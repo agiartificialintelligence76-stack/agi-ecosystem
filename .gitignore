@@ -1,0 +1,7 @@
+# Vercel's link to a project (never commit or copy this between projects)
+.vercel
+
+# Files Windows and macOS create on their own
+desktop.ini
+Thumbs.db
+.DS_Store
