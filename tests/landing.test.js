@@ -118,6 +118,17 @@ test("its styles only touch the front: every rule names an lp- class (so the res
   assert.doesNotMatch(css, /@import/, 'no imports');
 });
 
+test("what's wider than its box on purpose keeps its width (base.css caps pictures, SVGs and canvases at 100%)", () => {
+  // Her WebGL canvas is 132% of her box, room for the print echoes. Capped at 100%, it cut off her right hand (2026-09-28,
+  // the owner: "what happened to her hand"). The same cap shortened the pink strike across "General".
+  assert.match(read('src/styles/base.css'), /img, svg, canvas \{[^}]*max-width: 100%/, 'the cap this test is about');
+  const src = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const wide = [...src.matchAll(/([^{}]+)\{([^{}]*\bwidth:\s*(\d+)%[^{}]*)\}/g)].filter((m) => Number(m[3]) > 100);
+  assert.ok(wide.length >= 2, 'her canvas and the strike');
+  for (const m of wide) assert.match(m[2], /max-width:\s*none/, `${m[1].trim()}: ${m[3]}% wide, so no 100% cap`);
+  assert.match(src, /\.lp-figure-gl \{[^}]*width: 132%;[^}]*max-width: none/, 'her canvas');
+});
+
 test('her bubble lines: PG-13, no pet names (anyone sees them), never money talk, short; the page starts with the first', () => {
   assert.ok(BUBBLE_LINES.length >= 4 && REACTIONS.length >= 4);
   for (const line of [...BUBBLE_LINES, ...REACTIONS]) {

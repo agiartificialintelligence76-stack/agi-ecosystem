@@ -127,7 +127,9 @@
   aspect-ratio: 796 / 1510; transform: translateX(-50%); pointer-events: none;
 }
 .lp-figure-img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.lp-figure-gl { position: absolute; left: -16%; top: -4%; width: 132%; height: 104%; display: none; }
+/* her WebGL canvas is wider than her box on purpose (room for the print echoes). base.css caps every canvas at 100% of its
+   box, which cut off her right hand (2026-09-28, the owner: "what happened to her hand"), so the cap is lifted here */
+.lp-figure-gl { position: absolute; left: -16%; top: -4%; width: 132%; max-width: none; height: 104%; display: none; }
 .lp-gl .lp-figure-gl { display: block; }
 .lp-gl .lp-figure-img { opacity: 0; }
 
@@ -332,7 +334,7 @@
 .lp-mani-line { display: block; position: relative; width: max-content; max-width: 100%; }
 .lp-mani-gen { display: inline-block; position: relative; opacity: var(--gen, .3); }
 .lp-mani-strike {
-  position: absolute; left: -4%; top: 50%; width: 108%; height: auto; aspect-ratio: 400 / 70;
+  position: absolute; left: -4%; top: 50%; width: 108%; max-width: none; height: auto; aspect-ratio: 400 / 70;
   transform: translateY(-48%); overflow: visible; pointer-events: none;
 }
 .lp-mani-strike path {
