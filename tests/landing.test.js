@@ -51,10 +51,10 @@ test('its links: the Playground, "Risk check your coins on clank", her diary, $A
   const nav = front.slice(front.indexOf('<nav class="lp-eco"'), front.indexOf('</nav>', front.indexOf('<nav class="lp-eco"')));
   assert.match(nav, /<nav class="lp-eco" aria-labelledby="lp-eco-label">/);
   assert.match(nav, /<p class="lp-eco-label" id="lp-eco-label">Her world <span>\(05\)<\/span><\/p>/, 'the list is "Her world" (the owner, 2026-09-28: no "ecosystem")');
-  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#playground', '#checker', '/diary', '#model-card', 'https://x.com/artgirlfintel']);
+  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#playground', '#checker', '/diary', '#model-card', 'https://x.com/agi1dotapp']);
   assert.match(nav, /<span class="lp-dot"><\/span>Risk check your coins on clank<i aria-hidden="true">↓<\/i>/, 'the risk check under its name (the owner, 2026-09-28), in the Arena\'s old place');
   const planets = [...front.matchAll(/<a class="lp-planet [^>]*href="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(planets, ['#playground', '#checker', '#model-card', 'https://x.com/artgirlfintel'], 'the planets: the same places');
+  assert.deepEqual(planets, ['#playground', '#checker', '#model-card', 'https://x.com/agi1dotapp'], 'the planets: the same places');
   for (const id of new Set([...main.matchAll(/<a [^>]*href="#([^"]+)"/g)].map((m) => m[1]))) assert.match(html, new RegExp(`id="${id}"`), `#${id} is on the page`);
   for (const a of front.match(/<a [^>]*target="_blank"[^>]*>/g) || []) assert.match(a, /rel="noopener noreferrer"/, 'a new tab, without passing our page along');
   assert.match(front, /<button class="lp-btn lp-btn-ink" type="button" data-open-chat[^>]*>Talk to AGI-1 /);

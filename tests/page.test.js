@@ -86,20 +86,20 @@ test('phones get a menu on both pages, with every section, the diary and the saf
   }
 });
 
-// 2026-09-28: the project's official X account, @artgirlfintel
+// 2026-09-28: the project's official X account, @agi1dotapp
 test('AGI on X: a round button in the top bar (a menu row on small phones) and a footer link, on both pages', () => {
   const diary = readFileSync(new URL('../diary.html', import.meta.url), 'utf8');
   for (const [name, page] of [['index.html', html], ['diary.html', diary]]) {
-    const links = page.match(/<a [^>]*href="https:\/\/x\.com\/artgirlfintel"[^>]*>/g) || [];
+    const links = page.match(/<a [^>]*href="https:\/\/x\.com\/agi1dotapp"[^>]*>/g) || [];
     // the home page's front (2026-09-28) has two more: its planet and its "Her world" list
-    const front = name === 'index.html' ? (page.slice(page.indexOf('data-lp-hero'), page.indexOf('data-lp-ribbons')).match(/href="https:\/\/x\.com\/artgirlfintel"/g) || []).length : 0;
+    const front = name === 'index.html' ? (page.slice(page.indexOf('data-lp-hero'), page.indexOf('data-lp-ribbons')).match(/href="https:\/\/x\.com\/agi1dotapp"/g) || []).length : 0;
     assert.equal(front, name === 'index.html' ? 2 : 0, `${name}: the front's planet and its "Her world" list`);
     assert.equal(links.length, 3 + front, `${name}: the top bar, the menu and the footer`);
     for (const a of links) assert.match(a, /target="_blank" rel="noopener noreferrer"/, `${name}: a new tab, without passing our page along`);
     const actions = page.slice(page.indexOf('<div class="topbar-actions">'), page.indexOf('</header>'));
-    assert.match(actions, /<a class="icon-btn x-btn" href="https:\/\/x\.com\/artgirlfintel" [^>]*aria-label="AGI on X \(@artgirlfintel\)"/, `${name}: named for screen readers`);
+    assert.match(actions, /<a class="icon-btn x-btn" href="https:\/\/x\.com\/agi1dotapp" [^>]*aria-label="AGI on X \(@agi1dotapp\)"/, `${name}: named for screen readers`);
     const nav = page.slice(page.indexOf('<nav class="nav" id="site-nav"'), page.indexOf('</nav>', page.indexOf('id="site-nav"')));
-    assert.ok(nav.includes('<a class="nav-x" href="https://x.com/artgirlfintel"'), `${name}: the menu row for screens under 380 px`);
+    assert.ok(nav.includes('<a class="nav-x" href="https://x.com/agi1dotapp"'), `${name}: the menu row for screens under 380 px`);
   }
 });
 

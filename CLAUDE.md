@@ -1447,7 +1447,7 @@ Evaluations, the Model card, the Playground, the risk check (ClankChecker) and t
   echoes (pink, honey), a little depth when the pointer moves (a depth map), and a slight color split when you hover her;
   "ドキドキ doki doki", her speech bubble (a new line every few seconds, a short reaction when you click her), and four
   planets in orbit around her: **AGI-1** (the Playground), **Risk check your coins on clank** (ClankChecker), **$AGI** (the
-  Model card) and **@artgirlfintel** (X). They
+  Model card) and **@agi1dotapp** (X). They
   slow down and stop under the pointer, speed up while you scroll, pass behind her, and their names never cover each
   other (on phones only the front planets' names show). On the left "Artificial / Girlfriend / Intelligence", a one-line
   lede, **Talk to AGI-1** (opens the chat) and **Explore ↓**; on the right the **Her world (05)** list ("Ecosystem" until the owner
@@ -2339,6 +2339,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-09-28 | The diary without the Arena (the owner's pick: "keep it, no Arena"): its table is shared with the original site, whose nightly job may write a day first. So this site writes from the chart alone (the prompt and `acceptableEntry()` refuse Arena talk), still saves the day's Arena numbers complete for the original site's page, and shows an entry the original site wrote without its Arena sentences (`entryForThisSite()`), or a pre-written one when too little is left |
 | 2026-09-28 | No "ecosystem" on the site (the owner: "can you just remove the word ecosystem, replace it with something better"; Claude picked the words): the front's list is **"Her world (05)"** (her bubble already says "welcome to my world", and every row is hers: her chat, her risk check, her diary, her coin, her X), and Pop mode's tooltip is "the bold AGI look". The pages' HTML comments said it too and ship with the page, so they changed as well (`tests/landing.test.js` keeps the word out). The folder `AGI 3 ECOSYSTEM`, the repo and the Vercel project `agi-ecosystem` keep their names: visitors never see them, and renaming them would break the link between this folder, GitHub and the live site |
 | 2026-09-28 | Her right hand on the front was cut off (the owner: "what happened to her hand"): the picture was fine, but `base.css` caps every `img`, `svg` and `canvas` at 100% of its box, and her WebGL canvas is meant to be 132% of her box (room for the print echoes), so its right 16% (her hand) was clipped. Fixed with `max-width: none` on `.lp-figure-gl`, and on the pink strike across "General" (108%, cut short by the same cap); `tests/landing.test.js` now fails the build if a front element wider than its box loses that |
+| 2026-09-28 | The project's X account is now **@agi1dotapp** (https://x.com/agi1dotapp, the owner's request), was @artgirlfintel: every X link on both pages (top bar, menu, footer, the front's planet, "Her world" row and ribbon) and their tests |
 
 ## Open questions
 
