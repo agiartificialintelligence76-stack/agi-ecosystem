@@ -30,9 +30,10 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   launched a moment ago shows up within seconds), each with its picture (tap it to see it big), a risk scan on demand
   (Lower / Some / High risk, the red flags and the facts behind them), and "Ask AGI-1": she appears right there in 3D,
   reacts and says what she thinks in her natural voice (a few fixed lines, made once). Never buy/sell advice
-- **Pop mode** (2026-09-27, the owner's idea): a ✦ button next to the theme button switches the whole page to the look of
-  the $AGI ecosystem page that used to be at agi1.app: bold color blocks, ink outlines, wide display type. Same content; off by default;
-  remembered in the browser
+- **Pop mode** (2026-09-27, the owner's idea): the whole page in the look of the $AGI ecosystem page that used to be at
+  agi1.app: bold color blocks, ink outlines, wide display type. Same content. **The default since 2026-09-28, in the dark
+  theme** (the owner: "make the pop mode open on default, in dark mode"); the ✦ button next to the theme button switches
+  back to the lab look, and both choices are remembered in the browser
 - **AGI-1 in 2D** (2026-09-27, the owner's idea): a "3D · 2D" switch on the stage and in her live views shows her as the
   owner's 2D anime art instead of the 3D model, rigged like a VTuber (breathing, blinking, looking, talking with the same
   voice, every reaction, hair on springs). 3D by default; remembered in the browser; each downloaded only when picked
@@ -1466,9 +1467,10 @@ That page was the same brand, so Pop mode dresses this site in that family's loo
 itself; the ecosystem page it copied is gone, the look lives on here.)
 
 **What visitors see:**
-- A round **✦** button next to the theme button (both pages; the tooltip says "Pop mode: the AGI ecosystem look"). **Off by
-  default.** Pressed, the whole page switches to the new look; pressed again, back to the lab look. Remembered in the browser
-  (`dr-skin`), like the theme. The theme button still works inside it (Pop mode has a night version). On phones under
+- A round **✦** button next to the theme button (both pages; the tooltip says "Pop mode: the AGI ecosystem look"). **On by
+  default since 2026-09-28, in the dark theme** (the owner: "make the pop mode open on default, in dark mode"; before that
+  it was off by default and the theme followed the system setting). Pressed, the page switches to the lab look; pressed
+  again, back to Pop mode. Remembered in the browser (`dr-skin` = `pop` or `lab`), like the theme (`dr-theme`). The theme button still works inside it (Pop mode has a night version). On phones under
   380 px the top bar has no room for a fourth round button, so there it's a **"Pop mode On / Off"** row at the bottom of the
   menu (the menu stays open when it's tapped).
 - **The same content:** every word, link, number, button and feature stays; only the CSS changes (`src/styles/pop.css`,
@@ -1505,17 +1507,18 @@ itself; the ecosystem page it copied is gone, the look lives on here.)
   At the very top of the page it stays at the top. The theme button does the same (Pop mode's night look has thinner
   outlines). What's in the middle stays; what's above it may grow or shrink.
 
-**How it works:** `/theme.js` (a tiny script in `<head>`) puts `data-skin="pop"` on `<html>` before the page paints when the
-browser saved `dr-skin` = `pop`, so the page never flashes the other look. `src/theme.js` wires the buttons (every
+**How it works:** `/theme.js` (a tiny script in `<head>`) puts `data-skin="pop"` on `<html>` before the page paints unless
+the browser saved `dr-skin` = `lab` (Pop mode switched off), and `data-theme="dark"` unless it saved `dr-theme` = `light`
+(the system setting doesn't decide any more), so the page never flashes the other look. `src/theme.js` wires the buttons (every
 `[data-skin-toggle]`, with `aria-pressed`), remembers the choice, repaints the browser bar (`barColor()`, the same colors as
 `/theme.js`; a test compares them) and sends `agi:skin`; the 3D stage listens (its `pop-light` / `pop-dark` colors, the
 hearts, the champion's card redrawn) and so does the menu (it closes when its links fit again). Browsers keep `/theme.js` a
-day, so `src/theme.js` also reads the saved choice itself: a browser with yesterday's copy shows the lab look for a moment
-and then switches.
+day, so the pages load it with a version (`/theme.js?v=2` since the new defaults: **raise the number whenever it changes**)
+and `src/theme.js` also applies the saved choices, else the same defaults (`DEFAULT_SKIN`, `DEFAULT_THEME`) itself.
 
 **Fonts:** Anybody (variable, 57 KB) and Instrument Serif Italic (22 KB), free (SIL Open Font License, the license files are
-next to them in `public/fonts/`), self-hosted like Geist (nothing from Google) and **only downloaded while Pop mode is on**: a
-visitor who never presses the button downloads nothing new. Browsers keep them a year (like Geist).
+next to them in `public/fonts/`), self-hosted like Geist (nothing from Google) and **only downloaded while Pop mode is on**
+(since it's the default, most visitors download them: 79 KB). Browsers keep them a year (like Geist).
 
 **Cost:** nothing: no new service, no new setting, no server work; only the two fonts, for Pop mode visitors, once.
 
@@ -1533,12 +1536,12 @@ the row of links about 40 px longer; it was 860), and the Arena's leaderboard fo
 | After switching, the heading above what you were reading moved | By design: what's in the middle of the screen stays in place, and Pop mode's headings are bigger | Nothing to fix |
 | After switching, the page shows another section | `keepPlace()` in `src/theme.js` didn't find anything to hold on to (a new kind of element?) | Tell Claude, with the section and the screen size (`skintest.mjs` checks 6 places × 3 screen sizes) |
 
-**Tests:** `tests/pop.test.js` (7: the button on both pages, after the theme button, off by default, and the menu row; the
+**Tests:** `tests/pop.test.js` (8: the button on both pages, after the theme button, pressed at first, and the menu row; the
 ribbons repeat only what the page already says, hidden from screen readers, no money talk; every rule scoped to
 `[data-skin="pop"]` except a few shared sizing rules, `!important` only for "reduce motion", nothing from other sites; the
-fonts are real WOFF2 files with their licenses and `font-display: swap`; `/theme.js` in a sandbox (only an exact `pop`
-turns it on, private mode works, the browser-bar color for every page × theme × look matches `src/theme.js`); where the menu
-starts in each look; switching keeps your place). End to end, `skintest.mjs` (38: off by default without downloading its fonts; pressed: the look, its
+fonts are real WOFF2 files with their licenses and `font-display: swap`; `/theme.js` in a sandbox (Pop mode and dark unless the visitor saved `lab` / `light`,
+private mode gets the defaults, the browser-bar color for every page × theme × look matches `src/theme.js`); where the menu
+starts in each look; switching keeps your place). End to end, `skintest.mjs` (written before Pop mode became the default, so it expects it off at first; 38: off by default without downloading its fonts; pressed: the look, its
 fonts, remembered, the browser bar, the 3D stage's colors, the focus stays; the theme button inside it; after a reload,
 there before the first paint; off again, remembered; yesterday's `/theme.js`; the top bar's band; the menu at 920 / 1040 px
 and closing when Pop mode goes off at 1000 px; phones at 390, 360 (the menu row) and 320; the diary page; no sideways
@@ -1734,9 +1737,9 @@ metal platform stage, fog and sparkles, the typewriter/glitch headline, uppercas
 the monster cursor, the marquee, confetti, the pink BUY button. **Don't reuse any HTML or CSS from the old site** (or from
 this site before the redesign). AGI FINAL is a reference for **logic only** (chat, voting, prices).
 
-**Pop mode (2026-09-27, the owner's request) is a second, optional look**, off by default: the design of the $AGI ecosystem
-site (agi1.app), for visitors who press its ✦ button (see "Pop mode"). Everything else in this section describes the default
-look, which stays exactly as it is. The "retired" list above is about the old site's "cute cyber" style (glows, neon, fog,
+**Pop mode (2026-09-27, the owner's request) is a second look, and since 2026-09-28 the default one, in the dark theme**:
+the design of the $AGI ecosystem page (see "Pop mode"). Everything else in this section describes the lab look (one press
+of the ✦ button away), which stays exactly as it is. The "retired" list above is about the old site's "cute cyber" style (glows, neon, fog,
 sparkles, the typewriter headline), not Pop mode's flat color blocks and ink outlines; Pop mode's two ribbons are its one
 moving decoration (a marquee the owner asked for with that look; they stop with "reduce motion"). Nothing was copied from
 agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts (SIL Open Font License).
@@ -1744,8 +1747,8 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 **Principles**
 - Minimal: one idea per section, lots of whitespace, a strict grid, 1 px hairlines instead of shadows and glows.
 - Sharp typography carries the page: big confident headlines, short sentences, tabular numbers, few weights.
-- **Light and dark themes**, both first-class. The page follows the visitor's system setting; the toggle in the top bar
-  overrides it (saved in the browser). Test every change in both.
+- **Light and dark themes**, both first-class. Dark by default since 2026-09-28 (the owner); the toggle in the top bar
+  switches to light (saved in the browser). Test every change in both.
 - Serious lab voice, silly content: "We're releasing…", "Evaluations", "Model card", "Safety note", but the facts are memes.
 - One accent color, used sparingly (live dot, highlights, focus rings). Everything else is black, white and grays.
 - Motion is subtle (short fades and slides) and switches off with "reduce motion".
@@ -2372,6 +2375,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-09-27 | Her 2D arms (the owner, looking at the original file's wave: "what is that arm lol, thats so bad"): each arm one picture bent at the elbow in code, a round elbow outside and a clean crease inside, the picture drawn twice and cut along the crease (found from her measured inside outline). It replaced two pieces with a round cap, the same day: those left a faint seam and short bits of outline at the elbow up close. Not picked: one piece bent smoothly all round (it folds over itself inside the elbow, or pinches like the original), or a longer, rubbery bend (a noodle arm) |
 | 2026-09-28 | Her 2D chest's follow-through (the owner's request, "make it the best ever"): a soft spring (2.8 Hz, damping 0.34) on the lower part of her chest, driven by her pose and her hop, on her existing body picture. Natural and subtle because the site is PG-13 (the owner's rule for every feature): about 6 px of her 1536 px picture in a hop, 1.5 px in her dance, nothing while she stands still, none with "reduce motion". Not picked: an exaggerated bounce (fan service, against the PG-13 rule), and a separate chest picture from an image generator (it wouldn't match her art) |
 | 2026-09-28 | The whole site copied into `AGI 3 ECOSYSTEM`, replacing the ecosystem page there (the owner: "replace the full website", "exact same so its the same website", the character becomes AGI-1; the lab name is just "AGI", "dont add research"). Renamed everywhere: page text, her prompt and fixed lines, the share cards (made again with `tools/cards/`), file names (`server/agi1-prompt.js`, `src/stage/agi1.js`, `src/stage/agi1-2d*.js`, `public/models/agi1.glb`, `public/images/agi1-*.webp`, `tools/agi1-2d/`), code names, browser-storage keys (a new domain starts empty anyway), the `AGI1_VOICE` setting, and the bot name (`AGIArena/1.0; +https://agi1.app`). Kept: the database table `daria_diary`. Added: the project's X account (@artgirlfintel) as a round button in the top bar (a menu row under 380 px) and a footer link, on both pages, with a test (234 unit tests). Deploys to `agi-ecosystem` (agi1.app); `AGI NEW WEBSITE` untouched |
+| 2026-09-28 | Pop mode on by default, in the dark theme (the owner: "make the pop mode open on default, in dark mode"). `/theme.js`: nothing saved = Pop mode + dark (the system setting no longer picks the theme); switching Pop mode off is saved as `dr-skin` = `lab` (before, "off" just removed the key); the ✦ buttons start pressed; the pages load `/theme.js?v=2` so browsers holding yesterday's copy (kept a day) get the new one at once. Checked in a browser: first paint Pop + dark on both pages and phone sizes, off / light remembered after a reload, blocked storage gets the defaults. 235 unit tests |
 
 ## Open questions
 

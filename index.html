@@ -21,7 +21,7 @@
     <link rel="canonical" href="__SITE__/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- picks light or dark before the page paints, so it never flashes the wrong theme -->
-    <script src="/theme.js"></script>
+    <script src="/theme.js?v=2"></script>
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preconnect" href="https://api.dexscreener.com" crossorigin />
   </head>
@@ -41,7 +41,7 @@
           <a href="/diary">Diary</a>
           <a class="nav-phone" href="#safety">Safety note</a>
           <a class="nav-x" href="https://x.com/artgirlfintel" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
-          <button class="nav-pop" type="button" data-skin-toggle aria-pressed="false">Pop mode <span class="nav-pop-state mono" aria-hidden="true">Off</span></button>
+          <button class="nav-pop" type="button" data-skin-toggle aria-pressed="true">Pop mode <span class="nav-pop-state mono" aria-hidden="true">On</span></button>
         </nav>
         <div class="topbar-actions">
           <!-- AGI on X (2026-09-28): the project's official account. Under 380 px it moves into the menu (layout.css) -->
@@ -50,9 +50,10 @@
             <svg class="i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
             <svg class="i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
           </button>
-          <!-- Pop mode (2026-09-27, the owner's idea): the $AGI ecosystem site's look (agi1.app), same content. Off until pressed;
-               remembered in this browser (src/theme.js; /theme.js applies it before the page paints) -->
-          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="false" aria-label="Pop mode" title="Pop mode: the AGI ecosystem look">
+          <!-- Pop mode (2026-09-27, the owner's idea): the $AGI ecosystem look, same content. On by default, in the dark theme
+               (2026-09-28, the owner); switching it off is remembered in this browser (src/theme.js; /theme.js applies it
+               before the page paints) -->
+          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the AGI ecosystem look">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           </button>
           <button class="btn btn-primary btn-sm" type="button" data-open-chat>Try AGI-1</button>

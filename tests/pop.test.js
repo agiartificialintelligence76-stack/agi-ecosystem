@@ -1,7 +1,8 @@
-// Pop mode (2026-09-27, the owner's idea): the whole page in the $AGI ecosystem site's look (agi1.app), same content, off
-// until the visitor presses its button. These checks keep it that way: the button on both pages, the default look untouched
-// (every Pop mode style is scoped to [data-skin="pop"]), its fonts self-hosted and licensed, the decoration only repeating
-// what the page already says, and the choice applied before the page paints.
+// Pop mode (2026-09-27, the owner's idea): the whole page in the $AGI ecosystem look, same content. Since 2026-09-28 it's the
+// default, in the dark theme (the owner: "make the pop mode open on default, in dark mode"); its button switches it off.
+// These checks keep it that way: the button on both pages, the lab look untouched (every Pop mode style is scoped to
+// [data-skin="pop"]), its fonts self-hosted and licensed, the decoration only repeating what the page already says, and the
+// defaults and the visitor's choice applied before the page paints.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
@@ -12,18 +13,19 @@ const html = read('index.html');
 const diary = read('diary.html');
 const css = read('src/styles/pop.css');
 
-test('Pop mode: a button next to the theme button on both pages, off by default, and a row in the small-phone menu', () => {
+test('Pop mode: a button next to the theme button on both pages, on by default, and a row in the small-phone menu', () => {
   for (const [name, page] of [['index.html', html], ['diary.html', diary]]) {
     const actions = page.slice(page.indexOf('<div class="topbar-actions">'), page.indexOf('</header>'));
     const theme = actions.indexOf('data-theme-toggle'), pop = actions.indexOf('data-skin-toggle');
     assert.ok(theme > 0 && pop > theme, `${name}: the Pop mode button comes right after the theme button`);
     assert.ok(actions.indexOf('data-open-chat') > pop || name === 'diary.html', `${name}: before Try AGI-1`);
-    assert.match(actions, /<button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="false" aria-label="Pop mode" title="[^"]+">/,
-      `${name}: a real toggle button (pressed or not), named for screen readers, off at first`);
+    assert.match(actions, /<button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="[^"]+">/,
+      `${name}: a real toggle button (pressed or not), named for screen readers, pressed at first (the default)`);
     const nav = page.slice(page.indexOf('<nav class="nav" id="site-nav"'), page.indexOf('</nav>', page.indexOf('id="site-nav"')));
-    assert.ok(nav.includes('<button class="nav-pop" type="button" data-skin-toggle aria-pressed="false">Pop mode <span class="nav-pop-state mono" aria-hidden="true">Off</span></button>'),
+    assert.ok(nav.includes('<button class="nav-pop" type="button" data-skin-toggle aria-pressed="true">Pop mode <span class="nav-pop-state mono" aria-hidden="true">On</span></button>'),
       `${name}: the menu's Pop mode row (for screens under 380 px, where the top bar has no room for the button)`);
-    assert.doesNotMatch(page.match(/<html[^>]*>/)[0], /data-skin/, `${name}: off by default (only /theme.js turns it on, from the visitor's own choice)`);
+    assert.doesNotMatch(page.match(/<html[^>]*>/)[0], /data-skin/, `${name}: /theme.js decides before the page paints (on, unless the visitor switched it off)`);
+    assert.match(page, /<script src="\/theme\.js\?v=\d+"><\/script>/, `${name}: /theme.js with a version, so a change reaches browsers that kept an older copy (they keep it a day)`);
     assert.ok(!/<script>|style="/.test(page), `${name}: no inline scripts or styles (the security rules block them)`);
   }
   assert.match(diary, /<html lang="en" data-page="diary">/, 'the diary page says which page it is (its browser-bar color in Pop mode)');
@@ -137,22 +139,27 @@ function prepaint({ skin, theme, systemDark = false, page = null, storage = true
   return { skin: attrs['data-skin'] ?? null, theme: attrs['data-theme'], bar: meta.content };
 }
 
-test('Pop mode is applied before the page paints, only when the visitor turned it on, with the browser bar to match', async () => {
+test('Pop mode and the dark theme are the defaults, applied before the page paints; a saved choice wins; the browser bar matches', async () => {
   // src/theme.js expects a browser: give it the little it reads when it loads
   globalThis.document ??= { documentElement: { dataset: {} }, querySelector: () => null, querySelectorAll: () => [] };
   globalThis.matchMedia ??= () => ({ matches: false, addEventListener() {} });
-  const { barColor } = await import('../src/theme.js');
-  assert.equal(prepaint({ skin: null, theme: 'light' }).skin, null, 'off by default');
-  for (const odd of ['lab', 'POP', 'pop ', '1', 'true']) assert.equal(prepaint({ skin: odd, theme: 'light' }).skin, null, `"${odd}" isn't Pop mode`);
-  assert.equal(prepaint({ skin: 'pop', theme: null, storage: false }).skin, null, 'private mode: the default look, no error');
+  const { barColor, DEFAULT_THEME, DEFAULT_SKIN } = await import('../src/theme.js');
+  assert.deepEqual([DEFAULT_SKIN, DEFAULT_THEME], ['pop', 'dark'], "the owner's defaults (2026-09-28)");
+  const first = prepaint({ skin: null, theme: null, systemDark: false });
+  assert.deepEqual([first.skin, first.theme], ['pop', 'dark'], 'a first visit: Pop mode, dark (even when the system is light)');
+  assert.equal(prepaint({ skin: 'lab', theme: null }).skin, null, 'switched off (saved as "lab"): it stays off');
+  for (const odd of ['POP', 'pop ', '1', 'true', 'off']) assert.equal(prepaint({ skin: odd, theme: null }).skin, 'pop', `"${odd}" isn't a choice: the default`);
+  const hidden = prepaint({ skin: 'lab', theme: 'light', storage: false });
+  assert.deepEqual([hidden.skin, hidden.theme], ['pop', 'dark'], 'private mode: the defaults, no error');
   for (const page of [null, 'diary']) {
-    for (const [theme, systemDark] of [['light', false], ['dark', false], [null, true], [null, false]]) {
-      for (const skin of ['pop', null]) {
+    for (const [theme, systemDark] of [['light', false], ['dark', false], ['light', true], [null, true], [null, false]]) {
+      for (const skin of ['pop', 'lab', null]) {
         const got = prepaint({ skin, theme, systemDark, page });
-        const expectTheme = theme || (systemDark ? 'dark' : 'light');
-        assert.equal(got.theme, expectTheme);
-        assert.equal(got.skin, skin === 'pop' ? 'pop' : null);
-        assert.equal(got.bar, barColor(skin === 'pop' ? 'pop' : 'lab', expectTheme, page === 'diary'), `${page || 'home'} · ${expectTheme} · ${skin || 'lab'}: the same color as the page's own script`);
+        const expectTheme = theme || 'dark';
+        const expectSkin = skin === 'lab' ? 'lab' : 'pop';
+        assert.equal(got.theme, expectTheme, 'a saved theme wins, else dark');
+        assert.equal(got.skin, expectSkin === 'pop' ? 'pop' : null);
+        assert.equal(got.bar, barColor(expectSkin, expectTheme, page === 'diary'), `${page || 'home'} · ${expectTheme} · ${expectSkin}: the same color as the page's own script`);
       }
     }
   }
@@ -165,6 +172,14 @@ test('Pop mode is applied before the page paints, only when the visitor turned i
   assert.equal(barColor('pop', 'dark', true), '#120828');
   assert.match(css, /\[data-skin='pop'\] \.hero \{[^}]*background: var\(--pop-violet\)/, 'the hero is that violet');
   assert.match(css, /\[data-skin='pop'\]\[data-theme='dark'\] \.hero \{ background: #2a0f7a; \}/, '…and that deep violet at night');
+});
+
+test('Pop mode: switching it off is remembered, and the page script starts from the same defaults as /theme.js', () => {
+  const theme = read('src/theme.js');
+  assert.match(theme, /localStorage\.setItem\(SKIN_KEY, skin === 'pop' \? 'pop' : 'lab'\)/, 'off is saved too ("lab"): with nothing saved, the page opens in Pop mode');
+  assert.match(theme, /apply\(saved\(\) \|\| DEFAULT_THEME, false\);\n  applySkin\(savedSkin\(\) \|\| DEFAULT_SKIN, false\);/, 'the saved choices, else the defaults');
+  assert.doesNotMatch(theme, /prefers-color-scheme/, "the system setting doesn't pick the theme any more (dark unless the visitor picks light)");
+  assert.doesNotMatch(read('public/theme.js'), /matchMedia/, '…in /theme.js either');
 });
 
 test('Pop mode: the phone menu starts where each look needs it (the CSS decides; the menu script follows)', () => {

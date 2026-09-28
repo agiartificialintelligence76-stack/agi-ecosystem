@@ -1,13 +1,15 @@
 // Light / dark theme, and Pop mode. /theme.js (in public/) already picked both before the page painted.
-// This adds the toggle buttons, remembers the visitor's choices, and follows the system setting until the visitor picks a
-// theme. Other code (the 3D stage) listens for the 'agi:theme' and 'agi:skin' events.
-// Pop mode (2026-09-27, the owner's idea): the whole page in the $AGI ecosystem site's look (agi1.app): same content, other
-// design (src/styles/pop.css, everything under [data-skin="pop"]). Off until the visitor presses the ✦ button next to the
-// theme button (on very small phones, "Pop mode" in the menu); remembered in this browser (dr-skin).
+// This adds the toggle buttons and remembers the visitor's choices. Other code (the 3D stage) listens for the 'agi:theme'
+// and 'agi:skin' events.
+// Pop mode (2026-09-27, the owner's idea): the whole page in the $AGI ecosystem look: same content, other design
+// (src/styles/pop.css, everything under [data-skin="pop"]). Since 2026-09-28 it's the default, in the dark theme (the owner:
+// "make the pop mode open on default, in dark mode"). The ✦ button next to the theme button (on very small phones, "Pop mode"
+// in the menu) switches it off and on; both choices are remembered in this browser (dr-skin = pop | lab, dr-theme).
 const KEY = 'dr-theme';
 const SKIN_KEY = 'dr-skin';
+export const DEFAULT_THEME = 'dark';
+export const DEFAULT_SKIN = 'pop';
 const root = document.documentElement;
-const systemDark = matchMedia('(prefers-color-scheme: dark)');
 
 const saved = () => {
   try {
@@ -20,7 +22,8 @@ const saved = () => {
 
 const savedSkin = () => {
   try {
-    return localStorage.getItem(SKIN_KEY) === 'pop' ? 'pop' : null;
+    const skin = localStorage.getItem(SKIN_KEY);
+    return skin === 'pop' || skin === 'lab' ? skin : null;
   } catch {
     return null;
   }
@@ -57,10 +60,8 @@ function applySkin(skin, remember) {
   if (skin === 'pop') root.dataset.skin = 'pop';
   else delete root.dataset.skin;
   if (remember) {
-    try {
-      if (skin === 'pop') localStorage.setItem(SKIN_KEY, 'pop');
-      else localStorage.removeItem(SKIN_KEY);
-    } catch { /* private mode: works for this visit only */ }
+    // "off" is saved too ('lab'): with nothing saved, the page opens in Pop mode
+    try { localStorage.setItem(SKIN_KEY, skin === 'pop' ? 'pop' : 'lab'); } catch { /* private mode: works for this visit only */ }
   }
   paintBar();
   for (const button of document.querySelectorAll('[data-skin-toggle]')) {
@@ -153,9 +154,9 @@ function keepPlace(change) {
 }
 
 export function startTheme() {
-  apply(saved() || currentTheme(), false);
-  applySkin(savedSkin() || currentSkin(), false);   // (the saved choice too: browsers keep /theme.js a day, so an older copy may not know Pop mode yet)
-  systemDark.addEventListener('change', (e) => { if (!saved()) apply(e.matches ? 'dark' : 'light', false); });
+  // the saved choices, else the defaults: the same as /theme.js (read here too, in case a browser still has an older copy)
+  apply(saved() || DEFAULT_THEME, false);
+  applySkin(savedSkin() || DEFAULT_SKIN, false);
   for (const button of document.querySelectorAll('[data-theme-toggle]')) {
     // (in Pop mode the night look has thinner outlines, so a few things move a little: keep the place there too)
     button.addEventListener('click', () => keepPlace(() => apply(currentTheme() === 'dark' ? 'light' : 'dark', true)));
