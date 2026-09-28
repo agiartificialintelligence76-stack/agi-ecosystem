@@ -1,0 +1,53 @@
+/* The Model card section: a spec sheet with the contract address on top (src/sections/modelcard.js). */
+.mcard { margin-top: 44px; overflow: hidden; overflow: clip; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); }
+/* overflow: clip (not hidden) rounds the corners without making the card a scroll box, so links to #contract land right */
+.mcard-head {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 16px 24px; background: var(--bg-2); border-bottom: 1px solid var(--line);
+}
+.mcard-title { font-weight: 600; letter-spacing: -0.01em; }
+.mcard-title span { font-weight: 400; color: var(--fg-3); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg);
+  font-family: var(--mono); font-size: 12px; color: var(--fg-2);
+}
+
+/* contract address */
+.ca { padding: 22px 24px 20px; border-bottom: 1px solid var(--line); scroll-margin-top: 140px; }   /* links to #contract land below the top bar, with the card's title in view */
+.ca-label { margin-bottom: 10px; font-family: var(--mono); font-size: 12.5px; color: var(--fg-3); }
+.ca-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.ca-addr {
+  flex: 1 1 auto; min-width: 0; padding: 10px 14px; overflow-wrap: anywhere; user-select: all;
+  font-family: var(--mono); font-size: clamp(13px, 1.55vw, 16.5px); letter-spacing: -0.01em;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px;
+}
+.ca-copy { min-width: 92px; }
+.ca-copy.is-done { background: var(--up); color: var(--bg); }
+.ca-note { margin-top: 10px; font-size: 13px; color: var(--fg-3); }
+.ca-links { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 14px; font-size: 14px; }
+.ca-links a { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; transition: text-decoration-color .15s ease; }
+.ca-links a:hover { text-decoration-color: currentColor; }
+
+/* the two spec columns */
+.mcard-cols { display: grid; grid-template-columns: 1fr 1fr; }
+.mcard-col { padding: 20px 24px 24px; }
+.mcard-col + .mcard-col { border-left: 1px solid var(--line); }
+.mcard-col h3 { margin-bottom: 6px; font-family: var(--mono); font-size: 12.5px; font-weight: 500; color: var(--fg-3); }
+.spec { margin: 0; }
+.spec > div { display: grid; grid-template-columns: 136px 1fr; gap: 16px; padding: 11px 0; border-top: 1px solid var(--line); }
+.spec > div:first-child { border-top: 0; }
+.spec dt { font-size: 13.5px; color: var(--fg-3); }
+.spec dd { margin: 0; font-size: 14.5px; color: var(--fg); }
+.spec dd.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.spec-note { margin-top: 10px; font-size: 12.5px; color: var(--fg-3); }
+
+@media (max-width: 880px) {
+  .mcard-cols { grid-template-columns: 1fr; }
+  .mcard-col + .mcard-col { border-left: 0; border-top: 1px solid var(--line); }
+}
+@media (max-width: 520px) {
+  .mcard-head, .ca, .mcard-col { padding-inline: 16px; }
+  .spec > div { grid-template-columns: 1fr; gap: 2px; }
+  .ca-copy { flex: 1 1 100%; }
+}

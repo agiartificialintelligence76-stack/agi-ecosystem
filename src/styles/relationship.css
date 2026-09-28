@@ -1,0 +1,125 @@
+/* Phase 3: the Relationship panel (src/chat/relationship.js) in the Playground's side panel, the level chip in the
+   chat's top bar, the level-up banner and the "Connect a wallet" screen. Same look as the rest: hairlines, mono numbers,
+   the one accent for the level. */
+.rel { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.rel-level { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rel-level b { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+.rel-num { font-size: 12px; color: var(--fg-3); }
+.rel-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.rel-steps i { height: 4px; border-radius: 2px; background: var(--line); transition: background-color .3s ease; }
+.rel-steps i.on { background: var(--accent); }
+.rel-daily { font-size: 13px; color: var(--fg-2); }
+.rel-daily .mono { color: var(--fg); }
+.rel-out, .rel-in { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.rel-connect, .rel-forget { width: 100%; }
+.rel-fine { font-size: 12px; color: var(--fg-3); }
+.rel-wallet { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+.rel-link {
+  padding: 4px 0; border: 0; background: none; cursor: pointer;
+  font-size: 12.5px; color: var(--fg-2); text-decoration: underline; text-underline-offset: 3px;
+}
+.rel-link:hover { color: var(--fg); }
+.rel-note { font-size: 12.5px; color: var(--fg-2); }
+.rel-name { display: flex; flex-direction: column; gap: 6px; }
+.rel-name label, .rel-sub { font-size: 13px; color: var(--fg-2); }
+.rel-name-row { display: flex; gap: 6px; }
+.rel-name input {
+  flex: 1; min-width: 0; height: 34px; padding: 0 10px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; font-size: 14px;
+}
+.rel-name input::placeholder { color: var(--fg-3); }
+.rel-notes ul { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 0; padding: 0; list-style: none; }
+.rel-notes li { padding: 6px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+.rel-notes li.empty { color: var(--fg-3); border-style: dashed; }
+.rel-how { font-size: 13px; color: var(--fg-2); }
+.rel-how summary { cursor: pointer; }
+.rel-how summary:hover { color: var(--fg); }
+.rel-how p { margin-top: 8px; font-size: 12.5px; color: var(--fg-3); }
+.rel-table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 12.5px; }
+.rel-table th, .rel-table td { padding: 6px 0; font-weight: 400; text-align: left; border-top: 1px solid var(--line); }
+.rel-table th { color: var(--fg-3); }
+.rel-table td { color: var(--fg); }
+.rel-table .num { text-align: right; }
+
+/* the level chip in the chat's top bar (on phones the panel sits below the chat) */
+.pg-bar-actions { display: inline-flex; align-items: center; gap: 8px; }
+.rel-chip {
+  padding: 4px 10px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 999px;
+  font-family: var(--mono); font-size: 12px; color: var(--accent); text-decoration: none; white-space: nowrap;
+}
+
+/* the level-up moment */
+.pg-levelup {
+  position: relative; display: flex; flex-direction: column; gap: 2px; margin: 12px 16px 0; padding: 12px 48px 12px 14px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg)); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 12px; animation: levelup-in .5s cubic-bezier(.2, .7, .2, 1) both;
+}
+.pg-levelup-kicker { font-size: 12px; color: var(--accent); }
+.pg-levelup-text { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.pg-levelup-close { position: absolute; top: 9px; right: 9px; }
+@keyframes levelup-in { from { opacity: 0; transform: translateY(-6px); } }
+.msg-memory { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+
+/* the "Connect a wallet" screen (a native <dialog>) */
+.wdlg {
+  width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 22px; overflow: auto;   /* margin: auto centers it (base.css resets margins) */
+  color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.wdlg::backdrop { background: color-mix(in srgb, #000 45%, transparent); }
+.wdlg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.wdlg-title { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+.wdlg-promise {
+  margin-top: 14px; padding: 12px 14px; font-size: 14px; color: var(--fg-2);
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
+}
+.wdlg-promise-title { margin-bottom: 4px; font-weight: 600; color: var(--fg); }
+.wdlg-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.wdlg-list:empty { display: none; }
+.wdlg-wallet {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; cursor: pointer; text-align: left;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px; font-size: 15px;
+  transition: border-color .15s ease;
+}
+.wdlg-wallet:hover { border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+.wdlg-wallet:disabled { opacity: .5; cursor: default; }
+.wdlg-wallet.is-waiting { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); cursor: progress; }
+.wdlg-wallet.is-waiting .wdlg-wallet-tag { color: var(--accent); }
+.wdlg-wallet img, .wdlg-wallet-dot { flex: none; width: 28px; height: 28px; border-radius: 8px; }
+.wdlg-wallet-dot {                          /* (a wallet without a logo: its first letter) */
+  display: grid; place-items: center; font-size: 13px; font-weight: 600; color: var(--fg-2);
+  background: var(--bg-2); border: 1px solid var(--line);
+}
+.wdlg-wallet-name { flex: 1; font-weight: 500; }
+.wdlg-wallet-tag { font-size: 12px; color: var(--fg-3); }
+.wdlg-none { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; font-size: 14px; color: var(--fg-2); }
+.wdlg-apps { display: flex; flex-direction: column; gap: 8px; }
+.wdlg-status { min-height: 1.5em; margin-top: 12px; font-size: 13.5px; }
+.wdlg-status + .wdlg-fine { margin-top: 8px; }
+.wdlg-fine { font-size: 12px; color: var(--fg-3); }
+
+/* Phase 5: share your level, and the voice button in the chat bar */
+.rel-share { display: flex; flex-wrap: wrap; gap: 2px 16px; }
+.rel-share .rel-link { font-size: 12.5px; }
+.rel-share .rel-link:disabled { opacity: .6; cursor: progress; }
+.pg-voice { width: 32px; height: 32px; }
+.pg-voice svg { width: 17px; height: 17px; }
+.pg-voice .i-voice-on { display: none; }
+.pg-voice.is-on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.pg-voice.is-on .i-voice-on { display: block; }
+.pg-voice.is-on .i-voice-off { display: none; }
+/* her voice is on its way from the server (usually a second or two): a slow, soft pulse */
+.pg-voice[data-state="loading"] .i-voice-on { animation: pg-voice-wait 1.2s ease-in-out infinite; }
+.pg-voice[data-rest] { color: var(--fg-3); border-color: var(--line); }   /* her voice rests for today: dimmed, not accent */
+@keyframes pg-voice-wait { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .pg-voice[data-state="loading"] .i-voice-on { animation: none; opacity: .55; }
+}
+/* small phones: the chat bar has the level chip, the voice button and Clear, so "online" shows as its dot only */
+.pg-who b { white-space: nowrap; }
+@media (max-width: 420px) {
+  .pg-bar { gap: 8px; padding-inline: 12px; }
+  .pg-who { gap: 8px; }
+  .pg-status { font-size: 0; gap: 0; }
+  .pg-status .dot { margin: 0; }
+  .pg-bar-actions { gap: 6px; }
+}

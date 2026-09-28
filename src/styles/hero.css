@@ -1,0 +1,174 @@
+/* Hero: announcement headline, live ticker, and the 3D figure. */
+.hero { padding-top: clamp(48px, 7.5vw, 100px); }
+.hero-head { display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+.eyebrow {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;
+  margin-bottom: 28px; font-family: var(--mono); font-size: 13px; color: var(--fg-3);
+}
+.eyebrow .tag { padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--fg); }
+
+.display {
+  font-size: clamp(46px, 8.6vw, 108px); font-weight: 600; line-height: .95; letter-spacing: -0.052em;
+  text-wrap: balance;
+}
+.hero-sub {
+  margin-top: 18px; font-size: clamp(20px, 2.7vw, 31px); font-weight: 400; line-height: 1.2;
+  letter-spacing: -0.028em; color: var(--fg-2);
+}
+.lede { margin-top: 22px; max-width: 35em; font-size: 17px; color: var(--fg-2); text-wrap: pretty; }
+.hero-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 32px; }
+
+/* a calm entrance */
+.hero-head > * { animation: rise .7s cubic-bezier(.2, .7, .2, 1) both; }
+.hero-head > :nth-child(2) { animation-delay: .06s; }
+.hero-head > :nth-child(3) { animation-delay: .12s; }
+.hero-head > :nth-child(4) { animation-delay: .18s; }
+.hero-head > :nth-child(5) { animation-delay: .24s; }
+/* starts at .01, not 0: browsers ignore fully transparent text when they time how fast the main content shows */
+@keyframes rise { from { opacity: .01; transform: translateY(10px); } }
+
+/* ---------- live ticker (src/prices/ticker.js) ---------- */
+.ticker {
+  display: flex; align-items: center; gap: 28px; margin-top: clamp(40px, 5.5vw, 68px); padding: 14px 2px;
+  border-block: 1px solid var(--line); font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums;
+}
+.ticker-live { display: inline-flex; align-items: center; gap: 9px; min-width: 92px; color: var(--fg-2); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: live 2.2s ease-out infinite; }
+@keyframes live {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); }
+  75%, 100% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+.ticker[data-state='loading'] .dot, .ticker[data-state='stale'] .dot { background: var(--fg-3); animation: none; }
+.ticker-stats { display: flex; flex-wrap: wrap; gap: 8px 30px; }
+.ticker-stats > div { display: flex; align-items: baseline; gap: 9px; }
+.ticker-stats dt { color: var(--fg-3); }
+.ticker-stats dd { color: var(--fg); transition: opacity .3s ease; }
+.ticker-stats dd.up { color: var(--up); }
+.ticker-stats dd.down { color: var(--down); }
+.ticker[data-state='stale'] dd { opacity: .55; }
+.ticker-note { margin-left: auto; font-size: 12px; color: var(--fg-3); text-align: right; }
+.tick-up { animation: tick-up 1.4s ease-out; }
+.tick-down { animation: tick-down 1.4s ease-out; }
+@keyframes tick-up { from { background: color-mix(in srgb, var(--up) 22%, transparent); } }
+@keyframes tick-down { from { background: color-mix(in srgb, var(--down) 22%, transparent); } }
+
+/* ---------- Figure 1: the 3D stage (src/stage/stage.js) ---------- */
+.figure { margin-top: 28px; }
+.stage {
+  position: relative; width: 100%; aspect-ratio: 2 / 1; max-height: 680px; overflow: hidden;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius);
+  transition: background-color .25s ease, border-color .25s ease;
+}
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .8s ease .1s; }
+.stage.ready canvas { opacity: 1; }
+.stage-status {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center;
+  font-family: var(--mono); font-size: 13px; color: var(--fg-3); pointer-events: none;
+}
+.stage-status:empty { display: none; }
+.stage-status.busy { animation: breathe 1.6s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .45; } }
+
+.seg {
+  position: absolute; top: 16px; left: 16px; z-index: 2; display: flex; gap: 2px; padding: 3px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
+}
+.seg-btn {
+  padding: 6px 12px; border: 0; border-radius: 999px; background: transparent; cursor: pointer;
+  font-family: var(--mono); font-size: 12px; color: var(--fg-2); white-space: nowrap;
+  transition: background-color .15s ease, color .15s ease;
+}
+.seg-btn span { margin-left: 5px; color: var(--fg-3); }
+.seg-btn:hover { color: var(--fg); }
+.seg-btn.is-on { background: var(--fg); color: var(--bg); }
+.seg-btn.is-on span { color: color-mix(in srgb, var(--bg) 72%, var(--fg)); }
+/* Phase 6: the Arena's champion (its logo, ticker and "Champion") */
+.seg-champ { display: inline-flex; align-items: center; gap: 6px; }
+.seg-champ b { overflow: hidden; max-width: 11ch; font-weight: inherit; text-overflow: ellipsis; }
+.seg-champ span { margin-left: 0; }
+.seg-logo { width: 16px; height: 16px; flex: none; border-radius: 50%; object-fit: cover; background: var(--bg-2); }
+
+/* zoom (2026-09-25): + and − at the top right, the level (and reset) under them */
+.zoom { position: absolute; top: 16px; right: 16px; z-index: 2; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.zoom-group {
+  display: flex; flex-direction: column; gap: 2px; padding: 3px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
+}
+.zoom-btn {
+  display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; color: var(--fg-2); cursor: pointer; transition: background-color .15s ease, color .15s ease;
+}
+.zoom-btn svg { width: 15px; height: 15px; }
+.zoom-btn:hover { background: var(--bg-2); color: var(--fg); }
+.zoom-btn[aria-disabled='true'] { opacity: .35; background: transparent; color: var(--fg-2); cursor: default; }
+.zoom-level {
+  padding: 4px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; cursor: pointer;
+  font-size: 11.5px; color: var(--fg); white-space: nowrap; transition: border-color .15s ease;
+}
+.zoom-level-word { color: var(--fg-3); }
+.zoom-level:hover { border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+@media (pointer: coarse) { .zoom-btn { width: 36px; height: 36px; } }
+
+/* AGI-1 in 3D or 2D (2026-09-27): a small pill like the model switch, bottom left of the stage (and top right of her
+   live views: src/styles/playground.css and checker.css use the same pill) */
+.dstyle {
+  display: flex; gap: 2px; padding: 3px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
+}
+.dstyle-btn {
+  min-width: 34px; padding: 5px 10px; border: 0; border-radius: 999px; background: transparent; cursor: pointer;
+  font-family: var(--mono); font-size: 12px; line-height: 1.25; color: var(--fg-2); white-space: nowrap;
+  transition: background-color .15s ease, color .15s ease;
+}
+.dstyle-btn:hover { color: var(--fg); }
+.dstyle-btn.is-on { background: var(--fg); color: var(--bg); }
+.dstyle-stage { position: absolute; left: 16px; bottom: 14px; z-index: 2; }
+.dstyle-cam {
+  position: absolute; top: 8px; right: 8px; z-index: 3; padding: 2px;
+  background: color-mix(in srgb, var(--bg) 84%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.dstyle-cam .dstyle-btn { min-width: 30px; min-height: 24px; padding: 3px 8px; font-size: 11px; }
+@media (pointer: coarse) { .dstyle-btn { min-height: 32px; } .dstyle-cam .dstyle-btn { min-height: 28px; } }
+.stage .devp { bottom: 58px; }
+
+/* the champion's Buy link, bottom middle of the stage (only while the champion is on stage) */
+.stage-buy {
+  position: absolute; left: 50%; bottom: 16px; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: max-content; max-width: calc(100% - 32px); transform: translateX(-50%); text-align: center;
+}
+.stage-buy .btn { max-width: 100%; }
+.stage-buy-note { font-size: 11.5px; color: var(--fg-3); }
+.stage:has(.stage-buy:not([hidden])) .stage-hint { display: none; }
+
+.stage-hint {
+  position: absolute; right: 16px; bottom: 14px; z-index: 2; pointer-events: none;
+  font-family: var(--mono); font-size: 12px; color: var(--fg-3);
+}
+.figure figcaption { margin-top: 12px; font-size: 13.5px; color: var(--fg-3); }
+.figure figcaption b { font-weight: 500; color: var(--fg-2); }
+
+/* test buttons, only with ?dev in the address */
+.devp { position: absolute; left: 16px; bottom: 14px; z-index: 3; display: flex; flex-wrap: wrap; gap: 6px; }
+.devp button {
+  padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); cursor: pointer;
+  font-family: var(--mono); font-size: 11px; color: var(--fg-2);
+}
+
+/* ---------- phones ---------- */
+@media (max-width: 760px) {
+  .eyebrow { margin-bottom: 22px; font-size: 12px; }
+  .lede { font-size: 16px; }
+  .hero-cta { width: 100%; max-width: 440px; }
+  .hero-cta .btn { flex: 1 1 0; padding: 0 14px; }
+  .ticker { flex-wrap: wrap; gap: 12px 18px; padding: 14px 0; font-size: 13px; }
+  .ticker-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; width: 100%; }
+  .ticker-note { width: 100%; margin-left: 0; text-align: left; }
+  .stage { aspect-ratio: 4 / 5; }
+  .stage-hint { display: none; }
+}
+/* phones: with three models, the second line of each button goes (the champion's button says it in its label) */
+@media (max-width: 560px) {
+  .seg.has-champ .seg-btn span { display: none; }
+  .seg.has-champ .seg-btn { padding-inline: 10px; }
+}

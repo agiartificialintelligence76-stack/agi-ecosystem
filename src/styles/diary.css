@@ -1,0 +1,24 @@
+/* The diary page (diary.html, src/diary.js): AGI-1's entries as a lab's field notes. Hairlines, one accent, mono details. */
+.nav a[aria-current="page"] { color: var(--fg); }
+.diary-note { margin-top: 16px; font-size: 12.5px; color: var(--fg-3); }
+.diary-feed { max-width: 760px; margin-top: 44px; }
+.diary-status { font-size: 15px; color: var(--fg-2); }
+.diary-status:empty { display: none; }
+.diary-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.entry { padding: 28px 0 30px; border-bottom: 1px solid var(--line); }
+.entry-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.entry-date { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
+.entry-mood { padding: 1px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; color: var(--fg-3); }
+.entry-text { margin-top: 14px; font-size: 21px; line-height: 1.5; letter-spacing: -0.012em; text-wrap: pretty; }
+.entry-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin-top: 18px; }
+.entry-stats { font-size: 12.5px; color: var(--fg-3); white-space: pre-wrap; }
+.diary-more { margin-top: 22px; }
+
+/* the short safety paragraph above the bottom bar */
+.diary-foot { max-width: 760px; padding-block: 40px 32px; font-size: 14px; color: var(--fg-2); text-wrap: pretty; }
+.diary-foot b { font-weight: 600; color: var(--fg); }
+.diary-foot a { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 600px) {
+  .entry-text { font-size: 18px; }
+}

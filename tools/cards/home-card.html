@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- The home page's link preview (public/cards/home.jpg), rendered by make-cards.mjs. Same words as the hero.
+     agi1-wave.webp is a render of the 3D model waving (transparent background). -->
+<html><head><meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Geist'; src: url('../../public/fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'Geist Mono'; src: url('../../public/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 630px; background: #fafaf8; color: #111; font-family: 'Geist', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  .card { position: relative; width: 1200px; height: 630px; }
+  .left { position: absolute; left: 72px; top: 60px; bottom: 40px; width: 620px; display: flex; flex-direction: column; }
+  .brand { font-size: 25px; font-weight: 600; letter-spacing: -0.02em; }
+  .mid { margin-top: auto; }
+  .eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; font-family: 'Geist Mono', monospace; font-size: 18px; color: #6a6a64; }
+  .chip { padding: 5px 12px; border: 1px solid #e3e3de; border-radius: 999px; background: #fff; color: #111; }
+  h1 { font-size: 96px; font-weight: 600; line-height: .96; letter-spacing: -0.048em; }
+  .sub { margin-top: 14px; font-size: 34px; font-weight: 400; letter-spacing: -0.02em; color: #5c5c57; }
+  .bench { margin-top: 34px; width: 470px; font-family: 'Geist Mono', monospace; font-size: 17px; color: #6a6a64; }
+  .bench-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  .bench-row b { flex: none; width: 86px; font-weight: 400; color: #111; white-space: nowrap; }
+  .bar { height: 14px; border-radius: 0 4px 4px 0; }
+  .bar.ours { width: 300px; background: #c7285f; }
+  .bar.ex { width: 37px; background: #a6a69f; }
+  .bench-row span { color: #111; }
+  .figure { position: absolute; right: 6px; bottom: 0; height: 585px; }
+  .figure img { display: block; height: 100%; }
+  .note { margin-top: 22px; font-family: 'Geist Mono', monospace; font-size: 15px; color: #6a6a64; }
+</style></head>
+<body><div class="card">
+  <div class="left">
+    <div class="brand">AGI</div>
+    <div class="mid">
+      <div class="eyebrow"><span class="chip">Model release</span><span>September 24, 2026</span></div>
+      <h1>Introducing AGI</h1>
+      <p class="sub">Artificial Girlfriend Intelligence</p>
+      <div class="bench">
+        <div>TextsBack@1 · higher is better</div>
+        <div class="bench-row"><b>AGI-1</b><i class="bar ours"></i><span>100.0</span></div>
+        <div class="bench-row"><b>Your ex</b><i class="bar ex"></i><span>12.4</span></div>
+      </div>
+      <p class="note">$AGI on Robinhood Chain · a parody · not financial advice</p>
+    </div>
+  </div>
+  <div class="figure"><img src="agi1-wave.webp" alt=""></div>
+</div></body></html>

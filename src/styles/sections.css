@@ -1,0 +1,21 @@
+/* Shared look for the page sections below the hero. */
+.section { padding-top: clamp(88px, 12vw, 160px); scroll-margin-top: 72px; }
+.section-head { max-width: 760px; }
+.kicker { margin-bottom: 18px; font-family: var(--mono); font-size: 13px; color: var(--fg-3); }
+.h2 { font-size: clamp(32px, 4.6vw, 56px); font-weight: 600; line-height: 1.02; letter-spacing: -0.042em; text-wrap: balance; }
+.section-lede { margin-top: 18px; max-width: 38em; font-size: 17px; color: var(--fg-2); text-wrap: pretty; }
+
+/* stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 40px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.tile { display: flex; flex-direction: column; gap: 6px; padding: 22px 24px 4px 0; }
+.tile + .tile { padding-left: 24px; border-left: 1px solid var(--line); }
+.tile-label { font-size: 14px; color: var(--fg-2); }
+.tile-value { font-size: clamp(34px, 4vw, 48px); font-weight: 600; line-height: 1.05; letter-spacing: -0.035em; }
+.tile-note { font-size: 13px; color: var(--fg-3); }
+
+@media (max-width: 760px) {
+  .section-lede { font-size: 16px; }
+  .tiles { grid-template-columns: 1fr; }
+  .tile { padding: 18px 0; }
+  .tile + .tile { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+}

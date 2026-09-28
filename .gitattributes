@@ -1,0 +1,20 @@
+# Store text files with LF line endings everywhere, so Windows and
+# Linux tools agree. (In AGI FINAL, every file looked "changed" to
+# some tools only because of Windows-style line endings.)
+* text=auto eol=lf
+
+# Binary files: git must never touch their bytes
+*.glb   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.gif   binary
+*.ico   binary
+*.ktx2  binary
+*.bin   binary
+*.mp3   binary
+*.wav   binary
+*.ogg   binary
+*.woff  binary
+*.woff2 binary

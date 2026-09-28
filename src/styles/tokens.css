@@ -1,0 +1,87 @@
+/* ================================================================
+   AGI design tokens (see CLAUDE.md → "Design").
+   Light is the default. Dark comes from [data-theme="dark"], which /theme.js sets
+   before the page paints, or from the system setting when JavaScript is off.
+   Fonts are self-hosted (public/fonts, SIL Open Font License), so no third-party requests.
+   ================================================================ */
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #fafaf8;
+  --bg-2: #f1f1ee;
+  --fg: #111111;
+  --fg-2: #5c5c57;
+  --fg-3: #6a6a64;
+  --line: #e3e3de;
+  --accent: #c7285f;
+  --up: #0f7b45;
+  --down: #c52a1a;
+  --warn: #b25b00;             /* ClankChecker's "Some risk" dot (2026-09-26): only ever a small mark, never text */
+
+  /* charts (checked with the dataviz validator: ours vs. baseline stay apart for color-blind readers;
+     the gray sits under 3:1 on purpose, so every chart also shows its numbers and has a table view) */
+  --series-1: #c7285f;
+  --series-base: #a6a69f;
+  --grid: #e3e3de;
+
+  --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 14px;
+  --wrap: 1200px;
+  --gutter: 24px;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0b0b0c;
+  --bg-2: #141416;
+  --fg: #ededed;
+  --fg-2: #a1a1a6;
+  --fg-3: #86868c;
+  --line: #26262a;
+  --accent: #ff5c93;
+  --up: #3ecf8e;
+  --down: #ff6b6b;
+  --warn: #f2a33a;
+  --series-1: #e84d86;
+  --series-base: #55555b;
+  --grid: #26262a;
+  color-scheme: dark;
+}
+
+/* JavaScript off: follow the system setting. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #0b0b0c;
+    --bg-2: #141416;
+    --fg: #ededed;
+    --fg-2: #a1a1a6;
+    --fg-3: #86868c;
+    --line: #26262a;
+    --accent: #ff5c93;
+    --up: #3ecf8e;
+    --down: #ff6b6b;
+    --warn: #f2a33a;
+    --series-1: #e84d86;
+    --series-base: #55555b;
+    --grid: #26262a;
+    color-scheme: dark;
+  }
+}
+
+@media (max-width: 640px) {
+  :root { --gutter: 16px; --radius: 12px; }
+}

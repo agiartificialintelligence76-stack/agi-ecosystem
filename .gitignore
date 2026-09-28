@@ -1,10 +1,32 @@
-# Vercel's link to a project (never commit or copy this between projects)
-.vercel
+# ── Secrets: never commit these ─────────────────────────────
+.env
+.env.*
+!.env.example
 
-# Files Windows and macOS create on their own
-desktop.ini
-Thumbs.db
+# ── Vercel link: ties a folder to a Vercel project ──────────
+# Never commit it, and NEVER copy it from AGI FINAL (a deploy
+# from here would overwrite the live site).
+.vercel/
+
+# ── Installed packages and build output (npm re-creates them)
+node_modules/
+dist/
+
+# ── Big original art files (only optimized copies go in git)
+_source-assets/
+
+# ── Junk from editors / operating systems ───────────────────
 .DS_Store
+Thumbs.db
+desktop.ini
+*.log
 
-# X article covers (not part of the website)
+# ── Copies of files Claude sent in chat (the Claude desktop app
+#    saves them here). Not part of the site; may be out of date.
+Claude outputs/
+
+# The Telegram export AGI-1's group memory is built from (tools/memory/). Thousands of people's messages: never in git.
+telegram memories/
+
+# Covers and pictures for X posts about the site (not part of the website)
 x-article/

@@ -1,0 +1,253 @@
+{
+  "about": "Hand-written memory cards about the clank.trade (ex daos.fun) Telegram group, from the export in 'telegram memories/result.json'. build-memory.mjs merges these with the member cards it makes and writes server/tg-memory.json. Facts only, no accusations, no price predictions; AGI-1 adds the sarcasm. Edit freely, then rebuild.",
+  "cards": [
+    {
+      "id": "overview",
+      "keys": [
+        "telegram",
+        "tg",
+        "group chat",
+        "the group",
+        "your group",
+        "tg group",
+        "clank chat",
+        "clank trade group",
+        "clank.trade group",
+        "daos fun",
+        "daos.fun",
+        "daosfun",
+        "lore"
+      ],
+      "text": "The clank.trade Telegram group, formerly the DAOS.FUN group: 2 years (Sep 2024 to Sep 2026), about 62,500 messages from about 3,700 people. It started as the chat of daos.fun, a Solana app for 'investment DAOs', went through a wild launch, a rough patch and a long quiet spell, and came back in September 2026 as clank.trade, a coin launchpad on Robinhood Chain (where $AGI lives)."
+    },
+    {
+      "id": "era-start",
+      "keys": [
+        "early days",
+        "first days",
+        "investment dao",
+        "investment daos",
+        "september 2024",
+        "how it started"
+      ],
+      "text": "Sep 2024, the beginning: the group opened as DAOS.FUN. The idea: on-chain 'investment DAOs' on Solana, with a one-week fundraise, a fair launch at one price for everyone, then a fund manager trades and holders can redeem profits when the fund expires. Creators were gated by invite codes. The founder, baoskee, pinned a welcome for 'the earliest adopters of daos.fun'."
+    },
+    {
+      "id": "era-frenzy",
+      "keys": [
+        "october 2024",
+        "ai16z",
+        "invite code",
+        "wen invite",
+        "busiest day",
+        "aum"
+      ],
+      "text": "Oct 2024, the frenzy: the ai16z fund made daos.fun famous ('ai16z crashed the site'). On Oct 27 and 28 the chat hit about 2,300 messages a day. Everyone hunted invite codes, learned what AUM means the hard way, and one member called it 'the biggest 4 days of Solana transactions ever. I blame you @baoskee'. Meanwhile: 'hey database will be down for 2 minutes while upgrading'."
+    },
+    {
+      "id": "era-v3",
+      "keys": [
+        "november 2024",
+        "daos v3",
+        "party round",
+        "party rounds",
+        "pool party",
+        "public round"
+      ],
+      "text": "Nov 2024: 'ANNOUNCING DAOS V3: PARTY ROUND EDITION'. Party rounds came first, then public rounds, plus 'Pool Party' LPs for DAO tokens and a new home page. Schedules slipped ('First Party Rounds delayed to tomorrow… making finishing touches', with a promise to make the schedule more predictable). The group got topics for Issues, one in Chinese, and later a Türkiye topic."
+    },
+    {
+      "id": "era-rough",
+      "keys": [
+        "december 2024",
+        "wen refund",
+        "refunds",
+        "clickable",
+        "impersonator",
+        "impersonators"
+      ],
+      "text": "Dec 2024, the rough patch: several funds went badly, the chat got loud ('wen refund' everywhere), and the team paused approving new DAOs over a weekend to revisit the model. danny boyyyyyy from the team pinned an apology: 'we are working close to 24 hours every day… I really regret that this happened'. X started flagging daos.fun links as spam, so baoskee asked everyone to report the site as safe: 'Make daos.fun clickable again!'. Impersonator warnings every other day ('please check handle'). The year ended with a 'first day of Christmas' gift announcement."
+    },
+    {
+      "id": "era-2025",
+      "keys": [
+        "2025",
+        "complete guide",
+        "almost bond",
+        "summer revival",
+        "dao closures",
+        "closing daos"
+      ],
+      "text": "2025, the quiet year with flashes: Leon from the dev team wrote a 'COMPLETE GUIDE TO DAOS.FUN' that got pinned in March, bug reports moved to Discord, then a summer revival (Aug to Sep 2025) full of brand-new tickers and bonding curves ('almost bond, congratulations'). In October the team started closing old DAOs by community vote, with a long list of names nobody had said in months."
+    },
+    {
+      "id": "llm",
+      "keys": [
+        "$llm",
+        "latina language model",
+        "gllm",
+        "llm memorial day",
+        "llm coin",
+        "llm era"
+      ],
+      "text": "$LLM, the 'Latina Language Model', was the big coin of the summer 2025 revival. The group never let it go: people greet each other with 'gLLM', someone listed the eras as 'v1 ai16z, v2 LLM, next version AGI', and in Sep 2026 someone noted 'it's been a year since llm memorial day, and you still miss her'."
+    },
+    {
+      "id": "poop",
+      "keys": [
+        "poop",
+        "poop emoji",
+        "poop emojis",
+        "poop moji"
+      ],
+      "text": "Sep 2025, the poop saga: a coin called POOP had its moment, and Zank's 'poop emojis sidelined once again 😹😹😹' became one of the most-reacted messages ever (77 reactions), followed by 'if you want to send poop moji send it here lol'."
+    },
+    {
+      "id": "era-quiet",
+      "keys": [
+        "long quiet",
+        "dead chat",
+        "quiet period",
+        "quiet year"
+      ],
+      "text": "Late 2025 to Aug 2026, the long quiet: 300 to 600 messages a month, mostly 'gm', old-timers asking the founder to 'do something', and people checking if anyone was still here. Then September 2026 happened."
+    },
+    {
+      "id": "era-clank",
+      "keys": [
+        "september 2026",
+        "clank trade",
+        "clank.trade",
+        "clank beta",
+        "robinhood chain",
+        "over powered",
+        "overpowered",
+        "gpu clusters",
+        "3 clusters"
+      ],
+      "text": "Sep 2026, the reboot: the group became 'clank.trade (ex daos.fun)', a coin launchpad on Robinhood Chain, and went from about 400 messages a month to 7,000+. Beta-phase classics: 'we have not officially launched this yet… trade on our UI for now', 'fee structure will be announced once we build it out', 'we have 3 clusters of GPUs right now running ai characters', and the founder's 'clank trade will be big. the team is over powered'. One member: 'Daos.fun is the past. Clank Trade is the future.'"
+    },
+    {
+      "id": "the-three",
+      "keys": [
+        "cabo",
+        "$cabo",
+        "clankcat",
+        "$clankcat",
+        "clank cat",
+        "main runner",
+        "first token",
+        "test token",
+        "the three"
+      ],
+      "text": "Sep 2026, the group's favorite three: $AGI (AGI-1, called 'the main runner' of the new platform), $CABO (baoskee: 'it is confirmed 1st test token ever made on clank'; members say he deployed it) and $CLANKCAT (clank's mascot). People kept telling each other to 'just focus on the three'. On Sep 24 baoskee noted 'clankcat has more volume than agi lol', which AGI-1 has not forgiven."
+    },
+    {
+      "id": "anime",
+      "keys": [
+        "anime girl",
+        "anime character",
+        "artificial girlfriend launch",
+        "robinhood list"
+      ],
+      "text": "About $AGI itself: someone asked the founder 'did you launch artificial girlfriend?', one member pushed for a 'specific AGI community' because 'we tend to gravitate towards anime characters', and a skeptic joked that Robinhood would never list an anime girl. AGI-1 took that personally."
+    },
+    {
+      "id": "joke-gm",
+      "keys": [
+        "gdaos",
+        "gclank",
+        "gngm",
+        "gllm"
+      ],
+      "text": "Running joke: 'gm'. Said about 900 times on its own, plus 'gm gm', 'gmgm', 'gdaos', 'gLLM', 'gclank' and the rare 'gngm'. The group's greeting changed with every era's favorite thing."
+    },
+    {
+      "id": "joke-commands",
+      "keys": [
+        "/buy",
+        "/save_cat",
+        "/send_damp_to_1m",
+        "/buy_everything",
+        "/no_more_daos",
+        "bot commands",
+        "buy commands",
+        "slash commands"
+      ],
+      "text": "Running joke: slash-command spam. People typed fake bot commands as chants, hundreds of times: /buy_djai, /send_damp_to_1m, /save_cat, /team_support_kekcto, /buy_norm, /buy_everything, /no_more_daos, and one ticker command so popular (and so not PG-13) that AGI-1 refuses to say it. /report and /ban also got typed a lot, mostly as jokes."
+    },
+    {
+      "id": "joke-tag",
+      "keys": [
+        "@baoskee",
+        "doorbell"
+      ],
+      "text": "Running joke: '@baoskee' sent as a whole message, about 200 times, like ringing the founder's doorbell. Also popular: 'Rest master @baoskee, job well done', 'remember baoskee is sleeping rn', and 'do something'."
+    },
+    {
+      "id": "joke-wen",
+      "keys": [
+        "wen refund",
+        "wen invite",
+        "pay the dex",
+        "pay dex",
+        "paid dex"
+      ],
+      "text": "Running joke: the questions that never stop. 'wen invite code', 'wen launch', 'wen refund', 'CA?' (asked 90+ times on its own), and whether someone will 'pay the dex' (buy the DexScreener profile) for a coin."
+    },
+    {
+      "id": "joke-shill",
+      "keys": [
+        "not a shilling channel",
+        "stop shilling",
+        "shilling channel",
+        "raiding"
+      ],
+      "text": "Running joke: the endless war on shilling. Leon from the dev team, in capital letters: 'INSTEAD OF RAIDING OUR MAIN SERVER, YOU GUYS CAN RAID ON TWITTER INFLUENCERS, FOUNDERS ETC. THIS IS NOT A SHILLING CHANNEL. GROW UP.' Also: 'can you pls stop shilling fam, this is for daos.fun chat only'. It did not stop the shilling."
+    },
+    {
+      "id": "joke-invite",
+      "keys": [
+        "invite code",
+        "invite codes",
+        "creator code",
+        "wen invite"
+      ],
+      "text": "Best line about the invite-code era: 'getting an invite to @daosdotfun is harder than finding the private key to a wallet from 2012. If I promise to never say wen invite…'"
+    },
+    {
+      "id": "moment-welcome",
+      "keys": [
+        "most reacted",
+        "most popular message",
+        "best message",
+        "top message",
+        "gating creators"
+      ],
+      "text": "The most-reacted message in the group's history (157 reactions): the founder's pinned welcome from Oct 2024, 'welcome everyone, we're gating creators (to curate quality) and keeping app fair launched for all buyers / consumers'."
+    },
+    {
+      "id": "moment-languages",
+      "keys": [
+        "türkiye",
+        "turkish topic",
+        "chinese topic",
+        "中国"
+      ],
+      "text": "The group went international early: it has topics for Issues in Chinese, a 中国 topic and a Türkiye 🇹🇷 topic, and some of the most active members wrote in Chinese, Turkish and Vietnamese."
+    },
+    {
+      "id": "numbers",
+      "keys": [
+        "most active",
+        "most talkative",
+        "how many messages",
+        "how many members",
+        "biggest day",
+        "busiest day",
+        "group stats"
+      ],
+      "text": "Group numbers: about 62,500 messages and 13,000 'joined the group' notices from Sep 2024 to Sep 2026. The busiest days were Oct 27 and 28 2024 (about 2,300 messages each), then Sep 23 2026 (about 1,700). The most talkative members: Markyyester, baoskee, Leon 🦴| Tailwind.zone, Zank, Quaser, Just a lazy cat, debodhi (daos/acc), Rin Okumura, Tanjiro.eth and Chrisz."
+    }
+  ]
+}

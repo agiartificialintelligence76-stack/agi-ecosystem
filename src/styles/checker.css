@@ -1,0 +1,261 @@
+/* ClankChecker (src/sections/checker.js, 2026-09-26): every clank.trade coin as a hairline list (live: new launches glow
+   in at the top), each coin's picture in a circle (tap it: the big view, a native dialog), and AGI-1's answer about one coin
+   opening under it (her live view, the risk level, the flags and the facts). Risk colors are small dots only:
+   high = --down, some = --warn, lower = gray, not enough data = an empty ring. Text always stays in the page's text colors. */
+/* the heading's credit line (2026-09-27, the owner's): "ClankChecker POWERED BY $CLANKCAP terminal" and a small round 𝕏
+   link to its X account. On a phone it wraps after "ClankChecker", keeping the credit and its icon on one line */
+.chk-kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.chk-powered { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.chk-powered-by { font-size: 11.5px; letter-spacing: .04em; }
+.chk-powered b { font-weight: 500; color: var(--fg); }
+.chk-x {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none; color: var(--fg); text-decoration: none;
+  font-family: 'Segoe UI Symbol', 'Apple Symbols', 'STIX Two Math', 'Noto Sans Math', 'DejaVu Sans', sans-serif;
+  font-size: 13px; line-height: 1; background: var(--bg); border: 1px solid var(--line); border-radius: 50%;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.chk-x:hover { border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); background: var(--bg-2); }
+.chk-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.chk { margin-top: 44px; }
+.chk-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
+.chk-search {
+  display: flex; flex: 1 1 320px; align-items: center; gap: 10px; max-width: 520px; height: 42px; padding: 0 16px 0 14px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 999px; transition: border-color .15s ease;
+}
+.chk-search:focus-within { border-color: color-mix(in srgb, var(--fg) 45%, var(--line)); }
+.chk-search-icon { flex: none; width: 16px; height: 16px; color: var(--fg-3); }
+.chk-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; background: transparent; font-size: 14.5px; }
+.chk-search input::placeholder { color: var(--fg-3); }
+.chk-filters { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; }
+.chk-filter {
+  height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; cursor: pointer;
+  font-size: 13.5px; color: var(--fg-2); transition: color .15s ease, background-color .15s ease;
+}
+.chk-filter:hover { color: var(--fg); }
+.chk-filter.is-on { background: var(--fg); color: var(--bg); }
+.chk-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 16px 0 10px; }
+.chk-status { min-height: 1.6em; margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--fg-3); }
+/* live: a pulsing accent dot while the list updates itself, gray when it can't */
+.chk-live-box { display: flex; align-items: center; gap: 10px; }
+.chk-live { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--fg-3); white-space: nowrap; }
+.chk .chk-live .dot { width: 7px; height: 7px; background: var(--accent); animation: live 2.2s ease-out infinite; }
+.chk .chk-live[data-state='paused'] .dot, .chk .chk-live[data-state='error'] .dot { background: var(--fg-3); animation: none; }
+.chk-refresh {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px 0 9px; cursor: pointer;
+  font: inherit; font-size: 12.5px; color: var(--fg-2); background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
+  transition: color .15s ease, border-color .15s ease;
+}
+.chk-refresh:hover { color: var(--fg); border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+.chk-refresh svg { width: 13px; height: 13px; }
+.chk-refresh.is-busy svg { animation: chk-spin .8s linear infinite; }
+@keyframes chk-spin { to { transform: rotate(360deg); } }
+.chk-retry { padding: 0; border: 0; background: none; color: var(--fg); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* the list: a head row on computers, then one row per coin */
+.chk-head, .chk-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 124px 60px 90px 128px; align-items: center; gap: 16px; }
+.chk-head { padding: 10px 4px; font-size: 12px; color: var(--fg-3); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.chk-list { margin: 0; padding: 0; list-style: none; }
+.chk-item { border-bottom: 1px solid var(--line); scroll-margin-top: 72px; }
+.chk-row { padding: 12px 4px; }
+/* a coin's picture: its first letter underneath until the picture arrives (or when it has none); the picture is a button
+   that opens the big view */
+.chk-ava {
+  position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; font-size: 13px; font-weight: 500;
+  color: var(--fg-2); background: var(--bg-2); border: 1px solid var(--line); border-radius: 50%;
+}
+.chk-ava-btn, .chk-coin-pic {
+  position: absolute; inset: -1px; padding: 0; overflow: hidden; cursor: zoom-in; background: none;
+  border: 1px solid transparent; border-radius: 50%; transition: transform .15s ease;
+}
+.chk-ava-btn img, .chk-coin-pic img {
+  display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; opacity: 0; transition: opacity .2s ease;
+}
+.chk-ava-btn.is-loaded img, .chk-coin-pic img { opacity: 1; }
+.chk-ava-btn.is-loaded { background: var(--bg-2); border-color: var(--line); }
+.chk-ava-btn:hover, .chk-coin-pic:hover { transform: scale(1.06); }
+.chk-ava-btn:focus-visible, .chk-coin-pic:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* a coin with a crude name, before the 18+ check: blurred, with a small "18+" */
+.chk-ava-btn.is-veiled img, .chk-coin-pic.is-veiled img { filter: blur(5px) saturate(.8); transform: scale(1.15); }
+.chk-ava-btn.is-veiled::after, .chk-coin-pic.is-veiled::after {
+  content: '18+'; position: absolute; inset: 0; display: grid; place-items: center;
+  font: 600 9.5px/1 var(--mono); color: #fff; text-shadow: 0 0 3px rgb(0 0 0 / .8), 0 0 1px rgb(0 0 0 / .9);
+}
+/* just launched (it arrived while you're looking): a soft accent glow that fades */
+.chk-item.is-fresh { animation: chk-fresh 12s ease-out both; }
+@keyframes chk-fresh {
+  0% { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  100% { background: transparent; }
+}
+.chk-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.chk-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.chk-title b { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.chk-tags { display: contents; }
+.chk-sub { overflow: hidden; font-size: 13px; color: var(--fg-3); text-overflow: ellipsis; white-space: nowrap; }
+.chk-sub:empty { display: none; }
+.chk-meta { display: none; font-size: 12px; color: var(--fg-3); }
+.chk-stage, .chk-age, .chk-mcap { font-size: 13.5px; color: var(--fg-2); white-space: nowrap; }
+.chk-tag, .chk-pill {
+  display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px;
+  font-family: var(--mono); font-size: 11px; font-weight: 400; line-height: 1.5; color: var(--fg-2); white-space: nowrap;
+}
+.chk-tag.is-bad { color: var(--down); border-color: color-mix(in srgb, var(--down) 45%, var(--line)); }
+.chk-tag.is-official { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.chk-pill { color: var(--fg); }
+.chk-ask { justify-self: end; gap: 7px; padding: 0 13px; }
+.chk-ask svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
+.chk-item.is-open .chk-ask { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+.chk-empty { padding: 18px 4px; font-size: 14px; color: var(--fg-3); border-bottom: 1px solid var(--line); }
+.chk-more { margin-top: 16px; }
+
+/* risk dots */
+.chk .dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-3); animation: none; }
+.chk [data-level='high'] .dot, .chk [data-sev='high'] .dot { background: var(--down); }
+.chk [data-level='some'] .dot, .chk [data-sev='some'] .dot { background: var(--warn); }
+.chk [data-level='none'] .dot, .chk [data-level='scanning'] .dot, .chk [data-sev='info'] .dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--fg-3); }
+.chk [data-level='scanning'] .dot { animation: cam-wait 1.1s ease-in-out infinite; }
+
+/* ---------- one coin's answer: her live view on the left (a strip on phones), the scan on the right ---------- */
+.chk-answer {
+  display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 24px; margin: 0 0 16px; padding: 16px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.chk-cam {
+  position: sticky; top: 76px; align-self: start; aspect-ratio: 4 / 5; overflow: hidden; isolation: isolate;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+}
+/* "love" and "shy": the view blushes for a moment (--glow is set by src/stage/stage.js), as in the chat */
+.chk-cam::before {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: var(--glow, 0);
+  background: radial-gradient(75% 55% at 50% 32%, color-mix(in srgb, var(--accent) 32%, transparent), transparent 78%);
+}
+.chk-cam-still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; transition: opacity .4s ease; }
+.chk-cam-view { position: absolute; inset: 0; z-index: 2; }
+.chk-cam-view canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .35s ease; }
+.chk-cam.is-live .chk-cam-view canvas { opacity: 1; }
+.chk-cam.is-live .chk-cam-still { opacity: 0; }
+/* the little label: live · reading · speaking (src/sections/checker.js), once she's really there */
+.chk-cam-tag {
+  position: absolute; top: 10px; left: 10px; z-index: 3; display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px 3px 8px; font-size: 11px; line-height: 1.45; color: var(--fg-2); pointer-events: none;
+  background: color-mix(in srgb, var(--bg) 82%, transparent); border: 1px solid var(--line); border-radius: 999px;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.chk-cam:not(.is-live) .chk-cam-tag { display: none; }
+.chk-cam-tag .dot { width: 6px; height: 6px; background: var(--accent); }
+.chk-cam[data-state='reading'] .chk-cam-tag .dot { animation: cam-wait 1.1s ease-in-out infinite; }
+.chk-cam[data-state='speaking'] .chk-cam-tag .dot { animation: cam-talk .42s ease-in-out infinite alternate; }
+
+.chk-gate { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; align-self: start; padding: 16px; font-size: 14px; color: var(--fg-2); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; }
+.chk-gate-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: var(--fg); }
+.chk-gate .btn { margin-top: 4px; }
+
+.chk-result { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.chk-coin-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.chk-coin-pic { position: relative; inset: auto; flex: none; width: 40px; height: 40px; background: var(--bg); border-color: var(--line); }
+.chk-coin-pic[hidden] { display: none; }
+.chk-coin { font-size: 13px; color: var(--fg-2); overflow-wrap: anywhere; }
+.chk-coin:focus-visible { outline-offset: 4px; }
+.chk-level { display: flex; align-items: center; gap: 10px; font-size: clamp(24px, 2.6vw, 30px); font-weight: 600; line-height: 1.1; letter-spacing: -0.03em; }
+.chk-level .dot { width: 12px; height: 12px; }
+.chk-say { max-width: 38em; font-size: 17px; line-height: 1.5; text-wrap: pretty; }
+.chk-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.chk-actions .chip-btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13.5px; color: var(--fg-2); text-decoration: none; }
+.chk-actions .chip-btn:hover { color: var(--fg); }
+.chk-listen { color: var(--fg) !important; border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.chk-listen svg { width: 12px; height: 12px; fill: var(--accent); }
+.chk-flags { margin: 4px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.chk-flag { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; font-size: 14.5px; line-height: 1.45; border-bottom: 1px solid var(--line); }
+.chk-flag .dot { transform: translateY(-1px); }
+.chk-flag[data-sev='ok'], .chk-flag[data-sev='info'] { color: var(--fg-2); }
+.chk-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px 20px; margin: 4px 0 0; }
+.chk-facts div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.chk-facts dt { font-size: 12px; color: var(--fg-3); }
+.chk-facts dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.chk-fine { max-width: 560px; padding: 8px 11px; font-size: 12.5px; line-height: 1.55; color: var(--fg-2); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+
+/* how the scan works, and the note under the list */
+.chk-how { margin-top: 28px; font-size: 14px; color: var(--fg-2); }
+.chk-how summary { cursor: pointer; font-weight: 500; }
+.chk-how summary:hover { color: var(--fg); }
+.chk-how-body { max-width: 760px; margin-top: 10px; font-size: 13.5px; color: var(--fg-2); }
+.chk-how-body p + ul, .chk-how-body ul + p { margin-top: 8px; }
+.chk-how-body ul { margin: 0; padding-left: 18px; }
+.chk-how-body li + li { margin-top: 3px; }
+.chk-how-body b { font-weight: 600; color: var(--fg); }
+.chk-note { margin-top: 12px; font-size: 12.5px; color: var(--fg-3); }
+
+/* ---------- a coin's picture, big: a native dialog in the middle of the screen ---------- */
+.chk-zoom {
+  width: min(440px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0;
+  overflow: auto; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 30px 80px -30px rgb(0 0 0 / .55);
+}
+.chk-zoom[open] { animation: chk-zoom-in .18s ease-out; }
+@keyframes chk-zoom-in { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+.chk-zoom::backdrop { background: rgb(0 0 0 / .55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.chk-zoom-box { display: flex; flex-direction: column; gap: 8px; padding: 14px 14px 16px; }
+.chk-zoom-pic {
+  position: relative; aspect-ratio: 1; overflow: hidden; isolation: isolate;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
+}
+.chk-zoom-pic img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .25s ease; }
+.chk-zoom-low { object-fit: cover; filter: blur(8px); transform: scale(1.06); }
+.chk-zoom-img { object-fit: contain; }
+.chk-zoom-pic img.is-loaded { opacity: 1; }
+/* (the small one only while the big one loads: a picture with see-through parts would show it through) */
+.chk-zoom-pic.is-big .chk-zoom-low { opacity: 0; }
+.chk-zoom-pic.is-veiled img { filter: blur(24px); transform: scale(1.1); }
+.chk-zoom-veil {
+  position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 24px 28px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--fg);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+.chk-zoom-veil[hidden] { display: none; }
+.chk-zoom-veil b { font-weight: 600; }
+.chk-zoom-x {
+  position: absolute; top: 10px; right: 10px; z-index: 2; display: grid; place-items: center; width: 34px; height: 34px;
+  padding: 0; cursor: pointer; color: var(--fg); border: 1px solid var(--line); border-radius: 50%;
+  background: color-mix(in srgb, var(--bg) 85%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.chk-zoom-x svg { width: 14px; height: 14px; }
+.chk-zoom-x:hover { border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+.chk-zoom-title { margin-top: 6px; font-size: 14px; color: var(--fg-2); overflow-wrap: anywhere; }
+.chk-zoom-title b { margin-right: 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: var(--fg); }
+.chk-zoom-meta { font-size: 12.5px; color: var(--fg-3); }
+.chk-zoom-meta:empty { display: none; }
+.chk-zoom-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.chk-zoom-actions .chip-btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.chk-zoom-ask { gap: 7px; }
+.chk-zoom-ask svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
+.chk-zoom-note { font-size: 12px; color: var(--fg-3); }
+
+@media (max-width: 900px) {
+  .chk-head, .chk-row { grid-template-columns: 36px minmax(0, 1fr) 104px 52px 80px 120px; gap: 12px; }
+}
+/* phones: the stage, age and market cap go under the name; the answer stacks, with her live view as a strip on top that
+   stays in view under the top bar while you read the flags */
+@media (max-width: 760px) {
+  .chk-top { flex-direction: column; align-items: stretch; }
+  .chk-search { max-width: none; flex: none; }
+  .chk-filters { align-self: flex-start; }
+  .chk-head { display: none; }
+  .chk-list { border-top: 1px solid var(--line); }
+  .chk-row { grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; }
+  .chk-bar { align-items: flex-start; }
+  .chk-stage, .chk-age, .chk-mcap { display: none; }
+  .chk-meta { display: block; }
+  .chk-answer { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 12px; }
+  .chk-cam { top: 64px; z-index: 5; height: 176px; aspect-ratio: auto; box-shadow: 0 10px 24px -18px rgb(0 0 0 / .45); }
+  .chk-cam-still { object-fit: contain; object-position: 50% 50%; }
+  .chk-say { font-size: 16px; }
+}
+@media (max-width: 380px) {
+  .chk-filter { padding: 0 11px; font-size: 13px; }
+  .chk-ask { padding: 0 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chk .dot, .chk-cam-tag .dot, .chk-refresh.is-busy svg, .chk-zoom[open] { animation: none !important; }
+  .chk-item.is-fresh { animation: none; box-shadow: inset 2px 0 0 var(--accent); }
+  .chk-ava-btn:hover, .chk-coin-pic:hover { transform: none; }
+}

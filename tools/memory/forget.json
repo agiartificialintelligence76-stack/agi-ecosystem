@@ -1,0 +1,4 @@
+{
+  "about": "Telegram display names (exactly as they appear in the group) that AGI-1 must not remember. Add a name here when someone asks to be left out, then rebuild: node tools/memory/build-memory.mjs \"telegram memories/result.json\"",
+  "names": []
+}

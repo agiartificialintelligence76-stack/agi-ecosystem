@@ -1,0 +1,9 @@
+{
+  "name": "agi-cards-tool",
+  "private": true,
+  "type": "module",
+  "description": "Makes public/cards/*.png (link-preview pictures). Not part of the site build.",
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}
