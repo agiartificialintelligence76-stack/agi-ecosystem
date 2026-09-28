@@ -18,7 +18,9 @@ const ETH_USD = '2689.164696758498861512';
 const CURVE = '0x3e73c6bc1dd85e5037080be44403fff0f160a3fa';
 const HOOKS = '0x18bff70216af1b93f3552016dec742c5d78ee000';
 const CREATOR = '0x001ac0ffeec0ffeec0ffeec0ffeec0ffeec0ffee';
-const CABO = '0xcf5b720f33febdc1c9d4880b8317203b63fdf368';
+const CABO = '0xcf5b720f33febdc1c9d4880b8317203b63fdf368';   // on clank.trade, but never shown on this site (2026-09-28)
+const MEOW = '0x4444444444444444444444444444444444444444';
+const ABC = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';
 const COIN = '0x8d45402124cc47687075b911af28bd2f246eb212';
 const DEAD = '0x7ee4501111111111111111111111111111111111';
 // real content ids from clank.trade's list (2026-09-26)
@@ -49,8 +51,8 @@ function detail(o = {}) {
     threshold: '4276363636363636363', ...o,
   };
 }
-// a healthy graduated coin, like CABO on 2026-09-26
-const grad = (o = {}) => detail({ address: CABO, name: 'Cabo', symbol: 'CABO', state: 3, progress: 100, marketCap: 49.29, reserve: '0', createdAt: String(S - 10 * D), ...o });
+// a healthy graduated coin (its numbers are a real one's, 2026-09-26)
+const grad = (o = {}) => detail({ address: MEOW, name: 'Meow', symbol: 'MEOW', state: 3, progress: 100, marketCap: 49.29, reserve: '0', createdAt: String(S - 10 * D), ...o });
 const scanOf = (o) => analyze({ detail: detail(), holders: holdersOf([[CURVE, 60], ...spread(60, 0.5)]), trades: lively(), ethUsd: Number(ETH_USD), sameTicker: [], now: NOW, ...o });
 const has = (scan, id, sev) => scan.flags.some((f) => f.id === id && (!sev || f.sev === sev));
 
@@ -200,15 +202,15 @@ test('words and numbers: tickers as shown, the same ticker, dollars, percents, t
   assert.deepEqual([timeText(5 * 60_000), timeText(3 * 3_600_000), timeText(10 * 86_400_000), timeText(20_000)], ['5 minutes', '3 hours', '10 days', '1 minute']);
 });
 
-test('a healthy graduated coin (like CABO): Lower risk, with its pool, its holders and the facts', () => {
+test('a healthy graduated coin (like a real one): Lower risk, with its pool, its holders and the facts', () => {
   const s = analyze({
     detail: grad(), holders: holdersOf([[POOL_MANAGER, 14.84], [wallet(1), 4.47], [wallet(2), 3.52], [CREATOR, 3.39], ...spread(96, 0.9)]),
-    trades: lively(100, 290), ethUsd: Number(ETH_USD), sameTicker: [listRow({ address: CABO, symbol: 'CABO', name: 'Cabo', state: 3, progress: 100, marketCap: 49.29 })],
+    trades: lively(100, 290), ethUsd: Number(ETH_USD), sameTicker: [listRow({ address: MEOW, symbol: 'MEOW', name: 'Meow', state: 3, progress: 100, marketCap: 49.29 })],
     dex: { liquidity: 36547.73, change: -16.56, volume: 28307.29 }, holderCount: 465, now: NOW,
   });
   assert.equal(s.level, 'low');
-  assert.equal(s.address, CABO);
-  assert.equal(s.symbol, 'CABO');
+  assert.equal(s.address, MEOW);
+  assert.equal(s.symbol, 'MEOW');
   assert.equal(s.graduated, true);
   assert.ok(has(s, 'stage', 'ok') && has(s, 'pool', 'ok') && has(s, 'spread', 'ok') && has(s, 'creator', 'ok'));
   assert.ok(s.flags.some((f) => f.text === '464 wallets hold it.'), 'the block explorer\'s count, minus its pool');
@@ -221,9 +223,9 @@ test('a healthy graduated coin (like CABO): Lower risk, with its pool, its holde
   assert.equal(facts.Holders, '464');
   assert.equal(facts['Biggest wallet'], '4.5%');
   assert.equal(facts['Creator holds'], '3.4%');
-  assert.equal(facts.Contract, '0xcf5b…f368');
-  assert.equal(s.links.clank, `https://clank.trade/coin/${CABO}`);
-  assert.equal(s.links.explorer, `https://robinhoodchain.blockscout.com/token/${CABO}`);
+  assert.equal(facts.Contract, '0x4444…4444');
+  assert.equal(s.links.clank, `https://clank.trade/coin/${MEOW}`);
+  assert.equal(s.links.explorer, `https://robinhoodchain.blockscout.com/token/${MEOW}`);
   // nothing in it tells anyone to buy or sell, or calls it safe
   for (const f of [...s.flags.map((x) => x.text), ...s.facts.map((x) => `${x.label} ${x.value}`)]) assert.doesNotMatch(f, /\b(buy|sell|safe|safer|moon|pump)\b/i, f);
 });
@@ -319,10 +321,10 @@ test('copycat tickers: $AGI\'s copies, a smaller coin with a graduated one\'s ti
   assert.ok(real.flags.some((f) => f.id === 'ticker' && f.sev === 'info' && f.text === '1 other clank.trade coin uses the same ticker: make sure you have this contract.'));
   assert.equal(checkLine(real).key, 'check-agi');
   // a smaller coin with a graduated coin's ticker
-  const cabo = listRow({ address: CABO, symbol: 'CABO', name: 'Cabo', state: 3, progress: 100, marketCap: 49 });
-  const small = scanOf({ detail: detail({ symbol: 'CABO', name: 'Cabo Mascot' }), sameTicker: [cabo] });
+  const meow = listRow({ address: MEOW, symbol: 'MEOW', name: 'Meow', state: 3, progress: 100, marketCap: 49 });
+  const small = scanOf({ detail: detail({ symbol: 'MEOW', name: 'Meow Mascot' }), sameTicker: [meow] });
   assert.equal(small.level, 'high');
-  assert.ok(small.flags.some((f) => f.text === 'Copycat ticker: the biggest $CABO on clank.trade is another coin (0xcf5b…f368), which has graduated.'));
+  assert.ok(small.flags.some((f) => f.text === 'Copycat ticker: the biggest $MEOW on clank.trade is another coin (0x4444…4444), which has graduated.'));
   // look-alikes of about the same size: a smaller flag
   const twin = scanOf({ detail: detail({ symbol: 'E/ACC' }), sameTicker: [listRow({ address: DEAD, symbol: 'EACC', name: 'x', progress: 25, marketCap: 3.5 })] });
   assert.ok(twin.flags.some((f) => f.id === 'ticker' && f.sev === 'some' && f.text === '1 other clank.trade coin uses the ticker $E/ACC too: check the contract address.'));
@@ -362,21 +364,25 @@ test('every coin is shown (the owner, round 2): crude names as they are, marked 
 });
 
 test('checkCoin: one request to clank.trade for the coin, then its ticker, its pool and its holders, at the same time', async () => {
-  fake.coins[CABO] = { detail: grad(), holders: holdersOf([[POOL_MANAGER, 14.84], ...spread(99, 0.8)]), trades: lively(120, 290) };
-  fake.search.CABO = [listRow({ address: CABO, symbol: 'CABO', name: 'Cabo', state: 3, progress: 100, marketCap: 49 })];
-  fake.dex[CABO] = [pair(CABO, 36547.73)];
-  fake.explorer[CABO] = 465;
-  const s = await checkCoin(CABO, { now: NOW });
+  fake.coins[MEOW] = { detail: grad(), holders: holdersOf([[POOL_MANAGER, 14.84], ...spread(99, 0.8)]), trades: lively(120, 290) };
+  fake.search.MEOW = [listRow({ address: MEOW, symbol: 'MEOW', name: 'Meow', state: 3, progress: 100, marketCap: 49 })];
+  fake.dex[MEOW] = [pair(MEOW, 36547.73)];
+  fake.explorer[MEOW] = 465;
+  const s = await checkCoin(MEOW, { now: NOW });
   assert.equal(s.level, 'low');
   const first = new URL(calls[0]);
   assert.equal(first.pathname, '/v1/trpc/coins.detail,coins.holders,coins.trades,exchangeRates.tokenUsdg');
-  assert.deepEqual(JSON.parse(first.searchParams.get('input')), { 0: { address: CABO }, 1: { address: CABO }, 2: { address: CABO, limit: 100 }, 3: { token: '0x0000000000000000000000000000000000000000' } });
+  assert.deepEqual(JSON.parse(first.searchParams.get('input')), { 0: { address: MEOW }, 1: { address: MEOW }, 2: { address: MEOW, limit: 100 }, 3: { token: '0x0000000000000000000000000000000000000000' } });
   assert.equal(first.searchParams.get('batch'), '1');
   assert.equal(calls.length, 4, 'then its ticker (clank.trade\'s search), DexScreener and the block explorer');
-  assert.ok(calls.some((u) => u.startsWith('https://clank.trade/v1/trpc/coins.list?') && JSON.parse(new URL(u).searchParams.get('input'))[0].query === 'CABO'));
-  assert.ok(calls.includes(`https://api.dexscreener.com/tokens/v1/robinhood/${CABO}`));
-  assert.ok(calls.includes(`https://robinhoodchain.blockscout.com/api/v2/tokens/${CABO}`));
+  assert.ok(calls.some((u) => u.startsWith('https://clank.trade/v1/trpc/coins.list?') && JSON.parse(new URL(u).searchParams.get('input'))[0].query === 'MEOW'));
+  assert.ok(calls.includes(`https://api.dexscreener.com/tokens/v1/robinhood/${MEOW}`));
+  assert.ok(calls.includes(`https://robinhoodchain.blockscout.com/api/v2/tokens/${MEOW}`));
   for (const u of calls) assert.match(u, /^https:\/\/(clank\.trade\/v1\/trpc\/|api\.dexscreener\.com\/tokens\/v1\/robinhood\/|robinhoodchain\.blockscout\.com\/api\/v2\/tokens\/)/, 'only these three');
+  // our server names itself (the site's address), so clank.trade can see who's asking (since 2026-09-28 "ClankChecker": the
+  // Arena, whose name it had, left the site)
+  const clankAsks = calls.map((u, i) => [u, inits[i]]).filter(([u]) => u.startsWith('https://clank.trade/'));
+  assert.ok(clankAsks.length && clankAsks.every(([, init]) => /\(compatible; ClankChecker\/1\.0; \+https:\/\/agi1\.app\)$/.test(init.headers?.['User-Agent'])), 'the bot name names agi1.app');
   // a coin on its curve with fewer than 100 holders: no DexScreener, no block explorer
   calls = [];
   fake.coins[COIN] = { detail: detail(), holders: holdersOf([[CURVE, 60], ...spread(40, 0.9)]), trades: lively() };
@@ -405,8 +411,10 @@ test('the list: every page, trending ranks, dollars, copycats marked, every coin
       listRow({ address: DEAD, symbol: 'AGI', name: 'Artificial Girlfriend Intelligence', progress: 0, createdAt: S - 3 * D })],
     [listRow({ address: OFFICIAL, symbol: 'AGI', name: 'Artificial Girlfriend Intelligence', state: 3, progress: 100, marketCap: 543, createdAt: S - 10 * D, image: `ipfs://${CID1}` }),
       listRow({ address: wallet(9), symbol: 'CUM', name: 'Clank Uwu Model', state: 3, progress: 100, marketCap: 31 })],
-    [listRow({ address: CABO, symbol: 'CABO', name: 'Cabo', state: 3, progress: 100, marketCap: 49.29 }),
-      listRow({ address: wallet(10), symbol: 'CABO', name: 'Cabo Mascot', progress: 0.02, marketCap: 1.55 })],
+    [listRow({ address: MEOW, symbol: 'MEOW', name: 'Meow', state: 3, progress: 100, marketCap: 49.29 }),
+      listRow({ address: wallet(10), symbol: 'MEOW', name: 'Meow Mascot', progress: 0.02, marketCap: 1.55 }),
+      // $CABO is still on clank.trade, but this site never shows it (2026-09-28): it leaves the list and the counts
+      listRow({ address: CABO, symbol: 'CABO', name: 'Cabo', state: 3, progress: 100, marketCap: 60 })],
   ];
   fake.trending = [OFFICIAL, COIN];
   const r = await get();
@@ -416,11 +424,12 @@ test('the list: every page, trending ranks, dollars, copycats marked, every coin
   assert.equal(calls.length, 3, 'three pages (the first one with the trending list and the ETH price)');
   assert.match(calls[0], /\/v1\/trpc\/coins\.list,coins\.trending,exchangeRates\.tokenUsdg\?batch=1/);
   assert.deepEqual(JSON.parse(new URL(calls[1]).searchParams.get('input')), { 0: { cursor: 'p1' } });
-  assert.equal(list.total, 6);
+  assert.equal(list.total, 6, '7 on clank.trade, without $CABO');
   assert.equal('hidden' in list, false);
   assert.equal(list.graduated, 3);
   assert.equal(list.complete, true);
   assert.equal(list.coins.length, 6);
+  assert.ok(!JSON.stringify(list).includes('CABO') && !JSON.stringify(list).includes(CABO), 'nothing about $CABO in the list');
   const by = Object.fromEntries(list.coins.map((c) => [c.address, c]));
   assert.equal(by[wallet(9)].symbol, 'CUM', 'every coin clank.trade has (the owner: "they are part of clank trade")');
   assert.equal(by[wallet(9)].adult, true, '…its picture waits for the 18+ check');
@@ -433,15 +442,33 @@ test('the list: every page, trending ranks, dollars, copycats marked, every coin
   assert.equal(by[OFFICIAL].marketCap, Math.round(543 * Number(ETH_USD)));
   assert.equal(by[DEAD].copyOfficial, true);
   assert.equal(by[DEAD].copyOf, OFFICIAL);
-  assert.equal(by[wallet(10)].copyOf, CABO);
-  assert.equal(by[CABO].copyOf, null);
-  assert.equal(by[CABO].sameTicker, 1);
+  assert.equal(by[wallet(10)].copyOf, MEOW);
+  assert.equal(by[MEOW].copyOf, null);
+  assert.equal(by[MEOW].sameTicker, 1);
   assert.equal(by[COIN].createdAt, (S - 2 * H) * 1000);
   assert.deepEqual(Object.keys(by[COIN]).sort(), ['address', 'adult', 'copyOf', 'copyOfficial', 'createdAt', 'graduated', 'image', 'marketCap', 'name', 'official', 'progress', 'sameTicker', 'symbol', 'trending']);
   // the next visitor (within 2 minutes) gets this server copy's list without asking clank.trade again
   calls = [];
   assert.equal((await get()).status, 200);
   assert.equal(calls.length, 0);
+});
+
+test('$CABO (2026-09-28): no scan, no picture and no place in the newest coins on this site', async () => {
+  fake.coins[CABO] = { detail: detail({ address: CABO, symbol: 'CABO', name: 'Cabo', image: `ipfs://${CID1}` }), holders: [], trades: [] };
+  fake.pictures[CID1] = { type: 'image/png', bytes: PNG };
+  const scan = await get(`?a=${CABO}`);
+  assert.equal(scan.status, 200);
+  assert.deepEqual(await scan.json(), { address: CABO, error: 'removed' });
+  assert.equal((await get(`?logo=${CABO}&s=96`)).status, 404);
+  assert.equal(calls.length, 0, 'clank.trade is never asked about it');
+  // a copycat with the same ticker at another address: its scan is refused too
+  fake.coins[MEOW] = { detail: detail({ address: MEOW, symbol: 'CABO', name: 'Cabo Again' }), holders: [], trades: [] };
+  assert.deepEqual(await (await get(`?a=${MEOW}`)).json(), { address: MEOW, error: 'removed' });
+  fake.pages = [[listRow({ address: CABO, symbol: 'CABO', name: 'Cabo' }), listRow({ address: COIN, symbol: 'E/ACC', name: 'x' })]];
+  fake.trending = [CABO, COIN];
+  const latest = await (await get('?latest')).json();
+  assert.deepEqual(latest.coins.map((c) => c.symbol), ['E/ACC']);
+  assert.deepEqual(latest.trending.map((c) => c.address), [COIN], "clank.trade's trending list without it");
 });
 
 test('the list: at most MAX_PAGES pages, and clank.trade down → 503 (nothing guessed, nothing cached)', async () => {
@@ -471,9 +498,9 @@ test('markCopycats: the site\'s own coin, then a graduated one, then the biggest
 
 // ---------- the API ----------
 test('only these addresses exist: the list, ?latest, ?a=<address>, ?logo=<address>&s=96|512; everything else stops before any lookup', async () => {
-  for (const search of ['?a=0xCF5B720F33FEBDC1C9D4880B8317203B63FDF368', `?a=${CABO}&x=1`, `?x=1&a=${CABO}`, '?a=0x123', '?a=', '?q=agi', `?a=${CABO}%20`,
-    '?latest=1', '?latest&x', '?LATEST', `?logo=${CABO}`, `?logo=${CABO}&s=64`, `?logo=${CABO}&s=256`, `?logo=${CABO}&s=96&v=2`, `?s=96&logo=${CABO}`,
-    `?logo=${CABO.toUpperCase().replace('0X', '0x')}&s=96`, '?logo=0x123&s=96']) {
+  for (const search of [`?a=${ABC.toUpperCase().replace('0X', '0x')}`, `?a=${ABC}&x=1`, `?x=1&a=${ABC}`, '?a=0x123', '?a=', '?q=agi', `?a=${ABC}%20`,
+    '?latest=1', '?latest&x', '?LATEST', `?logo=${ABC}`, `?logo=${ABC}&s=64`, `?logo=${ABC}&s=256`, `?logo=${ABC}&s=96&v=2`, `?s=96&logo=${ABC}`,
+    `?logo=${ABC.toUpperCase().replace('0X', '0x')}&s=96`, '?logo=0x123&s=96']) {
     const r = await get(search);
     assert.equal(r.status, 400, search);
     assert.equal(r.headers.get('cache-control'), 'no-store');
@@ -521,18 +548,18 @@ test('the page: filters, search, order, and how numbers read', () => {
   const list = [
     c('0x01', 'AGI', 'Artificial Girlfriend Intelligence', { graduated: true, progress: 100, marketCap: 1_460_000, trending: 1 }),
     c('0x02', 'E/ACC', 'Egirl Acceleration', { progress: 22, marketCap: 10_900, createdAt: now - 2 * 3_600_000, trending: 2 }),
-    c('0x03', 'CABO', 'Cabo', { graduated: true, progress: 100, marketCap: 132_000 }),
+    c('0x03', 'MEOW', 'Meow', { graduated: true, progress: 100, marketCap: 132_000 }),
     c('0x04', 'AGIX', 'Agi Copy', { progress: 0, marketCap: 4170, createdAt: now - 30 * 60_000 }),
   ];
-  assert.deepEqual(pick(list).map((x) => x.symbol), ['AGIX', 'E/ACC', 'AGI', 'CABO'], 'newest first, like clank.trade (the default)');
-  assert.deepEqual(pick(list, { filter: 'biggest' }).map((x) => x.symbol), ['AGI', 'CABO', 'E/ACC', 'AGIX'], 'biggest: by market cap');
+  assert.deepEqual(pick(list).map((x) => x.symbol), ['AGIX', 'E/ACC', 'AGI', 'MEOW'], 'newest first, like clank.trade (the default)');
+  assert.deepEqual(pick(list, { filter: 'biggest' }).map((x) => x.symbol), ['AGI', 'MEOW', 'E/ACC', 'AGIX'], 'biggest: by market cap');
   assert.deepEqual(pick(list, { filter: 'trending', now }).map((x) => x.symbol), ['AGI', 'E/ACC']);
-  assert.deepEqual(pick(list, { filter: 'graduated', now }).map((x) => x.symbol), ['AGI', 'CABO']);
+  assert.deepEqual(pick(list, { filter: 'graduated', now }).map((x) => x.symbol), ['AGI', 'MEOW']);
   assert.notEqual(pick(list), list, 'never sorts the page\'s own list in place');
   assert.deepEqual(pick(list, { query: 'agi', now }).map((x) => x.symbol), ['AGI', 'AGIX'], 'the exact ticker first');
-  assert.deepEqual(pick(list, { query: '$cabo', now }).map((x) => x.symbol), ['CABO']);
+  assert.deepEqual(pick(list, { query: '$meow', now }).map((x) => x.symbol), ['MEOW']);
   assert.deepEqual(pick(list, { query: 'egirl', now }).map((x) => x.symbol), ['E/ACC'], 'by name');
-  assert.deepEqual(pick(list, { query: '0x03', now }).map((x) => x.symbol), ['CABO'], 'by address');
+  assert.deepEqual(pick(list, { query: '0x03', now }).map((x) => x.symbol), ['MEOW'], 'by address');
   assert.deepEqual([usdShort(1_460_000), usdShort(10_900), usdShort(840), usdShort(null)], ['$1.46M', '$10.9K', '$840', '—']);
   assert.deepEqual([ageShort(30 * 60_000), ageShort(5 * 3_600_000), ageShort(10 * DAY_MS)], ['30 min', '5 h', '10 d']);
   assert.deepEqual([stageText({ graduated: true, progress: 100 }), stageText({ graduated: false, progress: 22.23 }), stageText({ graduated: false, progress: 0.22 })], ['Graduated', 'Curve 22%', 'Curve 0.2%']);
@@ -584,12 +611,12 @@ test('the page merges the newest coins: new launches added, known ones updated, 
   const coin = (address, symbol, o = {}) => tidyCoin({ address, symbol, name: symbol, graduated: false, progress: 5, createdAt: 1000, marketCap: 4000, trending: 0, ...o });
   const coins = [
     coin(`0x${'a'.repeat(40)}`, 'AGI', { graduated: true, progress: 100, marketCap: 1_000_000, trending: 1, official: true }),
-    coin(`0x${'b'.repeat(40)}`, 'CABO', { graduated: true, progress: 100, marketCap: 120_000, trending: 2 }),
+    coin(`0x${'b'.repeat(40)}`, 'MEOW', { graduated: true, progress: 100, marketCap: 120_000, trending: 2 }),
     coin(`0x${'c'.repeat(40)}`, 'MOON', { progress: 3, marketCap: 4000 }),
   ];
   const added = mergeLatest(coins, {
     coins: [
-      { address: `0x${'d'.repeat(40)}`, symbol: 'CABO', name: 'Cabo 2', graduated: false, progress: 0, createdAt: 5000, marketCap: 4100, trending: 0, image: true, adult: false },
+      { address: `0x${'d'.repeat(40)}`, symbol: 'MEOW', name: 'Meow 2', graduated: false, progress: 0, createdAt: 5000, marketCap: 4100, trending: 0, image: true, adult: false },
       { address: `0x${'c'.repeat(40)}`, symbol: 'MOON', name: 'Moon', graduated: true, progress: 100, createdAt: 1000, marketCap: 90_000, trending: 7, copyOf: 'x' },
       { address: 'not a coin' },
     ],
@@ -598,7 +625,7 @@ test('the page merges the newest coins: new launches added, known ones updated, 
       { address: `0x${'e'.repeat(40)}`, rank: 2, marketCap: 5, progress: 1, graduated: false },
     ],
   });
-  assert.deepEqual(added.map((c) => c.symbol), ['CABO'], 'the new launch');
+  assert.deepEqual(added.map((c) => c.symbol), ['MEOW'], 'the new launch');
   assert.equal(coins.length, 4);
   const by = Object.fromEntries(coins.map((c) => [c.address, c]));
   assert.equal(by[`0x${'c'.repeat(40)}`].graduated, true, 'a coin that graduated since');
@@ -639,14 +666,14 @@ test('?logo=: a coin\'s picture from clank.trade\'s own picture host, checked, s
   assert.deepEqual(PICTURE_SIZES, [96, 512]);
   // a coin this server copy hasn't listed: its details from clank.trade, once
   forgetPictures();
-  fake.coins[CABO] = { detail: grad({ image: `ipfs://${CID1}` }), holders: [], trades: [] };
+  fake.coins[MEOW] = { detail: grad({ image: `ipfs://${CID1}` }), holders: [], trades: [] };
   fake.pictures[CID1] = { type: 'image/png', bytes: PNG };
   calls = [];
-  assert.equal((await get(`?logo=${CABO}&s=96`)).status, 200);
+  assert.equal((await get(`?logo=${MEOW}&s=96`)).status, 200);
   assert.equal(calls.length, 2);
   assert.match(calls[0], /\/v1\/trpc\/coins\.detail\?batch=1/);
   calls = [];
-  assert.equal((await get(`?logo=${CABO}&s=512`)).status, 200);
+  assert.equal((await get(`?logo=${MEOW}&s=512`)).status, 200);
   assert.equal(calls.length, 1, 'remembered');
 });
 
@@ -691,9 +718,9 @@ test('?logo=: no picture, not a clank.trade coin, not a real picture, too big, t
   const hidden = await get(`?logo=${COIN}&s=512`);
   assert.equal(hidden.status, 404);
   assert.equal(calls.length, 0, 'not even fetched');
-  fake.pages = [[listRow({ address: COIN, symbol: 'E/ACC', name: 'x', image: `ipfs://${CID1}` }), listRow({ address: CABO, symbol: 'CABO', name: 'Cabo', image: `ipfs://${CID2}` })]];
+  fake.pages = [[listRow({ address: COIN, symbol: 'E/ACC', name: 'x', image: `ipfs://${CID1}` }), listRow({ address: MEOW, symbol: 'MEOW', name: 'Meow', image: `ipfs://${CID2}` })]];
   const list = await (await get()).json();
-  assert.deepEqual(list.coins.map((c) => [c.symbol, c.image]), [['E/ACC', false], ['CABO', true]]);
+  assert.deepEqual(list.coins.map((c) => [c.symbol, c.image]), [['E/ACC', false], ['MEOW', true]]);
   const latest = await (await get('?latest')).json();
   assert.equal(latest.coins.find((c) => c.address === COIN).image, false);
   fake.coins[COIN] = { detail: detail({ image: `ipfs://${CID1}` }), holders: holdersOf([[CURVE, 60], ...spread(40, 0.9)]), trades: lively() };

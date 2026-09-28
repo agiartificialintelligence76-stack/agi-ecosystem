@@ -15,6 +15,7 @@ import { getConfig } from '../server/config.js';
 import { clientIp, visitorCode, ipGroup } from '../server/security.js';
 import { checkerBurst, pictureBurst } from '../server/burst.js';
 import { scanClank, latestClank, checkCoin, coinPictureId, fetchCoinPicture } from '../server/checker.js';
+import { isHiddenCoin } from '../server/arena.js';
 
 const DAY = 86_400_000;
 const noStore = { 'Cache-Control': 'no-store' };
@@ -50,6 +51,16 @@ async function newest() {
 // the owner's hidden pictures: those coins show their letter instead
 const withoutHidden = (cfg, coins) => (cfg.checkerHidePictures.size
   ? coins.map((c) => (cfg.checkerHidePictures.has(c.address) ? { ...c, image: false } : c)) : coins);
+// the coins this site never shows (2026-09-28: $CABO, server/arena.js) leave the lists, and the counts with them
+function forThisSite(cfg, data) {
+  const coins = Array.isArray(data?.coins) ? data.coins : [];
+  const gone = coins.filter((c) => isHiddenCoin(c.symbol, c.address));
+  const out = { ...data, coins: withoutHidden(cfg, coins.filter((c) => !gone.includes(c))) };
+  if (Number.isFinite(data?.total)) out.total = Math.max(0, data.total - gone.length);
+  if (Number.isFinite(data?.graduated)) out.graduated = Math.max(0, data.graduated - gone.filter((c) => c.graduated).length);
+  if (Array.isArray(data?.trending)) out.trending = data.trending.filter((c) => !isHiddenCoin(c?.symbol, c?.address ?? c));
+  return out;
+}
 const visitor = (cfg, request) => { const ip = clientIp(request); return cfg.passSecret ? visitorCode(cfg.passSecret, ip) : ipGroup(ip); };
 
 export async function GET(request) {
@@ -58,7 +69,7 @@ export async function GET(request) {
   if (search === '' || search === '?') {
     try {
       const list = await coinList();
-      return Response.json({ ...list, coins: withoutHidden(cfg, list.coins) }, { headers: LIST });
+      return Response.json(forThisSite(cfg, list), { headers: LIST });
     } catch (err) {
       console.error(`[checker] couldn't read clank.trade's coin list: ${err.message}`);
       return Response.json({ error: 'unverified' }, { status: 503, headers: noStore });
@@ -67,7 +78,7 @@ export async function GET(request) {
   if (search === '?latest') {
     try {
       const data = await newest();
-      return Response.json({ ...data, coins: withoutHidden(cfg, data.coins) }, { headers: LATEST });
+      return Response.json(forThisSite(cfg, data), { headers: LATEST });
     } catch (err) {
       console.warn(`[checker] couldn't read clank.trade's newest coins: ${err.message}`);
       return Response.json({ error: 'unverified' }, { status: 503, headers: noStore });
@@ -77,6 +88,7 @@ export async function GET(request) {
   if (pic) return picture(cfg, request, pic[1], Number(pic[2]));
   const m = /^\?a=(0x[0-9a-f]{40})$/.exec(search);
   if (!m) return Response.json({ error: 'bad_request' }, { status: 400, headers: noStore });
+  if (isHiddenCoin('', m[1])) return Response.json({ address: m[1], error: 'removed' }, { headers: cache(300, 3600) });
   if (!checkerBurst(visitor(cfg, request))) return Response.json({ error: 'slow_down' }, { status: 429, headers: noStore });
   const now = Date.now();
   const scan = await checkCoin(m[1], { now });
@@ -84,6 +96,7 @@ export async function GET(request) {
   // it's a 200 (browsers log every 404 as an error)
   if (scan.error === 'not_clank') return Response.json({ address: m[1], error: 'not_clank' }, { headers: cache(30, 60) });
   if (scan.error) return Response.json(scan, { status: 503, headers: noStore });
+  if (isHiddenCoin(scan.symbol, scan.address)) return Response.json({ address: m[1], error: 'removed' }, { headers: cache(300, 3600) });
   if (cfg.checkerHidePictures.has(scan.address)) scan.image = false;
   return Response.json(scan, { headers: scanCache(scan, now) });
 }
@@ -92,7 +105,7 @@ export async function GET(request) {
 // from our own address (the page's security rules only allow our own pictures). Kept by the CDN a week, browsers an hour.
 async function picture(cfg, request, address, size) {
   const none = (status, error, seconds) => Response.json({ error }, { status, headers: seconds ? cache(seconds, seconds) : noStore });
-  if (cfg.checkerHidePictures.has(address)) return none(404, 'no_picture', 3600);
+  if (cfg.checkerHidePictures.has(address) || isHiddenCoin('', address)) return none(404, 'no_picture', 3600);
   if (!pictureBurst(visitor(cfg, request))) return none(429, 'slow_down', 0);
   let got;
   try {

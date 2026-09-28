@@ -1,7 +1,7 @@
 // Small in-memory speed bumps for one server instance (Phase 4 anti-bot check).
 // They are NOT the real rules: Vercel runs several copies of a function and they don't share memory. The real rules live
-// in the database (one vote per round). These only make hammering an endpoint pointless and cheap for us: a script that
-// sends hundreds of requests gets "slow down" answers without calling Cloudflare or the database.
+// in the database (the chat's and her voice's daily limits). These only make hammering an endpoint pointless and cheap for
+// us: a script that sends hundreds of requests gets "slow down" answers without calling Cloudflare, Google or the database.
 
 // "At most `max` requests per `windowMs` for one key" (the key is a visitor code, never an IP).
 export function makeBurstLimit({ max, windowMs, maxKeys = 5000 }) {
@@ -21,25 +21,7 @@ export function makeBurstLimit({ max, windowMs, maxKeys = 5000 }) {
   return allow;
 }
 
-// Remembers "this visitor already voted in this round" after the database said so, so repeats don't reach the database.
-export function makeRoundMemory({ maxKeys = 20000 } = {}) {
-  let round = null;
-  const seen = new Set();
-  return {
-    has(r, who) { return r === round && seen.has(who); },
-    add(r, who) {
-      if (r !== round) { round = r; seen.clear(); }           // a new round starts with a clean slate
-      if (seen.size < maxKeys) seen.add(who);
-    },
-    reset() { round = null; seen.clear(); },
-  };
-}
-
-// The Arena's vote endpoint uses these two (api/vote.js). A person votes once per round, so 12 requests a minute is plenty.
-export const voteBurst = makeBurstLimit({ max: 12, windowMs: 60_000 });
-export const votedThisRound = makeRoundMemory();
-// Nominations and votes to add a coin (api/coins.js, Phase 6): a new coin also costs two lookups (clank.trade, DexScreener).
-export const coinBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });
+// (The Arena's votes and nominations had their own until 2026-09-28, when the Arena left the site.)
 // AGI-1's voice (api/voice.js, 2026-09-25): one request per reply, so 20 a minute is plenty.
 export const voiceBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });
 // ClankChecker (api/checker.js, 2026-09-26): each coin's scan asks clank.trade (and DexScreener, the block explorer), so a

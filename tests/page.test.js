@@ -20,9 +20,9 @@ test('"Not financial advice" is in the hero and in the footer', () => {
 
 test('the safety note covers every serious topic', () => {
   const foot = part('<footer class="foot"', '</footer>');
-  assert.equal(foot.match(/<li class="safety-item">/g)?.length, 5, 'five notes');
+  assert.equal(foot.match(/<li class="safety-item">/g)?.length, 4, 'four notes (the fifth, "The Arena is a game", left with the Arena on 2026-09-28)');
   for (const must of ['Not financial advice', 'seed phrase', 'private keys', '18+', 'PG-13', 'an AI service that writes her replies',
-    'never your IP address', "don't move prices", 'free signature', 'token approval', 'Forget me deletes']) {
+    'never your IP address', 'free signature', 'token approval', 'Forget me deletes']) {
     assert.ok(foot.includes(must), `safety note mentions "${must}"`);
   }
 });
@@ -53,18 +53,17 @@ test('the diary page keeps its warnings and links back to the safety note', () =
   assert.ok(!/<script>|style="/.test(diary), 'no inline scripts or styles (the security rules block them)');
 });
 
-test('Phase 6: nominations and the champion\'s Buy link come with their warnings', () => {
-  const foot = part('<footer class="foot"', '</footer>');
-  assert.ok(foot.includes('a coin joins after 20 humans vote for it'));
-  assert.ok(foot.includes('which says nothing about whether to buy it'));
-  assert.ok(foot.includes('a separate scrambled code for each coin, deleted after about a week'));
-  const arena = part('<section class="section" id="arena"', '<section class="section" id="checker"');
-  assert.match(arena, /not an endorsement or financial advice/);
-  const buy = part('<div class="stage-buy"', '</div>');
-  assert.match(buy, /Community pick · not financial advice/);
-  assert.match(buy, /target="_blank" rel="noopener noreferrer"/, 'the Buy link opens clank.trade in a new tab, without passing our page along');
+test('the Arena left the site (2026-09-28, the owner: "remove the arena"): no section, link, champion or Buy link', () => {
+  const diary = readFileSync(new URL('../diary.html', import.meta.url), 'utf8');
+  for (const [name, page] of [['index.html', html], ['diary.html', diary]]) {
+    assert.doesNotMatch(page.replace(/<!--[\s\S]*?-->/g, ''), /arena|champion|crown|nominat|leaderboard|hall of fame/i, `${name}: nothing about the Arena`);
+  }
+  assert.doesNotMatch(html, /data-stage-buy|data-champ|data-model="champion"|stage-buy/, 'no champion on the stage, no Buy link under it');
   const stage = readFileSync(new URL('../src/stage/stage.js', import.meta.url), 'utf8');
-  assert.match(stage, /A community pick, not an endorsement or financial advice\./, 'the caption under the champion says so too');
+  assert.doesNotMatch(stage, /champion\.js|agi:arena-champion|createChampionCard/);
+  for (const gone of ['../api/arena.js', '../api/vote.js', '../api/coins.js', '../api/logo.js', '../src/sections/arena.js', '../src/stage/champion.js', '../server/arena-memory.js']) {
+    assert.ok(!existsSync(new URL(gone, import.meta.url)), `${gone} is gone`);
+  }
 });
 
 test('the safety note says what voice and sharing do', () => {
@@ -81,7 +80,7 @@ test('phones get a menu on both pages, with every section, the diary and the saf
   for (const [name, page, prefix] of [['index.html', html, ''], ['diary.html', diary, '/']]) {
     assert.match(page, /<button class="icon-btn menu-btn" type="button" data-menu aria-expanded="false" aria-controls="site-nav" aria-label="Menu">/, `${name}: menu button`);
     const nav = page.slice(page.indexOf('<nav class="nav" id="site-nav"'), page.indexOf('</nav>', page.indexOf('id="site-nav"')));
-    for (const href of [`${prefix}#evaluations`, `${prefix}#model-card`, `${prefix}#playground`, `${prefix}#arena`, `${prefix}#checker`, '/diary', `${prefix}#safety`]) {
+    for (const href of [`${prefix}#evaluations`, `${prefix}#model-card`, `${prefix}#playground`, `${prefix}#checker`, '/diary', `${prefix}#safety`]) {
       assert.ok(nav.includes(`href="${href}"`), `${name}: the menu links to ${href}`);
     }
   }
@@ -92,7 +91,10 @@ test('AGI on X: a round button in the top bar (a menu row on small phones) and a
   const diary = readFileSync(new URL('../diary.html', import.meta.url), 'utf8');
   for (const [name, page] of [['index.html', html], ['diary.html', diary]]) {
     const links = page.match(/<a [^>]*href="https:\/\/x\.com\/artgirlfintel"[^>]*>/g) || [];
-    assert.equal(links.length, 3, `${name}: the top bar, the menu and the footer`);
+    // the home page's front (2026-09-28) has two more: its planet and its "Her world" list
+    const front = name === 'index.html' ? (page.slice(page.indexOf('data-lp-hero'), page.indexOf('data-lp-ribbons')).match(/href="https:\/\/x\.com\/artgirlfintel"/g) || []).length : 0;
+    assert.equal(front, name === 'index.html' ? 2 : 0, `${name}: the front's planet and its "Her world" list`);
+    assert.equal(links.length, 3 + front, `${name}: the top bar, the menu and the footer`);
     for (const a of links) assert.match(a, /target="_blank" rel="noopener noreferrer"/, `${name}: a new tab, without passing our page along`);
     const actions = page.slice(page.indexOf('<div class="topbar-actions">'), page.indexOf('</header>'));
     assert.match(actions, /<a class="icon-btn x-btn" href="https:\/\/x\.com\/artgirlfintel" [^>]*aria-label="AGI on X \(@artgirlfintel\)"/, `${name}: named for screen readers`);
@@ -129,7 +131,7 @@ test('the owner\'s wording (2026-09-24): the AI provider isn\'t named, and there
 });
 
 test('her live view in the chat (2026-09-25): a slot for the 3D stage, with a still picture until she arrives', () => {
-  const pg = part('<section class="section" id="playground"', '<section class="section" id="arena"');
+  const pg = part('<section class="section" id="playground"', '<section class="section" id="checker"');
   assert.match(pg, /<div class="pg-cam" data-cam hidden>/, 'hidden until the 18+ check is done (src/chat/chat.js)');
   assert.match(pg, /<img class="pg-cam-still" src="\/images\/agi1-live\.webp" alt="" width="280" height="412" loading="lazy"/);
   assert.match(pg, /<div class="pg-cam-view" data-cam-view><\/div>/, 'src/stage/stage.js moves the canvas in here');
@@ -141,7 +143,7 @@ test('her live view in the chat (2026-09-25): a slot for the 3D stage, with a st
 });
 
 test('voice chat (2026-09-25): mic and Call buttons wait for the browser, the mic is allowed only for our own pages', () => {
-  const pg = part('<section class="section" id="playground"', '<section class="section" id="arena"');
+  const pg = part('<section class="section" id="playground"', '<section class="section" id="checker"');
   assert.match(pg, /<button class="icon-btn pg-mic" type="button" data-mic aria-pressed="false" aria-label="Talk: say your message out loud" title="Talk" hidden>/,
     'hidden until src/chat/listen.js knows the browser can listen');
   assert.match(pg, /<button class="pg-call" type="button" data-call aria-pressed="false" aria-label="Call her: talk out loud, hands-free" hidden>/);
@@ -168,12 +170,12 @@ test('market moments (2026-09-25): the safety note says her market feelings are 
   assert.ok(foot.includes('She also has feelings about the live chart (happy at each new $200K of market cap, sad after a -20% day): a mood, not a signal to buy or sell.'));
 });
 
-test('ClankChecker (2026-09-26): its warnings, its link in both menus, her live view slot, and the safety note', () => {
+test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-28): its warnings, its link in both menus, her live view slot, and the safety note', () => {
   const chk = part('<section class="section" id="checker"', '</section>\n    </main>');
-  assert.match(chk, /<p class="kicker chk-kicker"><span>ClankChecker<\/span> <span class="chk-powered"><span class="chk-powered-by">POWERED BY<\/span> <b>\$CLANKCAP terminal<\/b> /,
-    'the owner\'s credit line (2026-09-27)');
-  assert.match(chk, /<a class="chk-x" href="https:\/\/x\.com\/clankcapxyz" target="_blank" rel="noopener noreferrer" aria-label="\$CLANKCAP terminal on X" title="\$CLANKCAP terminal on X"><span aria-hidden="true">𝕏<\/span><\/a>/,
-    'its small X link: a new tab, no referrer, a name for screen readers');
+  assert.match(chk, /<p class="kicker chk-kicker"><span>Risk check your coins on clank<\/span><\/p>/, 'its name, the owner\'s words (2026-09-28; the $CLANKCAP credit line is gone)');
+  assert.ok(html.indexOf('id="playground"') < html.indexOf('id="checker"') && html.indexOf('id="checker"') < html.indexOf('id="safety"'), 'right after the Playground: the Arena\'s old place');
+  assert.doesNotMatch(html, />ClankChecker</, 'the old name is gone from what visitors read');
+  assert.doesNotMatch(html, /clankcap/i, 'nothing about $CLANKCAP anywhere on the page (the owner, 2026-09-28)');
   assert.match(chk, /Rough automated checks of public data, not an audit, and never financial advice\./, 'the lede says what it is');
   assert.match(chk, /A scan is not an endorsement or financial advice: check any coin yourself\./);
   assert.match(chk, /Not an audit and not financial advice: lower risk isn't no risk, and any meme coin can go to zero\./, 'under every answer');
@@ -197,12 +199,12 @@ test('ClankChecker (2026-09-26): its warnings, its link in both menus, her live 
   assert.match(chk, /Every coin, name and picture comes from clank\.trade, as its creator made it, not from us \(slurs are masked, and pictures of coins with crude names stay blurred until you confirm you're 18 or older\)\./);
   assert.doesNotMatch(chk, /left out of the list|not PG-13/, 'every coin is listed now');
   assert.ok(!/<script>|style="/.test(chk), 'no inline scripts or styles');
-  assert.match(html, /<a href="#checker">ClankChecker<\/a>/);
+  assert.equal((html.match(/<a href="#checker">Risk check your coins on clank<\/a>/g) || []).length, 2, 'the menu and the footer');
   const diary = readFileSync(new URL('../diary.html', import.meta.url), 'utf8');
-  assert.match(diary, /<a href="\/#checker">ClankChecker<\/a>/);
+  assert.equal((diary.match(/<a href="\/#checker">Risk check your coins on clank<\/a>/g) || []).length, 2, 'the diary page\'s menu and footer');
   const foot = part('<footer class="foot"', '</footer>');
-  assert.ok(foot.includes("ClankChecker's risk levels are rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy or sell."));
-  assert.ok(foot.includes("ClankChecker's scans and coin pictures are read by our server from public sources (clank.trade and its picture host, DexScreener, a block explorer); nothing about you is sent to them."));
-  assert.match(foot, /Last updated September 26, 2026/);
+  assert.ok(foot.includes("The risk levels in “Risk check your coins on clank” are rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy or sell."));
+  assert.ok(foot.includes("The coin scans and pictures in “Risk check your coins on clank” are read by our server from public sources (clank.trade and its picture host, DexScreener, a block explorer); nothing about you is sent to them."));
+  assert.match(foot, /Last updated September 28, 2026/);
   assert.equal(html.match(/<canvas/g).length, 1, 'still one canvas for the whole page');
 });

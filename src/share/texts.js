@@ -2,7 +2,6 @@
 // tests/share.test.js can check every post fits in 280 characters and never talks money.
 // The visitor always sends the post themselves: these only fill in X's "new post" box. Nothing is posted automatically.
 import { LEVELS } from '../lib/levels.js';
-import { TOKENS } from '../prices/parse.js';
 
 export const X_INTENT = 'https://x.com/intent/tweet';
 export const URL_CHARS = 23;           // X counts every link as 23 characters (t.co)
@@ -12,13 +11,6 @@ const MAX = 280;
 export const intentUrl = (text, url) => `${X_INTENT}?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
 // X's length rule for one post: the text, a space, and the link as 23 characters. Emojis count as 2.
 export const postLength = (text) => [...text].reduce((n, ch) => n + (/\p{Extended_Pictographic}/u.test(ch) ? 2 : 1), 0) + 1 + URL_CHARS;
-
-export function championPost({ coin, number, votes }) {
-  const n = `round #${number}`;
-  return coin === 'AGI'
-    ? `$AGI was just crowned champion of ${n} in the AGI Arena 💜 ${votes} vote${votes === 1 ? '' : 's'}, one per human`
-    : `$${coin} just won ${n} in the AGI Arena. AGI-1 says she's "not jealous" 🙈`;
-}
 
 export function levelPost(level) {
   const l = LEVELS.find((x) => x.level === level) || LEVELS[0];
@@ -38,8 +30,7 @@ export function diaryPost(dayLabel, entry) {
 }
 
 // Where each post links to. /share/… pages exist only to show the right picture in X's link preview; they send
-// people on to the right part of the site (made by scripts/share-pages.js, one per coin and per level).
-export const SHARE_COINS = TOKENS.map((t) => t.symbol);
-export const championLink = (origin, coin) => (SHARE_COINS.includes(coin) ? `${origin}/share/champion-${coin.toLowerCase()}` : `${origin}/#arena`);
+// people on to the right part of the site (made by scripts/share-pages.js, one per level). (The Arena's champion posts and
+// pages left with the Arena on 2026-09-28.)
 export const levelLink = (origin, level) => `${origin}/share/level-${(LEVELS.find((x) => x.level === level) || LEVELS[0]).name.toLowerCase()}`;
 export const diaryLink = (origin) => `${origin}/diary`;

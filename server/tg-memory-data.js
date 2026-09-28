@@ -147,20 +147,16 @@ export default {
    "text": "Sep 2026, the reboot: the group became 'clank.trade (ex daos.fun)', a coin launchpad on Robinhood Chain, and went from about 400 messages a month to 7,000+. Beta-phase classics: 'we have not officially launched this yet… trade on our UI for now', 'fee structure will be announced once we build it out', 'we have 3 clusters of GPUs right now running ai characters', and the founder's 'clank trade will be big. the team is over powered'. One member: 'Daos.fun is the past. Clank Trade is the future.'"
   },
   {
-   "id": "the-three",
+   "id": "the-favorites",
    "kind": "lore",
    "keys": [
-    "cabo",
-    "$cabo",
     "clankcat",
     "$clankcat",
     "clank cat",
     "main runner",
-    "first token",
-    "test token",
-    "the three"
+    "favorite coins"
    ],
-   "text": "Sep 2026, the group's favorite three: $AGI (AGI-1, called 'the main runner' of the new platform), $CABO (baoskee: 'it is confirmed 1st test token ever made on clank'; members say he deployed it) and $CLANKCAT (clank's mascot). People kept telling each other to 'just focus on the three'. On Sep 24 baoskee noted 'clankcat has more volume than agi lol', which AGI-1 has not forgiven."
+   "text": "Sep 2026, the group's favorites: $AGI (AGI-1, called 'the main runner' of the new platform) and $CLANKCAT (clank's mascot). On Sep 24 baoskee noted 'clankcat has more volume than agi lol', which AGI-1 has not forgiven."
   },
   {
    "id": "anime",
@@ -287,7 +283,7 @@ export default {
     "markyyester"
    ],
    "keys": [],
-   "text": "Markyyester: active Apr 2025 to Sep 2026, about 2,954 messages (#1 most talkative), busiest during the clank.trade reboot. Often says 'yes', 'gm', 'yeah'. Mentions $CPU, $CABO, $AGI the most."
+   "text": "Markyyester: active Apr 2025 to Sep 2026, about 2,954 messages (#1 most talkative), busiest during the clank.trade reboot. Often says 'yes', 'gm', 'yeah'. Mentions $CPU, $AGI the most."
   },
   {
    "id": "member-2",
@@ -511,7 +507,7 @@ export default {
     "adam rex"
    ],
    "keys": [],
-   "text": "Adam Rex: active Apr 2025 to Sep 2026, about 377 messages (#23 most talkative), busiest during the quiet 2025. Often says 'llm zero', '/ban', 'cabo'. Mentions $LLM, $BONKFOLIO, $CABO the most."
+   "text": "Adam Rex: active Apr 2025 to Sep 2026, about 377 messages (#23 most talkative), busiest during the quiet 2025. Often says 'llm zero', '/ban'. Mentions $LLM, $BONKFOLIO the most."
   },
   {
    "id": "member-24",
@@ -571,7 +567,7 @@ export default {
     "luckyjohn"
    ],
    "keys": [],
-   "text": "LuckyJohn: active Dec 2024 to Sep 2026, about 295 messages (#30 most talkative), busiest during the clank.trade reboot. Often says 'gm', 'lmao', 'lol'. Mentions $AGI, $CABO, $CLANKCAT the most."
+   "text": "LuckyJohn: active Dec 2024 to Sep 2026, about 295 messages (#30 most talkative), busiest during the clank.trade reboot. Often says 'gm', 'lmao', 'lol'. Mentions $AGI, $CLANKCAT the most."
   },
   {
    "id": "member-30",
@@ -762,7 +758,7 @@ export default {
    "name": "HAPpy_",
    "aliases": [],
    "keys": [],
-   "text": "HAPpy_: active Dec 2024 to Sep 2026, about 183 messages (#49 most talkative), busiest during the clank.trade reboot. Often says 'gllmorning', 'gene'. Mentions $AGI, $CABO, $CLANKCAT the most."
+   "text": "HAPpy_: active Dec 2024 to Sep 2026, about 183 messages (#49 most talkative), busiest during the clank.trade reboot. Often says 'gllmorning', 'gene'. Mentions $AGI, $CLANKCAT the most."
   },
   {
    "id": "member-49",
@@ -790,7 +786,7 @@ export default {
     "zjoko"
    ],
    "keys": [],
-   "text": "zjoko: active Nov 2024 to Sep 2026, about 170 messages (#52 most talkative), busiest during the clank.trade reboot. Mentions $CABO the most."
+   "text": "zjoko: active Nov 2024 to Sep 2026, about 170 messages (#52 most talkative), busiest during the clank.trade reboot."
   },
   {
    "id": "member-52",
@@ -798,7 +794,7 @@ export default {
    "name": "Gen",
    "aliases": [],
    "keys": [],
-   "text": "Gen: active Sep 2025 to Sep 2026, about 169 messages (#53 most talkative), busiest during the clank.trade reboot. Mentions $CABO the most."
+   "text": "Gen: active Sep 2025 to Sep 2026, about 169 messages (#53 most talkative), busiest during the clank.trade reboot."
   },
   {
    "id": "member-53",
@@ -1044,7 +1040,7 @@ export default {
    "name": "PAC💤",
    "aliases": [],
    "keys": [],
-   "text": "PAC💤: active Jul 2026 to Sep 2026, about 135 messages (#80 most talkative), busiest during the clank.trade reboot. Often says 'gllm'. Mentions $CABO the most."
+   "text": "PAC💤: active Jul 2026 to Sep 2026, about 135 messages (#80 most talkative), busiest during the clank.trade reboot. Often says 'gllm'."
   },
   {
    "id": "member-80",
@@ -1444,7 +1440,7 @@ export default {
     "coco 𐦍"
    ],
    "keys": [],
-   "text": "Coco 𐦍: active Jul 2025 to Sep 2026, about 83 messages (#122 most talkative), busiest during the clank.trade reboot. Often says 'gdaos', 'llm', 'gm'. Mentions $CABO the most."
+   "text": "Coco 𐦍: active Jul 2025 to Sep 2026, about 83 messages (#122 most talkative), busiest during the clank.trade reboot. Often says 'gdaos', 'llm', 'gm'."
   },
   {
    "id": "member-122",
@@ -1702,7 +1698,7 @@ export default {
     "thomas nguyen aster 10"
    ],
    "keys": [],
-   "text": "Thomas Nguyen | Aster 10$: active Aug 2025 to Sep 2026, about 68 messages (#149 most talkative), busiest during the clank.trade reboot. Mentions $AGI, $CABO, $CLANKCAT the most."
+   "text": "Thomas Nguyen | Aster 10$: active Aug 2025 to Sep 2026, about 68 messages (#149 most talkative), busiest during the clank.trade reboot. Mentions $AGI, $CLANKCAT the most."
   },
   {
    "id": "member-149",
@@ -1877,7 +1873,7 @@ export default {
     "eivenea"
    ],
    "keys": [],
-   "text": "eivenea: active Sep 2026 to Sep 2026, about 61 messages (#169 most talkative), busiest during the clank.trade reboot. Mentions $CABO, $INNBCV the most."
+   "text": "eivenea: active Sep 2026 to Sep 2026, about 61 messages (#169 most talkative), busiest during the clank.trade reboot. Mentions $INNBCV the most."
   },
   {
    "id": "member-167",
@@ -2202,7 +2198,7 @@ export default {
     "maki"
    ],
    "keys": [],
-   "text": "Maki: active Dec 2024 to Sep 2026, about 48 messages (#204 most talkative), busiest during the clank.trade reboot. Mentions $CABO, $AGI the most."
+   "text": "Maki: active Dec 2024 to Sep 2026, about 48 messages (#204 most talkative), busiest during the clank.trade reboot. Mentions $AGI the most."
   },
   {
    "id": "member-202",

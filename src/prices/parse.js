@@ -1,20 +1,18 @@
 // Turns DexScreener's answer into the numbers the site shows.
 // No browser code in here, so the tests can run these functions in Node (tests/prices.test.js).
 
-// The coins the site tracks. The first one is $AGI. Contract addresses are lowercase.
+// The coins the site tracks: $AGI (since 2026-09-28 only $AGI: the Arena's other coins left with it). Addresses are lowercase.
 // ⚠️ $AGI's address also appears in index.html and server/agi1-prompt.js. A test checks they all match.
 export const TOKENS = [
   { symbol: 'AGI', name: 'Artificial Girlfriend Intelligence', ca: '0xfa31d04462746aaa24bc7e5626403e09e4b106ec' },
-  { symbol: 'CABO', name: 'CABO the cat', ca: '0xcf5b720f33febdc1c9d4880b8317203b63fdf368' },
-  { symbol: 'CLANKCAT', name: 'Clank Cat', ca: '0x03e6a6881d0813bf6157ac4ee44d3cc73d5465a3' },
 ];
 export const CHAIN = 'robinhood'; // DexScreener's name for Robinhood Chain
 
 // A coin's page on clank.trade (where it's bought and sold).
 export const buyLink = (ca) => `https://clank.trade/coin/${String(ca).toLowerCase()}`;
 
-// What a visitor pastes to nominate a coin for the Arena (Phase 6): a clank.trade coin link ("clank.trade/coin/0x…",
-// with or without https://) or just the contract address. → the lowercase address, or null.
+// What a visitor pastes into ClankChecker's search: a clank.trade coin link ("clank.trade/coin/0x…", with or without
+// https://) or just the contract address. → the lowercase address, or null.
 export function parseCoinInput(text) {
   const s = String(text ?? '').trim();
   if (!s || s.length > 200) return null;
@@ -23,8 +21,7 @@ export function parseCoinInput(text) {
   return link ? link[1].toLowerCase() : null;
 }
 
-// One request for all coins. DexScreener answers with each coin's biggest pool (free, no key).
-// Up to 30 addresses per request, so the Arena's 8 coins always fit in one.
+// One request for all coins. DexScreener answers with each coin's biggest pool (free, no key). Up to 30 addresses per request.
 export const pricesUrl = (tokens = TOKENS) =>
   `https://api.dexscreener.com/tokens/v1/${CHAIN}/${tokens.map((t) => t.ca).join(',')}`;
 

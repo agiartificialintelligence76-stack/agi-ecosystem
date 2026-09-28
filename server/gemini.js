@@ -1,5 +1,5 @@
 // Asks Google Gemini for AGI-1's reply. Only the server calls this; the API key never reaches the browser.
-import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, arenaPrompt, groupMemoryPrompt } from './agi1-prompt.js';
+import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt } from './agi1-prompt.js';
 
 // Safety filters are OFF by default for Gemini 3 models, so we switch them on.
 // Sexual content uses the strictest level (PG-13 site).
@@ -101,7 +101,7 @@ export function cleanReply(text) {
 // history: [{ role: 'user' | 'model', text }], already checked by api/chat.js
 // visitor: { level: 1-3, name, notes } (Phase 3). Only Soulmates (level 3) can get a "note" back: a short new fact
 // AGI-1 learned about them, which api/chat.js checks and saves. Asking for it costs a few output tokens, so only they do.
-// visitor.arena: the Arena's current champion (server/arena-memory.js), or null. visitor.memory: Telegram group notes.
+// visitor.memory: her Telegram group notes, when the visitor asked about the group.
 export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
   const soulmate = visitor.level === 3;
   const properties = { reply: { type: 'string' }, mood: { type: 'string', enum: MOODS } };
@@ -115,7 +115,7 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
     method: 'POST',
     headers: { 'x-goog-api-key': cfg.geminiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(visitor.level, visitor) + arenaPrompt(visitor.arena) + groupMemoryPrompt(visitor.memory) }] },
+      systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(visitor.level, visitor) + groupMemoryPrompt(visitor.memory) }] },
       contents,
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {

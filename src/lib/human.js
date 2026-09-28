@@ -1,5 +1,5 @@
-// The "are you human?" check (Cloudflare Turnstile) and the 2-hour pass, shared by the Playground and the Arena.
-// The server hands out a pass after one successful check; the same pass works for chatting and voting.
+// The "are you human?" check (Cloudflare Turnstile) and the 2-hour pass, for the Playground (the Arena used it too, until
+// it left the site on 2026-09-28). The server hands out a pass after one successful check.
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';   // public key, set in Vercel
 const PASS_KEY = 'agi1_pass';
 

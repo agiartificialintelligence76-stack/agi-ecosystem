@@ -1,4 +1,7 @@
 {
-  "about": "Telegram display names (exactly as they appear in the group) that AGI-1 must not remember. Add a name here when someone asks to be left out, then rebuild: node tools/memory/build-memory.mjs \"telegram memories/result.json\"",
-  "names": []
+  "about": "Telegram display names (exactly as they appear in the group) that AGI-1 must not remember. Add a name here when someone asks to be left out, then rebuild: node tools/memory/build-memory.mjs \"telegram memories/result.json\" \"tickers\" (without $): coins she never talks about; they're left out of the members' cards (2026-09-28: CABO).",
+  "names": [],
+  "tickers": [
+    "CABO"
+  ]
 }

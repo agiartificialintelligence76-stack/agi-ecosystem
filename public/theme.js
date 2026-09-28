@@ -15,4 +15,22 @@
   var dark = theme === 'dark', diary = root.getAttribute('data-page') === 'diary';
   var bar = document.querySelector('meta[name="theme-color"]');
   if (bar) bar.setAttribute('content', pop ? (diary ? (dark ? '#120828' : '#f8f5ff') : (dark ? '#2a0f7a' : '#6b3bff')) : (dark ? '#0b0b0c' : '#fafaf8'));
+
+  // The front (2026-09-28, the home page only): a visit that starts at the top gets its entrance (lp-intro), and the first
+  // visit of a browser session its loader too (lp-loading). src/landing/landing.js plays both and ends them; with "reduce
+  // motion" src/styles/landing.css shows neither. A link to a section (a #hash) skips both. The safety net: if that script
+  // hasn't started 7 s from now, the page shows itself anyway.
+  try {
+    if (root.getAttribute('data-page') === 'home' && !location.hash) {
+      root.classList.add('lp-intro');
+      var seen = '1';
+      try { seen = sessionStorage.getItem('agi-seen'); } catch (e) { /* no storage: no loader (it would play on every visit) */ }
+      if (!seen) root.classList.add('lp-loading');
+      setTimeout(function () {
+        if (root.classList.contains('lp-live')) return;
+        root.classList.add('lp-go');
+        root.classList.remove('lp-loading');
+      }, 7000);
+    }
+  } catch (e) { /* the page just shows without its entrance */ }
 })();

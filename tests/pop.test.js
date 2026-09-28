@@ -1,4 +1,4 @@
-// Pop mode (2026-09-27, the owner's idea): the whole page in the $AGI ecosystem look, same content. Since 2026-09-28 it's the
+// Pop mode (2026-09-27, the owner's idea): the whole page in the bold $AGI look, same content. Since 2026-09-28 it's the
 // default, in the dark theme (the owner: "make the pop mode open on default, in dark mode"); its button switches it off.
 // These checks keep it that way: the button on both pages, the lab look untouched (every Pop mode style is scoped to
 // [data-skin="pop"]), its fonts self-hosted and licensed, the decoration only repeating what the page already says, and the

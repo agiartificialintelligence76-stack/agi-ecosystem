@@ -16,7 +16,6 @@
 // day she's sad. Her face and body react, a notification card appears, and her natural voice says it (src/chat/market.js).
 import { withHuman, postJson } from '../lib/human.js';
 import { currentSession } from './relationship.js';
-import { championLine } from './champion-lines.js';
 import { startModelMenu } from './models.js';
 import { soonLine } from './model-lines.js';
 import { startVoice } from './voice.js';
@@ -410,7 +409,6 @@ export function startPlayground(root) {
       busy = false;
       sendBtn.disabled = false;
       if (!touch) input.focus({ preventScroll: true });
-      if (waitingChampion) { const d = waitingChampion; waitingChampion = null; showChampion(d); }
       if (waitingMarket) { const m = waitingMarket; waitingMarket = null; showMarket(m); }
       if (waitingSoon) { const m = waitingSoon; waitingSoon = null; showSoon(m); }
       showRestNote();
@@ -593,22 +591,6 @@ export function startPlayground(root) {
       message('model', e.detail.text, { mood: 'love' });
       sayQuietly(e.detail.text);
     }
-  });
-  // ---------- the Arena crowned a new champion (Phase 4) ----------
-  // A pre-written line (src/chat/champion-lines.js, no AI cost), shown but not added to the history. Only after the 18+
-  // check, and never in the middle of her typing a reply: then it waits until the reply is there.
-  let waitingChampion = null;
-  function showChampion(d) {
-    const coinName = (typeof d.coinName === 'string' && d.coinName) || TOKENS.find((t) => t.symbol === d.coin)?.name || '';
-    const { text, mood } = championLine({ ...d, level: rel.level, name: rel.name, coinName });
-    message('model', text, { mood, chip: `arena · round #${d.number}` });
-    sayQuietly(text);
-  }
-  addEventListener('agi:champion', (e) => {
-    const d = e.detail;
-    if (!d || typeof d.coin !== 'string' || !gate.hidden) return;
-    if (busy) waitingChampion = d;
-    else showChampion(d);
   });
   // ---------- the model picker (2026-09-26, the owner's request) ----------
   // "AGI-1 ▾" in the chat bar opens the models (src/chat/models.js). AGI-2 is "Coming soon": picking it makes her playfully

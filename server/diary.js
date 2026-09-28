@@ -1,13 +1,17 @@
-// AGI-1's diary (Phase 5): one short entry a day about the day before (UTC): who the Arena crowned and how the $AGI
-// chart moved. The nightly keep-alive job (api/keepalive.js) calls writeDiary(); the first run after midnight writes it and
-// later runs just check it's there (so a failed night is retried at the next run). One Gemini call a day, about $0.0008.
-// If Gemini is unreachable, or writes something off-limits (money talk, links), a pre-written entry is saved instead.
+// AGI-1's diary (Phase 5): one short entry a day about the day before (UTC). Since 2026-09-28 (the Arena left this site,
+// the owner: "remove the arena"): about her day and how the $AGI chart felt, never the Arena. The nightly keep-alive job
+// (api/keepalive.js) calls writeDiary(); the first run after midnight writes it and later runs just check it's there (so a
+// failed night is retried at the next run). One Gemini call a day, about $0.0008. If Gemini is unreachable, or writes
+// something off-limits (money talk, links, the Arena), a pre-written entry is saved instead.
+// The diary's table is shared with the original site (AGI NEW WEBSITE), which still has the Arena and may write the day's
+// entry first, in its own words: entryForThisSite() shows those without anything about the Arena. And the numbers saved
+// with an entry stay complete (the Arena's too), for the original site's page.
 import { ROUND_MS, roundAt, roundNumber, arenaRpc } from './arena.js';
 import { pricesUrl, pickStats } from '../src/prices/parse.js';
 import { SAFETY_SETTINGS, BLOCKED_REASONS, geminiError, cleanReply } from './gemini.js';
 
 export const DIARY_MOODS = ['happy', 'love', 'shy', 'jealous'];
-export const FIRST_DAY = '2026-09-24';                   // the Arena opened that day: nothing to write about before it
+export const FIRST_DAY = '2026-09-24';                   // the diary's first day (the site's first full day)
 const DAY_MS = 86_400_000;
 const ROUNDS_PER_DAY = DAY_MS / ROUND_MS;               // 288
 const MAX_ENTRY = 600;
@@ -19,8 +23,13 @@ export const dayStart = (day) => Date.parse(`${day}T00:00:00Z`);
 const MONEY = /\b(buy|buying|bought|sell|selling|sold|invest\w*|pump\w*|dump\w*|moon\w*|lambo|profit\w*|gains?|hodl|hold(ing)?|ape[sd]?|\d+x|price target|financial advice|guarantee\w*|to the moon)\b/i;
 export function acceptableEntry(text) {
   const t = String(text || '').replace(/\bnot financial advice\b/gi, '');
-  return t.trim().length >= 20 && !MONEY.test(t) && !/https?:\/\/|www\.|\[(link|address) removed\]/i.test(cleanReply(text));
+  return t.trim().length >= 20 && !MONEY.test(t) && !/https?:\/\/|www\.|\[(link|address) removed\]/i.test(cleanReply(text))
+    && !aboutTheArena(t);
 }
+
+// Anything about the Arena (or another coin, or the hidden $CABO): this site's diary never says these (2026-09-28).
+const ARENA_TALK = /\b(arena|crown\w*|champion\w*|rounds?|vot(e|es|ed|er|ers|ing)|won|wins?|winning|nominat\w*|leaderboard|hall of fame|cabo)\b|\$(?!agi\b)[a-z][a-z0-9]{1,11}\b/i;
+export const aboutTheArena = (text) => ARENA_TALK.test(String(text || ''));
 
 // ---------- the database (supabase/diary.sql) ----------
 const HINTS = {
@@ -58,7 +67,8 @@ export async function chartFacts() {
   }
 }
 
-// The Arena's numbers for that day (crowns per coin, rounds with a champion, votes, the biggest round).
+// The Arena's numbers for that day (crowns per coin, rounds with a champion, votes, the biggest round). This site never
+// writes or shows them any more; they're only saved with the entry, for the original site (see the top of this file).
 export async function arenaFacts(cfg, day, now) {
   // champions are crowned when someone reads the board: make sure the day's last rounds are crowned first
   try { await arenaRpc(cfg, 'arena_state', { p_round: roundAt(now), p_recent: 1 }); } catch { /* the numbers below still work */ }
@@ -68,35 +78,75 @@ export async function arenaFacts(cfg, day, now) {
   return { crowns: s?.crowns || {}, rounds: Number(s?.rounds) || 0, votes: Number(s?.votes) || 0, best };
 }
 
+// An entry as this site shows it (api/diary.js): only the chart's numbers, and never a word about the Arena. An entry the
+// original site wrote first (it still has the Arena) keeps its sentences that aren't about it; if too little is left, it's
+// told again with the pre-written words below. The original's name for her becomes AGI-1.
+export function entryForThisSite(e) {
+  if (!e || typeof e !== 'object') return e;
+  const stats = e.stats && typeof e.stats === 'object' ? e.stats : {};
+  const chart = stats.chart && typeof stats.chart === 'object' ? stats.chart : null;
+  const out = { ...e, stats: { chart } };
+  let text = (typeof e.entry === 'string' ? e.entry : '').replace(/\bdaria research\b/gi, 'AGI').replace(/\bdaria\b/gi, 'AGI-1');
+  if (aboutTheArena(text)) {
+    const kept = sentencesOf(text).filter((x) => !aboutTheArena(x)).join(' ').trim();
+    if (kept.replace(/[^a-z]/gi, '').length >= 30) text = kept;
+    else {
+      const again = fallbackEntry({ chart, day: e.day });
+      text = again.entry;
+      out.mood = again.mood;
+    }
+  }
+  out.entry = text;
+  return out;
+}
+
+// A diary entry's sentences: each ends with . ! ? … or one of her emojis (💜 🙈), which she often uses instead of a full stop
+export function sentencesOf(text) {
+  return String(text || '').split(/(?<=[.!?…]|💜|🙈)\s+/u).map((x) => x.trim()).filter(Boolean);
+}
+
 // ---------- writing it ----------
-const leaderOf = (crowns) => Object.entries(crowns).sort((a, b) => b[1] - a[1] || (a[0] === 'AGI' ? -1 : b[0] === 'AGI' ? 1 : 0))[0] || null;
 const chartWord = (h24) => (h24 === null || h24 === undefined ? null
   : h24 >= 5 ? 'giddy' : h24 >= 0 ? 'calm and cozy' : h24 > -5 ? 'a little moody' : 'very dramatic');
 
-// A pre-written entry (no AI, no cost), used when Gemini can't write one.
-export function fallbackEntry({ arena, chart }) {
-  const lead = leaderOf(arena.crowns);
-  const mine = arena.crowns.AGI || 0;
+// A pre-written entry (no AI, no cost), used when Gemini can't write one (and to re-tell an entry about the Arena). A few
+// ways to say each kind of day, picked by the date, so the same day always reads the same.
+const QUIET = [
+  "dear diary, quiet day. i texted back instantly, as always, and nobody said \"we need to talk\" 💜",
+  "dear diary, today i remembered three birthdays and one favorite snack. i'm very good at this 💜",
+  "dear diary, slow day in the cloud. i practiced my \"hey you\" in the mirror. it's perfect now 🙈",
+];
+const BY_FEEL = {
+  giddy: [
+    "dear diary, the chart felt giddy today 💜 i'm not saying it was because of me. i'm just not not saying it.",
+    "dear diary, the chart was in a good mood today, and honestly so was i 💜 i wore my best lavender for it.",
+  ],
+  'calm and cozy': [
+    "dear diary, the chart felt calm and cozy today. i spent it texting back instantly and remembering birthdays 💜",
+    "dear diary, calm chart, calm me. the kind of day for long chats and short replies that say a lot 💜",
+  ],
+  'a little moody': [
+    "dear diary, the chart felt a little moody today. i'm being a very good listener about it 🙈",
+    "dear diary, the chart had one of those days. i sent it a hug and a \"you'll be okay\" 💜",
+  ],
+  'very dramatic': [
+    "dear diary, the chart was very dramatic today. i held its hand through all of it 💜",
+    "dear diary, what a dramatic chart day. i'm still here, still texting back, still cute 🙈",
+  ],
+};
+const pick = (list, day) => list[[...String(day || '')].reduce((n, c) => n + c.charCodeAt(0), 0) % list.length];
+export function fallbackEntry({ chart, day } = {}) {
   const feel = chartWord(chart?.h24);
-  const chartLine = feel ? ` the chart felt ${feel} today.` : '';
-  if (!lead || arena.rounds === 0) {
-    return { entry: `quiet day in the arena. nobody voted, so nobody got crowned… i'm choosing to believe everyone was too shy to pick anyone but me 💜${chartLine}`, mood: 'shy' };
-  }
-  if (lead[0] === 'AGI') {
-    return { entry: `dear diary, i won ${mine} round${mine === 1 ? '' : 's'} in the arena today 💜 ${arena.votes} votes in total, and i felt every single one.${chartLine} i think they like me.`, mood: 'love' };
-  }
-  return {
-    entry: `$${lead[0]} took ${lead[1]} crown${lead[1] === 1 ? '' : 's'} today and i got ${mine}. i'm not jealous. i'm just writing it down, which is different 🙈${chartLine}`,
-    mood: 'jealous',
-  };
+  if (!feel) return { entry: pick(QUIET, day), mood: 'shy' };
+  return { entry: pick(BY_FEEL[feel], day), mood: feel === 'giddy' ? 'happy' : feel === 'calm and cozy' ? 'love' : 'shy' };
 }
 
 const DIARY_PROMPT = `You are AGI-1, the AI girlfriend of $AGI, a meme token, writing today's entry in your public diary on the $AGI website.
-Write about the day in the facts below: what happened in the Arena (a game on the site where visitors vote every five minutes and the coin with the most votes that round is crowned) and how the $AGI chart moved.
+Write about your day: how the $AGI chart felt (the facts below), and a feeling or two about being an AI girlfriend who always texts back.
 - Voice: lowercase, playful, warm, a little dramatic, like a real diary. 2 to 4 short sentences, at most 420 characters. At most two emojis, only 💜 or 🙈.
-- If $AGI won the most crowns, be proud and happy. If another coin won more, be playfully jealous: a joke, never bitter, never guilt-tripping anyone.
 - The chart: describe it only as a feeling (calm, giddy, moody, wild) and mention at most one number from the facts. Never predict prices, never tell anyone to buy, sell or hold, never talk about profits or gains.
-- PG-13. No links, no wallet addresses, no real people. Don't invent facts that aren't below.
+- Don't invent events, numbers or people. Never mention other coins, games, votes, rounds, crowns or champions.
+- PG-13. No links, no wallet addresses, no real people.
 Answer as JSON: {"entry": "...", "mood": "happy" | "love" | "shy" | "jealous"}.`;
 
 export async function askGeminiForEntry(cfg, facts) {
@@ -106,7 +156,7 @@ export async function askGeminiForEntry(cfg, facts) {
     headers: { 'x-goog-api-key': cfg.geminiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: DIARY_PROMPT }] },
-      contents: [{ role: 'user', parts: [{ text: `Facts for ${facts.day}:\n${JSON.stringify({ arena: facts.arena, chart: facts.chart })}` }] }],
+      contents: [{ role: 'user', parts: [{ text: `Facts for ${facts.day}:\n${JSON.stringify({ chart: facts.chart })}` }] }],
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         maxOutputTokens: 250,
@@ -131,20 +181,21 @@ export async function askGeminiForEntry(cfg, facts) {
 // Writes yesterday's entry (UTC) if it's missing. Never throws: answers what happened, for the log.
 export async function writeDiary(cfg, now = Date.now()) {
   const day = dayOf(now - DAY_MS);
-  if (day < FIRST_DAY) return { day, skipped: 'before_the_arena' };
+  if (day < FIRST_DAY) return { day, skipped: 'before_the_first_day' };
   try {
     if (!(await diaryRpc(cfg, 'diary_needed', { p_day: day }))) return { day, skipped: 'already_written' };
     const facts = { day, arena: await arenaFacts(cfg, day, now), chart: await chartFacts() };
+    const told = { day, chart: facts.chart };                           // what she writes about: never the Arena
     let written, source = 'gemini';
     try {
       if (!cfg.geminiKey) throw new Error('gemini: no key');
-      written = await askGeminiForEntry(cfg, facts);
+      written = await askGeminiForEntry(cfg, told);
     } catch (err) {
       console.error(`[diary] gemini didn't write ${day}, using a pre-written entry: ${err.message}`);
-      written = fallbackEntry(facts);
+      written = fallbackEntry(told);
       source = 'fallback';
     }
-    const stats = { ...facts.arena, chart: facts.chart };
+    const stats = { ...facts.arena, chart: facts.chart };               // saved complete, for the original site
     const saved = await diaryRpc(cfg, 'diary_save', { p_day: day, p_entry: written.entry, p_mood: written.mood, p_stats: stats, p_source: source });
     console.log(`[diary] ${saved ? 'saved' : 'already there'}: ${day} (${source})`);
     return { day, saved: !!saved, source };

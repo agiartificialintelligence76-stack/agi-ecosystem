@@ -2,7 +2,7 @@
 // Everyone sees the same entries, so Vercel's CDN keeps the answer for 10 minutes (older pages: an hour).
 // Entries are written once a day by the nightly keep-alive job (server/diary.js), never by visitors.
 import { getConfig } from '../server/config.js';
-import { diaryRpc, dayOf } from '../server/diary.js';
+import { diaryRpc, dayOf, entryForThisSite } from '../server/diary.js';
 
 const noStore = { 'Cache-Control': 'no-store' };
 const DAY_MS = 86_400_000;
@@ -26,7 +26,7 @@ export async function GET(request) {
     const entries = await diaryRpc(cfg, 'diary_list', { p_before: before, p_limit: limit });
     const latest = !params.has('before');
     return Response.json(
-      { entries: Array.isArray(entries) ? entries : [], before },
+      { entries: Array.isArray(entries) ? entries.map(entryForThisSite) : [], before },
       { headers: { 'Cache-Control': `public, max-age=0, s-maxage=${latest ? 600 : 3600}, stale-while-revalidate=600` } },
     );
   } catch (err) {

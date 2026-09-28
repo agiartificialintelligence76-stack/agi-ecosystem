@@ -1,5 +1,5 @@
 /* ================================================================
-   Pop mode (2026-09-27, the owner's idea): the whole page in the look of the $AGI ecosystem site (agi1.app), with exactly
+   Pop mode (2026-09-27, the owner's idea): the whole page in the look of the $AGI page agi1.app used to show, with exactly
    the same content. Off until the visitor presses the ✦ button next to the theme button (src/theme.js); then <html> has
    data-skin="pop" and every rule below applies. Nothing here changes what the page says or does.
    The look: ink outlines (#170a36), paper and lavender, bold color blocks (violet, honey, pink, mint), the wide "Anybody"
@@ -88,16 +88,16 @@
 [data-skin='pop'] body { background: var(--page); }
 [data-skin='pop'] ::selection { background: color-mix(in srgb, var(--pop-pink) 45%, transparent); }
 /* the keyboard's focus ring: violet on the light blocks, white on the violet hero, ink where violet wouldn't stand out (the
-   top bar floats over the hero; her pink stage; the pink Arena), honey on the ink footer and everywhere at night */
+   top bar floats over the hero; her pink stage), honey on the ink footer and everywhere at night */
 [data-skin='pop'] :focus-visible { outline: 3px solid var(--pop-violet); outline-offset: 3px; }
 [data-skin='pop'] .hero :focus-visible { outline-color: #fff; }
-[data-skin='pop'] :is(.topbar, .stage, #arena, .ticker) :focus-visible { outline-color: var(--pop-ink); }
+[data-skin='pop'] :is(.topbar, .stage, .ticker) :focus-visible { outline-color: var(--pop-ink); }
 [data-skin='pop'] .foot :focus-visible { outline-color: var(--pop-honey); }
 [data-skin='pop'][data-theme='dark'] :focus-visible,
-[data-skin='pop'][data-theme='dark'] :is(.hero, .topbar, .stage, #arena, .ticker, .foot) :focus-visible { outline-color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] :is(.hero, .topbar, .stage, .ticker, .foot) :focus-visible { outline-color: var(--pop-honey); }
 [data-skin='pop'] .pg-models-item:focus-visible { outline-offset: -3px; }   /* (inside its menu, like the other look) */
 
-/* headings: wide and heavy, like the ecosystem site; section eyebrows in spaced mono capitals with a dot */
+/* headings: wide and heavy, like the old agi1.app page; section eyebrows in spaced mono capitals with a dot */
 [data-skin='pop'] .h2 {
   font-family: var(--display); font-size: clamp(36px, 5.6vw, 72px); font-weight: 850; font-stretch: 112%;
   line-height: .95; letter-spacing: -0.035em;
@@ -110,9 +110,6 @@
   content: ''; flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--kicker-dot, currentColor);
 }
 [data-skin='pop'] .section-lede { font-size: 18px; color: var(--fg-2); }
-/* (ClankChecker's credit line keeps the owner's exact words: "$CLANKCAP terminal") */
-[data-skin='pop'] .chk-powered b { text-transform: none; letter-spacing: 0; }
-[data-skin='pop'] .chk-powered-by { font-size: 11px; }
 
 /* ---------- buttons, pills, chips ---------- */
 [data-skin='pop'] .btn { font-weight: 650; border-width: 2px; }
@@ -145,7 +142,7 @@
   background: color-mix(in srgb, var(--pop-paper) 84%, transparent); box-shadow: 0 2px 0 var(--pop-ink);
   -webkit-backdrop-filter: blur(12px) saturate(1.2); backdrop-filter: blur(12px) saturate(1.2);
 }
-[data-skin='pop'][data-theme='dark'] .topbar.is-stuck { background: color-mix(in srgb, #120828 84%, transparent); box-shadow: 0 2px 0 rgb(205 184 255 / .45); }
+[data-skin='pop'][data-theme='dark'] .topbar.is-stuck { background: color-mix(in srgb, #120828 94%, transparent); box-shadow: 0 2px 0 rgb(205 184 255 / .45); }
 [data-skin='pop'] .topbar-in { height: 72px; }
 [data-skin='pop'] .wordmark {
   padding: 8px 16px; font-family: var(--display); font-size: 15px; line-height: 18px; font-weight: 800; font-stretch: 108%;
@@ -215,18 +212,15 @@
 [data-skin='pop'] #evaluations { --sec: var(--pop-honey); }
 [data-skin='pop'] #model-card { --sec: var(--pop-paper); }
 [data-skin='pop'] #playground { --sec: var(--pop-lav); }
-[data-skin='pop'] #arena { --sec: var(--pop-pink); --fg-2: #170a36; --fg-3: #2d1a57; --line: rgb(23 10 54 / .2); }
 [data-skin='pop'] #checker { --sec: var(--pop-mint); }
-/* honey, pink and mint: the lighter gray texts go darker, so they stay easy to read on the color */
+/* honey and mint: the lighter gray texts go darker, so they stay easy to read on the color */
 [data-skin='pop'] #evaluations, [data-skin='pop'] #checker { --fg-2: #2d1f52; --fg-3: #3d3064; }
-/* halftone dots in a corner of the color blocks, and a faint grid on ClankChecker (like the ecosystem's terminal card) */
-[data-skin='pop'] #evaluations::before, [data-skin='pop'] #arena::before {
+/* halftone dots in a corner of the color blocks, and a faint grid on ClankChecker (like the old agi1.app page's terminal card) */
+[data-skin='pop'] #evaluations::before {
   content: ''; position: absolute; z-index: -1; right: 0; bottom: 0; width: min(560px, 60%); height: 70%; pointer-events: none;
   background-image: radial-gradient(circle, rgb(23 10 54 / .16) 1.6px, transparent 1.9px); background-size: 14px 14px;
   -webkit-mask-image: radial-gradient(ellipse at 100% 100%, #000 0%, transparent 70%); mask-image: radial-gradient(ellipse at 100% 100%, #000 0%, transparent 70%);
 }
-[data-skin='pop'] #arena::before { background-image: radial-gradient(circle, rgb(255 255 255 / .35) 1.6px, transparent 1.9px); left: 0; right: auto;
-  -webkit-mask-image: radial-gradient(ellipse at 0% 100%, #000 0%, transparent 70%); mask-image: radial-gradient(ellipse at 0% 100%, #000 0%, transparent 70%); }
 [data-skin='pop'] #checker {
   background-image: linear-gradient(rgb(23 10 54 / .07) 1px, transparent 1px), linear-gradient(90deg, rgb(23 10 54 / .07) 1px, transparent 1px);
   background-size: 28px 28px;
@@ -235,21 +229,16 @@
 [data-skin='pop'][data-theme='dark'] #evaluations { --sec: #1c1036; --shade: var(--pop-honey); --kicker-dot: var(--pop-honey); --fg-2: #cbbff0; --fg-3: #ad9fdb; }
 [data-skin='pop'][data-theme='dark'] #model-card { --sec: #120828; --shade: var(--pop-blue); --kicker-dot: #8aa2ff; }
 [data-skin='pop'][data-theme='dark'] #playground { --sec: #1a0d3d; --shade: var(--pop-violet); --kicker-dot: var(--pop-violet-2); }
-[data-skin='pop'][data-theme='dark'] #arena { --sec: #25092a; --shade: var(--pop-pink); --kicker-dot: var(--pop-pink); --fg-2: #cbbff0; --fg-3: #ad9fdb; --line: rgb(228 217 255 / .18); }
 [data-skin='pop'][data-theme='dark'] #checker { --sec: #0b2126; --shade: var(--pop-mint); --kicker-dot: var(--pop-mint); --fg-2: #cbbff0; --fg-3: #ad9fdb;
   background-image: linear-gradient(rgb(63 240 195 / .07) 1px, transparent 1px), linear-gradient(90deg, rgb(63 240 195 / .07) 1px, transparent 1px); }
 [data-skin='pop'][data-theme='dark'] #evaluations::before { background-image: radial-gradient(circle, rgb(255 201 51 / .22) 1.6px, transparent 1.9px); }
-[data-skin='pop'][data-theme='dark'] #arena::before { background-image: radial-gradient(circle, rgb(255 77 166 / .3) 1.6px, transparent 1.9px); }
 
 /* cards: white, an ink outline and a hard shadow */
-[data-skin='pop'] .chart-fig, [data-skin='pop'] .mcard, [data-skin='pop'] .pg, [data-skin='pop'] .board,
-[data-skin='pop'] .nominate-intro, [data-skin='pop'] .nominate-queue, [data-skin='pop'] .hof, [data-skin='pop'] .history,
-[data-skin='pop'] .tile {
+[data-skin='pop'] .chart-fig, [data-skin='pop'] .mcard, [data-skin='pop'] .pg, [data-skin='pop'] .tile {
   background: var(--bg); border: 3px solid var(--edge); border-radius: var(--radius); box-shadow: 0 9px 0 -2px var(--shade);
 }
 [data-skin='pop'][data-theme='dark'] .chart-fig, [data-skin='pop'][data-theme='dark'] .mcard, [data-skin='pop'][data-theme='dark'] .pg,
-[data-skin='pop'][data-theme='dark'] .board, [data-skin='pop'][data-theme='dark'] .nominate-intro, [data-skin='pop'][data-theme='dark'] .nominate-queue,
-[data-skin='pop'][data-theme='dark'] .hof, [data-skin='pop'][data-theme='dark'] .history, [data-skin='pop'][data-theme='dark'] .tile { border-width: 2px; }
+[data-skin='pop'][data-theme='dark'] .tile { border-width: 2px; }
 
 /* ---------- the hero: violet, with comic speed lines and halftone dots ---------- */
 [data-skin='pop'] .hero {
@@ -318,7 +307,6 @@
 [data-skin='pop'] .dstyle-btn.is-on { background: var(--pop-ink); color: #fff; }
 [data-skin='pop'] .zoom-btn:hover { background: var(--pop-lav); }
 [data-skin='pop'] .stage-hint, [data-skin='pop'] .stage-status { color: var(--pop-ink); font-weight: 500; }
-[data-skin='pop'] .stage-buy-note { color: var(--pop-ink); }
 [data-skin='pop'] .figure figcaption { font-family: var(--mono); font-size: 13px; color: rgb(255 255 255 / .9); }
 [data-skin='pop'] .figure figcaption b { color: #fff; font-weight: 600; }
 /* night: a deep violet hero, a violet stage */
@@ -336,7 +324,7 @@
 [data-skin='pop'][data-theme='dark'] .dstyle { background: #1d0e40; border-color: var(--pop-lav-2); }
 [data-skin='pop'][data-theme='dark'] .dstyle-btn { color: #f4efff; }
 [data-skin='pop'][data-theme='dark'] .dstyle-btn.is-on { background: var(--pop-honey); color: var(--pop-ink); }
-[data-skin='pop'][data-theme='dark'] .stage-hint, [data-skin='pop'][data-theme='dark'] .stage-status, [data-skin='pop'][data-theme='dark'] .stage-buy-note { color: #f4efff; }
+[data-skin='pop'][data-theme='dark'] .stage-hint, [data-skin='pop'][data-theme='dark'] .stage-status { color: #f4efff; }
 [data-skin='pop'][data-theme='dark'] .ticker { background: #1d0e40; color: #f4efff; border-color: var(--pop-lav-2); box-shadow: 0 7px 0 -1px var(--pop-pink);
   --fg: #f4efff; --fg-2: #cbbff0; --fg-3: #ad9fdb; }
 [data-skin='pop'][data-theme='dark'] .ticker-stats dd.up { color: #3ecf8e; }
@@ -470,42 +458,6 @@
   [data-skin='pop'][data-theme='dark'] .pg-side { border-top-width: 2px; }
 }
 
-/* ---------- The Arena (pink) ---------- */
-[data-skin='pop'] .arena-round b, [data-skin='pop'] .arena-status { color: var(--fg); }
-[data-skin='pop'] .arena-round { color: var(--fg); font-weight: 500; }
-[data-skin='pop'] .board { padding: 2px 18px 6px; }
-[data-skin='pop'] .board-row { border-bottom-color: var(--line); }
-[data-skin='pop'] .board-row:last-child { border-bottom: 0; }
-[data-skin='pop'] .board-head { color: var(--fg-2); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; }
-[data-skin='pop'] .b-coin b { font-weight: 700; }
-[data-skin='pop'] .coin-logo { border: 2px solid var(--edge); }
-[data-skin='pop'] .leader { color: var(--pop-ink); background: var(--pop-honey); border: 2px solid var(--pop-ink); }
-[data-skin='pop'] .tag-new, [data-skin='pop'] .h-mine { color: var(--fg); border: 2px solid var(--edge); }
-[data-skin='pop'] .b-bar, [data-skin='pop'] .cand-bar, [data-skin='pop'] .hof-bar { background: var(--bg-2); box-shadow: inset 0 0 0 1.5px var(--line); border-radius: 0 6px 6px 0; }
-[data-skin='pop'] .b-bar i, [data-skin='pop'] .cand-bar i, [data-skin='pop'] .hof-bar i { background: var(--pop-violet); }
-[data-skin='pop'][data-theme='dark'] .b-bar i, [data-skin='pop'][data-theme='dark'] .cand-bar i, [data-skin='pop'][data-theme='dark'] .hof-bar i { background: var(--pop-pink); }
-[data-skin='pop'] .b-act .btn.is-mine, [data-skin='pop'] .cand-act .btn.is-mine { background: var(--pop-ink); color: #fff; border-color: var(--pop-ink); }
-[data-skin='pop'][data-theme='dark'] .b-act .btn.is-mine, [data-skin='pop'][data-theme='dark'] .cand-act .btn.is-mine { background: var(--pop-honey); color: var(--pop-ink); border-color: var(--pop-honey); }
-[data-skin='pop'] .nominate-intro, [data-skin='pop'] .nominate-queue, [data-skin='pop'] .hof, [data-skin='pop'] .history { padding: 22px 22px 20px; }
-/* the leaderboard card is narrower inside (its outline and padding), so its rows fold into two lines up to 980 px */
-@media (min-width: 921px) and (max-width: 980px) {
-  [data-skin='pop'] .board-row { grid-template-columns: 28px minmax(0, 1fr) minmax(90px, .9fr) 88px; gap: 12px; }
-  [data-skin='pop'] .c-wide { display: none; }
-  [data-skin='pop'] .b-coin .b-meta { display: flex; }
-}
-[data-skin='pop'] .arena-sub { font-family: var(--display); font-size: 22px; font-weight: 850; font-stretch: 112%; letter-spacing: -0.02em; }
-[data-skin='pop'] .nominate-form { border: 2px solid var(--edge); }
-[data-skin='pop'] .nominate-form:focus-within { border-color: var(--pop-violet); }
-[data-skin='pop'] .share-strip { background: var(--pop-lav); color: var(--pop-ink); border: 2px solid var(--pop-ink); border-radius: 18px;
-  --fg: #170a36; --fg-2: #4a3d6e; --fg-3: #5f537f; }
-[data-skin='pop'][data-theme='dark'] .share-strip { background: #2c1766; border-color: var(--pop-lav-2); --fg: #f4efff; --fg-2: #cbbff0; --fg-3: #ad9fdb; }
-/* (the Arena's texts outside the cards sit on the pink: ink, for contrast) */
-[data-skin='pop'] #arena .section-head, [data-skin='pop'] #arena .arena-top { color: var(--pop-ink); }
-[data-skin='pop'][data-theme='dark'] #arena .section-head, [data-skin='pop'][data-theme='dark'] #arena .arena-top { color: var(--fg); }
-@media (max-width: 480px) {
-  [data-skin='pop'] .board { padding-inline: 12px; }
-}
-
 /* ---------- ClankChecker (mint) ---------- */
 [data-skin='pop'] .chk-search, [data-skin='pop'] .chk-filters { background: var(--bg); border: 2px solid var(--edge); }
 [data-skin='pop'] .chk-search:focus-within { border-color: var(--pop-violet); }
@@ -543,10 +495,6 @@
 [data-skin='pop'] .chk-flags { border-top-color: var(--line); }
 [data-skin='pop'] .chk-how summary { font-weight: 600; color: var(--fg); }
 [data-skin='pop'] .chk-note { color: var(--fg-2); }
-[data-skin='pop'] .chk-x { background: #fff; color: var(--pop-ink); border: 2px solid var(--pop-ink); }
-[data-skin='pop'] .chk-x:hover { background: var(--pop-honey); }
-[data-skin='pop'][data-theme='dark'] .chk-x { background: #1d0e40; color: #f4efff; border-color: var(--pop-lav-2); }
-[data-skin='pop'][data-theme='dark'] .chk-x:hover { background: #28155a; }
 [data-skin='pop'][data-theme='dark'] .chk-head, [data-skin='pop'][data-theme='dark'] .chk-list { border-width: 2px; }
 [data-skin='pop'][data-theme='dark'] .chk-head { border-bottom: 0; }
 /* the big picture */

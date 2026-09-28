@@ -3,12 +3,11 @@
 // because it needs the database for its limits. A tiny database read a few times a day counts as activity.
 // Phase 5: it also writes AGI-1's diary entry for yesterday if it's missing (server/diary.js): the first run after
 // midnight UTC writes it, later runs only check (so a failed night is tried again at the next run).
-// Phase 6: and it checks the Arena's voted-in coins on DexScreener: one whose liquidity is almost gone leaves the Arena.
+// (Its check of the Arena's coins, Phase 6, left with the Arena on 2026-09-28: the original site's keep-alive still does it.)
 // Only Vercel may call it: when CRON_SECRET is set, Vercel sends "Authorization: Bearer <CRON_SECRET>".
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../server/config.js';
 import { writeDiary } from '../server/diary.js';
-import { sweepCoins } from '../server/coins.js';
 
 const fingerprint = (text) => createHash('sha256').update(String(text)).digest();
 // Compares fixed-size fingerprints, so the check takes the same time whatever was sent.
@@ -43,8 +42,7 @@ export async function GET(request) {
     await res.text();
     console.log('[keepalive] ok: Supabase answered');
     const diary = await writeDiary(cfg);                  // never throws; a diary problem doesn't fail the keep-alive
-    const coins = await sweepCoins(cfg);                  // never throws either
-    return answer({ ok: true, diary, coins });
+    return answer({ ok: true, diary });
   } catch (err) {
     console.error(`[keepalive] database read failed: ${err.message}`);
     return answer({ error: 'database' }, 502);

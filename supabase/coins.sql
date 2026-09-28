@@ -1,4 +1,6 @@
 -- $AGI "The Arena": which coins are in it (Phase 6).
+-- Note (2026-09-28, this folder): the database is shared with the original site, where $CABO is a core coin, so it stays
+-- here as it is. This site never shows it or takes votes for it: server/arena.js → HIDDEN_COINS.
 -- Visitors nominate clank.trade coins. A coin joins the Arena when 20 different humans vote for it within 7 days.
 -- The Arena holds 8 coins: $AGI and $CABO always stay, plus up to 6 others. When it's full, the coin with the fewest
 -- Arena votes in the last 7 days makes room (a coin that joined less than a day ago is safe).

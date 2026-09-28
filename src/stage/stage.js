@@ -1,5 +1,6 @@
 // Figure 1: the 3D stage. A minimal "studio": the page background shows through, neutral white light,
-// a faint dial on the floor and a soft contact shadow. AGI-1 (or CABO) stands in the middle.
+// a faint dial on the floor and a soft contact shadow. AGI-1 stands in the middle. (The Arena's champion card, a second
+// thing to show here, left with the Arena on 2026-09-28.)
 // main.js loads this file only after the page's text is showing, because three.js is large.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -7,7 +8,6 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createEffects, POP_HEART_COLORS } from './effects.js';
 import { createAgi1, buildIdleClip, addFace } from './agi1.js';
-import { createChampionCard } from './champion.js';
 import { talkLevel, pretendTalk } from '../lib/talk.js';
 import { STYLE_KEY, readStyle } from './agi1-2d-motion.js';   // (AGI-1 in 2D itself, src/stage/agi1-2d.js, loads only when picked)
 
@@ -15,7 +15,6 @@ import { STYLE_KEY, readStyle } from './agi1-2d-motion.js';   // (AGI-1 in 2D it
 // quarter of the graphics memory). It looks the same at phone size (checked side by side, 2026-09-24).
 const MODELS = {
   agi1: { url: '/models/agi1.glb', phoneUrl: '/models/agi1-phone.glb', label: 'AGI-1', height: 1.62, clip: 'Dont_You_Dare', idle: true },
-  cabo: { url: '/models/cabo.glb', label: 'CABO-1 (the cat)', height: 0.85 },
 };
 
 // Colors of the 3D bits for each theme (the page behind the transparent canvas does the rest). Pop mode (2026-09-27): her
@@ -29,20 +28,17 @@ const THEMES = {
 };
 
 const TARGET = new THREE.Vector3(0, 0.78, 0);   // the camera looks at her middle
-const CARD_Y = 0.98;                            // the champion's card floats with its middle at this height
 const HOME = new THREE.Vector3(0.3, 1.25, 4.7); // where the camera rests (in front, slightly to the right)
 const HOME_DIST = HOME.distanceTo(TARGET);      // the camera's distance at 1× (about 4.7)
 // Zoom (2026-09-25): how close each model can be seen, and what the camera moves toward as it zooms in. At 1× it looks at
 // the middle of the stage as before; zooming in, the aim slides up to AGI-1's face (between her head and head-top bones),
-// CABO's face, or the logo on the champion's card, and follows it while she moves.
+// and follows it while she moves.
 // `top`: frame her like a portrait photographer would, with the top of her head near the top of the picture, so each step
 // in crops from the bottom up (knees up, waist up, face) instead of centering on her middle.
 const ZOOM = {
   agi1: { max: 8, bones: ['mixamorigHead', 'mixamorigHeadTop_End'], at: 0.42, lift: 0, top: true },
   // AGI-1 in 2D (2026-09-27): up to 3× (head and shoulders); closer than that, a flat picture only gets blurrier
   agi1_2d: { max: 3, at: 0.42, lift: 0, top: true },
-  cabo: { max: 7, bones: ['head', 'headend'], at: 0.5, lift: 0.08 },
-  champion: { max: 2 },                         // closer than this, the card's title and ticker leave the picture
 };
 const ZOOM_STEP = 1.75;                         // one press of + or − (1× → 1.75× → 3.1× → 5.4× → 8×)
 
@@ -158,15 +154,7 @@ export function startStage(wrap) {
   const nameEl = document.getElementById('modelName');
   const noteEl = document.getElementById('modelNote');          // the rest of the caption
   const NOTE = noteEl?.textContent || '';
-  const CHAMPION_NOTE = ', crowned by humans in the Arena. A community pick, not an endorsement or financial advice.';
   const buttons = [...wrap.querySelectorAll('[data-model]')];
-  // Phase 6: the Arena's latest champion, as a third button (hidden until the Arena knows who it is)
-  const seg = wrap.querySelector('.seg');
-  const champButton = wrap.querySelector('[data-model="champion"]');
-  const champLogo = wrap.querySelector('[data-champ-logo]');
-  const champSym = wrap.querySelector('[data-champ-sym]');
-  const buyBox = wrap.querySelector('[data-stage-buy]');
-  const buyLink = buyBox?.querySelector('a');
 
   const mobile = matchMedia('(pointer: coarse)').matches || innerWidth < 700;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -274,8 +262,8 @@ export function startStage(wrap) {
     renderer.toneMappingExposure = theme.exposure;
   }
   applyTheme();
-  addEventListener('agi:theme', () => { applyTheme(); models.champion?.card.redraw(); });
-  addEventListener('agi:skin', () => { applyTheme(); models.champion?.card.redraw(); });
+  addEventListener('agi:theme', applyTheme);
+  addEventListener('agi:skin', applyTheme);
 
   const stageRoot = new THREE.Group();                     // models stand on the floor (y = 0)
   scene.add(stageRoot);
@@ -310,18 +298,6 @@ export function startStage(wrap) {
     agi1Parts = partsOf[k] || null;
   }
 
-  // The champion's card (Phase 6): no file to download, just a canvas, so it's ready at once.
-  async function loadChampion() {
-    const card = createChampionCard({ maxAnisotropy: renderer.capabilities.getMaxAnisotropy() });
-    card.group.position.y = CARD_Y;
-    await card.set(champion);
-    const holder = new THREE.Group();
-    const fx = new THREE.Group();
-    holder.add(fx);
-    fx.add(card.group);
-    return { kind: 'champion', card, root: card.group, holder, fx, mixer: null, hitBox: card.hit };
-  }
-
   async function loadAgi1_2D() {
     const { loadAgi1_2D: load, createAgi1_2D } = await import('./agi1-2d.js');
     const m = await load({ renderer, onProgress: (p) => { if (current !== 'agi1' || slot('agi1') === 'agi1_2d') setStatus(`Loading 2D… ${Math.round(p * 100)}%`); } });
@@ -334,7 +310,6 @@ export function startStage(wrap) {
   }
 
   async function loadModel(kind) {
-    if (kind === 'champion') return loadChampion();
     if (kind === 'agi1_2d') return loadAgi1_2D();
     const def = MODELS[kind];
     const gltf = await loader.loadAsync(mobile && def.phoneUrl ? def.phoneUrl : def.url, (ev) => {
@@ -345,7 +320,7 @@ export function startStage(wrap) {
     const mixer = new THREE.AnimationMixer(root);
     const clip = gltf.animations.find((a) => a.name === def.clip)
       || gltf.animations.filter((a) => a.duration > 0.5)[0] || gltf.animations[0] || null;
-    // AGI-1 stands in a calm idle (built in code) and dances now and then. CABO just plays his loop.
+    // AGI-1 stands in a calm idle (built in code) and dances now and then. (A model without an idle just plays its loop.)
     const idleClip = def.idle ? buildIdleClip(root) : null;
     const main = idleClip || clip;
     const action = main ? mixer.clipAction(main) : null;
@@ -417,23 +392,14 @@ export function startStage(wrap) {
     });
   }
 
-  const championLabel = () => (champion ? `$${champion.coin}, champion of Arena round #${champion.number}` : '');
-  // what goes with each model: the caption's name and (champion only) the Buy link under the card
+  // what goes with the model: the caption's name
   function setDetails(kind) {
-    if (nameEl) nameEl.textContent = kind === 'champion' ? championLabel() : MODELS[kind].label;
-    if (noteEl) noteEl.textContent = kind === 'champion' ? CHAMPION_NOTE : NOTE;
-    const buy = kind === 'champion' && champion?.buy;
-    if (buyBox) buyBox.hidden = !buy;
-    if (buy && buyLink) {
-      buyLink.href = champion.buy;
-      buyLink.querySelector('[data-buy-sym]').textContent = `$${champion.coin}`;
-      buyLink.setAttribute('aria-label', `Buy $${champion.coin} on clank.trade (opens in a new tab). Not financial advice.`);
-    }
+    if (nameEl) nameEl.textContent = MODELS[kind].label;
+    if (noteEl) noteEl.textContent = NOTE;
   }
 
   async function show(kind) {
     if (kind === current || switching) return;
-    if (kind === 'champion' && !champion) return;
     switching = true;
     setButtons(kind);
     let incoming;
@@ -515,50 +481,8 @@ export function startStage(wrap) {
     const m = models[onStageKey()];
     if (!m || !raycaster.intersectObject(m.hitBox, false).length) return;
     if (current === 'agi1') agi1?.react('tap');
-    else if (current === 'champion') spinCard();
     else if (!reducedMotion) tween(500, (x) => x, (q) => { m.fx.position.y = Math.sin(q * Math.PI) * 0.12; });
   });
-
-  // ---------- the Arena's champion (Phase 6) ----------
-  // src/sections/arena.js announces the latest champion ('agi:arena-champion': coin, name, logos, clank.trade link, round,
-  // votes), or null when there's none. The stage loads later than the Arena, so it asks once when it starts.
-  let champion = null;
-  function spinCard() {
-    const m = models.champion;
-    if (!m || reducedMotion) return;
-    const start = m.fx.rotation.y;
-    tween(900, easeOutCubic, (p) => { m.fx.rotation.y = start + p * Math.PI * 2; }, () => { m.fx.rotation.y = 0; });
-  }
-  function setChampion(d) {
-    const ok = d && typeof d.coin === 'string' && /^[A-Z0-9]{1,12}$/.test(d.coin);
-    const buy = ok && typeof d.buy === 'string' && /^https:\/\/clank\.trade\/coin\/0x[0-9a-f]{40}$/.test(d.buy) ? d.buy : null;
-    const next = ok ? { coin: d.coin, name: String(d.name || ''), logo: d.logo || '', logoLarge: d.logoLarge || '', number: d.number, votes: d.votes, buy } : null;
-    const changed = JSON.stringify(next) !== JSON.stringify(champion);
-    const newCoin = next?.coin !== champion?.coin;
-    champion = next;
-    if (!changed) return;
-    champButton.hidden = !champion;
-    seg?.classList.toggle('has-champ', !!champion);
-    if (champion) {
-      champSym.textContent = `$${champion.coin}`;
-      champButton.setAttribute('aria-label', `Arena champion: $${champion.coin}`);
-      champButton.title = `$${champion.coin}, champion of Arena round #${champion.number}`;
-      champLogo.hidden = !champion.logo;
-      if (champion.logo && champLogo.getAttribute('src') !== champion.logo) champLogo.src = champion.logo;
-    }
-    const m = models.champion;
-    if (m && champion) {
-      m.card.set(champion);
-      if (current === 'champion' && newCoin) spinCard();          // a new champion: the card turns once
-    }
-    if (current === 'champion') {
-      if (champion) setDetails('champion');
-      else show('agi1');                                          // no champion any more (e.g. the owner removed the coin)
-    }
-  }
-  champLogo?.addEventListener('error', () => { champLogo.hidden = true; });
-  addEventListener('agi:arena-champion', (e) => setChampion(e.detail));
-  dispatchEvent(new CustomEvent('agi:arena-champion-request'));
 
   // ---------- zoom (2026-09-25) ----------
   // + and − (one step each), the "2.4× · reset" pill, a two-finger pinch on phones, and a pinch on a laptop's trackpad
@@ -637,7 +561,6 @@ export function startStage(wrap) {
   function focusPoint(out) {
     const m = current && models[onStageKey()], z = current && ZOOM[onStageKey()];
     if (!m || !z) return out.copy(TARGET);
-    if (current === 'champion') return m.card.group.getWorldPosition(out).add(vTmp.set(0, 0.05, 0));  // the logo and title
     const [a, b] = m.focusBones || [];
     if (!a) return out.copy(TARGET);
     a.getWorldPosition(out);
@@ -771,7 +694,7 @@ export function startStage(wrap) {
     resize();
     renderZoom();
     eachAgi1((c) => c.setCloseUp(current === 'agi1' && view.goal > 2));
-    const back = dock.heroKind;                           // CABO or the champion was on stage before: back they come
+    const back = dock.heroKind;                           // another model was on stage before: back it comes
     dock.heroKind = null;
     if (back && back !== current && !switching) show(back);
     if (current) renderer.render(scene, camera);
@@ -828,7 +751,7 @@ export function startStage(wrap) {
           bottom = Math.min(bottom, e.y - 0.06);
         }
       }
-    } else {                                              // CABO or the card for a moment, while AGI-1 is on her way
+    } else {                                              // the card for a moment, while AGI-1 is on her way
       top = (MODELS[current]?.height || CARD_Y + 0.3) + 0.1; x0 = -0.45; x1 = 0.45;
     }
     // never wider than her waist up (0.78 m tall): then her waving hand stays in and her hair on the other side may touch
@@ -1004,11 +927,9 @@ export function startStage(wrap) {
   const onScreen = () => (dock.on ? dock.cam.visible : heroVisible);
 
   // ---------- one animation step (dt = seconds since the last step) ----------
-  let simTime = 0;
   function step(dt) {
-    simTime += dt;
     if (dock.on) {
-      // the chat is with AGI-1: if CABO or the champion was on stage, she takes over (they come back with the stage)
+      // the chat is with AGI-1: if another model was on stage, she takes over (it comes back with the stage)
       if (current && current !== 'agi1' && !switching) { dock.heroKind ??= current; show('agi1'); }
     } else {
       updateView(dt);
@@ -1021,11 +942,6 @@ export function startStage(wrap) {
     if (current) {
       if (current === 'agi1' && agi1) agi1.beforeMixer(); // 0. undo last frame's wave/look, so they never stick
       models[onStageKey()]?.mixer?.update(dt);              // 1. the idle (or the dance) sets her pose (3D)
-      if (current === 'champion' && !reducedMotion) {       // the champion's card floats and turns a little
-        const card = models.champion.card.group;
-        card.position.y = CARD_Y + Math.sin(simTime * 1.3) * 0.035;
-        card.rotation.y = Math.sin(simTime * 0.45) * 0.22;
-      }
       if (current === 'agi1' && agi1) {
         agi1.setPointer(lookTarget());                     // your pointer, the chat box, or you
         agi1.setTalk(talkLevel());                         // how loud she's talking right now (src/lib/talk.js)

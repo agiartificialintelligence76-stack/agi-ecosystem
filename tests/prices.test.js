@@ -14,24 +14,25 @@ const pool = (symbol, address, priceUsd, liq, mcap, h24, extra = {}) => ({
   ...extra,
 });
 const AGI_POOL = pool('AGI', '0xFa31d04462746aAA24bC7E5626403E09E4B106ec', '0.002181', 148096.74, 2181107, 14.96);
-const CABO_POOL = pool('CABO', '0xcf5b720f33febDC1c9D4880b8317203b63fDF368', '0.0001927', 44015.88, 192733, -40.42);
 const CLANKCAT_POOL = pool('CLANKCAT', '0x03E6a6881D0813bF6157ac4ee44D3Cc73d5465A3', '0.0001014', 31956.13, 101407, -2.58);
-const REAL = [AGI_POOL, CABO_POOL, CLANKCAT_POOL];
+const REAL = [AGI_POOL, CLANKCAT_POOL];
 
 test('reads the real DexScreener answer', () => {
   const s = pickStats(REAL);
   assert.deepEqual(s.AGI, { price: 0.002181, mcap: 2181107, fdv: 2181107, liq: 148096.74, h24: 14.96, vol24: null });
-  assert.equal(s.CABO.price, 0.0001927);
-  assert.equal(s.CABO.h24, -40.42);
-  assert.equal(s.CLANKCAT.mcap, 101407);
-  assert.equal(pricesUrl(), `https://api.dexscreener.com/tokens/v1/robinhood/${TOKENS.map((t) => t.ca).join(',')}`);
+  assert.deepEqual(Object.keys(s), ['AGI'], 'the site follows $AGI only (2026-09-28: the Arena, with its coins, left the site)');
+  assert.deepEqual(TOKENS.map((t) => t.symbol), ['AGI']);
+  // any other coin is read the same way when asked for
+  const cat = pickStats(REAL, [{ symbol: 'CLANKCAT', ca: '0x03e6a6881d0813bf6157ac4ee44d3cc73d5465a3' }]).CLANKCAT;
+  assert.deepEqual([cat.price, cat.h24, cat.mcap], [0.0001014, -2.58, 101407]);
+  assert.equal(pricesUrl(), `https://api.dexscreener.com/tokens/v1/robinhood/${TOKENS[0].ca}`);
 });
 
 test('uses the biggest Robinhood pool where the coin is the one being priced', () => {
   const small = { ...AGI_POOL, priceUsd: '0.001982', liquidity: { usd: 1021.37 } };
   const otherChain = { ...AGI_POOL, chainId: 'base', priceUsd: '9.99', liquidity: { usd: 9e9 } };
   // A pool where $AGI is the *quote* token: its price is the other coin's price, not $AGI's.
-  const agiAsQuote = { ...CABO_POOL, quoteToken: AGI_POOL.baseToken, priceUsd: '5.55', liquidity: { usd: 8e9 },
+  const agiAsQuote = { ...CLANKCAT_POOL, quoteToken: AGI_POOL.baseToken, priceUsd: '5.55', liquidity: { usd: 8e9 },
     baseToken: { address: '0x1111111111111111111111111111111111111111', symbol: 'XYZ' } };
   const noPrice = { ...AGI_POOL, priceUsd: null, liquidity: { usd: 7e9 } };
   const s = pickStats({ pairs: [small, otherChain, agiAsQuote, noPrice, AGI_POOL] }); // the old {pairs} shape works too

@@ -1,6 +1,6 @@
 // Cloudflare Turnstile: asks Cloudflare whether the browser's "are you human?" token is real.
 // Tokens are single-use and expire after 5 minutes.
-// `action` must match the widget that made the token: 'chat' (Playground) or 'vote' (Arena).
+// `action` must match the widget that made the token: 'chat' (the Playground; 'vote' was the Arena's, until 2026-09-28).
 export async function verifyHuman(cfg, token, ip, action = 'chat') {
   if (typeof token !== 'string' || !token || token.length > 2048) return false;
   try {

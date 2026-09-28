@@ -569,6 +569,7 @@ export function startChecker(root) {
   // ---------- AGI-1's answer ----------
   const ERRORS = {
     not_clank: 'Not a clank.trade coin, or too new to be listed yet.',
+    removed: "That coin isn't checked on this site.",
     slow_down: 'Lots of scans at once: wait a few seconds and ask again.',
   };
   function camLabel(text) {

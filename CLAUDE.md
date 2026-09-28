@@ -11,22 +11,30 @@
 >   that need them (model rebuilds, `tools/memory/build-memory.mjs`) read them there, or from a copy put here first.
 > - **One old name stays on purpose:** the database table `daria_diary` (`supabase/diary.sql`). The diary's server code only
 >   calls database functions, and both sites can share one Supabase project, so renaming the table would break the diary.
+> - **$CABO and ClankCap are gone from this site** (2026-09-28, the owner: "remove everything about cabo and clankcap"):
+>   no $CABO anywhere (the stage's cat, ClankChecker, her memory), no ClankCap credit. The database is shared with the
+>   original site, so $CABO is **hidden in this site's code**, never deleted from the database. See "$CABO and ClankCap
+>   removed".
+> - **The Arena is gone from this site too** (2026-09-28, the owner: "remove the arena too"): no voting, champions or
+>   nominations, and the site follows $AGI only. The database keeps the Arena for the original site. See "The Arena: removed".
+>   Older sections below that still name the Arena or CABO describe how things were before that day.
+> - **ClankChecker is called "Risk check your coins on clank"** on the page since 2026-09-28 (the owner's words), in the
+>   Arena's old place right after the Playground. The code keeps its old name (`checker.js`, `chk-*`, "ClankChecker" here).
+> - **The front** (2026-09-28): the bright AGI landing of the ecosystem page that used to be here is back, as the first
+>   thing on the home page, with the whole site after it. See "The front".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
 - **AGI-1**: the $AGI AI girlfriend you can chat with, and later see on a 3D stage
-- **The Arena** (formerly ClankeRRankeR): a live vote-to-crown leaderboard for clank.trade tokens. One vote per human
-  per 5-minute round, and a champion is crowned every round. Hall of Fame (this week / all time) and round history (Phase 4)
 - **Price data**: live $AGI price, market cap, liquidity and 24h change
 - **Relationship levels** (Phase 3): connect a wallet with a free signature (never a transaction) and AGI-1 gets closer the
   more $AGI it holds: Stranger, Crush, Soulmate
 - **AGI-1's diary, sharing and voice** (Phase 5): a `/diary` page with one entry a day, share cards + "Share on X" buttons
   (the visitor posts, never us), and voice replies (since 2026-09-25 in her own natural AI voice, Gemini's "Despina": her
   natural voice or text, never a robotic one)
-- **Phase 6:** visitors choose the Arena's coins (nominate any clank.trade coin; 20 humans in 7 days and it joins; 8 coins at
-  most), every coin shows its logo, the latest champion gets a third button on the stage with a "Buy on clank.trade" link,
-  and AGI-1 remembers the clank.trade Telegram group (only when asked, sarcastic but kind)
-- **ClankChecker** (2026-09-26, the owner's idea and name): every coin on clank.trade (new, old and graduated), live (a coin
+- **Her memory of the clank.trade Telegram group** (Phase 6): only when asked, sarcastic but kind
+- **ClankChecker**, called **"Risk check your coins on clank"** on the page since 2026-09-28 (2026-09-26, the owner's idea;
+  the name is the owner's too): every coin on clank.trade (new, old and graduated), live (a coin
   launched a moment ago shows up within seconds), each with its picture (tap it to see it big), a risk scan on demand
   (Lower / Some / High risk, the red flags and the facts behind them), and "Ask AGI-1": she appears right there in 3D,
   reacts and says what she thinks in her natural voice (a few fixed lines, made once). Never buy/sell advice
@@ -37,6 +45,11 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
 - **AGI-1 in 2D** (2026-09-27, the owner's idea): a "3D · 2D" switch on the stage and in her live views shows her as the
   owner's 2D anime art instead of the 3D model, rigged like a VTuber (breathing, blinking, looking, talking with the same
   voice, every reaction, hair on springs). 3D by default; remembered in the browser; each downloaded only when picked
+- **The front** (2026-09-28, the owner: "make the landing page like on the old site … just make it in front"): the home
+  page opens with the bright AGI landing of the old ecosystem page (a loader on the first visit, the huge AGI letters,
+  AGI-1 in WebGL with her speech bubble, the site's parts in orbit around her, ribbons, and the "General → Girlfriend"
+  manifesto), then the whole site as before, under the same top bar
+- **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
 It looks like an AI lab's model launch page (a parody, see "Design" below): serious design, meme content. (Pop mode is the
 optional second look.)
@@ -61,8 +74,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 4. **No secrets in front-end code or in git.** Everything the browser downloads is public. API keys live only in
    Vercel environment variables (and `.env.local` for local testing, which git ignores). Vite ships every
    variable that starts with `VITE_` to the browser, so never give a secret that prefix.
-5. **The browser never writes to the database directly.** All writes (votes, chat counters) go through our
-   own `/api` functions, which check and limit them.
+5. **The browser never writes to the database directly.** All writes (chat counters, wallet names and notes, voice
+   counts) go through our own `/api` functions, which check and limit them.
 6. **No automatic posting** to X or anywhere else. "Share on X" only opens a pre-filled post that the visitor sends themselves.
 7. **Keep costs near $0.** The total budget is $150. Prefer free tiers, and check every new feature against the budget table below.
 8. **Not financial advice.** Nothing on the site, and nothing AGI-1 says, promises gains or tells people to buy or sell.
@@ -86,9 +99,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | Server code | **Vercel Functions** in `/api` | Same project, no sleeping server; the free tier covers 1M calls/month |
 | Chat AI | **Google Gemini API, paid tier with prepaid credits** | Chats stay private (not used for training), allowed worldwide, and the key stops when credits run out |
 | Model | `gemini-3.1-flash-lite`, read from env var `GEMINI_MODEL` | Cheapest as of Sep 2026 ($0.25 per 1M input tokens / $1.50 per 1M output). Check [pricing](https://ai.google.dev/gemini-api/docs/pricing) before changing it |
-| Votes database | A **new** Supabase project, separate from the old site's | Testing can never break the live leaderboard |
+| Database | Supabase (free tier): the chat's limits, wallet names and notes, the diary, her voice's counts and kept lines. Since 2026-09-28 the same project as the original site's (see "Deployment") | Free; only our server holds its key |
 | Prices | DexScreener public API (free, no key) | Same as the old site |
-| Human check | Cloudflare Turnstile (free, unlimited, works on any host) | Stops bots on chat and voting |
+| Human check | Cloudflare Turnstile (free, unlimited, works on any host) | Stops bots on the chat |
 | Hosting | A **new, separate** Vercel project (free Hobby plan) | Every push gets its own preview link |
 | Wallet sign-in | "Sign-In with Ethereum" message (EIP-4361), checked on the server with `viem`; wallets found with EIP-6963 | Free, standard, no outside service |
 | $AGI balances | Robinhood Chain's free public node, read-only `balanceOf` | Free and keyless; rate-limited, but we ask rarely |
@@ -100,34 +113,34 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 
 | Path | What it is |
 |---|---|
-| `index.html` | The page: top bar, hero, every section, and the footer (the safety note). Vite starts here |
+| `index.html` | The page: top bar, the front (2026-09-28), hero, every section, and the footer (the safety note). Vite starts here |
 | `diary.html` | AGI-1's diary page (`/diary`, Phase 5): top bar, the entries, a short safety paragraph. Its own entry: `src/diary.js` |
-| `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode if the visitor switched it on, before the page paints (no flash), and sets the phone's browser-bar color to match |
-| `src/main.js` | Browser code entry point: styles, theme, prices, sections, chat, the Arena, then the 3D stage (loaded separately) |
-| `src/styles/` | `tokens.css` (colors for both themes, chart colors, fonts), `base.css` (reset, buttons), `layout.css` (top bar), `footer.css` (safety note + bottom bar), `hero.css` (hero, ticker, figure), `sections.css` (section headings, stat tiles), `evals.css` (Figure 2), `modelcard.css` (Model card), `playground.css` (Playground), `relationship.css` (levels panel, connect screen, level-up), `arena.css` (The Arena), `notify.css` (the notification card, 2026-09-25), `checker.css` (ClankChecker, 2026-09-26), `pop.css` (Pop mode, 2026-09-27: the whole second look, every rule under `[data-skin="pop"]`) |
+| `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28) |
+| `src/main.js` | Browser code entry point: styles, theme, the front, prices, sections, chat, then the 3D stage (loaded separately, after the front's entrance) |
+| `src/landing/landing.js` | The front (2026-09-28): the loader, the entrance, the focus lines, AGI-1 in WebGL, the orbit, her bubble, the ribbons, the manifesto, the cursor and hearts (see "The front") |
+| `src/landing/lines.js` | What AGI-1 says in the front's speech bubble, and when she's clicked (PG-13, no pet names, no money talk) |
+| `src/styles/` | `tokens.css` (colors for both themes, chart colors, fonts), `base.css` (reset, buttons), `layout.css` (top bar), `footer.css` (safety note + bottom bar), `hero.css` (hero, ticker, figure), `sections.css` (section headings, stat tiles), `evals.css` (Figure 2), `modelcard.css` (Model card), `playground.css` (Playground), `relationship.css` (levels panel, connect screen, level-up), `notify.css` (the notification card, 2026-09-25), `checker.css` (ClankChecker, 2026-09-26), `pop.css` (Pop mode, 2026-09-27: the whole second look, every rule under `[data-skin="pop"]`), `landing.css` (the front, 2026-09-28: every rule names an `lp-` class) |
 | `src/theme.js` | The light/dark toggle and (2026-09-27) the Pop mode button; remembers both choices; sends `agi:theme` and `agi:skin`; the phone's browser-bar color (`barColor()`) |
 | `src/menu.js` | The phone menu (both pages): on screens up to 920 px (in Pop mode up to 1040 px; 860 px before the Pop mode button, 760 px before ClankChecker's link) the top bar's links are hidden, and the menu button shows them as a drop-down (with the Diary, the Safety note and, under 380 px, Pop mode). Where it starts is decided by the CSS alone. Closes on a link, Escape, a tap outside, or when the links fit again. Also Pop mode's top-bar band (`is-stuck`, past the hero) |
 | `src/prices/` | `parse.js` (read DexScreener's answer, number formats), `prices.js` (fetch every 30 s, sends `agi:prices`), `ticker.js` (draws the hero ticker) |
-| `src/sections/` | Page sections below the hero: `evals-data.js` (the benchmark numbers) + `evals.js` (Figure 2: chart, tooltips, table view); `modelcard.js` (Copy button + live token numbers); `arena.js` (The Arena: leaderboard rows, voting, countdown, Hall of Fame, round history, the new-champion event); `checker.js` (ClankChecker, 2026-09-26: the coin list (live: the newest coins every 10 s while it's on screen, a Refresh button), each coin's picture and its big view, filters and search, "Ask AGI-1" and her answer under the coin) |
+| `src/sections/` | Page sections below the hero: `evals-data.js` (the benchmark numbers) + `evals.js` (Figure 2: chart, tooltips, table view); `modelcard.js` (Copy button + live token numbers); `checker.js` (ClankChecker, 2026-09-26, "Risk check your coins on clank" on the page since 2026-09-28: the coin list (live: the newest coins every 10 s while it's on screen, a Refresh button), each coin's picture and its big view, filters and search, "Ask AGI-1" and her answer under the coin) |
 | `src/checker/lines.js` | ClankChecker (2026-09-26): the risk levels' names and what AGI-1 says about a scan (two lines per level, the official $AGI, a copy of it), with her reaction and voice style for each. The page and the server both read it |
 | `src/checker/copycat.js` | ClankChecker (2026-09-26): which coins copy another coin's ticker ("E/ACC" = "EACC"). Our server marks the whole list with it, and the page marks it again whenever new launches arrive, so both always agree |
-| `src/stage/stage.js` | Figure 1, the 3D stage: minimal studio (transparent canvas, neutral light, floor dial, soft shadow), camera, loading %, AGI-1 / CABO-1 switch, taps; and (2026-09-25) moving that one canvas into a live view and back: the chat's, and since 2026-09-26 ClankChecker's; and (2026-09-27) the "3D · 2D" switch: which AGI-1 is on stage (`slot()`, `setStyle()`, `swapAgi1()`) |
+| `src/stage/stage.js` | Figure 1, the 3D stage: minimal studio (transparent canvas, neutral light, floor dial, soft shadow), camera, loading %, the model switch (AGI-1; the Arena's champion left on 2026-09-28), taps; and (2026-09-25) moving that one canvas into a live view and back: the chat's, and since 2026-09-26 ClankChecker's; and (2026-09-27) the "3D · 2D" switch: which AGI-1 is on stage (`slot()`, `setStyle()`, `swapAgi1()`) |
 | `src/stage/agi1-2d.js` | AGI-1 in 2D (2026-09-27): her 2D rig, drawn by the same stage as flat layers that bend every frame (loads only when 2D is picked: a separate file). Her motion, face, hair springs, arms and every reaction; the same controls as `agi1.js` (`react`, `hello`, `setTalk`, `setPointer`, `setAttention`, `setCloseUp`, `update`) |
 | `src/stage/agi1-2d-rig.js` | Where everything is on her 2D picture: each layer's box, her face's pieces, her eyes' edges, her joints, the inside outline of her elbows, the markers the live views frame her by, her hair's springs, the part of her chest that follows through (2026-09-28) |
 | `src/stage/agi1-2d-motion.js` | The pure parts of her 2D motion (tested in Node): springs that follow like body parts, blinks, her eyelids' curves, her head turning in 2.5D, her elbows (a round elbow outside, the crease inside), her chest's soft follow-through (`Jiggle`, `chestWeight`, 2026-09-28), her talking mouth, 2D transforms; and which AGI-1 the visitor picked (`agi1_style`) |
 | `src/stage/agi1.js` | AGI-1's idle (built in code), occasional dance, and reactions (wave, looking at you, hop, spin, hearts, a jealous glance); her face (2026-09-25: her jaw, mouth corners and cheeks really move, painted eyelids, blush and "^^" eyes, an expression for each chat mood) and her listening/thinking looks; since 2026-09-26 her arm waves like a real arm (a hinge at the elbow), her mouth is redrawn, her hair swings, and ClankChecker's reactions (`okay`, `hmm`, `worried`) |
 | `src/lib/talk.js` | How much AGI-1 is talking right now (0–1), for her 3D mouth: a sound meter on her voice, or a made-up rhythm ("saying" a reply silently) |
 | `src/stage/effects.js` | Floating hearts in the accent color |
-| `src/stage/champion.js` | Phase 6: the Arena champion's card on the stage (logo, ticker, name, round, votes), drawn on a canvas in the site's colors |
-| `public/` | Files served as-is: favicon, `fonts/` (Geist, and for Pop mode Anybody and Instrument Serif Italic; self-hosted, each with its OFL license file), `models/agi1.glb` (2.18 MB, computers), `models/agi1-phone.glb` (1.67 MB, phones), `models/cabo.glb` (2.44 MB), `images/agi1-avatar.webp`, `images/agi1-portrait.webp`, `images/agi1-live.webp` (the chat's live view before the 3D arrives, 24 KB), `images/agi1-live-2d.webp` (the same for AGI-1 in 2D, 50 KB), `models/agi1-2d/` (AGI-1 in 2D, 2026-09-27: her 6 layers and her face's pieces as 7 WebP pictures, 389 KB, downloaded only when a visitor picks 2D), `images/coins/` (logos of the Arena's first coins: 256 px for the stage card, `-64` for the leaderboard; $AGI's is AGI-1's portrait, not the old rear-view picture) |
+| `public/` | Files served as-is: favicon, `fonts/` (Geist, and for Pop mode Anybody and Instrument Serif Italic; for the front's "ドキドキ" a 760-byte subset of Dela Gothic One; self-hosted, each with its OFL license file), `models/agi1.glb` (2.18 MB, computers), `models/agi1-phone.glb` (1.67 MB, phones), `images/landing/` (the front, 2026-09-28: AGI-1's cutout, 104 KB; her face for the bubble, 4 KB; a depth map for her WebGL parallax, 5 KB), `images/agi1-avatar.webp`, `images/agi1-portrait.webp`, `images/agi1-live.webp` (the chat's live view before the 3D arrives, 24 KB), `images/agi1-live-2d.webp` (the same for AGI-1 in 2D, 50 KB), `models/agi1-2d/` (AGI-1 in 2D, 2026-09-27: her 6 layers and her face's pieces as 7 WebP pictures, 389 KB, downloaded only when a visitor picks 2D) (`images/coins/`, the Arena's coin logos, left with it on 2026-09-28) |
 | `src/chat/chat.js` | The Playground (AGI-1's chat, `section#playground` in `index.html`): 18+ gate, human check, history in the browser, mood → stage reaction. "Try AGI-1" buttons scroll here |
 | `src/chat/models.js` | The model picker in the chat bar (2026-09-26): "AGI-1 ▾" opens a small menu (AGI-1, and AGI-2 "Coming soon"), for mouse, keyboard and screen readers |
 | `src/chat/model-lines.js` | What AGI-1 says when someone picks AGI-2 (pre-written, playfully jealous, PG-13, no AI cost) |
-| `src/lib/human.js` | The human check shared by the chat and the Arena: Cloudflare Turnstile widget, the 2-hour pass saved in the browser, a small JSON-POST helper |
+| `src/lib/human.js` | The human check for the chat (shared with the Arena until 2026-09-28): Cloudflare Turnstile widget, the 2-hour pass saved in the browser, a small JSON-POST helper |
 | `src/lib/levels.js` | The three relationship levels (names, $AGI needed, messages a day). The page and the server both read it |
 | `src/lib/wallet.js` | Finds the visitor's wallets (including Phantom) and signs in: asks only for the address, the network it's on (read-only) and a plain-text signature; turns wallet errors into plain words |
 | `src/chat/relationship.js` | The Relationship panel in the Playground: connect screen, level, name, AGI-1's notes, Forget me, the level-up moment |
-| `src/chat/champion-lines.js` | What AGI-1 says in her chat when the Arena crowns a new champion (pre-written, no AI cost) |
 | `src/chat/voice.js` | Voice replies: the speaker button; plays her AI voice from `/api/voice` (Web Audio; her natural voice or nothing, never the browser's robotic one); what she says out loud (`speakable`, `clipSpeech`); her fixed lines (hello, out of messages, market moments, ClankChecker: downloaded once, early when you're about to need them; her call intro is her natural voice or nothing). One voice for the whole page: ClankChecker plays through the same one (`sharedVoice()`), and `agi1:speaking` tells every live view when she talks |
 | `src/chat/listen.js` | Voice chat (2026-09-25): the browser's free speech recognition, one message at a time (`listenOnce`), and whether this browser can listen (`canListen`) |
 | `src/chat/limit-lines.js` | Out of messages (2026-09-25): what AGI-1 says when a Stranger or a Crush has used today's messages (the page shows it; her voice for it comes from `/api/voice?line=more-1` / `more-2`), and the safety note under it |
@@ -137,19 +150,19 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/diary.js` | The diary page: entries from `/api/diary`, Share on X per entry, "Show older entries" |
 | `src/share/` | `texts.js` (the ready-made X posts + links; checked by tests), `card.js` (draws the 1200×630 share cards), `buttons.js` (Share on X links, Save image) |
 | `scripts/share-pages.js` | Runs after `vite build`: writes `dist/share/*.html` (link-preview pages) and the site address into the preview tags of the home page and the diary page (`__SITE__`) |
-| `public/cards/` | The link-preview pictures (champion per coin, level per level, diary, and `home.jpg` for the home page), made with `tools/cards/` |
+| `public/cards/` | The link-preview pictures (one per level, the diary, and `home.jpg` for the home page; the champions' cards left with the Arena), made with `tools/cards/` |
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards") |
-| `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat, with her memory of the Arena's current champion), `wallet.js` (wallet sign-in, level, name, Forget me), `arena.js` (the Arena scoreboard, with the coins and nominations), `vote.js` (one Arena vote), `coins.js` (Phase 6: nominate a coin / vote to add it), `logo.js` (Phase 6: a coin's logo, served from our own address), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary + the coins' liquidity check, cron only) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (rounds, database calls for the Arena), `coins.js` (Phase 6: the checks a nominated coin must pass, the coin list, logos (its picture checks are shared with ClankChecker), the liquidity check), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `arena-memory.js` (2026-09-25: the Arena's current champion for AGI-1's chat, kept a minute), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/vote`, `/api/coins`, `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`) |
+| `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
-| `supabase/arena.sql` | Run in the same Supabase project (again after Phase 4; re-running is safe): the Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()` |
+| `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
 | `supabase/diary.sql` | Run once in the same Supabase project: the diary table + `diary_day_stats/needed/save/list()` |
-| `supabase/coins.sql` | Phase 6. Run once in the same Supabase project, **after** `arena.sql`: the Arena's coin list, nominations and votes to add a coin + `coin_board/vote/nominate/active/logo/retire()`, and the owner tools `coin_remove()` / `coin_restore()` |
+| `supabase/coins.sql` | Phase 6: the Arena's coin list, nominations and votes to add a coin + `coin_board/vote/nominate/active/logo/retire()`, and the owner tools `coin_remove()` / `coin_restore()`. **The original site's since 2026-09-28**, like `arena.sql`: never run it again from here, never drop its tables |
 | `supabase/voice.sql` | AGI-1's voice (2026-09-25). Run once in the same Supabase project, **after** `chat-limits.sql`: `voice_take()`, which counts voice use in the chat's counter table (the hard daily cap; since 2026-09-26 in requests, no need to run it again) |
 | `supabase/voice-lines.sql` | Her recorded lines (2026-09-26). Run once in the same Supabase project (any time): the `voice_lines` table + `voice_line_get/put()`, where the server keeps her fixed lines once Google has made them |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `arena.test.js`, `page.test.js` (the page's must-have warnings), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `champion.test.js` (AGI-1's champion lines: PG-13, no money talk, levels), `diary.test.js` (writing and listing the diary), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `coins.test.js` (Phase 6: nominations, logos, the coin list), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27: AGI-1 in 2D: which AGI-1, her springs, drifts, blinks, eyelids, the 2.5D turn, her mouth, her elbows, the rig's data and pictures, the page's "3D · 2D" buttons) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27: AGI-1 in 2D: which AGI-1, her springs, drifts, blinks, eyelids, the 2.5D turn, her mouth, her elbows, the rig's data and pictures, the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `scripts/check-secrets.js` | Runs after every build and fails it if a secret would be shipped to browsers |
 | `tools/model/` | Offline 3D-model tools, not part of the site build: `fix-hair-weights.mjs`, `drop-tangents.mjs` (see "3D models") |
 | `tools/agi1-2d/` | 2026-09-27, offline: turns the owner's 2D art (`agi 2d anime/agi-vtuber.html`) into `public/models/agi1-2d/`: takes the layers out, cleans them up, upscales them 2× (an anime upscaler, run once), packs them. `bash tools/agi1-2d/build.sh "agi 2d anime/agi-vtuber.html"` (see "AGI-1 in 2D") |
@@ -162,8 +175,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 ## Commands
 
 - `npm install`: downloads the packages listed in `package.json` into `node_modules/` (git ignores it).
-- `npm run dev`: local preview with instant reload at http://localhost:5173. The `/api` functions (chat, Arena) don't run here.
-- `npm test`: runs all automated tests: chat, prices, keep-alive, evaluations data, the Arena, the page's warnings, wallet sign-in and levels (a few seconds, no keys needed).
+- `npm run dev`: local preview with instant reload at http://localhost:5173. The `/api` functions (chat, voice, the diary, the risk check…) don't run here.
+- `npm test`: runs all automated tests (the files listed in `package.json`: chat, prices, keep-alive, the page's warnings, wallet sign-in and levels, the diary, voice, the risk check, the front…; a few seconds, no keys needed).
 - `npm run build`: runs the tests, builds the site into `dist/`, writes the share pages (`scripts/share-pages.js`), then runs the
   secret check. Vercel runs this on every push, so a failing test stops a broken chat from going live. Each test may take at
   most 30 s (`--test-timeout`): a stuck test fails the build within a minute instead of hanging it for 45 minutes.
@@ -186,12 +199,11 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 - **Zoom** (2026-09-25, the owner's request "zoom in really close"; `src/stage/stage.js`, "zoom"): **+ / −** at the stage's
   top right (each press ×1.75: 1× → 1.75× → 3.1× → 5.4× → 8×), a "2.4× · reset" pill under them while zoomed, a **two-finger
   pinch** on phones and a **trackpad pinch** on laptops (browsers send it as Ctrl + wheel). A plain mouse wheel still scrolls the
-  page. Limits: AGI-1 8× (her face fills the stage), CABO 7× (his face), the champion card 2× (logo, title and ticker still
-  fit). Every model starts at 1×, and switching models resets it.
+  page. Limits: AGI-1 8× (her face fills the stage; 3× in 2D). She starts at 1×. (The Arena champion's card, 2× at most,
+  left with the Arena on 2026-09-28.)
   - **Where it aims:** at 1× the stage's middle, as before. Zooming in, AGI-1 is framed like a portrait: the top of her head
     stays just inside the top of the picture, so each step crops from the bottom up (knees up, waist up, face), never centered
-    on her hips. CABO zooms toward his face, the card toward its logo. The aim follows her head smoothly, so she stays in the
-    picture even if she dances.
+    on her hips. The aim follows her head smoothly, so she stays in the picture even if she dances.
   - **While zoomed in** (over 2×) she looks into the camera, and no surprise dance starts (`agi1.setCloseUp()`; it comes back
     at 1×). All the way in, she gets shy (looks away, small hearts), at most every 30 s.
   - **Phones:** at 1× a swipe over the stage scrolls the page (`touch-action: pan-y`); once zoomed in, one finger turns the view
@@ -218,7 +230,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
   `window.dispatchEvent(new CustomEvent('agi1:react', { detail: 'happy' }))`.
   Types: `wave`, `happy` (same as a tap: hop + hearts), `love` (spin + big hearts + the floor dial blushes), `shy`
   (looks down and away + small hearts), `dance`, `nod` (voice chat), and since 2026-09-25 `jealous` (a pout and a glance away;
-  the Arena sends it when another coin wins), `neutral` (her calm face again; the chat sends it for a neutral reply), and the
+  for AGI-2 in the model picker and a copy of $AGI in ClankChecker; until 2026-09-28 also when another coin won the Arena), `neutral` (her calm face again; the chat sends it for a neutral reply), and the
   market moments' `celebrate` (a hop, a burst of hearts, "^^" and a big smile, and on the stage a little dance; not in the
   chat's live view) and `sad` (a sad face, looking down for a few seconds), and since 2026-09-26 ClankChecker's `okay`
   (lower risk: a calm smile and a nod), `hmm` (some risk: a pout and a slow tilt of her head) and `worried` (high risk: a
@@ -248,16 +260,10 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
   swings it around and flares it and it settles, her dance moves it, never too far, phones, "reduce motion", no shader errors;
   her mouth opens and closes with each syllable, never all the way.
 - **Taps** hit an invisible box around the model, which is much cheaper than testing 31k triangles. A drag of more than 8 px is a rotate, not a tap.
-- **CABO** downloads only when someone picks CABO-1, so first-time visitors only download AGI-1.
-- **The champion** (Phase 6): a third button (the Arena's latest champion: its logo, its ticker, "Champion") appears once the
-  Arena knows who won (`agi:arena-champion`, sent by `src/sections/arena.js`; the stage asks for it when it starts). It shows a
-  card floating over the floor dial (`src/stage/champion.js`: logo, ticker, name, round, votes; redrawn when the theme changes;
-  tap = it spins; a new champion turns it once), a **Buy $X on clank.trade ↗** link under it (a normal link to the coin's
-  clank.trade page, new tab, `noopener noreferrer`) and "Community pick · not financial advice"; the figure's caption becomes
-  "$X, champion of Arena round #N, crowned by humans in the Arena. A community pick, not an endorsement or financial advice."
-  AGI-1 stays first on stage.
-  On phones the buttons drop their second line ("AGI-1", "Cat", "Champion") so all three fit at 360 px. A coin the owner removed
-  is never shown as champion.
+- **CABO-1 (the cat) is gone** (2026-09-28, with $CABO: see "$CABO and ClankCap removed"): its button, its model file and
+  its zoom are removed; since the Arena left too (the same day), the stage has AGI-1 alone.
+- **The champion is gone too** (2026-09-28, with the Arena: see "The Arena: removed"): its stage button, its card
+  (`src/stage/champion.js`) and its "Buy on clank.trade" link. The model switch shows AGI-1 alone.
 - **In the chat too** (2026-09-25): while you chat, this same canvas moves into the Playground's live view, where she's framed
   like a video call, talks, blinks, listens and thinks. See "AGI-1's live view in the chat". **And in ClankChecker**
   (2026-09-26): the same way into the answer under the coin you asked her about (see "ClankChecker").
@@ -294,9 +300,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    depends on the relationship level (10 / 50 / 150, see "Relationship levels"), and 1,000 AGI-1 replies per day for the whole
    site. Strangers are counted by a daily-changing HMAC code of their IP, Crush and Soulmate by their wallet's code;
    raw IPs and addresses are never stored. **If the database is unreachable, there's no chat** (fail closed).
-4. **Gemini** (`gemini-3.1-flash-lite`): AGI-1's prompt (`server/agi1-prompt.js`) plus a section for the visitor's level, the
-   Arena's current champion (since 2026-09-25, see "Her memory of the Arena") and, only for messages about the clank.trade
-   Telegram group, her notes about it (see below), safety filters switched **on** (Gemini 3's
+4. **Gemini** (`gemini-3.1-flash-lite`): AGI-1's prompt (`server/agi1-prompt.js`) plus a section for the visitor's level
+   and, only for messages about the clank.trade Telegram group, her notes about it (see below; from 2026-09-25 to 2026-09-28
+   also the Arena's current champion: see "Her memory of the Arena"), safety filters switched **on** (Gemini 3's
    defaults are off; sexual content at the strictest level), thinking at `MINIMAL` (Gemini 3 defaults to HIGH, and thinking is
    billed), replies capped at 300 output tokens, JSON answer `{reply, mood}`.
 5. **Reply cleanup:** wallet addresses other than the official $AGI one and links other than clank.trade are removed in code.
@@ -345,25 +351,11 @@ it**, and then she's sarcastic and funny about it (owner's request, 2026-09-25).
   addresses / phones / emails / ids / explicit words / accusations in the data, the forget list and blocklist, the prompt rules,
   and that the chat sends the notes to Gemini only when asked).
 
-### Her memory of the Arena (2026-09-25)
+### Her memory of the Arena (2026-09-25 to 2026-09-28)
 
-The owner's request: "update her memories every time there's an arena champion, she only remembers the current arena
-champion… not the past ones, but don't add these on the parameters section, just an update". So:
-- Before every reply, `server/arena-memory.js` asks the database who the **current champion** is (the latest crowned round:
-  `arena_state` with one recent round, which also crowns a round that just ended, plus the coin list for its name) and adds
-  a short section to her prompt (`arenaPrompt()` in `server/agi1-prompt.js`): the coin, its name, the round, its votes and
-  how long ago. **Only the latest crown**, never older ones (asked about earlier rounds, she says she only keeps track of the
-  latest one and points to the Hall of Fame).
-- Kept per server copy for at most a minute and never across a round change, so she knows a new champion within seconds.
-  A coin the owner removed is never mentioned (as on the stage); one that has since left the Arena is mentioned as such.
-- She brings it up only when it fits (the Arena, the champion, voting, who's winning, that coin, or her own champion news in
-  the chat), proud when $AGI holds the crown and playfully jealous otherwise, and never says to buy, sell or hold any coin.
-- It never slows her down or stops her: if the database is slow (over 1.5 s) or down, she just doesn't mention the Arena.
-- No row in the Playground's Parameters panel (as asked). **Cost:** about 80 more input tokens per reply, about +$0.00002
-  (worst case about +$0.02 a day with the 1,000-reply cap), plus at most two small database reads a minute per server copy.
-- **Tests:** `tests/chat.test.js` (5: only the current champion, $AGI proud / others jealous, asked again at every new round and
-  at most once a minute, a removed coin never mentioned, a coin that left, the database down or stuck never holds up the
-  reply, the text is plain and safe); end to end in `limittest.mjs` (the local server tells her the champion; no Parameters row).
+From 2026-09-25 she knew the Arena's current champion before every reply (`server/arena-memory.js`, `arenaPrompt()`). It left
+with the Arena on 2026-09-28 (see "The Arena: removed"): her prompt no longer mentions the Arena, and the chat makes no Arena
+database calls (`tests/chat.test.js` checks both).
 
 ### The model picker: AGI-2 "Coming soon" (2026-09-26)
 
@@ -640,187 +632,58 @@ other networks, "already pending", the wallet's own error words, the 15-second h
 (2026-09-26, `phantomtest.mjs`, 25 checks): Phantom's real logo formats, a late Phantom, a broken picture and no picture (the
 letter instead), outside picture addresses refused.
 
-## The Arena (voting)
+## The Arena: removed from this site (2026-09-28)
 
-The Arena is the ClankeRRankeR, restyled as an AI-lab leaderboard (`section#arena` in `index.html`). Rules (the owner's
-choices, 2026-09-24): **one vote per human per round**, **5-minute rounds**; it started with **$AGI, $CABO, $CLANKCAT**, and since
-Phase 6 **visitors vote coins in** (see "Coins in the Arena" below). The coin with the most votes in a round is crowned champion
-and enters the Hall of Fame.
-Phase 4 (2026-09-24) added the anti-bot check below, the Hall of Fame (most crowns this week and all time), the round history
-(past champions with their times) and AGI-1's reactions in her chat.
+The owner: "and can you remove the arena too" (after $CABO and ClankCap), then "replace clankchecker with the name … risk
+check your coins on clank": the risk check took the Arena's place (see "ClankChecker"). The Arena (from 2026-09-24: the
+ClankeRRankeR as an AI-lab leaderboard, one vote per human per 5-minute round, a champion crowned every round, the Hall of
+Fame, the round history, visitors voting clank.trade coins in, the champion's card and "Buy on clank.trade" link on the 3D
+stage, AGI-1's champion lines and her memory of the champion) is gone from agi1.app. The original site in `AGI NEW WEBSITE`
+still runs it, on the database both sites share, so **nothing was removed from the database**.
 
-**Rounds** come from the server's clock, never the visitor's: round = time since 1970 in 5-minute steps (UTC), so rounds start
-at :00, :05, :10… The page shows a friendly number: round #1 started 2026-09-24 00:00 UTC.
+**What went:**
+- The page: the Arena section, its links (top bar, menu, footer, both pages), the stage's champion button, card and Buy link,
+  the front's Arena planet and list row, the safety note's fifth point ("The Arena is a game") and its data sentences (the
+  Arena votes, the per-coin code for votes to add a coin), "vote in the Arena" in the link-preview text.
+- The code: `api/arena.js`, `api/vote.js`, `api/coins.js`, `api/logo.js`, `src/sections/arena.js`, `src/styles/arena.css`,
+  `src/stage/champion.js`, `src/chat/champion-lines.js`, `server/arena-memory.js`, the Arena's speed bumps
+  (`server/burst.js`) and its per-coin visitor code (`server/security.js`), the keep-alive's liquidity check of the Arena's
+  coins (the original site's keep-alive still does it), the champion's share posts, cards and pages, and their tests
+  (`tests/arena.test.js`, `coins.test.js`, `champion.test.js`).
+- The Arena's coins: the site now follows **$AGI only** (`TOKENS` in `src/prices/parse.js`; $CLANKCAT, one of the Arena's first
+  coins, went with it), and `public/images/coins/` (their logos) and the champion cards in `public/cards/` are gone.
 
-**Flow of one vote** (`api/vote.js`, in this order; any failure stops before anything is counted):
-1. **Speed bump:** at most 12 requests a minute per visitor on one server copy (`server/burst.js`), else 429 `slow_down`,
-   before Cloudflare or the database is asked.
-2. **Check the request:** settings present, JSON only, body ≤ 4 KB, and the coin looks like a ticker.
-3. **Human check:** the 2-hour pass (the **same pass as the chat**: one check covers both), or a fresh Turnstile token made for
-   voting. Tokens carry an action (`chat` or `vote`) and the server checks it. A token earns a new pass.
-   Then the coin must be in the Arena right now (`coin_active()`, kept 30 s per server copy and asked again when a coin isn't
-   on it, so a coin voted in a moment ago counts at once; before `coins.sql` is run, the first three coins).
-4. **Count it:** the server picks the round and the visitor's daily IP code, then `arena_vote()` records the vote in one atomic
-   step. The **database** refuses a second vote from the same code in the same round (409 `already_voted`), whatever the
-   browser does. If the database is unreachable, no vote (fail closed). A server copy that already saw this visitor vote this
-   round answers 409 itself, without asking the database again.
+**What stays, and why:**
+- `server/arena.js`, small now: the round clock and one database call for the diary (the numbers saved with each day's entry
+  stay complete for the original site's diary page, although this site never shows them), and the coins this site never
+  shows ($CABO, for ClankChecker).
+- `server/coins.js`, small now: ClankChecker's helpers (a coin name's cleanup, crude names, picture checks, reading an answer
+  up to a size, and the name our server gives itself: `ClankChecker/1.0; +https://agi1.app`, was `AGIArena/1.0`).
+- `supabase/arena.sql` and `supabase/coins.sql`: they set up the shared database's Arena, which the original site uses. Never
+  run them again for this site, and never drop those tables (the original site would lose its Arena).
+- Her Telegram memory still knows the group's favorite coins ($AGI and $CLANKCAT): that's the group's history, not the Arena.
 
-**Anti-bot check (Phase 4, 2026-09-24).** Already there: the human check (Turnstile, tied to the action), one vote per round
-enforced by the database, rounds and champions decided by the server, size and coin checks, fail closed, no raw IPs, and a
-board the CDN caches. Gaps found and fixed:
-- **IPv6 address blocks:** IPv6 users usually get a block of 18 billion billion addresses (a "/64"), so the full address let one
-  person look like millions of voters. Visitor codes now use the whole /64 block (`ipGroup()` in `server/security.js`), for votes,
-  passes and chat limits alike. Like a shared Wi-Fi, everyone in one block shares one vote per round.
-- **Hammering:** a script sending hundreds of requests now gets "slow down" from memory (`server/burst.js`), and repeat votes in a
-  round don't reach the database. These only work per server copy; the real rules stay in the database.
-- **Still possible, by design:** someone with many real internet connections and a human (or paid captcha-solving) check for each
-  can cast more votes. Anonymous voting can't fully stop that without accounts; it costs them a lot for a meme crown.
-- **Owner action (optional, free, recommended before launch):** Vercel's one free rate-limit rule: Vercel → agi-ecosystem →
-  **Firewall** → **Configure** → **+ New Rule** → name "API speed limit" → If **Request Path** **starts with** `/api/` → Then
-  **Rate Limit** → Fixed Window, **60 s**, **120 requests**, key **IP** → action **Default (429)** → Save Rule → **Review
-  Changes** → **Publish**. It stops floods before they cost function runs, for the chat and wallet too.
+**To bring it back:** it lives on in `AGI NEW WEBSITE` (read-only for us, hard rule 1) and in this repo's git history before
+this change; ask Claude.
 
-**Scoreboard** (`GET /api/arena`): this round's votes, the latest 12 champions, all-time crowns and **this week's crowns** (the
-week starts Monday 00:00 UTC; the server works out the first round of the week). `arena_state()` crowns
-finished rounds when the board is read: most votes wins; a tie goes to the coin that reached that score first. Rounds with no
-votes get no champion, and rounds more than a week old are never crowned late. The answer is the same for everyone, so Vercel's
-CDN keeps it for 10 s (`s-maxage=10`): any number of visitors costs about one function call per 10 s per region.
-**Older rounds** (`GET /api/arena?before=<round>&limit=<1–48>`, `arena_history()`): champions before that round, newest first.
-Finished rounds don't change, so the CDN keeps these for 60 s. If the database still has the arena.sql from before Phase 4, the
-board keeps working, "This week" says "Coming soon." and older rounds can't load (log: "Hall of Fame not set up yet").
+### $CABO and ClankCap removed (2026-09-28)
 
-**In the browser** (`src/sections/arena.js`): a leaderboard table (rank, coin, live price, 24h, votes this round as a thin accent
-bar, crowns, Vote button), the round number + countdown, then two blocks: the **Hall of Fame** (two small tables: this week and
-all time, most crowns first, with a thin accent bar) and the **Round history** (past champions grouped by day: round number, the
-round's start time in the visitor's own time zone (the full five minutes in a tooltip), the coin, its votes, "quiet rounds" where nobody voted, and a "your pick" tag where
-this browser voted for the winner; "Show older rounds" loads 24 more at a time and disappears at the first round). It fetches
-the board every 15 s, only while the Arena is on screen and the tab is visible; while only the Playground is on screen it checks
-once after each round, so AGI-1 can react. A vote shows at once, then every Vote button locks until the next round
-(remembered in the browser as `arena_vote`; the last 100 votes as `arena_votes`, only for "your pick"). On phones, price, 24h and
-crowns move under the coin name, and the two blocks stack. Text is always set with `textContent`.
-
-**AGI-1 reacts to each new champion** (`agi:champion` event → `src/chat/chat.js` + `src/chat/champion-lines.js`): on stage
-(`love` for $AGI, `shy` for the others) and in her chat, with a pre-written line (no Gemini call, so no cost): happy when
-$AGI wins, playfully jealous when another coin does ("a cat won round #152. a CAT. i can literally text back 🙈"), a special
-line when your pick won. The line follows your level (Strangers: no pet names; Crush and Soulmate: your name or a pet name),
-shows chips like "mood: jealous · arena · round #152", appears only after the 18+ check, waits if she's typing a reply, and
-isn't saved to the chat history. Jealousy is a joke, never guilt-tripping, and the lines never mention prices or buying
-(`tests/champion.test.js`). Only while the page is open: nothing is sent anywhere.
-
-**Privacy and storage:** `arena_votes` keeps only round, daily IP code and coin, and forgets who voted after about 2 days.
-Tallies and champions are kept (tiny). Real IPs are never stored. Because a vote is tied to the IP code, **people sharing one
-internet connection** (the same Wi-Fi, some mobile networks) **share one vote per round**.
-
-**Setup:** Supabase → the same project as the chat → SQL Editor → New query → paste **all** of `supabase/arena.sql` →
-Run. It ends by showing `arena_functions_found = 3`. **After the Phase 4 update, run it once more** (it keeps every vote and
-champion; Supabase may warn about a "destructive operation": that's the line replacing the old `arena_state`). No new Vercel
-settings or redeploy needed. Until it's run at all, the Arena says "The Arena opens soon." and counts nothing.
-
-**Troubleshooting** (Vercel → agi-ecosystem → Logs):
-
-| The Arena says | Log line | Fix |
-|---|---|---|
-| "The Arena opens soon." | `[arena] state unavailable: arena: arena_state HTTP 404 PGRST202 …` | Run `supabase/arena.sql` in the project `SUPABASE_URL` points to |
-| "The Arena opens soon." | `[arena] SUPABASE_URL or SUPABASE_SECRET_KEY is missing` / `[vote] missing settings: …` | Same settings as the chat: add them, then Redeploy |
-| "Too busy to count right now." | `… HTTP 401` / `403` / `540 …` | Wrong key / a publishable key instead of `sb_secret_…` / project paused (Resume it): same fixes as the chat |
-| "Couldn't check that you're human." | (browser console: Turnstile error) | Expected in automated browsers; test in a normal browser |
-| Hall of Fame "This week" says "Coming soon." | `[arena] Hall of Fame not set up yet: run supabase/arena.sql again in Supabase` | Run all of `supabase/arena.sql` again (safe) |
-| "Too many tries. Wait a minute, then vote again." | (none) | The speed bump: more than 12 vote requests in a minute from one visitor. It clears by itself |
-
-**Adding a coin:** visitors do it (next section). `TOKENS` in `src/prices/parse.js` is now only the Arena's first three coins,
-used before `coins.sql` is run and for the static share cards.
-
-### Coins in the Arena (Phase 6)
-
-The owner's choices (2026-09-25): **a coin joins automatically at 20 votes** from different humans within 7 days; it must be a
-real clank.trade coin with some liquidity; **the Arena holds 8 coins**: $AGI and $CABO always stay, plus up to 6 others; when
-it's full, the coin with the fewest Arena votes in the last 7 days makes room; the owner can remove any coin.
-
-**Nominating** (the "Nominate a coin" block under the leaderboard; `POST /api/coins { coin: "<clank.trade link or address>" }`):
-1. Speed bump (10 requests a minute per visitor), JSON ≤ 2 KB, a clank.trade coin link (`clank.trade/coin/0x…`) or a contract
-   address (`parseCoinInput()` in `src/prices/parse.js`, shared with the page).
-2. The human check: the same 2-hour pass as the chat and the Arena, or Turnstile (action `vote`).
-3. A coin that's already up for a vote: this is simply a **vote to add** (no outside lookups).
-4. A new coin (or one that left the Arena) is **checked first** (`server/coins.js`), both lookups at once:
-   - its **clank.trade page** must exist: the page title is "<Name> (<TICKER>) · Clank.trade" ("Coin not found" = not a clank
-     coin). The page also gives the name, the ticker and the logo (the Pinata IPFS picture on the page);
-   - **DexScreener**: its biggest Robinhood Chain pool must hold **$5,000+** (coins still on their bonding curve have no pool yet);
-   - the ticker must be A–Z/0–9 (up to 12), and the name and ticker must be PG-13 without links (`fitToShow()`).
-   If clank.trade or DexScreener doesn't answer, nothing is saved ("Couldn't reach clank.trade…", fail closed).
-5. `coin_nominate()` saves it with the nominator's vote as the first one. At most **2 nominations a day per visitor** and 50 a
-   day for the whole site; **one coin per ticker** (a second "$PEPE" gets `symbol_taken`, unless the first one is a forgotten
-   nomination with no votes this week).
-
-**Votes to add** (`coin_vote()`): one per visitor per coin per 7 days, counted with a scrambled code made for that coin only
-(`coinVoterCode()`: it can't be linked to the visitor's other coins or Arena votes), deleted after 8 days. At 20 the coin joins
-in the same step (`coin_promote()`, one at a time under a database lock, so the Arena never gets a 9th coin). If the Arena is full,
-the coin with the fewest Arena votes this week leaves ("made room"); a coin that joined less than a day ago is safe, and if every
-coin is that new, the nominee **waits** and joins at the next board read. A coin's votes are used up when it joins: if it ever
-leaves, it starts again from zero. Nominations show only their ticker, name, votes and a clank.trade link, **never a logo**.
-
-**The board** (`GET /api/arena` also calls `coin_board()`, at the same time as `arena_state()`): `coins` (in the Arena, AGI and
-CABO first, each with `logo` 64 px, `logoLarge` 256 px, `buy` = its clank.trade page), `retired` (left in the last 30 days, so a
-recent champion keeps its name and logo), `candidates` (top 12 nominations with this week's votes) and `rules` (20, 8). Before
-`coins.sql` is run: the first three coins and `candidates: null` ("Nominations open soon.").
-
-**Logos** (`GET /api/logo?a=<address>&s=64|256`): only for coins that are (or were) in the Arena, never nominations or removed
-coins. The server fetches the picture from clank.trade's Pinata gateway at the size asked (Pinata shrinks it), checks it's a real
-PNG/JPEG/WebP/GIF/AVIF of at most 1 MB (never SVG), and serves it from our own address with `Cache-Control` for a week at the CDN
-(so a logo costs about one function run per region per week). Why not load it straight from Pinata: our CSP only allows our own
-pictures, and the 3D stage can only paint same-address pictures onto the card. Only pictures from `*.mypinata.cloud/ipfs/…` or
-DexScreener's picture server are ever fetched, so the endpoint can't be used to fetch anything else. A changed picture gets a new
-address (`&v=`). The first three coins use local files (`public/images/coins/`).
-
-**Rugs:** the keep-alive (3 times a day) checks the voted-in coins on DexScreener; one whose pool holds **under $1,000** leaves
-the Arena ("low liquidity"), so the champion's Buy link never points at a dead coin. A coin missing from one answer is left alone.
-
-**In the browser** (`src/sections/arena.js`): rows are made when a coin appears and removed when it leaves; each has its logo (the
-ticker's first letter when there's none), and a "New" tag for its first day. The prices follow the list (`agi:coins` →
-`src/prices/prices.js`, still one DexScreener request for all coins). "Nominate a coin": the box takes a link or an address
-(Enter works), and every answer is said in plain words (not a clank.trade coin; $X liquidity, needs $5K; not PG-13; already in
-the Arena; 2 nominations today…). "Up for a vote": ticker, name, clank.trade ↗, a thin bar "7 / 20", **Vote to add** (remembered
-in the browser for 7 days as `arena_coin_votes`). After a nomination the board is fetched fresh (a new address skips the CDN
-copy). AGI-1's champion lines work for any coin (her "a CAT won" jokes follow the coin's name).
-
-**Owner tools** (Supabase → SQL Editor → New query → one line → Run):
-- `select coin_remove('PEPE');` takes a coin out for good (ticker or address): it leaves the Arena at once, can't be nominated
-  again, its logo is no longer served, and it's never shown as champion. AGI and CABO can't be removed.
-- `select coin_restore('PEPE');` undoes that (it can then be nominated again).
-- `select symbol, status, name, note from arena_coins order by status, symbol;` lists every coin (core, listed, candidate,
-  retired, hidden) and why it left.
-
-**Setup:** Supabase → the same project → SQL Editor → New query → paste **all** of `supabase/coins.sql` → Run (after
-`arena.sql`). It ends by showing `coin_functions_found = 10`. No new Vercel settings. Until it's run, the Arena keeps its first
-three coins and nominations say "Nominations open soon." (log: `[arena] nominations not set up yet`).
-
-**Troubleshooting** (Vercel → agi-ecosystem → Logs):
-
-| What you see | Log line | Fix |
-|---|---|---|
-| "Nominations open soon." | `[arena] nominations not set up yet: run supabase/coins.sql` | Run `supabase/coins.sql` (after `arena.sql`) |
-| "Couldn't reach clank.trade to check the coin" on every nomination | `[coins] couldn't check 0x… with clank.trade` | clank.trade is down or refuses our server (e.g. a bot wall). Try later; if it lasts, tell Claude (the check could use another source) |
-| A coin's row shows a letter instead of its logo | `[logo] 0x…: HTTP …` | Pinata or clank.trade's picture is gone or too big (over 1 MB). Harmless; the letter stays until it works |
-| A coin you don't want in the Arena | (none) | `select coin_remove('TICKER');` in the SQL Editor |
-| A coin left with "low liquidity" | `[coins] left the Arena (liquidity under $1000): $X` | Working as planned (its pool was almost empty). It can be nominated again later |
-
-**Tests:** `tests/coins.test.js` (18: links and addresses accepted/refused, tickers/names/PG-13, logo addresses, the clank.trade
-and DexScreener checks, request checks before the human check, votes go straight to the database, nominations and every refusal,
-removed coins, the 20th vote, "open soon", the speed bump, `/api/logo` (sizes, only Arena coins, only real pictures, never other
-hosts), the board's coins/logos/links, Arena votes following the list, the keep-alive's liquidity check). The SQL ran in PGlite
-(55 checks: nominations and limits, votes and the 7-day window, the 20th vote, making room by this week's votes, the 1-day safety,
-waiting, tickers, removed coins, logos, retire, data checks, permissions). End to end with fake services: 58 checks (logos,
-nominating with every refusal, another visitor's vote, the 20th vote bringing a row with its logo, "New", its price and Arena
-votes, the champion button and card with the Buy link in both themes, a new champion replacing the card, phones at 360 and 390 px,
-"open soon", a removed coin never shown).
-
-**Tests:** `tests/arena.test.js` (cacheable scoreboard, "not ready" before the SQL is run, request checks, one vote per round,
-a chat pass works for voting, fail closed; Phase 4: this week's crowns and the Monday start, the old-SQL fallback, history paging
-and input checks, IPv6 blocks, the speed bump, repeat votes answered from memory) and `tests/champion.test.js`. During
-development the SQL also ran in a real Postgres (PGlite, 21 checks, plus 19 for Phase 4: upgrading from the old file with data in
-it, running it twice, this week, history paging, permissions), and the page was tested end to end with fake services (13 checks,
-plus 36 for Phase 4: Hall of Fame counts, history days/times/quiet rounds/your pick/Show older, AGI-1's jealous and happy lines
-with the Playground or the Arena on screen, Stranger vs Crush lines, nothing before the 18+ check, "Coming soon" with the old
-SQL, phones at 390 and 360 px in both themes).
+The owner: "can you remove everything about cabo and clankcap". Done on this site (agi1.app) only; the original site in
+`AGI NEW WEBSITE` is untouched. (The Arena, where $CABO lived, left the same day: see above.)
+- **$CABO is hidden in this site's code, never deleted from the database.** Both sites share one Supabase project (see
+  "Deployment"), and there `CABO` is still a "core" coin of the original site's Arena. `server/arena.js` lists the coins this
+  site never shows (`HIDDEN_COINS` = CABO, `HIDDEN_ADDRESSES` = its contract) and `isHiddenCoin()`: **ClankChecker**
+  (`api/checker.js`) leaves $CABO out of the list, the newest coins and trending, and its scan and picture answer `removed` /
+  404, even for a pasted contract. **Her diary** never mentions it (an entry the original site wrote about it is shown without
+  those sentences, see "Diary"). **Her Telegram memory**: `tools/memory/forget.json` has `"tickers": ["CABO"]`, so
+  `build-memory.mjs` leaves the ticker out of every card; `server/tg-memory-data.js` was made again without it.
+- **Gone from the page:** the stage's CABO-1 button and cat model (`public/models/cabo.glb`), $CABO's logos and share card.
+- **ClankCap:** ClankChecker's "POWERED BY $CLANKCAP terminal" credit and its 𝕏 link are gone. (Nothing else named it.)
+- **To hide another coin** from ClankChecker the same way: add its ticker and contract address to `HIDDEN_COINS` /
+  `HIDDEN_ADDRESSES` in `server/arena.js` (and, for her Telegram memory, to `forget.json`'s `tickers`, then rebuild it), run
+  `npm test`, push.
+- **Tests:** `checker.test.js` ("no scan, no picture and no place in the newest coins on this site"), `diary.test.js`,
+  `memory.test.js` (the data has no CABO), `page.test.js`, `landing.test.js` (no CABO, ClankCap or Daria on the page).
 
 ## Diary, sharing and voice (Phase 5)
 
@@ -829,35 +692,43 @@ an X account, voice used only the browser's free text-to-speech (upgraded 2026-0
 posted automatically.**
 
 **AGI-1's diary** (`/diary`: `diary.html`, `src/diary.js`, `api/diary.js`, `server/diary.js`, `supabase/diary.sql`):
-- One short entry a day about the day before (UTC): who the Arena crowned (crowns per coin, votes, the biggest round) and how the
-  $AGI chart moved ($AGI's 24-hour change and volume from DexScreener, read just after midnight). Stored with its numbers, so
-  the page shows a small stats line under each entry.
+- One short entry a day about the day before (UTC): her day and how the $AGI chart moved ($AGI's 24-hour change and volume
+  from DexScreener, read just after midnight). The page shows a small stats line under each entry ("$AGI 24h +3.10%").
+  **Since 2026-09-28 never the Arena** (it left the site): until then she wrote about who the Arena crowned too.
+- **The diary's table is shared with the original site** (`AGI NEW WEBSITE`, which still has the Arena), and each day's entry
+  is written once, by whichever site's nightly job runs first. So: this site writes from the chart alone (the prompt forbids
+  coins, games, votes, rounds, crowns and champions, and `acceptableEntry()` refuses them, `aboutTheArena()`), but saves the
+  day's Arena numbers with the entry, complete, for the original site's page. And an entry the original site wrote first is
+  shown here without its Arena numbers and without its sentences about the Arena (`entryForThisSite()`: "dear diary, i won 5
+  rounds in the arena today 💜 the chart felt calm. i think they like me." → "the chart felt calm. i think they like me.");
+  if too little is left, it's told again with a pre-written entry. "Daria" becomes AGI-1.
 - **Who writes it:** the nightly keep-alive job (`api/keepalive.js`, 3 runs a day at 03, 11 and 19 UTC; Vercel may run each
   within that hour). Its first run after midnight writes yesterday's entry; later runs see it's there and do nothing, so a failed
   night is retried at the next run. No new cron job was needed.
 - **How:** one Gemini call (`gemini-3.1-flash-lite`, thinking MINIMAL, 250 output tokens, safety filters on) with the day's facts
-  and a diary prompt: lowercase, 2–4 sentences, proud when $AGI won most, playfully jealous otherwise, the chart only as a feeling,
-  never predictions or buy/sell/hold, no links or addresses. The answer is checked in code (`acceptableEntry()`: no money talk,
-  no links); if Gemini fails, has no key, or writes something off-limits, a **pre-written entry** (`fallbackEntry()`) is saved
-  instead (marked `source: fallback`). `diary_save()` writes a day once, so nothing is ever overwritten.
+  (the chart) and a diary prompt: lowercase, 2–4 sentences, her feelings as an AI girlfriend who always texts back, the chart
+  only as a feeling, never predictions or buy/sell/hold, no links or addresses, nothing invented. The answer is checked in code
+  (`acceptableEntry()`: no money talk, no links, nothing about the Arena); if Gemini fails, has no key, or writes something
+  off-limits, a **pre-written entry** (`fallbackEntry()`: a couple of ways to say each kind of chart day, and quiet ones, picked
+  by the date) is saved instead (marked `source: fallback`). `diary_save()` writes a day once, so nothing is ever overwritten.
 - **The page:** lab "field notes" style: kicker, title, a short lede and "written by an AI once a day · entertainment only · not
   financial advice"; each entry shows the date (the UTC day, written out), a mood chip, her words, the stats line and a
   **Share on X** button; 14 per page with "Show older entries"; a short safety paragraph linking to the full safety note.
-  `GET /api/diary` is the same for everyone: the CDN keeps it 10 minutes (older pages an hour). The first entry appears the
-  night after the first full day (the Arena opened 2026-09-24).
+  `GET /api/diary` is the same for everyone: the CDN keeps it 10 minutes (older pages an hour). The first entry was about
+  2026-09-24 (`FIRST_DAY`).
 - **Cost:** one Gemini call a day ≈ $0.0008 (about 2.5 cents a month). Supabase and Vercel: nothing noticeable.
 
 **Share on X** (`src/share/texts.js`, `src/share/buttons.js`): plain links to X's new-post box
 (`https://x.com/intent/tweet?text=…&url=…`). X opens with a ready-made post; the visitor edits it, posts it or closes it. Where:
-the Arena ("Latest champion" row above the round history), the Relationship panel ("Share my level on X") and every diary entry.
+the Relationship panel ("Share my level on X") and every diary entry (the Arena's "Latest champion" row left with it).
 Posts are short, fit in 280 characters (tested), never talk money, and never include the visitor's name or address.
 
 **Share cards and link previews** (`src/share/card.js`, `scripts/share-pages.js`, `public/cards/`, `public/share/go.js`):
-- **Save image** (Arena and Relationship panel) draws a 1200×630 picture on a `<canvas>` in the browser: the champion with the
-  round number and votes, or your level with the name AGI-1 calls you. It's made on the device and never uploaded: phones get the
-  share sheet (the visitor picks an app), computers a download.
-- **Link previews:** each shared link points to a small page (`/share/champion-<coin>`, `/share/level-<name>`; `/diary` for the
-  diary) whose preview tags show a picture from `public/cards/`. Crawlers read the tags; people are sent on at once by
+- **Save image** (the Relationship panel) draws a 1200×630 picture on a `<canvas>` in the browser: your level with the name
+  AGI-1 calls you. It's made on the device and never uploaded: phones get the share sheet (the visitor picks an app), computers
+  a download. (The Arena's "crowned champion" card left with it.)
+- **Link previews:** each shared link points to a small page (`/share/level-<name>`; `/diary` for the diary) whose preview
+  tags show a picture from `public/cards/` (`diary.png` says "her day · the chart · her feelings" since 2026-09-28). Crawlers read the tags; people are sent on at once by
   `/share/go.js` (a script file, because the security rules block inline scripts). The pages are written at build time with the
   production address from Vercel (`VERCEL_PROJECT_PRODUCTION_URL`, needs "System Environment Variables" on, which is the
   default), so the builds use https://agi1.app by themselves (the project's shortest production domain).
@@ -870,7 +741,7 @@ Posts are short, fit in 280 characters (tested), never talk money, and never inc
   `tools/cards/agi1-wave.webp` is AGI-1's live hello wave, about 1 s in (arm up, open hand), drawn from the stage at 5× pixels on a
   transparent background and cropped at the "AGI" on her shirt. Re-render it if the wave or the model changes: the first
   one (before the 2026-09-24 wave fix) had a drooping, broken-looking arm.
-- **Redo the pictures** after changing the card design or adding a coin/level (the build fails if one is missing):
+- **Redo the pictures** after changing the card design or the levels (the build fails if one is missing):
   `npm run build`, serve `dist/`, then `cd tools/cards && npm install && node make-cards.mjs http://localhost:4173`, then
   shrink the PNGs to 256 colors (about 40 KB instead of 200 KB; not `home.jpg`). The portrait is
   `public/images/agi1-portrait.webp` (384 px, the same render as the chat avatar).
@@ -882,7 +753,7 @@ Posts are short, fit in 280 characters (tested), never talk money, and never inc
 remembered in the browser (`agi1_voice`). Since 2026-09-25 she speaks in her own AI voice (see "AGI-1's voice" below); the
 browser's own robotic text-to-speech, the first version's voice and then the fallback, isn't used at all any more (her
 natural voice or text). Pressing it says "hi, it's me" (phones only allow sound that starts from a tap); a new message, Clear,
-Forget me and switching it off stop her talking. Browsers without Web Audio (none today) don't show the button. Only her replies are read, not the champion or level-up lines. On small phones the chat bar shows
+Forget me and switching it off stop her talking. Browsers without Web Audio (none today) don't show the button. Only her replies are read, not the level-up lines. On small phones the chat bar shows
 "online" as its dot only, to make room.
 
 **Setup (once):** Supabase → the same project → SQL Editor → New query → paste **all** of `supabase/diary.sql` → Run. It ends by
@@ -898,10 +769,12 @@ keep-alive logs `[diary] couldn't write … run supabase/diary.sql` (the keep-al
 | A plain, pre-written entry | `[diary] gemini didn't write <day>, using a pre-written entry: …` | Gemini refused or was down (same log hints as the chat). Nothing to do; tomorrow tries Gemini again |
 | X shows no picture under a shared link | (none) | X caches previews: try the link in a new post. Check `/share/…` opens and `/cards/….png` exists |
 
-**Tests:** `tests/diary.test.js` (writes yesterday once with the day's facts; skips when written or before the Arena opened;
-pre-written entries when Gemini fails, has no key, or talks money/links; DexScreener down; diary.sql missing; the list API's
-caching and input checks; the keep-alive writes it and never fails because of it), `tests/share.test.js` (every post fits and
-never talks money; the intent link; share pages for every coin and level with full addresses and no inline scripts; the pictures
+**Tests:** `tests/diary.test.js` (writes yesterday once from the chart, never the Arena, and saves the day's numbers complete;
+skips when written or before the first day; pre-written entries when Gemini fails, has no key, talks money/links or the Arena,
+one for each kind of chart day; what counts as the Arena; DexScreener down; diary.sql missing; the list API's caching and input
+checks, and entries as this site shows them; the keep-alive writes it and never fails because of it), `tests/share.test.js`
+(every post fits and never talks money; the intent link; share pages for every level (no champion pages) with full addresses
+and no inline scripts; the pictures
 exist; the address comes from Vercel; go.js only goes to our own pages; voice text and voice choice), `tests/page.test.js`
 (the diary page's warnings). The SQL ran in PGlite (22 checks). End to end with fake services: 43 checks (the diary page on
 desktop and phones in both themes, paging, empty and "opens soon", share pages redirect, Share on X links, Save image makes a
@@ -1154,11 +1027,10 @@ the chat while you're there and back when you scroll up. One 3D scene, so nothin
 - **Her mouth moves when she talks** (`src/lib/talk.js`): with voice on, a sound meter on her actual voice opens and closes her
   mouth (and her head nods a little on the louder words); **with voice off (or a reply without her voice), she
   "says" each reply silently** for a moment (about 16 letters a second, 0.8–3.2 s), like a character in a video game, and her
-  pre-written lines (level-up, new champion) too. Since 2026-09-26 her mouth opens quickly on each syllable and closes a
+  pre-written lines (level-up, AGI-2, market moments) too. Since 2026-09-26 her mouth opens quickly on each syllable and closes a
   little slower, so it no longer snaps shut about five times a second like a puppet's, and it never opens all the way.
 - **She blinks** every 2.5–6 seconds (sometimes twice), and when her attention shifts. Everywhere, not only in the chat.
 - **She waves when you arrive** at the chat (not again within a minute). No surprise dances in the chat.
-- If CABO or the champion is on the stage, the chat shows AGI-1, and they're back on the stage when you scroll up.
 - The conversation keeps its newest message in view when the live view appears (it takes some width, so lines re-wrap) and
   when the site's font arrives a moment later.
 - **Before the 3D arrives** (still loading) and **without WebGL**: a still picture of her (`public/images/agi1-live.webp`, 24 KB,
@@ -1222,7 +1094,7 @@ out slowly. It lasts while she says that reply (her voice, or the silent "saying
 | love | a soft smile, blushing (with the little strokes), dreamy half-lowered eyes, "^^" right after her spin |
 | shy | blushing, eyes half down, a small smile (and she looks away) |
 | wave (and her hello) | a bright smile, a little open, "^^" for a moment |
-| jealous (another coin won the Arena) | a pout (corners down, lips pushed out), eyes a little lowered, a glance away |
+| jealous (AGI-2 picked in the model picker; a copy of $AGI in ClankChecker; until 2026-09-28 another coin winning the Arena) | a pout (corners down, lips pushed out), eyes a little lowered, a glance away |
 | celebrate ($AGI reached a new $200K market cap step) | "^^" eyes, a big open smile, a blush (with a hop, a burst of hearts and, on the stage, a little dance) |
 | sad (a -20% day) | corners down, a small pout, eyes lowered; she looks down for a few seconds |
 | neutral | her calm face |
@@ -1287,7 +1159,7 @@ Escape; a call with her pickup, two turns back and forth, the mic never open whi
 hanging up after silence, leaving the tab, Clear; Firefox (no buttons); phones at 390 and 360; no console errors. Accessibility
 scan (axe) of the Playground during a call: 0 issues.
 
-## ClankChecker (2026-09-26)
+## ClankChecker, "Risk check your coins on clank" (2026-09-26)
 
 **The owner's request:** "add a new tab on the top … ClankChecker, it will determine all coins, old, new, graduated, if it's
 safe to buy … on clank.trade … a button for each coin that says ask AGI-1 … AGI-1 will speak with her natural voice and her
@@ -1303,11 +1175,16 @@ magnify it … and please add the non pg 13 ticker name coins they are part of c
 plus a **Refresh** button, **every coin's picture** with a **big view** when you tap it, and **every coin** listed, crude
 names too (hate slurs are still masked, and a crude coin's picture stays blurred until the 18+ check).
 
-**Where:** a section after the Arena (`section#checker`), with a **ClankChecker** link in the top bar between Arena and Diary
-(both pages, and the footer). Six links needed about 860 px, so the phone menu showed up to 860 px (was 760; 920 since the
-Pop mode button, 2026-09-27). Its eyebrow
-line reads **"ClankChecker POWERED BY $CLANKCAP terminal"** with a small round **𝕏** link to https://x.com/clankcapxyz (new
-tab; 2026-09-27, the owner's credit line). The scans' data still comes from the sources listed below.
+**Where, and its name:** since 2026-09-28 right after the Playground (`section#checker`), in the Arena's old place, and
+called **"Risk check your coins on clank"** everywhere visitors read it (the owner: "i mean risk check your coins on clank"):
+the top bar's link between Playground and Diary (both pages, and the footer), its eyebrow line, the front's planet and
+"Her world" row, the safety note, the home page's link-preview text, and a new line in her bubble on the front ("psst… want me
+to risk check your coins on clank? 💜"). Its heading stays "Every clank.trade coin, risk-checked". The code keeps the old
+name (`checker.js`, `chk-*`, `/api/checker`, and "ClankChecker" in these notes). The longer link still fits the top bar
+where the phone menu starts (920 px, 1040 px in Pop mode), now that the Arena's link is gone. (Before: a section after the
+Arena, with a **ClankChecker** link between Arena and Diary; six links needed about 860 px, so the phone menu showed up to
+860 px, 920 since the Pop mode button. From 2026-09-27 to 2026-09-28 its eyebrow also had a "POWERED BY $CLANKCAP terminal"
+credit with an 𝕏 link, removed with everything about ClankCap.) The scans' data comes from the sources listed below.
 
 **What visitors see** (`src/sections/checker.js`, `src/styles/checker.css`):
 - A search box (name, ticker, contract address or a clank.trade link: a contract that isn't listed can still be checked) and
@@ -1331,7 +1208,7 @@ tab; 2026-09-27, the owner's credit line). The scans' data still comes from the 
 - **Pictures** (round 2): tap a coin's picture (in the list or in her answer) for the **big view**, a native dialog: the
   picture up to 512 px (the whole picture, never cropped or enlarged), the ticker, name, stage, age and market cap, **Ask
   AGI-1**, **View on clank.trade ↗**, and "The picture its creator uploaded to clank.trade". ✕, Escape or a tap outside
-  closes it, and the focus goes back to the picture. A coin with a **crude name** (the Arena's PG-13 word list) has its
+  closes it, and the focus goes back to the picture. A coin with a **crude name** (the PG-13 word list first made for the Arena, now in `server/coins.js`) has its
   picture **blurred with "18+"** until the visitor confirms they're 18 or older (the big view has the button; it's the same
   confirmation as her chat's).
 - **Every coin** (round 2): crude names and tickers are listed as clank.trade shows them (the owner's choice: "they are just
@@ -1377,8 +1254,8 @@ tab; 2026-09-27, the owner's credit line). The scans' data still comes from the 
 - `GET /api/checker?logo=<lowercase address>&s=96|512` (round 2): a coin's picture (96 px, cut to a square, for the rows; 512
   px, the whole picture, for the big view). Its IPFS id comes from the lists our server already read (else one lookup at
   clank.trade), it's fetched from the picture host above, checked (a real PNG, JPEG, WebP, GIF or AVIF by its first bytes,
-  never SVG, at most 1 MB, no redirects) and served from our own address with its own strict CSP, like the Arena's logos
-  (the page's CSP stays as it is). The CDN keeps it a week (browsers an hour); no picture → 404 (kept an hour); the host
+  never SVG, at most 1 MB, no redirects) and served from our own address with its own strict CSP, as the Arena's logos
+  were (the page's CSP stays as it is). The CDN keeps it a week (browsers an hour); no picture → 404 (kept an hour); the host
   failing → 502 (kept 5 minutes; the row keeps its letter, and her answer's header shows no picture: before 2026-09-27 it
   could show a broken-image icon). 240 pictures a minute per visitor (per server copy).
 - Any other address is 400 before anything is fetched. clank.trade not answering, or half an answer: 503 and "Not enough
@@ -1423,7 +1300,7 @@ coin shows its letter instead, everywhere (the redeploy also empties the CDN's c
 
 | What you see | Log line | Fix |
 |---|---|---|
-| "Couldn't reach clank.trade right now." under the search box | `[checker] couldn't read clank.trade's coin list: clank.trade HTTP 403` (or `answer is not JSON`) | clank.trade is down, put up a bot wall, or changed its API. Try later; if it lasts, tell Claude with the log line (nominations may be affected too) |
+| "Couldn't reach clank.trade right now." under the search box | `[checker] couldn't read clank.trade's coin list: clank.trade HTTP 403` (or `answer is not JSON`) | clank.trade is down, put up a bot wall, or changed its API. Try later; if it lasts, tell Claude with the log line |
 | A coin's answer says "Not enough data" | `[checker] couldn't read 0x… from clank.trade: …` or `…'s answer … was incomplete` | Same as above, for one coin. Passes by itself if it was a hiccup |
 | "Not a clank.trade coin, or too new to be listed yet." | (none) | Working as planned: clank.trade doesn't know that address (yet) |
 | "Couldn't read its DEX pool right now." on graduated coins | (none) | DexScreener didn't answer: the coin stays at "Some risk" at best until it does |
@@ -1467,7 +1344,7 @@ That page was the same brand, so Pop mode dresses this site in that family's loo
 itself; the ecosystem page it copied is gone, the look lives on here.)
 
 **What visitors see:**
-- A round **✦** button next to the theme button (both pages; the tooltip says "Pop mode: the AGI ecosystem look"). **On by
+- A round **✦** button next to the theme button (both pages; the tooltip says "Pop mode: the bold AGI look"; "the AGI ecosystem look" until 2026-09-28). **On by
   default since 2026-09-28, in the dark theme** (the owner: "make the pop mode open on default, in dark mode"; before that
   it was off by default and the theme followed the system setting). Pressed, the page switches to the lab look; pressed
   again, back to Pop mode. Remembered in the browser (`dr-skin` = `pop` or `lab`), like the theme (`dr-theme`). The theme button still works inside it (Pop mode has a night version). On phones under
@@ -1480,22 +1357,22 @@ itself; the ecosystem page it copied is gone, the look lives on here.)
   ♥ Robinhood Chain ✦ One official contract"), hidden from screen readers.
 - **The look** (agi1.app's design language): ink outlines (`#170a36`) on paper (`#f8f5ff`) and lavender (`#e4d9ff`); each
   section a bold color block: the hero **violet** (`#6b3bff`) with comic speed lines and halftone dots, Evaluations **honey**
-  (`#ffc933`), Model card paper, Playground **lavender**, the Arena **pink** (`#ff4da6`), ClankChecker **mint** (`#3ff0c3`)
-  with a faint grid, the safety note **ink**, the bottom bar violet with "AGI" in huge type. Headings and big
+  (`#ffc933`), Model card paper, Playground **lavender**, ClankChecker **mint** (`#3ff0c3`) with a faint grid (the Arena's
+  **pink** block left with it), the safety note **ink**, the bottom bar violet with "AGI" in huge type. Headings and big
   numbers in the wide **Anybody** type (weight 850–900), the hero's subtitle and the diary entries in **Instrument Serif**
   italics, mono uppercase eyebrows with a dot, pill buttons and chips with 2 px outlines, white cards with 3 px ink outlines
   and hard offset shadows (like stickers), AGI-1's stage and her live views as **pink comic panels** (her hearts there white,
   violet and honey; the 3D stage switches its floor-line colors), chat bubbles (hers lavender, yours violet), "Introducing
   AGI" in lavender with a pink offset shadow, a honey "Try AGI-1" in the hero.
 - **At night** (the dark theme): a deep violet hero and stage, deep ink sections, each keeping its color as an accent (the
-  eyebrow dot and its cards' shadows: honey, blue, violet, pink, mint), honey buttons and focus rings.
+  eyebrow dot and its cards' shadows: honey, blue, violet, mint), honey buttons and focus rings.
 - **The top bar:** floating pills over the hero (the wordmark, the section links in one white pill, round buttons). Once the
   hero has scrolled away (on the diary page: once the page scrolls at all) it gets a **frosted band** with an ink line under
   it (`is-stuck`, added by `src/menu.js`), so the pills never sit on busy text. The pills need about 1,000 px in one line,
   so in Pop mode the menu takes over up to **1040 px** (a card under the pills); the default look's menu starts at 920 px.
 - The phone's browser bar: violet at the top of the home page (deep violet at night), the page's own color on the diary.
-- The keyboard's focus ring: violet on the light blocks, white on the violet hero, ink in the top bar, on her pink stage and
-  in the pink Arena, honey on the ink footer and everywhere at night.
+- The keyboard's focus ring: violet on the light blocks, white on the violet hero, ink in the top bar and on her pink
+  stage, honey on the ink footer and everywhere at night.
 - **Switching keeps your place** (2026-09-27, the owner: "why when i click pop mode it goes to a different section of the
   page?"). Pop mode's sections are taller and its headlines bigger, and a browser keeps the number of pixels scrolled, not
   what you were reading: switching halfway down the page showed another section (270 to 2,270 px away, measured). Browsers'
@@ -1512,8 +1389,8 @@ the browser saved `dr-skin` = `lab` (Pop mode switched off), and `data-theme="da
 (the system setting doesn't decide any more), so the page never flashes the other look. `src/theme.js` wires the buttons (every
 `[data-skin-toggle]`, with `aria-pressed`), remembers the choice, repaints the browser bar (`barColor()`, the same colors as
 `/theme.js`; a test compares them) and sends `agi:skin`; the 3D stage listens (its `pop-light` / `pop-dark` colors, the
-hearts, the champion's card redrawn) and so does the menu (it closes when its links fit again). Browsers keep `/theme.js` a
-day, so the pages load it with a version (`/theme.js?v=2` since the new defaults: **raise the number whenever it changes**)
+hearts) and so does the menu (it closes when its links fit again). Browsers keep `/theme.js` a
+day, so the pages load it with a version (`/theme.js?v=3` since the front, 2026-09-28: **raise the number whenever it changes**)
 and `src/theme.js` also applies the saved choices, else the same defaults (`DEFAULT_SKIN`, `DEFAULT_THEME`) itself.
 
 **Fonts:** Anybody (variable, 57 KB) and Instrument Serif Italic (22 KB), free (SIL Open Font License, the license files are
@@ -1551,6 +1428,92 @@ top it stays at the top; slow fonts: kept at once and again when they arrive; a 
 back); "reduce motion"; axe 0 issues on both pages, computer and phone with the menu open, both themes; a clean console).
 Every earlier suite passes too (the launch suite's top-bar check now includes the ✦ button).
 
+## The front: the bright AGI landing (2026-09-28)
+
+**The owner's request:** "can you make the landing page like on the old site it was better … this one which has the brighter
+colors etc. … just make it in front but the other section just stays … the main is in the front". So the landing of the
+ecosystem page that agi1.app showed before this site (the loader, the huge AGI letters, AGI-1 with her bubble, the
+ecosystem in orbit, the ribbons, the "General → Girlfriend" manifesto) is back, as the first thing on the home page. The
+top bar stays on top, and everything else follows unchanged: the lab hero ("Introducing AGI", the ticker, the 3D stage),
+Evaluations, the Model card, the Playground, the risk check (ClankChecker) and the safety note (the Arena left the same day).
+
+**What visitors see** (`index.html`, the first children of `<main>`; `src/styles/landing.css`; `src/landing/landing.js`):
+- **The loader** (first visit of a browser session only, `sessionStorage` `agi-seen`): a honey screen with a little boot log
+  ("loading personality … ok", "scanning for red flags … 0 found", "warming up the playground … ok"), a huge 0–100 % count and a
+  bar; a click or any key speeds it up; it slides up after about 2 s (at the latest about 7 s after the page was asked for).
+- **The hero** (violet, full screen; in Pop mode under the see-through top bar): comic focus lines and halftone dots that
+  beat like a heart, the huge lavender "AGI" with a pink print echo (it moves a little with the pointer and the scroll),
+  AGI-1 (the owner's art, a cutout) drawn in WebGL: she's revealed in halftone dots with a light sweep, then has two print
+  echoes (pink, honey), a little depth when the pointer moves (a depth map), and a slight color split when you hover her;
+  "ドキドキ doki doki", her speech bubble (a new line every few seconds, a short reaction when you click her), and four
+  planets in orbit around her: **AGI-1** (the Playground), **Risk check your coins on clank** (ClankChecker), **$AGI** (the
+  Model card) and **@artgirlfintel** (X). They
+  slow down and stop under the pointer, speed up while you scroll, pass behind her, and their names never cover each
+  other (on phones only the front planets' names show). On the left "Artificial / Girlfriend / Intelligence", a one-line
+  lede, **Talk to AGI-1** (opens the chat) and **Explore ↓**; on the right the **Her world (05)** list ("Ecosystem" until the owner
+  asked for a better word, 2026-09-28): Talk to AGI-1,
+  Risk check your coins on clank, Her diary, $AGI (the model card), AGI on X.
+- **The ribbons:** two tilted marquees (pink, ink) between the hero and the manifesto, faster while you scroll.
+- **The manifesto** (honey): pinned while you scroll: "Artificial **General** Intelligence", "General" crossed out in pink,
+  "Girlfriend" written in over it with a heart, and "What the big labs are racing to build." → "What we built instead:
+  **the one who texts back.**", a "Zero red flags" sticker, then "Next: the model release ↓".
+- **With a mouse, over the front only:** a cursor with labels ("Say hi", "Risk check ↓", "The coin ↓", "Read →", "Follow ↗"), magnetic buttons,
+  and hearts where you click.
+- **One bright look in every theme and both looks** on purpose (it's the brand's pop-manga print look): the theme and Pop
+  mode buttons change the rest of the site, not the front. The lab hero lost its `h1` to the front (it's an `h2` now: one
+  `h1` per page, the front's "AGI, Artificial Girlfriend Intelligence").
+
+**How it works:**
+- `/theme.js` (before the page paints; `data-page="home"` on `<html>`) adds `lp-intro` to a visit that starts at the top (no
+  `#section` in the address) and `lp-loading` on the first visit of a session; `landing.css` hides the front's parts until
+  `landing.js` adds `lp-go`, then plays the entrance (the letters rise and widen, her reveal, the texts, the orbit growing
+  in, the sticker and the bubble popping in). `landing.js` marks itself running (`lp-live`); if it hasn't started 7 s after
+  the page opened (a script that failed to load), `/theme.js` shows the page anyway.
+- **"Reduce motion":** no loader, no entrance, nothing moving on its own (the orbit waits, the ribbons stand still, no heart
+  beat, no cursor, no hearts), and the manifesto shows its end, not pinned. (The CSS only plays the loader and the entrance
+  without "reduce motion", so the first paint is right too.)
+- **Performance:** one animation loop for the whole front, running only while some of it is on screen; the focus lines are
+  drawn once per resize; her WebGL canvas is at most 1.75× the screen's pixels (1.5× on phones); a GPU that loses the
+  canvas gets her picture back. **The 3D stage waits for the front's entrance** (`agi:landing-ready`, sent by `landing.js`),
+  so downloading and preparing her 3D model doesn't make the entrance stutter; it starts sooner when the stage is about to
+  scroll into view or the chat opens, and at the latest 6 s after the page opened. Downloads: her cutout (104 KB, high
+  priority), the depth map (5 KB), her face (4 KB) and, only for the "ドキドキ", 2 letters of Dela Gothic One (760 bytes).
+- **Security:** no outside scripts or styles (the old page used GSAP and Lenis from a CDN, which the site's CSP would block):
+  plain JavaScript and CSS only; its two canvases are made by the script (the page's markup keeps its one canvas); no inline
+  styles (colors are classes like `lp-c-pink`; positions come from the script through the CSS object model, which the CSP
+  allows). Her bubble lines are fixed (`src/landing/lines.js`): PG-13, no pet names (anyone reads them), never money talk.
+- **Accessibility:** the letters, the planets (they repeat the "Her world" list, so they're mouse-and-touch only:
+  `tabindex="-1"`), the bubble, the ribbons and the loader are hidden from screen readers; the "Her world" list and the two
+  buttons are the keyboard's way in (7 stops); the manifesto has a plain-text `h2` ("Artificial Girlfriend Intelligence,
+  instead of Artificial General Intelligence"). axe: 0 issues at 1440, 390 and 360 px × both themes × both looks.
+- **Not copied from the old page:** its own top bar (the site's stays), its Daria Research / ClankCap / Clank / CABO planets,
+  its ecosystem cards and token section (the site has its own), and its smooth-scroll library (the rest of the site
+  scrolls normally).
+
+**Cost:** nothing new: no service, no setting; about 114 KB of pictures for everyone who opens the home page.
+
+**Troubleshooting:**
+
+| What you see | Why | Fix |
+|---|---|---|
+| The honey loader shows again | It plays once per browser session: a browser that was closed, or a new private window, starts a new one (where the browser blocks `sessionStorage`, it never plays) | Nothing to fix |
+| The front shows without its entrance | The address had a `#section`, "reduce motion" is on, or the page's script came more than 7 s late | Nothing to fix |
+| She's a flat picture (no halftone reveal, no echoes) | The browser has no WebGL (or lost it) | Normal fallback: her picture |
+| "Loading weights…" stays a while on the 3D stage after scrolling down quickly | The stage starts after the front's entrance (at the latest 6 s after the page opened) | Nothing to fix |
+
+**Tests:** `tests/landing.test.js` (12: first in the page and everything in order under the top bar; the one `h1`, the lab
+hero's `h2`, decoration hidden from screen readers, the planets never a keyboard stop; its links (the Playground, the risk
+check, the Model card, the diary, X) and that every `#link` exists; one canvas in the markup, no inline code, nothing from other
+sites; its pictures and font (real WebP / WOFF2 files, small, the font's license); every CSS rule names an `lp-` class; her
+bubble lines; the manifesto's end state without the script; `/theme.js`'s classes (home, first visit, same session, private
+mode, a `#link`, the diary, the 7-second safety net); "reduce motion" in the CSS and the script; the stage waiting for
+`agi:landing-ready`; no CABO / ClankCap / Daria, nothing of the Arena), `tests/page.test.js` (the X links: 2 more on the home page). End to end
+(Claude's scratch scripts, not in the repo): the first visit (loader → entrance → the stage after it, timed), a second
+visit, a `#link`, "reduce motion" (she's drawn from the first frame the canvas shows), 1440 / 1024 / 390 / 360 / 320 px (no
+sideways scrolling, the bubble fits, planet names never overlap over time), both looks × both themes, axe, the keyboard
+order, every link, Pop mode and the theme switch keeping your place at the top, in the manifesto and at the risk check, the chat's
+live view and the 3D stage still working, the phone menu over the front, the site's real CSP, a clean console.
+
 ## AGI-1 in 2D (2026-09-27)
 
 **The owner's request:** "i attached a html file in the folder agi 2d anime … they will be able to choose what version agi can
@@ -1566,8 +1529,8 @@ scratch, and she's drawn by the same 3D stage as flat layers (one canvas, one sc
 live views, the hearts, works for her too).
 
 **What visitors see:**
-- **"3D · 2D"**, a small pill like the model switch: at the stage's bottom left (only while AGI-1 is on stage, not CABO or the
-  champion), and at the top right of her live views (the chat's and ClankChecker's). They all show the same choice, and a tap on
+- **"3D · 2D"**, a small pill like the model switch: at the stage's bottom left (while AGI-1 is on stage), and at the
+  top right of her live views (the chat's and ClankChecker's). They all show the same choice, and a tap on
   any of them switches her right where she is, with the same little shrink-and-grow as between models. Remembered in the
   browser (`agi1_style`); a first visit is 3D.
 - **Each version downloads only when it's picked:** 2D is 7 pictures (389 KB) and a small file of code (33 KB); a visitor who
@@ -1641,7 +1604,7 @@ with `src/stage/agi1-2d-rig.js` (its `arms.L.inner` / `arms.R.inner` are `RIG.el
 | What you see | Why | Fix |
 |---|---|---|
 | "Couldn't load that version of AGI-1. Refresh to try again." | Her 2D pictures didn't download (a connection hiccup) | Refresh. If it lasts, check `public/models/agi1-2d/` has its 7 files in the deployment |
-| No "3D · 2D" on the stage | CABO or the champion is on stage (it's about AGI-1), or the stage hasn't loaded yet | Nothing to fix |
+| No "3D · 2D" on the stage | The stage hasn't loaded yet | Nothing to fix |
 | A new reaction added to the 3D AGI-1 does nothing in 2D | The 2D rig needs its own version | Tell Claude: `react()` in `src/stage/agi1-2d.js` |
 | The 2D art was changed | The site's pictures are made from it | Run `tools/agi1-2d/build.sh` again (above) |
 
@@ -1668,10 +1631,11 @@ face 29, market 56, call intro 8, model picker 25, wave 61, hair 15, ClankChecke
 | Ticker | Contract (Robinhood Chain) |
 |---|---|
 | $AGI | `0xfa31d04462746aaa24bc7e5626403e09e4b106ec` (buy: https://clank.trade/coin/0xfa31d04462746aaa24bc7e5626403e09e4b106ec) |
-| $CABO | `0xcf5b720f33febdc1c9d4880b8317203b63fdf368` |
-| $CLANKCAT | `0x03e6a6881d0813bf6157ac4ee44d3cc73d5465a3` |
+| $CABO | `0xcf5b720f33febdc1c9d4880b8317203b63fdf368` (hidden on this site since 2026-09-28: `HIDDEN_ADDRESSES` in `server/arena.js`) |
+| $CLANKCAT | `0x03e6a6881d0813bf6157ac4ee44d3cc73d5465a3` (one of the Arena's first coins; not on this site since the Arena left, 2026-09-28) |
 
-Arena rounds are 5 minutes long (server clock, UTC), and prices refresh every 30 s. Buy links are `https://clank.trade/coin/<contract>`.
+Prices refresh every 30 s. Buy links are `https://clank.trade/coin/<contract>`. (Arena rounds were 5 minutes long, on the
+server's clock, UTC; `server/arena.js` keeps that clock only for the numbers the diary saves.)
 
 **AGI-1's 3D model:** `public/models/agi1.glb`, 2.48 MB. The original is `_source-assets/agi1-original.glb`
 (56.5 MB, = `models/girl.glb` from AGI FINAL, updated 2026-09-23).
@@ -1681,9 +1645,8 @@ Arena rounds are 5 minutes long (server clock, UTC), and prices refresh every 30
 - No face shapes (morph targets), so she can't blink or smile by herself. Reactions come from body animations and stage effects.
 - 3 textures at 2048 px WebP (color, normal, metal/roughness). About 67 MB of graphics memory (the original needed 537 MB).
 
-**CABO's 3D model:** `public/models/cabo.glb`, 2.44 MB. The original is `_source-assets/cabo-original.glb` (8.5 MB, = `models/cat.glb`
-from AGI FINAL), shrunk with the same command. 95,690 triangles, one 1-second looping animation. He's stored at a tiny scale
-(about 0.003 units tall), so the stage measures him and resizes him to fit the platform.
+**CABO's 3D model** (the cat, `models/cabo.glb`) was removed from this site on 2026-09-28 with $CABO; the original site in
+`AGI NEW WEBSITE` still has it (its original: `_source-assets/cabo-original.glb` there).
 
 ## AGI-1's personality
 
@@ -1753,7 +1716,7 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 - One accent color, used sparingly (live dot, highlights, focus rings). Everything else is black, white and grays.
 - Motion is subtle (short fades and slides) and switches off with "reduce motion".
 - **No real company names, logos, product or model names, and no copied layouts, fonts or artwork** from any real lab.
-  The wordmark is plain text. Made-up model names only (AGI-1, CABO-1).
+  The wordmark is plain text. Made-up model names only (AGI-1, AGI-2).
 
 **Tokens** (CSS variables in `src/styles/tokens.css`; light theme / dark theme):
 
@@ -1775,18 +1738,21 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   Headlines: weight 500–600, tight letter-spacing. No all-caps labels except tiny "eyebrow" lines.
 - **Page, top to bottom:** top bar (wordmark "AGI", section links, theme toggle, the Pop mode button (✦, the same
   round style), "Try AGI-1"; on phones the links
-  move into a drop-down behind a menu button: full-width rows, 17 px, hairlines between them) → **hero** →
+  move into a drop-down behind a menu button: full-width rows, 17 px, hairlines between them) → since 2026-09-28 **the
+  front** (the bright AGI landing, its ribbons and its manifesto: see "The front"; the one part of the page outside this lab
+  look) → **hero** →
   **Evaluations** (fake benchmark chart, AGI vs "your ex": "Texts back", "Rizz-Bench"…) → **Model card** (tokenomics +
-  contract address with copy) → **Playground** (AGI-1's chat styled like an AI playground) → **The Arena** (ClankeRRankeR as a
-  leaderboard) → **ClankChecker** (2026-09-26: every clank.trade coin with a risk scan, see "ClankChecker") → footer **safety
-  note** (the disclaimer, written like a lab safety statement). On screens up to 920 px the top bar's links move into the
-  phone menu (six links since ClankChecker and the Pop mode button since 2026-09-27; 760 px, then 860 px before).
+  contract address with copy) → **Playground** (AGI-1's chat styled like an AI playground) → **Risk check your coins on
+  clank** (ClankChecker, 2026-09-26: every clank.trade coin with a risk scan, see "ClankChecker"; since 2026-09-28 in the
+  Arena's old place) → footer **safety note** (the disclaimer, written like a lab safety statement). On screens up to 920 px
+  the top bar's links move into the phone menu (five links since the Arena left, one of them long; 760 px, then 860 px
+  before the Pop mode button, 2026-09-27).
 - **Hero:** eyebrow + date, "Introducing AGI", "Artificial Girlfriend Intelligence", a one-line meme lede, **Try AGI-1** (primary)
   + a secondary link, the **live price ticker** (mono, tabular numbers, live dot, "not financial advice"), and AGI-1 on the
   **minimal stage** as the hero figure with a paper-style caption ("Figure 1 …").
 - **Minimal stage:** plain background that matches the theme, neutral white studio light, a soft contact shadow and a faint
   floor ring. No platform, no colored lights, no fog, no particles except reaction hearts in the accent color. The model switch
-  is a small segmented control (AGI-1 · AGI-1 / CABO-1 · Cat, plus the champion). The zoom is a matching vertical pill (+ / −)
+  is a small segmented control (AGI-1 · Girlfriend; the champion's button left with the Arena). The zoom is a matching vertical pill (+ / −)
   at the top right, with a small mono "2.4× · reset" pill under it while zoomed.
 - **Charts** (rules from the dataviz method; Figure 2 is the example): "ours vs. a baseline" is an *emphasis* chart: ours in
   `--series-1` (accent), the baseline in the gray `--series-base`. One axis only (every score 0–100, higher is better).
@@ -1795,30 +1761,22 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   that only repeat visible numbers; and a "Show table" view. The colors were checked with the dataviz validator: color-blind
   separation 16.4 (light) / 11.0 (dark), target ≥ 8. The gray is under 3:1 on purpose, which is why values and the table
   are always there. Big standalone numbers (stat tiles) use normal figures; columns of numbers use `tabular-nums`.
-- **The Arena:** a plain leaderboard table (hairline rows, mono numbers, one thin accent bar per coin for this round's votes,
-  a small "Leader" pill), the round number and countdown above it, and below it the Hall of Fame (two small hairline tables, this week and all time) next to the Round history (rows grouped by day; they stack on phones). No podiums,
-  trophies, confetti or glow. On phones each coin folds into two lines. Phase 6: a 28 px round logo before each ticker (the
-  first letter when there's none), a "New" pill for a coin's first day, and "Nominate a coin" under the table (explanation +
-  a pill-shaped box with the Nominate button on the left, "Up for a vote" as hairline rows with a thin accent progress bar on
-  the right; stacked on phones).
-- **The champion's card** (stage, Phase 6): the page's own background color, a hairline border, "Arena champion" with an accent
-  dot, the round in mono, the logo in a circle, the ticker in Geist 600, the name, a hairline, "N votes · one per human". The Buy
-  link is the primary (black/white) button, centered at the bottom of the stage, with the note under it.
+- **The Arena and the champion's card** left the site on 2026-09-28 (see "The Arena: removed"); their look lives on in the
+  original site (`AGI NEW WEBSITE`).
 - **Safety note (the footer):** the site's real disclaimer, in a lab's voice: "Safety note", "The only serious part of this
-  page", then five numbered notes in two columns (one on phones): 01 not financial advice · 02 one official contract (the site
+  page", then four numbered notes in two columns (one on phones; five until the Arena left): 01 not financial advice · 02 one official contract (the site
   never asks for seed phrases, keys, transactions or token approvals; connecting a wallet only takes a free signature) ·
   03 AGI-1 is not a person (18+, PG-13) · 04 your data ("an AI service that writes her replies", history only in the browser,
-  the daily visitor code, the per-coin code for votes to add a coin, the wallet balance read, the Crush/Soulmate name and notes
+  the daily visitor code, the wallet balance read, the Crush/Soulmate name and notes
   under a scrambled code, Forget me, voice replies read aloud by the same AI service (else the browser's own speech), outside
-  services, the Telegram group memory) · 05 the Arena is a game (visitors choose the
-  coins; we only check it's a real clank.trade coin with some liquidity; the Buy link just opens the champion's clank.trade
-  page). Since 2026-09-25, note 01 also says that holding $AGI unlocks closer levels (more messages a day) and that AGI-1
+  services, the Telegram group memory). (05, "the Arena is a game", left with the Arena on 2026-09-28.) Since 2026-09-25, note 01 also says that holding $AGI unlocks closer levels (more messages a day) and that AGI-1
   mentions it when you run out of messages, and that her feelings about the live chart (happy at each new $200K of market cap,
   sad after a -20% day) are "a mood, not a signal to buy or sell". Since 2026-09-26 note 01 also says ClankChecker's risk
   levels are "rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy
   or sell", and note 04 that its scans are read by our server from public sources (clank.trade, DexScreener, a block
   explorer) and nothing about the visitor is sent to them (since round 2: its scans and coin pictures, from clank.trade and
-  its picture host, DexScreener and a block explorer). Last updated September 26, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
+  its picture host, DexScreener and a block explorer). Since 2026-09-28 note 01 calls it “Risk check your coins on clank”.
+  Last updated September 28, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
   AI provider (no "Google"/"Gemini"; it says "an AI service"), and there's no "Not a real lab" note. **2026-09-25:** "A parody"
   is gone from the bottom bar (both pages); it now reads "© 2026 AGI. No labs were harmed." and "$AGI is a token made
   by AGI, launched on clank.trade. Entertainment only · Not financial advice." The share pictures, link previews and
@@ -1834,9 +1792,9 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   background, a hairline border, 14 px corners, a soft shadow, her 36 px round avatar, a mono headline with a small green
   (`--up`) or red (`--down`) dot, her words, pill buttons (Listen with the accent play icon, Open chat) and a ✕. It slides in
   6 px (no motion with "reduce motion") and sits under the top bar's layer, so the open phone menu covers it.
-- **ClankChecker** (2026-09-26): the eyebrow "ClankChecker", then "POWERED BY" (11.5 px, spaced), "$CLANKCAP terminal" in the
-  text color and a 24 px round 𝕏 link with a hairline (2026-09-27; the 𝕏 is the Unicode character, not X's logo artwork; it
-  wraps under "ClankChecker" on phones). A pill-shaped search box and a segmented filter (Newest · Trending · Graduated · Biggest),
+- **ClankChecker** (2026-09-26): the eyebrow "Risk check your coins on clank" since 2026-09-28 (it was "ClankChecker"; its
+  ClankCap credit line is gone too). A
+  pill-shaped search box and a segmented filter (Newest · Trending · Graduated · Biggest),
   a mono status line with, at its right, "● Live · updated 8 s ago" (the accent dot pulsing like the hero ticker's; gray
   when paused) and a small pill **Refresh** button (its arrow spins while it asks), then the coins as hairline rows (the
   coin's picture in a 36 px circle with a hairline, its letter underneath until it loads, a slight zoom on hover and a
@@ -1885,34 +1843,16 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 - The Gemini key lives only in Vercel env vars. The browser talks to `/api/chat`, never to Google.
 - 18+ confirmation, Turnstile + 2-hour chat pass, size caps, per-visitor and site-wide limits in Supabase, signed history,
   safety filters on, thinking minimal, 300-token reply cap, address/link cleanup. Each of these is covered by `tests/chat.test.js`.
-- Optional outer fence: Vercel's one free WAF rate-limit rule on `/api/*` (120 requests/min per IP; steps in "The Arena" →
-  "Anti-bot check").
+- Optional outer fence: Vercel's one free rate-limit rule on `/api/*` (120 requests a minute per IP). Firewall rules belong to
+  one project: the owner set it up on `agi-new-website` (2026-09-24). For this one: Vercel → agi-ecosystem → **Firewall** →
+  **Configure** → **+ New Rule** → name "API speed limit" → If **Request Path** **starts with** `/api/` → Then **Rate Limit**
+  → Fixed Window, **60 s**, **120 requests**, key **IP** → action **Default (429)** → Save Rule → **Review Changes** →
+  **Publish**. (These steps were in the Arena's section, which left on 2026-09-28.)
 - **Money hard stop:** Gemini prepaid credits (top up small amounts, auto-reload OFF) plus a monthly spend cap in AI Studio.
 
-### Votes (`/api/vote`) (built, see "The Arena" above)
-- Row Level Security is ON for the three Arena tables with no rules, and the browser keys have no rights on them or on the
-  functions. Only the server's secret key can call `arena_vote()` and `arena_state()`. The browser never talks to Supabase.
-- The server picks the round from its own clock. The browser only says which coin.
-- One vote per visitor per round, enforced by the database (key: round + visitor code). This replaced the old site's
-  "unlimited clicks" (owner's decision, 2026-09-24), so there are no click batches to cap.
-- Turnstile (action `vote`) or the 2-hour pass shared with the chat. Fail closed: no database, no vote.
-- Visitor codes group IPv6 addresses by /64 block, so one person can't pose as millions of voters (Phase 4).
-- A per-copy speed bump (12 requests/min per visitor) and a "voted this round" memory keep floods away from Cloudflare and the
-  database (Phase 4). `arena_history()` is only callable with the secret key, like the other functions.
-
-### Coins (`/api/coins`, `/api/logo`) (Phase 6, see "Coins in the Arena" above)
-- The browser never writes coin data: nominations and votes to add go through `/api/coins` (speed bump, size check, human check
-  first, then the database decides in one step). Our server does the checks with clank.trade and DexScreener; if either doesn't
-  answer, nothing is saved.
-- Visitors are stored as a per-coin scrambled code (votes to add, deleted after 8 days) and the daily code (nomination limits,
-  deleted after 3 days). Never IPs.
-- Names and tickers are cleaned (no invisible characters, A–Z/0–9 tickers) and must be PG-13 without links; everything is shown
-  with `textContent`. Logos appear only after 20 humans voted a coin in, and the owner can remove any coin (`coin_remove`).
-- `/api/logo` only fetches from clank.trade's Pinata gateway (`/ipfs/<id>`) or DexScreener's picture server, for coins that are
-  or were in the Arena; it checks the picture's type and first bytes, refuses SVG and anything over 1 MB, and serves it with its
-  own strict CSP. No new domains in the page's CSP.
-- Row Level Security is ON for the three coin tables with no rules; only the server's secret key can use the coin functions, and
-  the owner tools can't be called by the server at all (only in the SQL editor).
+### Votes and coins (`/api/vote`, `/api/coins`, `/api/logo`): removed with the Arena (2026-09-28)
+- These endpoints are gone from this site (see "The Arena: removed"). The shared database's Arena tables keep their rules
+  (row level security on, only the secret key can call their functions) for the original site.
 
 ### Wallets (`/api/wallet`) (built, see "Relationship levels" above)
 - Signatures only: the page asks wallets for an address, the network they're on (read-only) and one plain-text message
@@ -2020,12 +1960,11 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 |---|---|---|
 | Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, 2026-09-27: 389 KB per visitor who picks 2D, instead of the 3D model's 1.7–2.2 MB) | Usually paused until 30 days have passed |
 | Supabase Free | 500 MB database · 5 GB egress · 200 realtime connections · 2M realtime messages/month. Paused after 1 week with no activity | Grace period, then restricted (read-only or paused), never billed |
-| Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008; her Arena memory adds about $0.00002), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 4,000 a day ≈ $12 ($18 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten) are made once and kept (the database since 2026-09-26) | The key stops when credits hit $0 (the chat and the voice share them) |
+| Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 4,000 a day ≈ $12 ($18 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten) are made once and kept (the database since 2026-09-26) | The key stops when credits hit $0 (the chat and the voice share them) |
 | Cloudflare Turnstile | Unlimited | — |
 | DexScreener | Free, no key, rate-limited per IP. Browsers ask every 30 s; since 2026-09-25 our server also asks for $AGI's market cap, at most once a minute per server copy, only to check a new market line | Requests fail, and we show the last known numbers (and her market lines wait) |
 | Robinhood Chain public node | Free, no key, rate-limited | Balance checks fail; people keep their last level and it retries |
-| clank.trade coin pages (Phase 6) | Free; our server reads one page per new nomination (at most 50 a day) | Nominations say "Couldn't reach clank.trade"; nothing else is affected |
-| Pinata picture gateway (clank.trade's logos) | Free for us; each logo (the Arena's, and since 2026-09-26 every ClankChecker coin's picture, two sizes) is fetched about once a week per CDN region | The coin shows its first letter instead |
+| Pinata picture gateway (clank.trade's coin pictures) | Free for us; each ClankChecker coin's picture (two sizes) is fetched about once a week per CDN region | The coin shows its first letter instead |
 | clank.trade's API (ClankChecker, 2026-09-26) | Free, no key; the list about once per 5 minutes per CDN region (about 17 small requests for 200 coins), the newest coins at most once per 10 seconds per region while someone watches (1 request), each coin asked about once per 5 minutes (1 minute for new coins; 2 requests) | ClankChecker says "Couldn't reach clank.trade" / "Not enough data"; nothing else is affected |
 | Blockscout block explorer (ClankChecker) | Free, no key; only for coins with 100+ holders, once per 5 minutes per coin | The scan says "More than 100 wallets hold it" |
 
@@ -2039,11 +1978,11 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | Name | Secret? | What |
 |---|---|---|
 | `GEMINI_API_KEY` | **yes** | Google AI Studio key (paid, prepaid billing) |
-| `SUPABASE_URL` | no | The **new** Supabase project URL, e.g. `https://abcd.supabase.co` |
+| `SUPABASE_URL` | no | The Supabase project URL, e.g. `https://abcd.supabase.co` (the same as the original site's: see "Deployment") |
 | `SUPABASE_SECRET_KEY` | **yes** | `sb_secret_…`, for server code only (goes in the `apikey` header) |
 | `TURNSTILE_SECRET_KEY` | **yes** | Verifies human checks on the server |
 | `VITE_TURNSTILE_SITE_KEY` | no (public) | Shows the Turnstile widget. Built into the page, so redeploy after changing it |
-| `PASS_SECRET` | **yes** | 32+ random characters. Signs the passes (chat and Arena) and AGI-1's replies, and makes the IP codes |
+| `PASS_SECRET` | **yes** | 32+ random characters. Signs the chat passes, AGI-1's replies, wallet sessions and voice tickets, and makes the IP codes |
 | `CRON_SECRET` | **yes** | 16+ random characters. Vercel sends it to `/api/keepalive`, so only Vercel's cron can run it |
 | `GEMINI_MODEL` | no, optional | Default `gemini-3.1-flash-lite` |
 | `CHAT_DAILY_CAP` | no, optional | AGI-1 replies per day, site-wide (default 1000) |
@@ -2059,8 +1998,8 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 
 Messages per day now depend on the relationship level (10 / 50 / 150 in `src/lib/levels.js`), so `CHAT_PERSON_DAILY` is gone.
 
-The Arena (and Phase 6's nominations and logos) has no settings of its own: it uses the chat's Supabase, Turnstile and `PASS_SECRET` settings. The browser never
-gets a Supabase key (the board comes from `/api/arena`), so `VITE_SUPABASE_…` settings aren't needed.
+The browser never gets a Supabase key (everything goes through our `/api`), so `VITE_SUPABASE_…` settings aren't needed.
+(The Arena, which left on 2026-09-28, had no settings of its own.)
 
 ## Deployment
 
@@ -2079,13 +2018,14 @@ gets a Supabase key (the board comes from `/api/arena`), so `VITE_SUPABASE_…` 
   1. **Environment variables:** Vercel → agi-ecosystem → Settings → Environment Variables → the same names and values as
      `agi-new-website` (see "Environment variables": open that project's list side by side and copy each one, with
      **Production** ticked), then **Redeploy**. `AGI1_VOICE` is the only renamed one (only if it was ever set there; the
-     default voice is the same). The same Supabase values mean both sites share one database: one Arena, one diary, the
-     same wallet levels, and the site-wide daily caps count both sites together. A separate Supabase project (every
+     default voice is the same). The same Supabase values mean both sites share one database: one diary (see "Diary"), the
+     same wallet levels, and the site-wide daily caps count both sites together; the Arena's tables too, which only the
+     original site uses since 2026-09-28 (never change or drop them from here). A separate Supabase project (every
      `supabase/*.sql` file run once, its own keys) would keep them apart.
   2. **Cloudflare Turnstile:** the site's widget → Settings → Hostname Management → add `agi1.app` and
-     `agi-ecosystem.vercel.app` (keep the ones already there). Without this, the chat, votes and nominations here say
-     "couldn't check that you're human".
-  3. **Check** in a private window and on a phone: the page, a chat reply, a vote, `/diary`, Connect wallet, and a link
+     `agi-ecosystem.vercel.app` (keep the ones already there). Without this, the chat here says "couldn't check that you're
+     human".
+  3. **Check** in a private window and on a phone: the page, a chat reply, `/diary`, Connect wallet, and a link
      preview (paste https://agi1.app into a post on X, don't send it). A MetaMask phishing warning on the new address is
      the usual false alarm: report `agi1.app` at report.blockaid.io (see "Relationship levels").
 - **A push that doesn't show up live** (a minute or two after pushing): Vercel → agi-ecosystem → **Deployments**. The newest one
@@ -2152,15 +2092,16 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   levels"). Needs `supabase/levels.sql` run once. Phantom fix: see "Why the wallet's own network" above.
 - **Phase 4: done 2026-09-24** (owner said "continue"). Anti-bot check (IPv6 blocks, speed bump; optional Vercel
   rate-limit rule for the owner), Hall of Fame (this week / all time), round history with times, and AGI-1's reactions to new
-  champions in her chat (see "The Arena"). Needs `supabase/arena.sql` run once more.
+  champions in her chat (all gone from this site since 2026-09-28: see "The Arena: removed"). Needed `supabase/arena.sql`
+  run once more (the original site's now: never again from here).
 - **Phase 5: done 2026-09-24** (owner said "continue"). AGI-1's diary page (one entry a day, Gemini once a day), share
   cards + "Share on X" (the visitor posts; **no automatic posting**), voice replies with the browser's free text-to-speech (see
   "Diary, sharing and voice"). Needs `supabase/diary.sql` run once.
 - **Phase 6: done 2026-09-25** (the owner pushed it and asked for the stage zoom next). Visitors nominate clank.trade coins and vote them in (20 humans in
   7 days, 8 coins at most, the fewest votes this week makes room), coin logos, the champion's button + card + "Buy on
   clank.trade" on the stage, the keep-alive's liquidity check, and AGI-1's memory of the clank.trade Telegram group (only when
-  asked). Needs `supabase/coins.sql` run once (after `arena.sql`). See "Coins in the Arena" and "AGI-1's memory of the clank.trade
-  Telegram group". All end-to-end suites pass (Arena 13, Playground 17, wallet 27, Phantom 18, Phase 4 37, Phase 5 43,
+  asked). Needed `supabase/coins.sql` run once (after `arena.sql`; the original site's now: never again from here). See "AGI-1's
+  memory of the clank.trade Telegram group" (the Arena's coins left this site on 2026-09-28). All end-to-end suites pass (Arena 13, Playground 17, wallet 27, Phantom 18, Phase 4 37, Phase 5 43,
   launch-ready 46, Phase 6 58) plus 112 unit tests and 55 SQL checks.
 - **Stage zoom: done 2026-09-25** (the owner pushed it and asked for the domain switch next). + / − and pinch (phones,
   trackpads), portrait framing toward AGI-1's face that follows her, CABO's face, the card's logo, sharper textures on phones
@@ -2259,6 +2200,20 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   in 2D". No setup, no cost, no new pictures. Tests: 233 unit (on Node 20, 22 and 24), `agi1_2dtest.mjs` 62 (its hop check
   now starts right after her dance, so a dance can't overlap it), the launch suite. Preview: `Claude outputs/agi1-2d-preview/`
   (`chest-before-after.mp4`, `chest-hop-slowmo.mp4`).
+- **This folder becomes the whole site (2026-09-28):** the copy of `AGI NEW WEBSITE` with AGI-1 / AGI, the X account, then Pop
+  mode + dark as the defaults (see the decisions log). Live on agi1.app once the owner set its settings in Vercel.
+- **$CABO and ClankCap removed, and the front: built 2026-09-28, waiting for the owner's OK** (the owner: "remove everything
+  about cabo and clankcap", and the old landing "in front"). See "$CABO and ClankCap removed" and "The front". No setup, no
+  cost. Tests: 252 unit (on Node 20, 22 and 24); end to end in a browser (see "The front": the first visit, phones down to
+  320 px, both looks and themes, "reduce motion", axe, the keyboard, the links, the stage and the chat's live view, the
+  site's real CSP).
+- **The Arena removed, and ClankChecker renamed: built 2026-09-28, waiting for the owner's OK** (the owner: "and can you
+  remove the arena too", then "i mean risk check your coins on clank"). The Arena is gone from this site (the database
+  keeps it for the original site), the risk check has its place and its new name, and the diary is never about the Arena
+  (see "The Arena: removed", "ClankChecker" and "Diary"). No setup, no cost. Tests: 212 unit (on Node 20, 22 and 24;
+  the Arena's, the champion's and the coins' tests left with them); end to end in a browser (the top bar fits at every
+  width in both looks, every link lands, the front and its planet names, the 3D stage and the chat's live view, Pop mode and
+  theme switches keeping your place, phones down to 320 px, axe 0 issues, a clean console).
 
 ## Decisions log
 
@@ -2376,6 +2331,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-09-28 | Her 2D chest's follow-through (the owner's request, "make it the best ever"): a soft spring (2.8 Hz, damping 0.34) on the lower part of her chest, driven by her pose and her hop, on her existing body picture. Natural and subtle because the site is PG-13 (the owner's rule for every feature): about 6 px of her 1536 px picture in a hop, 1.5 px in her dance, nothing while she stands still, none with "reduce motion". Not picked: an exaggerated bounce (fan service, against the PG-13 rule), and a separate chest picture from an image generator (it wouldn't match her art) |
 | 2026-09-28 | The whole site copied into `AGI 3 ECOSYSTEM`, replacing the ecosystem page there (the owner: "replace the full website", "exact same so its the same website", the character becomes AGI-1; the lab name is just "AGI", "dont add research"). Renamed everywhere: page text, her prompt and fixed lines, the share cards (made again with `tools/cards/`), file names (`server/agi1-prompt.js`, `src/stage/agi1.js`, `src/stage/agi1-2d*.js`, `public/models/agi1.glb`, `public/images/agi1-*.webp`, `tools/agi1-2d/`), code names, browser-storage keys (a new domain starts empty anyway), the `AGI1_VOICE` setting, and the bot name (`AGIArena/1.0; +https://agi1.app`). Kept: the database table `daria_diary`. Added: the project's X account (@artgirlfintel) as a round button in the top bar (a menu row under 380 px) and a footer link, on both pages, with a test (234 unit tests). Deploys to `agi-ecosystem` (agi1.app); `AGI NEW WEBSITE` untouched |
 | 2026-09-28 | Pop mode on by default, in the dark theme (the owner: "make the pop mode open on default, in dark mode"). `/theme.js`: nothing saved = Pop mode + dark (the system setting no longer picks the theme); switching Pop mode off is saved as `dr-skin` = `lab` (before, "off" just removed the key); the ✦ buttons start pressed; the pages load `/theme.js?v=2` so browsers holding yesterday's copy (kept a day) get the new one at once. Checked in a browser: first paint Pop + dark on both pages and phone sizes, off / light remembered after a reload, blocked storage gets the defaults. 235 unit tests |
+| 2026-09-28 | $CABO and ClankCap removed from this site (the owner: "remove everything about cabo and clankcap"). The database is shared with the original site, so $CABO is **hidden in the code** (`HIDDEN_COINS` in `server/arena.js`: the Arena's numbers, crowns and history, the coin list and votes, nominations, her Arena memory, her diary, ClankChecker, her Telegram memory), never deleted from the database; its cat model, logos and share card are gone; ClankChecker's ClankCap credit is gone. $CLANKCAT stays (not asked). Not picked: `coin_remove('CABO')` (the original site would lose it too, and the SQL refuses core coins anyway) |
+| 2026-09-28 | The front (the owner: the old landing "was better … just make it in front"): the ecosystem page's landing rebuilt as the first part of the home page (the loader, the hero with AGI-1 in WebGL and the orbit, the ribbons, the manifesto), everything else after it unchanged under the same top bar. Ported without its outside libraries (GSAP, Lenis: the CSP allows only our own scripts; plain JS and CSS instead), styles scoped to `lp-` names, the same bright look in every theme and look. Its planets are this site's parts (the Playground, the Arena, ClankChecker, X; the list adds the diary), not the old page's projects. The lab hero's title became an `h2` (one `h1`). Her bubble lines: no pet names (anyone reads them), unlike the old page's "hi love". Not picked: a separate landing page (the owner asked for it "in front"), or keeping the old page's own top bar |
+| 2026-09-28 | The 3D stage waits for the front's entrance (`agi:landing-ready`; sooner when it's about to scroll into view or the chat opens; 6 s at the latest), so her 3D model's download and shaders don't make the entrance stutter. Pop mode's dark top-bar band is a little more opaque (94%, was 84%): over the front's honey manifesto the old one looked muddy brown. `/theme.js?v=3` |
+| 2026-09-28 | The Arena removed from this site (the owner: "and can you remove the arena too"): its section and links, the champion on the stage (card and Buy link), her champion lines and Arena memory, the champion's share posts, cards and pages, the safety note's fifth point, `/api/arena`, `/api/vote`, `/api/coins`, `/api/logo` and the keep-alive's coin check. **Nothing removed from the database**, which the original site still uses for its Arena: `arena.sql` and `coins.sql` are never run again from here. The site follows $AGI only ($CLANKCAT, an Arena coin, went with it; her Telegram memory still knows it as the group's history). Kept, small: `server/arena.js` (the round clock and one database call, for the numbers the diary saves; the hidden $CABO) and `server/coins.js` (ClankChecker's helpers; our bot name is now `ClankChecker/1.0`, was `AGIArena/1.0`) |
+| 2026-09-28 | ClankChecker is **"Risk check your coins on clank"** on the page (the owner's words, after "placae clankchecker with risk check your coins in clank" and two corrections), in the Arena's old place right after the Playground (the owner's pick), with a new line in her bubble on the front; the front's Arena planet became **$AGI** (the Model card). The code keeps the old name. The top bar's five links still fit where the menu starts (920 / 1040 px) |
+| 2026-09-28 | The diary without the Arena (the owner's pick: "keep it, no Arena"): its table is shared with the original site, whose nightly job may write a day first. So this site writes from the chart alone (the prompt and `acceptableEntry()` refuse Arena talk), still saves the day's Arena numbers complete for the original site's page, and shows an entry the original site wrote without its Arena sentences (`entryForThisSite()`), or a pre-written one when too little is left |
+| 2026-09-28 | No "ecosystem" on the site (the owner: "can you just remove the word ecosystem, replace it with something better"; Claude picked the words): the front's list is **"Her world (05)"** (her bubble already says "welcome to my world", and every row is hers: her chat, her risk check, her diary, her coin, her X), and Pop mode's tooltip is "the bold AGI look". The pages' HTML comments said it too and ship with the page, so they changed as well (`tests/landing.test.js` keeps the word out). The folder `AGI 3 ECOSYSTEM`, the repo and the Vercel project `agi-ecosystem` keep their names: visitors never see them, and renaming them would break the link between this folder, GitHub and the live site |
 
 ## Open questions
 
@@ -2385,10 +2347,6 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   report that address the same way, and decide whether to hide Connect wallet until it's cleared (the chat works without
   it, as a Stranger).
 - Is the site "commercial" under Vercel's Hobby rules? Still worth asking Vercel support, now that the domain is live.
-- Nominations need our server to read clank.trade's coin pages. If clank.trade ever puts up a bot wall, nominations stop
-  ("Couldn't reach clank.trade…") until the check uses another source (e.g. on-chain). Votes to add and the Arena keep working.
-- Arena votes count per internet connection (IP code), so people on the same Wi-Fi share one vote per round. Fine for now;
-  revisit if it becomes a problem.
 - If the old AGI-1 server code turns up, compare its prompt with the personality section above.
 - ClankChecker shows coin pictures as their creators uploaded them to clank.trade; nothing free checks them. Crude-named
   coins' pictures are blurred until the 18+ check, and the owner can hide any picture with `CHECKER_HIDE_PICTURES`. If that

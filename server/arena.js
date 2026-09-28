@@ -1,19 +1,22 @@
-// The Arena (ClankeRRankeR) on the server: rounds, the coin list, and calls to the database functions
-// in supabase/arena.sql (arena_vote, arena_state). Only the server's secret key can call them.
-import { TOKENS } from '../src/prices/parse.js';
+// What's left of the Arena on this site's server. The Arena itself (voting, the leaderboard, nominations, the champion) left
+// agi1.app on 2026-09-28 (the owner: "remove the arena"). The database is shared with the original site (AGI NEW WEBSITE),
+// which still runs it, so two small things stay here:
+//   · the rounds and one database call, for the diary: the numbers saved with each day's entry stay complete for the
+//     original site's page (server/diary.js), although this site never shows or writes about them;
+//   · the coins this site never shows ($CABO), for ClankChecker (api/checker.js).
 
 export const ROUND_MS = 5 * 60_000;                                // one round = 5 minutes
-export const COINS = TOKENS.map((t) => t.symbol);                  // AGI, CABO, CLANKCAT (one list for the whole site)
 export const roundAt = (ms = Date.now()) => Math.floor(ms / ROUND_MS);
-// Friendly round numbers for the page: round #1 started when the Arena opened.
+// Friendly round numbers: round #1 started when the Arena opened.
 export const OPENED = roundAt(Date.UTC(2026, 8, 24));
 export const roundNumber = (round) => round - OPENED + 1;
-// The first round of this week (Monday 00:00 UTC): the Hall of Fame's "This week".
-export function weekStartRound(ms = Date.now()) {
-  const d = new Date(ms);
-  const daysSinceMonday = (d.getUTCDay() + 6) % 7;
-  return roundAt(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - daysSinceMonday));
-}
+
+// Coins this site never shows (2026-09-28, the owner: "remove everything about cabo"). The shared database still lists
+// $CABO for the original site, so it stays there untouched: this site leaves it out instead.
+export const HIDDEN_COINS = new Set(['CABO']);
+export const HIDDEN_ADDRESSES = new Set(['0xcf5b720f33febdc1c9d4880b8317203b63fdf368']);
+export const isHiddenCoin = (symbol, address = '') =>
+  HIDDEN_COINS.has(String(symbol ?? '').toUpperCase()) || HIDDEN_ADDRESSES.has(String(address ?? '').toLowerCase());
 
 const HINTS = {
   PGRST202: 'arena functions not found: run supabase/arena.sql in this Supabase project',
@@ -22,7 +25,7 @@ const HINTS = {
   540: 'the Supabase project is paused: Supabase dashboard → the project → Resume project',
 };
 
-// Call a database function. Errors carry a `code`: 'not_ready' when arena.sql hasn't been run yet.
+// Call a database function (supabase/arena.sql). Errors carry a `code`: 'not_ready' when arena.sql hasn't been run.
 export async function arenaRpc(cfg, fn, args) {
   const res = await fetch(`${cfg.supabaseUrl}/rest/v1/rpc/${fn}`, {
     method: 'POST',
@@ -33,10 +36,7 @@ export async function arenaRpc(cfg, fn, args) {
   if (!res.ok) {
     let code = '';
     try { code = String((await res.json()).code || ''); } catch { /* not JSON */ }
-    const hint = code === 'PGRST202' && fn.startsWith('coin_')
-      ? 'coin functions not found: run supabase/coins.sql in this Supabase project (after arena.sql)'
-      : HINTS[code] || HINTS[res.status] || 'see the Supabase logs';
-    const err = new Error(`arena: ${fn} HTTP ${res.status}${code ? ` ${code}` : ''} (${hint})`);
+    const err = new Error(`arena: ${fn} HTTP ${res.status}${code ? ` ${code}` : ''} (${HINTS[code] || HINTS[res.status] || 'see the Supabase logs'})`);
     err.code = code === 'PGRST202' ? 'not_ready' : 'busy';
     throw err;
   }

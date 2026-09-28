@@ -39,9 +39,6 @@ export function ipGroup(ip) {
 export const visitorCodeForDay = (secret, ip, day) => b64url(hmac(secret, `day:${day}:${ipGroup(ip)}`)).slice(0, 32);
 // ...and a stable code ties a chat pass to the visitor who earned it.
 export const visitorCode = (secret, ip) => b64url(hmac(secret, `ip:${ipGroup(ip)}`)).slice(0, 32);
-// Votes to add a coin to the Arena (Phase 6) count "different humans within 7 days", so a daily code won't do. This code is
-// different for every coin: it can't be linked to the visitor's other coins or to their Arena votes. Deleted after 8 days.
-export const coinVoterCode = (secret, ip, address) => b64url(hmac(secret, `coin:${String(address).toLowerCase()}:${ipGroup(ip)}`)).slice(0, 32);
 
 // Chat pass: proof that this visitor passed the human check recently. Valid for 2 hours.
 export function makePass(secret, code, now = Date.now(), ttlMs = 2 * 60 * 60 * 1000) {

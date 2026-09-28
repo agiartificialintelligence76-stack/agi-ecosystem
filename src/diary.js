@@ -6,7 +6,7 @@ import './styles/layout.css';
 import './styles/sections.css';
 import './styles/footer.css';
 import './styles/diary.css';
-import './styles/pop.css';      // Pop mode (2026-09-27): the ecosystem look, only while it's switched on
+import './styles/pop.css';      // Pop mode (2026-09-27): the bold look, only while it's switched on
 import { startTheme } from './theme.js';
 import { startMenu } from './menu.js';
 import { diaryPost, diaryLink, intentUrl } from './share/texts.js';
@@ -23,14 +23,9 @@ const longDate = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'lon
 const shortDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 const pct = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
 
+// Under each entry: how the $AGI chart moved that day (since 2026-09-28 the Arena's numbers aren't shown: it left the site)
 function statsLine(stats = {}) {
-  const parts = [];
-  const crowns = Object.entries(stats.crowns || {}).sort((a, b) => b[1] - a[1]);
-  if (crowns.length) parts.push(`crowns: ${crowns.map(([c, n]) => `$${c} ${n}`).join(' · ')}`);
-  else parts.push('no crowns that day');
-  if (Number.isFinite(stats.votes) && stats.votes > 0) parts.push(`${stats.votes} vote${stats.votes === 1 ? '' : 's'}`);
-  if (Number.isFinite(stats.chart?.h24)) parts.push(`$AGI 24h ${pct(stats.chart.h24)}`);
-  return parts.join('  ·  ');
+  return Number.isFinite(stats?.chart?.h24) ? `$AGI 24h ${pct(stats.chart.h24)}` : 'no chart numbers that day';
 }
 
 function entryItem(e) {
@@ -77,7 +72,7 @@ async function start() {
 
   try {
     const n = await load(null);
-    status.textContent = n ? '' : 'Her first entry arrives the night after the first full day of the Arena. She\'s thinking about what to write.';
+    status.textContent = n ? '' : 'Her first entry arrives just after midnight (UTC). She\'s thinking about what to write.';
     status.hidden = n > 0;
   } catch (err) {
     status.textContent = err.message === 'not_ready' || err.message === 'not_configured'

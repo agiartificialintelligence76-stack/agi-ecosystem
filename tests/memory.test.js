@@ -3,6 +3,7 @@
 // hold no links, addresses, phone numbers, emails or Telegram ids; and anyone on the forget list is left out.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { recallGroup, memorySource } from '../server/tg-memory.js';
 import { groupMemoryPrompt } from '../server/agi1-prompt.js';
 import { buildMemory } from '../tools/memory/build-memory.mjs';
@@ -28,11 +29,22 @@ test('asking about the group, its moments or its people brings the matching note
   assert.equal(names('remember zank?')[0], 'Zank');
   assert.equal(names('who is leon')[0], 'Leon 🦴| Tailwind.zone');
   assert.deepEqual(ids('what was the poop thing lol'), ['poop']);
-  assert.ok(ids('tell me about cabo').includes('the-three'));
+  assert.ok(ids('tell me about clankcat').includes('the-favorites'));
+  assert.deepEqual(ids('tell me about cabo'), [], 'nothing about $CABO (2026-09-28: the owner removed it from the site)');
   assert.ok(ids('what was the party round')[0] === 'era-v3');
   assert.ok(ids('who is the most active in the tg').includes('numbers'));
   assert.ok(ids('gdaos').includes('joke-gm'));
   assert.ok(recallGroup('what do you know about the telegram group?').reduce((n, c) => n + c.text.length, 0) <= 1800, 'at most ~450 tokens');
+});
+
+test('her memory never mentions $CABO, and a rebuild keeps it out (forget.json → tickers)', () => {
+  assert.ok(!/cabo/i.test(JSON.stringify(MEMORY)), 'not in any card');
+  const forget = JSON.parse(readFileSync(new URL('../tools/memory/forget.json', import.meta.url), 'utf8'));
+  assert.deepEqual(forget.tickers, ['CABO']);
+  const messages = Array.from({ length: 50 }, (_, i) => ({ type: 'message', from: 'Tester Person', date: '2026-09-01T00:00:00', text: i % 2 ? '$CABO and $AGI' : 'cabo' }));
+  const built = buildMemory({ name: 'g', messages }, { cards: [] }, [], forget.tickers);
+  assert.ok(!/cabo/i.test(JSON.stringify(built.cards)), built.cards.map((c) => c.text).join(' | '));
+  assert.match(built.cards[0].text, /Mentions \$AGI the most\./);
 });
 
 test('a follow-up leans on the previous message, an unrelated one does not', () => {
@@ -91,8 +103,6 @@ test('the chat sends her notes to Gemini only when the visitor asks about the gr
     const body = init.body ? JSON.parse(init.body) : null;
     if (url.startsWith('https://challenges.cloudflare.com/')) return Response.json({ success: true, action: 'chat' });
     if (url.includes('/rest/v1/rpc/chat_take')) return Response.json('ok');
-    if (url.includes('/rest/v1/rpc/arena_state')) return Response.json({ tally: {}, recent: [] });   // (her Arena memory: no champion)
-    if (url.includes('/rest/v1/rpc/coin_board')) return Response.json({ coins: [], retired: [], candidates: [] });
     if (url.startsWith('https://generativelanguage.googleapis.com/')) {
       prompts.push(body.systemInstruction.parts[0].text);
       return Response.json({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({ reply: 'lol ok 💜', mood: 'happy' }) }] } }] });

@@ -1,5 +1,5 @@
-// Phase 5: share cards, 1200×630 pictures for "crowned champion", "my level with AGI-1" and the diary.
-// Drawn on a <canvas> in the browser. "Save image" makes a personal one (the round number, or the name AGI-1 calls you):
+// Phase 5: share cards, 1200×630 pictures for "my level with AGI-1" and the diary (the Arena's "crowned champion" card left
+// with the Arena on 2026-09-28). Drawn on a <canvas> in the browser. "Save image" makes a personal one (the name AGI-1 calls you):
 // it's made on the visitor's device and never uploaded. The same drawing made the plain preview pictures in
 // public/cards/ that X shows under a shared link (see "Share cards" in CLAUDE.md for how to redo them).
 // Same look as the site: dark theme colors, Geist, one accent, hairlines. No emojis (fonts draw them differently).
@@ -69,7 +69,7 @@ function portrait(ctx, img) {
   ctx.stroke();
 }
 
-// card: { kind: 'champion', coin, number?, votes? } | { kind: 'level', level, name? } | { kind: 'diary' }
+// card: { kind: 'level', level, name? } | { kind: 'diary' }  (the Arena's 'champion' card left with it on 2026-09-28)
 export async function drawCard(canvas, card) {
   canvas.width = CARD_W;
   canvas.height = CARD_H;
@@ -79,15 +79,7 @@ export async function drawCard(canvas, card) {
   const room = CARD_W - 72 - 336 - 72 - 48;                     // left column width, next to the portrait
   ctx.textBaseline = 'alphabetic';
 
-  if (card.kind === 'champion') {
-    const personal = Number.isInteger(card.number);
-    frame(ctx, personal ? `The Arena · round #${card.number}` : 'The Arena');
-    const big = `$${card.coin}`;
-    text(ctx, big, 68, 318, { size: fit(ctx, big, room, 170, 600, SANS), weight: 600 });
-    text(ctx, 'crowned champion', 72, 386, { size: 52, weight: 500, color: C.fg2 });
-    const votes = Number(card.votes) || 0;
-    text(ctx, personal ? `${votes} vote${votes === 1 ? '' : 's'} · one vote per human` : 'crowned by humans, every five minutes', 72, 446, { size: 26, family: MONO, color: C.accent });
-  } else if (card.kind === 'level') {
+  if (card.kind === 'level') {
     const level = LEVEL_NAMES[card.level] ? card.level : 1;
     frame(ctx, 'Relationship status');
     const big = LEVEL_NAMES[level];
@@ -103,7 +95,7 @@ export async function drawCard(canvas, card) {
     frame(ctx, 'Field notes');
     text(ctx, "AGI-1's diary", 68, 300, { size: fit(ctx, "AGI-1's diary", room, 120, 600, SANS), weight: 600 });
     text(ctx, 'one entry a day, written by AGI-1', 72, 366, { size: 40, weight: 500, color: C.fg2 });
-    text(ctx, 'the arena · the chart · her feelings', 72, 430, { size: 26, family: MONO, color: C.accent });
+    text(ctx, 'her day · the chart · her feelings', 72, 430, { size: 26, family: MONO, color: C.accent });
   }
   portrait(ctx, img);
   return canvas;

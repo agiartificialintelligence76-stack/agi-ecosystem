@@ -1,0 +1,450 @@
+/* The front (2026-09-28, the owner: "make the landing page like on the old site … just make it in front"): the bright AGI
+   landing from the page agi1.app showed before this site, as the first thing on the home page. The rest of the site
+   follows unchanged. One bright look in every theme on purpose (pop-manga print meets AI-lab labels), its palette pulled
+   from her: tee lavender, hair honey. Everything here is scoped to .lp* and lp-* names, so nothing leaks into the site.
+   Script: src/landing/landing.js. The loader and the entrance are armed before the page paints by /theme.js. */
+
+@font-face {
+  font-family: 'Dela Gothic One';           /* only its two glyphs, ド and キ (760 bytes), for the "doki doki" */
+  src: url('/fonts/DelaGothicOne-doki.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+30C9, U+30AD;
+}
+
+.lp, .lp-loader, .lp-cursor {
+  --lp-violet: #6b3bff;
+  --lp-lav: #e4d9ff;
+  --lp-paper: #f8f5ff;
+  --lp-ink: #170a36;
+  --lp-ink-2: #4a3d6e;
+  --lp-pink: #ff4da6;
+  --lp-honey: #ffc933;
+  --lp-mint: #3ff0c3;
+  --lp-blue: #2f5bff;
+  --lp-gutter: clamp(16px, 3.2vw, 44px);
+  --lp-rib: clamp(100px, 12vw, 180px);
+  --lp-ease: cubic-bezier(.16, 1, .3, 1);
+  --lp-ease-io: cubic-bezier(.76, 0, .24, 1);
+  --lp-back: cubic-bezier(.34, 1.56, .64, 1);
+  --lp-display: 'Anybody', 'Arial Black', 'Helvetica Neue', system-ui, sans-serif;
+  --lp-serif: 'Instrument Serif', 'Iowan Old Style', 'Times New Roman', serif;
+  --lp-body: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --lp-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --lp-jp: 'Dela Gothic One', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif;
+}
+/* the colors each link and planet carries */
+.lp-c-pink { --c: #ff4da6; }
+.lp-c-honey { --c: #ffc933; }
+.lp-c-mint { --c: #3ff0c3; }
+.lp-c-lav { --c: #cdb8ff; }
+.lp-c-blue { --c: #2f5bff; }
+.lp-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* ---------- buttons ---------- */
+.lp-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 50px; padding: 0 24px; border-radius: 999px; border: 2px solid var(--lp-ink);
+  font: 650 15px/1 var(--lp-body); text-decoration: none; white-space: nowrap; cursor: pointer;
+  transition: background-color .35s var(--lp-ease), color .35s var(--lp-ease), translate .5s var(--lp-ease);
+}
+.lp-btn i { font-style: normal; display: inline-block; transition: transform .45s var(--lp-ease); }
+.lp-btn:hover i { transform: translate(3px, -3px); }
+.lp-btn-ink { background: var(--lp-ink); color: #fff; }
+.lp-btn-ink:hover { background: var(--lp-pink); color: var(--lp-ink); }
+.lp-btn-light { background: #fff; color: var(--lp-ink); }
+.lp-btn-light:hover { background: var(--lp-honey); }
+.lp-btn-down:hover i { transform: translateY(3px); }
+.lp :focus-visible { outline: 3px solid var(--lp-honey); outline-offset: 3px; }
+
+/* ---------- the loader (first visit of a browser session only: /theme.js adds .lp-loading; never with "reduce motion") ---------- */
+.lp-loader { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .lp-loading .lp-loader {
+    position: fixed; inset: 0; z-index: 400; display: flex; flex-direction: column; justify-content: space-between;
+    gap: 24px; background: var(--lp-honey); color: var(--lp-ink); cursor: pointer;
+    padding: calc(22px + env(safe-area-inset-top, 0px)) var(--lp-gutter) calc(22px + env(safe-area-inset-bottom, 0px));
+  }
+  .lp-loading .lp-loader.is-leaving { transform: translateY(-100%); transition: transform .95s var(--lp-ease-io); }
+}
+.lp-loader-log { font: 500 13px/2 var(--lp-mono); width: min(440px, 100%); }
+.lp-loader-head { margin: 0 0 8px; font-weight: 700; letter-spacing: .04em; }
+.lp-loader-line { display: flex; gap: 10px; align-items: baseline; margin: 0; opacity: 0; animation: lp-line .3s var(--lp-ease) forwards; }
+.lp-loader-line:nth-child(2) { animation-delay: .12s; }
+.lp-loader-line:nth-child(3) { animation-delay: .42s; }
+.lp-loader-line:nth-child(4) { animation-delay: .72s; }
+.lp-loader-line:nth-child(5) { animation-delay: 1.02s; }
+@keyframes lp-line { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+.lp-loader-line span { white-space: nowrap; }
+.lp-loader-line i { flex: 1; min-width: 12px; border-bottom: 2px dotted currentColor; opacity: .35; transform: translateY(-5px); }
+.lp-loader-line b { font-weight: 700; white-space: nowrap; }
+.lp-loader-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.lp-loader-hint { margin: 0 0 8px; font: 500 12px/1.4 var(--lp-mono); letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+.lp-loader-count {
+  font: 900 clamp(92px, 21vw, 300px)/.78 var(--lp-display); font-variation-settings: 'wdth' 150;
+  letter-spacing: -.045em; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.lp-loader-count sup { font-size: .28em; vertical-align: top; margin-left: .06em; letter-spacing: 0; }
+.lp-loader-bar { height: 6px; background: rgba(23, 10, 54, .14); border-radius: 6px; overflow: hidden; }
+.lp-loader-bar i { display: block; height: 100%; background: var(--lp-ink); transform-origin: 0 50%; transform: scaleX(0); }
+
+/* ---------- the hero ---------- */
+.lp-hero {
+  position: relative; height: clamp(620px, calc(100svh - 60px), 1040px); background: var(--lp-violet); color: #fff;
+  overflow: clip; isolation: isolate;
+}
+/* Pop mode: under the see-through top bar, the whole screen, like the old agi1.app page (pop.css: the bar is 72 px there) */
+[data-skin='pop'] .lp-hero { margin-top: -72px; height: clamp(660px, 100svh, 1100px); }
+.lp-fx {
+  position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
+  transform-origin: var(--ox, 50%) var(--oy, 25%);
+  animation: lp-beat 1.5s var(--lp-ease) infinite;
+}
+@keyframes lp-beat {
+  0%, 100% { transform: scale(1); }
+  7% { transform: scale(1.04); }
+  15% { transform: scale(1.006); }
+  23% { transform: scale(1.028); }
+  42% { transform: scale(1); }
+}
+.lp-scene { position: absolute; inset: 0; z-index: 1; }
+.lp-title { position: absolute; inset: 0; margin: 0; pointer-events: none; }
+.lp-word {
+  position: absolute; left: 0; right: 0; top: var(--word-top, 12%);
+  display: flex; justify-content: center; user-select: none;
+  font-family: var(--lp-display); font-weight: 900; font-size: var(--word-size, min(35vw, 55svh));
+  line-height: .74; letter-spacing: -.035em; white-space: nowrap; will-change: transform;
+}
+[data-skin='pop'] .lp-word { top: var(--word-top, 10.5%); }
+.lp-word span { display: block; font-variation-settings: 'wdth' 150; }
+.lp-word-main { color: var(--lp-lav); }
+.lp-word-echo { color: var(--lp-pink); translate: .03em .028em; }
+
+.lp-stage { position: absolute; inset: 0; }
+.lp-figure {
+  position: absolute; left: 50%; bottom: calc(var(--lp-rib) * .16); z-index: 5; height: var(--fig-h, 86%);
+  aspect-ratio: 796 / 1510; transform: translateX(-50%); pointer-events: none;
+}
+.lp-figure-img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.lp-figure-gl { position: absolute; left: -16%; top: -4%; width: 132%; height: 104%; display: none; }
+.lp-gl .lp-figure-gl { display: block; }
+.lp-gl .lp-figure-img { opacity: 0; }
+
+.lp-orbit { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.lp-orbit path { fill: none; stroke: rgba(255, 255, 255, .7); stroke-width: 1.6; stroke-dasharray: 1 8; stroke-linecap: round; }
+.lp-orbit-back { z-index: 1; }
+.lp-orbit-back path { stroke: rgba(255, 255, 255, .38); }
+.lp-orbit-front { z-index: 7; }
+
+.lp-planets { list-style: none; margin: 0; padding: 0; position: absolute; inset: 0; pointer-events: none; }
+.lp-planet {
+  --ps: 46px;
+  position: absolute; left: var(--sx, 50%); top: var(--sy, 50%); width: var(--ps); height: var(--ps);
+  margin: calc(var(--ps) / -2) 0 0 calc(var(--ps) / -2);
+  pointer-events: auto; text-decoration: none; color: var(--lp-ink); z-index: 8; will-change: transform;
+}
+/* where they wait before the script puts them in orbit (and where they stay without it) */
+.lp-p1 { --sx: 22%; --sy: 50%; }
+.lp-p2 { --sx: 76%; --sy: 46%; }
+.lp-p3 { --sx: 30%; --sy: 64%; }
+.lp-p4 { --sx: 70%; --sy: 62%; }
+.lp-planet-orb {
+  position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--lp-ink);
+  background: var(--c);
+  background: radial-gradient(circle at 34% 30%, #fff 0 9%, var(--c) 34%, color-mix(in oklab, var(--c) 72%, #000) 100%);
+  box-shadow: 3px 4px 0 var(--lp-ink);
+  transition: transform .5s var(--lp-ease);
+}
+.lp-planet:hover .lp-planet-orb, .lp-planet:focus-visible .lp-planet-orb { transform: scale(1.18); }
+.lp-planet-name {
+  position: absolute; top: 50%; left: calc(100% + 10px); transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  background: #fff; color: var(--lp-ink); border: 2px solid var(--lp-ink); border-radius: 999px;
+  padding: 7px 13px; font: 750 13.5px/1 var(--lp-body); box-shadow: 3px 3px 0 var(--lp-ink);
+  transition: background-color .3s, opacity .35s var(--lp-ease);
+}
+.lp-planet.is-left .lp-planet-name { left: auto; right: calc(100% + 10px); }
+/* a name that would cover a nearer planet's name waits, hidden (the script decides, every frame) */
+.lp-planet.is-quiet .lp-planet-name { opacity: 0; }
+.lp-planet.is-quiet:hover .lp-planet-name { opacity: 1; }
+.lp-planet:hover .lp-planet-name, .lp-planet:focus-visible .lp-planet-name { background: var(--c); }
+.lp-c-blue.lp-planet:hover .lp-planet-name, .lp-c-blue.lp-planet:focus-visible .lp-planet-name { color: #fff; }
+.lp-planet-url { font: 500 11px/1 var(--lp-mono); max-width: 0; overflow: hidden; opacity: .75; transition: max-width .55s var(--lp-ease); }
+.lp-planet:hover .lp-planet-url, .lp-planet:focus-visible .lp-planet-url { max-width: 170px; }
+.lp-planet:focus-visible { outline: none; }
+.lp-planet:focus-visible .lp-planet-orb { outline: 3px solid var(--lp-honey); outline-offset: 4px; }
+
+.lp-sfx {
+  position: absolute; z-index: 6; left: -40%; top: 6%; transform: rotate(-12deg);
+  font: 400 clamp(30px, 3.4vw, 54px)/1 var(--lp-jp); color: var(--lp-honey); letter-spacing: -.02em;
+  -webkit-text-stroke: 2px var(--lp-ink); paint-order: stroke fill; text-shadow: 4px 4px 0 var(--lp-ink);
+  animation: lp-beat-text 1.5s var(--lp-ease) infinite; pointer-events: none; white-space: nowrap;
+}
+.lp-sfx small { display: block; margin-top: 6px; font: 600 11px/1 var(--lp-mono); letter-spacing: .14em; color: #fff; text-shadow: none; -webkit-text-stroke: 0; text-transform: uppercase; }
+@keyframes lp-beat-text {
+  0%, 100% { scale: 1; }
+  7% { scale: 1.12; }
+  15% { scale: 1.02; }
+  23% { scale: 1.08; }
+  42% { scale: 1; }
+}
+
+.lp-bubble {
+  position: absolute; z-index: 9; left: 74%; top: 1.5%; width: max-content; max-width: 270px;
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px 12px 10px;
+  background: #fff; color: var(--lp-ink); border: 2.5px solid var(--lp-ink); border-radius: 22px 22px 22px 6px;
+  box-shadow: 5px 5px 0 var(--lp-ink); transform-origin: 0 100%;
+}
+.lp-bubble::after {
+  content: ""; position: absolute; left: -12px; bottom: 10px; width: 18px; height: 18px; background: #fff;
+  border-left: 2.5px solid var(--lp-ink); border-bottom: 2.5px solid var(--lp-ink); transform: skewY(-35deg) rotate(8deg);
+}
+.lp-bubble-av { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--lp-ink); background: var(--lp-lav); object-fit: cover; flex: none; }
+.lp-bubble-who { display: flex; align-items: center; gap: 6px; font: 700 13px/1.2 var(--lp-body); white-space: nowrap; }
+.lp-bubble-who em { font: 500 10.5px/1 var(--lp-mono); font-style: normal; color: #139a57; letter-spacing: .04em; }
+.lp-bubble-who em::before { content: "● "; }
+.lp-bubble-text { margin: 3px 0 0; font-size: 15px; line-height: 1.35; min-height: 1.35em; }
+.lp-bubble-dots { display: none; gap: 4px; padding: 7px 0 3px; }
+.lp-bubble.is-typing .lp-bubble-dots { display: flex; }
+.lp-bubble.is-typing .lp-bubble-text { display: none; }
+.lp-bubble-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--lp-ink); animation: lp-typing 1s infinite ease-in-out; }
+.lp-bubble-dots i:nth-child(2) { animation-delay: .15s; }
+.lp-bubble-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes lp-typing { 0%, 60%, 100% { transform: translateY(0); opacity: .35; } 30% { transform: translateY(-4px); opacity: 1; } }
+
+.lp-left, .lp-eco { position: absolute; z-index: 10; bottom: calc(var(--lp-rib) * .36 + clamp(36px, 4.6svh, 60px)); }
+.lp-left { left: var(--lp-gutter); width: min(400px, 29vw); }
+.lp-sub { margin: 0 0 16px; font: italic 400 clamp(36px, 3.7vw, 60px)/.93 var(--lp-serif); letter-spacing: -.01em; }
+.lp-sub span { display: block; }
+.lp-sub span:nth-child(2) { color: var(--lp-honey); }
+.lp-lede { margin: 0 0 22px; font: 400 16px/1.5 var(--lp-body); color: rgba(255, 255, 255, .92); max-width: 34ch; }
+.lp-cta { display: flex; flex-wrap: wrap; gap: 10px; }
+.lp-eco { right: var(--lp-gutter); width: min(400px, 30vw); }
+.lp-eco-label {
+  margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding-bottom: 12px; border-bottom: 2.5px solid #fff;
+  font: 900 clamp(22px, 2.1vw, 32px)/1 var(--lp-display); font-variation-settings: 'wdth' 150; letter-spacing: .01em;
+}
+.lp-eco-label span { font: 500 12px/1 var(--lp-mono); letter-spacing: .12em; }
+.lp-eco ul { list-style: none; margin: 0; padding: 0; }
+.lp-eco a {
+  position: relative; display: flex; align-items: center; gap: 12px; padding: 11px 6px 11px 2px; color: #fff;
+  border-bottom: 1.5px solid rgba(255, 255, 255, .35); text-decoration: none; font: 700 17px/1.1 var(--lp-body);
+  isolation: isolate; transition: color .35s var(--lp-ease), padding-left .45s var(--lp-ease);
+}
+.lp-eco a::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; background: var(--c); border-radius: 12px;
+  transform: scaleY(0); transform-origin: 50% 100%; transition: transform .45s var(--lp-ease);
+}
+.lp-eco a:hover, .lp-eco a:focus-visible { color: var(--lp-ink); padding-left: 12px; }
+.lp-eco a.lp-c-blue:hover, .lp-eco a.lp-c-blue:focus-visible { color: #fff; }
+.lp-eco a:hover::before, .lp-eco a:focus-visible::before { transform: scaleY(1); }
+.lp-dot { width: 13px; height: 13px; border-radius: 50%; background: var(--c); border: 2px solid #fff; flex: none; }
+.lp-eco a:hover .lp-dot, .lp-eco a:focus-visible .lp-dot { border-color: var(--lp-ink); }
+.lp-eco small { margin-left: auto; font: 500 11.5px/1 var(--lp-mono); opacity: .8; }
+.lp-eco a i { font-style: normal; transition: transform .45s var(--lp-ease); }
+.lp-eco a:not(:has(small)) i { margin-left: auto; }   /* a long name has no small line: its arrow still lines up at the right */
+.lp-eco a:hover i { transform: translate(3px, -3px); }
+
+/* ---------- the entrance (/theme.js adds .lp-intro on a visit that starts at the top; the script adds .lp-go) ---------- */
+/* Only without "reduce motion" (then the front is simply there). The planets are the script's: it grows their orbit in and
+   sets how bright each one is as it goes round, so here they only wait, hidden, for the script. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-intro:not(.lp-go) :is(.lp-word span, .lp-left > *, .lp-eco-label, .lp-eco li, .lp-sfx, .lp-bubble, .lp-orbit, .lp-planets) { opacity: 0; }
+  .lp-intro:not(.lp-go):not(.lp-gl) .lp-figure-img { clip-path: inset(0 0 100% 0); }
+  .lp-intro.lp-go .lp-word span { animation: lp-rise 1.6s var(--lp-ease) both; }
+  .lp-intro.lp-go .lp-word-echo span { animation-duration: 1.7s; }
+  .lp-intro.lp-go .lp-word span:nth-child(2) { animation-delay: .09s; }
+  .lp-intro.lp-go .lp-word span:nth-child(3) { animation-delay: .18s; }
+  .lp-intro.lp-go .lp-word-echo span:nth-child(1) { animation-delay: .12s; }
+  .lp-intro.lp-go .lp-word-echo span:nth-child(2) { animation-delay: .21s; }
+  .lp-intro.lp-go .lp-word-echo span:nth-child(3) { animation-delay: .3s; }
+  .lp-intro.lp-go:not(.lp-gl) .lp-figure-img { animation: lp-unveil 1.8s var(--lp-ease-io) .15s both; }
+  .lp-intro.lp-go .lp-orbit { animation: lp-fade 1.2s var(--lp-ease) 1s both; }
+  .lp-intro.lp-go :is(.lp-left > *, .lp-eco-label, .lp-eco li) { animation: lp-up 1.2s var(--lp-ease) both; }
+  .lp-intro.lp-go .lp-left > :nth-child(1) { animation-delay: .75s; }
+  .lp-intro.lp-go .lp-left > :nth-child(2) { animation-delay: .83s; }
+  .lp-intro.lp-go .lp-left > :nth-child(3) { animation-delay: .91s; }
+  .lp-intro.lp-go .lp-eco-label { animation-delay: .85s; }
+  .lp-intro.lp-go .lp-eco li:nth-child(1) { animation-delay: .91s; }
+  .lp-intro.lp-go .lp-eco li:nth-child(2) { animation-delay: .97s; }
+  .lp-intro.lp-go .lp-eco li:nth-child(3) { animation-delay: 1.03s; }
+  .lp-intro.lp-go .lp-eco li:nth-child(4) { animation-delay: 1.09s; }
+  .lp-intro.lp-go .lp-eco li:nth-child(5) { animation-delay: 1.15s; }
+  .lp-intro.lp-go .lp-sfx { animation: lp-pop 1s var(--lp-back) 1.55s both, lp-beat-text 1.5s var(--lp-ease) 2.6s infinite; }
+  .lp-intro.lp-go .lp-bubble { animation: lp-bubble-in .9s var(--lp-back) 1.8s both; }
+}
+@keyframes lp-rise {
+  from { opacity: 0; transform: translateY(95%); font-variation-settings: 'wdth' 50; }
+  to { opacity: 1; transform: none; font-variation-settings: 'wdth' 150; }
+}
+@keyframes lp-unveil { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes lp-up { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+@keyframes lp-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lp-pop { from { opacity: 0; transform: rotate(-62deg) scale(0); } to { opacity: 1; transform: rotate(-12deg) scale(1); } }
+@keyframes lp-bubble-in { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: none; } }
+
+/* the site's own hero comes after the front now: in Pop mode it no longer slides under the see-through top bar */
+[data-skin='pop'] .lp-mani + .hero { margin-top: 0; padding-top: clamp(64px, 8vw, 110px); }
+
+/* ---------- ribbons ---------- */
+.lp-ribbons {
+  position: relative; z-index: 20; height: var(--lp-rib); margin-top: calc(var(--lp-rib) * -.36); margin-bottom: calc(var(--lp-rib) * -.64);
+  overflow-x: clip; pointer-events: none;
+}
+.lp-ribbon {
+  position: absolute; left: -6%; right: -6%; top: 50%; overflow: hidden; white-space: nowrap;
+  padding: clamp(12px, 1.3vw, 18px) 0; border-block: 3px solid var(--lp-ink);
+}
+.lp-ribbon-a { background: var(--lp-pink); color: var(--lp-ink); transform: translateY(-50%) rotate(-3.4deg); }
+.lp-ribbon-b { background: var(--lp-ink); color: var(--lp-honey); transform: translateY(-50%) rotate(2.6deg); }
+.lp-ribbon-track {
+  display: inline-flex; will-change: transform;
+  font: 900 clamp(20px, 2.6vw, 38px)/1 var(--lp-display); font-variation-settings: 'wdth' 140; text-transform: uppercase;
+}
+.lp-ribbon-track span { display: inline-flex; align-items: center; gap: .55em; padding-right: .55em; }
+.lp-ribbon-track svg { width: .8em; height: .8em; fill: currentColor; flex: none; }
+
+/* ---------- the manifesto: pinned while "General" gets crossed out (the script scrubs it with the scroll) ---------- */
+.lp-mani { position: relative; background: var(--lp-honey); color: var(--lp-ink); height: 240svh; }
+.lp-mani-pin {
+  position: sticky; top: 0; height: 100svh; min-height: 560px; overflow: clip;
+  display: flex; flex-direction: column; justify-content: center; gap: clamp(22px, 3vw, 40px);
+  max-width: 1440px; margin: 0 auto; padding: clamp(110px, 12vw, 170px) var(--lp-gutter) clamp(56px, 7vw, 96px);
+}
+.lp-mani-tone {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(23, 10, 54, .2) 1.5px, transparent 1.7px);
+  background-size: 13px 13px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 100% 100%, #000 10%, transparent 70%);
+  mask-image: radial-gradient(ellipse 60% 70% at 100% 100%, #000 10%, transparent 70%);
+}
+.lp-eyebrow {
+  position: relative; margin: 0; display: inline-flex; align-items: center; gap: 10px;
+  font: 500 12.5px/1.2 var(--lp-mono); letter-spacing: .12em; text-transform: uppercase;
+}
+.lp-eyebrow::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.lp-mani-title {
+  position: relative; margin: 0; font-family: var(--lp-display); font-weight: 850; font-variation-settings: 'wdth' 116;
+  font-size: clamp(50px, 10.6vw, 178px); line-height: .9; letter-spacing: -.035em;
+}
+.lp-mani-line { display: block; position: relative; width: max-content; max-width: 100%; }
+.lp-mani-gen { display: inline-block; position: relative; opacity: var(--gen, .3); }
+.lp-mani-strike {
+  position: absolute; left: -4%; top: 50%; width: 108%; height: auto; aspect-ratio: 400 / 70;
+  transform: translateY(-48%); overflow: visible; pointer-events: none;
+}
+.lp-mani-strike path {
+  fill: none; stroke: var(--lp-pink); stroke-width: 15; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1 3; stroke-dashoffset: var(--strike, 0);
+}
+.lp-mani-girl {
+  position: absolute; left: 47%; bottom: 71%; white-space: nowrap; color: var(--lp-violet);
+  font: italic 400 clamp(58px, 11vw, 190px)/.9 var(--lp-serif); letter-spacing: -.015em;
+  transform-origin: 0 100%; opacity: var(--girl-o, 1);
+  transform: translateY(var(--girl-y, 0%)) scale(var(--girl-s, 1)) rotate(var(--girl-r, -7deg));
+  text-shadow: 3px 3px 0 var(--lp-honey), 6px 6px 0 var(--lp-ink);
+}
+.lp-mani-heart {
+  position: absolute; right: -.5em; top: -.35em; width: .42em; height: .4em; fill: var(--lp-pink);
+  stroke: var(--lp-ink); stroke-width: 1.6px; transform: rotate(14deg);
+}
+.lp-mani-caps { position: relative; display: grid; font: 600 clamp(19px, 2.1vw, 28px)/1.3 var(--lp-body); }
+.lp-mani-cap { margin: 0; grid-area: 1 / 1; }
+.lp-mani-cap-a { opacity: var(--cap-a, 0); transform: translateY(var(--cap-a-y, 0px)); }
+.lp-mani-cap-b { opacity: var(--cap-b, 1); transform: translateY(var(--cap-b-y, 0px)); }
+.lp-mani-cap b { background: var(--lp-ink); color: var(--lp-honey); padding: 0 .3em; border-radius: 6px; }
+.lp-mani-next { position: relative; margin: 0; font: 500 12.5px/1.4 var(--lp-mono); letter-spacing: .08em; text-transform: uppercase; opacity: .72; }
+.lp-mani-sticker {
+  position: absolute; right: var(--lp-gutter); top: clamp(110px, 13vw, 180px); display: grid; place-items: center;
+  width: clamp(110px, 12vw, 170px); aspect-ratio: 1; border-radius: 50%; background: var(--lp-pink); border: 3px solid var(--lp-ink);
+  box-shadow: 6px 6px 0 var(--lp-ink); text-align: center; transform: rotate(12deg);
+  font: 900 clamp(14px, 1.3vw, 19px)/1.05 var(--lp-display); font-variation-settings: 'wdth' 120; text-transform: uppercase;
+}
+
+/* ---------- reveals (armed off-screen, so the page is complete at rest) ---------- */
+.lp [data-lp-reveal].is-armed { opacity: 0; transform: translateY(36px); }
+.lp [data-lp-reveal].is-in { opacity: 1; transform: none; transition: opacity .9s var(--lp-ease), transform 1.2s var(--lp-ease); }
+
+/* ---------- the cursor and the hearts (only over the front, with a mouse) ---------- */
+.lp-cursor { display: none; }
+.lp-cursor-on .lp-cursor { display: block; }
+.lp-cursor-on .lp, .lp-cursor-on .lp a, .lp-cursor-on .lp button { cursor: none; }
+.lp-cursor-dot, .lp-cursor-ring, .lp-cursor-label { position: fixed; left: 0; top: 0; z-index: 500; pointer-events: none; will-change: transform; }
+.lp-cursor-dot { width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff; mix-blend-mode: difference; }
+.lp-cursor-ring {
+  width: 42px; height: 42px; margin: -21px 0 0 -21px; border-radius: 50%; border: 1.5px solid #fff; mix-blend-mode: difference;
+  transition: opacity .3s;
+}
+.lp-cursor-label {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  background: var(--cc, var(--lp-ink)); color: var(--ct, #fff); border: 2px solid var(--lp-ink); border-radius: 999px;
+  padding: 11px 15px; font: 700 12px/1 var(--lp-mono); letter-spacing: .08em; text-transform: uppercase;
+  opacity: 0; scale: .4; transition: opacity .25s, scale .4s var(--lp-ease);
+}
+.lp-cursor.has-label .lp-cursor-label { opacity: 1; scale: 1; }
+.lp-cursor.has-label .lp-cursor-ring { opacity: 0; }
+.lp-cursor.is-down .lp-cursor-ring { scale: .8; }
+.lp-heart { position: fixed; left: 0; top: 0; z-index: 450; width: 20px; height: 19px; margin: -9px 0 0 -10px; pointer-events: none; }
+.lp-heart svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+/* ---------- sizes ---------- */
+@media (max-width: 1100px) {
+  .lp-left { width: min(330px, 30vw); }
+  .lp-eco { width: min(300px, 30vw); }
+  .lp-sub { font-size: clamp(30px, 3.6vw, 44px); }
+  .lp-eco a { font-size: 15px; }
+  .lp-eco small { display: none; }
+  .lp-eco a i { margin-left: auto; }   /* the arrows stay in one column at the right */
+  .lp-eco-label { font-size: 22px; }
+}
+@media (min-width: 761px) and (max-aspect-ratio: 1/1) {
+  .lp-figure { --fig-h: 74%; }
+  .lp-word { --word-size: min(38vw, 30svh); }
+}
+@media (max-width: 760px) {
+  .lp-hero, [data-skin='pop'] .lp-hero { height: auto; display: flex; flex-direction: column; padding-bottom: calc(var(--lp-rib) * .36 + 34px); }
+  [data-skin='pop'] .lp-hero { margin-top: -64px; }
+  .lp-scene { position: relative; inset: auto; height: min(174vw, calc(100svh - 30px)); min-height: 560px; }
+  .lp-word, [data-skin='pop'] .lp-word { --word-size: 34vw; top: 84px; }
+  .lp-figure { --fig-h: 76%; bottom: 0; }
+  .lp-left, .lp-eco { position: relative; left: auto; right: auto; bottom: auto; width: auto; padding-inline: var(--lp-gutter); }
+  .lp-left { margin-top: 10px; }
+  .lp-sub { font-size: clamp(40px, 11vw, 56px); }
+  .lp-sub span { display: inline; }
+  .lp-eco { margin-top: 28px; }
+  .lp-eco a { font-size: 16px; }
+  .lp-eco small { display: inline; }
+  .lp-eco a i { margin-left: 0; }
+  .lp-planet { --ps: 30px; }
+  /* a long name takes two lines (max-content: its own width, not the planet's, up to the cap) */
+  .lp-planet-name { font-size: 11.5px; padding: 5px 9px; white-space: normal; width: max-content; max-width: 10em; line-height: 1.15; }
+  .lp-planet-url { display: none; }
+  .lp-bubble { left: 54%; top: 9%; max-width: min(200px, 44vw); padding: 8px 11px 9px 8px; gap: 8px; box-shadow: 4px 4px 0 var(--lp-ink); }
+  .lp-bubble-av { width: 30px; height: 30px; }
+  .lp-bubble-text { font-size: 13.5px; }
+  .lp-sfx { display: none; }
+  .lp-mani { height: 200svh; }
+  .lp-mani-girl { font-size: 13vw; left: 30%; bottom: 70%; }
+  .lp-mani-sticker { display: none; }
+}
+@media (max-width: 420px) {
+  .lp-word, [data-skin='pop'] .lp-word { top: 84px; }
+  .lp-bubble { left: 44%; max-width: min(172px, 52vw); }
+  .lp-bubble-who { font-size: 12px; }
+  .lp-bubble-who em { font-size: 9.5px; }
+  .lp-bubble-text { font-size: 12.5px; }
+}
+
+/* off screen (the script adds .lp-off): its heartbeat loops pause, so there's nothing to draw (after the entrance's rules,
+   so it wins over them) */
+.lp-hero.lp-off .lp-fx, .lp-hero.lp-off .lp-sfx { animation-play-state: paused; }
+
+/* ---------- "reduce motion": no loader, no entrance, nothing moving on its own; the manifesto shows its end ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .lp-fx, .lp-sfx, .lp-bubble-dots i { animation: none !important; }
+  .lp-mani { height: auto; }
+  .lp-mani-pin { position: relative; height: auto; min-height: 100svh; }
+  .lp-btn, .lp-planet-orb, .lp-eco a, .lp-eco a::before { transition: none; }
+}

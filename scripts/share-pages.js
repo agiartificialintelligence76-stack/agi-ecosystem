@@ -1,13 +1,12 @@
 // Runs after `vite build` (part of `npm run build`). Phase 5 share links:
-// 1. writes dist/share/champion-<coin>.html and dist/share/level-<name>.html: tiny pages that exist so X (and other apps)
-//    show the right picture under a shared link. People who open one are sent on to the Arena or the Playground by
-//    /share/go.js (crawlers don't run scripts, so they read the preview tags).
+// 1. writes dist/share/level-<name>.html: tiny pages that exist so X (and other apps) show the right picture under a
+//    shared link. People who open one are sent on to the Playground by /share/go.js (crawlers don't run scripts, so they
+//    read the preview tags). (The Arena's champion pages left with the Arena on 2026-09-28.)
 // 2. puts the site's address into the preview tags of dist/index.html and dist/diary.html (__SITE__).
 // Link previews need full addresses. They come from Vercel's VERCEL_PROJECT_PRODUCTION_URL (the production domain), so
 // the next build uses agi1.app (the project's domain) by itself. SITE_URL overrides it (tests, previews).
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { TOKENS } from '../src/prices/parse.js';
 import { LEVELS } from '../src/lib/levels.js';
 
 export function siteUrl(env = process.env) {
@@ -47,14 +46,6 @@ export function sharePage({ site, title, description, image, go }) {
 export function allSharePages(site) {
   const pages = {};
   const note = 'A parody. Entertainment only, not financial advice.';
-  for (const t of TOKENS) {
-    const id = t.symbol.toLowerCase();
-    pages[`champion-${id}`] = sharePage({
-      site, go: '/#arena', image: `/cards/champion-${id}.png`,
-      title: `$${t.symbol} crowned champion · AGI Arena`,
-      description: `One vote per human, every five minutes. ${note}`,
-    });
-  }
   for (const l of LEVELS) {
     const id = l.name.toLowerCase();
     pages[`level-${id}`] = sharePage({
@@ -67,7 +58,7 @@ export function allSharePages(site) {
 }
 
 // the card pictures every share page needs (public/cards/, see "Share cards" in CLAUDE.md)
-export const neededCards = () => [...TOKENS.map((t) => `champion-${t.symbol.toLowerCase()}.png`), ...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg'];
+export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg'];
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const site = siteUrl();

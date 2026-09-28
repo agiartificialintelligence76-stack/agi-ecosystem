@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 
 const HEART_COLORS = [0xff5c93, 0xe0457b, 0xff9cc0];
-// Pop mode (2026-09-27): her stage is pink, so hearts in white, the ecosystem's violet and honey show on it
+// Pop mode (2026-09-27): her stage is pink, so hearts in white, Pop mode's violet and honey show on it
 export const POP_HEART_COLORS = [0xffffff, 0x6b3bff, 0xffc933];
 
 // A white heart drawn on a small canvas. Each sprite tints it with its own color.

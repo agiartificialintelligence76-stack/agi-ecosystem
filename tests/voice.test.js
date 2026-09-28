@@ -83,8 +83,6 @@ beforeEach(() => {
       return Response.json(whole ? whole.parts.join('') : null);
     }
     if (url.includes('/rest/v1/rpc/chat_take')) return Response.json('ok');
-    if (url.includes('/rest/v1/rpc/arena_state')) return Response.json({ tally: {}, recent: [] });   // (her Arena memory: no champion)
-    if (url.includes('/rest/v1/rpc/coin_board')) return Response.json({ coins: [], retired: [], candidates: [] });
     if (url.startsWith('https://challenges.cloudflare.com/')) return Response.json({ success: true, action: 'chat' });
     if (url === TTS) {
       const mine = fake.byModel[body.model];                        // (one model's own refusals first)
@@ -808,7 +806,7 @@ test('her speech models are a setting: GEMINI_TTS_MODELS (in order), else GEMINI
 
 test('what she says out loud', () => {
   assert.equal(speakable('$AGI to the moon 💜 (not financial advice)'), 'AGI to the moon (not financial advice)');
-  assert.equal(speakable('a $5 coffee and $CABO'), 'a $5 coffee and CABO');
+  assert.equal(speakable('a $5 coffee and $CLANKCAT'), 'a $5 coffee and CLANKCAT');
   assert.equal(clipSpeech('short one.', 300), 'short one.');
   assert.equal(clipSpeech('One. Two three four five six seven eight nine ten.', 30), 'One. Two three four five six', 'no sentence end late enough: at a word');
   assert.equal(clipSpeech('Hello there my love. And then more words go here', 30), 'Hello there my love.', 'at a sentence end');

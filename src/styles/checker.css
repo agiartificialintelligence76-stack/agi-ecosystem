@@ -2,20 +2,7 @@
    in at the top), each coin's picture in a circle (tap it: the big view, a native dialog), and AGI-1's answer about one coin
    opening under it (her live view, the risk level, the flags and the facts). Risk colors are small dots only:
    high = --down, some = --warn, lower = gray, not enough data = an empty ring. Text always stays in the page's text colors. */
-/* the heading's credit line (2026-09-27, the owner's): "ClankChecker POWERED BY $CLANKCAP terminal" and a small round 𝕏
-   link to its X account. On a phone it wraps after "ClankChecker", keeping the credit and its icon on one line */
 .chk-kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.chk-powered { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
-.chk-powered-by { font-size: 11.5px; letter-spacing: .04em; }
-.chk-powered b { font-weight: 500; color: var(--fg); }
-.chk-x {
-  display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none; color: var(--fg); text-decoration: none;
-  font-family: 'Segoe UI Symbol', 'Apple Symbols', 'STIX Two Math', 'Noto Sans Math', 'DejaVu Sans', sans-serif;
-  font-size: 13px; line-height: 1; background: var(--bg); border: 1px solid var(--line); border-radius: 50%;
-  transition: border-color .15s ease, background-color .15s ease;
-}
-.chk-x:hover { border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); background: var(--bg-2); }
-.chk-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .chk { margin-top: 44px; }
 .chk-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }

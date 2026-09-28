@@ -45,9 +45,6 @@ beforeEach(() => {
     }
     if (url.startsWith('https://challenges.cloudflare.com/')) return Response.json({ success: body.response === 'good-token', action: 'chat' });
     if (url.includes('/rest/v1/rpc/chat_take')) return Response.json(fake.limit);
-    // her Arena memory (server/arena-memory.js): no champion yet
-    if (url.includes('/rest/v1/rpc/arena_state')) return Response.json({ tally: {}, recent: [] });
-    if (url.includes('/rest/v1/rpc/coin_board')) return Response.json({ coins: [], retired: [], candidates: [] });
     if (url.includes('/rest/v1/rpc/friend_')) {
       if (fake.friendsStatus !== 200) return Response.json({ code: 'PGRST202' }, { status: fake.friendsStatus });
       const fn = url.split('/').pop();

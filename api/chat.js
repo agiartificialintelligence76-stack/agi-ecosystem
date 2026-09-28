@@ -3,8 +3,8 @@
 //   2. human check: a valid chat pass, or a fresh Cloudflare Turnstile token (then we hand out a pass)
 //   3. relationship level (Phase 3): from the wallet session, if the visitor connected a wallet (else Stranger)
 //   4. limits in the database: per visitor (gap + daily, by level) and for the whole site (daily cap). DB down → no chat
-//   5. ask Gemini, sending only history AGI-1 really said (signed) plus the visitor's own messages, and what she knows
-//      right now: the Arena's current champion (server/arena-memory.js, 2026-09-25; the latest crown only)
+//   5. ask Gemini, sending only history AGI-1 really said (signed) plus the visitor's own messages (her memory of the Arena's
+//      champion, 2026-09-25, left with the Arena on 2026-09-28)
 //   6. Soulmates: save the short new note AGI-1 wrote about them, if any
 // The reply comes back signed (for the history) with a voice ticket (for api/voice.js, her voice).
 import { getConfig, missingSettings } from '../server/config.js';
@@ -17,7 +17,6 @@ import { checkLevel } from '../server/chain.js';
 import { getFriend, addFriendNote, cleanNote } from '../server/friends.js';
 import { levelInfo } from '../src/lib/levels.js';
 import { recallGroup } from '../server/tg-memory.js';
-import { currentChampion } from '../server/arena-memory.js';
 
 const MAX_BODY = 16_000;     // bytes
 const MAX_MESSAGE = 500;     // characters per visitor message
@@ -90,13 +89,10 @@ export async function POST(request) {
   if (slot === 'global_cap') return json(503, { error: 'global_cap', pass, level, session, signedOut });
 
   // What AGI-1 remembers (Crush: the name; Soulmate: the name and her notes). If the database can't say, she just forgets.
-  // At the same time: the Arena's current champion (kept a minute per server copy; never throws, never waits long).
-  const arena = currentChampion(cfg, now);
   let friend = { name: null, notes: [] };
   if (friendCode) {
     try { friend = await getFriend(cfg, friendCode); } catch (err) { console.error('[chat] memory unavailable:', err.message); }
   }
-  const champion = await arena;
 
   // 5. Gemini. If the visitor asked about the clank.trade Telegram group (or someone/something in it), her notes on
   // it come along; otherwise nothing is added.
@@ -105,7 +101,7 @@ export async function POST(request) {
   let answer;
   try {
     answer = await askAgi1(cfg, history, message,
-      { level, name: friend.name, notes: level === 3 ? friend.notes : [], memory, arena: champion });
+      { level, name: friend.name, notes: level === 3 ? friend.notes : [], memory });
   } catch (err) {
     console.error('[chat] gemini failed:', err.message);
     return json(502, { error: 'ai_error', pass, level, session, signedOut });

@@ -9,7 +9,7 @@
 // Other parts of the site ask for a reaction with an event:
 //   window.dispatchEvent(new CustomEvent('agi1:react', { detail: 'happy' }))
 // Reactions: 'wave', 'happy' (= a tap), 'love', 'shy', 'nod' (a small nod while you talk to her, voice chat), and
-// (2026-09-25) 'jealous' (another coin won the Arena: a pout and a glance away), 'neutral' (her calm face again), and her
+// (2026-09-25) 'jealous' (a pout and a glance away: someone picked AGI-2 in the chat's model menu), 'neutral' (her calm face again), and her
 // market moments: 'celebrate' ($AGI reached a new market cap step: a hop, a burst of hearts, a joyful face and, on the stage,
 // a little dance) and 'sad' (a -20% day: a sad face, looking down for a few seconds); (2026-09-26) what she thinks of a
 // ClankChecker scan: 'okay' (lower risk: a calm smile and a nod), 'hmm' (some risk: a pout and a tilt of her head) and
@@ -811,7 +811,7 @@ export function createAgi1(model, { camera, effects, reducedMotion = false, onGl
         look.awayUntil = clock + 3.5;
         break;
       }
-      case 'jealous': {                              // another coin won the Arena: a little pout, and a glance away
+      case 'jealous': {                              // someone picked AGI-2: a little pout, and a glance away
         const head = worldPos(B.head);
         const toYou = camera.position.clone().sub(head).setY(0).normalize();
         const side = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), toYou);
@@ -897,7 +897,7 @@ export function createAgi1(model, { camera, effects, reducedMotion = false, onGl
     applyHair(dt);              // last: her hair follows where everything above has put her
   }
 
-  // She arrived on stage (page opened, or switched back from CABO): wave hello, dance a bit later.
+  // She arrived on stage (page opened, or switched back from the champion's card): wave hello, dance a bit later.
   function hello() {
     startWave();
     setMood('wave');                             // with a smile

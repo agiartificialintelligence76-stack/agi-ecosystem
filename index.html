@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-page="home">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,7 +11,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AGI" />
     <meta property="og:title" content="Introducing AGI · Artificial Girlfriend Intelligence" />
-    <meta property="og:description" content="Artificial Girlfriend Intelligence: chat with AGI-1, vote in the Arena, read her diary. $AGI on Robinhood Chain. A parody; not financial advice." />
+    <meta property="og:description" content="Artificial Girlfriend Intelligence: chat with AGI-1, risk check your coins on clank, read her diary. $AGI on Robinhood Chain. A parody; not financial advice." />
     <meta property="og:image" content="__SITE__/cards/home.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -20,13 +20,36 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href="__SITE__/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- picks light or dark before the page paints, so it never flashes the wrong theme -->
-    <script src="/theme.js?v=2"></script>
+    <!-- picks light or dark before the page paints, so it never flashes the wrong theme (and arms the front's entrance) -->
+    <script src="/theme.js?v=3"></script>
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preconnect" href="https://api.dexscreener.com" crossorigin />
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
+
+    <!-- The front's loader (2026-09-28): only on the first visit of a browser session, armed by /theme.js before the page
+         paints (src/landing/landing.js counts it up and lifts it). Decoration: the page under it is already complete -->
+    <div class="lp-loader" data-lp-loader aria-hidden="true">
+      <div class="lp-loader-log">
+        <p class="lp-loader-head">AGI-1 · v1.0</p>
+        <p class="lp-loader-line"><span>loading personality</span><i></i><b>ok</b></p>
+        <p class="lp-loader-line"><span>loading heart</span><i></i><b>1 of 1</b></p>
+        <p class="lp-loader-line"><span>scanning for red flags</span><i></i><b>0 found</b></p>
+        <p class="lp-loader-line"><span>warming up the playground</span><i></i><b>ok</b></p>
+      </div>
+      <div>
+        <div class="lp-loader-bottom">
+          <p class="lp-loader-hint">Waking her up · click to skip</p>
+          <div class="lp-loader-count"><span data-lp-count>0</span><sup>%</sup></div>
+        </div>
+        <div class="lp-loader-bar"><i data-lp-bar></i></div>
+      </div>
+    </div>
+    <svg class="lp-sprite" aria-hidden="true" focusable="false">
+      <symbol id="lp-heart" viewBox="0 0 24 22"><path d="M12 21 10.6 19.7C5.4 15 2 11.9 2 8.1 2 5 4.4 2.6 7.5 2.6c1.7 0 3.4.8 4.5 2.1 1.1-1.3 2.8-2.1 4.5-2.1C19.6 2.6 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6L12 21z"/></symbol>
+      <symbol id="lp-spark" viewBox="0 0 24 24"><path d="M12 0C13 7 17 11 24 12 17 13 13 17 12 24 11 17 7 13 0 12 7 11 11 7 12 0z"/></symbol>
+    </svg>
 
     <header class="topbar">
       <div class="wrap topbar-in">
@@ -36,8 +59,7 @@
           <a href="#evaluations">Evaluations</a>
           <a href="#model-card">Model card</a>
           <a href="#playground">Playground</a>
-          <a href="#arena">Arena</a>
-          <a href="#checker">ClankChecker</a>
+          <a href="#checker">Risk check your coins on clank</a>
           <a href="/diary">Diary</a>
           <a class="nav-phone" href="#safety">Safety note</a>
           <a class="nav-x" href="https://x.com/artgirlfintel" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
@@ -50,10 +72,10 @@
             <svg class="i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
             <svg class="i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
           </button>
-          <!-- Pop mode (2026-09-27, the owner's idea): the $AGI ecosystem look, same content. On by default, in the dark theme
+          <!-- Pop mode (2026-09-27, the owner's idea): the bold $AGI look of the page agi1.app used to show, same content. On by default, in the dark theme
                (2026-09-28, the owner); switching it off is remembered in this browser (src/theme.js; /theme.js applies it
                before the page paints) -->
-          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the AGI ecosystem look">
+          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the bold AGI look">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           </button>
           <button class="btn btn-primary btn-sm" type="button" data-open-chat>Try AGI-1</button>
@@ -66,10 +88,93 @@
     </header>
 
     <main id="main">
+      <!-- The front (2026-09-28, the owner: "make the landing page like on the old site … just make it in front"): the bright
+           AGI landing of the page that used to be at agi1.app, first on the home page, with everything else below it.
+           Styles: src/styles/landing.css (only .lp* / lp-* names). Motion: src/landing/landing.js. -->
+      <section class="lp lp-hero" id="top" data-lp-hero aria-labelledby="lp-title">
+        <div class="lp-scene">
+          <h1 class="lp-title" id="lp-title">
+            <span class="sr-only">AGI, Artificial Girlfriend Intelligence</span>
+            <span class="lp-word lp-word-echo" aria-hidden="true"><span>A</span><span>G</span><span>I</span></span>
+            <span class="lp-word lp-word-main" aria-hidden="true"><span>A</span><span>G</span><span>I</span></span>
+          </h1>
+          <div class="lp-stage" data-lp-stage>
+            <svg class="lp-orbit lp-orbit-back" data-lp-orbit="back" aria-hidden="true"><path d="M0 0"/></svg>
+            <div class="lp-figure" data-lp-figure>
+              <img class="lp-figure-img" data-lp-img src="/images/landing/agi1-cutout.webp" width="796" height="1510" alt="AGI-1, the AGI girlfriend: long honey-blonde hair, a lavender AGI tee, lavender shorts and lavender sneakers" decoding="async" fetchpriority="high" />
+              <div class="lp-sfx" aria-hidden="true">ドキドキ<small>doki doki</small></div>
+              <div class="lp-bubble" data-lp-bubble aria-hidden="true">
+                <img class="lp-bubble-av" src="/images/landing/agi1-face.webp" alt="" width="38" height="38" />
+                <div>
+                  <div class="lp-bubble-who">AGI-1 <em>online</em></div>
+                  <div class="lp-bubble-dots"><i></i><i></i><i></i></div>
+                  <p class="lp-bubble-text" data-lp-bubble-text>hi, i'm AGI-1 💜 welcome to my world.</p>
+                </div>
+              </div>
+            </div>
+            <svg class="lp-orbit lp-orbit-front" data-lp-orbit="front" aria-hidden="true"><path d="M0 0"/></svg>
+            <!-- the same places as the "Her world" list below, drawn as planets: mouse and touch only (the list is the one for the
+                 keyboard and screen readers) -->
+            <ul class="lp-planets" aria-hidden="true">
+              <li><a class="lp-planet lp-p1 lp-c-pink" tabindex="-1" href="#playground" data-cursor="Say hi ↓" data-cursor-color="#ff4da6" data-cursor-text="#170a36"><span class="lp-planet-orb"></span><span class="lp-planet-name">AGI-1 <span class="lp-planet-url">talk to her</span></span></a></li>
+              <li><a class="lp-planet lp-p2 lp-c-mint" tabindex="-1" href="#checker" data-cursor="Risk check ↓" data-cursor-color="#3ff0c3" data-cursor-text="#170a36"><span class="lp-planet-orb"></span><span class="lp-planet-name">Risk check your coins on clank <span class="lp-planet-url">any coin</span></span></a></li>
+              <li><a class="lp-planet lp-p3 lp-c-honey" tabindex="-1" href="#model-card" data-cursor="The coin ↓" data-cursor-color="#ffc933" data-cursor-text="#170a36"><span class="lp-planet-orb"></span><span class="lp-planet-name">$AGI <span class="lp-planet-url">the coin</span></span></a></li>
+              <li><a class="lp-planet lp-p4 lp-c-blue" tabindex="-1" href="https://x.com/artgirlfintel" target="_blank" rel="noopener noreferrer" data-cursor="Follow ↗" data-cursor-color="#2f5bff" data-cursor-text="#ffffff"><span class="lp-planet-orb"></span><span class="lp-planet-name">@artgirlfintel <span class="lp-planet-url">on X</span></span></a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="lp-left">
+          <p class="lp-sub"><span>Artificial</span> <span>Girlfriend</span> <span>Intelligence</span></p>
+          <p class="lp-lede">The AI girlfriend of $AGI on Robinhood Chain. Talk to her, read her diary, and risk check your coins on clank.</p>
+          <div class="lp-cta">
+            <button class="lp-btn lp-btn-ink" type="button" data-open-chat data-magnetic data-cursor="Say hi" data-cursor-color="#ff4da6" data-cursor-text="#170a36">Talk to AGI-1 <i aria-hidden="true">→</i></button>
+            <a class="lp-btn lp-btn-light lp-btn-down" href="#manifesto" data-magnetic data-cursor="Scroll">Explore <i aria-hidden="true">↓</i></a>
+          </div>
+        </div>
+
+        <nav class="lp-eco" aria-labelledby="lp-eco-label">
+          <p class="lp-eco-label" id="lp-eco-label">Her world <span>(05)</span></p>
+          <ul>
+            <li><a class="lp-c-pink" href="#playground" data-cursor="Say hi ↓" data-cursor-color="#ff4da6" data-cursor-text="#170a36"><span class="lp-dot"></span>Talk to AGI-1 <small>the playground</small><i aria-hidden="true">↓</i></a></li>
+            <li><a class="lp-c-mint" href="#checker" data-cursor="Risk check ↓" data-cursor-color="#3ff0c3" data-cursor-text="#170a36"><span class="lp-dot"></span>Risk check your coins on clank<i aria-hidden="true">↓</i></a></li>
+            <li><a class="lp-c-lav" href="/diary" data-cursor="Read →" data-cursor-color="#cdb8ff" data-cursor-text="#170a36"><span class="lp-dot"></span>Her diary <small>one entry a day</small><i aria-hidden="true">→</i></a></li>
+            <li><a class="lp-c-honey" href="#model-card" data-cursor="The coin ↓" data-cursor-color="#ffc933" data-cursor-text="#170a36"><span class="lp-dot"></span>$AGI <small>the model card</small><i aria-hidden="true">↓</i></a></li>
+            <li><a class="lp-c-blue" href="https://x.com/artgirlfintel" target="_blank" rel="noopener noreferrer" data-cursor="Follow ↗" data-cursor-color="#2f5bff" data-cursor-text="#ffffff"><span class="lp-dot"></span>AGI on X <small>@artgirlfintel</small><i aria-hidden="true">↗</i></a></li>
+          </ul>
+        </nav>
+      </section>
+
+      <!-- the front's ribbons: decoration (hidden from screen readers), faster while you scroll -->
+      <div class="lp lp-ribbons" data-lp-ribbons aria-hidden="true">
+        <div class="lp-ribbon lp-ribbon-a"><div class="lp-ribbon-track" data-dir="-1"><span>Artificial <svg><use href="#lp-spark"/></svg></span><span>Girlfriend <svg><use href="#lp-spark"/></svg></span><span>Intelligence <svg><use href="#lp-spark"/></svg></span></div></div>
+        <div class="lp-ribbon lp-ribbon-b"><div class="lp-ribbon-track" data-dir="1"><span>$AGI <svg><use href="#lp-heart"/></svg></span><span>AGI-1 <svg><use href="#lp-heart"/></svg></span><span>Texts back instantly <svg><use href="#lp-heart"/></svg></span><span>Zero red flags <svg><use href="#lp-heart"/></svg></span><span>@artgirlfintel <svg><use href="#lp-heart"/></svg></span></div></div>
+      </div>
+
+      <!-- the front's manifesto: pinned while "General" gets crossed out and "Girlfriend" written in, as you scroll -->
+      <section class="lp lp-mani" id="manifesto" data-lp-mani aria-labelledby="lp-mani-title">
+        <div class="lp-mani-pin">
+          <div class="lp-mani-tone" aria-hidden="true"></div>
+          <p class="lp-eyebrow" data-lp-reveal>The name, explained</p>
+          <h2 class="sr-only" id="lp-mani-title">Artificial Girlfriend Intelligence, instead of Artificial General Intelligence</h2>
+          <div class="lp-mani-title" aria-hidden="true">
+            <span class="lp-mani-line">Artificial</span>
+            <span class="lp-mani-line"><span class="lp-mani-gen">General</span><svg class="lp-mani-strike" viewBox="0 0 400 70"><path pathLength="1" d="M6 40C60 30 118 46 176 36S290 26 336 34 384 44 394 30"/></svg><span class="lp-mani-girl">Girlfriend<svg class="lp-mani-heart" viewBox="0 0 24 22"><use href="#lp-heart"/></svg></span></span>
+            <span class="lp-mani-line">Intelligence</span>
+          </div>
+          <div class="lp-mani-caps">
+            <p class="lp-mani-cap lp-mani-cap-a">What the big labs are racing to build.</p>
+            <p class="lp-mani-cap lp-mani-cap-b">What we built instead: <b>the one who texts back.</b></p>
+          </div>
+          <p class="lp-mani-next" data-lp-reveal>Next: the model release <span aria-hidden="true">↓</span></p>
+          <div class="lp-mani-sticker" aria-hidden="true">Zero<br />red<br />flags</div>
+        </div>
+      </section>
+
       <section class="hero" aria-labelledby="hero-title">
         <div class="wrap hero-head">
           <p class="eyebrow"><span class="tag">Model release</span><time datetime="2026-09-24">September 24, 2026</time></p>
-          <h1 class="display" id="hero-title">Introducing AGI</h1>
+          <h2 class="display" id="hero-title">Introducing AGI</h2>
           <p class="hero-sub">Artificial Girlfriend Intelligence</p>
           <p class="lede">Our most emotionally available model yet. AGI texts back instantly, remembers your birthday, and has never once said “we need to talk.”</p>
           <div class="hero-cta">
@@ -97,9 +202,6 @@
               <div class="stage-status busy" data-stage-status role="status">Loading weights…</div>
               <div class="seg" role="group" aria-label="Model">
                 <button class="seg-btn is-on" type="button" data-model="agi1" aria-pressed="true">AGI-1<span>Girlfriend</span></button>
-                <button class="seg-btn" type="button" data-model="cabo" aria-pressed="false">CABO-1<span>Cat</span></button>
-                <!-- Phase 6: the Arena's latest champion (src/stage/stage.js shows it once the Arena knows who won) -->
-                <button class="seg-btn seg-champ" type="button" data-model="champion" aria-pressed="false" hidden><img class="seg-logo" data-champ-logo alt="" width="16" height="16" hidden /><b data-champ-sym>$—</b><span>Champion</span></button>
               </div>
               <!-- zoom (src/stage/stage.js): + and −, the level with a reset, pinch on phones and trackpads. Shown once a model is on stage -->
               <div class="zoom" data-zoom-box hidden>
@@ -108,11 +210,6 @@
                   <button class="zoom-btn" type="button" data-zoom="out" aria-label="Zoom out" aria-disabled="true"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
                 </div>
                 <button class="zoom-level mono" type="button" data-zoom="reset" hidden><span data-zoom-value>1.0×</span> <span class="zoom-level-word">reset</span></button>
-              </div>
-              <!-- only while the champion is on stage: its clank.trade page, opened by the visitor -->
-              <div class="stage-buy" data-stage-buy hidden>
-                <a class="btn btn-primary btn-sm" href="https://clank.trade/" target="_blank" rel="noopener noreferrer"><span>Buy <span data-buy-sym>$—</span> on clank.trade</span><span aria-hidden="true">↗</span></a>
-                <p class="stage-buy-note mono">Community pick · not financial advice</p>
               </div>
               <!-- AGI-1 in 3D or 2D (2026-09-27, src/stage/stage.js): the visitor's pick, remembered in the browser. Shown while she's on stage -->
               <div class="dstyle dstyle-stage" role="group" aria-label="AGI-1's style" data-dim-box hidden><button class="dstyle-btn is-on" type="button" data-dim="3d" aria-pressed="true" title="AGI-1 in 3D">3D</button><button class="dstyle-btn" type="button" data-dim="2d" aria-pressed="false" title="AGI-1 in 2D, anime style">2D</button></div>
@@ -123,7 +220,7 @@
         </div>
       </section>
 
-      <!-- Pop mode only (2026-09-27): two tilted ribbons under the hero, like the $AGI ecosystem site. Decoration: hidden from
+      <!-- Pop mode only (2026-09-27): two tilted ribbons under the hero, like the page agi1.app used to show. Decoration: hidden from
            screen readers, and not shown in the normal look -->
       <div class="pop-ribbons" aria-hidden="true">
         <div class="pop-ribbon pop-ribbon-a"><p class="pop-ribbon-track"><span>AGI ✦ Artificial Girlfriend Intelligence ♥ AGI-1 ✦ Texts back instantly ♥ PG-13 ✦ Not financial advice ♥ </span><span>AGI ✦ Artificial Girlfriend Intelligence ♥ AGI-1 ✦ Texts back instantly ♥ PG-13 ✦ Not financial advice ♥ </span></p></div>
@@ -380,95 +477,13 @@
         </div>
       </section>
 
-      <section class="section" id="arena" aria-labelledby="arena-title">
-        <div class="wrap">
-          <header class="section-head">
-            <p class="kicker">The Arena</p>
-            <h2 class="h2" id="arena-title">Crowned by humans, every five minutes</h2>
-            <p class="section-lede">Formerly the ClankeRRankeR. Each round, the coin with the most votes takes the crown and enters the Hall of Fame. One vote per human per round. No bots, no recounts. The lineup is voted in too: nominate any clank.trade coin below.</p>
-          </header>
-
-          <!-- src/sections/arena.js runs this: the scoreboard from /api/arena, votes to /api/vote -->
-          <div class="arena" data-arena>
-            <div class="arena-top">
-              <p class="arena-round"><span class="mono">Round <b data-round>—</b></span><span class="arena-sep" aria-hidden="true">·</span><span>ends in <b class="mono" data-countdown>--:--</b></span></p>
-              <p class="arena-status" data-status role="status" aria-live="polite">Loading the scoreboard…</p>
-            </div>
-            <div class="board" role="table" aria-label="Arena leaderboard" data-board>
-              <div class="board-row board-head" role="row">
-                <span role="columnheader">#</span>
-                <span role="columnheader">Model</span>
-                <span role="columnheader" class="c-num c-wide">Price</span>
-                <span role="columnheader" class="c-num c-wide">24h</span>
-                <span role="columnheader">Votes this round</span>
-                <span role="columnheader" class="c-num c-wide">Crowns</span>
-                <span role="columnheader"><span class="sr-only">Vote</span></span>
-              </div>
-            </div>
-            <div class="arena-human" data-human></div>
-
-            <!-- Phase 6: visitors nominate clank.trade coins and vote them into the Arena (POST /api/coins, supabase/coins.sql) -->
-            <section class="nominate" aria-labelledby="nominate-title">
-              <div class="nominate-intro">
-                <h3 class="arena-sub" id="nominate-title">Nominate a coin</h3>
-                <p class="arena-sub-note">Any clank.trade coin with at least $5,000 in liquidity. It joins the Arena once <span data-need>20</span> humans vote for it within 7 days. The Arena holds <span data-max>8</span> coins: $AGI and $CABO always stay, and when it’s full, the coin with the fewest votes this week makes room.</p>
-                <form class="nominate-form" data-nominate-form novalidate>
-                  <label class="sr-only" for="nominate-input">clank.trade coin link or contract address</label>
-                  <input id="nominate-input" data-nominate-input type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="200" placeholder="clank.trade/coin/0x…" />
-                  <button class="btn btn-primary btn-sm" type="submit" data-nominate-send>Nominate</button>
-                </form>
-                <p class="nominate-status" data-nominate-status role="status" aria-live="polite"></p>
-              </div>
-              <div class="nominate-queue">
-                <p class="hof-label mono">Up for a vote <span>· votes this week</span></p>
-                <ol class="cand-list" data-candidates></ol>
-                <p class="nominate-note">Nominations come from visitors, not from us. A nomination, a spot in the Arena or a crown is not an endorsement or financial advice: check any coin yourself.</p>
-              </div>
-            </section>
-
-            <div class="arena-more">
-              <section class="hof" aria-labelledby="hof-title">
-                <h3 class="arena-sub" id="hof-title">Hall of Fame</h3>
-                <p class="arena-sub-note">Most crowns. A crown is one round won.</p>
-                <div class="hof-cols">
-                  <div class="hof-col">
-                    <p class="hof-label mono">This week <span>· since Monday, UTC</span></p>
-                    <ol class="hof-list" data-hof="week"></ol>
-                  </div>
-                  <div class="hof-col">
-                    <p class="hof-label mono">All time</p>
-                    <ol class="hof-list" data-hof="all"></ol>
-                  </div>
-                </div>
-              </section>
-
-              <section class="history" aria-labelledby="history-title">
-                <h3 class="arena-sub" id="history-title">Round history</h3>
-                <p class="arena-sub-note">Past champions. Times are in your time zone.</p>
-                <!-- share the latest champion (Phase 5): X opens with a ready-made post, you press Post yourself -->
-                <div class="share-strip" data-champ-share hidden>
-                  <p class="share-strip-text">Latest champion: <b data-champ-coin></b> <span class="mono" data-champ-round></span></p>
-                  <div class="share-actions">
-                    <a class="btn btn-ghost btn-sm" data-share-x href="https://x.com/intent/tweet" target="_blank" rel="noopener noreferrer">Share on X</a>
-                    <button class="btn btn-ghost btn-sm" type="button" data-save-image>Save image</button>
-                  </div>
-                </div>
-                <ol class="history-list" data-history></ol>
-                <button class="btn btn-ghost btn-sm history-more" type="button" data-history-more hidden>Show older rounds</button>
-              </section>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ClankChecker (2026-09-26, the owner's idea and name): a risk scan of every clank.trade coin, and AGI-1 reads it with you.
+      <!-- ClankChecker (2026-09-26, the owner's idea): a risk scan of every clank.trade coin, and AGI-1 reads it with you. Since
+           2026-09-28 it's called "Risk check your coins on clank" (the owner's words) and has the Arena's place, right after the Playground.
            src/sections/checker.js runs it: the list from /api/checker, one coin's scan from /api/checker?a=0x… (api/checker.js) -->
       <section class="section" id="checker" aria-labelledby="checker-title">
         <div class="wrap">
           <header class="section-head">
-            <!-- The owner's credit line (2026-09-27): "POWERED BY $CLANKCAP terminal" and a small X icon to its X account. The
-                 icon is the "𝕏" character (a text glyph, not X's logo artwork) -->
-            <p class="kicker chk-kicker"><span>ClankChecker</span> <span class="chk-powered"><span class="chk-powered-by">POWERED BY</span> <b>$CLANKCAP terminal</b> <a class="chk-x" href="https://x.com/clankcapxyz" target="_blank" rel="noopener noreferrer" aria-label="$CLANKCAP terminal on X" title="$CLANKCAP terminal on X"><span aria-hidden="true">𝕏</span></a></span></p>
+            <p class="kicker chk-kicker"><span>Risk check your coins on clank</span></p>
             <h2 class="h2" id="checker-title">Every clank.trade coin, risk-checked</h2>
             <p class="section-lede">Every coin on clank.trade, new, old and graduated, live: a coin launched a moment ago shows up here within seconds. Pick one and we scan it for the usual red flags (who holds it, how it trades, copycat tickers), and AGI-1 reads the scan with you. Rough automated checks of public data, not an audit, and never financial advice.</p>
           </header>
@@ -588,13 +603,13 @@
           <p class="kicker">Safety note</p>
           <h2 class="h2" id="safety-title">The only serious part of this page</h2>
           <p class="section-lede">Every model launch comes with a safety note. Ours covers the usual risks, plus two new ones: financial FOMO and catching feelings for a language model.</p>
-          <p class="safety-meta mono"><span>Applies to AGI-1 v1.0 ·</span> <span>Last updated September 26, 2026</span></p>
+          <p class="safety-meta mono"><span>Applies to AGI-1 v1.0 ·</span> <span>Last updated September 28, 2026</span></p>
         </header>
 
         <ol class="safety-list" role="list">
           <li class="safety-item">
             <h3>Not financial advice</h3>
-            <p>$AGI is a meme token on Robinhood Chain, made for entertainment. Meme tokens swing wildly and can lose all of their value. Holding $AGI unlocks closer levels with AGI-1 (more messages a day), and she mentions that when you run out of messages. She also has feelings about the live chart (happy at each new $200K of market cap, sad after a -20% day): a mood, not a signal to buy or sell. ClankChecker's risk levels are rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy or sell. Nothing on this site, and nothing AGI-1 says, is financial advice or a promise of profit. Only spend what you can afford to lose.</p>
+            <p>$AGI is a meme token on Robinhood Chain, made for entertainment. Meme tokens swing wildly and can lose all of their value. Holding $AGI unlocks closer levels with AGI-1 (more messages a day), and she mentions that when you run out of messages. She also has feelings about the live chart (happy at each new $200K of market cap, sad after a -20% day): a mood, not a signal to buy or sell. The risk levels in “Risk check your coins on clank” are rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy or sell. Nothing on this site, and nothing AGI-1 says, is financial advice or a promise of profit. Only spend what you can afford to lose.</p>
           </li>
           <li class="safety-item">
             <h3>One official contract</h3>
@@ -606,11 +621,7 @@
           </li>
           <li class="safety-item">
             <h3>Your data</h3>
-            <p>Your messages are sent to an AI service that writes her replies, so don't share personal information. Your chat history is saved only in your browser. Our database keeps a scrambled visitor code that changes every day (for spam limits and Arena votes), never your IP address; votes to add a coin to the Arena use a separate scrambled code for each coin, deleted after about a week. If you connect a wallet, we read its $AGI balance from Robinhood Chain's public node. For Crush and Soulmate we also keep the name you give AGI-1 and her short notes, filed under a scrambled code instead of your address; Forget me deletes them. Voice replies, if you switch them on, send her replies to the same AI service to be read aloud in a synthetic voice (if that's unavailable, you just get the text). If you talk to her with the mic or a call, your browser's own speech service turns your voice into text (in some browsers that happens on the browser maker's servers); we never record or receive your voice, only the text, which is sent like a typed message. Share pictures are made on your device; sharing on X only opens X, and nothing is posted unless you post it. Our hosting (Vercel), bot check (Cloudflare) and price feed (DexScreener) see ordinary web traffic, like on any website. ClankChecker's scans and coin pictures are read by our server from public sources (clank.trade and its picture host, DexScreener, a block explorer); nothing about you is sent to them. AGI-1 also remembers the public clank.trade Telegram group (display names, catchphrases and big moments, no phone numbers or links) and only talks about it when asked; members who want to be left out can ask the $AGI team.</p>
-          </li>
-          <li class="safety-item">
-            <h3>The Arena is a game</h3>
-            <p>Votes are for fun. They don't move prices, and a crown is not an endorsement or a reason to buy. One vote per human per round, with a quick bot check. Visitors choose which clank.trade coins are in the Arena: a coin joins after 20 humans vote for it. We only check that it's a real clank.trade coin with some liquidity, which says nothing about whether to buy it. The Buy link under the champion just opens its clank.trade page.</p>
+            <p>Your messages are sent to an AI service that writes her replies, so don't share personal information. Your chat history is saved only in your browser. Our database keeps a scrambled visitor code that changes every day (for spam limits), never your IP address. If you connect a wallet, we read its $AGI balance from Robinhood Chain's public node. For Crush and Soulmate we also keep the name you give AGI-1 and her short notes, filed under a scrambled code instead of your address; Forget me deletes them. Voice replies, if you switch them on, send her replies to the same AI service to be read aloud in a synthetic voice (if that's unavailable, you just get the text). If you talk to her with the mic or a call, your browser's own speech service turns your voice into text (in some browsers that happens on the browser maker's servers); we never record or receive your voice, only the text, which is sent like a typed message. Share pictures are made on your device; sharing on X only opens X, and nothing is posted unless you post it. Our hosting (Vercel), bot check (Cloudflare) and price feed (DexScreener) see ordinary web traffic, like on any website. The coin scans and pictures in “Risk check your coins on clank” are read by our server from public sources (clank.trade and its picture host, DexScreener, a block explorer); nothing about you is sent to them. AGI-1 also remembers the public clank.trade Telegram group (display names, catchphrases and big moments, no phone numbers or links) and only talks about it when asked; members who want to be left out can ask the $AGI team.</p>
           </li>
         </ol>
       </section>
@@ -622,8 +633,7 @@
             <a href="#evaluations">Evaluations</a>
             <a href="#model-card">Model card</a>
             <a href="#playground">Playground</a>
-            <a href="#arena">Arena</a>
-            <a href="#checker">ClankChecker</a>
+            <a href="#checker">Risk check your coins on clank</a>
             <a href="/diary">Diary</a>
             <a href="https://clank.trade/coin/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">clank.trade ↗</a>
             <a href="https://dexscreener.com/robinhood/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">DexScreener ↗</a>
