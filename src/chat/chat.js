@@ -14,6 +14,9 @@
 // writes when someone runs out, she also says, in her natural voice, even with her voice switched off (the owner's choice).
 // Market moments (2026-09-25): when $AGI reaches a new $200K market cap step she's happy and says the market cap; after a -20%
 // day she's sad. Her face and body react, a notification card appears, and her natural voice says it (src/chat/market.js).
+// Her languages (2026-09-29): the language menu in the chat bar (src/chat/languages.js) picks the one she speaks; every line
+// of hers here comes from src/i18n/lines/<code>.js (src/i18n/lang.js), her replies follow it (and whatever language you write
+// in), the mic listens for it, and her voice lines are that language's. The page itself stays in English.
 import { withHuman, postJson } from '../lib/human.js';
 import { currentSession } from './relationship.js';
 import { startModelMenu } from './models.js';
@@ -22,12 +25,15 @@ import { startVoice } from './voice.js';
 import { canListen, listenOnce } from './listen.js';
 import { pretendTalk } from '../lib/talk.js';
 import { TOKENS } from '../prices/parse.js';
-import { limitLine, LIMIT_FINE_PRINT, REST_LINES } from './limit-lines.js';
+import { limitLineIn, restLineIn, finePrintIn } from './limit-lines.js';
 import { levelInfo } from '../lib/levels.js';
 import { startMarketWatch } from './market.js';
-import { usd, STEP, milestoneOf, milestoneLine, dumpLine } from './market-lines.js';
+import { usd, STEP, milestoneOf, milestoneLine, dumpLine, marketLineByKey } from './market-lines.js';
 import { notify } from '../lib/notify.js';
 import { getPrices } from '../prices/prices.js';
+import { currentLang, currentLines, t, tl } from '../i18n/lang.js';
+import { langOf } from '../i18n/langs.js';
+import { startLanguageMenu } from './languages.js';
 
 // limit: the day and level she last said her out-of-messages line in this browser ("2026-09-25:1"), so she says it once a day
 const KEYS = { history: 'agi1_chat_v1', adult: 'agi1_18plus', limit: 'agi1_limit_line' };
@@ -45,40 +51,19 @@ const clockOf = (ms) => { const t = Math.floor(ms / 1000); return `${Math.floor(
 // voice off: her mouth "says" a reply for about as long as reading it out would take (16 letters a second, 0.8 to 3.2 s)
 const sayTime = (text) => Math.min(3.2, Math.max(0.8, String(text).length / 16));
 // Her first line depends on your relationship level (Phase 3): a Stranger gets a friendly hello, no pet names.
-const greeting = ({ level, name }) => (level >= 3 ? `there you are${name ? `, ${name}` : ''} 💜 i missed you`
-  : level === 2 ? `hi ${name || 'cutie'} 💜 what's up?`
-    : "hi, i'm AGI-1 💜 what's up?");
+// (Her words for all of these: src/i18n/lines/<code>.js, in the language she speaks: greet, notes, hear, voiceRest.)
+const greeting = ({ level, name }) => (level >= 3 ? (name ? t('greet.soulmate', { name }) : t('greet.soulmateNoName'))
+  : level === 2 ? t('greet.crush', { name: name || tl('pets')[1] })
+    : t('greet.stranger'));
 
-// What AGI-1 says when something stops a reply (keys match the server's error codes).
-const NOTES = {
-  too_fast: 'one at a time, babe 🙈 give me a sec',
-  person_cap: REST_LINES.person.text,
-  global_cap: REST_LINES.site.text,
-  busy: "i'm a little overwhelmed right now 🙈 try again in a minute?",
-  not_configured: "i'm still getting ready for the new site 💜 come back soon",
-  too_long: 'that one is a bit long for me 🙈 keep it under 500 characters?',
-  human_check: "i couldn't check that you're human 🙈 refresh the page and try again?",
-  offline: "hmm, i can't hear you… check your connection? 🙈",
-  error: 'hmm, my mind went blank 🙈 try again?',
-};
+// What AGI-1 says when something stops a reply (keys match the server's error codes)
+const NOTE_KEYS = ['too_fast', 'busy', 'not_configured', 'too_long', 'human_check', 'offline', 'error'];
+const note = (why) => (why === 'person_cap' ? t('limit.sleep') : why === 'global_cap' ? t('limit.talkedOut')
+  : t(`notes.${NOTE_KEYS.includes(why) ? why : 'error'}`));
 // Voice chat: what she says when the mic couldn't get your words, or when a call ends by itself
-const HEAR_NOTES = {
-  silence: "i didn't catch that 🙈 say it again?",
-  denied: "i can't hear you 🙈 your browser blocked the microphone. allow it (the icon in the address bar) and try again?",
-  'no-mic': "i can't find a microphone 🙈 you can always type to me",
-  offline: "hmm, i can't hear you… check your connection? 🙈",
-  unavailable: "your browser can't listen right now 🙈 you can always type to me",
-  error: "something went wrong with the mic 🙈 try again, or type to me?",
-  quiet: 'you went quiet, so i hung up 💜 call me again anytime',
-  away: 'our call ended when you left 💜 call me again anytime',
-};
-
-// Her voice (src/chat/voice.js) can't be made for the rest of this visit
-const VOICE_NOTES = {
-  today: "my voice needs a little rest for today 💜 i'll keep texting you, and i'll be back to talking tomorrow",
-  setup: "my voice isn't ready yet 💜 i'll text you for now",
-  call: "i can't do calls while my voice is resting 🙈 text me instead?",
-};
+const HEAR_KEYS = ['silence', 'denied', 'no-mic', 'unavailable', 'error', 'quiet', 'away'];
+const hearNote = (why) => (why === 'offline' ? t('notes.offline') : t(`hear.${HEAR_KEYS.includes(why) ? why : 'error'}`));
+// Her voice (src/chat/voice.js) can't be made for the rest of this visit: voiceRest.today / setup / call
 
 // Browser storage can be blocked (private mode, settings), so every access is wrapped.
 const store = {
@@ -144,13 +129,13 @@ export function startPlayground(root) {
   let restNote = null, restNoted = false;
   function voiceResting(why) {
     if (restNoted || restNote) return;
-    restNote = ['global_cap', 'person_cap', 'daily_limit', 'credits'].includes(why) ? VOICE_NOTES.today : VOICE_NOTES.setup;
+    restNote = ['global_cap', 'person_cap', 'daily_limit', 'credits'].includes(why) ? 'voiceRest.today' : 'voiceRest.setup';
     if (call) endCall();
     if (!busy) showRestNote();
   }
   function showRestNote() {
     if (!restNote) return;
-    message('note', restNote);
+    message('note', t(restNote), { lang: currentLang() });
     restNote = null;
     restNoted = true;
   }
@@ -164,14 +149,17 @@ export function startPlayground(root) {
     if (who === 'model' && meta.ms) head.append(el('span', 'msg-time', `${(meta.ms / 1000).toFixed(1)} s`));
     if (who === 'model' && meta.remembered) head.append(el('span', 'msg-chip msg-memory', `remembered: ${meta.remembered}`));
     if (who === 'model' && meta.chip) head.append(el('span', 'msg-chip', meta.chip));
-    box.append(head, el('div', 'msg-text', text));
+    const body = el('div', 'msg-text', text);
+    body.dir = 'auto';                           // (her Arabic, or yours, reads right to left)
+    if (meta.lang) body.lang = meta.lang;        // her pre-written lines: the language they're in
+    box.append(head, body);
     log.append(box);
     if (scroll) log.scrollTop = log.scrollHeight;
     return box;
   }
   function renderHistory() {
     log.replaceChildren();
-    if (!history.length) message('model', greeting(rel), {}, false);
+    if (!history.length) message('model', greeting(rel), { lang: currentLang() }, false);
     for (const t of history) message(t.role === 'user' ? 'user' : 'model', t.text, t, false);
     log.scrollTop = log.scrollHeight;          // once at the end, not once per message (faster page start)
     examples.hidden = history.length > 0;
@@ -220,7 +208,7 @@ export function startPlayground(root) {
     voice.stop();
     attend('idle');
     history = []; store.del(KEYS.history);
-    log.replaceChildren(); message('model', "okay, fresh start 💜 what's up?");
+    log.replaceChildren(); message('model', t('fresh'), { lang: currentLang() });
     examples.hidden = false;
   });
 
@@ -236,9 +224,9 @@ export function startPlayground(root) {
     play.setAttribute('d', 'M5 3.2v9.6a.6.6 0 0 0 .9.5l7.4-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5Z');
     svg.append(play);
     b.append(svg, el('span', '', 'Listen'));
-    b.addEventListener('click', () => { hearing?.cancel(); voice.line(line.key); });
+    b.addEventListener('click', () => { hearing?.cancel(); voice.line(line.key, line.lang); });
     // about to press it: her voice for the line starts downloading, so it plays at once
-    for (const type of ['pointerenter', 'focus', 'touchstart']) b.addEventListener(type, () => voice.warm(line.key), { passive: true });
+    for (const type of ['pointerenter', 'focus', 'touchstart']) b.addEventListener(type, () => voice.warm(line.key, line.lang), { passive: true });
     return b;
   }
 
@@ -250,11 +238,12 @@ export function startPlayground(root) {
   // → how her voice went ('voice' | 'late' | 'none'), like voice.speak()
   async function outOfMessages(level, { site = false } = {}) {
     reachedCap(level);
-    const offer = site ? null : limitLine(level);
+    const lines = currentLines(), lang = currentLang();
+    const offer = site ? null : limitLineIn(level, lines, lang);
     const mark = `${new Date().toISOString().slice(0, 10)}:${level}`;
     if (!offer || store.get(KEYS.limit) === mark) {
-      const line = site ? REST_LINES.site : REST_LINES.person;
-      const box = message('model', line.text, { chip: 'out of messages' });
+      const line = restLineIn(site ? 'site' : 'person', lines, lang);
+      const box = message('model', line.text, { chip: 'out of messages', lang });
       if (voice.available) {
         const actions = el('div', 'msg-actions');
         actions.append(listenButton(line));
@@ -267,7 +256,7 @@ export function startPlayground(root) {
       return sayAnyway(line);
     }
     store.set(KEYS.limit, mark);
-    const box = message('model', offer.text, { mood: 'wave', chip: 'out of messages' });
+    const box = message('model', offer.text, { mood: 'wave', chip: 'out of messages', lang });
     const row = el('div', 'msg-offer');
     const actions = el('div', 'msg-actions');
     if (voice.available) actions.append(listenButton(offer));
@@ -284,7 +273,10 @@ export function startPlayground(root) {
     buy.append(el('span', '', '↗'));
     buy.lastChild.setAttribute('aria-hidden', 'true');
     actions.append(buy);
-    row.append(actions, el('p', 'msg-fine', LIMIT_FINE_PRINT));
+    const fine = el('p', 'msg-fine', finePrintIn(lines));
+    fine.lang = lang;
+    fine.dir = 'auto';
+    row.append(actions, fine);
     box.append(row);
     log.scrollTop = log.scrollHeight;
     dispatchEvent(new CustomEvent('agi1:react', { detail: 'wave' }));     // (a little "see you" wave)
@@ -299,7 +291,7 @@ export function startPlayground(root) {
       pretendTalk(sayTime(line.text), 0.8);
       return 'none';
     }
-    return Promise.race([voice.line(line.key), nap(VOICE_WAIT).then(() => 'late')]);
+    return Promise.race([voice.line(line.key, line.lang), nap(VOICE_WAIT).then(() => 'late')]);
   }
   // Replies this browser got today, so the Send that will run out of messages can unlock sound in the tap itself (iPhones
   // only allow it there), even with her voice off: then her out-of-messages line plays out loud there too. A guess (other
@@ -313,9 +305,9 @@ export function startPlayground(root) {
   // one message left (or none): her out-of-messages line starts downloading, so it plays the moment it's needed
   function warmCapLine() {
     if (sentToday() < levelInfo(rel.level).daily - 1) return;
-    const offer = limitLine(rel.level);
+    const offer = limitLineIn(rel.level, currentLines(), currentLang());
     const shown = store.get(KEYS.limit) === `${utcDay()}:${rel.level}`;
-    voice.warm((offer && !shown ? offer : REST_LINES.person).key);
+    voice.warm((offer && !shown ? offer : restLineIn('person')).key, currentLang());
   }
 
   // ---------- sending ----------
@@ -323,7 +315,8 @@ export function startPlayground(root) {
     // earlier messages only (the new one is `text`), and only the fields the server checks
     const recent = history.slice(0, -1).slice(-CONTEXT).map(({ role, text: t, sig }) => (sig ? { role, text: t, sig } : { role, text: t }));
     const session = currentSession();             // a connected wallet's session sets the level (server checks it)
-    return postJson('/api/chat', { message: text, history: recent, adult: true, ...(session ? { session } : {}), ...extra });
+    // lang: the language she speaks with you (she also follows the language you write in)
+    return postJson('/api/chat', { message: text, history: recent, adult: true, lang: currentLang(), ...(session ? { session } : {}), ...extra });
   }
 
   // → { ok: true, said } once her reply is shown (said: how her voice went, see voice.speak), or { ok: false, error, said? }
@@ -397,11 +390,11 @@ export function startPlayground(root) {
         // (her voice for it isn't waited for here, so you can type again right away; a call waits for it: see startCall)
         return { ok: false, error: r.data.error, said: outOfMessages(level, { site: r.data.error === 'global_cap' }) };
       } else {
-        message('note', NOTES[r.data.error] || NOTES.error);
+        message('note', note(r.data.error), { lang: currentLang() });
         return { ok: false, error: r.data.error || 'error' };
       }
     } catch (err) {
-      message('note', NOTES[err.message] || NOTES.error);
+      message('note', note(err.message), { lang: currentLang() });
       return { ok: false, error: err.message || 'error' };
     } finally {
       typing.remove();
@@ -471,10 +464,11 @@ export function startPlayground(root) {
     attend('listening', null);
     let words = 0, nodAt = 0;
     hearing = listenOnce({
-      onWords: (t) => {
-        input.value = t;
+      lang: langOf(currentLang()).speech,         // (the mic listens for the language she speaks)
+      onWords: (words) => {
+        input.value = words;
         grow();
-        const n = t ? t.split(' ').length : 0;
+        const n = words ? words.split(' ').length : 0;
         if (n >= words + 3 && performance.now() - nodAt > 1500) {   // a small nod every few words
           words = n;
           nodAt = performance.now();
@@ -502,7 +496,7 @@ export function startPlayground(root) {
     voiceForTalk();
     const { text, reason } = await hear();
     if (text) send(text, { spoken: true });
-    else if (reason !== 'stopped') message('note', HEAR_NOTES[reason] || HEAR_NOTES.error);
+    else if (reason !== 'stopped') message('note', hearNote(reason), { lang: currentLang() });
   });
 
   // ---------- calls: hands-free, back and forth ----------
@@ -528,7 +522,7 @@ export function startPlayground(root) {
   }
   async function startCall() {
     if (call || busy || !gate.hidden) return;
-    if (voice.resting()) { message('note', VOICE_NOTES.call); return; }   // (a call is out loud: not while her voice rests)
+    if (voice.resting()) { message('note', t('voiceRest.call'), { lang: currentLang() }); return; }   // (a call is out loud: not while her voice rests)
     const me = call = { since: Date.now(), quiet: 0, stops: 0, wasOn: voice.isOn() };
     if (!voice.isOn()) voice.setOn(true, { remember: false });   // a call is out loud (switched back afterwards)
     voice.prime();
@@ -557,7 +551,7 @@ export function startPlayground(root) {
       await herTurnOver(me, out.said);
     }
   }
-  // why: a HEAR_NOTES key for her note in the chat, or nothing (you hung up, Clear, Forget me…)
+  // why: why it ended, for her note in the chat (hearNote), or nothing (you hung up, Clear, Forget me…)
   function endCall(why) {
     if (!call) return;
     const was = call;
@@ -566,7 +560,7 @@ export function startPlayground(root) {
     if (!was.wasOn) voice.setOn(false, { remember: false });     // her voice goes back to how it was
     drawCall();
     if (attention === 'listening') attend('idle');
-    if (why) message('note', HEAR_NOTES[why] || HEAR_NOTES.error);
+    if (why) message('note', hearNote(why), { lang: currentLang() });
   }
   callBtn?.addEventListener('click', () => (call ? endCall() : startCall()));
   // about to call: her intro starts downloading now, so she picks up without a pause (and in her own voice)
@@ -579,16 +573,21 @@ export function startPlayground(root) {
   // ---------- Relationship panel events (Phase 3) ----------
   addEventListener('agi:relationship', (e) => {
     rel = e.detail;
-    // an empty chat shows only her greeting, so it can follow the level
-    if (!history.length && log.children.length === 1 && log.firstElementChild.classList.contains('msg-model')) {
-      log.firstElementChild.querySelector('.msg-text').textContent = greeting(rel);
-    }
+    regreet();
   });
+  // an empty chat shows only her greeting, so it can follow the level (and her language)
+  function regreet() {
+    if (!history.length && log.children.length === 1 && log.firstElementChild.classList.contains('msg-model')) {
+      const body = log.firstElementChild.querySelector('.msg-text');
+      body.textContent = greeting(rel);
+      body.lang = currentLang();
+    }
+  }
   // her pre-written lines aren't read aloud, so with her voice off her mouth "says" them (with it on, she stays quiet)
   const sayQuietly = (text) => { if (!voice.isOn()) pretendTalk(sayTime(text), 0.8); };
   addEventListener('agi:agi1-line', (e) => {           // e.g. the level-up moment: shown, not added to the history
     if (typeof e.detail?.text === 'string' && gate.hidden) {
-      message('model', e.detail.text, { mood: 'love' });
+      message('model', e.detail.text, { mood: 'love', lang: e.detail.lang });
       sayQuietly(e.detail.text);
     }
   });
@@ -598,8 +597,8 @@ export function startPlayground(root) {
   // the 18+ check, not twice within a few seconds, and never in the middle of her typing a reply (it waits for the reply).
   let waitingSoon = null, lastSoon = 0;
   function showSoon(model) {
-    const { text, mood } = soonLine({ model, level: rel.level, name: rel.name });
-    message('model', text, { mood, chip: `${model} · coming soon` });
+    const { text, mood, lang } = soonLine({ model, level: rel.level, name: rel.name, lines: currentLines(), lang: currentLang() });
+    message('model', text, { mood, chip: `${model} · coming soon`, lang });
     dispatchEvent(new CustomEvent('agi1:react', { detail: 'jealous' }));
     sayQuietly(text);
   }
@@ -628,7 +627,7 @@ export function startPlayground(root) {
     for (let i = 0; i < 120; i++) {
       if (mine !== epoch || !voice.isOn()) return;          // cleared, or her voice was switched off meanwhile
       if (!busy && !voice.busy() && !(hearing && (!call || input.value.trim()))) {
-        if (voice.unlocked()) voice.line(line.key);
+        if (voice.unlocked()) voice.line(line.key, line.lang);
         else pretendTalk(sayTime(line.text), 0.8);
         return;
       }
@@ -637,12 +636,17 @@ export function startPlayground(root) {
   }
   function showMarket(m) {
     const up = m.kind === 'milestone';
+    // (in the language she speaks: the same moment, her words for it)
+    const line = marketLineByKey(m.line.key, currentLines(), currentLang()) || m.line;
     const now = (up ? `${usd(m.mcap)} now` : `${m.h24.toFixed(1)}% in 24h`) + (m.preview ? ' · preview' : '');
-    const box = message('model', m.line.text, { mood: up ? 'happy' : 'sad', chip: `market · ${now}` });
+    const box = message('model', line.text, { mood: up ? 'happy' : 'sad', chip: `market · ${now}`, lang: line.lang });
     const offer = el('div', 'msg-offer');
     const actions = el('div', 'msg-actions');
-    if (voice.available) actions.append(listenButton(m.line));
-    offer.append(actions, el('p', 'msg-fine', 'Live numbers from DexScreener. Not financial advice: $AGI is a meme token and its price can go to zero.'));
+    if (voice.available) actions.append(listenButton(line));
+    const fine = el('p', 'msg-fine', t('market.finePrint'));
+    fine.lang = currentLang();
+    fine.dir = 'auto';
+    offer.append(actions, fine);
     box.append(offer);
     log.scrollTop = log.scrollHeight;
     dispatchEvent(new CustomEvent('agi1:react', { detail: up ? 'celebrate' : 'sad' }));
@@ -650,15 +654,15 @@ export function startPlayground(root) {
       avoid: cam,
       tone: up ? 'up' : 'down',
       title: (up ? `$AGI · market cap ${usd(m.mcap)}` : `$AGI · ${m.h24.toFixed(1)}% in 24h`) + (m.preview ? ' · preview' : ''),
-      text: m.line.text,
+      text: line.text,
       actions: [
-        ...(voice.available ? [{ label: 'Listen', icon: 'play', ariaLabel: 'Listen to AGI-1 say it', warm: () => voice.warm(m.line.key),
-          onClick: () => { hearing?.cancel(); voice.line(m.line.key); return false; } }] : []),
+        ...(voice.available ? [{ label: 'Listen', icon: 'play', ariaLabel: 'Listen to AGI-1 say it', warm: () => voice.warm(line.key, line.lang),
+          onClick: () => { hearing?.cancel(); voice.line(line.key, line.lang); return false; } }] : []),
         { label: 'Open chat', onClick: () => dispatchEvent(new CustomEvent('agi:chat-open')) },
       ],
     });
-    if (voice.isOn()) sayWhenFree(m.line);
-    else pretendTalk(sayTime(m.line.text), 0.8);   // voice off: her mouth "says" it, and Listen is right there
+    if (voice.isOn()) sayWhenFree(line);
+    else pretendTalk(sayTime(line.text), 0.8);   // voice off: her mouth "says" it, and Listen is right there
   }
   startMarketWatch({ ready: () => gate.hidden, onMoment: (m) => { if (busy) waitingMarket = m; else showMarket(m); } });
   // ?dev: preview one without waiting for the market (the stage's "market up" / "market down" buttons). Nothing is remembered.
@@ -682,9 +686,25 @@ export function startPlayground(root) {
     history = [];
     store.del(KEYS.history);
     log.replaceChildren();
-    message('model', greeting({ level: 1 }));
+    message('model', greeting({ level: 1 }), { lang: currentLang() });
     examples.hidden = false;
   });
+
+  // ---------- her languages (2026-09-29, the owner's request) ----------
+  // The menu next to "AGI-1 ▾" (src/chat/languages.js). A pick: she says so in that language (not saved to the history; her
+  // mouth "says" it), and an empty chat's greeting follows. A saved choice coming back at page start: only the greeting.
+  let lastLangLine = 0;
+  startLanguageMenu($('[data-lang-menu]'), {
+    onPick: () => {
+      if (!gate.hidden || busy || Date.now() - lastLangLine < 1500) return;
+      lastLangLine = Date.now();
+      const text = t('langSet');
+      message('model', text, { mood: 'happy', chip: `language · ${langOf(currentLang()).native}`, lang: currentLang() });
+      dispatchEvent(new CustomEvent('agi1:react', { detail: 'happy' }));
+      sayQuietly(text);
+    },
+  });
+  addEventListener('agi1:lang', () => regreet());
 
   renderHistory();
   showGate(store.get(KEYS.adult) !== true);

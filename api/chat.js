@@ -6,6 +6,8 @@
 //   5. ask Gemini, sending only history AGI-1 really said (signed) plus the visitor's own messages (her memory of the Arena's
 //      champion, 2026-09-25, left with the Arena on 2026-09-28)
 //   6. Soulmates: save the short new note AGI-1 wrote about them, if any
+// Her language (2026-09-29): `lang` (the chat's language menu, src/i18n/langs.js; English if missing or unknown), and she
+// follows whatever language they write in (server/agi1-prompt.js, languagePrompt).
 // The reply comes back signed (for the history) with a voice ticket (for api/voice.js, her voice).
 import { getConfig, missingSettings } from '../server/config.js';
 import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass, signReply, checkReply, makeVoiceTicket } from '../server/security.js';
@@ -17,6 +19,7 @@ import { checkLevel } from '../server/chain.js';
 import { getFriend, addFriendNote, cleanNote } from '../server/friends.js';
 import { levelInfo } from '../src/lib/levels.js';
 import { recallGroup } from '../server/tg-memory.js';
+import { isLang } from '../src/i18n/langs.js';
 
 const MAX_BODY = 16_000;     // bytes
 const MAX_MESSAGE = 500;     // characters per visitor message
@@ -49,6 +52,7 @@ export async function POST(request) {
   if (!message) return json(400, { error: 'bad_request' });
   if (message.length > MAX_MESSAGE) return json(400, { error: 'too_long' });
   if (body.adult !== true) return json(403, { error: 'age' });
+  const lang = isLang(body.lang) ? body.lang : 'en';                 // the language she speaks with them (2026-09-29)
 
   // 2. Human check.
   const ip = clientIp(request);
@@ -101,7 +105,7 @@ export async function POST(request) {
   let answer;
   try {
     answer = await askAgi1(cfg, history, message,
-      { level, name: friend.name, notes: level === 3 ? friend.notes : [], memory });
+      { level, name: friend.name, notes: level === 3 ? friend.notes : [], memory, lang });
   } catch (err) {
     console.error('[chat] gemini failed:', err.message);
     return json(502, { error: 'ai_error', pass, level, session, signedOut });

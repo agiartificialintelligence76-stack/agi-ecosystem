@@ -123,6 +123,16 @@
   .pg-status .dot { margin: 0; }
   .pg-bar-actions { gap: 6px; }
 }
+/* (2026-09-29) her language button joined the bar: on small phones "online" goes (her live view, right under the bar, shows
+   she's there), and under 380 px the gaps tighten a little (Pop mode's buttons are a few pixels wider) */
+@media (max-width: 420px) {
+  .pg-bar .pg-status { display: none; }
+}
+@media (max-width: 380px) {
+  .pg-bar, .pg-who { gap: 6px; }
+  .pg-bar-actions { gap: 5px; }
+  .rel-chip { padding-inline: 8px; }
+}
 
 /* She texts first (2026-09-29): the link to AGI-1's Telegram bot, under the Relationship panel (hidden until the bot is set) */
 .pg-tg { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }

@@ -234,3 +234,52 @@ test('the front names no coin, project or part the site no longer has, nor "ecos
   // the owner (2026-09-28): "remove the word ecosystem, replace it with something better". The pages' comments ship with them
   for (const text of [html, read('diary.html'), css, js, lines]) assert.doesNotMatch(text, /ecosystem/i, 'the front\'s list is "Her world" now');
 });
+
+test('the official contract address on the front, copied in one tap (2026-09-29, the owner: "contract address needs to be copy pasted on landing page right away")', async () => {
+  const { TOKENS } = await import('../src/prices/parse.js');
+  const box = front.slice(front.indexOf('<div class="lp-ca" data-lp-ca>'), front.indexOf('</div>', front.indexOf('<div class="lp-ca" data-lp-ca>')));
+  assert.ok(box, 'the address block is on the front');
+  assert.ok(front.indexOf('data-lp-ca>') > front.indexOf('<div class="lp-cta">'), 'under the two buttons (on phones CSS puts it first, under her picture)');
+  const [start, end] = [/<span class="lp-ca-start">([^<]+)<\/span>/.exec(box)?.[1], /<span class="lp-ca-end">([^<]+)<\/span>/.exec(box)?.[1]];
+  assert.equal(`${start}${end}`, TOKENS[0].ca, 'the whole official address, the same one as everywhere else');
+  assert.match(start, /^0xfa31/);
+  assert.match(end, /06ec$/, 'its end always shows: what the safety note says to check');
+  assert.match(box, /<button class="lp-ca-copy" type="button" data-lp-copy aria-label="Copy the official \$AGI contract address"[^>]*>Copy<\/button>/);
+  assert.match(box, /<span class="sr-only" role="status" data-lp-copied><\/span>/, 'screen readers hear "copied"');
+  const script = readFileSync(new URL('../src/landing/landing.js', import.meta.url), 'utf8');
+  assert.match(script, /copyButton\(\$\('\[data-lp-copy\]', hero\), \{ text: TOKENS\[0\]\.ca/, 'Copy takes the address from one place in the code');
+  const css = readFileSync(new URL('../src/styles/landing.css', import.meta.url), 'utf8');
+  assert.match(css, /\.lp-ca-end \{ flex: none; \}/, 'the end never shrinks');
+  assert.match(css, /\.lp-ca \{ order: -1;/, 'phones: first thing under her picture');
+  assert.match(html, /Copy the full address from the top of this page or the <a href="#contract">Model card<\/a>, and double-check it every time\./, 'the safety note says so');
+});
+
+test('the Copy button copies the whole address, or selects it where the clipboard is blocked', async () => {
+  const { copyButton } = await import('../src/lib/copy.js');
+  const listeners = {};
+  const button = { textContent: 'Copy', classList: { set: new Set(), toggle(c, on) { if (on) this.set.add(c); else this.set.delete(c); }, remove(c) { this.set.delete(c); } },
+    addEventListener: (type, fn) => { listeners[type] = fn; } };
+  const say = { textContent: '' };
+  let copied = null, selected = null;
+  globalThis.navigator ??= {};
+  const clipboard = Object.getOwnPropertyDescriptor(globalThis.navigator, 'clipboard');
+  Object.defineProperty(globalThis.navigator, 'clipboard', { value: { writeText: async (t) => { copied = t; } }, configurable: true });
+  try {
+    copyButton(button, { text: '0xabc', select: {}, say });
+    await listeners.click();
+    assert.deepEqual([copied, button.textContent, button.classList.set.has('is-done'), say.textContent], ['0xabc', 'Copied', true, 'Contract address copied']);
+    Object.defineProperty(globalThis.navigator, 'clipboard', { value: { writeText: async () => { throw new Error('blocked'); } }, configurable: true });
+    globalThis.document ??= undefined;
+    const range = { selectNodeContents: (n) => { selected = n; } };
+    globalThis.document = { createRange: () => range };
+    globalThis.getSelection = () => ({ removeAllRanges() {}, addRange() {} });
+    const addr = { id: 'addr' };
+    copyButton(button, { text: '0xabc', select: addr, say });
+    await listeners.click();
+    assert.deepEqual([selected, button.textContent], [addr, 'Selected'], 'the address selected instead');
+  } finally {
+    if (clipboard) Object.defineProperty(globalThis.navigator, 'clipboard', clipboard); else delete globalThis.navigator.clipboard;
+    delete globalThis.document;
+    delete globalThis.getSelection;
+  }
+});

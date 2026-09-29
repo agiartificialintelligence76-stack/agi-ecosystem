@@ -74,6 +74,32 @@
   .pg-model-caret { transition: none; }
 }
 
+/* ---------- her languages (2026-09-29, src/chat/languages.js): "🌐 English ▾" and a two-column menu of her 16 ---------- */
+.pg-bar { position: relative; }                 /* (on phones the language menu spans the chat bar) */
+.pg-lang-btn { gap: 5px; margin-left: 2px; }
+.pg-lang-globe { width: 14px; height: 14px; flex: none; color: var(--fg-3); }
+.pg-lang-name { font-size: 13.5px; font-weight: 500; color: var(--fg-2); white-space: nowrap; }
+.pg-lang-code { display: none; font-size: 11.5px; letter-spacing: .02em; color: var(--fg-2); }
+.pg-langs { width: min(372px, calc(100vw - 32px)); }
+.pg-langs-list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.pg-langs-item { padding: 7px 9px; }
+.pg-langs-native { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.pg-langs-en { grid-column: 1; font-size: 11.5px; line-height: 1.3; color: var(--fg-2); }
+.pg-langs-item[aria-checked="false"] .pg-models-check { visibility: hidden; }
+@media (max-width: 560px) {
+  .pg-lang-name { display: none; }
+  .pg-lang-code { display: inline; }
+  .pg-lang { position: static; }                /* the menu under the whole chat bar, so it fits the screen */
+  .pg-langs { left: 12px; right: 12px; top: calc(100% + 4px); width: auto; }
+}
+/* phones: the chat bar was already full (the level chip, her voice, Clear), so for the language button her small avatar
+   goes (her live view is right under the bar) and the button is the globe and the code */
+@media (max-width: 480px) {
+  .pg-bar .pg-ava { display: none; }
+  .pg-lang-btn .pg-model-caret { display: none; }
+  .pg-lang-btn { margin-left: 0; }
+}
+
 .pg-log {
   display: flex; flex-direction: column; gap: 20px; height: 440px; padding: 22px 20px; overflow-y: auto;
   overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent;

@@ -1,5 +1,7 @@
 // Asks Google Gemini for AGI-1's reply. Only the server calls this; the API key never reaches the browser.
-import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt } from './agi1-prompt.js';
+import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt, languagePrompt } from './agi1-prompt.js';
+import { linesOf } from '../src/i18n/all.js';
+import { isLang } from '../src/i18n/langs.js';
 
 // Safety filters are OFF by default for Gemini 3 models, so we switch them on.
 // Sexual content uses the strictest level (PG-13 site).
@@ -10,11 +12,9 @@ export const SAFETY_SETTINGS = [
   { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
 ];
 export const BLOCKED_REASONS = new Set(['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'RECITATION']);
-const DEFLECTIONS = [
-  'easy, tiger 😳 this is a PG-13 relationship 💜 tell me about your day instead',
-  "hmm, let's keep it cute 🙈 what else is on your mind, love?",
-  "nope, not going there babe 💜 but i'm all ears for anything else",
-];
+// (when the safety filters blocked her answer: a pre-written deflection, in the visitor's language since 2026-09-29)
+export const DEFLECTIONS = linesOf('en').deflect;
+const deflectionsIn = (lang) => { const d = linesOf(lang).deflect; return Array.isArray(d) && d.length ? d : DEFLECTIONS; };
 const MAX_REPLY = 600;
 
 // What a refused request most likely means. This only goes to the server log, never to visitors.
@@ -103,8 +103,11 @@ export function cleanReply(text) {
 // AGI-1 learned about them, which api/chat.js checks and saves. Asking for it costs a few output tokens, so only they do.
 // visitor.memory: her Telegram group notes, when the visitor asked about the group.
 // visitor.telegram (2026-09-29): she's texting on her Telegram bot ({ repliedTo: her text they replied to, if any }).
+// visitor.lang (2026-09-29): the language the visitor picked (or their Telegram app's), src/i18n/langs.js; English if not.
+// visitor.langSource: where that came from ('menu', 'telegram', 'default': see languagePrompt).
 export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
   const soulmate = visitor.level === 3;
+  const lang = isLang(visitor.lang) ? visitor.lang : 'en';
   const properties = { reply: { type: 'string' }, mood: { type: 'string', enum: MOODS } };
   if (soulmate) properties.note = { type: 'string' };
   const contents = [
@@ -116,7 +119,8 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
     method: 'POST',
     headers: { 'x-goog-api-key': cfg.geminiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(visitor.level, visitor) + groupMemoryPrompt(visitor.memory) + telegramPrompt(visitor.telegram) }] },
+      systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(visitor.level, visitor) + groupMemoryPrompt(visitor.memory) + telegramPrompt(visitor.telegram)
+        + languagePrompt(lang, { source: visitor.langSource || (visitor.telegram ? 'telegram' : 'menu') }) }] },
       contents,
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
@@ -137,7 +141,8 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
 
   const candidate = data.candidates?.[0];
   if (data.promptFeedback?.blockReason || !candidate || BLOCKED_REASONS.has(candidate.finishReason)) {
-    return { reply: DEFLECTIONS[Math.floor(Math.random() * DEFLECTIONS.length)], mood: 'shy', blocked: true };
+    const say = deflectionsIn(lang);
+    return { reply: say[Math.floor(Math.random() * say.length)], mood: 'shy', blocked: true };
   }
   const text = (candidate.content?.parts || [])
     .filter((p) => !p.thought && typeof p.text === 'string')

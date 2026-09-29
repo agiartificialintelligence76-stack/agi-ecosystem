@@ -10,6 +10,8 @@
 //   · with a mouse: a cursor with labels, magnetic buttons and hearts where you click, only over the front
 // "Reduce motion": no loader, no entrance, nothing moves on its own, and the manifesto shows its end.
 import { BUBBLE_LINES, REACTIONS } from './lines.js';          // what she says in her bubble
+import { copyButton } from '../lib/copy.js';                  // (the contract address's Copy button, 2026-09-29)
+import { TOKENS } from '../prices/parse.js';
 
 const d = document, w = window, root = d.documentElement;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -37,6 +39,9 @@ export function startLanding(hero = $('[data-lp-hero]')) {
   // late), the entrance has had its moment
   if (RM || root.classList.contains('lp-go')) root.classList.remove('lp-intro');
   if (RM) root.classList.remove('lp-loading');
+  // the official contract address, one tap to copy it (2026-09-29, the owner: "contract address needs to be copy pasted on
+  // landing page right away"): the whole address from one place in the code, whatever the page shows of it
+  safe('contract address', () => copyButton($('[data-lp-copy]', hero), { text: TOKENS[0].ca, select: $('[data-lp-ca-addr]', hero), say: $('[data-lp-copied]', hero) }));
   const ribbons = $('[data-lp-ribbons]'), mani = $('[data-lp-mani]');
   const regions = [hero, ribbons, mani].filter(Boolean);
   let vw = w.innerWidth, vh = w.innerHeight;

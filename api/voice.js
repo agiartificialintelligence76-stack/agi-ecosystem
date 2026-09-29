@@ -22,7 +22,8 @@
 //   midnight Pacific time) or "unknown model" for a model, this server copy stops asking that model for a while ("no
 //   credits": every model); when no model is left, the page gets the same reason at once, and nothing is counted.
 //
-// GET ?line=<key>&v=<LINE_VERSION>: her fixed lines, the same for everyone: "hi, it's me" (hello), out of messages (more-1,
+// GET ?line=<key>&v=<LINE_VERSION> (and, in her other languages since 2026-09-29, ?line=<key>&lang=<code>&v=…: each
+// language's words, recorded once each): her fixed lines, the same for everyone: "hi, it's me" (hello), out of messages (more-1,
 // more-2, sleep, talked-out) and her market moments (mcap-<step>, dump-<n>). Vercel's CDN keeps one copy of each (a new
 // deployment starts fresh) and this server copy keeps them in memory: after the first time they cost nothing. Exactly one
 // address per line (anything else is 404), and a market-cap line is only made for a step near $AGI's real market cap right
@@ -32,7 +33,9 @@
 import { getConfig, missingVoiceSettings } from '../server/config.js';
 import { clientIp, visitorCode, visitorCodeForDay, checkVoiceTicket } from '../server/security.js';
 import { takeVoiceSlot, voicePerDay } from '../server/limits.js';
-import { speakAsAgi1, streamAsAgi1, NoAudioError, spokenText, styleFor, LINES, LINE_MOODS } from '../server/voice.js';
+import { speakAsAgi1, streamAsAgi1, NoAudioError, spokenText, styleFor, LINE_MOODS, linesFor } from '../server/voice.js';
+import { linesOf } from '../src/i18n/all.js';
+import { isLang } from '../src/i18n/langs.js';
 import { loadLine, saveLine, lineId, resetStoreForTests } from '../server/voice-store.js';
 import { troubleKind, msToGoogleReset } from '../server/gemini.js';
 import { voiceBurst } from '../server/burst.js';
@@ -151,49 +154,57 @@ async function speak(cfg, words, style, last) {
 }
 
 export async function GET(request) {
-  // exactly one address per line, so nobody can make the CDN miss (and us pay) by adding things to it
-  const m = /^\?line=([a-z0-9-]{1,20})&v=(\d{1,3})$/.exec(new URL(request.url).search);
-  const line = m && m[2] === String(LINE_VERSION) ? m[1] : null;          // (exactly "3", not "03")
-  const market = line && !Object.hasOwn(LINES, line) ? marketLineByKey(line) : null;
-  if (!line || (!Object.hasOwn(LINES, line) && !market)) return json(404, { error: 'not_found' });
+  // exactly one address per line (and language), so nobody can make the CDN miss (and us pay) by adding things to it:
+  // ?line=<key>&v=3 in English, ?line=<key>&lang=<code>&v=3 in her other languages (2026-09-29; never &lang=en)
+  const m = /^\?line=([a-z0-9-]{1,20})(?:&lang=([a-z]{2,3}))?&v=(\d{1,3})$/.exec(new URL(request.url).search);
+  const lang = m?.[2] ?? 'en';
+  const line = m && m[3] === String(LINE_VERSION) && (m[2] === undefined || (lang !== 'en' && isLang(lang))) ? m[1] : null;   // (exactly "3", not "03")
+  const fixed = linesFor(lang);
+  const market = line && !Object.hasOwn(fixed, line) ? marketLineByKey(line, linesOf(lang), lang) : null;
+  if (!line || (!Object.hasOwn(fixed, line) && !market)) return json(404, { error: 'not_found' });
   const cfg = getConfig();
   if (!cfg.geminiKey) {
     console.error('[voice] missing settings: GEMINI_API_KEY');
     return json(503, { error: 'not_configured' });
   }
-  const words = market ? market.spoken : LINES[line];
+  const words = market ? market.spoken : fixed[line];
   const style = styleFor(market ? (market.step ? 'celebrate' : 'sad') : LINE_MOODS[line]);
-  if (!made.has(line) && market?.step) {
+  const id = lang === 'en' ? line : `${line}@${lang}`;           // (this server copy's memory: one entry per line and language)
+  if (!made.has(id) && market?.step) {
     // only a step the market cap really reached (or is right at): up to 3 steps below it, at most 1 above
     const now = await agiMarket();
     if (!now) return json(503, { error: 'unverified' });
     if (market.step > now.mcap + STEP || market.step < now.mcap - 3 * STEP) return json(404, { error: 'not_found' });
   }
   let from = 'memory';
-  if (!made.has(line)) {
+  if (!made.has(id)) {
     // kept in the database since the first time, made by any of her models (her market-cap lines aren't kept: they come
-    // and go)? Else the first model that isn't resting makes it
+    // and go)? Else the first model that isn't resting makes it. (Each language's words make their own recording.)
     const keep = !market?.step;
     const idFor = (model) => lineId({ ...cfg, voiceModel: model }, line, words, style);
     let audio = null, model = null;
-    for (const m of keep ? cfg.voiceModels : []) {
-      audio = await loadLine(cfg, idFor(m));
-      if (audio) { model = m; break; }
+    for (const mdl of keep ? cfg.voiceModels : []) {
+      audio = await loadLine(cfg, idFor(mdl));
+      if (audio) { model = mdl; break; }
     }
     from = 'kept';
     if (!audio) {
       if (!ready(cfg).length) return aiError(pickWhy(cfg.voiceModels.map(restingWhy)));
-      const got = await askModels(cfg, `line ${line}`, (c, last) => withRetry(() => speakAsAgi1(c, words, style), { budgetMs: 6000, last }));
+      const got = await askModels(cfg, `line ${id}`, (c, last) => withRetry(() => speakAsAgi1(c, words, style), { budgetMs: 6000, last }));
       if (!got.answer) return aiError(got.why);
       ({ answer: audio, model } = got);
       from = 'google';
       if (keep) await saveLine(cfg, idFor(model), audio);
     }
-    made.set(line, { audio, model });
-    // (market lines come and go with the market cap: keep at most 24 lines here, dropping the oldest market line first)
-    if (made.size > 24) for (const key of made.keys()) if (!Object.hasOwn(LINES, key)) { made.delete(key); break; }
+    made.set(id, { audio, model, market: Boolean(market?.step) });
+    // at most 40 lines here (16 languages can't all sit in one copy's memory): the oldest market line goes first, else the
+    // oldest line (it's still kept in the database and by the CDN)
+    if (made.size > 40) {
+      const old = [...made.entries()].find(([, v]) => v.market)?.[0] ?? made.keys().next().value;
+      made.delete(old);
+    }
   }
-  const { audio, model } = made.get(line);
+  const { audio, model } = made.get(id);
   return wav(audio, 'public, max-age=86400, s-maxage=2592000', from, model);   // browsers keep it a day, the CDN 30 days
 }
 

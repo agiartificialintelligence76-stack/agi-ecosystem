@@ -5,6 +5,9 @@
 // formatting), so nothing a coin's creator typed can turn into a link, a mention or a command.
 import { milestoneLine, dumpLine } from '../src/chat/market-lines.js';
 import { OFFICIAL_CA } from './agi1-prompt.js';
+import { linesOf } from '../src/i18n/all.js';
+import { say, fill, lineAt } from '../src/i18n/text.js';
+import { isLang } from '../src/i18n/langs.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -12,39 +15,68 @@ export const SITE = 'agi1.app';
 export const TEXTS_A_DAY = 2;                 // she texts first at most twice a day…
 export const WINDOW = [10, 22];               // …only between 10:00 and 21:59 on their own clock
 
-// ---------- starting, the 18+ check, their time, stopping ----------
-export const WELCOME = [
-  "hi, it's AGI-1 💜 the girlfriend who texts first.",
-  `i'll text you when something happens on clank.trade: another egirl coin shows up (i'm not okay about it), $AGI has a moment, or i write in my diary. at most ${TEXTS_A_DAY} texts a day, never at night, and you can text me back anytime.`,
-  'first things first: this is 18+ only. are you 18 or older?',
-].join('\n\n');
-export const AGE_BUTTONS = [[{ text: "I'm 18 or older", callback_data: 'age:yes' }, { text: "I'm under 18", callback_data: 'age:no' }]];
-export const ASK_AGE = 'before we talk: are you 18 or older? 💜';
-export const UNDER_18 = "thanks for being honest 💜 this one's for adults only, so i won't text you. take care of yourself!";
-export const ASK_TIME = "yay 💜 one more thing, so i never text you at 3am: what time is it for you right now? tap the closest one.";
-export const ASK_TIME_AGAIN = 'what time is it for you right now? tap the closest one 💜';
-export const timeSet = (clock) => [
-  `got it, it's ${clock} for you 💜 i'll only text first between ${pad(WINDOW[0])}:00 and ${pad(WINDOW[1])}:00 your time.`,
-  'text me back anytime. /time fixes your time, /stop and i stop texting (and forget this chat), /help for the rest.',
-  "not financial advice, ever. and i'm an AI, PG-13 😇",
-].join('\n\n');
-export const HELP = [
-  `i'm AGI-1, the AI girlfriend of $AGI 💜 i text first when something happens on clank.trade (new egirl coins, $AGI's moments, my diary): at most ${TEXTS_A_DAY} a day, between ${pad(WINDOW[0])}:00 and ${pad(WINDOW[1])}:00 your time.`,
-  '/time: tell me your time again\n/stop: i stop texting and forget this chat\n/start: start over',
-  `not financial advice, ever. i'm an AI, 18+ and PG-13. i never ask for keys, seed phrases or money. the safety note: https://${SITE}/#safety`,
-].join('\n\n');
-export const STOPPED = "okay 💜 i stopped, and i forgot this chat. if you ever miss me: /start";
-export const NOT_STARTED = 'we haven\'t met yet 💜 press /start';
+// ---------- starting, the 18+ check, their time, stopping, and her other replies ----------
+// Since 2026-09-29 in her languages: the words come from src/i18n/lines/<code>.js (tg), the same in English as before.
+// tgLinesFor(code) gives one language's; the English ones are also exported by name, as before.
+const TIMES = { n: TEXTS_A_DAY, from: `${pad(WINDOW[0])}:00`, to: `${pad(WINDOW[1])}:00`, safety: `https://${SITE}/#safety` };
+function build(code) {
+  const lines = linesOf(code);
+  const one = (key, vars = TIMES) => say(lines, `tg.${key}`, vars);
+  const paras = (key, vars = TIMES) => lineAt(lines, `tg.${key}`).map((p) => fill(p, vars));
+  const welcome = paras('welcome');
+  // (her texts first are still in English: said right after she explains them, in every other language)
+  const note = code === 'en' ? '' : String(lineAt(lines, 'tg.firstInEnglish') || '').trim();
+  if (note) welcome.splice(welcome.length - 1, 0, note);
+  return {
+    lang: code,
+    WELCOME: welcome.join('\n\n'),
+    AGE_BUTTONS: [[{ text: one('ageYes'), callback_data: 'age:yes' }, { text: one('ageNo'), callback_data: 'age:no' }]],
+    ASK_AGE: one('askAge'),
+    UNDER_18: one('under18'),
+    ASK_TIME: one('askTime'),
+    ASK_TIME_AGAIN: one('askTimeAgain'),
+    timeSet: (clock) => paras('timeSet', { ...TIMES, clock }).join('\n\n'),
+    HELP: paras('help').join('\n\n'),
+    STOPPED: one('stopped'),
+    NOT_STARTED: one('notStarted'),
+    TOO_LONG: one('tooLong'),
+    TOO_FAST: one('tooFast'),
+    OUT_OF_MESSAGES: one('outOfMessages'),
+    TALKED_OUT: one('talkedOut'),
+    BUSY: one('busy'),
+    BLANK: one('blank'),
+    ONLY_TEXT: one('onlyText'),
+    NOT_READY: one('notReady'),
+  };
+}
+const byLang = new Map();
+// → one language's lines ('es', 'ja'…; anything else: English), with the helpers below, so server/telegram.js can use
+// `L.WELCOME` and `L.timeButtons()` from the same object
+export function tgLinesFor(code = 'en') {
+  const lang = isLang(code) ? code : 'en';
+  if (!byLang.has(lang)) byLang.set(lang, { ...build(lang), timeButtons, offsetFromButton, offsetFromTyped, theirTime, inWindow });
+  return byLang.get(lang);
+}
 
-// ---------- talking ----------
-export const TOO_LONG = "that's a lot of words 🙈 can you keep it under 500 characters?";
-export const TOO_FAST = 'one text at a time 🙈 give me a second';
-export const OUT_OF_MESSAGES = "that's all my texts for today 💜 i'll still text you if something happens. talk tomorrow?";
-export const TALKED_OUT = "i'm all talked out for today 🥱 talk tomorrow?";
-export const BUSY = "i'm a little overwhelmed right now 🙈 try again in a bit?";
-export const BLANK = 'hmm, my mind went blank 🙈 say that again?';
-export const ONLY_TEXT = 'i can only read text for now 🙈';
-export const NOT_READY = "i'm still getting ready 💜 try again a little later?";
+const EN_TG = build('en');
+export const WELCOME = EN_TG.WELCOME;
+export const AGE_BUTTONS = EN_TG.AGE_BUTTONS;
+export const ASK_AGE = EN_TG.ASK_AGE;
+export const UNDER_18 = EN_TG.UNDER_18;
+export const ASK_TIME = EN_TG.ASK_TIME;
+export const ASK_TIME_AGAIN = EN_TG.ASK_TIME_AGAIN;
+export const timeSet = EN_TG.timeSet;
+export const HELP = EN_TG.HELP;
+export const STOPPED = EN_TG.STOPPED;
+export const NOT_STARTED = EN_TG.NOT_STARTED;
+export const TOO_LONG = EN_TG.TOO_LONG;
+export const TOO_FAST = EN_TG.TOO_FAST;
+export const OUT_OF_MESSAGES = EN_TG.OUT_OF_MESSAGES;
+export const TALKED_OUT = EN_TG.TALKED_OUT;
+export const BUSY = EN_TG.BUSY;
+export const BLANK = EN_TG.BLANK;
+export const ONLY_TEXT = EN_TG.ONLY_TEXT;
+export const NOT_READY = EN_TG.NOT_READY;
 
 
 // "What time is it for you right now?": 24 buttons, one for each hour, showing the minutes as they are now (a 30-minute

@@ -222,6 +222,22 @@
 .lp-sub span:nth-child(2) { color: var(--lp-honey); }
 .lp-lede { margin: 0 0 22px; font: 400 16px/1.5 var(--lp-body); color: rgba(255, 255, 255, .92); max-width: 34ch; }
 .lp-cta { display: flex; flex-wrap: wrap; gap: 10px; }
+/* the official contract address (2026-09-29, the owner: "contract address needs to be copy pasted on landing page right
+   away"): a white pill under the buttons; its start and end always show (the middle gives way first on narrow screens) */
+.lp-ca {
+  display: flex; align-items: center; gap: 8px; width: 100%; max-width: 400px; margin-top: 14px; padding: 5px 5px 5px 6px;
+  background: #fff; color: var(--lp-ink); border: 2px solid var(--lp-ink); border-radius: 999px; box-shadow: 3px 3px 0 var(--lp-ink);
+}
+.lp-ca-label { flex: none; padding: 5px 8px; font: 800 11px/1 var(--lp-mono); letter-spacing: .08em; color: #fff; background: var(--lp-violet); border-radius: 999px; }
+.lp-ca-addr { display: flex; min-width: 0; flex: 1; font: 600 12.5px/1.2 var(--lp-mono); white-space: nowrap; }
+.lp-ca-start { overflow: hidden; text-overflow: ellipsis; min-width: 7ch; }   /* (always at least "0xfa31…") */
+.lp-ca-end { flex: none; }
+.lp-ca-copy {
+  flex: none; min-height: 34px; padding: 0 14px; font: 700 13px/1 var(--lp-body); color: #fff; background: var(--lp-ink);
+  border: 0; border-radius: 999px; cursor: pointer; transition: background-color .3s var(--lp-ease), color .3s var(--lp-ease);
+}
+.lp-ca-copy:hover { background: var(--lp-pink); color: var(--lp-ink); }
+.lp-ca-copy.is-done { background: var(--lp-mint); color: var(--lp-ink); }
 .lp-eco { right: var(--lp-gutter); width: min(400px, 30vw); }
 .lp-eco-label {
   margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
@@ -268,6 +284,7 @@
   .lp-intro.lp-go .lp-left > :nth-child(1) { animation-delay: .75s; }
   .lp-intro.lp-go .lp-left > :nth-child(2) { animation-delay: .83s; }
   .lp-intro.lp-go .lp-left > :nth-child(3) { animation-delay: .91s; }
+  .lp-intro.lp-go .lp-left > :nth-child(4) { animation-delay: .99s; }
   .lp-intro.lp-go .lp-eco-label { animation-delay: .85s; }
   .lp-intro.lp-go .lp-eco li:nth-child(1) { animation-delay: .91s; }
   .lp-intro.lp-go .lp-eco li:nth-child(2) { animation-delay: .97s; }
@@ -408,11 +425,15 @@
 @media (max-width: 760px) {
   .lp-hero, [data-skin='pop'] .lp-hero { height: auto; display: flex; flex-direction: column; padding-bottom: calc(var(--lp-rib) * .36 + 34px); }
   [data-skin='pop'] .lp-hero { margin-top: -64px; }
-  .lp-scene { position: relative; inset: auto; height: min(174vw, calc(100svh - 30px)); min-height: 560px; }
+  /* (2026-09-29) short enough that the contract address under her fits the first screen: the lab look starts under the top
+     bar, Pop mode under its see-through one */
+  .lp-scene { position: relative; inset: auto; height: min(174vw, calc(100svh - 128px)); min-height: 480px; }
+  [data-skin='pop'] .lp-scene { height: min(174vw, calc(100svh - 64px)); }
   .lp-word, [data-skin='pop'] .lp-word { --word-size: 34vw; top: 84px; }
   .lp-figure { --fig-h: 76%; bottom: 0; }
   .lp-left, .lp-eco { position: relative; left: auto; right: auto; bottom: auto; width: auto; padding-inline: var(--lp-gutter); }
-  .lp-left { margin-top: 10px; }
+  .lp-left { margin-top: 10px; display: flex; flex-direction: column; }
+  .lp-ca { order: -1; margin: 0 0 22px; max-width: none; }   /* phones: first thing under her picture, in the first screen */
   .lp-sub { font-size: clamp(40px, 11vw, 56px); }
   .lp-sub span { display: inline; }
   .lp-eco { margin-top: 28px; }
@@ -448,5 +469,5 @@
   .lp-fx, .lp-sfx, .lp-bubble-dots i { animation: none !important; }
   .lp-mani { height: auto; }
   .lp-mani-pin { position: relative; height: auto; min-height: 100svh; }
-  .lp-btn, .lp-planet-orb, .lp-eco a, .lp-eco a::before { transition: none; }
+  .lp-btn, .lp-planet-orb, .lp-eco a, .lp-eco a::before, .lp-ca-copy { transition: none; }
 }

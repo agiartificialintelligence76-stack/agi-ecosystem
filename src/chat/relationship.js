@@ -10,6 +10,7 @@ import { findWallets, signInWithWallet, explainWalletError } from '../lib/wallet
 import { postJson } from '../lib/human.js';
 import { levelPost, levelLink } from '../share/texts.js';
 import { setShareLink, onSaveImage } from '../share/buttons.js';
+import { t, currentLang } from '../i18n/lang.js';
 
 const KEY = 'agi_wallet';              // { session, wallet, level, name, notes } in this browser
 const SEEN = 'agi_levels_seen';        // { [wallet]: highest level this browser has celebrated }
@@ -26,10 +27,10 @@ const el = (tag, className, text) => {
   return n;
 };
 
-// Pre-written lines for the level-up moment (no AI call, so no cost).
+// Pre-written lines for the level-up moment (no AI call, so no cost), in the language she speaks (src/i18n/lines: levelUp)
 const LEVEL_UP_LINES = {
-  2: (name) => `wait… you're my crush now? 🙈 ${name ? `hi ${name} 💜` : "tell me what to call you 💜"}`,
-  3: (name) => `soulmate status unlocked 💜 ${name ? `${name}, ` : ''}i'll remember the little things from now on`,
+  2: (name) => (name ? t('levelUp.crush', { name }) : t('levelUp.crushNoName')),
+  3: (name) => (name ? t('levelUp.soulmate', { name }) : t('levelUp.soulmateNoName')),
 };
 
 let state = store.get(KEY);            // null = no wallet (Stranger)
@@ -92,7 +93,7 @@ export function startRelationship(root) {
     banner.querySelector('[data-levelup-text]').textContent = `${levelInfo(from).name} → ${levelInfo(to).name}`;
     banner.hidden = false;
     dispatchEvent(new CustomEvent('agi1:react', { detail: 'love' }));
-    dispatchEvent(new CustomEvent('agi:agi1-line', { detail: { text: LEVEL_UP_LINES[to](state?.name) } }));
+    dispatchEvent(new CustomEvent('agi:agi1-line', { detail: { text: LEVEL_UP_LINES[to](state?.name), lang: currentLang() } }));
   }
   banner.querySelector('[data-levelup-close]').addEventListener('click', () => { banner.hidden = true; });
 

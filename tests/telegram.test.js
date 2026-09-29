@@ -777,3 +777,29 @@ test('the build never ships the bot token, and the cron runs 8 times a day', () 
   assert.ok(feed.every((c) => /^30 \d{1,2} \* \* \*$/.test(c.schedule)), 'once a day each (Vercel Hobby), half past the hour');
   assert.match(vercel.headers[0].headers[0].value, /connect-src 'self' blob: https:\/\/api\.dexscreener\.com;/, 'the CSP doesn\'t change: Telegram is only called from our server');
 });
+
+// ---------- her languages (2026-09-29, the owner's request) ----------
+test('her replies in the language of their Telegram app: /start, the buttons, her AI replies; English when it isn\'t one of hers', async () => {
+  const { tgLinesFor } = await import('../server/tg-lines.js');
+  const es = tgLinesFor('es');
+  const from = (language_code) => ({ from: { id: CHAT, is_bot: false, first_name: 'A', language_code } });
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg('/start', from('es')), NOW), 'start');
+  assert.equal(texts().at(-1), es.WELCOME);
+  assert.deepEqual(tg('sendMessage').at(-1).body.reply_markup.inline_keyboard, es.AGE_BUTTONS);
+  assert.equal(await handleUpdate(cfg(), TOKEN, tap('age:yes', from('fr')), NOW), 'adult');
+  assert.equal(texts().at(-1), tgLinesFor('fr').ASK_TIME);
+  assert.equal(await handleUpdate(cfg(), TOKEN, tap('tz:16', from('ja')), NOW), 'time_set');
+  assert.equal(texts().at(-1), tgLinesFor('ja').timeSet('16:07'));
+  // her AI reply: in their app's language (and she follows whatever they write in)
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg('hola!', from('pt-br')), NOW + 5_000), 'replied');
+  let prompt = calls.filter((c) => c.to === 'gemini').at(-1).body.systemInstruction.parts[0].text;
+  assert.match(prompt, /Their Telegram app is set to Portuguese \(Brazil\) \(Português\): reply in Portuguese \(Brazil\)\./);
+  assert.match(prompt, /reply in that language instead/);
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg('czesc', from('pl')), NOW + 10_000), 'replied');
+  prompt = calls.filter((c) => c.to === 'gemini').at(-1).body.systemInstruction.parts[0].text;
+  assert.match(prompt, /Reply in English by default\./, 'not one of hers: English, and she follows what they write');
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg('/help', from('en-GB')), NOW + 20_000), 'help');
+  assert.equal(texts().at(-1), L.HELP, 'English as before');
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg('', { ...from('tr'), sticker: { file_id: 'x' } }), NOW + 30_000), 'not_text');
+  assert.equal(texts().at(-1), tgLinesFor('tr').ONLY_TEXT);
+});

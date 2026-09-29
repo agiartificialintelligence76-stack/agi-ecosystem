@@ -540,10 +540,10 @@ test('GET her sad lines for a -20% day (soft and sad; no numbers in them, so no 
   assert.equal(called(TTS).length, 3);
 });
 
-test('a server copy keeps at most 24 lines in memory (market lines come and go; the fixed ones stay)', async () => {
+test('a server copy keeps at most 40 lines in memory (market lines go first; the fixed ones stay while there are any)', async () => {
   fake.mcap = 1_000_000_000;
   assert.equal((await hello()).status, 200);
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 41; i++) {
     fake.mcap = 1_000_000_000 + i * 200_000;
     forgetMarket();
     assert.equal((await line(`mcap-${fake.mcap}`)).status, 200);
@@ -812,4 +812,51 @@ test('what she says out loud', () => {
   assert.equal(clipSpeech('Hello there my love. And then more words go here', 30), 'Hello there my love.', 'at a sentence end');
   assert.equal(clipSpeech('word '.repeat(20).trim(), 23), 'word word word word');
   assert.equal(spokenText(`hey 💜 ${'la '.repeat(200)}`).length <= MAX_SPOKEN, true);
+});
+
+// ---------- her languages (2026-09-29, the owner's request) ----------
+test('her fixed lines in her languages: one address each (&lang=, never for English), in that language\'s words, made once and kept', async () => {
+  const { linesFor } = await import('../server/voice.js');
+  const ja = await get(`?line=more-1&lang=ja&v=${LINE_VERSION}`);
+  assert.deepEqual([ja.status, ja.type], [200, 'audio/wav']);
+  assert.equal(called(TTS).at(-1).body.input[0].content[0].text, linesFor('ja')['more-1'], 'her Japanese words');
+  assert.equal(styleOf(called(TTS).at(-1)), styleFor('sweet'), 'the same mood as in English');
+  assert.match(ja.headers.get('cache-control'), /s-maxage=2592000/);
+  const n = called(TTS).length;
+  assert.equal((await get(`?line=more-1&lang=ja&v=${LINE_VERSION}`)).headers.get('x-agi1-line'), 'memory');
+  assert.equal((await line('more-1')).status, 200, 'English: its own recording');
+  assert.equal(called(TTS).at(-1).body.input[0].content[0].text, LINES['more-1']);
+  assert.equal(called(TTS).length, n + 1);
+  // the Japanese one is kept in the database under its own name (its words make its fingerprint)
+  resetForTests();
+  const again = await get(`?line=more-1&lang=ja&v=${LINE_VERSION}`);
+  assert.deepEqual([again.status, again.headers.get('x-agi1-line')], [200, 'kept']);
+  assert.deepEqual(again.audio, ja.audio);
+  // only her languages, only after the line, never "en", never twice
+  for (const bad of [`?line=more-1&lang=en&v=${LINE_VERSION}`, `?line=more-1&lang=xx&v=${LINE_VERSION}`, `?lang=ja&line=more-1&v=${LINE_VERSION}`,
+    `?line=more-1&lang=JA&v=${LINE_VERSION}`, `?line=more-1&lang=ja&lang=ko&v=${LINE_VERSION}`, `?line=more-1&v=${LINE_VERSION}&lang=ja`, '?line=more-1&lang=ja']) {
+    assert.equal((await get(bad)).status, 404, bad);
+  }
+  for (const key of ['hello', 'check-high-1', 'sleep', 'talked-out']) assert.equal((await get(`?line=${key}&lang=es&v=${LINE_VERSION}`)).status, 200, key);
+});
+
+test('her market lines in her languages: the whole number said in that language, only near the real market cap', async () => {
+  const { ALL } = await import('../src/i18n/all.js');
+  const es = await get(`?line=mcap-2000000&lang=es&v=${LINE_VERSION}`);
+  assert.equal(es.status, 200);
+  const said = called(TTS).at(-1).body.input[0].content[0].text;
+  assert.equal(said, milestoneLine(2_000_000, ALL.es, 'es').spoken);
+  assert.match(said, /2\.000\.000/);
+  assert.equal(styleOf(called(TTS).at(-1)), styleFor('celebrate'));
+  assert.equal((await get(`?line=mcap-9000000&lang=es&v=${LINE_VERSION}`)).status, 404, 'far from the real market cap: never made');
+  assert.equal((await get(`?line=dump-1&lang=ko&v=${LINE_VERSION}`)).status, 200);
+  assert.equal(called(TTS).at(-1).body.input[0].content[0].text, dumpLine(1, ALL.ko, 'ko').spoken);
+});
+
+test('a reply in Japanese is read aloud up to about 120 characters (a syllable a character), cut at a sentence', async () => {
+  const text = 'ねえ、今日はどんな一日だった？'.repeat(14);
+  const r = await voice({ text, ticket: ticketFor(text) });
+  assert.equal(r.status, 200);
+  const said = called(TTS).at(-1).body.input[0].content[0].text;
+  assert.ok(said.length <= 120 && said.endsWith('？'), `${said.length}`);
 });

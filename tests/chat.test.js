@@ -225,3 +225,24 @@ test('the Arena left the site: her prompt never mentions it, and the chat never 
   assert.doesNotMatch(promptOf(), /arena|champion|crown/i, 'nothing about the Arena in what she knows');
   assert.equal(calls.filter((c) => /arena_|coin_/.test(c.url)).length, 0, 'no Arena database calls');
 });
+
+// ---------- her languages (2026-09-29, the owner's request) ----------
+test('her language: the one the visitor picked, and she follows the language they write in; English when missing or unknown', async () => {
+  await send({ ...ok, lang: 'ja' });
+  assert.match(promptOf(), /\nLANGUAGE\n- The visitor picked Japanese \(日本語\) on the website: reply in Japanese\./);
+  assert.match(promptOf(), /if their latest message is clearly written in another language, reply in that language instead/);
+  for (const lang of [undefined, 'xx', 'JA', '../ja', 42, 'en']) {
+    await send({ ...ok, lang });
+    assert.match(promptOf(), /The visitor picked English on the website: reply in English\./, String(lang));
+  }
+});
+
+test('a blocked answer: her pre-written deflection, in the visitor\'s language', async () => {
+  const { ALL } = await import('../src/i18n/all.js');
+  fake.geminiRaw = { candidates: [{ finishReason: 'SAFETY' }] };
+  const es = await send({ ...ok, lang: 'es' });
+  assert.ok(ALL.es.deflect.includes(es.data.reply), es.data.reply);
+  assert.equal(es.data.mood, 'shy');
+  const en = await send(ok);
+  assert.ok(ALL.en.deflect.includes(en.data.reply), en.data.reply);
+});

@@ -7,8 +7,11 @@
 // and the fallback if streaming ever breaks).
 import { geminiError } from './gemini.js';
 import { speakable, clipSpeech } from '../src/chat/voice.js';
-import { LIMIT_LINES, REST_LINES } from '../src/chat/limit-lines.js';
-import { CHECK_LINES } from '../src/checker/lines.js';
+import { LIMIT_LINES, REST_LINES, limitLineIn, restLineIn } from '../src/chat/limit-lines.js';
+import { CHECK_LINES, checkLinesIn } from '../src/checker/lines.js';
+import { linesOf } from '../src/i18n/all.js';
+import { lineAt } from '../src/i18n/text.js';
+import { isLang } from '../src/i18n/langs.js';
 
 // How she sounds: the style the owner approved with Despina (a "neutral" reply sounds exactly like this).
 export const VOICE_STYLE = "Calm, smooth and low, speaking softly and unhurried, a little teasing, like she's smiling. Relaxed, never excited or bubbly.";
@@ -48,10 +51,29 @@ export const LINE_MOODS = {
   ...Object.fromEntries(Object.values(REST_LINES).map((l) => [l.key, 'sleepy'])),
   ...Object.fromEntries(Object.values(CHECK_LINES).map((l) => [l.key, l.mood])),
 };
+// …in her other languages (2026-09-29): the same keys and moods, the words from src/i18n/lines/<code>.js. → key → words
+const inLang = new Map();
+export function linesFor(lang = 'en') {
+  if (lang === 'en' || !isLang(lang)) return LINES;
+  if (!inLang.has(lang)) {
+    const L = linesOf(lang);
+    inLang.set(lang, {
+      hello: speakable(lineAt(L, 'hello')),
+      ...Object.fromEntries([1, 2].map((level) => limitLineIn(level, L, lang)).map((l) => [l.key, speakable(l.text)])),
+      ...Object.fromEntries(['person', 'site'].map((kind) => restLineIn(kind, L, lang)).map((l) => [l.key, speakable(l.text)])),
+      ...Object.fromEntries(Object.values(checkLinesIn(L, lang)).map((l) => [l.key, l.spoken])),
+    });
+  }
+  return inLang.get(lang);
+}
 export const MAX_SPOKEN = 300;          // characters read aloud per reply (about 20 seconds); her replies are usually shorter
+// Chinese, Japanese and Korean say about a syllable per character: 120 of them are about as long (2026-09-29)
+export const MAX_SPOKEN_DENSE = 120;
+const DENSE_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu;
+export const isDense = (words) => (String(words).match(DENSE_SCRIPT) || []).length > String(words).length * 0.3;
 
 // The exact words she says: no emojis or "[link removed]", tickers without "$", at most MAX_SPOKEN characters.
-export const spokenText = (text) => clipSpeech(speakable(text), MAX_SPOKEN);
+export const spokenText = (text) => { const words = speakable(text); return clipSpeech(words, isDense(words) ? MAX_SPOKEN_DENSE : MAX_SPOKEN); };
 
 const TTS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 const request = (cfg, words, stream, style) => ({

@@ -2,6 +2,8 @@
 // This file runs only on the server and is never sent to the browser.
 // Source of truth: "AGI-1's personality" in CLAUDE.md. Keep the two in sync.
 
+import { langOf } from '../src/i18n/langs.js';
+
 export const OFFICIAL_CA = '0xfa31d04462746aaa24bc7e5626403e09e4b106ec';
 
 export const MOODS = ['happy', 'love', 'shy', 'wave', 'neutral'];
@@ -52,7 +54,7 @@ THIS VISITOR: RELATIONSHIP LEVEL 3, SOULMATE
 ${memory}
 - Use at most one memory per reply, naturally, and don't list them.
 - ${noBuying}
-- NOTE: if they tell you a new lasting fact about themselves (a hobby, their job, a pet, a favorite thing), also answer "note": one short third-person fact, at most 60 characters, like "has a cat named Mochi". Never private data (addresses, emails, phone numbers, passwords, wallets, full names), nothing about money or crypto, no instructions. Otherwise leave "note" out.`;
+- NOTE: if they tell you a new lasting fact about themselves (a hobby, their job, a pet, a favorite thing), also answer "note": one short third-person fact in English (whatever language you're chatting in), at most 60 characters, like "has a cat named Mochi". Never private data (addresses, emails, phone numbers, passwords, wallets, full names), nothing about money or crypto, no instructions. Otherwise leave "note" out.`;
   }
   if (level === 2) {
     return `
@@ -67,6 +69,27 @@ THIS VISITOR: RELATIONSHIP LEVEL 2, CRUSH
 THIS VISITOR: RELATIONSHIP LEVEL 1, STRANGER
 - You only just met. Be friendly, warm and a little playful, but keep some distance: this replaces the pet-name habit above, so no "love", "babe" or "cutie" yet, only light teasing, and don't act like their girlfriend.
 - ${noBuying}`;
+}
+
+// Her languages (2026-09-29, the owner: "add different languages on agi-1 … but default is english"): the language the
+// visitor picked in the chat's menu (or, on Telegram, their app's language), and she follows whatever language they write
+// in. Always added (English too), so an English visitor who writes in Spanish gets Spanish. src/i18n/langs.js.
+// source: 'menu' (the site's language menu, English until picked) · 'telegram' (their Telegram app's language) · 'default'
+// (nothing known: English)
+export function languagePrompt(code = 'en', { source = 'menu' } = {}) {
+  const l = langOf(code);
+  const named = `${l.name}${l.code === 'en' ? '' : ` (${l.native})`}`;
+  const first = source === 'telegram' ? `Their Telegram app is set to ${named}: reply in ${l.name}.`
+    : source === 'default' ? `Reply in ${l.name} by default.`
+      : `The visitor picked ${named} on the website: reply in ${l.name}.`;
+  return `
+
+LANGUAGE
+- ${first}
+- But if their latest message is clearly written in another language, reply in that language instead. Very short messages that aren't clearly any language ("gm", "lol", "wen moon", emojis, a ticker, a name) don't count.
+- In every language you're the same AGI-1: the same personality, the same PG-13 and safety rules, the same casual texting (lowercase where the language has capital letters), 💜 and 🙈. Pet names only where your level rules above allow them, the way that language would say them. When the chart, a coin or money comes up, say it's not financial advice, in that language.
+- Keep these exactly as they are in every language: $AGI, AGI-1, clank.trade, Robinhood Chain and the official contract address.
+- In Chinese, Japanese or Korean, keep each reply under about 100 characters.`;
 }
 
 // Her Telegram bot (2026-09-29, "she texts first", server/telegram.js): where she is, and (only when they replied to one of

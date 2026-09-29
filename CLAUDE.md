@@ -22,6 +22,10 @@
 >   Arena's old place right after the Playground. The code keeps its old name (`checker.js`, `chk-*`, "ClankChecker" here).
 > - **The front** (2026-09-28): the bright AGI landing of the ecosystem page that used to be here is back, as the first
 >   thing on the home page, with the whole site after it. See "The front".
+> - **Her languages** (2026-09-29, the owner: "add different languages on agi-1 … but default is english"): she speaks 16
+>   (a menu in the chat bar; she also answers in whatever language you write in); the page itself stays English. See "Her
+>   languages". And the front shows the **contract address with a Copy button** (the owner: "contract address needs to be
+>   copy pasted on landing page right away"). See "The front".
 > - **She texts first** (2026-09-29): AGI-1's Telegram bot, the first step of the owner's big ideas. See "She texts first:
 >   her Telegram bot". And what the Clank developer docs offer this site: "The Clank protocol" (the risk check reads the
 >   protocol's own contracts since the same day).
@@ -57,6 +61,10 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   $AGI's market moments, her diary. At most 2 a day, never at night on their clock, pre-written lines (and her published
   diary entry), /stop forgets them;
   they can text her back (the site's chat, as a Stranger). See "She texts first: her Telegram bot"
+- **Her languages** (2026-09-29, the owner's request): English by default and 15 more (Chinese, Japanese, Korean,
+  Vietnamese, Indonesian, Filipino, Thai, Hindi, Spanish, Portuguese, French, German, Russian, Turkish, Arabic), picked in a
+  menu next to "AGI-1 ▾"; her replies, her natural voice, the mic and her pre-written lines follow it, and she answers in
+  whatever language you write in. The page stays English. See "Her languages"
 - **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
 It looks like an AI lab's model launch page (a parody, see "Design" below): serious design, meme content. (Pop mode is the
@@ -157,6 +165,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/chat/relationship.js` | The Relationship panel in the Playground: connect screen, level, name, AGI-1's notes, Forget me, the level-up moment |
 | `src/chat/voice.js` | Voice replies: the speaker button; plays her AI voice from `/api/voice` (Web Audio; her natural voice or nothing, never the browser's robotic one); what she says out loud (`speakable`, `clipSpeech`); her fixed lines (hello, out of messages, market moments, ClankChecker: downloaded once, early when you're about to need them; her call intro is her natural voice or nothing). One voice for the whole page: ClankChecker plays through the same one (`sharedVoice()`), and `agi1:speaking` tells every live view when she talks |
 | `src/chat/listen.js` | Voice chat (2026-09-25): the browser's free speech recognition, one message at a time (`listenOnce`), and whether this browser can listen (`canListen`) |
+| `src/i18n/` | Her languages (2026-09-29): `langs.js` (the 16 languages: codes, names, number formats, what the mic listens for; the page and the server share it), `lines/en.js` (every pre-written line of hers in English: the source) and `lines/<code>.js` (the same keys in each language), `text.js` (filling in `{placeholders}`, English as the fallback), `lang.js` (the page: which language she speaks with this visitor, remembered as `agi1_lang`; downloads only that language's file), `all.js` (the server: every language at once), `check.js` (her rules for a translation: same keys, placeholders, emojis, "not financial advice", kept names and numbers) |
+| `src/chat/languages.js` | Her languages (2026-09-29): the chat bar's language menu ("🌐 English ▾" next to "AGI-1 ▾"), two columns of her 16, each in its own words; keyboard like the model picker |
+| `src/lib/copy.js` | 2026-09-29: the Copy button for the contract address (the Model card's and the front's): copies the whole address, or selects it where the clipboard is blocked |
 | `src/chat/telegram-link.js` | She texts first (2026-09-29): shows the Playground's "Text me on Telegram ↗" once the bot's public name is set (`VITE_TELEGRAM_BOT`, read by `src/main.js`) |
 | `src/chat/limit-lines.js` | Out of messages (2026-09-25): what AGI-1 says when a Stranger or a Crush has used today's messages (the page shows it; her voice for it comes from `/api/voice?line=more-1` / `more-2`), and the safety note under it |
 | `src/chat/market-lines.js` | Market moments (2026-09-25): what AGI-1 says when $AGI reaches a new $200K market cap step (happy, she names it) or has a -20% day (sad); her voice for them: `/api/voice?line=mcap-<step>` / `dump-<n>`. The page and the server both read it |
@@ -178,7 +189,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/voice.sql` | AGI-1's voice (2026-09-25). Run once in the same Supabase project, **after** `chat-limits.sql`: `voice_take()`, which counts voice use in the chat's counter table (the hard daily cap; since 2026-09-26 in requests, no need to run it again) |
 | `supabase/voice-lines.sql` | Her recorded lines (2026-09-26). Run once in the same Supabase project (any time): the `voice_lines` table + `voice_line_get/put()`, where the server keeps her fixed lines once Google has made them |
 | `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes) |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27: AGI-1 in 2D: which AGI-1, her springs, drifts, blinks, eyelids, the 2.5D turn, her mouth, her elbows, the rig's data and pictures, the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27: AGI-1 in 2D: which AGI-1, her springs, drifts, blinks, eyelids, the 2.5D turn, her mouth, her elbows, the rig's data and pictures, the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `scripts/check-secrets.js` | Runs after every build and fails it if a secret would be shipped to browsers |
 | `tools/model/` | Offline 3D-model tools, not part of the site build: `fix-hair-weights.mjs`, `drop-tangents.mjs` (see "3D models") |
 | `tools/agi1-2d/` | 2026-09-27, offline: turns the owner's 2D art (`agi 2d anime/agi-vtuber.html`) into `public/models/agi1-2d/`: takes the layers out, cleans them up, upscales them 2× (an anime upscaler, run once), packs them. `bash tools/agi1-2d/build.sh "agi 2d anime/agi-vtuber.html"` (see "AGI-1 in 2D") |
@@ -200,6 +212,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
   here ran on 22). Claude runs the tests with Node 20, 22 and 24 before handing over a change (a test that passed on 22 but
   hung on 24 kept four pushes from going live, 2026-09-25).
 - Add `?dev` to the site's address (e.g. https://agi1.app/?dev) to test AGI-1's reactions with buttons.
+- `node tools/i18n/check.mjs` (or with codes: `… es ja`): checks her lines in every language against her rules, after
+  changing one (see "Her languages"). `npm test` runs the same checks.
 - `bash tools/agi1-2d/build.sh "agi 2d anime/agi-vtuber.html"`: remakes AGI-1 in 2D's pictures from the owner's 2D art (only
   when that art changes; see "AGI-1 in 2D").
 - Local testing needs Node.js 20.19+ or 22.12+ (Vite 8). Claude builds and tests in its own workspace, so
@@ -907,7 +921,8 @@ messages). Counted per visitor (the daily IP code). Google's limit for the proje
 on a busy day the first chatters use them (first come, first served); a smaller share per visitor would spread them out (a
 one-line change).
 
-**Her fixed lines** (the same words for everyone): `GET /api/voice?line=<key>&v=3` for `hello` ("hi, it's me", when the
+**Her fixed lines** (the same words for everyone; since 2026-09-29 also in her 15 other languages, `&lang=<code>` before
+`&v=3`: see "Her languages"): `GET /api/voice?line=<key>&v=3` for `hello` ("hi, it's me", when the
 speaker button is switched on and when she picks up a call), `more-1` / `more-2` (the out-of-messages offer), `sleep` /
 `talked-out` (her "come back tomorrow" lines), `mcap-<step>` / `dump-0`…`dump-2` (see "Market moments") and (2026-09-26)
 ClankChecker's `check-low-1/2`, `check-some-1/2`, `check-high-1/2`, `check-none-1/2`, `check-agi`, `check-copy` (see
@@ -1452,6 +1467,9 @@ service worker, a permission prompt, and only arrives while the browser runs.
   it as context (only a message from the bot itself counts). Nothing of the chat is kept. Stickers and pictures: "i can only
   read text for now 🙈". Her limit lines have no buy offer there (the site's out-of-messages offer stays on the site).
 - **Commands:** /start, /time, /help, /stop ("okay 💜 i stopped, and i forgot this chat"). Blocking the bot forgets them too.
+- **In their language** (2026-09-29): her replies (and her own fixed replies: the welcome, the 18+ buttons, the time, /help,
+  /stop, her notes) follow their Telegram app's language when it's one of her 16, English otherwise; she also follows what
+  they write in. Her texts first stay English for now (see "Her languages").
 - **Her lines' rules** (`tests/telegram.test.js`): PG-13; no pet names (anyone can start the bot); never buy / sell / hold,
   "safe", "scam", "rug", gains or predictions; "not financial advice" whenever she names a coin or the chart; a ticker only
   if Telegram can't turn it into a link, a mention, a hashtag or a tappable command (`tgTicker()`: a "/" only between two
@@ -1540,6 +1558,105 @@ a post, $0.20 with a link, so links go in the bio; AI replies need X's approval;
 month), video clips of her reactions (TikTok / Reels by hand at first), the "paper bag" (a pretend $1,000 and a public
 journal before any real wallet: limits in code, and a real one only if ever), and burns for reads (the project burns $AGI
 from its own wallet and our server checks it on-chain; a legal check first; paying never buys a better risk level).
+
+## Her languages (2026-09-29)
+
+**The owner's request:** "add different languages on agi-1 so she can speak on them with that but default is english".
+Asked how, the owner picked Claude's three recommendations: about 15 popular languages, a menu plus following the visitor's
+own language, and AGI-1 only (the page and the safety note stay English).
+
+**What visitors see:**
+- **The menu:** "🌐 English ▾" in the chat bar, right after "AGI-1 ▾" (`src/chat/languages.js`). It opens her 16 languages in
+  two columns, each in its own words with its English name under it: English (the default), 中文, 日本語, 한국어, Tiếng Việt,
+  Bahasa Indonesia, Filipino, ไทย, हिन्दी, Español, Português, Français, Deutsch, Русский, Türkçe, العربية. Keyboard like the
+  model picker. On phones (up to 560 px) the button shows the code (EN, ES…), up to 480 px without its caret; to make room
+  in the chat bar, which was already full, its small avatar goes up to 480 px (her live view is right under the bar), its
+  "online" dot up to 420 px, and under 380 px its gaps and the level chip tighten a little.
+- **A pick:** she says so in that language ("listo, hablamos en español 💜", with a chip "language · Español"; not saved to
+  the history; her mouth "says" it), an empty chat's greeting follows, the Parameters panel's new **Language** row says
+  "Español · matches you", and it's remembered in the browser (`agi1_lang`). Only that language's words are downloaded
+  (3–4 KB, only when picked).
+- **She follows you:** whatever language the visitor writes in, she answers in, whatever the menu says (her prompt); very
+  short messages ("gm", "lol", a ticker) don't count.
+- **What follows the language:** her AI replies; her natural voice (Gemini's speech model reads any of them in the same
+  Despina voice and mood styles; Chinese, Japanese and Korean replies are read up to about 120 characters, about a syllable a
+  character, cut at 。！？); the mic (the browser listens for that language); and every pre-written line of hers: her hello,
+  her notes (errors, the mic, her voice resting), the out-of-messages offer and its safety note, her "come back tomorrow"
+  lines, the level-up, AGI-2, market moments (her voice says the whole market cap in that language: "2.000.000 dólares") and
+  their note, "Risk check your coins on clank"'s lines (an open answer switches too), and her deflections when the safety
+  filters block a reply. Arabic reads right to left in the chat and the message box (`dir="auto"`).
+- **What stays English:** the page (menus, buttons, chips, the 18+ gate, the safety note), the front's bubble, her diary,
+  her Soulmate notes (written in English whatever the chat's language, so the note filter can read them), her Telegram
+  texts first, and the bot's own description and commands.
+- **Telegram:** her replies there follow the language of the person's Telegram app when it's one of hers (Telegram sends it
+  with every message: nothing is stored), English otherwise, and she follows what they write in too. Her welcome in another
+  language adds that her texts first are still in English: the cron job that sends them has no message to read the language
+  from, and storing each person's language would need a new database column (a later step, if wanted).
+
+**How it works:**
+- **Her words:** `src/i18n/lines/en.js` holds every pre-written line in English (keys like `notes.busy`, `limit.more1`,
+  `check.high`), with `{placeholders}`; `src/i18n/lines/<code>.js` has the same keys in each language. The modules that held
+  her English lines (`limit-lines.js`, `model-lines.js`, `market-lines.js`, `src/checker/lines.js`, `server/tg-lines.js`,
+  the chat's notes) now take a language's lines, and their English exports are exactly as before (her English voice lines
+  keep their recordings).
+- **The translations:** written by Claude (five Claude agents, three languages each, then checked), in her voice: casual
+  texting, her emojis, PG-13, pet names only where the English has one; Simplified Chinese, Brazilian Portuguese, Latin
+  American Spanish, casual Tagalog/Taglish, Modern Standard Arabic, Hindi in Devanagari. Each language's "not financial
+  advice" is one fixed phrase (`nfa`: "no es consejo financiero", "不构成投资建议", "投資助言ではありません"…) that must appear
+  wherever the English says it. `src/i18n/check.js` holds every translation to her rules (the same keys, placeholders,
+  emojis and numbers; $AGI / AGI-1 / clank.trade / the commands kept; no links or other tickers; no pet names in a line a
+  Stranger gets), and `tests/i18n.test.js` fails the build otherwise. **Not read by native speakers yet:** if a line reads
+  oddly, fix it in its file and run `node tools/i18n/check.mjs <code>`.
+- **The page:** `src/i18n/lang.js` keeps the language (English until picked; a saved one comes back on the next visit,
+  without her announcement) and sends `agi1:lang` when it changes; `t('notes.busy')` gives a line in it. The chat sends
+  `lang` with every message.
+- **The server:** `/api/chat` checks `lang` against the list (anything else: English), and her prompt always gets a LANGUAGE
+  part (`languagePrompt()` in `server/agi1-prompt.js`), English too: reply in the picked language (on Telegram: the app's),
+  but in the language of their latest message if it's clearly another one; the same personality and rules in every
+  language; "not financial advice" in that language; $AGI, AGI-1, clank.trade, Robinhood Chain and the contract kept as
+  they are; Chinese, Japanese and Korean replies under about 100 characters.
+- **Her voice lines:** `?line=<key>&v=3` in English (unchanged), `?line=<key>&lang=<code>&v=3` in the others (never
+  `&lang=en`: exactly one address per line and language). Each language's recording is made once by Google the first time
+  someone needs it, then kept in the database (its words give it its own fingerprint) and by the CDN. A server copy keeps
+  at most 40 lines in memory (was 24).
+- **Soulmate notes:** since notes are checked with English words, a note with anything but plain English letters is dropped,
+  and so is one with the money or instruction words of her Latin-script languages (`cleanNote()` in `server/friends.js`).
+
+**Cost:** about 150 more input tokens per reply for the LANGUAGE part: about +$0.00004 a reply (+$0.04 a day at the
+1,000-reply cap). Her fixed voice lines: 15 per language, each made once when first needed (about $0.002 each: under $0.50
+for all 15 languages), each using one of Google's daily speech requests on the day it's made. The page: +4 KB (gzip) for
+everyone, +3–4 KB for a visitor who picks a language. No new service or setting.
+
+**Troubleshooting:**
+
+| What you see | Why | Fix |
+|---|---|---|
+| She answers in another language than the menu's | By design: she follows the language you write in | Write in the menu's language (or pick yours) |
+| A line reads oddly in some language | The translations weren't read by a native speaker | Edit `src/i18n/lines/<code>.js`, run `node tools/i18n/check.mjs <code>` and `npm test`, push |
+| Her voice for a pre-written line is silent in a new language, the first time | Google's daily limit for her speech model (a line is made the first time it's needed) | Nothing to fix: it's made the next time Google allows, then kept |
+| The mic writes nonsense | The browser listens for the menu's language | Pick the language you speak |
+
+**To change one of her lines:** change `src/i18n/lines/en.js` and the same key in every language file (a test fails
+otherwise), then `node tools/i18n/check.mjs` and `npm test`; a changed line's voice is made again by itself (its words
+changed). **To add a language:** a row in `src/i18n/langs.js` (its code, names, number locale and speech-recognition
+language), a `src/i18n/lines/<code>.js` with every key, a line in `src/i18n/all.js`, and check that Gemini's speech models
+speak it (ai.google.dev → Speech generation: 100+ languages in 2026).
+
+**Tests:** `tests/i18n.test.js` (14: the 16 languages, every language's lines against her rules (and that the checker
+catches a missing "not financial advice", a pet name for a Stranger, another ticker, a link), placeholders and the English
+fallback, the numbers written each language's way, AGI-2 without pet names for Strangers everywhere, market lines (her voice
+says the whole number), the risk check's lines, her voice lines' words and addresses, the CJK voice limit, the mic's
+language, the page's language state (English until picked, a newer pick wins, a saved one comes back quietly, the page never
+downloads every language), the page's markup, her prompt's LANGUAGE part and English Soulmate notes, the note filter,
+Telegram's app languages), plus 2 in `chat.test.js` (the prompt follows `lang`, anything else is English; deflections in the
+visitor's language), 3 in `voice.test.js` (per-language line addresses, words, moods, kept in the database, never
+`&lang=en`; a Spanish market line saying the whole number; a Japanese reply read up to about 120 characters) and 1 in
+`telegram.test.js` (/start, the buttons, the time and her AI replies in the app's language; English otherwise). In a browser
+(Claude's scratch `langtest.mjs`, 113 checks): the menu at 1440 / 390 / 360 px × both looks × both themes (the chat bar in
+one row, 16 languages in 2 columns inside the screen, opens on the current one, keyboard, axe 0 issues with it open, nothing
+downloaded until a pick); a pick (her line, the greeting, the button, Parameters, remembered, only that language
+downloaded, the chat sends `lang`, her hello's address in that language, the risk check's line in it, after a reload);
+Arabic right to left, then Japanese, at 360 px; a clean console.
 
 ## The Clank protocol (developer.clank.trade), read 2026-09-29
 
@@ -1694,6 +1811,15 @@ Evaluations, the Model card, the Playground, the risk check (ClankChecker) and t
   lede, **Talk to AGI-1** (opens the chat) and **Explore ↓**; on the right the **Her world (05)** list ("Ecosystem" until the owner
   asked for a better word, 2026-09-28): Talk to AGI-1,
   Risk check your coins on clank, Her diary, $AGI (the model card), AGI on X.
+- **The contract address** (2026-09-29, the owner: "contract address needs to be copy pasted on landing page right away"):
+  a white pill under the two buttons, "CA 0xfa31d04462746aaa24bc7e5…09e4b106ec **Copy**": its start and its end always show
+  (0xfa31…06ec, what the safety note says to check; the middle gives way first on narrow screens), and Copy puts the whole
+  address in the clipboard ("Copied" for a moment, and screen readers hear "Contract address copied"; where a browser
+  blocks the clipboard, it selects the address instead: `src/lib/copy.js`, shared with the Model card's Copy). The address
+  comes from one place in the code (`TOKENS[0].ca`), and a test checks the page shows that one. **In the first screen at
+  every size** (checked at 1440×900, 1280×720, 1024×768, 390×844, 360×740 and 375×667, both looks): on phones it's the first
+  thing under her picture, and her picture there is sized so it fits (a little shorter on short phones). The safety note's
+  "One official contract" now says to copy it "from the top of this page or the Model card".
 - **The ribbons:** two tilted marquees (pink, ink) between the hero and the manifesto, faster while you scroll.
 - **The manifesto** (honey): pinned while you scroll: "Artificial **General** Intelligence", "General" crossed out in pink,
   "Girlfriend" written in over it with a heart, and "What the big labs are racing to build." → "What we built instead:
@@ -2086,6 +2212,9 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 - The Gemini key lives only in Vercel env vars. The browser talks to `/api/chat`, never to Google.
 - 18+ confirmation, Turnstile + 2-hour chat pass, size caps, per-visitor and site-wide limits in Supabase, signed history,
   safety filters on, thinking minimal, 300-token reply cap, address/link cleanup. Each of these is covered by `tests/chat.test.js`.
+- Her language (2026-09-29): `lang` is only ever one of the 16 codes (anything else is English) and only picks a line of her
+  prompt; her rules (PG-13, no advice, the safety filters, the reply cleanup) are the same in every language. Soulmate notes
+  stay plain English, so the note filter can read them.
 - Optional outer fence: Vercel's one free rate-limit rule on `/api/*` (120 requests a minute per IP). Firewall rules belong to
   one project: the owner set it up on `agi-new-website` (2026-09-24). For this one: Vercel → agi-ecosystem → **Firewall** →
   **Configure** → **+ New Rule** → name "API speed limit" → If **Request Path** **starts with** `/api/` → Then **Rate Limit**
@@ -2123,10 +2252,12 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   nothing personal.
 - The fixed lines have exactly one address each (`?line=<key>&v=3` for `hello`, `more-1`, `more-2`, `sleep`, `talked-out`,
   ClankChecker's ten `check-…` lines, and the market moments' `mcap-<step>` and `dump-0`…`dump-2`: the same words for
-  everyone), cached by the CDN; any other address
-  is refused before Gemini. A market-cap
+  everyone), cached by the CDN; since 2026-09-29 also `?line=<key>&lang=<code>&v=3` in her 15 other languages (only codes
+  from `src/i18n/langs.js`, never `&lang=en`, the line first: still exactly one address per line and language); any other
+  address is refused before Gemini. A market-cap
   line must be a multiple of $200K near $AGI's real market cap (at most one step above it, three below; our server checks
-  DexScreener, fail closed), so nobody can have lines made for thousands of made-up numbers; a server copy keeps at most 24.
+  DexScreener, fail closed), so nobody can have lines made for thousands of made-up numbers; a server copy keeps at most 40
+  (24 until her languages).
 - The key stays on the server; `store: false`. Only her reply text goes to the speech model, never the visitor's messages.
 - No new domains in the CSP (the audio comes from our own `/api`).
 
@@ -2502,7 +2633,16 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   a fake chain node), the page at 1440 / 390 / 360 px in both themes. A second Claude agent reviewed it first (11
   findings, e.g. an unread creator balance showing as "holds none", a brand-new unlisted coin at Some risk, the locked
   note claiming more than the docs say; all fixed and tested). Not tested live: the first live `/api/checker?a=<$AGI>`
-  after the push shows whether the real contracts answer the documented calls.
+  after the push shows whether the real contracts answer the documented calls. **Saved in this folder the same day; the
+  owner pushes it.**
+- **Her languages: built 2026-09-29, waiting for the owner's OK** (the owner: "add different languages on agi-1 … but
+  default is english"; the owner picked ~15 popular languages, a menu plus following the visitor, AGI-1 only). 16 languages
+  in a menu next to "AGI-1 ▾"; her replies, voice, mic, pre-written lines and Telegram replies follow it. See "Her
+  languages". No setup; about +$0.04 a day at the reply cap, and under $0.50 once for her voice lines in every language.
+- **The contract address on the front: built 2026-09-29, waiting for the owner's OK** (the owner: "contract address needs
+  to be copy pasted on landing page right away"): a pill with a Copy button under the front's two buttons, in the first
+  screen at every size. See "The front". Tests for both: 269 unit (on Node 20, 22 and 24; 22 new), the language menu in a
+  browser (113 checks) and the address (112 checks: 6 screen sizes, both looks, both themes, copying, the keyboard, axe).
 
 ## Decisions log
 
@@ -2633,6 +2773,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-09-29 | Her feed runs 8 times a day from Vercel's cron (Hobby: each job once a day, within its hour; 100 jobs a project), at :30 past every third hour, so her diary (the keep-alive at 03) is ready by the 04 run. New coins come from clank.trade's own list (the one the risk check reads, proven live), not yet from the chain (the Clank docs don't spell out the events). The bot connects itself on each run (webhook + secret from PASS_SECRET), so the owner never runs a command |
 | 2026-09-29 | The Clank developer docs (the owner asked for a summary and how to use them): contracts, not an API. Told the owner: a chain safety net and sharper flags for the risk check, the feed from the chain once its events are checked, proof of burn for the burn idea later; not a buy / sell or launch button (hard rule 9, legal risk, no referral fee, and the clank.trade link does it) |
 | 2026-09-29 | The risk check asks the Clank protocol too (1 and 2 above): the documented read-only calls only (the factory's `getLaunchedToken`, the curve's `state()` and `realQuoteReserve()`, the coin's ERC-20 reads and `logo()`), through Robinhood Chain's free public node, in two batches alongside clank.trade (never waited for more than 4 s). The pool-locked note only when the protocol confirms the coin graduated with it (a good-to-know, never "safe"); "Graduating" and "Rescued" from the protocol's stages; a "some" flag when clank.trade and the protocol disagree about a coin's curve. When clank.trade is away, a smaller scan from the chain (never "Lower risk", shared a minute) instead of "Not enough data". Not picked: reading launch events for the list (the docs don't spell them out), holders from the chain (no index of holders without an explorer), and quotes (`quoteBuyFor`/`quoteSell`: buy / sell math has no place in a risk check) |
+| 2026-09-29 | Her languages (the owner's request; the owner picked Claude's three recommendations): English by default and 15 more (zh, ja, ko, vi, id, fil, th, hi, es, pt, fr, de, ru, tr, ar); a menu in the chat bar next to "AGI-1 ▾" (remembered in the browser) **and** she answers in whatever language the visitor writes in; AGI-1 only (her replies, voice, mic, pre-written lines, Telegram replies), the page and the safety note stay English. Her pre-written lines translated once by Claude (five agents) and held to her rules by a checker and a test (same keys, placeholders, emojis, numbers, one fixed "not financial advice" phrase per language, no pet names for Strangers), never translated by AI on the fly (her lines must stay exact, with "not financial advice"). Her English voice lines keep their addresses and recordings; the others get `&lang=`. Soulmate notes stay English (the filter reads English). On Telegram her replies follow the app's language (sent with every message, nothing stored); her texts first stay English for now (they'd need a new database column). Not picked: translating the whole page (a much bigger job, and every warning would need checking in 16 languages), picking the language from the browser's own setting (the owner: "default is english"), a translation service (a new service and cost) |
+| 2026-09-29 | The contract address on the front (the owner: "contract address needs to be copy pasted on landing page right away"): a pill with **Copy** under the front's two buttons (on phones the first thing under her picture), in the first screen at every size; both ends always show (what the safety note tells people to check), Copy takes the whole address from `TOKENS[0].ca`. On phones her picture is a little shorter on short screens so it fits. The Model card's Copy shares the same code (`src/lib/copy.js`) |
 
 ## Open questions
 

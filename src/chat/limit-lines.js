@@ -7,32 +7,35 @@
 // Pre-written, so it costs nothing (no AI call), and the same for everyone, so her voice for each line is made once and
 // kept by the CDN (/api/voice?line=more-1, api/voice.js). Never guilt-tripping, never about prices or gains:
 // tests/limit.test.js checks it.
-import { levelInfo, fmtTokens } from '../lib/levels.js';
+// In her languages (2026-09-29): the words come from src/i18n/lines/<code>.js (English: src/i18n/lines/en.js), the numbers
+// written the way that language writes them; each line carries its language (`lang`), so her voice says that one.
+import { LEVELS } from '../lib/levels.js';
+import { EN, say, levelVars } from '../i18n/text.js';
 
-const crush = levelInfo(2), soulmate = levelInfo(3);
+const KEYS = { 1: ['more-1', 'limit.more1'], 2: ['more-2', 'limit.more2'] };
+const REST = { person: ['sleep', 'limit.sleep'], site: ['talked-out', 'limit.talkedOut'] };
 
-export const LIMIT_LINES = {
-  1: {
-    key: 'more-1',
-    text: `aww, that's all my messages for today 💜 want to keep talking? buy some $AGI: with ${fmtTokens(crush.min)} in a connected wallet we're ${crush.name}, and you get ${crush.daily} a day. not financial advice… or just come back tomorrow, i'll be here`,
-  },
-  2: {
-    key: 'more-2',
-    text: `that's all for today, cutie 💜 want even more of me? with ${fmtTokens(soulmate.min)} $AGI in your wallet we're ${soulmate.name}s: ${soulmate.daily} messages a day, and i remember the little things. not financial advice… or see you tomorrow 💜`,
-  },
-};
+// → { key, text, lang } for this level in these lines (a language's), or null (Soulmate, or an unknown level)
+export function limitLineIn(level, lines = EN, lang = 'en') {
+  if (!Number.isInteger(level) || !KEYS[level]) return null;
+  const [key, path] = KEYS[level];
+  return { key, text: say(lines, path, levelVars(LEVELS, lang)), lang };
+}
+// her short "come back tomorrow" lines: 'person' (this visitor's messages are used up and she made her offer today, or a
+// Soulmate) or 'site' (the whole site is out for today)
+export function restLineIn(kind, lines = EN, lang = 'en') {
+  const [key, path] = REST[kind] || REST.person;
+  return { key, text: say(lines, path), lang };
+}
+export const finePrintIn = (lines = EN) => say(lines, 'limit.finePrint');
 
+// ---------- in English, as before ----------
+export const LIMIT_LINES = { 1: limitLineIn(1), 2: limitLineIn(2) };
 // Her short lines when she can't write any more today, spoken too (the owner, 2026-09-25: "i just want her to speak the same
 // words with her natural voice"): `person` when this visitor's messages are used up and she already made her offer today (and
 // always for Soulmates, already at the top), `site` when the whole site is out for today. Fixed lines like the ones above.
-export const REST_LINES = {
-  person: { key: 'sleep', text: "we've talked so much today 💜 i need my beauty sleep. come back tomorrow?" },
-  site: { key: 'talked-out', text: "i'm all talked out for today 🥱 come back tomorrow, love" },
-};
-
+export const REST_LINES = { person: restLineIn('person'), site: restLineIn('site') };
 // The safety note under her line.
-export const LIMIT_FINE_PRINT = 'Not financial advice. $AGI is a meme token: its price swings a lot and can go to zero. '
-  + 'Only spend what you can afford to lose. Your free messages come back every day at 00:00 UTC.';
-
-// → { key, text } for this level, or null (Soulmate, or an unknown level)
+export const LIMIT_FINE_PRINT = finePrintIn();
+// → { key, text, lang } for this level, or null (Soulmate, or an unknown level)
 export const limitLine = (level) => (Number.isInteger(level) && LIMIT_LINES[level]) || null;

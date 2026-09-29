@@ -6,6 +6,8 @@
 // Rules, like every line of hers: PG-13, lowercase texting, no pet names (anyone may ask, Strangers too), never buy / sell /
 // hold or a prediction, never "safe", and always "not financial advice" (tests/checker.test.js checks every line).
 
+import { EN, lineAt } from '../i18n/text.js';
+
 // The risk levels a scan can end in (server/checker.js decides which), worst last. `label`: what the page shows.
 export const LEVELS = {
   low: { label: 'Lower risk', react: 'okay', mood: 'neutral' },
@@ -14,28 +16,10 @@ export const LEVELS = {
   none: { label: 'Not enough data', react: 'shy', mood: 'careful' },
 };
 
-// Two lines per level: a coin always gets the same one (it follows its address), different coins take turns.
-const SAYS = {
-  low: [
-    "okay, this one looks calmer than most 💜 nothing big jumped out at me. it's still a meme coin, so it can still go to zero. not financial advice.",
-    "i read every line of this one 💜 fewer red flags than usual. lower risk isn't no risk though. not financial advice.",
-  ],
-  some: [
-    'hmm, a few things made me pause 🙈 read the flags with me before you decide anything. not financial advice.',
-    "mixed feelings about this one. some of it looks fine, some of it doesn't. the flags are right here 💜 not financial advice.",
-  ],
-  high: [
-    "okay, i'm worried about this one 🥺 lots of red flags in the scan. please be careful. not financial advice.",
-    'no no no… this one scares me a little 🙈 the red flags are right there, so please be careful with it. not financial advice.',
-  ],
-  none: [
-    "i couldn't read enough about this one to say anything 🙈 try again in a minute? not financial advice.",
-    "hmm, the scan came back empty. i'd rather not guess 💜 let's try again in a bit. not financial advice.",
-  ],
-};
-// Two special ones: the site's own coin, and a coin that only borrowed its ticker.
-const AGI_LINE = "wait, that's me! 💜 i'm a little biased, so read the facts yourself. not financial advice.";
-const COPY_LINE = "hey, that's not me 🙈 someone borrowed my name. the real $AGI has one official contract, and it's on this page. not financial advice.";
+// Two lines per level: a coin always gets the same one (it follows its address), different coins take turns. The site's own
+// coin and a coin that only borrowed its ticker have their own. In her languages since 2026-09-29: `check` in
+// src/i18n/lines/<code>.js (English: en.js).
+const SAYS = { low: EN.check.low, some: EN.check.some, high: EN.check.high, none: EN.check.none };
 
 // The words her voice says: her emojis end a sentence in her texts ("…than most 💜 nothing big…"), so out loud they become a
 // full stop (or nothing at the very end), and "$AGI" is said "AGI".
@@ -46,20 +30,30 @@ export const spokenOf = (text) => String(text)
   .replace(/\s+/g, ' ')
   .trim();
 
-// Every line she can say here: key → { key, text, spoken (what her voice says), mood (how her voice sounds, server/voice.js),
-// react (her 3D reaction) }
-const line = (key, text, mood, react) => [key, { key, text, spoken: spokenOf(text), mood, react }];
-export const CHECK_LINES = Object.fromEntries([
-  ...Object.entries(SAYS).flatMap(([level, list]) => list.map((text, i) => line(`check-${level}-${i + 1}`, text, LEVELS[level].mood, LEVELS[level].react))),
-  line('check-agi', AGI_LINE, 'happy', 'love'),
-  line('check-copy', COPY_LINE, 'pout', 'jealous'),
-]);
+// Every line she can say here, in these lines' language: key → { key, text, spoken (what her voice says), mood (how her
+// voice sounds, server/voice.js), react (her 3D reaction), lang }
+export function checkLinesIn(lines = EN, lang = 'en') {
+  const line = (key, path, mood, react) => { const text = lineAt(lines, path); return [key, { key, text, spoken: spokenOf(text), mood, react, lang }]; };
+  return Object.fromEntries([
+    ...Object.entries(SAYS).flatMap(([level, list]) => list.map((_, i) => line(`check-${level}-${i + 1}`, `check.${level}.${i}`, LEVELS[level].mood, LEVELS[level].react))),
+    line('check-agi', 'check.agi', 'happy', 'love'),
+    line('check-copy', 'check.copy', 'pout', 'jealous'),
+  ]);
+}
+export const CHECK_LINES = checkLinesIn();
+const byLang = new Map([['en', CHECK_LINES]]);
+const linesFor = (lines, lang) => {
+  if (!byLang.has(lang) || byLang.get(lang).lines !== lines) byLang.set(lang, Object.assign(checkLinesIn(lines, lang), { lines }));
+  return byLang.get(lang);
+};
 
-// Her line for one scan: { level, official, copyOfficial, address } (what /api/checker answers) → a CHECK_LINES entry.
-export function checkLine({ level, official = false, copyOfficial = false, address = '' } = {}) {
-  if (official && level !== 'none') return CHECK_LINES['check-agi'];
-  if (copyOfficial && level !== 'none') return CHECK_LINES['check-copy'];
+// Her line for one scan: { level, official, copyOfficial, address } (what /api/checker answers) → a CHECK_LINES entry (in
+// the language of `lines`, English if not given)
+export function checkLine({ level, official = false, copyOfficial = false, address = '' } = {}, lines = EN, lang = 'en') {
+  const all = lang === 'en' && lines === EN ? CHECK_LINES : linesFor(lines, lang);
+  if (official && level !== 'none') return all['check-agi'];
+  if (copyOfficial && level !== 'none') return all['check-copy'];
   const lv = Object.hasOwn(SAYS, level) ? level : 'none';
   const n = (parseInt(String(address).slice(-4), 16) || 0) % SAYS[lv].length;
-  return CHECK_LINES[`check-${lv}-${n + 1}`];
+  return all[`check-${lv}-${n + 1}`];
 }

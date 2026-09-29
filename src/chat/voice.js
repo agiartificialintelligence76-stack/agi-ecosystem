@@ -16,6 +16,7 @@
 // starts and stops talking out loud.
 import { setMeter, stopTalk } from '../lib/talk.js';
 import { lineUrl } from './voice-lines.js';
+import { currentLang } from '../i18n/lang.js';
 
 const KEY = 'agi1_voice';
 const nap = (ms) => new Promise((ok) => setTimeout(ok, ms));
@@ -37,7 +38,9 @@ export function clipSpeech(words, max = 300) {
   const text = String(words);
   if (text.length <= max) return text;
   const cut = text.slice(0, max);
-  const sentence = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  // the end of its last whole sentence: ". " "! " "? ", or (2026-09-29, her languages) 。！？ । ؟ which need no space
+  let sentence = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  for (const m of cut.matchAll(/[。！？।؟]/g)) sentence = Math.max(sentence, m.index);
   if (sentence > max * 0.5) return cut.slice(0, sentence + 1);
   const space = cut.lastIndexOf(' ');
   return (space > max * 0.5 ? cut.slice(0, space) : cut).replace(/[\s,;:]+$/, '');
@@ -70,7 +73,7 @@ export function startVoice(button, { onSpeaking = () => {}, onResting = () => {}
 
   // her voice: played with Web Audio, which phones allow once it was started from a tap (the speaker button, Send, Listen)
   let ctx = null, serial = 0, reader = null;
-  const lines = new Map();              // her fixed lines, once downloaded: key → sound
+  const lines = new Map();              // her fixed lines, once downloaded: "lang|key" → sound
   let resting = null;                   // why her voice rests for the rest of this visit, or null
   const sources = new Set();            // the pieces of her voice scheduled on the Web Audio clock
   let nextAt = 0, flowing = false;      // where the next piece goes; more pieces still on their way
@@ -254,12 +257,15 @@ export function startVoice(button, { onSpeaking = () => {}, onResting = () => {}
   // Her fixed lines (/api/voice?line=<key>&v=…, the same for everyone, made once and kept by the CDN). They use nobody's
   // voice allowance, so they're asked for even when replies can't be voiced. Each line is downloaded once per visit (warm()
   // starts that early), and a failed download is tried once more. Her natural voice or nothing.
-  const fetching = new Map();           // key → the download in progress (bytes), shared by warm() and sayLine()
+  // In her languages (2026-09-29): each line in the language it was shown in (`lang`; her current one if not given).
+  const fetching = new Map();           // "lang|key" → the download in progress (bytes), shared by warm() and sayLine()
   let linesOn = true;                   // false after "not set up" (no Gemini key): no more line requests this visit
-  function download(key) {
-    if (!fetching.has(key)) {
+  const idOf = (key, lang) => `${lang}|${key}`;
+  function download(key, lang) {
+    const id = idOf(key, lang);
+    if (!fetching.has(id)) {
       const attempt = async () => {
-        const res = await fetch(lineUrl(key), { signal: AbortSignal.timeout?.(20000) });
+        const res = await fetch(lineUrl(key, lang), { signal: AbortSignal.timeout?.(20000) });
         if (res.ok && /^audio\//.test(res.headers.get('content-type') || '')) return res.arrayBuffer();
         let error = '';
         try { error = (await res.json()).error || ''; } catch { /* not JSON */ }
@@ -268,26 +274,29 @@ export function startVoice(button, { onSpeaking = () => {}, onResting = () => {}
       };
       const job = attempt()
         .catch((err) => (err.final ? Promise.reject(err) : nap(700).then(attempt)))
-        .catch((err) => { fetching.delete(key); throw err; });       // (a later try may work)
-      fetching.set(key, job);
+        .catch((err) => { fetching.delete(id); throw err; });       // (a later try may work)
+      fetching.set(id, job);
     }
-    return fetching.get(key);
+    return fetching.get(id);
   }
   // start downloading a line before it's needed (the pointer is on Call, Listen or the speaker button): no sound, no decoding
-  const warm = (key) => { if (linesOn && !lines.has(key)) download(key).catch(() => { /* it's tried again when needed */ }); };
-  function sayLine(key) {
+  const warm = (key, lang = currentLang()) => {
+    if (linesOn && !lines.has(idOf(key, lang))) download(key, lang).catch(() => { /* it's tried again when needed */ });
+  };
+  function sayLine(key, lang = currentLang()) {
     stop();
     const my = serial;
+    const id = idOf(key, lang);
     const ready = new Promise((resolve) => { started = resolve; });
     if (!linesOn || !audio()) { announce('none'); return ready; }
     setState('loading');
     (async () => {
       try {
-        if (!lines.has(key)) lines.set(key, await decode((await download(key)).slice(0)));
+        if (!lines.has(id)) lines.set(id, await decode((await download(key, lang)).slice(0)));
         if (my !== serial) return;
         flowing = false;
         nextAt = 0;
-        schedule(lines.get(key), my, 0.02);
+        schedule(lines.get(id), my, 0.02);
       } catch {
         if (my !== serial) return;
         setState('');
@@ -337,8 +346,8 @@ export function startVoice(button, { onSpeaking = () => {}, onResting = () => {}
     hello: () => (on ? greet() : Promise.resolve('none')),
     // a fixed line (see sayLine). Plays even with voice off: only for a line the visitor asked to hear (a tap), when her
     // voice is on, or when she runs out of messages (the owner's choice). warm(key): download it early, silently.
-    line: (key) => sayLine(key),
-    warm,
+    line: (key, lang) => sayLine(key, lang || currentLang()),
+    warm: (key, lang) => warm(key, lang || currentLang()),
     available: true,                    // this browser can play her voice (else the quiet stub above: false)
     speaking: () => speaking,
     // talking, or her voice for something is still on its way (so another line would cut it off)

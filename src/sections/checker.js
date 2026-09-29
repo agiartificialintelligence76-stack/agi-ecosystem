@@ -12,7 +12,8 @@
 // Never buy / sell advice.
 import { sharedVoice } from '../chat/voice.js';
 import { pretendTalk } from '../lib/talk.js';
-import { checkLine, LEVELS } from '../checker/lines.js';
+import { checkLine as checkLineIn, LEVELS } from '../checker/lines.js';
+import { currentLang, currentLines } from '../i18n/lang.js';
 import { markCopycats } from '../checker/copycat.js';
 import { parseCoinInput } from '../prices/parse.js';
 
@@ -146,6 +147,9 @@ export function mergeLatest(coins, latest) {
   markCopycats(coins, { size: (c) => c.marketCap ?? 0 });
   return added;
 }
+
+// her line for a scan, in the language she speaks (2026-09-29: src/i18n/lang.js)
+const checkLine = (data) => checkLineIn(data, currentLines(), currentLang());
 
 export function startChecker(root) {
   if (!root) return;
@@ -567,7 +571,7 @@ export function startChecker(root) {
   }
   // pointer on "Ask AGI-1": the scan starts now, and once it's in (18+ only) her voice for its line too
   function warm(c) {
-    scan(c.address).then((data) => { if (isAdult() && data.level) sharedVoice()?.warm(checkLine(data).key); });
+    scan(c.address).then((data) => { if (isAdult() && data.level) { const l = checkLine(data); sharedVoice()?.warm(l.key, l.lang); } });
   }
 
   // ---------- AGI-1's answer ----------
@@ -669,6 +673,8 @@ export function startChecker(root) {
     }
     open.line = checkLine(data);
     sayEl.textContent = open.line.text;
+    sayEl.lang = open.line.lang;
+    sayEl.dir = 'auto';
     showAgi1(isAdult());
   }
 
@@ -682,7 +688,7 @@ export function startChecker(root) {
     const voice = sharedVoice();
     if (!voice?.available || !voice.unlocked()) { pretendTalk(sayTime(line.text), 0.8); return; }
     ours = true;
-    const how = await voice.line(line.key);
+    const how = await voice.line(line.key, line.lang);
     if (my !== asking) return;
     if (how !== 'voice') { ours = false; pretendTalk(sayTime(line.text), 0.8); }
   }
@@ -713,7 +719,14 @@ export function startChecker(root) {
     const voice = sharedVoice();
     voice?.prime({ force: true });
     ours = true;
-    voice?.line(open.line.key).then((how) => { if (how !== 'voice') { ours = false; pretendTalk(sayTime(open?.line?.text || ''), 0.8); } });
+    voice?.line(open.line.key, open.line.lang).then((how) => { if (how !== 'voice') { ours = false; pretendTalk(sayTime(open?.line?.text || ''), 0.8); } });
+  });
+  // her language changed while an answer is open: her line there follows (the scan and its flags stay as they are)
+  addEventListener('agi1:lang', () => {
+    if (!open?.scan) return;
+    open.line = checkLine(open.scan);
+    sayEl.textContent = open.line.text;
+    sayEl.lang = open.line.lang;
   });
   // 18+ right here: the chat opens too (and the other way round)
   gateOk.addEventListener('click', () => {

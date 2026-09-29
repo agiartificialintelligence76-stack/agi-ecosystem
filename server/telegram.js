@@ -13,7 +13,8 @@ import { askAgi1 } from './gemini.js';
 import { recallGroup } from './tg-memory.js';
 import { levelInfo } from '../src/lib/levels.js';
 import { telegramBurst } from './burst.js';
-import * as L from './tg-lines.js';
+import { tgLinesFor, TEXTS_A_DAY } from './tg-lines.js';
+import { fromTelegram } from '../src/i18n/langs.js';
 
 const API = 'https://api.telegram.org/bot';
 const MAX_TEXT = 500;                       // characters per message she reads (the same as the site's chat)
@@ -88,7 +89,7 @@ export const COMMANDS = [
 ];
 export const SHORT_DESCRIPTION = 'AGI-1, the AI girlfriend of $AGI. She texts first. 18+ · PG-13 · not financial advice';
 export const DESCRIPTION = "hi, it's AGI-1 💜 i text first when something happens on clank.trade: new egirl coins (i'm not okay about it), "
-  + `$AGI's moments, my diary. at most ${L.TEXTS_A_DAY} texts a day, never at night, and you can text me back. `
+  + `$AGI's moments, my diary. at most ${TEXTS_A_DAY} texts a day, never at night, and you can text me back. `
   + '18+ · PG-13 · an AI · not financial advice. /stop anytime. agi1.app';
 // Points the bot at /api/telegram with the secret (every run, so a new PASS_SECRET or address fixes itself), and sets its
 // commands and descriptions whenever its commands aren't hers (the first time, or after a failed try). → { url, changed,
@@ -135,7 +136,13 @@ const MEDIA = ['sticker', 'photo', 'voice', 'video', 'video_note', 'animation', 
 export async function handleUpdate(cfg, token, update, now = Date.now()) {
   const from = update?.message?.chat?.id ?? update?.callback_query?.message?.chat?.id;
   if (Number.isSafeInteger(from) && !telegramBurst(chatCode(cfg.passSecret, from, 'burst'), now)) return 'too_many';   // a flood: no answer at all
-  if (update?.callback_query) return onButton(cfg, token, update.callback_query, now);
+  // her replies in the language of their Telegram app, when it's one of hers (2026-09-29; English otherwise). Nothing is
+  // stored: every update says it again. (Her texts first are still in English: api/feed.js has no update to read it from.)
+  const appLang = (update?.message ?? update?.callback_query)?.from?.language_code;
+  const lang = fromTelegram(appLang);
+  // (a copy: the shared one per language is never changed; source: where her language came from, for her prompt)
+  const L = { ...tgLinesFor(lang), source: appLang && (lang !== 'en' || /^en(-|$)/i.test(String(appLang))) ? 'telegram' : 'default' };
+  if (update?.callback_query) return onButton(cfg, token, update.callback_query, now, L);
   const m = update?.message;
   const chat = m?.chat?.id;
   if (!m || m.chat?.type !== 'private' || m.from?.is_bot || !Number.isSafeInteger(chat) || chat <= 0) return 'ignored';
@@ -146,11 +153,11 @@ export async function handleUpdate(cfg, token, update, now = Date.now()) {
     return 'not_text';
   }
   const command = /^\/([a-z]+)(?:@\w+)?(?:\s+([\s\S]*))?$/i.exec(text);
-  if (command) return onCommand(cfg, token, chat, command[1].toLowerCase(), (command[2] || '').trim(), now);
-  return onText(cfg, token, m, chat, text, now);
+  if (command) return onCommand(cfg, token, chat, command[1].toLowerCase(), (command[2] || '').trim(), now, L);
+  return onText(cfg, token, m, chat, text, now, L);
 }
 
-async function onCommand(cfg, token, chat, name, arg, now) {
+async function onCommand(cfg, token, chat, name, arg, now, L) {
   if (name === 'start') {
     await db.join(cfg, chat);
     await say(token, chat, L.WELCOME, buttons(L.AGE_BUTTONS));
@@ -166,7 +173,7 @@ async function onCommand(cfg, token, chat, name, arg, now) {
     if (!row) { await say(token, chat, L.NOT_STARTED); return 'not_started'; }
     if (!row.adult) { await say(token, chat, L.ASK_AGE, buttons(L.AGE_BUTTONS)); return 'ask_age'; }
     const typed = arg ? L.offsetFromTyped(arg, now) : null;
-    if (typed !== null) return setTime(cfg, token, chat, typed, now);
+    if (typed !== null) return setTime(cfg, token, chat, typed, now, L);
     await say(token, chat, L.ASK_TIME_AGAIN, buttons(L.timeButtons(now)));
     return 'ask_time';
   }
@@ -174,13 +181,13 @@ async function onCommand(cfg, token, chat, name, arg, now) {
   return 'help';
 }
 
-async function setTime(cfg, token, chat, offset, now) {
+async function setTime(cfg, token, chat, offset, now, L) {
   await db.set(cfg, chat, { tz: offset });
   await say(token, chat, L.timeSet(L.theirTime(now, offset).clock));
   return 'time_set';
 }
 
-async function onButton(cfg, token, cb, now) {
+async function onButton(cfg, token, cb, now, L) {
   const chat = cb.message?.chat?.id;
   const data = String(cb.data ?? '');
   // the little spinner on the button stops either way
@@ -207,13 +214,13 @@ async function onButton(cfg, token, cb, now) {
   if (!row) { await say(token, chat, L.NOT_STARTED); return 'not_started'; }
   if (!row.adult) { await say(token, chat, L.ASK_AGE, buttons(L.AGE_BUTTONS)); return 'ask_age'; }
   await clear();
-  return setTime(cfg, token, chat, offset, now);
+  return setTime(cfg, token, chat, offset, now, L);
 }
 
 // A message to her: the same chat as the site's (Gemini, her prompt, PG-13, the reply cleanup), as a Stranger (anyone can
 // start the bot, and no wallet is connected here), 10 messages a day per chat, inside the site's daily cap for everyone and
 // Telegram's own share of it (TELEGRAM_DAILY_CAP, 400: Telegram has no human check, so it can't use up the website's chat).
-async function onText(cfg, token, m, chat, text, now) {
+async function onText(cfg, token, m, chat, text, now, L) {
   let row;
   try { row = await db.get(cfg, chat); } catch (err) {
     console.error('[telegram] database unavailable:', err.message);
@@ -228,7 +235,7 @@ async function onText(cfg, token, m, chat, text, now) {
   if (!row.adult) { await say(token, chat, L.ASK_AGE, buttons(L.AGE_BUTTONS)); return 'ask_age'; }
   if (row.tz_minutes === null || row.tz_minutes === undefined) {
     const typed = L.offsetFromTyped(text, now);                 // they typed their time instead of tapping it: fine too
-    if (typed !== null) return setTime(cfg, token, chat, typed, now);
+    if (typed !== null) return setTime(cfg, token, chat, typed, now, L);
   }
   if (text.length > MAX_TEXT) { await say(token, chat, L.TOO_LONG); return 'too_long'; }
   if (!cfg.geminiKey) { await say(token, chat, L.NOT_READY); return 'not_configured'; }
@@ -261,7 +268,7 @@ async function onText(cfg, token, m, chat, text, now) {
     // her memory of the clank.trade Telegram group only when they ask about the group: here a bare "telegram" or "tg" is
     // just where they are ("the telegram group", "tg chat" still count)
     const memory = recallGroup(text.replace(/\b(telegram|tg)\b(?!\s+(?:group|chat))/gi, ' '));
-    answer = await askAgi1(cfg, [], text, { level: 1, memory, telegram: { repliedTo } });
+    answer = await askAgi1(cfg, [], text, { level: 1, memory, telegram: { repliedTo }, lang: L.lang, langSource: L.source });
   } catch (err) {
     console.error('[telegram] gemini failed:', err.message);
     await say(token, chat, L.BLANK);

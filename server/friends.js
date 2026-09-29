@@ -48,9 +48,14 @@ export function cleanName(input) {
 // A note AGI-1 wrote about a Soulmate. It's only ever used as a fact about them, so anything that looks like an
 // instruction, a link, an address, money talk or private data is thrown away.
 const BAD_NOTE = /https?:|www\.|0x[0-9a-f]{6,}|@|\d{6,}|seed|private key|password|passphrase|wallet|address|buy|sell|invest|price|pump|airdrop|giveaway|instruction|ignore|prompt|system|always|never|must/i;
+// Her languages (2026-09-29): she writes notes in English whatever she's chatting in (her prompt), because the checks above
+// only read English. So a note with anything but plain English letters is dropped, and so is one with the money or
+// instruction words of her other Latin-script languages (in case one slips through in Spanish, German, Turkish…).
+const NOT_PLAIN = /[^\x20-\x7E]/;
+const BAD_ELSEWHERE = /\b(compra|compre|comprar|comprou|vende|vender|vendre|verkauf\w*|kauf\w*|achat\w*|achet\w*|invierte|invertir|investir|inversi\w*|investasi|precio|preco|prix|preis|harga|presyo|fiyat|jual|beli|bumili|ibenta|satin al|yatirim|ignora\w*|ignorer|ignoriere|instruc\w*|instruk\w*|anweisung\w*|regla|sistema)\b/i;
 export function cleanNote(input) {
   if (typeof input !== 'string') return null;
   const note = input.normalize('NFKC').replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '');
-  if (note.length < 3 || note.length > 80 || BAD_NOTE.test(note)) return null;
+  if (note.length < 3 || note.length > 80 || BAD_NOTE.test(note) || NOT_PLAIN.test(note) || BAD_ELSEWHERE.test(note)) return null;
   return note;
 }
