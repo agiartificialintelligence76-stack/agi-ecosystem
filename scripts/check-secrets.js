@@ -7,13 +7,14 @@ import { extname, join } from 'node:path';
 const DIST = 'dist';
 
 // 1) The real secret values, when they're set where the build runs (they are on Vercel).
-const SECRET_ENV_VARS = ['GEMINI_API_KEY', 'SUPABASE_SECRET_KEY', 'TURNSTILE_SECRET_KEY', 'PASS_SECRET', 'CRON_SECRET'];
+const SECRET_ENV_VARS = ['GEMINI_API_KEY', 'SUPABASE_SECRET_KEY', 'TURNSTILE_SECRET_KEY', 'PASS_SECRET', 'CRON_SECRET', 'TELEGRAM_BOT_TOKEN'];
 
 // 2) Shapes of keys that must never be public, even when no env var is set.
 const PATTERNS = [
   { name: 'Google API key', re: /AIza[0-9A-Za-z_-]{35}/ },
   { name: 'Supabase secret key', re: /sb_secret_[0-9A-Za-z_-]{10,}/ },
   { name: 'private key', re: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
+  { name: 'Telegram bot token', re: /\b\d{6,12}:AA[0-9A-Za-z_-]{33}\b/ },
 ];
 
 const TEXT_TYPES = new Set(['.html', '.js', '.mjs', '.css', '.json', '.txt', '.svg', '.map', '.xml', '.webmanifest']);

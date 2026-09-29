@@ -205,6 +205,6 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   const foot = part('<footer class="foot"', '</footer>');
   assert.ok(foot.includes("The risk levels in “Risk check your coins on clank” are rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy or sell."));
   assert.ok(foot.includes("The coin scans and pictures in “Risk check your coins on clank” are read by our server from public sources (clank.trade and its picture host, DexScreener, a block explorer); nothing about you is sent to them."));
-  assert.match(foot, /Last updated September 28, 2026/);
+  assert.match(foot, /Last updated September 29, 2026/);
   assert.equal(html.match(/<canvas/g).length, 1, 'still one canvas for the whole page');
 });

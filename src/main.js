@@ -23,6 +23,7 @@ import { startTicker } from './prices/ticker.js';
 import { startEvals } from './sections/evals.js';
 import { startModelCard } from './sections/modelcard.js';
 import { startChecker } from './sections/checker.js';
+import { startTelegramLink } from './chat/telegram-link.js';
 import * as cards from './share/card.js';
 import { STYLE_KEY, readStyle } from './stage/agi1-2d-motion.js';
 
@@ -46,6 +47,7 @@ startEvals(document.getElementById('evals'));
 startModelCard(document.getElementById('model-card'));
 startPlayground(document.querySelector('[data-playground]'));
 startRelationship(document.querySelector('[data-rel]'));   // wallet + levels (after the chat, which listens to it)
+startTelegramLink(document, import.meta.env.VITE_TELEGRAM_BOT);   // "She texts first" (2026-09-29): her Telegram bot, if set
 startChecker(document.querySelector('[data-checker]'));   // ClankChecker (2026-09-26): loads its list when you get close
 startPrices();                    // live $AGI numbers from DexScreener, every 30 s while the tab is open
 

@@ -19,6 +19,10 @@ const MISSING = {
   voice_line_get: 'voice_line_get not found: run supabase/voice-lines.sql in this Supabase project',
   voice_line_put: 'voice_line_put not found: run supabase/voice-lines.sql in this Supabase project',
 };
+// her Telegram bot and its feed (2026-09-29): supabase/telegram.sql
+for (const fn of ['tg_get', 'tg_join', 'tg_set', 'tg_forget', 'tg_due', 'tg_mark', 'feed_add', 'feed_recent', 'feed_state_get', 'feed_state_put']) {
+  MISSING[fn] = `${fn} not found: run supabase/telegram.sql in this Supabase project`;
+}
 
 // One database function call (also used by server/voice-store.js for her recorded lines).
 export async function rpc(cfg, fn, args, label) {

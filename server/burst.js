@@ -29,3 +29,6 @@ export const voiceBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });
 // and each is shared by the CDN for a week, so 240 a minute only stops scripts.
 export const checkerBurst = makeBurstLimit({ max: 30, windowMs: 60_000 });
 export const pictureBurst = makeBurstLimit({ max: 240, windowMs: 60_000 });
+// Her Telegram bot (api/telegram.js, 2026-09-29): a person types a few messages a minute at most, so 20 updates a minute per
+// chat (keyed by a code of the chat) only stops floods before they reach the database or Telegram.
+export const telegramBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });

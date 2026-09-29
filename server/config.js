@@ -38,6 +38,9 @@ export function getConfig(env = process.env) {
     voiceName: env.AGI1_VOICE || 'Despina',
     voiceDailyRequests: number('VOICE_DAILY_REQUESTS', 4000),
     voiceStream: env.VOICE_STREAM !== 'off',      // stream her replies (starts faster); "off" = one whole clip each
+    // Her Telegram bot (2026-09-29): Telegram's share of the day's AI replies (inside the site's CHAT_DAILY_CAP), so
+    // Telegram alone can't use up the website's chat
+    telegramDailyCap: number('TELEGRAM_DAILY_CAP', 400),
     // ClankChecker (2026-09-26): coins whose picture the owner doesn't want on the site (contract addresses, separated by
     // commas); their letter shows instead. Optional
     checkerHidePictures: new Set(String(env.CHECKER_HIDE_PICTURES || '').toLowerCase().split(/[\s,]+/).filter((a) => /^0x[0-9a-f]{40}$/.test(a))),

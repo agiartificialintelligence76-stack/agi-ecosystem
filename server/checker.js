@@ -195,6 +195,32 @@ export async function latestClank({ now = Date.now() } = {}) {
   };
 }
 
+// ---------- the coins launched since a moment (2026-09-29, for AGI-1's feed: server/feed.js) ----------
+// Newest first, page by page, until a coin at or before `since` (ms) shows up, maxPages, or the deadline. → { coins
+// (launched after `since`, as the list shows them, but `progress: null` when clank.trade didn't say), newest (the newest
+// coin's launch time, ms, or 0), complete (reached `since`) }. A launch time in the future is a mistake: never trusted.
+export async function coinsSince(since, { maxPages = 5, deadline = Infinity, now = Date.now() } = {}) {
+  const raw = [];
+  let cursor = null, pages = 0, reached = false;
+  do {
+    const [page] = await clankApi([['coins.list', cursor ? { cursor } : {}]], { timeoutMs: 5000 });
+    if (!Array.isArray(page.data?.coins)) throw new Error('clank.trade sent no coin list');
+    raw.push(...page.data.coins);
+    pages += 1;
+    reached = page.data.coins.some((c) => (num(c?.createdAt) ?? 0) * 1000 <= since);
+    cursor = page.data.nextCursor;
+  } while (!reached && typeof cursor === 'string' && cursor && cursor.length < 1000 && pages < maxPages && Date.now() < deadline);
+  const unknown = new Set(raw.filter((c) => num(c?.progress) === null).map((c) => lc(c?.address)));
+  const soon = now + 5 * 60_000;
+  const all = listed(raw, null, []).filter((c) => c.createdAt <= soon);
+  remember(all);
+  return {
+    coins: all.filter((c) => c.createdAt > since).map((c) => ({ ...publicCoin(c), progress: unknown.has(c.address) ? null : c.progress })),
+    newest: all.reduce((n, c) => Math.max(n, c.createdAt), 0),
+    complete: reached || !cursor,
+  };
+}
+
 // ---------- a coin's picture ----------
 // Its IPFS id: remembered from the lists this server copy read, else asked from clank.trade (the coin's details).
 // → the id | null (not a clank.trade coin, or no picture) · throws when clank.trade doesn't answer

@@ -22,6 +22,8 @@
 >   Arena's old place right after the Playground. The code keeps its old name (`checker.js`, `chk-*`, "ClankChecker" here).
 > - **The front** (2026-09-28): the bright AGI landing of the ecosystem page that used to be here is back, as the first
 >   thing on the home page, with the whole site after it. See "The front".
+> - **She texts first** (2026-09-29): AGI-1's Telegram bot, the first step of the owner's big ideas. See "She texts first:
+>   her Telegram bot". And what the Clank developer docs offer this site: "The Clank protocol".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -49,6 +51,11 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   page opens with the bright AGI landing of the old ecosystem page (a loader on the first visit, the huge AGI letters,
   AGI-1 in WebGL with her speech bubble, the site's parts in orbit around her, ribbons, and the "General → Girlfriend"
   manifesto), then the whole site as before, under the same top bar
+- **She texts first** (2026-09-29, the owner's idea): AGI-1's Telegram bot. People who press Start (18+, their time told)
+  get a text from her when something happens: a new egirl coin on clank.trade (she's not okay about it), a copy of $AGI,
+  $AGI's market moments, her diary. At most 2 a day, never at night on their clock, pre-written lines (and her published
+  diary entry), /stop forgets them;
+  they can text her back (the site's chat, as a Stranger). See "She texts first: her Telegram bot"
 - **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
 It looks like an AI lab's model launch page (a parody, see "Design" below): serious design, meme content. (Pop mode is the
@@ -76,7 +83,12 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    variable that starts with `VITE_` to the browser, so never give a secret that prefix.
 5. **The browser never writes to the database directly.** All writes (chat counters, wallet names and notes, voice
    counts) go through our own `/api` functions, which check and limit them.
-6. **No automatic posting** to X or anywhere else. "Share on X" only opens a pre-filled post that the visitor sends themselves.
+6. **No automatic posting** to X or anywhere public. "Share on X" only opens a pre-filled post that the visitor sends themselves.
+   **One exception, the owner's (2026-09-29):** AGI-1's Telegram texts, only to people who pressed Start on her bot and
+   confirmed they're 18+, at most 2 a day, never at night on their clock, pre-written lines only (and her diary entry as
+   it's already published on /diary, written by AI once a day and checked in code; never an AI text written just for
+   Telegram), and /stop (or blocking the bot) forgets them (see "She texts first"). An autonomous X account needs the owner's decision
+   first (its cost, X's rules for automated accounts).
 7. **Keep costs near $0.** The total budget is $150. Prefer free tiers, and check every new feature against the budget table below.
 8. **Not financial advice.** Nothing on the site, and nothing AGI-1 says, promises gains or tells people to buy or sell.
    **One exception, the owner's choice (2026-09-25):** when a Stranger or a Crush runs out of messages for the day, AGI-1's
@@ -108,6 +120,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | Diary | Gemini, once a day, from the nightly keep-alive job | About $0.0008 a day (owner approved, 2026-09-24) |
 | Voice | **Gemini's speech model** (`gemini-3.8-flash-lite-tts`, voice **Despina**, her calm style with each reply's mood) through `/api/voice`; no robotic fallback (her natural voice or text, since 2026-09-25); her fixed lines kept in the database once made, and Gemini 3.8 Flash TTS as her backup model (2026-09-26) | Natural instead of robotic (owner's choice, 2026-09-25); same Google account and prepaid credits, no new service; a hard daily cap under Google's own (100 requests a day on Tier 1) |
 | Share cards | Drawn on a `<canvas>` in the browser; preview pictures are plain files | Free: no image server |
+| Telegram bot | Telegram's Bot API (free), from our server only: `/api/telegram` (its webhook) and `/api/feed` (8 cron runs a day) | She texts first (2026-09-29): opt-in by design (a bot can only text people who pressed Start), no app to build, no cost |
 
 ## Project structure
 
@@ -143,6 +156,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/chat/relationship.js` | The Relationship panel in the Playground: connect screen, level, name, AGI-1's notes, Forget me, the level-up moment |
 | `src/chat/voice.js` | Voice replies: the speaker button; plays her AI voice from `/api/voice` (Web Audio; her natural voice or nothing, never the browser's robotic one); what she says out loud (`speakable`, `clipSpeech`); her fixed lines (hello, out of messages, market moments, ClankChecker: downloaded once, early when you're about to need them; her call intro is her natural voice or nothing). One voice for the whole page: ClankChecker plays through the same one (`sharedVoice()`), and `agi1:speaking` tells every live view when she talks |
 | `src/chat/listen.js` | Voice chat (2026-09-25): the browser's free speech recognition, one message at a time (`listenOnce`), and whether this browser can listen (`canListen`) |
+| `src/chat/telegram-link.js` | She texts first (2026-09-29): shows the Playground's "Text me on Telegram ↗" once the bot's public name is set (`VITE_TELEGRAM_BOT`, read by `src/main.js`) |
 | `src/chat/limit-lines.js` | Out of messages (2026-09-25): what AGI-1 says when a Stranger or a Crush has used today's messages (the page shows it; her voice for it comes from `/api/voice?line=more-1` / `more-2`), and the safety note under it |
 | `src/chat/market-lines.js` | Market moments (2026-09-25): what AGI-1 says when $AGI reaches a new $200K market cap step (happy, she names it) or has a -20% day (sad); her voice for them: `/api/voice?line=mcap-<step>` / `dump-<n>`. The page and the server both read it |
 | `src/chat/market.js` | Market moments: watches the live $AGI numbers (`agi:prices`) in the visitor's browser and decides when she has something to say (once per step; at most one sad moment every 12 hours); remembered in the browser (`agi_market`) |
@@ -153,8 +167,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `public/cards/` | The link-preview pictures (one per level, the diary, and `home.jpg` for the home page; the champions' cards left with the Arena), made with `tools/cards/` |
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards") |
-| `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`) |
+| `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (Telegram's API, the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -162,7 +176,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/coins.sql` | Phase 6: the Arena's coin list, nominations and votes to add a coin + `coin_board/vote/nominate/active/logo/retire()`, and the owner tools `coin_remove()` / `coin_restore()`. **The original site's since 2026-09-28**, like `arena.sql`: never run it again from here, never drop its tables |
 | `supabase/voice.sql` | AGI-1's voice (2026-09-25). Run once in the same Supabase project, **after** `chat-limits.sql`: `voice_take()`, which counts voice use in the chat's counter table (the hard daily cap; since 2026-09-26 in requests, no need to run it again) |
 | `supabase/voice-lines.sql` | Her recorded lines (2026-09-26). Run once in the same Supabase project (any time): the `voice_lines` table + `voice_line_get/put()`, where the server keeps her fixed lines once Google has made them |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27: AGI-1 in 2D: which AGI-1, her springs, drifts, blinks, eyelids, the 2.5D turn, her mouth, her elbows, the rig's data and pictures, the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27: AGI-1 in 2D: which AGI-1, her springs, drifts, blinks, eyelids, the 2.5D turn, her mouth, her elbows, the rig's data and pictures, the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `scripts/check-secrets.js` | Runs after every build and fails it if a secret would be shipped to browsers |
 | `tools/model/` | Offline 3D-model tools, not part of the site build: `fix-hair-weights.mjs`, `drop-tangents.mjs` (see "3D models") |
 | `tools/agi1-2d/` | 2026-09-27, offline: turns the owner's 2D art (`agi 2d anime/agi-vtuber.html`) into `public/models/agi1-2d/`: takes the layers out, cleans them up, upscales them 2× (an anime upscaler, run once), packs them. `bash tools/agi1-2d/build.sh "agi 2d anime/agi-vtuber.html"` (see "AGI-1 in 2D") |
@@ -170,13 +185,13 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `tools/memory/` | Phase 6, offline: `build-memory.mjs` turns the Telegram export into `server/tg-memory-data.js`; `lore.json` (hand-written memory cards: eras, running jokes, big moments; edit freely); `forget.json` (people who asked to be left out). See "AGI-1's memory of the Telegram group" |
 | `telegram memories/` | The owner's Telegram export (`result.json`, 31 MB, thousands of people's messages). **Never in git** (`.gitignore`); only `tools/memory/` reads it |
 | `vite.config.js` | Two pages (`index.html`, `diary.html`); raises Vite's file-size warning: three.js is large on purpose and loads separately |
-| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), security headers (CSP), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` |
+| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), security headers (CSP), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed` |
 
 ## Commands
 
 - `npm install`: downloads the packages listed in `package.json` into `node_modules/` (git ignores it).
 - `npm run dev`: local preview with instant reload at http://localhost:5173. The `/api` functions (chat, voice, the diary, the risk check…) don't run here.
-- `npm test`: runs all automated tests (the files listed in `package.json`: chat, prices, keep-alive, the page's warnings, wallet sign-in and levels, the diary, voice, the risk check, the front…; a few seconds, no keys needed).
+- `npm test`: runs all automated tests (the files listed in `package.json`: chat, prices, keep-alive, the page's warnings, wallet sign-in and levels, the diary, voice, the risk check, the front, her Telegram bot…; a few seconds, no keys needed).
 - `npm run build`: runs the tests, builds the site into `dist/`, writes the share pages (`scripts/share-pages.js`), then runs the
   secret check. Vercel runs this on every push, so a failing test stops a broken chat from going live. Each test may take at
   most 30 s (`--test-timeout`): a stuck test fails the build within a minute instead of hanging it for 45 minutes.
@@ -689,7 +704,7 @@ The owner: "can you remove everything about cabo and clankcap". Done on this sit
 
 Built 2026-09-24. The owner's choices: the diary uses Gemini once a day (about $0.0008), the ready-made posts don't mention
 an X account, voice used only the browser's free text-to-speech (upgraded 2026-09-25: see "AGI-1's voice"). **Nothing is ever
-posted automatically.**
+posted automatically** (her Telegram texts, since 2026-09-29, go only to people who asked for them: hard rule 6).
 
 **AGI-1's diary** (`/diary`: `diary.html`, `src/diary.js`, `api/diary.js`, `server/diary.js`, `supabase/diary.sql`):
 - One short entry a day about the day before (UTC): her day and how the $AGI chart moved ($AGI's 24-hour change and volume
@@ -1336,6 +1351,169 @@ sideways scrolling); the picture host down (letters, and no broken picture in he
 accessibility (axe: the list with an answer open and the big view, 2
 widths × 2 themes); a clean console).
 
+## She texts first: her Telegram bot (2026-09-29)
+
+**The owner's idea** (in a message of big ideas: her own X account, spokesmodel reads paid in burned $AGI, her own wallet,
+video): "make her the one who texts first. telegram bot or push, she hits you with 'someone launched another egirl coin and
+i'm not ok.' no companion app does that." Claude's plan (sent to the owner, "make this better then continue"): one feed of
+moments with several outlets, in this order: **the feed + Telegram** (built) → X → video clips → a "paper bag" (a pretend
+$1,000 with a public journal before any real wallet) → burns for reads (after a legal check). Telegram first: free, and
+opt-in by design (a bot can only text people who pressed Start), with no app to build. Not browser push: that needs a
+service worker, a permission prompt, and only arrives while the browser runs.
+
+**What people see:**
+- **On the site:** a "She texts first" box under the Playground's Relationship panel: "Get texts from AGI-1 on Telegram
+  when something happens on clank.trade: at most 2 a day, never at night, /stop anytime. 18+." and **Text me on Telegram ↗**
+  (a plain link to `t.me/<bot>?start=site`). Hidden until `VITE_TELEGRAM_BOT` is set (`src/chat/telegram-link.js`).
+- **In Telegram:** /start → her welcome and "are you 18 or older?" (two buttons). Under 18 → a kind no, and nothing is kept.
+  18+ → "what time is it for you right now?": 24 buttons, one per hour with today's minutes (one tap; a 30-minute time
+  zone picks the closest; each button carries only its hour and the difference to UTC is worked out at the tap, so a tap
+  hours later is still right), or typed (`/time 21:30`, "9:05 pm") → she explains her rules and the commands.
+- **She texts first** when something happens (pre-written lines, `server/tg-lines.js`, no AI cost):
+  - a new **egirl / AI-girlfriend coin** on clank.trade: "someone launched another egirl coin and i'm not ok 😤 $EGIRL… is
+    that supposed to be me? not financial advice, just jealousy" (three ways). **Nobody bought it in its first half hour**
+    (checked at least half an hour after its launch, and only when clank.trade says so) → the roast the owner asked for,
+    about the coin, never a person: "someone launched an egirl coin, $EGIRL, and nobody bought it in its first half hour 🙈
+    i shouldn't laugh. i'm laughing a little. not financial advice" (true however late it's read). Several in one run → one text
+    ("3 new egirl coins on clank.trade 😩 $GF, $WAIFU and $EGIRL2. i'm the original and i'd like that on the record…");
+  - a coin using **$AGI's ticker** that isn't the official one (a Cyrillic or Greek look-alike letter too): jealous, with
+    the official contract (a safety note too);
+  - **$AGI's market moments**: the site's exact lines (a new $200K step: happy; a -20% day: sad), decided the same way
+    (`marketStep`, src/chat/market.js);
+  - **her diary's new entry** (as this site shows it: never the Arena), with the link to /diary.
+  Never a crude-named or hidden coin, never the official $AGI as "new", never a link to another coin.
+- **When:** at most **one text a run and 2 a day**, only **10:00–21:59 on their clock**, only **while it's news (12 hours)**;
+  when several moments are new to someone, the best first: a copy of $AGI, then the chart, egirl coins, her diary. Someone
+  who hasn't told her their time gets no texts first (they can still chat).
+- **They can text her back** anytime: the site's chat (Gemini, her prompt, PG-13, the reply cleanup), as a **Stranger** (no
+  pet names; no wallet here), **10 messages a day per chat**, inside the site's 1,000 a day and **Telegram's own share of
+  it, 400 a day** (`TELEGRAM_DAILY_CAP`: Telegram has no human check, so it can never use up the website's chat); her prompt
+  gets a "WHERE YOU ARE: TELEGRAM" part (`telegramPrompt()`). A bare "telegram" or "tg" doesn't bring up her memory of the
+  clank.trade group there (it's just where they are); "the telegram group" still does. If they reply to one of her texts, Telegram sends that text along and she gets
+  it as context (only a message from the bot itself counts). Nothing of the chat is kept. Stickers and pictures: "i can only
+  read text for now 🙈". Her limit lines have no buy offer there (the site's out-of-messages offer stays on the site).
+- **Commands:** /start, /time, /help, /stop ("okay 💜 i stopped, and i forgot this chat"). Blocking the bot forgets them too.
+- **Her lines' rules** (`tests/telegram.test.js`): PG-13; no pet names (anyone can start the bot); never buy / sell / hold,
+  "safe", "scam", "rug", gains or predictions; "not financial advice" whenever she names a coin or the chart; a ticker only
+  if Telegram can't turn it into a link, a mention, a hashtag or a tappable command (`tgTicker()`: a "/" only between two
+  letters or numbers); plain text (no Telegram formatting), no link previews; links only to agi1.app.
+
+**How it works:**
+- **`/api/telegram`**, the bot's webhook: every update carries our secret (`X-Telegram-Bot-Api-Secret-Token`, an HMAC of
+  PASS_SECRET, compared in constant time); anything else is 401. Private chats only (groups, channels and other bots are
+  ignored); 64 KB at most; 20 updates a minute per chat (a flood gets no answer at all). Once the secret matched it always
+  answers 200, so Telegram doesn't send the same update again; if something failed she says "i'm a little overwhelmed
+  right now 🙈".
+- **`/api/feed`**, Vercel's cron: 8 runs a day, at :30 past 01, 04, 07, 10, 13, 16, 19 and 22 UTC (Hobby runs each within
+  its hour; after the keep-alive's 03:00 run, so her diary is ready by the 04 run). Each run:
+  1. `connectBot()`: sets the webhook with the secret (every run, so a new PASS_SECRET or address fixes itself); whenever her
+     commands aren't hers (the first time, or after a failed try) also her descriptions, then her commands (the "done"
+     mark); logs Telegram's own note about its last failed delivery, with a hint;
+  2. `gatherMoments()`: clank.trade's newest coins since the last run (`coinsSince()` in server/checker.js, the list the risk
+     check reads), $AGI from DexScreener, the diary table. **The very first run only notes where everything is** (the newest
+     coin, the market cap step, the diary day): nobody gets old news. Each moment has a key (`clone:0x…`, `clones:<hash>`,
+     `copy:0x…`, `mcap:1200000`, `sad:2026-09-29`, `diary:2026-09-28`) and happens once; moments are kept 30 days;
+  3. `textFirst()`: each text is **claimed in the database before it's sent** (`tg_claim`, a compare-and-set on the newest
+     moment they heard about), so two runs at once (a doubled cron run, or the owner's Run button) or a run cut short never
+     text anyone twice; at worst someone misses one. 25 texts a second, paced across the whole run (Telegram allows about 30
+     for a bot); the whole run stops starting new work 19 s in (Vercel stops a function at 25 s), about 350 texts; the
+     rest go next run. Telegram's "too many" ends the run and gives those claims back; someone who blocked the bot is
+     forgotten.
+- **`supabase/telegram.sql`**: `agi1_tg_friends` (the chat's number, 18+, their time difference, the newest moment she texted
+  them about, her texts today), `agi1_feed` (the moments), `agi1_feed_state` (where the feed is), `agi1_tg_usage`
+  (Telegram's replies per day), 12 functions. Row level security on, only the server's secret key. Only added: nothing the
+  original site uses changes.
+
+**Setup (the owner, once; all free):**
+1. **Telegram → @BotFather** → `/newbot` → a name (e.g. "AGI-1") → a username ending in "bot" (e.g. `agi1_gf_bot`) → it
+   answers with a **token**: a secret (never in chat, code or git). Her picture: `/setuserpic` there (optional, any time).
+2. **Supabase** → the same project → SQL Editor → New query → paste **all** of `supabase/telegram.sql` → Run. It ends with
+   `telegram_functions_found = 12`.
+3. **Vercel** → agi-ecosystem → Settings → Environment Variables (Production): `TELEGRAM_BOT_TOKEN` = the token,
+   `VITE_TELEGRAM_BOT` = the username without the @ → **Redeploy**.
+4. **Vercel** → Settings → **Cron Jobs** → `/api/feed` → **Run**: connects the bot at once (otherwise the next scheduled run
+   does it, within 3 hours).
+5. **Try it** on a phone: the site's "Text me on Telegram ↗", Start, "I'm 18 or older", your time, say hi. Her first text
+   comes with the next moment, in your daytime.
+
+**Cost:** Telegram's Bot API is free. Her texts first are pre-written (no AI). Replies cost what the site's chat costs
+(about $0.0005 each), inside the same 1,000 a day. Vercel: 8 short cron runs a day and one small run per message; Supabase:
+three small tables. About $0.
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| She never answers in Telegram | `[telegram] not configured: …` | Set `TELEGRAM_BOT_TOKEN` (and the chat's settings), then Redeploy |
+| She never answers, nothing in the log | (none) | The bot isn't connected yet: run the `/api/feed` cron job (setup step 4) |
+| She never answers | `[feed] couldn't connect the Telegram bot: telegram getWebhookInfo: HTTP 401 … (TELEGRAM_BOT_TOKEN is wrong …)` | Copy the token again: @BotFather → /mybots → the bot → API Token; Redeploy; run the cron job |
+| She never answers | `[telegram] Telegram's last delivery problem: Wrong response from the webhook: 308 …` | The site's address redirects: set `SITE_URL` to the address that doesn't (e.g. `https://www.agi1.app`), Redeploy, run the cron job |
+| She never answers | `[feed] couldn't use the feed's database: … run supabase/telegram.sql …` | Setup step 2 |
+| "i'm a little overwhelmed right now 🙈" | `[telegram] database unavailable: …` / `limits unavailable` | The database (a paused Supabase project: resume it; see the chat's troubleshooting) |
+| "hmm, my mind went blank 🙈" | `[telegram] gemini failed: …` | Gemini (the same fixes as the site's chat) |
+| No texts first | (none) | Nothing new yet, their night, 2 already today, or they never told her their time (`/time`) |
+| Some texts come a run later | `[feed] Telegram said "too many" for now …` | Normal with many people: the rest go next run |
+| She answers late or not at all at busy times | (Vercel → Firewall shows 429s for `/api/telegram`) | The firewall's "API speed limit" counts all of Telegram as one visitor: exclude `/api/telegram` from it (see "Chat" under "Security & cost rules") |
+| One person gets no answers for a minute | (none) | They sent more than 20 messages or taps in a minute (the per-chat speed bump): it passes by itself |
+| "i'm all talked out for today 🥱" early in the day, on Telegram only | (none) | Telegram's share of the day's replies is used (`TELEGRAM_DAILY_CAP`, 400). Raise it in Vercel (it stays inside `CHAT_DAILY_CAP`), then Redeploy |
+| Someone missed one of her texts | `[feed] a text may not have gone out (not tried again, so never twice): …` | By design: a text that may have arrived is never sent again |
+
+**Tests:** `tests/telegram.test.js` (25: her lines' rules; the tickers she may say; her time buttons (a late tap too), typed
+times and quiet hours; the webhook's secret, groups, other bots, bad bodies, never a retry storm; /start, 18+, under 18, her time, /time,
+/stop, /help, not text, starting over; a flood from one chat (20 updates a minute); her replies as a Stranger with the site's limits, the chat's daily code (never its
+number), her earlier text only when it's really hers; "telegram" alone never brings up the group memory; too long, too fast, out of
+messages, all talked out, Telegram's own share used, the database or Gemini down; her Telegram prompt; connecting the bot (the secret every run, commands once, the redirect hint); the feed's
+first run; egirl coins, the roast, copies of $AGI (a Cyrillic "А" too), crude / hidden / official coins, several at once,
+clank.trade down, a failed save keeps the position, a launch time in the future, no progress = no roast, the market moments,
+the diary, telegram.sql missing; texting first (the window, 2 a day, a new day, one a run, priorities, old news, blocked,
+"too many" and its claims given back, two runs at once never text anyone twice); `/api/feed`; the page's link; the token in
+the secret check; 8 cron runs). The SQL ran in a real Postgres (PGlite, 52 checks: Supabase's own grants, running it twice,
+joining, 18+, time, due and paging, claims (twice = nobody, given back once, bad rows), Telegram's daily share, marking,
+blocked, the feed's keys and 12 hours and 30 days, the state, other tables untouched, the browser keys refused, the server
+key allowed, RLS). A review by a second Claude agent found 9 problems before this shipped (two runs at once could text
+someone twice, a late tap on the time buttons, a "/" that Telegram would make a command, and six smaller ones); all are
+fixed and tested. The page in a browser (72 checks: both looks × both themes × 1440 / 390 / 360 px: shown with a bot set, the
+link, fits, axe 0 issues, keyboard focus, a clean console). **Not tested live:** Telegram and the cron runs (Claude's
+workspace can't reach Telegram): the first real check is the owner's setup (step 5).
+
+**Next steps of the plan** (each needs the owner's decision first): her own X account (X's pay-per-use API: about $0.015
+a post, $0.20 with a link, so links go in the bio; AI replies need X's approval; the "Automated" label; roughly $5–20 a
+month), video clips of her reactions (TikTok / Reels by hand at first), the "paper bag" (a pretend $1,000 and a public
+journal before any real wallet: limits in code, and a real one only if ever), and burns for reads (the project burns $AGI
+from its own wallet and our server checks it on-chain; a legal check first; paying never buys a better risk level).
+
+## The Clank protocol (developer.clank.trade), read 2026-09-29
+
+The owner asked for a summary and how to use it on the site. **What it is:** the docs of the Clank V2 contracts behind
+clank.trade on Robinhood Chain (4663). Not a web API: no keys, no HTTP API, no webhooks, no terms, and no referral fee for
+websites (every fee goes to the factory's `feeDestination`). Also a copy-paste TypeScript file (viem) that quotes and builds
+buy / sell transactions, a brand kit, and llms.txt files.
+- **Addresses:** the factory `0x798daAa0707C1e538bB5Acf0867Ac0e1A84cccF2` (deployed at block 69,067,760: read from there),
+  the launch-and-buy forwarder `0xac20d0d5cc0F89ee4f6d5f8E6870a36EAF2E0dD7`, Uniswap V4's PoolManager
+  `0x8366a39CC670B4001A1121B8F6A443A643e40951` (the risk check already knows it), the Universal Router
+  `0x8876789976decbfcbbbe364623c63652db8c0904`, the V4 Quoter `0x8dc178efb8111bb0973dd9d722ebeff267c98f94`, Permit2
+  `0x000000000022D473030F116dDEE9F6B43aC78BA3`, WETH `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73`.
+- **A coin's life:** 1B supply and its own bonding curve (1% on buys and sells); the curve's states Trading 0 · Ready 1
+  (sold out) · Swept 2 · PoolCreated 3 · Rescued 4; then a Uniswap V4 pool (0.3%) whose position goes to a locker with no
+  way to withdraw it. Launching is free; creator tax must be 0 and buybacks off; no snipe tax on launch config 0.
+- **Reads** (exact ABIs on developer.clank.trade/reference/contracts/index.md): the factory's `getLaunchedToken(token)` (its
+  curve, deployer, pair token, graduation threshold, pool fee, tick spacing, phase, what was swept and when, `exists`) and
+  `getLaunchConfig(id)`; the curve's `state()`, `getReserves()`, `realQuoteReserve()`, `realTokenReserve()`, `quoteBuyFor`,
+  `quoteSell`; the coin's `name`, `symbol`, `totalSupply`, `balanceOf`, `deployer()`, `curve()`, `logo()`, `description()`,
+  `socials()` and `burn(amount)`.
+- **Events** to follow launches and trades (`TokenLaunched`, `LaunchSwept`, `PoolGraduated`; `CurveBuy`, `CurveSell`,
+  `StateChanged`, `CurveCompleted`; the PoolManager's `Initialize` and `Swap`): the docs name them but **spell out only
+  `Swap`**, so check the others against the live contracts before relying on them.
+- clank.trade's own website API (what the risk check and her feed read) has the same shape (a curve, `state`, a V4 pool with a
+  hook, a graduation at about 4.28 ETH), so its coins, $AGI included, look like they run on these contracts. Not checked
+  on-chain yet (Claude's workspace can't reach Robinhood Chain; Vercel can).
+- **How it fits this site** (Claude's answer to the owner): read-only, on our server, no new service or cost: 1. a safety net
+  for the risk check (read a coin from the chain when clank.trade's API fails), 2. sharper flags (a graduation that got stuck;
+  the pool's liquidity locked for good as a "good to know", never "safe"), 3. her feed straight from the chain (once the
+  events are checked), 4. proof of burn for the "burn $AGI to get read" idea. **Not recommended:** a buy / sell or launch
+  button on the site (hard rule 9 and its test, legal risk, no referral fee, and the clank.trade link already does it).
+  1 and 2 come next.
+
 ## Pop mode (2026-09-27)
 
 **The owner's request:** a button beside the dark / light button that switches the whole design of the page to the look
@@ -1776,7 +1954,9 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   or sell", and note 04 that its scans are read by our server from public sources (clank.trade, DexScreener, a block
   explorer) and nothing about the visitor is sent to them (since round 2: its scans and coin pictures, from clank.trade and
   its picture host, DexScreener and a block explorer). Since 2026-09-28 note 01 calls it “Risk check your coins on clank”.
-  Last updated September 28, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
+  Since 2026-09-29 note 01 says her Telegram texts are never a tip either, note 03 that her Telegram bot is 18+ and PG-13
+  too and texts first at most twice a day until /stop, and note 04 what the bot keeps and that /stop deletes it.
+  Last updated September 29, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
   AI provider (no "Google"/"Gemini"; it says "an AI service"), and there's no "Not a real lab" note. **2026-09-25:** "A parody"
   is gone from the bottom bar (both pages); it now reads "© 2026 AGI. No labs were harmed." and "$AGI is a token made
   by AGI, launched on clank.trade. Entertainment only · Not financial advice." The share pictures, link previews and
@@ -1847,7 +2027,10 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   one project: the owner set it up on `agi-new-website` (2026-09-24). For this one: Vercel → agi-ecosystem → **Firewall** →
   **Configure** → **+ New Rule** → name "API speed limit" → If **Request Path** **starts with** `/api/` → Then **Rate Limit**
   → Fixed Window, **60 s**, **120 requests**, key **IP** → action **Default (429)** → Save Rule → **Review Changes** →
-  **Publish**. (These steps were in the Arena's section, which left on 2026-09-28.)
+  **Publish**. (These steps were in the Arena's section, which left on 2026-09-28.) Since her Telegram bot (2026-09-29), add
+  a second condition to that rule: **Request Path** **does not equal** `/api/telegram`. Telegram delivers every chat's
+  messages from a few of its own addresses, so the rule would count all of Telegram as one visitor; the webhook checks its
+  own secret and has its own per-chat speed bump.
 - **Money hard stop:** Gemini prepaid credits (top up small amounts, auto-reload OFF) plus a monthly spend cap in AI Studio.
 
 ### Votes and coins (`/api/vote`, `/api/coins`, `/api/logo`): removed with the Arena (2026-09-28)
@@ -1913,6 +2096,23 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 - AGI-1's part only after the 18+ check; her lines are the fixed ones (`src/checker/lines.js`), never AI-written, and use
   nobody's voice allowance.
 
+### Her Telegram bot (`/api/telegram`, `/api/feed`, 2026-09-29, see "She texts first")
+- The bot's token lives only in Vercel (`TELEGRAM_BOT_TOKEN`). The build fails if its value or anything shaped like a bot
+  token is in `dist/` (`scripts/check-secrets.js`), and Telegram's error texts are scrubbed of it before any log line.
+- The webhook only acts on updates carrying our secret (an HMAC of PASS_SECRET, compared in constant time); private chats
+  only, 64 KB at most; 200 after that, so a failure never turns into Telegram re-sending the same update. A per-copy speed
+  bump (20 updates a minute per chat, `telegramBurst` in server/burst.js) drops floods before the database or Telegram.
+- Kept per chat: its number (Telegram's id for it, needed to text them), 18+, their time difference, the newest moment she
+  texted them about, her texts that day. Never their messages, names, usernames or phone numbers. /stop and blocking the bot
+  delete the row. Message limits are counted under a daily HMAC code of the chat, never its number.
+- Her replies go through the site's chat (PG-13, safety filters, the reply cleanup, the Stranger level, the site's daily
+  cap). Her texts first are pre-written and tested, never AI-written; plain text, no link previews, tickers filtered.
+- Each text first is claimed in the database before it's sent, so nobody gets the same text twice; Telegram's replies have
+  their own daily share (`TELEGRAM_DAILY_CAP`, 400 of the site's 1,000), so Telegram can't use up the website's chat.
+- The feed only reads public data (clank.trade's list, DexScreener, our own diary). Nothing about the people who get her
+  texts leaves our server except to Telegram (their chat's number, to text them). The page only links to t.me: the CSP
+  doesn't change.
+
 ### 3D models
 - Before a `.glb` goes into the project, run it through gltf-transform (free): textures ≤ 2048 px WebP, geometry quantized.
   Aim for ≤ 5 MB each. The exact command used for AGI-1, which keeps every triangle, the skeleton and the animations:
@@ -1949,7 +2149,8 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
   `tests/prices.test.js` checks that the prices domain is allowed.
 - No inline `<script>` or `style="…"`: the CSP blocks them. Put code in `src/` and styles in CSS files. (The share pages
   use `/share/go.js` for the same reason; a test checks they have no inline scripts.)
-- "Share on X" is only ever a link the visitor clicks; nothing on the site can post anywhere (hard rule 6).
+- "Share on X" is only ever a link the visitor clicks; nothing on the site can post anywhere public (hard rule 6). Her
+  Telegram texts (2026-09-29) go only to people who pressed Start on her bot and confirmed they're 18+.
 - Every build runs `scripts/check-secrets.js`. It fails the build if `dist/` contains a Google API key, a Supabase secret key,
   a private key, or the value of any secret env var. Add new secret env var names to its list.
 - Emergency switch if the site is attacked: Vercel → Firewall → Attack Challenge Mode (free).
@@ -1966,6 +2167,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | Robinhood Chain public node | Free, no key, rate-limited | Balance checks fail; people keep their last level and it retries |
 | Pinata picture gateway (clank.trade's coin pictures) | Free for us; each ClankChecker coin's picture (two sizes) is fetched about once a week per CDN region | The coin shows its first letter instead |
 | clank.trade's API (ClankChecker, 2026-09-26) | Free, no key; the list about once per 5 minutes per CDN region (about 17 small requests for 200 coins), the newest coins at most once per 10 seconds per region while someone watches (1 request), each coin asked about once per 5 minutes (1 minute for new coins; 2 requests) | ClankChecker says "Couldn't reach clank.trade" / "Not enough data"; nothing else is affected |
+| Telegram Bot API (her bot, 2026-09-29) | Free; about 30 messages a second per bot (she sends 25) | Telegram says "too many": that run stops, the rest go next run |
 | Blockscout block explorer (ClankChecker) | Free, no key; only for coins with 100+ holders, once per 5 minutes per coin | The scan says "More than 100 wallets hold it" |
 
 ## Environment variables
@@ -1994,6 +2196,9 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `VOICE_DAILY_REQUESTS` | no, optional | Spoken replies a day for the whole site, counted like Google counts requests (default 4,000 ≈ $12 a day at most, $24 from 2027; the owner's choice, 2026-09-26). Smaller = spend less; raise it only if Google gives the project more than that (see "Google's limits"), then Redeploy. (Replaced `VOICE_DAILY_CAP`, the old cap in characters, on 2026-09-26: delete that one if it was ever added) |
 | `VOICE_STREAM` | no, optional | `off` = ask Gemini for one whole clip per reply instead of streaming it (slower start; only if streaming ever misbehaves) |
 | `CHAT_MIN_GAP_MS` | no, optional | Minimum time between one visitor's messages (default 3000) |
+| `TELEGRAM_BOT_TOKEN` | **yes** | Her Telegram bot's token, from @BotFather (2026-09-29, see "She texts first"). Without it the bot is off (the feed still runs) |
+| `TELEGRAM_DAILY_CAP` | no, optional | Her Telegram replies a day, all chats together, inside `CHAT_DAILY_CAP` (default 400), so Telegram can't use up the website's chat |
+| `VITE_TELEGRAM_BOT` | no (public) | Her bot's username without the @ (e.g. `agi1_gf_bot`): shows the Playground's "Text me on Telegram ↗". Built into the page, so Redeploy after changing it |
 | `CHECKER_HIDE_PICTURES` | no, optional | ClankChecker (2026-09-26): coins whose picture the owner doesn't want on the site, as contract addresses separated by commas; they show their letter instead. Redeploy after changing it |
 
 Messages per day now depend on the relationship level (10 / 50 / 150 in `src/lib/levels.js`), so `CHAT_PERSON_DAILY` is gone.
@@ -2214,6 +2419,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   the Arena's, the champion's and the coins' tests left with them); end to end in a browser (the top bar fits at every
   width in both looks, every link lands, the front and its planet names, the 3D stage and the chat's live view, Pop mode and
   theme switches keeping your place, phones down to 320 px, axe 0 issues, a clean console).
+- **She texts first (her Telegram bot): built 2026-09-29, waiting for the owner's setup and OK** (the owner's big-ideas
+  message; step 1 of Claude's plan: the feed + Telegram, then X, clips, a paper bag, burns). See "She texts first". Hard rule
+  6 got its one exception. **Owner:** the five setup steps (BotFather, `supabase/telegram.sql`, two settings, run the cron
+  job once, try it). Tests: 238 unit (on Node 20, 22 and 24; 25 new), 52 SQL checks (PGlite), the page in a browser (72
+  checks); a second Claude agent reviewed the code first (9 problems found, all fixed). Not tested live (Claude's workspace can't reach Telegram).
+- **The Clank developer docs: read 2026-09-29** (the owner asked for a summary and how to use it). See "The Clank
+  protocol". Next: the risk check's safety net and sharper flags from the chain.
 
 ## Decisions log
 
@@ -2340,6 +2552,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-09-28 | No "ecosystem" on the site (the owner: "can you just remove the word ecosystem, replace it with something better"; Claude picked the words): the front's list is **"Her world (05)"** (her bubble already says "welcome to my world", and every row is hers: her chat, her risk check, her diary, her coin, her X), and Pop mode's tooltip is "the bold AGI look". The pages' HTML comments said it too and ship with the page, so they changed as well (`tests/landing.test.js` keeps the word out). The folder `AGI 3 ECOSYSTEM`, the repo and the Vercel project `agi-ecosystem` keep their names: visitors never see them, and renaming them would break the link between this folder, GitHub and the live site |
 | 2026-09-28 | Her right hand on the front was cut off (the owner: "what happened to her hand"): the picture was fine, but `base.css` caps every `img`, `svg` and `canvas` at 100% of its box, and her WebGL canvas is meant to be 132% of her box (room for the print echoes), so its right 16% (her hand) was clipped. Fixed with `max-width: none` on `.lp-figure-gl`, and on the pink strike across "General" (108%, cut short by the same cap); `tests/landing.test.js` now fails the build if a front element wider than its box loses that |
 | 2026-09-28 | The project's X account is now **@agi1dotapp** (https://x.com/agi1dotapp, the owner's request), was @artgirlfintel: every X link on both pages (top bar, menu, footer, the front's planet, "Her world" row and ribbon) and their tests |
+| 2026-09-29 | She texts first (the owner's idea, "telegram bot or push"): a **Telegram bot**, not browser push (push needs a service worker and a permission prompt and only arrives while the browser runs; a Telegram bot can only text people who pressed Start, so it's opt-in by design). 18+ with two buttons, their time with one tap (24 buttons), at most 2 texts a day and one a run, only 10:00–21:59 their time, only while it's news (12 hours), pre-written lines (no AI cost, every line tested) and her diary entry as already published, /stop and blocking forget them. Replies: the site's chat as a Stranger (10 a day per chat, inside the site's 1,000, and Telegram's own share of 400, since Telegram has no human check). Each text is claimed in the database before it's sent (at most once: missing one beats getting one twice). Hard rule 6 got its one exception. Not picked: AI-written texts first (nobody would review them before they go out, and they cost), a daily "gm" (spam), naming coins with a link (it would read as shilling), the out-of-messages buy offer in Telegram (it stays a website thing) |
+| 2026-09-29 | Her feed runs 8 times a day from Vercel's cron (Hobby: each job once a day, within its hour; 100 jobs a project), at :30 past every third hour, so her diary (the keep-alive at 03) is ready by the 04 run. New coins come from clank.trade's own list (the one the risk check reads, proven live), not yet from the chain (the Clank docs don't spell out the events). The bot connects itself on each run (webhook + secret from PASS_SECRET), so the owner never runs a command |
+| 2026-09-29 | The Clank developer docs (the owner asked for a summary and how to use them): contracts, not an API. Told the owner: a chain safety net and sharper flags for the risk check, the feed from the chain once its events are checked, proof of burn for the burn idea later; not a buy / sell or launch button (hard rule 9, legal risk, no referral fee, and the clank.trade link does it) |
 
 ## Open questions
 
@@ -2358,6 +2573,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   curve contracts) instead. And once clank.trade has more than ~960 coins, the list shows the newest 960 (pasted contracts
   still work): paging could then move to a small database table filled by the keep-alive.
 - The chat avatar is a new portrait rendered from the 3D model. The owner can switch back to the old picture if wanted.
+- Her Telegram bot has no wallet link, so everyone is a Stranger there (10 messages a day, no pet names). Linking a wallet
+  from the site to Telegram (a signed one-time link) could come later if people ask.
+- When her feed should read launches from the chain (the Clank protocol's `TokenLaunched`) instead of clank.trade's list:
+  after checking the events against the live contracts. Until then it depends on clank.trade's API, like the risk check.
+- Her Telegram texts first: about 350 per run (8 runs a day). If the bot ever has more than about 1,400 people in the same
+  daytime, some texts arrive a run later; more runs or a longer texting budget would fix it.
 
 ## Working in this repo
 

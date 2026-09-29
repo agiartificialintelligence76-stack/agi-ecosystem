@@ -123,3 +123,7 @@
   .pg-status .dot { margin: 0; }
   .pg-bar-actions { gap: 6px; }
 }
+
+/* She texts first (2026-09-29): the link to AGI-1's Telegram bot, under the Relationship panel (hidden until the bot is set) */
+.pg-tg { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.pg-tg-text { font-size: 13px; color: var(--fg-2); }
