@@ -10,6 +10,9 @@ import { analyze, checkCoin, scanClank, latestClank, markCopycats, showTicker, t
 import { CHECK_LINES, LEVELS, checkLine, spokenOf } from '../src/checker/lines.js';
 import { LINES, LINE_MOODS, MOOD_STYLES } from '../server/voice.js';
 import { pick, usdShort, ageShort, agoText, stageText, mergeLatest, tidyCoin } from '../src/sections/checker.js';
+import { analyzeChain, LOCKED_TEXT } from '../server/checker.js';
+import { readCoinOnChain, shareOf, FACTORY, FACTORY_ABI, CURVE_ABI, TOKEN_ABI, STAGE } from '../server/clank-chain.js';
+import { decodeFunctionData, encodeFunctionResult } from 'viem';
 
 const NOW = Date.UTC(2026, 8, 26, 12, 0, 0);
 const S = NOW / 1000;
@@ -57,7 +60,45 @@ const scanOf = (o) => analyze({ detail: detail(), holders: holdersOf([[CURVE, 60
 const has = (scan, id, sev) => scan.flags.some((f) => f.id === id && (!sev || f.sev === sev));
 
 // ---------- fakes ----------
-let fake, calls, inits;
+let fake, calls, inits, rpcCalls;
+// Robinhood Chain (2026-09-29, the Clank protocol's contracts): answers eth_calls the way the contracts would, from
+// fake.chain = { coins: { [coin]: { launch, name, symbol, supply, logo, balances } }, curves: { [curve]: { state, reserve } } }
+const ZERO = '0x0000000000000000000000000000000000000000';
+// fake.chainFail: names of calls that fail on their own inside a batch (a node's per-call limit), the rest still answer
+function chainAnswer({ to, data }) {
+  const coins = fake.chain.coins || {}, curves = fake.chain.curves || {};
+  const out = (abi, functionName, result) => (fake.chainFail.has(functionName)
+    ? { error: { code: -32005, message: 'limit exceeded' } }
+    : { result: encodeFunctionResult({ abi, functionName, result }) });
+  const reverted = { error: { code: 3, message: 'execution reverted' } };
+  try {
+    if (to === FACTORY) {
+      const { args } = decodeFunctionData({ abi: FACTORY_ABI, data });
+      const c = coins[String(args[0]).toLowerCase()];
+      const none = { launchToken: ZERO, curve: ZERO, deployer: ZERO, creatorFeeRecipient: ZERO, pairToken: ZERO, graduationThreshold: 0n, poolFee: 0,
+        tickSpacing: 0, creatorTaxBps: 0, buybackEnabled: false, phase: 0, sweptPairToken: 0n, sweptLaunchTokens: 0n, sweptAt: 0n, exists: false };
+      return out(FACTORY_ABI, 'getLaunchedToken', c ? c.launch : none);
+    }
+    if (curves[to]) {
+      const { functionName } = decodeFunctionData({ abi: CURVE_ABI, data });
+      return out(CURVE_ABI, functionName, functionName === 'state' ? curves[to].state : curves[to].reserve);
+    }
+    const c = coins[to];
+    if (!c) return reverted;
+    const { functionName, args } = decodeFunctionData({ abi: TOKEN_ABI, data });
+    const value = { name: c.name, symbol: c.symbol, totalSupply: c.supply, logo: c.logo, balanceOf: c.balances?.[String(args?.[0]).toLowerCase()] ?? 0n }[functionName];
+    return value === undefined ? reverted : out(TOKEN_ABI, functionName, value);
+  } catch { return reverted; }
+}
+const launchOf = (coin, o = {}) => ({ launchToken: coin, curve: CURVE, deployer: CREATOR, creatorFeeRecipient: CREATOR, pairToken: ZERO,
+  graduationThreshold: 4276363636363636363n, poolFee: 3000, tickSpacing: 200, creatorTaxBps: 0, buybackEnabled: false, phase: 0,
+  sweptPairToken: 0n, sweptLaunchTokens: 0n, sweptAt: 0n, exists: true, ...o });
+const onChain = (coin, { state = 0, reserve = 950957059954408513n, creator = 0n, launch = {}, symbol = 'E/ACC', name = 'Egirl Acceleration', logo = `ipfs://${'bafkreiborp2klxbx4jemgyyuu4dmcjtd2kztj7psvrhjzesu76wjy2qgce'}` } = {}) => {
+  fake.chain = {
+    coins: { [coin]: { launch: launchOf(coin, launch), name, symbol, supply: 10n ** 27n, logo, balances: { [CREATOR]: creator, [CURVE]: 6n * 10n ** 26n } } },
+    curves: { [CURVE]: { state, reserve } },
+  };
+};
 function listRow(c) {
   return { id: `market:4663:${c.address}`, address: c.address, name: c.name, symbol: c.symbol, image: c.image ?? 'ipfs://x', creator: CREATOR, website: null, twitter: null,
     createdAt: String(c.createdAt ?? S - D), marketCap: c.marketCap ?? 1.55, quoteSymbol: 'ETH', quoteCurrency: '0x0000000000000000000000000000000000000000', state: c.state ?? 0, progress: c.progress ?? 0 };
@@ -70,7 +111,10 @@ beforeEach(() => {
   console.error = () => {}; console.warn = () => {}; console.log = () => {};
   calls = [];
   inits = [];
+  rpcCalls = [];
   fake = {
+    chain: null,                            // Robinhood Chain: null = the node doesn't answer (as before 2026-09-29)
+    chainFail: new Set(), chainDelay: 0, chainStringIds: false,
     down: false, wall: false,
     coins: {},                              // address → { detail, holders, trades }
     pages: [[]],                            // coins.list pages (rows)
@@ -82,6 +126,15 @@ beforeEach(() => {
   };
   globalThis.fetch = async (url, init = {}) => {
     url = String(url);
+    if (url === 'https://rpc.mainnet.chain.robinhood.com') {
+      const batch = JSON.parse(init.body);
+      rpcCalls.push(batch);
+      if (fake.chainDelay) await new Promise((resolve) => setTimeout(resolve, fake.chainDelay));
+      if (init.signal?.aborted) throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+      if (!fake.chain) return new Response('busy', { status: 503 });
+      if (fake.chain === 'no-batch') return Response.json({ jsonrpc: '2.0', id: null, error: { code: -32600, message: 'batch requests are not allowed' } });
+      return Response.json(batch.map((q) => ({ jsonrpc: '2.0', id: fake.chainStringIds ? String(q.id) : q.id, ...chainAnswer(q.params[0]) })));
+    }
     calls.push(url);
     inits.push(init);
     if (url.startsWith(PINATA)) {
@@ -404,6 +457,265 @@ test('checkCoin fails closed: not a clank.trade coin, clank.trade down or walled
   assert.ok(s.flags.some((f) => f.text === "Couldn't check for coins with the same ticker right now."), 'the search failing is a flag, not a crash');
 });
 
+// ---------- the Clank protocol (2026-09-29, developer.clank.trade) ----------
+test('a coin\'s stage, as the protocol has it: graduating (1, 2), graduated (3), rescued (4), and anything odd', () => {
+  const holders = holdersOf([[CURVE, 60], ...spread(60, 0.5)]);
+  for (const state of [1, 2]) {
+    const s = scanOf({ detail: detail({ state, progress: 100, reserve: '0' }), holders });
+    assert.equal(s.graduated, false);
+    assert.ok(has(s, 'stage', 'some'));
+    assert.equal(s.flags.find((f) => f.id === 'stage').text, "Graduating: its bonding curve sold out and its DEX pool isn't open yet. Graduations can fail: check clank.trade.");
+    assert.equal(s.facts.find((f) => f.label === 'Stage').value, 'Graduating');
+    assert.ok(!has(s, 'pool'), 'no pool to read yet');
+    assert.notEqual(s.level, 'low');
+  }
+  const rescued = scanOf({ detail: detail({ state: 4, progress: 100, reserve: '0' }), holders });
+  assert.ok(has(rescued, 'stage', 'high'));
+  assert.equal(rescued.level, 'high');
+  assert.equal(rescued.facts.find((f) => f.label === 'Stage').value, 'Rescued');
+  const odd = scanOf({ detail: detail({ state: 9 }), holders });
+  assert.ok(has(odd, 'stage', 'some'));
+  assert.match(odd.flags.find((f) => f.id === 'stage').text, /unusual stage/);
+  // graduated: as before, and never "graduating"
+  const g = scanOf({ detail: grad(), holders: holdersOf([[POOL_MANAGER, 14.84], ...spread(99, 0.8)]), trades: lively(120, 290), dex: { liquidity: 36547, change: -3, volume: 9000 }, holderCount: 465 });
+  assert.equal(g.graduated, true);
+  assert.ok(has(g, 'stage', 'ok'));
+  assert.ok(!has(g, 'locked'), 'no "locked" note without the protocol\'s own word');
+});
+
+test('the protocol confirms a graduated coin: its liquidity locked for good (a fair note, never "safe"); a curve clank.trade and the protocol disagree on', () => {
+  const holders = holdersOf([[POOL_MANAGER, 14.84], ...spread(99, 0.8)]);
+  const base = { detail: grad({ curve: CURVE }), holders, trades: lively(120, 290), dex: { liquidity: 36547, change: -3, volume: 9000 }, holderCount: 465 };
+  const s = scanOf({ ...base, chain: { exists: true, state: 3, curve: CURVE } });
+  assert.ok(has(s, 'locked', 'ok'));
+  assert.equal(s.flags.find((f) => f.id === 'locked').text, LOCKED_TEXT);
+  assert.doesNotMatch(LOCKED_TEXT, /\bsafe\b|\bbuy\b|\bsell\b/i);
+  assert.equal(s.level, 'low', 'a good-to-know, not a flag');
+  assert.deepEqual(s.onchain, { exists: true, state: 3, curve: CURVE });
+  assert.ok(!has(scanOf({ ...base, chain: { exists: true, state: 0, curve: CURVE } }), 'locked'), 'only when the protocol says it graduated');
+  assert.ok(!has(scanOf({ ...base, chain: { exists: false } }), 'locked'));
+  assert.deepEqual(scanOf({ ...base, chain: { exists: false } }).onchain, { exists: false });
+  assert.equal(scanOf(base).onchain, null, 'the chain didn\'t answer');
+  const other = scanOf({ ...base, chain: { exists: true, state: 3, curve: DEAD } });
+  assert.ok(has(other, 'record', 'some'));
+  assert.notEqual(other.level, 'low');
+  // only the liquidity the protocol put in at graduation is locked (anyone else's in the same pool isn't), and a price can fall
+  assert.match(LOCKED_TEXT, /^The liquidity the Clank protocol put in its pool at graduation is locked for good: .* Its price can still fall\.$/);
+  // the protocol says its graduation was rescued, clank.trade doesn't show it yet: the worse of the two counts
+  const sold = { ...base, detail: detail({ state: 1, progress: 100, reserve: '0' }), holders: holdersOf([[CURVE, 60], ...spread(60, 0.5)]) };
+  const rescued = scanOf({ ...sold, chain: { exists: true, state: 4, curve: CURVE } });
+  assert.ok(has(rescued, 'stage', 'high'));
+  assert.equal(rescued.facts.find((f) => f.label === 'Stage').value, 'Rescued');
+  assert.equal(rescued.flags.find((f) => f.id === 'record').text, "clank.trade doesn't show it yet, but the Clank protocol says its graduation was rescued.");
+  assert.equal(rescued.level, 'high');
+  // other stage differences are left alone (clank.trade can be a few seconds behind the chain)
+  const behind = scanOf({ ...sold, chain: { exists: true, state: 3, curve: CURVE } });
+  assert.ok(!has(behind, 'record'));
+  assert.equal(behind.facts.find((f) => f.label === 'Stage').value, 'Graduating');
+});
+
+test('readCoinOnChain: the documented calls in two batches, decoded; the node down or odd answers → null', async () => {
+  onChain(COIN, { state: 0, creator: 3n * 10n ** 25n });
+  const c = await readCoinOnChain(COIN);
+  assert.equal(rpcCalls.length, 2, 'two requests');
+  assert.equal(rpcCalls[0].length, 5, 'its record, name, ticker, supply and logo');
+  assert.equal(rpcCalls[1].length, 4, 'its curve\'s stage and ETH, what its creator and its curve hold');
+  assert.ok(rpcCalls.flat().every((q) => q.method === 'eth_call' && q.params[1] === 'latest'), 'eth_call only: nothing is ever sent or signed');
+  assert.equal(rpcCalls[0][0].params[0].to, FACTORY);
+  assert.deepEqual({ ...c, logo: undefined }, {
+    exists: true, curve: CURVE, deployer: CREATOR, pairToken: ZERO, state: 0, threshold: '4276363636363636363', reserve: '950957059954408513',
+    supply: '1000000000000000000000000000', creatorBalance: '30000000000000000000000000', curveBalance: '600000000000000000000000000',
+    name: 'Egirl Acceleration', symbol: 'E/ACC', logo: undefined, poolFee: 3000, sweptAt: 0,
+  });
+  assert.equal(shareOf(c.creatorBalance, c.supply), 3);
+  assert.deepEqual(await readCoinOnChain(DEAD), { exists: false }, 'not a coin the factory made');
+  fake.chain = null;
+  assert.equal(await readCoinOnChain(COIN), null, 'the node doesn\'t answer');
+  fake.chain = 'no-batch';
+  assert.equal(await readCoinOnChain(COIN), null, 'a node that refuses batches');
+  assert.equal(await readCoinOnChain('0x12'), null);
+  const before = rpcCalls.length;
+  assert.equal(await readCoinOnChain('not an address'), null);
+  assert.equal(rpcCalls.length, before, 'nothing asked for a bad address');
+  // a node that sends the ids back as strings is read all the same
+  onChain(COIN, { state: 0, creator: 3n * 10n ** 25n });
+  fake.chainStringIds = true;
+  assert.equal((await readCoinOnChain(COIN)).creatorBalance, '30000000000000000000000000');
+  // one call failing on its own inside a batch: that one value is unknown (null), never 0
+  fake.chainStringIds = false;
+  fake.chainFail = new Set(['balanceOf', 'realQuoteReserve']);
+  const part = await readCoinOnChain(COIN);
+  assert.equal(part.exists, true);
+  assert.equal(part.creatorBalance, null);
+  assert.equal(part.curveBalance, null);
+  assert.equal(part.reserve, null);
+  assert.equal(part.state, 0, 'the rest still answered');
+});
+
+test('the chain\'s smaller scan never reads what it couldn\'t read as 0: its creator, its curve, a forwarder, the explorer\'s contracts', () => {
+  const chain = { exists: true, curve: CURVE, deployer: CREATOR, state: 0, threshold: '4276363636363636363', reserve: '950957059954408513',
+    supply: String(10n ** 27n), creatorBalance: String(3n * 10n ** 26n), curveBalance: String(6n * 10n ** 26n), name: 'x', symbol: 'X', logo: null };
+  const full = analyzeChain(chain, { address: COIN, now: NOW });
+  assert.equal(full.flags.find((f) => f.id === 'creator').text, 'Its creator still holds 30%.');
+  assert.equal(full.level, 'high');
+  // its creator's balance (or the supply) didn't come back: unknown, a "some" flag, never "holds none" (was: 0%, and Some risk)
+  for (const gap of [{ creatorBalance: null }, { supply: null }, { supply: '0' }]) {
+    const s = analyzeChain({ ...chain, ...gap }, { address: COIN, now: NOW });
+    assert.equal(s.flags.find((f) => f.id === 'creator').text, "Couldn't read what its creator holds right now.");
+    assert.ok(has(s, 'creator', 'some'));
+    assert.equal(s.facts.find((f) => f.label === 'Creator holds').value, '—');
+  }
+  // launched through the protocol's forwarder (or no creator at all): who made it isn't known from the chain
+  for (const deployer of ['0xac20d0d5cc0f89ee4f6d5f8e6870a36eaf2e0dd7', FACTORY, ZERO, 'nope']) {
+    const s = analyzeChain({ ...chain, deployer, creatorBalance: '0' }, { address: COIN, now: NOW });
+    assert.equal(s.flags.find((f) => f.id === 'creator').text, "Couldn't tell from the chain who created it, so what its creator holds is unknown.");
+    assert.equal(s.facts.find((f) => f.label === 'Creator holds').value, '—');
+  }
+  // how full its curve is didn't come back: said so (never "barely started: 0%")
+  const noReserve = analyzeChain({ ...chain, reserve: null }, { address: COIN, now: NOW });
+  assert.equal(noReserve.flags.find((f) => f.id === 'stage').text, "Couldn't read how full its bonding curve is right now.");
+  assert.equal(noReserve.facts.find((f) => f.label === 'Stage').value, 'On its curve');
+  assert.equal(noReserve.facts.find((f) => f.label === 'In its curve').value, '—');
+  // an empty curve: "nobody bought it" only when every coin is still in it; otherwise 0% filled (true either way)
+  const empty = { ...chain, reserve: '0', creatorBalance: '0' };
+  assert.match(analyzeChain({ ...empty, curveBalance: String(10n ** 27n) }, { address: COIN }).flags.find((f) => f.id === 'stage').text, /^Nobody has bought it yet/);
+  assert.match(analyzeChain(empty, { address: COIN }).flags.find((f) => f.id === 'stage').text, /^Barely started: only 0% of its bonding curve is filled/);
+  assert.match(analyzeChain({ ...empty, curveBalance: null }, { address: COIN }).flags.find((f) => f.id === 'stage').text, /^Barely started/);
+  // the explorer counts contracts too: its curve comes off (and a graduated coin's PoolManager and hook)
+  const ten = analyzeChain(chain, { address: COIN, holderCount: 10, now: NOW });
+  assert.equal(ten.flags.find((f) => f.id === 'holders').text, "About 9 wallets hold it (the block explorer's count, without its curve).");
+  assert.ok(has(ten, 'holders', 'high'), '9 wallets and its curve: under 10 wallets');
+  assert.equal(ten.facts.find((f) => f.label === 'Holders').value, 'about 9');
+  const pool = analyzeChain({ ...chain, state: 3, curveBalance: '0' }, { address: COIN, holderCount: 52, now: NOW });
+  assert.equal(pool.flags.find((f) => f.id === 'holders').text, "About 50 wallets hold it (the block explorer's count, without its curve and pool).");
+  assert.ok(has(pool, 'holders', 'ok'));
+  assert.equal(analyzeChain({ ...chain, curveBalance: '0' }, { address: COIN, holderCount: 1 }).flags.find((f) => f.id === 'holders').text,
+    "About 1 wallet holds it (the block explorer's count, without its curve).");
+  // what it was read from
+  assert.equal(ten.facts.find((f) => f.label === 'Read from').value, 'Robinhood Chain, the block explorer');
+  assert.equal(pool.facts.find((f) => f.label === 'Read from').value, 'Robinhood Chain, the block explorer', 'no pool read: no DexScreener');
+  assert.equal(analyzeChain({ ...chain, state: 3 }, { address: COIN, dex: { liquidity: 30_000, change: 1 } }).facts.find((f) => f.label === 'Read from').value,
+    'Robinhood Chain, DexScreener');
+  // a coin clank.trade hasn't listed: brand new (or one it doesn't show), so High risk, like the age rule
+  const fresh = analyzeChain({ ...chain, creatorBalance: '0' }, { address: COIN, why: 'unlisted', now: NOW });
+  assert.equal(fresh.flags.find((f) => f.id === 'listed').text, "Not listed on clank.trade (yet): it's brand new, or a coin clank.trade doesn't show.");
+  assert.equal(fresh.level, 'high');
+  assert.ok(!has(analyzeChain(chain, { address: COIN, why: 'down' }), 'listed'));
+});
+
+test('a slow chain: a full scan waits for it at most 4 s, but when clank.trade fails its whole answer is used', { timeout: 20_000 }, async () => {
+  onChain(COIN, { state: 0, creator: 12n * 10n ** 25n });
+  fake.chainDelay = 2200;                                   // two batches: about 4.4 s, over the full scan's 4 s
+  fake.coins[COIN] = { detail: detail(), holders: holdersOf([[CURVE, 60], ...spread(60, 0.5)]), trades: lively() };
+  fake.search['E/ACC'] = [];
+  let t = Date.now();
+  const s = await checkCoin(COIN, { now: NOW });
+  assert.equal(s.source, undefined, 'clank.trade answered: the full scan');
+  assert.equal(s.onchain, null, 'without the chain\'s word');
+  assert.ok(Date.now() - t < 4_300, `not held up past 4 s (${Date.now() - t} ms)`);
+  await new Promise((resolve) => setTimeout(resolve, 1_000));  // (the slow read finishing in the background)
+  fake.down = true;
+  t = Date.now();
+  const c = await checkCoin(COIN, { now: NOW });
+  assert.equal(c.source, 'chain', 'the chain answered in 4.4 s: used');
+  assert.ok(has(c, 'creator', 'high'));
+  assert.ok(Date.now() - t >= 4_000);
+});
+
+test('checkCoin asks the chain alongside clank.trade: a graduated coin gets the protocol\'s word', async () => {
+  fake.coins[MEOW] = { detail: grad({ curve: CURVE }), holders: holdersOf([[POOL_MANAGER, 14.84], ...spread(99, 0.8)]), trades: lively(120, 290) };
+  fake.search.MEOW = [];
+  fake.dex[MEOW] = [pair(MEOW, 36547.73)];
+  fake.explorer[MEOW] = 465;
+  onChain(MEOW, { state: 3, reserve: 0n, symbol: 'MEOW', name: 'Meow' });
+  const s = await checkCoin(MEOW, { now: NOW });
+  assert.equal(s.source, undefined, 'clank.trade answered: the full scan');
+  assert.deepEqual(s.onchain, { exists: true, state: 3, curve: CURVE });
+  assert.ok(has(s, 'locked', 'ok'));
+  assert.equal(new URL(calls[0]).pathname, '/v1/trpc/coins.detail,coins.holders,coins.trades,exchangeRates.tokenUsdg', 'clank.trade still first');
+});
+
+test('clank.trade doesn\'t answer, or hasn\'t listed a coin yet: a smaller scan straight from the chain, never "Lower risk"', async () => {
+  onChain(COIN, { state: 0, reserve: 950957059954408513n, creator: 12n * 10n ** 25n });
+  fake.down = true;
+  fake.explorer[COIN] = 37;
+  const s = await checkCoin(COIN, { now: NOW });
+  assert.equal(s.source, 'chain');
+  assert.equal(s.flags[0].sev, 'high', 'worst first');
+  const source = s.flags.find((f) => f.id === 'source');
+  assert.equal(source.sev, 'some');
+  assert.match(source.text, /^clank\.trade couldn't be read just now, so this comes straight from Robinhood Chain: how spread out its holders are, its trades, its age and look-alike tickers couldn't be checked\.$/);
+  assert.ok(has(s, 'creator', 'high'), 'its creator holds 12%');
+  assert.ok(has(s, 'holders', 'some'), 'the block explorer\'s count');
+  assert.equal(s.progress, 22.23);
+  assert.match(s.flags.find((f) => f.id === 'stage').text, /22\.23% of its bonding curve is filled \(about 0\.951 ETH in it\)|Early: 22\.23%/);
+  assert.equal(s.facts.find((f) => f.label === 'Read from').value, 'Robinhood Chain, the block explorer');
+  assert.equal(s.facts.find((f) => f.label === 'In its curve').value, '0.951 ETH');
+  assert.equal(s.symbol, 'E/ACC');
+  assert.equal(s.image, true);
+  assert.equal(s.level, 'high');
+  assert.equal(await coinPictureId(COIN), 'bafkreiborp2klxbx4jemgyyuu4dmcjtd2kztj7psvrhjzesu76wjy2qgce', 'its picture, from its own contract, while clank.trade is down');
+  // never lower risk, even with nothing else to say
+  onChain(COIN, { state: 3, reserve: 0n, creator: 0n });
+  fake.dex[COIN] = [pair(COIN, 90_000, 2)];
+  fake.explorer[COIN] = 900;
+  const calm = await checkCoin(COIN, { now: NOW });
+  assert.equal(calm.level, 'some');
+  assert.ok(has(calm, 'locked', 'ok'));
+  assert.ok(has(calm, 'pool', 'ok'));
+  // clank.trade answers "not found": the chain may still know it (a coin too new to be listed)
+  fake.down = false;
+  onChain(DEAD, { state: 0, reserve: 0n, symbol: 'NEW', name: 'Brand new' });
+  const fresh = await checkCoin(DEAD, { now: NOW });
+  assert.equal(fresh.source, 'chain');
+  assert.match(fresh.flags.find((f) => f.id === 'source').text, /^clank\.trade hasn't listed it yet/);
+  assert.ok(has(fresh, 'listed', 'high'), 'brand new (or one clank.trade doesn\'t show)');
+  assert.ok(has(fresh, 'stage', 'high'), 'its curve is empty: 0% filled');
+  // neither knows it, or the chain is down too: as before
+  fake.chain = null;
+  assert.deepEqual(await checkCoin(DEAD), { error: 'not_clank' });
+  fake.down = true;
+  assert.deepEqual(await checkCoin(COIN), { error: 'unverified' });
+  // a copy of $AGI found on the chain alone is still called out
+  fake.down = true;
+  onChain(COIN, { symbol: 'AGI', name: 'Artificial Girlfriend Intelligence' });
+  const copy = await checkCoin(COIN, { now: NOW });
+  assert.ok(has(copy, 'copycat', 'high'));
+  assert.equal(copy.copyOfficial, true);
+});
+
+test('?a=: a scan from the chain alone is shared a minute (so the full scan is back soon), and the page never needs to change', async () => {
+  onChain(COIN, { state: 0, creator: 0n });
+  fake.down = true;
+  const r = await get(`?a=${COIN}`);
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('cache-control'), 'public, max-age=30, s-maxage=60, stale-while-revalidate=60');
+  const body = await r.json();
+  assert.equal(body.source, 'chain');
+  assert.ok(Array.isArray(body.flags) && Array.isArray(body.facts) && LEVELS[body.level], 'the same shape the page shows');
+  assert.ok(checkLine(body).text, 'she has a line for it');
+});
+
+test('analyzeChain: what the chain alone can say', () => {
+  const chain = { exists: true, curve: CURVE, deployer: CREATOR, state: 0, threshold: '4276363636363636363', reserve: '0', supply: String(10n ** 27n),
+    creatorBalance: '0', curveBalance: String(10n ** 27n), name: 'x', symbol: 'X', logo: null };
+  const s = analyzeChain(chain, { address: COIN, now: NOW });
+  assert.equal(s.progress, 0);
+  assert.ok(has(s, 'stage', 'high'), 'nobody bought it yet');
+  assert.ok(has(s, 'creator', 'info'));
+  assert.equal(s.image, false);
+  assert.equal(s.createdAt, 0);
+  assert.equal(analyzeChain({ ...chain, state: STAGE.RESCUED }, { address: COIN }).level, 'high');
+  assert.equal(analyzeChain({ ...chain, state: STAGE.READY, reserve: '0' }, { address: COIN }).facts.find((f) => f.label === 'Stage').value, 'Graduating');
+  // its curve didn't answer: the stage is unknown, said as such (never "an unusual stage on clank.trade")
+  const unknown = analyzeChain({ ...chain, state: null, reserve: null }, { address: COIN, now: NOW });
+  assert.equal(unknown.flags.find((f) => f.id === 'stage').text, "Couldn't read its stage from the chain right now.");
+  assert.ok(has(unknown, 'stage', 'some'));
+  assert.equal(unknown.facts.find((f) => f.label === 'Stage').value, '—');
+  assert.equal(unknown.facts.find((f) => f.label === 'In its curve').value, '—');
+  assert.notEqual(unknown.level, 'low');
+});
+
 // ---------- the list ----------
 test('the list: every page, trending ranks, dollars, copycats marked, every coin (crude names too, marked adult)', async () => {
   fake.pages = [
@@ -576,6 +888,8 @@ test('?latest: the 12 newest coins and clank.trade\'s trending list in one reque
   fake.trending = [
     { address: OFFICIAL, name: 'Artificial Girlfriend Intelligence', symbol: 'AGI', image: `ipfs://${CID2}`, marketCapUsdg: 1203153.5335925785, volumeUsdg: 21989.02, priceChangePercent: -9.1, progress: 100, isLive: true },
     { address: COIN.toUpperCase().replace('0X', '0x'), symbol: 'E/ACC', marketCapUsdg: 10191.4, progress: 22.23, isLive: false },
+    // sold out, its pool not open yet: graduating, not graduated (2026-09-29: only "live" means in its pool)
+    { address: MEOW, symbol: 'MEOW', marketCapUsdg: 12000, progress: 100, isLive: false },
     { address: 'not an address' },
   ];
   const r = await get('?latest');
@@ -593,6 +907,7 @@ test('?latest: the 12 newest coins and clank.trade\'s trending list in one reque
   assert.deepEqual(data.trending, [
     { address: OFFICIAL, rank: 1, marketCap: 1203154, progress: 100, graduated: true },
     { address: COIN, rank: 2, marketCap: 10191, progress: 22.23, graduated: false },
+    { address: MEOW, rank: 3, marketCap: 12000, progress: 100, graduated: false },
   ]);
   assert.equal(data.ethUsd, Number(ETH_USD));
   // a few CDN regions at once: this server copy asks clank.trade once every 4 seconds at most
@@ -641,7 +956,23 @@ test('the page merges the newest coins: new launches added, known ones updated, 
   assert.deepEqual(mergeLatest(coins, null), []);
   assert.equal(tidyCoin({ address: '0x12' }), null);
   assert.deepEqual(tidyCoin({ address: `0x${'f'.repeat(40)}`, marketCap: 'lots', createdAt: null, image: 'yes' }),
-    { address: `0x${'f'.repeat(40)}`, symbol: null, name: '', graduated: false, progress: 0, createdAt: 0, marketCap: null, trending: 0, image: false, adult: false });
+    { address: `0x${'f'.repeat(40)}`, symbol: null, name: '', graduated: false, stage: null, progress: 0, createdAt: 0, marketCap: null, trending: 0, image: false, adult: false });
+  // (2026-09-29) a graduating or rescued coin keeps that word until it graduates; nothing else is a stage word
+  assert.equal(tidyCoin({ address: `0x${'f'.repeat(40)}`, stage: 'graduating' }).stage, 'graduating');
+  assert.equal(tidyCoin({ address: `0x${'f'.repeat(40)}`, stage: '<b>x</b>' }).stage, null);
+  const g = coin(`0x${'9'.repeat(40)}`, 'GRAD', { stage: 'graduating', progress: 100 });
+  const list = [g];
+  mergeLatest(list, { coins: [{ address: g.address, symbol: 'GRAD', name: 'GRAD', graduated: true, progress: 100, createdAt: 1000, marketCap: 9000 }] });
+  assert.equal(list[0].stage, null, 'it graduated: the word goes');
+  assert.equal(stageText(list[0]), 'Graduated');
+  // trending says it's sold out but not live yet: still graduating (never "Graduated" too early)
+  const h = coin(`0x${'8'.repeat(40)}`, 'SOLD', { stage: 'graduating', progress: 100 });
+  const soldOut = [h];
+  mergeLatest(soldOut, { coins: [], trending: [{ address: h.address, rank: 3, marketCap: 12000, progress: 100, graduated: false }] });
+  assert.equal(stageText(soldOut[0]), 'Graduating');
+  assert.equal(soldOut[0].graduated, false);
+  assert.equal(stageText({ stage: 'graduating', graduated: false, progress: 100 }), 'Graduating');
+  assert.equal(stageText({ stage: 'rescued', graduated: false, progress: 100 }), 'Rescued');
 });
 
 // ---------- round 2: pictures ----------

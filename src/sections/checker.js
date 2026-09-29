@@ -72,7 +72,9 @@ export function agoText(ms) {
   if (s < 5) return 'just now';
   return s < 60 ? `${s} s ago` : `${Math.round(s / 60)} min ago`;
 }
-export const stageText = (c) => (c.graduated ? 'Graduated' : `Curve ${c.progress > 0 && c.progress < 1 ? c.progress.toFixed(1) : Math.round(c.progress)}%`);
+// (2026-09-29: "Graduating" while its curve has sold out and its pool isn't open yet, "Rescued" when its graduation failed)
+export const stageText = (c) => (c.stage === 'graduating' ? 'Graduating' : c.stage === 'rescued' ? 'Rescued'
+  : c.graduated ? 'Graduated' : `Curve ${c.progress > 0 && c.progress < 1 ? c.progress.toFixed(1) : Math.round(c.progress)}%`);
 const tickerOf = (c) => (c.symbol ? `$${c.symbol}` : '(no ticker)');
 const letterOf = (c) => (c.symbol || '?').replace(/^[^\p{L}\p{N}]+/u, '').charAt(0).toUpperCase() || '?';
 
@@ -101,6 +103,7 @@ export function tidyCoin(c) {
     symbol: typeof c.symbol === 'string' ? c.symbol : null,
     name: typeof c.name === 'string' ? c.name : '',
     graduated: c.graduated === true,
+    stage: c.stage === 'graduating' || c.stage === 'rescued' ? c.stage : null,
     progress: n(c.progress) ?? 0,
     createdAt: n(c.createdAt) ?? 0,
     marketCap: n(c.marketCap),
@@ -136,7 +139,7 @@ export function mergeLatest(coins, latest) {
       if (!had || !(t.rank > 0)) continue;
       had.trending = t.rank;
       if (Number.isFinite(t.marketCap)) had.marketCap = t.marketCap;
-      if (t.graduated === true) had.graduated = true;
+      if (t.graduated === true) { had.graduated = true; had.stage = null; }
       if (Number.isFinite(t.progress)) had.progress = had.graduated ? 100 : t.progress;
     }
   }
@@ -548,7 +551,8 @@ export function startChecker(root) {
         const data = await res.json();
         if (res.ok && data.level) {
           entry.data = data;
-          if (data.createdAt > 0 && Date.now() - data.createdAt < DAY) entry.keep = SCAN_KEEP_NEW;
+          // (a coin under a day old, or a smaller scan straight from the chain while clank.trade is away: a minute)
+          if ((data.createdAt > 0 && Date.now() - data.createdAt < DAY) || data.source === 'chain') entry.keep = SCAN_KEEP_NEW;
           return data;
         }
         entry.failed = true;                       // (asked again after a little while)

@@ -7,6 +7,11 @@
 // The scan turns what it read into flags (high / some = a red flag, ok / info = good to know) and a level: any high flag →
 // High risk, else any "some" → Some risk, else Lower risk. If clank.trade doesn't answer, there's no guess: "Not enough
 // data" (fail closed). Rough automated checks, never an audit and never advice: nothing here says buy, sell or safe.
+// Since 2026-09-29 (the Clank protocol's docs, developer.clank.trade): a coin's stage follows the protocol's (clank.trade's
+// `state` is its curve's state: 0 on its curve, 1 and 2 graduating, 3 graduated, 4 rescued), every scan also asks the
+// protocol itself on Robinhood Chain (server/clank-chain.js: its record, and for a graduated coin that its pool's
+// liquidity is locked for good), and when clank.trade doesn't answer, or hasn't listed a coin yet, a smaller scan comes
+// straight from the chain instead of "Not enough data".
 // Since 2026-09-26 (the owner's second round): the newest coins every few seconds (latestClank: new launches show up at
 // once), every coin's picture (coinPicture, from clank.trade's own picture host), and every coin, crude names included (the
 // owner: "they are part of clank trade"; hate slurs are still masked, and a crude coin's picture waits for the 18+ check).
@@ -14,6 +19,7 @@
 import { TOKENS, bestPair } from '../src/prices/parse.js';
 import { tickerKey, markCopycats } from '../src/checker/copycat.js';
 import { UA, cleanName, isCrude, readLimited, looksLike, PICTURE_TYPES, PICTURE_MAX_BYTES } from './coins.js';
+import { STAGE, FACTORY, FORWARDER, readCoinOnChain, shareOf } from './clank-chain.js';
 
 export { tickerKey, markCopycats };
 
@@ -116,9 +122,11 @@ function listCoin(c, ethUsd, trendingRank) {
   const symbol = showTicker(c.symbol), name = cleanName(c.name);
   const mcEth = Math.max(0, num(c.marketCap) ?? 0);
   const cid = cidOf(c.image);
+  const state = Number(c.state);
   return {
     address, symbol: maskSlurs(symbol), name: maskSlurs(name),
-    graduated: Number(c.state) !== 0,
+    graduated: state === STAGE.POOL,
+    ...(state === STAGE.READY || state === STAGE.SWEPT ? { stage: 'graduating' } : state === STAGE.RESCUED ? { stage: 'rescued' } : {}),
     progress: Math.min(100, Math.max(0, +(num(c.progress) ?? 0).toFixed(2))),
     createdAt: (num(c.createdAt) ?? 0) * 1000,
     marketCap: ethUsd ? Math.round(mcEth * ethUsd) : null,
@@ -188,7 +196,8 @@ export async function latestClank({ now = Date.now() } = {}) {
       address: lc(c.address), rank: i + 1,
       marketCap: num(c.marketCapUsdg) !== null && num(c.marketCapUsdg) >= 0 ? Math.round(num(c.marketCapUsdg)) : null,
       progress: Math.min(100, Math.max(0, +(num(c.progress) ?? 0).toFixed(2))),
-      graduated: c.isLive === true || (num(c.progress) ?? 0) >= 100,
+      // (live = trading in its pool; a sold-out curve whose pool isn't open yet is graduating, not graduated)
+      graduated: c.isLive === true,
     })),
     ethUsd,
     updatedAt: now,
@@ -277,39 +286,89 @@ async function readHolderCount(address) {
   }
 }
 
-// Everything about one coin. → a scan (see analyze) or { error: 'not_clank' | 'unverified' }
+// Resolves to what `promise` gives, or to null after `ms` (the chain never holds a scan up for long)
+const within = (promise, ms) => Promise.race([promise, new Promise((resolve) => { setTimeout(() => resolve(null), ms).unref?.(); })]);
+
+// Everything about one coin. → a scan (see analyze, or analyzeChain when only the chain answered) or
+// { error: 'not_clank' | 'unverified' }
 export async function checkCoin(address, { now = Date.now() } = {}) {
+  const asked = clankApi([
+    ['coins.detail', { address }], ['coins.holders', { address }], ['coins.trades', { address, limit: 100 }],
+    ['exchangeRates.tokenUsdg', { token: ETH }],
+  ]);
+  // asked at the same time as clank.trade: a full scan waits for it at most 4 s; when clank.trade failed, the chain's answer
+  // is all there is, so it's awaited in full (its own timeouts end it within about 5 s of the start)
+  const chainRead = readCoinOnChain(address);
+  const onchain = within(chainRead, 4000);
   let first;
   try {
-    first = await clankApi([
-      ['coins.detail', { address }], ['coins.holders', { address }], ['coins.trades', { address, limit: 100 }],
-      ['exchangeRates.tokenUsdg', { token: ETH }],
-    ]);
+    first = await asked;
   } catch (err) {
     console.warn(`[checker] couldn't read ${address} from clank.trade: ${err.message}`);
-    return { error: 'unverified' };
+    return fromChain(address, await chainRead, 'down', now);
   }
   const [d, h, t, r] = first;
-  if (d.error === 'not_found') return { error: 'not_clank' };
+  if (d.error === 'not_found') return fromChain(address, await chainRead, 'unlisted', now);
   const detail = d.data;
   const holders = h.data?.holders, trades = t.data?.trades;
-  // no half scans: without its details, holders and trades, there's nothing honest to say
+  // no half scans: without its details, holders and trades, there's nothing honest to say (but the chain may be)
   if (!detail || lc(detail.address) !== address || !Array.isArray(holders) || !Array.isArray(trades)) {
     console.warn(`[checker] clank.trade's answer for ${address} was incomplete`);
-    return { error: 'unverified' };
+    return fromChain(address, await chainRead, 'down', now);
   }
   remember([{ address, cid: cidOf(detail.image) }]);
-  const graduated = Number(detail.state) !== 0;
+  const graduated = Number(detail.state) === STAGE.POOL;
   const query = String(detail.symbol ?? '').normalize('NFKC').replace(/^\$+/, '').trim().slice(0, 40);
-  const [sameTicker, dex, holderCount] = await Promise.all([
+  const [sameTicker, dex, holderCount, chain] = await Promise.all([
     tickerKey(query)
       ? clankApi([['coins.list', { query }]]).then(([s]) => (Array.isArray(s.data?.coins) ? s.data.coins : null)).catch(() => null)
       : [],
     graduated ? readDex(address) : null,
     holders.length >= 100 ? readHolderCount(address) : null,
+    onchain,
   ]);
-  return analyze({ detail, holders, trades, ethUsd: num(r.data?.price), sameTicker, dex, holderCount, now });
+  return analyze({ detail, holders, trades, ethUsd: num(r.data?.price), sameTicker, dex, holderCount, chain, now });
 }
+
+// clank.trade didn't answer ('down') or doesn't know the coin yet ('unlisted'): a smaller scan from the chain, if the
+// Clank protocol knows the coin; else as before ("Not enough data" / "Not a clank.trade coin")
+async function fromChain(address, chain, why, now) {
+  if (!chain?.exists) return { error: why === 'unlisted' ? 'not_clank' : 'unverified' };
+  const [dex, holderCount] = await Promise.all([chain.state === STAGE.POOL ? readDex(address) : null, readHolderCount(address)]);
+  if (cidOf(chain.logo)) remember([{ address, cid: cidOf(chain.logo) }]);
+  return analyzeChain(chain, { address, dex, holderCount, why, now });
+}
+
+// ---------- the stage and the pool: the same words whoever answered (clank.trade or the chain) ----------
+function stageFlag(flag, { state, progress, nobodyBought, about = '' }) {
+  if (state === STAGE.POOL) flag('stage', 'ok', 'Graduated: it filled its bonding curve and now trades in a DEX pool.');
+  else if (state === STAGE.READY || state === STAGE.SWEPT) {
+    flag('stage', 'some', "Graduating: its bonding curve sold out and its DEX pool isn't open yet. Graduations can fail: check clank.trade.");
+  } else if (state === STAGE.RESCUED) {
+    flag('stage', 'high', "Its graduation didn't go through, and the Clank protocol stepped in (\"rescued\"). Check clank.trade before anything else.");
+  } else if (state !== STAGE.TRADING) flag('stage', 'some', "It's at an unusual stage: check it on clank.trade first.");
+  else if (nobodyBought) flag('stage', 'high', 'Nobody has bought it yet: its bonding curve is at 0%.');
+  else if (progress < 2) flag('stage', 'high', `Barely started: only ${progress}% of its bonding curve is filled${about}.`);
+  else if (progress < 25) flag('stage', 'some', `Early: ${progress}% of its bonding curve is filled${about}.`);
+  else flag('stage', 'info', `${progress}% of its bonding curve is filled${about}. It graduates at 100%.`);
+}
+const stageWord = (state, progress) => (state === STAGE.POOL ? 'Graduated' : state === STAGE.READY || state === STAGE.SWEPT ? 'Graduating'
+  : state === STAGE.RESCUED ? 'Rescued' : `Curve ${progress}%`);
+function poolFlags(flag, dex) {
+  if (!dex || dex.failed || dex.missing || dex.liquidity === null) { flag('pool', 'some', "Couldn't read its DEX pool right now."); return; }
+  if (dex.liquidity < 5_000) flag('pool', 'high', `Its pool holds only ${usd(dex.liquidity)}: small trades move the price a lot.`);
+  else if (dex.liquidity < 20_000) flag('pool', 'some', `Its pool holds ${usd(dex.liquidity)}: bigger trades move the price a lot.`);
+  else flag('pool', 'ok', `Its pool holds ${usd(dex.liquidity)}.`);
+  if (dex.change !== null && dex.change <= -60) flag('drop', 'high', `Down ${Math.round(-dex.change)}% in 24 hours.`);
+  else if (dex.change !== null && dex.change <= -30) flag('drop', 'some', `Down ${Math.round(-dex.change)}% in 24 hours.`);
+}
+// The Clank protocol puts the liquidity it adds at graduation in a locker with no way out (its docs), so when the chain
+// confirms the coin graduated through the protocol, that's a fair "good to know" (never "safe"). Only that liquidity:
+// anyone else's in the same pool is theirs to take out, and DexScreener may show another pool, so the note says exactly that.
+export const LOCKED_TEXT = 'The liquidity the Clank protocol put in its pool at graduation is locked for good: nobody can pull it out, its creator included. Its price can still fall.';
+const lockedNote = (flag, chain) => { if (chain?.exists && chain.state === STAGE.POOL) flag('locked', 'ok', LOCKED_TEXT); };
+// what the scan says about the chain (so the page, the owner and the tests can see what the chain answered)
+const onchainOf = (chain) => (chain ? (chain.exists ? { exists: true, state: chain.state, curve: chain.curve } : { exists: false }) : null);
 
 // The scan itself, from what was read (no network here, so the tests can feed it anything).
 //   detail: clank.trade's coins.detail · holders: [{ address, balance }] (its biggest, at most 100) · trades: its latest
@@ -318,12 +377,13 @@ export async function checkCoin(address, { now = Date.now() } = {}) {
 // → { address, symbol, name, adult, image, createdAt, graduated, progress, official, copyOfficial, level, flags, facts,
 //     links, checkedAt } (symbol and name with hate slurs masked; adult: a crude or sexual name, so its picture waits for the
 //     18+ check; image: it has a picture)
-export function analyze({ detail, holders = [], trades = [], ethUsd = null, sameTicker = [], dex = null, holderCount = null, now = Date.now() }) {
+export function analyze({ detail, holders = [], trades = [], ethUsd = null, sameTicker = [], dex = null, holderCount = null, chain = null, now = Date.now() }) {
   const address = lc(detail.address);
   const rawSymbol = showTicker(detail.symbol), rawName = cleanName(detail.name);
   const symbol = maskSlurs(rawSymbol), name = maskSlurs(rawName);
   const ticker = symbol ? `$${symbol}` : 'this ticker';
-  const graduated = Number(detail.state) !== 0;
+  const state = Number(detail.state);
+  const graduated = state === STAGE.POOL;
   const progress = Math.min(100, Math.max(0, +(num(detail.progress) ?? 0).toFixed(2)));
   const rate = num(ethUsd) > 0 ? num(ethUsd) : null;
   const supply = /^\d{1,40}$/.test(String(detail.totalSupply)) ? BigInt(detail.totalSupply) : 0n;
@@ -341,7 +401,7 @@ export function analyze({ detail, holders = [], trades = [], ethUsd = null, same
     : holderCount !== null ? Math.max(wallets.length, holderCount - (list.length - wallets.length)) : null;
   const trades100 = trades.filter((x) => x && ['buy', 'sell'].includes(x.side) && num(x.timestamp) !== null)
     .sort((a, b) => num(b.timestamp) - num(a.timestamp));
-  const nobodyBought = !graduated && progress === 0 && !trades100.length;
+  const nobodyBought = state === STAGE.TRADING && progress === 0 && !trades100.length;
   const creator = lc(detail.creator);
 
   // 1. the ticker: the site's own $AGI, or a coin that only borrowed a ticker
@@ -355,7 +415,7 @@ export function analyze({ detail, holders = [], trades = [], ethUsd = null, same
     else {
       const me = { address, official, graduated, mcEth: num(detail.marketCap) ?? 0, symbol: detail.symbol };
       const others = sameTicker.filter((c) => isAddress(c?.address) && lc(c.address) !== address && tickerKey(c.symbol) === key)
-        .map((c) => ({ address: lc(c.address), official: lc(c.address) === OFFICIAL, graduated: Number(c.state) !== 0, mcEth: num(c.marketCap) ?? 0, symbol: c.symbol }));
+        .map((c) => ({ address: lc(c.address), official: lc(c.address) === OFFICIAL, graduated: Number(c.state) === STAGE.POOL, mcEth: num(c.marketCap) ?? 0, symbol: c.symbol }));
       if (others.length) {
         markCopycats([me, ...others]);
         const n = plural(others.length, 'other clank.trade coin');
@@ -373,11 +433,16 @@ export function analyze({ detail, holders = [], trades = [], ethUsd = null, same
   const reserve = /^\d{1,40}$/.test(String(detail.reserve)) ? Number(BigInt(detail.reserve) / 10n ** 12n) / 1e6 : null;   // ETH
   const inCurve = !graduated && reserve !== null && rate ? reserve * rate : null;
   const about = inCurve !== null ? ` (about ${usd(inCurve)} in it)` : '';
-  if (graduated) flag('stage', 'ok', 'Graduated: it filled its bonding curve and now trades in a DEX pool.');
-  else if (nobodyBought) flag('stage', 'high', 'Nobody has bought it yet: its bonding curve is at 0%.');
-  else if (progress < 2) flag('stage', 'high', `Barely started: only ${progress}% of its bonding curve is filled${about}.`);
-  else if (progress < 25) flag('stage', 'some', `Early: ${progress}% of its bonding curve is filled${about}.`);
-  else flag('stage', 'info', `${progress}% of its bonding curve is filled${about}. It graduates at 100%.`);
+  // the protocol's own record, when the chain answered. A graduation it had to rescue counts whatever clank.trade shows
+  // (the worse of the two); other stage differences are left alone (clank.trade can be a few seconds behind the chain)
+  const rescuedOnChain = chain?.exists === true && chain.state === STAGE.RESCUED && state !== STAGE.RESCUED;
+  const stageNow = rescuedOnChain ? STAGE.RESCUED : state;
+  stageFlag(flag, { state: stageNow, progress, nobodyBought, about });
+  if (rescuedOnChain) flag('record', 'some', "clank.trade doesn't show it yet, but the Clank protocol says its graduation was rescued.");
+  // …and its curve: clank.trade and the protocol should agree about it
+  if (chain?.exists && isAddress(detail.curve) && lc(detail.curve) !== chain.curve) {
+    flag('record', 'some', "clank.trade and the Clank protocol don't agree about this coin's curve: check it on clank.trade.");
+  }
 
   // 3. age
   const created = (num(detail.createdAt) ?? 0) * 1000;
@@ -437,22 +502,16 @@ export function analyze({ detail, holders = [], trades = [], ethUsd = null, same
     }
   }
 
-  // 8. a graduated coin's DEX pool: how much is in it, and today's move
+  // 8. a graduated coin's DEX pool: how much is in it, and today's move; and its liquidity locked by the protocol
   if (graduated) {
-    if (!dex || dex.failed || dex.missing || dex.liquidity === null) flag('pool', 'some', "Couldn't read its DEX pool right now.");
-    else {
-      if (dex.liquidity < 5_000) flag('pool', 'high', `Its pool holds only ${usd(dex.liquidity)}: small trades move the price a lot.`);
-      else if (dex.liquidity < 20_000) flag('pool', 'some', `Its pool holds ${usd(dex.liquidity)}: bigger trades move the price a lot.`);
-      else flag('pool', 'ok', `Its pool holds ${usd(dex.liquidity)}.`);
-      if (dex.change !== null && dex.change <= -60) flag('drop', 'high', `Down ${Math.round(-dex.change)}% in 24 hours.`);
-      else if (dex.change !== null && dex.change <= -30) flag('drop', 'some', `Down ${Math.round(-dex.change)}% in 24 hours.`);
-    }
+    poolFlags(flag, dex);
+    lockedNote(flag, chain);
   }
 
   // the facts under the flags (the page shows them as a small table)
   const mcEth = num(detail.marketCap);
   const head = [
-    ['Stage', graduated ? 'Graduated' : `Curve ${progress}%`],
+    ['Stage', stageWord(stageNow, progress)],
     ['Launched', age !== null ? `${timeText(age)} ago` : '—'],
     ['Market cap', mcEth !== null && rate ? usd(mcEth * rate) : '—'],
     graduated
@@ -476,6 +535,89 @@ export function analyze({ detail, holders = [], trades = [], ethUsd = null, same
     adult: isCrude(`${rawName || ''} ${rawSymbol || ''}`), image: Boolean(cidOf(detail.image)), createdAt: created,
     graduated, progress, official, copyOfficial, level, flags, facts,
     links: { clank: `https://clank.trade/coin/${address}`, explorer: `https://robinhoodchain.blockscout.com/token/${address}` },
-    checkedAt: now,
+    checkedAt: now, onchain: onchainOf(chain),
+  };
+}
+
+// The smaller scan, straight from the chain (clank.trade couldn't be read, or hasn't listed the coin yet): its stage and
+// how far along its curve is, what its creator holds, a graduated coin's pool (DexScreener) and about how many wallets hold
+// it (the block explorer). Its holders' spread, its trades, its age and look-alike tickers can't be read this way, so it
+// always says so, and it's never "Lower risk". Anything the chain didn't answer is said to be unknown, never read as 0
+// (a call inside a batch can fail on its own): an unknown can only make a scan look worse, never better.
+const DIGITS = /^\d{1,40}$/;
+export function analyzeChain(chain, { address, dex = null, holderCount = null, why = 'down', now = Date.now() }) {
+  const rawSymbol = showTicker(chain.symbol), rawName = cleanName(chain.name);
+  const symbol = maskSlurs(rawSymbol), name = maskSlurs(rawName);
+  const flags = [], facts = [];
+  const flag = (id, sev, text) => flags.push({ id, sev, text });
+  const fact = (label, value) => facts.push({ label, value });
+  flag('source', 'some', `${why === 'unlisted' ? "clank.trade hasn't listed it yet" : "clank.trade couldn't be read just now"}, so this comes straight from Robinhood Chain: how spread out its holders are, its trades, its age and look-alike tickers couldn't be checked.`);
+  // clank.trade lists a coin within seconds of its launch: one it doesn't know is brand new, or one it doesn't show
+  // (the age rule would call a coin under an hour old High risk anyway)
+  if (why === 'unlisted') flag('listed', 'high', "Not listed on clank.trade (yet): it's brand new, or a coin clank.trade doesn't show.");
+  const official = address === OFFICIAL;
+  const copyOfficial = tickerKey(chain.symbol) === 'AGI' && !official;
+  if (copyOfficial) flag('copycat', 'high', 'Not the official $AGI: it only uses the same ticker. The official contract ends in 06ec (see the Model card).');
+  else if (official) flag('official', 'ok', 'The official $AGI: the same contract as on this site.');
+  const state = chain.state;
+  const graduated = state === STAGE.POOL;
+  const big = (v) => (DIGITS.test(String(v)) ? BigInt(v) : null);
+  const threshold = big(chain.threshold) ?? 0n, reserveWei = big(chain.reserve);
+  const supply = big(chain.supply), curveHeld = big(chain.curveBalance), creatorHeld = big(chain.creatorBalance);
+  const progress = graduated ? 100 : threshold > 0n && reserveWei !== null ? Math.min(100, Number((reserveWei * 10_000n) / threshold) / 100) : 0;
+  const eth = reserveWei !== null ? Number(reserveWei / 10n ** 12n) / 1e6 : null;
+  const about = !graduated && eth !== null && eth > 0 ? ` (about ${+eth.toFixed(eth < 1 ? 3 : 2)} ETH in it)` : '';
+  // its stage (its curve may not have answered) and, on its curve, how full it is (an empty curve with every coin still
+  // in it = nobody bought any; an empty curve otherwise is "0% filled", which is true either way)
+  const knownStage = Number.isInteger(state);
+  if (!knownStage) flag('stage', 'some', "Couldn't read its stage from the chain right now.");
+  else if (state === STAGE.TRADING && reserveWei === null) flag('stage', 'some', "Couldn't read how full its bonding curve is right now.");
+  else {
+    const nobodyBought = state === STAGE.TRADING && reserveWei === 0n && supply !== null && curveHeld !== null && curveHeld === supply;
+    stageFlag(flag, { state, progress, nobodyBought, about });
+  }
+  // its creator: only when the chain named a real creator (not the protocol's own forwarder) and both numbers came back
+  const deployer = String(chain.deployer || '').toLowerCase();
+  const creatorKnown = isAddress(deployer) && ![FACTORY, FORWARDER, ETH].includes(deployer);
+  const creator = creatorKnown && supply !== null && supply > 0n && creatorHeld !== null ? shareOf(creatorHeld, supply) : null;
+  if (!creatorKnown) flag('creator', 'some', "Couldn't tell from the chain who created it, so what its creator holds is unknown.");
+  else if (creator === null) flag('creator', 'some', "Couldn't read what its creator holds right now.");
+  else if (creator > 10) flag('creator', 'high', `Its creator still holds ${percent(creator)}.`);
+  else if (creator > 5) flag('creator', 'some', `Its creator holds ${percent(creator)}.`);
+  else if (creator === 0) flag('creator', 'info', 'Its creator holds none of it.');
+  else flag('creator', 'ok', `Its creator holds ${percent(creator)}.`);
+  // about how many wallets: the explorer counts every address, contracts too, so its curve (when it holds coins) and a
+  // graduated coin's pool (Uniswap's PoolManager and the pool's hook) come off; if the hook holds none, that's one too few
+  // wallets, which only errs on the careful side
+  let wallets = null;
+  if (holderCount !== null) {
+    const contracts = (curveHeld === null || curveHeld > 0n ? 1 : 0) + (graduated ? 2 : 0);
+    wallets = Math.max(0, holderCount - contracts);
+    const without = graduated ? 'without its curve and pool' : 'without its curve';
+    if (wallets < 10) flag('holders', 'high', `About ${plural(wallets, 'wallet')} ${wallets === 1 ? 'holds' : 'hold'} it (the block explorer's count, ${without}).`);
+    else if (wallets < 50) flag('holders', 'some', `About ${wallets} wallets hold it (the block explorer's count, ${without}).`);
+    else flag('holders', 'ok', `About ${wallets} wallets hold it (the block explorer's count, ${without}).`);
+  }
+  const dexRead = Boolean(dex && !dex.failed && !dex.missing && dex.liquidity !== null);
+  if (graduated) {
+    poolFlags(flag, dex);
+    lockedNote(flag, chain);
+  }
+  fact('Stage', !knownStage ? '—' : state === STAGE.TRADING && reserveWei === null ? 'On its curve' : stageWord(state, progress));
+  if (graduated) fact('In its pool', dexRead ? usd(dex.liquidity) : '—');
+  else fact('In its curve', eth !== null ? `${+eth.toFixed(eth < 1 ? 3 : 2)} ETH` : '—');
+  fact('Holders', wallets !== null ? `about ${wallets}` : '—');
+  fact('Creator holds', creator !== null ? percent(creator) : '—');
+  fact('Read from', ['Robinhood Chain', ...(holderCount !== null ? ['the block explorer'] : []), ...(graduated && dexRead ? ['DexScreener'] : [])].join(', '));
+  fact('Contract', short(address));
+  const ORDER = { high: 0, some: 1, ok: 2, info: 3 };
+  flags.sort((a, b) => ORDER[a.sev] - ORDER[b.sev]);
+  const level = flags.some((f) => f.sev === 'high') ? 'high' : 'some';
+  return {
+    address, symbol, name,
+    adult: isCrude(`${rawName || ''} ${rawSymbol || ''}`), image: Boolean(cidOf(chain.logo)), createdAt: 0,
+    graduated, progress, official, copyOfficial, level, flags, facts,
+    links: { clank: `https://clank.trade/coin/${address}`, explorer: `https://robinhoodchain.blockscout.com/token/${address}` },
+    checkedAt: now, source: 'chain', onchain: onchainOf(chain),
   };
 }

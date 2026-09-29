@@ -23,7 +23,8 @@
 > - **The front** (2026-09-28): the bright AGI landing of the ecosystem page that used to be here is back, as the first
 >   thing on the home page, with the whole site after it. See "The front".
 > - **She texts first** (2026-09-29): AGI-1's Telegram bot, the first step of the owner's big ideas. See "She texts first:
->   her Telegram bot". And what the Clank developer docs offer this site: "The Clank protocol".
+>   her Telegram bot". And what the Clank developer docs offer this site: "The Clank protocol" (the risk check reads the
+>   protocol's own contracts since the same day).
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -168,7 +169,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards") |
 | `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (Telegram's API, the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (Telegram's API, the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and ETH, what its creator holds; the risk check's second opinion and safety net) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -1257,6 +1258,43 @@ credit with an 𝕏 link, removed with everything about ClankCap.) The scans' da
   (`robinhoodchain.blockscout.com/api/v2/tokens/…`: how many wallets hold it, when clank.trade's list of 100 is full).
 - **clank.trade's picture host** (its own Pinata IPFS gateway, `yellow-total-guanaco-389.mypinata.cloud/ipfs/<id>`, which
   also shrinks pictures): our server fetches each coin's picture there (round 2).
+- **The Clank protocol itself, on Robinhood Chain** (2026-09-29, from its docs: see "The Clank protocol";
+  `server/clank-chain.js`): every scan also reads the coin's record at the protocol's factory and its curve, through the same
+  free public node as the wallet levels (`ROBINHOOD_RPC_URL` can point elsewhere). Read-only `eth_call`s, two requests of
+  several calls each ("batches"): the factory's `getLaunchedToken` (its curve, its creator, its graduation threshold) and
+  the coin's name, ticker, supply and logo; then the curve's `state()` and `realQuoteReserve()` (its ETH) and what its
+  creator and its curve hold. Asked at the same time as clank.trade, and never waited for more than 4 s. It gives:
+  - **the protocol's word:** `onchain` in the scan (`{ exists, state, curve }`, or `{ exists: false }` when the factory
+    doesn't know the coin, or `null` when the node didn't answer). For a coin that graduated through the protocol, the
+    good-to-know note "The liquidity the Clank protocol put in its pool at graduation is locked for good: nobody can pull
+    it out, its creator included. Its price can still fall." (its docs: that position goes to a locker with no way to
+    withdraw it; only that liquidity, since anyone else's in the same pool is theirs to take out; never "safe"). "The
+    record", a "some" flag: clank.trade and the protocol disagree about the coin's curve, or the protocol says its
+    graduation was rescued while clank.trade doesn't show it yet (then the scan uses "rescued", the worse of the two;
+    other stage differences are left alone, since clank.trade can be seconds behind the chain);
+  - **a safety net:** when clank.trade can't be read, answers only half, or hasn't listed the coin yet, and the protocol
+    knows it, a **smaller scan straight from the chain** (`analyzeChain()`, `source: 'chain'`) instead of "Not enough data"
+    or "Not a clank.trade coin": its stage and how full its curve is (in ETH), what its creator holds, a copy of $AGI,
+    about how many wallets hold it (the block explorer's count minus its curve, and a graduated coin's PoolManager and
+    hook), a graduated coin's pool (DexScreener) and the locked note. Its first flag says what's missing ("…how spread out
+    its holders are, its trades, its age and look-alike tickers couldn't be checked"), and it's **never "Lower risk"**. A
+    coin clank.trade hasn't listed also gets a "high" flag ("Not listed on clank.trade (yet): it's brand new, or a coin
+    clank.trade doesn't show"), as the age rule would. **Anything the chain didn't answer is unknown, never 0** (one call
+    in a batch can fail alone): "Couldn't read what its creator holds", "Couldn't read how full its bonding curve is",
+    "Couldn't read its stage", and a creator the chain can't name (the protocol's launch-and-buy forwarder `0xac20…0dD7`
+    as the deployer) is "Couldn't tell from the chain who created it" (all "some" flags, "—" in the facts). The facts end
+    with "Read from: Robinhood Chain, the block explorer, DexScreener" (what was really read). Its picture comes from the
+    coin's own `logo()`. A full scan waits for the chain at most 4 s; when clank.trade failed, the chain's whole answer is
+    awaited (its two 2.5 s timeouts end it).
+  - **Stages** (clank.trade's `state` is its curve's state, the protocol's numbers): 0 on its curve, 1 sold out ("Ready")
+    and 2 its coins and ETH taken out for the pool ("Swept") = **Graduating** (a "some" flag: its pool isn't open yet, and
+    graduations can fail), 3 = **Graduated**, 4 = **Rescued** (its graduation failed and the protocol stepped in: a "high"
+    flag). The list shows "Graduating" / "Rescued" in the Stage column too (`stage` on a coin); the live trending list
+    only marks a coin graduated when clank.trade says it's live in its pool (`isLive`), not when its curve is merely full.
+  Not verified against the live contracts yet (Claude's workspace can't reach Robinhood Chain): the calls are the docs'
+  own ABIs, and everything fails soft (a wrong answer decodes to nothing, and the scan works as before). First live check:
+  `https://www.agi1.app/api/checker?a=0xfa31d04462746aaa24bc7e5626403e09e4b106ec` should show `"onchain":{"exists":true,"state":3,…}`
+  and the locked note.
 - `GET /api/checker`: every coin (up to 80 pages = 960 coins, at most ~18 s of reading; 202 on 2026-09-26), crude names too
   (slurs masked; `adult: true` marks a crude name), `image: true` when it has a picture, copycats marked. Shared by Vercel's
   CDN for 5 minutes (browsers 1 minute; then the old copy is served while a new one is read).
@@ -1264,8 +1302,9 @@ credit with an 𝕏 link, removed with everything about ClankCap.) The scans' da
   caps in dollars), one request to clank.trade; shared by the CDN for 10 seconds (browsers 5), and each server copy reads it
   at most every 4 seconds.
 - `GET /api/checker?a=<lowercase address>`: one coin's scan, shared by the CDN for 5 minutes (1 minute for a coin less than a
-  day old: those change fast). A coin that isn't on clank.trade: `{ error: 'not_clank' }` (shared a minute). A visitor may
-  start 30 coin scans a minute (per server copy).
+  day old: those change fast; and for a scan from the chain alone, so the full scan is back soon after clank.trade is). A
+  coin that neither clank.trade nor the protocol knows: `{ error: 'not_clank' }` (shared a minute). A visitor may start 30
+  coin scans a minute (per server copy).
 - `GET /api/checker?logo=<lowercase address>&s=96|512` (round 2): a coin's picture (96 px, cut to a square, for the rows; 512
   px, the whole picture, for the big view). Its IPFS id comes from the lists our server already read (else one lookup at
   clank.trade), it's fetched from the picture host above, checked (a real PNG, JPEG, WebP, GIF or AVIF by its first bytes,
@@ -1273,8 +1312,9 @@ credit with an 𝕏 link, removed with everything about ClankCap.) The scans' da
   were (the page's CSP stays as it is). The CDN keeps it a week (browsers an hour); no picture → 404 (kept an hour); the host
   failing → 502 (kept 5 minutes; the row keeps its letter, and her answer's header shows no picture: before 2026-09-27 it
   could show a broken-image icon). 240 pictures a minute per visitor (per server copy).
-- Any other address is 400 before anything is fetched. clank.trade not answering, or half an answer: 503 and "Not enough
-  data" (never a guess). No database, no human check; one optional setting, `CHECKER_HIDE_PICTURES` (below).
+- Any other address is 400 before anything is fetched. clank.trade not answering, or half an answer: the chain's smaller
+  scan (above), else 503 and "Not enough data" (never a guess). No database, no human check; one optional setting,
+  `CHECKER_HIDE_PICTURES` (below).
 
 **The rules** (flags: **high** = a big red flag, **some** = a smaller one; any high → **High risk**, else any some → **Some
 risk**, else **Lower risk**):
@@ -1283,6 +1323,9 @@ risk**, else **Lower risk**):
 |---|---|---|
 | Copycat ticker | another coin with the same ticker is bigger (graduated, or at least twice its market cap), or it uses $AGI's ticker and isn't the official contract | other coins of about the same size use the same ticker |
 | Bonding curve | nobody bought it (0%), or under 2% filled | under 25% filled |
+| Stage (the protocol's, 2026-09-29) | rescued (its graduation failed) | graduating (sold out, its pool not open yet), or a stage the site doesn't know |
+| The record (2026-09-29) | | clank.trade and the Clank protocol disagree about its curve, or the protocol says rescued first |
+| A scan from the chain alone (2026-09-29) | not listed on clank.trade (yet) | always a "some" (never Lower risk: its holders' spread, trades, age and tickers can't be read); anything the chain didn't answer |
 | Age | under 1 hour | under 1 day |
 | Holders (wallets; its curve, its pool and burned coins don't count) | under 10 | under 50 |
 | The biggest wallet / the 10 biggest | over 10% / over 40% of all its coins | over 5% / over 25% |
@@ -1292,7 +1335,8 @@ risk**, else **Lower risk**):
 | Couldn't check the ticker (search down) | | always a "some" (never Lower risk without that check) |
 
 Good-to-know notes (not flags): graduated, how far along its curve is, when it launched, a spread-out holder list, what
-its creator holds, trades today. Tickers count as the same without spaces and symbols ("E/ACC" = "EACC"). The numbers:
+its creator holds, trades today, and (2026-09-29) a pool locked by the protocol for good. Tickers count as the same without
+spaces and symbols ("E/ACC" = "EACC"). The numbers:
 clank.trade coins have 1B supply; its bonding curve graduates at about 4.28 ETH; Uniswap v4's PoolManager
 (`0x8366…0951`) holds the pools' coins. Nothing reads a coin's code (the contracts aren't verified on the block
 explorer): "How the scan works" says so.
@@ -1304,7 +1348,8 @@ week per region and size; well inside the free tier (1M function runs a month). 
 request every 10 s, and each row picture is one request (Vercel counts both as "edge requests", 1M a month free). The pictures' bytes: about 5 KB per row
 picture, 20–60 KB per big one, served by the CDN. clank.trade, its picture host, DexScreener and Blockscout are free and
 keyless. Her 10 lines: about $0.03 once (made by Google the first time each is asked for, then kept), and 10 of Google's
-100 speech requests a day on that day.
+100 speech requests a day on that day. The protocol's word (2026-09-29): 2 small requests to Robinhood Chain's public node
+per scan (9 calls in all), so once per coin per 5 minutes per region; free, keyless.
 
 **Owner tool, a picture you don't want on the site** (round 2): coins' pictures are whatever their creators uploaded to
 clank.trade, and nothing free can check every picture. To hide one: Vercel → agi-ecosystem → Settings → Environment
@@ -1316,7 +1361,10 @@ coin shows its letter instead, everywhere (the redeploy also empties the CDN's c
 | What you see | Log line | Fix |
 |---|---|---|
 | "Couldn't reach clank.trade right now." under the search box | `[checker] couldn't read clank.trade's coin list: clank.trade HTTP 403` (or `answer is not JSON`) | clank.trade is down, put up a bot wall, or changed its API. Try later; if it lasts, tell Claude with the log line |
-| A coin's answer says "Not enough data" | `[checker] couldn't read 0x… from clank.trade: …` or `…'s answer … was incomplete` | Same as above, for one coin. Passes by itself if it was a hiccup |
+| A coin's answer says "Not enough data" | `[checker] couldn't read 0x… from clank.trade: …` or `…'s answer … was incomplete` | Same as above, for one coin, and the chain couldn't say either. Passes by itself if it was a hiccup |
+| A coin's answer starts "clank.trade couldn't be read just now, so this comes straight from Robinhood Chain" | `[checker] couldn't read 0x… from clank.trade: …` | Working as planned: the chain's smaller scan while clank.trade is away (shared a minute, then the full scan is tried again) |
+| (nothing wrong to see) | `[checker] couldn't read 0x… from the chain: …` | Robinhood Chain's public node didn't answer: the scan works without the protocol's word (no locked note). Passes by itself; if it lasts, ask about a free node key (`ROBINHOOD_RPC_URL`, see "Relationship levels") |
+| Graduated coins never get the "locked for good" note | (none) | The protocol doesn't know them (`"onchain":{"exists":false}` in `/api/checker?a=…`), or the node never answers. Tell Claude with what `?a=` shows |
 | "Not a clank.trade coin, or too new to be listed yet." | (none) | Working as planned: clank.trade doesn't know that address (yet) |
 | "Couldn't read its DEX pool right now." on graduated coins | (none) | DexScreener didn't answer: the coin stays at "Some risk" at best until it does |
 | Old coins missing from the list | (none) | More than 960 coins (80 pages) or 18 s of reading: the oldest are left out of the list, but a pasted contract still works. Tell Claude if clank.trade grows that big |
@@ -1336,9 +1384,20 @@ newest coins (one request, clank.trade's real trending shape, 10 s, 4 s per serv
 launches, updates, trending ranks, copycats); pictures (the picture host's address and sizes, known ids without a lookup,
 unknown ones asked once, no picture, not a clank.trade coin, SVG / HTML / fake PNG / over 1 MB refused, the host down, 240 a
 minute, the owner's hidden pictures everywhere); the API's addresses, caching, the speed bump; the page's filters, search
-and number formats), `tests/voice.test.js` (her ClankChecker lines: one address each, their styles, made once),
-`tests/page.test.js` (the section's warnings, the links, her live view's slot, the filters, Refresh, the announcer, the big
-view's dialog, the safety note). End to end with fake services (`checkertest.mjs`, 124 checks: clank.trade
+and number formats; and since 2026-09-29 (35 in all) the Clank protocol, with a fake Robinhood Chain node that answers
+`eth_call`s the way the contracts would (viem encodes the answers; it can also fail one call inside a batch, answer
+slowly, or send ids back as strings): the stages (graduating, graduated, rescued, anything odd; a rescue only the
+protocol knows about yet; clank.trade a step behind), the locked note only with the protocol's word and a curve it
+disagrees on, `readCoinOnChain` (two batches, the documented calls, `eth_call` only, the node down or refusing batches, a
+coin the factory doesn't know, a bad address asks nothing, one failed call = that value unknown), checkCoin asking the
+chain alongside clank.trade (a slow node: a full scan waits 4 s at most, a fallback uses its whole answer), the chain's
+smaller scan (clank.trade down or not listing it yet (High risk), never "Lower risk", unknowns never read as 0, the
+forwarder as a deployer, the explorer's count without its curve and pool, its picture from the coin's own logo, a copy of
+$AGI still called out, neither answering = as before), `?a=` sharing it a minute, `analyzeChain`; a sold-out trending
+coin stays "Graduating"), `tests/voice.test.js` (her ClankChecker lines: one address each,
+their styles, made once), `tests/page.test.js` (the section's warnings, the links, her live view's slot, the filters,
+Refresh, the announcer, the big view's dialog, the safety note, "How the scan works" (2026-09-29: the protocol's record,
+the stages, the locked pool, the chain's smaller scan)). End to end with fake services (`checkertest.mjs`, 124 checks: clank.trade
 down first ("Try again", live updates failing and coming back); the link; the list (newest first, counts, tags, pictures
 and letters, crude names listed with blurred pictures, Show more, filters, search); the big view (512 px, words, Escape and
 the focus back, a tap outside, Ask AGI-1 from it); live (a coin launched while you look appears at the top by itself, glows,
@@ -1512,7 +1571,11 @@ buy / sell transactions, a brand kit, and llms.txt files.
   the pool's liquidity locked for good as a "good to know", never "safe"), 3. her feed straight from the chain (once the
   events are checked), 4. proof of burn for the "burn $AGI to get read" idea. **Not recommended:** a buy / sell or launch
   button on the site (hard rule 9 and its test, legal risk, no referral fee, and the clank.trade link already does it).
-  1 and 2 come next.
+- **1 and 2 are built** (2026-09-29, `server/clank-chain.js`: see "The Clank protocol itself, on Robinhood Chain" under
+  "ClankChecker"): each scan reads the coin's record at the factory and its curve (a locked-pool note, the graduating and
+  rescued stages, a record clank.trade disagrees with), and a smaller scan comes from the chain when clank.trade is away.
+  Only the documented calls are used; the first live `/api/checker?a=<$AGI>` shows whether the real contracts answer them.
+  3 and 4 wait (the events need checking first; the burn idea needs the owner's decision and a legal check).
 
 ## Pop mode (2026-09-27)
 
@@ -2078,8 +2141,9 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 
 ### ClankChecker (`/api/checker`, 2026-09-26, see "ClankChecker" above)
 - Read-only, public data, the same answer for everyone: no database, no keys, no human check. Our server reads clank.trade's
-  API, its picture host, DexScreener and the Blockscout explorer; the browser only talks to our `/api/checker`, so the CSP
-  doesn't change.
+  API, its picture host, DexScreener and the Blockscout explorer, and (2026-09-29) the Clank protocol's contracts through
+  Robinhood Chain's public node, with `eth_call` only (nothing is ever signed or sent: `tests/checker.test.js` checks every
+  request); the browser only talks to our `/api/checker`, so the CSP doesn't change.
 - Exactly four addresses (`/api/checker`, `?latest`, `?a=<lowercase address>`, `?logo=<lowercase address>&s=96|512`);
   anything else is 400 before any lookup, so nobody can make the CDN miss on purpose. 30 coin scans and 240 pictures a
   minute per visitor (per server copy). Answers are capped (3 MB) and checked before use; a half answer is "Not enough data",
@@ -2164,7 +2228,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 4,000 a day ≈ $12 ($18 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten) are made once and kept (the database since 2026-09-26) | The key stops when credits hit $0 (the chat and the voice share them) |
 | Cloudflare Turnstile | Unlimited | — |
 | DexScreener | Free, no key, rate-limited per IP. Browsers ask every 30 s; since 2026-09-25 our server also asks for $AGI's market cap, at most once a minute per server copy, only to check a new market line | Requests fail, and we show the last known numbers (and her market lines wait) |
-| Robinhood Chain public node | Free, no key, rate-limited | Balance checks fail; people keep their last level and it retries |
+| Robinhood Chain public node | Free, no key, rate-limited. Wallet balances, and since 2026-09-29 the risk check's reads of the Clank protocol (2 small requests per scan, once per coin per 5 minutes per region) | Balance checks fail; people keep their last level and it retries. Scans work without the protocol's word (no locked note, no chain safety net) |
 | Pinata picture gateway (clank.trade's coin pictures) | Free for us; each ClankChecker coin's picture (two sizes) is fetched about once a week per CDN region | The coin shows its first letter instead |
 | clank.trade's API (ClankChecker, 2026-09-26) | Free, no key; the list about once per 5 minutes per CDN region (about 17 small requests for 200 coins), the newest coins at most once per 10 seconds per region while someone watches (1 request), each coin asked about once per 5 minutes (1 minute for new coins; 2 requests) | ClankChecker says "Couldn't reach clank.trade" / "Not enough data"; nothing else is affected |
 | Telegram Bot API (her bot, 2026-09-29) | Free; about 30 messages a second per bot (she sends 25) | Telegram says "too many": that run stops, the rest go next run |
@@ -2188,7 +2252,7 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `CRON_SECRET` | **yes** | 16+ random characters. Vercel sends it to `/api/keepalive`, so only Vercel's cron can run it |
 | `GEMINI_MODEL` | no, optional | Default `gemini-3.1-flash-lite` |
 | `CHAT_DAILY_CAP` | no, optional | AGI-1 replies per day, site-wide (default 1000) |
-| `ROBINHOOD_RPC_URL` | no, optional | Another Robinhood Chain node for balance checks (default: the free public one). Ask the owner first |
+| `ROBINHOOD_RPC_URL` | no, optional | Another Robinhood Chain node for balance checks and (2026-09-29) the risk check's reads of the Clank protocol (default: the free public one). Ask the owner first |
 | `SITE_URL` | no, optional | The site's address for link previews (default: Vercel's `VERCEL_PROJECT_PRODUCTION_URL`, set automatically) |
 | `AGI1_VOICE` | no, optional | AGI-1's voice: one of Gemini's ready-made voices (default `Despina`, the owner's choice) |
 | `GEMINI_TTS_MODELS` | no, optional | Her speech models, in order, comma-separated (default `gemini-3.8-flash-lite-tts,gemini-3.8-flash-tts`: Flash-Lite, then 3.8 Flash as the backup, about 1.5× the price). One name only = no backup |
@@ -2424,8 +2488,21 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   6 got its one exception. **Owner:** the five setup steps (BotFather, `supabase/telegram.sql`, two settings, run the cron
   job once, try it). Tests: 238 unit (on Node 20, 22 and 24; 25 new), 52 SQL checks (PGlite), the page in a browser (72
   checks); a second Claude agent reviewed the code first (9 problems found, all fixed). Not tested live (Claude's workspace can't reach Telegram).
+  **The owner did the setup the same day** ("im done"). Claude checked what it could see live: the site's "Text me on
+  Telegram ↗" (t.me/agi1_appbot), `/api/telegram` answering 401 without its secret (so it's configured), and the bot's
+  Telegram page showing her description (so the cron run connected it). Still to confirm by the owner: she answers /start.
 - **The Clank developer docs: read 2026-09-29** (the owner asked for a summary and how to use it). See "The Clank
-  protocol". Next: the risk check's safety net and sharper flags from the chain.
+  protocol".
+- **The risk check reads the Clank protocol: built 2026-09-29, waiting for the owner's OK** (1 and 2 of Claude's answer
+  about the docs: a safety net and sharper flags). Each scan also asks the protocol's own contracts on Robinhood Chain
+  (read-only): a locked-pool note for coins that graduated with it, the graduating and rescued stages (the list too), a
+  flag when clank.trade and the protocol disagree, and a smaller scan from the chain when clank.trade is away (never "Lower
+  risk"). "How the scan works" and the safety note's data sentence say so. See "The Clank protocol itself, on Robinhood
+  Chain" under "ClankChecker". No setup, no cost. Tests: 247 unit (on Node 20, 22 and 24; 9 new in `checker.test.js`, with
+  a fake chain node), the page at 1440 / 390 / 360 px in both themes. A second Claude agent reviewed it first (11
+  findings, e.g. an unread creator balance showing as "holds none", a brand-new unlisted coin at Some risk, the locked
+  note claiming more than the docs say; all fixed and tested). Not tested live: the first live `/api/checker?a=<$AGI>`
+  after the push shows whether the real contracts answer the documented calls.
 
 ## Decisions log
 
@@ -2555,6 +2632,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-09-29 | She texts first (the owner's idea, "telegram bot or push"): a **Telegram bot**, not browser push (push needs a service worker and a permission prompt and only arrives while the browser runs; a Telegram bot can only text people who pressed Start, so it's opt-in by design). 18+ with two buttons, their time with one tap (24 buttons), at most 2 texts a day and one a run, only 10:00–21:59 their time, only while it's news (12 hours), pre-written lines (no AI cost, every line tested) and her diary entry as already published, /stop and blocking forget them. Replies: the site's chat as a Stranger (10 a day per chat, inside the site's 1,000, and Telegram's own share of 400, since Telegram has no human check). Each text is claimed in the database before it's sent (at most once: missing one beats getting one twice). Hard rule 6 got its one exception. Not picked: AI-written texts first (nobody would review them before they go out, and they cost), a daily "gm" (spam), naming coins with a link (it would read as shilling), the out-of-messages buy offer in Telegram (it stays a website thing) |
 | 2026-09-29 | Her feed runs 8 times a day from Vercel's cron (Hobby: each job once a day, within its hour; 100 jobs a project), at :30 past every third hour, so her diary (the keep-alive at 03) is ready by the 04 run. New coins come from clank.trade's own list (the one the risk check reads, proven live), not yet from the chain (the Clank docs don't spell out the events). The bot connects itself on each run (webhook + secret from PASS_SECRET), so the owner never runs a command |
 | 2026-09-29 | The Clank developer docs (the owner asked for a summary and how to use them): contracts, not an API. Told the owner: a chain safety net and sharper flags for the risk check, the feed from the chain once its events are checked, proof of burn for the burn idea later; not a buy / sell or launch button (hard rule 9, legal risk, no referral fee, and the clank.trade link does it) |
+| 2026-09-29 | The risk check asks the Clank protocol too (1 and 2 above): the documented read-only calls only (the factory's `getLaunchedToken`, the curve's `state()` and `realQuoteReserve()`, the coin's ERC-20 reads and `logo()`), through Robinhood Chain's free public node, in two batches alongside clank.trade (never waited for more than 4 s). The pool-locked note only when the protocol confirms the coin graduated with it (a good-to-know, never "safe"); "Graduating" and "Rescued" from the protocol's stages; a "some" flag when clank.trade and the protocol disagree about a coin's curve. When clank.trade is away, a smaller scan from the chain (never "Lower risk", shared a minute) instead of "Not enough data". Not picked: reading launch events for the list (the docs don't spell them out), holders from the chain (no index of holders without an explorer), and quotes (`quoteBuyFor`/`quoteSell`: buy / sell math has no place in a risk check) |
 
 ## Open questions
 
@@ -2569,9 +2647,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   coins' pictures are blurred until the 18+ check, and the owner can hide any picture with `CHECKER_HIDE_PICTURES`. If that
   becomes a chore, a paid image-moderation service could check each new picture once (ask the owner first: it costs money).
 - ClankChecker depends on clank.trade's own API, which isn't documented and could change or get a bot wall. If that happens,
-  the checker says "Couldn't reach clank.trade" (nothing breaks); a fix could read the chain directly (the explorer, the
-  curve contracts) instead. And once clank.trade has more than ~960 coins, the list shows the newest 960 (pasted contracts
+  the checker says "Couldn't reach clank.trade" (nothing breaks), and since 2026-09-29 a scan comes from the chain instead
+  (the Clank protocol's contracts); the list itself still needs clank.trade (it would need the protocol's launch events,
+  once they're checked). And once clank.trade has more than ~960 coins, the list shows the newest 960 (pasted contracts
   still work): paging could then move to a small database table filled by the keep-alive.
+- Whether the Clank protocol's documented calls match the live contracts (the docs' ABIs, never checked on-chain from
+  Claude's workspace). If `/api/checker?a=<$AGI>` shows `"onchain":null` or `{"exists":false}` after the push, the risk
+  check still works as before; tell Claude.
 - The chat avatar is a new portrait rendered from the 3D model. The owner can switch back to the old picture if wanted.
 - Her Telegram bot has no wallet link, so everyone is a Stranger there (10 messages a day, no pet names). Linking a wallet
   from the site to Telegram (a signed one-time link) could come later if people ask.

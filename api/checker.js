@@ -4,13 +4,16 @@
 //   GET /api/checker?latest              the 12 newest coins and clank.trade's trending list: the page asks every 10 s while
 //                                         ClankChecker is on screen, so a coin launched a moment ago shows up without a reload
 //   GET /api/checker?a=0x…               one coin's scan: flags, a level (lower / some / high risk) and the facts behind them
+//                                         (since 2026-09-29 also checked with the Clank protocol on Robinhood Chain, and a
+//                                         smaller scan from the chain alone when clank.trade doesn't answer or know the coin)
 //   GET /api/checker?logo=0x…&s=96|512   a coin's picture, from clank.trade's own picture host (a row's circle / the big view)
 // Read-only and the same for everyone, so Vercel's CDN shares every answer: the whole list 5 minutes, the newest coins 10
 // seconds, a scan 5 minutes (1 minute for a coin less than a day old), a picture a week. However many visitors look,
 // clank.trade is asked about that often per CDN region. No database, no human check, no keys.
 // Only these addresses exist (anything else is 400, before anything is fetched), so nobody can make the CDN miss on purpose;
-// a visitor may start at most 30 coin scans and 240 pictures a minute (per server copy). clank.trade doesn't answer → no
-// guess (503). CHECKER_HIDE_PICTURES (optional): coins whose picture the owner doesn't want shown.
+// a visitor may start at most 30 coin scans and 240 pictures a minute (per server copy). clank.trade doesn't answer → the
+// chain's smaller scan (shared a minute), or when the chain can't say either, no guess (503). CHECKER_HIDE_PICTURES
+// (optional): coins whose picture the owner doesn't want shown.
 import { getConfig } from '../server/config.js';
 import { clientIp, visitorCode, ipGroup } from '../server/security.js';
 import { checkerBurst, pictureBurst } from '../server/burst.js';
@@ -27,7 +30,8 @@ const LIST = cache(60, 300, 600);
 // the newest coins: 10 seconds, no stale copies (the point is to be fresh)
 const LATEST = cache(5, 10);
 // a scan: a coin under a day old changes fast (1 minute), an older one less (5 minutes)
-const scanCache = (scan, now) => (scan.createdAt > 0 && now - scan.createdAt < DAY ? cache(30, 60, 60) : cache(60, 300, 300));
+// (a scan from the chain alone, 2026-09-29, while clank.trade doesn't answer: a minute, so the full scan is back soon after it does)
+const scanCache = (scan, now) => (scan.source === 'chain' || (scan.createdAt > 0 && now - scan.createdAt < DAY) ? cache(30, 60, 60) : cache(60, 300, 300));
 
 // this server copy's last answers (a few CDN regions asking at once cost one read), and reads already on their way
 let memo = { at: 0, list: null }, running = null;
