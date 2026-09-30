@@ -218,8 +218,8 @@ test('a good request is counted first, then streamed: Despina in her calm style 
   assert.equal(take.body.p_who, visitorCodeForDay(SECRET, IP, new Date().toISOString().slice(0, 10)));
   assert.ok(!JSON.stringify(take.body).includes(IP), 'never the IP');
   assert.equal(take.body.p_ticket, checkVoiceTicket(SECRET, ticket, TEXT).id);
-  assert.deepEqual([take.body.p_units, take.body.p_person_daily, take.body.p_global_daily, take.body.p_ticket_max], [1, 20, 4000, 2],
-    'one request; a Stranger may ask 20 times a day (10 messages, each voice ticket twice); the site 4,000 (the owner\'s choice)');
+  assert.deepEqual([take.body.p_units, take.body.p_person_daily, take.body.p_global_daily, take.body.p_ticket_max], [1, 10, 4000, 2],
+    'one request; a Stranger may ask 10 times a day (5 messages, each voice ticket twice); the site 4,000 (the owner\'s choice)');
   const g = called(TTS)[0];
   assert.equal(g.headers['x-goog-api-key'], 'fake-gemini-key');
   assert.equal(g.body.model, 'gemini-3.8-flash-lite-tts');
@@ -234,15 +234,15 @@ test('a good request is counted first, then streamed: Despina in her calm style 
 });
 
 test('her voice follows each reply\'s mood, and her daily voice follows the visitor\'s messages a day', async () => {
-  for (const [mood, level, share] of [['love', 3, 300], ['shy', 2, 100], ['happy', 1, 20], ['wave', 2, 100], ['neutral', 3, 300], ['celebrate', 1, 20], ['bogus', 1, 20]]) {
+  for (const [mood, level, share] of [['love', 3, 300], ['shy', 2, 30], ['happy', 1, 10], ['wave', 2, 30], ['neutral', 3, 300], ['celebrate', 1, 10], ['bogus', 1, 10]]) {
     const r = await voice({ text: TEXT, ticket: ticketFor(TEXT, { mood, level }) });
     assert.equal(r.status, 200, mood);
     const expected = ['happy', 'love', 'shy', 'wave', 'neutral'].includes(mood) ? styleFor(mood) : VOICE_STYLE;
     assert.equal(styleOf(called(TTS).at(-1)), expected, `${mood}: a reply's own moods only`);
     assert.equal(called('voice_take').at(-1).body.p_person_daily, share, `level ${level}`);
   }
-  // every reply she may write (10 / 50 / 150 a day) can also be said, even with a retry (each ticket twice)
-  assert.deepEqual([1, 2, 3].map(voicePerDay), [20, 100, 300]);
+  // every reply she may write (5 / 15 / 150 a day) can also be said, even with a retry (each ticket twice)
+  assert.deepEqual([1, 2, 3].map(voicePerDay), [10, 30, 300]);
   assert.equal(MOOD_STYLES.neutral, VOICE_STYLE, 'a neutral reply sounds exactly like the style the owner approved');
   for (const [mood, style] of Object.entries(MOOD_STYLES)) {
     assert.match(style, /smooth|warm|soft|gentle/i, `${mood}: still her`);

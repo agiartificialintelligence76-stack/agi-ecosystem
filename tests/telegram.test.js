@@ -374,7 +374,7 @@ test('texting her: the site\'s chat as a Stranger, with the same limits, and her
   assert.doesNotMatch(prompt, /They're replying to this text/, 'no earlier text unless they replied to one');
   assert.deepEqual(g.contents, [{ role: 'user', parts: [{ text: 'hi agi1' }] }]);
   const slot = db('chat_take')[0].body;
-  assert.equal(slot.p_person_daily, 10, 'a Stranger\'s 10 messages a day');
+  assert.equal(slot.p_person_daily, 5, 'a Stranger\'s 5 messages a day');
   assert.equal(slot.p_global_daily, 1000, 'the site\'s daily cap covers Telegram too');
   assert.equal(slot.p_who, chatCode(SECRET, CHAT, '2026-09-29'));
   assert.equal(db('tg_take')[0].body.p_max, 400, 'Telegram\'s own share of the day (TELEGRAM_DAILY_CAP)');

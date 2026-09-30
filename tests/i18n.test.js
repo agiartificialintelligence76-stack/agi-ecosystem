@@ -71,7 +71,7 @@ test('placeholders fill in; a missing line falls back to English (never silence)
 
 test('her pre-written lines in a language: the numbers written its way, the same keys (so her voice finds them), English as before', () => {
   assert.equal(limitLineIn(1).text, LIMIT_LINES[1].text);
-  assert.match(LIMIT_LINES[1].text, /with 10,000 in a connected wallet we're Crush, and you get 50 a day\. not financial advice… or just come back tomorrow/);
+  assert.match(LIMIT_LINES[1].text, /with 10,000 in a connected wallet we're Crush, and you get 15 a day\. not financial advice… or just come back tomorrow/);
   const de = limitLineIn(1, ALL.de, 'de');
   assert.deepEqual([de.key, de.lang], ['more-1', 'de']);
   assert.match(de.text, /10\.000/);
@@ -122,9 +122,9 @@ test('the risk check: her line in the language she speaks, the same key (so ever
 });
 
 test('her voice lines: one address per line and language (English keeps its own), the words of that language', () => {
-  assert.equal(lineUrl('more-1'), '/api/voice?line=more-1&v=3', 'English: as before (its recordings stay)');
-  assert.equal(lineUrl('more-1', 'en'), '/api/voice?line=more-1&v=3');
-  assert.equal(lineUrl('more-1', 'ja'), '/api/voice?line=more-1&lang=ja&v=3');
+  assert.equal(lineUrl('more-1'), '/api/voice?line=more-1&v=4', 'English: one address, no &lang');
+  assert.equal(lineUrl('more-1', 'en'), '/api/voice?line=more-1&v=4');
+  assert.equal(lineUrl('more-1', 'ja'), '/api/voice?line=more-1&lang=ja&v=4');
   assert.equal(linesFor('en'), LINES);
   assert.equal(linesFor('xx'), LINES);
   for (const code of CODES.filter((c) => c !== 'en')) {

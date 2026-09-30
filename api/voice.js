@@ -155,10 +155,11 @@ async function speak(cfg, words, style, last) {
 
 export async function GET(request) {
   // exactly one address per line (and language), so nobody can make the CDN miss (and us pay) by adding things to it:
-  // ?line=<key>&v=3 in English, ?line=<key>&lang=<code>&v=3 in her other languages (2026-09-29; never &lang=en)
+  // ?line=<key>&v=4 in English, ?line=<key>&lang=<code>&v=4 in her other languages (2026-09-29; never &lang=en; the number is
+  // LINE_VERSION, 4 since 2026-09-30)
   const m = /^\?line=([a-z0-9-]{1,20})(?:&lang=([a-z]{2,3}))?&v=(\d{1,3})$/.exec(new URL(request.url).search);
   const lang = m?.[2] ?? 'en';
-  const line = m && m[3] === String(LINE_VERSION) && (m[2] === undefined || (lang !== 'en' && isLang(lang))) ? m[1] : null;   // (exactly "3", not "03")
+  const line = m && m[3] === String(LINE_VERSION) && (m[2] === undefined || (lang !== 'en' && isLang(lang))) ? m[1] : null;   // (exactly "4", not "04")
   const fixed = linesFor(lang);
   const market = line && !Object.hasOwn(fixed, line) ? marketLineByKey(line, linesOf(lang), lang) : null;
   if (!line || (!Object.hasOwn(fixed, line) && !market)) return json(404, { error: 'not_found' });

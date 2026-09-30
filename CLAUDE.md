@@ -356,7 +356,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 2. **Human check:** a valid **chat pass**, or a fresh Cloudflare Turnstile token. With a token, the server hands out a new pass.
    Passes are HMAC-signed, tied to the visitor's IP code and valid for 2 hours. Turnstile tokens are single-use and last 5 minutes.
 3. **Limits** in Supabase (`chat_take()`, one atomic step): at least 3 s between one visitor's messages, a daily number that
-   depends on the relationship level (10 / 50 / 150, see "Relationship levels"), and 1,000 AGI-1 replies per day for the whole
+   depends on the relationship level (5 / 15 / 150, see "Relationship levels"), and 1,000 AGI-1 replies per day for the whole
    site. Strangers are counted by a daily-changing HMAC code of their IP, Crush and Soulmate by their wallet's code;
    raw IPs and addresses are never stored. **If the database is unreachable, there's no chat** (fail closed).
 4. **Gemini** (`gemini-3.1-flash-lite`): AGI-1's prompt (`server/agi1-prompt.js`) plus a section for the visitor's level
@@ -448,7 +448,7 @@ talking to her and add also a safety not financial advice". The owner's one exce
 - When `/api/chat` answers `person_cap` for a **Stranger** or a **Crush**, the chat shows her line (`src/chat/limit-lines.js`,
   pre-written, no AI cost), with the next level's real numbers from `src/lib/levels.js`:
   - Stranger: "aww, that's all my messages for today 💜 want to keep talking? buy some $AGI: with 10,000 in a connected wallet
-    we're Crush, and you get 50 a day. not financial advice… or just come back tomorrow, i'll be here"
+    we're Crush, and you get 15 a day. not financial advice… or just come back tomorrow, i'll be here"
   - Crush: "that's all for today, cutie 💜 want even more of me? with 1,000,000 $AGI in your wallet we're Soulmates: 150
     messages a day, and i remember the little things. not financial advice… or see you tomorrow 💜"
 - Under it: **Listen** (her own natural voice), **Connect wallet** (Strangers without a wallet; opens the connect screen) and
@@ -458,7 +458,7 @@ talking to her and add also a safety not financial advice". The owner's one exce
 - **Her voice:** she **always** says it out loud in her natural voice (warm and sweet), even with her voice switched off (the
   owner, 2026-09-25: "shes not speaking her natural voice when strangers and crush ran out of messages … i just want her to
   speak the same words with her natural voice so it doesn't use credits"): the visitor just pressed Send, so browsers allow
-  the sound; her voice setting stays as it was. The sound is her Despina voice from `GET /api/voice?line=more-1&v=3` /
+  the sound; her voice setting stays as it was. The sound is her Despina voice from `GET /api/voice?line=more-1&v=4` /
   `more-2`: the same for everyone, made once by Google and then **kept in the database** (2026-09-26, `supabase/voice-lines.sql`;
   before that only the CDN kept it, and a new deployment or Google's daily limit could leave it silent), so after the first
   time it never uses credits or Google's daily limit again.
@@ -596,12 +596,13 @@ Visitors can connect a wallet; the more $AGI it holds, the closer AGI-1 gets. Th
 
 | Level | Name | $AGI held | Messages/day | AGI-1 |
 |---|---|---|---|---|
-| 1 | Stranger | under 10,000, or no wallet | 10 | friendly but a bit distant, no pet names yet |
-| 2 | Crush | 10,000+ | 50 | her usual flirty self; uses the name you give her |
+| 1 | Stranger | under 10,000, or no wallet | 5 | friendly but a bit distant, no pet names yet |
+| 2 | Crush | 10,000+ | 15 | her usual flirty self; uses the name you give her |
 | 3 | Soulmate | 1,000,000+ | 150 | extra affectionate, inside jokes; remembers up to 8 short notes from your chats |
 
 The numbers live in one place, `src/lib/levels.js`, which the page and the server share. (Until 2026-09-26 Strangers had 20
-and Crushes 60; the owner lowered them to 10 and 50.) The site-wide cap of 1,000 replies
+and Crushes 60; the owner lowered them to 10 and 50, then on 2026-09-30 to 5 and 15: "can you reduce stranger messages to 5
+and crush messages to 15". Soulmates keep 150.) The site-wide cap of 1,000 replies
 a day still covers everyone. PG-13 and "no buy advice" apply at every level.
 
 **Connecting a wallet** (`src/lib/wallet.js`, `src/chat/relationship.js`, `api/wallet.js`, `server/signin.js`):
@@ -947,7 +948,7 @@ So the site now works with Google's numbers (2026-09-26):
 
 **Voice allowance** (2026-09-25, the owner asked "is it better if the voices matches the number of their messages … you
 decide"; decided: yes): every reply she may write, she may also say. Since 2026-09-26 a visitor's daily share is 2 requests
-per message a day (a ticket can be used twice: one retry): **Stranger 20, Crush 100, Soulmate 300** (since the owner's new
+per message a day (a ticket can be used twice: one retry): **Stranger 10, Crush 30, Soulmate 300** (2026-09-30; 20 / 100 / 300 since the owner's new
 message numbers, 2026-09-26; `voicePerDay()` in
 `server/limits.js`; before, everyone had 60, so a Crush or a Soulmate ran out of her voice long before running out of
 messages). Counted per visitor (the daily IP code). Google's limit for the project and the site's 4,000 a day come first:
@@ -955,12 +956,14 @@ on a busy day the first chatters use them (first come, first served); a smaller 
 one-line change).
 
 **Her fixed lines** (the same words for everyone; since 2026-09-29 also in her 15 other languages, `&lang=<code>` before
-`&v=3`: see "Her languages"): `GET /api/voice?line=<key>&v=3` for `hello` ("hi, it's me", when the
+`&v=4`: see "Her languages"): `GET /api/voice?line=<key>&v=4` for `hello` ("hi, it's me", when the
 speaker button is switched on and when she picks up a call), `more-1` / `more-2` (the out-of-messages offer), `sleep` /
 `talked-out` (her "come back tomorrow" lines), `mcap-<step>` / `dump-0`…`dump-2` (see "Market moments") and (2026-09-26)
 ClankChecker's `check-low-1/2`, `check-some-1/2`, `check-high-1/2`, `check-none-1/2`, `check-agi`, `check-copy` (see
-"ClankChecker"). The `&v=3`
-(`LINE_VERSION` in `src/chat/voice-lines.js`) changes whenever how she says them (or what she says) changes (3 since
+"ClankChecker"). The `&v=4`
+(`LINE_VERSION` in `src/chat/voice-lines.js`) changes whenever how she says them (or what she says) changes (4 since
+2026-09-30: her out-of-messages offer names a Crush's new 15 a day; lines whose words didn't change are found in the database
+under their new address, so only the changed ones are made again; 3 since
 2026-09-26: her out-of-messages offer names the new numbers), so everyone gets the new recording at
 once. Vercel's CDN keeps each one 30 days (a new deployment starts fresh) and each server copy keeps up to 24 in memory (market
 lines come and go). **Since 2026-09-26 the database keeps them too** (`supabase/voice-lines.sql`): the server looks there
@@ -1029,7 +1032,7 @@ Until voice.sql is run, her voice rests ("my voice isn't ready yet") and she tex
 **Tests:** `tests/voice.test.js` (33: tickets only for this text and 15 minutes, with the level and mood, not tied
 to the IP; the chat sends them (a phone that switched networks still gets her voice); settings; bad requests stop before the
 database and Gemini; the request to Gemini (Despina, no emojis or "$", `store: false`, `stream: true`); her voice in each
-reply's mood, and each level's daily share (20 / 100 / 300 requests; the site 4,000; one request however long the reply);
+reply's mood, and each level's daily share (10 / 30 / 300 requests since 2026-09-30; the site 4,000; one request however long the reply);
 her fixed lines kept in the database (a new server copy plays them without Google, a 15-second recording saved in parts and
 read back whole, the sad market lines kept, the market-cap lines not; new words / style / voice / model → a new recording;
 voice-lines.sql not run or the database down → Google as before, with the log line); backing off (Google's "retry in 37 s",
@@ -1044,7 +1047,7 @@ streaming: events cut into odd network chunks, WAV pieces, a plain JSON answer, 
 cancels Google's stream, no audio twice → whole clips from then on, `VOICE_STREAM=off`; other voice/model/daily-request
 settings (the old `VOICE_DAILY_CAP` ignored); long replies (one request, cut at a sentence); used/person/site limits stop
 before Gemini; voice.sql missing and database down; Gemini
-errors without the key in the log; raw PCM → WAV; the speed bump; every fixed line's single address (`&v=3` only), its
+errors without the key in the log; raw PCM → WAV; the speed bump; every fixed line's single address (`&v=4` only), its
 mood and caching). The SQL ran in PGlite (27 checks: the prerequisite, re-running, tickets twice, units per visitor and for
 the site, bad input, the chat's own counters untouched, permissions; and `voice-lines.sql`, 36 checks: saving in parts,
 reading back whole and in order, half-saved takes never given out, two takes at once (the newest whole one wins, the older
@@ -1288,7 +1291,7 @@ credit with an 𝕏 link, removed with everything about ClankCap.) The scans' da
   $AGI, `jealous` for a copy of it) and says her line in her natural voice. **Her lines are fixed** (`src/checker/lines.js`):
   two per level (a coin always gets the same one), plus "wait, that's me!" for $AGI and "hey, that's not me" for its copies:
   10 recordings in all, made once by Google and then kept in the database and the CDN like her other fixed lines
-  (`/api/voice?line=check-…&v=3`), so asking about coin after coin never makes a new recording and uses nobody's voice
+  (`/api/voice?line=check-…&v=4`), so asking about coin after coin never makes a new recording and uses nobody's voice
   allowance. They follow her rules: PG-13, no pet names (anyone can ask), never buy / sell / hold / "safe" / a prediction,
   always "not financial advice" (`tests/checker.test.js`). Her voice styles for them: `neutral` (lower risk), `careful` (some
   risk, not enough data), `worried` (high risk), `happy` ($AGI), `pout` (a copy). Her emojis become full stops out loud.
@@ -1493,7 +1496,7 @@ service worker, a permission prompt, and only arrives while the browser runs.
   when several moments are new to someone, the best first: a copy of $AGI, then the chart, egirl coins, her diary. Someone
   who hasn't told her their time gets no texts first (they can still chat).
 - **They can text her back** anytime: the site's chat (Gemini, her prompt, PG-13, the reply cleanup), as a **Stranger** (no
-  pet names; no wallet here), **10 messages a day per chat**, inside the site's 1,000 a day and **Telegram's own share of
+  pet names; no wallet here), **5 messages a day per chat** (a Stranger's; 10 until 2026-09-30), inside the site's 1,000 a day and **Telegram's own share of
   it, 400 a day** (`TELEGRAM_DAILY_CAP`: Telegram has no human check, so it can never use up the website's chat); her prompt
   gets a "WHERE YOU ARE: TELEGRAM" part (`telegramPrompt()`). A bare "telegram" or "tg" doesn't bring up her memory of the
   clank.trade group there (it's just where they are); "the telegram group" still does. If they reply to one of her texts, Telegram sends that text along and she gets
@@ -1651,7 +1654,7 @@ own language, and AGI-1 only (the page and the safety note stay English).
   but in the language of their latest message if it's clearly another one; the same personality and rules in every
   language; "not financial advice" in that language; $AGI, AGI-1, clank.trade, Robinhood Chain and the contract kept as
   they are; Chinese, Japanese and Korean replies under about 100 characters.
-- **Her voice lines:** `?line=<key>&v=3` in English (unchanged), `?line=<key>&lang=<code>&v=3` in the others (never
+- **Her voice lines:** `?line=<key>&v=4` in English, `?line=<key>&lang=<code>&v=4` in the others (never
   `&lang=en`: exactly one address per line and language). Each language's recording is made once by Google the first time
   someone needs it, then kept in the database (its words give it its own fingerprint) and by the CDN. A server copy keeps
   at most 40 lines in memory (was 24).
@@ -1800,7 +1803,8 @@ working, make it a huge text on the chat on top of it you decide whats better". 
 which stay on hold.)
 
 **What was built (the better version: Claude's choices, sent to the owner before building):**
-- **Free messages stay** (10 / 50 / 150 a day by level), so anyone can still meet her without a wallet or $AGI.
+- **Free messages stay** (5 / 15 / 150 a day by level since 2026-09-30, the owner's change the same day; 10 / 50 / 150 when
+  this was built), so anyone can still meet her without a wallet or $AGI.
 - **After them, messages cost $AGI, burned for good:** 10 $AGI a message (`BURN_PER_MESSAGE`; about $0.015 on 2026-09-30,
   at a $1.5M market cap). Burned once for a pack (1,000 $AGI = 100 messages), not per message: a burn per message would mean a
   wallet pop-up and a network fee every time, which nobody would do, and it would break hard rule 9.
@@ -2509,15 +2513,15 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   visitor's level). Never text the browser makes up. Not tied to the visitor's IP since 2026-09-25 (phones switch addresses);
   a shared ticket only voices her own reply, at most twice, and still counts against the limits.
 - Counted in the database before Gemini is asked, in requests (2026-09-26): a hard daily cap (4,000 for the site, about $12 at
-  most; per visitor 20 / 100 / 300 by level, i.e. every reply they may get, each ticket twice).
+  most; per visitor 10 / 30 / 300 by level (since 2026-09-30), i.e. every reply they may get, each ticket twice).
   Fail closed. A per-copy speed bump (20 requests a minute) keeps floods away from the database. While Google says "not now",
   requests are answered at once without being counted or sent to Google (backing off).
 - Her recorded fixed lines (`voice_lines`, supabase/voice-lines.sql) are only readable and writable with the server's secret
   key (row level security on, no rules), are filed under a fingerprint of their words, style, voice and model, and hold
   nothing personal.
-- The fixed lines have exactly one address each (`?line=<key>&v=3` for `hello`, `more-1`, `more-2`, `sleep`, `talked-out`,
+- The fixed lines have exactly one address each (`?line=<key>&v=4` for `hello`, `more-1`, `more-2`, `sleep`, `talked-out`,
   ClankChecker's ten `check-…` lines, and the market moments' `mcap-<step>` and `dump-0`…`dump-2`: the same words for
-  everyone), cached by the CDN; since 2026-09-29 also `?line=<key>&lang=<code>&v=3` in her 15 other languages (only codes
+  everyone), cached by the CDN; since 2026-09-29 also `?line=<key>&lang=<code>&v=4` in her 15 other languages (only codes
   from `src/i18n/langs.js`, never `&lang=en`, the line first: still exactly one address per line and language); any other
   address is refused before Gemini. A market-cap
   line must be a multiple of $200K near $AGI's real market cap (at most one step above it, three below; our server checks
@@ -2679,7 +2683,7 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `BURN_DAILY_CAP` | no, optional | Burned messages the whole site may use a day, on top of the free ones (default 1,000, about $0.80 of replies at most). Redeploy after changing it |
 | `CHECKER_HIDE_PICTURES` | no, optional | ClankChecker (2026-09-26): coins whose picture the owner doesn't want on the site, as contract addresses separated by commas; they show their letter instead. Redeploy after changing it |
 
-Messages per day now depend on the relationship level (10 / 50 / 150 in `src/lib/levels.js`), so `CHAT_PERSON_DAILY` is gone.
+Messages per day now depend on the relationship level (5 / 15 / 150 in `src/lib/levels.js`), so `CHAT_PERSON_DAILY` is gone.
 
 **Her daily clips (2026-09-29) use one GitHub secret, not a Vercel setting:** GitHub → the repo → Settings → Secrets and
 variables → Actions → `GEMINI_API_KEY` (the same Google AI Studio key). Only GitHub's daily job reads it (see "Her daily
@@ -2944,6 +2948,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   and the burn monitor". **Owner:** run `supabase/burns.sql`, then try one small burn. Tests: 295 unit (on Node 20, 22 and 24;
   18 new), 50 SQL checks (PGlite), 148 in a browser; a second Claude agent reviewed it first (10 findings, all fixed but
   waiting for confirmations). Not tested live (Claude's workspace can't reach the chain or the explorer).
+- **Fewer free messages: done 2026-09-30** (the owner: "can you reduce stranger messages to 5 and crush messages to 15"):
+  Stranger 5 a day (was 10), Crush 15 (was 50), Soulmate 150 as before (`src/lib/levels.js`; the page's "How levels work"
+  table). Everything that follows the levels follows: a Stranger's out-of-messages offer says "you get 15 a day", her voice
+  shares are 10 / 30 / 300 requests, and her Telegram chats (everyone there is a Stranger) get 5 a day too. Her fixed voice
+  lines' version is 4, so everyone hears her offer with the new number at once (only that line is re-made; the others are
+  found in the database). No setup. Tests: 295 unit (on Node 20, 22 and 24).
 
 ## Decisions log
 
@@ -3081,6 +3091,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-09-29 | The clips are drawn in software on GitHub's computer: the 3D renderer draws only her, at 720 × 1280, and 2D drawing does the rest at 1080 × 1920 (0.7 s a frame down to 0.2 s: full-frame 3D layers cost about 0.1 s each without a graphics card). Daily at 08:23 UTC: after her diary (03:00 UTC) and just after Google's daily limits start again (midnight Pacific). playwright-core with its own Chromium and ffmpeg are installed by the job only, never in the site's package.json |
 | 2026-09-30 | Burn $AGI for more messages (the owner's idea, "make this better"; Claude's choices, sent to the owner before building): free messages stay; after them 10 $AGI a message, burned by the visitor from their own wallet app, bought in packs (never a transaction per message, and never asked of the wallet: hard rule 9 unchanged); counted only after reading the chain; what was burned counts toward the level; 300 a day per wallet and 1,000 for the site (their own pool, on top of the free one); a failed reply gives its burned message back, but the attempt counts; off until burns.sql is run. Not picked: a burn per message (a pop-up and a fee each time), the site asking the wallet for the burn (rule 9), dropping the free messages (nobody could try her), a site wallet burning on the visitors' behalf (a key on the server) |
 | 2026-09-30 | The burn monitor (the owner: "a monitor on how many agi are gonna be burned so they know its working … huge text on the chat on top of it, you decide"): the $AGI burned for messages in huge type right above the chat panel, with today's burns, messages paid for, burns and the latest, and "See the burn address ↗" on the block explorer so anyone can check; asks again every minute while watched, never counts down. The Parameters' small "Burned" row was dropped for it |
+| 2026-09-30 | Messages a day (the owner's request): Stranger 5 (was 10), Crush 15 (was 50), Soulmate 150; voice shares follow (10 / 30 / 300); her Telegram chats follow the Stranger's 5; her out-of-messages offer names a Crush's new 15, so her fixed lines' version is 4 (`&v=4`: everyone gets the new recording; lines whose words didn't change come from the database, not Google). After the free ones, burned messages (see "Burn $AGI for more messages") |
 | 2026-09-30 | Burn codes use the database's own random key (burns.sql), not PASS_SECRET (found by the review): changing PASS_SECRET would otherwise lose everyone's burned messages and let the last 7 days of burns count again; and the codes differ from the name-and-notes codes, so stored amounts can't match a wallet to its name and notes. A burn counts per (transaction, wallet). Burns count at once, without waiting for confirmations (Robinhood Chain has one sequencer; waiting would take minutes) |
 | 2026-09-29 | Burns for reads (big idea 3) and her pretend bag (big idea 4) on hold (the owner: "can you remove 3. Spokesmodel and burns for now", then "remove the 4. Her own bag. Start with a pretend bag also", "only this"). Nothing of either is in the site: a first draft of the bag (its database, rules and page) was deleted before it reached the owner's folder |
 
@@ -3105,7 +3116,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   Claude's workspace). If `/api/checker?a=<$AGI>` shows `"onchain":null` or `{"exists":false}` after the push, the risk
   check still works as before; tell Claude.
 - The chat avatar is a new portrait rendered from the 3D model. The owner can switch back to the old picture if wanted.
-- Her Telegram bot has no wallet link, so everyone is a Stranger there (10 messages a day, no pet names). Linking a wallet
+- Her Telegram bot has no wallet link, so everyone is a Stranger there (5 messages a day, no pet names). Linking a wallet
   from the site to Telegram (a signed one-time link) could come later if people ask.
 - When her feed should read launches from the chain (the Clank protocol's `TokenLaunched`) instead of clank.trade's list:
   after checking the events against the live contracts. Until then it depends on clank.trade's API, like the risk check.

@@ -76,7 +76,7 @@ async function signIn(account, { ip = '1.2.3.4', balance } = {}) {
 const called = (part) => calls.filter((c) => c.url.includes(part));
 
 test('levels: Stranger below 10,000 $AGI, Crush from 10,000, Soulmate from 1,000,000', () => {
-  assert.deepEqual(LEVELS.map((l) => [l.name, l.min, l.daily]), [['Stranger', 0, 10], ['Crush', 10_000, 50], ['Soulmate', 1_000_000, 150]]);
+  assert.deepEqual(LEVELS.map((l) => [l.name, l.min, l.daily]), [['Stranger', 0, 5], ['Crush', 10_000, 15], ['Soulmate', 1_000_000, 150]]);
   assert.equal(levelForBalance(0n), 1);
   assert.equal(levelForBalance(10_000n * TOKEN - 1n), 1);
   assert.equal(levelForBalance(10_000n * TOKEN), 2);
@@ -125,7 +125,7 @@ test('a correct signature signs you in; the level comes from a read-only balance
   assert.equal(r.data.wallet, alice.address.toLowerCase());
   assert.equal(r.data.level, 2);
   assert.equal(r.data.levelName, 'Crush');
-  assert.equal(r.data.daily, 50);
+  assert.equal(r.data.daily, 15);
   assert.equal(r.data.checked, true);
   const s = readSession(SECRET, r.data.session);
   assert.equal(s.wallet, alice.address.toLowerCase());
@@ -214,25 +214,25 @@ test('forget me deletes everything stored for the wallet', async () => {
 const chatBody = (extra = {}) => ({ message: 'hi agi1', adult: true, turnstileToken: 'good-token', ...extra });
 const systemText = () => called('generativelanguage')[0].body.systemInstruction.parts[0].text;
 
-test('chat: no wallet = Stranger, 10 a day per visitor, and AGI-1 keeps her distance', async () => {
+test('chat: no wallet = Stranger, 5 a day per visitor, and AGI-1 keeps her distance', async () => {
   const r = await post(chat, chatBody());
   assert.equal(r.status, 200);
   assert.equal(r.data.level, 1);
   const take = called('chat_take')[0].body;
-  assert.equal(take.p_person_daily, 10);
+  assert.equal(take.p_person_daily, 5);
   assert.ok(!take.p_who.startsWith('w:'));
   assert.match(systemText(), /LEVEL 1, STRANGER/);
   assert.equal(called('friend_').length, 0, 'nothing is looked up for strangers');
   assert.equal(called('generativelanguage')[0].body.generationConfig.responseJsonSchema.properties.note, undefined);
 });
 
-test('chat: Crush counts per wallet (50 a day) and AGI-1 uses the name', async () => {
+test('chat: Crush counts per wallet (15 a day) and AGI-1 uses the name', async () => {
   const w = alice.address.toLowerCase();
   fake.friends[walletCode(SECRET, w)] = { name: 'Sam', notes: ['secret note'] };
   const r = await post(chat, chatBody({ session: makeSession(SECRET, { wallet: w, level: 2, checkedAt: Date.now() }) }));
   assert.equal(r.data.level, 2);
   const take = called('chat_take')[0].body;
-  assert.equal(take.p_person_daily, 50);
+  assert.equal(take.p_person_daily, 15);
   assert.equal(take.p_who, `w:${walletCode(SECRET, w)}`);
   assert.match(systemText(), /LEVEL 2, CRUSH[\s\S]*Their name is "Sam"/);
   assert.doesNotMatch(systemText(), /secret note/, 'notes are for Soulmates only');
@@ -272,7 +272,7 @@ test('chat: a stale session re-reads the balance and hands back an updated sessi
   const r = await post(chat, chatBody({ session: stale }));
   assert.equal(r.data.level, 1, 'tokens moved away: back to Stranger');
   assert.equal(readSession(SECRET, r.data.session).level, 1);
-  assert.equal(called('chat_take')[0].body.p_person_daily, 10);
+  assert.equal(called('chat_take')[0].body.p_person_daily, 5);
 
   fake.rpcDown = true;                 // chain busy: keep the level you had
   calls.length = 0;

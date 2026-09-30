@@ -91,7 +91,7 @@ test('happy path: verifies, counts, asks Gemini the safe way, returns a signed r
   assert.equal(s.headers.apikey, 'sb_secret_fake_key_123');
   assert.equal(s.headers.Authorization, undefined, 'secret key must not go in Authorization');
   assert.equal(s.body.p_global_daily, 1000);
-  assert.equal(s.body.p_person_daily, 10);                    // no wallet = Stranger: 10 messages a day (20 until 2026-09-26)
+  assert.equal(s.body.p_person_daily, 5);                     // no wallet = Stranger: 5 messages a day (20 until 2026-09-26, 10 until 2026-09-30)
   assert.ok(!JSON.stringify(s.body).includes('1.2.3.4'), 'the raw IP is never sent to the database');
 });
 

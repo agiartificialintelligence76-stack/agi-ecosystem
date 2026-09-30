@@ -1,10 +1,11 @@
 // Relationship levels with AGI-1 (Phase 3). Shared by the page and the server, so both always agree.
 // A level depends only on how much $AGI a connected wallet holds (read-only). Owner's choices, 2026-09-24.
 // Amounts are whole tokens, so they don't move with the price. Everyone without a wallet is a Stranger.
-// Messages a day: 20 / 60 / 150 until 2026-09-26, then 10 / 50 / 150 (the owner's change).
+// Messages a day: 20 / 60 / 150 until 2026-09-26, 10 / 50 / 150 until 2026-09-30, then 5 / 15 / 150 (the owner's changes).
+// (After them, messages paid for by burning $AGI: server/burn.js.)
 export const LEVELS = [
-  { level: 1, name: 'Stranger', min: 0, daily: 10 },          // friendly but a bit distant
-  { level: 2, name: 'Crush', min: 10_000, daily: 50 },        // remembers your name
+  { level: 1, name: 'Stranger', min: 0, daily: 5 },           // friendly but a bit distant
+  { level: 2, name: 'Crush', min: 10_000, daily: 15 },        // remembers your name
   { level: 3, name: 'Soulmate', min: 1_000_000, daily: 150 }, // remembers past chats, special replies
 ];
 

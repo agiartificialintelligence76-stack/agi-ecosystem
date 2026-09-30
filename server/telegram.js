@@ -218,7 +218,7 @@ async function onButton(cfg, token, cb, now, L) {
 }
 
 // A message to her: the same chat as the site's (Gemini, her prompt, PG-13, the reply cleanup), as a Stranger (anyone can
-// start the bot, and no wallet is connected here), 10 messages a day per chat, inside the site's daily cap for everyone and
+// start the bot, and no wallet is connected here), a Stranger's messages a day per chat (5 since 2026-09-30), inside the site's daily cap for everyone and
 // Telegram's own share of it (TELEGRAM_DAILY_CAP, 400: Telegram has no human check, so it can't use up the website's chat).
 async function onText(cfg, token, m, chat, text, now, L) {
   let row;
