@@ -887,11 +887,12 @@ summer and 08:00 in winter, which is 15:00 / 16:00 in the owner's time). The cha
 a day). On a live check the same day, her not-yet-made lines got `why: daily_limit`: the owner's testing had used the 100.
 So the site now works with Google's numbers (2026-09-26):
 - **Counted in requests, like Google counts them:** every time the page asks for a reply's voice is one request, whatever its
-  length. The whole site may ask **4,000 times a day** (`VOICE_DAILY_REQUESTS`, the owner's choice, 2026-09-26): the money
-  limit, about **$12 a day at most** ($18 if every reply went to the backup model below; double from January 2027). Google's
+  length. The whole site may ask **5,000 times a day** (`VOICE_DAILY_REQUESTS`, the owner's choice, 2026-09-30): the money
+  limit, about **$15 a day at most** ($22.50 if every reply went to the backup model below; double from January 2027). Google's
   own limit comes first while it's lower (100 a day per speech model on Tier 1): when it's used up, the site backs off (below)
-  and she texts. When the site's 4,000 are used, she says "my voice needs a little rest for today" once and texts until 00:00
-  UTC. (The same day it was first 80, to leave room under Google's 100, then 1,000 (about $3), then 4,000.)
+  and she texts. When the site's 5,000 are used, she says "my voice needs a little rest for today" once and texts until 00:00
+  UTC. (On 2026-09-26 it was first 80, to leave room under Google's 100, then 1,000 (about $3), then 4,000; 5,000 since
+  2026-09-30, the owner: "can you make the voices 5000 a day?".)
 - **Her fixed lines are kept in the database** once Google has made them (`supabase/voice-lines.sql`, `server/voice-store.js`),
   so they never need Google again: not after a push (which empties Vercel's CDN), not when Google's daily limit is used up.
 - **A backup speech model** (2026-09-26, the owner's idea and OK): Google gives each model its own limits, so her voice
@@ -918,7 +919,7 @@ So the site now works with Google's numbers (2026-09-26):
   3. **Never** extra projects or keys to add up limits: Google's terms forbid getting around rate limits.
   4. The backup model above (built 2026-09-26) roughly doubles what Google allows: its limits come on top of Flash-Lite's
      (check its own numbers on the same Rate limit page).
-  With more than 4,000 a day from Google, raise `VOICE_DAILY_REQUESTS` too (Vercel → Settings → Environment Variables, then
+  With more than 5,000 a day from Google, raise `VOICE_DAILY_REQUESTS` too (Vercel → Settings → Environment Variables, then
   Redeploy), after checking the cost below.
 - Testing the voice a lot uses the same Google limit (every spoken reply, every `?dev` market preview of a new step): on a day
   of heavy testing on Tier 1, her voice may rest for visitors until the next Pacific midnight.
@@ -933,7 +934,7 @@ So the site now works with Google's numbers (2026-09-26):
    visitor), JSON ≤ 4 KB, text ≤ 600 characters and the ticket.
 3. **Limits in the database** (`voice_take()`, `supabase/voice.sql`), counted in requests *before* Gemini is asked, so the cap
    is a hard cap on Google's requests and on money: each ticket at most **twice** (one retry), **a visitor's daily voice
-   follows their messages a day** (see "Voice allowance" below), **4,000 requests a day for the whole site**
+   follows their messages a day** (see "Voice allowance" below), **5,000 requests a day for the whole site**
    (`VOICE_DAILY_REQUESTS`, the money limit). She reads at most 300 characters, cut after a sentence. Database down → no
    voice (fail closed). While Google has said "not now" (see "Backing off" above), the page gets the same answer at once and
    nothing is counted.
@@ -951,7 +952,7 @@ decide"; decided: yes): every reply she may write, she may also say. Since 2026-
 per message a day (a ticket can be used twice: one retry): **Stranger 10, Crush 30, Soulmate 300** (2026-09-30; 20 / 100 / 300 since the owner's new
 message numbers, 2026-09-26; `voicePerDay()` in
 `server/limits.js`; before, everyone had 60, so a Crush or a Soulmate ran out of her voice long before running out of
-messages). Counted per visitor (the daily IP code). Google's limit for the project and the site's 4,000 a day come first:
+messages). Counted per visitor (the daily IP code). Google's limit for the project and the site's 5,000 a day come first:
 on a busy day the first chatters use them (first come, first served); a smaller share per visitor would spread them out (a
 one-line change).
 
@@ -993,13 +994,13 @@ needs no `media-src`.
 
 **Cost** (Gemini 3.8 Flash-Lite TTS: $0.50 per 1M text tokens and $6.00 per 1M audio tokens until 2026-12-31, then $1.00 /
 $12.00; 25 audio tokens per second): a spoken reply is at most 20 seconds (500 audio tokens), so at most about $0.003, usually
-about $0.001 (so 1,000 spoken replies ≈ $1.50, at most $3). With the 4,000-a-day cap (the owner's choice, 2026-09-26) that's
-at most about **$12 a day (about $360 a month)**, $24 a day from January 2027. Claude told the owner that this ceiling is far
-above the $150 budget if it's ever reached; it's a ceiling, and the prepaid credits are the hard stop. (Before: 1,000 a day,
-about $3.) While Google allows 100 a day per speech model (Tier 1), the real most is about $0.30–0.75 a day. The ceiling is
+about $0.001 (so 1,000 spoken replies ≈ $1.50, at most $3). With the 5,000-a-day cap (the owner's choice, 2026-09-30) that's
+at most about **$15 a day (about $450 a month)**, $30 a day from January 2027. Claude told the owner that this ceiling is far
+above the $150 budget if it's ever reached; it's a ceiling, and the prepaid credits are the hard stop. (Before: 4,000 a day,
+about $12, from 2026-09-26; 1,000 a day, about $3, before that.) While Google allows 100 a day per speech model (Tier 1), the real most is about $0.30–0.75 a day. The ceiling is
 about $0.003 per request. The backup model (3.8 Flash TTS: $0.50 / $9.00 per 1M, then $1.00 / $18.00 from 2027) costs about
 1.5× (about $0.002 per spoken reply, $0.0045 at most) and is only used for replies Flash-Lite can't take: if every reply went
-there, the ceiling would be about $18 a day. The prepaid credits
+there, the ceiling would be about $22.50 a day. The prepaid credits
 (shared with the chat) are the hard stop. A retry only happens after Google refused (no audio was made). Her mood styles cost
 about nothing extra (a few more words per request). The fixed lines cost about nothing (made once, then kept).
 `GEMINI_TTS_MODELS=gemini-3.8-flash-lite-tts` switches the backup off (one model only).
@@ -1009,7 +1010,7 @@ about nothing extra (a few more words per request). The fixed lines cost about n
 `supabase/voice-lines.sql` → Run: it ends by showing `voice_line_functions_found = 2` (until it's run, everything works, but her
 fixed lines are made again by Google after every push, and the log says `her lines aren't kept yet`). No new Vercel settings
 are needed (it uses the chat's Gemini key); optional: `AGI1_VOICE` (another Gemini voice), `GEMINI_TTS_MODELS` (her speech
-models in order), `VOICE_DAILY_REQUESTS` (default 4,000). `VOICE_DAILY_CAP` (the old cap in characters) isn't used any more: delete it if it was ever added.
+models in order), `VOICE_DAILY_REQUESTS` (default 5,000 since 2026-09-30). `VOICE_DAILY_CAP` (the old cap in characters) isn't used any more: delete it if it was ever added.
 Until voice.sql is run, her voice rests ("my voice isn't ready yet") and she texts.
 
 **Troubleshooting** (Vercel → agi-ecosystem → Logs; the end of each `[voice] gemini failed` line names the reason):
@@ -1019,7 +1020,7 @@ Until voice.sql is run, her voice rests ("my voice isn't ready yet") and she tex
 | "my voice isn't ready yet" | `[voice] limits unavailable: voice limits: HTTP 404 PGRST202 (voice_take not found: run supabase/voice.sql …)` | Run `supabase/voice.sql` (after `chat-limits.sql`) |
 | "my voice needs a little rest for today" early in the day | `[voice] gemini failed (…): gemini: HTTP 429 RESOURCE_EXHAUSTED … → daily_limit (this server copy won't ask again for 30 min)` | Google's 100 requests a day for the speech model are used up (usually by a lot of testing; it starts again at midnight Pacific, 15:00 the owner's time). Her kept lines still play. Nothing to fix; for more, see "Google's limits" |
 | "my voice needs a little rest for today" | `… → credits` | Prepaid credits or the spend cap used up: Google AI Studio → Billing (the chat stops too) |
-| "my voice needs a little rest for today" late in the day | (none) | The site's 4,000 requests for the day are used up. Normal; it starts again at 00:00 UTC. Raise `VOICE_DAILY_REQUESTS` only if Google gives you more than that (see "Google's limits") and after checking the cost above |
+| "my voice needs a little rest for today" late in the day | (none) | The site's 5,000 requests for the day are used up. Normal; it starts again at 00:00 UTC. Raise `VOICE_DAILY_REQUESTS` only if Google gives you more than that (see "Google's limits") and after checking the cost above |
 | Now and then a reply marked "voice: unavailable" | `… → busy (this server copy won't ask again for 37 s)` | Google's 10 a minute for the speech model (several replies in the same minute). Harmless: the next replies speak again. If it happens often, ask Google for more |
 | Her out-of-messages line or her hello is silent right after a push | `[voice] her lines aren't kept yet (reading): run supabase/voice-lines.sql …` | Run `supabase/voice-lines.sql` once; then each line is made once and kept for good |
 | (nothing wrong to see) | `[voice] her kept lines are unavailable right now (…)` | The database didn't answer; Google made the line instead. Passes by itself (a paused Supabase project: resume it) |
@@ -1032,7 +1033,7 @@ Until voice.sql is run, her voice rests ("my voice isn't ready yet") and she tex
 **Tests:** `tests/voice.test.js` (33: tickets only for this text and 15 minutes, with the level and mood, not tied
 to the IP; the chat sends them (a phone that switched networks still gets her voice); settings; bad requests stop before the
 database and Gemini; the request to Gemini (Despina, no emojis or "$", `store: false`, `stream: true`); her voice in each
-reply's mood, and each level's daily share (10 / 30 / 300 requests since 2026-09-30; the site 4,000; one request however long the reply);
+reply's mood, and each level's daily share (10 / 30 / 300 requests since 2026-09-30; the site 5,000; one request however long the reply);
 her fixed lines kept in the database (a new server copy plays them without Google, a 15-second recording saved in parts and
 read back whole, the sad market lines kept, the market-cap lines not; new words / style / voice / model → a new recording;
 voice-lines.sql not run or the database down → Google as before, with the log line); backing off (Google's "retry in 37 s",
@@ -1201,7 +1202,7 @@ turns speech into text) with **both** ways to talk: a mic button for one message
   visit; if it refuses to reopen the mic by itself in a call, the call ends with a note and the mic button still works.
 
 **Cost:** nothing extra. The browser does the listening for free; each spoken message is a normal chat message (same daily
-message limits by level) and her spoken replies use the voice allowance already set (4,000 requests a day for the site, and
+message limits by level) and her spoken replies use the voice allowance already set (5,000 requests a day for the site, and
 Google's own limit for the project; each visitor's follows their messages a day). Calls just use those up faster. While her voice rests, calls don't start ("i can't do
 calls while my voice is resting") and one in progress ends.
 
@@ -1882,7 +1883,7 @@ Check my burn, and watch the monitor go up.
 
 **Cost:** nothing new to pay: Supabase (small tables), the chain's public node and the explorer (free, keyless, only when
 someone presses Check my burn), the monitor (one tiny cached request a minute per watching visitor). The burned messages'
-replies: at most 1,000 a day, about $0.80 (their voice comes out of the existing 4,000 a day).
+replies: at most 1,000 a day, about $0.80 (their voice comes out of the site's 5,000 a day).
 
 **Worth knowing (not legal advice):** taking crypto for a service can count as selling something (consumer rules, crypto
 promotion rules like the UK's and the EU's MiCA), and Vercel's Hobby plan is for non-commercial use. The page never presents
@@ -2512,8 +2513,8 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 - Only replies AGI-1 just wrote, within 15 minutes (voice tickets, HMAC with PASS_SECRET, carrying the reply's mood and the
   visitor's level). Never text the browser makes up. Not tied to the visitor's IP since 2026-09-25 (phones switch addresses);
   a shared ticket only voices her own reply, at most twice, and still counts against the limits.
-- Counted in the database before Gemini is asked, in requests (2026-09-26): a hard daily cap (4,000 for the site, about $12 at
-  most; per visitor 10 / 30 / 300 by level (since 2026-09-30), i.e. every reply they may get, each ticket twice).
+- Counted in the database before Gemini is asked, in requests (2026-09-26): a hard daily cap (5,000 for the site since
+  2026-09-30, about $15 at most; per visitor 10 / 30 / 300 by level (since 2026-09-30), i.e. every reply they may get, each ticket twice).
   Fail closed. A per-copy speed bump (20 requests a minute) keeps floods away from the database. While Google says "not now",
   requests are answered at once without being counted or sent to Google (backing off).
 - Her recorded fixed lines (`voice_lines`, supabase/voice-lines.sql) are only readable and writable with the server's secret
@@ -2640,7 +2641,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 |---|---|---|
 | Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, 2026-09-27: 389 KB per visitor who picks 2D, instead of the 3D model's 1.7–2.2 MB) | Usually paused until 30 days have passed |
 | Supabase Free | 500 MB database · 5 GB egress · 200 realtime connections · 2M realtime messages/month. Paused after 1 week with no activity | Grace period, then restricted (read-only or paused), never billed |
-| Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 4,000 a day ≈ $12 ($18 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten) are made once and kept (the database since 2026-09-26); since 2026-09-30 the replies paid for by burning $AGI, at most `BURN_DAILY_CAP` (1,000) a day ≈ $0.80 more | The key stops when credits hit $0 (the chat and the voice share them) |
+| Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 5,000 a day ≈ $15 ($22.50 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten) are made once and kept (the database since 2026-09-26); since 2026-09-30 the replies paid for by burning $AGI, at most `BURN_DAILY_CAP` (1,000) a day ≈ $0.80 more | The key stops when credits hit $0 (the chat and the voice share them) |
 | Cloudflare Turnstile | Unlimited | — |
 | DexScreener | Free, no key, rate-limited per IP. Browsers ask every 30 s; since 2026-09-25 our server also asks for $AGI's market cap, at most once a minute per server copy, only to check a new market line | Requests fail, and we show the last known numbers (and her market lines wait) |
 | Robinhood Chain public node | Free, no key, rate-limited. Wallet balances, and since 2026-09-29 the risk check's reads of the Clank protocol (2 small requests per scan, once per coin per 5 minutes per region), and since 2026-09-30 "Check my burn" (2 small reads per burn, at most 3 burns a check) | Balance checks fail; people keep their last level and it retries. Scans work without the protocol's word (no locked note, no chain safety net) |
@@ -2673,7 +2674,7 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `AGI1_VOICE` | no, optional | AGI-1's voice: one of Gemini's ready-made voices (default `Despina`, the owner's choice) |
 | `GEMINI_TTS_MODELS` | no, optional | Her speech models, in order, comma-separated (default `gemini-3.8-flash-lite-tts,gemini-3.8-flash-tts`: Flash-Lite, then 3.8 Flash as the backup, about 1.5× the price). One name only = no backup |
 | `GEMINI_TTS_MODEL` | no, optional | Older, still read when `GEMINI_TTS_MODELS` isn't set: her first speech model (the backup `gemini-3.8-flash-tts` comes after it) |
-| `VOICE_DAILY_REQUESTS` | no, optional | Spoken replies a day for the whole site, counted like Google counts requests (default 4,000 ≈ $12 a day at most, $24 from 2027; the owner's choice, 2026-09-26). Smaller = spend less; raise it only if Google gives the project more than that (see "Google's limits"), then Redeploy. (Replaced `VOICE_DAILY_CAP`, the old cap in characters, on 2026-09-26: delete that one if it was ever added) |
+| `VOICE_DAILY_REQUESTS` | no, optional | Spoken replies a day for the whole site, counted like Google counts requests (default 5,000 ≈ $15 a day at most, $30 from 2027; the owner's choice, 2026-09-30; 4,000 before). If it was ever set in Vercel, that value wins over the default. Smaller = spend less; raise it only if Google gives the project more than that (see "Google's limits"), then Redeploy. (Replaced `VOICE_DAILY_CAP`, the old cap in characters, on 2026-09-26: delete that one if it was ever added) |
 | `VOICE_STREAM` | no, optional | `off` = ask Gemini for one whole clip per reply instead of streaming it (slower start; only if streaming ever misbehaves) |
 | `CHAT_MIN_GAP_MS` | no, optional | Minimum time between one visitor's messages (default 3000) |
 | `TELEGRAM_BOT_TOKEN` | **yes** | Her Telegram bot's token, from @BotFather (2026-09-29, see "She texts first"). Without it the bot is off (the feed still runs) |
@@ -2954,6 +2955,11 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   shares are 10 / 30 / 300 requests, and her Telegram chats (everyone there is a Stranger) get 5 a day too. Her fixed voice
   lines' version is 4, so everyone hears her offer with the new number at once (only that line is re-made; the others are
   found in the database). No setup. Tests: 295 unit (on Node 20, 22 and 24).
+- **Her voice: 5,000 a day for the whole site: done 2026-09-30** (the owner: "can you make the voices 5000 a day?"):
+  `VOICE_DAILY_REQUESTS`'s default is 5,000 (was 4,000). The ceiling is about $15 a day ($22.50 if every reply went to the
+  backup model; double from January 2027); Claude told the owner it's far above the $150 budget if ever reached, and that
+  Google's own daily limits keep real use far lower until the project gets more from Google. No setup (if the setting was ever
+  added in Vercel, change it there too).
 
 ## Decisions log
 
@@ -3091,6 +3097,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-09-29 | The clips are drawn in software on GitHub's computer: the 3D renderer draws only her, at 720 × 1280, and 2D drawing does the rest at 1080 × 1920 (0.7 s a frame down to 0.2 s: full-frame 3D layers cost about 0.1 s each without a graphics card). Daily at 08:23 UTC: after her diary (03:00 UTC) and just after Google's daily limits start again (midnight Pacific). playwright-core with its own Chromium and ffmpeg are installed by the job only, never in the site's package.json |
 | 2026-09-30 | Burn $AGI for more messages (the owner's idea, "make this better"; Claude's choices, sent to the owner before building): free messages stay; after them 10 $AGI a message, burned by the visitor from their own wallet app, bought in packs (never a transaction per message, and never asked of the wallet: hard rule 9 unchanged); counted only after reading the chain; what was burned counts toward the level; 300 a day per wallet and 1,000 for the site (their own pool, on top of the free one); a failed reply gives its burned message back, but the attempt counts; off until burns.sql is run. Not picked: a burn per message (a pop-up and a fee each time), the site asking the wallet for the burn (rule 9), dropping the free messages (nobody could try her), a site wallet burning on the visitors' behalf (a key on the server) |
 | 2026-09-30 | The burn monitor (the owner: "a monitor on how many agi are gonna be burned so they know its working … huge text on the chat on top of it, you decide"): the $AGI burned for messages in huge type right above the chat panel, with today's burns, messages paid for, burns and the latest, and "See the burn address ↗" on the block explorer so anyone can check; asks again every minute while watched, never counts down. The Parameters' small "Burned" row was dropped for it |
+| 2026-09-30 | The site's voice cap raised to **5,000 requests a day** (the owner's request, was 4,000): about $15 a day at most ($22.50 if all went to the backup model; double from 2027). Claude flagged the ceiling against the $150 budget again; Google's Tier 1 limits keep real use far lower, and the prepaid credits are the hard stop |
 | 2026-09-30 | Messages a day (the owner's request): Stranger 5 (was 10), Crush 15 (was 50), Soulmate 150; voice shares follow (10 / 30 / 300); her Telegram chats follow the Stranger's 5; her out-of-messages offer names a Crush's new 15, so her fixed lines' version is 4 (`&v=4`: everyone gets the new recording; lines whose words didn't change come from the database, not Google). After the free ones, burned messages (see "Burn $AGI for more messages") |
 | 2026-09-30 | Burn codes use the database's own random key (burns.sql), not PASS_SECRET (found by the review): changing PASS_SECRET would otherwise lose everyone's burned messages and let the last 7 days of burns count again; and the codes differ from the name-and-notes codes, so stored amounts can't match a wallet to its name and notes. A burn counts per (transaction, wallet). Burns count at once, without waiting for confirmations (Robinhood Chain has one sequencer; waiting would take minutes) |
 | 2026-09-29 | Burns for reads (big idea 3) and her pretend bag (big idea 4) on hold (the owner: "can you remove 3. Spokesmodel and burns for now", then "remove the 4. Her own bag. Start with a pretend bag also", "only this"). Nothing of either is in the site: a first draft of the bag (its database, rules and page) was deleted before it reached the owner's folder |

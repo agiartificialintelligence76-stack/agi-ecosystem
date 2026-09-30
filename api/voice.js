@@ -9,7 +9,7 @@
 //      visitor's level and the reply's mood
 //   3. limits in the database (voice_take, supabase/voice.sql), counted in requests like Google counts them (2026-09-26):
 //      each ticket at most twice; a visitor's daily share follows their messages a day (server/limits.js);
-//      VOICE_DAILY_REQUESTS (default 4,000, about $12 at most) a day for the whole site. DB down → no voice
+//      VOICE_DAILY_REQUESTS (default 5,000 since 2026-09-30, about $15 at most) a day for the whole site. DB down → no voice
 //   4. Gemini speech, STREAMED (the owner: "should be instant"): raw PCM (audio/l16) passed on piece by piece as Gemini makes
 //      it, so the page starts playing about a second after the reply. If Google's streamed answer ever has no audio, this
 //      server copy switches to one whole WAV file (and logs it); VOICE_STREAM=off does the same for good.

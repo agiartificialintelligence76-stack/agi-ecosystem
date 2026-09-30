@@ -64,8 +64,9 @@ export async function takeChatSlot(cfg, who, daily) {
 
 // AGI-1's voice (2026-09-26: counted in requests, like Google counts them). Each time the page asks for a reply's voice is
 // one request to Google's speech model. The whole site may ask cfg.voiceDailyRequests times a day (VOICE_DAILY_REQUESTS,
-// default 4,000, the owner's choice): the money limit, since each request is at most 20 seconds of her voice, about $0.003
-// ($0.0045 on the backup model), so at most about $12 a day ($18 if all on the backup). Google's own limit for the
+// default 5,000 since 2026-09-30, the owner's choice; 4,000 before): the money limit, since each request is at most 20
+// seconds of her voice, about $0.003 ($0.0045 on the backup model), so at most about $15 a day ($22.50 if all on the backup;
+// double from January 2027). Google's own limit for the
 // project (Google AI Studio → Rate limit: 100 a day per model on Tier 1) comes on top; when it's used up, api/voice.js
 // backs off. A visitor's own daily share follows their messages a day (2026-09-25,
 // the owner's question "is it better if the voice matches the number of their messages?": yes): each reply's ticket may be

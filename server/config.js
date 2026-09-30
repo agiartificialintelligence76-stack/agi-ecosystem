@@ -29,14 +29,15 @@ export function getConfig(env = process.env) {
     dailyCap: number('CHAT_DAILY_CAP', 1000),      // AGI-1 replies per day for the whole site
     minGapMs: number('CHAT_MIN_GAP_MS', 3000),     // at least 3 seconds between one visitor's messages
     // AGI-1's voice (2026-09-25, api/voice.js): Gemini's speech model, her voice, and how many times a day the whole site
-    // may ask it for a reply's voice (2026-09-26: in requests, like Google counts them; 4,000 a day, the owner's choice:
-    // each is at most about $0.003 ($0.0045 on the backup model), so about $12 a day at most, $18 if all went to the backup.
+    // may ask it for a reply's voice (2026-09-26: in requests, like Google counts them; 5,000 a day since 2026-09-30, the
+    // owner's choice (4,000 before): each is at most about $0.003 ($0.0045 on the backup model), so about $15 a day at most,
+    // $22.50 if all went to the backup, double from January 2027.
     // Google's own limit for the project comes on top: 100 a day per model on Tier 1, more on Tier 2. VOICE_DAILY_CAP, the
     // old cap in characters, isn't used any more)
     voiceModel: models[0],
     voiceModels: models,
     voiceName: env.AGI1_VOICE || 'Despina',
-    voiceDailyRequests: number('VOICE_DAILY_REQUESTS', 4000),
+    voiceDailyRequests: number('VOICE_DAILY_REQUESTS', 5000),
     voiceStream: env.VOICE_STREAM !== 'off',      // stream her replies (starts faster); "off" = one whole clip each
     // Her Telegram bot (2026-09-29): Telegram's share of the day's AI replies (inside the site's CHAT_DAILY_CAP), so
     // Telegram alone can't use up the website's chat

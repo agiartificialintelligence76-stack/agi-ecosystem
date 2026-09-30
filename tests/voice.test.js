@@ -218,8 +218,8 @@ test('a good request is counted first, then streamed: Despina in her calm style 
   assert.equal(take.body.p_who, visitorCodeForDay(SECRET, IP, new Date().toISOString().slice(0, 10)));
   assert.ok(!JSON.stringify(take.body).includes(IP), 'never the IP');
   assert.equal(take.body.p_ticket, checkVoiceTicket(SECRET, ticket, TEXT).id);
-  assert.deepEqual([take.body.p_units, take.body.p_person_daily, take.body.p_global_daily, take.body.p_ticket_max], [1, 10, 4000, 2],
-    'one request; a Stranger may ask 10 times a day (5 messages, each voice ticket twice); the site 4,000 (the owner\'s choice)');
+  assert.deepEqual([take.body.p_units, take.body.p_person_daily, take.body.p_global_daily, take.body.p_ticket_max], [1, 10, 5000, 2],
+    'one request; a Stranger may ask 10 times a day (5 messages, each voice ticket twice); the site 5,000 (the owner\'s choice, 2026-09-30)');
   const g = called(TTS)[0];
   assert.equal(g.headers['x-goog-api-key'], 'fake-gemini-key');
   assert.equal(g.body.model, 'gemini-3.8-flash-lite-tts');
@@ -336,7 +336,7 @@ test('settings: another voice, speech model or daily requests (the old VOICE_DAI
   Object.assign(process.env, { AGI1_VOICE: 'Sulafat', GEMINI_TTS_MODEL: 'gemini-3.8-flash-tts', VOICE_DAILY_REQUESTS: '400', VOICE_DAILY_CAP: '2000' });
   assert.equal((await voice({ text: TEXT, ticket: ticketFor() })).status, 200);
   assert.equal(called('voice_take')[0].body.p_global_daily, 400);
-  for (const bad of ['0', '-5', 'lots', '']) assert.equal(getConfig({ VOICE_DAILY_REQUESTS: bad }).voiceDailyRequests, 4000, `"${bad}" → the default`);
+  for (const bad of ['0', '-5', 'lots', '']) assert.equal(getConfig({ VOICE_DAILY_REQUESTS: bad }).voiceDailyRequests, 5000, `"${bad}" → the default`);
   assert.equal(called(TTS)[0].body.model, 'gemini-3.8-flash-tts');
   assert.deepEqual(called(TTS)[0].body.generation_config.speech_config, [{ voice: 'Sulafat' }]);
 });
