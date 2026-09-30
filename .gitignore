@@ -30,3 +30,6 @@ telegram memories/
 
 # Covers and pictures for X posts about the site (not part of the website)
 x-article/
+
+# AGI-1's daily clips (tools/clips/make.mjs): the videos are made on GitHub's computer and downloaded from there
+/clips/

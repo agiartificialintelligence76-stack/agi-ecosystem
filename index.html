@@ -336,6 +336,23 @@
             <p class="section-lede">Research preview. Replies are generated live: usually sweet, often flirty, never financial advice.</p>
           </header>
 
+          <!-- The burn monitor (2026-09-30, the owner: "make a monitor on how many agi are gonna be burned so they know its
+               working, make it a huge text on the chat on top of it"): the $AGI burned for messages so far by everyone (each
+               burn is read on Robinhood Chain before it counts), live while it's on screen. Hidden until burns are open
+               (src/chat/burn.js fills it in, the explorer link too). -->
+          <section class="burnmon" data-burnmon hidden aria-labelledby="burnmon-title">
+            <div class="burnmon-top">
+              <h3 class="burnmon-kicker mono" id="burnmon-title"><svg class="burnmon-flame" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.2 2.5c.4 3-1.4 4.8-3 6.6-1.5 1.7-2.9 3.4-2.9 6 0 3.6 2.7 6.4 5.9 6.4s5.9-2.6 5.9-6.2c0-2.7-1.4-4.4-2.6-5.6-.2 1.6-.9 2.7-2 3.2.5-3.5-.2-7.2-1.3-10.4Z" fill="currentColor"/></svg>Burned by chatting with AGI-1</h3>
+              <p class="burnmon-live mono" data-burnmon-live><i class="dot" aria-hidden="true"></i><span data-burnmon-state>live</span></p>
+            </div>
+            <p class="burnmon-num"><span class="burnmon-agi" data-burnmon-agi>0</span> <span class="burnmon-unit">$AGI</span></p>
+            <p class="burnmon-sub mono" data-burnmon-sub></p>
+            <div class="burnmon-foot">
+              <p class="burnmon-note">Every burn is read on Robinhood Chain before it counts: <span data-burn-price>10</span> $AGI a message, gone for good. <a data-burnmon-proof href="https://robinhoodchain.blockscout.com/" target="_blank" rel="noopener noreferrer">See the burn address ↗</a></p>
+              <button class="btn btn-primary btn-sm burnmon-btn" type="button" data-burn-open>Burn $AGI for more messages</button>
+            </div>
+          </section>
+
           <!-- src/chat/chat.js runs this panel. Messages are added with textContent only. -->
           <div class="pg" data-playground>
             <aside class="pg-side" aria-label="Relationship and model settings">
@@ -348,6 +365,12 @@
                 </div>
                 <div class="rel-steps" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
                 <p class="rel-daily"><span class="mono" data-rel-daily>10</span> messages a day</p>
+                <!-- 2026-09-30: more messages paid for by burning $AGI (src/chat/burn.js): shown once burns are open -->
+                <div class="rel-burn" data-rel-burn hidden>
+                  <p class="rel-burn-left" data-rel-burn-left hidden><span class="mono" data-rel-burn-n>0</span> burned messages left</p>
+                  <button class="btn btn-ghost btn-sm rel-burn-btn" type="button" data-burn-open>Burn $AGI for more messages</button>
+                  <p class="rel-fine">After your free ones: <span data-burn-price>10</span> $AGI a message, burned for good. Not financial advice.</p>
+                </div>
                 <!-- Phase 5: X opens with a ready-made post (you press Post yourself); the image is made in your browser -->
                 <p class="rel-share" data-rel-share>
                   <a class="rel-link" data-share-x href="https://x.com/intent/tweet" target="_blank" rel="noopener noreferrer">Share my level on X</a>
@@ -384,7 +407,7 @@
                       <tr><td>3 · Soulmate</td><td class="num mono">1,000,000+</td><td class="num mono">150</td></tr>
                     </tbody>
                   </table>
-                  <p>Crush: AGI-1 uses your name. Soulmate: she also remembers little things from your chats. Levels follow how much $AGI a connected wallet holds, read-only. More $AGI means more messages a day, but it's a meme token that can lose all of its value: not financial advice, so only spend what you can afford to lose.</p>
+                  <p>Crush: AGI-1 uses your name. Soulmate: she also remembers little things from your chats. Levels follow how much $AGI a connected wallet holds, read-only.<span data-burn-only hidden> What it burned for messages counts too.</span> More $AGI means more messages a day, but it's a meme token that can lose all of its value: not financial advice, so only spend what you can afford to lose.</p>
                 </details>
               </section>
 
@@ -627,17 +650,17 @@
           <p class="kicker">Safety note</p>
           <h2 class="h2" id="safety-title">The only serious part of this page</h2>
           <p class="section-lede">Every model launch comes with a safety note. Ours covers the usual risks, plus two new ones: financial FOMO and catching feelings for a language model.</p>
-          <p class="safety-meta mono"><span>Applies to AGI-1 v1.0 ·</span> <span>Last updated September 29, 2026</span></p>
+          <p class="safety-meta mono"><span>Applies to AGI-1 v1.0 ·</span> <span>Last updated September 30, 2026</span></p>
         </header>
 
         <ol class="safety-list" role="list">
           <li class="safety-item">
             <h3>Not financial advice</h3>
-            <p>$AGI is a meme token on Robinhood Chain, made for entertainment. Meme tokens swing wildly and can lose all of their value. Holding $AGI unlocks closer levels with AGI-1 (more messages a day), and she mentions that when you run out of messages. She also has feelings about the live chart (happy at each new $200K of market cap, sad after a -20% day): a mood, not a signal to buy or sell. The texts she sends on Telegram, about the chart and about new egirl coins on clank.trade, are never a tip either. The risk levels in “Risk check your coins on clank” are rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy or sell. Nothing on this site, and nothing AGI-1 says, is financial advice or a promise of profit. Only spend what you can afford to lose.</p>
+            <p>$AGI is a meme token on Robinhood Chain, made for entertainment. Meme tokens swing wildly and can lose all of their value. Holding $AGI unlocks closer levels with AGI-1 (more messages a day), and she mentions that when you run out of messages.<span data-burn-only hidden> After your free messages you can also burn $AGI for more: that pays for messages and isn't an investment. Burned $AGI is gone for good, and burned messages have no cash value and can't be refunded or moved.</span> She also has feelings about the live chart (happy at each new $200K of market cap, sad after a -20% day): a mood, not a signal to buy or sell. The texts she sends on Telegram, about the chart and about new egirl coins on clank.trade, are never a tip either. The risk levels in “Risk check your coins on clank” are rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy or sell. Nothing on this site, and nothing AGI-1 says, is financial advice or a promise of profit. Only spend what you can afford to lose.</p>
           </li>
           <li class="safety-item">
             <h3>One official contract</h3>
-            <p>The only official $AGI contract starts <span class="mono">0xfa31</span> and ends <span class="mono">06ec</span>. Copy the full address from the top of this page or the <a href="#contract">Model card</a>, and double-check it every time. This site will never ask for your seed phrase, private keys, a transaction or a token approval (connecting a wallet only takes a free signature), and neither will AGI-1. Anyone who does isn't us.</p>
+            <p>The only official $AGI contract starts <span class="mono">0xfa31</span> and ends <span class="mono">06ec</span>. Copy the full address from the top of this page or the <a href="#contract">Model card</a>, and double-check it every time. This site will never ask for your seed phrase or private keys, and it never asks your wallet for a transaction or a token approval (connecting a wallet only takes a free signature); neither will AGI-1. Anyone who does isn't us.<span data-burn-only hidden> The only transaction we ever suggest is a burn you send yourself, from your own wallet app, for more messages: only ever to the burn address <span class="mono">0x000…dEaD</span> (zeros, then dEaD), and our server just reads it on the chain. Anyone who asks you to send $AGI anywhere else isn't us.</span></p>
           </li>
           <li class="safety-item">
             <h3>AGI-1 is not a person</h3>
@@ -645,7 +668,7 @@
           </li>
           <li class="safety-item">
             <h3>Your data</h3>
-            <p>Your messages are sent to an AI service that writes her replies, so don't share personal information. Your chat history is saved only in your browser. Our database keeps a scrambled visitor code that changes every day (for spam limits), never your IP address. If you connect a wallet, we read its $AGI balance from Robinhood Chain's public node. For Crush and Soulmate we also keep the name you give AGI-1 and her short notes, filed under a scrambled code instead of your address; Forget me deletes them. Voice replies, if you switch them on, send her replies to the same AI service to be read aloud in a synthetic voice (if that's unavailable, you just get the text). If you talk to her with the mic or a call, your browser's own speech service turns your voice into text (in some browsers that happens on the browser maker's servers); we never record or receive your voice, only the text, which is sent like a typed message. Share pictures are made on your device; sharing on X only opens X, and nothing is posted unless you post it. Our hosting (Vercel), bot check (Cloudflare) and price feed (DexScreener) see ordinary web traffic, like on any website. The coin scans and pictures in “Risk check your coins on clank” are read by our server from public sources (clank.trade and its picture host, Robinhood Chain, DexScreener, a block explorer); nothing about you is sent to them. AGI-1 also remembers the public clank.trade Telegram group (display names, catchphrases and big moments, no phone numbers or links) and only talks about it when asked; members who want to be left out can ask the $AGI team. If you ask her to text you on Telegram, our database keeps that chat's number (Telegram's id for it, so she can text you), your 18+ answer, the time you told her (so she never texts at night) and what she last texted you; /stop, or blocking the bot, deletes it. What you text her there goes to the same AI service to write her replies and isn't stored by us; Telegram carries the chat, like any Telegram chat.</p>
+            <p>Your messages are sent to an AI service that writes her replies, so don't share personal information. Your chat history is saved only in your browser. Our database keeps a scrambled visitor code that changes every day (for spam limits), never your IP address. If you connect a wallet, we read its $AGI balance from Robinhood Chain's public node.<span data-burn-only hidden> If you burn $AGI for messages, our server reads that burn on Robinhood Chain (and asks a block explorer for your wallet's recent burns). Under a scrambled code of your wallet (a different one from your name and notes), we keep how many burned messages you have left and bought, the $AGI that bought them, how many you used today and when you last used one; and a scrambled code of each counted burn with the day it was counted, never the transaction or your address. The burn monitor above the chat shows only totals, and when the latest burn was counted. Forget me doesn't delete your burned messages, since you paid for them.</span> For Crush and Soulmate we also keep the name you give AGI-1 and her short notes, filed under a scrambled code instead of your address; Forget me deletes them. Voice replies, if you switch them on, send her replies to the same AI service to be read aloud in a synthetic voice (if that's unavailable, you just get the text). If you talk to her with the mic or a call, your browser's own speech service turns your voice into text (in some browsers that happens on the browser maker's servers); we never record or receive your voice, only the text, which is sent like a typed message. Share pictures are made on your device; sharing on X only opens X, and nothing is posted unless you post it. Our hosting (Vercel), bot check (Cloudflare) and price feed (DexScreener) see ordinary web traffic, like on any website. The coin scans and pictures in “Risk check your coins on clank” are read by our server from public sources (clank.trade and its picture host, Robinhood Chain, DexScreener, a block explorer); nothing about you is sent to them. AGI-1 also remembers the public clank.trade Telegram group (display names, catchphrases and big moments, no phone numbers or links) and only talks about it when asked; members who want to be left out can ask the $AGI team. If you ask her to text you on Telegram, our database keeps that chat's number (Telegram's id for it, so she can text you), your 18+ answer, the time you told her (so she never texts at night) and what she last texted you; /stop, or blocking the bot, deletes it. What you text her there goes to the same AI service to write her replies and isn't stored by us; Telegram carries the chat, like any Telegram chat.</p>
           </li>
         </ol>
       </section>
@@ -681,7 +704,7 @@
       </div>
       <div class="wdlg-promise">
         <p class="wdlg-promise-title">Free signature. Never a transaction.</p>
-        <p>You'll sign a plain-text message that proves the wallet is yours. It costs no gas, and this site will never ask you to send, approve or swap tokens. If a wallet ever shows you a transaction here, reject it.</p>
+        <p>You'll sign a plain-text message that proves the wallet is yours. It costs no gas, and this site will never ask your wallet to send, approve or swap tokens. If a wallet ever shows you a transaction here, reject it.</p>
       </div>
       <div class="wdlg-list" data-wdlg-list></div>
       <div class="wdlg-none" data-wdlg-none hidden>
@@ -697,6 +720,56 @@
       </div>
       <p class="wdlg-status" data-wdlg-status role="status" aria-live="polite"></p>
       <p class="wdlg-fine">We only read your wallet's $AGI balance to set your level. Not financial advice.</p>
+    </dialog>
+
+    <!-- Burn $AGI for more messages (2026-09-30, src/chat/burn.js). The visitor sends $AGI from their own wallet app to the burn
+         address; our server reads it on Robinhood Chain (server/burn.js). This page never asks a wallet for a transaction. -->
+    <dialog class="wdlg bdlg" data-burn-dialog aria-labelledby="bdlg-title">
+      <div class="wdlg-head">
+        <h2 class="wdlg-title" id="bdlg-title">More messages: burn $AGI</h2>
+        <button class="icon-btn" type="button" data-bdlg-close aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="wdlg-promise">
+        <p class="wdlg-promise-title">You send it yourself. This page never asks your wallet for a transaction.</p>
+        <p>After your free messages, each one costs <b><span data-burn-price>10</span> $AGI</b>, burned for good. Burn once for a pack of messages: she uses them after your free ones, up to 300 a day while the site's daily share lasts.</p>
+      </div>
+      <div class="bdlg-out" data-bdlg-out>
+        <p>First connect the wallet you'll burn from: burned messages belong to the wallet that burned the $AGI.</p>
+        <button class="btn btn-primary btn-sm" type="button" data-bdlg-connect>Connect wallet</button>
+      </div>
+      <div class="bdlg-in" data-bdlg-in hidden>
+        <ol class="bdlg-steps">
+          <li>
+            <p class="bdlg-step">Pick an amount</p>
+            <ul class="bdlg-packs" data-bdlg-packs></ul>
+            <p class="wdlg-fine">Or any amount: every full <span data-burn-price>10</span> $AGI in a burn is one message, and what's left over doesn't count.</p>
+          </li>
+          <li>
+            <p class="bdlg-step">Send it from your own wallet app</p>
+            <p class="bdlg-text">From your connected wallet <span class="mono" data-bdlg-wallet></span>, on Robinhood Chain: Send → $AGI → this burn address.</p>
+            <p class="bdlg-addr"><code class="mono" data-burn-address>0x000000000000000000000000000000000000dEaD</code><button class="chip-btn" type="button" data-bdlg-copy>Copy</button></p>
+            <p class="wdlg-fine">The burn address is always zeros, then dEaD: nobody has its key, so what's sent there is gone for good. Only the official $AGI (<span class="mono" data-bdlg-ca>0xfa31…06ec</span>) counts. Your wallet charges a small network fee in ETH.</p>
+          </li>
+          <li>
+            <p class="bdlg-step">Then check it here</p>
+            <button class="btn btn-primary btn-sm" type="button" data-bdlg-check>Check my burn</button>
+            <form class="bdlg-paste" data-bdlg-paste>
+              <label for="bdlg-tx">Or paste its transaction link or ID</label>
+              <span class="bdlg-paste-row">
+                <input id="bdlg-tx" data-bdlg-tx maxlength="300" autocomplete="off" spellcheck="false" inputmode="url" placeholder="0x… or an explorer link" />
+                <button class="btn btn-ghost btn-sm" type="submit">Check</button>
+              </span>
+            </form>
+            <p class="wdlg-fine">A burn counts once, within 7 days.</p>
+          </li>
+        </ol>
+        <p class="wdlg-status bdlg-status" data-bdlg-status role="status" aria-live="polite"></p>
+        <p class="bdlg-left" data-bdlg-left hidden>Burned messages: <b class="mono">0 left</b></p>
+      </div>
+      <p class="wdlg-fine bdlg-rules">Burning is permanent and not an investment: burned $AGI is gone for good, there are no refunds, and burned messages have no cash value. The $AGI that bought your messages counts toward your level, like the $AGI you hold. Not financial advice.</p>
+      <p class="wdlg-fine bdlg-total" data-bdlg-total hidden></p>
     </dialog>
 
     <script type="module" src="/src/main.js"></script>

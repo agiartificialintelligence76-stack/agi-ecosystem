@@ -40,7 +40,7 @@ test('the footer names the contract by its real start and end', () => {
 test('the connect screen promises signatures only, never transactions', () => {
   const dialog = part('<dialog class="wdlg"', '</dialog>');
   assert.match(dialog, /Free signature\. Never a transaction\./);
-  assert.match(dialog, /never ask you to send, approve or swap tokens/);
+  assert.match(dialog, /never ask your wallet to send, approve or swap tokens/);
   assert.match(part('<section class="rel"', '</section>'), /Never a transaction/);
 });
 
@@ -213,6 +213,6 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   assert.match(chk, /a smaller scan comes straight from Robinhood Chain: .*never <b>Lower risk<\/b>/);
   assert.match(chk, /A coin clank\.trade hasn't listed is <b>High risk<\/b>: it's brand new, or one clank\.trade doesn't show\./);
   assert.match(chk, /If neither answers, the scan says <b>Not enough data<\/b> instead of guessing\./);
-  assert.match(foot, /Last updated September 29, 2026/);
+  assert.match(foot, /Last updated September 30, 2026/);
   assert.equal(html.match(/<canvas/g).length, 1, 'still one canvas for the whole page');
 });

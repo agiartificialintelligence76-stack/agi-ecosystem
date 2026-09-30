@@ -137,3 +137,87 @@
 /* She texts first (2026-09-29): the link to AGI-1's Telegram bot, under the Relationship panel (hidden until the bot is set) */
 .pg-tg { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
 .pg-tg-text { font-size: 13px; color: var(--fg-2); }
+
+/* More messages paid for by burning $AGI (2026-09-30, src/chat/burn.js): the panel's row, the chat's chip, the burn screen
+   (a native <dialog> in the connect screen's look: the same card, promise box and fine print) */
+.rel-burn { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+.rel-burn-left { font-size: 13px; color: var(--fg-2); }
+.rel-burn-left .mono { color: var(--fg); }
+.rel-burn-btn { width: 100%; }
+.msg-burned { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.bdlg-out { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 14px; font-size: 14px; color: var(--fg-2); }
+.bdlg-steps { display: flex; flex-direction: column; gap: 16px; margin: 16px 0 0; padding: 0; list-style: none; counter-reset: bdlg-step; }
+.bdlg-steps > li {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding-left: 32px;
+  counter-increment: bdlg-step;
+}
+.bdlg-steps > li::before {
+  content: counter(bdlg-step); position: absolute; top: 0; left: 0; display: grid; place-items: center; width: 21px; height: 21px;
+  font-family: var(--mono); font-size: 11.5px; color: var(--fg-2); border: 1px solid var(--line); border-radius: 50%;
+}
+.bdlg-step { font-size: 14.5px; font-weight: 600; line-height: 21px; color: var(--fg); }
+.bdlg-text { font-size: 13.5px; color: var(--fg-2); }
+.bdlg-packs {
+  display: flex; flex-direction: column; align-self: stretch; margin: 0; padding: 0; list-style: none;
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.bdlg-packs li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 12px; font-size: 13.5px; }
+.bdlg-packs li + li { border-top: 1px solid var(--line); }
+.bdlg-packs li span:last-child { color: var(--fg-2); }
+.bdlg-addr {
+  display: flex; align-items: center; gap: 8px; align-self: stretch; padding: 7px 7px 7px 12px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px;
+}
+.bdlg-addr code { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.bdlg-addr .chip-btn { flex: none; padding: 6px 12px; font-size: 13px; }
+.bdlg-addr .chip-btn.is-done { color: var(--fg); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.bdlg-paste { display: flex; flex-direction: column; gap: 6px; align-self: stretch; margin-top: 4px; }
+.bdlg-paste label { font-size: 13px; color: var(--fg-2); }
+.bdlg-paste-row { display: flex; gap: 6px; }
+.bdlg-paste input {
+  flex: 1; min-width: 0; height: 34px; padding: 0 10px;
+  font-family: var(--mono); font-size: 12.5px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+}
+.bdlg-paste input::placeholder { color: var(--fg-3); }
+.bdlg-steps button:disabled { opacity: .6; cursor: progress; }
+.bdlg-left { font-size: 13.5px; color: var(--fg-2); }
+.bdlg-left b { font-weight: 500; color: var(--fg); }
+.bdlg-rules { margin-top: 14px; }
+.bdlg-total { margin-top: 6px; }
+
+/* The burn monitor (2026-09-30, src/chat/burn.js): a huge live number right above the chat, "so they know it's working" */
+.burnmon { margin: 0 0 20px; padding: 18px 22px 20px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.burnmon-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.burnmon-kicker {
+  display: inline-flex; align-items: center; gap: 8px; margin: 0;
+  font-size: 12px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-2);
+}
+.burnmon-flame { flex: none; width: 16px; height: 16px; color: var(--accent); }
+.burnmon-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-3); white-space: nowrap; }
+.burnmon-live[data-state='paused'] .dot { background: var(--fg-3); animation: none; }
+.burnmon-num {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .22em; margin-top: 8px;
+  font-size: clamp(52px, 13vw, 128px); font-weight: 600; line-height: .98; letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums; color: var(--fg);
+}
+.burnmon-num.is-long { font-size: clamp(40px, 10vw, 108px); }          /* (8 characters and more: "1,234,567") */
+.burnmon-num.is-longer { font-size: clamp(30px, 7.4vw, 88px); }       /* (11 and more: "123,456,789") */
+.burnmon-unit { font-size: .36em; font-weight: 600; letter-spacing: -0.01em; color: var(--accent); }
+.burnmon-num.is-up .burnmon-agi { animation: burnmon-up 1.4s ease-out; }
+@keyframes burnmon-up { 0%, 35% { color: var(--accent); } }
+.burnmon-sub { margin-top: 10px; font-size: 13px; color: var(--fg-2); }
+.burnmon-foot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px;
+  margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line);
+}
+.burnmon-note { flex: 1 1 320px; max-width: 620px; font-size: 13px; color: var(--fg-3); }
+.burnmon-note a { color: var(--fg-2); text-decoration: underline; text-underline-offset: 3px; }
+.burnmon-note a:hover { color: var(--fg); }
+.burnmon-btn { flex: none; }
+@media (max-width: 560px) {
+  .burnmon { padding: 16px 16px 18px; }
+  .burnmon-btn { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .burnmon-num.is-up .burnmon-agi { animation: none; }
+}

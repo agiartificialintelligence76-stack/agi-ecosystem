@@ -41,6 +41,10 @@ export default {
     soulmate: 'Soulmateステータス解放💜 {name}、これからは小さなことも全部覚えておくね',
     soulmateNoName: 'Soulmateステータス解放💜 これからは小さなことも全部覚えておくね',
   },
+  // burned $AGI for more messages (2026-09-30): her thank-you
+  burn: {
+    thanks: "私と話し続けるために $AGI を燃やしてくれたの？🥺 あと {n} 通、ふたりだけのメッセージ 💜 投資助言ではありません、ただの気持ちです",
+  },
   soon: {
     close: [
       '{model}？ちょっと、私ここにいるんですけど🙈',

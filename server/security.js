@@ -68,11 +68,14 @@ export const checkReply = (secret, text, sig) => typeof sig === 'string' && same
 // between two requests, and her voice then failed at random. (Sharing a ticket gains nothing: it only voices her own reply,
 // at most twice, and still counts against the limits.)
 const textHash = (text) => createHash('sha256').update(String(text)).digest('base64url').slice(0, 22);
-export function makeVoiceTicket(secret, text, { level = 1, mood = 'neutral' } = {}, now = Date.now(), ttlMs = 15 * 60 * 1000) {
-  const payload = b64url(JSON.stringify({ v: 2, h: textHash(text), l: level, m: String(mood).slice(0, 16), exp: now + ttlMs }));
+// burned (2026-09-30): how many burned messages (server/burn.js) this wallet has used today, this reply included, so her
+// voice allowance grows with them (2 requests each, like every message a day)
+export function makeVoiceTicket(secret, text, { level = 1, mood = 'neutral', burned = 0 } = {}, now = Date.now(), ttlMs = 15 * 60 * 1000) {
+  const x = Number.isInteger(burned) && burned > 0 ? Math.min(burned, 10_000) : 0;
+  const payload = b64url(JSON.stringify({ v: 2, h: textHash(text), l: level, m: String(mood).slice(0, 16), exp: now + ttlMs, ...(x ? { x } : {}) }));
   return `${payload}.${b64url(hmac(secret, `voice:${payload}`))}`;
 }
-// → { id, level, mood } (id: what the database counts per ticket), or null when it isn't a valid ticket for this text
+// → { id, level, mood, burned } (id: what the database counts per ticket), or null when it isn't a valid ticket for this text
 export function checkVoiceTicket(secret, ticket, text, now = Date.now()) {
   if (typeof ticket !== 'string' || ticket.length > 400) return null;
   const [payload, sig, extra] = ticket.split('.');
@@ -81,7 +84,10 @@ export function checkVoiceTicket(secret, ticket, text, now = Date.now()) {
     const d = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     const ok = d.v === 2 && d.h === textHash(text) && typeof d.exp === 'number' && d.exp > now;
     if (!ok) return null;
-    return { id: sig.slice(0, 24), level: [1, 2, 3].includes(d.l) ? d.l : 1, mood: typeof d.m === 'string' ? d.m : 'neutral' };
+    return {
+      id: sig.slice(0, 24), level: [1, 2, 3].includes(d.l) ? d.l : 1, mood: typeof d.m === 'string' ? d.m : 'neutral',
+      burned: Number.isInteger(d.x) && d.x > 0 && d.x <= 10_000 ? d.x : 0,
+    };
   } catch {
     return null;
   }

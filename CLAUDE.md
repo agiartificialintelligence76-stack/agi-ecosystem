@@ -29,6 +29,15 @@
 > - **She texts first** (2026-09-29): AGI-1's Telegram bot, the first step of the owner's big ideas. See "She texts first:
 >   her Telegram bot". And what the Clank developer docs offer this site: "The Clank protocol" (the risk check reads the
 >   protocol's own contracts since the same day).
+> - **Her daily clips** (2026-09-29, the owner's big idea 5, "only this"): a free daily GitHub job makes a vertical video
+>   of AGI-1 in 2D reading her diary entry in her voice, with captions, for the owner to post by hand. **Only AGI, never
+>   another coin** (the owner: "why are u promoting other coins in the video … the founder of the launchpad will get
+>   angry", "just agi"). See "Her daily clips". The big ideas' burns for reads and her pretend bag are **on hold** (the
+>   owner: "remove 3 … for now", "remove the 4 … also").
+> - **Burn $AGI for more messages** (2026-09-30, the owner: "every chat $AGI is burned … make this better then continue"):
+>   after the free messages, visitors burn $AGI from their own wallet app for more (10 $AGI a message, checked on Robinhood
+>   Chain), and a huge live **burn monitor** above the chat shows how much was burned. Off until `supabase/burns.sql` is run.
+>   See "Burn $AGI for more messages, and the burn monitor".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -65,6 +74,13 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   Vietnamese, Indonesian, Filipino, Thai, Hindi, Spanish, Portuguese, French, German, Russian, Turkish, Arabic), picked in a
   menu next to "AGI-1 ▾"; her replies, her natural voice, the mic and her pre-written lines follow it, and she answers in
   whatever language you write in. The page stays English. See "Her languages"
+- **Her daily clips** (2026-09-29, the owner's idea): every day GitHub's computer makes a vertical clip (1080 × 1920,
+  about 20 s) of AGI-1 in 2D reading her diary entry in her natural voice, with captions. Only AGI: never another coin.
+  The owner downloads it and posts it by hand, with the apps' AI labels. Not part of the website. See "Her daily clips"
+- **Burn $AGI for more messages** (2026-09-30, the owner's idea): after the free messages, 10 $AGI a message, burned by the
+  visitor from their own wallet app (the site never asks a wallet for a transaction) and checked on Robinhood Chain; what was
+  burned counts toward the level; a huge live **burn monitor** above the chat. Off until `supabase/burns.sql` is run. See
+  "Burn $AGI for more messages, and the burn monitor"
 - **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
 It looks like an AI lab's model launch page (a parody, see "Design" below): serious design, meme content. (Pop mode is the
@@ -97,7 +113,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    confirmed they're 18+, at most 2 a day, never at night on their clock, pre-written lines only (and her diary entry as
    it's already published on /diary, written by AI once a day and checked in code; never an AI text written just for
    Telegram), and /stop (or blocking the bot) forgets them (see "She texts first"). An autonomous X account needs the owner's decision
-   first (its cost, X's rules for automated accounts).
+   first (its cost, X's rules for automated accounts). Her daily clips (2026-09-29) are made automatically, but only for the
+   owner to download: the owner posts them by hand (see "Her daily clips").
 7. **Keep costs near $0.** The total budget is $150. Prefer free tiers, and check every new feature against the budget table below.
 8. **Not financial advice.** Nothing on the site, and nothing AGI-1 says, promises gains or tells people to buy or sell.
    **One exception, the owner's choice (2026-09-25):** when a Stranger or a Crush runs out of messages for the day, AGI-1's
@@ -105,11 +122,15 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    advice", the free option (come back tomorrow) and the safety note right under it; never prices, gains or pressure
    (`tests/limit.test.js`). Her AI replies still never suggest buying anything. Her **market moments** (2026-09-25: happy at
    each new $200K of market cap, sad after a -20% day) are feelings about the chart, never a prediction or buy / sell / hold,
-   always with "not financial advice" and no Buy link (`tests/market.test.js`).
+   always with "not financial advice" and no Buy link (`tests/market.test.js`). **Burning for messages** (2026-09-30, the
+   owner's idea): the page offers it after the free messages, always as a way to pay for messages, never as an investment
+   ("permanent, not an investment, no refunds, not financial advice"); her AI replies never suggest it.
 9. **Wallets: an address and a free signature, nothing else.** The site never asks a wallet for a transaction, a token
    approval, a network change or any signature other than the plain-text sign-in message (it may *read* which network the
    wallet is on). `tests/wallet.test.js` fails the build if the code in `src/` ever does. Levels never come with "buy more" wording,
-   except the out-of-messages line in rule 8.
+   except the out-of-messages line in rule 8. The one transaction the site ever suggests (2026-09-30) is a burn the visitor
+   sends themselves, from their own wallet app, to the burn address `0x…dEaD` (see "Burn $AGI for more messages"): the page
+   never asks a wallet for it, and the test also refuses payment links (`ethereum:`, MetaMask's send links).
 
 ## Decided stack
 
@@ -169,6 +190,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/chat/languages.js` | Her languages (2026-09-29): the chat bar's language menu ("🌐 English ▾" next to "AGI-1 ▾"), two columns of her 16, each in its own words; keyboard like the model picker |
 | `src/lib/copy.js` | 2026-09-29: the Copy button for the contract address (the Model card's and the front's): copies the whole address, or selects it where the clipboard is blocked |
 | `src/chat/telegram-link.js` | She texts first (2026-09-29): shows the Playground's "Text me on Telegram ↗" once the bot's public name is set (`VITE_TELEGRAM_BOT`, read by `src/main.js`) |
+| `src/chat/burn.js` | Burn $AGI for more messages (2026-09-30): the burn monitor above the chat (the huge live number), the Relationship panel's row, the burn screen (a native dialog: the steps, the burn address and Copy, Check my burn, a pasted link), the sentences about burning (shown once burns are open, `[data-burn-only]`); `burnsReady()` / `openBurn()` for the chat's out-of-messages chip |
+| `src/lib/burns.js` | 2026-09-30: the burn address (`0x…dEaD`), its block explorer page, the suggested amounts. The page and the server share it |
 | `src/chat/limit-lines.js` | Out of messages (2026-09-25): what AGI-1 says when a Stranger or a Crush has used today's messages (the page shows it; her voice for it comes from `/api/voice?line=more-1` / `more-2`), and the safety note under it |
 | `src/chat/market-lines.js` | Market moments (2026-09-25): what AGI-1 says when $AGI reaches a new $200K market cap step (happy, she names it) or has a -20% day (sad); her voice for them: `/api/voice?line=mcap-<step>` / `dump-<n>`. The page and the server both read it |
 | `src/chat/market.js` | Market moments: watches the live $AGI numbers (`agi:prices`) in the visitor's browser and decides when she has something to say (once per step; at most one sad moment every 12 hours); remembered in the browser (`agi_market`) |
@@ -179,8 +202,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `public/cards/` | The link-preview pictures (one per level, the diary, and `home.jpg` for the home page; the champions' cards left with the Arena), made with `tools/cards/` |
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards") |
-| `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (Telegram's API, the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and ETH, what its creator holds; the risk check's second opinion and safety net) |
+| `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me; since 2026-09-30 "Check my burn" and, at `GET ?burns`, the burn monitor's numbers), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (Telegram's API, the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and ETH, what its creator holds; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -189,8 +212,11 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/voice.sql` | AGI-1's voice (2026-09-25). Run once in the same Supabase project, **after** `chat-limits.sql`: `voice_take()`, which counts voice use in the chat's counter table (the hard daily cap; since 2026-09-26 in requests, no need to run it again) |
 | `supabase/voice-lines.sql` | Her recorded lines (2026-09-26). Run once in the same Supabase project (any time): the `voice_lines` table + `voice_line_get/put()`, where the server keeps her fixed lines once Google has made them |
 | `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes) |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27: AGI-1 in 2D: which AGI-1, her springs, drifts, blinks, eyelids, the 2.5D turn, her mouth, her elbows, the rig's data and pictures, the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `supabase/burns.sql` | Burn $AGI for more messages (2026-09-30). Run once in the same Supabase project (any time): five new tables (`agi1_burn_key`, `agi1_burn_txs`, `agi1_burn_wallets`, `agi1_burn_days`, `agi1_burn_total`) and 7 functions, only added (nothing the original site uses changes). Until it's run, nobody sees anything about burning |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27: AGI-1 in 2D: which AGI-1, her springs, drifts, blinks, eyelids, the 2.5D turn, her mouth, her elbows, the rig's data and pictures, the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
+| `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
+| `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
 | `scripts/check-secrets.js` | Runs after every build and fails it if a secret would be shipped to browsers |
 | `tools/model/` | Offline 3D-model tools, not part of the site build: `fix-hair-weights.mjs`, `drop-tangents.mjs` (see "3D models") |
 | `tools/agi1-2d/` | 2026-09-27, offline: turns the owner's 2D art (`agi 2d anime/agi-vtuber.html`) into `public/models/agi1-2d/`: takes the layers out, cleans them up, upscales them 2× (an anime upscaler, run once), packs them. `bash tools/agi1-2d/build.sh "agi 2d anime/agi-vtuber.html"` (see "AGI-1 in 2D") |
@@ -216,6 +242,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
   changing one (see "Her languages"). `npm test` runs the same checks.
 - `bash tools/agi1-2d/build.sh "agi 2d anime/agi-vtuber.html"`: remakes AGI-1 in 2D's pictures from the owner's 2D art (only
   when that art changes; see "AGI-1 in 2D").
+- `node tools/clips/make.mjs --fake-voice`: makes today's diary clip with a stand-in hum instead of her voice (see "Her
+  daily clips"; needs Chrome or Chromium, ffmpeg and `npm install --no-save playwright-core`: Claude's workspace and GitHub
+  have them). GitHub's daily job runs it for real (with her voice): Actions → "AGI-1's daily clips".
 - Local testing needs Node.js 20.19+ or 22.12+ (Vite 8). Claude builds and tests in its own workspace, so
   `node_modules/` normally isn't in this folder. `node_modules/` made on one system (Linux, Windows) doesn't work on
   another: if it came from somewhere else, delete it and run `npm install` again.
@@ -634,6 +663,10 @@ her notes, so people see what she keeps.
 **Level-up moment:** when your level goes up (at sign-in, or when a re-check finds more $AGI), the Playground shows
 "Relationship upgraded: Stranger → Crush", AGI-1 does her `love` reaction on stage and says a pre-written line (no AI cost).
 Each browser celebrates each level once (`agi_levels_seen`).
+
+**What was burned counts too** (2026-09-30): a wallet's level follows the $AGI it holds plus the $AGI it burned for messages
+(`checkLevel(address, fallback, env, burned)` in `server/chain.js`; see "Burn $AGI for more messages"), so burning never
+drops a level.
 
 **Cost:** level instructions add a few words per reply (about +$0.00002). Soulmate notes add about $0.0001 per Soulmate reply
 (worst case about $0.90/day instead of $0.80). Balance checks and the database are free.
@@ -1555,9 +1588,12 @@ workspace can't reach Telegram): the first real check is the owner's setup (step
 
 **Next steps of the plan** (each needs the owner's decision first): her own X account (X's pay-per-use API: about $0.015
 a post, $0.20 with a link, so links go in the bio; AI replies need X's approval; the "Automated" label; roughly $5–20 a
-month), video clips of her reactions (TikTok / Reels by hand at first), the "paper bag" (a pretend $1,000 and a public
-journal before any real wallet: limits in code, and a real one only if ever), and burns for reads (the project burns $AGI
-from its own wallet and our server checks it on-chain; a legal check first; paying never buys a better risk level).
+month), video clips of her reactions (**built 2026-09-29: her diary only, never another coin, posted by hand: see "Her
+daily clips"**), the "paper bag" (a
+pretend $1,000 and a public journal before any real wallet: limits in code, and a real one only if ever), and burns for
+reads (the project burns $AGI from its own wallet and our server checks it on-chain; a legal check first; paying never buys
+a better risk level). **The paper bag and burns for reads are on hold** (the owner, 2026-09-29: "remove 3 … for now",
+"remove the 4 … also"): nothing of either is in the site.
 
 ## Her languages (2026-09-29)
 
@@ -1657,6 +1693,231 @@ one row, 16 languages in 2 columns inside the screen, opens on the current one, 
 downloaded until a pick); a pick (her line, the greeting, the button, Parameters, remembered, only that language
 downloaded, the chat sends `lang`, her hello's address in that language, the risk check's line in it, after a reload);
 Arabic right to left, then Japanese, at 360 px; a clean console.
+
+## Her daily clips (2026-09-29)
+
+**The owner's idea** (item 5 of the big-ideas message): "Automatic vertical clips from the models she already has (the 2D
+one renders fastest): launch of the day, clone watch, readouts and her diary, with her voice and captions." Asked how they
+reach X, the owner picked **"You post by hand"**: a free daily GitHub job makes them, the owner downloads them and posts
+them by hand (X, TikTok, Reels, Shorts), with the apps' AI labels on. Nothing posts by itself (hard rule 6 is unchanged;
+posting to X automatically would need X's pay-per-use API, about $0.015 a post, and the owner's decision). Items 3 (burns
+for reads) and 4 (her pretend bag) of the same message are **on hold** (the owner: "juist do 5 … only this"), and nothing
+of them is in the site. Live streams come after the clips prove the idea.
+
+**Only AGI, never another coin** (the owner, the same day, after seeing the first version: "why are u promoting other
+coins in the video, i dont like this, the founder of the launchpad will get angry at me again", then "just agi"). The
+first version also made "launch of the day", "clone watch" and "readout" clips, which named and risk-rated other
+clank.trade coins; they were removed before anything ran or was posted. **Never add a clip that names, shows or rates
+another coin** without the owner asking for it. What's left: her diary. The clip tools don't read clank.trade at all, and
+a diary entry that names another coin's ticker (the diary's table is shared with the original site), an address or a link
+makes no clip (`tests/clips.test.js` checks both).
+
+**What the owner gets, every day** (GitHub → the repo → **Actions** → "AGI-1's daily clips" → the newest run →
+**Artifacts** → `agi1-clips-<run>-<attempt>`, a zip kept 7 days):
+- her diary clip: an MP4, 1080 × 1920, 30 frames a second, about 20 seconds: her newest entry (yesterday's, as /diary
+  shows it) read out in her voice, with captions ("dear diary… not financial advice, just feelings"). None on a day her
+  diary has no new entry (a quiet day, not an error);
+- a `.txt` with a post to paste (it ends "AI-generated · not financial advice · agi1.app") and a `.jpg` cover;
+- `README.txt`: what was made, or why not, and how to post (the apps' AI labels: TikTok "AI-generated content", YouTube
+  "Altered or synthetic content: yes", Instagram "AI label").
+
+**How the clip looks:** AGI-1 in 2D (the site's own rig, `src/stage/agi1-2d.js`: breathing, blinking, glances, her hair on
+springs, her mouth following her voice, a reaction in the entry's mood), framed like a VTuber (head to chest, fading into
+the background below), on Pop mode's honey with comic focus lines and halftone dots. On top: "AI-GENERATED · NOT
+FINANCIAL ADVICE" on every frame, "HER DIARY", the date in big Anybody type that pops in, "written by AGI-1, an AI", her
+captions in a white card (a new card when she pauses), and agi1.app at the bottom and at the end. The label, the title
+and the captions stay clear of TikTok's, Reels' and Shorts' own buttons and text (their top ~180 px and bottom ~380 px).
+
+**Her words** (`tools/clips/lines.js`): her published diary entry (written once a day by `server/diary.js` and checked in
+code; never an AI text written for the clip), "dear diary" said once, at most 300 characters, "not financial advice, just
+feelings" at the end. Her voice: Gemini's speech model, Despina, in the entry's mood (one request a day, Flash-Lite first
+and 3.8 Flash as the backup, as on the site; `speakAsAgi1` got a `timeoutMs` option for it: a clip waits up to a minute,
+the site's replies still 20 s).
+
+**How it works:**
+- `.github/workflows/clips.yml`: once a day at **08:23 UTC** (16:23 the owner's time: after her diary is written at 03:00
+  UTC, and just after Google's daily limits start again at midnight Pacific), and by hand (**Run workflow**). GitHub's
+  computer (Ubuntu, no graphics card) installs the site's packages, then playwright-core 1.63.0 with its own Chromium and
+  ffmpeg (tools for the clips only: not in package.json, not in the site), and runs `node tools/clips/make.mjs`.
+  Read-only permissions; the key (`GEMINI_API_KEY`, a GitHub secret) only reaches the step that makes the clip, and never
+  the browser or ffmpeg (`withoutSecrets`). 30 minutes at most. The actions are GitHub's own, by version tag (`@v7`).
+  **The owner saves this file by hand**: Claude's link to the folder may not write GitHub workflow files (a safety rule of
+  the Claude app), so Claude sends it in the chat.
+- `tools/clips/make.mjs`: reads her newest diary entry (`/api/diary`, nothing else), asks Gemini for her voice, times her
+  captions by her pauses (`captions.js`) and her mouth by her loudness (`audio.js`, the same meter as the site's), builds
+  the renderer page (`tools/clips/page/`, with Vite, into `tools/clips/dist/`) and serves it on the computer itself, and
+  draws every frame in Chrome: the 3D renderer draws only her, at 720 × 1280 (about her art's own sharpness in this
+  framing), and plain 2D drawing does the rest at 1080 × 1920, about 0.2 s a frame without a graphics card (drawing it
+  all in 3D took 0.7 s). ffmpeg makes the MP4 (H.264, AAC). Nothing is random (a seed a day), and time moves exactly
+  1/30 s a frame.
+- When something fails: a clip whose voice, page or ffmpeg fails is deleted; a frame that takes more than 30 s fails the
+  clip instead of hanging the job; a diary entry older than yesterday isn't made again. README.txt and warnings on the
+  run's page say what happened; the job is red when the clip should have been made and wasn't.
+- Try it without Google: `node tools/clips/make.mjs --fake-voice` (a stand-in hum), `--facts f.json` (a made-up entry:
+  `{ "diary": { "day": "2026-09-29", "mood": "love", "entry": "…" } }`), `--out dir`.
+
+**Setup (the owner, once; free):**
+1. GitHub → the repo `agi-ecosystem` → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+   → Name `GEMINI_API_KEY`, Secret: the same Google AI Studio key as in Vercel → **Add secret**.
+2. **The workflow file, by hand (once):** save `clips.yml` (Claude sends it in the chat) in this folder as
+   `.github\workflows\clips.yml` (the folders are already there, empty). Then push this folder, the file included (it
+   must be on `main`). Later changes to it: the same way (Claude sends it, the owner saves it). Until it's saved, the
+   build's check of it waits (`tests/clips.test.js` skips it), so a push without it never breaks the site.
+3. GitHub → **Actions** → "AGI-1's daily clips" → **Run workflow** (to try it now; otherwise it runs every day by itself).
+   About 5 minutes later: the run's page → **Artifacts** → download the zip, watch the clip, then post it if you like it.
+
+**Cost:** GitHub gives private repositories 2,000 free minutes a month (a run takes about 5: about 150 a month) and 500 MB
+of storage for downloads (a clip is about 5 MB, kept 7 days); without a payment method on GitHub, going over just stops
+the job, never a bill. Her voice: 1 request a day to Google's speech model, about $0.003, from the same prepaid credits as
+the site.
+
+**Troubleshooting** (GitHub → Actions → the run: its log, and warnings on its page):
+
+| What you see | Why | Fix |
+|---|---|---|
+| The run is red: "GEMINI_API_KEY is missing" | The secret isn't set | Setup step 1, then Run workflow |
+| Green, but README.txt says "none today" | Her diary had no entry about yesterday (its nightly job failed, or it named another coin, or it isn't written yet) | Nothing to fix; tomorrow's comes as usual |
+| "couldn't read her diary" | The site didn't answer GitHub's computer | Run workflow later |
+| "diary not made: gemini: HTTP 429 …" | Google's daily limit for her voice is used up (the site's voice shares it) | It runs again tomorrow; or Run workflow after 08:00 UTC |
+| "… credits" (HTTP 402) | Prepaid credits used up | Google AI Studio → Billing (the site's chat and voice stop too) |
+| "no Chrome or Chromium found" / "couldn't start" | The browser step failed | Re-run the job; if it lasts, tell Claude with the log |
+
+**Tests:** `tests/clips.test.js` (8, in `npm test`, no browser, ffmpeg or network): only AGI (the clip tools know nothing
+about other coins; an entry naming one makes no clip), her diary clip's words and label, which entry, captions and their
+timing, her voice's loudness and pauses, ffmpeg stopping early or a clip given up never hanging the job (a stand-in
+ffmpeg), no secrets for the browser and ffmpeg, the workflow (once a day, by hand, read-only, one secret, 7 days, never
+posting) and nothing of it in the site's build. Rendered in Claude's workspace with the stand-in voice and a made-up
+entry (about 2 minutes 15 seconds on 2 processor cores; looked at frame by frame). A second Claude agent reviewed the first
+version (19 findings, e.g. the job could hang for 30 minutes when a frame failed; all fixed, except pinning GitHub's own
+actions to exact commits: they stay on their version tags). **Not tried on GitHub yet, nor with her real voice:** the
+owner's first Run workflow is the first real check.
+
+## Burn $AGI for more messages, and the burn monitor (2026-09-30)
+
+**The owner's request:** "is it possible if they talk to agi-1 they will use $AGI and every chat $AGI is burned. make this
+better then continue", then, while it was being built: "make a monitor on how many agi are gonna be burned so they know its
+working, make it a huge text on the chat on top of it you decide whats better". (Not the big ideas' "burns for reads",
+which stay on hold.)
+
+**What was built (the better version: Claude's choices, sent to the owner before building):**
+- **Free messages stay** (10 / 50 / 150 a day by level), so anyone can still meet her without a wallet or $AGI.
+- **After them, messages cost $AGI, burned for good:** 10 $AGI a message (`BURN_PER_MESSAGE`; about $0.015 on 2026-09-30,
+  at a $1.5M market cap). Burned once for a pack (1,000 $AGI = 100 messages), not per message: a burn per message would mean a
+  wallet pop-up and a network fee every time, which nobody would do, and it would break hard rule 9.
+- **The visitor burns it themselves**, from their own wallet app (Send → $AGI → the burn address `0x…dEaD`), then presses
+  **Check my burn**. Our server reads the burn on Robinhood Chain and adds the messages. The site never asks a wallet for
+  anything but the sign-in signature (hard rule 9 is unchanged).
+- **What was burned counts toward the level** (held + burned), so burning never drops someone from Crush to Stranger, and can
+  lift them (9,000 held + 1,000 burned = Crush).
+- **The owner's AI bill stays bounded:** a wallet may use 300 burned messages a day, the whole site 1,000 (`BURN_DAILY_CAP`,
+  about $0.80 of replies at most), on top of the free 1,000; a reply that fails gives its burned message back.
+- **The burn monitor:** a huge live number above the chat, "so they know it's working".
+- **Off until the owner runs `supabase/burns.sql`:** until then nobody sees a burn button, the monitor or a word about burning.
+- Not built: burning on Telegram (no wallets there), a button that asks the wallet for the burn (rule 9), a buy link in it.
+
+**What visitors see:**
+- **The burn monitor** (`section.burnmon`, in the Playground right above the chat panel): "BURNED BY CHATTING WITH AGI-1 ·
+  ● live", the number in huge type ("12,340 $AGI"; in Pop mode a honey sticker with ink digits and a pink print echo), under
+  it "+2,300 today · 1,234 messages paid for · 7 burns · latest 3 min ago", then "Every burn is read on Robinhood Chain before
+  it counts: 10 $AGI a message, gone for good. See the burn address ↗" (the block explorer's page of 0x…dEaD, so anyone can
+  check) and **Burn $AGI for more messages**. Before the first burn: "0" and "Nothing burned yet: the first burn shows up
+  here." It asks our server again every minute while it's on screen and the tab is visible, and says "paused" after 10 minutes
+  without a touch (a forgotten tab doesn't ask all night); a new total counts up in about a second (at once with "reduce
+  motion"), and it never counts down (a CDN copy can be a minute old). Long numbers get smaller type: even the whole supply
+  fits a 360 px phone. If its first ask fails, it asks again (30 s, 1, 2, 4, then every 5 minutes).
+- **The Relationship panel:** "42 burned messages left" (with a wallet) and **Burn $AGI for more messages**.
+- **The burn screen** (a native dialog, the connect screen's look): "You send it yourself. This page never asks your wallet
+  for a transaction.", the price; without a wallet, **Connect wallet** first (it comes back here after the sign-in); then three
+  steps: pick an amount (1,000 / 5,000 / 10,000 $AGI → 100 / 500 / 1,000 messages; or any amount: every full 10 $AGI in a burn
+  is one message, and what's left over doesn't count), send it from your own wallet app (your connected wallet, the burn
+  address with **Copy**, "zeros, then dEaD", only the official $AGI counts, a small ETH fee), then **Check my burn** (or paste
+  the transaction's link or ID). Every answer in plain words (found, already counted, not on the chain yet, failed, not the
+  official $AGI, another wallet's, more than 7 days old, under the price of one message, the chain or the explorer away, "more
+  burns are waiting"). The rules under it: permanent, not an investment, no refunds, no cash value, counts toward your level,
+  not financial advice; and the monitor's total.
+- **A burn counted:** "Burn found: 1,000 $AGI, so 100 more messages", the panel and the monitor move at once, her `love`
+  reaction and her thank-you in the chat ("you burned $AGI just to keep talking to me? 🥺 100 more messages, all ours 💜 not
+  financial advice, just feelings", in her 16 languages: `burn.thanks`; shown and "said" silently, not voiced), and the
+  level-up moment when the burn lifted the level.
+- **In the chat:** a reply paid by a burn has a chip "burned message · 41 left". Her out-of-messages lines (the offer, "beauty
+  sleep", "all talked out") get a **Burn $AGI for more messages** chip; when their burned messages wait for tomorrow, a note
+  instead ("That's today's most for burned messages (300 a day)…" or "…the site's daily share is used up…").
+- **The page's sentences about burning** (three in the safety note, one in "How levels work") show only once burns are open
+  (`[data-burn-only]`), so every sentence stays true. The page loads that answer when the chat or the safety note comes near.
+
+**How it works:**
+- **Checking a burn** (`server/burn.js`, `api/wallet.js` action `burn`): the pasted transaction, or else the wallet's newest
+  $AGI burns from the Blockscout explorer (`/api/v2/addresses/<wallet>/token-transfers`, only to know which to read; at most 3
+  read per check). Each is read from the chain (`eth_getTransactionReceipt`, then `eth_getBlockByNumber` for its time; read
+  only). It counts when the transaction succeeded, moved the official $AGI (its contract's Transfer events, never a
+  look-alike) from the connected wallet to `0x…dEaD` (or `0x0`, the coin's own `burn()`), happened in the last **7 days**, and
+  that wallet's part of it wasn't counted before. Messages = the whole $AGI ÷ the price, rounded down. 10 checks a minute per
+  visitor. Not on the chain yet, or the node away: nothing is counted, and it can be checked again.
+- **Using them** (`api/chat.js`): free messages first (`chat_take`, unchanged); when those are used (the visitor's own or the
+  whole site's), one burned message (`burn_take`: 300 a day per wallet, `BURN_DAILY_CAP` for the site, the same 3 s gap). If her
+  reply fails, exactly that burned message is given back (`burn_refund` with its id, once, within 5 minutes), but the attempt
+  still counts toward the day's caps, so failures can't run up the AI bill. Her reply is asked for early enough to give it
+  back inside Vercel's 25 s (`REPLY_BY_MS`, 21 s). Her voice allowance grows with the burned messages used (2 each, carried in
+  the voice ticket).
+- **The database** (`supabase/burns.sql`, only added: nothing the original site uses changes; see its header). **Never an
+  address or a transaction's hash:** both are scrambled with the database's own random key (`agi1_burn_key`, made once by the
+  file and never changed): different codes from the name-and-notes ones (so burns can't be matched to them), and they don't
+  depend on PASS_SECRET (changing it doesn't lose anyone's burned messages or let old burns count again). A burn is counted per
+  (transaction, wallet), so pasting someone else's transaction says nothing about it.
+- **The monitor's numbers:** `GET /api/wallet?burns` (exactly that address, anything else is 405), kept by the CDN a minute:
+  `{ ready, price, perDay, total: { agi, messages, burns, today, lastAt } }`, or `{ ready: false }` until burns.sql is run.
+  A counted burn's answer carries the fresh numbers too, so the monitor moves at once.
+- **Forget me** deletes her name for them and her notes, not their burned messages (they paid for them).
+
+**Setup (the owner, once):** Supabase → the same project → SQL Editor → New query → paste **all** of `supabase/burns.sql` →
+Run. It ends with `burn_functions_found = 7`. That's the switch: the next page load shows the monitor (at 0) and the burn
+buttons. Optional settings (Vercel → Environment Variables, then Redeploy): `BURN_PER_MESSAGE` (whole $AGI a message, default
+10), `BURN_DAILY_CAP` (burned messages a day for the whole site, default 1,000). **Then check it yourself before telling
+anyone:** connect a wallet, send a small burn (e.g. 100 $AGI = 10 messages) from your wallet app to the burn address, press
+Check my burn, and watch the monitor go up.
+
+**Cost:** nothing new to pay: Supabase (small tables), the chain's public node and the explorer (free, keyless, only when
+someone presses Check my burn), the monitor (one tiny cached request a minute per watching visitor). The burned messages'
+replies: at most 1,000 a day, about $0.80 (their voice comes out of the existing 4,000 a day).
+
+**Worth knowing (not legal advice):** taking crypto for a service can count as selling something (consumer rules, crypto
+promotion rules like the UK's and the EU's MiCA), and Vercel's Hobby plan is for non-commercial use. The page never presents
+burning as an investment or "number go up", and her AI replies never suggest burning (her prompt is unchanged).
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| No monitor, no burn buttons | (none) | burns.sql isn't run (or the database is away): the setup above |
+| "Couldn't look up your burns automatically just now…" | `[wallet] checking burns failed (explorer): …` | The block explorer didn't answer: paste the transaction link, or try later |
+| "Couldn't read Robinhood Chain just now…" | `[wallet] checking burns failed (chain): …` | The chain's public node didn't answer; it passes. If it lasts, ask about a node key (`ROBINHOOD_RPC_URL`) |
+| "No burn from 0x… found yet" right after burning | (none) | The explorer is a minute behind: check again, or paste the link |
+| "didn't burn the official $AGI" | (none) | A look-alike coin was sent (it's lost), or it went to another address |
+| "That's today's most for burned messages" | (none) | 300 a day per wallet: working as planned |
+| "Burned messages are resting for today" | (none) | The site's `BURN_DAILY_CAP` is used: raise it (about $0.0008 a reply), then Redeploy |
+| A reply failed, nothing else | `[chat] no time left for her reply: … ms before asking` | The database or the chain was very slow; a burned message was given back |
+| The monitor says "paused" | (none) | Nobody touched the page for 10 minutes: any mouse move, key or scroll starts it again |
+
+**Tests:** `tests/burn.test.js` (18: pasted links and IDs; what a transaction burned (look-alikes, other wallets, removed
+events, mints, `burn()`); every reason a burn doesn't count; the explorer's list (both of Blockscout's field names, at most 3
+read per check); counted once and per wallet; no address or hash sent to the database; the key read once; the level counting
+burns; the chain away or never answering, the explorer away, signed out, not set up, the speed bump; the chat (free first, then
+burned, the whole site's free share used, their 300, the site's cap, too fast, no wallet, a failed reply gives back exactly that
+one while the attempt counts, the level); her voice allowance; the counter's one address and caching; the settings; the page's
+promises; the monitor's markup), `tests/wallet.test.js` (the no-transaction guard also refuses payment links: `ethereum:`,
+MetaMask's send links), `tests/prices.test.js` (the one other address on the page is the burn address, only in the burn
+screen), `tests/i18n.test.js` (her thank-you in 16 languages). The SQL ran in PGlite (50 checks: the key, counting once, the
+daily caps, giving back exactly one take once within 5 minutes, a take-fail-give-back loop stopped by the caps, midnight, the
+totals and today, re-running, permissions, RLS, the original site's tables untouched). In a browser (148 checks: hidden until
+open; the monitor (its numbers, live every minute, counting up and never down, paused when idle or off screen, a failed first
+load asked again, the whole supply at 360 px); the panel; the burn screen (connect first, the steps, Copy, Check my burn, a
+pasted link, every answer, a session that ended); her thank-you; the level-up; the chat's chips and notes; both looks × both
+themes × 1440 / 390 / 360 px; axe 0 issues; the wallet never asked for anything; a clean console). A second Claude agent
+reviewed it (10 findings, e.g. failed replies could be retried without end at the owner's cost, changing PASS_SECRET would let
+old burns count twice, stored amounts could match a wallet to its name and notes, the monitor could count down; all fixed and
+tested, except waiting for confirmations: Robinhood Chain has one sequencer, and waiting would make people wait minutes).
+**Not tested live:** the chain, the explorer and the real database (Claude's workspace can't reach them): the owner's first
+small burn is the first real check.
 
 ## The Clank protocol (developer.clank.trade), read 2026-09-29
 
@@ -2145,7 +2406,11 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   its picture host, DexScreener and a block explorer). Since 2026-09-28 note 01 calls it “Risk check your coins on clank”.
   Since 2026-09-29 note 01 says her Telegram texts are never a tip either, note 03 that her Telegram bot is 18+ and PG-13
   too and texts first at most twice a day until /stop, and note 04 what the bot keeps and that /stop deletes it.
-  Last updated September 29, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
+  Since 2026-09-30, once burning $AGI for messages is open (and only then: `[data-burn-only]`), note 01 says burning pays
+  for messages and isn't an investment (gone for good, no refunds, no cash value), note 02 that the only transaction the site
+  ever suggests is a burn the visitor sends themselves to `0x…dEaD` (anyone asking for another address isn't us), and note
+  04 what's kept for burns (under a different scrambled wallet code than the name and notes) and that Forget me keeps
+  burned messages. Last updated September 30, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
   AI provider (no "Google"/"Gemini"; it says "an AI service"), and there's no "Not a real lab" note. **2026-09-25:** "A parody"
   is gone from the bottom bar (both pages); it now reads "© 2026 AGI. No labs were harmed." and "$AGI is a token made
   by AGI, launched on clank.trade. Entertainment only · Not financial advice." The share pictures, link previews and
@@ -2308,6 +2573,21 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   texts leaves our server except to Telegram (their chat's number, to text them). The page only links to t.me: the CSP
   doesn't change.
 
+### Burns for messages (`/api/wallet` action `burn`, `GET /api/wallet?burns`, 2026-09-30, see "Burn $AGI for more messages")
+- The site never asks a wallet for a transaction: the visitor sends the burn from their own wallet app. The page only shows
+  the address (with Copy), and our server only reads: the chain (`eth_getTransactionReceipt`, `eth_getBlockByNumber`, and
+  `eth_call` for decimals and balances) and the block explorer. No payment links (`tests/wallet.test.js`).
+- A burn counts only from the chain's own answer: the official contract's Transfer events, from the signed-in wallet (its
+  session proves it), to `0x…dEaD` or `0x0`, in the last 7 days, once per (transaction, wallet). A session is needed; 10 checks
+  a minute per visitor; the explorer only says which transactions to read.
+- The database never holds an address or a transaction's hash: both are scrambled with its own random key (made once by
+  burns.sql, never PASS_SECRET), and those codes differ from the name-and-notes codes. RLS on, only the secret key.
+- Money: burned messages have their own daily caps (300 per wallet, `BURN_DAILY_CAP` for the site), and a failed attempt still
+  counts, so the AI bill stays bounded; each failed reply gives back exactly its burned message, once. The chat asks for her
+  reply early enough to do that inside Vercel's 25 s.
+- The monitor's numbers are public totals only (no wallet, no transaction), at one fixed address, cached a minute.
+- Fail closed: burns.sql not run, or the database away → no burn buttons, and the chat is out of messages as before.
+
 ### 3D models
 - Before a `.glb` goes into the project, run it through gltf-transform (free): textures ≤ 2048 px WebP, geometry quantized.
   Aim for ≤ 5 MB each. The exact command used for AGI-1, which keeps every triangle, the skeleton and the animations:
@@ -2356,14 +2636,15 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 |---|---|---|
 | Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, 2026-09-27: 389 KB per visitor who picks 2D, instead of the 3D model's 1.7–2.2 MB) | Usually paused until 30 days have passed |
 | Supabase Free | 500 MB database · 5 GB egress · 200 realtime connections · 2M realtime messages/month. Paused after 1 week with no activity | Grace period, then restricted (read-only or paused), never billed |
-| Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 4,000 a day ≈ $12 ($18 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten) are made once and kept (the database since 2026-09-26) | The key stops when credits hit $0 (the chat and the voice share them) |
+| Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 4,000 a day ≈ $12 ($18 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten) are made once and kept (the database since 2026-09-26); since 2026-09-30 the replies paid for by burning $AGI, at most `BURN_DAILY_CAP` (1,000) a day ≈ $0.80 more | The key stops when credits hit $0 (the chat and the voice share them) |
 | Cloudflare Turnstile | Unlimited | — |
 | DexScreener | Free, no key, rate-limited per IP. Browsers ask every 30 s; since 2026-09-25 our server also asks for $AGI's market cap, at most once a minute per server copy, only to check a new market line | Requests fail, and we show the last known numbers (and her market lines wait) |
-| Robinhood Chain public node | Free, no key, rate-limited. Wallet balances, and since 2026-09-29 the risk check's reads of the Clank protocol (2 small requests per scan, once per coin per 5 minutes per region) | Balance checks fail; people keep their last level and it retries. Scans work without the protocol's word (no locked note, no chain safety net) |
+| Robinhood Chain public node | Free, no key, rate-limited. Wallet balances, and since 2026-09-29 the risk check's reads of the Clank protocol (2 small requests per scan, once per coin per 5 minutes per region), and since 2026-09-30 "Check my burn" (2 small reads per burn, at most 3 burns a check) | Balance checks fail; people keep their last level and it retries. Scans work without the protocol's word (no locked note, no chain safety net) |
 | Pinata picture gateway (clank.trade's coin pictures) | Free for us; each ClankChecker coin's picture (two sizes) is fetched about once a week per CDN region | The coin shows its first letter instead |
 | clank.trade's API (ClankChecker, 2026-09-26) | Free, no key; the list about once per 5 minutes per CDN region (about 17 small requests for 200 coins), the newest coins at most once per 10 seconds per region while someone watches (1 request), each coin asked about once per 5 minutes (1 minute for new coins; 2 requests) | ClankChecker says "Couldn't reach clank.trade" / "Not enough data"; nothing else is affected |
 | Telegram Bot API (her bot, 2026-09-29) | Free; about 30 messages a second per bot (she sends 25) | Telegram says "too many": that run stops, the rest go next run |
-| Blockscout block explorer (ClankChecker) | Free, no key; only for coins with 100+ holders, once per 5 minutes per coin | The scan says "More than 100 wallets hold it" |
+| GitHub Actions (her daily clip, 2026-09-29) | Private repositories: 2,000 minutes a month and 500 MB of storage for downloads; a run takes about 5 minutes (about 150 a month) and keeps about 5 MB for 7 days | Without a payment method on GitHub: the job just stops until next month (never a bill) |
+| Blockscout block explorer (ClankChecker; since 2026-09-30 "Check my burn") | Free, no key; only for coins with 100+ holders, once per 5 minutes per coin; one request per "Check my burn" without a pasted link | The scan says "More than 100 wallets hold it"; "Check my burn" asks for the transaction link instead |
 
 ## Environment variables
 
@@ -2394,9 +2675,15 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `TELEGRAM_BOT_TOKEN` | **yes** | Her Telegram bot's token, from @BotFather (2026-09-29, see "She texts first"). Without it the bot is off (the feed still runs) |
 | `TELEGRAM_DAILY_CAP` | no, optional | Her Telegram replies a day, all chats together, inside `CHAT_DAILY_CAP` (default 400), so Telegram can't use up the website's chat |
 | `VITE_TELEGRAM_BOT` | no (public) | Her bot's username without the @ (e.g. `agi1_gf_bot`): shows the Playground's "Text me on Telegram ↗". Built into the page, so Redeploy after changing it |
+| `BURN_PER_MESSAGE` | no, optional | Burn $AGI for more messages (2026-09-30): whole $AGI a burned message costs (default 10: 1,000 $AGI = 100 messages). Change it if $AGI's price moves a lot; burns already counted keep their messages. Redeploy after changing it |
+| `BURN_DAILY_CAP` | no, optional | Burned messages the whole site may use a day, on top of the free ones (default 1,000, about $0.80 of replies at most). Redeploy after changing it |
 | `CHECKER_HIDE_PICTURES` | no, optional | ClankChecker (2026-09-26): coins whose picture the owner doesn't want on the site, as contract addresses separated by commas; they show their letter instead. Redeploy after changing it |
 
 Messages per day now depend on the relationship level (10 / 50 / 150 in `src/lib/levels.js`), so `CHAT_PERSON_DAILY` is gone.
+
+**Her daily clips (2026-09-29) use one GitHub secret, not a Vercel setting:** GitHub → the repo → Settings → Secrets and
+variables → Actions → `GEMINI_API_KEY` (the same Google AI Studio key). Only GitHub's daily job reads it (see "Her daily
+clips"); Vercel never sees GitHub's secrets, and GitHub never sees Vercel's.
 
 The browser never gets a Supabase key (everything goes through our `/api`), so `VITE_SUPABASE_…` settings aren't needed.
 (The Arena, which left on 2026-09-28, had no settings of its own.)
@@ -2643,6 +2930,20 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   to be copy pasted on landing page right away"): a pill with a Copy button under the front's two buttons, in the first
   screen at every size. See "The front". Tests for both: 269 unit (on Node 20, 22 and 24; 22 new), the language menu in a
   browser (113 checks) and the address (112 checks: 6 screen sizes, both looks, both themes, copying, the keyboard, axe).
+- **Her daily clips: built 2026-09-29, waiting for the owner's setup and OK** (the owner's big idea 5, "juist do 5 … only
+  this"; posted by hand, the owner's pick; then "just agi": only her diary, never another coin). A free daily GitHub job
+  makes a vertical clip of AGI-1 in 2D reading her diary entry in her voice, with captions, to download and post by hand.
+  See "Her daily clips". **Owner:** add the GitHub secret `GEMINI_API_KEY`, save `.github\workflows\clips.yml` (sent in
+  the chat), push, then Actions → Run workflow. Cost: GitHub's free minutes, about $0.003 a day of her voice. Tests: 277
+  unit (on Node 20, 22 and 24; 8 new), the clip rendered in Claude's workspace with a stand-in voice. Burns for reads and
+  her pretend bag (big ideas 3 and 4): on hold, the owner's call.
+- **Burn $AGI for more messages, and the burn monitor: built 2026-09-30, waiting for the owner's setup and OK** (the owner:
+  "every chat $AGI is burned … make this better then continue", then "make a monitor … huge text on the chat on top of it").
+  Free messages stay; after them 10 $AGI a message, burned by the visitor from their own wallet app and checked on Robinhood
+  Chain; what was burned counts toward the level; a huge live burn monitor above the chat. See "Burn $AGI for more messages,
+  and the burn monitor". **Owner:** run `supabase/burns.sql`, then try one small burn. Tests: 295 unit (on Node 20, 22 and 24;
+  18 new), 50 SQL checks (PGlite), 148 in a browser; a second Claude agent reviewed it first (10 findings, all fixed but
+  waiting for confirmations). Not tested live (Claude's workspace can't reach the chain or the explorer).
 
 ## Decisions log
 
@@ -2775,6 +3076,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-09-29 | The risk check asks the Clank protocol too (1 and 2 above): the documented read-only calls only (the factory's `getLaunchedToken`, the curve's `state()` and `realQuoteReserve()`, the coin's ERC-20 reads and `logo()`), through Robinhood Chain's free public node, in two batches alongside clank.trade (never waited for more than 4 s). The pool-locked note only when the protocol confirms the coin graduated with it (a good-to-know, never "safe"); "Graduating" and "Rescued" from the protocol's stages; a "some" flag when clank.trade and the protocol disagree about a coin's curve. When clank.trade is away, a smaller scan from the chain (never "Lower risk", shared a minute) instead of "Not enough data". Not picked: reading launch events for the list (the docs don't spell them out), holders from the chain (no index of holders without an explorer), and quotes (`quoteBuyFor`/`quoteSell`: buy / sell math has no place in a risk check) |
 | 2026-09-29 | Her languages (the owner's request; the owner picked Claude's three recommendations): English by default and 15 more (zh, ja, ko, vi, id, fil, th, hi, es, pt, fr, de, ru, tr, ar); a menu in the chat bar next to "AGI-1 ▾" (remembered in the browser) **and** she answers in whatever language the visitor writes in; AGI-1 only (her replies, voice, mic, pre-written lines, Telegram replies), the page and the safety note stay English. Her pre-written lines translated once by Claude (five agents) and held to her rules by a checker and a test (same keys, placeholders, emojis, numbers, one fixed "not financial advice" phrase per language, no pet names for Strangers), never translated by AI on the fly (her lines must stay exact, with "not financial advice"). Her English voice lines keep their addresses and recordings; the others get `&lang=`. Soulmate notes stay English (the filter reads English). On Telegram her replies follow the app's language (sent with every message, nothing stored); her texts first stay English for now (they'd need a new database column). Not picked: translating the whole page (a much bigger job, and every warning would need checking in 16 languages), picking the language from the browser's own setting (the owner: "default is english"), a translation service (a new service and cost) |
 | 2026-09-29 | The contract address on the front (the owner: "contract address needs to be copy pasted on landing page right away"): a pill with **Copy** under the front's two buttons (on phones the first thing under her picture), in the first screen at every size; both ends always show (what the safety note tells people to check), Copy takes the whole address from `TOKENS[0].ca`. On phones her picture is a little shorter on short screens so it fits. The Model card's Copy shares the same code (`src/lib/copy.js`) |
+| 2026-09-29 | Her daily clips (the owner's big idea 5; the owner picked "You post by hand"): made once a day by a free GitHub Actions job, downloaded and posted by the owner (X, TikTok, Reels, Shorts), so hard rule 6 stays as it is and there's no X API cost. AGI-1 in 2D (the site's own rig: the owner's "the 2D one renders fastest"), 1080 × 1920, her natural voice (Gemini, one request a clip) and captions. "AI-generated · not financial advice" on every frame, clear of the apps' own overlays. Not picked: posting to X automatically (X's paid API and a change to rule 6: the owner's decision), the 3D model (far slower without a graphics card), a Vercel function or cron (25 s limit; rendering takes minutes) |
+| 2026-09-29 | **The clips are only about AGI, never another coin** (the owner, after the first version: "why are u promoting other coins in the video, i dont like this, the founder of the launchpad will get angry at me again", then "just agi"). The first version's "launch of the day", "clone watch" and "readout" clips (other clank.trade coins, named and risk-rated) were removed before anything ran or was posted; only her diary is left, the clip tools don't read clank.trade, and an entry naming another coin makes no clip. Claude should have flagged the risk of naming other coins in public videos before building them. Never add a clip about another coin unless the owner asks |
+| 2026-09-29 | The clips are drawn in software on GitHub's computer: the 3D renderer draws only her, at 720 × 1280, and 2D drawing does the rest at 1080 × 1920 (0.7 s a frame down to 0.2 s: full-frame 3D layers cost about 0.1 s each without a graphics card). Daily at 08:23 UTC: after her diary (03:00 UTC) and just after Google's daily limits start again (midnight Pacific). playwright-core with its own Chromium and ffmpeg are installed by the job only, never in the site's package.json |
+| 2026-09-30 | Burn $AGI for more messages (the owner's idea, "make this better"; Claude's choices, sent to the owner before building): free messages stay; after them 10 $AGI a message, burned by the visitor from their own wallet app, bought in packs (never a transaction per message, and never asked of the wallet: hard rule 9 unchanged); counted only after reading the chain; what was burned counts toward the level; 300 a day per wallet and 1,000 for the site (their own pool, on top of the free one); a failed reply gives its burned message back, but the attempt counts; off until burns.sql is run. Not picked: a burn per message (a pop-up and a fee each time), the site asking the wallet for the burn (rule 9), dropping the free messages (nobody could try her), a site wallet burning on the visitors' behalf (a key on the server) |
+| 2026-09-30 | The burn monitor (the owner: "a monitor on how many agi are gonna be burned so they know its working … huge text on the chat on top of it, you decide"): the $AGI burned for messages in huge type right above the chat panel, with today's burns, messages paid for, burns and the latest, and "See the burn address ↗" on the block explorer so anyone can check; asks again every minute while watched, never counts down. The Parameters' small "Burned" row was dropped for it |
+| 2026-09-30 | Burn codes use the database's own random key (burns.sql), not PASS_SECRET (found by the review): changing PASS_SECRET would otherwise lose everyone's burned messages and let the last 7 days of burns count again; and the codes differ from the name-and-notes codes, so stored amounts can't match a wallet to its name and notes. A burn counts per (transaction, wallet). Burns count at once, without waiting for confirmations (Robinhood Chain has one sequencer; waiting would take minutes) |
+| 2026-09-29 | Burns for reads (big idea 3) and her pretend bag (big idea 4) on hold (the owner: "can you remove 3. Spokesmodel and burns for now", then "remove the 4. Her own bag. Start with a pretend bag also", "only this"). Nothing of either is in the site: a first draft of the bag (its database, rules and page) was deleted before it reached the owner's folder |
 
 ## Open questions
 
@@ -2801,8 +3109,17 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   from the site to Telegram (a signed one-time link) could come later if people ask.
 - When her feed should read launches from the chain (the Clank protocol's `TokenLaunched`) instead of clank.trade's list:
   after checking the events against the live contracts. Until then it depends on clank.trade's API, like the risk check.
+- Posting her daily clips to X by itself (instead of by hand): X's pay-per-use API (about $0.015 a post, a video upload
+  too), an X developer account, the "Automated" label, and an exception to hard rule 6. The owner picked "by hand" on
+  2026-09-29; Claude said it can be added later if the owner wants it.
 - Her Telegram texts first: about 350 per run (8 runs a day). If the bot ever has more than about 1,400 people in the same
   daytime, some texts arrive a run later; more runs or a longer texting budget would fix it.
+- Burned messages are website-only: her Telegram bot has no wallets. A signed link from the site to Telegram could carry
+  them later, if people ask.
+- Taking crypto for a service may count as commercial (Vercel's Hobby plan) or as selling (consumer and crypto-promotion
+  rules): worth checking before promoting burns widely. Not legal advice.
+- The price is in $AGI (`BURN_PER_MESSAGE`), so it moves with $AGI's price: about $0.015 a message on 2026-09-30. Change it if
+  the price moves a lot.
 
 ## Working in this repo
 

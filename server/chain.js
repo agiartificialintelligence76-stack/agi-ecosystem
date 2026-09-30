@@ -45,10 +45,13 @@ export async function agiBalance(address, env) {
 
 // The wallet's relationship level from its balance. Never throws: if the chain can't be reached, the level stays as
 // it was (or Stranger) and { checked: false } tells the caller to try again soon.
-export async function checkLevel(address, fallbackLevel = 1, env) {
+// burned (2026-09-30): the whole $AGI this wallet burned for messages (server/burn.js) counts too, so burning for more
+// messages never drops a level (and can lift one: 9,000 held + 1,000 burned = Crush)
+export async function checkLevel(address, fallbackLevel = 1, env, burned = 0) {
   try {
     const { raw, decimals } = await agiBalance(address, env);
-    return { level: levelForBalance(raw, decimals), checked: true };
+    const extra = Number.isSafeInteger(burned) && burned > 0 ? BigInt(burned) * 10n ** BigInt(decimals) : 0n;
+    return { level: levelForBalance(raw + extra, decimals), checked: true };
   } catch (err) {
     console.error('[wallet] balance check failed:', err.message);
     return { level: fallbackLevel, checked: false };

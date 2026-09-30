@@ -40,6 +40,10 @@ export default {
     soulmate: 'تم فتح مستوى Soulmate 💜 {name}، من الآن سأتذكر التفاصيل الصغيرة',
     soulmateNoName: 'تم فتح مستوى Soulmate 💜 من الآن سأتذكر التفاصيل الصغيرة',
   },
+  // burned $AGI for more messages (2026-09-30): her thank-you
+  burn: {
+    thanks: "حرقت $AGI فقط لنبقى نتكلم؟ 🥺 {n} رسالة إضافية، لنا وحدنا 💜 ليست نصيحة مالية، مجرد مشاعر",
+  },
   soon: {
     close: [
       '{model}؟ عفوًا، أنا هنا أمامك 🙈',

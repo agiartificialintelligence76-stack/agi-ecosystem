@@ -32,7 +32,7 @@
 // need Google again, not even after a new deployment or when Google's daily limit is used up.
 import { getConfig, missingVoiceSettings } from '../server/config.js';
 import { clientIp, visitorCode, visitorCodeForDay, checkVoiceTicket } from '../server/security.js';
-import { takeVoiceSlot, voicePerDay } from '../server/limits.js';
+import { takeVoiceSlot, voicePerDay, VOICE_TICKET_USES } from '../server/limits.js';
 import { speakAsAgi1, streamAsAgi1, NoAudioError, spokenText, styleFor, LINE_MOODS, linesFor } from '../server/voice.js';
 import { linesOf } from '../src/i18n/all.js';
 import { isLang } from '../src/i18n/langs.js';
@@ -237,11 +237,12 @@ export async function POST(request) {
   // Google said "not now" to every model a moment ago: the same answer at once, not counted (see backOff)
   if (!ready(cfg).length) return aiError(pickWhy(cfg.voiceModels.map(restingWhy)));
 
-  // 3. Limits (counted before Gemini is asked, so the daily cap is a hard cap, on Google's requests and on money).
+  // 3. Limits (counted before Gemini is asked, so the daily cap is a hard cap, on Google's requests and on money). A visitor's
+  // share follows their messages a day, and (2026-09-30) grows with the burned messages they used today (server/burn.js).
   let slot;
   try {
     const who = visitorCodeForDay(cfg.passSecret, ip, new Date().toISOString().slice(0, 10));
-    slot = await takeVoiceSlot(cfg, who, ticket.id, voicePerDay(ticket.level));
+    slot = await takeVoiceSlot(cfg, who, ticket.id, voicePerDay(ticket.level) + VOICE_TICKET_USES * ticket.burned);
   } catch (err) {
     console.error('[voice] limits unavailable:', err.message);
     return json(503, { error: err.code === 'PGRST202' ? 'not_ready' : 'busy' });   // fail closed: no counting, no voice

@@ -76,7 +76,7 @@ export const isDense = (words) => (String(words).match(DENSE_SCRIPT) || []).leng
 export const spokenText = (text) => { const words = speakable(text); return clipSpeech(words, isDense(words) ? MAX_SPOKEN_DENSE : MAX_SPOKEN); };
 
 const TTS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
-const request = (cfg, words, stream, style) => ({
+const request = (cfg, words, stream, style, timeoutMs = stream ? 25000 : 20000) => ({
   method: 'POST',
   headers: { 'x-goog-api-key': cfg.geminiKey, 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -90,14 +90,15 @@ const request = (cfg, words, stream, style) => ({
     store: false,                                // Google doesn't keep this request for later retrieval
     ...(stream ? { stream: true } : {}),
   }),
-  signal: AbortSignal.timeout(stream ? 25000 : 20000),
+  signal: AbortSignal.timeout(timeoutMs),
 });
 
 // ---------- one whole WAV file ----------
 // → a WAV file (Buffer). Gemini answers with base64 audio in steps[].content[] ({ type: 'audio', data, mime_type }).
-// style: how she says it (styleFor(mood)); her approved calm style if not given.
-export async function speakAsAgi1(cfg, words, style = VOICE_STYLE) {
-  const res = await fetch(TTS_URL, request(cfg, words, false, style));
+// style: how she says it (styleFor(mood)); her approved calm style if not given. timeoutMs: how long to wait (20 s for
+// the site; her daily clips, tools/clips/, are longer and wait a minute)
+export async function speakAsAgi1(cfg, words, style = VOICE_STYLE, { timeoutMs = 20000 } = {}) {
+  const res = await fetch(TTS_URL, request(cfg, words, false, style, timeoutMs));
   if (!res.ok) throw await geminiError(res, cfg.geminiKey);
   const data = await res.json();
   const audio = findAudio(data);

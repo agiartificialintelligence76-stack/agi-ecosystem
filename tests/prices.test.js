@@ -1,5 +1,6 @@
 // Tests for the live prices (src/prices/parse.js) and the contract address. No network needed. Run: npm test
 import { test } from 'node:test';
+import { BURN_ADDRESS } from '../src/lib/burns.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { TOKENS, CHAIN, pricesUrl, pickStats, fmtPrice, fmtCompact, fmtPct, fmtCount, supplyFrom } from '../src/prices/parse.js';
@@ -86,8 +87,11 @@ test('the $AGI contract address is the same everywhere', () => {
   assert.equal(ca, OFFICIAL_CA);
   assert.ok(html.includes(`href="https://clank.trade/coin/${ca}"`), 'the Buy button points at the official coin');
   assert.ok(html.includes(`data-ca>${ca}</code>`), 'the model card shows the official address');
-  const addresses = new Set(html.match(/0x[0-9a-fA-F]{40}/g).map((a) => a.toLowerCase()));
+  // (2026-09-30) the one other address: the burn address, only on the burn screen (burning $AGI for more messages)
+  const burnScreen = html.match(/<dialog class="wdlg bdlg"[\s\S]*?<\/dialog>/)[0];
+  const addresses = new Set(html.replace(burnScreen, '').match(/0x[0-9a-fA-F]{40}/g).map((a) => a.toLowerCase()));
   assert.deepEqual([...addresses], [ca], 'no other address appears on the page');
+  assert.deepEqual([...new Set(burnScreen.match(/0x[0-9a-fA-F]{40}/g))], [BURN_ADDRESS], 'the burn screen: only the burn address');
 });
 
 test('the security policy lets the page reach DexScreener (and only its API)', () => {

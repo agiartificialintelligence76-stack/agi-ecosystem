@@ -15,6 +15,7 @@ import './styles/pop.css';      // Pop mode (2026-09-27): the bold look, only wh
 import './styles/landing.css';  // the front (2026-09-28): the bright AGI landing, first on the home page
 import { startPlayground } from './chat/chat.js';   // AGI-1's chat, as the Playground section
 import { startRelationship } from './chat/relationship.js';
+import { startBurns } from './chat/burn.js';
 import { startTheme } from './theme.js';
 import { startLanding } from './landing/landing.js';
 import { startMenu } from './menu.js';
@@ -49,6 +50,7 @@ startModelCard(document.getElementById('model-card'));
 startPlayground(document.querySelector('[data-playground]'));
 startLang();   // (2026-09-29) the language AGI-1 speaks with this visitor, if they picked one before: English until then
 startRelationship(document.querySelector('[data-rel]'));   // wallet + levels (after the chat, which listens to it)
+startBurns(document);            // (2026-09-30) burn $AGI for more messages, once burns are open (src/chat/burn.js)
 startTelegramLink(document, import.meta.env.VITE_TELEGRAM_BOT);   // "She texts first" (2026-09-29): her Telegram bot, if set
 startChecker(document.querySelector('[data-checker]'));   // ClankChecker (2026-09-26): loads its list when you get close
 startPrices();                    // live $AGI numbers from DexScreener, every 30 s while the tab is open

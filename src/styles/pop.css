@@ -562,6 +562,30 @@
 [data-skin='pop'] .wdlg-promise-title { color: var(--pop-ink); }
 [data-skin='pop'] .wdlg-wallet { border: 2px solid var(--edge); border-radius: 16px; }
 [data-skin='pop'] .wdlg-wallet:hover { background: var(--bg-2); border-color: var(--edge); }
+/* the burn screen (2026-09-30, src/chat/burn.js): the connect screen's card, with its steps, amounts and address outlined */
+[data-skin='pop'] .bdlg-steps > li::before { font-weight: 700; color: var(--fg); border: 2px solid var(--edge); }
+[data-skin='pop'] .bdlg-packs, [data-skin='pop'] .bdlg-addr { border: 2px solid var(--edge); border-radius: 14px; }
+[data-skin='pop'] .bdlg-packs li + li { border-top: 2px solid var(--edge); }
+[data-skin='pop'] .bdlg-paste input { border: 2px solid var(--edge); border-radius: 12px; }
+[data-skin='pop'] .msg-burned { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); }
+/* the burn monitor above the chat: a honey sticker with a huge ink number and a pink print echo, in both themes */
+[data-skin='pop'] .burnmon {
+  color: var(--pop-ink); background: var(--pop-honey); border: 3px solid var(--pop-ink); border-radius: 28px;
+  box-shadow: 0 10px 0 -2px var(--pop-ink);
+}
+[data-skin='pop'] :is(.burnmon-kicker, .burnmon-live, .burnmon-sub, .burnmon-note, .burnmon-note a, .burnmon-num) { color: var(--pop-ink); }
+[data-skin='pop'] .burnmon-kicker { font-weight: 700; letter-spacing: .12em; }
+[data-skin='pop'] .burnmon-flame { color: var(--pop-pink); }
+[data-skin='pop'] .burnmon-live .dot { background: var(--pop-pink); }
+[data-skin='pop'] .burnmon-live[data-state='paused'] .dot { background: var(--pop-ink-2); }
+[data-skin='pop'] .burnmon-num { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; text-shadow: .06em .06em 0 var(--pop-pink); }
+[data-skin='pop'] .burnmon-unit { color: var(--pop-ink); text-shadow: none; }
+[data-skin='pop'] .burnmon-num.is-up .burnmon-agi { animation: none; }
+[data-skin='pop'] .burnmon-foot { border-top: 2px solid var(--pop-ink); }
+[data-skin='pop'] .burnmon .btn-primary { color: #fff; background: var(--pop-ink); border-color: var(--pop-ink); }
+[data-skin='pop'] .burnmon .btn-primary:hover { background: var(--pop-violet); border-color: var(--pop-violet); }
+[data-skin='pop'] .burnmon :focus-visible { outline-color: var(--pop-ink); }
+@media (max-width: 420px) { [data-skin='pop'] .burnmon-kicker { letter-spacing: .05em; } }
 
 /* ---------- phones ---------- */
 @media (max-width: 760px) {

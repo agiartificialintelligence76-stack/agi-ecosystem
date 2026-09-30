@@ -5,6 +5,10 @@
 //   'agi:chat-reset'                                     sent by "Forget me" so the chat clears itself
 //   'agi:agi1-line' { text }                            asks the chat to show a line from AGI-1 (the level-up moment)
 //   'agi:wallet-open'                                    opens the connect screen (her out-of-messages line, 2026-09-25)
+//   'agi:burn-status' { wallet, burn }                   sent with each profile from the server: its burned messages
+//                                                        (2026-09-30, src/chat/burn.js)
+//   'agi:profile' (heard)                                a profile the burn screen got after "Check my burn": saved here
+//   'agi:signed-out' (heard)                             the burn screen found the session ended
 import { LEVELS, levelInfo } from '../lib/levels.js';
 import { findWallets, signInWithWallet, explainWalletError } from '../lib/wallet.js';
 import { postJson } from '../lib/human.js';
@@ -35,6 +39,7 @@ const LEVEL_UP_LINES = {
 
 let state = store.get(KEY);            // null = no wallet (Stranger)
 export const currentSession = () => state?.session || null;
+export const currentWallet = () => state?.wallet || null;
 
 export function startRelationship(root) {
   if (!root) return;
@@ -86,7 +91,15 @@ export function startRelationship(root) {
     const highest = Math.max(seen[profile.wallet] || 1, quiet ? before : 1);
     if (profile.level > highest) levelUp(highest, profile.level);
     if (profile.level > (seen[profile.wallet] || 0)) store.set(SEEN, { ...seen, [profile.wallet]: profile.level });
+    // its burned messages (2026-09-30): the burn screen and the panel's "left" (src/chat/burn.js)
+    dispatchEvent(new CustomEvent('agi:burn-status', { detail: { wallet: profile.wallet, burn: profile.burn || null } }));
   }
+  // "Check my burn" counted a burn: its profile (a new session, and the level, since what was burned counts toward it)
+  addEventListener('agi:profile', (e) => {
+    const p = e.detail;
+    if (state && p && typeof p.session === 'string' && p.wallet === state.wallet) accept(p, { quiet: true });
+  });
+  addEventListener('agi:signed-out', () => { if (state) signOut('Your session ended. Connect again.'); });
 
   // ---------- the level-up moment ----------
   function levelUp(from, to) {

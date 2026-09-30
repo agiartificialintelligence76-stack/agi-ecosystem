@@ -23,6 +23,10 @@ const MISSING = {
 for (const fn of ['tg_get', 'tg_join', 'tg_set', 'tg_forget', 'tg_due', 'tg_mark', 'feed_add', 'feed_recent', 'feed_state_get', 'feed_state_put']) {
   MISSING[fn] = `${fn} not found: run supabase/telegram.sql in this Supabase project`;
 }
+// messages paid for by burning $AGI (2026-09-30): supabase/burns.sql
+for (const fn of ['burn_claim', 'burn_take', 'burn_refund', 'burn_status', 'burn_total', 'burn_seen']) {
+  MISSING[fn] = `${fn} not found: run supabase/burns.sql in this Supabase project`;
+}
 
 // One database function call (also used by server/voice-store.js for her recorded lines).
 export async function rpc(cfg, fn, args, label) {

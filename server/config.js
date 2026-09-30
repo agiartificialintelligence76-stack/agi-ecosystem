@@ -41,6 +41,11 @@ export function getConfig(env = process.env) {
     // Her Telegram bot (2026-09-29): Telegram's share of the day's AI replies (inside the site's CHAT_DAILY_CAP), so
     // Telegram alone can't use up the website's chat
     telegramDailyCap: number('TELEGRAM_DAILY_CAP', 400),
+    // Messages paid for by burning $AGI (2026-09-30, server/burn.js): whole $AGI a message (10 by default: 1,000 $AGI =
+    // 100 messages), and the burned messages the whole site may use a day, on top of the free ones (1,000: about $0.80 of
+    // AI replies at most)
+    burnPrice: Math.min(1e9, Math.floor(number('BURN_PER_MESSAGE', 10)) || 10),
+    burnDailyCap: Math.floor(number('BURN_DAILY_CAP', 1000)) || 1000,
     // ClankChecker (2026-09-26): coins whose picture the owner doesn't want on the site (contract addresses, separated by
     // commas); their letter shows instead. Optional
     checkerHidePictures: new Set(String(env.CHECKER_HIDE_PICTURES || '').toLowerCase().split(/[\s,]+/).filter((a) => /^0x[0-9a-f]{40}$/.test(a))),

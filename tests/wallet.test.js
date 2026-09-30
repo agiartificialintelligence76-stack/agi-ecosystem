@@ -45,6 +45,8 @@ beforeEach(() => {
     }
     if (url.startsWith('https://challenges.cloudflare.com/')) return Response.json({ success: body.response === 'good-token', action: 'chat' });
     if (url.includes('/rest/v1/rpc/chat_take')) return Response.json(fake.limit);
+    // burned messages (2026-09-30: tests/burn.test.js): here as if supabase/burns.sql weren't run yet
+    if (url.includes('/rest/v1/rpc/burn_')) return Response.json({ code: 'PGRST202', message: 'Could not find the function' }, { status: 404 });
     if (url.includes('/rest/v1/rpc/friend_')) {
       if (fake.friendsStatus !== 200) return Response.json({ code: 'PGRST202' }, { status: fake.friendsStatus });
       const fn = url.split('/').pop();
@@ -283,7 +285,9 @@ test('the website code never asks a wallet for a transaction, an approval or a n
   const files = [];
   const walk = (dir) => { for (const n of readdirSync(dir)) { const p = join(dir, n); statSync(p).isDirectory() ? walk(p) : files.push(p); } };
   walk(new URL('../src', import.meta.url).pathname);
-  const FORBIDDEN = /eth_sendTransaction|eth_signTransaction|eth_sendRawTransaction|eth_sign\b|eth_signTypedData|wallet_sendCalls|wallet_switchEthereumChain|wallet_addEthereumChain|wallet_watchAsset|wallet_requestPermissions|setApprovalForAll|increaseAllowance|\bapprove\(|\bpermit\(/;
+  // (2026-09-30, with burning $AGI for messages: also no "one-tap" payment links, EIP-681 ethereum: links or MetaMask's
+  // send links: a burn is always sent by the visitor from their own wallet app)
+  const FORBIDDEN = /eth_sendTransaction|eth_signTransaction|eth_sendRawTransaction|eth_sign\b|eth_signTypedData|wallet_sendCalls|wallet_switchEthereumChain|wallet_addEthereumChain|wallet_watchAsset|wallet_requestPermissions|setApprovalForAll|increaseAllowance|\bapprove\(|\bpermit\(|ethereum:|metamask\.app\.link\/send|link\.metamask\.io\/send/;
   const allowed = new Set(['eth_requestAccounts', 'eth_accounts', 'eth_chainId', 'personal_sign']);   // eth_chainId only reads
   const used = new Set();
   for (const f of files.filter((f) => f.endsWith('.js'))) {

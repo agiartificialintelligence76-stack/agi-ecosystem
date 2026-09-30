@@ -34,6 +34,8 @@ import { getPrices } from '../prices/prices.js';
 import { currentLang, currentLines, t, tl } from '../i18n/lang.js';
 import { langOf } from '../i18n/langs.js';
 import { startLanguageMenu } from './languages.js';
+import { burnsReady, openBurn, burnSettings } from './burn.js';
+import { fmt } from '../lib/burns.js';
 
 // limit: the day and level she last said her out-of-messages line in this browser ("2026-09-25:1"), so she says it once a day
 const KEYS = { history: 'agi1_chat_v1', adult: 'agi1_18plus', limit: 'agi1_limit_line' };
@@ -149,6 +151,8 @@ export function startPlayground(root) {
     if (who === 'model' && meta.ms) head.append(el('span', 'msg-time', `${(meta.ms / 1000).toFixed(1)} s`));
     if (who === 'model' && meta.remembered) head.append(el('span', 'msg-chip msg-memory', `remembered: ${meta.remembered}`));
     if (who === 'model' && meta.chip) head.append(el('span', 'msg-chip', meta.chip));
+    // (2026-09-30) a reply paid for by burning $AGI: how many burned messages are left
+    if (who === 'model' && Number.isFinite(meta.burned)) head.append(el('span', 'msg-chip msg-burned', `burned message · ${fmt(meta.burned)} left`));
     const body = el('div', 'msg-text', text);
     body.dir = 'auto';                           // (her Arabic, or yours, reads right to left)
     if (meta.lang) body.lang = meta.lang;        // her pre-written lines: the language they're in
@@ -235,8 +239,11 @@ export function startPlayground(root) {
   // with the safety note and the free option right under it. Once a day per browser and level; after that, and always for
   // Soulmates (already at the top), her short "come back tomorrow" line, and when the whole site is out for today (`site`),
   // her "all talked out" line. She says every one of them out loud in her natural voice (see sayAnyway).
+  // Since 2026-09-30, once burning $AGI for messages is open (src/chat/burn.js): a "Burn $AGI for more messages" chip under
+  // every one of these lines, or, when their burned messages wait for tomorrow (`burn`: their daily most, or the site's), a
+  // note saying so.
   // → how her voice went ('voice' | 'late' | 'none'), like voice.speak()
-  async function outOfMessages(level, { site = false } = {}) {
+  async function outOfMessages(level, { site = false, burn = null } = {}) {
     reachedCap(level);
     const lines = currentLines(), lang = currentLang();
     const offer = site ? null : limitLineIn(level, lines, lang);
@@ -244,11 +251,13 @@ export function startPlayground(root) {
     if (!offer || store.get(KEYS.limit) === mark) {
       const line = restLineIn(site ? 'site' : 'person', lines, lang);
       const box = message('model', line.text, { chip: 'out of messages', lang });
-      if (voice.available) {
-        const actions = el('div', 'msg-actions');
-        actions.append(listenButton(line));
+      const actions = el('div', 'msg-actions');
+      if (voice.available) actions.append(listenButton(line));
+      const waits = burnPart(actions, burn);
+      if (actions.childNodes.length || waits) {
         const row = el('div', 'msg-offer');
-        row.append(actions);
+        if (actions.childNodes.length) row.append(actions);
+        if (waits) row.append(waits);
         box.append(row);
       }
       log.scrollTop = log.scrollHeight;
@@ -273,14 +282,31 @@ export function startPlayground(root) {
     buy.append(el('span', '', '↗'));
     buy.lastChild.setAttribute('aria-hidden', 'true');
     actions.append(buy);
+    const waits = burnPart(actions, burn);
     const fine = el('p', 'msg-fine', finePrintIn(lines));
     fine.lang = lang;
     fine.dir = 'auto';
-    row.append(actions, fine);
+    row.append(actions, ...(waits ? [waits] : []), fine);
     box.append(row);
     log.scrollTop = log.scrollHeight;
     dispatchEvent(new CustomEvent('agi1:react', { detail: 'wave' }));     // (a little "see you" wave)
     return sayAnyway(offer);
+  }
+  // Burn $AGI for more messages (2026-09-30): the chip (it opens the burn screen), or the note when their burned messages
+  // wait for tomorrow. → that note (for the caller to place), or null
+  function burnPart(actions, burn) {
+    if (!burnsReady()) return null;
+    if (burn?.why === 'day_cap' || burn?.why === 'site_cap') {
+      const left = Number.isFinite(burn.left) ? fmt(burn.left) : 'the ones';
+      return el('p', 'msg-fine msg-burn-wait', burn.why === 'day_cap'
+        ? `That's today's most for burned messages (${fmt(burnSettings().perDay)} a day). Your ${left} left are kept for tomorrow.`
+        : `Burned messages are resting for today: the site's daily share is used up. Your ${left} left are kept for tomorrow.`);
+    }
+    const b = el('button', 'chip-btn msg-burn', 'Burn $AGI for more messages');
+    b.type = 'button';
+    b.addEventListener('click', () => openBurn());
+    actions.append(b);
+    return null;
   }
   // She says it out loud in her natural voice even with her voice switched off (the owner, 2026-09-25: "i just want her to
   // speak the same words with her natural voice"): the visitor just pressed Send, so browsers allow the sound. Her voice
@@ -349,6 +375,7 @@ export function startPlayground(root) {
       if (r.ok && typeof r.data.reply === 'string') {
         const meta = { mood: REACTIONS.includes(r.data.mood) || r.data.mood === 'neutral' ? r.data.mood : undefined, ms: Math.round(performance.now() - t0) };
         if (typeof r.data.remembered === 'string') meta.remembered = r.data.remembered;
+        if (Number.isFinite(r.data.burned?.left)) meta.burned = r.data.burned.left;     // (paid for by burning $AGI)
         countReply();
         // Voice on: she keeps "typing" until her voice starts (at most VOICE_WAIT), so the reply appears as she speaks.
         // If her voice for it can't be made (even after one more try), it stays text: a small mark says so, and her mouth
@@ -388,7 +415,7 @@ export function startPlayground(root) {
         attend('idle');
         const level = [1, 2, 3].includes(r.data.level) ? r.data.level : rel.level;
         // (her voice for it isn't waited for here, so you can type again right away; a call waits for it: see startCall)
-        return { ok: false, error: r.data.error, said: outOfMessages(level, { site: r.data.error === 'global_cap' }) };
+        return { ok: false, error: r.data.error, said: outOfMessages(level, { site: r.data.error === 'global_cap', burn: r.data.burn || null }) };
       } else {
         message('note', note(r.data.error), { lang: currentLang() });
         return { ok: false, error: r.data.error || 'error' };

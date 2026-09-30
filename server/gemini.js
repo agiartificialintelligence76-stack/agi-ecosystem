@@ -134,7 +134,7 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
         },
       },
     }),
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(Number.isFinite(visitor.timeoutMs) && visitor.timeoutMs > 0 ? Math.min(10000, visitor.timeoutMs) : 10000),
   });
   if (!res.ok) throw await geminiError(res, cfg.geminiKey);
   const data = await res.json();

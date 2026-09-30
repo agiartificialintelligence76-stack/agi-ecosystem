@@ -2,7 +2,9 @@
 //   1. check the request (size, 18+ confirmation)
 //   2. human check: a valid chat pass, or a fresh Cloudflare Turnstile token (then we hand out a pass)
 //   3. relationship level (Phase 3): from the wallet session, if the visitor connected a wallet (else Stranger)
-//   4. limits in the database: per visitor (gap + daily, by level) and for the whole site (daily cap). DB down → no chat
+//   4. limits in the database: per visitor (gap + daily, by level) and for the whole site (daily cap). DB down → no chat.
+//      Out of free messages (2026-09-30): a message paid for by burning $AGI, if their wallet has any (server/burn.js,
+//      supabase/burns.sql), given back if her reply fails
 //   5. ask Gemini, sending only history AGI-1 really said (signed) plus the visitor's own messages (her memory of the Arena's
 //      champion, 2026-09-25, left with the Arena on 2026-09-28)
 //   6. Soulmates: save the short new note AGI-1 wrote about them, if any
@@ -19,6 +21,8 @@ import { checkLevel } from '../server/chain.js';
 import { getFriend, addFriendNote, cleanNote } from '../server/friends.js';
 import { levelInfo } from '../src/lib/levels.js';
 import { recallGroup } from '../server/tg-memory.js';
+import { takeBurned, refundBurned, burnedAgi } from '../server/burn.js';
+import { randomUUID } from 'node:crypto';
 import { isLang } from '../src/i18n/langs.js';
 
 const MAX_BODY = 16_000;     // bytes
@@ -26,6 +30,9 @@ const MAX_MESSAGE = 500;     // characters per visitor message
 const MAX_REPLY = 600;       // characters per AGI-1 reply kept in history
 const MAX_TURNS = 6;         // recent messages sent to Gemini as context
 const RETRY_MS = 5 * 60 * 1000;   // if the $AGI balance couldn't be read, try again in about 5 minutes
+// Vercel stops a function at 25 s: her reply must be asked for early enough that a burned message can still be given back
+// if it fails (2026-09-30). The AI gets at most 10 s, less when the steps before it were slow.
+const REPLY_BY_MS = 21_000;
 
 const json = (status, body) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
@@ -34,6 +41,7 @@ export function GET() {
 }
 
 export async function POST(request) {
+  const started = Date.now();
   const cfg = getConfig();
   const missing = missingSettings(cfg);
   if (missing.length) {
@@ -71,7 +79,8 @@ export async function POST(request) {
     wallet = s.wallet;
     level = s.level;
     if (needsRecheck(s, now)) {
-      const r = await checkLevel(s.wallet, s.level);
+      // (what they burned for messages counts too, 2026-09-30)
+      const r = await checkLevel(s.wallet, s.level, undefined, await burnedAgi(cfg, s.wallet));
       level = r.level;
       session = makeSession(cfg.passSecret, { wallet, level, checkedAt: r.checked ? now : now - RECHECK_MS + RETRY_MS, expiresAt: s.expiresAt });
     }
@@ -88,9 +97,30 @@ export async function POST(request) {
     console.error('[chat] limits unavailable:', err.message);
     return json(503, { error: 'busy', pass });                        // fail closed: no counting, no chat
   }
+  // Out of free messages (their own, or the whole site's): a burned one, if this wallet has any (2026-09-30). burns.sql not
+  // run, or the database can't say: out of messages, as before. `burn` tells the page why burned ones wait (their 300 a
+  // day, or the site's) and how many are left.
+  let burned = null, burn;
+  const take = randomUUID();                                         // (this burned message's id, to give it back if need be)
+  const giveBack = async () => {
+    try { await refundBurned(cfg, wallet, take); } catch (e) { console.error('[chat] giving a burned message back failed:', e.message); }
+  };
+  if ((slot === 'person_cap' || slot === 'global_cap') && wallet) {
+    try {
+      const b = await takeBurned(cfg, wallet, take);
+      if (b.ok) { burned = { left: b.left, today: b.today }; slot = 'ok'; }
+      else if (b.why === 'too_fast') slot = 'too_fast';
+      else if (b.why === 'day_cap' || b.why === 'site_cap') burn = { why: b.why, left: b.left };
+    } catch (err) {
+      if (err.code !== 'PGRST202') {
+        console.error('[chat] burned messages unavailable:', err.message);
+        await giveBack();                                            // (in case it was taken but the answer got lost)
+      }
+    }
+  }
   if (slot === 'too_fast') return json(429, { error: 'too_fast', pass, level, session, signedOut });
-  if (slot === 'person_cap') return json(429, { error: 'person_cap', pass, level, session, signedOut });
-  if (slot === 'global_cap') return json(503, { error: 'global_cap', pass, level, session, signedOut });
+  if (slot === 'person_cap') return json(429, { error: 'person_cap', pass, level, session, signedOut, burn });
+  if (slot === 'global_cap') return json(503, { error: 'global_cap', pass, level, session, signedOut, burn });
 
   // What AGI-1 remembers (Crush: the name; Soulmate: the name and her notes). If the database can't say, she just forgets.
   let friend = { name: null, notes: [] };
@@ -102,12 +132,19 @@ export async function POST(request) {
   // it come along; otherwise nothing is added.
   const history = cleanHistory(body.history, cfg.passSecret);
   const memory = recallGroup(message, history.filter((t) => t.role === 'user').at(-1)?.text);
+  const timeLeft = REPLY_BY_MS - (Date.now() - started);
+  if (timeLeft < 3000) {                                               // too slow today: no reply rather than one cut off
+    console.error('[chat] no time left for her reply:', Date.now() - started, 'ms before asking');
+    if (burned) await giveBack();
+    return json(503, { error: 'busy', pass, level, session, signedOut });
+  }
   let answer;
   try {
     answer = await askAgi1(cfg, history, message,
-      { level, name: friend.name, notes: level === 3 ? friend.notes : [], memory, lang });
+      { level, name: friend.name, notes: level === 3 ? friend.notes : [], memory, lang, timeoutMs: Math.min(10_000, timeLeft) });
   } catch (err) {
     console.error('[chat] gemini failed:', err.message);
+    if (burned) await giveBack();                                      // a burned message never pays for no reply
     return json(502, { error: 'ai_error', pass, level, session, signedOut });
   }
 
@@ -119,9 +156,9 @@ export async function POST(request) {
   }
   const { reply, mood } = answer;
   // voice: a 15-minute ticket to have this reply read aloud in her real voice (api/voice.js), with this reply's mood (her voice
-  // follows it) and the visitor's level (her voice allowance follows their messages a day)
-  const voice = makeVoiceTicket(cfg.passSecret, reply, { level, mood }, now);
-  return json(200, { reply, mood, sig: signReply(cfg.passSecret, reply), voice, pass, level, session, remembered, signedOut });
+  // follows it) and the visitor's level (her voice allowance follows their messages a day, and the burned ones they used)
+  const voice = makeVoiceTicket(cfg.passSecret, reply, { level, mood, burned: burned?.today || 0 }, now);
+  return json(200, { reply, mood, sig: signReply(cfg.passSecret, reply), voice, pass, level, session, remembered, signedOut, burned });
 }
 
 // Keep only trustworthy history: the visitor's own short messages, and AGI-1's replies with a valid signature.
