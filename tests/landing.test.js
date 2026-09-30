@@ -129,6 +129,39 @@ test("what's wider than its box on purpose keeps its width (base.css caps pictur
   assert.match(src, /\.lp-figure-gl \{[^}]*width: 132%;[^}]*max-width: none/, 'her canvas');
 });
 
+test('on phones her bubble sits beside her head, never over her face, and ends before the screen\'s edge', () => {
+  // 2026-09-30, the owner: "on the mobile agi-1 is getting blocked" (it sat at 54% of her box, and a 420 px rule moved it
+  // to 44%: over her eyes). Her face ends at about 61% of her box; her box is centered, so the room right of a bubble
+  // starting at L% is 50vw − (L − 50)% of her box.
+  const src = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const block = (prelude) => {
+    const open = src.indexOf('{', src.indexOf(`${prelude} {`));
+    assert.ok(src.includes(`${prelude} {`), prelude);
+    for (let i = open, depth = 0; i < src.length; i++) {
+      if (src[i] === '{') depth++;
+      else if (src[i] === '}' && --depth === 0) return src.slice(open + 1, i);
+    }
+    throw new Error(`${prelude} never ends`);
+  };
+  const rule = block('@media (max-width: 760px)').match(/(?:^|\})\s*\.lp-bubble \{([^}]*)\}/);
+  assert.ok(rule, "the phones' bubble rule");
+  const left = Number(rule[1].match(/\bleft: (\d+(?:\.\d+)?)%/)?.[1]);
+  assert.ok(left >= 62, `it starts right of her face (left: ${left}%)`);
+  const room = rule[1].match(/max-width: min\(\d+px, calc\(50vw - (\d+(?:\.\d+)?)% - (\d+)px\)\)/);
+  assert.ok(room, "its width stops before the screen's edge");
+  assert.equal(Number(room[1]), left - 50, 'the room right of it');
+  assert.ok(Number(room[2]) >= 5, 'with a margin for its shadow');
+  // nothing narrower moves it back or widens it
+  const narrower = [...src.matchAll(/@media \(max-width: (\d+)px\)/g)].filter((m) => Number(m[1]) < 760);
+  assert.ok(narrower.length >= 2, 'the smaller phones');
+  for (const m of narrower) {
+    for (const r of block(m[0]).matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+      if (!/\.lp-bubble(?![-\w])/.test(r[1])) continue;
+      assert.doesNotMatch(r[2], /(^|[;\s])(left|right|inset|max-width|width|translate|transform)\s*:/, `${m[0]}: "${r[1].trim()}" keeps its place`);
+    }
+  }
+});
+
 test('her bubble lines: PG-13, no pet names (anyone sees them), never money talk, short; the page starts with the first', () => {
   assert.ok(BUBBLE_LINES.length >= 4 && REACTIONS.length >= 4);
   for (const line of [...BUBBLE_LINES, ...REACTIONS]) {
