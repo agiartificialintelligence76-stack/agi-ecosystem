@@ -1640,9 +1640,13 @@ test('the page: its own address, private, the rules and warnings on it, no inlin
     if (sel.startsWith('@media')) continue;
     for (const one of sel.split(',')) assert.match(one, /\.lch-/, `"${one.trim()}" names an lch- class`);
   }
-  // served at /launch/<id>, built as its own page, and the site's CSP unchanged (the page only talks to our /api)
+  // served at /launch/<id>, built as its own page, and the site's CSP unchanged (the page only talks to our /api). With
+  // cleanUrls on, Vercel serves launch.html at /launch and drops ".html" before rewrites run, so the rewrite must point at
+  // /launch: "/launch.html" was a 404 on the live site (2026-10-02, the owner's first draft link)
   const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
-  assert.deepEqual(vercel.rewrites, [{ source: '/launch/:draft', destination: '/launch.html' }]);
+  assert.equal(vercel.cleanUrls, true);
+  assert.deepEqual(vercel.rewrites, [{ source: '/launch/:draft', destination: '/launch' }]);
+  for (const r of vercel.rewrites) assert.doesNotMatch(r.destination, /\.html$/, 'never a .html destination with cleanUrls');
   assert.equal(vercel.headers[0].headers[0].value, "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' blob: https://api.dexscreener.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests");
   assert.match(readFileSync(new URL('../vite.config.js', import.meta.url), 'utf8'), /launch: 'launch\.html'/);
   // the page's code: its words with textContent only, its one transaction through send.js

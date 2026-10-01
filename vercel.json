@@ -4,7 +4,7 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/launch/:draft", "destination": "/launch.html" }
+    { "source": "/launch/:draft", "destination": "/launch" }
   ],
   "functions": {
     "api/**/*.js": {

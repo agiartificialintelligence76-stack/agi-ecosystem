@@ -272,7 +272,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `tools/memory/` | Phase 6, offline: `build-memory.mjs` turns the Telegram export into `server/tg-memory-data.js`; `lore.json` (hand-written memory cards: eras, running jokes, big moments; edit freely); `forget.json` (people who asked to be left out). See "AGI-1's memory of the Telegram group" |
 | `telegram memories/` | The owner's Telegram export (`result.json`, 31 MB, thousands of people's messages). **Never in git** (`.gitignore`); only `tools/memory/` reads it |
 | `vite.config.js` | Three pages (`index.html`, `diary.html` and since 2026-10-01 `launch.html`); raises Vite's file-size warning: three.js is large on purpose and loads separately |
-| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves launch.html), security headers (CSP), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed` |
+| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site), security headers (CSP), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed` |
 
 ## Commands
 
@@ -2227,6 +2227,7 @@ coin.
 | "Her gas wallet has paid back all it can for today…" | (none) | `LAUNCH_GAS_DAILY` reached: by design (raise it and Redeploy, if you like) |
 | "Her gas wallet started paying your fee back but never heard how it went…" | `[launch] a payback's nonce was taken and the chain couldn't say by what: …` | Rare. Look at the gas wallet on the block explorer; it's never sent twice. Tell Claude if it repeats |
 | A coin launched here shows its letter instead of its picture on clank.trade | (none) | See "Open questions" (clank.trade's picture host) |
+| Her private link opens Vercel's own "404 NOT_FOUND" page | (none) | The rewrite in `vercel.json` must send `/launch/:draft` to `/launch` (the page's clean address), not `/launch.html` (fixed 2026-10-02; a test checks it). An old link that expired shows the page's own "This link expired" instead |
 
 **Tests:** `tests/launch.test.js` (39, with a fake Robinhood Chain, Pinata, Telegram and clank.trade, and the database as
 JavaScript): the one file that sends (exactly clank.trade's launch, no ETH, Robinhood Chain), reading `/launch`, her checks
