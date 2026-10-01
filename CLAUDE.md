@@ -38,6 +38,11 @@
 >   after the free messages, visitors burn $AGI from their own wallet app for more (10 $AGI a message, checked on Robinhood
 >   Chain), and a huge live **burn monitor** above the chat shows how much was burned. Off until `supabase/burns.sql` is run.
 >   See "Burn $AGI for more messages, and the burn monitor".
+> - **AGI-1 in 2D is her Live2D model, and 2D comes first** (2026-10-01, the owner: "change the 2d model use the new mode in
+>   VTuber_Project … when they visit the website i want the 2d model to be shown first instead of 3d"): the Live2D model from
+>   the owner's VTuber project, drawn by the stage's own renderer, with its hair and chest physics (her chest subtle: PG-13);
+>   3D is one tap away. **Before pushing: the model was made in Cubism Editor's PRO trial, whose output isn't for commercial
+>   use** (see "AGI-1 in 2D" and "Open questions").
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -58,9 +63,10 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   agi1.app: bold color blocks, ink outlines, wide display type. Same content. **The default since 2026-09-28, in the dark
   theme** (the owner: "make the pop mode open on default, in dark mode"); the ✦ button next to the theme button switches
   back to the lab look, and both choices are remembered in the browser
-- **AGI-1 in 2D** (2026-09-27, the owner's idea): a "3D · 2D" switch on the stage and in her live views shows her as the
-  owner's 2D anime art instead of the 3D model, rigged like a VTuber (breathing, blinking, looking, talking with the same
-  voice, every reaction, hair on springs). 3D by default; remembered in the browser; each downloaded only when picked
+- **AGI-1 in 2D** (2026-09-27, the owner's idea; her Live2D model since 2026-10-01): a "3D · 2D" switch on the stage and in
+  her live views. In 2D she's the Live2D model of the owner's VTuber project (breathing, blinking, looking, talking with the
+  same voice, every reaction, hair and chest physics). **2D first since 2026-10-01** (3D before); remembered in the browser;
+  each downloaded only when needed
 - **The front** (2026-09-28, the owner: "make the landing page like on the old site … just make it in front"): the home
   page opens with the bright AGI landing of the old ecosystem page (a loader on the first visit, the huge AGI letters,
   AGI-1 in WebGL with her speech bubble, the site's parts in orbit around her, ribbons, and the "General → Girlfriend"
@@ -170,13 +176,14 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/checker/lines.js` | ClankChecker (2026-09-26): the risk levels' names and what AGI-1 says about a scan (two lines per level, the official $AGI, a copy of it), with her reaction and voice style for each. The page and the server both read it |
 | `src/checker/copycat.js` | ClankChecker (2026-09-26): which coins copy another coin's ticker ("E/ACC" = "EACC"). Our server marks the whole list with it, and the page marks it again whenever new launches arrive, so both always agree |
 | `src/stage/stage.js` | Figure 1, the 3D stage: minimal studio (transparent canvas, neutral light, floor dial, soft shadow), camera, loading %, the model switch (AGI-1; the Arena's champion left on 2026-09-28), taps; and (2026-09-25) moving that one canvas into a live view and back: the chat's, and since 2026-09-26 ClankChecker's; and (2026-09-27) the "3D · 2D" switch: which AGI-1 is on stage (`slot()`, `setStyle()`, `swapAgi1()`) |
-| `src/stage/agi1-2d.js` | AGI-1 in 2D (2026-09-27): her 2D rig, drawn by the same stage as flat layers that bend every frame (loads only when 2D is picked: a separate file). Her motion, face, hair springs, arms and every reaction; the same controls as `agi1.js` (`react`, `hello`, `setTalk`, `setPointer`, `setAttention`, `setCloseUp`, `update`) |
-| `src/stage/agi1-2d-rig.js` | Where everything is on her 2D picture: each layer's box, her face's pieces, her eyes' edges, her joints, the inside outline of her elbows, the markers the live views frame her by, her hair's springs, the part of her chest that follows through (2026-09-28) |
-| `src/stage/agi1-2d-motion.js` | The pure parts of her 2D motion (tested in Node): springs that follow like body parts, blinks, her eyelids' curves, her head turning in 2.5D, her elbows (a round elbow outside, the crease inside), her chest's soft follow-through (`Jiggle`, `chestWeight`, 2026-09-28), her talking mouth, 2D transforms; and which AGI-1 the visitor picked (`agi1_style`) |
+| `src/stage/agi1-2d.js` | AGI-1 in 2D, her Live2D model (2026-10-01; her 2D rig before): loads her files (`loadAgi1_2D`), builds her puppet (`buildPuppet`: standing on the floor, 1.62 m, her markers for the live views, taps only on her, her 4096 px texture on request: `sharpen()`) and her controller (`createAgi1_2D`: her motion on her model's parameters, every reaction, her physics; the same controls as `agi1.js`: `react`, `hello`, `setTalk`, `setPointer`, `setAttention`, `setCloseUp`, `update`). Loads only when needed (a separate file). See "AGI-1 in 2D" |
+| `src/stage/live2d.js` | 2026-10-01: Live2D for the stage: loads Live2D's runtime (Cubism Core) once, draws her model's 52 pieces as three.js meshes in Live2D's order with their opacity and blending, her eyes' clipping with the stencil buffer (`buildMeshes`); which piece is at a point (`pieceAt`, for taps) and the box of a few pieces (`boxOf`, for her markers) |
+| `src/stage/live2d-physics.js` | 2026-10-01: her hair and chest physics, read from her model's physics file: the same pendulum maths as Live2D's runtime (checked against it), fixed 60 steps a second; pure (tested in Node) |
+| `src/stage/agi1-2d-motion.js` | The pure parts of her 2D motion (tested in Node): which AGI-1 the visitor picked (`agi1_style`, `readStyle`: 2D unless "3d" since 2026-10-01; the page reads it too), springs that follow like body parts, drifts, blinks, how open her model's eyes are (`eyeOpen`), her mouth while she talks, where she looks (`lookAt`), her chest's limits on the site (`CHEST`, `chestLimit`: PG-13) |
 | `src/stage/agi1.js` | AGI-1's idle (built in code), occasional dance, and reactions (wave, looking at you, hop, spin, hearts, a jealous glance); her face (2026-09-25: her jaw, mouth corners and cheeks really move, painted eyelids, blush and "^^" eyes, an expression for each chat mood) and her listening/thinking looks; since 2026-09-26 her arm waves like a real arm (a hinge at the elbow), her mouth is redrawn, her hair swings, and ClankChecker's reactions (`okay`, `hmm`, `worried`) |
 | `src/lib/talk.js` | How much AGI-1 is talking right now (0–1), for her 3D mouth: a sound meter on her voice, or a made-up rhythm ("saying" a reply silently) |
 | `src/stage/effects.js` | Floating hearts in the accent color |
-| `public/` | Files served as-is: favicon, `fonts/` (Geist, and for Pop mode Anybody and Instrument Serif Italic; for the front's "ドキドキ" a 760-byte subset of Dela Gothic One; self-hosted, each with its OFL license file), `models/agi1.glb` (2.18 MB, computers), `models/agi1-phone.glb` (1.67 MB, phones), `images/landing/` (the front, 2026-09-28: AGI-1's cutout, 104 KB; her face for the bubble, 4 KB; a depth map for her WebGL parallax, 5 KB), `images/agi1-avatar.webp`, `images/agi1-portrait.webp`, `images/agi1-live.webp` (the chat's live view before the 3D arrives, 24 KB), `images/agi1-live-2d.webp` (the same for AGI-1 in 2D, 50 KB), `models/agi1-2d/` (AGI-1 in 2D, 2026-09-27: her 6 layers and her face's pieces as 7 WebP pictures, 389 KB, downloaded only when a visitor picks 2D) (`images/coins/`, the Arena's coin logos, left with it on 2026-09-28) |
+| `public/` | Files served as-is: favicon, `fonts/` (Geist, and for Pop mode Anybody and Instrument Serif Italic; for the front's "ドキドキ" a 760-byte subset of Dela Gothic One; self-hosted, each with its OFL license file), `models/agi1.glb` (2.18 MB, computers), `models/agi1-phone.glb` (1.67 MB, phones), `images/landing/` (the front, 2026-09-28: AGI-1's cutout, 104 KB; her face for the bubble, 4 KB; a depth map for her WebGL parallax, 5 KB), `images/agi1-avatar.webp`, `images/agi1-portrait.webp`, `images/agi1-live.webp` (the chat's live view before the 3D arrives, 24 KB), `images/agi1-live-2d.webp` (the same for AGI-1 in 2D, 51 KB, rendered from her Live2D model on 2026-10-01; shown first), `models/agi1-live2d/` (AGI-1 in 2D since 2026-10-01: Live2D's runtime `live2dcubismcore.min.js` (as it is, © Live2D Inc., with `NOTICE.txt`), her model `AGI-1.moc3`, its physics `AGI-1.physics3.json`, her texture `AGI-1.2048.webp` (462 KB) and `AGI-1.4096.webp` (1.2 MB, close-ups on computers); about 770 KB for a visitor who sees her in 2D) (`models/agi1-2d/`, the 2D rig's pictures before her Live2D model, and `images/coins/`, the Arena's coin logos, are gone) |
 | `src/chat/chat.js` | The Playground (AGI-1's chat, `section#playground` in `index.html`): 18+ gate, human check, history in the browser, mood → stage reaction. "Try AGI-1" buttons scroll here |
 | `src/chat/models.js` | The model picker in the chat bar (2026-09-26): "AGI-1 ▾" opens a small menu (AGI-1, and AGI-2 "Coming soon"), for mouse, keyboard and screen readers |
 | `src/chat/model-lines.js` | What AGI-1 says when someone picks AGI-2 (pre-written, playfully jealous, PG-13, no AI cost) |
@@ -213,14 +220,13 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/voice-lines.sql` | Her recorded lines (2026-09-26). Run once in the same Supabase project (any time): the `voice_lines` table + `voice_line_get/put()`, where the server keeps her fixed lines once Google has made them |
 | `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes) |
 | `supabase/burns.sql` | Burn $AGI for more messages (2026-09-30). Run once in the same Supabase project (any time): five new tables (`agi1_burn_key`, `agi1_burn_txs`, `agi1_burn_wallets`, `agi1_burn_days`, `agi1_burn_total`) and 7 functions, only added (nothing the original site uses changes). Until it's run, nobody sees anything about burning |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27: AGI-1 in 2D: which AGI-1, her springs, drifts, blinks, eyelids, the 2.5D turn, her mouth, her elbows, the rig's data and pictures, the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
 | `scripts/check-secrets.js` | Runs after every build and fails it if a secret would be shipped to browsers |
 | `tools/model/` | Offline 3D-model tools, not part of the site build: `fix-hair-weights.mjs`, `drop-tangents.mjs` (see "3D models") |
-| `tools/agi1-2d/` | 2026-09-27, offline: turns the owner's 2D art (`agi 2d anime/agi-vtuber.html`) into `public/models/agi1-2d/`: takes the layers out, cleans them up, upscales them 2× (an anime upscaler, run once), packs them. `bash tools/agi1-2d/build.sh "agi 2d anime/agi-vtuber.html"` (see "AGI-1 in 2D") |
-| `agi 2d anime/` | The owner's 2D art (`agi-vtuber.html`, the owner's own rig with the art inside it): the source for `tools/agi1-2d/`. Not used by the site itself |
+| `agi 2d anime/` | The owner's earlier 2D art (`agi-vtuber.html`): the source of the 2D AGI-1 from 2026-09-27 to 2026-10-01 (her Live2D model since). Not used by the site; its tools (`tools/agi1-2d/`) left with the old 2D rig |
 | `tools/memory/` | Phase 6, offline: `build-memory.mjs` turns the Telegram export into `server/tg-memory-data.js`; `lore.json` (hand-written memory cards: eras, running jokes, big moments; edit freely); `forget.json` (people who asked to be left out). See "AGI-1's memory of the Telegram group" |
 | `telegram memories/` | The owner's Telegram export (`result.json`, 31 MB, thousands of people's messages). **Never in git** (`.gitignore`); only `tools/memory/` reads it |
 | `vite.config.js` | Two pages (`index.html`, `diary.html`); raises Vite's file-size warning: three.js is large on purpose and loads separately |
@@ -240,8 +246,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 - Add `?dev` to the site's address (e.g. https://agi1.app/?dev) to test AGI-1's reactions with buttons.
 - `node tools/i18n/check.mjs` (or with codes: `… es ja`): checks her lines in every language against her rules, after
   changing one (see "Her languages"). `npm test` runs the same checks.
-- `bash tools/agi1-2d/build.sh "agi 2d anime/agi-vtuber.html"`: remakes AGI-1 in 2D's pictures from the owner's 2D art (only
-  when that art changes; see "AGI-1 in 2D").
+- AGI-1 in 2D's model files come from Live2D Cubism Editor (the owner's VTuber project): see "Updating her model" in
+  "AGI-1 in 2D".
 - `node tools/clips/make.mjs --fake-voice`: makes today's diary clip with a stand-in hum instead of her voice (see "Her
   daily clips"; needs Chrome or Chromium, ffmpeg and `npm install --no-save playwright-core`: Claude's workspace and GitHub
   have them). GitHub's daily job runs it for real (with her voice): Actions → "AGI-1's daily clips".
@@ -326,8 +332,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 - **In the chat too** (2026-09-25): while you chat, this same canvas moves into the Playground's live view, where she's framed
   like a video call, talks, blinks, listens and thinks. See "AGI-1's live view in the chat". **And in ClankChecker**
   (2026-09-26): the same way into the answer under the coin you asked her about (see "ClankChecker").
-- **Or in 2D** (2026-09-27): the "3D · 2D" switch at the stage's bottom left swaps her for the owner's 2D art, rigged like a
-  VTuber, with the same reactions, voice and live views (see "AGI-1 in 2D").
+- **Or in 2D** (2026-09-27; **2D first since 2026-10-01**): the "3D · 2D" switch at the stage's bottom left swaps her for
+  her Live2D model (the owner's VTuber project; the owner's 2D art rigged in code before), with the same reactions, voice
+  and live views (see "AGI-1 in 2D"). So most first visits see this section's 3D AGI-1 only after pressing "3D".
 - **Test mode:** add `?dev` to the address to get wave / happy / shy / love / jealous / celebrate / sad / dance / okay / hmm /
   worried buttons, plus
   **market up** / **market down** (a whole market moment with today's numbers, labelled "preview"; see "Market moments"). `window.__agiStage` (with
@@ -1725,11 +1732,13 @@ makes no clip (`tests/clips.test.js` checks both).
 - `README.txt`: what was made, or why not, and how to post (the apps' AI labels: TikTok "AI-generated content", YouTube
   "Altered or synthetic content: yes", Instagram "AI label").
 
-**How the clip looks:** AGI-1 in 2D (the site's own rig, `src/stage/agi1-2d.js`: breathing, blinking, glances, her hair on
-springs, her mouth following her voice, a reaction in the entry's mood), framed like a VTuber (head to chest, fading into
-the background below), on Pop mode's honey with comic focus lines and halftone dots. On top: "AI-GENERATED · NOT
+**How the clip looks:** AGI-1 in 2D (the site's own, `src/stage/agi1-2d.js`: her Live2D model since 2026-10-01, the owner's
+2D art rigged in code before; breathing, blinking, glances, her hair and chest physics, her mouth following her voice, a
+reaction in the entry's mood), framed like a VTuber (head to chest, by her model's own eyes and waist: `model.landmarks`,
+fading into the background below), on Pop mode's honey with comic focus lines and halftone dots. On top: "AI-GENERATED · NOT
 FINANCIAL ADVICE" on every frame, "HER DIARY", the date in big Anybody type that pops in, "written by AGI-1, an AI", her
-captions in a white card (a new card when she pauses), and agi1.app at the bottom and at the end. The label, the title
+captions in a white card (a new card when she pauses; always tall enough to cover the AGI on her shirt, never half of it),
+and agi1.app at the bottom and at the end. The label, the title
 and the captions stay clear of TikTok's, Reels' and Shorts' own buttons and text (their top ~180 px and bottom ~380 px).
 
 **Her words** (`tools/clips/lines.js`): her published diary entry (written once a day by `server/diary.js` and checked in
@@ -2155,117 +2164,115 @@ sideways scrolling, the bubble fits, planet names never overlap over time), both
 order, every link, Pop mode and the theme switch keeping your place at the top, in the manifesto and at the risk check, the chat's
 live view and the 3D stage still working, the phone menu over the front, the site's real CSP, a clean console.
 
-## AGI-1 in 2D (2026-09-27)
+## AGI-1 in 2D: her Live2D model, 2D first (2026-10-01; the 2D switch since 2026-09-27)
 
-**The owner's request:** "i attached a html file in the folder agi 2d anime … they will be able to choose what version agi can
-they see on the stage on the site, on the checker or able to switch … in that html file is a 2d anime of agi, the current one
-on the page is a 3d model … what do you think you decide … that 2d agi is not flawless yet even the animation, the physics,
-her hand movements, eyes, etc.. all are bad and clunk i want it to move like a real vtuber and speak too like the 3d AGI-1
-same voice etc."
-
-**Decided (Claude; the owner said "you decide"):** one switch, **"3D · 2D"**, everywhere she appears; **3D stays the default**;
-the choice is remembered in the browser; it's the same AGI-1 either way (the same voice, chat moods, reactions and live
-views). The owner's file was the starting point, not the finished thing: its art was cleaned up and its rig rebuilt from
-scratch, and she's drawn by the same 3D stage as flat layers (one canvas, one scene: everything the stage does, the zoom, the
-live views, the hearts, works for her too).
+**The owner's request (2026-10-01):** "can you change the 2d model use the new mode in VTuber_Project folder its in the
+downloads folder, and after that when they visit the website i want the 2d model to be shown first instead of 3d". The
+VTuber project (`C:\Users\User\Downloads\VTuber_Project`, made with another Claude session) is a **Live2D model** of AGI-1:
+the full-body AGI-1 in the lavender AGI tee, dolphin shorts and sneakers, made from the owner's art in Live2D Cubism Editor
+5.3 (52 pieces, 31 parameters, a 4096 px texture, hair and chest physics), exported for the web (`04_exports/AGI-1_web/`).
+Only its runtime files were copied here; the project itself stays in Downloads (its `03_live2d/AGI-1.cmo3` is what Cubism
+Editor edits).
 
 **What visitors see:**
-- **"3D · 2D"**, a small pill like the model switch: at the stage's bottom left (while AGI-1 is on stage), and at the
-  top right of her live views (the chat's and ClankChecker's). They all show the same choice, and a tap on
-  any of them switches her right where she is, with the same little shrink-and-grow as between models. Remembered in the
-  browser (`agi1_style`); a first visit is 3D.
-- **Each version downloads only when it's picked:** 2D is 7 pictures (389 KB) and a small file of code (33 KB); a visitor who
-  picked 2D doesn't download the 3D model (2.2 MB) at all on the next visit. Her live views' still picture (before she's there)
-  matches too (`agi1-live-2d.webp`).
-- **In 2D:** tap her to say hi; no dragging (a flat picture doesn't turn: the view stays in front, and on phones one finger
-  always scrolls the page); zoom up to **3×** (head and shoulders: closer, a picture only gets blurrier); the labels say so
-  ("AGI-1, in 2D. Tap to say hi.", "AGI-1, live in 2D. She reacts to the chat.").
-- **Everything else is the same:** her voice and her mouth following it (`src/lib/talk.js`), every reaction (`agi1:react`)
-  with the same faces and timing, listening and thinking in the chat, ClankChecker's reactions, her wave when you arrive,
-  hearts, the blush glow, "reduce motion", Pop mode.
+- **2D first:** a first visit (and any visitor who hasn't picked) sees AGI-1 in 2D on the stage, in the chat's live view and
+  in the risk check's; the page's markup already says so (the "2D" buttons pressed, "AGI-1, in 2D. Tap to say hi.", "tap to
+  say hi", the 2D still pictures), so nothing switches when the stage arrives. **"3D · 2D"** (a small pill: the stage's
+  bottom left, the live views' top right) switches her right where she is; the choice is remembered (`agi1_style`: `3d` or
+  `2d`; anything else is 2D: `readStyle()` in `src/stage/agi1-2d-motion.js`). A visitor who picked 3D gets 3D first, and its
+  still pictures (`src/main.js` swaps them before they download).
+- **Each version downloads only when it's needed:** 2D is Live2D's runtime (150 KB), her model (150 KB), its physics (7 KB) and
+  her 2048 px texture (462 KB): about 770 KB, against 1.7–2.2 MB for the 3D model, which now only downloads when picked.
+  Zoomed past 1.9× on a computer, her 4096 px texture (1.2 MB) is downloaded once and swapped in (never on phones: graphics
+  memory). Her 2D code is a separate file (about 9 KB gzipped).
+- **In 2D:** tap her to say hi (only on her: a tap in the air beside her does nothing; a tap on her face makes her blush too);
+  no dragging (a flat picture doesn't turn; on phones one finger always scrolls the page); zoom up to **3×**.
+- **Everything else is the same:** her voice and her mouth following it (`src/lib/talk.js`), every reaction (`agi1:react`) with
+  the same moods and timing, listening and thinking in the chat, ClankChecker's reactions, her wave when you arrive, hearts,
+  the blush glow, "reduce motion", Pop mode, her daily clips (they use the same model).
 
-**How she moves** (`src/stage/agi1-2d.js`; what makes a VTuber look alive):
-- **Her head turns in 2.5D:** each point of her face moves by how far in front of the middle of her head it sits (her eyes, nose
-  and mouth together, her face's outline less, her ears hardly, the back of her hair the other way), so a turn of up to about
-  10° reads as a real one. The depth has no sharp edge (a test checks), so her face and hair never crease.
-- **Never frozen:** slow drifts of her head and body, breathing (her shoulders rise), her weight shifting; her arms swing back
-  like hanging arms when her body sways.
-- **Her eyes lead, her head follows:** quick little eye movements (saccades) and a slower turn of her head toward your pointer,
-  the box you type in, or up and away while she thinks; springs that follow like body parts (`Follow` in
-  `agi1-2d-motion.js`: a little overshoot where a real body has one, none where it doesn't).
-- **Blinks** every 2 to 6 s (now and then twice): her lid falls in 70 ms and rises in 150 ms, her upper lash riding on it and
-  closing into a soft "‿"; her lower lids rise when she smiles with her eyes; "^^" when she's delighted; a shadow under her lids.
-- **Her mouth** is drawn by a small shader (sharp at any zoom): a soft line that smiles a little when it's closed, a rounded
-  opening when she talks (a new shape on each syllable), her tongue only when it's wide open, the corners up for a smile and
-  down for a pout.
-- **Her hair on springs:** chains hanging from her head, their roots following her head and their ends her body, so it lags
-  behind every move, bounces when she hops and settles; a very gentle breeze (none with "reduce motion").
-- **Each arm is one picture that bends like an arm** (the owner's rig stretched it, which pinched and kinked the elbow):
-  outside, a round elbow as wide as her arm, joining her upper arm and forearm smoothly; inside, a clean crease where the two
-  meet. How (`elbowOuter`, `elbowInner` and `creaseAngle` in `agi1-2d-motion.js`): the picture is drawn twice, once as her
-  upper arm and once as her forearm, each cut along the line from her elbow to the crease (found from her arm's inside
-  outline, measured from the art: `RIG.elbows`), so the two outlines meet exactly, however far she bends; outside, a wedge at
-  the point of her elbow is spread like a fan and drawn in toward it, which makes the round cap; finer mesh around the elbow
-  keeps it smooth. (The first version the same day, two pieces with a round cap, left a faint seam and bits of outline at
-  the elbow up close.) Her wave: on the stage, her arm out and her forearm up; up close (the chat, zoomed in) a video-call
-  wave with her open hand by her face, palm to you, her hand trailing a little behind her forearm.
-- **Her chest follows through** (2026-09-28, the owner: "fix the jiggle physics on her chest … make it the best ever"): the
-  lower part of her chest trails her body a little when she moves (a hop, a sway, her dance), swings back once or twice and
-  settles within about half a second, like soft tissue under a t-shirt; nothing at all while she stands still (her breathing
-  alone moves it about a hundredth of a pixel). How (`Jiggle` and `chestWeight` in `agi1-2d-motion.js`, `RIG.chest`): a
-  soft spring (2.8 Hz, damping 0.34) behind the middle of her chest, which follows her pose and her hop; its lag moves two
-  soft ovals of her body picture, strongest on their lower half, so the top of her chest and the AGI print on her shirt
-  stay with her body and the shirt bends smoothly (no seam). **Natural, never exaggerated, because the site is PG-13**
-  (the owner's rule for every feature): a hop moves it about 6 px of her 1536 px picture at most, her dance about 1.5 px,
-  with a soft limit (7 px down or up, 3.5 px sideways) instead of a hard stop; the same at any frame rate; none with
-  "reduce motion". No new pictures were needed: her body picture already has her chest and shirt, and a separate chest
-  layer made elsewhere wouldn't match her art.
-- **2D versions of the 3D moves:** `love` is a happy sway from side to side (a picture can't spin), `dance` her hips swaying
-  on the beat with a bounce and her arms swinging (6 s, every 35 to 55 s like the 3D dance, never up close), `celebrate` a
-  hop and a little cheer with both arms.
+**How it's drawn** (`src/stage/live2d.js`): Live2D's runtime, **Cubism Core** (`public/models/agi1-live2d/live2dcubismcore.min.js`,
+© Live2D Inc.), reads her model and works out, every frame, where each of her 52 pieces is; the stage's own three.js renderer
+draws them (one mesh per piece, in Live2D's order, with its opacity and blending; her irises and the light in her eyes are cut
+to her eye whites with the stencil buffer, so the stage's renderer is made with `stencil: true`). One canvas, one scene: the
+zoom, the live views, her hearts and the switch work as for the 3D model. Her texture is uploaded with premultiplied alpha and
+drawn without color conversion, so her colors and edges are the model's own. **Not used:** the web widget the VTuber project
+made (`agi1.js` with PixiJS and pixi-live2d-display): PixiJS needs `'unsafe-eval'` in the CSP, and it would be a second canvas
+beside the stage's. Cubism Core uses neither eval nor WebAssembly, so the CSP is unchanged (it loads from our own address).
 
-**The art** (`tools/agi1-2d/`, run once; the site only gets the results): the owner's file had problems that showed as soon as
-anything moved. Its eye, brow and mouth pieces carried patches of skin and hair (the "tan rectangles" when she blinked); its
-body layer had lavender "ghost" sleeves and patches where the arms and hair had been painted out; its back hair had smeared
-streaks and holes behind her arms; its cut-out edges were jagged, with white fringes; its arms were one piece each. Fixed:
-the lashes and brows are clean strokes (a hair strand crossed each brow: rebuilt), the skin under her eyes and mouth is
-smooth, her jaw line is redrawn smooth with the chin's shadow on her neck moving with her head, the ghost pieces are gone
-(her torso's sides under the sleeves shaded like a shirt), the back hair behind her arms is repainted as hair in shadow,
-the edges are smooth, and two flaws in her arms' outlines are redrawn (a small step above her right elbow, bits of hair on
-her left one: the crease shows them up close). Then everything was upscaled 2× with an anime upscaler (Real-ESRGAN x4plus
-anime 6B, BSD-3 license, run once on Claude's computer; nothing on the site), so she's sharp up close. **To redo it** (new art):
-`bash tools/agi1-2d/build.sh "agi 2d anime/agi-vtuber.html"` (Python with numpy, scipy, pillow, onnx and onnxruntime; it
-downloads the upscaler's weights, 18 MB, into `tools/agi1-2d/work/`, which git ignores), then compare the numbers it prints
-with `src/stage/agi1-2d-rig.js` (its `arms.L.inner` / `arms.R.inner` are `RIG.elbows`).
+**How she moves** (`src/stage/agi1-2d.js`, on her model's own parameters; what makes a VTuber look alive):
+- **Her eyes lead, her head follows** (your pointer, the box you type in, up and away while she thinks): quick little eye
+  movements, then her head (ParamAngleX / Y / Z) and her body a little (ParamBodyAngleX / Z), on springs that follow like body
+  parts (`Follow`). Her head turns at most 20° sideways, 12 up and 15 down (her model's own scale): further, her flat art shows
+  its seams (checked at every edge).
+- **Never frozen:** slow drifts of her head and body, her weight shifting, breathing (ParamBreath), her arms hanging a little
+  away from her sides with a life of their own.
+- **Blinks** every 2 to 6 s (now and then twice), quick. Her model's eyes look clean open, a little lowered and closed (a soft
+  "‿"); in between its lids cross-fade, which only looks right for a moment: so a mood lowers her lids only a little (to 0.86
+  at most, `eyeOpen()`), and her happy moments close her eyes in a smile quickly and open them quickly.
+- **Her mouth** follows her voice (ParamMouthOpenY: her model's open mouth shows her teeth and tongue), a little open in a smile
+  on happy moments; **her blush** is ParamCheek.
+- **Her hair and chest** move with **her model's own physics** (`src/stage/live2d-physics.js`, written for this site: the same
+  pendulum maths as Live2D's runtime, checked against it to the sixth decimal, fixed 60 steps a second so it's the same at any
+  frame rate). **Her chest is natural and subtle, as on the whole site (PG-13):** the model was tuned "really bouncy" for
+  another use (at full strength her chest moves 2% of her height); here it's scaled down and softly limited (`CHEST` in
+  `agi1-2d-motion.js`: at most about 0.4% of her height, like the 2D AGI-1 before her), nothing while she stands still, none
+  with "reduce motion". (The VTuber project's own widget, and its preview video, use the full strength.)
+- **Her moods** on what her model can show (its smile, brow and mouth-shape parameters aren't animated in the model): a little
+  open-mouthed smile, her blush, her lids lowered a little, her eyes closing in a smile (happy, love, celebrate, wave), where she
+  looks (shy and sad look down, jealous glances away), and her body.
+- **2D versions of the 3D moves:** a hop (her whole figure, with a crouch and a landing her body and chest feel), `love` a happy
+  sway, `dance` her hips swaying on the beat with a bounce and her arms swinging (6 s, every 35 to 55 s, never up close),
+  `celebrate` a hop and both arms out, nods, a slow head shake (`worried`), a tilt (`hmm`). **Her wave** is a bubbly little one:
+  her model's arms only lift a little from her sides (ParamArmRA, about 7°), so her right arm swings out on each beat while she
+  leans toward it, tilts her head and bounces a little.
 
-**Cost:** nothing new: no service, no setting. 389 KB of pictures, only for visitors who pick 2D (cached a day, like the models).
+**Updating her model** (after editing it in Cubism Editor): File → Export For Runtime → moc3 (For SDK 4.0 / Cubism 4.0) with
+the physics; then in `public/models/agi1-live2d/` replace `AGI-1.moc3` and `AGI-1.physics3.json`, and the textures:
+`texture_00.png` converted to WebP at 4096 px (`AGI-1.4096.webp`) and at half size (`AGI-1.2048.webp`). Run `npm test`: it
+checks the parameters her motion uses are still there, with the same ranges. New parameters do nothing until her motion uses
+them (tell Claude). Never edit or re-minify `live2dcubismcore.min.js` (Live2D's license: as it is; a test checks its checksum).
+
+**Licenses (not legal advice):** Live2D's runtime (Cubism Core) may be redistributed as it is under the Live2D Proprietary
+Software License; individuals and small businesses (under ¥10 million in yearly sales) don't need Live2D's SDK Release License
+to publish, bigger ones do (`public/models/agi1-live2d/NOTICE.txt`). **The model was made and exported in Cubism Editor's free
+42-day PRO trial** (the VTuber project's progress log), and Live2D's terms say trial output is for "demonstration, evaluation
+and training", not commercial use; a site with Buy links and burns for messages likely counts as commercial. The usual fix: buy
+Cubism PRO (the plan for individuals and small businesses) and export the model again from the paid editor. Claude told the
+owner on 2026-10-01 (see "Open questions").
+
+**Before 2026-10-01** the 2D AGI-1 was the owner's earlier 2D art (`agi 2d anime/agi-vtuber.html`), cleaned up, upscaled and
+rigged in code by Claude (bending flat layers, a 2.5D head turn, arms that bend at the elbow, hair on springs); its code
+(`agi1-2d-rig.js`, the old `agi1-2d.js`), its pictures (`public/models/agi1-2d/`) and its art tools (`tools/agi1-2d/`) were
+removed with the switch (they're in git's history). `agi 2d anime/` is the owner's file and stays, unused.
+
+**Cost:** nothing to pay. About 770 KB for every visitor who sees her in 2D (now most first visits, instead of the 3D model's
+1.7–2.2 MB), cached a day like the models; the 4096 px texture only for close-ups on computers.
 
 **Troubleshooting:**
 
 | What you see | Why | Fix |
 |---|---|---|
-| "Couldn't load that version of AGI-1. Refresh to try again." | Her 2D pictures didn't download (a connection hiccup) | Refresh. If it lasts, check `public/models/agi1-2d/` has its 7 files in the deployment |
+| "Couldn't load that version of AGI-1. Refresh to try again." | One of her 2D files didn't download (a connection hiccup), or the browser has no WebGL | Refresh. If it lasts, check `public/models/agi1-live2d/` has its files in the deployment |
+| She's there but her eyes look empty (no irises) | The stage's renderer has no stencil buffer | `stencil: true` in `src/stage/stage.js` (and `tools/clips/page/clip.js`) |
 | No "3D · 2D" on the stage | The stage hasn't loaded yet | Nothing to fix |
-| A new reaction added to the 3D AGI-1 does nothing in 2D | The 2D rig needs its own version | Tell Claude: `react()` in `src/stage/agi1-2d.js` |
-| The 2D art was changed | The site's pictures are made from it | Run `tools/agi1-2d/build.sh` again (above) |
+| A new reaction added to the 3D AGI-1 does nothing in 2D | Her 2D controller needs its own version | Tell Claude: `react()` in `src/stage/agi1-2d.js` |
+| The model was edited in Cubism Editor | The site has its exported files | See "Updating her model" above |
 
-**Tests:** `tests/agi1-2d.test.js` (13: which AGI-1 (only an exact "2d"), her springs at any frame rate, her drifts, blinks,
-eyelids ("‿", "^^", smiling eyes, never inside out), the 2.5D turn (no crease), her mouth, the 2D transforms, her elbows
-(nothing moves at rest, never folds at any bend, a round cap outside, the two sides meet at the crease), her chest's
-follow-through (still while she stands, a small lag and a swing back after a hop, settled within a second, the same at 30,
-60 and 144 frames a second, inside its soft limits, breathing alone moves nothing) and which part of her picture moves with
-it (only the lower part of her chest, left and right alike, never the AGI print, her waist or her arms, no edges), the rig's data
-and its 7 WebP pictures (under 600 KB), the page's three "3D · 2D" groups and that 2D's code is a separate file). End to end,
-`agi1_2dtest.mjs` (62: 3D by default with nothing of 2D downloaded; "2D" on the stage: its 7 pictures loaded once, remembered,
-every group in sync, the event, the labels, no dragging, drawn; she drifts, breathes and blinks, follows your pointer eyes
-first and never turns too far, talks syllable by syllable, every reaction with its face, her wave bends at the elbow, each arm
-one picture drawn as two copies that match outside the crease and never both show where they differ, a hop with hearts and
-"^^", her hair lagging and settling, her chest following through and settling, a tap; zoom up to 3× and back to 8× in 3D; a return visit straight to 2D without the 3D
-model, the 2D still pictures; the chat's live view (her video-call wave, the label, framing, switching to 3D and back right
-there, thinking and listening); ClankChecker's; CABO on stage; phones at 390 and 360 (fits, taps, the strip's switch);
-reduce motion (no follow-through either); Pop mode; axe 0 issues; a clean console). Every earlier suite passes too (arena 13, playground 19, wallet 27,
-Phantom 25, Phase 4 37, Phase 5 42, launch 46, coins 58, zoom 43, voice 36, live view 50, voice chat 34, out of messages 31,
-face 29, market 56, call intro 8, model picker 25, wave 61, hair 15, ClankChecker 124, Pop mode 38).
+**Tests:** `tests/agi1-2d.test.js` (12: which AGI-1 (2D unless "3d"); her springs and drifts; blinks, her lids and her smile's
+closed eyes; her mouth; where she looks; her chest's limits, measured on her model (at most 0.45% of her height); her physics
+against values recorded from Live2D's own runtime, still at rest, the same at 30 and 60 frames a second; her model's files
+(the runtime unchanged and without eval or WebAssembly, the parameters her motion uses with their ranges, the clipping, the two
+WebP textures, under 800 KB in all); her puppet with Live2D's real runtime in Node (standing on the floor, 1.62 m, her markers,
+taps only on her); her controller (every reaction, the hop and her chest settling, happy's closed eyes and blush, her wave,
+shy and sad looking down, a tap on her face, talking, never turning too far, her hair swinging and settling); "reduce motion";
+the page (2D pressed first, the labels, the still pictures, the stencil, the separate file, the clips' framing)). End to end in
+a browser with the site's real CSP (Claude's scratch `l2de2e.mjs`, 49 checks: 2D first with only her Live2D files downloaded,
+she's drawn, drifts, breathes and blinks, follows your pointer and never too far, a tap on her face and in the air, every
+reaction, zoom to 3× with the 4096 px texture once, 3D and back (nothing downloaded twice, remembered), the chat's live view
+framed like a video call with her mouth moving, axe 0 issues, a visitor who picked 3D, a phone (swipes scroll, no 4096 px
+texture, the live strip, no sideways scrolling), "reduce motion", the lab look in the light theme, a clean console). Her daily
+clip rendered with the new model (`node tools/clips/make.mjs --fake-voice`).
 
 ## Project facts
 
@@ -2601,6 +2608,12 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 - The monitor's numbers are public totals only (no wallet, no transaction), at one fixed address, cached a minute.
 - Fail closed: burns.sql not run, or the database away → no burn buttons, and the chat is out of messages as before.
 
+### Her Live2D model (AGI-1 in 2D, 2026-10-01)
+- Live2D's runtime (`public/models/agi1-live2d/live2dcubismcore.min.js`) is served from our own address and loaded only when
+  she's shown in 2D; it uses no eval and no WebAssembly, so the CSP is unchanged. It's Live2D's file as it is (never edited:
+  a test checks its checksum and that it has neither).
+- Her model files are read-only data (`fetch` from our own address); nothing about the visitor goes anywhere.
+
 ### 3D models
 - Before a `.glb` goes into the project, run it through gltf-transform (free): textures ≤ 2048 px WebP, geometry quantized.
   Aim for ≤ 5 MB each. The exact command used for AGI-1, which keeps every triangle, the skeleton and the animations:
@@ -2647,7 +2660,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 
 | Service | Free allowance | If exceeded |
 |---|---|---|
-| Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, 2026-09-27: 389 KB per visitor who picks 2D, instead of the 3D model's 1.7–2.2 MB) | Usually paused until 30 days have passed |
+| Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, her Live2D model and the default since 2026-10-01: about 770 KB per visitor who sees her in 2D, instead of the 3D model's 1.7–2.2 MB, which now only downloads when picked) | Usually paused until 30 days have passed |
 | Supabase Free | 500 MB database · 5 GB egress · 200 realtime connections · 2M realtime messages/month. Paused after 1 week with no activity | Grace period, then restricted (read-only or paused), never billed |
 | Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 5,000 a day ≈ $15 ($22.50 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten) are made once and kept (the database since 2026-09-26); since 2026-09-30 the replies paid for by burning $AGI, at most `BURN_DAILY_CAP` (1,000) a day ≈ $0.80 more | The key stops when credits hit $0 (the chat and the voice share them) |
 | Cloudflare Turnstile | Unlimited | — |
@@ -2973,6 +2986,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   size (see "Her bubble on phones" in "The front"). Computers unchanged. No setup, no cost. Tests: 296 unit (on Node 20, 22
   and 24; 1 new in `tests/landing.test.js`, which fails if a rule ever moves it back), her longest line measured in a
   browser at 8 widths in both looks.
+- **AGI-1 in 2D is her Live2D model, and 2D comes first: built 2026-10-01, waiting for the owner's OK** (the owner: "change
+  the 2d model use the new mode in VTuber_Project … i want the 2d model to be shown first instead of 3d"). See "AGI-1 in
+  2D". No setup. **Owner, before pushing:** the model was made in Cubism Editor's PRO trial (see "Open questions"). Tests: 295
+  unit (on Node 20, 22 and 24; `agi1-2d.test.js` rewritten), 49 end to end in a browser with the site's real CSP.
 
 ## Decisions log
 
@@ -3115,6 +3132,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-09-30 | The front's bubble on phones (the owner: "on the mobile agi-1 is getting blocked"): beside her head (from 66% of her box, her face ends at about 61%), as wide as the room to the screen's edge allows, a long line wrapping onto more lines; no avatar under 480 px. Not picked: moving it under her (it would cover her body and the contract address below), or hiding it on phones (her lines are the front's voice) |
 | 2026-09-30 | Burn codes use the database's own random key (burns.sql), not PASS_SECRET (found by the review): changing PASS_SECRET would otherwise lose everyone's burned messages and let the last 7 days of burns count again; and the codes differ from the name-and-notes codes, so stored amounts can't match a wallet to its name and notes. A burn counts per (transaction, wallet). Burns count at once, without waiting for confirmations (Robinhood Chain has one sequencer; waiting would take minutes) |
 | 2026-09-29 | Burns for reads (big idea 3) and her pretend bag (big idea 4) on hold (the owner: "can you remove 3. Spokesmodel and burns for now", then "remove the 4. Her own bag. Start with a pretend bag also", "only this"). Nothing of either is in the site: a first draft of the bag (its database, rules and page) was deleted before it reached the owner's folder |
+| 2026-10-01 | AGI-1 in 2D is the Live2D model of the owner's VTuber project (the owner's request), drawn by the stage's own three.js renderer from Live2D's runtime (Cubism Core, as it is) with her physics written for the site (checked against Live2D's runtime): one canvas, the CSP unchanged. Not picked: the project's own web widget (PixiJS needs `'unsafe-eval'` in the CSP and would be a second canvas). Her chest physics scaled down to the site's PG-13 level (about 0.4% of her height at most; the model was tuned "really bouncy" for another use). The old 2D rig, its pictures and its art tools were removed |
+| 2026-10-01 | 2D first (the owner: "i want the 2d model to be shown first instead of 3d"): `agi1_style` is 2D unless "3d"; the page's markup says 2D before the stage arrives; a visitor who picked 3D keeps 3D. Most first visits now download about 770 KB for her instead of the 3D model's 1.7–2.2 MB |
 
 ## Open questions
 
@@ -3152,6 +3171,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   rules): worth checking before promoting burns widely. Not legal advice.
 - The price is in $AGI (`BURN_PER_MESSAGE`), so it moves with $AGI's price: about $0.015 a message on 2026-09-30. Change it if
   the price moves a lot.
+- AGI-1's Live2D model was made and exported in Cubism Editor's free 42-day PRO trial; Live2D's terms say trial output is for
+  demonstration, evaluation and training, not commercial use. Before relying on it on a commercial site: buy Cubism PRO and
+  export the model again from the paid editor (Claude told the owner, 2026-10-01; not legal advice). Live2D's runtime itself
+  is free to publish for individuals and small businesses under ¥10 million in yearly sales.
 
 ## Working in this repo
 

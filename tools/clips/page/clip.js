@@ -1,14 +1,14 @@
 // AGI-1's daily clips (2026-09-29, the owner's idea "video"): draws one clip, frame by frame, the same way every time.
 // tools/clips/make.mjs opens this page in a browser, calls clip.load(), clip.start(spec), then clip.frame(0), clip.frame(1)…
-// and turns the pictures into a video with her voice (ffmpeg). She's AGI-1 in 2D (src/stage/agi1-2d.js, the rig the site
-// uses: her face, her hair, her mouth following her voice, her reactions), on a Pop mode background (the site's colors),
+// and turns the pictures into a video with her voice (ffmpeg). She's AGI-1 in 2D (src/stage/agi1-2d.js, her Live2D model,
+// as on the site since 2026-10-01: her face, her hair, her mouth following her voice, her reactions), on a Pop mode
+// background (the site's colors),
 // with a title, her captions, and "AI-generated · not financial advice" on every frame.
 // Nothing here is random: the rig's little random moves (blinks, glances) come from a fixed seed, and time moves exactly
 // 1/30 s a frame, however long a frame takes to draw.
 import * as THREE from 'three';
-import { loadAgi1_2D, createAgi1_2D, HEIGHT } from '../../../src/stage/agi1-2d.js';
+import { loadAgi1_2D, createAgi1_2D } from '../../../src/stage/agi1-2d.js';
 import { createEffects } from '../../../src/stage/effects.js';
-import { RIG } from '../../../src/stage/agi1-2d-rig.js';
 
 export const W = 1080, H = 1920, FPS = 30;
 const INK = '#170a36', VIOLET = '#6b3bff', PAPER = '#ffffff';
@@ -17,12 +17,14 @@ const THEMES = {
   diary: { bg: '#ffc933', glow: '#ffe28a', dot: 'rgba(23,10,54,0.09)', ray: 'rgba(255,255,255,0.2)', title: INK, stroke: PAPER, echo: '#ff4da6', pill: PAPER, meta: INK, hearts: [0xff4da6, 0x6b3bff, 0xffffff] },
 };
 // where she is in the picture: her eyes and her waist (pixels of the frame)
-const FRAME = { eyes: 850, waist: 1770, eyesArt: 153, waistArt: 620 };
+const FRAME = { eyes: 850, waist: 1770 };
 // what TikTok, Reels and Shorts cover with their own buttons and text: the top ~180 px (their tabs) and the bottom
 // ~380 px (the account name, the post's text), and a column on the right. The label, the title and the captions stay
 // clear of them.
 const LABEL_Y = 205, KICKER_Y = 292, TITLE_TOP = 350;
-const CARD = { top: 1235, width: 860 };        // (its top covers her shirt's print: never half of it)
+// her captions' card: its top above her shirt's print, and always tall enough to cover all of it (never half of it):
+// `cover` is set from her model when it loads
+const CARD = { top: 1235, width: 860, cover: 0 };
 const FADE = [1500, 1690];                   // where she fades out (pixels of the frame)
 
 // a seeded random number maker (mulberry32): the same seed, the same clip
@@ -148,7 +150,8 @@ function captionCard(g, text, age, { end = false } = {}) {
     if (lines.length <= (size > 56 ? 2 : 3) || size <= 44) break;
     size -= 4;
   }
-  const lh = Math.round(size * 1.22), h = lines.length * lh + 70;
+  const lh = Math.round(size * 1.22), h = Math.max(lines.length * lh + 70, CARD.cover - CARD.top);
+  const pad = (h - lines.length * lh) / 2;            // (35 px above and below, more when it's taller for her print)
   const s = 0.94 + 0.06 * easeOutBack(age / 0.16);
   const cx = W / 2, top = CARD.top;
   g.save();
@@ -170,7 +173,7 @@ function captionCard(g, text, age, { end = false } = {}) {
   lines.forEach((line, i) => {
     const lw = line.reduce((s2, p) => s2 + p.pw, 0) + space * (line.length - 1);
     let x = cx - lw / 2;
-    const y = top + 35 + lh * i + size * 0.98;
+    const y = top + pad + lh * i + size * 0.98;
     for (const p of line) {
       g.fillStyle = p.color;
       g.fillText(p.w, x, y);
@@ -206,24 +209,24 @@ async function loadFonts() {
 
 async function load() {
   await loadFonts();
-  renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, stencil: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(1);
   renderer.setSize(GL_W, GL_H, false);
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   scene = new THREE.Scene();
-  // framed like a VTuber: her eyes and her waist where FRAME says, a long lens (little perspective)
-  const K = HEIGHT / (RIG.feet - RIG.top);
-  const worldY = (artY) => (RIG.feet - artY) * K;
-  const perMetre = (FRAME.waist - FRAME.eyes) / (worldY(FRAME.eyesArt) - worldY(FRAME.waistArt));
+  model = await loadAgi1_2D({ renderer });
+  scene.add(model.holder);
+  // framed like a VTuber: her eyes and her waist where FRAME says (her model's own heights), a long lens (little perspective)
+  const { eyes, waist } = model.landmarks;
+  const perMetre = (FRAME.waist - FRAME.eyes) / (eyes - waist);
   const tall = H / perMetre;
-  const centre = worldY(FRAME.eyesArt) - (H / 2 - FRAME.eyes) / perMetre;
+  const centre = eyes - (H / 2 - FRAME.eyes) / perMetre;
   camera = new THREE.PerspectiveCamera(18, W / H, 0.05, 60);
   const dist = tall / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
   camera.position.set(0, centre, dist);
   camera.lookAt(0, centre, 0);
-  model = await loadAgi1_2D({ renderer, base: '/models/agi1-2d/' });
-  scene.add(model.holder);
+  CARD.cover = Math.round(FRAME.eyes + (eyes - model.landmarks.print.bottom) * perMetre) + 14;
   raw = new Uint8Array(GL_W * GL_H * 4);
   return { width: W, height: H, fps: FPS };
 }

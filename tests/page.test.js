@@ -133,12 +133,13 @@ test('the owner\'s wording (2026-09-24): the AI provider isn\'t named, and there
 test('her live view in the chat (2026-09-25): a slot for the 3D stage, with a still picture until she arrives', () => {
   const pg = part('<section class="section" id="playground"', '<section class="section" id="checker"');
   assert.match(pg, /<div class="pg-cam" data-cam hidden>/, 'hidden until the 18+ check is done (src/chat/chat.js)');
-  assert.match(pg, /<img class="pg-cam-still" src="\/images\/agi1-live\.webp" alt="" width="280" height="412" loading="lazy"/);
+  // (her 2D picture: she's 2D first since 2026-10-01; src/main.js shows the 3D one to visitors who picked 3D)
+  assert.match(pg, /<img class="pg-cam-still" src="\/images\/agi1-live-2d\.webp" alt="" width="280" height="412" loading="lazy"/);
   assert.match(pg, /<div class="pg-cam-view" data-cam-view><\/div>/, 'src/stage/stage.js moves the canvas in here');
   assert.match(pg, /<span class="pg-cam-tag mono" aria-hidden="true"><i class="dot"><\/i><span data-cam-state>live<\/span><\/span>/);
   assert.ok(pg.indexOf('data-cam ') < pg.indexOf('data-log'), 'the live view comes first (on phones it sits above the conversation)');
-  assert.ok(existsSync(new URL('../public/images/agi1-live.webp', import.meta.url)), 'the still picture exists');
-  assert.match(html, /<canvas id="stage" aria-label="AGI-1, in 3D\. Drag to rotate, tap to say hi\."><\/canvas>/, 'one canvas, on the stage');
+  for (const f of ['agi1-live-2d.webp', 'agi1-live.webp']) assert.ok(existsSync(new URL(`../public/images/${f}`, import.meta.url)), `${f}: the still pictures exist`);
+  assert.match(html, /<canvas id="stage" aria-label="AGI-1, in 2D\. Tap to say hi\."><\/canvas>/, 'one canvas, on the stage');
   assert.equal(html.match(/<canvas/g).length, 1, 'no second 3D view (the one canvas moves)');
 });
 
@@ -184,7 +185,7 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   assert.match(chk, /<a class="chip-btn" data-chk-clank href="https:\/\/clank\.trade\/" target="_blank" rel="noopener noreferrer">View on clank\.trade/);
   // her live view: the same one canvas moves in (src/stage/stage.js), a still picture until then, after the 18+ check
   assert.match(chk, /<div class="chk-cam" data-live-cam="checker" data-cam-quiet data-cam-label="[^"]+" hidden>/);
-  assert.match(chk, /<img class="chk-cam-still" src="\/images\/agi1-live\.webp" alt="" width="280" height="412" loading="lazy"/);
+  assert.match(chk, /<img class="chk-cam-still" src="\/images\/agi1-live-2d\.webp" alt="" width="280" height="412" loading="lazy"/, 'her 2D picture first (2026-10-01)');
   assert.match(chk, /<div class="chk-cam-view" data-cam-view><\/div>/);
   assert.match(chk, /confirm you're <b>18 or older<\/b>/, 'her answer after the 18+ check');
   // round 2 (the owner, 2026-09-26): live, pictures (big in a native dialog), every coin

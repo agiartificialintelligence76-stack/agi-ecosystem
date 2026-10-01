@@ -1,0 +1,8 @@
+AGI-1 in 2D: her Live2D model (agi1.app)
+
+live2dcubismcore.min.js
+  Live2D Cubism Core (c) Live2D Inc., redistributed as is under the Live2D Proprietary Software License Agreement:
+  https://www.live2d.com/eula/live2d-proprietary-software-license-agreement_en.html
+
+AGI-1.moc3, AGI-1.physics3.json, AGI-1.2048.webp, AGI-1.4096.webp
+  The AGI-1 Live2D model (made with Live2D Cubism Editor) for the $AGI project.

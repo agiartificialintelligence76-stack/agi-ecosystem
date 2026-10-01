@@ -36,13 +36,13 @@ try { startLanding(); } catch (err) {
   document.documentElement.classList.remove('lp-loading');
   document.documentElement.classList.add('lp-go');
 }
-// AGI-1 in 2D (2026-09-27): her live views' still pictures (shown until she's there) match the AGI-1 this visitor picked,
-// before they download (the stage switches them afterwards; src/stage/stage.js)
+// AGI-1 in 3D or 2D (2026-09-27; 2D first since 2026-10-01): her live views' still pictures (shown until she's there)
+// match the AGI-1 this visitor picked, before they download (the stage switches them afterwards; src/stage/stage.js)
 try {
-  if (readStyle(localStorage.getItem(STYLE_KEY)) === '2d') {
-    for (const img of document.querySelectorAll('.pg-cam-still, .chk-cam-still')) img.setAttribute('src', '/images/agi1-live-2d.webp');
+  if (readStyle(localStorage.getItem(STYLE_KEY)) === '3d') {
+    for (const img of document.querySelectorAll('.pg-cam-still, .chk-cam-still')) img.setAttribute('src', '/images/agi1-live.webp');
   }
-} catch { /* private mode: the 3D picture */ }
+} catch { /* private mode: the 2D picture */ }
 startMenu();                      // the phone menu
 startTicker(document.getElementById('ticker'));
 startEvals(document.getElementById('evals'));

@@ -9,7 +9,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createEffects, POP_HEART_COLORS } from './effects.js';
 import { createAgi1, buildIdleClip, addFace } from './agi1.js';
 import { talkLevel, pretendTalk } from '../lib/talk.js';
-import { STYLE_KEY, readStyle } from './agi1-2d-motion.js';   // (AGI-1 in 2D itself, src/stage/agi1-2d.js, loads only when picked)
+import { STYLE_KEY, DEFAULT_STYLE, readStyle } from './agi1-2d-motion.js';   // (AGI-1 in 2D itself, src/stage/agi1-2d.js, loads only when needed)
 
 // Phones get a lighter copy of AGI-1 (1024 px textures instead of 2048: 1.7 MB instead of 2.2 MB, and about a
 // quarter of the graphics memory). It looks the same at phone size (checked side by side, 2026-09-24).
@@ -169,7 +169,8 @@ export function startStage(wrap) {
 
   let renderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: Q.antialias, alpha: true, powerPreference: 'high-performance' });
+    // (stencil: AGI-1 in 2D clips her irises to her eye whites with it, as her Live2D model asks: src/stage/live2d.js)
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: Q.antialias, alpha: true, stencil: true, powerPreference: 'high-performance' });
   } catch (err) {
     console.warn('[stage] WebGL is not available', err);
     setStatus('The 3D view needs WebGL. Try another browser.', false);
@@ -282,11 +283,12 @@ export function startStage(wrap) {
   let switching = false;
   let agi1 = null;                                        // the AGI-1 on stage now, 3D or 2D (they take the same commands)
   // AGI-1 in 2D (2026-09-27, the owner's idea): visitors pick which AGI-1 they see, with the "3D · 2D" buttons on the
-  // stage and in her live views. Remembered in the browser; 3D by default. Each is downloaded only when it's picked.
+  // stage and in her live views. Remembered in the browser; 2D by default since 2026-10-01 (the owner: "i want the 2d
+  // model to be shown first instead of 3d"; 3D before). Each is downloaded only when it's needed.
   const agi1s = { agi1: null, agi1_2d: null };           // both controllers, once loaded
   const partsOf = { agi1: null, agi1_2d: null };          // what the live views frame her by, for each
-  let style = '3d';
-  try { style = readStyle(localStorage.getItem(STYLE_KEY)); } catch { /* private mode: 3D */ }
+  let style = DEFAULT_STYLE;
+  try { style = readStyle(localStorage.getItem(STYLE_KEY)); } catch { /* private mode: the default */ }
   const slot = (kind) => (kind === 'agi1' && style === '2d' ? 'agi1_2d' : kind);   // which model "AGI-1" should be
   let agi1Slot = null;                                    // which AGI-1 is on stage now ('agi1' or 'agi1_2d')
   const onStageKey = () => (current === 'agi1' ? agi1Slot || slot('agi1') : current);
@@ -590,6 +592,8 @@ export function startStage(wrap) {
     controls.target.copy(view.focus);
     camera.position.copy(view.focus).add(vOffset);
     if (current === 'agi1' && agi1Slot === 'agi1' && view.zoom > 3) sharpenAgi1();
+    // AGI-1 in 2D: her 4096 px texture for close-ups, on computers only (phones' graphics memory is kept for the page)
+    if (current === 'agi1' && agi1Slot === 'agi1_2d' && view.zoom > 1.9 && !mobile) models.agi1_2d?.sharpen?.();
   }
 
   // Phones start with the lighter copy of AGI-1 (1024 px textures): sharp enough at normal size, soft up close. The first
@@ -636,7 +640,7 @@ export function startStage(wrap) {
   // and, since 2026-09-26, ClankChecker's ([data-live-cam], under the coin you asked her about). In there she's framed like
   // a video call: head and shoulders, widening when she waves (her hops and spins show as movement, the camera doesn't follow
   // those), with her mouth moving as she talks, and her eyes on the box while you type (or on the scan while she reads it).
-  const DOCK_LABEL = 'AGI-1, live in 3D. She reacts to the chat.';
+  const DOCK_LABEL = 'AGI-1, live in 2D. She reacts to the chat.';
   const cams = [...document.querySelectorAll('[data-cam], [data-live-cam]')]
     .map((box) => ({
       box, view: box.querySelector('[data-cam-view]'), label: box.dataset.camLabel || DOCK_LABEL,
@@ -807,13 +811,17 @@ export function startStage(wrap) {
   const styleButtons = [...document.querySelectorAll('[data-dim]')];
   const styleBox = wrap.querySelector('[data-dim-box]');
   const hintEl = wrap.querySelector('.stage-hint');
-  const HINT = hintEl?.textContent || '';
+  const HINT = { '2d': 'tap to say hi', '3d': 'drag to rotate · tap to say hi' };
   const stills = [...document.querySelectorAll('.pg-cam-still, .chk-cam-still')];
   const STILL = { '3d': '/images/agi1-live.webp', '2d': '/images/agi1-live-2d.webp' };
-  // her labels say which one she is ("AGI-1, in 2D. Tap to say hi.": a flat picture doesn't turn)
+  // her labels say which one she is ("AGI-1, in 2D. Tap to say hi.": a flat picture doesn't turn; "AGI-1, in 3D. Drag to
+  // rotate, tap to say hi."). Before she's on stage, the one she's going to be.
   function styled(text) {
-    if (!flatOnStage()) return text;
-    return String(text).replace(/in 3D/g, 'in 2D').replace(/\s*Drag to rotate,\s*tap/i, ' Tap');
+    const s = String(text);
+    if (current === 'agi1' && agi1Slot ? flatOnStage() : slot('agi1') === 'agi1_2d') {
+      return s.replace(/in 3D/g, 'in 2D').replace(/\s*Drag to rotate,\s*tap/i, ' Tap');
+    }
+    return s.replace(/in 2D/g, 'in 3D').replace(/(in 3D\.)\s*Tap/i, '$1 Drag to rotate, tap');
   }
   function applyStyle() {
     for (const b of styleButtons) {
@@ -824,7 +832,7 @@ export function startStage(wrap) {
     if (styleBox) styleBox.hidden = !(revealed && current === 'agi1');
     const flat = flatOnStage();
     controls.enableRotate = !flat;                        // a flat picture doesn't turn: no dragging her around
-    if (hintEl) hintEl.textContent = flat ? 'tap to say hi' : HINT;
+    if (hintEl) hintEl.textContent = flat || (!current && style === '2d') ? HINT['2d'] : HINT['3d'];
     canvas.setAttribute('aria-label', styled(dock.on ? dock.cam.label : HERO_LABEL));
     for (const img of stills) {
       const src = STILL[style];
@@ -1008,6 +1016,6 @@ export function startStage(wrap) {
     };
   }
 
-  setStatus('Loading weights…');
+  setStatus(slot('agi1') === 'agi1_2d' ? 'Loading 2D…' : 'Loading weights…');
   show('agi1');
 }

@@ -206,7 +206,7 @@
 
           <figure class="figure">
             <div class="stage" id="stageWrap">
-              <canvas id="stage" aria-label="AGI-1, in 3D. Drag to rotate, tap to say hi."></canvas>
+              <canvas id="stage" aria-label="AGI-1, in 2D. Tap to say hi."></canvas>
               <div class="stage-status busy" data-stage-status role="status">Loading weights…</div>
               <div class="seg" role="group" aria-label="Model">
                 <button class="seg-btn is-on" type="button" data-model="agi1" aria-pressed="true">AGI-1<span>Girlfriend</span></button>
@@ -219,9 +219,9 @@
                 </div>
                 <button class="zoom-level mono" type="button" data-zoom="reset" hidden><span data-zoom-value>1.0×</span> <span class="zoom-level-word">reset</span></button>
               </div>
-              <!-- AGI-1 in 3D or 2D (2026-09-27, src/stage/stage.js): the visitor's pick, remembered in the browser. Shown while she's on stage -->
-              <div class="dstyle dstyle-stage" role="group" aria-label="AGI-1's style" data-dim-box hidden><button class="dstyle-btn is-on" type="button" data-dim="3d" aria-pressed="true" title="AGI-1 in 3D">3D</button><button class="dstyle-btn" type="button" data-dim="2d" aria-pressed="false" title="AGI-1 in 2D, anime style">2D</button></div>
-              <span class="stage-hint">drag to rotate · tap to say hi</span>
+              <!-- AGI-1 in 3D or 2D (2026-09-27, src/stage/stage.js): the visitor's pick, remembered in the browser; 2D first since 2026-10-01. Shown while she's on stage -->
+              <div class="dstyle dstyle-stage" role="group" aria-label="AGI-1's style" data-dim-box hidden><button class="dstyle-btn" type="button" data-dim="3d" aria-pressed="false" title="AGI-1 in 3D">3D</button><button class="dstyle-btn is-on" type="button" data-dim="2d" aria-pressed="true" title="AGI-1 in 2D, anime style">2D</button></div>
+              <span class="stage-hint">tap to say hi</span>
             </div>
             <figcaption><b>Figure 1.</b> <span id="modelName">AGI-1</span><span id="modelNote">, running live in your browser. Not pre-rendered. Not a real girlfriend. Close enough.</span></figcaption>
           </figure>
@@ -488,10 +488,10 @@
                    see her react, talk and think. Until it arrives (or without WebGL) a still picture of her shows. -->
               <div class="pg-body">
                 <div class="pg-cam" data-cam hidden>
-                  <img class="pg-cam-still" src="/images/agi1-live.webp" alt="" width="280" height="412" loading="lazy" decoding="async" />
+                  <img class="pg-cam-still" src="/images/agi1-live-2d.webp" alt="" width="280" height="412" loading="lazy" decoding="async" />
                   <div class="pg-cam-view" data-cam-view></div>
                   <span class="pg-cam-tag mono" aria-hidden="true"><i class="dot"></i><span data-cam-state>live</span></span>
-                  <div class="dstyle dstyle-cam" role="group" aria-label="AGI-1's style"><button class="dstyle-btn is-on" type="button" data-dim="3d" aria-pressed="true" title="AGI-1 in 3D">3D</button><button class="dstyle-btn" type="button" data-dim="2d" aria-pressed="false" title="AGI-1 in 2D, anime style">2D</button></div>
+                  <div class="dstyle dstyle-cam" role="group" aria-label="AGI-1's style"><button class="dstyle-btn" type="button" data-dim="3d" aria-pressed="false" title="AGI-1 in 3D">3D</button><button class="dstyle-btn is-on" type="button" data-dim="2d" aria-pressed="true" title="AGI-1 in 2D, anime style">2D</button></div>
                   <!-- Voice chat (2026-09-25, src/chat/chat.js): a hands-free call. Shown only where the browser can listen -->
                   <button class="pg-call" type="button" data-call aria-pressed="false" aria-label="Call her: talk out loud, hands-free" hidden>
                     <svg class="i-call" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.6 3.5h2.6l1.5 4-1.9 1.3a11 11 0 0 0 6.4 6.4l1.3-1.9 4 1.5v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
@@ -584,11 +584,11 @@
                  moves the 3D canvas in here, like the chat's; a still picture until she arrives. After the 18+ check, like her chat. -->
             <div class="chk-parking" hidden>
               <div class="chk-answer" data-chk-answer>
-                <div class="chk-cam" data-live-cam="checker" data-cam-quiet data-cam-label="AGI-1, live in 3D, reading the scan with you." hidden>
-                  <img class="chk-cam-still" src="/images/agi1-live.webp" alt="" width="280" height="412" loading="lazy" decoding="async" />
+                <div class="chk-cam" data-live-cam="checker" data-cam-quiet data-cam-label="AGI-1, live in 2D, reading the scan with you." hidden>
+                  <img class="chk-cam-still" src="/images/agi1-live-2d.webp" alt="" width="280" height="412" loading="lazy" decoding="async" />
                   <div class="chk-cam-view" data-cam-view></div>
                   <span class="chk-cam-tag mono" aria-hidden="true"><i class="dot"></i><span data-cam-state>live</span></span>
-                  <div class="dstyle dstyle-cam" role="group" aria-label="AGI-1's style"><button class="dstyle-btn is-on" type="button" data-dim="3d" aria-pressed="true" title="AGI-1 in 3D">3D</button><button class="dstyle-btn" type="button" data-dim="2d" aria-pressed="false" title="AGI-1 in 2D, anime style">2D</button></div>
+                  <div class="dstyle dstyle-cam" role="group" aria-label="AGI-1's style"><button class="dstyle-btn" type="button" data-dim="3d" aria-pressed="false" title="AGI-1 in 3D">3D</button><button class="dstyle-btn is-on" type="button" data-dim="2d" aria-pressed="true" title="AGI-1 in 2D, anime style">2D</button></div>
                 </div>
                 <div class="chk-gate" data-chk-gate hidden>
                   <p class="chk-gate-title">AGI-1 reads it with you</p>
