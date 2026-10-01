@@ -13,6 +13,36 @@ function voiceModels(env) {
   return models.length ? models : ['gemini-3.8-flash-lite-tts', BACKUP_VOICE_MODEL];
 }
 
+// "0.001" (ETH) → wei, as a BigInt; anything else (empty, negative, more than 18 decimals) → the fallback
+export function ethToWei(text, fallback) {
+  const m = /^(\d{1,6})(?:\.(\d{1,18}))?$/.exec(String(text ?? '').trim());
+  if (!m) return fallback;
+  const wei = BigInt(m[1]) * 10n ** 18n + BigInt((m[2] || '').padEnd(18, '0'));
+  return wei > 0n ? wei : fallback;
+}
+
+// "Launch with AGI-1" in private (2026-10-01, the owner: "id like to be my first launch to be private"): LAUNCH_ONLY_FOR,
+// Telegram usernames (with or without @) or numeric Telegram ids, separated by commas. → null (not set: launching is for
+// everyone once it's set up) · { ids, names } (set: only they may launch; a setting with nothing usable in it lets nobody in,
+// so a typo never opens it to everyone)
+export function launchTesters(text) {
+  const raw = String(text ?? '').trim();
+  if (!raw) return null;
+  const ids = new Set(), names = new Set();
+  for (const part of raw.split(/[\s,]+/)) {
+    const p = part.replace(/^@/, '');
+    if (/^\d{1,20}$/.test(p)) ids.add(p);
+    else if (/^[A-Za-z0-9_]{3,32}$/.test(p)) names.add(p.toLowerCase());
+  }
+  return { ids, names };
+}
+
+// A wallet's private key, as a setting: 64 hex characters, with or without "0x" → "0x…" (lowercase), or '' (not one)
+export function gasKey(text) {
+  const m = /^(?:0x)?([0-9a-fA-F]{64})$/.exec(String(text ?? '').trim());
+  return m ? `0x${m[1].toLowerCase()}` : '';
+}
+
 export function getConfig(env = process.env) {
   const number = (name, fallback) => {
     const n = Number(env[name]);
@@ -47,6 +77,19 @@ export function getConfig(env = process.env) {
     // AI replies at most)
     burnPrice: Math.min(1e9, Math.floor(number('BURN_PER_MESSAGE', 10)) || 10),
     burnDailyCap: Math.floor(number('BURN_DAILY_CAP', 1000)) || 1000,
+    // "Launch with AGI-1" (2026-10-01, server/launch.js): the owner's Pinata key (a JWT, secret: it puts each coin's
+    // picture on IPFS), and the pictures the whole site may upload a day (Pinata's free plan holds 500 files)
+    pinataJwt: String(env.PINATA_JWT || '').trim(),
+    launchDailyCap: Math.floor(number('LAUNCH_DAILY_CAP', 30)) || 30,
+    // while it's set, only these Telegram accounts may launch (the owner's private first launch): launchTesters() above
+    launchTesters: launchTesters(env.LAUNCH_ONLY_FOR),
+    // …and paying each launch's network fee back (the owner's choice): the private key of the owner's small gas wallet on
+    // Robinhood Chain (secret; a wallet made only for this, holding a little ETH), the most paid back for one launch and
+    // in a day for the whole site, in ETH. Without the key, no fee is paid back. (With or without its "0x": MetaMask's "Show
+    // private key" leaves it out.)
+    launchGasKey: gasKey(env.LAUNCH_GAS_KEY),
+    launchGasMaxWei: ethToWei(env.LAUNCH_GAS_MAX, 10n ** 15n),          // 0.001 ETH
+    launchGasDailyWei: ethToWei(env.LAUNCH_GAS_DAILY, 10n ** 16n),      // 0.01 ETH
     // ClankChecker (2026-09-26): coins whose picture the owner doesn't want on the site (contract addresses, separated by
     // commas); their letter shows instead. Optional
     checkerHidePictures: new Set(String(env.CHECKER_HIDE_PICTURES || '').toLowerCase().split(/[\s,]+/).filter((a) => /^0x[0-9a-f]{40}$/.test(a))),

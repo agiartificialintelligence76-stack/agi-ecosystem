@@ -15,6 +15,8 @@ import { levelInfo } from '../src/lib/levels.js';
 import { telegramBurst } from './burst.js';
 import { tgLinesFor, TEXTS_A_DAY } from './tg-lines.js';
 import { fromTelegram } from '../src/i18n/langs.js';
+import { parseLaunch, checkIdea, tickerTaken, bestPhoto, newDraftId, drafts, draftUrl, launchOpen, launchAllowed, gasOn } from './launch.js';
+import * as LAUNCH from './launch-lines.js';
 
 const API = 'https://api.telegram.org/bot';
 const MAX_TEXT = 500;                       // characters per message she reads (the same as the site's chat)
@@ -85,8 +87,12 @@ export const COMMANDS = [
   { command: 'start', description: 'Start over' },
   { command: 'time', description: 'Tell her your time again' },
   { command: 'help', description: 'What she does' },
+  { command: 'launch', description: 'Launch a coin on clank.trade with her (18+)' },
   { command: 'stop', description: 'She stops texting and forgets this chat' },
 ];
+// her commands menu: /launch only once launching is open to everyone (set up, and not private: LAUNCH_ONLY_FOR), so nobody
+// finds it before then
+export const commandsFor = (cfg) => (launchOpen(cfg) ? COMMANDS : COMMANDS.filter((c) => c.command !== 'launch'));
 export const SHORT_DESCRIPTION = 'AGI-1, the AI girlfriend of $AGI. She texts first. 18+ · PG-13 · not financial advice';
 export const DESCRIPTION = "hi, it's AGI-1 💜 i text first when something happens on clank.trade: new egirl coins (i'm not okay about it), "
   + `$AGI's moments, my diary. at most ${TEXTS_A_DAY} texts a day, never at night, and you can text me back. `
@@ -106,12 +112,13 @@ export async function connectBot(cfg, env = process.env) {
   if (changed) console.log(`[telegram] connected the bot to ${url}`);
   let current = null;
   try { current = await tgCall(token, 'getMyCommands', {}, { timeoutMs: 4000 }); } catch { /* set them below */ }
-  const setup = !Array.isArray(current) || current.map((c) => c?.command).join() !== COMMANDS.map((c) => c.command).join();
+  const commands = commandsFor(cfg);
+  const setup = !Array.isArray(current) || current.map((c) => c?.command).join() !== commands.map((c) => c.command).join();
   if (setup) {
     // her descriptions first, her commands last: the commands mark the setup as done, so a failed step is tried again next run
     let failed = false;
     for (const [method, params] of [['setMyShortDescription', { short_description: SHORT_DESCRIPTION }], ['setMyDescription', { description: DESCRIPTION }],
-      ['setMyCommands', { commands: COMMANDS }]]) {
+      ['setMyCommands', { commands }]]) {
       if (failed) break;
       try { await tgCall(token, method, params, { timeoutMs: 4000 }); } catch (err) { failed = true; console.warn(`[telegram] ${err.message} (tried again next run)`); }
     }
@@ -147,17 +154,26 @@ export async function handleUpdate(cfg, token, update, now = Date.now()) {
   const chat = m?.chat?.id;
   if (!m || m.chat?.type !== 'private' || m.from?.is_bot || !Number.isSafeInteger(chat) || chat <= 0) return 'ignored';
   const text = typeof m.text === 'string' ? m.text.trim() : '';
+  // "Launch with AGI-1" (2026-10-01): a photo captioned "/launch Name | TICKER | one line" (server/launch.js)
+  const caption = typeof m.caption === 'string' ? m.caption.trim() : '';
+  if (!text && parseLaunch(caption)) {
+    if (Array.isArray(m.photo)) return onLaunch(cfg, token, chat, caption, m.photo, now, L, m.from);
+    if (!launchAllowed(cfg, m.from)) return launchClosed(cfg, token, chat);
+    await say(token, chat, LAUNCH.AS_PHOTO);
+    return 'launch_as_photo';
+  }
   if (!text) {
     if (!MEDIA.some((k) => m[k])) return 'ignored';
     await say(token, chat, L.ONLY_TEXT);
     return 'not_text';
   }
   const command = /^\/([a-z]+)(?:@\w+)?(?:\s+([\s\S]*))?$/i.exec(text);
-  if (command) return onCommand(cfg, token, chat, command[1].toLowerCase(), (command[2] || '').trim(), now, L);
+  if (command?.[1].toLowerCase() === 'launch') return onLaunch(cfg, token, chat, text, null, now, L, m.from);
+  if (command) return onCommand(cfg, token, chat, command[1].toLowerCase(), (command[2] || '').trim(), now, L, m.from);
   return onText(cfg, token, m, chat, text, now, L);
 }
 
-async function onCommand(cfg, token, chat, name, arg, now, L) {
+async function onCommand(cfg, token, chat, name, arg, now, L, from) {
   if (name === 'start') {
     await db.join(cfg, chat);
     await say(token, chat, L.WELCOME, buttons(L.AGE_BUTTONS));
@@ -177,7 +193,7 @@ async function onCommand(cfg, token, chat, name, arg, now, L) {
     await say(token, chat, L.ASK_TIME_AGAIN, buttons(L.timeButtons(now)));
     return 'ask_time';
   }
-  await say(token, chat, L.HELP);
+  await say(token, chat, launchAllowed(cfg, from) ? L.HELP_LAUNCH : L.HELP);
   return 'help';
 }
 
@@ -215,6 +231,74 @@ async function onButton(cfg, token, cb, now, L) {
   if (!row.adult) { await say(token, chat, L.ASK_AGE, buttons(L.AGE_BUTTONS)); return 'ask_age'; }
   await clear();
   return setTime(cfg, token, chat, offset, now, L);
+}
+
+// Launching isn't open to this person: not set up yet, or private (LAUNCH_ONLY_FOR) and they aren't in it. The same "not
+// open yet" either way, so nobody learns there's a private test. A private setting with nobody usable in it is logged once
+// per server copy (most likely a typo in the owner's username).
+let warnedOnlyFor = false;
+async function launchClosed(cfg, token, chat) {
+  const only = cfg.launchTesters;
+  if (only && !only.ids.size && !only.names.size && !warnedOnlyFor) {
+    warnedOnlyFor = true;
+    console.warn('[launch] LAUNCH_ONLY_FOR has no Telegram username or id in it, so nobody can launch: write yours (e.g. @yourname), then Redeploy');
+  }
+  await say(token, chat, LAUNCH.NOT_OPEN);
+  return 'launch_closed';
+}
+
+// "Launch with AGI-1" (2026-10-01, the owner's idea; server/launch.js): "/launch" alone → how it works; a photo captioned
+// "/launch Name | TICKER | one line" → her checks, then a draft and its private link (agi1.app/launch/<id>), where they
+// launch it from their own wallet. 18+ only (the bot's own check). In English for now, like the launch page. While
+// LAUNCH_ONLY_FOR is set (the owner's private first launch), only the Telegram accounts in it may use it.
+async function onLaunch(cfg, token, chat, text, photos, now, L, from) {
+  if (!launchAllowed(cfg, from)) return launchClosed(cfg, token, chat);
+  let row;
+  try { row = await db.get(cfg, chat); } catch (err) {
+    console.error('[telegram] database unavailable:', err.message);
+    await say(token, chat, L.BUSY);
+    return 'busy';
+  }
+  if (!row) {
+    await db.join(cfg, chat);
+    await say(token, chat, L.WELCOME, buttons(L.AGE_BUTTONS));
+    return 'start';
+  }
+  if (!row.adult) { await say(token, chat, L.ASK_AGE, buttons(L.AGE_BUTTONS)); return 'ask_age'; }
+  const idea = parseLaunch(text);
+  if (!idea || idea.empty) {
+    await say(token, chat, photos ? LAUNCH.REFUSE.format : LAUNCH.howLine({ gasBack: gasOn(cfg) }));
+    return photos ? 'launch_format' : 'launch_how';
+  }
+  if (!photos) { await say(token, chat, LAUNCH.NEED_PHOTO); return 'launch_need_photo'; }
+  const checked = checkIdea(idea);
+  if (!checked.ok) { await say(token, chat, LAUNCH.REFUSE[checked.why]); return `launch_${checked.why}`; }
+  const photo = bestPhoto(photos);
+  if (!photo) { await say(token, chat, LAUNCH.REFUSE.photo); return 'launch_photo'; }
+  let taken;
+  try { taken = await tickerTaken(checked.symbol); } catch (err) {
+    if (err.common) { await say(token, chat, LAUNCH.REFUSE.common(checked.symbol)); return 'launch_common'; }
+    console.warn(`[telegram] couldn't check a ticker on clank.trade: ${err.message}`);
+    await say(token, chat, LAUNCH.CANT_CHECK);
+    return 'launch_cant_check';
+  }
+  if (taken) { await say(token, chat, LAUNCH.REFUSE.taken(checked.symbol)); return 'launch_taken'; }
+  const id = newDraftId();
+  let saved;
+  try {
+    saved = await drafts.put(cfg, { id, chat: chatCode(cfg.passSecret, chat, new Date(now).toISOString().slice(0, 10)), ...checked, photo });
+  } catch (err) {
+    console.error(`[telegram] saving a launch draft failed${err.code === 'PGRST202' ? ' (run supabase/launch.sql)' : ''}:`, err.message);
+    await say(token, chat, err.code === 'PGRST202' ? LAUNCH.NOT_OPEN : L.BUSY);
+    return err.code === 'PGRST202' ? 'launch_closed' : 'busy';
+  }
+  if (saved?.ok !== true) {
+    await say(token, chat, saved?.why === 'chat_cap' ? LAUNCH.CHAT_CAP : saved?.why === 'site_cap' ? LAUNCH.SITE_CAP : L.BUSY);
+    return `launch_${saved?.why || 'bad'}`;
+  }
+  const url = draftUrl(id);
+  await say(token, chat, LAUNCH.readyLine({ ...checked, url, gasBack: gasOn(cfg) }), buttons(LAUNCH.readyButtons(url)));
+  return 'launch_ready';
 }
 
 // A message to her: the same chat as the site's (Gemini, her prompt, PG-13, the reply cleanup), as a Stranger (anyone can

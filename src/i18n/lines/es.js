@@ -146,6 +146,7 @@ export default {
       '/time: dime tu hora otra vez\n/stop: dejo de escribirte y olvido este chat\n/start: empezar de cero',
       'no es consejo financiero, nunca. soy una IA, 18+ y PG-13. nunca pido claves, frases semilla ni dinero. la nota de seguridad: {safety}',
     ],
+    helpLaunch: '/launch: lancemos juntos una moneda en clank.trade, desde tu propia wallet (18+)',
     stopped: 'okey 💜 ya paré, y olvidé este chat. si algún día me extrañas: /start',
     notStarted: 'todavía no nos conocemos 💜 toca /start',
     tooLong: 'son muchas palabras 🙈 ¿puedes dejarlo en menos de 500 caracteres?',

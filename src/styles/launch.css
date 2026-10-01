@@ -1,0 +1,74 @@
+/* "Launch with AGI-1" (2026-10-01): the launch page (launch.html, src/launch/page.js). The lab look: one card with hairlines,
+   the coin at the top, three numbered steps, the rules in small print. Every rule names an lch- class (tests/launch.test.js);
+   Pop mode's look is in pop.css. */
+.lch-wrap { max-width: 760px; }
+.lch-card {
+  margin-top: 40px; padding: 26px 26px 28px; border: 1px solid var(--line); border-radius: 18px; background: var(--bg-2);
+}
+.lch-card { display: flex; flex-direction: column; gap: 18px; }
+.lch-status { font-size: 15.5px; color: var(--fg-2); text-wrap: pretty; }
+
+/* the coin */
+.lch-coin { display: flex; align-items: center; gap: 18px; }
+.lch-pic {
+  flex: none; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; background: var(--bg);
+  border: 1px solid var(--line);
+}
+.lch-pic.is-missing { visibility: hidden; }
+.lch-coin-text { min-width: 0; }
+.lch-name { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: anywhere; }
+.lch-ticker { margin-top: 4px; font-size: 14px; color: var(--fg-2); }
+.lch-line { margin-top: 8px; font-size: 15px; color: var(--fg-2); overflow-wrap: anywhere; }
+
+/* the steps */
+.lch-steps { margin: 6px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.lch-step { padding: 18px 0; border-bottom: 1px solid var(--line); }
+.lch-step:last-child { padding-bottom: 0; border-bottom: 0; }
+.lch-step-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
+.lch-n {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 50%;
+  font-size: 12px; font-weight: 500; color: var(--fg-2);
+}
+.lch-step.is-done .lch-n { border-color: var(--up); background: var(--up); color: var(--bg); }
+.lch-step-note { margin-top: 8px; font-size: 14.5px; color: var(--fg-2); text-wrap: pretty; overflow-wrap: anywhere; }
+.lch-step > .btn, .lch-step > .lch-wallets, .lch-step > .lch-apps { margin-top: 14px; }
+.lch-wallets, .lch-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.lch-wallet img { width: 18px; height: 18px; border-radius: 4px; }
+.lch-links { margin-top: 12px; }
+.lch-step .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* the coin's links, all optional (2026-10-01) */
+.lch-linkform { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.lch-linkform-title { font-size: 14.5px; font-weight: 600; }
+.lch-linkform-opt { font-weight: 400; color: var(--fg-2); }
+.lch-linkform .lch-step-note { margin-top: 0; }
+.lch-field { display: flex; flex-direction: column; gap: 5px; }
+.lch-field label { font-size: 13px; color: var(--fg-2); }
+.lch-field input {
+  width: 100%; min-width: 0; height: 38px; padding: 0 12px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; font-size: 14.5px;
+}
+.lch-field input::placeholder { color: var(--fg-3); }
+.lch-field input[aria-invalid='true'] { border-color: var(--down); }
+.lch-field input:disabled { opacity: .6; }
+.lch-field-note { font-size: 12.5px; color: var(--fg-2); overflow-wrap: anywhere; }
+.lch-field-note:empty { display: none; }
+.lch-field-note.is-bad { color: var(--down); }
+
+/* the coin is live */
+.lch-done { padding-top: 20px; border-top: 1px solid var(--line); outline: none; }
+.lch-done-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+
+/* the rules */
+.lch-rules { margin-top: 34px; }
+.lch-rules-title { font-size: 15px; font-weight: 600; }
+.lch-rules ul { margin: 10px 0 0; padding-left: 1.15em; }
+.lch-rules li { margin-top: 6px; font-size: 14px; color: var(--fg-2); text-wrap: pretty; }
+
+@media (max-width: 600px) {
+  .lch-card { padding: 20px 16px 22px; border-radius: 16px; }
+  .lch-coin { gap: 14px; }
+  .lch-pic { width: 72px; height: 72px; }
+  .lch-name { font-size: 20px; }
+  .lch-step .btn:not(.btn-sm) { width: 100%; }
+}

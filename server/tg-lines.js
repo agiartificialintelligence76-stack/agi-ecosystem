@@ -37,6 +37,8 @@ function build(code) {
     ASK_TIME_AGAIN: one('askTimeAgain'),
     timeSet: (clock) => paras('timeSet', { ...TIMES, clock }).join('\n\n'),
     HELP: paras('help').join('\n\n'),
+    // (2026-10-01) the same, with /launch among her commands: while launching coins with her is open (server/launch.js)
+    HELP_LAUNCH: paras('help').map((p, i) => (i === 1 ? `${p}\n${one('helpLaunch')}` : p)).join('\n\n'),
     STOPPED: one('stopped'),
     NOT_STARTED: one('notStarted'),
     TOO_LONG: one('tooLong'),

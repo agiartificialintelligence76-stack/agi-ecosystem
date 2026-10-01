@@ -146,6 +146,7 @@ export default {
       "/time: sabihin ulit ang oras mo\n/stop: titigil ako sa pag-text at kakalimutan ang chat na 'to\n/start: magsimula ulit",
       "hindi financial advice, kahit kailan. AI ako, 18+ at PG-13. hindi ako hihingi ng keys, seed phrases o pera. ang safety note: {safety}",
     ],
+    helpLaunch: '/launch: mag-launch tayo ng coin sa clank.trade, gamit ang sarili mong wallet (18+)',
     stopped: "okay 💜 tumigil na ako, at kinalimutan ko na ang chat na 'to. kung ma-miss mo ako: /start",
     notStarted: "hindi pa tayo magkakilala 💜 pindutin mo ang /start",
     tooLong: "ang daming words 🙈 pwede under 500 characters lang?",

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en" data-page="launch">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Launch with AGI-1 · AGI</title>
+    <meta name="description" content="Launch the coin AGI-1 checked for you on clank.trade, from your own wallet. 18+ · not financial advice." />
+    <!-- a private link from her Telegram bot: never in search results -->
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fafaf8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/theme.js?v=4"></script>
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="wordmark" href="/">AGI</a>
+        <!-- On phones this list becomes the drop-down menu (src/menu.js) -->
+        <nav class="nav" id="site-nav" aria-label="Sections">
+          <a href="/#evaluations">Evaluations</a>
+          <a href="/#model-card">Model card</a>
+          <a href="/#playground">Playground</a>
+          <a href="/#checker">Risk check your coins on clank</a>
+          <a href="/diary">Diary</a>
+          <a class="nav-phone" href="/#safety">Safety note</a>
+          <a class="nav-x" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
+          <button class="nav-pop" type="button" data-skin-toggle aria-pressed="true">Pop mode <span class="nav-pop-state mono" aria-hidden="true">On</span></button>
+        </nav>
+        <div class="topbar-actions">
+          <a class="icon-btn x-btn" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on X (@agi1dotapp)" title="@agi1dotapp on X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
+            <svg class="i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the bold AGI look">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <a class="btn btn-primary btn-sm" href="/#playground">Try AGI-1</a>
+          <button class="icon-btn menu-btn" type="button" data-menu aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+            <svg class="i-menu" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <svg class="i-close" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- "Launch with AGI-1" (2026-10-01, the owner's idea): a coin she checked in her Telegram bot (/launch), launched here
+           from the visitor's OWN wallet on clank.trade's own contracts. src/launch/page.js runs it; src/launch/send.js is
+           the only code on the site that asks a wallet for a transaction (this launch, nothing else: hard rule 9) -->
+      <section class="section lch" aria-labelledby="lch-title">
+        <div class="wrap lch-wrap">
+          <header class="section-head">
+            <p class="kicker">Launch with AGI-1</p>
+            <h1 class="h2" id="lch-title">Launch your coin on clank.trade</h1>
+            <p class="section-lede">From your own wallet, on clank.trade's own contracts. AGI-1 checked it with you; you're its creator, and she never holds your keys or your money.</p>
+          </header>
+
+          <div class="lch-card" data-lch>
+            <p class="lch-status" data-lch-status role="status" aria-live="polite">Opening your coin…</p>
+            <p class="lch-bot" data-lch-bot hidden><a class="btn btn-ghost btn-sm" data-lch-bot-link target="_blank" rel="noopener noreferrer">Open her Telegram bot ↗</a></p>
+
+            <div class="lch-coin" data-lch-coin hidden>
+              <img class="lch-pic" data-lch-pic alt="" width="88" height="88" decoding="async" />
+              <div class="lch-coin-text">
+                <p class="lch-name" data-lch-name></p>
+                <p class="lch-ticker mono" data-lch-ticker></p>
+                <p class="lch-line" data-lch-line></p>
+              </div>
+            </div>
+
+            <ol class="lch-steps" data-lch-steps hidden>
+              <li class="lch-step" data-lch-step="adult" hidden>
+                <p class="lch-step-title">18+ only</p>
+                <p class="lch-step-note">Launching a coin is for adults. A coin is public and permanent, and meme coins can lose all of their value.</p>
+                <button class="btn btn-primary btn-sm" type="button" data-lch-adult>I'm 18 or older</button>
+              </li>
+              <li class="lch-step" data-lch-step="wallet">
+                <p class="lch-step-title"><span class="lch-n mono" aria-hidden="true">1</span> Your wallet</p>
+                <p class="lch-step-note" data-lch-wallet-note aria-live="polite">It needs 10,000+ $AGI held, or burned for messages (the chat's Crush level). Nothing is spent. Connecting takes a free signature, not a transaction.</p>
+                <div class="lch-wallets" data-lch-wallets></div>
+                <div class="lch-apps" data-lch-apps hidden>
+                  <p class="lch-step-note">No wallet in this browser. Open this page in your wallet app:</p>
+                  <div class="lch-links">
+                    <a class="btn btn-ghost btn-sm" data-lch-app="metamask">Open in MetaMask ↗</a>
+                    <a class="btn btn-ghost btn-sm" data-lch-app="coinbase">Open in Coinbase Wallet ↗</a>
+                  </div>
+                  <p class="lch-step-note">Robinhood Wallet: open its Web3 tab and go to this page's address.</p>
+                </div>
+              </li>
+              <li class="lch-step" data-lch-step="chain">
+                <p class="lch-step-title"><span class="lch-n mono" aria-hidden="true">2</span> Robinhood Chain</p>
+                <p class="lch-step-note" data-lch-chain-note aria-live="polite">clank.trade's coins live on Robinhood Chain.</p>
+                <button class="btn btn-ghost btn-sm" type="button" data-lch-switch hidden>Switch to Robinhood Chain</button>
+              </li>
+              <li class="lch-step" data-lch-step="launch">
+                <p class="lch-step-title"><span class="lch-n mono" aria-hidden="true">3</span> Launch</p>
+                <p class="lch-step-note" data-lch-launch-note aria-live="polite">Your wallet shows clank.trade's launch for you to approve: no ETH sent, only a small network fee.</p>
+                <!-- the coin's links, all optional (2026-10-01): src/launch/links.js tidies and checks them, as our server does -->
+                <div class="lch-linkform" data-lch-linkform>
+                  <p class="lch-linkform-title">Links <span class="lch-linkform-opt">(optional)</span></p>
+                  <p class="lch-step-note">Your coin's X, Telegram and website, if you like. They're saved in its record for good, like its name; clank.trade shows X and the website on its page.</p>
+                  <div class="lch-field">
+                    <label for="lch-x">X</label>
+                    <input id="lch-x" data-lch-link="twitter" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="200" placeholder="@yourcoin or x.com/yourcoin" aria-describedby="lch-x-note" />
+                    <p class="lch-field-note" id="lch-x-note" data-lch-link-note="twitter" aria-live="polite"></p>
+                  </div>
+                  <div class="lch-field">
+                    <label for="lch-tg">Telegram</label>
+                    <input id="lch-tg" data-lch-link="telegram" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="200" placeholder="t.me/yourgroup" aria-describedby="lch-tg-note" />
+                    <p class="lch-field-note" id="lch-tg-note" data-lch-link-note="telegram" aria-live="polite"></p>
+                  </div>
+                  <div class="lch-field">
+                    <label for="lch-web">Website</label>
+                    <input id="lch-web" data-lch-link="website" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="200" placeholder="https://yourcoin.com" aria-describedby="lch-web-note" />
+                    <p class="lch-field-note" id="lch-web-note" data-lch-link-note="website" aria-live="polite"></p>
+                  </div>
+                </div>
+                <button class="btn btn-primary" type="button" data-lch-go disabled>Launch</button>
+              </li>
+            </ol>
+
+            <div class="lch-done" data-lch-done tabindex="-1" hidden>
+              <p class="lch-done-title" data-lch-done-title></p>
+              <p class="lch-step-note lch-gas" data-lch-gas aria-live="polite" hidden><span data-lch-gas-text></span> <a data-lch-gas-tx target="_blank" rel="noopener noreferrer" hidden>See it ↗</a></p>
+              <p class="lch-step-note">AGI-1 won't promote it: that part's up to you. A brand-new coin shows as High risk in her risk check for its first hour, which is normal. Not financial advice.</p>
+              <div class="lch-links">
+                <a class="btn btn-primary btn-sm" data-lch-clank target="_blank" rel="noopener noreferrer">View on clank.trade ↗</a>
+                <a class="btn btn-ghost btn-sm" data-lch-explorer target="_blank" rel="noopener noreferrer">Block explorer ↗</a>
+              </div>
+            </div>
+          </div>
+
+          <section class="lch-rules" aria-labelledby="lch-rules-title">
+            <h2 class="lch-rules-title" id="lch-rules-title">Before you launch</h2>
+            <ul>
+              <li>You launch it from your own wallet, on clank.trade's own contracts, and you're its creator. AGI-1 never holds keys or money and never launches anything for you.</li>
+              <li>Your wallet needs 10,000+ $AGI, held or burned for messages (the chat's Crush level). Nothing is spent.</li>
+              <li>Launching is free on clank.trade; your wallet pays a small network fee in ETH. clank.trade takes 1% of every trade on its curve, and creators earn nothing from trading fees.</li>
+              <li>A coin is public and permanent: it can't be deleted or renamed. Its picture goes on IPFS, public too.</li>
+          <li>Links (X, Telegram, website) are optional, and saved in your coin's record for good, like its name. We check how they're written, not what they lead to.</li>
+              <li>AGI-1 won't promote your coin. Meme coins can lose all of their value. Nothing here is financial advice. 18+ only.</li>
+              <li>The only transaction this page asks your wallet for is that launch (and switching to Robinhood Chain, if you press it). If your wallet shows you anything else here, like a token approval or sending tokens, reject it.</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap diary-foot">
+        <p><b>The only serious part of this page.</b> AGI-1 is a fictional character voiced by an AI language model; she can be wrong. $AGI is a meme token on Robinhood Chain, made for entertainment, and meme tokens can lose all of their value. Nothing here is financial advice or a promise of profit. Read the full <a href="/#safety">safety note</a>.</p>
+      </div>
+      <div class="foot-bar">
+        <div class="wrap foot-bar-in">
+          <p class="foot-brand">AGI</p>
+          <nav class="foot-nav" aria-label="Footer">
+            <a href="/#evaluations">Evaluations</a>
+            <a href="/#model-card">Model card</a>
+            <a href="/#playground">Playground</a>
+            <a href="/#checker">Risk check your coins on clank</a>
+            <a href="/diary">Diary</a>
+            <a href="https://clank.trade/coin/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">clank.trade ↗</a>
+            <a href="https://dexscreener.com/robinhood/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">DexScreener ↗</a>
+            <a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">X @agi1dotapp ↗</a>
+          </nav>
+          <p class="foot-legal">
+            <span>© 2026 AGI. No labs were harmed.</span>
+            <span>$AGI is a token made by the AGI team, launched on clank.trade. Entertainment only · Not financial advice.</span>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/launch/page.js"></script>
+  </body>
+</html>

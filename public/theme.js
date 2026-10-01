@@ -11,8 +11,9 @@
   root.setAttribute('data-theme', theme);
   if (pop) root.setAttribute('data-skin', 'pop');
   // the phone's browser bar matches the top of the page from the first paint (Pop mode: its violet hero, or on the diary
-  // page, which has no hero, the page's own color). src/theme.js keeps it up to date (barColor there must say the same)
-  var dark = theme === 'dark', diary = root.getAttribute('data-page') === 'diary';
+  // and launch pages, which have no hero, the page's own color). src/theme.js keeps it up to date (barColor there must say
+  // the same)
+  var dark = theme === 'dark', page = root.getAttribute('data-page'), diary = page === 'diary' || page === 'launch';
   var bar = document.querySelector('meta[name="theme-color"]');
   if (bar) bar.setAttribute('content', pop ? (diary ? (dark ? '#120828' : '#f8f5ff') : (dark ? '#2a0f7a' : '#6b3bff')) : (dark ? '#0b0b0c' : '#fafaf8'));
 

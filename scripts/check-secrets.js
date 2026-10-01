@@ -7,7 +7,10 @@ import { extname, join } from 'node:path';
 const DIST = 'dist';
 
 // 1) The real secret values, when they're set where the build runs (they are on Vercel).
-const SECRET_ENV_VARS = ['GEMINI_API_KEY', 'SUPABASE_SECRET_KEY', 'TURNSTILE_SECRET_KEY', 'PASS_SECRET', 'CRON_SECRET', 'TELEGRAM_BOT_TOKEN'];
+// (2026-10-01, "Launch with AGI-1": the Pinata key that puts coin pictures on IPFS, and the private key of the owner's gas
+// wallet that pays launch fees back)
+const SECRET_ENV_VARS = ['GEMINI_API_KEY', 'SUPABASE_SECRET_KEY', 'TURNSTILE_SECRET_KEY', 'PASS_SECRET', 'CRON_SECRET', 'TELEGRAM_BOT_TOKEN',
+  'PINATA_JWT', 'LAUNCH_GAS_KEY'];
 
 // 2) Shapes of keys that must never be public, even when no env var is set.
 const PATTERNS = [
@@ -15,6 +18,7 @@ const PATTERNS = [
   { name: 'Supabase secret key', re: /sb_secret_[0-9A-Za-z_-]{10,}/ },
   { name: 'private key', re: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
   { name: 'Telegram bot token', re: /\b\d{6,12}:AA[0-9A-Za-z_-]{33}\b/ },
+  { name: 'JWT (a Pinata key?)', re: /eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{20,}/ },
 ];
 
 const TEXT_TYPES = new Set(['.html', '.js', '.mjs', '.css', '.json', '.txt', '.svg', '.map', '.xml', '.webmanifest']);
@@ -32,9 +36,15 @@ if (!existsSync(DIST)) {
   process.exit(1);
 }
 
+const HEX_KEY = /^(?:0x)?([0-9a-fA-F]{64})$/;
 const secrets = SECRET_ENV_VARS
   .map((name) => ({ name, value: process.env[name] }))
-  .filter((s) => s.value && s.value.length >= 8);
+  .filter((s) => s.value && s.value.length >= 8)
+  // a wallet's private key: found with or without its "0x", in any case
+  .map((s) => {
+    const key = HEX_KEY.exec(s.value.trim());
+    return key ? { name: s.name, value: key[1].toLowerCase(), caseless: true } : s;
+  });
 
 const problems = [];
 let scanned = 0;
@@ -45,8 +55,9 @@ for (const file of walk(DIST)) {
   for (const { name, re } of PATTERNS) {
     if (re.test(text)) problems.push(`${file}: looks like a ${name}`);
   }
-  for (const { name, value } of secrets) {
-    if (text.includes(value)) problems.push(`${file}: contains the value of ${name}`);
+  const lower = text.toLowerCase();
+  for (const { name, value, caseless } of secrets) {
+    if ((caseless ? lower : text).includes(value)) problems.push(`${file}: contains the value of ${name}`);
   }
 }
 

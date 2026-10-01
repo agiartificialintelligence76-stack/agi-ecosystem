@@ -27,6 +27,11 @@ for (const fn of ['tg_get', 'tg_join', 'tg_set', 'tg_forget', 'tg_due', 'tg_mark
 for (const fn of ['burn_claim', 'burn_take', 'burn_refund', 'burn_status', 'burn_total', 'burn_seen']) {
   MISSING[fn] = `${fn} not found: run supabase/burns.sql in this Supabase project`;
 }
+// "Launch with AGI-1" (2026-10-01): supabase/launch.sql
+for (const fn of ['launch_draft_put', 'launch_draft_get', 'launch_prepare', 'launch_upload_back', 'launch_set_cid', 'launch_predicted',
+  'launch_done', 'launch_gas_claim', 'launch_gas_sending', 'launch_gas_sent', 'launch_tidy', 'launch_unpinned']) {
+  MISSING[fn] = `${fn} not found: run supabase/launch.sql in this Supabase project`;
+}
 
 // One database function call (also used by server/voice-store.js for her recorded lines).
 export async function rpc(cfg, fn, args, label) {

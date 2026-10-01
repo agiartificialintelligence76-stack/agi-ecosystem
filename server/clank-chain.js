@@ -29,10 +29,12 @@ export const TOKEN_ABI = parseAbi([
 ]);
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 const call = (abi, to, functionName, args = []) => ({ abi, to, functionName, data: encodeFunctionData({ abi, functionName, args }) });
+export { call as callOf };
 
 // Several eth_calls in one request (a JSON-RPC batch). → each call's decoded answer, or null for the ones that failed
 // (a reverted call, a missing function). Throws only when the node itself doesn't answer properly.
-async function readAll(calls, env, timeoutMs) {
+// (Also used by server/launch.js, with call() as callOf, to read a launch's record back from the factory.)
+export async function readAll(calls, env, timeoutMs) {
   const res = await fetch(rpcUrl(env), {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(calls.map((c, i) => ({ jsonrpc: '2.0', id: i + 1, method: 'eth_call', params: [{ to: c.to, data: c.data }, 'latest'] }))),

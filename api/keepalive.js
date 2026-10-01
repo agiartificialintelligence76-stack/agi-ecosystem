@@ -3,11 +3,13 @@
 // because it needs the database for its limits. A tiny database read a few times a day counts as activity.
 // Phase 5: it also writes AGI-1's diary entry for yesterday if it's missing (server/diary.js): the first run after
 // midnight UTC writes it, later runs only check (so a failed night is tried again at the next run).
+// 2026-10-01: and it tidies "Launch with AGI-1" up (old drafts, and the pictures of coins never launched, at Pinata).
 // (Its check of the Arena's coins, Phase 6, left with the Arena on 2026-09-28: the original site's keep-alive still does it.)
 // Only Vercel may call it: when CRON_SECRET is set, Vercel sends "Authorization: Bearer <CRON_SECRET>".
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../server/config.js';
 import { writeDiary } from '../server/diary.js';
+import { tidyLaunches } from '../server/launch.js';
 
 const fingerprint = (text) => createHash('sha256').update(String(text)).digest();
 // Compares fixed-size fingerprints, so the check takes the same time whatever was sent.
@@ -15,6 +17,7 @@ const sameSecret = (a, b) => timingSafeEqual(fingerprint(a), fingerprint(b));
 const answer = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
 export async function GET(request) {
+  const started = Date.now();
   const secret = process.env.CRON_SECRET || '';
   if (secret.length < 16) {
     console.error('[keepalive] CRON_SECRET is missing or shorter than 16 characters: add it in Vercel, then redeploy');
@@ -42,7 +45,10 @@ export async function GET(request) {
     await res.text();
     console.log('[keepalive] ok: Supabase answered');
     const diary = await writeDiary(cfg);                  // never throws; a diary problem doesn't fail the keep-alive
-    return answer({ ok: true, diary });
+    // "Launch with AGI-1" (2026-10-01): old drafts go, and the pictures of coins never launched are deleted at Pinata
+    // (server/launch.js tidyLaunches: never throws; only when PINATA_JWT is set)
+    const unpinned = await tidyLaunches(cfg, { deadline: started + 16_000 });
+    return answer({ ok: true, diary, unpinned });
   } catch (err) {
     console.error(`[keepalive] database read failed: ${err.message}`);
     return answer({ error: 'database' }, 502);

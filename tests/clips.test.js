@@ -151,7 +151,7 @@ test('the GitHub job: once a day and by hand, read-only, the key only where her 
 
 // ---------- not part of the website ----------
 test('the clips aren\'t part of the website: not in its build, no new packages, their files never in git', () => {
-  assert.match(read('vite.config.js'), /input: \{ main: 'index\.html', diary: 'diary\.html' \}/, 'the site builds its two pages only');
+  assert.match(read('vite.config.js'), /input: \{ main: 'index\.html', diary: 'diary\.html', launch: 'launch\.html' \}/, 'the site builds its own pages only (never the clips\' page)');
   const pkg = JSON.parse(read('package.json'));
   assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['three', 'viem']);
   assert.deepEqual(Object.keys(pkg.devDependencies), ['vite']);

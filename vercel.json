@@ -3,6 +3,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "rewrites": [
+    { "source": "/launch/:draft", "destination": "/launch.html" }
+  ],
   "functions": {
     "api/**/*.js": {
       "maxDuration": 25

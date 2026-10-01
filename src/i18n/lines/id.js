@@ -146,6 +146,7 @@ export default {
       "/time: kasih tau jam kamu lagi\n/stop: aku berhenti chat dan lupain obrolan ini\n/start: mulai dari awal",
       "bukan nasihat keuangan, sampai kapan pun. aku AI, 18+ dan PG-13. aku nggak pernah minta private key, seed phrase, atau uang. catatan keamanan: {safety}",
     ],
+    helpLaunch: '/launch: yuk luncurin koin bareng di clank.trade, dari wallet kamu sendiri (18+)',
     stopped: "oke 💜 aku udah berhenti, dan udah lupain obrolan ini. kalau kamu kangen aku: /start",
     notStarted: "kita belum kenalan 💜 tekan /start ya",
     tooLong: "banyak banget kata-katanya 🙈 bisa di bawah 500 karakter?",

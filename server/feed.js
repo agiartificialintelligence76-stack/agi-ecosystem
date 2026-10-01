@@ -25,6 +25,7 @@ import { rpc } from './limits.js';
 import { say, db } from './telegram.js';
 import * as L from './tg-lines.js';
 import { createHash } from 'node:crypto';
+import { EGIRL, asLatin } from './lookalike.js';
 
 const HOUR = 3_600_000, DAY = 86_400_000;
 export const FRESH_HOURS = 12;                     // a moment older than this isn't news any more
@@ -34,11 +35,7 @@ export const PER_SECOND = 25;                      // texts a second (Telegram a
 // then the egirl coins, then her diary; the newest of the same kind
 export const PRIORITY = { copy: 0, mcap: 1, sad: 2, clone: 3, diary: 4 };
 
-// An egirl or AI-girlfriend coin, by its name or ticker (a few words, not every coin with "AI" in it)
-const EGIRL = /e-?girl|girl-?friend|waifu|wifey|kawaii|\buwu\b|\bgfs?\b|\bgirls?\b|\bai[\s-]?(?:gf|wife|wifu|babe)s?\b|anime[\s-]?girl|\bagi[\s-]?\d\b|artificial\s+girl/i;
-// Letters from other alphabets that look like A, G and I (a copy of $AGI can hide behind a Cyrillic "А")
-const LOOKALIKE = { А: 'A', а: 'A', Α: 'A', α: 'A', Ԍ: 'G', ɢ: 'G', І: 'I', і: 'I', Ι: 'I', ι: 'I', Ӏ: 'I', ӏ: 'I' };
-const asLatin = (s) => String(s ?? '').replace(/[АаΑαԌɢІіΙιӀӏ]/g, (ch) => LOOKALIKE[ch]);
+// (an egirl or AI-girlfriend coin, and letters that look like A, G and I: server/lookalike.js, shared with her launch checks)
 // → 'copy' | 'clone' | null, for a coin as the list shows it (server/checker.js)
 export function coinKind(c) {
   if (!c || c.official || c.adult || isHiddenCoin(c.symbol, c.address)) return null;

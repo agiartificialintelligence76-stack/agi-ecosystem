@@ -281,20 +281,30 @@ test('chat: a stale session re-reads the balance and hands back an updated sessi
 });
 
 // ---------- the page never asks a wallet for anything but an address and a signature ----------
-test('the website code never asks a wallet for a transaction, an approval or a network change', () => {
+// One exception since 2026-10-01 ("Launch with AGI-1", hard rule 9): the launch page's src/launch/send.js may ask the wallet
+// to switch to Robinhood Chain and to send clank.trade's own launch (checked there: tests/launch.test.js). No other file may.
+test('the website code never asks a wallet for a transaction, an approval or a network change (except the launch page\'s one file)', () => {
   const files = [];
   const walk = (dir) => { for (const n of readdirSync(dir)) { const p = join(dir, n); statSync(p).isDirectory() ? walk(p) : files.push(p); } };
   walk(new URL('../src', import.meta.url).pathname);
+  const LAUNCH = new URL('../src/launch/send.js', import.meta.url).pathname;
   // (2026-09-30, with burning $AGI for messages: also no "one-tap" payment links, EIP-681 ethereum: links or MetaMask's
   // send links: a burn is always sent by the visitor from their own wallet app)
-  const FORBIDDEN = /eth_sendTransaction|eth_signTransaction|eth_sendRawTransaction|eth_sign\b|eth_signTypedData|wallet_sendCalls|wallet_switchEthereumChain|wallet_addEthereumChain|wallet_watchAsset|wallet_requestPermissions|setApprovalForAll|increaseAllowance|\bapprove\(|\bpermit\(|ethereum:|metamask\.app\.link\/send|link\.metamask\.io\/send/;
+  const NEVER = /eth_signTransaction|eth_sendRawTransaction|eth_sign\b|eth_signTypedData|wallet_sendCalls|wallet_watchAsset|wallet_requestPermissions|setApprovalForAll|increaseAllowance|\bapprove\(|\bpermit\(|ethereum:|metamask\.app\.link\/send|link\.metamask\.io\/send/;
+  const LAUNCH_ONLY = /eth_sendTransaction|wallet_switchEthereumChain|wallet_addEthereumChain/;
   const allowed = new Set(['eth_requestAccounts', 'eth_accounts', 'eth_chainId', 'personal_sign']);   // eth_chainId only reads
-  const used = new Set();
+  const used = new Set(), launchUsed = new Set();
+  assert.ok(files.includes(LAUNCH), 'the launch page sends from one file');
   for (const f of files.filter((f) => f.endsWith('.js'))) {
     const code = readFileSync(f, 'utf8');
-    assert.doesNotMatch(code, FORBIDDEN, f);
-    for (const m of code.matchAll(/request\(\s*\{\s*method:\s*['"`]([a-zA-Z_]+)['"`]/g)) used.add(m[1]);   // wallet.request({ method })
+    assert.doesNotMatch(code, NEVER, f);
+    if (f !== LAUNCH) assert.doesNotMatch(code, LAUNCH_ONLY, `${f}: only src/launch/send.js may send a transaction or switch networks`);
+    for (const m of code.matchAll(/request\(\s*\{\s*method:\s*['"`]([a-zA-Z_]+)['"`]/g)) (f === LAUNCH ? launchUsed : used).add(m[1]);   // wallet.request({ method })
   }
   for (const m of used) assert.ok(allowed.has(m), `wallet method not allowed: ${m}`);
   assert.ok(used.has('personal_sign'), 'the sign-in uses a plain message signature');
+  assert.deepEqual([...launchUsed].sort(), ['eth_chainId', 'eth_sendTransaction', 'wallet_addEthereumChain', 'wallet_switchEthereumChain'], 'the launch file: read the network, switch it, send the launch');
+  const send = readFileSync(LAUNCH, 'utf8');
+  assert.equal((send.match(/eth_sendTransaction/g) || []).length, 1, 'one place sends');
+  assert.match(send, /const tx = launchTx\(from, prepared\);[\s\S]*method: 'eth_sendTransaction', params: \[tx\]/, 'and only what launchTx() checked');
 });

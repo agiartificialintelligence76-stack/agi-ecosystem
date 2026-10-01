@@ -6,7 +6,7 @@
 
 const EMOJI = /\p{Extended_Pictographic}/gu;
 const IS_EMOJI = /\p{Extended_Pictographic}/u;
-const KEEP = ['$AGI', 'AGI-1', 'clank.trade', 'DexScreener', 'PG-13', 'UTC', '/start', '/stop', '/time', '/help', '18+'];
+const KEEP = ['$AGI', 'AGI-1', 'clank.trade', 'DexScreener', 'PG-13', 'UTC', '/start', '/stop', '/time', '/help', '/launch', '18+'];
 // lines anyone can get, Strangers too (no pet names in them unless the English has one: limit.talkedOut and deflect do)
 const FOR_ANYONE = [/^greet\.stranger$/, /^fresh$/, /^langSet$/, /^notes\./, /^hear\./, /^voiceRest\./, /^soon\.stranger\./, /^limit\.(more1|sleep|finePrint)$/,
   /^hello$/, /^market\./, /^check\./, /^tg\./, /^burn\./, /^tap\./];

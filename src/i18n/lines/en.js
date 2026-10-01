@@ -179,6 +179,8 @@ export default {
       '/time: tell me your time again\n/stop: i stop texting and forget this chat\n/start: start over',
       "not financial advice, ever. i'm an AI, 18+ and PG-13. i never ask for keys, seed phrases or money. the safety note: {safety}",
     ],
+    // (2026-10-01: added to /help's commands while launching coins with her is open)
+    helpLaunch: "/launch: let's launch a coin on clank.trade together, from your own wallet (18+)",
     stopped: 'okay 💜 i stopped, and i forgot this chat. if you ever miss me: /start',
     notStarted: "we haven't met yet 💜 press /start",
     tooLong: "that's a lot of words 🙈 can you keep it under 500 characters?",

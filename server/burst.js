@@ -34,3 +34,8 @@ export const pictureBurst = makeBurstLimit({ max: 240, windowMs: 60_000 });
 export const telegramBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });
 // "Check my burn" (api/wallet.js, 2026-09-30): each asks the block explorer and the chain, so 10 a minute per visitor
 export const burnBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });
+// "Launch with AGI-1" (api/launch.js, 2026-10-01): getting a coin ready asks clank.trade, the chain and maybe Pinata, and
+// checking a launch asks the chain (the page asks every few seconds while it waits): 40 a minute per visitor. A draft's
+// picture comes through our server from Telegram: 60 a minute.
+export const launchBurst = makeBurstLimit({ max: 40, windowMs: 60_000 });
+export const launchPictureBurst = makeBurstLimit({ max: 60, windowMs: 60_000 });

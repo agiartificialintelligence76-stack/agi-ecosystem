@@ -214,6 +214,6 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   assert.match(chk, /a smaller scan comes straight from Robinhood Chain: .*never <b>Lower risk<\/b>/);
   assert.match(chk, /A coin clank\.trade hasn't listed is <b>High risk<\/b>: it's brand new, or one clank\.trade doesn't show\./);
   assert.match(chk, /If neither answers, the scan says <b>Not enough data<\/b> instead of guessing\./);
-  assert.match(foot, /Last updated September 30, 2026/);
+  assert.match(foot, /Last updated October 1, 2026/);   // (2026-10-01: Launch with AGI-1)
   assert.equal(html.match(/<canvas/g).length, 1, 'still one canvas for the whole page');
 });

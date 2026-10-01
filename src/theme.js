@@ -32,8 +32,8 @@ const savedSkin = () => {
 export const currentTheme = () => (root.dataset.theme === 'dark' ? 'dark' : 'light');
 export const currentSkin = () => (root.dataset.skin === 'pop' ? 'pop' : 'lab');
 
-// the phone's browser bar: the color at the top of the page (Pop mode: its violet hero, or on the diary page, which has no
-// hero, the page's own color). The same colors as /theme.js, which sets it before the page paints.
+// the phone's browser bar: the color at the top of the page (Pop mode: its violet hero, or on the diary and launch pages,
+// which have no hero, the page's own color). The same colors as /theme.js, which sets it before the page paints.
 export function barColor(skin, theme, diary) {
   const dark = theme === 'dark';
   if (skin !== 'pop') return dark ? '#0b0b0c' : '#fafaf8';
@@ -41,7 +41,7 @@ export function barColor(skin, theme, diary) {
   return dark ? '#2a0f7a' : '#6b3bff';
 }
 function paintBar() {
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor(currentSkin(), currentTheme(), root.dataset.page === 'diary'));
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor(currentSkin(), currentTheme(), ['diary', 'launch'].includes(root.dataset.page)));
 }
 
 function apply(theme, remember) {

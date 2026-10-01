@@ -201,7 +201,12 @@ test('her Telegram lines: PG-13, no pet names (anyone can start the bot), never 
   assert.match(L.HELP, /\/stop/);
   assert.match(L.HELP, /never ask for keys, seed phrases or money/);
   assert.ok(SHORT_DESCRIPTION.length <= 120 && DESCRIPTION.length <= 512, 'Telegram\'s limits for descriptions');
-  assert.deepEqual(COMMANDS.map((c) => c.command), ['start', 'time', 'help', 'stop']);
+  assert.deepEqual(COMMANDS.map((c) => c.command), ['start', 'time', 'help', 'launch', 'stop']);
+  for (const c of COMMANDS) {
+    assert.match(c.command, /^[a-z]{1,32}$/, 'Telegram: 1–32 lowercase letters');
+    assert.ok(c.description.length >= 1 && c.description.length <= 256, 'Telegram: 1–256 characters');
+    assert.doesNotMatch(c.description, NOT_OK, c.description);
+  }
   // the chart: exactly the site's market moments
   assert.equal(L.mcapLine(2_000_000), milestoneLine(2_000_000).text);
   assert.equal(L.sadLine(4), dumpLine(4).text);
@@ -454,7 +459,8 @@ test('connecting the bot: the site\'s address, our secret, her commands the firs
   assert.equal(set.url, 'https://agi1.app/api/telegram');
   assert.equal(set.secret_token, webhookSecret(SECRET));
   assert.deepEqual(set.allowed_updates, ['message', 'callback_query']);
-  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS);
+  // (/launch isn't in her menu until launching is set up: no Pinata key here)
+  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS.filter((c) => c.command !== 'launch'));
   assert.equal(tg('setMyShortDescription')[0].body.short_description, SHORT_DESCRIPTION);
   assert.equal(tg('setMyDescription')[0].body.description, DESCRIPTION);
   assert.ok(calls.every((c) => !c.body || !JSON.stringify(c.body).includes(TOKEN)), 'the token is only ever in the address');
@@ -474,6 +480,14 @@ test('connecting the bot: the site\'s address, our secret, her commands the firs
   calls.length = 0;
   await connectBot(cfg());
   assert.deepEqual(tg('setMyDescription').length + tg('setMyCommands').length, 2, 'all of it, the next run');
+  // once launching is set up (Pinata's key), the next run adds /launch to her menu
+  process.env.PINATA_JWT = 'eyJfake.eyJfake.fake-signature';
+  calls.length = 0;
+  assert.equal((await connectBot(cfg())).setup, true);
+  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS);
+  calls.length = 0;
+  assert.equal((await connectBot(cfg())).setup, false, 'then left alone');
+  delete process.env.PINATA_JWT;
   // Telegram's last delivery problem is logged with a hint (a redirecting address)
   const logged = [];
   console.warn = (...a) => logged.push(a.join(' '));
