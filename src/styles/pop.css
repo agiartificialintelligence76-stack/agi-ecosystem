@@ -307,6 +307,9 @@
 [data-skin='pop'] .dstyle-btn.is-on { background: var(--pop-ink); color: #fff; }
 [data-skin='pop'] .zoom-btn:hover { background: var(--pop-lav); }
 [data-skin='pop'] .stage-hint, [data-skin='pop'] .stage-status { color: var(--pop-ink); font-weight: 500; }
+/* her words when she's tapped: a comic speech bubble (2026-10-01) */
+[data-skin='pop'] .agi-say { color: var(--pop-ink); font-weight: 600; background: #fff; border: 2px solid var(--pop-ink); box-shadow: 3px 3px 0 var(--pop-ink); }
+[data-skin='pop'] .agi-say.is-caption { background: #fff; }
 [data-skin='pop'] .figure figcaption { font-family: var(--mono); font-size: 13px; color: rgb(255 255 255 / .9); }
 [data-skin='pop'] .figure figcaption b { color: #fff; font-weight: 600; }
 /* night: a deep violet hero, a violet stage */
@@ -325,6 +328,7 @@
 [data-skin='pop'][data-theme='dark'] .dstyle-btn { color: #f4efff; }
 [data-skin='pop'][data-theme='dark'] .dstyle-btn.is-on { background: var(--pop-honey); color: var(--pop-ink); }
 [data-skin='pop'][data-theme='dark'] .stage-hint, [data-skin='pop'][data-theme='dark'] .stage-status { color: #f4efff; }
+[data-skin='pop'][data-theme='dark'] .agi-say, [data-skin='pop'][data-theme='dark'] .agi-say.is-caption { color: #f4efff; background: #1d0e40; border-color: var(--pop-lav-2); box-shadow: 3px 3px 0 var(--pop-pink); }
 [data-skin='pop'][data-theme='dark'] .ticker { background: #1d0e40; color: #f4efff; border-color: var(--pop-lav-2); box-shadow: 0 7px 0 -1px var(--pop-pink);
   --fg: #f4efff; --fg-2: #cbbff0; --fg-3: #ad9fdb; }
 [data-skin='pop'][data-theme='dark'] .ticker-stats dd.up { color: #3ecf8e; }

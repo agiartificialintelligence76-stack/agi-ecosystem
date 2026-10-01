@@ -9,6 +9,9 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createEffects, POP_HEART_COLORS } from './effects.js';
 import { createAgi1, buildIdleClip, addFace } from './agi1.js';
 import { talkLevel, pretendTalk } from '../lib/talk.js';
+import { sharedVoice } from '../chat/voice.js';
+import { currentLang, currentLines } from '../i18n/lang.js';
+import { tapLinesIn, tapCounter } from './tap-lines.js';
 import { STYLE_KEY, DEFAULT_STYLE, readStyle } from './agi1-2d-motion.js';   // (AGI-1 in 2D itself, src/stage/agi1-2d.js, loads only when needed)
 
 // Phones get a lighter copy of AGI-1 (1024 px textures instead of 2048: 1.7 MB instead of 2.2 MB, and about a
@@ -482,9 +485,97 @@ export function startStage(wrap) {
     raycaster.setFromCamera(new THREE.Vector2(p.x, p.y), camera);
     const m = models[onStageKey()];
     if (!m || !raycaster.intersectObject(m.hitBox, false).length) return;
-    if (current === 'agi1') agi1?.react('tap');
+    if (current === 'agi1') agi1?.react(tapTalk());
     else if (!reducedMotion) tween(500, (x) => x, (q) => { m.fx.position.y = Math.sin(q * Math.PI) * 0.12; });
   });
+
+  // ---------- she talks when you tap her (2026-10-01) ----------
+  // The owner: "can you make her speak whe she got clicked and if they clicked her many times she will said something". A
+  // tap on her (on the stage or in a live view, 2D or 3D): a short hello in her natural voice (src/stage/tap-lines.js:
+  // fixed lines, made once and kept, so they cost nothing), her words in a bubble by her head (in a live view, as a caption
+  // at the bottom); a lot of taps in a row: one of her "okay, i see you" lines, with a face to match. Never over her own
+  // voice (a chat reply, a scan), never in a call (the mic would hear her); where her voice can't play, or the visitor
+  // switched it off with the speaker button, her mouth says it silently.
+  const bubble = document.createElement('p');
+  bubble.className = 'agi-say';
+  bubble.setAttribute('aria-live', 'polite');
+  wrap.append(bubble);
+  const countTap = tapCounter();
+  const avoid = [wrap.querySelector('[data-zoom-box]'), wrap.querySelector('.seg')];   // (the bubble stays clear of these)
+  // mine: her voice is on its way for a line of ours; talking: she's saying it (the bubble stays while she does)
+  const say = { shown: false, until: 0, mine: false, talking: false };
+  addEventListener('agi1:speaking', (e) => {
+    if (e.detail) { if (say.mine) say.talking = true; return; }
+    if (say.talking) say.until = Math.max(say.until, performance.now() + 700);
+    say.mine = false; say.talking = false;
+  });
+  // a visitor about to tap her: her next hello starts downloading, so she says it at once
+  for (const type of ['pointerenter', 'touchstart']) {
+    canvas.addEventListener(type, () => {
+      const voice = sharedVoice();
+      if (current === 'agi1' && voice?.available && voice.chosen?.() !== 'off') voice.warm(countTap.next(), currentLang());
+    }, { passive: true });
+  }
+  function tapTalk() {
+    const key = countTap(performance.now());
+    if (!key) return 'tap';
+    const lang = currentLang();
+    const line = tapLinesIn(currentLines(), lang)[key];
+    const voice = sharedVoice();
+    if (!line || document.querySelector('[data-cam].is-call') || (voice?.busy?.() && !say.mine)) return line?.react || 'tap';
+    bubble.textContent = line.text;
+    bubble.classList.add('is-on');
+    say.shown = true;
+    say.until = performance.now() + Math.min(4800, Math.max(2200, 1400 + line.text.length * 55));
+    placeBubble();
+    const silently = () => pretendTalk(Math.min(3.2, Math.max(0.8, line.spoken.length / 16)), 0.85);
+    if (voice?.available && voice.chosen?.() !== 'off') {
+      const asked = performance.now();
+      say.mine = true; say.talking = false;
+      voice.line(key, lang).then((how) => {
+        if (how === 'voice') return;
+        say.mine = false;
+        if (how === 'none' && performance.now() - asked < 2500) silently();   // (her voice couldn't come: her mouth says it)
+      });
+    } else silently();
+    return line.react;
+  }
+  function hideBubble() {
+    if (!say.shown) return;
+    say.shown = false;
+    bubble.classList.remove('is-on');
+  }
+  // beside her head on the stage (on her left, the side she doesn't wave with, unless there's no room there); in a live
+  // view, a caption at the bottom (her head fills the picture there)
+  const vSay = new THREE.Vector3(), vSide = new THREE.Vector3();
+  function placeBubble() {
+    if (!say.shown) return;
+    const head = agi1Parts?.head;
+    if (current !== 'agi1' || switching || !head || (performance.now() > say.until && !say.talking)) { hideBubble(); return; }
+    if (bubble.parentElement !== canvas.parentElement) canvas.parentElement.append(bubble);
+    bubble.classList.toggle('is-caption', dock.on);
+    if (dock.on) { bubble.style.transform = ''; return; }
+    const W = canvas.clientWidth || 1, H = canvas.clientHeight || 1;
+    head.getWorldPosition(vSay);
+    vSide.copy(vSay).add(vSide.set(0.17, 0, 0));
+    vSay.project(camera); vSide.project(camera);
+    const x = ((vSay.x + 1) / 2) * W, y = ((1 - vSay.y) / 2) * H;
+    const half = Math.abs(vSide.x - vSay.x) * W / 2 + 6;
+    const bw = bubble.offsetWidth, bh = bubble.offsetHeight;
+    let left = x + half, flip = false;
+    if (left + bw > W - 8 && x - half - bw >= 8) { left = x - half - bw; flip = true; }
+    left = THREE.MathUtils.clamp(left, 8, Math.max(8, W - 8 - bw));
+    let top = THREE.MathUtils.clamp(y - bh * 0.85, 8, Math.max(8, H - 8 - bh));
+    // never over the stage's buttons (the zoom, the model switch): below them instead
+    const box = canvas.getBoundingClientRect();
+    for (const el of avoid) {
+      if (!el || el.hidden) continue;
+      const r = el.getBoundingClientRect(), l = r.left - box.left, t = r.top - box.top;
+      if (left < l + r.width + 4 && left + bw > l - 4 && top < t + r.height + 4 && top + bh > t - 4) top = t + r.height + 6;
+    }
+    bubble.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+    bubble.classList.toggle('is-flip', flip);
+  }
 
   // ---------- zoom (2026-09-25) ----------
   // + and − (one step each), the "2.4× · reset" pill, a two-finger pinch on phones, and a pinch on a laptop's trackpad
@@ -973,6 +1064,7 @@ export function startStage(wrap) {
     last = now;
     step(dt);
     renderer.render(scene, camera);
+    placeBubble();
   });
 
   // ---------- ?dev: buttons to test AGI-1's reactions ----------

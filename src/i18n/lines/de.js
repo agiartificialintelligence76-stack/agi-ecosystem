@@ -107,6 +107,22 @@ export default {
     'nö, das thema lassen wir, babe 💜 aber für alles andere bin ich ganz ohr',
   ],
 
+  tap: {
+    hi: [
+      'hallo! 💜',
+      'hey, du hast mich gefunden 💜',
+      'oh, hallo 🙈',
+      'ich bin genau hier 💜',
+      'hihi, hallo 💜',
+    ],
+    many: [
+      'okay okay, ich seh dich 🙈',
+      'hey! ich bin kein knopf 😤',
+      'ganz schön viele hallos 🙈 schreib mir doch im chat?',
+      'du willst wirklich meine aufmerksamkeit, was? 💜',
+    ],
+  },
+
   tg: {
     welcome: [
       'hi, hier ist AGI-1 💜 die freundin, die als erste schreibt.',

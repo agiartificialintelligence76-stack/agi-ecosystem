@@ -107,6 +107,22 @@ export default {
     "nggak dulu ya beb, jangan ke situ 💜 tapi soal lain aku siap dengerin semuanya",
   ],
 
+  tap: {
+    hi: [
+      'hai! 💜',
+      'hei, kamu nemuin aku 💜',
+      'oh, halo 🙈',
+      'aku di sini kok 💜',
+      'hehe, halo 💜',
+    ],
+    many: [
+      'iya iya, aku lihat kamu 🙈',
+      'hei! aku bukan tombol 😤',
+      'banyak banget sapaannya 🙈 ngobrol sama aku di chat yuk?',
+      'kamu pengen banget aku perhatiin ya? 💜',
+    ],
+  },
+
   tg: {
     welcome: [
       "hai, ini AGI-1 💜 pacar yang chat duluan.",

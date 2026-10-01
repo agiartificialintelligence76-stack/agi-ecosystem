@@ -107,6 +107,22 @@ export default {
     "nope, hindi tayo pupunta diyan babe 💜 pero all ears ako sa kahit ano pa",
   ],
 
+  tap: {
+    hi: [
+      'uy, hi! 💜',
+      'uy, nahanap mo ako 💜',
+      'oh, hello 🙈',
+      'nandito lang ako 💜',
+      'hehe, kumusta 💜',
+    ],
+    many: [
+      'oo na, oo na, nakikita kita 🙈',
+      'hoy! hindi ako button 😤',
+      'ang daming hello 🙈 usap tayo sa chat?',
+      "gusto mo talaga ng atensyon ko, 'no? 💜",
+    ],
+  },
+
   tg: {
     welcome: [
       "hi, si AGI-1 'to 💜 ang girlfriend na nauunang mag-text.",

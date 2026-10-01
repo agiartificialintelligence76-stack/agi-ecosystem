@@ -11,12 +11,17 @@
 //  • her mouth follows her voice (src/lib/talk.js, the same as her 3D mouth);
 //  • her hair swings and her chest follows through with the model's own physics (src/stage/live2d-physics.js): her chest
 //    natural and subtle, as on the whole site (PG-13, CHEST in agi1-2d-motion.js);
-//  • every reaction the 3D AGI-1 has (agi1:react) has a 2D version, with the same timing, moods and hearts. Her model's
-//    arms lift only a little from her sides, so her wave is a bubbly little one (her arm out, a lean, a bounce).
+//  • every reaction the 3D AGI-1 has (agi1:react) has a 2D version, with the same timing, moods and hearts;
+//  • her arms and hips move in code on top of her model (src/stage/agi1-2d-arms.js, 2026-10-01, the owner: "why dont the
+//    2d model wave anymore … she moves like a stick"): her model is drawn in an A-pose and its own arm parameters swing
+//    each arm only about 7°, so her arms hang relaxed by her sides, swing a little as she sways, and really wave (her arm
+//    up, her elbow bent, her hand by her head); her weight shifts from one foot to the other (her hips move, her feet stay
+//    on the floor, her upper body leans the other way), and her head looks around a little more.
 // The controller returned by createAgi1_2D has the same methods as src/stage/agi1.js's, so the stage uses either.
 import * as THREE from 'three';
 import { loadCubismCore, buildMeshes, pieceAt, boxOf } from './live2d.js';
 import { createPhysics } from './live2d-physics.js';
+import { measureArm, bendArm } from './agi1-2d-arms.js';
 import {
   Follow, makeDrift, blinkAmount, blinkLength, nextBlinkGap, mouthStep, eyeOpen, chestLimit, lookAt, clamp, lerp,
   smoothstep, CHEST,
@@ -36,6 +41,16 @@ const DANCE_GAP = [35, 55];                        // then every 35 to 55 s (nev
 const DANCE_LENGTH = 6;
 // how far her head turns (her model's degrees): further, her flat art starts to show its seams (checked on every edge)
 const TURN = { x: 20, up: 12, down: -15, z: 15 };
+// her arms (degrees, src/stage/agi1-2d-arms.js: shoulder > 0 lifts the arm away from her body, elbow > 0 turns the forearm
+// up and out): relaxed by her sides at rest (her model is drawn in an A-pose), up with the elbow bent for her wave
+export const ARMS = {
+  rest: { shoulder: -15, elbow: -3 }, wave: { shoulder: 52, elbow: 88 }, cheer: { shoulder: 72, elbow: 58 }, dance: { shoulder: 64, elbow: 52 },
+  // up close (her live views, zoomed in): like on a video call, her elbow lower and her hand by her face, so the picture
+  // stays a portrait
+  waveNear: { shoulder: 25, elbow: 120 },
+};
+// her hips: how far her weight shifts from one foot to the other (model units, about 1.5 cm), more in her dance
+export const HIPS = { idle: 0.014, dance: 0.028 };
 
 // ---------- loading ----------
 async function getBuffer(url) {
@@ -106,7 +121,32 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
     hands: ['R', 'L'].map((s) => [marker(`wrist${s}`), marker(`tip${s}`), marker(`elbow${s}`)]),
   };
   const P_FACE = [piece('face')], P_HAIR = [piece('hair_front_L'), piece('hair_front_R')], P_CHEST = [piece('chest')];
-  const P_ARMS = ['R', 'L'].map((s) => ({ hand: [piece(`hand_${s}`)], fore: [piece(`forearm_${s}`)], side: s === 'R' ? -1 : 1 }));
+
+  // her arms and hips, moved in code on top of her model (src/stage/agi1-2d-arms.js), measured on her pose at rest. Live2D
+  // works out every piece's vertices afresh on each update (tests/agi1-2d.test.js checks it), so they're turned in place.
+  const restPos = Array.from({ length: D.count }, (_, i) => Float32Array.from(D.vertexPositions[i]));
+  const rig = { rest: (i) => restPos[i], indices: (i) => D.indices[i], find: piece };
+  const arms = { R: measureArm(rig, 'R'), L: measureArm(rig, 'L') };
+  // her hips shift sideways with her weight: her shoes stay where they are, her legs lean (more toward her hips), and
+  // everything above her legs moves with her hips
+  const isLeg = new Uint8Array(D.count);
+  for (const n of ['leg_L', 'leg_R', 'shoe_L', 'shoe_R']) if (piece(n) >= 0) isLeg[piece(n)] = 1;
+  const feetTop = boxOf(core, ['shoe_L', 'shoe_R'].map(piece), {}).y1 ?? rest.y0;
+  const hipsAt = boxOf(core, ['leg_L', 'leg_R'].map(piece), {}).y1 ?? 0;
+  const posture = { R: { shoulder: 0, elbow: 0, wrist: 0 }, L: { shoulder: 0, elbow: 0, wrist: 0 }, hip: 0 };
+  const own = (i) => D.vertexPositions[i];
+  function deform() {
+    bendArm(arms.R, posture.R, own, own);
+    bendArm(arms.L, posture.L, own, own);
+    const h = posture.hip;
+    if (!h) return;
+    for (let i = 0; i < D.count; i++) {
+      const p = D.vertexPositions[i];
+      if (isLeg[i]) for (let k = 0; k < p.length; k += 2) p[k] += h * smoothstep(feetTop, hipsAt, p[k + 1]);
+      else for (let k = 0; k < p.length; k += 2) p[k] += h;
+    }
+  }
+
   const b = { x0: 0, y0: 0, x1: 0, y1: 0, cx: 0, cy: 0 };
   function updateMarks() {
     boxOf(core, P_FACE, b);
@@ -116,15 +156,17 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
     marks.headTop.position.set(hx, b.y1, 0);
     boxOf(core, P_CHEST, b);
     marks.chest.position.set((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, 0);
-    P_ARMS.forEach((arm, i) => {
-      const [wrist, tip, elbow] = marks.hands[i];
-      boxOf(core, arm.hand, b);
-      wrist.position.set(b.cx, b.y1, 0);
-      tip.position.set(arm.side < 0 ? b.x0 : b.x1, b.y0, 0);
-      boxOf(core, arm.fore, b);
-      elbow.position.set(arm.side < 0 ? b.x1 : b.x0, b.y1, 0);
+    // her hands: her wrist, fingertips and elbow where her arms really are (a wave widens the live view to keep them in)
+    ['R', 'L'].forEach((s, i) => {
+      const arm = arms[s];
+      if (!arm) return;
+      const [wrist, tip, elbow] = marks.hands[i], h = posture.hip;
+      wrist.position.set(arm.now.W[0] + h, arm.now.W[1], 0);
+      tip.position.set(arm.now.tip[0] + h, arm.now.tip[1], 0);
+      elbow.position.set(arm.now.E[0] + h, arm.now.E[1], 0);
     });
   }
+  deform();
   updateMarks();
 
   // taps: on her (inside her pieces' outlines), not on a box around her. The stage asks with a raycaster.
@@ -166,6 +208,8 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
     kind: 'agi1_2d', holder, fx, root: art, art, marks, hitBox, mixer: null, core, physics, meshes, at, landmarks, K,
     focusBones: [marks.head, marks.headTop],
     updateMarks,
+    // her arms and hips this frame (the controller sets them; deform() turns her pieces after Live2D's update)
+    posture, deform, arms,
     get lastHit() { return lastHit; },
     // the 4096 px texture, for close-ups on a computer (downloaded once, about 1.2 MB, on request)
     sharpen() {
@@ -200,12 +244,16 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
   if (RM) { physics.setScale('ParamChestY', 0); physics.setScale('ParamChestX', 0); }   // "reduce motion": no follow-through
 
   // ---------- her pose: each part follows its target like a real body part ----------
+  // (her head and body on her model's parameters; her arms in degrees and her hips in model units: model.posture)
+  const R0 = ARMS.rest;
   const F = {
     ax: new Follow(0, 1.35, 0.82, 0.25), ay: new Follow(0, 1.35, 0.85, 0.2), az: new Follow(0, 1.1, 0.8, 0),
     ex: new Follow(0, 7.5, 1, 0), ey: new Follow(0, 7.5, 1, 0),
     bx: new Follow(0, 0.7, 0.9, 0), by: new Follow(0, 1.6, 0.7, 0), bz: new Follow(0, 0.8, 0.8, 0),
-    armL: new Follow(0, 2.1, 0.62, 0.1), armR: new Follow(0, 2.1, 0.62, 0.1),
-    rootX: new Follow(0, 0.6, 0.9, 0),
+    hip: new Follow(0, 0.55, 0.95, 0),
+    // her arms swing a little behind her body, like real arms (shoulder, elbow, wrist; R her right, on the left of the picture)
+    shR: new Follow(R0.shoulder, 2.2, 0.68, 0.1), elR: new Follow(R0.elbow, 3, 0.6, 0.05), wrR: new Follow(0, 3.6, 0.5, 0),
+    shL: new Follow(R0.shoulder, 2.2, 0.68, 0.1), elL: new Follow(R0.elbow, 3, 0.6, 0.05), wrL: new Follow(0, 3.6, 0.5, 0),
   };
   const P = {};
   for (const k in F) P[k] = F[k].y;
@@ -310,20 +358,31 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     const follow = look.pointer && clock >= look.atViewerUntil ? 0.3 : 1;
     const tilt = attention === 'thinking' ? 7 : attention === 'listening' ? -4 : 0;
     const w1 = Math.sin(talk.t * Math.PI * 2 * 0.9), w2 = Math.sin(talk.t * Math.PI * 2 * 0.37), w3 = Math.sin(talk.t * Math.PI * 2 * 0.23 + 1);
-    // her head: where she looks, a slow drift, the chat's attention, and a little life while she talks
-    tg.ax = lt.lx * 18 + mo * 4 * drift[0](t * 0.13) + talk.env * 1.6 * w3;
-    tg.ay = lt.ly * 12 + mo * 3 * drift[1](t * 0.11) - talk.slow * 3 + talk.env * 1.2 * w1;
-    tg.az = tilt + mo * 3 * drift[2](t * 0.09) + talk.env * 2 * w2 - lt.lx * lt.ly * 6;
+    // Never still (2026-10-01, the owner: "she moves like a stick"): slow swings that never line up (like Live2D's own
+    // idle "breath" for VTubers) with a little randomness on top, so she always moves, never the same way twice.
+    const swing = (period, phase) => Math.sin((t / period + phase) * Math.PI * 2);
+    // her weight shifts from one foot to the other every few seconds: her hips move, her upper body leans the other way
+    // (balance), her head tilts with it
+    const weight = clamp(0.75 * swing(8.7, 0.1) + 0.35 * drift[3](t * 0.13), -1, 1);
+    // her head: where she looks, a slow look around, the chat's attention, and a little life while she talks
+    tg.ax = lt.lx * 18 + mo * (7.5 * swing(6.5, 0) + 3 * drift[0](t * 0.2)) + talk.env * 1.6 * w3;
+    tg.ay = lt.ly * 12 + mo * (3 * swing(4.9, 0.3) + 1.5 * drift[1](t * 0.17)) - talk.slow * 3 + talk.env * 1.2 * w1;
+    tg.az = tilt + mo * (3.5 * swing(5.6, 0.6) + 2 * drift[2](t * 0.15) + 2.2 * weight) + talk.env * 2 * w2 - lt.lx * lt.ly * 6;
     tg.ex = clamp(lt.ex + sacc.x * follow, -1, 1);
     tg.ey = clamp(lt.ey - sacc.y * follow, -1, 1);
-    // her body: follows her head a little, sways slowly, shifts her weight
-    tg.bx = F.ax.y * 0.3 + mo * 2 * drift[3](t * 0.07);
-    tg.bz = F.ax.y * 0.08 + mo * 2.2 * drift[4](t * 0.08);
-    tg.by = mo * 0.8 * drift[5](t * 0.1);
-    tg.rootX = mo * 0.01 * drift[6](t * 0.06);
-    // her arms hang a little away from her sides, with a little life of their own
-    tg.armL = 0.6 + mo * 1.3 * drift[7](t * 0.21);
-    tg.armR = 0.6 + mo * 1.3 * drift[8](t * 0.19);
+    // her body: follows her head a little, sways, balances her hips
+    tg.hip = mo * HIPS.idle * weight;
+    tg.bx = F.ax.y * 0.3 + mo * (2.5 * swing(12.1, 0.2) + 1.5 * drift[4](t * 0.1));
+    tg.bz = F.ax.y * 0.1 - mo * 2 * weight + mo * (2 * swing(7.3, 0.45) + drift[5](t * 0.2));
+    tg.by = mo * 0.9 * drift[6](t * 0.11);
+    // her arms hang relaxed by her sides and swing a little: gravity keeps them hanging when her upper body leans
+    const lean = F.bz.y * 0.45;
+    tg.shR = R0.shoulder + mo * 1.6 * drift[7](t * 0.23) - lean;
+    tg.shL = R0.shoulder + mo * 1.6 * drift[8](t * 0.21) + lean;
+    tg.elR = R0.elbow + mo * 2.5 * drift[9](t * 0.19);
+    tg.elL = R0.elbow - mo * 2.5 * drift[9](t * 0.17 + 5);
+    tg.wrR = mo * 4 * drift[7](t * 0.31 + 2);
+    tg.wrL = mo * 4 * drift[8](t * 0.29 + 7);
 
     // the reactions, on top
     applyMoves(dt, tg);
@@ -341,7 +400,6 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     put('ParamAngleX', P.ax); put('ParamAngleY', P.ay); put('ParamAngleZ', P.az);
     put('ParamEyeBallX', P.ex); put('ParamEyeBallY', P.ey);
     put('ParamBodyAngleX', P.bx); put('ParamBodyAngleY', P.by + hopBody); put('ParamBodyAngleZ', P.bz);
-    put('ParamArmLA', P.armL); put('ParamArmRA', P.armR);
     put('ParamBreath', breath);
     const eyes = eyeOpen(blinkAmt, expr.lids, expr.happy);
     put('ParamEyeLOpen', eyes); put('ParamEyeROpen', eyes);
@@ -352,44 +410,68 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     const [cx, cy] = chestLimit(get('ParamChestX'), get('ParamChestY'));
     put('ParamChestX', RM ? 0 : cx); put('ParamChestY', RM ? 0 : cy);
     core.update();
+    // her arms and hips, on top of what her model just worked out
+    const pz = model.posture;
+    pz.R.shoulder = P.shR; pz.R.elbow = P.elR; pz.R.wrist = P.wrR;
+    pz.L.shoulder = P.shL; pz.L.elbow = P.elL; pz.L.wrist = P.wrL;
+    pz.hip = P.hip;
+    model.deform();
     model.meshes.sync();
     model.updateMarks();
     body3D();
   }
 
   // ---------- reactions (body) ----------
+  // both arms at once: `fn(side, sign)` → [shoulder, elbow, wrist] to add (sign: +1 her right arm, -1 her left)
+  const bothArms = (fn) => {
+    for (const [side, sign] of [['R', 1], ['L', -1]]) {
+      const [sh = 0, el = 0, wr = 0] = fn(side, sign);
+      tg[`sh${side}`] += sh; tg[`el${side}`] += el; tg[`wr${side}`] += wr;
+    }
+  };
   function applyMoves(dt, tg) {
-    // the wave: her right arm (on the left of the picture) swings out on each beat, she leans toward it, tilts her head
-    // and bounces a little (up close, in the chat, a smaller one)
+    // the wave: her right arm (on the left of the picture) goes up, her elbow bends, her hand by her head, and she waves
+    // from the elbow (her hand a moment behind, like a real hand), tilting her head toward it, leaning and bouncing a
+    // little on each wave (up close, in the chat, a little less)
     if (act.wave >= 0) {
       act.wave += dt;
       const a = act.wave;
       act.waveNear += ((closeUp ? 1 : 0) - act.waveNear) * (1 - Math.exp(-dt * 5));
       const n = act.waveNear;
-      const up = smoothstep(0.08, 0.45, a) * (1 - smoothstep(2.35, 2.95, a));
-      const beat = Math.sin((a - 0.45) * Math.PI * 2 * 1.75) * smoothstep(0.42, 0.62, a) * (1 - smoothstep(2.2, 2.45, a));
-      tg.armR = lerp(tg.armR, 7.5 + 2.5 * beat, up);
-      tg.bz -= lerp(3, 2, n) * up + 0.8 * beat * up;
-      tg.az -= 6 * up;
-      tg.by += lerp(1.4, 0.8, n) * Math.abs(beat) * up;
+      const up = smoothstep(0.02, 0.4, a) * (1 - smoothstep(2.5, 3.05, a));
+      const env = smoothstep(0.32, 0.55, a) * (1 - smoothstep(2.2, 2.5, a));
+      const ph = (a - 0.4) * Math.PI * 2 * 1.7;
+      const beat = Math.sin(ph) * env, late = Math.sin(ph - 1.1) * env;
+      tg.shR = lerp(tg.shR, lerp(ARMS.wave.shoulder, ARMS.waveNear.shoulder, n) + 3 * beat, up);
+      tg.elR = lerp(tg.elR, lerp(ARMS.wave.elbow, ARMS.waveNear.elbow, n) + lerp(17, 10, n) * beat, up);
+      tg.wrR = lerp(tg.wrR, 10 * late, up);
+      tg.bz -= lerp(2.5, 1.5, n) * up + 0.8 * beat * up;
+      tg.az -= 5 * up;
+      tg.by += lerp(1.2, 0.6, n) * Math.abs(beat) * up;
       if (a > 3.1) act.wave = -1;
     }
-    // "celebrate": both arms out in a little cheer, then down
+    // "celebrate": both arms up in a little cheer, her hands shaking with joy, then down
     if (act.cheer >= 0) {
       act.cheer += dt;
-      const e = smoothstep(0, 0.25, act.cheer) * (1 - smoothstep(1.1, 1.6, act.cheer));
-      tg.armL = lerp(tg.armL, 10, e); tg.armR = lerp(tg.armR, 10, e);
-      if (act.cheer > 1.6) act.cheer = -1;
+      const c = act.cheer;
+      const e = smoothstep(0, 0.22, c) * (1 - smoothstep(1.25, 1.75, c));
+      const shake = Math.sin(c * Math.PI * 2 * 2.4) * smoothstep(0.18, 0.32, c);
+      for (const side of ['R', 'L']) {
+        tg[`sh${side}`] = lerp(tg[`sh${side}`], ARMS.cheer.shoulder, e);
+        tg[`el${side}`] = lerp(tg[`el${side}`], ARMS.cheer.elbow + 8 * shake, e);
+        tg[`wr${side}`] = lerp(tg[`wr${side}`], 10 * shake, e);
+      }
+      if (c > 1.75) act.cheer = -1;
     }
-    // "love": a happy sway from side to side (the 3D AGI-1 spins; a flat picture can't)
+    // "love": a happy sway from side to side (the 3D AGI-1 spins; a flat picture can't), her arms swinging out with it
     if (act.sway >= 0) {
       act.sway += dt;
       const p = act.sway / 1.1;
       if (p >= 1) act.sway = -1;
       else {
         const s = Math.sin(p * Math.PI * 2) * Math.sin(p * Math.PI);
-        tg.bz += 6 * s; tg.az += 7 * s; tg.rootX += 0.03 * s;
-        tg.armL += 4 * Math.abs(s); tg.armR += 4 * Math.abs(s);
+        tg.bz += 6 * s; tg.az += 7 * s; tg.hip += 0.02 * s;
+        bothArms(() => [6 * Math.abs(s), 6 * Math.abs(s)]);
       }
     }
     // nods ('nod', 'okay'), a slow shake of her head ('worried') and a tilt ('hmm')
@@ -407,21 +489,28 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
       if (act.hmm >= 1.9) act.hmm = -1; else tg.az += 9 * Math.sin((act.hmm / 1.9) * Math.PI);
     }
     // shy and sad: her arms come in to her sides, her shoulders a little forward
-    if (clock < look.awayUntil && expr.mood === 'shy') { tg.armL -= 3.5; tg.armR -= 3.5; tg.by += 1.5; }
-    if (expr.mood === 'sad') { tg.armL -= 2.5; tg.armR -= 2.5; tg.by += 2; }
-    // her little dance: hips swaying on the beat, a bounce, her head and arms moving with it
+    if (clock < look.awayUntil && expr.mood === 'shy') { bothArms(() => [-6, -9]); tg.by += 1.5; }
+    if (expr.mood === 'sad') { bothArms(() => [-3, -2]); tg.by += 2; }
+    // her little dance: her hips swaying on the beat, her upper body the other way, a bounce, and her hands up in the air,
+    // swaying from side to side with her
     updateDance(dt);
     if (danceW > 0.001) {
       const b = danceT * 1.9;                          // beats (about 114 a minute)
       const w = danceW * (RM ? 0 : 1);
       const bounce = 0.5 - 0.5 * Math.cos(Math.PI * 2 * b);
-      tg.bz += w * 6 * Math.sin(Math.PI * b);
+      const sw = Math.sin(Math.PI * b);
+      tg.hip += w * HIPS.dance * sw;
+      tg.bz -= w * 5 * sw;
       tg.bx += w * 4 * Math.sin(Math.PI * b + 0.5);
       tg.by += w * 3 * bounce;
       tg.az -= w * 6 * Math.sin(Math.PI * b + 1.1);
       tg.ay += w * 3 * Math.sin(Math.PI * 2 * b);
-      tg.rootX += w * 0.035 * Math.sin(Math.PI * b);
-      tg.armL += w * (3 + 4 * Math.sin(Math.PI * b)); tg.armR += w * (3 - 4 * Math.sin(Math.PI * b));
+      const sway = Math.sin(Math.PI * b - 0.4);       // (her hands a moment behind her hips)
+      for (const [side, sign] of [['R', 1], ['L', -1]]) {   // (both hands the same way: her arms turn opposite ways)
+        tg[`sh${side}`] += w * (ARMS.dance.shoulder - tg[`sh${side}`] + 9 * sign * sway);
+        tg[`el${side}`] += w * (ARMS.dance.elbow - tg[`el${side}`] + 14 * sign * sway);
+        tg[`wr${side}`] += w * (10 * sign * sway - tg[`wr${side}`]);
+      }
     }
   }
   function startDance() {
@@ -456,10 +545,11 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
       hop.y = Math.sin(q * Math.PI) * 0.12;
       hop.squash = 0.03 * Math.cos(q * Math.PI);
       hopBody = 4 * Math.cos(Math.min(1, q * 3) * Math.PI / 2) - 2.5 * Math.sin(q * Math.PI);
+      bothArms(() => [10 * Math.sin(q * Math.PI), 6 * Math.sin(q * Math.PI)]);    // her arms lift a little in the air
     } else { const u = Math.sin(((p - 0.88) / 0.12) * Math.PI); hop.squash = -0.03 * u; hopBody = 3 * u; }   // landing
   }
   function body3D() {
-    model.fx.position.set(P.rootX, hop.y, 0);
+    model.fx.position.set(0, hop.y, 0);
     model.fx.scale.set(1 - hop.squash * 0.5, 1 + hop.squash, 1);
   }
 
@@ -533,7 +623,12 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     update, react, hello,
     beforeMixer() {},                                  // (the 3D AGI-1 needs this; nothing to undo here)
     setPointer(pointer) { look.pointer = pointer ? { x: pointer.x, y: pointer.y } : null; },
-    setCloseUp(on) { closeUp = !!on; },
+    // up close (zoomed in, or in a live view): no surprise dances, and one in progress ends softly (her hands in the air would
+    // widen the live view's portrait to her waist)
+    setCloseUp(on) {
+      closeUp = !!on;
+      if (closeUp && dancing && danceT < DANCE_LENGTH - 0.8) danceT = DANCE_LENGTH - 0.8;
+    },
     setTalk(level) { talk.level = Number.isFinite(level) ? clamp(level, 0, 1) : 0; },
     setAttention(mode) {
       const next = mode === 'listening' || mode === 'thinking' ? mode : 'idle';

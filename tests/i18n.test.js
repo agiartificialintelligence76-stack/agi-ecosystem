@@ -242,3 +242,38 @@ test('Telegram: her replies in the language of their Telegram app (English when 
     assert.equal(typeof L.timeButtons, 'function');
   }
 });
+
+test('when she\'s tapped (2026-10-01): her hellos and her "a lot of taps" lines in every language, and how taps are counted', async () => {
+  const { tapLinesIn, tapCounter, TAP_LINES, TAP_MANY, TAP_GAP } = await import('../src/stage/tap-lines.js');
+  for (const code of CODES) {
+    const lines = tapLinesIn(ALL[code], code);
+    assert.deepEqual(Object.keys(lines), Object.keys(TAP_LINES), code);
+    for (const l of Object.values(lines)) {
+      assert.ok(l.text && l.text.length <= 70, `${code} ${l.key}: short`);
+      assert.doesNotMatch(l.spoken, /\p{Extended_Pictographic}/u, `${code} ${l.key}: no emojis out loud`);
+      assert.doesNotMatch(l.text, /\$|buy|sell|coin|crypto|money|financ/i, `${code} ${l.key}: never about money`);
+      assert.equal(l.lang, code);
+    }
+  }
+  assert.ok(Object.values(TAP_LINES).every((l) => !/\b(babe|love|cutie|sweetie|honey)\b/i.test(l.text)), 'no pet names: anyone can tap her');
+  // a tap: a hello (they take turns, at most one every 3.5 s); a lot of taps in a row: a "many" line, then quiet for a while
+  const count = tapCounter();
+  const first = count(0);
+  assert.match(first, /^tap-[1-5]$/);
+  assert.equal(count.next() === first, false, 'the next hello is another one');
+  let got = [];
+  for (let i = 1; i < TAP_MANY; i++) got.push(count(i * 300));
+  assert.deepEqual(got.slice(0, -1), Array(TAP_MANY - 2).fill(null), 'quick taps: no hello each time');
+  assert.equal(got.at(-1), 'tap-many-1', `${TAP_MANY} taps in a row`);
+  // keep tapping: a while of just her reactions, then the next "many" line
+  const manyAt = (TAP_MANY - 1) * 300;
+  let next = null, at = manyAt;
+  while (!next && at < 20_000) { at += 300; next = count(at); }
+  assert.equal(next, 'tap-many-2', 'and if they keep at it, the next one');
+  assert.ok(at >= manyAt + 8000 && at < manyAt + 8000 + 400, `after about 8 s of just reactions (${at - manyAt} ms)`);
+  assert.equal(count(at + TAP_GAP + 100), null, 'still quiet for a while');
+  assert.match(count(at + 8000 + TAP_GAP), /^tap-[1-5]$/, 'a pause, then a tap: a hello again');
+  const slow = tapCounter();
+  const keys = [0, 2000, 4000, 6000, 8000].map((t) => slow(t));
+  assert.deepEqual(keys.map((k) => k !== null), [true, false, true, false, true], 'a tap every 2 s: a hello every other tap');
+});

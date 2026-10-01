@@ -9,6 +9,7 @@ import { geminiError } from './gemini.js';
 import { speakable, clipSpeech } from '../src/chat/voice.js';
 import { LIMIT_LINES, REST_LINES, limitLineIn, restLineIn } from '../src/chat/limit-lines.js';
 import { CHECK_LINES, checkLinesIn } from '../src/checker/lines.js';
+import { TAP_LINES, tapLinesIn } from '../src/stage/tap-lines.js';
 import { linesOf } from '../src/i18n/all.js';
 import { lineAt } from '../src/i18n/text.js';
 import { isLang } from '../src/i18n/langs.js';
@@ -36,13 +37,15 @@ export const MOOD_STYLES = {
 export const styleFor = (mood) => (Object.hasOwn(MOOD_STYLES, mood) ? MOOD_STYLES[mood] : VOICE_STYLE);
 // Fixed lines, the same for everyone (so Vercel's CDN can keep one copy), exactly as the chat shows them: her "hi, it's me"
 // (the speaker button, picking up a call), her out-of-messages lines for Strangers and Crushes, (2026-09-25) her short
-// "come back tomorrow" lines (src/chat/limit-lines.js) and (2026-09-26) what she says about a ClankChecker scan
-// (src/checker/lines.js). Her market lines are made from src/chat/market-lines.js.
+// "come back tomorrow" lines (src/chat/limit-lines.js), (2026-09-26) what she says about a ClankChecker scan
+// (src/checker/lines.js) and (2026-10-01) what she says when she's tapped (src/stage/tap-lines.js). Her market lines are
+// made from src/chat/market-lines.js.
 export const LINES = {
   hello: "hi, it's me",
   ...Object.fromEntries(Object.values(LIMIT_LINES).map((l) => [l.key, speakable(l.text)])),
   ...Object.fromEntries(Object.values(REST_LINES).map((l) => [l.key, speakable(l.text)])),
   ...Object.fromEntries(Object.values(CHECK_LINES).map((l) => [l.key, l.spoken])),
+  ...Object.fromEntries(Object.values(TAP_LINES).map((l) => [l.key, l.spoken])),
 };
 // …and how each one sounds
 export const LINE_MOODS = {
@@ -50,6 +53,7 @@ export const LINE_MOODS = {
   ...Object.fromEntries(Object.values(LIMIT_LINES).map((l) => [l.key, 'sweet'])),
   ...Object.fromEntries(Object.values(REST_LINES).map((l) => [l.key, 'sleepy'])),
   ...Object.fromEntries(Object.values(CHECK_LINES).map((l) => [l.key, l.mood])),
+  ...Object.fromEntries(Object.values(TAP_LINES).map((l) => [l.key, l.mood])),
 };
 // …in her other languages (2026-09-29): the same keys and moods, the words from src/i18n/lines/<code>.js. → key → words
 const inLang = new Map();
@@ -62,6 +66,7 @@ export function linesFor(lang = 'en') {
       ...Object.fromEntries([1, 2].map((level) => limitLineIn(level, L, lang)).map((l) => [l.key, speakable(l.text)])),
       ...Object.fromEntries(['person', 'site'].map((kind) => restLineIn(kind, L, lang)).map((l) => [l.key, speakable(l.text)])),
       ...Object.fromEntries(Object.values(checkLinesIn(L, lang)).map((l) => [l.key, l.spoken])),
+      ...Object.fromEntries(Object.values(tapLinesIn(L, lang)).map((l) => [l.key, l.spoken])),
     });
   }
   return inLang.get(lang);

@@ -461,7 +461,7 @@ test('GET her out-of-messages lines (the offer: sweet; "come back tomorrow": sle
     assert.equal((await line(key)).status, 200);
     assert.equal(called(TTS).length, before, 'made once per server copy');
   }
-  assert.deepEqual(Object.keys(LINES).filter((k) => !k.startsWith('check-')).sort(), ['hello', 'more-1', 'more-2', 'sleep', 'talked-out']);
+  assert.deepEqual(Object.keys(LINES).filter((k) => !k.startsWith('check-') && !k.startsWith('tap-')).sort(), ['hello', 'more-1', 'more-2', 'sleep', 'talked-out']);
   assert.equal(called('voice_take').length, 0, 'fixed lines need no ticket or count');
 });
 
@@ -477,6 +477,26 @@ test('GET her ClankChecker lines (2026-09-26): one address each, in each line\'s
     assert.equal(first.type, 'audio/wav');
     assert.match(first.headers.get('cache-control'), /s-maxage=2592000/);
     assert.equal(called(TTS).at(-1).body.input[0].content[0].text, spoken, `${key}: exactly her words, emojis as full stops`);
+    assert.equal(styleOf(called(TTS).at(-1)), styleFor(mood), `${key}: ${mood}`);
+    const before = called(TTS).length;
+    assert.equal((await line(key)).status, 200);
+    assert.equal(called(TTS).length, before, 'made once per server copy');
+  }
+  assert.equal(called('voice_take').length, 0, 'no ticket, no count: nobody\'s voice allowance');
+});
+
+test('GET her lines when she\'s tapped (2026-10-01): one address each, in each line\'s own style, made once and kept', async () => {
+  const { TAP_LINES } = await import('../src/stage/tap-lines.js');
+  assert.deepEqual(Object.keys(LINES).filter((k) => k.startsWith('tap-')).sort(), Object.keys(TAP_LINES).sort());
+  assert.equal(Object.keys(TAP_LINES).length, 9, 'five hellos, four for a lot of taps');
+  for (const key of ['tap-0', 'tap-6', 'tap-many-5', 'tap-many', 'TAP-1', 'tap-']) assert.equal((await line(key)).status, 404, key);
+  assert.equal(calls.length, 0, 'unknown lines never reach Gemini');
+  for (const { key, spoken, mood } of Object.values(TAP_LINES)) {
+    const first = await line(key);
+    assert.equal(first.status, 200, key);
+    assert.equal(first.type, 'audio/wav');
+    assert.match(first.headers.get('cache-control'), /s-maxage=2592000/);
+    assert.equal(called(TTS).at(-1).body.input[0].content[0].text, spoken, `${key}: exactly her words, no emojis`);
     assert.equal(styleOf(called(TTS).at(-1)), styleFor(mood), `${key}: ${mood}`);
     const before = called(TTS).length;
     assert.equal((await line(key)).status, 200);

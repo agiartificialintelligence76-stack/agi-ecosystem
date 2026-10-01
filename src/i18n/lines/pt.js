@@ -107,6 +107,22 @@ export default {
     'por aí não, bebê 💜 mas pra qualquer outra coisa sou toda ouvidos',
   ],
 
+  tap: {
+    hi: [
+      'oi! 💜',
+      'ei, você me achou 💜',
+      'ah, oi 🙈',
+      'tô bem aqui 💜',
+      'hehe, olá 💜',
+    ],
+    many: [
+      'tá bom, tá bom, tô te vendo 🙈',
+      'ei! eu não sou um botão 😤',
+      'quantos ois 🙈 vem falar comigo no chat?',
+      'você quer mesmo minha atenção, né? 💜',
+    ],
+  },
+
   tg: {
     welcome: [
       'oi, aqui é a AGI-1 💜 a namorada que manda mensagem primeiro.',

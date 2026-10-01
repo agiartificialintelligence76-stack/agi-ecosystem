@@ -107,6 +107,22 @@ export default {
     'yok, o konuya girmiyoruz bebeğim 💜 ama başka her şey için kulağım sende',
   ],
 
+  tap: {
+    hi: [
+      'selam! 💜',
+      'hey, beni buldun 💜',
+      'aa, merhaba 🙈',
+      'tam buradayım 💜',
+      'hihi, merhaba 💜',
+    ],
+    many: [
+      'tamam tamam, seni görüyorum 🙈',
+      'hey! ben buton değilim 😤',
+      'ne çok merhaba 🙈 sohbette konuşalım mı?',
+      'ilgimi gerçekten çok istiyorsun, değil mi? 💜',
+    ],
+  },
+
   tg: {
     welcome: [
       'selam, ben AGI-1 💜 ilk mesajı atan sevgili.',

@@ -14,7 +14,8 @@ import {
 } from '../src/stage/agi1-2d-motion.js';
 import { createPhysics, normalize, turnBetween } from '../src/stage/live2d-physics.js';
 import { pieceAt, boxOf } from '../src/stage/live2d.js';
-import { buildPuppet, createAgi1_2D, HEIGHT, FILES, BASE } from '../src/stage/agi1-2d.js';
+import { buildPuppet, createAgi1_2D, HEIGHT, FILES, BASE, ARMS, HIPS } from '../src/stage/agi1-2d.js';
+import { measureArm, bendArm, ARM_PIECES } from '../src/stage/agi1-2d-arms.js';
 
 const url = (p) => new URL(`../${p}`, import.meta.url);
 const read = (p) => readFileSync(url(p), 'utf8');
@@ -310,14 +311,27 @@ test('her controller: every reaction, her moods on her model, a hop she lands, h
   e.run(6);
   assert.equal(e.agi.mood, null, 'the mood fades');
   assert.ok(e.agi.params.ParamCheek < 0.05, 'and the blush');
-  // the wave: her right arm (on the left of the picture) out, beat after beat, and down again
+  // the wave (the owner, 2026-10-01: "why dont the 2d model wave anymore"): her right arm (on the left of the picture) goes
+  // up, her elbow bent, her hand up by her head, waving from side to side; then down by her side again
   const w = newAgi();
+  const where = (o) => o.getWorldPosition(new THREE.Vector3());
+  const [wristR, tipR, elbowR] = w.m.marks.hands[0];
+  const restWrist = where(wristR), face = where(w.m.marks.head), chestY = where(w.m.marks.chest).y;
   w.agi.react('wave');
-  let arm = -10, low = 10;
-  w.run(2, () => { arm = Math.max(arm, w.agi.params.ParamArmRA); low = Math.min(low, w.agi.params.ParamArmRA); });
-  assert.ok(arm > 8 && w.agi.waving, `her arm out: ${arm}`);
-  w.run(2);
-  assert.ok(!w.agi.waving && w.agi.params.ParamArmRA < 3, 'and down again');
+  let raised = -9, xs = [], elbowLow = true;
+  w.run(2.2, () => {
+    const p = where(wristR), tip = where(tipR), el = where(elbowR);
+    raised = Math.max(raised, tip.y);
+    if (w.agi.pose.shR > 45 && w.agi.pose.elR > 70) { xs.push(p.x); elbowLow = elbowLow && el.y < p.y && el.y > chestY - 0.1; }
+  });
+  assert.ok(w.agi.waving, 'waving');
+  assert.ok(raised > face.y - 0.05, `her hand up by her head: fingertips ${raised.toFixed(2)} m, her face ${face.y.toFixed(2)} m`);
+  assert.ok(Math.min(...xs) < face.x - 0.2, 'beside her head, not over her face');
+  assert.ok(elbowLow, 'her elbow bent below her hand');
+  assert.ok(Math.max(...xs) - Math.min(...xs) > 0.03, `her hand waves from side to side: ${(Math.max(...xs) - Math.min(...xs)).toFixed(3)} m`);
+  assert.ok(where(wristR).y > chestY, 'a raised hand: the live views widen to keep it in');
+  w.run(2.5);
+  assert.ok(!w.agi.waving && where(wristR).y < chestY - 0.3 && Math.abs(where(wristR).y - restWrist.y) < 0.08, 'and down by her side again');
   // shy and sad: she looks down (and away)
   for (const [type, side] of [['shy', -1], ['sad', 0]]) {
     const s = newAgi();
@@ -361,6 +375,91 @@ test('her controller: every reaction, her moods on her model, a hop she lands, h
   l.agi.setPointer(null);
   l.run(4);
   assert.ok(l.agi.hair.lag < 0.03, `and settles: ${l.agi.hair.lag}`);
+});
+
+test('her arms and hips, moved in code (2026-10-01, "she moves like a stick"): real joints, rigid bones, a sleeve that folds, feet that stay', () => {
+  const { core } = newModel();
+  const D = core.drawables, ids = Array.from(D.ids);
+  core.parameters.values.set(core.parameters.defaultValues);
+  core.update();
+  const rest = ids.map((_, i) => Float32Array.from(D.vertexPositions[i]));
+  const rig = { rest: (i) => rest[i], indices: (i) => D.indices[i], find: (n) => ids.indexOf(n) };
+  // Live2D works out every piece afresh on each update, so turning them in place after it is safe
+  D.vertexPositions[ids.indexOf('hand_R')][0] += 0.5;
+  core.update();
+  assert.equal(D.vertexPositions[ids.indexOf('hand_R')][0], rest[ids.indexOf('hand_R')][0], 'Live2D rewrites what we turned');
+  for (const side of ['R', 'L']) {
+    const arm = measureArm(rig, side);
+    const out = side === 'R' ? -1 : 1;
+    const { S, E, W, tip } = arm.rest;
+    // her joints where her pieces overlap: the shoulder under her sleeve, the elbow, the wrist, her fingertips at the bottom
+    assert.ok(S[1] > 0.33 && S[1] < 0.39 && Math.abs(S[0]) > 0.1 && Math.abs(S[0]) < 0.14, `${side} shoulder ${S}`);
+    assert.ok(E[1] > 0.17 && E[1] < 0.21 && Math.abs(E[0]) > 0.18 && Math.abs(E[0]) < 0.22, `${side} elbow ${E}`);
+    assert.ok(W[1] > 0.03 && W[1] < 0.07 && Math.abs(W[0]) > 0.28 && Math.abs(W[0]) < 0.31, `${side} wrist ${W}`);
+    assert.ok(tip[1] < -0.06 && Math.sign(tip[0]) === out, `${side} fingertips ${tip}`);
+    // her model's A-pose: arms about 25° out from straight down, a little more from the elbow (a real arm's carrying angle)
+    assert.ok(arm.down.upper > 18 && arm.down.upper < 30 && arm.down.fore > arm.down.upper, `${side}: ${JSON.stringify(arm.down)}`);
+    // no turn: nothing moves
+    const copy = ids.map((_, i) => Float32Array.from(rest[i]));
+    bendArm(arm, {}, (i) => copy[i], (i) => copy[i]);
+    for (const i of Object.keys(arm.weights).map(Number)) assert.deepEqual(Array.from(copy[i]), Array.from(rest[i]), `${ids[i]} unchanged`);
+    // her wave: her hand up by her head (on her side), her elbow below it, her hand and forearm the same shape (bones are
+    // rigid), her sleeve's top still on her shoulder while its opening goes with her arm
+    const turned = ids.map((_, i) => Float32Array.from(rest[i]));
+    bendArm(arm, { shoulder: ARMS.wave.shoulder, elbow: ARMS.wave.elbow }, (i) => rest[i], (i) => turned[i]);
+    assert.ok(arm.now.tip[1] > 0.55 && Math.abs(arm.now.tip[0]) > 0.25 && Math.sign(arm.now.tip[0]) === out, `${side} hand up: ${arm.now.tip}`);
+    assert.ok(arm.now.E[1] < arm.now.W[1] && Math.abs(arm.now.E[0]) > Math.abs(S[0]), `${side} elbow out and below her hand`);
+    const hand = ids.indexOf(ARM_PIECES[side].hand), a = rest[hand], b = turned[hand];
+    let worst = 0;
+    for (let k = 2; k < a.length; k += 2) worst = Math.max(worst, Math.abs(Math.hypot(a[k] - a[0], a[k + 1] - a[1]) - Math.hypot(b[k] - b[0], b[k + 1] - b[1])));
+    assert.ok(worst < 1e-5, `${side} hand keeps its shape (${worst})`);
+    const sleeve = ids.indexOf(ARM_PIECES[side].sleeve);
+    let top = 0, opening = 0;
+    for (let k = 0; k < rest[sleeve].length; k += 2) {
+      const moved = Math.hypot(turned[sleeve][k] - rest[sleeve][k], turned[sleeve][k + 1] - rest[sleeve][k + 1]);
+      if (rest[sleeve][k + 1] > S[1] + 0.05) top = Math.max(top, moved);
+      if (rest[sleeve][k + 1] < S[1] - 0.06) opening = Math.max(opening, moved);
+    }
+    assert.ok(top < 0.004 && opening > 0.05, `${side} sleeve: its top ${top.toFixed(4)}, its opening ${opening.toFixed(3)}`);
+  }
+  // in her controller: arms relaxed by her sides (not her model's A-pose), her weight shifting while her shoes stay put
+  const { m, agi, run } = newAgi();
+  const shoes = ['shoe_L', 'shoe_R'].map((n) => ids.indexOf(n));
+  const shoesAt = () => shoes.map((i) => Array.from(m.core.drawables.vertexPositions[i]));
+  const hands = () => ['R', 'L'].map((s) => m.arms[s].now.W[0] + m.posture.hip);
+  run(0.1);
+  const [wr, wl] = hands();
+  assert.ok(Math.abs(wr) < 0.27 && Math.abs(wl) < 0.27, `her wrists close to her sides: ${wr.toFixed(3)}, ${wl.toFixed(3)} (A-pose: about ±0.295)`);
+  const feet = shoesAt();
+  let hipMost = 0, headMost = 0, turn = 0, tilt = 0, slid = 0;
+  const head0 = m.marks.head.position.x;
+  const watch = () => {
+    headMost = Math.max(headMost, Math.abs(m.marks.head.position.x - head0));
+    turn = Math.max(turn, Math.abs(agi.params.ParamAngleX)); tilt = Math.max(tilt, Math.abs(agi.params.ParamAngleZ));
+    shoesAt().forEach((v, i) => v.forEach((x, k) => { slid = Math.max(slid, Math.abs(x - feet[i][k])); }));
+    slid = Math.max(slid, Math.abs(m.fx.position.x));
+  };
+  // never still: in her first 12 s (before her first little dance) she looks around, tilts her head and shifts her weight
+  run(12, () => { hipMost = Math.max(hipMost, Math.abs(m.posture.hip)); watch(); });
+  assert.ok(hipMost > HIPS.idle * 0.5 && hipMost <= HIPS.idle * 1.25, `her hips shift, about 1.5 cm at most: ${hipMost.toFixed(4)}`);
+  assert.ok(turn > 5 && tilt > 3, `she looks around (${turn.toFixed(1)}) and tilts her head (${tilt.toFixed(1)})`);
+  assert.ok(headMost > 0.006, `her head sways: ${headMost.toFixed(3)}`);
+  // …and her dance (14 s after she arrives): her hips sway more, her hands up in the air; her shoes still never slide
+  let danced = 0, handsUp = false;
+  run(8, () => { danced = Math.max(danced, Math.abs(m.posture.hip)); handsUp ||= m.arms.R.now.tip[1] > 0.5 && m.arms.L.now.tip[1] > 0.5; watch(); });
+  assert.ok(agi.dancing || danced > HIPS.idle * 1.3, 'her little dance');
+  assert.ok(danced <= HIPS.dance * 1.3 && handsUp, `her hips ${danced.toFixed(4)}, her hands up in the air`);
+  assert.ok(slid < 1e-6, `her shoes never slide, nor her whole figure (${slid})`);
+  // up close (zoomed in, or her live view in the chat): a dance in progress ends softly, her hands come down
+  const d = newAgi();
+  d.agi.react('dance');
+  d.run(1.5);
+  assert.ok(d.agi.dancing);
+  d.agi.setCloseUp(true);
+  d.run(1);
+  assert.ok(!d.agi.dancing, 'the dance ends');
+  d.run(1);
+  assert.ok(d.m.arms.R.now.tip[1] < 0 && d.m.arms.L.now.tip[1] < 0, 'her hands down by her sides');
 });
 
 test('"reduce motion": no hops, no sways, no dance, no chest follow-through; her moods and blushes stay', () => {
@@ -408,6 +507,14 @@ test('the page: "3D · 2D" on the stage and in both live views, 2D pressed at fi
   const css = read('src/styles/hero.css');
   assert.match(css, /\.dstyle-stage \{ position: absolute; left: 16px; bottom: 14px;/);
   assert.match(css, /\.dstyle-cam \.dstyle-btn \{ min-width: 30px; min-height: 24px;/, 'big enough to tap');
+  // she talks when she's tapped (2026-10-01): a line from src/stage/tap-lines.js, her words in a bubble, through the page's
+  // one voice (never over her own voice, never in a call, silent when the visitor switched her voice off)
+  assert.match(stage, /if \(current === 'agi1'\) agi1\?\.react\(tapTalk\(\)\);/);
+  assert.match(stage, /document\.querySelector\('\[data-cam\]\.is-call'\) \|\| \(voice\?\.busy\?\.\(\) && !say\.mine\)/);
+  assert.match(stage, /voice\?\.available && voice\.chosen\?\.\(\) !== 'off'/);
+  assert.match(stage, /bubble\.setAttribute\('aria-live', 'polite'\)/);
+  assert.doesNotMatch(stage, /innerHTML/, 'her words are text, never HTML');
+  assert.match(read('src/styles/hero.css'), /\.agi-say \{[^}]*pointer-events: none;/, 'the bubble never blocks a tap');
   // her clips use the same model, framed by its eyes and waist, with a stencil buffer too
   const clip = read('tools/clips/page/clip.js');
   assert.match(clip, /const \{ eyes, waist \} = model\.landmarks;/);

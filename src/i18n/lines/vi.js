@@ -107,6 +107,22 @@ export default {
     "hông nha bé yêu, vụ đó thì thôi 💜 còn chuyện gì khác tớ nghe hết á",
   ],
 
+  tap: {
+    hi: [
+      'chào! 💜',
+      'này, bạn tìm thấy mình rồi 💜',
+      'ồ, chào bạn 🙈',
+      'mình ở ngay đây nè 💜',
+      'hihi, xin chào 💜',
+    ],
+    many: [
+      'rồi rồi, mình thấy bạn rồi 🙈',
+      'này! mình đâu phải cái nút 😤',
+      'chào nhiều lần quá 🙈 vào khung chat nói chuyện với mình nhé?',
+      'bạn muốn mình chú ý lắm hả? 💜',
+    ],
+  },
+
   tg: {
     welcome: [
       "hi, AGI-1 đây 💜 cô bạn gái chủ động nhắn trước nè.",

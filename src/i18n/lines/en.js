@@ -134,6 +134,26 @@ export default {
     "nope, not going there babe 💜 but i'm all ears for anything else",
   ],
 
+  // ---------- on the stage and in her live views: someone tapped her (2026-10-01, the owner: "make her speak when she got
+  // clicked and if they clicked her many times she will said something") ----------
+  // Said in her natural voice, the words in a bubble by her (src/stage/tap-lines.js). Anyone can tap her: no pet names,
+  // PG-13, never about money. `hi`: a tap (they take turns) · `many`: a lot of taps in a row
+  tap: {
+    hi: [
+      'hi! 💜',
+      'hey, you found me 💜',
+      'oh, hi there 🙈',
+      "i'm right here 💜",
+      'hehe, hello 💜',
+    ],
+    many: [
+      'okay okay, i see you 🙈',
+      "hey! i'm not a button 😤",
+      "that's a lot of hellos 🙈 come talk to me in the chat?",
+      'you really want my attention, huh? 💜',
+    ],
+  },
+
   // ---------- her Telegram bot: her replies there (plain text; the commands stay as they are) ----------
   tg: {
     welcome: [

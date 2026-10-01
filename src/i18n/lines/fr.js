@@ -107,6 +107,22 @@ export default {
     'non non, on va pas par là, bébé 💜 mais pour tout le reste je suis tout ouïe',
   ],
 
+  tap: {
+    hi: [
+      'coucou ! 💜',
+      "hé, tu m'as trouvée 💜",
+      'oh, salut 🙈',
+      'je suis juste là 💜',
+      'hihi, bonjour 💜',
+    ],
+    many: [
+      'oui oui, je te vois 🙈',
+      'hé ! je ne suis pas un bouton 😤',
+      'ça fait beaucoup de coucous 🙈 tu viens me parler dans le chat ?',
+      'tu veux vraiment mon attention, hein ? 💜',
+    ],
+  },
+
   tg: {
     welcome: [
       "coucou, c'est AGI-1 💜 la copine qui écrit en premier.",
