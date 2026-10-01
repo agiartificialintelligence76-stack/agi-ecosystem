@@ -42,12 +42,14 @@ const DANCE_LENGTH = 6;
 // how far her head turns (her model's degrees): further, her flat art starts to show its seams (checked on every edge)
 const TURN = { x: 20, up: 12, down: -15, z: 15 };
 // her arms (degrees, src/stage/agi1-2d-arms.js: shoulder > 0 lifts the arm away from her body, elbow > 0 turns the forearm
-// up and out): relaxed by her sides at rest (her model is drawn in an A-pose), up with the elbow bent for her wave
+// up and out): relaxed by her sides at rest (her model is drawn in an A-pose). Her upper arms never lift far (her shirt
+// under her sleeves is drawn for arms down: REACH in agi1-2d-arms.js), so her hands go up by bending her elbows: her elbow
+// stays low by her side and her hand comes up by her face, like a cute "hi!" (her wave), both hands up for a "yay!" (her
+// cheer), her forearms up and swaying in front of her (her dance).
 export const ARMS = {
-  rest: { shoulder: -15, elbow: -3 }, wave: { shoulder: 52, elbow: 88 }, cheer: { shoulder: 72, elbow: 58 }, dance: { shoulder: 64, elbow: 52 },
-  // up close (her live views, zoomed in): like on a video call, her elbow lower and her hand by her face, so the picture
-  // stays a portrait
-  waveNear: { shoulder: 25, elbow: 120 },
+  rest: { shoulder: -15, elbow: -3 }, wave: { shoulder: 9, elbow: 130 }, cheer: { shoulder: 8, elbow: 124 }, dance: { shoulder: 0, elbow: 116 },
+  // up close (her live views, zoomed in): like on a video call, her hand a little nearer her face
+  waveNear: { shoulder: 7, elbow: 134 },
 };
 // her hips: how far her weight shifts from one foot to the other (model units, about 1.5 cm), more in her dance
 export const HIPS = { idle: 0.014, dance: 0.028 };
@@ -430,9 +432,9 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     }
   };
   function applyMoves(dt, tg) {
-    // the wave: her right arm (on the left of the picture) goes up, her elbow bends, her hand by her head, and she waves
-    // from the elbow (her hand a moment behind, like a real hand), tilting her head toward it, leaning and bouncing a
-    // little on each wave (up close, in the chat, a little less)
+    // the wave: her right forearm (on the left of the picture) comes up, her elbow low by her side, her hand up by her
+    // face, and she waves from the elbow (her hand a moment behind, like a real hand), tilting her head toward it, leaning
+    // and bouncing a little on each wave (up close, in the chat, a little less)
     if (act.wave >= 0) {
       act.wave += dt;
       const a = act.wave;
@@ -450,7 +452,7 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
       tg.by += lerp(1.2, 0.6, n) * Math.abs(beat) * up;
       if (a > 3.1) act.wave = -1;
     }
-    // "celebrate": both arms up in a little cheer, her hands shaking with joy, then down
+    // "celebrate": both hands up by her face in a little "yay!", shaking with joy, then down
     if (act.cheer >= 0) {
       act.cheer += dt;
       const c = act.cheer;
@@ -491,8 +493,8 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     // shy and sad: her arms come in to her sides, her shoulders a little forward
     if (clock < look.awayUntil && expr.mood === 'shy') { bothArms(() => [-6, -9]); tg.by += 1.5; }
     if (expr.mood === 'sad') { bothArms(() => [-3, -2]); tg.by += 2; }
-    // her little dance: her hips swaying on the beat, her upper body the other way, a bounce, and her hands up in the air,
-    // swaying from side to side with her
+    // her little dance: her hips swaying on the beat, her upper body the other way, a bounce, and her forearms up in front
+    // of her, her hands swaying from side to side with her and bobbing on each beat (her elbows stay low: REACH)
     updateDance(dt);
     if (danceW > 0.001) {
       const b = danceT * 1.9;                          // beats (about 114 a minute)
@@ -506,9 +508,10 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
       tg.az -= w * 6 * Math.sin(Math.PI * b + 1.1);
       tg.ay += w * 3 * Math.sin(Math.PI * 2 * b);
       const sway = Math.sin(Math.PI * b - 0.4);       // (her hands a moment behind her hips)
+      const bob = 0.5 - 0.5 * Math.cos(Math.PI * 2 * b - 0.5);
       for (const [side, sign] of [['R', 1], ['L', -1]]) {   // (both hands the same way: her arms turn opposite ways)
-        tg[`sh${side}`] += w * (ARMS.dance.shoulder - tg[`sh${side}`] + 9 * sign * sway);
-        tg[`el${side}`] += w * (ARMS.dance.elbow - tg[`el${side}`] + 14 * sign * sway);
+        tg[`sh${side}`] += w * (ARMS.dance.shoulder - tg[`sh${side}`] - 5 * sign * sway);
+        tg[`el${side}`] += w * (ARMS.dance.elbow - tg[`el${side}`] + 16 * sign * sway + 10 * bob);
         tg[`wr${side}`] += w * (10 * sign * sway - tg[`wr${side}`]);
       }
     }
@@ -545,7 +548,7 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
       hop.y = Math.sin(q * Math.PI) * 0.12;
       hop.squash = 0.03 * Math.cos(q * Math.PI);
       hopBody = 4 * Math.cos(Math.min(1, q * 3) * Math.PI / 2) - 2.5 * Math.sin(q * Math.PI);
-      bothArms(() => [10 * Math.sin(q * Math.PI), 6 * Math.sin(q * Math.PI)]);    // her arms lift a little in the air
+      if (act.cheer < 0) bothArms(() => [10 * Math.sin(q * Math.PI), 6 * Math.sin(q * Math.PI)]);   // her arms lift a little in the air
     } else { const u = Math.sin(((p - 0.88) / 0.12) * Math.PI); hop.squash = -0.03 * u; hopBody = 3 * u; }   // landing
   }
   function body3D() {

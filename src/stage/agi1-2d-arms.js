@@ -23,6 +23,19 @@ export const ARM_PIECES = {
   L: { upper: 'upper_arm_L', fore: 'forearm_L', hand: 'hand_L', sleeve: 'sleeve_L' },
 };
 
+// How far her drawing lets her arms go (2026-10-01, the owner's screenshot of her dance: "what is this lol"). Her shirt
+// is drawn for arms held down: the inside of each sleeve is part of her shirt's own drawing, under the arm, and stays
+// where it's drawn. Lifted much past her model's pose, an arm leaves it behind, and it shows under the raised sleeve like
+// a torn flap (her dance lifted both arms 64°, straight out like a scarecrow). So each upper arm lifts at most 16° above
+// her model's pose (degrees; clean at every angle up to 20, checked up close on both sides), easing into that limit
+// instead of stopping, and her hands go up by bending her elbows: by her face for her wave and her cheer.
+export const REACH = { shoulder: 16 };
+const KNEE = 5;                                   // the last 5° before the limit ease into it
+export function shoulderLimit(deg) {
+  const from = REACH.shoulder - KNEE;
+  return deg > from ? from + KNEE * Math.tanh((deg - from) / KNEE) : deg;
+}
+
 // How each piece follows the joints (model units, along the arm, measured from each joint): where a weight starts and
 // ends. Tuned on her model at the poses she uses (her wave, its close-up version, her cheer, her dance, her arms down by
 // her sides), looked at up close.
@@ -128,13 +141,14 @@ function norm(x, y) { const l = Math.hypot(x, y) || 1; return [x / l, y / l]; }
 function outFromDown(u, side) { return (Math.atan2(u[0], -u[1]) / RAD) * (side === 'R' ? -1 : 1); }
 
 // ---------- turning an arm ----------
-// `pose`: { shoulder, elbow, wrist } in degrees. shoulder > 0 lifts her arm away from her body (out, then up), < 0 brings
-// it in to her side; elbow > 0 turns her forearm up and out (her wave), < 0 in; wrist > 0 turns her hand out.
+// `pose`: { shoulder, elbow, wrist } in degrees. shoulder > 0 lifts her arm away from her body (out, then up; at most
+// REACH.shoulder), < 0 brings it in to her side; elbow > 0 turns her forearm up and out (her wave), < 0 in; wrist > 0 turns
+// her hand out.
 // `src(i)`: piece i's vertex positions this frame (from Live2D); `dst(i)`: where to write the turned ones (may be src).
 const tmpS = [0, 0], tmpE = [0, 0], tmpW = [0, 0], tmpT = [0, 0];
 export function bendArm(arm, pose, src, dst) {
   if (!arm) return;
-  const s = arm.sign * (pose.shoulder || 0) * RAD, e = arm.sign * (pose.elbow || 0) * RAD, wr = arm.sign * (pose.wrist || 0) * RAD;
+  const s = arm.sign * shoulderLimit(pose.shoulder || 0) * RAD, e = arm.sign * (pose.elbow || 0) * RAD, wr = arm.sign * (pose.wrist || 0) * RAD;
   const { upper, fore, hand } = arm.pieces;
   const S = at(src(upper), arm.anchors.S, tmpS), E = at(src(upper), arm.anchors.E, tmpE), W = at(src(fore), arm.anchors.W, tmpW);
   const T = at(src(hand), arm.anchors.T, tmpT);

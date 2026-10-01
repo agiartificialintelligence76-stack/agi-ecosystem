@@ -46,8 +46,10 @@
 > - **Her 2D wave, natural motion, and she talks when tapped** (2026-10-01, round 2, the owner: "why dont the 2d model dont
 >   wave anymore, and she moves like a stick", then "can you make her speak whe she got clicked and if they clicked her many
 >   times she will said something"): her arms move in code on top of her model (relaxed by her sides, a real wave with her
->   hand up by her head), her weight shifts, her head looks around; a tap gets a hello in her voice with her words in a
->   bubble, a lot of taps one of her "okay, i see you" lines. See "AGI-1 in 2D" and "She talks when you tap her".
+>   hand up by her face), her weight shifts, her head looks around; a tap gets a hello in her voice with her words in a
+>   bubble, a lot of taps one of her "okay, i see you" lines. See "AGI-1 in 2D" and "She talks when you tap her". Her upper
+>   arms never lift far (the owner's screenshot of her first dance, "what is this lol": her shirt under her sleeves showed
+>   like torn flaps): her hands go up by bending her elbows (see "Her upper arms never lift far").
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -183,7 +185,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/checker/lines.js` | ClankChecker (2026-09-26): the risk levels' names and what AGI-1 says about a scan (two lines per level, the official $AGI, a copy of it), with her reaction and voice style for each. The page and the server both read it |
 | `src/checker/copycat.js` | ClankChecker (2026-09-26): which coins copy another coin's ticker ("E/ACC" = "EACC"). Our server marks the whole list with it, and the page marks it again whenever new launches arrive, so both always agree |
 | `src/stage/stage.js` | Figure 1, the 3D stage: minimal studio (transparent canvas, neutral light, floor dial, soft shadow), camera, loading %, the model switch (AGI-1; the Arena's champion left on 2026-09-28), taps; and (2026-09-25) moving that one canvas into a live view and back: the chat's, and since 2026-09-26 ClankChecker's; and (2026-09-27) the "3D · 2D" switch: which AGI-1 is on stage (`slot()`, `setStyle()`, `swapAgi1()`) |
-| `src/stage/agi1-2d-arms.js` | 2026-10-01, round 2: her 2D arms, turned in code on top of her Live2D model after each update: her joints found on her model (`measureArm`), each arm turned at the shoulder, elbow and wrist with a round elbow and a sleeve that folds (`bendArm`). Pure (tested in Node with Live2D's runtime) |
+| `src/stage/agi1-2d-arms.js` | 2026-10-01, round 2: her 2D arms, turned in code on top of her Live2D model after each update: her joints found on her model (`measureArm`), each arm turned at the shoulder, elbow and wrist with a round elbow and a sleeve that folds (`bendArm`), never lifted past what her drawing allows (`REACH`). Pure (tested in Node with Live2D's runtime) |
 | `src/stage/tap-lines.js` | 2026-10-01: what she says when she's tapped (her hellos, her "a lot of taps" lines, their voice styles and faces: `tapLinesIn`) and the tap counter (`tapCounter`). The stage and the server (`server/voice.js`) both read it |
 | `src/stage/agi1-2d.js` | AGI-1 in 2D, her Live2D model (2026-10-01; her 2D rig before): loads her files (`loadAgi1_2D`), builds her puppet (`buildPuppet`: standing on the floor, 1.62 m, her markers for the live views, taps only on her, her 4096 px texture on request: `sharpen()`) and her controller (`createAgi1_2D`: her motion on her model's parameters, every reaction, her physics; the same controls as `agi1.js`: `react`, `hello`, `setTalk`, `setPointer`, `setAttention`, `setCloseUp`, `update`). Loads only when needed (a separate file). See "AGI-1 in 2D" |
 | `src/stage/live2d.js` | 2026-10-01: Live2D for the stage: loads Live2D's runtime (Cubism Core) once, draws her model's 52 pieces as three.js meshes in Live2D's order with their opacity and blending, her eyes' clipping with the stencil buffer (`buildMeshes`); which piece is at a point (`pieceAt`, for taps) and the box of a few pieces (`boxOf`, for her markers) |
@@ -2252,6 +2254,12 @@ beside the stage's. Cubism Core uses neither eval nor WebAssembly, so the CSP is
   sleeve folds with her shoulder (its top stays on her shirt, its opening goes with her arm); her hand follows her forearm and
   her wrist adds a little turn. At rest **her arms hang relaxed by her sides** (15° in from the A-pose, elbows a little bent),
   swinging a little behind her body (gravity keeps them hanging when she leans). `ARMS` in `agi1-2d.js` holds her poses.
+- **Her upper arms never lift far** (2026-10-01, the owner's screenshot of her dance: "what is this lol"): her shirt is drawn
+  for arms held down, and the inside of each sleeve is part of her shirt's own drawing, under the arm. Lifted far, an arm
+  leaves it behind: in her first dance (both arms lifted 64°, straight out like a scarecrow) it showed under her sleeves like
+  torn flaps. So each upper arm lifts at most 16° above her model's pose (`REACH` in `agi1-2d-arms.js`: clean at every angle
+  up to 20, checked up close on both sides), easing into the limit, and her hands go up by bending her elbows: her elbow
+  stays low by her side and her forearm comes up, like a cute "hi!".
 - **Blinks** every 2 to 6 s (now and then twice), quick. Her model's eyes look clean open, a little lowered and closed (a soft
   "‿"); in between its lids cross-fade, which only looks right for a moment: so a mood lowers her lids only a little (to 0.86
   at most, `eyeOpen()`), and her happy moments close her eyes in a smile quickly and open them quickly.
@@ -2268,15 +2276,17 @@ beside the stage's. Cubism Core uses neither eval nor WebAssembly, so the CSP is
   looks (shy and sad look down, jealous glances away), and her body.
 - **2D versions of the 3D moves:** a hop (her whole figure, with a crouch and a landing her body and chest feel; her arms lift
   a little in the air), `love` a happy sway with her arms swinging out, `dance` her hips swaying on the beat (her upper body the
-  other way), a bounce, and her hands up in the air swaying with her (6 s, every 35 to 55 s, never up close: zooming in or
-  her live view ends one softly), `celebrate` a hop and both arms up in a cheer, her hands shaking with joy, nods, a slow head
-  shake (`worried`), a tilt (`hmm`), shy and sad with her arms in at her sides.
+  other way), a bounce, and her forearms up, her hands by her shoulders swaying with her and bobbing on the beat (6 s, every 35
+  to 55 s, never up close: zooming in or her live view ends one softly), `celebrate` a hop and both hands up by her face in a
+  little "yay!", shaking with joy, nods, a slow head shake (`worried`), a tilt (`hmm`), shy and sad with her arms in at her
+  sides.
 - **Her wave** (2026-10-01, round 2, the owner: "why dont the 2d model wave anymore"; it was her arm swinging out 7°): her
-  right arm (on the left of the picture) goes up, her elbow bent, her hand up by her head, and she waves from the elbow about
-  1.7 times a second for about 2 s, her hand a moment behind (like a real hand), her head tilting toward it, leaning and
-  bouncing a little on each wave. Up close (her live views, zoomed in) like on a video call: her elbow lower and her hand by
-  her face, so the picture stays a portrait (it widens a little to keep her hand in, as for the 3D AGI-1; her hand may swing
-  in from the picture's side for a moment as it goes up and down).
+  right forearm (on the left of the picture) comes up, her elbow low by her side, her hand up by her face, and she waves from
+  the elbow about 1.7 times a second for about 2 s, her hand a moment behind (like a real hand), her head tilting toward it,
+  leaning and bouncing a little on each wave. Up close (her live views, zoomed in) like on a video call, her hand a little
+  nearer her face (the picture widens a little to keep her hand and elbow in, as for the 3D AGI-1; as her hand goes up and
+  down, it passes out to her side for a moment). (Its first version lifted her whole arm out, her hand above her head: that
+  showed the torn flap under her sleeve, see above.)
 - **Her shirt under her right arm:** the model's texture was painted with her arms down, so the side of her shirt under her
   right arm kept a pink and orange smudge where the arm had been, which her wave showed. `tools/agi1-2d/fix-shirt.py` repaints
   it in her shirt's purple from the shirt around it (only that area, never her outline), on both textures (2026-10-01; both
@@ -2319,15 +2329,18 @@ removed with the switch (they're in git's history; `tools/agi1-2d/` now holds on
 | No "3D · 2D" on the stage | The stage hasn't loaded yet | Nothing to fix |
 | A new reaction added to the 3D AGI-1 does nothing in 2D | Her 2D controller needs its own version | Tell Claude: `react()` in `src/stage/agi1-2d.js` |
 | A seam or a gap at her shoulder or elbow when she waves | Her arms are turned in code on top of her model (`src/stage/agi1-2d-arms.js`) | Tell Claude which pose (a screenshot helps): `BLEND` and `ARMS` are tuned by eye |
+| A purple flap under her sleeve, like torn fabric, when she lifts her arms | An arm lifted past what her drawing allows (her shirt under her sleeves is drawn for arms down) | Never raise `REACH` in `agi1-2d-arms.js` without looking up close at both sides; raise her hands with her elbows instead (`ARMS`) |
 | A pink patch on her shirt's side when she raises an arm | The texture's smudge under her arm (a new export brings it back) | `python3 tools/agi1-2d/fix-shirt.py` on both textures (see "Updating her model") |
 | The model was edited in Cubism Editor | The site has its exported files | See "Updating her model" above |
 
 **Tests (round 2, 2026-10-01):** `tests/agi1-2d.test.js` (13): her arms and hips (Live2D rewrites her pieces on every update,
 so turning them in place is safe; her joints where her pieces overlap, on both arms; no turn moves nothing; her wave's hand up
-by her head with her elbow below it, her hand keeping its exact shape, her sleeve's top staying on her shoulder while its
-opening follows; at rest her wrists close to her sides; in her first 12 s she looks around, tilts her head, shifts her weight
-about 1.5 cm; her dance's hips and hands in the air; her shoes and her whole figure never sliding; up close a dance ending
-softly); her controller's wave (her hand up by her head, beside it, waving from side to side, then down by her side again).
+by her face with her elbow low below it, her hand keeping its exact shape, her sleeve's top staying on her shoulder while its
+opening follows; her arms never lifted past `REACH`, however far they're asked to go, and in every reaction on the stage and
+up close; at rest her wrists close to her sides; in her first 12 s she looks around, tilts her head, shifts her weight about
+1.5 cm; her dance's hips and her hands up by her shoulders; her shoes and her whole figure never sliding; up close a dance
+ending softly); her controller's wave (her hand up by her face, beside it, waving from side to side, then down by her side
+again).
 `tests/voice.test.js` and `tests/i18n.test.js`: her tap lines (see "She talks when you tap her"). In a browser: `l2de2e.mjs`
 (now 50 checks: her hello wave in the chat's live view, which widens and keeps her fingertips in while she waves) and
 `taptest.mjs` (24 checks: her hello wave on the stage, her arms relaxed after it, a tap's hello in a bubble beside her head and
@@ -3070,11 +3083,14 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 - **Her 2D wave and natural motion, and she talks when tapped: built 2026-10-01 (round 2), waiting for the owner's OK** (the
   owner, with two screenshots: "why dont the 2d model dont wave anymore, and she moves like a stick, not even natural", then
   "can you make her speak whe she got clicked and if they clicked her many times she will said something"). Her arms move in
-  code on top of her model (relaxed by her sides, a real wave, a cheer, hands in the air in her dance), her weight shifts
-  with her feet on the floor, her head looks around; her shirt's smudge under her right arm repainted; a tap gets a hello in
-  her voice and a bubble, a lot of taps one of her "okay, i see you" lines (16 languages). See "AGI-1 in 2D" and "She talks
-  when you tap her". No setup; her nine tap lines cost about $0.02 once in English (each other language only when someone
-  uses it). Tests: 298 unit (on Node 20, 22 and 24), 50 + 24 end to end in a browser with the site's real CSP.
+  code on top of her model (relaxed by her sides, a real wave, a cheer, her hands up in her dance), her weight shifts with
+  her feet on the floor, her head looks around; her shirt's smudge under her right arm repainted; a tap gets a hello in her
+  voice and a bubble, a lot of taps one of her "okay, i see you" lines (16 languages). See "AGI-1 in 2D" and "She talks when
+  you tap her". No setup; her nine tap lines cost about $0.02 once in English (each other language only when someone uses
+  it). **Then** (the owner, with a screenshot of her dance: "what is this lol": both arms straight out, torn-looking flaps
+  under her sleeves): her upper arms never lift past what her drawing allows (`REACH`), and her wave, cheer and dance raise
+  her hands by bending her elbows (see "Her upper arms never lift far"). Tests: 298 unit (on Node 20, 22 and 24), 50 + 24 end
+  to end in a browser with the site's real CSP.
 
 ## Decisions log
 
@@ -3222,6 +3238,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-01 | Her 2D arms moved in code on top of her Live2D model (the owner: "why dont the 2d model dont wave anymore, and she moves like a stick"): her model's arms swing only 7° from an A-pose, so after each Live2D update her arm pieces are turned at the shoulder, elbow and wrist (joints found on her model, a round elbow, a sleeve that folds), her hips shift with her feet staying put, and her idle swings never line up. Not picked: editing her model in Cubism Editor (the owner's project, and a raised-arm drawing would be new art), a second arm drawing, or a rubbery bend along the whole arm |
 | 2026-10-01 | Her texture's shirt under her right arm repainted (`tools/agi1-2d/fix-shirt.py`): a pink and orange smudge (painted where her arm had been) showed when she raised it, and read like skin at the side of her chest. Only that area, from the shirt around it; both textures saved again as WebP (a little smaller, about 45 dB: the difference invisible) |
 | 2026-10-01 | She talks when tapped (the owner's request): pre-written lines in her natural voice (fixed lines: made once and kept, no credits after, nobody's allowance), a bubble with her words, a "many taps" line after 5 quick taps. For everyone (the stage isn't behind the 18+ check, like the front's bubble): PG-13, no pet names, never money. She says it even if the speaker button was never pressed (a tap is asking to hear her, like Listen), never if the visitor switched her voice off, never over her own voice or in a call. Not picked: AI-written answers to taps (cost, and nobody checks them first) |
+| 2026-10-01 | Her 2D upper arms lift at most 16° above her model's pose (`REACH`, the owner's screenshot of her dance: "what is this lol"): her shirt is drawn for arms down, with the inside of each sleeve on the shirt under the arm, so her first dance (both arms out 64°, like a scarecrow) and her wave (52°) showed it under the sleeve like a torn flap. Her hands go up by bending her elbows instead: her wave and cheer with her hand by her face, her dance with her hands by her shoulders. Not picked: moving that part of her shirt with her sleeve (her shirt's mesh is coarse there, so it would likely smear across her side), cutting it out of her texture (her sleeve at rest needs it), or new raised-arm art (Cubism Editor, the owner's project) |
 
 ## Open questions
 
