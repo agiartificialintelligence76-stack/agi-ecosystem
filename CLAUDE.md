@@ -3646,6 +3646,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   delete files, so git leaves an empty `.git/index.lock` behind and the owner's next `git add` fails ("index.lock: File
   exists"). It happened once (2026-09-25; removed with the owner's permission). Claude compares files by checksum instead. If
   it ever happens again: delete `.git\index.lock` in this folder (only when no git command is running), then retry.
+- **Tests never depend on the build's own settings** (2026-10-02): Vercel runs `npm test` with the project's real
+  environment variables present (the owner's keys). A test that needs a setting to be missing deletes it first (in its
+  `beforeEach`). The first push of "Launch with AGI-1" failed that way (Vercel: Error after 41 s): three Telegram tests
+  expected launching to be off, but the owner's Pinata key was already in Vercel. Since then Claude also runs every test
+  with all the settings in "Environment variables" set to real-looking values before handing over a change. A failed build
+  never touches the live site: Vercel keeps serving the last good deployment.
 - Claude's end-to-end tests build the site with Cloudflare's public test site key
   (`VITE_TURNSTILE_SITE_KEY=1x00000000000000000000BB npx vite build`): without a site key the chat answers "i'm still getting
   ready for the new site" and every suite that chats fails (2026-09-26). The real key only comes from Vercel's settings.

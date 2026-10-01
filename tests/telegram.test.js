@@ -99,7 +99,9 @@ const agiPair = (mcap, h24 = 1) => ({ chainId: 'robinhood', dexId: 'uniswap', ba
   liquidity: { usd: 50_000 }, priceChange: { h24 }, marketCap: mcap, fdv: mcap });
 
 beforeEach(() => {
-  for (const k of ['SITE_URL']) delete process.env[k];
+  // (the build's own settings never decide a test: on Vercel the real ones are there while the tests run, e.g. the owner's
+  // Pinata key, which opens launching; these tests start with launching not set up, and turn it on themselves)
+  for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'LAUNCH_GAS_KEY', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP']) delete process.env[k];
   Object.assign(process.env, ENV);
   forgetMarket();
   telegramBurst.reset();
