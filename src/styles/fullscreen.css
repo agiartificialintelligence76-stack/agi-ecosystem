@@ -201,6 +201,9 @@ html.is-talk .pg.is-popped .pg-away { grid-area: 1 / 1 / -1 / -1; align-self: ce
 /* in the window: its own title bar has the buttons (back to the tab, close); there's no full screen in it, and no app to get;
    and no keyboard hints under the box (every line of a small window is hers) */
 html.is-pip .pg-talk-ctl, html.is-pip .pg-foot { display: none; }
+/* "Show her" there: a smaller picture and words, so her chat keeps its room */
+html.is-pip .pg-shot-img { width: 84px; height: 48px; }
+html.is-pip .pg-shot-text { font-size: 11.5px; line-height: 1.4; }
 /* her on top, a little bigger than on a phone, and the chat under her, until the window is wide enough for side by side
    (the same windows as full-screen talk's own stacked layout, and narrower landscape ones) */
 @media (max-width: 639px), (max-aspect-ratio: 4/5), (max-width: 760px) and (orientation: portrait) {

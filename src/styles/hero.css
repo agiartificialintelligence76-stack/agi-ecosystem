@@ -67,7 +67,9 @@
   font-family: var(--mono); font-size: 13px; color: var(--fg-3); pointer-events: none;
 }
 .stage-status:empty { display: none; }
-.stage-status.busy { animation: breathe 1.6s ease-in-out infinite; }
+/* (while it loads, the words breathe between two grays that both stay readable: 2026-10-02, was a fade to 45%, too faint) */
+.stage-status.busy { animation: stage-breathe 1.6s ease-in-out infinite; }
+@keyframes stage-breathe { 0%, 100% { color: var(--fg-2); } 50% { color: var(--fg-3); } }
 @keyframes breathe { 50% { opacity: .45; } }
 
 .seg {

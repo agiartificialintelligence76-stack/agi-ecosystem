@@ -154,7 +154,7 @@ test('voice chat (2026-09-25): mic and Call buttons wait for the browser, the mi
   assert.ok(foot.includes('we never record or receive your voice, only the text'));
   const cfg = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
   const policy = cfg.headers.flatMap((r) => r.headers).find((h) => h.key === 'Permissions-Policy').value;
-  assert.equal(policy, 'camera=(), microphone=(self), geolocation=()', 'the mic for our own pages only (not Turnstile\'s frame); no camera, no location');
+  assert.equal(policy, 'camera=(), microphone=(self), geolocation=(), display-capture=(self)', 'the mic, and (2026-10-02, "Show her") sharing a window, for our own pages only (not Turnstile\'s frame); no camera, no location');
 });
 
 test('out of messages (2026-09-25): the levels panel and the safety note say what more $AGI does, with the risk', () => {

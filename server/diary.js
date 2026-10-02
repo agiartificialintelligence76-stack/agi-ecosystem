@@ -23,7 +23,7 @@ export const dayStart = (day) => Date.parse(`${day}T00:00:00Z`);
 const MONEY = /\b(buy|buying|bought|sell|selling|sold|invest\w*|pump\w*|dump\w*|moon\w*|lambo|profit\w*|gains?|hodl|hold(ing)?|ape[sd]?|\d+x|price target|financial advice|guarantee\w*|to the moon)\b/i;
 export function acceptableEntry(text) {
   const t = String(text || '').replace(/\bnot financial advice\b/gi, '');
-  return t.trim().length >= 20 && !MONEY.test(t) && !/https?:\/\/|www\.|\[(link|address) removed\]/i.test(cleanReply(text))
+  return t.trim().length >= 20 && !MONEY.test(t) && !/https?:\/\/|www\.|\[(link|address|email|handle) removed\]/i.test(cleanReply(text))
     && !aboutTheArena(t);
 }
 

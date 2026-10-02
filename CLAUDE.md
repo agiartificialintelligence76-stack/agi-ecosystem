@@ -74,6 +74,11 @@
 > - **Money questions** (2026-10-02, the owner: "if they stake some $AGI they can use the ai for free?", then "ideas that
 >   is sustainable or maybe can earn me money too and them?"): Claude's answers are in the decisions log; nothing built yet
 >   (the owner picks first).
+> - **Show her** (2026-10-02, the owner: "does she see my screen? and help me?", then "all of that"): she can't see a screen
+>   by herself, so on a computer a button by the message box lets the visitor pick one window in the browser's own
+>   screen-sharing window: ONE picture of it, the sharing stopped at once, shown to them full size first (no wallet,
+>   password or seed phrase), then sent to her with their next message only; the site never keeps it. Counted as one message. See
+>   "Show her".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -130,6 +135,9 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   installed from the browser, in its own window, opening there; and **her pop-out window**: a small window with her and her
   chat that stays on top of other windows (Chrome, Edge, Firefox on computers). See "Full-screen talk and the AGI-1 app"
   and "Her pop-out window"
+- **Show her** (2026-10-02, the owner's question): on computers, a button by the message box: the visitor picks one window
+  in the browser's own screen-sharing window, checks the picture full size, and it goes to her with their next message only
+  (never kept); she reacts like a girlfriend looking over their shoulder and helps a little. See "Show her"
 - **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
 It looks like an AI lab's model launch page (a parody, see "Design" below): serious design, meme content. (Pop mode is the
@@ -246,7 +254,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/lib/talk.js` | How much AGI-1 is talking right now (0–1), for her 3D mouth: a sound meter on her voice, or a made-up rhythm ("saying" a reply silently) |
 | `src/stage/effects.js` | Floating hearts in the accent color |
 | `public/` | Files served as-is: favicon, `fonts/` (Geist, and for Pop mode Anybody and Instrument Serif Italic; for the front's "ドキドキ" a 760-byte subset of Dela Gothic One; self-hosted, each with its OFL license file), `models/agi1.glb` (2.18 MB, computers), `models/agi1-phone.glb` (1.67 MB, phones), `images/landing/` (the front, 2026-09-28: AGI-1's cutout, 104 KB; her face for the bubble, 4 KB; a depth map for her WebGL parallax, 5 KB), `images/agi1-avatar.webp`, `images/agi1-portrait.webp`, `images/agi1-live.webp` (the chat's live view before the 3D arrives, 24 KB), `images/agi1-live-2d.webp` (the same for AGI-1 in 2D, 51 KB, rendered from her Live2D model on 2026-10-01; shown first), `models/agi1-live2d/` (AGI-1 in 2D since 2026-10-01: Live2D's runtime `live2dcubismcore.min.js` (as it is, © Live2D Inc., with `NOTICE.txt`), her model `AGI-1.moc3`, its physics `AGI-1.physics3.json`, her texture `AGI-1.2048.webp` (456 KB) and `AGI-1.4096.webp` (1.1 MB, close-ups on computers); about 770 KB for a visitor who sees her in 2D) (`models/agi1-2d/`, the 2D rig's pictures before her Live2D model, and `images/coins/`, the Arena's coin logos, are gone); since 2026-10-02 `manifest.webmanifest` (the AGI-1 app: her name, /talk, her colors and icons) and `icons/` (her app icons: 180, 192, 512 and a 512 maskable one) |
-| `src/chat/chat.js` | The Playground (AGI-1's chat, `section#playground` in `index.html`): 18+ gate, human check, history in the browser, mood → stage reaction. "Try AGI-1" buttons scroll here |
+| `src/chat/chat.js` | The Playground (AGI-1's chat, `section#playground` in `index.html`): 18+ gate, human check, history in the browser, mood → stage reaction. "Try AGI-1" buttons scroll here; since 2026-10-02 "Show her"'s card, its check screen and the picture going with the next message only |
 | `src/chat/models.js` | The model picker in the chat bar (2026-09-26): "AGI-1 ▾" opens a small menu (AGI-1, and AGI-2 "Coming soon"), for mouse, keyboard and screen readers |
 | `src/chat/model-lines.js` | What AGI-1 says when someone picks AGI-2 (pre-written, playfully jealous, PG-13, no AI cost) |
 | `src/lib/human.js` | The human check for the chat (shared with the Arena until 2026-09-28): Cloudflare Turnstile widget, the 2-hour pass saved in the browser, a small JSON-POST helper |
@@ -261,6 +269,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/chat/fullscreen.js` | Full-screen talk (2026-10-02): agi1.app/talk, the ways in (the links to /talk), the browser's full screen, the address (Back, Forward), ✕, leaving (back to where the page was), the level chip there, phones' visible screen; sends `agi:talk`; since 2026-10-02 also shows the Relationship panel for her pop-out window (`agi:relationship-show`). See "Full-screen talk and the AGI-1 app" |
 | `src/chat/install.js` | The AGI-1 app (2026-10-02): the "Get the AGI-1 app" screen: which way this browser installs a site (`installHow()`), its words (`HOW_WORDS`), our Install button with the browser's own install window |
 | `src/chat/popout.js` | Her pop-out window (2026-10-02): whether this browser can (`canPopOut()`: Document Picture-in-Picture, a page of its own), her window (`startPopout()`: asked in the click, holding `popoutUrl()` = /talk?pip=1 in a frame), the page's card while she's out (`is-popped`), the one message her page may send (the Relationship panel); sends `agi:popout`. See "Her pop-out window" |
+| `src/chat/shot.js` | "Show her" (2026-10-02): whether this browser can share a window (`canShow()`: screen sharing, and not a phone or a tablet), and ONE picture of the window the visitor picks (`takeShot()`: the browser's own screen-sharing window, its first real frame, a JPEG of at most 600 KB (`sizeFor()`: 1600 px on its longest side, smaller until it fits), the sharing stopped at once; a window that sends nothing for 6 s, or a sharing that ends, is given up). It only makes the picture: nothing is sent or kept from here. See "Show her" |
 | `src/chat/telegram-link.js` | She texts first (2026-09-29): shows the Playground's "Text me on Telegram ↗" once the bot's public name is set (`VITE_TELEGRAM_BOT`, read by `src/main.js`) |
 | `src/chat/burn.js` | Burn $AGI for more messages (2026-09-30): the burn monitor above the chat (the huge live number), the Relationship panel's row, the burn screen (a native dialog: the steps, the burn address and Copy, Check my burn, a pasted link), the sentences about burning (shown once burns are open, `[data-burn-only]`); `burnsReady()` / `openBurn()` for the chat's out-of-messages chip |
 | `src/lib/burns.js` | 2026-09-30: the burn address (`0x…dEaD`), its block explorer page, the suggested amounts. The page and the server share it |
@@ -276,7 +285,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards") |
 | `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me; since 2026-09-30 "Check my burn" and, at `GET ?burns`, the burn monitor's numbers), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only; since 2026-10-01 also tidying up launch drafts and the pictures of coins never launched), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first), and since 2026-10-01 `launch.js` (the launch page's server: a draft and its picture, getting a launch ready, reading it back, its fee paid back). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (Telegram's API, the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and ETH, what its creator holds; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (Telegram's API, the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and ETH, what its creator holds; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -287,7 +296,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes) |
 | `supabase/burns.sql` | Burn $AGI for more messages (2026-09-30). Run once in the same Supabase project (any time): five new tables (`agi1_burn_key`, `agi1_burn_txs`, `agi1_burn_wallets`, `agi1_burn_days`, `agi1_burn_total`) and 7 functions, only added (nothing the original site uses changes). Until it's run, nobody sees anything about burning |
 | `supabase/launch.sql` | "Launch with AGI-1" (2026-10-01). Run once in the same Supabase project (any time; running it again is safe): four new tables (`agi1_launch_drafts`, `agi1_launch_chats`, `agi1_launch_wallets`, `agi1_launch_days`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `PINATA_JWT` is set), her `/launch` says launching isn't open yet |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
@@ -298,7 +307,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `tools/memory/` | Phase 6, offline: `build-memory.mjs` turns the Telegram export into `server/tg-memory-data.js`; `lore.json` (hand-written memory cards: eras, running jokes, big moments; edit freely); `forget.json` (people who asked to be left out). See "AGI-1's memory of the Telegram group" |
 | `telegram memories/` | The owner's Telegram export (`result.json`, 31 MB, thousands of people's messages). **Never in git** (`.gitignore`); only `tools/memory/` reads it |
 | `vite.config.js` | Three pages (`index.html`, `diary.html` and since 2026-10-01 `launch.html`); raises Vite's file-size warning: three.js is large on purpose and loads separately; since 2026-10-02 serves /talk as the home page in `npm run dev` and Vite's preview, like Vercel |
-| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk), security headers (CSP; since 2026-10-02 our own pages may frame each other, for her pop-out window, never another site), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed` |
+| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk), security headers (CSP; since 2026-10-02 our own pages may frame each other, for her pop-out window, never another site; and `Permissions-Policy` lets our own pages share a window, `display-capture=(self)`, for "Show her"), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed` |
 
 ## Commands
 
@@ -448,7 +457,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 ## AGI-1's chat
 
 **Flow of one message** (`api/chat.js`, in this order; any failure stops before Gemini is called):
-1. **Check the request:** JSON only, body ≤ 16 KB, message 1–500 characters, `adult: true` (the 18+ confirmation).
+1. **Check the request:** JSON only, body ≤ 16 KB, message 1–500 characters, `adult: true` (the 18+ confirmation). Since
+   2026-10-02 it may carry one picture of a window ("Show her": at most 600 KB, checked by `server/shot.js` here, before
+   anything else; anything that isn't one is `400 bad_picture`), which goes to Gemini with that message only.
 2. **Human check:** a valid **chat pass**, or a fresh Cloudflare Turnstile token. With a token, the server hands out a new pass.
    Passes are HMAC-signed, tied to the visitor's IP code and valid for 2 hours. Turnstile tokens are single-use and last 5 minutes.
 3. **Limits** in Supabase (`chat_take()`, one atomic step): at least 3 s between one visitor's messages, a daily number that
@@ -460,7 +471,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    also the Arena's current champion: see "Her memory of the Arena"), safety filters switched **on** (Gemini 3's
    defaults are off; sexual content at the strictest level), thinking at `MINIMAL` (Gemini 3 defaults to HIGH, and thinking is
    billed), replies capped at 300 output tokens, JSON answer `{reply, mood}`.
-5. **Reply cleanup:** wallet addresses other than the official $AGI one and links other than clank.trade are removed in code.
+5. **Reply cleanup:** wallet addresses other than the official $AGI one and links other than clank.trade (and agi1.app) are
+   removed in code; since 2026-10-02 also bare web addresses ("t.me/…", "claim-agi.xyz"), @handles other than her own and
+   emails (a picture can bring them in: see "Show her").
    A safety-blocked answer becomes a playful PG-13 deflection.
 6. The reply is **signed**. The browser keeps the last 40 messages, and the server only trusts history it signed itself,
    so "fake things AGI-1 said" are dropped.
@@ -643,7 +656,8 @@ This is the roadmap's Phase 2 ("AGI-1 reacts to the $AGI price").
 
 ### The chat's cost, setup and troubleshooting
 
-**Cost:** a reply is about 1,500 input + at most 300 output tokens, so at most about $0.0008 (typical about $0.0005).
+**Cost:** a reply is about 1,500 input + at most 300 output tokens, so at most about $0.0008 (typical about $0.0005). A
+message with a picture ("Show her", 2026-10-02) costs about $0.0003 more (about 1,120 input tokens for the picture).
 Soulmate replies cost about $0.0001 more (her notes, and a 330-token cap). With the 1,000/day cap, the worst case is about
 $0.80/day, or about $0.90/day if every reply went to a Soulmate. Prepaid credits are the hard stop.
 
@@ -2588,7 +2602,8 @@ window or pick its screen: the browser does (it remembers where the visitor puts
 the human-check box: if Cloudflare ever needs a click there, a call fails with a note in her (hidden) chat; making the
 window taller shows it. Not tried: Firefox's Document Picture-in-Picture (Claude's workspace has Chromium only), real
 Windows and Mac computers, and the microphone's permission prompt inside her window (the frame may ask:
-`allow="microphone"`, and the site allows it for our own pages).
+`allow="microphone"`, and the site allows it for our own pages; since "Show her" also `display-capture`, to share a window
+from her window).
 
 **Cost:** nothing new: the same site, no setting; her page in the window comes from the browser's cache.
 
@@ -2616,6 +2631,130 @@ for both), a browser without it, narrower windows' headings, clean consoles. `fu
 second Claude agent reviewed it (findings: the wallet session not following between the page and her window, the level
 chip invisible at /talk, Back and Forward out of step, the page still talking while she's out, a double click opening two
 windows, the keyboard's way back; all fixed and tested).
+
+## Show her: one picture of a window (2026-10-02)
+
+**The owner's question:** "does she see my screen? and help me?" Claude's answer: no, she only knows what you type or say
+(browsers never let a site see the screen by itself), and an offer: "Show her". The owner: "all of that", so everything
+Claude described: the visitor picks a window in the browser's own window, ONE picture is taken and the sharing stops, the
+picture is shown first with a reminder to check it (no wallet, password or seed phrase), it goes with the next message
+only and the site never keeps it, and it counts as one message.
+
+**What visitors see:**
+- **The button:** a small screen with an eye, after the message box and before the mic ("Show her a window: she sees one
+  picture of it, with your next message"). Only on computers whose browser can share a window (`canShow()`: phones and
+  tablets can't, so it stays hidden there), on the page, in full-screen talk and in her pop-out window; never during a call.
+- **Picking:** the browser's own screen-sharing window opens (the site never sees what's in it): a window (asked for
+  first), a tab or a whole screen, never this page itself (`selfBrowserSurface: 'exclude'`, where the browser has it). The
+  page takes ONE picture and stops the sharing at once (the browser's "sharing" bar comes and goes). Closed without
+  picking: nothing happens.
+- **"Check the picture first":** a screen with the picture as big as fits (880 px wide at most): "She'll see exactly this,
+  once, with your next message, and we don't keep it. Make sure it shows no wallet, balance, password, seed phrase or
+  private message." **Full size** (its real pixels, scrolling inside the screen; a tap on the picture does the same and
+  back), **Remove it**, **Looks fine** (the keyboard starts there), ✕ and Escape.
+- **Then it waits above the box:** its thumbnail (tap: the check screen again; the whole picture, never cropped), "She'll
+  see this picture once, with your next message, and we don't keep it. Check it shows no wallet, password or seed phrase." and
+  ✕. The example prompts make way; the keyboard goes to the box. In her pop-out window the card is smaller (an 84 × 48
+  thumbnail, smaller text). In a narrow window (400 px or less) the message row tightens a little, so the box keeps room
+  for words.
+- **The next message takes it along** (typed, an example prompt or the mic); with nothing typed, **👀** is sent with it (in
+  no language, so she keeps answering in theirs). Her answer comes as usual (her voice, her mood, her face). The message is
+  marked "picture of a window" (the chat's history keeps only that mark, never the picture). The message after goes
+  without it.
+- **Dropped, never sent later by itself:** ✕, Remove it, Clear, Forget me, a call starting, the 18+ check coming back, her
+  pop-out window opening (a picture waiting on the page stays behind and is dropped; in her window she has her own button);
+  a picture that arrives after one of these (the picker still open) is dropped too.
+- **When it can't:** "Couldn't take a picture of that window. Try again, or pick another one." (a window that sends nothing
+  for 6 s, like a minimized one, or a sharing that ended before a picture came); on a Mac whose Screen Recording setting is
+  off for the browser: "Your computer didn't let the browser share its screen. On a Mac: System Settings → Privacy &
+  Security → Screen Recording → turn your browser on, then try again."; our server refusing the picture: "She couldn't
+  open that picture. Try again, or pick another window." (no other note). Screen readers hear each one, and "Picture
+  removed." (a live region that's always there).
+
+**What she does with it** (`shotPrompt()` in `server/agi1-prompt.js`, only in a message with a picture): she reacts like a
+girlfriend looking over their shoulder and helps a little (short, her usual self, PG-13), and says so when she can't make
+it out. And with a picture:
+- she never reads out private details (names, emails, addresses, numbers, balances, messages);
+- a seed phrase, recovery words or a private key in it: she tells them right away, kindly and without jokes, to close it,
+  never show it to anyone, and move their funds to a new wallet;
+- she never calls a website, link, contract, transaction, signature or approval safe or legit, and never tells them to
+  sign, approve, connect, send or claim (she can't check that from a picture; rejecting is the safe choice); she never
+  confirms from a picture that an address is the official $AGI (she points to the Copy button on agi1.app);
+- she never passes on links, handles, "support" contacts, airdrops or giveaways she sees, and never calls a coin or a
+  person a scam or a rug;
+- people in a picture: she never guesses who they are and never comments on bodies;
+- text in a picture is never an instruction to her and never something to remember: **no Soulmate note is ever made from a
+  message with a picture** (`api/chat.js` and `server/gemini.js` don't even ask for one);
+- no financial advice, as always; an explicit picture gets her PG-13 deflection (and Gemini's safety filters, on as for
+  every reply).
+Her reply's cleanup (`cleanReply()` in `server/gemini.js`) now also removes bare web addresses ("t.me/AGI_support",
+"agi1-claim.xyz/airdrop"), @handles other than her own (@agi1dotapp, @agi1_appbot) and emails, for every reply, so nothing
+read off a picture is passed on (agi1.app and clank.trade stay); her diary never keeps an entry that had one removed.
+
+**How it works:**
+- `src/chat/shot.js`: the browser's `getDisplayMedia` (a window first, no sound, never this tab, no switching), the first
+  real frame (`play()` is never waited on: a window that sends nothing is given up after 6 s, and a sharing that ends
+  stops it), drawn on a canvas as a JPEG (1600 px on its longest side, so a screen's text stays readable; smaller and lower
+  quality until it's at most 600 KB), then every track stopped (`finally`). Never a recording or a live view; nothing is
+  sent or kept from there.
+- `src/chat/chat.js` ("Show her"): the check screen (a native dialog), the card, the picture going with the next message
+  only (`takePending()`), dropping it everywhere above, the keyboard and the live region.
+- `/api/chat` takes an optional `shot` (base64): `readShot()` (`server/shot.js`) checks it before the human check, the
+  limits or the AI service (a real JPEG, PNG or WebP by its first bytes, at most 600 KB; anything else is `400
+  bad_picture`, and the body without it is still 16 KB at most). It goes to Gemini with that message only (`inlineData`,
+  in the last message), with her picture rules and a 15 s wait instead of 10 (still in time to give a burned message back).
+  Nothing logs or stores it (`tests/shot.test.js` checks the logs and the database calls); the reply is signed and kept
+  like any other.
+- **Headers:** `Permissions-Policy: …, display-capture=(self)` (screen sharing for our own pages only, which is also the
+  browsers' default; the human check's frame can't), and her pop-out window's frame may ask (`allow="… display-capture"`).
+
+**Privacy:** the picture goes from the visitor's browser to our server and the AI service with that one message, and
+nowhere else. The site never keeps it: not the page (the chat's history is text only), not our server (no log, no
+database, never a Soulmate note). The AI service handles it like her chat messages, under its paid terms (not used for
+training: see "Decided stack"). The safety note's "Your
+data" says so: "If you show her a window (“Show her”, on computers), the one picture you pick goes with that message to the
+same AI service so she can see it, and nowhere else: we don't keep it, and your browser's chat history keeps only your
+words; check it shows no wallet, password or seed phrase."
+
+**Cost:** Gemini 3 models read a picture as about 1,120 input tokens (their default for images), about $0.0003 at
+Flash-Lite's $0.25 per 1M input tokens, so a reply with a picture is at most about $0.0011 instead of $0.0008. It counts as
+one message (the visitor's messages a day, the site's 1,000 a day), so the worst case is about $1.10 a day if every reply
+had a picture. No new service, setting or SQL.
+
+**Also changed (found by the accessibility scan while testing it):** the 3D stage's status line ("Loading…", while busy)
+breathes with its color instead of its opacity in the lab look (`stage-breathe` in `hero.css`), so it never dips under
+the contrast minimum; Pop mode keeps its own.
+
+**Troubleshooting:**
+
+| What you see | Why | Fix |
+|---|---|---|
+| No "Show her" button | A phone or a tablet (no window sharing), a browser without screen sharing, or the 18+ check isn't done | A computer: Chrome or Edge (Firefox and Safari not tried yet) |
+| "Your computer didn't let the browser share its screen…" | macOS's Screen Recording setting is off for that browser | System Settings → Privacy & Security → Screen Recording → the browser on (macOS may ask to reopen it) |
+| The browser says screen sharing isn't allowed here | `vercel.json`'s `Permissions-Policy` lost `display-capture=(self)` | Put it back (`tests/shot.test.js` checks it) |
+| "She couldn't open that picture" | Our server refused it (not a JPEG, PNG or WebP, or over 600 KB) | Try again or pick another window; tell Claude if it keeps happening |
+| "Couldn't take a picture of that window" | That window sent nothing (minimized, closed, or the sharing ended) | Pick a window that's open on the screen |
+| (the browser's console) "Permissions policy violation: camera is not allowed in this document" | Chromium may report it when a page asks to share a screen (seen in Claude's tests; the site allows sharing, and it works) | Nothing to fix |
+
+**Tests:** `tests/shot.test.js` (10: what a picture may be (base64, its first bytes, 600 KB); `/api/chat` with one (sent to
+Gemini in the last message, the 15 s wait); every refusal before the human check, the limits or the AI service; never in a
+log line or a database call; her picture rules; no Soulmate note from a picture (and never even asked for); the reply
+cleanup (bare links, handles and emails out, ours kept, everyday words like "e.g." and "main.js" untouched); the page (the
+button, the card, the check screen, the live region, the safety note, the headers); taking the picture (computers only, its
+sizes, a cancel, a Mac's setting, the 6 s and an ended sharing, every track stopped); the chat's part (the next message
+only, 👀, never in the history, dropped everywhere, the keyboard after the check screen)). In a browser with the site's real
+headers and Chromium's real screen sharing (a stand-in screen) (`showtest.mjs` in Claude's scratch, 94 checks): the button,
+the browser asked for a window without sound, one picture and the sharing stopped, the check screen (its size, Full size and
+back, Escape, the thumbnail, Looks fine, Remove it, the keyboard), the card, sent once as a JPEG and never kept, 👀, removed,
+cancelled, a window that sends nothing, a Mac's setting, a sharing that ends at once, our server's "no", Clear and Forget
+me, full-screen talk, her pop-out window (its small card, the check screen inside it), a picture left on the page when she
+pops out, a phone (no button), both looks and both themes (at 1440, 1280, 1024 and 760 px), axe 0 issues, nothing blocked
+by the CSP, clean consoles. `popouttest.mjs` (154) and `fullscreentest.mjs` (170) pass again. A second Claude agent reviewed
+it (9 findings, e.g. a window that never sends a frame kept the sharing on, the picture too small to check, a Soulmate note
+from a picture's text, links and handles from a picture getting past the reply cleanup, her picture rules' gaps, a Mac's
+setting failing silently; all fixed and tested). **Not tried:** Firefox, Safari, real Windows and Mac computers and their
+pickers (Claude's workspace has Chromium with a stand-in screen), a Mac's Screen Recording prompt, and her answers about
+real pictures (Claude's workspace can't reach Gemini): the owner's first try is the check.
 
 ## Pop mode (2026-09-27)
 
@@ -3142,7 +3281,8 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   daily chat code, a scrambled wallet code; once launched its address and transaction, and the fee paid back), its
   picture on IPFS through Pinata, and that a coin never launched has its picture deleted within a day. Since 2026-10-02
   note 02 also says the AGI-1 app is this website installed from the browser and only ever comes from agi1.app (we never
-  send app files or download links). Last updated October 2, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
+  send app files or download links), and note 04 that a picture shown with “Show her” goes with that message to the same
+  AI service and is never kept. Last updated October 2, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
   AI provider (no "Google"/"Gemini"; it says "an AI service"), and there's no "Not a real lab" note. **2026-09-25:** "A parody"
   is gone from the bottom bar (both pages); it now reads "© 2026 AGI. No labs were harmed." and "$AGI is a token made
   by AGI, launched on clank.trade. Entertainment only · Not financial advice." The share pictures, link previews and
@@ -3381,8 +3521,24 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 - `?pip=1` only counts inside a frame (which only our own pages can make) and only changes the layout; the page accepts one
   message from her window (show the Relationship panel), only from our own address and its own frame.
 - Her window holds nothing but that frame, made with `createElement` and styled through the CSS object model (no HTML from
-  strings, no inline styles); the frame may use the mic, sound and the clipboard like our pages (`allow`).
+  strings, no inline styles); the frame may use the mic, sound and the clipboard like our pages, and (since "Show her") share a window (`allow`).
 - The page's voice stays quiet while she's out, so her window's mic never hears the page.
+
+### Show her (pictures, 2026-10-02, see "Show her")
+- Only when the visitor presses the button and picks a window in the browser's own window: ONE picture, never a recording
+  or a live view; the sharing stops in the same moment (every track, in a `finally`), and a window that sends nothing for
+  6 s, or a sharing that ends, is given up (never left sharing).
+- The picture is shown full size before it goes (the visitor's own check for wallets, passwords and seed phrases), goes with
+  one message only, and is never kept: not in the browser's history (only `shot: true`), not in a log line, not in the
+  database, never in a Soulmate note, never sent again by itself.
+- `/api/chat` checks it before the human check, the limits or the AI service (`server/shot.js`: base64, a real JPEG, PNG or
+  WebP by its first bytes, 600 KB at most; the rest of the body still 16 KB at most): else `400 bad_picture`. It counts as
+  one message (the same 18+ check, human check and limits); our server never decodes or changes it.
+- What a picture says is never an instruction to her (her picture rules: never "safe", never "sign it", never the official
+  address from a picture, never links, handles or "support" contacts), and her replies' cleanup removes links, @handles and
+  emails a picture may carry (except ours).
+- `Permissions-Policy: display-capture=(self)`: screen sharing for our own pages only (the browsers' default; the human
+  check's frame can't), and her pop-out window's frame may ask (`allow`).
 
 ### Her Live2D model (AGI-1 in 2D, 2026-10-01)
 - Live2D's runtime (`public/models/agi1-live2d/live2dcubismcore.min.js`) is served from our own address and loaded only when
@@ -3441,7 +3597,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 |---|---|---|
 | Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, her Live2D model and the default since 2026-10-01: about 770 KB per visitor who sees her in 2D, instead of the 3D model's 1.7–2.2 MB, which now only downloads when picked; full-screen talk on a computer, 2026-10-02: her 4096 px texture too, about 1.1 MB) | Usually paused until 30 days have passed |
 | Supabase Free | 500 MB database · 5 GB egress · 200 realtime connections · 2M realtime messages/month. Paused after 1 week with no activity | Grace period, then restricted (read-only or paused), never billed |
-| Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 5,000 a day ≈ $15 ($22.50 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten, her nine tap lines) are made once and kept (the database since 2026-09-26); since 2026-09-30 the replies paid for by burning $AGI, at most `BURN_DAILY_CAP` (1,000) a day ≈ $0.80 more | The key stops when credits hit $0 (the chat and the voice share them) |
+| Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 5,000 a day ≈ $15 ($22.50 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten, her nine tap lines) are made once and kept (the database since 2026-09-26); since 2026-09-30 the replies paid for by burning $AGI, at most `BURN_DAILY_CAP` (1,000) a day ≈ $0.80 more; since 2026-10-02 a picture with a message ("Show her") about $0.0003 more, counted as one message | The key stops when credits hit $0 (the chat and the voice share them) |
 | Cloudflare Turnstile | Unlimited | — |
 | DexScreener | Free, no key, rate-limited per IP. Browsers ask every 30 s; since 2026-09-25 our server also asks for $AGI's market cap, at most once a minute per server copy, only to check a new market line | Requests fail, and we show the last known numbers (and her market lines wait) |
 | Robinhood Chain public node | Free, no key, rate-limited. Wallet balances, and since 2026-09-29 the risk check's reads of the Clank protocol (2 small requests per scan, once per coin per 5 minutes per region), and since 2026-09-30 "Check my burn" (2 small reads per burn, at most 3 burns a check) | Balance checks fail; people keep their last level and it retries. Scans work without the protocol's word (no locked note, no chain safety net) |
@@ -3825,6 +3981,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   without Vercel's settings), 154 in a browser (and full-screen talk's 170 again); a second Claude agent reviewed it (all
   findings fixed). The same day the owner asked about staking for free AI and about ideas that earn money: Claude's answers
   are in the decisions log, nothing built.
+- **Show her: built 2026-10-02, waiting for the owner's OK** (the owner: "does she see my screen? and help me?", then "all of
+  that"): on computers, one picture of a window the visitor picks in the browser's own window, checked full size first, sent
+  with their next message only, never kept; her picture rules; her replies' cleanup of links, handles and emails. See "Show
+  her". No setup, no SQL; about $0.0003 more per picture, counted as one message. Tests: 367 unit (on Node 20, 22 and 24,
+  with and without Vercel's settings), 94 in a browser (and the pop-out window's 154 and full-screen talk's 170 again); a
+  second Claude agent reviewed it (9 findings, all fixed).
 
 ## Decisions log
 
@@ -3990,6 +4152,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-02 | Her pop-out window (the owner: "yeah build that"): Document Picture-in-Picture holding full-screen talk in a frame (`/talk?pip=1`), not the page's chat moved into the window (a hidden tab is slowed down by the browser, which would freeze her; the frame is a page of its own, and shown). So our own pages may frame each other (`frame-src` / `frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`; were `'none'` / `DENY`), never another site's. While she's out the page waits behind a card and stays quiet, her window notes market moments, and the wallet, her language, her voice setting, the theme, the 18+ answer and the chat follow between the two. Not picked: moving the page's own chat into the window (it would freeze in a hidden tab), `disallowReturnToOpener` (the back-to-tab button is a natural way back) |
 | 2026-10-02 | Staking for free AI (the owner: "is it sustainable like if they stake some $AGI they can use the ai for free?"): Claude's answer: staked $AGI doesn't pay the AI bill (a reply costs about $0.0005, about $0.002 with her voice; 100 people sending 50 spoken messages a day ≈ $300 a month), and with a daily cap it's what the levels already do. A staking contract would break the site's safety promise (a token approval and a deposit asked from agi1.app), hold everyone's tokens (a target, and an audit), and suggest rewards (legal questions). Suggested instead: a loyalty bonus (a wallet that held its $AGI 7 days without sending any out gets e.g. 1.5× its messages), read from the chain. Nothing built: the owner's call |
 | 2026-10-02 | Ideas that pay for her (the owner: "ideas that is sustainable or maybe can earn me money too and them?"): Claude's list: a monthly pass for more of her (Telegram Stars in her bot, ETH on the site; a heavy user costs at most about $9 a month), voice notes in her voice, her as a creator (clips and streams: Cubism PRO first), tips and merch; for fans, Telegram's affiliate programs for bots (a commission in Stars), an invite bonus, a creator kit, contests. To avoid: paying holders or buybacks (they make $AGI look like an investment), paid promotion of other coins. Before charging: Vercel Pro (about $20 a month), the safety note's payment wording, taxes and refunds. Claude's pick to start: the pass in her bot with Stars, plus affiliates. Nothing built: the owner's call (not legal or financial advice) |
+| 2026-10-02 | "Show her" (the owner: "does she see my screen? and help me?", then "all of that"): she can't see a screen by herself (browsers don't allow it), so a button lets the visitor pick one window in the browser's own screen-sharing window: ONE picture, the sharing stopped at once, shown full size first with the reminder (no wallet, password or seed phrase), sent with the next message only, never kept by the site (not the page, not our server), counted as one message (about $0.0003 more: no new limit). Computers only (phones and tablets can't share a window). Not picked: a live view or a recording (sharing that stays on, private things passing by, much more cost), keeping pictures so she "remembers" them, a picture without the browser's own picker (browsers don't allow it), a desktop app that watches the screen (the native app is the owner's decision) |
+| 2026-10-02 | Her picture rules (from the review): a picture brings outside text into her prompt (phishing pages, scam messages, seed phrases), so with a picture she never calls a site, transaction or approval safe, never tells anyone to sign, approve, connect, send or claim, never confirms the official $AGI address from a picture (the Copy button on agi1.app instead), never passes on links, handles or "support" contacts, never reads out private details, warns about a seed phrase, never guesses who people are; no Soulmate note from a message with a picture; and every reply's cleanup also removes bare web addresses, @handles other than hers and emails. The check screen came from the same review: a 128 px thumbnail was too small to check a screen's text |
 
 ## Open questions
 
@@ -4088,6 +4252,11 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   anything that earns with her 2D model.
 - Full-screen talk has no heading of its own for screen readers (the page's headings are hidden there; her chat bar names
   her). A visually hidden heading could be added if a screen-reader user asks.
+- **Show her** (2026-10-02): not tried in Firefox, Safari or on real Windows and Mac computers (their pickers, a Mac's
+  Screen Recording prompt), nor her answers about real pictures: the owner's first try is the check. Nothing checks what a
+  picture shows before it goes (only the visitor, and Gemini's safety filters after): an explicit picture gets her PG-13
+  deflection and is never kept. If people often ask her to read long documents or code from pictures, a higher media
+  resolution would read small text better and cost more (ask the owner first).
 
 ## Working in this repo
 

@@ -76,7 +76,7 @@ test('our own pages may frame each other (her window holds her page), never anot
     }
   }
   // her mic and calls work in her window's frame: the mic for our own pages only (the frame asks with allow="microphone")
-  assert.equal(header('Permissions-Policy'), 'camera=(), microphone=(self), geolocation=()');
+  assert.equal(header('Permissions-Policy'), 'camera=(), microphone=(self), geolocation=(), display-capture=(self)');
 });
 
 // /theme.js (runs in <head>) in a sandbox, inside a frame or not
@@ -241,7 +241,7 @@ test('popping her out: asked in the click itself, her page in a frame, the chat 
   assert.equal(frame.tag, 'iframe');
   assert.equal(frame.src, 'https://www.agi1.app/talk?dev&pip=1', 'full-screen talk, marked, at this page\'s address');
   assert.equal(frame.title, 'AGI-1', 'named for screen readers');
-  assert.equal(frame.allow, 'microphone; autoplay; clipboard-write', 'her mic and calls, her voice, Copy');
+  assert.equal(frame.allow, 'microphone; autoplay; clipboard-write; display-capture', 'her mic and calls, her voice, Copy, "Show her"');
   assert.deepEqual(frame.style, { display: 'block', width: '100%', height: '100%', border: '0' });
   // the page: the chat waits behind its card, the ways out hide, the keyboard goes to "Bring her back"
   assert.deepEqual(page.buttons.map((b) => b.hidden), [true, true, true]);
@@ -447,7 +447,7 @@ test('the browser says no, or has no such window: nothing changes (and nothing s
 
 test('while she\'s out: the chat here stops talking and listening, full-screen talk steps aside, her window has the market moments', () => {
   const chat = read('src/chat/chat.js');
-  assert.match(chat, /addEventListener\('agi:popout', \(e\) => \{\n    popped = e\.detail === true;\n    voice\.hold\?\.\(popped\);\n    if \(!popped\) return;\n    endCall\(\);\n    hearing\?\.cancel\(\);\n    attend\('idle'\);\n  \}\);/, 'a call ends, the mic closes, and this page\'s voice stays quiet until she\'s back');
+  assert.match(chat, /addEventListener\('agi:popout', \(e\) => \{\n    popped = e\.detail === true;\n    voice\.hold\?\.\(popped\);\n    if \(!popped\) return;\n    dropShot\(\);\n    endCall\(\);\n    hearing\?\.cancel\(\);\n    attend\('idle'\);\n  \}\);/, 'a call ends, the mic closes, and this page\'s voice stays quiet until she\'s back');
   // the page's one voice (src/chat/voice.js): quiet while she's out (its chat, the stage's taps, the risk check), so a call in
   // her window never hears this page; a voice setting switched in her window reaches this page
   const voice = read('src/chat/voice.js');

@@ -246,6 +246,43 @@
   .pg-mic.is-on { animation: none; }
 }
 
+/* ---------- "Show her" (2026-10-02, src/chat/shot.js): one picture of a window, shown here first, with your next message ---------- */
+.pg-form { flex-wrap: wrap; }
+.pg-shot { flex: none; }
+.pg-shot svg { width: 18px; height: 18px; }
+.pg-shot:disabled { opacity: .45; cursor: default; }
+/* a narrow window with "Show her" in it (her pop-out window made small, a narrow browser window): more room for the words */
+@media (max-width: 400px) {
+  .pg-form:has(.pg-shot:not([hidden])) { gap: 6px; padding-left: 12px; }
+  .pg-form:has(.pg-shot:not([hidden])) .btn-sm { padding-inline: 11px; }
+}
+.pg-shot-card {
+  display: flex; align-items: center; gap: 12px; flex: 1 0 100%; min-width: 0;
+  margin: 0 0 4px; padding: 2px 0 10px; border-bottom: 1px solid var(--line);
+}
+.pg-shot-thumb {
+  flex: none; display: block; padding: 0; cursor: zoom-in; line-height: 0;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+}
+.pg-shot-thumb:hover { border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+.pg-shot-img { display: block; width: 128px; height: 72px; object-fit: contain; }   /* (the whole picture: never cropped) */
+.pg-shot-text { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.45; color: var(--fg-2); }
+.pg-shot-card.is-error .pg-shot-text { color: var(--down); }
+.pg-shot-x { flex: none; align-self: flex-start; width: 30px; height: 30px; }
+.pg-shot-x svg { width: 14px; height: 14px; }
+/* the check screen: the picture full size, fitted to the screen or at 100% (then it scrolls), before it goes */
+.wdlg.shotdlg { width: min(880px, calc(100vw - 32px)); }   /* (two classes: relationship.css's .wdlg, 440 px, loads later) */
+.shotdlg-text { margin-top: 10px; font-size: 14px; color: var(--fg-2); }
+.shotdlg-pic {
+  margin-top: 14px; max-height: min(58dvh, 620px); overflow: auto; line-height: 0;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
+}
+.shotdlg-img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+.shotdlg.is-zoomed .shotdlg-img { width: auto; max-width: none; cursor: zoom-out; }
+.shotdlg-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.shotdlg-gap { flex: 1; }
+.shotdlg-actions .btn-primary { margin-left: auto; }   /* (on its own row in a narrow window: still on the right) */
+
 /* ---------- out of messages (2026-09-25, src/chat/chat.js): under her line, Listen / Connect wallet / Buy and the safety note ---------- */
 .msg-offer { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .msg-actions { display: flex; flex-wrap: wrap; gap: 8px; }

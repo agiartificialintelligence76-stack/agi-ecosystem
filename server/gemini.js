@@ -1,5 +1,5 @@
 // Asks Google Gemini for AGI-1's reply. Only the server calls this; the API key never reaches the browser.
-import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt, languagePrompt } from './agi1-prompt.js';
+import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt, languagePrompt, shotPrompt } from './agi1-prompt.js';
 import { linesOf } from '../src/i18n/all.js';
 import { isLang } from '../src/i18n/langs.js';
 
@@ -87,12 +87,23 @@ export function msToGoogleReset(now = Date.now()) {
   return (86_400 - ((t.hour % 24) * 3600 + t.minute * 60 + t.second)) * 1000 - (now % 1000);
 }
 
-// Remove wallet addresses other than the official one, and links other than clank.trade.
-// The prompt already forbids these. This catches them even if someone tricks the AI.
+// Remove wallet addresses other than the official one, and links other than clank.trade (and agi1.app, our own). Since
+// 2026-10-02 ("Show her": a picture can carry a scam's "support" link or an airdrop) also bare domains like
+// "agi1-claim.xyz/airdrop" or "t.me/…", emails, and @handles other than ours. The prompt already forbids all of these.
+// This catches them even if someone tricks the AI.
+const OUR_HOSTS = /^(?:www\.)?(?:clank\.trade|agi1\.app)$/i;
+const OUR_HANDLES = /^(?:agi1dotapp|agi1_appbot)$/i;
+const TLDS = 'com|net|org|io|xyz|app|co|me|gg|fun|info|link|site|online|top|club|vip|pro|live|ai|finance|money|cash|trade|exchange|'
+  + 'biz|ru|cn|tk|ly|cc|tv|tech|dev|page|wtf|lol|bot|claims?|airdrop|network|world|space|website|store|shop|cloud|digital|social|'
+  + 'chat|games?|bet|casino|crypto|nft|dao|eth|sol|blog|news|to|so|in|us|uk|eu|de';
+const BARE_DOMAIN = new RegExp(`(^|[^\\w@.-])((?:[a-z0-9-]+\\.)+(?:${TLDS}))\\b(\\/[^\\s)]*)?`, 'gi');
 export function cleanReply(text) {
   return String(text)
     .replace(/0x[a-fA-F0-9]{40}/g, (m) => (m.toLowerCase() === OFFICIAL_CA ? m : '[address removed]'))
-    .replace(/\b(?:https?:\/\/|www\.)[^\s)]+/gi, (url) => (/^(?:https?:\/\/)?(?:www\.)?clank\.trade(?:\/|$)/i.test(url) ? url : '[link removed]'))
+    .replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, '[email removed]')
+    .replace(/\b(?:https?:\/\/|www\.)[^\s)]+/gi, (url) => (/^(?:https?:\/\/)?(?:www\.)?(?:clank\.trade|agi1\.app)(?:\/|$)/i.test(url) ? url : '[link removed]'))
+    .replace(BARE_DOMAIN, (m, before, host) => (OUR_HOSTS.test(host) ? m : `${before}[link removed]`))
+    .replace(/(^|[^\w@])@([A-Za-z0-9_]{3,32})\b/g, (m, before, handle) => (OUR_HANDLES.test(handle) ? m : `${before}[handle removed]`))
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, MAX_REPLY);
@@ -105,22 +116,27 @@ export function cleanReply(text) {
 // visitor.telegram (2026-09-29): she's texting on her Telegram bot ({ repliedTo: her text they replied to, if any }).
 // visitor.lang (2026-09-29): the language the visitor picked (or their Telegram app's), src/i18n/langs.js; English if not.
 // visitor.langSource: where that came from ('menu', 'telegram', 'default': see languagePrompt).
+// visitor.shot (2026-10-02, "Show her"): one picture of a window they picked, { mimeType, data } from server/shot.js: it goes
+// with this message only (before its words), and she gets her rules for it (shotPrompt). It takes a little longer to read.
 export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
   const soulmate = visitor.level === 3;
   const lang = isLang(visitor.lang) ? visitor.lang : 'en';
   const properties = { reply: { type: 'string' }, mood: { type: 'string', enum: MOODS } };
-  if (soulmate) properties.note = { type: 'string' };
+  // (no note from a message with a picture: nothing of a picture is ever kept, and text in it mustn't plant a memory)
+  const shot = visitor.shot && typeof visitor.shot.data === 'string' && visitor.shot.mimeType ? visitor.shot : null;
+  if (soulmate && !shot) properties.note = { type: 'string' };
   const contents = [
     ...history.map((t) => ({ role: t.role, parts: [{ text: t.text }] })),
-    { role: 'user', parts: [{ text: message }] },
+    { role: 'user', parts: [...(shot ? [{ inlineData: { mimeType: shot.mimeType, data: shot.data } }] : []), { text: message }] },
   ];
+  const wait = shot ? 15000 : 10000;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.geminiModel)}:generateContent`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'x-goog-api-key': cfg.geminiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(visitor.level, visitor) + groupMemoryPrompt(visitor.memory) + telegramPrompt(visitor.telegram)
-        + languagePrompt(lang, { source: visitor.langSource || (visitor.telegram ? 'telegram' : 'menu') }) }] },
+        + languagePrompt(lang, { source: visitor.langSource || (visitor.telegram ? 'telegram' : 'menu') }) + shotPrompt(shot) }] },
       contents,
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
@@ -134,7 +150,7 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
         },
       },
     }),
-    signal: AbortSignal.timeout(Number.isFinite(visitor.timeoutMs) && visitor.timeoutMs > 0 ? Math.min(10000, visitor.timeoutMs) : 10000),
+    signal: AbortSignal.timeout(Number.isFinite(visitor.timeoutMs) && visitor.timeoutMs > 0 ? Math.min(wait, visitor.timeoutMs) : wait),
   });
   if (!res.ok) throw await geminiError(res, cfg.geminiKey);
   const data = await res.json();
@@ -156,6 +172,6 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
   }
   const reply = parsed && typeof parsed.reply === 'string' ? cleanReply(parsed.reply) : '';
   if (!reply) throw new Error('gemini: no usable reply');
-  const note = soulmate && typeof parsed.note === 'string' ? parsed.note : null;
+  const note = soulmate && !shot && typeof parsed.note === 'string' ? parsed.note : null;
   return { reply, mood: MOODS.includes(parsed.mood) ? parsed.mood : 'neutral', note, usage: data.usageMetadata };
 }

@@ -66,7 +66,7 @@ export function startPopout(doc = document) {
     frame = d.createElement('iframe');
     frame.src = popoutUrl();
     frame.title = 'AGI-1';
-    frame.allow = 'microphone; autoplay; clipboard-write';   // (her mic and calls, her voice, Copy)
+    frame.allow = 'microphone; autoplay; clipboard-write; display-capture';   // (her mic and calls, her voice, Copy, "Show her")
     Object.assign(frame.style, { display: 'block', width: '100%', height: '100%', border: '0' });
     d.body.append(frame);
   }

@@ -25,6 +25,7 @@ import { startModelMenu } from './models.js';
 import { soonLine } from './model-lines.js';
 import { startVoice } from './voice.js';
 import { canListen, listenOnce } from './listen.js';
+import { canShow, takeShot } from './shot.js';
 import { pretendTalk } from '../lib/talk.js';
 import { TOKENS } from '../prices/parse.js';
 import { limitLineIn, restLineIn, finePrintIn } from './limit-lines.js';
@@ -153,6 +154,7 @@ export function startPlayground(root) {
     const box = el('div', `msg msg-${who}`);
     const head = el('div', 'msg-meta', who === 'user' ? 'You' : who === 'note' ? 'AGI-1 · notice' : 'AGI-1');
     if (who === 'user' && meta.voice) head.append(el('span', 'msg-chip', 'voice'));   // said out loud (voice chat)
+    if (who === 'user' && meta.shot) head.append(el('span', 'msg-chip', 'picture of a window'));   // ("Show her", 2026-10-02)
     if (who === 'model' && meta.mood) head.append(el('span', 'msg-chip', `mood: ${meta.mood}`));
     if (who === 'model' && meta.ms) head.append(el('span', 'msg-time', `${(meta.ms / 1000).toFixed(1)} s`));
     if (who === 'model' && meta.remembered) head.append(el('span', 'msg-chip msg-memory', `remembered: ${meta.remembered}`));
@@ -245,6 +247,7 @@ export function startPlayground(root) {
     voice.stop();
     attend('idle');
     history = []; synced = 0; store.del(KEYS.history);
+    dropShot();
     log.replaceChildren(); message('model', t('fresh'), { lang: currentLang() });
     examples.hidden = false;
   });
@@ -369,6 +372,102 @@ export function startPlayground(root) {
     voice.warm((offer && !shown ? offer : restLineIn('person')).key, currentLang());
   }
 
+  // ---------- "Show her" (2026-10-02, src/chat/shot.js): one picture of a window you pick, with your next message ----------
+  // She sees it once (it goes to the AI service with that message; we never keep it). It's shown full size first, to check:
+  // no wallet, password or seed phrase. Then it waits above the box (it can be seen again, or removed). Computers only.
+  const shotBtn = $('[data-shot]'), shotCard = $('[data-shot-card]'), shotImg = $('[data-shot-img]'), shotText = $('[data-shot-text]');
+  const shotLive = $('[data-shot-live]');
+  const shotDlg = document.querySelector('[data-shot-dialog]');
+  const dlg$ = (sel) => shotDlg?.querySelector(sel);
+  const SHOT_TEXT = shotText?.textContent || '';
+  const SHOT_ASK = '👀';                          // (sent with the picture when nothing was typed: it's in no language, so she
+                                                  // keeps answering in yours)
+  const SHOT_FAILED = {
+    system: "Your computer didn't let the browser share its screen. On a Mac: System Settings → Privacy & Security → Screen Recording → turn your browser on, then try again.",
+    refused: "She couldn't open that picture. Try again, or pick another window.",
+    other: "Couldn't take a picture of that window. Try again, or pick another one.",
+  };
+  let pending = null, shooting = false;           // the picture waiting for your next message { data, url }
+  let quietClose = false;                         // (the check screen closed by the page itself: the keyboard stays put)
+  if (shotBtn && shotCard && shotDlg && canShow()) shotBtn.hidden = false;
+  const shotSay = (text) => { if (!shotLive) return; shotLive.textContent = ''; setTimeout(() => { shotLive.textContent = text; }, 60); };
+  // the keyboard to the message box once the check screen has closed (after the browser's own "back to where you were")
+  const toBox = () => setTimeout(() => { if (gate.hidden && !popped && !shotDlg?.open) input.focus({ preventScroll: true }); }, 0);
+  function dropShot() {
+    if (pending?.url) URL.revokeObjectURL(pending.url);
+    pending = null;
+    if (!shotCard) return;
+    if (shotDlg?.open) { quietClose = true; shotDlg.close(); }
+    dlg$('[data-shotdlg-img]')?.removeAttribute('src');
+    shotCard.hidden = true;
+    shotCard.classList.remove('is-error');
+    shotImg.removeAttribute('src');
+    examples.hidden = history.length > 0 || !gate.hidden;
+  }
+  // the picture goes with this message, and only this one → its base64, or null
+  function takePending() {
+    const data = pending?.data || null;
+    dropShot();
+    return data;
+  }
+  function shotFailed(why) {
+    dropShot();
+    shotCard.querySelector('[data-shot-view]').hidden = true;
+    shotText.textContent = SHOT_FAILED[why] || SHOT_FAILED.other;
+    shotCard.classList.add('is-error');
+    shotCard.hidden = false;
+    shotSay(shotText.textContent);
+  }
+  // the picture full size, to check (and to see again from its thumbnail)
+  function review() {
+    if (!pending || !shotDlg) return;
+    const img = dlg$('[data-shotdlg-img]');
+    img.src = pending.url;
+    shotDlg.classList.remove('is-zoomed');
+    dlg$('[data-shotdlg-zoom]').setAttribute('aria-pressed', 'false');
+    if (!shotDlg.open) shotDlg.showModal();
+    dlg$('[data-shotdlg-ok]').focus();
+  }
+  shotBtn?.addEventListener('click', async () => {
+    if (call || shooting || popped) return;
+    shooting = true;
+    shotBtn.disabled = true;
+    hearing?.cancel();
+    const at = epoch;
+    try {
+      const shot = await takeShot(document);    // (the browser asks which window: cancelled → nothing)
+      if (!shot) return;
+      if (at !== epoch || call || popped || !gate.hidden) { URL.revokeObjectURL(shot.url); return; }   // (things changed meanwhile)
+      dropShot();
+      pending = shot;
+      shotImg.src = shot.url;
+      shotCard.querySelector('[data-shot-view]').hidden = false;
+      shotText.textContent = SHOT_TEXT;
+      shotCard.hidden = false;
+      examples.hidden = true;
+      review();
+    } catch (err) {
+      console.warn('[shot] no picture:', err?.message || err);
+      shotFailed(err?.code === 'system' ? 'system' : 'other');
+    } finally {
+      shooting = false;
+      shotBtn.disabled = Boolean(call);
+      if (gate.hidden && !shotDlg?.open) input.focus({ preventScroll: true });
+    }
+  });
+  shotCard?.querySelector('[data-shot-view]')?.addEventListener('click', review);
+  shotCard?.querySelector('[data-shot-x]')?.addEventListener('click', () => { dropShot(); shotSay('Picture removed.'); input.focus({ preventScroll: true }); });
+  dlg$('[data-shotdlg-ok]')?.addEventListener('click', () => shotDlg.close());
+  dlg$('[data-shotdlg-close]')?.addEventListener('click', () => shotDlg.close());
+  dlg$('[data-shotdlg-remove]')?.addEventListener('click', () => { dropShot(); shotSay('Picture removed.'); toBox(); });
+  dlg$('[data-shotdlg-zoom]')?.addEventListener('click', (e) => {
+    const on = shotDlg.classList.toggle('is-zoomed');
+    e.currentTarget.setAttribute('aria-pressed', String(on));
+  });
+  dlg$('[data-shotdlg-img]')?.addEventListener('click', () => dlg$('[data-shotdlg-zoom]').click());
+  // closed ("Looks fine", ✕, Escape): to the box, to ask her about it (opened from its thumbnail, the browser would go back there)
+  shotDlg?.addEventListener('close', () => { if (!quietClose) toBox(); quietClose = false; });
+
   // ---------- sending ----------
   async function callApi(text, extra) {
     // earlier messages only (the new one is `text`), and only the fields the server checks
@@ -380,7 +479,8 @@ export function startPlayground(root) {
 
   // → { ok: true, said } once her reply is shown (said: how her voice went, see voice.speak), or { ok: false, error, said? }
   // (out of messages: `said` is a promise of how her voice for that line went)
-  async function send(text, { spoken = false } = {}) {
+  // shot: a picture of a window to go with it ("Show her": its base64)
+  async function send(text, { spoken = false, shot = null } = {}) {
     voice.prime({ force: nearCap() });           // (in the tap: phones only allow sound that starts from one)
     voice.stop();
     warmCapLine();
@@ -389,8 +489,9 @@ export function startPlayground(root) {
     sendBtn.disabled = true;
     examples.hidden = true;
     attend('thinking');
-    message('user', text, spoken ? { voice: true } : {});
-    history.push({ role: 'user', text, ...(spoken ? { voice: true } : {}) });
+    const marks = { ...(spoken ? { voice: true } : {}), ...(shot ? { shot: true } : {}) };
+    message('user', text, marks);
+    history.push({ role: 'user', text, ...marks });     // (the picture itself is never kept: only that there was one)
     save();
     const typing = el('div', 'msg msg-model msg-typing');
     const dots = el('div', 'msg-text');
@@ -402,7 +503,7 @@ export function startPlayground(root) {
     const t0 = performance.now();
     try {
       // No pass yet? The human check runs first, so the message is sent only once.
-      const r = await withHuman(humanBox, 'chat', (extra) => callApi(text, extra));
+      const r = await withHuman(humanBox, 'chat', (extra) => callApi(text, shot ? { ...extra, shot } : extra));
       // the answer carries the latest level/session; the Relationship panel keeps them
       dispatchEvent(new CustomEvent('agi:chat-answer', { detail: r.data }));
       if (r.ok && typeof r.data.reply === 'string') {
@@ -439,6 +540,7 @@ export function startPlayground(root) {
         dispatchEvent(new CustomEvent('agi1:react', { detail: REACTIONS.includes(r.data.mood) ? r.data.mood : 'neutral' }));
         return { ok: true, said };
       } else if (r.data.error === 'age') {
+        dropShot();
         store.del(KEYS.adult);
         showGate(true);
         dispatchEvent(new CustomEvent('agi:adult', { detail: false }));
@@ -449,6 +551,9 @@ export function startPlayground(root) {
         const level = [1, 2, 3].includes(r.data.level) ? r.data.level : rel.level;
         // (her voice for it isn't waited for here, so you can type again right away; a call waits for it: see startCall)
         return { ok: false, error: r.data.error, said: outOfMessages(level, { site: r.data.error === 'global_cap', burn: r.data.burn || null }) };
+      } else if (r.data.error === 'bad_picture') {
+        shotFailed('refused');                   // ("Show her": a picture our server won't take)
+        return { ok: false, error: 'bad_picture' };
       } else {
         message('note', note(r.data.error), { lang: currentLang() });
         return { ok: false, error: r.data.error || 'error' };
@@ -471,11 +576,11 @@ export function startPlayground(root) {
 
   function submit() {
     if (hearing) { hearing.stop(); return; }    // (the mic is on: Enter/Send means "done talking")
-    const text = input.value.trim().slice(0, MAX_LEN);
+    const text = input.value.trim().slice(0, MAX_LEN) || (pending ? SHOT_ASK : '');
     if (!text || busy) return;
     input.value = '';
     grow();
-    send(text);
+    send(text, { shot: takePending() });
   }
   form.addEventListener('submit', (e) => { e.preventDefault(); submit(); });
   input.addEventListener('keydown', (e) => {
@@ -495,7 +600,7 @@ export function startPlayground(root) {
     listenTimer = setTimeout(() => attend('idle'), LISTEN_MS);   // …until you stop for a moment
   });
   for (const b of examples.querySelectorAll('button')) {
-    b.addEventListener('click', () => { if (!busy) send(b.textContent.trim()); });
+    b.addEventListener('click', () => { if (!busy) send(b.textContent.trim(), { shot: takePending() }); });
   }
 
   // ---------- voice chat (2026-09-25) ----------
@@ -556,7 +661,7 @@ export function startPlayground(root) {
     if (busy || !gate.hidden) return;
     voiceForTalk();
     const { text, reason } = await hear();
-    if (text) send(text, { spoken: true });
+    if (text) send(text, { spoken: true, shot: takePending() });
     else if (reason !== 'stopped') message('note', hearNote(reason), { lang: currentLang() });
   });
 
@@ -564,6 +669,7 @@ export function startPlayground(root) {
   let callClock = 0;
   function drawCall() {
     callBtn.classList.toggle('is-on', Boolean(call));
+    if (shotBtn) shotBtn.disabled = Boolean(call) || shooting;   // ("Show her": not in a call)
     callBtn.setAttribute('aria-pressed', String(Boolean(call)));
     callBtn.setAttribute('aria-label', call ? 'End the call' : CALL_LABEL);
     callWord.textContent = call ? 'End' : 'Call';
@@ -582,9 +688,10 @@ export function startPlayground(root) {
     await nap(400);                              // a breath before the mic opens
   }
   async function startCall() {
-    if (call || busy || !gate.hidden) return;
+    if (call || busy || !gate.hidden || shooting) return;
     if (voice.resting()) { message('note', t('voiceRest.call'), { lang: currentLang() }); return; }   // (a call is out loud: not while her voice rests)
     const me = call = { since: Date.now(), quiet: 0, stops: 0, wasOn: voice.isOn() };
+    dropShot();                                  // (a call doesn't take pictures along)
     if (!voice.isOn()) voice.setOn(true, { remember: false });   // a call is out loud (switched back afterwards)
     voice.prime();
     drawCall();
@@ -637,6 +744,7 @@ export function startPlayground(root) {
     popped = e.detail === true;
     voice.hold?.(popped);
     if (!popped) return;
+    dropShot();
     endCall();
     hearing?.cancel();
     attend('idle');
@@ -761,6 +869,7 @@ export function startPlayground(root) {
     store.del(KEYS.history);
     log.replaceChildren();
     message('model', greeting({ level: 1 }), { lang: currentLang() });
+    dropShot();
     examples.hidden = false;
   });
 

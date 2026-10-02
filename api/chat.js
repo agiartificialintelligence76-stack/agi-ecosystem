@@ -10,6 +10,8 @@
 //   6. Soulmates: save the short new note AGI-1 wrote about them, if any
 // Her language (2026-09-29): `lang` (the chat's language menu, src/i18n/langs.js; English if missing or unknown), and she
 // follows whatever language they write in (server/agi1-prompt.js, languagePrompt).
+// "Show her" (2026-10-02): `shot`, one picture of a window the visitor picked (server/shot.js), goes with this message to the
+// AI service and nowhere else (never logged or stored); the message counts as one, like any other.
 // The reply comes back signed (for the history) with a voice ticket (for api/voice.js, her voice).
 import { getConfig, missingSettings } from '../server/config.js';
 import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass, signReply, checkReply, makeVoiceTicket } from '../server/security.js';
@@ -24,8 +26,10 @@ import { recallGroup } from '../server/tg-memory.js';
 import { takeBurned, refundBurned, burnedAgi } from '../server/burn.js';
 import { randomUUID } from 'node:crypto';
 import { isLang } from '../src/i18n/langs.js';
+import { readShot } from '../server/shot.js';
 
-const MAX_BODY = 16_000;     // bytes
+const MAX_BODY = 16_000;     // bytes (besides a picture: "Show her")
+const MAX_SHOT_BODY = 16_000 + 820_000;   // a message with one picture (600 KB at most, base64 in the JSON)
 const MAX_MESSAGE = 500;     // characters per visitor message
 const MAX_REPLY = 600;       // characters per AGI-1 reply kept in history
 const MAX_TURNS = 6;         // recent messages sent to Gemini as context
@@ -52,10 +56,13 @@ export async function POST(request) {
   // 1. The request itself.
   if (!(request.headers.get('content-type') || '').includes('application/json')) return json(415, { error: 'bad_request' });
   const raw = await request.text();
-  if (raw.length > MAX_BODY) return json(413, { error: 'too_long' });
+  if (raw.length > MAX_SHOT_BODY) return json(413, { error: 'too_long' });
   let body;
   try { body = JSON.parse(raw); } catch { return json(400, { error: 'bad_request' }); }
   if (!body || typeof body !== 'object') return json(400, { error: 'bad_request' });
+  if (raw.length - (typeof body.shot === 'string' ? body.shot.length : 0) > MAX_BODY) return json(413, { error: 'too_long' });
+  const shot = readShot(body.shot);                                  // ("Show her": a real picture, and small, or nothing)
+  if (shot === false) return json(400, { error: 'bad_picture' });
   const message = typeof body.message === 'string' ? body.message.trim() : '';
   if (!message) return json(400, { error: 'bad_request' });
   if (message.length > MAX_MESSAGE) return json(400, { error: 'too_long' });
@@ -141,7 +148,7 @@ export async function POST(request) {
   let answer;
   try {
     answer = await askAgi1(cfg, history, message,
-      { level, name: friend.name, notes: level === 3 ? friend.notes : [], memory, lang, timeoutMs: Math.min(10_000, timeLeft) });
+      { level, name: friend.name, notes: level === 3 ? friend.notes : [], memory, lang, shot, timeoutMs: Math.min(shot ? 15_000 : 10_000, timeLeft) });
   } catch (err) {
     console.error('[chat] gemini failed:', err.message);
     if (burned) await giveBack();                                      // a burned message never pays for no reply
@@ -150,7 +157,7 @@ export async function POST(request) {
 
   // 6. A Soulmate's new note (checked: a short fact, nothing private, nothing that looks like an instruction).
   let remembered = null;
-  const note = level === 3 && friendCode ? cleanNote(answer.note) : null;
+  const note = level === 3 && friendCode && !shot ? cleanNote(answer.note) : null;   // (never from a picture)
   if (note) {
     try { await addFriendNote(cfg, friendCode, note); remembered = note; } catch (err) { console.error('[chat] saving a note failed:', err.message); }
   }

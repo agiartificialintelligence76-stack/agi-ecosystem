@@ -308,6 +308,7 @@
 [data-skin='pop'] .dstyle-btn.is-on { background: var(--pop-ink); color: #fff; }
 [data-skin='pop'] .zoom-btn:hover { background: var(--pop-lav); }
 [data-skin='pop'] .stage-hint, [data-skin='pop'] .stage-status { color: var(--pop-ink); font-weight: 500; }
+[data-skin='pop'] .stage-status.busy { animation-name: breathe; }
 /* her words when she's tapped: a comic speech bubble (2026-10-01) */
 [data-skin='pop'] .agi-say { color: var(--pop-ink); font-weight: 600; background: #fff; border: 2px solid var(--pop-ink); box-shadow: 3px 3px 0 var(--pop-ink); }
 [data-skin='pop'] .agi-say.is-caption { background: #fff; }
@@ -424,6 +425,9 @@
 [data-skin='pop'] .msg-note .msg-text { border-left: 3px solid var(--pop-pink); color: var(--fg-2); }
 [data-skin='pop'] .msg-fine { background: var(--bg-2); border: 2px solid var(--edge); border-radius: 14px; }
 [data-skin='pop'] .pg-form { border: 2px solid var(--edge); border-radius: 18px; }
+[data-skin='pop'] .pg-shot-card { border-bottom: 2px solid var(--edge); }
+[data-skin='pop'] .pg-shot-thumb { border: 2px solid var(--edge); border-radius: 10px; }
+[data-skin='pop'] .shotdlg-pic { border: 2px solid var(--edge); border-radius: 16px; }
 [data-skin='pop'] .pg-form:focus-within { border-color: var(--pop-violet); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pop-violet) 25%, transparent); }
 [data-skin='pop'] .pg-foot { color: var(--fg-2); }
 /* her live view: the same pink comic panel as her stage */
