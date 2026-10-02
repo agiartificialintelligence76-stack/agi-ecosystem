@@ -4,12 +4,14 @@
 // Phase 5: it also writes AGI-1's diary entry for yesterday if it's missing (server/diary.js): the first run after
 // midnight UTC writes it, later runs only check (so a failed night is tried again at the next run).
 // 2026-10-01: and it tidies "Launch with AGI-1" up (old drafts, and the pictures of coins never launched, at Pinata).
+// 2026-10-02: and her live show's questions older than 2 days (server/live.js tidyLive).
 // (Its check of the Arena's coins, Phase 6, left with the Arena on 2026-09-28: the original site's keep-alive still does it.)
 // Only Vercel may call it: when CRON_SECRET is set, Vercel sends "Authorization: Bearer <CRON_SECRET>".
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../server/config.js';
 import { writeDiary } from '../server/diary.js';
 import { tidyLaunches } from '../server/launch.js';
+import { tidyLive } from '../server/live.js';
 
 const fingerprint = (text) => createHash('sha256').update(String(text)).digest();
 // Compares fixed-size fingerprints, so the check takes the same time whatever was sent.
@@ -48,7 +50,9 @@ export async function GET(request) {
     // "Launch with AGI-1" (2026-10-01): old drafts go, and the pictures of coins never launched are deleted at Pinata
     // (server/launch.js tidyLaunches: never throws; only when PINATA_JWT is set)
     const unpinned = await tidyLaunches(cfg, { deadline: started + 16_000 });
-    return answer({ ok: true, diary, unpinned });
+    // her live show (2026-10-02): questions older than 2 days go, and a show whose runner went quiet is switched off
+    const live = await tidyLive(cfg);
+    return answer({ ok: true, diary, unpinned, live });
   } catch (err) {
     console.error(`[keepalive] database read failed: ${err.message}`);
     return answer({ error: 'database' }, 502);

@@ -1,0 +1,20 @@
+# What the live show's Docker image never gets (tools/live/Dockerfile): packages it installs itself, build output, git,
+# and anything secret or private
+node_modules
+dist
+tools/live/dist
+tools/live/cache
+.git
+.vercel
+.env
+.env.*
+tools/live/live.env
+*.live.env
+*-gcp-key.json
+google-key.json
+_source-assets
+telegram memories
+Claude outputs
+clips
+x-article
+agi 2d anime

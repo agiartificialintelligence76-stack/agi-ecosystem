@@ -2,7 +2,7 @@
 // 1. writes dist/share/level-<name>.html: tiny pages that exist so X (and other apps) show the right picture under a
 //    shared link. People who open one are sent on to the Playground by /share/go.js (crawlers don't run scripts, so they
 //    read the preview tags). (The Arena's champion pages left with the Arena on 2026-09-28.)
-// 2. puts the site's address into the preview tags of dist/index.html and dist/diary.html (__SITE__).
+// 2. puts the site's address into the preview tags of dist/index.html, dist/diary.html and (2026-10-02) dist/live.html (__SITE__).
 // Link previews need full addresses. They come from Vercel's VERCEL_PROJECT_PRODUCTION_URL (the production domain), so
 // the next build uses agi1.app (the project's domain) by itself. SITE_URL overrides it (tests, previews).
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
@@ -69,7 +69,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
   mkdirSync('dist/share', { recursive: true });
   for (const [name, html] of Object.entries(allSharePages(site))) writeFileSync(`dist/share/${name}.html`, html);
-  for (const page of ['dist/index.html', 'dist/diary.html']) {
+  for (const page of ['dist/index.html', 'dist/diary.html', 'dist/live.html']) {
     if (existsSync(page)) writeFileSync(page, readFileSync(page, 'utf8').replaceAll('__SITE__', site));
   }
   console.log(`✓ share pages written for ${site}`);

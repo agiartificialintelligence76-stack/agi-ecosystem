@@ -39,3 +39,9 @@ export const burnBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });
 // picture comes through our server from Telegram: 60 a minute.
 export const launchBurst = makeBurstLimit({ max: 40, windowMs: 60_000 });
 export const launchPictureBurst = makeBurstLimit({ max: 60, windowMs: 60_000 });
+// Her live show (api/live.js, 2026-10-02): a person sends a question a minute at most (the database's own rule), so 10 tries
+// a minute per visitor only stops scripts before the human check; the page asks where its question is now and then (the
+// answer is one small database read): 30 a minute; and wrong secrets for the runner's and the owner's actions: 10 a minute
+export const liveBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });
+export const liveLookupBurst = makeBurstLimit({ max: 30, windowMs: 60_000 });
+export const liveAuthBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });

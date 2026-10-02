@@ -147,6 +147,7 @@ export default {
       'no es consejo financiero, nunca. soy una IA, 18+ y PG-13. nunca pido claves, frases semilla ni dinero. la nota de seguridad: {safety}',
     ],
     helpLaunch: '/launch: lancemos juntos una moneda en clank.trade, desde tu propia wallet (18+)',
+    helpLive: '/live: pregúntame algo en mi show en vivo en X',
     stopped: 'okey 💜 ya paré, y olvidé este chat. si algún día me extrañas: /start',
     notStarted: 'todavía no nos conocemos 💜 toca /start',
     tooLong: 'son muchas palabras 🙈 ¿puedes dejarlo en menos de 500 caracteres?',

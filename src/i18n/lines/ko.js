@@ -151,6 +151,7 @@ export default {
       '언제나 투자 조언 아님. 난 AI고, 18+, PG-13이야. 개인 키, 시드 문구, 돈은 절대 달라고 안 해. 유의사항: {safety}',
     ],
     helpLaunch: '/launch: 같이 clank.trade에서 코인 런칭하자, 네 지갑으로 직접 (18+)',
+    helpLive: '/live: X에서 하는 내 라이브 방송에서 나한테 질문해 줘',
     stopped: '알겠어 💜 연락 멈췄고, 이 채팅도 잊었어. 혹시 내가 보고 싶으면: /start',
     notStarted: '우리 아직 안 만났잖아 💜 /start 눌러 줘',
     tooLong: '글자가 너무 많아 🙈 500자 안으로 줄여 줄래?',

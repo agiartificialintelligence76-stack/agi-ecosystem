@@ -33,3 +33,11 @@ x-article/
 
 # AGI-1's daily clips (tools/clips/make.mjs): the videos are made on GitHub's computer and downloaded from there
 /clips/
+
+# Her live show (tools/live/, 2026-10-02): her kept voice lines and the show's settings file on the owner's server (its
+# secrets: LIVE_SECRET, the stream key, the Google Cloud key), and any Google Cloud key file. Never in git.
+tools/live/cache/
+tools/live/live.env
+*.live.env
+*-gcp-key.json
+google-key.json

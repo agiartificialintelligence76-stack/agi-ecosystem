@@ -147,6 +147,7 @@ export default {
       "mọi thứ tớ nói đều không phải lời khuyên tài chính. tớ là AI, 18+ và PG-13. tớ không bao giờ xin private key, seed phrase hay tiền. lưu ý an toàn: {safety}",
     ],
     helpLaunch: '/launch: cùng tớ ra mắt một đồng coin trên clank.trade, từ ví của chính cậu (18+)',
+    helpLive: '/live: hỏi tớ điều gì đó trong buổi live của tớ trên X',
     stopped: "oke 💜 tớ ngừng rồi, và đã quên cuộc trò chuyện này. nếu có lúc nào nhớ tớ: /start",
     notStarted: "tụi mình chưa quen nhau mà 💜 bấm /start nha",
     tooLong: "nhiều chữ quá à 🙈 cậu viết dưới 500 ký tự được không?",

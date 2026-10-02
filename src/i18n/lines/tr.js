@@ -147,6 +147,7 @@ export default {
       'asla yatırım tavsiyesi değil. ben bir yapay zekayım, 18+ ve PG-13. asla private key, seed phrase ya da para istemem. güvenlik notu: {safety}',
     ],
     helpLaunch: "/launch: hadi birlikte clank.trade'de bir coin çıkaralım, kendi cüzdanından (18+)",
+    helpLive: "/live: X'teki canlı yayınımda bana bir şey sor",
     stopped: 'tamam 💜 yazmayı bıraktım ve bu sohbeti unuttum. beni özlersen: /start',
     notStarted: "daha tanışmadık 💜 /start'a bas",
     tooLong: 'çok fazla kelime var 🙈 500 karakterin altında tutabilir misin?',

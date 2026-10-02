@@ -147,6 +147,7 @@ export default {
       "bukan nasihat keuangan, sampai kapan pun. aku AI, 18+ dan PG-13. aku nggak pernah minta private key, seed phrase, atau uang. catatan keamanan: {safety}",
     ],
     helpLaunch: '/launch: yuk luncurin koin bareng di clank.trade, dari wallet kamu sendiri (18+)',
+    helpLive: '/live: tanya aku sesuatu di live show-ku di X',
     stopped: "oke 💜 aku udah berhenti, dan udah lupain obrolan ini. kalau kamu kangen aku: /start",
     notStarted: "kita belum kenalan 💜 tekan /start ya",
     tooLong: "banyak banget kata-katanya 🙈 bisa di bawah 500 karakter?",

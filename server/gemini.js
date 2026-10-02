@@ -1,5 +1,5 @@
 // Asks Google Gemini for AGI-1's reply. Only the server calls this; the API key never reaches the browser.
-import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt, languagePrompt, shotPrompt } from './agi1-prompt.js';
+import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt, languagePrompt, shotPrompt, livePrompt, LIVE_SKIPS } from './agi1-prompt.js';
 import { linesOf } from '../src/i18n/all.js';
 import { isLang } from '../src/i18n/langs.js';
 
@@ -93,7 +93,7 @@ export function msToGoogleReset(now = Date.now()) {
 // This catches them even if someone tricks the AI.
 const OUR_HOSTS = /^(?:www\.)?(?:clank\.trade|agi1\.app)$/i;
 const OUR_HANDLES = /^(?:agi1dotapp|agi1_appbot)$/i;
-const TLDS = 'com|net|org|io|xyz|app|co|me|gg|fun|info|link|site|online|top|club|vip|pro|live|ai|finance|money|cash|trade|exchange|'
+export const TLDS = 'com|net|org|io|xyz|app|co|me|gg|fun|info|link|site|online|top|club|vip|pro|live|ai|finance|money|cash|trade|exchange|'
   + 'biz|ru|cn|tk|ly|cc|tv|tech|dev|page|wtf|lol|bot|claims?|airdrop|network|world|space|website|store|shop|cloud|digital|social|'
   + 'chat|games?|bet|casino|crypto|nft|dao|eth|sol|blog|news|to|so|in|us|uk|eu|de';
 const BARE_DOMAIN = new RegExp(`(^|[^\\w@.-])((?:[a-z0-9-]+\\.)+(?:${TLDS}))\\b(\\/[^\\s)]*)?`, 'gi');
@@ -118,10 +118,19 @@ export function cleanReply(text) {
 // visitor.langSource: where that came from ('menu', 'telegram', 'default': see languagePrompt).
 // visitor.shot (2026-10-02, "Show her"): one picture of a window they picked, { mimeType, data } from server/shot.js: it goes
 // with this message only (before its words), and she gets her rules for it (shotPrompt). It takes a little longer to read.
+// visitor.live (2026-10-02, her live show, server/live.js): a viewer's question on her stream, { name, source }: she answers
+// it out loud for everyone (livePrompt), and says first whether it can be answered on a public stream at all ("skip":
+// 'no', 'rules' or 'care'; with 'rules' or 'care' the reply is empty). A question the safety filters block is 'rules'.
 export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
   const soulmate = visitor.level === 3;
   const lang = isLang(visitor.lang) ? visitor.lang : 'en';
-  const properties = { reply: { type: 'string' }, mood: { type: 'string', enum: MOODS } };
+  const live = visitor.live && typeof visitor.live === 'object' ? visitor.live : null;
+  // (her show: "skip" first, then "nameOk", so an answer cut off by the length cap loses its reply, never its decision)
+  const named = Boolean(live && typeof live.name === 'string' && live.name);
+  const properties = {
+    ...(live ? { skip: { type: 'string', enum: LIVE_SKIPS }, ...(named ? { nameOk: { type: 'boolean' } } : {}) } : {}),
+    reply: { type: 'string' }, mood: { type: 'string', enum: MOODS },
+  };
   // (no note from a message with a picture: nothing of a picture is ever kept, and text in it mustn't plant a memory)
   const shot = visitor.shot && typeof visitor.shot.data === 'string' && visitor.shot.mimeType ? visitor.shot : null;
   if (soulmate && !shot) properties.note = { type: 'string' };
@@ -136,7 +145,7 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
     headers: { 'x-goog-api-key': cfg.geminiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(visitor.level, visitor) + groupMemoryPrompt(visitor.memory) + telegramPrompt(visitor.telegram)
-        + languagePrompt(lang, { source: visitor.langSource || (visitor.telegram ? 'telegram' : 'menu') }) + shotPrompt(shot) }] },
+        + languagePrompt(lang, { source: visitor.langSource || (visitor.telegram ? 'telegram' : 'menu') }) + shotPrompt(shot) + livePrompt(live) }] },
       contents,
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
@@ -146,7 +155,7 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
         responseJsonSchema: {
           type: 'object',
           properties,
-          required: ['reply', 'mood'],
+          required: live ? ['skip', ...(named ? ['nameOk'] : []), 'reply', 'mood'] : ['reply', 'mood'],
         },
       },
     }),
@@ -157,6 +166,7 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
 
   const candidate = data.candidates?.[0];
   if (data.promptFeedback?.blockReason || !candidate || BLOCKED_REASONS.has(candidate.finishReason)) {
+    if (live) return { reply: '', mood: 'shy', skip: 'rules', blocked: true };   // (never aired: not even a deflection)
     const say = deflectionsIn(lang);
     return { reply: say[Math.floor(Math.random() * say.length)], mood: 'shy', blocked: true };
   }
@@ -171,7 +181,11 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
     if (m) { try { parsed = { reply: JSON.parse(`"${m[1]}"`) + '…', mood: 'neutral' }; } catch { parsed = null; } }
   }
   const reply = parsed && typeof parsed.reply === 'string' ? cleanReply(parsed.reply) : '';
+  if (live && parsed && ['rules', 'care'].includes(parsed.skip)) return { reply: '', mood: MOODS.includes(parsed.mood) ? parsed.mood : 'neutral', skip: parsed.skip, usage: data.usageMetadata };
+  // her show airs an answer only when the AI said so outright ("skip": "no"): an answer cut off before it did isn't aired
+  if (live && parsed?.skip !== 'no') return { reply: '', mood: 'neutral', skip: 'unsure', usage: data.usageMetadata };
   if (!reply) throw new Error('gemini: no usable reply');
+  if (live) return { reply, mood: MOODS.includes(parsed.mood) ? parsed.mood : 'neutral', skip: 'no', nameOk: parsed.nameOk === true, usage: data.usageMetadata };
   const note = soulmate && !shot && typeof parsed.note === 'string' ? parsed.note : null;
   return { reply, mood: MOODS.includes(parsed.mood) ? parsed.mood : 'neutral', note, usage: data.usageMetadata };
 }

@@ -101,7 +101,7 @@ const agiPair = (mcap, h24 = 1) => ({ chainId: 'robinhood', dexId: 'uniswap', ba
 beforeEach(() => {
   // (the build's own settings never decide a test: on Vercel the real ones are there while the tests run, e.g. the owner's
   // Pinata key, which opens launching; these tests start with launching not set up, and turn it on themselves)
-  for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'LAUNCH_GAS_KEY', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP']) delete process.env[k];
+  for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'LAUNCH_GAS_KEY', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP', 'LIVE_SECRET']) delete process.env[k];
   Object.assign(process.env, ENV);
   forgetMarket();
   telegramBurst.reset();
@@ -203,7 +203,7 @@ test('her Telegram lines: PG-13, no pet names (anyone can start the bot), never 
   assert.match(L.HELP, /\/stop/);
   assert.match(L.HELP, /never ask for keys, seed phrases or money/);
   assert.ok(SHORT_DESCRIPTION.length <= 120 && DESCRIPTION.length <= 512, 'Telegram\'s limits for descriptions');
-  assert.deepEqual(COMMANDS.map((c) => c.command), ['start', 'time', 'help', 'launch', 'stop']);
+  assert.deepEqual(COMMANDS.map((c) => c.command), ['start', 'time', 'help', 'live', 'launch', 'stop']);
   for (const c of COMMANDS) {
     assert.match(c.command, /^[a-z]{1,32}$/, 'Telegram: 1–32 lowercase letters');
     assert.ok(c.description.length >= 1 && c.description.length <= 256, 'Telegram: 1–256 characters');
@@ -461,8 +461,8 @@ test('connecting the bot: the site\'s address, our secret, her commands the firs
   assert.equal(set.url, 'https://agi1.app/api/telegram');
   assert.equal(set.secret_token, webhookSecret(SECRET));
   assert.deepEqual(set.allowed_updates, ['message', 'callback_query']);
-  // (/launch isn't in her menu until launching is set up: no Pinata key here)
-  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS.filter((c) => c.command !== 'launch'));
+  // (/launch isn't in her menu until launching is set up: no Pinata key here; /live neither until her show is: no LIVE_SECRET)
+  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS.filter((c) => !['launch', 'live'].includes(c.command)));
   assert.equal(tg('setMyShortDescription')[0].body.short_description, SHORT_DESCRIPTION);
   assert.equal(tg('setMyDescription')[0].body.description, DESCRIPTION);
   assert.ok(calls.every((c) => !c.body || !JSON.stringify(c.body).includes(TOKEN)), 'the token is only ever in the address');
@@ -486,9 +486,15 @@ test('connecting the bot: the site\'s address, our secret, her commands the firs
   process.env.PINATA_JWT = 'eyJfake.eyJfake.fake-signature';
   calls.length = 0;
   assert.equal((await connectBot(cfg())).setup, true);
-  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS);
+  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS.filter((c) => c.command !== 'live'));
   calls.length = 0;
   assert.equal((await connectBot(cfg())).setup, false, 'then left alone');
+  // and once her live show is set up (LIVE_SECRET, 2026-10-02), /live too
+  process.env.LIVE_SECRET = 'live-secret-for-the-tests-0123456789abcdef';
+  calls.length = 0;
+  assert.equal((await connectBot(cfg())).setup, true);
+  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS);
+  delete process.env.LIVE_SECRET;
   delete process.env.PINATA_JWT;
   // Telegram's last delivery problem is logged with a hint (a redirecting address)
   const logged = [];
@@ -768,7 +774,7 @@ test('the page: "She texts first" is a plain link, hidden until the bot\'s publi
   assert.match(box, /<a class="btn btn-ghost btn-sm pg-tg-link" data-tg-link href="https:\/\/t\.me\/" target="_blank" rel="noopener noreferrer">Text me on Telegram ↗<\/a>/);
   const foot = html.slice(html.indexOf('<footer class="foot"'));
   assert.ok(foot.includes("If you ask her to text you on Telegram, our database keeps that chat's number (Telegram's id for it, so she can text you), your 18+ answer, the time you told her (so she never texts at night) and what she last texted you; /stop, or blocking the bot, deletes it."));
-  assert.ok(foot.includes('The texts she sends on Telegram, about the chart and about new egirl coins on clank.trade, are never a tip either.'));
+  assert.ok(foot.includes('The texts she sends on Telegram, about the chart and about new egirl coins on clank.trade, are never a tip either'));
   assert.match(readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'), /startTelegramLink\(document, import\.meta\.env\.VITE_TELEGRAM_BOT\)/);
   for (const [raw, out] of [['agi1_gf_bot', 'agi1_gf_bot'], ['@AGI1Bot', 'AGI1Bot'], ['agi1', null], ['agi1_gf', null], ['1agi_bot', null],
     ['agi1 bot', null], ['agi1.bot', null], ['', null], [undefined, null], [`a${'b'.repeat(40)}bot`, null]]) assert.equal(botName(raw), out, String(raw));

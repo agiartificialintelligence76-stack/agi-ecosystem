@@ -312,7 +312,7 @@ function chainAnswer(q) {
 }
 
 beforeEach(() => {
-  for (const k of ['SITE_URL', 'ROBINHOOD_RPC_URL', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP', 'LAUNCH_ONLY_FOR']) delete process.env[k];
+  for (const k of ['SITE_URL', 'ROBINHOOD_RPC_URL', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP', 'LAUNCH_ONLY_FOR', 'LIVE_SECRET']) delete process.env[k];
   Object.assign(process.env, ENV);
   _resetChainCache();
   _resetBurnKey();
@@ -1773,7 +1773,7 @@ test('her private first launch (LAUNCH_ONLY_FOR): only those Telegram accounts m
   // removed: open to everyone, and back in her menu
   delete process.env.LAUNCH_ONLY_FOR;
   assert.equal(launchOpen(cfg()), true);
-  assert.deepEqual(commandsFor(cfg()), COMMANDS);
+  assert.deepEqual(commandsFor(cfg()), COMMANDS.filter((c) => c.command !== 'live'));
   assert.equal(await hook(as(stranger, { text: '/launch' })), 'start', 'anyone now (someone new to her bot: her welcome and 18+ first)');
   assert.equal(await hook(msg({ text: '/launch' })), 'launch_how');
 });
@@ -1830,7 +1830,7 @@ test('the page: its own address, private, the rules and warnings on it, no inlin
   const html = readFileSync(new URL('../launch.html', import.meta.url), 'utf8');
   assert.match(html, /<html lang="en" data-page="launch">/);
   assert.match(html, /<meta name="robots" content="noindex" \/>/, 'a private link: never in search results');
-  assert.match(html, /<script src="\/theme\.js\?v=6"><\/script>/);
+  assert.match(html, /<script src="\/theme\.js\?v=7"><\/script>/);
   assert.match(html, /<script type="module" src="\/src\/launch\/page\.js"><\/script>/);
   assert.doesNotMatch(html.replace(/<script (type="module" )?src="[^"]+"><\/script>/g, ''), /<script/i, 'no inline scripts');
   assert.doesNotMatch(html, /\sstyle=|\son[a-z]+=/i, 'no inline styles or handlers');

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en" data-page="live">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AGI-1, live · AGI</title>
+    <meta name="description" content="AGI-1 streams on X and answers questions out loud, as an AI. Send her yours while she's live. 18+ · PG-13 · not financial advice." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fafaf8" />
+    <!-- link previews (X and others). __SITE__ becomes the site's address at build time (scripts/share-pages.js) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AGI" />
+    <meta property="og:title" content="AGI-1, live · AGI" />
+    <meta property="og:description" content="She streams on X and answers your questions out loud. Ask her at agi1.app/live. An AI · 18+ · not financial advice." />
+    <meta property="og:image" content="__SITE__/cards/home.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="__SITE__/live" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="__SITE__/live" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/theme.js?v=7"></script>
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="wordmark" href="/">AGI</a>
+        <!-- On phones this list becomes the drop-down menu (src/menu.js) -->
+        <nav class="nav" id="site-nav" aria-label="Sections">
+          <a href="/#evaluations">Evaluations</a>
+          <a href="/#model-card">Model card</a>
+          <a href="/#playground">Playground</a>
+          <a href="/#checker">Risk check your coins on clank</a>
+          <a href="/diary">Diary</a>
+          <a class="nav-phone" href="/live" aria-current="page">Live</a>
+          <a class="nav-phone" href="/#safety">Safety note</a>
+          <a class="nav-x" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
+          <button class="nav-pop" type="button" data-skin-toggle aria-pressed="true">Pop mode <span class="nav-pop-state mono" aria-hidden="true">On</span></button>
+        </nav>
+        <div class="topbar-actions">
+          <a class="icon-btn x-btn" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on X (@agi1dotapp)" title="@agi1dotapp on X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
+            <svg class="i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the bold AGI look">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <a class="btn btn-primary btn-sm" href="/#playground">Try AGI-1</a>
+          <button class="icon-btn menu-btn" type="button" data-menu aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+            <svg class="i-menu" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <svg class="i-close" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Her live show (2026-10-02, the owner's idea): she streams on X from the owner's own server (tools/live/) and answers
+           the questions sent here or with /live in her Telegram bot. src/live/page.js runs this page (/api/live); with the
+           owner's link (#admin=…) it also shows the host's controls -->
+      <section class="section lv" aria-labelledby="lv-title">
+        <div class="wrap lv-wrap">
+          <header class="section-head">
+            <p class="kicker">Live on X</p>
+            <h1 class="h2" id="lv-title">AGI-1, live</h1>
+            <p class="section-lede">She streams on X and answers your questions out loud. Send her one here while she's live.</p>
+            <p class="lv-label mono">An AI on stream · 18+ · PG-13 · not financial advice</p>
+          </header>
+
+          <!-- is she on? (asked every 15 s) -->
+          <div class="lv-card lv-now" data-lv-now data-state="loading">
+            <p class="lv-badge mono" data-lv-badge><span class="lv-dot" aria-hidden="true"></span> <span data-lv-badge-text>Checking</span></p>
+            <p class="lv-headline" data-lv-headline role="status" aria-live="polite">Checking whether she's live…</p>
+            <p class="lv-sub" data-lv-sub hidden></p>
+            <div class="lv-links">
+              <a class="btn btn-primary btn-sm" data-lv-watch href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">Watch on X ↗</a>
+            </div>
+          </div>
+
+          <!-- a question for her (18+, the human check); then where it is, and her answer -->
+          <section class="lv-card lv-ask" data-lv-ask aria-labelledby="lv-ask-title" hidden>
+            <h2 class="lv-title" id="lv-ask-title">Ask her something</h2>
+            <div class="lv-gate" data-lv-gate hidden>
+              <p class="lv-note">Her show is for adults: 18+ only. It's PG-13, and she's an AI.</p>
+              <button class="btn btn-primary btn-sm" type="button" data-lv-adult>I'm 18 or older</button>
+            </div>
+            <form class="lv-form" data-lv-form novalidate hidden>
+              <div class="lv-field">
+                <label for="lv-q">Your question</label>
+                <textarea id="lv-q" data-lv-q rows="3" maxlength="200" autocomplete="off" aria-describedby="lv-q-note"></textarea>
+                <p class="lv-field-note" id="lv-q-note"><span data-lv-count>0</span>/200 · PG-13 · no links, @names, addresses or other coins</p>
+              </div>
+              <div class="lv-field">
+                <label for="lv-name">Your name on stream <span class="lv-opt">(optional)</span></label>
+                <input id="lv-name" data-lv-name type="text" maxlength="24" autocomplete="nickname" spellcheck="false" aria-describedby="lv-name-note" />
+                <p class="lv-field-note" id="lv-name-note">Shown with your question: 3 to 24 letters or numbers, nobody real and no coins. Leave it empty (or pick one she can't say on stream) and she says “someone asks”.</p>
+              </div>
+              <div class="lv-human" data-lv-human></div>
+              <p class="lv-error" data-lv-error role="alert"></p>
+              <div class="lv-links">
+                <button class="btn btn-primary" type="submit" data-lv-send>Send to her show</button>
+              </div>
+              <p class="lv-note" data-lv-wait-note hidden></p>
+            </form>
+            <div class="lv-mine" data-lv-mine tabindex="-1" hidden>
+              <p class="lv-mine-kicker mono">Your question</p>
+              <p class="lv-mine-q" data-lv-mine-q></p>
+              <p class="lv-mine-status" data-lv-mine-status role="status" aria-live="polite"></p>
+              <p class="lv-reply" data-lv-reply hidden></p>
+              <div class="lv-links">
+                <a class="btn btn-primary btn-sm" data-lv-mine-watch href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer" hidden>Watch on X ↗</a>
+                <button class="btn btn-ghost btn-sm" type="button" data-lv-again hidden>Ask another question</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- the owner's controls: only with the owner's link (agi1.app/live#admin=…: node tools/live/run.mjs --owner-link) -->
+          <section class="lv-card lv-owner" data-lv-owner aria-labelledby="lv-owner-title" hidden>
+            <h2 class="lv-title" id="lv-owner-title">Host controls</h2>
+            <p class="lv-note" data-lv-o-state role="status" aria-live="polite">Opening…</p>
+            <div class="lv-controls">
+              <button class="btn btn-ghost btn-sm" type="button" data-lv-o="pause">Pause her (be right back)</button>
+              <button class="btn btn-primary btn-sm" type="button" data-lv-o="resume" hidden>Resume</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-lv-o="skip">Skip this question</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-lv-o="close">Stop new questions</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-lv-o="open" hidden>Take questions again</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-lv-o="clear">Clear the line</button>
+              <button class="btn btn-ghost btn-sm lv-danger" type="button" data-lv-o="end">End the show</button>
+            </div>
+            <p class="lv-error" data-lv-o-error role="alert"></p>
+            <div class="lv-onair" data-lv-o-now hidden>
+              <p class="lv-mine-kicker mono">On air</p>
+              <p class="lv-mine-q" data-lv-o-now-q></p>
+              <p class="lv-o-reply" data-lv-o-now-a></p>
+            </div>
+            <h3 class="lv-o-title">In line (<span data-lv-o-count>0</span>)</h3>
+            <ol class="lv-line" data-lv-o-line></ol>
+            <p class="lv-note" data-lv-o-empty>Nobody's waiting.</p>
+            <h3 class="lv-o-title">Blocked words</h3>
+            <form class="lv-block" data-lv-o-block novalidate>
+              <label class="lv-sr" for="lv-word">A word to block</label>
+              <input id="lv-word" data-lv-o-word type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="a word" />
+              <button class="btn btn-ghost btn-sm" type="submit">Block</button>
+            </form>
+            <ul class="lv-words" data-lv-o-words></ul>
+            <p class="lv-note">A question with a blocked word anywhere in it (or in its name) is refused, and the waiting ones with it are dropped. They stay blocked from show to show.</p>
+            <h3 class="lv-o-title">Just finished</h3>
+            <ol class="lv-line lv-recent" data-lv-o-recent></ol>
+          </section>
+
+          <section class="lv-rules" aria-labelledby="lv-rules-title">
+            <h2 class="lv-rules-title" id="lv-rules-title">How her show works</h2>
+            <ul>
+              <li>AGI-1 is an AI. She streams on X from <a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">@agi1dotapp</a>, reads questions out loud and answers them in her AI voice. Everything on her stream is AI-generated.</li>
+              <li>Your question is shown on her stream, with the name you give here (if any, and if it can go on a public stream). Never your account, your address or anything else about you.</li>
+              <li>18+ and PG-13. No links, @names, emails, phone numbers, addresses or other coins: she only talks about $AGI on her show, and never about real people.</li>
+              <li>One question at a time, one a minute, 5 a day. She can't answer everyone, and the show's host can skip any question.</li>
+              <li data-lv-tg hidden>Also in her Telegram bot: <a data-lv-tg-link target="_blank" rel="noopener noreferrer">/live and your question ↗</a> (shown on stream without a name).</li>
+              <li>Questions and her answers are kept at most 2 days, then deleted.</li>
+              <li>Nothing she says is financial advice. She's an AI and she can be wrong. $AGI is a meme token and can lose all of its value.</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap diary-foot">
+        <p><b>The only serious part of this page.</b> AGI-1 is a fictional character voiced by an AI language model; she can be wrong. $AGI is a meme token on Robinhood Chain, made for entertainment, and meme tokens can lose all of their value. Nothing here is financial advice or a promise of profit. Read the full <a href="/#safety">safety note</a>.</p>
+      </div>
+      <div class="foot-bar">
+        <div class="wrap foot-bar-in">
+          <p class="foot-brand">AGI</p>
+          <nav class="foot-nav" aria-label="Footer">
+            <a href="/#evaluations">Evaluations</a>
+            <a href="/#model-card">Model card</a>
+            <a href="/#playground">Playground</a>
+            <a href="/#checker">Risk check your coins on clank</a>
+            <a href="/diary">Diary</a>
+            <a href="/live">Live</a>
+            <a href="https://clank.trade/coin/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">clank.trade ↗</a>
+            <a href="https://dexscreener.com/robinhood/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">DexScreener ↗</a>
+            <a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">X @agi1dotapp ↗</a>
+          </nav>
+          <p class="foot-legal">
+            <span>© 2026 AGI. No labs were harmed.</span>
+            <span>$AGI is a token made by the AGI team, launched on clank.trade. Entertainment only · Not financial advice.</span>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/live/page.js"></script>
+  </body>
+</html>

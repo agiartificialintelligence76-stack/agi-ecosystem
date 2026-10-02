@@ -21,10 +21,10 @@
     // on top (no full screen there, no app to get, no ✕: the window has its own buttons). Only believed inside a frame
     try { if (/[?&]pip=1(&|$)/.test(location.search) && window.parent !== window) root.classList.add('is-pip'); } catch (e) { /* the page as usual */ }
   }
-  // the phone's browser bar matches the top of the page from the first paint (Pop mode: its violet hero, or on the diary
-  // and launch pages, which have no hero, the page's own color; full-screen talk: the color around her). src/theme.js keeps
-  // it up to date (barColor there must say the same)
-  var dark = theme === 'dark', diary = page === 'diary' || page === 'launch';
+  // the phone's browser bar matches the top of the page from the first paint (Pop mode: its violet hero, or on the diary,
+  // launch and live pages, which have no hero, the page's own color; full-screen talk: the color around her). src/theme.js
+  // keeps it up to date (barColor there must say the same)
+  var dark = theme === 'dark', diary = page === 'diary' || page === 'launch' || page === 'live';
   var bar = document.querySelector('meta[name="theme-color"]');
   if (bar) {
     bar.setAttribute('content', talk ? (pop ? (dark ? '#1a0d3d' : '#e4d9ff') : (dark ? '#0b0b0c' : '#fafaf8'))

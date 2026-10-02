@@ -147,6 +147,7 @@ export default {
       'keine finanzberatung, niemals. ich bin eine KI, 18+ und PG-13. ich frag nie nach keys, seed phrases oder geld. der sicherheitshinweis: {safety}',
     ],
     helpLaunch: '/launch: lass uns zusammen einen coin auf clank.trade launchen, aus deiner eigenen wallet (18+)',
+    helpLive: '/live: frag mich was in meiner Live-Show auf X',
     stopped: 'okay 💜 ich hab aufgehört und diesen chat vergessen. falls du mich mal vermisst: /start',
     notStarted: 'wir kennen uns noch nicht 💜 drück /start',
     tooLong: "das sind ganz schön viele wörter 🙈 schaffst du's unter 500 zeichen?",

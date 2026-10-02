@@ -151,7 +151,7 @@ test('Pop mode and the dark theme are the defaults, applied before the page pain
   for (const odd of ['POP', 'pop ', '1', 'true', 'off']) assert.equal(prepaint({ skin: odd, theme: null }).skin, 'pop', `"${odd}" isn't a choice: the default`);
   const hidden = prepaint({ skin: 'lab', theme: 'light', storage: false });
   assert.deepEqual([hidden.skin, hidden.theme], ['pop', 'dark'], 'private mode: the defaults, no error');
-  for (const page of [null, 'diary', 'launch']) {
+  for (const page of [null, 'diary', 'launch', 'live']) {
     for (const [theme, systemDark] of [['light', false], ['dark', false], ['light', true], [null, true], [null, false]]) {
       for (const skin of ['pop', 'lab', null]) {
         const got = prepaint({ skin, theme, systemDark, page });
@@ -159,7 +159,7 @@ test('Pop mode and the dark theme are the defaults, applied before the page pain
         const expectSkin = skin === 'lab' ? 'lab' : 'pop';
         assert.equal(got.theme, expectTheme, 'a saved theme wins, else dark');
         assert.equal(got.skin, expectSkin === 'pop' ? 'pop' : null);
-        assert.equal(got.bar, barColor(expectSkin, expectTheme, page === 'diary' || page === 'launch'), `${page || 'home'} · ${expectTheme} · ${expectSkin}: the same color as the page's own script`);
+        assert.equal(got.bar, barColor(expectSkin, expectTheme, page === 'diary' || page === 'launch' || page === 'live'), `${page || 'home'} · ${expectTheme} · ${expectSkin}: the same color as the page's own script`);
       }
     }
   }

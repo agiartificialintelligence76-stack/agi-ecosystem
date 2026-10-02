@@ -151,6 +151,7 @@ export default {
       '永远不构成投资建议。我是AI，18+，PG-13。我绝不会向你要私钥、助记词或钱。注意事项：{safety}',
     ],
     helpLaunch: '/launch：一起在 clank.trade 上发一个币吧，用你自己的钱包（18+）',
+    helpLive: '/live：在我 X 上的直播里问我问题',
     stopped: '好的💜 我不发了，这段聊天我也忘掉了。哪天想我了就发 /start',
     notStarted: '我们还没认识呢💜 点一下 /start',
     tooLong: '字有点多哦🙈 能控制在500字以内吗？',

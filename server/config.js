@@ -90,6 +90,9 @@ export function getConfig(env = process.env) {
     launchGasKey: gasKey(env.LAUNCH_GAS_KEY),
     launchGasMaxWei: ethToWei(env.LAUNCH_GAS_MAX, 10n ** 15n),          // 0.001 ETH
     launchGasDailyWei: ethToWei(env.LAUNCH_GAS_DAILY, 10n ** 16n),      // 0.01 ETH
+    // Her live show (2026-10-02, server/live.js): the secret her stream runner (on the owner's own server) and our server
+    // share (32+ characters); the owner's phone link is made from it. Without it, agi1.app/live says her show is coming soon
+    liveSecret: String(env.LIVE_SECRET || '').trim(),
     // ClankChecker (2026-09-26): coins whose picture the owner doesn't want on the site (contract addresses, separated by
     // commas); their letter shows instead. Optional
     checkerHidePictures: new Set(String(env.CHECKER_HIDE_PICTURES || '').toLowerCase().split(/[\s,]+/).filter((a) => /^0x[0-9a-f]{40}$/.test(a))),

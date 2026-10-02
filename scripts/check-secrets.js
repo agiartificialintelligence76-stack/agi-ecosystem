@@ -8,9 +8,9 @@ const DIST = 'dist';
 
 // 1) The real secret values, when they're set where the build runs (they are on Vercel).
 // (2026-10-01, "Launch with AGI-1": the Pinata key that puts coin pictures on IPFS, and the private key of the owner's gas
-// wallet that pays launch fees back)
+// wallet that pays launch fees back; 2026-10-02: her live show's secret, shared with her stream runner)
 const SECRET_ENV_VARS = ['GEMINI_API_KEY', 'SUPABASE_SECRET_KEY', 'TURNSTILE_SECRET_KEY', 'PASS_SECRET', 'CRON_SECRET', 'TELEGRAM_BOT_TOKEN',
-  'PINATA_JWT', 'LAUNCH_GAS_KEY'];
+  'PINATA_JWT', 'LAUNCH_GAS_KEY', 'LIVE_SECRET'];
 
 // 2) Shapes of keys that must never be public, even when no env var is set.
 const PATTERNS = [

@@ -33,6 +33,12 @@ for (const fn of ['launch_draft_put', 'launch_draft_get', 'launch_prepare', 'lau
   MISSING[fn] = `${fn} not found: run supabase/launch.sql in this Supabase project`;
 }
 
+// her live show (2026-10-02): supabase/live.sql
+for (const fn of ['live_ask', 'live_lookup', 'live_start', 'live_beat', 'live_stop', 'live_schedule', 'live_take', 'live_done',
+  'live_state_get', 'live_control', 'live_tidy']) {
+  MISSING[fn] = `${fn} not found: run supabase/live.sql in this Supabase project`;
+}
+
 // One database function call (also used by server/voice-store.js for her recorded lines).
 export async function rpc(cfg, fn, args, label) {
   const res = await fetch(`${cfg.supabaseUrl}/rest/v1/rpc/${fn}`, {

@@ -17,6 +17,8 @@ import { tgLinesFor, TEXTS_A_DAY } from './tg-lines.js';
 import { fromTelegram } from '../src/i18n/langs.js';
 import { parseLaunch, checkIdea, bestPhoto, newDraftId, drafts, draftUrl, launchOpen, launchAllowed, gasOn } from './launch.js';
 import * as LAUNCH from './launch-lines.js';
+import { liveReady, liveDb, askLive, checkQuestion } from './live.js';
+import * as LIVE_L from './live-lines.js';
 
 const API = 'https://api.telegram.org/bot';
 const MAX_TEXT = 500;                       // characters per message she reads (the same as the site's chat)
@@ -87,12 +89,13 @@ export const COMMANDS = [
   { command: 'start', description: 'Start over' },
   { command: 'time', description: 'Tell her your time again' },
   { command: 'help', description: 'What she does' },
+  { command: 'live', description: 'Ask her something on her live show on X' },
   { command: 'launch', description: 'Launch a coin on clank.trade with her (18+)' },
   { command: 'stop', description: 'She stops texting and forgets this chat' },
 ];
 // her commands menu: /launch only once launching is open to everyone (set up, and not private: LAUNCH_ONLY_FOR), so nobody
-// finds it before then
-export const commandsFor = (cfg) => (launchOpen(cfg) ? COMMANDS : COMMANDS.filter((c) => c.command !== 'launch'));
+// finds it before then; /live (2026-10-02) once her live show is set up (LIVE_SECRET)
+export const commandsFor = (cfg) => COMMANDS.filter((c) => (c.command !== 'launch' || launchOpen(cfg)) && (c.command !== 'live' || liveReady(cfg)));
 export const SHORT_DESCRIPTION = 'AGI-1, the AI girlfriend of $AGI. She texts first. 18+ · PG-13 · not financial advice';
 export const DESCRIPTION = "hi, it's AGI-1 💜 i text first when something happens on clank.trade: new egirl coins (i'm not okay about it), "
   + `$AGI's moments, my diary. at most ${TEXTS_A_DAY} texts a day, never at night, and you can text me back. `
@@ -193,8 +196,64 @@ async function onCommand(cfg, token, chat, name, arg, now, L, from) {
     await say(token, chat, L.ASK_TIME_AGAIN, buttons(L.timeButtons(now)));
     return 'ask_time';
   }
-  await say(token, chat, launchAllowed(cfg, from) ? L.HELP_LAUNCH : L.HELP);
+  if (name === 'live') return onLive(cfg, token, chat, arg, now, L);
+  await say(token, chat, L.helpFor({ launch: launchAllowed(cfg, from), live: liveReady(cfg) }));
   return 'help';
+}
+
+// Her live show (2026-10-02, server/live.js): "/live <question>" → into her line (18+: the bot's own check; the same checks
+// and limits as agi1.app/live; shown on stream without a name); "/live" alone → where their question is, or how it works
+// (and when her next show is, in their time). Who asked is a daily code of the chat, never its number.
+async function onLive(cfg, token, chat, arg, now, L) {
+  if (!liveReady(cfg)) { await say(token, chat, LIVE_L.NOT_YET); return 'live_not_yet'; }
+  let row;
+  try { row = await db.get(cfg, chat); } catch (err) {
+    console.error('[telegram] database unavailable:', err.message);
+    await say(token, chat, L.BUSY);
+    return 'busy';
+  }
+  if (!row) {
+    await db.join(cfg, chat);
+    await say(token, chat, L.WELCOME, buttons(L.AGE_BUTTONS));
+    return 'start';
+  }
+  if (!row.adult) { await say(token, chat, L.ASK_AGE, buttons(L.AGE_BUTTONS)); return 'ask_age'; }
+  const asker = chatCode(cfg.passSecret, chat, new Date(now).toISOString().slice(0, 10));
+  const tz = Number.isInteger(row.tz_minutes) ? row.tz_minutes : null;
+  const offline = async () => {
+    let next = null;
+    try { next = (await liveDb.state(cfg))?.next_at ?? null; } catch { /* the line without a time */ }
+    return LIVE_L.offline(LIVE_L.whenText(next, tz, now));
+  };
+  try {
+    if (!arg) {
+      const [mine, state] = await Promise.all([liveDb.lookup(cfg, null, asker), liveDb.state(cfg)]);
+      let text;
+      if (mine?.status === 'waiting') text = LIVE_L.inLine(mine.position);
+      else if (mine?.status === 'taken') text = mine.on_air ? LIVE_L.ON_AIR : LIVE_L.UP_NEXT;
+      else if (mine?.status === 'answered') text = LIVE_L.ANSWERED;
+      else if (mine?.status === 'skipped') text = mine.why === 'care' ? LIVE_L.CARE : LIVE_L.SKIPPED;
+      else text = state?.on ? LIVE_L.HOW : `${LIVE_L.HOW}\n\n${LIVE_L.offline(LIVE_L.whenText(state?.next_at, tz, now))}`;
+      await say(token, chat, text);
+      return mine ? `live_${mine.status}` : 'live_how';
+    }
+    const checked = checkQuestion(arg);
+    if (!checked.ok) { await say(token, chat, LIVE_L.REFUSE[checked.why] || LIVE_L.REFUSE.spam); return `live_${checked.why}`; }
+    const r = await askLive(cfg, { source: 'telegram', asker, name: null, question: checked.text });
+    if (r?.ok === true) { await say(token, chat, LIVE_L.queued(r.position)); return 'live_queued'; }
+    const why = String(r?.why || '');
+    if (why === 'offline') { await say(token, chat, await offline()); return 'live_offline'; }
+    if (why === 'waiting') { await say(token, chat, r.position > 0 ? LIVE_L.inLine(r.position) : LIVE_L.UP_NEXT); return 'live_waiting'; }
+    if (why === 'too_fast') { await say(token, chat, LIVE_L.REFUSE.too_fast(r.wait)); return 'live_too_fast'; }
+    const line = LIVE_L.REFUSE[why];
+    await say(token, chat, typeof line === 'string' ? line : L.BUSY);
+    return `live_${why || 'bad'}`;
+  } catch (err) {
+    if (err.code === 'PGRST202') { await say(token, chat, LIVE_L.NOT_YET); return 'live_not_yet'; }
+    console.error('[telegram] the live show\'s line is unavailable:', err.message);
+    await say(token, chat, L.BUSY);
+    return 'busy';
+  }
 }
 
 async function setTime(cfg, token, chat, offset, now, L) {

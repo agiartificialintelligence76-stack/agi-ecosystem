@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- AGI-1's live show (2026-10-02): the scene her stream shows, 1280 × 720. Not part of the website: only
+     tools/live/run.mjs builds it (into tools/live/dist) and shows it in a browser window on the owner's server, which ffmpeg
+     sends to X. tools/live/page/stage.js runs it (window.studio). -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AGI-1 live</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./stage.css" />
+  </head>
+  <body>
+    <div class="set" data-set data-overlay="starting">
+      <canvas class="set-bg" data-bg width="1280" height="720" aria-hidden="true"></canvas>
+      <div class="her"><canvas class="her-gl" data-gl></canvas></div>
+
+      <header class="top">
+        <span class="live-pill"><span class="live-dot"></span>LIVE <span class="live-clock" data-clock>00:00</span></span>
+        <span class="brand">AGI-1</span>
+        <span class="label">AI-generated · not financial advice</span>
+      </header>
+
+      <section class="card" data-card hidden>
+        <p class="card-kicker" data-card-kicker></p>
+        <h1 class="card-title" data-card-title></h1>
+        <ul class="card-list" data-card-list></ul>
+        <p class="card-body" data-card-body></p>
+      </section>
+
+      <div class="caption" data-caption hidden><p data-caption-text></p></div>
+
+      <footer class="ask">
+        <span class="ask-cta">Ask me at <b>agi1.app/live</b></span>
+        <span class="ask-queue" data-queue></span>
+        <span class="ask-rules">18+ · PG-13 · I'm an AI · only $AGI here</span>
+      </footer>
+
+      <div class="overlay" data-overlay-box>
+        <p class="overlay-kicker" data-overlay-kicker>AGI-1 · live on X</p>
+        <h2 class="overlay-title" data-overlay-title>Starting soon</h2>
+        <p class="overlay-sub" data-overlay-sub></p>
+      </div>
+    </div>
+    <script type="module" src="./stage.js"></script>
+  </body>
+</html>

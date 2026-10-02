@@ -1,0 +1,101 @@
+/* Her live show's page (2026-10-02, live.html, src/live/page.js). The lab look: cards with hairlines like the launch page,
+   her status at the top (a pill with a dot: pink while she's live), the question box, your question and her answer, the
+   host's controls (only with the owner's link), the rules in small print. Every rule names an lv- class
+   (tests/live.test.js); Pop mode's look is in pop.css. */
+.lv-wrap { max-width: 760px; }
+.lv-label { margin-top: 14px; font-size: 12.5px; color: var(--fg-3); letter-spacing: 0.02em; }
+.lv-card {
+  display: flex; flex-direction: column; gap: 14px; margin-top: 24px; padding: 24px 26px 26px;
+  border: 1px solid var(--line); border-radius: 18px; background: var(--bg-2);
+}
+.lv-now { margin-top: 36px; }
+
+/* her status */
+.lv-badge {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 10px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.lv-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-3); }
+.lv-now[data-state='live'] .lv-dot, .lv-now[data-state='starting'] .lv-dot { background: var(--accent); animation: lv-pulse 1.6s ease-in-out infinite; }
+.lv-now[data-state='brb'] .lv-dot, .lv-now[data-state='ending'] .lv-dot { background: var(--warn); }
+.lv-now[data-state='live'] .lv-badge { border-color: var(--accent); color: var(--accent); }
+@keyframes lv-pulse { 50% { opacity: 0.35; } }
+.lv-headline { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; text-wrap: balance; }
+.lv-sub { font-size: 15.5px; color: var(--fg-2); text-wrap: pretty; }
+.lv-links { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* asking */
+.lv-title { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.lv-note { font-size: 14.5px; color: var(--fg-2); text-wrap: pretty; }
+.lv-gate { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.lv-form { display: flex; flex-direction: column; gap: 14px; }
+.lv-field { display: flex; flex-direction: column; gap: 6px; }
+.lv-field label { font-size: 13.5px; font-weight: 500; }
+.lv-opt { font-weight: 400; color: var(--fg-2); }
+.lv-field textarea, .lv-field input, .lv-block input {
+  width: 100%; min-width: 0; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  font: inherit; font-size: 15.5px; color: var(--fg);
+}
+.lv-field textarea { min-height: 92px; resize: vertical; line-height: 1.45; }
+.lv-field input, .lv-block input { height: 40px; padding: 0 12px; }
+.lv-field textarea::placeholder, .lv-field input::placeholder, .lv-block input::placeholder { color: var(--fg-3); }
+.lv-field-note { font-size: 12.5px; color: var(--fg-2); }
+.lv-error { font-size: 14px; color: var(--down); }
+.lv-error:empty { display: none; }
+.lv-human:empty { display: none; }
+.lv-form .btn:disabled, .lv-controls .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* your question */
+.lv-mine { display: flex; flex-direction: column; gap: 10px; outline: none; }
+.lv-mine-kicker { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-3); }
+.lv-mine-q { font-size: 17px; font-weight: 500; overflow-wrap: anywhere; }
+.lv-mine-status { font-size: 15.5px; color: var(--fg-2); text-wrap: pretty; }
+.lv-reply {
+  padding: 4px 0 4px 14px; border-left: 3px solid var(--accent); font-size: 16.5px; line-height: 1.45; overflow-wrap: anywhere;
+}
+
+/* the host's controls */
+.lv-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.lv-danger { border-color: var(--down); color: var(--down); }
+.lv-onair { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.lv-onair .lv-mine-q { margin-top: 6px; }
+.lv-o-reply { margin-top: 6px; font-size: 14.5px; color: var(--fg-2); overflow-wrap: anywhere; }
+.lv-o-title { margin-top: 6px; font-size: 14.5px; font-weight: 600; }
+.lv-line { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.lv-item {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.lv-item-from { grid-column: 1; font-size: 11.5px; color: var(--fg-3); }
+.lv-item-q { grid-column: 1; font-size: 15px; overflow-wrap: anywhere; }
+.lv-item .btn { grid-column: 2; grid-row: 1 / span 2; }
+.lv-recent .lv-item-q { color: var(--fg-2); font-size: 14px; }
+.lv-line:empty { display: none; }
+.lv-block { display: flex; gap: 8px; }
+.lv-words { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.lv-words:empty { display: none; }
+.lv-word {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 12px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--bg); font-size: 14px;
+}
+.lv-word-x {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 50%; background: none;
+  color: var(--fg-2); font-size: 17px; cursor: pointer;
+}
+.lv-word-x:hover { background: var(--bg-2); color: var(--fg); }
+.lv-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* the rules */
+.lv-rules { margin-top: 34px; }
+.lv-rules-title { font-size: 15px; font-weight: 600; }
+.lv-rules ul { margin: 10px 0 0; padding-left: 1.15em; }
+.lv-rules li { margin-top: 6px; font-size: 14px; color: var(--fg-2); text-wrap: pretty; }
+
+@media (max-width: 600px) {
+  .lv-card { padding: 20px 16px 22px; border-radius: 16px; }
+  .lv-headline { font-size: 21px; }
+  .lv-form .btn:not(.btn-sm) { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-now[data-state='live'] .lv-dot, .lv-now[data-state='starting'] .lv-dot { animation: none; }
+}
