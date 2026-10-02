@@ -1,5 +1,6 @@
 // "Launch with AGI-1" (2026-10-01): what the launch page says, and which draft it's about. Pure (no page), so tests can
 // read it. Plain words; always shown with textContent.
+import { PER_DAY } from './rules.js';
 
 // The draft in this page's address: agi1.app/launch/<id> (her link), or ?d=<id>. → the id (22 characters) or null
 export function draftIdFrom(loc) {
@@ -21,17 +22,15 @@ export const WORDS = {
   not_ready: "Launching with AGI-1 isn't open yet.",
   error: 'Something went wrong. Try again in a moment.',
   level: "This wallet isn't at Crush yet: launching with AGI-1 needs 10,000+ $AGI held, or burned for messages, in the wallet you launch from. Not financial advice.",
-  taken: 'Someone launched a coin with this ticker in the meantime. Send her /launch again with another ticker.',
-  common: "So many coins on clank.trade look like this ticker that it can't be checked. Send her /launch again with a more unusual one.",
   launched: 'This coin is already launched.',
   other_wallet: 'This link was already used with another wallet: only that wallet can launch this coin.',
-  wallet_cap: "That's enough coins from this wallet for today. Try again tomorrow.",
+  wallet_cap: "That's all the coins this wallet can launch today. Try again tomorrow.",
   site_cap: 'AGI-1 has helped with a lot of coins today. Try again tomorrow.',
+  pair: "clank.trade isn't taking coins paired with SPCX right now, so your wallet wasn't asked. Pick ETH and try again.",
   picture: "Couldn't use the picture. Send her /launch again with another photo.",
   telegram: "Couldn't get the picture from Telegram just now. Try again in a minute.",
   pinata: "Couldn't put the picture on IPFS just now. Try again in a minute.",
   chain: "Couldn't reach Robinhood Chain just now. Try again in a minute.",
-  clank: "Couldn't check clank.trade just now. Try again in a minute.",
   fee: 'clank.trade charges a launch fee now, and this page never sends ETH, so launches wait for an update of the site.',
   closed: "clank.trade isn't taking new launches from this wallet right now (its own switch), so your wallet wasn't asked. Try again later.",
   uploading: 'Its picture is on its way to IPFS. Try again in a moment.',
@@ -47,8 +46,8 @@ export const WORDS = {
   wrong_chain: 'Switch your wallet to Robinhood Chain first.',
   no_hash: "Your wallet didn't say it sent the launch. Check your wallet's activity before you try again.",
   cancelled: 'You cancelled in your wallet. Nothing was launched.',
-  no_switch: "Your wallet couldn't switch to Robinhood Chain. Use MetaMask, Coinbase Wallet or Robinhood Wallet.",
-  preparing: 'Getting it ready: checking the ticker on clank.trade, putting the picture on IPFS and trying the launch on Robinhood Chain…',
+  no_switch: "Your wallet couldn't switch to Robinhood Chain. In Phantom, turn it on first (Settings → Active Networks → Robinhood Chain), then try again; or use MetaMask, Coinbase Wallet or Robinhood Wallet.",
+  preparing: 'Getting it ready: putting the picture on IPFS and trying the launch on Robinhood Chain…',
   approve: 'Approve the launch in your wallet. It sends no ETH; your wallet pays a small network fee.',
   waiting: 'Sent from your wallet. Waiting for Robinhood Chain…',
   slow: "Still waiting for Robinhood Chain. Check your wallet's activity, and reload this page in a minute.",
@@ -60,6 +59,16 @@ export const WORDS = {
   link_agi: "Links can't point to AGI-1, $AGI or agi1.app: your coin is yours, not hers.",
   link_crude: 'Keep the links PG-13, please.',
 };
+// the coins a wallet may launch a day (2026-10-02: src/launch/rules.js), as the page says it
+export const perDayText = `${PER_DAY.charAt(0).toUpperCase()}${PER_DAY.slice(1)}, held or burned for messages in the wallet you launch from.`;
+// /api/launch's "wallet_cap" (perDay: this wallet's coins a day; changed: the link was got ready again with other links or
+// the other pair, which is another coin)
+export function capText(perDay, changed = false) {
+  const n = Number.isSafeInteger(perDay) && perDay > 0 ? perDay : null;
+  const all = n === null ? 'all its coins' : n === 1 ? 'its 1 coin' : `all ${n} of its coins`;
+  if (changed) return `Other links or another pair make it another coin, and this wallet has got ${all} ready for today. Use links and a pair you already got this one ready with, or try again tomorrow.`;
+  return `This wallet has got ${all} ready for today (${PER_DAY}; a coin counts once it's got ready, launched or not). Try again tomorrow.`;
+}
 // what's under a link box: what it will be saved as, or what's wrong with it (why: 'format' | 'agi' | 'crude')
 export function linkNote(field, saved, why = 'format') {
   if (saved) return `Saved as ${saved}`;

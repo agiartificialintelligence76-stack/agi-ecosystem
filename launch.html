@@ -81,15 +81,16 @@
               </li>
               <li class="lch-step" data-lch-step="wallet">
                 <p class="lch-step-title"><span class="lch-n mono" aria-hidden="true">1</span> Your wallet</p>
-                <p class="lch-step-note" data-lch-wallet-note aria-live="polite">It needs 10,000+ $AGI held, or burned for messages (the chat's Crush level). Nothing is spent. Connecting takes a free signature, not a transaction.</p>
+                <p class="lch-step-note" data-lch-wallet-note aria-live="polite">It needs 10,000+ $AGI held, or burned for messages: 5 coins a day for every 10,000 $AGI, up to 50 a day with 100,000+. Nothing is spent. Connecting takes a free signature, not a transaction.</p>
                 <div class="lch-wallets" data-lch-wallets></div>
                 <div class="lch-apps" data-lch-apps hidden>
                   <p class="lch-step-note">No wallet in this browser. Open this page in your wallet app:</p>
                   <div class="lch-links">
                     <a class="btn btn-ghost btn-sm" data-lch-app="metamask">Open in MetaMask ↗</a>
+                    <a class="btn btn-ghost btn-sm" data-lch-app="phantom">Open in Phantom ↗</a>
                     <a class="btn btn-ghost btn-sm" data-lch-app="coinbase">Open in Coinbase Wallet ↗</a>
                   </div>
-                  <p class="lch-step-note">Robinhood Wallet: open its Web3 tab and go to this page's address.</p>
+                  <p class="lch-step-note">Phantom: turn on Robinhood Chain first (Settings → Active Networks). Robinhood Wallet: open its Web3 tab and go to this page's address.</p>
                 </div>
               </li>
               <li class="lch-step" data-lch-step="chain">
@@ -100,6 +101,15 @@
               <li class="lch-step" data-lch-step="launch">
                 <p class="lch-step-title"><span class="lch-n mono" aria-hidden="true">3</span> Launch</p>
                 <p class="lch-step-note" data-lch-launch-note aria-live="polite">Your wallet shows clank.trade's launch for you to approve: no ETH sent, only a small network fee.</p>
+                <!-- its pair (2026-10-02): what people trade it against on clank.trade, ETH unless they pick SPCX -->
+                <fieldset class="lch-pair" data-lch-pair aria-describedby="lch-pair-note">
+                  <legend class="lch-linkform-title">Pair</legend>
+                  <p class="lch-step-note" id="lch-pair-note">What people trade your coin against on clank.trade. It can't be changed later.</p>
+                  <div class="lch-pair-opts">
+                    <label class="lch-pair-opt"><input type="radio" name="lch-pair" value="eth" checked /> <span class="lch-pair-name">ETH</span></label>
+                    <label class="lch-pair-opt"><input type="radio" name="lch-pair" value="spcx" /> <span class="lch-pair-name">SPCX</span> <span class="lch-pair-sub">SpaceX AI</span></label>
+                  </div>
+                </fieldset>
                 <!-- the coin's links, all optional (2026-10-01): src/launch/links.js tidies and checks them, as our server does -->
                 <div class="lch-linkform" data-lch-linkform>
                   <p class="lch-linkform-title">Links <span class="lch-linkform-opt">(optional)</span></p>
@@ -139,10 +149,11 @@
             <h2 class="lch-rules-title" id="lch-rules-title">Before you launch</h2>
             <ul>
               <li>You launch it from your own wallet, on clank.trade's own contracts, and you're its creator. AGI-1 never holds keys or money and never launches anything for you.</li>
-              <li>Your wallet needs 10,000+ $AGI, held or burned for messages (the chat's Crush level). Nothing is spent.</li>
+              <li>Your wallet needs 10,000+ $AGI, held or burned for messages (the chat's Crush level), and nothing is spent: 5 coins a day for every 10,000 $AGI, up to 50 a day with 100,000+. A coin counts once it's got ready, launched or not.</li>
+              <li>Its pair is what people trade it against on clank.trade: ETH, or SPCX (SpaceX AI). Launching takes no SPCX, and the pair can't be changed later.</li>
               <li>Launching is free on clank.trade; your wallet pays a small network fee in ETH. clank.trade takes 1% of every trade on its curve, and creators earn nothing from trading fees.</li>
               <li>A coin is public and permanent: it can't be deleted or renamed. Its picture goes on IPFS, public too.</li>
-          <li>Links (X, Telegram, website) are optional, and saved in your coin's record for good, like its name. We check how they're written, not what they lead to.</li>
+              <li>Links (X, Telegram, website) are optional, and saved in your coin's record for good, like its name. We check how they're written, not what they lead to.</li>
               <li>AGI-1 won't promote your coin. Meme coins can lose all of their value. Nothing here is financial advice. 18+ only.</li>
               <li>The only transaction this page asks your wallet for is that launch (and switching to Robinhood Chain, if you press it). If your wallet shows you anything else here, like a token approval or sending tokens, reject it.</li>
             </ul>

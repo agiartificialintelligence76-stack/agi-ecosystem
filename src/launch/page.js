@@ -4,10 +4,12 @@
 //   1. connect their OWN wallet: its address and the site's free sign-in signature (src/lib/wallet.js). It needs the chat's
 //      Crush level (10,000+ $AGI held or burned): the server reads it fresh before anything else;
 //   2. switch to Robinhood Chain, if their wallet is elsewhere (only when they press it);
-//   3. add their coin's links if they like (X, Telegram, a website: optional, src/launch/links.js), then press Launch: our
-//      server builds clank.trade's own launch for their wallet and tries it on the chain first
-//      (api/launch.js "prepare"); src/launch/send.js checks it's exactly that and asks their wallet to send it; they
-//      approve it there; then the page reads the launch back from the chain ("check") and shows the coin.
+//   3. pick its pair (ETH, or SPCX since 2026-10-02) and add their coin's links if they like (X, Telegram, a website:
+//      optional, src/launch/links.js), then press Launch: our server builds clank.trade's own launch for their wallet and
+//      tries it on the chain first (api/launch.js "prepare"); src/launch/send.js checks it's exactly that and asks their
+//      wallet to send it; they approve it there; then the page reads the launch back from the chain ("check") and shows
+//      the coin.
+// The coins a wallet may launch a day follow what it holds (2026-10-02, src/launch/rules.js): our server counts them.
 // Nothing here holds a key or sends anything by itself. All text is set with textContent.
 import '../styles/tokens.css';
 import '../styles/base.css';
@@ -23,7 +25,7 @@ import { findWallets, signInWithWallet, explainWalletError, userRejected } from 
 import { postJson } from '../lib/human.js';
 import { botName } from '../chat/telegram-link.js';
 import { walletChain, switchToRobinhood, sendLaunch, ROBINHOOD } from './send.js';
-import { draftIdFrom, WORDS, CHECK, STEP, LEVEL_NAME, short, gasText, gasNote, GAS_AGAIN, linkNote } from './words.js';
+import { draftIdFrom, WORDS, CHECK, STEP, LEVEL_NAME, short, gasText, gasNote, GAS_AGAIN, linkNote, capText } from './words.js';
 import { cleanLinks, cleanX, cleanTelegram, cleanWebsite, LINK_FIELDS } from './links.js';
 
 startTheme();
@@ -33,6 +35,8 @@ const ADULT = 'agi1_18plus';            // the chat's 18+ confirmation (src/chat
 const WALLET = 'agi_wallet';            // the site's wallet session (src/chat/relationship.js): { session, wallet, level, name, notes }
 const PENDING = 'agi1_launch_tx';       // a launch sent but not read back yet: { draft, tx } (so a reload keeps waiting;
                                         // once it's read back, our server keeps its transaction for the fee's payback)
+const READY = 'agi1_launch_ready';      // the pair and links each link's launch was last got ready with: { <draft>: { pair,
+                                        // links } } (the newest 10; a reload shows them again: others make another coin)
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode: this visit only */ } },
@@ -71,7 +75,28 @@ function renderSteps() {
   for (const b of document.querySelectorAll('[data-lch-wallets] button')) b.disabled = busy || !adult();
   $('[data-lch-switch]').disabled = busy;
   for (const field of LINK_FIELDS) linkBox(field).disabled = busy;
+  for (const r of pairBoxes()) r.disabled = busy;
   $('[data-lch-go]').disabled = busy || !ready() || !cleanLinks(typedLinks()).ok;
+}
+
+// What this link's launch was last got ready with, in this browser (null: forget it, it's launched)
+function readyBefore() {
+  const all = store.get(READY);
+  const mine = all && typeof all === 'object' && !Array.isArray(all) && Object.hasOwn(all, id) ? all[id] : null;
+  return mine && typeof mine === 'object' ? mine : null;
+}
+function rememberReady(what) {
+  const all = store.get(READY);
+  const kept = Object.entries(all && typeof all === 'object' && !Array.isArray(all) ? all : {}).filter(([k]) => k !== id && /^[A-Za-z0-9_-]{22}$/.test(k));
+  if (what) kept.push([id, what]);
+  if (kept.length) store.set(READY, Object.fromEntries(kept.slice(-10))); else store.del(READY);
+}
+
+// ---------- its pair (2026-10-02): what people trade it against on clank.trade, ETH unless they pick SPCX ----------
+const pairBoxes = () => document.querySelectorAll('input[name="lch-pair"]');
+const pairChoice = () => ([...pairBoxes()].find((r) => r.checked)?.value === 'spcx' ? 'spcx' : 'eth');
+function setPair(choice) {
+  for (const r of pairBoxes()) r.checked = r.value === (choice === 'spcx' ? 'spcx' : 'eth');
 }
 
 // ---------- the coin's links (optional) ----------
@@ -146,6 +171,7 @@ async function settleGas(gas) {
 // ---------- 1. their wallet ----------
 function walletApps() {
   $('[data-lch-app="metamask"]').href = `https://metamask.app.link/dapp/${location.host}${location.pathname}${location.search}`;
+  $('[data-lch-app="phantom"]').href = `https://phantom.app/ul/browse/${encodeURIComponent(location.href)}?ref=${encodeURIComponent(location.origin)}`;
   $('[data-lch-app="coinbase"]').href = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(location.href)}`;
   show($('[data-lch-apps]'));
 }
@@ -248,12 +274,15 @@ async function checkChain() {
 }
 $('[data-lch-switch]').addEventListener('click', async () => {
   if (!me || busy) return;
+  let said = null;
   try {
     await switchToRobinhood(me.provider);
   } catch (err) {
-    note('chain', userRejected(err) ? 'You cancelled in your wallet.' : WORDS.no_switch);
+    said = userRejected(err) ? 'You cancelled in your wallet.' : WORDS.no_switch;
   }
   await checkChain();
+  // (after the check, so its "on another network" doesn't hide why: in Phantom, Robinhood Chain may be switched off)
+  if (said && !chainOk) note('chain', said);
 });
 
 // ---------- 3. the launch ----------
@@ -262,11 +291,12 @@ async function launch() {
   const linked = cleanLinks(typedLinks());
   if (!linked.ok) { showLink(linked.field, { force: true }); linkBox(linked.field).focus(); note('launch', WORDS.links); return; }
   const { provider, address, session } = me;     // (this wallet's, whatever happens to the page meanwhile)
+  const pair = pairChoice();
   busy = true;
   renderSteps();
   note('launch', WORDS.preparing);
   let r;
-  try { r = await postJson('/api/launch', { action: 'prepare', draft: id, session, links: linked.links }); } catch {
+  try { r = await postJson('/api/launch', { action: 'prepare', draft: id, session, links: linked.links, pair }); } catch {
     busy = false;
     note('launch', WORDS.offline);
     renderSteps();
@@ -277,7 +307,8 @@ async function launch() {
     const error = r.data?.error;
     if (error === 'launched' && /^0x[0-9a-f]{40}$/.test(String(r.data?.token))) { done(r.data.token); return; }
     if (error === 'signed_out') { store.del(WALLET); me = null; note('wallet', WORDS.signed_out); }
-    note('launch', WORDS[error] || WORDS.error);
+    // this wallet's coins for today (how many it gets, and whether other links or the other pair made this one another)
+    note('launch', error === 'wallet_cap' ? capText(r.data?.perDay, r.data?.changed === true) : WORDS[error] || WORDS.error);
     renderSteps();
     // a link our server won't save (its form, or about her, or crude): said under that box, and the focus there (once the
     // boxes are back on)
@@ -288,6 +319,7 @@ async function launch() {
     }
     return;
   }
+  rememberReady({ pair, links: linked.links });
   note('launch', WORDS.approve);
   let hash;
   try {
@@ -317,6 +349,7 @@ async function waitFor(hash, session) {
     try { r = await postJson('/api/launch', { action: 'check', draft: id, session, tx: hash }); } catch { continue; }
     if (r.ok && r.data?.ok === true) {
       store.del(PENDING);
+      rememberReady(null);
       draft.token = r.data.token;
       done(r.data.token, r.data.gas || null);
       await settleGas(r.data.gas);
@@ -369,12 +402,21 @@ async function start() {
   const mine = pending?.draft === id && /^0x[0-9a-f]{64}$/.test(String(pending.tx)) && saved?.session ? pending : null;
   if (/^0x[0-9a-f]{40}$/.test(String(draft.token))) {
     if (pending?.draft === id) store.del(PENDING);
+    rememberReady(null);
     done(draft.token, draft.gas);
     settleGas(draft.gas);
     return;
   }
   if (draft.expired && !mine) { status(WORDS.expired); showBot(); return; }
   if (!draft.ready) { status(WORDS.not_ready); return; }
+  // the pair and links its launch was last got ready with, in this browser (other ones would make it another coin)
+  const before = readyBefore();
+  if (before) {
+    setPair(before.pair);
+    for (const field of LINK_FIELDS) {
+      if (typeof before.links?.[field] === 'string') { linkBox(field).value = before.links[field]; showLink(field); }
+    }
+  }
   status('');
   show($('[data-lch-steps]'));
   renderSteps();

@@ -567,6 +567,10 @@
 [data-skin='pop'] .lch-steps, [data-skin='pop'] .lch-step, [data-skin='pop'] .lch-done { border-color: var(--edge); }
 [data-skin='pop'] .lch-field input { border: 2px solid var(--edge); border-radius: 12px; }
 [data-skin='pop'] .lch-field input[aria-invalid='true'] { border-color: var(--down); }
+[data-skin='pop'] .lch-pair-opt { border: 2px solid var(--edge); }
+[data-skin='pop'] .lch-pair-opt:has(input:checked) { background: var(--pop-honey); color: var(--pop-ink); border-color: var(--pop-ink); }
+[data-skin='pop'] .lch-pair-opt:has(input:checked) .lch-pair-sub { color: #4a3d6e; }
+[data-skin='pop'] .lch-pair-opt input { accent-color: var(--pop-ink); }
 
 /* ---------- things that float over the page: the market notice, the wallet screen ---------- */
 [data-skin='pop'] .notice { border: 2px solid var(--edge); border-radius: 22px; box-shadow: 0 8px 0 -1px var(--shade); }

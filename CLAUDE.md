@@ -57,6 +57,11 @@
 >   spent), and the owner's small gas wallet pays the launch's network fee back. The site's one exception to hard rule 9.
 >   **Off until the owner sets it up** (Pinata, `supabase/launch.sql`, a gas wallet), then **private to the owner** for a first
 >   real launch (`LAUNCH_ONLY_FOR`) until they open it. See "Launch with AGI-1".
+>   **Round 2, 2026-10-02** (the owner: "the ticker it can be anything … its okay if its a copycat", "the more they hold agi
+>   … they can launch", "the team added token can now paired with spcx", "add open in phantom in telegram"): names and
+>   tickers can be almost anything, copies included (never $AGI look-alikes, egirl coins, "official", crude or links);
+>   **5 coins a day for every 10,000 $AGI** held or burned (50 at most); a coin can be **paired with ETH or SPCX**; "Open in
+>   Phantom ↗". **Run `supabase/launch.sql` again before pushing it.**
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -105,8 +110,9 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   "Burn $AGI for more messages, and the burn monitor"
 - **Launch with AGI-1** (2026-10-01, the owner's idea): people launch their own coin on clank.trade with her help: `/launch`
   and a photo in her Telegram bot, then a private launch page where their own wallet launches it (10,000+ $AGI held or
-  burned in it, nothing spent; launching is free, and the owner's gas wallet pays the small network fee back). The coin is
-  theirs; she never promotes it. Off until it's set up. See "Launch with AGI-1"
+  burned in it, nothing spent; since 2026-10-02 5 coins a day for every 10,000, up to 50, any name and ticker, copies
+  included, paired with ETH or SPCX; launching is free, and the owner's gas wallet pays the small network fee back). The
+  coin is theirs; she never promotes it. Off until it's set up. See "Launch with AGI-1"
 - **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
 It looks like an AI lab's model launch page (a parody, see "Design" below): serious design, meme content. (Pop mode is the
@@ -238,7 +244,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/chat/telegram-link.js` | She texts first (2026-09-29): shows the Playground's "Text me on Telegram ↗" once the bot's public name is set (`VITE_TELEGRAM_BOT`, read by `src/main.js`) |
 | `src/chat/burn.js` | Burn $AGI for more messages (2026-09-30): the burn monitor above the chat (the huge live number), the Relationship panel's row, the burn screen (a native dialog: the steps, the burn address and Copy, Check my burn, a pasted link), the sentences about burning (shown once burns are open, `[data-burn-only]`); `burnsReady()` / `openBurn()` for the chat's out-of-messages chip |
 | `src/lib/burns.js` | 2026-09-30: the burn address (`0x…dEaD`), its block explorer page, the suggested amounts. The page and the server share it |
-| `src/launch/` | "Launch with AGI-1" (2026-10-01): `page.js` (the launch page: the draft, 18+, connecting a wallet with the site's sign-in, Robinhood Chain, Launch, waiting for the chain, the coin and its fee paid back), `send.js` (**the one file on the site that asks a wallet for a transaction**: switching to Robinhood Chain and sending clank.trade's launch, and nothing else: hard rule 9's exception), `words.js` (everything the page says, and `/api/launch`'s answers in plain words), `links.js` (the coin's optional links: X, Telegram, a website, tidied and checked the same way on the page and our server) |
+| `src/launch/` | "Launch with AGI-1" (2026-10-01): `page.js` (the launch page: the draft, 18+, connecting a wallet with the site's sign-in, Robinhood Chain, Launch, waiting for the chain, the coin and its fee paid back), `send.js` (**the one file on the site that asks a wallet for a transaction**: switching to Robinhood Chain and sending clank.trade's launch, and nothing else: hard rule 9's exception), `words.js` (everything the page says, and `/api/launch`'s answers in plain words), `links.js` (the coin's optional links: X, Telegram, a website, tidied and checked the same way on the page and our server), `rules.js` (2026-10-02: the coins a wallet may launch a day, 5 for every 10,000 $AGI up to 50, and the rule in words; shared by the page, her bot and our server) |
 | `src/chat/limit-lines.js` | Out of messages (2026-09-25): what AGI-1 says when a Stranger or a Crush has used today's messages (the page shows it; her voice for it comes from `/api/voice?line=more-1` / `more-2`), and the safety note under it |
 | `src/chat/market-lines.js` | Market moments (2026-09-25): what AGI-1 says when $AGI reaches a new $200K market cap step (happy, she names it) or has a -20% day (sad); her voice for them: `/api/voice?line=mcap-<step>` / `dump-<n>`. The page and the server both read it |
 | `src/chat/market.js` | Market moments: watches the live $AGI numbers (`agi:prices`) in the visitor's browser and decides when she has something to say (once per step; at most one sad moment every 12 hours); remembered in the browser (`agi_market`) |
@@ -250,7 +256,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards") |
 | `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me; since 2026-09-30 "Check my burn" and, at `GET ?burns`, the burn monitor's numbers), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only; since 2026-10-01 also tidying up launch drafts and the pictures of coins never launched), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first), and since 2026-10-01 `launch.js` (the launch page's server: a draft and its picture, getting a launch ready, reading it back, its fee paid back). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (Telegram's API, the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and ETH, what its creator holds; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, clank.trade's ticker search, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (Telegram's API, the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and ETH, what its creator holds; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -261,7 +267,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes) |
 | `supabase/burns.sql` | Burn $AGI for more messages (2026-09-30). Run once in the same Supabase project (any time): five new tables (`agi1_burn_key`, `agi1_burn_txs`, `agi1_burn_wallets`, `agi1_burn_days`, `agi1_burn_total`) and 7 functions, only added (nothing the original site uses changes). Until it's run, nobody sees anything about burning |
 | `supabase/launch.sql` | "Launch with AGI-1" (2026-10-01). Run once in the same Supabase project (any time; running it again is safe): four new tables (`agi1_launch_drafts`, `agi1_launch_chats`, `agi1_launch_wallets`, `agi1_launch_days`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `PINATA_JWT` is set), her `/launch` says launching isn't open yet |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the ticker search, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
@@ -2061,6 +2067,23 @@ launches it on clank.trade's own contracts. The owner's choices, asked one by on
   small gas wallet sends that launch's fee back to its creator. After, never before: ETH sent ahead could be collected by
   people who never launch.
 
+**2026-10-02, round 2** (the owner: "can you fix on the ticker it can be anything and on the name because they would be
+launching a meme coin which the name doesnt matter and its okay if its a copycat, and can you make it the can launch the
+more they hold agi … and the team added token can now paired with spcx", then "add open in phantom in telegram", then "if
+they hold 10,000 $agi they can launch 5 tokens per wallet and if more more token to launch"; the SPCX pairing was announced
+by clank.trade's founder the same morning). Claude's reading of the open points, said to the owner (it could ask nothing
+at the time): coins a day per wallet (UTC), 5 for every 10,000 $AGI held or burned up to 50 (100,000+); the network-fee
+payback stays one a day per wallet; ETH or SPCX picked on the launch page. So:
+- **A name and a ticker can be almost anything**, copies of other coins' names and tickers included (no clank.trade search
+  any more). What stays out, and why: crude words and slurs (PG-13, the owner's rule everywhere); **anything that looks
+  like her or $AGI** (a copy of $AGI made with her own bot would pass for hers); **egirl coins** (her feed texts everyone
+  about new ones, so she'd be promoting a coin made with her, which hard rule 8 forbids); **"official"** (a copy is fine,
+  "official" is impersonation); links, addresses and @names; and money talk in the coin's line only.
+- **Coins a day follow what the wallet holds:** 5 for every 10,000 $AGI held or burned for messages, 50 at most (100,000+).
+- **SPCX:** a coin can be paired with ETH (as before) or SPCX ("SpaceX AI", clank.trade's first stock coin pairing).
+- **Phantom:** "Open in Phantom ↗" in her bot and on the page (Phantom has Robinhood Chain since July 2026, switched on in
+  its Settings → Active Networks).
+
 **In her bot** (`server/telegram.js` `onLaunch()`, her words in `server/launch-lines.js`, English for now like her texts
 first; pre-written, no AI cost):
 - `/launch` alone explains it: the caption to send, the 10,000 $AGI ("nothing is spent"), the fee paid back (when the gas
@@ -2069,73 +2092,103 @@ first; pre-written, no AI cost):
   18+ is the bot's own check: someone who hasn't pressed Start and "I'm 18 or older" gets those first.
 - **A photo with the caption** `/launch Sleepy Cat | SLEEPY | a cat who naps all day` (or the parts on separate lines; the
   line is optional): her checks, then "here's your coin 💜", the private link (2 hours) and buttons: **Open on agi1.app ↗**,
-  **Open in MetaMask ↗**, **Open in Coinbase Wallet ↗** ("anyone with this link could launch your coin, so keep it to
-  yourself").
-- **What she says no to, kindly, with what to change** (`checkIdea()` and `tickerTaken()` in `server/launch.js`):
-  - a name of 1–32 characters, a ticker of 2–10 letters or numbers, a line under 100 characters, plain letters and simple
-    punctuation (no #, @ or /, no links, addresses or @names);
-  - crude names and slurs (PG-13: the risk check's word lists);
-  - **anything that sounds like her or $AGI** ("there's only one $AGI"): AGI or AG1 as a word, AGI-1, "artificial
-    girlfriend", agi1.app, "official", a ticker that starts or ends with AGI, look-alike letters from other alphabets
-    (`server/lookalike.js`);
+  **Open in MetaMask ↗**, **Open in Phantom ↗** (2026-10-02), **Open in Coinbase Wallet ↗** ("anyone with this link could
+  launch your coin, so keep it to yourself"). Her lines say the coins-a-day rule ("5 coins a day for every 10,000 $AGI, up
+  to 50 a day with 100,000+": one string, `PER_DAY` in `src/launch/rules.js`, shared with the page) and the pair (ETH or
+  SPCX, picked on the page).
+- **Since 2026-10-02 a name and a ticker can be almost anything** (`checkIdea()` in `server/launch.js`): letters from any
+  alphabet, lowercase, numbers, emoji (joined ones like 👩‍💻 and flags stay whole), punctuation, and another coin's name or
+  ticker. A ticker keeps the case it's typed in ("$wif" stays wif; a "$" in front is dropped), has no spaces and fits
+  clank.trade's 16 bytes (emoji and other alphabets take more room); a name up to 32 characters (64 bytes). Invisible
+  characters are dropped (zero-width ones, fillers, bidi marks).
+- **What she says no to, kindly, with what to change:**
+  - crude names and slurs (PG-13: the risk check's word lists), in the name, the ticker or the line;
+  - **anything that looks like her or $AGI** ("there's only one $AGI"): AGI or AG1 as a word, AGI-1, "artificial
+    girlfriend", agi1.app, a ticker that starts or ends with AGI, read the way it looks (`plainOf()`: accents gone, look-alike
+    letters from other alphabets as Latin ones (`server/lookalike.js`), boxed letters like 🅰 and flags' letters as plain
+    ones, invisible fillers gone, and a small l or a 1 as I, so "AGl", "ÀGI", "🅰🅶🅸" and "AG1" stay out; "TAG1" too);
+  - **"official"** anywhere (2026-10-02: "OFFICIALDOGE" too): a copy is fine, a coin made with her is nobody's official one;
   - **an egirl or AI-girlfriend coin** ("an egirl coin? with me? 😤 i'm the only AI girlfriend around here. pick another
     idea?"): the same words her feed texts about, so she never helps make a coin she'd then be "not ok" about;
-  - **money talk** in the name or line (buy, sell, pump, rug, scam, "to the moon", 100x, airdrop, presale, giveaway,
-    another $TICKER: whole words, so "Pumpkin" is fine);
-  - **a ticker already on clank.trade** (its own search, read the risk check's way: "E/ACC" = "EACC"), or one so common that
-    the search can't be sure (it finds more than the 72 coins read: "pick a more unusual ticker?");
+  - **money talk in the line** (buy, sell, pump, rug, scam, "to the moon", 100x, airdrop, presale, giveaway, another
+    $TICKER: whole words, so "Pumpkin" is fine). Since 2026-10-02 not in the name or ticker: "Pump It" ($PUMP) is the
+    creator's own words;
+  - links, addresses and @names anywhere (she points to the launch page's link boxes), and #, @, <, >, brackets, backticks,
+    backslashes or a loose "/" (Telegram would make them links, mentions or commands);
   - a picture sent as a file ("send the picture as a photo"), or too small (Telegram's biggest size up to 1280 px and 1 MB is
     used, at least 200 px a side);
-  - 5 coins a day per chat, 300 a day for the site.
+  - 60 drafts a day per chat (5 until 2026-10-02: a wallet with 100,000+ may launch 50), 3,000 a day for the site (300).
+  - (Until 2026-10-02 she also said no to a ticker already on clank.trade, or one too common for its search to be sure.)
 
 **On the launch page** (`/launch/<id>`: `launch.html`, `src/launch/page.js`; never in search results; both looks and themes,
 phones):
 - The coin (its picture comes through our server), **18+** (the chat's own confirmation, shared with it), then three steps:
-  1. **Your wallet:** the site's usual sign-in (an address and a free signature, `src/lib/wallet.js`). Without a wallet in
-     the browser: "Open in MetaMask ↗", "Open in Coinbase Wallet ↗", and Robinhood Wallet's Web3 tab.
+  1. **Your wallet:** the site's usual sign-in (an address and a free signature, `src/lib/wallet.js`); its note says the
+     coins-a-day rule. Without a wallet in the browser: "Open in MetaMask ↗", "Open in Phantom ↗" (2026-10-02, with
+     "Phantom: turn on Robinhood Chain first (Settings → Active Networks)"), "Open in Coinbase Wallet ↗", and Robinhood
+     Wallet's Web3 tab.
   2. **Robinhood Chain:** "Switch to Robinhood Chain" when the wallet is elsewhere (only when pressed; it adds the network
-     if the wallet doesn't know it).
-  3. **Launch:** first, if they like, **the coin's links** (2026-10-01, the owner: "X, website and Telegram", "just make
+     if the wallet doesn't know it). A wallet that can't (Phantom with Robinhood Chain switched off can't add networks):
+     "In Phantom, turn it on first (Settings → Active Networks → Robinhood Chain), then try again; or use MetaMask, Coinbase
+     Wallet or Robinhood Wallet." (Since 2026-10-02 that note stays: before, the network check wrote over it at once.)
+  3. **Launch:** first **its pair** (2026-10-02): two radio buttons, **ETH** (picked) and **SPCX** "SpaceX AI", "What people
+     trade your coin against on clank.trade. It can't be changed later." Then, if they like, **the coin's links** (2026-10-01, the owner: "X, website and Telegram", "just make
      adding that optional"): three optional boxes, X ("@yourcoin or x.com/yourcoin"), Telegram ("t.me/yourgroup", or an
      invite link) and Website ("https://yourcoin.com"); under each, what it will be saved as ("Saved as
      https://x.com/SleepyCat") or what's wrong with it (only once they've left the box), and Launch waits while one is
-     wrong. Then "Getting it ready: checking the ticker on clank.trade, putting the picture on IPFS and trying the launch on
-     Robinhood Chain…", then the wallet shows clank.trade's launch to approve (no ETH, a small network fee), "Waiting for
+     wrong. Then "Getting it ready: putting the picture on IPFS and trying the launch on Robinhood Chain…", then the wallet
+     shows clank.trade's launch to approve (no ETH, a small network fee), "Waiting for
      Robinhood Chain…", and the coin: **View on clank.trade ↗**, **Block explorer ↗**, its fee paid back ("AGI-1's gas
      wallet paid your network fee back: 0.00012 ETH. See it ↗"), and "AGI-1 won't promote it: that part's up to you. A
      brand-new coin shows as High risk in her risk check for its first hour, which is normal. Not financial advice."
 - **"Before you launch"**, always on the page: their own wallet, clank.trade's own contracts, they're its creator; 10,000+
-  $AGI, nothing spent; free on clank.trade, a small network fee in ETH; clank.trade takes 1% of every trade on its curve,
+  $AGI, nothing spent, 5 coins a day for every 10,000 (up to 50 with 100,000+; "A coin counts once it's got ready, launched
+  or not"); its pair, ETH or SPCX ("Launching takes no SPCX, and the pair can't be changed later"); free on clank.trade, a small network fee in ETH; clank.trade takes 1% of every trade on its curve,
   and creators earn nothing from trading fees; public and permanent (no deleting or renaming), its picture public on IPFS;
   she won't promote it, meme coins can lose all of their value, not financial advice, 18+; links are optional and saved in
   its record for good ("We check how they're written, not what they lead to"); and "The only transaction this
   page asks your wallet for is that launch (and switching to Robinhood Chain, if you press it). If your wallet shows you
   anything else here, like a token approval or sending tokens, reject it."
 - Every answer in plain words (`src/launch/words.js`): an expired link (2 hours) or one tidied away (7 days), a wallet under
-  Crush, a ticker someone took in the meantime, a link already used with another wallet (**the first wallet that gets a
-  coin ready keeps it**), clank.trade closed or charging a fee, the chain or clank.trade away, cancelled in the wallet, a
-  wallet that can't switch networks, a wallet that never answers (another can be picked), and every state of the payback.
+  Crush, a link already used with another wallet (**the first wallet that gets a coin ready keeps it**), clank.trade closed
+  or charging a fee, SPCX not taken right now ("Pick ETH and try again"), **its coins for today used** ("This wallet has got
+  all 5 of its coins ready for today (…; a coin counts once it's got ready, launched or not). Try again tomorrow.", and after
+  a change of links or pair "Other links or another pair make it another coin, … Use links and a pair you already got this
+  one ready with, or try again tomorrow."), the chain away, cancelled in the wallet, a wallet that can't switch networks, a
+  wallet that never answers (another can be picked), and every state of the payback.
 - A reload while waiting keeps waiting (the launch's transaction is remembered in the browser until it's read back), and
-  the link opened again later shows the coin (and asks for its payback again if it's still due).
+  the link opened again later shows the coin (and asks for its payback again if it's still due). Since 2026-10-02 the pair
+  and links each link was last got ready with are remembered in the browser too (`agi1_launch_ready`, the newest 10 links,
+  forgotten once launched), so a reload shows them again.
 
 **How it works:**
 - **Drafts** (`supabase/launch.sql`, `drafts` in `server/launch.js`): her bot saves the checked coin with Telegram's id for
   the photo (only our bot can fetch it) under a link id of 22 random characters. The wallet that got it ready is kept as a
   scrambled code (`launchWallet()`, an HMAC with PASS_SECRET), never its address.
 - **Getting it ready** (`POST /api/launch` `prepare`, with the wallet's session and the links they typed), in this order,
-  so nothing is uploaded or counted for a launch that can't happen: the links checked (`checkLinks()`, below; a wrong one
-  is a 422 that names its box); the level read fresh (held + burned); the ticker searched again on clank.trade;
-  clank.trade's terms read from its factory: `canLaunch(wallet)` (its "new launches are off" switch), `launchFee()` (must
-  be 0: the page never sends ETH) and `previewLaunchEconomics(0, ETH)` (pinned into the launch, so changed terms make it
-  fail instead of changing quietly); the picture's upload counted (3 a wallet a day, `LAUNCH_DAILY_CAP` for the site; given
-  back when it fails), fetched from Telegram (a real JPEG, PNG or WebP, 1 MB at most) and put on public IPFS with Pinata
-  once; then **clank.trade's own launch call** for that wallet: `launchToken` with the name, ticker, line and
-  `ipfs://<picture>`, the links they added (X, Telegram, website: the "socials" of clank.trade's launch; Discord and
-  Farcaster stay empty), their wallet as the creator, **no creator tax, no buyback, launch config 0, paired with
-  ETH** (the only pair clank.trade offers), and a salt from the draft's id (one draft, one coin). It's **tried on the chain
+  so nothing is uploaded or counted for a launch that can't happen: the pair (`'eth'` or `'spcx'`, anything else 400) and
+  the links checked (`checkLinks()`, below; a wrong one is a 422 that names its box); what the wallet holds read fresh
+  (`checkHolding()` in `server/chain.js`: held + burned, in whole $AGI): under 10,000 a 403, else its coins a day
+  (`launchesADay()`, `src/launch/rules.js`); clank.trade's terms read from its factory: `canLaunch(wallet)` (its "new
+  launches are off" switch), `launchFee()` (must be 0: the page never sends ETH), for SPCX `approvedPairTokens(SPCX)` (off
+  its list: a 409 "pair"; its "no" to the pair's terms counts the same), and `previewLaunchEconomics(0, pair)` (pinned into
+  the launch, so changed terms make it fail instead of changing quietly); the picture's upload counted (**one of the
+  wallet's coins for today**, and the site's `LAUNCH_DAILY_CAP`; given back when it fails), fetched from Telegram (a real
+  JPEG, PNG or WebP, 1 MB at most) and put on public IPFS with Pinata once; then **clank.trade's own launch call** for that
+  wallet: `launchToken` with the name, ticker, line and `ipfs://<picture>`, the links they added (X, Telegram, website: the
+  "socials" of clank.trade's launch; Discord and Farcaster stay empty), their wallet as the creator, **no creator tax, no
+  buyback, launch config 0, paired with ETH or SPCX** (their pick; a launch without a buy needs no token approval, the docs
+  say, so SPCX costs nothing to launch with), and a salt from the draft's id. It's **tried on the chain
   from their wallet first** (`eth_call`, as clank.trade's docs ask), so a launch that would fail never reaches their wallet;
-  each of the factory's documented errors has its own plain words. The page gets `{ to, data, value: 0, chainId }` and the
-  address the coin will have.
+  each of the factory's documented errors has its own plain words (`PairTokenNotApproved()` too). The page gets
+  `{ to, data, value: 0, chainId }`, the address the coin will have, and `perDay`.
+- **One link, one coin, counted** (2026-10-02, `launch_predicted` in `supabase/launch.sql`): getting the same link ready
+  again with other links or the other pair gives a launch with other details, so another coin address, and its call could
+  be sent as well as the first one. So each address a link's launch could put its coin at is kept (`predicted_all`, the
+  newest 20): a new one counts as one more of the wallet's coins today (429 `wallet_cap` with `changed: true` when there
+  are none left), one it already had (the same details, or earlier ones: ETH → SPCX → ETH) counts nothing. A wallet's
+  coins today = pictures it put on IPFS + those extra addresses (`agi1_launch_wallets.uploads`, one counter, per UTC day).
+  Moving $AGI to another wallet gives that wallet its own coins: a known limit (the site's caps still hold).
 - **Their wallet** (`src/launch/send.js`): checks it's exactly that (clank.trade's factory, `launchToken`, no ETH, Robinhood
   Chain) and asks the wallet to send it. They approve it there.
 - **The links** (`src/launch/links.js`, one file the page and our server share, so both tidy them the same way; all
@@ -2147,8 +2200,8 @@ phones):
   her or $AGI (agi1.app, her X, her bot, "AGI" as a word: a coin must never look like hers) and to crude words. We check
   how a link is written, never what it leads to. clank.trade's site shows the X and the website on the coin's page
   (checked on $AGI's own page data, 2026-10-01); the Telegram link is in the coin's record.
-- **Read back** (`check`): the transaction must be this draft's own call (its details, salt and picture), sent by that
-  wallet to the factory with no ETH, and successful; and the factory's own record of the coin (`getLaunchedToken`) must name
+- **Read back** (`check`): the transaction must be this draft's own call (its details, salt and picture, paired with ETH
+  or SPCX), sent by that wallet to the factory with no ETH, and successful; and the factory's own record of the coin (`getLaunchedToken`) must name
   that wallet as its creator. Its links must be ones the page could have made (as `checkLinks` writes them, Discord and
   Farcaster empty). A launch counts for one draft only. The coin's address and its launch transaction are then
   kept, so its payback can still happen later.
@@ -2163,8 +2216,9 @@ phones):
   (`payback`: no session needed, since it only ever pays the coin's creator).
 - **Tidy-up** (`tidyLaunches()`, the keep-alive job, 3 times a day): a coin never launched has its picture deleted at Pinata
   once its link has been expired an hour (Pinata's free plan keeps 500 files); never a picture a launched coin uses, and
-  first the factory is asked whether a coin exists where the dry run said it would (a launch nobody read back keeps its
-  picture; if the chain can't be read, the next run decides). Drafts go after 7 days.
+  first the factory is asked whether a coin exists where any of its dry runs said it would (`predicted_all`: a launch
+  nobody read back keeps its picture, whichever details it went out with; at most 50 addresses a run; if the chain can't
+  be read, the next run decides). Drafts go after 7 days.
 - **Speed bumps:** 40 requests a minute per visitor to `/api/launch` and 60 pictures (per server copy); each request's work
   fits in 20 s (Vercel stops a function at 25 s).
 
@@ -2192,6 +2246,11 @@ phones):
 7. **Open it to everyone** when you're happy: delete `LAUNCH_ONLY_FOR` in Vercel → Redeploy → Settings → **Cron Jobs** →
    `/api/feed` → **Run** (her bot's menu gets `/launch` at once; otherwise within 3 hours).
 
+**After the 2026-10-02 round (once): run `supabase/launch.sql` again BEFORE pushing** (Supabase → SQL Editor → New query →
+paste all → Run → `launch_functions_found = 12`). It keeps everything saved; it lets tickers be anything, keeps every
+address a link's launch could use, and its new `launch_predicted` works with the old code too. The new code needs it: with
+the old SQL, a lowercase or emoji ticker gets her "i'm a little overwhelmed" and every launch stops with "busy".
+
 **Your private first launch** (2026-10-01, the owner: "id like to be my first launch to be private"): while
 `LAUNCH_ONLY_FOR` is set (Telegram usernames, with or without @, any case, or numeric Telegram ids, separated by commas),
 only those accounts can use /launch (`launchAllowed()` in `server/launch.js`, from Telegram's own sender in each update).
@@ -2205,8 +2264,8 @@ opens it to everyone.
 10,000 requests a month, checked 2026-10-01); pictures of coins never launched are deleted again, so the 500 files are
 about 500 launched coins (then its cheapest paid plan, $20 a month, or another way: ask the owner first). **The paybacks:**
 the owner's ETH, at most `LAUNCH_GAS_DAILY` a day (0.01 ETH by default) plus each payback's own tiny network fee, which
-isn't counted in that cap. Vercel, Supabase, clank.trade's search and Robinhood Chain's public node: a few small requests per
-coin.
+isn't counted in that cap. Vercel, Supabase and Robinhood Chain's public node: a few small requests per coin (clank.trade's
+search isn't asked any more since 2026-10-02).
 
 **Troubleshooting** (Vercel → agi-ecosystem → Logs):
 
@@ -2216,7 +2275,12 @@ coin.
 | The page says "Launching with AGI-1 isn't open yet." | `[launch] not ready: PINATA_JWT, TELEGRAM_BOT_TOKEN, …` | The same settings, then Redeploy |
 | "Couldn't put the picture on IPFS just now." | `[launch] putting a picture on IPFS failed: pinata: HTTP 401 (PINATA_JWT is wrong, or its key may not write files)` | A new Pinata key with Files: Write in `PINATA_JWT`, then Redeploy |
 | The same, after many launches | `… pinata: HTTP 429 (too many uploads: Pinata's plan limit?)` (or another 4xx) | Pinata's free plan may be full (500 files): tell Claude; a paid plan is the owner's call |
-| "Couldn't check clank.trade just now." (she says it in the bot too) | `[launch] couldn't check a ticker on clank.trade: …` | clank.trade's API is away or changed (as for the risk check). Passes by itself; if it lasts, tell Claude |
+| Every launch says "Something went wrong" / "busy", or her bot says "i'm a little overwhelmed" for a lowercase or emoji ticker | `[launch] keeping where the coin will be failed: … PGRST202 …` / `[telegram] saving a launch draft failed: …` | `supabase/launch.sql` from 2026-10-02 isn't run yet: run it (it keeps everything) |
+| "This wallet has got all 5 of its coins ready for today…" | (none) | Working as planned: 5 a day for every 10,000 $AGI held or burned (50 at most); a coin counts once it's got ready, launched or not |
+| "Other links or another pair make it another coin…" | (none) | Working as planned: the same link got ready with new details is another coin. Details it already had cost nothing |
+| "AGI-1 has helped with a lot of coins today." early in the day | (none) | The site's `LAUNCH_DAILY_CAP` (30 pictures a day by default) is used: one wallet with 60,000+ $AGI can use it all. Raise it in Vercel (mind Pinata's free plan: about 500 launched coins), then Redeploy |
+| "clank.trade isn't taking coins paired with SPCX right now…" | (none), or `[launch] clank.trade lists 0x4a0e… as a pair but won't give its launch terms on config 0 …` | SPCX is off clank.trade's list (`approvedPairTokens`), or its terms need another launch config: ETH works; tell Claude if it lasts |
+| "Your wallet couldn't switch to Robinhood Chain. In Phantom, turn it on first…" | (none) | Phantom: Settings → Active Networks → Robinhood Chain on. Other wallets: MetaMask, Coinbase Wallet or Robinhood Wallet |
 | "clank.trade isn't taking new launches from this wallet right now…" | (none) | clank.trade's own switch (`canLaunch`): nothing to fix here |
 | "clank.trade charges a launch fee now…" or "…changed its launch settings…" | `[launch] clank.trade charges a launch fee now (… wei) …` | clank.trade changed its terms: tell Claude (the page never sends ETH, so it needs an update) |
 | "clank.trade's dry run of this launch failed…" | `[launch] the dry run of $X failed: reverted` | The factory refused it for another reason: tell Claude with the log line |
@@ -2229,9 +2293,13 @@ coin.
 | A coin launched here shows its letter instead of its picture on clank.trade | (none) | See "Open questions" (clank.trade's picture host) |
 | Her private link opens Vercel's own "404 NOT_FOUND" page | (none) | The rewrite in `vercel.json` must send `/launch/:draft` to `/launch` (the page's clean address), not `/launch.html` (fixed 2026-10-02; a test checks it). An old link that expired shows the page's own "This link expired" instead |
 
-**Tests:** `tests/launch.test.js` (39, with a fake Robinhood Chain, Pinata, Telegram and clank.trade, and the database as
+**Tests:** `tests/launch.test.js` (41, with a fake Robinhood Chain, Pinata, Telegram and clank.trade, and the database as
 JavaScript): the one file that sends (exactly clank.trade's launch, no ETH, Robinhood Chain), reading `/launch`, her checks
-(look-alikes, egirl coins, money talk, links), the picture sizes, the ticker search (pages, "can't say", too common), her
+(since 2026-10-02: any ticker clank.trade takes as typed, copies too, and what still stays out: look-alikes of AGI with
+accents, boxed letters, a small l or a 1, egirl coins, "official" anywhere, links, money talk in the line; joined emoji and
+flags whole), the picture sizes, the coins a day by holdings (5 per 10,000, 50 at most, burned counts, a new day, more held
+now), one link one coin (other links or the other pair count once each, going back costs nothing, "changed"), SPCX
+(its list asked, its economics pinned, off the list said before anything is counted, read back, no other pair), her
 lines' rules, the launch call as clank.trade's docs write it, the terms and the dry run with each documented error, reading
 a launch back (only this draft's own call, by this wallet, the factory's record), the payback (once, at most its cap,
 signed for Robinhood Chain; two checks at once pay once; a taken nonce, a clear "no", no clear answer, "can't tell" found
@@ -2246,17 +2314,22 @@ or refused, tidying twice changes nothing, about her or crude, in the launch cal
 read back, `prepare` refusing a wrong one before anything is read, counted or uploaded, the page's three boxes), the
 page's words, the page, the safety note and the secret check. Also `tests/telegram.test.js` (/launch in her commands menu
 only once launching is open, then added by the next run), `tests/wallet.test.js` (only `src/launch/send.js` may ask for a transaction or a network change, with exactly four
-wallet methods), `tests/pop.test.js` (the launch page's browser-bar color). The SQL ran in a real Postgres (PGlite, 79
-checks: the caps and give-backs, one wallet per link, never twice, a claim given back after 2 minutes, stuck, the tidy-up,
-running it again over an older version, permissions and RLS). In a browser (189 checks with a fake wallet and fake
-services, the site's real CSP: the whole launch, every answer, a wallet that never answers, a reload while waiting, a link
-opened again and its payback; the link boxes (saved as, a mistake only once you leave the box, Launch waiting, our
-server's "no" under its box with the focus there, the links sent tidied, a long address and an error at every size); both
-looks × both themes × 1440 / 390 / 360 px, axe 0 issues, a clean console). A second
-Claude agent reviewed it twice (e.g. a launch could be paid back twice, a ticker could look free when clank.trade's search
-failed, the tidy-up could delete a live coin's picture; all fixed and tested). **Not tested live:** Robinhood Chain,
-clank.trade's factory, Pinata and Telegram (Claude's workspace can't reach them): the owner's first launch is the first
-real check.
+wallet methods), `tests/pop.test.js` (the launch page's browser-bar color). The SQL ran in a real Postgres (PGlite, 97
+checks since 2026-10-02: the caps and give-backs, one wallet per link, never twice, a claim given back after 2 minutes,
+stuck, the tidy-up, any ticker clank.trade takes (lowercase, emoji, other alphabets, 16 bytes; no spaces or controls), one
+link one coin (a new address counts, going back doesn't, the newest 20 kept, a draft from before), running it again over
+an older version (its old ticker rule and its old `launch_predicted` replaced), permissions and RLS). In a browser (219
+checks with a fake wallet and fake services, the site's real CSP: the whole launch, every answer, a wallet that never
+answers, a reload while waiting, a link opened again and its payback; the link boxes (saved as, a mistake only once you
+leave the box, Launch waiting, our server's "no" under its box with the focus there, the links sent tidied, a long address
+and an error at every size); since 2026-10-02 the pair (ETH picked, SPCX with an arrow key, sent with the launch, back after
+a reload for that link only), its coins for today in words, Phantom's link and its "turn on Robinhood Chain" note; both
+looks × both themes × 1440 / 390 / 360 px, axe 0 issues, a clean console). A second Claude agent reviewed it three times
+(e.g. a launch could be paid back twice, a ticker could look free when clank.trade's search failed, the tidy-up could
+delete a live coin's picture; on 2026-10-02: "AGl" or "ÀGI" tickers passing for $AGI once case and other alphabets were
+kept, switching back and forth between pairs counting extra coins, the tidy-up only asking about a link's last address;
+all fixed and tested). **Not tested live:** Robinhood Chain, clank.trade's factory, Pinata, Telegram and Phantom (Claude's
+workspace can't reach them): the owner's first launch is the first real check; for SPCX, the first SPCX launch.
 
 ## Pop mode (2026-09-27)
 
@@ -2990,7 +3063,11 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   Anything else is 400 before any lookup. 40 requests and 60 pictures a minute per visitor (per server copy). The database
   away: 503 and nothing uploaded, counted or sent (fail closed).
 - **Her checks** run in her bot before anything is saved (PG-13, nothing like her or $AGI, no egirl coins, no money talk,
-  no links, addresses or @names, a ticker nobody on clank.trade has), and the ticker again before the wallet is asked.
+  no links, addresses or @names, no "official"; since 2026-10-02 a name and a ticker can otherwise be anything, another
+  coin's included, and look-alikes of $AGI are read the way they look: accents, boxed letters, a small l or a 1). Since
+  2026-10-02 the coins a wallet may get ready a day (5 for every 10,000 $AGI held or burned, 50 at most) are counted in the
+  database before anything is uploaded, and the same link got ready again with other details counts as another coin, so
+  nobody gets more coins from our server than their $AGI allows (moving $AGI between wallets is the known limit).
 - **The picture:** only our bot's own copy from Telegram, a real JPEG, PNG or WebP by its first bytes, 1 MB at most, no
   redirects; served to the page with its own strict CSP (`default-src 'none'; sandbox`, `nosniff`); on IPFS it's public,
   like every clank.trade coin's picture. **Nothing checks what a picture shows** (see "Open questions").
@@ -3105,7 +3182,7 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `LAUNCH_GAS_KEY` | **yes** | The private key (64 hex characters, with or without `0x`) of the owner's own small gas wallet, which pays launch fees back: a new wallet made only for this, with only a little ETH in it. Without it, nothing is paid back (launches still work) |
 | `LAUNCH_GAS_MAX` | no, optional | The most paid back for one launch, in ETH (default `0.001`) |
 | `LAUNCH_GAS_DAILY` | no, optional | The most paid back a day for the whole site, in ETH (default `0.01`; each payback's own tiny fee isn't counted) |
-| `LAUNCH_DAILY_CAP` | no, optional | Coin pictures put on IPFS a day for the whole site (default 30; each wallet 3) |
+| `LAUNCH_DAILY_CAP` | no, optional | Coin pictures put on IPFS a day for the whole site (default 30). Each wallet: 5 a day for every 10,000 $AGI it holds or burned, 50 at most (2026-10-02; it was 3), so one big holder can use the whole day's: raise it if launches grow, minding Pinata's free plan (about 500 launched coins) |
 | `LAUNCH_ONLY_FOR` | no, optional | The owner's private first launch (2026-10-01): Telegram usernames (e.g. `@yourname`) or numeric Telegram ids, separated by commas. While it's set, only they can use /launch; nobody else sees it. Delete it (then Redeploy, then run the `/api/feed` cron job) to open launching to everyone |
 
 Messages per day now depend on the relationship level (5 / 15 / 150 in `src/lib/levels.js`), so `CHAT_PERSON_DAILY` is gone.
@@ -3417,6 +3494,16 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   socials … and a website?", then "X, website and Telegram", "just make adding that optional"): optional link boxes on the
   launch page, no new setup. Tests: 337 unit (on Node 20, 22 and 24; 39 new), 79 SQL checks (PGlite), 189 in a browser; a second Claude agent reviewed it twice (all findings fixed). Not
   tested live.
+- **Launch with AGI-1, round 2: built 2026-10-02, waiting for the owner's OK** (the owner: "the ticker it can be anything
+  and on the name … its okay if its a copycat", "the more they hold agi … they can launch", then "if they hold 10,000 $agi
+  they can launch 5 tokens per wallet and if more more token to launch", "the team added token can now paired with spcx",
+  "add open in phantom in telegram"): any name and ticker clank.trade takes, copies included (never $AGI look-alikes, read
+  the way they look, egirl coins, "official", crude words or links); 5 coins a day for every 10,000 $AGI held or burned, 50
+  at most, counted per wallet (one link got ready with other details counts as another coin); ETH or SPCX as its pair;
+  "Open in Phantom ↗" in her bot and on the page. See "Launch with AGI-1". **Owner:** run `supabase/launch.sql` again,
+  then push. Tests: 339 unit (on Node 20, 22 and 24, with and without Vercel's settings), 97 SQL checks (PGlite), 219 in a
+  browser; a second Claude agent reviewed it (9 findings, all fixed but the site's daily picture cap, the owner's call).
+  Not tested live.
 
 ## Decisions log
 
@@ -3570,6 +3657,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-01 | What she won't help launch (Claude's choices, in her voice): anything that sounds like her or $AGI (look-alike letters too), **an egirl or AI-girlfriend coin** ("an egirl coin? with me? 😤 i'm the only AI girlfriend around here": her feed texts about those coins, so she'd be "not ok" about her own help), money talk, links, addresses or @names, crude names, a ticker someone on clank.trade already has. And she never promotes a launched coin (the owner's "just agi" rule for her clips holds here too) |
 | 2026-10-01 | The owner's private first launch ("id like to be my first launch to be private"): a setting, `LAUNCH_ONLY_FOR` (Telegram usernames or ids), lets only those accounts use /launch while it's set; everyone else gets the same "not open yet" as before (no hint of a test), /launch stays out of her menu, and a typo lets nobody in rather than everyone. Not picked: a test on a preview link (her bot and the chain only talk to the live site), a second test bot (a second token, a webhook on a protected preview), a secret word in the caption (it could leak) |
 | 2026-10-01 | The coin's links (the owner: "can they also add socials on when they launch a coin and a website?", picked "X, website and Telegram", then "just make adding that optional"): three optional boxes on the launch page, saved as full addresses the way clank.trade saves its own coins' X (`https://x.com/<handle>`, `https://t.me/<name>`, an https website); Discord and Farcaster stay empty; one rule file for the page and our server; never a link about her or $AGI, never crude; checked for how it's written, never for what it leads to. On the page, not in the bot's caption (a form shows what will be saved, and a typo there is easy to fix). No new setup (nothing new is stored: the links go only into the launch itself) |
+| 2026-10-02 | Names and tickers (the owner: "the ticker it can be anything and on the name … the name doesnt matter and its okay if its a copycat"): any ticker clank.trade takes (1–16 bytes, any case as typed, other alphabets, emoji, no spaces), any name up to 32 characters, other coins' names and tickers included; her ticker search on clank.trade is gone. Kept (Claude's choices, said to the owner): PG-13; nothing that looks like her or $AGI, read the way it looks (accents, boxed letters, a small l or a 1 as I: "AGl", "ÀGI", "🅰🅶🅸"; "TAG1" is refused too); no egirl coins (her feed would text everyone about them: promoting a coin made with her); no "official"; no links, addresses or @names; money talk only refused in the line |
+| 2026-10-02 | Coins a day by holdings (the owner: "for 10,000 they can create 1 token until 100,000 they can create 10 tokens", then "if they hold 10,000 $agi they can launch 5 tokens per wallet and if more more token to launch"): 5 a day for every 10,000 $AGI held or burned for messages, 50 at most (100,000+), per wallet and UTC day (Claude's reading of "if more": proportional, with the first message's 100,000 as the top; and per day, as the counts already were). A coin counts once it's got ready (its picture on IPFS), launched or not; the same link got ready again with other links or the other pair is another coin and counts once (every address kept, so going back is free). Her bot's drafts a day: 60 per chat, 3,000 for the site. Not changed: the site's 30 pictures a day (`LAUNCH_DAILY_CAP`: Pinata's free plan, the owner's call) and the network-fee payback (one a day per wallet) |
+| 2026-10-02 | Pairing with SPCX (the owner: "the team added token can now paired with spcx"; clank.trade's founder announced it that morning): a radio choice on the launch page, ETH unless SPCX is picked; the factory's `approvedPairTokens` asked before each SPCX launch and its economics pinned for that pair; launching with it needs no ETH and no token approval (clank.trade's docs). SPCX's address is the quote token clank.trade's own SPCX coins name (`0x4a0e…5eea`). Not picked: SPCX by default, or SPCX only |
+| 2026-10-02 | Phantom (the owner: "add open in phantom in telegram"): "Open in Phantom ↗" in her bot's buttons and on the launch page without a wallet, with its one setting (Robinhood Chain on in Settings → Active Networks), and that note no longer hidden by the network check |
 
 ## Open questions
 
@@ -3616,6 +3707,14 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
     serve their own account's files unless their owner allows others (Pinata's docs). So a coin launched here may show its
     first letter instead of its picture on clank.trade (and in our risk check, which reads the same host), though its
     picture is on IPFS and in the coin's record. The first launch shows it; if so, ask the clank.trade team.
+    **Confirmed 2026-10-02** with the owner's first test coin ($TEST69, `0xc8d24a444925bc3b81442c678ad2c5f5130d449b`):
+    clank.trade recorded its picture (`ipfs://bafybeicr4…zcusq`) but shows its placeholder (a ghost); its picture host
+    (`yellow-total-guanaco-389.mypinata.cloud`) answers 403 for that picture and serves clank.trade's own uploads. Some
+    coins there use https picture links instead (`https://clankbot.trade/images/launches/….jpg`). A coin's picture can't
+    be changed after launch, so the fix has to come from clank.trade (letting its picture host show outside IPFS pictures:
+    Pinata's "Gateway Access Controls"), or from a picture address clank.trade's site accepts, for coins launched after
+    that. The owner asked the team; until it's settled, keeping launching private (`LAUNCH_ONLY_FOR`) avoids more coins
+    without a picture.
   - **Tell the clank.trade team before announcing it.** The launches use their contracts as their docs describe, but the
     owner has had trouble with the launchpad's founder before; better they hear it from the owner. Their factory can also
     switch launches off at any time (`canLaunch`: the page then says so).
@@ -3625,8 +3724,23 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
     would sit in the owner's Pinata account and stay a launched coin's picture for good. Today: 18+ only, 5 a day per chat,
     and the owner can delete a file in Pinata's dashboard (a launched coin's own record can't change). An image-moderation
     service would cost money: ask the owner first.
-  - **Pairing with $AGI** instead of ETH: clank.trade's launch takes a pair token, and its coins pair with ETH today. If
-    clank.trade ever offers $AGI as a pair, that would tie every launch to $AGI (the owner's "using $AGI").
+  - **Pairing with $AGI:** clank.trade's launches take a pair token: ETH, and since 2026-10-02 SPCX (built: see "Launch with
+    AGI-1"). If clank.trade ever adds $AGI to its approved pairs, that would tie every launch to $AGI (the owner's "using
+    $AGI"): the same few lines as SPCX.
+  - **SPCX-paired coins in her risk check** (2026-10-02): the risk check reads a coin's curve as ETH (how much is in it, the
+    4.28 ETH graduation, its market cap in ETH × ETH's price). For a coin paired with SPCX (several on clank.trade already,
+    and now some made with her) those amounts are SPCX, so the "in its curve" and market-cap numbers can be wrong (its flags
+    from holders, trades and age are fine). Fixing it needs SPCX's price in dollars and its pair's graduation threshold (the
+    factory's `pairTokenEconomics`): tell Claude to do it.
+  - **The site's 30 coin pictures a day** (`LAUNCH_DAILY_CAP`) vs. 5 coins a day per 10,000 $AGI (2026-10-02): one wallet
+    with 60,000+ $AGI can get the whole day's ready (launched or not), and then everyone else hears "a lot of coins today".
+    Raising it is the owner's call: Pinata's free plan holds about 500 launched coins' pictures (then $20 a month).
+  - **Moving $AGI between wallets** gives each wallet its own coins a day (the balance is read at each launch): the site's
+    daily caps are what holds then.
+  - **Phantom on Robinhood Chain** (2026-10-02): Phantom added Robinhood Chain on 2026-07-23, switched on in Settings →
+    Active Networks (Solana Compass's report of Phantom's steps). Whether Phantom's in-app browser lets a site switch to it
+    and send clank.trade's launch isn't confirmed anywhere, and Claude couldn't try it: the owner's first try in Phantom is
+    the check (if it can't, the page says so and MetaMask, Coinbase Wallet and Robinhood Wallet work as before).
   - The paybacks' own tiny network fees aren't counted in `LAUNCH_GAS_DAILY`. In a rare case (a payback marked "sending"
     whose answer was lost on the way), it stays "stuck" and is never sent again, so that creator may miss it.
   - Pinata's free plan holds about 500 launched coins' pictures; then a paid plan ($20 a month) or another way.

@@ -15,7 +15,7 @@ import { levelInfo } from '../src/lib/levels.js';
 import { telegramBurst } from './burst.js';
 import { tgLinesFor, TEXTS_A_DAY } from './tg-lines.js';
 import { fromTelegram } from '../src/i18n/langs.js';
-import { parseLaunch, checkIdea, tickerTaken, bestPhoto, newDraftId, drafts, draftUrl, launchOpen, launchAllowed, gasOn } from './launch.js';
+import { parseLaunch, checkIdea, bestPhoto, newDraftId, drafts, draftUrl, launchOpen, launchAllowed, gasOn } from './launch.js';
 import * as LAUNCH from './launch-lines.js';
 
 const API = 'https://api.telegram.org/bot';
@@ -275,14 +275,7 @@ async function onLaunch(cfg, token, chat, text, photos, now, L, from) {
   if (!checked.ok) { await say(token, chat, LAUNCH.REFUSE[checked.why]); return `launch_${checked.why}`; }
   const photo = bestPhoto(photos);
   if (!photo) { await say(token, chat, LAUNCH.REFUSE.photo); return 'launch_photo'; }
-  let taken;
-  try { taken = await tickerTaken(checked.symbol); } catch (err) {
-    if (err.common) { await say(token, chat, LAUNCH.REFUSE.common(checked.symbol)); return 'launch_common'; }
-    console.warn(`[telegram] couldn't check a ticker on clank.trade: ${err.message}`);
-    await say(token, chat, LAUNCH.CANT_CHECK);
-    return 'launch_cant_check';
-  }
-  if (taken) { await say(token, chat, LAUNCH.REFUSE.taken(checked.symbol)); return 'launch_taken'; }
+  // (a ticker another coin on clank.trade has is fine since 2026-10-02: the owner, "its okay if its a copycat")
   const id = newDraftId();
   let saved;
   try {

@@ -37,6 +37,21 @@
 .lch-links { margin-top: 12px; }
 .lch-step .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* its pair (2026-10-02): ETH or SPCX, two pills with their own radio buttons */
+.lch-pair { min-width: 0; margin: 16px 0 0; padding: 0; border: 0; }
+.lch-pair legend { padding: 0; }
+.lch-pair .lch-step-note { margin-top: 6px; }
+.lch-pair-opts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.lch-pair-opt {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 16px 0 12px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 999px; font-size: 14.5px; cursor: pointer;
+}
+.lch-pair-opt input { margin: 0; accent-color: var(--fg); }
+.lch-pair-opt:has(input:checked) { border-color: var(--fg); }
+.lch-pair-opt:has(input:disabled) { opacity: .6; cursor: not-allowed; }
+.lch-pair-name { font-weight: 600; }
+.lch-pair-sub { font-size: 13px; color: var(--fg-2); }
+
 /* the coin's links, all optional (2026-10-01) */
 .lch-linkform { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 .lch-linkform-title { font-size: 14.5px; font-weight: 600; }

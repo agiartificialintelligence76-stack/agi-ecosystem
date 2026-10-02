@@ -1,7 +1,9 @@
 // "Launch with AGI-1" (2026-10-01, the owner's idea: people launch a coin on clank.trade from her Telegram bot, with their own
 // wallet, and her gas wallet pays the network fee back): her checks, her lines, the bot's /launch, the drafts, /api/launch
-// (prepare: the level, the ticker, clank.trade's terms, the picture to IPFS, the dry run; check: the launch read back from the
-// factory, the fee paid back once), the launch page's one transaction (src/launch/send.js) and its words, the page itself.
+// (prepare: what the wallet holds and its coins a day, clank.trade's terms and the pair, the picture to IPFS, the dry run;
+// check: the launch read back from the factory, the fee paid back once), the launch page's one transaction
+// (src/launch/send.js) and its words, the page itself. Since 2026-10-02: any name and ticker (copies too), 5 coins a day per
+// 10,000 $AGI, one link one coin, ETH or SPCX, Phantom.
 // Telegram, Supabase, Pinata, clank.trade and Robinhood Chain are fakes: no keys, no cost. (The database here is a JavaScript
 // copy of supabase/launch.sql; the SQL itself is run in a real Postgres, PGlite, by Claude before each change: see CLAUDE.md.)
 // Run: npm test
@@ -18,11 +20,12 @@ import {
 import { privateKeyToAccount } from 'viem/accounts';
 import * as LL from '../server/launch-lines.js';
 import {
-  parseLaunch, checkIdea, bestPhoto, tickerTaken, launchCall, saltFor, tryLaunch, readLaunch, namedIn, launchTerms, payGasBack,
+  parseLaunch, checkIdea, bestPhoto, launchCall, saltFor, tryLaunch, readLaunch, namedIn, launchTerms, payGasBack,
   gasPlan, sendPlanned, gasWallet, launchWallet, draftUrl, siteBase, LAUNCH_ABI, LAUNCH_SELECTOR, ERRORS, FACTORY, ZERO,
   DRAFT_ID, newDraftId, telegramPicture, pinPicture, launchReady, gasOn, isDraftLaunch, paybackFor, tidyLaunches, gasSoFar, gasFinal,
-  launchOpen, launchAllowed, checkLinks,
+  launchOpen, launchAllowed, checkLinks, launchesADay, pairOf, PAIRS, SPCX, DRAFTS_PER_CHAT, LAUNCHES_MAX,
 } from '../server/launch.js';
+import { PER_DAY } from '../src/launch/rules.js';
 import { cleanLinks, cleanX, cleanTelegram, cleanWebsite, LINK_FIELDS, LINK_MAX } from '../src/launch/links.js';
 import { FACTORY_ABI } from '../server/clank-chain.js';
 import { GET as launchGet, POST as launchPost } from '../api/launch.js';
@@ -37,7 +40,7 @@ import { launchBurst, launchPictureBurst, telegramBurst } from '../server/burst.
 import {
   launchTx, sendLaunch, switchToRobinhood, walletChain, ROBINHOOD, FACTORY as PAGE_FACTORY, LAUNCH_SELECTOR as PAGE_SELECTOR,
 } from '../src/launch/send.js';
-import { draftIdFrom, WORDS, CHECK, STEP, gasText, ethText, gasNote, GAS_AGAIN, linkNote } from '../src/launch/words.js';
+import { draftIdFrom, WORDS, CHECK, STEP, gasText, ethText, gasNote, GAS_AGAIN, linkNote, capText, perDayText } from '../src/launch/words.js';
 
 const SECRET = 'test-pass-secret-that-is-long-enough-1234';
 const TOKEN = `123456789:AA${'x'.repeat(33)}`;
@@ -56,6 +59,7 @@ const COIN = '0xc0fe000000000000000000000000000000000001';
 const CURVE = '0xc0fe0000000000000000000000000000000000c1';
 const CID = 'bafybeiactrc6p6sdhypbyh3cq3zblsgbhjedsm6mkaxyttzh3ovuzrz6jm';
 const ECON = `0x${'e1'.repeat(32)}`;
+const ECON_SPCX = `0x${'e2'.repeat(32)}`;                                  // (the economics clank.trade pins for an SPCX pair)
 const TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const CHAT = 424242;
 const E18 = 10n ** 18n;
@@ -80,7 +84,7 @@ function launchDb() {
     drafts, chats, wallets, days, day, wal,
     launch_draft_put({ p_id, p_chat, p_name, p_symbol, p_desc, p_photo, p_minutes, p_per_chat, p_site_daily }) {
       if (!DRAFT_ID.test(p_id) || !ok(p_chat) || !p_name || [...p_name].length > 32 || Buffer.byteLength(p_name) > 64
-        || !/^[A-Z0-9]{2,10}$/.test(p_symbol) || [...(p_desc || '')].length > 100 || !(p_photo?.length >= 10) || !(p_minutes >= 1 && p_minutes <= 1440)
+        || !p_symbol || Buffer.byteLength(p_symbol) > 16 || /[\s\u0000-\u001f\u007f-\u009f]/.test(p_symbol) || [...(p_desc || '')].length > 100 || !(p_photo?.length >= 10) || !(p_minutes >= 1 && p_minutes <= 1440)
         || !(p_per_chat >= 1) || !(p_site_daily >= 1)) return { ok: false, why: 'bad' };
       const s = day();
       let c = chats.get(p_chat);
@@ -90,7 +94,7 @@ function launchDb() {
       if (drafts.has(p_id)) return { ok: false, why: 'bad' };
       const expires = new Date(Date.now() + p_minutes * 60_000).toISOString();
       drafts.set(p_id, { id: p_id, chat_code: p_chat, name: p_name, symbol: p_symbol, description: p_desc || '', photo: p_photo, cid: null, pin_id: null,
-        upload_at: null, wallet_code: null, predicted: null, token: null, launch_tx: null, created_at: new Date().toISOString(), expires_at: expires, gas_wei: null,
+        upload_at: null, wallet_code: null, predicted: null, predicted_all: null, token: null, launch_tx: null, created_at: new Date().toISOString(), expires_at: expires, gas_wei: null,
         gas_state: null, gas_why: null, gas_tx: null, gas_at: null });
       c.drafts += 1; s.drafts += 1;
       return { ok: true, expires };
@@ -135,11 +139,24 @@ function launchDb() {
       Object.assign(d, { cid: p_cid, pin_id: p_pin ?? null, upload_at: null });
       return true;
     },
-    launch_predicted({ p_id, p_wallet, p_token }) {
-      const d = drafts.get(p_id);
-      if (!d || d.wallet_code !== p_wallet || d.token || !/^0x[0-9a-f]{40}$/.test(p_token)) return false;
-      d.predicted = p_token;
-      return true;
+    launch_predicted({ p_id, p_wallet, p_token, p_per_wallet = null }) {
+      if (!DRAFT_ID.test(p_id) || !ok(p_wallet) || !/^0x[0-9a-f]{40}$/.test(p_token) || (p_per_wallet !== null && !(p_per_wallet >= 1))) return { ok: false, why: 'bad' };
+      const w = wal(p_wallet), d = drafts.get(p_id);
+      if (!d) return { ok: false, why: 'gone' };
+      if (d.token) return { ok: false, why: 'launched' };
+      if (d.wallet_code !== p_wallet) return { ok: false, why: 'other_wallet' };
+      // the same link got ready again with other details: another coin, one more of the wallet's coins today (an address it
+      // already had counts nothing; the newest 20 are kept)
+      const seen = d.predicted_all ?? (d.predicted ? [d.predicted] : []);
+      if (!seen.includes(p_token)) {
+        if (seen.length && p_per_wallet !== null) {
+          if (w.uploads >= p_per_wallet) return { ok: false, why: 'wallet_cap' };
+          w.uploads += 1;
+        }
+        seen.push(p_token);
+      }
+      Object.assign(d, { predicted: p_token, predicted_all: seen.slice(-20) });
+      return { ok: true };
     },
     launch_done({ p_id, p_wallet, p_token, p_tx }) {
       if (!/^0x[0-9a-f]{40}$/.test(p_token) || !/^0x[0-9a-f]{64}$/.test(p_tx)) return { ok: false, why: 'bad' };
@@ -197,7 +214,7 @@ function launchDb() {
       for (const [k, d] of drafts) if (Date.parse(d.created_at ?? d.expires_at) < now - 7 * 86_400_000 && (!d.pin_id || d.token)) drafts.delete(k);
       const pins = [...drafts.values()].filter((d) => d.pin_id && !d.token && Date.parse(d.expires_at) < now - 3_600_000
         && ![...drafts.values()].some((o) => o.cid === d.cid && o.id !== d.id && (o.token || Date.parse(o.expires_at) > now - 3_600_000)))
-        .map((d) => ({ pin: d.pin_id, predicted: d.predicted }));
+        .map((d) => ({ pin: d.pin_id, predicted: d.predicted, predicted_all: d.predicted_all ?? [] }));
       return { pins: pins.slice(0, 50) };
     },
     launch_unpinned({ p_pins }) {
@@ -229,16 +246,28 @@ function chainAnswer(q) {
           result: l ? { ...none, launchToken: coin, curve: l.curve, deployer: l.deployer, creatorFeeRecipient: l.deployer, graduationThreshold: 4n * E18, exists: true } : none }) };
       }
       const { functionName, args } = decodeFunctionData({ abi: LAUNCH_ABI, data });
+      const notApproved = () => reverted(encodeErrorResult({ abi: parseAbi(['error PairTokenNotApproved()']), errorName: 'PairTokenNotApproved' }));
+      const taken = (pair) => String(pair).toLowerCase() === ZERO || c.pairs[String(pair).toLowerCase()] === true;
       if (functionName === 'canLaunch') return { result: encodeFunctionResult({ abi: LAUNCH_ABI, functionName, result: c.open }) };
       if (functionName === 'launchFee') return { result: encodeFunctionResult({ abi: LAUNCH_ABI, functionName, result: c.fee }) };
+      if (functionName === 'approvedPairTokens') {
+        c.pairAsks.push(String(args[0]).toLowerCase());
+        return { result: encodeFunctionResult({ abi: LAUNCH_ABI, functionName, result: c.pairs[String(args[0]).toLowerCase()] === true }) };
+      }
       if (functionName === 'previewLaunchEconomics') {
-        assert.deepEqual(args, [0n, ZERO], 'launch config 0, paired with ETH');
-        return { result: encodeFunctionResult({ abi: LAUNCH_ABI, functionName, result: c.economics }) };
+        assert.equal(args[0], 0n, 'launch config 0');
+        c.econAsks.push(String(args[1]).toLowerCase());
+        if (!taken(args[1])) return notApproved();
+        return { result: encodeFunctionResult({ abi: LAUNCH_ABI, functionName, result: String(args[1]).toLowerCase() === ZERO ? c.economics : c.economicsSpcx }) };
       }
       if (functionName === 'launchToken') {
-        c.dryRuns.push({ from, value, params: args[0], config: args[1], pair: args[2] });
+        c.dryRuns.push({ from, value, params: args[0], config: args[1], pair: String(args[2]).toLowerCase() });
+        if (!taken(args[2])) return notApproved();
         if (c.dryRun) return reverted(c.dryRun);
-        return { result: encodeFunctionResult({ abi: LAUNCH_ABI, functionName, result: [c.predicted.token, c.predicted.curve] }) };
+        // (where the coin would be: fixed by its creator and details, like the real factory's; the plain launch of a test's
+        // draft is at COIN, any other details somewhere else)
+        const at = c.byDetails ? `0x${keccak256(data).slice(-40)}` : c.predicted.token;
+        return { result: encodeFunctionResult({ abi: LAUNCH_ABI, functionName, result: [at, c.predicted.curve] }) };
       }
       return reverted();
     }
@@ -301,6 +330,7 @@ beforeEach(() => {
     clank: [], clankDown: false, picture: JPEG, pictureGone: false, telegramDown: false, pinata: 'ok', pinned: [], unpinned: [], pinDuplicate: false,
     chain: {
       down: false, agi: { [ALICE]: 20_000n * E18, [BOB]: 20_000n * E18 }, open: true, fee: 0n, economics: ECON, dryRun: null, dryRuns: [],
+      pairs: { [SPCX]: true }, economicsSpcx: ECON_SPCX, pairAsks: [], econAsks: [],
       predicted: { token: COIN, curve: CURVE }, receipts: {}, txs: {}, codes: {}, launched: {}, symbols: {},
       gas: { balance: E18, price: 100_000_000n, nonce: 7, estimate: 25_000n, sendPlan: [], raws: [] },
     },
@@ -500,42 +530,72 @@ test('reading "/launch Name | TICKER | line": in a caption, on separate lines, w
   assert.deepEqual(parseLaunch('/launch Sleepy Cat'), { name: 'Sleepy Cat', symbol: '', description: '' });
 });
 
-test('her checks of a coin: tidy, a real ticker, short, no links, PG-13, nothing that sounds like her or $AGI', () => {
+test('her checks of a coin: a name and a ticker can be almost anything (copies too), PG-13, no links, nothing like her or $AGI', () => {
   const ok = (name, symbol, description = '') => checkIdea({ name, symbol, description });
-  assert.deepEqual(ok('  Sleepy   Cat ', '$sleepy', ' a cat who naps all day '), { ok: true, name: 'Sleepy Cat', symbol: 'SLEEPY', description: 'a cat who naps all day' });
+  // tidied: spaces, fullwidth letters, invisible characters, a "$" in front; a ticker keeps the case it's typed in
+  assert.deepEqual(ok('  Sleepy   Cat ', '$sleepy', ' a cat who naps all day '), { ok: true, name: 'Sleepy Cat', symbol: 'sleepy', description: 'a cat who naps all day' });
   assert.deepEqual(ok('Ｓｌｅｅｐｙ​ Cat', 'ＳＬＥＥＰＹ'), { ok: true, name: 'Sleepy Cat', symbol: 'SLEEPY', description: '' }, 'fullwidth letters and invisible characters');
   assert.equal(ok('Cat 💜', 'CAT').ok, true, 'an emoji in its name is fine');
   assert.equal(ok('E/ACC', 'EACC').ok, true, 'a "/" between letters');
   const why = (name, symbol, description = '') => ok(name, symbol, description).why;
+  // since 2026-10-02 (the owner: "the ticker it can be anything … its okay if its a copycat"): any ticker clank.trade takes
+  for (const s of ['C', 'TOOLONGTICKER', 'MC-AT', 'ÇAT', 'wif', 'Pepe', '🐸', 'CA$H', 'E/ACC', 'ABCDEFGHIJKLMNOP', 'ПЕПЕ', '猫', 'DOGE2.0', '420']) {
+    assert.equal(why('Cat', s), undefined, s);
+    assert.equal(ok('Cat', s).symbol, s, `${s}: as typed`);
+  }
+  // …another coin's name and ticker too (clank.trade's search isn't asked any more)
+  for (const [n, s] of [['Pepe', 'PEPE'], ['Dogwifhat', 'WIF'], ['Space Inu', 'SI'], ['Bitcoin', 'BTC']]) assert.equal(why(n, s), undefined, n);
+  // a name or a ticker that's nothing, too long for clank.trade, or a ticker with a space
   assert.equal(why('', 'CAT'), 'name');
   assert.equal(why('x'.repeat(33), 'CAT'), 'name');
   assert.equal(why('💜'.repeat(17), 'CAT'), 'name', 'clank.trade allows 64 bytes');
-  for (const s of ['C', 'TOOLONGTICKER', 'MC-AT', 'MC AT', 'ÇAT', '']) assert.equal(why('Cat', s), 'symbol', s);
+  assert.equal(why('!!!', 'CAT'), 'name', 'punctuation alone');
+  for (const s of ['', 'MC AT', 'X'.repeat(17), '💜'.repeat(5), '猫'.repeat(6), '!!!', '$']) assert.equal(why('Cat', s), 'symbol', s);
   assert.equal(why('Cat', 'CAT', 'x'.repeat(101)), 'description');
   assert.equal(why('Cat', 'CAT', '💜'.repeat(76)), 'description', '300 bytes');
   for (const d of ['see https://x.io', 'cat.com', 'join t.me/cats', 'www.cats', 'by @catdev']) assert.equal(why('Cat', 'CAT', d), 'link', d);
+  for (const [n, s] of [['Cat.com', 'CAT'], ['Cat', 'DOGE.AI'], ['Cat', '@CAT']]) assert.equal(why(n, s), 'link', `${n} ${s}`);
   for (const d of ['#1 cat', '<b>cat</b>', '`cat`', 'a /stop cat', 'cat/', '{cat}', 'a\\b']) assert.equal(why('Cat', 'CAT', d), 'characters', d);
+  assert.equal(why('Cat', '#CAT'), 'characters');
   assert.equal(why('Horny Cat', 'CAT'), 'crude');
   assert.equal(why('Cat', 'CAT', 'a sexy cat'), 'crude');
-  for (const [n, s, d] of [['AGI Cat', 'CAT'], ['Cat', 'CAT', 'by agi-1'], ['Cat', 'CAT', 'the artificial girlfriend'], ['Official Cat', 'CAT'],
-    ['Cat', 'AGI'], ['Cat', 'AGI2'], ['Cat', 'XAGI'], ['A.G.I', 'CAT'], ['Cat', 'CAT', 'agi1.app']]) {
+  assert.equal(why('Cat', 'HORNY'), 'crude', 'a ticker is PG-13 too');
+  // "official": a copy is fine, a coin made with her is nobody's official one
+  for (const [n, s, d] of [['Official Cat', 'CAT'], ['Pepe', 'PEPE', 'the official pepe'], ['Cat', 'OFFICIAL']]) assert.equal(why(n, s, d), 'official', `${n} ${s} ${d}`);
+  for (const [n, s, d] of [['AGI Cat', 'CAT'], ['Cat', 'CAT', 'by agi-1'], ['Cat', 'CAT', 'the artificial girlfriend'],
+    ['Cat', 'AGI'], ['Cat', 'AGI2'], ['Cat', 'XAGI'], ['Cat', 'agi'], ['Cat', 'Agi'], ['Cat', 'A.G.I'], ['A.G.I', 'CAT'], ['Cat', 'CAT', 'agi1.app']]) {
     assert.ok(['agi', 'link'].includes(why(n, s, d)), `${n} ${s} ${d}`);
   }
   assert.equal(why('Magic Cat', 'MAGIC'), undefined, '"magic" isn\'t "agi"');
   // anything shaped like a link or an address, whatever its ending (her reply would make it one)
-  for (const d of ['airdrop.info', 'bit.ly/freecat', 'cats.ru', 'free.site/x', 'Mr.Cat', 'ipfs://abc', '0xfa31d0446274']) assert.equal(why('Cat', 'CAT', d), d.startsWith('airdrop') ? 'link' : 'link', d);
+  for (const d of ['airdrop.info', 'bit.ly/freecat', 'cats.ru', 'free.site/x', 'Mr.Cat', 'ipfs://abc', '0xfa31d0446274']) assert.equal(why('Cat', 'CAT', d), 'link', d);
   for (const ok2 of [['St. Bernard', 'STB'], ['Doge 2.0', 'DOGE2'], ['Pumpkin Cat', 'PKIN'], ['Dumpling', 'DUMP'], ['Rugby Cat', 'RUGB'], ['Scampi', 'SCMP'], ['Agile Dog', 'AGL'], ['Moon Cat', 'MCAT']]) {
     assert.equal(why(...ok2), undefined, ok2[0]);
   }
-  // money talk and lures she won't repeat: buying or selling, promises, airdrops, another coin's $TICKER
+  // money talk and lures she won't repeat, in its line: buying or selling, promises, airdrops, another coin's $TICKER
   for (const d of ['buy $PEPE too', 'pump it', '100x soon', 'guaranteed', 'free money', 'presale now', 'to the moon']) assert.equal(why('Cat', 'CAT', d), 'money', d);
-  // her look-alikes: numbers and other alphabets don't hide "AGI"
-  for (const [n, sym] of [['AGI2', 'ACAT'], ['\u0410GI Cat', 'ACAT'], ['1AGI', 'ONE'], ['AGIX Girlfriend', 'AGX'], ['\u1d00\u0262\u026a Cat', 'ACAT'], ['\ua4ee\ua4d6\ua4f2 Cat', 'ACAT'], ['\ud835\udc00\ud835\udc06\ud835\udc08 Cat', 'ACAT'], ['AG1 Cat', 'ACAT']]) {
-    assert.equal(why(n, sym), 'agi', n);
+  // …but a name and a ticker are the creator's own words ("the name doesnt matter")
+  for (const [n, s] of [['Pump It', 'PUMP'], ['Baby $PEPE', 'BPEPE'], ['100x Cat', '100X'], ['Moon Pump', 'BUY']]) assert.equal(why(n, s), undefined, n);
+  // her look-alikes: numbers and other alphabets don't hide "AGI", in a name or a ticker
+  for (const [n, sym] of [['AGI2', 'ACAT'], ['АGI Cat', 'ACAT'], ['1AGI', 'ONE'], ['AGIX Girlfriend', 'AGX'], ['ᴀɢɪ Cat', 'ACAT'], ['ꓮꓖꓲ Cat', 'ACAT'], ['𝐀𝐆𝐈 Cat', 'ACAT'], ['AG1 Cat', 'ACAT'],
+    ['Cat', 'АGI'], ['Cat', 'аgi'], ['Cat', 'AGІ']]) {
+    assert.equal(why(n, sym), 'agi', `${n} ${sym}`);
   }
-  assert.equal(why('Cat', '\u0410GI'), 'symbol', 'a ticker is plain A–Z and 0–9: another alphabet\'s "А" never gets in');
+  // since tickers keep their case and any alphabet (2026-10-02): what LOOKS like AGI stays out (a small l or a 1 for the I,
+  // accents, boxed letters, flags' letters, invisible fillers)
+  for (const sym of ['AGl', 'agl', 'ÀGI', 'AGÍ', 'ÅGI', 'AĞI', 'AGİ', '🅰🅶🅸', '🇦🇬🇮', 'AGꟾ', 'AGl1', 'A\u3164GI', 'A\uFFA0GI', 'AG1', 'Agi']) assert.equal(why('Cat', sym), 'agi', sym);
+  for (const n of ['ÀGI Cat', 'AGl Cat', 'Agl dog', '🅰🅶🅸 Cat', 'A\u3164GI Cat']) assert.equal(why(n, 'CAT'), 'agi', n);
+  for (const [n, sym] of [['Agile Dog', 'AGL'], ['Magic Cat', 'maglev'], ['Bagel', 'MAGLEV']]) assert.equal(why(n, sym), undefined, `${n} ${sym}`);
+  for (const [n, sym] of [['Cat', 'OFFICIALDOGE'], ['Cat', 'OfficialTrump'], ['Officially Cute', 'CUTE'], ['Cat', 'ÓFFICIAL']]) assert.equal(why(n, sym), 'official', `${n} ${sym}`);
+  // emoji made of several (joined, skin tones, flags) stay whole; an invisible filler alone is nothing
+  for (const sym of ['👩‍💻', '🏳️‍🌈', '👩🏽‍💻', '🇺🇸']) assert.equal(ok('Cat', sym).symbol, sym, sym);
+  assert.equal(ok('Coder 👩‍💻', 'CODE').name, 'Coder 👩‍💻');
+  assert.equal(ok('Cat', 'C\u200dAT').symbol, 'CAT', 'a joiner between letters goes');
+  assert.equal(why('Cat', '\u3164'), 'symbol', 'a Hangul filler alone');
+  assert.equal(why('\u3164\u3164', 'CAT'), 'name');
+  assert.equal(why('Wäifu Cat', 'WC'), 'egirl', 'accents don\'t hide an egirl coin');
   // egirl coins: her feed would tell everyone she's not ok about it
-  for (const [n, sym] of [['Waifu Cat', 'WAIFU'], ['Cat', 'GF'], ['Ai Wife', 'AIW'], ['Egirl', 'EGIRL']]) assert.equal(why(n, sym), 'egirl', n);
+  for (const [n, sym] of [['Waifu Cat', 'WAIFU'], ['Cat', 'GF'], ['Ai Wife', 'AIW'], ['Egirl', 'EGIRL'], ['Cat', 'waifu']]) assert.equal(why(n, sym), 'egirl', n);
   assert.equal(checkIdea(null).why, 'name');
   // her example passes her own checks
   assert.equal(checkIdea(parseLaunch(LL.EXAMPLE)).ok, true);
@@ -551,30 +611,11 @@ test('the picture: the biggest Telegram size up to 1280 px and 1 MB, never a tin
   assert.equal(bestPhoto([p(2560, 1440)]), null);
 });
 
-test('a ticker nobody on clank.trade has: its own search, a few pages, "E/ACC" = "EACC", and an honest "can\'t say"', async () => {
-  fake.clank = [{ symbol: 'SLEEPYHEAD', name: 'Sleepy Head' }, { symbol: 'SLEEP', name: 'Sleep' }];
-  assert.equal(await tickerTaken('SLEEPY'), false);
-  fake.clank.push(...Array.from({ length: 14 }, (_, i) => ({ symbol: `SLEEPY${i}`, name: 'x' })), { symbol: 'SLEEPY', name: 'The Other Sleepy' });
-  assert.equal(await tickerTaken('SLEEPY'), true, 'found on the second page');
-  assert.equal(calls.filter((c) => c.to === 'clank').length, 3);
-  fake.clank = [{ symbol: 'E/ACC', name: 'Egirl Acceleration' }];
-  assert.equal(await tickerTaken('EACC'), true, 'the same ticker without its symbols');
-  fake.clankDown = true;
-  await assert.rejects(tickerTaken('CAT'), /clank\.trade|HTTP|answer/);
-  // more matches than we read (a common ticker): not "free"
-  fake.clankDown = false;
-  fake.clank = Array.from({ length: 80 }, (_, i) => ({ symbol: `CAT${i}`, name: 'cat' }));
-  await assert.rejects(tickerTaken('CAT'), (err) => err.common === true && /more coins match/.test(err.message), 'a ticker too common to check');
-  // clank.trade's search gone ("not found" for the whole call): not "free" either
-  fake.clank404 = true;
-  await assert.rejects(tickerTaken('CAT'), /no coin list/);
-});
-
 // ---------- her lines ----------
 const NOT_OK = /\b(babe|baby|cutie|honey|darling|sweetie|love)\b|\b(buy|buying|sell|selling|hold|hodl|invest\w*|moon\w*|pump\w*|dump\w*|profit\w*|gains?|lambo|scam\w*|rug\w*|fraud\w*|safe|guarantee\w*)\b|\b\d+x\b|sex|nude|naked|horny/i;
 test('her launch lines: PG-13, no pet names (anyone 18+ can start the bot), never money advice, "not financial advice", only her site\'s links', () => {
   const url = 'https://agi1.app/launch/AAAAAAAAAAAAAAAAAAAAAA';
-  const lines = [LL.howLine(), LL.howLine({ gasBack: true }), LL.HOW, LL.NOT_OPEN, LL.NEED_PHOTO, LL.AS_PHOTO, LL.CANT_CHECK, LL.CHAT_CAP, LL.SITE_CAP,
+  const lines = [LL.howLine(), LL.howLine({ gasBack: true }), LL.HOW, LL.NOT_OPEN, LL.NEED_PHOTO, LL.AS_PHOTO, LL.CHAT_CAP, LL.SITE_CAP,
     ...Object.values(LL.REFUSE).map((r) => (typeof r === 'function' ? r('SLEEPY') : r)),
     LL.readyLine({ name: 'Sleepy Cat', symbol: 'SLEEPY', description: 'a cat who naps all day', url }), LL.readyLine({ name: 'Sleepy Cat', symbol: 'SLEEPY', url, gasBack: true })];
   for (const line of lines) {
@@ -593,10 +634,20 @@ test('her launch lines: PG-13, no pet names (anyone 18+ can start the bot), neve
   assert.match(LL.readyLine({ name: 'Sleepy Cat', symbol: 'SLEEPY', url }), new RegExp(`${url}`));
   assert.match(LL.readyLine({ name: 'Sleepy Cat', symbol: 'SLEEPY', url }), /keep it to yourself/);
   assert.match(LL.readyLine({ name: 'Sleepy Cat', symbol: 'SLEEPY', url }), /10,000\+ \$AGI/, 'the real Crush number');
-  // her buttons: the link itself, and the same page inside a wallet app
+  // the coins a wallet may launch a day (2026-10-02): the same rule, in her words and the page's; copies are fine; ETH or SPCX
+  assert.equal(PER_DAY, '5 coins a day for every 10,000 $AGI, up to 50 a day with 100,000+');
+  for (const line of [LL.howLine(), LL.readyLine({ name: 'Sleepy Cat', symbol: 'SLEEPY', url })]) assert.ok(line.includes(PER_DAY), line);
+  assert.match(LL.howLine(), /copies of other coins too/);
+  assert.match(LL.howLine(), /paired with ETH or SPCX/);
+  assert.doesNotMatch(Object.values(LL.REFUSE).join(' '), /already a \$|pick another ticker|so many coins/, 'no "taken" any more');
+  assert.match(LL.readyLine({ name: 'Sleepy Cat', symbol: 'SLEEPY', url }), /MetaMask, Coinbase Wallet, Phantom/);
+  // her buttons: the link itself, and the same page inside a wallet app (Phantom since 2026-10-02)
   const rows = LL.readyButtons(url);
   assert.deepEqual(rows.flat().map((b) => b.url), [url, 'https://metamask.app.link/dapp/agi1.app/launch/AAAAAAAAAAAAAAAAAAAAAA',
+    `https://phantom.app/ul/browse/${encodeURIComponent(url)}?ref=${encodeURIComponent('https://agi1.app')}`,
     `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(url)}`]);
+  assert.deepEqual(rows.flat().map((b) => b.text), ['Open on agi1.app ↗', 'Open in MetaMask ↗', 'Open in Phantom ↗', 'Open in Coinbase Wallet ↗']);
+  assert.ok(rows.every((row) => row.length <= 2), 'at most two buttons a row (they stay readable on a phone)');
   // in her bot's menu, and in /help (her 16 languages) while launching is open
   assert.ok(COMMANDS.some((c) => c.command === 'launch'));
   for (const code of ['en', 'es', 'ja', 'ar']) {
@@ -633,6 +684,18 @@ test('the launch call is clank.trade\'s own, as its docs write it: no tax, no bu
   assert.notEqual(saltFor(id), saltFor('Abc_def-0123456789ABCE'), 'each draft its own salt');
   // clank.trade's limits (bytes): name 64, symbol 16, logo 256, description 1,024
   assert.ok(Buffer.byteLength(params.logo) <= 256);
+  // paired with SPCX when they pick it (2026-10-02), never anything else
+  assert.equal(SPCX, '0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea', 'the quote token clank.trade\'s own SPCX coins name');
+  assert.deepEqual(PAIRS, { eth: ZERO, spcx: SPCX });
+  const spcx = decodeFunctionData({ abi: LAUNCH_ABI, data: launchCall({ id, name: 'Sleepy Cat', symbol: 'SLEEPY', cid: CID, wallet: ALICE, economics: ECON_SPCX, pair: SPCX }).data });
+  assert.equal(spcx.args[2].toLowerCase(), SPCX);
+  assert.equal(spcx.args[0].expectedEconomics, ECON_SPCX, 'the economics pinned for that pair');
+  assert.throws(() => launchCall({ id, name: 'Sleepy Cat', symbol: 'SLEEPY', cid: CID, wallet: ALICE, economics: ECON, pair: BOB }), /not a pair/);
+  assert.deepEqual([pairOf(undefined), pairOf('eth'), pairOf('spcx')], [ZERO, ZERO, SPCX]);
+  for (const bad of ['', 'ETH', 'doge', 'constructor', '__proto__', SPCX, 1, {}]) assert.equal(pairOf(bad), null, String(bad));
+  // a ticker of any case, other alphabets, emoji: as typed, inside clank.trade's 16 bytes
+  const odd = decodeFunctionData({ abi: LAUNCH_ABI, data: launchCall({ id, name: 'Пепе 🐸', symbol: 'пепе🐸', cid: CID, wallet: ALICE, economics: ECON }).data });
+  assert.deepEqual([odd.args[0].name, odd.args[0].symbol], ['Пепе 🐸', 'пепе🐸']);
   // the documented errors, by their first 4 bytes (LaunchEconomicsMismatch takes two values)
   const sel = (sig) => keccak256(toBytes(sig)).slice(0, 10);
   assert.equal(ERRORS[sel('LaunchAlreadyExists()')], 'exists');
@@ -640,13 +703,22 @@ test('the launch call is clank.trade\'s own, as its docs write it: no tax, no bu
   assert.equal(ERRORS[sel('InvalidMetadata()')], 'metadata');
   assert.equal(ERRORS[sel('NotWhitelisted()')], 'closed');
   assert.equal(ERRORS[sel('LaunchFeeNotPaid()')], 'fee');
+  assert.equal(ERRORS[sel('PairTokenNotApproved()')], 'pair');
 });
 
 test('clank.trade\'s terms (canLaunch, its fee, the economics to pin) and the dry run from their wallet, with each documented "no"', async () => {
-  assert.deepEqual(await launchTerms(ALICE), { open: true, fee: 0n, economics: ECON });
+  assert.deepEqual(await launchTerms(ALICE), { open: true, fee: 0n, approved: true, economics: ECON });
+  assert.deepEqual(fake.chain.pairAsks, [], 'ETH is always a pair: its list isn\'t asked');
+  // SPCX: on the factory's approved list, with its own economics to pin
+  assert.deepEqual(await launchTerms(ALICE, undefined, SPCX), { open: true, fee: 0n, approved: true, economics: ECON_SPCX });
+  assert.deepEqual([fake.chain.pairAsks, fake.chain.econAsks.at(-1)], [[SPCX], SPCX]);
+  // off its list: its economics can't be read (the factory's "no"), and that's an answer, not an error
+  fake.chain.pairs[SPCX] = false;
+  assert.deepEqual(await launchTerms(ALICE, undefined, SPCX), { open: true, fee: 0n, approved: false, economics: null });
+  fake.chain.pairs[SPCX] = true;
   fake.chain.open = false;
   fake.chain.fee = 5n;
-  assert.deepEqual(await launchTerms(ALICE), { open: false, fee: 5n, economics: ECON });
+  assert.deepEqual(await launchTerms(ALICE), { open: false, fee: 5n, approved: true, economics: ECON });
   const call = launchCall({ id: 'A'.repeat(22), name: 'Sleepy Cat', symbol: 'SLEEPY', cid: CID, wallet: ALICE, economics: ECON });
   assert.deepEqual(await tryLaunch(call, ALICE), { ok: true, token: COIN, curve: CURVE });
   assert.equal(fake.chain.dryRuns.at(-1).from, ALICE, 'tried from their wallet, as their wallet will send it');
@@ -654,7 +726,7 @@ test('clank.trade\'s terms (canLaunch, its fee, the economics to pin) and the dr
   const err = (name, args) => encodeErrorResult({ abi: parseAbi([`error ${name}`]), errorName: name.split('(')[0], args });
   for (const [e, args, why] of [['LaunchAlreadyExists()', [], 'exists'], ['LaunchEconomicsMismatch(bytes32 expected, bytes32 actual)', [ECON, `0x${'00'.repeat(32)}`], 'economics'],
     ['InvalidMetadata()', [], 'metadata'], ['NotWhitelisted()', [], 'closed'], ['LaunchConfigDisabled()', [], 'config'],
-    ['NativeValueMismatch(uint256 sent, uint256 expected)', [0n, 5n], 'fee'], ['UnsupportedBuyback()', [], 'reverted']]) {
+    ['NativeValueMismatch(uint256 sent, uint256 expected)', [0n, 5n], 'fee'], ['PairTokenNotApproved()', [], 'pair'], ['UnsupportedBuyback()', [], 'reverted']]) {
     fake.chain.dryRun = err(e, args);
     assert.deepEqual(await tryLaunch(call, ALICE), { ok: false, why }, e);
   }
@@ -717,6 +789,9 @@ test('reading a launch back: this draft\'s own call, by this wallet, to the fact
   const call = launchCall({ ...SLEEPY, wallet: ALICE, economics: ECON });
   assert.equal(isDraftLaunch(call.data, SLEEPY, ALICE), true);
   assert.equal(isDraftLaunch(call.data, SLEEPY, BOB), false);
+  assert.equal(isDraftLaunch(launchCall({ ...SLEEPY, wallet: ALICE, economics: ECON_SPCX, pair: SPCX }).data, SLEEPY, ALICE), true, 'paired with SPCX');
+  const otherPair = encodeFunctionData({ abi: LAUNCH_ABI, functionName: 'launchToken', args: [decodeFunctionData({ abi: LAUNCH_ABI, data: call.data }).args[0], 0n, BOB] });
+  assert.equal(isDraftLaunch(otherPair, SLEEPY, ALICE), false, 'a pair the page never offers');
   assert.equal(isDraftLaunch('0x', SLEEPY, ALICE), false);
 });
 
@@ -1077,17 +1152,20 @@ test('GET a draft: only ?d=<id> or ?pic=<id>, private (no-store), its picture th
   assert.equal((await (await get(`d=${id}`)).json()).gasBack, null);
 });
 
-test('prepare: the Crush level read fresh, a free ticker, clank.trade open and free, the picture on IPFS once, then the dry run', async () => {
+test('prepare: what the wallet holds read fresh, clank.trade open and free, the picture on IPFS once, then the dry run', async () => {
   const id = draft();
   let res = await prepare(id);
   assert.equal(res.status, 200);
   const r = await res.json();
-  assert.deepEqual(Object.keys(r).sort(), ['chainId', 'curve', 'data', 'level', 'to', 'token', 'value']);
+  assert.deepEqual(Object.keys(r).sort(), ['chainId', 'curve', 'data', 'level', 'perDay', 'to', 'token', 'value']);
   assert.equal(r.chainId, CHAIN_ID);
   assert.equal(r.to, FACTORY);
   assert.equal(r.value, '0x0');
   assert.equal(r.token, COIN);
   assert.equal(r.level, 2);
+  assert.equal(r.perDay, 10, '20,000 $AGI: 10 coins a day');
+  assert.equal(fake.chain.dryRuns[0].pair, ZERO, 'paired with ETH unless they pick SPCX');
+  assert.ok(!calls.some((c) => c.to === 'clank'), 'clank.trade\'s search isn\'t asked (copies are fine)');
   // exactly what the page's send.js accepts, and what clank.trade's docs ask for
   assert.doesNotThrow(() => launchTx(ALICE, r));
   const { args } = decodeFunctionData({ abi: LAUNCH_ABI, data: r.data });
@@ -1145,7 +1223,7 @@ test('prepare with the coin\'s links: checked and tidied before anything is read
   assert.equal(r.token, COIN);
 });
 
-test('prepare says no, in plain words: a Stranger, a taken ticker, clank.trade closed or charging, the chain or clank.trade away, a used link', async () => {
+test('prepare says no, in plain words: a Stranger, clank.trade closed or charging, the chain away, its coins for today, a used link', async () => {
   const id = draft();
   const err = async (res) => [res.status, (await res.json()).error];
   fake.chain.agi[ALICE] = 9_000n * E18;
@@ -1155,14 +1233,9 @@ test('prepare says no, in plain words: a Stranger, a taken ticker, clank.trade c
   fake.burns = null;
   fake.chain.agi[ALICE] = 20_000n * E18;
   const id2 = draft({ symbol: 'NAPS' });
+  // a ticker another coin on clank.trade has: fine since 2026-10-02 (nothing asks clank.trade, so its being away changes nothing)
   fake.clank = [{ symbol: 'NAPS', name: 'Naps' }];
-  assert.deepEqual(await err(await prepare(id2)), [409, 'taken']);
-  fake.clank = Array.from({ length: 80 }, (_, i) => ({ symbol: `NAPS${i}`, name: 'naps' }));
-  assert.deepEqual(await err(await prepare(id2)), [409, 'common'], 'too many look-alikes to check');
-  fake.clank = [];
   fake.clankDown = true;
-  assert.deepEqual(await err(await prepare(id2)), [503, 'clank']);
-  fake.clankDown = false;
   fake.chain.open = false;
   assert.deepEqual(await err(await prepare(id2)), [409, 'closed']);
   fake.chain.open = true;
@@ -1189,16 +1262,19 @@ test('prepare says no, in plain words: a Stranger, a taken ticker, clank.trade c
   assert.deepEqual(await err(await prepare(id3)), [502, 'pinata']);
   assert.ok(logs.some(([, l]) => /PINATA_JWT is wrong/.test(l)), 'the owner\'s log says what to fix');
   assert.ok(!logs.some(([, l]) => l.includes(JWT)), 'never the key itself');
-  // three pictures a day per wallet: only uploads that worked count (id and id2 so far)
+  // its coins for today (10,000 $AGI: 5): only uploads that worked count (id and id2 so far)
   fake.pinata = 'ok';
   assert.equal(fake.db.wal(launchWallet(SECRET, ALICE)).uploads, 2, 'the failed tries cost nothing');
+  fake.chain.agi[ALICE] = 10_000n * E18;
   assert.equal((await prepare(id3)).status, 200);
-  assert.deepEqual(await err(await prepare(draft({ symbol: 'NAPS4' }))), [429, 'wallet_cap']);
+  for (const sym of ['NAPS4', 'NAPS5']) assert.equal((await prepare(draft({ symbol: sym }))).status, 200);
+  const capped = await prepare(draft({ symbol: 'NAPS6' }));
+  assert.deepEqual([capped.status, await capped.json()], [429, { error: 'wallet_cap', perDay: 5 }]);
   // a used, an expired or a launched link
-  const gone = draft({ symbol: 'NAPS5' });
+  const gone = draft({ symbol: 'NAPS7' });
   fake.db.drafts.get(gone).expires_at = new Date(Date.now() - 1).toISOString();
   assert.deepEqual(await err(await prepare(gone)), [410, 'expired']);
-  const live = draft({ symbol: 'NAPS6' });
+  const live = draft({ symbol: 'NAPS8' });
   fake.db.drafts.get(live).token = COIN;
   const res = await prepare(live);
   assert.deepEqual([res.status, await res.json()], [409, { error: 'launched', token: COIN }]);
@@ -1353,10 +1429,11 @@ test('its payback, asked for again later: from the launch our server kept, to it
 });
 
 test('uploads: counted before they start (many tries at once can\'t get past the caps), given back when they fail, one at a time per draft', async () => {
-  const ids = [draft(), draft(), draft(), draft()];
+  fake.chain.agi[ALICE] = 10_000n * E18;                            // 5 coins a day
+  const ids = Array.from({ length: 6 }, () => draft());
   const answers = await Promise.all(ids.map((id) => prepare(id)));
-  assert.deepEqual(answers.map((a) => a.status).sort(), [200, 200, 200, 429], 'four at once: three pictures a day per wallet');
-  assert.equal(fake.pinned.length, 3);
+  assert.deepEqual(answers.map((a) => a.status).sort(), [200, 200, 200, 200, 200, 429], 'six at once: its 5 coins a day');
+  assert.equal(fake.pinned.length, 5);
   // a failed upload gives its place back
   const db2 = launchWallet(SECRET, BOB);
   fake.pinata = 'down';
@@ -1394,6 +1471,113 @@ test('uploads: counted before they start (many tries at once can\'t get past the
   assert.deepEqual([fake.db.drafts.get(lost).cid, fake.db.drafts.get(lost).pin_id, fake.db.wal(dc).uploads], [CID, null, 1]);
 });
 
+test('the coins a wallet may launch a day follow what it holds: 5 for every 10,000 $AGI (held or burned), 50 at most', async () => {
+  // the owner's rule (2026-10-02): "if they hold 10,000 $agi they can launch 5 tokens per wallet and if more more token to launch"
+  for (const [agi, n] of [[0, 0], [9_999, 0], [10_000, 5], [19_999, 5], [20_000, 10], [55_000, 25], [99_999, 45], [100_000, 50], [1_000_000, 50], [NaN, 0], [-5, 0]]) {
+    assert.equal(launchesADay(agi), n, String(agi));
+  }
+  assert.equal(LAUNCHES_MAX, 50);
+  assert.ok(DRAFTS_PER_CHAT > LAUNCHES_MAX, 'her bot never stops someone before their wallet would');
+  const perDay = async (agi, burned = null) => {
+    const who = `0x${String(agi).padStart(8, '0')}${'d'.repeat(32)}`;
+    fake.chain.agi[who] = BigInt(agi) * E18;
+    fake.burns = burned === null ? null : { agi: burned };
+    const res = await prepare(draft(), session(who));
+    const body = await res.json();
+    fake.burns = null;
+    return [res.status, body.perDay ?? body.error];
+  };
+  assert.deepEqual(await perDay(9_999), [403, 'level']);
+  assert.deepEqual(await perDay(10_000), [200, 5]);
+  assert.deepEqual(await perDay(35_000), [200, 15]);
+  assert.deepEqual(await perDay(250_000), [200, 50]);
+  assert.deepEqual(await perDay(5_000, 15_000), [200, 10], 'what it burned for messages counts too');
+  // a wallet with 10,000: its 5 coins, then "that's all for today" (with its number, for the page's words)
+  fake.chain.agi[ALICE] = 10_000n * E18;
+  for (let i = 0; i < 5; i++) assert.equal((await prepare(draft())).status, 200);
+  const capped = await prepare(draft());
+  assert.deepEqual([capped.status, await capped.json()], [429, { error: 'wallet_cap', perDay: 5 }]);
+  // tomorrow (a new UTC day): its 5 again
+  fake.db.wallets.clear();
+  assert.equal((await prepare(draft())).status, 200);
+  // holding more now: more coins today, at once (read fresh at every launch)
+  fake.chain.agi[ALICE] = 30_000n * E18;
+  assert.equal((await (await prepare(draft())).json()).perDay, 15);
+});
+
+test('one link, one coin: getting it ready again with other links or the other pair is another coin, and counts as one', async () => {
+  fake.chain.byDetails = true;                                    // (the dry run's coin address follows its details, like the factory's)
+  fake.chain.agi[ALICE] = 10_000n * E18;                          // 5 coins a day
+  const code = launchWallet(SECRET, ALICE);
+  const id = draft();
+  const go = (body = {}) => post({ action: 'prepare', draft: id, session: session(), ...body });
+  const first = await (await go()).json();
+  assert.equal(fake.db.wal(code).uploads, 1);
+  // the same again (a reload, a wallet that said no): the same coin, nothing counted
+  assert.equal((await (await go()).json()).token, first.token);
+  assert.equal(fake.db.wal(code).uploads, 1);
+  // other links: another coin (its launch could be sent as well as the first one's), one more of today's
+  const linked = await (await go({ links: { twitter: '@SleepyCat' } })).json();
+  assert.notEqual(linked.token, first.token);
+  assert.equal(fake.db.wal(code).uploads, 2);
+  // the other pair: another coin too
+  const paired = await (await go({ links: { twitter: '@SleepyCat' }, pair: 'spcx' })).json();
+  assert.notEqual(paired.token, linked.token);
+  assert.equal(fake.db.wal(code).uploads, 3);
+  assert.equal(fake.db.drafts.get(id).predicted, paired.token, 'where its newest launch would put its coin');
+  // back and forth between details it already had (ETH, SPCX, no links, its X): nothing more counted
+  for (const body of [{}, { links: { twitter: '@SleepyCat' } }, { links: { twitter: '@SleepyCat' }, pair: 'spcx' }, {}]) assert.equal((await go(body)).status, 200);
+  assert.equal(fake.db.wal(code).uploads, 3, 'going back costs nothing');
+  assert.deepEqual(fake.db.drafts.get(id).predicted_all, [first.token, linked.token, paired.token], 'every address it could launch at, kept');
+  // its coins for today used up: another change is "that's all for today", said as a change
+  for (let i = 0; i < 2; i++) assert.equal((await prepare(draft())).status, 200);
+  assert.equal(fake.db.wal(code).uploads, 5);
+  const changed = await go({ links: { website: 'sleepycat.com' } });
+  assert.deepEqual([changed.status, await changed.json()], [429, { error: 'wallet_cap', perDay: 5, changed: true }]);
+  // details it was already got ready with (any of them): the same coins, fine
+  const back = await go({ links: { twitter: '@SleepyCat' } });
+  assert.equal(back.status, 200);
+  assert.equal((await back.json()).token, linked.token);
+  assert.equal(fake.db.wal(code).uploads, 5);
+});
+
+test('prepare with SPCX (2026-10-02): its pair asked of clank.trade\'s factory, the launch paired with it, read back; never another pair', async () => {
+  const id = draft();
+  const res = await post({ action: 'prepare', draft: id, session: session(), pair: 'spcx' });
+  assert.equal(res.status, 200);
+  const r = await res.json();
+  const { args } = decodeFunctionData({ abi: LAUNCH_ABI, data: r.data });
+  assert.equal(args[2].toLowerCase(), SPCX, 'paired with SPCX');
+  assert.equal(args[0].expectedEconomics, ECON_SPCX, 'with the economics clank.trade gives for that pair');
+  assert.equal(r.value, '0x0', 'no ETH, and no SPCX either: a launch without a buy needs no token approval');
+  assert.doesNotThrow(() => launchTx(ALICE, r), 'exactly what the page\'s send.js accepts');
+  assert.deepEqual(fake.chain.pairAsks, [SPCX], 'its approved list asked first');
+  assert.equal(fake.chain.dryRuns.at(-1).pair, SPCX);
+  // read back: this draft's launch, paired with SPCX
+  const tx = launched({ tx: txOf(80), draft: asDraft(id), input: launchCall({ ...asDraft(id), wallet: ALICE, economics: ECON_SPCX, pair: SPCX }).data });
+  const back = await (await check(id, tx)).json();
+  assert.equal(back.ok, true);
+  assert.equal(back.token, COIN);
+  // SPCX off the factory's list: said before anything is counted or uploaded, and the wallet is never asked
+  const id2 = draft();
+  fake.chain.pairs[SPCX] = false;
+  const before = { pinned: fake.pinned.length, uploads: fake.db.wal(launchWallet(SECRET, ALICE)).uploads, dry: fake.chain.dryRuns.length };
+  const no = await post({ action: 'prepare', draft: id2, session: session(), pair: 'spcx' });
+  assert.deepEqual([no.status, (await no.json()).error], [409, 'pair']);
+  assert.deepEqual({ pinned: fake.pinned.length, uploads: fake.db.wal(launchWallet(SECRET, ALICE)).uploads, dry: fake.chain.dryRuns.length }, before);
+  assert.ok(WORDS.pair);
+  // …ETH still works
+  assert.equal((await post({ action: 'prepare', draft: id2, session: session(), pair: 'eth' })).status, 200);
+  // a pair the page never offers: a bad request, before anything is read
+  fake.chain.pairs[SPCX] = true;
+  const reads = chainCalls().length;
+  for (const pair of ['doge', 'ETH', SPCX, 7, '']) {
+    const bad = await post({ action: 'prepare', draft: draft(), session: session(), pair });
+    assert.deepEqual([bad.status, (await bad.json()).error], [400, 'bad_request'], String(pair));
+  }
+  assert.equal(chainCalls().length, reads, 'nothing read');
+});
+
 test('tidying up (the keep-alive job): pictures of coins never launched are deleted at Pinata, never a launched coin\'s', async () => {
   const gone = draft(), live = draft(), open = draft();
   for (const id of [gone, live, open]) Object.assign(fake.db.drafts.get(id), { cid: CID, pin_id: `pin-${id.slice(0, 5)}`, wallet_code: launchWallet(SECRET, ALICE) });
@@ -1423,6 +1607,15 @@ test('tidying up (the keep-alive job): pictures of coins never launched are dele
   assert.equal(await tidyLaunches(cfg()), 0);
   assert.ok(!fake.unpinned.includes('pin-unread'), 'never deleted');
   assert.equal(fake.db.drafts.get(unread).pin_id, null, '…for good');
+  // got ready twice (other links): the FIRST launch went out and nobody read it back; its later details never did. Kept.
+  const twice = draft();
+  Object.assign(fake.db.drafts.get(twice), { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdM', pin_id: 'pin-twice', wallet_code: launchWallet(SECRET, ALICE),
+    predicted: '0xc0fe00000000000000000000000000000000000c', predicted_all: ['0xc0fe00000000000000000000000000000000000b', '0xc0fe00000000000000000000000000000000000c'],
+    expires_at: new Date(Date.now() - 2 * 3_600_000).toISOString() });
+  fake.chain.launched['0xc0fe00000000000000000000000000000000000b'] = { deployer: ALICE, curve: CURVE };
+  assert.equal(await tidyLaunches(cfg()), 0);
+  assert.ok(!fake.unpinned.includes('pin-twice'), 'its first launch is live: never deleted');
+  assert.equal(fake.db.drafts.get(twice).pin_id, null, '…for good');
   // its draft's launch never happened: deleted
   const never = draft();
   Object.assign(fake.db.drafts.get(never), { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdK', pin_id: 'pin-never', wallet_code: launchWallet(SECRET, ALICE),
@@ -1466,22 +1659,23 @@ test('her bot: /launch explains, a photo with its caption becomes a private link
   const sent = tg('sendMessage').at(-1).body;
   const url = /https:\/\/agi1\.app\/launch\/([A-Za-z0-9_-]{22})/.exec(sent.text);
   assert.ok(url, 'her private link');
-  assert.equal(sent.text, LL.readyLine({ name: 'Sleepy Cat', symbol: 'SLEEPY', description: 'a cat who naps all day', url: url[0], gasBack: true }));
+  assert.equal(sent.text, LL.readyLine({ name: 'Sleepy Cat', symbol: 'sleepy', description: 'a cat who naps all day', url: url[0], gasBack: true }), 'its ticker as typed');
   assert.deepEqual(sent.reply_markup.inline_keyboard, LL.readyButtons(url[0]));
   assert.deepEqual(sent.link_preview_options, { is_disabled: true });
   assert.ok(!('parse_mode' in sent), 'plain text');
   assert.equal(url[0], draftUrl(url[1]));
   const d = fake.db.drafts.get(url[1]);
   assert.equal(d.name, 'Sleepy Cat');
-  assert.equal(d.symbol, 'SLEEPY');
+  assert.equal(d.symbol, 'sleepy');
   assert.equal(d.photo, 'AgACAgQAAxkBAAIBY2Zp-big-1280', 'the biggest size that fits');
   assert.equal(d.chat_code, chatCode(SECRET, CHAT, today()), 'the chat\'s daily code');
   assert.ok(!JSON.stringify(d).includes(String(CHAT)), 'never the chat\'s number');
   // then the page has it
-  assert.equal((await (await get(`d=${url[1]}`)).json()).symbol, 'SLEEPY');
+  assert.equal((await (await get(`d=${url[1]}`)).json()).symbol, 'sleepy');
+  assert.ok(!calls.some((c) => c.to === 'clank'), 'clank.trade\'s search isn\'t asked (copies are fine since 2026-10-02)');
 });
 
-test('her bot says no, kindly: a bad caption, a crude or AGI-like coin, a link, a tiny picture, a taken ticker, a file, too many', async () => {
+test('her bot says no, kindly: a bad caption, a crude or AGI-like coin, "official", a link, a tiny picture, a file, too many; copies are fine', async () => {
   const say = async (o) => [await hook(msg(o)), texts().at(-1)];
   assert.deepEqual(await say({ photo: PHOTO, caption: '/launch' }), ['launch_format', LL.REFUSE.format]);
   assert.deepEqual(await say({ photo: PHOTO, caption: '/launch Sleepy Cat' }), ['launch_symbol', LL.REFUSE.symbol]);
@@ -1490,19 +1684,26 @@ test('her bot says no, kindly: a bad caption, a crude or AGI-like coin, a link, 
   assert.deepEqual(await say({ photo: PHOTO, caption: '/launch Cat | CAT | cats.xyz' }), ['launch_link', LL.REFUSE.link]);
   assert.deepEqual(await say({ photo: PHOTO, caption: '/launch Waifu Cat | WAIFU' }), ['launch_egirl', LL.REFUSE.egirl]);
   assert.deepEqual(await say({ photo: PHOTO, caption: '/launch Cat | CAT | buy $PEPE too' }), ['launch_money', LL.REFUSE.money]);
+  assert.deepEqual(await say({ photo: PHOTO, caption: '/launch Official Pepe | PEPE' }), ['launch_official', LL.REFUSE.official]);
+  assert.deepEqual(await say({ photo: PHOTO, caption: '/launch Cat | MY CAT' }), ['launch_symbol', LL.REFUSE.symbol]);
   assert.deepEqual(await say({ photo: [PHOTO[0]], caption: LL.EXAMPLE }), ['launch_photo', LL.REFUSE.photo]);
-  fake.clank = [{ symbol: 'SLEEPY', name: 'Sleepy' }];
-  assert.deepEqual(await say({ photo: PHOTO, caption: LL.EXAMPLE }), ['launch_taken', LL.REFUSE.taken('SLEEPY')]);
-  fake.clank = Array.from({ length: 80 }, (_, i) => ({ symbol: `SLEEPY${i}`, name: 'sleepy' }));
-  assert.deepEqual(await say({ photo: PHOTO, caption: LL.EXAMPLE }), ['launch_common', LL.REFUSE.common('SLEEPY')]);
-  fake.clankDown = true;
-  assert.deepEqual(await say({ photo: PHOTO, caption: LL.EXAMPLE }), ['launch_cant_check', LL.CANT_CHECK]);
-  fake.clankDown = false;
-  fake.clank = [];
   assert.deepEqual(await say({ document: { file_id: 'BQACAgQAAxkBAAIB-doc', mime_type: 'image/png' }, caption: LL.EXAMPLE }), ['launch_as_photo', LL.AS_PHOTO]);
   assert.equal(fake.db.drafts.size, 0, 'no draft for any of those');
-  for (let i = 0; i < 5; i++) assert.equal(await hook(msg({ photo: PHOTO, caption: `/launch Cat ${i} | CAT${i}` })), 'launch_ready');
-  assert.deepEqual(await say({ photo: PHOTO, caption: '/launch Cat 6 | CAT6' }), ['launch_chat_cap', LL.CHAT_CAP]);
+  telegramBurst.reset();
+  // a ticker (and a name) another coin on clank.trade already has: fine since 2026-10-02, and clank.trade isn't even asked
+  fake.clank = [{ symbol: 'SLEEPY', name: 'Sleepy Cat' }];
+  fake.clankDown = true;
+  assert.equal(await hook(msg({ photo: PHOTO, caption: LL.EXAMPLE })), 'launch_ready');
+  assert.equal(await hook(msg({ photo: PHOTO, caption: '/launch Pepe 🐸 | pepe🐸 | the frog, again' })), 'launch_ready', 'lowercase, emoji');
+  assert.ok(!calls.some((c) => c.to === 'clank'));
+  // her bot's own cap: enough drafts a day for a wallet's most coins, and some to spare (the per-chat speed bump of 20 updates
+  // a minute is reset now and then here: this is a day's drafts, not a minute's)
+  for (let i = 2; i < DRAFTS_PER_CHAT; i++) {
+    if (i % 15 === 0) telegramBurst.reset();
+    assert.equal(await hook(msg({ photo: PHOTO, caption: `/launch Cat ${i} | CAT${i}` })), 'launch_ready');
+  }
+  telegramBurst.reset();
+  assert.deepEqual(await say({ photo: PHOTO, caption: '/launch One More | MORE' }), ['launch_chat_cap', LL.CHAT_CAP]);
 });
 
 test('her bot: 18+ first, and "not open yet" until Pinata\'s key and launch.sql are there; /help shows /launch only then', async () => {
@@ -1612,7 +1813,14 @@ test('the page\'s words: which draft, every answer of the API in plain words, ET
   for (const why of [...GAS_AGAIN, 'empty', 'failed']) assert.equal(gasFinal({ paid: false, why }), false, `not final: ${why}`);
   assert.equal(gasFinal({ paid: true, wei: '1', tx: txOf(1) }), true);
   assert.match(gasNote(String(10n ** 15n)), /up to 0\.001 ETH; one launch a day per wallet, while it lasts/);
-  for (const w of [...Object.values(WORDS), ...Object.values(CHECK), gasNote('1')]) {
+  // the coins a wallet may launch a day (2026-10-02), and "that's all for today", with its number
+  assert.equal(perDayText, '5 coins a day for every 10,000 $AGI, up to 50 a day with 100,000+, held or burned for messages in the wallet you launch from.');
+  assert.match(capText(5), /^This wallet has got all 5 of its coins ready for today \(5 coins a day for every 10,000 \$AGI, up to 50 a day with 100,000\+; a coin counts once it's got ready, launched or not\)\. Try again tomorrow\.$/);
+  assert.match(capText(1), /its 1 coin ready/);
+  assert.match(capText(undefined), /all its coins ready/);
+  assert.match(capText('5'), /all its coins ready/, 'only a real number');
+  assert.match(capText(5, true), /^Other links or another pair make it another coin, and this wallet has got all 5 of its coins ready for today\. Use links and a pair you already got this one ready with, or try again tomorrow\.$/);
+  for (const w of [...Object.values(WORDS), ...Object.values(CHECK), gasNote('1'), perDayText, capText(5), capText(5, true)]) {
     assert.doesNotMatch(w, /\b(buy|sell|hold|moon|pump|profit|gains?|safe|guarantee\w*)\b/i, w);
     assert.doesNotMatch(w, /<|>/, 'plain text');
   }
@@ -1628,9 +1836,22 @@ test('the page: its own address, private, the rules and warnings on it, no inlin
   assert.doesNotMatch(html, /\sstyle=|\son[a-z]+=/i, 'no inline styles or handlers');
   for (const must of [/own wallet/i, /clank\.trade's own contracts/, /never holds keys or money/, /18\+ only/, /Meme coins can lose all of their value/,
     /Nothing here is financial advice/, /won't promote your coin/, /token approval or sending tokens, reject it/, /public and permanent/,
-    /10,000\+ \$AGI/, /Its picture goes on IPFS, public too/]) {
+    /10,000\+ \$AGI/, /Its picture goes on IPFS, public too/, /A coin counts once it's got ready, launched or not/,
+    /Launching takes no SPCX, and the pair can't be changed later/]) {
     assert.match(html, must, String(must));
   }
+  // the coins a wallet may launch a day: the same words as her bot's and our server's rule (src/launch/rules.js)
+  assert.equal(html.split(PER_DAY).length - 1, 2, 'in step 1 and in the rules');
+  // its pair (2026-10-02): two native radio buttons in a fieldset, ETH picked unless they pick SPCX
+  const pair = html.slice(html.indexOf('<fieldset class="lch-pair"'), html.indexOf('</fieldset>'));
+  assert.match(pair, /<legend[^>]*>Pair<\/legend>/);
+  assert.deepEqual([...pair.matchAll(/<input type="radio" name="lch-pair" value="(\w+)"( checked)? \/>/g)].map((m) => [m[1], Boolean(m[2])]), [['eth', true], ['spcx', false]]);
+  const step3 = html.slice(html.indexOf('data-lch-step="launch"'), html.indexOf('data-lch-go'));
+  assert.ok(step3.indexOf('lch-pair') < step3.indexOf('data-lch-linkform'), 'in step 3, before the links');
+  // without a wallet in the browser: MetaMask, Phantom (2026-10-02, with its one setting) and Coinbase Wallet
+  assert.deepEqual([...html.matchAll(/data-lch-app="(\w+)">Open in ([^<]+) ↗</g)].map((m) => [m[1], m[2]]), [['metamask', 'MetaMask'], ['phantom', 'Phantom'], ['coinbase', 'Coinbase Wallet']]);
+  assert.match(html, /Phantom: turn on Robinhood Chain first \(Settings → Active Networks\)/);
+  assert.match(WORDS.no_switch, /In Phantom, turn it on first/);
   assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);
   for (const a of html.matchAll(/<a [^>]*target="_blank"[^>]*>/g)) assert.match(a[0], /rel="noopener noreferrer"/);
   // its styles: every rule names an lch- class (the rest of the site can't change), Pop mode's in pop.css
@@ -1654,6 +1875,8 @@ test('the page: its own address, private, the rules and warnings on it, no inlin
   assert.doesNotMatch(page, /innerHTML|insertAdjacentHTML|document\.write|eval\(/);
   assert.match(page, /import \{ walletChain, switchToRobinhood, sendLaunch, ROBINHOOD \} from '\.\/send\.js'/);
   assert.doesNotMatch(page, /eth_sendTransaction|wallet_switchEthereumChain|wallet_addEthereumChain|eth_sign\b|signTypedData/, 'only send.js asks');
+  assert.match(page, /action: 'prepare', draft: id, session, links: linked\.links, pair \}/, 'the pair they picked goes with it');
+  assert.match(page, /https:\/\/phantom\.app\/ul\/browse\/\$\{encodeURIComponent\(location\.href\)\}\?ref=\$\{encodeURIComponent\(location\.origin\)\}/);
 });
 
 test('the page\'s link boxes: three, labelled, optional, each described by its note, and the rules say links are for good', () => {

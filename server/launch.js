@@ -1,13 +1,18 @@
 // "Launch with AGI-1" (2026-10-01, the owner's idea: people launch a coin on clank.trade from her Telegram bot, "the wallet
 // will be non custodial … make this better then continue"). The better version, with the owner's choices:
-//   • In her bot, a photo captioned "/launch Name | TICKER | one line" gets her checks (checkIdea, tickerTaken) and becomes a
-//     draft (supabase/launch.sql) with a private link: agi1.app/launch/<id> (22 random characters, 2 hours).
-//   • On that page (src/launch/) the person connects their OWN wallet (the site's free sign-in signature). It needs the
-//     chat's Crush level: 10,000+ $AGI held or burned in that wallet (the owner's choice: held, nothing spent). Our server
-//     then puts the picture on IPFS once (Pinata's free plan, PINATA_JWT), builds clank.trade's own launch call for that
-//     wallet (the factory's launchToken: free, paired with ETH, launch config 0, no creator tax, no buyback; with the coin's
-//     X, Telegram and website if they added them: optional, checkLinks) and tries it on Robinhood Chain first (an eth_call
-//     from their wallet, as clank.trade's docs ask) before their wallet opens.
+//   • In her bot, a photo captioned "/launch Name | TICKER | one line" gets her checks (checkIdea) and becomes a draft
+//     (supabase/launch.sql) with a private link: agi1.app/launch/<id> (22 random characters, 2 hours). Since 2026-10-02
+//     (the owner: "the ticker it can be anything and on the name … its okay if its a copycat") a name and a ticker can be
+//     almost anything, other coins' tickers included: only PG-13, nothing like her or $AGI, no egirl coin, no links.
+//   • On that page (src/launch/) the person connects their OWN wallet (the site's free sign-in signature). It needs
+//     10,000+ $AGI held or burned in that wallet (the chat's Crush; the owner's choice: held, nothing spent), and since
+//     2026-10-02 the more it holds, the more coins it may launch a day (the owner: "if they hold 10,000 $agi they can launch
+//     5 tokens per wallet and if more more token to launch": 5 a day per 10,000, launchesADay). Our server then puts the
+//     picture on IPFS once (Pinata's free plan, PINATA_JWT), builds clank.trade's own launch call for that wallet (the
+//     factory's launchToken: free, launch config 0, no creator tax, no buyback, paired with ETH or, since 2026-10-02,
+//     SPCX, the pair they pick; with the coin's X, Telegram and website if they added them: optional, checkLinks) and
+//     tries it on Robinhood Chain first (an eth_call from their wallet, as clank.trade's docs ask) before their wallet
+//     opens.
 //   • They approve it in their own wallet, which becomes the coin's creator ("the caller becomes the creator", the docs).
 // Our server never holds anyone's key and never signs or sends anything for them: it reads (eth_call, receipts, Telegram's
 // copy of the picture) and builds the call. Never: a wallet inside the bot (a bot that can sign holds the key: custodial,
@@ -26,20 +31,37 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { rpc } from './limits.js';
 import { rpcUrl, CHAIN_ID } from './chain.js';
 import { FACTORY, FACTORY_ABI, readAll, callOf } from './clank-chain.js';
-import { clankApi, tickerKey, maskSlurs, cidOf } from './checker.js';
+import { tickerKey, maskSlurs, cidOf } from './checker.js';
 import { isCrude, looksLike, readLimited } from './coins.js';
 import { EGIRL, asLatin } from './lookalike.js';
-import { NAME_MAX, DESC_MAX, DRAFT_HOURS } from './launch-lines.js';
+import { NAME_MAX, SYMBOL_MAX, DESC_MAX, DRAFT_HOURS } from './launch-lines.js';
+import { AGI_PER_STEP, COINS_PER_STEP, LAUNCHES_MAX, launchesADay } from '../src/launch/rules.js';
 import { cleanLinks, LINK_FIELDS } from '../src/launch/links.js';
 
 export { FACTORY };
-export const ZERO = `0x${'0'.repeat(40)}`;            // the pair "token" for ETH, clank.trade's only pair today
+export const ZERO = `0x${'0'.repeat(40)}`;            // the pair "token" for ETH
+// What a coin can be paired with (what people trade it against on its curve): ETH, and since 2026-10-02 SPCX ("u can now
+// pair coin launches with AI stocks starting with SpaceX AI (SPCX)", clank.trade's founder; the owner: "the team added
+// token can now paired with spcx"). SPCX's address is the one clank.trade's own coins name as their quote token; before
+// each launch the factory itself is asked whether it's still on its approved list (approvedPairTokens), and launching
+// with it costs no SPCX (a launch without a buy needs no token approval, clank.trade's docs).
+export const SPCX = '0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea';
+export const PAIRS = { eth: ZERO, spcx: SPCX };
+// the page's choice ('eth', 'spcx'; nothing = ETH) → the pair's address, or null for anything else
+export const pairOf = (choice) => (choice === undefined || choice === null ? ZERO
+  : typeof choice === 'string' && Object.hasOwn(PAIRS, choice) ? PAIRS[choice] : null);
 export const LAUNCH_CONFIG = 0n;                       // clank.trade's active launch config
-export const NEEDED_LEVEL = 2;                         // the chat's Crush: 10,000+ $AGI held or burned (src/lib/levels.js)
 export const DRAFT_MINUTES = DRAFT_HOURS * 60;         // a draft can be got ready for 2 hours
-export const DRAFTS_PER_CHAT = 5;                      // drafts one Telegram chat may make a day
-export const DRAFTS_A_DAY = 300;                       // drafts the whole site may make a day
-export const UPLOADS_PER_WALLET = 3;                   // pictures one wallet may have put on IPFS a day (the site: LAUNCH_DAILY_CAP)
+// The coins one wallet may launch a day (the owner's rule, 2026-10-02: "if they hold 10,000 $agi they can launch 5 tokens
+// per wallet and if more more token to launch"): 5 for every 10,000 $AGI it holds or burned for messages, 50 at most
+// (100,000+). 10,000 is the chat's Crush (src/lib/levels.js), so under it: none. Counted as the coins it gets ready (its
+// picture put on IPFS, or the same draft got ready again with other details: another coin), launched or not, per UTC day
+// (supabase/launch.sql launch_prepare and launch_predicted); the whole site: LAUNCH_DAILY_CAP pictures a day.
+// (src/launch/rules.js, shared with the launch page)
+export { AGI_PER_STEP, COINS_PER_STEP, LAUNCHES_MAX, launchesADay };
+export const DRAFTS_PER_CHAT = LAUNCHES_MAX + 10;      // drafts one Telegram chat may make a day (5 before the coins a day by holdings)
+export const DRAFTS_A_DAY = 3000;                      // drafts the whole site may make a day (300 before 2026-10-02: a draft is
+                                                       // only a database row until it's got ready, and many chats can each make 60 now)
 export const GAS_PER_WALLET = 1;                       // launch fees paid back to one wallet a day
 export const PICTURE_MAX = 1_000_000;                  // bytes
 const PICTURE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -52,15 +74,17 @@ export const LAUNCH_ABI = parseAbi([
   'function previewLaunchEconomics(uint256 launchConfigId,address pairToken) view returns (bytes32)',
   'function launchFee() view returns (uint256)',
   'function canLaunch(address launcher) view returns (bool)',
+  'function approvedPairTokens(address pairToken) view returns (bool)',
 ]);
 export const LAUNCH_SELECTOR = '0xf35abbcf';           // launchToken(…): the only call the launch page may send (src/launch/send.js)
 // The factory's errors a launch can revert with (Reference → Errors → Launching), by their first 4 bytes. (A creator tax, a
-// buyback, a pair token or a zero address can't happen with the call below: "reverted".)
+// buyback or a zero address can't happen with the call below: "reverted".)
 const ERROR_OF = {
   'LaunchAlreadyExists()': 'exists',                       // the same creator, details and salt: already launched
   'LaunchEconomicsMismatch(bytes32,bytes32)': 'economics', // its terms changed after we read them
   'InvalidMetadata()': 'metadata',                         // a field empty or too long
   'NotWhitelisted()': 'closed',                            // new launches are switched off (for this wallet)
+  'PairTokenNotApproved()': 'pair',                        // its pair (SPCX) isn't on the factory's list (any more)
   'InvalidLaunchConfigId()': 'config', 'LaunchConfigDisabled()': 'config',
   'LaunchFeeNotPaid()': 'fee', 'NativeValueMismatch(uint256,uint256)': 'fee',
 };
@@ -105,8 +129,11 @@ export function parseLaunch(text) {
   return { name: parts[0] ?? '', symbol: parts[1] ?? '', description: parts.slice(2).join(' ') };
 }
 
-const INVISIBLE = /[\u0000-\u001f\u007f-\u009f\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g;
-const tidy = (s) => String(s ?? '').normalize('NFKC').replace(INVISIBLE, '').replace(/\s+/g, ' ').trim();
+// Invisible characters go: controls, zero-width spaces, bidi marks, Hangul fillers, tags… (Unicode's "default ignorable"
+// ones), except what emoji are made of: a variation selector, and a zero-width joiner between two emoji (👩‍💻 stays one)
+const INVISIBLE = /[\u0000-\u001f\u007f-\u009f]|(?![\u200d\ufe0e\ufe0f])\p{Default_Ignorable_Code_Point}/gu;
+const LOOSE_JOINER = /(?<![\p{Extended_Pictographic}\p{Emoji_Modifier}]\ufe0f?)\u200d|\u200d(?!\p{Extended_Pictographic})/gu;
+const tidy = (s) => String(s ?? '').normalize('NFKC').replace(INVISIBLE, '').replace(LOOSE_JOINER, '').replace(/\s+/g, ' ').trim();
 const bytes = (s) => Buffer.byteLength(s, 'utf8');
 // anything shaped like a link or an address: a scheme, "www.", any "word.ending" (her reply would turn it into a link),
 // a wallet or contract address
@@ -114,33 +141,58 @@ const LINK = /[a-z][a-z0-9+.-]*:\/\/|www\.|\bt\.me\b|[\p{L}\p{N}-]\.[a-z]{2,}\b|
 // nothing Telegram or a page could turn into a mention, a hashtag or a tappable command ("/" only between letters or numbers)
 const ODD = /[#@<>`\\{}[\]|]|(^|[^\p{L}\p{N}])\/|\/($|[^\p{L}\p{N}])/u;
 // about her or $AGI (her copies are what she's most careful about): "agi" on its own (numbers and symbols don't hide it:
-// "AGI2", "1AGI"), "AGIX"-like, her name, the site, "official"; letters from other alphabets read as Latin ones
-const ABOUT_HER = /(?<!\p{L})ag[i1](?!\p{L})|agi[\s-]?1|artificial\s*girl\s*friend|agi1\.app|\bofficial\b/iu;
-// money talk and lures she won't repeat in her own words: buying or selling, promises, airdrops, another coin's $TICKER
-// (whole words: "Pumpkin", "Dumpling", "Rugby" and "Scampi" are fine)
+// "AGI2", "1AGI"), "AGIX"-like, her name, the site; letters from other alphabets read as Latin ones
+const ABOUT_HER = /(?<!\p{L})ag[i1](?!\p{L})|agi[\s-]?1|artificial\s*girl\s*friend|agi1\.app/iu;
+// "official" anywhere ("OFFICIALDOGE" too): a copy of another coin is fine (the owner, 2026-10-02), but a coin made with her
+// is nobody's official one
+const OFFICIAL = /official/i;
+// money talk and lures she won't repeat in her own words, in a coin's line: buying or selling, promises, airdrops, another
+// coin's $TICKER (whole words: "Pumpkin", "Dumpling", "Rugby" and "Scampi" are fine). (Its name and ticker are the
+// creator's own words since 2026-10-02, "the name doesnt matter": not checked for it)
 const MONEY = /\b(buy(?:s|ing|ers?)?|sell(?:s|ing|ers?)?|pump(?:s|ed|ing|ers?)?|dump(?:s|ed|ing)?|profit\w*|gains?|guarantee\w*|invest\w*|airdrops?|presales?|giveaways?|free\s+money|rug(?:s|ged|pull\w*)?|scam(?:s|mers?|my)?|to\s+the\s+moon|\d+\s*x)\b|\$\s*[a-z]/i;
+// a name or a ticker needs at least one letter (any alphabet), number or emoji (a flag too): punctuation alone isn't one
+const SOMETHING = /[\p{L}\p{N}\p{Extended_Pictographic}\p{Regional_Indicator}]/u;
+// A name or a ticker read the way it LOOKS, for "is it AGI?" (since 2026-10-02 a ticker keeps its case and can use any
+// alphabet, so "AGl" with a small L, "ÀGI" or "🅰🅶🅸" must not get through): accents and invisible letters gone, look-alike
+// letters from other alphabets read as Latin ones (server/lookalike.js), boxed letters (🅰, 🇦) as plain ones; asI also
+// reads a small l and a 1 as I
+const BOXED = [[0x1f150, 0x1f169], [0x1f170, 0x1f189], [0x1f1e6, 0x1f1ff]];        // negative circled, negative squared, flags' letters
+const unbox = (ch) => { const c = ch.codePointAt(0); const r = BOXED.find(([a, b]) => c >= a && c <= b); return r ? String.fromCharCode(65 + c - r[0]) : ch; };
+export const plainOf = (s) => asLatin(String(s ?? '').normalize('NFKD').replace(/[\p{M}\p{Default_Ignorable_Code_Point}]/gu, ''))
+  .replace(/[\u{1f150}-\u{1f169}\u{1f170}-\u{1f189}\u{1f1e6}-\u{1f1ff}]/gu, unbox);
+const asI = (s) => s.replace(/[l1ǀꟾ]/g, 'I');
 
 // A coin idea, as she checks it. → { ok: true, name, symbol, description } (tidied) or { ok: false, why }:
-// 'name' · 'symbol' · 'description' · 'link' · 'characters' · 'money' · 'crude' · 'agi' · 'egirl' (the keys of REFUSE in
-// server/launch-lines.js)
+// 'name' · 'symbol' · 'description' · 'link' · 'characters' · 'money' · 'crude' · 'official' · 'agi' · 'egirl' (the keys of
+// REFUSE in server/launch-lines.js).
+// Since 2026-10-02 (the owner: "the ticker it can be anything and on the name … the name doesnt matter and its okay if its
+// a copycat") a name and a ticker can be almost anything: letters from any alphabet, lowercase, numbers, emoji,
+// punctuation, and another coin's name or ticker (no search of clank.trade any more). A ticker keeps the case it's typed in
+// (a "$" in front is dropped), has no spaces and fits clank.trade's 16 bytes. What stays: PG-13, nothing like her or $AGI
+// (a copy of $AGI from her own bot would pass for hers), no egirl coin (her feed texts everyone about new ones: she'd be
+// promoting a coin made with her), nothing shaped like a link, an address or an @name, and no trading talk in its line.
 export function checkIdea(idea) {
   const name = tidy(idea?.name);
-  const symbol = tidy(idea?.symbol).replace(/^\$+/, '').toUpperCase();
+  const symbol = tidy(idea?.symbol).replace(/^\$+/, '');
   const description = tidy(idea?.description);
-  if (!name || [...name].length > NAME_MAX || bytes(name) > 64) return { ok: false, why: 'name' };
-  if (!/^[A-Z0-9]{2,10}$/.test(symbol)) return { ok: false, why: 'symbol' };
+  if (!name || [...name].length > NAME_MAX || bytes(name) > 64 || !SOMETHING.test(name)) return { ok: false, why: 'name' };
+  if (!symbol || bytes(symbol) > SYMBOL_MAX || /\s/.test(symbol) || !SOMETHING.test(symbol)) return { ok: false, why: 'symbol' };
   if ([...description].length > DESC_MAX || bytes(description) > 300) return { ok: false, why: 'description' };
   const all = `${name} ${symbol} ${description}`;
   if (LINK.test(all) || /@[a-z0-9_]{2,}/i.test(all)) return { ok: false, why: 'link' };
   if (ODD.test(all)) return { ok: false, why: 'characters' };
-  if (MONEY.test(`${name} ${description}`)) return { ok: false, why: 'money' };
+  if (MONEY.test(description)) return { ok: false, why: 'money' };
   if (isCrude(all) || maskSlurs(all) !== all) return { ok: false, why: 'crude' };
-  const latin = asLatin(`${name} ${description}`);
-  if (ABOUT_HER.test(latin) || /\bAGI[A-Z]/.test(asLatin(name)) || /^AGI|AGI$/.test(asLatin(symbol)) || tickerKey(asLatin(name)) === 'AGI') {
+  const plain = plainOf(all);
+  if (OFFICIAL.test(plain)) return { ok: false, why: 'official' };
+  // her or $AGI: as it reads, and with every small l and 1 read as I
+  const words = plainOf(`${name} ${description}`), title = plainOf(name), ticker = plainOf(symbol);
+  if ([words, asI(words)].some((t) => ABOUT_HER.test(t)) || [title, asI(title)].some((t) => /\bAGI[A-Z]/.test(t) || tickerKey(t) === 'AGI')
+    || [ticker, asI(ticker)].some((t) => /^AGI|AGI$/.test(tickerKey(t)))) {
     return { ok: false, why: 'agi' };
   }
   // an egirl or AI-girlfriend coin (her feed would text everyone she's "not ok" about it)
-  if (EGIRL.test(asLatin(`${name} ${symbol} ${description}`))) return { ok: false, why: 'egirl' };
+  if (EGIRL.test(plain)) return { ok: false, why: 'egirl' };
   return { ok: true, name, symbol, description };
 }
 
@@ -163,24 +215,8 @@ export function checkLinks(input) {
   return { ok: true, links: c.links };
 }
 
-// Is there already a coin with this ticker on clank.trade? (its own search, up to 6 pages of matches) → true / false ·
-// throws when clank.trade can't say for sure: it doesn't answer, or more coins match than we read (err.common: a ticker
-// too common to check, so she asks for another)
-export async function tickerTaken(symbol, { pages = 6 } = {}) {
-  const key = tickerKey(symbol);
-  let cursor = null;
-  for (let page = 0; page < pages; page++) {
-    const [r] = await clankApi([['coins.list', cursor ? { query: symbol, cursor } : { query: symbol }]], { timeoutMs: 6000 });
-    if (r.error || !Array.isArray(r.data?.coins)) throw new Error(`clank.trade sent no coin list (${r.error || 'odd answer'})`);
-    if (r.data.coins.some((c) => tickerKey(c?.symbol) === key)) return true;
-    cursor = r.data.nextCursor;
-    if (cursor === null || cursor === undefined || cursor === '') return false;
-    if (typeof cursor !== 'string' || cursor.length > 1000) throw new Error('clank.trade sent an odd page cursor');
-  }
-  const err = new Error(`more coins match "${symbol}" than we read`);
-  err.common = true;
-  throw err;
-}
+// (Until 2026-10-02 she also searched clank.trade for the ticker and said no to one someone already had: tickerTaken. The
+// owner: "its okay if its a copycat". Our risk check still marks a coin whose ticker a bigger coin has as "Copycat?".)
 
 // Telegram sends a photo in several sizes (90 to 2560 px): the biggest up to 1280 px and 1 MB, at least 200 px a side
 export function bestPhoto(sizes) {
@@ -200,12 +236,15 @@ export const drafts = {
     p_minutes: DRAFT_MINUTES, p_per_chat: DRAFTS_PER_CHAT, p_site_daily: DRAFTS_A_DAY,
   }, 'launch'),
   get: (cfg, id) => rpc(cfg, 'launch_draft_get', { p_id: id }, 'launch'),
-  prepare: (cfg, id, wallet) => rpc(cfg, 'launch_prepare', {
-    p_id: id, p_wallet: wallet, p_per_wallet: UPLOADS_PER_WALLET, p_site_daily: cfg.launchDailyCap,
+  // perDay: the coins this wallet may get ready today (launchesADay)
+  prepare: (cfg, id, wallet, perDay) => rpc(cfg, 'launch_prepare', {
+    p_id: id, p_wallet: wallet, p_per_wallet: perDay, p_site_daily: cfg.launchDailyCap,
   }, 'launch'),
   uploadBack: (cfg, id) => rpc(cfg, 'launch_upload_back', { p_id: id }, 'launch'),
   setCid: (cfg, id, cid, pin) => rpc(cfg, 'launch_set_cid', { p_id: id, p_cid: cid, p_pin: pin ?? null }, 'launch'),
-  predicted: (cfg, id, wallet, token) => rpc(cfg, 'launch_predicted', { p_id: id, p_wallet: wallet, p_token: token }, 'launch'),
+  // where its coin will be; the same draft got ready again with other details (links, pair) is another coin, counted
+  // against perDay → { ok: true } · { ok: false, why: 'wallet_cap' | 'launched' | 'other_wallet' | 'gone' | 'bad' }
+  predicted: (cfg, id, wallet, token, perDay) => rpc(cfg, 'launch_predicted', { p_id: id, p_wallet: wallet, p_token: token, p_per_wallet: perDay }, 'launch'),
   done: (cfg, id, wallet, token, tx) => rpc(cfg, 'launch_done', { p_id: id, p_wallet: wallet, p_token: token, p_tx: tx }, 'launch'),
   gasClaim: (cfg, id, wallet, wei) => rpc(cfg, 'launch_gas_claim', {
     p_id: id, p_wallet: wallet, p_wei: wei.toString(), p_per_wallet: GAS_PER_WALLET, p_daily_wei: cfg.launchGasDailyWei.toString(),
@@ -294,31 +333,42 @@ export async function unpinPicture(jwt, pin, { timeoutMs = 8000 } = {}) {
 }
 // The keep-alive job's tidy-up (3 times a day): old drafts and counts go, and the pictures of coins that were never
 // launched are deleted at Pinata (its free plan keeps 500 files). Never a picture whose draft's own launch is on the chain
-// (the factory is asked at the address its dry run gave: a launch nobody read back still keeps its picture). Stops
+// (the factory is asked at every address its dry runs gave: a launch nobody read back still keeps its picture). Stops
 // starting new work at `deadline`. → how many pictures were deleted · never throws
 export async function tidyLaunches(cfg, { env, deadline = Date.now() + 10_000 } = {}) {
   if (!cfg.pinataJwt || !cfg.supabaseUrl || !cfg.supabaseKey) return 0;
   if (Date.now() > deadline - 4000) return 0;                    // (too late in this run: the next one tidies)
   try {
     const { pins } = (await drafts.tidy(cfg)) || {};
-    const list = (Array.isArray(pins) ? pins : [])
-      .filter((p) => /^[A-Za-z0-9_-]{1,100}$/.test(String(p?.pin)) && (p.predicted === null || p.predicted === undefined || ADDRESS.test(String(p.predicted))))
-      .slice(0, 50);
+    // each picture with every address its draft's launch could have put its coin at (a draft got ready again with other
+    // links or the other pair has several: predicted_all, 2026-10-02), at most 50 addresses a run (one batch to the chain;
+    // the rest wait for the next run). A picture with an address that isn't one is never deleted.
+    const list = [];
+    let addresses = 0;
+    for (const p of Array.isArray(pins) ? pins : []) {
+      if (!/^[A-Za-z0-9_-]{1,100}$/.test(String(p?.pin))) continue;
+      const at = [...new Set([...(Array.isArray(p.predicted_all) ? p.predicted_all : []), p.predicted].filter((a) => a !== null && a !== undefined))];
+      if (!at.every((a) => ADDRESS.test(String(a)))) continue;
+      if (list.length >= 50 || addresses + at.length > 50) break;
+      list.push({ pin: p.pin, at });
+      addresses += at.length;
+    }
     if (!list.length) return 0;
-    // a coin where its draft's own launch would be: keep its picture for good
-    const asked = list.filter((p) => p.predicted);
+    // a coin where any of its draft's launches would be: keep its picture for good
+    const asks = list.flatMap((p) => p.at.map((a) => ({ pin: p.pin, a })));
     let live = new Set(), unread = new Set();
-    if (asked.length) {
+    if (asks.length) {
       try {
-        const records = await readAll(asked.map((p) => callOf(FACTORY_ABI, FACTORY, 'getLaunchedToken', [p.predicted])), env, 6000);
-        asked.forEach((p, i) => {
-          if (records[i]?.exists === true) live.add(p.pin);
-          else if (records[i] === null) unread.add(p.pin);
+        const records = await readAll(asks.map((q) => callOf(FACTORY_ABI, FACTORY, 'getLaunchedToken', [q.a])), env, 6000);
+        asks.forEach((q, i) => {
+          if (records[i]?.exists === true) live.add(q.pin);
+          else if (records[i] === null) unread.add(q.pin);
         });
       } catch (err) {
         console.warn(`[launch] tidying up: couldn't ask the factory (${err.message}); those pictures wait for the next run`);
-        unread = new Set(asked.map((p) => p.pin));
+        unread = new Set(asks.map((q) => q.pin));
       }
+      for (const pin of live) unread.delete(pin);
     }
     const done = [...live];
     let deleted = 0;
@@ -378,26 +428,35 @@ async function chain(method, params, env, timeoutMs = 6000) {
 }
 const ethCall = (to, data, env, extra = {}, timeoutMs) => chain('eth_call', [{ ...extra, to, data }, 'latest'], env, timeoutMs);
 
-// clank.trade's launch terms now, for this wallet: whether it may launch (canLaunch: the docs' "new launches are currently
-// disabled" switch), its launch fee (wei: 0 today) and the economics hash its docs say to pin, so a change of terms between
-// the dry run and the wallet makes the launch fail instead of changing silently. → { open, fee, economics }
-export async function launchTerms(wallet, env) {
+// clank.trade's launch terms now, for this wallet and this pair: whether it may launch (canLaunch: the docs' "new launches
+// are currently disabled" switch), its launch fee (wei: 0 today), whether the pair is on its approved list (ETH always is;
+// approvedPairTokens for SPCX) and the economics hash its docs say to pin for that pair, so a change of terms between the
+// dry run and the wallet makes the launch fail instead of changing silently.
+// → { open, fee, approved, economics (null when the pair isn't approved) }
+export async function launchTerms(wallet, env, pair = ZERO) {
   const ask = (functionName, args) => ethCall(FACTORY, encodeFunctionData({ abi: LAUNCH_ABI, functionName, args }), env);
-  const [openHex, feeHex, econHex] = await Promise.all([
-    ask('canLaunch', [wallet]), ask('launchFee'), ask('previewLaunchEconomics', [LAUNCH_CONFIG, ZERO]),
+  const read = (functionName, data) => {
+    try { return decodeFunctionResult({ abi: LAUNCH_ABI, functionName, data }); } catch { throw new Error('chain: odd launch terms'); }
+  };
+  const token = pair !== ZERO;
+  const [openHex, feeHex, econ, approvedHex] = await Promise.all([
+    ask('canLaunch', [wallet]), ask('launchFee'),
+    // (for a pair the factory doesn't take, this may be its "no": the approved list decides, below)
+    ask('previewLaunchEconomics', [LAUNCH_CONFIG, pair]).then((hex) => ({ hex }), (err) => (token && err.revert !== undefined ? { err } : Promise.reject(err))),
+    token ? ask('approvedPairTokens', [pair]) : null,
   ]);
-  let open, fee, economics;
-  try {
-    open = decodeFunctionResult({ abi: LAUNCH_ABI, functionName: 'canLaunch', data: openHex });
-    fee = decodeFunctionResult({ abi: LAUNCH_ABI, functionName: 'launchFee', data: feeHex });
-    economics = decodeFunctionResult({ abi: LAUNCH_ABI, functionName: 'previewLaunchEconomics', data: econHex });
-  } catch {
-    throw new Error('chain: odd launch terms');
+  const open = read('canLaunch', openHex), fee = read('launchFee', feeHex);
+  const approved = token ? read('approvedPairTokens', approvedHex) : true;
+  if (typeof open !== 'boolean' || typeof fee !== 'bigint' || fee < 0n || typeof approved !== 'boolean') throw new Error('chain: odd launch terms');
+  if (!approved) return { open, fee, approved, economics: null };
+  // on its list, but the factory won't give its terms on launch config 0 (another config for it, say): not offered here
+  if (econ.err) {
+    console.warn(`[launch] clank.trade lists ${pair} as a pair but won't give its launch terms on config 0 (${econ.err.message}): launches wait for an update`);
+    return { open, fee, approved: false, economics: null };
   }
-  if (typeof open !== 'boolean' || typeof fee !== 'bigint' || fee < 0n || typeof economics !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(economics)) {
-    throw new Error('chain: odd launch terms');
-  }
-  return { open, fee, economics: economics.toLowerCase() };
+  const economics = read('previewLaunchEconomics', econ.hex);
+  if (typeof economics !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(economics)) throw new Error('chain: odd launch terms');
+  return { open, fee, approved, economics: economics.toLowerCase() };
 }
 
 // The salt clank.trade's docs ask the creator to pick: one per draft, so the same draft can't be launched twice by the same
@@ -406,8 +465,9 @@ export const saltFor = (id) => keccak256(toBytes(`agi1-launch:${id}`));
 
 // clank.trade's launch, for their wallet to send: the factory's launchToken with the draft, its picture on IPFS, no
 // creator tax and no buyback (the factory requires both), their wallet as the creator fee's recipient (nothing today), no
-// links of anyone's, paired with ETH on launch config 0, and no ETH sent. → { to, data, value }
-export function launchCall({ id, name, symbol, description = '', cid, wallet, economics, links = {} }) {
+// links of anyone's, paired with ETH (or the pair they picked: PAIRS) on launch config 0, and no ETH sent.
+// → { to, data, value }
+export function launchCall({ id, name, symbol, description = '', cid, wallet, economics, links = {}, pair = ZERO }) {
   const params = {
     name, symbol, logo: `ipfs://${cid}`, description,
     // the links they added (checked by checkLinks: X, Telegram, a website, or ''); Discord and Farcaster stay empty
@@ -415,12 +475,13 @@ export function launchCall({ id, name, symbol, description = '', cid, wallet, ec
     creatorFeeRecipient: wallet, creatorTaxBps: 0, buybackEnabled: false,
     expectedEconomics: economics, salt: saltFor(id),
   };
-  return { to: FACTORY, data: encodeFunctionData({ abi: LAUNCH_ABI, functionName: 'launchToken', args: [params, LAUNCH_CONFIG, ZERO] }), value: '0x0' };
+  if (!Object.values(PAIRS).includes(pair)) throw new Error('not a pair clank.trade offers');
+  return { to: FACTORY, data: encodeFunctionData({ abi: LAUNCH_ABI, functionName: 'launchToken', args: [params, LAUNCH_CONFIG, pair] }), value: '0x0' };
 }
 
 // The launch tried on the chain first, from their wallet, exactly as their wallet will send it ("simulate the exact call
 // before opening the wallet", the docs). → { ok: true, token, curve } (where the coin will be) or { ok: false, why: 'exists' |
-// 'economics' | 'metadata' | 'closed' | 'config' | 'fee' | 'reverted' } · throws "chain:"
+// 'economics' | 'metadata' | 'closed' | 'config' | 'fee' | 'pair' | 'reverted' } · throws "chain:"
 export async function tryLaunch(call, wallet, env) {
   let hex;
   try {
@@ -472,8 +533,9 @@ export async function launchedBy(receipt, wallet, env, predicted = null) {
   return null;
 }
 // Is this transaction's call the draft's own launch? clank.trade's launchToken with exactly this draft's name, ticker, line
-// and picture, nobody's links, no tax, no buyback, this wallet as the creator, ETH on config 0, and this draft's own salt
-// (so one launch can only ever be one draft's, and a launch with other details is never "this coin")
+// and picture, nobody's links, no tax, no buyback, this wallet as the creator, ETH or SPCX (a pair the page offers) on
+// config 0, and this draft's own salt (so one launch can only ever be one draft's, and a launch with other details is
+// never "this coin")
 // A launch's links as this site makes them: Discord and Farcaster empty, the others '' or a link exactly as checkLinks
 // writes it (a launch with links the page could never make isn't this draft's)
 function socialsAsWeMakeThem(s) {
@@ -487,7 +549,7 @@ export function isDraftLaunch(input, { id, name, symbol, description = '', cid }
   try { call = decodeFunctionData({ abi: LAUNCH_ABI, data: input }); } catch { return false; }
   if (call.functionName !== 'launchToken') return false;
   const [p, config, pair] = call.args;
-  return config === LAUNCH_CONFIG && String(pair).toLowerCase() === ZERO && p.name === name && p.symbol === symbol
+  return config === LAUNCH_CONFIG && Object.values(PAIRS).includes(String(pair).toLowerCase()) && p.name === name && p.symbol === symbol
     && p.description === (description || '') && p.logo === `ipfs://${cid}` && socialsAsWeMakeThem(p.socials)
     && String(p.creatorFeeRecipient).toLowerCase() === String(wallet).toLowerCase() && p.creatorTaxBps === 0 && p.buybackEnabled === false
     && String(p.salt).toLowerCase() === saltFor(id);

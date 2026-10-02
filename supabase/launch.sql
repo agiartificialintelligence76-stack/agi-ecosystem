@@ -14,6 +14,12 @@
 -- wallet (LAUNCH_GAS_KEY in Vercel) sends that fee back to the creator, once per coin, at most one a day per wallet and
 -- LAUNCH_GAS_DAILY a day for the whole site. Never twice: a payback is claimed here before anything is sent, marked
 -- "sending" right before it goes, and only given back when nothing went out.
+-- 2026-10-02 (run it again: it updates what's here, and keeps everything saved): a ticker can be almost anything (the
+-- owner: "the ticker it can be anything … its okay if its a copycat"): 1 to 16 bytes (clank.trade's own limit), no spaces,
+-- any case, other alphabets and emoji; and the coins a wallet may get ready a day follow what it holds (5 for every 10,000
+-- $AGI, 50 at most: our server reads it and sends it as p_per_wallet); the same link got ready again with other details
+-- (other links, another pair) is another coin, and counts as one (launch_predicted: each address a draft's launch could put
+-- its coin at is kept, predicted_all, so going back to earlier details counts nothing, and the tidy-up asks about them all).
 --
 -- What's kept:
 --   agi1_launch_drafts   each draft: its id, the coin's name, ticker and line, the Telegram id of its picture (only our
@@ -24,8 +30,8 @@
 --                        hours for getting it ready), and its fee paid back (how much, how it went, the transaction, when).
 --                        Drafts are deleted after 7 days (launch_tidy, from the keep-alive job).
 --   agi1_launch_chats    per Telegram chat and day: drafts made (under a daily code of the chat, never its number)
---   agi1_launch_wallets  per wallet and day: pictures uploaded and fees paid back (under the wallet's scrambled code, never
---                        its address)
+--   agi1_launch_wallets  per wallet and day: the coins it got ready ("uploads": a picture put on IPFS, or a link got ready
+--                        again with other details) and fees paid back (under the wallet's scrambled code, never its address)
 --   agi1_launch_days     per day: drafts, pictures uploaded, launches and the ETH paid back for the whole site (the daily
 --                        caps), 30 days kept
 -- Only the server (the secret key) can use them.
@@ -34,7 +40,7 @@ create table if not exists public.agi1_launch_drafts (
   id          text        primary key check (id ~ '^[A-Za-z0-9_-]{22}$'),
   chat_code   text        not null check (char_length(chat_code) between 16 and 64),
   name        text        not null check (char_length(name) between 1 and 32 and octet_length(name) <= 64),
-  symbol      text        not null check (symbol ~ '^[A-Z0-9]{2,10}$'),
+  symbol      text        not null check (octet_length(symbol) between 1 and 16 and symbol !~ '[[:space:][:cntrl:]]'),
   description text        not null default '' check (char_length(description) <= 100 and octet_length(description) <= 300),
   photo       text        not null check (char_length(photo) between 10 and 300),
   cid         text        check (cid is null or cid ~ '^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{50,100})$'),
@@ -42,6 +48,9 @@ create table if not exists public.agi1_launch_drafts (
   upload_at   timestamptz,                                                             -- an upload counted and under way
   wallet_code text        check (wallet_code is null or char_length(wallet_code) between 16 and 64),
   predicted   text        check (predicted is null or predicted ~ '^0x[0-9a-f]{40}$'),     -- where its coin will be (the dry run)
+  -- every address its launch could have put its coin at (got ready again with other details: 2026-10-02), the newest 20
+  predicted_all text[]    check (predicted_all is null or (cardinality(predicted_all) <= 20
+                            and array_to_string(predicted_all, ',') ~ '^(0x[0-9a-f]{40}(,0x[0-9a-f]{40})*)?$')),
   token       text        check (token is null or token ~ '^0x[0-9a-f]{40}$'),
   launch_tx   text        check (launch_tx is null or launch_tx ~ '^0x[0-9a-f]{64}$'),
   created_at  timestamptz not null default now(),
@@ -58,6 +67,8 @@ create table if not exists public.agi1_launch_drafts (
 alter table public.agi1_launch_drafts add column if not exists pin_id text check (pin_id is null or pin_id ~ '^[A-Za-z0-9_-]{1,100}$');
 alter table public.agi1_launch_drafts add column if not exists upload_at timestamptz;
 alter table public.agi1_launch_drafts add column if not exists predicted text check (predicted is null or predicted ~ '^0x[0-9a-f]{40}$');
+alter table public.agi1_launch_drafts add column if not exists predicted_all text[] check (predicted_all is null or (cardinality(predicted_all) <= 20
+  and array_to_string(predicted_all, ',') ~ '^(0x[0-9a-f]{40}(,0x[0-9a-f]{40})*)?$'));
 alter table public.agi1_launch_drafts add column if not exists launch_tx text check (launch_tx is null or launch_tx ~ '^0x[0-9a-f]{64}$');
 alter table public.agi1_launch_drafts add column if not exists gas_why text check (gas_why is null or gas_why in ('wallet_cap', 'site_cap'));
 alter table public.agi1_launch_drafts add column if not exists gas_at timestamptz;
@@ -65,6 +76,10 @@ update public.agi1_launch_drafts set gas_state = null where gas_state not in ('c
 alter table public.agi1_launch_drafts drop constraint if exists agi1_launch_drafts_gas_state_check;
 alter table public.agi1_launch_drafts add constraint agi1_launch_drafts_gas_state_check
   check (gas_state is null or gas_state in ('claimed', 'sending', 'sent', 'skipped'));
+-- (2026-10-02: a ticker can be almost anything; every ticker saved before fits the new rule too)
+alter table public.agi1_launch_drafts drop constraint if exists agi1_launch_drafts_symbol_check;
+alter table public.agi1_launch_drafts add constraint agi1_launch_drafts_symbol_check
+  check (octet_length(symbol) between 1 and 16 and symbol !~ '[[:space:][:cntrl:]]');
 -- one coin belongs to one draft (so one launch is paid back once)
 create unique index if not exists agi1_launch_drafts_token on public.agi1_launch_drafts (token) where token is not null;
 
@@ -120,7 +135,7 @@ declare
 begin
   if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_chat is null or char_length(p_chat) not between 16 and 64
      or p_name is null or char_length(p_name) not between 1 and 32 or octet_length(p_name) > 64
-     or p_symbol is null or p_symbol !~ '^[A-Z0-9]{2,10}$'
+     or p_symbol is null or octet_length(p_symbol) not between 1 and 16 or p_symbol ~ '[[:space:][:cntrl:]]'
      or char_length(coalesce(p_desc, '')) > 100 or octet_length(coalesce(p_desc, '')) > 300
      or p_photo is null or char_length(p_photo) not between 10 and 300
      or p_minutes is null or p_minutes not between 1 and 1440 or p_per_chat is null or p_per_chat < 1
@@ -164,9 +179,10 @@ as $$
 $$;
 
 -- Getting a draft ready for one wallet (one atomic step): the first wallet that gets it ready keeps it. When its picture
--- isn't on IPFS yet, an upload is counted here first (that wallet's and the site's daily uploads), so many tries at once
--- can't get past the caps; launch_upload_back gives it back when the upload fails. A second try while one is under way
--- (under a minute) waits.
+-- isn't on IPFS yet, an upload is counted here first (that wallet's coins today, and the site's daily uploads), so many
+-- tries at once can't get past the caps; launch_upload_back gives it back when the upload fails. A second try while one is
+-- under way (under a minute) waits. p_per_wallet: the coins this wallet may get ready today (since 2026-10-02 our server
+-- reads it from what the wallet holds: 5 for every 10,000 $AGI, 50 at most).
 -- → {"ok": true, "upload": true|false, "cid"} or {"ok": false, "why": "gone" | "expired" | "launched" | "other_wallet" |
 --   "uploading" | "wallet_cap" | "site_cap" | "bad"}
 create or replace function public.launch_prepare(p_id text, p_wallet text, p_per_wallet integer, p_site_daily integer)
@@ -256,16 +272,49 @@ end;
 $$;
 
 -- Where its coin will be, from the dry run of its launch (fixed by its creator, details and salt): read back from there,
--- and its picture is never deleted while a coin is there. → true, or false (not this wallet's draft, or launched)
-create or replace function public.launch_predicted(p_id text, p_wallet text, p_token text)
-returns boolean
+-- and its picture is never deleted while a coin is there. Since 2026-10-02 (the coins a wallet may launch a day follow
+-- what it holds): the same link got ready again with other details (other links, another pair) is another coin (its
+-- launch could be sent as well as the first one), so a new address counts as one more of that wallet's coins today, up to
+-- p_per_wallet; an address it already had (the same details again, or earlier ones) counts nothing. Every address is kept
+-- (predicted_all, the newest 20), so the tidy-up can ask about them all. (Called without p_per_wallet, as before
+-- 2026-10-02: nothing counted.)
+-- → {"ok": true} or {"ok": false, "why": "gone" | "launched" | "other_wallet" | "wallet_cap" | "bad"}
+drop function if exists public.launch_predicted(text, text, text);
+create or replace function public.launch_predicted(p_id text, p_wallet text, p_token text, p_per_wallet integer default null)
+returns json
 language plpgsql
 set search_path = public
 as $$
+declare
+  today date := (now() at time zone 'utc')::date;
+  d agi1_launch_drafts%rowtype;
+  w agi1_launch_wallets%rowtype;
+  seen text[];
 begin
-  if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null or p_token is null or p_token !~ '^0x[0-9a-f]{40}$' then return false; end if;
-  update agi1_launch_drafts set predicted = p_token where id = p_id and wallet_code = p_wallet and token is null;
-  return found;
+  if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null or char_length(p_wallet) not between 16 and 64
+     or p_token is null or p_token !~ '^0x[0-9a-f]{40}$' or (p_per_wallet is not null and p_per_wallet < 1) then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  -- (a wallet's row, then the draft: the usual order)
+  insert into agi1_launch_wallets (wallet_code, day) values (p_wallet, today) on conflict (wallet_code, day) do nothing;
+  select * into w from agi1_launch_wallets where wallet_code = p_wallet and day = today for update;
+  select * into d from agi1_launch_drafts where id = p_id for update;
+  if not found then return json_build_object('ok', false, 'why', 'gone'); end if;
+  if d.token is not null then return json_build_object('ok', false, 'why', 'launched'); end if;
+  if d.wallet_code is distinct from p_wallet then return json_build_object('ok', false, 'why', 'other_wallet'); end if;
+  -- every address its launch could have put its coin at so far (a draft from before 2026-10-02: just "predicted")
+  seen := coalesce(d.predicted_all, case when d.predicted is null then '{}'::text[] else array[d.predicted] end);
+  if not (p_token = any(seen)) then
+    -- a new one: another coin, unless it's the first (its picture's upload counted that one)
+    if cardinality(seen) > 0 and p_per_wallet is not null then
+      if w.uploads >= p_per_wallet then return json_build_object('ok', false, 'why', 'wallet_cap'); end if;
+      update agi1_launch_wallets set uploads = uploads + 1 where wallet_code = p_wallet and day = today;
+    end if;
+    seen := array_append(seen, p_token);
+    if cardinality(seen) > 20 then seen := seen[cardinality(seen) - 19 : cardinality(seen)]; end if;
+  end if;
+  update agi1_launch_drafts set predicted = p_token, predicted_all = seen where id = p_id;
+  return json_build_object('ok', true);
 end;
 $$;
 
@@ -420,8 +469,9 @@ $$;
 -- pictures we uploaded for coins that were never launched (their link ended over an hour ago), at most 50, unless a
 -- still-open draft uses the same picture. A picture a launched coin uses is never deleted, whichever draft uploaded it
 -- (Pinata gives the same picture one id); and the server first asks the factory whether a coin is where the draft's own
--- launch would have put it ("predicted": a launch nobody read back), keeping its picture if so. Then it deletes the rest
--- at Pinata and calls launch_unpinned (for both). → {"pins": [{"pin", "predicted"}]}
+-- launch would have put it ("predicted", and since 2026-10-02 every such address, "predicted_all": a launch nobody read
+-- back), keeping its picture if so. Then it deletes the rest at Pinata and calls launch_unpinned (for both).
+-- → {"pins": [{"pin", "predicted", "predicted_all"}]}
 create or replace function public.launch_tidy()
 returns json
 language plpgsql
@@ -438,8 +488,8 @@ begin
   delete from agi1_launch_chats where day < today;
   delete from agi1_launch_wallets where day < today - 1;
   delete from agi1_launch_days where day < today - 30;
-  select coalesce(json_agg(json_build_object('pin', p.pin_id, 'predicted', p.predicted)), '[]'::json) into pins from (
-    select d.pin_id, d.predicted from agi1_launch_drafts d
+  select coalesce(json_agg(json_build_object('pin', p.pin_id, 'predicted', p.predicted, 'predicted_all', coalesce(to_json(p.predicted_all), '[]'::json))), '[]'::json) into pins from (
+    select d.pin_id, d.predicted, d.predicted_all from agi1_launch_drafts d
     where d.pin_id is not null and d.token is null and d.expires_at < now() - interval '1 hour'
       and not exists (select 1 from agi1_launch_drafts o where o.cid = d.cid and o.id <> d.id
                         and (o.token is not null or o.expires_at > now() - interval '1 hour'))
@@ -470,7 +520,7 @@ revoke all on function public.launch_draft_get(text) from public, anon, authenti
 revoke all on function public.launch_prepare(text, text, integer, integer) from public, anon, authenticated;
 revoke all on function public.launch_upload_back(text) from public, anon, authenticated;
 revoke all on function public.launch_set_cid(text, text, text) from public, anon, authenticated;
-revoke all on function public.launch_predicted(text, text, text) from public, anon, authenticated;
+revoke all on function public.launch_predicted(text, text, text, integer) from public, anon, authenticated;
 revoke all on function public.launch_done(text, text, text, text) from public, anon, authenticated;
 revoke all on function public.launch_gas_claim(text, text, numeric, integer, numeric) from public, anon, authenticated;
 revoke all on function public.launch_gas_sending(text, text) from public, anon, authenticated;
@@ -482,7 +532,7 @@ grant execute on function public.launch_draft_get(text) to service_role;
 grant execute on function public.launch_prepare(text, text, integer, integer) to service_role;
 grant execute on function public.launch_upload_back(text) to service_role;
 grant execute on function public.launch_set_cid(text, text, text) to service_role;
-grant execute on function public.launch_predicted(text, text, text) to service_role;
+grant execute on function public.launch_predicted(text, text, text, integer) to service_role;
 grant execute on function public.launch_done(text, text, text, text) to service_role;
 grant execute on function public.launch_gas_claim(text, text, numeric, integer, numeric) to service_role;
 grant execute on function public.launch_gas_sending(text, text) to service_role;

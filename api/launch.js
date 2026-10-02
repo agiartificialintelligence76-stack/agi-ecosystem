@@ -1,16 +1,17 @@
 // /api/launch: "Launch with AGI-1" (2026-10-01, the owner's idea; server/launch.js). The launch page (agi1.app/launch/<id>,
 // src/launch/) asks here; the person's own wallet does the launch, on clank.trade's own contracts. Nothing here signs or
-// sends anything for them, or holds their keys: it reads (the database, Telegram's copy of the picture, Robinhood Chain,
-// clank.trade's search) and builds clank.trade's launch call. The one thing our server ever sends is the owner's own gas
-// wallet paying a launch's network fee back to its creator.
+// sends anything for them, or holds their keys: it reads (the database, Telegram's copy of the picture, Robinhood Chain)
+// and builds clank.trade's launch call. The one thing our server ever sends is the owner's own gas wallet paying a
+// launch's network fee back to its creator.
 //   GET  ?d=<id>    → the draft: { name, symbol, description, expires (ms), expired, token (once launched), ready, gasBack
 //                     (the most paid back, wei, or null), gas (its payback so far, or { paid: false, why: 'unpaid' }) }
 //   GET  ?pic=<id>  → its picture (Telegram's copy, through our server, so the page's CSP stays as it is)
-//   POST { action: 'prepare', draft, session, links? } → { to, data, value, chainId, token, curve, level }: the launch for
-//        that wallet, tried on the chain first. Needs the Crush level (10,000+ $AGI held or burned, read fresh), a ticker
-//        nobody on clank.trade has, and clank.trade open to launches (free); puts the picture on IPFS the first time.
+//   POST { action: 'prepare', draft, session, links?, pair? } → { to, data, value, chainId, token, curve, level, perDay }:
+//        the launch for that wallet, tried on the chain first. Needs 10,000+ $AGI held or burned in it (read fresh), and
+//        one of its coins for today (perDay: 5 for every 10,000, 50 at most, since 2026-10-02; else 429 { error:
+//        'wallet_cap', perDay, changed? }), and clank.trade open to launches (free); puts the picture on IPFS the first time.
 //        links (optional, 2026-10-01): { twitter, telegram, website } as typed: checked and tidied (server/launch.js
-//        checkLinks), else 422 { error: 'links', field, why }
+//        checkLinks), else 422 { error: 'links', field, why }. pair (2026-10-02): 'eth' (the default) or 'spcx'.
 //   POST { action: 'check', draft, session, tx } → { ok: true, token, curve, gas } | { pending: true } | { ok: false, why }:
 //        their launch, read back from the chain: this draft's own call (its salt, its details), sent by their wallet to
 //        clank.trade's factory, and the coin as the factory records it. gas: its network fee paid back by the owner's gas
@@ -21,11 +22,11 @@
 import { getConfig } from '../server/config.js';
 import { clientIp, visitorCode } from '../server/security.js';
 import { readSession } from '../server/session.js';
-import { checkLevel, CHAIN_ID } from '../server/chain.js';
+import { checkHolding, CHAIN_ID } from '../server/chain.js';
 import { burnedAgi } from '../server/burn.js';
 import { tgToken } from '../server/telegram.js';
 import {
-  DRAFT_ID, NEEDED_LEVEL, drafts, launchWallet, launchReady, tickerTaken, telegramPicture, pinPicture, launchTerms, launchCall,
+  DRAFT_ID, drafts, launchWallet, launchReady, telegramPicture, pinPicture, launchTerms, launchCall, launchesADay, pairOf,
   tryLaunch, readLaunch, gasOn, payGasBack, paybackFor, gasSoFar, gasFinal, checkLinks,
 } from '../server/launch.js';
 import { launchBurst, launchPictureBurst } from '../server/burst.js';
@@ -163,40 +164,39 @@ export async function POST(request) {
   if (d.token) return json(409, { error: 'launched', token: d.token });
   if (d.expired === true) return json(410, { error: 'expired' });
   if (d.wallet && d.wallet !== wallet) return json(403, { error: 'other_wallet' });
-  // the links they added (optional): checked before anything is read, counted or uploaded
+  // the pair they picked (ETH unless they picked SPCX) and the links they added (optional): checked before anything is
+  // read, counted or uploaded
+  const pair = pairOf(body.pair);
+  if (!pair) return json(400, { error: 'bad_request' });
   const linked = checkLinks(body.links);
   if (!linked.ok) return json(422, { error: 'links', field: linked.field, why: linked.why });
-  // the Crush level, read fresh from the chain: what the wallet holds, plus what it burned for messages
-  const level = await checkLevel(s.wallet, 1, undefined, await burnedAgi(cfg, s.wallet));
-  if (!level.checked) return json(503, { error: 'chain' });
-  if (level.level < NEEDED_LEVEL) return json(403, { error: 'level', level: level.level });
-  // still a ticker nobody on clank.trade has (it was checked in her bot; someone may have launched it since)
-  try {
-    if (await tickerTaken(d.symbol)) return json(409, { error: 'taken' });
-  } catch (err) {
-    if (err.common) return json(409, { error: 'common' });
-    console.warn(`[launch] couldn't check a ticker on clank.trade: ${err.message}`);
-    return json(503, { error: 'clank' });
-  }
-  // clank.trade's terms right now, before anything is counted or uploaded: launches open for this wallet, and free (the
-  // page never sends ETH)
+  // what the wallet holds, plus what it burned for messages, read fresh from the chain: 10,000+ to launch at all, and its
+  // coins a day (5 for every 10,000, 50 at most)
+  const held = await checkHolding(s.wallet, undefined, await burnedAgi(cfg, s.wallet));
+  if (!held.checked) return json(503, { error: 'chain' });
+  const perDay = launchesADay(held.agi);
+  if (perDay < 1) return json(403, { error: 'level', level: held.level });
+  // clank.trade's terms right now, before anything is counted or uploaded: launches open for this wallet, the pair on its
+  // list, and free (the page never sends ETH)
   let terms;
-  try { terms = await launchTerms(s.wallet); } catch (err) {
+  try { terms = await launchTerms(s.wallet, undefined, pair); } catch (err) {
     console.warn(`[launch] couldn't read clank.trade's launch terms: ${err.message}`);
     return json(503, { error: 'chain' });
   }
   if (!terms.open) return json(409, { error: 'closed' });
+  if (!terms.approved) return json(409, { error: 'pair' });
   if (terms.fee !== 0n) {
     console.warn(`[launch] clank.trade charges a launch fee now (${terms.fee} wei): the page sends no ETH, so launches wait for an update`);
     return json(409, { error: 'fee' });
   }
-  // this wallet keeps the draft; its picture's upload is counted before it starts (and given back if it fails)
+  // this wallet keeps the draft; its picture's upload is counted before it starts (one of the wallet's coins for today;
+  // given back if it fails)
   let p;
-  try { p = await drafts.prepare(cfg, d.id, wallet); } catch (err) { return dbTrouble(err, 'getting a draft ready failed'); }
+  try { p = await drafts.prepare(cfg, d.id, wallet, perDay); } catch (err) { return dbTrouble(err, 'getting a draft ready failed'); }
   if (p?.ok !== true) {
     const why = String(p?.why || 'busy');
     const status = { gone: 404, expired: 410, launched: 409, other_wallet: 403, uploading: 409, wallet_cap: 429, site_cap: 429 }[why] || 503;
-    return json(status, { error: why });
+    return json(status, why === 'wallet_cap' ? { error: why, perDay } : { error: why });
   }
   let cid = p.cid || null;
   if (!cid) {
@@ -209,7 +209,9 @@ export async function POST(request) {
     }
     if (!pic) { await giveBack(); return json(422, { error: 'picture' }); }
     let pinned;
-    try { pinned = await pinPicture(cfg.pinataJwt, pic, `agi1-launch-${d.symbol}-${d.id.slice(0, 6)}`); } catch (err) {
+    // (a file name of plain letters: a ticker can be anything since 2026-10-02, emoji and "/" included)
+    const label = String(d.symbol).normalize('NFKD').replace(/[^A-Za-z0-9]/g, '').slice(0, 16) || 'coin';
+    try { pinned = await pinPicture(cfg.pinataJwt, pic, `agi1-launch-${label}-${d.id.slice(0, 6)}`); } catch (err) {
       console.error(`[launch] putting a picture on IPFS failed: ${err.message}`);
       await giveBack();
       return json(502, { error: 'pinata' });
@@ -225,20 +227,29 @@ export async function POST(request) {
     }
   }
   // the launch call, and a dry run of it on the chain right before the wallet opens
-  const call = launchCall({ id: d.id, name: d.name, symbol: d.symbol, description: d.description || '', cid, wallet: s.wallet, economics: terms.economics, links: linked.links });
+  const call = launchCall({ id: d.id, name: d.name, symbol: d.symbol, description: d.description || '', cid, wallet: s.wallet, economics: terms.economics, links: linked.links, pair });
   let dry;
   try { dry = await tryLaunch(call, s.wallet); } catch (err) {
     console.warn(`[launch] couldn't try a launch on the chain: ${err.message}`);
     return json(503, { error: 'chain' });
   }
   if (!dry.ok) {
-    if (dry.why !== 'exists' && dry.why !== 'closed') console.warn(`[launch] the dry run of $${d.symbol} failed: ${dry.why}`);
+    if (!['exists', 'closed', 'pair'].includes(dry.why)) console.warn(`[launch] the dry run of $${d.symbol} failed: ${dry.why}`);
     return json(409, { error: dry.why });
   }
-  // where its coin will be: read back from there, and its picture kept while a coin is there
-  try { await drafts.predicted(cfg, d.id, wallet, dry.token); } catch (err) {
+  // where its coin will be: read back from there, and its picture kept while a coin is there. The same link got ready again
+  // with other details (other links, the other pair) would be another coin: one more of this wallet's coins for today
+  let kept;
+  try { kept = await drafts.predicted(cfg, d.id, wallet, dry.token, perDay); } catch (err) {
     console.error('[launch] keeping where the coin will be failed:', err.message);
     return json(503, { error: 'busy' });
   }
-  return json(200, { ...call, chainId: CHAIN_ID, token: dry.token, curve: dry.curve, level: level.level });
+  if (kept?.ok !== true) {
+    const why = String(kept?.why || 'busy');
+    if (why === 'wallet_cap') return json(429, { error: why, perDay, changed: true });
+    const status = { gone: 404, launched: 409, other_wallet: 403 }[why];
+    if (!status) console.error(`[launch] keeping where the coin will be: launch_predicted said ${why}`);
+    return json(status || 503, { error: status ? why : 'busy' });
+  }
+  return json(200, { ...call, chainId: CHAIN_ID, token: dry.token, curve: dry.curve, level: held.level, perDay });
 }

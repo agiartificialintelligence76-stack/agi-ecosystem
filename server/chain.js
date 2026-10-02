@@ -48,13 +48,22 @@ export async function agiBalance(address, env) {
 // burned (2026-09-30): the whole $AGI this wallet burned for messages (server/burn.js) counts too, so burning for more
 // messages never drops a level (and can lift one: 9,000 held + 1,000 burned = Crush)
 export async function checkLevel(address, fallbackLevel = 1, env, burned = 0) {
+  const h = await checkHolding(address, env, burned);
+  return h.checked ? { level: h.level, checked: true } : { level: fallbackLevel, checked: false };
+}
+
+// The same read, with the amount too (2026-10-02, "Launch with AGI-1": the coins a wallet may launch a day follow it):
+// → { level, agi (whole $AGI held plus burned for messages, rounded down), checked: true } · { checked: false } when the
+// chain can't be reached (never throws)
+export async function checkHolding(address, env, burned = 0) {
   try {
     const { raw, decimals } = await agiBalance(address, env);
-    const extra = Number.isSafeInteger(burned) && burned > 0 ? BigInt(burned) * 10n ** BigInt(decimals) : 0n;
-    return { level: levelForBalance(raw + extra, decimals), checked: true };
+    const unit = 10n ** BigInt(decimals);
+    const total = raw + (Number.isSafeInteger(burned) && burned > 0 ? BigInt(burned) * unit : 0n);
+    return { level: levelForBalance(total, decimals), agi: Number(total / unit), checked: true };
   } catch (err) {
     console.error('[wallet] balance check failed:', err.message);
-    return { level: fallbackLevel, checked: false };
+    return { level: 1, agi: 0, checked: false };
   }
 }
 
