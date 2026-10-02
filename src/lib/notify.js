@@ -27,6 +27,8 @@ function covers(a, b) {
 // warm() runs when the pointer or focus arrives on it, to get something ready before the click)
 // → { box, close } or null (not shown: it would cover `avoid`)
 export function notify({ tone = 'up', title, text, actions = [], avoid = null }) {
+  // full-screen talk (2026-10-02): she's right there, reacting in her big live view, and the moment is in her chat: no card
+  if (document.documentElement.classList.contains('is-talk')) return null;
   const box = el('div', `notice notice-${tone === 'down' ? 'down' : 'up'}`);
   box.setAttribute('role', 'group');
   box.setAttribute('aria-label', 'Notification from AGI-1');

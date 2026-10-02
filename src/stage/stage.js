@@ -208,7 +208,11 @@ export function startStage(wrap) {
   const view = { zoom: 1, goal: 1, intro: reducedMotion ? 1 : 1.14, focus: TARGET.clone() };
   // The live views (the chat's, 2026-09-25, and ClankChecker's, 2026-09-26; see "live views" below): is the canvas in one
   // now (`cam`: which one), and what decides it.
-  const dock = { on: false, cam: null, heroNear: true, saved: null, heroKind: null, helloAt: -Infinity };
+  // frameH / headroom: how much of her a live view shows (its CSS can ask for more: --cam-frame, --cam-headroom, in meters,
+  // and --cam-frame-3d for her 3D model; full-screen talk, 2026-10-02, shows her waist up); big: a large live view (her
+  // sharper 2D texture)
+  const dock = { on: false, cam: null, heroNear: true, saved: null, heroKind: null, helloAt: -Infinity, frameH: 0, frame3d: 0, headroom: 0.07, big: false };
+  const askedFrame = () => (flatOnStage() || !dock.frame3d ? dock.frameH : dock.frame3d);   // (her 3D model: closer, see fullscreen.css)
   let agi1Parts = null;                                  // her head, chest and hands, to frame her in the live view
   const attention = { state: 'idle', el: null };          // what she's doing in the chat (src/chat/chat.js: 'agi1:state')
 
@@ -716,6 +720,12 @@ export function startStage(wrap) {
   // Other parts of the site (the chat) can ask AGI-1 to react, or bring someone on stage.
   addEventListener('agi1:react', (e) => { if (current === 'agi1') agi1?.react(e.detail); });
   addEventListener('agi:stage', (e) => { if (MODELS[e.detail]) show(e.detail); });
+  // full-screen talk (2026-10-02, src/chat/fullscreen.js): she waves as it opens (not again within a few seconds)
+  addEventListener('agi:talk', (e) => {
+    if (!e.detail || current !== 'agi1' || !agi1 || switching || performance.now() - dock.helloAt < 8000) return;
+    dock.helloAt = performance.now();
+    agi1.hello();
+  });
   // what she's doing in the chat: 'listening' (you're typing: she looks at the box), 'thinking' (her reply is on its way)
   addEventListener('agi1:state', (e) => {
     const d = e.detail || {};
@@ -811,16 +821,23 @@ export function startStage(wrap) {
     if (!m) return;
     const aspect = camera.aspect || 1;
     let top, x0, x1, z = 0.05;
+    // (while she grows in as she arrives, the picture keeps up with her: easing behind it cut her head off for a moment)
+    if (m.holder.scale.x < 0.999) frame.ready = false;
     m.fx.updateWorldMatrix(true, false);                  // this frame's hop and spin
     unFx.copy(m.fx.matrixWorld).invert().premultiply(m.holder.matrixWorld);
     const at = (bone) => bone.getWorldPosition(vPose).applyMatrix4(unFx);
     let bottom = Infinity, hands = 0;                     // hands: which side a raised hand is on (-1 her right, +1 her left)
-    // head and shoulders (a little more in the taller desktop view), wider only for a raised hand
-    const base = THREE.MathUtils.lerp(0.54, 0.5, THREE.MathUtils.smoothstep(aspect, 0.9, 1.8));
+    // head and shoulders (a little more in the taller desktop view), wider only for a raised hand. A live view that asks
+    // for more (full-screen talk: --cam-frame) gets it in a squarish picture, and closer as the picture gets wide and short
+    // (a phone's keyboard squeezing it), so her face never ends up small in a strip
+    const asked = askedFrame();
+    const base = asked
+      ? THREE.MathUtils.lerp(asked, Math.min(asked, 0.52), THREE.MathUtils.smoothstep(aspect, 1.3, 2.6))
+      : THREE.MathUtils.lerp(0.54, 0.5, THREE.MathUtils.smoothstep(aspect, 0.9, 1.8));
     if (current === 'agi1' && agi1Parts) {
       const head = vHead.copy(at(agi1Parts.head));
       z = head.z; x0 = head.x - 0.2; x1 = head.x + 0.2;   // her hair is about this wide
-      top = at(agi1Parts.headTop).y + 0.07;
+      top = at(agi1Parts.headTop).y + dock.headroom;
       const chestY = at(agi1Parts.chest).y;
       // A raised hand is held a little in front of her face, so it looks a little wider out than it is (2026-09-26: her
       // fingers were cut off by the edge while she waved)
@@ -849,9 +866,9 @@ export function startStage(wrap) {
     } else {                                              // the card for a moment, while AGI-1 is on her way
       top = (MODELS[current]?.height || CARD_Y + 0.3) + 0.1; x0 = -0.45; x1 = 0.45;
     }
-    // never wider than her waist up (0.78 m tall): then her waving hand stays in and her hair on the other side may touch
-    // the edge, so the view stays a portrait
-    const h = Math.min(0.78, Math.max(base, (x1 - x0) / aspect, top - bottom));
+    // never wider than her waist up (0.78 m tall; more where the live view asks for more): then her waving hand stays in
+    // and her hair on the other side may touch the edge, so the view stays a portrait
+    const h = Math.min(Math.max(0.78, base), Math.max(base, (x1 - x0) / aspect, top - bottom));
     const x = (x0 + x1) / 2 + Math.sign(hands) * Math.max(0, x1 - x0 - h * aspect) / 2;
     if (!frame.ready || reducedMotion || !(dt > 0)) Object.assign(frame, { x, top, h, ready: true });
     else {
@@ -992,9 +1009,25 @@ export function startStage(wrap) {
   applyStyle();
 
   // ---------- size, visibility ----------
+  // A big picture (full-screen talk on a large screen, 2026-10-02) draws fewer pixels per point, at most about this many:
+  // still sharp, and smooth on ordinary graphics chips
+  const MAX_PIXELS = mobile ? 1.8e6 : 3.4e6;
   function resize() {
     const host = dock.on ? dock.cam.view : wrap;
     const w = host.clientWidth || 1, h = host.clientHeight || 1;
+    const ratio = Math.min(Q.dpr, Math.sqrt(MAX_PIXELS / (w * h)));
+    if (Math.abs(renderer.getPixelRatio() - ratio) > 0.01) renderer.setPixelRatio(ratio);
+    if (dock.on) {
+      // how much of her this live view shows (its CSS: --cam-frame, --cam-headroom); a new framing is taken at once, not eased
+      const cs = getComputedStyle(dock.cam.box);
+      const meters = (name) => { const v = parseFloat(cs.getPropertyValue(name)); return v > 0.3 && v < 2 ? v : 0; };
+      const frameH = meters('--cam-frame'), frame3d = meters('--cam-frame-3d'), room = parseFloat(cs.getPropertyValue('--cam-headroom'));
+      if (frameH !== dock.frameH || frame3d !== dock.frame3d) frame.ready = false;
+      dock.frameH = frameH;
+      dock.frame3d = frame3d;
+      dock.headroom = room >= 0 && room < 0.5 ? room : 0.07;
+      dock.big = h > 520;
+    }
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.fov = dock.on ? DOCK_FOV : camera.aspect < 0.9 ? 36 : camera.aspect < 1.5 ? 33 : 29;
@@ -1049,6 +1082,8 @@ export function startStage(wrap) {
     }
     effects.update(dt);
     if (dock.on) { frameDock(dt); paintCam(); }             // after her pose, so the live view frames this frame's pose
+    // AGI-1 in 2D, big (full-screen talk on a computer): her 4096 px texture, as for a close-up on the stage
+    if (dock.on && dock.big && !mobile && current === 'agi1' && agi1Slot === 'agi1_2d') models.agi1_2d?.sharpen?.();
   }
 
   // ---------- the loop ----------

@@ -96,6 +96,7 @@
 [data-skin='pop'][data-theme='dark'] :focus-visible,
 [data-skin='pop'][data-theme='dark'] :is(.hero, .topbar, .stage, .ticker, .foot) :focus-visible { outline-color: var(--pop-honey); }
 [data-skin='pop'] .pg-models-item:focus-visible { outline-offset: -3px; }   /* (inside its menu, like the other look) */
+[data-skin='pop'] .pg-log:focus-visible { outline-offset: -4px; }       /* (her chat's messages, scrolled with the keyboard) */
 
 /* headings: wide and heavy, like the old agi1.app page; section eyebrows in spaced mono capitals with a dot */
 [data-skin='pop'] .h2 {
@@ -461,6 +462,23 @@
 @media (max-width: 880px) {
   [data-skin='pop'] .pg-side { border-right: 0; border-top: 3px solid var(--edge); }
   [data-skin='pop'][data-theme='dark'] .pg-side { border-top-width: 2px; }
+}
+/* full-screen talk (2026-10-02, fullscreen.css): her chat on its own column with an ink line beside it, AGI-1 on her comic
+   panel with a hard shadow, both on the Playground's lavender (deep violet at night); her buttons like the Call button */
+[data-skin='pop'].is-talk .pg::before { border-right: 3px solid var(--edge); }
+[data-skin='pop'].is-talk .pg-cam { margin: 16px 16px 22px; border-width: 3px; border-radius: 28px; box-shadow: 0 9px 0 -2px var(--shade); }
+[data-skin='pop'][data-theme='dark'].is-talk .pg::before { border-right-width: 2px; }
+[data-skin='pop'][data-theme='dark'].is-talk .pg-cam { border-width: 2px; }
+[data-skin='pop'] .pg-cam-full, [data-skin='pop'] .pg-talk-btn { color: var(--pop-ink); background: #fff; border: 2px solid var(--pop-ink); }
+[data-skin='pop'] .pg-cam-full:hover, [data-skin='pop'] .pg-talk-btn:hover { color: var(--pop-ink); background: var(--pop-lav); border-color: var(--pop-ink); }
+[data-skin='pop'][data-theme='dark'] .pg-cam-full, [data-skin='pop'][data-theme='dark'] .pg-talk-btn { color: #f4efff; background: #1d0e40; border-color: var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .pg-cam-full:hover, [data-skin='pop'][data-theme='dark'] .pg-talk-btn:hover { color: #f4efff; background: #2c1766; }
+[data-skin='pop'] .pg-cam :focus-visible { outline-color: var(--pop-ink); }   /* (violet wouldn't stand out on her pink panel) */
+[data-skin='pop'][data-theme='dark'] .pg-cam :focus-visible { outline-color: var(--pop-honey); }
+@media (max-aspect-ratio: 4/5), (max-width: 760px) and (orientation: portrait) {
+  [data-skin='pop'].is-talk .pg::before { border-right: 0; border-top: 3px solid var(--edge); }
+  [data-skin='pop'][data-theme='dark'].is-talk .pg::before { border-top-width: 2px; }
+  [data-skin='pop'].is-talk .pg-cam { margin: 10px 10px 14px; border-radius: 22px; box-shadow: 0 6px 0 -1px var(--shade); }
 }
 
 /* ---------- ClankChecker (mint) ---------- */

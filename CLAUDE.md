@@ -62,6 +62,11 @@
 >   tickers can be almost anything, copies included (never $AGI look-alikes, egirl coins, "official", crude or links);
 >   **5 coins a day for every 10,000 $AGI** held or burned (50 at most); a coin can be **paired with ETH or SPCX**; "Open in
 >   Phantom ↗". **Run `supabase/launch.sql` again before pushing it.**
+> - **Full-screen talk and the AGI-1 app** (2026-10-02, the owner: "can you put a full screen button on the chat of agi1 …
+>   you decide where to put", and an idea for a Windows and Mac app): **agi1.app/talk**, her chat on the left and AGI-1 big
+>   on the right (phones: her on top), from the Playground's "Talk full screen" or the ⤢ on her live view; and the site
+>   installs from the browser as an app that opens there ("Get the AGI-1 app"). A native app and "she does what Claude
+>   does" are the owner's decisions. See "Full-screen talk and the AGI-1 app".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -113,6 +118,9 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   burned in it, nothing spent; since 2026-10-02 5 coins a day for every 10,000, up to 50, any name and ticker, copies
   included, paired with ETH or SPCX; launching is free, and the owner's gas wallet pays the small network fee back). The
   coin is theirs; she never promotes it. Off until it's set up. See "Launch with AGI-1"
+- **Full-screen talk** (2026-10-02, the owner's idea): agi1.app/talk, her chat on the left and AGI-1 big on the right
+  (phones: her on top), in the browser's real full screen when opened from the page; and **the AGI-1 app**: the site
+  installed from the browser, in its own window, opening there. See "Full-screen talk and the AGI-1 app"
 - **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
 It looks like an AI lab's model launch page (a parody, see "Design" below): serious design, meme content. (Pop mode is the
@@ -207,11 +215,11 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `index.html` | The page: top bar, the front (2026-09-28), hero, every section, and the footer (the safety note). Vite starts here |
 | `diary.html` | AGI-1's diary page (`/diary`, Phase 5): top bar, the entries, a short safety paragraph. Its own entry: `src/diary.js` |
 | `launch.html` | "Launch with AGI-1" (2026-10-01): the private launch page (`/launch/<id>`, never in search results): the coin, 18+, the three steps (your wallet, Robinhood Chain, Launch), the coin once it's live, "Before you launch". Its own entry: `src/launch/page.js` |
-| `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28) |
-| `src/main.js` | Browser code entry point: styles, theme, the front, prices, sections, chat, then the 3D stage (loaded separately, after the front's entrance) |
+| `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28); at agi1.app/talk (2026-10-02) it starts the page in full-screen talk (`is-talk`, its title and colors, no loader) |
+| `src/main.js` | Browser code entry point: styles, theme, the front, prices, sections, chat, then the 3D stage (loaded separately, after the front's entrance; at /talk at once, and the front only when you leave full-screen talk) |
 | `src/landing/landing.js` | The front (2026-09-28): the loader, the entrance, the focus lines, AGI-1 in WebGL, the orbit, her bubble, the ribbons, the manifesto, the cursor and hearts (see "The front") |
 | `src/landing/lines.js` | What AGI-1 says in the front's speech bubble, and when she's clicked (PG-13, no pet names, no money talk) |
-| `src/styles/` | `tokens.css` (colors for both themes, chart colors, fonts), `base.css` (reset, buttons), `layout.css` (top bar), `footer.css` (safety note + bottom bar), `hero.css` (hero, ticker, figure), `sections.css` (section headings, stat tiles), `evals.css` (Figure 2), `modelcard.css` (Model card), `playground.css` (Playground), `relationship.css` (levels panel, connect screen, level-up), `notify.css` (the notification card, 2026-09-25), `checker.css` (ClankChecker, 2026-09-26), `pop.css` (Pop mode, 2026-09-27: the whole second look, every rule under `[data-skin="pop"]`), `landing.css` (the front, 2026-09-28: every rule names an `lp-` class), `launch.css` (the launch page, 2026-10-01: every rule names an `lch-` class) |
+| `src/styles/` | `tokens.css` (colors for both themes, chart colors, fonts), `base.css` (reset, buttons), `layout.css` (top bar), `footer.css` (safety note + bottom bar), `hero.css` (hero, ticker, figure), `sections.css` (section headings, stat tiles), `evals.css` (Figure 2), `modelcard.css` (Model card), `playground.css` (Playground), `relationship.css` (levels panel, connect screen, level-up), `notify.css` (the notification card, 2026-09-25), `checker.css` (ClankChecker, 2026-09-26), `pop.css` (Pop mode, 2026-09-27: the whole second look, every rule under `[data-skin="pop"]`), `landing.css` (the front, 2026-09-28: every rule names an `lp-` class), `launch.css` (the launch page, 2026-10-01: every rule names an `lch-` class), `fullscreen.css` (full-screen talk, 2026-10-02: every rule names `.is-talk`, except the Playground's new buttons) |
 | `src/theme.js` | The light/dark toggle and (2026-09-27) the Pop mode button; remembers both choices; sends `agi:theme` and `agi:skin`; the phone's browser-bar color (`barColor()`) |
 | `src/menu.js` | The phone menu (both pages): on screens up to 920 px (in Pop mode up to 1040 px; 860 px before the Pop mode button, 760 px before ClankChecker's link) the top bar's links are hidden, and the menu button shows them as a drop-down (with the Diary, the Safety note and, under 380 px, Pop mode). Where it starts is decided by the CSS alone. Closes on a link, Escape, a tap outside, or when the links fit again. Also Pop mode's top-bar band (`is-stuck`, past the hero) |
 | `src/prices/` | `parse.js` (read DexScreener's answer, number formats), `prices.js` (fetch every 30 s, sends `agi:prices`), `ticker.js` (draws the hero ticker) |
@@ -228,7 +236,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/stage/agi1.js` | AGI-1's idle (built in code), occasional dance, and reactions (wave, looking at you, hop, spin, hearts, a jealous glance); her face (2026-09-25: her jaw, mouth corners and cheeks really move, painted eyelids, blush and "^^" eyes, an expression for each chat mood) and her listening/thinking looks; since 2026-09-26 her arm waves like a real arm (a hinge at the elbow), her mouth is redrawn, her hair swings, and ClankChecker's reactions (`okay`, `hmm`, `worried`) |
 | `src/lib/talk.js` | How much AGI-1 is talking right now (0–1), for her 3D mouth: a sound meter on her voice, or a made-up rhythm ("saying" a reply silently) |
 | `src/stage/effects.js` | Floating hearts in the accent color |
-| `public/` | Files served as-is: favicon, `fonts/` (Geist, and for Pop mode Anybody and Instrument Serif Italic; for the front's "ドキドキ" a 760-byte subset of Dela Gothic One; self-hosted, each with its OFL license file), `models/agi1.glb` (2.18 MB, computers), `models/agi1-phone.glb` (1.67 MB, phones), `images/landing/` (the front, 2026-09-28: AGI-1's cutout, 104 KB; her face for the bubble, 4 KB; a depth map for her WebGL parallax, 5 KB), `images/agi1-avatar.webp`, `images/agi1-portrait.webp`, `images/agi1-live.webp` (the chat's live view before the 3D arrives, 24 KB), `images/agi1-live-2d.webp` (the same for AGI-1 in 2D, 51 KB, rendered from her Live2D model on 2026-10-01; shown first), `models/agi1-live2d/` (AGI-1 in 2D since 2026-10-01: Live2D's runtime `live2dcubismcore.min.js` (as it is, © Live2D Inc., with `NOTICE.txt`), her model `AGI-1.moc3`, its physics `AGI-1.physics3.json`, her texture `AGI-1.2048.webp` (456 KB) and `AGI-1.4096.webp` (1.1 MB, close-ups on computers); about 770 KB for a visitor who sees her in 2D) (`models/agi1-2d/`, the 2D rig's pictures before her Live2D model, and `images/coins/`, the Arena's coin logos, are gone) |
+| `public/` | Files served as-is: favicon, `fonts/` (Geist, and for Pop mode Anybody and Instrument Serif Italic; for the front's "ドキドキ" a 760-byte subset of Dela Gothic One; self-hosted, each with its OFL license file), `models/agi1.glb` (2.18 MB, computers), `models/agi1-phone.glb` (1.67 MB, phones), `images/landing/` (the front, 2026-09-28: AGI-1's cutout, 104 KB; her face for the bubble, 4 KB; a depth map for her WebGL parallax, 5 KB), `images/agi1-avatar.webp`, `images/agi1-portrait.webp`, `images/agi1-live.webp` (the chat's live view before the 3D arrives, 24 KB), `images/agi1-live-2d.webp` (the same for AGI-1 in 2D, 51 KB, rendered from her Live2D model on 2026-10-01; shown first), `models/agi1-live2d/` (AGI-1 in 2D since 2026-10-01: Live2D's runtime `live2dcubismcore.min.js` (as it is, © Live2D Inc., with `NOTICE.txt`), her model `AGI-1.moc3`, its physics `AGI-1.physics3.json`, her texture `AGI-1.2048.webp` (456 KB) and `AGI-1.4096.webp` (1.1 MB, close-ups on computers); about 770 KB for a visitor who sees her in 2D) (`models/agi1-2d/`, the 2D rig's pictures before her Live2D model, and `images/coins/`, the Arena's coin logos, are gone); since 2026-10-02 `manifest.webmanifest` (the AGI-1 app: her name, /talk, her colors and icons) and `icons/` (her app icons: 180, 192, 512 and a 512 maskable one) |
 | `src/chat/chat.js` | The Playground (AGI-1's chat, `section#playground` in `index.html`): 18+ gate, human check, history in the browser, mood → stage reaction. "Try AGI-1" buttons scroll here |
 | `src/chat/models.js` | The model picker in the chat bar (2026-09-26): "AGI-1 ▾" opens a small menu (AGI-1, and AGI-2 "Coming soon"), for mouse, keyboard and screen readers |
 | `src/chat/model-lines.js` | What AGI-1 says when someone picks AGI-2 (pre-written, playfully jealous, PG-13, no AI cost) |
@@ -241,6 +249,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/i18n/` | Her languages (2026-09-29): `langs.js` (the 16 languages: codes, names, number formats, what the mic listens for; the page and the server share it), `lines/en.js` (every pre-written line of hers in English: the source) and `lines/<code>.js` (the same keys in each language), `text.js` (filling in `{placeholders}`, English as the fallback), `lang.js` (the page: which language she speaks with this visitor, remembered as `agi1_lang`; downloads only that language's file), `all.js` (the server: every language at once), `check.js` (her rules for a translation: same keys, placeholders, emojis, "not financial advice", kept names and numbers) |
 | `src/chat/languages.js` | Her languages (2026-09-29): the chat bar's language menu ("🌐 English ▾" next to "AGI-1 ▾"), two columns of her 16, each in its own words; keyboard like the model picker |
 | `src/lib/copy.js` | 2026-09-29: the Copy button for the contract address (the Model card's and the front's): copies the whole address, or selects it where the clipboard is blocked |
+| `src/chat/fullscreen.js` | Full-screen talk (2026-10-02): agi1.app/talk, the ways in (the links to /talk), the browser's full screen, the address (Back, Forward), ✕, leaving (back to where the page was), the level chip there, phones' visible screen; sends `agi:talk`. See "Full-screen talk and the AGI-1 app" |
+| `src/chat/install.js` | The AGI-1 app (2026-10-02): the "Get the AGI-1 app" screen: which way this browser installs a site (`installHow()`), its words (`HOW_WORDS`), our Install button with the browser's own install window |
 | `src/chat/telegram-link.js` | She texts first (2026-09-29): shows the Playground's "Text me on Telegram ↗" once the bot's public name is set (`VITE_TELEGRAM_BOT`, read by `src/main.js`) |
 | `src/chat/burn.js` | Burn $AGI for more messages (2026-09-30): the burn monitor above the chat (the huge live number), the Relationship panel's row, the burn screen (a native dialog: the steps, the burn address and Copy, Check my burn, a pasted link), the sentences about burning (shown once burns are open, `[data-burn-only]`); `burnsReady()` / `openBurn()` for the chat's out-of-messages chip |
 | `src/lib/burns.js` | 2026-09-30: the burn address (`0x…dEaD`), its block explorer page, the suggested amounts. The page and the server share it |
@@ -267,7 +277,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes) |
 | `supabase/burns.sql` | Burn $AGI for more messages (2026-09-30). Run once in the same Supabase project (any time): five new tables (`agi1_burn_key`, `agi1_burn_txs`, `agi1_burn_wallets`, `agi1_burn_days`, `agi1_burn_total`) and 7 functions, only added (nothing the original site uses changes). Until it's run, nobody sees anything about burning |
 | `supabase/launch.sql` | "Launch with AGI-1" (2026-10-01). Run once in the same Supabase project (any time; running it again is safe): four new tables (`agi1_launch_drafts`, `agi1_launch_chats`, `agi1_launch_wallets`, `agi1_launch_days`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `PINATA_JWT` is set), her `/launch` says launching isn't open yet |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
@@ -277,8 +287,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `tools/agi1-2d/fix-shirt.py` | 2026-10-01: repaints the pink smudge on her Live2D texture's shirt under her right arm (her wave showed it), on both WebP textures; run once after each new export of her model (see "Updating her model") |
 | `tools/memory/` | Phase 6, offline: `build-memory.mjs` turns the Telegram export into `server/tg-memory-data.js`; `lore.json` (hand-written memory cards: eras, running jokes, big moments; edit freely); `forget.json` (people who asked to be left out). See "AGI-1's memory of the Telegram group" |
 | `telegram memories/` | The owner's Telegram export (`result.json`, 31 MB, thousands of people's messages). **Never in git** (`.gitignore`); only `tools/memory/` reads it |
-| `vite.config.js` | Three pages (`index.html`, `diary.html` and since 2026-10-01 `launch.html`); raises Vite's file-size warning: three.js is large on purpose and loads separately |
-| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site), security headers (CSP), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed` |
+| `vite.config.js` | Three pages (`index.html`, `diary.html` and since 2026-10-01 `launch.html`); raises Vite's file-size warning: three.js is large on purpose and loads separately; since 2026-10-02 serves /talk as the home page in `npm run dev` and Vite's preview, like Vercel |
+| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk), security headers (CSP), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed` |
 
 ## Commands
 
@@ -2331,6 +2341,179 @@ kept, switching back and forth between pairs counting extra coins, the tidy-up o
 all fixed and tested). **Not tested live:** Robinhood Chain, clank.trade's factory, Pinata, Telegram and Phantom (Claude's
 workspace can't reach them): the owner's first launch is the first real check; for SPCX, the first SPCX launch.
 
+## Full-screen talk and the AGI-1 app (2026-10-02)
+
+**The owner's request:** "can you put a full screen button on the chat of agi1- like talk to her on full screen, like agi-1
+will be in full screen on the right and her chat will be on the left, you decide where to put, the top section is already
+crowded maybe in new tab? or sub domain? i dont know you know best", and in the same message an idea: "a windows app and mac
+app. they can download agi-1 on their pc, and agi-1 can do what claude do, and help me with my tasks or i can consult her
+she also speaks on my pc, she will appear on my screen as well … make this better then continue".
+
+**Claude's choices:**
+- **Its own address on this same site: agi1.app/talk.** Not a subdomain: talk.agi1.app would open empty, because browsers
+  keep the chat history, the 18+ answer, the wallet sign-in, the voice setting and her language per address, and it would
+  need its own domain setup (Vercel, Cloudflare's human check). agi1.app/talk shares all of them, and it's the home page
+  itself in another layout (`src/styles/fullscreen.css`), so everything of the chat works there exactly as on the page. It
+  still opens in a new tab when wanted (Ctrl-click, ⌘-click, the middle button), and it's a link people can share.
+- **Nothing in the crowded top bar:** the ways in are in the Playground.
+- **The app, step 1, free:** the site installs from the browser as an app that opens straight into full-screen talk. The
+  native Windows and Mac app and "she does what Claude does" are the owner's decisions (costs, safety): see "The AGI-1 app"
+  below.
+
+**What visitors see:**
+- **The ways in:** "Talk full screen" (an expand icon) and "Get the AGI-1 app" (a download icon) in the Playground's heading,
+  and a round ⤢ at the top right of her live view (its 3D · 2D pill moved left of it). Both ways in are plain links to
+  /talk.
+- **Opened from the page,** it also asks the browser for real full screen (no browser bars; iPhones have none, so there it's
+  the layout alone). Leaving full screen (Esc, or the browser's own button) brings you back to the page, at the same place,
+  with the keyboard back on the button you used, like a video's full screen. **Except when a screen or a menu is open** (the
+  wallet's connect screen, the burn screen, the app's screen, her language or model menu): in full screen the browser keeps
+  Esc for itself, so that Esc was for the screen. Full-screen talk then stays (without the browser's full screen), and the
+  next Esc closes the screen.
+- **The layout:** on computers her chat on the left (340–540 px wide) and AGI-1 big on the right, the whole height, in a
+  rounded panel (Pop mode: a comic panel with focus lines, pink in the light theme and deep violet in the dark, with an
+  outline and a hard shadow); her chat bar tightens in steps as its column gets narrower. **Phones standing up and tall
+  windows** (taller than 5:4): her on top (40% of the height, at least 132 px) and the chat under her; **a phone on its
+  side:** side by side. When a phone's keyboard comes up, the layout follows the part of the screen you can see
+  (`visualViewport`): her picture shrinks and the message box stays in view; on a short screen the example prompts make
+  way, and a very short picture keeps only the buttons you need. Under 340 px tall (stacked): the chat alone. The 18+
+  check and her language menu scroll inside the screen, so their buttons are always reachable.
+- **Her framing:** waist up in 2D (head and shoulders in 3D), with a little room above her hair (`--cam-frame`,
+  `--cam-frame-3d`, `--cam-headroom` in the CSS, read by `src/stage/stage.js`); she waves when it opens. On a computer, in
+  2D, her sharper 4096 px texture (as for a close-up). The big picture draws at most about 3.4 million pixels (1.8 million on
+  phones), so a 4K screen doesn't cost a fortune in graphics.
+- **Her buttons on her picture:** at the top right "Get the app" (only its icon on small screens), ⛶ (the browser's full
+  screen, shown when it isn't on and the browser has one: a direct visit, or after an Esc that was for a screen) and ✕;
+  3D · 2D at the bottom left, Call at the bottom right, a tap's caption in the middle above them.
+- **✕:** opened from the page, it's the browser's own Back, so Back and Forward stay tidy (two quick ✕ go back once);
+  opened at agi1.app/talk itself (a shared link, a new tab, the app), it goes to the rest of the site, at the chat, as a new
+  step, so Back comes back to full-screen talk (the app's back gesture too).
+- **Everything of the chat works there** as on the page: the 18+ check (her picture is there before it, as on the stage; no
+  Call before it), messages, her voice, the mic and calls, her languages, the model picker, burns, market moments (in her
+  chat: no card over her), taps. **The level chip** in her chat bar: without a wallet, the wallet's connect screen; with
+  one, back to the page at the Relationship panel (with the keyboard there). **Not there:** the rest of the page, the
+  Playground's heading, the burn monitor and the side panel (Parameters, the Relationship panel).
+- **At agi1.app/talk** the page starts in full-screen talk before its first paint (`/theme.js`): no loader and no entrance
+  of the front; her stage starts at once; the front starts only if you go to the rest of the site (without its entrance).
+  Its tab title is "Talk to AGI-1 · AGI", and the phone's browser bar (and the installed app's title bar) is deep violet
+  (lavender in Pop mode's light theme; the page's own color in the lab look).
+- **The same chat in two tabs** (`src/chat/chat.js`, "the same chat in another tab"; full-screen talk opens in a new tab
+  too): her chat history is kept in this browser, and each tab now shows what another tab adds or clears (at once; while
+  she's typing a reply, right after it). A tab's new messages always go after what's stored, so two tabs never write over
+  each other's messages; a Clear (or Forget me) in one wins over what the others had.
+- **For the keyboard and screen readers:** the chat's message list is a keyboard stop (so it can be scrolled without a
+  mouse: `tabindex="0"`, an inset focus ring); in Pop mode the focus ring on her live view's buttons is ink (honey at night),
+  on the page too (violet was hard to see on her pink panel).
+
+**How it works:**
+- `public/theme.js` (before the first paint, `?v=5`) adds `is-talk` to the page at /talk (and /talk/), sets its title and
+  skips the front's loader and entrance; `src/chat/fullscreen.js` does the rest: the ways in (a plain left click only; with
+  Ctrl, ⌘, Shift or the middle button the browser opens a new tab), the browser's full screen (only from a click, which
+  browsers require), the address (`history.pushState`, Back and Forward), leaving, where the page goes and the keyboard,
+  the level chip, and on phones the visible part of the screen (`--talk-h`, `--talk-top`). It sends `agi:talk` (true /
+  false) when it changes: the chat (her picture before the 18+ check, the newest message in view), the stage (her hello
+  wave; her framing comes from the CSS) and `src/main.js` (the front waits for it) listen, and `src/lib/notify.js` shows
+  no market cards while it's on.
+- `src/styles/fullscreen.css`: every rule for it names `.is-talk` (a test checks it), so the page itself only gets the new
+  buttons; the layout is a CSS grid on the Playground's own markup, with container queries (`pgbar`, `talk`, `pgcam`) for
+  the chat bar's width and short screens. Pop mode's colors for it are in `pop.css`, scoped like the rest of Pop mode.
+- The address: `vercel.json` rewrites `/talk` and `/talk/` to the home page (`/`); `vite.config.js` does the same in
+  `npm run dev` and Vite's preview.
+
+### The AGI-1 app
+
+**Step 1 (built): the site, installed from the browser as an app** (a "web app"): its own window and icon on Windows, Mac,
+ChromeOS, Android, iPhone and iPad, opening straight into full-screen talk. Nothing to download from a store, no file to
+trust, and it updates with every push (each time it opens it loads the live site).
+- **"Get the AGI-1 app"** (the Playground's heading; "Get the app" on her picture in full-screen talk) opens a screen that
+  says how, in this browser (`installHow()` and `HOW_WORDS` in `src/chat/install.js`):
+
+  | Browser | What the screen says |
+  |---|---|
+  | Chrome, Edge, Samsung Internet, once they offer it | **Install AGI-1**: our button opens the browser's own install window (its `beforeinstallprompt`, kept for our button instead of the browser's small banner) |
+  | Chrome and Edge on a computer, before they offer it | where it is in their menu (Chrome: ⋮ → Cast, save and share → Install AGI-1; Edge: ⋯ → Apps → Install this site as an app), or the install icon in the address bar; "Already installed? Open AGI-1 from your apps." |
+  | Safari on a Mac | File → Add to Dock (macOS Sonoma or newer) |
+  | iPhone and iPad | Share (on iOS 26 in the ⋯ menu) → Add to Home Screen |
+  | Other Android browsers | their menu (⋮) → Install app, or Add to Home screen |
+  | Firefox | it doesn't install sites the usual way: open agi1.app/talk in Chrome, Edge or Safari (full-screen talk works in Firefox too) |
+  | Inside another app (Telegram, X, Instagram, TikTok…) | open the page in the browser first (the app's ⋯ or share menu → Open in browser) |
+  | The app itself | "She's installed" (and the Get the app buttons are hidden inside it) |
+
+  On Safari (Mac, iPhone, iPad), which keeps the address it's on when you add it, the screen first switches to full-screen
+  talk, so the app starts there.
+- **Its fine print:** "The app is this website in its own window, with the same rules: 18+, PG-13, not financial advice. It
+  only ever comes from agi1.app: we never send app files or download links in messages, on Telegram or on X, so an “AGI-1
+  download” from anyone else isn't us." The safety note's "One official contract" says the same (fake "AGI-1.exe" downloads
+  are a classic crypto scam). Its "Last updated" is October 2, 2026.
+- **How it works:** `public/manifest.webmanifest` (name AGI-1, `start_url` and `id` /talk, `display: standalone`, her
+  deep-violet colors, three icons) and, in `index.html`, its `<link rel="manifest">` and Apple's icon and name for the Home
+  Screen and the Dock (`apple-touch-icon`, `apple-mobile-web-app-title`). **No service worker:** Chrome hasn't needed one to
+  install a site since version 108 on phones and 112 on computers, and one would mean caching on people's devices, where an
+  old version could get stuck. So the app has no offline mode (she needs the internet anyway). No new CSP entries (the
+  manifest and icons are our own address).
+- **Her icons** (`public/icons/`: 180 for Apple, 192, 512, and a 512 "maskable" one with room around her for Android's
+  shapes; palette PNGs, 21–112 KB): her Live2D model's head and shoulders, "AGI" on her shirt, on the site's violet with a
+  soft glow and rays. Rendered from the site's own model in Claude's workspace (its scripts aren't in the repo: ask Claude
+  to redo them if her model changes). Browsers keep them a day.
+- **Worth knowing:** Safari's web apps (the Mac's Dock, iPhone and iPad Home Screens) keep **their own storage**, apart
+  from Safari's: her chat history, the 18+ answer, the wallet sign-in, the voice setting and her language start fresh there
+  (the screen says so). Chrome's and Edge's apps share the browser's. Whether the mic and calls work inside an iPhone Home
+  Screen app wasn't tested (no iPhone in Claude's workspace): typing and her voice replies do.
+
+**The next steps** (Claude's plan, sent to the owner on 2026-10-02; each needs the owner's decision first):
+1. **Done: the web app** (above). Free.
+2. **Free, next:** (a) **"pop her out"**: a small window with her that stays on top of other windows while you work
+   (Document Picture-in-Picture: Chrome and Edge 116+ and Firefox 151+ on computers; not Safari; one window, which closes
+   with its tab; its title bar stays). (b) **The Microsoft Store:** the same web app listed there. Microsoft's own PWABuilder
+   makes the package ("no code changes are required"), registration has been free for individual developers since
+   September 2025, and Microsoft signs Store packages itself; its review (usually 24–48 hours) and its rules for 18+ and
+   crypto apps need checking first.
+3. **Paid: a native companion app** (e.g. Tauri: a small native shell around the site): her on the desktop without a
+   window (see-through, always on top), a hotkey, starting with the computer. It must be signed, or computers warn about it
+   or block it: on a Mac the Apple Developer Program ($99 a year) to sign and notarize it; on Windows the Microsoft Store
+   (free: it signs MSIX packages) or a code-signing certificate (about $150–300 a year; Azure Artifact Signing, $9.99 a month,
+   is only for individuals in the US and Canada). Published only on agi1.app (and the Store); the "we never send app files"
+   wording must change before it ships.
+4. **The owner's decision: "do what Claude does."** Claude's recommendation: an AI she talks to and consults (her voice, her
+   chat, things you show her), not one that controls the computer: an AI that clicks and types on a computer with crypto
+   wallets on it can be tricked by what it reads (prompt injection); an agent doing tasks takes dozens of AI steps for what
+   a chat reply does in one, which the $150 budget can't carry; and an "AGI-1 that runs your PC" download is exactly what
+   scammers would copy. It would be a different product, with its own support.
+
+**Cost:** nothing new: no service, no setting. The icons (about 260 KB in all) are only downloaded where they're shown (an
+install, a Home Screen). On a computer in 2D, her big picture downloads her 4096 px texture (about 1.1 MB, once a day at
+most, as for a close-up on the stage).
+
+**Troubleshooting:**
+
+| What you see | Why | Fix |
+|---|---|---|
+| agi1.app/talk shows Vercel's "404 NOT_FOUND" | The rewrites in `vercel.json` (`/talk` and `/talk/` → `/`) are missing | Put them back (`tests/fullscreen.test.js` checks them) |
+| Chrome or Edge shows no Install button in the app's screen, only words | The browser hasn't offered to install yet (it waits until you've been on the site a little), or it's installed already | The words say where it is in the browser's menu |
+| The app on an iPhone or a Mac's Dock shows an empty chat | Safari's web apps keep their own storage | By design (the screen says so) |
+| Full screen ended but full-screen talk stayed | That Esc was for an open screen or menu | Esc again closes it; ✕ goes back to the page |
+| No full screen on an iPhone | iPhones' browsers don't let sites go full screen | The layout fills the page; added to the Home Screen it has no browser bars at all |
+
+**Tests:** `tests/fullscreen.test.js` (7: the address in `vercel.json` and `vite.config.js`; `/theme.js` at /talk in a
+sandbox (before the first paint, no loader, its title and colors); the ways in (two links to /talk, nothing in the top
+bar); the manifest, the icons (real PNGs, their sizes), the app's screen and the safety note; `installHow()` with real
+browsers' user-agent strings (in-app browsers too); every layout rule names `.is-talk` (the page only gets the new
+buttons), her framing and the stage's pixel cap; the chat's and the page's parts). `tests/launch.test.js` and
+`tests/page.test.js` follow (`/theme.js?v=5`, "Last updated October 2, 2026"). End to end in a browser with the site's real
+CSP (`fullscreentest.mjs` in Claude's scratch, 170 checks): from the page (the buttons, real full screen, the layout, her
+framing and pixels, a message and her reaction, a tap's caption, her language menu, a market moment in her chat, the
+wallet's screen, Esc back to the same place with the keyboard back, Back and Forward, ⛶, ✕, Ctrl-click to a new tab, the
+same chat in both tabs); /talk opened directly (before the first paint, the 18+ check with her beside it, ✕ to the site at
+the chat, Back to full-screen talk again, Forward); the app's screen (Chrome's words, then its own install window, an
+iPhone, Firefox, inside Telegram); phones at 390 and 360 px in both looks and themes (the keyboard up: the message box in
+view), a phone on its side (740×360), a short phone (375×548: the 18+ button and her last language reachable); tall,
+narrow and wide windows, 3D; two tabs (a slow reply in one while the other chats; Clear in one while the other waits);
+Esc for a screen or a menu; two quick ✕; the level chip with a wallet; axe 0 issues (computer and phone, both looks and
+themes); clean consoles. A second Claude agent reviewed it (10 findings, e.g. two tabs writing over each other's chat, a
+phone on its side hiding the 18+ button, an Esc meant for a screen leaving full-screen talk; all fixed and tested; the Pop
+focus ring change kept on purpose). **Not tried on real devices:** an iPhone, an iPad, Android, Safari's Add to Dock, a
+real install on Windows or a Mac (Claude's workspace has Chromium only): the owner's devices are the first real check.
+
 ## Pop mode (2026-09-27)
 
 **The owner's request:** a button beside the dark / light button that switches the whole design of the page to the look
@@ -2368,7 +2551,8 @@ itself; the ecosystem page it copied is gone, the look lives on here.)
 - The phone's browser bar: violet at the top of the home page (deep violet at night), the page's own color on the diary
   (and since 2026-10-01 on the launch page).
 - The keyboard's focus ring: violet on the light blocks, white on the violet hero, ink in the top bar and on her pink
-  stage, honey on the ink footer and everywhere at night.
+  stage (and since 2026-10-02 on her live view's buttons, where violet didn't stand out on her pink panel), honey on the ink footer and
+  everywhere at night.
 - **Switching keeps your place** (2026-09-27, the owner: "why when i click pop mode it goes to a different section of the
   page?"). Pop mode's sections are taller and its headlines bigger, and a browser keeps the number of pixels scrolled, not
   what you were reading: switching halfway down the page showed another section (270 to 2,270 px away, measured). Browsers'
@@ -2386,7 +2570,7 @@ the browser saved `dr-skin` = `lab` (Pop mode switched off), and `data-theme="da
 `[data-skin-toggle]`, with `aria-pressed`), remembers the choice, repaints the browser bar (`barColor()`, the same colors as
 `/theme.js`; a test compares them) and sends `agi:skin`; the 3D stage listens (its `pop-light` / `pop-dark` colors, the
 hearts) and so does the menu (it closes when its links fit again). Browsers keep `/theme.js` a
-day, so the pages load it with a version (`/theme.js?v=4` since the launch page, 2026-10-01, `v=3` since the front: **raise the number whenever it changes**)
+day, so the pages load it with a version (`/theme.js?v=5` since full-screen talk, 2026-10-02, `v=4` since the launch page, `v=3` since the front: **raise the number whenever it changes**)
 and `src/theme.js` also applies the saved choices, else the same defaults (`DEFAULT_SKIN`, `DEFAULT_THEME`) itself.
 
 **Fonts:** Anybody (variable, 57 KB) and Instrument Serif Italic (22 KB), free (SIL Open Font License, the license files are
@@ -2853,8 +3037,9 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   contract, no ETH, approved in their wallet: anyone asking for anything else isn't us), and no longer that the site never
   asks for a transaction; note 04 what's kept for a launch (7 days: the coin's details, Telegram's id for its picture, a
   daily chat code, a scrambled wallet code; once launched its address and transaction, and the fee paid back), its
-  picture on IPFS through Pinata, and that a coin never launched has its picture deleted within a day. Last updated
-  October 1, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
+  picture on IPFS through Pinata, and that a coin never launched has its picture deleted within a day. Since 2026-10-02
+  note 02 also says the AGI-1 app is this website installed from the browser and only ever comes from agi1.app (we never
+  send app files or download links). Last updated October 2, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
   AI provider (no "Google"/"Gemini"; it says "an AI service"), and there's no "Not a real lab" note. **2026-09-25:** "A parody"
   is gone from the bottom bar (both pages); it now reads "© 2026 AGI. No labs were harmed." and "$AGI is a token made
   by AGI, launched on clank.trade. Entertainment only · Not financial advice." The share pictures, link previews and
@@ -3078,6 +3263,13 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   `textContent` only.
 - No new CSP domains: the page talks only to our `/api` and the person's wallet.
 
+### Full-screen talk and the app (2026-10-02, see "Full-screen talk and the AGI-1 app")
+- No new CSP entries and nothing from elsewhere: /talk is the home page at another address, and the app's manifest and
+  icons are our own files. No service worker, so nothing of the site is ever cached on people's devices by us.
+- The browser's full screen only ever starts from the visitor's own click (browsers require it), and Esc always ends it.
+- The app only ever comes from agi1.app (installed from the browser): the page says we never send app files or download
+  links, so an "AGI-1 download" from anyone else is a scam. If a native app ever ships, that wording changes first.
+
 ### Her Live2D model (AGI-1 in 2D, 2026-10-01)
 - Live2D's runtime (`public/models/agi1-live2d/live2dcubismcore.min.js`) is served from our own address and loaded only when
   she's shown in 2D; it uses no eval and no WebAssembly, so the CSP is unchanged. It's Live2D's file as it is (never edited:
@@ -3109,7 +3301,7 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 ### General
 - Show user or AI text with `textContent`, never `innerHTML`.
 - **Caching** (`vercel.json`, 2026-09-24): built files in `/assets` (their names change with every build) and the fonts are
-  kept by browsers for a year; AGI-1, pictures, preview cards and `theme.js` for a day; the pages and `/api` are always
+  kept by browsers for a year; AGI-1, pictures, preview cards, the app's icons (2026-10-02) and `theme.js` for a day; the pages and `/api` are always
   rechecked. So if a font (or another year-long file) ever changes, give it a new file name. (`theme.js` is kept a day, which
 is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 - Security headers live in `vercel.json`. The Content-Security-Policy (CSP) lists every outside domain the page may use.
@@ -3132,7 +3324,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 
 | Service | Free allowance | If exceeded |
 |---|---|---|
-| Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, her Live2D model and the default since 2026-10-01: about 770 KB per visitor who sees her in 2D, instead of the 3D model's 1.7–2.2 MB, which now only downloads when picked) | Usually paused until 30 days have passed |
+| Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, her Live2D model and the default since 2026-10-01: about 770 KB per visitor who sees her in 2D, instead of the 3D model's 1.7–2.2 MB, which now only downloads when picked; full-screen talk on a computer, 2026-10-02: her 4096 px texture too, about 1.1 MB) | Usually paused until 30 days have passed |
 | Supabase Free | 500 MB database · 5 GB egress · 200 realtime connections · 2M realtime messages/month. Paused after 1 week with no activity | Grace period, then restricted (read-only or paused), never billed |
 | Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 5,000 a day ≈ $15 ($22.50 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten, her nine tap lines) are made once and kept (the database since 2026-09-26); since 2026-09-30 the replies paid for by burning $AGI, at most `BURN_DAILY_CAP` (1,000) a day ≈ $0.80 more | The key stops when credits hit $0 (the chat and the voice share them) |
 | Cloudflare Turnstile | Unlimited | — |
@@ -3504,6 +3696,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   then push. Tests: 339 unit (on Node 20, 22 and 24, with and without Vercel's settings), 97 SQL checks (PGlite), 219 in a
   browser; a second Claude agent reviewed it (9 findings, all fixed but the site's daily picture cap, the owner's call).
   Not tested live.
+- **Full-screen talk and the AGI-1 app: built 2026-10-02, waiting for the owner's OK** (the owner: "can you put a full
+  screen button on the chat of agi1 … you decide where to put", and "a windows app and mac app … make this better then
+  continue"): agi1.app/talk (her chat on the left, AGI-1 big on the right; phones: her on top), from the Playground's "Talk
+  full screen" and the ⤢ on her live view, in the browser's real full screen from the page; the site installs as an app
+  that opens there ("Get the AGI-1 app"); the same chat in two tabs. See "Full-screen talk and the AGI-1 app" (with the
+  native app's plan: the owner's decisions). No setup, no SQL, no cost. Tests: 346 unit (on Node 20, 22 and 24, with and
+  without Vercel's settings), 170 in a browser; a second Claude agent reviewed it (10 findings, all fixed).
 
 ## Decisions log
 
@@ -3661,6 +3860,11 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-02 | Coins a day by holdings (the owner: "for 10,000 they can create 1 token until 100,000 they can create 10 tokens", then "if they hold 10,000 $agi they can launch 5 tokens per wallet and if more more token to launch"): 5 a day for every 10,000 $AGI held or burned for messages, 50 at most (100,000+), per wallet and UTC day (Claude's reading of "if more": proportional, with the first message's 100,000 as the top; and per day, as the counts already were). A coin counts once it's got ready (its picture on IPFS), launched or not; the same link got ready again with other links or the other pair is another coin and counts once (every address kept, so going back is free). Her bot's drafts a day: 60 per chat, 3,000 for the site. Not changed: the site's 30 pictures a day (`LAUNCH_DAILY_CAP`: Pinata's free plan, the owner's call) and the network-fee payback (one a day per wallet) |
 | 2026-10-02 | Pairing with SPCX (the owner: "the team added token can now paired with spcx"; clank.trade's founder announced it that morning): a radio choice on the launch page, ETH unless SPCX is picked; the factory's `approvedPairTokens` asked before each SPCX launch and its economics pinned for that pair; launching with it needs no ETH and no token approval (clank.trade's docs). SPCX's address is the quote token clank.trade's own SPCX coins name (`0x4a0e…5eea`). Not picked: SPCX by default, or SPCX only |
 | 2026-10-02 | Phantom (the owner: "add open in phantom in telegram"): "Open in Phantom ↗" in her bot's buttons and on the launch page without a wallet, with its one setting (Robinhood Chain on in Settings → Active Networks), and that note no longer hidden by the network check |
+| 2026-10-02 | Full-screen talk at its own address on this site, **agi1.app/talk** (the owner: "maybe in new tab? or sub domain? … you know best"). Not a subdomain: it would open with an empty browser (the chat history, the 18+ answer, the wallet sign-in, the voice setting and her language are kept per address) and need its own domain and human-check setup. It's the home page in another layout (CSS only, every rule naming `.is-talk`), so every chat feature works there; a new tab only when the visitor asks for one (Ctrl-click…). Nothing in the top bar (the owner: "the top section is already crowded"): "Talk full screen" in the Playground's heading and a ⤢ on her live view. Not picked: a separate page with its own copy of the chat (two copies to keep in sync), a pop-up window (blocked by browsers, nothing like it on phones) |
+| 2026-10-02 | From the page it also asks for the browser's real full screen; leaving it (Esc) goes back to the page where it was, like a video's full screen, except while a screen or a menu is open (in full screen the browser keeps Esc for itself, so that Esc was for it). ✕ from the page is the browser's own Back (the history stays tidy); from a direct visit it's a new step to the site's chat (so Back returns) |
+| 2026-10-02 | The AGI-1 app, step 1 (Claude's choice for the owner's "windows app and mac app" idea; free): the site installs from the browser as a web app (a manifest, her icons, an install screen for each browser), opening at /talk. No service worker (Chrome hasn't needed one to install since versions 108 / 112, and caching could leave old versions on people's devices), so no offline mode. The screen and the safety note say the app only comes from agi1.app and we never send app files (fake downloads are a common crypto scam). The native app (signing: Apple $99 a year; Windows free through the Microsoft Store, else a certificate) and the Microsoft Store listing are the owner's decisions |
+| 2026-10-02 | "She does what Claude does" (the owner's idea): Claude recommends an AI she talks to and consults, not one that controls the computer (prompt injection near crypto wallets, the AI cost of agents against the $150 budget, fake-download scams). Written down for the owner's decision; nothing built |
+| 2026-10-02 | The same chat in two tabs (full-screen talk can open in a new tab; found by the review): each tab saves its new messages after what's stored (never over another tab's), shows another tab's changes (after its own reply when one is on its way), and a Clear or Forget me in one tab wins over the others |
 
 ## Open questions
 
@@ -3747,6 +3951,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   - Her launch lines and the launch page are English for now (like her texts first).
   - Helping people launch tokens, and paying their fees to bring launches in, may count as promoting tokens in some places
     (like her out-of-messages line and burns): worth checking before promoting it widely. Not legal advice.
+- **The AGI-1 app** (2026-10-02): the free next steps ("pop her out" in a small always-on-top window; the same web app in the
+  Microsoft Store, whose rules for 18+ and crypto apps need checking first) and a native app (signing costs; the "we never
+  send app files" wording must change before one ships) wait for the owner. Not tried on real devices yet: an iPhone or
+  iPad Home Screen app (whether its mic and calls work there), Safari's Add to Dock, a real install on Windows, a Mac,
+  Android or ChromeOS.
+- Full-screen talk has no heading of its own for screen readers (the page's headings are hidden there; her chat bar names
+  her). A visually hidden heading could be added if a screen-reader user asks.
 
 ## Working in this repo
 
@@ -3767,6 +3978,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   expected launching to be off, but the owner's Pinata key was already in Vercel. Since then Claude also runs every test
   with all the settings in "Environment variables" set to real-looking values before handing over a change. A failed build
   never touches the live site: Vercel keeps serving the last good deployment.
+- **Claude checks every file it saves into this folder by checksum, on the owner's computer, after saving.** A file saved
+  twice in one session goes the second time from a new place in Claude's workspace (2026-10-02: the second save of
+  CLAUDE.md from the same place wrote the first copy again; the checksum check caught it).
 - Claude's end-to-end tests build the site with Cloudflare's public test site key
   (`VITE_TURNSTILE_SITE_KEY=1x00000000000000000000BB npx vite build`): without a site key the chat answers "i'm still getting
   ready for the new site" and every suite that chats fails (2026-09-26). The real key only comes from Vercel's settings.

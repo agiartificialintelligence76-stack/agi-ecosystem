@@ -33,15 +33,18 @@ export const currentTheme = () => (root.dataset.theme === 'dark' ? 'dark' : 'lig
 export const currentSkin = () => (root.dataset.skin === 'pop' ? 'pop' : 'lab');
 
 // the phone's browser bar: the color at the top of the page (Pop mode: its violet hero, or on the diary and launch pages,
-// which have no hero, the page's own color). The same colors as /theme.js, which sets it before the page paints.
-export function barColor(skin, theme, diary) {
+// which have no hero, the page's own color; full-screen talk, 2026-10-02: the color around her, which is also the title bar
+// of the installed app). The same colors as /theme.js, which sets it before the page paints.
+export function barColor(skin, theme, diary, talk = false) {
   const dark = theme === 'dark';
   if (skin !== 'pop') return dark ? '#0b0b0c' : '#fafaf8';
+  if (talk) return dark ? '#1a0d3d' : '#e4d9ff';
   if (diary) return dark ? '#120828' : '#f8f5ff';
   return dark ? '#2a0f7a' : '#6b3bff';
 }
-function paintBar() {
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor(currentSkin(), currentTheme(), ['diary', 'launch'].includes(root.dataset.page)));
+export function paintBar() {
+  const talk = Boolean(root.classList?.contains('is-talk'));
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor(currentSkin(), currentTheme(), ['diary', 'launch'].includes(root.dataset.page), talk));
 }
 
 function apply(theme, remember) {

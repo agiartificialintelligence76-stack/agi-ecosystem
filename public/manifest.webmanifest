@@ -1,0 +1,17 @@
+{
+  "id": "/talk",
+  "name": "AGI-1",
+  "short_name": "AGI-1",
+  "description": "Talk to AGI-1, the AI girlfriend of $AGI, full screen, in her own window. 18+, PG-13, not financial advice.",
+  "start_url": "/talk",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1a0d3d",
+  "theme_color": "#1a0d3d",
+  "categories": ["entertainment", "social"],
+  "icons": [
+    { "src": "/icons/agi1-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/agi1-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/agi1-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

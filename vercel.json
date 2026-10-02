@@ -4,7 +4,9 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/launch/:draft", "destination": "/launch" }
+    { "source": "/launch/:draft", "destination": "/launch" },
+    { "source": "/talk", "destination": "/" },
+    { "source": "/talk/", "destination": "/" }
   ],
   "functions": {
     "api/**/*.js": {
@@ -72,6 +74,7 @@
     { "source": "/models/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
     { "source": "/images/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
     { "source": "/cards/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
+    { "source": "/icons/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
     { "source": "/theme.js", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
   ]
 }

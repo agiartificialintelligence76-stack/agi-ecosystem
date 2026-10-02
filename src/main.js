@@ -13,7 +13,10 @@ import './styles/notify.css';
 import './styles/checker.css';
 import './styles/pop.css';      // Pop mode (2026-09-27): the bold look, only while it's switched on
 import './styles/landing.css';  // the front (2026-09-28): the bright AGI landing, first on the home page
+import './styles/fullscreen.css';   // full-screen talk (2026-10-02): agi1.app/talk, her chat and AGI-1 filling the screen
 import { startPlayground } from './chat/chat.js';   // AGI-1's chat, as the Playground section
+import { startFullscreen } from './chat/fullscreen.js';
+import { startInstall } from './chat/install.js';
 import { startRelationship } from './chat/relationship.js';
 import { startBurns } from './chat/burn.js';
 import { startTheme } from './theme.js';
@@ -30,12 +33,22 @@ import * as cards from './share/card.js';
 import { STYLE_KEY, readStyle } from './stage/agi1-2d-motion.js';
 
 startTheme();
+// Full-screen talk (2026-10-02): agi1.app/talk opens straight into it (/theme.js decided before the page painted)
+const talkAtStart = document.documentElement.classList.contains('is-talk');
 // The front first (2026-09-28): its loader and entrance are already waiting (/theme.js). If it fails, the page shows at once.
-try { startLanding(); } catch (err) {
-  console.error('[landing] failed to start', err);
-  document.documentElement.classList.remove('lp-loading');
-  document.documentElement.classList.add('lp-go');
+// In full-screen talk the front isn't shown: it starts when you leave it (no loader or entrance then)
+let frontStarted = false;
+function startFront() {
+  if (frontStarted) return;
+  frontStarted = true;
+  try { startLanding(); } catch (err) {
+    console.error('[landing] failed to start', err);
+    document.documentElement.classList.remove('lp-loading');
+    document.documentElement.classList.add('lp-go');
+  }
 }
+if (talkAtStart) addEventListener('agi:talk', (e) => { if (!e.detail) startFront(); });
+else startFront();
 // AGI-1 in 3D or 2D (2026-09-27; 2D first since 2026-10-01): her live views' still pictures (shown until she's there)
 // match the AGI-1 this visitor picked, before they download (the stage switches them afterwards; src/stage/stage.js)
 try {
@@ -48,6 +61,8 @@ startTicker(document.getElementById('ticker'));
 startEvals(document.getElementById('evals'));
 startModelCard(document.getElementById('model-card'));
 startPlayground(document.querySelector('[data-playground]'));
+startFullscreen(document);        // (2026-10-02) full-screen talk: the "Talk full screen" links, /talk, Back, the browser's full screen
+startInstall(document);           // (2026-10-02) "Get the AGI-1 app": this site installed as an app, opening in full-screen talk
 startLang();   // (2026-09-29) the language AGI-1 speaks with this visitor, if they picked one before: English until then
 startRelationship(document.querySelector('[data-rel]'));   // wallet + levels (after the chat, which listens to it)
 startBurns(document);            // (2026-09-30) burn $AGI for more messages, once burns are open (src/chat/burn.js)
@@ -83,7 +98,8 @@ if (stageWrap) {
       });
   };
   const front = document.querySelector('[data-lp-hero]');
-  if (!front) start();
+  addEventListener('agi:talk', (e) => { if (e.detail) start(); });   // full-screen talk: she's needed right away
+  if (!front || talkAtStart) start();
   else {
     addEventListener('agi:landing-ready', start, { once: true });
     addEventListener('agi:chat-open', start, { once: true });

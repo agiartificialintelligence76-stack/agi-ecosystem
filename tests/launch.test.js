@@ -1830,7 +1830,7 @@ test('the page: its own address, private, the rules and warnings on it, no inlin
   const html = readFileSync(new URL('../launch.html', import.meta.url), 'utf8');
   assert.match(html, /<html lang="en" data-page="launch">/);
   assert.match(html, /<meta name="robots" content="noindex" \/>/, 'a private link: never in search results');
-  assert.match(html, /<script src="\/theme\.js\?v=4"><\/script>/);
+  assert.match(html, /<script src="\/theme\.js\?v=5"><\/script>/);
   assert.match(html, /<script type="module" src="\/src\/launch\/page\.js"><\/script>/);
   assert.doesNotMatch(html.replace(/<script (type="module" )?src="[^"]+"><\/script>/g, ''), /<script/i, 'no inline scripts');
   assert.doesNotMatch(html, /\sstyle=|\son[a-z]+=/i, 'no inline styles or handlers');
@@ -1866,7 +1866,7 @@ test('the page: its own address, private, the rules and warnings on it, no inlin
   // /launch: "/launch.html" was a 404 on the live site (2026-10-02, the owner's first draft link)
   const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
   assert.equal(vercel.cleanUrls, true);
-  assert.deepEqual(vercel.rewrites, [{ source: '/launch/:draft', destination: '/launch' }]);
+  assert.deepEqual(vercel.rewrites.filter((r) => r.source.startsWith('/launch')), [{ source: '/launch/:draft', destination: '/launch' }]);   // (and /talk since 2026-10-02: tests/fullscreen.test.js)
   for (const r of vercel.rewrites) assert.doesNotMatch(r.destination, /\.html$/, 'never a .html destination with cleanUrls');
   assert.equal(vercel.headers[0].headers[0].value, "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' blob: https://api.dexscreener.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests");
   assert.match(readFileSync(new URL('../vite.config.js', import.meta.url), 'utf8'), /launch: 'launch\.html'/);

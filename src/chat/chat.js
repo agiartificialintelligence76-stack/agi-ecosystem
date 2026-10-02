@@ -17,6 +17,8 @@
 // Her languages (2026-09-29): the language menu in the chat bar (src/chat/languages.js) picks the one she speaks; every line
 // of hers here comes from src/i18n/lines/<code>.js (src/i18n/lang.js), her replies follow it (and whatever language you write
 // in), the mic listens for it, and her voice lines are that language's. The page itself stays in English.
+// Full-screen talk (2026-10-02, src/chat/fullscreen.js): this same chat at agi1.app/talk, with AGI-1 big beside it. There
+// her live view shows even before the 18+ check (as on the stage, for everyone: PG-13); the chat itself still waits for it.
 import { withHuman, postJson } from '../lib/human.js';
 import { currentSession } from './relationship.js';
 import { startModelMenu } from './models.js';
@@ -92,6 +94,10 @@ export function startPlayground(root) {
   $('.pg-ava')?.addEventListener('error', (e) => e.target.remove());
 
   let history = Array.isArray(store.get(KEYS.history)) ? store.get(KEYS.history) : [];
+  // (2026-10-02) the same chat can be open in two tabs (full-screen talk opens in a new tab too): `synced` is how much of
+  // `history` is also in this browser's storage (the rest: this tab's new messages); `stale`: another tab changed it while
+  // this one was busy, so this one shows the stored chat again once it's done
+  let synced = history.length, stale = false;
   let busy = false;
   let epoch = 0;                                // +1 on Clear and Forget me: a reply still on its way then isn't shown
   let rel = { level: 1, name: null };           // updated by the Relationship panel (src/chat/relationship.js)
@@ -168,18 +174,44 @@ export function startPlayground(root) {
     log.scrollTop = log.scrollHeight;          // once at the end, not once per message (faster page start)
     examples.hidden = history.length > 0;
   }
-  const save = () => store.set(KEYS.history, history.slice(-KEEP));
+  // this tab's new messages go after whatever is stored now: another tab may have added some (they're kept) or cleared it,
+  // or "Forget me" (then that wins: only this tab's new messages are kept)
+  const save = () => {
+    const stored = store.get(KEYS.history);
+    const base = Array.isArray(stored) ? stored : [];
+    if (JSON.stringify(base) !== JSON.stringify(history.slice(0, synced))) stale = true;
+    history = base.concat(history.slice(synced)).slice(-KEEP);
+    synced = history.length;
+    store.set(KEYS.history, history);
+  };
+  // the stored chat, shown again (another tab changed it)
+  function reload() {
+    const next = store.get(KEYS.history);
+    history = Array.isArray(next) ? next : [];
+    synced = history.length;
+    stale = false;
+    renderHistory();
+    if (!gate.hidden) examples.hidden = true;
+  }
 
   // ---------- 18+ confirmation ----------
+  // her live view comes with the chat, after the 18+ check; in full-screen talk she's there from the start (src/chat/fullscreen.js)
+  const talkMode = () => document.documentElement.classList.contains('is-talk');
+  const showCam = () => { if (cam) cam.hidden = !gate.hidden && !talkMode(); };
   function showGate(on) {
     if (on) endCall();
     gate.hidden = !on;
     log.hidden = form.hidden = foot.hidden = on;
-    if (cam) cam.hidden = on;                    // her live view comes with the chat, after the 18+ check
+    root.classList.toggle('is-gated', on);       // (no Call button on her live view before it)
+    showCam();
     examples.hidden = on || history.length > 0;
     clearBtn.hidden = on;
     if (!on) log.scrollTop = log.scrollHeight;   // (the live view takes some width, so lines wrap: newest message in view)
   }
+  addEventListener('agi:talk', () => {
+    showCam();
+    requestAnimationFrame(() => { log.scrollTop = log.scrollHeight; });   // (a taller or shorter chat: the newest message in view)
+  });
   $('[data-gate-ok]').addEventListener('click', () => {
     store.set(KEYS.adult, true);
     showGate(false);
@@ -192,6 +224,7 @@ export function startPlayground(root) {
   // ---------- "Try AGI-1" buttons: scroll here and get ready to type ----------
   addEventListener('agi:chat-open', () => {
     dispatchEvent(new CustomEvent('agi:stage', { detail: 'agi1' }));   // bring AGI-1 back on stage
+    if (talkMode()) { (gate.hidden ? input : $('[data-gate-ok]')).focus({ preventScroll: true }); return; }   // (already right here)
     const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
     root.closest('section').scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
     setTimeout(() => (gate.hidden ? input : $('[data-gate-ok]')).focus({ preventScroll: true }), smooth ? 600 : 0);
@@ -211,7 +244,7 @@ export function startPlayground(root) {
     hearing?.cancel();
     voice.stop();
     attend('idle');
-    history = []; store.del(KEYS.history);
+    history = []; synced = 0; store.del(KEYS.history);
     log.replaceChildren(); message('model', t('fresh'), { lang: currentLang() });
     examples.hidden = false;
   });
@@ -429,6 +462,7 @@ export function startPlayground(root) {
       busy = false;
       sendBtn.disabled = false;
       if (!touch) input.focus({ preventScroll: true });
+      if (stale) reload();                       // (another tab's messages, now that her reply is in)
       if (waitingMarket) { const m = waitingMarket; waitingMarket = null; showMarket(m); }
       if (waitingSoon) { const m = waitingSoon; waitingSoon = null; showSoon(m); }
       showRestNote();
@@ -711,6 +745,7 @@ export function startPlayground(root) {
     voice.stop();
     attend('idle');
     history = [];
+    synced = 0;
     store.del(KEYS.history);
     log.replaceChildren();
     message('model', greeting({ level: 1 }), { lang: currentLang() });
@@ -732,6 +767,16 @@ export function startPlayground(root) {
     },
   });
   addEventListener('agi1:lang', () => regreet());
+
+  // ---------- the same chat in another tab (2026-10-02: full-screen talk can open in a new tab too) ----------
+  // Her chat history is kept in this browser: when another tab of the site changes it, this one shows it too, so two tabs
+  // never write over each other's messages. The same for the 18+ answer.
+  addEventListener('storage', (e) => {
+    if (e.key === KEYS.history) {
+      if (busy) stale = true;                    // (after her reply: send() saves its own, then shows them all)
+      else reload();
+    } else if (e.key === KEYS.adult && store.get(KEYS.adult) === true && !gate.hidden) showGate(false);
+  });
 
   renderHistory();
   showGate(store.get(KEYS.adult) !== true);

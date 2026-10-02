@@ -20,8 +20,13 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href="__SITE__/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- picks light or dark before the page paints, so it never flashes the wrong theme (and arms the front's entrance) -->
-    <script src="/theme.js?v=4"></script>
+    <!-- The AGI-1 app (2026-10-02): this site installed as an app opens in full-screen talk, agi1.app/talk (src/chat/install.js) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/agi1-180.png" />
+    <meta name="apple-mobile-web-app-title" content="AGI-1" />
+    <!-- picks light or dark before the page paints, so it never flashes the wrong theme (and arms the front's entrance; at
+         agi1.app/talk, full-screen talk) -->
+    <script src="/theme.js?v=5"></script>
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preconnect" href="https://api.dexscreener.com" crossorigin />
   </head>
@@ -334,6 +339,12 @@
             <p class="kicker">Playground</p>
             <h2 class="h2" id="pg-title">Talk to AGI-1</h2>
             <p class="section-lede">Research preview. Replies are generated live: usually sweet, often flirty, never financial advice.</p>
+            <!-- Full-screen talk and the app (2026-10-02, src/chat/fullscreen.js and src/chat/install.js): her chat on the left and
+                 AGI-1 big on the right, at its own address (a link: Ctrl-click or a middle click opens it in a new tab) -->
+            <div class="pg-head-actions">
+              <a class="btn btn-ghost btn-sm" href="/talk" data-talk-open><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14.5 4.5H19.5V9.5M9.5 19.5H4.5V14.5M19.5 4.5l-6 6M4.5 19.5l6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Talk full screen</a>
+              <button class="btn btn-ghost btn-sm" type="button" data-app-open><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4.5v10m0 0-4-4m4 4 4-4M5 19.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Get the AGI-1 app</button>
+            </div>
           </header>
 
           <!-- The burn monitor (2026-09-30, the owner: "make a monitor on how many agi are gonna be burned so they know its
@@ -492,6 +503,13 @@
                   <div class="pg-cam-view" data-cam-view></div>
                   <span class="pg-cam-tag mono" aria-hidden="true"><i class="dot"></i><span data-cam-state>live</span></span>
                   <div class="dstyle dstyle-cam" role="group" aria-label="AGI-1's style"><button class="dstyle-btn" type="button" data-dim="3d" aria-pressed="false" title="AGI-1 in 3D">3D</button><button class="dstyle-btn is-on" type="button" data-dim="2d" aria-pressed="true" title="AGI-1 in 2D, anime style">2D</button></div>
+                  <!-- Full-screen talk (2026-10-02, src/chat/fullscreen.js): the way in (on the page), and its buttons (in it) -->
+                  <a class="pg-cam-full" href="/talk" data-talk-open aria-label="Talk to her full screen" title="Full screen"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14.5 4.5H19.5V9.5M9.5 19.5H4.5V14.5M19.5 4.5l-6 6M4.5 19.5l6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+                  <div class="pg-talk-ctl" role="group" aria-label="Full-screen talk">
+                    <button class="pg-talk-btn pg-talk-app" type="button" data-app-open><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4.5v10m0 0-4-4m4 4 4-4M5 19.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Get the app</span></button>
+                    <button class="pg-talk-btn" type="button" data-talk-fs aria-label="Full screen" title="Full screen" hidden><svg class="i-fs-on" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 9V4.5H9M15 4.5h4.5V9M19.5 15v4.5H15M9 19.5H4.5V15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="i-fs-off" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 4.5V9H4.5M19.5 9H15V4.5M15 19.5V15h4.5M4.5 15H9v4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    <button class="pg-talk-btn" type="button" data-talk-close aria-label="Back to the site" title="Back to the site"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+                  </div>
                   <!-- Voice chat (2026-09-25, src/chat/chat.js): a hands-free call. Shown only where the browser can listen -->
                   <button class="pg-call" type="button" data-call aria-pressed="false" aria-label="Call her: talk out loud, hands-free" hidden>
                     <svg class="i-call" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.6 3.5h2.6l1.5 4-1.9 1.3a11 11 0 0 0 6.4 6.4l1.3-1.9 4 1.5v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
@@ -499,7 +517,7 @@
                     <span class="pg-call-word" data-call-word>Call</span>
                   </button>
                 </div>
-                <div class="pg-log" data-log role="log" aria-live="polite" aria-label="Conversation with AGI-1"></div>
+                <div class="pg-log" data-log role="log" aria-live="polite" aria-label="Conversation with AGI-1" tabindex="0"></div>
               </div>
               <div class="pg-examples" data-examples aria-label="Example prompts">
                 <button class="chip-btn" type="button">hi AGI-1 💜</button>
@@ -650,7 +668,7 @@
           <p class="kicker">Safety note</p>
           <h2 class="h2" id="safety-title">The only serious part of this page</h2>
           <p class="section-lede">Every model launch comes with a safety note. Ours covers the usual risks, plus two new ones: financial FOMO and catching feelings for a language model.</p>
-          <p class="safety-meta mono"><span>Applies to AGI-1 v1.0 ·</span> <span>Last updated October 1, 2026</span></p>
+          <p class="safety-meta mono"><span>Applies to AGI-1 v1.0 ·</span> <span>Last updated October 2, 2026</span></p>
         </header>
 
         <ol class="safety-list" role="list">
@@ -660,7 +678,7 @@
           </li>
           <li class="safety-item">
             <h3>One official contract</h3>
-            <p>The only official $AGI contract starts <span class="mono">0xfa31</span> and ends <span class="mono">06ec</span>. Copy the full address from the top of this page or the <a href="#contract">Model card</a>, and double-check it every time. This site will never ask for your seed phrase or private keys, and it never asks your wallet for a token approval (connecting a wallet only takes a free signature); neither will AGI-1. The only transaction it can ever ask your wallet for is a coin launch you start yourself, on its launch page (“Launch with AGI-1”, from her Telegram bot): it goes to clank.trade's own contract, sends no ETH, and you approve it in your wallet. Anyone who asks for anything else isn't us.<span data-burn-only hidden> The only transaction we ever suggest is a burn you send yourself, from your own wallet app, for more messages: only ever to the burn address <span class="mono">0x000…dEaD</span> (zeros, then dEaD), and our server just reads it on the chain. Anyone who asks you to send $AGI anywhere else isn't us.</span></p>
+            <p>The only official $AGI contract starts <span class="mono">0xfa31</span> and ends <span class="mono">06ec</span>. Copy the full address from the top of this page or the <a href="#contract">Model card</a>, and double-check it every time. This site will never ask for your seed phrase or private keys, and it never asks your wallet for a token approval (connecting a wallet only takes a free signature); neither will AGI-1. The only transaction it can ever ask your wallet for is a coin launch you start yourself, on its launch page (“Launch with AGI-1”, from her Telegram bot): it goes to clank.trade's own contract, sends no ETH, and you approve it in your wallet. Anyone who asks for anything else isn't us. The AGI-1 app is this website installed from your browser (“Get the AGI-1 app”), and it only ever comes from agi1.app: we never send app files or download links in messages, on Telegram or on X, so an “AGI-1 download” from anyone else isn't ours.<span data-burn-only hidden> The only transaction we ever suggest is a burn you send yourself, from your own wallet app, for more messages: only ever to the burn address <span class="mono">0x000…dEaD</span> (zeros, then dEaD), and our server just reads it on the chain. Anyone who asks you to send $AGI anywhere else isn't us.</span></p>
           </li>
           <li class="safety-item">
             <h3>AGI-1 is not a person</h3>
@@ -770,6 +788,27 @@
       </div>
       <p class="wdlg-fine bdlg-rules">Burning is permanent and not an investment: burned $AGI is gone for good, there are no refunds, and burned messages have no cash value. The $AGI that bought your messages counts toward your level, like the $AGI you hold. Not financial advice.</p>
       <p class="wdlg-fine bdlg-total" data-bdlg-total hidden></p>
+    </dialog>
+
+    <!-- The AGI-1 app (2026-10-02, src/chat/install.js): this site installed from the browser, opening in full-screen talk.
+         The words for each browser come from install.js (HOW_WORDS) -->
+    <dialog class="wdlg appdlg" data-app-dialog aria-labelledby="appdlg-title">
+      <div class="wdlg-head">
+        <h2 class="wdlg-title" id="appdlg-title">Get the AGI-1 app</h2>
+        <button class="icon-btn" type="button" data-appdlg-close aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="wdlg-promise">
+        <p class="wdlg-promise-title">Her own window, straight into full-screen talk.</p>
+        <p>Install AGI-1 from this site and she opens like an app, from your dock, taskbar or home screen, straight into talking with her. Free, nothing from an app store, and it updates itself.</p>
+      </div>
+      <div class="appdlg-how">
+        <p class="appdlg-text" data-appdlg-text></p>
+        <button class="btn btn-primary btn-sm" type="button" data-appdlg-install hidden>Install AGI-1</button>
+      </div>
+      <p class="wdlg-status" data-appdlg-status role="status" aria-live="polite"></p>
+      <p class="wdlg-fine">The app is this website in its own window, with the same rules: 18+, PG-13, not financial advice. It only ever comes from agi1.app: we never send app files or download links in messages, on Telegram or on X, so an “AGI-1 download” from anyone else isn't us.</p>
     </dialog>
 
     <script type="module" src="/src/main.js"></script>

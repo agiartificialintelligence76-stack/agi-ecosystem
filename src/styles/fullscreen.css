@@ -1,0 +1,171 @@
+/* ================================================================
+   Full-screen talk (2026-10-02, src/chat/fullscreen.js): agi1.app/talk, or the "Talk full screen" buttons in the Playground.
+   The home page itself in another layout: <html class="is-talk"> hides everything but the Playground's chat, which fills
+   the screen: her chat on the left, AGI-1 big on the right (phones and tall windows: her on top, the chat under her).
+   Every rule for that layout names .is-talk; the rest only styles the new buttons (the way in, and the app's screen).
+   Pop mode's colors for it: pop.css. The browser bar's color: barColor() in src/theme.js and /theme.js.
+   ================================================================ */
+
+/* ---------- on the page: the way in ---------- */
+.pg-head-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.pg-head-actions .btn svg { width: 16px; height: 16px; flex: none; }
+/* the ⤢ on her live view (top right; her 3D · 2D pill moves left of it) */
+.pg-cam-full {
+  position: absolute; top: 8px; right: 8px; z-index: 3; display: grid; place-items: center; width: 30px; height: 30px;
+  color: var(--fg); background: color-mix(in srgb, var(--bg) 84%, transparent); border: 1px solid var(--line); border-radius: 999px;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: border-color .15s ease, color .15s ease;
+}
+.pg-cam-full:hover { border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+.pg-cam-full svg { width: 15px; height: 15px; }
+.pg-cam .dstyle-cam { right: 44px; }
+@media (pointer: coarse) {
+  .pg-cam-full { width: 34px; height: 34px; }
+  .pg-cam .dstyle-cam { right: 48px; }
+}
+/* her live view's Call button waits for the 18+ check, like the chat (src/chat/chat.js) */
+.pg.is-gated .pg-call { display: none; }
+
+/* her buttons in full-screen talk (shown only there): Get the app, the browser's full screen, back to the site */
+.pg-talk-ctl { display: none; }
+.pg-talk-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 38px; min-width: 38px; padding: 0 14px 0 12px;
+  font: 500 13.5px/1 var(--sans); color: var(--fg); white-space: nowrap; cursor: pointer;
+  background: color-mix(in srgb, var(--bg) 86%, transparent); border: 1px solid var(--line); border-radius: 999px;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: border-color .15s ease, background-color .15s ease;
+}
+.pg-talk-btn:not(.pg-talk-app) { width: 38px; padding: 0; }
+.pg-talk-btn:hover { border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+.pg-talk-btn svg { width: 17px; height: 17px; flex: none; }
+.pg-talk-btn .i-fs-off, .pg-talk-btn.is-on .i-fs-on { display: none; }
+.pg-talk-btn.is-on .i-fs-off { display: block; }
+
+/* ---------- the app's screen (a native dialog like the wallet's: relationship.css .wdlg) ---------- */
+.appdlg-how { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-top: 16px; }
+.appdlg-text { font-size: 14.5px; line-height: 1.55; color: var(--fg); }
+
+/* ================================================================
+   The layout
+   ================================================================ */
+html.is-talk, html.is-talk body { overflow: hidden; overscroll-behavior: none; }
+/* only the Playground (and the dialogs it opens: the wallet, burns, the app) */
+html.is-talk body > :not(main):not(dialog), html.is-talk main > :not(#playground) { display: none; }
+html.is-talk #playground {
+  /* (phones: the part of the screen you can see, so the keyboard never covers the message box: src/chat/fullscreen.js) */
+  position: fixed; left: 0; right: 0; top: var(--talk-top, 0px); height: var(--talk-h, 100%); z-index: 40;
+  margin: 0; padding: 0; background: var(--sec, var(--bg));
+}
+html.is-talk #playground > .wrap { height: 100%; max-width: none; padding: 0; }
+html.is-talk #playground { container: talk / size; }
+html.is-talk #playground .section-head, html.is-talk .burnmon, html.is-talk .pg-side, html.is-talk .pg-cam-full { display: none; }
+
+/* her chat on the left (its own column, with a line between), AGI-1 on the right */
+html.is-talk .pg {
+  --talk-chat: clamp(340px, 36vw, 540px);
+  display: grid; grid-template-columns: var(--talk-chat) minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto auto auto;
+  height: 100%; min-height: 0; margin: 0; isolation: isolate;
+  background: transparent; border: 0; border-radius: 0; box-shadow: none;
+}
+html.is-talk .pg::before {
+  content: ''; grid-area: 1 / 1 / -1 / 2; z-index: -1;
+  background: var(--bg); border-right: 1px solid var(--line);
+}
+html.is-talk .pg-main, html.is-talk .pg-body { display: contents; }
+html.is-talk .pg-bar { grid-area: 1 / 1; position: relative; z-index: 5; container: pgbar / inline-size; }   /* (its menus over the rest) */
+html.is-talk .pg-gate { grid-area: 2 / 1 / 5 / 2; align-self: center; max-height: 100%; overflow-y: auto; }   /* (a short screen: it scrolls) */
+html.is-talk .pg-levelup { grid-area: 3 / 1; }
+html.is-talk .pg-log { grid-area: 4 / 1; height: auto; min-height: 0; }
+html.is-talk .pg-examples { grid-area: 5 / 1; }
+html.is-talk .pg-human { grid-area: 6 / 1; }
+html.is-talk .pg-form { grid-area: 7 / 1; }
+html.is-talk .pg-foot { grid-area: 8 / 1; }
+html.is-talk .msg { max-width: 92%; }
+/* her menus (the model, her 16 languages) fit the screen: they scroll inside when there's less room than they need */
+html.is-talk .pg-models { max-height: calc(100cqh - 84px); overflow-y: auto; overscroll-behavior: contain; }
+
+/* AGI-1: her live view, big. --cam-frame / --cam-headroom: how much of her the stage shows (src/stage/stage.js, in meters),
+   here from a little above her hair to her waist, like a video call or a VTuber's stream (her waving hand can widen it a
+   little, never past her waist) */
+html.is-talk .pg-cam {
+  --cam-frame: .74; --cam-frame-3d: .54; --cam-headroom: .1;   /* (her 3D model: head and shoulders, as in her live view on the page) */
+  container: pgcam / size;
+  grid-area: 1 / 2 / -1 / 3; position: relative; top: auto; z-index: auto; align-self: stretch;
+  width: auto; height: auto; aspect-ratio: auto; margin: 14px; border-radius: 22px; box-shadow: none;
+}
+html.is-talk .pg-cam-still { object-fit: contain; object-position: 50% 50%; }
+html.is-talk .pg-cam-tag { top: 14px; left: 14px; padding: 4px 11px 4px 9px; font-size: 12px; }
+html.is-talk .pg-talk-ctl { position: absolute; top: 12px; right: 12px; z-index: 4; display: flex; align-items: center; gap: 8px; }
+html.is-talk .pg-cam .dstyle-cam { top: auto; right: auto; bottom: 14px; left: 14px; }
+html.is-talk .pg-call { right: 14px; bottom: 14px; gap: 8px; height: 44px; padding: 0 19px 0 16px; font-size: 14px; }
+html.is-talk .pg-call svg { width: 18px; height: 18px; }
+/* her words when she's tapped: a caption over her, above her buttons */
+html.is-talk .pg-cam .agi-say.is-caption {
+  left: 50%; bottom: 72px; max-width: min(440px, calc(100% - 40px)); translate: -50% 0; transform-origin: 50% 100%;
+  font-size: 15px; padding: 9px 14px 10px; border-radius: 16px;
+}
+
+/* her chat bar in a narrower column: the same compact steps as on a phone, by the column's width */
+@container pgbar (max-width: 540px) {
+  .pg-lang-name { display: none; }
+  .pg-lang-code { display: inline; }
+  .pg-lang { position: static; }
+  .pg-langs { left: 12px; right: 12px; top: calc(100% + 4px); width: auto; }
+}
+@container pgbar (max-width: 470px) {
+  .pg-ava { display: none; }
+  .pg-lang-btn .pg-model-caret { display: none; }
+  .pg-lang-btn { margin-left: 0; }
+}
+@container pgbar (max-width: 420px) {
+  .pg-who { gap: 8px; }
+  .pg-status { display: none; }
+  .pg-bar-actions { gap: 6px; }
+}
+
+/* ---------- phones standing up, and windows taller than wide: her on top, the chat under her (a phone on its side keeps
+   them side by side: stacked, the chat wouldn't fit its short screen) ---------- */
+@media (max-aspect-ratio: 4/5), (max-width: 760px) and (orientation: portrait) {
+  html.is-talk .pg {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(132px, 40%) auto auto auto minmax(0, 1fr) auto auto auto auto;
+  }
+  html.is-talk .pg::before { grid-area: 2 / 1 / -1 / 2; border-right: 0; border-top: 1px solid var(--line); }
+  html.is-talk .pg-cam { --cam-frame: .64; --cam-frame-3d: .5; --cam-headroom: .09; grid-area: 1 / 1; margin: 8px; border-radius: 18px; }
+  html.is-talk .pg-bar { grid-area: 2 / 1; }
+  html.is-talk .pg-gate { grid-area: 3 / 1 / 6 / 2; padding: 24px 20px; }
+  html.is-talk .pg-levelup { grid-area: 4 / 1; }
+  html.is-talk .pg-log { grid-area: 5 / 1; padding: 16px 14px; }
+  html.is-talk .pg-examples { grid-area: 6 / 1; padding-inline: 14px; }
+  html.is-talk .pg-human { grid-area: 7 / 1; }
+  html.is-talk .pg-form { grid-area: 8 / 1; margin: 0 10px 10px; }
+  html.is-talk .pg-foot { display: none; }
+  html.is-talk .pg-cam-tag { top: 8px; left: 8px; }
+  html.is-talk .pg-talk-ctl { top: 8px; right: 8px; gap: 6px; }
+  html.is-talk .pg-talk-btn { height: 34px; min-width: 34px; font-size: 13px; }
+  html.is-talk .pg-talk-btn:not(.pg-talk-app) { width: 34px; }
+  html.is-talk .pg-cam .dstyle-cam { bottom: 8px; left: 8px; }
+  html.is-talk .pg-call { right: 8px; bottom: 8px; height: 36px; padding: 0 14px 0 12px; font-size: 13px; }
+  html.is-talk .pg-call svg { width: 16px; height: 16px; }
+  html.is-talk .pg-cam .agi-say.is-caption { bottom: 52px; font-size: 13.5px; padding: 7px 12px 8px; }
+  html.is-talk .pg-models { max-height: calc(100cqh - max(132px, 40cqh) - 96px); }   /* (under her picture and the bar) */
+  /* very little room (a small phone with its keyboard up): the chat alone, her picture comes back with the room */
+  @container talk (max-height: 340px) {
+    .pg { grid-template-rows: 0 auto auto auto minmax(0, 1fr) auto auto auto auto; }
+    .pg-cam { display: none; }
+  }
+}
+/* a short screen (a phone with its keyboard up, a small window): the chat keeps its room. The example prompts go, and in a
+   short picture of her only the buttons you need stay (✕, full screen, the app as its icon, Call) */
+@container talk (max-height: 560px) {
+  .pg-examples { display: none; }
+}
+@container pgcam (max-height: 210px) {
+  .pg-cam-tag, .dstyle-cam { display: none; }
+  .pg-talk-app { width: 34px; padding: 0; }
+  .pg-talk-app span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+/* very small phones: "Get the app" shows as its icon only */
+@media (max-width: 380px) {
+  html.is-talk .pg-talk-app { width: 34px; padding: 0; }
+  html.is-talk .pg-talk-app span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
