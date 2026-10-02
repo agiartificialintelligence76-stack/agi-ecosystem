@@ -56,7 +56,7 @@ function rules(source) {
       let depth = 1, j = open + 1;
       while (depth && j < s.length) { if (s[j] === '{') depth++; else if (s[j] === '}') depth--; j++; }
       const body = s.slice(open + 1, j - 1);
-      if (/^@(media|supports)/.test(head)) walk(body, head);
+      if (/^@(media|supports|container)/.test(head)) walk(body, head);   // (container queries since her pop-out window, 2026-10-02)
       else out.push({ at, head, body });
       i = j;
     }

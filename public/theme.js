@@ -17,6 +17,9 @@
   if (talk) {
     root.classList.add('is-talk');
     document.title = 'Talk to AGI-1 · AGI';
+    // her pop-out window (2026-10-02, src/chat/popout.js): agi1.app/talk?pip=1 inside its frame, in a small window that stays
+    // on top (no full screen there, no app to get, no ✕: the window has its own buttons). Only believed inside a frame
+    try { if (/[?&]pip=1(&|$)/.test(location.search) && window.parent !== window) root.classList.add('is-pip'); } catch (e) { /* the page as usual */ }
   }
   // the phone's browser bar matches the top of the page from the first paint (Pop mode: its violet hero, or on the diary
   // and launch pages, which have no hero, the page's own color; full-screen talk: the color around her). src/theme.js keeps

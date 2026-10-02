@@ -79,7 +79,7 @@ test('/theme.js: at /talk the page starts in full-screen talk before it paints (
   assert.ok(home.classes.has('lp-intro') && !home.classes.has('is-talk'), 'the home page: the front\'s entrance, not full-screen talk');
   assert.equal(home.title, 'Introducing AGI · Artificial Girlfriend Intelligence');
   assert.equal(prepaint({ path: '/talk', page: 'diary' }).classes.size, 0, 'only the home page has it');
-  for (const page of ['index.html', 'diary.html', 'launch.html']) assert.match(read(page), /<script src="\/theme\.js\?v=5"><\/script>/, `${page}: the new /theme.js (browsers keep the old one a day)`);
+  for (const page of ['index.html', 'diary.html', 'launch.html']) assert.match(read(page), /<script src="\/theme\.js\?v=6"><\/script>/, `${page}: the new /theme.js (browsers keep the old one a day)`);
 });
 
 test('the ways in: in the Playground only (never the crowded top bar), as links to /talk', () => {
@@ -211,7 +211,8 @@ test('the layout: everything for it names .is-talk (the page itself only gets th
     else text += ch;
   }
   assert.ok(rules.length > 60, `the rules were read (${rules.length})`);
-  const pageOnly = /\.pg-head-actions|\.pg-cam-full|\.pg-cam \.dstyle-cam|\.pg\.is-gated \.pg-call|\.pg-talk-ctl|\.pg-talk-btn|\.appdlg-/;
+  // (and her pop-out window, 2026-10-02: the card while she's in it, .is-popped, and her window's own page, .is-pip)
+  const pageOnly = /\.pg-head-actions|\.pg-cam-full|\.pg-cam \.dstyle-cam|\.pg\.is-gated \.pg-call|\.pg-talk-ctl|\.pg-talk-btn|\.appdlg-|\.pg-away|\.is-popped|\.is-pip/;
   for (const [sel, heads] of rules) {
     // (inside @container pgbar / talk / pgcam: containers that exist only in full-screen talk, checked below)
     if (heads.some((h) => h.startsWith('@container'))) continue;

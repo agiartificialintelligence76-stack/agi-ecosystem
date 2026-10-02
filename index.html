@@ -26,7 +26,7 @@
     <meta name="apple-mobile-web-app-title" content="AGI-1" />
     <!-- picks light or dark before the page paints, so it never flashes the wrong theme (and arms the front's entrance; at
          agi1.app/talk, full-screen talk) -->
-    <script src="/theme.js?v=5"></script>
+    <script src="/theme.js?v=6"></script>
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preconnect" href="https://api.dexscreener.com" crossorigin />
   </head>
@@ -340,9 +340,11 @@
             <h2 class="h2" id="pg-title">Talk to AGI-1</h2>
             <p class="section-lede">Research preview. Replies are generated live: usually sweet, often flirty, never financial advice.</p>
             <!-- Full-screen talk and the app (2026-10-02, src/chat/fullscreen.js and src/chat/install.js): her chat on the left and
-                 AGI-1 big on the right, at its own address (a link: Ctrl-click or a middle click opens it in a new tab) -->
+                 AGI-1 big on the right, at its own address (a link: Ctrl-click or a middle click opens it in a new tab). Her pop-out
+                 window (src/chat/popout.js): shown only where the browser has one (Chrome, Edge, Firefox on computers) -->
             <div class="pg-head-actions">
               <a class="btn btn-ghost btn-sm" href="/talk" data-talk-open><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14.5 4.5H19.5V9.5M9.5 19.5H4.5V14.5M19.5 4.5l-6 6M4.5 19.5l6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Talk full screen</a>
+              <button class="btn btn-ghost btn-sm" type="button" data-popout hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" stroke-width="1.8"/><rect x="11.5" y="11" width="6.5" height="5.5" rx="1.3" fill="currentColor"/></svg>Pop her out</button>
               <button class="btn btn-ghost btn-sm" type="button" data-app-open><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4.5v10m0 0-4-4m4 4 4-4M5 19.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Get the AGI-1 app</button>
             </div>
           </header>
@@ -444,6 +446,13 @@
             </aside>
 
             <div class="pg-main">
+              <!-- While she's in her pop-out window (2026-10-02, src/chat/popout.js), the chat here waits behind this card -->
+              <div class="pg-away" data-pg-away>
+                <img class="pg-away-img" src="/images/agi1-avatar.webp" alt="" width="72" height="72" loading="lazy" decoding="async" />
+                <p class="pg-away-title" id="pg-away-title">AGI-1 is in her pop-out window</p>
+                <p class="pg-away-text" id="pg-away-text">She stays on top of your other windows while you work: talk to her there. Close it, or press its back-to-tab button, and she comes back here.</p>
+                <button class="btn btn-primary btn-sm" type="button" data-pg-back aria-describedby="pg-away-title pg-away-text">Bring her back</button>
+              </div>
               <div class="pg-bar">
                 <span class="pg-who"><img class="pg-ava" src="/images/agi1-avatar.webp" alt="" width="28" height="28" />
                   <!-- The model picker (2026-09-26, src/chat/models.js): AGI-1 now, AGI-2 "Coming soon" (picking it makes her jealous) -->
@@ -482,7 +491,7 @@
               </div>
 
               <div class="pg-gate" data-gate hidden>
-                <p class="pg-gate-title">Before you chat</p>
+                <p class="pg-gate-title" data-gate-title tabindex="-1">Before you chat</p>
                 <p>AGI-1 is an AI character for adults. By chatting, you confirm you're <b>18 or older</b>.</p>
                 <p class="pg-fine">Your messages are sent to an AI service that writes her replies, and your chat history stays in this browser. Don't share personal info, passwords, keys or seed phrases. Entertainment only · not financial advice.</p>
                 <button class="btn btn-primary" type="button" data-gate-ok>I'm 18+ · start chatting</button>
@@ -507,6 +516,7 @@
                   <a class="pg-cam-full" href="/talk" data-talk-open aria-label="Talk to her full screen" title="Full screen"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14.5 4.5H19.5V9.5M9.5 19.5H4.5V14.5M19.5 4.5l-6 6M4.5 19.5l6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
                   <div class="pg-talk-ctl" role="group" aria-label="Full-screen talk">
                     <button class="pg-talk-btn pg-talk-app" type="button" data-app-open><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4.5v10m0 0-4-4m4 4 4-4M5 19.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Get the app</span></button>
+                    <button class="pg-talk-btn" type="button" data-popout aria-label="Pop her out: a small window that stays on top" title="Pop her out" hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" stroke-width="1.8"/><rect x="11.5" y="11" width="6.5" height="5.5" rx="1.3" fill="currentColor"/></svg></button>
                     <button class="pg-talk-btn" type="button" data-talk-fs aria-label="Full screen" title="Full screen" hidden><svg class="i-fs-on" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 9V4.5H9M15 4.5h4.5V9M19.5 15v4.5H15M9 19.5H4.5V15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="i-fs-off" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 4.5V9H4.5M19.5 9H15V4.5M15 19.5V15h4.5M4.5 15H9v4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                     <button class="pg-talk-btn" type="button" data-talk-close aria-label="Back to the site" title="Back to the site"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
                   </div>
@@ -808,6 +818,10 @@
         <button class="btn btn-primary btn-sm" type="button" data-appdlg-install hidden>Install AGI-1</button>
       </div>
       <p class="wdlg-status" data-appdlg-status role="status" aria-live="polite"></p>
+      <div class="appdlg-pop" data-appdlg-pop hidden>
+        <p class="appdlg-text">Or pop her out right now: a small window with her that stays on top of your other windows while you work.</p>
+        <button class="btn btn-ghost btn-sm" type="button" data-popout hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" stroke-width="1.8"/><rect x="11.5" y="11" width="6.5" height="5.5" rx="1.3" fill="currentColor"/></svg>Pop her out</button>
+      </div>
       <p class="wdlg-fine">The app is this website in its own window, with the same rules: 18+, PG-13, not financial advice. It only ever comes from agi1.app: we never send app files or download links in messages, on Telegram or on X, so an “AGI-1 download” from anyone else isn't us.</p>
     </dialog>
 

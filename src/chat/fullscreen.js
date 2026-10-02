@@ -78,6 +78,7 @@ export function startFullscreen(doc = document) {
   // where the keyboard goes: the 18+ button while it's up, else the message box (on phones the ✕ instead, so the keyboard
   // doesn't jump up and squeeze her)
   function focusIn() {
+    if (root.classList.contains('is-popped')) { $('[data-pg-back]')?.focus({ preventScroll: true }); return; }   // (the card)
     const gate = $('[data-gate]');
     const target = gate && !gate.hidden ? $('[data-gate-ok]') : matchMedia('(pointer: fine)').matches ? $('[data-input]') : closeBtn;
     target?.focus({ preventScroll: true });
@@ -87,6 +88,9 @@ export function startFullscreen(doc = document) {
   // so Back leaves it again
   function enter({ fromPage = true, full = true, push = true } = {}) {
     if (state.on) return;
+    // she's in her pop-out window (src/chat/popout.js): not from a click on the page meanwhile; Back and Forward still
+    // follow the address (the card fills full-screen talk then)
+    if (push && root.classList.contains('is-popped')) return;
     state.fromPage = fromPage;
     state.y = scrollY;
     state.opener = doc.activeElement instanceof HTMLElement && doc.activeElement !== doc.body ? doc.activeElement : null;
@@ -136,6 +140,13 @@ export function startFullscreen(doc = document) {
   }
   // (the app's install screen asks for it on Safari, which keeps the address it's on when you add it: src/chat/install.js)
   addEventListener('agi:talk-open', (e) => enter({ full: e.detail?.full !== false }));
+  // she went into her pop-out window (src/chat/popout.js): opened from the page, back to it (out of the browser's full
+  // screen too); at agi1.app/talk itself it stays, out of the browser's full screen, with the card saying where she is
+  addEventListener('agi:popout', (e) => {
+    if (e.detail !== true || !state.on) return;
+    if (state.fromPage) leave();
+    else if (fullElement()) leaveFull();
+  });
   closeBtn?.addEventListener('click', () => leave());
   fullBtn?.addEventListener('click', () => (fullElement() ? leaveFull() : goFull()));
 
@@ -170,22 +181,26 @@ export function startFullscreen(doc = document) {
   // each time it changes, src/chat/relationship.js)
   let wallet = null;
   addEventListener('agi:relationship', (e) => { wallet = e.detail?.wallet || null; });
+  // the panel, with the keyboard on its first button, box or link that's showing → where the page should be (worked out
+  // again once the browser's full screen is over)
+  function showRelationship() {
+    const rel = doc.getElementById('relationship');
+    if (!rel) return null;
+    const at = () => rel.getBoundingClientRect().top + scrollY - 80;
+    jumpTo(at());
+    [...rel.querySelectorAll('button, input, a[href]')].find((el) => !el.disabled && el.getClientRects().length)?.focus({ preventScroll: true });
+    return at;
+  }
   $('[data-rel-chip]')?.addEventListener('click', (e) => {
     if (!state.on) return;
     e.preventDefault();
     if (!wallet) dispatchEvent(new CustomEvent('agi:wallet-open'));
-    else {
-      leave({ then: () => {
-        const rel = doc.getElementById('relationship');
-        if (!rel) return null;
-        const at = () => rel.getBoundingClientRect().top + scrollY - 80;
-        jumpTo(at());
-        // (the keyboard there too: its first button, box or link that's showing)
-        [...rel.querySelectorAll('button, input, a[href]')].find((el) => !el.disabled && el.getClientRects().length)?.focus({ preventScroll: true });
-        return at;                               // (and there again once the browser's full screen is over)
-      } });
-    }
+    // in her pop-out window: the page behind it shows the panel (src/chat/popout.js), and she stays on top
+    else if (root.classList.contains('is-pip')) parent.postMessage({ agi1: 'relationship' }, location.origin);
+    else leave({ then: showRelationship });
   });
+  // her pop-out window's level chip (src/chat/popout.js): the panel on this page, out of full-screen talk first
+  addEventListener('agi:relationship-show', () => { if (state.on) leave({ then: showRelationship }); else showRelationship(); });
 
   // Phones and tablets: the layout follows the part of the screen you can see, so the keyboard never covers the message box
   // (it shrinks her picture instead). Not while pinch-zoomed in.

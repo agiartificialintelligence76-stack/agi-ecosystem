@@ -167,4 +167,9 @@ export function startTheme() {
   for (const button of document.querySelectorAll('[data-skin-toggle]')) {
     button.addEventListener('click', () => keepPlace(() => applySkin(currentSkin() === 'pop' ? 'lab' : 'pop', true)));
   }
+  // switched in another tab of this browser (2026-10-02: or behind her pop-out window, src/chat/popout.js): this one follows
+  addEventListener('storage', (e) => {
+    if (e.key === KEY) apply(saved() || DEFAULT_THEME, false);
+    else if (e.key === SKIN_KEY) applySkin(savedSkin() || DEFAULT_SKIN, false);
+  });
 }

@@ -17,6 +17,7 @@ import './styles/fullscreen.css';   // full-screen talk (2026-10-02): agi1.app/t
 import { startPlayground } from './chat/chat.js';   // AGI-1's chat, as the Playground section
 import { startFullscreen } from './chat/fullscreen.js';
 import { startInstall } from './chat/install.js';
+import { startPopout } from './chat/popout.js';
 import { startRelationship } from './chat/relationship.js';
 import { startBurns } from './chat/burn.js';
 import { startTheme } from './theme.js';
@@ -63,6 +64,7 @@ startModelCard(document.getElementById('model-card'));
 startPlayground(document.querySelector('[data-playground]'));
 startFullscreen(document);        // (2026-10-02) full-screen talk: the "Talk full screen" links, /talk, Back, the browser's full screen
 startInstall(document);           // (2026-10-02) "Get the AGI-1 app": this site installed as an app, opening in full-screen talk
+startPopout(document);            // (2026-10-02) "Pop her out": her in a small window that stays on top (Chrome, Edge, Firefox on computers)
 startLang();   // (2026-09-29) the language AGI-1 speaks with this visitor, if they picked one before: English until then
 startRelationship(document.querySelector('[data-rel]'));   // wallet + levels (after the chat, which listens to it)
 startBurns(document);            // (2026-09-30) burn $AGI for more messages, once burns are open (src/chat/burn.js)

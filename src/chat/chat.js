@@ -630,6 +630,17 @@ export function startPlayground(root) {
   document.addEventListener('visibilitychange', () => { if (document.hidden && call) endCall('away'); });
   addEventListener('pagehide', () => endCall());
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && hearing && !call) hearing.cancel(); });
+  // her pop-out window (2026-10-02, src/chat/popout.js): she talks there now, so here a call ends, the mic closes and this
+  // page's voice stays quiet until she's back (a reply still on its way here shows as text)
+  let popped = false;
+  addEventListener('agi:popout', (e) => {
+    popped = e.detail === true;
+    voice.hold?.(popped);
+    if (!popped) return;
+    endCall();
+    hearing?.cancel();
+    attend('idle');
+  });
 
   // ---------- Relationship panel events (Phase 3) ----------
   addEventListener('agi:relationship', (e) => {
@@ -725,7 +736,8 @@ export function startPlayground(root) {
     if (voice.isOn()) sayWhenFree(line);
     else pretendTalk(sayTime(line.text), 0.8);   // voice off: her mouth "says" it, and Listen is right there
   }
-  startMarketWatch({ ready: () => gate.hidden, onMoment: (m) => { if (busy) waitingMarket = m; else showMarket(m); } });
+  // (while she's in her pop-out window, its page notices them: nothing is noted here, so nothing is missed: src/chat/popout.js)
+  startMarketWatch({ ready: () => gate.hidden && !popped, onMoment: (m) => { if (busy) waitingMarket = m; else showMarket(m); } });
   // ?dev: preview one without waiting for the market (the stage's "market up" / "market down" buttons). Nothing is remembered.
   if (new URLSearchParams(location.search).has('dev')) {
     addEventListener('agi:market-preview', (e) => {

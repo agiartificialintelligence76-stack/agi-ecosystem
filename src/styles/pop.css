@@ -480,6 +480,20 @@
   [data-skin='pop'][data-theme='dark'].is-talk .pg::before { border-top-width: 2px; }
   [data-skin='pop'].is-talk .pg-cam { margin: 10px 10px 14px; border-radius: 22px; box-shadow: 0 6px 0 -1px var(--shade); }
 }
+/* her pop-out window (2026-10-02, fullscreen.css): her on top until it's wide, her panel a little tighter; on the page, the
+   card that says she's in it */
+@media (max-width: 639px), (max-aspect-ratio: 4/5), (max-width: 760px) and (orientation: portrait) {
+  [data-skin='pop'].is-pip .pg::before { border-right: 0; border-top: 3px solid var(--edge); }
+  [data-skin='pop'][data-theme='dark'].is-pip .pg::before { border-top-width: 2px; }
+  [data-skin='pop'].is-pip .pg-cam { margin: 10px 10px 14px; border-radius: 22px; box-shadow: 0 6px 0 -1px var(--shade); }
+  /* (a small window: her alone) */
+  @container talk (max-height: 400px) {
+    [data-skin='pop'].is-pip .pg-cam { margin: 6px 6px 10px; }
+  }
+}
+[data-skin='pop'] .pg-away-img { box-shadow: 0 0 0 3px var(--edge); }
+[data-skin='pop'] .pg-away-title { font-family: var(--display); font-size: 24px; font-weight: 800; font-stretch: 110%; }
+[data-skin='pop'] .appdlg-pop { border-top: 2px solid var(--edge); }
 
 /* ---------- ClankChecker (mint) ---------- */
 [data-skin='pop'] .chk-search, [data-skin='pop'] .chk-filters { background: var(--bg); border: 2px solid var(--edge); }

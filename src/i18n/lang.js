@@ -34,8 +34,16 @@ export async function setLang(next, { remember = true, picked = true } = {}) {
   return true;
 }
 
-// At page start: the language this visitor picked on an earlier visit (English needs nothing)
+// At page start: the language this visitor picked on an earlier visit (English needs nothing). A pick in another tab of
+// this browser, or in her pop-out window's page (2026-10-02), is followed here too, quietly
 export function startLang() {
+  try {
+    addEventListener('storage', (e) => {
+      if (e.key !== KEY) return;
+      const next = saved() || DEFAULT_LANG;
+      if (next !== code) setLang(next, { remember: false, picked: false });
+    });
+  } catch { /* (tests without a window) */ }
   const was = saved();
   return was && was !== DEFAULT_LANG ? setLang(was, { remember: false, picked: false }) : Promise.resolve(false);
 }

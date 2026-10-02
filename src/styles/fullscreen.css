@@ -169,3 +169,65 @@ html.is-talk .pg-cam .agi-say.is-caption {
   html.is-talk .pg-talk-app { width: 34px; padding: 0; }
   html.is-talk .pg-talk-app span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+
+/* ================================================================
+   Her pop-out window (2026-10-02, src/chat/popout.js): a small window with her that stays on top of the visitor's other
+   windows (the browser's Document Picture-in-Picture). It holds full-screen talk in a frame (agi1.app/talk?pip=1, marked
+   .is-pip by /theme.js); while she's in it, the chat on the page waits behind a card (.is-popped).
+   ================================================================ */
+/* on the page: the card where her chat was, and the ways into full-screen talk wait too */
+.pg-away { display: none; }
+.pg.is-popped .pg-main > :not(.pg-away) { display: none; }
+.pg.is-popped .pg-away {
+  display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  min-height: 420px; padding: 40px 24px; text-align: center;
+}
+.pg-away-img { width: 72px; height: 72px; border-radius: 50%; box-shadow: 0 0 0 1px var(--line); }
+.pg-away-title { font-size: 19px; font-weight: 600; letter-spacing: -0.02em; }
+.pg-away-text { max-width: 380px; color: var(--fg-2); }
+.pg-away .btn { margin-top: 4px; }
+html.is-popped [data-talk-open] { display: none; }
+/* at agi1.app/talk itself (the installed app): the card fills full-screen talk */
+html.is-talk .pg.is-popped::before { display: none; }
+html.is-talk .pg.is-popped .pg-away { grid-area: 1 / 1 / -1 / -1; align-self: center; justify-self: center; min-height: 0; }
+/* the app's screen offers her window too */
+.appdlg-pop { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.appdlg-pop[hidden] { display: none; }
+.appdlg-pop .btn svg { width: 16px; height: 16px; flex: none; }
+/* (the fine print under it a little apart; with the row hidden, as under the status line before) */
+.appdlg-pop + .wdlg-fine { margin-top: 16px; }
+.appdlg-pop[hidden] + .wdlg-fine { margin-top: 8px; }
+
+/* in the window: its own title bar has the buttons (back to the tab, close); there's no full screen in it, and no app to get;
+   and no keyboard hints under the box (every line of a small window is hers) */
+html.is-pip .pg-talk-ctl, html.is-pip .pg-foot { display: none; }
+/* her on top, a little bigger than on a phone, and the chat under her, until the window is wide enough for side by side
+   (the same windows as full-screen talk's own stacked layout, and narrower landscape ones) */
+@media (max-width: 639px), (max-aspect-ratio: 4/5), (max-width: 760px) and (orientation: portrait) {
+  html.is-pip .pg {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(120px, 46%) auto auto auto minmax(0, 1fr) auto auto auto auto;
+  }
+  html.is-pip .pg::before { grid-area: 2 / 1 / -1 / 2; border-right: 0; border-top: 1px solid var(--line); }
+  html.is-pip .pg-cam { --cam-frame: .64; --cam-frame-3d: .5; --cam-headroom: .09; grid-area: 1 / 1; margin: 8px; border-radius: 18px; }
+  html.is-pip .pg-bar { grid-area: 2 / 1; }
+  html.is-pip .pg-gate { grid-area: 3 / 1 / 6 / 2; padding: 20px 16px; }
+  html.is-pip .pg-levelup { grid-area: 4 / 1; }
+  html.is-pip .pg-log { grid-area: 5 / 1; padding: 14px 12px; }
+  html.is-pip .pg-examples { grid-area: 6 / 1; padding-inline: 12px; }
+  html.is-pip .pg-human { grid-area: 7 / 1; }
+  html.is-pip .pg-form { grid-area: 8 / 1; margin: 0 8px 8px; }
+  html.is-pip .pg-cam-tag { top: 8px; left: 8px; }
+  html.is-pip .pg-cam .dstyle-cam { bottom: 8px; left: 8px; }
+  html.is-pip .pg-call { right: 8px; bottom: 8px; height: 36px; padding: 0 14px 0 12px; font-size: 13px; }
+  html.is-pip .pg-call svg { width: 16px; height: 16px; }
+  html.is-pip .pg-cam .agi-say.is-caption { bottom: 52px; font-size: 13.5px; padding: 7px 12px 8px; }
+  html.is-pip .pg-models { max-height: calc(100cqh - max(120px, 46cqh) - 96px); }
+  /* a small window: her alone, with her Call button (the chat comes back with the room); never the chat without her */
+  @container talk (max-height: 400px) {
+    html.is-pip .pg { grid-template-rows: minmax(0, 1fr); }
+    html.is-pip .pg-cam { display: block; grid-area: 1 / 1; margin: 6px; }
+    html.is-pip .pg::before, html.is-pip .pg-bar, html.is-pip .pg-gate, html.is-pip .pg-levelup, html.is-pip .pg-log,
+    html.is-pip .pg-examples, html.is-pip .pg-human, html.is-pip .pg-form { display: none; }
+  }
+}

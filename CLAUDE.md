@@ -67,6 +67,13 @@
 >   on the right (phones: her on top), from the Playground's "Talk full screen" or the ⤢ on her live view; and the site
 >   installs from the browser as an app that opens there ("Get the AGI-1 app"). A native app and "she does what Claude
 >   does" are the owner's decisions. See "Full-screen talk and the AGI-1 app".
+> - **Her pop-out window** (2026-10-02, the owner: "yeah build that", the app plan's free next step): "Pop her out" puts
+>   AGI-1 and her chat in a small window that stays on top of the visitor's other windows while they work (Chrome, Edge and
+>   Firefox on computers; hidden where a browser can't). Our own pages may now frame each other (vercel.json). See "Her
+>   pop-out window".
+> - **Money questions** (2026-10-02, the owner: "if they stake some $AGI they can use the ai for free?", then "ideas that
+>   is sustainable or maybe can earn me money too and them?"): Claude's answers are in the decisions log; nothing built yet
+>   (the owner picks first).
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -120,7 +127,9 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   coin is theirs; she never promotes it. Off until it's set up. See "Launch with AGI-1"
 - **Full-screen talk** (2026-10-02, the owner's idea): agi1.app/talk, her chat on the left and AGI-1 big on the right
   (phones: her on top), in the browser's real full screen when opened from the page; and **the AGI-1 app**: the site
-  installed from the browser, in its own window, opening there. See "Full-screen talk and the AGI-1 app"
+  installed from the browser, in its own window, opening there; and **her pop-out window**: a small window with her and her
+  chat that stays on top of other windows (Chrome, Edge, Firefox on computers). See "Full-screen talk and the AGI-1 app"
+  and "Her pop-out window"
 - **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
 It looks like an AI lab's model launch page (a parody, see "Design" below): serious design, meme content. (Pop mode is the
@@ -215,12 +224,12 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `index.html` | The page: top bar, the front (2026-09-28), hero, every section, and the footer (the safety note). Vite starts here |
 | `diary.html` | AGI-1's diary page (`/diary`, Phase 5): top bar, the entries, a short safety paragraph. Its own entry: `src/diary.js` |
 | `launch.html` | "Launch with AGI-1" (2026-10-01): the private launch page (`/launch/<id>`, never in search results): the coin, 18+, the three steps (your wallet, Robinhood Chain, Launch), the coin once it's live, "Before you launch". Its own entry: `src/launch/page.js` |
-| `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28); at agi1.app/talk (2026-10-02) it starts the page in full-screen talk (`is-talk`, its title and colors, no loader) |
+| `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28); at agi1.app/talk (2026-10-02) it starts the page in full-screen talk (`is-talk`, its title and colors, no loader), and at agi1.app/talk?pip=1 inside a frame marks it as her pop-out window's page (`is-pip`) |
 | `src/main.js` | Browser code entry point: styles, theme, the front, prices, sections, chat, then the 3D stage (loaded separately, after the front's entrance; at /talk at once, and the front only when you leave full-screen talk) |
 | `src/landing/landing.js` | The front (2026-09-28): the loader, the entrance, the focus lines, AGI-1 in WebGL, the orbit, her bubble, the ribbons, the manifesto, the cursor and hearts (see "The front") |
 | `src/landing/lines.js` | What AGI-1 says in the front's speech bubble, and when she's clicked (PG-13, no pet names, no money talk) |
-| `src/styles/` | `tokens.css` (colors for both themes, chart colors, fonts), `base.css` (reset, buttons), `layout.css` (top bar), `footer.css` (safety note + bottom bar), `hero.css` (hero, ticker, figure), `sections.css` (section headings, stat tiles), `evals.css` (Figure 2), `modelcard.css` (Model card), `playground.css` (Playground), `relationship.css` (levels panel, connect screen, level-up), `notify.css` (the notification card, 2026-09-25), `checker.css` (ClankChecker, 2026-09-26), `pop.css` (Pop mode, 2026-09-27: the whole second look, every rule under `[data-skin="pop"]`), `landing.css` (the front, 2026-09-28: every rule names an `lp-` class), `launch.css` (the launch page, 2026-10-01: every rule names an `lch-` class), `fullscreen.css` (full-screen talk, 2026-10-02: every rule names `.is-talk`, except the Playground's new buttons) |
-| `src/theme.js` | The light/dark toggle and (2026-09-27) the Pop mode button; remembers both choices; sends `agi:theme` and `agi:skin`; the phone's browser-bar color (`barColor()`) |
+| `src/styles/` | `tokens.css` (colors for both themes, chart colors, fonts), `base.css` (reset, buttons), `layout.css` (top bar), `footer.css` (safety note + bottom bar), `hero.css` (hero, ticker, figure), `sections.css` (section headings, stat tiles), `evals.css` (Figure 2), `modelcard.css` (Model card), `playground.css` (Playground), `relationship.css` (levels panel, connect screen, level-up), `notify.css` (the notification card, 2026-09-25), `checker.css` (ClankChecker, 2026-09-26), `pop.css` (Pop mode, 2026-09-27: the whole second look, every rule under `[data-skin="pop"]`), `landing.css` (the front, 2026-09-28: every rule names an `lp-` class), `launch.css` (the launch page, 2026-10-01: every rule names an `lch-` class), `fullscreen.css` (full-screen talk, 2026-10-02: every rule names `.is-talk`, except the Playground's new buttons; and her pop-out window: the page's card, `.is-popped`, and her window's own layout, `.is-pip`) |
+| `src/theme.js` | The light/dark toggle and (2026-09-27) the Pop mode button; remembers both choices; sends `agi:theme` and `agi:skin`; the phone's browser-bar color (`barColor()`); since 2026-10-02 follows a switch made in another tab or on the page behind her pop-out window (the `storage` event) |
 | `src/menu.js` | The phone menu (both pages): on screens up to 920 px (in Pop mode up to 1040 px; 860 px before the Pop mode button, 760 px before ClankChecker's link) the top bar's links are hidden, and the menu button shows them as a drop-down (with the Diary, the Safety note and, under 380 px, Pop mode). Where it starts is decided by the CSS alone. Closes on a link, Escape, a tap outside, or when the links fit again. Also Pop mode's top-bar band (`is-stuck`, past the hero) |
 | `src/prices/` | `parse.js` (read DexScreener's answer, number formats), `prices.js` (fetch every 30 s, sends `agi:prices`), `ticker.js` (draws the hero ticker) |
 | `src/sections/` | Page sections below the hero: `evals-data.js` (the benchmark numbers) + `evals.js` (Figure 2: chart, tooltips, table view); `modelcard.js` (Copy button + live token numbers); `checker.js` (ClankChecker, 2026-09-26, "Risk check your coins on clank" on the page since 2026-09-28: the coin list (live: the newest coins every 10 s while it's on screen, a Refresh button), each coin's picture and its big view, filters and search, "Ask AGI-1" and her answer under the coin) |
@@ -243,14 +252,15 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/lib/human.js` | The human check for the chat (shared with the Arena until 2026-09-28): Cloudflare Turnstile widget, the 2-hour pass saved in the browser, a small JSON-POST helper |
 | `src/lib/levels.js` | The three relationship levels (names, $AGI needed, messages a day). The page and the server both read it |
 | `src/lib/wallet.js` | Finds the visitor's wallets (including Phantom) and signs in: asks only for the address, the network it's on (read-only) and a plain-text signature; turns wallet errors into plain words |
-| `src/chat/relationship.js` | The Relationship panel in the Playground: connect screen, level, name, AGI-1's notes, Forget me, the level-up moment |
-| `src/chat/voice.js` | Voice replies: the speaker button; plays her AI voice from `/api/voice` (Web Audio; her natural voice or nothing, never the browser's robotic one); what she says out loud (`speakable`, `clipSpeech`); her fixed lines (hello, out of messages, market moments, ClankChecker: downloaded once, early when you're about to need them; her call intro is her natural voice or nothing). One voice for the whole page: ClankChecker plays through the same one (`sharedVoice()`), and `agi1:speaking` tells every live view when she talks |
+| `src/chat/relationship.js` | The Relationship panel in the Playground: connect screen, level, name, AGI-1's notes, Forget me, the level-up moment; since 2026-10-02 the wallet session follows another tab or her pop-out window (signed in, out or forgotten there), never written back |
+| `src/chat/voice.js` | Voice replies: the speaker button; plays her AI voice from `/api/voice` (Web Audio; her natural voice or nothing, never the browser's robotic one); what she says out loud (`speakable`, `clipSpeech`); her fixed lines (hello, out of messages, market moments, ClankChecker: downloaded once, early when you're about to need them; her call intro is her natural voice or nothing). One voice for the whole page: ClankChecker plays through the same one (`sharedVoice()`), and `agi1:speaking` tells every live view when she talks; since 2026-10-02 quiet while she's in her pop-out window (`hold()`), and the voice setting follows other tabs and her window |
 | `src/chat/listen.js` | Voice chat (2026-09-25): the browser's free speech recognition, one message at a time (`listenOnce`), and whether this browser can listen (`canListen`) |
 | `src/i18n/` | Her languages (2026-09-29): `langs.js` (the 16 languages: codes, names, number formats, what the mic listens for; the page and the server share it), `lines/en.js` (every pre-written line of hers in English: the source) and `lines/<code>.js` (the same keys in each language), `text.js` (filling in `{placeholders}`, English as the fallback), `lang.js` (the page: which language she speaks with this visitor, remembered as `agi1_lang`; downloads only that language's file), `all.js` (the server: every language at once), `check.js` (her rules for a translation: same keys, placeholders, emojis, "not financial advice", kept names and numbers) |
 | `src/chat/languages.js` | Her languages (2026-09-29): the chat bar's language menu ("🌐 English ▾" next to "AGI-1 ▾"), two columns of her 16, each in its own words; keyboard like the model picker |
 | `src/lib/copy.js` | 2026-09-29: the Copy button for the contract address (the Model card's and the front's): copies the whole address, or selects it where the clipboard is blocked |
-| `src/chat/fullscreen.js` | Full-screen talk (2026-10-02): agi1.app/talk, the ways in (the links to /talk), the browser's full screen, the address (Back, Forward), ✕, leaving (back to where the page was), the level chip there, phones' visible screen; sends `agi:talk`. See "Full-screen talk and the AGI-1 app" |
+| `src/chat/fullscreen.js` | Full-screen talk (2026-10-02): agi1.app/talk, the ways in (the links to /talk), the browser's full screen, the address (Back, Forward), ✕, leaving (back to where the page was), the level chip there, phones' visible screen; sends `agi:talk`; since 2026-10-02 also shows the Relationship panel for her pop-out window (`agi:relationship-show`). See "Full-screen talk and the AGI-1 app" |
 | `src/chat/install.js` | The AGI-1 app (2026-10-02): the "Get the AGI-1 app" screen: which way this browser installs a site (`installHow()`), its words (`HOW_WORDS`), our Install button with the browser's own install window |
+| `src/chat/popout.js` | Her pop-out window (2026-10-02): whether this browser can (`canPopOut()`: Document Picture-in-Picture, a page of its own), her window (`startPopout()`: asked in the click, holding `popoutUrl()` = /talk?pip=1 in a frame), the page's card while she's out (`is-popped`), the one message her page may send (the Relationship panel); sends `agi:popout`. See "Her pop-out window" |
 | `src/chat/telegram-link.js` | She texts first (2026-09-29): shows the Playground's "Text me on Telegram ↗" once the bot's public name is set (`VITE_TELEGRAM_BOT`, read by `src/main.js`) |
 | `src/chat/burn.js` | Burn $AGI for more messages (2026-09-30): the burn monitor above the chat (the huge live number), the Relationship panel's row, the burn screen (a native dialog: the steps, the burn address and Copy, Check my burn, a pasted link), the sentences about burning (shown once burns are open, `[data-burn-only]`); `burnsReady()` / `openBurn()` for the chat's out-of-messages chip |
 | `src/lib/burns.js` | 2026-09-30: the burn address (`0x…dEaD`), its block explorer page, the suggested amounts. The page and the server share it |
@@ -277,7 +287,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes) |
 | `supabase/burns.sql` | Burn $AGI for more messages (2026-09-30). Run once in the same Supabase project (any time): five new tables (`agi1_burn_key`, `agi1_burn_txs`, `agi1_burn_wallets`, `agi1_burn_days`, `agi1_burn_total`) and 7 functions, only added (nothing the original site uses changes). Until it's run, nobody sees anything about burning |
 | `supabase/launch.sql` | "Launch with AGI-1" (2026-10-01). Run once in the same Supabase project (any time; running it again is safe): four new tables (`agi1_launch_drafts`, `agi1_launch_chats`, `agi1_launch_wallets`, `agi1_launch_days`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `PINATA_JWT` is set), her `/launch` says launching isn't open yet |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
@@ -288,7 +298,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `tools/memory/` | Phase 6, offline: `build-memory.mjs` turns the Telegram export into `server/tg-memory-data.js`; `lore.json` (hand-written memory cards: eras, running jokes, big moments; edit freely); `forget.json` (people who asked to be left out). See "AGI-1's memory of the Telegram group" |
 | `telegram memories/` | The owner's Telegram export (`result.json`, 31 MB, thousands of people's messages). **Never in git** (`.gitignore`); only `tools/memory/` reads it |
 | `vite.config.js` | Three pages (`index.html`, `diary.html` and since 2026-10-01 `launch.html`); raises Vite's file-size warning: three.js is large on purpose and loads separately; since 2026-10-02 serves /talk as the home page in `npm run dev` and Vite's preview, like Vercel |
-| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk), security headers (CSP), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed` |
+| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk), security headers (CSP; since 2026-10-02 our own pages may frame each other, for her pop-out window, never another site), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed` |
 
 ## Commands
 
@@ -2406,7 +2416,7 @@ she also speaks on my pc, she will appear on my screen as well … make this bet
   on the page too (violet was hard to see on her pink panel).
 
 **How it works:**
-- `public/theme.js` (before the first paint, `?v=5`) adds `is-talk` to the page at /talk (and /talk/), sets its title and
+- `public/theme.js` (before the first paint, `?v=5`; `?v=6` since her pop-out window) adds `is-talk` to the page at /talk (and /talk/), sets its title and
   skips the front's loader and entrance; `src/chat/fullscreen.js` does the rest: the ways in (a plain left click only; with
   Ctrl, ⌘, Shift or the middle button the browser opens a new tab), the browser's full screen (only from a click, which
   browsers require), the address (`history.pushState`, Back and Forward), leaving, where the page goes and the keyboard,
@@ -2462,9 +2472,10 @@ trust, and it updates with every push (each time it opens it loads the live site
 
 **The next steps** (Claude's plan, sent to the owner on 2026-10-02; each needs the owner's decision first):
 1. **Done: the web app** (above). Free.
-2. **Free, next:** (a) **"pop her out"**: a small window with her that stays on top of other windows while you work
-   (Document Picture-in-Picture: Chrome and Edge 116+ and Firefox 151+ on computers; not Safari; one window, which closes
-   with its tab; its title bar stays). (b) **The Microsoft Store:** the same web app listed there. Microsoft's own PWABuilder
+2. **Free, next:** (a) **"pop her out": built 2026-10-02** (the owner: "yeah build that"; see "Her pop-out window"
+   below): a small window with her that stays on top of other windows while you work (Document Picture-in-Picture: Chrome
+   and Edge 116+ and Firefox 151+ on computers; not Safari; one window, which closes with its tab; its title bar stays).
+   (b) **The Microsoft Store:** the same web app listed there. Microsoft's own PWABuilder
    makes the package ("no code changes are required"), registration has been free for individual developers since
    September 2025, and Microsoft signs Store packages itself; its review (usually 24–48 hours) and its rules for 18+ and
    crypto apps need checking first.
@@ -2513,6 +2524,98 @@ themes); clean consoles. A second Claude agent reviewed it (10 findings, e.g. tw
 phone on its side hiding the 18+ button, an Esc meant for a screen leaving full-screen talk; all fixed and tested; the Pop
 focus ring change kept on purpose). **Not tried on real devices:** an iPhone, an iPad, Android, Safari's Add to Dock, a
 real install on Windows or a Mac (Claude's workspace has Chromium only): the owner's devices are the first real check.
+
+### Her pop-out window (2026-10-02)
+
+**The owner's request:** "yeah build that", to Claude's "Should I build the free pop-out window next?" (step 2a of the app
+plan above; the owner's idea was a desktop AGI-1 who "will appear on my screen as well").
+
+**What visitors see:**
+- **"Pop her out"** in three places: the Playground's heading (between "Talk full screen" and "Get the AGI-1 app"), her
+  picture in full-screen talk (an icon after "Get the app") and the app's screen ("Or pop her out right now"). Only where
+  the browser has Document Picture-in-Picture (Chrome and Edge 116+, Firefox 151+, on computers): Safari, phones and older
+  browsers never see them.
+- **Her window:** a small window the browser keeps on top of every other window (other apps too) while you work. It asks
+  for about 400 × 660 (the browser may pick another size, and remembers where the visitor put it last; it can be resized).
+  In it, full-screen talk in its own layout: her on top (46% of the height) and her chat under her; a wide window (from
+  640 px, and not taller than 5:4), side by side; a small one (under 400 px tall, stacked), her alone with her Call
+  button. No ✕, full screen, app buttons or keyboard hints in it: its title bar has the browser's own buttons (back to the
+  tab, close).
+- **Everything of the chat works there:** the same chat (her history, the 18+ answer, the wallet sign-in, her voice
+  setting and her language are this browser's, shared with the page), her voice, the mic and calls, taps, the model
+  picker, burns, her market moments (only her window notes them while she's out, so none is missed or doubled).
+- **The page while she's out:** a card where her chat was, "AGI-1 is in her pop-out window … Close it, or press its
+  back-to-tab button, and she comes back here.", with **Bring her back** (the keyboard goes there, and it says where she
+  is). "Talk full screen" and the other "Pop her out" buttons wait; the side panel (Relationship, Parameters) stays. The
+  page stays quiet meanwhile: her voice only plays in her window (a reply still on its way to the page shows as text; a
+  tap on the page's stage or the risk check's line is silent), so a call in her window never hears the page.
+- **Her level chip in her window** (with a wallet connected): the page comes to the front (browsers allow it from a click
+  in her window, Chrome 123+) and shows her Relationship panel; she stays on top. At agi1.app/talk itself (the installed
+  app) the page leaves full-screen talk to show it. Without a wallet, the connect screen opens in her window.
+- **Changes made in one follow in the other** (the `storage` event): the theme and the look, her language, her voice
+  setting, the 18+ answer, the chat, and the wallet (signed in, out or forgotten: "Forget me" on the page stays forgotten
+  in her window, which never writes the old session back).
+- **From full-screen talk on the page:** the page goes back to where it was (out of the browser's full screen) and shows
+  the card. **At agi1.app/talk itself:** it stays in full-screen talk, the card in the middle. Back and Forward still
+  follow the address while she's out (the card fills full-screen talk then).
+- **Closing it** (Bring her back, its close button, its back-to-tab button, or closing the page): she's back on the page,
+  with what was said in her window, and the keyboard in her message box (or, while the 18+ check is still up, on its title:
+  never on its button, so a held Enter can't answer it unread).
+
+**How it works** (`src/chat/popout.js`):
+- `documentPictureInPicture.requestWindow({ width: 400, height: 660 })`, asked in the click itself (browsers only open one
+  from a click); one window at a time (a double click or a held key asks once).
+- The window holds **agi1.app/talk?pip=1 in a frame**: her own page (the site's full-screen talk), not this page's chat
+  moved into the window. A page whose tab is hidden (the visitor working elsewhere) is slowed down by the browser (its
+  timers and animation frames), which would freeze her; the frame is a page of its own, and shown. Its browser dialogs, the
+  human check and speech recognition work as on any page. `/theme.js` marks it `.is-pip` before it paints, only inside a
+  frame (`/theme.js?v=6`). The window's own empty page is styled through the CSS object model (it keeps the page's CSP:
+  no inline styles).
+- **The headers** (`vercel.json`): `frame-src 'self' https://challenges.cloudflare.com`, `frame-ancestors 'self'` and
+  `X-Frame-Options: SAMEORIGIN` (were: frame-src the human check only, `frame-ancestors 'none'`, `DENY`). Our own pages may
+  frame each other; never another site's, and no other site may frame ours. The window's page takes the page's CSP, so
+  without `frame-src 'self'` the frame was blocked (checked in a browser).
+- **Events:** `agi:popout` (true / false) when she goes out and comes back: `src/chat/chat.js` ends a call, closes the mic,
+  holds the page's voice (`hold()` in `src/chat/voice.js`) and leaves market moments to her window;
+  `src/chat/fullscreen.js` leaves full-screen talk opened from the page (or the browser's full screen at /talk) and won't
+  open it from a click meanwhile. Her page in the window may send the page one message (show the Relationship panel),
+  only from our own address and its own frame (`postMessage`, both checked): the page then sends `agi:relationship-show`,
+  which `fullscreen.js` handles.
+- `src/styles/fullscreen.css`: the card (`.is-popped`) and her window's layout (`.is-pip`); Pop mode's touches in `pop.css`.
+
+**Worth knowing:** one window per browser (the browser's rule), and it closes with its page. The site can't place the
+window or pick its screen: the browser does (it remembers where the visitor puts it). A very small window (her alone) hides
+the human-check box: if Cloudflare ever needs a click there, a call fails with a note in her (hidden) chat; making the
+window taller shows it. Not tried: Firefox's Document Picture-in-Picture (Claude's workspace has Chromium only), real
+Windows and Mac computers, and the microphone's permission prompt inside her window (the frame may ask:
+`allow="microphone"`, and the site allows it for our own pages).
+
+**Cost:** nothing new: the same site, no setting; her page in the window comes from the browser's cache.
+
+**Troubleshooting:**
+
+| What you see | Why | Fix |
+|---|---|---|
+| No "Pop her out" button | The browser has no Document Picture-in-Picture (Safari, phones, Chrome or Edge before 116, Firefox before 151) | Chrome or Edge on a computer |
+| Her window opens empty (the browser's console: "Refused to frame") | The frame headers in `vercel.json` changed | Put them back: `frame-src 'self' …`, `frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN` (`tests/popout.test.js` checks them) |
+| "Pop her out" does nothing (the console: `[popout] the browser didn't open her window`) | The browser refused it (a setting or a policy) | Try again, or another browser |
+| Her level chip in her window seems to do nothing | The page showed her Relationship panel, but the browser left it behind another app | The window's back-to-tab button |
+
+**Tests:** `tests/popout.test.js` (11: its address, who may open it (a page of its own, the API, never in a frame), the
+frame headers, `/theme.js`'s mark only inside a frame, the buttons and the card, the window itself with a stand-in browser
+(asked in the click, her page in a frame, the card, the one message and from whom, every way back, the keyboard, one window
+for a double click, a window that can't be set up or was gone already, a browser that says no), and what the chat,
+full-screen talk, the voice, the wallet, her language and the looks do). In a browser with the site's real headers
+(`popouttest.mjs` in Claude's scratch, 154 checks; Chromium's real Document Picture-in-Picture): the buttons, her window and
+her page in it, the card, axe on both, she's drawn there, a message from her window shown on the page too, the theme
+following, the level chip (also from the installed app's /talk), Bring her back, its own close, the app's screen, her
+window's layouts at 340×600 to 1100×700 (stacked, her alone, side by side; her buttons inside her picture, no scrolling),
+her language menu inside it, Pop and lab in both themes, from full-screen talk, at /talk itself, Back and Forward while
+she's out, the wallet, language and voice following, the page quiet while she's out, the 18+ check (focus, answered once
+for both), a browser without it, narrower windows' headings, clean consoles. `fullscreentest.mjs` (170) still passes. A
+second Claude agent reviewed it (findings: the wallet session not following between the page and her window, the level
+chip invisible at /talk, Back and Forward out of step, the page still talking while she's out, a double click opening two
+windows, the keyboard's way back; all fixed and tested).
 
 ## Pop mode (2026-09-27)
 
@@ -2570,7 +2673,7 @@ the browser saved `dr-skin` = `lab` (Pop mode switched off), and `data-theme="da
 `[data-skin-toggle]`, with `aria-pressed`), remembers the choice, repaints the browser bar (`barColor()`, the same colors as
 `/theme.js`; a test compares them) and sends `agi:skin`; the 3D stage listens (its `pop-light` / `pop-dark` colors, the
 hearts) and so does the menu (it closes when its links fit again). Browsers keep `/theme.js` a
-day, so the pages load it with a version (`/theme.js?v=5` since full-screen talk, 2026-10-02, `v=4` since the launch page, `v=3` since the front: **raise the number whenever it changes**)
+day, so the pages load it with a version (`/theme.js?v=6` since her pop-out window, 2026-10-02, `v=5` since full-screen talk, `v=4` since the launch page, `v=3` since the front: **raise the number whenever it changes**)
 and `src/theme.js` also applies the saved choices, else the same defaults (`DEFAULT_SKIN`, `DEFAULT_THEME`) itself.
 
 **Fonts:** Anybody (variable, 57 KB) and Instrument Serif Italic (22 KB), free (SIL Open Font License, the license files are
@@ -3270,6 +3373,17 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 - The app only ever comes from agi1.app (installed from the browser): the page says we never send app files or download
   links, so an "AGI-1 download" from anyone else is a scam. If a native app ever ships, that wording changes first.
 
+### Her pop-out window (2026-10-02, see "Her pop-out window")
+- **Our own pages may frame each other** (her window holds /talk in a frame): `frame-src 'self'`, `frame-ancestors 'self'`
+  and `X-Frame-Options: SAMEORIGIN` since 2026-10-02 (were `'none'` / `DENY`). Never another site's page in a frame, and no
+  other site may frame ours (clickjacking stays blocked); `*.vercel.app` previews are other addresses, so they can't
+  either. `tests/popout.test.js` checks every header entry.
+- `?pip=1` only counts inside a frame (which only our own pages can make) and only changes the layout; the page accepts one
+  message from her window (show the Relationship panel), only from our own address and its own frame.
+- Her window holds nothing but that frame, made with `createElement` and styled through the CSS object model (no HTML from
+  strings, no inline styles); the frame may use the mic, sound and the clipboard like our pages (`allow`).
+- The page's voice stays quiet while she's out, so her window's mic never hears the page.
+
 ### Her Live2D model (AGI-1 in 2D, 2026-10-01)
 - Live2D's runtime (`public/models/agi1-live2d/live2dcubismcore.min.js`) is served from our own address and loaded only when
   she's shown in 2D; it uses no eval and no WebAssembly, so the CSP is unchanged. It's Live2D's file as it is (never edited:
@@ -3307,7 +3421,8 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 - Security headers live in `vercel.json`. The Content-Security-Policy (CSP) lists every outside domain the page may use.
   Today: `https://api.dexscreener.com` in `connect-src` (live prices); `blob:` in `img-src` and `connect-src` (three.js
   unpacks a model's textures through temporary `blob:` addresses; without it the browser blocks AGI-1's textures); and
-  `https://challenges.cloudflare.com` in `script-src` and `frame-src` (Turnstile). Fonts are self-hosted, so styles and fonts
+  `https://challenges.cloudflare.com` in `script-src` and `frame-src` (Turnstile), and since 2026-10-02 `'self'` in
+  `frame-src` and `frame-ancestors` (her pop-out window: our own pages only). Fonts are self-hosted, so styles and fonts
   are `'self'` only. **When the site starts using a new outside service, add its domain to the CSP, or browsers will block it.**
   `tests/prices.test.js` checks that the prices domain is allowed.
 - No inline `<script>` or `style="…"`: the CSP blocks them. Put code in `src/` and styles in CSS files. (The share pages
@@ -3703,6 +3818,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   that opens there ("Get the AGI-1 app"); the same chat in two tabs. See "Full-screen talk and the AGI-1 app" (with the
   native app's plan: the owner's decisions). No setup, no SQL, no cost. Tests: 346 unit (on Node 20, 22 and 24, with and
   without Vercel's settings), 170 in a browser; a second Claude agent reviewed it (10 findings, all fixed).
+- **Her pop-out window: built 2026-10-02, waiting for the owner's OK** (the owner: "yeah build that", the app plan's free
+  next step): "Pop her out" puts her and her chat in a small window that stays on top of other windows while you work
+  (Chrome, Edge and Firefox on computers), with a card and "Bring her back" on the page; our own pages may now frame each
+  other (vercel.json). See "Her pop-out window". No setup, no SQL, no cost. Tests: 357 unit (on Node 20, 22 and 24, with and
+  without Vercel's settings), 154 in a browser (and full-screen talk's 170 again); a second Claude agent reviewed it (all
+  findings fixed). The same day the owner asked about staking for free AI and about ideas that earn money: Claude's answers
+  are in the decisions log, nothing built.
 
 ## Decisions log
 
@@ -3865,6 +3987,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-02 | The AGI-1 app, step 1 (Claude's choice for the owner's "windows app and mac app" idea; free): the site installs from the browser as a web app (a manifest, her icons, an install screen for each browser), opening at /talk. No service worker (Chrome hasn't needed one to install since versions 108 / 112, and caching could leave old versions on people's devices), so no offline mode. The screen and the safety note say the app only comes from agi1.app and we never send app files (fake downloads are a common crypto scam). The native app (signing: Apple $99 a year; Windows free through the Microsoft Store, else a certificate) and the Microsoft Store listing are the owner's decisions |
 | 2026-10-02 | "She does what Claude does" (the owner's idea): Claude recommends an AI she talks to and consults, not one that controls the computer (prompt injection near crypto wallets, the AI cost of agents against the $150 budget, fake-download scams). Written down for the owner's decision; nothing built |
 | 2026-10-02 | The same chat in two tabs (full-screen talk can open in a new tab; found by the review): each tab saves its new messages after what's stored (never over another tab's), shows another tab's changes (after its own reply when one is on its way), and a Clear or Forget me in one tab wins over the others |
+| 2026-10-02 | Her pop-out window (the owner: "yeah build that"): Document Picture-in-Picture holding full-screen talk in a frame (`/talk?pip=1`), not the page's chat moved into the window (a hidden tab is slowed down by the browser, which would freeze her; the frame is a page of its own, and shown). So our own pages may frame each other (`frame-src` / `frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`; were `'none'` / `DENY`), never another site's. While she's out the page waits behind a card and stays quiet, her window notes market moments, and the wallet, her language, her voice setting, the theme, the 18+ answer and the chat follow between the two. Not picked: moving the page's own chat into the window (it would freeze in a hidden tab), `disallowReturnToOpener` (the back-to-tab button is a natural way back) |
+| 2026-10-02 | Staking for free AI (the owner: "is it sustainable like if they stake some $AGI they can use the ai for free?"): Claude's answer: staked $AGI doesn't pay the AI bill (a reply costs about $0.0005, about $0.002 with her voice; 100 people sending 50 spoken messages a day ≈ $300 a month), and with a daily cap it's what the levels already do. A staking contract would break the site's safety promise (a token approval and a deposit asked from agi1.app), hold everyone's tokens (a target, and an audit), and suggest rewards (legal questions). Suggested instead: a loyalty bonus (a wallet that held its $AGI 7 days without sending any out gets e.g. 1.5× its messages), read from the chain. Nothing built: the owner's call |
+| 2026-10-02 | Ideas that pay for her (the owner: "ideas that is sustainable or maybe can earn me money too and them?"): Claude's list: a monthly pass for more of her (Telegram Stars in her bot, ETH on the site; a heavy user costs at most about $9 a month), voice notes in her voice, her as a creator (clips and streams: Cubism PRO first), tips and merch; for fans, Telegram's affiliate programs for bots (a commission in Stars), an invite bonus, a creator kit, contests. To avoid: paying holders or buybacks (they make $AGI look like an investment), paid promotion of other coins. Before charging: Vercel Pro (about $20 a month), the safety note's payment wording, taxes and refunds. Claude's pick to start: the pass in her bot with Stars, plus affiliates. Nothing built: the owner's call (not legal or financial advice) |
 
 ## Open questions
 
@@ -3951,11 +4076,16 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   - Her launch lines and the launch page are English for now (like her texts first).
   - Helping people launch tokens, and paying their fees to bring launches in, may count as promoting tokens in some places
     (like her out-of-messages line and burns): worth checking before promoting it widely. Not legal advice.
-- **The AGI-1 app** (2026-10-02): the free next steps ("pop her out" in a small always-on-top window; the same web app in the
-  Microsoft Store, whose rules for 18+ and crypto apps need checking first) and a native app (signing costs; the "we never
-  send app files" wording must change before one ships) wait for the owner. Not tried on real devices yet: an iPhone or
+- **The AGI-1 app** (2026-10-02): the free next step left (the same web app in the Microsoft Store, whose rules for 18+ and
+  crypto apps need checking first) and a native app (signing costs; the "we never send app files" wording must change
+  before one ships) wait for the owner. "Pop her out" is built (see "Her pop-out window"): not tried in Firefox or on real
+  Windows and Mac computers yet, nor its microphone prompt there. Not tried on real devices yet: an iPhone or
   iPad Home Screen app (whether its mic and calls work there), Safari's Add to Dock, a real install on Windows, a Mac,
   Android or ChromeOS.
+- **Money** (2026-10-02): staking or a loyalty bonus, and which earning idea first (Claude's pick: a pass in her Telegram
+  bot paid with Telegram Stars, with Telegram's affiliate commission), wait for the owner. Before charging anything: Vercel
+  Pro, the safety note's payment wording, taxes and refunds where the owner lives (an accountant), and Cubism PRO for
+  anything that earns with her 2D model.
 - Full-screen talk has no heading of its own for screen readers (the page's headings are hidden there; her chat bar names
   her). A visually hidden heading could be added if a screen-reader user asks.
 

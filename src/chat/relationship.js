@@ -38,6 +38,7 @@ const LEVEL_UP_LINES = {
 };
 
 let state = store.get(KEY);            // null = no wallet (Stranger)
+let kept = Boolean(state);             // this browser keeps the session (so a missing one was removed by another tab)
 export const currentSession = () => state?.session || null;
 export const currentWallet = () => state?.wallet || null;
 
@@ -85,6 +86,7 @@ export function startRelationship(root) {
     const before = state?.level || 1;
     state = { session: profile.session, wallet: profile.wallet, level: profile.level, name: profile.name, notes: profile.notes || [] };
     store.set(KEY, state);
+    kept = Boolean(store.get(KEY));
     render();
     note(profile.checked === false ? "Couldn't check your $AGI just now, so you're a Stranger for a few minutes. It tries again by itself." : '');
     const seen = store.get(SEEN) || {};
@@ -300,8 +302,24 @@ export function startRelationship(root) {
       state.notes = [...(state.notes || []).filter((n) => n !== d.remembered), d.remembered].slice(-8);
       changed = true;
     }
-    if (changed) { store.set(KEY, state); render(); }
+    if (!changed) return;
+    // (signed out or forgotten in another tab, or in her pop-out window's page, a moment ago: that wins, nothing is written back)
+    const now = store.get(KEY);
+    if (kept && now?.wallet !== state.wallet) { follow(now); return; }
+    store.set(KEY, state);
+    render();
   });
+
+  // signed in, out or forgotten in another tab of this browser, or (2026-10-02) in her pop-out window's page: this page
+  // follows, without writing anything back (so "Forget me" anywhere stays forgotten here too)
+  function follow(next) {
+    const valid = next && typeof next.session === 'string' && next.session && typeof next.wallet === 'string' ? next : null;
+    if (JSON.stringify(valid) === JSON.stringify(state)) return;
+    state = valid;
+    note('');
+    render();
+  }
+  addEventListener('storage', (e) => { if (e.key === KEY || e.key === null) follow(store.get(KEY)); });
 
   render();
   // Coming back: refresh the level and what AGI-1 remembers (the server re-reads the balance if it's been 30 minutes).

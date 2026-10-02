@@ -64,7 +64,7 @@ export function startVoice(button, { onSpeaking = () => {}, onResting = () => {}
   const quiet = {
     speak: async () => 'none', isOn: () => false, prime() {}, unlock: async () => false, stop() {}, setOn() {}, chosen: () => null,
     hello: async () => 'none', line: async () => 'none', warm() {}, speaking: () => false, busy: () => false, unlocked: () => false,
-    resting: () => null, available: false,
+    resting: () => null, available: false, hold() {},
   };
   if (!button || !Ctx) { shared = quiet; return quiet; }
   button.hidden = false;
@@ -79,6 +79,10 @@ export function startVoice(button, { onSpeaking = () => {}, onResting = () => {}
   let nextAt = 0, flowing = false;      // where the next piece goes; more pieces still on their way
   let started = null;                   // resolve() of the promise speak()/line() handed out, until she starts talking
   const announce = (how) => { const r = started; started = null; r?.(how); };
+
+  // (2026-10-02) she's in her pop-out window (src/chat/popout.js): this page stays quiet, her window talks (its chat, the
+  // stage's tap lines, the risk check's lines: so a call in her window never hears this page)
+  let held = false;
 
   let speaking = false;
   const setState = (s) => {
@@ -337,17 +341,24 @@ export function startVoice(button, { onSpeaking = () => {}, onResting = () => {}
     } else stop();
   });
   draw();
+  // switched in another tab of this browser, or in her pop-out window's page (2026-10-02): this page follows
+  w.addEventListener?.('storage', (e) => {
+    if (e.key !== KEY) return;
+    let v = null;
+    try { v = localStorage.getItem(KEY); } catch { /* */ }
+    setOn(v === 'on', { remember: false });
+  });
   shared = {
-    speak: (text, ticket, options) => (on ? say(text, ticket, options) : Promise.resolve('none')),
+    speak: (text, ticket, options) => (on && !held ? say(text, ticket, options) : Promise.resolve('none')),
     isOn: () => on,
     setOn,
     // what the visitor picked with the speaker button: 'on', 'off', or null (never pressed it)
     chosen: () => { try { return localStorage.getItem(KEY); } catch { return null; } },
-    hello: () => (on ? greet() : Promise.resolve('none')),
+    hello: () => (on && !held ? greet() : Promise.resolve('none')),
     // a fixed line (see sayLine). Plays even with voice off: only for a line the visitor asked to hear (a tap), when her
     // voice is on, or when she runs out of messages (the owner's choice). warm(key): download it early, silently.
-    line: (key, lang) => sayLine(key, lang || currentLang()),
-    warm: (key, lang) => warm(key, lang || currentLang()),
+    line: (key, lang) => (held ? Promise.resolve('none') : sayLine(key, lang || currentLang())),
+    warm: (key, lang) => { if (!held) warm(key, lang || currentLang()); },
     available: true,                    // this browser can play her voice (else the quiet stub above: false)
     speaking: () => speaking,
     // talking, or her voice for something is still on its way (so another line would cut it off)
@@ -361,6 +372,8 @@ export function startVoice(button, { onSpeaking = () => {}, onResting = () => {}
     // her out-of-messages line)
     prime: ({ force = false } = {}) => { if (on || force) audio(); },
     stop,
+    // quiet while she's in her pop-out window (true), herself again when she's back (false)
+    hold: (next) => { held = Boolean(next); if (held) stop(); },
   };
   return shared;
 }
