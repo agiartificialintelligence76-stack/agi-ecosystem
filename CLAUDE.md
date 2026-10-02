@@ -11,6 +11,9 @@
 >   that need them (model rebuilds, `tools/memory/build-memory.mjs`) read them there, or from a copy put here first.
 > - **One old name stays on purpose:** the database table `daria_diary` (`supabase/diary.sql`). The diary's server code only
 >   calls database functions, and both sites can share one Supabase project, so renaming the table would break the diary.
+>   **And the Google Cloud project is `agi-daria`** (the Gemini key's, shared with the original site): a project's ID can
+>   never change. (The rename had turned it into "agi-agi1" in these notes by mistake; fixed 2026-10-03, during her live
+>   show's setup.)
 > - **$CABO and ClankCap are gone from this site** (2026-09-28, the owner: "remove everything about cabo and clankcap"):
 >   no $CABO anywhere (the stage's cat, ClankChecker, her memory), no ClankCap credit. The database is shared with the
 >   original site, so $CABO is **hidden in this site's code**, never deleted from the database. See "$CABO and ClankCap
@@ -1017,7 +1020,7 @@ speech model, 100 requests a day for the whole project (see "Google's limits" be
   `request`, `key`, `timeout`, `no_audio`, `google`; never secret), and the log line ends with it (`… → daily_limit`).
 - A browser without Web Audio (none today) gets no speaker button at all.
 
-**Google's limits** (the owner checked them on 2026-09-26: Google AI Studio → the project agi-agi1 → **Dashboard → Rate
+**Google's limits** (the owner checked them on 2026-09-26: Google AI Studio → the project agi-daria → **Dashboard → Rate
 limit**, Tier 1): the speech model `gemini-3.8-flash-lite-tts` may be asked **10 times a minute and 100 times a day** by the
 whole project (limits are per project, not per key; the daily one starts again at **midnight Pacific time**, 07:00 UTC in
 summer and 08:00 in winter, which is 15:00 / 16:00 in the owner's time). The chat model has far more (4,000 a minute, 150,000
@@ -1052,7 +1055,7 @@ So the site now works with Google's numbers (2026-09-26):
      to $100 in total appears to count (a prepay user on Google's forum reached Tier 2 that way), though Google doesn't say
      it outright; the credits stay for the chat and her voice. Tier 3: $1,000 and 30 days.
   2. **The "Request paid tier rate limit increase" form**, linked from ai.google.dev/gemini-api/docs/rate-limits: free, no
-     guarantee, can take days. Say the project (agi-agi1), the model, today's limits, what's needed and why.
+     guarantee, can take days. Say the project (agi-daria), the model, today's limits, what's needed and why.
   3. **Never** extra projects or keys to add up limits: Google's terms forbid getting around rate limits.
   4. The backup model above (built 2026-09-26) roughly doubles what Google allows: its limits come on top of Flash-Lite's
      (check its own numbers on the same Rate limit page).
@@ -2899,21 +2902,32 @@ keep the link private: whoever has it can pause or end her show):
    same PowerShell line as `PASS_SECRET`, in "The chat's cost, setup and troubleshooting"), Production → **Redeploy**.
    Then Supabase → the same project → SQL Editor → New query → paste **all** of `supabase/live.sql` → Run: it ends with
    `live_functions_found = 12`. agi1.app/live then says she's offline (instead of "coming soon").
-2. **Google Cloud** (her voice; console.cloud.google.com, the same project as the site's Gemini key, with billing on):
-   APIs & Services → **Enable APIs** → "Vertex AI API" (Google may call it Agent Platform) → Enable. IAM & Admin →
-   **Service accounts** → Create → name `agi1-live` → role **Vertex AI User** → Done → the account → **Keys** → Add key →
-   Create new key → **JSON**: a file downloads (the key file). Billing → **Budgets & alerts** → a budget of $20 a month
-   with emails at 50, 90 and 100% (an alert, not a stop). If Google says key files are switched off for the project, make
-   an API key instead (APIs & Services → Credentials → Create credentials → API key, restricted to the Vertex AI API) and
-   put it in live.env as `LIVE_GCP_API_KEY` (step 6).
-3. **X:** X Premium on @agi1dotapp (Live Studio needs it). X Live Studio → **Sources** → New source → a name (e.g.
-   "agi1 server"), the region nearest the server (EU for Hetzner in Germany or Finland), RTMPS if offered → keep its
-   **server URL** and **stream key** for step 6 (the key is a secret: anyone with it can stream to her account). Then
-   **New livestream** → a title (e.g. "AGI-1 live: ask me at agi1.app/live"), that source, Public, **Later** at the show's
-   time (20:00 UTC = 04:00 the owner's time the next morning; or another time: see step 9), **auto start**. Schedule the
-   coming days the same way (up to a year ahead); a scheduled livestream whose source sends nothing at its start time ends
-   by itself, so a missed day costs nothing. (If Live Studio allows only one scheduled livestream per source at a time,
-   schedule the next one after each show.)
+2. **Google Cloud** (her voice; console.cloud.google.com, the same project as the site's Gemini key, with billing on).
+   **Google renamed Vertex AI "Gemini Enterprise Agent Platform" in 2026** (checked 2026-10-03): the same API underneath
+   (`aiplatform.googleapis.com`), new names in the console. APIs & Services → **Library** → "**Agent Platform API**"
+   (formerly "Vertex AI API") → Enable. The Library's search didn't find it for the owner (2026-10-03): its own page
+   always works, whatever it's called that day: `console.cloud.google.com/apis/library/aiplatform.googleapis.com?project=agi-daria`. IAM & Admin → **Service accounts** → Create → name `agi1-live` → role **Agent
+   Platform User** (`roles/aiplatform.user`, formerly "Vertex AI User") → Done → the account → **Keys** → Add key → Create
+   new key → **JSON**: a file downloads (the key file). Billing → **Budgets & alerts** → a budget of $20 a month (in the
+   billing account's currency) with emails at 50, 90 and 100% (an alert, not a stop). **Her voice on stream is billed to
+   the billing account's card once a month, not from AI Studio's prepaid credits** (those pay for the Gemini API only,
+   Google's billing docs), so the budget's emails are the only warning. If Google says key files are switched off for
+   the project, make an API key instead (APIs & Services → Credentials → Create credentials → API key, restricted to the
+   Agent Platform API) and put it in live.env as `LIVE_GCP_API_KEY` (step 6). On Agent Platform, Gemini 3.8 Flash-Lite TTS
+   is a **Preview** model (GA in the Gemini API): it works, but Google may change it; `--check` (step 7) says at once if
+   its name or place changed (`LIVE_VOICE_MODEL`, `LIVE_VERTEX_LOCATION`).
+3. **X:** X Premium on @agi1dotapp (Live Studio comes with Premium). X Live Studio (`x.com/i/live-studio`, or Creator
+   Studio → Live Studio) → **New Livestream** → a title (e.g. "AGI-1 live: ask me at agi1.app/live") → Source: **create a
+   new one** → a name (e.g. "agi1 server") → the region nearest the server (**EU** for Hetzner in Germany or Finland, not
+   the viewers': X's own network carries it to them) → keep its **RTMPS URL** (the RTMP one works too) and **stream key**
+   for step 6 (the key is a secret: anyone with it can stream to her account). Audience: public. **Later** at the show's
+   time, **01:00 UTC = 9:00 the owner's time** (the owner's choice, 2026-10-03: the evening in the US; Live Studio shows
+   the owner's own time), **Auto-start** on. Live Studio's rules (help.x.com, 2026-10-03): a source is reused by every
+   livestream; livestreams can be scheduled up to a year ahead; with Auto-start a livestream goes live at its time **only
+   if video is already arriving** (the server starts 2 minutes early, on "starting soon"), else it shows TIMED OUT, ends,
+   and can't be restarted, so a missed day costs nothing. Schedule the first one for a day the server will be ready, then
+   the coming days the same way. (If Live Studio allows only one scheduled livestream per source at a time, schedule the
+   next one after each show.) Another time later: change it here, in `LIVE_DAILY_AT` and in the cron line (step 9).
 4. **The server:** Hetzner Cloud (console.hetzner.com) → a project → **Add server** → Germany or Finland → Ubuntu 24.04 →
    shared vCPU, x86 → **CX33** (4 vCPUs, 8 GB) → public IPv4 on → your **SSH key** (on Windows, PowerShell: `ssh-keygen -t
    ed25519` with Enter for every question, then `Get-Content $env:USERPROFILE\.ssh\id_ed25519.pub`, and paste that line)
@@ -2958,11 +2972,11 @@ keep the link private: whoever has it can pause or end her show):
 8. **The owner's phone link:** `sh tools/live/live.sh --owner-link` → open it on the phone and bookmark it (private).
 9. **Every day, by itself** (one line, on the server):
    ```
-   printf 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n58 19 * * * root sh /opt/agi1-live/site/tools/live/live.sh show >> /var/log/agi1-live.log 2>&1\n' > /etc/cron.d/agi1-live
+   printf 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n58 0 * * * root sh /opt/agi1-live/site/tools/live/live.sh show >> /var/log/agi1-live.log 2>&1\n' > /etc/cron.d/agi1-live
    ```
-   The server's clock is UTC (Hetzner's default), so that's 19:58 UTC: two minutes before `LIVE_DAILY_AT=20:00`, while
-   "starting soon" shows. Another time: change both (the cron line's `58 19` and `LIVE_DAILY_AT`) and the scheduled
-   livestreams in Live Studio. `tail -50 /var/log/agi1-live.log` shows the last show.
+   The server's clock is UTC (Hetzner's default), so that's 00:58 UTC: two minutes before `LIVE_DAILY_AT=01:00` (9:00 the
+   owner's time), while "starting soon" shows. Another time: change both (the cron line's `58 0`, minute then hour, and
+   `LIVE_DAILY_AT`) and the scheduled livestreams in Live Studio. `tail -50 /var/log/agi1-live.log` shows the last show.
 10. **The first real show:** watch it on X with the phone link open (Pause, Resume, End all work from there).
 11. **X's own chat, later:** apply for X's Livestream API (forms.x.com/livestream-api-access: for approved apps only; it
     can read a livestream's chat and schedule livestreams). Free to apply, no promise. If X approves, Claude adds X's chat
@@ -2984,7 +2998,7 @@ requests a second while she's on, nothing noticeable. **About $29–35 a month**
 source), `GOOGLE_APPLICATION_CREDENTIALS` (left as it is: /secrets/google-key.json) or `LIVE_GCP_API_KEY`,
 `LIVE_VERTEX_LOCATION` (global), `LIVE_VOICE_MODEL` (gemini-3.8-flash-lite-tts), `LIVE_VOICES` (vertex; also `cloud`, or
 `gemini` with `GEMINI_API_KEY`: the site's own key and its daily limit, a backup only), `LIVE_MINUTES` (60),
-`LIVE_DAILY_AT` (20:00), `LIVE_AV_MS` (170), `LIVE_MUSIC` (on), `LIVE_MUSIC_VOLUME` (100). Optional: `LIVE_VOICE_TIMEOUT_S`
+`LIVE_DAILY_AT` (01:00 UTC, 9:00 the owner's time), `LIVE_AV_MS` (170), `LIVE_MUSIC` (on), `LIVE_MUSIC_VOLUME` (100). Optional: `LIVE_VOICE_TIMEOUT_S`
 (15), `LIVE_GL` (her picture's size: 720 with 4 cores or more, else 540).
 
 **Troubleshooting** (`tail -50 /var/log/agi1-live.log` on the server; Vercel → Logs for the site's side):
@@ -2996,7 +3010,8 @@ source), `GOOGLE_APPLICATION_CREDENTIALS` (left as it is: /secrets/google-key.js
 | It stops at once | `… HTTP 503 (LIVE_SECRET or supabase/live.sql missing on the site?)` | Setup step 1 |
 | It stops at once | `start: the site's address redirects to …: set SITE_URL in live.env to the address it goes to` | Set `SITE_URL` to that address |
 | It stops at once | `--start-at 20:00 is 23 h 45 min away (it's 20:15 UTC now)…` | The cron line runs too late for `LIVE_DAILY_AT` (or it was started by hand after the time): change one of them |
-| She talks silently (captions only) | `[voice] vertex: … HTTP 403 … (enable the "Vertex AI API" for the project, and give the service account the "Vertex AI User" role)` | Setup step 2 |
+| She talks silently (captions only) | `[voice] vertex: … HTTP 403 … (enable the "Agent Platform API" for the project (formerly "Vertex AI API"), and give the service account the "Agent Platform User" role …)` | Setup step 2 |
+| She talks silently | `[voice] vertex: … HTTP 404 … (the model or the project/location: check LIVE_VOICE_MODEL, …)` | Google renamed or moved the Preview model on Agent Platform: tell Claude with the line (`LIVE_VOICE_MODEL`, `LIVE_VERTEX_LOCATION`) |
 | She talks silently | `can't read GOOGLE_APPLICATION_CREDENTIALS (ENOENT): no file there …` | The key file isn't at /opt/agi1-live/google-key.json (setup step 6) |
 | A few silent lines, now and then | `[voice] vertex: no answer within 15 s (it rests a minute)` | Google was slow; she goes on. If it's often: `LIVE_VOICE_TIMEOUT_S=25` |
 | Questions wait, "my brain's lagging" | `her answers aren't coming (ai): questions wait 30 s` | The site's Gemini key (credits, limits): see the chat's troubleshooting |
@@ -3036,7 +3051,8 @@ more on the fixes: e.g. unchecked names and other coins on stream, a paused show
 silencing her kept lines; all fixed but one: the stream key is visible in the server's own process list, which only the
 owner can see).
 
-**Not tried live:** X Live Studio, Google's Vertex AI speech, Hetzner, and the Docker build itself (Claude's workspace
+**Not tried live:** X Live Studio, Google's Vertex AI speech (Agent Platform: Gemini 3.8 Flash-Lite TTS is a Preview
+model there, so its name or places could change: `--check` says so), Hetzner, and the Docker build itself (Claude's workspace
 can't reach X or Google, and can't download Playwright's image: Microsoft's container registry is blocked there; every
 step the image runs was run outside Docker instead, as a non-root user). The owner's first `--check`, `--record` and show
 are the first real checks.
@@ -3837,8 +3853,8 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   `server/live-words.js`), then by the AI before it airs (`skip`, `nameOk`), then her answer again in code. Shown with
   `textContent` only, on the page and on her set. Someone in distress is never read on stream.
 - **The Gemini key never leaves Vercel:** her answers are made on our server and handed to the runner with the question.
-  The server only holds `LIVE_SECRET`, X's stream key and Google Cloud's key (its own service account, the "Vertex AI User"
-  role only), in `/opt/agi1-live` (mode 600; the key file readable only by the show's user). The Docker image gets no
+  The server only holds `LIVE_SECRET`, X's stream key and Google Cloud's key (its own service account, the "Agent Platform
+  User" role only, formerly "Vertex AI User"), in `/opt/agi1-live` (mode 600; the key file readable only by the show's user). The Docker image gets no
   secrets (`.dockerignore`), runs as its own user, and its browser and ffmpeg get none in their environment
   (`withoutSecrets`). The stream key never appears in a log line (masked); it is in ffmpeg's command line, which only the
   server's own users can see (the owner).
@@ -3918,7 +3934,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | Pinata (launched coins' pictures, 2026-10-01) | Free plan: 500 files, 1 GB, 10 GB of bandwidth and 10,000 requests a month (checked 2026-10-01); one file per launched coin (pictures of coins never launched are deleted within a day); at most `LAUNCH_DAILY_CAP` (30) uploads a day | Uploads fail ("Couldn't put the picture on IPFS"); its cheapest paid plan is $20 a month: the owner's call |
 | The owner's server (her live show, 2026-10-02) | Not a free tier: Hetzner CX33, about €8.49 a month (plus its IPv4 and VAT); 20 TB of traffic included (her stream uses about 1.4 GB an hour) | The owner's bill; a show just doesn't happen if the server is off |
 | X Premium (her live show) | Not a free tier: about $9 a month (X Live Studio needs it) | No Live Studio: no show |
-| Google Cloud Vertex AI (her voice on stream, 2026-10-02) | Pay per use on the project's billing account: at most about $0.54 an hour of talking ($6 per 1M audio tokens until 2026-12-31, then double), about $10–16 a month for an hour a day; a budget alert at $20 | Her lines that aren't kept yet are said silently (captions); kept lines and her music keep playing |
+| Google Cloud Vertex AI, now "Agent Platform" (her voice on stream, 2026-10-02) | Pay per use on the project's billing account, charged to its card once a month (never from AI Studio's prepaid credits, which pay for the Gemini API only): at most about $0.54 an hour of talking ($6 per 1M audio tokens until 2026-12-31, then double), about $10–16 a month for an hour a day; a budget alert at $20 (an email, never a stop) | Her lines that aren't kept yet are said silently (captions); kept lines and her music keep playing |
 | The gas wallet (launch fees paid back, 2026-10-01) | Not a free tier: the owner's own ETH, at most `LAUNCH_GAS_DAILY` (0.01 ETH by default) a day plus each payback's own tiny fee | Paybacks pause ("out of ETH" / "all it can for today"); launches still work |
 
 ## Environment variables
@@ -4486,6 +4502,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-02 | Her voice on stream: Google Cloud's Vertex AI with a service account (the same Gemini 3.8 Flash-Lite TTS and Despina voice as the site, with Cloud's higher limits); pre-written lines made once and kept on the server (`--warm`); a line Google is slow with is said silently (captions), never waited on for long. Her mouth in step with her voice by ffmpeg's own clock, fine-tuned per server (`--sync-check`) |
 | 2026-10-02 | Her music (the owner: "can you just generate music yourself?" after considering Suno; "the music good" after a sample): five original instrumental songs composed and synthesized in code by Claude (`tools/live/music.js`: chords, bass, soft drums, a melody; no samples or service), rendered once on the server, played on a loop under her voice, quieter while she talks. Suno was explained first (paid plans only for a commercial stream; the owner chose not to) |
 | 2026-10-02 | From the review: a recording (`--record`) uses made-up questions unless `--with-site`; a start more than 30 minutes away is refused (no all-day "starting soon"); a paused show still ends; a question she had ready when paused goes back in line; her answers stuck → questions wait and she says so once; an answer cut off before its decision isn't aired; ffmpeg gives up on a silent network after 15 s and starts again |
+| 2026-10-03 | Her show's setup, taught to the owner one step at a time (the owner: "can you teach me step by step"); step 1 done (agi1.app/live says Offline). Checked before step 2: Google renamed Vertex AI "Gemini Enterprise Agent Platform" (the API is still `aiplatform.googleapis.com`; the role `roles/aiplatform.user` is now "Agent Platform User"), Gemini 3.8 Flash-Lite TTS is a Preview model there, and AI Studio's prepaid credits don't pay for it (it's billed to the card monthly). The setup steps, the voice's error hints and live.env.example now use the new names |
+| 2026-10-03 | Step 2 done (the Agent Platform API on in agi-daria, the `agi1-live` service account and its key file, a $20 budget on "Vertex AI"). Her daily show time (the owner's pick): **01:00 UTC, 9:00 the owner's time** (the evening in the US, where most crypto people on X are; Europe asleep), was 20:00 UTC (4:00 for the owner): `LIVE_DAILY_AT=01:00` in live.env.example and live.sh, the cron line `58 0 * * *` |
 
 ## Open questions
 

@@ -229,7 +229,7 @@ test('Google Cloud sign-in: a service account\'s key file, a signed token reques
   assert.equal(body.get('assertion').split('.').length, 3);
   forgetToken();
   const refused = async () => Response.json({ error: 'invalid_grant', error_description: 'Invalid JWT Signature.' }, { status: 400 });
-  await assert.rejects(accessToken(sa, { fetchFn: refused, now }), /google sign-in: HTTP 400 invalid_grant.*Vertex AI User/);
+  await assert.rejects(accessToken(sa, { fetchFn: refused, now }), /google sign-in: HTTP 400 invalid_grant.*"Agent Platform User" role, formerly "Vertex AI User"/);
   forgetToken();
 });
 

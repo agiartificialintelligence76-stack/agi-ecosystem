@@ -1,7 +1,8 @@
 // AGI-1's live show (2026-10-02): her voice on stream, on the owner's own server. The owner's choice: "Her voice via Google
 // Cloud": the same Despina voice and moods as the site, with Google Cloud's higher limits (the site's own key allows 100
 // spoken lines a day on Tier 1, shared with every visitor). Ways to make it, tried in order (LIVE_VOICES):
-//   vertex  Gemini 3.8 Flash-Lite TTS through Google Cloud's Vertex AI ("Agent Platform"), the same model as the site: a
+//   vertex  Gemini 3.8 Flash-Lite TTS through Google Cloud's Vertex AI (called "Gemini Enterprise Agent Platform" since
+//           2026: the same API, aiplatform.googleapis.com; the model is in Preview there), the same model as the site: a
 //           service account key file (GOOGLE_APPLICATION_CREDENTIALS) or an API key (LIVE_GCP_API_KEY)
 //   cloud   Cloud Text-to-Speech's Gemini voices (gemini-2.5-flash-tts, Despina): an API key or the same key file
 //   gemini  the site's own key (GEMINI_API_KEY, Google AI Studio): shares the site's daily limit, so only as a backup
@@ -73,7 +74,7 @@ export async function accessToken(sa, { fetchFn = fetch, now = Date.now() } = {}
   const data = await res.json().catch(() => ({}));
   if (!res.ok || typeof data.access_token !== 'string') {
     throw googleError(res.status, `google sign-in: HTTP ${res.status} ${String(data.error || '')} ${String(data.error_description || '').slice(0, 160)}`.trim(),
-      ' (check the key file: a service account of the project, its key not deleted, the "Vertex AI User" role)');
+      ' (check the key file: a service account of the project, its key not deleted, the "Agent Platform User" role, formerly "Vertex AI User")');
   }
   token = { value: data.access_token, until: now + Math.max(60, Number(data.expires_in) || 3600) * 1000, for: sa.email };
   return token.value;
@@ -182,7 +183,7 @@ export function createVoice(settings, { fetchFn = fetch, log = console } = {}) {
       const bearer = sa ? await accessToken(sa, { fetchFn }) : null;
       const { url, init } = vertexRequest(settings, words, style, { bearer });
       const res = await fetchFn(url, init);
-      if (!res.ok) { if (res.status === 401) forgetToken(); throw await failed(res, 'vertex', ' (enable the "Vertex AI API" for the project, and give the service account the "Vertex AI User" role)'); }
+      if (!res.ok) { if (res.status === 401) forgetToken(); throw await failed(res, 'vertex', ' (enable the "Agent Platform API" for the project (formerly "Vertex AI API"), and give the service account the "Agent Platform User" role (formerly "Vertex AI User"))'); }
       const audio = vertexAudio(await res.json());
       if (!audio || audio.samples.length < 2400) throw new Error('vertex: no audio in the answer');
       return audio;
