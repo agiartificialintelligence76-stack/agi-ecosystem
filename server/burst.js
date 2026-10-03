@@ -45,3 +45,6 @@ export const launchPictureBurst = makeBurstLimit({ max: 60, windowMs: 60_000 });
 export const liveBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });
 export const liveLookupBurst = makeBurstLimit({ max: 30, windowMs: 60_000 });
 export const liveAuthBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });
+// CloakMesh's waitlist (api/cloakmesh.js, 2026-10-03): a person joins once (or fixes a typo), so 10 tries a minute per
+// visitor only stops scripts before the human check and the database; leaving with a link: the same
+export const waitlistBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });

@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- CloakMesh's link preview (public/cards/cloakmesh.png, 2026-10-03), the same words as the top of cloakmesh.html. Render
+     it at 1200 × 630 in Chromium (Claude does: a screenshot of this file, then 256 colors), after changing those words. -->
+<html><head><meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Geist'; src: url('../../public/fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'Geist Mono'; src: url('../../public/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 630px; background: #090b0d; color: #e9eef2; font-family: 'Geist', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  .card { position: relative; width: 1200px; height: 630px; overflow: hidden; }
+  .card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle, rgba(233,238,242,.08) 1px, transparent 1.3px) 0 0 / 24px 24px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 70% at 78% 30%, #000 0%, transparent 75%); }
+  .card::after { content: ''; position: absolute; width: 900px; height: 900px; right: -300px; top: -420px; background: radial-gradient(circle, rgba(62,230,176,.16) 0%, transparent 62%); }
+  .in { position: relative; z-index: 1; padding: 64px 72px; height: 100%; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 14px; font-size: 30px; font-weight: 650; letter-spacing: -0.03em; }
+  .brand svg { width: 42px; height: 42px; }
+  .by { font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 400; color: #8a96a1; letter-spacing: .04em; margin-top: 4px; }
+  h1 { margin-top: auto; font-size: 86px; font-weight: 600; line-height: .98; letter-spacing: -0.045em; max-width: 900px; }
+  .line { margin-top: 30px; display: flex; align-items: center; gap: 14px; font-size: 25px; color: #a5b0ba; }
+  .tok { font-family: 'Geist Mono', monospace; font-size: 22px; color: #c1b2ff; background: rgba(193,178,255,.13); padding: 3px 10px; border-radius: 8px; }
+  .foot { margin-top: 34px; display: flex; align-items: center; justify-content: space-between; font-family: 'Geist Mono', monospace; font-size: 18px; color: #8a96a1; }
+  .checks { display: flex; gap: 10px; }
+  .checks span { display: inline-flex; align-items: center; gap: 9px; padding: 7px 14px 7px 12px; border-radius: 999px; color: #e9eef2;
+    background: rgba(62,230,176,.1); border: 1px solid rgba(62,230,176,.3); font-family: 'Geist', sans-serif; font-size: 17px; font-weight: 500; }
+  .checks span::before { content: ''; width: 10px; height: 5px; border-left: 2px solid #3ee6b0; border-bottom: 2px solid #3ee6b0; transform: translateY(-2px) rotate(-45deg); }
+  .site { color: #3ee6b0; }
+</style></head>
+<body><div class="card"><div class="in">
+  <div class="brand">
+    <svg viewBox="0 0 32 32"><rect x="1.5" y="1.5" width="29" height="29" rx="9" fill="none" stroke="#e9eef2" stroke-width="2"/><path d="M9.5 11.5h13L16 22.5z" fill="none" stroke="#e9eef2" stroke-width="1.8" stroke-linejoin="round"/><circle cx="9.5" cy="11.5" r="3" fill="#e9eef2"/><circle cx="16" cy="22.5" r="3" fill="#e9eef2"/><circle cx="22.5" cy="11.5" r="3" fill="#3ee6b0"/></svg>
+    CloakMesh <span class="by">by AGI</span>
+  </div>
+  <h1>Private AI, with nothing in the middle.</h1>
+  <p class="line">Hi, I'm <span class="tok">[PERSON_7K2M4QXP]</span> → only you see “Anna”</p>
+  <div class="foot">
+    <div class="checks"><span>AMD signature</span><span>Approved code</span><span>Debugging off</span></div>
+    <span class="site">inference.agi1.app</span>
+  </div>
+</div></div></body></html>

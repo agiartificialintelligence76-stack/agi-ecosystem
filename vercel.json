@@ -8,6 +8,9 @@
     { "source": "/talk", "destination": "/" },
     { "source": "/talk/", "destination": "/" }
   ],
+  "redirects": [
+    { "source": "/", "has": [{ "type": "host", "value": "inference.agi1.app" }], "destination": "/cloakmesh", "permanent": false }
+  ],
   "functions": {
     "api/**/*.js": {
       "maxDuration": 25

@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en" data-page="cloakmesh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloakMesh · private AI with nothing in the middle</title>
+    <meta name="description" content="Before your prompt leaves, your own device checks that the server is a genuine AMD confidential machine running approved code, and swaps your names, keys and card numbers for tokens. Join the waitlist." />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#090b0d" />
+    <!-- link previews (X and others): CloakMesh lives at inference.agi1.app, so its addresses are written out in full -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CloakMesh" />
+    <meta property="og:title" content="CloakMesh · private AI with nothing in the middle" />
+    <meta property="og:description" content="Your device checks the hardware itself, and your personal data never leaves in the first place. Join the waitlist." />
+    <meta property="og:image" content="https://inference.agi1.app/cards/cloakmesh.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="CloakMesh: private AI with nothing in the middle" />
+    <meta property="og:url" content="https://inference.agi1.app/cloakmesh" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://inference.agi1.app/cloakmesh" />
+    <link rel="icon" type="image/svg+xml" href="/icons/cloakmesh.svg" />
+    <script src="/cloakmesh-theme.js"></script>
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body class="cm">
+    <a class="skip" href="#main">Skip to content</a>
+
+    <!-- CloakMesh (2026-10-03): the owner's private-AI project, at inference.agi1.app (vercel.json sends that address here).
+         Its own look and its own light / dark choice; src/cloakmesh/page.js runs the demo, the waitlist and leaving it -->
+    <header class="cm-top">
+      <div class="cm-wrap cm-top-in">
+        <a class="cm-brand" href="#top" aria-label="CloakMesh, back to the top">
+          <svg class="cm-logo" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="1.5" y="1.5" width="29" height="29" rx="9" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M9.5 11.5h13L16 22.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+            <circle cx="9.5" cy="11.5" r="3" fill="currentColor" />
+            <circle cx="16" cy="22.5" r="3" fill="currentColor" />
+            <circle class="cm-logo-key" cx="22.5" cy="11.5" r="3" />
+          </svg>
+          <span class="cm-brand-name">CloakMesh</span>
+          <span class="cm-brand-by mono">by AGI</span>
+        </a>
+        <nav class="cm-nav" aria-label="Sections">
+          <a href="#how">How it works</a>
+          <a href="#demo">Demo</a>
+          <a href="#proof">Proof</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <div class="cm-top-actions">
+          <button class="cm-icon-btn" type="button" data-cm-theme aria-label="Switch theme">
+            <svg class="cm-i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <svg class="cm-i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <a class="cm-btn cm-btn-primary cm-btn-sm" href="#waitlist" aria-label="Join the waitlist"><span class="cm-join-long">Join the waitlist</span><span class="cm-join-short" aria-hidden="true">Join</span></a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- shown only when the page is opened with someone's leave link (#leave=…) -->
+      <section class="cm-leave" data-cm-leave hidden aria-labelledby="cm-leave-title">
+        <div class="cm-wrap">
+          <div class="cm-card cm-leave-card">
+            <h2 class="cm-h3" id="cm-leave-title" tabindex="-1">Leave the CloakMesh waitlist?</h2>
+            <p>Your email address will be deleted from the list, for good.</p>
+            <div class="cm-row">
+              <button class="cm-btn cm-btn-primary" type="button" data-cm-leave-go>Leave the list</button>
+              <a class="cm-btn cm-btn-ghost" href="#top" data-cm-leave-keep>Stay on it</a>
+            </div>
+            <p class="cm-msg" data-cm-leave-msg role="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- the top -->
+      <section class="cm-hero" id="top" aria-labelledby="cm-title">
+        <div class="cm-wrap cm-hero-in">
+          <div class="cm-hero-copy">
+            <p class="cm-kicker mono"><span class="cm-pulse" aria-hidden="true"></span>Private AI inference · Phase 1 built</p>
+            <h1 class="cm-h1" id="cm-title">Private AI, with nothing in the middle.</h1>
+            <p class="cm-lede">Before your prompt leaves, your own device proves the server is a genuine AMD confidential machine running approved code. It swaps your names, keys and card numbers for tokens first, and only you can swap them back.</p>
+            <div class="cm-cta">
+              <a class="cm-btn cm-btn-primary" href="#waitlist">Join the waitlist <span class="cm-arrow" aria-hidden="true">→</span></a>
+              <a class="cm-btn cm-btn-ghost" href="#how">How it works</a>
+            </div>
+            <p class="cm-note mono">Free · only emails about CloakMesh · leave anytime</p>
+          </div>
+
+          <figure class="cm-hero-card" aria-labelledby="cm-hc-cap">
+            <p class="cm-hc-head mono"><span class="cm-hc-dot" aria-hidden="true"></span>On your device</p>
+            <div class="cm-hc-block">
+              <p class="cm-hc-label mono">You type</p>
+              <p class="cm-hc-text">Hi, I'm Anna Kowalski. My card 4111 1111 1111 1111 was charged twice. Email me at anna.k@example.org.</p>
+            </div>
+            <p class="cm-hc-step mono" aria-hidden="true">↓ scrubbed here, before anything is sent</p>
+            <div class="cm-hc-block cm-hc-out">
+              <p class="cm-hc-label mono">What leaves your device</p>
+              <p class="cm-hc-text">Hi, I'm <span class="cm-tok">[PERSON_7K2M4QXP]</span>. My card <span class="cm-tok">[CARD_R4X6M2KQ]</span> was charged twice. Email me at <span class="cm-tok">[EMAIL_X3L7D2QA]</span>.</p>
+            </div>
+            <ul class="cm-checks" aria-label="Checked before anything is sent">
+              <li>AMD signature</li>
+              <li>Approved code</li>
+              <li>Debugging off</li>
+              <li>Current firmware</li>
+            </ul>
+            <figcaption class="cm-hc-cap" id="cm-hc-cap">Then it goes, encrypted with AES-256-GCM, to the machine your device just checked. The map back to “Anna Kowalski” never leaves.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- how it works -->
+      <section class="cm-section" id="how" aria-labelledby="cm-how-title">
+        <div class="cm-wrap">
+          <header class="cm-head">
+            <p class="cm-eyebrow mono">How it works</p>
+            <h2 class="cm-h2" id="cm-how-title">Three steps, all on your side.</h2>
+            <p class="cm-sub">There's no server of ours in the path. Your device does the checking.</p>
+          </header>
+          <ol class="cm-steps">
+            <li class="cm-step">
+              <span class="cm-step-n mono" aria-hidden="true">01</span>
+              <h3 class="cm-h3">Scrub, on your device</h3>
+              <p>Names, email addresses, phone numbers, card numbers, IBANs, ID numbers, API keys, passwords, private keys and seed phrases each become a keyed token, like <span class="cm-tok">[EMAIL_X3L7D2QA]</span>. The map back stays on your device, encrypted.</p>
+            </li>
+            <li class="cm-step">
+              <span class="cm-step-n mono" aria-hidden="true">02</span>
+              <h3 class="cm-h3">Check the machine</h3>
+              <p>The server must show a report signed by its own AMD chip. Your device checks it against AMD's root keys, built into CloakMesh: genuine hardware, approved code, debugging off, current firmware. If anything is off, nothing is sent.</p>
+            </li>
+            <li class="cm-step">
+              <span class="cm-step-n mono" aria-hidden="true">03</span>
+              <h3 class="cm-h3">Talk end to end</h3>
+              <p>Then your device talks to that machine over AES-256-GCM. The network, the cloud host and any relay see only ciphertext. The answer comes back, and your real values are put back in, on your device.</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- the demo: src/cloakmesh/demo.js, in this browser only -->
+      <section class="cm-section cm-demo-sec" id="demo" aria-labelledby="cm-demo-title">
+        <div class="cm-wrap">
+          <header class="cm-head">
+            <p class="cm-eyebrow mono">Try it</p>
+            <h2 class="cm-h2" id="cm-demo-title">See what leaves your device.</h2>
+            <p class="cm-sub">Type anything. This runs entirely in your browser: nothing on this page is sent anywhere. (Use made-up details anyway.)</p>
+          </header>
+          <div class="cm-demo" data-cm-demo>
+            <div class="cm-pane cm-pane-in">
+              <label class="cm-pane-label mono" for="cm-demo-in">You type</label>
+              <textarea class="cm-demo-in" id="cm-demo-in" rows="6" maxlength="2000" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" data-cm-demo-in>Hi, I'm Anna Kowalski. My card 4111 1111 1111 1111 was charged twice last week. Please email me at anna.k@example.org or call +44 20 7946 0958. My online banking password is Tulip-Rain-42.</textarea>
+            </div>
+            <div class="cm-pane cm-pane-out">
+              <p class="cm-pane-label mono" id="cm-demo-out-label">What leaves your device</p>
+              <p class="cm-demo-text" data-cm-demo-out aria-labelledby="cm-demo-out-label">Hi, I'm <span class="cm-tok">[PERSON_7K2M4QXP]</span>. My card <span class="cm-tok">[CARD_R4X6M2KQ]</span> was charged twice last week. Please email me at <span class="cm-tok">[EMAIL_X3L7D2QA]</span> or call <span class="cm-tok">[PHONE_Q7WZ3MAE]</span>. My online banking password is <span class="cm-tok">[SECRET_K5RD2NTA]</span>.</p>
+            </div>
+            <p class="cm-demo-status mono" data-cm-demo-status role="status" aria-live="polite"></p>
+            <div class="cm-pane cm-pane-ai">
+              <p class="cm-pane-label mono">What the model writes back <span class="cm-pane-note">a fixed example, not a real model</span></p>
+              <p class="cm-demo-text" data-cm-demo-ai></p>
+            </div>
+            <div class="cm-pane cm-pane-you">
+              <p class="cm-pane-label mono">What you read <span class="cm-pane-note">tokens put back, on your device</span></p>
+              <p class="cm-demo-text" data-cm-demo-you></p>
+            </div>
+          </div>
+          <p class="cm-fine">A simplified version of CloakMesh's filter, made for this page. The real one runs on your own machine, catches more (street addresses, dates of birth, bank account numbers, names it has seen before) and shows you exactly what will be sent.</p>
+        </div>
+      </section>
+
+      <!-- who sees what -->
+      <section class="cm-section" id="who" aria-labelledby="cm-who-title">
+        <div class="cm-wrap">
+          <header class="cm-head">
+            <p class="cm-eyebrow mono">Who sees what</p>
+            <h2 class="cm-h2" id="cm-who-title">Everyone in the middle sees ciphertext.</h2>
+            <p class="cm-sub">Once your device's checks pass:</p>
+          </header>
+          <div class="cm-table-wrap">
+            <table class="cm-table">
+              <caption class="sr-only">What each party can see once the checks pass</caption>
+              <thead>
+                <tr><th scope="col"><span class="sr-only">Who</span></th><th scope="col">Your prompt</th><th scope="col">Your names, keys and numbers</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">You, on your device</th><td class="cm-all">All of it</td><td class="cm-all">All of it</td></tr>
+                <tr><th scope="row">The network, the Wi-Fi, any relay</th><td>Ciphertext</td><td>Ciphertext</td></tr>
+                <tr><th scope="row">The cloud host running the server</th><td>Ciphertext: the processor encrypts the machine's memory</td><td>Ciphertext</td></tr>
+                <tr><th scope="row">The model, inside the checked machine</th><td>Your words, with tokens</td><td class="cm-none">Only tokens</td></tr>
+                <tr><th scope="row">AGI, who make CloakMesh</th><td class="cm-none">Nothing: no server of ours in the path</td><td class="cm-none">Nothing</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- the five checks -->
+      <section class="cm-section cm-proof-sec" id="proof" aria-labelledby="cm-proof-title">
+        <div class="cm-wrap cm-proof-in">
+          <header class="cm-head">
+            <p class="cm-eyebrow mono">The proof</p>
+            <h2 class="cm-h2" id="cm-proof-title">How your device knows it's real.</h2>
+            <p class="cm-sub">Five checks, run by CloakMesh on your device before a single byte of your prompt leaves. Pass all five, or nothing is sent.</p>
+          </header>
+          <ol class="cm-proof" data-cm-proof>
+            <li class="cm-proof-step">
+              <h3 class="cm-h3">AMD signed it.</h3>
+              <p>The server sends a report signed by its own AMD chip. CloakMesh checks the signature all the way up to AMD's root keys, which are built into the app, so nobody can stand in for AMD.</p>
+            </li>
+            <li class="cm-proof-step">
+              <h3 class="cm-h3">This chip, current firmware.</h3>
+              <p>The chip's certificate must match the report, and its security patches must be at or above a required minimum.</p>
+            </li>
+            <li class="cm-proof-step">
+              <h3 class="cm-h3">Approved code, locked down.</h3>
+              <p>The report holds a fingerprint of the code that started the machine. It must be on the approved list, with debugging and migration switched off.</p>
+            </li>
+            <li class="cm-proof-step">
+              <h3 class="cm-h3">Its key lives inside.</h3>
+              <p>The report also carries the server's own key, created inside the sealed machine. A copy of someone else's report is useless.</p>
+            </li>
+            <li class="cm-proof-step">
+              <h3 class="cm-h3">This connection belongs to that key.</h3>
+              <p>The server signs this very handshake with that key, so nobody can replay it or slip in between.</p>
+            </li>
+          </ol>
+          <p class="cm-proof-foot">Tested against genuine AMD data (an EPYC Milan report and its certificates, a Turin certificate) and against dozens of forged and tampered reports.</p>
+        </div>
+      </section>
+
+      <!-- the difference -->
+      <section class="cm-section" id="compare" aria-labelledby="cm-cmp-title">
+        <div class="cm-wrap">
+          <header class="cm-head">
+            <p class="cm-eyebrow mono">The difference</p>
+            <h2 class="cm-h2" id="cm-cmp-title">Two ways to do private AI.</h2>
+          </header>
+          <div class="cm-cmp">
+            <article class="cm-cmp-card">
+              <h3 class="cm-h3">Through a gateway</h3>
+              <p>Your prompt goes to the service's own server, which passes it on, sometimes to a secure machine behind it. You rely on its word that the machine is secure, and on its promise not to keep your data.</p>
+              <dl class="cm-cmp-list">
+                <div><dt>Who checks the hardware</dt><dd>The service</dd></div>
+                <div><dt>Your personal data</dt><dd>Sent as you typed it</dd></div>
+                <div><dt>In the middle</dt><dd>The gateway's server</dd></div>
+              </dl>
+            </article>
+            <article class="cm-cmp-card cm-cmp-us">
+              <h3 class="cm-h3">CloakMesh</h3>
+              <p>Your device checks the machine itself, against AMD's keys, and talks to it directly. Your personal data never leaves in the first place.</p>
+              <dl class="cm-cmp-list">
+                <div><dt>Who checks the hardware</dt><dd>Your device</dd></div>
+                <div><dt>Your personal data</dt><dd>Swapped for tokens first</dd></div>
+                <div><dt>In the middle</dt><dd>Nothing but ciphertext</dd></div>
+              </dl>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- speed -->
+      <section class="cm-section" id="speed" aria-labelledby="cm-speed-title">
+        <div class="cm-wrap">
+          <header class="cm-head">
+            <p class="cm-eyebrow mono">Speed</p>
+            <h2 class="cm-h2" id="cm-speed-title">The checks take milliseconds.</h2>
+            <p class="cm-sub">The model takes the rest.</p>
+          </header>
+          <dl class="cm-stats">
+            <div class="cm-stat"><dt>to check a genuine AMD report and its certificate chain</dt><dd class="mono">2.2 ms</dd></div>
+            <div class="cm-stat"><dt>for the encrypted handshake, once the report is checked</dt><dd class="mono">0.4 ms</dd></div>
+            <div class="cm-stat"><dt>of encrypted data a second, over one connection</dt><dd class="mono">373 MiB</dd></div>
+          </dl>
+          <p class="cm-fine">Measured with CloakMesh's own benchmark (a release build) on a cloud processor, with client and server on the same machine; the handshake used simulated AMD hardware. Your network adds its own time.</p>
+        </div>
+      </section>
+
+      <!-- straight answers -->
+      <section class="cm-section" id="limits" aria-labelledby="cm-limits-title">
+        <div class="cm-wrap">
+          <header class="cm-head">
+            <p class="cm-eyebrow mono">Straight answers</p>
+            <h2 class="cm-h2" id="cm-limits-title">What Phase 1 doesn't do yet.</h2>
+          </header>
+          <ul class="cm-limits">
+            <li class="cm-limit">
+              <h3 class="cm-h3">GPUs</h3>
+              <p>Phase 1 checks the AMD machine itself (its processor and memory), so models run inside it. Checking NVIDIA confidential GPUs and Intel TDX machines is Phase 2, and it's what the biggest models need.</p>
+            </li>
+            <li class="cm-limit">
+              <h3 class="cm-h3">Not live yet</h3>
+              <p>The client, the encrypted connection, the server side and the filter are built and tested. The first servers come next, and the waitlist hears first.</p>
+            </li>
+            <li class="cm-limit">
+              <h3 class="cm-h3">A filter, not a mind reader</h3>
+              <p>It catches the formats and cues above, not every secret you could write in a sentence. You can always see exactly what will be sent before it goes.</p>
+            </li>
+            <li class="cm-limit">
+              <h3 class="cm-h3">Approved means checked, not perfect</h3>
+              <p>The proof shows which code is running, not that the code is good. That's why only published, reviewed code should ever be on the approved list.</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- questions -->
+      <section class="cm-section" id="faq" aria-labelledby="cm-faq-title">
+        <div class="cm-wrap cm-faq-in">
+          <header class="cm-head">
+            <p class="cm-eyebrow mono">FAQ</p>
+            <h2 class="cm-h2" id="cm-faq-title">Questions.</h2>
+          </header>
+          <div class="cm-faq">
+            <details>
+              <summary>Is CloakMesh live?</summary>
+              <p>Not yet. Phase 1 (the client that checks the hardware, the encrypted connection, the server side and the filter) is built and tested. The first servers come next, and the waitlist hears first.</p>
+            </details>
+            <details>
+              <summary>Do I have to trust AGI?</summary>
+              <p>Not with your prompts: there's no server of ours in the path, and your device checks the hardware against AMD's keys, not ours. You do rely on AMD's hardware, as every confidential-computing service does, and on the approved code being published for anyone to check.</p>
+            </details>
+            <details>
+              <summary>Can whoever runs the server read my prompt?</summary>
+              <p>Not if the checks pass: the machine's memory is encrypted by its own processor, debugging is off, and its code is on the approved list. And your names, keys and numbers are tokens before they leave anyway.</p>
+            </details>
+            <details>
+              <summary>Which hardware does it check?</summary>
+              <p>AMD SEV-SNP machines with EPYC Milan, Genoa or Turin processors, on clouds such as Google Cloud's confidential VMs. NVIDIA confidential GPUs and Intel TDX come in Phase 2.</p>
+            </details>
+            <details>
+              <summary>What does the filter catch?</summary>
+              <p>Names when they're introduced (“I'm…”, “Dear…”) or seen before, email addresses, phone numbers, card numbers, IBANs, ID numbers, API keys, passwords, private keys, seed phrases, street addresses and more. It runs before anything is sent.</p>
+            </details>
+            <details>
+              <summary>Can I run a server?</summary>
+              <p>That's the plan: servers run on AMD SEV-SNP machines with approved code. Pick “Run a server” when you join, and you'll hear when it opens.</p>
+            </details>
+            <details>
+              <summary>What will it cost?</summary>
+              <p>It's not decided yet. With no gateway in the middle, there's one less thing to pay for. The waitlist hears first.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- the waitlist (/api/cloakmesh) -->
+      <section class="cm-section cm-join-sec" id="waitlist" aria-labelledby="cm-join-title">
+        <div class="cm-wrap">
+          <div class="cm-join">
+            <div class="cm-join-copy">
+              <p class="cm-eyebrow mono">Waitlist</p>
+              <h2 class="cm-h2" id="cm-join-title">Be first when it opens.</h2>
+              <ul class="cm-join-points">
+                <li>Free, no account</li>
+                <li>Only emails about CloakMesh</li>
+                <li>Leave anytime, with one link</li>
+              </ul>
+            </div>
+            <div class="cm-join-box">
+              <form class="cm-form" data-cm-form novalidate>
+                <label class="cm-label" for="cm-email">Your email</label>
+                <input class="cm-input" id="cm-email" name="email" type="email" autocomplete="email" inputmode="email" required maxlength="254" placeholder="you@company.com" spellcheck="false" autocapitalize="off" aria-describedby="cm-form-msg" />
+                <fieldset class="cm-roles">
+                  <legend class="cm-label">I'd mostly like to</legend>
+                  <label class="cm-role"><input type="radio" name="role" value="use" checked /><span>Use it</span></label>
+                  <label class="cm-role"><input type="radio" name="role" value="build" /><span>Build on it</span></label>
+                  <label class="cm-role"><input type="radio" name="role" value="node" /><span>Run a server</span></label>
+                </fieldset>
+                <div class="cm-human" data-cm-human></div>
+                <button class="cm-btn cm-btn-primary cm-btn-block" type="submit" data-cm-submit>Join the waitlist</button>
+                <p class="cm-msg" id="cm-form-msg" data-cm-msg role="status" aria-live="polite"></p>
+                <p class="cm-fine">We keep your email address, your pick above and the day you joined, only to tell you about CloakMesh. Never sold or shared. Your internet address isn't stored. A human check by Cloudflare runs when you join.</p>
+              </form>
+              <div class="cm-done" data-cm-done hidden tabindex="-1">
+                <p class="cm-done-title">You're on the list.</p>
+                <p>Save your leave link. It deletes your email address from the list, anytime:</p>
+                <div class="cm-leave-link">
+                  <code class="cm-leave-url mono" data-cm-leave-url></code>
+                  <button class="cm-btn cm-btn-ghost cm-btn-sm" type="button" data-cm-copy>Copy</button>
+                </div>
+                <p class="sr-only" data-cm-copy-say aria-live="polite"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="cm-foot">
+      <div class="cm-wrap cm-foot-in">
+        <div>
+          <p class="cm-foot-brand">CloakMesh</p>
+          <p>Private AI with nothing in the middle. A project of <a href="https://agi1.app">AGI</a>.</p>
+        </div>
+        <p class="cm-fine">Phase 1 is built and tested; the network isn't live yet. AMD, EPYC, SEV-SNP, NVIDIA and Intel TDX are trademarks of their owners, and CloakMesh isn't affiliated with them. © 2026 AGI.</p>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/cloakmesh/page.js"></script>
+  </body>
+</html>

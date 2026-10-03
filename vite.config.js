@@ -21,10 +21,11 @@ export default defineConfig({
     // three.js alone is about 650 KB (170 KB compressed). It's already in its own file that
     // loads after the page's text, so Vite's default 500 KB warning isn't useful here.
     chunkSizeWarningLimit: 800,
-    // four pages: the home page (also at /talk since 2026-10-02), AGI-1's diary (/diary, Phase 5), "Launch with AGI-1"
-    // (/launch/<id>, 2026-10-01) and her live show (/live, 2026-10-02)
+    // five pages: the home page (also at /talk since 2026-10-02), AGI-1's diary (/diary, Phase 5), "Launch with AGI-1"
+    // (/launch/<id>, 2026-10-01), her live show (/live, 2026-10-02) and CloakMesh (/cloakmesh, 2026-10-03: what
+    // inference.agi1.app shows)
     rollupOptions: {
-      input: { main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html' },
+      input: { main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html' },
     },
   },
 });
