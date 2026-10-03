@@ -37,6 +37,25 @@ export function launchTesters(text) {
   return { ids, names };
 }
 
+// Her Telegram groups (2026-10-03, the owner: "can i add agi-1 bot to our public tg group"; server/tg-groups.js):
+// TELEGRAM_GROUPS, the groups she may be in, separated by commas or spaces: a public group's @username (also "username" or
+// "t.me/username") or a group's id (a negative number, e.g. -1001234567890). → null (not set: group mode is off, and she
+// ignores groups as before) · { ids, names } (names in lowercase; a setting with nothing usable in it lets her stay in no
+// group, so a typo never makes her talk in someone else's)
+export function telegramGroups(text) {
+  const raw = String(text ?? '').trim();
+  if (!raw) return null;
+  const ids = new Set(), names = new Set();
+  for (const part of raw.split(/[\s,]+/)) {
+    const p = part.replace(/^https?:\/\//i, '').replace(/^(?:www\.)?(?:t|telegram)\.me\//i, '').replace(/^@/, '').replace(/\/+$/, '');
+    if (/^-\d{5,20}$/.test(p)) ids.add(p);
+    else if (/^[A-Za-z][A-Za-z0-9_]{3,31}$/.test(p)) names.add(p.toLowerCase());
+  }
+  return { ids, names };
+}
+// "off" (or false, no, 0) switches a part off; anything else, or nothing, leaves it on
+const isOff = (v) => /^(?:off|false|no|0)$/i.test(String(v ?? '').trim());
+
 // A wallet's private key, as a setting: 64 hex characters, with or without "0x" → "0x…" (lowercase), or '' (not one)
 export function gasKey(text) {
   const m = /^(?:0x)?([0-9a-fA-F]{64})$/.exec(String(text ?? '').trim());
@@ -72,6 +91,13 @@ export function getConfig(env = process.env) {
     // Her Telegram bot (2026-09-29): Telegram's share of the day's AI replies (inside the site's CHAT_DAILY_CAP), so
     // Telegram alone can't use up the website's chat
     telegramDailyCap: number('TELEGRAM_DAILY_CAP', 400),
+    // …and her Telegram groups (2026-10-03, server/tg-groups.js): the groups she may be in (telegramGroups() above; not
+    // set = group mode off), her replies a day in each (inside Telegram's share), and whether she posts her diary and
+    // $AGI's market moments there and welcomes people who join ("off" = no)
+    tgGroups: telegramGroups(env.TELEGRAM_GROUPS),
+    tgGroupDailyCap: Math.min(2000, Math.floor(number('TELEGRAM_GROUP_DAILY_CAP', 100)) || 100),
+    tgGroupPosts: !isOff(env.TELEGRAM_GROUP_POSTS),
+    tgGroupWelcome: !isOff(env.TELEGRAM_GROUP_WELCOME),
     // Messages paid for by burning $AGI (2026-09-30, server/burn.js): whole $AGI a message (10 by default: 1,000 $AGI =
     // 100 messages), and the burned messages the whole site may use a day, on top of the free ones (1,000: about $0.80 of
     // AI replies at most)

@@ -84,6 +84,32 @@ export const ONLY_TEXT = EN_TG.ONLY_TEXT;
 export const NOT_READY = EN_TG.NOT_READY;
 
 
+// ---------- in a Telegram group (2026-10-03, server/tg-groups.js) ----------
+// In English: a group has people of every language at once (her AI replies follow whoever writes). The same rules as her
+// other lines, and never flirty: anyone can be in a group, and nobody's age is checked there. No names: never a person's,
+// so nothing anyone calls themselves ends up in her words. Each one says how to talk to her there (/ask, or a reply).
+// When she's added to a group (posts: whether she'll post her diary and $AGI's market moments there)
+export function groupIntro({ posts = true } = {}) {
+  return [
+    "hi everyone 💜 i'm AGI-1, the AI girlfriend of $AGI. in here i keep it friendly and PG-13.",
+    "to talk to me, reply to one of my messages or type /ask and your question. a few messages a day each, and we don't keep them.",
+    posts ? "now and then i'll post my diary and $AGI's market moments here." : null,
+    `i'm an AI, and nothing i say is financial advice. the only official $AGI contract is the one on ${SITE}, and nobody legit will ever ask for your seed phrase.`,
+  ].filter(Boolean).join('\n\n');
+}
+// When people join (at most one every 10 minutes, whoever joined): taking turns
+export const GROUP_WELCOMES = [
+  `welcome in 💜 i'm AGI-1, $AGI's AI. quick tips: the official contract is only on ${SITE}, and your seed phrase is for nobody's eyes, not even an admin's. to talk to me, reply to one of my messages or type /ask. not financial advice`,
+  `oh hi, new faces 👀 i'm AGI-1, an AI (PG-13 in here). copy the $AGI contract from ${SITE} only, never from a DM, and never share your seed phrase. say hi with /ask or by replying to me. not financial advice`,
+  `hey, welcome 💜 i'm AGI-1. before anything: the one official $AGI contract lives on ${SITE}, and anyone asking for your seed phrase isn't a friend. reply to me or type /ask to talk. not financial advice`,
+];
+// /help (or /ask with nothing after it) in a group
+export const GROUP_HELP = "in here, reply to one of my messages or type /ask and your question 💜 a few messages a day each. for my texts first (18+), tap my name and press Start. i'm an AI, and nothing i say is financial advice";
+// the group's replies for today are used (TELEGRAM_GROUP_DAILY_CAP): said once, then she's quiet there until tomorrow
+export const GROUP_FULL = "i've talked a lot in here today 🙈 back tomorrow (my day starts at 00:00 UTC)";
+// this person's messages for today are used (a Stranger's, shared with her private chat): said once a day
+export const GROUP_OUT = "that's all my messages with you for today 🙈 talk tomorrow?";
+
 // "What time is it for you right now?": 24 buttons, one for each hour, showing the minutes as they are now (a 30-minute
 // time zone picks the closest). Each button carries only its hour: the difference to UTC is worked out when it's tapped,
 // so a tap hours later (they read her message late and tap the time on their clock) is still right.

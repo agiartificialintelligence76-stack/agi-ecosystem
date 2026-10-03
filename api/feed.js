@@ -2,13 +2,16 @@
 //   1. connects her Telegram bot to the site (server/telegram.js, connectBot: every run, so it fixes itself);
 //   2. looks for new moments (server/feed.js, gatherMoments: new egirl coins and copies of $AGI on clank.trade, $AGI's
 //      market moments, her diary's new entry);
-//   3. texts them to the people who asked for it on Telegram (textFirst: at most 2 a day each, never at night their time).
+//   3. (2026-10-03) posts her diary and $AGI's market moments in her Telegram groups, the ones found this run (server/
+//      tg-groups.js, postToGroups: only the groups in TELEGRAM_GROUPS; TELEGRAM_GROUP_POSTS=off: none);
+//   4. texts them to the people who asked for it on Telegram (textFirst: at most 2 a day each, never at night their time).
 // Only Vercel may call it: when CRON_SECRET is set, Vercel sends "Authorization: Bearer <CRON_SECRET>" (like /api/keepalive).
 // To run it by hand (e.g. right after setting the bot up): Vercel → the project → Settings → Cron Jobs → /api/feed → Run.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../server/config.js';
 import { tgToken, connectBot } from '../server/telegram.js';
 import { gatherMoments, textFirst } from '../server/feed.js';
+import { postToGroups } from '../server/tg-groups.js';
 
 const fingerprint = (text) => createHash('sha256').update(String(text)).digest();
 const sameSecret = (a, b) => timingSafeEqual(fingerprint(a), fingerprint(b));
@@ -41,13 +44,20 @@ export async function GET(request) {
     console.error("[feed] TELEGRAM_BOT_TOKEN doesn't look like a bot token (digits, a colon, then about 35 letters): copy it again from @BotFather");
   }
 
+  let added;
   try {
-    const added = await gatherMoments(cfg, now, { deadline: deadline - 8_000 });
+    added = await gatherMoments(cfg, now, { deadline: deadline - 8_000 });
     out.moments = added.map((m) => m.key);
     if (added.length) console.log(`[feed] new: ${out.moments.join(', ')}`);
   } catch (err) {
     console.error(`[feed] couldn't use the feed's database: ${err.message}`);
     return answer({ error: 'database' }, 502);
+  }
+
+  // her Telegram groups: the moments found just now (so never twice), before the texts first (a handful of posts)
+  if (token && !out.bot?.error && cfg.tgGroups) {
+    out.groups = await postToGroups(cfg, token, added, { deadline: deadline - 4_000 });
+    if (out.groups.posted) console.log(`[feed] posted ${out.groups.posted} in her Telegram groups`);
   }
 
   if (token && !out.bot?.error) {

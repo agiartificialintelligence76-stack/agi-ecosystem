@@ -6,8 +6,11 @@
 //     (the same Gemini chat as the site, as a Stranger, with the same daily limits).
 //   • api/feed.js (a few times a day, Vercel's cron): connectBot() points the bot at the site, then server/feed.js decides
 //     what she texts first and sends it (gatherMoments(), textFirst()).
+//   • (2026-10-03) her Telegram groups: server/tg-groups.js (only the groups the owner lists in TELEGRAM_GROUPS).
 // What's kept: supabase/telegram.sql (the chat's number, 18+, their time, what she last texted them). Never their messages.
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { tgToken, tgCall, say, chatCode, scrub, MEDIA } from './tg-api.js';
+import { onGroup, GROUP_COMMANDS } from './tg-groups.js';
 import { rpc, takeChatSlot } from './limits.js';
 import { askAgi1 } from './gemini.js';
 import { recallGroup } from './tg-memory.js';
@@ -20,12 +23,10 @@ import * as LAUNCH from './launch-lines.js';
 import { liveReady, liveDb, askLive, checkQuestion } from './live.js';
 import * as LIVE_L from './live-lines.js';
 
-const API = 'https://api.telegram.org/bot';
 const MAX_TEXT = 500;                       // characters per message she reads (the same as the site's chat)
-const TOKEN = /^\d{5,15}:[A-Za-z0-9_-]{30,60}$/;
 
-// The bot's token (BotFather gives it), or '' when it isn't set or doesn't look like one
-export const tgToken = (env = process.env) => (TOKEN.test(String(env.TELEGRAM_BOT_TOKEN || '').trim()) ? String(env.TELEGRAM_BOT_TOKEN).trim() : '');
+// (Telegram's API itself, her token and the daily chat codes live in server/tg-api.js since 2026-10-03; still exported here)
+export { tgToken, tgCall, say, chatCode };
 
 // The secret Telegram sends back with every update (X-Telegram-Bot-Api-Secret-Token), so only Telegram can talk to
 // /api/telegram. Made from PASS_SECRET: no extra setting. Letters, numbers, "_" and "-", as Telegram wants.
@@ -40,36 +41,6 @@ export function webhookUrl(env = process.env) {
   return /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}$/i.test(base) ? `${base}/api/telegram` : null;
 }
 
-// A daily code for one Telegram chat's message limits (like the site's daily visitor code): never the chat's number itself
-const b64url = (buf) => Buffer.from(buf).toString('base64url');
-export const chatCode = (secret, chat, day) => `t:${b64url(createHmac('sha256', secret).update(`tg:${day}:${chat}`).digest()).slice(0, 32)}`;
-
-// Telegram's answers can quote the token back (in an address): never in a log line
-const scrub = (text, token) => {
-  let s = String(text ?? '');
-  if (token) s = s.split(token).join('[token]');
-  return s.replace(/\d{5,15}:[A-Za-z0-9_-]{30,60}/g, '[token]').replace(/\s+/g, ' ').trim().slice(0, 200);
-};
-
-// One Bot API call. → its result · throws an error with .status, .retryAfter (seconds, when Telegram says "too many") and
-// .gone (the person blocked the bot or deleted their account, or the chat doesn't exist: forget them)
-export async function tgCall(token, method, params = {}, { timeoutMs = 5000 } = {}) {
-  const res = await fetch(`${API}${token}/${method}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params), signal: AbortSignal.timeout(timeoutMs),
-  });
-  let body = null;
-  try { body = await res.json(); } catch { /* not JSON */ }
-  if (res.ok && body?.ok === true) return body.result;
-  const said = scrub(body?.description, token);
-  const err = new Error(`telegram ${method}: HTTP ${res.status}${said ? ` (${said})` : ''}`);
-  err.status = res.status;
-  err.retryAfter = Number(body?.parameters?.retry_after) > 0 ? Number(body.parameters.retry_after) : null;
-  err.gone = res.status === 403 || (res.status === 400 && /chat not found|user is deactivated|bot was blocked|can't initiate/i.test(said));
-  throw err;
-}
-// Plain text only (no Telegram formatting, so nothing in it becomes a link or a mention by accident), no link previews
-export const say = (token, chat, text, extra = {}, options = {}) =>
-  tgCall(token, 'sendMessage', { chat_id: chat, text, link_preview_options: { is_disabled: true }, ...extra }, options);
 const buttons = (rows) => ({ reply_markup: { inline_keyboard: rows } });
 
 // ---------- the database (supabase/telegram.sql) ----------
@@ -126,6 +97,18 @@ export async function connectBot(cfg, env = process.env) {
       try { await tgCall(token, method, params, { timeoutMs: 4000 }); } catch (err) { failed = true; console.warn(`[telegram] ${err.message} (tried again next run)`); }
     }
   }
+  // her commands in groups (2026-10-03, server/tg-groups.js): only /ask and /help there, while group mode is on
+  // (TELEGRAM_GROUPS); none of her own otherwise (then Telegram shows her usual menu, as before)
+  let groups = false;
+  try {
+    const scope = { type: 'all_group_chats' };
+    const want = cfg.tgGroups ? GROUP_COMMANDS : [];
+    const inGroups = await tgCall(token, 'getMyCommands', { scope }, { timeoutMs: 4000 });
+    if (!Array.isArray(inGroups) || inGroups.map((c) => c?.command).join() !== want.map((c) => c.command).join()) {
+      await tgCall(token, want.length ? 'setMyCommands' : 'deleteMyCommands', want.length ? { commands: want, scope } : { scope }, { timeoutMs: 4000 });
+      groups = true;
+    }
+  } catch (err) { console.warn(`[telegram] her commands for groups: ${err.message} (tried again next run)`); }
   // Telegram's own note about its last failed delivery to us, if it's from the last day (the owner's log is the only place to see it)
   const lastError = !changed && before?.last_error_message && (Date.now() / 1000 - Number(before.last_error_date || 0)) < 86_400
     ? scrub(before.last_error_message, token) : null;
@@ -135,15 +118,18 @@ export async function connectBot(cfg, env = process.env) {
       : /401/.test(lastError) ? ' (the secret didn\'t match: fixed by this run)' : '';
     console.warn(`[telegram] Telegram's last delivery problem: ${lastError}${hint}`);
   }
-  return { url, changed, setup, lastError };
+  return { url, changed, setup, groups, lastError };
 }
 
 // ---------- one update from Telegram (api/telegram.js) ----------
 // → a short word for the log and the tests: what happened. Never throws for a person's input; database or Telegram
 // hiccups are logged and she answers what she can.
-// what people can send besides text (she says she only reads text); anything else without text (service messages) is ignored
-const MEDIA = ['sticker', 'photo', 'voice', 'video', 'video_note', 'animation', 'audio', 'document', 'location', 'venue', 'contact', 'poll', 'dice'];
+// (what people can send besides text: MEDIA, in server/tg-api.js)
 export async function handleUpdate(cfg, token, update, now = Date.now()) {
+  // a group (2026-10-03, server/tg-groups.js): its own rules and speed bumps (per person and per group), so a busy group
+  // never trips the private chats' one
+  const type = update?.message?.chat?.type;
+  if (type === 'group' || type === 'supergroup') return onGroup(cfg, token, update.message, now);
   const from = update?.message?.chat?.id ?? update?.callback_query?.message?.chat?.id;
   if (Number.isSafeInteger(from) && !telegramBurst(chatCode(cfg.passSecret, from, 'burst'), now)) return 'too_many';   // a flood: no answer at all
   // her replies in the language of their Telegram app, when it's one of hers (2026-09-29; English otherwise). Nothing is

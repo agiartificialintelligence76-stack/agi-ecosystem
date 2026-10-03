@@ -20,8 +20,12 @@ const MISSING = {
   voice_line_put: 'voice_line_put not found: run supabase/voice-lines.sql in this Supabase project',
 };
 // her Telegram bot and its feed (2026-09-29): supabase/telegram.sql
-for (const fn of ['tg_get', 'tg_join', 'tg_set', 'tg_forget', 'tg_due', 'tg_mark', 'feed_add', 'feed_recent', 'feed_state_get', 'feed_state_put']) {
+for (const fn of ['tg_get', 'tg_join', 'tg_set', 'tg_forget', 'tg_due', 'tg_claim', 'tg_mark', 'tg_take', 'feed_add', 'feed_recent', 'feed_state_get', 'feed_state_put']) {
   MISSING[fn] = `${fn} not found: run supabase/telegram.sql in this Supabase project`;
+}
+// …and her Telegram groups (2026-10-03, server/tg-groups.js): added to the same file, so it's run once more
+for (const fn of ['tg_group_take', 'tg_group_welcome']) {
+  MISSING[fn] = `${fn} not found: run supabase/telegram.sql again in this Supabase project (it ends with telegram_functions_found = 14)`;
 }
 // messages paid for by burning $AGI (2026-09-30): supabase/burns.sql
 for (const fn of ['burn_claim', 'burn_take', 'burn_refund', 'burn_status', 'burn_total', 'burn_seen']) {

@@ -32,6 +32,10 @@ export const pictureBurst = makeBurstLimit({ max: 240, windowMs: 60_000 });
 // Her Telegram bot (api/telegram.js, 2026-09-29): a person types a few messages a minute at most, so 20 updates a minute per
 // chat (keyed by a code of the chat) only stops floods before they reach the database or Telegram.
 export const telegramBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });
+// …in her Telegram groups (2026-10-03, server/tg-groups.js), only for messages meant for her: 4 a minute per person (one
+// person can't fill the group with her answers) and 15 a minute per group (Telegram lets a bot send about 20 a minute there)
+export const groupPersonBurst = makeBurstLimit({ max: 4, windowMs: 60_000 });
+export const groupBurst = makeBurstLimit({ max: 15, windowMs: 60_000 });
 // "Check my burn" (api/wallet.js, 2026-09-30): each asks the block explorer and the chain, so 10 a minute per visitor
 export const burnBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });
 // "Launch with AGI-1" (api/launch.js, 2026-10-01): getting a coin ready asks clank.trade, the chain and maybe Pinata, and

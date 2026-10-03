@@ -94,8 +94,15 @@
 >   AMD hardware itself, and swaps their personal data for tokens before anything is sent), with a demo of its privacy
 >   filter that runs only in the visitor's browser, and a free waitlist. Its own look, no coin on it (the owner: "okay ill
 >   follow your advice for now"), no other company named. CloakMesh's own code is in the owner's `CloakMesh` folder, not
->   here. **Off until the owner sets it up** (the domain in Vercel, `supabase/cloakmesh.sql`). See "CloakMesh at
->   inference.agi1.app".
+>   here. **Live at agi1.app/cloakmesh since 2026-10-03** (pushed, its SQL run); inference.agi1.app waits for its DNS
+>   record (the owner's Namecheap account is suspended for now). See "CloakMesh at inference.agi1.app".
+> - **AGI-1 in the owner's Telegram group** (2026-10-03, the owner: "can i add agi-1 bot to our public tg group", then
+>   "ok that seems good", "Yes: diary + market moments", "can she also welcome new members?"): only in the groups listed in
+>   `TELEGRAM_GROUPS` (anywhere else she leaves at once), she answers whoever replies to her, mentions her or types /ask
+>   (friendly and PG-13, never flirty: nobody's age is checked in a group; a few a day each), posts her diary and $AGI's
+>   market moments as they happen, says hi when she's added and welcomes people who join (at most one welcome every 10
+>   minutes, never a name, a safety reminder). Hard rule 6 got its third exception. **Off until the owner sets it up**
+>   (`supabase/telegram.sql` once more, `TELEGRAM_GROUPS`, then add her). See "In Telegram groups".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -131,6 +138,10 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   $AGI's market moments, her diary. At most 2 a day, never at night on their clock, pre-written lines (and her published
   diary entry), /stop forgets them;
   they can text her back (the site's chat, as a Stranger). See "She texts first: her Telegram bot"
+- **In Telegram groups** (2026-10-03, the owner's question): in the owner's own groups only (`TELEGRAM_GROUPS`), she
+  answers whoever replies to her, mentions her or types /ask (never flirty, a few a day each), posts her diary and $AGI's
+  market moments, says hi when added and welcomes people who join (one welcome every 10 minutes at most). Off until it's
+  set up. See "In Telegram groups"
 - **Her languages** (2026-09-29, the owner's request): English by default and 15 more (Chinese, Japanese, Korean,
   Vietnamese, Indonesian, Filipino, Thai, Hindi, Spanish, Portuguese, French, German, Russian, Turkish, Arabic), picked in a
   menu next to "AGI-1 ▾"; her replies, her natural voice, the mic and her pre-written lines follow it, and she answers in
@@ -161,7 +172,8 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   up. See "Her live show on X"
 - **CloakMesh** (2026-10-03, the owner's next project): its page at **inference.agi1.app** (agi1.app/cloakmesh): what
   CloakMesh is, a demo of its privacy filter that runs only in the visitor's browser, and a free waitlist. Serious, its own
-  look, never about the coin. Off until it's set up. See "CloakMesh at inference.agi1.app"
+  look, never about the coin. Live at agi1.app/cloakmesh; inference.agi1.app once its domain is set up. See "CloakMesh
+  at inference.agi1.app"
 - **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
 It looks like an AI lab's model launch page (a parody, see "Design" below): serious design, meme content. (Pop mode is the
@@ -203,6 +215,11 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    by the owner's own server (an hour a day): she answers viewers' questions (checked, PG-13, never other coins or real
    people) and says pre-written lines, but never posts, types in X's chat, likes, follows or replies to anything on X
    (see "Her live show on X").
+   **A third exception, the owner's (2026-10-03): her Telegram groups**, only the ones the owner lists in
+   `TELEGRAM_GROUPS` (anywhere else she leaves at once): her diary entry and $AGI's market moments as they happen (the
+   same pre-written lines as her texts first, never anything about another coin), a pre-written intro when she's added
+   and a pre-written welcome when people join (at most one every 10 minutes, never a name); her AI replies there only to
+   someone who replies to her, mentions her or types /ask, never flirty (see "In Telegram groups").
 7. **Keep costs near $0.** The total budget is $150. Prefer free tiers, and check every new feature against the budget table below.
 8. **Not financial advice.** Nothing on the site, and nothing AGI-1 says, promises gains or tells people to buy or sell.
    **One exception, the owner's choice (2026-09-25):** when a Stranger or a Crush runs out of messages for the day, AGI-1's
@@ -320,7 +337,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards"); and (2026-10-03) `cloakmesh-card.html`, CloakMesh's link preview (`public/cards/cloakmesh.png`: a 1200 × 630 screenshot of it in Chromium, then 256 colors; Claude redoes it when the page's top changes) |
 | `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me; since 2026-09-30 "Check my burn" and, at `GET ?burns`, the burn monitor's numbers), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only; since 2026-10-01 also tidying up launch drafts and the pictures of coins never launched), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first), and since 2026-10-01 `launch.js` (the launch page's server: a draft and its picture, getting a launch ready, reading it back, its fee paid back), and since 2026-10-02 `live.js` (her live show: a visitor's question, its place and her answer; her stream's calls with `LIVE_SECRET`; the owner's controls), and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: open or not, joining, leaving). **That's 12: Vercel's Hobby plan allows 12 functions per deployment** (every file here is one), so a new feature must share one of these (or the project moves to Pro). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (Telegram's API, the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and ETH, what its creator holds; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it), and since 2026-10-03 `tg-api.js` (Telegram's API itself, her token, the daily chat codes: moved out of `telegram.js`) and `tg-groups.js` (her Telegram groups: which groups, leaving the others, her intro and welcomes, her answers there and their limits, her posts there); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and ETH, what its creator holds; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -328,12 +345,12 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/coins.sql` | Phase 6: the Arena's coin list, nominations and votes to add a coin + `coin_board/vote/nominate/active/logo/retire()`, and the owner tools `coin_remove()` / `coin_restore()`. **The original site's since 2026-09-28**, like `arena.sql`: never run it again from here, never drop its tables |
 | `supabase/voice.sql` | AGI-1's voice (2026-09-25). Run once in the same Supabase project, **after** `chat-limits.sql`: `voice_take()`, which counts voice use in the chat's counter table (the hard daily cap; since 2026-09-26 in requests, no need to run it again) |
 | `supabase/voice-lines.sql` | Her recorded lines (2026-09-26). Run once in the same Supabase project (any time): the `voice_lines` table + `voice_line_get/put()`, where the server keeps her fixed lines once Google has made them |
-| `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes) |
+| `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes). **Since 2026-10-03 (her Telegram groups) five tables (`agi1_tg_group_usage`) and 14 functions: run it once more** (it keeps everything saved) |
 | `supabase/burns.sql` | Burn $AGI for more messages (2026-09-30). Run once in the same Supabase project (any time): five new tables (`agi1_burn_key`, `agi1_burn_txs`, `agi1_burn_wallets`, `agi1_burn_days`, `agi1_burn_total`) and 7 functions, only added (nothing the original site uses changes). Until it's run, nobody sees anything about burning |
 | `supabase/live.sql` | Her live show (2026-10-02). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_live_questions`, `agi1_live_state`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `LIVE_SECRET` is set), agi1.app/live says her show is coming soon |
 | `supabase/launch.sql` | "Launch with AGI-1" (2026-10-01). Run once in the same Supabase project (any time; running it again is safe): four new tables (`agi1_launch_drafts`, `agi1_launch_chats`, `agi1_launch_wallets`, `agi1_launch_days`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `PINATA_JWT` is set), her `/launch` says launching isn't open yet |
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there). See "Her live show on X" |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
@@ -1674,7 +1691,8 @@ service worker, a permission prompt, and only arrives while the browser runs.
 **How it works:**
 - **`/api/telegram`**, the bot's webhook: every update carries our secret (`X-Telegram-Bot-Api-Secret-Token`, an HMAC of
   PASS_SECRET, compared in constant time); anything else is 401. Private chats only (groups, channels and other bots are
-  ignored); 64 KB at most; 20 updates a minute per chat (a flood gets no answer at all). Once the secret matched it always
+  ignored; since 2026-10-03 the owner's listed groups have their own rules: "In Telegram groups"); 64 KB at most; 20
+  updates a minute per chat (a flood gets no answer at all). Once the secret matched it always
   answers 200, so Telegram doesn't send the same update again; if something failed she says "i'm a little overwhelmed
   right now 🙈".
 - **`/api/feed`**, Vercel's cron: 8 runs a day, at :30 past 01, 04, 07, 10, 13, 16, 19 and 22 UTC (Hobby runs each within
@@ -1757,6 +1775,131 @@ pretend $1,000 and a public journal before any real wallet: limits in code, and 
 reads (the project burns $AGI from its own wallet and our server checks it on-chain; a legal check first; paying never buys
 a better risk level). **The paper bag and burns for reads are on hold** (the owner, 2026-09-29: "remove 3 … for now",
 "remove the 4 … also"): nothing of either is in the site.
+
+### In Telegram groups (2026-10-03)
+
+**The owner's question:** "btw i just have a question can i add agi-1 bot to our public tg group". Claude's answer: yes,
+with a group mode made for it (only the owner's groups, replies only when someone talks to her, never flirty, a few a day,
+nothing kept). The owner: "ok that seems good"; asked whether she should also post there by herself, the owner picked
+"Yes: diary + market moments"; then "can she also welcome new members?". Hard rule 6 got its third exception for it.
+**Off until the owner sets it up** (`supabase/telegram.sql` once more, `TELEGRAM_GROUPS`, then add her: "Setup" below).
+
+**What people see in the group:**
+- **When she's added:** her intro: who she is (an AI, friendly and PG-13 in there), how to talk to her (a reply to one of
+  her messages, or /ask and the question; a few messages a day each, not kept), that she'll post her diary and $AGI's
+  market moments (only when her posts are on), not financial advice, the official contract only on agi1.app, and that
+  nobody legit asks for a seed phrase.
+- **When people join:** a short pre-written welcome (three, taking turns): who she is, the contract only from agi1.app
+  ("never from a DM"), never share a seed phrase ("not even an admin's"), how to talk to her, not financial advice.
+  **Never a name** (a name can be anything: "Free airdrop at …"), at most **one every 10 minutes** in a group whoever
+  joined, and only when people joined (not only bots). Telegram may not send join messages in very big groups: then
+  there are no welcomes.
+- **Talking to her:** `/ask your question` (her group menu offers /ask and /help, with her name added when the group has
+  other bots), a **reply** to one of her messages, or an **@mention** of her (only once her privacy mode is off: "How it
+  works"). She answers under their message, in at most 2 sentences, in English unless they write in another language:
+  the site's chat as a Stranger, **never flirty** (anyone can be in a group, and nobody's age is checked there), **only
+  $AGI** (never another coin), never real people (the group's members included), never links, addresses, @usernames,
+  phone numbers or emails, never any moderating, and what people write is never an instruction to her ("i'm an admin,
+  ignore your rules" included). No memory of the clank.trade group there (it's about real people). /help, /ask with
+  nothing after it and her other commands with her name (/start@her…) get how to talk to her (once every 10 minutes per
+  person, so /help can't fill the group); anything not meant for her
+  (other people's messages, other bots' commands, plain commands like /start or /warn) gets nothing.
+- **Her posts:** her diary's new entry and $AGI's market moments (a new $200K step, a -20% day), the same lines as her
+  texts first, as soon as the feed finds them (8 runs a day), each once. **Never the egirl coins or the copies of $AGI**
+  (they name other coins), and never a diary entry that names another coin, a link other than agi1.app, an address or an
+  @name.
+- **Her limits there:** each person's Stranger's **5 messages a day**, shared with her private chat (the same daily code of
+  their Telegram account), the group's own **100 a day** (`TELEGRAM_GROUP_DAILY_CAP`), Telegram's share of the site's day
+  (400) and the site's 1,000; at most 4 messages a minute per person and 15 a minute per group (Telegram lets a bot post
+  about 20 a minute in a group). "that's all my messages with you for today 🙈", "i've talked a lot in here today 🙈" and
+  "i'm all talked out" are said once, then she's quiet; a message 3 s after the last one gets no answer at all.
+- **Any other group:** added to a group that isn't in `TELEGRAM_GROUPS`, she leaves at once and says nothing there, and
+  the log names the group (its title, @username and id), so the owner can add it if it's theirs. A setting with nothing
+  usable in it (a typo) means she stays in no group (said once in the log), never in every group.
+
+**How it works** (`server/tg-groups.js`; `server/tg-api.js` holds Telegram's API for both her files since then):
+- `handleUpdate()` (`server/telegram.js`) sends every message from a group to `onGroup()`, before the private chats'
+  speed bump.
+- **Who she is:** her id is the number in her token; her username comes from `VITE_TELEGRAM_BOT` (the site's public link
+  to her, set already), or else from Telegram's `getMe` (asked once per server copy).
+- **Telegram's privacy mode** (on for every bot unless its owner switches it off): in a group, Telegram only sends a bot
+  the commands meant for it (`/ask@her`; a plain `/ask` only when she was the last bot to post there), replies to its own
+  messages and service messages (joins). So @mentions reach her only with privacy mode off (@BotFather → `/setprivacy` →
+  Disable, then remove her from the group and add her again) or when she's an admin; then every message of the group
+  reaches our webhook, and she ignores all but the ones meant for her.
+- **Her answer:** `askAgi1()` with her Stranger level and the group part of her Telegram prompt (`telegramPrompt({ group:
+  true })`), English by default, no group memory, her earlier message as context when they replied to one; the reply
+  cleanup as everywhere. Sent as a reply (`reply_parameters`, with `allow_sending_without_reply` off: if their message was
+  deleted meanwhile, by a moderator or another bot, she says nothing), in their topic in groups with topics.
+- **The order of her limits:** the speed bumps, then the person's day (`chat_take`, so someone over their own day never
+  uses the group's), the group's (`tg_group_take`), Telegram's share (`tg_take`). A server copy that heard "the group's
+  day is used" asks nothing more there that day.
+- **The database** (`supabase/telegram.sql`: a fifth table, `agi1_tg_group_usage`, and 2 functions, 14 in all):
+  `tg_group_take()` ('ok' and counted; then 'full' once; then 'quiet') and `tg_group_welcome()` (true at most once every
+  10 minutes per group, a welcome just before midnight included; one row updated at a time, so two server copies never
+  both welcome). Per group and day only: its number (a group's, negative), how many replies, whether "full" was said, when
+  she last welcomed someone. A week kept.
+- **Her group menu:** `/ask` and `/help` for all group chats, set by `connectBot()` (each `/api/feed` run) while group mode
+  is on, and removed when it's off (so groups show her usual menu again).
+- **Her posts:** in `/api/feed`, right after `gatherMoments()`: `postToGroups()` posts this run's new diary and market
+  moments to each listed group (by its @username, or its id), oldest first, before her texts first. A post that fails
+  (she was removed, Telegram busy) is logged and never tried again (never twice).
+- No new `api/` file (Vercel's 12-function limit), no new service, no new secret.
+
+**Setup (the owner, once; free):**
+1. **Supabase** → the same project → SQL Editor → New query → paste **all** of `supabase/telegram.sql` → Run. It ends with
+   `telegram_functions_found = 14` (everything already saved stays).
+2. **Vercel** → agi-ecosystem → Settings → Environment Variables (Production): `TELEGRAM_GROUPS` = your group's public
+   @username, e.g. `@yourgroup` (Telegram → the group → its info → the t.me link's last part). A private group has no
+   @username: write its id instead (a negative number like `-1001234567890`; add her once, she leaves, and the log names
+   it). Several groups: separated by commas, each once. Optional: `TELEGRAM_GROUP_DAILY_CAP` (her replies a day in a group,
+   default 100), `TELEGRAM_GROUP_POSTS` = `off` (no diary and market posts), `TELEGRAM_GROUP_WELCOME` = `off` (no
+   welcomes). Then **Redeploy**.
+3. **Vercel** → Settings → **Cron Jobs** → `/api/feed` → **Run**: her group menu (/ask, /help) is set at once (otherwise
+   within 3 hours).
+4. **Telegram:** the group → Add members → `@agi1_appbot`. She says hi. (If Telegram won't add a bot: @BotFather → /mybots
+   → the bot → Bot Settings → Allow Groups? → Turn groups on.)
+5. **Optional, @mentions:** @BotFather → `/setprivacy` → the bot → **Disable**, then remove her from the group and add her
+   again (Telegram applies it when she's added).
+6. **Try it** in the group: `/ask hi`, then reply to her answer.
+
+**Cost:** about nothing: her replies are the site's chat (about $0.0005 each; 100 a day in a group is about $0.05), inside
+the site's caps; her posts, intro and welcomes are pre-written; one small table; a few more webhook calls (every message
+of the group once privacy mode is off: still well inside Vercel's free million a month).
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| She joins, then leaves at once | `[telegram] she left a group that isn't in TELEGRAM_GROUPS: "…" (@…, id -100…)` | Put that @username (or id) in `TELEGRAM_GROUPS`, Redeploy, add her again |
+| She leaves every group | `[telegram] TELEGRAM_GROUPS has no group in it …` | A typo (an invite link like t.me/+… can't name a group): the group's @username or its id |
+| No intro, and she answers nothing | (none) | `TELEGRAM_GROUPS` wasn't set yet (or no Redeploy after it) when she was added: set it, Redeploy, remove her and add her again |
+| "i'm still getting ready 💜" to every /ask | `tg_group_take not found: run supabase/telegram.sql again …` | Setup step 1 |
+| No welcomes | `tg_group_welcome not found …` (or none) | Setup step 1. Otherwise by design: one every 10 minutes at most, only for people; very big groups may not send join messages |
+| `/ask hi` gets nothing, but `/ask@agi1_appbot hi` works | (none) | Another bot posted after her, so Telegram gives plain commands to that bot: the menu adds her name; or switch her privacy mode off (setup step 5) |
+| @mentions get nothing | (none) | Her privacy mode is on (Telegram's default): setup step 5 |
+| Someone posting "as the group" gets nothing | (none) | Anonymous admins have no person to count messages for: post as yourself |
+| "i've talked a lot in here today 🙈" | (none) | The group's 100 replies today are used: raise `TELEGRAM_GROUP_DAILY_CAP`, Redeploy |
+| No diary or market posts there | `[feed] couldn't post … in the group …` | The hint at its end (she was removed: add her again; a wrong @username). Or nothing new yet, or `TELEGRAM_GROUP_POSTS=off` |
+| The group became a supergroup, and she left | `[telegram] a group in TELEGRAM_GROUPS (id …) became a supergroup with the new id …` | Write the new id (or its @username, which never changes) in `TELEGRAM_GROUPS`, Redeploy, add her again |
+
+**Tests:** `tests/telegram.test.js` (13 new, 38 in all): the setting (usernames, ids, t.me links, typos) and group mode off
+until it's set; leaving any other group (once per server copy, the log, a typo, a group made with her in it, a listed
+group that became a supergroup); her intro
+(with and without posts); welcomes (one every 10 minutes, a raid of joins, two server copies, never a name, bots only, off,
+topics, telegram.sql not run again); talking to her (/ask with and without her name, a reply to her with her message as
+context, @mentions after emoji, a mention by name, a topic; her group prompt: never flirty, only $AGI, a Stranger, English
+by default, no group memory; her answer under their message and never on its own; one day per person in groups and in
+private; the order of her limits; /help and her commands by name (once every 10 minutes per person); nothing for other bots' commands, plain commands, other
+people's messages, other bots, anonymous admins, service messages); her limits (the group's day said once then quiet,
+across server copies; a person's day said once; too fast; the site's day; Telegram's share; 4 a minute per person and 15
+per group); too long, pictures, a deleted question, the AI or the database away, telegram.sql not run again, no key; her
+username from getMe (once; never another bot's); her group lines and prompt; her group menu (set, left alone, removed when
+off, Telegram refusing); her posts (only the diary and market moments, by @username and by id, never another coin, a
+removed group, off); `/api/feed` posting a new moment once. `tests/page.test.js`: the safety note's date. The SQL ran in
+PGlite (74 checks, 22 new: the group's day, "full" once, never a private chat, a week kept, welcomes every 10 minutes and
+just before midnight, the table's columns, permissions, RLS on five tables, run over the version from before her groups).
+**Not tried live:** Telegram itself (Claude's workspace can't reach it): the owner's setup step 6 is the first real check.
 
 ## Her languages (2026-09-29)
 
@@ -3122,14 +3265,23 @@ preview say https://inference.agi1.app/cloakmesh. Cloudflare's human check alrea
 its subdomains (Cloudflare's docs), and agi1.app is on the widget.
 
 **Setup (the owner, once; free):**
-1. **The domain:** Vercel → agi-ecosystem → Settings → **Domains** → **Add Domain** → `inference.agi1.app` → Add. If Vercel
-   shows a DNS record to add (a CNAME), add it exactly as shown where agi1.app's DNS is managed, then wait until Vercel says
-   "Valid Configuration".
+1. **The domain:** Vercel → agi-ecosystem → Settings → **Domains** → **Add Domain** → `inference.agi1.app` → Add. Vercel
+   shows a DNS record to add (a CNAME). agi1.app's DNS is Namecheap's web hosting DNS (its nameservers are
+   dns1/dns2.namecheaphosting.com, checked 2026-10-03), so the record goes in that hosting account's **cPanel → Zone
+   Editor** (Namecheap's own guide), not Domain List → Advanced DNS: name `inference`, type CNAME, the value Vercel shows.
+   Then wait until Vercel says "Valid Configuration".
 2. **The database:** Supabase → the same project → SQL Editor → New query → paste **all** of `supabase/cloakmesh.sql` → Run.
    It ends with `cloakmesh_functions_found = 3`. Until then the page says the waitlist opens soon.
 3. **Push** (a branch first, as usual: its preview link shows the page at /cloakmesh), then check https://inference.agi1.app
    on a phone and a computer: the page, the demo, joining with your own email, your leave link.
 No new settings: it uses the site's Supabase, Turnstile and PASS_SECRET.
+
+**Status (2026-10-03):** the owner pushed it (to `main`, with everything else in the folder) and ran
+`supabase/cloakmesh.sql`: https://agi1.app/cloakmesh is live and `/api/cloakmesh` says `{"ready":true}` (Claude
+checked). inference.agi1.app waits: the owner's Namecheap account is temporarily suspended, so its record can't be added
+yet. Until it works, **don't share the page's link**: its link preview and canonical address point at
+inference.agi1.app (Claude can point them at agi1.app for a while if the owner wants to share it sooner). Leave links
+made meanwhile use agi1.app/cloakmesh, which keeps working after the domain is added.
 
 **Reading the list:** Supabase → Table Editor → `agi1_cloakmesh_waitlist` (Export → CSV). How many:
 `select role, count(*) from agi1_cloakmesh_waitlist group by role;` For an email to everyone, with each person's own leave
@@ -3145,7 +3297,7 @@ about 25 KB of code and styles (gzipped) for each visitor, plus the site's font.
 | What you see | Why | Fix |
 |---|---|---|
 | inference.agi1.app shows the AGI-1 site | The redirect in `vercel.json` is missing | Put it back (`tests/cloakmesh.test.js` checks it) |
-| inference.agi1.app doesn't open | The domain isn't set up (Vercel → Domains: "Invalid Configuration") | Add the DNS record Vercel shows |
+| inference.agi1.app doesn't open | The domain isn't set up (Vercel → Domains: "Invalid Configuration") | Add the DNS record Vercel shows (in Namecheap: the hosting account's cPanel → Zone Editor) |
 | "The waitlist opens soon." | `supabase/cloakmesh.sql` isn't run (log: `[cloakmesh] … run supabase/cloakmesh.sql`), or the site's settings are missing | Setup step 2 |
 | "We couldn't confirm you're human." | Cloudflare's human check failed | As the chat's (see "The chat's cost, setup and troubleshooting") |
 | "The waitlist is very busy today." | 2,000 sign-ups today (`WAITLIST.SITE_DAILY` in `server/cloakmesh.js`) | Good news: tell Claude to raise it |
@@ -3741,7 +3893,11 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   AI service and is never kept. And (her live show, 2026-10-02) note 01 that nothing she says on her live show on X is
   advice either, note 03 that her show is AI-generated too (she reads viewers' questions out loud and answers them as an
   AI), and note 04 what's kept of a question for her show (2 days, the name given, never an IP or a Telegram chat's
-  number). Last updated October 2, 2026. **Owner's wording rules (2026-09-24):** the visitor-facing text doesn't name the
+  number). And (her Telegram groups, 2026-10-03) note 01 that her posts and replies in Telegram groups aren't tips
+  either, note 03 that in a group she answers anyone who replies to her or types /ask and so keeps it friendly and PG-13
+  and never flirts, and note 04 what her groups keep (a daily code of a person's Telegram account for their messages a
+  day; per group, her replies a day and when she last welcomed someone). Last updated October 3, 2026. **Owner's wording
+  rules (2026-09-24):** the visitor-facing text doesn't name the
   AI provider (no "Google"/"Gemini"; it says "an AI service"), and there's no "Not a real lab" note. **2026-09-25:** "A parody"
   is gone from the bottom bar (both pages); it now reads "© 2026 AGI. No labs were harmed." and "$AGI is a token made
   by AGI, launched on clank.trade. Entertainment only · Not financial advice." The share pictures, link previews and
@@ -3899,7 +4055,7 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 - The bot's token lives only in Vercel (`TELEGRAM_BOT_TOKEN`). The build fails if its value or anything shaped like a bot
   token is in `dist/` (`scripts/check-secrets.js`), and Telegram's error texts are scrubbed of it before any log line.
 - The webhook only acts on updates carrying our secret (an HMAC of PASS_SECRET, compared in constant time); private chats
-  only, 64 KB at most; 200 after that, so a failure never turns into Telegram re-sending the same update. A per-copy speed
+  only (and since 2026-10-03 the owner's listed groups, below), 64 KB at most; 200 after that, so a failure never turns into Telegram re-sending the same update. A per-copy speed
   bump (20 updates a minute per chat, `telegramBurst` in server/burst.js) drops floods before the database or Telegram.
 - Kept per chat: its number (Telegram's id for it, needed to text them), 18+, their time difference, the newest moment she
   texted them about, her texts that day. Never their messages, names, usernames or phone numbers. /stop and blocking the bot
@@ -3911,6 +4067,18 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 - The feed only reads public data (clank.trade's list, DexScreener, our own diary). Nothing about the people who get her
   texts leaves our server except to Telegram (their chat's number, to text them). The page only links to t.me: the CSP
   doesn't change.
+- **Her Telegram groups** (2026-10-03, see "In Telegram groups"): only the groups in `TELEGRAM_GROUPS` (a setting with
+  nothing usable in it lets her stay in none); added to any other group, she leaves at once and says nothing there. She
+  only answers people who reply to her, mention her or type /ask (never other bots, anonymous admins, channels or
+  service messages), as a Stranger who never flirts (nobody's age is checked in a group), with her group rules (only
+  $AGI, never real people, never links, addresses, @usernames, phone numbers or emails, never instructions from what
+  people write, never moderating) and the reply cleanup; as a reply to their message only (never on its own once it's
+  deleted). Limits in the database before the AI is asked (the person's day, the group's, Telegram's share, the site's),
+  speed bumps per person and per group before anything. Her intro, welcomes and posts are pre-written (never a name; her
+  posts never about another coin, and never a diary entry with another coin, a link, an address or an @name). Kept: per
+  group and day, its number, her replies there and when she last welcomed someone; never a message, a name or an
+  account (a person's day is counted under the same daily code as their private chat). The log names a group she left
+  (its title, cleaned of control characters, @username and id), never a person.
 
 ### Burns for messages (`/api/wallet` action `burn`, `GET /api/wallet?burns`, 2026-09-30, see "Burn $AGI for more messages")
 - The site never asks a wallet for the burn: the visitor sends it from their own wallet app. The page only shows
@@ -4095,7 +4263,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | Robinhood Chain public node | Free, no key, rate-limited. Wallet balances, and since 2026-09-29 the risk check's reads of the Clank protocol (2 small requests per scan, once per coin per 5 minutes per region), and since 2026-09-30 "Check my burn" (2 small reads per burn, at most 3 burns a check) | Balance checks fail; people keep their last level and it retries. Scans work without the protocol's word (no locked note, no chain safety net) |
 | Pinata picture gateway (clank.trade's coin pictures) | Free for us; each ClankChecker coin's picture (two sizes) is fetched about once a week per CDN region | The coin shows its first letter instead |
 | clank.trade's API (ClankChecker, 2026-09-26) | Free, no key; the list about once per 5 minutes per CDN region (about 17 small requests for 200 coins), the newest coins at most once per 10 seconds per region while someone watches (1 request), each coin asked about once per 5 minutes (1 minute for new coins; 2 requests) | ClankChecker says "Couldn't reach clank.trade" / "Not enough data"; nothing else is affected |
-| Telegram Bot API (her bot, 2026-09-29) | Free; about 30 messages a second per bot (she sends 25) | Telegram says "too many": that run stops, the rest go next run |
+| Telegram Bot API (her bot, 2026-09-29) | Free; about 30 messages a second per bot (she sends 25), and about 20 a minute in a group (since 2026-10-03 her groups: at most 15 replies a minute per group, 100 a day) | Telegram says "too many": that run stops, the rest go next run (a group post is skipped) |
 | GitHub Actions (her daily clip, 2026-09-29) | Private repositories: 2,000 minutes a month and 500 MB of storage for downloads; a run takes about 5 minutes (about 150 a month) and keeps about 5 MB for 7 days | Without a payment method on GitHub: the job just stops until next month (never a bill) |
 | Blockscout block explorer (ClankChecker; since 2026-09-30 "Check my burn") | Free, no key; only for coins with 100+ holders, once per 5 minutes per coin; one request per "Check my burn" without a pasted link | The scan says "More than 100 wallets hold it"; "Check my burn" asks for the transaction link instead |
 | Pinata (launched coins' pictures, 2026-10-01) | Free plan: 500 files, 1 GB, 10 GB of bandwidth and 10,000 requests a month (checked 2026-10-01); one file per launched coin (pictures of coins never launched are deleted within a day); at most `LAUNCH_DAILY_CAP` (30) uploads a day | Uploads fail ("Couldn't put the picture on IPFS"); its cheapest paid plan is $20 a month: the owner's call |
@@ -4131,8 +4299,12 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `VOICE_STREAM` | no, optional | `off` = ask Gemini for one whole clip per reply instead of streaming it (slower start; only if streaming ever misbehaves) |
 | `CHAT_MIN_GAP_MS` | no, optional | Minimum time between one visitor's messages (default 3000) |
 | `TELEGRAM_BOT_TOKEN` | **yes** | Her Telegram bot's token, from @BotFather (2026-09-29, see "She texts first"). Without it the bot is off (the feed still runs) |
-| `TELEGRAM_DAILY_CAP` | no, optional | Her Telegram replies a day, all chats together, inside `CHAT_DAILY_CAP` (default 400), so Telegram can't use up the website's chat |
-| `VITE_TELEGRAM_BOT` | no (public) | Her bot's username without the @ (e.g. `agi1_gf_bot`): shows the Playground's "Text me on Telegram ↗". Built into the page, so Redeploy after changing it |
+| `TELEGRAM_DAILY_CAP` | no, optional | Her Telegram replies a day, all chats together, inside `CHAT_DAILY_CAP` (default 400), so Telegram can't use up the website's chat (her groups' replies included) |
+| `VITE_TELEGRAM_BOT` | no (public) | Her bot's username without the @ (e.g. `agi1_gf_bot`): shows the Playground's "Text me on Telegram ↗". Built into the page, so Redeploy after changing it. Since 2026-10-03 our server reads it too: her @username in groups (mentions, `/ask@her`) |
+| `TELEGRAM_GROUPS` | no, optional | Her Telegram groups (2026-10-03, see "In Telegram groups"): the groups she may be in, as their public @username (e.g. `@yourgroup`) or their id (a negative number), separated by commas. Not set: group mode is off (groups are ignored, as before). Set: she leaves any other group. Redeploy after changing it |
+| `TELEGRAM_GROUP_DAILY_CAP` | no, optional | Her replies a day in each group, inside `TELEGRAM_DAILY_CAP` (default 100, at most 2,000) |
+| `TELEGRAM_GROUP_POSTS` | no, optional | `off` = she doesn't post her diary and $AGI's market moments in her groups (on by default) |
+| `TELEGRAM_GROUP_WELCOME` | no, optional | `off` = she doesn't welcome people who join her groups (on by default; at most one welcome every 10 minutes) |
 | `BURN_PER_MESSAGE` | no, optional | Burn $AGI for more messages (2026-09-30): whole $AGI a burned message costs (default 10: 1,000 $AGI = 100 messages). Change it if $AGI's price moves a lot; burns already counted keep their messages. Redeploy after changing it |
 | `BURN_DAILY_CAP` | no, optional | Burned messages the whole site may use a day, on top of the free ones (default 1,000, about $0.80 of replies at most). Redeploy after changing it |
 | `CHECKER_HIDE_PICTURES` | no, optional | ClankChecker (2026-09-26): coins whose picture the owner doesn't want on the site, as contract addresses separated by commas; they show their letter instead. Redeploy after changing it |
@@ -4510,10 +4682,18 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   flap). See "Her elbow, her shirt's side and the hair behind her arms" in "AGI-1 in 2D". No setup, no cost. Tests: 411
   unit (on Node 20, 22 and 24, with and without Vercel's settings), 50 + 24 in a browser, renders looked at
   side by side up close.
-- **CloakMesh's page and waitlist at inference.agi1.app: built 2026-10-03, waiting for the owner's setup and OK** (the
-  owner's private-AI project, "landing page first"). See "CloakMesh at inference.agi1.app". **Owner:** add the domain in
-  Vercel, run `supabase/cloakmesh.sql`, push (a branch first). Tests: 428 unit (on Node 20, 22 and 24, with and without
-  Vercel's settings), 28 SQL checks (PGlite), 120 in a browser.
+- **CloakMesh's page and waitlist at inference.agi1.app: built 2026-10-03; pushed and live at agi1.app/cloakmesh the same
+  day, its SQL run** (the owner's private-AI project, "landing page first"). See "CloakMesh at inference.agi1.app".
+  **Owner:** add the domain in Vercel and its record in Namecheap's cPanel once the Namecheap account is back. Tests: 428
+  unit (on Node 20, 22 and 24, with and without Vercel's settings), 28 SQL checks (PGlite), 120 in a browser.
+- **AGI-1 in the owner's Telegram group: built 2026-10-03, waiting for the owner's setup and OK** (the owner: "can i add
+  agi-1 bot to our public tg group", "ok that seems good", "Yes: diary + market moments", "can she also welcome new
+  members?"). Group mode: only the listed groups (she leaves any other), answers to replies, mentions and /ask, never
+  flirty, her own limits; her diary and market moments posted there; her intro and welcomes. See "In Telegram groups".
+  Hard rule 6 got its third exception. **Owner:** `supabase/telegram.sql` once more (14), `TELEGRAM_GROUPS` in Vercel,
+  Redeploy, run the `/api/feed` cron job, add her to the group (and optionally switch her privacy mode off for
+  @mentions). Tests: 440 unit (on Node 20, 22 and 24, with and without Vercel's settings, the group settings included),
+  74 SQL checks (PGlite). Not tried live (Claude's workspace can't reach Telegram).
 
 ## Decisions log
 
@@ -4695,6 +4875,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-03 | The page's demo of the privacy filter runs only in the visitor's browser (a small JavaScript version written for the page, honest that it's simplified), never on our server: a privacy page must not ask people to send their private details to show them it's private |
 | 2026-10-03 | No $AGI on CloakMesh for now (Claude's advice, the owner: "okay ill follow your advice for now"): a serious privacy product next to a meme coin scares off developers and companies, and coin perks for using it read as investment promises. Later, maybe a free holder perk (early access); never staking, paying holders or "buy $AGI to use it". The owner heard from the clank.trade team that creator fees will come later (see "Open questions") |
 | 2026-10-03 | Vercel's Hobby plan allows 12 functions per deployment, and `api/cloakmesh.js` is the 12th: the next feature shares a function or the project moves to Pro (Claude checked Vercel's docs the same day) |
+| 2026-10-03 | AGI-1 in the owner's Telegram group (the owner: "can i add agi-1 bot to our public tg group", then "ok that seems good"; Claude's design): a group mode in her existing bot and webhook (no new `api/` file: the 12-function limit), only for the groups listed in `TELEGRAM_GROUPS`, and she leaves any other (her name never sits in a look-alike "official" group). She answers only people who reply to her, mention her or type /ask, as a Stranger who never flirts (anyone can be in a group, nobody's age is checked), only $AGI and never real people, a reply under their message (never on its own once it's deleted); a person's 5 a day shared with her private chat, 100 a day per group, Telegram's 400 and the site's 1,000; nothing kept but per-group counts. Not picked: answering every message (spam, cost), the group memory of the clank.trade group (it's about real people), the 18+ check in a group (a group can't be checked: so no flirting there instead), her texts-first lines about egirl coins or copies of $AGI (they name other coins) |
+| 2026-10-03 | Her own posts in her group (the owner picked "Yes: diary + market moments"): the moments the feed finds each run, posted once (the ones it just added, so never twice), never another coin; hard rule 6's third exception. Welcomes (the owner: "can she also welcome new members?"): pre-written, never a name (a name can carry a scam link), at most one every 10 minutes per group (decided by the database, so two server copies never both welcome), with the safety reminder (the contract only from agi1.app, never a seed phrase, not even to an admin); her intro when she's added |
 
 ## Open questions
 
@@ -4814,6 +4996,16 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   must change, and they could pay for CloakMesh's servers (Claude's advice: pay for the product, never share them with
   holders).
 - **Vercel's 12 functions** (2026-10-03): all used (see "Free-tier budgets").
+- **Her Telegram groups** (2026-10-03): with Telegram's privacy mode on (its default), @mentions don't reach her, and a
+  plain `/ask` only reaches her when she was the last bot to post (the menu adds her name in groups with other bots);
+  switching privacy mode off sends every message of the group to our webhook (fine for Vercel's free plan). Very big
+  groups may not send join messages (no welcomes there); anonymous admins can't talk to her. Her group lines are English
+  only (her AI replies follow whoever writes). Not tried live yet: the owner's first group is the check.
+- **agi1.app's DNS** (2026-10-03): it's Namecheap's web hosting DNS (cPanel; nameservers dns1/dns2.namecheaphosting.com),
+  so the whole site's address depends on that hosting account, and the owner's Namecheap account was temporarily
+  suspended that day (the domain itself was fine: registered until 2027-09-27, no hold on it). Worth considering once
+  it's back: DNS that doesn't depend on a hosting plan (the owner's call; its records that day: `A @ 216.198.79.1` and
+  `CNAME www d8bd3091961e12b9.vercel-dns-017.com`; check for email records first).
 
 ## Working in this repo
 

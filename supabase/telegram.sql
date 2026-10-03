@@ -1,12 +1,15 @@
 -- AGI-1 texts first (2026-09-29, the owner's idea): her Telegram bot, and the feed of moments she texts about.
 -- Run this once in the Supabase project that SUPABASE_URL points to: SQL Editor → New query → paste all of it → Run.
--- It only ADDS four new tables and their functions (all named agi1_… / tg_… / feed_…). It doesn't touch any table the
+-- It only ADDS five new tables and their functions (all named agi1_… / tg_… / feed_…). It doesn't touch any table the
 -- original site uses, so it's safe in the database both sites share. Running it again changes nothing that's saved.
+-- (2026-10-03: her Telegram groups added a fifth table and 2 functions: run it once more; it ends with 14.)
 --
 -- What's kept, per person who pressed Start in Telegram: the chat's number (Telegram's id for that chat, needed to text
 -- them; never their phone number, name or username), whether they confirmed they're 18+, the time difference they told
 -- her (so she never texts at night), the newest moment she has texted them about, and how many texts she started today.
 -- Never their messages. /stop in Telegram (or blocking the bot) deletes the row. Only the server (secret key) can use this.
+-- Per Telegram group she's in (only the groups the owner lists): the group's number, how many replies she gave there each
+-- day, and when she last welcomed someone there. Never a message, a name or anyone's account.
 
 -- The people she may text first
 create table if not exists public.agi1_tg_friends (
@@ -43,15 +46,29 @@ create table if not exists public.agi1_tg_usage (
   n   integer not null default 0
 );
 
+-- Her Telegram groups (2026-10-03): per group and day (UTC), her replies there (so one busy group can't use up Telegram's
+-- share of her day), whether she has said that the group's day is used, and when she last welcomed someone (at most one
+-- welcome every 10 minutes). chat_id is the group's own number (negative, like every group's). A week kept.
+create table if not exists public.agi1_tg_group_usage (
+  day         date        not null,
+  chat_id     bigint      not null check (chat_id < 0),
+  n           integer     not null default 0 check (n >= 0),
+  noted       boolean     not null default false,
+  welcomed_at timestamptz,
+  primary key (day, chat_id)
+);
+
 -- Row Level Security ON, with no rules: the public (browser) keys can't read or change these tables.
 alter table public.agi1_tg_friends enable row level security;
 alter table public.agi1_feed enable row level security;
 alter table public.agi1_feed_state enable row level security;
 alter table public.agi1_tg_usage enable row level security;
+alter table public.agi1_tg_group_usage enable row level security;
 revoke all on table public.agi1_tg_friends from anon, authenticated;
 revoke all on table public.agi1_feed from anon, authenticated;
 revoke all on table public.agi1_feed_state from anon, authenticated;
 revoke all on table public.agi1_tg_usage from anon, authenticated;
+revoke all on table public.agi1_tg_group_usage from anon, authenticated;
 
 -- ---------- the people ----------
 -- One person's row, or null
@@ -170,6 +187,58 @@ begin
 end;
 $$;
 
+-- One reply in a group (p_chat, the group's number) against its daily cap (p_max a day, UTC):
+-- 'ok' = one more reply, counted · 'full' = the group's day is used (the first time she hears it today: she says so once) ·
+-- 'quiet' = used, and already said (or not a group)
+create or replace function public.tg_group_take(p_chat bigint, p_max integer)
+returns text
+language plpgsql
+set search_path = public
+as $$
+declare
+  today date := (now() at time zone 'utc')::date;
+  got integer;
+begin
+  if p_chat is null or p_chat >= 0 then return 'quiet'; end if;
+  insert into agi1_tg_group_usage (day, chat_id) values (today, p_chat) on conflict (day, chat_id) do nothing;
+  update agi1_tg_group_usage set n = n + 1
+   where day = today and chat_id = p_chat and n < greatest(0, least(coalesce(p_max, 0), 100000))
+  returning n into got;
+  delete from agi1_tg_group_usage where day < today - 7;
+  if got is not null then return 'ok'; end if;
+  update agi1_tg_group_usage set noted = true
+   where day = today and chat_id = p_chat and not noted
+  returning n into got;
+  return case when got is not null then 'full' else 'quiet' end;
+end;
+$$;
+
+-- People joined a group: may she welcome them? True (and noted) only if she hasn't welcomed anyone there in the last
+-- p_gap_seconds (10 minutes; at least a minute, at most a day). One row is updated at a time, so two server copies asking
+-- at once never both get true.
+create or replace function public.tg_group_welcome(p_chat bigint, p_gap_seconds integer default 600)
+returns boolean
+language plpgsql
+set search_path = public
+as $$
+declare
+  today date := (now() at time zone 'utc')::date;
+  gap interval := make_interval(secs => greatest(60, least(coalesce(p_gap_seconds, 600), 86400)));
+  yesterday_at timestamptz;
+  got date;
+begin
+  if p_chat is null or p_chat >= 0 then return false; end if;
+  insert into agi1_tg_group_usage (day, chat_id) values (today, p_chat) on conflict (day, chat_id) do nothing;
+  select welcomed_at into yesterday_at from agi1_tg_group_usage where day = today - 1 and chat_id = p_chat;   -- (just before midnight)
+  update agi1_tg_group_usage set welcomed_at = now()
+   where day = today and chat_id = p_chat
+     and (welcomed_at is null or welcomed_at <= now() - gap)
+     and (yesterday_at is null or yesterday_at <= now() - gap)
+  returning day into got;
+  return got is not null;
+end;
+$$;
+
 -- After a round of texts, for the ones Telegram said can't be delivered: [{ "chat": 123, "gone": true }] (they blocked the
 -- bot or deleted their account) → forgotten. Also takes { "chat", "seen", "day", "sent" } (seen never goes back).
 -- → how many rows it looked at
@@ -266,6 +335,8 @@ revoke all on function public.tg_due(bigint, bigint, integer) from public, anon,
 revoke all on function public.tg_mark(json) from public, anon, authenticated;
 revoke all on function public.tg_claim(json) from public, anon, authenticated;
 revoke all on function public.tg_take(integer) from public, anon, authenticated;
+revoke all on function public.tg_group_take(bigint, integer) from public, anon, authenticated;
+revoke all on function public.tg_group_welcome(bigint, integer) from public, anon, authenticated;
 revoke all on function public.feed_add(text, text, text) from public, anon, authenticated;
 revoke all on function public.feed_recent(integer) from public, anon, authenticated;
 revoke all on function public.feed_state_get() from public, anon, authenticated;
@@ -278,6 +349,8 @@ grant execute on function public.tg_due(bigint, bigint, integer) to service_role
 grant execute on function public.tg_mark(json) to service_role;
 grant execute on function public.tg_claim(json) to service_role;
 grant execute on function public.tg_take(integer) to service_role;
+grant execute on function public.tg_group_take(bigint, integer) to service_role;
+grant execute on function public.tg_group_welcome(bigint, integer) to service_role;
 grant execute on function public.feed_add(text, text, text) to service_role;
 grant execute on function public.feed_recent(integer) to service_role;
 grant execute on function public.feed_state_get() to service_role;
@@ -286,7 +359,8 @@ grant execute on function public.feed_state_put(jsonb) to service_role;
 -- Tell Supabase's web API to notice the new functions right away.
 notify pgrst, 'reload schema';
 
--- Check: this should show telegram_functions_found = 12.
+-- Check: this should show telegram_functions_found = 14 (12 before her Telegram groups, 2026-10-03).
 select count(*) as telegram_functions_found from pg_proc
 where pronamespace = 'public'::regnamespace
-  and proname in ('tg_get', 'tg_join', 'tg_set', 'tg_forget', 'tg_due', 'tg_claim', 'tg_mark', 'tg_take', 'feed_add', 'feed_recent', 'feed_state_get', 'feed_state_put');
+  and proname in ('tg_get', 'tg_join', 'tg_set', 'tg_forget', 'tg_due', 'tg_claim', 'tg_mark', 'tg_take', 'tg_group_take', 'tg_group_welcome',
+                  'feed_add', 'feed_recent', 'feed_state_get', 'feed_state_put');
