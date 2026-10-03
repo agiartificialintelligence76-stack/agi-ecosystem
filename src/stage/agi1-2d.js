@@ -16,12 +16,14 @@
 //    2d model wave anymore … she moves like a stick"): her model is drawn in an A-pose and its own arm parameters swing
 //    each arm only about 7°, so her arms hang relaxed by her sides, swing a little as she sways, and really wave (her arm
 //    up, her elbow bent, her hand by her head); her weight shifts from one foot to the other (her hips move, her feet stay
-//    on the floor, her upper body leans the other way), and her head looks around a little more.
+//    on the floor, her upper body leans the other way), and her head looks around a little more. Since 2026-10-03 (the
+//    owner's close-ups of an elbow cut flat and a slit at her shirt's side) her arms are drawn with finer meshes
+//    (ARM_REFINE), so her elbow keeps its shape with a smooth outside, and the top of her upper arm moves with her sleeve.
 // The controller returned by createAgi1_2D has the same methods as src/stage/agi1.js's, so the stage uses either.
 import * as THREE from 'three';
-import { loadCubismCore, buildMeshes, pieceAt, boxOf } from './live2d.js';
+import { loadCubismCore, buildMeshes, pieceAt, boxOf, mixInto } from './live2d.js';
 import { createPhysics } from './live2d-physics.js';
-import { measureArm, bendArm } from './agi1-2d-arms.js';
+import { measureArm, bendArm, ARM_PIECES } from './agi1-2d-arms.js';
 import {
   Follow, makeDrift, blinkAmount, blinkLength, nextBlinkGap, mouthStep, eyeOpen, chestLimit, lookAt, clamp, lerp,
   smoothstep, CHEST,
@@ -51,6 +53,10 @@ export const ARMS = {
   // up close (her live views, zoomed in): like on a video call, her hand a little nearer her face
   waveNear: { shoulder: 7, elbow: 134 },
 };
+// her arms' finer meshes (src/stage/live2d.js refineMesh): each triangle of her model's own split in 4, this many times. Her
+// upper arms and forearms 3 times (64 for one), so the outside of her elbow is a smooth curve up close; her hands and
+// sleeves, which bend gently, twice (16 for one)
+export const ARM_REFINE = { upper: 3, fore: 3, hand: 2, sleeve: 2 };
 // her hips: how far her weight shifts from one foot to the other (model units, about 1.5 cm), more in her dance
 export const HIPS = { idle: 0.014, dance: 0.028 };
 
@@ -112,7 +118,10 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
   holder.add(fx);
   fx.add(art);
   let map = texture;
-  const meshes = buildMeshes(core, map, { order: ORDER });
+  // her arms are drawn with finer meshes than her model's own, so they bend smoothly (src/stage/agi1-2d-arms.js)
+  const refine = {};
+  for (const side of ['R', 'L']) for (const [part, name] of Object.entries(ARM_PIECES[side])) if (piece(name) >= 0) refine[piece(name)] = ARM_REFINE[part];
+  const meshes = buildMeshes(core, map, { order: ORDER, refine });
   art.add(meshes.group);
 
   // markers the stage frames her by (like the 3D model's bones), kept where her pieces are every frame
@@ -129,6 +138,12 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
   const restPos = Array.from({ length: D.count }, (_, i) => Float32Array.from(D.vertexPositions[i]));
   const rig = { rest: (i) => restPos[i], indices: (i) => D.indices[i], find: piece };
   const arms = { R: measureArm(rig, 'R'), L: measureArm(rig, 'L') };
+  // …and on the finer vertices she's drawn with (the same joints, so both turn exactly alike)
+  const fine = meshes.fine;
+  const fineRest = restPos.map((p, i) => (fine[i] ? mixInto(p, fine[i], new Float32Array(fine[i].count * 2)) : p));
+  const fineRig = { rest: (i) => fineRest[i], indices: (i) => (fine[i] ? fine[i].indices : D.indices[i]), find: piece };
+  const drawn = { R: arms.R && measureArm(fineRig, 'R', arms.R), L: arms.L && measureArm(fineRig, 'L', arms.L) };
+  const finePos = (i) => (fine[i] ? fine[i].positions : D.vertexPositions[i]);
   // her hips shift sideways with her weight: her shoes stay where they are, her legs lean (more toward her hips), and
   // everything above her legs moves with her hips
   const isLeg = new Uint8Array(D.count);
@@ -138,7 +153,10 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
   const posture = { R: { shoulder: 0, elbow: 0, wrist: 0 }, L: { shoulder: 0, elbow: 0, wrist: 0 }, hip: 0 };
   const own = (i) => D.vertexPositions[i];
   function deform() {
-    bendArm(arms.R, posture.R, own, own);
+    meshes.expand();                                 // her finer pieces from what her model just worked out
+    bendArm(drawn.R, posture.R, finePos, finePos);
+    bendArm(drawn.L, posture.L, finePos, finePos);
+    bendArm(arms.R, posture.R, own, own);            // her model's own vertices too: taps and her markers
     bendArm(arms.L, posture.L, own, own);
     const h = posture.hip;
     if (!h) return;
@@ -147,6 +165,7 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
       if (isLeg[i]) for (let k = 0; k < p.length; k += 2) p[k] += h * smoothstep(feetTop, hipsAt, p[k + 1]);
       else for (let k = 0; k < p.length; k += 2) p[k] += h;
     }
+    for (const i in fine) { const p = fine[i].positions; for (let k = 0; k < p.length; k += 2) p[k] += h; }   // (her arms)
   }
 
   const b = { x0: 0, y0: 0, x1: 0, y1: 0, cx: 0, cy: 0 };
@@ -212,6 +231,7 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
     updateMarks,
     // her arms and hips this frame (the controller sets them; deform() turns her pieces after Live2D's update)
     posture, deform, arms,
+    drawnArms: drawn,                                // the same arms, on the finer vertices she's drawn with
     get lastHit() { return lastHit; },
     // the 4096 px texture, for close-ups on a computer (downloaded once, about 1.2 MB, on request)
     sharpen() {

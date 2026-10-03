@@ -13,8 +13,8 @@ import {
   mouthTarget, mouthStep, chestLimit, CHEST, lookAt,
 } from '../src/stage/agi1-2d-motion.js';
 import { createPhysics, normalize, turnBetween } from '../src/stage/live2d-physics.js';
-import { pieceAt, boxOf } from '../src/stage/live2d.js';
-import { buildPuppet, createAgi1_2D, HEIGHT, FILES, BASE, ARMS, HIPS } from '../src/stage/agi1-2d.js';
+import { pieceAt, boxOf, refineMesh, mixInto } from '../src/stage/live2d.js';
+import { buildPuppet, createAgi1_2D, HEIGHT, FILES, BASE, ARMS, HIPS, ARM_REFINE } from '../src/stage/agi1-2d.js';
 import { measureArm, bendArm, ARM_PIECES, REACH, shoulderLimit } from '../src/stage/agi1-2d-arms.js';
 
 const url = (p) => new URL(`../${p}`, import.meta.url);
@@ -495,6 +495,159 @@ test('her arms and hips, moved in code (2026-10-01, "she moves like a stick"): r
   assert.ok(!d.agi.dancing, 'the dance ends');
   d.run(1);
   assert.ok(d.m.arms.R.now.tip[1] < 0 && d.m.arms.L.now.tip[1] < 0, 'her hands down by her sides');
+});
+
+test('finer meshes for her arms (2026-10-03): each triangle split in 4, every new vertex a fixed mix of at most 3 of the piece\'s own', () => {
+  // a square of two triangles
+  const idx = [0, 1, 2, 0, 2, 3], quad = [0, 0, 1, 0, 1, 1, 0, 1];
+  for (const levels of [0, 1, 2, 3]) {
+    const f = refineMesh(idx, 4, levels);
+    assert.equal(f.indices.length / 3, 2 * 4 ** levels, `${levels}: triangles`);
+    for (let v = 0; v < f.count; v++) {
+      const w = [f.w[v * 3], f.w[v * 3 + 1], f.w[v * 3 + 2]];
+      assert.ok(w.every((x) => x >= 0) && Math.abs(w[0] + w[1] + w[2] - 1) < 1e-6, `${levels}: vertex ${v} mixes ${w}`);
+      for (let j = 0; j < 3; j++) assert.ok(f.from[v * 3 + j] < 4);
+    }
+    for (const i of f.indices) assert.ok(i < f.count);
+    // it follows the piece exactly: any affine change of the piece's vertices, mixed, is the same change of the mixed ones
+    const moved = quad.map((x, k) => (k % 2 ? 0.3 * quad[k - 1] + 1.7 * x - 0.2 : 0.9 * x - 0.4 * quad[k + 1] + 0.5));
+    const a = mixInto(quad, f, new Float32Array(f.count * 2)), b = mixInto(moved, f, new Float32Array(f.count * 2));
+    for (let v = 0; v < f.count; v++) {
+      assert.ok(Math.abs(b[v * 2] - (0.9 * a[v * 2] - 0.4 * a[v * 2 + 1] + 0.5)) < 1e-5);
+      assert.ok(Math.abs(b[v * 2 + 1] - (0.3 * a[v * 2] + 1.7 * a[v * 2 + 1] - 0.2)) < 1e-5);
+    }
+  }
+  // on her: her arms' pieces only (sleeves, upper arms, forearms, hands), drawn with them, covering exactly the same area;
+  // her upper arms and forearms the finest (their elbow), her hands and sleeves a step less
+  const m = newPuppet(), D = m.core.drawables, ids = Array.from(D.ids);
+  const arms = Object.values(ARM_PIECES).flatMap((p) => Object.entries(p));
+  assert.deepEqual(Object.keys(m.meshes.fine).map((i) => ids[i]).sort(), arms.map(([, name]) => name).sort());
+  assert.ok(ARM_REFINE.upper === 3 && ARM_REFINE.fore === 3 && ARM_REFINE.hand === 2 && ARM_REFINE.sleeve === 2);
+  const area = (p, idx) => { let s = 0; for (let k = 0; k < idx.length; k += 3) { const a = idx[k] * 2, b = idx[k + 1] * 2, c = idx[k + 2] * 2; s += Math.abs((p[b] - p[a]) * (p[c + 1] - p[a + 1]) - (p[c] - p[a]) * (p[b + 1] - p[a + 1])) / 2; } return s; };
+  for (const [part, name] of arms) {
+    const i = ids.indexOf(name), f = m.meshes.fine[i], n = 4 ** ARM_REFINE[part];
+    assert.equal(f.indices.length, D.indices[i].length * n, `${name}: ${n} triangles for one`);
+    assert.equal(m.meshes.meshes[i].geometry.attributes.position.count, f.count, `${name} is drawn with its finer mesh`);
+    assert.ok(Math.abs(area(f.positions, f.indices) - area(D.vertexPositions[i], D.indices[i])) < 1e-9, `${name}: the same area`);
+  }
+  assert.equal(m.meshes.meshes[ids.indexOf('shirt')].geometry.attributes.position.count, D.vertexCounts[ids.indexOf('shirt')], 'everything else as her model has it');
+});
+
+test('her sleeve and her elbow (2026-10-03, the owner\'s close-ups): no slit beside her chest, her elbow her artist\'s shape with a smooth outside, nothing poking out', () => {
+  const m = newPuppet(), core = m.core, D = core.drawables, ids = Array.from(D.ids), fine = m.meshes.fine;
+  const set = (R, L) => {
+    core.parameters.values.set(core.parameters.defaultValues);
+    core.update();
+    m.posture.R = { shoulder: 0, elbow: 0, wrist: 0, ...R };
+    m.posture.L = { shoulder: 0, elbow: 0, wrist: 0, ...L };
+    m.posture.hip = 0;
+    m.deform();
+    return {
+      fine: Object.fromEntries(Object.keys(fine).map((i) => [i, Float32Array.from(fine[i].positions)])),
+      own: Object.fromEntries(Object.keys(fine).map((i) => [i, Float32Array.from(D.vertexPositions[i])])),
+    };
+  };
+  const rest = set({}, {});
+  const idxOf = (kind, i) => (kind === 'fine' ? fine[i].indices : D.indices[i]);
+  // where a point at rest is inside a piece's triangles: then where that point goes
+  const locate = (p, idx, x, y) => {
+    for (let k = 0; k < idx.length; k += 3) {
+      const a = idx[k] * 2, b = idx[k + 1] * 2, c = idx[k + 2] * 2;
+      const det = (p[b + 1] - p[c + 1]) * (p[a] - p[c]) + (p[c] - p[b]) * (p[a + 1] - p[c + 1]);
+      if (Math.abs(det) < 1e-14) continue;
+      const l1 = ((p[b + 1] - p[c + 1]) * (x - p[c]) + (p[c] - p[b]) * (y - p[c + 1])) / det;
+      const l2 = ((p[c + 1] - p[a + 1]) * (x - p[c]) + (p[a] - p[c]) * (y - p[c + 1])) / det;
+      if (l1 >= -1e-9 && l2 >= -1e-9 && 1 - l1 - l2 >= -1e-9) return [a, b, c, l1, l2, 1 - l1 - l2];
+    }
+    return null;
+  };
+  const at = (q, [a, b, c, l1, l2, l3]) => [q[a] * l1 + q[b] * l2 + q[c] * l3, q[a + 1] * l1 + q[b + 1] * l2 + q[c + 1] * l3];
+  // how far a point is outside a piece (0 inside)
+  const outside = (p, idx, x, y) => {
+    let best = Infinity;
+    const seg = (ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay; let t = ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1e-12); t = t < 0 ? 0 : t > 1 ? 1 : t; return Math.hypot(ax + t * dx - x, ay + t * dy - y); };
+    for (let k = 0; k < idx.length; k += 3) {
+      const a = idx[k] * 2, b = idx[k + 1] * 2, c = idx[k + 2] * 2;
+      const d1 = (x - p[b]) * (p[a + 1] - p[b + 1]) - (p[a] - p[b]) * (y - p[b + 1]);
+      const d2 = (x - p[c]) * (p[b + 1] - p[c + 1]) - (p[b] - p[c]) * (y - p[c + 1]);
+      const d3 = (x - p[a]) * (p[c + 1] - p[a + 1]) - (p[c] - p[a]) * (y - p[a + 1]);
+      if (!((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0))) return 0;
+      best = Math.min(best, seg(p[a], p[a + 1], p[b], p[b + 1]), seg(p[b], p[b + 1], p[c], p[c + 1]), seg(p[c], p[c + 1], p[a], p[a + 1]));
+    }
+    return best;
+  };
+  const unit = (x, y) => { const l = Math.hypot(x, y); return [x / l, y / l]; };
+  for (const side of ['R', 'L']) {
+    const P = ARM_PIECES[side], up = ids.indexOf(P.upper), sl = ids.indexOf(P.sleeve), fo = ids.indexOf(P.fore), ha = ids.indexOf(P.hand);
+    // her arms relaxed by her sides: the top of her upper arm, under her sleeve, moves exactly like her sleeve there (it
+    // turned in full before, and showed in a slit beside her chest)
+    const relaxed = set(ARMS.rest, ARMS.rest).fine;
+    let under = 0, slit = 0;
+    for (let v = 0; v < rest.fine[up].length; v += 2) {
+      const loc = locate(rest.fine[sl], fine[sl].indices, rest.fine[up][v], rest.fine[up][v + 1]);
+      if (!loc) continue;
+      under++;
+      const s = at(relaxed[sl], loc);
+      slit = Math.max(slit, Math.hypot(s[0] - relaxed[up][v], s[1] - relaxed[up][v + 1]));
+    }
+    assert.ok(under > 50 && slit < 2e-4, `${side}: ${under} points of her upper arm under her sleeve, apart by ${slit.toExponential(1)} at most`);
+    // her elbow, in every bent pose: her forearm turns round her elbow joint as her artist drew her arm (her forearm's soft
+    // top over the end of her upper arm; for one night it bent like a round tube instead, the owner: "what is this lol,
+    // before was better"), with
+    //  • the end of her upper arm (past her elbow joint, under her forearm's top at rest) staying under her forearm: it
+    //    turned only halfway before, and poked out below her elbow as a little flap, 3 to 4 mm;
+    //  • the outside of her elbow a smooth curve on her finer meshes: on her model's own, it turns 40° and more from one
+    //    point to the next 4 mm along (the flat cuts in the owner's close-up);
+    //  • her hand keeping its exact shape.
+    const arm = m.arms[side], { S, E, W } = arm.rest;
+    const uS = unit(E[0] - S[0], E[1] - S[1]), uE = unit(W[0] - E[0], W[1] - E[1]), u = unit(uS[0] + uE[0], uS[1] + uE[1]), n = [-u[1], u[0]];
+    const half = { pos: 0, neg: 0 };                // her arm's half width at her elbow, on each side of its middle
+    for (const i of [up, fo]) {
+      for (let k = 0; k < rest.own[i].length; k += 2) {
+        const dx = rest.own[i][k] - E[0], dy = rest.own[i][k + 1] - E[1];
+        if (Math.abs(dx * u[0] + dy * u[1]) > 0.05) continue;
+        const d = dx * n[0] + dy * n[1];
+        half.pos = Math.max(half.pos, d); half.neg = Math.max(half.neg, -d);
+      }
+    }
+    const end = [];
+    for (let v = 0; v < rest.fine[up].length; v += 2) {
+      const x = rest.fine[up][v], y = rest.fine[up][v + 1];
+      if ((x - E[0]) * uS[0] + (y - E[1]) * uS[1] > 0 && !outside(rest.fine[fo], fine[fo].indices, x, y)) end.push(v);
+    }
+    assert.ok(end.length > 100, `${side}: the end of her upper arm, under her forearm (${end.length} points)`);
+    for (const [name, pose] of Object.entries({ wave: ARMS.wave, waveNear: ARMS.waveNear, cheer: ARMS.cheer, dance: ARMS.dance })) {
+      const q = set(pose, pose);
+      let poke = 0;
+      for (const v of end) poke = Math.max(poke, outside(q.fine[fo], fine[fo].indices, q.fine[up][v], q.fine[up][v + 1]));
+      assert.ok(poke < 2e-3, `${side} ${name}: the end of her upper arm pokes out by ${poke.toExponential(1)} at most`);
+      const out = (side === 'R' ? -1 : 1) * pose.elbow > 0 ? -1 : 1;     // the outside of the bend
+      const h = (out > 0 ? half.pos : half.neg) * 0.7;
+      const turn = {};
+      for (const kind of ['fine', 'own']) {
+        const pts = [];
+        for (let t = -0.07; t <= 0.07 + 1e-9; t += 0.004) {
+          const x = E[0] + u[0] * t + n[0] * h * out, y = E[1] + u[1] * t + n[1] * h * out;
+          const inFore = locate(rest[kind][fo], idxOf(kind, fo), x, y), loc = inFore || locate(rest[kind][up], idxOf(kind, up), x, y);
+          if (loc) pts.push(at(inFore ? q[kind][fo] : q[kind][up], loc));
+        }
+        assert.ok(pts.length > 30, `${side} ${name}: ${pts.length} points along the outside of her elbow`);
+        turn[kind] = 0;
+        for (let k = 2; k < pts.length; k++) {
+          const a = Math.atan2(pts[k - 1][1] - pts[k - 2][1], pts[k - 1][0] - pts[k - 2][0]);
+          const b = Math.atan2(pts[k][1] - pts[k - 1][1], pts[k][0] - pts[k - 1][0]);
+          let d = (Math.abs(b - a) * 180) / Math.PI;
+          if (d > 180) d = 360 - d;
+          turn[kind] = Math.max(turn[kind], d);
+        }
+      }
+      assert.ok(turn.fine < 25 && turn.own > 35, `${side} ${name}: the outside of her elbow turns ${turn.fine.toFixed(1)}° at most between points (her model's own mesh: ${turn.own.toFixed(1)}°)`);
+      const a0 = rest.fine[ha], a1 = q.fine[ha];
+      let worst = 0;
+      for (let k = 2; k < a0.length; k += 2) worst = Math.max(worst, Math.abs(Math.hypot(a0[k] - a0[0], a0[k + 1] - a0[1]) - Math.hypot(a1[k] - a1[0], a1[k + 1] - a1[1])));
+      assert.ok(worst < 1e-5, `${side} ${name}: her hand keeps its shape (${worst})`);
+    }
+  }
 });
 
 test('"reduce motion": no hops, no sways, no dance, no chest follow-through; her moods and blushes stay', () => {

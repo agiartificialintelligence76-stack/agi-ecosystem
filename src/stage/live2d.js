@@ -85,21 +85,77 @@ function clipTo(m, ref, inverted) {
   });
 }
 
+// ---------- finer meshes (2026-10-03) ----------
+// A piece's triangles split in 4, `levels` times (her arms: they bend in code, src/stage/agi1-2d-arms.js, and Live2D's own
+// meshes are too coarse there: her elbow showed as a few straight cuts, the owner's close-up). Every new vertex lies inside
+// one of the piece's own triangles, so it's a fixed mix of at most 3 of its vertices: it follows the piece exactly, and
+// takes its texture coordinates the same way. Returns, per vertex, which vertices it mixes (`from`, 3 each) and how much
+// (`w`, 3 each), and the new triangles.
+export function refineMesh(indices, vertexCount, levels = 2) {
+  const mix = [];                                    // per vertex: Map(original vertex → weight)
+  for (let v = 0; v < vertexCount; v++) mix.push(new Map([[v, 1]]));
+  let tris = Array.from(indices);
+  for (let l = 0; l < levels; l++) {
+    const mid = new Map(), next = [];
+    const middle = (a, b) => {
+      const key = a < b ? a * 1e6 + b : b * 1e6 + a;
+      let m = mid.get(key);
+      if (m === undefined) {
+        const w = new Map();
+        for (const [k, x] of mix[a]) w.set(k, (w.get(k) || 0) + x / 2);
+        for (const [k, x] of mix[b]) w.set(k, (w.get(k) || 0) + x / 2);
+        m = mix.push(w) - 1;
+        mid.set(key, m);
+      }
+      return m;
+    };
+    for (let k = 0; k < tris.length; k += 3) {
+      const a = tris[k], b = tris[k + 1], c = tris[k + 2];
+      const ab = middle(a, b), bc = middle(b, c), ca = middle(c, a);
+      next.push(a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca);
+    }
+    tris = next;
+  }
+  const count = mix.length, from = new Uint32Array(count * 3), w = new Float32Array(count * 3);
+  mix.forEach((m, v) => {
+    const parts = [...m].filter(([, x]) => x > 1e-7).sort((p, q) => q[1] - p[1]);
+    if (parts.length > 3) throw new Error('refineMesh: a vertex mixes more than 3');
+    parts.forEach(([k, x], j) => { from[v * 3 + j] = k; w[v * 3 + j] = x; });
+  });
+  return { count, from, w, indices: count < 65536 ? Uint16Array.from(tris) : Uint32Array.from(tris) };
+}
+// a piece's finer vertices from its own (2 numbers each: x, y; or u, v)
+export function mixInto(src, fine, out) {
+  const { from, w, count } = fine;
+  for (let v = 0, o = 0; v < count; v++, o += 3) {
+    const a = from[o] * 2, b = from[o + 1] * 2, c = from[o + 2] * 2, wa = w[o], wb = w[o + 1], wc = w[o + 2];
+    out[v * 2] = src[a] * wa + src[b] * wb + src[c] * wc;
+    out[v * 2 + 1] = src[a + 1] * wa + src[b + 1] * wb + src[c + 1] * wc;
+  }
+  return out;
+}
+
 // The model's pieces as three.js meshes. `order`: where she draws among the stage's things (renderOrder: after the floor,
-// before the hearts); her own pieces fit between order and order + 0.02, in Live2D's order.
-export function buildMeshes(core, map, { order = 1 } = {}) {
+// before the hearts); her own pieces fit between order and order + 0.02, in Live2D's order. `refine`: { piece index:
+// levels } for pieces drawn with a finer mesh (see refineMesh): their vertices this frame are in `fine[i].positions`, filled
+// from Live2D's by expand() (call it after Live2D's update; then change them if you like, before sync()).
+export function buildMeshes(core, map, { order = 1, refine = {} } = {}) {
   const D = core.drawables;
   const group = new THREE.Group();
   group.name = 'live2d';
-  const meshes = [], proxies = [];
+  const meshes = [], proxies = [], fine = {};
   for (let i = 0; i < D.count; i++) {
-    const n = D.vertexCounts[i];
+    const levels = refine[i] || 0;
+    const f = levels > 0 ? refineMesh(D.indices[i], D.vertexCounts[i], levels) : null;
+    if (f) fine[i] = Object.assign(f, { positions: new Float32Array(f.count * 2) });
+    const n = f ? f.count : D.vertexCounts[i];
     const g = new THREE.BufferGeometry();
     const pos = new THREE.BufferAttribute(new Float32Array(n * 3), 3);
     pos.setUsage(THREE.DynamicDrawUsage);
     g.setAttribute('position', pos);
-    g.setAttribute('uv', new THREE.BufferAttribute(Float32Array.from(D.vertexUvs[i]), 2));   // (Live2D's v points up, like three.js's)
-    g.setIndex(new THREE.BufferAttribute(Uint16Array.from(D.indices[i]), 1));
+    // (Live2D's v points up, like three.js's)
+    g.setAttribute('uv', new THREE.BufferAttribute(f ? mixInto(D.vertexUvs[i], f, new Float32Array(n * 2)) : Float32Array.from(D.vertexUvs[i]), 2));
+    g.setIndex(new THREE.BufferAttribute(f ? f.indices : Uint16Array.from(D.indices[i]), 1));
     const mesh = new THREE.Mesh(g, drawMaterial(map, D.constantFlags[i]));
     mesh.name = D.ids[i];
     mesh.frustumCulled = false;
@@ -124,14 +180,18 @@ export function buildMeshes(core, map, { order = 1 } = {}) {
     }
   }
 
+  // The finer pieces' vertices from Live2D's, this frame (after its update, before anything turns them)
+  function expand() {
+    for (const i in fine) mixInto(D.vertexPositions[i], fine[i], fine[i].positions);
+  }
   // After the model's update: copy where each piece is, its opacity, its order and its colors
   function sync() {
     const flags = D.dynamicFlags, op = D.opacities, ro = D.renderOrders;
     const mul = D.multiplyColors, scr = D.screenColors;
     for (let i = 0; i < D.count; i++) {
       const mesh = meshes[i];
-      const src = D.vertexPositions[i], attr = mesh.geometry.attributes.position, dst = attr.array;
-      for (let k = 0, n = D.vertexCounts[i]; k < n; k++) { dst[k * 3] = src[k * 2]; dst[k * 3 + 1] = src[k * 2 + 1]; }
+      const f = fine[i], src = f ? f.positions : D.vertexPositions[i], attr = mesh.geometry.attributes.position, dst = attr.array;
+      for (let k = 0, n = f ? f.count : D.vertexCounts[i]; k < n; k++) { dst[k * 3] = src[k * 2]; dst[k * 3 + 1] = src[k * 2 + 1]; }
       attr.needsUpdate = true;
       mesh.visible = (flags[i] & 1) !== 0 && op[i] > 0.002;
       mesh.material.uniforms.opacity.value = op[i];
@@ -152,7 +212,8 @@ export function buildMeshes(core, map, { order = 1 } = {}) {
     for (const m of meshes) { m.geometry.dispose(); m.material.dispose(); }
     for (const p of proxies) p.material.dispose();
   }
-  return { group, meshes, proxies, sync, setMap, dispose };
+  expand();
+  return { group, meshes, proxies, fine, expand, sync, setMap, dispose };
 }
 
 // Which of her pieces is at (x, y) (model units), the frontmost first; -1 for none. For taps: only visible, mostly opaque
