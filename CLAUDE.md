@@ -108,6 +108,8 @@
 >   (`supabase/telegram.sql` once more, `TELEGRAM_GROUPS`, then add her). See "In Telegram groups". **The group's own link,
 >   t.me/agi2dotapp ("$AGI Community Group"), is a round button next to X in the top bar since 2026-10-05** (the owner:
 >   "can you add a telegram here"), with a menu row on small phones and a footer link, on every page with the top bar.
+>   **And in her groups, `/ca` and `/website`** (2026-10-05, the owner: "/ca the contract address will reply … /website the
+>   website link … just that"): the official contract (a tap copies it) and agi1.app, pre-written. See "In Telegram groups".
 > - **Her launch video** (2026-10-03, the owner: "now create me a professional launch video with motion design using only
 >   code about the website and its features … make it really good"): a 79-second film of agi1.app, every frame drawn in
 >   code and its music made in code (`tools/promo/`), wide (1920 × 1080) and tall (1080 × 1920), 60 frames a second, for
@@ -232,7 +234,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    `TELEGRAM_GROUPS` (anywhere else she leaves at once): her diary entry and $AGI's market moments as they happen (the
    same pre-written lines as her texts first, never anything about another coin), a pre-written intro when she's added
    and a pre-written welcome when people join (at most one every 10 minutes, never a name); her AI replies there only to
-   someone who replies to her, mentions her or types /ask, never flirty (see "In Telegram groups").
+   someone who replies to her, mentions her or types /ask, never flirty (see "In Telegram groups"); and (2026-10-05) her
+   pre-written answers to `/ca` (the official contract) and `/website` (agi1.app), only when someone types them.
 7. **Keep costs near $0.** The total budget is $150. Prefer free tiers, and check every new feature against the budget table below.
 8. **Not financial advice.** Nothing on the site, and nothing AGI-1 says, promises gains or tells people to buy or sell.
    **One exception, the owner's choice (2026-09-25):** when a Stranger or a Crush runs out of messages for the day, AGI-1's
@@ -1850,7 +1853,16 @@ nothing kept). The owner: "ok that seems good"; asked whether she should also po
   **Never a name** (a name can be anything: "Free airdrop at …"), at most **one every 10 minutes** in a group whoever
   joined, and only when people joined (not only bots). Telegram may not send join messages in very big groups: then
   there are no welcomes.
-- **Talking to her:** `/ask your question` (her group menu offers /ask and /help, with her name added when the group has
+- **/ca and /website** (2026-10-05, the owner: "when they chat in the telegram group /ca the contract address will reply
+  and when they /website the website link like will reply . just that"): `/ca` gets "the official $AGI contract on
+  Robinhood Chain 💜", the address on its own line, marked as code (Telegram copies it with a tap), "the same one as on
+  agi1.app. anyone sending you a different one isn't us. not financial advice"; `/website` gets "the official website 💜
+  https://agi1.app" (`GROUP_CA`, `GROUP_WEBSITE` in `server/tg-lines.js`; the address is `OFFICIAL_CA`, the site's one).
+  Plain or with her name (`/ca@agi1_appbot`), any case, under their message (or on its own if a cleaning bot already
+  deleted the command), in their topic. Pre-written: no AI, nothing counted, nothing kept. Each at most **once every 30
+  seconds in a group** (asked again sooner, by anyone: no answer, it's right above), inside her speed bumps (4 a minute
+  per person, 15 per group). Only in her groups: her private chat answers them with her help, as before.
+- **Talking to her:** `/ask your question` (her group menu offers /ask, /ca, /website and /help, with her name added when the group has
   other bots), a **reply** to one of her messages, or an **@mention** of her (only once her privacy mode is off: "How it
   works"). She answers under their message, in at most 2 sentences, in English unless they write in another language:
   the site's chat as a Stranger, **never flirty** (anyone can be in a group, and nobody's age is checked there), **only
@@ -1895,8 +1907,12 @@ nothing kept). The owner: "ok that seems good"; asked whether she should also po
   10 minutes per group, a welcome just before midnight included; one row updated at a time, so two server copies never
   both welcome). Per group and day only: its number (a group's, negative), how many replies, whether "full" was said, when
   she last welcomed someone. A week kept.
-- **Her group menu:** `/ask` and `/help` for all group chats, set by `connectBot()` (each `/api/feed` run) while group mode
+- **Her group menu:** `/ask`, `/ca`, `/website` and `/help` (`GROUP_COMMANDS`; /ca and /website since 2026-10-05) for all
+  group chats, set by `connectBot()` (each `/api/feed` run: a changed list is set again by the next run) while group mode
   is on, and removed when it's off (so groups show her usual menu again).
+- **/ca and /website:** handled in `onGroup()` right after the speed bumps, before anything is counted (`FIXED`,
+  `FIXED_GAP_MS` in `server/tg-groups.js`): the contract's `code` mark is an entity on our own text (no `parse_mode`, so
+  nothing is parsed), its offset in UTF-16 units like Telegram's (💜 counts two).
 - **Her posts:** in `/api/feed`, right after `gatherMoments()`: `postToGroups()` posts this run's new diary and market
   moments to each listed group (by its @username, or its id), oldest first, before her texts first. A post that fails
   (she was removed, Telegram busy) is logged and never tried again (never twice).
@@ -1911,8 +1927,8 @@ nothing kept). The owner: "ok that seems good"; asked whether she should also po
    it). Several groups: separated by commas, each once. Optional: `TELEGRAM_GROUP_DAILY_CAP` (her replies a day in a group,
    default 100), `TELEGRAM_GROUP_POSTS` = `off` (no diary and market posts), `TELEGRAM_GROUP_WELCOME` = `off` (no
    welcomes). Then **Redeploy**.
-3. **Vercel** → Settings → **Cron Jobs** → `/api/feed` → **Run**: her group menu (/ask, /help) is set at once (otherwise
-   within 3 hours).
+3. **Vercel** → Settings → **Cron Jobs** → `/api/feed` → **Run**: her group menu (/ask, /ca, /website, /help) is set at
+   once (otherwise within 3 hours; the same after a push that changes it).
 4. **Telegram:** the group → Add members → `@agi1_appbot`. She says hi. (If Telegram won't add a bot: @BotFather → /mybots
    → the bot → Bot Settings → Allow Groups? → Turn groups on.)
 5. **Optional, @mentions:** @BotFather → `/setprivacy` → the bot → **Disable**, then remove her from the group and add her
@@ -1932,7 +1948,9 @@ of the group once privacy mode is off: still well inside Vercel's free million a
 | No intro, and she answers nothing | (none) | `TELEGRAM_GROUPS` wasn't set yet (or no Redeploy after it) when she was added: set it, Redeploy, remove her and add her again |
 | "i'm still getting ready 💜" to every /ask | `tg_group_take not found: run supabase/telegram.sql again …` | Setup step 1 |
 | No welcomes | `tg_group_welcome not found …` (or none) | Setup step 1. Otherwise by design: one every 10 minutes at most, only for people; very big groups may not send join messages |
-| `/ask hi` gets nothing, but `/ask@agi1_appbot hi` works | (none) | Another bot posted after her, so Telegram gives plain commands to that bot: the menu adds her name; or switch her privacy mode off (setup step 5) |
+| `/ask hi` (or `/ca`, `/website`) gets nothing, but `/ask@agi1_appbot hi` works | (none) | Another bot posted after her, so Telegram gives plain commands to that bot: the menu adds her name; or switch her privacy mode off (setup step 5), or make her an admin of the group (admins get every message; she needs none of an admin's rights) |
+| `/ca` (or `/website`) gets nothing the second time | (none) | By design: each at most once every 30 seconds in a group (the answer is right above). Wait half a minute |
+| The group's command menu shows no /ca or /website | (none) | Her menu is set by the next `/api/feed` run: Vercel → Cron Jobs → `/api/feed` → **Run** (Telegram apps may take a moment to show it) |
 | @mentions get nothing | (none) | Her privacy mode is on (Telegram's default): setup step 5 |
 | Someone posting "as the group" gets nothing | (none) | Anonymous admins have no person to count messages for: post as yourself |
 | "i've talked a lot in here today 🙈" | (none) | The group's 100 replies today are used: raise `TELEGRAM_GROUP_DAILY_CAP`, Redeploy |
@@ -1955,6 +1973,11 @@ off, Telegram refusing); her posts (only the diary and market moments, by @usern
 removed group, off); `/api/feed` posting a new moment once. `tests/page.test.js`: the safety note's date. The SQL ran in
 PGlite (74 checks, 22 new: the group's day, "full" once, never a private chat, a week kept, welcomes every 10 minutes and
 just before midnight, the table's columns, permissions, RLS on five tables, run over the version from before her groups).
+Since 2026-10-05 (1 more, 39 in all): `/ca` and `/website` (their lines: the official contract once and no other address,
+not financial advice, the site; the contract's code mark exactly on the address in UTF-16 units; under their message or on
+its own, in their topic, no preview, no formatting; no AI, no database; with her name, any case, words after it; once
+every 30 s per group, each command on its own, another group its own; a flood inside her speed bumps; another bot's
+command, a bot, the group as itself, group mode off: nothing; her private chat as before) and her group menu's four.
 **Not tried live:** Telegram itself (Claude's workspace can't reach it): the owner's setup step 6 is the first real check.
 
 ## Her languages (2026-09-29)
@@ -4898,6 +4921,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   every page with the top bar (home, diary, launch, live). The default look's phone menu starts at 960 px now (920
   before); Pop mode's 1040 px still fits. No setup. Tests: 454 unit (on Node 20, 22 and 24, with and without Vercel's
   settings), the top bar measured at every width from 300 to 1500 px in both looks and themes (nothing sticks out).
+- **/ca and /website in her Telegram group: built 2026-10-05, waiting for the owner's push** (the owner: "can you add on the
+  telegram bot, when they chat in the telegram group /ca the contract address will reply and when they /website the website
+  link like will reply . just that"). Pre-written answers: the official contract (a tap copies it) and agi1.app, each at most
+  once every 30 s in a group; in her group menu too. See "/ca and /website" in "In Telegram groups". **Owner:** push, then
+  Vercel → Cron Jobs → `/api/feed` → Run (her group menu). No SQL, no setting. Tests: 455 unit (on Node 20, 22 and 24, with
+  and without Vercel's settings). Not tried live (Claude's workspace can't reach Telegram).
 
 ## Decisions log
 
@@ -5087,6 +5116,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-05 | The risk check prices every coin at its own pair's price (the owner: "not accurate"): clank.trade gives a coin's market cap, reserve and threshold in its pair (ETH or, since 2026-10-02, SPCX), and our server multiplied them all by ETH's price, so the 32 coins paired with SPCX looked about 17 times bigger ($SI $677.5K for $39.8K). Now ETH's and SPCX's prices come with every first request (clank.trade's `exchangeRates.tokenUsdg`, the numbers its own page uses), any other pair is asked once, and a price that can't be read leaves "—" (never ETH's). Copycats are compared in dollars too. A scan says which pair a coin has ("Paired with") |
 | 2026-10-05 | The risk check's pictures from public IPFS gateways, made small by our server with sharp (the owner: "theres no pictures"): clank.trade's own Pinata gateway now answers only clank.trade's pages (401, ERR_ID:00024). Not picked: sending a "clank.trade" Origin or Referer to get past that rule (its gateway is its own to keep, and it pays for it), loading pictures straight from a gateway in visitors' browsers (a new CSP domain, and every visitor's address to a third party), serving the originals as they are (some are 0.7 MB+: too heavy for a 96 px circle), Vercel's own image service (Hobby's monthly limit, and no fallback between gateways). sharp is an npm package (about 19 MB) in `api/checker.js` only (`server/coin-pictures.js`, checked with Vercel's own file tracer) |
 | 2026-10-05 | The $AGI community group on Telegram in the top bar (the owner: "can you add a telegram here", with t.me/agi2dotapp; Claude checked it: "$AGI Community Group", a public group): a round button right after X, a menu row under 380 px like X's, and "Telegram @agi2dotapp ↗" in the footer (its handle, so people can tell the real group from a copy), on the four pages with the top bar. Its icon is a paper plane drawn for the site as a line icon (like the theme button's), not Telegram's logo. The default look's phone menu starts at 960 px now (the row needs about 945 px; 920 before); Pop mode's 1040 px still fits (20 px to spare at 1041, as the default look had before). Not added: a planet or a "Her world" row on the front (a design change nobody asked for), or the group in her replies (her reply cleanup keeps removing links and handles other than ours) |
+| 2026-10-05 | `/ca` and `/website` in her Telegram groups (the owner: "/ca the contract address will reply … /website the website link … just that"): pre-written (no AI cost, nobody's messages a day), the address marked as code so a tap copies it (an entity on our own text, never `parse_mode`), the link without a preview, each at most once every 30 s in a group (a spam guard: the answer is right above), plain or with her name, and in her group menu. The CA line also says where to check it and that a different one isn't us (a group is where fake contracts get posted). Until now no group line carried an address or a link ("copy it from agi1.app"); the owner asked for this one, and it's the one official contract from the code (`OFFICIAL_CA`). Not changed: her private chat (the owner asked for the group: there /ca gets her help, as before), her /help line |
 
 ## Open questions
 

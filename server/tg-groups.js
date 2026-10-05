@@ -10,6 +10,9 @@
 //     Her limits there: each person's Stranger's messages a day (5, shared with her private chat: the same daily code of
 //     their account), the group's TELEGRAM_GROUP_DAILY_CAP (100), Telegram's share of the site's day (TELEGRAM_DAILY_CAP),
 //     the site's daily cap; speed bumps per person (4 a minute) and per group (15). Nothing of what they write is kept.
+//   • /ca and /website (2026-10-05, the owner's): the official $AGI contract (marked as code, so a tap copies it) and the
+//     site's link, pre-written (no AI, nobody's messages a day), each at most once every 30 seconds in a group (the answer
+//     is right above), within the same speed bumps;
 //   • when she's added: her intro; when people join: a short pre-written welcome (no names, a safety reminder), at most one
 //     every 10 minutes in a group (TELEGRAM_GROUP_WELCOME=off: none);
 //   • api/feed.js posts her diary and $AGI's market moments there as they happen (postToGroups; TELEGRAM_GROUP_POSTS=off:
@@ -21,7 +24,8 @@ import { rpc, takeChatSlot } from './limits.js';
 import { askAgi1, TLDS } from './gemini.js';
 import { levelInfo } from '../src/lib/levels.js';
 import { groupPersonBurst, groupBurst } from './burst.js';
-import { tgLinesFor, groupIntro, GROUP_WELCOMES, GROUP_HELP, GROUP_FULL, GROUP_OUT, pickFor } from './tg-lines.js';
+import { tgLinesFor, groupIntro, GROUP_WELCOMES, GROUP_HELP, GROUP_FULL, GROUP_OUT, GROUP_CA, GROUP_WEBSITE, pickFor } from './tg-lines.js';
+import { OFFICIAL_CA } from './agi1-prompt.js';
 import { botName } from '../src/chat/telegram-link.js';
 
 const MAX_TEXT = 500;                        // characters she reads (the same as the site's chat and her private chat)
@@ -30,8 +34,17 @@ export const WELCOME_GAP_S = 600;            // at most one welcome every 10 min
 // her commands in groups (server/telegram.js connectBot sets them for all group chats while group mode is on)
 export const GROUP_COMMANDS = [
   { command: 'ask', description: 'Ask AGI-1 something (a few a day each)' },
+  { command: 'ca', description: 'The official $AGI contract' },
+  { command: 'website', description: 'The official website, agi1.app' },
   { command: 'help', description: 'How to talk to her in here' },
 ];
+// /ca and /website: what she answers (the contract marked as code: Telegram copies it with a tap), at most once every 30 s
+// in a group
+export const FIXED_GAP_MS = 30_000;
+const FIXED = {
+  ca: { text: GROUP_CA, entities: [{ type: 'code', offset: GROUP_CA.indexOf(OFFICIAL_CA), length: OFFICIAL_CA.length }] },
+  website: { text: GROUP_WEBSITE },
+};
 // /ask, /ask@her_bot, "/help@her_bot something" → [, name, @name, the rest]
 const COMMAND = /^\/([A-Za-z0-9_]{1,32})(?:@([A-Za-z0-9_]{3,64}))?(?:\s+([\s\S]*))?$/;
 
@@ -148,12 +161,13 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
   let me = identity(token);
   if (!me.username && (cmd?.[2] || ents.some((e) => e?.type === 'mention') || body.includes('@'))) me = await botIdentity(token, process.env, now);
 
-  // is it for her? /ask (or her own commands, with her name), a reply to her, or a mention of her
-  let ask = '', help = false;
+  // is it for her? /ask (or her own commands, with her name), /ca, /website, a reply to her, or a mention of her
+  let ask = '', help = false, fixed = null;
   if (cmd) {
     if (cmd[2] && me.username && cmd[2].toLowerCase() !== me.username) return 'ignored';   // another bot's command
     const name = cmd[1].toLowerCase();
     if (name === 'ask') ask = withoutHer(cmd[3] || '', [], me);
+    else if (Object.hasOwn(FIXED, name)) fixed = name;          // /ca, /website (plain, or with her name)
     else if (name === 'help' || cmd[2]) help = true;            // /help, or another of her commands sent to her by name
     else return 'ignored';                                       // someone else's plain command (/start, /warn…)
   } else if (toHer || mentionsHer(body, ents, me)) {
@@ -162,6 +176,16 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
 
   // speed bumps, only for messages meant for her: 4 a minute per person, 15 a minute per group (per server copy)
   if (!groupPersonBurst(chatCode(cfg.passSecret, m.from.id, 'gburst'), now) || !groupBurst(chatCode(cfg.passSecret, chat.id, 'gburst'), now)) return 'too_many';
+
+  // /ca and /website: her fixed answer under their message (on its own if a bot already cleaned their command away), at
+  // most once every 30 seconds in a group (asked again sooner: the answer is right above); no AI, nothing counted
+  if (fixed) {
+    if (!firstTime(`${fixed}:${chat.id}`, now, FIXED_GAP_MS)) return 'group_recent';
+    const { text: line, entities } = FIXED[fixed];
+    await say(token, chat.id, line, { reply_parameters: { message_id: m.message_id, allow_sending_without_reply: true }, ...topicOf(m), ...(entities ? { entities } : {}) },
+      { timeoutMs: 4000 }).catch((err) => console.warn(`[telegram] couldn't answer /${fixed} in a group: ${err.message}`));
+    return `group_${fixed}`;
+  }
 
   const E = tgLinesFor('en');
   const day = new Date(now).toISOString().slice(0, 10);

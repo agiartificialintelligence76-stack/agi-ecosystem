@@ -1216,8 +1216,85 @@ test('her group prompt and her group lines: never flirty, only $AGI, a safety re
   assert.equal(new Set(L.GROUP_WELCOMES).size, 3, 'three welcomes, taking turns');
   assert.match(L.GROUP_HELP, /tap my name and press Start/);
   assert.match(L.GROUP_FULL, /00:00 UTC/);
-  assert.deepEqual(GROUP_COMMANDS.map((c) => c.command), ['ask', 'help']);
+  assert.deepEqual(GROUP_COMMANDS.map((c) => c.command), ['ask', 'ca', 'website', 'help'], '(/ca and /website since 2026-10-05)');
   for (const c of GROUP_COMMANDS) assert.ok(/^[a-z]{1,32}$/.test(c.command) && c.description.length <= 256 && !NOT_OK.test(c.description));
+});
+
+// 2026-10-05, the owner: "when they chat in the telegram group /ca the contract address will reply and when they /website
+// the website link like will reply . just that"
+test('/ca and /website in her group: the official contract (a tap copies it) and the site; no AI, nothing counted; once every 30 s', async () => {
+  inGroup();
+  // the lines: the one official contract (where else to check it, not financial advice), and the site
+  assert.equal(L.GROUP_CA.split(OFFICIAL).length, 2, 'the official contract, once');
+  assert.deepEqual(L.GROUP_CA.match(/0x[0-9a-f]+/gi), [OFFICIAL], 'no other address');
+  assert.match(L.GROUP_CA, /\$AGI contract on Robinhood Chain/);
+  assert.match(L.GROUP_CA, /agi1\.app/);
+  assert.match(L.GROUP_CA, /a different one isn't us/);
+  assert.match(L.GROUP_CA, /not financial advice$/);
+  assert.doesNotMatch(L.GROUP_CA, /https?:\/\//, 'no link in the contract line');
+  assert.equal(L.GROUP_WEBSITE, 'the official website 💜 https://agi1.app');
+  for (const line of [L.GROUP_CA, L.GROUP_WEBSITE]) assert.doesNotMatch(line, NOT_OK, line);
+
+  let t = NOW;
+  const next = () => { t += 31_000; return t; };                       // (past the 30 s, and inside her speed bumps)
+  const answer = async (update, at = next()) => {
+    calls.length = 0;
+    const what = await handleUpdate(cfg(), TOKEN, update, at);
+    return [what, tg('sendMessage').at(-1)?.body ?? null];
+  };
+  // /ca: under their message, the address marked as code (Telegram copies it with a tap), plain text otherwise, no preview
+  let [what, sent] = await answer(gmsg('/ca'));
+  assert.equal(what, 'group_ca');
+  assert.equal(sent.chat_id, GROUP);
+  assert.equal(sent.text, L.GROUP_CA);
+  assert.deepEqual(sent.entities, [{ type: 'code', offset: L.GROUP_CA.indexOf(OFFICIAL), length: 42 }]);
+  const [code] = sent.entities;
+  assert.equal(sent.text.slice(code.offset, code.offset + code.length), OFFICIAL, 'exactly the address (offsets in UTF-16 units, like Telegram counts them: 💜 is two)');
+  assert.deepEqual(sent.reply_parameters, { message_id: 50, allow_sending_without_reply: true }, 'under their message, or on its own if a bot already deleted their command');
+  assert.equal(sent.parse_mode, undefined, 'no Telegram formatting');
+  assert.deepEqual(sent.link_preview_options, { is_disabled: true });
+  assert.equal(calls.filter((c) => c.to === 'gemini' || c.to === 'db').length, 0, 'no AI, nothing counted, nothing stored');
+  assert.equal(tg('sendChatAction').length, 0);
+  // /website
+  [what, sent] = await answer(gmsg('/website'));
+  assert.equal(what, 'group_website');
+  assert.equal(sent.text, L.GROUP_WEBSITE);
+  assert.equal(sent.entities, undefined);
+  assert.equal(sent.reply_parameters.allow_sending_without_reply, true);
+  assert.equal(calls.filter((c) => c.to === 'gemini' || c.to === 'db').length, 0);
+  // with her name, any case, words after it; in a topic
+  for (const text of ['/ca@agi1_appbot', '/CA@AGI1_APPBOT', '/Ca what is it', '/website@agi1_appbot pls', '/WEBSITE']) {
+    assert.equal((await answer(gmsg(text)))[0], /^\/ca/i.test(text) ? 'group_ca' : 'group_website', text);
+  }
+  [, sent] = await answer(gmsg('/ca', { is_topic_message: true, message_thread_id: 7 }));
+  assert.equal(sent.message_thread_id, 7, 'in their topic');
+  // at most once every 30 s in a group, whoever asks (the answer is right above); /ca and /website each on their own
+  const at = next();
+  assert.equal((await answer(gmsg('/ca', { from: { id: 901, is_bot: false } }), at))[0], 'group_ca');
+  assert.deepEqual(await answer(gmsg('/ca', { from: { id: 902, is_bot: false } }), at + 10_000), ['group_recent', null]);
+  assert.equal((await answer(gmsg('/website', { from: { id: 902, is_bot: false } }), at + 11_000))[0], 'group_website');
+  assert.deepEqual(await answer(gmsg('/ca', { from: { id: 903, is_bot: false } }), at + 29_999), ['group_recent', null]);
+  assert.equal((await answer(gmsg('/ca', { from: { id: 903, is_bot: false } }), at + 30_000))[0], 'group_ca');
+  // another group has its own 30 s
+  inGroup({ TELEGRAM_GROUPS: '@agi_group @second_group' });
+  const other = gmsg('/ca', { chat: groupChat({ id: -1009999, username: 'second_group' }), from: { id: 904, is_bot: false } });
+  assert.equal((await answer(other, at + 30_001))[0], 'group_ca');
+  // a flood from one person stays inside her speed bumps (4 a minute)
+  t = at + 120_000;
+  const flood = [];
+  for (let i = 0; i < 5; i += 1) flood.push((await answer(gmsg('/ca', { from: { id: 950, is_bot: false } }), t + i * 1000))[0]);
+  assert.deepEqual(flood, ['group_ca', 'group_recent', 'group_recent', 'group_recent', 'too_many']);
+  // not for her: another bot's /ca, a bot, the group posting as itself
+  for (const u of [gmsg('/ca@other_bot'), gmsg('/website@modbot'), gmsg('/ca', { from: { id: 5, is_bot: true, first_name: 'Bot' } }),
+    gmsg('/website', { sender_chat: { id: GROUP, type: 'supergroup' } })]) {
+    assert.deepEqual(await answer(u, t += 61_000), ['ignored', null]);
+    assert.equal(calls.length, 0);
+  }
+  // group mode off: as before, nothing
+  delete process.env.TELEGRAM_GROUPS;
+  assert.deepEqual(await answer(gmsg('/ca'), t += 61_000), ['ignored', null]);
+  // her private chat is as it was (the owner asked for the group): her help
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg('/ca'), t += 61_000), 'help');
 });
 
 test('connecting the bot: /ask and /help in groups while group mode is on, her usual menu otherwise', async () => {

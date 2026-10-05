@@ -109,6 +109,12 @@ export const GROUP_HELP = "in here, reply to one of my messages or type /ask and
 export const GROUP_FULL = "i've talked a lot in here today 🙈 back tomorrow (my day starts at 00:00 UTC)";
 // this person's messages for today are used (a Stranger's, shared with her private chat): said once a day
 export const GROUP_OUT = "that's all my messages with you for today 🙈 talk tomorrow?";
+// /ca and /website in a group (2026-10-05, the owner: "when they chat in the telegram group /ca the contract address will
+// reply and when they /website the website link … just that"). The one official contract (the same as everywhere on the
+// site: server/tg-groups.js marks it as code, so a tap copies it), and the site. The only group lines with an address or
+// a link in them.
+export const GROUP_CA = `the official $AGI contract on Robinhood Chain 💜\n\n${OFFICIAL_CA}\n\nthe same one as on ${SITE}. anyone sending you a different one isn't us. not financial advice`;
+export const GROUP_WEBSITE = `the official website 💜 https://${SITE}`;
 
 // "What time is it for you right now?": 24 buttons, one for each hour, showing the minutes as they are now (a 30-minute
 // time zone picks the closest). Each button carries only its hour: the difference to UTC is worked out when it's tapped,
