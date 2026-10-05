@@ -27,12 +27,11 @@
 // api/checker.js serves all of it (Vercel's CDN shares each answer); src/sections/checker.js shows it.
 import { TOKENS, bestPair } from '../src/prices/parse.js';
 import { tickerKey, markCopycats } from '../src/checker/copycat.js';
-import { UA, cleanName, isCrude, readLimited } from './coins.js';
+import { UA, cleanName, isCrude, readLimited, clankApi } from './coins.js';
 import { STAGE, FACTORY, FORWARDER, ETH_PAIR, SPCX, PAIR_NAMES, readCoinOnChain, shareOf } from './clank-chain.js';
 
-export { tickerKey, markCopycats };
+export { tickerKey, markCopycats, clankApi };
 
-const CLANK_API = 'https://clank.trade/v1/trpc/';
 const DEX_API = 'https://api.dexscreener.com/tokens/v1/robinhood/';
 const EXPLORER_API = 'https://robinhoodchain.blockscout.com/api/v2/tokens/';
 const ETH = ETH_PAIR;                                                  // a coin paired with ETH names the zero address
@@ -128,25 +127,8 @@ export function timeText(ms) {
 const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 // ---------- reading clank.trade ----------
-// One request to clank.trade's API with several questions at once ("batch"): [[name, input], …] → for each question
-// { data } or { error: 'not_found' | 'bad' }. Throws when clank.trade doesn't answer properly (down, a bot wall, a change).
-export async function clankApi(calls, { timeoutMs = 8000 } = {}) {
-  const names = calls.map(([name]) => name).join(',');
-  const input = Object.fromEntries(calls.map(([, value], i) => [i, value ?? {}]));
-  const res = await fetch(`${CLANK_API}${names}?batch=1&input=${encodeURIComponent(JSON.stringify(input))}`, {
-    headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(timeoutMs),
-  });
-  // 200 = all answered, 207 = some did, 404 = all "not found"; anything else is an outage or a wall
-  if (![200, 207, 404].includes(res.status)) throw new Error(`clank.trade HTTP ${res.status}`);
-  const bytes = await readLimited(res, 3_000_000);
-  if (!bytes) throw new Error('clank.trade answer too big');
-  let body;
-  try { body = JSON.parse(bytes.toString('utf8')); } catch { throw new Error('clank.trade answer is not JSON'); }
-  if (!Array.isArray(body) || body.length !== calls.length) throw new Error('clank.trade answer has an unexpected shape');
-  return body.map((item) => (item && typeof item === 'object' && 'result' in item
-    ? { data: item.result?.data ?? null }
-    : { error: item?.error?.data?.httpStatus === 404 ? 'not_found' : 'bad' }));
-}
+// clankApi (one request to clank.trade's API with several questions at once) lives in server/coins.js since 2026-10-06,
+// so the buy bot (server/buys.js, every minute) can use it without loading the chain's code (viem); exported here as before.
 
 // ---------- the list of every coin ----------
 // Where each coin's picture is, remembered from the lists this server copy read (so a picture rarely costs a lookup)

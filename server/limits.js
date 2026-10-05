@@ -43,6 +43,11 @@ for (const fn of ['live_ask', 'live_lookup', 'live_start', 'live_beat', 'live_st
   MISSING[fn] = `${fn} not found: run supabase/live.sql in this Supabase project`;
 }
 
+// the $AGI buy bot (2026-10-06): supabase/buys.sql
+for (const fn of ['buy_key', 'buy_take']) {
+  MISSING[fn] = `${fn} not found: run supabase/buys.sql in this Supabase project (it ends with buys_ready = 1)`;
+}
+
 // CloakMesh's waitlist (inference.agi1.app, 2026-10-03): supabase/cloakmesh.sql
 for (const fn of ['cloakmesh_ready', 'cloakmesh_join', 'cloakmesh_leave']) {
   MISSING[fn] = `${fn} not found: run supabase/cloakmesh.sql in this Supabase project`;

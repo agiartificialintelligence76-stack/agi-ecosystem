@@ -1,5 +1,6 @@
 // Helpers for clank.trade coins, used by ClankChecker (server/checker.js): cleaning a coin's name, telling crude names
-// apart, checking a coin picture really is one, reading an answer only up to a size, and the name our server gives itself.
+// apart, checking a coin picture really is one, reading an answer only up to a size, the name our server gives itself, and
+// (since 2026-10-06) clank.trade's API itself, which the buy bot (server/buys.js) shares. No imports: light to load.
 // (Until 2026-09-28 this file was also the Arena's coin list and nominations; they left with the Arena.)
 
 // ---------- names ----------
@@ -55,4 +56,27 @@ export async function readLimited(res, max, { cut = false } = {}) {
     size += value.length;
   }
   return Buffer.concat(chunks.map((c) => Buffer.from(c)));
+}
+
+// clank.trade's API (the one its own website uses: tRPC, no key; moved here from server/checker.js on 2026-10-06, so the
+// buy bot can use it without loading the chain's code)
+const CLANK_API = 'https://clank.trade/v1/trpc/';
+// One request to clank.trade's API with several questions at once ("batch"): [[name, input], …] → for each question
+// { data } or { error: 'not_found' | 'bad' }. Throws when clank.trade doesn't answer properly (down, a bot wall, a change).
+export async function clankApi(calls, { timeoutMs = 8000 } = {}) {
+  const names = calls.map(([name]) => name).join(',');
+  const input = Object.fromEntries(calls.map(([, value], i) => [i, value ?? {}]));
+  const res = await fetch(`${CLANK_API}${names}?batch=1&input=${encodeURIComponent(JSON.stringify(input))}`, {
+    headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(timeoutMs),
+  });
+  // 200 = all answered, 207 = some did, 404 = all "not found"; anything else is an outage or a wall
+  if (![200, 207, 404].includes(res.status)) throw new Error(`clank.trade HTTP ${res.status}`);
+  const bytes = await readLimited(res, 3_000_000);
+  if (!bytes) throw new Error('clank.trade answer too big');
+  let body;
+  try { body = JSON.parse(bytes.toString('utf8')); } catch { throw new Error('clank.trade answer is not JSON'); }
+  if (!Array.isArray(body) || body.length !== calls.length) throw new Error('clank.trade answer has an unexpected shape');
+  return body.map((item) => (item && typeof item === 'object' && 'result' in item
+    ? { data: item.result?.data ?? null }
+    : { error: item?.error?.data?.httpStatus === 404 ? 'not_found' : 'bad' }));
 }

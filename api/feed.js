@@ -7,17 +7,50 @@
 //   4. texts them to the people who asked for it on Telegram (textFirst: at most 2 a day each, never at night their time).
 // Only Vercel may call it: when CRON_SECRET is set, Vercel sends "Authorization: Bearer <CRON_SECRET>" (like /api/keepalive).
 // To run it by hand (e.g. right after setting the bot up): Vercel → the project → Settings → Cron Jobs → /api/feed → Run.
+//
+// GET /api/feed?buys (2026-10-06): the $AGI buy bot's check (server/buys.js), every minute, from Supabase Cron
+// (supabase/buys.sql): only with the key that file made ("Authorization: Bearer <key>", read from the database). Here and
+// not in a file of its own: Vercel's Hobby plan allows 12 functions, and they're all used. Since it runs every minute, it
+// starts light: the feed's own code (her bot, the moments, the chain's code they load) is loaded only for the feed itself.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../server/config.js';
-import { tgToken, connectBot } from '../server/telegram.js';
-import { gatherMoments, textFirst } from '../server/feed.js';
-import { postToGroups } from '../server/tg-groups.js';
+import { tgToken } from '../server/tg-api.js';
+import { buyKey, checkBuys } from '../server/buys.js';
+
+const feedParts = () => Promise.all([import('../server/telegram.js'), import('../server/feed.js'), import('../server/tg-groups.js')]);
 
 const fingerprint = (text) => createHash('sha256').update(String(text)).digest();
 const sameSecret = (a, b) => timingSafeEqual(fingerprint(a), fingerprint(b));
 const answer = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
+// the buy bot's check: the key first (from the database), then clank.trade, then her groups
+async function buysCheck(request) {
+  const cfg = getConfig();
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) {
+    console.error('[buys] SUPABASE_URL or SUPABASE_SECRET_KEY is missing');
+    return answer({ error: 'not_configured' }, 503);
+  }
+  let key;
+  try { key = await buyKey(cfg); } catch (err) {
+    console.error(`[buys] couldn't read the buy bot's key: ${err.message}`);
+    return answer({ error: err.code === 'PGRST202' ? 'not_set_up' : 'database' }, 503);
+  }
+  if (!key || !sameSecret(request.headers.get('authorization') || '', `Bearer ${key}`)) return answer({ error: 'unauthorized' }, 401);
+  const now = Date.now();
+  try {
+    const out = await checkBuys(cfg, tgToken(), { now, deadline: now + 19_000 });
+    if (out.posted || out.failed || out.skipped || out.stopped) {
+      console.log(`[buys] ${out.buys} new $AGI buy(s): posted ${out.posted}, failed ${out.failed}, skipped ${out.skipped}${out.stopped ? `, stopped (${out.stopped})` : ''}`);
+    }
+    return answer({ ok: true, ...out });
+  } catch (err) {
+    console.warn(`[buys] couldn't check $AGI's buys: ${err.message}`);
+    return answer({ error: 'unavailable' }, 502);
+  }
+}
+
 export async function GET(request) {
+  if (new URL(request.url).search === '?buys') return buysCheck(request);
   const secret = process.env.CRON_SECRET || '';
   if (secret.length < 16) {
     console.error('[feed] CRON_SECRET is missing or shorter than 16 characters: add it in Vercel, then redeploy');
@@ -30,6 +63,7 @@ export async function GET(request) {
     console.error('[feed] SUPABASE_URL, SUPABASE_SECRET_KEY or PASS_SECRET is missing');
     return answer({ error: 'not_configured' }, 503);
   }
+  const [{ connectBot }, { gatherMoments, textFirst }, { postToGroups }] = await feedParts();
   const now = Date.now();
   const deadline = now + 19_000;               // no new slow work after this: each call has its own timeout, all inside 25 s
   const token = tgToken();

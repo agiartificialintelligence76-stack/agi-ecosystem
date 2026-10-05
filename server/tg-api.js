@@ -29,10 +29,19 @@ export const scrub = (text, token) => {
 
 // One Bot API call. → its result · throws an error with .status, .retryAfter (seconds, when Telegram says "too many") and
 // .gone (the person blocked the bot or deleted their account, or the chat doesn't exist: forget them)
-export async function tgCall(token, method, params = {}, { timeoutMs = 5000 } = {}) {
-  const res = await fetch(`${API}${token}/${method}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params), signal: AbortSignal.timeout(timeoutMs),
-  });
+export async function tgCall(token, method, params = {}, { timeoutMs = 5000, files = null } = {}) {
+  // (files: { name: { bytes, filename, type } } → sent as a form, for a file Telegram doesn't have yet: her buy GIF)
+  let body = JSON.stringify(params), headers = { 'Content-Type': 'application/json' };
+  if (files) {
+    body = new FormData();
+    for (const [k, v] of Object.entries(params)) if (v !== undefined) body.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+    for (const [k, f] of Object.entries(files)) body.append(k, new Blob([f.bytes], { type: f.type }), f.filename);
+    headers = {};
+  }
+  const res = await fetch(`${API}${token}/${method}`, { method: 'POST', headers, body, signal: AbortSignal.timeout(timeoutMs) });
+  return answerOf(res, method, token);
+}
+async function answerOf(res, method, token) {
   let body = null;
   try { body = await res.json(); } catch { /* not JSON */ }
   if (res.ok && body?.ok === true) return body.result;

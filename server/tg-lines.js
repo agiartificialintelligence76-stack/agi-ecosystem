@@ -4,7 +4,7 @@
 // names a coin or the chart. tests/telegram.test.js checks every line. Plain text only (sent without Telegram's
 // formatting), so nothing a coin's creator typed can turn into a link, a mention or a command.
 import { milestoneLine, dumpLine } from '../src/chat/market-lines.js';
-import { fmtCompact, fmtPct } from '../src/prices/parse.js';
+import { fmtCompact, fmtPct, fmtPrice } from '../src/prices/parse.js';
 import { OFFICIAL_CA } from './agi1-prompt.js';
 import { linesOf } from '../src/i18n/all.js';
 import { say, fill, lineAt } from '../src/i18n/text.js';
@@ -124,6 +124,33 @@ export const groupMarket = ({ mcap, h24, liq }) =>
   `$AGI right now 💜\n\nmarket cap: ${fmtCompact(mcap)}\n24h: ${fmtPct(h24)}\nliquidity: ${fmtCompact(liq)}\n\nfrom DexScreener · not financial advice`;
 // DexScreener didn't answer (or had no market cap): no numbers at all, never old or made-up ones
 export const GROUP_MARKET_DOWN = "couldn't read the market numbers just now 🙈 try again in a minute";
+
+// A $AGI buy in her groups (2026-10-06, the owner: "a very simple buybot … with robot emojis … with mc, price amount of
+// agi, etc.", server/buys.js): the caption under her buy GIF. A robot for every $25 (4 for the smallest, $100; 40 at
+// most), what was spent (in dollars, at ETH's price then, and in ETH), the $AGI it got, the price it paid, the market cap at
+// that price ($AGI's 1 billion), and the buyer's short address and the transaction, both linked to the block explorer
+// (entities on our own text: nothing is parsed). Only the buy's numbers: never a word about where the price is going.
+export const ROBOT_USD = 25;
+export const EXPLORER = 'https://robinhoodchain.blockscout.com';
+const ethText = (eth) => (eth >= 1 ? eth.toFixed(3) : eth >= 0.01 ? eth.toFixed(4) : eth.toFixed(5));
+// buy: { usd, eth, agi, price, mcap, trader, tx } → { text, entities }
+export function buyLine({ usd, eth, agi, price, mcap, trader, tx }) {
+  const who = `${trader.slice(0, 6)}…${trader.slice(-4)}`;
+  const parts = [
+    '🤖'.repeat(Math.max(1, Math.min(40, Math.floor(usd / ROBOT_USD)))), '\n$AGI BUY! 💜\n\n',
+    `💵 spent: ${fmtPrice(usd)} (${ethText(eth)} ETH)\n`,
+    `🪙 got: ${Math.round(agi).toLocaleString('en-US')} $AGI\n`,
+    `🏷️ price: ${fmtPrice(price)}\n`,
+    `📊 market cap: ${fmtCompact(mcap)}\n`,
+    '👤 ', [who, `${EXPLORER}/address/${trader}`], ' · ', ['tx', `${EXPLORER}/tx/${tx}`], '\n\nnot financial advice',
+  ];
+  let text = '';
+  const entities = [];
+  for (const p of parts) {
+    if (Array.isArray(p)) { entities.push({ type: 'text_link', offset: text.length, length: p[0].length, url: p[1] }); text += p[0]; } else text += p;
+  }
+  return { text, entities };
+}
 
 // "What time is it for you right now?": 24 buttons, one for each hour, showing the minutes as they are now (a 30-minute
 // time zone picks the closest). Each button carries only its hour: the difference to UTC is worked out when it's tapped,

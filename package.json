@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node --test --test-timeout=30000 tests/chat.test.js tests/prices.test.js tests/keepalive.test.js tests/evals.test.js tests/page.test.js tests/wallet.test.js tests/diary.test.js tests/share.test.js tests/memory.test.js tests/voice.test.js tests/talk.test.js tests/listen.test.js tests/limit.test.js tests/market.test.js tests/models.test.js tests/checker.test.js tests/pop.test.js tests/agi1-2d.test.js tests/landing.test.js tests/telegram.test.js tests/i18n.test.js tests/clips.test.js tests/burn.test.js tests/launch.test.js tests/fullscreen.test.js tests/popout.test.js tests/shot.test.js tests/live.test.js tests/livestream.test.js tests/cloakmesh.test.js tests/promo.test.js",
+    "test": "node --test --test-timeout=30000 tests/chat.test.js tests/prices.test.js tests/keepalive.test.js tests/evals.test.js tests/page.test.js tests/wallet.test.js tests/diary.test.js tests/share.test.js tests/memory.test.js tests/voice.test.js tests/talk.test.js tests/listen.test.js tests/limit.test.js tests/market.test.js tests/models.test.js tests/checker.test.js tests/pop.test.js tests/agi1-2d.test.js tests/landing.test.js tests/telegram.test.js tests/i18n.test.js tests/clips.test.js tests/burn.test.js tests/launch.test.js tests/fullscreen.test.js tests/popout.test.js tests/shot.test.js tests/live.test.js tests/livestream.test.js tests/cloakmesh.test.js tests/promo.test.js tests/buys.test.js",
     "build": "npm test && vite build && node scripts/share-pages.js && node scripts/check-secrets.js",
     "preview": "vite preview"
   },
