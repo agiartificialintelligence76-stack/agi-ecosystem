@@ -1216,7 +1216,7 @@ test('her group prompt and her group lines: never flirty, only $AGI, a safety re
   assert.equal(new Set(L.GROUP_WELCOMES).size, 3, 'three welcomes, taking turns');
   assert.match(L.GROUP_HELP, /tap my name and press Start/);
   assert.match(L.GROUP_FULL, /00:00 UTC/);
-  assert.deepEqual(GROUP_COMMANDS.map((c) => c.command), ['ask', 'ca', 'website', 'help'], '(/ca and /website since 2026-10-05)');
+  assert.deepEqual(GROUP_COMMANDS.map((c) => c.command), ['ask', 'ca', 'mc', 'website', 'help'], '(/ca, /mc and /website since 2026-10-05)');
   for (const c of GROUP_COMMANDS) assert.ok(/^[a-z]{1,32}$/.test(c.command) && c.description.length <= 256 && !NOT_OK.test(c.description));
 });
 
@@ -1295,6 +1295,65 @@ test('/ca and /website in her group: the official contract (a tap copies it) and
   assert.deepEqual(await answer(gmsg('/ca'), t += 61_000), ['ignored', null]);
   // her private chat is as it was (the owner asked for the group): her help
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/ca'), t += 61_000), 'help');
+});
+
+// 2026-10-05, the owner: "can you also add to the tg bot /mc then it will reply its current market cap , 24h, liq just that"
+test('/mc in her group: $AGI\'s market cap, 24h change and liquidity from DexScreener, the site\'s formats; never old or made-up numbers', async () => {
+  inGroup();
+  const pair = (mcap, h24, liq) => ({ ...agiPair(mcap, h24), liquidity: liq === undefined ? undefined : { usd: liq } });
+  fake.dex = [pair(393_371, -39.94, 63_612), { ...pair(9_999_999, 50, 1_000), baseToken: { address: OFFICIAL } }];   // (the biggest pool counts)
+  let t = NOW;
+  const ask = async (text = '/mc', at = (t += 61_000), from = { id: PERSON, is_bot: false }) => {
+    calls.length = 0;
+    const what = await handleUpdate(cfg(), TOKEN, gmsg(text, { from }), at);
+    return [what, tg('sendMessage').at(-1)?.body ?? null];
+  };
+  let [what, sent] = await ask();
+  assert.equal(what, 'group_mc');
+  assert.equal(sent.text, '$AGI right now 💜\n\nmarket cap: $393K\n24h: -39.94%\nliquidity: $63.6K\n\nfrom DexScreener · not financial advice');
+  assert.equal(sent.text, L.groupMarket({ mcap: 393_371, h24: -39.94, liq: 63_612 }));
+  assert.deepEqual(sent.reply_parameters, { message_id: 50, allow_sending_without_reply: true });
+  assert.deepEqual(sent.link_preview_options, { is_disabled: true });
+  assert.equal(sent.parse_mode, undefined);
+  assert.equal(calls.filter((c) => c.to === 'dex').length, 1, 'one request to DexScreener');
+  assert.match(calls.find((c) => c.to === 'dex').url, new RegExp(`/tokens/v1/robinhood/${OFFICIAL}$`));
+  assert.equal(calls.filter((c) => c.to === 'gemini' || c.to === 'db').length, 0, 'no AI, nothing counted, nothing stored');
+  assert.doesNotMatch(sent.text, NOT_OK);
+  // kept a minute per server copy (the same numbers as her voice and her feed); asked again after
+  const base = t;
+  fake.dex = [pair(1_150_000, 4, 80_000)];
+  assert.equal((await ask('/mc', base + 31_000))[1].text.includes('$393K'), true, 'the same minute: the same numbers, no new request');
+  assert.equal(calls.filter((c) => c.to === 'dex').length, 0);
+  [, sent] = await ask('/MC@agi1_appbot', base + 62_000);
+  assert.equal(sent.text, '$AGI right now 💜\n\nmarket cap: $1.15M\n24h: +4.00%\nliquidity: $80K\n\nfrom DexScreener · not financial advice');
+  // at most once every 30 s in a group (no request to DexScreener for a repeat)
+  assert.deepEqual(await ask('/mc', base + 70_000, { id: 902, is_bot: false }), ['group_recent', null]);
+  assert.equal(calls.filter((c) => c.to === 'dex').length, 0);
+  t = base + 70_000;                                                    // (time only goes forward from here)
+  // a number DexScreener left out: "—", never a guess
+  fake.dex = [pair(2_030_000, undefined, undefined)];
+  delete fake.dex[0].priceChange;
+  forgetMarket();
+  [, sent] = await ask();
+  assert.match(sent.text, /market cap: \$2\.03M\n24h: —\nliquidity: —/);
+  // DexScreener down, no $AGI pool, or no market cap: no numbers at all (never old ones), and the log says why
+  for (const [why, setup] of [['down', () => { fake.dexDown = true; }], ['no pool', () => { fake.dexDown = false; fake.dex = []; }],
+    ['no market cap', () => { fake.dex = [{ ...pair(0, 1, 5_000), fdv: null }]; }]]) {
+    setup();
+    forgetMarket();
+    const log = quietLog();
+    [what, sent] = await ask();
+    assert.equal(what, 'group_mc', why);
+    assert.equal(sent.text, L.GROUP_MARKET_DOWN, why);
+    assert.match(log.join('\n'), /\[telegram\] market numbers unavailable \(DexScreener\)/, why);
+  }
+  assert.doesNotMatch(L.GROUP_MARKET_DOWN, NOT_OK);
+  // her voice's and her feed's reading is as it was ({ mcap, h24 }, its own log line)
+  fake.dexDown = false;
+  fake.dex = [pair(393_371, -39.94, 63_612)];
+  forgetMarket();
+  const { agiMarket } = await import('../server/market.js');
+  assert.deepEqual(await agiMarket(NOW), { mcap: 393_371, h24: -39.94 });
 });
 
 test('connecting the bot: /ask and /help in groups while group mode is on, her usual menu otherwise', async () => {

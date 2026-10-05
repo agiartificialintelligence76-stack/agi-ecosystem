@@ -4,6 +4,7 @@
 // names a coin or the chart. tests/telegram.test.js checks every line. Plain text only (sent without Telegram's
 // formatting), so nothing a coin's creator typed can turn into a link, a mention or a command.
 import { milestoneLine, dumpLine } from '../src/chat/market-lines.js';
+import { fmtCompact, fmtPct } from '../src/prices/parse.js';
 import { OFFICIAL_CA } from './agi1-prompt.js';
 import { linesOf } from '../src/i18n/all.js';
 import { say, fill, lineAt } from '../src/i18n/text.js';
@@ -115,6 +116,14 @@ export const GROUP_OUT = "that's all my messages with you for today 🙈 talk to
 // a link in them.
 export const GROUP_CA = `the official $AGI contract on Robinhood Chain 💜\n\n${OFFICIAL_CA}\n\nthe same one as on ${SITE}. anyone sending you a different one isn't us. not financial advice`;
 export const GROUP_WEBSITE = `the official website 💜 https://${SITE}`;
+// /mc in a group (2026-10-05, the owner: "/mc then it will reply its current market cap , 24h, liq just that"): $AGI's
+// numbers as the site's ticker shows them (DexScreener's biggest Robinhood Chain pool, at most a minute old: server/market.js),
+// in the site's formats ("$393K", "-39.94%"; "—" for a number DexScreener left out). The numbers only: never a word about
+// where they're going.
+export const groupMarket = ({ mcap, h24, liq }) =>
+  `$AGI right now 💜\n\nmarket cap: ${fmtCompact(mcap)}\n24h: ${fmtPct(h24)}\nliquidity: ${fmtCompact(liq)}\n\nfrom DexScreener · not financial advice`;
+// DexScreener didn't answer (or had no market cap): no numbers at all, never old or made-up ones
+export const GROUP_MARKET_DOWN = "couldn't read the market numbers just now 🙈 try again in a minute";
 
 // "What time is it for you right now?": 24 buttons, one for each hour, showing the minutes as they are now (a 30-minute
 // time zone picks the closest). Each button carries only its hour: the difference to UTC is worked out when it's tapped,

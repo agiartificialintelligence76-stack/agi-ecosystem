@@ -97,7 +97,7 @@ export async function connectBot(cfg, env = process.env) {
       try { await tgCall(token, method, params, { timeoutMs: 4000 }); } catch (err) { failed = true; console.warn(`[telegram] ${err.message} (tried again next run)`); }
     }
   }
-  // her commands in groups (2026-10-03, server/tg-groups.js): only /ask and /help there (and /ca and /website since
+  // her commands in groups (2026-10-03, server/tg-groups.js): only /ask and /help there (and /ca, /mc and /website since
   // 2026-10-05), while group mode is on (TELEGRAM_GROUPS); none of her own otherwise (then Telegram shows her usual menu,
   // as before). A change to the list is set by the next run
   let groups = false;
