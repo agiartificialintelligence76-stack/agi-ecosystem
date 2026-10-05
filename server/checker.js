@@ -15,30 +15,39 @@
 // Since 2026-09-26 (the owner's second round): the newest coins every few seconds (latestClank: new launches show up at
 // once), every coin's picture (coinPicture, from clank.trade's own picture host), and every coin, crude names included (the
 // owner: "they are part of clank trade"; hate slurs are still masked, and a crude coin's picture waits for the 18+ check).
+// Since 2026-10-05 (the owner: "the risk check on the website is not accurate and theres no pictures of the token there"):
+//   • a coin's pair: clank.trade pairs coins with ETH or (since 2026-10-02) SPCX, Robinhood's SpaceX stock token, and gives
+//     a coin's market cap, its curve's reserve and its threshold in its pair. Everything was priced as ETH before, so a
+//     coin paired with SPCX (about $160) looked about 17 times bigger than it was ($SI showed $677K for $40K). Now every
+//     amount becomes dollars at its own pair's price (clank.trade's exchangeRates, the same numbers its page shows);
+//   • pictures: clank.trade's own Pinata gateway now only answers clank.trade's own pages ("This content cannot be
+//     requested through the gateway you are using", HTTP 401), so the same IPFS files come from public IPFS gateways
+//     (anyone may read IPFS), and our server shrinks them itself (sharp): server/coin-pictures.js. A few coins use
+//     ClankBot's own picture host.
 // api/checker.js serves all of it (Vercel's CDN shares each answer); src/sections/checker.js shows it.
 import { TOKENS, bestPair } from '../src/prices/parse.js';
 import { tickerKey, markCopycats } from '../src/checker/copycat.js';
-import { UA, cleanName, isCrude, readLimited, looksLike, PICTURE_TYPES, PICTURE_MAX_BYTES } from './coins.js';
-import { STAGE, FACTORY, FORWARDER, readCoinOnChain, shareOf } from './clank-chain.js';
+import { UA, cleanName, isCrude, readLimited } from './coins.js';
+import { STAGE, FACTORY, FORWARDER, ETH_PAIR, SPCX, PAIR_NAMES, readCoinOnChain, shareOf } from './clank-chain.js';
 
 export { tickerKey, markCopycats };
 
 const CLANK_API = 'https://clank.trade/v1/trpc/';
 const DEX_API = 'https://api.dexscreener.com/tokens/v1/robinhood/';
 const EXPLORER_API = 'https://robinhoodchain.blockscout.com/api/v2/tokens/';
-const ETH = '0x0000000000000000000000000000000000000000';            // clank.trade coins trade against ETH
+const ETH = ETH_PAIR;                                                  // a coin paired with ETH names the zero address
 // Uniswap v4's PoolManager on Robinhood Chain: every clank.trade pool keeps its coins there, so it's not a wallet
 export const POOL_MANAGER = '0x8366a39cc670b4001a1121b8f6a443a643e40951';
 const NOBODY = [ETH, '0x000000000000000000000000000000000000dead'];   // burned coins
 export const OFFICIAL = TOKENS[0].ca;                                 // $AGI, the site's own coin
 export const MAX_PAGES = 80;                                          // 12 coins a page: 960 coins (202 on 2026-09-26)
 const ADDRESS = /^0x[0-9a-f]{40}$/;
-// clank.trade keeps coin pictures on IPFS and shows them through its own Pinata gateway (which also shrinks them)
-const PICTURE_HOST = 'https://yellow-total-guanaco-389.mypinata.cloud/ipfs/';
-const CID = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{50,100})$/;         // (the same check clank.trade's page makes)
-// a row's circle (cut to a square) and the big view (the whole picture, never enlarged: 400 px stays 400 px)
-export const PICTURE_SIZES = [96, 512];
-const PICTURE_FIT = { 96: 'cover', 512: 'scale-down' };
+// clank.trade keeps coin pictures on IPFS: a coin's picture is its content id (the pictures themselves come from public
+// IPFS gateways since 2026-10-05: server/coin-pictures.js, which only api/checker.js loads)
+export const CID = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{50,100})$/;  // (the same check clank.trade's page makes)
+// A few coins (made with ClankBot) name a picture on ClankBot's own host instead: only that host, only its pictures
+// (13 coins on 2026-10-05; the 3 coins naming any other site keep their letter)
+export const PICTURE_URL = /^https:\/\/clankbot\.trade\/images\/[A-Za-z0-9_-]{1,40}(\/[A-Za-z0-9_-]{1,80}){0,2}\.(?:png|jpe?g|webp|gif)$/;
 
 const lc = (s) => String(s ?? '').toLowerCase();
 const isAddress = (s) => ADDRESS.test(lc(s));
@@ -62,6 +71,43 @@ export function cidOf(image) {
   const id = s.startsWith('ipfs://') ? s.slice(7).split(/[/?#]/)[0] : (/^https:\/\/[a-z0-9.-]+\/ipfs\/([^/?#]+)/.exec(s) || [])[1];
   return id && CID.test(id) ? id : null;
 }
+// Where a coin's picture is (2026-10-05): its IPFS content id, or a picture on ClankBot's host (its address), or null
+export function pictureOf(image) {
+  const cid = cidOf(image);
+  if (cid) return cid;
+  const s = String(image ?? '').trim();
+  return PICTURE_URL.test(s) ? s : null;
+}
+
+// ---------- a coin's pair (2026-10-05) ----------
+// Its pair's address (a coin clank.trade doesn't say about: ETH, as every coin was before SPCX), and its name for people
+const pairOf = (c) => (isAddress(c?.quoteCurrency) ? lc(c.quoteCurrency) : ETH);
+const pairName = (address, symbol) => PAIR_NAMES[address] ?? (showTicker(symbol) || 'its pair token');
+// clank.trade's prices (in dollars) for each pair: ETH and SPCX are asked with every first request; any other pair a coin
+// names is asked once more (at most 5 at a time; if that fails, those coins' dollars stay unknown, never guessed)
+const KNOWN_PAIRS = [ETH, SPCX];
+const priceCalls = (pairs) => pairs.map((token) => ['exchangeRates.tokenUsdg', { token }]);
+const priceOf = (answer) => (num(answer?.data?.price) > 0 ? num(answer.data.price) : null);
+function pricesFrom(pairs, answers, into = new Map()) {
+  pairs.forEach((p, i) => { const v = priceOf(answers[i]); if (v) into.set(p, v); });
+  return into;
+}
+async function pricesFor(pairs, prices, { timeoutMs = 6000 } = {}) {
+  const missing = [...new Set(pairs)].filter((p) => isAddress(p) && !prices.has(p) && !KNOWN_PAIRS.includes(p)).slice(0, 5);
+  if (!missing.length) return prices;
+  try { pricesFrom(missing, await clankApi(priceCalls(missing), { timeoutMs }), prices); } catch { /* their dollars stay unknown */ }
+  return prices;
+}
+// a coin's market cap in dollars (clank.trade's number is in its pair), or null when its pair's price is unknown
+const dollarsOf = (c, prices) => { const p = prices.get(pairOf(c)); const n = num(c?.marketCap); return p && n !== null ? Math.max(0, n) * p : null; };
+// an amount in a pair's smallest units (a string of digits) → in whole units (18 decimals unless said otherwise)
+function wholeUnits(raw, decimals = 18) {
+  if (!/^\d{1,40}$/.test(String(raw))) return null;
+  const d = Number.isInteger(decimals) && decimals >= 0 && decimals <= 36 ? decimals : 18;
+  return Number((BigInt(raw) * 1_000_000n) / 10n ** BigInt(d)) / 1e6;
+}
+// "12.3", "0.042" (for an amount of ETH or SPCX)
+const amountText = (n) => String(+n.toFixed(n < 1 ? 3 : 2));
 // $36.5K · $1.46M · $840 · <$1
 export function usd(n) {
   if (!Number.isFinite(n)) return '—';
@@ -103,25 +149,26 @@ export async function clankApi(calls, { timeoutMs = 8000 } = {}) {
 }
 
 // ---------- the list of every coin ----------
-// Which picture each coin has, remembered from the lists this server copy read (so a picture rarely costs a lookup)
+// Where each coin's picture is, remembered from the lists this server copy read (so a picture rarely costs a lookup)
 const pictures = new Map();
 export const forgetPictures = () => pictures.clear();            // (for the tests)
 function remember(coins) {
   for (const c of coins) {
-    if (!c.cid) continue;
+    if (!c.pic) continue;
     pictures.delete(c.address);
-    pictures.set(c.address, c.cid);
+    pictures.set(c.address, c.pic);
     if (pictures.size > 5000) pictures.delete(pictures.keys().next().value);
   }
 }
 // A coin as the page lists it: every coin clank.trade has (hate slurs in a name are masked). `adult`: its name is crude
-// or sexual (its picture waits for the 18+ check); `image`: it has a picture (served by /api/checker?logo=…).
-function listCoin(c, ethUsd, trendingRank) {
+// or sexual (its picture waits for the 18+ check); `image`: it has a picture (served by /api/checker?logo=…);
+// `marketCap`: in dollars, at its own pair's price (null when that price is unknown).
+function listCoin(c, prices, trendingRank) {
   const address = lc(c?.address);
   if (!isAddress(address)) return null;
   const symbol = showTicker(c.symbol), name = cleanName(c.name);
-  const mcEth = Math.max(0, num(c.marketCap) ?? 0);
-  const cid = cidOf(c.image);
+  const mcUsd = dollarsOf(c, prices);
+  const pic = pictureOf(c.image);
   const state = Number(c.state);
   return {
     address, symbol: maskSlurs(symbol), name: maskSlurs(name),
@@ -129,31 +176,32 @@ function listCoin(c, ethUsd, trendingRank) {
     ...(state === STAGE.READY || state === STAGE.SWEPT ? { stage: 'graduating' } : state === STAGE.RESCUED ? { stage: 'rescued' } : {}),
     progress: Math.min(100, Math.max(0, +(num(c.progress) ?? 0).toFixed(2))),
     createdAt: (num(c.createdAt) ?? 0) * 1000,
-    marketCap: ethUsd ? Math.round(mcEth * ethUsd) : null,
+    marketCap: mcUsd !== null ? Math.round(mcUsd) : null,
     trending: trendingRank ?? 0,
     official: address === OFFICIAL,
     adult: isCrude(`${name || ''} ${symbol || ''}`),
-    image: Boolean(cid),
-    mcEth, cid,
+    image: Boolean(pic),
+    mcUsd, pic,
   };
 }
-const publicCoin = ({ mcEth, cid, ...c }) => c;
+const publicCoin = ({ mcUsd, pic, ...c }) => c;
 // clank.trade's trending list (its own order), only real addresses → [coin]
 const trendingList = (data) => (Array.isArray(data) ? data : []).filter((c) => isAddress(c?.address)).slice(0, 50);
-const ethPrice = (rate) => (num(rate.data?.price) > 0 ? num(rate.data.price) : null);
-// the first page of coins.list, trending and the ETH price: the one request both lists start with
-const FIRST = [['coins.list', {}], ['coins.trending', {}], ['exchangeRates.tokenUsdg', { token: ETH }]];
-function listed(raw, ethUsd, trending) {
+// the first page of coins.list, trending and the prices of ETH and SPCX: the one request both lists start with
+const FIRST = [['coins.list', {}], ['coins.trending', {}], ...priceCalls(KNOWN_PAIRS)];
+function listed(raw, prices, trending) {
   const ranks = new Map(trending.map((c, i) => [lc(c.address), i + 1]));
   const seen = new Set();
-  return raw.map((c) => listCoin(c, ethUsd, ranks.get(lc(c?.address)))).filter((c) => c && !seen.has(c.address) && seen.add(c.address));
+  return raw.map((c) => listCoin(c, prices, ranks.get(lc(c?.address)))).filter((c) => c && !seen.has(c.address) && seen.add(c.address));
 }
+// copycats are told apart by size: their market caps in dollars (an SPCX coin and an ETH coin, compared fairly)
+const bySize = { size: (c) => c.mcUsd ?? 0 };
 
 // Every coin, page by page (clank.trade only gives 12 at a time), newest first. Stops after MAX_PAGES or `budgetMs`
 // (a function may run 25 s): then `complete` is false and the oldest coins are missing (still checkable by address).
 export async function scanClank({ budgetMs = 18_000, now = Date.now() } = {}) {
   const t0 = Date.now();
-  const [first, trending, rate] = await clankApi(FIRST);
+  const [first, trending, ...rates] = await clankApi(FIRST);
   if (!Array.isArray(first.data?.coins)) throw new Error('clank.trade sent no coin list');
   const raw = [...first.data.coins];
   let cursor = first.data.nextCursor, pages = 1;
@@ -164,16 +212,17 @@ export async function scanClank({ budgetMs = 18_000, now = Date.now() } = {}) {
     cursor = page.data.nextCursor;
     pages += 1;
   }
-  const ethUsd = ethPrice(rate);
-  const all = listed(raw, ethUsd, trendingList(trending.data));
-  markCopycats(all, { size: (c) => c.mcEth });
+  const prices = await pricesFor(raw.map(pairOf), pricesFrom(KNOWN_PAIRS, rates));
+  const all = listed(raw, prices, trendingList(trending.data));
+  markCopycats(all, bySize);
   remember(all);
   return {
     coins: all.map(publicCoin),
     total: all.length,
     graduated: all.filter((c) => c.graduated).length,
     complete: !cursor,
-    ethUsd,
+    ethUsd: prices.get(ETH) ?? null,
+    spcxUsd: prices.get(SPCX) ?? null,
     updatedAt: now,
   };
 }
@@ -183,13 +232,13 @@ export async function scanClank({ budgetMs = 18_000, now = Date.now() } = {}) {
 // dollars) and the price of ETH. The page asks for it every 10 s while ClankChecker is on screen and merges it into the
 // whole list, so a coin launched a moment ago appears without a reload, and trending coins' numbers stay current.
 export async function latestClank({ now = Date.now() } = {}) {
-  const [first, trending, rate] = await clankApi(FIRST, { timeoutMs: 6000 });
+  const [first, trending, ...rates] = await clankApi(FIRST, { timeoutMs: 6000 });
   if (!Array.isArray(first.data?.coins)) throw new Error('clank.trade sent no coin list');
-  const ethUsd = ethPrice(rate);
+  const prices = await pricesFor(first.data.coins.map(pairOf), pricesFrom(KNOWN_PAIRS, rates), { timeoutMs: 4000 });
   const top = trendingList(trending.data);
-  const coins = listed(first.data.coins, ethUsd, top);
+  const coins = listed(first.data.coins, prices, top);
   remember(coins);
-  remember(top.map((c) => ({ address: lc(c.address), cid: cidOf(c.image) })));
+  remember(top.map((c) => ({ address: lc(c.address), pic: pictureOf(c.image) })));
   return {
     coins: coins.map(publicCoin),
     trending: top.map((c, i) => ({
@@ -199,7 +248,8 @@ export async function latestClank({ now = Date.now() } = {}) {
       // (live = trading in its pool; a sold-out curve whose pool isn't open yet is graduating, not graduated)
       graduated: c.isLive === true,
     })),
-    ethUsd,
+    ethUsd: prices.get(ETH) ?? null,
+    spcxUsd: prices.get(SPCX) ?? null,
     updatedAt: now,
   };
 }
@@ -221,7 +271,7 @@ export async function coinsSince(since, { maxPages = 5, deadline = Infinity, now
   } while (!reached && typeof cursor === 'string' && cursor && cursor.length < 1000 && pages < maxPages && Date.now() < deadline);
   const unknown = new Set(raw.filter((c) => num(c?.progress) === null).map((c) => lc(c?.address)));
   const soon = now + 5 * 60_000;
-  const all = listed(raw, null, []).filter((c) => c.createdAt <= soon);
+  const all = listed(raw, new Map(), []).filter((c) => c.createdAt <= soon);
   remember(all);
   return {
     coins: all.filter((c) => c.createdAt > since).map((c) => ({ ...publicCoin(c), progress: unknown.has(c.address) ? null : c.progress })),
@@ -231,36 +281,18 @@ export async function coinsSince(since, { maxPages = 5, deadline = Infinity, now
 }
 
 // ---------- a coin's picture ----------
-// Its IPFS id: remembered from the lists this server copy read, else asked from clank.trade (the coin's details).
-// → the id | null (not a clank.trade coin, or no picture) · throws when clank.trade doesn't answer
+// Where it is: remembered from the lists this server copy read, else asked from clank.trade (the coin's details).
+// → its IPFS id or ClankBot address | null (not a clank.trade coin, or no picture) · throws when clank.trade doesn't answer
 export async function coinPictureId(address) {
   if (!isAddress(address)) return null;
   if (pictures.has(address)) return pictures.get(address);
   const [d] = await clankApi([['coins.detail', { address }]], { timeoutMs: 6000 });
   if (d.error === 'not_found') return null;
   if (!d.data || lc(d.data.address) !== address) throw new Error('clank.trade sent no details');
-  const cid = cidOf(d.data.image);
-  if (cid) remember([{ address, cid }]);
-  return cid;
+  const pic = pictureOf(d.data.image);
+  if (pic) remember([{ address, pic }]);
+  return pic;
 }
-// The picture itself, from clank.trade's own picture host, which shrinks it for us (size: 96 or 512). Only real pictures:
-// PNG, JPEG, WebP, GIF or AVIF, checked by their first bytes (never SVG, which can carry code), at most 1 MB.
-// → { bytes, type } | null (no such picture, or not a picture) · throws when the host doesn't answer
-export async function fetchCoinPicture(cid, size) {
-  if (!CID.test(String(cid)) || !PICTURE_SIZES.includes(size)) return null;
-  const url = `${PICTURE_HOST}${cid}?img-width=${size}&img-height=${size}&img-fit=${PICTURE_FIT[size]}&img-quality=85&img-format=webp`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA, Accept: 'image/webp,image/avif,image/png,image/jpeg,image/gif' },
-    redirect: 'error', signal: AbortSignal.timeout(8000),
-  });
-  if (res.status === 404 || res.status === 400) { res.body?.cancel().catch(() => {}); return null; }
-  if (!res.ok) { res.body?.cancel().catch(() => {}); throw new Error(`picture host HTTP ${res.status}`); }
-  const type = String(res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-  if (!PICTURE_TYPES.has(type)) { res.body?.cancel().catch(() => {}); return null; }
-  const bytes = await readLimited(res, PICTURE_MAX_BYTES);
-  return bytes && bytes.length && looksLike(type, bytes) ? { bytes, type } : null;
-}
-
 // ---------- one coin ----------
 // DexScreener: a graduated coin's biggest pool. → { liquidity, change, volume } | { missing: true } | { failed: true }
 async function readDex(address) {
@@ -294,7 +326,7 @@ const within = (promise, ms) => Promise.race([promise, new Promise((resolve) => 
 export async function checkCoin(address, { now = Date.now() } = {}) {
   const asked = clankApi([
     ['coins.detail', { address }], ['coins.holders', { address }], ['coins.trades', { address, limit: 100 }],
-    ['exchangeRates.tokenUsdg', { token: ETH }],
+    ...priceCalls(KNOWN_PAIRS),
   ]);
   // asked at the same time as clank.trade: a full scan waits for it at most 4 s; when clank.trade failed, the chain's answer
   // is all there is, so it's awaited in full (its own timeouts end it within about 5 s of the start)
@@ -307,7 +339,7 @@ export async function checkCoin(address, { now = Date.now() } = {}) {
     console.warn(`[checker] couldn't read ${address} from clank.trade: ${err.message}`);
     return fromChain(address, await chainRead, 'down', now);
   }
-  const [d, h, t, r] = first;
+  const [d, h, t, ...r] = first;
   if (d.error === 'not_found') return fromChain(address, await chainRead, 'unlisted', now);
   const detail = d.data;
   const holders = h.data?.holders, trades = t.data?.trades;
@@ -316,7 +348,7 @@ export async function checkCoin(address, { now = Date.now() } = {}) {
     console.warn(`[checker] clank.trade's answer for ${address} was incomplete`);
     return fromChain(address, await chainRead, 'down', now);
   }
-  remember([{ address, cid: cidOf(detail.image) }]);
+  remember([{ address, pic: pictureOf(detail.image) }]);
   const graduated = Number(detail.state) === STAGE.POOL;
   const query = String(detail.symbol ?? '').normalize('NFKC').replace(/^\$+/, '').trim().slice(0, 40);
   const [sameTicker, dex, holderCount, chain] = await Promise.all([
@@ -327,7 +359,9 @@ export async function checkCoin(address, { now = Date.now() } = {}) {
     holders.length >= 100 ? readHolderCount(address) : null,
     onchain,
   ]);
-  return analyze({ detail, holders, trades, ethUsd: num(r.data?.price), sameTicker, dex, holderCount, chain, now });
+  // the dollar prices of its pair (and of the pairs of coins with its ticker): ETH and SPCX came with the first request
+  const prices = await pricesFor([pairOf(detail), ...(Array.isArray(sameTicker) ? sameTicker.map(pairOf) : [])], pricesFrom(KNOWN_PAIRS, r), { timeoutMs: 4000 });
+  return analyze({ detail, holders, trades, prices, sameTicker, dex, holderCount, chain, now });
 }
 
 // clank.trade didn't answer ('down') or doesn't know the coin yet ('unlisted'): a smaller scan from the chain, if the
@@ -335,7 +369,7 @@ export async function checkCoin(address, { now = Date.now() } = {}) {
 async function fromChain(address, chain, why, now) {
   if (!chain?.exists) return { error: why === 'unlisted' ? 'not_clank' : 'unverified' };
   const [dex, holderCount] = await Promise.all([chain.state === STAGE.POOL ? readDex(address) : null, readHolderCount(address)]);
-  if (cidOf(chain.logo)) remember([{ address, cid: cidOf(chain.logo) }]);
+  if (pictureOf(chain.logo)) remember([{ address, pic: pictureOf(chain.logo) }]);
   return analyzeChain(chain, { address, dex, holderCount, why, now });
 }
 
@@ -372,12 +406,13 @@ const onchainOf = (chain) => (chain ? (chain.exists ? { exists: true, state: cha
 
 // The scan itself, from what was read (no network here, so the tests can feed it anything).
 //   detail: clank.trade's coins.detail · holders: [{ address, balance }] (its biggest, at most 100) · trades: its latest
-//   (newest first) · ethUsd · sameTicker: clank.trade's search for its ticker (null = couldn't ask) · dex: readDex() (or null
+//   (newest first) · prices: a Map of each pair's address → its price in dollars (or ethUsd: the price of ETH alone, as
+//   before 2026-10-05) · sameTicker: clank.trade's search for its ticker (null = couldn't ask) · dex: readDex() (or null
 //   for a coin on its bonding curve) · holderCount: from the block explorer (or null)
 // → { address, symbol, name, adult, image, createdAt, graduated, progress, official, copyOfficial, level, flags, facts,
 //     links, checkedAt } (symbol and name with hate slurs masked; adult: a crude or sexual name, so its picture waits for the
 //     18+ check; image: it has a picture)
-export function analyze({ detail, holders = [], trades = [], ethUsd = null, sameTicker = [], dex = null, holderCount = null, chain = null, now = Date.now() }) {
+export function analyze({ detail, holders = [], trades = [], ethUsd = null, prices = null, sameTicker = [], dex = null, holderCount = null, chain = null, now = Date.now() }) {
   const address = lc(detail.address);
   const rawSymbol = showTicker(detail.symbol), rawName = cleanName(detail.name);
   const symbol = maskSlurs(rawSymbol), name = maskSlurs(rawName);
@@ -385,7 +420,11 @@ export function analyze({ detail, holders = [], trades = [], ethUsd = null, same
   const state = Number(detail.state);
   const graduated = state === STAGE.POOL;
   const progress = Math.min(100, Math.max(0, +(num(detail.progress) ?? 0).toFixed(2)));
-  const rate = num(ethUsd) > 0 ? num(ethUsd) : null;
+  // its pair (ETH or SPCX) and that pair's price: its market cap and its curve are counted in its pair
+  const priceMap = new Map(prices instanceof Map ? prices : []);
+  if (!priceMap.has(ETH) && num(ethUsd) > 0) priceMap.set(ETH, num(ethUsd));
+  const pair = pairOf(detail), pairWord = pairName(pair, detail.quoteSymbol);
+  const rate = priceMap.get(pair) ?? null;
   const supply = /^\d{1,40}$/.test(String(detail.totalSupply)) ? BigInt(detail.totalSupply) : 0n;
   const share = (balance) => (supply > 0n && /^\d{1,40}$/.test(String(balance)) ? Number((BigInt(balance) * 1_000_000n) / supply) / 10_000 : 0);
   const flags = [], facts = [];
@@ -413,11 +452,11 @@ export function analyze({ detail, holders = [], trades = [], ethUsd = null, same
   if (key && !copyOfficial) {
     if (sameTicker === null) flag('ticker', 'some', "Couldn't check for coins with the same ticker right now.");
     else {
-      const me = { address, official, graduated, mcEth: num(detail.marketCap) ?? 0, symbol: detail.symbol };
+      const me = { address, official, graduated, mcUsd: dollarsOf(detail, priceMap) ?? 0, symbol: detail.symbol };
       const others = sameTicker.filter((c) => isAddress(c?.address) && lc(c.address) !== address && tickerKey(c.symbol) === key)
-        .map((c) => ({ address: lc(c.address), official: lc(c.address) === OFFICIAL, graduated: Number(c.state) === STAGE.POOL, mcEth: num(c.marketCap) ?? 0, symbol: c.symbol }));
+        .map((c) => ({ address: lc(c.address), official: lc(c.address) === OFFICIAL, graduated: Number(c.state) === STAGE.POOL, mcUsd: dollarsOf(c, priceMap) ?? 0, symbol: c.symbol }));
       if (others.length) {
-        markCopycats([me, ...others]);
+        markCopycats([me, ...others], bySize);
         const n = plural(others.length, 'other clank.trade coin');
         if (me.copyOf) {
           const top = others.find((c) => c.address === me.copyOf);
@@ -429,8 +468,8 @@ export function analyze({ detail, holders = [], trades = [], ethUsd = null, same
     }
   }
 
-  // 2. how far along it is: graduated (a DEX pool) or still on its bonding curve (how much ETH is in it)
-  const reserve = /^\d{1,40}$/.test(String(detail.reserve)) ? Number(BigInt(detail.reserve) / 10n ** 12n) / 1e6 : null;   // ETH
+  // 2. how far along it is: graduated (a DEX pool) or still on its bonding curve (how much of its pair is in it, in dollars)
+  const reserve = wholeUnits(detail.reserve, num(detail.quoteDecimals) ?? 18);        // in its pair (ETH or SPCX)
   const inCurve = !graduated && reserve !== null && rate ? reserve * rate : null;
   const about = inCurve !== null ? ` (about ${usd(inCurve)} in it)` : '';
   // the protocol's own record, when the chain answered. A graduation it had to rescue counts whatever clank.trade shows
@@ -509,11 +548,12 @@ export function analyze({ detail, holders = [], trades = [], ethUsd = null, same
   }
 
   // the facts under the flags (the page shows them as a small table)
-  const mcEth = num(detail.marketCap);
+  const mcUsd = dollarsOf(detail, priceMap);
   const head = [
     ['Stage', stageWord(stageNow, progress)],
     ['Launched', age !== null ? `${timeText(age)} ago` : '—'],
-    ['Market cap', mcEth !== null && rate ? usd(mcEth * rate) : '—'],
+    ['Market cap', mcUsd !== null ? usd(mcUsd) : '—'],
+    ['Paired with', pairWord],
     graduated
       ? ['In its pool', dex && !dex.failed && !dex.missing && dex.liquidity !== null ? usd(dex.liquidity) : '—']
       : ['In its curve', inCurve !== null ? usd(inCurve) : '—'],
@@ -532,7 +572,7 @@ export function analyze({ detail, holders = [], trades = [], ethUsd = null, same
   const level = flags.some((f) => f.sev === 'high') ? 'high' : flags.some((f) => f.sev === 'some') ? 'some' : 'low';
   return {
     address, symbol, name,
-    adult: isCrude(`${rawName || ''} ${rawSymbol || ''}`), image: Boolean(cidOf(detail.image)), createdAt: created,
+    adult: isCrude(`${rawName || ''} ${rawSymbol || ''}`), image: Boolean(pictureOf(detail.image)), createdAt: created,
     graduated, progress, official, copyOfficial, level, flags, facts,
     links: { clank: `https://clank.trade/coin/${address}`, explorer: `https://robinhoodchain.blockscout.com/token/${address}` },
     checkedAt: now, onchain: onchainOf(chain),
@@ -565,8 +605,11 @@ export function analyzeChain(chain, { address, dex = null, holderCount = null, w
   const threshold = big(chain.threshold) ?? 0n, reserveWei = big(chain.reserve);
   const supply = big(chain.supply), curveHeld = big(chain.curveBalance), creatorHeld = big(chain.creatorBalance);
   const progress = graduated ? 100 : threshold > 0n && reserveWei !== null ? Math.min(100, Number((reserveWei * 10_000n) / threshold) / 100) : 0;
-  const eth = reserveWei !== null ? Number(reserveWei / 10n ** 12n) / 1e6 : null;
-  const about = !graduated && eth !== null && eth > 0 ? ` (about ${+eth.toFixed(eth < 1 ? 3 : 2)} ETH in it)` : '';
+  // what's in its curve, in its pair (ETH, or SPCX since 2026-10-02: both have 18 decimals)
+  const pairWord = PAIR_NAMES[isAddress(chain.pairToken) ? lc(chain.pairToken) : ETH] ?? null;      // (null: a pair we don't know)
+  const inPair = reserveWei !== null ? wholeUnits(reserveWei.toString()) : null;
+  const amountOf = (n) => (pairWord ? `${amountText(n)} ${pairWord}` : `${amountText(n)} of its pair token`);
+  const about = !graduated && inPair !== null && inPair > 0 ? ` (about ${amountOf(inPair)} in it)` : '';
   // its stage (its curve may not have answered) and, on its curve, how full it is (an empty curve with every coin still
   // in it = nobody bought any; an empty curve otherwise is "0% filled", which is true either way)
   const knownStage = Number.isInteger(state);
@@ -605,7 +648,8 @@ export function analyzeChain(chain, { address, dex = null, holderCount = null, w
   }
   fact('Stage', !knownStage ? '—' : state === STAGE.TRADING && reserveWei === null ? 'On its curve' : stageWord(state, progress));
   if (graduated) fact('In its pool', dexRead ? usd(dex.liquidity) : '—');
-  else fact('In its curve', eth !== null ? `${+eth.toFixed(eth < 1 ? 3 : 2)} ETH` : '—');
+  else fact('In its curve', inPair !== null ? amountOf(inPair) : '—');
+  fact('Paired with', pairWord ?? 'its pair token');
   fact('Holders', wallets !== null ? `about ${wallets}` : '—');
   fact('Creator holds', creator !== null ? percent(creator) : '—');
   fact('Read from', ['Robinhood Chain', ...(holderCount !== null ? ['the block explorer'] : []), ...(graduated && dexRead ? ['DexScreener'] : [])].join(', '));
@@ -615,7 +659,7 @@ export function analyzeChain(chain, { address, dex = null, holderCount = null, w
   const level = flags.some((f) => f.sev === 'high') ? 'high' : 'some';
   return {
     address, symbol, name,
-    adult: isCrude(`${rawName || ''} ${rawSymbol || ''}`), image: Boolean(cidOf(chain.logo)), createdAt: 0,
+    adult: isCrude(`${rawName || ''} ${rawSymbol || ''}`), image: Boolean(pictureOf(chain.logo)), createdAt: 0,
     graduated, progress, official, copyOfficial, level, flags, facts,
     links: { clank: `https://clank.trade/coin/${address}`, explorer: `https://robinhoodchain.blockscout.com/token/${address}` },
     checkedAt: now, source: 'chain', onchain: onchainOf(chain),

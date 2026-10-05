@@ -1,0 +1,9 @@
+/* AGI-1's launch video renderer (never shown to visitors): the site's own fonts (public/fonts, SIL Open Font License),
+   and nothing but the frame */
+@font-face { font-family: 'Geist'; src: url('/fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; }
+@font-face { font-family: 'Geist Mono'; src: url('/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; }
+@font-face { font-family: 'Anybody'; src: url('/fonts/Anybody-Variable.woff2') format('woff2'); font-weight: 100 900; font-stretch: 50% 150%; }
+@font-face { font-family: 'Instrument Serif'; src: url('/fonts/InstrumentSerif-Italic.woff2') format('woff2'); font-style: italic; font-weight: 400; }
+@font-face { font-family: 'Dela Gothic One'; src: url('/fonts/DelaGothicOne-doki.woff2') format('woff2'); font-weight: 400; }
+html, body { margin: 0; background: #000; }
+canvas { display: block; }

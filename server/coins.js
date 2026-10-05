@@ -33,7 +33,7 @@ export function looksLike(type, b) {
 }
 
 // ---------- reading clank.trade ----------
-// The name our server gives itself when it reads clank.trade and its picture host, so they can see who's asking.
+// The name our server gives itself when it reads clank.trade and the coins' pictures, so they can see who's asking.
 export const UA = 'Mozilla/5.0 (compatible; ClankChecker/1.0; +https://agi1.app)';
 
 // Reads at most `max` bytes of an answer. `cut`: keep the start of a bigger answer (a web page), else give up (null).

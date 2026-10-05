@@ -2,22 +2,30 @@
 // about a scan (src/checker/lines.js) and the page's list helpers (src/sections/checker.js). clank.trade, its picture host,
 // DexScreener and the block explorer are faked with the shapes they really answer with (read on 2026-09-26). Run: npm test
 // Round 2 (the owner, the same day): live updates (?latest), coin pictures (?logo=…), and every coin listed (crude names too).
+// 2026-10-05 (the owner: "not accurate and theres no pictures"): coins paired with SPCX priced at SPCX's price, not ETH's,
+// and pictures from public IPFS gateways (clank.trade's own gateway only answers its own pages), made small with sharp.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import sharp from 'sharp';
+import zlib from 'node:zlib';
 import { GET, POST, resetForTests } from '../api/checker.js';
 import { analyze, checkCoin, scanClank, latestClank, markCopycats, showTicker, tickerKey, usd, percent, timeText, maskSlurs, cidOf,
-  coinPictureId, fetchCoinPicture, forgetPictures, POOL_MANAGER, OFFICIAL, MAX_PAGES, PICTURE_SIZES } from '../server/checker.js';
+  coinPictureId, forgetPictures, POOL_MANAGER, OFFICIAL, MAX_PAGES, pictureOf } from '../server/checker.js';
+import { fetchCoinPicture, PICTURE_SIZES, GATEWAYS, ORIGINAL_MAX_BYTES, pictureType, setSharpForTests } from '../server/coin-pictures.js';
 import { CHECK_LINES, LEVELS, checkLine, spokenOf } from '../src/checker/lines.js';
 import { LINES, LINE_MOODS, MOOD_STYLES } from '../server/voice.js';
 import { pick, usdShort, ageShort, agoText, stageText, mergeLatest, tidyCoin } from '../src/sections/checker.js';
 import { analyzeChain, LOCKED_TEXT } from '../server/checker.js';
-import { readCoinOnChain, shareOf, FACTORY, FACTORY_ABI, CURVE_ABI, TOKEN_ABI, STAGE } from '../server/clank-chain.js';
+import { readCoinOnChain, shareOf, FACTORY, FACTORY_ABI, CURVE_ABI, TOKEN_ABI, STAGE, SPCX } from '../server/clank-chain.js';
+import { SPCX as LAUNCH_SPCX } from '../server/launch.js';
 import { decodeFunctionData, encodeFunctionResult } from 'viem';
 
 const NOW = Date.UTC(2026, 8, 26, 12, 0, 0);
 const S = NOW / 1000;
 const H = 3600, D = 86_400, DAY_MS = 86_400_000;
 const ETH_USD = '2689.164696758498861512';
+// SPCX, Robinhood's SpaceX stock token: clank.trade's second pair (2026-10-02), its price as clank.trade gave it on 2026-10-05
+const SPCX_USD = '160.479619942851745065';
 const CURVE = '0x3e73c6bc1dd85e5037080be44403fff0f160a3fa';
 const HOOKS = '0x18bff70216af1b93f3552016dec742c5d78ee000';
 const CREATOR = '0x001ac0ffeec0ffeec0ffeec0ffeec0ffeec0ffee';
@@ -29,10 +37,20 @@ const DEAD = '0x7ee4501111111111111111111111111111111111';
 // real content ids from clank.trade's list (2026-09-26)
 const CID1 = 'bafkreiborp2klxbx4jemgyyuu4dmcjtd2kztj7psvrhjzesu76wjy2qgce';
 const CID2 = 'bafybeifs73il537t3zuag2zf2ekdm2iso6q4twlfvooq4isk4uejdn4yjq';
+// clank.trade's own Pinata gateway: since October 2026 it only answers clank.trade's own pages, so it's never asked
 const PINATA = 'https://yellow-total-guanaco-389.mypinata.cloud/ipfs/';
+// the public IPFS gateways the pictures come from instead, in order, and ClankBot's picture host
+const FILEBASE = 'https://ipfs.filebase.io/ipfs/', PINATA_PUBLIC = 'https://gateway.pinata.cloud/ipfs/', IPFS_IO = 'https://ipfs.io/ipfs/';
+const CLANKBOT_PIC = 'https://clankbot.trade/images/launches/2104949577573146779.jpg';
 // the first bytes of a real WebP / PNG, and an SVG (never served)
 const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x24, 0, 0, 0]), Buffer.from('WEBPVP8 '), Buffer.alloc(40, 7)]);
 const PNG = Buffer.concat([Buffer.from([0x89]), Buffer.from('PNG\r\n\x1a\n'), Buffer.alloc(40, 1)]);
+// real pictures, as coin creators upload them (made here with sharp): a photo, a square PNG, a small one, a big one
+const PHOTO = await sharp({ create: { width: 800, height: 600, channels: 3, background: '#ff3f9a' } }).jpeg({ quality: 90 }).toBuffer();
+const SQUARE = await sharp({ create: { width: 400, height: 400, channels: 4, background: { r: 107, g: 59, b: 255, alpha: 1 } } }).png().toBuffer();
+const SMALL = await sharp({ create: { width: 64, height: 40, channels: 3, background: '#ffc933' } }).png().toBuffer();
+const BIG = await sharp({ create: { width: 3000, height: 2000, channels: 3, background: '#3ff0c3' } }).jpeg().toBuffer();
+const metaOf = (bytes) => sharp(bytes).metadata();
 const wallet = (n) => `0x${n.toString(16).padStart(4, '0')}${'c0ffee'.repeat(6)}`;
 // a balance that is `pct` percent of the 1B supply (18 decimals)
 const bal = (pct) => ((10n ** 27n * BigInt(Math.round(pct * 10_000))) / 1_000_000n).toString();
@@ -122,8 +140,11 @@ beforeEach(() => {
     search: {},                             // query → rows
     dex: {},                                // address → pairs | 'down'
     explorer: {},                           // address → holders_count | 'down'
-    pictures: {},                           // content id → { type, bytes } | 'down'
+    pictures: {},                           // content id (or ClankBot address) → { type, bytes } | 'down'
+    gateways: {},                           // filebase | pinata | ipfsio | clankbot → 'down' | 'timeout' | 'html' | 'missing'
+    prices: { [ZERO]: ETH_USD, [SPCX]: SPCX_USD },   // clank.trade's dollar price for each pair
   };
+  setSharpForTests(undefined);              // the real sharp (a test can take it away)
   globalThis.fetch = async (url, init = {}) => {
     url = String(url);
     if (url === 'https://rpc.mainnet.chain.robinhood.com') {
@@ -137,9 +158,15 @@ beforeEach(() => {
     }
     calls.push(url);
     inits.push(init);
-    if (url.startsWith(PINATA)) {
-      const pic = fake.pictures[new URL(url).pathname.split('/').pop()];
-      if (pic === 'down') return new Response('bad gateway', { status: 502 });
+    if (url.startsWith(PINATA)) return new Response('This content cannot be requested through the gateway you are using - ERR_ID:00024', { status: 401 });
+    const gateway = [[FILEBASE, 'filebase'], [PINATA_PUBLIC, 'pinata'], [IPFS_IO, 'ipfsio'], ['https://clankbot.trade/', 'clankbot']].find(([base]) => url.startsWith(base));
+    if (gateway) {
+      const how = fake.gateways[gateway[1]];
+      if (how === 'down') return new Response('bad gateway', { status: 502 });
+      if (how === 'timeout') throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+      if (how === 'html') return new Response('<html>a gateway error page</html>', { headers: { 'content-type': 'text/html' } });
+      const pic = how === 'missing' ? null : fake.pictures[gateway[1] === 'clankbot' ? url : url.slice(gateway[0].length)];
+      if (pic === 'down') return new Response('gateway timeout', { status: 504 });
       if (!pic) return new Response('not found', { status: 404 });
       return new Response(pic.bytes, { headers: { 'content-type': pic.type } });
     }
@@ -156,7 +183,10 @@ beforeEach(() => {
         if (name === 'coins.detail') return coin ? { result: { data: coin.detail } } : notFound;
         if (name === 'coins.holders') return coin ? (coin.holdersError ? { error: { message: 'boom', data: { httpStatus: 500 } } } : { result: { data: { holders: coin.holders } } }) : notFound;
         if (name === 'coins.trades') return coin ? { result: { data: { trades: coin.trades.slice(0, arg.limit), nextCursor: null, headCursor: 'h' } } } : notFound;
-        if (name === 'exchangeRates.tokenUsdg') return { result: { data: { price: ETH_USD, token: arg.token, tokenDecimals: 18 } } };
+        if (name === 'exchangeRates.tokenUsdg') {
+          const price = fake.prices[String(arg.token).toLowerCase()];
+          return price ? { result: { data: { price, token: arg.token, tokenDecimals: 18 } } } : { error: { message: 'no price for that token', data: { httpStatus: 404 } } };
+        }
         if (name === 'coins.trending') return { result: { data: fake.trending.map((t) => (typeof t === 'string' ? { address: t } : t)) } };
         if (name === 'coins.list') {
           if ('query' in arg) return fake.search === 'down' ? { error: { message: 'boom', data: { httpStatus: 500 } } } : { result: { data: { coins: fake.search[arg.query] || [], nextCursor: null } } };
@@ -424,8 +454,9 @@ test('checkCoin: one request to clank.trade for the coin, then its ticker, its p
   const s = await checkCoin(MEOW, { now: NOW });
   assert.equal(s.level, 'low');
   const first = new URL(calls[0]);
-  assert.equal(first.pathname, '/v1/trpc/coins.detail,coins.holders,coins.trades,exchangeRates.tokenUsdg');
-  assert.deepEqual(JSON.parse(first.searchParams.get('input')), { 0: { address: MEOW }, 1: { address: MEOW }, 2: { address: MEOW, limit: 100 }, 3: { token: '0x0000000000000000000000000000000000000000' } });
+  assert.equal(first.pathname, '/v1/trpc/coins.detail,coins.holders,coins.trades,exchangeRates.tokenUsdg,exchangeRates.tokenUsdg');
+  assert.deepEqual(JSON.parse(first.searchParams.get('input')), { 0: { address: MEOW }, 1: { address: MEOW }, 2: { address: MEOW, limit: 100 },
+    3: { token: '0x0000000000000000000000000000000000000000' }, 4: { token: SPCX } }, 'the prices of both pairs (ETH, SPCX) come with it');
   assert.equal(first.searchParams.get('batch'), '1');
   assert.equal(calls.length, 4, 'then its ticker (clank.trade\'s search), DexScreener and the block explorer');
   assert.ok(calls.some((u) => u.startsWith('https://clank.trade/v1/trpc/coins.list?') && JSON.parse(new URL(u).searchParams.get('input'))[0].query === 'MEOW'));
@@ -632,7 +663,7 @@ test('checkCoin asks the chain alongside clank.trade: a graduated coin gets the 
   assert.equal(s.source, undefined, 'clank.trade answered: the full scan');
   assert.deepEqual(s.onchain, { exists: true, state: 3, curve: CURVE });
   assert.ok(has(s, 'locked', 'ok'));
-  assert.equal(new URL(calls[0]).pathname, '/v1/trpc/coins.detail,coins.holders,coins.trades,exchangeRates.tokenUsdg', 'clank.trade still first');
+  assert.equal(new URL(calls[0]).pathname, '/v1/trpc/coins.detail,coins.holders,coins.trades,exchangeRates.tokenUsdg,exchangeRates.tokenUsdg', 'clank.trade still first');
 });
 
 test('clank.trade doesn\'t answer, or hasn\'t listed a coin yet: a smaller scan straight from the chain, never "Lower risk"', async () => {
@@ -734,7 +765,7 @@ test('the list: every page, trending ranks, dollars, copycats marked, every coin
   assert.equal(r.headers.get('cache-control'), 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
   const list = await r.json();
   assert.equal(calls.length, 3, 'three pages (the first one with the trending list and the ETH price)');
-  assert.match(calls[0], /\/v1\/trpc\/coins\.list,coins\.trending,exchangeRates\.tokenUsdg\?batch=1/);
+  assert.match(calls[0], /\/v1\/trpc\/coins\.list,coins\.trending,exchangeRates\.tokenUsdg,exchangeRates\.tokenUsdg\?batch=1/);
   assert.deepEqual(JSON.parse(new URL(calls[1]).searchParams.get('input')), { 0: { cursor: 'p1' } });
   assert.equal(list.total, 6, '7 on clank.trade, without $CABO');
   assert.equal('hidden' in list, false);
@@ -798,7 +829,8 @@ test('the list: at most MAX_PAGES pages, and clank.trade down → 503 (nothing g
 });
 
 test('markCopycats: the site\'s own coin, then a graduated one, then the biggest is the real one', () => {
-  const c = (address, symbol, graduated, mcEth, official = false) => ({ address, symbol, graduated, mcEth, official });
+  // (sizes: market caps in dollars, mcUsd on the server since 2026-10-05)
+  const c = (address, symbol, graduated, mcUsd, official = false) => ({ address, symbol, graduated, mcUsd, official });
   const [a, b, d] = markCopycats([c('0xa', 'PEPE', false, 3), c('0xb', 'pepe', true, 40), c('0xd', 'PEPE', false, 2.9)]);
   assert.equal(a.copyOf, '0xb'); assert.equal(d.copyOf, '0xb'); assert.equal(b.copyOf, null);
   const [x, y] = markCopycats([c('0xx', 'DOG', false, 3), c('0xy', 'DOG', false, 2.5)]);
@@ -806,6 +838,8 @@ test('markCopycats: the site\'s own coin, then a graduated one, then the biggest
   assert.equal(x.sameTicker, 1);
   const [z] = markCopycats([c('0xz', 'DOG', false, 3)]);
   assert.equal(z.sameTicker, 0);
+  const [p, q] = markCopycats([c('0xp', 'CAT', false, 10_000), c('0xq', 'CAT', false, 4_000)]);
+  assert.equal(p.copyOf, null); assert.equal(q.copyOf, '0xp', 'less than half its size: a copy');
 });
 
 // ---------- the API ----------
@@ -897,7 +931,7 @@ test('?latest: the 12 newest coins and clank.trade\'s trending list in one reque
   assert.equal(r.headers.get('cache-control'), 'public, max-age=5, s-maxage=10');
   const data = await r.json();
   assert.equal(calls.length, 1, 'one request, never the other pages');
-  assert.match(calls[0], /\/v1\/trpc\/coins\.list,coins\.trending,exchangeRates\.tokenUsdg\?batch=1/);
+  assert.match(calls[0], /\/v1\/trpc\/coins\.list,coins\.trending,exchangeRates\.tokenUsdg,exchangeRates\.tokenUsdg\?batch=1/);
   assert.deepEqual(data.coins.map((c) => c.symbol), ['THUC', 'E/ACC']);
   assert.equal(data.coins[0].image, true);
   assert.equal(data.coins[0].createdAt, (S - 60) * 1000);
@@ -976,9 +1010,9 @@ test('the page merges the newest coins: new launches added, known ones updated, 
 });
 
 // ---------- round 2: pictures ----------
-test('?logo=: a coin\'s picture from clank.trade\'s own picture host, checked, served from our address and kept a week', async () => {
+test('?logo=: a coin\'s picture from a public IPFS gateway (never clank.trade\'s own), made small, served from our address and kept a week', async () => {
   fake.pages = [[listRow({ address: COIN, symbol: 'E/ACC', name: 'Egirl Acceleration', image: `ipfs://${CID2}` })]];
-  fake.pictures[CID2] = { type: 'image/webp', bytes: WEBP };
+  fake.pictures[CID2] = { type: 'image/jpeg', bytes: PHOTO };
   assert.equal((await get()).status, 200, 'the list (it remembers every coin\'s picture)');
   calls = []; inits = [];
   const r = await get(`?logo=${COIN}&s=96`);
@@ -987,18 +1021,28 @@ test('?logo=: a coin\'s picture from clank.trade\'s own picture host, checked, s
   assert.equal(r.headers.get('cache-control'), 'public, max-age=3600, s-maxage=604800, stale-while-revalidate=86400');
   assert.equal(r.headers.get('content-security-policy'), "default-src 'none'; sandbox");
   assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
-  assert.deepEqual(Buffer.from(await r.arrayBuffer()), WEBP);
-  assert.deepEqual(calls, [`${PINATA}${CID2}?img-width=96&img-height=96&img-fit=cover&img-quality=85&img-format=webp`], 'known from the list: no lookup at clank.trade');
+  const small = Buffer.from(await r.arrayBuffer());
+  const m = await metaOf(small);
+  assert.deepEqual([m.format, m.width, m.height], ['webp', 96, 96], 'a 96 px square (cut to fit), always WebP');
+  assert.ok(small.length < 3000, `small (${small.length} bytes)`);
+  assert.deepEqual(calls, [`${FILEBASE}${CID2}`], 'Filebase\'s public gateway first; known from the list: no lookup at clank.trade');
   assert.equal(inits[0].redirect, 'error', 'never followed somewhere else');
-  // the big one: the whole picture, never enlarged
+  assert.match(inits[0].headers['User-Agent'], /ClankChecker\/1\.0; \+https:\/\/agi1\.app/);
+  assert.ok(!calls.some((u) => u.startsWith(PINATA)), 'clank.trade\'s own gateway is never asked (it only answers its own pages)');
+  // the big one: the whole picture, at most 512 px, never enlarged
   calls = [];
-  assert.equal((await get(`?logo=${COIN}&s=512`)).status, 200);
-  assert.deepEqual(calls, [`${PINATA}${CID2}?img-width=512&img-height=512&img-fit=scale-down&img-quality=85&img-format=webp`]);
+  const big = await get(`?logo=${COIN}&s=512`);
+  const bm = await metaOf(Buffer.from(await big.arrayBuffer()));
+  assert.deepEqual([bm.format, bm.width, bm.height], ['webp', 512, 384], 'the whole 800 × 600 photo, at most 512 px wide or tall');
   assert.deepEqual(PICTURE_SIZES, [96, 512]);
+  fake.pictures[CID2] = { type: 'image/png', bytes: SMALL };
+  resetForTests();
+  const tiny = await metaOf(Buffer.from(await (await get(`?logo=${COIN}&s=512`)).arrayBuffer()));
+  assert.deepEqual([tiny.width, tiny.height], [64, 40], 'a small picture stays its size');
   // a coin this server copy hasn't listed: its details from clank.trade, once
   forgetPictures();
   fake.coins[MEOW] = { detail: grad({ image: `ipfs://${CID1}` }), holders: [], trades: [] };
-  fake.pictures[CID1] = { type: 'image/png', bytes: PNG };
+  fake.pictures[CID1] = { type: 'image/png', bytes: SQUARE };
   calls = [];
   assert.equal((await get(`?logo=${MEOW}&s=96`)).status, 200);
   assert.equal(calls.length, 2);
@@ -1008,7 +1052,92 @@ test('?logo=: a coin\'s picture from clank.trade\'s own picture host, checked, s
   assert.equal(calls.length, 1, 'remembered');
 });
 
-test('?logo=: no picture, not a clank.trade coin, not a real picture, too big, the host down; the speed bump; the owner\'s hidden pictures', async () => {
+test('pictures: the next public gateway when one is down, slow or missing it; ClankBot\'s host; the type read from the file itself', async () => {
+  fake.pictures[CID1] = { type: 'application/octet-stream', bytes: SQUARE };
+  assert.deepEqual(GATEWAYS.map(([base]) => base), [FILEBASE, PINATA_PUBLIC, IPFS_IO], 'Filebase, then Pinata\'s public gateway, then ipfs.io');
+  for (const [how, expect] of [['down', 2], ['timeout', 2], ['missing', 2], ['html', 2]]) {
+    calls = [];
+    fake.gateways = { filebase: how };
+    const got = await fetchCoinPicture(CID1, 96);
+    assert.equal(got?.type, 'image/webp', how);
+    assert.deepEqual(calls, [`${FILEBASE}${CID1}`, `${PINATA_PUBLIC}${CID1}`], `Filebase ${how}: Pinata's public gateway has it`);
+  }
+  calls = [];
+  fake.gateways = { filebase: 'down', pinata: 'timeout' };
+  assert.equal((await fetchCoinPicture(CID1, 512))?.type, 'image/webp');
+  assert.deepEqual(calls, [`${FILEBASE}${CID1}`, `${PINATA_PUBLIC}${CID1}`, `${IPFS_IO}${CID1}`]);
+  // a gateway that claims some other type: what counts is the file's own first bytes
+  assert.equal(pictureType(PHOTO), 'image/jpeg');
+  assert.equal(pictureType(SQUARE), 'image/png');
+  assert.equal(pictureType(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')), null);
+  assert.equal(pictureType(Buffer.from('<html>')), null);
+  // nobody has it: "no picture" (kept an hour); somebody failed: asked again later (an error)
+  fake.gateways = { filebase: 'missing', pinata: 'missing', ipfsio: 'missing' };
+  assert.equal(await fetchCoinPicture(CID1, 96), null);
+  fake.gateways = { filebase: 'missing', pinata: 'down', ipfsio: 'missing' };
+  await assert.rejects(fetchCoinPicture(CID1, 96), /picture hosts: HTTP 502/);
+  fake.gateways = {};
+  // out of time: never past the deadline (Vercel stops a function at 25 s)
+  calls = [];
+  await assert.rejects(fetchCoinPicture(CID1, 96, { deadline: Date.now() + 500 }), /no time left/);
+  assert.equal(calls.length, 0);
+  // ClankBot's host: 13 coins name a picture there (2026-10-05). Only its pictures; any other site keeps the letter
+  assert.equal(pictureOf(CLANKBOT_PIC), CLANKBOT_PIC);
+  assert.equal(pictureOf('https://clankbot.trade/images/default-logo.png'), 'https://clankbot.trade/images/default-logo.png');
+  for (const bad of ['https://emojiisland.com/cdn/shop/products/Rocket_Emoji_large.png?v=1571606064', 'https://violet-mauve.vercel.app/images/favicon.png',
+    'http://clankbot.trade/images/launches/1.jpg', 'https://clankbot.trade.evil.test/images/launches/1.jpg', 'https://clankbot.trade/images/../secret.jpg',
+    'https://clankbot.trade/images/launches/1.jpg?x=1', 'https://clankbot.trade:8443/images/launches/1.jpg', 'https://user@clankbot.trade/images/launches/1.jpg',
+    'https://clankbot.trade/images/launches/1.svg', 'https://clankbot.trade/api/launches/1.jpg', ' ', '', null]) {
+    assert.equal(pictureOf(bad), null, String(bad));
+  }
+  assert.equal(pictureOf(`ipfs://${CID1}`), CID1);
+  assert.equal(pictureOf(`https://yellow-total-guanaco-389.mypinata.cloud/ipfs/${CID2}?img-width=128&img-height=128`), CID2, 'clank.trade\'s own gateway address: its content id, read elsewhere');
+  fake.pictures[CLANKBOT_PIC] = { type: 'image/jpeg', bytes: PHOTO };
+  calls = [];
+  const cb = await fetchCoinPicture(CLANKBOT_PIC, 96);
+  assert.equal(cb.type, 'image/webp');
+  assert.deepEqual(calls, [CLANKBOT_PIC]);
+  fake.pages = [[listRow({ address: COIN, symbol: 'CLANKMEW', name: 'clankmew', image: CLANKBOT_PIC }), listRow({ address: MEOW, symbol: 'ROCKET', name: 'rocket', image: 'https://emojiisland.com/x.png' })]];
+  const list = await (await get()).json();
+  assert.deepEqual(list.coins.map((c) => [c.symbol, c.image]), [['CLANKMEW', true], ['ROCKET', false]]);
+  assert.equal((await get(`?logo=${COIN}&s=96`)).status, 200);
+  assert.equal((await get(`?logo=${MEOW}&s=96`)).status, 404);
+});
+
+test('pictures we never show: not a picture, a fake one, SVG, over 8 MB, broken, giant; sharp missing (as they are, up to 1 MB)', async () => {
+  for (const [pic, why] of [
+    [{ type: 'image/svg+xml', bytes: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>') }, 'SVG can carry code'],
+    [{ type: 'text/html', bytes: Buffer.from('<html>hi</html>') }, 'not a picture'],
+    [{ type: 'image/png', bytes: Buffer.from('<html>not really a png</html>') }, 'says PNG, isn\'t one'],
+    [{ type: 'image/png', bytes: PNG }, 'a PNG\'s first bytes and nothing behind them (broken)'],
+    [{ type: 'image/jpeg', bytes: Buffer.concat([PHOTO, Buffer.alloc(ORIGINAL_MAX_BYTES)]) }, 'over 8 MB'],
+  ]) {
+    fake.pictures[CID1] = pic;
+    assert.equal(await fetchCoinPicture(CID1, 96), null, why);
+  }
+  // a picture of more than 50 million pixels (a "decompression bomb" is tiny as a file): not shown. A 1 × 1 PNG whose
+  // header claims 10,000 × 6,000 (its checksum made right, so only the size gives it away)
+  const bomb = Buffer.from(await sharp({ create: { width: 1, height: 1, channels: 3, background: '#000' } }).png().toBuffer());
+  bomb.writeUInt32BE(10_000, 16); bomb.writeUInt32BE(6_000, 20);
+  bomb.writeUInt32BE(zlib.crc32(bomb.subarray(12, 29)), 29);
+  assert.equal((await metaOf(bomb)).width, 10_000);
+  fake.pictures[CID1] = { type: 'image/png', bytes: bomb };
+  assert.equal(await fetchCoinPicture(CID1, 512), null, 'giant');
+  // big but fine: made small
+  fake.pictures[CID1] = { type: 'image/jpeg', bytes: BIG };
+  const big = await fetchCoinPicture(CID1, 512);
+  assert.deepEqual([(await metaOf(big.bytes)).width, (await metaOf(big.bytes)).height], [512, 341]);
+  assert.ok(big.bytes.length < 40_000, `${big.bytes.length} bytes, from ${BIG.length}`);
+  // if sharp ever went missing, a real picture as it is, up to 1 MB (never a broken one: its first bytes are still checked)
+  setSharpForTests(null);
+  fake.pictures[CID1] = { type: 'image/png', bytes: SQUARE };
+  assert.deepEqual(await fetchCoinPicture(CID1, 96), { bytes: SQUARE, type: 'image/png' });
+  fake.pictures[CID1] = { type: 'image/jpeg', bytes: BIG.length > 1_000_000 ? BIG : Buffer.concat([BIG, Buffer.alloc(1_000_001 - BIG.length)]) };
+  assert.equal(await fetchCoinPicture(CID1, 96), null, 'over 1 MB without sharp');
+  setSharpForTests(undefined);
+});
+
+test('?logo=: no picture, not a clank.trade coin, not a real picture, the hosts down; the speed bump; the owner\'s hidden pictures', async () => {
   fake.coins[COIN] = { detail: detail({ image: 'ipfs://x' }), holders: [], trades: [] };
   const none = await get(`?logo=${COIN}&s=96`);
   assert.equal(none.status, 404, 'no picture');
@@ -1016,27 +1145,21 @@ test('?logo=: no picture, not a clank.trade coin, not a real picture, too big, t
   assert.equal((await get(`?logo=${DEAD}&s=96`)).status, 404, 'not a clank.trade coin');
   fake.coins[COIN].detail = detail({ image: `ipfs://${CID1}` });
   forgetPictures();
-  for (const [pic, why] of [
-    [{ type: 'image/svg+xml', bytes: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>') }, 'SVG can carry code'],
-    [{ type: 'text/html', bytes: Buffer.from('<html>hi</html>') }, 'not a picture'],
-    [{ type: 'image/png', bytes: Buffer.from('<html>not really a png</html>') }, 'says PNG, isn\'t one'],
-    [{ type: 'image/webp', bytes: Buffer.concat([WEBP, Buffer.alloc(1_000_001)]) }, 'over 1 MB'],
-  ]) {
-    fake.pictures[CID1] = pic;
-    const r = await get(`?logo=${COIN}&s=96`);
-    assert.equal(r.status, 404, why);
-    assert.match(r.headers.get('content-type'), /json/);
-  }
-  fake.pictures[CID1] = 'down';
+  fake.pictures[CID1] = { type: 'text/html', bytes: Buffer.from('<html>hi</html>') };
+  const notPic = await get(`?logo=${COIN}&s=96`);
+  assert.equal(notPic.status, 404, 'not a picture');
+  assert.match(notPic.headers.get('content-type'), /json/);
+  fake.gateways = { filebase: 'down', pinata: 'down', ipfsio: 'timeout' };
   const down = await get(`?logo=${COIN}&s=96`);
   assert.equal(down.status, 502);
   assert.equal(down.headers.get('cache-control'), 'public, max-age=300, s-maxage=300', 'tried again in a few minutes');
+  fake.gateways = {};
   fake.down = true;
   forgetPictures();
   assert.equal((await get(`?logo=${COIN}&s=96`)).status, 502, 'clank.trade down');
   fake.down = false;
   // a script asking for thousands: 240 a minute per visitor
-  fake.pictures[CID1] = { type: 'image/png', bytes: PNG };
+  fake.pictures[CID1] = { type: 'image/png', bytes: SMALL };
   resetForTests();
   let last;
   for (let i = 0; i < 241; i++) last = await get(`?logo=${COIN}&s=96`);
@@ -1058,14 +1181,122 @@ test('?logo=: no picture, not a clank.trade coin, not a real picture, too big, t
   assert.equal((await (await get(`?a=${COIN}`)).json()).image, false);
 });
 
-test('fetchCoinPicture / coinPictureId: only real content ids and our two sizes; nothing else is ever fetched', async () => {
+test('fetchCoinPicture / coinPictureId: only real content ids, ClankBot\'s pictures and our two sizes; nothing else is ever fetched', async () => {
   assert.equal(await fetchCoinPicture('../../etc/passwd', 96), null);
+  assert.equal(await fetchCoinPicture('https://evil.test/x.png', 96), null);
   assert.equal(await fetchCoinPicture(CID1, 64), null);
   assert.equal(await fetchCoinPicture(CID1, 2048), null);
   assert.equal(await coinPictureId('0xnope'), null);
   assert.equal(calls.length, 0);
-  fake.pictures[CID1] = { type: 'image/png', bytes: PNG };
+  fake.pictures[CID1] = { type: 'image/png', bytes: SQUARE };
   const got = await fetchCoinPicture(CID1, 512);
-  assert.equal(got.type, 'image/png');
+  assert.equal(got.type, 'image/webp');
   assert.equal(calls.length, 1);
+});
+
+// ---------- coins paired with SPCX (2026-10-05) ----------
+// Since 2026-10-02 clank.trade also pairs coins with SPCX, Robinhood's SpaceX stock token: their market cap, curve and
+// threshold are in SPCX. Everything was priced as ETH before, so $SI (247.76 SPCX, $39.8K on clank.trade) showed $677K.
+const SI = '0x0fe97b2d477014d78a61829a3c41866912d469ea';
+const spcxRow = (c) => ({ ...listRow(c), quoteSymbol: 'SPCX', quoteCurrency: SPCX });
+const spcxDetail = (o = {}) => detail({ quoteCurrency: '0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa', quoteSymbol: 'SPCX', quoteDecimals: 18, threshold: '74389625610464579013', ...o });
+
+test('coins paired with SPCX: the list counts their market cap at SPCX\'s price (the same number clank.trade shows), never ETH\'s', async () => {
+  assert.equal(SPCX, '0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea');
+  assert.equal(LAUNCH_SPCX, SPCX, 'one address for SPCX: the risk check and the launch page agree');
+  fake.pages = [[
+    spcxRow({ address: SI, symbol: 'SI', name: 'Space Inu', state: 3, progress: 100, marketCap: 247.76325924079578 }),
+    listRow({ address: OFFICIAL, symbol: 'AGI', name: 'Artificial Girlfriend Intelligence', state: 3, progress: 100, marketCap: 143.91 }),
+    spcxRow({ address: wallet(30), symbol: 'CBOT', name: 'ClankBot', progress: 15.97, marketCap: 54.73 }),
+    // the same ticker on both pairs, about the same size in dollars ($4.7K and $4.3K): neither is a copy of the other
+    listRow({ address: wallet(31), symbol: 'SUPER', name: 'Super Intelligence', progress: 3, marketCap: 1.75 }),
+    spcxRow({ address: wallet(32), symbol: 'SUPER', name: 'Space Super', progress: 0.5, marketCap: 26.91 }),
+  ]];
+  const list = await (await get()).json();
+  const by = Object.fromEntries(list.coins.map((c) => [c.symbol === 'SUPER' ? c.name : c.symbol, c]));
+  assert.equal(by.SI.marketCap, Math.round(247.76325924079578 * Number(SPCX_USD)), 'about $39.8K, as clank.trade shows it');
+  assert.equal(by.SI.marketCap, 39761);
+  assert.notEqual(by.SI.marketCap, Math.round(247.76325924079578 * Number(ETH_USD)), 'not $666K (the old mistake)');
+  assert.equal(by.CBOT.marketCap, Math.round(54.73 * Number(SPCX_USD)));
+  assert.equal(by.AGI.marketCap, Math.round(143.91 * Number(ETH_USD)));
+  assert.ok(by.AGI.marketCap > by.SI.marketCap, 'so "Biggest" puts $AGI above $SI again');
+  assert.equal(by['Super Intelligence'].copyOf, null);
+  assert.equal(by['Space Super'].copyOf, null, 'sizes compared in dollars (26.91 SPCX is not "15 times" 1.75 ETH)');
+  assert.equal(list.spcxUsd, Number(SPCX_USD));
+  assert.match(calls[0], /coins\.list,coins\.trending,exchangeRates\.tokenUsdg,exchangeRates\.tokenUsdg\?batch=1/, 'both prices in the first request');
+  assert.equal(calls.filter((u) => u.includes('exchangeRates')).length, 1, 'no extra request for ETH or SPCX');
+  // the newest coins every 10 seconds: the same
+  resetForTests();
+  const latest = await (await get('?latest')).json();
+  assert.equal(latest.coins.find((c) => c.address === SI).marketCap, 39761);
+});
+
+test('a pair we don\'t know yet: its price asked once, in one more request; no price → no dollars (never ETH\'s)', async () => {
+  const FOO = '0x1111111111111111111111111111111111111111';
+  fake.pages = [[{ ...listRow({ address: wallet(40), symbol: 'FOOD', name: 'Food', marketCap: 10 }), quoteCurrency: FOO, quoteSymbol: 'FOO' }]];
+  fake.prices[FOO] = '2.5';
+  const list = await scanClank({ now: NOW });
+  assert.equal(list.coins[0].marketCap, 25);
+  const asked = calls.filter((u) => u.includes('exchangeRates'));
+  assert.equal(asked.length, 2);
+  assert.deepEqual(JSON.parse(new URL(asked[1]).searchParams.get('input')), { 0: { token: FOO } });
+  delete fake.prices[FOO];
+  calls = [];
+  const unknown = await scanClank({ now: NOW });
+  assert.equal(unknown.coins[0].marketCap, null, 'shown as "—" on the page');
+  // clank.trade down for prices altogether: no dollars, the list still comes
+  fake.prices = {};
+  const noPrices = await scanClank({ now: NOW });
+  assert.equal(noPrices.coins[0].marketCap, null);
+  assert.equal(noPrices.ethUsd, null);
+});
+
+test('a scan of a coin paired with SPCX: its market cap and what\'s in its curve at SPCX\'s price, and its pair named', async () => {
+  const s = scanOf({ detail: spcxDetail({ marketCap: 26.91, progress: 8, reserve: '5951170048837166321' }), prices: new Map([[ZERO, Number(ETH_USD)], [SPCX, Number(SPCX_USD)]]) });
+  const facts = Object.fromEntries(s.facts.map((f) => [f.label, f.value]));
+  assert.equal(facts['Market cap'], usd(26.91 * Number(SPCX_USD)));
+  assert.equal(facts['Market cap'], '$4.3K');
+  assert.equal(facts['In its curve'], usd(5.951170048837166 * Number(SPCX_USD)));
+  assert.equal(facts['In its curve'], '$955');
+  assert.equal(facts['Paired with'], 'SPCX');
+  assert.ok(s.flags.some((f) => f.id === 'stage' && f.text === 'Early: 8% of its bonding curve is filled (about $955 in it).'));
+  // an ETH coin says so too
+  assert.equal(Object.fromEntries(scanOf({}).facts.map((f) => [f.label, f.value]))['Paired with'], 'ETH');
+  // without SPCX's price: no dollars (never priced as ETH)
+  const blind = scanOf({ detail: spcxDetail({ marketCap: 26.91, progress: 8, reserve: '5951170048837166321' }) });
+  const bf = Object.fromEntries(blind.facts.map((f) => [f.label, f.value]));
+  assert.equal(bf['Market cap'], '—');
+  assert.equal(bf['In its curve'], '—');
+  // the same ticker: compared in dollars, whatever the pairs
+  const other = listRow({ address: DEAD, symbol: 'E/ACC', name: 'x', progress: 3, marketCap: 1.75 });
+  const twin = scanOf({ detail: spcxDetail({ marketCap: 26.91 }), sameTicker: [other], prices: new Map([[ZERO, Number(ETH_USD)], [SPCX, Number(SPCX_USD)]]) });
+  assert.ok(!twin.flags.some((f) => f.id === 'copycat'), '$4.3K vs $4.7K: neither is a copy');
+  assert.ok(twin.flags.some((f) => f.id === 'ticker' && f.sev === 'some'));
+});
+
+test('checkCoin of a coin paired with SPCX: both prices come with the first request; the chain\'s scan names SPCX', async () => {
+  fake.coins[SI] = { detail: spcxDetail({ address: SI, symbol: 'SI', name: 'Space Inu', state: 3, progress: 100, marketCap: 247.76325924079578, reserve: '0' }),
+    holders: holdersOf([[POOL_MANAGER, 24.5], ...spread(99, 0.6)]), trades: lively(100, 300) };
+  fake.dex[SI] = [pair(SI, 21885.65, -12.91)];
+  fake.explorer[SI] = 300;
+  const s = await checkCoin(SI, { now: NOW });
+  const facts = Object.fromEntries(s.facts.map((f) => [f.label, f.value]));
+  assert.equal(facts['Market cap'], '$39.8K', 'as clank.trade shows it (it was $677K)');
+  assert.equal(facts['Paired with'], 'SPCX');
+  assert.equal(calls.filter((u) => u.includes('exchangeRates')).length, 1, 'no extra request');
+  // from the chain alone (clank.trade away): its curve in SPCX
+  fake.down = true;
+  onChain(COIN, { reserve: 12_300_000_000_000_000_000n, launch: { pairToken: SPCX, graduationThreshold: 74389625610464579013n } });
+  const c = await checkCoin(COIN, { now: NOW });
+  assert.equal(c.source, 'chain');
+  const cf = Object.fromEntries(c.facts.map((f) => [f.label, f.value]));
+  assert.equal(cf['In its curve'], '12.3 SPCX');
+  assert.equal(cf['Paired with'], 'SPCX');
+  assert.ok(c.flags.some((f) => f.id === 'stage' && /about 12\.3 SPCX in it/.test(f.text)));
+  assert.equal(c.progress, 16.53, '12.3 of its 74.39 SPCX threshold');
+  // an ETH coin from the chain: ETH, as before
+  onChain(COIN, {});
+  const e = Object.fromEntries((await checkCoin(COIN, { now: NOW })).facts.map((f) => [f.label, f.value]));
+  assert.equal(e['In its curve'], '0.951 ETH');
+  assert.equal(e['Paired with'], 'ETH');
 });

@@ -6,10 +6,11 @@ export const tickerKey = (raw) => String(raw ?? '').normalize('NFKC').toUpperCas
 
 // Among coins with the same ticker, the "real" one is the site's own $AGI, else a graduated one, else the biggest. Another
 // coin is a copy when that one has graduated or is at least twice its size (and it hasn't graduated itself).
-// size(c): how big a coin is (its market cap, in ETH on the server or in dollars on the page: only the ratio matters).
+// size(c): how big a coin is: its market cap in dollars (on the server and the page; since 2026-10-05 also on the server,
+// where it was in ETH, which made a coin paired with SPCX look about 17 times bigger than one paired with ETH).
 // → the same coins, each with copyOf (the real one's address, or null), copyOfficial (uses $AGI's ticker without being it)
 // and sameTicker (how many other coins share it)
-export function markCopycats(coins, { size = (c) => c.mcEth ?? c.marketCap ?? 0 } = {}) {
+export function markCopycats(coins, { size = (c) => c.mcUsd ?? c.marketCap ?? 0 } = {}) {
   const groups = new Map();
   for (const c of coins) {
     const key = tickerKey(c.symbol);

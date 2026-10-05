@@ -23,6 +23,9 @@
 >   Older sections below that still name the Arena or CABO describe how things were before that day.
 > - **ClankChecker is called "Risk check your coins on clank"** on the page since 2026-09-28 (the owner's words), in the
 >   Arena's old place right after the Playground. The code keeps its old name (`checker.js`, `chk-*`, "ClankChecker" here).
+>   **Fixed 2026-10-05** (the owner: "not accurate and theres no pictures"): coins paired with SPCX are priced at SPCX's
+>   price (they looked about 17 times bigger), and the coins' pictures come from public IPFS gateways (clank.trade's own
+>   gateway refuses other sites now), made small on our server with sharp. See "Each coin's pair" and "The coins' pictures".
 > - **The front** (2026-09-28): the bright AGI landing of the ecosystem page that used to be here is back, as the first
 >   thing on the home page, with the whole site after it. See "The front".
 > - **Her languages** (2026-09-29, the owner: "add different languages on agi-1 … but default is english"): she speaks 16
@@ -103,6 +106,12 @@
 >   market moments as they happen, says hi when she's added and welcomes people who join (at most one welcome every 10
 >   minutes, never a name, a safety reminder). Hard rule 6 got its third exception. **Off until the owner sets it up**
 >   (`supabase/telegram.sql` once more, `TELEGRAM_GROUPS`, then add her). See "In Telegram groups".
+> - **Her launch video** (2026-10-03, the owner: "now create me a professional launch video with motion design using only
+>   code about the website and its features … make it really good"): a 79-second film of agi1.app, every frame drawn in
+>   code and its music made in code (`tools/promo/`), wide (1920 × 1080) and tall (1080 × 1920), 60 frames a second, for
+>   the owner to post by hand. AGI-1 only in 2D (her Live2D model and the front's art; the owner: "use the 2d art … the 3d
+>   model is 18+"), never CloakMesh (the owner: "dont announce on the video about cloackmesh"), only $AGI and only what's
+>   live. See "Her launch video".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -149,6 +158,8 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
 - **Her daily clips** (2026-09-29, the owner's idea): every day GitHub's computer makes a vertical clip (1080 × 1920,
   about 20 s) of AGI-1 in 2D reading her diary entry in her natural voice, with captions. Only AGI: never another coin.
   The owner downloads it and posts it by hand, with the apps' AI labels. Not part of the website. See "Her daily clips"
+- **Her launch video** (2026-10-03, the owner's request): a 79-second film of the site and everything she does, drawn and
+  scored in code, wide and tall, for the owner to post by hand. Not part of the website. See "Her launch video"
 - **Burn $AGI for more messages** (2026-09-30, the owner's idea): after the free messages, 10 $AGI a message, burned by the
   visitor from their own wallet app (the site never asks a wallet for the burn) and checked on Robinhood Chain; what was
   burned counts toward the level; a huge live **burn monitor** above the chat. Off until `supabase/burns.sql` is run. See
@@ -268,6 +279,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | Telegram bot | Telegram's Bot API (free), from our server only: `/api/telegram` (its webhook) and `/api/feed` (8 cron runs a day) | She texts first (2026-09-29): opt-in by design (a bot can only text people who pressed Start), no app to build, no cost |
 | Coin launches | **clank.trade's own factory contract** (`launchToken`, from its developer docs), sent by the person's own wallet from the launch page (2026-10-01) | Non-custodial: their wallet is the coin's creator and nothing of theirs is on our server; launching is free; no new service |
 | Launched coins' pictures | **Pinata** (free plan: 500 files, 1 GB), from our server only (`PINATA_JWT`): each coin's picture goes on IPFS once, as it's got ready; a coin never launched has its picture deleted again | A clank.trade coin's picture is an `ipfs://` address; clank.trade's own pictures are on Pinata too; free |
+| The risk check's coin pictures (2026-10-05) | **Public IPFS gateways** (Filebase's, Pinata's public one, ipfs.io; ClankBot's host for its 13 coins), made small on our server with **sharp** (an npm package) | clank.trade's own gateway only answers its own pages since October 2026; IPFS is public; free and keyless; a 96 px WebP is a few KB |
 | Launch fees paid back | The owner's own small **gas wallet** (`LAUNCH_GAS_KEY`), from our server: one plain ETH payment back to each launch's creator | The owner's choice, to bring launches to her bot; capped per launch, per wallet and per day |
 | Her live show (2026-10-02) | **The owner's own rented server** (Hetzner Cloud, CX33) running **Docker** (Playwright's Chromium, Xvfb, ffmpeg), streaming to **X Live Studio** by RTMP; the site keeps her line (`/api/live`, Supabase) | Vercel can't run a browser and ffmpeg for an hour; Live Studio takes a standard encoder's stream; the cheapest server that draws her smoothly |
 | Her voice on stream | **Google Cloud's Vertex AI** (Gemini 3.8 Flash-Lite TTS, Despina), a service account on the server | The site's own voice (the owner's choice), with Google Cloud's higher limits instead of the site's 100 a day |
@@ -337,7 +349,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards"); and (2026-10-03) `cloakmesh-card.html`, CloakMesh's link preview (`public/cards/cloakmesh.png`: a 1200 × 630 screenshot of it in Chromium, then 256 colors; Claude redoes it when the page's top changes) |
 | `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me; since 2026-09-30 "Check my burn" and, at `GET ?burns`, the burn monitor's numbers), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only; since 2026-10-01 also tidying up launch drafts and the pictures of coins never launched), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first), and since 2026-10-01 `launch.js` (the launch page's server: a draft and its picture, getting a launch ready, reading it back, its fee paid back), and since 2026-10-02 `live.js` (her live show: a visitor's question, its place and her answer; her stream's calls with `LIVE_SECRET`; the owner's controls), and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: open or not, joining, leaving). **That's 12: Vercel's Hobby plan allows 12 functions per deployment** (every file here is one), so a new feature must share one of these (or the project moves to Pro). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; the coins' pictures from clank.trade's picture host), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it), and since 2026-10-03 `tg-api.js` (Telegram's API itself, her token, the daily chat codes: moved out of `telegram.js`) and `tg-groups.js` (her Telegram groups: which groups, leaving the others, her intro and welcomes, her answers there and their limits, her posts there); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and ETH, what its creator holds; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; where each coin's picture is; since 2026-10-05 every amount in dollars at the coin's own pair's price, ETH or SPCX), `coin-pictures.js` (2026-10-05: the coins' pictures, from public IPFS gateways or ClankBot's host, checked and made small with sharp; only `api/checker.js` loads it), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it), and since 2026-10-03 `tg-api.js` (Telegram's API itself, her token, the daily chat codes: moved out of `telegram.js`) and `tg-groups.js` (her Telegram groups: which groups, leaving the others, her intro and welcomes, her answers there and their limits, her posts there); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and what's in it, what its creator holds; since 2026-10-05 the pairs' addresses, `ETH_PAIR` and `SPCX`, which `launch.js` shares; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -350,11 +362,12 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/live.sql` | Her live show (2026-10-02). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_live_questions`, `agi1_live_state`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `LIVE_SECRET` is set), agi1.app/live says her show is coming soon |
 | `supabase/launch.sql` | "Launch with AGI-1" (2026-10-01). Run once in the same Supabase project (any time; running it again is safe): four new tables (`agi1_launch_drafts`, `agi1_launch_chats`, `agi1_launch_wallets`, `agi1_launch_days`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `PINATA_JWT` is set), her `/launch` says launching isn't open yet |
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there). See "Her live show on X" |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
+| `tools/promo/` | Her launch video (2026-10-03, not part of the website): `make.mjs` (builds its page, draws every frame in Chromium, ffmpeg → the MP4s, the cover, the post text, a light copy), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen, from the site's own files where it can), `music.js` (its music, composed and played in code), `page/` (the renderer: `promo.js`, `kit.js`, `ui.js`, `transitions.js`, `her.js` (her Live2D model), `art.js` (the front's art and shader), `scenes/` (one file a scene); built into `tools/promo/dist/`, which git ignores). Its videos go to `promo/` (git ignores it). See "Her launch video" |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
 | `scripts/check-secrets.js` | Runs after every build and fails it if a secret would be shipped to browsers |
 | `tools/model/` | Offline 3D-model tools, not part of the site build: `fix-hair-weights.mjs`, `drop-tangents.mjs` (see "3D models") |
@@ -385,6 +398,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 - `node tools/clips/make.mjs --fake-voice`: makes today's diary clip with a stand-in hum instead of her voice (see "Her
   daily clips"; needs Chrome or Chromium, ffmpeg and `npm install --no-save playwright-core`: Claude's workspace and GitHub
   have them). GitHub's daily job runs it for real (with her voice): Actions → "AGI-1's daily clips".
+- Her launch video (2026-10-03): `node tools/promo/make.mjs --format both --out promo --light 28` makes both videos into
+  `promo/` (about 15 minutes each; Chromium, ffmpeg and `npm install --no-save playwright-core`, like her clips). Quick
+  looks: `--scale 0.5 --fps 30`, `--from 48 --to 54`, `--stills 9.6,24.4`, `--sheet 0.5` (see "Her launch video").
 - Her live show (2026-10-02): `node tools/live/run.mjs --demo --fake-voice --record try.mp4 --minutes 3` makes a short show
   into a file anywhere (made-up questions, a stand-in hum; needs Chromium, ffmpeg, Xvfb and `npm install --no-save
   playwright-core@1.63.0`). On the owner's server everything goes through `sh tools/live/live.sh …` (see "Her live show
@@ -1475,13 +1491,34 @@ credit with an 𝕏 link, removed with everything about ClankCap.) The scans' da
 
 **Where the data comes from** (`server/checker.js`, `api/checker.js`; our server only, the browser never talks to them):
 - **clank.trade's own API**, the one its website uses (`https://clank.trade/v1/trpc/…`, tRPC, no key): `coins.list` (12 coins
-  a page, newest first, with a cursor; `{query}` searches), `coins.trending`, `exchangeRates.tokenUsdg` (ETH in dollars),
-  `coins.detail`, `coins.holders` (the 100 biggest) and `coins.trades` (up to 100). Several questions go in one request
-  ("batch"). It isn't documented, so it can change: then the checker says "Couldn't reach clank.trade" (see Troubleshooting).
+  a page, newest first, with a cursor; `{query}` searches), `coins.trending`, `exchangeRates.tokenUsdg` (a pair's price in
+  dollars: ETH's and, since 2026-10-05, SPCX's, in every first request), `coins.detail`, `coins.holders` (the 100 biggest) and
+  `coins.trades` (up to 100). Several questions go in one request ("batch"). It isn't documented, so it can change: then the
+  checker says "Couldn't reach clank.trade" (see Troubleshooting).
+- **Each coin's pair** (2026-10-05, the owner: "the risk check on the website is not accurate", with a screenshot: $SI at
+  $677.5K above $AGI): since 2026-10-02 clank.trade pairs coins with ETH or **SPCX** (Robinhood's SpaceX stock token, about
+  $160), and its `marketCap`, a curve's `reserve` and its `threshold` are counted in the coin's pair (`quoteCurrency`,
+  `quoteSymbol`). The checker priced everything as ETH (about $2,730), so a coin paired with SPCX looked about 17 times
+  bigger than it was ($SI: $677.5K for clank.trade's $39.8K; $CBOT $132.7K for $8.8K; 32 of 393 coins that day). Now every
+  amount becomes dollars at its own pair's price (`pairOf()`, `dollarsOf()` in `server/checker.js`): the list's market caps
+  (and so "Biggest" and copycats, compared in dollars), a scan's "Market cap", "In its curve" and its stage flag, and a new
+  fact, **"Paired with: ETH / SPCX"**; the chain's smaller scan says "about 12.3 SPCX in it". Any other pair a coin ever
+  names gets its price asked once more (at most 5 at a time); a pair whose price can't be read shows "—", never a guess.
+  `SPCX`'s address lives in `server/clank-chain.js` (`ETH_PAIR`, `SPCX`, `PAIR_NAMES`), shared with the launch page's code.
 - **DexScreener** (a graduated coin's pool: liquidity, 24h change, volume) and the **Blockscout block explorer**
   (`robinhoodchain.blockscout.com/api/v2/tokens/…`: how many wallets hold it, when clank.trade's list of 100 is full).
-- **clank.trade's picture host** (its own Pinata IPFS gateway, `yellow-total-guanaco-389.mypinata.cloud/ipfs/<id>`, which
-  also shrinks pictures): our server fetches each coin's picture there (round 2).
+- **The coins' pictures** (`server/coin-pictures.js`, since 2026-10-05; the owner: "theres no pictures of the token there"):
+  clank.trade keeps each coin's picture on IPFS (`ipfs://<id>`). Until October 2026 our server read them through
+  clank.trade's own Pinata gateway (`yellow-total-guanaco-389.mypinata.cloud`, which also shrank them); that gateway now
+  only answers clank.trade's own pages ("This content cannot be requested through the gateway you are using -
+  ERR_ID:00024", HTTP 401, checked in a browser from another site on 2026-10-05), so every picture became a letter. IPFS is
+  public, so the same files now come from **public IPFS gateways**, in order: Filebase's (`ipfs.filebase.io`, 0.4–2 s in a
+  browser), Pinata's public one (`gateway.pinata.cloud`, 6–8 s, but it has every clank.trade picture: they're pinned on
+  Pinata) and ipfs.io; and our server makes them small itself with **sharp** (a 96 px square, or at most 512 px, WebP). 13
+  coins (made with ClankBot) name a picture on **ClankBot's own host** (`https://clankbot.trade/images/…`): only that host
+  and only its pictures; the 3 coins naming any other site, and the 21 with no picture, keep their letter. Never
+  clank.trade's own gateway, never pretending to be clank.trade (its gateway is its own to keep). Only `api/checker.js`
+  loads this file: sharp (about 19 MB) is in no other function.
 - **The Clank protocol itself, on Robinhood Chain** (2026-09-29, from its docs: see "The Clank protocol";
   `server/clank-chain.js`): every scan also reads the coin's record at the protocol's factory and its curve, through the same
   free public node as the wallet levels (`ROBINHOOD_RPC_URL` can point elsewhere). Read-only `eth_call`s, two requests of
@@ -1518,7 +1555,10 @@ credit with an 𝕏 link, removed with everything about ClankCap.) The scans' da
   Not verified against the live contracts yet (Claude's workspace can't reach Robinhood Chain): the calls are the docs'
   own ABIs, and everything fails soft (a wrong answer decodes to nothing, and the scan works as before). First live check:
   `https://www.agi1.app/api/checker?a=0xfa31d04462746aaa24bc7e5626403e09e4b106ec` should show `"onchain":{"exists":true,"state":3,…}`
-  and the locked note.
+  and the locked note. **Checked live 2026-10-05:** coins launched through the docs' factory are confirmed (e.g. $SI and
+  $CBOT: `exists: true`, the same curve as clank.trade's; $SI gets the locked note), but $AGI is `{"exists":false}`: it was
+  launched before that factory, so $AGI gets no locked note (true either way: the note is only said when the protocol
+  confirms it).
 - `GET /api/checker`: every coin (up to 80 pages = 960 coins, at most ~18 s of reading; 202 on 2026-09-26), crude names too
   (slurs masked; `adult: true` marks a crude name), `image: true` when it has a picture, copycats marked. Shared by Vercel's
   CDN for 5 minutes (browsers 1 minute; then the old copy is served while a new one is read).
@@ -1530,12 +1570,14 @@ credit with an 𝕏 link, removed with everything about ClankCap.) The scans' da
   coin that neither clank.trade nor the protocol knows: `{ error: 'not_clank' }` (shared a minute). A visitor may start 30
   coin scans a minute (per server copy).
 - `GET /api/checker?logo=<lowercase address>&s=96|512` (round 2): a coin's picture (96 px, cut to a square, for the rows; 512
-  px, the whole picture, for the big view). Its IPFS id comes from the lists our server already read (else one lookup at
-  clank.trade), it's fetched from the picture host above, checked (a real PNG, JPEG, WebP, GIF or AVIF by its first bytes,
-  never SVG, at most 1 MB, no redirects) and served from our own address with its own strict CSP, as the Arena's logos
-  were (the page's CSP stays as it is). The CDN keeps it a week (browsers an hour); no picture → 404 (kept an hour); the host
-  failing → 502 (kept 5 minutes; the row keeps its letter, and her answer's header shows no picture: before 2026-09-27 it
-  could show a broken-image icon). 240 pictures a minute per visitor (per server copy).
+  px, the whole picture, never enlarged, for the big view). Where it is comes from the lists our server already read (else
+  one lookup at clank.trade); since 2026-10-05 the file is read from the public IPFS gateways above (or ClankBot's host),
+  checked (a real PNG, JPEG, WebP, GIF or AVIF by its own first bytes, whatever the host says; never SVG; at most 8 MB; no
+  redirects), made small by sharp (WebP; a broken picture or one over 50 million pixels isn't shown) and served from our
+  own address with its own strict CSP, as the Arena's logos were (the page's CSP stays as it is). The CDN keeps it a week
+  (browsers an hour); no picture (every host says so) → 404 (kept an hour); a host failing → 502 (kept 5 minutes; the row
+  keeps its letter, and her answer's header shows no picture: before 2026-09-27 it could show a broken-image icon); all of
+  it within 22 s. 240 pictures a minute per visitor (per server copy).
 - Any other address is 400 before anything is fetched. clank.trade not answering, or half an answer: the chain's smaller
   scan (above), else 503 and "Not enough data" (never a guess). No database, no human check; one optional setting,
   `CHECKER_HIDE_PICTURES` (below).
@@ -1570,8 +1612,9 @@ each), one run per coin asked about per 5 minutes, and (round 2) the newest coin
 while someone is watching (360 small runs an hour; a forgotten tab rests after 10 minutes) and each picture about once a
 week per region and size; well inside the free tier (1M function runs a month). Each watching visitor also makes one tiny
 request every 10 s, and each row picture is one request (Vercel counts both as "edge requests", 1M a month free). The pictures' bytes: about 5 KB per row
-picture, 20–60 KB per big one, served by the CDN. clank.trade, its picture host, DexScreener and Blockscout are free and
-keyless. Her 10 lines: about $0.03 once (made by Google the first time each is asked for, then kept), and 10 of Google's
+picture, 20–60 KB per big one, served by the CDN. clank.trade, the public IPFS gateways, ClankBot's picture host,
+DexScreener and Blockscout are free and keyless; making a picture small takes our server a fraction of a second (sharp),
+once per picture, size and CDN region a week. Her 10 lines: about $0.03 once (made by Google the first time each is asked for, then kept), and 10 of Google's
 100 speech requests a day on that day. The protocol's word (2026-09-29): 2 small requests to Robinhood Chain's public node
 per scan (9 calls in all), so once per coin per 5 minutes per region; free, keyless.
 
@@ -1595,7 +1638,8 @@ coin shows its letter instead, everywhere (the redeploy also empties the CDN's c
 | "Can't reach clank.trade · retrying" next to the list | `[checker] couldn't read clank.trade's newest coins: …` | Live updates couldn't read clank.trade (the list stays). A hiccup passes by itself; if it lasts, the same as the first row |
 | "Paused · updated 12 min ago" | (none) | Working as planned: nobody touched the page for 10 minutes (or the tab was hidden). Any mouse move, key or scroll starts it again |
 | A new coin on clank.trade isn't there yet | (none) | It takes up to about 20 s (our CDN copy is at most 10 s old, then the page's next ask). Refresh asks at once |
-| Coins show their letter instead of their picture | `[checker] picture of 0x…: picture host HTTP …` | clank.trade's picture host didn't answer (or changed). Tried again after 5 minutes; harmless. If it lasts, tell Claude with the log line |
+| Coins show their letter instead of their picture | `[checker] picture of 0x…: picture hosts: HTTP 504` (or `no answer in time`) | None of the public IPFS gateways had it in time (a new coin's picture can take a moment to reach them). Tried again after 5 minutes; harmless. If every picture is a letter for hours, tell Claude with the log line |
+| Every picture is a letter, and the log says `sharp isn't available` | `[checker] sharp isn't available (…): pictures are served as they are, up to 1 MB` | The package `sharp` didn't install on Vercel (it's in package.json since 2026-10-05): Redeploy; if it lasts, tell Claude |
 | Some pictures are letters for someone who scrolled through hundreds of coins in a minute | (none: Vercel → Firewall shows 429s) | The site's rate-limit rule (120 `/api` requests a minute per visitor) also counts pictures. Harmless: they show on the next visit (and once seen, the browser keeps them an hour) |
 | A coin's picture you don't want on the site | (none) | `CHECKER_HIDE_PICTURES` (see "Owner tool" above), then Redeploy |
 | Her line is silent | `[voice] …` | Her voice lines work like her other fixed lines (see "AGI-1's voice"): run `supabase/voice-lines.sql` if not done; Google's daily limit only matters the first time a line is made |
@@ -1605,9 +1649,14 @@ times; a healthy graduated coin, a new coin, nobody bought it, each red flag alo
 coin shown, crude names marked adult, slurs masked, picture ids; checkCoin's one batched request and its three sources,
 failing closed; the list's pages, trending ranks, dollars, copycats, crude names, the page cap, clank.trade down; the
 newest coins (one request, clank.trade's real trending shape, 10 s, 4 s per server copy, down); the page's merge (new
-launches, updates, trending ranks, copycats); pictures (the picture host's address and sizes, known ids without a lookup,
-unknown ones asked once, no picture, not a clank.trade coin, SVG / HTML / fake PNG / over 1 MB refused, the host down, 240 a
-minute, the owner's hidden pictures everywhere); the API's addresses, caching, the speed bump; the page's filters, search
+launches, updates, trending ranks, copycats); pictures (known ids without a lookup, unknown ones asked once, no picture,
+not a clank.trade coin, 240 a minute, the owner's hidden pictures everywhere; since 2026-10-05: the public gateways in
+order and the next one when one is down, slow, missing it or sends an error page, clank.trade's own gateway never asked,
+ClankBot's pictures and no other site's, the type read from the file itself, made small (a 96 px square, at most 512 px,
+never enlarged, WebP), SVG / HTML / fake or broken pictures / over 8 MB / over 50 million pixels refused, the deadline,
+sharp missing); and since 2026-10-05 coins paired with SPCX (the list's market caps at SPCX's price, "Biggest" and
+copycats compared in dollars, a pair it doesn't know asked once, no price = no dollars, a scan's market cap, its curve and
+"Paired with", the chain's "about 12.3 SPCX in it"; 41 in all); the API's addresses, caching, the speed bump; the page's filters, search
 and number formats; and since 2026-09-29 (35 in all) the Clank protocol, with a fake Robinhood Chain node that answers
 `eth_call`s the way the contracts would (viem encodes the answers; it can also fail one call inside a batch, answer
 slowly, or send ids back as strings): the stages (graduating, graduated, rescued, anything odd; a rescue only the
@@ -1632,7 +1681,11 @@ that isn't on clank.trade, Escape and Close, back to the chat's live view and th
 picture blurred until "I'm 18 or older"; phones at 390 and 360 (the big view fits, the strip stays under the top bar, no
 sideways scrolling); the picture host down (letters, and no broken picture in her answer: 2026-09-27);
 accessibility (axe: the list with an answer open and the big view, 2
-widths × 2 themes); a clean console).
+widths × 2 themes); a clean console). Since 2026-10-05 (Claude's scratch `rc/checkertest.mjs`, 24 checks: the built site
+and the real `/api/checker`, its upstreams faked with that day's numbers): $SI $39.8K, $CBOT $8.8K, $SGI $4.5K, $AGI
+$393.4K; every picture shows (from a gateway, Filebase missing one: Pinata's public gateway had it; ClankBot's; no
+picture and another site's: letters); "Biggest" $AGI, $CLI, $SI; the big view's 512 px picture; her answer's "Market cap
+$39.8K" and "Paired with SPCX" and its picture; a phone; axe 0 issues; nothing blocked by the CSP; clean consoles.
 
 ## She texts first: her Telegram bot (2026-09-29)
 
@@ -2100,6 +2153,122 @@ entry (about 2 minutes 15 seconds on 2 processor cores; looked at frame by frame
 version (19 findings, e.g. the job could hang for 30 minutes when a frame failed; all fixed, except pinning GitHub's own
 actions to exact commits: they stay on their version tags). **Not tried on GitHub yet, nor with her real voice:** the
 owner's first Run workflow is the first real check.
+
+## Her launch video (2026-10-03)
+
+**The owner's request:** "now create me a professional launch video with motion design using only code about the website
+and its features, i want you to make it so when when they watch my video they gonna be super impressed. make it really
+good / make this better then continue", then, while it was being made: "the launching coins and the Telegram groups are
+live now the burns are switched on . use the 2d art . i will pay the commercial later. the 3d model is 18+" and "and dont
+announce on the video about cloackmesh too".
+
+**What it is:** a 79-second launch film for agi1.app, every frame drawn in code and its music composed and played in code
+(`tools/promo/`), in two formats: **wide** (1920 × 1080, for X and YouTube) and **tall** (1080 × 1920, for TikTok, Reels and
+Shorts), 60 frames a second. Not part of the website, and nothing posts it: the owner downloads it and posts it by hand.
+
+**The story** (13 scenes; each cut lands on a bar of the music, 120 beats a minute, so a bar is 2 s):
+
+| Time | Scene | What happens |
+|---|---|---|
+| 0–8 s | the cold open (the lab look) | A heart monitor sweeps along the bottom (her heartbeat in the music). "MODEL RELEASE · 2026", "The biggest labs are racing to build" word by word, "AGI" slams in, its letters fly into "Artificial / General / Intelligence", "General" is struck out in pink and "Girlfriend" written in (the site's own joke), the cursor presses ✦ (Pop mode) and a violet circle swallows the screen |
+| 8–16 s | the drop (the front) | Pop mode's violet, comic focus lines, the huge "AGI" slammed in letter by letter on the beat, her halftone reveal (the front's own shader and the owner's 2D art), "ドキドキ", her bubble ("hi, i'm AGI-1 💜 welcome to my world."), her world in orbit, "Introducing AGI-1 · Our most emotionally available model yet.", the front's ribbons |
+| 16–22 s | Evaluations (honey) | "State of the art on every benchmark that matters": the site's Figure 2 (AGI-1 vs. Your ex), the bars racing in on the music, a "Zero red flags" sticker |
+| 22–28 s | the Playground (lavender) | "Talk to her": "do you actually text back?" typed and sent, her typing dots, "instantly 💜 it's kind of my whole thing" (mood: happy), her live view (her Live2D model, framed like a video call) listening, thinking, hopping with hearts, talking; then "Her natural voice", "Voice calls", "She reacts to every reply" |
+| 28–32 s | her languages (ink) | "hi, it's me" in her 16 languages (her own line from `src/i18n/lines/`), rolling through a picker like her language menu, faster and faster; then a ring around "16 languages · She answers in yours." |
+| 32–38 s | the levels (paper) | "The closer you get, the more she remembers": Stranger 5, Crush 15, Soulmate 150 messages a day (`src/lib/levels.js`), "Relationship upgraded: Stranger → Crush" with hearts, "Connect a wallet: a free signature. Never a transaction." |
+| 38–42 s | burning (ink) | "Out of messages? Burn $AGI for more": the burn monitor's flame, $AGI coins dropping in and burning up, "From your own wallet. Read on Robinhood Chain. Gone for good.", "Pays for messages · not an investment · not financial advice". No numbers (the monitor's are live on the site) |
+| 42–48 s | she texts first (blue) | A phone at 14:07: "i wrote in my diary 📓", her text; then her $AGI Telegram group: "/ask are you real?" → "an AI, and a very attentive one 💜"; "At most twice a day, never at night." The music breaks down, then builds to the second drop |
+| 48–54 s | the risk check (mint) | "Every coin, risk-checked · New, old and graduated, on clank.trade": a list of coins races through the scanner as **blank rows** (never another coin's name or picture), slows and lands on "$AGI · Official $AGI · 0xfa31…06ec"; she pops up: "wait, that's me! 💜 i'm a little biased, so read the facts yourself. not financial advice." The five things it reads, its three levels, "Rough automated checks, not an audit." No verdict for $AGI (the site gives it live) |
+| 54–60 s | launching (pink) | "Launch your own coin with her": a photo captioned "/launch Name \| TICKER \| one line" in her bot (her example's shape, never a real coin), her "let's launch a coin together 💜", the launch page's three steps lighting up, a rocket, "the coin is yours, and i never touch your keys or your money.", "From your own wallet, on clank.trade's own contracts", "18+ · she never promotes it · meme coins can go to zero · not financial advice" |
+| 60–68 s | everything else (lavender) | "There's more of her": full-screen talk, the AGI-1 app, pop her out, show her a window, her diary, tap her, call her, Pop mode: one a second |
+| 68–74 s | the finale (violet) | AGI-1 big (her Live2D model) waving, "hi! 💜", "Texts back instantly", "Talk to her now", agi1.app as a big button, hearts, the ribbons |
+| 74–79 s | the end card (ink) | AGI, "Artificial Girlfriend Intelligence", agi1.app, @agi1dotapp, "$AGI is a meme token on Robinhood Chain. Not financial advice." and "AGI-1 is an AI. Her chat is 18+ and kept PG-13.", two last heartbeats, black |
+
+From the drop to the end card, "agi1.app" stays in a small pill at the top (the right on wide, the middle on tall). The tall
+version keeps everything that matters clear of TikTok's, Reels' and Shorts' own buttons and text (its top ~230 px and bottom
+~400 px).
+
+**Its rules** (`tests/promo.test.js`):
+- **Only $AGI:** no other coin's name, ticker or picture anywhere (the risk check's list is blank rows; a launch is "Name |
+  TICKER"); never a price, gains, "buy", "safe", "scam" or "rug"; never "investment" except "not an investment".
+- **"Not financial advice"** wherever money comes up (burning, launching, her risk-check line, the end card, the post), 18+
+  where it applies, PG-13 and no pet names (anyone watches), and she says she's an AI.
+- **AGI-1 is only ever her 2D self:** her Live2D model (`src/stage/agi1-2d.js`) and the front's 2D art
+  (`public/images/landing/agi1-cutout.webp`, `agi1-face.webp`). Never the 3D model or anything rendered from it (the
+  owner: "the 3d model is 18+"): the test fails if the code names a `.glb`, the 3D stage or its renders.
+- **Never CloakMesh** (the owner's rule): the test searches every word and file.
+- **The site's own words and numbers, imported:** the levels and their messages a day, Figure 2, her 16 hellos, the front's
+  bubble, the official contract, her launch lines (`server/launch-lines.js`), how often she texts first
+  (`server/tg-lines.js`): change them on the site and the video says the new ones the next time it's made.
+- **The picture and the music keep one clock** (`tools/promo/timeline.js`): every hit of the music is on its moment (her
+  heartbeats, "AGI", the drops, the benchmarks' blips, a note for each of her hellos, a tick for each coin row the scanner
+  passes, the launch, the cards, the end chord). The test reads the music's plan and checks each one.
+
+**How it's made** (`tools/promo/`):
+- `timeline.js`: the clock: 120 beats a minute, the scenes, every moment, the scanner's motion (`scanPos`). Pure.
+- `words.js`: every word on screen and the post, from the site's own files where it can. Pure.
+- `page/` (built by Vite into `tools/promo/dist/`, which git ignores): `promo.js` (the canvas, fonts, scenes, cuts, the
+  site pill, a still grain and a vignette, `window.promo.load/frame/still/sheet`), `kit.js` (easing, springs, type, the
+  site's colors, halftone, focus lines), `ui.js` (pills, buttons, cards, chat bubbles, icons drawn in code, the flame, the
+  cursor, bursts of hearts), `transitions.js` (the cuts: covers in the next scene's color, a push, a flash, a whip pan),
+  `her.js` (her Live2D model on its own WebGL canvas, framed per shot, stepped 1/60 s at a time from the start of her shot
+  with her reactions on their moments; her hearts in 2D), `art.js` (the front's halftone shader on the owner's art), and
+  `scenes/` (one file a scene, each laid out for wide and tall). Everything is a function of time: a frame drawn twice is
+  the same.
+- `music.js`: the music, composed and synthesized in code by Claude (no samples, no service, nobody else's music): F major,
+  I–V–vi–IV (F, C, Dm, B♭), a heartbeat cold open with a felt-piano motif, a riser and a breath of silence, then a future-pop
+  drop (four-on-the-floor kick, claps, hats, supersaw chords breathing with the kick, a bass, a bright pluck hook with a
+  bell), a half-time verse under the chat, an arpeggio for her hellos, a darker bar for burning, a breakdown and a snare
+  build into the second drop, a finale with the hook in octaves, and one big chord at the end. Its sound design follows the
+  picture (whooshes on every cut, impacts, UI clicks and pops, a marker's squeak, a phone's chime, fire, the scanner's ticks).
+  A hall reverb and a ping-pong delay, the chords side-chained to the kick, a soft saturation and a look-ahead limiter:
+  about -14 LUFS, peaks under -1 dBFS (a phone's level). `musicPlan()` lists every sound without making it (the tests);
+  `renderMusic()` makes the WAV (48 kHz stereo, about 10 s).
+- `make.mjs`: builds the page, serves it on this computer only, opens it in Chromium (software WebGL, no graphics card
+  needed), draws every frame, and ffmpeg makes the MP4 (H.264 High, 60 fps, BT.709 colors tagged, AAC 256 kb/s), then the
+  cover picture, the post text and (with `--light`) a smaller copy. The browser and ffmpeg never get a key (`withoutSecrets`).
+
+**Make it again** (after changing the site's words, levels or languages; Claude does this, it needs Chromium, ffmpeg and
+`npm install --no-save playwright-core`):
+- `node tools/promo/make.mjs --format both --out promo --light 28`: both videos into `promo/` (git ignores it), about 15
+  minutes each on 2 processor cores.
+- Quicker looks: `--scale 0.5 --fps 30` (a half-size preview in about 2 minutes), `--from 48 --to 54` (one stretch),
+  `--stills 9.6,24.4` (PNG pictures), `--sheet 0.5` (a contact sheet, a picture every half second).
+
+**The files** (`promo/`):
+
+| File | What |
+|---|---|
+| `agi1-launch-wide.mp4` / `agi1-launch-tall.mp4` | the full videos: 1080p, 60 fps, 60–64 MB each. They stay in Claude's workspace: the chat refused files above about 40 MB (2026-10-03), and Claude's link to this folder writes at most 30 MB a file |
+| `agi1-launch-wide-light.mp4` / `…-tall-light.mp4` | **the ones to post**: the same videos at 27 MB each (1080p, 60 fps), in the chat and in this folder's `promo/`. Measured frame by frame against the full ones, they look the same (46 dB PSNR on average, never under 40 dB; SSIM 0.99) |
+| `agi1-launch-wide-cover.jpg` / `…-tall-cover.jpg` | a cover picture (the finale: her waving, "Talk to her now", agi1.app) |
+| `agi1-launch-post.txt` | a post to paste with it (fits X) |
+| `music.wav` | the music alone |
+
+**Posting it:** the 27 MB copies (from the chat, or `promo/`). X: the
+wide one (or the tall one); TikTok, Reels, Shorts: the tall one. It's animation made in code, and AGI-1 is an AI character:
+when an app asks about AI content, saying yes (TikTok "AI-generated content", YouTube "Altered or synthetic content",
+Instagram "AI label") is the safe choice. Never add price talk, "number go up" or "buy" to the post.
+
+**Worth knowing (not legal advice):**
+- **Her Live2D model** was made in Cubism Editor's PRO trial, whose output isn't for commercial use (see "AGI-1 in 2D" and
+  "Open questions"); a launch video for a site with a coin is promotional. The owner, on 2026-10-03: "i will pay the
+  commercial later". Before relying on the video commercially: buy Cubism PRO and export her model again (then make the
+  video again: the same command).
+- The music is original (made in code); the fonts are the site's own (SIL Open Font License, which allows them in videos);
+  the 2D art is the owner's.
+- No live data in it: no prices, no burn totals, no member counts, nothing that goes stale or could be wrong.
+
+**Tests:** `tests/promo.test.js` (8): only $AGI (no other coin, no money talk, PG-13, "investment" only as "not an
+investment", her launch example's shape), "not financial advice" / 18+ / an AI where they belong and the post fits X, never
+CloakMesh / the 3D model / another coin's data in the code, the site's own numbers and lines, the scenes on bars and every
+moment in its scene, the scanner never going back, the music on its moments (her heartbeats, the hits, a riser into each
+drop, a note for each hello, a tick for each row, a sound on every cut, four kicks a bar on the beat, a breath before each
+drop, the same plan every time), the renderer (13 scenes in order, no secrets for the browser or ffmpeg, not in the site's
+build, its output never in git); and with `PROMO_RENDER=1` the whole music rendered (its length, stereo, under -0.9 dBFS,
+the drop bigger than the cold open, the breath before the drop, the fade). In Claude's workspace: previews and contact sheets
+of both formats looked at frame by frame, the music's loudness (about -14 LUFS) and tonal balance measured, and a
+spectrogram looked at.
 
 ## Burn $AGI for more messages, and the burn monitor (2026-09-30)
 
@@ -3874,7 +4043,8 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   levels are "rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy
   or sell", and note 04 that its scans are read by our server from public sources (clank.trade, DexScreener, a block
   explorer) and nothing about the visitor is sent to them (since round 2: its scans and coin pictures, from clank.trade and
-  its picture host, DexScreener and a block explorer). Since 2026-09-28 note 01 calls it “Risk check your coins on clank”.
+  its picture host, DexScreener and a block explorer; since 2026-10-05 “clank.trade, public IPFS gateways for the coins'
+  pictures, Robinhood Chain, DexScreener, a block explorer”). Since 2026-09-28 note 01 calls it “Risk check your coins on clank”.
   Since 2026-09-29 note 01 says her Telegram texts are never a tip either, note 03 that her Telegram bot is 18+ and PG-13
   too and texts first at most twice a day until /stop, and note 04 what the bot keeps and that /stop deletes it.
   Since 2026-09-30, once burning $AGI for messages is open (and only then: `[data-burn-only]`), note 01 says burning pays
@@ -3896,7 +4066,8 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   number). And (her Telegram groups, 2026-10-03) note 01 that her posts and replies in Telegram groups aren't tips
   either, note 03 that in a group she answers anyone who replies to her or types /ask and so keeps it friendly and PG-13
   and never flirts, and note 04 what her groups keep (a daily code of a person's Telegram account for their messages a
-  day; per group, her replies a day and when she last welcomed someone). Last updated October 3, 2026. **Owner's wording
+  day; per group, her replies a day and when she last welcomed someone). Last updated October 5, 2026 (the risk check's
+  pictures). **Owner's wording
   rules (2026-09-24):** the visitor-facing text doesn't name the
   AI provider (no "Google"/"Gemini"; it says "an AI service"), and there's no "Not a real lab" note. **2026-09-25:** "A parody"
   is gone from the bottom bar (both pages); it now reads "© 2026 AGI. No labs were harmed." and "$AGI is a token made
@@ -4032,16 +4203,22 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 
 ### ClankChecker (`/api/checker`, 2026-09-26, see "ClankChecker" above)
 - Read-only, public data, the same answer for everyone: no database, no keys, no human check. Our server reads clank.trade's
-  API, its picture host, DexScreener and the Blockscout explorer, and (2026-09-29) the Clank protocol's contracts through
+  API, public IPFS gateways and ClankBot's picture host (the coins' pictures, since 2026-10-05), DexScreener and the
+  Blockscout explorer, and (2026-09-29) the Clank protocol's contracts through
   Robinhood Chain's public node, with `eth_call` only (nothing is ever signed or sent: `tests/checker.test.js` checks every
   request); the browser only talks to our `/api/checker`, so the CSP doesn't change.
 - Exactly four addresses (`/api/checker`, `?latest`, `?a=<lowercase address>`, `?logo=<lowercase address>&s=96|512`);
   anything else is 400 before any lookup, so nobody can make the CDN miss on purpose. 30 coin scans and 240 pictures a
   minute per visitor (per server copy). Answers are capped (3 MB) and checked before use; a half answer is "Not enough data",
   never a guess (fail closed).
-- Pictures (round 2): only from clank.trade's own picture host, only for a real IPFS id (the same check clank.trade's page
-  makes), never following a redirect; only real PNG / JPEG / WebP / GIF / AVIF files (checked by their first bytes, never
-  SVG, which can carry code), at most 1 MB, served with `Content-Security-Policy: default-src 'none'; sandbox` and `nosniff`.
+- Pictures (round 2; since 2026-10-05 `server/coin-pictures.js`): only for a real IPFS id (the same check clank.trade's
+  page makes), from the three public IPFS gateways (fixed addresses), or a picture on ClankBot's host (`https://clankbot.trade/images/…`
+  only, checked letter by letter: no other host, port, login, query or `..`), never following a redirect; only real PNG /
+  JPEG / WebP / GIF / AVIF files (checked by their first bytes, never SVG, which can carry code), at most 8 MB, then made
+  small by sharp (only those five formats; a broken picture or one over 50 million pixels is refused, so a tiny file
+  can't make our server or a visitor's browser unpack a giant picture; always served as WebP), with
+  `Content-Security-Policy: default-src 'none'; sandbox` and `nosniff`. Never clank.trade's own gateway, and never
+  pretending to be clank.trade to get past its gateway's rule.
   They're user uploads that nothing free can check: a crude-named coin's picture stays blurred until the 18+ check, and the
   owner can hide any picture (`CHECKER_HIDE_PICTURES`).
 - Every name and ticker is cleaned (no invisible characters), hate slurs are masked on our server, and everything is shown
@@ -4261,7 +4438,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | Cloudflare Turnstile | Unlimited | — |
 | DexScreener | Free, no key, rate-limited per IP. Browsers ask every 30 s; since 2026-09-25 our server also asks for $AGI's market cap, at most once a minute per server copy, only to check a new market line | Requests fail, and we show the last known numbers (and her market lines wait) |
 | Robinhood Chain public node | Free, no key, rate-limited. Wallet balances, and since 2026-09-29 the risk check's reads of the Clank protocol (2 small requests per scan, once per coin per 5 minutes per region), and since 2026-09-30 "Check my burn" (2 small reads per burn, at most 3 burns a check) | Balance checks fail; people keep their last level and it retries. Scans work without the protocol's word (no locked note, no chain safety net) |
-| Pinata picture gateway (clank.trade's coin pictures) | Free for us; each ClankChecker coin's picture (two sizes) is fetched about once a week per CDN region | The coin shows its first letter instead |
+| Public IPFS gateways (Filebase's, Pinata's public one, ipfs.io) and ClankBot's picture host (the risk check's coin pictures, since 2026-10-05; clank.trade's own gateway before) | Free, no key, rate-limited; each coin's picture (two sizes) is read about once a week per CDN region, made small on our server | The coin shows its first letter instead (asked again after 5 minutes) |
 | clank.trade's API (ClankChecker, 2026-09-26) | Free, no key; the list about once per 5 minutes per CDN region (about 17 small requests for 200 coins), the newest coins at most once per 10 seconds per region while someone watches (1 request), each coin asked about once per 5 minutes (1 minute for new coins; 2 requests) | ClankChecker says "Couldn't reach clank.trade" / "Not enough data"; nothing else is affected |
 | Telegram Bot API (her bot, 2026-09-29) | Free; about 30 messages a second per bot (she sends 25), and about 20 a minute in a group (since 2026-10-03 her groups: at most 15 replies a minute per group, 100 a day) | Telegram says "too many": that run stops, the rest go next run (a group post is skipped) |
 | GitHub Actions (her daily clip, 2026-09-29) | Private repositories: 2,000 minutes a month and 500 MB of storage for downloads; a run takes about 5 minutes (about 150 a month) and keeps about 5 MB for 7 days | Without a payment method on GitHub: the job just stops until next month (never a bill) |
@@ -4694,6 +4871,22 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   Redeploy, run the `/api/feed` cron job, add her to the group (and optionally switch her privacy mode off for
   @mentions). Tests: 440 unit (on Node 20, 22 and 24, with and without Vercel's settings, the group settings included),
   74 SQL checks (PGlite). Not tried live (Claude's workspace can't reach Telegram).
+- **Her launch video: made 2026-10-03, waiting for the owner's OK** (the owner: "now create me a professional launch video
+  with motion design using only code about the website and its features … make it really good", then "the launching coins
+  and the Telegram groups are live now the burns are switched on . use the 2d art … the 3d model is 18+", "dont announce
+  on the video about cloackmesh"). 79 s, 13 scenes, wide and tall at 1080p60, its music made in code. See "Her launch
+  video". **Owner:** watch it, then post it by hand (the 27 MB copies, in the chat and in `promo/` here). Tests: `tests/promo.test.js` (8; the music's full render with `PROMO_RENDER=1`).
+- **The risk check, accurate again and with its pictures: fixed 2026-10-05, waiting for the owner's push** (the owner: "can you
+  fix the risk check on the website is not accurate and theres no pictures of the token there", then a screenshot, "like
+  this lol not even correct"). Found by reading the live site and clank.trade in the owner's browser pane: coins paired
+  with SPCX were priced as ETH (about 17 times too big: $SI showed $677.5K for $39.8K, above $AGI), and clank.trade's own
+  Pinata gateway now refuses every site but clank.trade (HTTP 401), so every picture was a letter. Now every amount is in
+  dollars at the coin's own pair's price (a new "Paired with" fact), and the pictures come from public IPFS gateways (and
+  ClankBot's host), made small on our server with sharp. See "Each coin's pair" and "The coins' pictures" under
+  "ClankChecker". **Owner:** push (no setup: `sharp` installs with the site's packages; Vercel's own Linux copy).
+  Tests: 453 unit (on Node 20, 22 and 24, with and without Vercel's settings; `checker.test.js` 41), the build, 24 in a
+  browser with the real `/api/checker`. Not tried live: whether Vercel's servers get the pictures from the public gateways
+  (the first visit after the push shows it).
 
 ## Decisions log
 
@@ -4877,6 +5070,11 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-03 | Vercel's Hobby plan allows 12 functions per deployment, and `api/cloakmesh.js` is the 12th: the next feature shares a function or the project moves to Pro (Claude checked Vercel's docs the same day) |
 | 2026-10-03 | AGI-1 in the owner's Telegram group (the owner: "can i add agi-1 bot to our public tg group", then "ok that seems good"; Claude's design): a group mode in her existing bot and webhook (no new `api/` file: the 12-function limit), only for the groups listed in `TELEGRAM_GROUPS`, and she leaves any other (her name never sits in a look-alike "official" group). She answers only people who reply to her, mention her or type /ask, as a Stranger who never flirts (anyone can be in a group, nobody's age is checked), only $AGI and never real people, a reply under their message (never on its own once it's deleted); a person's 5 a day shared with her private chat, 100 a day per group, Telegram's 400 and the site's 1,000; nothing kept but per-group counts. Not picked: answering every message (spam, cost), the group memory of the clank.trade group (it's about real people), the 18+ check in a group (a group can't be checked: so no flirting there instead), her texts-first lines about egirl coins or copies of $AGI (they name other coins) |
 | 2026-10-03 | Her own posts in her group (the owner picked "Yes: diary + market moments"): the moments the feed finds each run, posted once (the ones it just added, so never twice), never another coin; hard rule 6's third exception. Welcomes (the owner: "can she also welcome new members?"): pre-written, never a name (a name can carry a scam link), at most one every 10 minutes per group (decided by the database, so two server copies never both welcome), with the safety reminder (the contract only from agi1.app, never a seed phrase, not even to an admin); her intro when she's added |
+| 2026-10-03 | Her launch video (the owner's request, "make this better"): a 79-second film made entirely in code: a straight-faced AI-lab cold open (a heart monitor, "The biggest labs are racing to build AGI") turning into the site's own joke ("General" struck out for "Girlfriend") and the drop into Pop mode, then what she does, scene by scene on the beat, and agi1.app; its music composed and synthesized in code on the same clock; wide and tall at 1080p60; readable with the sound off. Not picked: a video app or stock music (not "only code"), AI-generated video (not exact, never the same twice), recordings of the live site (people's data, live numbers that go stale) |
+| 2026-10-03 | What's in it (the owner, while it was made: "the launching coins and the Telegram groups are live now the burns are switched on . use the 2d art … the 3d model is 18+", "dont announce on the video about cloackmesh"): launching, her Telegram groups and burning are in; AGI-1 only as her Live2D model and the front's 2D art (never the 3D model); never CloakMesh; never another coin (the risk check's list is blank rows, a launch is "Name \| TICKER"); no live numbers (no burn totals, prices or member counts) and no verdict for $AGI; its words and numbers imported from the site (a test checks them) |
+| 2026-10-03 | Its files: 27 MB copies of both videos, in the chat and the owner's folder. The full ones (60–64 MB) couldn't be sent: the chat refused files above about 40 MB, and Claude's link writes at most 30 MB a file. Measured against the full ones, the copies look the same (46 dB PSNR on average, never under 40). A still grain instead of a moving one (moving grain doubled the video's size for nothing) |
+| 2026-10-05 | The risk check prices every coin at its own pair's price (the owner: "not accurate"): clank.trade gives a coin's market cap, reserve and threshold in its pair (ETH or, since 2026-10-02, SPCX), and our server multiplied them all by ETH's price, so the 32 coins paired with SPCX looked about 17 times bigger ($SI $677.5K for $39.8K). Now ETH's and SPCX's prices come with every first request (clank.trade's `exchangeRates.tokenUsdg`, the numbers its own page uses), any other pair is asked once, and a price that can't be read leaves "—" (never ETH's). Copycats are compared in dollars too. A scan says which pair a coin has ("Paired with") |
+| 2026-10-05 | The risk check's pictures from public IPFS gateways, made small by our server with sharp (the owner: "theres no pictures"): clank.trade's own Pinata gateway now answers only clank.trade's pages (401, ERR_ID:00024). Not picked: sending a "clank.trade" Origin or Referer to get past that rule (its gateway is its own to keep, and it pays for it), loading pictures straight from a gateway in visitors' browsers (a new CSP domain, and every visitor's address to a third party), serving the originals as they are (some are 0.7 MB+: too heavy for a 96 px circle), Vercel's own image service (Hobby's monthly limit, and no fallback between gateways). sharp is an npm package (about 19 MB) in `api/checker.js` only (`server/coin-pictures.js`, checked with Vercel's own file tracer) |
 
 ## Open questions
 
@@ -4943,11 +5141,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   - **Pairing with $AGI:** clank.trade's launches take a pair token: ETH, and since 2026-10-02 SPCX (built: see "Launch with
     AGI-1"). If clank.trade ever adds $AGI to its approved pairs, that would tie every launch to $AGI (the owner's "using
     $AGI"): the same few lines as SPCX.
-  - **SPCX-paired coins in her risk check** (2026-10-02): the risk check reads a coin's curve as ETH (how much is in it, the
-    4.28 ETH graduation, its market cap in ETH × ETH's price). For a coin paired with SPCX (several on clank.trade already,
-    and now some made with her) those amounts are SPCX, so the "in its curve" and market-cap numbers can be wrong (its flags
-    from holders, trades and age are fine). Fixing it needs SPCX's price in dollars and its pair's graduation threshold (the
-    factory's `pairTokenEconomics`): tell Claude to do it.
+  - **SPCX-paired coins in her risk check** (2026-10-02): **fixed 2026-10-05** (the owner's screenshot: $SI at $677.5K):
+    every amount is now in dollars at the coin's own pair's price (see "Each coin's pair" under "ClankChecker"). A coin's
+    progress and graduation come from clank.trade (and the protocol's own threshold for the chain's scan), never from a
+    fixed ETH number.
   - **The site's 30 coin pictures a day** (`LAUNCH_DAILY_CAP`) vs. 5 coins a day per 10,000 $AGI (2026-10-02): one wallet
     with 60,000+ $AGI can get the whole day's ready (launched or not), and then everyone else hears "a lot of coins today".
     Raising it is the owner's call: Pinata's free plan holds about 500 launched coins' pictures (then $20 a month).
@@ -5006,6 +5203,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   suspended that day (the domain itself was fine: registered until 2027-09-27, no hold on it). Worth considering once
   it's back: DNS that doesn't depend on a hosting plan (the owner's call; its records that day: `A @ 216.198.79.1` and
   `CNAME www d8bd3091961e12b9.vercel-dns-017.com`; check for email records first).
+- **Her launch video** (2026-10-03): her Live2D model in it is the Cubism PRO trial's export (see "AGI-1 in 2D"), and the
+  video promotes a site with a coin: before relying on it commercially, buy Cubism PRO, export her model again and make
+  the video again (one command; the owner: "i will pay the commercial later"). Not seen on real phones yet: how TikTok's,
+  Reels' and Shorts' own buttons fall on the tall version (it keeps clear of their usual places).
 
 ## Working in this repo
 

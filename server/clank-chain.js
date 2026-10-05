@@ -18,6 +18,12 @@ export const FORWARDER = '0xac20d0d5cc0f89ee4f6d5f8e6870a36eaf2e0dd7';
 // A coin's curve: 0 trading on its curve · 1 sold out ("Ready") · 2 its coins and ETH taken out for the pool ("Swept") ·
 // 3 its Uniswap V4 pool made ("PoolCreated": graduated) · 4 its graduation failed and was rescued by the protocol
 export const STAGE = { TRADING: 0, READY: 1, SWEPT: 2, POOL: 3, RESCUED: 4 };
+// What a coin is paired with (what people trade it against): ETH (the zero address), or since 2026-10-02 SPCX, Robinhood's
+// SpaceX stock token (clank.trade's first stock pairing). A coin's market cap, its curve's reserve and its graduation
+// threshold are counted in its pair, not in ETH (the risk check turns them into dollars at its pair's own price).
+export const ETH_PAIR = '0x0000000000000000000000000000000000000000';
+export const SPCX = '0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea';
+export const PAIR_NAMES = { [ETH_PAIR]: 'ETH', [SPCX]: 'SPCX' };
 
 export const FACTORY_ABI = parseAbi([
   'function getLaunchedToken(address launchToken) view returns ((address launchToken,address curve,address deployer,address creatorFeeRecipient,address pairToken,uint256 graduationThreshold,uint24 poolFee,int24 tickSpacing,uint16 creatorTaxBps,bool buybackEnabled,uint8 phase,uint256 sweptPairToken,uint256 sweptLaunchTokens,uint256 sweptAt,bool exists) launched)',

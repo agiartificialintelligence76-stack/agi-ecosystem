@@ -6,7 +6,8 @@
 //   GET /api/checker?a=0x…               one coin's scan: flags, a level (lower / some / high risk) and the facts behind them
 //                                         (since 2026-09-29 also checked with the Clank protocol on Robinhood Chain, and a
 //                                         smaller scan from the chain alone when clank.trade doesn't answer or know the coin)
-//   GET /api/checker?logo=0x…&s=96|512   a coin's picture, from clank.trade's own picture host (a row's circle / the big view)
+//   GET /api/checker?logo=0x…&s=96|512   a coin's picture (a row's circle / the big view): since 2026-10-05 its IPFS file from
+//                                         public IPFS gateways (or ClankBot's host), made small by our server
 // Read-only and the same for everyone, so Vercel's CDN shares every answer: the whole list 5 minutes, the newest coins 10
 // seconds, a scan 5 minutes (1 minute for a coin less than a day old), a picture a week. However many visitors look,
 // clank.trade is asked about that often per CDN region. No database, no human check, no keys.
@@ -17,7 +18,8 @@
 import { getConfig } from '../server/config.js';
 import { clientIp, visitorCode, ipGroup } from '../server/security.js';
 import { checkerBurst, pictureBurst } from '../server/burst.js';
-import { scanClank, latestClank, checkCoin, coinPictureId, fetchCoinPicture } from '../server/checker.js';
+import { scanClank, latestClank, checkCoin, coinPictureId } from '../server/checker.js';
+import { fetchCoinPicture } from '../server/coin-pictures.js';
 import { isHiddenCoin } from '../server/arena.js';
 
 const DAY = 86_400_000;
@@ -105,17 +107,20 @@ export async function GET(request) {
   return Response.json(scan, { headers: scanCache(scan, now) });
 }
 
-// A coin's picture: clank.trade keeps it on IPFS; its own picture host shrinks it; we check it's a real picture and serve it
-// from our own address (the page's security rules only allow our own pictures). Kept by the CDN a week, browsers an hour.
+// A coin's picture: clank.trade keeps it on IPFS; we read it from a public IPFS gateway (clank.trade's own gateway only
+// answers its own pages since October 2026), check it's a real picture, make it small (WebP) and serve it from our own
+// address (the page's security rules only allow our own pictures). Kept by the CDN a week, browsers an hour. Everything
+// fits in 22 s (Vercel stops a function at 25 s).
 async function picture(cfg, request, address, size) {
+  const deadline = Date.now() + 22_000;
   const none = (status, error, seconds) => Response.json({ error }, { status, headers: seconds ? cache(seconds, seconds) : noStore });
   if (cfg.checkerHidePictures.has(address) || isHiddenCoin('', address)) return none(404, 'no_picture', 3600);
   if (!pictureBurst(visitor(cfg, request))) return none(429, 'slow_down', 0);
   let got;
   try {
-    const cid = await coinPictureId(address);
-    if (!cid) return none(404, 'no_picture', 3600);             // not a clank.trade coin, or no picture
-    got = await fetchCoinPicture(cid, size);
+    const source = await coinPictureId(address);                // its IPFS id, or its picture on ClankBot's host
+    if (!source) return none(404, 'no_picture', 3600);          // not a clank.trade coin, or no picture
+    got = await fetchCoinPicture(source, size, { deadline });
   } catch (err) {
     console.warn(`[checker] picture of ${address}: ${err.message}`);
     return none(502, 'unavailable', 300);

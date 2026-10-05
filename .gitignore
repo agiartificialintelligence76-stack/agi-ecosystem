@@ -41,3 +41,6 @@ tools/live/live.env
 *.live.env
 *-gcp-key.json
 google-key.json
+
+# Her launch video (tools/promo/make.mjs, 2026-10-03): the videos it makes (big files: the owner posts them by hand)
+/promo/

@@ -30,7 +30,7 @@ import { encodeFunctionData, decodeFunctionResult, decodeFunctionData, parseAbi,
 import { privateKeyToAccount } from 'viem/accounts';
 import { rpc } from './limits.js';
 import { rpcUrl, CHAIN_ID } from './chain.js';
-import { FACTORY, FACTORY_ABI, readAll, callOf } from './clank-chain.js';
+import { FACTORY, FACTORY_ABI, readAll, callOf, SPCX } from './clank-chain.js';
 import { tickerKey, maskSlurs, cidOf } from './checker.js';
 import { isCrude, looksLike, readLimited } from './coins.js';
 import { EGIRL, asLatin } from './lookalike.js';
@@ -44,8 +44,9 @@ export const ZERO = `0x${'0'.repeat(40)}`;            // the pair "token" for ET
 // pair coin launches with AI stocks starting with SpaceX AI (SPCX)", clank.trade's founder; the owner: "the team added
 // token can now paired with spcx"). SPCX's address is the one clank.trade's own coins name as their quote token; before
 // each launch the factory itself is asked whether it's still on its approved list (approvedPairTokens), and launching
-// with it costs no SPCX (a launch without a buy needs no token approval, clank.trade's docs).
-export const SPCX = '0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea';
+// with it costs no SPCX (a launch without a buy needs no token approval, clank.trade's docs). (Its address lives in
+// server/clank-chain.js since 2026-10-05, where the risk check reads it too.)
+export { SPCX };
 export const PAIRS = { eth: ZERO, spcx: SPCX };
 // the page's choice ('eth', 'spcx'; nothing = ETH) → the pair's address, or null for anything else
 export const pairOf = (choice) => (choice === undefined || choice === null ? ZERO

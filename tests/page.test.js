@@ -205,7 +205,8 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   assert.equal((diary.match(/<a href="\/#checker">Risk check your coins on clank<\/a>/g) || []).length, 2, 'the diary page\'s menu and footer');
   const foot = part('<footer class="foot"', '</footer>');
   assert.ok(foot.includes("The risk levels in “Risk check your coins on clank” are rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy or sell."));
-  assert.ok(foot.includes("The coin scans and pictures in “Risk check your coins on clank” are read by our server from public sources (clank.trade and its picture host, Robinhood Chain, DexScreener, a block explorer); nothing about you is sent to them."));
+  // (2026-10-05: the coins' pictures come from public IPFS gateways, clank.trade's own gateway only answers its own pages)
+  assert.ok(foot.includes("The coin scans and pictures in “Risk check your coins on clank” are read by our server from public sources (clank.trade, public IPFS gateways for the coins' pictures, Robinhood Chain, DexScreener, a block explorer); nothing about you is sent to them."));
   // how the scan works (2026-09-29, the Clank protocol): its own record, the stages, the locked pool, the chain's smaller scan
   assert.match(chk, /the Clank protocol's own record of the coin on Robinhood Chain/);
   assert.match(chk, /Its curve sold out but its pool isn't open yet \(graduations can fail\): a smaller flag\. Its graduation failed and the protocol had to rescue it: a big one\./);
@@ -214,6 +215,6 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   assert.match(chk, /a smaller scan comes straight from Robinhood Chain: .*never <b>Lower risk<\/b>/);
   assert.match(chk, /A coin clank\.trade hasn't listed is <b>High risk<\/b>: it's brand new, or one clank\.trade doesn't show\./);
   assert.match(chk, /If neither answers, the scan says <b>Not enough data<\/b> instead of guessing\./);
-  assert.match(foot, /Last updated October 3, 2026/);   // (2026-10-03: her Telegram groups; 2026-10-02: the AGI-1 app)
+  assert.match(foot, /Last updated October 5, 2026/);   // (2026-10-05: the risk check's pictures; 2026-10-03: her Telegram groups)
   assert.equal(html.match(/<canvas/g).length, 1, 'still one canvas for the whole page');
 });
