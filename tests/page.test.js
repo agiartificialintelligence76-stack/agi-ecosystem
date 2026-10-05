@@ -103,6 +103,35 @@ test('AGI on X: a round button in the top bar (a menu row on small phones) and a
   }
 });
 
+// 2026-10-05 (the owner: "can you add a telegram here", with its link): the $AGI community group on Telegram, next to X
+test('AGI on Telegram: a round button next to X (a menu row on small phones) and a footer link, on every page with the top bar', () => {
+  const TG = 'https://t.me/agi2dotapp';
+  const css = readFileSync(new URL('../src/styles/layout.css', import.meta.url), 'utf8');
+  for (const name of ['index.html', 'diary.html', 'launch.html', 'live.html']) {
+    const page = readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
+    const links = page.match(/<a [^>]*href="https:\/\/t\.me\/agi2dotapp"[^>]*>/g) || [];
+    assert.equal(links.length, 3, `${name}: the top bar, the menu and the footer`);
+    for (const a of links) assert.match(a, /target="_blank" rel="noopener noreferrer"/, `${name}: a new tab, without passing our page along`);
+    // the top bar: right after the X button, named for screen readers, its paper plane only decoration
+    const actions = page.slice(page.indexOf('<div class="topbar-actions">'), page.indexOf('</header>'));
+    const button = actions.match(/<a class="icon-btn tg-btn" [^>]*>[\s\S]*?<\/a>/)?.[0] ?? '';
+    assert.match(button, new RegExp(`^<a class="icon-btn tg-btn" href="${TG}" [^>]*aria-label="AGI on Telegram \\(@agi2dotapp\\)"`), `${name}: the button, named`);
+    assert.match(button, /<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">/, `${name}: its icon is decoration (the label names it)`);
+    const x = actions.indexOf('class="icon-btn x-btn"'), tg = actions.indexOf('class="icon-btn tg-btn"'), theme = actions.indexOf('data-theme-toggle');
+    assert.ok(x > 0 && tg > x && theme > tg, `${name}: X, then Telegram, then the theme button`);
+    // the small-phone menu: its row right after X's
+    const nav = page.slice(page.indexOf('<nav class="nav" id="site-nav"'), page.indexOf('</nav>', page.indexOf('id="site-nav"')));
+    assert.match(nav, new RegExp(`<a class="nav-x" [^>]*>AGI on X ↗</a>\\s*<a class="nav-tg" href="${TG}" [^>]*>AGI on Telegram ↗</a>`), `${name}: the menu row, after X's`);
+    // the footer: after X, with its handle (so people can tell the real group from a copy)
+    const foot = page.slice(page.indexOf('<nav class="foot-nav"'), page.indexOf('</nav>', page.indexOf('<nav class="foot-nav"')));
+    assert.match(foot, new RegExp(`X @agi1dotapp ↗</a>\\s*<a href="${TG}" [^>]*>Telegram @agi2dotapp ↗</a>`), `${name}: the footer link, after X`);
+  }
+  // like X: hidden in the top bar under 380 px, where its menu row shows instead
+  assert.match(css, /\.topbar \.nav a\.nav-x, \.topbar \.nav a\.nav-tg { display: none; }/, 'the menu rows hidden until the small-phone menu');
+  assert.match(css, /@media \(max-width: 379px\) {\n  \.topbar-actions \.x-btn, \.topbar-actions \.tg-btn { display: none; }\n  \.topbar\.menu-open \.nav a\.nav-x, \.topbar\.menu-open \.nav a\.nav-tg { display: block; }/,
+    'under 380 px: the buttons go, the menu rows come');
+});
+
 test('link previews: the home page and the diary have full preview tags (the address is filled in at build time)', () => {
   const diary = readFileSync(new URL('../diary.html', import.meta.url), 'utf8');
   assert.ok(html.includes('<meta property="og:image" content="__SITE__/cards/home.jpg" />'));

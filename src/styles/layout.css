@@ -20,12 +20,13 @@
 
 /* the menu button and the "Safety note" link only exist on phones */
 .menu-btn, .nav .nav-phone { display: none; }
-/* AGI on X (2026-09-28): a round button in the top bar; under 380 px it's a row in the menu instead (like Pop mode) */
-.x-btn svg { width: 15px; height: 15px; }
-.topbar .nav a.nav-x { display: none; }
+/* AGI on X (2026-09-28) and the $AGI community group on Telegram (2026-10-05, next to it): round buttons in the top bar;
+   under 380 px they're rows in the menu instead (like Pop mode) */
+.x-btn svg { width: 15px; height: 15px; }   /* (the Telegram button's paper plane is a line icon, like the theme button's: 16 px) */
+.topbar .nav a.nav-x, .topbar .nav a.nav-tg { display: none; }
 @media (max-width: 379px) {
-  .topbar-actions .x-btn { display: none; }
-  .topbar.menu-open .nav a.nav-x { display: block; }
+  .topbar-actions .x-btn, .topbar-actions .tg-btn { display: none; }
+  .topbar.menu-open .nav a.nav-x, .topbar.menu-open .nav a.nav-tg { display: block; }
 }
 .menu-btn .i-close { display: none; }
 .menu-btn[aria-expanded='true'] .i-menu { display: none; }
@@ -35,9 +36,10 @@
   .topbar-in { height: 56px; gap: 12px; }
   .topbar-actions { gap: 8px; }
 }
-/* the section links need about 900 px in one line (six of them since ClankChecker, 2026-09-26, and the Pop mode button
-   since 2026-09-27): below that, the menu. (Pop mode's wider pills need more: pop.css repeats these rules up to 1040 px.) */
-@media (max-width: 920px) {
+/* the section links and the buttons need about 945 px in one line (the Pop mode button since 2026-09-27, the Telegram
+   button since 2026-10-05: the menu started at 920 px before it): below that, the menu. (Pop mode's wider pills need more:
+   pop.css repeats these rules up to 1040 px.) */
+@media (max-width: 960px) {
   .menu-btn { display: inline-grid; }
   /* on phones the section links become a drop-down under the top bar, opened by the menu button */
   .nav {

@@ -184,10 +184,11 @@ test('Pop mode: switching it off is remembered, and the page script starts from 
 
 test('Pop mode: the phone menu starts where each look needs it (the CSS decides; the menu script follows)', () => {
   const layout = read('src/styles/layout.css'), menu = read('src/menu.js');
-  assert.match(layout, /@media \(max-width: 920px\) {\n  \.menu-btn { display: inline-grid; }/, 'the default look: up to 920 px');
-  assert.match(css, /@media \(min-width: 921px\) and \(max-width: 1040px\) {\n  \[data-skin='pop'\] \.menu-btn { display: inline-grid; }/, 'Pop mode: up to 1040 px');
+  // (960 px since the Telegram button, 2026-10-05: the links and the buttons need about 945 px in one line; 920 before)
+  assert.match(layout, /@media \(max-width: 960px\) {\n  \.menu-btn { display: inline-grid; }/, 'the default look: up to 960 px');
+  assert.match(css, /@media \(min-width: 961px\) and \(max-width: 1040px\) {\n  \[data-skin='pop'\] \.menu-btn { display: inline-grid; }/, 'Pop mode: up to 1040 px');
   assert.match(css, /@media \(min-width: 1041px\) {\n  \[data-skin='pop'\] \.nav {/, 'Pop mode: the pill of links from 1041 px');
-  assert.match(menu, /\['\(min-width: 921px\)', '\(min-width: 1041px\)'\]/, 'the menu closes when its links fit again');
+  assert.match(menu, /\['\(min-width: 961px\)', '\(min-width: 1041px\)'\]/, 'the menu closes when its links fit again');
   assert.match(menu, /addEventListener\('agi:skin', closeIfWide\)/, '…also when Pop mode is switched off');
 });
 

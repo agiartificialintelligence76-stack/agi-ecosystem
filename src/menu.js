@@ -1,5 +1,5 @@
-// The phone menu: on small screens (up to 920 px since 2026-09-27: a sixth link, ClankChecker, and the Pop mode button made
-// the row longer; up to 1040 px in Pop mode, whose pills are wider) the top bar's section links are hidden, and this button
+// The phone menu: on small screens (up to 960 px since 2026-10-05, when the Telegram button made the row longer; 920 px from
+// 2026-09-27; up to 1040 px in Pop mode, whose pills are wider) the top bar's section links are hidden, and this button
 // shows them as a drop-down. It closes when a link is picked, on Escape, on a tap outside, or when the links fit again (a
 // wider screen, or switching Pop mode off). Where the menu starts is decided by the CSS (layout.css, pop.css) alone.
 export function startMenu() {
@@ -24,7 +24,7 @@ export function startMenu() {
   });
   document.addEventListener('pointerdown', (e) => { if (isOpen() && !bar.contains(e.target)) setOpen(false); });
   const closeIfWide = () => { if (isOpen() && !collapsed()) setOpen(false); };
-  for (const width of ['(min-width: 921px)', '(min-width: 1041px)']) matchMedia(width).addEventListener('change', closeIfWide);
+  for (const width of ['(min-width: 961px)', '(min-width: 1041px)']) matchMedia(width).addEventListener('change', closeIfWide);
   addEventListener('agi:skin', closeIfWide);
 
   // Pop mode's top bar floats see-through over the hero; once the hero has scrolled away (on the diary page: once the page

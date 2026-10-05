@@ -170,9 +170,9 @@
   [data-skin='pop'][data-theme='dark'] .nav a { color: #f4efff; }
   [data-skin='pop'][data-theme='dark'] .nav a:hover, [data-skin='pop'][data-theme='dark'] .nav a[aria-current='page'] { background: #34206b; }
 }
-/* the pills need about 1000 px in one line, so in Pop mode the menu takes over up to 1040 px (layout.css's phone menu, which
-   starts at 920 px, repeated here for the screens in between) */
-@media (min-width: 921px) and (max-width: 1040px) {
+/* the pills need about 1000 px in one line (still 1020 px with the Telegram button, 2026-10-05), so in Pop mode the menu
+   takes over up to 1040 px (layout.css's phone menu, which starts at 960 px, repeated here for the screens in between) */
+@media (min-width: 961px) and (max-width: 1040px) {
   [data-skin='pop'] .menu-btn { display: inline-grid; }
   [data-skin='pop'] .nav { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; gap: 0; }
   [data-skin='pop'] .topbar.menu-open .nav { display: flex; }
