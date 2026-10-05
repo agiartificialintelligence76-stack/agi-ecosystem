@@ -99,9 +99,9 @@ export function getConfig(env = process.env) {
     tgGroupPosts: !isOff(env.TELEGRAM_GROUP_POSTS),
     tgGroupWelcome: !isOff(env.TELEGRAM_GROUP_WELCOME),
     // …and the $AGI buy bot there (2026-10-06, server/buys.js): on unless "off", and the smallest buy it posts, in
-    // dollars (100 by default, the owner's: "a minimum buy of $100")
+    // dollars (50 by default, the owner's: "can you make the minimum to 50$"; $100 at first)
     tgBuys: !isOff(env.TELEGRAM_BUYS),
-    tgBuyMin: Math.min(1_000_000, number('TELEGRAM_BUY_MIN', 100)),
+    tgBuyMin: Math.min(1_000_000, number('TELEGRAM_BUY_MIN', 50)),
     // Messages paid for by burning $AGI (2026-09-30, server/burn.js): whole $AGI a message (10 by default: 1,000 $AGI =
     // 100 messages), and the burned messages the whole site may use a day, on top of the free ones (1,000: about $0.80 of
     // AI replies at most)

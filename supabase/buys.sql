@@ -1,6 +1,6 @@
 -- AGI-1's $AGI buy bot (2026-10-06, the owner: "add a very simple buybot to the tgbot with a minimum buy of $100 just for
 -- $AGI with robot emojis and with a gif of her … with mc, price amount of agi, etc."). Our server reads $AGI's newest trades
--- from clank.trade and posts each new buy of $100 or more in her Telegram groups (server/buys.js). This file gives it what
+-- from clank.trade and posts each new buy of $50 or more in her Telegram groups (server/buys.js). This file gives it what
 -- it needs from the database, and the clock that makes it look every minute.
 --
 -- Before running it (once, in the Supabase project that SUPABASE_URL points to; two switches, both free):

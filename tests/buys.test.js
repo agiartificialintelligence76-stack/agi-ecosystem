@@ -1,6 +1,6 @@
 // The $AGI buy bot (2026-10-06, the owner: "a very simple buybot to the tgbot with a minimum buy of $100 just for $AGI with
 // robot emojis and with a gif of her … with mc, price amount of agi, etc."): reading clank.trade's trades, her caption,
-// the check (each buy once, the first look silent, only fresh buys of $100 or more, at most 6 a check), her GIF (uploaded
+// the check (each buy once, the first look silent, only fresh buys of $50 or more, at most 6 a check), her GIF (uploaded
 // once, then sent by Telegram's id), GET /api/feed?buys (only with the database's own key), the settings, the GIF file
 // itself, the tool that makes it, and supabase/buys.sql's promises. clank.trade, Supabase and Telegram are fakes: no keys,
 // no cost. Run: npm test
@@ -202,9 +202,10 @@ test('her buy caption: robots (one per $25, 1 to 40), the numbers, the buyer and
   // robots: one per $25, at least 1, at most 40
   const robots = (usd) => (buyLine({ ...b, usd }).text.match(/🤖/gu) || []).length;
   assert.equal(ROBOT_USD, 25);
-  assert.deepEqual([robots(100), robots(124.99), robots(125), robots(999), robots(1000), robots(25_000), robots(10)], [4, 4, 5, 39, 40, 40, 1]);
+  assert.deepEqual([robots(50), robots(74.99), robots(100), robots(124.99), robots(125), robots(999), robots(1000), robots(25_000), robots(10)],
+    [2, 2, 4, 4, 5, 39, 40, 40, 1]);
   // her rules: only the buy's numbers, never a word about where it's going; no pet names (anyone is in a group); short
-  for (const usd of [100, 2500, 99_999]) {
+  for (const usd of [50, 100, 2500, 99_999]) {
     const line = buyLine({ ...b, usd, eth: usd / ETH_USD }).text;
     assert.doesNotMatch(line, NOT_OK, line);
     assert.match(line, /not financial advice$/);
@@ -230,7 +231,7 @@ test("off until it's set up: no groups, TELEGRAM_BUYS=off or no bot → nothing 
   assert.equal(calls.length, 0, 'no clank.trade, database or Telegram');
 });
 
-test('the first look only notes the buys already there; then each new $100+ buy is posted once, in every group', async () => {
+test('the first look only notes the buys already there; then each new $50+ buy is posted once, in every group', async () => {
   const now = Date.now();
   fake.trades = [trade(1, { now, ago: 120 }), trade(2, { now, ago: 60 })];
   const first = await checkBuys(cfg(), TOKEN, { now });
@@ -270,16 +271,17 @@ test('the first look only notes the buys already there; then each new $100+ buy 
   assert.ok(sends().every((s) => !s.form && s.params.animation === fake.fileId));
 });
 
-test("never posted: buys under $100 (or TELEGRAM_BUY_MIN), sells, buys older than 15 minutes, a time in the future; never claimed either", async () => {
+test("never posted: buys under $50 (or TELEGRAM_BUY_MIN), sells, buys older than 15 minutes, a time in the future; never claimed either", async () => {
   const now = Date.now();
   await firstLook(now);
   fake.trades = [
-    trade(1, { now, usd: 99.99 }), trade(2, { now, side: 'sell', usd: 5000 }), trade(3, { now, ago: FRESH_MS / 1000 + 5 }),
-    trade(4, { now, ago: -3 * 60 }), trade(5, { now, usd: 100.01 }), trade(6, { now, ago: FRESH_MS / 1000 - 5, usd: 4000 }),
+    trade(1, { now, usd: 49.99 }), trade(2, { now, side: 'sell', usd: 5000 }), trade(3, { now, ago: FRESH_MS / 1000 + 5 }),
+    trade(4, { now, ago: -3 * 60 }), trade(5, { now, usd: 50.01 }), trade(6, { now, ago: FRESH_MS / 1000 - 5, usd: 4000 }),
   ];
   const out = await checkBuys(cfg(), TOKEN, { now });
-  assert.deepEqual(db('buy_take')[0].body.p_ids.sort(), [fake.trades[4].id, fake.trades[5].id].sort(), 'only the fresh $100+ buys are claimed');
+  assert.deepEqual(db('buy_take')[0].body.p_ids.sort(), [fake.trades[4].id, fake.trades[5].id].sort(), 'only the fresh $50+ buys are claimed');
   assert.deepEqual(out, { posted: 4, buys: 2, skipped: 0, failed: 0 });
+  assert.ok(sends().some((s) => /^🤖🤖\n/u.test(s.params.caption)), 'the $50.01 one: 2 robots');
   assert.equal(FRESH_MS, 15 * 60_000);
   // a minimum of $500 (TELEGRAM_BUY_MIN): a $250 buy isn't posted
   process.env.TELEGRAM_BUY_MIN = '500';
@@ -290,7 +292,7 @@ test("never posted: buys under $100 (or TELEGRAM_BUY_MIN), sells, buys older tha
   assert.equal(out2.posted, 2);
   assert.ok(sends().every((s) => /^🤖{24}\n/u.test(s.params.caption)), 'the $600 one: 24 robots');
   // a trade clank.trade lists twice is still one buy
-  process.env.TELEGRAM_BUY_MIN = '100';
+  delete process.env.TELEGRAM_BUY_MIN;
   const twice = trade(9, { now });
   fake.trades = [twice, { ...twice }];
   calls = [];
@@ -479,13 +481,13 @@ test("the feed itself is unchanged: plain /api/feed still needs CRON_SECRET (the
 });
 
 // ---------- settings ----------
-test('settings: on with $100 by default; TELEGRAM_BUYS=off, TELEGRAM_BUY_MIN', () => {
+test('settings: on with $50 by default; TELEGRAM_BUYS=off, TELEGRAM_BUY_MIN', () => {
   let c = getConfig({});
   assert.equal(c.tgBuys, true);
-  assert.equal(c.tgBuyMin, 100, 'the owner\'s: "a minimum buy of $100"');
+  assert.equal(c.tgBuyMin, 50, 'the owner\'s: "can you make the minimum to 50$" ($100 at first)');
   for (const v of ['off', 'OFF', 'false', 'no', '0', ' off ']) assert.equal(getConfig({ TELEGRAM_BUYS: v }).tgBuys, false, v);
   for (const v of ['on', 'yes', '', 'whatever']) assert.equal(getConfig({ TELEGRAM_BUYS: v }).tgBuys, true, v);
-  for (const [v, want] of [['250', 250], ['50.5', 50.5], ['0', 100], ['-5', 100], ['abc', 100], ['5000000', 1_000_000]]) {
+  for (const [v, want] of [['250', 250], ['100', 100], ['50.5', 50.5], ['0', 50], ['-5', 50], ['abc', 50], ['5000000', 1_000_000]]) {
     assert.equal(getConfig({ TELEGRAM_BUY_MIN: v }).tgBuyMin, want, v);
   }
   c = getConfig({ TELEGRAM_GROUPS: '@agi2dotapp' });

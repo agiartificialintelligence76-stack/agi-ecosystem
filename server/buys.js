@@ -2,10 +2,11 @@
 // just for $AGI with robot emojis and with a gif of her … with mc, price amount of agi, etc."). Every minute Supabase Cron
 // calls GET /api/feed?buys with the database's own key (supabase/buys.sql). Our server then reads $AGI's newest trades
 // from clank.trade (the trades its coin page lists: since $AGI graduated, its Uniswap pool's) with ETH's price, and posts
-// each new buy worth TELEGRAM_BUY_MIN dollars or more (100) in her Telegram groups (TELEGRAM_GROUPS): her buy GIF (her 2D
-// self cheering: server/media/agi1-buy.mp4, made by tools/buybot/make.mjs) with the buy's numbers and a robot for every $25
-// (server/tg-lines.js, buyLine). Read-only everywhere but Telegram; nothing about anyone is kept (only the trades' public
-// ids, so each buy is posted once). TELEGRAM_BUYS=off: none.
+// each new buy worth TELEGRAM_BUY_MIN dollars or more ($50, the owner's since 2026-10-06: "can you make the minimum to 50$";
+// $100 at first) in her Telegram groups (TELEGRAM_GROUPS): her buy GIF (her 2D self cheering: server/media/agi1-buy.mp4,
+// made by tools/buybot/make.mjs) with the buy's numbers and a robot for every $25 (server/tg-lines.js, buyLine). Read-only
+// everywhere but Telegram; nothing about anyone is kept (only the trades' public ids, so each buy is posted once).
+// TELEGRAM_BUYS=off: none.
 //   • only $AGI, only buys, only fresh ones (a quarter of an hour at most: after a pause it never posts old buys), and each
 //     once, even when two checks run at once (claimed in the database first: buy_take). A check cut short (Telegram's "too
 //     many", or its time) skips the rest of its buys: never twice, at worst one missed;

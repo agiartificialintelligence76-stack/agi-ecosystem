@@ -126,7 +126,7 @@ export const groupMarket = ({ mcap, h24, liq }) =>
 export const GROUP_MARKET_DOWN = "couldn't read the market numbers just now 🙈 try again in a minute";
 
 // A $AGI buy in her groups (2026-10-06, the owner: "a very simple buybot … with robot emojis … with mc, price amount of
-// agi, etc.", server/buys.js): the caption under her buy GIF. A robot for every $25 (4 for the smallest, $100; 40 at
+// agi, etc.", server/buys.js): the caption under her buy GIF. A robot for every $25 (2 for the smallest, $50; 40 at
 // most), what was spent (in dollars, at ETH's price then, and in ETH), the $AGI it got, the price it paid, the market cap at
 // that price ($AGI's 1 billion), and the buyer's short address and the transaction, both linked to the block explorer
 // (entities on our own text: nothing is parsed). Only the buy's numbers: never a word about where the price is going.
