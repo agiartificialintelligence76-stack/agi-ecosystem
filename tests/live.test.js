@@ -450,6 +450,14 @@ test('the runner: its secret only; start, beat (the owner\'s controls), next (he
   assert.deepEqual([r.data.ok, r.data.paused, r.data.end, r.data.waiting], [true, false, false, 0]);
   assert.equal((await post({ action: 'beat', show, status: 'off' }, { auth: RUNNER() })).status, 400);
   assert.equal((await post({ action: 'beat', show: 99, status: 'live' }, { auth: RUNNER() })).data.why, 'old_show');
+  // the server's --check, exactly as it asks (tools/live/run.mjs, secretAccepted: a show that can never be on): "old_show"
+  // with the right key, 401 with a wrong one, and nothing changes (2026-10-06: show 0 was a bad request, and --check said NO)
+  const probe = { action: 'beat', show: Number.MAX_SAFE_INTEGER, status: 'live', segment: null, now: null };
+  r = await post(probe, { auth: RUNNER() });
+  assert.deepEqual([r.status, r.data.ok, r.data.why], [200, false, 'old_show']);
+  assert.equal((await post(probe, { auth: 'Bearer wrong' })).status, 401);
+  assert.equal((await post({ ...probe, show: 0 }, { auth: RUNNER() })).status, 400, 'what the first --check sent');
+  assert.equal((await post({ action: 'beat', show, status: 'live', segment: 'intro', now: null }, { auth: RUNNER() })).data.ok, true, 'the real show is still on');
   r = await post({ action: 'next', show }, { auth: RUNNER() });
   assert.deepEqual(r.data, { none: true }, 'nobody waiting');
   await post(askOk);

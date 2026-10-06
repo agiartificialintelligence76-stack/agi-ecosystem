@@ -16,8 +16,8 @@
 //   node tools/live/run.mjs --build                  only builds her set's page (the Docker image does this once)
 //   node tools/live/run.mjs --sync-check             measures whether her mouth is in step with her voice on this server
 //   node tools/live/run.mjs --warm                   makes every pre-written line's voice once and keeps it (once, at setup:
-//                                                    about 10 minutes; then even her first show never waits for Google)
-// Options: --minutes 60 (LIVE_MINUTES) · --site https://agi1.app (SITE_URL) · --next-at 20:00 (LIVE_DAILY_AT: her next show,
+//                                                    about 20 minutes, at Google's pace; then even her first show never waits for Google)
+// Options: --minutes 60 (LIVE_MINUTES) · --site https://www.agi1.app (SITE_URL) · --next-at 20:00 (LIVE_DAILY_AT: her next show,
 // said on agi1.app/live when this one ends) · --fake-voice
 // Settings (/opt/agi1-live/live.env on the server, from tools/live/live.env.example; never in git): see "Her live show on X"
 // in CLAUDE.md. On the server, tools/live/live.sh runs all of this in the Docker image (tools/live/Dockerfile).
@@ -56,7 +56,7 @@ export const avShift = (env = process.env) => (env.LIVE_AV_MS !== undefined && e
 export function parseArgs(argv, env = process.env) {
   const a = {
     record: null, minutes: Number(env.LIVE_MINUTES) || 60, startAt: env.LIVE_START_AT || null, nextAt: env.LIVE_DAILY_AT || null,
-    site: env.SITE_URL || 'https://agi1.app', fake: false, demo: false, check: false, ownerLink: false, announce: null, build: false, syncCheck: false,
+    site: env.SITE_URL || 'https://www.agi1.app', fake: false, demo: false, check: false, ownerLink: false, announce: null, build: false, syncCheck: false,
     withSite: false, warm: false,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -276,12 +276,32 @@ export class Mixer {
 
 // Her pre-written lines' voices made ahead and kept (tools/live/cache), so she never waits for Google on stream: during
 // "starting soon" (her first lines), and all of them with --warm (once, at setup). until: no new one after this time (ms)
-export async function warmUp(voice, lines, { until = Infinity, each = null } = {}) {
+// Her pre-written lines' voices, made once and kept (--warm, and before a show). At Google's pace (2026-10-06: Vertex let
+// her voice model take about 10 requests a minute, then "429 resource exhausted", and the owner's first --warm made only
+// 11 of 121, skipping the rest while her voice rested): a short pause after each line Google made (gapMs; kept lines
+// need none), and while her voice rests after a "wait", the same line waits and is tried again (a few times) instead of
+// being skipped. Never past `until`.
+export const WARM_GAP_MS = 6500;
+export async function warmUp(voice, lines, { until = Infinity, each = null, gapMs = 0, tries = 4, log = null,
+  now = Date.now, sleep = (ms) => new Promise((done) => { setTimeout(done, ms); }) } = {}) {
   let ready = 0, i = 0;
   for (const line of lines) {
-    if (Date.now() > until) break;
-    const v = await voice.speak(line.text, { say: line.say, mood: line.mood, keep: true }).catch(() => null);
-    if (v) ready += 1;
+    if (now() > until) break;
+    let v = null;
+    for (let t = 0; t < tries; t++) {
+      const wait = (voice.restingUntil?.(now()) || 0) - now();
+      if (wait > 0) {
+        if (now() + wait > until) break;
+        log?.(`  waiting ${Math.ceil(wait / 1000)} s: Google takes about 10 a minute…`);
+        await sleep(wait + 1000);
+      }
+      v = await voice.speak(line.text, { say: line.say, mood: line.mood, keep: true, now }).catch(() => null);
+      if (v || !(voice.restingUntil?.(now()) > now())) break;     // made or kept, or a refusal that isn't "wait"
+    }
+    if (v) {
+      ready += 1;
+      if (gapMs > 0 && !/\(kept\)/.test(String(v.by || ''))) await sleep(gapMs);
+    }
     each?.(++i, v);
   }
   return ready;
@@ -416,7 +436,7 @@ async function runShow(a) {
     // are made (when they aren't kept yet), so her intro never waits for Google. The owner's "end" cancels the show.
     if (begins > Date.now()) {
       await browser.page.evaluate(([at]) => window.studio.overlay('starting', { sub: 'Ask me at agi1.app/live', untilMs: at }), [begins]);
-      warmUp(voice, [...L.INTRO, ...L.READING, L.BRB.start, L.BRB.back, ...L.LAG, ...L.OUTRO], { until: begins - 5000 }).catch(() => {});
+      warmUp(voice, [...L.INTRO, ...L.READING, L.BRB.start, L.BRB.back, ...L.LAG, ...L.OUTRO], { until: begins - 5000, gapMs: WARM_GAP_MS }).catch(() => {});
       while (Date.now() < begins && !stopping && !controls.end) await sleep(500);
     }
     if (controls.end && !stopping) {
@@ -713,6 +733,20 @@ async function syncCheck() {
 }
 
 // ---------- --check, --owner-link, --announce ----------
+// Does the site take this server's LIVE_SECRET? A beat for a show that can never be on (the site answers "old_show" and
+// changes nothing; a wrong key gets 401). Before 2026-10-06 it sent show 0, which the site refuses as a bad request (400)
+// before it looks: the owner's first --check said NO with the right key.
+export const PROBE_SHOW = Number.MAX_SAFE_INTEGER;
+export async function secretAccepted(site) {
+  try {
+    const r = await site.beat(PROBE_SHOW, 'live', null, null);
+    return { ok: r?.ok === true || r?.why === 'old_show', why: String(r?.why || '') };
+  } catch (err) {
+    // a 400 only comes after the key was taken (the runner's own checks); 401 is a wrong key; anything else, the site
+    return { ok: err.status === 400, why: err.message };
+  }
+}
+
 async function check(a) {
   const ok = (c, m) => { console.log(`${c ? 'ok  ' : 'NO  '} ${m}`); return c; };
   let good = true;
@@ -726,8 +760,8 @@ async function check(a) {
     const site = liveSite({ site: a.site, secret: process.env.LIVE_SECRET, log });
     const s = await site.status();
     good = ok(s.ready === true, `${site.base}/api/live is set up${s.ready ? '' : ' (LIVE_SECRET in Vercel, and supabase/live.sql run?)'}`) && good;
-    const r = await site.beat(0, 'live', null, null).catch((err) => ({ error: err }));
-    good = ok(r?.why === 'old_show' || r?.ok === true, `the site accepts this server's LIVE_SECRET${r?.error ? ` (${r.error.message})` : ''}`) && good;
+    const k = await secretAccepted(site);
+    good = ok(k.ok, `the site accepts this server's LIVE_SECRET${k.ok ? '' : ` (${k.why})`}`) && good;
   } catch (err) { good = ok(false, err.message) && false; }
   const voice = createVoice(voiceSettings(process.env, { fake: a.fake }), { log: { warn: (m) => console.log(`     ${m}`) } });
   good = ok(voice.order.length > 0, `a way to make her voice: ${voice.order.join(' → ') || 'none (GOOGLE_APPLICATION_CREDENTIALS or LIVE_GCP_API_KEY)'}`) && good;
@@ -757,8 +791,10 @@ async function main() {
     if (!voice.order.length) throw new Error('no way to make her voice: set GOOGLE_APPLICATION_CREDENTIALS (or LIVE_GCP_API_KEY)');
     const lines = L.allLines(), t0 = Date.now();
     if (musicSettings().on) { console.log('making her music (the songs already kept are skipped)…'); loadSongs(voice.settings.cacheDir, { log }); }
-    console.log(`making her ${lines.length} pre-written lines' voices (the ones already kept are skipped)…`);
-    const ready = await warmUp(voice, lines, { each: (i) => { if (i % 10 === 0) console.log(`  ${i} of ${lines.length}`); } });
+    console.log(`making her ${lines.length} pre-written lines' voices at Google's pace, about 8 a minute (the ones already kept are skipped)…`);
+    // (at Google's pace: about 8 a minute, so 121 lines take about 17 minutes; never more than an hour)
+    const ready = await warmUp(voice, lines, { gapMs: WARM_GAP_MS, until: Date.now() + 60 * 60_000, log: (m) => console.log(m),
+      each: (i) => { if (i % 10 === 0) console.log(`  ${i} of ${lines.length}`); } });
     console.log(`${ready} of ${lines.length} ready, kept for every show (${Math.round((Date.now() - t0) / 1000)} s)${ready < lines.length ? ': run it again later for the rest' : ''}`);
     process.exitCode = ready === lines.length ? 0 : 1;
     return;

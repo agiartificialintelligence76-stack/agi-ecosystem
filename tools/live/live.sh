@@ -8,7 +8,7 @@
 #   sh tools/live/live.sh --record try.mp4 --minutes 5
 #                                             a real show into a file instead of X (/opt/agi1-live/out/try.mp4)
 #   sh tools/live/live.sh --sync-check        her mouth vs her voice on this server (then LIVE_AV_MS in live.env)
-#   sh tools/live/live.sh --warm              makes all her pre-written lines' voices once (at setup: about 10 minutes)
+#   sh tools/live/live.sh --warm              makes all her pre-written lines' voices once (at setup: about 20 minutes)
 #   sh tools/live/live.sh --owner-link        the owner's phone link (agi1.app/live#admin=…)
 #   sh tools/live/live.sh --announce 01:00    tells agi1.app/live when her next show is (UTC)
 #   sh tools/live/live.sh show                today's show: "starting soon" until LIVE_DAILY_AT, then the show (the cron line)

@@ -15,7 +15,8 @@ import {
   voiceSettings, serviceAccount, tokenRequest, accessToken, forgetToken, vertexRequest, cloudRequest, vertexAudio, createVoice, promptFor,
   pcmToSamples, samplesToPcm, resample, RATE,
 } from '../tools/live/voice.js';
-import { parseArgs, timeAt, startProblem, rtmpTarget, maskUrl, ffmpegArgs, Mixer, reactFor, avShift, outPath, warmUp, beep, audioOnsets, videoOnsets, syncOffset } from '../tools/live/run.mjs';
+import { parseArgs, timeAt, startProblem, rtmpTarget, maskUrl, ffmpegArgs, Mixer, reactFor, avShift, outPath, warmUp, beep, audioOnsets, videoOnsets, syncOffset,
+  WARM_GAP_MS, PROBE_SHOW, secretAccepted } from '../tools/live/run.mjs';
 import { liveSite, demoSite, DEMO_QA } from '../tools/live/site.js';
 import * as M from '../tools/live/music.js';
 import { isCrude } from '../server/coins.js';
@@ -624,6 +625,80 @@ test('the runner\'s side of agi1.app/api/live: LIVE_SECRET on every call; --demo
   await demo.back(1, second.question.id);
   assert.equal((await demo.next()).question.text, second.question.text, 'put back: the same one again');
   for (const qa of DEMO_QA) assert.ok(!isCrude(qa.reply) && !/\b(babe|cutie)\b/.test(qa.reply));
+});
+
+// (2026-10-06, the owner's first real setup on the server: --check said NO for a right LIVE_SECRET, and agi1.app redirects)
+test("--check: the site takes this server's LIVE_SECRET (a beat for a show that can never be on); www.agi1.app by default", async () => {
+  const calls = [];
+  const site = (answer) => ({ beat: async (...a) => { calls.push(a); if (answer instanceof Error) throw answer; return answer; } });
+  const err = (status, message) => Object.assign(new Error(message), { status });
+  assert.deepEqual(await secretAccepted(site({ ok: false, why: 'old_show' })), { ok: true, why: 'old_show' });
+  assert.deepEqual(calls[0], [PROBE_SHOW, 'live', null, null], 'a show that can never be on: the site changes nothing');
+  assert.ok(Number.isSafeInteger(PROBE_SHOW) && PROBE_SHOW > 0, "the site's own id rule takes it (show 0 was a bad request)");
+  assert.equal((await secretAccepted(site(err(401, 'beat: HTTP 401 unauthorized')))).ok, false, 'a wrong key');
+  assert.match((await secretAccepted(site(err(401, 'beat: HTTP 401 unauthorized')))).why, /401/);
+  assert.equal((await secretAccepted(site(err(400, 'beat: HTTP 400 bad_request')))).ok, true, 'a 400 only comes after the key was taken');
+  assert.equal((await secretAccepted(site(err(503, 'beat: HTTP 503 busy')))).ok, false);
+  // agi1.app redirects to www (and the show never follows a redirect with its key): www is the default everywhere
+  assert.equal(parseArgs([], {}).site, 'https://www.agi1.app');
+  assert.equal(liveSite({ secret: 'x'.repeat(40) }).base, 'https://www.agi1.app');
+  assert.match(read('tools/live/live.env.example'), /^SITE_URL=https:\/\/www\.agi1\.app$/m);
+});
+
+test("--warm goes at Google's pace: a pause after each line it made, and a line that got \"wait\" waits and is tried again (the first --warm made 11 of 121)", async () => {
+  // Google with a limit a minute: "wait" (429) past it, and her voice then rests a minute (like createVoice)
+  const fakeGoogle = (perMinute) => {
+    const g = { t: 0, asked: [], rest: 0, made: new Set(), refused: 0 };
+    g.voice = {
+      restingUntil: (x) => (g.rest > x ? g.rest : 0),
+      async speak(text, { now }) {
+        assert.equal(typeof now, 'function', 'the warm-up hands its clock on');
+        if (g.made.has(text)) return { by: 'vertex (kept)' };
+        if (g.rest > g.t) return null;
+        const minute = Math.floor(g.t / 60_000);
+        g.asked.push(minute);
+        if (g.asked.filter((m) => m === minute).length > perMinute) { g.refused += 1; g.rest = g.t + 60_000; return null; }
+        g.t += 2000;                                   // Google takes 2 s a line
+        g.made.add(text);
+        return { by: 'vertex' };
+      },
+    };
+    g.opts = (extra = {}) => ({ now: () => g.t, sleep: async (ms) => { g.t += ms; }, ...extra });
+    return g;
+  };
+  const lines = Array.from({ length: 30 }, (_, i) => ({ text: `line ${i}`, mood: 'neutral' }));
+  // at the pace --warm uses: Google never says "wait" (10 a minute), and every line is made
+  let g = fakeGoogle(10);
+  assert.equal(await warmUp(g.voice, lines, g.opts({ gapMs: WARM_GAP_MS })), 30);
+  assert.equal(g.refused, 0, 'never more than Google takes');
+  assert.ok(Math.max(...[...new Set(g.asked)].map((m) => g.asked.filter((x) => x === m).length)) <= 8, 'about 8 a minute');
+  // kept lines: nothing asked, no pause
+  const t0 = g.t;
+  assert.equal(await warmUp(g.voice, lines, g.opts({ gapMs: WARM_GAP_MS })), 30);
+  assert.equal(g.t, t0, 'kept: no waiting at all');
+  // a stricter Google (3 a minute) and no pause: "wait" happens, and each line waits and is tried again, none skipped
+  g = fakeGoogle(3);
+  const said = [];
+  assert.equal(await warmUp(g.voice, lines, g.opts({ log: (m) => said.push(m) })), 30, 'every line, not 3 of them');
+  assert.ok(g.refused > 0 && said.some((m) => /waiting \d+ s: Google takes about 10 a minute/.test(m)));
+  // the way it was (no retries): only the lines before the first "wait"
+  g = fakeGoogle(3);
+  assert.ok(await warmUp(g.voice, lines, g.opts({ tries: 1 })) < 30);
+  // never past `until`: a rest that ends after it stops the warm-up, nothing more is asked
+  g = fakeGoogle(3);
+  assert.ok(await warmUp(g.voice, lines, g.opts({ until: 40_000 })) < 30);
+  assert.ok(g.t <= 60_000, 'it didn\'t wait out a rest past "until"');
+  // the real voice: after Google's "wait" she rests a minute, and says until when (0 while another way can speak)
+  const fetchFn = async (url) => (String(url).includes('aiplatform')
+    ? new Response('{"error":{"code":429,"message":"Resource exhausted. Please try again later.","status":"RESOURCE_EXHAUSTED"}}', { status: 429 })
+    : new Response('{}', { status: 500 }));
+  const dir = mkdtempSync(join(tmpdir(), 'agi1-rest-'));
+  const v = createVoice({ ...voiceSettings({ LIVE_GCP_API_KEY: 'k'.repeat(39), LIVE_VOICES: 'vertex' }), cacheDir: dir }, { fetchFn, log: { warn() {} } });
+  assert.equal(v.restingUntil(1_000), 0, 'nothing asked yet: she can be asked');
+  assert.equal(await v.speak('hello there, a line for the show', { keep: true, now: () => 1_000_000 }), null);
+  assert.equal(v.restingUntil(1_000_000), 1_060_000, 'a minute after "wait"');
+  assert.equal(v.restingUntil(1_060_001), 0);
+  rmSync(dir, { recursive: true, force: true });
 });
 
 // ---------- her set's page, the image ----------

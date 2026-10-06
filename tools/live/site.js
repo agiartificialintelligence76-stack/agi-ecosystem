@@ -5,7 +5,8 @@
 // demoSite(): the same, without any site (--demo): a few made-up questions and answers, to try the show anywhere.
 
 export function liveSite({ site, secret, fetchFn = fetch, log = console } = {}) {
-  const base = String(site || 'https://agi1.app').replace(/\/+$/, '');
+  // (www: agi1.app redirects there, and a redirect is never followed with the key: checked on 2026-10-06)
+  const base = String(site || 'https://www.agi1.app').replace(/\/+$/, '');
   if (!/^https?:\/\/[^/\s]+$/.test(base)) throw new Error(`SITE_URL isn't an address: ${base}`);
   if (String(secret || '').length < 32) throw new Error('LIVE_SECRET is missing or shorter than 32 characters (the same one as in Vercel)');
   const call = async (body, timeoutMs = 10_000) => {

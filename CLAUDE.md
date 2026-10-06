@@ -2090,12 +2090,22 @@ key): one request a minute; Telegram: free.
 Live2D model (`tools/buybot/page/gif.js`, through the launch video's renderer `tools/promo/page/her.js`), never the 3D
 model.
 
-**Troubleshooting** (Vercel → agi-ecosystem → Logs; and in Supabase → SQL Editor,
-`select status_code, created from net._http_response order by created desc limit 5;` shows the clock's last calls: 200 is
-fine):
+**Troubleshooting** (Vercel → agi-ecosystem → Logs; and in Supabase → SQL Editor, this lists every answer the site gave
+the clock, in UTC (pg_net keeps them about 6 hours): `{"ok":true,"posted":…}` is the bot at work, `"off":…` says why it
+isn't (the rows below)):
+
+```sql
+select left(content, 90) as answer, count(*) as calls,
+       to_char(min(created), 'HH24:MI') as first, to_char(max(created), 'HH24:MI') as last
+from net._http_response
+group by 1
+order by min(created);
+```
 
 | What you see | Log line | Fix |
 |---|---|---|
+| No buy alerts, the clock's calls answered `{"ok":true,"off":"off"}` | (none) | `TELEGRAM_BUYS` is off (or 0, no, false) in Vercel: remove it (no setting = on), then Redeploy. (2026-10-06, the first night: a $59 buy wasn't posted for this) |
+| No buy alerts, answered `{"ok":true,"off":"no_groups"}` or `"no_bot"` | (none) | `TELEGRAM_GROUPS` (no group in it) or `TELEGRAM_BOT_TOKEN` isn't set: set it, then Redeploy |
 | No buy alerts, nothing in the log | (none) | The clock isn't running: setup steps 1–3 (`buys_scheduled` must be 1). Supabase → Integrations → Cron should list `agi1-buys` with a run every minute |
 | No buy alerts | `[buys] couldn't read the buy bot's key: … buy_key not found: run supabase/buys.sql …` | Setup step 3 |
 | No buy alerts, the clock's calls get 401 | (none) | The key the clock sends isn't the database's: run `supabase/buys.sql` again (it keeps its key) |
@@ -3424,10 +3434,18 @@ keep the link private: whoever has it can pause or end her show):
    and can't be restarted, so a missed day costs nothing. Schedule the first one for a day the server will be ready, then
    the coming days the same way. (If Live Studio allows only one scheduled livestream per source at a time, schedule the
    next one after each show.) Another time later: change it here, in `LIVE_DAILY_AT` and in the cron line (step 9).
-4. **The server:** Hetzner Cloud (console.hetzner.com) → a project → **Add server** → Germany or Finland → Ubuntu 24.04 →
-   shared vCPU, x86 → **CX33** (4 vCPUs, 8 GB) → public IPv4 on → your **SSH key** (on Windows, PowerShell: `ssh-keygen -t
-   ed25519` with Enter for every question, then `Get-Content $env:USERPROFILE\.ssh\id_ed25519.pub`, and paste that line)
-   → Create. Then connect from PowerShell: `ssh root@<the server's IP>`.
+4. **The server:** Hetzner Cloud (console.hetzner.com) → a project → **Create Server** → Falkenstein (Germany) → Ubuntu
+   24.04 → Type: Cost-Optimized, x86 (Intel®/AMD) → **CX23** (2 vCPUs, 4 GB; the console shows dollars: $6.49, plus $0.60
+   for the IPv4) → public IPv4 on → your **SSH key** (on Windows, PowerShell: `ssh-keygen -t ed25519` with Enter for every
+   question, then `Get-Content $env:USERPROFILE\.ssh\id_ed25519.pub`, and paste that line) → name `agi1-live` → Create &
+   Buy now (nothing is charged then: Hetzner bills the month after). Then connect from PowerShell:
+   `ssh -o ServerAliveInterval=30 root@<the server's IP>` (the extra part keeps the link from dropping while you're away).
+   **Done 2026-10-06** (agi1-live, CX23, Falkenstein). CX33 (4 vCPUs, $9.99) and CX43 (8, $18.49) were sold out ("limited
+   availability"), so CX23 for now, and **Rescale** to CX33 or CX43 once one is back (the server off a minute, everything
+   on it kept; keep its disk as it is, so it can go back). On 2 cores she's drawn at 540 px (`LIVE_GL`), at about 22–29
+   frames a second. The Hetzner account is the owner's close friend's (verified), paid with the owner's own card: the
+   friend can reach the server, and so its stream key and Google key (if that ever changes: a new stream key in Live
+   Studio and a new Google key).
 5. **On the server** (each line pasted into that window, one by one):
    ```
    apt-get update && apt-get -y upgrade
@@ -3438,21 +3456,31 @@ keep the link private: whoever has it can pause or end her show):
    GitHub → the repo `agi-ecosystem` → Settings → **Deploy keys** → Add deploy key → a title ("agi1 live server"), the
    line the last command printed, **"Allow write access" left off** → Add key. Then:
    ```
-   GIT_SSH_COMMAND="ssh -i /root/.ssh/agi1_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" git clone git@github.com:agiartificialintelligence76-stack/agi-ecosystem.git /opt/agi1-live/site
+   apt-get install -y git && GIT_SSH_COMMAND="ssh -i /root/.ssh/agi1_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" git clone git@github.com:agiartificialintelligence76-stack/agi-ecosystem.git /opt/agi1-live/site
    git -C /opt/agi1-live/site config core.sshCommand "ssh -i /root/.ssh/agi1_deploy -o IdentitiesOnly=yes"
    cd /opt/agi1-live/site && sh tools/live/live.sh update
    ```
-   The first build takes a few minutes (Playwright's image is about 2 GB).
+   The first build takes about 10 minutes (Playwright's image is about 2 GB). **Done 2026-10-06:** the image's first real
+   build, without a hitch.
 6. **Her settings, on the server:**
    ```
    cp /opt/agi1-live/site/tools/live/live.env.example /opt/agi1-live/live.env && chmod 600 /opt/agi1-live/live.env
-   nano /opt/agi1-live/live.env
    ```
-   Fill in `LIVE_SECRET` (the same as Vercel's), `LIVE_RTMP_URL` and `LIVE_STREAM_KEY` (step 3), with no quotes → Ctrl+O,
-   Enter, Ctrl+X. Then her voice's key file, from PowerShell on the PC (live.sh lets only the show read it):
+   `LIVE_SECRET`: Vercel keeps it "sensitive" (it never shows it again), so the server makes a new one and puts it in
+   live.env itself; the owner then pastes it into Vercel (LIVE_SECRET → ⋯ → Edit → Save, then Redeploy) and types `clear`:
    ```
-   scp "$env:USERPROFILE\Downloads\<the key file>.json" root@<the server's IP>:/opt/agi1-live/google-key.json
+   S=$(openssl rand -hex 32) && sed -i "s|^LIVE_SECRET=.*|LIVE_SECRET=$S|" /opt/agi1-live/live.env && grep -q "^LIVE_SECRET=$S$" /opt/agi1-live/live.env && echo "$S"
    ```
+   `SITE_URL` is https://www.agi1.app (agi1.app redirects there, and the show never follows a redirect with its key;
+   live.env.example says www since 2026-10-06; an older live.env: `sed -i 's|^SITE_URL=.*|SITE_URL=https://www.agi1.app|'
+   /opt/agi1-live/live.env`). `LIVE_RTMP_URL` and `LIVE_STREAM_KEY` (step 3): `nano /opt/agi1-live/live.env`, no quotes →
+   Ctrl+O, Enter, Ctrl+X. Then her voice's key file, from PowerShell on the PC (live.sh lets only the show read it;
+   `dir agi-daria*.json` in Downloads shows its name: the key Google Cloud made in step 2):
+   ```
+   cd Downloads
+   scp agi-daria-<…>.json root@<the server's IP>:/opt/agi1-live/google-key.json
+   ```
+   **Done 2026-10-06**, but X's two lines.
 7. **Checks, on the server**, one at a time:
    ```
    cd /opt/agi1-live/site
@@ -3461,8 +3489,11 @@ keep the link private: whoever has it can pause or end her show):
    sh tools/live/live.sh --sync-check
    sh tools/live/live.sh --record try.mp4 --minutes 5
    ```
-   `--check`: every line "ok", and a test of her voice saved (from PowerShell: `scp root@<IP>:/opt/agi1-live/out/live-check.wav .`,
-   then listen). `--warm`: all her pre-written lines' voices and her music, once (about 10 minutes, about $0.10).
+   `--check`: every line "ok" (X's says NO until step 3), and a test of her voice saved (from PowerShell: `scp
+   root@<IP>:/opt/agi1-live/out/live-check.wav .`, then listen). `--warm`: her music and all her pre-written lines' voices,
+   once, at Google's pace: Vertex takes about 10 requests a minute for her voice model (then "429 resource exhausted"), so
+   about 8 a minute, about 20 minutes, about $0.10. (2026-10-06, the first one, before it waited by itself: 11 of 121, then
+   `for i in $(seq 1 15); do sh tools/live/live.sh --warm && break; sleep 70; done` for the rest.)
    `--sync-check`: if it says so, set `LIVE_AV_MS` in live.env and run it again. `--record`: a real 5-minute show with
    made-up questions, into a file (`scp root@<IP>:/opt/agi1-live/out/try.mp4 .`, then watch it).
 8. **The owner's phone link:** `sh tools/live/live.sh --owner-link` → open it on the phone and bookmark it (private).
@@ -3482,15 +3513,17 @@ keep the link private: whoever has it can pause or end her show):
 && sh tools/live/live.sh update` (git pull, then the image is built again; the next show uses it). Not needed for the
 site's own changes (agi1.app/live, her answers: those go live with Vercel).
 
-**Cost** (one hour a day; checked 2026-10-02): the server about €8.49 a month (Hetzner CX33, its price since 2026-06-15;
-plus its IPv4 address and any VAT; CX43, 8 vCPUs, €15.99 if she ever stutters) · X Premium about $9 a month (the price
+**Cost** (one hour a day; checked 2026-10-02, the server 2026-10-06): the server $7.09 a month (Hetzner CX23, $6.49 and
+$0.60 for its IPv4, the console in dollars, plus any VAT; CX33 $9.99 or CX43 $18.49 once back in stock: the owner's
+budget for the server is up to $20 a month) · X Premium about $9 a month (the price
 may differ by country) · her voice at most about $0.54 an hour of talking ($6 per 1M audio tokens until 2026-12-31, 25 a
 second; double from 2027), so about $10–16 a month for an hour a day, plus about $0.10 once for her pre-written lines ·
 her answers about $0.0005 each on the site's key (at most $0.30 a day: 600 questions) · Vercel and Supabase: a few small
-requests a second while she's on, nothing noticeable. **About $29–35 a month** (the owner approved about $20–35).
+requests a second while she's on, nothing noticeable. **About $26–32 a month on CX23** ($30–36 on CX33, $38–44 on CX43;
+the owner approved about $20–35, and up to $20 for the server on 2026-10-06).
 
 **Settings on the server** (`/opt/agi1-live/live.env`, from `tools/live/live.env.example`; none of them go to Vercel):
-`SITE_URL` (https://agi1.app), `LIVE_SECRET` (the same as Vercel's), `LIVE_RTMP_URL` and `LIVE_STREAM_KEY` (X Live Studio's
+`SITE_URL` (https://www.agi1.app), `LIVE_SECRET` (the same as Vercel's), `LIVE_RTMP_URL` and `LIVE_STREAM_KEY` (X Live Studio's
 source), `GOOGLE_APPLICATION_CREDENTIALS` (left as it is: /secrets/google-key.json) or `LIVE_GCP_API_KEY`,
 `LIVE_VERTEX_LOCATION` (global), `LIVE_VOICE_MODEL` (gemini-3.8-flash-lite-tts), `LIVE_VOICES` (vertex; also `cloud`, or
 `gemini` with `GEMINI_API_KEY`: the site's own key and its daily limit, a backup only), `LIVE_MINUTES` (60),
@@ -3504,7 +3537,9 @@ source), `GOOGLE_APPLICATION_CREDENTIALS` (left as it is: /secrets/google-key.js
 | `--check`: "NO LIVE_RTMP_URL and LIVE_STREAM_KEY" | | Fill them in from Live Studio's source (setup step 3) |
 | It stops at once | `the site refused to start the show: start: HTTP 401 (LIVE_SECRET isn't the same as in Vercel)` | Copy `LIVE_SECRET` again on both sides; after changing it in Vercel, Redeploy |
 | It stops at once | `… HTTP 503 (LIVE_SECRET or supabase/live.sql missing on the site?)` | Setup step 1 |
-| It stops at once | `start: the site's address redirects to …: set SITE_URL in live.env to the address it goes to` | Set `SITE_URL` to that address |
+| It stops at once | `start: the site's address redirects to …: set SITE_URL in live.env to the address it goes to` | Set `SITE_URL` to that address (https://www.agi1.app) |
+| `--check`: `NO the site accepts this server's LIVE_SECRET (beat: HTTP 400 bad_request)` | | The check itself, before 2026-10-06 (a 400 means the key was taken; a wrong key is 401): after the push, `sh tools/live/live.sh update` |
+| `--warm` ends with `11 of 121 ready … run it again later for the rest` | `[voice] vertex: … HTTP 429 … RESOURCE_EXHAUSTED` | Google takes about 10 a minute for her voice model: since 2026-10-06 it waits by itself (`update` first); before, the loop in step 7 |
 | It stops at once | `--start-at 20:00 is 23 h 45 min away (it's 20:15 UTC now)…` | The cron line runs too late for `LIVE_DAILY_AT` (or it was started by hand after the time): change one of them |
 | She talks silently (captions only) | `[voice] vertex: … HTTP 403 … (enable the "Agent Platform API" for the project (formerly "Vertex AI API"), and give the service account the "Agent Platform User" role …)` | Setup step 2 |
 | She talks silently | `[voice] vertex: … HTTP 404 … (the model or the project/location: check LIVE_VOICE_MODEL, …)` | Google renamed or moved the Preview model on Agent Platform: tell Claude with the line (`LIVE_VOICE_MODEL`, `LIVE_VERTEX_LOCATION`) |
@@ -3547,11 +3582,13 @@ more on the fixes: e.g. unchecked names and other coins on stream, a paused show
 silencing her kept lines; all fixed but one: the stream key is visible in the server's own process list, which only the
 owner can see).
 
-**Not tried live:** X Live Studio, Google's Vertex AI speech (Agent Platform: Gemini 3.8 Flash-Lite TTS is a Preview
-model there, so its name or places could change: `--check` says so), Hetzner, and the Docker build itself (Claude's workspace
-can't reach X or Google, and can't download Playwright's image: Microsoft's container registry is blocked there; every
-step the image runs was run outside Docker instead, as a non-root user). The owner's first `--check`, `--record` and show
-are the first real checks.
+**Tried live, 2026-10-06** (the owner's setup, step by step): Hetzner (a CX23), the Docker build (its first real one:
+fine, about 10 minutes), her settings, Google Cloud's Vertex AI speech (works: about 2 s a line; it takes about 10
+requests a minute for her voice model, so `--warm` goes at that pace), `--check` and her music. Two fixes came from it:
+`SITE_URL` must be www.agi1.app, and `--check`'s key test said NO for the right key (both fixed in the code; the server
+gets them with `update` after the push). **Not tried live yet:** X Live Studio (step 3), `--sync-check`, `--record`, a
+real show (Agent Platform: Gemini 3.8 Flash-Lite TTS is a Preview model there, so its name or places could change:
+`--check` says so).
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -4629,7 +4666,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | GitHub Actions (her daily clip, 2026-09-29) | Private repositories: 2,000 minutes a month and 500 MB of storage for downloads; a run takes about 5 minutes (about 150 a month) and keeps about 5 MB for 7 days | Without a payment method on GitHub: the job just stops until next month (never a bill) |
 | Blockscout block explorer (ClankChecker; since 2026-09-30 "Check my burn") | Free, no key; only for coins with 100+ holders, once per 5 minutes per coin; one request per "Check my burn" without a pasted link | The scan says "More than 100 wallets hold it"; "Check my burn" asks for the transaction link instead |
 | Pinata (launched coins' pictures, 2026-10-01) | Free plan: 500 files, 1 GB, 10 GB of bandwidth and 10,000 requests a month (checked 2026-10-01); one file per launched coin (pictures of coins never launched are deleted within a day); at most `LAUNCH_DAILY_CAP` (30) uploads a day | Uploads fail ("Couldn't put the picture on IPFS"); its cheapest paid plan is $20 a month: the owner's call |
-| The owner's server (her live show, 2026-10-02) | Not a free tier: Hetzner CX33, about €8.49 a month (plus its IPv4 and VAT); 20 TB of traffic included (her stream uses about 1.4 GB an hour) | The owner's bill; a show just doesn't happen if the server is off |
+| The owner's server (her live show, 2026-10-02) | Not a free tier: since 2026-10-06 a Hetzner CX23, $6.49 a month plus $0.60 for its IPv4 (and any VAT), billed the month after; CX33 ($9.99) or CX43 ($18.49) once back in stock, within the owner's $20 a month for the server; 20 TB of traffic included (her stream uses about 1.4 GB an hour) | The owner's bill; a show just doesn't happen if the server is off |
 | X Premium (her live show) | Not a free tier: about $9 a month (X Live Studio needs it) | No Live Studio: no show |
 | Google Cloud Vertex AI, now "Agent Platform" (her voice on stream, 2026-10-02) | Pay per use on the project's billing account, charged to its card once a month (never from AI Studio's prepaid credits, which pay for the Gemini API only): at most about $0.54 an hour of talking ($6 per 1M audio tokens until 2026-12-31, then double), about $10–16 a month for an hour a day; a budget alert at $20 (an email, never a stop) | Her lines that aren't kept yet are said silently (captions); kept lines and her music keep playing |
 | The gas wallet (launch fees paid back, 2026-10-01) | Not a free tier: the owner's own ETH, at most `LAUNCH_GAS_DAILY` (0.01 ETH by default) a day plus each payback's own tiny fee | Paybacks pause ("out of ETH" / "all it can for today"); launches still work |
@@ -5038,6 +5075,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   chat. Tests: 409 unit (on Node 20, 22 and 24, with and without Vercel's settings), 97 SQL checks (PGlite), 96 in a
   browser, 22 with the real runner end to end; a second Claude agent reviewed it twice (25 findings in all; all fixed but
   the stream key in the server's own process list). Not tried live (X, Google Cloud, Hetzner, the Docker build).
+  **Setup, 2026-10-06** (step by step with the owner): the server is up (Hetzner CX23: CX33 was sold out), her image
+  built, her settings and Google key on it, `--check` passes but X, her music made, her voice lines at Google's pace; two
+  fixes in the code (www.agi1.app as the site's address, `--check`'s key test) and `--warm` waits for Google by itself.
+  Next: X (step 3), then `--sync-check`, `--record`, the phone link and the daily cron line.
 - **Her 2D elbow, her shirt's side and the hair behind her arms: fixed 2026-10-03, waiting for the owner's OK** (the
   owner's two close-ups: "I just checked by now , what happened to this, can you fix", then "im sleeping now just finish
   it"): no slit at her shirt's side when her arms are down, soft hair tips and her hair's own color where her arms move
@@ -5295,6 +5336,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-06 | The buy bot's clock is Supabase Cron (pg_cron and pg_net, in the site's Supabase project), every minute, with a key the database made (the cron job reads it from its table, our server reads it with its secret key). Not picked: Vercel's cron (Hobby: once a day at most), an outside cron service (a new service, and a secret for the owner to copy), a server watching the chain (no always-on server; the live show's server is on only for the show) |
 | 2026-10-06 | `/api/feed?buys` starts light: `api/feed.js` loads the feed's own modules only for the feed, and clank.trade's API (`clankApi`) moved from `server/checker.js` to `server/coins.js`, so a buy check never loads the chain's code (viem): about 50 ms of CPU to start instead of 300, so a run a minute stays far inside Vercel Hobby's 4 hours of CPU a month even if every run started cold |
 | 2026-10-06 | The buy bot's minimum is **$50** (the owner, the same day: "can you make the minimum to 50$"; it was $100): `TELEGRAM_BUY_MIN`'s default, so the smallest buy gets 2 robots (one for every $25, as before). A `TELEGRAM_BUY_MIN` set in Vercel still wins over the default |
+| 2026-10-06 | Her live show's server is a **Hetzner CX23** in Falkenstein (2 vCPUs, 4 GB, $7.09 a month with its IPv4): CX33 and CX43 were sold out ("limited availability"), and the owner picked CX23 over waiting; **Rescale** to CX33, or CX43 within the owner's new $20 a month for the server, once one is back. Not picked: CPX32 ($41.99, four times the plan), CCX13 (dedicated, about four times too). It's on the owner's close friend's verified Hetzner account, paid with the owner's own card (Hetzner's terms let a customer let others use what they order; the friend stays the customer and can reach the server) |
+| 2026-10-06 | The live show's first real setup (the owner, step by step): `SITE_URL` is **https://www.agi1.app** (agi1.app redirects, and the show never follows a redirect with its key; the default everywhere now); `LIVE_SECRET` made on the server (Vercel keeps it sensitive, so it can't be read back) and pasted into Vercel; `--check`'s key test is a beat for a show that can never be on (it sent show 0, which the site refuses as a bad request: a NO for the right key); `--warm` goes at Google's pace (Vertex takes about 10 requests a minute for her voice model: the first one made 11 of 121, then skipped the rest) |
 
 ## Open questions
 
@@ -5427,6 +5470,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   video promotes a site with a coin: before relying on it commercially, buy Cubism PRO, export her model again and make
   the video again (one command; the owner: "i will pay the commercial later"). Not seen on real phones yet: how TikTok's,
   Reels' and Shorts' own buttons fall on the tall version (it keeps clear of their usual places).
+- **Her live show's LIVE_SECRET** (2026-10-06): a screenshot in the chat showed it, the day it was made; the owner chose
+  to keep it. If anyone else ever sees that chat: make a new one (step 6's command on the server), paste it into Vercel,
+  Redeploy (the owner's phone link changes with it: `--owner-link` again).
 - **Her buy bot** (2026-10-06): it reads clank.trade's undocumented trades API (like the risk check): if that changes, no
   alerts until it's fixed (the log says so). More than 50 $AGI trades in one minute would miss some (nowhere near that so
   far). A check cut short by Telegram skips the rest of its buys (never twice). Her GIF is drawn from the Cubism PRO

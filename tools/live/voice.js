@@ -246,7 +246,13 @@ export function createVoice(settings, { fetchFn = fetch, log = console } = {}) {
     }
     return null;
   }
-  return { speak, order: settings.order, settings };
+  // when she can be asked for a new line again: 0 while a way can be asked now; else the earliest a resting way can (the
+  // warm-up waits for it instead of skipping lines: 2026-10-06, the owner's first --warm made 11 of 121 that way)
+  const restingUntil = (t = Date.now()) => {
+    const times = settings.order.map((way) => resting.get(way) || 0);
+    return !times.length || times.some((x) => x <= t) ? 0 : Math.min(...times);
+  };
+  return { speak, order: settings.order, settings, restingUntil };
 }
 
 // another sample rate → 24 kHz (straight lines between samples: speech only, so it's plenty)
