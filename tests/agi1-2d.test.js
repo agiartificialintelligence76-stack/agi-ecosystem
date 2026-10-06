@@ -4,7 +4,7 @@
 // the "3D · 2D" buttons on the page.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import vm from 'node:vm';
 import * as THREE from 'three';
@@ -707,4 +707,62 @@ test('the page: "3D · 2D" on the stage and in both live views, 2D pressed at fi
   const clip = read('tools/clips/page/clip.js');
   assert.match(clip, /const \{ eyes, waist \} = model\.landmarks;/);
   assert.match(clip, /stencil: true/);
+});
+
+test('her live show draws her lighter, only when it asks (2026-10-06): one level of finer mesh on her arms, her texture at the size she\'s shown, without mipmaps', () => {
+  // the website's (and her clips' and her launch video's) default: as before
+  const site = newPuppet();
+  const { moc, core } = newModel();
+  const live = buildPuppet({ core, moc, physicsJson, texture: new THREE.Texture(), armRefine: { upper: 1, fore: 1, hand: 1, sleeve: 1 } });
+  const D = site.core.drawables, ids = Array.from(D.ids);
+  for (const side of ['R', 'L']) {
+    for (const [part, name] of Object.entries(ARM_PIECES[side])) {
+      const i = ids.indexOf(name);
+      if (i < 0) continue;
+      const tris = D.indices[i].length / 3;
+      assert.equal(site.meshes.fine[i].indices.length / 3, tris * 4 ** ARM_REFINE[part], `${name}: the website's finer mesh as before`);
+      assert.equal(live.meshes.fine[i].indices.length / 3, tris * 4, `${name}: one level on the live show`);
+    }
+  }
+  // her arms still bend the same way on the lighter mesh (the same joints are found on it)
+  for (const side of ['R', 'L']) assert.ok(live.drawnArms[side] && site.drawnArms[side], `${side}: her joints on the drawn mesh`);
+  // how much texture a metre of her takes: the same on both, and at the live show's framing (?gl=540) about 1188 px of
+  // texture to her picture (her 2048 px texture was drawn about 1.7 times smaller, mixing two mipmap levels)
+  assert.ok(Math.abs(site.uvPerMetre - live.uvPerMetre) < 1e-9);
+  const perMetre = (774 - 264) / (site.landmarks.eyes - site.landmarks.waist);
+  const size = Math.round((perMetre * 540) / 720 / site.uvPerMetre);
+  assert.ok(size > 1100 && size < 1300, `1:1 at ?gl=540: ${size} px`);
+  // fitTexture: in a stand-in browser (a canvas that records what's drawn on it)
+  const drawn = [];
+  let quality = null;
+  const ctx = { drawImage: (...a) => drawn.push(a), set imageSmoothingQuality(v) { quality = v; } };
+  globalThis.document = { createElement: (tag) => (tag === 'canvas' ? { width: 0, height: 0, getContext: () => ctx } : null) };
+  try {
+    const before = live.meshes.meshes[0].material.uniforms.map.value;
+    const t = live.fitTexture(size);
+    assert.ok(t instanceof THREE.CanvasTexture);
+    assert.equal(t.image.width, size);
+    assert.equal(t.image.height, size);
+    assert.deepEqual(drawn, [[before.image, 0, 0, size, size]], 'her texture drawn once, at that size');
+    assert.equal(quality, 'high');
+    assert.equal(t.minFilter, THREE.LinearFilter);
+    assert.equal(t.magFilter, THREE.LinearFilter);
+    assert.equal(t.generateMipmaps, false, 'no mipmaps');
+    assert.equal(t.premultiplyAlpha, true, 'clean edges, as her own texture');
+    assert.equal(t.colorSpace, THREE.NoColorSpace, 'her colors as they are');
+    for (const m of [...live.meshes.meshes, ...live.meshes.proxies]) assert.equal(m.material.uniforms.map.value, t, 'every piece (and every mask) draws with it');
+  } finally {
+    delete globalThis.document;
+  }
+  // only her live show asks for any of it
+  const callers = [];
+  const walk = (dir) => {
+    for (const name of readdirSync(url(dir))) {
+      const p = `${dir}/${name}`;
+      if (statSync(url(p)).isDirectory()) { if (name !== 'dist' && name !== 'node_modules') walk(p); continue; }
+      if (/\.(m?js)$/.test(name) && /fitTexture\(|armRefine:/.test(read(p))) callers.push(p);
+    }
+  };
+  for (const dir of ['src', 'tools']) walk(dir);
+  assert.deepEqual(callers.sort(), ['src/stage/agi1-2d.js', 'tools/live/page/stage.js'], 'the website, her clips and her launch video draw her as before');
 });

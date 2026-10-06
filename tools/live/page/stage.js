@@ -20,6 +20,9 @@ const FPS = Math.min(30, Math.max(10, Number(opts.get('fps')) || 30));
 // her head just under the top row (its "AI-generated" label ends at y = 64)
 const FRAME = { x: 920, eyes: 264, waist: 774 };
 const HEARTS = [0xff4da6, 0xffc933, 0xffffff];
+// her arms' finer meshes, one level here (the website's are up to three: its close-ups): on the stream her elbows are small
+// and mostly at the bar, and the finest meshes were about a seventh of drawing her on a server without a graphics card
+const ARM_REFINE_LIVE = { upper: 1, fore: 1, hand: 1, sleeve: 1 };
 const $ = (sel) => document.querySelector(sel);
 const set = $('[data-set]');
 const ui = {
@@ -84,7 +87,7 @@ async function load() {
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   scene = new THREE.Scene();
-  model = await loadAgi1_2D({ renderer });
+  model = await loadAgi1_2D({ renderer, armRefine: ARM_REFINE_LIVE });
   scene.add(model.holder);
   const { eyes, waist } = model.landmarks;
   perMetre = (FRAME.waist - FRAME.eyes) / (eyes - waist);
@@ -96,6 +99,9 @@ async function load() {
   camera.setViewOffset(wide, H, wide / 2 - FRAME.x + box.left, box.top, box.width, box.height);
   camera.position.set(0, centre, tall / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))));
   camera.lookAt(0, centre, 0);
+  // her texture at the size she's shown, one of its pixels to one of her picture's, without mipmaps (src/stage/agi1-2d.js:
+  // fitTexture): about a quarter less drawing for a server without a graphics card, the same look
+  model.fitTexture(Math.min(2048, Math.round((perMetre * DRAW) / H / model.uvPerMetre)));
   effects = createEffects(scene);
   effects.setHeartColors(HEARTS);
   agi = createAgi1_2D(model, { camera, effects, reducedMotion: false, onGlow: () => {} });

@@ -3620,11 +3620,21 @@ things. Fixed the same day:
   second, 23 to 25 before). Not picked either: switching the GPU compositing on (13 frames a second), drawing the set's
   background in WebGL too (13).
 - **How smoothly she moves on the CX23:** about 12 new pictures of her a second, before any of these fixes too (measured in
-  try.mp4: how often her face changes, 12 to 13 a second; with the copy, 11). Claude had said 18–19 at first, counting
-  every picture the window put together (the LIVE dot blinks in all of them). Since 2026-10-06 the video encoder works a
-  little less hard below 4 cores (`x264Preset()`: superfast; veryfast with 4 or more; `LIVE_X264_PRESET` to choose), which
-  gave her about 10% more on Claude's computer, with no difference to see. A Rescale to 4 cores (CX33) should about
-  double it.
+  the recordings, by how often her face changes: try.mp4 12 to 13 a second, try2 with the copy 11, try3 12 to 13). Claude
+  had said 18–19 at first, counting every picture the window put together (the LIVE dot blinks in all of them). Then (the
+  owner: "theres nothing u can do to increase the frames?"), measured per thread while recording: drawing her in software
+  (SwiftShader's two threads) was about two thirds of the processor. So since 2026-10-06 her live show draws her lighter,
+  only there (the website, her clips and her launch video draw her as before):
+  - her texture made once at the size she's shown, one of its pixels to one of her picture's (1188 px at `?gl=540`), and
+    drawn without mipmaps (`fitTexture()` and `uvPerMetre` in `src/stage/agi1-2d.js`): mixing two mipmap levels of her
+    2048 px texture for every pixel of her was about a quarter of drawing her. She looks the same (a touch sharper);
+  - her arms with one level of finer mesh (`armRefine`; the website keeps up to three for its close-ups): on the stream her
+    elbows are small and mostly at the bar (looked at side by side in her wave, her cheer and at rest);
+  - the video encoder working a little less hard below 4 cores (`x264Preset()`: superfast, veryfast with 4 or more;
+    `LIVE_X264_PRESET` to choose), with no difference to see.
+  On Claude's computer: 37 → 21 ms of SwiftShader for each picture of her, 61 → 41 ms of processor in all. Not worth it:
+  stopping the LIVE dot's blink (about 1 ms a picture), a smaller picture (`LIVE_GL=480`: softer, and less than the texture
+  saves). A Rescale to 4 cores (CX33) should about double it again.
 - **Her waving hand cut off by a straight line left of her** (her picture was 720 × 720 on the right, from x = 560; her
   wave reaches x = 481, her cheer 447). Her picture now starts at x = 400 (its pixels and the camera's view follow its
   place in the stylesheet), and her hearts, which can fly further, fade out before its edge (`fadeHearts()` in
@@ -4123,6 +4133,12 @@ flap poked out 3 to 4 mm: the test fails on it), the outside of her elbow turns 
 first: in this software-drawn browser, at 8 to 10 frames a second, the 3 s she looks at you as she arrives outlasted the
 6 s a still pointer counts for) and `taptest.mjs` (24). Renders of her elbow before, as the tube and now, at the owner's
 framing and in every bent pose, were looked at side by side.
+
+**Her live show draws her lighter (2026-10-06), and only it:** `loadAgi1_2D({ armRefine })` / `buildPuppet({ armRefine })`
+(her arms' finer meshes, `ARM_REFINE` unless given) and `fitTexture(size)` (her texture made `size` px once and drawn
+without mipmaps; `uvPerMetre` says how much texture a metre of her takes, to size it). See "Her first test recording"
+under "Her live show on X". The website, her clips and her launch video draw her as before: `tests/agi1-2d.test.js` (16
+since then) fails the build if anything but `tools/live/page/stage.js` calls them.
 
 **Tests (round 2, 2026-10-01):** `tests/agi1-2d.test.js` (13): her arms and hips (Live2D rewrites her pieces on every update,
 so turning them in place is safe; her joints where her pieces overlap, on both arms; no turn moves nothing; her wave's hand up
@@ -5133,8 +5149,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   Then `--sync-check` (`LIVE_AV_MS=261`) and a 5-minute `--record`, whose glitches were fixed the same day (her head and
   hearts cut flat near the top, her waving hand cut off, a black line at two edges, blocks in Windows' player: see "Her
   first test recording"); the first fix checked on the server (try2.mp4: the glitches gone, but 9.5 frames a second), the
-  second one as fast as before; after its push, `update` and another `--record` to check. She moves about 12 times a
-  second on the CX23: a Rescale to 4 cores when CX33 is back. Next: X (step 3), the phone link and the daily cron line.
+  second one as fast as before (try3: 12 to 13 new pictures of her a second, the glitches gone). Then her drawing made a
+  third lighter, for the live show only (see "How smoothly she moves on the CX23"): after its push, `update` and try4 to
+  measure it. A Rescale to 4 cores when CX33 is back. Next: X (step 3), the phone link and the daily cron line.
 - **Her 2D elbow, her shirt's side and the hair behind her arms: fixed 2026-10-03, waiting for the owner's OK** (the
   owner's two close-ups: "I just checked by now , what happened to this, can you fix", then "im sleeping now just finish
   it"): no slit at her shirt's side when her arms are down, soft hair tips and her hair's own color where her arms move
@@ -5395,6 +5412,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-06 | Her live show's server is a **Hetzner CX23** in Falkenstein (2 vCPUs, 4 GB, $7.09 a month with its IPv4): CX33 and CX43 were sold out ("limited availability"), and the owner picked CX23 over waiting; **Rescale** to CX33, or CX43 within the owner's new $20 a month for the server, once one is back. Not picked: CPX32 ($41.99, four times the plan), CCX13 (dedicated, about four times too). It's on the owner's close friend's verified Hetzner account, paid with the owner's own card (Hetzner's terms let a customer let others use what they order; the friend stays the customer and can reach the server) |
 | 2026-10-06 | The live show's first real setup (the owner, step by step): `SITE_URL` is **https://www.agi1.app** (agi1.app redirects, and the show never follows a redirect with its key; the default everywhere now); `LIVE_SECRET` made on the server (Vercel keeps it sensitive, so it can't be read back) and pasted into Vercel; `--check`'s key test is a beat for a show that can never be on (it sent show 0, which the site refuses as a bad request: a NO for the right key); `--warm` goes at Google's pace (Vertex takes about 10 requests a minute for her voice model: the first one made 11 of 121, then skipped the rest) |
 | 2026-10-06 | Her live set after her first test recordings (see "Her first test recording"): nothing plain and opaque covers her picture, because the server's software compositing left out the mirror image of what the opaque bar covered (her head and hearts cut flat 64 px from the top): her picture ends where the bar starts, and the boxes over it are 1% see-through. Her picture starts at x = 400 (her wave and her cheer reached past its old edge at 560), her hearts fade out before its edge, her middle at x = 920 as before and 14 px lower (under the top row's label); the browser window one pixel bigger than the screen (a page exactly the screen's size came out 1279 × 719 without a window manager); a finished recording made a standard MP4 (Windows' player showed blocks in the fragmented one); x264 superfast below 4 cores (the CX23 draws her about 12 times a second). Tried first and replaced the same day: drawing her off the page and copying each picture onto a 2D canvas (9.5 frames a second on the server). Not picked: GPU compositing or her background in WebGL (13 frames a second on Claude's computer, instead of 23–25) |
+| 2026-10-06 | Her live show draws her lighter (the owner: "theres nothing u can do to increase the frames?"; the CX23 drew her about 12 times a second, and drawing her in software was two thirds of its processor): her texture at the size she's shown without mipmaps (`fitTexture()`), her arms with one level of finer mesh (`armRefine`), x264 superfast below 4 cores. Only the live show: the website keeps its sharper close-ups (the owner asked). On Claude's computer a third less processor for each picture of her. Not picked: a smaller picture (`LIVE_GL=480`: softer for less), stopping the LIVE dot's blink (nothing to gain) |
 
 ## Open questions
 

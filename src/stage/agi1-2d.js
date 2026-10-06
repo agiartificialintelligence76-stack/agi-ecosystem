@@ -82,7 +82,8 @@ async function getTexture(url) {
   return t;
 }
 
-export async function loadAgi1_2D({ renderer, base = BASE, onProgress = () => {} } = {}) {
+// armRefine: her arms' finer meshes (ARM_REFINE unless given: her live show draws them lighter, tools/live/page/stage.js)
+export async function loadAgi1_2D({ renderer, base = BASE, onProgress = () => {}, armRefine = ARM_REFINE } = {}) {
   const done = [0, 0, 0, 0];
   const tick = (i) => (v) => { done[i] = 1; onProgress(Math.min(0.99, done.reduce((a, b) => a + b, 0) / done.length)); return v; };
   const [Core, mocBuffer, physicsJson, texture] = await Promise.all([
@@ -95,11 +96,11 @@ export async function loadAgi1_2D({ renderer, base = BASE, onProgress = () => {}
   if (!moc) throw new Error("her Live2D model couldn't be read");
   const core = Core.Model.fromMoc(moc);
   if (!core) throw new Error("her Live2D model couldn't be made");
-  return buildPuppet({ core, moc, physicsJson, texture, base, renderer });
+  return buildPuppet({ core, moc, physicsJson, texture, base, renderer, armRefine });
 }
 
 // ---------- the puppet ----------
-export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
+export function buildPuppet({ core, moc, physicsJson, texture, base = BASE, armRefine = ARM_REFINE }) {
   const P = core.parameters, D = core.drawables;
   const params = Array.from(P.ids), pieces = Array.from(D.ids);
   const at = Object.fromEntries(params.map((id, i) => [id, i]));
@@ -109,6 +110,16 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
   core.update();
   const shown = [...Array(D.count).keys()].filter((i) => (D.dynamicFlags[i] & 1) && D.opacities[i] > 0.01);
   const rest = boxOf(core, shown);
+  // how much of her texture one metre of her takes, at rest (texture units: 0 to 1 across it); the same on all her pieces
+  let uvArea = 0, modelArea = 0;
+  for (const i of shown) {
+    const p = D.vertexPositions[i], uv = D.vertexUvs[i], ix = D.indices[i];
+    for (let t = 0; t < ix.length; t += 3) {
+      const a = 2 * ix[t], b = 2 * ix[t + 1], c = 2 * ix[t + 2];
+      uvArea += Math.abs((uv[b] - uv[a]) * (uv[c + 1] - uv[a + 1]) - (uv[c] - uv[a]) * (uv[b + 1] - uv[a + 1])) / 2;
+      modelArea += Math.abs((p[b] - p[a]) * (p[c + 1] - p[a + 1]) - (p[c] - p[a]) * (p[b + 1] - p[a + 1])) / 2;
+    }
+  }
   const K = HEIGHT / (rest.y1 - rest.y0);          // world units per model unit
   const holder = new THREE.Group();                // moved by the stage (switching in and out)
   const fx = new THREE.Group();                    // hops, squashes, her weight shifting
@@ -120,7 +131,7 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
   let map = texture;
   // her arms are drawn with finer meshes than her model's own, so they bend smoothly (src/stage/agi1-2d-arms.js)
   const refine = {};
-  for (const side of ['R', 'L']) for (const [part, name] of Object.entries(ARM_PIECES[side])) if (piece(name) >= 0) refine[piece(name)] = ARM_REFINE[part];
+  for (const side of ['R', 'L']) for (const [part, name] of Object.entries(ARM_PIECES[side])) if (piece(name) >= 0) refine[piece(name)] = armRefine[part];
   const meshes = buildMeshes(core, map, { order: ORDER, refine });
   art.add(meshes.group);
 
@@ -245,6 +256,29 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE }) {
       return sharp;
     },
     get sharp() { return map !== texture; },
+    // how much of her texture one metre of her takes (texture units), to draw her texture at the size she's shown
+    uvPerMetre: Math.sqrt(uvArea / modelArea) / K,
+    // her texture made `size` px once, and drawn without mipmaps (2026-10-06, her live show: on a server without a graphics
+    // card, mixing two mipmap levels for every pixel of her was a quarter of drawing her; at the size she's shown, one
+    // level looks the same). In a browser only (a canvas).
+    fitTexture(size) {
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const g = c.getContext('2d');
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(map.image, 0, 0, size, size);
+      const t = new THREE.CanvasTexture(c);
+      t.premultiplyAlpha = true;
+      t.colorSpace = THREE.NoColorSpace;
+      t.minFilter = THREE.LinearFilter;
+      t.magFilter = THREE.LinearFilter;
+      t.generateMipmaps = false;
+      const old = map;
+      map = t;
+      meshes.setMap(t);
+      if (old !== texture) old.dispose();
+      return t;
+    },
     dispose() {
       meshes.dispose();
       map.dispose();

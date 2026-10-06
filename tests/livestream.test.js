@@ -796,6 +796,11 @@ test('her picture: from x = 400 to the right edge, ending at the bar, nothing pl
   assert.match(js, /renderer\.setSize\(Math\.round\(\(box\.width \* DRAW\) \/ H\), Math\.round\(\(box\.height \* DRAW\) \/ H\), false\);/);
   assert.match(js, /camera\.setViewOffset\(wide, H, wide \/ 2 - FRAME\.x \+ box\.left, box\.top, box\.width, box\.height\)/);
   assert.match(js, /effects\.update\(dt\);\s*fadeHearts\(\);\s*renderer\.render\(scene, camera\);/);
+  // drawn lighter for a server without a graphics card (2026-10-06: drawing her was two thirds of its processor): her
+  // texture at the size she's shown (no mipmaps), her arms with one level of finer mesh (src/stage/agi1-2d.js)
+  assert.match(js, /const ARM_REFINE_LIVE = \{ upper: 1, fore: 1, hand: 1, sleeve: 1 \};/);
+  assert.match(js, /model = await loadAgi1_2D\(\{ renderer, armRefine: ARM_REFINE_LIVE \}\);/);
+  assert.match(js, /model\.fitTexture\(Math\.min\(2048, Math\.round\(\(perMetre \* DRAW\) \/ H \/ model\.uvPerMetre\)\)\);/);
   // she stays where she was (her middle at x = 920, the same size), the top of her head under the top row's label (it ends at y = 64)
   const frame = /const FRAME = \{ x: (\d+), eyes: (\d+), waist: (\d+) \};/.exec(js);
   assert.ok(frame, 'FRAME');
