@@ -9,18 +9,21 @@ import { loadAgi1_2D, createAgi1_2D } from '../../../src/stage/agi1-2d.js';
 import { createEffects } from '../../../src/stage/effects.js';
 
 export const W = 1280, H = 720, GL = 720;
-// her picture's own size (pixels; it's shown 720 × 720 either way): ?gl=540 draws fewer pixels, for a server with fewer cores.
-// ?fps=… caps the frames a second (30)
+// Her picture is as wide as the set and ends where the bar at the bottom starts (stage.css: .her), so nothing of her is ever
+// cut off in the middle of the screen (2026-10-06: it was 720 × 720 on the right, and its left edge cut off her waving hand
+// and her hearts). How many pixels it draws: ?gl=540 draws 540 for every 720 of the set (on a server with fewer cores; it's
+// shown at the set's size either way). ?fps=… caps the frames a second (30)
 const opts = new URLSearchParams(location.search);
 const DRAW = Math.min(GL, Math.max(360, Number(opts.get('gl')) || GL));
 const FPS = Math.min(30, Math.max(10, Number(opts.get('fps')) || 30));
-// where she is in her canvas (pixels): her eyes and her waist, framed waist up like a streamer's camera
-const FRAME = { eyes: 250, waist: 760 };
+// where she is on the set (pixels): her middle, her eyes and her waist, framed waist up like a streamer's camera, the top of
+// her head just under the top row (its "AI-generated" label ends at y = 64)
+const FRAME = { x: 920, eyes: 264, waist: 774 };
 const HEARTS = [0xff4da6, 0xffc933, 0xffffff];
 const $ = (sel) => document.querySelector(sel);
 const set = $('[data-set]');
 const ui = {
-  bg: $('[data-bg]'), gl: $('[data-gl]'), clock: $('[data-clock]'), card: $('[data-card]'), kicker: $('[data-card-kicker]'), title: $('[data-card-title]'),
+  bg: $('[data-bg]'), pic: $('[data-pic]'), clock: $('[data-clock]'), card: $('[data-card]'), kicker: $('[data-card-kicker]'), title: $('[data-card-title]'),
   list: $('[data-card-list]'), body: $('[data-card-body]'), caption: $('[data-caption]'), captionText: $('[data-caption-text]'), queue: $('[data-queue]'),
   oKicker: $('[data-overlay-kicker]'), oTitle: $('[data-overlay-title]'), oSub: $('[data-overlay-sub]'),
 };
@@ -62,23 +65,39 @@ function drawSet() {
 }
 
 // ---------- her ----------
-let renderer, scene, camera, model, agi, effects;
+// She's drawn with WebGL on a canvas that isn't on the page, and each picture is copied onto the page's own canvas (a plain
+// 2D one). Why (2026-10-06, her first test recording on the owner's server): Chromium there puts the window together in
+// software (--disable-gpu-compositing, tools/live/run.mjs), and it misplaces the part of a WebGL canvas that something
+// opaque covers: it leaves out the mirror image of it instead (behind the 64 px bar at the bottom, the top 64 px of her
+// picture were missing: her head and her hearts cut flat). A 2D canvas doesn't have that problem, and the copy costs
+// almost nothing (measured on 2 cores while recording: 22 to 24 frames a second, as before).
+let renderer, scene, camera, model, agi, effects, pic, PW = 0, PH = 0;
 async function load() {
   await document.fonts.ready;
   drawSet();
-  renderer = new THREE.WebGLRenderer({ canvas: ui.gl, antialias: false, alpha: true, stencil: true, powerPreference: 'high-performance' });
+  // her picture's place on the set (stage.css), and its size in pixels
+  const box = ui.pic.getBoundingClientRect();
+  PW = Math.round((box.width * DRAW) / H);
+  PH = Math.round((box.height * DRAW) / H);
+  renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas'), antialias: false, alpha: true, stencil: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(1);
-  renderer.setSize(DRAW, DRAW, false);
+  renderer.setSize(PW, PH, false);
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  ui.pic.width = PW;
+  ui.pic.height = PH;
+  pic = ui.pic.getContext('2d');
   scene = new THREE.Scene();
   model = await loadAgi1_2D({ renderer });
   scene.add(model.holder);
   const { eyes, waist } = model.landmarks;
   const perMetre = (FRAME.waist - FRAME.eyes) / (eyes - waist);
-  const tall = GL / perMetre;
-  const centre = eyes - (GL / 2 - FRAME.eyes) / perMetre;
-  camera = new THREE.PerspectiveCamera(18, 1, 0.05, 60);
+  const tall = H / perMetre;
+  const centre = eyes - (H / 2 - FRAME.eyes) / perMetre;
+  // the camera looks at her middle, its view as tall as the set; her picture is the part of that view where it is on the set
+  const wide = 2 * Math.max(FRAME.x, W - FRAME.x);
+  camera = new THREE.PerspectiveCamera(18, wide / H, 0.05, 60);
+  camera.setViewOffset(wide, H, wide / 2 - FRAME.x + box.left, box.top, box.width, box.height);
   camera.position.set(0, centre, tall / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))));
   camera.lookAt(0, centre, 0);
   effects = createEffects(scene);
@@ -227,6 +246,8 @@ function frame(t) {
   agi.update(dt);
   effects.update(dt);
   renderer.render(scene, camera);
+  pic.clearRect(0, 0, PW, PH);
+  pic.drawImage(renderer.domElement, 0, 0);
   drawn += 1;
 }
 function stats() {

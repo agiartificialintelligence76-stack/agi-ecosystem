@@ -6,6 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { EventEmitter } from 'node:events';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generateKeyPairSync, createVerify } from 'node:crypto';
@@ -16,7 +17,7 @@ import {
   pcmToSamples, samplesToPcm, resample, RATE,
 } from '../tools/live/voice.js';
 import { parseArgs, timeAt, startProblem, rtmpTarget, maskUrl, ffmpegArgs, Mixer, reactFor, avShift, outPath, warmUp, beep, audioOnsets, videoOnsets, syncOffset,
-  WARM_GAP_MS, PROBE_SHOW, secretAccepted } from '../tools/live/run.mjs';
+  WARM_GAP_MS, PROBE_SHOW, secretAccepted, finishRecording } from '../tools/live/run.mjs';
 import { liveSite, demoSite, DEMO_QA } from '../tools/live/site.js';
 import * as M from '../tools/live/music.js';
 import { isCrude } from '../server/coins.js';
@@ -527,6 +528,45 @@ test('ffmpeg\'s settings, as X Live Studio asks: 1280×720 at 30, H.264, a keyfr
   assert.ok(file.includes('+frag_keyframe+empty_moov+default_base_moof'), 'a recording that plays even if it\'s stopped hard');
 });
 
+test('a finished recording becomes a standard MP4 (index at the start, nothing encoded again); if that fails, it stays as it was', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agi1-rec-'));
+  const file = join(dir, 'try.mp4');
+  writeFileSync(file, 'fragmented');
+  // a stand-in ffmpeg: what it was asked, and what it does
+  const calls = [];
+  const fake = (code, write = true) => (cmd, args, opts) => {
+    calls.push({ cmd, args, opts });
+    const p = new EventEmitter();
+    setImmediate(() => { if (write) writeFileSync(args.at(-1), 'standard'); p.emit('exit', code); });
+    return p;
+  };
+  assert.equal(await finishRecording(file, { run: fake(0) }), true);
+  assert.equal(readFileSync(file, 'utf8'), 'standard', 'the standard MP4 took its place');
+  const { cmd, args, opts } = calls[0];
+  assert.equal(cmd, 'ffmpeg');
+  assert.deepEqual(args.slice(args.indexOf('-i'), args.indexOf('-i') + 2), ['-i', file]);
+  for (const [k, v] of [['-c', 'copy'], ['-movflags', '+faststart'], ['-map', '0']]) assert.equal(args[args.indexOf(k) + 1], v, k);
+  assert.ok(!args.includes('libx264'), 'never encoded again');
+  assert.ok(!Object.keys(opts.env).some((k) => /SECRET|KEY|TOKEN/.test(k)), 'no secrets for ffmpeg');
+  assert.deepEqual(readdirSync(dir), ['try.mp4'], 'nothing left behind');
+  // ffmpeg fails, says nothing, or isn't there: the recording stays as it was
+  writeFileSync(file, 'fragmented');
+  assert.equal(await finishRecording(file, { run: fake(1) }), false);
+  assert.equal(await finishRecording(file, { run: fake(0, false) }), false, 'ffmpeg made nothing');
+  const gone = () => { const p = new EventEmitter(); setImmediate(() => p.emit('error', new Error('spawn ffmpeg ENOENT'))); return p; };
+  assert.equal(await finishRecording(file, { run: gone }), false);
+  assert.equal(await finishRecording(file, { run: () => { throw new Error('nope'); } }), false);
+  assert.equal(readFileSync(file, 'utf8'), 'fragmented');
+  assert.deepEqual(readdirSync(dir), ['try.mp4'], 'its half-made copy deleted');
+  // no recording at all: nothing asked
+  const before = calls.length;
+  assert.equal(await finishRecording(join(dir, 'none.mp4'), { run: fake(0) }), false);
+  assert.equal(calls.length, before);
+  // the show does it when a recording ends
+  assert.match(read('tools/live/run.mjs'), /if \(a\.record && ffm\) \{\s*if \(await finishRecording\(outPath\(a\.record\)\)\)/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('her voice\'s clock: written in real time a little ahead, a line\'s first sample has a time her mouth follows, cut on demand', async () => {
   let now = 1_000_000;
   const written = [];
@@ -718,6 +758,35 @@ test('her set: "AI-generated · not financial advice" and "Ask me at agi1.app/li
   assert.doesNotMatch(read('vite.config.js'), /tools\/live/);
   assert.match(read('.gitignore'), /^tools\/live\/cache\/$/m);
   assert.match(read('.gitignore'), /^tools\/live\/live\.env$/m);
+});
+
+test('her picture: as wide as the set, ending at the bar, never WebGL on the page itself, the window the screen\'s size (her first recording: her head and hearts cut flat, her waving hand cut off, a black line at two edges)', () => {
+  // the server's Chromium (software compositing) left out the mirror image of the part of a WebGL canvas that the opaque
+  // bar covers: so she's drawn on a canvas that isn't on the page, and copied onto a plain 2D canvas each frame
+  const html = read('tools/live/page/index.html');
+  assert.match(html, /<div class="her"><canvas class="her-pic" data-pic aria-hidden="true"><\/canvas><\/div>/);
+  assert.doesNotMatch(html, /data-gl/);
+  const js = read('tools/live/page/stage.js');
+  assert.match(js, /new THREE\.WebGLRenderer\(\{ canvas: document\.createElement\('canvas'\)/, 'WebGL on a canvas that isn\'t on the page');
+  assert.equal(js.match(/WebGLRenderer\(/g).length, 1);
+  assert.match(js, /pic = ui\.pic\.getContext\('2d'\)/);
+  assert.match(js, /renderer\.render\(scene, camera\);\s*pic\.clearRect\(0, 0, PW, PH\);\s*pic\.drawImage\(renderer\.domElement, 0, 0\);/, 'each picture copied right after it\'s drawn');
+  // as wide as the set (her waving hand reached x = 481, her hearts further: the old picture's edge was at x = 560), and
+  // ending where the bar starts; its pixels and the camera's view follow its place in the stylesheet
+  const css = read('tools/live/page/stage.css');
+  assert.match(css, /--bar: 64px;/);
+  assert.match(css, /\.her \{ position: absolute; left: 0; top: 0; width: 1280px; height: calc\(720px - var\(--bar\)\); \}/);
+  assert.match(css, /\.her-pic \{ width: 100%; height: 100%; display: block; \}/);
+  assert.match(css, /\.ask \{\s*position: absolute; left: 0; right: 0; bottom: 0; height: var\(--bar\);/, 'the bar: the same height');
+  assert.match(js, /const box = ui\.pic\.getBoundingClientRect\(\);\s*PW = Math\.round\(\(box\.width \* DRAW\) \/ H\);\s*PH = Math\.round\(\(box\.height \* DRAW\) \/ H\);/);
+  assert.match(js, /camera\.setViewOffset\(wide, H, wide \/ 2 - FRAME\.x \+ box\.left, box\.top, box\.width, box\.height\)/);
+  // she stays where she was (her middle at x = 920, the same size), the top of her head under the top row's label (it ends at y = 64)
+  const frame = /const FRAME = \{ x: (\d+), eyes: (\d+), waist: (\d+) \};/.exec(js);
+  assert.ok(frame, 'FRAME');
+  assert.equal(Number(frame[1]), 920);
+  assert.ok(Number(frame[2]) >= 260 && Number(frame[3]) - Number(frame[2]) === 510, 'her size as before, a little lower');
+  // the browser's window: a page of exactly 1280 × 720 needs a window one pixel bigger on a screen without a window manager
+  assert.match(read('tools/live/run.mjs'), /`--window-size=\$\{W \+ 1\},\$\{H \+ 1\}`/);
 });
 
 test('the Docker image: Playwright\'s Chromium with ffmpeg and Xvfb, never root, no secrets copied in', () => {

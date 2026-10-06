@@ -21,7 +21,7 @@
 // said on agi1.app/live when this one ends) · --fake-voice
 // Settings (/opt/agi1-live/live.env on the server, from tools/live/live.env.example; never in git): see "Her live show on X"
 // in CLAUDE.md. On the server, tools/live/live.sh runs all of this in the Docker image (tools/live/Dockerfile).
-import { existsSync, createReadStream, statSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, createReadStream, statSync, mkdtempSync, rmSync, writeFileSync, readFileSync, renameSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { resolve, dirname, join, extname, sep, isAbsolute } from 'node:path';
@@ -167,7 +167,9 @@ export async function openBrowser(display, url) {
   const context = await chromium.launchPersistentContext(profile, {
     headless: false, executablePath, viewport: null, env: { ...withoutSecrets(), DISPLAY: display },
     ignoreDefaultArgs: ['--enable-automation'],            // (no "controlled by automated software" bar on stream)
-    args: [`--window-size=${W},${H}`, '--window-position=0,0', '--kiosk', '--start-fullscreen', '--force-device-scale-factor=1',
+    // a window one pixel bigger than the screen: one exactly the screen's size gets a page 1 px narrower and shorter from
+    // Chromium on a screen without a window manager (1279 × 719: a black line along the stream's right and bottom edges)
+    args: [`--window-size=${W + 1},${H + 1}`, '--window-position=0,0', '--kiosk', '--start-fullscreen', '--force-device-scale-factor=1',
       // her picture: WebGL in software (no graphics card on a server), and the window put together in software too (measured
       // on 2 cores: 13 frames a second with SwiftShader putting it together, 22 to 29 with this)
       '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--disable-gpu-compositing',
@@ -202,6 +204,23 @@ export function ffmpegArgs({ display, out, file = false }) {
     '-b:v', '3000k', '-maxrate', '3000k', '-bufsize', '6000k', '-g', String(FPS * 3), '-keyint_min', String(FPS * 3), '-sc_threshold', '0',
     '-c:a', 'aac', '-b:a', '128k', '-ar', '48000', '-ac', '2',
     ...(file ? ['-movflags', '+frag_keyframe+empty_moov+default_base_moof', '-y', out] : ['-rw_timeout', '15000000', '-f', 'flv', out])];
+}
+// A recording is written as a fragmented MP4 while it's made (a show cut short still plays), then made into a standard MP4,
+// with its index at the start, which every player shows properly (2026-10-06: Windows' own player showed blocks over her
+// hand and her mouth in the owner's first test recording, which ffmpeg read without a single error). Nothing is encoded
+// again (a copy: a few seconds for an hour); if it fails, the fragmented file stays as it was.
+export async function finishRecording(file, { run = spawn } = {}) {
+  if (!existsSync(file)) return false;
+  const tmp = `${file}.finishing.mp4`;
+  const ok = await new Promise((done) => {
+    let p;
+    try { p = run('ffmpeg', ['-v', 'error', '-y', '-i', file, '-map', '0', '-c', 'copy', '-movflags', '+faststart', tmp], { stdio: 'ignore', env: withoutSecrets() }); } catch { done(false); return; }
+    p.on('error', () => done(false));
+    p.on('exit', (code) => done(code === 0));
+  });
+  if (ok && existsSync(tmp) && statSync(tmp).size > 0) { renameSync(tmp, file); return true; }
+  rmSync(tmp, { force: true });
+  return false;
 }
 export function startFfmpeg({ display, out, file, target }) {
   const ff = spawn('ffmpeg', ffmpegArgs({ display, out, file }), { stdio: ['pipe', 'ignore', 'pipe'], env: withoutSecrets() });
@@ -350,6 +369,10 @@ async function runShow(a) {
     if (browser?.profile) rmSync(browser.profile, { recursive: true, force: true });
     screen.xvfb.kill();
     served.server.close();
+    if (a.record && ffm) {
+      if (await finishRecording(outPath(a.record))) log.info(`the recording: ${outPath(a.record)}`);
+      else log.warn(`the recording stays a fragmented MP4 (some players show it badly; VLC plays it): ${outPath(a.record)}`);
+    }
   };
   let interrupt = null;           // the line she's saying: interrupt('pause' | 'skip' | 'stop') cuts it
   let brbLine = false;            // (her "be right back" itself is never cut by the pause it's for)
