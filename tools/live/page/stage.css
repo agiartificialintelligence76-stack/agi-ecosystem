@@ -18,10 +18,11 @@ html, body { width: 1280px; height: 720px; overflow: hidden; background: var(--n
 body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
 .set { position: relative; width: 1280px; height: 720px; overflow: hidden; }
 .set-bg { position: absolute; inset: 0; width: 1280px; height: 720px; }
-/* her: her picture is as wide as the set, so nothing of her is ever cut off in the middle of the screen, and it ends where
-   the bar at the bottom starts (nothing hidden is drawn); stage.js frames her on the right, waist up, by her model's own
-   eyes and waist */
-.her { position: absolute; left: 0; top: 0; width: 1280px; height: calc(720px - var(--bar)); }
+/* her: her picture, from x = 400 (her wave reaches x = 481, her cheer 447; her hearts fade out before its edge) to the right
+   edge, and from the top to where the bar starts. Nothing plain and opaque may cover it (stage.js says why): it ends at the
+   bar, and the boxes over it are 1% see-through. stage.js frames her on the right, waist up, by her model's own eyes and
+   waist */
+.her { position: absolute; left: 400px; right: 0; top: 0; height: calc(720px - var(--bar)); }
 .her-pic { width: 100%; height: 100%; display: block; }
 
 /* top: LIVE, her name, the label */
@@ -43,7 +44,7 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 /* the card: a question, a segment, her diary, "would you rather" */
 .card {
   position: absolute; left: 40px; top: 100px; width: 600px; max-height: 400px; overflow: hidden; padding: 22px 26px 24px;
-  border: 4px solid var(--ink); border-radius: 26px; background: var(--paper); box-shadow: 0 10px 0 -2px var(--ink);
+  border: 4px solid var(--ink); border-radius: 26px; background: rgba(255, 255, 255, 0.99); box-shadow: 0 10px 0 -2px var(--ink);
   transform-origin: 20% 50%; animation: pop-in 0.28s cubic-bezier(.2, 1.4, .4, 1) both;
 }
 .card[hidden] { display: none; }
@@ -88,7 +89,7 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 /* starting soon, be right back, thanks for watching */
 .overlay {
   position: absolute; left: 40px; top: 140px; width: 600px; padding: 30px 32px 32px; border: 4px solid var(--ink); border-radius: 30px;
-  background: var(--honey); box-shadow: 0 12px 0 -2px var(--ink); display: none;
+  background: rgba(255, 201, 51, 0.99); box-shadow: 0 12px 0 -2px var(--ink); display: none;
 }
 .set[data-overlay='starting'] .overlay, .set[data-overlay='brb'] .overlay, .set[data-overlay='ended'] .overlay { display: block; }
 .set[data-overlay='starting'] .card, .set[data-overlay='brb'] .card, .set[data-overlay='ended'] .card { display: none; }

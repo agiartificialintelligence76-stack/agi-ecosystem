@@ -3312,8 +3312,8 @@ building, and the owner's choices (asked one by one):
 
 **What viewers see on X** (1280 × 720, 30 frames a second):
 - **Her set** (`tools/live/page/`): AGI-1 in 2D (her Live2D model, the site's own code: breathing, blinking, looking around,
-  her mouth following her voice), waist up on the right, on Pop mode's violet with comic focus lines. Her picture is as
-  wide as the set (since 2026-10-06), so her waving hand, her cheer and her hearts are never cut off mid-screen. At the top
+  her mouth following her voice), waist up on the right, on Pop mode's violet with comic focus lines. Her picture starts at
+  x = 400 (since 2026-10-06), so her waving hand and her cheer fit, and her hearts fade out before its edge. At the top
   "● LIVE 12:34", "AGI-1" and **"AI-generated · not financial advice"** (always on screen); at the bottom **"Ask me at
   agi1.app/live"**, how many questions are waiting, and "18+ · PG-13 · I'm an AI · only $AGI here".
 - **A question:** a card "Question · from Mochi" with the question; she looks at it, then answers out loud ("mochi asks…"),
@@ -3443,8 +3443,9 @@ keep the link private: whoever has it can pause or end her show):
    `ssh -o ServerAliveInterval=30 root@<the server's IP>` (the extra part keeps the link from dropping while you're away).
    **Done 2026-10-06** (agi1-live, CX23, Falkenstein). CX33 (4 vCPUs, $9.99) and CX43 (8, $18.49) were sold out ("limited
    availability"), so CX23 for now, and **Rescale** to CX33 or CX43 once one is back (the server off a minute, everything
-   on it kept; keep its disk as it is, so it can go back). On 2 cores she's drawn at 540 px (`LIVE_GL`), at about 22–29
-   frames a second. The Hetzner account is the owner's close friend's (verified), paid with the owner's own card: the
+   on it kept; keep its disk as it is, so it can go back). On 2 cores she's drawn at 540 px (`LIVE_GL`): 22 to 29 frames a
+   second on Claude's computer, but about 12 on the CX23 (measured in its first two recordings, 2026-10-06), so a Rescale
+   to 4 cores should make her about twice as smooth. The Hetzner account is the owner's close friend's (verified), paid with the owner's own card: the
    friend can reach the server, and so its stream key and Google key (if that ever changes: a new stream key in Live
    Studio and a new Google key).
 5. **On the server** (each line pasted into that window, one by one):
@@ -3529,7 +3530,8 @@ source), `GOOGLE_APPLICATION_CREDENTIALS` (left as it is: /secrets/google-key.js
 `LIVE_VERTEX_LOCATION` (global), `LIVE_VOICE_MODEL` (gemini-3.8-flash-lite-tts), `LIVE_VOICES` (vertex; also `cloud`, or
 `gemini` with `GEMINI_API_KEY`: the site's own key and its daily limit, a backup only), `LIVE_MINUTES` (60),
 `LIVE_DAILY_AT` (01:00 UTC, 9:00 the owner's time), `LIVE_AV_MS` (170), `LIVE_MUSIC` (on), `LIVE_MUSIC_VOLUME` (100). Optional: `LIVE_VOICE_TIMEOUT_S`
-(15), `LIVE_GL` (her picture's size: 720 with 4 cores or more, else 540).
+(15), `LIVE_GL` (her picture's size: 720 with 4 cores or more, else 540), `LIVE_X264_PRESET` (how hard the video encoder
+works: superfast below 4 cores, else veryfast; since 2026-10-06).
 
 **Troubleshooting** (`tail -50 /var/log/agi1-live.log` on the server; Vercel → Logs for the site's side):
 
@@ -3549,7 +3551,8 @@ source), `GOOGLE_APPLICATION_CREDENTIALS` (left as it is: /secrets/google-key.js
 | Questions wait, "my brain's lagging" | `her answers aren't coming (ai): questions wait 30 s` | The site's Gemini key (credits, limits): see the chat's troubleshooting |
 | Nothing on X, the log looks fine | `ffmpeg stopped (…) : starting it again. it said: … Connection refused` (or timed out) | Live Studio's server URL or stream key in live.env is wrong, or the source was deleted |
 | The scheduled livestream ended without her | (the log of that day: nothing, or an error above) | The cron line didn't run or stopped early: check `/etc/cron.d/agi1-live` and the log; schedule the next livestream |
-| Her set stutters | `her set draws 14 frames a second` | A bigger server (CX43), or `LIVE_GL=540` in live.env |
+| Her set stutters | `her set draws 12 frames a second` (about what the CX23's 2 cores do) | Rescale to 4 or 8 cores (CX33, CX43); on 2 cores, `LIVE_GL=480` in live.env draws faster and a little softer |
+| Her set draws about 9 frames a second right after the 2026-10-06 update | `her set draws 9.5 frames a second` | The first fix of her picture (it copied each picture: see "Her first test recording"): push, then `update` |
 | Her head and her hearts cut flat along one line near the top (about 64 px down), or her waving hand cut off by a straight line left of her | (none) | Her set from before 2026-10-06 (see "Her first test recording" below): push, then `sh tools/live/live.sh update` |
 | A thin black line along the recording's right and bottom edges | (none) | The browser window from before 2026-10-06 (a page 1 px too small): push, then `update` |
 | A recording shows grey or green blocks over her hand, her mouth or the captions in Windows' own player (ffmpeg reads it without an error) | `the recording stays a fragmented MP4 …` (or none, before 2026-10-06) | Recordings are made standard MP4s at the end since 2026-10-06. An older one: VLC plays it, or `ffmpeg -i try.mp4 -c copy -movflags +faststart try-fixed.mp4` |
@@ -3571,8 +3574,9 @@ requests, every way in order, kept lines (even while a way rests), a slow way re
 warm-up), her music (her songs' chords, melodies, length, level, no clipping or clicks, the same every time; the loop, the
 ducking, the fade, no gaps, kept on disk), the runner's options (a late start refused, a recording's made-up questions),
 ffmpeg's settings, a recording finished as a standard MP4, her voice's clock and the mixer, the lip-sync check, the site
-client (a redirect said, never followed; "back") and the demo, her set's page (since 2026-10-06 her picture: as wide as the
-set, ending at the bar, WebGL never on the page itself, the window one pixel bigger than the screen), the Docker image). The SQL ran in PGlite (97 checks). In a browser with the site's
+client (a redirect said, never followed; "back") and the demo, her set's page (since 2026-10-06 her picture: from x = 400,
+ending at the bar, nothing plain and opaque over it, her hearts fading before its edge, the window one pixel bigger than
+the screen; and x264's speed by the server's cores), the Docker image). The SQL ran in PGlite (97 checks). In a browser with the site's
 real headers (`livepagetest.mjs` in Claude's scratch, 96 checks: coming soon, offline with her next show, live (asking,
 your place, on air, her answer, another), every refusal (the caring note, "already in line"), a reload, the owner's
 controls (the key out of the address, pause, two-tap end, block, drop, a tap during a slow check never lost, a link that
@@ -3600,21 +3604,33 @@ also i watched it again theres some glitches"). Claude read it frame by frame (f
 and made the same recording on its own computer (Xvfb, Chromium as the runner opens it, x11grab), which showed the same
 things. Fixed the same day:
 - **Her head and her hearts cut flat along one line, 64 px from the top**, all show long. The server's Chromium puts the
-  window together in software (`--disable-gpu-compositing`, which keeps her at 22 to 29 frames a second on 2 cores), and it
-  misplaces the part of a WebGL canvas that something opaque covers: behind the 64 px bar at the bottom, it left out the
-  top 64 px of her picture instead (a WebGL picture is stored upside down, and that part was flipped the wrong way). The
-  bar made the cut; nothing else on the set did. Checked: without the bar, with a bar 1% see-through, with the window put
-  together on the "GPU" (SwiftShader), and with her drawn on a 2D canvas, the top of her head is round again. Now she's
-  drawn with WebGL on a canvas that isn't on the page, and each picture is copied onto a plain 2D canvas
-  (`tools/live/page/stage.js`): it can't happen whatever covers her, and costs almost nothing (22 to 24 frames a second
-  while recording on 2 cores, before and after). Not picked: the bar 1% see-through (it works, but the next opaque thing
-  over her would bring it back), switching the GPU compositing on (13 frames a second), drawing the set's background in
-  WebGL too (13).
+  window together in software (`--disable-gpu-compositing`), and it misplaces the part of a WebGL canvas that something
+  opaque covers: behind the 64 px bar at the bottom, it left out the top 64 px of her picture instead (a WebGL picture is
+  stored upside down, and that part was flipped the wrong way). The bar made the cut. Checked on Claude's computer: without
+  the bar, with a bar 1% see-through, with the window put together on the "GPU" (SwiftShader), and with her drawn on a 2D
+  canvas, the top of her head is round again. Now nothing plain and opaque covers her picture: it ends where the bar
+  starts (`.her` in `tools/live/page/stage.css`, `--bar`), and the boxes that can be over her (the card, the "starting
+  soon" box) are 1% see-through (the caption and the label already were). **Keep it that way:** a new box over her
+  picture needs a background that's a little see-through.
+- **First tried, the same day: drawing her off the page and copying each picture onto a plain 2D canvas** (it can't happen
+  whatever covers her). It fixed every glitch on the server (try2.mp4: her head round, her whole wave, clean edges), but
+  her set drew 9.5 frames a second there (on Claude's computer as many as before): on the server, with a newer browser
+  (Chromium 153; Claude's: 141), the copy makes it wait for each picture to be finished before starting the next. Replaced
+  by the fix above the same day (her set as fast as before it, a little faster on Claude's computer: 25 to 26 frames a
+  second, 23 to 25 before). Not picked either: switching the GPU compositing on (13 frames a second), drawing the set's
+  background in WebGL too (13).
+- **How smoothly she moves on the CX23:** about 12 new pictures of her a second, before any of these fixes too (measured in
+  try.mp4: how often her face changes, 12 to 13 a second; with the copy, 11). Claude had said 18–19 at first, counting
+  every picture the window put together (the LIVE dot blinks in all of them). Since 2026-10-06 the video encoder works a
+  little less hard below 4 cores (`x264Preset()`: superfast; veryfast with 4 or more; `LIVE_X264_PRESET` to choose), which
+  gave her about 10% more on Claude's computer, with no difference to see. A Rescale to 4 cores (CX33) should about
+  double it.
 - **Her waving hand cut off by a straight line left of her** (her picture was 720 × 720 on the right, from x = 560; her
-  wave reaches x = 481, her cheer 447, her hearts further). Her picture is now as wide as the set and ends where the bar
-  starts (`.her` in `stage.css`; its pixels and the camera's view follow its place there), so its only edges are the
-  screen's. She's where she was and the same size, 14 px lower (`FRAME` in `stage.js`), so the top of her head sits just
-  under the top row's "AI-generated" label instead of behind it.
+  wave reaches x = 481, her cheer 447). Her picture now starts at x = 400 (its pixels and the camera's view follow its
+  place in the stylesheet), and her hearts, which can fly further, fade out before its edge (`fadeHearts()` in
+  `stage.js`; in 16 love and celebrate reactions on Claude's computer, none came closer than x = 469). She's where she was
+  and the same size, 14 px lower (`FRAME` in `stage.js`), so the top of her head sits just under the top row's
+  "AI-generated" label instead of behind it. (The first fix made her picture as wide as the set: 62% more to draw.)
 - **A thin black line along the right and bottom edges**: on a screen without a window manager, Chromium makes a window
   exactly the screen's size 1 px narrower and shorter (its page was 1279 × 719). The window is one pixel bigger than the
   screen now (`--window-size=1281,721` in `openBrowser()`).
@@ -5116,8 +5132,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   fixes in the code (www.agi1.app as the site's address, `--check`'s key test) and `--warm` waits for Google by itself.
   Then `--sync-check` (`LIVE_AV_MS=261`) and a 5-minute `--record`, whose glitches were fixed the same day (her head and
   hearts cut flat near the top, her waving hand cut off, a black line at two edges, blocks in Windows' player: see "Her
-  first test recording"); after the push, `update` and another `--record` to check. Next: X (step 3), the phone link and
-  the daily cron line.
+  first test recording"); the first fix checked on the server (try2.mp4: the glitches gone, but 9.5 frames a second), the
+  second one as fast as before; after its push, `update` and another `--record` to check. She moves about 12 times a
+  second on the CX23: a Rescale to 4 cores when CX33 is back. Next: X (step 3), the phone link and the daily cron line.
 - **Her 2D elbow, her shirt's side and the hair behind her arms: fixed 2026-10-03, waiting for the owner's OK** (the
   owner's two close-ups: "I just checked by now , what happened to this, can you fix", then "im sleeping now just finish
   it"): no slit at her shirt's side when her arms are down, soft hair tips and her hair's own color where her arms move
@@ -5377,7 +5394,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-06 | The buy bot's minimum is **$50** (the owner, the same day: "can you make the minimum to 50$"; it was $100): `TELEGRAM_BUY_MIN`'s default, so the smallest buy gets 2 robots (one for every $25, as before). A `TELEGRAM_BUY_MIN` set in Vercel still wins over the default |
 | 2026-10-06 | Her live show's server is a **Hetzner CX23** in Falkenstein (2 vCPUs, 4 GB, $7.09 a month with its IPv4): CX33 and CX43 were sold out ("limited availability"), and the owner picked CX23 over waiting; **Rescale** to CX33, or CX43 within the owner's new $20 a month for the server, once one is back. Not picked: CPX32 ($41.99, four times the plan), CCX13 (dedicated, about four times too). It's on the owner's close friend's verified Hetzner account, paid with the owner's own card (Hetzner's terms let a customer let others use what they order; the friend stays the customer and can reach the server) |
 | 2026-10-06 | The live show's first real setup (the owner, step by step): `SITE_URL` is **https://www.agi1.app** (agi1.app redirects, and the show never follows a redirect with its key; the default everywhere now); `LIVE_SECRET` made on the server (Vercel keeps it sensitive, so it can't be read back) and pasted into Vercel; `--check`'s key test is a beat for a show that can never be on (it sent show 0, which the site refuses as a bad request: a NO for the right key); `--warm` goes at Google's pace (Vertex takes about 10 requests a minute for her voice model: the first one made 11 of 121, then skipped the rest) |
-| 2026-10-06 | Her live set after her first test recording (see "Her first test recording"): she's drawn with WebGL on a canvas that isn't on the page and copied onto a 2D canvas each frame (the server's software compositing left out the mirror image of what the opaque bar covered: her head and hearts cut flat 64 px from the top); her picture is as wide as the set and ends at the bar (her wave, her cheer and her hearts reached past its old left edge), her middle at x = 920 as before and 14 px lower (under the top row's label); the browser window one pixel bigger than the screen (a page exactly the screen's size came out 1279 × 719 without a window manager); a finished recording made a standard MP4 (Windows' player showed blocks in the fragmented one). Not picked: a bar 1% see-through (the next opaque thing over her would bring the cut back), GPU compositing or her background in WebGL (13 frames a second instead of 22–24) |
+| 2026-10-06 | Her live set after her first test recordings (see "Her first test recording"): nothing plain and opaque covers her picture, because the server's software compositing left out the mirror image of what the opaque bar covered (her head and hearts cut flat 64 px from the top): her picture ends where the bar starts, and the boxes over it are 1% see-through. Her picture starts at x = 400 (her wave and her cheer reached past its old edge at 560), her hearts fade out before its edge, her middle at x = 920 as before and 14 px lower (under the top row's label); the browser window one pixel bigger than the screen (a page exactly the screen's size came out 1279 × 719 without a window manager); a finished recording made a standard MP4 (Windows' player showed blocks in the fragmented one); x264 superfast below 4 cores (the CX23 draws her about 12 times a second). Tried first and replaced the same day: drawing her off the page and copying each picture onto a 2D canvas (9.5 frames a second on the server). Not picked: GPU compositing or her background in WebGL (13 frames a second on Claude's computer, instead of 23–25) |
 
 ## Open questions
 

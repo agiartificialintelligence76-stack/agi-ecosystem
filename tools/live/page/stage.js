@@ -9,10 +9,10 @@ import { loadAgi1_2D, createAgi1_2D } from '../../../src/stage/agi1-2d.js';
 import { createEffects } from '../../../src/stage/effects.js';
 
 export const W = 1280, H = 720, GL = 720;
-// Her picture is as wide as the set and ends where the bar at the bottom starts (stage.css: .her), so nothing of her is ever
-// cut off in the middle of the screen (2026-10-06: it was 720 × 720 on the right, and its left edge cut off her waving hand
-// and her hearts). How many pixels it draws: ?gl=540 draws 540 for every 720 of the set (on a server with fewer cores; it's
-// shown at the set's size either way). ?fps=… caps the frames a second (30)
+// Her picture's place on the set is in stage.css (.her): from x = 400 to the right edge, and from the top to where the bar
+// at the bottom starts (2026-10-06: it was 720 × 720 from x = 560, and its left edge cut off her waving hand). How many
+// pixels it draws: ?gl=540 draws 540 for every 720 of the set (on a server with fewer cores; it's shown at its size on the
+// set either way). ?fps=… caps the frames a second (30)
 const opts = new URLSearchParams(location.search);
 const DRAW = Math.min(GL, Math.max(360, Number(opts.get('gl')) || GL));
 const FPS = Math.min(30, Math.max(10, Number(opts.get('fps')) || 30));
@@ -65,33 +65,29 @@ function drawSet() {
 }
 
 // ---------- her ----------
-// She's drawn with WebGL on a canvas that isn't on the page, and each picture is copied onto the page's own canvas (a plain
-// 2D one). Why (2026-10-06, her first test recording on the owner's server): Chromium there puts the window together in
-// software (--disable-gpu-compositing, tools/live/run.mjs), and it misplaces the part of a WebGL canvas that something
-// opaque covers: it leaves out the mirror image of it instead (behind the 64 px bar at the bottom, the top 64 px of her
-// picture were missing: her head and her hearts cut flat). A 2D canvas doesn't have that problem, and the copy costs
-// almost nothing (measured on 2 cores while recording: 22 to 24 frames a second, as before).
-let renderer, scene, camera, model, agi, effects, pic, PW = 0, PH = 0;
+// Nothing plain and opaque may cover her picture (2026-10-06, her first test recording on the owner's server): Chromium there
+// puts the window together in software (--disable-gpu-compositing, tools/live/run.mjs), and it misplaces the part of a
+// WebGL canvas that something opaque covers: it leaves out the mirror image of it instead (the 64 px bar at the bottom
+// covered her picture, and the top 64 px of it went missing: her head and her hearts cut flat). So her picture ends where
+// the bar starts, and the boxes that can be over her (the card, the "starting soon" box) are 1% see-through (stage.css).
+// (Drawing her off the page and copying each picture onto a 2D canvas avoided it too, but slowed her down on the server:
+// 9.5 frames a second.)
+let renderer, scene, camera, model, agi, effects, box, perMetre;
 async function load() {
   await document.fonts.ready;
   drawSet();
   // her picture's place on the set (stage.css), and its size in pixels
-  const box = ui.pic.getBoundingClientRect();
-  PW = Math.round((box.width * DRAW) / H);
-  PH = Math.round((box.height * DRAW) / H);
-  renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas'), antialias: false, alpha: true, stencil: true, powerPreference: 'high-performance' });
+  box = ui.pic.getBoundingClientRect();
+  renderer = new THREE.WebGLRenderer({ canvas: ui.pic, antialias: false, alpha: true, stencil: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(1);
-  renderer.setSize(PW, PH, false);
+  renderer.setSize(Math.round((box.width * DRAW) / H), Math.round((box.height * DRAW) / H), false);
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  ui.pic.width = PW;
-  ui.pic.height = PH;
-  pic = ui.pic.getContext('2d');
   scene = new THREE.Scene();
   model = await loadAgi1_2D({ renderer });
   scene.add(model.holder);
   const { eyes, waist } = model.landmarks;
-  const perMetre = (FRAME.waist - FRAME.eyes) / (eyes - waist);
+  perMetre = (FRAME.waist - FRAME.eyes) / (eyes - waist);
   const tall = H / perMetre;
   const centre = eyes - (H / 2 - FRAME.eyes) / perMetre;
   // the camera looks at her middle, its view as tall as the set; her picture is the part of that view where it is on the set
@@ -245,10 +241,20 @@ function frame(t) {
   markerFrame(now);
   agi.update(dt);
   effects.update(dt);
+  fadeHearts();
   renderer.render(scene, camera);
-  pic.clearRect(0, 0, PW, PH);
-  pic.drawImage(renderer.domElement, 0, 0);
   drawn += 1;
+}
+
+// her hearts fade out as they come near her picture's left edge (it's in the middle of the set: never a heart cut in two)
+const EDGE_FADE = 90, at = new THREE.Vector3();
+function fadeHearts() {
+  for (const o of scene.children) {
+    if (!o.isSprite) continue;
+    at.copy(o.position).project(camera);
+    const left = ((at.x + 1) / 2) * box.width - (o.scale.x * perMetre) / 2;        // its left side, from the edge (set pixels)
+    if (left < EDGE_FADE) o.material.opacity *= THREE.MathUtils.clamp(left / EDGE_FADE, 0, 1);
+  }
 }
 function stats() {
   const now = performance.now();

@@ -17,7 +17,7 @@ import {
   pcmToSamples, samplesToPcm, resample, RATE,
 } from '../tools/live/voice.js';
 import { parseArgs, timeAt, startProblem, rtmpTarget, maskUrl, ffmpegArgs, Mixer, reactFor, avShift, outPath, warmUp, beep, audioOnsets, videoOnsets, syncOffset,
-  WARM_GAP_MS, PROBE_SHOW, secretAccepted, finishRecording } from '../tools/live/run.mjs';
+  WARM_GAP_MS, PROBE_SHOW, secretAccepted, finishRecording, x264Preset } from '../tools/live/run.mjs';
 import { liveSite, demoSite, DEMO_QA } from '../tools/live/site.js';
 import * as M from '../tools/live/music.js';
 import { isCrude } from '../server/coins.js';
@@ -520,7 +520,14 @@ test('ffmpeg\'s settings, as X Live Studio asks: 1280×720 at 30, H.264, a keyfr
   assert.equal(at('-framerate'), '30');
   assert.equal(at('-draw_mouse'), '0');
   assert.ok(args.includes('pipe:0') && args.includes('s16le') && args.includes('24000'), 'her voice: raw sound on a pipe');
-  for (const [k, v] of [['-c:v', 'libx264'], ['-preset', 'veryfast'], ['-tune', 'zerolatency'], ['-pix_fmt', 'yuv420p'], ['-b:v', '3000k'], ['-g', '90'], ['-keyint_min', '90'], ['-c:a', 'aac'], ['-b:a', '128k']]) assert.equal(at(k), v, k);
+  for (const [k, v] of [['-c:v', 'libx264'], ['-preset', x264Preset()], ['-tune', 'zerolatency'], ['-pix_fmt', 'yuv420p'], ['-b:v', '3000k'], ['-g', '90'], ['-keyint_min', '90'], ['-c:a', 'aac'], ['-b:a', '128k']]) assert.equal(at(k), v, k);
+  // how hard x264 works: superfast below 4 cores (every bit of processor goes to drawing her), veryfast with 4 or more
+  assert.equal(x264Preset({}, 2), 'superfast');
+  assert.equal(x264Preset({}, 4), 'veryfast');
+  assert.equal(x264Preset({ LIVE_X264_PRESET: ' VeryFast ' }, 2), 'veryfast', 'the setting wins');
+  assert.equal(x264Preset({ LIVE_X264_PRESET: 'superslow' }, 8), 'veryfast', 'a name x264 doesn\'t have: as if unset');
+  const pick = (p) => { const a = ffmpegArgs({ display: ':99', out: 'rtmps://x/k', preset: p }); return a[a.indexOf('-preset') + 1]; };
+  assert.equal(pick('superfast'), 'superfast');
   assert.deepEqual(args.slice(-5), ['-rw_timeout', '15000000', '-f', 'flv', 'rtmps://x/k'], 'a network that stops answering for 15 s ends it (and it starts again)');
   const file = ffmpegArgs({ display: ':99', out: '/tmp/x.mp4', file: true });
   assert.equal(file.at(-1), '/tmp/x.mp4');
@@ -760,26 +767,35 @@ test('her set: "AI-generated · not financial advice" and "Ask me at agi1.app/li
   assert.match(read('.gitignore'), /^tools\/live\/live\.env$/m);
 });
 
-test('her picture: as wide as the set, ending at the bar, never WebGL on the page itself, the window the screen\'s size (her first recording: her head and hearts cut flat, her waving hand cut off, a black line at two edges)', () => {
-  // the server's Chromium (software compositing) left out the mirror image of the part of a WebGL canvas that the opaque
-  // bar covers: so she's drawn on a canvas that isn't on the page, and copied onto a plain 2D canvas each frame
+test('her picture: from x = 400 to the right edge, ending at the bar, nothing plain and opaque over it, her hearts fading before its edge, the window the screen\'s size (her first recording: her head and hearts cut flat, her waving hand cut off, a black line at two edges)', () => {
+  // the server's Chromium (software compositing) left out the mirror image of the part of a WebGL canvas that something
+  // opaque covered (the bar at the bottom: the top 64 px of her picture went missing). So nothing plain and opaque covers
+  // it: it ends where the bar starts, and the boxes over it are 1% see-through. (Drawing her off the page and copying each
+  // picture onto a 2D canvas avoided it too, but halved her frames a second on the server: never again.)
   const html = read('tools/live/page/index.html');
   assert.match(html, /<div class="her"><canvas class="her-pic" data-pic aria-hidden="true"><\/canvas><\/div>/);
-  assert.doesNotMatch(html, /data-gl/);
   const js = read('tools/live/page/stage.js');
-  assert.match(js, /new THREE\.WebGLRenderer\(\{ canvas: document\.createElement\('canvas'\)/, 'WebGL on a canvas that isn\'t on the page');
+  assert.match(js, /new THREE\.WebGLRenderer\(\{ canvas: ui\.pic,/, 'WebGL straight onto the page');
   assert.equal(js.match(/WebGLRenderer\(/g).length, 1);
-  assert.match(js, /pic = ui\.pic\.getContext\('2d'\)/);
-  assert.match(js, /renderer\.render\(scene, camera\);\s*pic\.clearRect\(0, 0, PW, PH\);\s*pic\.drawImage\(renderer\.domElement, 0, 0\);/, 'each picture copied right after it\'s drawn');
-  // as wide as the set (her waving hand reached x = 481, her hearts further: the old picture's edge was at x = 560), and
-  // ending where the bar starts; its pixels and the camera's view follow its place in the stylesheet
+  assert.doesNotMatch(js, /drawImage|transferFromImageBitmap|createElement\('canvas'\)/, 'never a copy of her picture each frame');
   const css = read('tools/live/page/stage.css');
   assert.match(css, /--bar: 64px;/);
-  assert.match(css, /\.her \{ position: absolute; left: 0; top: 0; width: 1280px; height: calc\(720px - var\(--bar\)\); \}/);
+  assert.match(css, /\.her \{ position: absolute; left: 400px; right: 0; top: 0; height: calc\(720px - var\(--bar\)\); \}/, 'it ends where the bar starts');
   assert.match(css, /\.her-pic \{ width: 100%; height: 100%; display: block; \}/);
   assert.match(css, /\.ask \{\s*position: absolute; left: 0; right: 0; bottom: 0; height: var\(--bar\);/, 'the bar: the same height');
-  assert.match(js, /const box = ui\.pic\.getBoundingClientRect\(\);\s*PW = Math\.round\(\(box\.width \* DRAW\) \/ H\);\s*PH = Math\.round\(\(box\.height \* DRAW\) \/ H\);/);
+  // the boxes that can be over her picture: never a plain opaque background
+  const rule = (sel) => new RegExp(`\\n${sel.replace('.', '\\.')} \\{([^}]*)\\}`).exec(css)?.[1] || '';
+  for (const sel of ['.card', '.caption', '.label', '.overlay']) {
+    const bg = /background: ([^;]+);/.exec(rule(sel))?.[1];
+    assert.ok(bg, `${sel} has a background`);
+    const alpha = Number(/rgba\([^)]*,\s*([\d.]+)\)/.exec(bg)?.[1]);
+    assert.ok(alpha < 1, `${sel}'s background is a little see-through (${bg})`);
+  }
+  // its pixels and the camera's view follow its place in the stylesheet; her hearts fade out before its left edge
+  assert.match(js, /box = ui\.pic\.getBoundingClientRect\(\);/);
+  assert.match(js, /renderer\.setSize\(Math\.round\(\(box\.width \* DRAW\) \/ H\), Math\.round\(\(box\.height \* DRAW\) \/ H\), false\);/);
   assert.match(js, /camera\.setViewOffset\(wide, H, wide \/ 2 - FRAME\.x \+ box\.left, box\.top, box\.width, box\.height\)/);
+  assert.match(js, /effects\.update\(dt\);\s*fadeHearts\(\);\s*renderer\.render\(scene, camera\);/);
   // she stays where she was (her middle at x = 920, the same size), the top of her head under the top row's label (it ends at y = 64)
   const frame = /const FRAME = \{ x: (\d+), eyes: (\d+), waist: (\d+) \};/.exec(js);
   assert.ok(frame, 'FRAME');

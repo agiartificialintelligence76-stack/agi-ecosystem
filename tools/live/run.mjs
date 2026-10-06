@@ -171,7 +171,8 @@ export async function openBrowser(display, url) {
     // Chromium on a screen without a window manager (1279 × 719: a black line along the stream's right and bottom edges)
     args: [`--window-size=${W + 1},${H + 1}`, '--window-position=0,0', '--kiosk', '--start-fullscreen', '--force-device-scale-factor=1',
       // her picture: WebGL in software (no graphics card on a server), and the window put together in software too (measured
-      // on 2 cores: 13 frames a second with SwiftShader putting it together, 22 to 29 with this)
+      // on 2 cores of Claude's computer: 13 frames a second with SwiftShader putting it together, 22 to 29 with this; the
+      // owner's CX23 does about 12). It misplaces what something opaque covers of her picture: tools/live/page/stage.js
       '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--disable-gpu-compositing',
       '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows',
       '--noerrdialogs', '--disable-session-crashed-bubble', '--disable-infobars', '--hide-scrollbars', '--no-first-run',
@@ -194,13 +195,21 @@ export async function openBrowser(display, url) {
 }
 
 // ---------- ffmpeg: the screen + her voice → X (or a file) ----------
+// how hard x264 works on each picture: on a server with fewer than 4 cores, superfast (2026-10-06: the CX23's 2 cores draw
+// her about 12 times a second, and every bit of processor x264 leaves goes to drawing her; a little less sharp for the same
+// bits, which this flat, mostly still picture hardly shows); veryfast with 4 or more. LIVE_X264_PRESET to choose
+export const X264_PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium'];
+export const x264Preset = (env = process.env, cores = cpus().length) => {
+  const want = String(env.LIVE_X264_PRESET || '').trim().toLowerCase();
+  return X264_PRESETS.includes(want) ? want : cores >= 4 ? 'veryfast' : 'superfast';
+};
 // Her voice goes in as raw sound, written in real time; the screen's first picture's time (ffmpeg says it: "start: …")
 // lines her voice up with her mouth.
-export function ffmpegArgs({ display, out, file = false }) {
+export function ffmpegArgs({ display, out, file = false, preset = x264Preset() }) {
   return ['-hide_banner', '-loglevel', 'info', '-nostats',
     '-thread_queue_size', '1024', '-f', 'x11grab', '-video_size', `${W}x${H}`, '-framerate', String(FPS), '-draw_mouse', '0', '-i', `${display}.0+0,0`,
     '-thread_queue_size', '1024', '-f', 's16le', '-ar', String(RATE), '-ac', '1', '-i', 'pipe:0',
-    '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-r', String(FPS),
+    '-c:v', 'libx264', '-preset', preset, '-tune', 'zerolatency', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-r', String(FPS),
     '-b:v', '3000k', '-maxrate', '3000k', '-bufsize', '6000k', '-g', String(FPS * 3), '-keyint_min', String(FPS * 3), '-sc_threshold', '0',
     '-c:a', 'aac', '-b:a', '128k', '-ar', '48000', '-ac', '2',
     ...(file ? ['-movflags', '+frag_keyframe+empty_moov+default_base_moof', '-y', out] : ['-rw_timeout', '15000000', '-f', 'flv', out])];
