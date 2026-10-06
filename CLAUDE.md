@@ -301,7 +301,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | Launched coins' pictures | **Pinata** (free plan: 500 files, 1 GB), from our server only (`PINATA_JWT`): each coin's picture goes on IPFS once, as it's got ready; a coin never launched has its picture deleted again | A clank.trade coin's picture is an `ipfs://` address; clank.trade's own pictures are on Pinata too; free |
 | The risk check's coin pictures (2026-10-05) | **Public IPFS gateways** (Filebase's, Pinata's public one, ipfs.io; ClankBot's host for its 13 coins), made small on our server with **sharp** (an npm package) | clank.trade's own gateway only answers its own pages since October 2026; IPFS is public; free and keyless; a 96 px WebP is a few KB |
 | Launch fees paid back | The owner's own small **gas wallet** (`LAUNCH_GAS_KEY`), from our server: one plain ETH payment back to each launch's creator | The owner's choice, to bring launches to her bot; capped per launch, per wallet and per day |
-| Her live show (2026-10-02) | **The owner's own rented server** (Hetzner Cloud, CX33) running **Docker** (Playwright's Chromium, Xvfb, ffmpeg), streaming to **X Live Studio** by RTMP; the site keeps her line (`/api/live`, Supabase) | Vercel can't run a browser and ffmpeg for an hour; Live Studio takes a standard encoder's stream; the cheapest server that draws her smoothly |
+| Her live show (2026-10-02) | **The owner's own rented server** (Hetzner Cloud: a CX23 since 2026-10-06, CX33 once it's back in stock) running **Docker** (Playwright's Chromium, Xvfb, ffmpeg), streaming to **X Live Studio** by RTMP; the site keeps her line (`/api/live`, Supabase) | Vercel can't run a browser and ffmpeg for an hour; Live Studio takes a standard encoder's stream; the cheapest server that draws her smoothly |
 | Her voice on stream | **Google Cloud's Vertex AI** (Gemini 3.8 Flash-Lite TTS, Despina), a service account on the server | The site's own voice (the owner's choice), with Google Cloud's higher limits instead of the site's 100 a day |
 | Her music on stream | **Her own songs, made in code** (`tools/live/music.js`) | The owner: "can you just generate music yourself?": no service, no licence, nobody else's music |
 
@@ -3443,9 +3443,10 @@ keep the link private: whoever has it can pause or end her show):
    `ssh -o ServerAliveInterval=30 root@<the server's IP>` (the extra part keeps the link from dropping while you're away).
    **Done 2026-10-06** (agi1-live, CX23, Falkenstein). CX33 (4 vCPUs, $9.99) and CX43 (8, $18.49) were sold out ("limited
    availability"), so CX23 for now, and **Rescale** to CX33 or CX43 once one is back (the server off a minute, everything
-   on it kept; keep its disk as it is, so it can go back). On 2 cores she's drawn at 540 px (`LIVE_GL`): 22 to 29 frames a
-   second on Claude's computer, but about 12 on the CX23 (measured in its first two recordings, 2026-10-06), so a Rescale
-   to 4 cores should make her about twice as smooth. The Hetzner account is the owner's close friend's (verified), paid with the owner's own card: the
+   on it kept; keep its disk as it is, so it can go back). On 2 cores she's drawn at 540 px (`LIVE_GL`): about 20 new pictures
+   of her a second on the CX23 since her live show draws her lighter (try4, 2026-10-06; about 12 before). On 4 cores she's
+   drawn bigger by default (720 px: sharper), so how smooth a CX33 is gets measured after the Rescale (`LIVE_GL=540` there
+   would favour smoothness instead). The Hetzner account is the owner's close friend's (verified), paid with the owner's own card: the
    friend can reach the server, and so its stream key and Google key (if that ever changes: a new stream key in Live
    Studio and a new Google key).
 5. **On the server** (each line pasted into that window, one by one):
@@ -3551,7 +3552,7 @@ works: superfast below 4 cores, else veryfast; since 2026-10-06).
 | Questions wait, "my brain's lagging" | `her answers aren't coming (ai): questions wait 30 s` | The site's Gemini key (credits, limits): see the chat's troubleshooting |
 | Nothing on X, the log looks fine | `ffmpeg stopped (…) : starting it again. it said: … Connection refused` (or timed out) | Live Studio's server URL or stream key in live.env is wrong, or the source was deleted |
 | The scheduled livestream ended without her | (the log of that day: nothing, or an error above) | The cron line didn't run or stopped early: check `/etc/cron.d/agi1-live` and the log; schedule the next livestream |
-| Her set stutters | `her set draws 12 frames a second` (about what the CX23's 2 cores do) | Rescale to 4 or 8 cores (CX33, CX43); on 2 cores, `LIVE_GL=480` in live.env draws faster and a little softer |
+| Her set stutters | `her set draws 12 frames a second` (the CX23's 2 cores draw about 20 since 2026-10-06's lighter drawing; about 12 before it) | Before that drawing: push, then `update`. With it: Rescale to 4 or 8 cores (CX33, CX43); on 2 cores, `LIVE_GL=480` in live.env draws faster and a little softer |
 | Her set draws about 9 frames a second right after the 2026-10-06 update | `her set draws 9.5 frames a second` | The first fix of her picture (it copied each picture: see "Her first test recording"): push, then `update` |
 | Her head and her hearts cut flat along one line near the top (about 64 px down), or her waving hand cut off by a straight line left of her | (none) | Her set from before 2026-10-06 (see "Her first test recording" below): push, then `sh tools/live/live.sh update` |
 | A thin black line along the recording's right and bottom edges | (none) | The browser window from before 2026-10-06 (a page 1 px too small): push, then `update` |
@@ -3632,9 +3633,13 @@ things. Fixed the same day:
     elbows are small and mostly at the bar (looked at side by side in her wave, her cheer and at rest);
   - the video encoder working a little less hard below 4 cores (`x264Preset()`: superfast, veryfast with 4 or more;
     `LIVE_X264_PRESET` to choose), with no difference to see.
-  On Claude's computer: 37 → 21 ms of SwiftShader for each picture of her, 61 → 41 ms of processor in all. Not worth it:
-  stopping the LIVE dot's blink (about 1 ms a picture), a smaller picture (`LIVE_GL=480`: softer, and less than the texture
-  saves). A Rescale to 4 cores (CX33) should about double it again.
+  On Claude's computer: 37 → 21 ms of SwiftShader for each picture of her, 61 → 41 ms of processor in all. **On the CX23
+  (try4.mp4, the same day): about 20 new pictures of her a second** (19.7 to 21.6 over five 20-second stretches, by how
+  often her face changes; its log said 19.4 to 20), from 12 to 13 in try3 (the same stretches: 11.3 to 13.7): about 1.6
+  times as smooth (the stream's 30 is the most). Its frames looked at: her head round, her whole wave (her hand sharp),
+  clean edges, no heart reaching her picture's edge, a standard MP4. Not worth it: stopping the LIVE dot's blink (about
+  1 ms a picture), a smaller picture (`LIVE_GL=480`: softer, and less than the texture saves). On 4 cores (a Rescale to
+  CX33) she's drawn bigger by default (`LIVE_GL` 720: sharper): how smooth that is gets measured there.
 - **Her waving hand cut off by a straight line left of her** (her picture was 720 × 720 on the right, from x = 560; her
   wave reaches x = 481, her cheer 447). Her picture now starts at x = 400 (its pixels and the camera's view follow its
   place in the stylesheet), and her hearts, which can fly further, fade out before its edge (`fadeHearts()` in
@@ -5150,8 +5155,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   hearts cut flat near the top, her waving hand cut off, a black line at two edges, blocks in Windows' player: see "Her
   first test recording"); the first fix checked on the server (try2.mp4: the glitches gone, but 9.5 frames a second), the
   second one as fast as before (try3: 12 to 13 new pictures of her a second, the glitches gone). Then her drawing made a
-  third lighter, for the live show only (see "How smoothly she moves on the CX23"): after its push, `update` and try4 to
-  measure it. A Rescale to 4 cores when CX33 is back. Next: X (step 3), the phone link and the daily cron line.
+  third lighter, for the live show only (see "How smoothly she moves on the CX23"): try4 drew about 20 new pictures of her
+  a second (from 12 to 13), its frames clean. A Rescale to 4 cores when CX33 is back. Next: X (step 3), the phone link and the daily cron line.
 - **Her 2D elbow, her shirt's side and the hair behind her arms: fixed 2026-10-03, waiting for the owner's OK** (the
   owner's two close-ups: "I just checked by now , what happened to this, can you fix", then "im sleeping now just finish
   it"): no slit at her shirt's side when her arms are down, soft hair tips and her hair's own color where her arms move
@@ -5412,7 +5417,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-06 | Her live show's server is a **Hetzner CX23** in Falkenstein (2 vCPUs, 4 GB, $7.09 a month with its IPv4): CX33 and CX43 were sold out ("limited availability"), and the owner picked CX23 over waiting; **Rescale** to CX33, or CX43 within the owner's new $20 a month for the server, once one is back. Not picked: CPX32 ($41.99, four times the plan), CCX13 (dedicated, about four times too). It's on the owner's close friend's verified Hetzner account, paid with the owner's own card (Hetzner's terms let a customer let others use what they order; the friend stays the customer and can reach the server) |
 | 2026-10-06 | The live show's first real setup (the owner, step by step): `SITE_URL` is **https://www.agi1.app** (agi1.app redirects, and the show never follows a redirect with its key; the default everywhere now); `LIVE_SECRET` made on the server (Vercel keeps it sensitive, so it can't be read back) and pasted into Vercel; `--check`'s key test is a beat for a show that can never be on (it sent show 0, which the site refuses as a bad request: a NO for the right key); `--warm` goes at Google's pace (Vertex takes about 10 requests a minute for her voice model: the first one made 11 of 121, then skipped the rest) |
 | 2026-10-06 | Her live set after her first test recordings (see "Her first test recording"): nothing plain and opaque covers her picture, because the server's software compositing left out the mirror image of what the opaque bar covered (her head and hearts cut flat 64 px from the top): her picture ends where the bar starts, and the boxes over it are 1% see-through. Her picture starts at x = 400 (her wave and her cheer reached past its old edge at 560), her hearts fade out before its edge, her middle at x = 920 as before and 14 px lower (under the top row's label); the browser window one pixel bigger than the screen (a page exactly the screen's size came out 1279 × 719 without a window manager); a finished recording made a standard MP4 (Windows' player showed blocks in the fragmented one); x264 superfast below 4 cores (the CX23 draws her about 12 times a second). Tried first and replaced the same day: drawing her off the page and copying each picture onto a 2D canvas (9.5 frames a second on the server). Not picked: GPU compositing or her background in WebGL (13 frames a second on Claude's computer, instead of 23–25) |
-| 2026-10-06 | Her live show draws her lighter (the owner: "theres nothing u can do to increase the frames?"; the CX23 drew her about 12 times a second, and drawing her in software was two thirds of its processor): her texture at the size she's shown without mipmaps (`fitTexture()`), her arms with one level of finer mesh (`armRefine`), x264 superfast below 4 cores. Only the live show: the website keeps its sharper close-ups (the owner asked). On Claude's computer a third less processor for each picture of her. Not picked: a smaller picture (`LIVE_GL=480`: softer for less), stopping the LIVE dot's blink (nothing to gain) |
+| 2026-10-06 | Her live show draws her lighter (the owner: "theres nothing u can do to increase the frames?"; the CX23 drew her about 12 times a second, and drawing her in software was two thirds of its processor): her texture at the size she's shown without mipmaps (`fitTexture()`), her arms with one level of finer mesh (`armRefine`), x264 superfast below 4 cores. Only the live show: the website keeps its sharper close-ups (the owner asked). On Claude's computer a third less processor for each picture of her; on the CX23 about 20 new pictures of her a second instead of 12 to 13 (try4, measured in the recording). Not picked: a smaller picture (`LIVE_GL=480`: softer for less), stopping the LIVE dot's blink (nothing to gain) |
 
 ## Open questions
 

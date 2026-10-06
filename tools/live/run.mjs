@@ -172,7 +172,8 @@ export async function openBrowser(display, url) {
     args: [`--window-size=${W + 1},${H + 1}`, '--window-position=0,0', '--kiosk', '--start-fullscreen', '--force-device-scale-factor=1',
       // her picture: WebGL in software (no graphics card on a server), and the window put together in software too (measured
       // on 2 cores of Claude's computer: 13 frames a second with SwiftShader putting it together, 22 to 29 with this; the
-      // owner's CX23 does about 12). It misplaces what something opaque covers of her picture: tools/live/page/stage.js
+      // owner's CX23 about 20 since she's drawn lighter, 2026-10-06). It misplaces what something opaque covers of her
+      // picture: tools/live/page/stage.js
       '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--disable-gpu-compositing',
       '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows',
       '--noerrdialogs', '--disable-session-crashed-bubble', '--disable-infobars', '--hide-scrollbars', '--no-first-run',
