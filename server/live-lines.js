@@ -14,23 +14,8 @@ export const HOW = [
 ].join('\n\n');
 export const NOT_YET = "my live show isn't on yet 🙈 soon";
 
-// When her next show is, in their own time when her bot knows it (their /time), else in UTC: "today at 20:00 your time",
-// "tomorrow at 20:00 UTC", "Friday at 20:00 your time", "Oct 12 at 20:00 UTC" · null (no next show, or it's past)
-const pad = (n) => String(n).padStart(2, '0');
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export function whenText(next, tzMinutes = null, now = Date.now()) {
-  const t = Date.parse(next ?? '');
-  if (!Number.isFinite(t) || t <= now) return null;
-  const known = Number.isInteger(tzMinutes) && Math.abs(tzMinutes) <= 14 * 60;
-  const off = known ? tzMinutes * 60_000 : 0;
-  const a = new Date(now + off), b = new Date(t + off);
-  const days = Math.round((Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate()) - Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate())) / 86_400_000);
-  const day = days === 0 ? 'today' : days === 1 ? 'tomorrow' : days < 7 ? DAYS[b.getUTCDay()] : `${MONTHS[b.getUTCMonth()]} ${b.getUTCDate()}`;
-  return `${day} at ${pad(b.getUTCHours())}:${pad(b.getUTCMinutes())} ${known ? 'your time' : 'UTC'}`;
-}
-// She isn't live. when: whenText(), or null
-export const offline = (when) => `i'm not live right now 🙈 ${when ? `my next show: ${when}. ` : ''}watch me and ask at ${PAGE}`;
+// She isn't live. (Never when her next show is: since 2026-10-07 the owner goes live at random times.)
+export const OFFLINE = `i'm not live right now 🙈 i go live on X at random times, so keep an eye out. watch me and ask at ${PAGE}`;
 export const queued = (position) => `got it 💜 you're #${position} in line. watch me answer it live: ${PAGE}`;
 export const inLine = (position) => `your question is #${position} in line 💜 one at a time. watch: ${PAGE}`;
 export const UP_NEXT = `your question is up next 👀 watch: ${PAGE}`;

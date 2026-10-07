@@ -12,7 +12,7 @@ import { startTheme } from '../theme.js';
 import { startMenu } from '../menu.js';
 import { withHuman, postJson } from '../lib/human.js';
 import { botName } from '../chat/telegram-link.js';
-import { STATUS, segmentText, lineText, nextText, askError, mineText, ownerText, fromText, relayText } from './words.js';
+import { STATUS, segmentText, lineText, askError, mineText, ownerText, fromText, relayText } from './words.js';
 
 const KEYS = { adult: 'agi1_18plus', mine: 'agi1_live_q', owner: 'agi1_live_owner' };
 const STATUS_EVERY = 15_000, MINE_EVERY = 30_000, OWNER_EVERY = 5_000, MINE_HOURS = 6;
@@ -104,7 +104,8 @@ function start() {
       if (doing && kind === 'live') bits.push(`Now: ${doing}.`);
       bits.push(lineText(Array.isArray(s.waiting) ? s.waiting.length : 0));
     } else {
-      bits.push(nextText(s.nextAt) || 'Her next show will be announced here and on X.');
+      // (never when her next show is: the owner goes live at random times, 2026-10-07)
+      bits.push('Follow @agi1dotapp on X to catch her next show.');
     }
     ui.sub.textContent = bits.join(' ');
     ui.sub.hidden = false;
@@ -124,7 +125,7 @@ function start() {
     ui.form.hidden = !showForm;
     ui.send.disabled = sending || !open;
     ui.waitNote.hidden = open;
-    ui.waitNote.textContent = !s?.on ? `You can send questions while she's live. ${nextText(s?.nextAt) || ''}`.trim()
+    ui.waitNote.textContent = !s?.on ? "You can send questions while she's live."
       : s.closed ? askError('closed') : s.status === 'ending' ? askError('ending') : '';
     renderMine();
   }

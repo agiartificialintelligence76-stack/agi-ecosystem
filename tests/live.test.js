@@ -495,7 +495,10 @@ test('the runner: its secret only; start, beat (the owner\'s controls), next (he
   assert.equal(fake.db.s.status, 'off');
   assert.equal((await post({ action: 'stop', show, next: 'yesterday' }, { auth: RUNNER() })).status, 400);
   assert.equal((await post({ action: 'schedule', next }, { auth: RUNNER() })).data.ok, true);
-  assert.equal((await get()).data.nextAt, next);
+  // (2026-10-07, the owner goes live at random times: the site never says when her next show is)
+  const shown = (await get()).data;
+  assert.ok(!('nextAt' in shown), 'no next show in what everyone gets');
+  assert.ok(!JSON.stringify(shown).includes(next.slice(0, 16)), 'nor its time anywhere in it');
   assert.equal((await post({ action: 'dance' }, { auth: RUNNER() })).status, 400);
 });
 
@@ -725,15 +728,17 @@ const hook = async (text, chat) => {
   return (await res.json()).what;
 };
 
-test('/live in her bot: into her line (18+, the same checks, no name on stream); where it is; when she\'s off, her next show in their time', async () => {
+test('/live in her bot: into her line (18+, the same checks, no name on stream); where it is; when she\'s off, never when her next show is', async () => {
   assert.equal(await hook('/live'), 'live_how');
-  assert.match(say().at(-1), /i do a live show on X/);
-  assert.match(say().at(-1), /not live right now/, 'and that she isn\'t live now');
-  // her next show, in their own time (their /time: UTC+2 here)
+  assert.equal(say().at(-1), `${LL.HOW}\n\n${LL.OFFLINE}`, 'how it works, and that she isn\'t live now');
+  // (2026-10-07, the owner goes live at random times) a next show the site knows of is never said, in any time
   const next = new Date(Date.now() + 3 * 3_600_000);
   fake.db.s.next = next.toISOString();
   assert.equal(await hook('/live what is your favorite color?'), 'live_offline');
-  assert.match(say().at(-1), /my next show: (today|tomorrow) at \d\d:\d\d your time/);
+  assert.equal(say().at(-1), LL.OFFLINE);
+  await hook('/live');
+  assert.equal(say().at(-1), `${LL.HOW}\n\n${LL.OFFLINE}`);
+  for (const line of say()) assert.doesNotMatch(line, /next show:|your time|\d\d:\d\d/, line);
   const show = await goLive();
   assert.equal(await hook('/live what is your favorite color?'), 'live_queued');
   assert.equal(say().at(-1), LL.queued(1));
@@ -794,7 +799,7 @@ test('/live: 18+ first, "not on yet" until her show is set up, her menu and /hel
 });
 
 test('her /live lines: PG-13, no pet names, never advice, links only to agi1.app, and a caring note never read on stream', () => {
-  const all = [LL.HOW, LL.NOT_YET, LL.offline(null), LL.offline('today at 20:00 your time'), LL.queued(3), LL.inLine(2), LL.UP_NEXT, LL.ON_AIR,
+  const all = [LL.HOW, LL.NOT_YET, LL.OFFLINE, LL.queued(3), LL.inLine(2), LL.UP_NEXT, LL.ON_AIR,
     LL.ANSWERED, LL.SKIPPED, LL.CARE, ...Object.values(LL.REFUSE).map((v) => (typeof v === 'function' ? v(30) : v))];
   for (const line of all) {
     assert.ok(line.length < 700, line);
@@ -805,15 +810,15 @@ test('her /live lines: PG-13, no pet names, never advice, links only to agi1.app
   }
   assert.match(LL.CARE, /someone you trust or a local support line/);
   assert.match(LL.HOW, /never your name or your account/);
-  // her next show, in their time (or UTC)
-  const now = Date.UTC(2026, 9, 2, 18, 0);
-  assert.equal(LL.whenText(new Date(Date.UTC(2026, 9, 2, 20, 0)).toISOString(), 120, now), 'today at 22:00 your time');
-  assert.equal(LL.whenText(new Date(Date.UTC(2026, 9, 2, 23, 0)).toISOString(), 120, now), 'tomorrow at 01:00 your time');
-  assert.equal(LL.whenText(new Date(Date.UTC(2026, 9, 3, 20, 0)).toISOString(), null, now), 'tomorrow at 20:00 UTC');
-  assert.equal(LL.whenText(new Date(Date.UTC(2026, 9, 6, 20, 0)).toISOString(), 0, now), 'Tuesday at 20:00 your time');
-  assert.equal(LL.whenText(new Date(Date.UTC(2026, 9, 20, 20, 0)).toISOString(), 0, now), 'Oct 20 at 20:00 your time');
-  assert.equal(LL.whenText(new Date(now - 1000).toISOString(), 0, now), null, 'a time in the past');
-  assert.equal(LL.whenText(null, 0, now), null);
+  // (2026-10-07, the owner goes live at random times) never when her next show is: no time, no day
+  assert.match(LL.OFFLINE, /not live right now/);
+  assert.match(LL.OFFLINE, /random times/);
+  assert.match(LL.OFFLINE, /agi1\.app\/live/);
+  for (const line of [LL.HOW, LL.NOT_YET, LL.OFFLINE, LL.ANSWERED, LL.SKIPPED, LL.REFUSE.ending]) {
+    assert.doesNotMatch(line, /\d\d:\d\d|your time|\b(today|tomorrow|tonight|every day|daily|same time)\b/i, line);
+  }
+  assert.equal(LL.whenText, undefined);
+  assert.equal(LL.offline, undefined);
 });
 
 // ---------- tidying, the secret check ----------
@@ -886,21 +891,19 @@ test('the page\'s styles: every rule names an lv- class (the rest of the site ca
   for (const l of pop) assert.match(l, /^\[data-skin='pop'\]/, l);
 });
 
-test('the page\'s words: her status, what she\'s doing, her next show in your time, every answer of /api/live in plain words', () => {
+test('the page\'s words: her status, what she\'s doing, never her next show, every answer of /api/live in plain words', () => {
   for (const s of ['live', 'starting', 'brb', 'ending', 'off', 'soon']) assert.ok(W.STATUS[s].badge && W.STATUS[s].headline, s);
   assert.equal(W.segmentText('questions'), 'answering questions');
   assert.equal(W.segmentText('nonsense'), null);
   assert.equal(W.lineText(0), 'Nobody is in line: ask away.');
   assert.equal(W.lineText(1), '1 question in line.');
   assert.equal(W.lineText(7), '7 questions in line.');
-  const now = Date.UTC(2026, 9, 2, 18, 0);
-  assert.equal(W.nextText(new Date(Date.UTC(2026, 9, 2, 20, 0)).toISOString(), now, 'en-GB', 'UTC'), 'Next show: today at 20:00 (your time).');
-  assert.equal(W.nextText(new Date(Date.UTC(2026, 9, 3, 20, 0)).toISOString(), now, 'en-GB', 'UTC'), 'Next show: tomorrow at 20:00 (your time).');
-  assert.equal(W.nextText(new Date(Date.UTC(2026, 9, 2, 20, 0)).toISOString(), now, 'en-GB', 'Asia/Tokyo'), 'Next show: today at 05:00 (your time).', 'already the 3rd in Tokyo');
-  assert.equal(W.nextText(new Date(Date.UTC(2026, 9, 2, 20, 0)).toISOString(), Date.UTC(2026, 9, 2, 14, 0), 'en-GB', 'Asia/Tokyo'), 'Next show: tomorrow at 05:00 (your time).');
-  assert.match(W.nextText(new Date(Date.UTC(2026, 9, 5, 20, 0)).toISOString(), now, 'en-GB', 'UTC'), /^Next show: Monday at 20:00/);
-  assert.equal(W.nextText(null, now), null);
-  assert.equal(W.nextText(new Date(now - 1).toISOString(), now), null);
+  // (2026-10-07, the owner goes live at random times) the page never says when her next show is
+  assert.equal(W.nextText, undefined);
+  const page = read('src/live/page.js');
+  assert.doesNotMatch(page, /nextAt|next_at|Next show:/);
+  assert.match(page, /Follow @agi1dotapp on X to catch her next show\./);
+  assert.doesNotMatch(read('live.html'), /next show|your time/i);
   // every error /api/live answers, and every reason the line gives, has its words (never the fallback)
   const api = read('api/live.js');
   const sql = read('supabase/live.sql');

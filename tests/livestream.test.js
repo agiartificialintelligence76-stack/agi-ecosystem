@@ -72,6 +72,11 @@ test('her lines on stream: PG-13, no pet names, only $AGI, never a real person, 
   assert.ok(L.SEGMENTS.chain101.lines.some((x) => /not affiliated with Robinhood/.test(x.text)), 'not affiliated with Robinhood');
   assert.ok(L.SEGMENTS.agi101.card.list.some((x) => /0xfa31…06ec/.test(x)) && L.SEGMENTS.agi101.lines.some((x) => /copy it from agi1\.app/.test(x.text)), 'the contract: its ends, copied only from agi1.app');
   assert.ok(L.SEGMENTS.safety.lines.some((x) => /never ask for your seed phrase/.test(x.text)));
+  // (2026-10-07, the owner goes live at random times) never when her next show is: on stream, or on her goodbye card
+  for (const line of lines) assert.doesNotMatch(line.text, /same time|next show (is|at|on)|tomorrow at|daily show|show every day|live every day|\d\d:\d\d/i, line.text);
+  assert.ok(L.OUTRO.some((x) => /catch my next show here on X/.test(x.text)));
+  assert.doesNotMatch(read('tools/live/run.mjs'), /Next show:/);
+  assert.match(read('tools/live/run.mjs'), /overlay\('ended', \{ sub: 'Follow @agi1dotapp for the next one' \}\)/);
   assert.deepEqual(L.SEGMENT_IDS, ['agi101', 'clank101', 'chain101', 'safety', 'tips', 'wyr', 'howto', 'selfcare', 'story', 'facts', 'thisorthat', 'flags', 'quiz', 'diary']);
   assert.deepEqual(Object.keys(L.SEGMENTS).sort(), [...L.SEGMENT_IDS].sort(), 'every segment the director can pick, and no other');
   // (2026-10-07, for 3-hour shows) the segments with a pool: a card for each pick, a few of them a time, enough to go round
@@ -526,6 +531,19 @@ test('the runner\'s options, her show\'s time, X\'s address (its stream key neve
   assert.equal(parseArgs(['--record', 'x.mp4', '--with-site'], {}).demo, false);
   assert.equal(parseArgs([], {}).demo, false, 'a show to X: the real site');
   assert.equal(parseArgs(['--warm'], {}).warm, true);
+  // (2026-10-07, the owner goes live at random times) --start-in: "starting soon" for that many minutes from now, no UTC sums
+  const T = Date.UTC(2026, 9, 7, 12, 34, 56);
+  assert.equal(parseArgs(['--start-in', '10'], {}, T).startAt, new Date(T + 600_000).toISOString());
+  assert.equal(parseArgs(['--start-in', '0'], {}, T).startAt, new Date(T).toISOString(), 'now');
+  assert.equal(parseArgs(['--start-in', '2.5'], {}, T).startAt, new Date(T + 150_000).toISOString());
+  assert.equal(parseArgs(['--start-in', '30'], {}, T).startAt, new Date(T + 1_800_000).toISOString(), 'the most a show waits');
+  for (const bad of ['31', '-1', 'x', '', undefined]) assert.throws(() => parseArgs(['--start-in', bad].filter((v) => v !== undefined), {}, T), /--start-in: 0 to 30 minutes/, String(bad));
+  assert.equal(parseArgs(['--start-in', '10'], { LIVE_START_AT: '01:00' }, T).startAt, new Date(T + 600_000).toISOString(), 'it wins over LIVE_START_AT');
+  {
+    const at = parseArgs(['--start-in', '10'], {}, T).startAt;
+    assert.equal(timeAt(at, T), T + 600_000, 'read back by the show as that time');
+    assert.equal(startProblem(at, timeAt(at, T), T), null, 'never refused');
+  }
   // a start more than 30 minutes away is a mistake (a late start, or LIVE_DAILY_AT and the cron line apart): refused
   const at = Date.UTC(2026, 9, 2, 20, 15);
   assert.match(startProblem('20:00', timeAt('20:00', at), at), /20:00 is 23 h 45 min away \(it's 20:15 UTC now\)/);

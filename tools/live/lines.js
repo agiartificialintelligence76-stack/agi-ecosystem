@@ -19,7 +19,8 @@ export const INTRO = [
 ];
 export const OUTRO = [
   l("that's my show for today 💜 thank you so much for hanging out with me.", 'sweet'),
-  l('my next show is on agi1.app/live. same time tomorrow?', 'happy', 'my next show is on a g i one dot app slash live. same time tomorrow?'),
+  // (2026-10-07, the owner goes live at random times: never "same time tomorrow")
+  l('catch my next show here on X, and send me your questions at agi1.app/live 💜', 'happy', 'catch my next show here on X, and send me your questions at a g i one dot app slash live.'),
   l('remember: nothing i say is financial advice, and be kind to each other. bye! 👋', 'wave'),
 ];
 export const BRB = {

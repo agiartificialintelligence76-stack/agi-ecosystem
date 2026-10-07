@@ -61,7 +61,8 @@ export async function GET(request) {
     const s = await liveDb.state(cfg);
     return json(200, {
       ready: true, on: s.on === true, status: STATUSES.includes(s.status) ? s.status : 'off', show: s.show,
-      startedAt: s.started_at ?? null, nextAt: s.next_at ?? null, segment: s.segment ?? null, now: idOf(s.now),
+      // (never when her next show is: the owner goes live at random times, 2026-10-07)
+      startedAt: s.started_at ?? null, segment: s.segment ?? null, now: idOf(s.now),
       paused: s.paused === true, closed: s.closed === true,
       waiting: Array.isArray(s.waiting) ? s.waiting.filter(idOf) : [], done: s.done && typeof s.done === 'object' ? s.done : {},
       watch: WATCH_URL,

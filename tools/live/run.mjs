@@ -53,7 +53,7 @@ export const outPath = (name, env = process.env) => (isAbsolute(name) ? name : r
 export const avShift = (env = process.env) => (env.LIVE_AV_MS !== undefined && env.LIVE_AV_MS !== '' && Number.isFinite(Number(env.LIVE_AV_MS)) ? Number(env.LIVE_AV_MS) : 170);
 
 // ---------- options ----------
-export function parseArgs(argv, env = process.env) {
+export function parseArgs(argv, env = process.env, now = Date.now()) {
   const a = {
     record: null, minutes: Number(env.LIVE_MINUTES) || 60, startAt: env.LIVE_START_AT || null, nextAt: env.LIVE_DAILY_AT || null,
     site: env.SITE_URL || 'https://www.agi1.app', fake: false, demo: false, check: false, ownerLink: false, announce: null, build: false, syncCheck: false,
@@ -64,6 +64,13 @@ export function parseArgs(argv, env = process.env) {
     if (k === '--record') a.record = argv[++i];
     else if (k === '--minutes') a.minutes = Number(argv[++i]);
     else if (k === '--start-at') a.startAt = argv[++i];
+    else if (k === '--start-in') {
+      // (2026-10-07, the owner goes live at random times: "starting soon" for this many minutes, then the show; no UTC sums)
+      const raw = String(argv[++i] ?? '').trim();
+      const n = /^\d+(\.\d+)?$/.test(raw) ? Number(raw) : NaN;
+      if (!(n >= 0 && n <= START_AHEAD_MS / 60_000)) throw new Error(`--start-in: 0 to ${START_AHEAD_MS / 60_000} minutes (like --start-in 10)`);
+      a.startAt = new Date(now + Math.round(n * 60_000)).toISOString();
+    }
     else if (k === '--next-at') a.nextAt = argv[++i];
     else if (k === '--site') a.site = argv[++i];
     else if (k === '--fake-voice') a.fake = true;
@@ -478,7 +485,7 @@ async function runShow(a) {
     }
     if (controls.end && !stopping) {
       log.info('the owner ended it before it started');
-      await browser.page.evaluate(() => window.studio.overlay('ended', { sub: 'Next show: agi1.app/live' }));
+      await browser.page.evaluate(() => window.studio.overlay('ended', { sub: 'Follow @agi1dotapp for the next one' }));
       music?.fadeOut();
       await sleep(4000);
       stopping = true;
@@ -657,7 +664,7 @@ async function runShow(a) {
         state.status = 'ending'; state.segment = 'outro';
         await beat();
         for (const line of L.OUTRO) { if ((await say(line)) !== 'done') break; await sleep(400); }
-        await browser.page.evaluate(() => window.studio.overlay('ended', { sub: 'Next show: agi1.app/live' }));
+        await browser.page.evaluate(() => window.studio.overlay('ended', { sub: 'Follow @agi1dotapp for the next one' }));
         music?.fadeOut();
         await sleep(6000);
       } else if (step.kind === 'question') {
@@ -857,7 +864,7 @@ async function main() {
     const t = timeAt(a.announce);
     if (!t) throw new Error('--announce: a time like 20:00 (UTC) or 2026-10-05T20:00Z');
     await liveSite({ site: a.site, secret: process.env.LIVE_SECRET, log }).schedule(t);
-    console.log(`agi1.app/live now says her next show is ${new Date(t).toISOString()}`);
+    console.log(`the site keeps her next show as ${new Date(t).toISOString()} (since 2026-10-07 it's never shown to visitors)`);
     return;
   }
   const r = await runShow(a);

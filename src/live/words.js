@@ -28,19 +28,6 @@ export function lineText(n) {
   return n === 1 ? '1 question in line.' : `${n} questions in line.`;
 }
 
-// her next show, in the visitor's own time ("Next show: today at 21:00"), or null
-export function nextText(next, now = Date.now(), locale = undefined, timeZone = undefined) {
-  const t = Date.parse(next ?? '');
-  if (!Number.isFinite(t) || t <= now) return null;
-  const opts = timeZone ? { timeZone } : {};
-  const day = (ms) => new Intl.DateTimeFormat('en-CA', { ...opts, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
-  const clock = new Intl.DateTimeFormat(locale, { ...opts, hour: '2-digit', minute: '2-digit' }).format(new Date(t));
-  const days = Math.round((Date.parse(day(t)) - Date.parse(day(now))) / 86_400_000);
-  const when = days === 0 ? 'today' : days === 1 ? 'tomorrow'
-    : new Intl.DateTimeFormat(locale, { ...opts, weekday: 'long', ...(days >= 7 ? { month: 'short', day: 'numeric' } : {}) }).format(new Date(t));
-  return `Next show: ${when} at ${clock} (your time).`;
-}
-
 // why a question was refused (/api/live's "why" for a question, the same words as her bot's)
 const QUESTION = {
   empty: 'Write your question first.',

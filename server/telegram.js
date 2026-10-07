@@ -190,7 +190,8 @@ async function onCommand(cfg, token, chat, name, arg, now, L, from) {
 
 // Her live show (2026-10-02, server/live.js): "/live <question>" → into her line (18+: the bot's own check; the same checks
 // and limits as agi1.app/live; shown on stream without a name); "/live" alone → where their question is, or how it works
-// (and when her next show is, in their time). Who asked is a daily code of the chat, never its number.
+// (never when her next show is: since 2026-10-07 the owner goes live at random times). Who asked is a daily code of the
+// chat, never its number.
 async function onLive(cfg, token, chat, arg, now, L) {
   if (!liveReady(cfg)) { await say(token, chat, LIVE_L.NOT_YET); return 'live_not_yet'; }
   let row;
@@ -206,12 +207,6 @@ async function onLive(cfg, token, chat, arg, now, L) {
   }
   if (!row.adult) { await say(token, chat, L.ASK_AGE, buttons(L.AGE_BUTTONS)); return 'ask_age'; }
   const asker = chatCode(cfg.passSecret, chat, new Date(now).toISOString().slice(0, 10));
-  const tz = Number.isInteger(row.tz_minutes) ? row.tz_minutes : null;
-  const offline = async () => {
-    let next = null;
-    try { next = (await liveDb.state(cfg))?.next_at ?? null; } catch { /* the line without a time */ }
-    return LIVE_L.offline(LIVE_L.whenText(next, tz, now));
-  };
   try {
     if (!arg) {
       const [mine, state] = await Promise.all([liveDb.lookup(cfg, null, asker), liveDb.state(cfg)]);
@@ -220,7 +215,7 @@ async function onLive(cfg, token, chat, arg, now, L) {
       else if (mine?.status === 'taken') text = mine.on_air ? LIVE_L.ON_AIR : LIVE_L.UP_NEXT;
       else if (mine?.status === 'answered') text = LIVE_L.ANSWERED;
       else if (mine?.status === 'skipped') text = mine.why === 'care' ? LIVE_L.CARE : LIVE_L.SKIPPED;
-      else text = state?.on ? LIVE_L.HOW : `${LIVE_L.HOW}\n\n${LIVE_L.offline(LIVE_L.whenText(state?.next_at, tz, now))}`;
+      else text = state?.on ? LIVE_L.HOW : `${LIVE_L.HOW}\n\n${LIVE_L.OFFLINE}`;
       await say(token, chat, text);
       return mine ? `live_${mine.status}` : 'live_how';
     }
@@ -229,7 +224,7 @@ async function onLive(cfg, token, chat, arg, now, L) {
     const r = await askLive(cfg, { source: 'telegram', asker, name: null, question: checked.text });
     if (r?.ok === true) { await say(token, chat, LIVE_L.queued(r.position)); return 'live_queued'; }
     const why = String(r?.why || '');
-    if (why === 'offline') { await say(token, chat, await offline()); return 'live_offline'; }
+    if (why === 'offline') { await say(token, chat, LIVE_L.OFFLINE); return 'live_offline'; }
     if (why === 'waiting') { await say(token, chat, r.position > 0 ? LIVE_L.inLine(r.position) : LIVE_L.UP_NEXT); return 'live_waiting'; }
     if (why === 'too_fast') { await say(token, chat, LIVE_L.REFUSE.too_fast(r.wait)); return 'live_too_fast'; }
     const line = LIVE_L.REFUSE[why];

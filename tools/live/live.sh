@@ -10,8 +10,11 @@
 #   sh tools/live/live.sh --sync-check        her mouth vs her voice on this server (then LIVE_AV_MS in live.env)
 #   sh tools/live/live.sh --warm              makes all her pre-written lines' voices once (at setup: about 20 minutes)
 #   sh tools/live/live.sh --owner-link        the owner's phone link (agi1.app/live#admin=…)
-#   sh tools/live/live.sh --announce 01:00    tells agi1.app/live when her next show is (UTC)
-#   sh tools/live/live.sh show                today's show: "starting soon" until LIVE_DAILY_AT, then the show (the cron line)
+#   sh tools/live/live.sh --start-in 10       a show now (2026-10-07: she goes live at random times): "starting soon" for
+#                                             10 minutes (0 to 30), then the show. In the background, so closing the window
+#                                             doesn't stop it: nohup sh tools/live/live.sh --start-in 10 >> /var/log/agi1-live.log 2>&1 &
+#   sh tools/live/live.sh --announce 01:00    keeps her next show's time on the site (UTC; never shown to visitors)
+#   sh tools/live/live.sh show                today's show: "starting soon" until LIVE_DAILY_AT, then the show (a cron line)
 # Anything else is passed to tools/live/run.mjs as it is. Run checks when no show is on (they share the processor).
 set -eu
 SITE=$(cd "$(dirname "$0")/../.." && pwd)
