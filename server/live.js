@@ -17,9 +17,10 @@
 // from it (adminKeyFor), so there's no second setting. The Gemini key stays in Vercel: the runner never holds it.
 import { createHash, createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import { rpc } from './limits.js';
-import { askAgi1, TLDS } from './gemini.js';
+import { askAgi1, askScene, TLDS } from './gemini.js';
 import { isCrude } from './coins.js';
 import { MOODS } from './agi1-prompt.js';
+import { canList, actOf, DESTINATIONS, PEOPLE, LOCAL } from './live-acts.js';
 
 export const LIVE = {
   GAP_S: 60,            // seconds between one person's questions
@@ -66,23 +67,24 @@ const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
 const HANDLE = /(^|[^\w])@[A-Za-z0-9_]{2,}/;
 const PHONE = /\+\d[\d\s().-]{7,}\d|\b\d{3}[\s.-]\d{3}[\s.-]\d{4}\b/;
 const TICKER = /\$([A-Za-z][A-Za-z0-9]{0,15})\b/g;
-import { OTHER_COINS, REAL_PEOPLE, DISTRESS, splitWords, mentionsCoinOrPerson } from './live-words.js';
-export { OTHER_COINS, REAL_PEOPLE, DISTRESS, splitWords, mentionsCoinOrPerson };
+import { OTHER_COINS, REAL_PEOPLE, DISTRESS, splitWords, mentionsCoinOrPerson, mentionsCoin } from './live-words.js';
+export { OTHER_COINS, REAL_PEOPLE, DISTRESS, splitWords, mentionsCoinOrPerson, mentionsCoin };
 // Why a question can't go on her stream, or null. (The owner's blocked words are checked in the database; what can't be
-// checked in code, like a real person or an accusation, her answer decides: askAgi1's "skip".)
-export function questionTrouble(text) {
+// checked in code, like an accusation or a private person, her answer decides: askAgi1's "skip".) Real people may come up
+// since 2026-10-07 (the owner: "always be neutral on the answers on that"): her live prompt keeps her neutral.
+// (max: 2026-10-07, her own X posts and the replies under them are checked the same way, up to POST_MAX characters)
+export function questionTrouble(text, { max = LIVE.Q_MAX } = {}) {
   const t = tidyText(text);
   if (!t) return 'empty';
   if (DISTRESS.test(t)) return 'care';
   const chars = [...t].length;
   if (chars < LIVE.Q_MIN) return 'short';
-  if (chars > LIVE.Q_MAX) return 'long';
+  if (chars > max) return 'long';
   if (LINK.test(t) || otherSite(t)) return 'link';
   if (ADDRESS.test(t) || LONG_WORD.test(t)) return 'address';
   if (EMAIL.test(t) || HANDLE.test(t) || PHONE.test(t)) return 'contact';
   for (const m of t.matchAll(TICKER)) if (m[1].toUpperCase() !== 'AGI') return 'coin';
-  const named = mentionsCoinOrPerson(t);
-  if (named) return named;
+  if (mentionsCoin(t)) return 'coin';
   if (isCrude(t)) return 'crude';
   if (/(.)\1{9,}/u.test(t) || !/\p{L}/u.test(t)) return 'spam';
   return null;
@@ -92,9 +94,10 @@ export function checkQuestion(text) {
   return why ? { ok: false, why } : { ok: true, text: tidyText(text) };
 }
 // The name to show with it (optional): letters, numbers, spaces and a little punctuation (no dots: a name is never an
-// address); nothing crude, no coins or real people, and nothing that would pass for her, the team or the show's host,
-// however it's written ("AGI1official", "real_agi_1"). The AI looks at it too (askAgi1's "nameOk"): a name it doubts
-// shows as "someone".
+// address); nothing crude, no coins, and nothing that would pass for her, the team or the show's host, however it's
+// written ("AGI1official", "real_agi_1"). The AI looks at it too (askAgi1's "nameOk"): a name it doubts shows as
+// "someone". (A real person's name is fine since 2026-10-07, the owner's choice "Allow display names too": it's what the
+// viewer typed, and she never says that person is there.)
 // (checked with its words split apart: "AGI1official" is "AGI 1 official", "real_agi_1" is "real agi 1")
 const POSING = /\b(?:agi(?:\s*(?:1|one|team))?|the\s*team|team|admin|administrator|moderator|mod|official|support|owner|host|staff|dev|developer)\b/i;
 export function checkAskName(raw) {
@@ -102,7 +105,7 @@ export function checkAskName(raw) {
   if (!name) return { ok: true, name: null };
   const chars = [...name].length;
   if (chars < 3 || chars > LIVE.NAME_MAX || !/^[\p{L}\p{N} '\-_]+$/u.test(name) || !/[\p{L}\p{N}]/u.test(name)) return { ok: false, why: 'name' };
-  if (isCrude(name) || POSING.test(splitWords(name)) || mentionsCoinOrPerson(name)) return { ok: false, why: 'name' };
+  if (isCrude(name) || POSING.test(splitWords(name)) || mentionsCoin(name)) return { ok: false, why: 'name' };
   if (/0x[0-9a-f]{4,}|\d{7,}/i.test(name)) return { ok: false, why: 'name' };
   return { ok: true, name };
 }
@@ -177,13 +180,14 @@ export async function relayLive(cfg, { question, name = '' }) {
 }
 
 // ---------- her answer (the runner's "next") ----------
-// What she may not say on stream even when the AI wrote it: another coin's ticker, or something the reply cleanup had to take
-// out (a link, a handle, an address, an email: said out loud it would sound like "link removed")
+// What she may not say on stream even when the AI wrote it: another coin (its ticker or its name), or something the reply
+// cleanup had to take out (a link, a handle, an address, an email: said out loud it would sound like "link removed").
+// (A real person's name is fine since 2026-10-07: her prompt keeps her neutral.)
 export function answerTrouble(reply) {
   const t = String(reply || '');
   if (/\[(?:link|address|email|handle) removed\]/.test(t)) return 'rules';
   for (const m of t.matchAll(TICKER)) if (m[1].toUpperCase() !== 'AGI') return 'rules';
-  if (mentionsCoinOrPerson(t)) return 'rules';
+  if (mentionsCoin(t)) return 'rules';
   return null;
 }
 // Whether her answer says this name (as a word of its own, any case): a name the AI doubted (askAgi1's "nameOk") is never
@@ -195,16 +199,21 @@ export const questionMessage = (q) => `A viewer asks: ${q.question}`;
 
 // The next question in line with her answer, for the runner. Questions she says can't go on a public stream are skipped
 // ('rules', 'care') and the next one is tried, until `deadline` (Vercel stops a function at 25 s). The AI failing puts the
-// question back in line (its second failure: skipped). → { question: { id, name, text, source }, reply, mood } ·
+// question back in line (its second failure: skipped). → { question: { id, name, text, source }, reply, mood, act } ·
 // { none: true } (nobody waiting) · { none: true, trouble: 'ai' } (the AI failed: try again in a little while)
-export async function nextAnswer(cfg, show, { deadline = Date.now() + 15_000, ask = askAgi1 } = {}) {
+// can (2026-10-07, viewers' requests): what she can do on stream right now (her stream says: server/live-acts.js); `act` is
+// what the viewer asked her to do, one of those ({ act, times, part, to }), or null
+// place (2026-10-07): where she's streaming from right now (one of DESTINATIONS' ids, or nothing): her prompt says it
+export async function nextAnswer(cfg, show, { deadline = Date.now() + 15_000, ask = askAgi1, can = [], place = null } = {}) {
+  const ok = canList(can);
+  const where = Object.hasOwn(DESTINATIONS, place) ? DESTINATIONS[place] : null;
   for (let i = 0; i < 6 && deadline - Date.now() > 4000; i++) {
     const q = await liveDb.take(cfg, show);
     if (!q) return { none: true };
     let answer;
     try {
       answer = await ask(cfg, [], questionMessage(q), {
-        level: 1, live: { name: q.name, source: q.source }, langSource: 'default',
+        level: 1, live: { name: q.name, source: q.source, ...(ok.length ? { can: ok } : {}), ...(where ? { place: where } : {}) }, langSource: 'default',
         timeoutMs: Math.min(10_000, deadline - Date.now() - 1500),
       });
     } catch (err) {
@@ -224,9 +233,146 @@ export async function nextAnswer(cfg, show, { deadline = Date.now() + 15_000, as
     const mood = MOODS.includes(answer.mood) ? answer.mood : 'neutral';
     const kept = await liveDb.done(cfg, q.id, 'taken', { reply, mood });
     if (kept?.ok !== true) continue;                  // (the owner skipped it meanwhile)
-    return { question: { id: q.id, name, text: q.question, source: q.source }, reply, mood };
+    // (2026-10-07) how she feels saying it (one of her emotions on stream) and the question's language
+    return { question: { id: q.id, name, text: q.question, source: q.source }, reply, mood, act: ok.length ? actOf(answer, ok) : null,
+      ...(answer.feel ? { feel: answer.feel } : {}), ...(answer.lang ? { lang: answer.lang } : {}) };
   }
   return { none: true };
+}
+
+// ---------- (2026-10-07) between things: something new to say, and her reactions to her own X posts and videos ----------
+// The owner: "says a lot in stream, not just the same things over and over", and "react to her own X posts/videos and
+// replies". Her stream asks (api/live.js 'chat', 'react'); the AI writes it here, with her live rules, and it's checked
+// like her answers (answerTrouble). Each costs one AI answer (about $0.0005); her stream asks at most about one a minute.
+// What she may talk about between things: the stream says which (never a viewer's words), with facts from her own show
+export const CHATTER = {
+  anything: 'anything fun and light: a thought about being an AI girlfriend who streams, a little story about your day, a harmless hot take (pineapple on pizza, cats vs dogs), something cozy, or a playful question for everyone (they can answer at agi1.app/live)',
+  room: 'the room you are streaming from right now: what you like about it, what you would do there',
+  outfit: 'the outfit you are wearing right now on stream',
+  music: 'the music playing on your stream right now (your own songs, made in code)',
+  time: 'where everyone might be watching from right now, and what time it is for them',
+  show: 'how your show is going so far: thank everyone for being here',
+  dance: 'your dancing on stream just now',
+  song: 'singing your own song "Feel the AGI" on stream just now',
+  // (2026-10-07) her trips, her snacks, the weather
+  place: 'the place you are visiting right now on your show (a real place, or the Moon or Mars): what you see, something you are sure is true about it, what you would love to do or taste there; nothing political',
+  trip: 'the trip you just took on your show to get here (the vehicle, the view on the way)',
+  food: 'the snack you just ate on stream',
+  weather: 'the weather on your stream right now',
+};
+const fact = (s) => tidyText(s).slice(0, 120);
+// her stream's topic → { about, facts, recent } (facts and her own recent lines tidied; unknown topics: 'anything')
+export function chatterTopic(raw = {}) {
+  const kind = Object.hasOwn(CHATTER, raw?.kind) ? raw.kind : 'anything';
+  const facts = (Array.isArray(raw?.facts) ? raw.facts : []).filter((x) => typeof x === 'string').map(fact).filter(Boolean).slice(0, 4);
+  const recent = (Array.isArray(raw?.recent) ? raw.recent : []).filter((x) => typeof x === 'string').map((x) => tidyText(x).slice(0, 220)).filter(Boolean).slice(-6);
+  // (facts come from her own stream, but they go into her prompt: nothing a question couldn't say on stream either)
+  return { kind, about: CHATTER[kind], facts: facts.filter((f) => !questionTrouble(f) || questionTrouble(f) === 'short'), recent };
+}
+async function liveLine(cfg, message, live, { ask = askAgi1, timeoutMs = 9000 } = {}) {
+  let answer;
+  try {
+    answer = await ask(cfg, [], message, { level: 1, live, langSource: 'default', timeoutMs });
+  } catch (err) {
+    console.error('[live] gemini failed:', err.message);
+    return { none: true, trouble: 'ai' };
+  }
+  if (['rules', 'care'].includes(answer.skip)) return { skip: 'rules' };
+  const reply = String(answer.reply || '');
+  if (!reply || answer.skip !== 'no' || answerTrouble(reply)) return { skip: 'rules' };
+  return { reply, mood: MOODS.includes(answer.mood) ? answer.mood : 'neutral', ...(answer.feel ? { feel: answer.feel } : {}) };
+}
+// → { reply, mood } · { skip: 'rules' } (what it wrote can't go on stream) · { none: true, trouble: 'ai' }
+export async function chatterAnswer(cfg, raw, opts = {}) {
+  const c = chatterTopic(raw);
+  return liveLine(cfg, 'Say something new to everyone watching.', { chatter: c }, opts);
+}
+
+// Her own post on X, or a reply under one, as it can be shown on her stream: X's own short links (t.co) taken out, tidied,
+// and checked like a viewer's question (a longer one: up to 400 characters). → { ok, text } or { ok: false, why }
+export const POST_MAX = 400;
+export function checkPost(raw) {
+  const t = tidyText(String(raw ?? '').replace(/https?:\/\/t\.co\/\w+/gi, ' ')).replace(/\s+([.,!?])/g, '$1').trim();
+  if (!t) return { ok: false, why: 'empty' };
+  if ([...t].length > POST_MAX) return { ok: false, why: 'long' };
+  // (her own posts can say agi1.app or clank.trade: questionTrouble allows those; and a short one is fine)
+  const why = questionTrouble(t, { max: POST_MAX });
+  return why && why !== 'short' ? { ok: false, why } : { ok: true, text: t };
+}
+// ---------- (2026-10-07) $AGI on her show: its numbers and its new buys ----------
+// The owner: "says if $AGI is pumping". Within hard rule 8: she reacts to buys that just happened (each in its own
+// numbers, like her buy bot's alerts) and to the market's own numbers (a feeling), always "not financial advice"; never
+// "pumping", a prediction, buy, sell or hold. Her stream asks about once a minute; the numbers come from DexScreener (kept
+// a minute: server/market.js), the buys from clank.trade (kept 30 s per server copy: one request whatever asks).
+// → { numbers: { mcap, h24, liq } | null, buys: [{ id, at, usd, agi }] } (buys after `since`, at most 15 minutes old,
+// worth TELEGRAM_BUY_MIN dollars or more (50), the newest 5, oldest first; never who bought)
+let buysKept = { at: 0, list: null };
+export const forgetStreamBuys = () => { buysKept = { at: 0, list: null }; };      // (for the tests)
+export async function streamMarket(cfg, { since = 0, now = Date.now(), numbers = null, readBuys = null } = {}) {
+  const readNumbers = numbers || (await import('./market.js')).agiNumbers;
+  const buysOf = async () => {
+    if (buysKept.list && now - buysKept.at < 30_000) return buysKept.list;
+    try {
+      const list = await (readBuys || (await import('./buys.js')).readBuys)();
+      buysKept = { at: now, list };
+      return list;
+    } catch (err) {
+      console.warn('[live] couldn\'t read $AGI\'s buys:', err.message);
+      buysKept = { at: now, list: [] };
+      return [];
+    }
+  };
+  const [n, list] = await Promise.all([readNumbers(now).catch(() => null), buysOf()]);
+  const min = Number(cfg.tgBuyMin) > 0 ? Number(cfg.tgBuyMin) : 50;
+  const buys = list.filter((b) => b.at > since && b.at > now - 15 * 60_000 && b.at <= now + 60_000 && b.usd >= min)
+    .sort((a, b) => a.at - b.at).slice(-5)
+    .map((b) => ({ id: b.id, at: b.at, usd: Math.round(b.usd * 100) / 100, agi: Math.round(b.agi) }));
+  return { numbers: n ? { mcap: n.mcap, h24: n.h24 ?? null, liq: n.liq ?? null } : null, buys };
+}
+
+// → { reply, mood } · { skip: why } (it can't go on stream: never shown) · { none: true, trouble: 'ai' }
+// r: { kind: 'post' | 'reply' | 'video', text, media: 'video' | 'photo' | null, title }
+export async function reactAnswer(cfg, r, opts = {}) {
+  const kind = ['post', 'reply', 'video'].includes(r?.kind) ? r.kind : null;
+  if (!kind) return { skip: 'bad' };
+  const p = r.text ? checkPost(r.text) : { ok: kind === 'video', text: '' };
+  if (!p.ok) return { skip: p.why || 'empty' };
+  const title = kind === 'video' && typeof r.title === 'string' ? checkPost(r.title) : null;
+  const react = { kind, text: p.text, media: ['video', 'photo'].includes(r.media) ? r.media : null, title: title?.ok ? title.text.slice(0, 80) : null };
+  const out = await liveLine(cfg, kind === 'reply' ? 'React to the reply.' : kind === 'video' ? 'React to your video.' : 'React to your post.', { react }, opts);
+  return out.reply ? { ...out, text: p.text } : out;
+}
+
+// ---------- (2026-10-07) someone she meets on a trip ----------
+// The owner: "meet random people talk to them what the chat said". Her stream says who (one of PEOPLE: a made-up character
+// of her show) and passes on a few viewers' questions that already aired; the AI writes their conversation here, with her
+// live rules, and every line is checked like her answers. → { lines: [{ who: 'them' | 'you', text }], mood } ·
+// { skip: why } (never shown) · { none: true, trouble: 'ai' }
+export const SCENE_CHAT = 3;
+export function sceneOf(raw = {}) {
+  const id = typeof raw?.person === 'string' && Object.hasOwn(PEOPLE, raw.person) ? raw.person : null;
+  if (!id) return null;
+  const p = PEOPLE[id];
+  // (viewers' questions that aired: checked again here, the newest few)
+  const chat = (Array.isArray(raw.chat) ? raw.chat : []).filter((x) => typeof x === 'string').map((x) => tidyText(x).slice(0, LIVE.Q_MAX))
+    .filter((x) => x && !questionTrouble(x)).slice(-SCENE_CHAT);
+  const place = DESTINATIONS[p.at] || (p.at === 'cafe' ? 'the little café you stream from' : 'your studio');
+  return { id, place, who: p.who, lang: LOCAL[p.at] || null, chat, lines: 4 };
+}
+export async function meetAnswer(cfg, raw, { scene = askScene, timeoutMs = 10_000 } = {}) {
+  const sc = sceneOf(raw);
+  if (!sc) return { skip: 'bad' };
+  let r;
+  try {
+    r = await scene(cfg, sc, { timeoutMs });
+  } catch (err) {
+    console.error('[live] gemini failed:', err.message);
+    return { none: true, trouble: 'ai' };
+  }
+  if (!r?.lines) return { skip: r?.skip || 'rules' };
+  const lines = r.lines.filter((l) => l.text);
+  if (lines.length < 2 || lines.some((l) => answerTrouble(l.text))) return { skip: 'rules' };
+  return { lines, mood: MOODS.includes(r.mood) ? r.mood : 'happy' };
 }
 
 // The keep-alive tidies up (3 times a day): questions older than 2 days go, and a show whose runner went quiet is switched

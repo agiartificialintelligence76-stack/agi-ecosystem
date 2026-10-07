@@ -16,8 +16,12 @@ export function splitWords(text) {
   return a === b ? a : `${a} · ${b}`;
 }
 
-// Another coin, or a real person: only $AGI, and never real people, on her show (the owner's rules). The obvious ones; the
-// AI judges the rest. (ETH stays allowed: it's Robinhood Chain's own money.)
+// Another coin: only $AGI on her show (the owner's rule). The obvious ones; the AI judges the rest. (ETH stays allowed: it's
+// Robinhood Chain's own money.) Real people: since 2026-10-07 (the owner: "change the restriction when they ask a name like a
+// specific person … always be neutral on the answers on that") a question, a reply under her posts and a viewer's display
+// name may name real people, and she stays neutral (her live prompt: server/agi1-prompt.js). REAL_PEOPLE stays for her
+// diary on stream (tools/live/lines.js: written for the site, never read out when it names someone) and her pre-written
+// lines' tests.
 const words = (list) => new RegExp(`\\b(?:${list.join('|')})\\b`, 'i');
 export const OTHER_COINS = words(['bitcoin', 'btc', 'solana', 'doge(?:coin)?', 'shib(?:a(?:\\s*inu)?)?', 'pepe', 'bonk', 'dogwifhat', 'wif', 'floki', 'xrp',
   'cardano', 'bnb', 'binance', 'tether', 'usdt', 'usdc', 'fartcoin', 'pengu', 'spcx', 'clankcat', 'clankcap', 'pump\\s*fun', 'pumpfun']);
@@ -27,6 +31,8 @@ export const mentionsCoinOrPerson = (text) => {
   const t = splitWords(text);
   return OTHER_COINS.test(t) ? 'coin' : REAL_PEOPLE.test(t) ? 'person' : null;
 };
+// (2026-10-07) another coin only: what a question, a name or her answer on stream may never have
+export const mentionsCoin = (text) => OTHER_COINS.test(splitWords(text));
 
 // Someone going through something heavy: never in her line, never read on stream. They get a caring note at once instead
 // (on the site and in her bot); the AI catches what this misses ("skip": "care"). (Curly apostrophes are made straight

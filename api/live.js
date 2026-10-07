@@ -9,7 +9,12 @@
 //       owner's controls · { action: 'next', show } → the next question with her answer · { action: 'done', show, id, status:
 //       'answered' | 'skipped', why? } · { action: 'back', show, id } (back in line: she was paused) · { action: 'stop', show,
 //       next? } · { action: 'schedule', next } · { action: 'on_x', show } (2026-10-07: she's streaming on X now; her Telegram
-//       groups hear it once a day)
+//       groups hear it once a day) · (2026-10-07, the owner's stream upgrade) 'next' with { can: [what she can do on stream
+//       now] } → also { act } (a viewer asked her to jump, dance, sing…) · { action: 'chat', show, topic } → something new to
+//       say · { action: 'react', show, react: { kind: 'post' | 'reply' | 'video', text, media, title } } → her reaction to
+//       her own X post, a reply under one, or her video · { action: 'market', show, since } → $AGI's numbers and new buys
+//       · (2026-10-07) { action: 'meet', show, meet: { person, chat: [questions that aired] } } → her conversation with
+//       someone she meets on a trip; 'next' may carry { place } (where she's streaming from)
 //     with "Authorization: Bearer <the owner's key>" (made from LIVE_SECRET: agi1.app/live#admin=…, the owner's phone):
 //       { action: 'control', do: 'view' | 'pause' | 'resume' | 'close' | 'open' | 'end' | 'skip' | 'drop' | 'clear' | 'block' |
 //       'unblock', arg? } · { action: 'relay', question, name? } (2026-10-07: a question from X's live chat, passed on)
@@ -17,10 +22,12 @@
 import { getConfig, missingSettings } from '../server/config.js';
 import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass } from '../server/security.js';
 import { verifyHuman } from '../server/turnstile.js';
-import { liveBurst, liveLookupBurst, liveAuthBurst } from '../server/burst.js';
+import { liveBurst, liveLookupBurst, liveAuthBurst, liveLineBurst } from '../server/burst.js';
 import {
   liveReady, whoIs, liveDb, askLive, checkQuestion, checkAskName, makeTicket, readTicket, nextAnswer, relayName, relayLive, WATCH_URL, STATUSES, LIVE,
+  chatterAnswer, reactAnswer, streamMarket, meetAnswer,
 } from '../server/live.js';
+import { canList } from '../server/live-acts.js';
 import { tgToken } from '../server/tg-api.js';
 
 const MAX_BODY = 4096;
@@ -173,7 +180,36 @@ async function runner(cfg, body) {
         console.error('[live] GEMINI_API_KEY is missing: she can\'t answer questions');
         return json(200, { none: true, trouble: 'ai' });
       }
-      return json(200, await nextAnswer(cfg, show, { deadline: Date.now() + 18_000 }));
+      // (2026-10-07, viewers' requests) what she can do on stream right now: only the ones server/live-acts.js knows; and
+      // where she's streaming from (one of her places, or nothing)
+      return json(200, await nextAnswer(cfg, show, { deadline: Date.now() + 18_000, can: canList(body.can), place: typeof body.place === 'string' ? body.place : null }));
+    }
+    case 'meet': {
+      // (2026-10-07) someone she meets on a trip: their conversation (one AI answer, like her lines between things)
+      if (!show) return json(400, { error: 'bad_request' });
+      if (!cfg.geminiKey) return json(200, { none: true, trouble: 'ai' });
+      if (!liveLineBurst('stream')) return json(429, { error: 'too_fast' });
+      const m = body.meet && typeof body.meet === 'object' ? body.meet : {};
+      return json(200, await meetAnswer(cfg, { person: m.person, chat: Array.isArray(m.chat) ? m.chat.slice(0, 6) : [] }));
+    }
+    case 'chat':
+    case 'react': {
+      // (2026-10-07) something new to say between things, or her reaction to her own X post, a reply under one, or her video
+      if (!show) return json(400, { error: 'bad_request' });
+      if (!cfg.geminiKey) return json(200, { none: true, trouble: 'ai' });
+      if (!liveLineBurst('stream')) return json(429, { error: 'too_fast' });
+      if (body.action === 'chat') return json(200, await chatterAnswer(cfg, body.topic && typeof body.topic === 'object' ? body.topic : {}));
+      const r = body.react && typeof body.react === 'object' ? body.react : {};
+      return json(200, await reactAnswer(cfg, {
+        kind: r.kind, media: r.media,
+        text: typeof r.text === 'string' ? r.text.slice(0, 1000) : '', title: typeof r.title === 'string' ? r.title.slice(0, 200) : '',
+      }));
+    }
+    case 'market': {
+      // (2026-10-07) $AGI's numbers and its new buys, for her alerts and her feelings about the chart (never advice)
+      if (!show) return json(400, { error: 'bad_request' });
+      const since = Number.isFinite(body.since) && body.since > 0 ? body.since : 0;
+      return json(200, await streamMarket(cfg, { since }));
     }
     case 'back': {
       // a question she had ready when the owner paused her: back in line, so it's answered fresh after the break

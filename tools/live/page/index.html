@@ -1,7 +1,9 @@
 <!doctype html>
 <!-- AGI-1's live show (2026-10-02): the scene her stream shows, 1280 × 720. Not part of the website: only
      tools/live/run.mjs builds it (into tools/live/dist) and shows it in a browser window on the owner's server, which ffmpeg
-     sends to X. tools/live/page/stage.js runs it (window.studio). -->
+     sends to X. tools/live/page/stage.js runs it (window.studio). Since 2026-10-07 also her rooms (rooms.js), her outfits
+     (outfits.js), her moves (moves.js) and her effects (fx.js); and her trips (places.js, vehicles.js), the people she meets
+     (people.js), her food (food.js) and the weather (weather.js). -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -10,28 +12,65 @@
     <link rel="stylesheet" href="./stage.css" />
   </head>
   <body>
-    <div class="set" data-set data-overlay="starting">
+    <div class="set" data-set data-overlay="starting" data-room="studio">
       <canvas class="set-bg" data-bg width="1280" height="720" aria-hidden="true"></canvas>
+      <div class="amb" data-amb aria-hidden="true"></div>
+      <canvas class="wx-back" data-wx-back width="1280" height="720" aria-hidden="true" hidden></canvas>
+      <div class="npc" data-npc aria-hidden="true" hidden><canvas width="300" height="560"></canvas></div>
+      <div class="veh" data-veh-back aria-hidden="true" hidden></div>
       <div class="her"><canvas class="her-pic" data-pic aria-hidden="true"></canvas></div>
+      <div class="veh veh-front" data-veh-front aria-hidden="true" hidden></div>
+      <canvas class="wx-front" data-wx-front width="640" height="328" aria-hidden="true" hidden></canvas>
+      <div class="fx" data-fx aria-hidden="true"><canvas class="confetti" data-confetti width="1280" height="720" hidden></canvas></div>
 
       <header class="top">
         <span class="live-pill"><span class="live-dot"></span>LIVE <span class="live-clock" data-clock>00:00</span></span>
         <span class="brand">AGI-1</span>
+        <span class="place-chip" data-place hidden><span class="place-pin">📍</span><b data-place-name></b><span data-place-country></span></span>
+        <span class="song-chip" data-song hidden></span>
         <span class="label">AI-generated · not financial advice</span>
       </header>
 
+      <div class="alert" data-alert hidden>
+        <span class="alert-icon" data-alert-icon></span>
+        <span class="alert-text"><b data-alert-title></b><span data-alert-sub></span></span>
+      </div>
+
       <section class="card" data-card hidden>
+        <div class="card-post" data-card-post hidden>
+          <img class="card-avatar" src="/images/agi1-avatar.webp" alt="" width="44" height="44" />
+          <span class="card-who"><b>AGI-1</b><span>@agi1dotapp</span></span>
+          <span class="card-x" aria-hidden="true">𝕏</span>
+        </div>
         <p class="card-kicker" data-card-kicker></p>
         <h1 class="card-title" data-card-title></h1>
         <ul class="card-list" data-card-list></ul>
         <p class="card-body" data-card-body></p>
+        <dl class="card-stats" data-card-stats></dl>
+        <p class="card-foot" data-card-foot></p>
       </section>
+
+      <div class="tv" data-tv hidden>
+        <div class="tv-screen"><video data-video muted playsinline preload="auto"></video><img data-tv-img alt="" hidden /></div>
+        <p class="tv-label" data-tv-label></p>
+      </div>
+
+      <div class="route" data-route hidden>
+        <p class="route-kicker" data-route-kicker>On my way</p>
+        <p class="route-line"><b data-route-from></b><span class="route-arrow" data-route-icon>➜</span><b data-route-to></b></p>
+        <div class="route-bar"><i></i></div>
+      </div>
+
+      <div class="npc-bubble" data-npc-bubble hidden><b data-npc-name></b><p data-npc-text></p></div>
+
+      <div class="karaoke" data-karaoke hidden><p data-karaoke-line></p></div>
 
       <div class="caption" data-caption hidden><p data-caption-text></p></div>
 
       <footer class="ask">
         <span class="ask-cta">Ask me at <b>agi1.app/live</b></span>
         <span class="ask-queue" data-queue></span>
+        <span class="ask-hint" data-hint></span>
         <span class="ask-rules">18+ · PG-13 · I'm an AI · only $AGI here</span>
       </footer>
 
@@ -40,6 +79,9 @@
         <h2 class="overlay-title" data-overlay-title>Starting soon</h2>
         <p class="overlay-sub" data-overlay-sub></p>
       </div>
+
+      <div class="flash" data-flash aria-hidden="true"></div>
+      <div class="wipe" data-wipe aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     </div>
     <script type="module" src="./stage.js"></script>
   </body>

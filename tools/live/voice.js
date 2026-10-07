@@ -106,9 +106,10 @@ export function samplesToPcm(samples) {
 
 // ---------- the requests ----------
 // What the speech model reads: her style ("director's notes") and the words, kept apart, so she never reads the notes out
-export const promptFor = (words, style) => `## DIRECTOR'S NOTES\nVoice: a young woman, the same voice every time. Style: ${style}\n\n## TRANSCRIPT\n${words}`;
+// (2026-10-07) who: whose voice it is (hers: "a young woman"; the people she meets on her trips have their own: people.js)
+export const promptFor = (words, style, who = 'a young woman') => `## DIRECTOR'S NOTES\nVoice: ${who}, the same voice every time. Style: ${style}\n\n## TRANSCRIPT\n${words}`;
 // Vertex AI (Gemini 3.8 Flash-Lite TTS): https://aiplatform.googleapis.com/v1beta1/projects/{p}/locations/{l}/publishers/google/models/{m}:generateContent
-export function vertexRequest(s, words, style, { bearer = null } = {}) {
+export function vertexRequest(s, words, style, { bearer = null, voiceName = null, who = undefined } = {}) {
   const host = s.location === 'global' ? 'aiplatform.googleapis.com' : `${s.location}-aiplatform.googleapis.com`;
   const path = s.project
     ? `/v1beta1/projects/${encodeURIComponent(s.project)}/locations/${encodeURIComponent(s.location)}/publishers/google/models/${encodeURIComponent(s.vertexModel)}:generateContent`
@@ -119,15 +120,15 @@ export function vertexRequest(s, words, style, { bearer = null } = {}) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(bearer ? { Authorization: `Bearer ${bearer}` } : { 'x-goog-api-key': s.apiKey }) },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: promptFor(words, style) }] }],
-        generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: s.voice } } } },
+        contents: [{ role: 'user', parts: [{ text: promptFor(words, style, who) }] }],
+        generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || s.voice } } } },
       }),
       signal: AbortSignal.timeout(s.timeoutMs || 15_000),
     },
   };
 }
 // Cloud Text-to-Speech (Gemini voices): https://texttospeech.googleapis.com/v1/text:synthesize (the style apart, as "prompt")
-export function cloudRequest(s, words, style, { bearer = null } = {}) {
+export function cloudRequest(s, words, style, { bearer = null, voiceName = null } = {}) {
   return {
     url: 'https://texttospeech.googleapis.com/v1/text:synthesize',
     init: {
@@ -136,7 +137,7 @@ export function cloudRequest(s, words, style, { bearer = null } = {}) {
         ...(bearer && s.project ? { 'x-goog-user-project': s.project } : {}) },
       body: JSON.stringify({
         input: { prompt: style, text: words },
-        voice: { languageCode: 'en-US', name: s.voice, modelName: s.cloudModel },
+        voice: { languageCode: 'en-US', name: voiceName || s.voice, modelName: s.cloudModel },
         audioConfig: { audioEncoding: 'LINEAR16', sampleRateHertz: RATE },
       }),
       signal: AbortSignal.timeout(s.timeoutMs || 15_000),
@@ -177,22 +178,22 @@ export function createVoice(settings, { fetchFn = fetch, log = console } = {}) {
   }
   const resting = new Map();            // a way that said "wait": not asked again until then
   const ways = {
-    async vertex(words, style) {
+    async vertex(words, style, v = {}) {
       if (saError) throw saError;
       if (!sa && !settings.apiKey) throw new Error('vertex: no GOOGLE_APPLICATION_CREDENTIALS key file or LIVE_GCP_API_KEY');
       const bearer = sa ? await accessToken(sa, { fetchFn }) : null;
-      const { url, init } = vertexRequest(settings, words, style, { bearer });
+      const { url, init } = vertexRequest(settings, words, style, { bearer, voiceName: v.name, who: v.who });
       const res = await fetchFn(url, init);
       if (!res.ok) { if (res.status === 401) forgetToken(); throw await failed(res, 'vertex', ' (enable the "Agent Platform API" for the project (formerly "Vertex AI API"), and give the service account the "Agent Platform User" role (formerly "Vertex AI User"))'); }
       const audio = vertexAudio(await res.json());
       if (!audio || audio.samples.length < 2400) throw new Error('vertex: no audio in the answer');
       return audio;
     },
-    async cloud(words, style) {
+    async cloud(words, style, v = {}) {
       if (saError) throw saError;
       if (!sa && !settings.apiKey) throw new Error('cloud: no GOOGLE_APPLICATION_CREDENTIALS key file or LIVE_GCP_API_KEY');
       const bearer = sa ? await accessToken(sa, { fetchFn }) : null;
-      const { url, init } = cloudRequest(settings, words, style, { bearer });
+      const { url, init } = cloudRequest(settings, words, style, { bearer, voiceName: v.name });
       const res = await fetchFn(url, init);
       if (!res.ok) { if (res.status === 401) forgetToken(); throw await failed(res, 'cloud tts', ' (enable the "Cloud Text-to-Speech API" for the project)'); }
       const data = await res.json();
@@ -200,10 +201,10 @@ export function createVoice(settings, { fetchFn = fetch, log = console } = {}) {
       const w = readWav(Buffer.from(data.audioContent, 'base64'));
       return { samples: w.samples, rate: w.rate };
     },
-    async gemini(words, style) {
+    async gemini(words, style, v = {}) {
       if (!settings.geminiKey) throw new Error('gemini: no GEMINI_API_KEY');
       const { speakAsAgi1 } = await import('../../server/voice.js');
-      const wav = await speakAsAgi1({ geminiKey: settings.geminiKey, voiceModel: 'gemini-3.8-flash-lite-tts', voiceName: settings.voice }, words, style, { timeoutMs: settings.timeoutMs || 15_000 });
+      const wav = await speakAsAgi1({ geminiKey: settings.geminiKey, voiceModel: 'gemini-3.8-flash-lite-tts', voiceName: v.name || settings.voice }, words, style, { timeoutMs: settings.timeoutMs || 15_000 });
       const w = readWav(wav);
       return { samples: w.samples, rate: w.rate };
     },
@@ -213,23 +214,27 @@ export function createVoice(settings, { fetchFn = fetch, log = console } = {}) {
     },
   };
   const modelOf = (way) => ({ vertex: settings.vertexModel, cloud: settings.cloudModel, gemini: 'gemini-3.8-flash-lite-tts', fake: 'stand-in' }[way]);
-  const cacheFile = (way, words, style) => join(settings.cacheDir, `${createHash('sha256').update([way, modelOf(way), settings.voice, style, words].join('\n')).digest('hex').slice(0, 32)}.pcm`);
+  // (another voice than hers: its name and who it is are part of its key; hers stay as they were, so her kept lines stay kept)
+  const cacheFile = (way, words, style, v = null) => join(settings.cacheDir, `${createHash('sha256').update([way, modelOf(way), v?.name || settings.voice, style, words, ...(v ? [v.who || ''] : [])].join('\n')).digest('hex').slice(0, 32)}.pcm`);
 
   // text: what she says (her captions); options: say (how to say it, if different), mood, keep (a pre-written line: kept on disk)
-  async function speak(text, { say = null, mood = 'neutral', keep = false, now = Date.now } = {}) {
+  // (2026-10-07) voice: { name, who, style }: someone else's voice (the people she meets on her trips: Google's ready-made
+  // voices, never hers), their own style instead of her mood's
+  async function speak(text, { say = null, mood = 'neutral', keep = false, now = Date.now, voice = null } = {}) {
     const words = spokenText(say || text);
     if (!words) return null;
-    const style = styleFor(mood);
+    const v = voice && typeof voice.name === 'string' && /^[A-Z][a-z]+$/.test(voice.name) ? { name: voice.name, who: String(voice.who || 'a person').slice(0, 80), style: String(voice.style || '').slice(0, 300) } : null;
+    const style = v ? v.style || 'Friendly and natural.' : styleFor(mood);
     for (const way of settings.order) {
       // (a line kept on disk plays even while its way rests: nothing is asked of Google for it)
-      const file = keep ? cacheFile(way, words, style) : null;
+      const file = keep ? cacheFile(way, words, style, v) : null;
       if (file && existsSync(file)) {
         try { return { samples: pcmToSamples(readFileSync(file)), rate: RATE, by: `${way} (kept)` }; } catch { /* make it again */ }
       }
       if ((resting.get(way) || 0) > now()) continue;
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          let audio = await ways[way](words, style);
+          let audio = await ways[way](words, style, v || {});
           if (audio.rate !== RATE) audio = { samples: resample(audio.samples, audio.rate, RATE), rate: RATE };
           if (file) {
             try { mkdirSync(settings.cacheDir, { recursive: true }); writeFileSync(`${file}.part`, samplesToPcm(audio.samples)); renameSync(`${file}.part`, file); } catch (err) { log.warn?.(`[voice] couldn't keep a line: ${err.message}`); }

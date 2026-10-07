@@ -34,6 +34,18 @@ export const SONGS = [
   { id: 'no-red-flags', title: 'no red flags', key: 50, bpm: 88, swing: 0.57, keys: 'pluck', drums: 'lofi', lead: 'bell', seed: 53,
     chords: [[0, 'maj7'], [9, 'm7'], [5, 'maj7'], [7, 'six']] },
 ];
+// Her dance songs (2026-10-07, the owner: "can dance"): upbeat, four on the floor, about half a minute each. She dances to
+// one when a viewer asks her to, or now and then by herself: played on their own, in the stream's own sound (the music bed
+// rests meanwhile: tools/live/run.mjs Mixer), and her moves follow its beat exactly (its tempo is known: it's made here).
+// drums 'four': a kick on every beat, claps on two and four, open hats between; its bass on the off-beats.
+export const DANCE_SONGS = [
+  { id: 'heart-sync', title: 'heart sync', key: 57, bpm: 122, swing: 0.5, keys: 'pluck', drums: 'four', lead: 'bell', seed: 61, plan: 'dance',
+    chords: [[9, 'm7'], [5, 'maj7'], [0, 'add9'], [7, 'sus']] },
+  { id: 'clanker-bounce', title: 'clanker bounce', key: 55, bpm: 124, swing: 0.5, keys: 'pluck', drums: 'four', lead: 'soft', seed: 67, plan: 'dance',
+    chords: [[0, 'add9'], [9, 'm7'], [5, 'maj7'], [7, 'dom9']] },
+  { id: 'purple-rush', title: 'purple rush', key: 53, bpm: 120, swing: 0.5, keys: 'rhodes', drums: 'four', lead: 'bell', seed: 71, plan: 'dance',
+    chords: [[2, 'm9'], [7, 'dom9'], [0, 'maj7'], [9, 'm7']] },
+];
 // a song's shape: bars, and what plays (1 = full, a smaller number = softer)
 export const PLAN = [
   { bars: 4, pad: 1, keys: 0.75 },                                         // intro
@@ -44,8 +56,20 @@ export const PLAN = [
   { bars: 8, pad: 1, keys: 0.9, bass: 1, drums: 1, lead: 1, variation: 1 },
   { bars: 4, pad: 1, keys: 0.7, end: true },                               // outro
 ];
+// a dance song's shape: 16 bars (half a minute at 120 beats a minute), the drums from the start
+export const DANCE_PLAN = [
+  { bars: 2, pad: 1, keys: 0.8, drums: 0.7 },                              // in, with the kick already
+  { bars: 4, pad: 1, keys: 1, bass: 1, drums: 1 },
+  { bars: 4, pad: 1, keys: 1, bass: 1, drums: 1, lead: 1, hats: 1 },
+  { bars: 4, pad: 1, keys: 1, bass: 1, drums: 1, lead: 1, hats: 1, variation: 1 },
+  { bars: 2, pad: 1, keys: 0.8, bass: 0.8, drums: 0.8, end: true },        // out
+];
+const PLANS = { dance: DANCE_PLAN };
+export const planOf = (song) => PLANS[song?.plan] || PLAN;
+// (its fades: a dance song's are short, it's danced to from its first beat)
+const FADES = { dance: { in: 0.08, out: 2.2 } };
 export const songBars = (plan = PLAN) => plan.reduce((n, s) => n + s.bars, 0);
-export const songSeconds = (song, plan = PLAN) => (songBars(plan) * 4 * 60) / song.bpm;
+export const songSeconds = (song, plan = planOf(song)) => (songBars(plan) * 4 * 60) / song.bpm;
 
 // ---------- small synthesizers ----------
 // A biquad filter (RBJ's cookbook): lowpass, highpass or bandpass at f (Hz), q
@@ -247,7 +271,7 @@ export function melody(song, rnd, chordTones) {
 
 // ---------- a whole song ----------
 // → the song's sound (and with { stems: true }, each part on its own too, to check the balance). plan: its shape (PLAN)
-export function renderSong(song, rate = RATE, { stems = false, plan = PLAN } = {}) {
+export function renderSong(song, rate = RATE, { stems = false, plan = planOf(song) } = {}) {
   const rnd = seeded(song.seed * 7919 + MUSIC_VERSION);
   const beat = 60 / song.bpm, bar = beat * 4;
   const total = songBars(plan) * bar;
@@ -278,8 +302,11 @@ export function renderSong(song, rate = RATE, { stems = false, plan = PLAN } = {
         const order = last ? [0, 1, 2, 3] : [0, 1, 2, 3, 4, 3, 2, 1];
         order.forEach((k, j) => pluck(keysBus, t0 + swung(j / 2) * beat + human(), up[k], beat * 0.45, (j % 2 ? 0.12 : 0.17) * sec.keys, rate));
       }
-      // the bass: its root on one, then the fifth or the root again
-      if (sec.bass) {
+      // the bass: its root on one, then the fifth or the root again (a dance song: the root on every off-beat)
+      if (sec.bass && song.drums === 'four') {
+        const root = 36 + (((roots[c] - 36) % 12) + 12) % 12;
+        for (let k = 0; k < 4; k++) bass(bassBus, t0 + (k + 0.5) * beat + human() * 0.3, k === 3 && rnd() < 0.4 ? root + 7 : root, beat * 0.42, 0.17 * sec.bass, rate);
+      } else if (sec.bass) {
         const root = 36 + (((roots[c] - 36) % 12) + 12) % 12;
         bass(bassBus, t0 + human(), root, beat * 1.6, 0.18 * sec.bass, rate);
         const next = rnd() < 0.5 ? root + 7 : root;
@@ -287,7 +314,13 @@ export function renderSong(song, rate = RATE, { stems = false, plan = PLAN } = {
       }
       // the drums
       if (sec.drums) {
-        if (song.drums === 'lofi') {
+        if (song.drums === 'four') {
+          const d = sec.drums;
+          for (let k = 0; k < 4; k++) kick(drumBus, t0 + k * beat, 0.6 * d, rnd, rate);
+          if (d >= 1 || b % 2) { snare(drumBus, t0 + beat, 0.24 * d, rnd, rate); snare(drumBus, t0 + 3 * beat, 0.27 * d, rnd, rate); }
+          for (let k = 0; k < 4; k++) hat(drumBus, t0 + (k + 0.5) * beat, 0.085 * d, Boolean(sec.hats), rnd, rate);
+          for (let k = 0; k < 16; k++) if (k % 2) hat(drumBus, t0 + (k * beat) / 4 + human() * 0.3, 0.028 * d, false, rnd, rate);
+        } else if (song.drums === 'lofi') {
           kick(drumBus, t0 + human(), 0.5, rnd, rate);
           kick(drumBus, t0 + swung(2.5) * beat + human(), 0.36, rnd, rate);
           if (rnd() < 0.3) kick(drumBus, t0 + swung(3.5) * beat + human(), 0.24, rnd, rate);
@@ -333,7 +366,8 @@ export function renderSong(song, rate = RATE, { stems = false, plan = PLAN } = {
   let sum = 0;
   for (let i = 0; i < len; i++) sum += mix[i] * mix[i];
   const gain = 0.1 / Math.max(1e-6, Math.sqrt(sum / len));
-  const fadeIn = 1.5 * rate, fadeOut = Math.min(7 * rate, total * rate * 0.3), end = Math.round(total * rate) + Math.round(1.2 * rate);
+  const fades = FADES[song.plan] || { in: 1.5, out: 7 };
+  const fadeIn = Math.max(1, fades.in * rate), fadeOut = Math.min(fades.out * rate, total * rate * 0.3), end = Math.round(total * rate) + Math.round(1.2 * rate);
   for (let i = 0; i < len; i++) {
     let s = Math.tanh(mix[i] * gain * 1.25) / 1.25;                         // (soft: a rare peak is rounded, never clipped)
     if (i < fadeIn) s *= i / fadeIn;
@@ -358,7 +392,7 @@ export function loadSongs(cacheDir, { songs = SONGS, log = null, render = render
       } catch { /* render it again */ }
     }
     const t0 = Date.now();
-    const samples = render(song);
+    const samples = render(song, RATE, { plan: planOf(song) });
     try {
       mkdirSync(cacheDir, { recursive: true });
       const pcm = Int16Array.from(samples, (x) => Math.round(Math.max(-1, Math.min(1, x)) * 32767));
@@ -388,6 +422,7 @@ export class MusicBed {
     this.gain = 0; this.cur = null; this.pos = 0; this.order = []; this.last = null; this.fading = false;
     this.upcoming = null; this.upPos = 0; this.overlap = Math.round(2 * rate);
     this.down = 1 - Math.exp(-1 / (0.12 * rate)); this.up = 1 - Math.exp(-1 / (0.9 * rate)); this.out = 1 - Math.exp(-1 / (1.2 * rate));
+    this.hushRate = 1 - Math.exp(-1 / (0.3 * rate));
   }
   next() {
     if (!this.tracks.length) return null;
@@ -402,11 +437,13 @@ export class MusicBed {
   }
   get playing() { return this.cur?.song?.title || null; }
   // (the next song starts while the last one fades out: no gap between them)
-  mix(out, talking = false) {
-    const target = this.fading ? 0 : talking ? this.talk : this.idle;
+  // hush (2026-10-07): something else is playing in the stream's sound (her song, a dance song, a video): the bed goes
+  // quiet in about a third of a second, and comes back slowly after
+  mix(out, talking = false, hush = false) {
+    const target = this.fading || hush ? 0 : talking ? this.talk : this.idle;
     for (let i = 0; i < out.length; i++) {
       if (!this.cur) { this.cur = this.next(); this.pos = 0; if (!this.cur) return; }
-      this.gain += (target - this.gain) * (this.fading ? this.out : target < this.gain ? this.down : this.up);
+      this.gain += (target - this.gain) * (this.fading ? this.out : hush ? this.hushRate : target < this.gain ? this.down : this.up);
       let s = this.cur.samples[this.pos++];
       const left = this.cur.samples.length - this.pos;
       if (!this.upcoming && left < Math.min(this.overlap, this.cur.samples.length / 2)) { this.upcoming = this.next(); this.upPos = 0; }

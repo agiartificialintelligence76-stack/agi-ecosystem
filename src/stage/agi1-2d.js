@@ -163,6 +163,9 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE, armR
   const hipsAt = boxOf(core, ['leg_L', 'leg_R'].map(piece), {}).y1 ?? 0;
   const posture = { R: { shoulder: 0, elbow: 0, wrist: 0 }, L: { shoulder: 0, elbow: 0, wrist: 0 }, hip: 0 };
   const own = (i) => D.vertexPositions[i];
+  // (2026-10-07, her live show's upgrade: hooks.afterDeform(core) runs after her arms and hips each frame, before she's
+  // drawn: her show moves her brows and puts her accessories where her pieces are. Nothing on the website sets it.)
+  const hooks = { afterDeform: null };
   function deform() {
     meshes.expand();                                 // her finer pieces from what her model just worked out
     bendArm(drawn.R, posture.R, finePos, finePos);
@@ -170,13 +173,15 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE, armR
     bendArm(arms.R, posture.R, own, own);            // her model's own vertices too: taps and her markers
     bendArm(arms.L, posture.L, own, own);
     const h = posture.hip;
-    if (!h) return;
-    for (let i = 0; i < D.count; i++) {
-      const p = D.vertexPositions[i];
-      if (isLeg[i]) for (let k = 0; k < p.length; k += 2) p[k] += h * smoothstep(feetTop, hipsAt, p[k + 1]);
-      else for (let k = 0; k < p.length; k += 2) p[k] += h;
+    if (h) {
+      for (let i = 0; i < D.count; i++) {
+        const p = D.vertexPositions[i];
+        if (isLeg[i]) for (let k = 0; k < p.length; k += 2) p[k] += h * smoothstep(feetTop, hipsAt, p[k + 1]);
+        else for (let k = 0; k < p.length; k += 2) p[k] += h;
+      }
+      for (const i in fine) { const p = fine[i].positions; for (let k = 0; k < p.length; k += 2) p[k] += h; }   // (her arms)
     }
-    for (const i in fine) { const p = fine[i].positions; for (let k = 0; k < p.length; k += 2) p[k] += h; }   // (her arms)
+    hooks.afterDeform?.(core);
   }
 
   const b = { x0: 0, y0: 0, x1: 0, y1: 0, cx: 0, cy: 0 };
@@ -241,7 +246,7 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE, armR
     focusBones: [marks.head, marks.headTop],
     updateMarks,
     // her arms and hips this frame (the controller sets them; deform() turns her pieces after Live2D's update)
-    posture, deform, arms,
+    posture, deform, arms, hooks,
     drawnArms: drawn,                                // the same arms, on the finer vertices she's drawn with
     get lastHit() { return lastHit; },
     // the 4096 px texture, for close-ups on a computer (downloaded once, about 1.2 MB, on request)
@@ -290,7 +295,12 @@ export function buildPuppet({ core, moc, physicsJson, texture, base = BASE, armR
 }
 
 // ---------- the controller ----------
-export function createAgi1_2D(model, { camera, effects, reducedMotion = false, onGlow = () => {} }) {
+// moves (optional, 2026-10-07: only her live show, tools/live/page/moves.js): more of her on stream. Each frame, after her
+// own reactions, moves.apply(dt, tg, now) may add to her targets (tg: her head ax/ay/az, eyes ex/ey, body bx/by/bz, hips
+// hip, arms shR/elR/wrR and shL/elL/wrL) and return her face's extras { grin, blush, lids, happy, mouth, winkL, winkR }
+// (0..1, each the larger of hers and its); `now` says what she's doing (talking, waving, hopping…). The website never
+// passes it: she moves there exactly as before.
+export function createAgi1_2D(model, { camera, effects, reducedMotion = false, onGlow = () => {}, moves = null }) {
   const { core, physics, at } = model;
   const RM = reducedMotion;
   const PV = core.parameters.values, MIN = core.parameters.minimumValues, MAX = core.parameters.maximumValues;
@@ -345,6 +355,16 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
   // body moves
   const act = { wave: -1, waveNear: 0, hop: -1, sway: -1, nod: -1, shake: -1, hmm: -1, cheer: -1 };
   let dancing = false, danceT = 0, nextDance = FIRST_DANCE_AFTER, danceW = 0, hopBody = 0;
+
+  // what she's doing, for `moves` (her live show)
+  const NO_EXTRA = {};
+  const now = {
+    get clock() { return clock; }, get talking() { return talk.env; }, get level() { return talk.level; }, get mouth() { return talk.open; },
+    get waving() { return act.wave >= 0; }, get hopping() { return act.hop >= 0; }, get cheering() { return act.cheer >= 0; },
+    get swaying() { return act.sway >= 0; }, get dancing() { return dancing; }, get mood() { return expr.mood; },
+    get attention() { return attention; }, get lookingAway() { return clock < look.awayUntil; }, get closeUp() { return closeUp; },
+    get pose() { return P; },
+  };
 
   function setMood(mood) {
     const f = FACES[mood];
@@ -443,6 +463,7 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     // the reactions, on top
     applyMoves(dt, tg);
     hopPose(dt);
+    const extra = moves ? moves.apply(dt, tg, now) || NO_EXTRA : NO_EXTRA;
     // the limits, so she never turns too far
     tg.ax = clamp(tg.ax, -TURN.x, TURN.x);
     tg.ay = clamp(tg.ay, TURN.down, TURN.up);
@@ -457,10 +478,11 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     put('ParamEyeBallX', P.ex); put('ParamEyeBallY', P.ey);
     put('ParamBodyAngleX', P.bx); put('ParamBodyAngleY', P.by + hopBody); put('ParamBodyAngleZ', P.bz);
     put('ParamBreath', breath);
-    const eyes = eyeOpen(blinkAmt, expr.lids, expr.happy);
-    put('ParamEyeLOpen', eyes); put('ParamEyeROpen', eyes);
-    put('ParamMouthOpenY', Math.max(talk.open, expr.grin * (1 - 0.5 * talk.env)));
-    put('ParamCheek', expr.blush);
+    const grin = Math.max(expr.grin, extra.grin || 0);
+    const eyes = eyeOpen(blinkAmt, Math.max(expr.lids, extra.lids || 0), Math.max(expr.happy, extra.happy || 0));
+    put('ParamEyeLOpen', eyes * (1 - (extra.winkL || 0))); put('ParamEyeROpen', eyes * (1 - (extra.winkR || 0)));
+    put('ParamMouthOpenY', Math.max(talk.open, grin * (1 - 0.5 * talk.env), extra.mouth || 0));
+    put('ParamCheek', Math.max(expr.blush, extra.blush || 0));
     // her hair and chest: the model's physics, from the pose above
     physics.evaluate(PV, dt);
     const [cx, cy] = chestLimit(get('ParamChestX'), get('ParamChestY'));

@@ -34,7 +34,6 @@ export const REFUSE = {
   address: 'no addresses or long codes in questions please 🙈',
   contact: 'no @names, emails or phone numbers in questions please 🙈',
   coin: 'i only talk about $AGI on my show 🙈 ask me something else?',
-  person: "i don't talk about real people on my show 🙈 ask me something else?",
   care: CARE,
   crude: 'keep it PG-13 please 🙈',
   spam: "hmm, that doesn't look like a question 🙈",

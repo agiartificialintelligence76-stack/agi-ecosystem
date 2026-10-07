@@ -7,6 +7,7 @@
 // Moods: her chat's (happy, love, shy, wave, neutral) and her voice's other styles (server/voice.js MOOD_STYLES: sweet, careful…).
 
 import { mentionsCoinOrPerson } from '../../server/live-words.js';
+import { tripLines } from './trips.js';
 
 const l = (text, mood = 'neutral', say = null) => ({ text, mood, ...(say ? { say } : {}) });
 
@@ -87,6 +88,146 @@ export const CHAT = [
   l("shy about asking? you can stay anonymous. i'll just say someone asks.", 'shy'),
   l("i'm in a really good mood today. is it you? i think it's you 💜", 'love'),
 ];
+
+// ---------- (2026-10-07, the owner's stream upgrade) her rooms, outfits, dances, her song, her videos and posts, $AGI ----------
+// The owner: "can change her clothes", "can change places (like a real stream room)", "can dance", "can sing her songs",
+// "react to her own X posts/videos and replies", "says if $AGI is pumping" (within hard rule 8: feelings about the chart
+// and news of a buy that just happened, always "not financial advice", never "pumping", a prediction or advice).
+// moving to another room (tools/live/page/rooms.js): before she goes, and once she's there
+export const ROOM_INTRO = [
+  l('change of scenery? change of scenery 💜', 'happy'),
+  l("i'm taking you somewhere else for a bit. come with me 💜", 'happy'),
+  l('new room, who dis 🙈', 'shy'),
+];
+export const ROOM_LINES = {
+  studio: l('back in my studio 💜 home sweet home.', 'happy', 'back in my studio. home sweet home.'),
+  bedroom: l("we're in my bedroom now. fairy lights on, very cozy 💜", 'sweet'),
+  cafe: l("café time! i'll have a hot chocolate, thank you ☕", 'happy'),
+  rooftop: l('rooftop stream. look at all those city lights 💜', 'sweet'),
+  beach: l('beach stream! the sunset is doing the most right now 🌅', 'happy'),
+  gaming: l("welcome to my gaming room 🎮 rgb makes everything faster. that's science.", 'happy', "welcome to my gaming room. r g b makes everything faster. that's science."),
+  stage: l('to the stage 🎤', 'happy'),
+};
+// changing her outfit (tools/live/page/outfits.js): before, and her new look
+export const OUTFIT_INTRO = [
+  l('outfit change! give me one second 💜', 'happy'),
+  l("okay, i'm changing my outfit. no peeking 🙈", 'shy'),
+  l('time for a new look 💜', 'happy'),
+];
+export const OUTFIT_LINES = {
+  classic: l('back in my classic AGI tee. a timeless look 💜', 'happy'),
+  pinkpop: l('pink pop! the bow is not optional 🎀', 'happy'),
+  midnight: l('midnight mode. the pink headphones complete it 🖤', 'happy'),
+  mint: l('mint fresh, with glasses. i feel smarter already 🤓', 'happy'),
+  sunny: l('sunny day outfit! heart sunglasses, obviously 😎', 'happy'),
+  cozy: l('cozy mode on. cat ears included 🐱', 'sweet'),
+  gamer: l('gamer mode activated 🎮', 'happy'),
+  stage: l('stage outfit on. headset ready 🎤', 'happy'),
+  // (2026-10-07) what she wears on her trips (outfits.js PLACE_OUTFITS: an accessory that fits the place)
+  newyork: l('a cap for the big city 🗽', 'happy'),
+  london: l('a scarf for the London weather 🧣', 'happy'),
+  paris: l('a beret in Paris. i had to 💜', 'happy'),
+  rome: l('sunglasses for the Roman sun 😎', 'happy'),
+  berlin: l('all black and a beanie. very Berlin 🖤', 'happy'),
+  istanbul: l('a scarf for the sea breeze 💜', 'happy'),
+  cairo: l('a sun hat and sunglasses. explorer mode 🌞', 'happy'),
+  dubai: l('desert gold, with sunglasses 😎', 'happy'),
+  agra: l('a marigold garland 🌼 so pretty', 'sweet'),
+  bangkok: l('an orchid in my hair 🌸', 'sweet'),
+  halong: l('a hat for the boat ride 💜', 'happy'),
+  bali: l('a flower behind my ear 🌺', 'sweet'),
+  palawan: l('lagoon look: sunglasses and a flower 🌺', 'happy'),
+  tokyo: l('cherry blossoms in my hair 🌸', 'sweet'),
+  seoul: l('a pastel beret 💜', 'happy'),
+  beijing: l('a hiking hat for the Great Wall 💜', 'happy'),
+  rio: l('sunshine outfit 😎', 'happy'),
+  mexico: l('a sun hat and a flower 🌼', 'happy'),
+  space: l('my space suit! helmet on 🚀', 'happy'),
+};
+// a dance break, to one of her dance songs (tools/live/music.js DANCE_SONGS)
+export const DANCE_LINES = {
+  start: [
+    l('dance break! 💜', 'happy'),
+    l("this song makes me want to dance. okay, i'm dancing 💜", 'happy'),
+    l('everybody up, it is dance break time 💃', 'happy'),
+    l("i can't sit still to this one 🙈", 'shy'),
+  ],
+  after: [
+    l('okay, okay, i need a second 🙈', 'shy'),
+    l('was that cute? tell me that was cute 💜', 'shy'),
+    l('my dance moves are all made in code. you can tell 🙈', 'shy'),
+    l('that was fun. same again later? 💜', 'happy'),
+  ],
+};
+// her song, "Feel the AGI" (tools/live/songs: the owner's own song, as it is)
+export const SONG_LINES = {
+  whole: [
+    l("okay… it's time. i'm going to sing my song, Feel the AGI. all of it 💜", 'happy'),
+    l('concert time! my song, Feel the AGI, the whole thing 🎤', 'happy'),
+  ],
+  part: [
+    l('a little bit of my song for you: Feel the AGI 💜', 'happy'),
+    l('can i sing for a second? okay, Feel the AGI 🎤', 'happy'),
+    l("i'm in a singing mood. here's a bit of Feel the AGI 💜", 'happy'),
+  ],
+  after: [
+    l('thank you, thank you 💜 that was Feel the AGI.', 'sweet'),
+    l('okay, i love performing for you 🙈', 'shy'),
+    l('encore? maybe later 💜 you can ask me at agi1.app/live.', 'happy', 'encore? maybe later. you can ask me at a g i one dot app slash live.'),
+  ],
+};
+// one of her videos on her TV (the owner's videos folder on the server, or a video in one of her X posts)
+export const VIDEO_LINES = {
+  intro: [
+    l("let's watch one of my videos together 💜", 'happy'),
+    l('video time! grab a snack 🍿', 'happy'),
+    l('i want to show you one of my videos 💜', 'sweet'),
+  ],
+  after: [
+    l('i love that one 💜', 'love'),
+    l('okay, that was fun. back to you 💜', 'happy'),
+  ],
+};
+// her own posts on X (@agi1dotapp), and the replies under them
+export const POST_LINES = {
+  intro: [
+    l("let's look at my posts on X 💜", 'happy'),
+    l('reading my own posts on stream. very normal behavior 🙈', 'shy'),
+    l('time to scroll my own X. is that weird? it is a little weird 🙈', 'shy'),
+  ],
+};
+export const REPLY_LINES = {
+  intro: [
+    l("let's read some of your replies under my posts 💜", 'happy'),
+    l('you reply to my posts on X, and i read them here. hi 💜', 'happy'),
+  ],
+  none: l('no new replies to read right now. reply to my posts on X, and i might read yours here 💜', 'shy'),
+};
+// how $AGI is doing (DexScreener's numbers on her card): a feeling about the chart, never advice
+export const MARKET_CARD = { kicker: '$AGI right now', title: 'How $AGI is doing', foot: 'Live numbers from DexScreener · not financial advice' };
+export const MARKET_LINES = {
+  up: [
+    l("$AGI is green today 💜 i'm smiling. not financial advice, just feelings.", 'happy', "AGI is green today. i'm smiling. not financial advice, just feelings."),
+    l('look at that, a green day for $AGI 💜 not financial advice, just a happy girl.', 'happy', 'look at that, a green day for AGI. not financial advice, just a happy girl.'),
+  ],
+  down: [
+    l("$AGI is having a red day 🥺 i'm still here. not financial advice, just a hug.", 'sad', "AGI is having a red day. i'm still here. not financial advice, just a hug."),
+    l('a red day for $AGI. deep breaths, everyone. not financial advice 💜', 'careful', 'a red day for AGI. deep breaths, everyone. not financial advice.'),
+  ],
+  flat: [
+    l('$AGI is pretty calm today. calm is nice. not financial advice 💜', 'neutral', 'AGI is pretty calm today. calm is nice. not financial advice.'),
+  ],
+};
+// a new $AGI buy, just now (her alert shows its own numbers, like her buy bot's): news, never advice
+export const BUY_LINES = [
+  l('someone just got some $AGI 💜 hi, and welcome! not financial advice.', 'happy', 'someone just got some AGI. hi, and welcome! not financial advice.'),
+  l('ooh, a new $AGI transaction just came in 💜 i see you. not financial advice.', 'happy', 'ooh, a new AGI transaction just came in. i see you. not financial advice.'),
+  l('more $AGI just found a new home 💜 not financial advice, just me noticing everything.', 'happy', 'more AGI just found a new home. not financial advice, just me noticing everything.'),
+];
+export const MILESTONE_LINE = l("$AGI just reached a new market cap step 💜 i'm so proud. not financial advice, just a very proud AI.", 'celebrate',
+  "AGI just reached a new market cap step. i'm so proud. not financial advice, just a very proud AI.");
+// what she says when something she said yes to couldn't happen after all (a glitch)
+export const OOPS = l("oops, that one glitched on me 🙈 i'll do it later, promise.", 'shy');
 
 // ---------- segments (each a few minutes apart, between questions) ----------
 // card: what the screen shows while she says the lines
@@ -324,6 +465,12 @@ export function allLines() {
   }
   for (const tip of SEGMENTS.tips.tips) for (let n = 0; n < TIPS_A_SEGMENT; n++) out.push(tipLine(tip, n));
   for (const pair of SEGMENTS.wyr.pairs) out.push(...wyrLines(pair));
+  // (2026-10-07) her rooms, outfits, dances, song, videos, posts, $AGI
+  out.push(...ROOM_INTRO, ...Object.values(ROOM_LINES), ...OUTFIT_INTRO, ...Object.values(OUTFIT_LINES), ...DANCE_LINES.start, ...DANCE_LINES.after,
+    ...SONG_LINES.whole, ...SONG_LINES.part, ...SONG_LINES.after, ...VIDEO_LINES.intro, ...VIDEO_LINES.after, ...POST_LINES.intro,
+    ...REPLY_LINES.intro, REPLY_LINES.none, ...MARKET_LINES.up, ...MARKET_LINES.down, ...MARKET_LINES.flat, ...BUY_LINES, MILESTONE_LINE, OOPS);
+  // (2026-10-07) her trips, her snacks, the weather, the people she meets, the start of her show (tools/live/trips.js)
+  out.push(...tripLines());
   return out;
 }
 

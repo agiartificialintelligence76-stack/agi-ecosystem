@@ -1,7 +1,8 @@
 // Asks Google Gemini for AGI-1's reply. Only the server calls this; the API key never reaches the browser.
-import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt, languagePrompt, shotPrompt, livePrompt, LIVE_SKIPS } from './agi1-prompt.js';
+import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt, languagePrompt, shotPrompt, livePrompt, scenePrompt, LIVE_SKIPS } from './agi1-prompt.js';
 import { linesOf } from '../src/i18n/all.js';
-import { isLang } from '../src/i18n/langs.js';
+import { isLang, LANGS } from '../src/i18n/langs.js';
+import { canList, PART_IDS, FEEL_IDS } from './live-acts.js';
 
 // Safety filters are OFF by default for Gemini 3 models, so we switch them on.
 // Sexual content uses the strictest level (PG-13 site).
@@ -16,6 +17,7 @@ export const BLOCKED_REASONS = new Set(['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLI
 export const DEFLECTIONS = linesOf('en').deflect;
 const deflectionsIn = (lang) => { const d = linesOf(lang).deflect; return Array.isArray(d) && d.length ? d : DEFLECTIONS; };
 const MAX_REPLY = 600;
+const LANG_CODES = LANGS.map((l) => l.code);
 
 // What a refused request most likely means. This only goes to the server log, never to visitors.
 const GEMINI_HINTS = {
@@ -121,15 +123,26 @@ export function cleanReply(text) {
 // visitor.live (2026-10-02, her live show, server/live.js): a viewer's question on her stream, { name, source }: she answers
 // it out loud for everyone (livePrompt), and says first whether it can be answered on a public stream at all ("skip":
 // 'no', 'rules' or 'care'; with 'rules' or 'care' the reply is empty). A question the safety filters block is 'rules'.
+// visitor.live.can (2026-10-07, viewers' requests): what she can do on stream right now (server/live-acts.js canList): her
+// answer also says which one the viewer asked for ("act", and "times", "part" or "to"), and her stream does it.
+// visitor.live.chatter / visitor.live.react (2026-10-07): something new to say on her show, or her reaction to one of her own
+// X posts, a reply under one, or one of her videos (livePrompt): the same answer, without a name.
 export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
   const soulmate = visitor.level === 3;
   const lang = isLang(visitor.lang) ? visitor.lang : 'en';
   const live = visitor.live && typeof visitor.live === 'object' ? visitor.live : null;
   // (her show: "skip" first, then "nameOk", so an answer cut off by the length cap loses its reply, never its decision)
-  const named = Boolean(live && typeof live.name === 'string' && live.name);
+  const named = Boolean(live && !live.chatter && !live.react && typeof live.name === 'string' && live.name);
+  const can = live && !live.chatter && !live.react ? canList(live.can) : [];
+  const acts = can.length ? ['none', ...new Set(can.map((x) => x.split(':')[0]))] : null;
+  // (2026-10-07) on her show: how she feels saying it ("feel"), and a viewer's question's language ("lang")
+  const question = Boolean(live && !live.chatter && !live.react);
   const properties = {
     ...(live ? { skip: { type: 'string', enum: LIVE_SKIPS }, ...(named ? { nameOk: { type: 'boolean' } } : {}) } : {}),
     reply: { type: 'string' }, mood: { type: 'string', enum: MOODS },
+    ...(live ? { feel: { type: 'string', enum: ['none', ...FEEL_IDS] } } : {}),
+    ...(question ? { lang: { type: 'string', enum: LANG_CODES } } : {}),
+    ...(acts ? { act: { type: 'string', enum: acts }, times: { type: 'integer' }, part: { type: 'string', enum: PART_IDS }, to: { type: 'string' } } : {}),
   };
   // (no note from a message with a picture: nothing of a picture is ever kept, and text in it mustn't plant a memory)
   const shot = visitor.shot && typeof visitor.shot.data === 'string' && visitor.shot.mimeType ? visitor.shot : null;
@@ -155,7 +168,7 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
         responseJsonSchema: {
           type: 'object',
           properties,
-          required: live ? ['skip', ...(named ? ['nameOk'] : []), 'reply', 'mood'] : ['reply', 'mood'],
+          required: live ? ['skip', ...(named ? ['nameOk'] : []), 'reply', 'mood', ...(acts ? ['act'] : [])] : ['reply', 'mood'],
         },
       },
     }),
@@ -185,7 +198,57 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
   // her show airs an answer only when the AI said so outright ("skip": "no"): an answer cut off before it did isn't aired
   if (live && parsed?.skip !== 'no') return { reply: '', mood: 'neutral', skip: 'unsure', usage: data.usageMetadata };
   if (!reply) throw new Error('gemini: no usable reply');
-  if (live) return { reply, mood: MOODS.includes(parsed.mood) ? parsed.mood : 'neutral', skip: 'no', nameOk: parsed.nameOk === true, usage: data.usageMetadata };
+  if (live) {
+    const act = acts && typeof parsed.act === 'string' ? { act: parsed.act, times: parsed.times, part: parsed.part, to: parsed.to } : {};
+    const feel = FEEL_IDS.includes(parsed.feel) ? { feel: parsed.feel } : {};
+    const said = question && LANG_CODES.includes(parsed.lang) ? { lang: parsed.lang } : {};
+    return { reply, mood: MOODS.includes(parsed.mood) ? parsed.mood : 'neutral', skip: 'no', nameOk: parsed.nameOk === true, ...act, ...feel, ...said, usage: data.usageMetadata };
+  }
   const note = soulmate && !shot && typeof parsed.note === 'string' ? parsed.note : null;
   return { reply, mood: MOODS.includes(parsed.mood) ? parsed.mood : 'neutral', note, usage: data.usageMetadata };
+}
+
+// (2026-10-07, her live show: "meet random people talk to them what the chat said") the conversation she has with someone she
+// meets on a trip (a made-up character of her show), written in one go: scene { place, who, lang, chat, lines } (scenePrompt).
+// → { lines: [{ who: 'them' | 'you', text }], mood } (each line cleaned like her replies) · { skip: 'rules' }. The same
+// safety settings and language part as her answers; English (her show's), with a word of the place's language.
+export async function askScene(cfg, scene, { timeoutMs = 10000 } = {}) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.geminiModel)}:generateContent`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'x-goog-api-key': cfg.geminiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(1, {}) + languagePrompt('en', { source: 'default' }) + scenePrompt(scene) }] },
+      contents: [{ role: 'user', parts: [{ text: 'Write the conversation.' }] }],
+      safetySettings: SAFETY_SETTINGS,
+      generationConfig: {
+        maxOutputTokens: 420,
+        thinkingConfig: { thinkingLevel: 'MINIMAL' },
+        responseMimeType: 'application/json',
+        responseJsonSchema: {
+          type: 'object',
+          properties: {
+            skip: { type: 'string', enum: ['no', 'rules'] },
+            lines: { type: 'array', items: { type: 'object', properties: { who: { type: 'string', enum: ['them', 'you'] }, text: { type: 'string' } }, required: ['who', 'text'] } },
+            mood: { type: 'string', enum: MOODS },
+          },
+          required: ['skip', 'lines', 'mood'],
+        },
+      },
+    }),
+    signal: AbortSignal.timeout(Math.max(1000, Math.min(12000, timeoutMs))),
+  });
+  if (!res.ok) throw await geminiError(res, cfg.geminiKey);
+  const data = await res.json();
+  const candidate = data.candidates?.[0];
+  if (data.promptFeedback?.blockReason || !candidate || BLOCKED_REASONS.has(candidate.finishReason)) return { skip: 'rules' };
+  const text = (candidate.content?.parts || []).filter((p) => !p.thought && typeof p.text === 'string').map((p) => p.text).join('');
+  let parsed = null;
+  try { parsed = JSON.parse(text); } catch { return { skip: 'unsure' }; }
+  if (parsed?.skip !== 'no') return { skip: parsed?.skip === 'rules' ? 'rules' : 'unsure' };
+  const lines = (Array.isArray(parsed.lines) ? parsed.lines : [])
+    .filter((l) => l && ['them', 'you'].includes(l.who) && typeof l.text === 'string')
+    .map((l) => ({ who: l.who, text: cleanReply(l.text).slice(0, 220) }))
+    .filter((l) => l.text);
+  return { lines: lines.slice(0, 6), mood: MOODS.includes(parsed.mood) ? parsed.mood : 'happy', usage: data.usageMetadata };
 }

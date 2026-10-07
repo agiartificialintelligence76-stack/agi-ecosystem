@@ -19,6 +19,11 @@ const SEGMENTS = {
   // (2026-10-07: more segments, for longer shows)
   howto: 'explaining how to ask her', selfcare: 'doing a self-care check', story: 'telling a story', facts: 'sharing fun facts about herself',
   thisorthat: 'playing “this or that”', flags: 'playing “green flag or red flag”', quiz: 'running a quiz about herself',
+  // (2026-10-07, her stream upgrade: her extras and viewers' requests)
+  request: 'doing what a viewer asked', dance: 'dancing', song: 'singing her song', room: 'moving to another room', outfit: 'changing her outfit',
+  market: 'looking at how $AGI is doing', post: 'reading her posts on X', replies: 'reading replies under her posts', video: 'watching one of her videos',
+  // (2026-10-07, her trips: places, people she meets, snacks, the weather)
+  trip: 'traveling somewhere new', meet: 'meeting someone', eat: 'having a snack', weather: 'out in the weather',
 };
 export const segmentText = (id) => SEGMENTS[id] || null;
 
@@ -37,7 +42,6 @@ const QUESTION = {
   address: 'No addresses or long codes in questions, please.',
   contact: 'No @names, emails or phone numbers in questions, please.',
   coin: 'She only talks about $AGI on her show. Ask her something else?',
-  person: "She doesn't talk about real people on her show. Ask her something else?",
   care: "That sounds like a lot to carry, so she won't read it on a public stream. If you're going through a hard time, please reach out to someone you trust or a local support line. You matter.",
   crude: 'Keep it PG-13, please.',
   spam: "That doesn't look like a question.",

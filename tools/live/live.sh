@@ -15,7 +15,12 @@
 #                                             doesn't stop it: nohup sh tools/live/live.sh --start-in 10 >> /var/log/agi1-live.log 2>&1 &
 #   sh tools/live/live.sh --announce 01:00    keeps her next show's time on the site (UTC; never shown to visitors)
 #   sh tools/live/live.sh show                today's show: "starting soon" until LIVE_DAILY_AT, then the show (a cron line)
+#   sh tools/live/live.sh --art               (2026-10-07) the pictures of her set, painted by Google's image AI with the
+#                                             same Google key as her voice, into /opt/agi1-live/out/art (about 20 minutes,
+#                                             about $5–10 once); --art-only paris,omar makes one more of those
 # Anything else is passed to tools/live/run.mjs as it is. Run checks when no show is on (they share the processor).
+# Her videos (2026-10-07): any of her own videos put in /opt/agi1-live/videos (mkdir -p /opt/agi1-live/videos, then scp
+# them there from the PC) are on her TV in her shows; the show reads that folder, never writes it.
 set -eu
 SITE=$(cd "$(dirname "$0")/../.." && pwd)
 DIR=${AGI1_LIVE_DIR:-/opt/agi1-live}
@@ -52,10 +57,15 @@ if [ -f "$DIR/google-key.json" ]; then
   chmod 600 "$DIR/google-key.json"
   KEY="-v $DIR/google-key.json:/secrets/google-key.json:ro"
 fi
+# her videos, when the folder is there: read-only for the show (as /videos: LIVE_VIDEOS_DIR's default)
+VIDEOS=""
+if [ -d "$DIR/videos" ]; then
+  VIDEOS="-v $DIR/videos:/videos:ro"
+fi
 
 # shellcheck disable=SC2086
 exec docker run --rm --init --shm-size=1g --stop-timeout 45 \
-  --env-file "$DIR/live.env" $KEY \
+  --env-file "$DIR/live.env" $KEY $VIDEOS \
   -v agi1-live-cache:/app/tools/live/cache \
   -v "$DIR/out:/out" \
   agi1-live "$@"

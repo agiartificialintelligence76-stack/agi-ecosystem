@@ -18,20 +18,20 @@ html, body { width: 1280px; height: 720px; overflow: hidden; background: var(--n
 body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
 .set { position: relative; width: 1280px; height: 720px; overflow: hidden; }
 .set-bg { position: absolute; inset: 0; width: 1280px; height: 720px; }
-/* her: her picture, from x = 400 (her wave reaches x = 481, her cheer 447; her hearts fade out before its edge) to the right
-   edge, and from the top to where the bar starts. Nothing plain and opaque may cover it (stage.js says why): it ends at the
-   bar, and the boxes over it are 1% see-through. stage.js frames her on the right, waist up, by her model's own eyes and
-   waist */
-.her { position: absolute; left: 400px; right: 0; top: 0; height: calc(720px - var(--bar)); }
+/* her: her picture, the whole width of the set (2026-10-07, the owner: "move on the screen not on just one place"; from
+   x = 400 before), from the top to where the bar starts. Nothing plain and opaque may cover it (stage.js says why): it
+   ends at the bar, and everything over it is a little see-through (its backgrounds at 0.99 at most). stage.js frames her
+   on the right, waist up, by her model's own eyes and waist, and moves her around */
+.her { position: absolute; left: 0; right: 0; top: 0; height: calc(720px - var(--bar)); }
 .her-pic { width: 100%; height: 100%; display: block; }
 
 /* top: LIVE, her name, the label */
 .top { position: absolute; left: 36px; top: 28px; right: 36px; display: flex; align-items: center; gap: 14px; }
 .live-pill {
   display: inline-flex; align-items: center; gap: 9px; height: 40px; padding: 0 16px 0 13px; border: 3px solid var(--ink); border-radius: 999px;
-  background: var(--pink); color: var(--ink); font: 800 17px/1 var(--mono); letter-spacing: 0.08em; box-shadow: 0 5px 0 -1px var(--ink);
+  background: rgba(255, 77, 166, 0.99); color: var(--ink); font: 800 17px/1 var(--mono); letter-spacing: 0.08em; box-shadow: 0 5px 0 -1px var(--ink);
 }
-.live-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--ink); animation: blink 1.4s ease-in-out infinite; }
+.live-dot { width: 11px; height: 11px; border-radius: 50%; background: rgba(23, 10, 54, 0.99); animation: blink 1.4s ease-in-out infinite; }
 @keyframes blink { 50% { opacity: 0.25; } }
 .live-clock { font-weight: 600; opacity: 0.85; }
 .brand { font: 900 30px/1 var(--display); font-stretch: 125%; color: var(--lav); text-shadow: 3px 3px 0 var(--pink); letter-spacing: -0.01em; }
@@ -39,7 +39,7 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
   margin-left: auto; padding: 7px 14px; border: 2px solid rgba(255, 255, 255, 0.85); border-radius: 999px; background: rgba(23, 10, 54, 0.82);
   color: #fff; font: 700 13px/1 var(--mono); letter-spacing: 0.07em; text-transform: uppercase;
 }
-.set[data-overlay='brb'] .live-pill, .set[data-overlay='starting'] .live-pill, .set[data-overlay='ended'] .live-pill { background: var(--honey); }
+.set[data-overlay='brb'] .live-pill, .set[data-overlay='starting'] .live-pill, .set[data-overlay='ended'] .live-pill { background: rgba(255, 201, 51, 0.99); }
 
 /* the card: a question, a segment, her diary, "would you rather" */
 .card {
@@ -50,7 +50,7 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .card[hidden] { display: none; }
 @keyframes pop-in { from { transform: scale(0.9); opacity: 0; } }
 .card-kicker {
-  display: inline-block; padding: 6px 13px; border: 2px solid var(--ink); border-radius: 999px; background: var(--honey);
+  display: inline-block; padding: 6px 13px; border: 2px solid var(--ink); border-radius: 999px; background: rgba(255, 201, 51, 0.99);
   font: 800 13px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
 }
 .card-title { margin-top: 14px; font: 900 34px/1.08 var(--display); font-stretch: 110%; letter-spacing: -0.01em; overflow-wrap: anywhere; }
@@ -58,14 +58,14 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .card-list { margin-top: 14px; list-style: none; display: flex; flex-direction: column; gap: 9px; }
 .card-list:empty { display: none; }
 .card-list li { position: relative; padding-left: 26px; font: 600 21px/1.3 var(--sans); }
-.card-list li::before { content: ''; position: absolute; left: 2px; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: var(--pink); border: 2px solid var(--ink); }
+.card-list li::before { content: ''; position: absolute; left: 2px; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 77, 166, 0.99); border: 2px solid var(--ink); }
 .card-list li.is-pick { color: var(--violet); }
-.card-list li.is-pick::before { background: var(--mint); }
+.card-list li.is-pick::before { background: rgba(63, 240, 195, 0.99); }
 .card-body { margin-top: 12px; font: 600 26px/1.3 var(--sans); overflow-wrap: anywhere; }
 .card-body:empty { display: none; }
 .card[data-kind='question'] .card-body { font: 700 30px/1.25 var(--sans); }
 .card[data-kind='diary'] .card-body { font: italic 400 30px/1.3 var(--serif); }
-.card[data-kind='question'] .card-kicker { background: var(--mint); }
+.card[data-kind='question'] .card-kicker { background: rgba(63, 240, 195, 0.99); }
 
 /* her words as she says them */
 .caption {
@@ -85,6 +85,9 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .ask-queue { padding: 6px 12px; border-radius: 999px; background: var(--violet); font: 700 14px/1 var(--mono); }
 .ask-queue:empty { display: none; }
 .ask-rules { margin-left: auto; font: 600 14px/1 var(--mono); color: var(--lav); letter-spacing: 0.04em; }
+/* (2026-10-07, her first trip recording) the bar never wraps: "Ask me at", the questions waiting and her rules keep their
+   width, and the hint gives way (hidden, not cut, when it doesn't fit: stage.js fitHint) */
+.ask-cta, .ask-queue, .ask-rules { flex-shrink: 0; white-space: nowrap; }
 
 /* starting soon, be right back, thanks for watching */
 .overlay {
@@ -99,5 +102,256 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .overlay-sub:empty { display: none; }
 
 /* the sync check (run.mjs --sync-check): a white square in the corner while a beep is heard */
-.sync-marker { position: absolute; left: 0; top: 0; width: 48px; height: 48px; background: #fff; z-index: 10; }
+.sync-marker { position: absolute; left: 0; top: 0; width: 48px; height: 48px; background: rgba(255, 255, 255, 0.99); z-index: 10; }
 .sync-marker[hidden] { display: none; }
+
+/* ---------- 2026-10-07, the owner's stream upgrade: her rooms, effects, her TV, karaoke ----------
+   Everything here that can be over her picture is a little see-through (backgrounds at 0.99, the video at opacity 0.99):
+   stage.js says why. */
+/* her room's moving bits (rooms.js): behind her, each placed by --x, --y; --d its animation's head start */
+.amb { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.amb i { position: absolute; left: var(--x); top: var(--y); display: block; animation-delay: var(--d, 0s); }
+.amb .bulb { width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid rgba(23, 10, 54, 0.8);
+  animation: twinkle 2.2s ease-in-out infinite; animation-delay: var(--d); }
+.amb .bulb.c0 { background: #ffc933; box-shadow: 0 0 14px 4px rgba(255, 201, 51, 0.55); }
+.amb .bulb.c1 { background: #ff4da6; box-shadow: 0 0 14px 4px rgba(255, 77, 166, 0.55); }
+.amb .bulb.c2 { background: #3ff0c3; box-shadow: 0 0 14px 4px rgba(63, 240, 195, 0.5); }
+.amb .bulb.c3 { background: #fff; box-shadow: 0 0 14px 4px rgba(255, 255, 255, 0.5); }
+@keyframes twinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.amb .star-twinkle { width: 6px; height: 6px; background: #fff; transform: rotate(45deg); animation: twinkle 1.6s ease-in-out infinite var(--d); }
+.amb .lamp-glow { width: 200px; height: 220px; margin-left: -100px; background: radial-gradient(closest-side, rgba(255, 196, 92, 0.42), rgba(255, 196, 92, 0));
+  transform-origin: 50% 0; animation: swing 5s ease-in-out infinite var(--d); }
+@keyframes swing { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.amb .steam { width: 16px; height: 40px; margin-left: -8px; border-radius: 50%; border-left: 4px solid rgba(255, 255, 255, 0.75);
+  animation: steam 2.6s ease-in infinite var(--d); }
+@keyframes steam { 0% { transform: translateY(0) scaleX(1); opacity: 0; } 25% { opacity: 0.85; } 100% { transform: translateY(-46px) scaleX(-1); opacity: 0; } }
+.amb .neon { width: 200px; height: 110px; margin: -55px 0 0 -100px; border-radius: 30px; background: radial-gradient(closest-side, rgba(255, 77, 166, 0.5), rgba(255, 77, 166, 0));
+  animation: flicker 4s steps(1) infinite; }
+.amb .neon.live { width: 260px; height: 130px; margin: -65px 0 0 -130px; }
+@keyframes flicker { 0%, 61%, 66%, 100% { opacity: 1; } 62%, 65% { opacity: 0.25; } }
+.amb .shooting-star { width: 120px; height: 3px; background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff); border-radius: 2px;
+  opacity: 0; animation: shoot 11s linear infinite; }
+@keyframes shoot { 0%, 88% { opacity: 0; transform: translate(0, 0) rotate(18deg); } 90% { opacity: 1; } 96% { opacity: 0; transform: translate(340px, 110px) rotate(18deg); } 100% { opacity: 0; } }
+.amb .window-blink { width: 6px; height: 8px; background: #ffd76b; animation: twinkle 5s steps(1) infinite var(--d); }
+.amb .wave-line { width: 240px; height: 5px; margin-left: -120px; border-radius: 3px; background: rgba(255, 241, 176, 0.6); animation: shimmer 3.6s ease-in-out infinite var(--d); }
+@keyframes shimmer { 0%, 100% { transform: translateX(-20px) scaleX(0.8); opacity: 0.3; } 50% { transform: translateX(20px) scaleX(1.1); opacity: 0.85; } }
+.amb .gull { width: 30px; height: 12px; border: 3px solid #170a36; border-color: #170a36 transparent transparent transparent; border-radius: 50% 50% 0 0;
+  animation: glide 9s ease-in-out infinite var(--d); }
+.amb .gull::after { content: ''; position: absolute; left: 24px; top: -3px; width: 30px; height: 12px; border: 3px solid #170a36; border-color: #170a36 transparent transparent transparent; border-radius: 50% 50% 0 0; }
+@keyframes glide { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(60px, -14px); } }
+.amb .rgb-strip { left: -640px; width: 1920px; height: 8px; border-radius: 4px; background: repeating-linear-gradient(90deg, #ff4da6 0, #ffc933 160px, #3ff0c3 320px, #6b3bff 480px, #ff4da6 640px);
+  animation: rgb 6s linear infinite; }
+@keyframes rgb { to { transform: translateX(640px); } }
+/* the stage: beams that sweep, the crowd's hands, a flash on the beat (--beat: the music's beat, set by stage.js) */
+.amb .beam { width: 110px; height: 520px; margin-left: -55px; transform-origin: 50% 0; opacity: 0.6; border-radius: 0 0 55px 55px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 85%);
+  animation: sweep 6s ease-in-out infinite var(--d); }
+.amb .beam.c0 { background: linear-gradient(180deg, rgba(255, 77, 166, 0.7), rgba(255, 77, 166, 0) 85%); }
+.amb .beam.c1 { background: linear-gradient(180deg, rgba(63, 240, 195, 0.6), rgba(63, 240, 195, 0) 85%); }
+.amb .beam.c2 { background: linear-gradient(180deg, rgba(255, 201, 51, 0.65), rgba(255, 201, 51, 0) 85%); }
+@keyframes sweep { 0%, 100% { transform: rotate(-22deg); } 50% { transform: rotate(22deg); } }
+.amb .crowd-hand { width: 26px; height: 70px; margin-left: -13px; border-radius: 13px 13px 4px 4px; background: #0b0620; border: 3px solid rgba(255, 77, 166, 0.35);
+  animation: hands var(--beat, 0.94s) ease-in-out infinite var(--d); }
+@keyframes hands { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-26px) rotate(8deg); } }
+.amb .stage-flash { left: 60px; top: 70px; width: 560px; height: 470px; background: radial-gradient(ellipse at 50% 40%, rgba(255, 77, 166, 0.32), rgba(255, 77, 166, 0) 70%);
+  animation: flash var(--beat, 0.47s) ease-out infinite; animation-delay: var(--phase, 0s); opacity: 0; }
+.set[data-music='on'] .amb .stage-flash { opacity: 1; }
+@keyframes flash { 0% { opacity: 0.9; } 100% { opacity: 0; } }
+
+/* in front of her: emojis she says, stickers, sparkles, confetti */
+.fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.confetti { position: absolute; inset: 0; width: 1280px; height: 720px; }
+.confetti[hidden] { display: none; }
+.pop { position: absolute; display: block; transform: translate(-50%, -50%); white-space: nowrap; will-change: transform, opacity; }
+.pop.emoji { font: 72px/1 'Noto Color Emoji', sans-serif; animation: rise 2.6s cubic-bezier(.2, .8, .3, 1) forwards; }
+@keyframes rise { 0% { transform: translate(-50%, -30%) scale(0.2) rotate(0); opacity: 0; } 14% { transform: translate(-50%, -60%) scale(1.15) rotate(var(--rot)); opacity: 1; }
+  70% { opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), -300%) scale(0.9) rotate(var(--rot)); opacity: 0; } }
+.pop.sticker { padding: 8px 18px 10px; border: 4px solid var(--ink); border-radius: 18px; font: 900 44px/1 var(--display); font-stretch: 120%; color: var(--ink);
+  background: rgba(255, 201, 51, 0.99); box-shadow: 0 6px 0 -1px var(--ink); animation: stick 1.8s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+.pop.sticker.st-bang { background: rgba(255, 77, 166, 0.99); color: #fff; font-size: 64px; padding: 4px 24px 8px; }
+.pop.sticker.st-q { background: rgba(63, 240, 195, 0.99); font-size: 56px; }
+.pop.sticker.st-note { background: rgba(228, 217, 255, 0.99); font-size: 52px; }
+@keyframes stick { 0% { transform: translate(-50%, -50%) scale(0.2) rotate(-14deg); opacity: 0; } 18% { transform: translate(-50%, -50%) scale(1.1) rotate(6deg); opacity: 1; }
+  80% { transform: translate(-50%, -62%) scale(1) rotate(4deg); opacity: 1; } 100% { transform: translate(-50%, -80%) scale(0.9) rotate(4deg); opacity: 0; } }
+.pop.sparkle { font: 900 38px/1 var(--sans); color: #fff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.9); animation: spark 1.1s ease-out var(--delay, 0s) both; }
+.pop.sparkle.s1 { color: #ffc933; } .pop.sparkle.s2 { color: #ff9cd8; }
+@keyframes spark { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.2) rotate(90deg); opacity: 0; } }
+
+/* the song she's singing, next to her name */
+/* her name stays readable on her lighter rooms */
+.set:not([data-room='studio']) .brand { padding: 5px 14px 8px; border-radius: 14px; background: rgba(23, 10, 54, 0.86); }
+.song-chip { padding: 8px 14px; border: 2px solid var(--ink); border-radius: 999px; background: rgba(63, 240, 195, 0.99); color: var(--ink); font: 800 14px/1 var(--mono); letter-spacing: 0.06em; }
+.song-chip[hidden] { display: none; }
+
+/* the alert banner: a new $AGI buy, a new post of hers */
+/* (top right, over her hair for a few seconds, like a streamer's alerts: never over a card) */
+.alert { position: absolute; right: 30px; top: 78px; max-width: 600px; display: flex; align-items: center; gap: 14px;
+  padding: 9px 20px 9px 10px; border: 4px solid var(--ink); border-radius: 20px; background: rgba(255, 255, 255, 0.99); box-shadow: 0 7px 0 -2px var(--ink);
+  animation: drop-in 0.5s cubic-bezier(.2, 1.4, .4, 1) both; z-index: 5; }
+.alert[hidden] { display: none; }
+@keyframes drop-in { from { transform: translateY(-160%); } }
+.alert-icon { display: grid; place-items: center; min-width: 54px; height: 54px; padding: 0 8px; border: 3px solid var(--ink); border-radius: 14px; background: rgba(255, 201, 51, 0.99);
+  font: 30px/1 'Noto Color Emoji', sans-serif; }
+.alert[data-kind='buy'] .alert-icon { background: rgba(63, 240, 195, 0.99); font-size: 24px; }
+.alert[data-kind='post'] .alert-icon { background: rgba(228, 217, 255, 0.99); font: 900 32px/1 var(--sans); }
+.alert-text { display: flex; flex-direction: column; gap: 5px; }
+.alert-text b { font: 900 26px/1 var(--display); font-stretch: 115%; }
+.alert-text span { font: 700 16px/1.2 var(--mono); }
+
+/* the card, as one of her X posts, and with numbers (the chart) */
+.card-post { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.card-post[hidden] { display: none; }
+.card-avatar { width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--ink); background: rgba(228, 217, 255, 0.99); object-fit: cover; opacity: 0.99; }
+.card-who { display: flex; flex-direction: column; gap: 3px; font: 600 15px/1 var(--mono); }
+.card-who b { font: 900 21px/1 var(--display); }
+.card-x { margin-left: auto; font: 900 30px/1 var(--sans); }
+.card-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+.card-stats:empty { display: none; }
+.card-stats div { padding: 12px 14px; border: 3px solid var(--ink); border-radius: 16px; background: rgba(228, 217, 255, 0.99); }
+.card-stats dt { font: 700 13px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.card-stats dd { margin-top: 8px; font: 900 30px/1 var(--display); font-stretch: 110%; }
+.card-stats div.up { background: rgba(63, 240, 195, 0.99); }
+.card-stats div.down { background: rgba(255, 156, 192, 0.99); }
+.card-foot { margin-top: 12px; font: 600 15px/1.3 var(--mono); color: #4b3a7a; }
+.card-foot:empty { display: none; }
+.card[data-kind='post'] .card-body, .card[data-kind='reply'] .card-body { font: 600 26px/1.3 var(--sans); }
+.card[data-kind='reply'] .card-kicker { background: rgba(228, 217, 255, 0.99); }
+.card[data-kind='chart'] .card-kicker { background: rgba(63, 240, 195, 0.99); }
+.card[data-kind='song'] .card-kicker { background: rgba(255, 77, 166, 0.99); color: #fff; }
+
+/* her TV: her videos (a little see-through, the video at 0.99) */
+.tv { position: absolute; left: 34px; top: 96px; width: 620px; padding: 14px 14px 12px; border: 5px solid var(--ink); border-radius: 26px;
+  background: rgba(23, 10, 54, 0.99); box-shadow: 0 10px 0 -2px var(--ink); animation: pop-in 0.3s cubic-bezier(.2, 1.4, .4, 1) both; z-index: 3; }
+.tv[hidden] { display: none; }
+.tv-screen { overflow: hidden; border-radius: 14px; background: rgba(0, 0, 0, 0.99); aspect-ratio: 16 / 9; }
+.tv-screen video { display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0.99; }
+/* (a picture from one of her X posts on her TV: like the video, never quite opaque over her picture) */
+.tv-screen img { display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0.99; }
+.tv-screen img[hidden], .tv-screen video[hidden] { display: none; }
+.tv-label { margin-top: 10px; color: #fff; font: 800 16px/1 var(--mono); letter-spacing: 0.05em; }
+.tv-label:empty { display: none; }
+
+/* karaoke: the hook of her song, each word lit as she sings it */
+.karaoke { position: absolute; left: 40px; bottom: 96px; max-width: 840px; padding: 14px 24px 16px; border: 4px solid var(--ink); border-radius: 22px;
+  background: rgba(23, 10, 54, 0.92); box-shadow: 0 8px 0 -2px var(--pink); animation: pop-in 0.22s cubic-bezier(.2, 1.4, .4, 1) both; }
+.karaoke[hidden] { display: none; }
+.karaoke p { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 900 40px/1.15 var(--display); font-stretch: 112%; color: rgba(255, 255, 255, 0.45); }
+.karaoke[data-big='1'] p { font-size: 58px; }
+.karaoke span { transition: color 0.12s, transform 0.12s; display: inline-block; }
+.karaoke span.sung { color: var(--honey); transform: translateY(-3px); text-shadow: 3px 3px 0 var(--pink); }
+/* while she sings or a video plays, her captions step aside */
+.set[data-mode='song'] .caption, .set[data-mode='tv'] .caption { display: none; }
+
+/* the comic wipe between rooms: four bands sweep across, covering everything midway (a little see-through) */
+.wipe { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 20; }
+.wipe i { position: absolute; top: -40%; width: 70%; height: 180%; transform: translateX(-320%) skewX(-18deg); }
+.wipe i:nth-child(1) { left: -10%; background: rgba(255, 77, 166, 0.99); }
+.wipe i:nth-child(2) { left: 20%; background: rgba(255, 201, 51, 0.99); }
+.wipe i:nth-child(3) { left: 50%; background: rgba(107, 59, 255, 0.99); }
+.wipe i:nth-child(4) { left: 80%; background: rgba(23, 10, 54, 0.99); }
+.wipe.go i { animation: wipe 0.95s cubic-bezier(.7, 0, .3, 1) both; }
+.wipe.go i:nth-child(2) { animation-delay: 0.04s; } .wipe.go i:nth-child(3) { animation-delay: 0.08s; } .wipe.go i:nth-child(4) { animation-delay: 0.12s; }
+@keyframes wipe { 0% { transform: translateX(-260%) skewX(-18deg); } 45%, 55% { transform: translateX(0) skewX(-18deg); } 100% { transform: translateX(260%) skewX(-18deg); } }
+
+/* ---------- (2026-10-07) her trips, the people she meets, the weather, where she is, what to try ---------- */
+/* the weather: its sky behind her (a tint, a rainbow, the sun's glow), its rain, snow, petals… over her (a canvas drawn at
+   half size, see-through), and lightning: a flash over everything (never plain and opaque: 0.8 at most) */
+.wx-back { position: absolute; inset: 0; width: 1280px; height: 720px; pointer-events: none; }
+.wx-front { position: absolute; left: 0; top: 0; width: 1280px; height: calc(720px - var(--bar)); pointer-events: none; opacity: 0.99; }
+.wx-back[hidden], .wx-front[hidden] { display: none; }
+.flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: rgba(255, 255, 255, 0.8); z-index: 15; }
+.flash.go { animation: bolt 0.7s ease-out; }
+@keyframes bolt { 0% { opacity: 0.85; } 10% { opacity: 0.05; } 18% { opacity: 0.6; } 100% { opacity: 0; } }
+
+/* a vehicle: what's behind her (its inside) under her picture, its body over it (a little see-through) */
+.veh { position: absolute; left: 0; top: 0; pointer-events: none; transform-origin: 0 0; will-change: transform; }
+.veh[hidden] { display: none; }
+.veh-front { opacity: 0.99; }
+.veh-pic { position: absolute; left: 0; top: 0; display: block; }
+.veh-wheel { position: absolute; display: block; }
+
+/* the people she meets: behind her picture (she's nearer), their speech bubble beside their head */
+.npc { position: absolute; left: 0; bottom: var(--bar); width: 300px; height: 560px; pointer-events: none; will-change: transform; }
+.npc[hidden] { display: none; }
+.npc canvas { display: block; width: 300px; height: 560px; }
+.npc-bubble { position: absolute; left: 310px; top: 104px; max-width: 430px; padding: 12px 18px 14px; border: 4px solid var(--ink); border-radius: 22px;
+  background: rgba(255, 255, 255, 0.99); box-shadow: 0 7px 0 -2px var(--ink); animation: pop-in 0.25s cubic-bezier(.2, 1.4, .4, 1) both; z-index: 4; }
+.npc-bubble::before { content: ''; position: absolute; left: -22px; top: 30px; border: 12px solid transparent; border-right: 14px solid var(--ink); }
+.npc-bubble[hidden] { display: none; }
+.npc-bubble b { display: block; font: 800 14px/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--violet); }
+.npc-bubble p { margin-top: 7px; font: 700 23px/1.28 var(--sans); overflow-wrap: anywhere; }
+/* while she meets someone, her captions step to the right (theirs is on the left) */
+.set[data-mode='meet'] .caption { left: 480px; width: 760px; }
+
+/* where she is right now (a trip), next to her name */
+.place-chip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px 7px 10px; border: 2px solid var(--ink); border-radius: 999px;
+  background: rgba(255, 255, 255, 0.99); color: var(--ink); font: 700 15px/1 var(--mono); animation: pop-in 0.3s cubic-bezier(.2, 1.4, .4, 1) both; }
+.place-chip[hidden] { display: none; }
+.place-chip b { font: 900 17px/1 var(--display); font-stretch: 112%; }
+.place-pin { font: 17px/1 'Noto Color Emoji', sans-serif; }
+
+/* on her way: from, to, and how far along */
+.route { position: absolute; left: 40px; top: 96px; width: 560px; padding: 18px 24px 22px; border: 4px solid var(--ink); border-radius: 26px;
+  background: rgba(255, 255, 255, 0.99); box-shadow: 0 10px 0 -2px var(--ink); animation: pop-in 0.3s cubic-bezier(.2, 1.4, .4, 1) both; z-index: 3; }
+.route[hidden] { display: none; }
+.route-kicker { display: inline-block; padding: 6px 13px; border: 2px solid var(--ink); border-radius: 999px; background: rgba(63, 240, 195, 0.99);
+  font: 800 14px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.route-line { margin-top: 14px; display: flex; align-items: center; gap: 14px; font: 900 34px/1.05 var(--display); font-stretch: 110%; }
+.route-arrow { font: 30px/1 'Noto Color Emoji', var(--sans); }
+.route-bar { margin-top: 16px; height: 14px; border: 3px solid var(--ink); border-radius: 999px; background: rgba(228, 217, 255, 0.99); overflow: hidden; }
+.route-bar i { display: block; height: 100%; width: 100%; background: rgba(255, 77, 166, 0.99); transform-origin: 0 50%; transform: scaleX(0); animation: route var(--route-s, 14s) linear forwards; }
+@keyframes route { to { transform: scaleX(1); } }
+
+/* what to try asking her: a hint in the bar, changing every few seconds */
+.ask-hint { font: 700 15px/1 var(--mono); color: var(--mint); letter-spacing: 0.02em; white-space: nowrap; animation: hint-in 0.5s ease both;
+  flex: 0 1 auto; min-width: 0; overflow: hidden; }
+.ask-hint.is-cut { visibility: hidden; }
+.ask-hint:empty { display: none; }
+@keyframes hint-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* the places' moving bits */
+.amb .cloud-drift { width: 230px; height: 74px; margin-left: -115px; border-radius: 40px;
+  background: radial-gradient(closest-side at 30% 60%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0)), radial-gradient(closest-side at 62% 45%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+  animation: drift 46s ease-in-out infinite alternate var(--d); }
+@keyframes drift { from { transform: translateX(-70px); } to { transform: translateX(110px); } }
+.amb .torch-glow { width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 196, 92, 0.85), rgba(255, 140, 40, 0));
+  animation: flicker 2.2s ease-in-out infinite; }
+.amb .bird-flap { width: 22px; height: 10px; border: 3px solid #170a36; border-color: #170a36 transparent transparent transparent; border-radius: 50% 50% 0 0;
+  animation: flap 0.5s ease-in-out infinite alternate var(--d); }
+@keyframes flap { to { transform: scaleY(0.4) translateY(4px); } }
+.amb .heat-shimmer { left: 0; width: 1280px; height: 46px; background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 236, 200, 0.28), rgba(255, 255, 255, 0));
+  animation: shimmer 3s ease-in-out infinite; }
+.amb .fog-band { left: -200px; width: 1680px; height: 110px; background: radial-gradient(closest-side, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+  animation: drift 30s ease-in-out infinite alternate var(--d); }
+.amb .dust-drift { left: -200px; width: 1680px; height: 90px; background: radial-gradient(closest-side, rgba(230, 150, 100, 0.4), rgba(230, 150, 100, 0));
+  animation: drift 18s ease-in-out infinite alternate var(--d); }
+.amb .kite { width: 46px; height: 58px; margin: -29px 0 0 -23px; transform-origin: 50% 100%; background: linear-gradient(135deg, #ff4da6 50%, #ffc933 50%);
+  clip-path: polygon(50% 0, 100% 40%, 50% 100%, 0 40%); animation: swing 2.6s ease-in-out infinite; }
+.amb .beacon { width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #ff3d5a; box-shadow: 0 0 12px 5px rgba(255, 61, 90, 0.6); animation: blink 1.6s steps(1) infinite; }
+.amb .lantern { width: 34px; height: 42px; margin-left: -17px; border-radius: 45%; border: 3px solid rgba(23, 10, 54, 0.85); transform-origin: 50% -20px; animation: swing 3s ease-in-out infinite var(--d); }
+.amb .lantern.c0 { background: #e8243f; box-shadow: 0 0 18px 4px rgba(232, 36, 63, 0.45); }
+.amb .lantern.c1 { background: #ff9a1f; box-shadow: 0 0 18px 4px rgba(255, 154, 31, 0.45); }
+.amb .lantern.c2 { background: #ffd23f; box-shadow: 0 0 18px 4px rgba(255, 210, 63, 0.45); }
+
+/* on her way: the world passes by while her vehicle bobs in place */
+.amb .mv-road { left: 0; width: 2560px; height: 10px; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0 70px, rgba(255, 255, 255, 0) 70px 140px);
+  animation: road 0.6s linear infinite; }
+@keyframes road { to { transform: translateX(-140px); } }
+.amb .mv-tree { width: 70px; height: 150px; left: 1340px; border-radius: 40px 40px 6px 6px; background: radial-gradient(circle at 50% 35%, #4fb36b 0 34px, rgba(0, 0, 0, 0) 35px),
+  linear-gradient(90deg, rgba(0, 0, 0, 0) 30px, #7a5236 30px 40px, rgba(0, 0, 0, 0) 40px); animation: pass 6s linear infinite var(--d); }
+@keyframes pass { to { transform: translateX(-1600px); } }
+.amb .mv-cloud { width: 200px; height: 64px; left: 1360px; border-radius: 36px;
+  background: radial-gradient(closest-side at 32% 60%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0)), radial-gradient(closest-side at 64% 45%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
+  animation: pass 11s linear infinite var(--d); }
+.amb .mv-cloud.big { width: 420px; height: 130px; animation-duration: 4.4s; }
+.amb .mv-rail { left: 0; width: 2560px; height: 18px; background: repeating-linear-gradient(90deg, #6b4a32 0 14px, rgba(0, 0, 0, 0) 14px 44px), linear-gradient(180deg, rgba(0, 0, 0, 0) 6px, #8a8aa8 6px 10px, rgba(0, 0, 0, 0) 10px);
+  animation: rail 0.35s linear infinite; }
+@keyframes rail { to { transform: translateX(-44px); } }
+.amb .mv-pole { width: 12px; height: 330px; left: 1340px; background: #5a4a6a; border: 2px solid #170a36; animation: pass 2.7s linear infinite var(--d); }
+.amb .mv-waves { left: 0; width: 2560px; height: 14px; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0 50px, rgba(255, 255, 255, 0) 50px 120px);
+  border-radius: 7px; animation: waves 1.6s linear infinite; }
+.amb .mv-waves.slow { animation-duration: 2.8s; opacity: 0.7; }
+@keyframes waves { to { transform: translateX(-120px); } }
+.amb .mv-isle { width: 260px; height: 120px; left: 1340px; border-radius: 120px 140px 0 0; background: #3e8f5a; border: 3px solid #170a36; animation: pass 16s linear infinite; }
+.amb .mv-streak { width: 3px; height: 90px; top: -100px; background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.9)); animation: streak 1.4s linear infinite var(--d); }
+@keyframes streak { to { transform: translateY(900px); } }

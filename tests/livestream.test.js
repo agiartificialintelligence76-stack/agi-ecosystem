@@ -17,7 +17,7 @@ import {
   pcmToSamples, samplesToPcm, resample, RATE,
 } from '../tools/live/voice.js';
 import { parseArgs, timeAt, startProblem, rtmpTarget, maskUrl, ffmpegArgs, Mixer, reactFor, avShift, outPath, warmUp, beep, audioOnsets, videoOnsets, syncOffset,
-  WARM_GAP_MS, PROBE_SHOW, secretAccepted, finishRecording, x264Preset, askedBy } from '../tools/live/run.mjs';
+  WARM_GAP_MS, PROBE_SHOW, secretAccepted, finishRecording, x264Preset, askedBy, OUT_RATE } from '../tools/live/run.mjs';
 import { liveSite, demoSite, DEMO_QA } from '../tools/live/site.js';
 import * as M from '../tools/live/music.js';
 import { isCrude } from '../server/coins.js';
@@ -49,7 +49,8 @@ test('her lines on stream: PG-13, no pet names, only $AGI, never a real person, 
       assert.ok(!isCrude(t), `PG-13: ${t}`);
       assert.doesNotMatch(t, /\b(babe|baby|cutie|honey|sweetie|darling)\b/i, `no pet names (everyone's watching): ${t}`);
       assert.doesNotMatch(t, REAL_PEOPLE, `never a real person: ${t}`);
-      assert.doesNotMatch(t, /\b(buy|sell|hold|moon|pump|profit|gains?|guaranteed|100x|ape in|financial freedom|get rich)\b/i, `no advice words: ${t}`);
+      // (2026-10-07, her trips: "the Moon" is a place she visits, never "wen moon")
+      assert.doesNotMatch(t.replace(/\bthe Moon\b/g, 'the place'), /\b(buy|sell|hold|moon|pump|profit|gains?|guaranteed|100x|ape in|financial freedom|get rich)\b/i, `no advice words: ${t}`);
       for (const m of t.matchAll(/\$([A-Za-z]+)/g)) assert.equal(m[1].toUpperCase(), 'AGI', `only $AGI: ${t}`);
       for (const link of t.match(/\b[\w-]+\.(?:app|com|io|xyz|me|trade)\b[^\s,]*/g) || []) assert.match(link, /^(agi1\.app|clank\.trade)/, `links: ${t}`);
       assert.doesNotMatch(t, /https?:\/\//, t);
@@ -62,7 +63,7 @@ test('her lines on stream: PG-13, no pet names, only $AGI, never a real person, 
     assert.ok(!isCrude(t));
     for (const m of t.matchAll(/\$([A-Za-z]+)/g)) assert.equal(m[1].toUpperCase(), 'AGI', t);
     assert.doesNotMatch(t, REAL_PEOPLE, t);
-    assert.doesNotMatch(t, /\b(buy|sell|hold|moon|pump|profit|gains?|guaranteed|100x)\b/i, t);
+    assert.doesNotMatch(t.replace(/\bthe Moon\b/g, 'the place'), /\b(buy|sell|hold|moon|pump|profit|gains?|guaranteed|100x)\b/i, t);
     assert.ok(t.length <= 60, `a card fits her set: ${t}`);
   }
   // "not financial advice" wherever money or $AGI comes up
@@ -493,7 +494,8 @@ test('her music under her voice: on a loop (never the same song twice in a row),
   two.mix(long);
   const tail = long.subarray(M.RATE * 5);
   assert.ok(tail.every((x) => x > 0.05), 'no silent moment between songs');
-  // under her voice in the stream's sound: added together, never past full scale
+  // under her voice in the stream's sound (since 2026-10-07 48 kHz stereo: her music, made at 24 kHz, made twice as fine on
+  // the way, the same on both sides): added together, never past full scale
   const writes = [];
   let t = 0;
   const mixer = new Mixer((buf) => writes.push(buf), { now: () => t, lead: 0, bed: new M.MusicBed([{ song: { title: 'x' }, samples: new Float32Array(M.RATE * 10).fill(1) }]) });
@@ -504,11 +506,14 @@ test('her music under her voice: on a loop (never the same song twice in a row),
   t = 4500;
   mixer.pump();
   mixer.end();
+  assert.equal(mixer.timer, null, 'its clock stopped with it');
   const pcm = Buffer.concat(writes);
-  const v = (sec) => pcm.readInt16LE(Math.round(sec * M.RATE) * 2) / 32768;
+  assert.equal(pcm.length, 4.5 * OUT_RATE * 4, '4.5 s of 48 kHz stereo, 16-bit');
+  const v = (sec, side = 0) => pcm.readInt16LE((Math.round(sec * OUT_RATE) * 2 + side) * 2) / 32768;
   assert.ok(v(0.2) < 0.15, `the music fades in at the start: ${v(0.2)}`);
   assert.ok(v(3.9) > 0.5 && v(3.9) < 0.56, `music alone: ${v(3.9)}`);
   assert.ok(v(4.4) > 0.99, 'her voice and the music together: kept at full scale, never wrapped around');
+  for (const s of [0.2, 3.9, 4.4]) assert.equal(v(s, 1), v(s, 0), `the same on both sides at ${s} s`);
   // kept on disk: made once, then read back
   const dir = mkdtempSync(join(tmpdir(), 'agi1-music-'));
   let made = 0;
@@ -583,7 +588,10 @@ test('ffmpeg\'s settings, as X Live Studio asks: 1280×720 at 30, H.264, a keyfr
   assert.equal(at('-video_size'), '1280x720');
   assert.equal(at('-framerate'), '30');
   assert.equal(at('-draw_mouse'), '0');
-  assert.ok(args.includes('pipe:0') && args.includes('s16le') && args.includes('24000'), 'her voice: raw sound on a pipe');
+  // the stream's sound: raw on a pipe, 48 kHz stereo since 2026-10-07 (her song and her videos' sound as they are)
+  const pipe = args.indexOf('pipe:0');
+  assert.deepEqual(args.slice(pipe - 7, pipe + 1), ['-f', 's16le', '-ar', String(OUT_RATE), '-ac', '2', '-i', 'pipe:0'], 'her sound: raw on a pipe');
+  assert.equal(OUT_RATE, 48000);
   for (const [k, v] of [['-c:v', 'libx264'], ['-preset', x264Preset()], ['-tune', 'zerolatency'], ['-pix_fmt', 'yuv420p'], ['-b:v', '3000k'], ['-g', '90'], ['-keyint_min', '90'], ['-c:a', 'aac'], ['-b:a', '128k']]) assert.equal(at(k), v, k);
   // how hard x264 works: superfast below 4 cores (every bit of processor goes to drawing her), veryfast with 4 or more
   assert.equal(x264Preset({}, 2), 'superfast');
@@ -641,7 +649,8 @@ test('a finished recording becomes a standard MP4 (index at the start, nothing e
 test('her voice\'s clock: written in real time a little ahead, a line\'s first sample has a time her mouth follows, cut on demand', async () => {
   let now = 1_000_000;
   const written = [];
-  const m = new Mixer((buf) => written.push(buf.length / 2), { rate: 1000, lead: 200, now: () => now });
+  // (a slow clock to count easily: 1,000 samples a second, her voice at the same rate; each sample 4 bytes: stereo, 16-bit)
+  const m = new Mixer((buf) => written.push(buf.length / 4), { rate: 1000, voiceRate: 1000, lead: 200, now: () => now });
   m.t0 = now;
   m.pump();
   assert.equal(written.reduce((s, x) => s + x, 0), 200, 'silence, 200 ms ahead');
@@ -851,35 +860,56 @@ test('her set: "AI-generated · not financial advice" and "Ask me at agi1.app/li
   assert.match(read('.gitignore'), /^tools\/live\/live\.env$/m);
 });
 
-test('her picture: from x = 400 to the right edge, ending at the bar, nothing plain and opaque over it, her hearts fading before its edge, the window the screen\'s size (her first recording: her head and hearts cut flat, her waving hand cut off, a black line at two edges)', () => {
+test('her picture: the whole width of the set, ending at the bar, nothing plain and opaque over it (her alerts, her TV and its video, karaoke, stickers, the wipe too), her hearts fading before its edge, the window the screen\'s size (her first recording: her head and hearts cut flat, her waving hand cut off, a black line at two edges)', () => {
   // the server's Chromium (software compositing) left out the mirror image of the part of a WebGL canvas that something
   // opaque covered (the bar at the bottom: the top 64 px of her picture went missing). So nothing plain and opaque covers
   // it: it ends where the bar starts, and the boxes over it are 1% see-through. (Drawing her off the page and copying each
   // picture onto a 2D canvas avoided it too, but halved her frames a second on the server: never again.)
   const html = read('tools/live/page/index.html');
   assert.match(html, /<div class="her"><canvas class="her-pic" data-pic aria-hidden="true"><\/canvas><\/div>/);
+  // (her room's moving bits are behind her: before her picture on the page)
+  assert.ok(html.indexOf('data-amb') < html.indexOf('data-pic') && html.indexOf('data-bg') < html.indexOf('data-pic'));
   const js = read('tools/live/page/stage.js');
   assert.match(js, /new THREE\.WebGLRenderer\(\{ canvas: ui\.pic,/, 'WebGL straight onto the page');
   assert.equal(js.match(/WebGLRenderer\(/g).length, 1);
   assert.doesNotMatch(js, /drawImage|transferFromImageBitmap|createElement\('canvas'\)/, 'never a copy of her picture each frame');
   const css = read('tools/live/page/stage.css');
   assert.match(css, /--bar: 64px;/);
-  assert.match(css, /\.her \{ position: absolute; left: 400px; right: 0; top: 0; height: calc\(720px - var\(--bar\)\); \}/, 'it ends where the bar starts');
+  // (2026-10-07, the owner: "move on the screen not on just one place": the whole width, so she can move left and right;
+  // from x = 400 since her first recording, from x = 560 before)
+  assert.match(css, /\.her \{ position: absolute; left: 0; right: 0; top: 0; height: calc\(720px - var\(--bar\)\); \}/, 'the whole width, and it ends where the bar starts');
   assert.match(css, /\.her-pic \{ width: 100%; height: 100%; display: block; \}/);
   assert.match(css, /\.ask \{\s*position: absolute; left: 0; right: 0; bottom: 0; height: var\(--bar\);/, 'the bar: the same height');
-  // the boxes that can be over her picture: never a plain opaque background
-  const rule = (sel) => new RegExp(`\\n${sel.replace('.', '\\.')} \\{([^}]*)\\}`).exec(css)?.[1] || '';
-  for (const sel of ['.card', '.caption', '.label', '.overlay']) {
-    const bg = /background: ([^;]+);/.exec(rule(sel))?.[1];
-    assert.ok(bg, `${sel} has a background`);
-    const alpha = Number(/rgba\([^)]*,\s*([\d.]+)\)/.exec(bg)?.[1]);
-    assert.ok(alpha < 1, `${sel}'s background is a little see-through (${bg})`);
+  // everything that can be over her picture: never a plain opaque background (every color in it a little see-through).
+  // Only her page itself, her room's moving bits (behind her) and the bar (under her picture) may be opaque
+  const plain = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const behind = /^(html, body|\.ask|\.ask-queue|\.amb\b.*)$/;
+  let checked = 0;
+  for (const [, sel, body] of plain.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const s = sel.trim().replace(/\s+/g, ' ');
+    if (/^(@|from|to|\d)/.test(s) || behind.test(s)) continue;
+    for (const [, bg] of body.matchAll(/background(?:-color)?:\s*([^;]+)/g)) {
+      const colors = bg.match(/#[0-9a-f]{3,8}\b|rgba?\([^)]*\)|var\(--[\w-]+\)|\b(?:white|black)\b/gi) || [];
+      for (const c of colors) {
+        const alpha = /^rgba\(/i.test(c) ? Number(c.split(',').at(-1).replace(')', '')) : 1;
+        assert.ok(alpha < 1, `${s}: its background is a little see-through (${bg.trim()})`);
+      }
+      checked += 1;
+    }
   }
+  assert.ok(checked >= 30, `${checked} backgrounds checked`);
+  for (const sel of ['.card', '.caption', '.label', '.overlay', '.alert', '.tv', '.tv-screen', '.karaoke', '.song-chip', '.pop.sticker', '.sync-marker']) {
+    assert.match(css, new RegExp(`\\n${sel.replace(/\./g, '\\.')} \\{[^}]*background: rgba\\(`), `${sel}: a see-through background`);
+  }
+  // pictures and videos over her (her TV's video and picture, her avatar on a post's card): never quite opaque either
+  for (const sel of ['.tv-screen video', '.tv-screen img', '.card-avatar']) assert.match(css, new RegExp(`\\n${sel.replace(/\./g, '\\.')} \\{[^}]*opacity: 0\\.99;`), sel);
   // its pixels and the camera's view follow its place in the stylesheet; her hearts fade out before its left edge
   assert.match(js, /box = ui\.pic\.getBoundingClientRect\(\);/);
   assert.match(js, /renderer\.setSize\(Math\.round\(\(box\.width \* DRAW\) \/ H\), Math\.round\(\(box\.height \* DRAW\) \/ H\), false\);/);
   assert.match(js, /camera\.setViewOffset\(wide, H, wide \/ 2 - FRAME\.x \+ box\.left, box\.top, box\.width, box\.height\)/);
-  assert.match(js, /effects\.update\(dt\);\s*fadeHearts\(\);\s*renderer\.render\(scene, camera\);/);
+  // (2026-10-07, her trips: the people she meets, the weather and the hints too; her picture cut at a vehicle's sill while
+  // she rides, else drawn whole)
+  assert.match(js, /effects\.update\(dt\);\s*fx\.frame\(dt, now\);\s*people\.frame\(dt\);\s*wx\.frame\(dt\);\s*hintFrame\(Date\.now\(\)\);\s*fadeHearts\(\);\s*if \(r && r\.cut < box\.bottom - 1\) \{[\s\S]*?renderer\.render\(scene, camera\);[\s\S]*?\} else renderer\.render\(scene, camera\);/);
   // drawn lighter for a server without a graphics card (2026-10-06: drawing her was two thirds of its processor): her
   // texture at the size she's shown (no mipmaps), her arms with one level of finer mesh (src/stage/agi1-2d.js)
   assert.match(js, /const ARM_REFINE_LIVE = \{ upper: 1, fore: 1, hand: 1, sleeve: 1 \};/);
@@ -911,4 +941,11 @@ test('the Docker image: Playwright\'s Chromium with ffmpeg and Xvfb, never root,
   for (const k of ['SITE_URL', 'LIVE_SECRET', 'LIVE_RTMP_URL', 'LIVE_STREAM_KEY', 'GOOGLE_APPLICATION_CREDENTIALS', 'LIVE_MINUTES', 'LIVE_DAILY_AT', 'LIVE_AV_MS']) assert.match(example, new RegExp(`^#? ?${k}=`, 'm'), k);
   assert.match(example, /^LIVE_SECRET=$/m, 'the template has no secret in it');
   assert.match(example, /^LIVE_STREAM_KEY=$/m);
+  // (2026-10-07) her chatter, her X posts (no token in the template) and her videos folder
+  for (const k of ['LIVE_CHATTER', 'LIVE_CHATTER_PER_HOUR', 'LIVE_X_BEARER', 'LIVE_X_READS', 'LIVE_X_USER', 'LIVE_VIDEOS_DIR']) assert.match(example, new RegExp(`^#? ?${k}=`, 'm'), k);
+  assert.match(example, /^LIVE_X_BEARER=$/m);
+  const sh = read('tools/live/live.sh');
+  assert.match(sh, /if \[ -d "\$DIR\/videos" \]; then\s+VIDEOS="-v \$DIR\/videos:\/videos:ro"/, 'her videos folder, read-only, when it\'s there');
+  assert.match(sh, /--env-file "\$DIR\/live\.env" \$KEY \$VIDEOS \\/);
+  assert.match(read('tools/live/run.mjs'), /listVideos\(process\.env\.LIVE_VIDEOS_DIR \|\| '\/videos'\)/);
 });

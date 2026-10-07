@@ -33,7 +33,16 @@ export function liveSite({ site, secret, fetchFn = fetch, log = console } = {}) 
     base,
     start: (status) => call({ action: 'start', status }),
     beat: (show, status, segment, now) => call({ action: 'beat', show, status, segment, now }, 6000),
-    next: (show) => call({ action: 'next', show }, 24_000),
+    // (2026-10-07, viewers' requests) can: what she can do on stream right now (tools/live/acts.js): her answer says which
+    // one the viewer asked for ({ act })
+    // (2026-10-07) place: where she's visiting (tools/live/page/places.js), so her answer can say so
+    next: (show, can = null, place = null) => call({ action: 'next', show, ...(Array.isArray(can) ? { can } : {}), ...(place ? { place } : {}) }, 24_000),
+    // (2026-10-07) someone she meets on a trip: their conversation ({ lines: [{ who, text }], mood }), about what her chat asked
+    meet: (show, meet) => call({ action: 'meet', show, meet }, 15_000),
+    // (2026-10-07) something new to say between things, her reaction to her own X post / a reply / her video, $AGI's numbers
+    chat: (show, topic) => call({ action: 'chat', show, topic }, 15_000),
+    react: (show, react) => call({ action: 'react', show, react }, 15_000),
+    market: (show, since) => call({ action: 'market', show, since }, 12_000),
     done: (show, id, status, why) => call({ action: 'done', show, id, status, ...(why ? { why } : {}) }),
     back: (show, id) => call({ action: 'back', show, id }),
     stop: (show, next) => call({ action: 'stop', show, ...(next ? { next: new Date(next).toISOString() } : {}) }),
@@ -55,34 +64,69 @@ export function liveSite({ site, secret, fetchFn = fetch, log = console } = {}) 
 }
 
 // --demo: no site at all. A few made-up questions arrive now and then, with made-up answers (no AI), and the owner's
-// controls never change. Only to see and hear the show (with --record, nothing goes anywhere).
+// controls never change. Only to see and hear the show (with --record, nothing goes anywhere). Since 2026-10-07 a few of
+// them ask her to do something (a viewer's request: act), and made-up lines stand in for the site's new ones
+// (something new to say, her reactions, $AGI's numbers and a made-up buy now and then).
 export const DEMO_QA = [
   { name: 'Mochi', text: "what's your favorite color?", reply: 'mochi asks my favorite color… purple, obviously 💜 it matches my whole personality.', mood: 'happy' },
+  { name: 'kai', text: 'can you jump 3 times?', reply: 'kai wants three jumps. okay okay, here we go! 💜', mood: 'happy', act: { act: 'jump', times: 3 } },
   { name: null, text: 'do you ever get tired of streaming?', reply: "someone asks if i get tired of streaming. never! i don't sleep, and you're here 💜", mood: 'love' },
-  { name: 'kai', text: 'wen moon?', reply: "kai asks wen moon. i'm a girlfriend, not a fortune teller 🙈 not financial advice, but i love the optimism.", mood: 'shy' },
-  { name: 'Lena', text: 'what music do you like?', reply: 'lena asks what music i like. anything you can dance to in your kitchen at midnight 💜', mood: 'happy' },
-  { name: null, text: 'are you real?', reply: "someone asks if i'm real. i'm a real AI, which is basically the same thing, right? 🙈", mood: 'shy' },
+  { name: 'Lena', text: 'sing the chorus of your song!', reply: 'lena wants the chorus of my song. say less 🎤', mood: 'happy', act: { act: 'sing', part: 'chorus' } },
+  { name: null, text: 'wen moon?', reply: "someone asks wen moon. i'm a girlfriend, not a fortune teller 🙈 not financial advice, but i love the optimism.", mood: 'shy' },
+  { name: 'Rin', text: 'go to the beach!', reply: 'rin says beach. okay, beach stream it is 🌅', mood: 'happy', act: { act: 'room', to: 'beach' } },
+  { name: 'Mo', text: 'dance for us', reply: "mo wants a dance. you don't have to ask me twice 💜", mood: 'happy', act: { act: 'dance' } },
+  { name: null, text: 'can you blush?', reply: 'someone wants me to blush. you just made me, so… 🙈', mood: 'shy', act: { act: 'blush' } },
+  { name: 'Ash', text: 'change your outfit to cozy', reply: 'ash wants cozy mode. cat ears, coming up 🐱', mood: 'happy', act: { act: 'outfit', to: 'cozy' } },
+  { name: null, text: 'wink at us', reply: 'someone wants a wink. okay, just one 😉', mood: 'shy', act: { act: 'wink' } },
+  // (2026-10-07) a trip, a snack, the weather, her emotions, a question in another language
+  { name: 'Yuki', text: 'take me to Tokyo!', reply: 'yuki wants Tokyo. okay, let\'s go! 💜', mood: 'happy', act: { act: 'trip', to: 'tokyo' } },
+  { name: null, text: 'eat a croissant', reply: 'someone says croissant. you know i can\'t say no 🥐', mood: 'happy', act: { act: 'eat', to: 'croissant' } },
+  { name: 'Sam', text: 'make it snow!', reply: 'sam wants snow. okay, let it snow ❄️', mood: 'happy', act: { act: 'weather', to: 'snow' } },
+  { name: null, text: 'show us heart eyes', reply: 'heart eyes, coming right up 😍', mood: 'love', act: { act: 'lovestruck' } },
+  { name: 'Lucía', text: '¿cuál es tu comida favorita?', reply: 'lucía pregunta por mi comida favorita… ¡las fresas! 🍓 son dulces como yo 💜', mood: 'happy', lang: 'es', feel: 'giggle' },
+  { name: null, text: 'go to the Moon!', reply: 'someone says the Moon. rocket time! 🚀', mood: 'happy', act: { act: 'trip', to: 'moon' } },
 ];
-export function demoSite({ every = 50_000, now = Date.now, diary = null } = {}) {
-  let n = 0, id = 100, show = 0;
+export const DEMO_CHAT = [
+  'okay, honest question: is pineapple on pizza a crime? ask me at agi1.app/live and convince me 🍕',
+  "i love this room. it's like a hug, but it's a room 💜",
+  "if you're watching with a snack right now, i respect you.",
+  "i've been live for a bit and i'm having the best time. thank you for being here 💜",
+  "fun thought: i'm the only girlfriend who's also a stream. very efficient 🙈",
+];
+export function demoSite({ every = 50_000, now = Date.now, diary = null, buyEvery = 150_000 } = {}) {
+  let n = 0, id = 100, show = 0, chat = 0, buys = 0;
   const startedAt = now();
   const due = () => Math.max(0, Math.min(DEMO_QA.length, Math.floor((now() - startedAt) / every) + 1) - n);
   return {
     base: '(demo)',
     async start() { show += 1; return { ok: true, show }; },
     async beat() { return { ok: true, paused: false, closed: false, end: false, blocked: [], skipped: [], waiting: due() }; },
-    async next() {
+    async next(_show, can = null) {
       if (due() <= 0) return { none: true };
       const qa = DEMO_QA[n % DEMO_QA.length];
       n += 1;
       id += 1;
-      return { question: { id, name: qa.name, text: qa.text, source: 'web' }, reply: qa.reply, mood: qa.mood };
+      // (what she can't do right now: she says yes anyway in the made-up answer, but nothing happens)
+      const ok = qa.act && (!Array.isArray(can) || can.includes(qa.act.act === 'sing' ? `sing:${qa.act.part}` : qa.act.act));
+      return { question: { id, name: qa.name, text: qa.text, source: 'web' }, reply: qa.reply, mood: qa.mood, act: ok ? { times: 1, ...qa.act } : null,
+        ...(qa.lang ? { lang: qa.lang } : {}), ...(qa.feel ? { feel: qa.feel } : {}) };
+    },
+    async chat() { const line = DEMO_CHAT[chat++ % DEMO_CHAT.length]; return { reply: line, mood: 'happy' }; },
+    async react(_show, r) { return r?.text || r?.kind === 'video' ? { reply: "okay, i love this one. i was so proud of it 💜", mood: 'happy', text: r.text || '' } : { skip: 'empty' }; },
+    async market() {
+      const t = now();
+      const k = Math.floor((t - startedAt) / buyEvery);
+      const out = { numbers: { mcap: 412_000 + k * 1500, h24: 4.2, liq: 64_000 }, buys: [] };
+      if (k > buys) { buys = k; out.buys.push({ id: `demo-${k}`, at: t - 5000, usd: 120 + 35 * k, agi: 290_000 }); }
+      return out;
     },
     async done() { return { ok: true }; },
     async back() { n = Math.max(0, n - 1); id -= 1; return { ok: true, status: 'waiting' }; },
     async stop() { return { ok: true }; },
     async schedule() { return { ok: true }; },
     async onX() { return { ok: true, told: false }; },
+    // (no AI: the stream's own few words for them instead: tools/live/trips.js MEET_FALLBACK)
+    async meet() { return { none: true }; },
     async status() { return { ready: true }; },
     async diary() { return diary; },
   };

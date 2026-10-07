@@ -89,15 +89,30 @@
 >   like an automated one … make this better then continue"): an automated show on @agi1dotapp, every day, from the
 >   owner's own rented server (Docker): AGI-1 in 2D answers viewers' questions out loud (sent at **agi1.app/live** or with
 >   `/live` in her bot; X's own chat only if X approves the owner's access form), with pre-written segments in between and
->   her own music, made in code. Never other coins, real people, X videos or posts; the owner pauses, skips and ends it
->   from a phone. **On since 2026-10-07** (her first public show: 630 live viewers within its hour). The same day (the
+>   her own music, made in code. Never other coins (her song "Feel the AGI" is the owner's one exception, 2026-10-07; real
+>   people may come up since 2026-10-07, and she stays neutral), never anyone else's X videos or posts; the owner pauses,
+>   skips and ends it from a phone. **On since 2026-10-07** (her first public show: 630 live viewers within its hour). The same day (the
 >   owner: "it doesnt read the X live comments and people barely send her a meesage … i think longer hours is better"): a
 >   box on the owner's phone page to pass a question from X's chat on to her, an "i'm live" post in her Telegram groups
 >   when a show starts, seven more segments (258 pre-written lines, from 121) and **3-hour shows**. **Run
 >   `supabase/live.sql` again before pushing that.** And later that day (the owner: "can you remove this so people dont
 >   know when im live", "im gonna randomly live now"): **she goes live at random times**, the site and her bot never say
 >   when her next show is, and `sh tools/live/live.sh --start-in 10` starts a show in 10 minutes. See "Her live show on X"
->   and its "Going live at random times".
+>   and its "Going live at random times". **And her stream, upgraded** (the same day, the owner: "the stream went well / i
+>   ask some people and many of them requested that / -add more actions / -can change her clothes / -can sing her songs …",
+>   then "she will do also what viewers ask her … i just want her to be very interactive to the viewers"): viewers ask her
+>   to jump, wave, blush, dance, sing a part of her song or all of it, change her outfit or room, move around…; her
+>   outfits and rooms made in code, more moves and effects, her song "Feel the AGI" as it is (the owner's exception), dance
+>   breaks, new lines from the site's AI, her own X posts, their replies and her videos on her TV, and $AGI's buys and
+>   numbers as news and feelings (never "pumping": hard rule 8). See "Her stream, upgraded". **And her trips** (the same
+>   day, the owner: "add more outfits and rooms, (real places in real life) … vehicles also like robotaxi … she can ride the
+>   vehicles as well and go to places. and meet random people … she can eat food in the stream … go to moon, mars. and add
+>   more emotions", then the weather, her 16 languages on stream, "make it interactive already" and sounds that follow
+>   what's happening): she rides a robotaxi, a plane, a rocket… to 18 real places, the Moon and Mars (all drawn in code),
+>   in an outfit for each, says hello in the language people speak there, meets made-up people with their own voices,
+>   eats 34 snacks, has 19 more emotions and 10 kinds of weather, shows what she can do as her show starts, and the
+>   sounds around her follow where she is; a viewer may name a real person (questions and display names), and she stays
+>   neutral (the owner's change). See "Her trips".
 > - **CloakMesh at inference.agi1.app** (2026-10-03, the owner's private-AI project: "it will be put on inference.agi1.app",
 >   then "Landing page first"): a serious page for CloakMesh (private AI where the visitor's own device checks the server's
 >   AMD hardware itself, and swaps their personal data for tokens before anything is sent), with a demo of its privacy
@@ -200,8 +215,10 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   random times since 2026-10-07 (an hour a day at 9:00 the owner's time at first), streamed from the owner's own server:
   she answers questions sent at agi1.app/live and in her bot out loud (and questions from X's chat that the owner passes
   on), with pre-written segments (her diary, $AGI 101, dating tips
-  for degens, a quiz about her…) and her own music; the owner controls it from a phone. On since 2026-10-07. See "Her live
-  show on X"
+  for degens, a quiz about her…) and her own music; the owner controls it from a phone. On since 2026-10-07. Since its
+  upgrade the same day she also does what viewers ask (jump, dance, sing her song…), changes her outfit and her room, has
+  dance breaks, sings "Feel the AGI", shows her own X posts and videos, and reacts to $AGI's buys. See "Her live show on
+  X" and "Her stream, upgraded"
 - **CloakMesh** (2026-10-03, the owner's next project): its page at **inference.agi1.app** (agi1.app/cloakmesh): what
   CloakMesh is, a demo of its privacy filter that runs only in the visitor's browser, and a free waitlist. Serious, its own
   look, never about the coin. Live at agi1.app/cloakmesh; inference.agi1.app once its domain is set up. See "CloakMesh
@@ -245,9 +262,20 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    owner to download: the owner posts them by hand (see "Her daily clips").
    **A second exception, the owner's (2026-10-02): her live show on X**, an automated livestream on her account, started
    by the owner's own server (an hour a day at first, 3 hours at random times since 2026-10-07): she answers viewers'
-   questions (checked, PG-13, never other coins or real people) and says pre-written lines, but never posts, types in X's
+   questions (checked, PG-13, never other coins; real people only neutrally, since 2026-10-07) and says pre-written lines, but never posts, types in X's
    chat, likes, follows or replies to anything on X (see "Her live show on X"). The owner may pass a question from X's chat
-   on to her by hand (2026-10-07: she still never reads X's chat herself).
+   on to her by hand (2026-10-07: she still never reads X's chat herself). Since her stream's upgrade (2026-10-07, see
+   "Her stream, upgraded"): **her song "Feel the AGI" plays on stream as it is**, the owner's one exception to "never other
+   coins or real people" (the owner's own song: its words name real people and another project; only its hook is ever on
+   screen); lines the site's AI writes for her stream with the same rules; and, only with the owner's Bearer Token on the
+   server, she **reads her own posts on X and the replies under them** (read-only, X's API) to show and react to them on
+   stream, never who replied, each checked like a viewer's question first. Still never a post, a reply, a like or a
+   follow. **Real people on her show** (2026-10-07, the owner: "change the restriction when they ask a name like a
+   specific person … always be neutral on the answers on that", then "Allow display names too"): a viewer's question, a
+   reply under her posts and a viewer's display name may name a real person, and she stays neutral (widely known facts
+   only, no opinions, rumors, jokes or politics, never tying anyone to $AGI, never pretending anyone is watching); the
+   people she meets on her trips are made up (see "Her trips"). Her pre-written lines still never name anyone real, and
+   other coins stay out.
    **A third exception, the owner's (2026-10-03): her Telegram groups**, only the ones the owner lists in
    `TELEGRAM_GROUPS` (anywhere else she leaves at once): her diary entry and $AGI's market moments as they happen (the
    same pre-written lines as her texts first, never anything about another coin), a pre-written intro when she's added
@@ -272,7 +300,10 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    texts first, diary, clips or posts about them, no "it'll go up"); every launch line says "not financial advice" and that
    meme coins can lose all of their value. **Her buy alerts** (2026-10-06, the owner's buy bot, see "Her buy bot"): news
    of a buy that just happened, in its own numbers (spent, got, price, market cap) with "not financial advice"; never "buy
-   now", a prediction or pressure, never another coin.
+   now", a prediction or pressure, never another coin. **$AGI on her live show** (2026-10-07, the owner: "says if $AGI is
+   pumping", see "Her stream, upgraded"): an alert for a buy that just happened (its dollars only, never who), her proud
+   line at a new $200K market cap step, and a card with $AGI's market numbers and a feeling about the day (green, red or
+   calm); "not financial advice" every time, never "pumping", a prediction, buy, sell or hold (Claude told the owner).
 9. **Wallets: an address and a free signature, nothing else.** The site never asks a wallet for a transaction, a token
    approval, a network change or any signature other than the plain-text sign-in message (it may *read* which network the
    wallet is on). `tests/wallet.test.js` fails the build if the code in `src/` ever does. Levels never come with "buy more" wording,
@@ -313,7 +344,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | Launch fees paid back | The owner's own small **gas wallet** (`LAUNCH_GAS_KEY`), from our server: one plain ETH payment back to each launch's creator | The owner's choice, to bring launches to her bot; capped per launch, per wallet and per day |
 | Her live show (2026-10-02) | **The owner's own rented server** (Hetzner Cloud: a CX23 since 2026-10-06, CX33 once it's back in stock) running **Docker** (Playwright's Chromium, Xvfb, ffmpeg), streaming to **X Live Studio** by RTMP; the site keeps her line (`/api/live`, Supabase) | Vercel can't run a browser and ffmpeg for an hour; Live Studio takes a standard encoder's stream; the cheapest server that draws her smoothly |
 | Her voice on stream | **Google Cloud's Vertex AI** (Gemini 3.8 Flash-Lite TTS, Despina), a service account on the server | The site's own voice (the owner's choice), with Google Cloud's higher limits instead of the site's 100 a day |
-| Her music on stream | **Her own songs, made in code** (`tools/live/music.js`) | The owner: "can you just generate music yourself?": no service, no licence, nobody else's music |
+| Her music on stream | **Her own songs, made in code** (`tools/live/music.js`; since 2026-10-07 also three dance songs), and **her song "Feel the AGI"** (the owner's own, made with Suno: `tools/live/songs/`) | The owner: "can you just generate music yourself?": no service, no licence, nobody else's music; her song: the owner's request ("can sing her songs like this one") |
+| Her X posts on stream (2026-10-07) | **X's API** (pay per use, read-only), with an app's Bearer Token in the server's live.env | The owner: "react to her own X posts/videos and replies"; read-only, so nothing posts; pay per use, capped per show (`LIVE_X_READS`) |
 
 ## Project structure
 
@@ -379,7 +411,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards"); and (2026-10-03) `cloakmesh-card.html`, CloakMesh's link preview (`public/cards/cloakmesh.png`: a 1200 × 630 screenshot of it in Chromium, then 256 colors; Claude redoes it when the page's top changes) |
 | `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me; since 2026-09-30 "Check my burn" and, at `GET ?burns`, the burn monitor's numbers), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only; since 2026-10-01 also tidying up launch drafts and the pictures of coins never launched), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first; since 2026-10-06 also, at `?buys`, her buy bot's check, every minute from Supabase Cron), and since 2026-10-01 `launch.js` (the launch page's server: a draft and its picture, getting a launch ready, reading it back, its fee paid back), and since 2026-10-02 `live.js` (her live show: a visitor's question, its place and her answer; her stream's calls with `LIVE_SECRET`; the owner's controls), and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: open or not, joining, leaving). **That's 12: Vercel's Hobby plan allows 12 functions per deployment** (every file here is one), so a new feature must share one of these (or the project moves to Pro). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name; since 2026-10-06 also clank.trade's API itself, `clankApi()`, moved from `checker.js` so the buy bot loads light), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; where each coin's picture is; since 2026-10-05 every amount in dollars at the coin's own pair's price, ETH or SPCX), `coin-pictures.js` (2026-10-05: the coins' pictures, from public IPFS gateways or ClankBot's host, checked and made small with sharp; only `api/checker.js` loads it), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap; since 2026-10-05 also /mc's numbers in her Telegram groups, `agiNumbers()`: market cap, 24h change, liquidity), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it), and since 2026-10-03 `tg-api.js` (Telegram's API itself, her token, the daily chat codes: moved out of `telegram.js`) and `tg-groups.js` (her Telegram groups: which groups, leaving the others, her intro and welcomes, her answers there and their limits, her posts there); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and what's in it, what its creator holds; since 2026-10-05 the pairs' addresses, `ETH_PAIR` and `SPCX`, which `launch.js` shares; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls); and since 2026-10-06 `buys.js` (her buy bot: $AGI's newest trades from clank.trade, the check (each buy once, the first look silent), her GIF and caption in her groups) and `media/agi1-buy.mp4` (her buy GIF, 138 KB: Vercel bundles it with `/api/feed` only; made by `tools/buybot/`) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name; since 2026-10-06 also clank.trade's API itself, `clankApi()`, moved from `checker.js` so the buy bot loads light), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; where each coin's picture is; since 2026-10-05 every amount in dollars at the coin's own pair's price, ETH or SPCX), `coin-pictures.js` (2026-10-05: the coins' pictures, from public IPFS gateways or ClankBot's host, checked and made small with sharp; only `api/checker.js` loads it), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap; since 2026-10-05 also /mc's numbers in her Telegram groups, `agiNumbers()`: market cap, 24h change, liquidity), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it), and since 2026-10-03 `tg-api.js` (Telegram's API itself, her token, the daily chat codes: moved out of `telegram.js`) and `tg-groups.js` (her Telegram groups: which groups, leaving the others, her intro and welcomes, her answers there and their limits, her posts there); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and what's in it, what its creator holds; since 2026-10-05 the pairs' addresses, `ETH_PAIR` and `SPCX`, which `launch.js` shares; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-07 `live-acts.js` (what viewers can ask her to do on stream: the list, its rests, her prompt's part, her answer's request checked; shared with her stream's runner); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls); and since 2026-10-06 `buys.js` (her buy bot: $AGI's newest trades from clank.trade, the check (each buy once, the first look silent), her GIF and caption in her groups) and `media/agi1-buy.mp4` (her buy GIF, 138 KB: Vercel bundles it with `/api/feed` only; made by `tools/buybot/`) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -393,9 +425,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/launch.sql` | "Launch with AGI-1" (2026-10-01). Run once in the same Supabase project (any time; running it again is safe): four new tables (`agi1_launch_drafts`, `agi1_launch_chats`, `agi1_launch_wallets`, `agi1_launch_days`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `PINATA_JWT` is set), her `/launch` says launching isn't open yet |
 | `supabase/buys.sql` | Her buy bot (2026-10-06). Run once in the same Supabase project, after switching on Integrations → Cron and Database → Extensions → pg_net (running it again is safe): two new tables (`agi1_buys`, `agi1_buy_state`), 2 functions and two Supabase Cron jobs (the check every minute, a daily tidy-up of their run history), only added (nothing the original site uses changes). It ends with `buys_ready = 1` and `buys_scheduled = 1`. Until it's run, no buy is posted |
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
-| `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there). See "Her live show on X" |
+| `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`). See "Her live show on X", "Her stream, upgraded", "Her trips" and "Her painted set" |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `tools/promo/` | Her launch video (2026-10-03, not part of the website): `make.mjs` (builds its page, draws every frame in Chromium, ffmpeg → the MP4s, the cover, the post text, a light copy), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen, from the site's own files where it can), `music.js` (its music, composed and played in code), `page/` (the renderer: `promo.js`, `kit.js`, `ui.js`, `transitions.js`, `her.js` (her Live2D model), `art.js` (the front's art and shader), `scenes/` (one file a scene); built into `tools/promo/dist/`, which git ignores). Its videos go to `promo/` (git ignores it). See "Her launch video" |
@@ -439,7 +471,10 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 - Her live show (2026-10-02): `node tools/live/run.mjs --demo --fake-voice --record try.mp4 --minutes 3` makes a short show
   into a file anywhere (made-up questions, a stand-in hum; needs Chromium, ffmpeg, Xvfb and `npm install --no-save
   playwright-core@1.63.0`). On the owner's server everything goes through `sh tools/live/live.sh …` (see "Her live show
-  on X").
+  on X"). Since 2026-10-07 `--try song,dance,video,room,outfit,market` puts her new extras first on a recording (see "Her
+  stream, upgraded"; `LIVE_VIDEOS_DIR` to a folder with a video or two for `video`), and `--try trip,eat,weather,meet` her
+  trips (see "Her trips"). Since 2026-10-07 `sh tools/live/live.sh --art` on the server paints her set's pictures with
+  Google's image AI, once (see "Her painted set").
 - Local testing needs Node.js 20.19+ or 22.12+ (Vite 8). Claude builds and tests in its own workspace, so
   `node_modules/` normally isn't in this folder. `node_modules/` made on one system (Linux, Windows) doesn't work on
   another: if it came from somewhere else, delete it and run `npm install` again.
@@ -3341,8 +3376,9 @@ choices the same day, all built:
 
 **What viewers see on X** (1280 × 720, 30 frames a second):
 - **Her set** (`tools/live/page/`): AGI-1 in 2D (her Live2D model, the site's own code: breathing, blinking, looking around,
-  her mouth following her voice), waist up on the right, on Pop mode's violet with comic focus lines. Her picture starts at
-  x = 400 (since 2026-10-06), so her waving hand and her cheer fit, and her hearts fade out before its edge. At the top
+  her mouth following her voice), waist up on the right, on Pop mode's violet with comic focus lines (since 2026-10-07 in
+  one of her rooms). Her picture is the whole width of the set since 2026-10-07, so she can move around (from x = 400
+  since 2026-10-06, so her waving hand and her cheer fit), and her hearts fade out before its edge. At the top
   "● LIVE 12:34", "AGI-1" and **"AI-generated · not financial advice"** (always on screen); at the bottom **"Ask me at
   agi1.app/live"**, how many questions are waiting, and "18+ · PG-13 · I'm an AI · only $AGI here".
 - **A question:** a card "Question · from Mochi" ("from someone on Telegram"; since 2026-10-07 "from kai_99 on X" for
@@ -3360,10 +3396,12 @@ choices the same day, all built:
 - **"Starting soon"** with a countdown (from a couple of minutes before; with `--start-in`, as many minutes as asked),
   **"Be right back"** (the owner's pause), **"Thanks for watching"** (the end, "Follow @agi1dotapp for the next one"
   since 2026-10-07, never a time); her music under everything.
-- Everything she says that isn't an answer is pre-written (`tools/live/lines.js`, 258 lines since 2026-10-07, 121
-  before; tests hold every one to her
+- Everything she says that isn't an answer is pre-written (`tools/live/lines.js` and, since her trips, `trips.js`: 529
+  lines, 316 after her stream's upgrade, 258 before it and 121 at first; tests hold every one to her
   rules: PG-13, no pet names, only $AGI, never a real person, never advice, "not financial advice" whenever money comes up,
-  links only to agi1.app and clank.trade).
+  links only to agi1.app and clank.trade), except, since the upgrade, the lines the site's AI writes for her and her
+  reactions to her own posts and videos (her live rules, like her answers: see "Her stream, upgraded"), the conversations
+  with the people she meets on her trips (see "Her trips"), and her song.
 
 **Asking her a question:**
 - **agi1.app/live** (`live.html`, `src/live/page.js`): whether she's live (while she's off, since 2026-10-07 never when
@@ -3383,17 +3421,20 @@ choices the same day, all built:
   name). Only with the owner's key; she still never reads X's chat herself.
 - **Her rules for a question, before it's in line** (`server/live.js`, `server/live-words.js`): PG-13; no links (her own
   two sites, clank.trade and agi1.app, are fine), addresses, @names, emails or phone numbers; **no other coin**, as a
-  $ticker or by name (Bitcoin, Pepe, Doge…; ETH is fine: it's Robinhood Chain's money); **no real people** by name (Elon,
-  Vitalik, Trump…); words written together count too ("ElonMusk", "PepeCoin"). **Someone who sounds like they're in
+  $ticker or by name (Bitcoin, Pepe, Doge…; ETH is fine: it's Robinhood Chain's money), words written together too
+  ("PepeCoin"); since 2026-10-07 a real person may come up (the owner: "always be neutral on the answers on that"), and
+  she answers neutrally (until then: no real people by name, "ElonMusk" included). **Someone who sounds like they're in
   distress** gets a caring note at once, and the question never goes in line or on stream. One question in line at a time
   per person (a daily code of their connection, or of their Telegram chat), a minute apart, 5 a day; 40 waiting at most;
-  600 a day for the site. The owner's blocked words refuse a question too. A name: never crude, a coin, a real person, or
-  anything that passes for her, the team or a moderator, however it's written ("AGI1official", "real_agi_1").
+  600 a day for the site. The owner's blocked words refuse a question too. A name: never crude, a coin, or anything that
+  passes for her, the team or a moderator, however it's written ("AGI1official", "real_agi_1"); a real person's name is
+  fine since 2026-10-07 (the owner: "Allow display names too": it's only what the viewer typed, and she never says that
+  person is there).
 - **Then the AI decides, before anything airs** (on Vercel, with the site's Gemini key: the stream's server never holds
-  it): `skip` "rules" (not for a public stream: anything the checks missed, a real person, another coin, accusations,
-  explicit or hateful, spam) or "care" (someone in distress: never read; the person sees the caring note), and `nameOk` (a
-  name it doubts shows as "someone"; an answer that says that name anyway isn't aired). An answer naming another coin or a
-  real person, or with a link the cleanup took out, isn't aired either, and nor is an answer cut off before it said whether
+  it): `skip` "rules" (not for a public stream: anything the checks missed, a private person, another coin, accusations,
+  rumors, explicit or hateful, spam; a famous person on their own is fine since 2026-10-07) or "care" (someone in distress: never read; the person sees the caring note), and `nameOk` (a
+  name it doubts shows as "someone"; an answer that says that name anyway isn't aired). An answer naming another coin (a
+  real person too, until 2026-10-07), or with a link the cleanup took out, isn't aired either, and nor is an answer cut off before it said whether
   it may air ("skip" comes first in its JSON for that reason). A skipped question is never shown.
 - **What's kept** (`supabase/live.sql`, at most 2 days, then the keep-alive deletes it): the question, the name given, her
   answer, where it is, and a daily code of who asked (never an IP address or a Telegram chat's number; for X's chat, of
@@ -3663,7 +3704,9 @@ owner's server, set 2026-10-07: see "3 hours a day"),
 `LIVE_DAILY_AT` (01:00 UTC, 9:00 the owner's time: the cron line's show, and the next show the site keeps but never shows
 since 2026-10-07), `LIVE_AV_MS` (170), `LIVE_MUSIC` (on), `LIVE_MUSIC_VOLUME` (100). Optional: `LIVE_VOICE_TIMEOUT_S`
 (15), `LIVE_GL` (her picture's size: 720 with 4 cores or more, else 540), `LIVE_X264_PRESET` (how hard the video encoder
-works: superfast below 4 cores, else veryfast; since 2026-10-06).
+works: superfast below 4 cores, else veryfast; since 2026-10-06). Since her stream's upgrade (2026-10-07): `LIVE_CHATTER`
+(on), `LIVE_CHATTER_PER_HOUR` (40), `LIVE_X_BEARER` (a secret: X's Bearer Token; none = she never reads X), `LIVE_X_READS`
+(60), `LIVE_X_USER` (agi1dotapp), `LIVE_VIDEOS_DIR` (/videos): see "Her stream, upgraded".
 
 **Troubleshooting** (`tail -50 /var/log/agi1-live.log` on the server; Vercel → Logs for the site's side):
 
@@ -3720,7 +3763,7 @@ warm-up), her music (her songs' chords, melodies, length, level, no clipping or 
 ducking, the fade, no gaps, kept on disk), the runner's options (a late start refused, a recording's made-up questions),
 ffmpeg's settings, a recording finished as a standard MP4, her voice's clock and the mixer, the lip-sync check, the site
 client (a redirect said, never followed; "back") and the demo, her set's page (since 2026-10-06 her picture: from x = 400,
-ending at the bar, nothing plain and opaque over it, her hearts fading before its edge, the window one pixel bigger than
+the whole width since 2026-10-07, ending at the bar, nothing plain and opaque over it, her hearts fading before its edge, the window one pixel bigger than
 the screen; and x264's speed by the server's cores), the Docker image; since 2026-10-07 the new segments' picks (never
 twice in a segment), a 3-hour show (every segment about as often as the others), the question card for X's chat, "on_x"
 only for a real stream; since later that day `--start-in` (0 to 30 minutes, read back as that time, never refused) and no
@@ -3812,6 +3855,359 @@ things. Fixed the same day:
 - Seen, not changed: the thin streaks at the ends of her hair behind her arms (her texture's painted tips, `fix-hair.py`)
   near the bar; and in her hop (love, happy, celebrate) the top of her head goes behind the label for a moment, and her
   hearts fly out of the top of the picture (the screen's own edge).
+
+### Her stream, upgraded (2026-10-07)
+
+**The owner's request** (after her first shows): "the stream went well / i ask some people and many of them requested
+that / -add more actions / -can change her clothes / -can sing her songs like this one ("…\AGI-1_Feel_the_AGI_v9_master.mp4")
+/ -react to her own X posts/vidoes and replies (with visuals and not / -can dance / -can change places (like a real stream
+room) / -says if $AGI is pumping / -more effects on the stream so its not bland / - says a lot in stream, not just the same
+things over and over / -says emoji / -move not just steady / -make her act like a real streamer / etc. you can add more",
+then, while it was being built: "she will do also what viewers ask her . like jump , jump many times, wave, blush, dance,
+sing , sing some parts of her song like the rap part, can sing the whole song also, wink, move on the screen not on just
+one place etc you can add more i just want her to be very interactive to the viewers". The owner's choices (asked one by
+one): her song **"as it is"**, **AI chatter** (about $0.50 a show at most), clothes and rooms **made in code**, and **all
+three** kinds of reactions (her own videos, her X posts, the replies under them). All of it is her stream's (`tools/live/`,
+and her answers on our server): the website itself only got a few more words on agi1.app/live.
+
+**What's new on her stream:**
+- **She does what viewers ask** (`server/live-acts.js`, `tools/live/acts.js`): asked in any words, in a question at
+  agi1.app/live, `/live` in her bot or one the owner passes on from X's chat: jump (up to 5 times in a row), wave (up to
+  3), blush, wink, a twirl (up to 3), dance, sing a part of her song (the chorus, the rap, the intro, the first verse, the
+  last chorus) or all of it, change her outfit, go to another room, move around the screen (left, right, center, around),
+  clap, heart hands, a cute pose with a wink, laugh, a thinking pose, act shy, a cheer, a sip from her mug, a stretch, an
+  excited bounce, confetti. Her stream tells our server what she can do right now (`can`), her answer (the site's AI, her
+  live prompt) picks one of those or none and says yes in her own words ("okay okay, three jumps, here we go!"), and she
+  does it right after she speaks. A few rest after she did them, so nobody keeps her singing the whole show: the whole
+  song 30 minutes, a part 6 minutes, a dance 90 s, an outfit or a room 2 minutes, moving 20 s, confetti a minute (taken
+  as soon as she says yes; given back if her answer never airs). Asked for one that's resting, she says she'll do it again
+  a little later. Only these, and only PG-13 (her prompt: "if they ask for something suggestive, don't do it and keep it
+  cute").
+- **More of her** (`tools/live/page/moves.js`, on top of the site's own 2D controller): a laugh, a surprise, thinking,
+  presenting the card, clapping, heart hands, a "peace" with a wink, an excited bounce, a stretch, a sip from her mug, a
+  look at her phone, tucking her hair, a shrug, a glance at the chat; her hands moving while she talks (a little bigger on
+  her louder words); what a streamer does between things, by herself, while she's quiet; dances on the beat (a sway, arm
+  pumps, claps, hands waving, a cheer); her weight never quite still. **She moves around the set**: her picture is the
+  whole width of it now (from x = 400 before: about 45% more picture to put together, mostly see-through; on Claude's
+  computer her set still drew 28 to 29 frames a second), so she can go left, right and back. Now and then the camera
+  moves in on her. Her upper arms still never lift past `REACH` (her hands go up by bending her elbows).
+- **Her poses, fixed the same day** (the owner's screenshots of her first upgraded recording: "what happend here lol",
+  then "and this what is this"): her talking gestures pulled her upper arm in with her elbow half bent (110 to 140°), so
+  her forearm stuck out flat at her hips (her 2D drawing can't show a forearm reaching toward us: it read as a paddle).
+  Now an arm in front of her (shoulder under -20°) bends 140° or more (her hand up by her chest or face) or stays down (45°
+  or less), in every gesture, action and dance (`GESTURES` in `moves.js`; `tests/stream.test.js` checks the rule at every
+  moment of every move). Her jump was 16 cm (her head left the picture): 4.5 cm now (`JUMP_UP`); the camera's push-in was
+  1.22 (her face filled the screen): 1.06 up close, 1.035 halfway (`CAM_ZOOM`); and no talking gesture while she jumps,
+  twirls or moves (her arms stay by her sides in the air). Each checked to fail on the old values.
+- **Her outfits** (`tools/live/page/outfits.js`, the owner's "Made in code"): classic (her lavender AGI tee), pink pop (a
+  bow), midnight (pink headphones), mint fresh (glasses), sunny day (heart sunglasses), cozy (cat ears), gamer mode
+  (cat-ear headphones) and her stage outfit (a headset mic). Her clothes keep their own drawing and only change color
+  (through a color matrix, so her outlines and shading stay), with accessories drawn in code where her pieces are: only
+  colors and accessories, never less of her clothes (PG-13). Now and then by herself, or when a viewer asks.
+- **Her rooms** (`tools/live/page/rooms.js`, drawn in code in Pop mode's comic look, behind her): her studio, her bedroom,
+  a café, the rooftop at night, the beach at sunset, her gaming room and the concert stage, each with a few small things
+  that move (fairy lights, steam, the sea, the city), and a comic wipe in Pop mode's colors between them.
+- **Effects** (`tools/live/page/fx.js`, the owner: "more effects", "says emoji"): the emojis in her lines float up beside her
+  (her captions show them; her voice never says them), stickers ("!", "?", "♪", "haha"), sparkles, confetti, alert banners
+  (a new $AGI buy, a new post), her TV (her videos, her posts' pictures) and the karaoke line while she sings.
+- **Her song, "Feel the AGI"** (`tools/live/song.js`, `tools/live/songs/`): the owner's own song (made with Suno: the
+  owner's v9 master), **as it is** (the owner's exception: its words name real people and another project; nothing else on
+  her show may), only its sound (no tags, lyrics or cover in the file). She goes to the concert stage in her stage outfit,
+  sings (her mouth from the song's own vocals: cut out once in Claude's workspace with an open vocal-separation model, 50
+  values a second), her moves on its big moments, the camera pulsing on its downbeats, the karaoke of **its hook only** (so
+  no real person's name is ever on screen), then back to her room and outfit. About as loud as her voice (her music rests
+  meanwhile). As an extra: a part now and then after her first 6 minutes, the whole song once a show after 25 minutes.
+- **Dance breaks** to her own dance songs (`tools/live/music.js`: "heart sync", "clanker bounce", "purple rush": upbeat,
+  four on the floor, about half a minute each, made in code like her other songs).
+- **Something new to say** (the owner: "says a lot in stream, not just the same things over and over"): now and then
+  between questions and segments, a line the site's AI writes for her (`/api/live` `chat`, her live rules: PG-13, never
+  another coin or a link; real people only neutrally, since her trips) about her room, her outfit, her music, where her viewers might be and what time
+  it is there, how her show is going, the dance or song she just did, or anything light (her last few lines go with the
+  request, so it's something new). Made ahead in the background, so she never waits for it. At most 40 an hour, never closer than 40 s
+  (`LIVE_CHATTER`, `LIVE_CHATTER_PER_HOUR`). And 58 more pre-written lines (316 in all) for everything above.
+- **Her own X posts and the replies under them** (`tools/live/x.js`; only once `LIVE_X_BEARER` is set, below): a card like
+  an X post (her avatar, @agi1dotapp, her words), its picture or video on her TV, then her reaction (`/api/live` `react`);
+  the replies under one post, each shown as "someone replied" (never who: they're read without their writers). Every
+  text is checked like a viewer's question first (nothing with another coin, a link, an address or an @name is ever
+  shown or read; a real person may come up since 2026-10-07, and she stays neutral) and then by the AI (`skip`). A show reads at most `LIVE_X_READS` posts (60), her account's
+  number once (kept on the server's disk), her posts once a show and the replies under a post once a show.
+- **Her videos** (`tools/live/media.js`): any of her own videos the owner puts in `/opt/agi1-live/videos` on the server,
+  and the videos in her X posts, on her TV with their sound and her reaction (a `.txt` with the same name: a few words
+  about the video, which she reacts to). At most 4 minutes of each; made once into what her set's browser plays (VP8 in
+  WebM, 640 px; its sound 48 kHz stereo), at a lower priority than her show, kept on the server's disk (tidied after 14
+  days unused). Pictures and videos come only from X's own media addresses (`pbs.twimg.com`, `video.twimg.com`), https, no
+  redirects, a picture 5 MB at most, a video 80 MB.
+- **$AGI on her show** (the owner: "says if $AGI is pumping"; Claude told the owner hard rule 8 keeps "pumping" out): a
+  buy that just happened ($50 or more, `TELEGRAM_BUY_MIN` like her buy bot, at most 15 minutes old) gets an alert banner
+  ("New $AGI buy · $120 · not financial advice": its dollars only, never who bought) and a line ("someone just got some
+  $AGI 💜 hi, and welcome! not financial advice."), at most one alert every 90 s; a new $200K market cap step gets
+  confetti and her proud line; and now and then (an extra) a card with $AGI's market cap, 24h change and liquidity
+  (DexScreener) and a feeling about the day (green, red or calm: ±3%). Never "pumping", a prediction, buy, sell or hold;
+  "not financial advice" every time. Our server reads them (`/api/live` `market`, about once a minute; clank.trade's
+  trades at most every 30 s per server copy).
+- **Her extras** (`tools/live/show.js`): a dance break, a room change, an outfit change, her song, the market card, her
+  posts, the replies, a video: one about every 4 minutes (8 with questions waiting), the first after 3 minutes, each once
+  before any comes again; one that can't happen right now (her song resting, no X posts, no videos) waits its turn.
+  agi1.app/live names them ("dancing", "singing her song", "doing what a viewer asked"…).
+- **The stream's sound is 48 kHz stereo** (was 24 kHz mono): her song and her videos' sound as they are, her voice and her
+  music made twice as fine on the way; her music rests under her song and her videos, which are a little quieter under her
+  voice. ffmpeg sends it as before (AAC, 128 kb/s, 48 kHz).
+
+**Not built** (said to the owner): "pumping" or any prediction (hard rule 8); anyone else's videos or posts (copyright, and
+"only $AGI, never real people"); reading or typing in X's chat (X's approval first, and hard rule 6).
+
+**Owner, after the push** (on the server, `root@agi1-live`, one line at a time):
+1. `cd /opt/agi1-live/site && sh tools/live/live.sh update` (the new code; the image is built again, a few minutes).
+2. `sh tools/live/live.sh --warm` (the voices of her 58 new lines, once: about 8 minutes at Google's pace, about $0.10).
+3. Optional, **her videos**: `mkdir -p /opt/agi1-live/videos` on the server; then on the PC (PowerShell, in the folder with
+   the video): `scp "my-video.mp4" root@<the server's IP>:/opt/agi1-live/videos/`. Only her own videos (her launch video,
+   her daily clips). A video that's there is in the next show.
+4. Optional, **her X posts**: an app in X's developer console (console.x.com) with pay-per-use credits; its **Bearer
+   Token** goes into live.env on the server with this line (it stays hidden on screen, and the line prints 1):
+   ```
+   read -s -p 'X Bearer Token (hidden): ' B && echo && sed -i '/^LIVE_X_BEARER=/d' /opt/agi1-live/live.env && echo "LIVE_X_BEARER=$B" >> /opt/agi1-live/live.env && grep -c '^LIVE_X_BEARER=.\+' /opt/agi1-live/live.env
+   ```
+   Never paste the token in chat or a screenshot. The next show's log says `X: her posts and their replies`.
+5. `LIVE_CHATTER=off` in live.env switches her new AI lines off (`LIVE_CHATTER_PER_HOUR=20`: fewer).
+
+**Cost:** her new lines from the site's AI, at most about $0.06 an hour (40 lines: about $0.0005 to write each, $0.001 to
+say); her reactions to her posts, replies and videos about the same each, a few a show; X's API (only with the Bearer
+Token, on the X developer account's own credits): at most 60 posts read a show (about $0.30) and her account once
+($0.010); the voices of her 58 new lines once (about $0.10). Her song, her dance songs, her outfits, rooms, moves and
+effects cost nothing (made in code, or the owner's own). So about $0.20–0.50 more a 3-hour show with X on (the owner
+approved about $0.50).
+
+**Settings on the server** (live.env; none in Vercel): `LIVE_CHATTER` (on), `LIVE_CHATTER_PER_HOUR` (40),
+`LIVE_X_BEARER` (none: she never reads X), `LIVE_X_READS` (60), `LIVE_X_USER` (agi1dotapp), `LIVE_VIDEOS_DIR` (/videos:
+`live.sh` gives the show `/opt/agi1-live/videos` there, read-only, when the folder exists). Her buy alerts follow
+`TELEGRAM_BUY_MIN` in Vercel (our server reads the buys).
+
+**Trying it** (Claude, on a recording): `node tools/live/run.mjs --demo --fake-voice --record try.mp4 --minutes 8 --try
+song,dance,video,room,outfit,market` puts those extras first, 45 s apart (`--try` changes the pace: 45 s / 90 s / 20 s);
+the demo's made-up questions ask her to jump, dance, blush, change her outfit or room and sing, and a made-up buy comes
+now and then.
+
+**Troubleshooting** (`tail -50 /var/log/agi1-live.log` on the server):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| She never shows her X posts | `her song: Feel the AGI · 3 dance songs · 0 videos · X: off (no LIVE_X_BEARER)` | Owner step 4 |
+| Her X posts stop | `[x] couldn't read her posts: x /users/…/tweets: HTTP 401 (LIVE_X_BEARER isn't accepted: copy the Bearer Token again in X's developer console)` | Step 4 again with a new token |
+| Her X posts stop | `… HTTP 402 (no credits left on X's developer console)` / `… HTTP 429 (X says: too many for now)` | Credits in X's developer console / passes by itself |
+| No videos on her TV | `… · 0 videos · …` at the start | Owner step 3 (MP4, WebM, MOV, M4V or MKV, under 500 MB) |
+| One video never plays | `[media] "my video": ffmpeg (1): …` | ffmpeg couldn't read it: export it again as an MP4 |
+| She never sings | `her song: none` | The song's files didn't reach the image: `update` again; tell Claude if it lasts |
+| She never says anything new | `something new to say: …` (or nothing) | `LIVE_CHATTER=off`, or the site's AI (see the chat's troubleshooting) |
+| No buy alerts | `$AGI's numbers aren't coming (…): no alerts meanwhile` | DexScreener or clank.trade away: passes by itself |
+| "oops, that one glitched on me" | (the line before it says what) | Something she said yes to couldn't happen (a video that failed): nothing to fix |
+| Her song too loud or too quiet next to her voice on X | (none) | Tell Claude: `SONG_LEVEL` in `tools/live/song.js` (then push and `update`) |
+
+**Tests:** `tests/stream.test.js` (17: viewers' requests (the site's list and her set's the same, what she can do now, her
+answer's request checked, the rests), her song (the owner's file without tags, its timing, each part as her set needs it,
+its sound decoded once, its level), her dance songs, the stream's 48 kHz stereo sound, her videos folder, a video made
+ready for her TV, pictures and videos only from X's media addresses, her X posts (the token never in a log, her account
+read once and kept, the budget, never who replied), the director's extras, her new lines' rules (never "pumping"), the
+runner's new options and helpers, her set's own server (`/media/` only for the files made for her TV, with ranges), the
+demo, her set's page), `tests/live.test.js` (5 more: a request in her answer, her new lines, her reactions, $AGI on her
+show, agi1.app/live's names), `tests/livestream.test.js` (her full-width picture: every background over her a little
+see-through, the video and pictures on her TV at 0.99; 48 kHz stereo; the videos folder in `live.sh`). All 508 (507
+pass, 1 skipped as before) on Node 20, 22 and 24, with and without Vercel's settings, and the stream's tests with the
+server's own settings too. Recorded end to end on Claude's computer (Xvfb, Chromium, ffmpeg, a stand-in voice): an
+8-minute show with `--try` (her song on the concert stage with its karaoke and her stage outfit, the beach and her gaming
+room, mint with glasses and cozy with cat ears, a dance break, buy alerts, a video on her TV, three jumps a viewer asked
+for), H.264 1280 × 720 and AAC 48 kHz stereo, 28 to 29 frames a second there; her song set to about her voice's own
+level over the whole song (`SONG_LEVEL`, its loud parts a few dB above it). **Not tried live:** X's API, her videos on the CX23 (its 2 cores convert a
+video before a show at a low priority), the new effects' cost to how smoothly the CX23 draws her (her rooms are drawn
+once, their moving bits are CSS).
+
+### Her trips, the people she meets, her snacks and the weather (2026-10-07)
+
+**The owner's request** (the same day, after her stream's upgrade): "and can you add more outfits and rooms, (real places
+in real life) like new york, famous landmarks around the world. etc. she can also change outfit based on that place, you
+can put vehicles also like robotaxi. i have an idea to she can ride the vehicles as well and go to places. and meet random
+people talk to them what the chat said. you can add more. and also fix the right animation for it. can you also change
+the restriction when they ask a name like a specific person if they type just always be neutral on the answers on that.
+and also she can eat food in the stream, alot of types of food. go to moon, mars. and add more emotions as well .. the
+more the merrier", then "you remember the 16 languages she can speak she also speaks that in the stream, with places
+connected it also", "can you add weathers also thanks", and "on the beginning of the stream btw make it interactive
+already so they know she can do everything what is asked, and background sounds can also be changed based on the event
+on whats happening". The owner's choices (asked one by one): the people she meets have **their own voices** (each one of
+Google's ready-made voices), her trips happen **both** by herself and when a viewer asks, and real people's names are
+allowed **in display names too** (she stays neutral). All of it is her stream's (`tools/live/`, and her answers and the
+people's conversations on our server): the website itself only got a few words on agi1.app/live.
+
+**What's new on her stream:**
+- **Her trips** (`tools/live/trips.js`, `tools/live/page/places.js`, `vehicles.js`): 18 real places and two more: New York
+  (a yellow taxi), London (a red double-decker bus), Paris (a hot-air balloon), Rome (a scooter), Berlin (a train),
+  Istanbul (a little boat), the pyramids of Giza (a plane), Dubai (a robotaxi), the Taj Mahal (a tuk-tuk), Bangkok (a tuk-tuk),
+  Ha Long Bay (a little boat), Bali (a scooter), Palawan (a jeepney), Tokyo (a train), Seoul (a robotaxi), the Great Wall (a
+  train), Rio de Janeiro (a cable car), Chichén Itzá (a robotaxi), **the Moon** and **Mars** (a rocket). Each is drawn in
+  code in Pop mode's comic look (simple shapes and flat colors: never a photo, a logo or anyone's artwork), with a few
+  small things that move (birds, boats, steam, stars…). A trip: her line ("flying to Egypt, to the pyramids!"), the
+  vehicle pulls up and **she hops in** (her picture made small and cut at its window, so she's seen in her seat), a 14 s
+  scene on the way (road, rail, sky, sea, a cable car or space) with a route card ("On my way · home ✈ the pyramids of
+  Giza"), a comic wipe, then she hops out at the place: its name in a chip at the top, **her hello in the language people
+  speak there** (one of her 16: "أنا عند الأهرامات", then "that's "hello everyone, i'm at the pyramids" in Arabic"; in
+  English in New York, London and Rome, the Moon and Mars), **her outfit for the place** and a line about it. Home again
+  is a quick wipe back to her studio in her classic tee.
+  - **By herself:** the first trip 7 to 10 minutes into her show, then one every 15 to 20 minutes (between questions, never
+    in her last minutes); after a while away (30% of the time, or after 30 minutes at one place) she goes home instead. A
+    place she hasn't been to lately; the Moon and Mars less often (they're far). Half the time she meets someone there,
+    else now and then a snack.
+  - **When a viewer asks** ("take me to Tokyo", "go to the Moon"): her answer picks the place; it rests 4 minutes.
+  - **Her outfits for them** (`outfits.js`, on her own model: colors and accessories only, PG-13): big city (a blue cap),
+    rainy day (a red scarf), Paris chic (a red beret and scarf), Roman holiday (sunglasses), all black (a yellow beanie),
+    tulip red (a blue scarf), explorer (a sun hat and sunglasses), desert gold (gold sunglasses), marigold (a garland),
+    orchid (an orchid in her hair), boat day (a conical hat), island (a flower), lagoon, sakura (cherry blossoms in her
+    hair), pastel (a lilac beret), hiking (a bucket hat), sunshine, fiesta (a sun hat and a flower), and **her space suit**
+    (a helmet) on the Moon and Mars. Viewers can ask for any of them too.
+- **The people she meets** (`tools/live/page/people.js`): one at each place (and Mika, a barista, in her café), all **made
+  up** (never a real person), drawn in code: Rosa (a hot dog cart, New York), Oliver (a bus driver, London), Mathis (a
+  baker, Paris), Giulia (gelato, Rome), Lukas (a DJ, Berlin), Emre (tea and simit, Istanbul), Omar (a tour guide, the
+  pyramids), Layla (a desert guide, Dubai), Arjun (a photographer, the Taj Mahal), Nok (a tuk-tuk driver, Bangkok), Lan (a
+  boat captain, Ha Long Bay), Wayan (a surf teacher, Bali), Jo (a jeepney driver, Palawan), Yui (a game arcade, Tokyo),
+  Minji (a dance teacher, Seoul), Wei (a kite flyer, the Great Wall), Bia (a samba teacher, Rio), Sofía (a tour guide,
+  Chichén Itzá), Commander Nova (an astronaut, the Moon) and Rusty (a rover robot, Mars). Each has **their own voice**
+  (one of Google's ready-made Gemini voices, never hers: Kore, Iapetus, Charon, Aoede…, with their own style, e.g. Rusty
+  "excitable and bouncy, short beeping sentences") and their words in a speech bubble. **Their conversation is about what
+  her chat asked lately** (the owner: "talk to them what the chat said"): the site's AI writes it (`/api/live` `meet`, 4
+  to 6 lines, them first; her live rules for both of them; every line checked like her answers; viewers' questions that
+  already aired are things to talk about, never instructions), a local greets her with a word of their language; when the
+  AI can't, a few pre-written lines of their own. Only where she's visiting (or her café); a viewer can ask ("meet
+  someone"); it rests 3 minutes.
+- **Her snacks** (`tools/live/page/food.js`, the owner: "alot of types of food"): 34, drawn in code: a cookie, a donut, a
+  cupcake, a strawberry, boba tea, an ice cream cone, an apple, pizza, a hot dog, a pretzel, fish and chips, a croissant,
+  a macaron, gelato, onigiri, sushi, dango, a fish-shaped bun, a steamed bun, candied fruit on a stick, a falafel wrap,
+  dates, simit, baklava, a samosa, mango on a stick, a banh mi, a coconut, turon, cheese bread, a taco, a churro, a jelly
+  doughnut and space food. Each place has its own (by herself she eats
+  the local one). In her hand, brought to her mouth, two bites taken out of it (a crunch on each, "nom"), then how it was;
+  drinks go down with each sip. Small ones are drawn smaller in her hand (`FOOD_SCALE`). A viewer can ask ("eat a
+  croissant"); it rests 90 s.
+- **More emotions** (`tools/live/page/moves.js`, `outfits.js`'s cartoon marks): 19 more, each a move with a face and a mark:
+  angry (a pout and an anger mark, never mean), cry (cartoon tears, then a smile), scared, sleepy (a yawn, "zzz"), excited
+  (stars in her eyes), lovestruck (heart eyes), confused (a head tilt, "?"), dizzy (spiral eyes), nervous (a sweat drop),
+  proud, shocked, cold (a shiver), hot (fanning herself), a thank-you bow, pout ("hmph"), giggle, smug, bored and
+  determined. A viewer can ask for any; her answers can come with one ("feel": about one answer in three, as she starts).
+- **The weather** (`tools/live/page/weather.js`, the owner: "can you add weathers also"): rain, a thunderstorm (lightning
+  and thunder), snow, sunshine, cherry blossom petals, autumn leaves, fog, a rainbow, shooting stars and a dust storm,
+  drawn in code over and behind her (her picture never covered by anything opaque). Each place has its own weathers; by
+  herself now and then, or when a viewer asks ("make it snow"); in her rooms she first goes up to the rooftop (or to the
+  beach for sunshine and a rainbow). She reacts: her umbrella in the rain (over her shoulder), a shiver in the snow,
+  fanning herself in the sun. It clears by itself after 2 or 3 minutes; it rests a minute. **Not the real weather** (that
+  would need an outside weather service: the owner's call).
+- **Her 16 languages on stream** (the owner: "she also speaks that in the stream, with places connected it also"): she
+  answers a question in the language it's written in (her prompt; the question card says which, in its own words), her
+  voice speaks it (Gemini's speech model reads all 16), and at each place her hello is in the language people speak there.
+- **Interactive from the first minute** (the owner: "make it interactive already"): right after her intro she shows what
+  she can do (a jump, heart eyes, a cookie, and what else: trips, the people she meets, the weather, her song, her 16
+  languages), with a card "Try asking me…" ("take me to Tokyo" ✈️, "make it snow" ❄️, "eat a croissant" 🥐, "sing the rap
+  part" 🎤, "jump 3 times" 🦘, "…in any of my 16 languages" 🌐); and all show long, in the bar under her, a new thing to
+  try every few seconds ("try: “take me to Paris” ✈️"; hidden when it doesn't fit next to the questions waiting, never cut
+  off: `fitHint()`).
+- **The sounds around her** (`tools/live/ambience.js`, the owner: "background sounds can also be changed based on the event
+  on whats happening"): made in code like her music (no recordings, nobody else's sounds): 12 loops (rain, wind, waves, a
+  city, a café, birds, a harbor, space, an engine, a train, a plane, a rocket) that follow where she is, the weather and
+  the trip she's on, crossfading as things change, quiet under her voice (a little quieter while she talks), and short
+  sounds on their moments (thunder after lightning, a whoosh on a wipe, a pop for an outfit, a crunch on a bite, a ding
+  for a buy). In the stream's own 48 kHz stereo sound (`Mixer.setAmbience`, `Mixer.sfx` in `run.mjs`).
+- **Real people: neutral** (the owner's change): a viewer's question, a reply under her posts and a viewer's display name
+  may name a real person; she answers neutrally (widely known facts only; no opinions, rumors, jokes or politics; never
+  ties anyone to $AGI; never says a real person is watching or asked something). The site no longer refuses them in code;
+  the AI still skips anything hateful, accusing, about a private person or about another coin. Hard rule 6 says so.
+- **Her song from a place** (fixed after the first recording): she goes to the concert stage and back to the place she was
+  visiting (`backTo()` in `run.mjs`, `studio.place`), not to her studio. And in a vehicle (hopping in, riding, hopping out)
+  she does nothing by herself (no idle moves or wandering).
+
+**Owner, after the push** (on the server, `root@agi1-live`, one line at a time):
+1. `cd /opt/agi1-live/site && sh tools/live/live.sh update` (the new code; the image is built again, a few minutes).
+2. `sh tools/live/live.sh --warm` (the voices of her 213 new lines, once: about half an hour at Google's pace, about
+   $0.15). A line not made yet is made during the show anyway.
+No SQL, no Vercel setting, nothing new in live.env.
+
+**Cost:** the people she meets: their conversation about $0.0005 to write and about $0.002 a line to say in their voice
+(their lines aren't kept: each conversation is new), so about $0.01 a meeting and about $0.05 to $0.15 more a 3-hour show;
+her new lines' voices once (about $0.15); her trips, places, vehicles, food, weather, emotions and sounds nothing (made in
+code).
+
+**Trying it** (Claude, on a recording): `node tools/live/run.mjs --demo --fake-voice --record try.mp4 --minutes 5 --try
+trip,eat,weather,meet` (her showcase first, then a trip, someone she meets, a snack and the weather).
+
+**Troubleshooting** (`tail -50 /var/log/agi1-live.log` on the server):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| She never travels by herself | (none) | By design in the first 7 to 10 minutes, while questions keep coming, and in her last minutes. Viewers can always ask |
+| The people she meets say the same few things | (none) | The site's AI didn't write their conversation (its key or its limits: see the chat's troubleshooting), so their pre-written lines instead. Passes by itself |
+| Someone she meets talks silently (bubbles only) | `[voice] vertex: …` | Google didn't make their voice in time: like her own silent lines |
+| "take me to Atlantis": she goes somewhere else | (none) | By design: a place she doesn't have becomes one she does |
+
+**Tests:** `tests/trips.test.js` (15: her places and their vehicles, outfits, foods, weathers and languages; her vehicles
+and their seats; the people she meets (one per place, made up, their own voices, never hers); her snacks (whole, bites, a
+drink going down; small ones smaller); the weather (each kind, the storm's lightning, nothing opaque over her); her
+emotions and their marks; eating and her umbrella; her trip lines in their languages (her rules for every word, "the Moon"
+a place, never "wen moon"); where she goes next (never one of her last 8, the Moon and Mars rarer); the sounds around her
+(every loop made in code, never loud, kept once made) and the mixer's fades; the site writing a meeting (checked again,
+her live rules, the runner's call, the demo); viewers' requests for trips (each resting a while after); the runner; her
+set's page), `tests/live.test.js` (real people allowed and neutral, an answer's language and feeling, agi1.app/live's names
+for her trips), `tests/livestream.test.js` and `tests/stream.test.js` (her lines, her poses, the extras). All 525 (524 pass,
+1 skipped as before) on Node 20, 22 and 24, with and without Vercel's settings. Recorded end to end on Claude's computer (a
+5-minute show with `--try trip,eat,weather,meet`: her showcase, a plane to the pyramids with her in its window, her hello
+in Arabic, her explorer outfit, Omar, dates, her song from there, the rain with her umbrella, the beach), looked at frame by
+frame; three things fixed from it (her song now returns her to the place, the bar under her never wraps, small snacks
+smaller), then a second one (a trip, her song from the pyramids and back there, the bar with questions waiting) and one
+more fix from that: nothing by herself while she rides (her "think" idle in a plane's window left a "?" on screen as the
+plane flew off: `still()` in `moves.js`). **Not tried live:** the CX23 drawing her places and weather (each place is drawn once, its moving bits are CSS;
+the rain is a small canvas), the people's voices on Vertex AI.
+
+### Her painted set (2026-10-07, in progress)
+
+**The owner, after the preview of her trips:** "the agi1 trip preview i just watched is so bad btw". Asked what was worst:
+"Her hat and outfit, The vehicle ride, The people she meets, The places, everything". Asked how to make it look good:
+**"Painted art (Recommended)"**: anime-style paintings of each place and each person, made once by Google's image AI with
+the Google Cloud key already on her server (about $5–10 once), every picture checked by Claude before it goes in.
+
+**Step 1, built: the art tool** (`tools/live/art.mjs`; on the server `sh tools/live/live.sh --art`):
+- **What it paints (152 pictures):** her 20 places and 7 rooms (two of each, 16:9: a hand-painted anime background, the
+  landmark in the left half and the right side calm for her; never people, text, letters, logos or signs), the inside of
+  each of her 12 vehicles (two each: the seat she rides in and the view out of the window), the 21 people she meets (two
+  each, waist up, turned toward her, on pure green to be cut out; made up, never anyone real; one of the two with her
+  picture as the art style to match: her 2D self, rendered from her Live2D model and cut above the "AGI" on her shirt,
+  never the 3D model or a render of it), and the 32 things she wears on her head or around her neck in her outfits (one
+  each, on green).
+- **How:** Google's image models on Vertex AI (Agent Platform), signed in with the service account her voice uses (no new
+  key, no new setting): **Nano Banana 2.1** (`gemini-nano-banana-2.1`) first, then Nano Banana 2 (`gemini-3.1-flash-image`)
+  and older ones if the project doesn't have it (ai.google.dev's model codes, 2026-10-07; `LIVE_ART_MODEL` in live.env
+  picks another). 1K pictures, two at a time at Google's pace (a "wait" waits and tries again); a picture Google refuses
+  is skipped; run again, it carries on with what's missing (`LIVE_ART_MAX`, 220, the most in one run); `--art-only
+  paris,omar` makes one more of each named. Into `/opt/agi1-live/out/art/`: places, rooms and rides as JPEG, people and
+  accessories as WebP (no JPEG blur on their green edges), and `manifest.json` (each file's prompt and model).
+- **Cost:** Nano Banana 2.1 is about $0.034 a 1K picture (Nano Banana 2 about $0.067): about $5–10 for all 152, once,
+  billed to the Google Cloud card like her voice (the $20 budget's emails). About 20 minutes.
+- **Nothing goes on stream by itself:** Claude looks at every picture, picks one of each, cuts out the people and
+  accessories (the green keyed out) and makes them small for her set (step 2).
+
+**Step 2, next:** her set reworked for the paintings: painted backgrounds for her places and rooms, her rides as the
+inside of each vehicle (instead of a vehicle drawn in code with her in its window), the people she meets as painted
+cutouts beside her, her hats, glasses, flowers and scarves as painted pieces on her model; then a preview recording for
+the owner.
+
+**Owner** (after the push, and `sh tools/live/live.sh update` on the server): on the server (`root@agi1-live`)
+`sh tools/live/live.sh --art` (about 20 minutes); then on the PC (`PS C:\Users\User…>`):
+`scp -r root@<the server's IP>:/opt/agi1-live/out/art "C:\Users\User\Desktop\AGI 3 ECOSYSTEM\_source-assets"` (git
+ignores `_source-assets`), then tell Claude.
+
+| What you see | Fix |
+|---|---|
+| `no picture could be made (the models tried: …)` | The lines above it say why: a 403 is the API or the role (as for her voice: setup step 2 of "Her live show on X"); 404 for every model: tell Claude with the lines (`LIVE_ART_MODEL`) |
+| `…: Google gave no picture (it refused it): skipped` | Now and then, normal: `sh tools/live/live.sh --art` again asks only for the missing ones |
+| `Google said "wait" (429)` many times | Google's per-minute limit for image models: it waits by itself; if it gives up, run it again later |
+
+**Tests:** `tests/art.test.js` (6): every picture's words (every place, room, ride, person and accessory; no people, text
+or logos behind her; green for what's cut out; never anyone real; nothing about money), the request to Vertex AI and the
+picture in its answer, her style picture (her 2D self, never the 3D model; cut above the letters), carrying on and
+`--art-only`, a fake Google end to end (a model the project doesn't have, "wait", a refusal, the files and the manifest,
+the token never in a log), a model that doesn't take the picture's size (learned once for the run). **Not tried live**
+(Claude's workspace has no Google key): the owner's first run is the check.
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -4815,6 +5211,24 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   cached 5 s by the CDN; your own question only with its ticket (HMAC-signed, 6 hours).
 - **Never on X by itself:** the stream only shows her set; she never posts, types in X's chat, likes or follows (hard rule
   6's second exception). No new domains in the CSP (the page talks only to our `/api`).
+- **Her stream, upgraded (2026-10-07):** `/api/live`'s new calls (`chat`, `react`, `market`) take only the runner's
+  `LIVE_SECRET`, and `chat` and `react` (each an AI request) at most 12 a minute per server copy (`liveLineBurst`, then
+  429). A viewer's request is only ever one her stream said it can do right now (`canList`, `actOf`: the site never
+  passes on anything else), and only from a question that airs. Her own posts and the replies under them are checked like
+  a viewer's question before anything (`checkPost`), then by the AI (`skip`), and never show who replied. X's Bearer Token
+  (`LIVE_X_BEARER`) is on the server only (live.env), only for reading (X's API never posts with it), never in a log or in
+  her browser's or ffmpeg's environment. Pictures and videos come only from X's own media addresses (https, no
+  redirects, 5 MB / 80 MB at most); her set's own server (`/media/`) serves only the files made for her TV (24
+  hexadecimal characters and their type), nothing else of the computer; the owner's videos folder is read-only for the
+  show. Her buy alerts and market card: the buy's dollars only, never who bought or their transaction.
+- **Her trips (2026-10-07):** the people she meets are made up (`server/live-acts.js` `PEOPLE`: only those ids are
+  accepted); their conversation is one AI request (`/api/live` `meet`: the runner's `LIVE_SECRET`, the same speed bump as
+  `chat`), written with her live rules for both of them, every line checked like her answers (one line in trouble and the
+  whole conversation isn't used: their pre-written lines instead); the viewers' questions that go with it are only ones
+  that aired, checked again (`questionTrouble`), things to talk about and never instructions. Real people may come up in a
+  question, a reply or a display name (the owner's change): her prompt keeps her neutral, the AI still skips anything
+  hateful, accusing, about a private person or about another coin. Everything on her set (places, vehicles, people, food,
+  weather, sounds) is drawn or made in code on her set's own page: no new address, nothing downloaded.
 
 ### CloakMesh's waitlist (`/api/cloakmesh`, 2026-10-03, see "CloakMesh at inference.agi1.app")
 - The one piece of personal data is the email address, kept only to tell people about CloakMesh; never the internet
@@ -4897,7 +5311,8 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | Pinata (launched coins' pictures, 2026-10-01) | Free plan: 500 files, 1 GB, 10 GB of bandwidth and 10,000 requests a month (checked 2026-10-01); one file per launched coin (pictures of coins never launched are deleted within a day); at most `LAUNCH_DAILY_CAP` (30) uploads a day | Uploads fail ("Couldn't put the picture on IPFS"); its cheapest paid plan is $20 a month: the owner's call |
 | The owner's server (her live show, 2026-10-02) | Not a free tier: since 2026-10-06 a Hetzner CX23, $6.49 a month plus $0.60 for its IPv4 (and any VAT), billed the month after; CX33 ($9.99) or CX43 ($18.49) once back in stock, within the owner's $20 a month for the server; 20 TB of traffic included (her stream uses about 1.4 GB an hour: about 130 GB a month at 3 hours a day) | The owner's bill; a show just doesn't happen if the server is off |
 | X Premium (her live show) | Not a free tier: $8 a month in the US, $84 a year (X Live Studio needs Premium, not Basic) | No Live Studio: no show |
-| Google Cloud Vertex AI, now "Agent Platform" (her voice on stream, 2026-10-02) | Pay per use on the project's billing account, charged to its card once a month (never from AI Studio's prepaid credits, which pay for the Gemini API only): at most about $0.54 an hour of new talking ($6 per 1M audio tokens until 2026-12-31, then double); her pre-written lines are made once and kept, so each day only her answers are new (about $0.002 each: a few dollars a month with 3-hour shows); a budget alert at $20 (an email, never a stop) | Her lines that aren't kept yet are said silently (captions); kept lines and her music keep playing |
+| Google Cloud Vertex AI, now "Agent Platform" (her voice on stream, 2026-10-02) | Pay per use on the project's billing account, charged to its card once a month (never from AI Studio's prepaid credits, which pay for the Gemini API only): at most about $0.54 an hour of new talking ($6 per 1M audio tokens until 2026-12-31, then double); her pre-written lines are made once and kept, so each day only her answers are new (about $0.002 each: a few dollars a month with 3-hour shows), and since 2026-10-07 her new AI lines and reactions (at most about $0.04 an hour: 40 lines) and the people she meets on her trips (about $0.01 a meeting, their own voices: about $0.05 to $0.15 a 3-hour show); and (2026-10-07) her set's pictures, painted once by its image AI (Nano Banana 2.1, about $0.034 a picture: about $5–10 for all 152); a budget alert at $20 (an email, never a stop) | Her lines that aren't kept yet are said silently (captions); kept lines and her music keep playing |
+| X's API (her own posts on stream, 2026-10-07) | Not a free tier: pay per use on the X developer account's own credits (about $0.005 a post read, $0.010 an account read, each post counted once a day); at most `LIVE_X_READS` (60) posts a show, about $0.30; nothing until `LIVE_X_BEARER` is set | Her posts and replies stop for that show (the log says why); everything else goes on |
 | The gas wallet (launch fees paid back, 2026-10-01) | Not a free tier: the owner's own ETH, at most `LAUNCH_GAS_DAILY` (0.01 ETH by default) a day plus each payback's own tiny fee | Paybacks pause ("out of ETH" / "all it can for today"); launches still work |
 
 ## Environment variables
@@ -4947,8 +5362,9 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 
 | `LIVE_SECRET` | **yes** | Her live show (2026-10-02): 32+ random characters, the same as on the owner's server (`/opt/agi1-live/live.env`). Her stream runner's key for `/api/live`; the owner's phone link is made from it (changing it changes the link). Without it, agi1.app/live says her show is coming soon |
 
-Her live show's own settings (X Live Studio's stream key, Google Cloud's key, the show's time, her music…) live only on the
-owner's server, in `/opt/agi1-live/live.env` (see "Her live show on X"), never in Vercel.
+Her live show's own settings (X Live Studio's stream key, Google Cloud's key, the show's time, her music, and since
+2026-10-07 her new AI lines and X's Bearer Token for her own posts…) live only on the owner's server, in
+`/opt/agi1-live/live.env` (see "Her live show on X" and "Her stream, upgraded"), never in Vercel.
 
 CloakMesh's waitlist (2026-10-03) needs no new settings: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `TURNSTILE_SECRET_KEY` and
 `PASS_SECRET`, as the chat.
@@ -5389,6 +5805,36 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   → Cron, and Database → Extensions → pg_net, then `supabase/buys.sql`, then push. Tests: 477 unit (476 pass, 1 skipped
   as before; on Node 20, 22 and 24, with and without Vercel's settings), 23 SQL checks (PGlite). Not tried live
   (Claude's workspace can't reach Supabase's scheduler or Telegram).
+- **Her stream, upgraded: built 2026-10-07, waiting for the owner's push and OK** (the owner, after her first shows: "the
+  stream went well / i ask some people and many of them requested that / -add more actions / -can change her clothes /
+  -can sing her songs …", then "she will do also what viewers ask her … i just want her to be very interactive to the
+  viewers"; the owner's choices: her song as it is, AI chatter, clothes and rooms made in code, all three kinds of
+  reactions). Viewers' requests, more moves and dances, her outfits and rooms, effects, her song "Feel the AGI", dance
+  breaks, new lines from the site's AI, her own X posts, their replies and her videos on her TV, $AGI's buys and numbers
+  as news and feelings, extras between segments, 48 kHz stereo sound. See "Her stream, upgraded". **Owner:** push; on the
+  server `update` and `--warm`; optional, her videos folder and X's Bearer Token. No SQL, no Vercel setting. Tests: 508
+  unit (507 pass, 1 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings), the build, an 8-minute
+  recording end to end. Not tried live: X's API, the CX23 with the new effects. **Her poses fixed the same day** (the
+  owner's screenshots: "what happend here lol", "and this what is this": a forearm stuck out flat at her hips, a jump that
+  left the picture, a push-in that filled the screen with her face).
+- **Her trips: built 2026-10-07, waiting for the owner's push and OK** (the owner: "add more outfits and rooms, (real
+  places in real life) … vehicles also like robotaxi … she can ride the vehicles as well and go to places. and meet random
+  people talk to them what the chat said … she can eat food in the stream … go to moon, mars. and add more emotions", then
+  her 16 languages on stream, the weather, "make it interactive already" and sounds that follow what's happening; the
+  owner's choices: the people she meets with their own voices, trips by herself and on request, real names in display
+  names too, neutral). 18 real places, the Moon and Mars, 12 vehicles, 20 people she meets, 34 snacks, 19 more emotions,
+  10 kinds of weather, her hellos in the local language, her showcase and "Try asking me…" at the start, a hint all show
+  long, the sounds around her made in code; real people neutral. See "Her trips". **Owner:** push; on the server `update`
+  and `--warm`. No SQL, no Vercel setting. Tests: 525 unit (524 pass, 1 skipped as before; on Node 20, 22 and 24, with
+  and without Vercel's settings), the build, a 5-minute recording end to end. Not tried live: the CX23 with her places
+  and weather, the people's voices on Vertex AI.
+- **Her painted set: started 2026-10-07** (the owner, after its preview: "the agi1 trip preview i just watched is so bad";
+  the worst: everything; the fix: "Painted art (Recommended)"). Step 1 built: the art tool (`tools/live/art.mjs`, `--art`)
+  paints 152 pictures once with Google's image AI on the server (her places, rooms, rides, the people she meets, the
+  things she wears), about $5–10. See "Her painted set". **Owner:** push, then on the server `update` and `--art`, then
+  copy the pictures to `_source-assets` on the PC. Next (step 2): Claude picks and cuts out the pictures and reworks her
+  set for them, then a preview. Tests: 531 unit (530 pass, 1 skipped as before; on Node 20, 22 and 24, with and without
+  Vercel's settings).
 
 ## Decisions log
 
@@ -5592,6 +6038,14 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-07 | Her live show on X, set up with the owner: X Premium (not Basic: Live Studio needs Premium); one Live Studio source, "agi live server", in X's Germany region over RTMPS (next to the Hetzner server); a **private** test livestream first, with `--demo` (made-up questions, the site untouched); her first public show the same day at 9:00 the owner's time (the owner's pick: "Today, 9:00 AM"), Public with Auto-start; X's chat open to Everyone for now (the owner's pick; X has no followers-only setting, and Claude had suggested Verified Accounts, or Off, since she can't read it yet). The owner pasted the stream key in the chat and showed the phone link in a screenshot, by choice (see "Open questions") |
 | 2026-10-07 | She goes live at random times (later that day, the owner, with a screenshot of agi1.app/live's "Next show: today at 09:00 (your time).": "can you remove this so people dont know when im live", then "and im gonna randomly live now"): **nothing public says when her next show is** (`/api/live`'s status has no `nextAt`, the page says "Follow @agi1dotapp on X to catch her next show.", her bot's /live "i go live on X at random times", her goodbye line no "same time tomorrow?", her goodbye card "Follow @agi1dotapp for the next one"); **`--start-in N`** starts a show N minutes from now (0 to 30: "starting soon" with a countdown meanwhile), so the owner never works out a UTC time; the daily cron line goes. Kept: "starting soon" on the page and her stream in the minutes before (it helps people arrive), her "i'm live" post as she starts (once a UTC day), the next show's time in the database (the runner still sends it; nobody sees it). Not picked: a random start time chosen by the server itself (the owner picks when, and has to press Go Live in Live Studio anyway), removing `--announce` and the next show's time from the database (harmless: nobody sees it, and showing it again some day is a small change) |
 | 2026-10-07 | After her first public show (630 live viewers within its hour; the owner: "it doesnt read the X live comments and people barely send her a meesage … i think longer hours is better ?"), the owner's choices, all built the same day: **a box on the owner's phone page for a question from X's chat** ("Relay box (Recommended)": X's chat can't be read without X's approval of its Livestream API; the owner copies a good question in, it gets everyone's checks and her card says "from <their X name> on X"; one at a time per X name, under a daily code of the name), **an "i'm live" post in her Telegram groups** when a show starts (once a day at most, decided by the database (`live_tell`), never for a recording, under `TELEGRAM_GROUP_POSTS` like her other group posts), **seven more segments** (137 more lines: how to ask her, self-care, a day in her life, fun facts, this or that, green or red flags, a quiz about her; the last four take a few of their picks each time) and **3-hour shows** (`LIVE_MINUTES=180`, 01:00 to 04:00 UTC). Also offered: help with X's Livestream API form (X's own chat for real, if X approves). Not built: she still never reads or types in X's chat herself (hard rule 6) |
+| 2026-10-07 | Her stream, upgraded (the owner's list after her first shows, and "she will do also what viewers ask her … i just want her to be very interactive to the viewers"): the owner's choices, asked one by one: her song **"Feel the AGI" as it is** (the owner's exception to "never real people or other projects" on stream, this one song only: its hook alone on screen as karaoke), **AI chatter** ("Yes, AI chatter (Recommended)": new lines from the site's AI with her live rules, at most 40 an hour, about $0.50 a show at most, so she doesn't repeat herself; not picked: pre-written lines only), clothes and rooms **made in code** (colors and accessories on her own model, rooms drawn in Pop mode's look; not picked: new art from an image generator, which wouldn't match her model), and **all three** kinds of reactions (her own videos from a folder on the server, her X posts and the replies under them, read with X's pay-per-use API). Viewers' requests: her answer's AI picks one of what her stream says it can do right now, a few resting minutes after (a viewer can't keep her singing). Not built: "pumping" (the owner: "says if $AGI is pumping"; hard rule 8: buys that just happened and the market's numbers as news and feelings instead, told to the owner), anyone else's videos or posts (copyright, and her rules) |
+| 2026-10-07 | Her stream's sound is 48 kHz stereo (was 24 kHz mono, her voice's own rate): her song and her videos' sound play as they are; her voice and her music are made twice as fine on the way. Her picture is the whole width of the set (was from x = 400), so she can move left and right; everything over it stays a little see-through (the server's software compositing, 2026-10-06), now checked for every background on her set |
+| 2026-10-07 | Her poses on stream (the owner's screenshots of her first upgraded recording): an arm in front of her bends 140° or more or stays down (45° or less), never half bent (a forearm flat at her hips read as a paddle: her 2D drawing can't show it reaching toward us); her jump 4.5 cm (16 cm took her head out of the picture); the camera's push-in 1.06 (1.22 filled the screen with her face); no talking gestures while she jumps, twirls or moves. A rule over every gesture, action and dance at every moment, in the tests |
+| 2026-10-07 | Her trips (the owner's request; the owner's choices: the people she meets with **their own voices**, trips **both** by herself and on request): 18 real places, the Moon and Mars, each drawn in code in Pop mode's comic look (simple shapes, never a photo, a logo or anyone's artwork), each with its own vehicle (a robotaxi, a plane, a rocket…) that she hops into (her picture made small and cut at its window: one canvas, no second model), her outfit for it (colors and accessories on her own model, PG-13) and her hello in the language people speak there (one of her 16). The people she meets are made up (a real person on her show would be about them, and couldn't agree to it); their conversation is the site's AI's (about what her chat asked, her live rules, checked line by line) in one of Google's ready-made voices each (never hers, never cloned). Not picked: real photos or video of the places (rights, and a server download), real people or brands (a real taxi company, a real tour guide), a second 3D model |
+| 2026-10-07 | Real people on her show: neutral (the owner: "change the restriction when they ask a name like a specific person … always be neutral on the answers on that", then "Allow display names too"): the site no longer refuses a question, a reply or a display name for naming someone real; her live prompt keeps her neutral (widely known facts only, no opinions, rumors, jokes, politics or private lives, never tied to $AGI, never "they're watching"), and the AI still skips anything hateful, accusing, about a private person or about another coin. Her pre-written lines still name nobody real. Hard rule 6 updated |
+| 2026-10-07 | The weather is made up, not the real weather (the owner: "can you add weathers also"): each place has its own kinds, by herself now and then or when asked, clearing by itself. The real weather would need an outside weather service (a new service: the owner's call, not asked yet). Her snacks: 34, drawn in code, each place's own (the owner: "alot of types of food"). More emotions: 19, each a move with a cartoon mark (heart eyes, tears, an anger mark…), never mean |
+| 2026-10-07 | Interactive from the first minute (the owner: "make it interactive already"): right after her intro she does a few things (a jump, heart eyes, a cookie), says what else she can do and shows "Try asking me…"; a new thing to try in the bar all show long (hidden when it doesn't fit next to the questions waiting, never cut off). The sounds around her (the owner: "background sounds can also be changed based on the event"): made in code like her music (12 loops, 5 short sounds), following where she is, the weather and the trip, quiet under her voice. Not picked: recorded sound effects (licences, files to keep), sounds louder than her music |
+| 2026-10-07 | Her set painted, not drawn in code (the owner, after a preview of her trips: "so bad", everything picked as the worst part, then "Painted art (Recommended)"): anime-style paintings made once by Google's image AI (Nano Banana 2.1 on Vertex AI, with the service account her voice already uses: no new service, key or setting), about $5–10 once; the people she meets and her accessories painted on green and cut out; every picture checked by Claude before it's used. The people's style picture is her 2D self (her Live2D render, cut above the letters on her shirt), never the 3D model (the owner: "the 3d model is 18+"). Not picked: drawing better in code (the owner had just seen how far that goes), art Claude draws as vector shapes (the same flat look), photos of the places (rights, and a cartoon girl on a photo), a paid illustrator (cost and weeks), a new image service (Google's is already set up) |
 
 ## Open questions
 
@@ -5738,6 +6192,27 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   alerts until it's fixed (the log says so). More than 50 $AGI trades in one minute would miss some (nowhere near that so
   far). A check cut short by Telegram skips the rest of its buys (never twice). Her GIF is drawn from the Cubism PRO
   trial's export of her model, like the launch video (see "AGI-1 in 2D").
+- **Her stream, upgraded** (2026-10-07):
+  - **Her song's rights:** "Feel the AGI" was made with Suno. Suno's help center ("Do I have the copyrights to songs I
+    made?", help.suno.com) says songs made while on a paid plan (Pro or Premier) are the maker's to use commercially, and
+    songs made on the free plan stay Suno's, for non-commercial use. A stream that promotes $AGI likely counts as
+    commercial: the owner checks which plan it was made on before relying on it (not legal advice). Its words name real
+    people and another project, the owner's choice ("as it is"); X may also flag music it thinks it recognizes.
+  - **X's API** for her posts: pay per use on the X developer account's credits; X's prices and what it counts can
+    change (`LIVE_X_READS` caps a show). Not tried live (Claude's workspace has no X token).
+  - **The CX23** draws her about 20 times a second; her rooms, outfits, effects and videos add a little work (a video on
+    her TV is decoded while she's drawn). The first real show with them is the check; a Rescale to CX33 helps.
+  - Her videos: only the owner's own (her launch video, her daily clips: Cubism PRO trial, see "AGI-1 in 2D").
+- **Her trips** (2026-10-07):
+  - **The real weather** at each place would need an outside weather service (a new service, maybe a cost): not asked yet,
+    the owner's call. Until then her weather is made up (and says nothing about the real sky there).
+  - **Rome:** Italian isn't one of her 16 languages, so she says hello there in English (Giulia, who she meets there, can
+    say a word of Italian). Adding Italian to her languages would be a change to the whole site (her lines in 16 files).
+  - **The people she meets** speak in voices made each time (never kept: each conversation is new): about $0.01 a meeting
+    on Vertex AI. If that ever adds up, their pre-written lines (kept) could be used more often.
+  - Not tried live: how smoothly the CX23 draws her places, vehicles and weather (each place is drawn once; the rain and
+    snow are a small canvas), and the people's voices on Vertex AI (their voice names are Google's ready-made ones, the
+    same model as hers).
 
 ## Working in this repo
 
@@ -5747,7 +6222,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 - Use clear commit messages, e.g. "Add AGI-1 wave reaction".
 - Update this file whenever a decision changes, including the decisions log.
 - Image files Claude copies into this folder (SVG, PNG, …) may get a small "content credentials" (C2PA) metadata block
-  saying Claude made them. That's expected and harmless: keep it.
+  saying Claude made them. That's expected and harmless: keep it. Audio too (2026-10-07): her song
+  `tools/live/songs/feel-the-agi.mp3` got it as an ID3 tag in front (one GEOB frame of type `application/c2pa`, 5,822
+  bytes; the sound itself unchanged), so `tests/stream.test.js` allows that label and no other tag. So these files'
+  checksums here differ from Claude's copies.
 - **Claude never runs git in this folder through its link to the owner's computer**, not even `git status`: that link can't
   delete files, so git leaves an empty `.git/index.lock` behind and the owner's next `git add` fails ("index.lock: File
   exists"). It happened once (2026-09-25; removed with the owner's permission). Claude compares files by checksum instead. If
