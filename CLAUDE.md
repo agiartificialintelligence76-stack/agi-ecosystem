@@ -94,7 +94,7 @@
 >   owner: "it doesnt read the X live comments and people barely send her a meesage … i think longer hours is better"): a
 >   box on the owner's phone page to pass a question from X's chat on to her, an "i'm live" post in her Telegram groups
 >   when a show starts, seven more segments (258 pre-written lines, from 121) and **3-hour shows**. **Run
->   `supabase/live.sql` again before pushing that.** And that evening (the owner: "can you remove this so people dont
+>   `supabase/live.sql` again before pushing that.** And later that day (the owner: "can you remove this so people dont
 >   know when im live", "im gonna randomly live now"): **she goes live at random times**, the site and her bot never say
 >   when her next show is, and `sh tools/live/live.sh --start-in 10` starts a show in 10 minutes. See "Her live show on X"
 >   and its "Going live at random times".
@@ -3330,9 +3330,10 @@ choices the same day, all built:
   question from the chat under her stream into it, and she answers it on stream like any other.
 - **An "i'm live" post in her Telegram groups** when a show starts ("Telegram 'I'm live' post"), once a day at most.
 - **More segments and lines** ("More segments"): seven more segments, 258 pre-written lines instead of 121.
-- **3 hours a day** ("3 hours"): `LIVE_MINUTES=180` in live.env on the server (set the same day), so 01:00 to 04:00 UTC
-  (9:00 to 12:00 the owner's time).
-- **At random times** (that evening, the owner, with a screenshot of agi1.app/live saying "Next show: today at 09:00
+- **3 hours a day** ("3 hours"): `LIVE_MINUTES=180` in live.env on the server, so 01:00 to 04:00 UTC (9:00 to 12:00 the
+  owner's time). (Thought set that morning, but the owner's check that afternoon still said 60:
+  `grep LIVE_MINUTES /opt/agi1-live/live.env`. The one `sed` line in "Going live at random times" sets it.)
+- **At random times** (later that day, the owner, with a screenshot of agi1.app/live saying "Next show: today at 09:00
   (your time).": "can you remove this so people dont know when im live", then "and im gonna randomly live now"): the site
   (agi1.app/live, `/api/live`) and her bot's /live never say when her next show is, her goodbye line and card promise
   none ("same time tomorrow?" is gone), and the owner starts a show when they like, a few minutes after one command
@@ -3584,7 +3585,7 @@ keep the link private: whoever has it can pause or end her show):
    owner's time), while "starting soon" shows. Another time: change both (the cron line's `58 0`, minute then hour, and
    `LIVE_DAILY_AT`) and the scheduled livestreams in Live Studio. `tail -50 /var/log/agi1-live.log` shows the last show.
    **Done 2026-10-07** (`date` on the server: UTC), with `sh tools/live/live.sh --announce 01:00` (agi1.app/live then said
-   her next show is 2026-10-07T01:00Z; since that evening it never says it). **Since that evening she goes live at random
+   her next show is 2026-10-07T01:00Z; since later that day it never says it). **Since then she goes live at random
    times instead** (see "Going live at random times" below): the line is deleted with `rm /etc/cron.d/agi1-live`.
 10. **The first real show:** watch it on X with the phone link open (Pause, Resume, End all work from there). Scheduled
     for 2026-10-07 at 01:00 UTC (9:00 the owner's time). Each day's show needs its own livestream scheduled in Live
@@ -3604,12 +3605,12 @@ keep the link private: whoever has it can pause or end her show):
    uses them).
 4. **On the server, if there's time before the next show:** `sh tools/live/live.sh --warm` (the voices of her 137 new
    lines, once: about 17 minutes at Google's pace, about $0.10). A line not made yet is made during the show anyway.
-5. `LIVE_MINUTES=180` in live.env (done 2026-10-07, before these): 3 hours from the next show on. Nothing to change in
-   Live Studio (a livestream lasts as long as the stream comes) or in the cron line.
-**Done 2026-10-07**, all five: `live_functions_found = 13`, the push live on agi1.app/live, `update` on the server, and
+5. `LIVE_MINUTES=180` in live.env: 3 hours from the next show on. Nothing to change in Live Studio (a livestream lasts
+   as long as the stream comes) or in the cron line. (Not done after all: still 60 that afternoon, see "3 hours a day".)
+**Done 2026-10-07**, the first four: `live_functions_found = 13`, the push live on agi1.app/live, `update` on the server, and
 `--warm`: "258 of 258 ready, kept for every show (1208 s)" (about 20 minutes).
 
-**Going live at random times** (since 2026-10-07 evening, the owner: "can you remove this so people dont know when im
+**Going live at random times** (since 2026-10-07, after her first show; the owner: "can you remove this so people dont know when im
 live", "im gonna randomly live now"). Nothing tells anyone ahead: agi1.app/live and her bot only say she's live while she
 is ("starting soon" in the minutes before), and her Telegram groups hear "i'm live on X right now" as she starts. Each time:
 1. **On the server:**
@@ -3617,8 +3618,13 @@ is ("starting soon" in the minutes before), and her Telegram groups hear "i'm li
    cd /opt/agi1-live/site && nohup sh tools/live/live.sh --start-in 10 >> /var/log/agi1-live.log 2>&1 &
    ```
    The stream starts at once with "starting soon" and a 10-minute countdown (`--start-in` takes 0 to 30 minutes), then her
-   show (`LIVE_MINUTES`: 3 hours). `nohup … &` keeps it going when the window closes; `tail -20 /var/log/agi1-live.log`
-   shows how it's going. (`--start-at HH:MM`, in UTC and at most 30 minutes ahead, still works too.)
+   show (`LIVE_MINUTES`: 3 hours; `--minutes 60` after `--start-in 10` for one hour this time). `nohup … &` keeps it
+   going when the window closes; `tail -20 /var/log/agi1-live.log` shows how it's going (a line near the start of
+   each show ends `streaming to X · 180 minutes`). (`--start-at HH:MM`, in UTC and at most 30 minutes ahead, still works too.)
+   Three hours, for every show: `grep LIVE_MINUTES /opt/agi1-live/live.env` says `LIVE_MINUTES=180`, or this sets it:
+   ```
+   sed -i 's/^LIVE_MINUTES=.*/LIVE_MINUTES=180/' /opt/agi1-live/live.env && grep LIVE_MINUTES /opt/agi1-live/live.env
+   ```
 2. **X Live Studio**, within those minutes: **New Livestream** → a title → Source **agi live server** → **Public** →
    **Go Live** (its preview shows her "starting soon" first), as for the private test.
 3. **The phone link** as usual (Pause, Resume, End, the box for X's chat). **End** there makes her say goodbye and stop;
@@ -3653,7 +3659,7 @@ day; the owner approved about $20–35, and up to $20 for the server on 2026-10-
 source), `GOOGLE_APPLICATION_CREDENTIALS` (left as it is: /secrets/google-key.json) or `LIVE_GCP_API_KEY`,
 `LIVE_VERTEX_LOCATION` (global), `LIVE_VOICE_MODEL` (gemini-3.8-flash-lite-tts), `LIVE_VOICES` (vertex; also `cloud`, or
 `gemini` with `GEMINI_API_KEY`: the site's own key and its daily limit, a backup only), `LIVE_MINUTES` (60; 180 on the
-owner's server since 2026-10-07),
+owner's server, set 2026-10-07: see "3 hours a day"),
 `LIVE_DAILY_AT` (01:00 UTC, 9:00 the owner's time: the cron line's show, and the next show the site keeps but never shows
 since 2026-10-07), `LIVE_AV_MS` (170), `LIVE_MUSIC` (on), `LIVE_MUSIC_VOLUME` (100). Optional: `LIVE_VOICE_TIMEOUT_S`
 (15), `LIVE_GL` (her picture's size: 720 with 4 cores or more, else 540), `LIVE_X264_PRESET` (how hard the video encoder
@@ -3691,9 +3697,9 @@ works: superfast below 4 cores, else veryfast; since 2026-10-06).
 | One group doesn't hear she's live | `[live] couldn't tell the group @… she's live: … (is she still in that group? add her again)` | Add her to that group again (or check `TELEGRAM_GROUPS`) |
 | Her groups don't hear she's live, and no log line | (none) | By design: once a day at most (a restart the same day posts nothing), never for a recording; or `TELEGRAM_GROUPS` isn't set, or `TELEGRAM_GROUP_POSTS=off` |
 | `--warm` takes about half an hour | | Her 258 lines at Google's pace (about 8 a minute): only the ones not made yet are made, once |
-| It stops at once | `--start-in: 0 to 30 minutes (like --start-in 10)` (or `unknown option --start-in`) | A number of minutes from 0 to 30 after it (like `--start-in 10`). `unknown option`: the server's code is from before 2026-10-07 evening: `sh tools/live/live.sh update` |
+| It stops at once | `--start-in: 0 to 30 minutes (like --start-in 10)` (or `unknown option --start-in`) | A number of minutes from 0 to 30 after it (like `--start-in 10`). `unknown option`: the server's code is from before the random-times change (2026-10-07): `sh tools/live/live.sh update` |
 | A show started by itself at 00:58 UTC (9:00 the owner's time), and the site or her groups said she's live | | The daily cron line is still there: `rm /etc/cron.d/agi1-live` (see "Going live at random times") |
-| agi1.app/live still says "Next show: today at …" | (none) | The page from before 2026-10-07 evening: push, then wait for Vercel's **Ready** (a tab open since then: reload it) |
+| agi1.app/live still says "Next show: today at …" | (none) | The page from before the random-times change (2026-10-07): push, then wait for Vercel's **Ready** (a tab open since then: reload it) |
 
 **Tests:** `tests/live.test.js` (26: a question's and a name's checks (links, addresses, contacts, other coins and real
 people however they're written, distress, crude, impersonation), tickets, who may call what (the runner's secret, the
@@ -3705,7 +3711,7 @@ the keep-alive's tidy-up, the page's promises, styles, words and code; since 202
 on by the owner (everyone's checks before the database, "on X" in her prompt, one at a time per X name, without a name
 each its own, only the owner's key, never logged, live.sql not run again) and her "i'm live" post (both kinds of group,
 plain text, her group rules, once a day, an old show, only the runner, posts switched off, a group she left, live.sql not
-run again), and the owner's box on the page (its words for every answer); since that evening never when her next show
+run again), and the owner's box on the page (its words for every answer); since later that day never when her next show
 is: not in `/api/live`'s status, her bot's /live or the page) and `tests/livestream.test.js` (24: every
 pre-written line against her rules (since 2026-10-07 the new segments, their picks and their cards too), her diary on stream, the director (a whole show simulated: segments, questions, a
 pause that still ends, a short show, no nudges while answers are stuck), her voice (settings, the signed token request, the
@@ -3717,10 +3723,10 @@ client (a redirect said, never followed; "back") and the demo, her set's page (s
 ending at the bar, nothing plain and opaque over it, her hearts fading before its edge, the window one pixel bigger than
 the screen; and x264's speed by the server's cores), the Docker image; since 2026-10-07 the new segments' picks (never
 twice in a segment), a 3-hour show (every segment about as often as the others), the question card for X's chat, "on_x"
-only for a real stream; since that evening `--start-in` (0 to 30 minutes, read back as that time, never refused) and no
+only for a real stream; since later that day `--start-in` (0 to 30 minutes, read back as that time, never refused) and no
 line or goodbye card that says when her next show is). The SQL ran in PGlite (112 checks since 2026-10-07: X's questions, `live_tell` once a day, run
 over the version before). In a browser with the site's
-real headers (`livepagetest.mjs` in Claude's scratch, 96 checks: coming soon, offline (since 2026-10-07 evening: no
+real headers (`livepagetest.mjs` in Claude's scratch, 96 checks: coming soon, offline (since the random-times change, 2026-10-07: no
 time anywhere on the page, even if an old answer had one), live (asking,
 your place, on air, her answer, another), every refusal (the caring note, "already in line"), a reload, the owner's
 controls (the key out of the address, pause, two-tap end, block, drop, a tap during a slow check never lost, a link that
@@ -3729,7 +3735,7 @@ showing "kai_99 · X" and "someone · X", every refusal in words with the focus 
 360 px in both looks; 134 checks in all), phones, both looks and themes, axe 0 issues, consoles). The real runner end to
 end (`showtest3.mjs`, 2026-10-07, 13 checks: a recording with a question from X's chat on her card and today's first
 segment, the quiz, its cards; no "on_x" for a recording; a real stream to a local RTMP listener: "on_x" once, right after
-she starts, the key never in the log; `showtest4.mjs`, that evening, 10 checks: `--start-in`, "starting soon" with its
+she starts, the key never in the log; `showtest4.mjs`, later that day, 10 checks: `--start-in`, "starting soon" with its
 countdown for the minutes asked, then the show, its goodbye card "Follow @agi1dotapp for the next one", no next show
 sent; `showtest.mjs`, 22 checks: Xvfb, Chromium, ffmpeg and a fake site; the owner's pause while she answers (back in line, answered after), a
 question skipped on air, a dropped question never aired, end → outro → off with her next show, H.264 1280 × 720 and AAC
@@ -5315,8 +5321,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   lines) and 3-hour shows (see "Her first public show"). The owner ran `supabase/live.sql` again (13), pushed, and ran
   `update` and `--warm` on the server the same day (258 of 258 lines ready). Tests: 486 unit (485 pass, 1 skipped as before; on Node 20, 22 and 24, with and without
   Vercel's settings), the build, 112 SQL checks (PGlite), 133 in a browser, 13 with the real runner (a recording and a
-  stream to a local RTMP listener). Not tried live yet: the box with a real show, the post in a real group. **That
-  evening** (the owner, with a screenshot of agi1.app/live's "Next show: today at 09:00 (your time).": "can you remove
+  stream to a local RTMP listener). Not tried live yet: the box with a real show, the post in a real group. **Later
+  that day** (the owner, with a screenshot of agi1.app/live's "Next show: today at 09:00 (your time).": "can you remove
   this so people dont know when im live", "im gonna randomly live now"): she goes live at random times: the site, her
   bot and her stream never say when her next show is, and `--start-in` starts a show in a few minutes (see "Going live
   at random times"). **Owner:** push, `update` on the server, delete the daily cron line. Tests: 486 unit (485 pass, 1
@@ -5584,7 +5590,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-06 | Her live set after her first test recordings (see "Her first test recording"): nothing plain and opaque covers her picture, because the server's software compositing left out the mirror image of what the opaque bar covered (her head and hearts cut flat 64 px from the top): her picture ends where the bar starts, and the boxes over it are 1% see-through. Her picture starts at x = 400 (her wave and her cheer reached past its old edge at 560), her hearts fade out before its edge, her middle at x = 920 as before and 14 px lower (under the top row's label); the browser window one pixel bigger than the screen (a page exactly the screen's size came out 1279 × 719 without a window manager); a finished recording made a standard MP4 (Windows' player showed blocks in the fragmented one); x264 superfast below 4 cores (the CX23 draws her about 12 times a second). Tried first and replaced the same day: drawing her off the page and copying each picture onto a 2D canvas (9.5 frames a second on the server). Not picked: GPU compositing or her background in WebGL (13 frames a second on Claude's computer, instead of 23–25) |
 | 2026-10-06 | Her live show draws her lighter (the owner: "theres nothing u can do to increase the frames?"; the CX23 drew her about 12 times a second, and drawing her in software was two thirds of its processor): her texture at the size she's shown without mipmaps (`fitTexture()`), her arms with one level of finer mesh (`armRefine`), x264 superfast below 4 cores. Only the live show: the website keeps its sharper close-ups (the owner asked). On Claude's computer a third less processor for each picture of her; on the CX23 about 20 new pictures of her a second instead of 12 to 13 (try4, measured in the recording). Not picked: a smaller picture (`LIVE_GL=480`: softer for less), stopping the LIVE dot's blink (nothing to gain) |
 | 2026-10-07 | Her live show on X, set up with the owner: X Premium (not Basic: Live Studio needs Premium); one Live Studio source, "agi live server", in X's Germany region over RTMPS (next to the Hetzner server); a **private** test livestream first, with `--demo` (made-up questions, the site untouched); her first public show the same day at 9:00 the owner's time (the owner's pick: "Today, 9:00 AM"), Public with Auto-start; X's chat open to Everyone for now (the owner's pick; X has no followers-only setting, and Claude had suggested Verified Accounts, or Off, since she can't read it yet). The owner pasted the stream key in the chat and showed the phone link in a screenshot, by choice (see "Open questions") |
-| 2026-10-07 | She goes live at random times (that evening, the owner, with a screenshot of agi1.app/live's "Next show: today at 09:00 (your time).": "can you remove this so people dont know when im live", then "and im gonna randomly live now"): **nothing public says when her next show is** (`/api/live`'s status has no `nextAt`, the page says "Follow @agi1dotapp on X to catch her next show.", her bot's /live "i go live on X at random times", her goodbye line no "same time tomorrow?", her goodbye card "Follow @agi1dotapp for the next one"); **`--start-in N`** starts a show N minutes from now (0 to 30: "starting soon" with a countdown meanwhile), so the owner never works out a UTC time; the daily cron line goes. Kept: "starting soon" on the page and her stream in the minutes before (it helps people arrive), her "i'm live" post as she starts (once a UTC day), the next show's time in the database (the runner still sends it; nobody sees it). Not picked: a random start time chosen by the server itself (the owner picks when, and has to press Go Live in Live Studio anyway), removing `--announce` and the next show's time from the database (harmless: nobody sees it, and showing it again some day is a small change) |
+| 2026-10-07 | She goes live at random times (later that day, the owner, with a screenshot of agi1.app/live's "Next show: today at 09:00 (your time).": "can you remove this so people dont know when im live", then "and im gonna randomly live now"): **nothing public says when her next show is** (`/api/live`'s status has no `nextAt`, the page says "Follow @agi1dotapp on X to catch her next show.", her bot's /live "i go live on X at random times", her goodbye line no "same time tomorrow?", her goodbye card "Follow @agi1dotapp for the next one"); **`--start-in N`** starts a show N minutes from now (0 to 30: "starting soon" with a countdown meanwhile), so the owner never works out a UTC time; the daily cron line goes. Kept: "starting soon" on the page and her stream in the minutes before (it helps people arrive), her "i'm live" post as she starts (once a UTC day), the next show's time in the database (the runner still sends it; nobody sees it). Not picked: a random start time chosen by the server itself (the owner picks when, and has to press Go Live in Live Studio anyway), removing `--announce` and the next show's time from the database (harmless: nobody sees it, and showing it again some day is a small change) |
 | 2026-10-07 | After her first public show (630 live viewers within its hour; the owner: "it doesnt read the X live comments and people barely send her a meesage … i think longer hours is better ?"), the owner's choices, all built the same day: **a box on the owner's phone page for a question from X's chat** ("Relay box (Recommended)": X's chat can't be read without X's approval of its Livestream API; the owner copies a good question in, it gets everyone's checks and her card says "from <their X name> on X"; one at a time per X name, under a daily code of the name), **an "i'm live" post in her Telegram groups** when a show starts (once a day at most, decided by the database (`live_tell`), never for a recording, under `TELEGRAM_GROUP_POSTS` like her other group posts), **seven more segments** (137 more lines: how to ask her, self-care, a day in her life, fun facts, this or that, green or red flags, a quiz about her; the last four take a few of their picks each time) and **3-hour shows** (`LIVE_MINUTES=180`, 01:00 to 04:00 UTC). Also offered: help with X's Livestream API form (X's own chat for real, if X approves). Not built: she still never reads or types in X's chat herself (hard rule 6) |
 
 ## Open questions
