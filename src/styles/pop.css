@@ -619,7 +619,7 @@
 [data-skin='pop'] .lv-now[data-state='live'] .lv-dot { background: var(--pop-ink); }
 [data-skin='pop'] .lv-field textarea, [data-skin='pop'] .lv-field input, [data-skin='pop'] .lv-block input { border: 2px solid var(--edge); border-radius: 12px; }
 [data-skin='pop'] .lv-reply { border-left: 4px solid var(--pop-pink); font-family: var(--serif); font-style: italic; font-size: 20px; }
-[data-skin='pop'] .lv-onair, [data-skin='pop'] .lv-word { border: 2px solid var(--edge); }
+[data-skin='pop'] .lv-onair, [data-skin='pop'] .lv-word, [data-skin='pop'] .lv-relay { border: 2px solid var(--edge); }
 [data-skin='pop'] .lv-line, [data-skin='pop'] .lv-item { border-color: var(--edge); }
 
 /* ---------- things that float over the page: the market notice, the wallet screen ---------- */

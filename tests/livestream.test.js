@@ -11,13 +11,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generateKeyPairSync, createVerify } from 'node:crypto';
 import * as L from '../tools/live/lines.js';
-import { createShow, nextStep, didStep, PACE, chatLine, pickupLine, tipsFor, pairsFor, seeded } from '../tools/live/show.js';
+import { createShow, nextStep, didStep, PACE, chatLine, pickupLine, tipsFor, pairsFor, poolFor, seeded } from '../tools/live/show.js';
 import {
   voiceSettings, serviceAccount, tokenRequest, accessToken, forgetToken, vertexRequest, cloudRequest, vertexAudio, createVoice, promptFor,
   pcmToSamples, samplesToPcm, resample, RATE,
 } from '../tools/live/voice.js';
 import { parseArgs, timeAt, startProblem, rtmpTarget, maskUrl, ffmpegArgs, Mixer, reactFor, avShift, outPath, warmUp, beep, audioOnsets, videoOnsets, syncOffset,
-  WARM_GAP_MS, PROBE_SHOW, secretAccepted, finishRecording, x264Preset } from '../tools/live/run.mjs';
+  WARM_GAP_MS, PROBE_SHOW, secretAccepted, finishRecording, x264Preset, askedBy } from '../tools/live/run.mjs';
 import { liveSite, demoSite, DEMO_QA } from '../tools/live/site.js';
 import * as M from '../tools/live/music.js';
 import { isCrude } from '../server/coins.js';
@@ -31,7 +31,10 @@ const allLines = () => {
   const out = L.allLines();
   const seg = L.SEGMENTS;
   for (const x of [...L.INTRO, ...L.OUTRO, L.BRB.start, L.BRB.back, ...L.READING, ...L.LAG, ...L.PICKUP, ...L.CHAT, ...seg.agi101.lines, ...seg.safety.lines,
-    seg.tips.intro, seg.wyr.intro, seg.diary.intro, seg.diary.outro, L.tipLine(seg.tips.tips[5], 2), ...L.wyrLines(seg.wyr.pairs[3])]) {
+    seg.tips.intro, seg.wyr.intro, seg.diary.intro, seg.diary.outro, L.tipLine(seg.tips.tips[5], 2), ...L.wyrLines(seg.wyr.pairs[3]),
+    // (2026-10-07: the segments for longer shows)
+    ...seg.howto.lines, ...seg.selfcare.lines, ...seg.story.lines, seg.facts.intro, seg.facts.pool[0].line, seg.thisorthat.pool.at(-1).line,
+    seg.flags.intro, ...seg.flags.pool.map((x) => x.line), seg.quiz.pool[2].line, L.tipLine(seg.tips.tips.at(-1), 0), ...L.wyrLines(seg.wyr.pairs.at(-1))]) {
     assert.ok(out.some((y) => y.text === x.text), `in allLines(): ${x.text}`);
   }
   return out;
@@ -40,7 +43,7 @@ const REAL_PEOPLE = /\b(vlad|tenev|elon|musk|trump|biden|vitalik|buterin|saylor|
 test('her lines on stream: PG-13, no pet names, only $AGI, never a real person, never advice, links only to agi1.app', () => {
   const lines = allLines();
   assert.ok(lines.length > 80, `${lines.length} lines`);
-  const cards = Object.values(L.SEGMENTS).flatMap((s) => [s.card?.title, s.card?.kicker, ...(s.card?.list || [])]).filter(Boolean);
+  const cards = Object.values(L.SEGMENTS).flatMap((s) => [s.card?.title, s.card?.kicker, ...(s.card?.list || []), ...(s.pool || []).map((x) => x.card)]).filter(Boolean);
   for (const line of lines) {
     for (const t of [line.text, line.say].filter(Boolean)) {
       assert.ok(!isCrude(t), `PG-13: ${t}`);
@@ -59,6 +62,8 @@ test('her lines on stream: PG-13, no pet names, only $AGI, never a real person, 
     assert.ok(!isCrude(t));
     for (const m of t.matchAll(/\$([A-Za-z]+)/g)) assert.equal(m[1].toUpperCase(), 'AGI', t);
     assert.doesNotMatch(t, REAL_PEOPLE, t);
+    assert.doesNotMatch(t, /\b(buy|sell|hold|moon|pump|profit|gains?|guaranteed|100x)\b/i, t);
+    assert.ok(t.length <= 60, `a card fits her set: ${t}`);
   }
   // "not financial advice" wherever money or $AGI comes up
   for (const id of ['agi101', 'clank101', 'chain101']) assert.ok(L.SEGMENTS[id].lines.some((x) => /not financial advice/i.test(x.text)), id);
@@ -67,7 +72,20 @@ test('her lines on stream: PG-13, no pet names, only $AGI, never a real person, 
   assert.ok(L.SEGMENTS.chain101.lines.some((x) => /not affiliated with Robinhood/.test(x.text)), 'not affiliated with Robinhood');
   assert.ok(L.SEGMENTS.agi101.card.list.some((x) => /0xfa31…06ec/.test(x)) && L.SEGMENTS.agi101.lines.some((x) => /copy it from agi1\.app/.test(x.text)), 'the contract: its ends, copied only from agi1.app');
   assert.ok(L.SEGMENTS.safety.lines.some((x) => /never ask for your seed phrase/.test(x.text)));
-  assert.deepEqual(L.SEGMENT_IDS, ['agi101', 'clank101', 'chain101', 'safety', 'tips', 'wyr', 'diary']);
+  assert.deepEqual(L.SEGMENT_IDS, ['agi101', 'clank101', 'chain101', 'safety', 'tips', 'wyr', 'howto', 'selfcare', 'story', 'facts', 'thisorthat', 'flags', 'quiz', 'diary']);
+  assert.deepEqual(Object.keys(L.SEGMENTS).sort(), [...L.SEGMENT_IDS].sort(), 'every segment the director can pick, and no other');
+  // (2026-10-07, for 3-hour shows) the segments with a pool: a card for each pick, a few of them a time, enough to go round
+  for (const id of ['facts', 'thisorthat', 'flags', 'quiz']) {
+    const seg = L.SEGMENTS[id];
+    assert.ok(seg.card.kicker && seg.card.title && seg.intro?.text, id);
+    assert.ok(Number.isInteger(seg.per) && seg.per >= 2 && seg.pool.length >= 2 * seg.per, `${id}: ${seg.per} of ${seg.pool.length}`);
+    for (const x of seg.pool) assert.ok(typeof x.card === 'string' && x.card.length >= 5 && x.line?.text, `${id}: ${x.card}`);
+    assert.equal(new Set(seg.pool.map((x) => x.card)).size, seg.pool.length, `${id}: no card twice`);
+  }
+  assert.ok(L.SEGMENTS.howto.lines.some((x) => /agi1\.app\/live/.test(x.text)), 'how to ask her: agi1.app/live');
+  assert.ok(L.SEGMENTS.quiz.pool.some((x) => /financial advice/.test(x.line.text)) && L.SEGMENTS.quiz.pool.some((x) => /only agi1\.app/.test(x.line.text)));
+  assert.ok(L.SEGMENTS.flags.pool.some((x) => /seed phrase/.test(x.line.text)), 'a safety flag among the fun ones');
+  assert.ok(L.SEGMENTS.tips.tips.length >= 24 && L.SEGMENTS.wyr.pairs.length >= 24 && L.CHAT.length >= 30 && L.PICKUP.length >= 10, 'enough to go round in 3 hours');
   for (const [a, b, pick, why] of L.SEGMENTS.wyr.pairs) assert.ok(a && b && [0, 1].includes(pick) && why.length > 3);
   assert.equal(L.wyrLines(L.SEGMENTS.wyr.pairs[0])[1].pick, 0);
 });
@@ -150,6 +168,24 @@ test('the director: intro first, questions first (up to 4 in a row), a segment e
   assert.deepEqual(simulate({ seed: 3 }).steps.map((s) => s.id || s.kind), simulate({ seed: 3 }).steps.map((s) => s.id || s.kind));
 });
 
+// (2026-10-07, the owner: "i think longer hours is better", then picked 3 hours: LIVE_MINUTES=180 on the server)
+test('a 3-hour show: every segment comes round several times, never twice in a row, and the outro at the end', () => {
+  for (const questionsEvery of [0, 45_000]) {
+    const { steps } = simulate({ minutes: 180, questionsEvery, seed: 11 });
+    assert.equal(steps.at(-1).kind, 'end');
+    const outro = steps.find((s) => s.kind === 'outro');
+    assert.ok(outro.at >= 180 * 60_000 - PACE.OUTRO_MS - 70_000, `the outro near the end: ${outro.at / 60_000} min`);
+    const order = steps.filter((s) => s.kind === 'segment').map((s) => s.id);
+    for (let i = 1; i < order.length; i++) assert.notEqual(order[i], order[i - 1], 'never the same segment twice in a row');
+    const seen = new Map();
+    for (const id of order) seen.set(id, (seen.get(id) || 0) + 1);
+    assert.deepEqual([...seen.keys()].sort(), [...L.SEGMENT_IDS].sort(), 'every segment');
+    const least = Math.min(...seen.values()), most = Math.max(...seen.values());
+    assert.ok(most - least <= 1, `each as often as the others (${least}–${most} times)`);
+    if (!questionsEvery) assert.ok(order.length >= 40, `${order.length} segments in 3 quiet hours (each about 3 times)`);
+  }
+});
+
 test('the director: the owner\'s pause is "be right back" at once; "end" goes to the outro; a short show still has its outro', () => {
   const p = simulate({ questionsEvery: 30_000, pauseAt: 10 * 60_000 });
   const brb = p.steps.filter((s) => s.kind === 'brb');
@@ -185,6 +221,16 @@ test('the director picks lines she hasn\'t said yet this show (tips, would you r
   assert.equal(new Set(tips).size, 12);
   const pairs = [...pairsFor(show), ...pairsFor(show), ...pairsFor(show)];
   assert.equal(new Set(pairs.map((x) => x[0])).size, 6);
+  // (2026-10-07) a pool segment's picks: never the same one twice in a segment, and none again until most have come
+  for (const id of ['facts', 'thisorthat', 'flags', 'quiz']) {
+    const { pool, per } = L.SEGMENTS[id];
+    const rounds = Math.floor(pool.length / per);
+    const picks = Array.from({ length: rounds }, () => poolFor(show, id));
+    for (const p of picks) assert.equal(new Set(p.map((x) => x.card)).size, per, `${id}: ${per} different ones in a segment`);
+    assert.equal(new Set(picks.flat().map((x) => x.card)).size, rounds * per, `${id}: nothing twice in the first ${rounds} segments`);
+    for (let i = 0; i < 40; i++) assert.equal(new Set(poolFor(show, id).map((x) => x.card)).size, per, `${id}: still ${per} different ones, round after round`);
+  }
+  assert.deepEqual(poolFor(show, 'agi101'), [], 'a segment without a pool');
   const r = seeded(9);
   assert.ok(r() !== r());
 });
@@ -646,6 +692,7 @@ test('the runner\'s side of agi1.app/api/live: LIVE_SECRET on every call; --demo
   await site.done(4, 9, 'skipped', 'owner');
   await site.stop(4, Date.UTC(2026, 9, 3, 20));
   await site.back(4, 10);
+  await site.onX(4);
   for (const c of calls) {
     assert.equal(c.url, 'https://agi1.app/api/live');
     assert.equal(c.init.headers.Authorization, `Bearer ${'x'.repeat(40)}`);
@@ -653,6 +700,7 @@ test('the runner\'s side of agi1.app/api/live: LIVE_SECRET on every call; --demo
   assert.deepEqual(JSON.parse(calls[2].init.body), { action: 'done', show: 4, id: 9, status: 'skipped', why: 'owner' });
   assert.equal(JSON.parse(calls[3].init.body).next, '2026-10-03T20:00:00.000Z');
   assert.deepEqual(JSON.parse(calls[4].init.body), { action: 'back', show: 4, id: 10 }, 'a question back in line (she was paused)');
+  assert.deepEqual(JSON.parse(calls[5].init.body), { action: 'on_x', show: 4 }, "(2026-10-07) she's streaming on X now");
   const refused = liveSite({ site: 'https://agi1.app', secret: 'x'.repeat(40), fetchFn: async () => Response.json({ error: 'unauthorized' }, { status: 401 }) });
   await assert.rejects(refused.start('live'), (e) => e.status === 401 && /start: HTTP 401 unauthorized/.test(e.message));
   // a site address that redirects (another host would drop LIVE_SECRET on the way): never followed, said plainly
@@ -672,6 +720,24 @@ test('the runner\'s side of agi1.app/api/live: LIVE_SECRET on every call; --demo
   await demo.back(1, second.question.id);
   assert.equal((await demo.next()).question.text, second.question.text, 'put back: the same one again');
   for (const qa of DEMO_QA) assert.ok(!isCrude(qa.reply) && !/\b(babe|cutie)\b/.test(qa.reply));
+  assert.deepEqual(await demo.onX(1), { ok: true, told: false }, '--demo tells nobody');
+});
+
+// (2026-10-07) who asked, on her question card: a question the owner passed on from X's live chat says so
+test("her question card: the name they gave, someone on Telegram, and (passed on from X's chat) <name> on X", () => {
+  assert.equal(askedBy({ source: 'web', name: 'Mochi' }), 'Mochi');
+  assert.equal(askedBy({ source: 'web', name: null }), 'someone');
+  assert.equal(askedBy({ source: 'telegram', name: null }), 'someone on Telegram');
+  assert.equal(askedBy({ source: 'x', name: 'kai_99' }), 'kai_99 on X');
+  assert.equal(askedBy({ source: 'x', name: null }), 'someone on X');
+  assert.equal(askedBy(null), 'someone');
+  // the runner tells the site she's on X only for a real show, after she starts (never a recording, never once it's stopping)
+  const run = read('tools/live/run.mjs');
+  assert.match(run, /if \(!a\.record && !stopping\) \{\s*site\.onX\(showId\)/);
+  assert.ok(run.indexOf("state.status = 'live';") < run.indexOf('site.onX(showId)'), 'after she goes live');
+  assert.match(run, /site\.onX\(showId\)\.then\([\s\S]{0,200}\(err\) => log\.warn/, 'a failure is only a warning: the show goes on');
+  // her pool segments: a card for each pick, the intro first
+  assert.match(run, /else if \(seg\.pool\) \{[\s\S]{0,400}poolFor\(show, id\)[\s\S]{0,200}body: item\.card[\s\S]{0,120}say\(item\.line\)/);
 });
 
 // (2026-10-06, the owner's first real setup on the server: --check said NO for a right LIVE_SECRET, and agi1.app redirects)

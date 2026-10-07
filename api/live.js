@@ -8,18 +8,20 @@
 //       { action: 'start', status: 'starting' | 'live' } → { show } · { action: 'beat', show, status, segment, now } → the
 //       owner's controls · { action: 'next', show } → the next question with her answer · { action: 'done', show, id, status:
 //       'answered' | 'skipped', why? } · { action: 'back', show, id } (back in line: she was paused) · { action: 'stop', show,
-//       next? } · { action: 'schedule', next }
+//       next? } · { action: 'schedule', next } · { action: 'on_x', show } (2026-10-07: she's streaming on X now; her Telegram
+//       groups hear it once a day)
 //     with "Authorization: Bearer <the owner's key>" (made from LIVE_SECRET: agi1.app/live#admin=…, the owner's phone):
 //       { action: 'control', do: 'view' | 'pause' | 'resume' | 'close' | 'open' | 'end' | 'skip' | 'drop' | 'clear' | 'block' |
-//       'unblock', arg? }
+//       'unblock', arg? } · { action: 'relay', question, name? } (2026-10-07: a question from X's live chat, passed on)
 // Until LIVE_SECRET is set and supabase/live.sql is run, GET answers { ready: false } and the page says her show is coming.
 import { getConfig, missingSettings } from '../server/config.js';
 import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass } from '../server/security.js';
 import { verifyHuman } from '../server/turnstile.js';
 import { liveBurst, liveLookupBurst, liveAuthBurst } from '../server/burst.js';
 import {
-  liveReady, whoIs, liveDb, askLive, checkQuestion, checkAskName, makeTicket, readTicket, nextAnswer, WATCH_URL, STATUSES, LIVE,
+  liveReady, whoIs, liveDb, askLive, checkQuestion, checkAskName, makeTicket, readTicket, nextAnswer, relayName, relayLive, WATCH_URL, STATUSES, LIVE,
 } from '../server/live.js';
+import { tgToken } from '../server/tg-api.js';
 
 const MAX_BODY = 4096;
 const noStore = { 'Cache-Control': 'no-store' };
@@ -138,12 +140,15 @@ async function ask(cfg, request, body) {
   if (r?.ok === true && idOf(r.id)) {
     return json(200, { ok: true, ticket: makeTicket(cfg.passSecret, r.id), id: r.id, position: r.position, pass });
   }
+  return lineRefused(r, { pass });
+}
+// The line's own "no" (supabase/live.sql live_ask), as an answer: its reason, how long to wait, and (a question of theirs
+// still in line: the same daily code, maybe someone else on the same network, so never its ticket or words, only its place)
+function lineRefused(r, extra = {}) {
   const why = typeof r?.why === 'string' ? r.why : 'busy';
-  // a question of theirs is still in line (the same daily code: maybe someone else on the same network, so never its
-  // ticket or words here, only its place)
-  const extra = why === 'waiting' && Number.isInteger(r.position) ? { position: r.position } : {};
+  const place = why === 'waiting' && Number.isInteger(r.position) ? { position: r.position } : {};
   const status = ['offline', 'ending', 'closed', 'site_cap', 'full'].includes(why) ? 503 : why === 'bad' ? 400 : 429;
-  return json(status, { error: why, wait: Number.isInteger(r?.wait) ? r.wait : undefined, ...extra, pass });
+  return json(status, { error: why, wait: Number.isInteger(r?.wait) ? r.wait : undefined, ...place, ...extra });
 }
 
 // ---------- her stream runner (LIVE_SECRET) ----------
@@ -193,6 +198,21 @@ async function runner(cfg, body) {
       if (Number.isNaN(next)) return json(400, { error: 'bad_request' });
       return json(200, await liveDb.schedule(cfg, next));
     }
+    case 'on_x': {
+      // (2026-10-07) she's streaming on X now (never sent for a recording): her Telegram groups hear it, once a day at most
+      // (live_tell decides, whatever restarts). Never a failure for the show: anything wrong here is only logged.
+      if (!show) return json(400, { error: 'bad_request' });
+      let told = false;
+      try { told = (await liveDb.tell(cfg, show)) === true; } catch (err) {
+        console.warn(`[live] couldn't check whether her groups heard she's live${err.code === 'PGRST202' ? ': run supabase/live.sql again (it ends with live_functions_found = 13)' : `: ${err.message}`}`);
+        return json(200, { ok: true, told: false });
+      }
+      if (!told) return json(200, { ok: true, told: false });
+      const { postLiveNow } = await import('../server/tg-groups.js');
+      const out = await postLiveNow(cfg, tgToken(), { deadline: Date.now() + 15_000 });
+      if (out.posted || out.failed) console.log(`[live] told her Telegram groups she's live: ${out.posted} posted, ${out.failed} failed`);
+      return json(200, { ok: true, told: true, ...out });
+    }
     default:
       return json(400, { error: 'bad_request' });
   }
@@ -201,10 +221,28 @@ async function runner(cfg, body) {
 // ---------- the owner's phone (the key made from LIVE_SECRET) ----------
 const CONTROLS = ['view', 'pause', 'resume', 'close', 'open', 'end', 'skip', 'drop', 'clear', 'block', 'unblock'];
 async function owner(cfg, body) {
+  if (body.action === 'relay') return relay(cfg, body);
   if (body.action !== 'control' || !CONTROLS.includes(body.do)) return json(400, { error: 'bad_request' });
   const arg = typeof body.arg === 'string' ? body.arg.slice(0, 60) : body.arg === undefined || body.arg === null ? null : String(body.arg).slice(0, 20);
   if (['drop', 'block', 'unblock'].includes(body.do) && !arg) return json(400, { error: 'bad_request' });
   const r = await liveDb.control(cfg, body.do, arg);
   if (body.do !== 'view') console.log(`[live] the owner: ${body.do}${['block', 'unblock'].includes(body.do) ? ' (a word)' : arg ? ` ${arg}` : ''}`);
   return json(200, { ...r, limits: { perDay: LIVE.PER_DAY, queue: LIVE.QUEUE, gap: LIVE.GAP_S } });
+}
+
+// (2026-10-07) a question from X's live chat, passed on by the owner: the same checks as a visitor's (no 18+ or human check:
+// it's the owner), shown on stream as "from <their X name> on X"; the line's own rules as everyone's (server/live.js relayLive).
+// Never logged: the question or the name.
+async function relay(cfg, body) {
+  if (typeof body.question !== 'string' || (body.name !== undefined && body.name !== null && typeof body.name !== 'string')) return json(400, { error: 'bad_request' });
+  const q = checkQuestion(body.question);
+  if (!q.ok) return json(400, { error: 'question', why: q.why });
+  const n = checkAskName(relayName(body.name));
+  if (!n.ok) return json(400, { error: 'name' });
+  const r = await relayLive(cfg, { question: q.text, name: n.name || '' });
+  if (r?.ok === true && idOf(r.id)) {
+    console.log(`[live] the owner passed on a question from X's chat (#${r.id})`);
+    return json(200, { ok: true, id: r.id, position: r.position });
+  }
+  return lineRefused(r);
 }

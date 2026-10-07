@@ -10,10 +10,12 @@
 //     talks to everyone, PG-13, never real people or other coins, never advice), and says first whether it can be answered
 //     on a public stream at all (askAgi1's `skip`). Only then is the question shown on stream, with the name they gave.
 //   • The owner controls the show from a phone (agi1.app/live#admin=…, a key made from LIVE_SECRET): pause, skip, block
-//     words, clear the line, end the show.
+//     words, clear the line, end the show; and (2026-10-07, the owner's choice: X's chat can't be read without X's approval)
+//     pass on a question from X's live chat (relayLive: the same checks, shown as "on X", source 'x').
+//   • When her show goes live on X, her Telegram groups hear it once a day (api/live.js 'on_x', live_tell).
 // Secrets: LIVE_SECRET (32+ characters, in Vercel and on the owner's server: the runner's key). The owner's phone link is made
 // from it (adminKeyFor), so there's no second setting. The Gemini key stays in Vercel: the runner never holds it.
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import { rpc } from './limits.js';
 import { askAgi1, TLDS } from './gemini.js';
 import { isCrude } from './coins.js';
@@ -137,6 +139,8 @@ export const liveDb = {
   beat: (cfg, show, status, segment, now) => rpc(cfg, 'live_beat', { p_show: show, p_status: status, p_segment: segment ?? null, p_now: now ?? null }, 'live'),
   stop: (cfg, show, next) => rpc(cfg, 'live_stop', { p_show: show, p_next: ISO(next) }, 'live'),
   schedule: (cfg, next) => rpc(cfg, 'live_schedule', { p_next: ISO(next) }, 'live'),
+  // (2026-10-07) true only the first time today, for the show that's on: her Telegram groups hear "i'm live" once a day
+  tell: (cfg, show) => rpc(cfg, 'live_tell', { p_show: show }, 'live'),
   take: (cfg, show) => rpc(cfg, 'live_take', { p_show: show }, 'live'),
   done: (cfg, id, status, { why = null, reply = null, mood = null } = {}) =>
     rpc(cfg, 'live_done', { p_id: id, p_status: status, p_why: why, p_reply: reply, p_mood: mood }, 'live'),
@@ -153,6 +157,23 @@ export async function askLive(cfg, { source, asker, name = null, question }) {
   const n = checkAskName(name);
   if (!n.ok) return { ok: false, why: 'name' };
   return liveDb.ask(cfg, { source, asker, name: n.name, question: q.text });
+}
+
+// ---------- a question from X's live chat, passed on by the owner (2026-10-07) ----------
+// X only lets approved apps read a livestream's chat (its Livestream API: the owner applies). Until then the owner copies a
+// good question from X's chat into the host's box on agi1.app/live: the same checks as everyone's (and the AI's "skip" and
+// "nameOk"), shown on stream as "from <name> on X". The name is the viewer's X name as the owner types it (an "@" in front
+// is dropped). Each X name gets a daily code of its own (one question in line at a time, a minute apart, 5 a day, like
+// everyone); a question without a name gets a code of its own, so the owner can pass on several.
+export const relayName = (raw) => String(raw ?? '').trim().replace(/^@+/, '');
+export function relayAsker(secret, name, day = new Date().toISOString().slice(0, 10)) {
+  if (!name) return `x:${randomBytes(16).toString('hex')}`;
+  return `x:${createHmac('sha256', String(secret)).update(`live-x:${name.toLowerCase()}:${day}`).digest('base64url').slice(0, 32)}`;
+}
+export async function relayLive(cfg, { question, name = '' }) {
+  const n = checkAskName(relayName(name));
+  if (!n.ok) return { ok: false, why: 'name' };
+  return askLive(cfg, { source: 'x', asker: relayAsker(cfg.passSecret, n.name), name: n.name, question });
 }
 
 // ---------- her answer (the runner's "next") ----------

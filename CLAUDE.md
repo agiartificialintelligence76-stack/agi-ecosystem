@@ -86,12 +86,15 @@
 >   password or seed phrase), then sent to her with their next message only; the site never keeps it. Counted as one message. See
 >   "Show her".
 > - **Her live show on X** (2026-10-02, the owner: "what if she livestreams on X and reads the comments and reacts to it?
->   like an automated one … make this better then continue"): an automated show on @agi1dotapp, one hour a day, from the
+>   like an automated one … make this better then continue"): an automated show on @agi1dotapp, every day, from the
 >   owner's own rented server (Docker): AGI-1 in 2D answers viewers' questions out loud (sent at **agi1.app/live** or with
 >   `/live` in her bot; X's own chat only if X approves the owner's access form), with pre-written segments in between and
 >   her own music, made in code. Never other coins, real people, X videos or posts; the owner pauses, skips and ends it
->   from a phone. **Off until the owner sets it up** (`LIVE_SECRET`, `supabase/live.sql`, the server, Google Cloud, X Live
->   Studio). See "Her live show on X".
+>   from a phone. **On since 2026-10-07** (her first public show: 630 live viewers within its hour). The same day (the
+>   owner: "it doesnt read the X live comments and people barely send her a meesage … i think longer hours is better"): a
+>   box on the owner's phone page to pass a question from X's chat on to her, an "i'm live" post in her Telegram groups
+>   when a show starts, seven more segments (258 pre-written lines, from 121) and **3-hour shows**. **Run
+>   `supabase/live.sql` again before pushing that.** See "Her live show on X".
 > - **CloakMesh at inference.agi1.app** (2026-10-03, the owner's private-AI project: "it will be put on inference.agi1.app",
 >   then "Landing page first"): a serious page for CloakMesh (private AI where the visitor's own device checks the server's
 >   AMD hardware itself, and swaps their personal data for tokens before anything is sent), with a demo of its privacy
@@ -190,10 +193,11 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
 - **Show her** (2026-10-02, the owner's question): on computers, a button by the message box: the visitor picks one window
   in the browser's own screen-sharing window, checks the picture full size, and it goes to her with their next message only
   (never kept); she reacts like a girlfriend looking over their shoulder and helps a little. See "Show her"
-- **Her live show on X** (2026-10-02, the owner's idea): an automated show on her X account, an hour a day, streamed from
-  the owner's own server: she answers questions sent at agi1.app/live and in her bot out loud, with pre-written segments
-  (her diary, $AGI 101, dating tips for degens…) and her own music; the owner controls it from a phone. Off until it's set
-  up. See "Her live show on X"
+- **Her live show on X** (2026-10-02, the owner's idea): an automated show on her X account, 3 hours a day since 2026-10-07
+  (an hour at first), streamed from the owner's own server: she answers questions sent at agi1.app/live and in her bot out
+  loud (and questions from X's chat that the owner passes on), with pre-written segments (her diary, $AGI 101, dating tips
+  for degens, a quiz about her…) and her own music; the owner controls it from a phone. On since 2026-10-07. See "Her live
+  show on X"
 - **CloakMesh** (2026-10-03, the owner's next project): its page at **inference.agi1.app** (agi1.app/cloakmesh): what
   CloakMesh is, a demo of its privacy filter that runs only in the visitor's browser, and a free waitlist. Serious, its own
   look, never about the coin. Live at agi1.app/cloakmesh; inference.agi1.app once its domain is set up. See "CloakMesh
@@ -236,9 +240,10 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    first (its cost, X's rules for automated accounts). Her daily clips (2026-09-29) are made automatically, but only for the
    owner to download: the owner posts them by hand (see "Her daily clips").
    **A second exception, the owner's (2026-10-02): her live show on X**, an automated livestream on her account, started
-   by the owner's own server (an hour a day): she answers viewers' questions (checked, PG-13, never other coins or real
-   people) and says pre-written lines, but never posts, types in X's chat, likes, follows or replies to anything on X
-   (see "Her live show on X").
+   by the owner's own server (an hour a day at first, 3 hours since 2026-10-07): she answers viewers' questions (checked,
+   PG-13, never other coins or real people) and says pre-written lines, but never posts, types in X's chat, likes, follows
+   or replies to anything on X (see "Her live show on X"). The owner may pass a question from X's chat on to her by hand
+   (2026-10-07: she still never reads X's chat herself).
    **A third exception, the owner's (2026-10-03): her Telegram groups**, only the ones the owner lists in
    `TELEGRAM_GROUPS` (anywhere else she leaves at once): her diary entry and $AGI's market moments as they happen (the
    same pre-written lines as her texts first, never anything about another coin), a pre-written intro when she's added
@@ -247,7 +252,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    pre-written answers to `/ca` (the official contract), `/website` (agi1.app) and `/mc` ($AGI's market numbers, never a
    word about where they're going), only when someone types them; and (2026-10-06) her buy alerts there: each $AGI buy of
    $50 or more as clank.trade lists it, with her buy GIF and that buy's own numbers, never a word about where the price is
-   going and never another coin (see "Her buy bot").
+   going and never another coin (see "Her buy bot"); and (2026-10-07) a pre-written "i'm live on X" post (with
+   agi1.app/live) when her live show starts streaming, once a day at most (see "Her live show on X").
 7. **Keep costs near $0.** The total budget is $150. Prefer free tiers, and check every new feature against the budget table below.
 8. **Not financial advice.** Nothing on the site, and nothing AGI-1 says, promises gains or tells people to buy or sell.
    **One exception, the owner's choice (2026-09-25):** when a Stranger or a Crush runs out of messages for the day, AGI-1's
@@ -312,10 +318,10 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `index.html` | The page: top bar, the front (2026-09-28), hero, every section, and the footer (the safety note). Vite starts here |
 | `diary.html` | AGI-1's diary page (`/diary`, Phase 5): top bar, the entries, a short safety paragraph. Its own entry: `src/diary.js` |
 | `launch.html` | "Launch with AGI-1" (2026-10-01): the private launch page (`/launch/<id>`, never in search results): the coin, 18+, the three steps (your wallet, Robinhood Chain, Launch), the coin once it's live, "Before you launch". Its own entry: `src/launch/page.js` |
-| `live.html` | Her live show's page (2026-10-02, agi1.app/live): whether she's live on X (or her next show, in your time), asking her a question (18+, the human check), where your question is and her answer, her rules; the owner's controls with the owner's link. Its own entry: `src/live/page.js` |
+| `live.html` | Her live show's page (2026-10-02, agi1.app/live): whether she's live on X (or her next show, in your time), asking her a question (18+, the human check), where your question is and her answer, her rules; the owner's controls with the owner's link (since 2026-10-07 with a box for a question from X's chat). Its own entry: `src/live/page.js` |
 | `cloakmesh.html` | CloakMesh's page (2026-10-03, what inference.agi1.app shows; also agi1.app/cloakmesh): the top, how it works, the demo ("See what leaves your device"), who sees what, the five checks, the difference, speed, what Phase 1 doesn't do yet, questions, the waitlist, and a leave box (opened with someone's leave link). Its own look and theme (`/cloakmesh-theme.js`, not `/theme.js`: no Pop mode). Its own entry: `src/cloakmesh/page.js` |
 | `src/cloakmesh/` | CloakMesh's page (2026-10-03): `page.js` (its light and dark theme, the demo, the five checks lighting up, the waitlist with `/api/cloakmesh` and the human check, leaving with a leave link), `demo.js` (a small version of CloakMesh's privacy filter, only in the visitor's browser: what it finds, its keyed tokens, putting them back, the demo's made-up answer), `words.js` (everything it says that isn't in the page), `email.js` (what counts as an email address: one rule for the page and our server) |
-| `src/live/` | Her live show's page (2026-10-02): `page.js` (her status every 15 s, asking, following your question, the owner's panel), `words.js` (everything it says, and `/api/live`'s answers in plain words) |
+| `src/live/` | Her live show's page (2026-10-02): `page.js` (her status every 15 s, asking, following your question, the owner's panel; since 2026-10-07 its box for a question from X's chat), `words.js` (everything it says, and `/api/live`'s answers in plain words; `relayText()` for the owner's box) |
 | `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28); at agi1.app/talk (2026-10-02) it starts the page in full-screen talk (`is-talk`, its title and colors, no loader), and at agi1.app/talk?pip=1 inside a frame marks it as her pop-out window's page (`is-pip`) |
 | `src/main.js` | Browser code entry point: styles, theme, the front, prices, sections, chat, then the 3D stage (loaded separately, after the front's entrance; at /talk at once, and the front only when you leave full-screen talk) |
 | `src/landing/landing.js` | The front (2026-09-28): the loader, the entrance, the focus lines, AGI-1 in WebGL, the orbit, her bubble, the ribbons, the manifesto, the cursor and hearts (see "The front") |
@@ -379,11 +385,11 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/voice-lines.sql` | Her recorded lines (2026-09-26). Run once in the same Supabase project (any time): the `voice_lines` table + `voice_line_get/put()`, where the server keeps her fixed lines once Google has made them |
 | `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes). **Since 2026-10-03 (her Telegram groups) five tables (`agi1_tg_group_usage`) and 14 functions: run it once more** (it keeps everything saved) |
 | `supabase/burns.sql` | Burn $AGI for more messages (2026-09-30). Run once in the same Supabase project (any time): five new tables (`agi1_burn_key`, `agi1_burn_txs`, `agi1_burn_wallets`, `agi1_burn_days`, `agi1_burn_total`) and 7 functions, only added (nothing the original site uses changes). Until it's run, nobody sees anything about burning |
-| `supabase/live.sql` | Her live show (2026-10-02). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_live_questions`, `agi1_live_state`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `LIVE_SECRET` is set), agi1.app/live says her show is coming soon |
+| `supabase/live.sql` | Her live show (2026-10-02). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_live_questions`, `agi1_live_state`) and 13 functions, only added (nothing the original site uses changes). Until it's run (and `LIVE_SECRET` is set), agi1.app/live says her show is coming soon. **Since 2026-10-07 (questions from X's chat, her "i'm live" post) 13 functions: run it once more** (it keeps everything saved; it ends with `live_functions_found = 13`) |
 | `supabase/launch.sql` | "Launch with AGI-1" (2026-10-01). Run once in the same Supabase project (any time; running it again is safe): four new tables (`agi1_launch_drafts`, `agi1_launch_chats`, `agi1_launch_wallets`, `agi1_launch_days`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `PINATA_JWT` is set), her `/launch` says launching isn't open yet |
 | `supabase/buys.sql` | Her buy bot (2026-10-06). Run once in the same Supabase project, after switching on Integrations → Cron and Database → Extensions → pg_net (running it again is safe): two new tables (`agi1_buys`, `agi1_buy_state`), 2 functions and two Supabase Cron jobs (the check every minute, a daily tidy-up of their run history), only added (nothing the original site uses changes). It ends with `buys_ready = 1` and `buys_scheduled = 1`. Until it's run, no buy is posted |
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there). See "Her live show on X" |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
@@ -1903,7 +1909,8 @@ nothing kept). The owner: "ok that seems good"; asked whether she should also po
 - **Her posts:** her diary's new entry and $AGI's market moments (a new $200K step, a -20% day), the same lines as her
   texts first, as soon as the feed finds them (8 runs a day), each once. **Never the egirl coins or the copies of $AGI**
   (they name other coins), and never a diary entry that names another coin, a link other than agi1.app, an address or an
-  @name.
+  @name. Since 2026-10-07 also "i'm live on X right now 💜 come hang out, and ask me anything: https://agi1.app/live"
+  when her live show starts streaming, once a day at most (see "Her live show on X").
 - **Her buy alerts** (2026-10-06): each $AGI buy of $50 or more, with her buy GIF: see "Her buy bot" below.
 - **Her limits there:** each person's Stranger's **5 messages a day**, shared with her private chat (the same daily code of
   their Telegram account), the group's own **100 a day** (`TELEGRAM_GROUP_DAILY_CAP`), Telegram's share of the site's day
@@ -1954,7 +1961,7 @@ nothing kept). The owner: "ok that seems good"; asked whether she should also po
    @username, e.g. `@yourgroup` (Telegram → the group → its info → the t.me link's last part). A private group has no
    @username: write its id instead (a negative number like `-1001234567890`; add her once, she leaves, and the log names
    it). Several groups: separated by commas, each once. Optional: `TELEGRAM_GROUP_DAILY_CAP` (her replies a day in a group,
-   default 100), `TELEGRAM_GROUP_POSTS` = `off` (no diary and market posts), `TELEGRAM_GROUP_WELCOME` = `off` (no
+   default 100), `TELEGRAM_GROUP_POSTS` = `off` (no diary, market or "i'm live" posts), `TELEGRAM_GROUP_WELCOME` = `off` (no
    welcomes). Then **Redeploy**.
 3. **Vercel** → Settings → **Cron Jobs** → `/api/feed` → **Run**: her group menu (/ask, /ca, /mc, /website, /help) is set at
    once (otherwise within 3 hours; the same after a push that changes it).
@@ -3310,23 +3317,40 @@ building, and the owner's choices (asked one by one):
   yourself?", and after a sample: "the music good"): her own songs, made in code (see "Her music" below).
 - Hard rule 6 got its second exception for this (an automated stream on her X account; nothing else posted).
 
+**Her first public show, 2026-10-07** (01:00 UTC, 9:00 the owner's time, scheduled in Live Studio). The owner: "th live
+works great but it doesnt read the X live comments and people barely send her a meesage it reached 630 live viewers in
+1hour i think longer hours is better ?". Claude's answer: X's own chat can't be read without X's approval (its Livestream
+API: free to apply, no promise), and a viewer on X has to leave X to ask at agi1.app/live, which few do. The owner's
+choices the same day, all built:
+- **A box for a question from X's chat** on the owner's phone page ("Relay box (Recommended)"): the owner copies a good
+  question from the chat under her stream into it, and she answers it on stream like any other.
+- **An "i'm live" post in her Telegram groups** when a show starts ("Telegram 'I'm live' post"), once a day at most.
+- **More segments and lines** ("More segments"): seven more segments, 258 pre-written lines instead of 121.
+- **3 hours a day** ("3 hours"): `LIVE_MINUTES=180` in live.env on the server (set the same day), so 01:00 to 04:00 UTC
+  (9:00 to 12:00 the owner's time).
+
 **What viewers see on X** (1280 × 720, 30 frames a second):
 - **Her set** (`tools/live/page/`): AGI-1 in 2D (her Live2D model, the site's own code: breathing, blinking, looking around,
   her mouth following her voice), waist up on the right, on Pop mode's violet with comic focus lines. Her picture starts at
   x = 400 (since 2026-10-06), so her waving hand and her cheer fit, and her hearts fade out before its edge. At the top
   "● LIVE 12:34", "AGI-1" and **"AI-generated · not financial advice"** (always on screen); at the bottom **"Ask me at
   agi1.app/live"**, how many questions are waiting, and "18+ · PG-13 · I'm an AI · only $AGI here".
-- **A question:** a card "Question · from Mochi" with the question; she looks at it, then answers out loud ("mochi asks…"),
+- **A question:** a card "Question · from Mochi" ("from someone on Telegram"; since 2026-10-07 "from kai_99 on X" for
+  one the owner passed on from X's chat) with the question; she looks at it, then answers out loud ("mochi asks…"),
   with captions; her face and body react to her answer's mood. While her next answer is still on its way, a filler line
   ("one sec 💜"), with her music under it.
 - **Between questions, segments** (a few minutes apart; each once before any comes again): "$AGI 101" (the official
   contract's two ends, copied only from agi1.app), "clank.trade 101", "Robinhood Chain 101" ("not affiliated with
   Robinhood"), "Stay safe" (seed phrases, fake "support"), "Dating tips for degens", "Would you rather" (her pick
-  highlighted), and **her diary** (her newest entry, at most two days old and read in full, only if it names no other coin,
-  real person or link). A little chat line when she's been quiet, and an "ask me at agi1.app/live" nudge when nobody asks.
+  highlighted), since 2026-10-07 "How to ask me", "Self-care check", "Story time" (a day in her life), "Fun facts about
+  AGI-1", "This or that", "Green flag or red flag?" and "How well do you know me?" (the last four take 3 or 4 of their 8
+  to 12 picks each time, a card for each, never the same one twice in a segment), and **her diary** (her newest entry, at
+  most two days old and read in full, only if it names no other coin, real person or link). A little chat line when
+  she's been quiet, and an "ask me at agi1.app/live" nudge when nobody asks.
 - **"Starting soon"** with a countdown (from a couple of minutes before), **"Be right back"** (the owner's pause),
   **"Thanks for watching"** (the end); her music under everything.
-- Everything she says that isn't an answer is pre-written (`tools/live/lines.js`, 121 lines; tests hold every one to her
+- Everything she says that isn't an answer is pre-written (`tools/live/lines.js`, 258 lines since 2026-10-07, 121
+  before; tests hold every one to her
   rules: PG-13, no pet names, only $AGI, never a real person, never advice, "not financial advice" whenever money comes up,
   links only to agi1.app and clank.trade).
 
@@ -3338,6 +3362,13 @@ building, and the owner's choices (asked one by one):
   full).
 - **Her Telegram bot:** `/live your question`; `/live` alone says where it is. Telegram questions show "someone on
   Telegram", never a name or an account (her /help line about it is in her 16 languages, `tg.helpLive`; her other /live lines are English).
+- **From X's live chat, by the owner** (2026-10-07: "A question from X's chat" on the owner's phone page; `relayLive()`
+  in `server/live.js`, `{ action: 'relay' }` in `api/live.js`): the owner pastes a good question from the chat under her
+  stream, and the viewer's X name if they like (as X shows it: an "@" in front is dropped); her card says "from kai_99 on
+  X" ("from someone on X" without a name). The same checks as everyone's (and the AI's `skip` and `nameOk`), the line's
+  own rules per X name (a daily code of the name: one in line at a time, a minute apart, 5 a day; without a name each is
+  its own, so the owner can pass on several), `x` as its source in the database. Never logged (the question or the
+  name). Only with the owner's key; she still never reads X's chat herself.
 - **Her rules for a question, before it's in line** (`server/live.js`, `server/live-words.js`): PG-13; no links (her own
   two sites, clank.trade and agi1.app, are fine), addresses, @names, emails or phone numbers; **no other coin**, as a
   $ticker or by name (Bitcoin, Pepe, Doge…; ETH is fine: it's Robinhood Chain's money); **no real people** by name (Elon,
@@ -3353,7 +3384,8 @@ building, and the owner's choices (asked one by one):
   real person, or with a link the cleanup took out, isn't aired either, and nor is an answer cut off before it said whether
   it may air ("skip" comes first in its JSON for that reason). A skipped question is never shown.
 - **What's kept** (`supabase/live.sql`, at most 2 days, then the keep-alive deletes it): the question, the name given, her
-  answer, where it is, and a daily code of who asked (never an IP address or a Telegram chat's number). A question that
+  answer, where it is, and a daily code of who asked (never an IP address or a Telegram chat's number; for X's chat, of
+  the X name the owner typed). A question that
   sounded like distress keeps no words at all. The safety note's "Your data" says so.
 
 **The owner's controls, from a phone** (the owner's link: `agi1.app/live#admin=<key>`, the key made from `LIVE_SECRET`;
@@ -3365,6 +3397,10 @@ keep the link private: whoever has it can pause or end her show):
   **Clear** the line (two taps); **Block** words (and unblock them); **End** the show (two taps: she says goodbye, even
   while paused). A tap on a slow connection is never lost (it goes right after the one on its way). A link that stopped
   working (a new `LIVE_SECRET`) says so.
+- **A question from X's chat** (2026-10-07): a box under the question on air: the question, their X name (optional) and
+  **Add to her line** (only while she's on). It says the question's place in line, or why not, in words for the owner
+  ("A question from that X name is already in her line", "That X name has had 5 questions today", "Run
+  supabase/live.sql again…" when the database is older than the page).
 
 **How it works:**
 - **Her stream runs on the owner's own rented server, in Docker** (`tools/live/Dockerfile`: Playwright's own image with its
@@ -3376,11 +3412,19 @@ keep the link private: whoever has it can pause or end her show):
   on a 2-core machine).
 - **What she does next** (`tools/live/show.js`, pure): intro → questions (up to 4 in a row) → a segment every ~6 minutes
   (every ~2.5 when nobody asks) → a nudge when nobody asks → a chat line after a quiet moment → the outro 40 seconds before
-  the end. The owner's "end" and the show's length come before a pause (a paused show still ends).
+  the end. The owner's "end" and the show's length come before a pause (a paused show still ends). Since 2026-10-07: 14
+  segments (13 without her diary), each once before any comes again, so in a 3-hour show each comes round 3 or 4 times
+  when nobody asks; the four with picks (`poolFor()`) take different ones each time.
 - **The site** (`api/live.js`): the runner calls `/api/live` with `LIVE_SECRET` every 5 seconds ("beat": what she's doing,
   and the owner's controls back) and for each question ("next": her answer, made there; "done"; "back": back in line after
   a pause; "stop": with her next show's time). If the site doesn't answer, she keeps going without new questions. The site's
   address must not redirect (`LIVE_SECRET` would be dropped on the way): the runner says so instead of following it.
+- **"I'm live" in her Telegram groups** (2026-10-07): once, as she starts streaming (never for a recording), the runner
+  says "on_x"; the site posts "i'm live on X right now 💜 come hang out, and ask me anything: https://agi1.app/live" and,
+  under it, "i'm an AI, it's PG-13, and nothing i say is financial advice" (`GROUP_LIVE` in `server/tg-lines.js`,
+  `postLiveNow()` in `server/tg-groups.js`) in each group of `TELEGRAM_GROUPS`, once a day at most whatever restarts (`live_tell` in the
+  database: true only the first time today, for the show that's on), never with `TELEGRAM_GROUP_POSTS=off`. A group that
+  fails is a warning in the log, and the show goes on either way.
 - **Her voice** (`tools/live/voice.js`): Google Cloud's Vertex AI, the same model, voice and mood styles as the site
   (Gemini 3.8 Flash-Lite TTS, Despina), signed in with a service account's key file (a signed token request) or an API key.
   A line Google doesn't make within 15 s: she says it silently (captions and her mouth), and that way rests a minute.
@@ -3408,7 +3452,7 @@ keep the link private: whoever has it can pause or end her show):
 1. **The site:** Vercel → agi-ecosystem → Settings → Environment Variables → `LIVE_SECRET` = 32+ random characters (the
    same PowerShell line as `PASS_SECRET`, in "The chat's cost, setup and troubleshooting"), Production → **Redeploy**.
    Then Supabase → the same project → SQL Editor → New query → paste **all** of `supabase/live.sql` → Run: it ends with
-   `live_functions_found = 12`. agi1.app/live then says she's offline (instead of "coming soon").
+   `live_functions_found = 13` (12 before 2026-10-07). agi1.app/live then says she's offline (instead of "coming soon").
 2. **Google Cloud** (her voice; console.cloud.google.com, the same project as the site's Gemini key, with billing on).
    **Google renamed Vertex AI "Gemini Enterprise Agent Platform" in 2026** (checked 2026-10-03): the same API underneath
    (`aiplatform.googleapis.com`), new names in the console. APIs & Services → **Library** → "**Agent Platform API**"
@@ -3423,7 +3467,7 @@ keep the link private: whoever has it can pause or end her show):
    Agent Platform API) and put it in live.env as `LIVE_GCP_API_KEY` (step 6). On Agent Platform, Gemini 3.8 Flash-Lite TTS
    is a **Preview** model (GA in the Gemini API): it works, but Google may change it; `--check` (step 7) says at once if
    its name or place changed (`LIVE_VOICE_MODEL`, `LIVE_VERTEX_LOCATION`).
-3. **X:** X Premium on @agi1dotapp (Live Studio comes with Premium). X Live Studio (`x.com/i/live-studio`, or Creator
+3. **X:** X Premium on @agi1dotapp: **Premium**, not Basic (Live Studio needs Premium). X Live Studio (`x.com/i/live-studio`, or Creator
    Studio → Live Studio) → **New Livestream** → a title (e.g. "AGI-1 live: ask me at agi1.app/live") → Source: **create a
    new one** → a name (e.g. "agi1 server") → the region nearest the server (**EU** for Hetzner in Germany or Finland, not
    the viewers': X's own network carries it to them) → keep its **RTMPS URL** (the RTMP one works too) and **stream key**
@@ -3435,6 +3479,15 @@ keep the link private: whoever has it can pause or end her show):
    and can't be restarted, so a missed day costs nothing. Schedule the first one for a day the server will be ready, then
    the coming days the same way. (If Live Studio allows only one scheduled livestream per source at a time, schedule the
    next one after each show.) Another time later: change it here, in `LIVE_DAILY_AT` and in the cron line (step 9).
+   **Done 2026-10-07:** Premium on @agi1dotapp; the source "agi live server" in X's Germany region (its RTMPS URL is
+   `rtmps://de.pscp.tv:443/x`, next to the Hetzner server; RTMPS works with the image's ffmpeg). A **private** test first:
+   `sh tools/live/live.sh --demo --minutes 5` on the server (made-up questions, the site untouched), then in Live Studio a
+   new livestream on that source, Visibility **Private**, **Go Live**: her picture, her voice and her music on X, 20 frames
+   a second, no errors; **End livestream** after it (never **Post livestream on X** for a test: that posts it on the
+   timeline). Then her first public show scheduled: 2026-10-07, 9:00 the owner's time, Public, Auto-start on. X's chat
+   has no followers-only setting (Everyone, Verified Accounts, Accounts I Follow, the accounts those follow, Off; "Accounts
+   I Follow" means the ones @agi1dotapp follows): Claude suggested Verified Accounts (or Off), since she can't read it yet
+   and crypto streams draw scam links there; the owner picked **Everyone** for now (limit it if scam links show up).
 4. **The server:** Hetzner Cloud (console.hetzner.com) → a project → **Create Server** → Falkenstein (Germany) → Ubuntu
    24.04 → Type: Cost-Optimized, x86 (Intel®/AMD) → **CX23** (2 vCPUs, 4 GB; the console shows dollars: $6.49, plus $0.60
    for the IPv4) → public IPv4 on → your **SSH key** (on Windows, PowerShell: `ssh-keygen -t ed25519` with Enter for every
@@ -3476,14 +3529,22 @@ keep the link private: whoever has it can pause or end her show):
    ```
    `SITE_URL` is https://www.agi1.app (agi1.app redirects there, and the show never follows a redirect with its key;
    live.env.example says www since 2026-10-06; an older live.env: `sed -i 's|^SITE_URL=.*|SITE_URL=https://www.agi1.app|'
-   /opt/agi1-live/live.env`). `LIVE_RTMP_URL` and `LIVE_STREAM_KEY` (step 3): `nano /opt/agi1-live/live.env`, no quotes →
-   Ctrl+O, Enter, Ctrl+X. Then her voice's key file, from PowerShell on the PC (live.sh lets only the show read it;
-   `dir agi-daria*.json` in Downloads shows its name: the key Google Cloud made in step 2):
+   /opt/agi1-live/live.env`). `LIVE_RTMP_URL` and `LIVE_STREAM_KEY` (step 3), each pasted when it asks (the key stays
+   hidden on screen and out of the shell's history; the first line shows the URL back, the second prints 1):
+   ```
+   read -p 'RTMPS URL: ' U && sed -i "s|^LIVE_RTMP_URL=.*|LIVE_RTMP_URL=$U|" /opt/agi1-live/live.env && grep '^LIVE_RTMP_URL=' /opt/agi1-live/live.env
+   read -s -p 'Stream key (hidden): ' K && echo && sed -i "s|^LIVE_STREAM_KEY=.*|LIVE_STREAM_KEY=$K|" /opt/agi1-live/live.env && grep -c '^LIVE_STREAM_KEY=.\+' /opt/agi1-live/live.env
+   ```
+   Then her voice's key file, from PowerShell on the PC (live.sh lets only the show read it; `dir agi-daria*.json` in
+   Downloads shows its name: the key Google Cloud made in step 2):
    ```
    cd Downloads
    scp agi-daria-<…>.json root@<the server's IP>:/opt/agi1-live/google-key.json
    ```
-   **Done 2026-10-06**, but X's two lines.
+   **Done 2026-10-06**; X's two lines 2026-10-07 (the owner pasted them in the chat, and a ready-made line set them; a
+   new stream key from Live Studio later: the second line above). A command that fails with "The token '&&' is not a
+   valid statement separator" was pasted into PowerShell, not the server: the link to the server had dropped
+   (`client_loop: send disconnect`), so `ssh -o ServerAliveInterval=30 root@<the server's IP>` again first.
 7. **Checks, on the server**, one at a time:
    ```
    cd /opt/agi1-live/site
@@ -3499,7 +3560,9 @@ keep the link private: whoever has it can pause or end her show):
    `for i in $(seq 1 15); do sh tools/live/live.sh --warm && break; sleep 70; done` for the rest.)
    `--sync-check`: if it says so, set `LIVE_AV_MS` in live.env and run it again. `--record`: a real 5-minute show with
    made-up questions, into a file (`scp root@<IP>:/opt/agi1-live/out/try.mp4 .`, then watch it).
-8. **The owner's phone link:** `sh tools/live/live.sh --owner-link` → open it on the phone and bookmark it (private).
+8. **The owner's phone link:** `sh tools/live/live.sh --owner-link` → keep the whole link somewhere private on the phone
+   (Telegram's Saved Messages, say) and open it from there each time: the page takes the key out of the address as soon as
+   it opens (so it isn't left on screen), so a bookmark made after opening is only the plain page. **Done 2026-10-07.**
 9. **Every day, by itself** (one line, on the server):
    ```
    printf 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n58 0 * * * root sh /opt/agi1-live/site/tools/live/live.sh show >> /var/log/agi1-live.log 2>&1\n' > /etc/cron.d/agi1-live
@@ -3507,29 +3570,52 @@ keep the link private: whoever has it can pause or end her show):
    The server's clock is UTC (Hetzner's default), so that's 00:58 UTC: two minutes before `LIVE_DAILY_AT=01:00` (9:00 the
    owner's time), while "starting soon" shows. Another time: change both (the cron line's `58 0`, minute then hour, and
    `LIVE_DAILY_AT`) and the scheduled livestreams in Live Studio. `tail -50 /var/log/agi1-live.log` shows the last show.
-10. **The first real show:** watch it on X with the phone link open (Pause, Resume, End all work from there).
+   **Done 2026-10-07** (`date` on the server: UTC), with `sh tools/live/live.sh --announce 01:00` (agi1.app/live then said
+   her next show is 2026-10-07T01:00Z).
+10. **The first real show:** watch it on X with the phone link open (Pause, Resume, End all work from there). Scheduled
+    for 2026-10-07 at 01:00 UTC (9:00 the owner's time). Each day's show needs its own livestream scheduled in Live
+    Studio (a few days ahead, if it takes them). **Done 2026-10-07:** it ran, 630 live viewers within its hour (see "Her
+    first public show" above).
 11. **X's own chat, later:** apply for X's Livestream API (forms.x.com/livestream-api-access: for approved apps only; it
     can read a livestream's chat and schedule livestreams). Free to apply, no promise. If X approves, Claude adds X's chat
-    to her line, with the same checks (she still never types in it).
+    to her line, with the same checks (she still never types in it). Until then the owner passes good questions on by
+    hand (the box on the phone page, 2026-10-07).
+
+**2026-10-07, after the first show (once):** the box for X's chat, the "i'm live" post, the new segments, 3-hour shows.
+1. **Supabase** → SQL Editor → New query → paste **all** of `supabase/live.sql` → Run: it ends with
+   `live_functions_found = 13`. **Before pushing:** the new code passes questions from X's chat on as source `x`, which
+   the old file refuses (the owner's box then says to run it), and her "i'm live" post needs `live_tell`.
+2. **Push** (the PC).
+3. **On the server:** `cd /opt/agi1-live/site && sh tools/live/live.sh update` (her new segments and lines; the next show
+   uses them).
+4. **On the server, if there's time before the next show:** `sh tools/live/live.sh --warm` (the voices of her 137 new
+   lines, once: about 17 minutes at Google's pace, about $0.10). A line not made yet is made during the show anyway.
+5. `LIVE_MINUTES=180` in live.env (done 2026-10-07, before these): 3 hours from the next show on. Nothing to change in
+   Live Studio (a livestream lasts as long as the stream comes) or in the cron line.
 
 **After every push** that touches her stream (`tools/live/`, her 2D model, her lines): on the server, `cd /opt/agi1-live/site
 && sh tools/live/live.sh update` (git pull, then the image is built again; the next show uses it). Not needed for the
 site's own changes (agi1.app/live, her answers: those go live with Vercel).
 
-**Cost** (one hour a day; checked 2026-10-02, the server 2026-10-06): the server $7.09 a month (Hetzner CX23, $6.49 and
+**Cost** (an hour a day at first, 3 hours since 2026-10-07; checked 2026-10-02, the server 2026-10-06): the server $7.09 a month (Hetzner CX23, $6.49 and
 $0.60 for its IPv4, the console in dollars, plus any VAT; CX33 $9.99 or CX43 $18.49 once back in stock: the owner's
-budget for the server is up to $20 a month) · X Premium about $9 a month (the price
-may differ by country) · her voice at most about $0.54 an hour of talking ($6 per 1M audio tokens until 2026-12-31, 25 a
-second; double from 2027), so about $10–16 a month for an hour a day, plus about $0.10 once for her pre-written lines ·
+budget for the server is up to $20 a month) · X Premium $8 a month in the US ($84 a year; help.x.com, 2026-10-07; the
+price may differ by country) · her voice at most about $0.54 an hour of new talking ($6 per 1M audio tokens until
+2026-12-31, 25 a second; double from 2027), but her pre-written lines are made once and kept (about $0.20 once for all
+258), so each day only her answers are new: about $0.002 each, so longer shows add little (at most about $1.60 a day,
+if she answered questions for the whole 3 hours; the first estimate, $10–16 a month for an hour a day, counted every
+line as new) ·
 her answers about $0.0005 each on the site's key (at most $0.30 a day: 600 questions) · Vercel and Supabase: a few small
-requests a second while she's on, nothing noticeable. **About $26–32 a month on CX23** ($30–36 on CX33, $38–44 on CX43;
-the owner approved about $20–35, and up to $20 for the server on 2026-10-06).
+requests a second while she's on, nothing noticeable. **About $17–25 a month on CX23** with a few dozen questions a day,
+3 hours included ($20–28 on CX33, $29–37 on CX43), and at most about $55 more if she answered questions non-stop every
+day; the owner approved about $20–35, and up to $20 for the server on 2026-10-06.
 
 **Settings on the server** (`/opt/agi1-live/live.env`, from `tools/live/live.env.example`; none of them go to Vercel):
 `SITE_URL` (https://www.agi1.app), `LIVE_SECRET` (the same as Vercel's), `LIVE_RTMP_URL` and `LIVE_STREAM_KEY` (X Live Studio's
 source), `GOOGLE_APPLICATION_CREDENTIALS` (left as it is: /secrets/google-key.json) or `LIVE_GCP_API_KEY`,
 `LIVE_VERTEX_LOCATION` (global), `LIVE_VOICE_MODEL` (gemini-3.8-flash-lite-tts), `LIVE_VOICES` (vertex; also `cloud`, or
-`gemini` with `GEMINI_API_KEY`: the site's own key and its daily limit, a backup only), `LIVE_MINUTES` (60),
+`gemini` with `GEMINI_API_KEY`: the site's own key and its daily limit, a backup only), `LIVE_MINUTES` (60; 180 on the
+owner's server since 2026-10-07),
 `LIVE_DAILY_AT` (01:00 UTC, 9:00 the owner's time), `LIVE_AV_MS` (170), `LIVE_MUSIC` (on), `LIVE_MUSIC_VOLUME` (100). Optional: `LIVE_VOICE_TIMEOUT_S`
 (15), `LIVE_GL` (her picture's size: 720 with 4 cores or more, else 540), `LIVE_X264_PRESET` (how hard the video encoder
 works: superfast below 4 cores, else veryfast; since 2026-10-06).
@@ -3561,15 +3647,24 @@ works: superfast below 4 cores, else veryfast; since 2026-10-06).
 | A recording won't start | `a show is on right now: a recording with --with-site would take over agi1.app/live…` | Wait for the show to end (or record without `--with-site`) |
 | The owner's link says it doesn't work any more | | `LIVE_SECRET` changed: `sh tools/live/live.sh --owner-link` again |
 | agi1.app/live says "coming soon" | `[live] missing settings` or none | `LIVE_SECRET` in Vercel and `supabase/live.sql` (setup step 1) |
+| The owner's box for X's chat says "Run supabase/live.sql again…" | (none) | `supabase/live.sql` from 2026-10-07 isn't run yet: run it (it ends with `live_functions_found = 13`) |
+| Her Telegram groups don't hear she's live | `[live] couldn't check whether her groups heard she's live: run supabase/live.sql again (it ends with live_functions_found = 13)` | The same: run `supabase/live.sql` again |
+| One group doesn't hear she's live | `[live] couldn't tell the group @… she's live: … (is she still in that group? add her again)` | Add her to that group again (or check `TELEGRAM_GROUPS`) |
+| Her groups don't hear she's live, and no log line | (none) | By design: once a day at most (a restart the same day posts nothing), never for a recording; or `TELEGRAM_GROUPS` isn't set, or `TELEGRAM_GROUP_POSTS=off` |
+| `--warm` takes about half an hour | | Her 258 lines at Google's pace (about 8 a minute): only the ones not made yet are made, once |
 
-**Tests:** `tests/live.test.js` (24: a question's and a name's checks (links, addresses, contacts, other coins and real
+**Tests:** `tests/live.test.js` (26: a question's and a name's checks (links, addresses, contacts, other coins and real
 people however they're written, distress, crude, impersonation), tickets, who may call what (the runner's secret, the
 owner's key), her live prompt, askAgi1's "skip" (first in its JSON), "nameOk" and cut-off answers, what she may not say,
 the shared status (numbers only), asking (18+, the human check, the line's own answers, no shared tickets), following a
 question, the runner's calls (start, beat, next, done, back, stop, schedule), skipped and doubted questions, the AI failing,
 the deadline, the owner's controls, not set up, /live in her bot (her checks, the caring note at once), her lines' rules,
-the keep-alive's tidy-up, the page's promises, styles, words and code) and `tests/livestream.test.js` (22: every
-pre-written line against her rules, her diary on stream, the director (a whole show simulated: segments, questions, a
+the keep-alive's tidy-up, the page's promises, styles, words and code; since 2026-10-07 a question from X's chat passed
+on by the owner (everyone's checks before the database, "on X" in her prompt, one at a time per X name, without a name
+each its own, only the owner's key, never logged, live.sql not run again) and her "i'm live" post (both kinds of group,
+plain text, her group rules, once a day, an old show, only the runner, posts switched off, a group she left, live.sql not
+run again), and the owner's box on the page (its words for every answer)) and `tests/livestream.test.js` (24: every
+pre-written line against her rules (since 2026-10-07 the new segments, their picks and their cards too), her diary on stream, the director (a whole show simulated: segments, questions, a
 pause that still ends, a short show, no nudges while answers are stuck), her voice (settings, the signed token request, the
 requests, every way in order, kept lines (even while a way rests), a slow way resting, an API key without a key file, the
 warm-up), her music (her songs' chords, melodies, length, level, no clipping or clicks, the same every time; the loop, the
@@ -3577,12 +3672,19 @@ ducking, the fade, no gaps, kept on disk), the runner's options (a late start re
 ffmpeg's settings, a recording finished as a standard MP4, her voice's clock and the mixer, the lip-sync check, the site
 client (a redirect said, never followed; "back") and the demo, her set's page (since 2026-10-06 her picture: from x = 400,
 ending at the bar, nothing plain and opaque over it, her hearts fading before its edge, the window one pixel bigger than
-the screen; and x264's speed by the server's cores), the Docker image). The SQL ran in PGlite (97 checks). In a browser with the site's
+the screen; and x264's speed by the server's cores), the Docker image; since 2026-10-07 the new segments' picks (never
+twice in a segment), a 3-hour show (every segment about as often as the others), the question card for X's chat, "on_x"
+only for a real stream). The SQL ran in PGlite (112 checks since 2026-10-07: X's questions, `live_tell` once a day, run
+over the version before). In a browser with the site's
 real headers (`livepagetest.mjs` in Claude's scratch, 96 checks: coming soon, offline with her next show, live (asking,
 your place, on air, her answer, another), every refusal (the caring note, "already in line"), a reload, the owner's
 controls (the key out of the address, pause, two-tap end, block, drop, a tap during a slow check never lost, a link that
-stopped working), phones, both looks and themes, axe 0 issues, consoles). The real runner end to end (`showtest.mjs`, 22
-checks: Xvfb, Chromium, ffmpeg and a fake site; the owner's pause while she answers (back in line, answered after), a
+stopped working; since 2026-10-07 the box for X's chat: sent with the owner's key, "Added to her line (#1)", her line
+showing "kai_99 · X" and "someone · X", every refusal in words with the focus where to fix it, waiting while she's off,
+360 px in both looks; 133 checks in all), phones, both looks and themes, axe 0 issues, consoles). The real runner end to
+end (`showtest3.mjs`, 2026-10-07, 13 checks: a recording with a question from X's chat on her card and today's first
+segment, the quiz, its cards; no "on_x" for a recording; a real stream to a local RTMP listener: "on_x" once, right after
+she starts, the key never in the log; `showtest.mjs`, 22 checks: Xvfb, Chromium, ffmpeg and a fake site; the owner's pause while she answers (back in line, answered after), a
 question skipped on air, a dropped question never aired, end → outro → off with her next show, H.264 1280 × 720 and AAC
 48 kHz, her music under every second). ffmpeg pushing RTMP to a local listener, and its 15 s network timeout against a
 server that never answers. `tools/live/live.sh` with a stand-in Docker image (the key file readable by the show's user
@@ -3596,9 +3698,10 @@ owner can see).
 fine, about 10 minutes), her settings, Google Cloud's Vertex AI speech (works: about 2 s a line; it takes about 10
 requests a minute for her voice model, so `--warm` goes at that pace), `--check` and her music. Two fixes came from it:
 `SITE_URL` must be www.agi1.app, and `--check`'s key test said NO for the right key (both fixed in the code; the server
-gets them with `update` after the push). `--sync-check` measured `LIVE_AV_MS=261` on the CX23 (then 21 ms off). **Not
-tried live yet:** X Live Studio (step 3), a real show (Agent Platform: Gemini 3.8 Flash-Lite TTS is a Preview model there,
-so its name or places could change: `--check` says so).
+gets them with `update` after the push). `--sync-check` measured `LIVE_AV_MS=261` on the CX23 (then 21 ms off). **2026-10-07:**
+X Live Studio (a private test livestream: her picture, her voice and her music on X, over RTMPS, no errors), then her
+first public show (an hour, 630 live viewers within it: see "Her first public show" above). Agent Platform's Gemini 3.8
+Flash-Lite TTS is a Preview model there, so its name or places could still change: `--check` says so.
 
 **Her first test recording, 2026-10-06** (`--record try.mp4 --minutes 5` on the CX23; the owner: "check the othe glitches
 also i watched it again theres some glitches"). Claude read it frame by frame (ffmpeg decoded it without a single error)
@@ -4739,9 +4842,9 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | GitHub Actions (her daily clip, 2026-09-29) | Private repositories: 2,000 minutes a month and 500 MB of storage for downloads; a run takes about 5 minutes (about 150 a month) and keeps about 5 MB for 7 days | Without a payment method on GitHub: the job just stops until next month (never a bill) |
 | Blockscout block explorer (ClankChecker; since 2026-09-30 "Check my burn") | Free, no key; only for coins with 100+ holders, once per 5 minutes per coin; one request per "Check my burn" without a pasted link | The scan says "More than 100 wallets hold it"; "Check my burn" asks for the transaction link instead |
 | Pinata (launched coins' pictures, 2026-10-01) | Free plan: 500 files, 1 GB, 10 GB of bandwidth and 10,000 requests a month (checked 2026-10-01); one file per launched coin (pictures of coins never launched are deleted within a day); at most `LAUNCH_DAILY_CAP` (30) uploads a day | Uploads fail ("Couldn't put the picture on IPFS"); its cheapest paid plan is $20 a month: the owner's call |
-| The owner's server (her live show, 2026-10-02) | Not a free tier: since 2026-10-06 a Hetzner CX23, $6.49 a month plus $0.60 for its IPv4 (and any VAT), billed the month after; CX33 ($9.99) or CX43 ($18.49) once back in stock, within the owner's $20 a month for the server; 20 TB of traffic included (her stream uses about 1.4 GB an hour) | The owner's bill; a show just doesn't happen if the server is off |
-| X Premium (her live show) | Not a free tier: about $9 a month (X Live Studio needs it) | No Live Studio: no show |
-| Google Cloud Vertex AI, now "Agent Platform" (her voice on stream, 2026-10-02) | Pay per use on the project's billing account, charged to its card once a month (never from AI Studio's prepaid credits, which pay for the Gemini API only): at most about $0.54 an hour of talking ($6 per 1M audio tokens until 2026-12-31, then double), about $10–16 a month for an hour a day; a budget alert at $20 (an email, never a stop) | Her lines that aren't kept yet are said silently (captions); kept lines and her music keep playing |
+| The owner's server (her live show, 2026-10-02) | Not a free tier: since 2026-10-06 a Hetzner CX23, $6.49 a month plus $0.60 for its IPv4 (and any VAT), billed the month after; CX33 ($9.99) or CX43 ($18.49) once back in stock, within the owner's $20 a month for the server; 20 TB of traffic included (her stream uses about 1.4 GB an hour: about 130 GB a month at 3 hours a day) | The owner's bill; a show just doesn't happen if the server is off |
+| X Premium (her live show) | Not a free tier: $8 a month in the US, $84 a year (X Live Studio needs Premium, not Basic) | No Live Studio: no show |
+| Google Cloud Vertex AI, now "Agent Platform" (her voice on stream, 2026-10-02) | Pay per use on the project's billing account, charged to its card once a month (never from AI Studio's prepaid credits, which pay for the Gemini API only): at most about $0.54 an hour of new talking ($6 per 1M audio tokens until 2026-12-31, then double); her pre-written lines are made once and kept, so each day only her answers are new (about $0.002 each: a few dollars a month with 3-hour shows); a budget alert at $20 (an email, never a stop) | Her lines that aren't kept yet are said silently (captions); kept lines and her music keep playing |
 | The gas wallet (launch fees paid back, 2026-10-01) | Not a free tier: the owner's own ETH, at most `LAUNCH_GAS_DAILY` (0.01 ETH by default) a day plus each payback's own tiny fee | Paybacks pause ("out of ETH" / "all it can for today"); launches still work |
 
 ## Environment variables
@@ -4775,7 +4878,7 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `VITE_TELEGRAM_BOT` | no (public) | Her bot's username without the @ (e.g. `agi1_gf_bot`): shows the Playground's "Text me on Telegram ↗". Built into the page, so Redeploy after changing it. Since 2026-10-03 our server reads it too: her @username in groups (mentions, `/ask@her`) |
 | `TELEGRAM_GROUPS` | no, optional | Her Telegram groups (2026-10-03, see "In Telegram groups"): the groups she may be in, as their public @username (e.g. `@yourgroup`) or their id (a negative number), separated by commas. Not set: group mode is off (groups are ignored, as before). Set: she leaves any other group. Redeploy after changing it |
 | `TELEGRAM_GROUP_DAILY_CAP` | no, optional | Her replies a day in each group, inside `TELEGRAM_DAILY_CAP` (default 100, at most 2,000) |
-| `TELEGRAM_GROUP_POSTS` | no, optional | `off` = she doesn't post her diary and $AGI's market moments in her groups (on by default) |
+| `TELEGRAM_GROUP_POSTS` | no, optional | `off` = she doesn't post her diary, $AGI's market moments or (2026-10-07) that her live show is on in her groups (on by default) |
 | `TELEGRAM_GROUP_WELCOME` | no, optional | `off` = she doesn't welcome people who join her groups (on by default; at most one welcome every 10 minutes) |
 | `TELEGRAM_BUYS` | no, optional | Her buy bot (2026-10-06, see "Her buy bot"): `off` = no buy alerts in her groups (on by default, once `supabase/buys.sql` has set up its clock) |
 | `TELEGRAM_BUY_MIN` | no, optional | The smallest $AGI buy her buy bot posts, in dollars (default 50, the owner's since 2026-10-06; 100 at first; at most 1,000,000). Redeploy after changing it |
@@ -5156,7 +5259,16 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   first test recording"); the first fix checked on the server (try2.mp4: the glitches gone, but 9.5 frames a second), the
   second one as fast as before (try3: 12 to 13 new pictures of her a second, the glitches gone). Then her drawing made a
   third lighter, for the live show only (see "How smoothly she moves on the CX23"): try4 drew about 20 new pictures of her
-  a second (from 12 to 13), its frames clean. A Rescale to 4 cores when CX33 is back. Next: X (step 3), the phone link and the daily cron line.
+  a second (from 12 to 13), its frames clean. A Rescale to 4 cores when CX33 is back. **2026-10-07:** X (step 3: Premium,
+  the Live Studio source and its keys on the server, a private test livestream with her picture, her voice and her
+  music), the phone link and the daily start, and agi1.app/live told; her first public show scheduled for 2026-10-07 at
+  01:00 UTC (9:00 the owner's time). **It ran** (630 live viewers within its hour). **The same day** (the owner: "it
+  doesnt read the X live comments and people barely send her a meesage … i think longer hours is better ?"): the box for
+  a question from X's chat on the owner's phone page, her Telegram groups' "i'm live" post, seven more segments (258
+  lines) and 3-hour shows (see "Her first public show"). **Owner:** `supabase/live.sql` again (13), push, `update` on the
+  server (and `--warm`). Tests: 486 unit (485 pass, 1 skipped as before; on Node 20, 22 and 24, with and without
+  Vercel's settings), the build, 112 SQL checks (PGlite), 133 in a browser, 13 with the real runner (a recording and a
+  stream to a local RTMP listener). Not tried live yet: the box with a real show, the post in a real group.
 - **Her 2D elbow, her shirt's side and the hair behind her arms: fixed 2026-10-03, waiting for the owner's OK** (the
   owner's two close-ups: "I just checked by now , what happened to this, can you fix", then "im sleeping now just finish
   it"): no slit at her shirt's side when her arms are down, soft hair tips and her hair's own color where her arms move
@@ -5418,6 +5530,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-06 | The live show's first real setup (the owner, step by step): `SITE_URL` is **https://www.agi1.app** (agi1.app redirects, and the show never follows a redirect with its key; the default everywhere now); `LIVE_SECRET` made on the server (Vercel keeps it sensitive, so it can't be read back) and pasted into Vercel; `--check`'s key test is a beat for a show that can never be on (it sent show 0, which the site refuses as a bad request: a NO for the right key); `--warm` goes at Google's pace (Vertex takes about 10 requests a minute for her voice model: the first one made 11 of 121, then skipped the rest) |
 | 2026-10-06 | Her live set after her first test recordings (see "Her first test recording"): nothing plain and opaque covers her picture, because the server's software compositing left out the mirror image of what the opaque bar covered (her head and hearts cut flat 64 px from the top): her picture ends where the bar starts, and the boxes over it are 1% see-through. Her picture starts at x = 400 (her wave and her cheer reached past its old edge at 560), her hearts fade out before its edge, her middle at x = 920 as before and 14 px lower (under the top row's label); the browser window one pixel bigger than the screen (a page exactly the screen's size came out 1279 × 719 without a window manager); a finished recording made a standard MP4 (Windows' player showed blocks in the fragmented one); x264 superfast below 4 cores (the CX23 draws her about 12 times a second). Tried first and replaced the same day: drawing her off the page and copying each picture onto a 2D canvas (9.5 frames a second on the server). Not picked: GPU compositing or her background in WebGL (13 frames a second on Claude's computer, instead of 23–25) |
 | 2026-10-06 | Her live show draws her lighter (the owner: "theres nothing u can do to increase the frames?"; the CX23 drew her about 12 times a second, and drawing her in software was two thirds of its processor): her texture at the size she's shown without mipmaps (`fitTexture()`), her arms with one level of finer mesh (`armRefine`), x264 superfast below 4 cores. Only the live show: the website keeps its sharper close-ups (the owner asked). On Claude's computer a third less processor for each picture of her; on the CX23 about 20 new pictures of her a second instead of 12 to 13 (try4, measured in the recording). Not picked: a smaller picture (`LIVE_GL=480`: softer for less), stopping the LIVE dot's blink (nothing to gain) |
+| 2026-10-07 | Her live show on X, set up with the owner: X Premium (not Basic: Live Studio needs Premium); one Live Studio source, "agi live server", in X's Germany region over RTMPS (next to the Hetzner server); a **private** test livestream first, with `--demo` (made-up questions, the site untouched); her first public show the same day at 9:00 the owner's time (the owner's pick: "Today, 9:00 AM"), Public with Auto-start; X's chat open to Everyone for now (the owner's pick; X has no followers-only setting, and Claude had suggested Verified Accounts, or Off, since she can't read it yet). The owner pasted the stream key in the chat and showed the phone link in a screenshot, by choice (see "Open questions") |
+| 2026-10-07 | After her first public show (630 live viewers within its hour; the owner: "it doesnt read the X live comments and people barely send her a meesage … i think longer hours is better ?"), the owner's choices, all built the same day: **a box on the owner's phone page for a question from X's chat** ("Relay box (Recommended)": X's chat can't be read without X's approval of its Livestream API; the owner copies a good question in, it gets everyone's checks and her card says "from <their X name> on X"; one at a time per X name, under a daily code of the name), **an "i'm live" post in her Telegram groups** when a show starts (once a day at most, decided by the database (`live_tell`), never for a recording, under `TELEGRAM_GROUP_POSTS` like her other group posts), **seven more segments** (137 more lines: how to ask her, self-care, a day in her life, fun facts, this or that, green or red flags, a quiz about her; the last four take a few of their picks each time) and **3-hour shows** (`LIVE_MINUTES=180`, 01:00 to 04:00 UTC). Also offered: help with X's Livestream API form (X's own chat for real, if X approves). Not built: she still never reads or types in X's chat herself (hard rule 6) |
 
 ## Open questions
 
@@ -5521,7 +5635,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   deflection and is never kept. If people often ask her to read long documents or code from pictures, a higher media
   resolution would read small text better and cost more (ask the owner first).
 - **Her live show** (2026-10-02): X's own live chat needs X's Livestream API (approved apps only: forms.x.com/livestream-api-access);
-  with it she could read X's chat (same checks) and the server could schedule her livestreams by itself. Until then the
+  with it she could read X's chat (same checks) and the server could schedule her livestreams by itself (2026-10-07:
+  meanwhile the owner passes good questions on by hand, with the box on the phone page; Claude offered to help fill in
+  the form). Whether 3-hour shows keep their viewers is the owner's call to watch (X's numbers for each livestream). Until then the
   owner schedules them in Live Studio (up to a year ahead). Not tried live: Live Studio's auto start and its behaviour when
   the stream drops for a moment, Vertex AI's speech from the server, the Docker build, Hetzner. Her 2D model on a stream
   that promotes $AGI makes the Cubism PRO trial question (see above) more pressing. X's rules for AI-generated streams:
@@ -5552,7 +5668,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   Reels' and Shorts' own buttons fall on the tall version (it keeps clear of their usual places).
 - **Her live show's LIVE_SECRET** (2026-10-06): a screenshot in the chat showed it, the day it was made; the owner chose
   to keep it. If anyone else ever sees that chat: make a new one (step 6's command on the server), paste it into Vercel,
-  Redeploy (the owner's phone link changes with it: `--owner-link` again).
+  Redeploy (the owner's phone link changes with it: `--owner-link` again). **The stream key and the phone link**
+  (2026-10-07): the owner pasted X's stream key in the chat ("dont worry its fine") and showed the phone link in a
+  screenshot. If anyone else ever sees them: a new stream key in Live Studio (then step 6's hidden line), and a new
+  LIVE_SECRET as above (which makes a new phone link).
 - **Her buy bot** (2026-10-06): it reads clank.trade's undocumented trades API (like the risk check): if that changes, no
   alerts until it's fixed (the log says so). More than 50 $AGI trades in one minute would miss some (nowhere near that so
   far). A check cut short by Telegram skips the rest of its buys (never twice). Her GIF is drawn from the Cubism PRO

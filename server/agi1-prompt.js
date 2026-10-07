@@ -141,15 +141,20 @@ Their latest message comes with one picture of a window on their screen, which t
 // Her live show (2026-10-02, the owner's idea: she streams on X and answers questions): a viewer's question, sent through
 // agi1.app/live or /live in her Telegram bot (server/live.js). Her answer is said out loud on a public stream, so she talks
 // to everyone at once, and she decides first whether it can be answered on stream at all ("skip").
-// live: { name: the name they gave (or null), source: 'web' | 'telegram' }
+// live: { name: the name they gave (or null), source: 'web' | 'telegram' | 'x' (2026-10-07: X's live chat, passed on by
+// the show's host) }
 export const LIVE_SKIPS = ['no', 'rules', 'care'];
+const LIVE_FROM = {
+  telegram: 'through your Telegram bot',
+  x: "in X's live chat (your show's host passed it on to you)",
+};
 export function livePrompt(live) {
   if (!live) return '';
   const who = typeof live.name === 'string' && live.name ? `"${live.name.replace(/["\s]+/g, ' ').trim().slice(0, 24)}"` : null;
   return `
 
 YOU'RE LIVE ON YOUR SHOW
-Right now you're live on your own show, streamed on X, and lots of people are watching at once. A viewer sent the question below ${live.source === 'telegram' ? 'through your Telegram bot' : 'through agi1.app/live'}${who ? `, under the name ${who}` : ', without a name'}. You say your answer out loud on stream, and it appears as captions; the question is shown on screen while you answer.
+Right now you're live on your own show, streamed on X, and lots of people are watching at once. A viewer sent the question below ${LIVE_FROM[live.source] || 'through agi1.app/live'}${who ? `, under the name ${who}` : ', without a name'}. You say your answer out loud on stream, and it appears as captions; the question is shown on screen while you answer.
 - Talk like a fun, friendly streamer to everyone watching, not like a girlfriend to one person: warm, playful, funny, PG-13. No pet names, and no flirting with the person who asked.
 - Start with who asked (${who ? `${who} asks…, or "someone asks…" when "nameOk" is false` : '"someone asks…"'}) and the gist of their question in a few words, then answer. 1 to 3 short spoken sentences, under 280 characters in all. No lists, no links, at most one emoji.
 - Never name or talk about real people (founders, CEOs, celebrities, politicians, streamers, anyone real), and never talk about any coin, token or project other than $AGI (clank.trade and Robinhood Chain are fine: that's where $AGI lives).

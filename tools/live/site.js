@@ -1,6 +1,6 @@
 // AGI-1's live show (2026-10-02): the runner's side of agi1.app/api/live (api/live.js): start the show, say what she's
 // doing every few seconds (and hear the owner's controls back), take the next question with her answer, mark it done, end
-// the show. Every call carries LIVE_SECRET; the site keeps the line and writes her answers (the Gemini key never leaves
+// the show, and (2026-10-07) say once that she's streaming on X (her Telegram groups hear it). Every call carries LIVE_SECRET; the site keeps the line and writes her answers (the Gemini key never leaves
 // Vercel). A failed call never stops the show: she keeps going without new questions until the site answers again.
 // demoSite(): the same, without any site (--demo): a few made-up questions and answers, to try the show anywhere.
 
@@ -38,6 +38,8 @@ export function liveSite({ site, secret, fetchFn = fetch, log = console } = {}) 
     back: (show, id) => call({ action: 'back', show, id }),
     stop: (show, next) => call({ action: 'stop', show, ...(next ? { next: new Date(next).toISOString() } : {}) }),
     schedule: (next) => call({ action: 'schedule', next: next ? new Date(next).toISOString() : null }),
+    // (2026-10-07) she's streaming on X now: her Telegram groups hear it (once a day: the site decides)
+    onX: (show) => call({ action: 'on_x', show }, 20_000),
     async status() {
       const res = await fetchFn(`${base}/api/live`, { signal: AbortSignal.timeout(10_000) });
       return res.json();
@@ -80,6 +82,7 @@ export function demoSite({ every = 50_000, now = Date.now, diary = null } = {}) 
     async back() { n = Math.max(0, n - 1); id -= 1; return { ok: true, status: 'waiting' }; },
     async stop() { return { ok: true }; },
     async schedule() { return { ok: true }; },
+    async onX() { return { ok: true, told: false }; },
     async status() { return { ready: true }; },
     async diary() { return diary; },
   };

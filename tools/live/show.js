@@ -110,6 +110,14 @@ export const readingLine = (show) => pickFrom(show, 'reading', READING);
 export const lagLine = (show) => pickFrom(show, 'lag', LAG);
 export const tipsFor = (show, n = TIPS_A_SEGMENT) => Array.from({ length: n }, () => pickFrom(show, 'tips', SEGMENTS.tips.tips));
 export const pairsFor = (show, n = 2) => Array.from({ length: n }, () => pickFrom(show, 'wyr', SEGMENTS.wyr.pairs));
+// (2026-10-07) n of a segment's pool (its fun facts, quick picks, flags, quiz questions), never the same one twice in a
+// segment: when fewer than n are left unused, all of them are fresh again first
+export function poolFor(show, id, n = SEGMENTS[id]?.per || 3) {
+  const list = SEGMENTS[id]?.pool || [];
+  const used = show.used[id] || (show.used[id] = new Set());
+  if (list.length - used.size < n) used.clear();
+  return Array.from({ length: Math.min(n, list.length) }, () => pickFrom(show, id, list));
+}
 
 // The segment's name for agi1.app/live ("Now: reading her diary"): the page knows these (src/live/words.js)
 export const SEGMENT_STATUS = { intro: 'intro', question: 'questions', pickup: 'chat', chat: 'chat', wait: 'chat', brb: 'brb', outro: 'outro' };

@@ -124,6 +124,10 @@ export const groupMarket = ({ mcap, h24, liq }) =>
   `$AGI right now 💜\n\nmarket cap: ${fmtCompact(mcap)}\n24h: ${fmtPct(h24)}\nliquidity: ${fmtCompact(liq)}\n\nfrom DexScreener · not financial advice`;
 // DexScreener didn't answer (or had no market cap): no numbers at all, never old or made-up ones
 export const GROUP_MARKET_DOWN = "couldn't read the market numbers just now 🙈 try again in a minute";
+// Her live show just went live on X (2026-10-07, the owner's choice: "Telegram 'I'm live' post"): once a day at most, in
+// her groups, when the runner starts streaming (api/live.js 'on_x'). Its link is agi1.app/live, where "Watch on X" is and
+// questions are sent (her group posts never link anywhere else).
+export const GROUP_LIVE = `i'm live on X right now 💜 come hang out, and ask me anything: https://${SITE}/live\n\ni'm an AI, it's PG-13, and nothing i say is financial advice`;
 
 // A $AGI buy in her groups (2026-10-06, the owner: "a very simple buybot … with robot emojis … with mc, price amount of
 // agi, etc.", server/buys.js): the caption under her buy GIF. A robot for every $25 (2 for the smallest, $50; 40 at

@@ -1,8 +1,11 @@
 -- AGI-1's live show (2026-10-02, the owner's idea: "what if she livestreams on X and reads the comments and reacts to it").
 -- Run this once in the Supabase project that SUPABASE_URL points to, any time: SQL Editor → New query → paste all of it →
--- Run. It ends by showing live_functions_found = 12. **Until it's run, agi1.app/live says her show is coming soon** and
+-- Run. It ends by showing live_functions_found = 13. **Until it's run, agi1.app/live says her show is coming soon** and
 -- nobody can send a question.
--- It only ADDS two new tables and twelve functions (all named agi1_live… / live_…). It doesn't touch any table the original
+-- **2026-10-07: run it once more** (it keeps everything saved): questions from X's live chat that the owner passes on
+-- (source 'x', the host's relay box on agi1.app/live), and her "I'm live" post in her Telegram groups once a day
+-- (live_tell, a thirteenth function).
+-- It only ADDS two new tables and thirteen functions (all named agi1_live… / live_…). It doesn't touch any table the original
 -- site uses, so it's safe in the database both sites share. Running it again changes nothing that's saved.
 --
 -- How it works: while her show is on (her stream runner, on the owner's own server, says so every few seconds), people
@@ -14,19 +17,20 @@
 -- the owner's link).
 --
 -- What's kept (at most 2 days: the keep-alive deletes older questions; never an IP address or a Telegram chat's number):
---   agi1_live_questions  each question: when, from where (web / telegram), a daily code of who asked (an HMAC: the same
---                        person today, nothing else), the name they gave (optional), the question, where it is (waiting,
---                        taken, answered, skipped) and why it was skipped, and her answer once she has one
+--   agi1_live_questions  each question: when, from where (web / telegram / x: X's live chat, passed on by the owner), a
+--                        daily code of who asked (an HMAC: the same person today, nothing else), the name they gave
+--                        (optional), the question, where it is (waiting, taken, answered, skipped) and why it was
+--                        skipped, and her answer once she has one
 --   agi1_live_state      one row: whether she's on (and when the runner last said so), the show's number, its segment, the
---                        question on air, when the next show is, and the owner's controls (paused, new questions closed,
---                        the show asked to end, blocked words)
+--                        question on air, when the next show is, the owner's controls (paused, new questions closed,
+--                        the show asked to end, blocked words), and the day her Telegram groups last heard she's live
 -- Only the server (the secret key) can use them.
 
 create table if not exists public.agi1_live_questions (
   id         bigserial   primary key,
   created_at timestamptz not null default now(),
   show_id    bigint      not null default 0,
-  source     text        not null check (source in ('web', 'telegram')),
+  source     text        not null check (source in ('web', 'telegram', 'x')),
   asker      text        not null check (char_length(asker) between 16 and 64),
   name       text        check (name is null or char_length(name) between 1 and 24),
   question   text        not null check (char_length(question) between 3 and 200),
@@ -38,6 +42,9 @@ create table if not exists public.agi1_live_questions (
   reply      text        check (reply is null or char_length(reply) <= 600),
   mood       text        check (mood is null or char_length(mood) <= 16)
 );
+-- (2026-10-07) 'x' too, in a database made before it: a question from X's live chat that the owner passed on
+alter table public.agi1_live_questions drop constraint if exists agi1_live_questions_source_check;
+alter table public.agi1_live_questions add constraint agi1_live_questions_source_check check (source in ('web', 'telegram', 'x'));
 create index if not exists agi1_live_questions_line on public.agi1_live_questions (status, id);
 create index if not exists agi1_live_questions_asker on public.agi1_live_questions (asker, created_at);
 create index if not exists agi1_live_questions_made on public.agi1_live_questions (created_at);
@@ -55,8 +62,10 @@ create table if not exists public.agi1_live_state (
   closed     boolean     not null default false,           -- the owner: no new questions for now
   end_asked  boolean     not null default false,           -- the owner: end the show
   blocked    text[]      not null default '{}',            -- the owner's blocked words (lowercase, at most 100)
+  told_on    date,                                         -- the day (UTC) her Telegram groups last heard she's live
   updated_at timestamptz not null default now()
 );
+alter table public.agi1_live_state add column if not exists told_on date;     -- (2026-10-07, in a database made before it)
 insert into public.agi1_live_state (id) values (1) on conflict (id) do nothing;
 
 -- Row Level Security ON, with no rules: the public (browser) keys can't read or change these tables.
@@ -77,7 +86,8 @@ as $$
 $$;
 
 -- A question for her show (from our server, after its own checks: 18+, the human check, PG-13, no links…).
--- p_source: 'web' or 'telegram' · p_asker: a daily code of who asked · p_name: the name to show, or null · p_question ·
+-- p_source: 'web', 'telegram' or 'x' (X's live chat, passed on by the owner) · p_asker: a daily code of who asked ·
+-- p_name: the name to show, or null · p_question ·
 -- p_gap: seconds between one person's questions · p_per_day: one person's questions a day · p_queue: questions waiting at
 -- most · p_site_day: questions a day for the whole site · p_beat: seconds since the runner's last word that still count as on.
 -- → {"ok": true, "id", "position"} or {"ok": false, "why": "bad" | "offline" | "ending" | "closed" | "blocked" | "waiting"
@@ -96,7 +106,7 @@ declare
   n integer;
   new_id bigint;
 begin
-  if p_source is null or p_source not in ('web', 'telegram') or p_asker is null or char_length(p_asker) not between 16 and 64
+  if p_source is null or p_source not in ('web', 'telegram', 'x') or p_asker is null or char_length(p_asker) not between 16 and 64
      or (p_name is not null and char_length(p_name) not between 1 and 24)
      or p_question is null or char_length(p_question) not between 3 and 200
      or p_gap is null or p_gap < 0 or p_per_day is null or p_per_day < 1 or p_queue is null or p_queue < 1
@@ -240,6 +250,22 @@ set search_path = public
 as $$
   update agi1_live_state set next_at = case when p_next > now() then p_next end, updated_at = now() where id = 1
   returning json_build_object('ok', true, 'next', next_at);
+$$;
+
+-- (2026-10-07) Her show went live on X (the runner says so once, when it starts streaming): true only the first time today
+-- (UTC) for the show that's on, so her Telegram groups hear "i'm live" once a day at most, whatever restarts.
+create or replace function public.live_tell(p_show bigint)
+returns boolean
+language plpgsql
+set search_path = public
+as $$
+declare
+  today date := (now() at time zone 'utc')::date;
+begin
+  update agi1_live_state set told_on = today, updated_at = now()
+  where id = 1 and show_id = p_show and status <> 'off' and (told_on is null or told_on < today);
+  return found;
+end;
 $$;
 
 -- The next question in line, for the runner (our server then asks the AI for her answer). Questions taken more than 5
@@ -421,6 +447,7 @@ revoke all on function public.live_start(text) from public, anon, authenticated;
 revoke all on function public.live_beat(bigint, text, text, bigint) from public, anon, authenticated;
 revoke all on function public.live_stop(bigint, timestamptz) from public, anon, authenticated;
 revoke all on function public.live_schedule(timestamptz) from public, anon, authenticated;
+revoke all on function public.live_tell(bigint) from public, anon, authenticated;
 revoke all on function public.live_take(bigint) from public, anon, authenticated;
 revoke all on function public.live_done(bigint, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.live_state_get(integer) from public, anon, authenticated;
@@ -433,6 +460,7 @@ grant execute on function public.live_start(text) to service_role;
 grant execute on function public.live_beat(bigint, text, text, bigint) to service_role;
 grant execute on function public.live_stop(bigint, timestamptz) to service_role;
 grant execute on function public.live_schedule(timestamptz) to service_role;
+grant execute on function public.live_tell(bigint) to service_role;
 grant execute on function public.live_take(bigint) to service_role;
 grant execute on function public.live_done(bigint, text, text, text, text) to service_role;
 grant execute on function public.live_state_get(integer) to service_role;
@@ -442,8 +470,8 @@ grant execute on function public.live_tidy() to service_role;
 -- Tell Supabase's web API to notice the new functions right away.
 notify pgrst, 'reload schema';
 
--- Check: this should show live_functions_found = 12.
+-- Check: this should show live_functions_found = 13.
 select count(*) as live_functions_found from pg_proc
 where pronamespace = 'public'::regnamespace
   and proname in ('live_on_air', 'live_ask', 'live_lookup', 'live_start', 'live_beat', 'live_stop', 'live_schedule', 'live_take',
-    'live_done', 'live_state_get', 'live_control', 'live_tidy');
+    'live_done', 'live_state_get', 'live_control', 'live_tidy', 'live_tell');

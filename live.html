@@ -139,6 +139,24 @@
               <p class="lv-mine-q" data-lv-o-now-q></p>
               <p class="lv-o-reply" data-lv-o-now-a></p>
             </div>
+            <!-- 2026-10-07: X's live chat can't be read without X's approval, so the host passes a good question on by hand -->
+            <h3 class="lv-o-title" id="lv-relay-title">A question from X's chat</h3>
+            <form class="lv-form lv-relay" data-lv-o-relay aria-labelledby="lv-relay-title" novalidate>
+              <p class="lv-note">Saw a good question in the chat under her stream on X? Paste it here: she answers it on stream as “from <i>their name</i> on X”, with the same checks as everyone's (PG-13, no links, @names or other coins).</p>
+              <div class="lv-field">
+                <label for="lv-relay-q">The question</label>
+                <textarea id="lv-relay-q" data-lv-o-relay-q rows="2" maxlength="200" autocomplete="off"></textarea>
+              </div>
+              <div class="lv-field">
+                <label for="lv-relay-name">Their X name <span class="lv-opt">(optional)</span></label>
+                <input id="lv-relay-name" data-lv-o-relay-name type="text" maxlength="25" autocomplete="off" spellcheck="false" aria-describedby="lv-relay-name-note" />
+                <p class="lv-field-note" id="lv-relay-name-note">As X shows it, with or without the @. Empty: “someone on X”.</p>
+              </div>
+              <div class="lv-links">
+                <button class="btn btn-primary btn-sm" type="submit" data-lv-o-relay-send>Add to her line</button>
+              </div>
+              <p class="lv-note lv-relay-msg" data-lv-o-relay-msg role="status" aria-live="polite"></p>
+            </form>
             <h3 class="lv-o-title">In line (<span data-lv-o-count>0</span>)</h3>
             <ol class="lv-line" data-lv-o-line></ol>
             <p class="lv-note" data-lv-o-empty>Nobody's waiting.</p>
@@ -161,6 +179,7 @@
               <li>Your question is shown on her stream, with the name you give here (if any, and if it can go on a public stream). Never your account, your address or anything else about you.</li>
               <li>18+ and PG-13. No links, @names, emails, phone numbers, addresses or other coins: she only talks about $AGI on her show, and never about real people.</li>
               <li>One question at a time, one a minute, 5 a day. She can't answer everyone, and the show's host can skip any question.</li>
+              <li>Chatting under her stream on X? The show's host may pass a good question from there on to her: it's shown with your X name (if it can go on a public stream), with the same rules as here.</li>
               <li data-lv-tg hidden>Also in her Telegram bot: <a data-lv-tg-link target="_blank" rel="noopener noreferrer">/live and your question ↗</a> (shown on stream without a name).</li>
               <li>Questions and her answers are kept at most 2 days, then deleted.</li>
               <li>Nothing she says is financial advice. She's an AI and she can be wrong. $AGI is a meme token and can lose all of its value.</li>

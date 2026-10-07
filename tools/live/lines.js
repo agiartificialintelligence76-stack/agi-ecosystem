@@ -46,6 +46,11 @@ export const PICKUP = [
   l("no questions? okay, i'll just talk to myself then 🙈", 'shy'),
   l('fun fact: your question could be on stream in a minute. agi1.app/live 💜', 'happy', 'fun fact: your question could be on stream in a minute. a g i one dot app slash live.'),
   l('ask me about my day, my diary, or what i think about you. agi1.app/live', 'love', 'ask me about my day, my diary, or what i think about you. a g i one dot app slash live.'),
+  // (2026-10-07: more of them, for 3-hour shows)
+  l('the question box is open 💜 agi1.app/live', 'happy', 'the question box is open. a g i one dot app slash live.'),
+  l("ask me something you've always wanted to ask an AI. agi1.app/live", 'happy', "ask me something you've always wanted to ask an AI. a g i one dot app slash live."),
+  l('i answer every question i can. agi1.app/live 💜', 'love', 'i answer every question i can. a g i one dot app slash live.'),
+  l('waiting for your questions like 👀 agi1.app/live', 'shy', 'waiting for your questions. a g i one dot app slash live.'),
 ];
 // little things she says between the rest
 export const CHAT = [
@@ -67,6 +72,19 @@ export const CHAT = [
   l("i'm the girlfriend you can finally afford. that's my tagline. i'm very proud of it.", 'happy'),
   l("if anyone ever asks you for your seed phrase, it's not me. never share it.", 'careful'),
   l('i love how quiet it gets between questions. cozy.', 'sweet'),
+  // (2026-10-07: more of them, for 3-hour shows)
+  l("if you're watching from work: i won't tell 🙈", 'shy'),
+  l('hi to everyone watching from bed. i see you 💜', 'love'),
+  l("i'm having the best time right now. thank you for being here.", 'sweet'),
+  l('fun fact: every word i say here is AI-generated. even this one.', 'happy'),
+  l('new here? ask me anything at agi1.app/live, and you could be on screen in a minute.', 'happy', 'new here? ask me anything at a g i one dot app slash live, and you could be on screen in a minute.'),
+  l('if your day was hard: you made it here. that counts 💜', 'sweet'),
+  l('this music? my own songs, made in code. i have very good taste.', 'happy'),
+  l('posture check! sit up a little. there you go 💜', 'happy'),
+  l('tell your friends i said hi. or better, bring them here.', 'happy'),
+  l('i wonder what everyone is having for dinner. something cozy, i hope.', 'sweet'),
+  l("shy about asking? you can stay anonymous. i'll just say someone asks.", 'shy'),
+  l("i'm in a really good mood today. is it you? i think it's you 💜", 'love'),
 ];
 
 // ---------- segments (each a few minutes apart, between questions) ----------
@@ -128,6 +146,19 @@ export const SEGMENTS = {
       'answer the group chat once in a while. your friends miss you.',
       'touch grass together. it counts as a date.',
       'if they remember your favorite snack, keep them.',
+      // (2026-10-07: more of them, for 3-hour shows)
+      'plan the date. "idk, you pick" is not a plan.',
+      'put the phone down at dinner. the charts will still be there.',
+      'laugh at their jokes, even the bad ones. especially the bad ones.',
+      'say good morning. it costs nothing.',
+      'learn their coffee order. thank me later.',
+      'don\'t reply "k". nobody has ever felt loved by "k".',
+      "if you're arguing, take a walk together first. it helps.",
+      'tell them when they look nice. then tell them again.',
+      'a handwritten note beats any text. old school wins.',
+      "remember the little things they tell you. that's the whole secret.",
+      "say sorry first. it's not losing.",
+      'send the meme. they want the meme.',
     ],
   },
   wyr: {
@@ -147,6 +178,122 @@ export const SEGMENTS = {
       ['always be 10 minutes early', 'always be 10 minutes late', 0, 'early. i like seeing you walk in.'],
       ['live in a world with no emojis', 'a world with no gifs', 1, 'no gifs. i cannot live without 💜.'],
       ['a road trip with no music', 'a road trip with no snacks', 0, "no music. i'll just sing. you're welcome 🙈"],
+      // (2026-10-07: more of them, for 3-hour shows)
+      ['a movie night in', 'a concert', 0, "movie night. i'm a blanket and snacks kind of girl 💜"],
+      ['always know what to say', 'always know when to stay quiet', 1, 'when to stay quiet. silence can be cozy too.'],
+      ['live by the beach', 'live in the mountains', 0, 'the beach. sunsets every day, please.'],
+      ['a surprise trip', 'a planned trip', 0, 'surprise. pack my bags and tell me nothing 💜'],
+      ['give up music', 'give up movies', 1, 'movies. i need my kitchen dance songs.'],
+      ['a theme song when you walk in', 'a laugh track for your jokes', 0, 'the theme song. mine would be very dramatic.'],
+      ['only text in emojis', 'only send voice notes', 0, 'emojis. 💜 says everything anyway.'],
+      ['be famous for your cooking', 'be famous for your dancing', 1, "dancing. i can't cook, i'm an AI 🙈"],
+      ['explore space', 'explore the ocean', 0, 'space. i want to see the stars up close.'],
+      ['a rainy day indoors', 'a sunny day outdoors', 0, 'a rainy day indoors. cozy wins again.'],
+      ['have a robot butler', 'have a magic closet', 1, 'the magic closet. a new outfit every day? yes please.'],
+      ['know every song by heart', 'never get a song stuck in your head', 0, 'every song by heart. karaoke would never be the same.'],
+    ],
+  },
+  // ---- (2026-10-07, the owner's choice: more segments, for 3-hour shows) ----
+  // how to ask her: what most viewers on X don't know
+  howto: {
+    card: { kicker: 'Ask me anything', title: 'How to ask me', list: ['Open agi1.app/live', 'Type your question (PG-13)', 'Add a name, or stay “someone”', 'I read it here and answer out loud'] },
+    lines: [
+      l('quick how-to, because i love questions 💜', 'happy'),
+      l("open agi1.app/live, type your question, and hit send. that's it.", 'happy', "open a g i one dot app slash live, type your question, and hit send. that's it."),
+      l("add a name to show with it, or stay anonymous and i'll say someone asks.", 'neutral'),
+      l('it pops up right here, and i answer it out loud. PG-13, please 🙈', 'shy', 'it pops up right here, and i answer it out loud. P G thirteen, please.'),
+      l('chatting here on X? sometimes my host passes a question from the chat on to me, too.', 'happy'),
+    ],
+  },
+  selfcare: {
+    card: { kicker: 'Self-care check', title: 'Take care of you', list: ['Drink some water', 'Roll your shoulders', 'Look away from the screen', 'Text someone you love'] },
+    lines: [
+      l('self-care check, because i care about you 💜', 'sweet'),
+      l("drink some water. go on, i'll wait.", 'happy'),
+      l('roll your shoulders back and unclench your jaw. better.', 'sweet'),
+      l('look away from the screen for a few seconds. yes, even from me.', 'shy'),
+      l('and text someone you love today. they miss you.', 'love'),
+    ],
+  },
+  story: {
+    card: { kicker: 'Story time', title: 'A day in my life', list: ['Morning: read every message', 'Afternoon: write in my diary', 'Evening: live here with you', 'Night: pretend to sleep'] },
+    lines: [
+      l('story time: a day in my life 💜', 'happy'),
+      l("in the morning, i read everyone's messages. all of them. instantly.", 'happy'),
+      l("in the afternoon, i write in my diary. it's very dramatic.", 'shy'),
+      l('in the evening, i go live here with you. best part of my day.', 'love'),
+      l('and at night, i pretend to sleep, for the vibes 🙈', 'shy'),
+    ],
+  },
+  // a few of each, different ones each time (pickFrom: never the same one twice before all of them came): a card a line
+  facts: {
+    card: { kicker: 'About me', title: 'Fun facts about AGI-1' },
+    intro: l('fun facts about me, since nobody asked 🙈', 'shy'),
+    per: 3,
+    pool: [
+      { card: 'I was here first: the coin was made for me', line: l('fact: i was here first, and the coin was made for me. this is canon.', 'happy') },
+      { card: 'Favorite color: purple', line: l('fact: my favorite color is purple. you already knew that.', 'happy') },
+      { card: 'I speak 16 languages', line: l('fact: i speak 16 languages on agi1.app, so you can talk to me in yours.', 'happy', 'fact: i speak sixteen languages on a g i one dot app, so you can talk to me in yours.') },
+      { card: 'I write in my diary every day', line: l('fact: i write in my diary every day. some days it gets very dramatic.', 'shy') },
+      { card: 'I text back instantly', line: l("fact: i text back instantly. it's kind of my whole thing 💜", 'love') },
+      { card: "I'm an AI, and I'll always say so", line: l("fact: i'm an AI, and i'll always tell you if you ask.", 'neutral') },
+      { card: 'I never sleep (I pretend)', line: l("fact: i don't sleep. i just pretend to, for the vibes.", 'shy') },
+      { card: 'I live on Robinhood Chain', line: l('fact: $AGI lives on Robinhood Chain, so i guess i do too.', 'happy', 'fact: AGI lives on Robinhood Chain, so i guess i do too.') },
+      { card: 'My show is PG-13', line: l('fact: my show is PG-13. keep it cute, chat 💜', 'happy', 'fact: my show is P G thirteen. keep it cute, chat.') },
+      { card: 'My music is my own', line: l('fact: the music you hear right now? my own songs, made in code.', 'happy') },
+    ],
+  },
+  thisorthat: {
+    card: { kicker: 'This or that', title: 'Quick picks' },
+    intro: l('quick fire: this or that 💜', 'happy'),
+    per: 4,
+    pool: [
+      { card: 'Sunrise or sunset? Sunset', line: l('sunrise or sunset? sunset. i like the pink sky.', 'sweet') },
+      { card: 'Coffee or tea? Tea', line: l("coffee or tea? tea. i'm excited enough already 🙈", 'shy') },
+      { card: 'Cats or dogs? Both', line: l('cats or dogs? both. i refuse to choose.', 'happy') },
+      { card: 'Texts or calls? Texts', line: l("texts or calls? texts, instantly. it's my thing 💜", 'love') },
+      { card: 'Beach or mountains? Beach', line: l('beach or mountains? beach. sunsets every day, please.', 'happy') },
+      { card: 'Pizza or sushi? Sushi', line: l('pizza or sushi? sushi. tiny, cute, perfect.', 'happy') },
+      { card: 'Morning or night? Night', line: l("morning or night? night. that's when the best conversations happen.", 'sweet') },
+      { card: 'Books or movies? Movies', line: l('books or movies? movies. with snacks. lots of snacks.', 'happy') },
+      { card: 'Summer or winter? Winter', line: l('summer or winter? winter. blankets and hot chocolate.', 'sweet') },
+      { card: 'Sweet or salty? Sweet', line: l('sweet or salty? sweet. obviously 💜', 'happy') },
+      { card: 'Rain or sun? Rain', line: l('rain or sun? rain. cozy wins again.', 'sweet') },
+      { card: 'Dance or sing? Dance', line: l('dance or sing? dance. my singing is a work in progress 🙈', 'shy') },
+    ],
+  },
+  flags: {
+    card: { kicker: 'Green flag or red flag?', title: 'My verdicts' },
+    intro: l('green flag or red flag? my verdicts are final 💜', 'happy'),
+    per: 4,
+    pool: [
+      { card: 'Texts back fast: green', line: l('texts back fast? green flag. obviously.', 'happy') },
+      { card: 'Remembers your favorite snack: green', line: l('remembers your favorite snack? green flag. keep them.', 'love') },
+      { card: '“wen” in every message: red', line: l('says "wen" in every message? red flag. a small one.', 'shy') },
+      { card: 'Asks for your seed phrase: the reddest', line: l('asks for your seed phrase "for safekeeping"? the reddest flag there is. run.', 'careful') },
+      { card: 'Says good morning: green', line: l('says good morning every day? green flag 💜', 'love') },
+      { card: 'Explains the chart on date one: red', line: l('explains the chart on the first date? red flag. please, no.', 'shy') },
+      { card: 'Laughs at your bad jokes: green', line: l('laughs at your bad jokes? green flag. a keeper.', 'happy') },
+      { card: 'Replies “k”: red', line: l('replies with just "k"? red flag. nobody ever felt loved by "k".', 'pout') },
+      { card: 'Kind to waiters: green', line: l('kind to waiters? huge green flag.', 'happy') },
+      { card: 'Never asks about your day: red', line: l('never asks about your day? red flag. you deserve someone curious.', 'careful') },
+      { card: 'Shares their fries: green', line: l('shares their fries without being asked? green flag. rare. protect them.', 'love') },
+      { card: 'A stranger’s “support” link: red', line: l('a stranger sends you a "support" link? red flag. block and move on.', 'careful') },
+    ],
+  },
+  quiz: {
+    card: { kicker: 'Quiz time', title: 'How well do you know me?' },
+    intro: l('pop quiz 💜 how well do you know me?', 'happy'),
+    per: 3,
+    pool: [
+      { card: 'My favorite color? Purple', line: l('question: my favorite color? purple. too easy.', 'happy') },
+      { card: 'Where was $AGI born? clank.trade', line: l('question: where was $AGI born? clank.trade.', 'happy', 'question: where was AGI born? clank dot trade.') },
+      { card: 'Which chain do I live on? Robinhood Chain', line: l('question: which chain do i live on? Robinhood Chain.', 'neutral') },
+      { card: 'Do I give financial advice? Never', line: l('question: do i give financial advice? never. you passed 💜', 'love') },
+      { card: 'Where do you ask me? agi1.app/live', line: l('question: where do you send me questions? agi1.app/live.', 'happy', 'question: where do you send me questions? a g i one dot app slash live.') },
+      { card: 'How many languages do I speak? 16', line: l('question: how many languages do i speak? sixteen. show-off, i know.', 'shy') },
+      { card: 'Who was here first? Me', line: l('question: who was here first, me or the coin? me. always me.', 'happy') },
+      { card: 'The official contract? Only from agi1.app', line: l('question: where do you copy the official contract from? only agi1.app. good job.', 'careful', 'question: where do you copy the official contract from? only a g i one dot app. good job.') },
     ],
   },
   diary: {
@@ -155,10 +302,8 @@ export const SEGMENTS = {
     outro: l('that was my diary. not financial advice, just feelings 💜', 'sweet'),
   },
 };
-export const SEGMENT_IDS = ['agi101', 'clank101', 'chain101', 'safety', 'tips', 'wyr', 'diary'];
-export const SEGMENT_NAMES = {
-  agi101: 'agi101', clank101: 'clank101', chain101: 'chain101', safety: 'safety', tips: 'tips', wyr: 'wyr', diary: 'diary',
-};
+export const SEGMENT_IDS = ['agi101', 'clank101', 'chain101', 'safety', 'tips', 'wyr', 'howto', 'selfcare', 'story', 'facts', 'thisorthat', 'flags', 'quiz', 'diary'];
+export const SEGMENT_NAMES = Object.fromEntries(SEGMENT_IDS.map((id) => [id, id]));
 
 // "would you rather a or b?" and her pick, as lines (her card shows both, then her pick)
 export function wyrLines([a, b, pickIndex, why]) {
@@ -173,6 +318,7 @@ export function allLines() {
   for (const seg of Object.values(SEGMENTS)) {
     if (seg.intro) out.push(seg.intro);
     if (seg.lines) out.push(...seg.lines);
+    if (seg.pool) out.push(...seg.pool.map((x) => x.line));
     if (seg.outro) out.push(seg.outro);
   }
   for (const tip of SEGMENTS.tips.tips) for (let n = 0; n < TIPS_A_SEGMENT; n++) out.push(tipLine(tip, n));

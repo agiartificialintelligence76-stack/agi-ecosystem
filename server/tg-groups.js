@@ -17,7 +17,8 @@
 //   • when she's added: her intro; when people join: a short pre-written welcome (no names, a safety reminder), at most one
 //     every 10 minutes in a group (TELEGRAM_GROUP_WELCOME=off: none);
 //   • api/feed.js posts her diary and $AGI's market moments there as they happen (postToGroups; TELEGRAM_GROUP_POSTS=off:
-//     none): never a moment about another coin (no egirl coins, no copies of $AGI), never twice.
+//     none): never a moment about another coin (no egirl coins, no copies of $AGI), never twice;
+//   • (2026-10-07) api/live.js tells them once a day when her show goes live on X (postLiveNow; the same switch).
 // Kept (supabase/telegram.sql, agi1_tg_group_usage): per group and day, how many replies she gave there and when she last
 // welcomed someone. Only the group's own number: never a message, a name or anyone's account.
 import { tgCall, say, chatCode, botIdOf, scrub, MEDIA } from './tg-api.js';
@@ -26,7 +27,7 @@ import { askAgi1, TLDS } from './gemini.js';
 import { levelInfo } from '../src/lib/levels.js';
 import { groupPersonBurst, groupBurst } from './burst.js';
 import {
-  tgLinesFor, groupIntro, GROUP_WELCOMES, GROUP_HELP, GROUP_FULL, GROUP_OUT, GROUP_CA, GROUP_WEBSITE, groupMarket, GROUP_MARKET_DOWN, pickFor,
+  tgLinesFor, groupIntro, GROUP_WELCOMES, GROUP_HELP, GROUP_FULL, GROUP_OUT, GROUP_CA, GROUP_WEBSITE, groupMarket, GROUP_MARKET_DOWN, GROUP_LIVE, pickFor,
 } from './tg-lines.js';
 import { OFFICIAL_CA } from './agi1-prompt.js';
 import { agiNumbers } from './market.js';
@@ -328,12 +329,17 @@ export function groupSafe(text) {
   for (const [, host] of s.matchAll(BARE_HOST)) if (!/^(?:www\.)?(?:agi1\.app|clank\.trade)$/i.test(host)) return false;
   return true;
 }
+// her groups, as Telegram takes them: a public group by its @username, a private one by its id
+const groupTargets = (g) => [...[...g.names].map((n) => `@${n}`), ...[...g.ids].map(Number)];
+const postHint = (err) => (err.status === 403 ? ' (is she still in that group? add her again)'
+  : err.status === 400 && /not found/i.test(err.message) ? " (check TELEGRAM_GROUPS: a public group's @username, or its id)"
+    : err.status === 429 ? ' (Telegram said "too many": skipped this time)' : '');
 // moments: what gatherMoments() added this run ([{ id, kind, key, text }]) → { posted, failed, skipped, stopped? }
 export async function postToGroups(cfg, token, moments = [], { deadline = Infinity } = {}) {
   const out = { posted: 0, failed: 0, skipped: 0 };
   const g = cfg.tgGroups;
   if (!g || !cfg.tgGroupPosts || !token) return out;
-  const targets = [...[...g.names].map((n) => `@${n}`), ...[...g.ids].map(Number)];
+  const targets = groupTargets(g);
   const ours = moments.filter((x) => GROUP_POSTS.includes(x?.kind) && typeof x.text === 'string');
   const posts = ours.filter((x) => groupSafe(x.text)).sort((a, b) => Number(a.id) - Number(b.id));
   out.skipped = ours.length - posts.length;
@@ -345,11 +351,28 @@ export async function postToGroups(cfg, token, moments = [], { deadline = Infini
         out.posted += 1;
       } catch (err) {
         out.failed += 1;
-        const hint = err.status === 403 ? ' (is she still in that group? add her again)'
-          : err.status === 400 && /not found/i.test(err.message) ? " (check TELEGRAM_GROUPS: a public group's @username, or its id)"
-            : err.status === 429 ? ' (Telegram said "too many": skipped this time)' : '';
-        console.warn(`[feed] couldn't post ${p.key} in the group ${to}: ${err.message}${hint}`);
+        console.warn(`[feed] couldn't post ${p.key} in the group ${to}: ${err.message}${postHint(err)}`);
       }
+    }
+  }
+  return out;
+}
+
+// ---------- her show just went live on X (2026-10-07, api/live.js 'on_x', once a day: live_tell) ----------
+// Her pre-written "i'm live" line in each of her groups, with agi1.app/live (where "Watch on X" is). Only while her posts
+// there are on (TELEGRAM_GROUP_POSTS); a group that refuses it is logged and left alone. → { posted, failed }
+export async function postLiveNow(cfg, token, { deadline = Date.now() + 15_000 } = {}) {
+  const out = { posted: 0, failed: 0 };
+  const g = cfg.tgGroups;
+  if (!g || !cfg.tgGroupPosts || !token || !groupSafe(GROUP_LIVE)) return out;
+  for (const to of groupTargets(g)) {
+    if (Date.now() > deadline) break;
+    try {
+      await say(token, to, GROUP_LIVE, {}, { timeoutMs: 4000 });
+      out.posted += 1;
+    } catch (err) {
+      out.failed += 1;
+      console.warn(`[live] couldn't tell the group ${to} she's live: ${err.message}${postHint(err)}`);
     }
   }
   return out;

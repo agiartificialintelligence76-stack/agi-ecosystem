@@ -35,7 +35,7 @@ import { liveSite, demoSite } from './site.js';
 import { voiceSettings, createVoice, RATE } from './voice.js';
 import { musicSettings, loadSongs, MusicBed } from './music.js';
 import * as L from './lines.js';
-import { createShow, nextStep, didStep, chatLine, pickupLine, readingLine, lagLine, tipsFor, pairsFor, PACE } from './show.js';
+import { createShow, nextStep, didStep, chatLine, pickupLine, readingLine, lagLine, tipsFor, pairsFor, poolFor, PACE } from './show.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const W = 1280, H = 720, FPS = 30;
@@ -340,6 +340,10 @@ export async function warmUp(voice, lines, { until = Infinity, each = null, gapM
 // hop and hearts on every "happy" line would be a lot for an hour); her answers to questions react fully.
 const REACT = { wave: 'wave', love: 'love', shy: 'shy', sweet: 'love', careful: 'okay', pout: 'jealous', sad: 'sad', celebrate: 'celebrate', worried: 'worried' };
 export const reactFor = (mood, { answer = false } = {}) => (answer && ['happy', 'love', 'shy', 'wave'].includes(mood) ? mood : REACT[mood] || 'neutral');
+// Who asked, on her question card: the name they gave (or "someone"), never a Telegram name ("someone on Telegram"), and
+// (2026-10-07) a question from X's live chat that the owner passed on: "<name> on X" (or "someone on X")
+export const askedBy = (q) => (q?.source === 'telegram' ? q.name || 'someone on Telegram'
+  : q?.source === 'x' ? `${q.name || 'someone'} on X` : q?.name || 'someone');
 
 // ---------- the show ----------
 async function runShow(a) {
@@ -483,6 +487,12 @@ async function runShow(a) {
     await studio('start', Date.now());
     show = createShow({ start: Date.now(), minutes: a.minutes, diary: Boolean(diary), seed: Math.floor(Date.now() / 86_400_000) });
     state.status = 'live';
+    // (2026-10-07) she's streaming on X now: her Telegram groups hear it, once a day at most (the site decides); never for a
+    // recording, and --demo's stand-in site tells nobody
+    if (!a.record && !stopping) {
+      site.onX(showId).then((r) => { if (r?.told) log.info(`her Telegram groups heard she's live (${r.posted ?? 0} posted, ${r.failed ?? 0} failed)`); },
+        (err) => log.warn(`couldn't tell her Telegram groups she's live: ${err.message}`));
+    }
 
     // her next question, ready before she needs it (asked while she's saying something else). When her answers don't come
     // (the AI is down or the site away), questions wait a while (30 s, then longer, at most 5 minutes) and she says so once,
@@ -543,6 +553,16 @@ async function runShow(a) {
           if ((await say(answer)) !== 'done') break;
           await sleep(600);
         }
+      } else if (seg.pool) {
+        // (2026-10-07) a few of its pool (fun facts, quick picks, flags, quiz questions), a card for each
+        await studio('card', { kind: 'segment', ...seg.card });
+        if ((await say(seg.intro)) === 'done') {
+          for (const item of poolFor(show, id)) {
+            await studio('card', { kind: 'segment', kicker: seg.card.kicker, title: seg.card.title, body: item.card });
+            if ((await say(item.line)) !== 'done') break;
+            await sleep(500);
+          }
+        }
       } else {
         await studio('card', { kind: 'segment', ...seg.card });
         for (const line of seg.lines) { if ((await say(line)) !== 'done') break; await sleep(300); }
@@ -555,11 +575,10 @@ async function runShow(a) {
     // a question: its card, she reads it (looks at it), her answer
     const question = async (qa) => {
       if (controls.skipped.has(qa.question.id)) { return false; }
-      const from = qa.question.source === 'telegram' ? (qa.question.name || 'someone on Telegram') : (qa.question.name || 'someone');
       state.segment = 'questions';
       state.onAir = qa.question.id;
       beat();
-      await studio('card', { kind: 'question', kicker: `Question · from ${from}`, body: qa.question.text });
+      await studio('card', { kind: 'question', kicker: `Question · from ${askedBy(qa.question)}`, body: qa.question.text });
       await studio('look', 'card');
       await sleep(1800);
       await studio('look', 'you');

@@ -19,6 +19,8 @@ import { GET, POST } from '../api/live.js';
 import { POST as webhook } from '../api/telegram.js';
 import { webhookSecret, chatCode, COMMANDS, commandsFor } from '../server/telegram.js';
 import { tgLinesFor } from '../server/tg-lines.js';
+import * as TL from '../server/tg-lines.js';
+import { groupSafe } from '../server/tg-groups.js';
 import { liveBurst, liveLookupBurst, liveAuthBurst, telegramBurst } from '../server/burst.js';
 import { LANGS } from '../src/i18n/langs.js';
 import { linesOf } from '../src/i18n/all.js';
@@ -47,7 +49,7 @@ function liveDb() {
   return {
     s, qs,
     live_ask({ p_source, p_asker, p_name, p_question, p_gap, p_per_day, p_queue, p_site_day }) {
-      if (!['web', 'telegram'].includes(p_source) || !p_asker || p_asker.length < 16 || !p_question) return { ok: false, why: 'bad' };
+      if (!['web', 'telegram', 'x'].includes(p_source) || !p_asker || p_asker.length < 16 || !p_question) return { ok: false, why: 'bad' };
       if (!on()) return { ok: false, why: 'offline' };
       if (s.status === 'ending') return { ok: false, why: 'ending' };
       if (s.closed) return { ok: false, why: 'closed' };
@@ -121,6 +123,12 @@ function liveDb() {
         line: waiting().map((q) => ({ id: q.id, name: q.name, question: q.question, source: q.source, status: q.status })), recent: [] };
     },
     live_tidy: () => ({ deleted: 0 }),
+    // (2026-10-07) her show went live on X: true the first time today for the show that's on
+    live_tell({ p_show }) {
+      if (p_show !== s.show || s.status === 'off' || s.toldOn === today) return false;
+      s.toldOn = today;
+      return true;
+    },
     // her bot
     tg_get: ({ p_chat }) => fake.friends.get(p_chat) ?? null,
     tg_join({ p_chat }) { if (!fake.friends.has(p_chat)) fake.friends.set(p_chat, { chat_id: p_chat, adult: false, tz_minutes: null }); return fake.friends.get(p_chat); },
@@ -130,7 +138,7 @@ function liveDb() {
 
 let fake, calls, logs;
 beforeEach(() => {
-  for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR']) delete process.env[k];
+  for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'TELEGRAM_GROUPS', 'TELEGRAM_GROUP_POSTS']) delete process.env[k];
   Object.assign(process.env, ENV);
   for (const b of [liveBurst, liveLookupBurst, liveAuthBurst, telegramBurst]) b.reset();
   logs = [];
@@ -259,6 +267,9 @@ test('her live prompt: everyone at once, no pet names, never real people or othe
   assert.match(livePrompt({ name: null, source: 'telegram' }), /through your Telegram bot, without a name/);
   assert.match(livePrompt({ name: null, source: 'telegram' }), /"someone asks…"/);
   assert.doesNotMatch(livePrompt({ name: 'a"b\nc', source: 'web' }), /a"b/, 'a name can\'t break out of its quotes');
+  // (2026-10-07) a question from X's live chat, passed on by the host
+  assert.match(livePrompt({ name: 'kai_99', source: 'x' }), /in X's live chat \(your show's host passed it on to you\), under the name "kai_99"/);
+  assert.match(livePrompt({ name: 'Mochi', source: 'web' }), /through agi1\.app\/live, under the name "Mochi"/);
   assert.deepEqual(LIVE_SKIPS, ['no', 'rules', 'care']);
 });
 
@@ -583,6 +594,118 @@ test("the owner's phone: its key only; every control passes through; the runner'
   assert.equal(last.status, 429);
 });
 
+// (2026-10-07, the owner: "it doesnt read the X live comments": X's chat needs X's approval, so the host passes them on)
+test("a question from X's live chat, passed on by the owner: the same checks, shown as on X, one at a time per X name, never logged", async () => {
+  const relay = (body, auth = OWNER()) => post({ action: 'relay', ...body }, { auth });
+  // not live yet: the line's own "no"
+  let r = await relay({ question: 'what is your favorite song?', name: '@kai_99' });
+  assert.deepEqual([r.status, r.data.error], [503, 'offline']);
+  const show = await goLive();
+  r = await relay({ question: 'what is your favorite song?', name: '@kai_99' });
+  assert.deepEqual([r.status, r.data.ok, r.data.position], [200, true, 1]);
+  const q = fake.db.qs.get(r.data.id);
+  assert.deepEqual([q.source, q.name, q.question], ['x', 'kai_99', 'what is your favorite song?'], 'the @ dropped');
+  assert.match(q.asker, /^x:[A-Za-z0-9_-]{32}$/, 'a daily code of the X name, never the name itself');
+  // the same X name (any case): one at a time, a minute apart, 5 a day, like everyone
+  r = await relay({ question: 'and your favorite food?', name: 'KAI_99' });
+  assert.deepEqual([r.status, r.data.error], [429, 'waiting']);
+  // no name: "someone on X", each its own (the owner can pass on several)
+  const a = await relay({ question: 'do you like rainy days?' });
+  const b = await relay({ question: 'what do you dream about?', name: '' });
+  assert.equal(a.data.ok && b.data.ok, true);
+  assert.equal(fake.db.qs.get(a.data.id).name, null);
+  assert.notEqual(fake.db.qs.get(a.data.id).asker, fake.db.qs.get(b.data.id).asker);
+  // its checks come first: nothing reaches the database
+  const before = rpcs().length;
+  for (const [question, why] of [['check https://example.com', 'link'], ['what about $PEPE?', 'coin'], ['do you like elon musk?', 'person'], ['hi', 'short'], ['i want to kill myself', 'care']]) {
+    r = await relay({ question });
+    assert.deepEqual([r.status, r.data.error, r.data.why], [400, 'question', why], question);
+  }
+  for (const name of ['elonmusk', '@AGI1official', 'x'.repeat(30), '🙂🙂🙂', 'admin']) {
+    r = await relay({ question: 'what is your favorite color?', name });
+    assert.deepEqual([r.status, r.data.error], [400, 'name'], name);
+  }
+  for (const body of [{}, { question: 42 }, { question: 'hello there friend', name: 7 }]) assert.equal((await relay(body)).status, 400, JSON.stringify(body));
+  assert.equal(rpcs().length, before, 'refused before the database');
+  // only the owner's key: never the runner's secret, never a visitor
+  assert.equal((await relay({ question: 'what is your favorite color?' }, RUNNER())).status, 400);
+  assert.equal((await post({ action: 'relay', question: 'what is your favorite color?' })).status, 400);
+  assert.equal((await relay({ question: 'what is your favorite color?' }, 'Bearer nope')).status, 401);
+  // blocked words and a closed line hold for it too
+  await post({ action: 'control', do: 'block', arg: 'pineapple' }, { auth: OWNER() });
+  assert.equal((await relay({ question: 'pineapple on pizza?', name: 'luna' })).data.error, 'blocked');
+  // never logged: the question or the name
+  assert.ok(logs.some(([, l]) => /passed on a question from X's chat/.test(l)));
+  assert.ok(!logs.some(([, l]) => /favorite song|kai_99|rainy|dream|pineapple/i.test(l)), 'never the question or the name in a log');
+  // on stream: where it came from, in her prompt; the owner's view shows the source
+  calls = [];
+  r = await post({ action: 'next', show }, { auth: RUNNER() });
+  assert.deepEqual(r.data.question, { id: q.id, name: 'kai_99', text: 'what is your favorite song?', source: 'x' });
+  assert.match(called('generativelanguage')[0].body.systemInstruction.parts[0].text, /in X's live chat \(your show's host passed it on to you\), under the name "kai_99"/);
+  const view = await post({ action: 'control', do: 'view' }, { auth: OWNER() });
+  assert.ok(view.data.line.some((x) => x.source === 'x' && x.name === null));
+  // live.sql not run again (its old check refuses source 'x'): "bad", which the host's box turns into "run live.sql again"
+  fake.db.live_ask = () => ({ ok: false, why: 'bad' });
+  r = await relay({ question: 'what is your favorite color?', name: 'luna' });
+  assert.deepEqual([r.status, r.data.error], [400, 'bad']);
+  assert.match(W.relayText('bad'), /Run supabase\/live\.sql again.*live_functions_found = 13/);
+});
+
+// (2026-10-07, the owner's choice: a Telegram "I'm live" post when her show starts)
+test("she's streaming on X: her Telegram groups hear it once a day (the database decides); never for the owner's key; a failure is only a warning", async () => {
+  Object.assign(process.env, { TELEGRAM_GROUPS: '@agi_group -1001234567890' });
+  const show = await goLive();
+  calls = [];
+  let r = await post({ action: 'on_x', show }, { auth: RUNNER() });
+  assert.deepEqual([r.status, r.data.told, r.data.posted, r.data.failed], [200, true, 2, 0]);
+  const sent = called('api.telegram.org').filter((c) => c.url.endsWith('/sendMessage')).map((c) => c.body);
+  assert.deepEqual(sent.map((b) => b.chat_id), ['@agi_group', -1001234567890]);
+  for (const b of sent) {
+    assert.equal(b.text, TL.GROUP_LIVE);
+    assert.deepEqual(b.link_preview_options, { is_disabled: true });
+    assert.equal(b.parse_mode, undefined, 'plain text');
+  }
+  assert.match(TL.GROUP_LIVE, /^i'm live on X right now 💜/);
+  assert.match(TL.GROUP_LIVE, /https:\/\/agi1\.app\/live/);
+  assert.match(TL.GROUP_LIVE, /i'm an AI/);
+  assert.match(TL.GROUP_LIVE, /nothing i say is financial advice/);
+  assert.equal(groupSafe(TL.GROUP_LIVE), true, 'her group rules: no other coin, no address, no @name, links only to agi1.app');
+  assert.doesNotMatch(TL.GROUP_LIVE, /\b(babe|cutie|honey|buy|sell|pump|moon)\b/i);
+  // once a day: a restart of the show (or the runner asking twice) tells nobody again
+  calls = [];
+  r = await post({ action: 'on_x', show }, { auth: RUNNER() });
+  assert.deepEqual([r.data.told, called('sendMessage').length], [false, 0]);
+  const again = await goLive();
+  assert.equal((await post({ action: 'on_x', show: again }, { auth: RUNNER() })).data.told, false, 'a new show the same day: no second post');
+  // an old show's number, or no number: nothing
+  fake.db.s.toldOn = null;
+  assert.equal((await post({ action: 'on_x', show: 99 }, { auth: RUNNER() })).data.told, false);
+  assert.equal((await post({ action: 'on_x' }, { auth: RUNNER() })).status, 400);
+  // only the runner
+  assert.equal((await post({ action: 'on_x', show: again }, { auth: OWNER() })).status, 400);
+  assert.equal(fake.db.s.toldOn, null, "the owner's key never told anyone");
+  // her group posts switched off (TELEGRAM_GROUP_POSTS=off), or no groups: the day is marked, nothing is posted
+  process.env.TELEGRAM_GROUP_POSTS = 'off';
+  calls = [];
+  r = await post({ action: 'on_x', show: again }, { auth: RUNNER() });
+  assert.deepEqual([r.data.told, r.data.posted, called('sendMessage').length], [true, 0, 0]);
+  delete process.env.TELEGRAM_GROUP_POSTS;
+  // a group she was removed from: a warning with a hint, the other group still hears it, the answer is still 200
+  fake.db.s.toldOn = null;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => (String(url).includes('/sendMessage') && JSON.parse(init.body).chat_id === '@agi_group'
+    ? Response.json({ ok: false, error_code: 403, description: 'Forbidden: bot was kicked from the supergroup chat' }, { status: 403 }) : realFetch(url, init));
+  r = await post({ action: 'on_x', show: again }, { auth: RUNNER() });
+  assert.deepEqual([r.status, r.data.posted, r.data.failed], [200, 1, 1]);
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /couldn't tell the group @agi_group she's live: .*is she still in that group\? add her again/.test(l)));
+  globalThis.fetch = realFetch;
+  // live.sql not run again (no live_tell): a warning that says so, never an error for the show
+  fake.sqlMissing = true;
+  r = await post({ action: 'on_x', show: again }, { auth: RUNNER() });
+  assert.deepEqual([r.status, r.data.told], [200, false]);
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /run supabase\/live\.sql again \(it ends with live_functions_found = 13\)/.test(l)));
+});
+
 test('not set up (no LIVE_SECRET): every action says so, nothing is asked', async () => {
   delete process.env.LIVE_SECRET;
   for (const [body, auth] of [[askOk, null], [{ action: 'start', status: 'live' }, `Bearer ${LIVE_KEY}`]]) {
@@ -703,12 +826,13 @@ test('the keep-alive tidies her show up (and never fails because of it); LIVE_SE
   assert.equal(await tidyLive(cfg()), null, 'live.sql not run: nothing to do, no error');
   assert.ok(!logs.some(([k, l]) => k === 'error' && /tidying up failed/.test(l)));
   assert.match(read('scripts/check-secrets.js'), /'LIVE_SECRET'/);
-  assert.match(read('supabase/live.sql'), /live_functions_found = 12/);
+  assert.match(read('supabase/live.sql'), /live_functions_found = 13/);
   assert.match(read('server/limits.js'), /run supabase\/live\.sql/);
 });
 
 // ---------- the page: agi1.app/live ----------
 import * as W from '../src/live/words.js';
+import { SEGMENT_IDS } from '../tools/live/lines.js';
 test('agi1.app/live: its promises (shown on stream, never your account, PG-13, no other coins, 2 days, an AI, not advice), 18+, the host\'s box hidden', () => {
   const html = read('live.html');
   assert.match(html, /<html lang="en" data-page="live">/);
@@ -723,6 +847,15 @@ test('agi1.app/live: its promises (shown on stream, never your account, PG-13, n
   assert.match(html, /<input id="lv-name" data-lv-name type="text" maxlength="24"/);
   assert.match(html, /<section class="lv-card lv-owner" data-lv-owner aria-labelledby="lv-owner-title" hidden>/, 'the host\'s controls: hidden unless the owner\'s link');
   assert.match(html, /<div class="lv-gate" data-lv-gate hidden>/);
+  // (2026-10-07) the host's box for a question from X's live chat: inside the host's controls (hidden unless the owner's link)
+  assert.match(html, /<form class="lv-form lv-relay" data-lv-o-relay aria-labelledby="lv-relay-title" novalidate>/);
+  assert.match(html, /<textarea id="lv-relay-q" data-lv-o-relay-q rows="2" maxlength="200"/);
+  assert.match(html, /<input id="lv-relay-name" data-lv-o-relay-name type="text" maxlength="25"/, 'an X name with its @');
+  assert.match(html, /<p class="lv-note lv-relay-msg" data-lv-o-relay-msg role="status" aria-live="polite"><\/p>/);
+  const owner = html.slice(html.indexOf('data-lv-owner'), html.indexOf('lv-rules'));
+  assert.ok(owner.includes('data-lv-o-relay'), "in the host's controls");
+  assert.match(html, /Chatting under her stream on X\? The show's host may pass a good question from there on to her: it's shown with your X name/);
+  assert.match(read('index.html'), /Her show's host may also pass on a question you write in the chat under her stream on X: then it's shown and read out with your X name/);
   for (const a of html.match(/<a [^>]*target="_blank"[^>]*>/g)) assert.match(a, /rel="noopener noreferrer"/, a);
   assert.doesNotMatch(html, /<script(?! src=)(?! type="module" src=)/, 'no inline scripts (the CSP)');
   assert.doesNotMatch(html, /style="/, 'no inline styles (the CSP)');
@@ -791,6 +924,21 @@ test('the page\'s words: her status, what she\'s doing, her next show in your ti
   for (const why of ['rules', 'care', 'owner', 'ended', 'error']) assert.ok(W.mineText({ status: 'skipped', why }).length > 10, why);
   assert.match(W.mineText({ status: 'skipped', why: 'care' }), /someone you trust or a local support line/);
   assert.equal(W.fromText({ name: null, source: 'telegram' }), 'someone · Telegram');
+  assert.equal(W.fromText({ name: 'kai_99', source: 'x' }), 'kai_99 · X');
+  assert.equal(W.fromText({ name: 'Mochi', source: 'web' }), 'Mochi · agi1.app');
+  // (2026-10-07) every segment the runner can say she's doing has its words
+  for (const id of [...SEGMENT_IDS, 'starting', 'intro', 'questions', 'chat', 'brb', 'outro']) assert.ok(W.segmentText(id), id);
+  // the host's box: every answer to a relay in plain words for the owner (never "you" for the X viewer)
+  assert.equal(W.relayText(null, { position: 3 }), 'Added to her line (#3).');
+  const rfallback = W.relayText('???');
+  for (const e of [...errors, ...whys, 'offline_net', 'question', 'name']) {
+    if (['bad_request', 'too_long', 'bad_ticket', 'gone', 'unauthorized', 'busy', 'old_show', 'human_check', 'age'].includes(e)) continue;
+    assert.notEqual(W.relayText(e), rfallback, `${e} has its own words`);
+    assert.doesNotMatch(W.relayText(e), /\byour (connection|question)\b/i, `${e}: for the owner, not a visitor`);
+  }
+  assert.equal(W.relayText('too_fast', { wait: 42 }), 'One question a minute from the same X name: try again in 42 s.');
+  assert.match(W.relayText('question', { why: 'link' }), /No links/);
+  assert.match(W.relayText('question', { why: 'care' }), /won’t read it on a public stream/);
   assert.equal(W.ownerText({ on: true, status: 'live', paused: true }), 'Live · paused (be right back)');
 });
 
@@ -802,5 +950,7 @@ test('the page\'s code: text only (never HTML), the human check made for "live",
   assert.match(js, /sessionStorage/, 'kept for this tab only');
   assert.match(js, /KEYS = \{ adult: 'agi1_18plus'/, 'the same 18+ answer as her chat');
   assert.match(js, /Authorization: `Bearer \$\{key\}`/);
+  assert.match(js, /JSON\.stringify\(\{ action: 'relay', question, \.\.\.\(name \? \{ name \} : \{\}\) \}\)/, "(2026-10-07) the host's box: the question and the X name, with the owner's key");
+  assert.match(js, /o\.relaySend\.disabled = relaying \|\| !v\.on/, 'only while she is on');
   assert.match(read('api/live.js'), /verifyHuman\(cfg, body\.turnstileToken, ip, 'live'\)/);
 });

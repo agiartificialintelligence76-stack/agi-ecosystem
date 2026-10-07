@@ -12,7 +12,7 @@ import { startTheme } from '../theme.js';
 import { startMenu } from '../menu.js';
 import { withHuman, postJson } from '../lib/human.js';
 import { botName } from '../chat/telegram-link.js';
-import { STATUS, segmentText, lineText, nextText, askError, mineText, ownerText, fromText } from './words.js';
+import { STATUS, segmentText, lineText, nextText, askError, mineText, ownerText, fromText, relayText } from './words.js';
 
 const KEYS = { adult: 'agi1_18plus', mine: 'agi1_live_q', owner: 'agi1_live_owner' };
 const STATUS_EVERY = 15_000, MINE_EVERY = 30_000, OWNER_EVERY = 5_000, MINE_HOURS = 6;
@@ -244,8 +244,11 @@ function startOwner() {
     nowA: $('[data-lv-o-now-a]', box), count: $('[data-lv-o-count]', box), line: $('[data-lv-o-line]', box), empty: $('[data-lv-o-empty]', box),
     words: $('[data-lv-o-words]', box), block: $('[data-lv-o-block]', box), word: $('[data-lv-o-word]', box), recent: $('[data-lv-o-recent]', box),
     buttons: [...box.querySelectorAll('[data-lv-o]')],
+    // (2026-10-07) the box for a question from X's live chat
+    relay: $('[data-lv-o-relay]', box), relayQ: $('[data-lv-o-relay-q]', box), relayName: $('[data-lv-o-relay-name]', box),
+    relaySend: $('[data-lv-o-relay-send]', box), relayMsg: $('[data-lv-o-relay-msg]', box),
   };
-  let timer = null, view = null, busy = false, armed = null;
+  let timer = null, view = null, busy = false, armed = null, relaying = false, dead = false;
   const queued = [];
   const call = async (body) => {
     let res;
@@ -268,8 +271,10 @@ function startOwner() {
       queued.length = 0;
       session.del(KEYS.owner);
       clearTimeout(timer);
+      dead = true;
       o.state.textContent = "This host link doesn't work any more (LIVE_SECRET changed?). Get the new one from the server.";
       for (const b of o.buttons) b.disabled = true;
+      if (o.relaySend) o.relaySend.disabled = true;
       return;
     }
     if (v.error) o.error.textContent = v.error === 'offline_net' ? "You're offline." : "Couldn't reach her show just now. Trying again…";
@@ -292,6 +297,7 @@ function startOwner() {
     show('pause', !v.paused); show('resume', v.paused); show('close', !v.closed); show('open', v.closed);
     for (const b of o.buttons) b.disabled = !v.on && !['open', 'close', 'clear'].includes(b.dataset.lvO);
     box.querySelector('[data-lv-o="skip"]').disabled = !v.now;
+    if (o.relaySend) o.relaySend.disabled = relaying || !v.on;
     o.now.hidden = !v.now;
     if (v.now) {
       o.nowQ.textContent = `${fromText(v.now)}: “${v.now.question}”`;
@@ -349,6 +355,46 @@ function startOwner() {
     if (w.length < 2) { o.error.textContent = 'A blocked word needs 2 letters or more.'; return; }
     o.word.value = '';
     run({ do: 'block', arg: w });
+  });
+
+  // (2026-10-07) a question from X's live chat, passed on by the host: the same checks as everyone's, then her line
+  o.relayQ?.addEventListener('input', () => { if (!relaying) o.relayMsg.textContent = ''; });
+  o.relay?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (relaying || dead) return;
+    const question = o.relayQ.value.trim();
+    const name = o.relayName.value.trim();
+    if ([...question].length < 3) { o.relayMsg.textContent = relayText('question', { why: question ? 'short' : 'empty' }); o.relayQ.focus(); return; }
+    relaying = true;
+    o.relaySend.disabled = true;
+    o.relayMsg.textContent = 'Adding…';
+    let d;
+    try {
+      const res = await fetch('/api/live', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ action: 'relay', question, ...(name ? { name } : {}) }),
+      });
+      d = await res.json().catch(() => ({}));
+      if (res.status === 401) d = { error: 'unauthorized' };
+      else if (!res.ok || d.ok !== true) d = { ...d, error: d.error || 'busy' };
+    } catch {
+      d = { error: 'offline_net' };
+    }
+    relaying = false;
+    o.relaySend.disabled = dead || (view ? !view.on : false);
+    if (d.error === 'unauthorized') {
+      o.relayMsg.textContent = '';
+      run({ do: 'view' });                 // (it says the link stopped working, and switches the controls off)
+      return;
+    }
+    o.relayMsg.textContent = relayText(d.error ?? null, { why: d.why, wait: d.wait, position: d.position });
+    if (!d.error) {
+      o.relayQ.value = '';
+      o.relayName.value = '';
+      run({ do: 'view' });                 // (her line shows it at once)
+      o.relayQ.focus();
+    } else if (d.error === 'name') o.relayName.focus();
+    else o.relayQ.focus();
   });
   document.addEventListener('visibilitychange', () => { if (visible()) poll(); });
   poll();

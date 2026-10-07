@@ -16,6 +16,9 @@ const SEGMENTS = {
   starting: 'about to start', intro: 'saying hi', questions: 'answering questions', diary: 'reading her diary', agi101: 'explaining $AGI',
   clank101: 'explaining clank.trade', chain101: 'talking about Robinhood Chain', safety: 'sharing safety tips', wyr: 'playing “would you rather”',
   tips: 'giving dating tips for degens', chat: 'chatting', brb: 'on a short break', outro: 'saying goodbye',
+  // (2026-10-07: more segments, for longer shows)
+  howto: 'explaining how to ask her', selfcare: 'doing a self-care check', story: 'telling a story', facts: 'sharing fun facts about herself',
+  thisorthat: 'playing “this or that”', flags: 'playing “green flag or red flag”', quiz: 'running a quiz about herself',
 };
 export const segmentText = (id) => SEGMENTS[id] || null;
 
@@ -102,5 +105,29 @@ export function ownerText(v) {
   if (v.end) bits.push('ending: she says goodbye after this');
   return bits.join(' · ');
 }
-// "Mochi · web" / "someone · Telegram"
-export const fromText = (q) => `${q?.name || 'someone'} · ${q?.source === 'telegram' ? 'Telegram' : 'agi1.app'}`;
+// "Mochi · agi1.app" / "someone · Telegram" / "kai · X" (2026-10-07: passed on from X's live chat)
+const FROM = { telegram: 'Telegram', x: 'X' };
+export const fromText = (q) => `${q?.name || 'someone'} · ${FROM[q?.source] || 'agi1.app'}`;
+
+// The host's box for a question from X's live chat (2026-10-07): /api/live's answer to { action: 'relay' }, in plain words
+// for the owner (the X viewer isn't here: "that X name", never "you")
+export function relayText(error, { why = null, wait = null, position = null } = {}) {
+  switch (error) {
+    case null: case undefined: return Number.isInteger(position) && position > 0 ? `Added to her line (#${position}).` : 'Added to her line.';
+    case 'question': return why === 'care' ? 'That sounds like someone going through something heavy, so she won’t read it on a public stream.' : QUESTION[why] || QUESTION.spam;
+    case 'name': return 'That X name can’t go on stream (3 to 24 letters or numbers, nothing crude, nobody real, nothing that passes for her or the team). Leave it empty and she says “someone on X”.';
+    case 'waiting': return 'A question from that X name is already in her line. One at a time: pass on another once she has answered it.';
+    case 'too_fast': return wait ? `One question a minute from the same X name: try again in ${wait} s.` : 'One question a minute from the same X name.';
+    case 'day_cap': return 'That X name has had 5 questions today.';
+    case 'blocked': return 'That one has a blocked word in it.';
+    case 'offline': return "She isn't live right now: pass questions on while her show is on.";
+    case 'ending': return "She's saying goodbye: too late for this show.";
+    case 'closed': return 'New questions are stopped: tap “Take questions again” first.';
+    case 'site_cap': return askError('site_cap');
+    case 'full': return askError('full');
+    case 'bad': case 'not_ready': return 'Run supabase/live.sql again in Supabase first (it ends with live_functions_found = 13), then try again.';
+    case 'not_configured': return "Her show isn't set up on the site (LIVE_SECRET in Vercel, then Redeploy).";
+    case 'offline_net': return "You're offline.";
+    default: return "Couldn't add it just now. Try again in a moment.";
+  }
+}
