@@ -9,18 +9,21 @@
 // the camera moving in on her now and then, and her song. And (2026-10-07, the owner's next list: "add more outfits and rooms,
 // (real places in real life) … vehicles also like robotaxi … she can ride the vehicles as well and go to places. and meet
 // random people … she can eat food in the stream … go to moon, mars. and add more emotions", then "can you add weathers
-// also") her trips (places.js, vehicles.js: she rides there, her picture placed in its seat), the people she meets
-// (people.js), her food (food.js), her emotions (moves.js) and the weather (weather.js).
+// also") her trips (places.js, vehicles.js: she rides there), the people she meets (people.js), her food (food.js), her
+// emotions (moves.js) and the weather (weather.js). And (2026-10-07, the owner after its preview: "so bad", then "Painted
+// art") the paintings of her set where they're there (paint.js): her places, her rooms, the inside of what she rides in,
+// the people she meets and what she wears.
 // Nothing here talks to the network: only this page's own files (and her videos, which the runner serves from its own disk).
 import * as THREE from 'three';
 import { loadAgi1_2D, createAgi1_2D } from '../../../src/stage/agi1-2d.js';
 import { createEffects } from '../../../src/stage/effects.js';
 import { drawRoom, fillAmbient, fillAmbientList, ROOMS } from './rooms.js';
-import { createWardrobe, OUTFITS } from './outfits.js';
+import { createWardrobe, OUTFITS, PAINT_AT } from './outfits.js';
 import { createMoves, ACTIONS, CAM_ZOOM } from './moves.js';
 import { createFx, emojisIn } from './fx.js';
 import { PLACES, TRAVEL, drawPlace, drawTravel } from './places.js';
-import { createVehicles, VEHICLES } from './vehicles.js';
+import { VEHICLES, rideMotion } from './vehicles.js';
+import { paintLoad, isPainted, drawPainting } from './paint.js';
 import { createPeople, PEOPLE } from './people.js';
 import { createWeather, WEATHERS } from './weather.js';
 import { FOODS } from './food.js';
@@ -48,39 +51,60 @@ const ui = {
   caption: $('[data-caption]'), captionText: $('[data-caption-text]'), queue: $('[data-queue]'), song: $('[data-song]'),
   oKicker: $('[data-overlay-kicker]'), oTitle: $('[data-overlay-title]'), oSub: $('[data-overlay-sub]'),
   wxBack: $('[data-wx-back]'), wxFront: $('[data-wx-front]'), flash: $('[data-flash]'), npc: $('[data-npc]'), npcBubble: $('[data-npc-bubble]'),
-  vehBack: $('[data-veh-back]'), vehFront: $('[data-veh-front]'), place: $('[data-place]'), placeName: $('[data-place-name]'), placeCountry: $('[data-place-country]'),
+  place: $('[data-place]'), placeName: $('[data-place-name]'), placeCountry: $('[data-place-country]'),
   route: $('[data-route]'), routeKicker: $('[data-route-kicker]'), routeFrom: $('[data-route-from]'), routeTo: $('[data-route-to]'), routeIcon: $('[data-route-icon]'),
   hint: $('[data-hint]'),
 };
 
 // ---------- her room (rooms.js): drawn once each time she moves, its little moving bits in CSS ----------
+// (2026-10-07, her painted set) or its painting (paint.js), loaded and decoded before it goes up, so a wipe never uncovers
+// the old one; a painting has its own detail, so the little moving bits drawn for the code's rooms aren't on it (but the
+// concert stage's flash on the beat is: its painting has its own light beams, and the code's looked like paper strips on it)
 let room = 'studio';
-function showRoom(id) {
-  room = ROOMS[id] ? id : 'studio';
-  drawRoom(room, ui.bg);
-  fillAmbient(room, ui.amb);
-  set.dataset.room = room;
-  set.dataset.where = 'room';
-  ui.place.hidden = true;
+const ON_PAINTINGS = /^stage-flash\b/;
+async function painting(group, id) {
+  const img = isPainted(group, id) ? await paintLoad(group, id) : null;
+  return img ? () => { drawPainting(img, ui.bg); set.dataset.painted = 'on'; } : null;
 }
-// (2026-10-07) a real place (or the Moon, or Mars): drawn the same way, its moving bits too; and the scene on her way there
-function showPlace(id) {
-  if (!PLACES[id]) return false;
-  room = id;
-  ui.bg.getContext('2d').clearRect(0, 0, W, H);
-  drawPlace(id, ui.bg);
-  fillAmbientList(PLACES[id].ambient || [], ui.amb, id);
-  set.dataset.room = id;
-  set.dataset.where = 'place';
-  return true;
+// what puts a room, a place or the inside of a ride up (once it's ready): drawRoom(id), then draw()
+async function roomDrawer(id) {
+  const r = ROOMS[id] ? id : 'studio', paint = await painting('rooms', r);
+  return () => {
+    room = r;
+    if (paint) { paint(); fillAmbientList(ROOMS[r].ambient.filter((a) => ON_PAINTINGS.test(a.cls)), ui.amb, r); }
+    else { set.dataset.painted = 'off'; drawRoom(r, ui.bg); fillAmbient(r, ui.amb); }
+    set.dataset.room = r;
+    set.dataset.where = 'room';
+    ui.place.hidden = true;
+  };
 }
-function showTravel(kind) {
-  const t = TRAVEL[kind] || TRAVEL.road;
-  ui.bg.getContext('2d').clearRect(0, 0, W, H);
-  drawTravel(kind in TRAVEL ? kind : 'road', ui.bg);
-  fillAmbientList(t.ambient || [], ui.amb, `travel-${kind}`);
-  set.dataset.room = `travel-${kind}`;
-  set.dataset.where = 'travel';
+// (2026-10-07) a real place (or the Moon, or Mars): drawn the same way, its moving bits too
+async function placeDrawer(id) {
+  if (!PLACES[id]) return null;
+  const paint = await painting('places', id);
+  return () => {
+    room = id;
+    if (paint) { paint(); ui.amb.replaceChildren(); }
+    else { set.dataset.painted = 'off'; ui.bg.getContext('2d').clearRect(0, 0, W, H); drawPlace(id, ui.bg); fillAmbientList(PLACES[id].ambient || [], ui.amb, id); }
+    set.dataset.room = id;
+    set.dataset.where = 'place';
+  };
+}
+// on her way: the inside of what she rides in (its painting), else the scene she'd see on the way, drawn
+async function rideDrawer(vehicle, kind) {
+  const paint = await painting('rides', vehicle);
+  return () => {
+    if (paint) { paint(); ui.amb.replaceChildren(); }
+    else {
+      const t = TRAVEL[kind] || TRAVEL.road;
+      set.dataset.painted = 'off';
+      ui.bg.getContext('2d').clearRect(0, 0, W, H);
+      drawTravel(kind in TRAVEL ? kind : 'road', ui.bg);
+      fillAmbientList(t.ambient || [], ui.amb, `travel-${kind}`);
+    }
+    set.dataset.room = `ride-${vehicle}`;
+    set.dataset.where = 'travel';
+  };
 }
 
 // ---------- her ----------
@@ -92,12 +116,12 @@ function showTravel(kind) {
 // her TV, stickers, karaoke, the wipe) are 1% see-through (stage.css).
 // (Drawing her off the page and copying each picture onto a 2D canvas avoided it too, but slowed her down on the server:
 // 9.5 frames a second.)
-let renderer, scene, camera, model, agi, effects, box, perMetre, wardrobe, moves, fx, centre, eyesAt, veh, people, wx;
+let renderer, scene, camera, model, agi, effects, box, perMetre, wardrobe, moves, fx, centre, eyesAt, people, wx;
 let shift = 0;
 const clockNow = () => Date.now() + shift;            // her set's clock: what's heard in the stream right now
 async function load() {
   await document.fonts.ready;
-  showRoom(room);
+  (await roomDrawer(room))();
   // her picture's place on the set (stage.css), and its size in pixels
   box = ui.pic.getBoundingClientRect();
   renderer = new THREE.WebGLRenderer({ canvas: ui.pic, antialias: false, alpha: true, stencil: true, powerPreference: 'high-performance' });
@@ -127,7 +151,6 @@ async function load() {
   fx = createFx({ set, layer: $('[data-fx]'), confetti: $('[data-confetti]'), alertEl: $('[data-alert]'), karaokeEl: $('[data-karaoke]'),
     tvEl: $('[data-tv]'), wipeEl: $('[data-wipe]'), clock: clockNow });
   wardrobe = createWardrobe(model);
-  veh = createVehicles({ back: ui.vehBack, front: ui.vehFront });
   people = createPeople({ el: ui.npc, bubble: ui.npcBubble, clock: clockNow });
   wx = createWeather({ back: ui.wxBack, front: ui.wxFront, flash: ui.flash });
   moves = createMoves({
@@ -136,7 +159,7 @@ async function load() {
     onProp: (what) => wardrobe.hold(what),
     onCam: (kind, seconds) => cam(kind, seconds),
     places,
-    still: () => Boolean(ride || trip),           // (in a vehicle, or hopping in or out: nothing by herself)
+    still: () => Boolean(ride || trip),           // (while she rides: nothing by herself)
   });
   // her brows lift on a surprise (her model's own brow parameters don't move anything); her accessories follow her
   const D = model.core.drawables, ids = Array.from(D.ids);
@@ -332,21 +355,25 @@ function look(where, ms = 0) {
 }
 
 // ---------- her room and her outfit ----------
-function changeRoom(id, { instant = false } = {}) {
+async function changeRoom(id, { instant = false } = {}) {
   if (!ROOMS[id]) return false;
-  if (instant || !fx) { showRoom(id); return true; }
-  fx.wipe(() => showRoom(id));
+  const draw = await roomDrawer(id);
+  if (instant || !fx) { draw(); return true; }
+  fx.wipe(draw);
   return true;
 }
-function changeOutfit(id, { instant = false } = {}) {
+async function changeOutfit(id, { instant = false } = {}) {
   if (!OUTFITS[id]) return false;
-  if (instant) { wardrobe.wear(id); return true; }
+  // (2026-10-07) its painted accessories, loaded first (paint.js)
+  const ready = wardrobe.prepare(id);
+  if (instant) { await ready; wardrobe.wear(id); return true; }
   // a hop and sparkles, and her new colors as she lands
   const at = headAt(-0.1);
   fx.sparkle({ x: at.x, y: at.y }, 9);
   fx.sparkle({ x: at.x - 120, y: at.y + 160 }, 7);
   agi.react('tap');
-  setTimeout(() => wardrobe.wear(id), 220);
+  await Promise.all([ready, wait(220)]);
+  wardrobe.wear(id);
   return true;
 }
 
@@ -435,121 +462,54 @@ function markerFrame(now) {
 }
 
 
-// ---------- (2026-10-07) her trips: a vehicle pulls up, she hops in, it takes her there ----------
-// While she rides, her picture is placed in its seat every frame (her eyes on the seat, scaled down) and cut below its
-// sill (a scissor on her canvas: her legs never hang out of a scooter or a balloon's basket). Its body is behind her while
-// it pulls up, and over her once she's in.
-const BAR_TOP = H - 64;
-let ride = null;                 // { from: { ex, ey, s }, t, ms, out } while she hops in or out; { seated: true } in her seat
+// ---------- (2026-10-07) her trips: she rides there ----------
+// (2026-10-07, her painted set; the owner after her first trips' preview: "so bad") A wipe, and she's in it: the painting of
+// its inside behind her (the seat she rides in, the view out of its window), the route card, and the ride's own motion: the
+// picture and her moving together, like a camera riding along (a car's bumps, a train's rhythm, a boat's roll, a rocket's
+// rumble), slowly closer. Then a wipe, and she's there. (Until then a vehicle drawn in code pulled up, she hopped into its
+// window and it drove off.)
+let ride = null;                 // { vehicle, kind, t } while she rides
 let trip = null;                 // { vehicle, to, kind } from tripGo until tripArrive is done
-const easeIO = (k) => (k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-// where it stands on the set (its size k, its top y): on the ground at the bar, or in the sky
-function vehSpot(id) {
-  const v = VEHICLES[id];
-  const k = id === 'plane' ? 0.78 : id === 'bus' || id === 'train' || id === 'jeepney' ? 0.86 : 1;
-  let y;
-  if (v.wheels.length) y = BAR_TOP + 6 - Math.max(...v.wheels.map(([, wy, r]) => wy + r)) * k;
-  else if (id === 'boat') y = BAR_TOP - v.h * k + 40;
-  else if (id === 'balloon') y = BAR_TOP - v.sill * k - 30;
-  else if (id === 'rocket') y = BAR_TOP - v.h * k + 30;
-  else if (id === 'cablecar') y = 40;
-  else y = (BAR_TOP - v.h * k) / 2 + 30;
-  return { k, y };
-}
-// where she is right now (set pixels): her eyes, her size
-function herNow() {
-  if (ride?.seated) { const st = veh.seat(); return { ex: st.x, ey: st.y, s: st.s }; }
-  const f = moves.figure;
-  return { ex: FRAME.x + f.x * perMetre, ey: FRAME.eyes - f.y * perMetre, s: 1 };
-}
-// the hop: from where she is into the seat (or out of it to her place), an arc, her picture's cut sliding to the sill
-function hop(into, ms = 900) {
-  return new Promise((done) => { ride = { from: herNow(), t: 0, ms, into, done }; });
-}
-function rideFrame(dt) {
-  if (!ride) return null;
-  if (ride.seated) { const st = veh.seat(); return { ex: st.x, ey: st.y, s: st.s, cut: st.sill }; }
-  ride.t += dt * 1000;
-  const p = Math.min(1, ride.t / ride.ms), e = easeIO(p);
-  const st = veh.seat() || { x: ride.from.ex, y: ride.from.ey, s: 1, sill: BAR_TOP };
-  const to = ride.into ? { ex: st.x, ey: st.y, s: st.s } : { ex: FRAME.x, ey: FRAME.eyes, s: 1 };
-  const from = ride.into ? ride.from : { ex: st.x, ey: st.y, s: st.s };
-  const arc = Math.sin(p * Math.PI) * (ride.into ? 110 : 90);
-  const out = { ex: from.ex + (to.ex - from.ex) * e, ey: from.ey + (to.ey - from.ey) * e - arc, s: from.s + (to.s - from.s) * e };
-  // its body comes over her halfway (she's in), or goes behind her (she's out); her cut slides with it
-  const inside = ride.into ? p >= 0.5 : p < 0.5;
-  if (veh.over !== inside) veh.layer(inside);
-  const k = ride.into ? smoothK(0.35, 0.7, p) : 1 - smoothK(0.3, 0.65, p);
-  out.cut = BAR_TOP + (st.sill - BAR_TOP) * k;
-  if (p >= 1) {
-    const d = ride.done;
-    ride = ride.into ? { seated: true } : null;
-    d(true);
-  }
-  return out;
-}
-const smoothK = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-// tripGo({ vehicle, kind, from, to, icon }): it pulls up, she hops in, it drives off, then the scene on her way (and the
-// route card). Resolves when she's on her way.
+// tripGo({ vehicle, kind, from, to, icon, seconds }): a wipe into it, the route card. Resolves when she's on her way.
 async function tripGo({ vehicle = 'robotaxi', kind = null, from = 'home', to = '', icon = '➜', seconds = 14 } = {}) {
   if (!VEHICLES[vehicle] || trip) return false;
-  const v = VEHICLES[vehicle], sp = vehSpot(vehicle);
-  trip = { vehicle, kind: kind || v.kind, to };
+  const k = kind || VEHICLES[vehicle].kind;
+  trip = { vehicle, kind: k, to };
   ui.card.hidden = true;
   stopTv();
   moves.move('center');
   camState.tz = 1;
-  await wait(700);
-  const stopX = 640 - v.seat.x * sp.k;
-  const fly = v.kind === 'space' || vehicle === 'balloon', air = v.kind === 'sky' && !fly;
-  veh.show(vehicle, { x: fly ? stopX : 1320, y: fly ? -v.h * sp.k - 40 : air ? sp.y - 220 : sp.y, k: sp.k, over: false });
-  await veh.moveTo(stopX, sp.y, fly ? 2000 : 1700);
-  await hop(true, 950);
-  await wait(250);
-  // off it goes, with her in it
-  if (fly) await veh.moveTo(stopX, -v.h * sp.k - 60, 1500);
-  else await veh.moveTo(-v.w * sp.k - 80, air ? sp.y - 260 : sp.y, 1700);
-  // the scene on her way
-  await new Promise((r) => fx.wipe(() => {
-    showTravel(trip.kind);
-    const sp2 = vehSpot(vehicle);
-    veh.show(vehicle, { x: (W - v.w * sp2.k) / 2 + (vehicle === 'plane' ? 40 : 90), y: sp2.y, k: sp2.k, over: true });
-    veh.travel({ bob: v.kind === 'sea' ? 0.5 : v.kind === 'space' ? 2.2 : 1.4, speed: 700 });
+  const draw = await rideDrawer(vehicle, k);
+  await fx.wipe(() => {
+    placeChip(null);
+    draw();
+    ride = { vehicle, kind: k, t: 0 };
+    set.dataset.ride = vehicle;
     routeCard({ from, to, icon, seconds });
-    r();
-  }));
+  });
   return true;
 }
-// tripArrive({ to, name, country }): the place, it pulls in, she hops out where she always stands, it leaves
+// tripArrive({ to, name, country }): a wipe, and she's there (its chip next to her name)
 async function tripArrive({ to, name = '', country = '' } = {}) {
   if (!trip || !PLACES[to]) return false;
-  const vehicle = trip.vehicle, v = VEHICLES[vehicle], sp = vehSpot(vehicle);
-  const fly = v.kind === 'space' || vehicle === 'balloon', air = v.kind === 'sky' && !fly;
-  const stopX = 600 - v.seat.x * sp.k;
-  await new Promise((r) => fx.wipe(() => {
+  const draw = await placeDrawer(to);
+  await fx.wipe(() => {
     routeCard(null);
-    veh.stopTravel();
-    showPlace(to);
-    veh.show(vehicle, { x: fly ? stopX : -v.w * sp.k - 60, y: fly ? -v.h * sp.k - 40 : air ? sp.y - 220 : sp.y, k: sp.k, over: true });
-    r();
-  }));
-  await veh.moveTo(stopX, sp.y, fly ? 2000 : 1800);
-  await hop(false, 900);
-  placeChip({ name: name || PLACES[to].name, country: country || PLACES[to].country });
-  await wait(300);
-  if (fly) await veh.moveTo(stopX, -v.h * sp.k - 60, 1500);
-  else await veh.moveTo(W + 60, air ? sp.y - 240 : sp.y, 1500);
-  veh.hide();
+    ride = null;
+    delete set.dataset.ride;
+    ui.bg.style.transform = '';
+    draw();
+    placeChip({ name: name || PLACES[to].name, country: country || PLACES[to].country });
+  });
   trip = null;
   return true;
 }
-// home again (or another room): no vehicle, a wipe (her trips home are quick: she "teleports" back to her room)
+// home again (or another room): a wipe (her trips home are quick: she "teleports" back to her room)
 function goHome(id = 'studio') {
   if (ride) return false;
   trip = null;
-  veh.hide();
   routeCard(null);
   placeChip(null);
   return changeRoom(ROOMS[id] ? id : 'studio');
@@ -580,10 +540,11 @@ async function meet(id) {
   ui.card.hidden = true;
   set.dataset.mode = 'meet';
   moves.move('right');
-  people.show(id, { x: -330 });
-  await people.walkTo(80, 1900);
+  await people.show(id, { x: -460 });
+  await people.walkTo(60, 1900);
   people.wave(1.6);
-  ui.npcBubble.style.left = `${80 + 250}px`;
+  // their bubble beside their head (a painted person is a little wider than one drawn in code)
+  ui.npcBubble.style.left = `${60 + Math.round(people.w * 0.8)}px`;
   return true;
 }
 // their line, in step with their voice: { startAt, step, env, text, seconds }
@@ -593,7 +554,7 @@ async function bye() {
   people.wave(1.4);
   await wait(700);
   ui.npcBubble.hidden = true;
-  await people.walkTo(-340, 1700);
+  await people.walkTo(-people.w - 60, 1700);
   people.hide();
   if (set.dataset.mode === 'meet') set.dataset.mode = 'none';
   moves.move('center');
@@ -652,38 +613,26 @@ function frame(t) {
   markerFrame(now);
   camFrame(dt, t);
   agi.update(dt);
-  veh.frame(dt);
-  const r = rideFrame(dt);
-  if (r) {
-    // in a vehicle: her eyes on its seat, her size its, her picture cut at its sill
-    model.holder.position.set((r.ex - FRAME.x) / perMetre, eyesAt - r.s * eyesAt - (r.ey - FRAME.eyes) / perMetre, 0);
-    model.holder.scale.set(r.s, r.s, 1);
-  } else {
-    const f = moves.figure;
-    model.holder.position.set(f.x, f.y, 0);
-    model.holder.scale.set(f.sx, f.sy, 1);
+  // where she is (moves.js); while she rides, she and the picture behind her move together with the ride (vehicles.js)
+  const f = moves.figure;
+  let rx = 0, ry = 0;
+  if (ride) {
+    ride.t += dt;
+    const m = rideMotion(ride.kind, ride.t);
+    rx = m.x; ry = m.y;
+    ui.bg.style.transform = `translate(${m.x.toFixed(2)}px, ${m.y.toFixed(2)}px) rotate(${m.r.toFixed(3)}deg) scale(${(1.05 + Math.min(1, ride.t / 16) * 0.03).toFixed(4)})`;
   }
+  model.holder.position.set(f.x + rx / perMetre, f.y - ry / perMetre, 0);
+  model.holder.scale.set(f.sx, f.sy, 1);
   effects.update(dt);
   fx.frame(dt, now);
   people.frame(dt);
   wx.frame(dt);
   hintFrame(Date.now());
   fadeHearts();
-  if (r && r.cut < box.bottom - 1) {
-    // only above the cut: the canvas cleared whole first (a scissor limits the clear too)
-    const size = renderer.getSize(v2), k = size.y / box.height, hPx = Math.max(0, Math.round((r.cut - box.top) * k));
-    renderer.setScissorTest(false);
-    renderer.clear();
-    renderer.setScissorTest(true);
-    renderer.setScissor(0, size.y - hPx, size.x, hPx);
-    renderer.autoClear = false;
-    renderer.render(scene, camera);
-    renderer.autoClear = true;
-    renderer.setScissorTest(false);
-  } else renderer.render(scene, camera);
+  renderer.render(scene, camera);
   drawn += 1;
 }
-const v2 = new THREE.Vector2();
 
 // her hearts fade out as they come near her picture's left edge (the set's own edge since 2026-10-07: never a heart cut in two)
 const EDGE_FADE = 90, at = new THREE.Vector3();
@@ -731,19 +680,22 @@ window.studio = {
   // (2026-10-07) her trips, the people she meets, her food, the weather, what to try
   tripGo, tripArrive, home: (id) => goHome(id),
   // (back at a place she was visiting, after her song on the concert stage: a wipe, like a room)
-  place: (id, o = {}) => {
+  place: async (id, o = {}) => {
     if (!PLACES[id] || ride) return false;
-    const go = () => { routeCard(null); showPlace(id); if (o.chip !== false) placeChip({ name: PLACES[id].name, country: PLACES[id].country }); };
+    const draw = await placeDrawer(id);
+    const go = () => { routeCard(null); draw(); if (o.chip !== false) placeChip({ name: PLACES[id].name, country: PLACES[id].country }); };
     if (o.instant || !fx) go(); else fx.wipe(go);
     return true;
   },
   meet, npcSay, bye, eat, weather,
+  // (2026-10-07, her painted set) where a painted accessory sits, changed on the set while it's being tuned (outfits.js)
+  paintAt: (key, v) => { PAINT_AT[key] = { ...(PAINT_AT[key] || {}), ...v }; return PAINT_AT[key]; },
   lightning: () => wx.lightning(),
   hint,
   get state() {
     return { room, outfit: wardrobe?.current, held: wardrobe?.held, action: moves?.action, dancing: moves?.dancing, routine: moves?.routine,
       singing, zoom: camera?.zoom, pops: fx?.popping, mode: set.dataset.mode || 'none', x: moves?.figure.x, moving: moves?.moving,
-      where: set.dataset.where || 'room', riding: Boolean(ride || trip), vehicle: veh?.id || null, seated: Boolean(ride?.seated), npc: people?.id || null,
+      where: set.dataset.where || 'room', riding: Boolean(ride || trip), vehicle: trip?.vehicle || null, seated: Boolean(ride), painted: set.dataset.painted === 'on', npc: people?.id || null,
       weather: wx?.id || null, food: food.id, foodStage: food.stage, carrying: moves?.carrying || null, emote: moves?.emote?.kind || null };
   },
 };

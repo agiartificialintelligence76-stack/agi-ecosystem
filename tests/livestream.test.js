@@ -907,9 +907,9 @@ test('her picture: the whole width of the set, ending at the bar, nothing plain 
   assert.match(js, /box = ui\.pic\.getBoundingClientRect\(\);/);
   assert.match(js, /renderer\.setSize\(Math\.round\(\(box\.width \* DRAW\) \/ H\), Math\.round\(\(box\.height \* DRAW\) \/ H\), false\);/);
   assert.match(js, /camera\.setViewOffset\(wide, H, wide \/ 2 - FRAME\.x \+ box\.left, box\.top, box\.width, box\.height\)/);
-  // (2026-10-07, her trips: the people she meets, the weather and the hints too; her picture cut at a vehicle's sill while
-  // she rides, else drawn whole)
-  assert.match(js, /effects\.update\(dt\);\s*fx\.frame\(dt, now\);\s*people\.frame\(dt\);\s*wx\.frame\(dt\);\s*hintFrame\(Date\.now\(\)\);\s*fadeHearts\(\);\s*if \(r && r\.cut < box\.bottom - 1\) \{[\s\S]*?renderer\.render\(scene, camera\);[\s\S]*?\} else renderer\.render\(scene, camera\);/);
+  // (2026-10-07, her trips: the people she meets, the weather and the hints too; and since her painted set she's drawn
+  // whole while she rides too: no cut at a vehicle's sill)
+  assert.match(js, /effects\.update\(dt\);\s*fx\.frame\(dt, now\);\s*people\.frame\(dt\);\s*wx\.frame\(dt\);\s*hintFrame\(Date\.now\(\)\);\s*fadeHearts\(\);\s*renderer\.render\(scene, camera\);\s*drawn \+= 1;/);
   // drawn lighter for a server without a graphics card (2026-10-06: drawing her was two thirds of its processor): her
   // texture at the size she's shown (no mipmaps), her arms with one level of finer mesh (src/stage/agi1-2d.js)
   assert.match(js, /const ARM_REFINE_LIVE = \{ upper: 1, fore: 1, hand: 1, sleeve: 1 \};/);

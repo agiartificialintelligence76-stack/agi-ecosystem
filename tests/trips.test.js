@@ -17,7 +17,7 @@ import { DESTINATIONS, DESTINATION_IDS, FOODS, FOOD_IDS, WEATHERS, WEATHER_IDS, 
   ACT_IDS, COOLDOWN, actOf, actsPrompt } from '../server/live-acts.js';
 import { sceneOf, meetAnswer, SCENE_CHAT } from '../server/live.js';
 import { PLACES, PLACE_IDS, TRAVEL } from '../tools/live/page/places.js';
-import { VEHICLES, VEHICLE_IDS } from '../tools/live/page/vehicles.js';
+import { VEHICLES, VEHICLE_IDS, rideMotion } from '../tools/live/page/vehicles.js';
 import { PEOPLE as NPC, PEOPLE_IDS as NPC_IDS } from '../tools/live/page/people.js';
 import { FOODS as FOOD_DEFS, FOOD_IDS as FOOD_DEF_IDS, FOOD_SCALE } from '../tools/live/page/food.js';
 import { WEATHERS as WX, WEATHER_IDS as WX_IDS } from '../tools/live/page/weather.js';
@@ -65,17 +65,27 @@ test('her places: the site\'s list and her set\'s the same; each with its outfit
   for (const id of PLACE_OUTFITS) for (const k of Object.keys(LOOKS[id])) assert.ok(['name', 'shirt', 'shorts', 'shoes', 'acc', 'colors'].includes(k), `${id}: ${k}`);
 });
 
-test('her vehicles: each in two layers (behind her and in front of her), a seat and a sill inside it, its own scene on the way', () => {
+test('her vehicles: what each is called and how it travels (its sounds and lines on the way, the scene drawn on the way until its inside is painted), and how a ride moves: small and smooth', () => {
   assert.ok(VEHICLE_IDS.includes('robotaxi'), 'the owner\'s robotaxi');
   for (const id of VEHICLE_IDS) {
     const v = VEHICLES[id];
-    assert.ok(typeof v.back === 'function' && typeof v.front === 'function', id);
-    assert.ok(v.seat.x > 0 && v.seat.x < v.w && v.seat.y > 0 && v.seat.y < v.sill && v.sill < v.h, `${id}: her seat inside it, its sill below her eyes`);
-    assert.ok(v.seat.s >= 0.3 && v.seat.s <= 0.6, `${id}: her size in it`);
-    assert.ok(TRAVEL[v.kind], `${id}: its scene on the way (${v.kind})`);
+    assert.ok(v.name && TRAVEL[v.kind], `${id}: a name, and its scene on the way (${v.kind})`);
     assert.ok(T.ICON[id], id);
   }
-  // no brands or logos: her own "AGI-1" and a heart are its only marks
+  // (2026-10-07, her painted set) she rides inside it: the picture behind her and her move together, like a camera riding
+  // along: never more than a few pixels or a degree, and smooth (a train's rail joints the only small knock)
+  for (const kind of Object.keys(TRAVEL)) {
+    let last = rideMotion(kind, 0), most = 0;
+    for (let t = 1 / 30; t < 20; t += 1 / 30) {
+      const m = rideMotion(kind, t);
+      assert.ok(Math.abs(m.x) <= 6 && Math.abs(m.y) <= 6 && Math.abs(m.r) <= 1, `${kind} at ${t.toFixed(2)} s: ${JSON.stringify(m)}`);
+      most = Math.max(most, Math.hypot(m.x - last.x, m.y - last.y));
+      last = m;
+    }
+    assert.ok(most <= (kind === 'space' ? 3 : 2.5), `${kind}: ${most.toFixed(2)} px from one frame to the next at most`);
+    assert.ok(Object.values(rideMotion(kind, 3.3)).some((x) => Math.abs(x) > 0.05), `${kind}: it moves`);
+  }
+  // no brands or logos
   const src = read('tools/live/page/vehicles.js');
   assert.doesNotMatch(src, /\b(uber|lyft|waymo|tesla|boeing|airbus|spacex|nasa)\b/i);
 });
@@ -400,6 +410,9 @@ test('the runner: her trips (a vehicle, the way, her hello in the language there
   assert.match(src, /const back = \{ room: look\.room, outfit: look\.outfit, place: where\.place, since: where\.since \};/);
   assert.match(src, /if \(back\.place\) await backTo\(back\.place, back\.since\);\s*else await goRoom\(back\.room, \{ line: false \}\);/);
   assert.match(src, /const backTo = async \(id, since = Date\.now\(\)\) => \{[\s\S]*?await studio\('place', id\);\s*where\.place = id; where\.since = since;\s*look\.room = null;\s*surround\(id\);/);
+  // (the painted set's first recording: rain on the rooftop, then her song, and she sang on the concert stage holding her
+  // umbrella) the weather stops whenever she changes rooms, not only when she leaves a place
+  assert.match(src, /const goRoom = async \(id, \{ line = true \} = \{\}\) => \{[\s\S]*?where\.place = null;\s*await stopWeather\(\);\s*sfx\('whoosh'/);
 });
 
 // ---------- her set's page ----------
@@ -408,25 +421,29 @@ test('her set\'s page: her trips, the people she meets, her food, the weather an
   for (const fn of ['tripGo', 'tripArrive', 'meet', 'npcSay', 'bye', 'eat', 'weather', 'hint']) assert.match(js, new RegExp(`\\b${fn}\\b[,:]`), fn);
   assert.match(js, /lightning: \(\) => wx\.lightning\(\)/);
   // back at a place (after her song): a wipe, its chip, never while she rides
-  assert.match(js, /place: \(id, o = \{\}\) => \{\s*if \(!PLACES\[id\] \|\| ride\) return false;[\s\S]*?if \(o\.instant \|\| !fx\) go\(\); else fx\.wipe\(go\);/);
+  assert.match(js, /place: async \(id, o = \{\}\) => \{\s*if \(!PLACES\[id\] \|\| ride\) return false;\s*const draw = await placeDrawer\(id\);[\s\S]*?if \(o\.instant \|\| !fx\) go\(\); else fx\.wipe\(go\);/);
   // (her first trip recording: "Ask me at agi1.app/live" wrapped onto two lines next to the questions waiting) the bar never
   // wraps: the hint gives way, hidden when it doesn't fit (never cut off), checked again when the questions waiting change
   assert.match(js, /function fitHint\(\) \{\s*ui\.hint\.classList\.toggle\('is-cut', Boolean\(ui\.hint\.textContent\) && ui\.hint\.scrollWidth > ui\.hint\.clientWidth \+ 1\);/);
   assert.match(js, /if \(ui\.queue\.textContent !== text\) \{ ui\.queue\.textContent = text; fitHint\(\); \}/);
-  // in a vehicle: her picture in its seat, cut at its sill (a scissor: only her canvas, never a copy of it)
-  assert.match(js, /renderer\.setScissor\(0, size\.y - hPx, size\.x, hPx\);/);
-  assert.match(js, /model\.holder\.position\.set\(\(r\.ex - FRAME\.x\) \/ perMetre, eyesAt - r\.s \* eyesAt - \(r\.ey - FRAME\.eyes\) \/ perMetre, 0\)/);
+  // (2026-10-07, her painted set) riding: a wipe into the painting of its inside (loaded and decoded first, so a wipe never
+  // uncovers the old picture), the route card; she and the picture behind her move with the ride; a wipe, and she's there
+  assert.match(js, /const draw = await rideDrawer\(vehicle, k\);\s*await fx\.wipe\(\(\) => \{[\s\S]*?draw\(\);\s*ride = \{ vehicle, kind: k, t: 0 \};/);
+  assert.match(js, /const draw = await placeDrawer\(to\);\s*await fx\.wipe\(\(\) => \{[\s\S]*?ride = null;[\s\S]*?ui\.bg\.style\.transform = '';\s*draw\(\);/);
+  assert.match(js, /const m = rideMotion\(ride\.kind, ride\.t\);[\s\S]*?ui\.bg\.style\.transform = `translate\(/);
+  assert.match(js, /model\.holder\.position\.set\(f\.x \+ rx \/ perMetre, f\.y - ry \/ perMetre, 0\);/, 'she moves with the picture behind her');
+  assert.doesNotMatch(js, /setScissor|createVehicles/, 'no vehicle drawn in code any more, no cut at its sill');
   assert.match(js, /if \(ride \|\| trip\) camState\.tz = 1;/, 'no camera push-ins while she rides');
   // her captions and her card say which language
   assert.match(js, /ui\.caption\.lang = /);
   assert.match(js, /ui\.card\.lang = /);
   const html = read('tools/live/page/index.html');
-  // behind her: the weather's sky, the people she meets, a vehicle's inside; over her: its body, the rain
+  // behind her: the weather's sky, the people she meets; over her: the rain
   const at = (k) => html.indexOf(k);
-  assert.ok(at('data-wx-back') < at('data-pic') && at('data-npc') < at('data-pic') && at('data-veh-back') < at('data-pic'));
-  assert.ok(at('data-veh-front') > at('data-pic') && at('data-wx-front') > at('data-pic'));
+  assert.ok(at('data-wx-back') < at('data-pic') && at('data-npc') < at('data-pic'));
+  assert.ok(at('data-wx-front') > at('data-pic'));
+  assert.doesNotMatch(html, /data-veh/);
   const css = read('tools/live/page/stage.css');
-  assert.match(css, /\n\.veh-front \{ opacity: 0\.99; \}/, 'its body over her: a little see-through');
   assert.match(css, /\n\.wx-front \{[^}]*opacity: 0\.99;/, 'the rain over her: a little see-through');
   assert.match(css, /\n\.flash \{[^}]*background: rgba\(255, 255, 255, 0\.8\)/, 'lightning: never plain white');
   for (const sel of ['.npc-bubble', '.place-chip', '.route']) assert.match(css, new RegExp(`\\n${sel.replace(/\./g, '\\.')} \\{[^}]*background: rgba\\(`), sel);

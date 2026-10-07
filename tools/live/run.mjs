@@ -725,7 +725,10 @@ async function runShow(a) {
     const goRoom = async (id, { line = true } = {}) => {
       if (!ROOM_NAMES[id] || (id === look.room && !where.place) || stopping) return false;
       state.segment = 'room';
-      if (where.place) { where.place = null; await stopWeather(); }
+      // (the weather stays where it was: going from the rooftop's rain to the concert stage, her umbrella went along until
+      // the painted set's first recording showed it)
+      where.place = null;
+      await stopWeather();
       sfx('whoosh', { gain: 0.8 });
       await studio('room', id);                     // the comic wipe: the room changes midway (about a second)
       look.room = id;

@@ -1,8 +1,11 @@
 // AGI-1's live show (2026-10-07, the owner: "meet random people talk to them what the chat said"): the people she meets on
 // her trips. Made-up characters of her show (never real people: server/live-acts.js PEOPLE has who they are, the same
-// names), drawn in code in the set's comic look, each with a voice of their own (Google's ready-made voices, never hers:
-// tools/live/voice.js). They walk in on the left of her set (behind her picture: she's nearer), talk (their mouth follows
-// their voice, their words in a speech bubble), wave, and walk out.
+// names), each with a voice of their own (Google's ready-made voices, never hers: tools/live/voice.js). They come in on
+// the left of her set (behind her picture: she's nearer), talk (their words in a speech bubble), wave, and go.
+// (2026-10-07, her painted set; the owner after the first preview of her trips: "so bad") Each is a painting where it's
+// there (paint.js: painted once by Google's image AI, cut out of its green background), moving the way a picture of
+// someone can: in and out, a breath, a bounce as they talk, a little tilt for a wave. Else drawn in code as before.
+import { isPainted, paintLoad } from './paint.js';
 // Each: who they look like (their skin, hair, clothes, a hat or a thing they carry), their voice (a name and how it sounds),
 // and what they're called on screen.
 export const PEOPLE = {
@@ -184,20 +187,34 @@ function drawRobot(g, pose) {
 
 // ---------- on the set ----------
 // el: their place on the set (stage.css .npc: behind her picture), with its canvas; bubble: their speech bubble
+// how tall a painted person is on her set (pixels: their head a little lower than hers, cut at the waist by the bar)
+export const PAINTED_H = 540;
 export function createPeople({ el, bubble, clock = () => Date.now() }) {
   const canvas = el.querySelector('canvas');
   const g = canvas.getContext('2d');
   const name = bubble.querySelector('[data-npc-name]'), words = bubble.querySelector('[data-npc-text]');
-  let cur = null;                  // { id, x, tween, t, blink, nextBlink, wave, speech, step }
-  function show(id, { x = -320 } = {}) {
+  let pic = null;                  // their painting on the set (an <img>), while it's them
+  let cur = null;                  // { id, x, tween, t, blink, nextBlink, wave, speech, step, painted, w }
+  // their painting, loaded and decoded before they come in (null: drawn in code)
+  const ready = (id) => (isPainted('people', id) ? paintLoad('people', id) : Promise.resolve(null));
+  async function show(id, { x = -320 } = {}) {
     if (!PEOPLE[id]) return false;
-    cur = { id, x, tween: null, t: 0, blink: 0, nextBlink: 1.5, wave: 0, waveUntil: 0, speech: null, step: 0 };
+    const img = await ready(id);
+    cur = { id, x, tween: null, t: 0, blink: 0, nextBlink: 1.5, wave: 0, waveUntil: 0, speech: null, step: 0, painted: Boolean(img), w: 300 };
+    if (img) {
+      if (!pic) { pic = document.createElement('img'); pic.className = 'npc-pic'; pic.alt = ''; el.append(pic); }
+      pic.src = img.src;
+      cur.w = Math.round((PAINTED_H * img.naturalWidth) / img.naturalHeight);
+      pic.style.width = `${cur.w}px`;
+      pic.style.height = `${PAINTED_H}px`;
+    }
+    el.classList.toggle('is-painted', cur.painted);
     el.hidden = false;
     name.textContent = `${PEOPLE[id].name} · ${PEOPLE[id].role}`;
     place();
     return true;
   }
-  function hide() { cur = null; el.hidden = true; bubble.hidden = true; }
+  function hide() { cur = null; el.hidden = true; bubble.hidden = true; el.classList.remove('is-painted'); if (pic) pic.style.transform = ''; }
   function walkTo(x, ms = 1600) {
     if (!cur) return Promise.resolve(false);
     return new Promise((done) => { cur.tween = { x0: cur.x, x1: x, t: 0, ms, done }; });
@@ -235,9 +252,18 @@ export function createPeople({ el, bubble, clock = () => Date.now() }) {
       if (t >= 0) talk = cur.speech.env[Math.floor(t / cur.speech.step)] ?? 0;
       if (now > cur.speech.end + 600) { cur.speech = null; bubble.hidden = true; }
     }
-    drawPerson(g, cur.id, { t: cur.t, blink: cur.blink > 0 ? 1 : 0, talk, wave: cur.wave, step: walking ? cur.step : 0 });
+    if (cur.painted) {
+      // a painting: a breath, a bob as they come and go, a bounce with their voice, a tilt and a hop for a wave
+      cur.talk = (cur.talk || 0) + (talk - (cur.talk || 0)) * Math.min(1, dt * 14);
+      const breath = 1 + 0.007 * Math.sin(cur.t * 1.7);
+      const bob = walking ? Math.abs(Math.sin(cur.step * Math.PI * 2)) * 7 : 0;
+      const hopY = cur.wave * Math.abs(Math.sin(cur.t * 7)) * 6;
+      const y = -(bob + hopY + cur.talk * 5);
+      const tilt = cur.wave * 1.6 * Math.sin(cur.t * 7) + cur.talk * 0.8;
+      pic.style.transform = `translateY(${y.toFixed(1)}px) rotate(${tilt.toFixed(2)}deg) scaleY(${breath.toFixed(4)})`;
+    } else drawPerson(g, cur.id, { t: cur.t, blink: cur.blink > 0 ? 1 : 0, talk, wave: cur.wave, step: walking ? cur.step : 0 });
     place();
   }
-  return { show, hide, walkTo, say, wave, frame, get id() { return cur?.id || null; }, get x() { return cur?.x ?? null; } };
+  return { show, hide, walkTo, say, wave, frame, ready, get id() { return cur?.id || null; }, get x() { return cur?.x ?? null; }, get w() { return cur?.w ?? 300; } };
 }
 export const PERSON_SIZE = { w: PW, h: PH };

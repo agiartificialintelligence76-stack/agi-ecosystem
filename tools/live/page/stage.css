@@ -263,17 +263,17 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .flash.go { animation: bolt 0.7s ease-out; }
 @keyframes bolt { 0% { opacity: 0.85; } 10% { opacity: 0.05; } 18% { opacity: 0.6; } 100% { opacity: 0; } }
 
-/* a vehicle: what's behind her (its inside) under her picture, its body over it (a little see-through) */
-.veh { position: absolute; left: 0; top: 0; pointer-events: none; transform-origin: 0 0; will-change: transform; }
-.veh[hidden] { display: none; }
-.veh-front { opacity: 0.99; }
-.veh-pic { position: absolute; left: 0; top: 0; display: block; }
-.veh-wheel { position: absolute; display: block; }
+/* (2026-10-07, her painted set) riding: the painting of its inside moves with the ride (stage.js, vehicles.js rideMotion) */
+.set[data-ride] .set-bg { will-change: transform; transform-origin: 50% 55%; }
 
 /* the people she meets: behind her picture (she's nearer), their speech bubble beside their head */
 .npc { position: absolute; left: 0; bottom: var(--bar); width: 300px; height: 560px; pointer-events: none; will-change: transform; }
 .npc[hidden] { display: none; }
 .npc canvas { display: block; width: 300px; height: 560px; }
+/* (2026-10-07) a painted person: their picture instead of the drawing, cut at the waist by the bar */
+.npc.is-painted { width: auto; height: auto; }
+.npc.is-painted canvas { display: none; }
+.npc-pic { display: block; transform-origin: 50% 100%; }
 .npc-bubble { position: absolute; left: 310px; top: 104px; max-width: 430px; padding: 12px 18px 14px; border: 4px solid var(--ink); border-radius: 22px;
   background: rgba(255, 255, 255, 0.99); box-shadow: 0 7px 0 -2px var(--ink); animation: pop-in 0.25s cubic-bezier(.2, 1.4, .4, 1) both; z-index: 4; }
 .npc-bubble::before { content: ''; position: absolute; left: -22px; top: 30px; border: 12px solid transparent; border-right: 14px solid var(--ink); }
@@ -333,7 +333,7 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .amb .lantern.c1 { background: #ff9a1f; box-shadow: 0 0 18px 4px rgba(255, 154, 31, 0.45); }
 .amb .lantern.c2 { background: #ffd23f; box-shadow: 0 0 18px 4px rgba(255, 210, 63, 0.45); }
 
-/* on her way: the world passes by while her vehicle bobs in place */
+/* on her way (the scene drawn on the way while the inside of what she rides in has no painting yet): the world passes by */
 .amb .mv-road { left: 0; width: 2560px; height: 10px; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0 70px, rgba(255, 255, 255, 0) 70px 140px);
   animation: road 0.6s linear infinite; }
 @keyframes road { to { transform: translateX(-140px); } }

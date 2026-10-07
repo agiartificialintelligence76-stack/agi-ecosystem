@@ -3,7 +3,8 @@
      tools/live/run.mjs builds it (into tools/live/dist) and shows it in a browser window on the owner's server, which ffmpeg
      sends to X. tools/live/page/stage.js runs it (window.studio). Since 2026-10-07 also her rooms (rooms.js), her outfits
      (outfits.js), her moves (moves.js) and her effects (fx.js); and her trips (places.js, vehicles.js), the people she meets
-     (people.js), her food (food.js) and the weather (weather.js). -->
+     (people.js), her food (food.js) and the weather (weather.js); and the paintings of her set where they're there
+     (paint.js, art/). -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -17,9 +18,7 @@
       <div class="amb" data-amb aria-hidden="true"></div>
       <canvas class="wx-back" data-wx-back width="1280" height="720" aria-hidden="true" hidden></canvas>
       <div class="npc" data-npc aria-hidden="true" hidden><canvas width="300" height="560"></canvas></div>
-      <div class="veh" data-veh-back aria-hidden="true" hidden></div>
       <div class="her"><canvas class="her-pic" data-pic aria-hidden="true"></canvas></div>
-      <div class="veh veh-front" data-veh-front aria-hidden="true" hidden></div>
       <canvas class="wx-front" data-wx-front width="640" height="328" aria-hidden="true" hidden></canvas>
       <div class="fx" data-fx aria-hidden="true"><canvas class="confetti" data-confetti width="1280" height="720" hidden></canvas></div>
 

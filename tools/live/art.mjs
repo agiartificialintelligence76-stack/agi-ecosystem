@@ -22,9 +22,13 @@ import { PEOPLE_IDS } from './page/people.js';
 // ---------- what each picture is ----------
 const BG_STYLE = 'A hand-painted anime background illustration with the quality of a Japanese anime film background: clean painterly detail, soft cel shading, gentle light and atmosphere, rich but soft colors that suit a cute pastel livestream.';
 const BG_RULES = 'No people, no characters, no animals up close, no text, no letters, no numbers, no logos, no signs with writing, no watermark, no frame or border.';
-const BG_LAYOUT = 'It is the backdrop of a VTuber livestream: a character will stand in front of the right half of the picture, so keep the right third calm and simple, and put the main subject in the left half, fully visible, its top in the upper half of the picture. Eye-level camera.';
-const ROOM_LAYOUT = 'It is the backdrop of a VTuber livestream: a character will stand in front of the right half of the picture, so keep the right half simple. Eye-level camera.';
-const INSIDE_LAYOUT = 'It is the backdrop of a VTuber livestream: the viewer looks at the seats from the front, and a character will sit or stand in front of the right half of the picture, so keep the right half simple. Eye-level camera.';
+// (2026-10-07, after the first pictures: told that "a character will stand in front of the right half, so keep it calm",
+// both models now and then painted a see-through white panel there, or a second, blurred picture, so the right side is
+// now described as scenery, and the picture as one continuous painting)
+const WHOLE = 'One continuous painting from edge to edge: no panels, no see-through or washed-out areas, no split screen, no inset picture.';
+const BG_LAYOUT = `Composition: the main subject in the left half of the picture, fully visible, its top in the upper half; the right third shows only open scenery (sky, water, ground, soft distant land) with nothing important in it. ${WHOLE} Eye-level camera.`;
+const ROOM_LAYOUT = `Composition: the most interesting things in the left half; the right half simpler (a wall, a window, soft furniture). ${WHOLE} Eye-level camera.`;
+const INSIDE_LAYOUT = `Seen from inside at eye level, the viewer looking at the seats from the front: the window with the view outside in the left half, the right half simpler (a seat). ${WHOLE}`;
 const GREEN = 'On a plain, flat, pure bright green background (#00FF00) with nothing else on it: no shadow, no gradient, no floor, no frame, no text.';
 const PERSON_STYLE = 'An anime character illustration in the style of a VTuber model: clean line art, soft cel shading, big expressive eyes, a warm friendly smile, cute and wholesome, modern everyday clothes.';
 const PERSON_LAYOUT = 'Waist-up: the whole head and hair inside the picture with a little space above it, cut off at the waist by the bottom edge. Standing, the body turned slightly to the right, toward someone standing there, looking at the viewer. One person only, an original made-up character (not anyone real).';
@@ -256,7 +260,7 @@ export async function makeArt({ env = process.env, only = [], log = console, fet
   try { manifest = JSON.parse(readFileSync(manifestFile, 'utf8')); } catch { /* a first run */ }
   let model = null, made = 0, failed = 0, done = 0;
   // what the model takes, learned once for the whole run: the picture's size (imageSize), and asking for a picture only
-  let size = true, imageOnly = true;
+  let size = true, imageOnly = true, toldWhy = false;
   const t0 = Date.now();
 
   async function one(job) {
@@ -286,7 +290,14 @@ export async function makeArt({ env = process.env, only = [], log = console, fet
       if (res.status === 404 && models.length > 1 && !model) { log.log(`  (${m} isn't there for this project: trying ${models[1]})`); models = models.slice(1); attempt--; continue; }
       if (res.status === 400 && sent.size && /imageSize|image_size|size/i.test(text)) { size = false; attempt--; continue; }
       if (res.status === 400 && sent.imageOnly && /modalit/i.test(text)) { imageOnly = false; attempt--; continue; }
-      if (res.status === 429 || res.status >= 500) { const wait = 15_000 * (attempt + 1); log.log(`  ${job.item.id}-${job.k}: Google said "wait" (${res.status}): ${wait / 1000} s`); await sleepFn(wait); continue; }
+      if (res.status === 429 || res.status >= 500) {
+        const wait = 15_000 * (attempt + 1);
+        // (Google's own words, the first time: its per-minute limit, or a busy moment)
+        if (!toldWhy) { toldWhy = true; log.log(`  (Google: ${googleError(res.status, text).message.slice(0, 220)})`); }
+        log.log(`  ${job.item.id}-${job.k}: Google said "wait" (${res.status}): ${wait / 1000} s`);
+        await sleepFn(wait);
+        continue;
+      }
       if (res.status === 403) throw googleError(403, `${text} (enable the "Agent Platform API" and give the service account the "Agent Platform User" role, as for her voice)`);
       log.log(`  ${job.item.id}-${job.k}: ${googleError(res.status, text).message}: skipped`);
       return false;

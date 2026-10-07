@@ -4,8 +4,12 @@
 // shading stay as drawn), and accessories drawn in code sit where her pieces are, every frame: cat ears, headphones,
 // glasses, sunglasses, a bow, a headset mic, star clips, and things she holds (a mug, her microphone). PG-13 like
 // everything she wears: only colors and accessories, never less of her clothes.
+// (2026-10-07, her painted set; the owner after the first preview of her trips: the worst part was "Her hat and outfit"
+// among the rest) Her accessories are paintings where they're there (paint.js: painted once by Google's image AI, cut out of
+// their green background; PAINTED_ACC says which goes with which outfit), else drawn in code as before.
 import * as THREE from 'three';
 import { drawFood, FOOD_SIZE, FOOD_SCALE, FOODS } from './food.js';
+import { isPainted, paintLoad } from './paint.js';
 
 // ---------- color matrices (rows), the way CSS's hue-rotate, saturate and brightness work ----------
 function hueRotate(deg) {
@@ -28,17 +32,27 @@ const mul = (A, B) => Array.from({ length: 9 }, (_, k) => {
   return A[r * 3] * B[c] + A[r * 3 + 1] * B[3 + c] + A[r * 3 + 2] * B[6 + c];
 });
 // her clothes' own color is lavender (about #d8a8f8, hue 276°): a tint is how far its hue turns, its saturation and its
-// brightness. null: as drawn
+// brightness; or (2026-10-07) a color it becomes outright (`rgb`), its shading kept: each pixel as bright against the
+// lavender as it was (a turn of the hue went muddy for these: her white looked grey, her cream khaki, her navy olive), a
+// little of the lavender left in (`keep`). null: as drawn
+export const LAVENDER = [215, 170, 249];
 export function tintMatrix(t) {
   if (!t) return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  if (t.rgb) {
+    const w = [0.2126, 0.7152, 0.0722], base = w[0] * LAVENDER[0] + w[1] * LAVENDER[1] + w[2] * LAVENDER[2], keep = t.keep ?? 0.1;
+    return Array.from({ length: 9 }, (_, k) => {
+      const r = Math.floor(k / 3), c = k % 3;
+      return ((1 - keep) * t.rgb[r] * w[c]) / base + (r === c ? keep : 0);
+    });
+  }
   const m = mul(saturate(t.sat ?? 1), hueRotate(t.hue ?? 0));
   return m.map((x) => x * (t.val ?? 1));
 }
 const T = {
   pink: { hue: 54, sat: 1.7 }, hotpink: { hue: 62, sat: 2.3, val: 0.98 }, mint: { hue: -112, sat: 1.4 },
   sky: { hue: -68, sat: 1.5 }, honey: { hue: 132, sat: 2.2, val: 1.02 }, black: { sat: 0.35, val: 0.3 },
-  cream: { hue: 124, sat: 0.45, val: 1.08 }, navy: { hue: -50, sat: 1.4, val: 0.45 }, red: { hue: 80, sat: 2.3, val: 0.92 },
-  white: { sat: 0, val: 1.08 },
+  cream: { rgb: [250, 236, 206] }, navy: { rgb: [50, 62, 132], keep: 0.06 }, red: { rgb: [232, 56, 72], keep: 0.06 },
+  white: { rgb: [236, 232, 245] },
 };
 
 // ---------- her outfits ----------
@@ -75,6 +89,57 @@ export const OUTFITS = {
   space: { name: 'space suit', shirt: T.white, shorts: T.white, shoes: T.white, acc: ['helmet'], colors: {} },
 };
 export const OUTFIT_IDS = Object.keys(OUTFITS);
+// (2026-10-07) the paintings of each outfit's accessories (tools/live/art.mjs paints them under these names)
+export const PAINTED_ACC = {
+  pinkpop: { bow: 'bow-pink' },
+  midnight: { headphones: 'headphones-midnight' },
+  mint: { glasses: 'glasses' },
+  sunny: { sunglasses: 'heartglasses', clips: 'clips-mint' },
+  cozy: { catEars: 'catears-white' },
+  gamer: { headphones: 'headphones-gamer', catEars: 'catears-black' },
+  stage: { headset: 'headset', clips: 'clips-honey' },
+  newyork: { cap: 'cap-blue' },
+  london: { scarf: 'scarf-london' },
+  paris: { beret: 'beret-red', scarf: 'scarf-paris' },
+  rome: { shades: 'shades-dark' },
+  berlin: { beanie: 'beanie-yellow' },
+  istanbul: { scarf: 'scarf-istanbul' },
+  cairo: { sunhat: 'sunhat-pink', shades: 'shades-dark' },
+  dubai: { shades: 'shades-gold' },
+  agra: { garland: 'garland' },
+  bangkok: { flower: 'flower-orchid' },
+  halong: { conical: 'conical' },
+  bali: { flower: 'flower-frangipani' },
+  palawan: { shades: 'shades-pink', flower: 'flower-hibiscus' },
+  tokyo: { sakura: 'sakura' },
+  seoul: { beret: 'beret-lilac' },
+  beijing: { bucket: 'bucket-cream' },
+  rio: { shades: 'shades-dark', flower: 'flower-pink' },
+  mexico: { sunhat: 'sunhat-mint', flower: 'flower-yellow' },
+  space: { helmet: 'helmet' },
+};
+// where a painted one sits on her (her face's width = 1, from the middle of her face; y up): its width, and where it is: a
+// hat or a headband by its bottom edge (its brim, its band) above her eyes (`brow`), something small in her hair or on her
+// eyes by its middle (`eyes`), a scarf or a garland under her chin (`neck`); and a tilt. Measured on her set (2026-10-07:
+// her face is about 185 px wide there, her eyes 260 px down, the top of her hair 65 px down), then tuned by eye with the
+// paintings. (The first guesses, from the top of her hair's mesh, put every hat above her head: the mesh reaches higher
+// than the hair painted on it.) An accessory's own id can carry its own (two sun hats aren't the same shape). sy: a
+// little shorter than painted; order: where it's drawn among her pieces (headphones behind her face and the hair beside
+// it, as cups at the sides of a head are: painted from the front, over her face they covered her cheeks).
+export const PAINT_AT = {
+  hat: { w: 1.3, from: 'brow', y: 0.2 }, cap: { w: 1.22, from: 'brow', y: 0.2 }, beret: { w: 1.22, from: 'brow', y: 0.36, x: 0.12, rot: -0.12 },
+  sunhat: { w: 1.9, from: 'brow', y: 0.2 }, conical: { w: 1.8, from: 'brow', y: 0.22 }, beanie: { w: 1.5, from: 'brow', y: 0.08 }, bucket: { w: 1.42, from: 'brow', y: 0.12 },
+  catEars: { w: 1.75, from: 'brow', y: -0.08 }, headphones: { w: 2.25, from: 'brow', y: -0.62, sy: 0.7, order: 'underFace' }, headset: { w: 1.45, from: 'brow', y: -0.49 },
+  glasses: { w: 1.08, from: 'eyes', y: 0.0 }, bow: { w: 0.75, from: 'eyes', y: 0.72, x: 0.55, rot: -0.35 }, clips: { w: 0.6, from: 'eyes', y: 0.85, x: 0.45, rot: -0.25 },
+  flower: { w: 0.55, from: 'eyes', y: 0.4, x: 0.62, rot: -0.2 }, sakura: { w: 0.85, from: 'eyes', y: 0.7, x: 0.55, rot: -0.35 },
+  neck: { w: 1.5, from: 'neck', y: 0 }, garland: { w: 1.75, from: 'neck', y: -0.05 }, helmet: { w: 2.2, from: 'eyes', y: 0.0 },
+  // their own: the black cat ears are taller (their tips left the picture), the lilac beret bigger than the red one, the
+  // flower under Mexico's sun hat by her ear (on the hat's brim it was lost)
+  'catears-black': { w: 1.55, y: -0.22 }, 'beret-lilac': { w: 1.12, y: 0.3 }, 'flower-yellow': { y: 0.12, x: 0.68 },
+};
+const PAINT_SLOT = { bow: 'bow', headphones: 'headphones', glasses: 'glasses', sunglasses: 'glasses', shades: 'glasses', clips: 'clips', catEars: 'ears',
+  headset: 'headset', cap: 'hat', beret: 'hat', sunhat: 'hat', bucket: 'hat', beanie: 'hat', conical: 'hat', scarf: 'neck', garland: 'neck', flower: 'flower',
+  sakura: 'sakura', helmet: 'helmet' };
 export const SHOW_OUTFITS = ['classic', 'pinkpop', 'midnight', 'mint', 'sunny', 'cozy', 'gamer'];
 // (2026-10-07) the ones she wears on her trips: each place's (places.js)
 export const PLACE_OUTFITS = ['newyork', 'london', 'paris', 'rome', 'berlin', 'istanbul', 'cairo', 'dubai', 'agra', 'bangkok', 'halong', 'bali', 'palawan', 'tokyo', 'seoul', 'beijing', 'rio', 'mexico', 'space'];
@@ -237,20 +302,42 @@ const DRAW = {
     g.fillStyle = '#ff4da6'; g.fillRect(150, 330, 60, 12);
   }),
   // an umbrella: its canopy (300 × 170) and its shaft (24 × 256)
+  // (2026-10-07, her painted set: the striped pink and honey one looked like clip art in front of the paintings) a clear
+  // umbrella, as in anime: see-through, a soft highlight, thin silver ribs, raindrops on it; the set shows through it
   canopy: (col) => canvas(300, 170, (g) => {
-    g.beginPath(); g.moveTo(10, 130); g.bezierCurveTo(20, 10, 280, 10, 290, 130);
-    for (let i = 5; i > 0; i--) { const x0 = 10 + (i * 280) / 5, x1 = 10 + ((i - 1) * 280) / 5; g.quadraticCurveTo((x0 + x1) / 2, 112, x1, 130); }
-    g.closePath();
-    const grad = g.createLinearGradient(0, 0, 300, 0);
-    const cs = [col.umbrella || '#ff4da6', col.umbrella2 || '#ffc933'];
-    for (let i = 0; i <= 5; i++) { grad.addColorStop(i / 5, cs[i % 2]); if (i < 5) grad.addColorStop((i + 0.999) / 5, cs[i % 2]); }
-    g.fillStyle = grad; g.fill(); g.lineWidth = 6; g.strokeStyle = INK; g.lineJoin = 'round'; g.stroke();
-    g.lineWidth = 3; for (let i = 1; i < 5; i++) { g.beginPath(); g.moveTo(150, 40); g.quadraticCurveTo(10 + (i * 280) / 5 + (i - 2.5) * 10, 70, 10 + (i * 280) / 5, 128); g.stroke(); }
-    g.beginPath(); g.arc(150, 30, 7, 0, Math.PI * 2); g.fillStyle = INK; g.fill();
+    const dome = () => {
+      g.beginPath(); g.moveTo(10, 130); g.bezierCurveTo(20, 10, 280, 10, 290, 130);
+      for (let i = 5; i > 0; i--) { const x0 = 10 + (i * 280) / 5, x1 = 10 + ((i - 1) * 280) / 5; g.quadraticCurveTo((x0 + x1) / 2, 116, x1, 130); }
+      g.closePath();
+    };
+    dome();
+    const fill = g.createLinearGradient(0, 20, 0, 135);
+    fill.addColorStop(0, col.umbrella || 'rgba(255, 255, 255, 0.42)'); fill.addColorStop(1, col.umbrella2 || 'rgba(228, 217, 255, 0.24)');
+    g.fillStyle = fill; g.fill();
+    g.lineJoin = 'round'; g.lineWidth = 3.5; g.strokeStyle = 'rgba(92, 84, 128, 0.75)'; g.stroke();
+    // its ribs, thin and silver, and a lighter edge where the panels meet the rim
+    g.lineWidth = 2; g.strokeStyle = 'rgba(150, 146, 176, 0.8)';
+    for (let i = 1; i < 5; i++) { g.beginPath(); g.moveTo(150, 34); g.quadraticCurveTo(10 + (i * 280) / 5 + (i - 2.5) * 10, 70, 10 + (i * 280) / 5, 129); g.stroke(); }
+    // a soft highlight across its top-left, as light catches the plastic
+    g.save(); dome(); g.clip();
+    g.beginPath(); g.ellipse(102, 64, 78, 20, -0.42, 0, Math.PI * 2); g.fillStyle = 'rgba(255, 255, 255, 0.5)'; g.fill();
+    g.beginPath(); g.ellipse(214, 58, 30, 8, 0.35, 0, Math.PI * 2); g.fillStyle = 'rgba(255, 255, 255, 0.35)'; g.fill();
+    g.restore();
+    // raindrops on it
+    for (const [x, y, r] of [[70, 92, 4], [118, 104, 3], [186, 86, 4.5], [236, 104, 3], [150, 70, 3], [92, 60, 2.5], [210, 56, 2.5]]) {
+      g.beginPath(); g.ellipse(x, y, r * 0.8, r, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(255, 255, 255, 0.75)'; g.fill();
+      g.lineWidth = 1.2; g.strokeStyle = 'rgba(92, 84, 128, 0.45)'; g.stroke();
+    }
+    g.beginPath(); g.arc(150, 30, 6, 0, Math.PI * 2); g.fillStyle = '#d9d4ec'; g.fill(); g.lineWidth = 2; g.strokeStyle = 'rgba(92, 84, 128, 0.85)'; g.stroke();
   }),
   shaft: () => canvas(24, 256, (g) => {
-    g.fillStyle = INK; g.fillRect(9, 0, 6, 220);
-    g.lineWidth = 7; g.strokeStyle = INK; g.beginPath(); g.moveTo(12, 214); g.lineTo(12, 236); g.quadraticCurveTo(12, 250, 2, 246); g.stroke();
+    const rod = g.createLinearGradient(9, 0, 15, 0);
+    rod.addColorStop(0, '#8d88a6'); rod.addColorStop(0.5, '#e6e2f2'); rod.addColorStop(1, '#8d88a6');
+    g.fillStyle = rod; g.fillRect(10, 0, 4, 216);
+    // its handle: a pink J
+    g.lineCap = 'round'; g.lineWidth = 8; g.strokeStyle = '#ff7eb6';
+    g.beginPath(); g.moveTo(12, 210); g.lineTo(12, 234); g.quadraticCurveTo(12, 250, 3, 245); g.stroke();
+    g.lineWidth = 2; g.strokeStyle = 'rgba(255, 255, 255, 0.7)'; g.beginPath(); g.moveTo(10.5, 214); g.lineTo(10.5, 232); g.stroke();
   }),
   // (2026-10-07, the owner: "add more emotions as well") her cartoon marks: heart eyes, star eyes, dizzy spirals (one eye
   // each, 128 × 128), tears (a stream under one eye, 64 × 160), gloom lines, an anger mark and a sweat drop
@@ -398,11 +485,37 @@ export function createWardrobe(model) {
     gloom: sprite(DRAW.gloom(), 'top'), vein: sprite(DRAW.vein(), 'top'), sweat: sprite(DRAW.sweat(), 'top'),
   };
   for (const m of Object.values(marks)) group.add(m);
+  // (2026-10-07) her painted accessories: loaded once (prepare(id) before an outfit goes on), kept for the show
+  const painted = {};
+  async function prepare(id) {
+    await Promise.all(Object.values(PAINTED_ACC[id] || {}).filter((pid) => !painted[pid] && isPainted('accessories', pid)).map(async (pid) => {
+      const img = await paintLoad('accessories', pid);
+      if (!img || painted[pid]) return;
+      const tex = new THREE.Texture(img);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 1;
+      tex.needsUpdate = true;
+      painted[pid] = tex;
+    }));
+    return true;
+  }
   function dress(id) {
-    for (const it of Object.values(items)) { group.remove(it); it.material.map.dispose(); it.material.dispose(); it.geometry.dispose(); }
+    for (const it of Object.values(items)) { group.remove(it); if (!it.userData.kept) it.material.map.dispose(); it.material.dispose(); it.geometry.dispose(); }
     items = {};
     const o = OUTFITS[id] || OUTFITS.classic, col = o.colors || {};
     for (const a of o.acc) {
+      // painted (if its painting is there and loaded): one picture where it goes
+      const pid = PAINTED_ACC[id]?.[a], tex = pid && painted[pid];
+      if (tex) {
+        const slot = PAINT_SLOT[a] || a;
+        const order = slot === 'glasses' || slot === 'ears' ? 'behindBangs' : slot === 'neck' ? 'neck' : 'top';
+        const it = sprite(tex, order);
+        it.userData.kept = true;
+        it.userData.paint = a;
+        it.userData.pid = pid;
+        items[slot] = it;
+        continue;
+      }
       if (a === 'headphones') {
         items.band = sprite(DRAW.band(col), 'top');
         items.slideR = sprite(DRAW.slider(col), 'top');
@@ -447,7 +560,9 @@ export function createWardrobe(model) {
       // (a scarf or a garland: over her shirt, under her arms, her face and her hair)
       neck: meshes[P.print].renderOrder + 1e-4,
       // (her umbrella's shaft: in her hand, behind her upper arm)
-      under: meshes[P.upperR].renderOrder - 1e-4 }[order];
+      under: meshes[P.upperR].renderOrder - 1e-4,
+      // (headphones: their cups at the sides of her head, behind her face and the hair beside it)
+      underFace: meshes[P.face].renderOrder - 1e-4 }[order];
     mesh.renderOrder = ro;
     mesh.material.opacity = opacity;
     mesh.visible = opacity > 0.01;
@@ -464,7 +579,25 @@ export function createWardrobe(model) {
     const fw = face.w, eyesY = (eL.cy + eR.cy) / 2 - face.cy, eyesX = (eL.cx + eR.cx) / 2 - face.cx;
     const top = Math.max(box(P.hairL).y1, box(P.hairR).y1) - face.cy;
     const span = Math.hypot(eL.cx - eR.cx, eL.cy - eR.cy);
+    const earL = box(P.earL), chin = face.y0;
     for (const [k, it] of Object.entries(items)) {
+      if (it.userData.paint) {
+        // a painting: its width (her face's), where its middle is, its own shape
+        const a = it.userData.paint, kind = PAINT_AT[a] ? a : ['cap', 'beret', 'sunhat', 'bucket', 'beanie', 'conical'].includes(a) ? 'hat'
+          : a === 'scarf' ? 'neck' : a === 'sunglasses' || a === 'shades' ? 'glasses' : a;
+        // (its own place if it has one: two sun hats or berets aren't the same shape)
+        const at0 = { ...(PAINT_AT[kind] || PAINT_AT.hat), ...(PAINT_AT[it.userData.pid] || {}) };
+        const img = it.material.map.image, w = fw * at0.w * (kind === 'glasses' ? span / fw * 2.1 : 1);
+        const h = (w * img.height * (at0.sy || 1)) / img.width;          // (sy: a little shorter, like headphones' tall band)
+        let x, y;
+        if (at0.from === 'eyes') [x, y] = at(eyesX + fw * (at0.x || 0), eyesY + fw * at0.y);
+        else if (at0.from === 'brow') [x, y] = at(eyesX + fw * (at0.x || 0), eyesY + fw * at0.y + h / 2);
+        else if (at0.from === 'ear') { x = earL.cx + fw * (at0.x || 0); y = earL.cy + fw * at0.y; }
+        else if (at0.from === 'neck') { x = face.cx + fw * (at0.x || 0); y = chin - h / 2 + fw * (0.06 + at0.y); }
+        else [x, y] = at(fw * (at0.x || 0), top + h / 2 + fw * at0.y - fw * 0.25);
+        place(it, x, y, w, h, (at0.from === 'neck' ? roll * 0.3 : roll) + (at0.rot || 0), at0.order || it.userData.order);
+        continue;
+      }
       if (k === 'ears') { const [x, y] = at(0, top - fw * 0.02); place(it, x, y, fw * 1.25, fw * 0.62, roll, it.userData.order); }
       else if (k === 'band') { const [x, y] = at(0, top - fw * 0.17); place(it, x, y, fw * 1.42, fw * 0.62, roll, it.userData.order); }
       else if (k === 'slideR' || k === 'slideL') {
@@ -568,6 +701,8 @@ export function createWardrobe(model) {
       return true;
     },
     hold(what) { held = what && (props[what] || what === 'umbrella') ? what : null; return true; },
+    // (2026-10-07) her painted accessories for an outfit, loaded before it goes on
+    prepare,
     // the food she holds, at a stage (0 whole, 1 one bite, 2 two bites; a drink goes down instead)
     food(id, stage = 0) {
       const key = `${id}:${stage}`;

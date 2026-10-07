@@ -275,6 +275,9 @@ test('her live prompt: everyone at once, no pet names, neutral about real people
   // (2026-10-07) a question from X's live chat, passed on by the host
   assert.match(livePrompt({ name: 'kai_99', source: 'x' }), /in X's live chat \(your show's host passed it on to you\), under the name "kai_99"/);
   assert.match(livePrompt({ name: 'Mochi', source: 'web' }), /through agi1\.app\/live, under the name "Mochi"/);
+  // (2026-10-08, the owner: "can she speak other languages on the stream when asked right?") in the language a question
+  // is written in, or the one a viewer asks her to speak, if it's one of her 16
+  assert.match(p, /Answer in the language the question is written in, or in the one they ask you to speak \("say something in Japanese", "speak Spanish!": then answer in it\): you speak English, [^\n]*Japanese[^\n]*Spanish[^\n]*\(anything else: English, and say so kindly\)\. Say which in "lang"\./);
   assert.deepEqual(LIVE_SKIPS, ['no', 'rules', 'care']);
 });
 

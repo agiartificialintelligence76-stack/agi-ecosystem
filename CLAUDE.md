@@ -427,7 +427,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
 | `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
-| `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`). See "Her live show on X", "Her stream, upgraded", "Her trips" and "Her painted set" |
+| `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`), `art-cut.mjs` (Claude makes them ready: one of each, cut out of its green, made small) and `art-picks.json` (which one of each), into `page/art/` (her places, rooms, rides, the people she meets and what she wears, WebP, in git), which `page/paint.js` finds when her set is built. See "Her live show on X", "Her stream, upgraded", "Her trips" and "Her painted set" |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `tools/promo/` | Her launch video (2026-10-03, not part of the website): `make.mjs` (builds its page, draws every frame in Chromium, ffmpeg → the MP4s, the cover, the post text, a light copy), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen, from the site's own files where it can), `music.js` (its music, composed and played in code), `page/` (the renderer: `promo.js`, `kit.js`, `ui.js`, `transitions.js`, `her.js` (her Live2D model), `art.js` (the front's art and shader), `scenes/` (one file a scene); built into `tools/promo/dist/`, which git ignores). Its videos go to `promo/` (git ignores it). See "Her launch video" |
@@ -4092,12 +4092,21 @@ people's conversations on our server): the website itself only got a few words o
   and thunder), snow, sunshine, cherry blossom petals, autumn leaves, fog, a rainbow, shooting stars and a dust storm,
   drawn in code over and behind her (her picture never covered by anything opaque). Each place has its own weathers; by
   herself now and then, or when a viewer asks ("make it snow"); in her rooms she first goes up to the rooftop (or to the
-  beach for sunshine and a rainbow). She reacts: her umbrella in the rain (over her shoulder), a shiver in the snow,
-  fanning herself in the sun. It clears by itself after 2 or 3 minutes; it rests a minute. **Not the real weather** (that
-  would need an outside weather service: the owner's call).
+  beach for sunshine and a rainbow). She reacts: her umbrella in the rain (over her shoulder; since her painted set a
+  clear, see-through one with raindrops on it: the striped one looked like clip art in front of the paintings), a shiver
+  in the snow, fanning herself in the sun. It clears by itself after 2 or 3 minutes, and whenever she changes rooms (her
+  song after rain on the rooftop had her singing on the concert stage under her umbrella, until the painted set's first
+  recording); it rests a minute. **Not the real weather** (that would need an outside weather service: the owner's call).
 - **Her 16 languages on stream** (the owner: "she also speaks that in the stream, with places connected it also"): she
   answers a question in the language it's written in (her prompt; the question card says which, in its own words), her
   voice speaks it (Gemini's speech model reads all 16), and at each place her hello is in the language people speak there.
+  Since 2026-10-08 (the owner: "can she speak other languages on the stream when asked right?") also in the one a viewer
+  asks her to speak ("say something in Japanese", "speak Spanish!"), if it's one of her 16 (else English, said kindly).
+- **Any combination** (the owner, 2026-10-08: "the outfits, places and emotions etc. can be a different combinations
+  right?"): yes. By herself she changes into a place's outfit when she gets there (and her space suit on the Moon and
+  Mars), but a viewer can ask for any of her 27 outfits anywhere (2 minutes apart), any of her emotions and moves
+  anywhere, any weather anywhere (a dust storm only on Mars, at the pyramids and in Dubai, else fog; in a room she first
+  goes up to the rooftop or out to the beach), and any of her 34 snacks.
 - **Interactive from the first minute** (the owner: "make it interactive already"): right after her intro she shows what
   she can do (a jump, heart eyes, a cookie, and what else: trips, the people she meets, the weather, her song, her 16
   languages), with a card "Try asking me…" ("take me to Tokyo" ✈️, "make it snow" ❄️, "eat a croissant" 🥐, "sing the rap
@@ -4159,7 +4168,7 @@ more fix from that: nothing by herself while she rides (her "think" idle in a pl
 plane flew off: `still()` in `moves.js`). **Not tried live:** the CX23 drawing her places and weather (each place is drawn once, its moving bits are CSS;
 the rain is a small canvas), the people's voices on Vertex AI.
 
-### Her painted set (2026-10-07, in progress)
+### Her painted set (2026-10-07 and 08)
 
 **The owner, after the preview of her trips:** "the agi1 trip preview i just watched is so bad btw". Asked what was worst:
 "Her hat and outfit, The vehicle ride, The people she meets, The places, everything". Asked how to make it look good:
@@ -4168,7 +4177,9 @@ the Google Cloud key already on her server (about $5–10 once), every picture c
 
 **Step 1, built: the art tool** (`tools/live/art.mjs`; on the server `sh tools/live/live.sh --art`):
 - **What it paints (152 pictures):** her 20 places and 7 rooms (two of each, 16:9: a hand-painted anime background, the
-  landmark in the left half and the right side calm for her; never people, text, letters, logos or signs), the inside of
+  landmark in the left half and the right side open scenery; never people, text, letters, logos or signs; since the
+  first run "one continuous painting from edge to edge": told that "a character will stand in front of the right half, so
+  keep it calm", both models now and then painted a see-through white panel there, or a second, blurred picture), the inside of
   each of her 12 vehicles (two each: the seat she rides in and the view out of the window), the 21 people she meets (two
   each, waist up, turned toward her, on pure green to be cut out; made up, never anyone real; one of the two with her
   picture as the art style to match: her 2D self, rendered from her Live2D model and cut above the "AGI" on her shirt,
@@ -4182,32 +4193,122 @@ the Google Cloud key already on her server (about $5–10 once), every picture c
   paris,omar` makes one more of each named. Into `/opt/agi1-live/out/art/`: places, rooms and rides as JPEG, people and
   accessories as WebP (no JPEG blur on their green edges), and `manifest.json` (each file's prompt and model).
 - **Cost:** Nano Banana 2.1 is about $0.034 a 1K picture (Nano Banana 2 about $0.067): about $5–10 for all 152, once,
-  billed to the Google Cloud card like her voice (the $20 budget's emails). About 20 minutes.
+  billed to the Google Cloud card like her voice (the $20 budget's emails). **About two hours**, not the 20 minutes first
+  said: on the owner's first run (2026-10-07) Google said "wait" (429) again and again, about one picture a minute. The
+  owner switched to Nano Banana 2 (`LIVE_ART_MODEL=gemini-3.1-flash-image` in live.env, Claude's suggestion) and it
+  didn't help: Google's limit covers the whole project, not each model (Claude had said it would be faster; it wasn't).
+  A run keeps going by itself through the waits; a bigger limit would be a request to Google that takes days.
+- **The owner's run** (2026-10-07 and 08): **138 of the 152** (55 with Nano Banana 2.1, 83 with Nano Banana 2). Google
+  gave nothing for 14: the second picture of one place, three rides and six people (each has its first), and four of her
+  accessories, which had no picture at all: Berlin's yellow beanie, Sunny's mint star clips, Istanbul's blue scarf and
+  Rio's pink flower. The owner's `--art-only` for those four (2026-10-08, Nano Banana 2) made all four: **142 of 152**,
+  every accessory painted (until then three had stand-ins and the beanie was drawn in code: see step 2).
 - **Nothing goes on stream by itself:** Claude looks at every picture, picks one of each, cuts out the people and
   accessories (the green keyed out) and makes them small for her set (step 2).
 
-**Step 2, next:** her set reworked for the paintings: painted backgrounds for her places and rooms, her rides as the
-inside of each vehicle (instead of a vehicle drawn in code with her in its window), the people she meets as painted
-cutouts beside her, her hats, glasses, flowers and scarves as painted pieces on her model; then a preview recording for
-the owner.
+**Step 2, built: her set uses them** (the paintings are in `tools/live/page/art/`, found when her set is built):
+- **Picking and cutting them** (`tools/live/art-cut.mjs`, Claude runs it on the copies in `_source-assets/art`): one of
+  each, as `tools/live/art-picks.json` says (`"places/paris": 1`; 0 = none good enough, drawn in code; or
+  `{ "k": 2, "flip": true, "panel": [905, 1324] }`), into `tools/live/page/art/<group>/<id>.webp`, picked by looking at
+  her in front of both (a render of her set for each). `flip`: mirrored left to right (Tokyo: its tower was painted on
+  her side). `panel`: a see-through white panel the model painted over those columns, undone (`unPanel()`: how washed it
+  is, per color, measured on the picture carrying on at each edge of the panel, then turned back, and the few columns at
+  each edge bridged; Rio and Chichén Itzá, about 37% white; checked side by side and up close). A picture split into two
+  (Tokyo's first) isn't used. Her backdrops at the set's size (1280 × 720, WebP); the people she meets and
+  the things she wears cut out of their green: the green joined to the picture's edges keyed out, and inside only the
+  green's own color (a gap, or seen through a glass: `SEE_THROUGH` for her helmet, her clear glasses and Commander Nova's
+  visor), each edge pixel as see-through as it's green against what the thing itself looks like nearby, the green taken
+  out of its color, specks (a crumb, a mark in a corner) dropped, cropped to what's left and made small (people 640 px
+  tall, things at most 512 px). Measured on her own 2D picture put on green: its edges come back within about 3 levels of
+  255 on average.
+- **The picks** (2026-10-08, each looked at with her in front of it): most places, rooms and rides as first painted; the
+  second picture of Agra, Bali, Beijing, Berlin, Istanbul, London, the Moon, the bus and the robotaxi (and of 15 of the 21
+  people), where it was the better one; Rio's and Chichén Itzá's panels undone; Tokyo's second mirrored; the plane and
+  the train mirrored (their windows were painted on her side); the balloon's first only in part (`crop`: `[0, 115, 957, 538]`, 16:9, it
+  was painted as two pictures, so its seam is behind her). Commander Nova and Rusty the rover at the size they're painted.
+- **What the first paintings needed** (2026-10-08, `tools/live/art-cut.mjs`): a green behind the conical hat that was olive
+  (150, 204, 69), so a background green is anything 40 levels greener than its red and blue (was 60); the hibiscus' own
+  light-green leaves, which came out grey and half see-through, kept (`GREEN_INSIDE`: only what's nearly the background's
+  own green is keyed from the edges in); the helmet's visor reflections, painted mint by the green behind them, made a
+  see-through white (`GLASS_GLINTS`, `whitenGlints()`); **the headphones' cups**: painted from the front, cups facing us,
+  their dark cushions showed by her eyes in the gaps between her face and the hair beside it, so only each cup's outer
+  half is kept (`OUTER_CUPS`, `outerCups()`: per row, from its outer edge, the rest fading out over a few pixels) and they're
+  drawn behind her face and that hair (`order: 'underFace'`); **the cat ears' headband**: its two ends came down past her
+  bangs beside her eyes (white lines with the white ears, black ones with the black), so below the ears it fades out
+  (`BAND_ENDS`, `trimBandEnds()`: on a head, the rest of a headband is under the hair; the picture keeps its size, so
+  where it sits doesn't change).
+- **Stand-ins** (2026-10-08, `STAND_INS`): until their own painting is there, three accessories Google skipped are made
+  from a painting asked for in the same words but another color, its colors turned (`turnHue()`: each pixel's lightness
+  and saturation kept, greys and the line work as they are): Sunny's mint star clips from the golden ones (the stage
+  outfit's), Istanbul's light blue scarf from Paris' light red one, Rio's pink hibiscus from Palawan's red one (only its
+  reds turned: its leaves stay green). Their own painting, once it's there, is used instead (`cutAll` logs which): since
+  the owner's `--art-only` the same day all four have their own, so the stand-ins are only for a picture Google skips
+  later (Berlin's beanie had no painting like it: drawn in code until then).
+- **The beanie** (2026-10-08): painted a little from below, its inside showed under its cuff as a brown oval, over her
+  forehead like a visor, so it goes (`HAT_INSIDE`, `dropHatInside()`: found from its middle by its color, where it's that
+  color all around, so it never leaks into the cuff's shading, which is nearly the same brown, through a gap in the line
+  between them; everything under its top edge, in its columns, goes), and the cuff's own line is the hat's edge, her bangs
+  under it (`PAINT_AT.beanie`: 1.5 of her face's width, 0.08 above her eyes; tried six ways, and drawing it behind her
+  bangs put her hair over the hat).
+- **Her set** (`tools/live/page/paint.js`; `stage.js`, `people.js`, `outfits.js`): a painting goes up only once it's loaded
+  and decoded (before a wipe starts, so the wipe never uncovers the old picture); without its painting, a place, a room,
+  a person or a hat is drawn in code as before. Her rooms and places: the painting, without the little moving bits drawn
+  for the code's rooms (the concert stage keeps only its flash on the beat: its painting has its own light beams, and the
+  code's looked like paper strips on it). **Her rides**: a wipe, and
+  she's in it, the painting of its inside behind her, the route card, and the ride's own motion (`rideMotion` in
+  `vehicles.js`: a car's bumps, a train's rhythm, a plane's float, a boat's roll, a cable car's sway, a rocket's rumble),
+  she and the picture moving together, slowly closer; then a wipe, and she's there (no vehicle drawn from the outside any
+  more, no hop into its window). **The people she meets**: their painting comes in on the left, with a breath, a bob as
+  they come and go, a bounce with their voice and a tilt for a wave; their bubble beside their head. **Her accessories**:
+  the outfit's painted hat, glasses, flower, scarf, headphones… (`PAINTED_ACC`), placed on her every frame from her
+  face's own pieces, tilting with her head (`PAINT_AT`: tuned by eye on her set). **Hats and headbands sit on her hair**
+  (2026-10-08; the owner: "Her hat and outfit"): placed by their bottom edge (a brim, a band) a set distance above her
+  eyes (`from: 'brow'`), her face's width the unit (on her set her face is about 185 px wide, her eyes 260 px down, the top
+  of her hair 65 px down). The first placement, from the top of her hair's mesh, put every hat above her head: her hair's
+  mesh reaches higher than the hair painted on it. An accessory's own id can carry its own place (`'catears-black'`,
+  `'beret-lilac'`, `'flower-yellow'`: two berets aren't the same shape), and `sy` makes one a little shorter than painted
+  (the headphones' tall band). `studio.paintAt(key, values)` changes one on her set while tuning it.
+- **Her shirt colors** (the owner: "Her hat and outfit"): white, cream, navy and red are those colors outright now (each
+  pixel as bright against her lavender as it was, a little lavender left in), where a turn of the hue had made them grey,
+  khaki and olive; her white a soft white, so the white AGI on it still shows.
 
 **Owner** (after the push, and `sh tools/live/live.sh update` on the server): on the server (`root@agi1-live`)
-`sh tools/live/live.sh --art` (about 20 minutes); then on the PC (`PS C:\Users\User…>`):
+`sh tools/live/live.sh --art` (about two hours at Google's pace); then on the PC (`PS C:\Users\User…>`):
 `scp -r root@<the server's IP>:/opt/agi1-live/out/art "C:\Users\User\Desktop\AGI 3 ECOSYSTEM\_source-assets"` (git
-ignores `_source-assets`), then tell Claude.
+ignores `_source-assets`), then tell Claude. **Done 2026-10-07 and 08** (138 pictures), then the four accessories Google
+skipped: `cd /opt/agi1-live/site && sh tools/live/live.sh --art-only beanie-yellow,clips-mint,scarf-istanbul,flower-pink`
+on the server, the same `scp` line on the PC (done 2026-10-08: 142). Any picture again later: the same way, with its
+name.
 
 | What you see | Fix |
 |---|---|
 | `no picture could be made (the models tried: …)` | The lines above it say why: a 403 is the API or the role (as for her voice: setup step 2 of "Her live show on X"); 404 for every model: tell Claude with the lines (`LIVE_ART_MODEL`) |
 | `…: Google gave no picture (it refused it): skipped` | Now and then, normal: `sh tools/live/live.sh --art` again asks only for the missing ones |
-| `Google said "wait" (429)` many times | Google's per-minute limit for image models: it waits by itself; if it gives up, run it again later |
+| `Google said "wait" (429)` many times | Google's limit for image models, for the whole project (another model doesn't help): it waits by itself, about a picture a minute; keep the window open (closing it stops the run), or run it again later: it carries on |
+| On stream, a painted hat or accessory sits wrong on her (floats, covers her eyes, a dark patch or a line by her face) | Tell Claude with a screenshot: its place is `PAINT_AT` in `tools/live/page/outfits.js` (tuned by eye), and what's kept of a painting is `art-cut.mjs`'s (`OUTER_CUPS`, `BAND_ENDS`) |
+| One of her accessories looks drawn, not painted | Google skipped its picture: `--art-only <its name>` (see "Owner" above; until then a stand-in, if there's one) |
 
-**Tests:** `tests/art.test.js` (6): every picture's words (every place, room, ride, person and accessory; no people, text
+**Tests:** `tests/art.test.js` (14; 12 before 2026-10-08): every picture's words (every place, room, ride, person and accessory; no people, text
 or logos behind her; green for what's cut out; never anyone real; nothing about money), the request to Vertex AI and the
 picture in its answer, her style picture (her 2D self, never the 3D model; cut above the letters), carrying on and
 `--art-only`, a fake Google end to end (a model the project doesn't have, "wait", a refusal, the files and the manifest,
-the token never in a log), a model that doesn't take the picture's size (learned once for the run). **Not tried live**
-(Claude's workspace has no Google key): the owner's first run is the check.
+the token never in a log), a model that doesn't take the picture's size (learned once for the run); cutting out (the
+green and green through a gap or a glass keyed out, a green thing of its own kept, clean edges, specks dropped; her own
+2D picture put on green comes back the same), a light panel undone (found exactly, within 3 levels of the painting, a
+picture without one refused) and a backdrop mirrored, her set finding the paintings (each with its place, drawn in code
+where there's none), the picks and the paintings (only art.mjs's pictures, at their size, small enough for git), her
+shirt's colors; since 2026-10-08 what the first paintings needed (an olive green keyed, a flower's own green leaves kept,
+a visor's tinted glints made white, the headphones' cushions gone and their outer halves, band and arms kept, the
+headband's ends gone and the ears kept, the beanie's inside gone and never its cuff's shading through a gap in the line
+between them, each only for its own pictures, the picture's size kept; a backdrop's 16:9 part,
+anything else refused), the stand-ins (golden to mint, red to pink with its green leaves kept, greys and the line work
+as they are; asked for in the same words as their own; their own painting wins once it's there; nothing to make the
+beanie from) and where hats and headbands sit (`brow`, the headphones behind her face). Each check of 2026-10-08 was
+seen to fail when its rule is broken (the old green threshold, no cups cut, nothing faded, no ends trimmed, no glints, the
+beanie's inside found without its guard).
+**Tried live 2026-10-07 and 08:** the owner's run made 138 pictures (see "Cost" for its pace). In Claude's workspace her
+set was rendered in each of her 27 outfits, in front of each place and room, in each ride and with each person she meets,
+and looked at (the before and after of her outfits went to the owner), then a 10-minute show was recorded.
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -5834,7 +5935,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   things she wears), about $5–10. See "Her painted set". **Owner:** push, then on the server `update` and `--art`, then
   copy the pictures to `_source-assets` on the PC. Next (step 2): Claude picks and cuts out the pictures and reworks her
   set for them, then a preview. Tests: 531 unit (530 pass, 1 skipped as before; on Node 20, 22 and 24, with and without
-  Vercel's settings).
+  Vercel's settings). **Step 2, 2026-10-08** (the owner ran `--art`: 138 pictures; "can i see the preview first before i
+  git push it"): the paintings picked, cut and on her set (her rooms, places, rides from inside, the people she meets,
+  her painted accessories sitting on her hair; the four Google skipped painted on a second run, `--art-only`), the
+  owner's before and after of her outfits, then a preview recording (3½ minutes of a 10-minute show). Also (the owner's
+  question): on stream she answers in a language a viewer asks her to speak. **Owner:** watch the preview, then push and
+  `update` on the server. Tests: 539 unit (538 pass, 1 skipped as
+  before; on Node 20, 22 and 24, with and without Vercel's settings), the build.
 
 ## Decisions log
 
@@ -6046,6 +6153,11 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-07 | The weather is made up, not the real weather (the owner: "can you add weathers also"): each place has its own kinds, by herself now and then or when asked, clearing by itself. The real weather would need an outside weather service (a new service: the owner's call, not asked yet). Her snacks: 34, drawn in code, each place's own (the owner: "alot of types of food"). More emotions: 19, each a move with a cartoon mark (heart eyes, tears, an anger mark…), never mean |
 | 2026-10-07 | Interactive from the first minute (the owner: "make it interactive already"): right after her intro she does a few things (a jump, heart eyes, a cookie), says what else she can do and shows "Try asking me…"; a new thing to try in the bar all show long (hidden when it doesn't fit next to the questions waiting, never cut off). The sounds around her (the owner: "background sounds can also be changed based on the event"): made in code like her music (12 loops, 5 short sounds), following where she is, the weather and the trip, quiet under her voice. Not picked: recorded sound effects (licences, files to keep), sounds louder than her music |
 | 2026-10-07 | Her set painted, not drawn in code (the owner, after a preview of her trips: "so bad", everything picked as the worst part, then "Painted art (Recommended)"): anime-style paintings made once by Google's image AI (Nano Banana 2.1 on Vertex AI, with the service account her voice already uses: no new service, key or setting), about $5–10 once; the people she meets and her accessories painted on green and cut out; every picture checked by Claude before it's used. The people's style picture is her 2D self (her Live2D render, cut above the letters on her shirt), never the 3D model (the owner: "the 3d model is 18+"). Not picked: drawing better in code (the owner had just seen how far that goes), art Claude draws as vector shapes (the same flat look), photos of the places (rights, and a cartoon girl on a photo), a paid illustrator (cost and weeks), a new image service (Google's is already set up) |
+| 2026-10-07 | The first paintings, picked by her in front of them (Claude rendered her set with both versions of each): most as painted; 4 had a see-through white panel where her side was (the prompt had said a character would stand there): two undone in code (`unPanel()`, Rio and Chichén Itzá), two not used (the Moon's and Palawan's other versions are clean); Tokyo's first was two pictures in one (not used), its second mirrored (its tower was on her side). The prompts now describe the right side as scenery and ask for one continuous painting. Not picked: asking the owner to paint them again (another wait at Google's pace; the undone ones look clean, up close too) |
+| 2026-10-08 | Her painted hats sit on her hair (the promise to the owner: "on her head, brim at forehead, tilting with her head"): placed from her eyes (`from: 'brow'`), measured on her set and tuned by eye with every painting, not from the top of her hair's mesh (it reaches higher than her painted hair: every hat floated). Headphones drawn behind her face and the hair beside it, with only their cups' outer halves kept (their dark cushions showed by her eyes); the cat ears' headband ends faded out below the ears (they came down beside her eyes). Not picked: redrawing those accessories in code, new paintings of them from the side (another run at Google's pace, and no promise it paints them that way) |
+| 2026-10-08 | On stream she also answers in the language a viewer asks her to speak (the owner: "can she speak other languages on the stream when asked right?"; before, only the language a question was written in, so "speak Spanish!" written in English got an English answer with a Spanish word or two): one line of her live prompt, if it's one of her 16 |
+| 2026-10-08 | Stand-ins for three accessories Google skipped, made from a painting asked for in the same words but another color, its colors turned (mint clips from golden, a blue scarf from a red one, a pink hibiscus from a red one with its leaves kept): their own painting replaces them once it's there. Berlin's beanie drawn in code (no painting like it). Not picked: drawing those three in code next to painted ones (the before/after showed how much they stood out). The owner's `--art-only` the same day made all four, so all of her accessories are painted; the stand-ins stay for a picture Google skips later |
+| 2026-10-08 | The beanie's inside (painted from a little below: a brown oval under its cuff, like a visor over her forehead) taken out of its picture, so the cuff's own line is its edge and her bangs show under it; placed at 1.5 of her face's width, 0.08 above her eyes. Not picked: drawing it behind her bangs (her hair over the hat), leaving the oval (a visor), asking Google for another picture (no promise of a better angle) |
 
 ## Open questions
 
@@ -6213,6 +6325,15 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   - Not tried live: how smoothly the CX23 draws her places, vehicles and weather (each place is drawn once; the rain and
     snow are a small canvas), and the people's voices on Vertex AI (their voice names are Google's ready-made ones, the
     same model as hers).
+- **Her painted set** (2026-10-08):
+  - **Pictures Google skips** (it never said why): the four it skipped on the first run (Berlin's beanie, Sunny's mint
+    clips, Istanbul's blue scarf, Rio's pink flower) came out on a second, `--art-only` (2026-10-08). If a later run
+    skips one, a stand-in or the code's drawing shows until `--art-only` makes it.
+  - **Rights:** the paintings are Google's image AI's, made with the owner's Google Cloud account; Google's terms for
+    Vertex AI's generated pictures are the owner's to check before relying on them commercially (not legal advice), like
+    her Live2D model's (Cubism PRO) and her song's (Suno).
+  - Not tried live: how smoothly the CX23 draws her painted set (a painting is one picture behind her, cheaper than the
+    code's drawing; the people she meets are one picture each).
 
 ## Working in this repo
 
