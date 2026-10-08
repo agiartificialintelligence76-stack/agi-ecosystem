@@ -2,12 +2,14 @@
 // owner's choice: "Made in code"). Her clothes keep their shape (her model's own drawing), and change color: each piece of
 // clothing is drawn through a color matrix (hue, saturation and brightness, like CSS's filters, so her outlines and
 // shading stay as drawn), and accessories drawn in code sit where her pieces are, every frame: cat ears, headphones,
-// glasses, sunglasses, a bow, a headset mic, star clips, and things she holds (a mug, her microphone). PG-13 like
+// glasses, sunglasses, a bow, a headset mic, star clips, and things she holds (a mug, her phone, her snacks). PG-13 like
 // everything she wears: only colors and accessories, never less of her clothes.
 // (2026-10-07, her painted set; the owner after the first preview of her trips: the worst part was "Her hat and outfit"
 // among the rest) Her accessories are paintings where they're there (paint.js: painted once by Google's image AI, cut out of
 // their green background; PAINTED_ACC says which goes with which outfit), else drawn in code as before.
 import * as THREE from 'three';
+import { handPoint } from '../../../src/stage/agi1-2d-arms.js';
+import { HOLD } from './moves.js';
 import { drawFood, FOOD_SIZE, FOOD_SCALE, FOODS } from './food.js';
 import { isPainted, paintLoad } from './paint.js';
 
@@ -124,12 +126,21 @@ export const PAINTED_ACC = {
 // her face is about 185 px wide there, her eyes 260 px down, the top of her hair 65 px down), then tuned by eye with the
 // paintings. (The first guesses, from the top of her hair's mesh, put every hat above her head: the mesh reaches higher
 // than the hair painted on it.) An accessory's own id can carry its own (two sun hats aren't the same shape). sy: a
-// little shorter than painted; order: where it's drawn among her pieces (headphones behind her face and the hair beside
-// it, as cups at the sides of a head are: painted from the front, over her face they covered her cheeks).
+// little shorter than painted; order: where it's drawn among her pieces.
 export const PAINT_AT = {
-  hat: { w: 1.3, from: 'brow', y: 0.2 }, cap: { w: 1.22, from: 'brow', y: 0.2 }, beret: { w: 1.22, from: 'brow', y: 0.36, x: 0.12, rot: -0.12 },
+  hat: { w: 1.3, from: 'brow', y: 0.2 }, cap: { w: 1.38, from: 'brow', y: 0.11 }, beret: { w: 1.22, from: 'brow', y: 0.36, x: 0.12, rot: -0.12 },
   sunhat: { w: 1.9, from: 'brow', y: 0.2 }, conical: { w: 1.8, from: 'brow', y: 0.22 }, beanie: { w: 1.5, from: 'brow', y: 0.08 }, bucket: { w: 1.42, from: 'brow', y: 0.12 },
-  catEars: { w: 1.75, from: 'brow', y: -0.08 }, headphones: { w: 2.25, from: 'brow', y: -0.62, sy: 0.7, order: 'underFace' }, headset: { w: 1.45, from: 'brow', y: -0.49 },
+  catEars: { w: 1.75, from: 'brow', y: -0.08 },
+  // (2026-10-08, the owner: "this headset is too big for her": 2.25 of her face's width, behind her face and the hair
+  // beside it, its band floated over her hair and its cups stuck out past her head) her headphones on her head: from the
+  // middle between her ears (`ears`: as she turns her head they stay at its sides), their cups' middles at her ears'
+  // height, the inside of each cup just outside her face, their band on top of her hair, drawn over her hair (`mic`)
+  headphones: { w: 1.643, from: 'ears', y: -0.397, order: 'mic' },
+  // (2026-10-08, the owner: "headset not even on her ears": its cup sat beside her eye, 0.19 of her face's width above her
+  // ear) its painting fitted to her head (PAINT_FIT): its cup's middle on her ear (her ears' middles are 0.45 out and 0.1
+  // below her eyes, measured on her model), its band's top on her hair, its mic at her mouth; drawn over her hair and under a
+  // hand by her face (`mic`: her laugh's hand over her mouth went under the boom)
+  headset: { w: 1.2, from: 'brow', y: -0.651, x: -0.032, order: 'mic' },
   glasses: { w: 1.08, from: 'eyes', y: 0.0 }, bow: { w: 0.75, from: 'eyes', y: 0.72, x: 0.55, rot: -0.35 }, clips: { w: 0.6, from: 'eyes', y: 0.85, x: 0.45, rot: -0.25 },
   flower: { w: 0.55, from: 'eyes', y: 0.4, x: 0.62, rot: -0.2 }, sakura: { w: 0.85, from: 'eyes', y: 0.7, x: 0.55, rot: -0.35 },
   neck: { w: 1.5, from: 'neck', y: 0 }, garland: { w: 1.75, from: 'neck', y: -0.05 }, helmet: { w: 2.2, from: 'eyes', y: 0.0 },
@@ -137,6 +148,83 @@ export const PAINT_AT = {
   // flower under Mexico's sun hat by her ear (on the hat's brim it was lost)
   'catears-black': { w: 1.55, y: -0.22 }, 'beret-lilac': { w: 1.12, y: 0.3 }, 'flower-yellow': { y: 0.12, x: 0.68 },
 };
+// (2026-10-08, the owner's screenshot: the conical hat perched above her head) a hat she wears with her head inside it,
+// painted from a little below (its underside showing): all of it behind her face and her hair, its outside (the cone, down
+// to its lip: `lip`, the lip's curve in the picture, y = lip[0] + lip[1] (x − ½)², both 0..1 of its size) in front of them
+export const PAINT_SPLIT = { conical: { lip: [0.478, 0.8] } };
+// (2026-10-08, the owner: "headset not even on her ears") a painting that doesn't fit her head as it's painted (its band a
+// round arc, her head taller than wide: its cups came out by her eyes): its rows [a, b] stretched, `add` px more in all,
+// most where its band's sides are straight (a smooth bump: its arc stays round at the top, its thickness as painted), so its
+// cups come down to her ears and its band stays on her hair; and a part of it turned on its own (`swing`: its mic's boom,
+// below `cut`, and below side[0] left of side[1], about `pivot` (where it leaves the cup), `deg` up: its mic, lower with
+// the stretch, back at her mouth). In the painting's own pixels (headset.webp, 431 × 512).
+// (2026-10-08, the owner: "this headset is too big for her") her headphones, smaller: painted with their cups close
+// together for her head (at the size that puts them at its sides, the cups were tall from her eyebrows to her mouth), so
+// their band's middle is widened too (`cols`, `addX` px more: the cups farther apart, as painted) and its sides lengthened
+// (`rows`), so at a smaller size the inside of each cup is just outside her face and the band on top of her hair
+// (headphones-midnight.webp 472 × 512, headphones-gamer.webp 464 × 512: its band thinner, so a little less of it).
+export const PAINT_FIT = {
+  headset: { rows: [110, 270], add: 99, swing: { cut: 374, side: [364, 39], pivot: [26, 364], deg: 16.5 } },
+  'headphones-midnight': { rows: [150, 268], add: 51, cols: [128, 344], addX: 58 },
+  'headphones-gamer': { rows: [150, 268], add: 41, cols: [124, 340], addX: 66 },
+};
+// where row y (or column x) of a painting goes once it's fitted (∫ 1 + k sin²: the stretch grows and fades smoothly; k:
+// `add` in all)
+function stretched(v, [a, b], add) {
+  if (!add || v <= a) return v;
+  if (v >= b) return v + add;
+  const u = (v - a) / (b - a);
+  return v + 2 * add * (u / 2 - Math.sin(2 * Math.PI * u) / (4 * Math.PI));
+}
+export const fitRow = (y, fit) => (fit.rows ? stretched(y, fit.rows, fit.add) : y);
+export const fitCol = (x, fit) => (fit.cols ? stretched(x, fit.cols, fit.addX) : x);
+// the painting fitted: its body (the swinging part taken out) and the swinging part, each a canvas of the fitted size
+function fitPainting(img, fit) {
+  const W = img.width, H = img.height, H2 = H + (fit.rows ? fit.add : 0), W2 = W + (fit.cols ? fit.addX : 0);
+  // its rows, then its columns: each one in between from the one of the painting that lands there (the stretch grows:
+  // halving finds it)
+  let src = img;
+  if (fit.rows) {
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H2;
+    const g = c.getContext('2d'), [a, b] = fit.rows;
+    g.drawImage(src, 0, 0, W, a, 0, 0, W, a);
+    g.drawImage(src, 0, b, W, H - b, 0, b + fit.add, W, H - b);
+    for (let yo = a; yo < b + fit.add; yo++) {
+      let lo = a, hi = b;
+      for (let k = 0; k < 24; k++) { const mid = (lo + hi) / 2; if (fitRow(mid, fit) < yo + 0.5) lo = mid; else hi = mid; }
+      g.drawImage(src, 0, Math.min(H - 1, Math.floor(lo)), W, 1, 0, yo, W, 1);
+    }
+    src = c;
+  }
+  if (fit.cols) {
+    const c = document.createElement('canvas');
+    c.width = W2; c.height = H2;
+    const g = c.getContext('2d'), [a, b] = fit.cols;
+    g.drawImage(src, 0, 0, a, H2, 0, 0, a, H2);
+    g.drawImage(src, b, 0, W - b, H2, b + fit.addX, 0, W - b, H2);
+    for (let xo = a; xo < b + fit.addX; xo++) {
+      let lo = a, hi = b;
+      for (let k = 0; k < 24; k++) { const mid = (lo + hi) / 2; if (fitCol(mid, fit) < xo + 0.5) lo = mid; else hi = mid; }
+      g.drawImage(src, Math.min(W - 1, Math.floor(lo)), 0, 1, H2, xo, 0, 1, H2);
+    }
+    src = c;
+  }
+  let body = src;
+  if (body === img) { body = document.createElement('canvas'); body.width = W; body.height = H; body.getContext('2d').drawImage(img, 0, 0); }
+  if (!fit.swing) return { body };
+  const g = body.getContext('2d');
+  const s = fit.swing, at = (y) => fitRow(y, fit), sx = fitCol(s.side[1], fit);
+  const region = (c) => { c.beginPath(); c.rect(0, at(s.cut), W2, H2 - at(s.cut)); c.rect(0, at(s.side[0]), sx, at(s.cut) - at(s.side[0])); };
+  const swing = document.createElement('canvas');
+  swing.width = W2; swing.height = H2;
+  const q = swing.getContext('2d');
+  region(q); q.clip();
+  q.drawImage(body, 0, 0);
+  g.globalCompositeOperation = 'destination-out';
+  region(g); g.fill();
+  return { body, swing };
+}
 const PAINT_SLOT = { bow: 'bow', headphones: 'headphones', glasses: 'glasses', sunglasses: 'glasses', shades: 'glasses', clips: 'clips', catEars: 'ears',
   headset: 'headset', cap: 'hat', beret: 'hat', sunhat: 'hat', bucket: 'hat', beanie: 'hat', conical: 'hat', scarf: 'neck', garland: 'neck', flower: 'flower',
   sakura: 'sakura', helmet: 'helmet' };
@@ -330,14 +418,19 @@ const DRAW = {
     }
     g.beginPath(); g.arc(150, 30, 6, 0, Math.PI * 2); g.fillStyle = '#d9d4ec'; g.fill(); g.lineWidth = 2; g.strokeStyle = 'rgba(92, 84, 128, 0.85)'; g.stroke();
   }),
-  shaft: () => canvas(24, 256, (g) => {
-    const rod = g.createLinearGradient(9, 0, 15, 0);
-    rod.addColorStop(0, '#8d88a6'); rod.addColorStop(0.5, '#e6e2f2'); rod.addColorStop(1, '#8d88a6');
-    g.fillStyle = rod; g.fillRect(10, 0, 4, 216);
-    // its handle: a pink J
-    g.lineCap = 'round'; g.lineWidth = 8; g.strokeStyle = '#ff7eb6';
-    g.beginPath(); g.moveTo(12, 210); g.lineTo(12, 234); g.quadraticCurveTo(12, 250, 3, 245); g.stroke();
-    g.lineWidth = 2; g.strokeStyle = 'rgba(255, 255, 255, 0.7)'; g.beginPath(); g.moveTo(10.5, 214); g.lineTo(10.5, 232); g.stroke();
+  // (2026-10-08: as long as a real umbrella's, its handle a pink grip and a little hook at its end; resting on her shoulder,
+  // held behind her, that end is behind her, out of sight)
+  shaft: () => canvas(32, 512, (g) => {
+    const rod = g.createLinearGradient(13, 0, 19, 0);
+    rod.addColorStop(0, '#8d88a6'); rod.addColorStop(0.5, '#eeeaf8'); rod.addColorStop(1, '#8d88a6');
+    g.fillStyle = rod; g.fillRect(14, 0, 4, 400);
+    // its handle: a pink grip, then its hook
+    const grip = g.createLinearGradient(9, 0, 23, 0);
+    grip.addColorStop(0, '#e2508f'); grip.addColorStop(0.45, '#ff8cc0'); grip.addColorStop(1, '#d9407f');
+    g.fillStyle = grip; g.beginPath(); g.roundRect(9, 384, 14, 92, 6); g.fill();
+    g.lineWidth = 2.5; g.strokeStyle = 'rgba(120, 30, 70, 0.6)'; g.stroke();
+    g.lineCap = 'round'; g.lineWidth = 10; g.strokeStyle = '#ff7eb6';
+    g.beginPath(); g.moveTo(16, 472); g.lineTo(16, 486); g.quadraticCurveTo(16, 506, 4, 498); g.stroke();
   }),
   // (2026-10-07, the owner: "add more emotions as well") her cartoon marks: heart eyes, star eyes, dizzy spirals (one eye
   // each, 128 × 128), tears (a stream under one eye, 64 × 160), gloom lines, an anger mark and a sweat drop
@@ -380,7 +473,7 @@ const DRAW = {
     g.fillStyle = 'rgba(140,215,255,0.95)'; g.fill(); g.lineWidth = 6; g.strokeStyle = INK; g.stroke();
     g.beginPath(); g.ellipse(30, 74, 6, 11, 0.3, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,0.85)'; g.fill();
   }),
-  // things she holds: a mug (96 × 96) and a microphone (64 × 160)
+  // things she holds: a mug (96 × 96) and her phone (64 × 112)
   mug: () => canvas(96, 96, (g) => {
     g.lineWidth = 6; g.strokeStyle = INK;
     g.beginPath(); g.arc(70, 50, 15, -Math.PI / 2, Math.PI / 2); g.stroke();
@@ -394,14 +487,6 @@ const DRAW = {
     g.fillStyle = '#e4d9ff'; g.beginPath(); g.roundRect(14, 14, 36, 70, 5); g.fill();
     g.fillStyle = '#6b3bff'; g.beginPath(); g.arc(32, 94, 4, 0, Math.PI * 2); g.fill();
   }),
-  mic: () => canvas(64, 160, (g) => {
-    g.lineWidth = 6; g.strokeStyle = INK;
-    g.beginPath(); g.moveTo(24, 58); g.lineTo(40, 58); g.lineTo(36, 154); g.lineTo(28, 154); g.closePath(); g.fillStyle = '#2b2b3d'; g.fill(); g.stroke();
-    g.beginPath(); g.arc(32, 34, 27, 0, Math.PI * 2); g.fillStyle = '#c9c9d9'; g.fill(); g.stroke();
-    g.strokeStyle = 'rgba(23,10,54,0.5)'; g.lineWidth = 2;
-    for (let k = -18; k <= 18; k += 9) { g.beginPath(); g.moveTo(32 + k, 10); g.lineTo(32 + k, 58); g.stroke(); g.beginPath(); g.moveTo(6, 34 + k); g.lineTo(58, 34 + k); g.stroke(); }
-    g.fillStyle = '#ff4da6'; g.fillRect(24, 64, 16, 8);
-  }),
 };
 
 // A flat picture in her model's own space (model units), drawn in a place in her pieces' order
@@ -413,6 +498,11 @@ function sprite(tex, order) {
   mesh.userData.order = order;
   return mesh;
 }
+// (2026-10-08) her umbrella, resting on her right shoulder, held behind her (her face's widths): where its shaft rests on
+// her shoulder (from her shoulder joint: out, up), how far it leans out from upright (degrees), its length above that and
+// below it (behind her), its width, its canopy's width; the canopy picture's apex (where the shaft ends) above its middle
+export const UMBRELLA = { rest: [0.12, 0.42], tilt: -15, above: 3, below: 1.6, width: 0.13, canopy: 4.3 };
+const CANOPY_APEX = 0.32;
 const HATS = ['cap', 'beret', 'sunhat', 'bucket', 'beanie', 'conical'];
 // where each hat sits (her face's width = 1): its width, and where its middle is above the top of her hair (her head's
 // tilt follows). Tuned by eye on her set (2026-10-07)
@@ -421,11 +511,78 @@ const HAT_AT = { cap: { w: 1.6, y: -0.52 }, beret: { w: 1.3, y: -0.31, x: 0.12, 
 // her cartoon marks (moves.js `emote`): which pictures, and where
 export const EMOTES = ['hearts', 'stars', 'spiral', 'tears', 'gloom', 'vein', 'sweat'];
 
+// her hand drawn again over what she holds, only where her thumb or her fingers are (her hand's own frame, a vertex
+// attribute: so it follows her hand however it bends, turns or curls)
+const GRIP_VERT = /* glsl */`
+  attribute vec2 hl;
+  varying vec2 vUv;
+  varying vec2 vHl;
+  void main() { vUv = uv; vHl = hl; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const GRIP_FRAG = /* glsl */`
+  uniform sampler2D map;
+  uniform float opacity;
+  uniform vec3 mulColor;
+  uniform vec3 scrColor;
+  uniform float part;
+  uniform float fade;
+  varying vec2 vUv;
+  varying vec2 vHl;
+  void main() {
+    float a = vHl.x, b = vHl.y;
+    // 1: her thumb (out on the far side of her hand, above its ball, before her knuckles: never her palm's edge below it,
+    // which showed as a line across her mug); 2: her fingers (past her knuckles)
+    float m = part < 1.5 ? (1.0 - smoothstep(-0.24, -0.15, b)) * smoothstep(0.3, 0.36, a) * (1.0 - smoothstep(0.54, 0.62, a)) : smoothstep(0.5, 0.6, a);
+    if (m < 0.004) discard;
+    vec4 c = texture2D(map, vUv);
+    c.rgb *= mulColor;
+    c.rgb = c.rgb + scrColor * c.a - c.rgb * scrColor;
+    gl_FragColor = c * opacity * fade * m;
+  }`;
+const GRIP_PART = { thumb: 1, fingers: 2 };
+// (2026-10-08) her elbow bent far, her hand up by her face: the ends of her upper arm and her forearm are drawn soft, to lie
+// over each other on a straight arm, and nothing of her drawing is the round of a bent elbow: its end showed as a pale,
+// see-through cuff with odd lines. A small round elbow in her skin's colors, just under her forearm (so her forearm's soft
+// end fades into it), its outline round its end, lit on her thumb's side like her forearm. In her quad's own frame: y away
+// from her forearm, x across it toward her little finger's side.
+const ELBOW_VERT = /* glsl */`
+  varying vec2 vP;
+  void main() { vP = uv * 2.0 - 1.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const ELBOW_FRAG = /* glsl */`
+  uniform float opacity;
+  uniform float w;
+  uniform float flip;
+  uniform vec3 skin;
+  uniform vec3 shade;
+  uniform vec3 line;
+  uniform vec3 lineLit;
+  varying vec2 vP;
+  void main() {
+    float r = length(vP);
+    float fill = 1.0 - smoothstep(0.95, 1.0, r);
+    if (fill <= 0.0) discard;
+    float x = vP.x * flip, y = vP.y;
+    float ring = smoothstep(0.85, 0.9, r) * smoothstep(-0.3, 0.15, y);
+    float dark = smoothstep(-0.7, 0.8, x);
+    vec3 c = mix(skin, shade, 0.15 + 0.55 * dark * smoothstep(0.35, 0.95, r) * smoothstep(-0.4, 0.6, y));
+    c = mix(c, mix(lineLit, line, dark), ring);
+    float a = fill * opacity * w;
+    gl_FragColor = vec4(c * a, a);
+  }`;
+// her skin (her forearm's, as drawn: its middle, its shaded side) and her outline (its dark side, its lit side), 0..255
+const ELBOW_COLORS = { skin: [254, 219, 192], shade: [246, 190, 164], line: [160, 98, 78], lineLit: [205, 168, 138] };
+// how far bent before it shows (the cosine between her upper arm and her forearm, from her elbow: −1 straight, 1 folded
+// flat: from about 110° apart, all of it by 70°), its radius (forearm lengths: her forearm's half width there, a little
+// more) and where its middle is across her forearm (her forearm's middle is a little toward her thumb's side)
+export const ELBOW_FOLD = [-0.34, 0.34];
+export const ELBOW_R = 0.18, ELBOW_ACROSS = -0.013;
+const smoothstep = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+// (2026-10-08) what she holds fades in and out (in this many frames) instead of popping into her hand and out of it
+export const HELD_FADE = 6;
 // ---------- her wardrobe ----------
-// model: her puppet (src/stage/agi1-2d.js). wear(id) changes her outfit (its colors ease in), hold('mug' | 'mic' | 'phone' |
-// 'umbrella' | 'food' | null) puts something in her right hand (on the left of the picture), food(id, stage) is the food
-// she holds (food.js: whole, one bite, two bites). Call update(emote) from her model's hooks.afterDeform: emote is moves.js's
-// { kind, w } (her cartoon marks: heart eyes, tears…) or null.
+// model: her puppet (src/stage/agi1-2d.js). wear(id) changes her outfit (its colors ease in), hold('mug' | 'phone' | 'food' |
+// 'umbrella' | null) puts something in her right hand (on the left of the picture; her umbrella on her right shoulder),
+// food(id, stage) is the food she holds (food.js: whole, one bite, two bites). Call update(emote) from her model's
+// hooks.afterDeform: emote is moves.js's { kind, w } (her cartoon marks: heart eyes, tears…) or null.
 export function createWardrobe(model) {
   const D = model.core.drawables, ids = Array.from(D.ids), meshes = model.meshes.meshes;
   const piece = (n) => ids.indexOf(n);
@@ -467,15 +624,78 @@ export function createWardrobe(model) {
   group.name = 'wardrobe';
   model.art.add(group);
   let items = {}, current = 'classic', held = null;
+  // (2026-10-08) what's drawn in her hand: what she holds, fading in (heldK up to 1), or what she held, fading out
+  let shown = null, heldK = 0;
   // the food she holds: its own small canvas, drawn again for each bite
   const foodCanvas = document.createElement('canvas');
   foodCanvas.width = foodCanvas.height = FOOD_SIZE;
   const foodTex = new THREE.CanvasTexture(foodCanvas);
   foodTex.colorSpace = THREE.SRGBColorSpace;
   let foodNow = null;
-  const props = { mug: sprite(DRAW.mug(), 'hand'), mic: sprite(DRAW.mic(), 'hand'), phone: sprite(DRAW.phone(), 'hand'), food: sprite(foodTex, 'hand'),
-    canopy: sprite(DRAW.canopy({}), 'top'), shaft: sprite(DRAW.shaft(), 'hand') };
+  const props = { mug: sprite(DRAW.mug(), 'held'), phone: sprite(DRAW.phone(), 'held'), food: sprite(foodTex, 'held'),
+    canopy: sprite(DRAW.canopy({}), 'top'), shaft: sprite(DRAW.shaft(), 'held') };
   for (const p of Object.values(props)) group.add(p);
+  // (2026-10-08) her hand drawn again over what she holds, only her fingers or her thumb (HOLD.grip): for each hand, her
+  // fingers, then her thumb over them
+  const grips = {};
+  for (const side of ['R', 'L']) {
+    const arm = model.drawnArms?.[side], i = arm?.pieces.hand, mesh = meshes[i], local = arm?.local?.[i];
+    if (!mesh || !local || local.length !== mesh.geometry.attributes.position.count * 2) continue;
+    mesh.geometry.setAttribute('hl', new THREE.BufferAttribute(local, 2));
+    const u = mesh.material.uniforms;
+    grips[side] = ['fingers', 'thumb'].map((part) => {
+      const mat = new THREE.ShaderMaterial({
+        uniforms: { map: u.map, opacity: u.opacity, mulColor: u.mulColor, scrColor: u.scrColor, part: { value: GRIP_PART[part] }, fade: { value: 0 } },
+        vertexShader: GRIP_VERT, fragmentShader: GRIP_FRAG, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+      });
+      for (const k of ['blending', 'blendEquation', 'blendEquationAlpha', 'blendSrc', 'blendDst', 'blendSrcAlpha', 'blendDstAlpha']) mat[k] = mesh.material[k];
+      const g = new THREE.Mesh(mesh.geometry, mat);
+      g.name = `${mesh.name}-${part}`;
+      g.frustumCulled = false;
+      g.visible = false;
+      g.userData.part = part;
+      model.meshes.group.add(g);
+      return g;
+    });
+  }
+  // (2026-10-08) her round elbow when it's bent far (ELBOW_FRAG), one for each arm
+  const elbows = {};
+  for (const side of ['R', 'L']) {
+    const arm = model.drawnArms?.[side], fm = arm && meshes[arm.pieces.fore];
+    if (!fm) continue;
+    const v3 = (c) => new THREE.Vector3(c[0] / 255, c[1] / 255, c[2] / 255);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { opacity: fm.material.uniforms.opacity, w: { value: 0 }, flip: { value: arm.inward || 1 }, skin: { value: v3(ELBOW_COLORS.skin) },
+        shade: { value: v3(ELBOW_COLORS.shade) }, line: { value: v3(ELBOW_COLORS.line) }, lineLit: { value: v3(ELBOW_COLORS.lineLit) } },
+      vertexShader: ELBOW_VERT, fragmentShader: ELBOW_FRAG, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+    });
+    for (const k of ['blending', 'blendEquation', 'blendEquationAlpha', 'blendSrc', 'blendDst', 'blendSrcAlpha', 'blendDstAlpha']) mat[k] = fm.material[k];
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+    m.name = `elbow_${side}`;
+    m.frustumCulled = false;
+    m.visible = false;
+    group.add(m);
+    elbows[side] = m;
+  }
+  // (2026-10-08) a hand by her face (a bite, her cheek, her chin): her forearm and hand drawn over her face and her hair
+  // (moves.js `front`); her arms are drawn under them otherwise, as her model has them
+  const armPieces = { R: ['forearm_R', 'hand_R'].map(piece), L: ['forearm_L', 'hand_L'].map(piece) };
+  const ownOrder = {};
+  let fronted = { R: false, L: false };
+  function front(which) {
+    const top = Math.max(meshes[P.hairL].renderOrder, meshes[P.hairR].renderOrder, meshes[P.sideL].renderOrder, meshes[P.sideR].renderOrder);
+    for (const side of ['R', 'L']) {
+      const on = Boolean(which?.[side]);
+      if (on === fronted[side]) continue;
+      fronted[side] = on;
+      armPieces[side].forEach((i, k) => {
+        const m = meshes[i];
+        if (!m) return;
+        if (on) { ownOrder[i] = m.renderOrder; m.renderOrder = top + (side === 'R' ? 0.2e-4 : 0.6e-4) + k * 0.1e-4; }
+        else if (ownOrder[i] !== undefined) m.renderOrder = ownOrder[i];
+      });
+    }
+  }
   // her cartoon marks: two of each eye mark, two tears, the rest one
   const marks = {
     heartsR: sprite(DRAW.heartEye(), 'behindBangs'), heartsL: sprite(DRAW.heartEye(), 'behindBangs'),
@@ -491,11 +711,34 @@ export function createWardrobe(model) {
     await Promise.all(Object.values(PAINTED_ACC[id] || {}).filter((pid) => !painted[pid] && isPainted('accessories', pid)).map(async (pid) => {
       const img = await paintLoad('accessories', pid);
       if (!img || painted[pid]) return;
-      const tex = new THREE.Texture(img);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = 1;
-      tex.needsUpdate = true;
-      painted[pid] = tex;
+      // (a painting fitted to her head first: its body, and the part that swings on its own)
+      const fit = PAINT_FIT[pid] && fitPainting(img, PAINT_FIT[pid]);
+      const texOf = (src) => {
+        const tex = src instanceof HTMLCanvasElement ? new THREE.CanvasTexture(src) : new THREE.Texture(src);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 1;
+        tex.needsUpdate = true;
+        return tex;
+      };
+      painted[pid] = texOf(fit ? fit.body : img);
+      if (fit?.swing) painted[`${pid}:swing`] = texOf(fit.swing);
+      // (a hat she wears with her head inside it: its front, the part in front of her head, as a picture of its own)
+      const split = PAINT_SPLIT[pid];
+      if (split) {
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d');
+        g.drawImage(img, 0, 0);
+        g.globalCompositeOperation = 'destination-out';
+        g.beginPath();
+        for (let k = 0; k <= 64; k++) { const x = k / 64; g.lineTo(x * c.width, (split.lip[0] + split.lip[1] * (x - 0.5) ** 2) * c.height); }
+        g.lineTo(c.width, c.height); g.lineTo(0, c.height); g.closePath();
+        g.fill();
+        const front = new THREE.CanvasTexture(c);
+        front.colorSpace = THREE.SRGBColorSpace;
+        front.anisotropy = 1;
+        painted[`${pid}:front`] = front;
+      }
     }));
     return true;
   }
@@ -514,6 +757,23 @@ export function createWardrobe(model) {
         it.userData.paint = a;
         it.userData.pid = pid;
         items[slot] = it;
+        // (a hat her head is inside: all of it behind her face and her hair, its front over them)
+        const front = painted[`${pid}:front`];
+        if (front) {
+          it.userData.order = 'underFace';
+          it.userData.split = true;
+          const f = sprite(front, 'top');
+          Object.assign(f.userData, { kept: true, paint: a, pid, split: true, front: true });
+          items[`${slot}Front`] = f;
+        }
+        // (its part that swings on its own: placed with it, below)
+        const swing = painted[`${pid}:swing`];
+        if (swing) {
+          const s = sprite(swing, 'top');
+          Object.assign(s.userData, { kept: true, pid, swing: true });
+          it.userData.swing = s;
+          items[`${slot}Swing`] = s;
+        }
         continue;
       }
       if (a === 'headphones') {
@@ -540,7 +800,7 @@ export function createWardrobe(model) {
   // where her pieces are (model units), this frame
   const P = {
     face: piece('face'), hairL: piece('hair_front_L'), hairR: piece('hair_front_R'), sideL: piece('hair_side_L'), sideR: piece('hair_side_R'),
-    earL: piece('ear_L'), earR: piece('ear_R'), eyeL: piece('eye_white_L'), eyeR: piece('eye_white_R'), handR: piece('hand_R'), mouth: piece('mouth_line'),
+    earL: piece('ear_L'), earR: piece('ear_R'), eyeL: piece('eye_white_L'), eyeR: piece('eye_white_R'), handR: piece('hand_R'), handL: piece('hand_L'), mouth: piece('mouth_line'),
     print: piece('shirt_print'), upperR: piece('upper_arm_R'),
   };
   const box = (i) => {
@@ -550,27 +810,39 @@ export function createWardrobe(model) {
     const n = p.length / 2;
     return { x0, y0, x1, y1, cx: sx / n, cy: sy / n, w: x1 - x0, h: y1 - y0 };
   };
+  const lowest = Math.min(...meshes.filter(Boolean).map((m) => m.renderOrder));
   const place = (mesh, x, y, w, h, rot, order, opacity = 1) => {
     mesh.position.set(x, y, 0);
     mesh.scale.set(w, h, 1);
     mesh.rotation.z = rot;
     const ro = { behindBangs: Math.min(meshes[P.hairL].renderOrder, meshes[P.hairR].renderOrder) - 1e-4,
       top: Math.max(meshes[P.hairL].renderOrder, meshes[P.hairR].renderOrder, meshes[P.sideL].renderOrder, meshes[P.sideR].renderOrder) + 1e-4,
+      // (2026-10-08, her headset: over her hair, under a hand by her face, front())
+      mic: Math.max(meshes[P.hairL].renderOrder, meshes[P.hairR].renderOrder, meshes[P.sideL].renderOrder, meshes[P.sideR].renderOrder) + 0.1e-4,
       hand: meshes[P.handR].renderOrder - 1e-4,
+      // (2026-10-08: what she holds, over her hand; her thumb or her fingers drawn again over it)
+      held: meshes[P.handR].renderOrder + 0.05e-4,
       // (a scarf or a garland: over her shirt, under her arms, her face and her hair)
       neck: meshes[P.print].renderOrder + 1e-4,
       // (her umbrella's shaft: in her hand, behind her upper arm)
       under: meshes[P.upperR].renderOrder - 1e-4,
-      // (headphones: their cups at the sides of her head, behind her face and the hair beside it)
-      underFace: meshes[P.face].renderOrder - 1e-4 }[order];
+      // (behind her face and her hair: the conical hat's underside, PAINT_SPLIT)
+      underFace: meshes[P.face].renderOrder - 1e-4,
+      // (her umbrella, held behind her: behind all of her)
+      behind: lowest - 1e-4 }[order];
     mesh.renderOrder = ro;
     mesh.material.opacity = opacity;
     mesh.visible = opacity > 0.01;
   };
   let t = 0;
+  const norm = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  const spots = { mouth: [0, 0], chin: [0, 0], cheekR: [0, 0], cheekL: [0, 0], eyeR: [0, 0], eyeL: [0, 0], earR: [0, 0], earL: [0, 0],
+    top: [0, 0], face: [0, 0], shoulderR: [0, 0], shoulderL: [0, 0], fw: 0.148, roll: 0 };
+  let spotsReady = false;
 
-  function update(emote = null) {
+  function update(emote = null, extra = {}) {
     t += 1 / 30;
+    front(extra.front);
     if (ease < 1) { ease = Math.min(1, ease + 1 / 12); apply(); }
     const face = box(P.face), eL = box(P.eyeL), eR = box(P.eyeR);
     const roll = Math.atan2(eL.cy - eR.cy, eL.cx - eR.cx);           // her head's tilt (R is on the left of the picture)
@@ -579,7 +851,21 @@ export function createWardrobe(model) {
     const fw = face.w, eyesY = (eL.cy + eR.cy) / 2 - face.cy, eyesX = (eL.cx + eR.cx) / 2 - face.cx;
     const top = Math.max(box(P.hairL).y1, box(P.hairR).y1) - face.cy;
     const span = Math.hypot(eL.cx - eR.cx, eL.cy - eR.cy);
-    const earL = box(P.earL), chin = face.y0;
+    const earL = box(P.earL), earR = box(P.earR), chin = face.y0;
+    // (2026-10-08) the spots of her face and body her hands reach for (moves.js), without her hips' shift (her arms' frame)
+    {
+      const hip = model.posture.hip, mouth = box(P.mouth), put = (k, x, y) => { spots[k][0] = x - hip; spots[k][1] = y; };
+      put('mouth', mouth.cx, mouth.cy);
+      put('chin', ...at(0, chin - face.cy));
+      put('cheekR', ...at(eyesX - fw * 0.4, eyesY - fw * 0.22));
+      put('cheekL', ...at(eyesX + fw * 0.4, eyesY - fw * 0.22));
+      put('eyeR', eR.cx, eR.cy); put('eyeL', eL.cx, eL.cy);
+      put('earR', earR.cx, earR.cy); put('earL', earL.cx, earL.cy);
+      put('top', ...at(0, top)); put('face', face.cx, face.cy);
+      for (const side of ['R', 'L']) { const S = model.drawnArms?.[side]?.now.base?.S; if (S) { spots[`shoulder${side}`][0] = S[0]; spots[`shoulder${side}`][1] = S[1]; } }
+      spots.fw = fw; spots.roll = roll;
+      spotsReady = true;
+    }
     for (const [k, it] of Object.entries(items)) {
       if (it.userData.paint) {
         // a painting: its width (her face's), where its middle is, its own shape
@@ -593,9 +879,25 @@ export function createWardrobe(model) {
         if (at0.from === 'eyes') [x, y] = at(eyesX + fw * (at0.x || 0), eyesY + fw * at0.y);
         else if (at0.from === 'brow') [x, y] = at(eyesX + fw * (at0.x || 0), eyesY + fw * at0.y + h / 2);
         else if (at0.from === 'ear') { x = earL.cx + fw * (at0.x || 0); y = earL.cy + fw * at0.y; }
+        else if (at0.from === 'ears') {
+          // (2026-10-08) from the middle between her ears, by its bottom edge: the sides of her head, which stay where they
+          // are as she turns her head (her eyes move across her face; anchored to them, a cup slid over her cheek)
+          const mx = (earR.cx + earL.cx) / 2, my = (earR.cy + earL.cy) / 2, ox = fw * (at0.x || 0), oy = fw * at0.y + h / 2;
+          x = mx + ox * cos - oy * sin; y = my + ox * sin + oy * cos;
+        }
         else if (at0.from === 'neck') { x = face.cx + fw * (at0.x || 0); y = chin - h / 2 + fw * (0.06 + at0.y); }
         else [x, y] = at(fw * (at0.x || 0), top + h / 2 + fw * at0.y - fw * 0.25);
-        place(it, x, y, w, h, (at0.from === 'neck' ? roll * 0.3 : roll) + (at0.rot || 0), at0.order || it.userData.order);
+        const rot = (at0.from === 'neck' ? roll * 0.3 : roll) + (at0.rot || 0), order = it.userData.split ? it.userData.order : at0.order || it.userData.order;
+        place(it, x, y, w, h, rot, order);
+        // (its part that swings on its own, turned about its pivot: the same size of picture, so the pivot is the same point
+        // of both)
+        const sw = it.userData.swing, fit = PAINT_FIT[it.userData.pid];
+        if (sw && fit?.swing) {
+          const [px, py] = fit.swing.pivot, lx = (fitCol(px, fit) / img.width - 0.5) * w, ly = (0.5 - fitRow(py, fit) / img.height) * h;
+          const c0 = Math.cos(rot), s0 = Math.sin(rot), r1 = rot + (fit.swing.deg * Math.PI) / 180, c1 = Math.cos(r1), s1 = Math.sin(r1);
+          const wx = x + lx * c0 - ly * s0, wy = y + lx * s0 + ly * c0;
+          place(sw, wx - lx * c1 + ly * s1, wy - lx * s1 - ly * c1, w, h, r1, order);
+        }
         continue;
       }
       if (k === 'ears') { const [x, y] = at(0, top - fw * 0.02); place(it, x, y, fw * 1.25, fw * 0.62, roll, it.userData.order); }
@@ -630,33 +932,75 @@ export function createWardrobe(model) {
         place(it, face.cx, face.y0 - fw * (g ? 0.49 : 0.41), w, (w * img.height) / img.width, roll * 0.3, it.userData.order);
       } else if (k === 'helmet') { const [x, y] = at(0, fw * 0.05); place(it, x, y, fw * 2.3, fw * 2.3 * (380 / 360), roll, it.userData.order); }
     }
-    // what she holds, in her right hand (on the left of the picture): along her hand, from her wrist to her fingertips
-    const arm = model.arms.R;
+    // what she holds, in her right hand (on the left of the picture): in her hand's own frame (HOLD), in front of her palm,
+    // her fingers or her thumb drawn again over it (2026-10-08: it floated past her fingertips before); fading in as it
+    // comes and out as it goes (heldK)
+    if (held !== shown) { heldK = Math.max(0, heldK - 1 / HELD_FADE); if (heldK === 0) shown = held; }
+    else heldK = Math.min(1, heldK + 1 / HELD_FADE);
+    const arm = model.drawnArms?.R || model.arms.R, hip = model.posture.hip;
+    let grip = null;
     for (const [k, p] of Object.entries(props)) {
-      const on = held === k || (held === 'umbrella' && (k === 'canopy' || k === 'shaft'));
+      const on = heldK > 0 && (shown === k || (shown === 'umbrella' && (k === 'canopy' || k === 'shaft')));
       if (!on || !arm) { p.visible = false; continue; }
-      const h = model.posture.hip, W = arm.now.W, tip = arm.now.tip;
-      const dx = tip[0] - W[0], dy = tip[1] - W[1], len = Math.hypot(dx, dy) || 1;
-      const ang = Math.atan2(dy, dx);
-      const mx = (tip[0] + W[0]) / 2 + h, my = (tip[1] + W[1]) / 2;
-      if (k === 'mug') place(p, mx, my, len * 1.25, len * 1.25, 0, 'hand');
-      else if (k === 'phone') place(p, mx + len * 0.1, my + len * 0.35, len * 0.62, len * 1.08, ang - Math.PI / 2, 'hand');
-      // (her food over her face and hair: her arms are drawn under her face, and a bite happens at her mouth: as her hand
-      // comes near her mouth, the food's top right corner, where its bites are, slides to her mouth; a drink's straw)
-      else if (k === 'food') {
-        const fid = foodNow ? foodNow.split(':')[0] : '', mouth = box(P.mouth), S = len * 1.55 * (FOOD_SCALE[fid] || 1), drink = Boolean(FOODS[fid]?.drink);
-        const hx = W[0] * 0.4 + tip[0] * 0.6 + h, hy = W[1] * 0.4 + tip[1] * 0.6 + S * 0.12;
-        const near = Math.hypot(tip[0] + h - mouth.cx, tip[1] - mouth.cy), k2 = 1 - Math.min(1, Math.max(0, (near - len * 0.7) / (len * 1.6)));
-        const fx = mouth.cx - S * (drink ? 0.12 : 0.3), fy = mouth.cy - S * (drink ? 0.47 : 0.28);
-        place(p, hx + (fx - hx) * k2, hy + (fy - hy) * k2, S, S, 0, 'top');
-      } else if (k === 'shaft' || k === 'canopy') {
-        // her umbrella over her shoulder (her head is near the top of the picture: no room for it over her head), tilted
-        // back, its shaft from her hand up to its middle
-        const tilt = 0.38 + 0.03 * Math.sin(t * 1.3), hx = mx, hy = my - len * 0.2;
-        const L = fw * 1.55, cx = hx - Math.sin(tilt) * L, cy = hy + Math.cos(tilt) * L;
-        if (k === 'shaft') place(p, (hx + cx) / 2 - Math.sin(tilt) * fw * 0.1, (hy + cy) / 2, fw * 0.09, L + fw * 0.45, tilt, 'under');
-        else { const w = fw * 3.2; place(p, cx, cy + (w * 170) / 300 * 0.12, w, (w * 170) / 300, tilt, 'top'); }
-      } else place(p, mx, my + len * 0.6, len * 0.62, len * 1.55, 0.12, 'hand');
+      const hd = arm.now.hand, Lh = Math.hypot(hd.u[0], hd.u[1]);
+      const up = Math.atan2(hd.u[1], hd.u[0]) - Math.PI / 2;            // turned with her hand: its top toward her fingertips
+      const drink = k === 'food' && FOODS[(foodNow || '').split(':')[0]]?.drink;
+      const H = k === 'shaft' || k === 'canopy' ? {} : HOLD[drink ? 'drink' : k], img = p.material.map.image;
+      const [cx, cy] = handPoint(arm, H.a ?? 0.6, H.b ?? 0);
+      if (k === 'shaft' || k === 'canopy') {
+        // her umbrella (2026-10-08: held up in her hand it showed her hand floating by her shoulder with her arm hanging
+        // under it, the owner: "????"; her drawn hand can't close round a handle): resting on her right shoulder, held
+        // behind her, its canopy over her head and behind it, its shaft coming out from behind her shoulder
+        const S = arm.now.S, t = (UMBRELLA.tilt * Math.PI) / 180;
+        const ax = arm.sign * Math.sin(t), ay = Math.cos(t);                // up its shaft (out over her shoulder)
+        const rx = S[0] + arm.sign * fw * UMBRELLA.rest[0], ry = S[1] + fw * UMBRELLA.rest[1];
+        const above = fw * UMBRELLA.above, below = fw * UMBRELLA.below, rot = Math.atan2(ay, ax) - Math.PI / 2;
+        if (k === 'shaft') {
+          const mid = (above - below) / 2;
+          place(p, rx + hip + ax * mid, ry + ay * mid, fw * UMBRELLA.width, above + below, rot, 'behind', heldK);
+        } else {
+          // (its top, where the shaft ends, is its picture's apex: CANOPY_APEX of its height above its middle)
+          const w = fw * UMBRELLA.canopy, h = (w * 170) / 300, top2 = above - h * CANOPY_APEX;
+          place(p, rx + hip + ax * top2, ry + ay * top2, w, h, rot, 'behind', heldK);
+        }
+        continue;
+      }
+      let w = H.w * Lh;
+      if (k === 'food') { const fid = shown === 'food' && foodNow ? foodNow.split(':')[0] : ''; w *= FOOD_SCALE[fid] || 1; }
+      const rot = H.upright !== undefined ? norm(up) * (1 - H.upright) : up + ((H.rot || 0) * Math.PI) / 180;
+      place(p, cx + hip, cy, w, (w * img.height) / img.width, rot, 'held', heldK);
+      grip = H.grip;
+    }
+    // her fingers and her thumb drawn again over what she holds (HOLD.grip)
+    for (const [side, parts] of Object.entries(grips)) {
+      const hand = meshes[side === 'R' ? P.handR : P.handL];
+      for (const g of parts) {
+        const part = g.userData.part;
+        // (her thumb over what she holds; her fingers over what she holds, and her thumb over them)
+        const on = side === 'R' && grip && (grip === part || (grip === 'fingers' && part === 'thumb'));
+        g.visible = Boolean(on) && hand.visible && heldK > 0.01;
+        g.material.uniforms.fade.value = heldK;
+        if (g.visible) g.renderOrder = hand.renderOrder + (part === 'fingers' ? 0.1e-4 : 0.15e-4);
+      }
+    }
+    // her round elbow, when it's bent far: from straight (nothing) to her forearm folded up beside her upper arm (all of
+    // it), at her elbow joint, just under her forearm (wherever her forearm is drawn: over her hair, by her face)
+    for (const [side, cap] of Object.entries(elbows)) {
+      const arm = model.drawnArms[side], n = arm.now, fm = meshes[arm.pieces.fore];
+      const u1x = n.S[0] - n.E[0], u1y = n.S[1] - n.E[1], u2x = n.W[0] - n.E[0], u2y = n.W[1] - n.E[1];
+      const l1 = Math.hypot(u1x, u1y) || 1e-9, l2 = Math.hypot(u2x, u2y) || 1e-9;
+      const fold = (u1x * u2x + u1y * u2y) / (l1 * l2);              // −1 straight, 1 folded flat
+      const k = smoothstep(ELBOW_FOLD[0], ELBOW_FOLD[1], fold) * (fm.visible ? 1 : 0);
+      cap.material.uniforms.w.value = k;
+      cap.visible = k > 0.01;
+      if (!cap.visible) continue;
+      const r = ELBOW_R * arm.rest.fore, dx = -u2x / l2, dy = -u2y / l2, inw = arm.inward || 1;
+      // (across her forearm toward her little finger's side: (−u2y, u2x) × inward, as her hand's frame)
+      const off = ELBOW_ACROSS * arm.rest.fore, ax = (-u2y / l2) * inw, ay = (u2x / l2) * inw;
+      cap.position.set(n.E[0] + ax * off + hip, n.E[1] + ay * off, 0);
+      cap.scale.set(2 * r, 2 * r, 1);
+      cap.rotation.z = Math.atan2(-dx, dy);
+      cap.renderOrder = fm.renderOrder - 0.05e-4;
     }
     // her cartoon marks
     const kind = emote?.kind || null, w = Math.max(0, Math.min(1, emote?.w ?? 0));
@@ -688,6 +1032,8 @@ export function createWardrobe(model) {
   }
 
   return {
+    // (2026-10-08) the spots of her face and body this frame, for her hands (moves.js), once she's been drawn
+    get spots() { return spotsReady ? spots : null; },
     get current() { return current; },
     get held() { return held; },
     // her outfit: its colors ease in over a few frames, its accessories at once (stage.js covers the change with sparkles)

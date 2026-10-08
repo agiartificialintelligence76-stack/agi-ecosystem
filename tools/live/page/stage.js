@@ -18,8 +18,8 @@ import * as THREE from 'three';
 import { loadAgi1_2D, createAgi1_2D } from '../../../src/stage/agi1-2d.js';
 import { createEffects } from '../../../src/stage/effects.js';
 import { drawRoom, fillAmbient, fillAmbientList, ROOMS } from './rooms.js';
-import { createWardrobe, OUTFITS, PAINT_AT } from './outfits.js';
-import { createMoves, ACTIONS, CAM_ZOOM } from './moves.js';
+import { createWardrobe, OUTFITS, PAINT_AT, UMBRELLA } from './outfits.js';
+import { createMoves, ACTIONS, CAM_ZOOM, HOLD } from './moves.js';
 import { createFx, emojisIn } from './fx.js';
 import { PLACES, TRAVEL, drawPlace, drawTravel } from './places.js';
 import { VEHICLES, rideMotion } from './vehicles.js';
@@ -160,6 +160,8 @@ async function load() {
     onCam: (kind, seconds) => cam(kind, seconds),
     places,
     still: () => Boolean(ride || trip),           // (while she rides: nothing by herself)
+    // (2026-10-08) her arms and the spots of her face this frame: her hands reach where they should as she moves
+    body: () => (wardrobe.spots ? { arms: model.drawnArms, spots: wardrobe.spots } : null),
   });
   // her brows lift on a surprise (her model's own brow parameters don't move anything); her accessories follow her
   const D = model.core.drawables, ids = Array.from(D.ids);
@@ -168,7 +170,7 @@ async function load() {
   model.hooks.afterDeform = () => {
     const lift = moves.brows * faceH * 0.045;
     if (lift > 1e-6) for (const i of brows) { const p = D.vertexPositions[i]; for (let k = 1; k < p.length; k += 2) p[k] += lift; }
-    wardrobe.update(moves.emote);
+    wardrobe.update(moves.emote, { front: moves.front });
   };
   agi = createAgi1_2D(model, { camera, effects, reducedMotion: false, onGlow: () => {}, moves });
   agi.setCloseUp(true);                    // her streamer framing: no surprise dances (moves.js dances on the music's beat)
@@ -667,6 +669,8 @@ window.studio = {
   cam,
   auto: (on) => moves.auto(on),
   pose: (p) => moves.hold(p),
+  // (2026-10-08) something in her hand as it is, for a look at it (her moves give it to her otherwise)
+  hold: (what) => wardrobe.hold(what),
   alert: (a) => fx.alert(a),
   confetti: (seconds) => { fx.burst(Number(seconds) || 3.5); return true; },
   sticker: (kind) => { const h = headAt(0); fx.sticker(kind, { x: h.x - 215, y: h.y - 30 }); return true; },
@@ -690,6 +694,10 @@ window.studio = {
   meet, npcSay, bye, eat, weather,
   // (2026-10-07, her painted set) where a painted accessory sits, changed on the set while it's being tuned (outfits.js)
   paintAt: (key, v) => { PAINT_AT[key] = { ...(PAINT_AT[key] || {}), ...v }; return PAINT_AT[key]; },
+  // (2026-10-08) and how she holds something (outfits.js HOLD)
+  holdAt: (key, v) => (HOLD[key] ? Object.assign(HOLD[key], v) : null),
+  // (2026-10-08) and where her umbrella rests (outfits.js UMBRELLA)
+  umbrellaAt: (v) => Object.assign(UMBRELLA, v),
   lightning: () => wx.lightning(),
   hint,
   get state() {

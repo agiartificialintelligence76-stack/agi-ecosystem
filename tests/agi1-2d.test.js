@@ -15,7 +15,7 @@ import {
 import { createPhysics, normalize, turnBetween } from '../src/stage/live2d-physics.js';
 import { pieceAt, boxOf, refineMesh, mixInto } from '../src/stage/live2d.js';
 import { buildPuppet, createAgi1_2D, HEIGHT, FILES, BASE, ARMS, HIPS, ARM_REFINE } from '../src/stage/agi1-2d.js';
-import { measureArm, bendArm, ARM_PIECES, REACH, shoulderLimit } from '../src/stage/agi1-2d-arms.js';
+import { measureArm, bendArm, ARM_PIECES, REACH, shoulderLimit, reach, handPoint, handTurn, HAND, RIGID } from '../src/stage/agi1-2d-arms.js';
 
 const url = (p) => new URL(`../${p}`, import.meta.url);
 const read = (p) => readFileSync(url(p), 'utf8');
@@ -765,4 +765,120 @@ test('her live show draws her lighter, only when it asks (2026-10-06): one level
   };
   for (const dir of ['src', 'tools']) walk(dir);
   assert.deepEqual(callers.sort(), ['src/stage/agi1-2d.js', 'tools/live/page/stage.js'], 'the website, her clips and her launch video draw her as before');
+});
+
+// (2026-10-08, her live show; the owner: "her arms doesnt even move naturally lol it so bad and clnky looks and when she
+// holds things she doesnt even look shes holding it") her hands go where her poses say, turned and curled; her elbow a
+// hinge when it's bent far. All of it only when asked for (her live show): the website's arms are the tests above.
+test('her hands on her live show (2026-10-08): her arm reaches a point (her elbow forward, her forearm toward us), her hand turned and curled, her elbow a hinge when it folds', () => {
+  const { core } = newModel();
+  const D = core.drawables, ids = Array.from(D.ids);
+  core.parameters.values.set(core.parameters.defaultValues);
+  core.update();
+  const rest = ids.map((_, i) => Float32Array.from(D.vertexPositions[i]));
+  const rig = { rest: (i) => rest[i], indices: (i) => D.indices[i], find: (n) => ids.indexOf(n) };
+  const P = (p) => p.map((v) => v.toFixed(3)).join(', ');
+  for (const side of ['R', 'L']) {
+    const arm = measureArm(rig, side);
+    const out = arm.sign;                                   // her right arm is on the left of the picture
+    const work = ids.map((_, i) => Float32Array.from(rest[i]));
+    const turn = (pose) => { for (let i = 0; i < ids.length; i++) work[i].set(rest[i]); bendArm(arm, pose, (i) => rest[i], (i) => work[i]); };
+    // her hand reaches a point by her face (her mouth, her chin, her cheek) and out by her shoulder, pointing up or out:
+    // that point of her hand lands there, her hand points that way, and her forearm never sticks out flat from her elbow
+    // pulled in
+    const points = (deg) => (u) => (Math.abs(((((Math.atan2(u[1], u[0]) * 180) / Math.PI) - deg + 540) % 360) - 180) < 1.5);
+    for (const [x, y, deg, a, b, tw, cu] of [[out * 0.02, 0.52, 80, 0.5, 0, 150, 0.35], [out * 0.06, 0.52, 85, 0.3, 0, 170, 0.2], [out * 0.05, 0.535, 70, 0.5, 0, 40, 0.9],
+      [out * 0.16, 0.43, 90, 0.6, 0.04, 25, 1], [out * 0.2, 0.42, out > 0 ? 30 : 150, 0.35, 0, 20, 0.3]]) {
+      const r = reach(arm, x, y, deg, { a, b, twist: tw, curl: cu });
+      turn({ ...r, twist: tw, curl: cu, fold: 1 });
+      const [hx, hy] = handPoint(arm, a, b);
+      assert.ok(Math.hypot(hx - x, hy - y) < 0.004, `${side}: her hand's point at ${P([hx, hy])}, asked for ${P([x, y])}`);
+      assert.ok(points(deg)(arm.now.hand.u), `${side}: her hand points ${deg}°`);
+      assert.ok(!(r.shoulder < -20 && r.elbow > 45 && r.elbow < 140), `${side}: no paddle (${r.shoulder}, ${r.elbow})`);
+      assert.ok(r.upper >= 0.26 && r.upper <= 1 && r.fore >= 0.45 && r.fore <= 1.05, `${side}: foreshortened as a real arm can (${r.upper}, ${r.fore})`);
+    }
+    // a point out of her reach (her hand up at her eye): as far as her arm goes (her elbow all the way forward, her forearm
+    // its longest), her hand still pointing the way asked, just under it: never a stretched arm
+    {
+      const [x, y] = [out * 0.035, 0.578];
+      const r = reach(arm, x, y, 70, { a: 0.5, twist: 40, curl: 0.9 });
+      turn({ ...r, twist: 40, curl: 0.9, fold: 1 });
+      const [hx, hy] = handPoint(arm, 0.5, 0);
+      assert.ok(r.upper === 0.26 && r.fore >= 1.04 && r.fore <= 1.05, `${side}: as far as she reaches (${r.upper}, ${r.fore})`);
+      assert.ok(points(70)(arm.now.hand.u), `${side}: her hand points 70°`);
+      assert.ok(hy < y && Math.hypot(hx - x, hy - y) < 0.05, `${side}: just under it (${P([hx, hy])})`);
+    }
+    // her hand turned: narrower side on, the other way round past it (her thumb on her other side), never pinched to a line
+    // just above her wrist (2026-10-08: a notch there); her fingers curled into a fist come back over her palm
+    assert.equal(handTurn(0), 1);
+    assert.ok(Math.abs(handTurn(Math.PI / 2) - HAND.edge) < 1e-9 && handTurn(Math.PI) === -1, 'side on: its edge; turned round: the other way');
+    const hand = arm.pieces.hand, loc = arm.local[hand];
+    const widthNear = (pos) => {
+      const o = arm.now.hand.o, u = arm.now.hand.u, L = Math.hypot(u[0], u[1]), n = [-u[1] / L, u[0] / L];
+      let lo = Infinity, hi = -Infinity;
+      for (let v = 0; v < loc.length / 2; v++) {
+        if (loc[v * 2] < 0.02 || loc[v * 2] > 0.14) continue;
+        const across = (pos[v * 2] - o[0]) * n[0] + (pos[v * 2 + 1] - o[1]) * n[1];
+        lo = Math.min(lo, across); hi = Math.max(hi, across);
+      }
+      return hi - lo;
+    };
+    const pose0 = reach(arm, out * 0.06, 0.53, 80, { a: 0.4 });
+    turn({ ...pose0, fold: 1 });
+    const flat = widthNear(work[hand]);
+    turn({ ...pose0, twist: 150, fold: 1 });
+    const mirrored = widthNear(work[hand]);
+    assert.ok(mirrored > flat * 0.8, `${side}: her turned hand at her wrist ${mirrored.toFixed(4)} wide (her palm to us ${flat.toFixed(4)})`);
+    const thumbAt = (tw) => { turn({ ...pose0, twist: tw, fold: 1 }); const h = arm.now.hand, [tx, ty] = handPoint(arm, ...HAND.at.thumb); return (tx - h.o[0]) * h.n[0] + (ty - h.o[1]) * h.n[1]; };
+    assert.ok(thumbAt(0) < 0 && thumbAt(170) > 0, `${side}: her thumb on her other side, turned round`);
+    turn({ ...pose0, curl: 1, fold: 1 });
+    const [, tipAlong] = (() => { const h = arm.now.hand, [x, y] = handPoint(arm, 1, 0), L2 = h.u[0] ** 2 + h.u[1] ** 2; return [0, ((x - h.o[0]) * h.u[0] + (y - h.o[1]) * h.u[1]) / L2]; })();
+    assert.ok(tipAlong < HAND.knuckles, `${side}: a fist: her fingertips back over her palm (${tipAlong.toFixed(2)})`);
+    // her elbow bent far (her hand at her eye, her elbow down): with \`fold\` (her live show) a hinge, her forearm turned in
+    // one piece (it keeps its shape) and the end of her upper arm with it; without (the website), her soft blend
+    const fore = arm.pieces.fore, keep = (pos) => {
+      let worst = 0;
+      for (let k = 2; k < rest[fore].length; k += 2) worst = Math.max(worst, Math.abs(Math.hypot(rest[fore][k] - rest[fore][0], rest[fore][k + 1] - rest[fore][1]) - Math.hypot(pos[k] - pos[0], pos[k + 1] - pos[1])));
+      return worst;
+    };
+    // (her wrist straight here: a turned wrist bends the end of her forearm by her wrist a little, as it should)
+    turn({ shoulder: -10, elbow: -175, fold: 1 });
+    assert.ok(keep(work[fore]) < 1e-5, `${side}: her forearm in one piece, folded (${keep(work[fore])})`);
+    turn({ shoulder: -10, elbow: -175 });
+    assert.ok(keep(work[fore]) > 0.005, `${side}: without it (the website) her elbow's soft blend (${keep(work[fore])})`);
+    // bent less (her hand out in front of her, her elbow at 100°): her soft elbow, as on the website
+    assert.ok(RIGID[0] > 100 && RIGID[0] < RIGID[1] && RIGID[1] <= 180);
+    turn({ shoulder: -10, elbow: -100, wrist: 10, fold: 1 });
+    const bent = Float32Array.from(work[fore]);
+    turn({ shoulder: -10, elbow: -100, wrist: 10 });
+    assert.deepEqual(Array.from(bent), Array.from(work[fore]), `${side}: a bend of 100°: as on the website`);
+  }
+});
+
+test('her round elbow on her live show (2026-10-08): as wide as her forearm is drawn by her elbow, all there before her elbow turns as a hinge, and only when her elbow bends', async () => {
+  const { ELBOW_FOLD, ELBOW_R, ELBOW_ACROSS } = await import('../tools/live/page/outfits.js');
+  const { core } = newModel();
+  const D = core.drawables, ids = Array.from(D.ids);
+  core.parameters.values.set(core.parameters.defaultValues);
+  core.update();
+  const rest = ids.map((_, i) => Float32Array.from(D.vertexPositions[i]));
+  const rig = { rest: (i) => rest[i], indices: (i) => D.indices[i], find: (n) => ids.indexOf(n) };
+  for (const side of ['R', 'L']) {
+    const arm = measureArm(rig, side), loc = arm.local[arm.pieces.fore];
+    // her forearm by her elbow (its own frame: along it from her elbow, across it, in forearm lengths): how wide it's drawn
+    let lo = Infinity, hi = -Infinity;
+    for (let v = 0; v < loc.length / 2; v++) if (loc[v * 2] > -0.05 && loc[v * 2] < 0.05) { lo = Math.min(lo, loc[v * 2 + 1]); hi = Math.max(hi, loc[v * 2 + 1]); }
+    const half = (hi - lo) / 2;
+    assert.ok(ELBOW_R > half * 0.9 && ELBOW_R < half * 1.2, `${side}: her round elbow ${ELBOW_R} across, her forearm ${half.toFixed(3)} (a ball or a dot would show)`);
+    assert.ok(Math.abs(ELBOW_ACROSS) < half * 0.25, `${side}: on her forearm's middle`);
+  }
+  // how far bent before it shows: the cosine between her upper arm and her forearm from her elbow (−1 straight)
+  const bendAt = (c) => 180 - (Math.acos(c) * 180) / Math.PI;
+  assert.ok(ELBOW_FOLD[0] > -1 && ELBOW_FOLD[0] < ELBOW_FOLD[1] && ELBOW_FOLD[1] < 1);
+  assert.ok(bendAt(ELBOW_FOLD[0]) > 45, `none for an arm bent ${bendAt(ELBOW_FOLD[0]).toFixed(0)}° or less (her arms by her sides, her wave's swing)`);
+  assert.ok(bendAt(ELBOW_FOLD[1]) <= RIGID[0], `all there by ${bendAt(ELBOW_FOLD[1]).toFixed(0)}°, before her elbow turns as a hinge (${RIGID[0]}°): it covers the joint`);
+  // drawn just under her forearm (its soft end fades into it), in her own drawing's colors, with no outline across her arm
+  const js = read('tools/live/page/outfits.js');
+  assert.match(js, /cap\.renderOrder = fm\.renderOrder - 0\.05e-4;/);
+  assert.match(js, /float ring = smoothstep\(0\.85, 0\.9, r\) \* smoothstep\(-0\.3, 0\.15, y\);/, 'its outline round its end only');
 });

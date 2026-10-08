@@ -112,7 +112,14 @@
 >   in an outfit for each, says hello in the language people speak there, meets made-up people with their own voices,
 >   eats 34 snacks, has 19 more emotions and 10 kinds of weather, shows what she can do as her show starts, and the
 >   sounds around her follow where she is; a viewer may name a real person (questions and display names), and she stays
->   neutral (the owner's change). See "Her trips".
+>   neutral (the owner's change). See "Her trips". **And her painted set** (2026-10-07 and 08, the owner: "the agi1 trip
+>   preview i just watched is so bad"): her places, rooms, rides, the people she meets and what she wears, painted once by
+>   Google's image AI on her server and cut out by Claude; **and her arms and hands** (2026-10-08, the owner: "her arms
+>   doesnt even move naturally … when she holds things she doesnt even look shes holding it and some hats not even wearing
+>   to her head and headset not even on her ears"): her hands reach where they go like a real arm's, what she holds is in
+>   her hand with her own fingers over it, her umbrella rests on her shoulder, her hats, her headset and her headphones
+>   sit on her head ("and i just noticed this headset is too big for her right": smaller, their cups by her ears).
+>   See "Her painted set" and "Her arms, her hands and what she holds".
 > - **CloakMesh at inference.agi1.app** (2026-10-03, the owner's private-AI project: "it will be put on inference.agi1.app",
 >   then "Landing page first"): a serious page for CloakMesh (private AI where the visitor's own device checks the server's
 >   AMD hardware itself, and swaps their personal data for tokens before anything is sent), with a demo of its privacy
@@ -370,7 +377,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `src/checker/lines.js` | ClankChecker (2026-09-26): the risk levels' names and what AGI-1 says about a scan (two lines per level, the official $AGI, a copy of it), with her reaction and voice style for each. The page and the server both read it |
 | `src/checker/copycat.js` | ClankChecker (2026-09-26): which coins copy another coin's ticker ("E/ACC" = "EACC"). Our server marks the whole list with it, and the page marks it again whenever new launches arrive, so both always agree |
 | `src/stage/stage.js` | Figure 1, the 3D stage: minimal studio (transparent canvas, neutral light, floor dial, soft shadow), camera, loading %, the model switch (AGI-1; the Arena's champion left on 2026-09-28), taps; and (2026-09-25) moving that one canvas into a live view and back: the chat's, and since 2026-09-26 ClankChecker's; and (2026-09-27) the "3D · 2D" switch: which AGI-1 is on stage (`slot()`, `setStyle()`, `swapAgi1()`) |
-| `src/stage/agi1-2d-arms.js` | 2026-10-01, round 2: her 2D arms, turned in code on top of her Live2D model after each update: her joints found on her model (`measureArm`), each arm turned at the shoulder, elbow and wrist with a round elbow and a sleeve that folds (`bendArm`), never lifted past what her drawing allows (`REACH`); since 2026-10-03 drawn finer, with the end of her upper arm turning fully at her elbow and the top of her upper arm moving with her sleeve. Pure (tested in Node with Live2D's runtime) |
+| `src/stage/agi1-2d-arms.js` | 2026-10-01, round 2: her 2D arms, turned in code on top of her Live2D model after each update: her joints found on her model (`measureArm`), each arm turned at the shoulder, elbow and wrist with a round elbow and a sleeve that folds (`bendArm`), never lifted past what her drawing allows (`REACH`); since 2026-10-03 drawn finer, with the end of her upper arm turning fully at her elbow and the top of her upper arm moving with her sleeve; since 2026-10-08, only for her live show, her forearm and upper arm seen shorter as they come toward us, her hand turned and its fingers curled (`HAND`, `handPoint`), her arm reaching a point (`reach`) and her elbow a hinge when it folds. Pure (tested in Node with Live2D's runtime) |
 | `src/stage/tap-lines.js` | 2026-10-01: what she says when she's tapped (her hellos, her "a lot of taps" lines, their voice styles and faces: `tapLinesIn`) and the tap counter (`tapCounter`). The stage and the server (`server/voice.js`) both read it |
 | `src/stage/agi1-2d.js` | AGI-1 in 2D, her Live2D model (2026-10-01; her 2D rig before): loads her files (`loadAgi1_2D`), builds her puppet (`buildPuppet`: standing on the floor, 1.62 m, her markers for the live views, taps only on her, her 4096 px texture on request: `sharpen()`) and her controller (`createAgi1_2D`: her motion on her model's parameters, every reaction, her physics; the same controls as `agi1.js`: `react`, `hello`, `setTalk`, `setPointer`, `setAttention`, `setCloseUp`, `update`). Loads only when needed (a separate file). See "AGI-1 in 2D" |
 | `src/stage/live2d.js` | 2026-10-01: Live2D for the stage: loads Live2D's runtime (Cubism Core) once, draws her model's 52 pieces as three.js meshes in Live2D's order with their opacity and blending, her eyes' clipping with the stencil buffer (`buildMeshes`); which piece is at a point (`pieceAt`, for taps) and the box of a few pieces (`boxOf`, for her markers); since 2026-10-03 finer meshes for a few pieces (her arms: `refineMesh`, `mixInto`) |
@@ -425,7 +432,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/launch.sql` | "Launch with AGI-1" (2026-10-01). Run once in the same Supabase project (any time; running it again is safe): four new tables (`agi1_launch_drafts`, `agi1_launch_chats`, `agi1_launch_wallets`, `agi1_launch_days`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `PINATA_JWT` is set), her `/launch` says launching isn't open yet |
 | `supabase/buys.sql` | Her buy bot (2026-10-06). Run once in the same Supabase project, after switching on Integrations → Cron and Database → Extensions → pg_net (running it again is safe): two new tables (`agi1_buys`, `agi1_buy_state`), 2 functions and two Supabase Cron jobs (the check every minute, a daily tidy-up of their run history), only added (nothing the original site uses changes). It ends with `buys_ready = 1` and `buys_scheduled = 1`. Until it's run, no buy is posted |
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, since 2026-10-08 her live show's hands (an arm reaching a point, a hand turned and curled, her round elbow), "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page; since 2026-10-08 her poses (never a paddle, never on her chest), her hands (always her palm, never turned or curled past their limits, what she holds in front of her palm with her fingers or thumb over it) and her hands on their way, frame by frame on her springs), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end; since 2026-10-08 cutting the paintings out, what the first ones needed, the stand-ins, the conical hat, her glasses' clear lenses, her headset on her ears and her headphones on her head), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`), `art-cut.mjs` (Claude makes them ready: one of each, cut out of its green, made small) and `art-picks.json` (which one of each), into `page/art/` (her places, rooms, rides, the people she meets and what she wears, WebP, in git), which `page/paint.js` finds when her set is built. See "Her live show on X", "Her stream, upgraded", "Her trips" and "Her painted set" |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
@@ -4232,8 +4239,9 @@ the Google Cloud key already on her server (about $5–10 once), every picture c
   own green is keyed from the edges in); the helmet's visor reflections, painted mint by the green behind them, made a
   see-through white (`GLASS_GLINTS`, `whitenGlints()`); **the headphones' cups**: painted from the front, cups facing us,
   their dark cushions showed by her eyes in the gaps between her face and the hair beside it, so only each cup's outer
-  half is kept (`OUTER_CUPS`, `outerCups()`: per row, from its outer edge, the rest fading out over a few pixels) and they're
-  drawn behind her face and that hair (`order: 'underFace'`); **the cat ears' headband**: its two ends came down past her
+  half is kept (`OUTER_CUPS`, `outerCups()`: per row, from its outer edge, the rest fading out over a few pixels) and they
+  were drawn behind her face and that hair (until the owner's later message the same day: see "The headphones" below);
+  **the cat ears' headband**: its two ends came down past her
   bangs beside her eyes (white lines with the white ears, black ones with the black), so below the ears it fades out
   (`BAND_ENDS`, `trimBandEnds()`: on a head, the rest of a headband is under the hair; the picture keeps its size, so
   where it sits doesn't change).
@@ -4250,6 +4258,47 @@ the Google Cloud key already on her server (about $5–10 once), every picture c
   between them; everything under its top edge, in its columns, goes), and the cuff's own line is the hat's edge, her bangs
   under it (`PAINT_AT.beanie`: 1.5 of her face's width, 0.08 above her eyes; tried six ways, and drawing it behind her
   bangs put her hair over the hat).
+- **The conical hat** (2026-10-08, the owner: "some hats not even wearing to her head"; it sat above her head, a dark
+  chin-strap loop across her forehead): painted from a little below, its underside showing, with a dark band inside it and
+  two thick chin straps. She wears it with her head inside it now: its underside drawn behind her face and her hair, its
+  cone and brim in front of them, its brim by her eyebrows (`PAINT_SPLIT` in `outfits.js`: the picture split along its
+  lip, a curve across it); and its band and straps are painted over in its picture (`HAT_STRAPS`, `dropStraps()` in
+  `art-cut.mjs`: what's dark and thicker than the painting's own lines is painted over from what's either side of it,
+  across its narrower way; a strap hanging below its brim has nothing either side, so it goes; the picture keeps its
+  size, so where it sits doesn't change).
+- **The cap** a little bigger and lower (`PAINT_AT.cap`: 1.38 of her face's width, its bottom 0.11 above her eyes; it sat
+  high and small on her hair).
+- **The headset** (2026-10-08, the owner: "headset not even on her ears": its cup was beside her eye, 0.19 of her face's
+  width above her ear): painted with its band a round arc, while her head is taller than wide, so its cups came out by
+  her eyes. Its painting is fitted to her head as it loads now (`PAINT_FIT`, `fitPainting()`, `fitRow()` in
+  `outfits.js`): rows 110 to 270 of it stretched by 99 px in all, most where its band's sides are straight (a smooth
+  bump: its arc stays round at the top and its thickness as painted), so its cup comes down onto her ear (her ears'
+  middles are 0.45 of her face's width out and 0.1 below her eyes, measured on her model) and its band stays on her
+  hair; and its mic's boom is a part turned on its own (16.5° up about where it leaves the cup), so its mic is back at her
+  mouth. Measured on her set: its cup's middle 0.49 out and 0.10 below her eyes, its pad on the other side 0.47 out, its
+  band's top 1.04 above her eyes, its mic 0.4 below them. Drawn over her hair and under a hand by her face (`order:
+  'mic'`: her laugh's hand over her mouth went under the boom).
+- **The headphones** (2026-10-08, the owner, with a screenshot of her midnight outfit: "and i just noticed this headset is
+  too big for her right"): 2.25 of her face's width (squashed to 0.7 of their height) and drawn behind her face and her
+  hair, their band showed only above her hair, as if floating behind her head, and their cups stuck out past her head
+  (their insides 0.65, their outsides 1.1 of her face's width out; her ears are 0.44 out). Now they're worn: placed from
+  the middle between her ears (`from: 'ears'`, a new place in `outfits.js`: as she turns her head, her eyes move across her
+  face while her ears stay at its sides, so anchored to her eyes a cup slid over her cheek), their cups' middles at her
+  ears' height, the inside of each cup just outside her face, their band resting on top of her hair, drawn over her hair
+  (`order: 'mic'`), as painted (no squash). Smaller too (1.64 of her face's width; their cups 0.68 tall, from 0.77): their
+  paintings have their cups close together for her head, so at that size their band's middle is widened (`PAINT_FIT`'s
+  new `cols`, `addX`: 58 px for the midnight pair, 66 for the gamer pair, whose band is thinner) and its sides lengthened
+  (`rows`, `add`: 51 and 41 px), so the cups come out to the sides of her head and the band up to the top of her hair.
+  Checked against her face's outline measured on her model with Live2D's runtime at every height, however she turns her
+  head (20° to either side, 15° up or down): the inside of each cup stays outside it.
+- **Her glasses' lenses** (2026-10-08, found while looking at every outfit again after the headphones; the owner: "and i
+  know other things have these problems as well"): asked for as "thin round black glasses with clear see-through lenses",
+  Google painted them all pale mint over the green (the green seen through them, about three parts white) and as solid
+  as their frame, so in her mint outfit they hid her eyes. Their lenses are made clear as they're cut (`CLEAR_LENSES`,
+  `clearLenses()` in `art-cut.mjs`): in each half, from the middle of what's there below its temples, what's inside the
+  dark line round the lens, a faint tint left and the glints painted on it kept as a see-through white; a lens whose fill
+  runs out past its line (into its frame, near what's see-through) is left as it is. Her eyes, her blinks and her winks
+  show through them now; the mint frame stays (it suits "mint fresh"). Her sunglasses stay dark.
 - **Her set** (`tools/live/page/paint.js`; `stage.js`, `people.js`, `outfits.js`): a painting goes up only once it's loaded
   and decoded (before a wipe starts, so the wipe never uncovers the old picture); without its painting, a place, a room,
   a person or a hat is drawn in code as before. Her rooms and places: the painting, without the little moving bits drawn
@@ -4285,10 +4334,10 @@ name.
 | `no picture could be made (the models tried: …)` | The lines above it say why: a 403 is the API or the role (as for her voice: setup step 2 of "Her live show on X"); 404 for every model: tell Claude with the lines (`LIVE_ART_MODEL`) |
 | `…: Google gave no picture (it refused it): skipped` | Now and then, normal: `sh tools/live/live.sh --art` again asks only for the missing ones |
 | `Google said "wait" (429)` many times | Google's limit for image models, for the whole project (another model doesn't help): it waits by itself, about a picture a minute; keep the window open (closing it stops the run), or run it again later: it carries on |
-| On stream, a painted hat or accessory sits wrong on her (floats, covers her eyes, a dark patch or a line by her face) | Tell Claude with a screenshot: its place is `PAINT_AT` in `tools/live/page/outfits.js` (tuned by eye), and what's kept of a painting is `art-cut.mjs`'s (`OUTER_CUPS`, `BAND_ENDS`) |
+| On stream, a painted hat or accessory sits wrong on her (floats, covers her eyes, a dark patch or a line by her face) | Tell Claude with a screenshot: its place is `PAINT_AT` in `tools/live/page/outfits.js` (tuned by eye; a hat worn with her head inside it: `PAINT_SPLIT`; the headset's and the headphones' fit to her head: `PAINT_FIT`), and what's kept of a painting is `art-cut.mjs`'s (`OUTER_CUPS`, `BAND_ENDS`, `HAT_INSIDE`, `HAT_STRAPS`, `CLEAR_LENSES`) |
 | One of her accessories looks drawn, not painted | Google skipped its picture: `--art-only <its name>` (see "Owner" above; until then a stand-in, if there's one) |
 
-**Tests:** `tests/art.test.js` (14; 12 before 2026-10-08): every picture's words (every place, room, ride, person and accessory; no people, text
+**Tests:** `tests/art.test.js` (18; 12 before 2026-10-08): every picture's words (every place, room, ride, person and accessory; no people, text
 or logos behind her; green for what's cut out; never anyone real; nothing about money), the request to Vertex AI and the
 picture in its answer, her style picture (her 2D self, never the 3D model; cut above the letters), carrying on and
 `--art-only`, a fake Google end to end (a model the project doesn't have, "wait", a refusal, the files and the manifest,
@@ -4305,10 +4354,135 @@ anything else refused), the stand-ins (golden to mint, red to pink with its gree
 as they are; asked for in the same words as their own; their own painting wins once it's there; nothing to make the
 beanie from) and where hats and headbands sit (`brow`, the headphones behind her face). Each check of 2026-10-08 was
 seen to fail when its rule is broken (the old green threshold, no cups cut, nothing faded, no ends trimmed, no glints, the
-beanie's inside found without its guard).
+beanie's inside found without its guard). And since the owner's next message the same day (2 more): the conical hat (a
+hat painted with a thick band and straps: they're painted over from either side, the straps below its brim gone, its own
+thin lines kept, nothing tinted green; a painting with only thin lines left alone; only the conical hat's; on her set
+fewer than 300 such pixels left of 11,043, one piece, its brim above the split; its underside behind her face and hair,
+its cone in front, its brim by her eyebrows) and her headset on her ears (`fitRow()` growing smoothly and adding 99 px;
+its cup, its pad and its mic where the painting has them; where its cup, pad, band and mic land on her: by her ears, on
+her hair, at her mouth, and its mic not at her mouth without the boom's turn; drawn over her hair, under a hand by her
+face). And then (2 more, 18 in all) her glasses' lenses (only the clear glasses; a pair painted like Google's: inside
+each lens' line clear but for its glint, its frame and bridge as painted, a lens with a gap in its line left alone; on
+her set, both lenses clear and the frame there) and her headphones on her head: from the middle between her ears, over her hair, as
+painted; their columns stretched like their rows; for both pairs, the inside of each cup outside her face's outline at
+every row of the cups (her outline at each height, the widest over every turn of her head, measured on her model), their
+cups' middles at her ears' height, their outsides past her ears and not far, their cups under 0.72 of her face's width
+tall, their band's inside at the top on her hair; and the code that places them from her ears. Seen to fail on the old
+placement and on the smaller size without the widened band.
 **Tried live 2026-10-07 and 08:** the owner's run made 138 pictures (see "Cost" for its pace). In Claude's workspace her
 set was rendered in each of her 27 outfits, in front of each place and room, in each ride and with each person she meets,
 and looked at (the before and after of her outfits went to the owner), then a 10-minute show was recorded.
+
+### Her arms, her hands and what she holds (2026-10-08)
+
+**The owner, after the painted set's preview:** "theres so many problems her arms doesnt even move naturally lol it so bad
+and clnky looks and when she holds things she doesnt even look shes holding it and some hats not even wearing to her head
+and headset not even on her ears please fix those things you can see it right use max effort and make it better", "and i
+know other things have these problems as well i just didint see them yet", and on the way: "why did you switched her
+hands", "and she doesnt even grabbed it lol". All of it is her live show's (`tools/live/page/`, and options of
+`src/stage/agi1-2d.js` and `agi1-2d-arms.js` that only her show passes): the website's AGI-1 moves exactly as before.
+
+**What was wrong** (her preview, frame by frame, and Claude's own recordings): her hands were her model's one flat drawing,
+turned like a board: a cookie or a croissant floated past her fingertips with her open palm under it, nothing ever touched
+her fingers; raised, both hands were stiff "jazz hands"; on their way up to a clap her forearms crossed in an X over her
+chest, and the clap itself was at her neckline; a blown kiss swept down across her chest; held up in her hand, her umbrella
+showed her hand floating by her shoulder with her arm hanging under it; the conical hat sat above her head with its painted
+chin straps across her forehead; the headset's ear cup was up by her eye. (Her hats and her headset: see "Her painted set".)
+
+**Her hand is one drawing, so every pose shows her palm, the right way round** (`src/stage/agi1-2d-arms.js`,
+`tools/live/page/moves.js`):
+- Her Live2D hand is one picture: an open palm facing us, fingers straight. On her show each arm now does with it, in
+  2.5D, what a real arm does: her forearm (and her upper arm) seen shorter as it comes toward us (`fore`, `upper`), her
+  hand turned about its length (`twist`: narrower as it turns, at most `HAND_TURN`, 40°, 0.81 as wide; further it's
+  squeezed thin), and her fingers curled (`curl`: shorter, closer together, her thumb in over her palm; relaxed at most
+  `CURL.open`, 0.35, round something she holds `CURL.hold`, 0.5, never past `CURL_MAX`, 0.55: past it her drawn fingers
+  fold back over her palm and crumple). `HAND` in `agi1-2d-arms.js` is her hand's own frame (along it from her wrist to her
+  fingertips, across it from her thumb's side), measured on her drawing; `handPoint()` gives where a point of her hand is
+  now.
+- Her poses say where her hand goes, not angles: a spot on her face (her mouth, chin, cheeks, eyes, ears: they follow her
+  head as it moves and tilts) or her body (her shoulders), which way her hand points and which point of her hand goes
+  there (`at()` in moves.js; her model's arms and spots come from her set every frame, `body()`). `reach()` works her arm
+  out on her model as it is that frame: her elbow comes forward and her upper arm is seen shorter when her hand goes up to
+  her face, her forearm comes toward us, her shoulder stays near where the pose says, her wrist bends little; never a
+  forearm out flat with her elbow pulled in (the "paddle" rule, 2026-10-07), never a whole turn of her forearm between two
+  frames (the nearest way round from where her elbow is).
+- A hand by her face is drawn over her face and her hair (`front`: a bite, her hand over her mouth as she laughs, her
+  fingertips at her chin); otherwise under them, as her model has it.
+- Every pose shows her palm, her own hand the right way round: a wave, "yay!", her hands by her cheeks, over her mouth,
+  her fingertips at her lips, in her hair, palms up low, on her hips. Never her palm drawing flipped to stand in for the
+  back of her hand (the owner, of her hands on her cheeks: "why did you switched her hands": a flipped palm reads as her
+  other hand), never a fist (one cut from her drawing read as a claw: "are you even fixing it lol").
+- Her elbow bent far (her hand up by her face): it turns as a hinge (`fold`, from 115° to 160° bent: `RIGID`), and a small
+  round elbow in her skin's colors is drawn just under her forearm (`ELBOW_FRAG` in `outfits.js`, as wide as her forearm
+  is drawn there): her drawing has no round of a bent elbow, and the soft ends of her upper arm and forearm showed below
+  it as a pale, see-through cuff with odd lines.
+- Her hands stay off her chest (PG-13: by her face, at her sides or low); her right hand leads, her left a moment behind.
+
+**What she holds** (`HOLD` in moves.js, drawn by `outfits.js`): in front of her palm, the way a hand seen from its palm's
+side holds something, and her own fingers or thumb drawn again over it (her hand's own drawing, only that part: a shader
+on her hand's own frame, so it follows however her hand turns or curls):
+- her mug, a drink (boba, a coconut…) and her phone in front of her palm, her thumb over its edge (`grip: 'thumb'`): her
+  mug's rim and a drink's straw at her lips; her phone up beside her face, its screen to us;
+- a snack up at her fingertips, her fingertips over its bottom (`grip: 'fingers'`), brought to her mouth twice (a bite
+  each time);
+- it fades in and out over a few frames (`HELD_FADE`, 6) instead of popping into her hand and out of it;
+- the hand mic picture, which nothing used, is gone (she sings in her stage outfit's headset).
+`studio.hold('mug')` and `studio.holdAt('mug', { a, b, w })` show and tune it on her set.
+
+**Her umbrella** (`UMBRELLA` in `outfits.js`) rests on her right shoulder, held behind her, its clear canopy over her (its
+shaft from where it rests on her shoulder, leaning out 15°, its pink grip and little hook behind her, out of sight): her
+drawn hand can't close round a handle, and held up in her hand it showed her hand floating by her shoulder. While she
+carries it her talking gestures are her left hand's, and something her right hand does (a laugh, a sip, a clap…:
+`USES_R`) puts it down until she's done. `studio.umbrellaAt({...})` tunes it.
+
+**Her arms on their way** (moves.js `blend()` and `post()`):
+- from her side up to her face, her hand comes up at her side, then in (her elbow turns her forearm out and up), never
+  across her chest: the nearest way round from her side to a hand pointing up at her face was often across her, so on
+  the way to a clap her forearms crossed in an X;
+- her forearm comes toward us on its way, as an elbow bending in front of a body does: seen shorter while it points across
+  her, when it still has far to go (`SWING_DIP`, at most half) and halfway on its way into or out of a pose that turns it a
+  lot (`TRANSIT_DIP`, up to 0.75, and for `TRANSIT_TAIL`, 0.35 s, after). It's worked out after her springs: her
+  controller calls `moves.post()` with her pose as it will be drawn (`src/stage/agi1-2d.js`, only when it has `moves`).
+  Worked out on her targets it came a moment late (her elbow follows them a moment behind) and pulled her hand down
+  across her chest just as it turned;
+- her claps by her chin (they were at her neckline); a blown kiss from her lips out to us without dipping across her chest
+  (her hand between two spots takes the second spot's nearest turn from the first's).
+
+**Her hats, her headset and her headphones**: the conical hat worn with her head inside it and its painted straps gone,
+the cap a little bigger and lower, the headset fitted to her head, and (the owner, after: "and i just noticed this headset
+is too big for her right") the headphones of her midnight and gamer outfits smaller and worn: their band on her hair,
+their cups at the sides of her head by her ears, and her glasses' lenses clear (painted solid, they hid her eyes) (see
+"Her painted set"). Every outfit with something on her head was then looked at, still and moving (looking around,
+laughing, dancing, a confused tilt, a twirl, a jump), and every outfit again after the headphones.
+
+**Not picked** (tried, and dropped the same day): a fist cut from her hand's drawing (`fist.js`: a claw) and a picture of
+her hand round a handle (`grip.js`: her umbrella's handle floated by her shoulder, the owner: "????"); her palm flipped for
+the back of her hand; a tool to paint new hands with Google's image AI (`hand-art.mjs`, the owner had offered: "if you can
+generate new images just to fix the arms and hands you can": never needed, her own hand turned and curled holds
+everything and stays in her drawing's style). `tests/stream.test.js` keeps those files out.
+
+**Tests:** `tests/stream.test.js` (2 new): her hands (never turned past `HAND_TURN`, curled at most `CURL.open`, or
+`CURL.hold` round something she holds, and `CURL_MAX` under 0.6, in every action, gesture and dance; how she holds each
+thing; `HELD_FADE` and the fade in the shader; `fist.js`, `grip.js`, `hands/` and `hand-art.mjs` gone; which actions use
+her right hand) and her hands on their way (her arms on her controller's own springs, frame by frame at 30 a second,
+with `post()`: every action, every dance from its start, 40 s of talking gestures, every switch from one dance move to
+another: never on her chest, never crossed, never a paddle at full length, never a whole turn of her forearm; her clap's
+forearm shorter on its way and full length while she claps, up at her side first). Seen to fail on the old code (her
+clap's X, her kiss across her chest). `tests/agi1-2d.test.js` (2 new, with Live2D's real runtime): her arm reaching a
+point (her hand's point lands within 0.004 model units of it, pointing the way asked, no paddle, foreshortened as a real
+arm can; a point out of reach as far as her arm goes; turned and curled; her elbow a hinge when it folds) and her round
+elbow (as wide as her forearm is drawn by her elbow, only when it bends far). `tests/trips.test.js`: her umbrella on her
+shoulder (no pose for it, no fist, it stays through a wink, a laugh puts it down and it comes back after).
+`tests/art.test.js` (3 new): the conical hat, her headset and her headphones (see "Her painted set"). In Claude's workspace: her set
+rendered in every action, gesture and dance and in every outfit with something on her head, up close at the stream's
+size; a before and after went to the owner; then a 9-minute show was recorded (`--try eat,trip,weather,song,dance,outfit`)
+and looked at frame by frame.
+
+| What you see | Fix |
+|---|---|
+| Her hand in a pose looks wrong (twisted, on her chest, crossing the other) | Tell Claude with a screenshot or the time in the recording: her poses are `ACTIONS`, `GESTURES` and `DANCES` in `tools/live/page/moves.js`, and `tests/stream.test.js` holds every one to the rules above |
+| Something she holds sits wrong in her hand | Tell Claude with a screenshot: `HOLD` in `moves.js` (tuned by eye, up close) |
+| Her umbrella sits wrong on her shoulder | Tell Claude with a screenshot: `UMBRELLA` in `tools/live/page/outfits.js` |
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -4634,7 +4808,8 @@ Editor edits).
 - **Each version downloads only when it's needed:** 2D is Live2D's runtime (150 KB), her model (150 KB), its physics (7 KB) and
   her 2048 px texture (456 KB): about 770 KB, against 1.7–2.2 MB for the 3D model, which now only downloads when picked.
   Zoomed past 1.9× on a computer, her 4096 px texture (1.1 MB) is downloaded once and swapped in (never on phones: graphics
-  memory). Her 2D code is a separate file (about 13 KB gzipped since her arms moved in code; 9 KB before).
+  memory). Her 2D code is a separate file (about 13 KB gzipped since her arms moved in code, 14 KB since 2026-10-08: the
+  maths of her live show's hands is in it, unused on the website; 9 KB before).
 - **In 2D:** tap her to say hi (only on her: a tap in the air beside her does nothing; a tap on her face makes her blush too);
   no dragging (a flat picture doesn't turn; on phones one finger always scrolls the page); zoom up to **3×**.
 - **Everything else is the same:** her voice and her mouth following it (`src/lib/talk.js`), every reaction (`agi1:react`) with
@@ -5941,7 +6116,14 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   owner's before and after of her outfits, then a preview recording (3½ minutes of a 10-minute show). Also (the owner's
   question): on stream she answers in a language a viewer asks her to speak. **Owner:** watch the preview, then push and
   `update` on the server. Tests: 539 unit (538 pass, 1 skipped as
-  before; on Node 20, 22 and 24, with and without Vercel's settings), the build.
+  before; on Node 20, 22 and 24, with and without Vercel's settings), the build. **Then, the same day** (the owner, after
+  that preview: "theres so many problems her arms doesnt even move naturally lol it so bad and clnky looks and when she
+  holds things she doesnt even look shes holding it and some hats not even wearing to her head and headset not even on
+  her ears please fix those things"): her arms and hands, what she holds, her umbrella, the conical hat, the cap and her
+  headset, and then her headphones ("and i just noticed this headset is too big for her right") and her glasses' lenses
+  (see "Her arms, her hands and what she holds" and "Her painted set"), a before and after for the owner, then a new
+  preview. **Owner:** look at both, then push and `update` on the server (no SQL, no setting, no `--warm`). Tests: 547
+  unit (546 pass, 1 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings), the build.
 
 ## Decisions log
 
@@ -6158,6 +6340,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-08 | On stream she also answers in the language a viewer asks her to speak (the owner: "can she speak other languages on the stream when asked right?"; before, only the language a question was written in, so "speak Spanish!" written in English got an English answer with a Spanish word or two): one line of her live prompt, if it's one of her 16 |
 | 2026-10-08 | Stand-ins for three accessories Google skipped, made from a painting asked for in the same words but another color, its colors turned (mint clips from golden, a blue scarf from a red one, a pink hibiscus from a red one with its leaves kept): their own painting replaces them once it's there. Berlin's beanie drawn in code (no painting like it). Not picked: drawing those three in code next to painted ones (the before/after showed how much they stood out). The owner's `--art-only` the same day made all four, so all of her accessories are painted; the stand-ins stay for a picture Google skips later |
 | 2026-10-08 | The beanie's inside (painted from a little below: a brown oval under its cuff, like a visor over her forehead) taken out of its picture, so the cuff's own line is its edge and her bangs show under it; placed at 1.5 of her face's width, 0.08 above her eyes. Not picked: drawing it behind her bangs (her hair over the hat), leaving the oval (a visor), asking Google for another picture (no promise of a better angle) |
+| 2026-10-08 | Her arms and hands on her live show (the owner, after the painted set's preview: "her arms doesnt even move naturally lol it so bad and clnky looks and when she holds things she doesnt even look shes holding it"): her hand is one drawing (her palm), so it's used in 2.5D: her forearm and upper arm seen shorter as they come toward us, her hand turned about its length at most 40°, her fingers curled a little; her poses are spots on her face and body her hand reaches (her elbow comes forward, her forearm toward us), worked out on her model as it is each frame; a hand by her face drawn over it; a round elbow when it bends far. Every pose shows her palm, her own hand the right way round. Only her show passes these options: the website's AGI-1 moves as before. Not picked: her palm flipped to stand in for the back of her hand (it reads as her other hand: "why did you switched her hands"), a fist cut from her drawing (a claw), new hand paintings from Google's image AI (the owner offered: "if you can generate new images just to fix the arms and hands you can"; her own hand, turned and curled, needed none, and stays in her drawing's style) |
+| 2026-10-08 | What she holds (the owner: "and she doesnt even grabbed it lol"): in front of her palm, the way a hand seen from its palm's side holds it, her own thumb or fingers drawn again over it (her mug, a drink, her phone: her thumb over its edge; a snack at her fingertips), fading in and out over a few frames. Her umbrella rests on her right shoulder, held behind her: her drawn hand can't close round a handle (held up in it, her hand floated by her shoulder, her arm hanging under it). The hand mic picture, which nothing used, is gone. Not picked: a picture of her hand round a handle (`grip.js`: it floated too) |
+| 2026-10-08 | Her arms on their way: from her side up to her face her hand comes up at her side, then in, never across her chest (on the way to a clap her forearms crossed in an X); her forearm seen shorter on its way, worked out after her springs (`moves.post()`: on her targets it came a moment late and pulled her hand down across her chest); her claps by her chin (at her neckline before); a blown kiss from her lips out to us without dipping across her chest |
+| 2026-10-08 | Her hats and her headset on her head (the owner: "some hats not even wearing to her head and headset not even on her ears"): the conical hat worn with her head inside it (its underside behind her face and hair, its cone in front) and its painted band and chin straps painted over; the cap a little bigger and lower; the headset's painting fitted to her head as it loads (stretched where its band's sides are straight, its mic's boom turned back up to her mouth), drawn over her hair and under a hand by her face. Then every outfit with something on her head looked at still and moving. Not picked: new paintings of them (another run at Google's pace, and no promise of a better angle), drawing them in code |
+| 2026-10-08 | Her headphones smaller and worn (the owner, with a screenshot: "and i just noticed this headset is too big for her right"): placed from the middle between her ears instead of her eyes (her eyes move across her face as she turns her head, her ears stay at its sides), over her hair, as painted (no squash), at 1.64 of her face's width (2.25 before), their band's middle widened and its sides lengthened in the painting as it loads (`PAINT_FIT` `cols` and `rows`), so their cups sit at the sides of her head by her ears, never over her face however she turns her head (checked against her face's outline measured with Live2D's runtime), and their band on top of her hair. Not picked: the same size without the widened band (its cups came over her face), a bigger size without the stretch (their cups from her eyebrows to her mouth: still big), drawing them behind her hair (their cups hidden) |
+| 2026-10-08 | Her glasses' lenses made clear as they're cut (found looking at every outfit again: "thin round black glasses with clear see-through lenses" came out pale mint and solid, hiding her eyes in her mint outfit): inside the line round each lens a faint tint and its glints; the mint frame kept. Her sunglasses stay dark (they're sunglasses). Not picked: painting them again (no promise Google paints clear glass over green better), drawing them in code (the before/after showed how drawn things stand out next to painted ones) |
 
 ## Open questions
 
@@ -6334,6 +6522,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
     her Live2D model's (Cubism PRO) and her song's (Suno).
   - Not tried live: how smoothly the CX23 draws her painted set (a painting is one picture behind her, cheaper than the
     code's drawing; the people she meets are one picture each).
+- **Her arms and hands** (2026-10-08): not tried on the CX23 yet. They add a little work for each picture of her (her
+  arms worked out where her face and body are, her fingers drawn again over what she holds, a round elbow): on Claude's
+  2-core computer her set still drew about 29 frames a second while recording. Her hand is still one drawing (her palm):
+  a pose that would need the back of her hand, a fist or a hand closed round a handle stays out (see "Her arms, her hands
+  and what she holds"); new hand art, if the owner ever wants those, would mean drawing her hands again in Cubism Editor
+  (the owner's VTuber project).
 
 ## Working in this repo
 

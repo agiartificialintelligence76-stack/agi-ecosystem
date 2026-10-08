@@ -121,7 +121,7 @@ test('her food and the weather: the same on both sides; drinks sipped, the rest 
   // (her first trip recording: three dates as big as her palm) small things smaller in her hand, never bigger than drawn
   for (const [id, k] of Object.entries(FOOD_SCALE)) assert.ok(FOOD_DEFS[id] && k > 0.5 && k < 1, `${id}: ${k}`);
   for (const id of ['dates', 'strawberry', 'macaron', 'sushi']) assert.ok(FOOD_SCALE[id] <= 0.75, id);
-  assert.match(read('tools/live/page/outfits.js'), /S = len \* 1\.55 \* \(FOOD_SCALE\[fid\] \|\| 1\)/);
+  assert.match(read('tools/live/page/outfits.js'), /w \*= FOOD_SCALE\[fid\] \|\| 1/);
 });
 
 // ---------- her emotions ----------
@@ -171,17 +171,25 @@ test('eating: her hand to her mouth twice (a bite each time), chewing, then a ha
   m.act('drink');
   for (let i = 0; i < 30 * 5; i++) m.apply(1 / 30, tg(), now);
   assert.equal(fx.filter((k) => k === 'bite').length, 2, 'two sips');
-  // her umbrella: her right hand up holding it, and it stays through a move that isn't about her hands
+  // her umbrella (2026-10-08: held up in her hand it showed her hand floating by her shoulder, her arm hanging under it;
+  // her drawn hand can't close round a handle): resting on her right shoulder, held behind her (outfits.js UMBRELLA), her
+  // arm as it hangs; it stays through a move that isn't about her right hand, and something her right hand does puts it
+  // down until she's done
   m.carry('umbrella');
   assert.equal(props.at(-1), 'umbrella');
   let pose = null;
   for (let i = 0; i < 20; i++) { pose = tg(); m.apply(1 / 30, pose, now); }
-  assert.ok(pose.elR > 140, `her forearm up: ${pose.elR}`);
+  assert.ok(Math.abs(pose.shR) < 1e-9 && Math.abs(pose.elR) < 1e-9 && Math.abs(pose.wrR) < 1e-9, 'no pose for it: her arm as it hangs');
+  assert.equal(pose.cuR ?? 0, 0, 'no fist');
   m.act('wink');
   for (let i = 0; i < 20; i++) m.apply(1 / 30, tg(), now);
   assert.equal(m.carrying, 'umbrella');
   for (let i = 0; i < 60; i++) m.apply(1 / 30, tg(), now);
-  assert.equal(props.at(-1), 'umbrella', 'still in her hand after the wink');
+  assert.equal(props.at(-1), 'umbrella', 'still on her shoulder after the wink');
+  m.act('laugh');
+  assert.equal(props.at(-1), null, 'her right hand to her mouth: it goes');
+  for (let i = 0; i < 30 * 3; i++) m.apply(1 / 30, tg(), now);
+  assert.equal(props.at(-1), 'umbrella', 'back on her shoulder after the laugh');
   m.carry(null);
   assert.equal(props.at(-1), null);
   // (her first trip recording: in a plane's window her "think" idle put a "?" by her head, which flew off with the plane)

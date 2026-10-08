@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { generateKeyPairSync } from 'node:crypto';
 import sharp from 'sharp';
 import { artList, artRequest, imageFrom, toMake, makeArt, artSettings, extOf, ART_MODELS, PROMPTS, STYLE_REF, styleRef } from '../tools/live/art.mjs';
@@ -343,6 +344,148 @@ test('(2026-10-08) what the first paintings needed: an olive green keyed too, a 
   }
 });
 
+test('(2026-10-08, the owner: "some hats not even wearing to her head") the conical hat\'s band and chin straps painted over, its own thin lines kept; worn with her head inside it: its underside behind her face and hair, its cone in front', async () => {
+  const { dropStraps, keyOut, cutOne, HAT_STRAPS } = await import('../tools/live/art-cut.mjs');
+  const A = (rgba, w, x, y) => rgba[(y * w + x) * 4 + 3];
+  const L = (rgba, w, x, y) => { const o = (y * w + x) * 4; return 0.3 * rgba[o] + 0.59 * rgba[o + 1] + 0.11 * rgba[o + 2]; };
+  // a hat painted from a little below: its cone and its underside with thin outlines, a thick dark band inside it and two
+  // thick straps from the band, hanging below its brim (one with a thin end, a string)
+  const W = 400, H = 360;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><rect width="100%" height="100%" fill="#00ff00"/>
+    <path d="M20 220 L200 20 L380 220" fill="#e8d2a0" stroke="#3a2a14" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="200" cy="220" rx="180" ry="50" fill="#c9a86a" stroke="#3a2a14" stroke-width="3"/>
+    <rect x="100" y="225" width="200" height="12" fill="#1a1410"/>
+    <path d="M130 237 L160 345 M270 237 L240 345" stroke="#1a1410" stroke-width="9" stroke-linecap="round"/>
+    <path d="M160 348 L162 358" stroke="#1a1410" stroke-width="2"/></svg>`;
+  const { data } = await sharp(Buffer.from(svg)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const px = keyOut(data, W, H);
+  assert.ok(L(px, W, 200, 231) < 40 && L(px, W, 153, 320) < 40 && A(px, W, 153, 320) === 255, 'the band and a strap, before');
+  assert.ok(dropStraps(px, W, H) > 5000);
+  // the band and the straps inside the hat: its lining's color (never the green keyed out round it), all there
+  for (const [x, y] of [[200, 231], [135, 255], [131, 232], [134, 240], [266, 240], [120, 231]]) {
+    assert.ok(Math.abs(L(px, W, x, y) - 171) < 6 && A(px, W, x, y) === 255, `painted over: ${x}, ${y} (${L(px, W, x, y).toFixed(0)}, ${A(px, W, x, y)})`);
+  }
+  // the straps below its brim: nothing either side, gone
+  for (const [x, y] of [[153, 320], [158, 338], [247, 320]]) assert.equal(A(px, W, x, y), 0, `gone: ${x}, ${y}`);
+  // its own lines kept, and nothing tinted green
+  for (const [x, y] of [[110, 120], [290, 120], [200, 270], [20, 220]]) assert.ok(L(px, W, x, y) < 60 && A(px, W, x, y) > 200, `its line: ${x}, ${y}`);
+  for (let p = 0; p < W * H; p++) if (px[p * 4 + 3] > 20) assert.ok(px[p * 4 + 1] - Math.max(px[p * 4], px[p * 4 + 2]) < 12, `green at ${p % W}, ${Math.floor(p / W)}`);
+  assert.equal(dropStraps(px, W, H), 0, 'nothing thick and dark left');
+  // a painting with only its thin lines: nothing changes (where its cone's lines meet its brim's, they're thick for a
+  // moment: they stay, its outline whole)
+  const thin = keyOut((await sharp(Buffer.from(svg.replace(/<rect x="100"[^>]*\/>\s*<path d="M130[^>]*\/>\s*<path d="M160[^>]*\/>/, ''))).ensureAlpha().raw().toBuffer()), W, H);
+  const before = thin.slice();
+  assert.equal(dropStraps(thin, W, H), 0);
+  assert.deepEqual(thin, before);
+  // only the conical hat's painting: cutOne does it for it alone
+  assert.deepEqual(Object.keys(HAT_STRAPS), ['conical']);
+  const dir = mkdtempSync(join(tmpdir(), 'agi1-straps-'));
+  try {
+    writeFileSync(join(dir, 'h.png'), await sharp(Buffer.from(svg)).png().toBuffer());
+    const darkOf = async (id) => {
+      await cutOne(sharp, join(dir, 'h.png'), { group: 'accessories', id }, { out: join(dir, 'out') });
+      const { data: d } = await sharp(join(dir, 'out', 'accessories', `${id}.webp`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      let n = 0; for (let p = 0; p < d.length; p += 4) n += d[p + 3] > 128 && 0.3 * d[p] + 0.59 * d[p + 1] + 0.11 * d[p + 2] < 60; return n;
+    };
+    const hat = await darkOf('conical'), other = await darkOf('sunhat');
+    assert.ok(hat < other * 0.5, `${hat} dark pixels left, of ${other}`);
+    // nothing of it below its brim any more (its picture keeps its size: where it sits on her is measured on all of it)
+    const below = async (id) => {
+      const { data: d, info } = await sharp(join(dir, 'out', 'accessories', `${id}.webp`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      let most = 0;
+      for (let y = Math.ceil(info.height * 0.8); y < info.height; y++) for (let x = 0; x < info.width; x++) most = Math.max(most, d[(y * info.width + x) * 4 + 3]);
+      return [most, info.height / info.width];
+    };
+    const [hatBelow, hatTall] = await below('conical'), [otherBelow, otherTall] = await below('sunhat');
+    assert.ok(hatBelow < 8 && otherBelow === 255, `below its brim: ${hatBelow} (another hat's painting: ${otherBelow})`);
+    assert.ok(Math.abs(hatTall - otherTall) < 0.01, 'its size as before');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+  // the painting on her set: no band or straps left in it (it had 11,043 such pixels)
+  const file = fileURLToPath(new URL('../tools/live/page/art/accessories/conical.webp', import.meta.url));
+  if (existsSync(file)) {
+    const { data: d, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const n = dropStraps(Uint8Array.from(d), info.width, info.height);
+    assert.ok(n < 300, `${n} pixels of it still thick and dark`);
+    // one piece: no bit of a strap left floating below it
+    const seen = new Uint8Array(info.width * info.height), parts = [];
+    for (let p = 0; p < seen.length; p++) {
+      if (seen[p] || d[p * 4 + 3] < 128) continue;
+      let size = 0; const stack = [p]; seen[p] = 1;
+      while (stack.length) {
+        const q = stack.pop(), x = q % info.width, y = (q - x) / info.width; size++;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy, r = ny * info.width + nx;
+          if (nx >= 0 && ny >= 0 && nx < info.width && ny < info.height && !seen[r] && d[r * 4 + 3] >= 128) { seen[r] = 1; stack.push(r); }
+        }
+      }
+      if (size >= 4) parts.push(size);
+    }
+    assert.equal(parts.length, 1, `its parts: ${parts.join(', ')}`);
+    // and where it's split (PAINT_SPLIT: its lip, a curve across it): above it all hat (its cone and brim, in front of
+    // her hair), below it its underside (behind her face and hair)
+    const { PAINT_SPLIT } = await import('../tools/live/page/outfits.js');
+    const [l0, l1] = PAINT_SPLIT.conical.lip;
+    assert.ok(l0 > 0.3 && l0 + l1 * 0.25 < 0.95, 'its lip inside the picture');
+    for (let x = 0.15; x <= 0.85; x += 0.05) {
+      const lip = l0 + l1 * (x - 0.5) ** 2, X = Math.round(x * (info.width - 1));
+      for (const dy of [0.04, 0.08]) assert.ok(d[(Math.round((lip - dy) * info.height) * info.width + X) * 4 + 3] > 200, `above its lip at ${x.toFixed(2)}: its brim`);
+    }
+  }
+  // on her: the underside behind her face and hair, the cone in front (outfits.js), never the conical hat floating above
+  // her head: its brim by her eyebrows
+  const outfitsJs = read('tools/live/page/outfits.js');
+  assert.match(outfitsJs, /const split = PAINT_SPLIT\[pid\];/);
+  assert.match(outfitsJs, /userData\.order = 'underFace'/);
+  assert.match(outfitsJs, /it\.userData\.split \? it\.userData\.order : at0\.order \|\| it\.userData\.order/);
+  const { PAINT_AT } = await import('../tools/live/page/outfits.js');
+  assert.equal(PAINT_AT.conical.from, 'brow');
+  assert.ok(PAINT_AT.conical.y > 0 && PAINT_AT.conical.y < 0.4 && PAINT_AT.conical.w > 1.5, JSON.stringify(PAINT_AT.conical));
+});
+
+test('(2026-10-08) her glasses\' lenses clear (asked for clear, painted milky over the green: on her they hid her eyes): inside the line round each lens, a faint tint and its glints kept; its frame as painted; a lens that isn\'t closed left alone', async () => {
+  const { clearLenses, CLEAR_LENSES, keyOut, opaqueBox, cropRaw } = await import('../tools/live/art-cut.mjs');
+  assert.deepEqual(Object.keys(CLEAR_LENSES), ['glasses'], 'only her clear glasses (her sunglasses stay dark)');
+  // round glasses painted like Google's: a pale frame between two dark lines, the lens a pale green-white inside, a glint
+  const W = 520, H = 260;
+  const lens = (cx, gap) => `<circle cx="${cx}" cy="140" r="96" fill="#b6f5b7" stroke="#d8f0dc" stroke-width="22"/>
+    <circle cx="${cx}" cy="140" r="107" fill="none" stroke="#141414" stroke-width="3"/>
+    <circle cx="${cx}" cy="140" r="85" fill="none" stroke="#141414" stroke-width="3"${gap ? ' stroke-dasharray="480 40"' : ''}/>
+    <path d="M${cx - 60} 110 Q${cx - 40} 80 ${cx - 10} 72" fill="none" stroke="#ffffff" stroke-width="9"/>`;
+  const svg = (gap) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><rect width="100%" height="100%" fill="#15f135"/>
+    ${lens(140, false)}${lens(380, gap)}<rect x="236" y="120" width="48" height="12" fill="#d8f0dc" stroke="#141414" stroke-width="2"/></svg>`;
+  const cut = async (s) => {
+    const { data } = await sharp(Buffer.from(s)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const keyed = keyOut(data, W, H, { seeThrough: 0.45 });
+    const box = opaqueBox(keyed, W, H), own = cropRaw(keyed, W, box);
+    const A = (x, y) => own[((y - box.top) * box.width + (x - box.left)) * 4 + 3];
+    return { own, box, A };
+  };
+  const a = await cut(svg(false));
+  assert.equal(a.A(140, 170), 255, 'its lens solid, before');
+  const sizes = clearLenses(a.own, a.box.width, a.box.height, CLEAR_LENSES.glasses);
+  assert.equal(sizes.length, 2, 'both lenses');
+  for (const x of [140, 380]) {
+    assert.ok(a.A(x, 170) < 30 && a.A(x + 40, 150) < 30, `${x}: clear (${a.A(x, 170)})`);
+    assert.ok(a.A(x - 37, 86) > 100, `${x}: its glint kept (${a.A(x - 37, 86)})`);
+    assert.equal(a.A(x, 140 - 96), 255, `${x}: its frame as painted`);
+    assert.equal(a.A(x + 96, 140), 255, `${x}: its frame as painted`);
+  }
+  assert.equal(a.A(260, 126), 255, 'the bridge as painted');
+  // a lens with a gap in its line: its fill runs into the frame and out: left as it is (the other one made clear)
+  const b = await cut(svg(true));
+  assert.equal(clearLenses(b.own, b.box.width, b.box.height, CLEAR_LENSES.glasses).length, 1);
+  assert.equal(b.A(380, 170), 255, 'not closed: as painted');
+  assert.ok(b.A(140, 170) < 30);
+  // the painting on her set: its lenses clear, its frame there
+  const file = fileURLToPath(new URL('../tools/live/page/art/accessories/glasses.webp', import.meta.url));
+  const { data: d, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const at = (fx, fy) => d[(Math.round(fy * (info.height - 1)) * info.width + Math.round(fx * (info.width - 1))) * 4 + 3];
+  for (const fx of [0.24, 0.76]) assert.ok(at(fx, 0.6) < 40, `its lens at ${fx}: ${at(fx, 0.6)}`);
+  let solid = 0;
+  for (let p = 3; p < d.length; p += 4) solid += d[p] > 200;
+  assert.ok(solid > info.width * info.height * 0.12, `its frame and temples: ${solid} solid pixels`);
+});
+
 test('(2026-10-08) a stand-in until its own painting is there: a painting asked for in the same words but another color, its colors turned (only its reds for the hibiscus); its own painting wins once it\'s there', async () => {
   const { turnHue, cutAll, STAND_INS } = await import('../tools/live/art-cut.mjs');
   const hueOf = ([r, g, b]) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn || 1; const h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return h * 60; };
@@ -463,6 +606,123 @@ test('a person cut out of green: her own 2D picture put on green comes back the 
   assert.ok(off < 30, `${off} pixels much more or less see-through than they should be`);
 });
 
+test('her headset on her ears (2026-10-08, the owner: "headset not even on her ears": its cup was beside her eye): its painting fitted to her head, its band stretched where its sides are straight, its cups on her ears, its band on her hair, its mic turned up to her mouth', async () => {
+  const { PAINT_AT, PAINT_FIT, fitRow } = await import('../tools/live/page/outfits.js');
+  const fit = PAINT_FIT.headset, at = PAINT_AT.headset;
+  // the stretch: smooth (no row skipped or squeezed, as painted at both ends), `add` rows more in all, most in the middle
+  const [a, b] = fit.rows;
+  assert.equal(fitRow(a, fit), a);
+  assert.equal(fitRow(b, fit), b + fit.add);
+  assert.equal(fitRow(b + 40, fit), b + 40 + fit.add);
+  let last = fitRow(a, fit), most = 0;
+  for (let y = a + 1; y <= b; y++) { const d = fitRow(y, fit) - last; assert.ok(d >= 1 - 1e-9, `row ${y}: ${d}`); most = Math.max(most, d); last = fitRow(y, fit); }
+  assert.ok(fitRow(a + 1, fit) - a < 1.01 && b + fit.add - fitRow(b - 1, fit) < 1.01, 'as painted where it starts and ends');
+  assert.ok(most > 2 && most < 2.6, `most in the middle: ${most}`);
+  // where its parts are in the painting (its alpha)
+  const { data, info } = await sharp(readFileSync(new URL('../tools/live/page/art/accessories/headset.webp', import.meta.url))).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height, A = (x, y) => data[(y * W + x) * 4 + 3];
+  const box = (x0, x1, y0, y1) => { let q = [1e9, 1e9, -1, -1]; for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (A(x, y) > 128) q = [Math.min(q[0], x), Math.min(q[1], y), Math.max(q[2], x), Math.max(q[3], y)]; return q; };
+  const mid = (q) => [(q[0] + q[2]) / 2, (q[1] + q[3]) / 2];
+  const cup = mid(box(0, 110, 255, 374)), pad = mid(box(365, W, 280, 355)), mic = mid(box(195, 270, 455, H)), top = box(0, W, 0, 40)[1];
+  // the part that swings is its mic's boom only: nothing of its cup on the line where it's cut, its cup over above it
+  const s = fit.swing;
+  for (let y = s.side[0]; y < s.cut; y++) assert.ok(A(s.side[1], y) < 40, `row ${y}: its boom apart from its cup at x ${s.side[1]}`);
+  for (let y = s.cut; y < s.cut + 6; y++) for (let x = s.side[1] + 10; x < 110; x++) assert.ok(A(x, y) < 40, `row ${y}: only its boom under its cup (x ${x})`);
+  assert.ok(box(0, W, s.cut - 12, s.cut)[2] > s.side[1] + 20, 'its cup goes down to where it\'s cut');
+  // where they land on her (her face's widths from the middle of her eyes, y up), measured on her model (2026-10-08): her
+  // ears' middles 0.45 out and 0.1 below her eyes (her right ear x −0.57..−0.31, y −0.27..0.09; her left x 0.33..0.57),
+  // the top of her hair 1.06 above them, her mouth 0.32 below them (x −0.13..0.14, y −0.36..−0.29)
+  const H2 = H + fit.add, w = at.w, h = (w * H2) / W;
+  const px = (x) => (at.x || 0) + (x / W - 0.5) * w, py = (y) => at.y + ((H2 - fitRow(y, fit)) / H2) * h;
+  const [cx, cy] = [px(cup[0]), py(cup[1])], [qx, qy] = [px(pad[0]), py(pad[1])];
+  assert.ok(cx > -0.57 && cx < -0.4 && cy > -0.2 && cy < 0, `its cup on her right ear: ${cx.toFixed(3)}, ${cy.toFixed(3)}`);
+  assert.ok(qx > 0.38 && qx < 0.57 && qy > -0.2 && qy < 0, `its other end on her left ear: ${qx.toFixed(3)}, ${qy.toFixed(3)}`);
+  assert.ok(py(top) > 0.98 && py(top) < 1.1, `its band on top of her hair: ${py(top).toFixed(3)}`);
+  const pv = [px(s.pivot[0]), py(s.pivot[1])], d = [px(mic[0]) - pv[0], py(mic[1]) - pv[1]], r = (s.deg * Math.PI) / 180;
+  const mx = pv[0] + d[0] * Math.cos(r) - d[1] * Math.sin(r), my = pv[1] + d[0] * Math.sin(r) + d[1] * Math.cos(r);
+  assert.ok(mx > -0.13 && mx < 0.14 && my > -0.45 && my < -0.32, `its mic at her mouth: ${mx.toFixed(3)}, ${my.toFixed(3)}`);
+  assert.ok(py(mic[1]) < -0.5, 'without the turn, it would be at her chin');
+  // drawn over her hair, under a hand by her face (her laugh's hand over her mouth went under its boom)
+  assert.equal(at.order, 'mic');
+  const js = read('tools/live/page/outfits.js');
+  assert.match(js, /mic: Math\.max\(meshes\[P\.hairL\]\.renderOrder, meshes\[P\.hairR\]\.renderOrder, meshes\[P\.sideL\]\.renderOrder, meshes\[P\.sideR\]\.renderOrder\) \+ 0\.1e-4,/);
+  assert.match(js, /m\.renderOrder = top \+ \(side === 'R' \? 0\.2e-4 : 0\.6e-4\)/, 'a hand by her face over it');
+});
+
+test('her headphones on her head (2026-10-08, the owner: "and i just noticed this headset is too big for her right": 2.25 of her face\'s width, their band floated over her hair and their cups stuck out past her head): smaller, their band on top of her hair, their cups at the sides of her head by her ears, the inside of each cup outside her face however she turns her head; drawn over her hair', async () => {
+  const { PAINT_AT, PAINT_FIT, fitRow, fitCol } = await import('../tools/live/page/outfits.js');
+  const at = PAINT_AT.headphones;
+  assert.equal(at.from, 'ears');
+  assert.equal(at.order, 'mic');
+  assert.ok(!at.sy, 'as painted, never squashed');
+  // the stretch of its columns is its rows' (smooth, as painted at both ends, `addX` more in all)
+  for (const fit of [PAINT_FIT['headphones-midnight'], PAINT_FIT['headphones-gamer']]) {
+    const [a, b] = fit.cols;
+    assert.equal(fitCol(a, fit), a);
+    assert.equal(fitCol(b, fit), b + fit.addX);
+    for (let x = a + 1; x <= b; x++) assert.ok(fitCol(x, fit) - fitCol(x - 1, fit) >= 1 - 1e-9, `column ${x}`);
+  }
+  assert.equal(fitCol(100, PAINT_FIT.headset), 100, 'the headset: its columns as painted');
+  // her head, measured on her model with Live2D's runtime (2026-10-08, her face's widths from the middle between her ears,
+  // y up): her face's outline at each height (where its mesh's edges cross it), the widest on each side however she turns
+  // her head (20° to either side, 15° up or down); her ears' middles 0.43 to 0.44 out; the top of her hair 1.15 above
+  // (her eyes 0.1 above her ears' middle, the top of her hair 1.05 above her eyes, measured on her set)
+  const FACE = [
+    [-0.42, -0.217, 0.25], [-0.4, -0.231, 0.258], [-0.38, -0.246, 0.265], [-0.36, -0.26, 0.274], [-0.34, -0.274, 0.29], [-0.32, -0.288, 0.306],
+    [-0.3, -0.302, 0.322], [-0.28, -0.316, 0.338], [-0.26, -0.331, 0.354], [-0.24, -0.342, 0.37], [-0.22, -0.352, 0.386], [-0.2, -0.363, 0.397],
+    [-0.18, -0.373, 0.405], [-0.16, -0.384, 0.414], [-0.14, -0.395, 0.422], [-0.12, -0.405, 0.43], [-0.1, -0.416, 0.439], [-0.08, -0.427, 0.447],
+    [-0.06, -0.438, 0.456], [-0.04, -0.449, 0.462], [-0.02, -0.46, 0.468], [0, -0.471, 0.474], [0.02, -0.475, 0.48], [0.04, -0.478, 0.485],
+    [0.06, -0.48, 0.491], [0.08, -0.483, 0.497], [0.1, -0.493, 0.5], [0.12, -0.503, 0.501], [0.14, -0.514, 0.501], [0.16, -0.52, 0.502],
+    [0.18, -0.517, 0.504], [0.2, -0.514, 0.505], [0.22, -0.511, 0.506], [0.24, -0.507, 0.501], [0.26, -0.502, 0.492], [0.28, -0.497, 0.483],
+    [0.3, -0.493, 0.474], [0.32, -0.482, 0.466], [0.34, -0.467, 0.457], [0.36, -0.451, 0.448], [0.38, -0.436, 0.439], [0.4, -0.424, 0.429],
+    [0.42, -0.415, 0.42],
+  ];
+  const outline = (Y) => {
+    let k = 0;
+    while (k < FACE.length - 2 && FACE[k + 1][0] < Y) k++;
+    const [a, b] = [FACE[k], FACE[k + 1]], u = Math.max(0, Math.min(1, (Y - a[0]) / (b[0] - a[0])));
+    return [a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u];
+  };
+  for (const pid of ['headphones-midnight', 'headphones-gamer']) {
+    const fit = PAINT_FIT[pid];
+    const { data, info } = await sharp(readFileSync(new URL(`../tools/live/page/art/accessories/${pid}.webp`, import.meta.url))).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const W = info.width, H = info.height, W2 = W + fit.addX, H2 = H + fit.add, A = (x, y) => data[(y * W + x) * 4 + 3];
+    const w = at.w, h = (w * H2) / W2;
+    const px = (x) => (at.x || 0) + (fitCol(x, fit) / W2 - 0.5) * w, py = (y) => at.y + ((H2 - fitRow(y, fit)) / H2) * h;
+    // its cups (below its band's sides): the inside of each one outside her face, all the way down
+    const cupRows = [];
+    for (let y = 285; y < H; y++) {
+      let l = -1, r = W;
+      for (let x = 0; x < W / 2; x++) if (A(x, y) > 128) l = x;
+      for (let x = W - 1; x >= W / 2; x--) if (A(x, y) > 128) r = x;
+      if (l < 0 || r >= W) continue;
+      cupRows.push(y);
+      const Y = py(y), [f0, f1] = outline(Y);
+      if (Y > 0.42 || Y < -0.42) continue;
+      assert.ok(px(l) < f0 - 0.008, `${pid} row ${y}: its left cup's inside at ${px(l).toFixed(3)}, her face to ${f0.toFixed(3)}`);
+      assert.ok(px(r) > f1 + 0.008, `${pid} row ${y}: its right cup's inside at ${px(r).toFixed(3)}, her face to ${f1.toFixed(3)}`);
+    }
+    // their middles at her ears' height, their outsides past her ears, not far past them
+    const mid = py((cupRows[0] + cupRows.at(-1)) / 2);
+    assert.ok(Math.abs(mid) < 0.06, `${pid}: its cups' middle ${mid.toFixed(3)} from her ears' height`);
+    let out = W;
+    for (let y = 300; y < 480; y++) for (let x = 0; x < W / 2; x++) if (A(x, y) > 128) { out = Math.min(out, x); break; }
+    assert.ok(px(out) < -0.6 && px(out) > -0.85, `${pid}: its cups' outsides ${px(out).toFixed(3)} (her ears to 0.44)`);
+    // smaller than before: its cups 0.72 of her face's width tall at most (they were 0.77, squashed, and 1.1 out)
+    const tall = py(cupRows[0]) - py(cupRows.at(-1));
+    assert.ok(tall < 0.72 && tall > 0.55, `${pid}: its cups ${tall.toFixed(3)} tall`);
+    // its band on top of her hair: its inside at the top 1.10 to 1.17 above her ears' middle (her hair's top 1.15)
+    let inner = -1;
+    for (let y = 0, seen = false; y < H; y++) { const on = A(Math.round(W / 2), y) > 128; if (on) seen = true; else if (seen) { inner = y; break; } }
+    assert.ok(py(inner) > 1.1 && py(inner) < 1.17, `${pid}: its band's inside at the top ${py(inner).toFixed(3)} above her ears' middle`);
+  }
+  // on her: from the middle between her ears, turning with her head
+  const js = read('tools/live/page/outfits.js');
+  assert.match(js, /else if \(at0\.from === 'ears'\) \{/);
+  assert.match(js, /const mx = \(earR\.cx \+ earL\.cx\) \/ 2, my = \(earR\.cy \+ earL\.cy\) \/ 2, ox = fw \* \(at0\.x \|\| 0\), oy = fw \* at0\.y \+ h \/ 2;/);
+  assert.match(js, /x = mx \+ ox \* cos - oy \* sin; y = my \+ ox \* sin \+ oy \* cos;/);
+});
+
 test('her set finds the paintings (paint.js), and each one has its place: the outfits\' accessories as art.mjs paints them, painted people, rooms, places and rides; drawn in code where there\'s none', async () => {
   const src = read('tools/live/page/paint.js');
   assert.match(src, /try \{ FILES = import\.meta\.glob\('\.\/art\/\*\/\*\.webp', \{ eager: true, query: '\?url', import: 'default' \}\); \} catch \{ FILES = \{\}; \}/);
@@ -484,18 +744,19 @@ test('her set finds the paintings (paint.js), and each one has its place: the ou
   for (const [outfit, o] of Object.entries(OUTFITS)) for (const acc of o.acc) assert.ok(PAINTED_ACC[outfit]?.[acc], `${outfit}'s ${acc}: a painting for it`);
   assert.deepEqual([...used].sort(), accIds, 'every painted accessory has an outfit');
   for (const k of ['hat', 'cap', 'beret', 'sunhat', 'conical', 'beanie', 'bucket', 'catEars', 'headphones', 'headset', 'glasses', 'bow', 'clips', 'flower', 'sakura', 'neck', 'garland', 'helmet']) {
-    assert.ok(PAINT_AT[k] && PAINT_AT[k].w > 0 && ['top', 'brow', 'eyes', 'ear', 'neck'].includes(PAINT_AT[k].from), k);
+    assert.ok(PAINT_AT[k] && PAINT_AT[k].w > 0 && ['top', 'brow', 'eyes', 'ear', 'ears', 'neck'].includes(PAINT_AT[k].from), k);
   }
   // (2026-10-08) a hat or a headband sits by its bottom edge above her eyes (`brow`: from her eyes, as her head is drawn;
   // the first guesses, from the top of her hair's mesh, put every hat above her head); an accessory's own place only
-  // changes what it says; headphones behind her face and the hair beside it
-  for (const k of ['hat', 'cap', 'beret', 'sunhat', 'conical', 'beanie', 'bucket', 'catEars', 'headphones', 'headset']) assert.equal(PAINT_AT[k].from, 'brow', k);
+  // changes what it says; her headphones from the middle between her ears (`ears`: the sides of her head), over her hair
+  for (const k of ['hat', 'cap', 'beret', 'sunhat', 'conical', 'beanie', 'bucket', 'catEars', 'headset']) assert.equal(PAINT_AT[k].from, 'brow', k);
+  assert.equal(PAINT_AT.headphones.from, 'ears');
   for (const [k, v] of Object.entries(PAINT_AT)) {
     if (!['hat', 'cap', 'beret', 'sunhat', 'conical', 'beanie', 'bucket', 'catEars', 'headphones', 'headset', 'glasses', 'bow', 'clips', 'flower', 'sakura', 'neck', 'garland', 'helmet'].includes(k)) assert.ok(accIds.includes(k), `${k}: an accessory's own`);
-    if (v.order) assert.ok(['underFace', 'behindBangs', 'top', 'neck'].includes(v.order), `${k}: ${v.order}`);
+    if (v.order) assert.ok(['underFace', 'behindBangs', 'top', 'neck', 'mic'].includes(v.order), `${k}: ${v.order}`);
     if (v.sy) assert.ok(v.sy > 0.4 && v.sy <= 1, `${k}: sy ${v.sy}`);
   }
-  assert.equal(PAINT_AT.headphones.order, 'underFace');
+  assert.equal(PAINT_AT.headphones.order, 'mic');
   const outfitsJs = read('tools/live/page/outfits.js');
   assert.match(outfitsJs, /underFace: meshes\[P\.face\]\.renderOrder - 1e-4/);
   assert.match(outfitsJs, /else if \(at0\.from === 'brow'\) \[x, y\] = at\(eyesX \+ fw \* \(at0\.x \|\| 0\), eyesY \+ fw \* at0\.y \+ h \/ 2\);/);

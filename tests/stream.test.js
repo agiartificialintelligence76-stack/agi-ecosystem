@@ -23,7 +23,8 @@ import { Mixer, OUT_RATE, ffmpegArgs, parseArgs, chatterSettings, timeFact, dirO
 import { demoSite, DEMO_QA, DEMO_CHAT } from '../tools/live/site.js';
 import * as M from '../tools/live/music.js';
 import * as L from '../tools/live/lines.js';
-import { ACTIONS, DANCE_IDS, DANCES, GESTURES, IDLES, CAM_ZOOM, JUMP_S, JUMP_UP, jumpAt, createMoves } from '../tools/live/page/moves.js';
+import { ACTIONS, DANCE_IDS, DANCES, GESTURES, IDLES, CAM_ZOOM, JUMP_S, JUMP_UP, jumpAt, createMoves, restArms, REST_ARMS, SPOTS_REST } from '../tools/live/page/moves.js';
+import { shoulderLimit } from '../src/stage/agi1-2d-arms.js';
 import { OUTFIT_IDS, SHOW_OUTFITS } from '../tools/live/page/outfits.js';
 import { ROOM_IDS, SHOW_ROOMS } from '../tools/live/page/rooms.js';
 import { isCrude } from '../server/coins.js';
@@ -684,24 +685,174 @@ const paddle = (arms) => {
   }
   return bad;
 };
-test('her poses on stream: never a forearm stuck out flat at her hips (every gesture, every action over its length, every dance at every beat)', () => {
-  for (const [id, g] of Object.entries(GESTURES)) assert.deepEqual(paddle(g.arms), [], `gesture ${id}`);
+// (2026-10-08) a pose's arms: as angles, or where her hands go (worked out on her arms at rest)
+const armsOf = (p) => (p.hands ? { ...restArms(p.hands), ...(p.arms || {}) } : p.arms || null);
+// where a point of her hand is (a: along it, HAND's frame), her arms turned as `arms` says, at rest (as bendArm turns them)
+const RAD = Math.PI / 180;
+function handAt(side, arms, a = 0.33) {
+  const A = REST_ARMS[side], B = A.now.base, g = A.sign, up = arms[`up${side}`] ?? 1, fo = arms[`fo${side}`] ?? 1;
+  const s = g * shoulderLimit(arms[`sh${side}`] || 0) * RAD, e = g * (arms[`el${side}`] || 0) * RAD, w = g * (arms[`wr${side}`] || 0) * RAD;
+  const rot = (v, t) => [v[0] * Math.cos(t) - v[1] * Math.sin(t), v[0] * Math.sin(t) + v[1] * Math.cos(t)];
+  const u = rot(B.up, s), f = rot(B.fo, s + e), h = rot(B.ha, s + e + w);
+  const E = [B.S[0] + u[0] * up, B.S[1] + u[1] * up], W = [E[0] + f[0] * fo, E[1] + f[1] * fo];
+  return { E, W, P: [W[0] + h[0] * a, W[1] + h[1] * a] };
+}
+// her chest (her model's chest piece, inside its box, up to the top of the AGI on her shirt: model units, her arms' frame):
+// her hands stay off it (PG-13). A hand may pass in front of her collarbones (a clap under her chin, a cup at her lips).
+const CHEST = { x0: -0.1, x1: 0.1, y0: 0.265, y1: 0.375 };
+const onChest = (arms) => {
+  const bad = [];
+  for (const s of ['R', 'L']) {
+    if (arms[`sh${s}`] === undefined || arms[`el${s}`] === undefined) continue;
+    for (const a of [0.15, 0.33, 0.56, 0.8]) {
+      const [x, y] = handAt(s, arms, a).P;
+      if (x > CHEST.x0 && x < CHEST.x1 && y > CHEST.y0 && y < CHEST.y1) { bad.push(`${s} hand at ${a}: ${x.toFixed(3)}, ${y.toFixed(3)}`); break; }
+    }
+  }
+  return bad;
+};
+test('her poses on stream: never a forearm stuck out flat at her hips, her hands never on her chest (every gesture, every action over its length, every dance at every beat)', () => {
+  for (const [id, g] of Object.entries(GESTURES)) {
+    assert.deepEqual(paddle(armsOf(g)), [], `gesture ${id}`);
+    assert.deepEqual(onChest(armsOf(g)), [], `gesture ${id}`);
+  }
   for (const [id, def] of Object.entries(ACTIONS)) {
     for (let a = 0; a <= def.len; a += 0.05) {
-      const p = def.pose(a);
-      if (p.arms) assert.deepEqual(paddle(p.arms), [], `action ${id} at ${a.toFixed(2)} s`);
+      const arms = armsOf(def.pose(a));
+      if (!arms) continue;
+      assert.deepEqual(paddle(arms), [], `action ${id} at ${a.toFixed(2)} s`);
+      assert.deepEqual(onChest(arms), [], `action ${id} at ${a.toFixed(2)} s`);
     }
   }
   for (const [id, d] of Object.entries(DANCES)) {
     for (let b = 0; b < 32; b += 0.05) {
-      const p = d(b, 1);
-      if (p.arms) assert.deepEqual(paddle(p.arms), [], `dance ${id} at beat ${b.toFixed(2)}`);
+      const arms = armsOf(d(b, 1));
+      if (!arms) continue;
+      assert.deepEqual(paddle(arms), [], `dance ${id} at beat ${b.toFixed(2)}`);
+      assert.deepEqual(onChest(arms), [], `dance ${id} at beat ${b.toFixed(2)}`);
     }
   }
+  // the rule catches a hand on her chest (the owner's screenshot, 2026-10-08: her palms flat up by her chest)
+  assert.equal(onChest(restArms({ R: { to: 'chin', dx: -0.1, dy: -1.1, deg: 80, a: 0.4, sh: -10, bend: 'in' } })).length, 1);
   for (const id of Object.keys(IDLES)) assert.ok(ACTIONS[id], `what she does by herself is one of her actions: ${id}`);
   // the rule itself catches the screenshot's pose (her old gestures: elbow 110–140° with her arm pulled in)
   assert.equal(paddle({ shR: -30, elR: 118 }).length, 1);
   assert.equal(paddle({ shR: -30, elR: 160, shL: -10, elL: 100 }).length, 0, 'an arm out to the side may bend any way');
+});
+
+// her poses' hands, each one (a hand between two spots: both)
+const handSpecs = (h) => (!h ? [] : h.mix ? [...handSpecs(h.mix[0]), ...handSpecs(h.mix[1])] : [h]);
+test('her hands (2026-10-08, the owner: "why did you switched her hands", "are you even fixing it lol", "she doesnt even grabbed it lol"): always her palm, her own hand the right way round, never squeezed thin or curled into a claw; what she holds in front of her palm, her own fingers or thumb drawn over it', async () => {
+  const { HAND_TURN, CURL, HOLD, USES_R } = await import('../tools/live/page/moves.js');
+  const { CURL_MAX } = await import('../src/stage/agi1-2d.js');
+  const { HELD_FADE } = await import('../tools/live/page/outfits.js');
+  // her hand is one drawing, her palm: turned at most HAND_TURN about its length (a hand turned 40° is 0.81 as wide), never
+  // flipped to stand in for her other hand's back (twisted 150° or more, her palm reads as her other hand's), her fingers
+  // relaxed (CURL.open), curled round something she holds at most CURL.hold, and never past what her drawn fingers can
+  // show on her live show (CURL_MAX)
+  assert.ok(HAND_TURN <= 45 && CURL.open < CURL.hold && CURL.hold <= CURL_MAX && CURL_MAX < 0.6, `${HAND_TURN} ${CURL.open} ${CURL.hold} ${CURL_MAX}`);
+  const check = (what, hands, holding) => {
+    for (const side of ['R', 'L']) for (const h of handSpecs(hands?.[side])) {
+      assert.ok(Math.abs(h.tw || 0) <= HAND_TURN, `${what} ${side}: turned ${h.tw}`);
+      assert.ok((h.cu || 0) <= (holding && side === 'R' ? CURL.hold : CURL.open) + 1e-9, `${what} ${side}: curled ${h.cu}`);
+    }
+  };
+  for (const [id, def] of Object.entries(ACTIONS)) for (let a = 0; a <= def.len; a += 0.1) check(`action ${id} at ${a.toFixed(1)} s`, def.pose(a).hands, def.prop);
+  for (const [id, g] of Object.entries(GESTURES)) check(`gesture ${id}`, g.hands, false);
+  for (const [id, d] of Object.entries(DANCES)) for (let b = 0; b < 16; b += 0.25) check(`dance ${id}`, d(b, 1).hands, false);
+  // what she holds: in front of her palm, at a point of her hand (along it from her wrist, across it), her thumb ('thumb':
+  // a cup or her phone, her thumb over its edge) or her fingers ('fingers': a snack at her fingertips) drawn again over it
+  for (const [k, H] of Object.entries(HOLD)) {
+    assert.ok(['thumb', 'fingers'].includes(H.grip), `${k}: ${H.grip}`);
+    assert.ok(H.a > 0.3 && H.a <= 1.05 && Math.abs(H.b) < 0.3 && H.w > 0.2 && H.w < 1 && H.upright >= 0 && H.upright <= 1, k);
+  }
+  assert.equal(HOLD.food.grip, 'fingers', 'a snack: her fingertips over its bottom');
+  for (const k of ['phone', 'mug', 'drink']) assert.equal(HOLD[k].grip, 'thumb', `${k}: her thumb over its edge`);
+  // things in her right hand come and go softly (a few frames), with her fingers drawn over them
+  assert.ok(HELD_FADE >= 3 && HELD_FADE <= 12);
+  const outfits = read('tools/live/page/outfits.js');
+  assert.match(outfits, /uniform float fade;/);
+  assert.match(outfits, /gl_FragColor = c \* opacity \* fade \* m;/);
+  // a fist, or a hand round a handle, are pictures her drawing can't make look held: gone (her fist read as a claw, the
+  // owner: "are you even fixing it lol"; her umbrella's handle floated by her shoulder, "????")
+  for (const f of ['tools/live/page/fist.js', 'tools/live/page/grip.js', 'tools/live/page/hands', 'tools/live/hand-art.mjs']) assert.equal(existsSync(new URL(`../${f}`, import.meta.url)), false, f);
+  assert.doesNotMatch(outfits, /fist\.js|grip\.js|FIST_|umbrellaGrip/);
+  // which actions use her right hand (her umbrella goes while they do)
+  for (const id of ['hairtuck', 'lookchat', 'lean', 'wink', 'smug']) assert.equal(USES_R[id], false, id);
+  for (const id of ['laugh', 'sip', 'phone', 'clap', 'eat', 'drink', 'think']) assert.equal(USES_R[id], true, id);
+});
+
+// Her arms on her controller's springs (src/stage/agi1-2d.js), frame by frame at 30 a second, with moves.js on top and its
+// after-the-springs part (post): as she's drawn on her live show (her body at rest)
+async function armsOverTime(run, { seconds = 4, talking = 0, rnd } = {}) {
+  const { Follow } = await import('../src/stage/agi1-2d-motion.js');
+  const { ARMS } = await import('../src/stage/agi1-2d.js');
+  const R0 = ARMS.rest;
+  const F = {
+    shR: new Follow(R0.shoulder, 2.2, 0.68, 0.1), elR: new Follow(R0.elbow, 3, 0.6, 0.05), wrR: new Follow(0, 3.6, 0.5, 0),
+    shL: new Follow(R0.shoulder, 2.2, 0.68, 0.1), elL: new Follow(R0.elbow, 3, 0.6, 0.05), wrL: new Follow(0, 3.6, 0.5, 0),
+    upR: new Follow(1, 2.2, 0.8, 0), foR: new Follow(1, 2.4, 0.8, 0), twR: new Follow(0, 2.2, 0.8, 0), cuR: new Follow(0, 3, 0.85, 0),
+    upL: new Follow(1, 2.2, 0.8, 0), foL: new Follow(1, 2.4, 0.8, 0), twL: new Follow(0, 2.2, 0.8, 0), cuL: new Follow(0, 3, 0.85, 0),
+  };
+  const P = {};
+  for (const k in F) P[k] = F[k].y;
+  let ms = 0, seed = 7;
+  const m = createMoves({ clock: () => ms, rnd: rnd || (() => ((seed = (seed * 16807) % 2147483647) / 2147483647)) });
+  m.auto(false);
+  if (!talking) m.gestures(false);
+  const now = { pose: P, talking, level: 0.3, waving: false, cheering: false, swaying: false };
+  run(m);
+  const frames = [];
+  for (let i = 0; i < seconds * 30; i++) {
+    ms += 1000 / 30;
+    const tg = { ax: 0, ay: 0, az: 0, ex: 0, ey: 0, bx: 0, by: 0, bz: 0, hip: 0, shR: R0.shoulder, shL: R0.shoulder, elR: R0.elbow, elL: R0.elbow,
+      wrR: 0, wrL: 0, upR: 1, foR: 1, twR: 0, cuR: 0, upL: 1, foL: 1, twL: 0, cuL: 0 };
+    m.apply(1 / 30, tg, now);
+    for (const k in F) P[k] = F[k].step(1 / 30, tg[k]);
+    const pz = { R: { shoulder: P.shR, elbow: P.elR, wrist: P.wrR, upper: P.upR, fore: P.foR }, L: { shoulder: P.shL, elbow: P.elL, wrist: P.wrL, upper: P.upL, fore: P.foL } };
+    m.post(pz);
+    const arms = {};
+    for (const s of ['R', 'L']) Object.assign(arms, { [`sh${s}`]: pz[s].shoulder, [`el${s}`]: pz[s].elbow, [`wr${s}`]: pz[s].wrist, [`up${s}`]: pz[s].upper, [`fo${s}`]: pz[s].fore });
+    frames.push({ t: i / 30, arms, target: { R: tg.elR, L: tg.elL } });
+  }
+  return frames;
+}
+// her forearms crossed in front of her: her right wrist and fingertips right of her left's
+const crossedArms = (arms) => {
+  const r = handAt('R', arms, 0.8).P, l = handAt('L', arms, 0.8).P;
+  return handAt('R', arms).W[0] > handAt('L', arms).W[0] + 0.01 && r[0] > l[0] + 0.01;
+};
+test('her hands on their way (2026-10-08, her clap: her forearms crossed in an X over her chest on their way up, and a blown kiss went down across her chest): from her sides up to her face and back, never on her chest, never crossed, never a whole turn of her forearm (every action, every dance from its start, her gestures while she talks; her springs frame by frame)', async () => {
+  const look = (what, frames) => {
+    for (const f of frames) {
+      assert.deepEqual(onChest(f.arms), [], `${what} at ${f.t.toFixed(2)} s`);
+      assert.equal(crossedArms(f.arms), false, `${what} at ${f.t.toFixed(2)} s: her forearms crossed`);
+      // (a forearm out flat at her hips, as long as drawn: on its way it comes toward us, seen shorter)
+      const long = { ...f.arms };
+      for (const s of ['R', 'L']) if ((f.arms[`fo${s}`] ?? 1) < 0.75) delete long[`el${s}`];
+      assert.deepEqual(paddle(long), [], `${what} at ${f.t.toFixed(2)} s`);
+    }
+    for (let i = 1; i < frames.length; i++) for (const s of ['R', 'L']) {
+      const jump = Math.abs(frames[i].target[s] - frames[i - 1].target[s]);
+      assert.ok(jump < 250, `${what} at ${frames[i].t.toFixed(2)} s: her ${s} elbow's target jumped ${jump.toFixed(0)}° (a whole turn of her forearm)`);
+    }
+  };
+  for (const [id, def] of Object.entries(ACTIONS)) look(`action ${id}`, await armsOverTime((m) => m.act(id), { seconds: def.len + 1.5 }));
+  for (const id of Object.keys(DANCES)) look(`dance ${id}`, await armsOverTime((m) => m.dance({ bpm: 112, style: id, until: 6000, beat0: 0 }), { seconds: 7.5 }));
+  look('her gestures', await armsOverTime(() => {}, { seconds: 40, talking: 1 }));
+  // from one dance move to the next (her song's moves, a new routine every four bars), every way round
+  for (const a of Object.keys(DANCES)) for (const b of Object.keys(DANCES)) {
+    if (a === b) continue;
+    const cues = [{ t: 0, move: a }, { t: 2.2, move: b }, { t: 4.4, move: a }];
+    look(`dance ${a} → ${b}`, await armsOverTime((m) => m.dance({ bpm: 112, until: 7000, beat0: 0, cues }), { seconds: 7.5 }));
+  }
+  // on its way her forearm comes toward us (seen shorter), then it's as long as her pose says: her clap from her side
+  const clap = await armsOverTime((m) => m.act('clap'), { seconds: 2.4 });
+  const fo = clap.map((f) => f.arms.foR), el = clap.map((f) => f.arms.elR);
+  assert.ok(Math.min(...fo.slice(0, 12)) < 0.5, `shorter on its way: ${Math.min(...fo.slice(0, 12)).toFixed(2)}`);
+  assert.ok(fo.slice(18, 50).every((v) => v > 0.85), 'as long as her pose says while she claps');
+  // …and up at her side first, never across her (her elbow turns her forearm out: up past 90°, not down past −90°)
+  assert.ok(Math.max(...el.slice(0, 15)) > 90 && Math.min(...el) > -20, `${el.slice(0, 15).map((v) => v.toFixed(0))}`);
 });
 
 test('her jump stays in the picture (4.5 cm up, her head never leaves it), the camera moves in gently, and no gesture while she jumps, twirls or moves', () => {
@@ -718,7 +869,13 @@ test('her jump stays in the picture (4.5 cm up, her head never leaves it), the c
   const rest = () => ({ shR: -15, elR: -3, wrR: 0, shL: -15, elL: -3, wrL: 0, ax: 0, ay: 0, az: 0, ex: 0, ey: 0, bx: 0, by: 0, bz: 0, hip: 0 });
   const talk = { talking: 1, level: 0.6 };
   let gestured = false;
-  for (let i = 0; i < 300; i++) { ms += 33; const tg = rest(); moves.apply(1 / 30, tg, talk); if (tg.elR > 60 || tg.elL > 60) gestured = true; }
+  // (2026-10-08: now and then, after a few seconds of talking, one hand at a time: not all the time)
+  for (let i = 0; i < 300; i++) {
+    ms += 33;
+    const tg = rest(), was = rest();
+    moves.apply(1 / 30, tg, talk);
+    if (['elR', 'elL', 'shR', 'shL'].some((k) => Math.abs(tg[k] - was[k]) > 25)) gestured = true;
+  }
   assert.ok(gestured, 'her hands move while she talks');
   for (const go of [() => moves.jump(3), () => moves.twirl(2), () => moves.move('left')]) {
     go();

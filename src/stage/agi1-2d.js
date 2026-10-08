@@ -59,6 +59,9 @@ export const ARMS = {
 export const ARM_REFINE = { upper: 3, fore: 3, hand: 2, sleeve: 2 };
 // her hips: how far her weight shifts from one foot to the other (model units, about 1.5 cm), more in her dance
 export const HIPS = { idle: 0.014, dance: 0.028 };
+// (2026-10-08, her live show) how far her drawn fingers curl there at most (past it they folded back over her palm and
+// crumpled: her poses keep her hand open, relaxed or round something she holds, tools/live/page/moves.js CURL)
+export const CURL_MAX = 0.55;
 
 // ---------- loading ----------
 async function getBuffer(url) {
@@ -320,6 +323,10 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     // her arms swing a little behind her body, like real arms (shoulder, elbow, wrist; R her right, on the left of the picture)
     shR: new Follow(R0.shoulder, 2.2, 0.68, 0.1), elR: new Follow(R0.elbow, 3, 0.6, 0.05), wrR: new Follow(0, 3.6, 0.5, 0),
     shL: new Follow(R0.shoulder, 2.2, 0.68, 0.1), elL: new Follow(R0.elbow, 3, 0.6, 0.05), wrL: new Follow(0, 3.6, 0.5, 0),
+    // (2026-10-08, her live show: moves.js) her upper arm and forearm foreshortened, her hand turned, her fingers curled
+    // (src/stage/agi1-2d-arms.js); on the website they stay as drawn
+    upR: new Follow(1, 2.2, 0.8, 0), foR: new Follow(1, 2.4, 0.8, 0), twR: new Follow(0, 2.2, 0.8, 0), cuR: new Follow(0, 3, 0.85, 0),
+    upL: new Follow(1, 2.2, 0.8, 0), foL: new Follow(1, 2.4, 0.8, 0), twL: new Follow(0, 2.2, 0.8, 0), cuL: new Follow(0, 3, 0.85, 0),
   };
   const P = {};
   for (const k in F) P[k] = F[k].y;
@@ -459,6 +466,7 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     tg.elL = R0.elbow - mo * 2.5 * drift[9](t * 0.17 + 5);
     tg.wrR = mo * 4 * drift[7](t * 0.31 + 2);
     tg.wrL = mo * 4 * drift[8](t * 0.29 + 7);
+    tg.upR = 1; tg.foR = 1; tg.twR = 0; tg.cuR = 0; tg.upL = 1; tg.foL = 1; tg.twL = 0; tg.cuL = 0;
 
     // the reactions, on top
     applyMoves(dt, tg);
@@ -492,6 +500,14 @@ export function createAgi1_2D(model, { camera, effects, reducedMotion = false, o
     const pz = model.posture;
     pz.R.shoulder = P.shR; pz.R.elbow = P.elR; pz.R.wrist = P.wrR;
     pz.L.shoulder = P.shL; pz.L.elbow = P.elL; pz.L.wrist = P.wrL;
+    pz.R.upper = P.upR; pz.R.fore = P.foR; pz.R.twist = P.twR; pz.R.curl = P.cuR;
+    pz.L.upper = P.upL; pz.L.fore = P.foL; pz.L.twist = P.twL; pz.L.curl = P.cuL;
+    // (her live show: moves.js, after her springs, her pose as it's drawn)
+    moves?.post?.(pz);
+    // (her elbow a hinge when it's bent far: her live show only, with her round elbow drawn over the joint there; and her
+    // drawn fingers curl only a little there, CURL_MAX)
+    pz.R.fold = pz.L.fold = moves ? 1 : 0;
+    pz.R.curlMax = pz.L.curlMax = moves ? CURL_MAX : 1;
     pz.hip = P.hip;
     model.deform();
     model.meshes.sync();

@@ -180,6 +180,153 @@ export function dropHatInside(rgba, w, h) {
   return n;
 }
 
+// (2026-10-08, the owner's screenshot: the conical hat perched above her head, "a black chin-strap loop across her forehead")
+// a hat painted from a little below, the band inside it and its chin straps painted dark and thick: on her (her head inside
+// it now: the hat's underside behind her head, outfits.js) they hung over her face. They go: what's dark and thicker than
+// the painting's own lines (they're thin) is painted over from what's either side of it, across its narrower way (the band
+// from the lining above and below it, the straps from either side); where a strap hangs below the brim, there's nothing
+// either side, so it's gone.
+export const HAT_STRAPS = { conical: true };
+export function dropStraps(rgba, w, h, { dark = 80, thick = 2, long = 10 } = {}) {
+  const at = (x, y) => (y * w + x) * 4;
+  const lum = (o) => 0.3 * rgba[o] + 0.59 * rgba[o + 1] + 0.11 * rgba[o + 2];
+  const d = new Uint8Array(w * h);
+  for (let p = 0; p < w * h; p++) d[p] = rgba[p * 4 + 3] > 128 && lum(p * 4) < dark ? 1 : 0;
+  // thick: still dark `thick` pixels in every direction (the painting's lines are thinner), and for a while (`long`
+  // pixels at least: where two of its lines meet, they're that thick for a moment, and stay), then grown back over its
+  // edges (their soft, lighter rims too: all of what's that close)
+  const core = new Uint8Array(w * h);
+  for (let y = thick; y < h - thick; y++) for (let x = thick; x < w - thick; x++) {
+    let all = 1;
+    for (let k = -thick; k <= thick && all; k++) if (!d[(y + k) * w + x] || !d[y * w + x + k]) all = 0;
+    core[y * w + x] = all;
+  }
+  const seen = new Uint8Array(w * h);
+  for (let p = 0; p < w * h; p++) {
+    if (!core[p] || seen[p]) continue;
+    const blob = [p], stack = [p];
+    let x0 = w, x1 = -1, y0 = h, y1 = -1;
+    seen[p] = 1;
+    while (stack.length) {
+      const q = stack.pop(), x = q % w, y = (q - x) / w;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy, r = ny * w + nx;
+        if (nx >= 0 && ny >= 0 && nx < w && ny < h && core[r] && !seen[r]) { seen[r] = 1; blob.push(r); stack.push(r); }
+      }
+    }
+    if (Math.max(x1 - x0, y1 - y0) + 1 < long) for (const q of blob) core[q] = 0;
+  }
+  const grow = thick + 4, m = new Uint8Array(w * h);
+  let count = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!core[y * w + x]) continue;
+    for (let dy = -grow; dy <= grow; dy++) for (let dx = -grow; dx <= grow; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h || dx * dx + dy * dy > grow * grow) continue;
+      const q = ny * w + nx;
+      if (!m[q]) { m[q] = 1; count++; }
+    }
+  }
+  if (!count) return 0;
+  // painted over from the outside in: each pixel across its narrower way, from the nearest clean pixels either side
+  // (their colors and their alpha: nothing either side, nothing here; a color only from a side that's there, so the green
+  // keyed out round it never tints it). Only across a stroke's own width at first (32 px, then a little more each pass):
+  // where it's covered further both ways (a strap's top, where it meets the band), on a later pass, from what the passes
+  // before filled in (never along the strap, from below the brim: its top came out half see-through).
+  const out = Uint8ClampedArray.from(rgba), MAX = 40, PASSES = 6, FIRST = 32, MORE = 16;
+  const end = (x, y, dx, dy) => {
+    for (let k = 1; k <= MAX; k++) {
+      const px = x + k * dx, py = y + k * dy;
+      if (px < 0 || py < 0 || px >= w || py >= h) return [k, -1];          // past the picture's edge: nothing there
+      if (!m[py * w + px]) return [k, at(px, py)];
+    }
+    return null;
+  };
+  let left = count;
+  for (let pass = 0; pass < PASSES && left; pass++) {
+    const done = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!m[y * w + x]) continue;
+      const L = end(x, y, -1, 0), R = end(x, y, 1, 0), U = end(x, y, 0, -1), Dn = end(x, y, 0, 1);
+      const across = L && R ? L[0] + R[0] : Infinity, down = U && Dn ? U[0] + Dn[0] : Infinity, last = pass === PASSES - 1;
+      let A, B;
+      if (!last && Math.min(across, down) > FIRST + MORE * pass) continue;
+      if (across <= down && across < Infinity) [A, B] = [L, R];
+      else if (down < Infinity) [A, B] = [U, Dn];
+      else [A, B] = L || R ? [L, R] : [U, Dn];                              // the last pass: what's there
+      const ka = A ? A[0] : 1, kb = B ? B[0] : 1, t = ka / (ka + kb), pa = A ? A[1] : -1, pb = B ? B[1] : -1, o = at(x, y);
+      const wa = (pa >= 0 ? out[pa + 3] : 0) * (1 - t), wb = (pb >= 0 ? out[pb + 3] : 0) * t;
+      out[o + 3] = Math.round(wa + wb);
+      for (let c = 0; c < 3; c++) out[o + c] = wa + wb > 0 ? Math.round(((pa >= 0 ? out[pa + c] : 0) * wa + (pb >= 0 ? out[pb + c] : 0) * wb) / (wa + wb)) : 0;
+      done.push(y * w + x);
+    }
+    for (const p of done) m[p] = 0;
+    left -= done.length;
+  }
+  rgba.set(out);
+  return count;
+}
+
+// (2026-10-08) glasses asked for with "clear see-through lenses", painted milky over the green (the green seen through
+// them pale, about three parts white, and as solid as the frame): on her they hid her eyes. Their lenses made clear: in
+// each half, from the middle of what's there below its temples, what's inside the dark line round the lens (its frame's
+// inner edge), a faint tint left (`alpha`), and the glints painted on it (lighter than the lens) kept, a see-through white
+// (`glint` at most). A lens that isn't closed by its line all the way round (its fill running out into its frame, to
+// within `margin` px of what's see-through, or to the picture's edge) is left as it is.
+export const CLEAR_LENSES = { glasses: { alpha: 0.08, glint: 0.7 } };
+export function clearLenses(rgba, w, h, { alpha = 0.08, glint = 0.7, line = 150, tint = [226, 244, 236], margin = 6 } = {}) {
+  const lum = (o) => 0.3 * rgba[o] + 0.59 * rgba[o + 1] + 0.11 * rgba[o + 2];
+  // what's near the see-through outside (within `margin` px: a lens is inside its frame, farther in than that)
+  const near = new Uint8Array(w * h), row = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    let last = -1e9;
+    for (let x = 0; x < w; x++) { if (rgba[(y * w + x) * 4 + 3] <= 128) last = x; if (x - last <= margin) row[y * w + x] = 1; }
+    last = 1e9;
+    for (let x = w - 1; x >= 0; x--) { if (rgba[(y * w + x) * 4 + 3] <= 128) last = x; if (last - x <= margin) row[y * w + x] = 1; }
+  }
+  for (let x = 0; x < w; x++) {
+    let last = -1e9;
+    for (let y = 0; y < h; y++) { if (row[y * w + x]) last = y; if (y - last <= margin) near[y * w + x] = 1; }
+    last = 1e9;
+    for (let y = h - 1; y >= 0; y--) { if (row[y * w + x]) last = y; if (last - y <= margin) near[y * w + x] = 1; }
+  }
+  const lenses = [];
+  for (const half of [0, 1]) {
+    const x0 = half ? Math.floor(w / 2) : 0, x1 = half ? w : Math.floor(w / 2);
+    let sx = 0, sy = 0, c = 0;
+    for (let y = Math.floor(h * 0.25); y < h; y++) for (let x = x0; x < x1; x++) if (rgba[(y * w + x) * 4 + 3] > 200) { sx += x; sy += y; c++; }
+    if (!c) continue;
+    const seed = Math.round(sy / c) * w + Math.round(sx / c);
+    if (rgba[seed * 4 + 3] <= 200 || lum(seed * 4) < line) continue;
+    const inLens = new Uint8Array(w * h), stack = [seed], pixels = [];
+    inLens[seed] = 1;
+    let open = false;
+    while (stack.length && !open) {
+      const p = stack.pop(), x = p % w, y = (p - x) / w;
+      pixels.push(p);
+      if (!x || !y || x === w - 1 || y === h - 1 || near[p]) { open = true; break; }
+      for (const q of [p - 1, p + 1, p - w, p + w]) {
+        if (inLens[q]) continue;
+        const o = q * 4;
+        if (rgba[o + 3] <= 128) { open = true; break; }
+        if (lum(o) >= line) { inLens[q] = 1; stack.push(q); }
+      }
+    }
+    if (!open) lenses.push(pixels);
+  }
+  for (const pixels of lenses) {
+    // the lens' own fill (the middle of its brightness), and lighter than that: a glint
+    const ls = pixels.map((p) => lum(p * 4)).sort((a, b) => a - b), mid = ls[ls.length >> 1];
+    for (const p of pixels) {
+      const o = p * 4, g = Math.max(0, Math.min(1, (lum(o) - mid - 8) / 24));
+      for (let k = 0; k < 3; k++) rgba[o + k] = Math.round(tint[k] + (255 - tint[k]) * g);
+      rgba[o + 3] = Math.round(255 * (alpha + (glint - alpha) * g));
+    }
+  }
+  return lenses.map((l) => l.length);
+}
+
 // (2026-10-08) until their own painting is there (Google skipped them in the owner's first run), three are made from a
 // painting asked for in the same words but another color, its colors turned (the drawing as painted): the mint star clips
 // from the golden ones, Istanbul's light blue scarf from Paris' light red one, Rio's pink hibiscus from Palawan's red one
@@ -484,6 +631,9 @@ export async function cutOne(sharp, file, item, { out = OUT, flip = false, panel
   // (its size stays: where it sits on her is measured on the whole picture)
   if (BAND_ENDS[like]) trimBandEnds(own, box.width, box.height);
   if (HAT_INSIDE[like]) dropHatInside(own, box.width, box.height);
+  // (what's left of a strap below its brim, cut off from the hat by it: a speck now, and it goes too)
+  if (HAT_STRAPS[like] && dropStraps(own, box.width, box.height)) dropSpecks(own, box.width, box.height);
+  if (CLEAR_LENSES[like]) clearLenses(own, box.width, box.height, CLEAR_LENSES[like]);
   let img = sharp(own, { raw: { width: box.width, height: box.height, channels: 4 } });
   img = item.group === 'people'
     ? img.resize({ height: Math.min(SIZE.people, box.height), withoutEnlargement: true })
