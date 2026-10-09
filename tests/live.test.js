@@ -43,13 +43,16 @@ function liveDb() {
   const qs = new Map();
   let seq = 0;
   const on = () => s.status !== 'off' && Date.now() - s.beat < LIVE.BEAT_S * 1000;
-  const waiting = () => [...qs.values()].filter((q) => q.status === 'waiting').sort((a, b) => a.id - b.id);
-  const position = (q) => (q.status === 'waiting' ? waiting().filter((w) => w.id <= q.id).length : null);
+  // (2026-10-10) her line's order: when it came minus a 💜 badge's head start (line), then its number
+  const key = (q) => q.line ?? q.at;
+  const waiting = () => [...qs.values()].filter((q) => q.status === 'waiting').sort((a, b) => key(a) - key(b) || a.id - b.id);
+  const position = (q) => (q.status === 'waiting' ? waiting().indexOf(q) + 1 : null);
   const today = new Date().toISOString().slice(0, 10);
   return {
     s, qs,
-    live_ask({ p_source, p_asker, p_name, p_question, p_gap, p_per_day, p_queue, p_site_day }) {
+    live_ask({ p_source, p_asker, p_name, p_question, p_gap, p_per_day, p_queue, p_site_day, p_holder = 0, p_holder_code = null, p_head = 0 }) {
       if (!['web', 'telegram', 'x'].includes(p_source) || !p_asker || p_asker.length < 16 || !p_question) return { ok: false, why: 'bad' };
+      if (![0, 2, 3, null].includes(p_holder) || (p_holder_code !== null && (p_holder_code.length < 16 || p_holder_code.length > 64))) return { ok: false, why: 'bad' };
       if (!on()) return { ok: false, why: 'offline' };
       if (s.status === 'ending') return { ok: false, why: 'ending' };
       if (s.closed) return { ok: false, why: 'closed' };
@@ -61,14 +64,19 @@ function liveDb() {
       if ([...qs.values()].filter((q) => q.asker === p_asker && q.day === today).length >= p_per_day) return { ok: false, why: 'day_cap' };
       if ([...qs.values()].filter((q) => q.day === today).length >= p_site_day) return { ok: false, why: 'site_cap' };
       if (waiting().length >= p_queue) return { ok: false, why: 'full' };
-      const q = { id: ++seq, show: s.show, source: p_source, asker: p_asker, name: p_name, question: p_question, status: 'waiting', tries: 0, at: Date.now(), day: today };
+      // (2026-10-10) her 💜 badge: at most p_per_day a day per wallet code, with its head start
+      const badge = [2, 3].includes(p_holder) && p_holder_code
+        && [...qs.values()].filter((q) => q.holderCode === p_holder_code && q.holder > 0 && q.day === today).length < p_per_day ? p_holder : 0;
+      const at = Date.now();
+      const q = { id: ++seq, show: s.show, source: p_source, asker: p_asker, name: p_name, question: p_question, status: 'waiting', tries: 0, at, day: today,
+        holder: badge, holderCode: badge ? p_holder_code : null, line: at - (badge ? p_head * 1000 : 0) };
       qs.set(q.id, q);
-      return { ok: true, id: q.id, position: waiting().length };
+      return { ok: true, id: q.id, position: position(q), holder: badge };
     },
     live_lookup({ p_id, p_asker }) {
       const q = p_id ? qs.get(p_id) : [...qs.values()].reverse().find((x) => p_asker && x.asker === p_asker);
       if (!q) return null;
-      return { id: q.id, status: q.status, on_air: q.status === 'taken' && s.now === q.id, position: position(q), why: q.why ?? null, reply: q.status === 'answered' ? q.reply : null, name: q.name, question: q.question };
+      return { id: q.id, status: q.status, on_air: q.status === 'taken' && s.now === q.id, position: position(q), why: q.why ?? null, reply: q.status === 'answered' ? q.reply : null, name: q.name, question: q.question, holder: q.holder ?? 0 };
     },
     live_start({ p_status }) {
       for (const q of qs.values()) if (['waiting', 'taken'].includes(q.status)) Object.assign(q, { status: 'skipped', why: 'ended' });
@@ -91,7 +99,7 @@ function liveDb() {
       const q = waiting()[0];
       if (!q) return null;
       Object.assign(q, { status: 'taken', tries: q.tries + 1 });
-      return { id: q.id, name: q.name, question: q.question, source: q.source, tries: q.tries };
+      return { id: q.id, name: q.name, question: q.question, source: q.source, tries: q.tries, holder: q.holder ?? 0 };
     },
     live_done({ p_id, p_status, p_why, p_reply, p_mood }) {
       const q = qs.get(p_id);
@@ -120,7 +128,7 @@ function liveDb() {
       if (p_action === 'block') s.blocked.push(p_arg.toLowerCase());
       if (p_action === 'end') s.end = on();
       return { ok: true, status: s.status, on: on(), paused: s.paused, closed: s.closed, end: s.end, blocked: s.blocked, now: null,
-        line: waiting().map((q) => ({ id: q.id, name: q.name, question: q.question, source: q.source, status: q.status })), recent: [] };
+        line: waiting().map((q) => ({ id: q.id, name: q.name, question: q.question, source: q.source, status: q.status, holder: q.holder ?? 0 })), recent: [] };
     },
     live_tidy: () => ({ deleted: 0 }),
     // (2026-10-07) her show went live on X: true the first time today for the show that's on
@@ -139,7 +147,8 @@ function liveDb() {
 let fake, calls, logs;
 beforeEach(() => {
   // (the settings Vercel's build has, which these tests take as unset: their defaults are what's checked)
-  for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'TELEGRAM_GROUPS', 'TELEGRAM_GROUP_POSTS', 'TELEGRAM_BUY_MIN', 'TELEGRAM_BUYS']) delete process.env[k];
+  for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'TELEGRAM_GROUPS', 'TELEGRAM_GROUP_POSTS', 'TELEGRAM_BUY_MIN', 'TELEGRAM_BUYS',
+    'TELEGRAM_GAMES', 'PRIZE_WALLET_KEY']) delete process.env[k];
   Object.assign(process.env, ENV);
   for (const b of [liveBurst, liveLookupBurst, liveAuthBurst, telegramBurst, liveLineBurst]) b.reset();
   logs = [];
@@ -161,6 +170,8 @@ beforeEach(() => {
     if (rpc) {
       if (fake.dbDown) return new Response('{"code":"XX000","message":"down"}', { status: 500 });
       if (fake.sqlMissing && rpc[1].startsWith('live_')) return new Response('{"code":"PGRST202","message":"not found"}', { status: 404 });
+      // (2026-10-10) live.sql from before the holder perks: live_ask without its badge settings
+      if (fake.oldLiveAsk && rpc[1] === 'live_ask' && body && 'p_holder' in body) return new Response('{"code":"PGRST202","message":"not found"}', { status: 404 });
       const fn = fake.db[rpc[1]];
       if (!fn) throw new Error(`unexpected database function ${rpc[1]}`);
       return Response.json(fn.call(fake.db, body) ?? null);
@@ -515,7 +526,7 @@ test('the runner: its secret only; start, beat (the owner\'s controls), next (he
   await post(askOk);
   calls = [];
   r = await post({ action: 'next', show }, { auth: RUNNER() });
-  assert.deepEqual(r.data.question, { id: 1, name: 'Mochi', text: 'what is your favorite color?', source: 'web' });
+  assert.deepEqual(r.data.question, { id: 1, name: 'Mochi', text: 'what is your favorite color?', source: 'web', holder: 0 });
   assert.equal(r.data.reply, 'mochi asks my favorite color… purple, obviously 💜');
   assert.equal(r.data.mood, 'happy');
   const ai = called('generativelanguage')[0].body;
@@ -707,7 +718,7 @@ test("a question from X's live chat, passed on by the owner: the same checks, sh
   // on stream: where it came from, in her prompt; the owner's view shows the source
   calls = [];
   r = await post({ action: 'next', show }, { auth: RUNNER() });
-  assert.deepEqual(r.data.question, { id: q.id, name: 'kai_99', text: 'what is your favorite song?', source: 'x' });
+  assert.deepEqual(r.data.question, { id: q.id, name: 'kai_99', text: 'what is your favorite song?', source: 'x', holder: 0 });
   assert.match(called('generativelanguage')[0].body.systemInstruction.parts[0].text, /in X's live chat \(your show's host passed it on to you\), under the name "kai_99"/);
   const view = await post({ action: 'control', do: 'view' }, { auth: OWNER() });
   assert.ok(view.data.line.some((x) => x.source === 'x' && x.name === null));
@@ -930,7 +941,7 @@ test('agi1.app/live: its promises (shown on stream and read out loud, never your
   assert.match(html, /<html lang="en" data-page="live">/);
   assert.match(html, /<script src="\/theme\.js\?v=7"><\/script>/);
   assert.match(html, /<link rel="canonical" href="__SITE__\/live" \/>/);
-  for (const must of [/Your question is shown on her stream and she reads it out loud, with the name you give here \(if any, and if it can go on a public stream\)\. Never your account/,
+  for (const must of [/Your question is shown on her stream and she reads it out loud, with the name you give here \(if any, and if it can go on a public stream\) and, with a connected wallet at Crush or Soulmate, her 💜 badge\. Never your account, your wallet's address/,
     /18\+ and PG-13\. Ask her anything, however short\./, /She can talk about other coins and about famous people, kindly and fairly: never rumors, and never financial advice\./,
     /kept at most 2 days, then deleted/, /Nothing she says is financial advice/, /reads questions out loud and answers them in her AI voice/,
     /Everything on her stream is AI-generated/, /the show's host can skip any question/, /Her show is for adults: 18\+ only/,
@@ -1279,4 +1290,159 @@ test("agi1.app/live names what she's doing in her extras and viewers' requests",
   // what her stream sets as her segment is one the page knows
   const run = read('tools/live/run.mjs');
   for (const m of run.matchAll(/state\.segment = '([a-z0-9]+)'/g)) assert.ok(W.segmentText(m[1]) || m[1] === 'starting', m[1]);
+});
+
+// ---------- (2026-10-10) holder perks: her 💜 badge and a head start in her line ----------
+import { makeSession } from '../server/session.js';
+import { liveHolder, holderCode, BADGES } from '../server/live.js';
+import * as LINES from '../tools/live/lines.js';
+const WALLET = '0x00000000000000000000000000000000000000aa';
+const sessionAt = (level, { wallet = WALLET, checkedAt = Date.now() } = {}) => makeSession(SECRET, { wallet, level, checkedAt });
+
+test("holder perks: a connected wallet at Crush or Soulmate: her 💜 badge and a 10-minute head start in her line (never further), 5 a day per wallet; a Stranger's, a broken session and live.sql from before: no badge", async () => {
+  const show = await goLive();
+  await post({ action: 'beat', show, status: 'live', segment: 'questions', now: null }, { auth: RUNNER() });
+  // two questions without a wallet: one sent 15 minutes ago, one 5 minutes ago
+  const a = await post({ ...askOk, name: 'Old', question: 'from 15 minutes ago' }, { ip: '10.0.0.1' });
+  const b = await post({ ...askOk, name: 'Newer', question: 'from 5 minutes ago' }, { ip: '10.0.0.2' });
+  assert.deepEqual([a.data.holder, b.data.holder], [0, 0], 'no wallet: no badge');
+  for (const q of fake.db.qs.values()) {
+    const back = q.question === 'from 15 minutes ago' ? 15 : 5;
+    Object.assign(q, { at: Date.now() - back * 60_000, line: Date.now() - back * 60_000 });
+  }
+  // a Crush: her badge, ahead of the 5-minute one, never ahead of the 15-minute one
+  calls.length = 0;
+  const c = await post({ ...askOk, name: 'Mochi', question: 'a Crush asks', session: sessionAt(2) }, { ip: '10.0.0.3' });
+  assert.equal(c.status, 200); assert.equal(c.data.holder, 2); assert.equal(c.data.position, 2);
+  const sent = called('rpc/live_ask').at(-1).body;
+  assert.equal(sent.p_holder, 2); assert.equal(sent.p_head, LIVE.HEAD_S); assert.equal(LIVE.HEAD_S, 600);
+  assert.equal(sent.p_holder_code, holderCode(SECRET, WALLET, new Date().toISOString().slice(0, 10)), "a daily code of the wallet");
+  assert.ok(!JSON.stringify(sent).toLowerCase().includes(WALLET.slice(2)), 'never the wallet\'s address');
+  assert.equal(c.data.session, undefined, 'a session checked a moment ago: no new one');
+  assert.deepEqual((await get()).data.waiting, [a.data.id, c.data.id, b.data.id], 'the public line in her order');
+  assert.equal((await get(`?q=${encodeURIComponent(c.data.ticket)}`)).data.holder, 2, 'the person who asked sees its badge');
+  // the runner gets its badge with the question
+  const n1 = await post({ action: 'next', show }, { auth: RUNNER() });
+  assert.equal(n1.data.question.text, 'from 15 minutes ago'); assert.equal(n1.data.question.holder, 0);
+  await post({ action: 'done', show, id: n1.data.question.id, status: 'answered' }, { auth: RUNNER() });
+  const n2 = await post({ action: 'next', show }, { auth: RUNNER() });
+  assert.equal(n2.data.question.text, 'a Crush asks'); assert.equal(n2.data.question.holder, 2);
+  await post({ action: 'done', show, id: n2.data.question.id, status: 'answered' }, { auth: RUNNER() });
+  // a Soulmate: badge 3 (her shout-out on stream)
+  const d = await post({ ...askOk, name: 'Jun', question: 'a Soulmate asks', session: sessionAt(3, { wallet: '0x00000000000000000000000000000000000000bb' }) }, { ip: '10.0.0.4' });
+  assert.equal(d.data.holder, 3);
+  const n3 = await post({ action: 'next', show }, { auth: RUNNER() });
+  assert.deepEqual([n3.data.question.text, n3.data.question.holder], ['a Soulmate asks', 3]);
+  // the host sees the badge
+  const view = await post({ action: 'control', do: 'view' }, { auth: OWNER() });
+  assert.ok(Array.isArray(view.data.line));
+  // a Stranger's session: no badge, and no badge settings sent at all
+  calls.length = 0;
+  const e = await post({ ...askOk, question: 'a Stranger asks', session: sessionAt(1, { wallet: '0x00000000000000000000000000000000000000cc' }) }, { ip: '10.0.0.5' });
+  assert.equal(e.data.holder, 0); assert.ok(!('p_holder' in called('rpc/live_ask').at(-1).body));
+  // a broken session: the question goes in without a badge, and the page forgets the wallet
+  const f = await post({ ...askOk, question: 'a broken session', session: 'not.a.session' }, { ip: '10.0.0.6' });
+  assert.equal(f.status, 200); assert.equal(f.data.holder, 0); assert.equal(f.data.signedOut, true);
+  const g = await post({ ...askOk, question: 'an old session', session: makeSession(SECRET, { wallet: WALLET, level: 2, checkedAt: Date.now() }, Date.now() - 8 * 864e5) }, { ip: '10.0.0.7' });
+  assert.equal(g.data.signedOut, true, 'a session past its 7 days: signed out');
+  // 5 badges a day per wallet (one session on many devices gets no more than one person's), then none
+  const many = [];
+  for (let i = 0; i < 6; i++) many.push((await post({ ...askOk, question: `badge ${i}`, session: sessionAt(2, { wallet: '0x00000000000000000000000000000000000000dd' }) }, { ip: `10.0.1.${i}` })).data.holder);
+  assert.deepEqual(many, [2, 2, 2, 2, 2, 0], 'five badges a day per wallet, from any connection, then the question goes in without one');
+});
+
+test('holder perks: liveHolder reads the session, re-reads its level when it\'s 30 minutes old (burned $AGI counted), keeps its last level when the chain is away; live.sql from before 2026-10-10: the question goes in without its badge, once said in the log', async () => {
+  const c = cfg();
+  assert.equal(await liveHolder(c, undefined), null);
+  assert.equal(await liveHolder(c, ''), null);
+  assert.deepEqual(await liveHolder(c, 'garbage'), { signedOut: true });
+  assert.deepEqual(await liveHolder(c, 42), { signedOut: true });
+  const fresh = await liveHolder(c, sessionAt(3));
+  assert.deepEqual(fresh, { level: 3, wallet: WALLET, session: null });
+  // 31 minutes old: re-read (the chain and what was burned)
+  const seen = [];
+  const old = sessionAt(2, { checkedAt: Date.now() - 31 * 60_000 });
+  const r = await liveHolder(c, old, { check: async (w, fallback, env, burned) => { seen.push([w, fallback, burned]); return { level: 3, checked: true }; }, burned: async () => 1234 });
+  assert.deepEqual(seen, [[WALLET, 2, 1234]]);
+  assert.equal(r.level, 3); assert.equal(typeof r.session, 'string');
+  const again = await liveHolder(c, r.session);
+  assert.deepEqual(again, { level: 3, wallet: WALLET, session: null }, 'the new session: checked just now');
+  // the chain away: its last level, and a re-read again in about 5 minutes
+  const away = await liveHolder(c, old, { check: async (w, fallback) => ({ level: fallback, checked: false }), burned: async () => 0 });
+  assert.equal(away.level, 2);
+  const soon = await liveHolder(c, away.session, { now: Date.now() + 6 * 60_000, check: async () => ({ level: 1, checked: true }), burned: async () => 0 });
+  assert.equal(soon.level, 1, 'tried again a few minutes later');
+  // the daily wallet code: the same all day, another the next day, never the address, never her chat's memory code
+  const code = holderCode(SECRET, WALLET, '2026-10-10');
+  assert.equal(code, holderCode(SECRET, WALLET.toUpperCase().replace('0X', '0x'), '2026-10-10'));
+  assert.notEqual(code, holderCode(SECRET, WALLET, '2026-10-11'));
+  assert.ok(code.length >= 16 && code.length <= 64 && !code.includes(WALLET.slice(2)));
+  const { walletCode } = await import('../server/session.js');
+  assert.notEqual(code, walletCode(SECRET, WALLET));
+  assert.deepEqual(BADGES, { 2: 'Crush', 3: 'Soulmate' });
+  // live.sql from before 2026-10-10: the question still goes in (without its badge), and the log says it once
+  const show = await goLive();
+  await post({ action: 'beat', show, status: 'live', segment: 'questions', now: null }, { auth: RUNNER() });
+  fake.oldLiveAsk = true;
+  const x = await post({ ...askOk, question: 'old sql?', session: sessionAt(2) }, { ip: '10.0.2.1' });
+  assert.equal(x.status, 200); assert.equal(x.data.holder, 0);
+  const y = await post({ ...askOk, question: 'old sql again?', session: sessionAt(2) }, { ip: '10.0.2.2' });
+  assert.equal(y.status, 200);
+  const said = logs.filter(([k, t]) => k === 'warn' && /supabase\/live\.sql is from before 2026-10-10/.test(t));
+  assert.ok(said.length <= 1, 'once per server copy');
+});
+
+test("holder perks on the page and on stream: the page's words (never \"buy\"), the session sent with a question, the host's badge, her card's badge (only Crush or Soulmate), a Soulmate's shout-out (her rules), the safety note", () => {
+  // the page's words
+  assert.deepEqual(W.BADGE, { 2: 'Crush', 3: 'Soulmate' });
+  assert.equal(W.fromText({ name: 'Mochi', source: 'web', holder: 2 }), 'Mochi · agi1.app · 💜 Crush');
+  assert.equal(W.fromText({ name: null, source: 'web', holder: 3 }), 'someone · agi1.app · 💜 Soulmate');
+  assert.equal(W.fromText({ name: 'Mochi', source: 'web', holder: 0 }), 'Mochi · agi1.app');
+  assert.match(W.perkText({ wallet: WALLET, level: 2 }), /^0x0000…00aa · Crush 💜 Your questions get her badge and a head start in her line\.$/);
+  assert.match(W.perkText({ wallet: WALLET, level: 3 }), /Soulmate 💜 .*shout-out/);
+  assert.match(W.perkText({ wallet: WALLET, level: 1 }), /Stranger\. Her 💜 badge starts at Crush \(10,000\+ \$AGI held, or burned for messages\)\./);
+  assert.equal(W.perkText({}), '');
+  assert.match(W.badgeNote({ holder: 2 }), /Crush badge: a head start/);
+  assert.match(W.badgeNote({ holder: 3 }), /Soulmate badge.*shout-out/);
+  assert.match(W.badgeNote({ holder: 0, level: 2 }), /badges for today are used \(5 a day\)/);
+  assert.match(W.badgeNote({ signedOut: true }), /session ended/);
+  assert.equal(W.badgeNote({ holder: 0, level: 1 }), '');
+  for (const t of [W.perkText({ wallet: WALLET, level: 1 }), W.perkText({ wallet: WALLET, level: 2 }), W.perkText({ wallet: WALLET, level: 3 }),
+    W.badgeNote({ holder: 2 }), W.badgeNote({ holder: 3 }), W.badgeNote({ holder: 0, level: 2 }), W.badgeNote({ signedOut: true }), ...Object.values(W.WALLET_STEPS), ...Object.values(W.NO_WALLET)]) {
+    assert.doesNotMatch(t, /\b(buy|sell|invest|profit|gains?|moon|pump)\b/i, `never "buy more" (hard rule 9): ${t}`);
+  }
+  // the page sends the wallet's session with a question, and follows what comes back
+  const page = read('src/live/page.js');
+  assert.match(page, /\.\.\.\(sent \? \{ session: sent\.session \} : \{\}\)/);
+  assert.match(page, /if \(sent && d\.signedOut === true && me\?\.wallet === sent\.wallet\) forgetWallet\(\);/);
+  assert.match(page, /wallet: 'agi_wallet'/, "the site's own wallet session (the home page's)");
+  assert.match(page, /findWallets\(\)/); assert.match(page, /signInWithWallet\(provider/);
+  assert.doesNotMatch(page, /eth_sendTransaction|wallet_switchEthereumChain|eth_signTypedData|approve\(/, 'an address and a free signature, nothing else (hard rule 9)');
+  // the page's markup and its promises
+  const html = read('live.html');
+  assert.match(html, /<div class="lv-perk" data-lv-perk>/);
+  assert.match(html, /With a connected wallet that holds 10,000\+ \$AGI \(or burned it for messages\), your question gets her 💜 badge on stream and goes ahead of the questions sent in the 10 minutes before it\. At 1,000,000\+ \(Soulmate\), she gives you a shout-out too\. Connecting takes a free signature, never a transaction\./);
+  assert.match(html, /never further, so everyone gets their turn/);
+  assert.match(html, /A thank-you for being here: nothing is spent, it's not an investment, and it's not financial advice\./);
+  const perk = html.slice(html.indexOf('data-lv-perk>'), html.indexOf('data-lv-human'));
+  assert.ok(perk.includes('data-lv-perk-connect') && perk.includes('data-lv-wallets') && perk.includes('data-lv-app="phantom"'));
+  // the safety note
+  const safety = read('index.html');
+  assert.match(safety, /On her live show, a question sent with a connected wallet at Crush or Soulmate gets her 💜 badge and a head start in her line: a thank-you for being here, not an investment\./);
+  assert.match(safety, /with a connected wallet at Crush or Soulmate, also that level \(her 💜 badge\) and a daily code of the wallet \(never its address\), to count a wallet's badges a day/);
+  // on stream: her card shows only the two badges; a Soulmate's shout-out first (her rules: tests/livestream.test.js, every line)
+  const js = read('tools/live/page/stage.js');
+  assert.match(js, /const BADGES = \{ Crush: '💜 Crush', Soulmate: '💜 Soulmate' \};/);
+  assert.match(js, /const badge = c\.kind === 'question' && Object\.hasOwn\(BADGES, c\.badge\) \? c\.badge : null;/);
+  assert.match(read('tools/live/page/index.html'), /<p class="card-badge" data-card-badge hidden><\/p>/);
+  assert.match(read('tools/live/page/stage.css'), /\.card-badge \{[^}]*background: rgba\(255, 156, 192, 0\.99\);/, 'a little see-through, like everything over her picture');
+  const run = read('tools/live/run.mjs');
+  assert.match(run, /const badge = BADGES\[qa\.question\.holder\] \|\| null;/);
+  assert.match(run, /if \(qa\.question\.holder === 3\) \{\s*await studio\('confetti', 2\.5\);\s*r = await say\(pickFrom\(show, 'shoutout', L\.SHOUTOUTS\), \{ react: 'love' \}\);/);
+  assert.ok(LINES.SHOUTOUTS.length >= 3);
+  for (const x of LINES.SHOUTOUTS) {
+    assert.ok(LINES.allLines().some((y) => y.text === x.text), `kept (--warm): ${x.text}`);
+    assert.doesNotMatch(x.text, /\$|agi\b|hold|wallet|buy|rich|whale|million/i, `never money or how much they hold: ${x.text}`);
+    assert.match(x.text, /soulmate/i);
+  }
 });

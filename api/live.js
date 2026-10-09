@@ -3,7 +3,9 @@
 //                             shared by the CDN for 5 seconds (agi1.app/live asks it every 15 s while it's open)
 //   GET  /api/live?q=<ticket> one question, for the person who asked it (its ticket, from asking): where it is, her answer
 //   POST /api/live            JSON, one of:
-//     { action: 'ask', question, name?, adult: true, pass? | turnstileToken? }   a visitor's question (18+, the human check)
+//     { action: 'ask', question, name?, adult: true, pass? | turnstileToken?, session? }   a visitor's question (18+, the human
+//     check); (2026-10-10, holder perks) with a connected wallet's session (the site's sign-in) at Crush or Soulmate: her 💜
+//     badge and a head start in her line → also { holder: 2 | 3 | 0, session? (re-read: a new one), signedOut? }
 //     with "Authorization: Bearer <LIVE_SECRET>" (her stream runner, tools/live/run.mjs):
 //       { action: 'start', status: 'starting' | 'live' } → { show } · { action: 'beat', show, status, segment, now } → the
 //       owner's controls · { action: 'next', show } → the next question with her answer · { action: 'done', show, id, status:
@@ -25,7 +27,7 @@ import { verifyHuman } from '../server/turnstile.js';
 import { liveBurst, liveLookupBurst, liveAuthBurst, liveLineBurst } from '../server/burst.js';
 import {
   liveReady, whoIs, liveDb, askLive, checkQuestion, checkAskName, makeTicket, readTicket, nextAnswer, relayName, relayLive, WATCH_URL, STATUSES, LIVE,
-  chatterAnswer, reactAnswer, streamMarket, meetAnswer,
+  chatterAnswer, reactAnswer, streamMarket, meetAnswer, liveHolder, holderCode,
 } from '../server/live.js';
 import { canList } from '../server/live-acts.js';
 import { tgToken } from '../server/tg-api.js';
@@ -56,7 +58,8 @@ export async function GET(request) {
     try {
       const q = await liveDb.lookup(cfg, id);
       if (!q) return json(404, { error: 'gone' });
-      return json(200, { id: q.id, status: q.status, onAir: q.on_air === true, position: q.position ?? null, why: q.why ?? null, reply: q.reply ?? null });
+      return json(200, { id: q.id, status: q.status, onAir: q.on_air === true, position: q.position ?? null, why: q.why ?? null, reply: q.reply ?? null,
+        holder: [2, 3].includes(q.holder) ? q.holder : 0 });
     } catch (err) {
       if (err.code === 'PGRST202') return json(200, { ready: false });
       console.error('[live] lookup failed:', err.message);
@@ -136,19 +139,26 @@ async function ask(cfg, request, body) {
     if (!(await verifyHuman(cfg, body.turnstileToken, ip, 'live'))) return json(401, { error: 'human_check' });
     pass = makePass(cfg.passSecret, code);
   }
-  const asker = `w:${visitorCodeForDay(cfg.passSecret, ip, new Date().toISOString().slice(0, 10))}`;
+  const day = new Date().toISOString().slice(0, 10);
+  const asker = `w:${visitorCodeForDay(cfg.passSecret, ip, day)}`;
+  // (2026-10-10, holder perks) a connected wallet: its level from its session (re-read on the chain when it's 30 minutes
+  // old). Crush or Soulmate: her 💜 badge and its head start (live.sql decides, at most 5 a day per wallet). An old or
+  // broken session: the question goes in without one, and the page forgets the wallet (signedOut)
+  const h = await liveHolder(cfg, body.session);
+  const holder = h && !h.signedOut && h.level >= 2 ? h.level : 0;
+  const wallet = h?.signedOut ? { signedOut: true } : h?.session ? { session: h.session, level: h.level } : {};
   let r;
   try {
-    r = await askLive(cfg, { source: 'web', asker, name: n.name, question: q.text });
+    r = await askLive(cfg, { source: 'web', asker, name: n.name, question: q.text, holder, holderCode: holder ? holderCode(cfg.passSecret, h.wallet, day) : null });
   } catch (err) {
-    if (err.code === 'PGRST202') return json(503, { error: 'not_ready', pass });
+    if (err.code === 'PGRST202') return json(503, { error: 'not_ready', pass, ...wallet });
     console.error('[live] asking failed:', err.message);
-    return json(503, { error: 'busy', pass });
+    return json(503, { error: 'busy', pass, ...wallet });
   }
   if (r?.ok === true && idOf(r.id)) {
-    return json(200, { ok: true, ticket: makeTicket(cfg.passSecret, r.id), id: r.id, position: r.position, pass });
+    return json(200, { ok: true, ticket: makeTicket(cfg.passSecret, r.id), id: r.id, position: r.position, holder: [2, 3].includes(r.holder) ? r.holder : 0, pass, ...wallet });
   }
-  return lineRefused(r, { pass });
+  return lineRefused(r, { pass, ...wallet });
 }
 // The line's own "no" (supabase/live.sql live_ask), as an answer: its reason, how long to wait, and (a question of theirs
 // still in line: the same daily code, maybe someone else on the same network, so never its ticket or words, only its place)

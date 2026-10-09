@@ -62,6 +62,20 @@ export function gasKey(text) {
   return m ? `0x${m[1].toLowerCase()}` : '';
 }
 
+// An address setting (STUDIO_PAY_TO): "0x" and 40 hex characters → lowercase, or '' (not one)
+export function studioAddress(text) {
+  const t = String(text ?? '').trim();
+  return /^0x[0-9a-fA-F]{40}$/.test(t) && !/^0x0{40}$/.test(t) ? t.toLowerCase() : '';
+}
+// A whole number setting that may be 0 (STUDIO_BURNS_A_MONTH=0: no burns), else the fallback
+const wholeOrZero = (text, fallback) => (/^\d{1,6}$/.test(String(text ?? '').trim()) ? Number(String(text).trim()) : fallback);
+// The studio's video model on fal.ai (STUDIO_VIDEO_MODEL): "owner/name[/path…]" in lowercase, else Seedance 2.5's
+// reference-to-video (server/fal.js)
+export const falModel = (text) => {
+  const t = String(text ?? '').trim();
+  return /^[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*){1,3}$/.test(t) ? t : 'bytedance/seedance-2.5/reference-to-video';
+};
+
 export function getConfig(env = process.env) {
   const number = (name, fallback) => {
     const n = Number(env[name]);
@@ -102,6 +116,16 @@ export function getConfig(env = process.env) {
     // dollars (50 by default, the owner's: "can you make the minimum to 50$"; $100 at first)
     tgBuys: !isOff(env.TELEGRAM_BUYS),
     tgBuyMin: Math.min(1_000_000, number('TELEGRAM_BUY_MIN', 50)),
+    // …and her games there (2026-10-09, server/games.js): on unless "off" (and only once supabase/games.sql has set up their
+    // clock), about how many a day in each group (10, the owner's: "About 10 a day"), the prize in whole $AGI (250, the
+    // owner's) and the prizes the whole site gives a day (10, the owner's), and the private key of the prize wallet that
+    // sends them (secret; a wallet made only for this, holding only the $AGI for prizes and a little ETH: never the launch
+    // gas wallet). Without the key, or with the gas wallet's, her games are just for fun.
+    tgGames: !isOff(env.TELEGRAM_GAMES),
+    gamesADay: Math.min(48, Math.max(1, Math.floor(number('GAMES_A_DAY', 10)))),
+    gamePrize: Math.min(1_000_000, Math.floor(number('GAME_PRIZE', 250)) || 250),
+    gameWinsADay: Math.min(1000, Math.floor(number('GAME_WINS_A_DAY', 10)) || 10),
+    prizeKey: gasKey(env.PRIZE_WALLET_KEY),
     // Messages paid for by burning $AGI (2026-09-30, server/burn.js): whole $AGI a message (10 by default: 1,000 $AGI =
     // 100 messages), and the burned messages the whole site may use a day, on top of the free ones (1,000: about $0.80 of
     // AI replies at most)
@@ -120,6 +144,29 @@ export function getConfig(env = process.env) {
     launchGasKey: gasKey(env.LAUNCH_GAS_KEY),
     launchGasMaxWei: ethToWei(env.LAUNCH_GAS_MAX, 10n ** 15n),          // 0.001 ETH
     launchGasDailyWei: ethToWei(env.LAUNCH_GAS_DAILY, 10n ** 16n),      // 0.01 ETH
+    // AGI-1's 3D character studio (2026-10-10, server/studio.js): Meshy's API key (secret, "msy_…": without it the studio is
+    // off), the owner's wallet that USDG payments go to (an address, not a secret: without it only burns and a Soulmate's free
+    // one), the prices for a Stranger (5 USDG or 15,000 $AGI burned: src/studio/rules.js gives Crush 20% off and Soulmate
+    // 40% off), the characters a month for the whole site (15: each costs the owner about 59 of Meshy's credits) and of them
+    // paid by burning (5: a burn pays nobody), who may make one (STUDIO_OPEN=yes: everyone; else only the wallets in
+    // STUDIO_ONLY_FOR), and characters the owner hides (their ids)
+    meshyKey: String(env.MESHY_API_KEY || '').trim(),
+    studioPayTo: studioAddress(env.STUDIO_PAY_TO),
+    studioUsdCents: Math.max(50, Math.round(Math.min(10_000, number('STUDIO_PRICE_USD', 5)) * 100)),
+    studioAgi: Math.max(100, Math.min(1e9, Math.floor(number('STUDIO_PRICE_AGI', 15_000)) || 15_000)),
+    studioMonthCap: Math.min(100_000, Math.floor(number('STUDIO_A_MONTH', 15)) || 15),
+    studioBurnCap: Math.min(100_000, wholeOrZero(env.STUDIO_BURNS_A_MONTH, 5)),
+    studioOpen: /^(?:yes|on|true|1)$/i.test(String(env.STUDIO_OPEN ?? '').trim()),
+    studioOnlyFor: new Set(String(env.STUDIO_ONLY_FOR || '').toLowerCase().split(/[\s,]+/).filter((a) => /^0x[0-9a-f]{40}$/.test(a))),
+    studioHide: new Set(String(env.STUDIO_HIDE || '').split(/[\s,]+/).filter((a) => /^[A-Za-z0-9_-]{22}$/.test(a))),
+    // …and its characters' videos (2026-10-10, server/studio-video.js): fal.ai's key (secret, "<id>:<secret>": without it, no
+    // videos), the video model on fal (Seedance 2.5's reference-to-video; another one must take the same inputs), a video's
+    // price in USDG for a Stranger (4: Crush 20% off, Soulmate 40% off, like a character), and the videos a month for the
+    // whole site (30: each costs the owner about $2.40 at fal)
+    falKey: String(env.FAL_KEY || '').trim(),
+    videoModel: falModel(env.STUDIO_VIDEO_MODEL),
+    videoUsdCents: Math.max(100, Math.round(Math.min(10_000, number('STUDIO_VIDEO_PRICE_USD', 4)) * 100)),
+    videoMonthCap: Math.min(100_000, Math.floor(number('STUDIO_VIDEOS_A_MONTH', 30)) || 30),
     // Her live show (2026-10-02, server/live.js): the secret her stream runner (on the owner's own server) and our server
     // share (32+ characters); the owner's phone link is made from it. Without it, agi1.app/live says her show is coming soon
     liveSecret: String(env.LIVE_SECRET || '').trim(),

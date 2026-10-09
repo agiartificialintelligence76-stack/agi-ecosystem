@@ -8,9 +8,11 @@ const DIST = 'dist';
 
 // 1) The real secret values, when they're set where the build runs (they are on Vercel).
 // (2026-10-01, "Launch with AGI-1": the Pinata key that puts coin pictures on IPFS, and the private key of the owner's gas
-// wallet that pays launch fees back; 2026-10-02: her live show's secret, shared with her stream runner)
+// wallet that pays launch fees back; 2026-10-02: her live show's secret, shared with her stream runner; 2026-10-09: the
+// private key of the prize wallet that sends her quizzes' prizes; 2026-10-10: the 3D character studio's Meshy key, and
+// fal.ai's key for its characters' videos)
 const SECRET_ENV_VARS = ['GEMINI_API_KEY', 'SUPABASE_SECRET_KEY', 'TURNSTILE_SECRET_KEY', 'PASS_SECRET', 'CRON_SECRET', 'TELEGRAM_BOT_TOKEN',
-  'PINATA_JWT', 'LAUNCH_GAS_KEY', 'LIVE_SECRET'];
+  'PINATA_JWT', 'LAUNCH_GAS_KEY', 'LIVE_SECRET', 'PRIZE_WALLET_KEY', 'MESHY_API_KEY', 'FAL_KEY'];
 
 // 2) Shapes of keys that must never be public, even when no env var is set.
 const PATTERNS = [
@@ -19,6 +21,8 @@ const PATTERNS = [
   { name: 'private key', re: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
   { name: 'Telegram bot token', re: /\b\d{6,12}:AA[0-9A-Za-z_-]{33}\b/ },
   { name: 'JWT (a Pinata key?)', re: /eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{20,}/ },
+  { name: 'Meshy API key', re: /\bmsy_[A-Za-z0-9_-]{20,}/ },
+  { name: 'fal.ai key', re: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9a-f]{20,}\b/i },
 ];
 
 const TEXT_TYPES = new Set(['.html', '.js', '.mjs', '.css', '.json', '.txt', '.svg', '.map', '.xml', '.webmanifest']);

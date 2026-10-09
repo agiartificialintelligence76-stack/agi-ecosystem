@@ -32,7 +32,7 @@ import { tmpdir, cpus } from 'node:os';
 import { talkTrack, pauses, fakeVoice, readWav, writeWav } from '../clips/audio.js';
 import { timeCaptions, sentencesOf } from '../clips/captions.js';
 import { withoutSecrets } from '../clips/make.mjs';
-import { adminKeyFor } from '../../server/live.js';
+import { adminKeyFor, BADGES } from '../../server/live.js';
 import { liveSite, demoSite } from './site.js';
 import { voiceSettings, createVoice, RATE } from './voice.js';
 import { musicSettings, loadSongs, MusicBed, DANCE_SONGS } from './music.js';
@@ -1410,7 +1410,10 @@ async function runShow(a) {
       beat();
       // (2026-10-07) a question in another of her languages: its name on the card, and she answers in it
       const lang = qa.lang && qa.lang !== 'en' ? langOf(qa.lang) : null;
-      await studio('card', { kind: 'question', kicker: `Question · from ${askedBy(qa.question)}${lang ? ` · ${lang.native}` : ''}`, body: qa.question.text, ...(lang ? { lang: lang.code } : {}) });
+      // (2026-10-10, holder perks) its 💜 badge on her card: a Crush or a Soulmate (their wallet, connected at agi1.app/live)
+      const badge = BADGES[qa.question.holder] || null;
+      await studio('card', { kind: 'question', kicker: `Question · from ${askedBy(qa.question)}${lang ? ` · ${lang.native}` : ''}`, body: qa.question.text,
+        ...(lang ? { lang: lang.code } : {}), ...(badge ? { badge } : {}) });
       await studio('look', 'card');
       await sleep(700);
       if (controls.skipped.has(qa.question.id)) {          // (the owner skipped it meanwhile)
@@ -1421,10 +1424,19 @@ async function runShow(a) {
         return true;
       }
       if (controls.paused) { state.onAir = null; await studio('card', null); await putBack(qa); return true; }   // (after her break)
+      // (2026-10-10, holder perks) a Soulmate: her shout-out first, with hearts and confetti (a pre-written line: its voice
+      // is kept), never their money or how much they hold
+      let r = 'done';
+      if (qa.question.holder === 3) {
+        await studio('confetti', 2.5);
+        r = await say(pickFrom(show, 'shoutout', L.SHOUTOUTS), { react: 'love' });
+      }
       // (2026-10-09) who asked and their whole question, out loud, then her answer
       const line = readAndAnswer(qa.question, qa.reply);
-      const r = await say({ text: line.text, mood: qa.mood, ...(qa.lang ? { lang: qa.lang } : {}) }, { keep: false, audio: qa.audio ?? null, react: reactFor(qa.mood, { answer: true }),
-        act: qa.feel && !qa.act ? qa.feel : null, read: line.read });
+      if (r === 'done') {
+        r = await say({ text: line.text, mood: qa.mood, ...(qa.lang ? { lang: qa.lang } : {}) }, { keep: false, audio: qa.audio ?? null, react: reactFor(qa.mood, { answer: true }),
+          act: qa.feel && !qa.act ? qa.feel : null, read: line.read });
+      }
       state.onAir = null;
       if (r === 'done') { aired.push(qa.question.text); if (aired.length > 8) aired.shift(); }
       // done: answered · the owner's skip: skipped · a pause: back in line (answered fresh after the break, however long it

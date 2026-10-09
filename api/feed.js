@@ -12,10 +12,17 @@
 // (supabase/buys.sql): only with the key that file made ("Authorization: Bearer <key>", read from the database). Here and
 // not in a file of its own: Vercel's Hobby plan allows 12 functions, and they're all used. Since it runs every minute, it
 // starts light: the feed's own code (her bot, the moments, the chain's code they load) is loaded only for the feed itself.
+// GET /api/feed?games (2026-10-09): her quizzes in her Telegram groups (server/games.js), every 2 minutes, from Supabase
+// Cron (supabase/games.sql), the same way with that file's own key: a quiz in each group whose turn it is, quizzes that
+// closed without Telegram telling us, the tidy-up.
+// GET /api/feed?studio (2026-10-10): AGI-1's 3D character studio's clock (server/studio.js), every minute, from Supabase
+// Cron (supabase/studio.sql), with that file's own key: the characters being made, one step along each (Meshy's steps,
+// then their files kept). Loaded only for it.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../server/config.js';
 import { tgToken } from '../server/tg-api.js';
 import { buyKey, checkBuys } from '../server/buys.js';
+import { gameKey, gamesTick, gamesOn } from '../server/games.js';
 
 const feedParts = () => Promise.all([import('../server/telegram.js'), import('../server/feed.js'), import('../server/tg-groups.js')]);
 
@@ -49,8 +56,74 @@ async function buysCheck(request) {
   }
 }
 
+// her quizzes' clock: the key first (from the database), then her groups
+async function gamesCheck(request) {
+  const cfg = getConfig();
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) {
+    console.error('[games] SUPABASE_URL or SUPABASE_SECRET_KEY is missing');
+    return answer({ error: 'not_configured' }, 503);
+  }
+  let key;
+  try { key = await gameKey(cfg); } catch (err) {
+    console.error(`[games] couldn't read the games' key: ${err.message}`);
+    return answer({ error: err.code === 'PGRST202' ? 'not_set_up' : 'database' }, 503);
+  }
+  if (!key || !sameSecret(request.headers.get('authorization') || '', `Bearer ${key}`)) return answer({ error: 'unauthorized' }, 401);
+  const token = tgToken();
+  // off: TELEGRAM_GAMES=off, no group in TELEGRAM_GROUPS, or no bot (the clock keeps calling; nothing is read or posted)
+  if (!gamesOn(cfg) || !token) return answer({ ok: true, off: !cfg.tgGames ? 'off' : !token ? 'no_bot' : 'no_groups' });
+  const now = Date.now();
+  try {
+    const out = await gamesTick(cfg, token, { now, deadline: now + 19_000 });
+    return answer({ ok: true, ...out });
+  } catch (err) {
+    console.warn(`[games] her quizzes' check stopped: ${err.message}`);
+    return answer({ error: err.code === 'PGRST202' ? 'not_set_up' : 'database' }, 502);
+  }
+}
+
+// the studio's clock: the key first (from the database), then the characters being made
+async function studioCheck(request) {
+  const cfg = getConfig();
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) {
+    console.error('[studio] SUPABASE_URL or SUPABASE_SECRET_KEY is missing');
+    return answer({ error: 'not_configured' }, 503);
+  }
+  const { studioKey, studioClock, studioOn } = await import('../server/studio.js');
+  let key;
+  try { key = await studioKey(cfg); } catch (err) {
+    console.error(`[studio] couldn't read the studio's key: ${err.message}`);
+    return answer({ error: err.code === 'PGRST202' ? 'not_set_up' : 'database' }, 503);
+  }
+  if (!key || !sameSecret(request.headers.get('authorization') || '', `Bearer ${key}`)) return answer({ error: 'unauthorized' }, 401);
+  if (!studioOn(cfg)) return answer({ ok: true, off: 'no_key' });       // MESHY_API_KEY not set: nothing to move along
+  const now = Date.now();
+  const deadline = now + 19_000;
+  let out;
+  try {
+    out = { ok: true, ...await studioClock(cfg, { now, deadline }) };
+  } catch (err) {
+    console.warn(`[studio] the clock stopped: ${err.message}`);
+    return answer({ error: err.code === 'PGRST202' ? 'not_set_up' : 'database' }, 502);
+  }
+  // (2026-10-10) and its characters' videos, in the time left (only once FAL_KEY is set: server/studio-video.js)
+  const { videosOn, videoClock } = await import('../server/studio-video.js');
+  if (videosOn(cfg)) {
+    try {
+      out.videos = Date.now() < deadline - 5000 ? await videoClock(cfg, { now: Date.now(), deadline }) : { due: 0, moved: 0, done: 0, failed: 0, later: true };
+    } catch (err) {
+      console.warn(`[studio] the videos' clock stopped: ${err.message}`);
+      out.videos = { error: err.code === 'PGRST202' ? 'not_set_up' : 'database' };
+    }
+  }
+  return answer(out);
+}
+
 export async function GET(request) {
-  if (new URL(request.url).search === '?buys') return buysCheck(request);
+  const search = new URL(request.url).search;
+  if (search === '?buys') return buysCheck(request);
+  if (search === '?games') return gamesCheck(request);
+  if (search === '?studio') return studioCheck(request);
   const secret = process.env.CRON_SECRET || '';
   if (secret.length < 16) {
     console.error('[feed] CRON_SECRET is missing or shorter than 16 characters: add it in Vercel, then redeploy');

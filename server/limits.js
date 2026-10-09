@@ -48,6 +48,24 @@ for (const fn of ['buy_key', 'buy_take']) {
   MISSING[fn] = `${fn} not found: run supabase/buys.sql in this Supabase project (it ends with buys_ready = 1)`;
 }
 
+// her quizzes in her Telegram groups and their prizes (2026-10-09): supabase/games.sql
+for (const fn of ['game_key', 'game_due', 'game_left', 'game_recent', 'game_open', 'game_answer', 'game_settle', 'game_unsettled',
+  'game_pending', 'game_address', 'game_claim', 'game_sending', 'game_sent', 'game_tidy']) {
+  MISSING[fn] = `${fn} not found: run supabase/games.sql in this Supabase project (it ends with games_ready = 1)`;
+}
+
+// AGI-1's 3D character studio (2026-10-10): supabase/studio.sql
+for (const fn of ['studio_key', 'studio_quote', 'studio_choose', 'studio_pay', 'studio_seen', 'studio_get', 'studio_lease', 'studio_step',
+  'studio_wait', 'studio_done', 'studio_fail', 'studio_redo', 'studio_due', 'studio_month', 'studio_free_used', 'studio_list', 'studio_mine',
+  'studio_tidy']) {
+  MISSING[fn] = `${fn} not found: run supabase/studio.sql in this Supabase project (it ends with studio_ready = 1)`;
+}
+// …and its characters' videos (2026-10-10): the same file, run again if it was run before them
+for (const fn of ['studio_video_quote', 'studio_video_pay', 'studio_video_get', 'studio_video_lease', 'studio_video_step', 'studio_video_wait',
+  'studio_video_done', 'studio_video_fail', 'studio_video_redo', 'studio_video_due', 'studio_video_list', 'studio_video_hide']) {
+  MISSING[fn] = `${fn} not found: run supabase/studio.sql again in this Supabase project (its characters' videos; it ends with studio_ready = 1)`;
+}
+
 // CloakMesh's waitlist (inference.agi1.app, 2026-10-03): supabase/cloakmesh.sql
 for (const fn of ['cloakmesh_ready', 'cloakmesh_join', 'cloakmesh_leave']) {
   MISSING[fn] = `${fn} not found: run supabase/cloakmesh.sql in this Supabase project`;

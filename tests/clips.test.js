@@ -151,10 +151,12 @@ test('the GitHub job: once a day and by hand, read-only, the key only where her 
 
 // ---------- not part of the website ----------
 test('the clips aren\'t part of the website: not in its build, no new packages, their files never in git', () => {
-  assert.match(read('vite.config.js'), /input: \{ main: 'index\.html', diary: 'diary\.html', launch: 'launch\.html', live: 'live\.html', cloakmesh: 'cloakmesh\.html' \}/, 'the site builds its own pages only (never the clips\' page, nor her live show\'s scene; CloakMesh\'s page since 2026-10-03)');
+  assert.match(read('vite.config.js'), /input: \{ main: 'index\.html', diary: 'diary\.html', launch: 'launch\.html', live: 'live\.html', cloakmesh: 'cloakmesh\.html', studio: 'studio\.html' \}/, 'the site builds its own pages only (never the clips\' page, nor her live show\'s scene; CloakMesh\'s page since 2026-10-03, the studio\'s since 2026-10-10)');
   const pkg = JSON.parse(read('package.json'));
-  // (sharp since 2026-10-05: the risk check's coin pictures, made small on our server; the clips never add a package)
-  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['sharp', 'three', 'viem']);
+  // (sharp since 2026-10-05: the risk check's coin pictures, made small on our server; @scure/bip39 since 2026-10-09: the
+  // wallet word list her secret check reads, server/secrets.js, the same package viem uses; @gltf-transform/* since
+  // 2026-10-10: the 3D character studio makes its characters' files small on our server; the clips never add a package)
+  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@gltf-transform/core', '@gltf-transform/extensions', '@gltf-transform/functions', '@scure/bip39', 'sharp', 'three', 'viem']);
   assert.deepEqual(Object.keys(pkg.devDependencies), ['vite']);
   assert.match(pkg.scripts.test, /tests\/clips\.test\.js/);
   const ignore = read('.gitignore');

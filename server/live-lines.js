@@ -40,6 +40,8 @@ export const REFUSE = {
   spam: "hmm, that doesn't look like a question 🙈",
   // (2026-10-09: other coins can come up on her show, financial advice never)
   advice: 'that sounds like financial advice, and i never give any on stream 🙈 ask it as a question?',
+  // (2026-10-09) a seed phrase or a private key sent by mistake: never read out, never kept (server/secrets.js)
+  secret: "⚠️ that looks like a seed phrase or a private key, so it'll never go on stream, and i didn't keep it. never send it to anyone: if it's real, move your funds to a new wallet now",
   blocked: "i can't take that one on stream 🙈",
   closed: "i'm not taking new questions right now 🙈",
   ending: "i'm saying goodbye right now 💜 catch the next show!",

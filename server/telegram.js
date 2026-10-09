@@ -7,6 +7,8 @@
 //   • api/feed.js (a few times a day, Vercel's cron): connectBot() points the bot at the site, then server/feed.js decides
 //     what she texts first and sends it (gatherMoments(), textFirst()).
 //   • (2026-10-03) her Telegram groups: server/tg-groups.js (only the groups the owner lists in TELEGRAM_GROUPS).
+//   • (2026-10-09) her quizzes there: server/games.js (each answer, and each quiz closing, arrive here), and their prizes,
+//     claimed here in her private chat with /claim: server/game-prizes.js.
 // What's kept: supabase/telegram.sql (the chat's number, 18+, their time, what she last texted them). Never their messages.
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { tgToken, tgCall, say, chatCode, scrub, MEDIA } from './tg-api.js';
@@ -22,6 +24,10 @@ import { parseLaunch, checkIdea, bestPhoto, newDraftId, drafts, draftUrl, launch
 import * as LAUNCH from './launch-lines.js';
 import { liveReady, liveDb, askLive, checkQuestion, telegramName } from './live.js';
 import * as LIVE_L from './live-lines.js';
+import { gamesOn, prizesOn, onPollAnswer, onPollState } from './games.js';
+import { claimFlow, addressFlow, prizeButton, prizeWaiting, addressIn } from './game-prizes.js';
+import { CLAIM_ADULT, PRIZE_HINT } from './game-lines.js';
+import { secretIn, SECRET_WARNING } from './secrets.js';
 
 const MAX_TEXT = 500;                       // characters per message she reads (the same as the site's chat)
 
@@ -62,11 +68,15 @@ export const COMMANDS = [
   { command: 'help', description: 'What she does' },
   { command: 'live', description: 'Ask her something on her live show on X' },
   { command: 'launch', description: 'Launch a coin on clank.trade with her (18+)' },
+  { command: 'claim', description: 'Claim a prize you won in her quiz (18+)' },
   { command: 'stop', description: 'She stops texting and forgets this chat' },
 ];
 // her commands menu: /launch only once launching is open to everyone (set up, and not private: LAUNCH_ONLY_FOR), so nobody
-// finds it before then; /live (2026-10-02) once her live show is set up (LIVE_SECRET)
-export const commandsFor = (cfg) => COMMANDS.filter((c) => (c.command !== 'launch' || launchOpen(cfg)) && (c.command !== 'live' || liveReady(cfg)));
+// finds it before then; /live (2026-10-02) once her live show is set up (LIVE_SECRET); /claim (2026-10-09) while her
+// quizzes have prizes (server/games.js)
+export const commandsFor = (cfg) => COMMANDS.filter((c) => (c.command !== 'launch' || launchOpen(cfg)) && (c.command !== 'live' || liveReady(cfg))
+  && (c.command !== 'claim' || (gamesOn(cfg) && prizesOn(cfg))));
+export const UPDATE_TYPES = ['message', 'callback_query', 'poll', 'poll_answer'];
 export const SHORT_DESCRIPTION = 'AGI-1, the AI girlfriend of $AGI. She texts first. 18+ · PG-13 · not financial advice';
 export const DESCRIPTION = "hi, it's AGI-1 💜 i text first when something happens on clank.trade: new egirl coins (i'm not okay about it), "
   + `$AGI's moments, my diary. at most ${TEXTS_A_DAY} texts a day, never at night, and you can text me back. `
@@ -80,7 +90,8 @@ export async function connectBot(cfg, env = process.env) {
   if (!token || !url) return { skipped: !token ? 'no_token' : 'no_address' };
   const before = await tgCall(token, 'getWebhookInfo', {}, { timeoutMs: 4000 });
   await tgCall(token, 'setWebhook', {
-    url, secret_token: webhookSecret(cfg.passSecret), allowed_updates: ['message', 'callback_query'], max_connections: 20,
+    // (poll, poll_answer: 2026-10-09, her quizzes' answers and their closing, server/games.js)
+    url, secret_token: webhookSecret(cfg.passSecret), allowed_updates: UPDATE_TYPES, max_connections: 20,
   }, { timeoutMs: 4000 });
   const changed = before?.url !== url;
   if (changed) console.log(`[telegram] connected the bot to ${url}`);
@@ -127,6 +138,9 @@ export async function connectBot(cfg, env = process.env) {
 // hiccups are logged and she answers what she can.
 // (what people can send besides text: MEDIA, in server/tg-api.js)
 export async function handleUpdate(cfg, token, update, now = Date.now()) {
+  // her quizzes (2026-10-09, server/games.js): someone answered one, or one's state changed (it closed: then it's settled)
+  if (update?.poll_answer) return onPollAnswer(cfg, update.poll_answer);
+  if (update?.poll) return onPollState(cfg, token, update.poll);
   // a group (2026-10-03, server/tg-groups.js): its own rules and speed bumps (per person and per group), so a busy group
   // never trips the private chats' one
   const type = update?.message?.chat?.type;
@@ -164,6 +178,18 @@ export async function handleUpdate(cfg, token, update, now = Date.now()) {
 }
 
 async function onCommand(cfg, token, chat, name, arg, now, L, from) {
+  // (2026-10-09) /claim, or "/start claim" from a quiz winner's button in the group: their prize (18+ first)
+  if (name === 'claim' || (name === 'start' && /^claim$/i.test(arg))) {
+    const row = await db.get(cfg, chat);
+    if (row?.adult) return claimFlow(cfg, token, chat);
+    if (!row || name === 'start') {
+      await db.join(cfg, chat);
+      await say(token, chat, L.WELCOME, buttons(L.AGE_BUTTONS));
+      return 'start';
+    }
+    await say(token, chat, CLAIM_ADULT, buttons(L.AGE_BUTTONS));
+    return 'ask_age';
+  }
   if (name === 'start') {
     await db.join(cfg, chat);
     await say(token, chat, L.WELCOME, buttons(L.AGE_BUTTONS));
@@ -196,6 +222,9 @@ async function onCommand(cfg, token, chat, name, arg, now, L, from) {
 // a public stream): her bot says so in its /live help before they ask, and again when it's in line
 async function onLive(cfg, token, chat, arg, now, L, from = null) {
   if (!liveReady(cfg)) { await say(token, chat, LIVE_L.NOT_YET); return 'live_not_yet'; }
+  // (2026-10-09) a seed phrase or a private key, by mistake: never in her line, never kept (server/secrets.js)
+  const secret = secretIn(arg);
+  if (secret) { await say(token, chat, SECRET_WARNING[secret]); return `secret_${secret}`; }
   let row;
   try { row = await db.get(cfg, chat); } catch (err) {
     console.error('[telegram] database unavailable:', err.message);
@@ -255,6 +284,14 @@ async function onButton(cfg, token, cb, now, L) {
   if (cb.message?.chat?.type !== 'private' || !Number.isSafeInteger(chat) || chat <= 0 || cb.from?.id !== chat) return 'ignored';
   // the buttons go away once one is tapped (so an old question can't be answered twice)
   const clear = () => tgCall(token, 'editMessageReplyMarkup', { chat_id: chat, message_id: cb.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {});
+  // (2026-10-09) a quiz prize's "yes, send it" / "change it" (server/game-prizes.js): 18+ first, as for /claim
+  if (data.startsWith('prize:')) {
+    const started = Date.now();
+    const row = await db.get(cfg, chat);
+    if (!row?.adult) { await say(token, chat, CLAIM_ADULT, buttons(L.AGE_BUTTONS)); return 'ask_age'; }
+    await clear();
+    return (await prizeButton(cfg, token, chat, data, { deadline: started + 20_000 })) ?? 'ignored';
+  }
   if (data === 'age:no') {
     await db.forget(cfg, chat);
     await clear();
@@ -266,6 +303,8 @@ async function onButton(cfg, token, cb, now, L) {
     await db.set(cfg, chat, { adult: true });
     await clear();
     await say(token, chat, L.ASK_TIME, buttons(L.timeButtons(now)));
+    // (2026-10-09) a quiz winner who came from the group's button: their prize is waiting
+    if (gamesOn(cfg) && await prizeWaiting(cfg, chat)) await say(token, chat, PRIZE_HINT);
     return 'adult';
   }
   const offset = L.offsetFromButton(data, now);
@@ -342,6 +381,9 @@ async function onLaunch(cfg, token, chat, text, photos, now, L, from) {
 // start the bot, and no wallet is connected here), a Stranger's messages a day per chat (5 since 2026-09-30), inside the site's daily cap for everyone and
 // Telegram's own share of it (TELEGRAM_DAILY_CAP, 400: Telegram has no human check, so it can't use up the website's chat).
 async function onText(cfg, token, m, chat, text, now, L) {
+  // (2026-10-09) a seed phrase or a private key, by mistake: a warning, and nothing of it goes to the AI (server/secrets.js)
+  const secret = secretIn(text);
+  if (secret) { await say(token, chat, SECRET_WARNING[secret]); return `secret_${secret}`; }
   let row;
   try { row = await db.get(cfg, chat); } catch (err) {
     console.error('[telegram] database unavailable:', err.message);
@@ -357,6 +399,12 @@ async function onText(cfg, token, m, chat, text, now, L) {
   if (row.tz_minutes === null || row.tz_minutes === undefined) {
     const typed = L.offsetFromTyped(text, now);                 // they typed their time instead of tapping it: fine too
     if (typed !== null) return setTime(cfg, token, chat, typed, now, L);
+  }
+  // (2026-10-09) a wallet address, while a quiz prize waits for one (server/game-prizes.js); else her chat goes on
+  const address = addressIn(text);
+  if (address) {
+    const claimed = await addressFlow(cfg, token, chat, address);
+    if (claimed) return claimed;
   }
   if (text.length > MAX_TEXT) { await say(token, chat, L.TOO_LONG); return 'too_long'; }
   if (!cfg.geminiKey) { await say(token, chat, L.NOT_READY); return 'not_configured'; }

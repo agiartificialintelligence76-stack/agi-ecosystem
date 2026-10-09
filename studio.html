@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en" data-page="studio">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AGI-1's studio · AGI</title>
+    <meta name="description" content="Describe a character and AGI-1's studio makes it in 3D: painted, given bones and taught 8 moves. It moves when you type in its chat. 18+ · PG-13 · not financial advice." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fafaf8" />
+    <!-- link previews (X and others). __SITE__ becomes the site's address at build time (scripts/share-pages.js) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AGI" />
+    <meta property="og:title" content="AGI-1's studio · AGI" />
+    <meta property="og:description" content="Make a 3D character that moves when you type: painted, rigged and taught 8 moves, from your words. 18+ · PG-13." />
+    <meta property="og:image" content="__SITE__/cards/home.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="__SITE__/studio" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="__SITE__/studio" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/theme.js?v=8"></script>
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="wordmark" href="/">AGI</a>
+        <!-- On phones this list becomes the drop-down menu (src/menu.js) -->
+        <nav class="nav" id="site-nav" aria-label="Sections">
+          <a href="/#evaluations">Evaluations</a>
+          <a href="/#model-card">Model card</a>
+          <a href="/#playground">Playground</a>
+          <a href="/#checker">Risk check your coins on clank</a>
+          <a href="/diary">Diary</a>
+          <a class="nav-phone" href="/live">Live</a>
+          <a class="nav-phone" href="/#safety">Safety note</a>
+          <a class="nav-x" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
+          <a class="nav-tg" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">AGI on Telegram ↗</a>
+          <button class="nav-pop" type="button" data-skin-toggle aria-pressed="true">Pop mode <span class="nav-pop-state mono" aria-hidden="true">On</span></button>
+        </nav>
+        <div class="topbar-actions">
+          <a class="icon-btn x-btn" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on X (@agi1dotapp)" title="@agi1dotapp on X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a class="icon-btn tg-btn" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on Telegram (@agi2dotapp)" title="@agi2dotapp: the $AGI community group on Telegram"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21.4 2.6 2.8 10.2l7.7 3.3 3.3 7.7 7.6-18.6ZM21.4 2.6 10.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></a>
+          <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
+            <svg class="i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the bold AGI look">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <a class="btn btn-primary btn-sm" href="/#playground">Try AGI-1</a>
+          <button class="icon-btn menu-btn" type="button" data-menu aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+            <svg class="i-menu" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <svg class="i-close" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- AGI-1's 3D character studio (2026-10-10, the owner's idea: a 3D character that moves when people type in its chat):
+           agi1.app/studio makes one, agi1.app/studio/<id> (the same page: vercel.json's rewrite) is a character's
+           own page. src/studio/page.js runs both (/api/launch?studio…: server/studio-api.js); the 3D view, src/studio/viewer.js,
+           loads only on a character's page -->
+      <section class="section st" data-st aria-labelledby="st-title">
+        <div class="wrap st-wrap">
+
+          <!-- the studio: making one -->
+          <div data-st-make>
+            <header class="section-head">
+              <p class="kicker">AGI-1's studio</p>
+              <h1 class="h2" id="st-title">Make a 3D character</h1>
+              <p class="section-lede">Describe a character, and the studio makes it in 3D: painted, given bones and taught 8 moves. On its own page it moves when you type in its chat, and its 3D model is yours to download.</p>
+              <p class="st-label mono">AI-made · 18+ · PG-13 · not financial advice</p>
+            </header>
+
+            <div class="st-card">
+              <p class="st-status" data-st-status role="status" aria-live="polite">Opening the studio…</p>
+              <ol class="st-steps">
+                <li class="st-step" data-st-step="adult" hidden>
+                  <p class="st-step-title">18+ only</p>
+                  <p class="st-note">The studio is for adults. What it makes is PG-13.</p>
+                  <button class="btn btn-primary btn-sm" type="button" data-st-adult>I'm 18 or older</button>
+                </li>
+                <li class="st-step" data-st-step="wallet" hidden>
+                  <p class="st-step-title"><span class="st-n mono" aria-hidden="true">1</span> Your wallet</p>
+                  <p class="st-note">Your wallet pays for it, and its $AGI sets your price: Crush (10,000+ $AGI held, or burned for messages) gets 20% off, Soulmate (1,000,000+) 40% off and one free a month. Connecting takes a free signature, never a transaction.</p>
+                  <p class="st-me" data-st-me hidden></p>
+                  <p class="st-note" data-st-wallet-note role="status" aria-live="polite" hidden></p>
+                  <div class="st-links">
+                    <button class="btn btn-ghost btn-sm" type="button" data-st-connect>Connect a wallet</button>
+                    <button class="btn btn-ghost btn-sm" type="button" data-st-out hidden>Disconnect</button>
+                  </div>
+                  <div class="st-wallets" data-st-wallets hidden></div>
+                  <div class="st-apps" data-st-apps hidden>
+                    <p class="st-note" data-st-apps-note></p>
+                    <div class="st-links">
+                      <a class="btn btn-ghost btn-sm" data-st-app="metamask">Open in MetaMask ↗</a>
+                      <a class="btn btn-ghost btn-sm" data-st-app="phantom">Open in Phantom ↗</a>
+                      <a class="btn btn-ghost btn-sm" data-st-app="coinbase">Open in Coinbase Wallet ↗</a>
+                    </div>
+                  </div>
+                  <p class="st-note" data-st-private hidden>The studio is private for now, and this wallet isn't on its list. It opens to everyone soon: follow <a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">@agi1dotapp</a> on X to hear when.</p>
+                </li>
+                <li class="st-step" data-st-step="describe" hidden>
+                  <p class="st-step-title"><span class="st-n mono" aria-hidden="true">2</span> Describe it</p>
+                  <form class="st-form" data-st-form novalidate>
+                    <div class="st-field">
+                      <label for="st-name">Its name</label>
+                      <input id="st-name" data-st-name type="text" maxlength="24" autocomplete="off" spellcheck="false" aria-describedby="st-name-note" />
+                      <p class="st-field-note" id="st-name-note">Up to 24 characters.</p>
+                    </div>
+                    <div class="st-field">
+                      <label for="st-about">What it looks like</label>
+                      <textarea id="st-about" data-st-about rows="4" maxlength="400" autocomplete="off" aria-describedby="st-about-note" placeholder="a cheerful knight cat in silver armor with a red cape and big green eyes"></textarea>
+                      <p class="st-field-note" id="st-about-note"><span data-st-count>0</span>/400 · one figure with two arms and two legs (a person, an animal, a robot…), what it wears, its colors. PG-13, never a real person or someone else's character.</p>
+                    </div>
+                    <fieldset class="st-styles">
+                      <legend class="st-legend">Its style</legend>
+                      <div class="st-opts">
+                        <label class="st-opt"><input type="radio" name="st-style" value="anime" checked /> <span class="st-opt-name">Anime</span></label>
+                        <label class="st-opt"><input type="radio" name="st-style" value="cartoon" /> <span class="st-opt-name">Cartoon</span></label>
+                        <label class="st-opt"><input type="radio" name="st-style" value="realistic" /> <span class="st-opt-name">Realistic</span></label>
+                      </div>
+                    </fieldset>
+                    <div class="st-human" data-st-human></div>
+                    <p class="st-error" data-st-error role="alert"></p>
+                    <div class="st-links">
+                      <button class="btn btn-primary" type="submit" data-st-quote>Get my price</button>
+                    </div>
+                  </form>
+                </li>
+                <li class="st-step" data-st-step="pay" tabindex="-1" aria-labelledby="st-pay-title" hidden>
+                  <p class="st-step-title" id="st-pay-title"><span class="st-n mono" aria-hidden="true">3</span> <span>Pay for <span data-st-pay-name></span></span></p>
+                  <p class="st-note"><span data-st-pay-price></span>. It holds its place this month for a day.</p>
+                  <fieldset class="st-pay">
+                    <legend class="st-legend">How you pay</legend>
+                    <div class="st-opts">
+                      <label class="st-opt" data-st-pay-opt="usdg"><input type="radio" name="st-pay" value="usdg" /> <span class="st-opt-name">USDG</span> <span class="st-opt-sub" data-st-pay-usdg></span></label>
+                      <label class="st-opt" data-st-pay-opt="burn"><input type="radio" name="st-pay" value="burn" /> <span class="st-opt-name">Burn $AGI</span> <span class="st-opt-sub" data-st-pay-burn></span></label>
+                      <label class="st-opt" data-st-pay-opt="free"><input type="radio" name="st-pay" value="free" /> <span class="st-opt-name">Free</span> <span class="st-opt-sub">your Soulmate one this month</span></label>
+                    </div>
+                    <p class="st-note" data-st-pay-none hidden>Neither way to pay is open right now. Try again later.</p>
+                  </fieldset>
+                  <div class="st-how" data-st-how hidden>
+                    <p class="st-how-title" data-st-how-title></p>
+                    <p class="st-note" data-st-how-from></p>
+                    <p class="st-how-label" data-st-how-to-label></p>
+                    <div class="st-addr">
+                      <code class="st-addr-text mono" data-st-how-to></code>
+                      <button class="btn btn-ghost btn-sm" type="button" data-st-copy>Copy</button>
+                    </div>
+                    <p class="st-sr" data-st-copy-say aria-live="polite"></p>
+                    <p class="st-note" data-st-how-token></p>
+                    <p class="st-note">This page never asks your wallet to send anything: you send it from your own wallet app, then check here. Payments add up, so you can send the rest later.</p>
+                    <div class="st-field">
+                      <label for="st-tx">Its transaction <span class="st-opt-sub">(optional: we look it up by your wallet)</span></label>
+                      <input id="st-tx" data-st-tx type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="400" placeholder="a link to it on the block explorer, or its ID" />
+                    </div>
+                    <div class="st-links">
+                      <button class="btn btn-primary" type="button" data-st-check>Check my payment</button>
+                    </div>
+                  </div>
+                  <p class="st-note st-check-msg" data-st-check-msg role="status" aria-live="polite" hidden></p>
+                  <div class="st-links">
+                    <button class="btn btn-ghost btn-sm" type="button" data-st-cancel>Start over</button>
+                  </div>
+                </li>
+              </ol>
+            </div>
+
+            <section class="st-card st-mine" data-st-mine aria-labelledby="st-mine-title" hidden>
+              <h2 class="st-title" id="st-mine-title">Your characters</h2>
+              <ul class="st-mine-list" data-st-mine-list></ul>
+            </section>
+
+            <section class="st-gallery" data-st-gallery aria-labelledby="st-gallery-title" hidden>
+              <h2 class="st-title" id="st-gallery-title">Made in the studio</h2>
+              <ul class="st-g-list" data-st-gallery-list></ul>
+            </section>
+
+            <section class="st-rules" aria-labelledby="st-rules-title">
+              <h2 class="st-rules-title" id="st-rules-title">Before you make one</h2>
+              <ul>
+                <li>Your character is made by an AI service: from your words, painted, given bones and taught 8 moves (idle, wave, dance, jump, cheer, bow, walk, party). It takes about 5 to 10 minutes, and it may not look exactly as you pictured.</li>
+                <li>PG-13, and never a real person, someone else's character or a brand's mascot, or anything that passes for AGI-1. One figure with two arms and two legs works best.</li>
+                <li>You pay from your own wallet app, on Robinhood Chain: USDG to the studio's wallet, or $AGI burned (sent to 0x…dEaD: gone for good, and it counts toward your level like a burn for messages). This page never asks your wallet for a transaction. Only the official tokens count, and each payment counts once.</li>
+                <li>Holder discounts: Crush (10,000+ $AGI held or burned for messages) 20% off, Soulmate (1,000,000+) 40% off and one free a month. A thank-you for holding, not an investment.</li>
+                <li>No refunds. If a paid character can't be made (an AI check stops it, or its bones don't fit), you can try again with new words, free.</li>
+                <li>Its page is public to anyone with its link, and the newest ones show here. Its picture and its 3D model (GLB: its bones and moves) are yours to download. The studio can take down any character.</li>
+                <li>Once it's made, the wallet that made it can have short videos of it made by an AI video service: 5 seconds of it in any scene you describe, paid in USDG with the same holder discounts. The same rules: PG-13, never a real person. Each is AI-generated and says so; when you post one, turn on the app's AI label too.</li>
+                <li>A limited number are made each month (each costs the studio to make). Nothing here is financial advice, and $AGI is a meme token that can lose all of its value.</li>
+              </ul>
+            </section>
+          </div>
+
+          <!-- a character's own page (agi1.app/studio/<id>) -->
+          <div class="st-char" data-st-char hidden>
+            <header class="section-head">
+              <p class="kicker"><a href="/studio">AGI-1's studio</a></p>
+              <h1 class="h2" id="st-c-title" data-st-c-name>Opening…</h1>
+              <p class="st-about" data-st-c-about hidden></p>
+              <p class="st-label mono" data-st-c-meta></p>
+            </header>
+            <div class="st-card">
+              <p class="st-status" data-st-c-status role="status" aria-live="polite" hidden></p>
+              <p class="st-links" data-st-c-continue hidden><a class="btn btn-primary btn-sm" href="/studio">Continue paying for it</a></p>
+
+              <!-- while it's made -->
+              <div class="st-progress" data-st-progress hidden>
+                <ol class="st-p-steps" data-st-p-steps></ol>
+                <p class="st-note" data-st-making-note></p>
+              </div>
+
+              <!-- done: in 3D, its moves and its chat -->
+              <div class="st-done" data-st-done hidden>
+                <div class="st-stage" data-st-stage data-state="loading">
+                  <canvas class="st-canvas" data-st-canvas aria-label="The character in 3D"></canvas>
+                  <img class="st-pic" data-st-pic alt="" width="384" height="384" decoding="async" />
+                  <p class="st-stage-note mono" data-st-stage-note hidden></p>
+                </div>
+                <div class="st-movebar" data-st-movebar aria-label="Its moves"></div>
+                <form class="st-chat" data-st-chat novalidate>
+                  <label class="st-sr" for="st-say">A message for it</label>
+                  <input id="st-say" data-st-say type="text" maxlength="200" autocomplete="off" placeholder="type a move: dance, wave, jump…" />
+                  <button class="btn btn-primary btn-sm" type="submit">Send</button>
+                </form>
+                <p class="st-field-note" data-st-hint></p>
+                <ul class="st-log" data-st-log aria-live="polite"></ul>
+                <div class="st-links">
+                  <a class="btn btn-ghost btn-sm" data-st-dl-png>Download its picture</a>
+                  <a class="btn btn-ghost btn-sm" data-st-dl-glb>Download its 3D model (GLB)</a>
+                  <a class="btn btn-ghost btn-sm" data-st-share target="_blank" rel="noopener noreferrer">Share on X ↗</a>
+                </div>
+                <p class="st-field-note">Its 3D model has its bones and its 8 moves, ready for a 3D stream or a 3D app.</p>
+                <div class="st-coin" data-st-coin hidden>
+                  <p class="st-how-title">Launch a coin with its face</p>
+                  <p class="st-note">Save its picture, then send it to AGI-1's Telegram bot as a photo with “/launch Name | TICKER | one line”. Launching needs 10,000+ $AGI in the wallet that launches; the coin is yours, and she never promotes it. Not financial advice.</p>
+                  <p class="st-links"><a class="btn btn-ghost btn-sm" data-st-bot target="_blank" rel="noopener noreferrer">Open her Telegram bot ↗</a></p>
+                </div>
+              </div>
+
+              <!-- couldn't be made: again with new words, free (the wallet that paid) -->
+              <div class="st-redo" data-st-redo hidden>
+                <p class="st-note" data-st-r-why></p>
+                <p class="st-me" data-st-r-me hidden></p>
+                <p class="st-note" data-st-r-note role="status" aria-live="polite" hidden></p>
+                <div class="st-links">
+                  <button class="btn btn-ghost btn-sm" type="button" data-st-r-connect>Connect the wallet that paid</button>
+                  <button class="btn btn-ghost btn-sm" type="button" data-st-r-out hidden>Disconnect</button>
+                </div>
+                <div class="st-wallets" data-st-r-wallets hidden></div>
+                <div class="st-apps" data-st-r-apps hidden>
+                  <p class="st-note" data-st-r-apps-note></p>
+                  <div class="st-links">
+                    <a class="btn btn-ghost btn-sm" data-st-app="metamask">Open in MetaMask ↗</a>
+                    <a class="btn btn-ghost btn-sm" data-st-app="phantom">Open in Phantom ↗</a>
+                    <a class="btn btn-ghost btn-sm" data-st-app="coinbase">Open in Coinbase Wallet ↗</a>
+                  </div>
+                </div>
+                <form class="st-form" data-st-r-form novalidate hidden>
+                  <div class="st-field">
+                    <label for="st-r-name">Its name</label>
+                    <input id="st-r-name" data-st-r-name type="text" maxlength="24" autocomplete="off" spellcheck="false" />
+                  </div>
+                  <div class="st-field">
+                    <label for="st-r-about">What it looks like</label>
+                    <textarea id="st-r-about" data-st-r-about rows="4" maxlength="400" autocomplete="off"></textarea>
+                  </div>
+                  <fieldset class="st-styles">
+                    <legend class="st-legend">Its style</legend>
+                    <div class="st-opts">
+                      <label class="st-opt"><input type="radio" name="st-r-style" value="anime" /> <span class="st-opt-name">Anime</span></label>
+                      <label class="st-opt"><input type="radio" name="st-r-style" value="cartoon" /> <span class="st-opt-name">Cartoon</span></label>
+                      <label class="st-opt"><input type="radio" name="st-r-style" value="realistic" /> <span class="st-opt-name">Realistic</span></label>
+                    </div>
+                  </fieldset>
+                  <p class="st-error" data-st-r-error role="alert" hidden></p>
+                  <div class="st-links">
+                    <button class="btn btn-primary" type="submit" data-st-r-send>Make it again, free</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- its videos (2026-10-10): its done ones for everyone; the wallet that made it describes a scene, pays in USDG from
+                 its own wallet app, and an AI video service makes it from its picture -->
+            <section class="st-card st-videos" data-st-videos aria-labelledby="st-v-title" hidden>
+              <h2 class="st-title" id="st-v-title">Its videos</h2>
+              <p class="st-note">Short videos of it, made by an AI video service from its picture. Every one is AI-generated.</p>
+              <ul class="st-v-list" data-st-v-list></ul>
+              <p class="st-note" data-st-v-none hidden>No videos of it yet.</p>
+              <div class="st-v-make" data-st-v-make hidden>
+                <p class="st-how-title">Make a video of it</p>
+                <p class="st-note" data-st-v-about></p>
+                <div class="st-v-adult" data-st-v-adult hidden>
+                  <p class="st-note">Making a video is for adults (18+). What it makes is PG-13.</p>
+                  <button class="btn btn-primary btn-sm" type="button" data-st-v-adult-yes>I'm 18 or older</button>
+                </div>
+                <div class="st-v-wallet" data-st-v-wallet hidden>
+                  <p class="st-me" data-st-v-me hidden></p>
+                  <p class="st-note" data-st-v-note role="status" aria-live="polite" hidden></p>
+                  <div class="st-links">
+                    <button class="btn btn-ghost btn-sm" type="button" data-st-v-connect>Connect the wallet that made it</button>
+                    <button class="btn btn-ghost btn-sm" type="button" data-st-v-out hidden>Disconnect</button>
+                  </div>
+                  <div class="st-wallets" data-st-v-wallets hidden></div>
+                  <div class="st-apps" data-st-v-apps hidden>
+                    <p class="st-note" data-st-v-apps-note></p>
+                    <div class="st-links">
+                      <a class="btn btn-ghost btn-sm" data-st-app="metamask">Open in MetaMask ↗</a>
+                      <a class="btn btn-ghost btn-sm" data-st-app="phantom">Open in Phantom ↗</a>
+                      <a class="btn btn-ghost btn-sm" data-st-app="coinbase">Open in Coinbase Wallet ↗</a>
+                    </div>
+                  </div>
+                </div>
+                <p class="st-note" data-st-v-owner role="status" hidden></p>
+                <form class="st-form" data-st-v-form novalidate hidden>
+                  <div class="st-field">
+                    <label for="st-v-scene">What happens in it</label>
+                    <textarea id="st-v-scene" data-st-v-scene rows="3" maxlength="300" autocomplete="off" aria-describedby="st-v-scene-note" placeholder="dancing on a neon rooftop in the rain at night, the city glowing behind it"></textarea>
+                    <p class="st-field-note" id="st-v-scene-note"><span data-st-v-count>0</span>/300 · where it is and what it does. PG-13, never a real person or someone else's character.</p>
+                  </div>
+                  <fieldset class="st-styles">
+                    <legend class="st-legend">Its shape</legend>
+                    <div class="st-opts">
+                      <label class="st-opt"><input type="radio" name="st-v-shape" value="tall" checked /> <span class="st-opt-name">Vertical</span> <span class="st-opt-sub">TikTok, Reels, Shorts</span></label>
+                      <label class="st-opt"><input type="radio" name="st-v-shape" value="wide" /> <span class="st-opt-name">Wide</span> <span class="st-opt-sub">X, YouTube</span></label>
+                      <label class="st-opt"><input type="radio" name="st-v-shape" value="square" /> <span class="st-opt-name">Square</span></label>
+                    </div>
+                  </fieldset>
+                  <label class="st-v-sound"><input type="checkbox" data-st-v-sound checked /> <span>With sound: its sounds and music, made by the AI too</span></label>
+                  <div class="st-human" data-st-v-human></div>
+                  <p class="st-error" data-st-v-error role="alert"></p>
+                  <div class="st-links">
+                    <button class="btn btn-primary" type="submit" data-st-v-quote>Get my price</button>
+                    <button class="btn btn-ghost btn-sm" type="button" data-st-v-redo-cancel hidden>Not now</button>
+                  </div>
+                </form>
+                <div class="st-how" data-st-v-pay tabindex="-1" hidden>
+                  <p class="st-how-title" data-st-v-pay-title></p>
+                  <p class="st-note" data-st-v-pay-from></p>
+                  <p class="st-how-label">To the studio's wallet</p>
+                  <div class="st-addr">
+                    <code class="st-addr-text mono" data-st-v-pay-to></code>
+                    <button class="btn btn-ghost btn-sm" type="button" data-st-v-copy>Copy</button>
+                  </div>
+                  <p class="st-sr" data-st-v-copy-say aria-live="polite"></p>
+                  <p class="st-note" data-st-v-pay-token></p>
+                  <p class="st-note">This page never asks your wallet to send anything: you send it from your own wallet app, then check here. Payments add up, so you can send the rest later.</p>
+                  <div class="st-field">
+                    <label for="st-v-tx">Its transaction <span class="st-opt-sub">(optional: we look it up by your wallet)</span></label>
+                    <input id="st-v-tx" data-st-v-tx type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="400" placeholder="a link to it on the block explorer, or its ID" />
+                  </div>
+                  <div class="st-links">
+                    <button class="btn btn-primary" type="button" data-st-v-check>Check my payment</button>
+                    <button class="btn btn-ghost btn-sm" type="button" data-st-v-later>Later</button>
+                  </div>
+                  <p class="st-note st-check-msg" data-st-v-check-msg role="status" aria-live="polite" hidden></p>
+                </div>
+              </div>
+            </section>
+
+            <p class="st-back"><a class="btn btn-ghost btn-sm" href="/studio">Make your own</a></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap diary-foot">
+        <p><b>The only serious part of this page.</b> AGI-1 is a fictional character voiced by an AI language model; she can be wrong. $AGI is a meme token on Robinhood Chain, made for entertainment, and meme tokens can lose all of their value. Nothing here is financial advice or a promise of profit. Read the full <a href="/#safety">safety note</a>.</p>
+      </div>
+      <div class="foot-bar">
+        <div class="wrap foot-bar-in">
+          <p class="foot-brand">AGI</p>
+          <nav class="foot-nav" aria-label="Footer">
+            <a href="/#evaluations">Evaluations</a>
+            <a href="/#model-card">Model card</a>
+            <a href="/#playground">Playground</a>
+            <a href="/#checker">Risk check your coins on clank</a>
+            <a href="/diary">Diary</a>
+            <a href="/live">Live</a>
+            <a href="https://clank.trade/coin/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">clank.trade ↗</a>
+            <a href="https://dexscreener.com/robinhood/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">DexScreener ↗</a>
+            <a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">X @agi1dotapp ↗</a>
+            <a href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">Telegram @agi2dotapp ↗</a>
+          </nav>
+          <p class="foot-legal">
+            <span>© 2026 AGI. No labs were harmed.</span>
+            <span>$AGI is a token made by the AGI team, launched on clank.trade. Entertainment only · Not financial advice.</span>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/studio/page.js"></script>
+  </body>
+</html>

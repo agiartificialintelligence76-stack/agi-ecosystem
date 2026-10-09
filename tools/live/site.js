@@ -71,7 +71,10 @@ export function liveSite({ site, secret, fetchFn = fetch, log = console } = {}) 
 export const DEMO_QA = [
   // (2026-10-09: she reads each question out loud first, so her answers never say it again)
   { name: 'Mochi', text: "what's your favorite color?", reply: 'purple, obviously 💜 it matches my whole personality.', mood: 'happy' },
+  // (2026-10-10, holder perks) a Soulmate's question (her 💜 badge and her shout-out) and a Crush's (her badge)
+  { name: 'Jun', text: 'can i be your favorite viewer?', reply: "you're all my favorites. but you're definitely up there 💜", mood: 'shy', holder: 3 },
   { name: 'kai', text: 'can you jump 3 times?', reply: 'three jumps? okay okay, here we go! 💜', mood: 'happy', act: { act: 'jump', times: 3 } },
+  { name: 'Nia', text: 'what do you love most about streaming?', reply: 'reading your questions. and the snacks 💜', mood: 'love', holder: 2 },
   { name: null, text: 'do you ever get tired of streaming?', reply: "never! i don't sleep, and you're here 💜", mood: 'love' },
   { name: 'Lena', text: 'sing the chorus of your song!', reply: 'the chorus? say less 🎤', mood: 'happy', act: { act: 'sing', part: 'chorus' } },
   { name: null, text: 'wen moon?', reply: "i'm a girlfriend, not a fortune teller 🙈 not financial advice, but i love the optimism.", mood: 'shy' },
@@ -128,7 +131,7 @@ export function demoSite({ every = 50_000, now = Date.now, diary = null, buyEver
       id += 1;
       // (what she can't do right now: she says yes anyway in the made-up answer, but nothing happens)
       const ok = qa.act && (!Array.isArray(can) || can.includes(qa.act.act === 'sing' ? `sing:${qa.act.part}` : qa.act.act));
-      return { question: { id, name: qa.name, text: qa.text, source: 'web' }, reply: qa.reply, mood: qa.mood, act: ok ? { times: 1, ...qa.act } : null,
+      return { question: { id, name: qa.name, text: qa.text, source: 'web', holder: qa.holder || 0 }, reply: qa.reply, mood: qa.mood, act: ok ? { times: 1, ...qa.act } : null,
         ...(qa.lang ? { lang: qa.lang } : {}), ...(qa.feel ? { feel: qa.feel } : {}) };
     },
     async chat() { const line = DEMO_CHAT[chat++ % DEMO_CHAT.length]; return { reply: line, mood: 'happy' }; },

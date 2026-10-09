@@ -44,6 +44,14 @@
 .lv-error:empty { display: none; }
 .lv-human:empty { display: none; }
 .lv-form .btn:disabled, .lv-controls .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+/* (2026-10-10) holder perks: a connected wallet at Crush or Soulmate */
+.lv-perk { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.lv-perk-title { font-size: 13.5px; font-weight: 600; }
+.lv-perk-me { font-size: 14px; color: var(--fg); overflow-wrap: anywhere; }
+.lv-perk-me[hidden], .lv-wallets[hidden], .lv-apps[hidden] { display: none; }
+.lv-wallets { display: flex; flex-wrap: wrap; gap: 8px; }
+.lv-wallet img { width: 18px; height: 18px; border-radius: 4px; }
+.lv-apps { display: flex; flex-direction: column; gap: 8px; }
 
 /* your question */
 .lv-mine { display: flex; flex-direction: column; gap: 10px; outline: none; }

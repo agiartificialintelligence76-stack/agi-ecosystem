@@ -48,6 +48,8 @@ const QUESTION = {
   spam: "That doesn't look like a question.",
   // (2026-10-09: other coins can come up on her show, financial advice never)
   advice: 'That sounds like financial advice, and she never gives any on stream. Ask it as a question?',
+  // (2026-10-09) a wallet's seed phrase or private key, sent by mistake: never on stream, never kept
+  secret: "That looks like a seed phrase or a private key, so it won't go on stream, and it wasn't kept. Never send it to anyone: if it's real, move your funds to a new wallet now.",
 };
 // /api/live's answers to a question, in plain words. why: the question's own reason; wait: seconds (too fast)
 export function askError(error, { why = null, wait = null, position = null } = {}) {
@@ -99,9 +101,42 @@ export function ownerText(v) {
   if (v.end) bits.push('ending: she says goodbye after this');
   return bits.join(' · ');
 }
-// "Mochi · agi1.app" / "someone · Telegram" / "kai · X" (2026-10-07: passed on from X's live chat)
+// "Mochi · agi1.app" / "someone · Telegram" / "kai · X" (2026-10-07: passed on from X's live chat); (2026-10-10) with her
+// 💜 badge: "Mochi · agi1.app · 💜 Crush"
 const FROM = { telegram: 'Telegram', x: 'X' };
-export const fromText = (q) => `${q?.name || 'someone'} · ${FROM[q?.source] || 'agi1.app'}`;
+export const fromText = (q) => `${q?.name || 'someone'} · ${FROM[q?.source] || 'agi1.app'}${BADGE[q?.holder] ? ` · 💜 ${BADGE[q.holder]}` : ''}`;
+
+// ---------- (2026-10-10) holder perks: a connected wallet at Crush or Soulmate ----------
+// her badge's names: the site's own levels (src/lib/levels.js: Crush at 10,000+ $AGI held or burned for messages, Soulmate
+// at 1,000,000+). Never "buy more" (hard rule 9): what each level gets, that's all
+export const BADGE = { 2: 'Crush', 3: 'Soulmate' };
+export const short = (a) => `${String(a).slice(0, 6)}…${String(a).slice(-4)}`;
+// what the page says about the connected wallet
+export function perkText({ wallet, level } = {}) {
+  if (!wallet) return '';
+  if (level === 3) return `${short(wallet)} · Soulmate 💜 Your questions get her badge, a head start in her line, and a shout-out from her.`;
+  if (level === 2) return `${short(wallet)} · Crush 💜 Your questions get her badge and a head start in her line.`;
+  return `${short(wallet)} · Stranger. Her 💜 badge starts at Crush (10,000+ $AGI held, or burned for messages).`;
+}
+// connecting (the same steps as the home page's connect screen)
+export const WALLET_STEPS = {
+  connect: 'Check your wallet: allow this site to see your address.',
+  sign: 'Now sign the message in your wallet. It is free and not a transaction.',
+  check: 'Checking your $AGI balance…',
+  slow: 'Nothing showing up? Open your wallet (its icon in the browser toolbar): the request may be waiting there. Or pick another wallet.',
+};
+export const NO_WALLET = {
+  phone: "Phone browsers can't talk to wallets directly. Open this page in your wallet app's browser:",
+  computer: 'No wallet found in this browser. Add a wallet extension (for example MetaMask, Phantom or Rabby), or open this page in your wallet app.',
+};
+// her badge on your question, after sending it: what it got, or why not
+export function badgeNote({ holder = 0, level = 1, signedOut = false } = {}) {
+  if (signedOut) return "Your wallet's session ended, so this one went in without her badge. Connect again for your next one.";
+  if (holder === 3) return '💜 With your Soulmate badge: a head start in her line, and she gives you a shout-out.';
+  if (holder === 2) return '💜 With your Crush badge: a head start in her line.';
+  if (level >= 2) return "Your wallet's 💜 badges for today are used (5 a day), so this one went in without one.";
+  return '';
+}
 
 // The host's box for a question from X's live chat (2026-10-07): /api/live's answer to { action: 'relay' }, in plain words
 // for the owner (the X viewer isn't here: "that X name", never "you")

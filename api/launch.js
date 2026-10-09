@@ -19,6 +19,9 @@
 //   POST { action: 'payback', draft } → { gas }: a launched draft's payback, again (from its own launch transaction, kept
 //        on our side: whoever opens the page, the fee only ever goes back to the coin's creator)
 // Everything is "no-store": a draft is private to whoever has its link.
+// (2026-10-10) AGI-1's 3D character studio lives here too (Vercel's Hobby plan allows 12 functions, all used; a character
+// can be a coin's face): GET ?studio=, ?studio-file=, ?studio-list, ?studio-info, and its characters' videos ?studio-videos=,
+// ?studio-video=, ?studio-video-dl=, and POST actions "studio-…", handled by server/studio-api.js (loaded only for them).
 import { getConfig } from '../server/config.js';
 import { clientIp, visitorCode } from '../server/security.js';
 import { readSession } from '../server/session.js';
@@ -32,6 +35,9 @@ import {
 import { launchBurst, launchPictureBurst } from '../server/burst.js';
 
 const MAX_BODY = 4000;
+const STUDIO_GETS = ['studio', 'studio-file', 'studio-list', 'studio-info', 'studio-videos', 'studio-video', 'studio-video-dl'];
+const STUDIO_POSTS = ['studio-quote', 'studio-choose', 'studio-check', 'studio-redo', 'studio-mine', 'studio-video-mine', 'studio-video-quote',
+  'studio-video-check', 'studio-video-redo', 'studio-video-look'];
 const BUDGET_MS = 20_000;                  // a request's payback must be done by then (Vercel stops a function at 25 s)
 const json = (status, body) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 const ms = (t) => { const n = Date.parse(t ?? ''); return Number.isFinite(n) ? n : null; };
@@ -55,6 +61,10 @@ function checkGasKey(cfg, env = process.env) {
 export async function GET(request) {
   const url = new URL(request.url);
   const keys = [...url.searchParams.keys()];
+  if (keys.length === 1 && STUDIO_GETS.includes(keys[0])) {
+    const { studioGet } = await import('../server/studio-api.js');
+    return studioGet(getConfig(), request, keys[0], url.searchParams.get(keys[0]));
+  }
   if (keys.length !== 1 || !['d', 'pic'].includes(keys[0])) return json(400, { error: 'bad_request' });
   const id = url.searchParams.get(keys[0]);
   if (!DRAFT_ID.test(id)) return json(400, { error: 'bad_request' });
@@ -97,6 +107,10 @@ export async function POST(request) {
   if (raw.length > MAX_BODY) return json(413, { error: 'bad_request' });
   let body;
   try { body = JSON.parse(raw); } catch { return json(400, { error: 'bad_request' }); }
+  if (body && typeof body === 'object' && STUDIO_POSTS.includes(body.action)) {
+    const { studioPost } = await import('../server/studio-api.js');
+    return studioPost(cfg, request, body);
+  }
   if (!body || typeof body !== 'object' || !['prepare', 'check', 'payback'].includes(body.action) || !DRAFT_ID.test(String(body.draft))) {
     return json(400, { error: 'bad_request' });
   }

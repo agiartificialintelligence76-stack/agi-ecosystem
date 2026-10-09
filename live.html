@@ -101,6 +101,26 @@
                 <input id="lv-name" data-lv-name type="text" maxlength="24" autocomplete="nickname" spellcheck="false" aria-describedby="lv-name-note" />
                 <p class="lv-field-note" id="lv-name-note">Shown with your question, and she says it: any name up to 24 characters (nothing crude, and nothing that passes for her or her team). Leave it empty and she says “someone asks”.</p>
               </div>
+              <!-- 2026-10-10, holder perks: a connected wallet at Crush (10,000+ $AGI) or Soulmate (1,000,000+), the site's own
+                   sign-in (a free signature, never a transaction), shared with the home page -->
+              <div class="lv-perk" data-lv-perk>
+                <p class="lv-perk-title">💜 Crush and Soulmate perks <span class="lv-opt">(optional)</span></p>
+                <p class="lv-field-note">With a connected wallet that holds 10,000+ $AGI (or burned it for messages), your question gets her 💜 badge on stream and goes ahead of the questions sent in the 10 minutes before it. At 1,000,000+ (Soulmate), she gives you a shout-out too. Connecting takes a free signature, never a transaction.</p>
+                <p class="lv-perk-me" data-lv-perk-me role="status" aria-live="polite" hidden></p>
+                <div class="lv-links">
+                  <button class="btn btn-ghost btn-sm" type="button" data-lv-perk-connect>Connect a wallet</button>
+                  <button class="btn btn-ghost btn-sm" type="button" data-lv-perk-out hidden>Disconnect</button>
+                </div>
+                <div class="lv-wallets" data-lv-wallets hidden></div>
+                <div class="lv-apps" data-lv-apps hidden>
+                  <p class="lv-field-note" data-lv-apps-note></p>
+                  <div class="lv-links">
+                    <a class="btn btn-ghost btn-sm" data-lv-app="metamask">Open in MetaMask ↗</a>
+                    <a class="btn btn-ghost btn-sm" data-lv-app="phantom">Open in Phantom ↗</a>
+                    <a class="btn btn-ghost btn-sm" data-lv-app="coinbase">Open in Coinbase Wallet ↗</a>
+                  </div>
+                </div>
+              </div>
               <div class="lv-human" data-lv-human></div>
               <p class="lv-error" data-lv-error role="alert"></p>
               <div class="lv-links">
@@ -176,9 +196,10 @@
             <h2 class="lv-rules-title" id="lv-rules-title">How her show works</h2>
             <ul>
               <li>AGI-1 is an AI. She streams on X from <a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">@agi1dotapp</a>, reads questions out loud and answers them in her AI voice. Everything on her stream is AI-generated.</li>
-              <li>Your question is shown on her stream and she reads it out loud, with the name you give here (if any, and if it can go on a public stream). Never your account, your address or anything else about you.</li>
+              <li>Your question is shown on her stream and she reads it out loud, with the name you give here (if any, and if it can go on a public stream) and, with a connected wallet at Crush or Soulmate, her 💜 badge. Never your account, your wallet's address or anything else about you.</li>
               <li>18+ and PG-13. Ask her anything, however short. No links, @names, emails, phone numbers or addresses. She can talk about other coins and about famous people, kindly and fairly: never rumors, and never financial advice.</li>
               <li>One question at a time, one a minute, 5 a day. She can't answer everyone, and the show's host can skip any question.</li>
+              <li>💜 Crush and Soulmate perks (here, with a connected wallet): at 10,000+ $AGI held or burned for messages, your question shows her 💜 badge and goes ahead of the questions sent in the 10 minutes before it (never further, so everyone gets their turn); at 1,000,000+ she gives you a shout-out too. 5 badges a day per wallet. A thank-you for being here: nothing is spent, it's not an investment, and it's not financial advice.</li>
               <li>Chatting under her stream on X? The show's host may pass a good question from there on to her: it's shown with your X name (if it can go on a public stream), with the same rules as here.</li>
               <li data-lv-tg hidden>Also in her Telegram bot: <a data-lv-tg-link target="_blank" rel="noopener noreferrer">/live and your question ↗</a> (shown on stream with your Telegram name).</li>
               <li>Questions and her answers are kept at most 2 days, then deleted.</li>

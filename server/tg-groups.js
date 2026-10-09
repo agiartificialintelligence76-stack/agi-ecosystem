@@ -32,6 +32,9 @@ import {
 import { OFFICIAL_CA } from './agi1-prompt.js';
 import { agiNumbers } from './market.js';
 import { botName } from '../src/chat/telegram-link.js';
+import { gamesOn, prizesOn } from './games.js';
+import { gamesNote, groupClaim, CLAIM_BUTTON } from './game-lines.js';
+import { secretIn, SECRET_WARNING } from './secrets.js';
 
 const MAX_TEXT = 500;                        // characters she reads (the same as the site's chat and her private chat)
 const MINUTE = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
@@ -55,6 +58,11 @@ const FIXED = {
     const n = await agiNumbers(now);
     return { text: n ? groupMarket(n) : GROUP_MARKET_DOWN };
   },
+  // (2026-10-09) /claim typed in a group, by a quiz's winner: her private chat is where prizes are claimed (server/games.js)
+  claim: async (now, me) => ({
+    text: groupClaim(Boolean(me?.username)),
+    ...(me?.username ? { markup: { inline_keyboard: [[{ text: CLAIM_BUTTON, url: `https://t.me/${me.username}?start=claim` }]] } } : {}),
+  }),
 };
 // /ask, /ask@her_bot, "/help@her_bot something" → [, name, @name, the rest]
 const COMMAND = /^\/([A-Za-z0-9_]{1,32})(?:@([A-Za-z0-9_]{3,64}))?(?:\s+([\s\S]*))?$/;
@@ -154,7 +162,7 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
   // she was added (or the group was made with her in it): her intro. People joined: a welcome, now and then.
   const joined = Array.isArray(m.new_chat_members) ? m.new_chat_members : [];
   if (m.group_chat_created || m.supergroup_chat_created || joined.some((u) => u?.id === herId)) {
-    await say(token, chat.id, groupIntro({ posts: cfg.tgGroupPosts }), topicOf(m), { timeoutMs: 4000 })
+    await say(token, chat.id, groupIntro({ posts: cfg.tgGroupPosts, games: gamesOn(cfg) && (prizesOn(cfg) ? 'prizes' : 'fun') }), topicOf(m), { timeoutMs: 4000 })
       .catch((err) => console.warn(`[telegram] her intro in a group didn't go out: ${err.message}`));
     return 'group_intro';
   }
@@ -178,7 +186,7 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
     if (cmd[2] && me.username && cmd[2].toLowerCase() !== me.username) return 'ignored';   // another bot's command
     const name = cmd[1].toLowerCase();
     if (name === 'ask') ask = withoutHer(cmd[3] || '', [], me);
-    else if (Object.hasOwn(FIXED, name)) fixed = name;          // /ca, /website, /mc (plain, or with her name)
+    else if (Object.hasOwn(FIXED, name) && (name !== 'claim' || (gamesOn(cfg) && prizesOn(cfg)))) fixed = name;   // /ca, /website, /mc, /claim (plain, or with her name)
     else if (name === 'help' || cmd[2]) help = true;            // /help, or another of her commands sent to her by name
     else return 'ignored';                                       // someone else's plain command (/start, /warn…)
   } else if (toHer || mentionsHer(body, ents, me)) {
@@ -192,9 +200,12 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
   // most once every 30 seconds in a group (asked again sooner: the answer is right above); no AI, nothing counted
   if (fixed) {
     if (!firstTime(`${fixed}:${chat.id}`, now, FIXED_GAP_MS)) return 'group_recent';
-    const { text: line, entities } = await FIXED[fixed](now);
-    await say(token, chat.id, line, { reply_parameters: { message_id: m.message_id, allow_sending_without_reply: true }, ...topicOf(m), ...(entities ? { entities } : {}) },
-      { timeoutMs: 4000 }).catch((err) => console.warn(`[telegram] couldn't answer /${fixed} in a group: ${err.message}`));
+    if (fixed === 'claim' && !me.username) me = await botIdentity(token, process.env, now);
+    const { text: line, entities, markup } = await FIXED[fixed](now, me);
+    await say(token, chat.id, line, {
+      reply_parameters: { message_id: m.message_id, allow_sending_without_reply: true }, ...topicOf(m), ...(entities ? { entities } : {}),
+      ...(markup ? { reply_markup: markup } : {}),
+    }, { timeoutMs: 4000 }).catch((err) => console.warn(`[telegram] couldn't answer /${fixed} in a group: ${err.message}`));
     return `group_${fixed}`;
   }
 
@@ -209,8 +220,11 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
     return 'not_text';
   }
   // how to talk to her: once every 10 minutes per person (so /help can't fill the group)
-  if (help || !ask) { if (firstTime(`help:${person}`, now, 10 * MINUTE)) await send(GROUP_HELP); return 'group_help'; }
+  if (help || !ask) { if (firstTime(`help:${person}`, now, 10 * MINUTE)) await send(gamesOn(cfg) ? `${GROUP_HELP}\n\n${gamesNote(prizesOn(cfg))}` : GROUP_HELP); return 'group_help'; }
   if (ask.length > MAX_TEXT) { await send(E.TOO_LONG); return 'too_long'; }
+  // (2026-10-09) a seed phrase or a private key, by mistake: a warning, and nothing of it goes to the AI (server/secrets.js)
+  const secret = secretIn(ask);
+  if (secret) { await send(SECRET_WARNING[secret]); return `secret_${secret}`; }
   if (!cfg.geminiKey) { if (firstTime(`ready:${chat.id}`, now, HOUR)) await send(E.NOT_READY); return 'not_configured'; }
   if (noted(`full:${chat.id}:${day}`, now)) return 'group_quiet';  // the group's day is used: quiet, without counting anything
 

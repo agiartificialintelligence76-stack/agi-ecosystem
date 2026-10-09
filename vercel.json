@@ -5,6 +5,7 @@
   "cleanUrls": true,
   "rewrites": [
     { "source": "/launch/:draft", "destination": "/launch" },
+    { "source": "/studio/:id", "destination": "/studio" },
     { "source": "/talk", "destination": "/" },
     { "source": "/talk/", "destination": "/" }
   ],

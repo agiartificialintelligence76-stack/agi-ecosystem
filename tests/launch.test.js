@@ -312,7 +312,8 @@ function chainAnswer(q) {
 }
 
 beforeEach(() => {
-  for (const k of ['SITE_URL', 'ROBINHOOD_RPC_URL', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP', 'LAUNCH_ONLY_FOR', 'LIVE_SECRET']) delete process.env[k];
+  for (const k of ['SITE_URL', 'ROBINHOOD_RPC_URL', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP', 'LAUNCH_ONLY_FOR', 'LIVE_SECRET',
+    'TELEGRAM_GROUPS', 'TELEGRAM_GAMES', 'PRIZE_WALLET_KEY']) delete process.env[k];
   Object.assign(process.env, ENV);
   _resetChainCache();
   _resetBurnKey();
@@ -1773,7 +1774,7 @@ test('her private first launch (LAUNCH_ONLY_FOR): only those Telegram accounts m
   // removed: open to everyone, and back in her menu
   delete process.env.LAUNCH_ONLY_FOR;
   assert.equal(launchOpen(cfg()), true);
-  assert.deepEqual(commandsFor(cfg()), COMMANDS.filter((c) => c.command !== 'live'));
+  assert.deepEqual(commandsFor(cfg()), COMMANDS.filter((c) => c.command !== 'live' && c.command !== 'claim'));
   assert.equal(await hook(as(stranger, { text: '/launch' })), 'start', 'anyone now (someone new to her bot: her welcome and 18+ first)');
   assert.equal(await hook(msg({ text: '/launch' })), 'launch_how');
 });
@@ -1868,7 +1869,7 @@ test('the page: its own address, private, the rules and warnings on it, no inlin
   assert.equal(vercel.cleanUrls, true);
   assert.deepEqual(vercel.rewrites.filter((r) => r.source.startsWith('/launch')), [{ source: '/launch/:draft', destination: '/launch' }]);   // (and /talk since 2026-10-02: tests/fullscreen.test.js)
   for (const r of vercel.rewrites) assert.doesNotMatch(r.destination, /\.html$/, 'never a .html destination with cleanUrls');
-  assert.equal(vercel.headers[0].headers[0].value, "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' blob: https://api.dexscreener.com; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests");   // (our own pages may frame each other since her pop-out window, 2026-10-02: tests/popout.test.js)
+  assert.equal(vercel.headers[0].headers[0].value, "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' blob: https://api.dexscreener.com; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests");   // (our own pages may frame each other since her pop-out window, 2026-10-02: tests/popout.test.js; a character's videos play from our own address: tests/videos.test.js)
   assert.match(readFileSync(new URL('../vite.config.js', import.meta.url), 'utf8'), /launch: 'launch\.html'/);
   // the page's code: its words with textContent only, its one transaction through send.js
   const page = readFileSync(new URL('../src/launch/page.js', import.meta.url), 'utf8');

@@ -7,6 +7,12 @@
 -- (live_tell, a thirteenth function).
 -- **2026-10-09: run it once more** (it keeps everything saved): a question can be 1 or 2 characters long now (the owner:
 -- "there would be no restrictions on how short their message are"; 3 at least before).
+-- **2026-10-10: run it once more** (it keeps everything saved): holder perks on her show (the owner: "you can also add more
+-- utility to $agi so holders are happy"). A question sent at agi1.app/live with a connected wallet at Crush (10,000+ $AGI
+-- held or burned for messages) or Soulmate (1,000,000+) carries her 💜 badge on stream and a head start in her line: it
+-- goes ahead of the questions sent in the 10 minutes before it (never further, so nobody waits forever). Three columns
+-- (holder, holder_code, line_at); live_ask takes three more settings, which have defaults, so the code from before keeps
+-- working with it (and the new code works without it, without the perks, until it's run).
 -- It only ADDS two new tables and thirteen functions (all named agi1_live… / live_…). It doesn't touch any table the original
 -- site uses, so it's safe in the database both sites share. Running it again changes nothing that's saved.
 --
@@ -22,7 +28,9 @@
 --   agi1_live_questions  each question: when, from where (web / telegram / x: X's live chat, passed on by the owner), a
 --                        daily code of who asked (an HMAC: the same person today, nothing else), the name they gave
 --                        (optional), the question, where it is (waiting, taken, answered, skipped) and why it was
---                        skipped, and her answer once she has one
+--                        skipped, and her answer once she has one; (2026-10-10) with a connected wallet at Crush or
+--                        Soulmate: its level (2 or 3, her badge), a daily code of the wallet (an HMAC, never its address:
+--                        a wallet's badges a day are counted with it) and its place in her line (line_at)
 --   agi1_live_state      one row: whether she's on (and when the runner last said so), the show's number, its segment, the
 --                        question on air, when the next show is, the owner's controls (paused, new questions closed,
 --                        the show asked to end, blocked words), and the day her Telegram groups last heard she's live
@@ -42,8 +50,21 @@ create table if not exists public.agi1_live_questions (
   taken_at   timestamptz,
   done_at    timestamptz,
   reply      text        check (reply is null or char_length(reply) <= 600),
-  mood       text        check (mood is null or char_length(mood) <= 16)
+  mood       text        check (mood is null or char_length(mood) <= 16),
+  holder     smallint    not null default 0 check (holder in (0, 2, 3)),                 -- (2026-10-10) her 💜 badge: Crush, Soulmate
+  holder_code text       check (holder_code is null or char_length(holder_code) between 16 and 64),   -- a daily code of the wallet
+  line_at    timestamptz                                                                  -- its place in her line (null: when it came)
 );
+-- (2026-10-10) holder perks, in a database made before them
+alter table public.agi1_live_questions add column if not exists holder smallint not null default 0;
+alter table public.agi1_live_questions add column if not exists holder_code text;
+alter table public.agi1_live_questions add column if not exists line_at timestamptz;
+alter table public.agi1_live_questions drop constraint if exists agi1_live_questions_holder_check;
+alter table public.agi1_live_questions add constraint agi1_live_questions_holder_check check (holder in (0, 2, 3));
+alter table public.agi1_live_questions drop constraint if exists agi1_live_questions_holder_code_check;
+alter table public.agi1_live_questions add constraint agi1_live_questions_holder_code_check
+  check (holder_code is null or char_length(holder_code) between 16 and 64);
+create index if not exists agi1_live_questions_holder on public.agi1_live_questions (holder_code, created_at) where holder_code is not null;
 -- (2026-10-07) 'x' too, in a database made before it: a question from X's live chat that the owner passed on
 alter table public.agi1_live_questions drop constraint if exists agi1_live_questions_source_check;
 alter table public.agi1_live_questions add constraint agi1_live_questions_source_check check (source in ('web', 'telegram', 'x'));
@@ -93,13 +114,22 @@ $$;
 -- A question for her show (from our server, after its own checks: 18+, the human check, PG-13, no links…).
 -- p_source: 'web', 'telegram' or 'x' (X's live chat, passed on by the owner) · p_asker: a daily code of who asked ·
 -- p_name: the name to show, or null · p_question ·
--- p_gap: seconds between one person's questions · p_per_day: one person's questions a day · p_queue: questions waiting at
--- most · p_site_day: questions a day for the whole site · p_beat: seconds since the runner's last word that still count as on.
--- → {"ok": true, "id", "position"} or {"ok": false, "why": "bad" | "offline" | "ending" | "closed" | "blocked" | "waiting"
---   (with "id" and "position": their question is still in line) | "too_fast" (with "wait", seconds) | "day_cap" | "site_cap"
---   | "full"}
+-- p_gap: seconds between one person's questions · p_per_day: one person's questions a day (and, since 2026-10-10, a wallet's
+-- badges a day) · p_queue: questions waiting at most · p_site_day: questions a day for the whole site · p_beat: seconds since
+-- the runner's last word that still count as on ·
+-- (2026-10-10, holder perks; all three have defaults, so a call without them is a question without a badge, as before)
+-- p_holder: the asker's wallet level, checked by our server from their wallet session (2 Crush, 3 Soulmate; 0 or null: none)
+-- · p_holder_code: a daily code of that wallet (an HMAC, never its address) · p_head: a badge's head start in her line, in
+-- seconds (0 to 3600: it goes ahead of the questions sent that long before it, never further)
+-- → {"ok": true, "id", "position", "holder" (the badge it got: 2, 3, or 0 once the wallet had p_per_day today)} or
+--   {"ok": false, "why": "bad" | "offline" | "ending" | "closed" | "blocked" | "waiting" (with "id" and "position": their
+--   question is still in line) | "too_fast" (with "wait", seconds) | "day_cap" | "site_cap" | "full"}
+-- Her line's order: line_at (when it came, minus a badge's head start), then the question's number.
+-- (the version before 2026-10-10 took nine settings: dropped here, then made again with the three new ones at the end)
+drop function if exists public.live_ask(text, text, text, text, integer, integer, integer, integer, integer);
 create or replace function public.live_ask(p_source text, p_asker text, p_name text, p_question text,
-  p_gap integer, p_per_day integer, p_queue integer, p_site_day integer, p_beat integer)
+  p_gap integer, p_per_day integer, p_queue integer, p_site_day integer, p_beat integer,
+  p_holder integer default 0, p_holder_code text default null, p_head integer default 0)
 returns json
 language plpgsql
 set search_path = public
@@ -110,12 +140,17 @@ declare
   last_at timestamptz;
   n integer;
   new_id bigint;
+  badge smallint := 0;
+  place timestamptz;
 begin
   if p_source is null or p_source not in ('web', 'telegram', 'x') or p_asker is null or char_length(p_asker) not between 16 and 64
      or (p_name is not null and char_length(p_name) not between 1 and 24)
      or p_question is null or char_length(p_question) not between 1 and 200
      or p_gap is null or p_gap < 0 or p_per_day is null or p_per_day < 1 or p_queue is null or p_queue < 1
-     or p_site_day is null or p_site_day < 1 or p_beat is null or p_beat < 5 then
+     or p_site_day is null or p_site_day < 1 or p_beat is null or p_beat < 5
+     or (p_holder is not null and p_holder not in (0, 2, 3))
+     or (p_holder_code is not null and char_length(p_holder_code) not between 16 and 64)
+     or (p_head is not null and p_head not between 0 and 3600) then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
   -- one question at a time joins the line (so the line's size and each person's limits are always counted right)
@@ -132,7 +167,8 @@ begin
   where asker = p_asker and status in ('waiting', 'taken') order by id desc limit 1;
   if found then
     return json_build_object('ok', false, 'why', 'waiting', 'id', mine.id,
-      'position', (select count(*) from agi1_live_questions where status = 'waiting' and id <= mine.id));
+      'position', (select count(*) from agi1_live_questions w where w.status = 'waiting'
+        and (coalesce(w.line_at, w.created_at), w.id) <= (coalesce(mine.line_at, mine.created_at), mine.id)));
   end if;
   select max(created_at) into last_at from agi1_live_questions where asker = p_asker;
   if last_at is not null and last_at > now() - make_interval(secs => p_gap) then
@@ -147,10 +183,20 @@ begin
   if n >= p_site_day then return json_build_object('ok', false, 'why', 'site_cap'); end if;
   select count(*) into n from agi1_live_questions where status = 'waiting';
   if n >= p_queue then return json_build_object('ok', false, 'why', 'full'); end if;
-  insert into agi1_live_questions (show_id, source, asker, name, question)
-  values (s.show_id, p_source, p_asker, p_name, p_question)
+  -- (2026-10-10) her 💜 badge and its head start: a wallet at Crush or Soulmate, at most p_per_day badges a day per wallet
+  -- (one wallet's session on many devices gets no more than one person's)
+  if coalesce(p_holder, 0) in (2, 3) and p_holder_code is not null
+     and (select count(*) from agi1_live_questions where holder_code = p_holder_code and holder > 0
+          and created_at >= ((now() at time zone 'utc')::date)::timestamp at time zone 'utc') < p_per_day then
+    badge := p_holder;
+  end if;
+  place := now() - make_interval(secs => case when badge > 0 then coalesce(p_head, 0) else 0 end);
+  insert into agi1_live_questions (show_id, source, asker, name, question, holder, holder_code, line_at)
+  values (s.show_id, p_source, p_asker, p_name, p_question, badge, case when badge > 0 then p_holder_code end, place)
   returning id into new_id;
-  return json_build_object('ok', true, 'id', new_id, 'position', n + 1);
+  return json_build_object('ok', true, 'id', new_id, 'holder', badge,
+    'position', (select count(*) from agi1_live_questions w where w.status = 'waiting'
+      and (coalesce(w.line_at, w.created_at), w.id) <= (place, new_id)));
 end;
 $$;
 
@@ -158,7 +204,7 @@ $$;
 -- p_id: the question (or null) · p_asker: their daily code (or null: then their newest question today)
 -- → null (no such question) or {"id", "status": "waiting" | "taken" | "answered" | "skipped", "on_air" (true while she's
 --   answering it), "position" (waiting: their place in line), "why" (skipped), "reply" (answered: what she said), "name",
---   "question"}
+--   "question", "holder" (2026-10-10: its badge, 0, 2 or 3)}
 create or replace function public.live_lookup(p_id bigint, p_asker text)
 returns json
 language sql
@@ -167,8 +213,10 @@ set search_path = public
 as $$
   select json_build_object('id', q.id, 'status', q.status, 'on_air', q.status = 'taken' and s.now_id is not distinct from q.id,
     'position', case when q.status = 'waiting'
-      then (select count(*) from agi1_live_questions w where w.status = 'waiting' and w.id <= q.id) end,
-    'why', q.why, 'reply', case when q.status = 'answered' then q.reply end, 'name', q.name, 'question', q.question)
+      then (select count(*) from agi1_live_questions w where w.status = 'waiting'
+            and (coalesce(w.line_at, w.created_at), w.id) <= (coalesce(q.line_at, q.created_at), q.id)) end,
+    'why', q.why, 'reply', case when q.status = 'answered' then q.reply end, 'name', q.name, 'question', q.question,
+    'holder', q.holder)
   from agi1_live_questions q
   left join agi1_live_state s on s.id = 1
   where (p_id is not null and q.id = p_id)
@@ -275,7 +323,8 @@ $$;
 
 -- The next question in line, for the runner (our server then asks the AI for her answer). Questions taken more than 5
 -- minutes ago and never finished (a runner that crashed) are skipped first ("error"). → null (nobody waiting) or
--- {"id", "name", "question", "source", "tries"}
+-- {"id", "name", "question", "source", "tries", "holder" (2026-10-10: its badge, 0, 2 or 3)}
+-- (2026-10-10) her line's order: line_at (when it came, minus a badge's head start), then the question's number
 create or replace function public.live_take(p_show bigint)
 returns json
 language plpgsql
@@ -287,10 +336,12 @@ begin
   if not exists (select 1 from agi1_live_state where id = 1 and show_id = p_show and status <> 'off') then return null; end if;
   update agi1_live_questions set status = 'skipped', why = 'error', done_at = now()
   where status = 'taken' and taken_at < now() - interval '5 minutes';
-  select * into q from agi1_live_questions where status = 'waiting' order by id limit 1 for update skip locked;
+  select * into q from agi1_live_questions where status = 'waiting'
+  order by coalesce(line_at, created_at), id limit 1 for update skip locked;
   if not found then return null; end if;
   update agi1_live_questions set status = 'taken', taken_at = now(), tries = tries + 1 where id = q.id returning * into q;
-  return json_build_object('id', q.id, 'name', q.name, 'question', q.question, 'source', q.source, 'tries', q.tries);
+  return json_build_object('id', q.id, 'name', q.name, 'question', q.question, 'source', q.source, 'tries', q.tries,
+    'holder', q.holder);
 end;
 $$;
 
@@ -348,8 +399,9 @@ as $$
     'segment', case when live_on_air(s, p_beat) then s.segment end,
     'now', case when live_on_air(s, p_beat) then s.now_id end,
     'paused', s.paused, 'closed', s.closed,
-    'waiting', coalesce((select json_agg(w.id order by w.id) from (select id from agi1_live_questions
-      where status = 'waiting' order by id limit 60) w), '[]'::json),
+    -- (in her line's order: a 💜 badge's head start included, 2026-10-10)
+    'waiting', coalesce((select json_agg(w.id order by w.k, w.id) from (select id, coalesce(line_at, created_at) as k
+      from agi1_live_questions where status = 'waiting' order by coalesce(line_at, created_at), id limit 60) w), '[]'::json),
     'done', coalesce((select json_object_agg(d.id::text, case d.status when 'answered' then 'a' else 's' end)
       from (select id, status from agi1_live_questions where status in ('answered', 'skipped') and show_id = s.show_id
             order by done_at desc nulls last limit 60) d), '{}'::json))
@@ -409,14 +461,17 @@ begin
   return json_build_object('ok', ok, 'status', case when live_on_air(s, p_beat) then s.status else 'off' end,
     'on', live_on_air(s, p_beat), 'paused', s.paused, 'closed', s.closed, 'end', s.end_asked, 'blocked', s.blocked,
     'show', s.show_id, 'next_at', case when s.next_at > now() then s.next_at end,
-    'now', (select json_build_object('id', q.id, 'name', q.name, 'question', q.question, 'reply', q.reply, 'source', q.source)
+    'now', (select json_build_object('id', q.id, 'name', q.name, 'question', q.question, 'reply', q.reply, 'source', q.source,
+      'holder', q.holder)
       from agi1_live_questions q where q.id = s.now_id and q.status = 'taken'),
+    -- (in her line's order: up next first, then a 💜 badge's head start included, 2026-10-10)
     'line', coalesce((select json_agg(json_build_object('id', q.id, 'name', q.name, 'question', q.question, 'source', q.source,
-      'status', q.status, 'at', q.created_at) order by q.id)
-      from (select * from agi1_live_questions where (status = 'waiting' or (status = 'taken' and id is distinct from s.now_id))
-            order by id limit 50) q), '[]'::json),
+      'status', q.status, 'at', q.created_at, 'holder', q.holder) order by q.status = 'waiting', q.k, q.id)
+      from (select *, coalesce(line_at, created_at) as k from agi1_live_questions
+            where (status = 'waiting' or (status = 'taken' and id is distinct from s.now_id))
+            order by status = 'waiting', coalesce(line_at, created_at), id limit 50) q), '[]'::json),
     'recent', coalesce((select json_agg(json_build_object('id', q.id, 'name', q.name, 'question', q.question, 'status', q.status,
-      'why', q.why) order by q.done_at desc)
+      'why', q.why, 'holder', q.holder) order by q.done_at desc)
       from (select * from agi1_live_questions where status in ('answered', 'skipped') order by done_at desc nulls last limit 10) q),
       '[]'::json));
 end;
@@ -446,7 +501,7 @@ $$;
 
 -- Only the server (the secret key = service_role) may call them. The browser keys may not.
 revoke all on function public.live_on_air(agi1_live_state, integer) from public, anon, authenticated;
-revoke all on function public.live_ask(text, text, text, text, integer, integer, integer, integer, integer) from public, anon, authenticated;
+revoke all on function public.live_ask(text, text, text, text, integer, integer, integer, integer, integer, integer, text, integer) from public, anon, authenticated;
 revoke all on function public.live_lookup(bigint, text) from public, anon, authenticated;
 revoke all on function public.live_start(text) from public, anon, authenticated;
 revoke all on function public.live_beat(bigint, text, text, bigint) from public, anon, authenticated;
@@ -459,7 +514,7 @@ revoke all on function public.live_state_get(integer) from public, anon, authent
 revoke all on function public.live_control(text, text, integer) from public, anon, authenticated;
 revoke all on function public.live_tidy() from public, anon, authenticated;
 grant execute on function public.live_on_air(agi1_live_state, integer) to service_role;
-grant execute on function public.live_ask(text, text, text, text, integer, integer, integer, integer, integer) to service_role;
+grant execute on function public.live_ask(text, text, text, text, integer, integer, integer, integer, integer, integer, text, integer) to service_role;
 grant execute on function public.live_lookup(bigint, text) to service_role;
 grant execute on function public.live_start(text) to service_role;
 grant execute on function public.live_beat(bigint, text, text, bigint) to service_role;

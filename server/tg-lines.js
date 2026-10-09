@@ -90,11 +90,14 @@ export const NOT_READY = EN_TG.NOT_READY;
 // other lines, and never flirty: anyone can be in a group, and nobody's age is checked there. No names: never a person's,
 // so nothing anyone calls themselves ends up in her words. Each one says how to talk to her there (/ask, or a reply).
 // When she's added to a group (posts: whether she'll post her diary and $AGI's market moments there)
-export function groupIntro({ posts = true } = {}) {
+// (games: 2026-10-09, her quizzes there, server/games.js: 'prizes' (with $AGI prizes), 'fun' (just for fun) or false)
+export function groupIntro({ posts = true, games = false } = {}) {
   return [
     "hi everyone 💜 i'm AGI-1, the AI girlfriend of $AGI. in here i keep it friendly and PG-13.",
     "to talk to me, reply to one of my messages or type /ask and your question. a few messages a day each, and we don't keep them.",
     posts ? "now and then i'll post my diary and $AGI's market moments here." : null,
+    games === 'prizes' ? 'and now and then a quiz: one right answer wins a little $AGI, drawn at random.'
+      : games ? 'and now and then a quiz, just for fun.' : null,
     `i'm an AI, and nothing i say is financial advice. the only official $AGI contract is the one on ${SITE}, and nobody legit will ever ask for your seed phrase.`,
   ].filter(Boolean).join('\n\n');
 }

@@ -147,6 +147,36 @@
 >   chest bounce the owner described: it posts by itself in public groups where nobody's age is checked. Supabase Cron
 >   calls the site every minute. **Off until the owner sets it up** (Cron and pg_net switched on in Supabase, then
 >   `supabase/buys.sql`). See "Her buy bot".
+> - **Her quizzes in her Telegram groups** (2026-10-09, the owner: "can i add games on the tg bot like riddles,
+>   questions, if the person in that telegram group answered correctly they will get a small amount of $AGI, they will
+>   reply with their address and get it", then "make this better then continue"; the owner's choices: claims in her
+>   private chat, 250 $AGI a win and 10 wins a day, about 10 quizzes a day, 18+ to claim): a Telegram quiz poll now and
+>   then in her groups (riddles, $AGI and her, staying safe, trivia from her trips: 97 pre-written), open 10 minutes;
+>   when it closes, one right answer is drawn at random and wins; the winner claims it in her private chat with only
+>   their wallet address (never a seed phrase, a signature or a link), and her **prize wallet** (`PRIZE_WALLET_KEY`, the
+>   owner's, a second wallet key on our server: hard rule 4) sends it. Without the prize wallet they're just for fun.
+>   Supabase Cron calls the site every 2 minutes (`supabase/games.sql`). And a seed phrase or a private key sent to her
+>   by mistake is never passed on (her private chat, /ask, her live show's questions). **Off until the owner sets it
+>   up.** See "Her quizzes in her Telegram groups".
+> - **Holder perks on her live show** (2026-10-10, the owner: "you can also add more utiliy to $agi so holders are happy";
+>   the owner's choice: from 10,000 $AGI): a question sent at agi1.app/live with a connected wallet at Crush (10,000+ $AGI
+>   held or burned for messages) or Soulmate (1,000,000+) gets her 💜 badge on its card on stream and a 10-minute head start
+>   in her line (never further), 5 a day per wallet; a Soulmate's gets her shout-out too. A thank-you, never an investment
+>   promise. **Run `supabase/live.sql` again before pushing it.** See "Holder perks on her show".
+> - **AGI-1's 3D character studio** (2026-10-10, the owner: "what if i launched a where they can create a 3d model with
+>   meshy ai api that can move on chat just like vladcat. they can get it by burning $AGI tokens and can launch token with
+>   it"; the owner's choices: "Burn $AGI or USDG", holder discounts, a free one a month for Soulmates, Vercel Pro):
+>   agi1.app/studio, where someone 18+ with a connected wallet describes a character, pays from their own wallet app (USDG
+>   to the owner's wallet, or $AGI burned: never asked of their wallet), and Meshy's API makes it in 3D (painted, given
+>   bones, taught 8 moves); its own page, agi1.app/studio/<id>, shows it in 3D, moving when someone types a move in its
+>   chat, with its picture and 3D model to download (its picture ready for a coin in her bot). **Off until the owner sets it
+>   up** (Vercel Pro, a Meshy key, `supabase/studio.sql`), then **private to the owner's wallet** (`STUDIO_ONLY_FOR`) until
+>   Meshy says its terms allow it (`STUDIO_OPEN`). See "AGI-1's 3D character studio". **And its characters' videos** (the
+>   same day, item 4 of the plan: "they can create a viral content with it using seedance 2.5 api but they gonna pay crypto
+>   like stables instead of $agi if they hold agi they get a discount"; the owner's choice: about $4 in USDG a 5-second
+>   720p video, before holder discounts): on a done character's page, the wallet that made it describes a scene, pays in
+>   USDG from its own wallet app, and an AI video service (Seedance 2.5 on fal.ai) makes a short video of it, played on
+>   its page and downloaded to post. **Off until `FAL_KEY` is set**, private like the studio. See "Its videos".
 > - **Her launch video** (2026-10-03, the owner: "now create me a professional launch video with motion design using only
 >   code about the website and its features … make it really good"): a 79-second film of agi1.app, every frame drawn in
 >   code and its music made in code (`tools/promo/`), wide (1920 × 1080) and tall (1080 × 1920), 60 frames a second, for
@@ -191,7 +221,9 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
 - **In Telegram groups** (2026-10-03, the owner's question): in the owner's own groups only (`TELEGRAM_GROUPS`), she
   answers whoever replies to her, mentions her or types /ask (never flirty, a few a day each), posts her diary and $AGI's
   market moments, says hi when added and welcomes people who join (one welcome every 10 minutes at most), and (2026-10-06)
-  posts each $AGI buy of $50 or more with her buy GIF (her buy bot). Off until it's set up. See "In Telegram groups"
+  posts each $AGI buy of $50 or more with her buy GIF (her buy bot), and (2026-10-09) her quizzes: a right answer can
+  win a little $AGI, claimed in her private chat. Off until it's set up. See "In Telegram groups" and "Her quizzes in her
+  Telegram groups"
 - **Her languages** (2026-09-29, the owner's request): English by default and 15 more (Chinese, Japanese, Korean,
   Vietnamese, Indonesian, Filipino, Thai, Hindi, Spanish, Portuguese, French, German, Russian, Turkish, Arabic), picked in a
   menu next to "AGI-1 ▾"; her replies, her natural voice, the mic and her pre-written lines follow it, and she answers in
@@ -224,8 +256,15 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   on), with pre-written segments (her diary, $AGI 101, dating tips
   for degens, a quiz about her…) and her own music; the owner controls it from a phone. On since 2026-10-07. Since its
   upgrade the same day she also does what viewers ask (jump, dance, sing her song…), changes her outfit and her room, has
-  dance breaks, sings "Feel the AGI", shows her own X posts and videos, and reacts to $AGI's buys. See "Her live show on
-  X" and "Her stream, upgraded"
+  dance breaks, sings "Feel the AGI", shows her own X posts and videos, and reacts to $AGI's buys. Since 2026-10-10 a
+  question sent with a connected wallet at Crush or Soulmate gets her 💜 badge and a head start in her line. See "Her live
+  show on X", "Her stream, upgraded" and "Holder perks on her show"
+- **AGI-1's 3D character studio** (2026-10-10, the owner's idea): agi1.app/studio: describe a character, pay for it from
+  your own wallet app (USDG, or $AGI burned; Crush 20% off, Soulmate 40% off and one free a month), and an AI service makes
+  it in 3D: painted, given bones and taught 8 moves. On its own page it moves when you type in its chat, and its picture
+  and 3D model are yours to download; and (the same day) the wallet that made it can have 5-second videos of it made in
+  any scene, paid in USDG with the same discounts. Off until it's set up, then private. See "AGI-1's 3D character studio"
+  and "Its videos"
 - **CloakMesh** (2026-10-03, the owner's next project): its page at **inference.agi1.app** (agi1.app/cloakmesh): what
   CloakMesh is, a demo of its privacy filter that runs only in the visitor's browser, and a free waitlist. Serious, its own
   look, never about the coin. Live at agi1.app/cloakmesh; inference.agi1.app once its domain is set up. See "CloakMesh
@@ -254,10 +293,17 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    site's GitHub repo. This folder has its own `.git` (the `agi-ecosystem` repo).
 4. **No secrets in front-end code or in git.** Everything the browser downloads is public. API keys live only in
    Vercel environment variables (and `.env.local` for local testing, which git ignores). Vite ships every
-   variable that starts with `VITE_` to the browser, so never give a secret that prefix. **The one wallet key on our server
-   (2026-10-01):** `LAUNCH_GAS_KEY`, the owner's own small gas wallet that pays launch fees back (see "Launch with AGI-1"):
-   a new wallet made only for that, holding only a little ETH (a hack could take at most what's in it), never anyone
-   else's key, and never a wallet that holds $AGI or anything else of value.
+   variable that starts with `VITE_` to the browser, so never give a secret that prefix. **The two wallet keys on our
+   server:** `LAUNCH_GAS_KEY` (2026-10-01), the owner's own small gas wallet that pays launch fees back (see "Launch with
+   AGI-1"): a new wallet made only for that, holding only a little ETH (a hack could take at most what's in it), never
+   anyone else's key, and never a wallet that holds $AGI or anything else of value; and `PRIZE_WALLET_KEY` (2026-10-09),
+   the owner's prize wallet that sends her quizzes' prizes (see "Her quizzes in her Telegram groups"): another new wallet
+   made only for that, holding only the $AGI for a few days of prizes and a little ETH for their network fees (a hack
+   could take at most what's in it), never the gas wallet (the code refuses it: prizes are then off), never anyone
+   else's key. Both are on the secret check's list (`scripts/check-secrets.js`). **The studio** (2026-10-10, see "AGI-1's
+   3D character studio") holds no wallet: `STUDIO_PAY_TO` is the owner's wallet *address* (where USDG goes), and its
+   secrets, `MESHY_API_KEY` and (its characters' videos, the same day) `FAL_KEY`, are on the secret check's list and never
+   in a log (Meshy's and fal's errors are scrubbed of them).
 5. **The browser never writes to the database directly.** All writes (chat counters, wallet names and notes, voice
    counts) go through our own `/api` functions, which check and limit them.
 6. **No automatic posting** to X or anywhere public. "Share on X" only opens a pre-filled post that the visitor sends themselves.
@@ -298,8 +344,15 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    word about where they're going), only when someone types them; and (2026-10-06) her buy alerts there: each $AGI buy of
    $50 or more as clank.trade lists it, with her buy GIF and that buy's own numbers, never a word about where the price is
    going and never another coin (see "Her buy bot"); and (2026-10-07) a pre-written "i'm live on X" post (with
-   agi1.app/live) when her live show starts streaming, once a day at most (see "Her live show on X").
+   agi1.app/live) when her live show starts streaming, once a day at most (see "Her live show on X"); and (2026-10-09) her
+   quizzes there: a pre-written quiz poll about 10 times a day at random times, and her pre-written result under it
+   when it closes, naming the winner by the name Telegram shows (or "our winner"), never anything else about anyone
+   (see "Her quizzes in her Telegram groups").
 7. **Keep costs near $0.** The total budget is $150. Prefer free tiers, and check every new feature against the budget table below.
+   **The studio** (2026-10-10) is the owner's choice to spend more: Meshy Pro (about $20 a month) and Vercel Pro ($20 a
+   month), meant to be paid for by the characters people buy; and its characters' videos (the same day): fal.ai, pay per
+   video (about $2.40 a 5-second video, from a balance the owner tops up), each paid for in USDG by the person who asks
+   for it ($4, less holder discounts: a Soulmate's $2.40 about covers it).
 8. **Not financial advice.** Nothing on the site, and nothing AGI-1 says, promises gains or tells people to buy or sell.
    **One exception, the owner's choice (2026-09-25):** when a Stranger or a Crush runs out of messages for the day, AGI-1's
    pre-written line (`src/chat/limit-lines.js`) suggests buying $AGI for more messages a day, always with "not financial
@@ -323,12 +376,26 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    a friendly crypto fan, never buy, sell, hold, a prediction, "safe", "scam" or a shill: her live prompt says so, and since
    then a safety net in code too (`ADVICE` in `server/live.js`: an answer, a line or a conversation telling people to get
    or let go of a coin, or calling a price, is never aired; a reply under her posts that does is never shown).
+   **Her quiz prizes** (2026-10-09, see "Her quizzes in her Telegram groups"): a small thank-you for playing (250 $AGI,
+   free to play, no purchase), announced with "a prize is a thank-you for playing, not financial advice"; never an
+   investment, never "more $AGI" as a reason to play, and her quizzes never ask anything about prices.
+   **Holder perks on her live show** (2026-10-10, see "Holder perks on her show"): her 💜 badge and a head start in her
+   line for a question sent with a wallet at Crush or Soulmate, and a Soulmate's shout-out, "a thank-you for being here,
+   not an investment"; never paying holders, buybacks, "number go up" or "buy more" (a Stranger hears where her badge
+   starts, never to buy).
+   **The studio's holder discounts** (2026-10-10, see "AGI-1's 3D character studio"): Crush 20% off a character, Soulmate
+   40% off and one free a month, "a thank-you for holding, not an investment"; a Stranger's price says where the discounts
+   start, never to buy. Burning $AGI for a character pays for it (gone for good, no refunds), never an investment. Its
+   characters' videos (2026-10-10, see "Its videos") get the same discounts (Crush 20%, Soulmate 40%; no free ones), paid
+   only in USDG, never $AGI.
 9. **Wallets: an address and a free signature, nothing else.** The site never asks a wallet for a transaction, a token
    approval, a network change or any signature other than the plain-text sign-in message (it may *read* which network the
    wallet is on). `tests/wallet.test.js` fails the build if the code in `src/` ever does. Levels never come with "buy more" wording,
-   except the out-of-messages line in rule 8. The one transaction the site ever suggests (2026-09-30) is a burn the visitor
-   sends themselves, from their own wallet app, to the burn address `0x…dEaD` (see "Burn $AGI for more messages"): the page
-   never asks a wallet for it, and the test also refuses payment links (`ethereum:`, MetaMask's send links).
+   except the out-of-messages line in rule 8. The transactions the site ever suggests are ones the visitor sends themselves,
+   from their own wallet app: a burn to the burn address `0x…dEaD` (2026-09-30, see "Burn $AGI for more messages"; since
+   2026-10-10 also for a 3D character) and (2026-10-10) USDG for a character or one of its videos, to the owner's own
+   wallet (`STUDIO_PAY_TO`, see "AGI-1's 3D character studio" and "Its videos"). The page never asks a wallet for them, our server only reads them on the chain, and
+   the test also refuses payment links (`ethereum:`, MetaMask's send links).
    **One exception, the owner's (2026-10-01, "Launch with AGI-1"):** on the launch page only (agi1.app/launch/<id>), and only
    when the person presses its buttons, `src/launch/send.js` may ask their wallet to switch to Robinhood Chain and to send
    ONE transaction: clank.trade's own factory (`0x798d…ccf2`), `launchToken(…)`, with no ETH, built by our server and tried
@@ -357,6 +424,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | Share cards | Drawn on a `<canvas>` in the browser; preview pictures are plain files | Free: no image server |
 | Telegram bot | Telegram's Bot API (free), from our server only: `/api/telegram` (its webhook) and `/api/feed` (8 cron runs a day) | She texts first (2026-09-29): opt-in by design (a bot can only text people who pressed Start), no app to build, no cost |
 | Her buy bot's clock (2026-10-06) | **Supabase Cron** (pg_cron and pg_net, in the site's Supabase project): every minute, a GET to `/api/feed?buys` with a key the database made itself | Vercel's Hobby plan runs a cron job once a day at most; Supabase Cron is in its free plan (no new service), and nobody copies a secret |
+| Her quizzes (2026-10-09) | **Telegram quiz polls** (the Bot API's `sendPoll`, open 10 minutes; Telegram tells our webhook each answer and when it closes), drawn and kept in the site's Supabase, clocked by **Supabase Cron** every 2 minutes (`/api/feed?games`, its own key) | Free; a quiz poll shows its countdown and the right answer by itself; the same clock as her buy bot |
+| Quiz prizes (2026-10-09) | The owner's own **prize wallet** (`PRIZE_WALLET_KEY`), from our server: $AGI's own `transfer`, recorded before it's sent and sent once (`server/hot-wallet.js`, shared with the launch payback) | The owner's choices ("Private chat with her bot", "250 $AGI, 10 wins a day"); a wallet only for prizes, holding only a few days' worth |
 | Coin launches | **clank.trade's own factory contract** (`launchToken`, from its developer docs), sent by the person's own wallet from the launch page (2026-10-01) | Non-custodial: their wallet is the coin's creator and nothing of theirs is on our server; launching is free; no new service |
 | Launched coins' pictures | **Pinata** (free plan: 500 files, 1 GB), from our server only (`PINATA_JWT`): each coin's picture goes on IPFS once, as it's got ready; a coin never launched has its picture deleted again | A clank.trade coin's picture is an `ipfs://` address; clank.trade's own pictures are on Pinata too; free |
 | The risk check's coin pictures (2026-10-05) | **Public IPFS gateways** (Filebase's, Pinata's public one, ipfs.io; ClankBot's host for its 13 coins), made small on our server with **sharp** (an npm package) | clank.trade's own gateway only answers its own pages since October 2026; IPFS is public; free and keyless; a 96 px WebP is a few KB |
@@ -364,6 +433,11 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | Her live show (2026-10-02) | **The owner's own rented server** (Hetzner Cloud: a CX23 since 2026-10-06, CX33 once it's back in stock) running **Docker** (Playwright's Chromium, Xvfb, ffmpeg), streaming to **X Live Studio** by RTMP; the site keeps her line (`/api/live`, Supabase) | Vercel can't run a browser and ffmpeg for an hour; Live Studio takes a standard encoder's stream; the cheapest server that draws her smoothly |
 | Her voice on stream | **Google Cloud's Vertex AI** (Gemini 3.8 Flash-Lite TTS, Despina), a service account on the server | The site's own voice (the owner's choice), with Google Cloud's higher limits instead of the site's 100 a day |
 | Her music on stream | **Her own songs, made in code** (`tools/live/music.js`; since 2026-10-07 also three dance songs), and **her song "Feel the AGI"** (the owner's own, made with Suno: `tools/live/songs/`) | The owner: "can you just generate music yourself?": no service, no licence, nobody else's music; her song: the owner's request ("can sing her songs like this one") |
+| 3D characters (2026-10-10) | **Meshy's API** (the owner's account, Pro): text to 3D, painted, rigged and taught moves from its animation library, from our server only (`MESHY_API_KEY`), one step at a time, moved along by its page and **Supabase Cron** every minute (`/api/feed?studio`) | The owner's pick ("meshy ai api"); its rigging and library of moves make a character that moves without an animator; 59 credits a character |
+| Characters' files (2026-10-10) | **Supabase Storage** (a private bucket in the site's project), served from our own address; made small with **gltf-transform** and **sharp** | Meshy keeps files 3 days; no new service; our own address keeps the CSP as it is |
+| Paying for a character (2026-10-10) | **USDG** (Paxos' dollar on Robinhood Chain) to the owner's wallet, or **$AGI burned**, sent from the person's own wallet app and read on the chain (like burns for messages) | The owner's choice ("Burn $AGI or USDG"); hard rule 9: nothing asked of a wallet |
+| Hosting, once the studio sells (2026-10-10) | **Vercel Pro** ($20 a month), the owner's choice, switched on by the owner | Selling characters is commercial use, which Hobby doesn't allow |
+| Characters' videos (2026-10-10) | **Seedance 2.5's reference-to-video on fal.ai** (fal's queue API, from our server only: `FAL_KEY`), from the character's own picture and a scene: 5 s, 720p, H.264; kept in the same private bucket and **played from our own address in parts** (HTTP Range → 206, at most 4 MB a part) | The owner's pick ("seedance 2.5 api"); fal sells it pay per video with no monthly plan; our own address keeps the CSP as it is (no other site's media) |
 | Her X posts on stream (2026-10-07) | **X's API** (pay per use, read-only), with an app's Bearer Token in the server's live.env | The owner: "react to her own X posts/videos and replies"; read-only, so nothing posts; pay per use, capped per show (`LIVE_X_READS`) |
 
 ## Project structure
@@ -373,15 +447,17 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `index.html` | The page: top bar, the front (2026-09-28), hero, every section, and the footer (the safety note). Vite starts here |
 | `diary.html` | AGI-1's diary page (`/diary`, Phase 5): top bar, the entries, a short safety paragraph. Its own entry: `src/diary.js` |
 | `launch.html` | "Launch with AGI-1" (2026-10-01): the private launch page (`/launch/<id>`, never in search results): the coin, 18+, the three steps (your wallet, Robinhood Chain, Launch), the coin once it's live, "Before you launch". Its own entry: `src/launch/page.js` |
-| `live.html` | Her live show's page (2026-10-02, agi1.app/live): whether she's live on X (never when her next show is, since 2026-10-07: she goes live at random times), asking her a question (18+, the human check), where your question is and her answer, her rules; the owner's controls with the owner's link (since 2026-10-07 with a box for a question from X's chat). Its own entry: `src/live/page.js` |
+| `live.html` | Her live show's page (2026-10-02, agi1.app/live): whether she's live on X (never when her next show is, since 2026-10-07: she goes live at random times), asking her a question (18+, the human check; since 2026-10-10 her holder perks: a wallet connected for her 💜 badge), where your question is and her answer, her rules; the owner's controls with the owner's link (since 2026-10-07 with a box for a question from X's chat). Its own entry: `src/live/page.js` |
 | `cloakmesh.html` | CloakMesh's page (2026-10-03, what inference.agi1.app shows; also agi1.app/cloakmesh): the top, how it works, the demo ("See what leaves your device"), who sees what, the five checks, the difference, speed, what Phase 1 doesn't do yet, questions, the waitlist, and a leave box (opened with someone's leave link). Its own look and theme (`/cloakmesh-theme.js`, not `/theme.js`: no Pop mode). Its own entry: `src/cloakmesh/page.js` |
+| `studio.html` | AGI-1's 3D character studio (2026-10-10, agi1.app/studio, and every character's page, agi1.app/studio/<id>: the same page): the studio (its state, 18+, your wallet, describe it, pay for it), your characters, the gallery, "Before you make one"; a character's page (its steps while it's made; done: its 3D stage, move buttons, chat, downloads, Share on X, a coin with its face; made again when it couldn't be; and its videos: each its player, Download, Share on X; making one: its scene, shape and sound, its price in USDG, paying, while it's made, made again). Its own entry: `src/studio/page.js` |
 | `src/cloakmesh/` | CloakMesh's page (2026-10-03): `page.js` (its light and dark theme, the demo, the five checks lighting up, the waitlist with `/api/cloakmesh` and the human check, leaving with a leave link), `demo.js` (a small version of CloakMesh's privacy filter, only in the visitor's browser: what it finds, its keyed tokens, putting them back, the demo's made-up answer), `words.js` (everything it says that isn't in the page), `email.js` (what counts as an email address: one rule for the page and our server) |
-| `src/live/` | Her live show's page (2026-10-02): `page.js` (her status every 15 s, asking, following your question, the owner's panel; since 2026-10-07 its box for a question from X's chat), `words.js` (everything it says, and `/api/live`'s answers in plain words; `relayText()` for the owner's box) |
-| `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28); at agi1.app/talk (2026-10-02) it starts the page in full-screen talk (`is-talk`, its title and colors, no loader), and at agi1.app/talk?pip=1 inside a frame marks it as her pop-out window's page (`is-pip`) |
+| `src/live/` | Her live show's page (2026-10-02): `page.js` (her status every 15 s, asking, following your question, the owner's panel; since 2026-10-07 its box for a question from X's chat; since 2026-10-10 connecting a wallet for her 💜 badge, the site's own sign-in and session), `words.js` (everything it says, and `/api/live`'s answers in plain words; `relayText()` for the owner's box; since 2026-10-10 `perkText()`, `badgeNote()`, `BADGE`) |
+| `src/studio/` | AGI-1's 3D character studio (2026-10-10): `page.js` (the studio and a character's page: the wallet with the site's sign-in, a quote with the human check, paying, "Check my payment", the gallery; its steps asked every 5 s; its moves and chat; made again; since the same day its videos: playing them, making one, paying, looking every 5 s while it's made, a shared link to one (`#v-<id>`)), `viewer.js` (a character in 3D with three.js, loaded only on its page: its clips by move (`clipsFor()`), in place (`inPlace()`), framed for every pose (`movesBox()`, `lookTimes()`, `framing()`), its idle and moves), `words.js` (everything the pages say that isn't in studio.html, and our server's answers in plain words), `rules.js` (what the page and our server share: ids, words' lengths, styles, its 8 moves with Meshy's library ids and clip names, the words for them (`moveIn()`), prices and discounts, the steps, its files' addresses; its videos': their shapes (`SHAPES`), a scene's length, their 5 seconds, their addresses) |
+| `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28); at agi1.app/talk (2026-10-02) it starts the page in full-screen talk (`is-talk`, its title and colors, no loader), and at agi1.app/talk?pip=1 inside a frame marks it as her pop-out window's page (`is-pip`); since 2026-10-10 the studio's page gets the page's own bar color like the diary (`/theme.js?v=8` there; the other pages keep `v=7`: the change only matters on that page) |
 | `src/main.js` | Browser code entry point: styles, theme, the front, prices, sections, chat, then the 3D stage (loaded separately, after the front's entrance; at /talk at once, and the front only when you leave full-screen talk) |
 | `src/landing/landing.js` | The front (2026-09-28): the loader, the entrance, the focus lines, AGI-1 in WebGL, the orbit, her bubble, the ribbons, the manifesto, the cursor and hearts (see "The front") |
 | `src/landing/lines.js` | What AGI-1 says in the front's speech bubble, and when she's clicked (PG-13, no pet names, no money talk) |
-| `src/styles/` | `tokens.css` (colors for both themes, chart colors, fonts), `base.css` (reset, buttons), `layout.css` (top bar), `footer.css` (safety note + bottom bar), `hero.css` (hero, ticker, figure), `sections.css` (section headings, stat tiles), `evals.css` (Figure 2), `modelcard.css` (Model card), `playground.css` (Playground), `relationship.css` (levels panel, connect screen, level-up), `notify.css` (the notification card, 2026-09-25), `checker.css` (ClankChecker, 2026-09-26), `pop.css` (Pop mode, 2026-09-27: the whole second look, every rule under `[data-skin="pop"]`), `landing.css` (the front, 2026-09-28: every rule names an `lp-` class), `launch.css` (the launch page, 2026-10-01: every rule names an `lch-` class), `fullscreen.css` (full-screen talk, 2026-10-02: every rule names `.is-talk`, except the Playground's new buttons; and her pop-out window: the page's card, `.is-popped`, and her window's own layout, `.is-pip`), `live.css` (her live show's page, 2026-10-02: every rule names an `lv-` class), `cloakmesh.css` (CloakMesh's page, 2026-10-03: its own colors, light and dark; every rule names a `cm-` class or the page itself) |
+| `src/styles/` | `tokens.css` (colors for both themes, chart colors, fonts), `base.css` (reset, buttons), `layout.css` (top bar), `footer.css` (safety note + bottom bar), `hero.css` (hero, ticker, figure), `sections.css` (section headings, stat tiles), `evals.css` (Figure 2), `modelcard.css` (Model card), `playground.css` (Playground), `relationship.css` (levels panel, connect screen, level-up), `notify.css` (the notification card, 2026-09-25), `checker.css` (ClankChecker, 2026-09-26), `pop.css` (Pop mode, 2026-09-27: the whole second look, every rule under `[data-skin="pop"]`), `landing.css` (the front, 2026-09-28: every rule names an `lp-` class), `launch.css` (the launch page, 2026-10-01: every rule names an `lch-` class), `fullscreen.css` (full-screen talk, 2026-10-02: every rule names `.is-talk`, except the Playground's new buttons; and her pop-out window: the page's card, `.is-popped`, and her window's own layout, `.is-pip`), `live.css` (her live show's page, 2026-10-02: every rule names an `lv-` class), `cloakmesh.css` (CloakMesh's page, 2026-10-03: its own colors, light and dark; every rule names a `cm-` class or the page itself), `studio.css` (AGI-1's 3D character studio, 2026-10-10: every rule names an `st-` class) |
 | `src/theme.js` | The light/dark toggle and (2026-09-27) the Pop mode button; remembers both choices; sends `agi:theme` and `agi:skin`; the phone's browser-bar color (`barColor()`); since 2026-10-02 follows a switch made in another tab or on the page behind her pop-out window (the `storage` event) |
 | `src/menu.js` | The phone menu (every page with the top bar): on screens up to 960 px (in Pop mode up to 1040 px; 920 px before the Telegram button (2026-10-05), 860 px before the Pop mode button, 760 px before ClankChecker's link) the top bar's links are hidden, and the menu button shows them as a drop-down (with the Diary, Live, the Safety note and, under 380 px, AGI on X, AGI on Telegram and Pop mode). Where it starts is decided by the CSS alone. Closes on a link, Escape, a tap outside, or when the links fit again. Also Pop mode's top-bar band (`is-stuck`, past the hero) |
 | `src/prices/` | `parse.js` (read DexScreener's answer, number formats), `prices.js` (fetch every 30 s, sends `agi:prices`), `ticker.js` (draws the hero ticker) |
@@ -429,8 +505,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `public/cards/` | The link-preview pictures (one per level, the diary, and `home.jpg` for the home page; the champions' cards left with the Arena), made with `tools/cards/` |
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards"); and (2026-10-03) `cloakmesh-card.html`, CloakMesh's link preview (`public/cards/cloakmesh.png`: a 1200 × 630 screenshot of it in Chromium, then 256 colors; Claude redoes it when the page's top changes) |
-| `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me; since 2026-09-30 "Check my burn" and, at `GET ?burns`, the burn monitor's numbers), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only; since 2026-10-01 also tidying up launch drafts and the pictures of coins never launched), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first; since 2026-10-06 also, at `?buys`, her buy bot's check, every minute from Supabase Cron), and since 2026-10-01 `launch.js` (the launch page's server: a draft and its picture, getting a launch ready, reading it back, its fee paid back), and since 2026-10-02 `live.js` (her live show: a visitor's question, its place and her answer; her stream's calls with `LIVE_SECRET`; the owner's controls), and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: open or not, joining, leaving). **That's 12: Vercel's Hobby plan allows 12 functions per deployment** (every file here is one), so a new feature must share one of these (or the project moves to Pro). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name; since 2026-10-06 also clank.trade's API itself, `clankApi()`, moved from `checker.js` so the buy bot loads light), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; where each coin's picture is; since 2026-10-05 every amount in dollars at the coin's own pair's price, ETH or SPCX), `coin-pictures.js` (2026-10-05: the coins' pictures, from public IPFS gateways or ClankBot's host, checked and made small with sharp; only `api/checker.js` loads it), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap; since 2026-10-05 also /mc's numbers in her Telegram groups, `agiNumbers()`: market cap, 24h change, liquidity), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it), and since 2026-10-03 `tg-api.js` (Telegram's API itself, her token, the daily chat codes: moved out of `telegram.js`) and `tg-groups.js` (her Telegram groups: which groups, leaving the others, her intro and welcomes, her answers there and their limits, her posts there); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and what's in it, what its creator holds; since 2026-10-05 the pairs' addresses, `ETH_PAIR` and `SPCX`, which `launch.js` shares; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-07 `live-acts.js` (what viewers can ask her to do on stream: the list, its rests, her prompt's part, her answer's request checked; shared with her stream's runner); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls); and since 2026-10-06 `buys.js` (her buy bot: $AGI's newest trades from clank.trade, the check (each buy once, the first look silent), her GIF and caption in her groups) and `media/agi1-buy.mp4` (her buy GIF, 138 KB: Vercel bundles it with `/api/feed` only; made by `tools/buybot/`) |
+| `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me; since 2026-09-30 "Check my burn" and, at `GET ?burns`, the burn monitor's numbers), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only; since 2026-10-01 also tidying up launch drafts and the pictures of coins never launched), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first; since 2026-10-06 also, at `?buys`, her buy bot's check, every minute from Supabase Cron; since 2026-10-09, at `?games`, her quizzes' clock, every 2 minutes), and since 2026-10-01 `launch.js` (the launch page's server: a draft and its picture, getting a launch ready, reading it back, its fee paid back), and since 2026-10-02 `live.js` (her live show: a visitor's question, its place and her answer; her stream's calls with `LIVE_SECRET`; the owner's controls), and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: open or not, joining, leaving); since 2026-10-10 AGI-1's 3D character studio shares two of them: `launch.js` (`?studio=`, `?studio-file=`, `?studio-list`, `?studio-info` and the `studio-…` actions: a character can be a coin's face) and `feed.js` (`?studio`, its clock every minute); since the same day its characters' videos too, in the same two: `launch.js` (`?studio-videos=`, `?studio-video=` (played in parts), `?studio-video-dl=` and the `studio-video-…` actions) and `feed.js` (`?studio` moves them along after the characters). **That's 12: Vercel's Hobby plan allows 12 functions per deployment** (every file here is one), so a new feature must share one of these (or the project moves to Pro). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name; since 2026-10-06 also clank.trade's API itself, `clankApi()`, moved from `checker.js` so the buy bot loads light), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; where each coin's picture is; since 2026-10-05 every amount in dollars at the coin's own pair's price, ETH or SPCX), `coin-pictures.js` (2026-10-05: the coins' pictures, from public IPFS gateways or ClankBot's host, checked and made small with sharp; only `api/checker.js` loads it), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap; since 2026-10-05 also /mc's numbers in her Telegram groups, `agiNumbers()`: market cap, 24h change, liquidity), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it), and since 2026-10-03 `tg-api.js` (Telegram's API itself, her token, the daily chat codes: moved out of `telegram.js`) and `tg-groups.js` (her Telegram groups: which groups, leaving the others, her intro and welcomes, her answers there and their limits, her posts there); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and what's in it, what its creator holds; since 2026-10-05 the pairs' addresses, `ETH_PAIR` and `SPCX`, which `launch.js` shares; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-07 `live-acts.js` (what viewers can ask her to do on stream: the list, its rests, her prompt's part, her answer's request checked; shared with her stream's runner); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls); and since 2026-10-06 `buys.js` (her buy bot: $AGI's newest trades from clank.trade, the check (each buy once, the first look silent), her GIF and caption in her groups) and `media/agi1-buy.mp4` (her buy GIF, 138 KB: Vercel bundles it with `/api/feed` only; made by `tools/buybot/`); and since 2026-10-09 her quizzes: `games.js` (the clock's tick, a quiz posted, an answer kept, a quiz settled and her result; light to load), `game-questions.js` (her 97 questions), `game-lines.js` (what she says about them, in English), `game-prizes.js` (claiming in her private chat: the address checked, the prize wallet's plan, the transfer sent once) and `hot-wallet.js` (the chain's node and the never-twice send, moved out of `launch.js`: shared by the gas wallet and the prize wallet), and `secrets.js` (a seed phrase or a private key sent to her by mistake: caught before it goes anywhere); and since 2026-10-10 AGI-1's 3D character studio: `studio.js` (its quotes, payments, the making one step at a time, its clock), `studio-api.js` (its GETs and POSTs inside `/api/launch`), `studio-words.js` (a character's words checked, and what Meshy gets), `meshy.js` (Meshy's API: each step's request, its tasks, its errors without the key), `studio-files.js` (its files from Meshy, made small with gltf-transform and sharp, kept in Supabase Storage; since its videos also a video from fal's media addresses, and a part of a file read with Range: `byteRange()`, `getRange()`) and `studio-chain.js` (a payment read on Robinhood Chain: USDG or a burn); and (the same day) its characters' videos: `studio-video.js` (a video's quote, its USDG payment, the making one step at a time, its clock, its file played in parts or downloaded) and `fal.js` (fal.ai's queue: a request, its state and its result, its errors without the key) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -440,11 +516,13 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/voice-lines.sql` | Her recorded lines (2026-09-26). Run once in the same Supabase project (any time): the `voice_lines` table + `voice_line_get/put()`, where the server keeps her fixed lines once Google has made them |
 | `supabase/telegram.sql` | She texts first (2026-09-29). Run once in the same Supabase project (any time): four new tables (`agi1_tg_friends`, `agi1_feed`, `agi1_feed_state`, `agi1_tg_usage`) and 12 functions, only added (nothing the original site uses changes). **Since 2026-10-03 (her Telegram groups) five tables (`agi1_tg_group_usage`) and 14 functions: run it once more** (it keeps everything saved) |
 | `supabase/burns.sql` | Burn $AGI for more messages (2026-09-30). Run once in the same Supabase project (any time): five new tables (`agi1_burn_key`, `agi1_burn_txs`, `agi1_burn_wallets`, `agi1_burn_days`, `agi1_burn_total`) and 7 functions, only added (nothing the original site uses changes). Until it's run, nobody sees anything about burning |
-| `supabase/live.sql` | Her live show (2026-10-02). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_live_questions`, `agi1_live_state`) and 13 functions, only added (nothing the original site uses changes). Until it's run (and `LIVE_SECRET` is set), agi1.app/live says her show is coming soon. **Since 2026-10-07 (questions from X's chat, her "i'm live" post) 13 functions: run it once more** (it keeps everything saved; it ends with `live_functions_found = 13`). **Since 2026-10-09 (questions of any length, 1 to 200 characters) run it once more**, before pushing |
+| `supabase/live.sql` | Her live show (2026-10-02). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_live_questions`, `agi1_live_state`) and 13 functions, only added (nothing the original site uses changes). Until it's run (and `LIVE_SECRET` is set), agi1.app/live says her show is coming soon. **Since 2026-10-07 (questions from X's chat, her "i'm live" post) 13 functions: run it once more** (it keeps everything saved; it ends with `live_functions_found = 13`). **Since 2026-10-09 (questions of any length, 1 to 200 characters) run it once more**, before pushing. **Since 2026-10-10 (holder perks: her 💜 badge, its head start in her line and a wallet's 5 a day) run it once more**, before pushing (it still ends with `live_functions_found = 13`) |
 | `supabase/launch.sql` | "Launch with AGI-1" (2026-10-01). Run once in the same Supabase project (any time; running it again is safe): four new tables (`agi1_launch_drafts`, `agi1_launch_chats`, `agi1_launch_wallets`, `agi1_launch_days`) and 12 functions, only added (nothing the original site uses changes). Until it's run (and `PINATA_JWT` is set), her `/launch` says launching isn't open yet |
 | `supabase/buys.sql` | Her buy bot (2026-10-06). Run once in the same Supabase project, after switching on Integrations → Cron and Database → Extensions → pg_net (running it again is safe): two new tables (`agi1_buys`, `agi1_buy_state`), 2 functions and two Supabase Cron jobs (the check every minute, a daily tidy-up of their run history), only added (nothing the original site uses changes). It ends with `buys_ready = 1` and `buys_scheduled = 1`. Until it's run, no buy is posted |
+| `supabase/games.sql` | Her quizzes (2026-10-09). Run once in the same Supabase project, after Integrations → Cron and Database → Extensions → pg_net are switched on (her buy bot's already did; running it again is safe): six new tables (`agi1_game_state`, `agi1_game_groups`, `agi1_game_rounds`, `agi1_game_answers`, `agi1_game_prizes`, `agi1_game_days`), 14 functions and a Supabase Cron job (her quizzes' clock every 2 minutes; it also sets the daily tidy of the run history, shared with her buy bot), only added. It ends with `games_ready = 1` and `games_scheduled = 1`. Until it's run, no quiz is posted |
+| `supabase/studio.sql` | AGI-1's 3D character studio (2026-10-10). Run once in the same Supabase project, after `burns.sql` (it shares its ledger of burns) and with Cron and pg_net on (running it again is safe): five new tables (`agi1_studio_state`, `agi1_studio_orders`, `agi1_studio_months`, `agi1_studio_free`, `agi1_studio_txs`), 20 functions, a private Storage bucket (`agi1-characters`) and a Supabase Cron job (its clock every minute), only added. It ends with `studio_ready = 1`, `studio_scheduled = 1` and `studio_storage = 1`. Until it's run (and `MESHY_API_KEY` is set), agi1.app/studio says it opens soon. **Since its characters' videos (the same day): six tables (`agi1_studio_videos`), 32 functions (12 for videos), the bucket 40 MB a file and `video/mp4` too: run it again if it was run before them** (it keeps everything; still `studio_ready = 1`) |
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, since 2026-10-08 her live show's hands (an arm reaching a point, a hand turned and curled, her round elbow), "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras; since 2026-10-09 questions of any length, any name but crude or posing ones, a Telegram question with the person's Telegram name, other coins and famous people in her live rules, the `ADVICE` safety net, her memory of the group on stream, her chart's trades), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page; since 2026-10-08 her poses (never a paddle, never on her chest), her hands (always her palm, never turned or curled past their limits, what she holds in front of her palm with her fingers or thumb over it) and her hands on their way, frame by frame on her springs; since 2026-10-09 requests that never wait, all of her song's words, reading the question out loud, her song's music video, her live $AGI chart and where she reads messages), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end; since 2026-10-08 cutting the paintings out, what the first ones needed, the stand-ins, the conical hat, her glasses' clear lenses, her headset on her ears and her headphones on her head), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, since 2026-10-08 her live show's hands (an arm reaching a point, a hand turned and curled, her round elbow), "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras; since 2026-10-09 questions of any length, any name but crude or posing ones, a Telegram question with the person's Telegram name, other coins and famous people in her live rules, the `ADVICE` safety net, her memory of the group on stream, her chart's trades; since 2026-10-10 her holder perks: a wallet's level with a question, her 💜 badge and its 5 a day, the head start in her line, old and new live.sql, the page's wallet), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page; since 2026-10-08 her poses (never a paddle, never on her chest), her hands (always her palm, never turned or curled past their limits, what she holds in front of her palm with her fingers or thumb over it) and her hands on their way, frame by frame on her springs; since 2026-10-09 requests that never wait, all of her song's words, reading the question out loud, her song's music video, her live $AGI chart and where she reads messages), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end; since 2026-10-08 cutting the paintings out, what the first ones needed, the stand-ins, the conical hat, her glasses' clear lenses, her headset on her ears and her headphones on her head), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note), `games.test.js` (2026-10-09: her quizzes: her questions' rules, a quiz as Telegram takes it, picking and shuffling, a winner's name, the settings, `/api/feed?games` and its key, a tick (just for fun without prizes), her bot hearing answers, answers, closing and the draw, her result, claiming in her private chat (18+, the address's checks, the transfer itself, every way sending can go, never twice), a secret sent to her by mistake, her groups' /help, intro and /claim, her quiz lines' rules, loading light, games.sql's promises, the safety note), `studio.test.js` (2026-10-10: AGI-1's 3D character studio: its rules, a character's words, Meshy's requests, its files made small, Storage, payments on the chain, the settings and codes, quotes, paying, "Check my payment", the making and every way it can go, the clock, `/api/launch` and `/api/feed?studio`; its page's 3D view (clips, in place, framed), words and promises, the safety note), `videos.test.js` (2026-10-10: its characters' videos: the rules and settings, a scene's checks and the video service's words, fal's queue (requests, states, results, errors, the key never in one), its files (only fal's addresses, MP4s, Storage, signed addresses, a part read with Range), what anyone sees, quotes, USDG payments, made again, the making and every way it can go, the clock, every GET (played in parts: 206, 416, 302) and POST, the page and its CSP, 12 functions). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`), `art-cut.mjs` (Claude makes them ready: one of each, cut out of its green, made small) and `art-picks.json` (which one of each), into `page/art/` (her places, rooms, rides, the people she meets and what she wears, WebP, in git), which `page/paint.js` finds when her set is built; and since 2026-10-09 `page/chart.js` ($AGI's live trading chart on her TV, drawn in code), her song's music video (`media.js`: found in her videos folder, made ready once) and all of her song's words (`songs/feel-the-agi.json`). See "Her live show on X", "Her stream, upgraded", "Her trips", "Her painted set" and "Her show, 2026-10-09" |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
@@ -459,8 +537,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `tools/agi1-2d/fix-hair.py` | 2026-10-03: finishes the hair behind her arms on her Live2D texture, where her arms move away from it (soft hair tips instead of a straight cut below her elbows, her hair's color over a pink band and a light line beside her shoulders, white specks), on both WebP textures; run once after each new export, after `fix-shirt.py` (see "Updating her model") |
 | `tools/memory/` | Phase 6, offline: `build-memory.mjs` turns the Telegram export into `server/tg-memory-data.js`; `lore.json` (hand-written memory cards: eras, running jokes, big moments; edit freely); `forget.json` (people who asked to be left out). See "AGI-1's memory of the Telegram group" |
 | `telegram memories/` | The owner's Telegram export (`result.json`, 31 MB, thousands of people's messages). **Never in git** (`.gitignore`); only `tools/memory/` reads it |
-| `vite.config.js` | Five pages (`index.html`, `diary.html`, since 2026-10-01 `launch.html`, since 2026-10-02 `live.html` and since 2026-10-03 `cloakmesh.html`); raises Vite's file-size warning: three.js is large on purpose and loads separately; since 2026-10-02 serves /talk as the home page in `npm run dev` and Vite's preview, like Vercel |
-| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk), security headers (CSP; since 2026-10-02 our own pages may frame each other, for her pop-out window, never another site; and `Permissions-Policy` lets our own pages share a window, `display-capture=(self)`, for "Show her"), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed`; since 2026-10-03 a redirect: inference.agi1.app/ → /cloakmesh (a redirect, not a rewrite: Vercel serves the home page's own file at "/" before any rewrite runs, so a rewrite there would never happen) |
+| `vite.config.js` | Six pages (`index.html`, `diary.html`, since 2026-10-01 `launch.html`, since 2026-10-02 `live.html`, since 2026-10-03 `cloakmesh.html` and since 2026-10-10 `studio.html`); raises Vite's file-size warning: three.js is large on purpose and loads separately; since 2026-10-02 serves /talk as the home page in `npm run dev` and Vite's preview, like Vercel, and since 2026-10-10 /studio/<id> as the studio's page |
+| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk; 2026-10-10: `/studio/:id` serves the studio's page, its destination `/studio` for the same reason), security headers (CSP; since 2026-10-02 our own pages may frame each other, for her pop-out window, never another site; and `Permissions-Policy` lets our own pages share a window, `display-capture=(self)`, for "Show her"), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed`; since 2026-10-03 a redirect: inference.agi1.app/ → /cloakmesh (a redirect, not a rewrite: Vercel serves the home page's own file at "/" before any rewrite runs, so a rewrite there would never happen) |
 
 ## Commands
 
@@ -1609,7 +1687,8 @@ credit with an 𝕏 link, removed with everything about ClankCap.) The scans' da
   coins (made with ClankBot) name a picture on **ClankBot's own host** (`https://clankbot.trade/images/…`): only that host
   and only its pictures; the 3 coins naming any other site, and the 21 with no picture, keep their letter. Never
   clank.trade's own gateway, never pretending to be clank.trade (its gateway is its own to keep). Only `api/checker.js`
-  loads this file: sharp (about 19 MB) is in no other function.
+  loads this file. (sharp, about 19 MB, was in no other function until the studio, 2026-10-10: `/api/launch` and
+  `/api/feed` bundle it too, for a character's files, loaded only when they're saved or served.)
 - **The Clank protocol itself, on Robinhood Chain** (2026-09-29, from its docs: see "The Clank protocol";
   `server/clank-chain.js`): every scan also reads the coin's record at the protocol's factory and its curve, through the same
   free public node as the wallet levels (`ROBINHOOD_RPC_URL` can point elsewhere). Read-only `eth_call`s, two requests of
@@ -1823,7 +1902,8 @@ service worker, a permission prompt, and only arrives while the browser runs.
   Since 2026-10-01 also **/launch** (launching a coin with her, see "Launch with AGI-1"), only once launching is open to
   everyone (set up, and not private): in her commands menu (`commandsFor()`: the next `/api/feed` run adds it) and in her
   /help (one more line, in her 16 languages: `tg.helpLaunch`). While it's private (`LAUNCH_ONLY_FOR`), only the owner
-  sees that /help line.
+  sees that /help line. Since 2026-10-09 also **/claim** (a prize won in her quizzes, see "Her quizzes in her Telegram
+  groups"), in her commands menu while her quizzes and their prizes are on.
 - **In their language** (2026-09-29): her replies (and her own fixed replies: the welcome, the 18+ buttons, the time, /help,
   /stop, her notes) follow their Telegram app's language when it's one of her 16, English otherwise; she also follows what
   they write in. Her texts first stay English for now (see "Her languages").
@@ -2199,6 +2279,142 @@ running it again (the same key, the same two jobs), the original site's tables u
 stand-ins for pg_cron and pg_net: the two jobs, the call each minute (our address, its key, 25 s), the tidy-up). Vercel's
 own file tracer bundles her GIF with `/api/feed` only. **Not tried live:** Supabase Cron, pg_net and Telegram (Claude's
 workspace can't reach them): the owner's setup is the first real check.
+
+### Her quizzes in her Telegram groups (2026-10-09)
+
+**The owner's idea:** "can i add games on the tg bot like riddles, questions, if the person in that telegram group answered
+correctly they will get a small amount of $AGI, they will reply with their address and get it / make this better then
+continue". Claude's better version, and the owner's choices (asked one by one): claims **in her private chat** ("Private
+chat with her bot", over replying with an address in the group, where anyone could copy or fake it), **250 $AGI a win and
+10 wins a day** for the whole site, **about 10 quizzes a day** in each group, and **18+ to claim** (her private chat's own
+check). **Off until the owner sets it up** (below).
+
+**What people see in her groups** (the ones in `TELEGRAM_GROUPS`):
+- **A quiz, now and then:** about every 2 hours 24 minutes at random times (0.6 to 1.4 times the gap: nobody can tell when
+  the next one comes; the first one 30 to 90 minutes after it's set up), a Telegram **quiz poll** with four answers,
+  shuffled, open **10 minutes** (Telegram shows its countdown, and to whoever answers, whether they were right and her
+  short line about it): "🧩 riddle for 250 $AGI: What has hands but can't clap?", "🎮 quiz for 250 $AGI: Which chain is
+  $AGI on?", or "… just for fun: …" when no prize is on offer. 97 questions (`server/game-questions.js`): riddles (old
+  folk riddles in her own words), $AGI and her (her name, her chain, her song, her trips…), staying safe (seed phrases,
+  fake support, "connect your wallet to claim", checking a contract), and trivia from her trips. Pre-written and held to
+  her rules by the tests: PG-13, never another coin or chain by name, never prices or buying, links only to agi1.app.
+  None of the newest 60 asked comes again.
+- **When it closes:** her result under the quiz. **One person who got it right is drawn at random** (not the fastest:
+  bots and quick fingers don't win every time) and named, by the name Telegram shows for them (a tap on it opens them;
+  a name that can't go in her words, like a link, an @name or "admin", is "our winner"): "⏰ time's up! the answer: a
+  clock / 🎉 Mia wins 250 $AGI! drawn at random from the 12 right answers 💜 / to claim it: tap the button below, then
+  /claim in my private chat (18+, within 24 hours). i'll only ever ask for your wallet address: never your seed phrase, a
+  signature or a link to connect your wallet. / a prize is a thank-you for playing, not financial advice", with a
+  **🎁 Claim it in my private chat** button (`t.me/agi1_appbot?start=claim`). Nobody right: "nobody got it this time 🙈";
+  a quiz just for fun: "12 of you got it right 💜"; today's prizes won meanwhile, or everyone right already won today:
+  "…so this one was for glory".
+- **The rules:** one win a day each (UTC), `GAME_WINS_A_DAY` wins a day for the whole site (10), `GAME_PRIZE` $AGI each
+  (250). Without the prize wallet (or with the launch gas wallet's key, which is refused), quizzes are just for fun.
+- **/help** and her intro mention them; `/claim` typed in a group points to her private chat (with the button).
+
+**Claiming, in her private chat** (`server/game-prizes.js`):
+1. The winner taps the button (or opens her chat and types `/claim`). Someone who never started her bot gets her welcome
+   and her 18+ question first (`/start claim`); once they confirm, she says their prize is waiting. Under 18: no prize.
+2. "you won 250 $AGI in my quiz 🎉 send me your wallet address on Robinhood Chain (it starts with 0x): your own wallet, not
+   an exchange's. i'll only ever ask for your address: never your seed phrase, your private key or a signature."
+3. Their address (alone, or with a word or two), checked: a real address, its capital letters right when it has them (a
+   typo is caught), not the $AGI contract, the burn address, an empty one or her own prize wallet, and not a contract (a
+   pool, a token: what's sent there is lost; a wallet with an EIP-7702 delegation, like MetaMask's smart account, is
+   fine). Kept; then "send 250 $AGI to this wallet on Robinhood Chain? 0x… check it carefully: once it's sent, it can't
+   be undone." with **✅ yes, send it** and **✏️ change it**.
+4. "yes, send it": claimed in the database first (once), then the prize wallet's numbers (its $AGI, its ETH for the fee,
+   the gas, its nonce), then $AGI's own `transfer(their address, 250 $AGI)` signed, **recorded with its transaction before
+   it goes out**, and sent (`server/hot-wallet.js`, the launch payback's never-twice send); its receipt looked at for a few
+   seconds. "done 💜 250 $AGI is on its way to your wallet… see it on the block explorer" (linked).
+- **Never twice, never lost:** a second tap or `/claim` later says it already went out (with its link); nothing went out
+  (the wallet short of $AGI or ETH, the chain's clear "no") → back to "send it?", and they can try again; a transfer the
+  chain says failed (nothing moved) → back too; a send whose answer was lost stays "sending" (never sent again), and
+  `/claim` later asks the chain about its transaction; a claim whose server stopped midway can be sent again after 2
+  minutes. Their prize wallet short of $AGI or ETH: "my prize wallet needs a top-up first 🙈 your prize is safe and
+  waiting", and the log names the wallet for the owner.
+- **How long:** a prize waits **24 hours** for its claim to start (giving an address); once started, **7 days** to be sent
+  (a prize wallet that needs a top-up, say).
+
+**A secret sent by mistake** (`server/secrets.js`, 2026-10-09: claims invite wallet talk): a message with a private key
+(64 hex characters: or a transaction's id, which looks the same) or a seed phrase (12 or more words of the wallet word list
+in a row) gets her warning at once ("never send it to anyone, not even me… if it's real, move your funds to a new wallet
+now. i didn't keep it"), and nothing of it goes to the AI, the database or her stream: in her private chat, with /ask in
+her groups, and in a question for her live show (`/live` in her bot or agi1.app/live: "secret", never read out).
+
+**How it works:**
+- **The clock** (`supabase/games.sql`): Supabase Cron calls `GET https://www.agi1.app/api/feed?games` every 2 minutes with
+  `Authorization: Bearer <key>` (a random key `games.sql` made in the database: `game_key()`, kept 10 minutes per server
+  copy), like her buy bot's. Each tick (`gamesTick` in `server/games.js`, light: no chain code unless a quiz with a prize
+  is about to go out): quizzes that closed over 20 s ago and weren't settled, a quiz in each group whose turn it is
+  (`game_due`: the database decides, so two ticks at once never both post), and every 30 minutes the tidy-up.
+- **Telegram tells us** each answer (`poll_answer`, for polls a bot sent: who, which answer) and when a quiz closes
+  (`poll`), at `/api/telegram` (`handleUpdate` → `onPollAnswer`, `onPollState`): her bot's webhook takes `poll` and
+  `poll_answer` updates since 2026-10-09 (`UPDATE_TYPES` in `server/telegram.js`; the clock connects her bot again by
+  itself if its webhook was set before, once an hour per server copy). A quiz closing is settled 2 s later (answers sent
+  in its last second may still be on their way; the database takes answers up to 15 s after closing).
+- **The draw** (`game_settle`): settled once (two at once: one does it), a random right answer among people who haven't
+  won today, while the day's prizes last (the day's row locked, so two quizzes closing at once can't both take the last
+  prize). A quiz that can't be kept after it was posted (the database away) is stopped and deleted: nobody could win it.
+- **Before a quiz offers a prize:** prizes on (`PRIZE_WALLET_KEY`, not the gas wallet's), the day's prizes not all won
+  (`game_left`), and the prize wallet holding at least one prize's $AGI and some ETH (read on the chain, kept 5 minutes; a
+  chain that doesn't answer doesn't stop the prize: a prize won meanwhile waits for its claim).
+- **Kept** (`supabase/games.sql`, only the server's key): per quiz its group's id and the poll's (30 days); per answer the
+  person's Telegram id, the first name Telegram shows and whether they were right (3 days); per prize the winner's id,
+  the amount and, once claimed, the address they gave and its transaction (60 days); per day the prizes won. The safety
+  note says so, and that her quizzes are polls with visible votes: a quiz that isn't anonymous is the only kind whose
+  answers Telegram tells a bot, and like any such poll it shows everyone in the group who answered what (Telegram's
+  "Polls 2.0", telegram.org/blog/polls-2-0-vmq).
+- No new service and no new function file (`api/feed.js` takes `?games`, like `?buys`).
+
+**Setup (the owner, once):**
+1. **Supabase** → SQL Editor → New query → paste **all** of `supabase/games.sql` → Run. It ends with `games_ready = 1`
+   and `games_scheduled = 1` (Cron and pg_net are on already, for her buy bot; `games_scheduled = 0`: switch them on, then
+   run it again).
+2. **The prize wallet:** make a **new** wallet only for prizes (a new account in MetaMask, say: never your main wallet, and
+   never the launch gas wallet), and send it, on Robinhood Chain, the $AGI for a few days of prizes (10 prizes of 250 a
+   day is 2,500 $AGI a day at most: 25,000 lasts at least 10 days) and a little ETH for the network fees (0.001 ETH is
+   plenty for hundreds). Then MetaMask → that account → Account details → Show private key → Vercel → agi-ecosystem →
+   Settings → Environment Variables → `PRIZE_WALLET_KEY` (Production). Never paste it anywhere else, chat included.
+   Optional: `GAMES_A_DAY` (10), `GAME_PRIZE` (250), `GAME_WINS_A_DAY` (10), `TELEGRAM_GAMES` = `off` (none).
+3. **Redeploy**, and **push** (step 1 before pushing, so the group never hears of quizzes that can't come).
+4. The first quiz comes 30 to 90 minutes later. Her private menu shows `/claim` after the next `/api/feed` run (Vercel →
+   Cron Jobs → `/api/feed` → **Run** for at once).
+5. If the group doesn't let members send polls (Telegram → the group → Permissions → Send Polls), allow it or make her an
+   admin (she needs none of an admin's rights).
+
+**Cost:** Telegram, Supabase (six small tables, one more cron job) and Vercel (720 small runs a day, and one per answer and
+per vote's poll update: well inside the free million a month) are free. **The prizes are the owner's $AGI:** at most
+`GAME_WINS_A_DAY` × `GAME_PRIZE` a day (2,500 $AGI, about $4 at today's price), and each prize's network fee (a few
+millionths of an ETH) from the prize wallet.
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| No quiz ever | (none), or the clock's calls answered `{"ok":true,"off":…}` | `games.sql` not run (setup step 1; `games_scheduled` must be 1), `TELEGRAM_GAMES=off`, or no group in `TELEGRAM_GROUPS`. The first quiz comes 30 to 90 minutes after the clock's first call |
+| No quiz in one group | `[games] couldn't post a quiz in @…: … 403 … (is she still in that group? add her again)` | Add her to the group again |
+| No quiz in one group | `… (the group doesn't let members send polls: allow polls in the group's permissions, or make her an admin)` | Setup step 5 |
+| Quizzes say "just for fun" | (none), or `[games] the prize wallet 0x… is out of $AGI` (or `ETH`) | `PRIZE_WALLET_KEY` isn't set (or is the gas wallet's: refused), today's prizes are won, or the prize wallet needs a top-up: send it $AGI (or ETH) |
+| People answer right but nobody ever wins | (none) | Her bot doesn't hear answers yet: the clock reconnects it within the hour (`[games] connected her bot again…`); or Vercel → Cron Jobs → `/api/feed` → **Run** |
+| A winner hears "my prize wallet needs a top-up first" | `[games] the prize wallet 0x… is out of …` | Top it up; their prize waits (7 days once they've given an address) and they `/claim` again |
+| A winner hears "your prize is on its way… if it hasn't arrived in an hour, ask in the group" | `[games] a prize's nonce was taken and the chain couldn't say by what: it stays "sending"` | Rare. Look at the prize wallet on the block explorer, and tell Claude (it's never sent twice by itself) |
+| `/claim` isn't in her menu | (none) | The next `/api/feed` run sets it (Run it for at once) |
+
+**Tests:** `tests/games.test.js` (26, with fake Telegram, Supabase (games.sql's rules in JavaScript) and Robinhood Chain):
+every question against her rules and Telegram's limits; picking and shuffling; a winner's name; the settings;
+`/api/feed?games` and its key; a tick (two groups, just for fun without prizes, Telegram or the database saying no, a quiz
+taken back); her bot connected again for answers; answers; closing, the draw and her result (and every result without a
+winner); claiming (18+, `/start claim`, the hint, every address check, the transfer itself decoded from the signed
+transaction, recorded before it's sent, every way sending can fail, never twice, a lost answer, expired, prizes off); a
+secret sent to her; her groups' lines; loading light; games.sql's promises; the safety note. And `tests/telegram.test.js`
+(her bot's update types and menu), `tests/live.test.js`, `tests/launch.test.js`, `tests/buys.test.js` and
+`tests/clips.test.js` follow. The SQL ran in PGlite (Claude's scratch `gamesql.mjs`: 34 groups of checks: the clock's due
+times at random, quizzes, answers and the 15 s grace, the draw at random among right answers only, one win a day, the
+cap, a new day, claims once, sending, a failed transfer given back, expiry, the tidy-up, running it again, permissions and
+row level security, the clock with stand-ins for pg_cron and pg_net), and the server's code end to end against that real
+database (`gamesint.mjs`: a tick, answers, the draw, her result, `/start claim`, 18+, the address, the transfer, never
+twice, a quiz the clock settles). **Not tried live:** Telegram's quiz polls and their updates, the prize wallet on Robinhood
+Chain (Claude's workspace can't reach them): the first quiz in the owner's group is the check.
 
 ## Her languages (2026-09-29)
 
@@ -3418,9 +3634,9 @@ choices the same day, all built:
 - **"Starting soon"** with a countdown (from a couple of minutes before; with `--start-in`, as many minutes as asked),
   **"Be right back"** (the owner's pause), **"Thanks for watching"** (the end, "Follow @agi1dotapp for the next one"
   since 2026-10-07, never a time); her music under everything.
-- Everything she says that isn't an answer is pre-written (`tools/live/lines.js` and, since her trips, `trips.js`: 547
-  lines since her live chart (2026-10-09), 529 after her trips, 316 after her stream's upgrade, 258 before it and 121 at
-  first; tests hold every one to her
+- Everything she says that isn't an answer is pre-written (`tools/live/lines.js` and, since her trips, `trips.js`: 551
+  lines since her Soulmate shout-outs (2026-10-10), 547 after her live chart (2026-10-09), 529 after her trips, 316 after
+  her stream's upgrade, 258 before it and 121 at first; tests hold every one to her
   rules: PG-13, no pet names, only $AGI, never a real person, never advice, "not financial advice" whenever money comes up,
   links only to agi1.app and clank.trade), except, since the upgrade, the lines the site's AI writes for her and her
   reactions to her own posts and videos (her live rules, like her answers: see "Her stream, upgraded"), the conversations
@@ -3431,7 +3647,8 @@ choices the same day, all built:
   her next show is: "Follow @agi1dotapp on X to catch her next show."), 18+, the question (3–200 characters; 1–200 since
   2026-10-09) and a name to show with it if they like (3–24 characters; 1–24 since 2026-10-09), the human check (Turnstile, action "live"), then where it is ("You're
   #3 in line", "She's answering you right now! Watch on X", her answer) for 6 hours, in that browser. The page is linked
-  from the footer ("Live") and the phone menu (the top bar is full).
+  from the footer ("Live") and the phone menu (the top bar is full). Since 2026-10-10, with a connected wallet at Crush or
+  Soulmate, her 💜 badge on stream and a head start in her line (see "Holder perks on her show").
 - **Her Telegram bot:** `/live your question`; `/live` alone says where it is (while she's off, since 2026-10-07: "i go
   live on X at random times, so keep an eye out", never when). Telegram questions show "someone on Telegram", never a
   name or an account (her /help line about it is in her 16 languages, `tg.helpLive`; her other /live lines are English).
@@ -3468,7 +3685,8 @@ choices the same day, all built:
   it may air ("skip" comes first in its JSON for that reason). A skipped question is never shown.
 - **What's kept** (`supabase/live.sql`, at most 2 days, then the keep-alive deletes it): the question, the name given, her
   answer, where it is, and a daily code of who asked (never an IP address or a Telegram chat's number; for X's chat, of
-  the X name the owner typed). A question that
+  the X name the owner typed; since 2026-10-10, with a connected wallet at Crush or Soulmate, also that level and a daily
+  code of the wallet, never its address). A question that
   sounded like distress keeps no words at all. The safety note's "Your data" says so.
 
 **The owner's controls, from a phone** (the owner's link: `agi1.app/live#admin=<key>`, the key made from `LIVE_SECRET`;
@@ -4656,6 +4874,431 @@ it took about 8 s a picture on a 2-core computer, and a test over 30 s fails the
 (119 checks: 1- and 2-character questions in, empty ones out, run over the version before). All 554 (553 pass, 1
 skipped as before) on Node 20, 22 and 24, with and without Vercel's settings.
 
+### Holder perks on her show (2026-10-10)
+
+**The owner's request** (with the next big plan, see the roadmap): "you can also add more utiliy to $agi so holders are
+happy", and from which holding: "10,000+ $AGI (Recommended)". Item 2 of the plan, after her quizzes. Things to see and do
+on her show, never an investment promise: nothing is spent, nobody is paid, nothing about prices (Claude's rule for every
+holder perk, said to the owner with the plan).
+
+**What people see:**
+- **At agi1.app/live**, in the question form after the name: "💜 Crush and Soulmate perks (optional)": what they are, and
+  **Connect a wallet**: the site's own sign-in (an address and a free signature, never a transaction: `src/lib/wallet.js`,
+  hard rule 9), the wallets this browser has (with their logos), or without one, "Open in MetaMask / Phantom / Coinbase
+  Wallet". The same wallet session as the home page's (`agi_wallet`): a wallet connected there is connected here, and
+  **Disconnect** here signs this browser out of it everywhere (it follows another tab too). Connected: "0x12ab…cdef ·
+  Crush 💜 Your questions get her badge and a head start in her line." (Soulmate: "…, and a shout-out from her"; a
+  Stranger: "Her 💜 badge starts at Crush (10,000+ $AGI held, or burned for messages).", never "buy").
+- **After sending:** the question waits with its badge ("“…” · as Mochi · 💜 Crush") and what it got: "💜 With your Crush
+  badge: a head start in her line." (or the Soulmate's), or why not: "Your wallet's 💜 badges for today are used (5 a
+  day)", or "Your wallet's session ended, so this one went in without her badge" (the page forgets it). A question never
+  fails because of its wallet.
+- **Her line:** a question with her badge goes ahead of the questions sent in the 10 minutes before it (`LIVE.HEAD_S`),
+  never further: one waiting longer than that stays ahead of it, so everyone still gets their turn. At most **5 badges a
+  day per wallet** (UTC; `LIVE.PER_DAY`, the same 5 as everyone's questions a day): after that its questions go in like
+  everyone's.
+- **On her stream:** the question's card shows a pink pill, **💜 Crush** or **💜 Soulmate**, next to "Question · from
+  Mochi" (never the wallet or how much it holds). A **Soulmate**'s question gets confetti and one of her four shout-out
+  lines ("ooh, a soulmate is here 💜", "soulmate alert 💜 my heart just did a little jump."…) before she reads it out loud
+  and answers.
+- **The host's panel** (the owner's phone link): "Mochi · agi1.app · 💜 Crush" in her line.
+- **The words:** a rule on agi1.app/live ("A thank-you for being here: nothing is spent, it's not an investment, and it's
+  not financial advice", 5 a day, never further than 10 minutes) and the safety note (01: "a thank-you for being here, not
+  an investment"; 04: what's kept). Only on agi1.app/live: a question from her Telegram bot or the host's box for X's chat
+  never has a badge (no wallet there).
+
+**How it works:**
+- The page sends its wallet session with the question (`session`); `/api/live` reads it (`liveHolder()` in
+  `server/live.js`; the page's own idea of its level is never used): its level now, read again on Robinhood Chain when it's
+  30 minutes old (held + burned for messages: `checkLevel`, `burnedAgi`), as her chat does. A level read again comes back
+  with a new session; an old or broken session answers `signedOut` (the page forgets it, the question goes in without a
+  badge); the chain away keeps its last level.
+- At Crush or Soulmate, the badge (2 or 3) and a daily code of the wallet (`holderCode()`: an HMAC of its address and the
+  UTC day with PASS_SECRET, never the address, a new one each day, and not the code her chat's memory files a wallet
+  under, so a question can't be matched to a name or notes) go to the database (`live_ask` in `supabase/live.sql`, with
+  `p_holder`, `p_holder_code`, `p_head`). It gives the badge only while that code has had fewer than 5 today, and sets the
+  question's place in line, `line_at`, to the time it was sent minus 10 minutes; every place in her line is read by
+  `(line_at or the time it was sent, id)`: the next question for her (`live_take`), "#3 in line" (`live_ask`,
+  `live_lookup`) and the host's panel (`live_state_get`, `live_control`).
+- **Old and new together:** the new code with live.sql from before 2026-10-10 asks a question without a badge exactly as
+  before, and a question with one without it (the log says once to run live.sql again); the new `live_ask` takes the old
+  call too (its new settings have defaults).
+- **On her stream** (`tools/live/run.mjs`): the card's badge (`card-badge` in `tools/live/page/`: only "Crush" or
+  "Soulmate", for a question card; 99% opaque, like everything over her picture), then for a Soulmate confetti and a
+  shout-out (`SHOUTOUTS` in `tools/live/lines.js`: four pre-written lines, all about her being happy they're there, never
+  about money or holding), then the question read out loud and her answer as always. `--demo` has a Soulmate (Jun) and a
+  Crush (Nia) among its made-up questions.
+
+**Owner, in this order** (no Vercel setting):
+1. **Supabase** → SQL Editor → New query → paste **all** of `supabase/live.sql` → Run: it ends with
+   `live_functions_found = 13`. **Before pushing** (it keeps everything saved).
+2. **Push** (the PC).
+3. **On the server:** `cd /opt/agi1-live/site && sh tools/live/live.sh update`, then `sh tools/live/live.sh --warm` (the
+   voices of her 4 shout-out lines, once).
+
+**Cost:** nothing new to pay: a wallet's level is read at most every 30 minutes per session (Robinhood Chain's free node),
+and her 4 new lines' voices once (about $0.01).
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| A question sent with a Crush wallet shows no badge | `[live] a question came with a 💜 badge, but supabase/live.sql is from before 2026-10-10: it went in without one…` | Run `supabase/live.sql` again |
+| "Your wallet's 💜 badges for today are used (5 a day)" | (none) | By design: a new day at 00:00 UTC |
+| A wallet with 10,000+ $AGI says "Stranger" | (none) | Its level is read again at most every 30 minutes (it just got its $AGI): Disconnect, then Connect a wallet again (a new sign-in reads it at once) |
+| No shout-out for a Soulmate's question on stream | (none) | The server's code is from before 2026-10-10: `sh tools/live/live.sh update` |
+
+**Tests:** `tests/live.test.js` (3 new: her 💜 badge and its 10-minute head start through `/api/live` (never further), 5
+a day per wallet, a Stranger's, a broken session, never the address in the database, live.sql from before; `liveHolder()`
+(the session, its level read again when it's 30 minutes old with burned $AGI counted, the chain away); the page's words
+(never "buy"), the session sent with a question, the host's badge, her card's badge (only Crush or Soulmate) and a
+Soulmate's shout-out; and the earlier tests with the badge), `tests/stream.test.js` (the shout-out before she reads a
+Soulmate's question), `tests/page.test.js` (the safety note's date). `supabase/live.sql` in PGlite (Claude's scratch `livesql-v4.mjs`, 146 checks: the badge and its 5 a
+day per wallet code, the head start never further than 10 minutes, the line's order in every function that reads it, the
+old call, a question without a badge exactly as before, run over the version before). In a browser with the site's real
+CSP (`holderpagetest.mjs`, 83 checks: the perk box only after the 18+ answer, the wallets in this browser, connecting with
+a stand-in wallet (asked only for its address, its network and one signature), the session with the question, the badge
+on your question and on the host's line, a wallet connected on the home page, a Soulmate, a session that ended, Disconnect,
+another tab, a Stranger never told to buy, a phone without a wallet and its wallet-app links, 1440 / 390 / 360 px in both
+looks and themes, axe 0 issues, clean consoles). Her card's badge rendered on her set and looked at (Crush, Soulmate, a long
+kicker; an unknown badge and a segment card never show one), and a 4-minute show recorded end to end with `--demo`
+(Jun's question: her Soulmate badge, confetti and "ooh, a soulmate is here", then "Jun asks: …" and her answer; Nia's:
+her Crush badge).
+
+## AGI-1's 3D character studio (2026-10-10)
+
+**The owner's idea** (in the next big plan, item 3): "what if i launched a where they can create a 3d model with meshy ai
+api that can move on chat just like vladcat. they can get it by burning $AGI tokens and can launch token with it", and
+"you can also add more utiliy to $agi so holders are happy". The owner's choices (asked one by one): paid **by burning
+$AGI or in USDG** ("Burn $AGI or USDG"), with **holder discounts** and **a free one a month for Soulmates**, burns capped a
+month (a burn pays nobody, while each character costs the owner Meshy's credits); **Meshy Pro** (the owner's account,
+about $20 a month) and **Vercel Pro** ($20 a month: selling characters is commercial use, which Hobby doesn't allow), the
+owner switching them on when ready. Telegram bots for people's own characters: later. Short videos of the characters
+(Seedance, item 4 of the plan): built the same day (see "Its videos" below). **Off until the owner sets it up, then private to the owner's wallet** (`STUDIO_ONLY_FOR`)
+until Meshy says its terms allow selling what it makes (`STUDIO_OPEN`: see "Open questions"). Visitor-facing words never
+name Meshy ("an AI service"; a character that couldn't be made is kept as `ai:<step>`, never the service's name).
+
+**What visitors see** (agi1.app/studio: `studio.html`, `src/studio/page.js`, `src/styles/studio.css`; not linked from the
+other pages while it's private):
+- **The studio:** "Make a 3D character", how many are left this month ("12 characters left to make this month"; private:
+  "The studio is private for now…"; sold out: "…opens again on the 1st (UTC)"), then its steps, each once the one before
+  is done: **18+ only** (the chat's own confirmation, shared with it); **1 Your wallet** (the site's sign-in: an address and
+  a free signature, the same session as the home page's; its price by level: "0x12ab…cdef · Crush. Your price: $4 in USDG
+  or 12,000 $AGI burned (Crush: 20% off)."; a wallet not on the private list: "The studio is private for now, and this
+  wallet isn't on its list"); **2 Describe it** (its name, up to 24 characters; what it looks like, 10 to 400; its style:
+  Anime, Cartoon or Realistic), **Get my price** (the human check, Turnstile action `studio`, or the 2-hour pass), our
+  server's "no" in words under it with the keyboard on the box to fix ("Never a real person: describe someone of your
+  own."); **3 Pay for it**: its price, USDG and/or Burn $AGI (and for a Soulmate, Free), where to send it ("Send $4 in
+  USDG", the studio's wallet or the burn address with **Copy**, "from your connected wallet, in your own wallet app, on
+  Robinhood Chain", only the official token counts), **Check my payment** (or a pasted transaction link or ID; payments add
+  up: "Counted: $1.50 of $4. Send the rest ($2.50) from the same wallet, then check again."), **Start over**. A quote
+  holds its place in the month for a day; the browser remembers it (`agi1_studio_order`) to come back to. Paid: "Payment
+  found: your character is being made now 💜", then its own page.
+- **Your characters** (with a wallet: Ready, Being made, Couldn't be made: try again free, Waiting for payment), **Made
+  in the studio** (the newest 24, with their pictures), **Before you make one** (its rules: made by an AI service and may not
+  look exactly as pictured, PG-13 and never a real person or someone else's character, paid from your own wallet app,
+  holder discounts "a thank-you for holding, not an investment", no refunds but made again free if it can't be made,
+  public by link, a limited number a month, not financial advice).
+- **A character's page** (agi1.app/studio/<id>, the same page: `vercel.json` rewrites `/studio/:id` to `/studio`; public to
+  anyone with its link): its name, its description, its style and day. **While it's made:** its five steps (Shaping it,
+  Painting it, Giving it bones, Teaching it moves, Saving it), the one now with the AI's percentage, "It takes about 5 to
+  10 minutes. You can close this page: it keeps going", asked again every 5 s while the page is open (which also moves
+  it along). **Done:** the character in 3D on a stage (three.js: `src/studio/viewer.js`, loaded only there), standing in
+  its idle; **move buttons** (wave, dance, jump, cheer, bow, walk, party; the one playing lit) and **a chat box**: a
+  message naming a move, or a word for one ("hi", "yay", "thanks", "boogie"…: `MOVE_WORDS` in `src/studio/rules.js`),
+  plays it, anything else gets a reaction (a wave, a cheer, a jump or a bow), and it stands again after; nothing typed
+  leaves the page (a log of the last 6). On computers a drag turns it (never a zoom: the wheel scrolls the page); on phones
+  a swipe scrolls the page. **Download its picture** (PNG, 1024 px) and **its 3D model** (GLB: its bones and its 8 moves,
+  for a 3D stream or a 3D app), **Share on X ↗** (the visitor posts: "Meet Mochi, my 3D character from AGI-1's studio 💜
+  type a move and watch it go:"), and **Launch a coin with its face** (save its picture, send it to her bot with
+  `/launch`: the launch's own rules, 10,000+ $AGI in the wallet that launches; shown when `VITE_TELEGRAM_BOT` is set).
+  Without WebGL, or when its file can't be read: its picture, and "It can't be shown in 3D in this browser: here's its
+  picture."
+- **A paid character that couldn't be made** (the AI's safety check stopped its words, its bones didn't fit, it took too
+  long, its files couldn't be kept): its page says why, and the wallet that paid can make it again with new words, free
+  (its words to change, as they were).
+
+**How it's made** (`server/studio.js`, `server/meshy.js`, `server/studio-words.js`):
+1. **Its words, checked first** (`checkCharacter()`): PG-13 (the site's crude-word lists and adult words), never a child,
+   nothing hateful, never a real person (the live show's list of famous people too), never someone else's character or a
+   brand's mascot, nothing passing for AGI-1, no links, @names, emails or phone numbers. Then **Meshy's own screening**
+   (`moderation: true`) when it starts.
+2. **Meshy's four tasks, one after another** (its API, `docs.meshy.ai`, read 2026-10-10): a model from its words (text to
+   3D, `preview`: one humanoid figure with two arms and two legs in an A-pose, about 20,000 triangles, its style's words
+   added: `meshyPrompt()`), painted (`refine`, a 2K texture: `meshyTexture()`), given bones (`rigging`, 1.7 m tall: Meshy's
+   rigging is for two-legged humanoids), taught its 8 moves (`animations`, Meshy's library: Idle 0, Big_Wave_Hello 28,
+   FunnyDancing_01 22, Happy_jump_f 44, Victory_Cheer 59, Formal_Bow 41, Casual_Walk 30, All_Night_Dance 64; one file with
+   a clip each, in that order). **59 credits** a character (20 + 10 + 5 + 3 a move). A task that fails gives its credits back.
+3. **Moved along one step at a time**, by its page while someone has it open and by the clock: Supabase Cron calls
+   `GET /api/feed?studio` every minute (`supabase/studio.sql`, its own key from the database, like her buy bot's), up to 6
+   characters a run; never two at once for one character (a lease in the database).
+4. **Its files kept** (`server/studio-files.js`): Meshy keeps what it makes for 3 days, so our server reads its files
+   (only Meshy's own https addresses, never a redirect), makes its model small (under 4 MB: Vercel answers at most 4.5 MB;
+   its textures 1024 px, or 512 if still too big, as JPEG, or PNG where they're see-through: glTF's own formats, so the
+   file opens anywhere, never only in a browser; its moves resampled, copies merged, what nothing uses pruned; its geometry,
+   bones and moves as made; gltf-transform and sharp) and its picture (the refine's: a 384 px WebP for the pages, a 1024 px
+   PNG to download), and keeps them in **Supabase Storage**, a private bucket (`agi1-characters`, 40 MB a file since its videos, 8 MB before), served from
+   our own address (`/api/launch?studio-file=<id>.glb|webp|png`: only a done character's, kept a day by Vercel's CDN, in a
+   sandbox: `default-src 'none'; sandbox`, `nosniff`). Saving starts only with 15 s left in the run, each wait bounded, so
+   it always ends inside Vercel's 25 s. gltf-transform and sharp are loaded only for that (a dynamic import), so the clock's
+   other jobs in `/api/feed` (her buy bot, her quizzes) start as light as before; Vercel's own file tracer puts
+   `/api/launch` and `/api/feed` at about 45 MB each with them (Vercel allows 250 MB a function).
+5. **When things go wrong:** Meshy's key refused, no credits, or its queue full → the character waits (never failed), and
+   the log tells the owner once per server copy; a step that fails at Meshy → tried again twice, then failed with a
+   credit (made again free); its words stopped by Meshy's screening, or its bones that can't find its pose → failed with a
+   credit; not done 3 days after it started → expired (failed, with a credit: Meshy has let go of its files); its files
+   that can't be kept → tried 4 times, then failed with a credit (too big to serve: the same).
+6. **On its page** (`src/studio/viewer.js`): its clips by move (by the library's names when every clip has one, "Armature|
+   Idle" too, else in the order asked for: `clipsFor()`); each move in place (`inPlace()`: of the node that travels
+   furthest across the floor, the drift from its first key to its last is taken out, as the world sees it, whatever its
+   armature's turn and scale: a walk stays put, a jump still jumps, a dance still sways); framed for every pose of every
+   move (`movesBox()`: each move looked at 8 times a second and at its hips' highest and lowest, a sample of its points
+   each time, so a jump or raised arms never leave the picture); its whole height filling most of the picture, a little
+   from above; light from a soft room, a sky light and a sun (`NeutralToneMapping`); glTF's default metalness tamed (it
+   read as chrome); drawn only while on screen and the tab is shown, at most about 60 times a second.
+
+**Paying** (`server/studio-chain.js`; hard rule 9: never asked of a wallet):
+- **USDG** (Paxos' Global Dollar on Robinhood Chain, `0x5fc5…d168`, docs.robinhood.com/chain/contracts) sent to the
+  owner's wallet (`STUDIO_PAY_TO`: an address, not a secret), or **$AGI burned** (to `0x…dEaD`, or the coin's own
+  `burn()`): the visitor sends it from their own wallet app, then presses **Check my payment**.
+- Our server reads it on Robinhood Chain (read-only: its receipt and its block's time from the public node; the block
+  explorer's list of the wallet's transfers only to know which to read, at most 3 a check): it counts when it succeeded,
+  moved the official token (its contract's own Transfer events, never a look-alike) from the connected wallet to where it
+  should go, after its quote (a minute's leeway) and in the last 7 days. **Each payment counts once** (`studio.sql`); **a
+  burn shares burns.sql's ledger** (it counts for messages or for a character, never both), and what's burned for a
+  character counts toward the wallet's level like a burn for messages. Payments add up; the last one that completes it
+  starts the making.
+- **Prices** (a Stranger's, in Vercel): `STUDIO_PRICE_USD` (5) and `STUDIO_PRICE_AGI` (15,000); **Crush 20% off, Soulmate
+  40% off and one free a month** (`DISCOUNT` in `src/studio/rules.js`; the level read on our server, again when it's 30
+  minutes old, burned $AGI counted). A Soulmate's free one is paid at once.
+- **Per month (UTC):** `STUDIO_A_MONTH` characters (15), `STUDIO_BURNS_A_MONTH` of them paid by burning (5); a quote
+  holds a place for a day; 2 quotes waiting at once per wallet. A character paid in full is always made, even if it goes
+  over the month's number (a payment that completes a quote held more than a day).
+- No refunds (the page and its rules say so); a paid one that can't be made is made again with new words, free.
+
+**What's kept** (`supabase/studio.sql`, row level security on, only the server's key): per character a scrambled code of
+its wallet (an HMAC with PASS_SECRET, `studioWallet()`: never the address, and not the code her chat's memory or burns
+use), its name, words and style, the level and price it was offered, how it's paid and how much so far, where it is in the
+making (Meshy's task ids, a lease), and once done its files' sizes and its moves; per payment counted, a scrambled code of
+it (never the transaction); per month, characters paid and paid by burning; per wallet code and month, its free one; its
+files in the private bucket. A done character stays (its page is public); a quote never paid goes after 2 days; a failed
+one after 30 days (60 with a credit to make it again). The safety note's 01, 02 and 04 say so (shown with the burns'
+sentences: the studio needs burns.sql).
+
+**Taking one down:** Supabase → SQL Editor → `select studio_hide('<its id>', true);` (`false` shows it again), or Vercel
+→ `STUDIO_HIDE` = its id (several: commas), then Redeploy. Its page, files and gallery entry go (404); nothing is deleted.
+
+**Setup (the owner, in this order):**
+1. **Vercel Pro** (the owner's choice): Vercel → the team's Settings → Billing → upgrade to Pro ($20 a month). Selling
+   characters is commercial use, which the Hobby plan doesn't allow.
+2. **Meshy:** meshy.ai → an account on **Pro** (about $20 a month, 1,000 credits: about 16 characters at 59 each) → its
+   developer platform → **API keys** → a new key (name it "agi1 studio"), **with a monthly credit limit** if Meshy offers
+   one (a cap on what a bug could spend) → Vercel → agi-ecosystem → Settings → Environment Variables → `MESHY_API_KEY`
+   (Production). A secret: never in chat, code, git or a screenshot.
+3. **Supabase** → SQL Editor → New query → paste **all** of `supabase/studio.sql` → Run (after `burns.sql`; Cron and pg_net
+   are on already, for her buy bot). It ends with `studio_ready = 1`, `studio_scheduled = 1` and `studio_storage = 1`.
+4. **Vercel** → Environment Variables (Production): `STUDIO_PAY_TO` = the owner's own wallet's address on Robinhood Chain
+   (where USDG goes: an address, never a key; a wallet the owner controls, not an exchange's), `STUDIO_ONLY_FOR` = the
+   owner's own wallet address (private first: only it may make one). Optional: `STUDIO_PRICE_USD` (5), `STUDIO_PRICE_AGI`
+   (15000), `STUDIO_A_MONTH` (15), `STUDIO_BURNS_A_MONTH` (5; 0 = no burns). Then **push**, and **Redeploy** if the
+   settings came after the push.
+5. **Try it** at agi1.app/studio with that wallet: 18+, connect, describe one, pay (a little USDG, or a burn; a Soulmate's
+   free one), then watch its page (about 5 to 10 minutes). Its moves on its page, and its GLB in Blender or a 3D stream,
+   are the first real check of what Meshy makes (see "Not tried live").
+6. **Before opening it to everyone** (`STUDIO_OPEN` = `yes`, Redeploy): ask Meshy whether its terms allow a service that
+   sells what it makes to others (see "Open questions"); then a link to it from the other pages (Claude adds it).
+
+**Cost:** Meshy Pro about $20 a month (1,000 credits: about 16 characters; more: Meshy's bigger plans or credit packs), so
+about $1.20 of credits a character; Vercel Pro $20 a month; Supabase Storage on its free plan (1 GB: a character is about 1
+to 4 MB, so a few hundred), the chain's public node and the block explorer free. What it brings in: a Stranger's
+character $5 in USDG ($4 a Crush's, $3 a Soulmate's) to the owner's wallet; a burned one brings nothing (5 a month at
+most: about $6 of credits), and a Soulmate's free one costs its credits too. The owner's to check: Meshy's and Vercel's
+own prices on their pages, and taxes on what's sold (not financial or legal advice).
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| agi1.app/studio says "The studio opens soon." | `[studio] MESHY_API_KEY is missing: the studio is off` (or none) | Setup steps 2–4, then Redeploy |
+| "The studio opens soon." after setting it up | `[studio] … studio_month … PGRST202` (or none) | Run `supabase/studio.sql` (setup step 3) |
+| Characters wait at "Shaping it" for ever | `[studio] a character waits: meshy HTTP 401 … (MESHY_API_KEY is wrong or was deleted …)` | A new key in Meshy, `MESHY_API_KEY` in Vercel, Redeploy. They carry on by themselves |
+| Characters wait | `[studio] a character waits: meshy HTTP 402 … (no Meshy credits left …)` | Credits in Meshy (or the key's monthly limit raised). They carry on by themselves |
+| Characters only move along while their page is open | (none: the clock isn't calling) | `studio.sql` (`studio_scheduled` must be 1); Supabase → Integrations → Cron should list `agi1-studio` every minute |
+| The clock's calls get 401 | `[studio] couldn't read the studio's key: …` | Run `supabase/studio.sql` again (it keeps its key) |
+| "Its files couldn't be kept." | `[studio] <id>'s files couldn't be kept: storage HTTP 400 … (run supabase/studio.sql: it makes the bucket)` | Setup step 3; the person makes it again, free |
+| "It came out too big to keep." | `… the model is still 4.6 MB made small …` | Rare (Meshy's texture or mesh far bigger than usual); made again free. Tell Claude if it repeats |
+| A character's page shows its picture instead of 3D | (none) | The visitor's browser has no WebGL, or its file couldn't be read (`[studio] a character's file: …`) |
+| A done character plays the wrong move for a button | `[studio] <id>'s file has 7 moves (8 asked for)` | Meshy left a move out or named its clips differently: tell Claude with the id (the page maps clips by Meshy's library names, else by order) |
+| "Couldn't look up your payments just now" | `[studio] checking a payment (explorer): …` | The block explorer didn't answer: paste the transaction's link, or try later |
+| "Something went wrong on our side" on every action | `[studio] studio-…: …` | The database (a paused Supabase project: resume it) |
+
+**Tests:** `tests/studio.test.js` (39, with fake Meshy, Supabase (studio.sql's rules in JavaScript) and its Storage,
+Robinhood Chain, the block explorer and Cloudflare): the rules (moves and their library ids and clip names, at most 10,
+prices and discounts), the words (PG-13, real people, others' characters, her), Meshy's requests as its docs write them
+(the key never in an error), its files (only Meshy's addresses, made small under 4 MB with glTF's own textures, its bones
+and moves kept, its pictures), Storage, the chain (what a transaction paid, one payment read, the explorer's list), the
+settings, the codes (never the address; a burn's code is burns.sql's), the wallet's level read again, what anyone with
+its link sees, quotes, choosing how to pay, "Check my payment" (pasted and looked up, once, adding up), making it again,
+the whole making (Meshy's steps, refusals, retries, its key and credits waiting, 3 days, keeping its files within the
+run's time), the clock, every GET and POST, `api/launch.js` and `/api/feed?studio`, 12 functions; and since its page: the
+3D view's pure parts with three.js in Node (clips by name or order; in place across the floor for a Y-up and a turned,
+centimetre armature, a jump still jumping and a sway still swaying; every pose framed, a jump's top looked at exactly, its
+bones put back; the camera seeing every corner on tall to wide canvases), the page's words (every "no" of our server, every
+reason a payment didn't count, why one couldn't be made, never the service's name), the page itself (its scripts, no inline
+code, the rules, never a transaction asked, three.js only on a character's page, the rewrite, its scoped styles) and the
+safety note's sentences. `tests/clips.test.js` (the site's six pages), `tests/pop.test.js` (its browser-bar color),
+`tests/page.test.js`. `supabase/studio.sql` in PGlite (Claude's scratch `pg/studiosql.mjs`, 44 checks). In a browser
+with the site's real CSP (Claude's scratch `studiotest.mjs`, 214 checks, a fake `/api/launch` shaped like our server's
+answers, a fake wallet, and a stand-in character: a rigged robot with Meshy's 8 library clips, made small by
+`server/studio-files.js`): the studio (18+, the wallet asked only for its address, its network and one signature, its
+price by level, every check of its words, a quote, USDG and a burn, Copy, "Check my payment" four ways, coming back to
+it, paid), its page while it's made (its steps, asked every 5 s, then in 3D), in 3D (every move, the chat, a reaction,
+back to standing; never out of its picture in any move, the walk in place, measured on screenshots), its picture when 3D
+can't be shown, one made again, a private studio, a Soulmate's free one, a kept order that isn't whole forgotten, phones
+at 390, 360 and 320 px in both looks and themes, axe 0 issues, clean consoles, nothing blocked by the CSP. **Not tried
+live:** Meshy itself (Claude's workspace can't reach it: what it really makes, its clips' names and order, its rig's root
+bone, its files' sizes), USDG on Robinhood Chain, Supabase Storage and its cron job: the owner's first character is the
+check.
+
+### Its videos (2026-10-10)
+
+**The owner's idea** (item 4 of the plan): "they can create a viral content with it using seedance 2.5 api but they gonna
+pay crypto like stables instead of $agi if they hold agi they get a discount, theyll be like ai influencers"; the owner's
+choice: about $4 in USDG for a 5-second 720p clip, before holder discounts. Built the same day as the studio, as part of
+it: the wallet that made a character can have short videos of it made by an AI video service (Seedance 2.5's
+reference-to-video, on fal.ai), from the character's own picture and a scene it describes, paid only in USDG. **Off until
+`FAL_KEY` is set** (and the studio is on, with `STUDIO_PAY_TO`), and private like the studio (`STUDIO_ONLY_FOR`). Words
+visitors read never name fal, Seedance or ByteDance ("an AI video service"; a failure is kept as `ai:make`, `refused`,
+`save`, `too_big`, `expired` or `no_char`).
+
+**What visitors see** (a done character's page, "Its videos": `studio.html`, `src/studio/page.js`, `src/styles/studio.css`):
+- **Its done videos, for everyone**, one a row: its player as tall, wide or square as the video (a vertical one 200 px wide
+  beside its words, a square one 260, a wide one the card's width; on phones one under the other, at most 240 and 320 px
+  wide), its picture first and nothing downloaded until it's played (`preload="none"`), its scene, "AI-generated · 5 s ·
+  Vertical · with sound", **Download** (an MP4 named "<Name>-AI-video.mp4") and **Share on X ↗** (the visitor posts:
+  "Mochi, my 3D character from AGI-1's studio, in an AI-made video 💜", with a link straight to that video on the page,
+  `#v-<its id>`: the page goes there once its videos are shown). "No videos of it yet." while there are none.
+- **Make a video of it** (while videos are on): "5 seconds of Mochi in any scene you describe: $4 in USDG. Crush (10,000+
+  $AGI) gets 20% off, Soulmate (1,000,000+) 40% off. Only the wallet that made Mochi can make its videos." Then **18+**
+  (the chat's own confirmation), **Connect the wallet that made it** (the site's sign-in: an address and a free
+  signature), and its price for that wallet ("$3.20 in USDG (Crush: 20% off)"). Another wallet: "Only the wallet that made
+  Mochi can make its videos."; a private studio, or the month's all spoken for: said, and no form.
+- **The form:** what happens in it (10 to 300 characters: "dancing on a neon rooftop in the rain at night, the city glowing
+  behind it"), its shape (Vertical for TikTok, Reels and Shorts; Wide for X and YouTube; Square), **With sound** (its sounds
+  and music, made by the AI too), **Get my price** (the human check, Turnstile action `studio`, or the 2-hour pass). Its
+  words checked here and by our server (the studio's rules: PG-13, never a real person or someone else's character); our
+  server's "no" in words, with the keyboard on the box to fix.
+- **Paying:** "Send $3.20 in USDG", for which video, from the connected wallet in its own wallet app, to the studio's wallet
+  (**Copy**); only USDG counts (its contract), no refunds, and one that can't be made is made again with a new scene, free;
+  **Check my payment** (or a pasted transaction; payments add up: "Counted: $1.50 of $3.20. Send the rest ($1.70) from
+  the same wallet, then check again."), **Later** (it waits in its list with **Pay for it**; a quote holds its place a
+  day). Paid: "Payment found: your video is being made now 💜".
+- **While it's made:** in its list, "Waiting its turn… (#2 in line)", "Making it…", "Saving it…", with a pulsing dot (still
+  with "reduce motion") and "It takes a few minutes: you can close this page.", asked again every 5 s while the page is
+  open; then it plays right there.
+- **One that couldn't be made** (the AI's safety check stopped its scene, it took too long, its file couldn't be kept, its
+  character was taken down): why, and **Make it again, free** (its scene, shape and sound to change, as they were; even
+  when the month's videos are all spoken for).
+
+**How it's made** (`server/studio-video.js`, `server/fal.js`; `checkScene()` and `videoPrompt()` in `server/studio-words.js`):
+1. **Its scene, checked first** (the studio's rules), then by the video service's own safety check.
+2. **fal.ai's queue** (its docs, read 2026-10-10): `POST https://queue.fal.run/<model>` with `Authorization: Key <FAL_KEY>`
+   (our server only ever sends the key there, never in a log or an error), then its state (in its queue with its place,
+   in progress, done or failed) and its result. The model: `bytedance/seedance-2.5/reference-to-video` (`STUDIO_VIDEO_MODEL`
+   picks another that takes the same inputs). What it gets: the character's own picture as `@Image1` (a signed address to
+   it in the private bucket, good 6 hours), the scene in `videoPrompt()`'s words (keep its look exactly as in the picture;
+   the scene; one continuous shot in its style; family-friendly; anyone else a made-up extra, never a real person; no
+   text, captions, logos or watermarks), 5 seconds, 720p, its shape (9:16, 16:9 or 1:1), with sound or not, H.264 (so it
+   plays in every browser), and an id for who asked that's an HMAC, never the wallet or its code here. fal keeps what it
+   makes 7 days at most (`X-Fal-Object-Lifecycle-Preference`).
+3. **Moved along** by its page while it's open (`studio-video-look`, every 5 s) and by the studio's clock every minute
+   (`/api/feed?studio`, up to 4 videos a run, after the characters), never two at once for one video (a lease).
+4. **Its file kept:** the MP4 read from fal's own media addresses only (`fal.media`, `*.fal.media`,
+   `storage.googleapis.com/falserverless/`; https, no redirects, 40 MB at most, a real MP4 by its first bytes), kept as it is
+   in the studio's private bucket (`videos/<id>.mp4`; the bucket takes 40 MB a file and `video/mp4` since then).
+5. **When things go wrong:** fal's key refused, no balance left, its queue full or fal down for a moment → it waits (never
+   failed; the log tells the owner once per server copy); its safety check → failed, with a credit; another failure → sent
+   again twice, then failed with a credit; not made 12 hours after it started → failed with a credit; its file not kept
+   after 4 tries (or too big) → failed with a credit; its character taken down → failed with a credit (`no_char`).
+
+**Played from our own address, in parts** (`/api/launch?studio-video=<id>.mp4`: `videoFile()` in `server/studio-video.js`,
+`byteRange()` and `getRange()` in `server/studio-files.js`): the page's CSP lets no other site's media in, and must keep
+"no wildcard anywhere" (`tests/popout.test.js`; adding Supabase's address for videos failed it, 2026-10-10), so a video
+never plays from Supabase's address. A video player asks for its file with "Range" (every browser's does; Safari plays
+nothing without it): our server answers that part (206 Partial Content, at most 4,000,000 bytes: Vercel answers at most
+4.5 MB), read from Storage with the same Range, and the player asks for the next part by itself. Without Range, a small
+file (4 MB or less) comes whole (200, kept by the CDN a day); a big one opened in a tab, and **Download**, go to a
+short-lived signed address in the bucket (302, 2 hours; the download named "<Name>-AI-video.mp4"). A part past its end is
+416. Every answer in a sandbox (`default-src 'none'; sandbox`, `nosniff`).
+
+**Paying** (USDG only, the owner's: "they gonna pay crypto like stables instead of $agi"): like a character's USDG (read on
+Robinhood Chain, each payment once, in the same ledger as characters', so one payment never pays for two things), to
+`STUDIO_PAY_TO`. **Prices:** `STUDIO_VIDEO_PRICE_USD` (4) for a Stranger, Crush 20% off ($3.20), Soulmate 40% off ($2.40):
+the studio's discounts, "a thank-you for holding, not an investment"; never $AGI, no free ones. **Per month (UTC):**
+`STUDIO_VIDEOS_A_MONTH` (30) for the whole site; a quote holds a place for a day; 2 quotes waiting at once per wallet. No
+refunds; one that can't be made is made again with a new scene, free.
+
+**What's kept** (`agi1_studio_videos` in `supabase/studio.sql`, only the server's key): per video the same scrambled wallet
+code as its character's, its character, the scene, its shape and sound, its level and price, what's paid so far, where it
+is in the making (fal's request id and the two addresses fal gave for it, a lease, its tries), and once done its file's
+size; its payments' scrambled codes with the characters' (`agi1_studio_txs`); videos a month with the characters' months;
+its file in the bucket. A done one stays (public on its character's page); one never paid goes after 2 days; a failed one
+after 30 days (60 with a credit). The safety note's 01, 02 and 04 say so. **Taking one down:**
+`select studio_video_hide('<its id>', true);` (`false` shows it again), or its id in `STUDIO_HIDE`, then Redeploy (a hidden
+character hides its videos too).
+
+**Setup (the owner, once the studio is set up):**
+1. **fal.ai:** fal.ai → sign up → **Billing**: add a little balance (fal takes each video's price from it; when it's empty,
+   videos wait) → **API Keys** → a new key (name it "agi1 studio videos") → Vercel → agi-ecosystem → Settings →
+   Environment Variables → `FAL_KEY` (Production). A secret: never in chat, code, git or a screenshot.
+2. `STUDIO_PAY_TO` must be set (videos are USDG only). `supabase/studio.sql` has its videos: run it again if it was run
+   before them (it keeps everything; it still ends with `studio_ready = 1`).
+3. Optional (Vercel, then Redeploy): `STUDIO_VIDEO_PRICE_USD` (4), `STUDIO_VIDEOS_A_MONTH` (30), `STUDIO_VIDEO_MODEL`.
+4. **Push** (or Redeploy if it's pushed), then on your own character's page: "Make a video of it", a scene, pay a little
+   USDG, and a few minutes later it plays there. Try it on an iPhone too (Safari is the strictest about video).
+
+**Cost:** fal.ai about $2.40 a 5-second 720p video (about $0.47 a second, fal's page, 2026-10-10), taken from the balance
+the owner tops up; a video made again (free for its owner) is one more video at fal. Supabase Storage holds it (a 5-second 720p video is a few MB:
+the free plan's 1 GB holds a few hundred with the characters), and each play on its page is read through our server, so
+it uses Supabase's egress (the free plan's 5 GB a month, shared with the database) and Vercel's bandwidth and function
+calls (Pro). What it brings in: a Stranger's video $4 in USDG, a Crush's $3.20, a Soulmate's $2.40 (about fal's own
+price: Claude told the owner), to the owner's wallet; at most 30 a month by default.
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| No "Make a video of it" on a done character's page | `[studio] FAL_KEY is missing: its videos are off` (or none) | `FAL_KEY` (and `STUDIO_PAY_TO`) in Vercel, then Redeploy |
+| Videos wait at "Waiting its turn" for ever | `[studio] a video waits: fal HTTP 401 … (FAL_KEY is wrong or was deleted: make a new one at fal.ai → API keys)` | A new key, `FAL_KEY` in Vercel, Redeploy. They carry on by themselves |
+| Videos wait | `[studio] a video waits: fal HTTP 403 … (no fal.ai balance left: top it up at fal.ai → Billing)` | Top up fal's balance. They carry on by themselves |
+| "The AI's safety check stopped this scene." | (none) | By design: made again free with a new scene |
+| "The AI couldn't make it this time." | `[studio] video <id> failed at the video service 3 times (…): given up` | Made again free. If it's every video, tell Claude with the log line (`STUDIO_VIDEO_MODEL`?) |
+| "Its file couldn't be kept." | `[studio] video <id>'s file couldn't be kept: …` | Supabase Storage (the bucket refusing `video/mp4` or its size: run `supabase/studio.sql` again); made again free |
+| A done video won't play on its page | `[studio] a video's file: storage HTTP …` | Supabase Storage didn't answer (a paused project: resume it); passes by itself |
+| Videos only move along while their page is open | (none) | The studio's clock (`studio_scheduled` must be 1), as for characters |
+
+**Tests:** `tests/videos.test.js` (23, with a fake fal (its queue and media), Supabase (studio.sql's video rules in
+JavaScript) and its Storage (signed addresses, Range reads), Robinhood Chain, the block explorer and Cloudflare): the rules
+and settings, a scene's checks and the video service's words (never anyone real, no text), fal's queue (a request with its
+inputs and the 7 days, its state and its place, its result, every error and the key never in one), its files (only fal's
+addresses, MP4s, Storage, a part read with Range, its capped parts), what anyone sees and what only its wallet does,
+quotes, USDG payments (once, adding up, never a character's payment twice), made again, the making and every way it can
+go, the clock, every GET (played in parts: 206, 416 and a whole small one; big ones and downloads 302 with their names)
+and POST, the page (its words, never the service's name, its CSP with no media-src and no other site), 12 functions, the
+secret check and package.json. `tests/studio.test.js`, `tests/launch.test.js` (the CSP's line), `tests/popout.test.js`
+(no wildcard). `supabase/studio.sql` in PGlite (Claude's scratch `pg/studiosql2.mjs`, 70 checks, also run over the
+studio's first version). In a browser with the site's real CSP (Claude's scratch `videotest.mjs`, 142 checks, a fake
+`/api/launch` serving stand-in videos in capped parts the way our server does): its videos for a visitor (each its shape
+and words, nothing downloaded before it's played, each played in parts answered 206, Download, Share on X), a shared link
+to one, the 18+ step, the wallet that made it at Crush (its price, its words checked here and by our server, a quote with
+its shape and sound, paying: where to, Copy, "Check my payment" four ways, Later and "Pay for it", paid, being made and
+asked every 5 s, done and played), one made again for free while the month's are spoken for, another wallet, a private
+studio, a session that ended, videos off, none yet, a character still being made, "reduce motion", phones at 390 and 360
+px in both looks and themes, axe 0 issues, clean consoles, nothing blocked by the CSP, the wallet never asked for anything
+but a signature. **Not tried live:** fal.ai and Seedance themselves (what they make from a character's picture, how long
+it takes, their files' sizes), USDG for a video on Robinhood Chain, Supabase Storage's Range reads, real phones (Safari):
+the owner's first video is the check.
+
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
 **The owner's project:** CloakMesh, "a Zero-Gateway P2P confidential AI inference network", whose Phase 1 Claude built in
@@ -5350,8 +5993,18 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   and never flirts, and note 04 what her groups keep (a daily code of a person's Telegram account for their messages a
   day; per group, her replies a day and when she last welcomed someone). And (her buy bot, 2026-10-06) note 04 what her
   buy alerts show (new $AGI buys as the chain's public record has them: what was spent and got, the buyer's short address
-  and the transaction, linked) and that our database keeps only those trades' public ids, for 7 days. Last updated
-  October 6, 2026 (her buy alerts; October 5: the risk check's pictures). **Owner's wording
+  and the transaction, linked) and that our database keeps only those trades' public ids, for 7 days. And (her quizzes,
+  2026-10-09) note 01 that her quiz prizes are a thank-you for playing, note 02 that a winner is only ever asked for a
+  wallet's address in her private chat, note 03 that claiming is 18+, note 04 what her quizzes keep and that their votes
+  are visible in the group; (her show, 2026-10-09 and 10) note 04 the name a question is shown with (a Telegram name with
+  /live) and, with a wallet at Crush or Soulmate, her 💜 badge (note 01: "a thank-you for being here, not an investment").
+  And (AGI-1's 3D character studio, 2026-10-10, in the burns' sentences: the studio needs burns.sql) note 01 its holder
+  discounts ("a thank-you for holding, not an investment") and no refunds, note 02 that the only transactions we ever
+  suggest are ones the visitor sends: a burn to `0x…dEaD` (for messages or a character) and USDG for a character or its
+  video to the studio's wallet its page shows, note 04 what the studio keeps and that a character's page is public; and
+  (its videos, the same day) note 01 that a character's videos are paid in USDG with the same discounts and can't be
+  refunded (one that can't be made is made again free), note 04 that the scene and the character's picture go to an AI
+  video service and what's kept. Last updated October 10, 2026. **Owner's wording
   rules (2026-09-24):** the visitor-facing text doesn't name the
   AI provider (no "Google"/"Gemini"; it says "an AI service"), and there's no "Not a real lab" note. **2026-09-25:** "A parody"
   is gone from the bottom bar (both pages); it now reads "© 2026 AGI. No labs were harmed." and "$AGI is a token made
@@ -5552,6 +6205,31 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   coin; her GIF is her 2D self, PG-13 (never the 3D model).
 - Each buy is claimed in the database before it's posted: never twice, even when two checks run at once.
 
+### Her quizzes and their prizes (`/api/feed?games`, `/api/telegram`, 2026-10-09, see "Her quizzes in her Telegram groups")
+- Only Supabase Cron may run the clock: `GET /api/feed?games` (exactly that) with the key `supabase/games.sql` made in the
+  database (`game_key()`), compared in constant time, like her buy bot's. Answers and closings come only through her bot's
+  webhook (our secret, as for every update).
+- **The second wallet key on our server, `PRIZE_WALLET_KEY`** (hard rule 4): only ever signs $AGI's own `transfer` of one
+  prize (`GAME_PRIZE`, at most 1,000,000 $AGI by the settings' own cap) to the address its winner gave, with no ETH, at most
+  1,500,000 gas; never the gas wallet's key (refused: prizes off), never logged, on the secret check's list. A hack could
+  take at most what's in it, so it holds only a few days of prizes.
+- **Never twice:** a prize is claimed in the database before anything (`game_claim`, once; again only 2 minutes after a
+  claim that never got as far as sending), its transaction recorded before it goes out (`game_sending`), and given back only
+  when nothing went out (the chain's clear "no", or a transfer the chain says failed); an unclear answer counts as sent.
+- **Only the winner, only their address:** a prize is claimed only by the Telegram account that won it (its id, from
+  Telegram's own update), in her private chat, after her 18+ check; the address is checked (its checksum, not a contract,
+  not ours, not the burn or $AGI's own contract) and shown back before it's sent. She never asks for anything else: never a
+  seed phrase, a private key, a signature, a token approval or a link (her lines and the safety note say so, and so does
+  one of her quiz questions).
+- **What's kept** (games.sql, row level security on, only the server's key): Telegram ids and first names of people who
+  answered (3 days), winners' ids, the addresses they gave and their prizes' public transactions (60 days). Never a
+  message, a username or a phone number.
+- **Her words:** her questions and lines are pre-written (no AI), PG-13, never another coin or chain, never money talk; a
+  winner's name goes in her result only when it can (no links, @names, addresses, crude words or "admin"/"official"),
+  as an entity on her own text (nothing parsed).
+- **A secret sent by mistake** (`server/secrets.js`): a private key or a seed phrase never reaches the AI, the database or
+  her stream; she warns them.
+
 ### Burns for messages (`/api/wallet` action `burn`, `GET /api/wallet?burns`, 2026-09-30, see "Burn $AGI for more messages")
 - The site never asks a wallet for the burn: the visitor sends it from their own wallet app. The page only shows
   the address (with Copy), and our server only reads: the chain (`eth_getTransactionReceipt`, `eth_getBlockByNumber`, and
@@ -5677,6 +6355,46 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
   question, a reply or a display name (the owner's change): her prompt keeps her neutral, the AI still skips anything
   hateful, accusing, about a private person or about another coin. Everything on her set (places, vehicles, people, food,
   weather, sounds) is drawn or made in code on her set's own page: no new address, nothing downloaded.
+- **Holder perks (2026-10-10, see "Holder perks on her show"):** a wallet's level comes only from its session
+  (HMAC-signed with PASS_SECRET, the site's own sign-in: an address and a free signature) read on our server, and from
+  Robinhood Chain when it's 30 minutes old: never from what the page says. The database never holds the wallet's address:
+  a daily HMAC code of it (not her chat's memory code), only to count its 5 badges a day, gone with the question (2 days).
+  On stream only "Crush" or "Soulmate", never the wallet or an amount; a Soulmate's shout-out is pre-written. The page asks
+  a wallet for nothing else (`tests/wallet.test.js` covers it), and no new CSP domain.
+
+### AGI-1's 3D character studio (`/api/launch?studio…`, `/api/feed?studio`, 2026-10-10, see "AGI-1's 3D character studio")
+- **Never asked of a wallet:** its payments are sent by the visitor from their own wallet app; the page only shows where to
+  (Copy) and our server only reads the chain (receipts, blocks' times, the explorer's list: `server/studio-chain.js`). A
+  payment counts only from the chain's own answer (the official token's Transfer events, from the signed-in wallet, to
+  where it should go, after its quote, in the last 7 days), once (a burn once across messages and characters).
+- **The one secret**, `MESHY_API_KEY`: only on our server, on the secret check's list, never in a log (Meshy's error texts
+  are scrubbed of `msy_…`). Its own monthly credit limit in Meshy caps what a bug could spend; the studio's monthly number
+  (`STUDIO_A_MONTH`) and burns (`STUDIO_BURNS_A_MONTH`) cap what it asks of Meshy. A character is made only once paid.
+- **Its words** are checked on our server before anything (`server/studio-words.js`), then by Meshy's own screening.
+  Everything a character's page shows is set with `textContent`.
+- **Its files** come only from Meshy's own https addresses (`*.meshy.ai`, no redirects, 80 MB at most), are made small and
+  checked (a real GLB with bones and moves, under 4 MB; a real picture, never over 40 million pixels) and kept in a
+  private bucket; our address serves only a done, shown character's files, in a sandbox (`default-src 'none'; sandbox`,
+  `nosniff`). The page loads them from our own address: the CSP is unchanged (three.js unpacks textures through `blob:`,
+  already allowed).
+- **Who may do what:** a quote, a choice, a check and making one again need the wallet's session (HMAC-signed; its level
+  read again on the chain when it's 30 minutes old); a quote needs 18+ and the human check (Turnstile `studio`, or the
+  2-hour pass); only the wallet that ordered a character can pay for it or make it again; 12 quotes and checks a minute
+  per visitor, 40 looks and 240 files a minute (per server copy). While it's private, only `STUDIO_ONLY_FOR`'s wallets may
+  ask for a quote. The clock (`/api/feed?studio`) only with studio.sql's own key, compared in constant time.
+- **What's kept:** never an address, a transaction or an IP address (a scrambled wallet code, scrambled payment codes);
+  row level security on, only the server's key. Its pages are public by link (22 random characters); the gallery shows
+  the newest; the owner can hide any (`studio_hide`, `STUDIO_HIDE`).
+- **Its videos** (2026-10-10, see "Its videos"): only the wallet that made a character may ask for one (the same
+  session, 18+ and human check as a quote; private while the studio is); paid only in USDG from that wallet's own app, read
+  on the chain, each payment once (the same ledger as characters'). Their one secret, `FAL_KEY`: only ever sent to
+  fal's queue (`queue.fal.run`), on the secret check's list, never in a log (fal's errors are scrubbed of it and of
+  anything shaped like a fal key). fal gets the character's picture (a signed address, 6 hours), the scene and an HMAC id
+  for who asked, never the wallet or its code; the scene is checked first by our server, then by fal's model. A video's
+  file comes only from fal's own media addresses (https, no redirects, 40 MB at most, a real MP4) and is played only from
+  our own address, in parts (206, at most 4 MB a part), in a sandbox: the CSP has no `media-src` and no other site's media
+  (its "no wildcard anywhere" test). A video being made is looked at at most 40 times a minute per visitor; `STUDIO_VIDEOS_A_MONTH`
+  caps what it asks of fal; a video is made only once paid. Hidden like characters (`studio_video_hide`, `STUDIO_HIDE`).
 
 ### CloakMesh's waitlist (`/api/cloakmesh`, 2026-10-03, see "CloakMesh at inference.agi1.app")
 - The one piece of personal data is the email address, kept only to tell people about CloakMesh; never the internet
@@ -5745,7 +6463,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 
 | Service | Free allowance | If exceeded |
 |---|---|---|
-| Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, her Live2D model and the default since 2026-10-01: about 770 KB per visitor who sees her in 2D, instead of the 3D model's 1.7–2.2 MB, which now only downloads when picked; full-screen talk on a computer, 2026-10-02: her 4096 px texture too, about 1.1 MB; her buy bot, 2026-10-06: one small run a minute, about 43,000 calls a month, about 1 ms of CPU each, 50 ms when a server copy starts). **12 functions per deployment** (each file in `api/` is one: all 12 used since CloakMesh's waitlist, 2026-10-03, so a new feature must share one, or Pro) | Usually paused until 30 days have passed (a 13th function: the deployment fails, the site stays on the last good one) |
+| Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, her Live2D model and the default since 2026-10-01: about 770 KB per visitor who sees her in 2D, instead of the 3D model's 1.7–2.2 MB, which now only downloads when picked; full-screen talk on a computer, 2026-10-02: her 4096 px texture too, about 1.1 MB; her buy bot, 2026-10-06: one small run a minute, about 43,000 calls a month, about 1 ms of CPU each, 50 ms when a server copy starts; her quizzes, 2026-10-09: one small run every 2 minutes, about 21,600 a month, and one webhook call per answer and per vote's poll update). **12 functions per deployment** (each file in `api/` is one: all 12 used since CloakMesh's waitlist, 2026-10-03, so a new feature must share one, or Pro) | Usually paused until 30 days have passed (a 13th function: the deployment fails, the site stays on the last good one) |
 | Supabase Free | 500 MB database · 5 GB egress · 200 realtime connections · 2M realtime messages/month. Paused after 1 week with no activity. Supabase Cron (pg_cron) and pg_net are in the free plan (her buy bot's clock, 2026-10-06: one tiny run a minute, its run history kept 3 days) | Grace period, then restricted (read-only or paused), never billed |
 | Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 5,000 a day ≈ $15 ($22.50 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten, her nine tap lines) are made once and kept (the database since 2026-09-26); since 2026-09-30 the replies paid for by burning $AGI, at most `BURN_DAILY_CAP` (1,000) a day ≈ $0.80 more; since 2026-10-02 a picture with a message ("Show her") about $0.0003 more, counted as one message | The key stops when credits hit $0 (the chat and the voice share them) |
 | Cloudflare Turnstile | Unlimited | — |
@@ -5762,6 +6480,11 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | Google Cloud Vertex AI, now "Agent Platform" (her voice on stream, 2026-10-02) | Pay per use on the project's billing account, charged to its card once a month (never from AI Studio's prepaid credits, which pay for the Gemini API only): at most about $0.54 an hour of new talking ($6 per 1M audio tokens until 2026-12-31, then double); her pre-written lines are made once and kept, so each day only her answers are new (about $0.002 each: a few dollars a month with 3-hour shows), and since 2026-10-07 her new AI lines and reactions (at most about $0.04 an hour: 40 lines) and the people she meets on her trips (about $0.01 a meeting, their own voices: about $0.05 to $0.15 a 3-hour show); and (2026-10-07) her set's pictures, painted once by its image AI (Nano Banana 2.1, about $0.034 a picture: about $5–10 for all 152); a budget alert at $20 (an email, never a stop) | Her lines that aren't kept yet are said silently (captions); kept lines and her music keep playing |
 | X's API (her own posts on stream, 2026-10-07) | Not a free tier: pay per use on the X developer account's own credits (about $0.005 a post read, $0.010 an account read, each post counted once a day); at most `LIVE_X_READS` (60) posts a show, about $0.30; nothing until `LIVE_X_BEARER` is set | Her posts and replies stop for that show (the log says why); everything else goes on |
 | The gas wallet (launch fees paid back, 2026-10-01) | Not a free tier: the owner's own ETH, at most `LAUNCH_GAS_DAILY` (0.01 ETH by default) a day plus each payback's own tiny fee | Paybacks pause ("out of ETH" / "all it can for today"); launches still work |
+| Meshy (the studio's 3D characters, 2026-10-10) | Not a free tier: the owner's Pro plan, about $20 a month for 1,000 credits; a character is 59 credits (about 16 a month); its key's own monthly credit limit, and `STUDIO_A_MONTH` (15) a month | Characters wait ("being made") until there are credits again; never failed |
+| Supabase Storage (the studio's files, 2026-10-10) | The free plan's 1 GB of files (a character is about 1 to 4 MB; since its videos, a video a few MB too) and its egress (shared with the database's 5 GB; Vercel's CDN keeps each character's file a day per region, but a video played on its page is read in parts through our server each time: about its size a play) | New characters' and videos' files can't be kept ("Its files couldn't be kept": made again free once there's room); the owner's call: a paid plan, or the oldest taken down |
+| fal.ai (the studio's videos, 2026-10-10) | Not a free tier: pay per video from a balance the owner tops up, about $2.40 a 5-second 720p video (Seedance 2.5, fal's page, 2026-10-10); at most `STUDIO_VIDEOS_A_MONTH` (30) a month, each paid for in USDG first | Videos wait ("Waiting its turn") until there's balance again; never failed |
+| Vercel Pro (the studio, 2026-10-10) | Not a free tier: $20 a month, the owner's choice, for the studio's sales (Hobby is for non-commercial use) | — |
+| The prize wallet (her quizzes' prizes, 2026-10-09) | Not a free tier: the owner's own $AGI, at most `GAME_WINS_A_DAY` × `GAME_PRIZE` a day (2,500 $AGI by default), plus each prize's own tiny network fee in ETH | Quizzes are just for fun until it's topped up; prizes already won wait for their claim |
 
 ## Environment variables
 
@@ -5798,6 +6521,11 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `TELEGRAM_GROUP_WELCOME` | no, optional | `off` = she doesn't welcome people who join her groups (on by default; at most one welcome every 10 minutes) |
 | `TELEGRAM_BUYS` | no, optional | Her buy bot (2026-10-06, see "Her buy bot"): `off` = no buy alerts in her groups (on by default, once `supabase/buys.sql` has set up its clock) |
 | `TELEGRAM_BUY_MIN` | no, optional | The smallest $AGI buy her buy bot posts, in dollars (default 50, the owner's since 2026-10-06; 100 at first; at most 1,000,000). Redeploy after changing it |
+| `PRIZE_WALLET_KEY` | **yes** | Her quizzes' prizes (2026-10-09, see "Her quizzes in her Telegram groups"): the private key (64 hex characters, with or without `0x`) of the owner's prize wallet, a new wallet made only for this, holding only the $AGI for a few days of prizes and a little ETH. Without it (or with the launch gas wallet's key, which is refused), her quizzes are just for fun |
+| `TELEGRAM_GAMES` | no, optional | `off` = no quizzes in her groups (on by default, once `supabase/games.sql` has set up their clock) |
+| `GAMES_A_DAY` | no, optional | About how many quizzes a day in each group (default 10, the owner's; 1 to 48), at random times |
+| `GAME_PRIZE` | no, optional | A win's prize, in whole $AGI (default 250, the owner's; at most 1,000,000) |
+| `GAME_WINS_A_DAY` | no, optional | The prizes the whole site gives a day (default 10, the owner's); quizzes after that are just for fun until 00:00 UTC |
 | `BURN_PER_MESSAGE` | no, optional | Burn $AGI for more messages (2026-09-30): whole $AGI a burned message costs (default 10: 1,000 $AGI = 100 messages). Change it if $AGI's price moves a lot; burns already counted keep their messages. Redeploy after changing it |
 | `BURN_DAILY_CAP` | no, optional | Burned messages the whole site may use a day, on top of the free ones (default 1,000, about $0.80 of replies at most). Redeploy after changing it |
 | `CHECKER_HIDE_PICTURES` | no, optional | ClankChecker (2026-09-26): coins whose picture the owner doesn't want on the site, as contract addresses separated by commas; they show their letter instead. Redeploy after changing it |
@@ -5809,6 +6537,19 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `LAUNCH_ONLY_FOR` | no, optional | The owner's private first launch (2026-10-01): Telegram usernames (e.g. `@yourname`) or numeric Telegram ids, separated by commas. While it's set, only they can use /launch; nobody else sees it. Delete it (then Redeploy, then run the `/api/feed` cron job) to open launching to everyone |
 
 | `LIVE_SECRET` | **yes** | Her live show (2026-10-02): 32+ random characters, the same as on the owner's server (`/opt/agi1-live/live.env`). Her stream runner's key for `/api/live`; the owner's phone link is made from it (changing it changes the link). Without it, agi1.app/live says her show is coming soon |
+| `MESHY_API_KEY` | **yes** | AGI-1's 3D character studio (2026-10-10): Meshy's API key (`msy_…`, from Meshy's developer platform; give it a monthly credit limit there). Without it, the studio is off ("opens soon") |
+| `STUDIO_PAY_TO` | no | The owner's own wallet address on Robinhood Chain, where USDG for characters goes (an address, never a key). Without it, characters can only be paid by burning |
+| `STUDIO_ONLY_FOR` | no | While the studio is private: the wallet addresses that may make a character (separated by commas). Nobody else can, until `STUDIO_OPEN` |
+| `STUDIO_OPEN` | no, optional | `yes` = anyone may make a character (after asking Meshy: see "Open questions"). Not set: private |
+| `STUDIO_PRICE_USD` | no, optional | A Stranger's price in USDG, in dollars (default 5; 0.50 to 100); Crush 20% off, Soulmate 40% off |
+| `STUDIO_PRICE_AGI` | no, optional | A Stranger's price in burned $AGI, whole (default 15,000) |
+| `STUDIO_A_MONTH` | no, optional | Characters a month (UTC) for the whole site (default 15: Meshy Pro's credits make about 16) |
+| `STUDIO_BURNS_A_MONTH` | no, optional | Of those, how many may be paid by burning (default 5; 0 = none: a burn pays nobody) |
+| `STUDIO_HIDE` | no, optional | Characters (and since 2026-10-10 their videos) taken down (their ids, separated by commas): their pages, files and gallery entries go; a character's videos go with it. Redeploy after changing it |
+| `FAL_KEY` | **yes** | Its characters' videos (2026-10-10): fal.ai's API key ("<id>:<secret>", from fal.ai → API Keys). Without it, no videos (the characters still work) |
+| `STUDIO_VIDEO_PRICE_USD` | no, optional | A video's price in USDG for a Stranger, in dollars (default 4; 1 to 100); Crush 20% off, Soulmate 40% off |
+| `STUDIO_VIDEOS_A_MONTH` | no, optional | Videos a month (UTC) for the whole site (default 30: each costs the owner about $2.40 at fal) |
+| `STUDIO_VIDEO_MODEL` | no, optional | The video model on fal (default `bytedance/seedance-2.5/reference-to-video`); another one must take the same inputs. Ask Claude first |
 
 Her live show's own settings (X Live Studio's stream key, Google Cloud's key, the show's time, her music, and since
 2026-10-07 her new AI lines and X's Bearer Token for her own posts…) live only on the owner's server, in
@@ -6296,7 +7037,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   (see "Her arms, her hands and what she holds" and "Her painted set"), a before and after for the owner, then a new
   preview. **Owner:** look at both, then push and `update` on the server (no SQL, no setting, no `--warm`). Tests: 547
   unit (546 pass, 1 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings), the build.
-- **Her show, 2026-10-09: built, waiting for the owner's push and OK** (the owner's next list: "no restrictions on howr
+- **Her show, 2026-10-09: done** (pushed and live the same day: the owner ran `supabase/live.sql`, updated the server,
+  warmed her 547 lines, uploaded her music video and her launch video, tried a private show ("thats good") and went live)
+  (the owner's next list: "no restrictions on howr
   short their message are", "agi will now read the full question", "she will do everything asked to her", "she doesn't
   watch her own ivdoes … and didn't sreact to her post", "the full lyrics on the subtitle … with the full video", "she can
   say names now no restrictions, and she will know every person's real name on the telegram … with her memories", "she can
@@ -6312,6 +7055,45 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   pass, 1 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings), the build, 119 SQL checks
   (PGlite), a 9-minute preview recording (her intro and how to ask her, questions read out loud, her song with its music
   video, her chart).
+- **The next big plan (2026-10-09)** (the owner: "since the 3d model with rig gonna be in demand on the live on
+  clank.trade what if i launched a where they can create a 3d model with meshy ai api that can move on chat just like
+  vladcat … burning $AGI … launch token with it … viral content with it using seedance 2.5 api … pay crypto like stables
+  … if they hold agi they get a discount … tg bots as well", "can i add games on the tg bot like riddles, questions …
+  make this better then continue", and "you can also add more utiliy to $agi so holders are happy"): Claude's better
+  version, and the owner's choices: build **all four**, in this order, each saved to the folder once tested with its
+  steps: 1. **her quizzes** in her Telegram groups (claims in her private chat, 250 $AGI a win, 10 wins a day, about 10
+  quizzes a day, 18+ to claim); 2. **holder perks on her live show** (a wallet sign-in at agi1.app/live, a 💜 holder
+  badge and a place near the front of her line for **10,000+ $AGI**, the owner's: "10,000+ $AGI (Recommended)"; Soulmate
+  shout-outs); 3. **a 3D character studio** (Meshy's API: a character made from a picture or words, rigged, moving on
+  her stream's chat like clank.trade's own; paid by **burning $AGI or in USDG**, the owner's, burns capped a month,
+  holder discounts; a character can launch its own coin); 4. **short videos of the characters** (Seedance 2.5 through
+  fal.ai, about $4 in USDG a 5-second 720p clip before holder discounts). Telegram bots for people's own characters:
+  later. **Vercel Pro** ($20 a month) for the studio and videos (selling is commercial use, which the free plan doesn't
+  allow, and they need more functions), the owner's choice: the owner switches it on when they're ready. The owner makes
+  the Meshy (Pro, $20 a month) and fal.ai accounts.
+- **Her quizzes: built 2026-10-09, waiting for the owner's setup and push** (item 1 of the plan above): see "Her quizzes in
+  her Telegram groups". And a safety net: a seed phrase or a private key sent to her by mistake never goes further (her
+  private chat, /ask, her live show's questions). **Owner:** `supabase/games.sql`, a new prize wallet with $AGI and a
+  little ETH (`PRIZE_WALLET_KEY`), Redeploy, push. Tests: 580 unit (579 pass, 1 skipped as before; on Node 20, 22 and 24,
+  with and without Vercel's settings), the build, games.sql in PGlite and the server end to end against it. Not tried live.
+- **Holder perks on her live show: built 2026-10-10, waiting for the owner's setup and push** (item 2 of the plan above;
+  the owner's choice: from 10,000 $AGI): see "Holder perks on her show". **Owner:** `supabase/live.sql` again (before
+  pushing), push, then `update` and `--warm` on the server. Tests: 583 unit (582 pass, 1 skipped as before; on Node 20, 22
+  and 24, with and without Vercel's settings), the build, 146 SQL checks (PGlite), 83 in a browser, her card's badges and
+  a Soulmate's shout-out on a 4-minute recording. Not tried live.
+- **AGI-1's 3D character studio: built 2026-10-10, waiting for the owner's setup and push** (item 3 of the plan above; the
+  owner's choices: burn $AGI or USDG, holder discounts and a Soulmate's free one, Meshy Pro and Vercel Pro): see "AGI-1's
+  3D character studio". **Owner:** Vercel Pro, a Meshy key (Pro), `supabase/studio.sql` (after burns.sql),
+  `STUDIO_PAY_TO` and `STUDIO_ONLY_FOR` (the owner's wallet), push, one private character; ask Meshy before
+  `STUDIO_OPEN`. Tests: 622 unit (621 pass, 1 skipped as before; on Node 20, 22 and 24, with and without Vercel's
+  settings), the build, 44 SQL checks (PGlite), 214 in a browser with a stand-in character. Not tried live (Meshy, USDG, Storage).
+- **Its characters' videos: built 2026-10-10, waiting for the owner's setup and push** (item 4 of the plan above; the
+  owner's choice: about $4 in USDG a 5-second 720p video, before holder discounts): see "Its videos". Telegram bots for
+  people's own characters stay for later (the owner's). **Owner:** with the studio's setup, a fal.ai account with a
+  little balance and its key (`FAL_KEY`), `supabase/studio.sql` (it has the videos: again if it was run before them),
+  push, one private video of the owner's own character. Tests: 645 unit (644 pass, 1 skipped as before; on Node 20, 22
+  and 24, with and without Vercel's settings), the build, 70 SQL checks (PGlite), 142 in a browser with stand-in videos
+  played in parts. Not tried live (fal.ai, Seedance, USDG, Storage's Range reads, real phones).
 
 ## Decisions log
 
@@ -6544,7 +7326,18 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-09 | Her song's music video (the owner: "the full lyrics on the subtitle must shown with the full video", then "Full screen, her small (Recommended)"): the owner's own video full screen at the top (its own 1280 × 548 shape), she's small in the bottom right (drawn small by the camera, about a fifth of her pixels, not her picture scaled down), all 61 lines of its words in a band under it (never over it); in step with the song (3 ms apart, nudged when it drifts); found in her videos folder by its name, made once (1280 px VP8 WebM). Not picked: the video on her TV (too small for its kinetic text and its pictures), her over the video at full size (she'd cover it) |
 | 2026-10-09 | Her song's words: all of them, timed once from the song's own lyrics (the owner's MP3's) and her vocals with a speech-to-text model, matched in order (the hook's 116 of 134 words placed by her voice, the rest paced). On screen as on the owner's own video, which names real people: the owner's exception for this one song. Never printed by a test or in chat |
 | 2026-10-09 | $AGI's live trading chart on her TV (the owner: "can you also include on her watching the live trading chart of $AGI"): candles of its newest 100 trades on clank.trade (the same read as her buy alerts, kept 30 s), drawn in code on her TV's canvas, redrawn every 12 s while she watches it for about 36 s; her feeling about it (±3%) and "not financial advice" every time; one of her extras and a viewer's request. Not picked: an outside chart widget or picture (DexScreener's or another site's: a third party in her stream, and its own words and links on screen), a chart all show long (her TV is for her videos and posts) |
+| 2026-10-09 | The next big plan (the owner's ideas: a 3D character studio with Meshy, videos with Seedance, games in her bot, "more utility to $agi so holders are happy"): Claude's better version, all four built in order (quizzes, holder perks on the live, the studio, videos), each only $AGI's own and never an investment promise (no paying holders, no buybacks, no "number go up": holder perks are things to do and see). Telegram bots for people's own characters later |
+| 2026-10-09 | Her quizzes (the owner: games in her bot, a little $AGI for a right answer, "they will reply with their address and get it"): Telegram **quiz polls** (Telegram shows the countdown and the right answer itself), 10 minutes each, about 10 a day per group at random times (the owner's "About 10 a day"); **one right answer drawn at random** wins, not the first (a bot or the quickest finger would win every time); one win a day each, 10 a day for the site, 250 $AGI each (the owner's); claimed **in her private chat** (the owner's: replying with an address in the group lets anyone copy or fake it, and posts strangers' addresses), **18+** (the owner's), only an address (never a seed phrase, a signature or a link: the opposite of a scam's "connect your wallet to claim"). Not picked: the first right answer wins, prizes paid without a claim (bots can't message people first), sending to an address posted in the group, a site page to claim (a "claim" page is what scams look like) |
+| 2026-10-09 | The prize wallet (`PRIZE_WALLET_KEY`): a second wallet key on our server (hard rule 4), holding only a few days of prizes; refused if it's the launch gas wallet's (that one never holds $AGI). Its sends share the launch payback's never-twice code, moved to `server/hot-wallet.js`. A prize waits 24 hours for its claim to start, then 7 days to be sent (a prize wallet that needs a top-up never costs a winner their prize) |
+| 2026-10-09 | A seed phrase or a private key sent to her (claims invite wallet talk) is caught before it goes anywhere (`server/secrets.js`: 64 hex characters, or 12 or more wallet-list words in a row): her private chat, /ask in her groups and her live show's questions; she warns them. Its word list is `@scure/bip39`'s (the package viem already uses, now a dependency of its own: no new download). The website's chat isn't covered yet |
 | 2026-10-09 | The art tests encode WebP at its lightest effort (`effort` in `tools/live/art-cut.mjs`, 6 for her set's own pictures): at 6, one picture took about 8 s on Claude's 2-core computer, and the whole test run timed out (30 s a test); Vercel's build runs these tests |
+| 2026-10-10 | Holder perks on her live show (the owner: "you can also add more utiliy to $agi so holders are happy"; the owner's choice of who: "10,000+ $AGI (Recommended)"): a question sent at agi1.app/live with a connected wallet at Crush or Soulmate gets her 💜 badge on its card and a head start in her line, a Soulmate's a shout-out too, 5 badges a day per wallet. A **head start of 10 minutes, never further**: a holder's question goes ahead of the ones sent in the 10 minutes before it, never the whole line. Named after the site's own levels (Crush, Soulmate), never "holder", a wallet or an amount on stream; the level read on our server from the wallet's session and the chain, like her chat's; nothing spent. Not picked: strict priority for holders (on a busy show everyone else could wait forever), a holders-only show or holders-only questions (she's for everyone), anything paid in $AGI to holders, buybacks or "number go up" (they'd make $AGI look like an investment), the wallet's address on stream |
+| 2026-10-10 | AGI-1's 3D character studio (the owner's idea, item 3 of the plan; the owner's choices: "Burn $AGI or USDG", holder discounts, a Soulmate's free one a month, Meshy Pro, Vercel Pro): a page on this site, agi1.app/studio (and agi1.app/studio/<id> for each character), inside two of the 12 functions (`/api/launch`, `/api/feed`). A character from **words only** for now (a name, a description, a style), checked on our server and by Meshy's screening; Meshy's four steps one at a time (a task can take minutes; Vercel stops a function at 25 s), moved along by its page and by Supabase Cron every minute; its files read from Meshy (which keeps them 3 days), made small and kept in Supabase Storage. Not picked: a character from an uploaded picture (its rights and what it shows can't be checked), a wallet asked to pay (hard rule 9: paid from their own wallet app, read on the chain), a coin launched for it automatically (her bot's /launch with its picture, its own rules), Telegram bots for characters (the owner: later), a character on her live show (later, if the owner wants it) |
+| 2026-10-10 | Paying for a character: USDG (Paxos' Global Dollar on Robinhood Chain) to the owner's own wallet, or $AGI burned to `0x…dEaD`, read on the chain like a burn for messages (one ledger of burns: a burn counts for messages or a character, never both, and toward the level). Prices $5 or 15,000 $AGI for a Stranger (settings), Crush 20% off, Soulmate 40% off and one free a month ("a thank-you for holding, not an investment"); 15 a month, 5 of them by burning (a burn pays nobody while each costs about $1.20 of Meshy's credits); no refunds, but a paid one that can't be made is made again, free, with new words. Private (`STUDIO_ONLY_FOR`) until Meshy says its terms allow selling what it makes (`STUDIO_OPEN`) |
+| 2026-10-10 | A character's files: its model under 4 MB (Vercel answers at most 4.5 MB) with glTF's own JPEG or PNG textures at 1024 px (never WebP or KTX2: the file must open anywhere people take it, a 3D stream or Blender), its moves resampled, its bones and moves as made; its picture as a 384 px WebP and a 1024 px PNG; served from our own address (the CSP unchanged). Its page: the site's own three.js, loaded only there; its moves in place (the drift across the floor taken out, as the world sees it, whatever its armature) and framed for every pose; its chat matched to moves in the browser (nothing typed is sent). Visitor-facing words never name Meshy (a failure is kept as `ai:<step>`) |
+| 2026-10-10 | Its characters' videos (the owner's idea, item 4 of the plan: "they can create a viral content with it using seedance 2.5 api but they gonna pay crypto like stables instead of $agi if they hold agi they get a discount"; the owner's choice: about $4 in USDG a 5-second 720p video, before holder discounts): on a done character's page, only the wallet that made it may ask for one (its character, its call): a scene in words, its shape (vertical, wide, square) and sound; Seedance 2.5's reference-to-video through **fal.ai** (its queue API: one key, pay per video), from the character's own picture, so it stays the same character. USDG only, the studio's discounts, no free ones, 30 a month for the site; one that can't be made is made again with a new scene, free. Not picked: videos from words alone (it wouldn't look like the character), longer or 1080p videos (more cost each: the owner's 5 s at 720p), $AGI for videos (the owner: stables), a free one a month (each costs about $2.40 at fal) |
+| 2026-10-10 | A video plays from our own address, in parts (HTTP Range → 206, at most 4 MB a part: Vercel answers at most 4.5 MB), never from Supabase's: the first version added `media-src 'self' https://*.supabase.co` to the CSP, and the site's own test ("no wildcard anywhere", `tests/popout.test.js`) failed it, so the CSP stays exactly as it was. Downloads, and a big one opened in a tab, go to a short-lived signed address (a navigation, which the page's CSP doesn't cover). The price of a strict CSP: each play reads Storage through our server (Supabase's egress, Vercel's function calls) |
+| 2026-10-10 | What the video service gets and makes: the scene checked by the studio's rules first (PG-13, never a real person or someone else's character), words that keep the character as pictured, one shot, family-friendly, anyone else made up, no text or logos; H.264 so every browser plays it; an HMAC id for who asked (fal asks for one), never the wallet; fal keeps its copy 7 days at most. Words visitors read never name fal, Seedance or ByteDance ("an AI video service"), like Meshy |
 
 ## Open questions
 
@@ -6742,6 +7535,64 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
     meanwhile (about a fifth of her pixels), which should make up for it, but how smoothly the CX23 shows it is
     measured on the first show with it (`her set draws N frames a second` in the log). On Claude's computer the old and
     the new set drew the same (an A/B test, 2026-10-09: this computer was slower that day than the day before for both).
+- **Her quizzes** (2026-10-09):
+  - **Prizes and the law (not legal advice):** a free quiz with a prize drawn at random among the right answers is a
+    prize promotion in many places, and a prize paid in a crypto token can bring in gambling or financial-promotion
+    rules in some. Her lines say the rules in short (18+ and 24 hours to start a claim; one prize a day each), but
+    there are no written official rules yet. Worth checking before promoting the prizes widely, like burns
+    and launches.
+  - **One person, several Telegram accounts:** each account answers and can win on its own, so someone with many
+    accounts gets more chances (the draw is random, one win a day per account, 10 prizes a day for the site). Her 18+
+    check is a tap, not a proof. If the same few keep winning, ask Claude about a rule like a minimum account age or
+    having started her bot a while ago.
+  - **Not tried live:** Telegram's quiz polls in the owner's group (whether members may send polls there, the `poll` and
+    `poll_answer` updates reaching our webhook, answers sent in a quiz's last second), and the prize wallet's first
+    transfer on Robinhood Chain. The first quiz in the group and the first claim are the check: the owner can win one
+    with a second Telegram account and claim it before announcing the prizes.
+  - **Topping up the prize wallet:** at most 2,500 $AGI a day goes out. When it runs low, quizzes say "just for fun" and
+    a prize won meanwhile waits for its claim; only the log says so (`[games] the prize wallet 0x… is out of …`), so
+    it's worth a look at the wallet on the block explorer every few days.
+  - **The website's chat** isn't covered by the seed-phrase and private-key check yet (her Telegram chats, /ask and her
+    live show's questions are): a key typed there goes to the AI service like any message (never kept by us). The same
+    `server/secrets.js` can cover it: ask Claude.
+  - Her quiz questions and lines are English only (like her other group lines); her AI replies follow whoever writes.
+- **Holder perks on her show** (2026-10-10):
+  - **Several wallets:** each wallet has its own 5 badges a day, and moving $AGI from one to another gives the next one its
+    level (read again at most every 30 minutes): the head start is small on purpose (10 minutes), and everyone's own 5
+    questions a day still hold. If a few wallets keep the line to themselves, ask Claude about fewer badges a day.
+  - **Telegram and X's chat** questions never have a badge (there's no wallet there). A signed link from the site to her
+    Telegram bot could carry a wallet's level later, if people ask (like burned messages).
+  - **Not tried live:** real wallets on agi1.app/live (MetaMask, Phantom, Coinbase Wallet and their apps' browsers; the same
+    sign-in as the home page's, which works live), the badge and the shout-out on the CX23's stream: the owner's first
+    question with a wallet is the check.
+- **AGI-1's 3D character studio** (2026-10-10):
+  - **Meshy's terms:** as read on 2026-10-10, they speak of its service for the customer's own use; whether the owner may
+    let other people order characters through it (and who then owns them) is Meshy's to say. Ask Meshy before
+    `STUDIO_OPEN` (it may need another plan). Not legal advice.
+  - **Selling:** characters paid in USDG are sales: Vercel Pro (the owner's choice), and taxes and consumer rules where the
+    owner lives (an accountant). The page says no refunds; a paid one that can't be made is made again free.
+  - **Not tried live:** what Meshy really makes (its clips' names and order: the page maps them by the library's names,
+    else by order; its rig's root and how its walk drifts; its files' sizes and textures; how long it takes), its
+    screening on real words, USDG payments on Robinhood Chain, Supabase Storage and the studio's cron job. The owner's
+    first character is the check; tell Claude what its page shows.
+  - **Supabase Storage's free plan** (1 GB) holds a few hundred characters; then a paid plan, or old ones taken down.
+  - **When it opens:** a link from the other pages (the top bar is full: the footer, the front's "Her world" list), and
+    maybe a word in her Telegram groups (the owner's call).
+  - **Next:** a character on her live show, or in a Telegram bot of its own, later, if the owner wants them (its videos:
+    built the same day, below).
+- **Its characters' videos** (2026-10-10):
+  - **fal's and the model's terms:** whether the owner may sell videos made with Seedance through fal to other people
+    (and who owns them) is fal's terms' and the model's to say: the owner checks them before opening the studio, as for
+    Meshy. Not legal advice.
+  - **Plays on its page cost a little each:** a video played on its page is read through our server from Storage every
+    time (the price of a strict CSP: see the decisions log), so Supabase's egress (5 GB a month free, shared with the
+    database) and Vercel's function calls grow with plays. Most videos are meant to be downloaded and posted; if they're
+    played a lot on the site, a paid Supabase plan, or Claude can serve them through Vercel's CDN.
+  - **A Soulmate's video** ($2.40) is about what fal charges for it; a video made again (free for its owner) is one more
+    at fal. The price is the owner's to change (`STUDIO_VIDEO_PRICE_USD`).
+  - **Not tried live:** fal and Seedance themselves (what they make from a character's picture, how long it takes, their
+    files' sizes and whether its sound is right), USDG for a video, Supabase Storage's Range reads, Safari on a real
+    iPhone. The owner's first video is the check.
 
 ## Working in this repo
 
@@ -6768,6 +7619,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 - **Claude checks every file it saves into this folder by checksum, on the owner's computer, after saving.** A file saved
   twice in one session goes the second time from a new place in Claude's workspace (2026-10-02: the second save of
   CLAUDE.md from the same place wrote the first copy again; the checksum check caught it).
+- A recording of her show on Claude's computer (`node tools/live/run.mjs --record …`) uses her set as it was last built
+  in `tools/live/dist/` (git ignores it): after changing anything in `tools/live/page/`, record with `LIVE_REBUILD=1`
+  (2026-10-10: a first recording without it showed her cards without their new 💜 badge). The server's image always
+  builds her set fresh (`run.mjs --build` in its Dockerfile), so `update` there needs nothing more.
 - Claude's end-to-end tests build the site with Cloudflare's public test site key
   (`VITE_TURNSTILE_SITE_KEY=1x00000000000000000000BB npx vite build`): without a site key the chat answers "i'm still getting
   ready for the new site" and every suite that chats fails (2026-09-26). The real key only comes from Vercel's settings.

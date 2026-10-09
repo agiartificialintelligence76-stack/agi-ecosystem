@@ -564,7 +564,8 @@ test("the buy check starts light: no chain code (viem) and none of the feed's ow
   const imports = (f) => [...readFileSync(new URL(f, import.meta.url), 'utf8').matchAll(/^import .* from '([^']+)';$/gm)].map((m) => m[1]);
   assert.deepEqual(imports('../server/buys.js'), ['node:fs/promises', './coins.js', './limits.js', './tg-api.js', './tg-lines.js', '../src/prices/parse.js']);
   assert.deepEqual(imports('../server/coins.js'), [], 'coins.js (clank.trade\'s API) imports nothing');
-  assert.deepEqual(imports('../api/feed.js'), ['node:crypto', '../server/config.js', '../server/tg-api.js', '../server/buys.js']);
+  // (2026-10-09: and her quizzes' clock, light too: tests/games.test.js)
+  assert.deepEqual(imports('../api/feed.js'), ['node:crypto', '../server/config.js', '../server/tg-api.js', '../server/buys.js', '../server/games.js']);
   assert.match(readFileSync(new URL('../api/feed.js', import.meta.url), 'utf8'),
     /import\('\.\.\/server\/telegram\.js'\), import\('\.\.\/server\/feed\.js'\), import\('\.\.\/server\/tg-groups\.js'\)/, 'the feed\'s modules, loaded for the feed only');
   assert.equal(ETH, ETH_PAIR, "clank.trade's name for ETH, the same as the chain code's");

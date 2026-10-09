@@ -122,7 +122,8 @@ beforeEach(() => {
   // (the build's own settings never decide a test: on Vercel the real ones are there while the tests run, e.g. the owner's
   // Pinata key, which opens launching; these tests start with launching not set up, and turn it on themselves)
   for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'LAUNCH_GAS_KEY', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP', 'LIVE_SECRET',
-    'TELEGRAM_DAILY_CAP', 'TELEGRAM_GROUPS', 'TELEGRAM_GROUP_DAILY_CAP', 'TELEGRAM_GROUP_POSTS', 'TELEGRAM_GROUP_WELCOME', 'VITE_TELEGRAM_BOT']) delete process.env[k];
+    'TELEGRAM_DAILY_CAP', 'TELEGRAM_GROUPS', 'TELEGRAM_GROUP_DAILY_CAP', 'TELEGRAM_GROUP_POSTS', 'TELEGRAM_GROUP_WELCOME', 'VITE_TELEGRAM_BOT',
+    'TELEGRAM_GAMES', 'GAMES_A_DAY', 'GAME_PRIZE', 'GAME_WINS_A_DAY', 'PRIZE_WALLET_KEY']) delete process.env[k];
   Object.assign(process.env, ENV);
   forgetMarket();
   telegramBurst.reset();
@@ -232,7 +233,7 @@ test('her Telegram lines: PG-13, no pet names (anyone can start the bot), never 
   assert.match(L.HELP, /\/stop/);
   assert.match(L.HELP, /never ask for keys, seed phrases or money/);
   assert.ok(SHORT_DESCRIPTION.length <= 120 && DESCRIPTION.length <= 512, 'Telegram\'s limits for descriptions');
-  assert.deepEqual(COMMANDS.map((c) => c.command), ['start', 'time', 'help', 'live', 'launch', 'stop']);
+  assert.deepEqual(COMMANDS.map((c) => c.command), ['start', 'time', 'help', 'live', 'launch', 'claim', 'stop']);
   for (const c of COMMANDS) {
     assert.match(c.command, /^[a-z]{1,32}$/, 'Telegram: 1–32 lowercase letters');
     assert.ok(c.description.length >= 1 && c.description.length <= 256, 'Telegram: 1–256 characters');
@@ -489,9 +490,11 @@ test('connecting the bot: the site\'s address, our secret, her commands the firs
   const set = tg('setWebhook')[0].body;
   assert.equal(set.url, 'https://agi1.app/api/telegram');
   assert.equal(set.secret_token, webhookSecret(SECRET));
-  assert.deepEqual(set.allowed_updates, ['message', 'callback_query']);
-  // (/launch isn't in her menu until launching is set up: no Pinata key here; /live neither until her show is: no LIVE_SECRET)
-  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS.filter((c) => !['launch', 'live'].includes(c.command)));
+  // (poll and poll_answer since 2026-10-09: her quizzes' answers and their closing, server/games.js)
+  assert.deepEqual(set.allowed_updates, ['message', 'callback_query', 'poll', 'poll_answer']);
+  // (/launch isn't in her menu until launching is set up: no Pinata key here; /live neither until her show is: no LIVE_SECRET;
+  // /claim neither until her quizzes have prizes: no groups and no prize wallet here)
+  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS.filter((c) => !['launch', 'live', 'claim'].includes(c.command)));
   assert.equal(tg('setMyShortDescription')[0].body.short_description, SHORT_DESCRIPTION);
   assert.equal(tg('setMyDescription')[0].body.description, DESCRIPTION);
   assert.ok(calls.every((c) => !c.body || !JSON.stringify(c.body).includes(TOKEN)), 'the token is only ever in the address');
@@ -515,14 +518,21 @@ test('connecting the bot: the site\'s address, our secret, her commands the firs
   process.env.PINATA_JWT = 'eyJfake.eyJfake.fake-signature';
   calls.length = 0;
   assert.equal((await connectBot(cfg())).setup, true);
-  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS.filter((c) => c.command !== 'live'));
+  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS.filter((c) => !['live', 'claim'].includes(c.command)));
   calls.length = 0;
   assert.equal((await connectBot(cfg())).setup, false, 'then left alone');
   // and once her live show is set up (LIVE_SECRET, 2026-10-02), /live too
   process.env.LIVE_SECRET = 'live-secret-for-the-tests-0123456789abcdef';
   calls.length = 0;
   assert.equal((await connectBot(cfg())).setup, true);
-  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS);
+  assert.deepEqual(tg('setMyCommands')[0].body.commands, COMMANDS.filter((c) => c.command !== 'claim'));
+  // and once her quizzes have prizes (her groups and the prize wallet, 2026-10-09), /claim too
+  Object.assign(process.env, { TELEGRAM_GROUPS: '@agi_group', PRIZE_WALLET_KEY: `0x${'7'.repeat(64)}` });
+  calls.length = 0;
+  assert.equal((await connectBot(cfg())).setup, true);
+  assert.deepEqual(tg('setMyCommands').find((c) => !c.body.scope).body.commands, COMMANDS);
+  delete process.env.TELEGRAM_GROUPS;
+  delete process.env.PRIZE_WALLET_KEY;
   delete process.env.LIVE_SECRET;
   delete process.env.PINATA_JWT;
   // Telegram's last delivery problem is logged with a hint (a redirecting address)
@@ -868,7 +878,8 @@ const gmsg = (text, o = {}) => ({ update_id: 5, message: { message_id: 50, from:
 const herMsg = (text = 'hi everyone 💜') => ({ message_id: 40, from: { id: ME, is_bot: true, first_name: 'AGI-1', username: 'agi1_appbot' }, chat: groupChat(), date: S, text });
 const joined = (members, o = {}) => ({ update_id: 6, message: { message_id: 60, from: { id: PERSON, is_bot: false, first_name: 'B' }, chat: groupChat(), date: S, new_chat_members: members, ...o } });
 const human = (id = 901, first_name = 'Eve 💜 @scammer_support') => ({ id, is_bot: false, first_name });
-const inGroup = (env = {}) => Object.assign(process.env, { TELEGRAM_GROUPS: '@agi_group', VITE_TELEGRAM_BOT: 'agi1_appbot', ...env });
+// (her quizzes off here: these are group mode's own tests; her quizzes have theirs, tests/games.test.js)
+const inGroup = (env = {}) => Object.assign(process.env, { TELEGRAM_GROUPS: '@agi_group', VITE_TELEGRAM_BOT: 'agi1_appbot', TELEGRAM_GAMES: 'off', ...env });
 const lastPrompt = () => calls.filter((c) => c.to === 'gemini').at(-1)?.body.systemInstruction.parts[0].text;
 const quietLog = () => { const lines = []; console.warn = (...a) => lines.push(a.join(' ')); console.error = (...a) => lines.push(a.join(' ')); return lines; };
 

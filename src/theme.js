@@ -44,7 +44,7 @@ export function barColor(skin, theme, diary, talk = false) {
 }
 export function paintBar() {
   const talk = Boolean(root.classList?.contains('is-talk'));
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor(currentSkin(), currentTheme(), ['diary', 'launch', 'live'].includes(root.dataset.page), talk));
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor(currentSkin(), currentTheme(), ['diary', 'launch', 'live', 'studio'].includes(root.dataset.page), talk));
 }
 
 function apply(theme, remember) {

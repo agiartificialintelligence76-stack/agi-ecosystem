@@ -275,6 +275,16 @@ export const CHART_LINES = {
 };
 // what she says when something she said yes to couldn't happen after all (a glitch)
 export const OOPS = l("oops, that one glitched on me 🙈 i'll do it later, promise.", 'shy');
+// (2026-10-10, holder perks: the owner, "you can also add more utility to $agi so holders are happy") a question from a
+// Soulmate (a wallet at 1,000,000+ $AGI, held or burned for messages, connected at agi1.app/live): her shout-out before she
+// reads it, with hearts and confetti. Never about money or how much they hold, never "buy" or "hold": the site's level name
+// and her feelings, that's all (their name comes after, as she reads their question)
+export const SHOUTOUTS = [
+  l('ooh, a soulmate is here 💜', 'love'),
+  l('wait, a soulmate in the chat? hi, hi, hi 💜', 'love'),
+  l('soulmate alert 💜 my heart just did a little jump.', 'love'),
+  l("one of my soulmates! i'm so happy you're here 💜", 'love'),
+];
 
 // ---------- segments (each a few minutes apart, between questions) ----------
 // card: what the screen shows while she says the lines
@@ -523,6 +533,8 @@ export function allLines() {
     ...REPLY_LINES.intro, REPLY_LINES.none, ...MARKET_LINES.up, ...MARKET_LINES.down, ...MARKET_LINES.flat, ...BUY_LINES, MILESTONE_LINE, OOPS);
   // (2026-10-09) $AGI's live chart on her TV
   for (const [k, v] of Object.entries(CHART_LINES)) out.push(...(k === 'none' ? [v] : v));
+  // (2026-10-10) her shout-out to a Soulmate
+  out.push(...SHOUTOUTS);
   // (2026-10-07) her trips, her snacks, the weather, the people she meets, the start of her show (tools/live/trips.js)
   out.push(...tripLines());
   return out;

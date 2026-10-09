@@ -19,15 +19,23 @@
 //     words, clear the line, end the show; and (2026-10-07, the owner's choice: X's chat can't be read without X's approval)
 //     pass on a question from X's live chat (relayLive: the same checks, shown as "on X", source 'x').
 //   • When her show goes live on X, her Telegram groups hear it once a day (api/live.js 'on_x', live_tell).
+//   • (2026-10-10, holder perks: the owner, "you can also add more utility to $agi so holders are happy") a question sent at
+//     agi1.app/live with a connected wallet (the site's sign-in: a free signature) at Crush (10,000+ $AGI held or burned for
+//     messages) or Soulmate (1,000,000+) carries her 💜 badge on stream and a head start in her line (LIVE.HEAD_S: ahead of
+//     the questions sent in the 10 minutes before it, never further), at most 5 badges a day per wallet; a Soulmate's also
+//     gets her shout-out on stream (tools/live). Its level comes from the wallet's session (liveHolder: re-read on the chain
+//     when it's 30 minutes old, like her chat's). A thank-you, never an investment: nothing is spent or promised.
 // Secrets: LIVE_SECRET (32+ characters, in Vercel and on the owner's server: the runner's key). The owner's phone link is made
 // from it (adminKeyFor), so there's no second setting. The Gemini key stays in Vercel: the runner never holds it.
 import { createHash, createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import { rpc } from './limits.js';
+import { readSession, makeSession, needsRecheck, RECHECK_MS } from './session.js';
 import { askAgi1, askScene, TLDS } from './gemini.js';
 import { isCrude } from './coins.js';
 import { MOODS } from './agi1-prompt.js';
 import { canList, actOf, DESTINATIONS, PEOPLE, LOCAL } from './live-acts.js';
 import { recallGroup } from './tg-memory.js';
+import { secretIn } from './secrets.js';
 
 export const LIVE = {
   GAP_S: 60,            // seconds between one person's questions
@@ -39,6 +47,7 @@ export const LIVE = {
   Q_MAX: 200,           // characters in a question
   NAME_MAX: 24,         // characters in a name
   TICKET_H: 6,          // hours a question's ticket works (the page asks where it is with it)
+  HEAD_S: 600,          // (2026-10-10) a 💜 badge's head start in her line: ahead of the questions sent 10 minutes before it
 };
 export const WATCH_URL = 'https://x.com/agi1dotapp';
 export const STATUSES = ['off', 'starting', 'live', 'brb', 'ending'];
@@ -86,6 +95,8 @@ export function questionTrouble(text, { max = LIVE.Q_MAX } = {}) {
   const t = tidyText(text);
   if (!t) return 'empty';
   if (DISTRESS.test(t)) return 'care';
+  // (2026-10-09) a wallet's seed phrase or private key sent by mistake: never on stream (server/secrets.js)
+  if (secretIn(t)) return 'secret';
   const chars = [...t].length;
   if (chars < LIVE.Q_MIN) return 'short';
   if (chars > max) return 'long';
@@ -166,11 +177,25 @@ export function readTicket(secret, ticket, now = Date.now()) {
 
 // ---------- the database (supabase/live.sql) ----------
 const ISO = (t) => (t ? new Date(t).toISOString() : null);
+let oldSqlSaid = false;
 export const liveDb = {
-  ask: (cfg, { source, asker, name, question }) => rpc(cfg, 'live_ask', {
-    p_source: source, p_asker: asker, p_name: name ?? null, p_question: question,
-    p_gap: LIVE.GAP_S, p_per_day: LIVE.PER_DAY, p_queue: LIVE.QUEUE, p_site_day: LIVE.SITE_DAY, p_beat: LIVE.BEAT_S,
-  }, 'live'),
+  // (2026-10-10) holder, holderCode: her 💜 badge (2 Crush, 3 Soulmate) and a daily code of the wallet. A question without
+  // one asks exactly as before; with one, live.sql from before 2026-10-10 (no badge settings: PGRST202) takes it without its
+  // badge, and the log says once per server copy to run live.sql again
+  ask: async (cfg, { source, asker, name, question, holder = 0, holderCode = null }) => {
+    const args = {
+      p_source: source, p_asker: asker, p_name: name ?? null, p_question: question,
+      p_gap: LIVE.GAP_S, p_per_day: LIVE.PER_DAY, p_queue: LIVE.QUEUE, p_site_day: LIVE.SITE_DAY, p_beat: LIVE.BEAT_S,
+    };
+    if (![2, 3].includes(holder) || !holderCode) return rpc(cfg, 'live_ask', args, 'live');
+    try {
+      return await rpc(cfg, 'live_ask', { ...args, p_holder: holder, p_holder_code: holderCode, p_head: LIVE.HEAD_S }, 'live');
+    } catch (err) {
+      if (err.code !== 'PGRST202') throw err;
+      if (!oldSqlSaid) { oldSqlSaid = true; console.warn('[live] a question came with a 💜 badge, but supabase/live.sql is from before 2026-10-10: it went in without one. Run supabase/live.sql again (it keeps everything saved)'); }
+      return rpc(cfg, 'live_ask', args, 'live');
+    }
+  },
   lookup: (cfg, id, asker = null) => rpc(cfg, 'live_lookup', { p_id: id ?? null, p_asker: asker }, 'live'),
   start: (cfg, status) => rpc(cfg, 'live_start', { p_status: status }, 'live'),
   beat: (cfg, show, status, segment, now) => rpc(cfg, 'live_beat', { p_show: show, p_status: status, p_segment: segment ?? null, p_now: now ?? null }, 'live'),
@@ -187,14 +212,40 @@ export const liveDb = {
 };
 
 // A question for her show, from the site or her bot (already checked: checkQuestion, checkAskName). → the database's answer
-// ({ ok, id, position } or { ok: false, why, … })
-export async function askLive(cfg, { source, asker, name = null, question }) {
+// ({ ok, id, position, holder } or { ok: false, why, … })
+// holder, holderCode (2026-10-10, only from the site, with a wallet): her 💜 badge and the wallet's daily code (holderCode)
+export async function askLive(cfg, { source, asker, name = null, question, holder = 0, holderCode = null }) {
   const q = checkQuestion(question);
   if (!q.ok) return { ok: false, why: q.why };
   const n = checkAskName(name);
   if (!n.ok) return { ok: false, why: 'name' };
-  return liveDb.ask(cfg, { source, asker, name: n.name, question: q.text });
+  return liveDb.ask(cfg, { source, asker, name: n.name, question: q.text, holder, holderCode });
 }
+
+// ---------- (2026-10-10) holder perks: her 💜 badge on stream and a head start in her line ----------
+// A wallet's code for a day: an HMAC of its address with PASS_SECRET and the day (UTC), never the address itself; a new one
+// every day, and not the code her chat's memory files a wallet under (server/session.js walletCode), so a question can't be
+// matched to a name or notes. Only to count a wallet's badges a day (live.sql), kept with the question (2 days at most).
+export const holderCode = (secret, wallet, day = new Date().toISOString().slice(0, 10)) =>
+  createHmac('sha256', String(secret)).update(`live-holder:${String(wallet).toLowerCase()}:${day}`).digest('base64url').slice(0, 32);
+const RETRY_MS = 5 * 60 * 1000;          // a level the chain couldn't read: re-read in about 5 minutes (as her chat does)
+// The wallet session a question came with (the site's sign-in, src/lib/wallet.js: a free signature, never a transaction):
+// its level now, re-read on the chain when it's 30 minutes old (what was burned for messages counts too), like her chat's.
+// → null (no session sent) · { signedOut: true } (an old or broken session: the page forgets it) · { level, wallet,
+// session } (session: a new one when the level was re-read, else null). Never throws (the chain away: its last level)
+export async function liveHolder(cfg, token, { now = Date.now(), check = null, burned = null } = {}) {
+  if (token === undefined || token === null || token === '') return null;
+  const s = readSession(cfg.passSecret, token, now);
+  if (!s) return { signedOut: true };
+  if (!needsRecheck(s, now)) return { level: s.level, wallet: s.wallet, session: null };
+  const checkLevel = check || (await import('./chain.js')).checkLevel;
+  const burnedAgi = burned || (await import('./burn.js')).burnedAgi;
+  const r = await checkLevel(s.wallet, s.level, undefined, await burnedAgi(cfg, s.wallet));
+  const session = makeSession(cfg.passSecret, { wallet: s.wallet, level: r.level, checkedAt: r.checked ? now : now - RECHECK_MS + RETRY_MS, expiresAt: s.expiresAt }, now);
+  return { level: r.level, wallet: s.wallet, session };
+}
+// her badge's name, on stream and on the host's panel (the site's own levels: src/lib/levels.js)
+export const BADGES = { 2: 'Crush', 3: 'Soulmate' };
 
 // ---------- a question from X's live chat, passed on by the owner (2026-10-07) ----------
 // X only lets approved apps read a livestream's chat (its Livestream API: the owner applies). Until then the owner copies a
@@ -281,7 +332,9 @@ export async function nextAnswer(cfg, show, { deadline = Date.now() + 15_000, as
     const kept = await liveDb.done(cfg, q.id, 'taken', { reply, mood });
     if (kept?.ok !== true) continue;                  // (the owner skipped it meanwhile)
     // (2026-10-07) how she feels saying it (one of her emotions on stream) and the question's language
-    return { question: { id: q.id, name, text: q.question, source: q.source }, reply, mood, act: ok.length ? actOf(answer, ok) : null,
+    // (2026-10-10) holder: its 💜 badge (2 Crush, 3 Soulmate, 0 none): her card shows it, and a Soulmate gets her shout-out
+    const holder = [2, 3].includes(q.holder) ? q.holder : 0;
+    return { question: { id: q.id, name, text: q.question, source: q.source, holder }, reply, mood, act: ok.length ? actOf(answer, ok) : null,
       ...(answer.feel ? { feel: answer.feel } : {}), ...(answer.lang ? { lang: answer.lang } : {}) };
   }
   return { none: true };

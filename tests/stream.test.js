@@ -941,7 +941,8 @@ test('she reads the whole question out loud (who asked, then every word of it), 
   assert.ok(sentencesOf(line.text).length > sentencesOf(line.read).length && sentencesOf(line.text).slice(0, sentencesOf(line.read).length).join(' ') === sentencesOf(line.read).join(' '));
   const run = read('tools/live/run.mjs');
   assert.match(run, /const audio = await voice\.speak\(readAndAnswer\(r\.question, r\.reply\)\.text, \{ mood: r\.mood, keep: false \}\);/, 'one voice request for both');
-  assert.match(run, /const line = readAndAnswer\(qa\.question, qa\.reply\);\s*const r = await say\(\{ text: line\.text,[\s\S]*?read: line\.read \}\);/);
+  // (2026-10-10: after a Soulmate's shout-out, if she got through it)
+  assert.match(run, /const line = readAndAnswer\(qa\.question, qa\.reply\);\s*if \(r === 'done'\) \{\s*r = await say\(\{ text: line\.text,[\s\S]*?read: line\.read \}\);/);
   assert.match(run, /const readEnd = read \? \(cues\.filter\(\(c\) => c\.sentence < sentencesOf\(read\)\.length\)\.at\(-1\)\?\.to \?\? 0\) : 0;/);
   assert.match(run, /\.\.\.\(readEnd \? \{ reactAt: readEnd \} : \{\}\)/);
   assert.match(run, /window\.studio\.look\(w, ms\), \['card', /);

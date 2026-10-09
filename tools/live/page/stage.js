@@ -50,7 +50,7 @@ const ARM_REFINE_LIVE = { upper: 1, fore: 1, hand: 1, sleeve: 1 };
 const $ = (sel) => document.querySelector(sel);
 const set = $('[data-set]');
 const ui = {
-  bg: $('[data-bg]'), amb: $('[data-amb]'), pic: $('[data-pic]'), clock: $('[data-clock]'), card: $('[data-card]'), kicker: $('[data-card-kicker]'), title: $('[data-card-title]'),
+  bg: $('[data-bg]'), amb: $('[data-amb]'), pic: $('[data-pic]'), clock: $('[data-clock]'), card: $('[data-card]'), kicker: $('[data-card-kicker]'), badge: $('[data-card-badge]'), title: $('[data-card-title]'),
   list: $('[data-card-list]'), body: $('[data-card-body]'), stats: $('[data-card-stats]'), foot: $('[data-card-foot]'), post: $('[data-card-post]'),
   caption: $('[data-caption]'), captionText: $('[data-caption-text]'), queue: $('[data-queue]'), song: $('[data-song]'),
   oKicker: $('[data-overlay-kicker]'), oTitle: $('[data-overlay-title]'), oSub: $('[data-overlay-sub]'),
@@ -313,13 +313,20 @@ function speechFrame(now) {
 
 // ---------- the card ----------
 // { kind: 'question' | 'segment' | 'diary' | 'wyr' | 'post' | 'reply' | 'chart' | 'song', kicker, title, body, list: [text],
-// pick (index in list), stats: [{ label, value, tone: 'up' | 'down' }], foot } or null
+// pick (index in list), stats: [{ label, value, tone: 'up' | 'down' }], foot, badge (2026-10-10: a question's 💜 badge,
+// 'Crush' or 'Soulmate') } or null
+const BADGES = { Crush: '💜 Crush', Soulmate: '💜 Soulmate' };
 function card(c) {
   if (!c) { ui.card.hidden = true; return true; }
   ui.card.dataset.kind = c.kind || 'segment';
   ui.card.lang = typeof c.lang === 'string' && /^[a-z]{2,3}$/.test(c.lang) ? c.lang : 'en';
   ui.post.hidden = c.kind !== 'post';
   ui.kicker.textContent = c.kicker || '';
+  // (only the two badges the site gives, never any other words)
+  const badge = c.kind === 'question' && Object.hasOwn(BADGES, c.badge) ? c.badge : null;
+  ui.badge.textContent = badge ? BADGES[badge] : '';
+  ui.badge.hidden = !badge;
+  ui.card.dataset.badge = badge ? badge.toLowerCase() : '';
   ui.title.textContent = c.title || '';
   ui.body.textContent = c.body || '';
   ui.foot.textContent = c.foot || '';

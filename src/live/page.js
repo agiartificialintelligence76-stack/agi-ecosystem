@@ -11,10 +11,13 @@ import '../styles/pop.css';      // Pop mode: the bold look, only while it's swi
 import { startTheme } from '../theme.js';
 import { startMenu } from '../menu.js';
 import { withHuman, postJson } from '../lib/human.js';
+import { findWallets, signInWithWallet, explainWalletError } from '../lib/wallet.js';
 import { botName } from '../chat/telegram-link.js';
-import { STATUS, segmentText, lineText, askError, mineText, ownerText, fromText, relayText } from './words.js';
+import { STATUS, segmentText, lineText, askError, mineText, ownerText, fromText, relayText, BADGE, perkText, WALLET_STEPS, NO_WALLET, badgeNote } from './words.js';
 
-const KEYS = { adult: 'agi1_18plus', mine: 'agi1_live_q', owner: 'agi1_live_owner' };
+// (2026-10-10, holder perks) wallet: the site's wallet session, shared with the home page and the launch page
+// (src/chat/relationship.js): { session, wallet, level, name, notes }
+const KEYS = { adult: 'agi1_18plus', mine: 'agi1_live_q', owner: 'agi1_live_owner', wallet: 'agi_wallet' };
 const STATUS_EVERY = 15_000, MINE_EVERY = 30_000, OWNER_EVERY = 5_000, MINE_HOURS = 6;
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -47,6 +50,9 @@ function start() {
     count: $('[data-lv-count]'), human: $('[data-lv-human]'), error: $('[data-lv-error]'), send: $('[data-lv-send]'), waitNote: $('[data-lv-wait-note]'),
     mine: $('[data-lv-mine]'), mineQ: $('[data-lv-mine-q]'), mineStatus: $('[data-lv-mine-status]'), reply: $('[data-lv-reply]'),
     mineWatch: $('[data-lv-mine-watch]'), again: $('[data-lv-again]'),
+    // (2026-10-10) holder perks
+    perkMe: $('[data-lv-perk-me]'), perkConnect: $('[data-lv-perk-connect]'), perkOut: $('[data-lv-perk-out]'), wallets: $('[data-lv-wallets]'),
+    apps: $('[data-lv-apps]'), appsNote: $('[data-lv-apps-note]'),
   };
   // her Telegram bot, when its public name is set (VITE_TELEGRAM_BOT)
   const bot = botName(import.meta.env.VITE_TELEGRAM_BOT);
@@ -115,6 +121,99 @@ function start() {
     followMine();
   }
 
+  // ---------- (2026-10-10) holder perks: a connected wallet at Crush or Soulmate ----------
+  // The site's own sign-in (src/lib/wallet.js: an address and a free signature, never a transaction), the same session as
+  // the home page's (a wallet connected there is connected here). Its level goes with each question; our server checks it.
+  const walletOf = (v) => (v && typeof v.session === 'string' && v.session && /^0x[0-9a-f]{40}$/i.test(String(v.wallet)) ? v : null);
+  let me = walletOf(store.get(KEYS.wallet));
+  let attempt = 0;                    // the wallet picked last (an older one that answers late is left behind)
+  const perkSay = (text) => { ui.perkMe.textContent = text || ''; ui.perkMe.hidden = !text; };
+  function renderPerk() {
+    if (!ui.perkMe) return;
+    perkSay(perkText(me || {}));
+    ui.perkConnect.hidden = Boolean(me);
+    ui.perkOut.hidden = !me;
+    if (me) { ui.wallets.hidden = true; ui.apps.hidden = true; }
+  }
+  function keepWallet(p) {
+    me = walletOf({ session: p.session, wallet: p.wallet, level: p.level, name: p.name ?? null, notes: p.notes || [] });
+    if (me) store.set(KEYS.wallet, me);
+    renderPerk();
+  }
+  function forgetWallet() {
+    me = null;
+    store.del(KEYS.wallet);
+    renderPerk();
+  }
+  // a wallet's session: the one this browser has for that address (its level re-read when due), else a new sign-in
+  async function sessionFor(provider, address) {
+    const saved = walletOf(store.get(KEYS.wallet));
+    if (saved && saved.wallet.toLowerCase() === address) {
+      try {
+        const r = await postJson('/api/wallet', { action: 'profile', session: saved.session });
+        if (r.ok) return r.data;
+      } catch { /* offline: sign in below */ }
+    }
+    return signInWithWallet(provider, (step) => perkSay(WALLET_STEPS[step]));
+  }
+  async function connect(w) {
+    const mine = ++attempt;
+    const slow = setTimeout(() => { if (mine === attempt) perkSay(WALLET_STEPS.slow); }, 15_000);
+    perkSay(WALLET_STEPS.connect);
+    try {
+      const accounts = await w.provider.request({ method: 'eth_requestAccounts' });
+      if (mine !== attempt) return;
+      const address = Array.isArray(accounts) && typeof accounts[0] === 'string' ? accounts[0].toLowerCase() : '';
+      if (!/^0x[0-9a-f]{40}$/.test(address)) throw new Error('no_account');
+      const profile = await sessionFor(w.provider, address);
+      if (mine !== attempt) return;
+      if (String(profile.wallet).toLowerCase() !== address) throw new Error('wrong_signer');
+      keepWallet(profile);
+      ui.perkOut.focus({ preventScroll: true });
+    } catch (err) {
+      if (mine === attempt) perkSay(explainWalletError(err));
+    } finally {
+      clearTimeout(slow);
+    }
+  }
+  ui.perkConnect?.addEventListener('click', async () => {
+    perkSay('Looking for wallets…');
+    const list = await findWallets();
+    perkSay('');
+    ui.wallets.replaceChildren(...list.map((w) => {
+      const b = el('button', 'btn btn-ghost btn-sm lv-wallet');
+      b.type = 'button';
+      if (w.icon) {
+        const img = el('img');
+        img.src = w.icon; img.alt = ''; img.width = 18; img.height = 18;
+        b.append(img);
+      }
+      b.append(document.createTextNode(w.name));
+      b.addEventListener('click', () => connect(w));
+      return b;
+    }));
+    ui.wallets.hidden = !list.length;
+    ui.apps.hidden = list.length > 0;
+    if (list.length) { ui.wallets.querySelector('button')?.focus(); return; }
+    // no wallet in this browser: open the page in a wallet app's own browser
+    const phone = matchMedia('(pointer: coarse)').matches;
+    ui.appsNote.textContent = phone ? NO_WALLET.phone : NO_WALLET.computer;
+    const here = location.href.split('#')[0];
+    $('[data-lv-app="metamask"]').href = `https://metamask.app.link/dapp/${location.host}${location.pathname}`;
+    $('[data-lv-app="phantom"]').href = `https://phantom.app/ul/browse/${encodeURIComponent(here)}?ref=${encodeURIComponent(location.origin)}`;
+    $('[data-lv-app="coinbase"]').href = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(here)}`;
+  });
+  ui.perkOut?.addEventListener('click', () => { forgetWallet(); ui.perkConnect.focus({ preventScroll: true }); });
+  // connected, disconnected or forgotten in another tab (the home page's too): this page follows
+  addEventListener('storage', (e) => { if (e.key === KEYS.wallet || e.key === null) { me = walletOf(store.get(KEYS.wallet)); renderPerk(); } });
+  // coming back: its level now (the server re-reads the balance when it's 30 minutes old)
+  if (me) {
+    postJson('/api/wallet', { action: 'profile', session: me.session })
+      .then((r) => { if (r.ok) keepWallet(r.data); else if (r.data?.error === 'signed_out') forgetWallet(); })
+      .catch(() => { /* offline: keep what we have */ });
+  }
+  renderPerk();
+
   // ---------- asking ----------
   const adult = () => store.get(KEYS.adult) === true;
   function renderAsk() {
@@ -147,17 +246,25 @@ function start() {
     ui.send.textContent = 'Sending…';
     ui.error.textContent = '';
     const name = ui.name.value.trim();
+    // (2026-10-10) a connected wallet's session goes with it: her 💜 badge at Crush or Soulmate (our server checks its level)
+    const sent = me;
     let r;
     try {
-      r = await withHuman(ui.human, 'live', (extra) => postJson('/api/live', { action: 'ask', question, ...(name ? { name } : {}), adult: true, ...extra }));
+      r = await withHuman(ui.human, 'live', (extra) => postJson('/api/live', { action: 'ask', question, ...(name ? { name } : {}), adult: true,
+        ...(sent ? { session: sent.session } : {}), ...extra }));
     } catch (err) {
       r = { ok: false, data: { error: err.message === 'offline' ? 'offline_net' : err.message === 'not_configured' ? 'not_configured' : 'human_check' } };
     }
     sending = false;
     ui.send.textContent = 'Send to her show';
     const d = r.data || {};
+    // its wallet: a session our server re-read (a new level), or one that ended (this browser forgets it)
+    if (sent && d.signedOut === true && me?.wallet === sent.wallet) forgetWallet();
+    else if (sent && typeof d.session === 'string' && [1, 2, 3].includes(d.level) && me?.wallet === sent.wallet) keepWallet({ ...me, session: d.session, level: d.level });
     if (r.ok && d.ok && typeof d.ticket === 'string') {
-      mine = { ticket: d.ticket, id: d.id, q: question, name: name || null, at: Date.now(), status: 'waiting', position: d.position };
+      const holder = [2, 3].includes(d.holder) ? d.holder : 0;
+      mine = { ticket: d.ticket, id: d.id, q: question, name: name || null, at: Date.now(), status: 'waiting', position: d.position, holder,
+        badge: sent ? badgeNote({ holder, level: d.level ?? sent.level, signedOut: d.signedOut === true }) : '' };
       store.set(KEYS.mine, mine);
       ui.q.value = '';
       ui.count.textContent = '0';
@@ -182,8 +289,11 @@ function start() {
   function renderMine() {
     ui.mine.hidden = !mine;
     if (!mine) return;
-    ui.mineQ.textContent = mine.q ? `“${mine.q}”${mine.name ? ` · as ${mine.name}` : ''}` : 'Your question from earlier';
-    ui.mineStatus.textContent = mine.status === 'gone' ? 'This question isn’t there any more.' : mineText(mine);
+    // (2026-10-10) with her 💜 badge, and what it got (or why not) while it's in line
+    const badge = BADGE[mine.holder] ? ` · 💜 ${BADGE[mine.holder]}` : '';
+    ui.mineQ.textContent = mine.q ? `“${mine.q}”${mine.name ? ` · as ${mine.name}` : ''}${badge}` : 'Your question from earlier';
+    const note = mine.status === 'waiting' && typeof mine.badge === 'string' ? mine.badge : '';
+    ui.mineStatus.textContent = mine.status === 'gone' ? 'This question isn’t there any more.' : `${mineText(mine)}${note ? ` ${note}` : ''}`;
     ui.reply.hidden = !(mine.status === 'answered' && mine.reply);
     ui.reply.textContent = mine.reply ? `“${mine.reply}”` : '';
     ui.mineWatch.hidden = !(mine.status === 'taken' || mine.status === 'waiting');
@@ -366,7 +476,8 @@ function startOwner() {
     if (relaying || dead) return;
     const question = o.relayQ.value.trim();
     const name = o.relayName.value.trim();
-    if ([...question].length < 3) { o.relayMsg.textContent = relayText('question', { why: question ? 'short' : 'empty' }); o.relayQ.focus(); return; }
+    // (any length since 2026-10-09, like everyone's: only an empty box waits)
+    if (!question) { o.relayMsg.textContent = relayText('question', { why: 'empty' }); o.relayQ.focus(); return; }
     relaying = true;
     o.relaySend.disabled = true;
     o.relayMsg.textContent = 'Adding…';

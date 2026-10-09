@@ -66,6 +66,15 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .card[data-kind='question'] .card-body { font: 700 30px/1.25 var(--sans); }
 .card[data-kind='diary'] .card-body { font: italic 400 30px/1.3 var(--serif); }
 .card[data-kind='question'] .card-kicker { background: rgba(63, 240, 195, 0.99); }
+/* (2026-10-10) her 💜 badge on a question from a Crush or a Soulmate: a pink sticker next to the kicker (a little see-through,
+   like everything over her picture) */
+.card-badge {
+  display: inline-block; margin-left: 8px; padding: 6px 13px; border: 2px solid var(--ink); border-radius: 999px; background: rgba(255, 156, 192, 0.99);
+  font: 800 13px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; vertical-align: top;
+}
+.card-badge[hidden] { display: none; }
+.card[data-badge='soulmate'] .card-badge { background: rgba(255, 77, 166, 0.99); color: #fff; }
+.card[data-badge='soulmate'] { box-shadow: 0 10px 0 -2px var(--ink), 0 0 0 6px rgba(255, 77, 166, 0.35); }
 
 /* her words as she says them */
 .caption {
