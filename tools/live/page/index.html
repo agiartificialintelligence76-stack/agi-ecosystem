@@ -4,7 +4,8 @@
      sends to X. tools/live/page/stage.js runs it (window.studio). Since 2026-10-07 also her rooms (rooms.js), her outfits
      (outfits.js), her moves (moves.js) and her effects (fx.js); and her trips (places.js, vehicles.js), the people she meets
      (people.js), her food (food.js) and the weather (weather.js); and the paintings of her set where they're there
-     (paint.js, art/). -->
+     (paint.js, art/). And (2026-10-09) her song's music video, full screen behind her while she sings, with all of its words,
+     and $AGI's live chart on her TV (chart.js). -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -16,6 +17,7 @@
     <div class="set" data-set data-overlay="starting" data-room="studio">
       <canvas class="set-bg" data-bg width="1280" height="720" aria-hidden="true"></canvas>
       <div class="amb" data-amb aria-hidden="true"></div>
+      <div class="song-video" data-song-video aria-hidden="true" hidden><video muted playsinline preload="auto"></video></div>
       <canvas class="wx-back" data-wx-back width="1280" height="720" aria-hidden="true" hidden></canvas>
       <div class="npc" data-npc aria-hidden="true" hidden><canvas width="300" height="560"></canvas></div>
       <div class="her"><canvas class="her-pic" data-pic aria-hidden="true"></canvas></div>
@@ -50,7 +52,7 @@
       </section>
 
       <div class="tv" data-tv hidden>
-        <div class="tv-screen"><video data-video muted playsinline preload="auto"></video><img data-tv-img alt="" hidden /></div>
+        <div class="tv-screen"><video data-video muted playsinline preload="auto"></video><img data-tv-img alt="" hidden /><canvas class="tv-chart" data-tv-chart width="582" height="327" hidden></canvas></div>
         <p class="tv-label" data-tv-label></p>
       </div>
 
@@ -62,15 +64,15 @@
 
       <div class="npc-bubble" data-npc-bubble hidden><b data-npc-name></b><p data-npc-text></p></div>
 
-      <div class="karaoke" data-karaoke hidden><p data-karaoke-line></p></div>
+      <div class="lyrics" data-lyrics hidden><p class="lyrics-now" data-lyrics-now></p><p class="lyrics-next" data-lyrics-next></p></div>
 
       <div class="caption" data-caption hidden><p data-caption-text></p></div>
 
       <footer class="ask">
-        <span class="ask-cta">Ask me at <b>agi1.app/live</b></span>
+        <span class="ask-cta">Ask me in the chat · Telegram · <b>agi1.app/live</b></span>
         <span class="ask-queue" data-queue></span>
         <span class="ask-hint" data-hint></span>
-        <span class="ask-rules">18+ · PG-13 · I'm an AI · only $AGI here</span>
+        <span class="ask-rules">18+ · PG-13 · I'm an AI</span>
       </footer>
 
       <div class="overlay" data-overlay-box>

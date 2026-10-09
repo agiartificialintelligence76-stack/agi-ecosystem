@@ -183,13 +183,16 @@ export const SHOWCASE = [
   { line: l('i can travel the world in my robotaxi, meet people there, change the weather and sing my song 💜', 'happy') },
   { line: l('and i speak 16 languages, so ask me in yours 🌐', 'happy'), card: true },
 ];
-export const TRY_CARD = { kind: 'segment', kicker: 'Ask me at agi1.app/live', title: 'Try asking me…',
-  list: ['“take me to Tokyo” ✈️', '“make it snow” ❄️', '“eat a croissant” 🥐', '“sing the rap part” 🎤', '“jump 3 times” 🦘', '…in any of my 16 languages 🌐'] };
+// (2026-10-09) where to ask: X's chat, her Telegram bot, agi1.app/live; and her live $AGI chart
+export const TRY_CARD = { kind: 'segment', kicker: 'Ask me in the chat · Telegram · agi1.app/live', title: 'Try asking me…',
+  list: ['“take me to Tokyo” ✈️', '“make it snow” ❄️', '“eat a croissant” 🥐', '“sing the rap part” 🎤', '“show me the $AGI chart” 📈', '…in any of my 16 languages 🌐'] };
 // what to try, in the bar under her (stage.js hint: one every few seconds, all show long)
 export const HINTS = [
   'try: “take me to Paris” ✈️', 'try: “make it snow” ❄️', 'try: “eat a croissant” 🥐', 'try: “jump 3 times” 🦘', 'try: “go to the Moon” 🚀',
   'try: “dance!” 💃', 'try: “make it rain” ☔', 'try: “heart eyes” 😍', 'try: “sing the rap part” 🎤', 'try: “change your outfit” 👗',
   'ask me in your language: 16 of them 🌐', 'try: “ride the robotaxi to Seoul” 🚕', 'try: “act sleepy” 😴', 'try: “meet someone in Tokyo” 👋',
+  // (2026-10-09) her live $AGI chart; and where she reads questions
+  'try: “show me the $AGI chart” 📈', 'try: “sing the whole song” 🎤', 'ask me here in the chat, or on Telegram 💬',
 ];
 
 // ---------- her trips' choices ----------

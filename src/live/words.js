@@ -24,6 +24,8 @@ const SEGMENTS = {
   market: 'looking at how $AGI is doing', post: 'reading her posts on X', replies: 'reading replies under her posts', video: 'watching one of her videos',
   // (2026-10-07, her trips: places, people she meets, snacks, the weather)
   trip: 'traveling somewhere new', meet: 'meeting someone', eat: 'having a snack', weather: 'out in the weather',
+  // (2026-10-09) $AGI's live trading chart on her screen
+  chart: 'watching the $AGI chart',
 };
 export const segmentText = (id) => SEGMENTS[id] || null;
 
@@ -36,15 +38,16 @@ export function lineText(n) {
 // why a question was refused (/api/live's "why" for a question, the same words as her bot's)
 const QUESTION = {
   empty: 'Write your question first.',
-  short: "That's a little short. Ask her a real question?",
+  short: 'Write your question first.',
   long: 'Keep it under 200 characters.',
   link: 'No links in questions, please.',
   address: 'No addresses or long codes in questions, please.',
   contact: 'No @names, emails or phone numbers in questions, please.',
-  coin: 'She only talks about $AGI on her show. Ask her something else?',
   care: "That sounds like a lot to carry, so she won't read it on a public stream. If you're going through a hard time, please reach out to someone you trust or a local support line. You matter.",
   crude: 'Keep it PG-13, please.',
   spam: "That doesn't look like a question.",
+  // (2026-10-09: other coins can come up on her show, financial advice never)
+  advice: 'That sounds like financial advice, and she never gives any on stream. Ask it as a question?',
 };
 // /api/live's answers to a question, in plain words. why: the question's own reason; wait: seconds (too fast)
 export function askError(error, { why = null, wait = null, position = null } = {}) {
@@ -53,7 +56,7 @@ export function askError(error, { why = null, wait = null, position = null } = {
       ? `A question from your connection is already in line (#${position}). One at a time: ask again once she's answered it.`
       : 'A question from your connection is already in line. One at a time!';
     case 'question': return QUESTION[why] || QUESTION.spam;
-    case 'name': return 'That name can’t go on stream: 24 characters at most, letters and numbers, nothing crude, and nothing that passes for her or the team.';
+    case 'name': return 'That name can’t go on stream: 24 characters at most, nothing crude, no links, and nothing that passes for her or her team.';
     case 'age': return 'Her show is 18+ only.';
     case 'human_check': return "We couldn't check that you're human. Try again.";
     case 'too_fast': return wait ? `One question a minute: try again in ${wait} s.` : 'Slow down a little, then try again.';
@@ -106,7 +109,7 @@ export function relayText(error, { why = null, wait = null, position = null } = 
   switch (error) {
     case null: case undefined: return Number.isInteger(position) && position > 0 ? `Added to her line (#${position}).` : 'Added to her line.';
     case 'question': return why === 'care' ? 'That sounds like someone going through something heavy, so she won’t read it on a public stream.' : QUESTION[why] || QUESTION.spam;
-    case 'name': return 'That X name can’t go on stream (3 to 24 letters or numbers, nothing crude, nobody real, nothing that passes for her or the team). Leave it empty and she says “someone on X”.';
+    case 'name': return 'That X name can’t go on stream (24 characters at most, nothing crude, no links, nothing that passes for her or her team). Leave it empty and she says “someone on X”.';
     case 'waiting': return 'A question from that X name is already in her line. One at a time: pass on another once she has answered it.';
     case 'too_fast': return wait ? `One question a minute from the same X name: try again in ${wait} s.` : 'One question a minute from the same X name.';
     case 'day_cap': return 'That X name has had 5 questions today.';

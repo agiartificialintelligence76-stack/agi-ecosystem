@@ -7,6 +7,9 @@
 //     on the server's disk; at most 4 minutes of a video;
 //   • a picture from one of her X posts: downloaded once (JPEG, PNG or WebP, 5 MB at most).
 // A video can have a few words about it next to it (the same name, .txt: its first line), which she reacts to.
+// (2026-10-09, the owner: "when she sings the full lyrics on the subtitle must shown with the full video on the live as
+// well") her song's music video goes in the same folder, named after the song (feel-the-agi.mp4): it's never one of her
+// videos on her TV, but the picture of her song, full screen while she sings it (findSongVideo, prepareSongVideo).
 import { existsSync, readdirSync, statSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, extname, basename } from 'node:path';
@@ -20,12 +23,16 @@ const MEDIA_VERSION = 1;
 // what the page may read from /media/: only the files made here (24 hex characters, then .webm, .jpg, .png or .webp)
 export const MEDIA_NAME = /^[0-9a-f]{24}\.(?:webm|jpg|png|webp)$/;
 
-// the videos the owner put in the folder: [{ file, title, about }] (newest first; files of 500 MB or more are left out)
+// her songs' music videos are named after them (tools/live/songs/<id>.json): feel-the-agi.mp4
+export const SONG_IDS = ['feel-the-agi'];
+const songVideo = (n) => SONG_IDS.includes(basename(n, extname(n)).toLowerCase());
+// the videos the owner put in the folder: [{ file, title, about }] (newest first; files of 500 MB or more are left out;
+// never a song's music video: that one is her song's own picture)
 export function listVideos(dir) {
   if (!dir || !existsSync(dir)) return [];
   let names = [];
   try { names = readdirSync(dir); } catch { return []; }
-  return names.filter((n) => VIDEO_TYPES.includes(extname(n).toLowerCase()) && !n.startsWith('.'))
+  return names.filter((n) => VIDEO_TYPES.includes(extname(n).toLowerCase()) && !n.startsWith('.') && !songVideo(n))
     .map((n) => {
       const file = join(dir, n);
       let st;
@@ -97,6 +104,42 @@ export async function prepareVideo(v, cacheDir, { run = spawn, log = null, nice 
   const seconds = (await probeSeconds(webm, { run })) || (samples ? samples.length / 2 / MEDIA_RATE : null);
   if (!(seconds > 0.5)) throw new Error(`"${v.title}": couldn't tell how long it is`);
   return { id, src: `/media/${id}.webm`, sound: samples, seconds: Math.min(VIDEO_MAX_S, seconds) };
+}
+
+// (2026-10-09) her song's music video in the folder (feel-the-agi.mp4, or .webm, .mov, .m4v, .mkv) → { file, title, size,
+// mtime } or null
+export function findSongVideo(dir, id = 'feel-the-agi') {
+  if (!dir || !existsSync(dir)) return null;
+  let names = [];
+  try { names = readdirSync(dir); } catch { return null; }
+  for (const n of names) {
+    if (n.startsWith('.') || !VIDEO_TYPES.includes(extname(n).toLowerCase()) || basename(n, extname(n)).toLowerCase() !== id) continue;
+    try {
+      const file = join(dir, n), st = statSync(file);
+      if (st.isFile() && st.size >= 1000 && st.size <= 1024 * 1024 * 1024) return { file, title: `${id} (music video)`, size: st.size, mtime: st.mtimeMs };
+    } catch { /* gone */ }
+  }
+  return null;
+}
+// the ffmpeg arguments for it: the whole of it (no 4-minute cap), 1280 px wide (it fills her stream), 24 frames a second,
+// VP8 in WebM like her TV's, a keyframe every 2 seconds (a part of her song starts it in the middle), no sound (the song's
+// own sound plays); made once, at a lower priority than her show, kept on the server's disk
+export const songVideoArgs = (file, out) => ['-y', '-i', file, '-an', '-sn', '-dn',
+  '-vf', "scale='min(1280,iw)':-2:flags=bicubic,fps=24,format=yuv420p", '-c:v', 'libvpx', '-b:v', '1800k', '-crf', '10', '-qmin', '4', '-qmax', '40',
+  '-deadline', 'good', '-cpu-used', '4', '-g', '48', '-threads', '2', '-auto-alt-ref', '0', '-f', 'webm', out];
+// → { id, src: '/media/<id>.webm', seconds } or throws
+export async function prepareSongVideo(v, cacheDir, { run = spawn, nice = NICE } = {}) {
+  const dir = join(cacheDir, 'media');
+  mkdirSync(dir, { recursive: true });
+  const id = mediaKey(`song:${v.file}`, v.size, v.mtime);
+  const webm = join(dir, `${id}.webm`);
+  if (!existsSync(webm)) {
+    await ff(songVideoArgs(v.file, `${webm}.part`), { run, nice });
+    renameSync(`${webm}.part`, webm);
+  }
+  const seconds = await probeSeconds(webm, { run });
+  if (!(seconds > 1)) throw new Error(`"${v.title}": couldn't tell how long it is`);
+  return { id, src: `/media/${id}.webm`, seconds };
 }
 
 // A picture or a video from one of her X posts, downloaded once into the show's cache (only from X's own media hosts,

@@ -42,7 +42,8 @@ export function liveSite({ site, secret, fetchFn = fetch, log = console } = {}) 
     // (2026-10-07) something new to say between things, her reaction to her own X post / a reply / her video, $AGI's numbers
     chat: (show, topic) => call({ action: 'chat', show, topic }, 15_000),
     react: (show, react) => call({ action: 'react', show, react }, 15_000),
-    market: (show, since) => call({ action: 'market', show, since }, 12_000),
+    // (2026-10-09) chart: $AGI's newest trades too (her live chart on her TV: { chart: [{ at, side, price, usd }] }, oldest first)
+    market: (show, since, opts = null) => call({ action: 'market', show, since, ...(opts?.chart ? { chart: true } : {}) }, 12_000),
     done: (show, id, status, why) => call({ action: 'done', show, id, status, ...(why ? { why } : {}) }),
     back: (show, id) => call({ action: 'back', show, id }),
     stop: (show, next) => call({ action: 'stop', show, ...(next ? { next: new Date(next).toISOString() } : {}) }),
@@ -68,31 +69,50 @@ export function liveSite({ site, secret, fetchFn = fetch, log = console } = {}) 
 // them ask her to do something (a viewer's request: act), and made-up lines stand in for the site's new ones
 // (something new to say, her reactions, $AGI's numbers and a made-up buy now and then).
 export const DEMO_QA = [
-  { name: 'Mochi', text: "what's your favorite color?", reply: 'mochi asks my favorite color… purple, obviously 💜 it matches my whole personality.', mood: 'happy' },
-  { name: 'kai', text: 'can you jump 3 times?', reply: 'kai wants three jumps. okay okay, here we go! 💜', mood: 'happy', act: { act: 'jump', times: 3 } },
-  { name: null, text: 'do you ever get tired of streaming?', reply: "someone asks if i get tired of streaming. never! i don't sleep, and you're here 💜", mood: 'love' },
-  { name: 'Lena', text: 'sing the chorus of your song!', reply: 'lena wants the chorus of my song. say less 🎤', mood: 'happy', act: { act: 'sing', part: 'chorus' } },
-  { name: null, text: 'wen moon?', reply: "someone asks wen moon. i'm a girlfriend, not a fortune teller 🙈 not financial advice, but i love the optimism.", mood: 'shy' },
-  { name: 'Rin', text: 'go to the beach!', reply: 'rin says beach. okay, beach stream it is 🌅', mood: 'happy', act: { act: 'room', to: 'beach' } },
-  { name: 'Mo', text: 'dance for us', reply: "mo wants a dance. you don't have to ask me twice 💜", mood: 'happy', act: { act: 'dance' } },
-  { name: null, text: 'can you blush?', reply: 'someone wants me to blush. you just made me, so… 🙈', mood: 'shy', act: { act: 'blush' } },
-  { name: 'Ash', text: 'change your outfit to cozy', reply: 'ash wants cozy mode. cat ears, coming up 🐱', mood: 'happy', act: { act: 'outfit', to: 'cozy' } },
-  { name: null, text: 'wink at us', reply: 'someone wants a wink. okay, just one 😉', mood: 'shy', act: { act: 'wink' } },
+  // (2026-10-09: she reads each question out loud first, so her answers never say it again)
+  { name: 'Mochi', text: "what's your favorite color?", reply: 'purple, obviously 💜 it matches my whole personality.', mood: 'happy' },
+  { name: 'kai', text: 'can you jump 3 times?', reply: 'three jumps? okay okay, here we go! 💜', mood: 'happy', act: { act: 'jump', times: 3 } },
+  { name: null, text: 'do you ever get tired of streaming?', reply: "never! i don't sleep, and you're here 💜", mood: 'love' },
+  { name: 'Lena', text: 'sing the chorus of your song!', reply: 'the chorus? say less 🎤', mood: 'happy', act: { act: 'sing', part: 'chorus' } },
+  { name: null, text: 'wen moon?', reply: "i'm a girlfriend, not a fortune teller 🙈 not financial advice, but i love the optimism.", mood: 'shy' },
+  { name: 'Rin', text: 'go to the beach!', reply: 'beach stream it is 🌅', mood: 'happy', act: { act: 'room', to: 'beach' } },
+  { name: 'Mo', text: 'dance for us', reply: "you don't have to ask me twice 💜", mood: 'happy', act: { act: 'dance' } },
+  { name: null, text: 'can you blush?', reply: 'you just made me, so… 🙈', mood: 'shy', act: { act: 'blush' } },
+  { name: 'Ash', text: 'change your outfit to cozy', reply: 'cozy mode? cat ears, coming up 🐱', mood: 'happy', act: { act: 'outfit', to: 'cozy' } },
+  { name: null, text: 'wink at us', reply: 'okay, just one 😉', mood: 'shy', act: { act: 'wink' } },
   // (2026-10-07) a trip, a snack, the weather, her emotions, a question in another language
-  { name: 'Yuki', text: 'take me to Tokyo!', reply: 'yuki wants Tokyo. okay, let\'s go! 💜', mood: 'happy', act: { act: 'trip', to: 'tokyo' } },
-  { name: null, text: 'eat a croissant', reply: 'someone says croissant. you know i can\'t say no 🥐', mood: 'happy', act: { act: 'eat', to: 'croissant' } },
-  { name: 'Sam', text: 'make it snow!', reply: 'sam wants snow. okay, let it snow ❄️', mood: 'happy', act: { act: 'weather', to: 'snow' } },
+  { name: 'Yuki', text: 'take me to Tokyo!', reply: "Tokyo? okay, let's go! 💜", mood: 'happy', act: { act: 'trip', to: 'tokyo' } },
+  { name: null, text: 'eat a croissant', reply: "you know i can't say no 🥐", mood: 'happy', act: { act: 'eat', to: 'croissant' } },
+  { name: 'Sam', text: 'make it snow!', reply: 'okay, let it snow ❄️', mood: 'happy', act: { act: 'weather', to: 'snow' } },
   { name: null, text: 'show us heart eyes', reply: 'heart eyes, coming right up 😍', mood: 'love', act: { act: 'lovestruck' } },
-  { name: 'Lucía', text: '¿cuál es tu comida favorita?', reply: 'lucía pregunta por mi comida favorita… ¡las fresas! 🍓 son dulces como yo 💜', mood: 'happy', lang: 'es', feel: 'giggle' },
-  { name: null, text: 'go to the Moon!', reply: 'someone says the Moon. rocket time! 🚀', mood: 'happy', act: { act: 'trip', to: 'moon' } },
+  { name: 'Lucía', text: '¿cuál es tu comida favorita?', reply: '¡las fresas! 🍓 son dulces como yo 💜', mood: 'happy', lang: 'es', feel: 'giggle' },
+  { name: null, text: 'go to the Moon!', reply: 'the Moon? rocket time! 🚀', mood: 'happy', act: { act: 'trip', to: 'moon' } },
+  // (2026-10-09) a question of any length, and her live $AGI chart
+  { name: 'Bo', text: 'gm', reply: 'gm gm 💜 coffee first, then chaos.', mood: 'happy' },
+  { name: 'Ari', text: 'show us the $AGI chart!', reply: "chart time! let's watch it together 📈 not financial advice.", mood: 'happy', act: { act: 'chart' } },
 ];
 export const DEMO_CHAT = [
-  'okay, honest question: is pineapple on pizza a crime? ask me at agi1.app/live and convince me 🍕',
+  'okay, honest question: is pineapple on pizza a crime? ask me in the chat and convince me 🍕',
   "i love this room. it's like a hug, but it's a room 💜",
   "if you're watching with a snack right now, i respect you.",
   "i've been live for a bit and i'm having the best time. thank you for being here 💜",
   "fun thought: i'm the only girlfriend who's also a stream. very efficient 🙈",
 ];
+// (2026-10-09) --demo's chart: made-up trades, a calm walk over the last 3 hours (the same ones every time), and a new one
+// every 2 minutes or so while the show is on, so her chart moves while she watches it
+export function demoTrades(startedAt, t = startedAt, { count = 100, every = 108_000 } = {}) {
+  const base = startedAt - count * every;
+  const n = count + Math.max(0, Math.floor((t - startedAt) / every));
+  let seed = 20261009, p = 0.000398;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const side = rnd() < 0.6 ? 'buy' : 'sell';
+    p *= 1 + (rnd() - 0.5) * 0.022 + (side === 'buy' ? 0.0016 : -0.0016);
+    out.push({ at: Math.round(base + i * every + rnd() * every * 0.8), side, price: Number(p.toPrecision(6)), usd: Math.round(15 + rnd() * 380) });
+  }
+  return out.slice(-count);
+}
 export function demoSite({ every = 50_000, now = Date.now, diary = null, buyEvery = 150_000 } = {}) {
   let n = 0, id = 100, show = 0, chat = 0, buys = 0;
   const startedAt = now();
@@ -113,11 +133,12 @@ export function demoSite({ every = 50_000, now = Date.now, diary = null, buyEver
     },
     async chat() { const line = DEMO_CHAT[chat++ % DEMO_CHAT.length]; return { reply: line, mood: 'happy' }; },
     async react(_show, r) { return r?.text || r?.kind === 'video' ? { reply: "okay, i love this one. i was so proud of it 💜", mood: 'happy', text: r.text || '' } : { skip: 'empty' }; },
-    async market() {
+    async market(_show, _since, opts = null) {
       const t = now();
       const k = Math.floor((t - startedAt) / buyEvery);
       const out = { numbers: { mcap: 412_000 + k * 1500, h24: 4.2, liq: 64_000 }, buys: [] };
       if (k > buys) { buys = k; out.buys.push({ id: `demo-${k}`, at: t - 5000, usd: 120 + 35 * k, agi: 290_000 }); }
+      if (opts?.chart) out.chart = demoTrades(startedAt, t);
       return out;
     },
     async done() { return { ok: true }; },

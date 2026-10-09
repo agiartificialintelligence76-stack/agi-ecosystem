@@ -52,17 +52,25 @@ export async function buyKey(cfg, now = Date.now()) {
 // whole units from a token amount in its smallest units (18 decimals for $AGI and ETH)
 const whole = (raw) => Number(BigInt(raw)) / 1e18;
 
-// One clank.trade trade → a buy { id, trader, tx, at (ms), agi, eth, usd, price, mcap }, or null (a sell, or anything
-// that doesn't look like a trade)
-export function buyOf(x, ethUsd) {
-  if (!x || x.side !== 'buy') return null;
+// One clank.trade trade → { id, trader, tx, side ('buy' | 'sell'), at (ms), agi, eth, usd, price, mcap }, or null (anything
+// that doesn't look like a trade). (2026-10-09: sells too, for her live chart on stream: server/live.js streamMarket)
+export function tradeOf(x, ethUsd) {
+  if (!x || (x.side !== 'buy' && x.side !== 'sell')) return null;
   const id = String(x.id ?? '').toLowerCase(), trader = String(x.trader ?? '').toLowerCase(), tx = String(x.transactionHash ?? '').toLowerCase();
   const at = Number(x.timestamp) * 1000;
   if (!ID.test(id) || !ADDR.test(trader) || !TX.test(tx) || !(at > 0) || !WEI.test(String(x.baseAmount)) || !WEI.test(String(x.quoteAmount))) return null;
   const agi = whole(x.baseAmount), eth = whole(x.quoteAmount);
   if (!(agi > 0) || !(eth > 0) || !(ethUsd > 0)) return null;
   const usd = eth * ethUsd, price = usd / agi;
-  return { id, trader, tx, at, agi, eth, usd, price, mcap: price * SUPPLY };
+  return { id, trader, tx, side: x.side, at, agi, eth, usd, price, mcap: price * SUPPLY };
+}
+// One clank.trade trade → a buy { id, trader, tx, at (ms), agi, eth, usd, price, mcap }, or null (a sell, or anything
+// that doesn't look like a trade)
+export function buyOf(x, ethUsd) {
+  const t = x?.side === 'buy' ? tradeOf(x, ethUsd) : null;
+  if (!t) return null;
+  const { side, ...buy } = t;
+  return buy;
 }
 
 // $AGI's newest trades (50: an hour or more of trading) and ETH's price, in one request to clank.trade → its buys
@@ -73,6 +81,17 @@ export async function readBuys() {
   if (!Array.isArray(trades)) throw new Error("clank.trade's answer had no trades");
   if (!(ethUsd > 0)) throw new Error("clank.trade's answer had no ETH price");
   return trades.map((x) => buyOf(x, ethUsd)).filter(Boolean);
+}
+
+// (2026-10-09, her live show: "her watching the live trading chart of $AGI") $AGI's newest trades, buys and sells (100: a few
+// hours of trading or more), in one request to clank.trade → [trade…] (tradeOf), newest first as clank.trade lists them
+export async function readTrades({ limit = 100 } = {}) {
+  const [t, rate] = await clankApi([['coins.trades', { address: AGI, limit }], ['exchangeRates.tokenUsdg', { token: ETH }]], { timeoutMs: 6000 });
+  const trades = t?.data?.trades;
+  const ethUsd = Number(rate?.data?.price);
+  if (!Array.isArray(trades)) throw new Error("clank.trade's answer had no trades");
+  if (!(ethUsd > 0)) throw new Error("clank.trade's answer had no ETH price");
+  return trades.map((x) => tradeOf(x, ethUsd)).filter(Boolean);
 }
 
 // where her groups are (as postToGroups sends to them): their @usernames and ids

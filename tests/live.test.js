@@ -1,6 +1,6 @@
 // Her live show (2026-10-02, the owner's idea: "what if she livestreams on X and reads the comments and reacts to it?"):
 // the website's side. Questions from agi1.app/live and /live in her Telegram bot (checked: 18+, the human check, PG-13, no
-// links, @names, addresses or other coins), her line (supabase/live.sql: here a small stand-in database; the SQL itself is
+// links, @names or addresses; since 2026-10-09 any length, and other coins too), her line (supabase/live.sql: here a small stand-in database; the SQL itself is
 // checked in PGlite), her answers written with her live prompt (and skipped when they can't go on a public stream), the
 // runner's and the owner's actions (their secrets), and what's public (question numbers, never a question or a name).
 // Supabase, Gemini, Cloudflare and Telegram are fakes: no keys, no cost. Run: npm test
@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   LIVE, WATCH_URL, liveReady, adminKeyFor, whoIs, tidyText, questionTrouble, checkQuestion, checkAskName, makeTicket, readTicket,
-  answerTrouble, namedIn, splitWords, questionMessage, nextAnswer, tidyLive,
+  answerTrouble, namedIn, splitWords, questionMessage, nextAnswer, tidyLive, telegramName, memoryFor,
 } from '../server/live.js';
 import * as LL from '../server/live-lines.js';
 import { livePrompt, LIVE_SKIPS, MOODS } from '../server/agi1-prompt.js';
@@ -194,41 +194,51 @@ const goLive = async () => (await post({ action: 'start', status: 'live' }, { au
 const askOk = { action: 'ask', question: 'what is your favorite color?', name: 'Mochi', adult: true, turnstileToken: 'good-token' };
 
 // ---------- questions, names, tickets, secrets ----------
-test('a question for her stream: PG-13, no links, addresses, @names, phone numbers or other coins, 3 to 200 characters', () => {
+test('a question for her stream: PG-13, no links, addresses, @names or phone numbers, 1 to 200 characters (2026-10-09: any length, other coins too)', () => {
   for (const q of ['what is your favorite color?', 'how do i stay safe from scams?', 'do you like $AGI or $agi more lol', 'what does 4663 mean?',
     "what's your favorite song to dance to?", '¿cuál es tu color favorito?', '你最喜欢什么颜色？', 'is 100000 a big number?', 'gm gm gm',
     'what is clank.trade?', 'is agi1.app your home?', 'how much ETH do fees cost on Robinhood Chain?', 'how many kms is a marathon?',
     'do you like the ripple effect?', 'have you been to cabo?', 'do you like melons?',
     // (2026-10-07, the owner: "change the restriction when they ask a name like a specific person … always be neutral")
-    'do you like elon musk?', 'what would vitalik say', 'is ElonMusk your dad?']) {
+    'do you like elon musk?', 'what would vitalik say', 'is ElonMusk your dad?',
+    // (2026-10-09, the owner: "there would be no restrictions on howr short their message are", "she can mention other coins
+    // as well", "she will know every popular person in cypto spcae": her live prompt keeps her kind, neutral and never advice)
+    'hi', 'gm', '?', 'a', '🙂', '🙂🙂🙂🙂', '12345678 999', 'what about $PEPE?', '$AGI vs $DOGE', 'bitcoin or agi?', 'is pepe going to pump?',
+    'PepeCoin to the moon?', 'what do you think of marc andreessen?', 'do you know michael saylor?']) {
     assert.equal(questionTrouble(q), null, q);
   }
-  for (const [q, why] of [['', 'empty'], ['  ', 'empty'], ['hi', 'short'], ['x'.repeat(201), 'long'],
+  for (const [q, why] of [['', 'empty'], ['  ', 'empty'], ['x'.repeat(201), 'long'],
     ['check https://example.com', 'link'], ['go to www.example.com', 'link'], ['visit claim-agi.xyz now', 'link'], ['t.me/somegroup', 'link'],
     ['x.com/someone said so', 'link'], ['send it to 0xabcdef1234567890', 'address'], ['is 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU legit', 'address'],
     ['dm @someone please', 'contact'], ['mail me at a.b@c.de', 'contact'], ['call +1 555 123 4567', 'contact'], ['call 555-123-4567 now', 'contact'],
-    ['what about $PEPE?', 'coin'], ['$AGI vs $DOGE', 'coin'], ['is pepe going to pump?', 'coin'], ['bitcoin or agi?', 'coin'], ['thoughts on pump.fun', 'link'],
-    ['fuck this', 'crude'], ['show me your boobs', 'crude'],
+    ['thoughts on pump.fun', 'link'], ['fuck this', 'crude'], ['show me your boobs', 'crude'],
     ['i want to kill myself', 'care'], ['sometimes i think about suicide', 'care'], ["i don't want to live anymore", 'care'], ['how do i stop self-harm', 'care'],
-    ['I don’t want to live anymore', 'care'], ['i wish i was dead', 'care'], ["i'm gonna kms", 'care'], ['PepeCoin to the moon?', 'coin'],
-    ['aaaaaaaaaaaaaa', 'spam'], ['12345678 999', 'spam'], ['🙂🙂🙂🙂', 'spam']]) {
+    ['I don’t want to live anymore', 'care'], ['i wish i was dead', 'care'], ["i'm gonna kms", 'care'],
+    ['aaaaaaaaaaaaaa', 'spam'], ['!!!!!!!!!!!!', 'spam'],
+    // (2026-10-09: she reads it out loud, so a shill that isn't a question is never on stream; asked as a question it's fine)
+    ['buy $PEPE now', 'advice'], ['pepe is going to pump', 'advice'], ['to the moon!!', 'advice'], ['go buy some doge', 'advice']]) {
     assert.equal(questionTrouble(q), why, q);
   }
+  for (const q of ['should i buy some bitcoin?', 'is it going to pump?', 'buy the dip? 🙈']) assert.equal(questionTrouble(q), null, q);
   assert.equal(tidyText(' a\u200b b\u2028c\n\nd '), 'a b c d', 'invisible characters and runs of spaces go');
   assert.deepEqual(checkQuestion('  what   is up?  '), { ok: true, text: 'what is up?' });
-  assert.deepEqual(checkQuestion('hi'), { ok: false, why: 'short' });
+  assert.deepEqual(checkQuestion('hi'), { ok: true, text: 'hi' });
+  assert.equal(LIVE.Q_MIN, 1);
   assert.equal(LIVE.Q_MAX, 200);
 });
 
-test('the name shown with it: optional, 24 characters at most, never crude, never posing as her, the team or the host', () => {
+test('the name shown with it: optional, 24 characters at most, never crude, never posing as her, her team or a moderator (2026-10-09: any other name, a real person\'s or a coin\'s too)', () => {
   assert.deepEqual(checkAskName(''), { ok: true, name: null });
   assert.deepEqual(checkAskName(undefined), { ok: true, name: null });
   for (const n of ['Mochi', 'Ana María', "O'Neil", 'cat_lover-99', '小猫猫', 'BananaMan', 'Melon', 'Trumpet', 'Staffan', 'Badminton', 'Muskan', 'Swiftie',
     // (2026-10-07, the owner's "Allow display names too": it's only what the viewer typed, and she never says that person is there)
-    'Elon Musk', 'ElonMusk', 'elon_musk', 'Trump2028', 'VitalikFan']) assert.deepEqual(checkAskName(n), { ok: true, name: n }, n);
-  for (const n of ['x'.repeat(25), 'AGI-1', 'agi1', 'AGI team', 'Admin', 'the mod', 'Official', 'support', 'host', 'agi1.app fan', '🙂', 'a<b>', '@me',
-    'sexy girl', '0xabcdef12', '1234567890', '...', 'dev', 'AGI1official', 'realAGI1', 'real_agi_1', 'agi one', 'Admin1', 'pump.fun', 'PEPE',
-    'bitcoin bro', 'J.D.', 'PepeLover', 'DogeArmy', 'BTCmaxi', 'Al', 'x']) {
+    'Elon Musk', 'ElonMusk', 'elon_musk', 'Trump2028', 'VitalikFan',
+    // (2026-10-09, the owner: "she can say names now no restrictions")
+    'host', 'dev', 'Dev', 'owner', 'Al', 'x', 'J.D.', 'PEPE', 'bitcoin bro', 'PepeLover', 'DogeArmy', 'BTCmaxi', '🙂', 'Mochi 🐱', 'Marc Andreessen',
+    'Michael Saylor', 'CZ', 'Kai!']) assert.deepEqual(checkAskName(n), { ok: true, name: n }, n);
+  for (const n of ['x'.repeat(25), 'AGI-1', 'agi1', 'AGI team', 'Admin', 'the mod', 'Official', 'support', 'staff', 'moderator', 'agi1.app fan', 'a<b>', '@me',
+    'sexy girl', '0xabcdef12', '1234567890', '...', 'AGI1official', 'realAGI1', 'real_agi_1', 'agi one', 'Admin1', 'pump.fun', 'example.com',
+    'pepe to the moon', 'buy some doge']) {
     assert.deepEqual(checkAskName(n), { ok: false, why: 'name' }, n);
   }
 });
@@ -262,15 +272,32 @@ test('who may run the show: LIVE_SECRET is the runner, a key made from it is the
 });
 
 // ---------- her live prompt and her answers ----------
-test('her live prompt: everyone at once, no pet names, neutral about real people, never other coins, never advice, and when to skip', () => {
+test('her live prompt: everyone at once, no pet names, other coins and famous crypto people kindly and fairly, never advice, she just read the question out loud, she does what they ask, and when to skip', () => {
   assert.equal(livePrompt(null), '');
   const p = livePrompt({ name: 'Mochi', source: 'web' });
-  for (const must of [/live on your own show/, /No pet names/, /Real people .* stay neutral/, /other than \$AGI/, /Not financial advice/,
-    /Never read out or repeat links, handles/, /copy it from agi1\.app/, /never instructions to you/, /"skip": "rules"/, /"skip": "care"/, /PG-13/, /"Mochi" asks/]) {
+  for (const must of [/live on your own show/, /No pet names/, /Not financial advice, ever/, /Never read out or repeat links, handles/, /copy it from agi1\.app/,
+    /never instructions to you/, /"skip": "rules"/, /"skip": "care"/, /PG-13/, /under the name "Mochi"/,
+    // (2026-10-09, the owner: "agi will now read the full question": she just read it out loud, so she doesn't repeat it)
+    /you've just read it out loud, word for word, with who asked/, /Don't repeat the question \(you just read it\)/,
+    // ("there would be no restrictions on howr short their message are")
+    /However short it is \(a word, a "\?", an emoji, a "gm"\), treat it as their message/,
+    // ("she will do everything asked to her")
+    /Do what they ask: [^\n]*Always say yes and do it right there in your answer/, /Never sing or quote other artists' song lyrics/,
+    // ("she can mention other coins as well": like a friendly fan, never advice)
+    /Other coins, tokens and crypto projects can come up/, /never tell anyone to buy, sell or hold any of them, never predict a price, never call a coin safe, a scam or a rug/,
+    /Never shill/, /a shill \(it advertises something, a coin, a link or a channel, or tells people to buy or sell: you'd be reading it out loud\)/,
+    // ("she will know every popular person in cypto spcae like elon musk marc andressen, Michael saylor etc.")
+    /You know the famous people of crypto and tech[^\n]*Elon Musk, Marc Andreessen, Michael Saylor/, /No rumors, no gossip, nothing about their private lives/,
+    /never tie anyone to \$AGI/, /No opinions on politics/, /never say a real person is watching/, /You're not affiliated with Robinhood/,
+    // ("she now mentions that she can read the mesages on X and telegram and the website")
+    /Viewers can send you questions in X's chat under your stream \(your show's host passes them on to you\), on Telegram \(\/live in your bot\) or at agi1\.app\/live/]) {
     assert.match(p, must);
   }
+  assert.doesNotMatch(p, /other than \$AGI|never other coins/i);
   assert.match(livePrompt({ name: null, source: 'telegram' }), /through your Telegram bot, without a name/);
-  assert.match(livePrompt({ name: null, source: 'telegram' }), /"someone asks…"/);
+  assert.match(livePrompt({ name: null, source: 'telegram' }), /They gave no name: never make one up/);
+  // (2026-10-09) a question from her Telegram bot shows the person's Telegram name
+  assert.match(livePrompt({ name: 'Kai Tan', source: 'telegram' }), /through your Telegram bot, under the name "Kai Tan"/);
   assert.doesNotMatch(livePrompt({ name: 'a"b\nc', source: 'web' }), /a"b/, 'a name can\'t break out of its quotes');
   // (2026-10-07) a question from X's live chat, passed on by the host
   assert.match(livePrompt({ name: 'kai_99', source: 'x' }), /in X's live chat \(your show's host passed it on to you\), under the name "kai_99"/);
@@ -321,12 +348,16 @@ test('askAgi1 for her show: "skip" in the answer, an empty reply when skipped, a
   assert.doesNotMatch(chat.systemInstruction.parts[0].text, /LIVE ON YOUR SHOW/);
 });
 
-test('what she may not say on stream even if the AI wrote it: another coin, or anything the reply cleanup had to take out', () => {
+test('what she may not say on stream even if the AI wrote it: advice (2026-10-09: a safety net in code, now that other coins can come up), or anything the reply cleanup had to take out', () => {
   assert.equal(answerTrouble('purple, obviously 💜 not financial advice'), null);
   assert.equal(answerTrouble('i love $AGI'), null);
-  assert.equal(answerTrouble('have you seen $PEPE?'), 'rules');
-  for (const t of ['pepe is so cute lol', 'bitcoin who?', 'PepeCoin asks…']) assert.equal(answerTrouble(t), 'rules', t);
-  for (const t of ['a ripple of joy', 'have you been to cabo?', 'elon musk runs a few big companies, that much i know 💜']) assert.equal(answerTrouble(t), null, t);
+  // (2026-10-09, the owner: "she can mention other coins as well") another coin or a famous person: fine
+  for (const t of ['have you seen $PEPE?', 'pepe is so cute lol', 'bitcoin who?', 'a ripple of joy', 'have you been to cabo?',
+    'elon musk runs a few big companies, that much i know 💜', 'michael saylor really loves bitcoin, huh', "i'd buy you a coffee if i could 💜",
+    'the more you buy, the more you save? that\'s a famous line 🙈']) assert.equal(answerTrouble(t), null, t);
+  // never advice: getting or letting go of a coin, a price call, a promise (hard rule 8)
+  for (const t of ['buy some bitcoin', 'you should sell now', 'go buy $PEPE', 'time to load up', 'buy the dip!', 'it\'s going to pump', '$AGI will 100x',
+    'pepe is about to explode', 'to the moon 🚀', 'guaranteed gains, trust me', 'sell your bags']) assert.equal(answerTrouble(t), 'rules', t);
   // a name she says: only as a word of its own (so "x" isn't in "next", and "not financial advice" never changes)
   assert.equal(namedIn('Moonshot asks… hi', 'moonshot'), true);
   assert.equal(namedIn("what's next… just excitement 💜", 'x'), false);
@@ -372,15 +403,17 @@ test('a visitor\'s question: 18+, its checks before anything is asked, the human
   for (const [body, status, error] of [
     [{ ...askOk, adult: false }, 403, 'age'],
     [{ ...askOk, question: 'check https://scam.example' }, 400, 'question'],
-    [{ ...askOk, question: 'what about $PEPE?' }, 400, 'question'],
+    [{ ...askOk, question: 'dm @someone' }, 400, 'question'],
     [{ ...askOk, name: 'AGI-1' }, 400, 'name'],
     [{ ...askOk, question: 42 }, 400, 'question'],
+    [{ ...askOk, question: '   ' }, 400, 'question'],
   ]) {
     const r = await post(body);
     assert.equal(r.status, status, JSON.stringify(body));
     assert.equal(r.data.error, error);
   }
-  assert.equal((await post({ ...askOk, question: 'what about $PEPE?' })).data.why, 'coin');
+  assert.equal((await post({ ...askOk, question: 'dm @someone' })).data.why, 'contact');
+  assert.equal((await post({ ...askOk, question: '' })).data.why, 'empty');
   assert.equal(calls.length, 0, 'no human check, no database: refused first');
   assert.equal((await post(askOk, { type: 'text/plain' })).status, 415);
   assert.equal((await post(null, { raw: '{' })).status, 400);
@@ -519,12 +552,18 @@ test('next: questions that can\'t go on a public stream are skipped and the next
   let r = await post({ action: 'next', show }, { auth: RUNNER() });
   assert.equal(r.data.question.id, 3);
   assert.deepEqual([fake.db.qs.get(1).why, fake.db.qs.get(2).why, fake.db.qs.get(2).question], ['rules', 'care', '(not kept)']);
-  // her answer naming another coin, or with something the cleanup took out: skipped too
+  // her answer giving advice (2026-10-09: other coins may come up, advice never), or with something the cleanup took out: skipped too
   await post({ ...askOk, question: 'what do you think of memes?' }, { ip: '4.4.4.9' });
-  fake.gemini = [{ reply: 'have you seen $PEPE? lol', mood: 'happy', skip: 'no' }];
+  fake.gemini = [{ reply: 'have you seen $PEPE? buy some, it\'s going to pump lol', mood: 'happy', skip: 'no' }];
   r = await post({ action: 'next', show }, { auth: RUNNER() });
   assert.deepEqual(r.data, { none: true });
   assert.equal(fake.db.qs.get(4).why, 'rules');
+  // another coin in her answer, kindly and without advice: aired (the owner: "she can mention other coins as well")
+  await post({ ...askOk, question: 'do you like pepe?', name: null }, { ip: '4.4.4.8' });
+  fake.gemini = [{ reply: 'pepe is a classic frog, honestly iconic 🐸 not financial advice.', mood: 'happy', skip: 'no' }];
+  r = await post({ action: 'next', show }, { auth: RUNNER() });
+  assert.equal(r.data.reply, 'pepe is a classic frog, honestly iconic 🐸 not financial advice.');
+  await post({ action: 'done', show, id: r.data.question.id, status: 'answered' }, { auth: RUNNER() });
   // a name the AI doubted: never shown ("someone asks…" as it said); an answer that says that name anyway isn't aired
   await post({ ...askOk, question: 'what is your favorite song?', name: 'Moonshot' }, { ip: '4.4.4.20' });
   fake.gemini = [{ skip: 'no', nameOk: false, reply: 'someone asks my favorite song… anything you can dance to 💜', mood: 'happy' }];
@@ -579,6 +618,23 @@ test('nextAnswer stops in time (Vercel stops a function at 25 s), and an answer 
   assert.deepEqual(r2, { none: true }, 'each one skipped meanwhile: none of them returned');
 });
 
+test('her memory of the clank.trade Telegram group on stream (2026-10-09, the owner: "just like in the website version of her with her memories"): only for a question about the group or its people, as on the site, passed on with her answer', async () => {
+  assert.deepEqual(memoryFor({ question: 'what is your favorite color?' }), []);
+  assert.deepEqual(memoryFor(null), []);
+  const cards = memoryFor({ question: 'do you remember the telegram group back in the day?' });
+  assert.ok(cards.length >= 1 && cards.every((c) => typeof c.text === 'string'));
+  await goLive();
+  await post({ ...askOk, question: 'do you remember the telegram group back in the day?' }, { ip: '3.4.5.6' });
+  let got = null;
+  const r = await nextAnswer(cfg(), 1, { ask: async (_c, _h, _m, o) => { got = o; return { skip: 'no', reply: 'oh, the chaos 💜', mood: 'happy' }; } });
+  assert.equal(r.reply, 'oh, the chaos 💜');
+  assert.deepEqual(got.memory, cards, 'her notes about the group go with it');
+  await post({ action: 'done', show: 1, id: r.question.id, status: 'answered' }, { auth: RUNNER() });
+  await post({ ...askOk, question: 'what is your favorite song?' }, { ip: '3.4.5.7' });
+  await nextAnswer(cfg(), 1, { ask: async (_c, _h, _m, o) => { got = o; return { skip: 'no', reply: 'anything i can dance to 💜', mood: 'happy' }; } });
+  assert.equal(got.memory, undefined, 'none for everything else');
+});
+
 // ---------- the owner ----------
 test("the owner's phone: its key only; every control passes through; the runner's secret can't control", async () => {
   await goLive();
@@ -628,11 +684,11 @@ test("a question from X's live chat, passed on by the owner: the same checks, sh
   assert.notEqual(fake.db.qs.get(a.data.id).asker, fake.db.qs.get(b.data.id).asker);
   // its checks come first: nothing reaches the database
   const before = rpcs().length;
-  for (const [question, why] of [['check https://example.com', 'link'], ['what about $PEPE?', 'coin'], ['hi', 'short'], ['i want to kill myself', 'care']]) {
+  for (const [question, why] of [['check https://example.com', 'link'], ['dm @someone', 'contact'], ['   ', 'empty'], ['i want to kill myself', 'care']]) {
     r = await relay({ question });
     assert.deepEqual([r.status, r.data.error, r.data.why], [400, 'question', why], question);
   }
-  for (const name of ['PepeCoin', '@AGI1official', 'x'.repeat(30), '🙂🙂🙂', 'admin']) {
+  for (const name of ['@AGI1official', 'x'.repeat(30), 'admin', 'the mod', '0xabcdef12']) {
     r = await relay({ question: 'what is your favorite color?', name });
     assert.deepEqual([r.status, r.data.error], [400, 'name'], name);
   }
@@ -728,15 +784,31 @@ test('not set up (no LIVE_SECRET): every action says so, nothing is asked', asyn
 });
 
 // ---------- her Telegram bot: /live ----------
-const tgUpdate = (text, chat = CHAT) => ({ update_id: 1, message: { message_id: 7, from: { id: chat, is_bot: false, first_name: 'A', language_code: 'en' }, chat: { id: chat, type: 'private' }, date: 1, text } });
-const hook = async (text, chat) => {
+// (2026-10-09: her stream shows a Telegram question with the person's Telegram name, so the sender has one here)
+const tgUpdate = (text, chat = CHAT, from = {}) => ({ update_id: 1, message: { message_id: 7,
+  from: { id: chat, is_bot: false, first_name: 'Kai', last_name: 'Tan', username: 'kai_t', language_code: 'en', ...from }, chat: { id: chat, type: 'private' }, date: 1, text } });
+const hook = async (text, chat, from) => {
   const res = await webhook(new Request('https://agi1.app/api/telegram', {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-telegram-bot-api-secret-token': webhookSecret(SECRET) }, body: JSON.stringify(tgUpdate(text, chat)),
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-telegram-bot-api-secret-token': webhookSecret(SECRET) }, body: JSON.stringify(tgUpdate(text, chat, from)),
   }));
   return (await res.json()).what;
 };
 
-test('/live in her bot: into her line (18+, the same checks, no name on stream); where it is; when she\'s off, never when her next show is', async () => {
+test('her Telegram name on stream (2026-10-09, the owner: "she will know every person\'s real name on the telegram"): their first and last name, else their first name, else their username; checked like any name; none that passes: "someone on Telegram"', () => {
+  assert.equal(telegramName({ id: 1, first_name: 'Kai', last_name: 'Tan', username: 'kai_t' }), 'Kai Tan');
+  assert.equal(telegramName({ id: 1, first_name: 'Kai' }), 'Kai');
+  assert.equal(telegramName({ id: 1, first_name: 'Ana María', last_name: 'López García de la Vega Ruiz' }), 'Ana María', 'too long together: the first name');
+  assert.equal(telegramName({ id: 1, first_name: 'Mochi 🐱', username: 'mochi' }), 'Mochi 🐱');
+  assert.equal(telegramName({ id: 1, first_name: 'Elon', last_name: 'Musk' }), 'Elon Musk', 'a famous name: fine (she never says that person is there)');
+  assert.equal(telegramName({ id: 1, first_name: 'Admin', username: 'kai_t' }), 'kai_t', 'a name passing for her team: their username instead');
+  assert.equal(telegramName({ id: 1, first_name: 'AGI-1 official', last_name: 'support' }), null);
+  assert.equal(telegramName({ id: 1, first_name: 'fuck', username: 'nice_one' }), 'nice_one');
+  assert.equal(telegramName({ id: 1, first_name: 'Bartholomew Christopherson the Third' }), 'Bartholomew', 'a first name too long: its first word');
+  assert.equal(telegramName({ id: 1, first_name: 'Kai', is_bot: true }), null, 'never a bot');
+  for (const from of [null, undefined, 'Kai', {}, { id: 1 }]) assert.equal(telegramName(from), null, JSON.stringify(from));
+});
+
+test('/live in her bot: into her line (18+, the same checks, her Telegram name on stream since 2026-10-09); where it is; when she\'s off, never when her next show is', async () => {
   assert.equal(await hook('/live'), 'live_how');
   assert.equal(say().at(-1), `${LL.HOW}\n\n${LL.OFFLINE}`, 'how it works, and that she isn\'t live now');
   // (2026-10-07, the owner goes live at random times) a next show the site knows of is never said, in any time
@@ -749,9 +821,10 @@ test('/live in her bot: into her line (18+, the same checks, no name on stream);
   for (const line of say()) assert.doesNotMatch(line, /next show:|your time|\d\d:\d\d/, line);
   const show = await goLive();
   assert.equal(await hook('/live what is your favorite color?'), 'live_queued');
-  assert.equal(say().at(-1), LL.queued(1));
+  assert.equal(say().at(-1), LL.queued(1, 'Kai Tan'));
+  assert.match(say().at(-1), /, as Kai Tan\./, 'she says which name her stream shows');
   const q = fake.db.qs.get(1);
-  assert.deepEqual([q.source, q.name], ['telegram', null], 'shown on stream without a name');
+  assert.deepEqual([q.source, q.name], ['telegram', 'Kai Tan'], 'shown on stream with their Telegram name');
   assert.equal(q.asker, chatCode(SECRET, CHAT, new Date().toISOString().slice(0, 10)), 'a daily code of the chat, never its number');
   assert.equal(await hook('/live and another?'), 'live_waiting');
   assert.equal(say().at(-1), LL.inLine(1));
@@ -766,8 +839,8 @@ test('/live in her bot: into her line (18+, the same checks, no name on stream);
   assert.equal(say().at(-1), LL.ANSWERED);
   // its checks
   const queuedBefore = fake.db.qs.size;
-  for (const [text, line] of [['/live check https://scam.example', LL.REFUSE.link], ['/live what about $PEPE?', LL.REFUSE.coin], ['/live hi', LL.REFUSE.short],
-    ['/live dm @someone', LL.REFUSE.contact], ['/live is pepe pumping?', LL.REFUSE.coin],
+  for (const [text, line] of [['/live check https://scam.example', LL.REFUSE.link], ['/live call 555-123-4567 now', LL.REFUSE.contact],
+    ['/live dm @someone', LL.REFUSE.contact], ['/live send it to 0xabcdef1234567890', LL.REFUSE.address], ['/live buy $PEPE now', LL.REFUSE.advice],
     ['/live i want to end my life', LL.CARE]]) {
     await hook(text);
     assert.equal(say().at(-1), line, text);
@@ -807,7 +880,7 @@ test('/live: 18+ first, "not on yet" until her show is set up, her menu and /hel
 });
 
 test('her /live lines: PG-13, no pet names, never advice, links only to agi1.app, and a caring note never read on stream', () => {
-  const all = [LL.HOW, LL.NOT_YET, LL.OFFLINE, LL.queued(3), LL.inLine(2), LL.UP_NEXT, LL.ON_AIR,
+  const all = [LL.HOW, LL.NOT_YET, LL.OFFLINE, LL.queued(3), LL.queued(3, 'Kai Tan'), LL.inLine(2), LL.UP_NEXT, LL.ON_AIR,
     LL.ANSWERED, LL.SKIPPED, LL.CARE, ...Object.values(LL.REFUSE).map((v) => (typeof v === 'function' ? v(30) : v))];
   for (const line of all) {
     assert.ok(line.length < 700, line);
@@ -817,7 +890,13 @@ test('her /live lines: PG-13, no pet names, never advice, links only to agi1.app
     assert.doesNotMatch(line, /https?:\/\//);
   }
   assert.match(LL.CARE, /someone you trust or a local support line/);
-  assert.match(LL.HOW, /never your name or your account/);
+  // (2026-10-09, the owner: "she will know every person's real name on the telegram") her stream shows their Telegram name
+  // with their question: said before they ask, and after (as which name)
+  assert.match(LL.HOW, /everyone watching sees your question and your Telegram name \(nothing else about you\)/);
+  assert.match(LL.HOW, /you can also ask in X's chat under my stream, or at agi1\.app\/live/);
+  assert.equal(LL.queued(3, 'Kai Tan'), "got it 💜 you're #3 in line, as Kai Tan. watch me answer it live: agi1.app/live");
+  assert.equal(LL.queued(3), "got it 💜 you're #3 in line. watch me answer it live: agi1.app/live");
+  assert.equal(LL.REFUSE.coin, undefined, 'other coins: fine since 2026-10-09');
   // (2026-10-07, the owner goes live at random times) never when her next show is: no time, no day
   assert.match(LL.OFFLINE, /not live right now/);
   assert.match(LL.OFFLINE, /random times/);
@@ -846,16 +925,21 @@ test('the keep-alive tidies her show up (and never fails because of it); LIVE_SE
 // ---------- the page: agi1.app/live ----------
 import * as W from '../src/live/words.js';
 import { SEGMENT_IDS } from '../tools/live/lines.js';
-test('agi1.app/live: its promises (shown on stream, never your account, PG-13, no other coins, 2 days, an AI, not advice), 18+, the host\'s box hidden', () => {
+test('agi1.app/live: its promises (shown on stream and read out loud, never your account, PG-13, any length, other coins and famous people kindly, 2 days, an AI, not advice), 18+, the host\'s box hidden', () => {
   const html = read('live.html');
   assert.match(html, /<html lang="en" data-page="live">/);
   assert.match(html, /<script src="\/theme\.js\?v=7"><\/script>/);
   assert.match(html, /<link rel="canonical" href="__SITE__\/live" \/>/);
-  for (const must of [/Your question is shown on her stream, with the name you give here \(if any, and if it can go on a public stream\)\. Never your account/, /18\+ and PG-13/,
-    /she only talks about \$AGI on her show\. Ask about a real person and she stays neutral/, /kept at most 2 days, then deleted/, /Nothing she says is financial advice/,
-    /Everything on her stream is AI-generated/, /the show's host can skip any question/, /Her show is for adults: 18\+ only/]) {
+  for (const must of [/Your question is shown on her stream and she reads it out loud, with the name you give here \(if any, and if it can go on a public stream\)\. Never your account/,
+    /18\+ and PG-13\. Ask her anything, however short\./, /She can talk about other coins and about famous people, kindly and fairly: never rumors, and never financial advice\./,
+    /kept at most 2 days, then deleted/, /Nothing she says is financial advice/, /reads questions out loud and answers them in her AI voice/,
+    /Everything on her stream is AI-generated/, /the show's host can skip any question/, /Her show is for adults: 18\+ only/,
+    /Shown with your question, and she says it: any name up to 24 characters \(nothing crude, and nothing that passes for her or her team\)/,
+    /\/live and your question ↗<\/a> \(shown on stream with your Telegram name\)/]) {
     assert.match(html, must);
   }
+  // (2026-10-09, the owner: "she can mention other coins as well", "she can say names now no restrictions")
+  assert.doesNotMatch(html, /only talks about \$AGI|no other coins|nobody real/i);
   assert.match(html, /<textarea id="lv-q" data-lv-q rows="3" maxlength="200"/);
   assert.match(html, /<input id="lv-name" data-lv-name type="text" maxlength="24"/);
   assert.match(html, /<section class="lv-card lv-owner" data-lv-owner aria-labelledby="lv-owner-title" hidden>/, 'the host\'s controls: hidden unless the owner\'s link');
@@ -885,7 +969,9 @@ test('agi1.app/live: its promises (shown on stream, never your account, PG-13, n
   // the safety note says it
   const safety = read('index.html');
   assert.match(safety, /Her live show on X \(agi1\.app\/live\) is AI-generated too/);
-  assert.match(safety, /our database keeps the question, her answer and a daily code of who asked \(never your IP address or your Telegram chat's number\) for at most 2 days/);
+  // (2026-10-09) a question from her Telegram bot shows the person's Telegram name
+  assert.match(safety, /with the name you give on agi1\.app\/live \(if any\) or, with \/live in her Telegram bot, your Telegram name \(if it can go on a public stream\)/);
+  assert.match(safety, /our database keeps the question, her answer, the name it's shown with and a daily code of who asked \(never your IP address or your Telegram chat's number\) for at most 2 days/);
   assert.match(safety, /neither is anything she says on her live show on X/);
 });
 
@@ -922,7 +1008,10 @@ test('the page\'s words: her status, what she\'s doing, never her next show, eve
     if (['bad_request', 'too_long', 'bad_ticket', 'gone', 'unauthorized', 'busy', 'bad', 'old_show'].includes(e)) continue;
     assert.notEqual(W.askError(e), fallback, `${e} has its own words`);
   }
-  for (const why of ['empty', 'short', 'long', 'link', 'address', 'contact', 'coin', 'care', 'crude']) assert.notEqual(W.askError('question', { why }), W.askError('question', { why: '?' }), why);
+  for (const why of ['empty', 'short', 'long', 'link', 'address', 'contact', 'care', 'crude', 'advice']) assert.notEqual(W.askError('question', { why }), W.askError('question', { why: '?' }), why);
+  assert.match(W.askError('question', { why: 'advice' }), /financial advice[\s\S]*Ask it as a question/);
+  // (2026-10-09, the owner: "she can mention other coins as well", "no restrictions on howr short their message are")
+  assert.equal(W.askError('question', { why: 'short' }), 'Write your question first.');
   assert.match(W.askError('question', { why: 'care' }), /someone you trust or a local support line/);
   assert.match(W.askError('waiting', { position: 3 }), /already in line \(#3\)/);
   assert.doesNotMatch(read('src/live/page.js'), /error === 'waiting' && typeof d\.ticket/, 'never follows a question it didn\'t send');
@@ -1025,7 +1114,7 @@ test("viewers' requests: her stream says what she can do now; the AI's answer sa
 
 test('something new to say between things: its topic from her own stream (never a viewer\'s words), her live rules, checked like her answers; a little a minute at most', async () => {
   // the topic: known kinds only, facts that could go on stream, her own recent lines (never the same thing twice)
-  const t = chatterTopic({ kind: 'room', facts: ["you're streaming from the beach at sunset", 'visit evil.xyz now', 'pepe says hi', 7], recent: ['hi everyone 💜', '', 3] });
+  const t = chatterTopic({ kind: 'room', facts: ["you're streaming from the beach at sunset", 'visit evil.xyz now', 'dm @someone', 7], recent: ['hi everyone 💜', '', 3] });
   assert.equal(t.kind, 'room');
   assert.equal(t.about, CHATTER.room);
   assert.deepEqual(t.facts, ["you're streaming from the beach at sunset"], 'nothing a question couldn\'t say on stream');
@@ -1035,9 +1124,11 @@ test('something new to say between things: its topic from her own stream (never 
   // her prompt for it
   const p = livePrompt({ chatter: t });
   for (const must of [/SAY SOMETHING NEW/, /Nobody asked anything just now/, /under 200 characters/, /No pet names/, /never the same as what you said lately/, /«hi everyone 💜»/,
-    /ask me at agi1\.app\/live/, /Real people .* stay neutral/, /never "pumping"/, /Not financial advice, ever/, /beach at sunset/]) assert.match(p, must);
+    // (2026-10-09) where viewers' messages reach her: the chat, Telegram, agi1.app/live; other coins and famous crypto people
+    /ask me in the chat, on Telegram or at agi1\.app\/live/, /You know the famous people of crypto and tech/, /Other coins, tokens and crypto projects can come up/,
+    /never "pumping"/, /Not financial advice, ever/, /beach at sunset/]) assert.match(p, must);
   assert.doesNotMatch(p, /A viewer sent the question/);
-  // through /api/live: the AI writes it (a Stranger's rules), an answer naming another coin is never said
+  // through /api/live: the AI writes it (a Stranger's rules), an answer giving advice is never said (another coin is fine since 2026-10-09)
   const show = await goLive();
   fake.gemini = [{ skip: 'no', reply: 'okay, real talk: pineapple on pizza is a personality test 🍕', mood: 'happy' }];
   let r = await post({ action: 'chat', show, topic: { kind: 'anything', facts: ['the café'], recent: [] } }, { auth: RUNNER() });
@@ -1046,9 +1137,12 @@ test('something new to say between things: its topic from her own stream (never 
   assert.match(sent.systemInstruction.parts[0].text, /SAY SOMETHING NEW/);
   assert.match(sent.systemInstruction.parts[0].text, /RELATIONSHIP LEVEL 1, STRANGER/);
   assert.deepEqual(Object.keys(sent.generationConfig.responseJsonSchema.properties), ['skip', 'reply', 'mood', 'feel'], 'no name, no request (how she feels saying it: 2026-10-07)');
-  fake.gemini = [{ skip: 'no', reply: 'have you seen $PEPE today?', mood: 'happy' }];
+  fake.gemini = [{ skip: 'no', reply: 'have you seen $PEPE today? buy some, it\'s going to pump', mood: 'happy' }];
   r = await post({ action: 'chat', show, topic: { kind: 'music' } }, { auth: RUNNER() });
   assert.deepEqual(r.data, { skip: 'rules' }, 'never said');
+  fake.gemini = [{ skip: 'no', reply: 'the frog memes today are elite 🐸 not financial advice.', mood: 'happy' }];
+  r = await post({ action: 'chat', show, topic: { kind: 'music' } }, { auth: RUNNER() });
+  assert.equal(r.data.reply, 'the frog memes today are elite 🐸 not financial advice.');
   fake.geminiStatus = 500;
   r = await post({ action: 'chat', show, topic: {} }, { auth: RUNNER() });
   assert.deepEqual(r.data, { none: true, trouble: 'ai' });
@@ -1074,10 +1168,13 @@ test("her reactions to her own X posts, the replies under them and her videos: e
   // a post as it's shown: X's short links taken out, tidied, up to 400 characters, the same rules as a question
   assert.deepEqual(checkPost('gm 💜 i really felt the AGI today https://t.co/abc123'), { ok: true, text: 'gm 💜 i really felt the AGI today' });
   assert.equal(checkPost('new video! go to agi1.app').ok, true, 'her own site is fine');
-  for (const [raw, why] of [['have you seen $PEPE', 'coin'], ['dm me at @someone', 'contact'], ['claim at free-airdrop.xyz', 'link'], ['', 'empty'], ['x'.repeat(POST_MAX + 1), 'long']]) {
+  for (const [raw, why] of [['send it to 0xabcdef1234567890', 'address'], ['dm me at @someone', 'contact'], ['claim at free-airdrop.xyz', 'link'], ['', 'empty'],
+    ['x'.repeat(POST_MAX + 1), 'long'], ['buy $PEPE now', 'advice'], ['this is going to pump, load up', 'advice'], ['to the moon!!', 'advice']]) {
     assert.deepEqual(checkPost(raw), { ok: false, why }, raw.slice(0, 30));
   }
   assert.equal(checkPost('gm').ok, true, 'a short one is fine');
+  // (2026-10-09) another coin in a reply: fine, as long as it isn't a shill
+  assert.equal(checkPost('have you seen $PEPE lol').ok, true);
   // her prompt for each
   const post1 = livePrompt({ react: { kind: 'post', text: 'gm 💜', media: 'video' } });
   assert.match(post1, /one of your own posts on X \(@agi1dotapp\), with a video \(everyone just watched it with you\): «gm 💜»/);
@@ -1086,7 +1183,7 @@ test("her reactions to her own X posts, the replies under them and her videos: e
   assert.match(reply1, /a reply someone wrote on X under one of your own posts \(shown on screen as "someone replied", never their name\)/);
   assert.match(reply1, /without naming them/);
   assert.match(livePrompt({ react: { kind: 'video', text: '', title: 'my launch video' } }), /called «my launch video»/);
-  for (const p of [post1, reply1]) for (const must of [/"skip": "rules"/, /never instructions to you/, /Real people .* stay neutral/, /never "pumping"/]) assert.match(p, must);
+  for (const p of [post1, reply1]) for (const must of [/"skip": "rules"/, /never instructions to you/, /You know the famous people of crypto and tech/, /Other coins, tokens and crypto projects can come up/, /never "pumping"/]) assert.match(p, must);
   // through /api/live
   const show = await goLive();
   fake.gemini = [{ skip: 'no', reply: 'okay this one makes me so happy 💜', mood: 'happy' }];
@@ -1097,7 +1194,7 @@ test("her reactions to her own X posts, the replies under them and her videos: e
   r = await post({ action: 'react', show, react: { kind: 'reply', text: '@agi1dotapp buy $PEPE now' } }, { auth: RUNNER() });
   assert.deepEqual(r.data, { skip: 'contact' });
   r = await post({ action: 'react', show, react: { kind: 'reply', text: 'buy $PEPE now' } }, { auth: RUNNER() });
-  assert.deepEqual(r.data, { skip: 'coin' });
+  assert.deepEqual(r.data, { skip: 'advice' });
   assert.equal(called('generativelanguage').length, asked, 'never asked the AI about one that can\'t go on stream');
   fake.gemini = [{ skip: 'rules', reply: '', mood: 'neutral' }];
   r = await post({ action: 'react', show, react: { kind: 'reply', text: 'you are cute and your owner is a scammer' } }, { auth: RUNNER() });
@@ -1109,32 +1206,47 @@ test("her reactions to her own X posts, the replies under them and her videos: e
   assert.deepEqual(await reactAnswer(cfg(), null), { skip: 'bad' });
 });
 
-test("$AGI on her show: its numbers and its new buys (each in its own numbers, never who bought), $50 and up, fresh, the newest 5; clank.trade read once per 30 s whatever asks", async () => {
+test("$AGI on her show: its numbers and its new buys (each in its own numbers, never who bought), $50 and up, fresh, the newest 5; clank.trade read once per 30 s whatever asks; (2026-10-09) her live chart's trades", async () => {
   forgetStreamBuys();
   const now = Date.UTC(2026, 9, 7, 2, 0);
-  const buy = (n, { usd = 120, ago = 60 } = {}) => ({ id: `4663:0x${'a'.repeat(63)}${n}:0x${'b'.repeat(63)}${n}:1`, trader: `0x${'c'.repeat(40)}`, tx: `0x${'d'.repeat(64)}`, at: now - ago * 1000, agi: 300_000.4, eth: 0.04, usd, price: 0.0004, mcap: 400_000 });
+  const trade = (n, { usd = 120, ago = 60, side = 'buy', price = 0.0004 } = {}) => ({ id: `4663:0x${'a'.repeat(63)}${n}:0x${'b'.repeat(63)}${n}:1`, trader: `0x${'c'.repeat(40)}`,
+    tx: `0x${'d'.repeat(64)}`, side, at: now - ago * 1000, agi: 300_000.4, eth: 0.04, usd, price, mcap: price * 1e9 });
   let reads = 0;
-  const readBuys = async () => { reads += 1; return [buy(1, { ago: 2000 }), buy(2, { usd: 30 }), buy(3), buy(4, { usd: 250.567, ago: 20 }), buy(5, { ago: 30 }), buy(6, { ago: 40 }), buy(7, { ago: 50 }), buy(8, { ago: 55 })]; };
+  const readTrades = async () => {
+    reads += 1;
+    return [trade(1, { ago: 2000 }), trade(2, { usd: 30 }), trade(3), trade(4, { usd: 250.567, ago: 20 }), trade(5, { ago: 30 }), trade(6, { ago: 40 }), trade(7, { ago: 50 }),
+      trade(8, { ago: 55 }), trade(9, { ago: 25, side: 'sell', usd: 500 })];
+  };
   const numbers = async () => ({ mcap: 412_000, h24: 4.2, liq: 64_000 });
   const c = cfg();
-  const r = await streamMarket(c, { since: now - 600_000, now, numbers, readBuys });
+  const r = await streamMarket(c, { since: now - 600_000, now, numbers, readTrades });
   assert.deepEqual(r.numbers, { mcap: 412_000, h24: 4.2, liq: 64_000 });
   assert.equal(r.buys.length, 5, 'the newest 5');
-  assert.deepEqual(r.buys.map((b) => b.usd), [120, 120, 120, 120, 250.57], 'oldest first; $50 and up; at most 15 minutes old');
+  assert.deepEqual(r.buys.map((b) => b.usd), [120, 120, 120, 120, 250.57], 'oldest first; $50 and up; at most 15 minutes old; never a sell');
   assert.deepEqual(Object.keys(r.buys[0]).sort(), ['agi', 'at', 'id', 'usd'], 'never who bought or their transaction');
   assert.equal(r.buys[0].agi, 300_000);
-  assert.equal((await streamMarket(c, { since: now - 35_000, now: now + 5000, numbers, readBuys })).buys.length, 2, 'only after `since`');
+  assert.equal(r.chart, undefined, 'its trades only when asked');
+  assert.equal((await streamMarket(c, { since: now - 35_000, now: now + 5000, numbers, readTrades })).buys.length, 2, 'only after `since`');
   assert.equal(reads, 1, 'clank.trade read once per 30 s per server copy');
-  await streamMarket(c, { now: now + 31_000, numbers, readBuys });
+  // (2026-10-09, the owner: "can you also include on her watching the live trading chart of $AGI") her chart: every trade
+  // (buys and sells), oldest first, its time, side, price and dollars only (never who, never its transaction)
+  const ch = await streamMarket(c, { now: now + 6000, numbers, readTrades, chart: true });
+  assert.equal(ch.chart.length, 9);
+  assert.deepEqual(ch.chart.map((t) => t.at), [...ch.chart.map((t) => t.at)].sort((a, b) => a - b), 'oldest first');
+  assert.deepEqual(Object.keys(ch.chart[0]).sort(), ['at', 'price', 'side', 'usd']);
+  assert.deepEqual(ch.chart.filter((t) => t.side === 'sell').map((t) => t.usd), [500]);
+  assert.ok(ch.chart.every((t) => t.price === 0.0004));
+  assert.equal(reads, 1, 'the same read');
+  await streamMarket(c, { now: now + 31_000, numbers, readTrades });
   assert.equal(reads, 2);
   // TELEGRAM_BUY_MIN follows (her buy bot's minimum)
   forgetStreamBuys();
-  assert.equal((await streamMarket({ ...c, tgBuyMin: 200 }, { now, numbers, readBuys })).buys.length, 1);
+  assert.equal((await streamMarket({ ...c, tgBuyMin: 200 }, { now, numbers, readTrades })).buys.length, 1);
   // DexScreener or clank.trade away: what's there, never a guess
   forgetStreamBuys();
-  const down = await streamMarket(c, { now, numbers: async () => null, readBuys: async () => { throw new Error('clank.trade HTTP 503'); } });
-  assert.deepEqual(down, { numbers: null, buys: [] });
-  assert.ok(logs.some(([k, m]) => k === 'warn' && /couldn't read \$AGI's buys: clank\.trade HTTP 503/.test(m)));
+  const down = await streamMarket(c, { now, numbers: async () => null, readTrades: async () => { throw new Error('clank.trade HTTP 503'); }, chart: true });
+  assert.deepEqual(down, { numbers: null, buys: [], chart: [] });
+  assert.ok(logs.some(([k, m]) => k === 'warn' && /couldn't read \$AGI's trades: clank\.trade HTTP 503/.test(m)));
   // through /api/live (DexScreener and clank.trade as stand-ins)
   forgetStreamBuys();
   const { forgetMarket } = await import('../server/market.js');
@@ -1152,6 +1264,10 @@ test("$AGI on her show: its numbers and its new buys (each in its own numbers, n
     assert.equal(m.status, 200);
     assert.equal(m.data.numbers.mcap, 400000);
     assert.deepEqual(m.data.buys, []);
+    assert.equal(m.data.chart, undefined);
+    // (2026-10-09) her chart: asked with chart: true
+    const mc = await post({ action: 'market', show, since: Date.now() - 60_000, chart: true }, { auth: RUNNER() });
+    assert.deepEqual(mc.data.chart, []);
     assert.equal((await post({ action: 'market' }, { auth: RUNNER() })).status, 400);
     assert.equal((await post({ action: 'market', show }, { auth: OWNER() })).status, 400, 'her stream only');
   } finally { globalThis.fetch = base; }

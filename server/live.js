@@ -2,13 +2,19 @@
 // like an automated one"): the website's side. Her stream itself runs on the owner's own rented server (tools/live/run.mjs:
 // her 2D self, her voice, the video to X); our server keeps her line of questions and her answers.
 //   • People send her questions at agi1.app/live (18+, the site's human check) or with /live in her Telegram bot. X's own
-//     live chat needs X's approval first (the owner applies): until then, the stream says "Ask me at agi1.app/live".
-//   • Each question is checked here first (PG-13, no links, @names, addresses, phone numbers or other coins, a name of 24
-//     characters at most), then joins the line in the database (supabase/live.sql: one at a time per person, a minute apart,
-//     5 a day; 40 waiting at most; 600 a day for the site). Kept at most 2 days.
+//     live chat needs X's approval first (the owner applies): until then the owner passes good ones on (relayLive).
+//   • Each question is checked here first (PG-13, no links, @names, addresses or phone numbers, a name of 24 characters at
+//     most), then joins the line in the database (supabase/live.sql: one at a time per person, a minute apart, 5 a day; 40
+//     waiting at most; 600 a day for the site). Kept at most 2 days.
 //   • The runner takes them one at a time (api/live.js `next`): the AI writes her answer here, with her live prompt (she
-//     talks to everyone, PG-13, never real people or other coins, never advice), and says first whether it can be answered
-//     on a public stream at all (askAgi1's `skip`). Only then is the question shown on stream, with the name they gave.
+//     talks to everyone, PG-13, never advice), and says first whether it can be answered on a public stream at all
+//     (askAgi1's `skip`). Only then is the question shown on stream, with the name they gave, and she reads it out loud.
+//   • (2026-10-09, the owner: "there would be no restrictions on how short their message are", "she can say names now no
+//     restrictions", "she can mention other coins as well", "she will know every person's real name on the telegram just
+//     like in the website version of her with her memories") a question can be a single character (or an emoji), other
+//     coins and real people can come up (never advice: her live prompt), a name is anything but crude or posing as her or
+//     her team, a Telegram question shows the person's own Telegram name, and her answer knows the clank.trade Telegram
+//     group like her chat on the site does (server/tg-memory.js: only when the question is about it).
 //   • The owner controls the show from a phone (agi1.app/live#admin=…, a key made from LIVE_SECRET): pause, skip, block
 //     words, clear the line, end the show; and (2026-10-07, the owner's choice: X's chat can't be read without X's approval)
 //     pass on a question from X's live chat (relayLive: the same checks, shown as "on X", source 'x').
@@ -21,6 +27,7 @@ import { askAgi1, askScene, TLDS } from './gemini.js';
 import { isCrude } from './coins.js';
 import { MOODS } from './agi1-prompt.js';
 import { canList, actOf, DESTINATIONS, PEOPLE, LOCAL } from './live-acts.js';
+import { recallGroup } from './tg-memory.js';
 
 export const LIVE = {
   GAP_S: 60,            // seconds between one person's questions
@@ -28,7 +35,7 @@ export const LIVE = {
   QUEUE: 40,            // questions waiting at most
   SITE_DAY: 600,        // questions a day for the whole site (each costs one or two AI answers: about $0.0005 each)
   BEAT_S: 45,           // the runner's last word counts this long ("she's on")
-  Q_MIN: 3,
+  Q_MIN: 1,             // (2026-10-09, the owner: "no restrictions on how short their message are": 3 before)
   Q_MAX: 200,           // characters in a question
   NAME_MAX: 24,         // characters in a name
   TICKET_H: 6,          // hours a question's ticket works (the page asks where it is with it)
@@ -66,12 +73,14 @@ const LONG_WORD = /[A-Za-z0-9]{26,}/;                       // a Solana-style ad
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
 const HANDLE = /(^|[^\w])@[A-Za-z0-9_]{2,}/;
 const PHONE = /\+\d[\d\s().-]{7,}\d|\b\d{3}[\s.-]\d{3}[\s.-]\d{4}\b/;
-const TICKER = /\$([A-Za-z][A-Za-z0-9]{0,15})\b/g;
 import { OTHER_COINS, REAL_PEOPLE, DISTRESS, splitWords, mentionsCoinOrPerson, mentionsCoin } from './live-words.js';
 export { OTHER_COINS, REAL_PEOPLE, DISTRESS, splitWords, mentionsCoinOrPerson, mentionsCoin };
 // Why a question can't go on her stream, or null. (The owner's blocked words are checked in the database; what can't be
 // checked in code, like an accusation or a private person, her answer decides: askAgi1's "skip".) Real people may come up
-// since 2026-10-07 (the owner: "always be neutral on the answers on that"): her live prompt keeps her neutral.
+// since 2026-10-07 (the owner: "always be neutral on the answers on that"), and since 2026-10-09 other coins too (the
+// owner: "she can mention other coins as well"; her live prompt: never advice) and a question of any length (the owner:
+// "there would be no restrictions on how short their message are": a single letter, a "?" or an emoji is a question).
+// What still never goes on a public stream: links, addresses, contact details, crude words, keyboard spam.
 // (max: 2026-10-07, her own X posts and the replies under them are checked the same way, up to POST_MAX characters)
 export function questionTrouble(text, { max = LIVE.Q_MAX } = {}) {
   const t = tidyText(text);
@@ -83,31 +92,56 @@ export function questionTrouble(text, { max = LIVE.Q_MAX } = {}) {
   if (LINK.test(t) || otherSite(t)) return 'link';
   if (ADDRESS.test(t) || LONG_WORD.test(t)) return 'address';
   if (EMAIL.test(t) || HANDLE.test(t) || PHONE.test(t)) return 'contact';
-  for (const m of t.matchAll(TICKER)) if (m[1].toUpperCase() !== 'AGI') return 'coin';
-  if (mentionsCoin(t)) return 'coin';
   if (isCrude(t)) return 'crude';
-  if (/(.)\1{9,}/u.test(t) || !/\p{L}/u.test(t)) return 'spam';
+  if (/(.)\1{9,}/u.test(t)) return 'spam';
+  // (2026-10-09: she reads a question out loud now, and other coins may come up, so something that tells people to get
+  // or let go of a coin, or calls a price, and isn't a question is a shill she'd be saying: "buy $XYZ now". Asked as a
+  // question ("should i buy some bitcoin?") it's fine: she answers it without advice)
+  if (ADVICE.test(t) && !/\?[\s"'”’)\p{Extended_Pictographic}\u200d\ufe0f]*$/u.test(t)) return 'advice';
   return null;
 }
 export function checkQuestion(text) {
   const why = questionTrouble(text);
   return why ? { ok: false, why } : { ok: true, text: tidyText(text) };
 }
-// The name to show with it (optional): letters, numbers, spaces and a little punctuation (no dots: a name is never an
-// address); nothing crude, no coins, and nothing that would pass for her, the team or the show's host, however it's
-// written ("AGI1official", "real_agi_1"). The AI looks at it too (askAgi1's "nameOk"): a name it doubts shows as
-// "someone". (A real person's name is fine since 2026-10-07, the owner's choice "Allow display names too": it's what the
-// viewer typed, and she never says that person is there.)
+// The name to show with it (optional): since 2026-10-09 (the owner: "she can say names now no restrictions") any name of
+// 1 to 24 characters (letters of any alphabet, numbers, spaces, emoji, a little punctuation), a real person's or a coin's
+// too: it's what the viewer typed, and she never says that person is there. What a public stream still never shows:
+// something crude, a link, an address or a contact, and anything that would pass for her, her team or the show's host,
+// however it's written ("AGI1official", "real_agi_1": a name like that next to a question could fool people). The AI
+// looks at it too (askAgi1's "nameOk", only for those): a name it doubts shows as "someone".
 // (checked with its words split apart: "AGI1official" is "AGI 1 official", "real_agi_1" is "real agi 1")
-const POSING = /\b(?:agi(?:\s*(?:1|one|team))?|the\s*team|team|admin|administrator|moderator|mod|official|support|owner|host|staff|dev|developer)\b/i;
+// (2026-10-09: no more "owner", "host", "dev" or "developer" on their own: everyday names and nicknames, "Dev" included)
+const POSING = /\b(?:agi(?:\s*(?:1|one|team))?|the\s*team|team|admin|administrator|moderator|mod|mods|official|support|staff)\b/i;
+const NAME_CHARS = /^[\p{L}\p{M}\p{N}\p{Extended_Pictographic}\u200d\ufe0f '\-_.!?&]+$/u;
 export function checkAskName(raw) {
   const name = tidyText(raw);
   if (!name) return { ok: true, name: null };
   const chars = [...name].length;
-  if (chars < 3 || chars > LIVE.NAME_MAX || !/^[\p{L}\p{N} '\-_]+$/u.test(name) || !/[\p{L}\p{N}]/u.test(name)) return { ok: false, why: 'name' };
-  if (isCrude(name) || POSING.test(splitWords(name)) || mentionsCoin(name)) return { ok: false, why: 'name' };
-  if (/0x[0-9a-f]{4,}|\d{7,}/i.test(name)) return { ok: false, why: 'name' };
+  if (chars > LIVE.NAME_MAX || !NAME_CHARS.test(name) || !/[\p{L}\p{N}\p{Extended_Pictographic}]/u.test(name)) return { ok: false, why: 'name' };
+  if (isCrude(name) || POSING.test(splitWords(name))) return { ok: false, why: 'name' };
+  if (/0x[0-9a-f]{4,}|\d{7,}/i.test(name) || LINK.test(name) || otherSite(name) || EMAIL.test(name)) return { ok: false, why: 'name' };
+  // (2026-10-09) a name that's a shill ("pepe to the moon") isn't a name
+  if (ADVICE.test(name)) return { ok: false, why: 'name' };
   return { ok: true, name };
+}
+// (2026-10-09, the owner: "she will know every person's real name on the telegram") the name a question from her Telegram
+// bot shows on stream: the person's own Telegram name (their first and last name, else their first name, else their
+// @username without the @), checked like any name; none that passes: "someone on Telegram". Her bot tells them before they
+// ask (server/live-lines.js HOW).
+export function telegramName(from) {
+  if (!from || typeof from !== 'object' || from.is_bot) return null;
+  const first = tidyText(from.first_name).slice(0, 64), last = tidyText(from.last_name).slice(0, 64);
+  const tries = [[first, last].filter(Boolean).join(' '), first, tidyText(from.username)];
+  for (const t of tries) {
+    if (!t || [...t].length > LIVE.NAME_MAX) continue;
+    const n = checkAskName(t);
+    if (n.ok && n.name) return n.name;
+  }
+  // (a first name longer than 24 characters: its first word, if that fits)
+  const word = first.split(' ')[0];
+  if (word && word !== first && [...word].length <= LIVE.NAME_MAX) { const n = checkAskName(word); if (n.ok && n.name) return n.name; }
+  return null;
 }
 
 // ---------- tickets: the page asks where its question is ----------
@@ -180,14 +214,22 @@ export async function relayLive(cfg, { question, name = '' }) {
 }
 
 // ---------- her answer (the runner's "next") ----------
-// What she may not say on stream even when the AI wrote it: another coin (its ticker or its name), or something the reply
-// cleanup had to take out (a link, a handle, an address, an email: said out loud it would sound like "link removed").
-// (A real person's name is fine since 2026-10-07: her prompt keeps her neutral.)
+// What she may not say on stream even when the AI wrote it: something the reply cleanup had to take out (a link, a handle,
+// an address, an email: said out loud it would sound like "link removed"). (A real person's name is fine since 2026-10-07,
+// and another coin since 2026-10-09: her prompt keeps her neutral and never gives advice.)
+// And (2026-10-09: other coins may come up now, so hard rule 8 gets a safety net in code too; her live prompt is the first
+// one) anything that tells people to get or let go of a coin, or calls a price: "buy some", "you should sell", "it's going
+// to pump", "to the moon"… (her own words stay free: "i'd buy you a coffee" is fine)
+export const ADVICE = new RegExp([
+  String.raw`\b(?:you should|you need to|you gotta|go|time to|better|must|definitely)\s+(?:buy|sell|ape|load up|dump)\b`,
+  String.raw`\b(?:buy|sell|ape into|load up on|dump)\s+(?:some|more|now|it now|the dip|all|everything|your|\$\w+|bitcoin|btc|eth|sol|doge|pepe|this coin|that coin)\b`,
+  String.raw`\b(?:going to|gonna|will|about to|is set to)\s+(?:pump|moon|10x|100x|1000x|skyrocket|explode|go parabolic)\b`,
+  String.raw`\b(?:to the moon|guaranteed (?:gains|profits?|returns)|easy money|price target|financial freedom|can't lose|cannot lose)\b`,
+].join('|'), 'i');
 export function answerTrouble(reply) {
   const t = String(reply || '');
   if (/\[(?:link|address|email|handle) removed\]/.test(t)) return 'rules';
-  for (const m of t.matchAll(TICKER)) if (m[1].toUpperCase() !== 'AGI') return 'rules';
-  if (mentionsCoin(t)) return 'rules';
+  if (ADVICE.test(t)) return 'rules';
   return null;
 }
 // Whether her answer says this name (as a word of its own, any case): a name the AI doubted (askAgi1's "nameOk") is never
@@ -196,6 +238,10 @@ const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export const namedIn = (reply, name) => Boolean(name) && new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRe(name)}($|[^\\p{L}\\p{N}])`, 'iu').test(String(reply));
 // The message the AI reads: the question, as a viewer's (the name and where it came from are in her live prompt)
 export const questionMessage = (q) => `A viewer asks: ${q.question}`;
+// (2026-10-09, the owner: "she will know every person's real name on the telegram just like in the website version of her
+// with her memories") her memory of the clank.trade Telegram group, as on the site (server/tg-memory.js): only when the
+// question is about the group or someone in it, at most 4 short cards
+export const memoryFor = (q) => recallGroup(String(q?.question || ''));
 
 // The next question in line with her answer, for the runner. Questions she says can't go on a public stream are skipped
 // ('rules', 'care') and the next one is tried, until `deadline` (Vercel stops a function at 25 s). The AI failing puts the
@@ -212,9 +258,10 @@ export async function nextAnswer(cfg, show, { deadline = Date.now() + 15_000, as
     if (!q) return { none: true };
     let answer;
     try {
+      const memory = memoryFor(q);
       answer = await ask(cfg, [], questionMessage(q), {
         level: 1, live: { name: q.name, source: q.source, ...(ok.length ? { can: ok } : {}), ...(where ? { place: where } : {}) }, langSource: 'default',
-        timeoutMs: Math.min(10_000, deadline - Date.now() - 1500),
+        ...(memory.length ? { memory } : {}), timeoutMs: Math.min(10_000, deadline - Date.now() - 1500),
       });
     } catch (err) {
       console.error('[live] gemini failed:', err.message);
@@ -297,7 +344,11 @@ export function checkPost(raw) {
   if ([...t].length > POST_MAX) return { ok: false, why: 'long' };
   // (her own posts can say agi1.app or clank.trade: questionTrouble allows those; and a short one is fine)
   const why = questionTrouble(t, { max: POST_MAX });
-  return why && why !== 'short' ? { ok: false, why } : { ok: true, text: t };
+  if (why && why !== 'short') return { ok: false, why };
+  // (2026-10-09: other coins may come up now, but a reply shown on her stream that tells people to get or let go of a coin,
+  // or calls a price, is a shill: never on screen. A viewer's question may still ask about one: she answers without advice)
+  if (ADVICE.test(t)) return { ok: false, why: 'advice' };
+  return { ok: true, text: t };
 }
 // ---------- (2026-10-07) $AGI on her show: its numbers and its new buys ----------
 // The owner: "says if $AGI is pumping". Within hard rule 8: she reacts to buys that just happened (each in its own
@@ -306,28 +357,38 @@ export function checkPost(raw) {
 // a minute: server/market.js), the buys from clank.trade (kept 30 s per server copy: one request whatever asks).
 // → { numbers: { mcap, h24, liq } | null, buys: [{ id, at, usd, agi }] } (buys after `since`, at most 15 minutes old,
 // worth TELEGRAM_BUY_MIN dollars or more (50), the newest 5, oldest first; never who bought)
-let buysKept = { at: 0, list: null };
-export const forgetStreamBuys = () => { buysKept = { at: 0, list: null }; };      // (for the tests)
-export async function streamMarket(cfg, { since = 0, now = Date.now(), numbers = null, readBuys = null } = {}) {
+// chart (2026-10-09, the owner: "can you also include on her watching the live trading chart of $AGI"): also its newest
+// trades for her chart on stream, `chart: [{ at, side, price, usd }]` (at most 100, oldest first, prices in dollars at
+// ETH's price now; never who traded or their transaction). Read from clank.trade at most every 30 s per server copy (one
+// request, whatever asks: her buy alerts and her chart share it)
+let tradesKept = { at: 0, list: null };
+export const forgetStreamBuys = () => { tradesKept = { at: 0, list: null }; };      // (for the tests)
+export async function streamMarket(cfg, { since = 0, now = Date.now(), numbers = null, readTrades = null, chart = false } = {}) {
   const readNumbers = numbers || (await import('./market.js')).agiNumbers;
-  const buysOf = async () => {
-    if (buysKept.list && now - buysKept.at < 30_000) return buysKept.list;
+  const tradesOf = async () => {
+    if (tradesKept.list && now - tradesKept.at < 30_000) return tradesKept.list;
     try {
-      const list = await (readBuys || (await import('./buys.js')).readBuys)();
-      buysKept = { at: now, list };
+      const list = await (readTrades || (await import('./buys.js')).readTrades)();
+      tradesKept = { at: now, list };
       return list;
     } catch (err) {
-      console.warn('[live] couldn\'t read $AGI\'s buys:', err.message);
-      buysKept = { at: now, list: [] };
+      console.warn('[live] couldn\'t read $AGI\'s trades:', err.message);
+      tradesKept = { at: now, list: [] };
       return [];
     }
   };
-  const [n, list] = await Promise.all([readNumbers(now).catch(() => null), buysOf()]);
+  const [n, list] = await Promise.all([readNumbers(now).catch(() => null), tradesOf()]);
   const min = Number(cfg.tgBuyMin) > 0 ? Number(cfg.tgBuyMin) : 50;
-  const buys = list.filter((b) => b.at > since && b.at > now - 15 * 60_000 && b.at <= now + 60_000 && b.usd >= min)
+  const buys = list.filter((b) => (b.side ?? 'buy') === 'buy' && b.at > since && b.at > now - 15 * 60_000 && b.at <= now + 60_000 && b.usd >= min)
     .sort((a, b) => a.at - b.at).slice(-5)
     .map((b) => ({ id: b.id, at: b.at, usd: Math.round(b.usd * 100) / 100, agi: Math.round(b.agi) }));
-  return { numbers: n ? { mcap: n.mcap, h24: n.h24 ?? null, liq: n.liq ?? null } : null, buys };
+  const out = { numbers: n ? { mcap: n.mcap, h24: n.h24 ?? null, liq: n.liq ?? null } : null, buys };
+  if (chart) {
+    out.chart = list.filter((t) => t.at <= now + 60_000 && t.price > 0 && Number.isFinite(t.price))
+      .sort((a, b) => a.at - b.at).slice(-100)
+      .map((t) => ({ at: t.at, side: t.side === 'sell' ? 'sell' : 'buy', price: Number(t.price.toPrecision(6)), usd: Math.round(t.usd * 100) / 100 }));
+  }
+  return out;
 }
 
 // → { reply, mood } · { skip: why } (it can't go on stream: never shown) · { none: true, trouble: 'ai' }

@@ -15,12 +15,15 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { ACTS, ACT_IDS, SONG_PARTS, PART_IDS, OUTFITS, ROOMS, PLACES, COOLDOWN, canList, actOf, actsPrompt } from '../server/live-acts.js';
 import { createActs, DOES, actMs, roomFor, outfitFor, nextRoom, nextOutfit } from '../tools/live/acts.js';
-import { readSong, partOf, decodeSong, songGain, mouthOf, SONG_LEVEL } from '../tools/live/song.js';
-import { listVideos, titleOf, videoArgs, soundArgs, prepareVideo, download, toStereo, MEDIA_NAME, VIDEO_MAX_S } from '../tools/live/media.js';
+import { readSong, partOf, decodeSong, songGain, mouthOf, SONG_LEVEL, MV_OFFSET } from '../tools/live/song.js';
+import { listVideos, titleOf, videoArgs, soundArgs, prepareVideo, download, toStereo, MEDIA_NAME, VIDEO_MAX_S, SONG_IDS, findSongVideo, songVideoArgs, prepareSongVideo } from '../tools/live/media.js';
+import { candlesOf, chartDir, changeOf, spanText, drawChart, CHART_W, CHART_H } from '../tools/live/page/chart.js';
+import * as T from '../tools/live/trips.js';
 import { xSettings, createX, mediaOf, postsOf, repliesOf } from '../tools/live/x.js';
 import { createShow, nextStep, didStep, PACE, EXTRA_IDS } from '../tools/live/show.js';
-import { Mixer, OUT_RATE, ffmpegArgs, parseArgs, chatterSettings, timeFact, dirOf, TOPICS, SONG_ROTATION, serve } from '../tools/live/run.mjs';
-import { demoSite, DEMO_QA, DEMO_CHAT } from '../tools/live/site.js';
+import { Mixer, OUT_RATE, ffmpegArgs, parseArgs, chatterSettings, timeFact, dirOf, TOPICS, SONG_ROTATION, serve, readAndAnswer, askedBy } from '../tools/live/run.mjs';
+import { demoSite, demoTrades, DEMO_QA, DEMO_CHAT } from '../tools/live/site.js';
+import { sentencesOf } from '../tools/clips/captions.js';
 import * as M from '../tools/live/music.js';
 import * as L from '../tools/live/lines.js';
 import { ACTIONS, DANCE_IDS, DANCES, GESTURES, IDLES, CAM_ZOOM, JUMP_S, JUMP_UP, jumpAt, createMoves, restArms, REST_ARMS, SPOTS_REST } from '../tools/live/page/moves.js';
@@ -67,7 +70,7 @@ test("what she can do right now (canList), and her answer's request checked agai
   assert.deepEqual(actOf({ act: 'blush', times: 4 }, can), { act: 'blush' });
   assert.deepEqual(actOf({ act: 'sing', part: 'whole' }, can), { act: 'sing', part: 'whole' });
   assert.deepEqual(actOf({ act: 'sing', part: 'nope' }, can), { act: 'sing', part: 'chorus' }, 'a part it doesn\'t know: the chorus');
-  assert.equal(actOf({ act: 'sing', part: 'rap' }, can), null, 'a part that\'s resting: nothing');
+  assert.equal(actOf({ act: 'sing', part: 'rap' }, can), null, 'a part that isn\'t on the list: nothing');
   assert.deepEqual(actOf({ act: 'outfit', to: 'cozy' }, can), { act: 'outfit', to: 'cozy' });
   assert.deepEqual(actOf({ act: 'outfit', to: 'bikini' }, can), { act: 'outfit', to: null }, 'an outfit she doesn\'t have: her next one');
   assert.deepEqual(actOf({ act: 'room', to: 'beach' }, can), { act: 'room', to: 'beach' });
@@ -76,42 +79,53 @@ test("what she can do right now (canList), and her answer's request checked agai
   assert.equal(actOf({ act: 'none' }, can), null);
   assert.equal(actOf({ act: 'twerk' }, can), null, 'nothing that isn\'t hers');
   assert.equal(actOf(null, can), null);
-  // her prompt's part: only what she can do now, PG-13, and "later" for what's resting
+  // (2026-10-09) her live $AGI chart
+  assert.deepEqual(actOf({ act: 'chart', times: 3 }, [...can, 'chart']), { act: 'chart' });
+  assert.equal(actOf({ act: 'chart' }, can), null);
+  // her prompt's part: only what she can do now, PG-13; (2026-10-09, the owner: "she will do everything asked to her",
+  // "she can sing the full song everytime if requested") always yes, her song every time, never "later"
   const p = actsPrompt(can);
   assert.match(p, /WHAT YOU CAN DO ON STREAM/);
+  assert.match(p, /you always say yes/);
   assert.match(p, /- "jump": jump/);
   assert.match(p, /\(right now: chorus, whole\)/);
   assert.doesNotMatch(p, /"dance"/);
+  assert.match(p, /sing it, every time \(the whole song when they ask for all of it\)/);
+  assert.match(p, /do the closest one and play along in your words \(never just say no\)/);
   assert.match(p, /Never anything that isn't PG-13/);
-  assert.match(p, /say you'll do it again a little later/);
+  assert.doesNotMatch(p, /later/);
   assert.equal(actsPrompt([]), '');
 });
 
-test("her stream's cooldowns: a sung part rests her singing 6 minutes (the whole song 30), a dance, an outfit, a room a little; reserved as soon as she says yes", () => {
+test("her stream's own pace (2026-10-09, the owner: \"she will do everything asked to her\", \"she can sing the full song everytime if requested\"): a viewer's request never waits; what she does by herself rests a while after (a sung part 6 minutes, the whole song 30, a dance, an outfit, a room a little)", () => {
   let t = 0;
   const acts = createActs({ now: () => t });
+  const all = PART_IDS.map((p) => `sing:${p}`);
   const sing = () => acts.can().filter((x) => x.startsWith('sing:'));
-  assert.deepEqual(sing(), PART_IDS.map((p) => `sing:${p}`), 'every part at first');
-  assert.ok(['jump', 'wave', 'blush', 'wink', 'dance', 'outfit', 'room', 'move'].every((x) => acts.can().includes(x)));
-  acts.take({ act: 'sing', part: 'chorus' });
-  assert.deepEqual(sing(), [], 'singing rests');
-  t = COOLDOWN.sing + 1;
-  assert.deepEqual(sing(), PART_IDS.map((p) => `sing:${p}`));
+  assert.deepEqual(sing(), all, 'every part');
+  assert.ok(['jump', 'wave', 'blush', 'wink', 'dance', 'outfit', 'room', 'move', 'trip', 'eat', 'weather', 'chart'].every((x) => acts.can().includes(x)));
   acts.take({ act: 'sing', part: 'whole' });
-  t += COOLDOWN.sing + 1;
-  assert.ok(sing().length && !sing().includes('sing:whole'), 'the whole song rests longer');
+  assert.deepEqual(sing(), all, 'asked again right away: she sings it again (the whole song too)');
+  assert.ok(acts.resting('sing') && acts.resting('sing_whole'), 'by herself: not for a while');
+  t = COOLDOWN.sing + 1;
+  assert.ok(!acts.resting('sing') && acts.resting('sing_whole'), 'the whole song rests longer');
   t += COOLDOWN.sing_whole;
-  assert.ok(sing().includes('sing:whole'));
-  acts.take({ act: 'dance' });
-  assert.ok(!acts.can().includes('dance') && acts.resting('dance'));
+  assert.ok(!acts.resting('sing_whole'));
+  for (const id of ['dance', 'outfit', 'room', 'trip', 'eat', 'weather', 'meet', 'chart', 'confetti']) {
+    acts.take({ act: id });
+    assert.ok(acts.resting(id), `${id}: her own pace`);
+    assert.ok(acts.can().includes(id), `${id}: a viewer can still ask for it`);
+  }
   acts.release({ act: 'dance' });
-  assert.ok(acts.can().includes('dance'), 'a question put back in line: free again');
+  assert.ok(!acts.resting('dance'), 'a question put back in line: free again');
   acts.take({ act: 'jump', times: 5 });
-  assert.ok(acts.can().includes('jump'), 'jumps never rest');
+  assert.ok(!acts.resting('jump') && acts.can().includes('jump'), 'jumps never rest');
   assert.ok(COOLDOWN.sing_whole >= 30 * 60_000 && COOLDOWN.sing >= 5 * 60_000);
-  // without her song or her dance songs, never offered
-  const none = createActs({ song: false, dance: false });
-  assert.ok(!none.can().some((x) => x.startsWith('sing') || x === 'dance'));
+  // only what her set can't do at all is left out: her song without its file, a dance without her dance songs, meeting
+  // someone where nobody is, her chart when $AGI's trades can't be read
+  const none = createActs({ song: false, dance: false, meet: () => false, chart: () => false });
+  assert.ok(!none.can().some((x) => x.startsWith('sing') || ['dance', 'meet', 'chart'].includes(x)));
+  assert.ok(none.can().includes('jump'));
   // how long each takes on her set (one at a time)
   assert.equal(actMs({ act: 'blush' }), Math.round(ACTIONS.blush.len * 1000) + 200);
   assert.ok(actMs({ act: 'jump', times: 5 }) > actMs({ act: 'jump', times: 1 }));
@@ -153,7 +167,7 @@ function id3Of(buf) {
 }
 const onlyCredentials = (tag) => tag.frames.every((f) => f.id === 'GEOB' && f.mime === 'application/c2pa');
 
-test('her song "Feel the AGI": the owner\'s file (no tags, lyrics or cover), its timing, each part as her set needs it', () => {
+test('her song "Feel the AGI": the owner\'s file (no tags, lyrics or cover), its timing, its words line by line (all of them), each part as her set needs it', () => {
   const song = readSong();
   assert.ok(song, 'tools/live/songs/feel-the-agi.json and .mp3');
   const mp3 = readFileSync(song.file);
@@ -184,10 +198,18 @@ test('her song "Feel the AGI": the owner\'s file (no tags, lyrics or cover), its
   assert.ok(mouth.every((x) => x >= 0 && x <= 1));
   const open = mouth.filter((x) => x > 0.15).length / mouth.length;
   assert.ok(open > 0.25 && open < 0.85, `her mouth opens while she sings, not all the time: ${open.toFixed(2)}`);
-  // its karaoke: the hook only (never a real person's name on screen)
-  const words = meta.lines.map((x) => x.text).join(' ');
-  assert.doesNotMatch(words, /elon|marc|ilya|sam|zuck|jensen|truth|sixteen|16z|bitcoin|bao/i, words);
-  assert.ok(meta.lines.every((x) => x.from < x.to && x.words.every((w, i, a) => i === 0 || w.t >= a[i - 1].t)));
+  // (2026-10-09, the owner: "when she sings the full lyrics on the subtitle must shown"): all of its words, line by line, in
+  // time with the song (timed once from her vocals: tools/live/songs/feel-the-agi.json), never two lines at once. (Counts
+  // only in these messages: the song's words are never printed.)
+  assert.ok(meta.lines.length >= 55, `${meta.lines.length} lines`);
+  assert.equal(meta.hook, undefined, 'no hook-only karaoke any more');
+  assert.ok(meta.lines.every((x) => typeof x.text === 'string' && x.text.length > 0 && typeof x.section === 'string' && x.section.length > 0 && x.words.length > 0),
+    'every line: its words and its section');
+  assert.ok(meta.lines.every((x) => x.from < x.to && x.words.every((w, i, a) => (i === 0 || w.t >= a[i - 1].t) && w.t >= x.from - 0.31 && w.t <= x.to + 0.5)),
+    'each word on time, in order, inside its line');
+  assert.ok(meta.lines.every((x, i, a) => i === 0 || x.from >= a[i - 1].to - 0.05), 'one line at a time, in order');
+  assert.ok(meta.lines[0].from < 20 && meta.lines.at(-1).to > meta.seconds - 30, 'from its first words to its last');
+  assert.ok(meta.lines.every((x) => x.words.map((w) => w.w).join(' ').replace(/\s+/g, ' ').trim().length > 0));
   // each part
   for (const id of PART_IDS) {
     const p = partOf(meta, id);
@@ -202,8 +224,9 @@ test('her song "Feel the AGI": the owner\'s file (no tags, lyrics or cover), its
     assert.ok(p.cues.length && p.cues[0].t === 0 && p.cues.every((c) => DANCE_IDS.includes(c.move) || ['cheer', 'present'].includes(c.move)), `${id}: her moves from its first moment`);
     assert.ok(p.bpm > 110 && p.bpm < 140, `${id}: ${p.bpm}`);
   }
-  assert.ok(partOf(meta, 'chorus').lines.length >= 6, 'the chorus has its karaoke');
-  assert.equal(partOf(meta, 'rap').lines.length, 0, 'the rap: no words on screen (they name real people)');
+  assert.ok(partOf(meta, 'chorus').lines.length >= 6, 'the chorus: its words on screen');
+  assert.ok(partOf(meta, 'rap').lines.length >= 8, 'the rap: its words on screen too (all of them, since 2026-10-09)');
+  assert.equal(partOf(meta, 'whole').lines.length, meta.lines.length, 'the whole song: every line');
   assert.equal(partOf(meta, 'whole').seconds, meta.seconds);
   assert.equal(partOf(meta, 'nope').part, 'chorus');
   assert.equal(readSong('/nowhere'), null);
@@ -525,7 +548,10 @@ test('the director\'s extras: one about every 4 minutes (8 with questions waitin
     else if (['segment', 'pickup', 'chat'].includes(step.kind)) didStep(show, step, now);
   }
   const ids = seen.map((x) => x[0]);
-  assert.deepEqual([...new Set(ids.slice(0, EXTRA_IDS.length - 1))].sort(), EXTRA_IDS.filter((x) => x !== 'video').sort(), `each once before any again: ${ids}`);
+  // each once before any comes again (the one that couldn't happen may come in the first round once it can, or after it)
+  const firstRepeat = ids.findIndex((id, k) => ids.indexOf(id) < k);
+  const round = new Set(ids.slice(0, firstRepeat === -1 ? ids.length : firstRepeat));
+  for (const id of EXTRA_IDS.filter((x) => x !== 'video')) assert.ok(round.has(id), `each once before any again: ${id} (${ids})`);
   assert.ok(!seen.some(([id, t]) => id === 'video' && t <= 30 * 60_000), 'one that couldn\'t happen waited');
   assert.ok(ids.includes('video'), 'and came when it could');
   for (let k = 1; k < seen.length; k++) assert.ok(seen[k][1] - seen[k - 1][1] >= PACE.EXTRA_EVERY, `${seen[k][1] - seen[k - 1][1]}`);
@@ -665,10 +691,17 @@ test('her set\'s page: viewers\' requests and her extras on window.studio, a pic
   assert.match(html, /<img data-tv-img alt="" hidden \/>/);
   const css = read('tools/live/page/stage.css');
   assert.match(css, /\.tv-screen img \{[^}]*opacity: 0\.99;/, 'never quite opaque over her picture');
-  assert.match(css, /\.set\[data-mode='song'\] \.caption, \.set\[data-mode='tv'\] \.caption \{ display: none; \}/);
+  // (2026-10-09: and while her music video plays, her song's words take the caption's place)
+  assert.match(css, /\.set\[data-mode='song'\] \.caption, \.set\[data-mode='tv'\] \.caption, \.set\[data-mode='mv'\] \.caption \{ display: none; \}/);
   const fx = read('tools/live/page/fx.js');
   assert.match(fx, /if \(v\.img && img\)/);
   assert.doesNotMatch(fx, /innerHTML/);
+  // (2026-10-09) her live $AGI chart on her TV (drawn on its own canvas, the screen's size) and her music video
+  assert.match(html, /<canvas class="tv-chart" data-tv-chart width="582" height="327" hidden><\/canvas>/);
+  assert.match(fx, /if \(v\.chart && chartEl && drawChart\) \{/);
+  assert.match(js, /chart: \(c\) => \{/);
+  assert.match(js, /mvLoad: \(v\) => fx\.songVideo\.load\(v \|\| \{\}\)/);
+  assert.match(html, /<div class="song-video" data-song-video aria-hidden="true" hidden><video muted playsinline preload="auto"><\/video><\/div>/);
 });
 
 // ---------- her poses on stream (2026-10-07, the owner's screenshots of her first upgraded stream: "what happend here lol",
@@ -889,4 +922,214 @@ test('her jump stays in the picture (4.5 cm up, her head never leaves it), the c
     }
     for (let i = 0; i < 200 && moves.moving; i++) { ms += 33; moves.apply(1 / 30, rest(), talk); }
   }
+});
+
+
+// ---------- (2026-10-09, the owner's next list: "agi will now read the full question", "when she sings the full lyrics on
+// the subtitle must shown with the full video on the live as well", "she now mentions that she can read the mesages on X
+// and telegram and the website", then "can you also include on her watching the live trading chart of $AGI") ----------
+test('she reads the whole question out loud (who asked, then every word of it), then answers: one line of her voice; she looks at its card while she reads it, at everyone as she answers', () => {
+  const r = readAndAnswer({ name: 'Mochi', text: "what's your favorite color?", source: 'web' }, 'purple, obviously 💜');
+  assert.deepEqual(r, { text: "Mochi asks: what's your favorite color? purple, obviously 💜", read: "Mochi asks: what's your favorite color?" });
+  assert.equal(readAndAnswer({ name: null, text: 'gm', source: 'web' }, 'gm gm 💜').read, 'someone asks: gm.', 'a full stop after a question without one');
+  assert.equal(readAndAnswer({ name: 'Kai Tan', text: 'hi!', source: 'telegram' }, 'hi 💜').read, 'Kai Tan asks: hi!');
+  assert.equal(readAndAnswer({ name: null, text: 'hello  \n there', source: 'telegram' }, 'x').read, 'someone on Telegram asks: hello there.');
+  assert.equal(readAndAnswer({ name: 'kai_99', text: 'wen song?', source: 'x' }, 'x').read, 'kai_99 on X asks: wen song?');
+  assert.equal(askedBy({ name: null, source: 'x' }), 'someone on X');
+  // its sentences come first in her captions (her reaction waits until her answer starts)
+  const line = readAndAnswer({ name: 'Mochi', text: 'two things. first: why? second: how?', source: 'web' }, 'okay! first, because. second, carefully 💜');
+  assert.ok(sentencesOf(line.text).length > sentencesOf(line.read).length && sentencesOf(line.text).slice(0, sentencesOf(line.read).length).join(' ') === sentencesOf(line.read).join(' '));
+  const run = read('tools/live/run.mjs');
+  assert.match(run, /const audio = await voice\.speak\(readAndAnswer\(r\.question, r\.reply\)\.text, \{ mood: r\.mood, keep: false \}\);/, 'one voice request for both');
+  assert.match(run, /const line = readAndAnswer\(qa\.question, qa\.reply\);\s*const r = await say\(\{ text: line\.text,[\s\S]*?read: line\.read \}\);/);
+  assert.match(run, /const readEnd = read \? \(cues\.filter\(\(c\) => c\.sentence < sentencesOf\(read\)\.length\)\.at\(-1\)\?\.to \?\? 0\) : 0;/);
+  assert.match(run, /\.\.\.\(readEnd \? \{ reactAt: readEnd \} : \{\}\)/);
+  assert.match(run, /window\.studio\.look\(w, ms\), \['card', /);
+  const js = read('tools/live/page/stage.js');
+  assert.match(js, /reactAt/, 'her set waits with her reaction until her answer starts');
+});
+
+test('her song\'s music video: found in her videos folder by its own name (never one of her TV\'s videos), made once into 1280 px VP8 WebM without its sound (her song plays it), at a lower priority; played full screen in step with her song (her small in the corner, all of its words under it)', async () => {
+  assert.deepEqual(SONG_IDS, ['feel-the-agi']);
+  const dir = mkdtempSync(join(tmpdir(), 'agi1-mv-'));
+  try {
+    writeFileSync(join(dir, 'feel-the-agi.mp4'), Buffer.alloc(5000));
+    writeFileSync(join(dir, 'launch.mp4'), Buffer.alloc(5000));
+    writeFileSync(join(dir, '.feel-the-agi.mp4'), Buffer.alloc(5000));
+    assert.deepEqual(listVideos(dir).map((v) => v.title), [titleOf('launch')], 'never on her TV: it\'s her song\'s own picture');
+    const v = findSongVideo(dir, 'feel-the-agi');
+    assert.equal(v.file, join(dir, 'feel-the-agi.mp4'));
+    assert.equal(findSongVideo(dir, 'nope'), null);
+    assert.equal(findSongVideo(join(dir, 'nowhere')), null);
+    rmSync(join(dir, 'feel-the-agi.mp4'));
+    writeFileSync(join(dir, 'Feel-The-AGI.MOV'), Buffer.alloc(5000));
+    assert.ok(findSongVideo(dir), 'any case, any of the video types');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+  const a = songVideoArgs('/in.mp4', '/out.webm');
+  const at = (k) => a[a.indexOf(k) + 1];
+  assert.equal(at('-c:v'), 'libvpx');
+  assert.equal(at('-f'), 'webm');
+  assert.ok(a.includes('-an') && !a.includes('-t'), 'no sound in it (her song plays), and all of it (no 4-minute cap)');
+  assert.match(at('-vf'), /scale='min\(1280,iw\)':-2/);
+  assert.match(at('-vf'), /fps=24/);
+  assert.equal(at('-g'), '48', 'a keyframe every 2 s: a part of her song starts it in the middle');
+  // made once, at a lower priority, never with a secret
+  const cache = mkdtempSync(join(tmpdir(), 'agi1-mvc-'));
+  const calls = [];
+  const fake = (cmd, args, opts) => {
+    calls.push({ cmd, args, opts });
+    const p = new EventEmitter();
+    p.stdout = new Readable({ read() {} });
+    p.stderr = new EventEmitter();
+    setImmediate(() => {
+      const ff = args.includes('ffmpeg') ? args.slice(args.indexOf('ffmpeg')) : [cmd, ...args];
+      if (ff[0] === 'ffprobe') p.stdout.push('200.08\n'); else writeFileSync(ff.at(-1), 'webm');
+      p.stdout.push(null);
+      setImmediate(() => p.emit('exit', 0));
+    });
+    return p;
+  };
+  try {
+    const video = { file: '/videos/feel-the-agi.mp4', title: 'feel-the-agi (music video)', size: 9000, mtime: 1 };
+    const r = await prepareSongVideo(video, cache, { run: fake, nice: '/usr/bin/nice' });
+    assert.match(r.src, /^\/media\/[0-9a-f]{24}\.webm$/);
+    assert.ok(MEDIA_NAME.test(r.src.slice(7)), 'her set\'s own server serves it');
+    assert.equal(r.seconds, 200.08);
+    const ff = calls.filter((c) => c.cmd === '/usr/bin/nice');
+    assert.equal(ff.length, 1);
+    assert.deepEqual(ff[0].args.slice(0, 3), ['-n', '15', 'ffmpeg']);
+    assert.ok(calls.every((c) => !Object.keys(c.opts.env).some((k) => /SECRET|KEY|TOKEN/.test(k))));
+    const n = calls.length;
+    await prepareSongVideo(video, cache, { run: fake, nice: null });
+    assert.equal(calls.filter((c) => c.cmd !== 'ffprobe').length, n - 1, 'kept: only asked how long it is');
+  } finally { rmSync(cache, { recursive: true, force: true }); }
+  // in step with her song (its sound and the video's own, measured once: 3 ms apart)
+  assert.ok(Math.abs(MV_OFFSET) < 0.05);
+  // her set: full screen behind her (nothing plain and opaque over her picture), her small in the bottom right, all of its
+  // words in a band under the video (never over it), the video loaded and seeked before her song starts
+  const html = read('tools/live/page/index.html');
+  assert.ok(html.indexOf('data-song-video') < html.indexOf('data-pic'), 'behind her picture');
+  assert.match(html, /<div class="lyrics" data-lyrics hidden><p class="lyrics-now" data-lyrics-now><\/p><p class="lyrics-next" data-lyrics-next><\/p><\/div>/);
+  const css = read('tools/live/page/stage.css');
+  assert.match(css, /\n\.song-video \{ position: absolute; left: 0; top: 0; width: 1280px; height: 548px; background: rgba\(0, 0, 0, 0\.99\); \}/, 'the video\'s own shape (1280 × 548)');
+  assert.match(css, /\.set\[data-mode='mv'\] \.lyrics \{ left: 22px; top: 552px;[^}]*width: 990px;[^}]*background: rgba\(/, 'its words under the video, left of her');
+  const js = read('tools/live/page/stage.js');
+  assert.match(js, /export const CORNER = \{ s: 0\.42, x: 1148 \};/);
+  assert.match(js, /fx\.songVideo\.play\(\{ startAt, from: Number\(video\.from\) \|\| 0, offset: Number\(video\.offset\) \|\| 0, seconds: s\.seconds \}\);\s*view\.ts = CORNER\.s;/);
+  assert.match(js, /set\.dataset\.mode = video \? 'mv' : 'song';/);
+  assert.match(js, /fx\.lyrics\(\{ startAt, lines: s\.lines \}\);/, 'all of its words, line by line');
+  assert.match(js, /camera\.setViewOffset\(wide, H, px - tx \/ view\.s, py - box\.height \/ view\.s, box\.width \/ view\.s, box\.height \/ view\.s\);/, 'drawn small (the camera sees more), never her picture scaled down');
+  const fx = read('tools/live/page/fx.js');
+  assert.match(fx, /const want = mv\.from \+ mv\.offset \+ s;/);
+  assert.match(fx, /Math\.abs\(sv\.currentTime - want\) > 0\.2/, 'nudged back in step when it drifts');
+  assert.match(fx, /const timer = setTimeout\(\(\) => end\(sv\.readyState >= 2\), 6000\);/, 'never waited on for long');
+  const run = read('tools/live/run.mjs');
+  assert.match(run, /withVideo = \(await studio\('mvLoad', \{ src: mv\.src, from: p\.from \+ MV_OFFSET \}\)\) === true;/);
+  assert.match(run, /\.\.\.\(withVideo \? \{ video: \{ from: p\.from, offset: MV_OFFSET \} \} : \{\}\)/);
+  assert.match(run, /songVideo\.ready = await prepareSongVideo\(songVideoFile, cacheDir\);/);
+  assert.match(read('tools/live/song.js'), /the owner's exception/);
+});
+
+test('her live $AGI chart (2026-10-09): candles from its newest trades (any order, a slot without a trade flat at the last price), a feeling about it (±3%), the time it covers in words; drawn on her TV\'s screen', () => {
+  const t0 = Date.UTC(2026, 9, 9, 12);
+  const tr = (min, price, side = 'buy', usd = 100) => ({ at: t0 + min * 60_000, price, side, usd });
+  const up = [tr(0, 1), tr(10, 1.01), tr(20, 1.02, 'sell', 40), tr(30, 1.05), tr(50, 1.1)];
+  const c = candlesOf([...up].reverse(), 5);
+  assert.equal(c.length, 6, 'at least 6 slots');
+  assert.ok(c.every((x, i) => i === 0 || x.o === c[i - 1].c), 'each opens where the last closed');
+  assert.ok(c.every((x) => x.h >= Math.max(x.o, x.c) && x.l <= Math.min(x.o, x.c)));
+  assert.equal(c.reduce((sum, x) => sum + x.n, 0), 5, 'every trade in a candle');
+  assert.equal(c.reduce((sum, x) => sum + x.sell, 0), 40);
+  assert.equal(c.at(-1).c, 1.1);
+  assert.equal(chartDir(up), 'up');
+  assert.equal(chartDir([tr(0, 1), tr(5, 0.9)]), 'down');
+  assert.equal(chartDir([tr(0, 1), tr(5, 1.02)]), 'flat');
+  assert.equal(chartDir([tr(0, 1)]), 'flat');
+  assert.ok(Math.abs(changeOf(up) - 10) < 1e-9);
+  assert.deepEqual(candlesOf([]), []);
+  assert.deepEqual(candlesOf([{ at: 'x', price: 1 }, { at: 1, price: 0 }]), []);
+  assert.equal(spanText(45 * 60_000), 'the last 45 min');
+  assert.equal(spanText(200 * 60_000), 'the last 3 h 20 min');
+  assert.equal(spanText(3 * 86_400_000), 'the last 3 days');
+  // drawn on a stand-in canvas: her TV's screen size, its candles, the last price, "not financial advice"
+  const calls = [];
+  const ctx = new Proxy({}, {
+    get: (o, k) => (k in o ? o[k] : k === 'measureText' ? () => ({ width: 40 }) : (...args) => { calls.push([k, ...args]); }),
+    set: (o, k, v) => { o[k] = v; return true; },
+  });
+  const canvas = { width: CHART_W, height: CHART_H, getContext: () => ctx };
+  const r = drawChart(canvas, { trades: up, numbers: { mcap: 412_000 } }, { now: t0 + 60 * 60_000 });
+  assert.equal(r.candles, 6);
+  assert.equal(r.last, 1.1);
+  const texts = calls.filter(([k]) => k === 'fillText').map(([, t]) => String(t));
+  assert.ok(texts.some((t) => /not financial advice/.test(t)) && texts.some((t) => /5 trades on clank\.trade, the last 1 h · market cap/.test(t)), texts.join(' | '));
+  assert.ok(texts.includes('$AGI') && texts.includes('LIVE TRADES'));
+  assert.ok(!texts.some((t) => /\b(buy|sell|pump|moon)\b/i.test(t)), 'no advice words on it');
+  assert.deepEqual(drawChart(canvas, { trades: [] }), { candles: 0 });
+  assert.deepEqual([CHART_W, CHART_H], [582, 327], 'her TV\'s screen');
+  assert.doesNotMatch(read('tools/live/page/chart.js'), /fetch\(|XMLHttpRequest|innerHTML/, 'drawn from what her stream hands it');
+});
+
+test('watching it with everyone: her lines (how she feels, never advice), the runner (on her TV, updated every 12 s, a new trade or a buy while she watches), her extras, a viewer\'s request, the site\'s trades, the demo\'s', async () => {
+  // her lines: "not financial advice" whenever she says how it's doing (and the rest of her rules: tests/livestream.test.js)
+  for (const k of ['explain', 'up', 'down', 'flat', 'live', 'after']) {
+    assert.ok(L.CHART_LINES[k].length >= 1, k);
+    for (const x of L.CHART_LINES[k]) assert.match(x.text, /not financial advice/, `${k}: ${x.text}`);
+  }
+  assert.ok(L.CHART_LINES.intro.length >= 2 && L.CHART_LINES.none.text);
+  const all = L.allLines();
+  for (const x of Object.values(L.CHART_LINES).flat()) assert.ok(all.includes(x), `--warm makes its voice: ${x.text}`);
+  assert.match(L.CHART_LABEL, /not financial advice/);
+  assert.ok([...L.CHART_LABEL].length <= 49, `one line under her TV (the first recording wrapped a longer one): ${L.CHART_LABEL}`);
+  // the runner
+  const run = read('tools/live/run.mjs');
+  assert.match(run, /const CHART_WATCH_MS = 36_000, CHART_EVERY_MS = 12_000;/);
+  assert.match(run, /const trades = chartOf\(await pollMarket\(\{ chart: true \}\)\);\s*if \(!trades\) return false;/);
+  assert.match(run, /await studio\('chart', \{ trades, numbers: market\.numbers, label: L\.CHART_LABEL \}\);\s*await studio\('look', 'tv'\);/);
+  assert.match(run, /const dir = chartDir\(trades\);\s*await say\(pickFrom\(show, `chart-\$\{dir\}`, L\.CHART_LINES\[dir\]\)\);/);
+  assert.match(run, /if \(alertDue\(Date\.now\(\)\)\) \{ await buyAlert\(\); state\.segment = 'chart'; \}\s*else await say\(pickFrom\(show, 'chartLive', L\.CHART_LINES\.live\)\);/);
+  assert.match(run, /await say\(pickFrom\(show, 'chartAfter', L\.CHART_LINES\.after\)\);\s*await studio\('chart', null\);/);
+  assert.match(run, /else if \(d\.own === 'chart'\) \{ if \(!\(await watchChart\(\)\)\) await say\(L\.CHART_LINES\.none\); \}/);
+  assert.match(run, /if \(id === 'chart'\) return Boolean\(market\.numbers\) && market\.failures < 3 && !acts\.resting\('chart'\);/);
+  assert.match(run, /createActs\(\{ song: Boolean\(song\), dance: dances\.length > 0, meet: meetOk, chart: \(\) => market\.failures < 3 \}\)/);
+  assert.match(run, /const extras = \['room', 'outfit', 'market', 'chart', /);
+  // one of her extras, a viewer's request, --try chart on a recording
+  assert.ok(EXTRA_IDS.includes('chart') && ACT_IDS.includes('chart'));
+  assert.deepEqual(DOES.chart, { own: 'chart' });
+  assert.ok(COOLDOWN.chart >= 60_000, 'by herself, now and then');
+  assert.deepEqual(parseArgs(['--try', 'chart', '--record', 'x.mp4'], {}).tryExtras, ['chart']);
+  // the site's trades for it (asked only for the chart)
+  const sent = [];
+  const { liveSite } = await import('../tools/live/site.js');
+  const site = liveSite({ site: 'https://www.agi1.app', secret: 's'.repeat(40), fetchFn: async (_u, init) => { sent.push(JSON.parse(init.body)); return { ok: true, status: 200, json: async () => ({}) }; } });
+  await site.market(3, 5);
+  await site.market(3, 5, { chart: true });
+  assert.deepEqual(sent, [{ action: 'market', show: 3, since: 5 }, { action: 'market', show: 3, since: 5, chart: true }]);
+  // the demo's made-up trades: the same every time, a new one every 2 minutes or so, oldest first
+  const start = Date.UTC(2026, 9, 9, 12);
+  const a = demoTrades(start), b = demoTrades(start, start + 5 * 60_000);
+  assert.deepEqual(a, demoTrades(start), 'the same every time');
+  assert.equal(a.length, 100);
+  assert.ok(b.at(-1).at > a.at(-1).at, 'it moves while she watches');
+  assert.ok(a.every((t, i) => i === 0 || t.at > a[i - 1].at) && a.every((t) => t.price > 0 && t.usd > 0 && ['buy', 'sell'].includes(t.side)));
+  assert.ok(['up', 'down', 'flat'].includes(chartDir(a)));
+  const demo = demoSite({ now: () => start });
+  assert.equal((await demo.market(1, 0)).chart, undefined);
+  assert.equal((await demo.market(1, 0, { chart: true })).chart.length, 100);
+  assert.ok(DEMO_QA.some((q) => q.act?.act === 'chart'), 'the demo asks for it');
+});
+
+test('where she reads your messages (2026-10-09, the owner: "she now mentions that she can read the mesages on X and telegram and the website"): her intro, her how-to, her invites, the bar, the try card and her hints', () => {
+  const three = /chat[\s\S]*Telegram[\s\S]*agi1\.app\/live/;
+  assert.match(L.INTRO.map((x) => x.text).join(' '), three);
+  assert.match(L.OUTRO.map((x) => x.text).join(' '), three);
+  assert.ok(L.PICKUP.filter((x) => /Telegram/.test(x.text)).length >= 2 && L.PICKUP.some((x) => /chat on X/.test(x.text)));
+  assert.match(L.SEGMENTS.howto.card.list.join(' · '), /Here in the chat on X · On Telegram: \/live in my bot · At agi1\.app\/live · I read it out loud, then answer/);
+  assert.ok(L.SEGMENTS.howto.lines.some((x) => /three ways to ask me/.test(x.text)) && L.SEGMENTS.howto.lines.some((x) => /i read your whole question out loud/.test(x.text)));
+  for (const x of [...L.INTRO, ...L.OUTRO, ...L.PICKUP, ...L.SEGMENTS.howto.lines]) if (/\/live\b/.test(x.text) && !/agi1\.app\/live/.test(x.text)) assert.match(x.say, /slash live/, `said as "slash live": ${x.text}`);
+  assert.match(T.TRY_CARD.kicker, /^Ask me in the chat · Telegram · agi1\.app\/live$/);
+  assert.ok(T.TRY_CARD.list.some((x) => /\$AGI chart/.test(x)) && T.HINTS.some((x) => /\$AGI chart/.test(x)) && T.HINTS.some((x) => /Telegram/.test(x)));
+  const run = read('tools/live/run.mjs');
+  assert.equal(run.match(/sub: 'Ask me in the chat · Telegram · agi1\.app\/live'/g)?.length, 2, '"starting soon" and "be right back"');
+  assert.match(read('tools/live/page/index.html'), /<span class="ask-cta">Ask me in the chat · Telegram · <b>agi1\.app\/live<\/b><\/span>/);
 });

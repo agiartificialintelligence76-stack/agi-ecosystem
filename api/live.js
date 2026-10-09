@@ -209,7 +209,8 @@ async function runner(cfg, body) {
       // (2026-10-07) $AGI's numbers and its new buys, for her alerts and her feelings about the chart (never advice)
       if (!show) return json(400, { error: 'bad_request' });
       const since = Number.isFinite(body.since) && body.since > 0 ? body.since : 0;
-      return json(200, await streamMarket(cfg, { since }));
+      // (2026-10-09) and her live chart's trades, while it's on her screen
+      return json(200, await streamMarket(cfg, { since, chart: body.chart === true }));
     }
     case 'back': {
       // a question she had ready when the owner paused her: back in line, so it's answered fresh after the break

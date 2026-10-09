@@ -5,12 +5,14 @@
 -- **2026-10-07: run it once more** (it keeps everything saved): questions from X's live chat that the owner passes on
 -- (source 'x', the host's relay box on agi1.app/live), and her "I'm live" post in her Telegram groups once a day
 -- (live_tell, a thirteenth function).
+-- **2026-10-09: run it once more** (it keeps everything saved): a question can be 1 or 2 characters long now (the owner:
+-- "there would be no restrictions on how short their message are"; 3 at least before).
 -- It only ADDS two new tables and thirteen functions (all named agi1_live… / live_…). It doesn't touch any table the original
 -- site uses, so it's safe in the database both sites share. Running it again changes nothing that's saved.
 --
 -- How it works: while her show is on (her stream runner, on the owner's own server, says so every few seconds), people
 -- send her questions at agi1.app/live or with /live in her Telegram bot. Our server checks each question first (18+, a
--- human check on the site, PG-13, no links, addresses, @names or other coins) and keeps it here in a line. The runner takes
+-- human check on the site, PG-13, no links, addresses or @names) and keeps it here in a line. The runner takes
 -- them one at a time: our server asks the AI for her answer (and whether it's fine for a public stream at all), the runner
 -- shows the question on her stream with the name they gave (if any) and she answers it out loud.
 -- The owner can pause her, skip a question, block words, clear the line and end the show from a phone (agi1.app/live with
@@ -33,7 +35,7 @@ create table if not exists public.agi1_live_questions (
   source     text        not null check (source in ('web', 'telegram', 'x')),
   asker      text        not null check (char_length(asker) between 16 and 64),
   name       text        check (name is null or char_length(name) between 1 and 24),
-  question   text        not null check (char_length(question) between 3 and 200),
+  question   text        not null check (char_length(question) between 1 and 200),
   status     text        not null default 'waiting' check (status in ('waiting', 'taken', 'answered', 'skipped')),
   why        text        check (why is null or why in ('rules', 'care', 'owner', 'ended', 'error')),
   tries      smallint    not null default 0,
@@ -45,6 +47,9 @@ create table if not exists public.agi1_live_questions (
 -- (2026-10-07) 'x' too, in a database made before it: a question from X's live chat that the owner passed on
 alter table public.agi1_live_questions drop constraint if exists agi1_live_questions_source_check;
 alter table public.agi1_live_questions add constraint agi1_live_questions_source_check check (source in ('web', 'telegram', 'x'));
+-- (2026-10-09) a question of any length up to 200 characters, in a database made before it (3 at least then)
+alter table public.agi1_live_questions drop constraint if exists agi1_live_questions_question_check;
+alter table public.agi1_live_questions add constraint agi1_live_questions_question_check check (char_length(question) between 1 and 200);
 create index if not exists agi1_live_questions_line on public.agi1_live_questions (status, id);
 create index if not exists agi1_live_questions_asker on public.agi1_live_questions (asker, created_at);
 create index if not exists agi1_live_questions_made on public.agi1_live_questions (created_at);
@@ -108,7 +113,7 @@ declare
 begin
   if p_source is null or p_source not in ('web', 'telegram', 'x') or p_asker is null or char_length(p_asker) not between 16 and 64
      or (p_name is not null and char_length(p_name) not between 1 and 24)
-     or p_question is null or char_length(p_question) not between 3 and 200
+     or p_question is null or char_length(p_question) not between 1 and 200
      or p_gap is null or p_gap < 0 or p_per_day is null or p_per_day < 1 or p_queue is null or p_queue < 1
      or p_site_day is null or p_site_day < 1 or p_beat is null or p_beat < 5 then
     return json_build_object('ok', false, 'why', 'bad');

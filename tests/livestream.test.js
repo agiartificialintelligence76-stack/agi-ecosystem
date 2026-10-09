@@ -842,11 +842,14 @@ test("--warm goes at Google's pace: a pause after each line it made, and a line 
 });
 
 // ---------- her set's page, the image ----------
-test('her set: "AI-generated · not financial advice" and "Ask me at agi1.app/live" always on screen, text only, no network', () => {
+test('her set: "AI-generated · not financial advice" and where to ask her (the chat, Telegram, agi1.app/live) always on screen, text only, no network', () => {
   const html = read('tools/live/page/index.html');
   assert.match(html, /<span class="label">AI-generated · not financial advice<\/span>/);
-  assert.match(html, /Ask me at <b>agi1\.app\/live<\/b>/);
-  assert.match(html, /18\+ · PG-13 · I'm an AI · only \$AGI here/);
+  // (2026-10-09, the owner: "she now mentions that she can read the mesages on X and telegram and the website")
+  assert.match(html, /Ask me in the chat · Telegram · <b>agi1\.app\/live<\/b>/);
+  // (2026-10-09, the owner: "she can mention other coins as well": no "only $AGI here" any more)
+  assert.match(html, /18\+ · PG-13 · I'm an AI</);
+  assert.doesNotMatch(html, /only \$AGI here/);
   const js = read('tools/live/page/stage.js');
   assert.doesNotMatch(js, /innerHTML|insertAdjacentHTML|document\.write|fetch\(|XMLHttpRequest|WebSocket/);
   assert.doesNotMatch(js.replace(/\/\/.*$/gm, ''), /https?:\/\//, 'no outside address');
@@ -898,11 +901,13 @@ test('her picture: the whole width of the set, ending at the bar, nothing plain 
     }
   }
   assert.ok(checked >= 30, `${checked} backgrounds checked`);
-  for (const sel of ['.card', '.caption', '.label', '.overlay', '.alert', '.tv', '.tv-screen', '.karaoke', '.song-chip', '.pop.sticker', '.sync-marker']) {
+  // (2026-10-09: her song's words, all of them, and her music video: .lyrics, .song-video)
+  for (const sel of ['.card', '.caption', '.label', '.overlay', '.alert', '.tv', '.tv-screen', '.lyrics', '.song-video', '.song-chip', '.pop.sticker', '.sync-marker']) {
     assert.match(css, new RegExp(`\\n${sel.replace(/\./g, '\\.')} \\{[^}]*background: rgba\\(`), `${sel}: a see-through background`);
   }
   // pictures and videos over her (her TV's video and picture, her avatar on a post's card): never quite opaque either
-  for (const sel of ['.tv-screen video', '.tv-screen img', '.card-avatar']) assert.match(css, new RegExp(`\\n${sel.replace(/\./g, '\\.')} \\{[^}]*opacity: 0\\.99;`), sel);
+  // (2026-10-09: her music video, and her live $AGI chart on her TV)
+  for (const sel of ['.tv-screen video', '.tv-screen img', '.card-avatar', '.song-video video', '.tv-screen canvas.tv-chart']) assert.match(css, new RegExp(`\\n${sel.replace(/\./g, '\\.')} \\{[^}]*opacity: 0\\.99;`), sel);
   // its pixels and the camera's view follow its place in the stylesheet; her hearts fade out before its left edge
   assert.match(js, /box = ui\.pic\.getBoundingClientRect\(\);/);
   assert.match(js, /renderer\.setSize\(Math\.round\(\(box\.width \* DRAW\) \/ H\), Math\.round\(\(box\.height \* DRAW\) \/ H\), false\);/);

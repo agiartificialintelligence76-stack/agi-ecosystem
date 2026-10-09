@@ -12,7 +12,10 @@
 // also") her trips (places.js, vehicles.js: she rides there), the people she meets (people.js), her food (food.js), her
 // emotions (moves.js) and the weather (weather.js). And (2026-10-07, the owner after its preview: "so bad", then "Painted
 // art") the paintings of her set where they're there (paint.js): her places, her rooms, the inside of what she rides in,
-// the people she meets and what she wears.
+// the people she meets and what she wears. And (2026-10-09, the owner: "when she sings the full lyrics on the subtitle must
+// shown with the full video on the live as well", "Full screen, her small") her song's music video, full screen behind her
+// while she sings, with all of its words, and her small in the bottom right corner singing along; and (the owner: "her
+// watching the live trading chart of $AGI") $AGI's live chart on her TV (chart.js).
 // Nothing here talks to the network: only this page's own files (and her videos, which the runner serves from its own disk).
 import * as THREE from 'three';
 import { loadAgi1_2D, createAgi1_2D } from '../../../src/stage/agi1-2d.js';
@@ -27,6 +30,7 @@ import { paintLoad, isPainted, drawPainting } from './paint.js';
 import { createPeople, PEOPLE } from './people.js';
 import { createWeather, WEATHERS } from './weather.js';
 import { FOODS } from './food.js';
+import { drawChart } from './chart.js';
 
 export const W = 1280, H = 720, GL = 720;
 // Her picture's place on the set is in stage.css (.her): the whole width of the set (since 2026-10-07, so she can move
@@ -116,7 +120,7 @@ async function rideDrawer(vehicle, kind) {
 // her TV, stickers, karaoke, the wipe) are 1% see-through (stage.css).
 // (Drawing her off the page and copying each picture onto a 2D canvas avoided it too, but slowed her down on the server:
 // 9.5 frames a second.)
-let renderer, scene, camera, model, agi, effects, box, perMetre, wardrobe, moves, fx, centre, eyesAt, people, wx;
+let renderer, scene, camera, model, agi, effects, box, perMetre, wardrobe, moves, fx, centre, eyesAt, people, wx, wide;
 let shift = 0;
 const clockNow = () => Date.now() + shift;            // her set's clock: what's heard in the stream right now
 async function load() {
@@ -138,7 +142,7 @@ async function load() {
   const tall = H / perMetre;
   centre = eyes - (H / 2 - FRAME.eyes) / perMetre;
   // the camera looks at her middle, its view as tall as the set; her picture is the part of that view where it is on the set
-  const wide = 2 * Math.max(FRAME.x, W - FRAME.x);
+  wide = 2 * Math.max(FRAME.x, W - FRAME.x);
   camera = new THREE.PerspectiveCamera(18, wide / H, 0.05, 60);
   camera.setViewOffset(wide, H, wide / 2 - FRAME.x + box.left, box.top, box.width, box.height);
   camera.position.set(0, centre, tall / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))));
@@ -148,8 +152,8 @@ async function load() {
   model.fitTexture(Math.min(2048, Math.round((perMetre * DRAW) / H / model.uvPerMetre)));
   effects = createEffects(scene);
   effects.setHeartColors(HEARTS);
-  fx = createFx({ set, layer: $('[data-fx]'), confetti: $('[data-confetti]'), alertEl: $('[data-alert]'), karaokeEl: $('[data-karaoke]'),
-    tvEl: $('[data-tv]'), wipeEl: $('[data-wipe]'), clock: clockNow });
+  fx = createFx({ set, layer: $('[data-fx]'), confetti: $('[data-confetti]'), alertEl: $('[data-alert]'), lyricsEl: $('[data-lyrics]'),
+    tvEl: $('[data-tv]'), wipeEl: $('[data-wipe]'), songVideoEl: $('[data-song-video]'), drawChart, clock: clockNow });
   wardrobe = createWardrobe(model);
   people = createPeople({ el: ui.npc, bubble: ui.npcBubble, clock: clockNow });
   wx = createWeather({ back: ui.wxBack, front: ui.wxFront, flash: ui.flash });
@@ -182,9 +186,9 @@ async function load() {
 
 // where she may go on the set (metres from her usual place, her middle at x = 920): all the way left while nothing's on the
 // left of the set, else only a little (a card or her TV is there); a little to the right (her right side past the edge)
-const leftBusy = () => !ui.card.hidden || set.dataset.mode === 'tv' || set.dataset.mode === 'pic' || set.dataset.mode === 'meet';
+const leftBusy = () => !ui.card.hidden || ['tv', 'pic', 'meet', 'chart'].includes(set.dataset.mode);
 function places() {
-  if (ride || trip) { const x = moves?.figure.x || 0; return { min: x, max: x }; }
+  if (ride || trip || set.dataset.mode === 'mv') { const x = moves?.figure.x || 0; return { min: x, max: x }; }
   return { min: leftBusy() ? (set.dataset.mode === 'meet' ? 0.05 : -0.08) : -(FRAME.x - 300) / perMetre, max: (1060 - FRAME.x) / perMetre };
 }
 
@@ -213,6 +217,26 @@ function actionFx(kind) {
   else if (kind === 'fire') fx.emoji(['🔥'], { x: at.x - 230, y: at.y + 60 });
   else if (kind === 'mmm') { fx.sticker('mmm', { x: at.x - 225, y: at.y - 30 }); actionFx('hearts-small'); }
   else if (kind === 'bite') { food.stage = Math.min(2, food.stage + 1); if (food.id) wardrobe.food(food.id, food.stage); fx.sticker('nom', { x: at.x - 205, y: at.y + 90 }); }
+}
+
+// ---------- (2026-10-09) her music video's corner: while it plays full screen she's small in the bottom right, singing along ----------
+// Drawn small, not her picture scaled down: the camera's view of her widens (her picture's part of it, 1 / s as big), so a
+// server without a graphics card draws about a fifth of her usual pixels while it also plays the video. s: her size (1 as
+// usual), ts: where it's going; her middle goes from her usual place to CORNER.x, the bottom of her picture stays put.
+export const CORNER = { s: 0.42, x: 1148 };
+const view = { s: 1, ts: 1 };
+function applyView() {
+  const bx = wide / 2 - FRAME.x + box.left, by = box.top;
+  if (view.s >= 0.9999) { camera.setViewOffset(wide, H, bx, by, box.width, box.height); return; }
+  const k = (1 - view.s) / (1 - CORNER.s);                      // 0 as usual … 1 in the corner
+  const tx = FRAME.x + (CORNER.x - FRAME.x) * k - box.left;     // where her middle goes on her picture
+  const px = bx + (FRAME.x - box.left), py = by + box.height;   // her middle at the bottom of her picture, in the camera's view
+  camera.setViewOffset(wide, H, px - tx / view.s, py - box.height / view.s, box.width / view.s, box.height / view.s);
+}
+function viewFrame(dt) {
+  if (view.s === view.ts) return;
+  view.s = Math.abs(view.ts - view.s) < 0.002 ? view.ts : view.s + (view.ts - view.s) * (1 - Math.exp(-dt * 4.5));
+  applyView();
 }
 
 // ---------- the camera: now and then it moves in on her a little (a streamer leaning in), and on her song's big moments ----------
@@ -246,11 +270,13 @@ function camFrame(dt, t) {
 // ---------- what she says: her mouth and her captions follow the sound ffmpeg sends ----------
 // say: { startAt (ms, this computer's clock: when her first word is heard in the stream), step (ms per envelope value),
 // env (0..1: how loud she is), cues ([{ from, to, text }], seconds from startAt), react (a mood), act (one of her actions,
-// as she starts), emoji (false: no emojis pop up) }
+// as she starts), emoji (false: no emojis pop up), reactAt (2026-10-09: seconds in, when the reaction and the act come: she
+// reads a viewer's question out loud first, and reacts as her answer starts) }
 let speech = null, singing = false, song = null;
 function say(s) {
   speech = { startAt: Number(s.startAt) || Date.now(), step: Number(s.step) || 20, env: Array.isArray(s.env) ? s.env : [], cues: Array.isArray(s.cues) ? s.cues : [],
     end: (Number(s.startAt) || Date.now()) + (Number(s.seconds) || 0) * 1000, reacted: false, react: s.react || null, act: s.act || null, cue: -1,
+    reactAt: Math.max(0, Number(s.reactAt) || 0),
     emoji: s.emoji === false ? [] : emojisIn(s.cues?.map((c) => c.text).join(' ')), caption: s.caption !== false };
   // (2026-10-07) the language she speaks it in (her 16): the caption says so to the browser (its letters and line breaks)
   ui.caption.lang = typeof s.lang === 'string' && /^[a-z]{2,3}$/.test(s.lang) ? s.lang : 'en';
@@ -266,7 +292,7 @@ function speechFrame(now) {
   if (!speech) return;
   const t = now - speech.startAt;
   if (t < 0) return;
-  if (!speech.reacted) {
+  if (!speech.reacted && t >= speech.reactAt * 1000) {
     speech.reacted = true;
     if (speech.react) agi.react(speech.react);
     if (speech.act) moves.act(speech.act);
@@ -389,12 +415,14 @@ function music(m) {
   return true;
 }
 
-// ---------- her song: she sings it (her mouth from its vocals), karaoke for its hook, her moves on its beat ----------
-// { startAt (ms: when it starts being heard), seconds, step, env (0..1, her mouth), lines (karaoke), beats, cues (her moves),
-// sections (its big moments: the camera and the lights), title }
+// ---------- her song: she sings it (her mouth from its vocals), its words line by line, her moves on its beat ----------
+// { startAt (ms: when it starts being heard), seconds, step, env (0..1, her mouth), lines (its words), beats, cues (her moves),
+// sections (its big moments: the camera and the lights), title, video: { from (seconds in the song), offset } (2026-10-09:
+// her music video full screen behind her, her small in the corner; loaded first with studio.mvLoad) }
 function sing(s) {
   if (!s) {
-    singing = false; song = null; moves.sing(false); moves.dance(null); fx.karaoke(null); music(null);
+    singing = false; song = null; moves.sing(false); moves.dance(null); fx.lyrics(null); fx.songVideo.stop(); music(null);
+    view.ts = 1;
     ui.song.hidden = true; set.dataset.mode = 'none'; wardrobe.hold(null); stop();
     return true;
   }
@@ -402,7 +430,17 @@ function sing(s) {
   const startAt = Number(s.startAt);
   song = { startAt, end: startAt + (Number(s.seconds) || 0) * 1000, sections: Array.isArray(s.sections) ? s.sections : [], downbeats: Array.isArray(s.downbeats) ? s.downbeats : [], hit: -1 };
   say({ startAt, step: s.step || 20, env: s.env, cues: [], seconds: s.seconds, emoji: false, caption: false });
-  fx.karaoke({ startAt, lines: s.lines });
+  fx.lyrics({ startAt, lines: s.lines });
+  const video = s.video && typeof s.video === 'object' ? s.video : null;
+  if (video) {
+    // (her music video fills the stream: her TV, a card and a person she met step away, she goes small in the corner)
+    stopTv();
+    ui.card.hidden = true;
+    people?.hide();
+    moves.move('center');
+    fx.songVideo.play({ startAt, from: Number(video.from) || 0, offset: Number(video.offset) || 0, seconds: s.seconds });
+    view.ts = CORNER.s;
+  }
   moves.sing(true);
   moves.dance({ beat0: startAt, beats: s.beats, cues: s.cues, until: song.end, bpm: s.bpm });
   const beats = Array.isArray(s.beats) ? s.beats : [];
@@ -410,7 +448,7 @@ function sing(s) {
   music({ bpm, beat0: startAt + (beats[0] || 0) * 1000 });
   ui.song.textContent = `♪ ${s.title || 'my song'}`;
   ui.song.hidden = false;
-  set.dataset.mode = 'song';
+  set.dataset.mode = video ? 'mv' : 'song';
   return true;
 }
 function songFrame(now) {
@@ -533,7 +571,7 @@ function placeChip(p) {
   ui.place.hidden = false;
   return true;
 }
-function stopTv() { if (set.dataset.mode === 'tv' || set.dataset.mode === 'pic') { fx.tv(null); set.dataset.mode = 'none'; } }
+function stopTv() { if (set.dataset.mode === 'tv' || set.dataset.mode === 'pic' || set.dataset.mode === 'chart') { fx.tv(null); set.dataset.mode = 'none'; } }
 
 // ---------- (2026-10-07) the people she meets: they walk in on the left, talk (their words in a bubble), wave, walk out ----------
 async function meet(id) {
@@ -613,6 +651,7 @@ function frame(t) {
   songFrame(now);
   clockFrame(Date.now());
   markerFrame(now);
+  viewFrame(dt);
   camFrame(dt, t);
   agi.update(dt);
   // where she is (moves.js); while she rides, she and the picture behind her move together with the ride (vehicles.js)
@@ -666,6 +705,16 @@ window.studio = {
   act: (id) => (ACTIONS[id] ? moves.act(id) : false),
   dance: (d) => { moves.dance(d ? { ...d, beat0: Number(d.beat0) || clockNow() } : null); music(d ? { bpm: d.bpm, beat0: d.beat0 } : null); return true; },
   sing,
+  // (2026-10-09) her music video, ready at the moment her song's part starts (resolves when it can play, or false)
+  mvLoad: (v) => fx.songVideo.load(v || {}),
+  // (2026-10-09) $AGI's live chart on her TV: { trades, numbers } (chart.js), or null
+  chart: (c) => {
+    if (!c) { if (set.dataset.mode === 'chart') { fx.tv(null); set.dataset.mode = 'none'; } return true; }
+    set.dataset.mode = 'chart';
+    ui.card.hidden = true;
+    if (moves.figure.x < places().min) moves.move('center');
+    return fx.tv({ chart: { trades: Array.isArray(c.trades) ? c.trades : [], numbers: c.numbers || null }, label: c.label || '$AGI · live on clank.trade · not financial advice' });
+  },
   cam,
   auto: (on) => moves.auto(on),
   pose: (p) => moves.hold(p),
@@ -702,7 +751,7 @@ window.studio = {
   hint,
   get state() {
     return { room, outfit: wardrobe?.current, held: wardrobe?.held, action: moves?.action, dancing: moves?.dancing, routine: moves?.routine,
-      singing, zoom: camera?.zoom, pops: fx?.popping, mode: set.dataset.mode || 'none', x: moves?.figure.x, moving: moves?.moving,
+      singing, zoom: camera?.zoom, pops: fx?.popping, mode: set.dataset.mode || 'none', corner: view.s, songVideo: fx?.songVideo.on || false, x: moves?.figure.x, moving: moves?.moving,
       where: set.dataset.where || 'room', riding: Boolean(ride || trip), vehicle: trip?.vehicle || null, seated: Boolean(ride), painted: set.dataset.painted === 'on', npc: people?.id || null,
       weather: wx?.id || null, food: food.id, foodStage: food.stage, carrying: moves?.carrying || null, emote: moves?.emote?.kind || null };
   },

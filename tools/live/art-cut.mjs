@@ -597,7 +597,9 @@ export function cropRaw(rgba, w, { left, top, width, height }) {
 }
 
 // ---------- one picture ----------
-export async function cutOne(sharp, file, item, { out = OUT, flip = false, panel = null, crop = null, like = item.id, turn = null } = {}) {
+// (effort: how hard WebP's encoder works, 0 to 6: 6 for her set (the smallest files), less in the tests, where 6 took about
+// 8 s a picture on a 2-core computer, 2026-10-09)
+export async function cutOne(sharp, file, item, { out = OUT, flip = false, panel = null, crop = null, like = item.id, turn = null, effort = 6 } = {}) {
   const dst = join(out, item.group, `${item.id}.webp`);
   mkdirSync(dirname(dst), { recursive: true });
   if (['places', 'rooms', 'rides'].includes(item.group)) {
@@ -613,7 +615,7 @@ export async function cutOne(sharp, file, item, { out = OUT, flip = false, panel
       img = sharp(await img.extract({ left, top, width, height }).toBuffer());
     }
     if (flip) img = img.flop();
-    const buf = await img.resize(SIZE.backdrop.w, SIZE.backdrop.h, { fit: 'cover', position: 'centre' }).webp({ quality: 80, effort: 6 }).toBuffer();
+    const buf = await img.resize(SIZE.backdrop.w, SIZE.backdrop.h, { fit: 'cover', position: 'centre' }).webp({ quality: 80, effort }).toBuffer();
     writeFileSync(dst, buf);
     return { file: dst, bytes: buf.length, width: SIZE.backdrop.w, height: SIZE.backdrop.h, undone };
   }
@@ -638,14 +640,14 @@ export async function cutOne(sharp, file, item, { out = OUT, flip = false, panel
   img = item.group === 'people'
     ? img.resize({ height: Math.min(SIZE.people, box.height), withoutEnlargement: true })
     : img.resize({ width: SIZE.accessories, height: SIZE.accessories, fit: 'inside', withoutEnlargement: true });
-  const buf = await img.webp({ quality: 90, alphaQuality: 100, effort: 6 }).toBuffer();
+  const buf = await img.webp({ quality: 90, alphaQuality: 100, effort }).toBuffer();
   writeFileSync(dst, buf);
   const meta = await sharp(buf).metadata();
   return { file: dst, bytes: buf.length, width: meta.width, height: meta.height };
 }
 
 // ---------- all of them ----------
-export async function cutAll(from, { only = [], picks = null, out = OUT, log = console } = {}) {
+export async function cutAll(from, { only = [], picks = null, out = OUT, log = console, effort = 6 } = {}) {
   const sharp = (await import('sharp')).default;
   const chosen = picks || (existsSync(PICKS_FILE) ? JSON.parse(readFileSync(PICKS_FILE, 'utf8')) : {});
   const list = artList().filter((x) => !only.length || only.includes(x.id) || only.includes(`${x.group}/${x.id}`));
@@ -661,7 +663,7 @@ export async function cutAll(from, { only = [], picks = null, out = OUT, log = c
       if (existsSync(sf)) { file = sf; stand = si; }
     }
     if (!existsSync(file)) { missing.push(`${item.group}/${item.id}-${k}`); continue; }
-    const r = await cutOne(sharp, file, item, { out, flip, panel, crop, like: stand ? stand.from : item.id, turn: stand });
+    const r = await cutOne(sharp, file, item, { out, flip, panel, crop, like: stand ? stand.from : item.id, turn: stand, effort });
     done.push({ ...r, id: item.id, group: item.group, k, standIn: stand ? stand.from : null });
     const extra = [crop && `its part ${crop.join(', ')}`, flip && 'mirrored', r.undone && `its light panel undone (${r.undone.x0}..${r.undone.x1}, ${r.undone.alpha.join('/')})`].filter(Boolean);
     log.log(`${item.group}/${item.id} (${stand ? `for now ${stand.from}'s picture, its colors turned` : `picture ${k}`}${extra.length ? `, ${extra.join(', ')}` : ''}): ${r.width} × ${r.height}, ${Math.round(r.bytes / 1024)} KB`);

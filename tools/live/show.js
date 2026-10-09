@@ -43,7 +43,8 @@ const shuffle = (list, rnd) => {
 // extras: the extras this show can have (2026-10-07: EXTRA_IDS, the ones her stream has what they need for)
 // (2026-10-07) and a snack, the weather, someone she meets where she's visiting (her trips themselves come on their own
 // clock: run.mjs, every 15 to 20 minutes)
-export const EXTRA_IDS = ['dance', 'room', 'post', 'outfit', 'market', 'song', 'replies', 'video', 'eat', 'weather', 'meet'];
+// (2026-10-09) and her live $AGI chart
+export const EXTRA_IDS = ['dance', 'room', 'post', 'outfit', 'market', 'song', 'replies', 'video', 'eat', 'weather', 'meet', 'chart'];
 // first: (run.mjs --try, to see them on a recording) these extras first, soon after the intro and one about every 45 s
 export function createShow({ start, minutes = 60, diary = false, seed = 1, extras = [], first = [] } = {}) {
   const rnd = seeded(seed);

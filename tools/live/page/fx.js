@@ -1,8 +1,13 @@
 // AGI-1's live show (2026-10-07, the owner: "more effects on the stream so its not bland", "says emoji"): what pops up on
 // her set besides her: the emojis she says floating up by her, little stickers ("!", "?", "♪", "haha"), sparkles,
-// confetti, an alert banner (a new $AGI buy, a new post), the karaoke line while she sings, the TV her videos play on, and
+// confetti, an alert banner (a new $AGI buy, a new post), her song's words while she sings, the TV her videos play on, and
 // the comic wipe between her rooms. Plain elements with CSS animations, and one canvas for confetti only while it falls:
 // cheap to draw on a server without a graphics card.
+// (2026-10-09, the owner: "when she sings the full lyrics on the subtitle must shown with the full video on the live as
+// well") her song's words are all of them now, line by line, each word lit as she sings it, the next line under it (only
+// its hook before); and her song's music video, full screen behind her while she sings (songVideo), in step with the song.
+// And (the owner: "can you also include on her watching the live trading chart of $AGI") $AGI's live chart on her TV
+// (chart.js draws it).
 // Nothing here is plain and opaque over her picture (stage.js says why: the server's software compositing misplaces what an
 // opaque box covers of a WebGL canvas): the boxes are 1% see-through, and the video too (opacity 0.99).
 const EMOJI = /(?:\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*)/gu;
@@ -13,7 +18,7 @@ export function emojisIn(text) {
   return out.slice(0, 3);
 }
 
-export function createFx({ set, layer, confetti, alertEl, karaokeEl, tvEl, wipeEl, clock = () => Date.now() }) {
+export function createFx({ set, layer, confetti, alertEl, lyricsEl, tvEl, wipeEl, songVideoEl, drawChart = null, clock = () => Date.now() }) {
   const pops = new Set();
   // a floating thing: text (an emoji or a sticker's words) at x, y (set pixels), its class, for `ms`
   function pop(textOrEl, x, y, cls, ms = 2200, vars = {}) {
@@ -97,47 +102,119 @@ export function createFx({ set, layer, confetti, alertEl, karaokeEl, tvEl, wipeE
     return true;
   }
 
-  // ---------- karaoke: her song's hook lines, each word lit as she sings it ----------
-  let kara = null;
-  const karaLine = karaokeEl.querySelector('[data-karaoke-line]');
-  function karaoke(k) {
-    if (!k) { kara = null; karaokeEl.hidden = true; return true; }
-    kara = { startAt: Number(k.startAt), lines: Array.isArray(k.lines) ? k.lines : [], at: -1, word: -1 };
+  // ---------- her song's words: the line she's singing, each word lit as she sings it, and the next line under it ----------
+  // { startAt (ms: when the part starts being heard), lines: [{ text, from, to, words: [{ w, t }] }] (seconds from its start) }
+  let lyr = null;
+  const lyrNow = lyricsEl.querySelector('[data-lyrics-now]'), lyrNext = lyricsEl.querySelector('[data-lyrics-next]');
+  function lyrics(k) {
+    if (!k) { lyr = null; lyricsEl.hidden = true; return true; }
+    lyr = { startAt: Number(k.startAt), lines: Array.isArray(k.lines) ? k.lines : [], at: -2, word: -1 };
     return true;
   }
-  function karaokeFrame(now) {
-    if (!kara) return;
-    const s = (now - kara.startAt) / 1000;
-    const at = kara.lines.findIndex((l) => s >= l.from && s < l.to);
-    if (at !== kara.at) {
-      kara.at = at; kara.word = -1;
-      if (at < 0) { karaokeEl.hidden = true; return; }
-      const l = kara.lines[at];
-      karaLine.replaceChildren(...l.words.map((w) => { const sp = document.createElement('span'); sp.textContent = w.w; return sp; }));
-      karaokeEl.dataset.big = /^[A-Z!·?' -]+$/.test(l.text) ? '1' : '0';
-      karaokeEl.hidden = true; void karaokeEl.offsetWidth; karaokeEl.hidden = false;
+  function lyricsFrame(now) {
+    if (!lyr) return;
+    const s = (now - lyr.startAt) / 1000;
+    const at = lyr.lines.findIndex((l) => s >= l.from && s < l.to);
+    if (at !== lyr.at) {
+      lyr.at = at; lyr.word = -1;
+      if (at < 0) {
+        // between lines: the next one waits there (when it's sung soon), else nothing
+        const next = lyr.lines.find((l) => l.from > s && l.from - s < 4);
+        if (!next) { lyricsEl.hidden = true; return; }
+        lyrNow.replaceChildren();
+        lyrNext.textContent = next.text;
+        lyricsEl.hidden = false;
+        return;
+      }
+      const l = lyr.lines[at];
+      lyrNow.replaceChildren(...l.words.map((w) => { const sp = document.createElement('span'); sp.textContent = w.w; return sp; }));
+      const next = lyr.lines[at + 1];
+      lyrNext.textContent = next && next.from - l.to < 4 ? next.text : '';
+      if (lyricsEl.hidden) { lyricsEl.hidden = false; }
+      lyrNow.classList.remove('in'); void lyrNow.offsetWidth; lyrNow.classList.add('in');
     }
     if (at < 0) return;
-    const words = kara.lines[at].words;
+    const words = lyr.lines[at].words;
     let k = -1;
     for (let i = 0; i < words.length; i++) if (s >= words[i].t) k = i;
-    if (k !== kara.word) { kara.word = k; [...karaLine.children].forEach((sp, i) => sp.classList.toggle('sung', i <= k)); }
+    if (k !== lyr.word) { lyr.word = k; [...lyrNow.children].forEach((sp, i) => sp.classList.toggle('sung', i <= k)); }
+  }
+
+  // ---------- her song's music video: full screen behind her while she sings, in step with the song ----------
+  // load({ src, from }): ready at that moment of it (resolves true when it can play, false after 6 s); play({ startAt (ms:
+  // when the song's part starts being heard), from (seconds in the song), offset (the video's picture against the song),
+  // seconds }); stop()
+  const sv = songVideoEl?.querySelector('video');
+  let mv = null;
+  function mvLoad({ src, from = 0 } = {}) {
+    if (!sv || typeof src !== 'string') return Promise.resolve(false);
+    return new Promise((done) => {
+      let over = false;
+      const end = (ok) => { if (over) return; over = true; sv.removeEventListener('seeked', onSeek); sv.removeEventListener('error', onErr); clearTimeout(timer); done(ok); };
+      const onSeek = () => end(true), onErr = () => end(false);
+      const timer = setTimeout(() => end(sv.readyState >= 2), 6000);
+      sv.addEventListener('seeked', onSeek);
+      sv.addEventListener('error', onErr);
+      sv.muted = true;
+      sv.preload = 'auto';
+      if (sv.getAttribute('src') !== src) sv.src = src;
+      const go = () => { try { sv.currentTime = Math.max(0, Number(from) || 0); } catch { end(false); } };
+      if (sv.readyState >= 1) go(); else sv.addEventListener('loadedmetadata', go, { once: true });
+    });
+  }
+  function mvPlay(v) {
+    if (!sv || !v) return false;
+    mv = { startAt: Number(v.startAt), from: Number(v.from) || 0, offset: Number(v.offset) || 0, seconds: Number(v.seconds) || 0, playing: false, lastFix: 0 };
+    songVideoEl.hidden = false;
+    return true;
+  }
+  function mvStop() {
+    mv = null;
+    if (!sv) return true;
+    sv.pause();
+    songVideoEl.hidden = true;
+    return true;
+  }
+  function mvFrame(now) {
+    if (!mv) return;
+    const s = (now - mv.startAt) / 1000;
+    if (s < 0) return;
+    if (mv.seconds && s > mv.seconds + 0.5) { sv.pause(); return; }
+    const want = mv.from + mv.offset + s;
+    if (!mv.playing) { mv.playing = true; if (Math.abs(sv.currentTime - want) > 0.08) sv.currentTime = want; sv.play().catch(() => {}); return; }
+    // in step with the song: a nudge when it drifts more than a fifth of a second (at most once a second)
+    if (performance.now() - mv.lastFix > 1000 && Math.abs(sv.currentTime - want) > 0.2 && sv.readyState >= 2) {
+      mv.lastFix = performance.now();
+      sv.currentTime = want;
+    }
   }
 
   // ---------- her TV: a video playing in step with its sound (the runner plays the sound), or a picture ----------
   // { src: a video (/media/…webm), startAt (ms: when its sound starts being heard), seconds, label } or { img: a picture
-  // (/media/…jpg, from one of her X posts), seconds, label } or null
+  // (/media/…jpg, from one of her X posts), seconds, label } or (2026-10-09) { chart: $AGI's trades (chart.js), label } or null
   const video = tvEl.querySelector('video');
   const img = tvEl.querySelector('[data-tv-img]');
+  const chartEl = tvEl.querySelector('[data-tv-chart]');
   const tvLabel = tvEl.querySelector('[data-tv-label]');
   let tv = null;
   function tvShow(v) {
     if (!v) {
       tv = null; video.pause(); video.removeAttribute('src'); video.load(); tvEl.hidden = true;
       if (img) { img.hidden = true; img.removeAttribute('src'); }
+      if (chartEl) chartEl.hidden = true;
       return true;
     }
     tvLabel.textContent = v.label || '';
+    if (chartEl) chartEl.hidden = !v.chart;
+    if (v.chart && chartEl && drawChart) {
+      // (its numbers drawn on its canvas: redrawn with each update, nothing moving in between but a dot)
+      tv = { startAt: clock(), seconds: 0, picture: true };
+      video.pause(); video.removeAttribute('src'); video.hidden = true;
+      if (img) { img.hidden = true; img.removeAttribute('src'); }
+      drawChart(chartEl, v.chart, { now: Date.now() });
+      tvEl.hidden = false;
+      return true;
+    }
     if (v.img && img) {
       tv = { startAt: Number(v.startAt) || clock(), seconds: Number(v.seconds) || 8, picture: true };
       video.pause(); video.removeAttribute('src'); video.hidden = true;
@@ -182,8 +259,10 @@ export function createFx({ set, layer, confetti, alertEl, karaokeEl, tvEl, wipeE
 
   function frame(dt, now) {
     confettiFrame(dt);
-    karaokeFrame(now);
+    lyricsFrame(now);
+    mvFrame(now);
     tvFrame(now);
   }
-  return { emoji, sticker, sparkle, burst, alert, karaoke, tv: tvShow, wipe, frame, get popping() { return pops.size; } };
+  return { emoji, sticker, sparkle, burst, alert, lyrics, tv: tvShow, wipe, frame, songVideo: { load: mvLoad, play: mvPlay, stop: mvStop, get on() { return Boolean(mv); } },
+    get popping() { return pops.size; } };
 }

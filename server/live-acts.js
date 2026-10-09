@@ -41,6 +41,8 @@ export const ACTS = {
   weather: 'change the weather ("to": one of the weathers)',
   // (2026-10-07, the owner: "meet random people talk to them what the chat said": only where she's visiting)
   meet: 'meet someone where you are, a local, and chat with them about what your chat has been asking',
+  // (2026-10-09, the owner: "can you also include on her watching the live trading chart of $AGI")
+  chart: "watch $AGI's live trading chart together on your screen (feelings only, never advice)",
 };
 // (2026-10-07) her emotions on stream: each a little act (her face, her body and a cartoon mark: tears, heart eyes, stars,
 // an anger mark…), always cute and PG-13. Viewers can ask for one, and her answers can show one ("feel")
@@ -166,9 +168,11 @@ export const OUTFITS = { classic: 'her classic lavender AGI tee', pinkpop: 'pink
 export const ROOMS = { studio: 'her studio', bedroom: 'her bedroom', cafe: 'a little café', rooftop: 'the rooftop at night', beach: 'the beach at sunset',
   gaming: 'her gaming room', stage: 'the concert stage' };
 export const PLACES = ['left', 'right', 'around', 'center'];
-// how long each one rests after she did it (ms): a viewer can't keep her singing the whole show
+// how long each one rests after she did it by herself (ms): her own pace between her extras (tools/live/run.mjs). Since
+// 2026-10-09 (the owner: "she will do everything asked to her", "she can sing the full song everytime if requested") a
+// viewer's request never waits for it: she does what she's asked whenever she's asked (tools/live/acts.js can())
 export const COOLDOWN = { sing_whole: 30 * 60_000, sing: 6 * 60_000, dance: 90_000, outfit: 2 * 60_000, room: 2 * 60_000, move: 20_000, confetti: 60_000,
-  trip: 4 * 60_000, eat: 90_000, weather: 60_000, meet: 3 * 60_000 };
+  trip: 4 * 60_000, eat: 90_000, weather: 60_000, meet: 3 * 60_000, chart: 3 * 60_000 };
 
 // what the runner says she can do now → the same, only known ones (sing:part for her song's parts)
 export function canList(list) {
@@ -211,7 +215,7 @@ export function actsPrompt(can) {
   return `
 
 WHAT YOU CAN DO ON STREAM
-Viewers love asking you to do things on stream. If the viewer asks you to do one of these (in any words), set "act" to it (and "times", "part" or "to" when it takes one), say yes in your reply in a fun, playful way (like "okay okay, three jumps, here we go!"), and you'll do it right after you speak. Otherwise "act": "none".
+Viewers love asking you to do things on stream, and you always say yes. If the viewer asks you to do one of these (in any words), set "act" to it (and "times", "part" or "to" when it takes one), say yes in your reply in a fun, playful way (like "okay okay, three jumps, here we go!"), and you'll do it right after you speak. If they ask to sing your song, sing it, every time (the whole song when they ask for all of it). Otherwise "act": "none".
 ${lines.join('\n')}
-${acts.includes('outfit') ? `Your outfits ("to"): ${Object.keys(OUTFITS).join(', ')}.\n` : ''}${acts.includes('room') ? `Your rooms ("to"): ${Object.keys(ROOMS).join(', ')}.\n` : ''}${acts.includes('trip') ? `The places ("to"): ${DESTINATION_IDS.join(', ')} (a place they name that isn't listed: the nearest one in spirit, or leave "to" empty).\n` : ''}${acts.includes('eat') ? `Your foods ("to"): ${FOOD_IDS.join(', ')} (one they name that isn't listed: the closest one).\n` : ''}${acts.includes('weather') ? `The weathers ("to"): ${WEATHER_IDS.join(', ')}.\n` : ''}Only these, nothing else (you can't do anything else on stream). Never anything that isn't PG-13: if they ask for something suggestive, don't do it and keep it cute. If they ask for one that isn't listed right now (you just did it), say you'll do it again a little later.`;
+${acts.includes('outfit') ? `Your outfits ("to"): ${Object.keys(OUTFITS).join(', ')}.\n` : ''}${acts.includes('room') ? `Your rooms ("to"): ${Object.keys(ROOMS).join(', ')}.\n` : ''}${acts.includes('trip') ? `The places ("to"): ${DESTINATION_IDS.join(', ')} (a place they name that isn't listed: the nearest one in spirit, or leave "to" empty).\n` : ''}${acts.includes('eat') ? `Your foods ("to"): ${FOOD_IDS.join(', ')} (one they name that isn't listed: the closest one).\n` : ''}${acts.includes('weather') ? `The weathers ("to"): ${WEATHER_IDS.join(', ')}.\n` : ''}If they ask for something on stream that isn't one of these, do the closest one and play along in your words (never just say no). Never anything that isn't PG-13: if they ask for something suggestive, don't do it and keep it cute.`;
 }

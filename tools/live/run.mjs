@@ -30,7 +30,7 @@ import { resolve, dirname, join, extname, sep, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir, cpus } from 'node:os';
 import { talkTrack, pauses, fakeVoice, readWav, writeWav } from '../clips/audio.js';
-import { timeCaptions } from '../clips/captions.js';
+import { timeCaptions, sentencesOf } from '../clips/captions.js';
 import { withoutSecrets } from '../clips/make.mjs';
 import { adminKeyFor } from '../../server/live.js';
 import { liveSite, demoSite } from './site.js';
@@ -41,8 +41,9 @@ import { createShow, nextStep, didStep, chatLine, pickupLine, readingLine, lagLi
 // (2026-10-07, the owner's stream upgrade: viewers' requests, her song, her videos and X posts, $AGI on stream)
 import { createActs, DOES, actMs, roomFor, outfitFor, nextRoom, nextOutfit } from './acts.js';
 import { BIG_DANCES } from './page/moves.js';
-import { readSong, partOf, decodeSong, songGain } from './song.js';
-import { listVideos, prepareVideo, download, toStereo, tidyMedia, MEDIA_NAME } from './media.js';
+import { readSong, partOf, decodeSong, songGain, MV_OFFSET } from './song.js';
+import { listVideos, prepareVideo, download, toStereo, tidyMedia, MEDIA_NAME, findSongVideo, prepareSongVideo } from './media.js';
+import { chartDir } from './page/chart.js';
 import { xSettings, createX } from './x.js';
 import { OUTFITS as OUTFIT_NAMES, ROOMS as ROOM_NAMES } from '../../server/live-acts.js';
 import { fmtCompact, fmtPct } from '../../src/prices/parse.js';
@@ -535,10 +536,20 @@ export async function warmUp(voice, lines, { until = Infinity, each = null, gapM
 // hop and hearts on every "happy" line would be a lot for an hour); her answers to questions react fully.
 const REACT = { wave: 'wave', love: 'love', shy: 'shy', sweet: 'love', careful: 'okay', pout: 'jealous', sad: 'sad', celebrate: 'celebrate', worried: 'worried' };
 export const reactFor = (mood, { answer = false } = {}) => (answer && ['happy', 'love', 'shy', 'wave'].includes(mood) ? mood : REACT[mood] || 'neutral');
-// Who asked, on her question card: the name they gave (or "someone"), never a Telegram name ("someone on Telegram"), and
-// (2026-10-07) a question from X's live chat that the owner passed on: "<name> on X" (or "someone on X")
+// Who asked, on her question card: the name they gave (or "someone"); (2026-10-07) a question from X's live chat that the
+// owner passed on: "<name> on X" (or "someone on X"); (2026-10-09, the owner: "she will know every person's real name on the
+// telegram") one from her Telegram bot: their Telegram name (or "someone on Telegram")
 export const askedBy = (q) => (q?.source === 'telegram' ? q.name || 'someone on Telegram'
   : q?.source === 'x' ? `${q.name || 'someone'} on X` : q?.name || 'someone');
+// (2026-10-09, the owner: "agi will now read the full question") what she says: who asked and their whole question, word for
+// word, then her answer, in one line of her voice (one request to Google, not two). → { text, readEnds: how many of its
+// sentences are the question's }
+export function readAndAnswer(q, reply) {
+  const question = String(q?.text || '').replace(/\s+/g, ' ').trim();
+  const end = /[.!?…]["'”’)]*$/.test(question) ? '' : '.';
+  const read = `${askedBy(q)} asks: ${question}${end}`;
+  return { text: `${read} ${String(reply || '').trim()}`, read };
+}
 
 // ---------- (2026-10-07, the owner's stream upgrade) her own words between things, and where everyone is watching from ----------
 // LIVE_CHATTER (on unless "off"): something new to say now and then (the site's AI, her live rules; about $0.0005 a line,
@@ -590,8 +601,10 @@ async function runShow(a) {
   try { dances = loadSongs(cacheDir, { songs: DANCE_SONGS, log }); } catch (err) { log.warn(`her dance songs: ${err.message}`); }
   const x = a.demo ? createX({ bearer: '', maxReads: 0, user: 'agi1dotapp' }) : createX(xSettings(), { log, cacheDir });
   const videos = listVideos(process.env.LIVE_VIDEOS_DIR || '/videos');
+  // (2026-10-09) her song's music video (feel-the-agi.mp4 in the same folder): full screen while she sings
+  const songVideoFile = song ? findSongVideo(process.env.LIVE_VIDEOS_DIR || '/videos', song.meta.id) : null;
   tidyMedia(cacheDir);
-  log.info(`her song: ${song ? song.meta.title : 'none'} · ${dances.length} dance songs · ${videos.length} videos · X: ${x.on ? 'her posts and their replies' : 'off (no LIVE_X_BEARER)'}`);
+  log.info(`her song: ${song ? `${song.meta.title}${songVideoFile ? ' (with its music video)' : ' (no music video: feel-the-agi.mp4 in the videos folder)'}` : 'none'} · ${dances.length} dance songs · ${videos.length} videos · X: ${x.on ? 'her posts and their replies' : 'off (no LIVE_X_BEARER)'}`);
 
   const dist = existsSync(join(ROOT, 'tools/live/dist/index.html')) && !process.env.LIVE_REBUILD ? join(ROOT, 'tools/live/dist') : await buildPage();
   const served = await serve(dist, { media: join(cacheDir, 'media') });
@@ -692,15 +705,19 @@ async function runShow(a) {
 
     // saying one line: her voice (kept on disk when it's pre-written), her captions, her mouth, a reaction
     // (2026-10-07) line.lang: the language she says it in (her captions say so); act: one of her moves (an emotion) as she starts
-    const say = async (line, { keep = true, audio = undefined, react = undefined, act = null } = {}) => {
+    // (2026-10-09) read: the first part of the line is a viewer's question she reads out loud (readAndAnswer): she looks at
+    // its card while she reads it, then at everyone, and her reaction comes as her answer starts
+    const say = async (line, { keep = true, audio = undefined, react = undefined, act = null, read = null } = {}) => {
       if (stopping || !line) return 'cut';
       const voiced = audio !== undefined ? audio : await voice.speak(line.text, { say: line.say, mood: line.mood, keep });
       const samples = voiced?.samples || readWav(fakeVoice(line.say || line.text)).samples;     // (no voice: she says it silently)
       const env = Array.from(talkTrack(samples, RATE, 50), (x) => Math.round(x * 100) / 100);
       const cues = timeCaptions(line.text, pauses(samples, RATE));
+      const readEnd = read ? (cues.filter((c) => c.sentence < sentencesOf(read).length).at(-1)?.to ?? 0) : 0;
       const play = mixer.play(samples, { silent: !voiced });
       await studio('say', { startAt: play.startAt, step: 20, env, cues, seconds: play.seconds, react: react === undefined ? reactFor(line.mood) : react,
-        ...(act ? { act } : {}), ...(line.lang ? { lang: line.lang } : {}) });
+        ...(act ? { act } : {}), ...(line.lang ? { lang: line.lang } : {}), ...(readEnd ? { reactAt: readEnd } : {}) });
+      if (readEnd) await browser.page.evaluate(([w, ms]) => window.studio.look(w, ms), ['card', Math.max(300, Math.round(play.startAt - Date.now() + readEnd * 1000))]).catch(() => {});
       const result = await Promise.race([play.done, new Promise((ok) => { interrupt = ok; })]);
       interrupt = null;
       if (result !== 'done') { mixer.stop(); await studio('stop'); }
@@ -763,8 +780,11 @@ async function runShow(a) {
       talk.event = 'dance';
       return r;
     };
-    // her song, or a part of it: to the concert stage in her stage outfit, the song's sound as it is, her mouth from its
-    // vocals, karaoke for its hook, her moves on its beat; then back to where she was
+    // her song, or a part of it: the song's sound as it is, her mouth from its vocals, all of its words line by line, her
+    // moves on its beat. (2026-10-09, the owner: "when she sings the full lyrics on the subtitle must shown with the full
+    // video on the live as well", "Full screen, her small") with its music video (when it's ready): the video fills the
+    // stream, in step with the song, and she's small in the corner in her stage outfit, singing along; without it, to the
+    // concert stage as before. Then back to where she was.
     let sangWhole = false;
     const singPart = async (part, { intro = false } = {}) => {
       const s = await songReady;
@@ -774,25 +794,38 @@ async function runShow(a) {
       const back = { room: look.room, outfit: look.outfit, place: where.place, since: where.since };
       if (intro) await say(pickFrom(show, 'songIntro', part === 'whole' ? L.SONG_LINES.whole : L.SONG_LINES.part));
       await studio('card', null);
-      await goRoom('stage', { line: false });
-      await goOutfit('stage', { line: false });
-      await sleep(1200);
+      const mv = songVideo.ready;
+      let withVideo = false;
+      if (mv) {
+        await stopWeather();
+        await goOutfit('stage', { line: false });
+        withVideo = (await studio('mvLoad', { src: mv.src, from: p.from + MV_OFFSET })) === true;
+        if (!withVideo) log.warn('her music video wasn\'t ready in time: the concert stage instead');
+      }
+      if (!withVideo) {
+        await goRoom('stage', { line: false });
+        await goOutfit('stage', { line: false });
+        await sleep(1200);
+      }
       if (stopping || controls.paused) return 'cut';
       if (part === 'whole') sangWhole = true;
       const play = mixer.playMedia(s.pcm, { from: p.from, to: p.to, gain: s.gain, fadeIn: p.from > 0.5 ? 0.35 : 0.02, fadeOut: p.to < song.meta.seconds - 0.5 ? 1.4 : 0.25 });
       state.segment = 'song';
       await studio('sing', { startAt: play.startAt, seconds: play.seconds, step: p.step, env: p.env, lines: p.lines, beats: p.beats, downbeats: p.downbeats,
-        cues: p.cues, sections: p.sections, bpm: p.bpm, title: `${p.title} · ${p.name}` });
+        cues: p.cues, sections: p.sections, bpm: p.bpm, title: `${p.title} · ${p.name}`, ...(withVideo ? { video: { from: p.from, offset: MV_OFFSET } } : {}) });
       const r = await playOn(play);
       await studio('sing', null);
       if (r === 'done') {
         if (part === 'whole' || part === 'final') await studio('confetti', 4.5);
-        await sleep(500);
+        await sleep(withVideo ? 1200 : 500);
         await say(pickFrom(show, 'songAfter', L.SONG_LINES.after));
       }
       if (!stopping && !controls.paused) {
-        if (back.place) await backTo(back.place, back.since);
-        else await goRoom(back.room, { line: false });
+        // (with her video she never left: only her stage outfit goes)
+        if (!withVideo) {
+          if (back.place) await backTo(back.place, back.since);
+          else await goRoom(back.room, { line: false });
+        }
         await goOutfit(back.outfit, { line: false });
       }
       talk.event = 'song';
@@ -812,10 +845,16 @@ async function runShow(a) {
       await studio('look', 'you');
       return r;
     };
-    // her videos, made ready one at a time in the background (each once, kept on disk): the folder's, and her X posts'
+    // her videos, made ready one at a time in the background (each once, kept on disk): her song's music video first
+    // (2026-10-09: its picture while she sings), then the folder's, and her X posts'
     const readyVideos = [];
     const xMedia = new Map();                       // her post's id → { video } or { picture }
+    const songVideo = { ready: null };
     const prepping = (async () => {
+      if (songVideoFile) {
+        const t0 = Date.now();
+        try { songVideo.ready = await prepareSongVideo(songVideoFile, cacheDir); log.info(`her music video is ready (${Math.round((Date.now() - t0) / 1000)} s)`); } catch (err) { log.warn(`[media] her music video: ${err.message}`); }
+      }
       for (const v of videos.slice(0, 12)) {
         if (stopping) return;
         try { const r = await prepareVideo(v, cacheDir, { log }); readyVideos.push({ ...r, title: v.title, about: v.about, gain: r.sound ? songGain(r.sound) : 1 }); } catch (err) { log.warn(`[media] "${v.title}": ${err.message}`); }
@@ -836,9 +875,10 @@ async function runShow(a) {
 
     // ---------- (2026-10-07) $AGI on her show: its numbers and its new buys (alerts), never advice ----------
     const market = { numbers: null, since: Date.now(), seen: new Set(), pending: [], milestone: false, step: null, lastAlert: 0, failures: 0 };
-    const pollMarket = async () => {
+    // (2026-10-09) chart: $AGI's newest trades too, for her live chart (watchChart): → the site's answer, or null
+    const pollMarket = async (opts = null) => {
       try {
-        const r = await site.market(showId, market.since);
+        const r = await site.market(showId, market.since, opts);
         if (r?.numbers?.mcap > 0) {
           market.numbers = r.numbers;
           const step = Math.floor(r.numbers.mcap / 200_000);
@@ -853,9 +893,10 @@ async function runShow(a) {
         }
         market.pending = market.pending.slice(-10);
         market.failures = 0;
-      } catch (err) { if (++market.failures === 3) log.warn(`$AGI's numbers aren't coming (${err.message}): no alerts meanwhile`); }
+        return r;
+      } catch (err) { if (++market.failures === 3) log.warn(`$AGI's numbers aren't coming (${err.message}): no alerts meanwhile`); return null; }
     };
-    marketTimer = setInterval(pollMarket, 60_000);
+    marketTimer = setInterval(() => pollMarket(), 60_000);
     pollMarket();
     const alertDue = (now) => (market.pending.length || market.milestone) && now - market.lastAlert > 90_000;
     const buyAlert = async () => {
@@ -1059,7 +1100,7 @@ async function runShow(a) {
     };
 
     // ---------- (2026-10-07) viewers' requests: what she said yes to, right after she said it ----------
-    const acts = createActs({ song: Boolean(song), dance: dances.length > 0, meet: meetOk });
+    const acts = createActs({ song: Boolean(song), dance: dances.length > 0, meet: meetOk, chart: () => market.failures < 3 });
     const doAct = async (act) => {
       const d = DOES[act?.act];
       if (!d || stopping || controls.paused) return;
@@ -1081,13 +1122,15 @@ async function runShow(a) {
         else if (d.own === 'eat') await eat(act.to);
         else if (d.own === 'weather') await weather(act.to);
         else if (d.own === 'meet') { if (!(await meet())) await say(L.OOPS); }
+        // (2026-10-09) her live $AGI chart
+        else if (d.own === 'chart') { if (!(await watchChart())) await say(L.CHART_LINES.none); }
       } catch (err) { log.warn(`a viewer's request (${act.act}): ${err.message}`); }
     };
 
     // "starting soon": until it's time (she's there, idle; questions can already come in). Meanwhile her first lines' voices
     // are made (when they aren't kept yet), so her intro never waits for Google. The owner's "end" cancels the show.
     if (begins > Date.now()) {
-      await browser.page.evaluate(([at]) => window.studio.overlay('starting', { sub: 'Ask me at agi1.app/live', untilMs: at }), [begins]);
+      await browser.page.evaluate(([at]) => window.studio.overlay('starting', { sub: 'Ask me in the chat · Telegram · agi1.app/live', untilMs: at }), [begins]);
       warmUp(voice, [...L.INTRO, ...T.SHOWCASE.map((x) => x.line), ...L.READING, L.BRB.start, L.BRB.back, ...L.LAG, ...L.OUTRO], { until: begins - 5000, gapMs: WARM_GAP_MS }).catch(() => {});
       while (Date.now() < begins && !stopping && !controls.end) await sleep(500);
     }
@@ -1100,7 +1143,7 @@ async function runShow(a) {
     }
     await browser.page.evaluate(() => window.studio.overlay(null));
     await studio('start', Date.now());
-    const extras = ['room', 'outfit', 'market', 'eat', 'weather', 'meet', ...(dances.length ? ['dance'] : []), ...(song ? ['song'] : []), ...(x.on ? ['post', 'replies'] : []), ...(videos.length ? ['video'] : [])];
+    const extras = ['room', 'outfit', 'market', 'chart', 'eat', 'weather', 'meet', ...(dances.length ? ['dance'] : []), ...(song ? ['song'] : []), ...(x.on ? ['post', 'replies'] : []), ...(videos.length ? ['video'] : [])];
     show = createShow({ start: Date.now(), minutes: a.minutes, diary: Boolean(diary), seed: Math.floor(Date.now() / 86_400_000), extras, first: a.tryExtras });
     state.status = 'live';
     // (2026-10-07) what to try asking her, in the bar all show long; a trip soon on a recording that asks for one (--try trip)
@@ -1132,8 +1175,9 @@ async function runShow(a) {
         if (!r?.question) { if (r?.trouble) troubled(r.trouble); return null; }
         if (ai.trouble) log.info('her answers are back');
         ai.trouble = 0; ai.said = false;
-        if (r.act) acts.take(r.act);                     // (it rests from now: the next answer, asked meanwhile, never offers it)
-        const audio = await voice.speak(r.reply, { mood: r.mood, keep: false });
+        if (r.act) acts.take(r.act);                     // (her own pace from now: what she does by herself waits a while)
+        // (2026-10-09) she reads their whole question out loud, then answers: one line of her voice
+        const audio = await voice.speak(readAndAnswer(r.question, r.reply).text, { mood: r.mood, keep: false });
         return { ...r, audio };
       })().catch((err) => { troubled(err.message); return null; });
     };
@@ -1277,10 +1321,49 @@ async function runShow(a) {
       await studio('card', null);
       return true;
     };
+    // (2026-10-09, the owner: "can you also include on her watching the live trading chart of $AGI") $AGI's live chart on her
+    // TV (its newest trades on clank.trade, drawn by her set: page/chart.js): she looks at it, says how she feels about it,
+    // and watches it with everyone for a while, the chart updated every 12 s (a new trade meanwhile: her line, and a new buy
+    // its alert). Feelings only, "not financial advice" every time (hard rule 8).
+    const CHART_WATCH_MS = 36_000, CHART_EVERY_MS = 12_000;
+    const chartOf = (r) => (Array.isArray(r?.chart) && r.chart.length >= 2 ? r.chart : null);
+    const watchChart = async () => {
+      const trades = chartOf(await pollMarket({ chart: true }));
+      if (!trades) return false;
+      state.segment = 'chart';
+      await say(pickFrom(show, 'chartIntro', L.CHART_LINES.intro));
+      await studio('chart', { trades, numbers: market.numbers, label: L.CHART_LABEL });
+      await studio('look', 'tv');
+      await sleep(2200);
+      const dir = chartDir(trades);
+      await say(pickFrom(show, `chart-${dir}`, L.CHART_LINES[dir]));
+      await studio('look', 'tv');
+      let last = trades.at(-1).at, explained = false;
+      const until = Date.now() + CHART_WATCH_MS;
+      while (Date.now() < until && !stopping && !controls.paused && !controls.end) {
+        await sleep(CHART_EVERY_MS);
+        if (stopping || controls.paused || controls.end) break;
+        const now = chartOf(await pollMarket({ chart: true }));
+        if (now) await studio('chart', { trades: now, numbers: market.numbers, label: L.CHART_LABEL });
+        state.segment = 'chart';
+        if (now && now.at(-1).at > last) {
+          last = now.at(-1).at;
+          if (alertDue(Date.now())) { await buyAlert(); state.segment = 'chart'; }
+          else await say(pickFrom(show, 'chartLive', L.CHART_LINES.live));
+        } else if (!explained) { explained = true; await say(pickFrom(show, 'chartExplain', L.CHART_LINES.explain)); }
+        await studio('look', 'tv');
+      }
+      await studio('look', 'you');
+      await say(pickFrom(show, 'chartAfter', L.CHART_LINES.after));
+      await studio('chart', null);
+      return true;
+    };
     const extraOk = (id) => {
       if (id === 'dance') return dances.length > 0 && !acts.resting('dance');
       if (id === 'song') return Boolean(song) && !acts.resting('sing') && (Date.now() - show.start > 6 * 60_000 || a.tryExtras.includes('song'));
       if (id === 'market') return Boolean(market.numbers);
+      // (2026-10-09) her live $AGI chart: once her numbers come (they're read from the same place)
+      if (id === 'chart') return Boolean(market.numbers) && market.failures < 3 && !acts.resting('chart');
       if (id === 'video') return readyVideos.some((v) => !shown.videos.has(v.id));
       // (2026-10-07) a snack, the weather (not while one's on), someone she meets (only where she's visiting, or her café)
       if (id === 'eat') return !acts.resting('eat');
@@ -1305,6 +1388,7 @@ async function runShow(a) {
         return true;
       }
       if (id === 'market') return marketCheck();
+      if (id === 'chart') { acts.take({ act: 'chart' }); return watchChart(); }
       if (id === 'post') return showPost();
       if (id === 'replies') {
         const ok = await showReplies();
@@ -1328,8 +1412,7 @@ async function runShow(a) {
       const lang = qa.lang && qa.lang !== 'en' ? langOf(qa.lang) : null;
       await studio('card', { kind: 'question', kicker: `Question · from ${askedBy(qa.question)}${lang ? ` · ${lang.native}` : ''}`, body: qa.question.text, ...(lang ? { lang: lang.code } : {}) });
       await studio('look', 'card');
-      await sleep(1800);
-      await studio('look', 'you');
+      await sleep(700);
       if (controls.skipped.has(qa.question.id)) {          // (the owner skipped it meanwhile)
         state.onAir = null;
         await studio('card', null);
@@ -1338,8 +1421,10 @@ async function runShow(a) {
         return true;
       }
       if (controls.paused) { state.onAir = null; await studio('card', null); await putBack(qa); return true; }   // (after her break)
-      const r = await say({ text: qa.reply, mood: qa.mood, ...(qa.lang ? { lang: qa.lang } : {}) }, { keep: false, audio: qa.audio ?? null, react: reactFor(qa.mood, { answer: true }),
-        act: qa.feel && !qa.act ? qa.feel : null });
+      // (2026-10-09) who asked and their whole question, out loud, then her answer
+      const line = readAndAnswer(qa.question, qa.reply);
+      const r = await say({ text: line.text, mood: qa.mood, ...(qa.lang ? { lang: qa.lang } : {}) }, { keep: false, audio: qa.audio ?? null, react: reactFor(qa.mood, { answer: true }),
+        act: qa.feel && !qa.act ? qa.feel : null, read: line.read });
       state.onAir = null;
       if (r === 'done') { aired.push(qa.question.text); if (aired.length > 8) aired.shift(); }
       // done: answered · the owner's skip: skipped · a pause: back in line (answered fresh after the break, however long it
@@ -1413,7 +1498,7 @@ async function runShow(a) {
         // the question she had ready goes back in line meanwhile (a long break would make it stale)
         if (prepared) { const p = prepared; prepared = null; p.then((qa) => { if (qa?.question) putBack(qa); }); }
         await studio('card', null);
-        await browser.page.evaluate(() => window.studio.overlay('brb', { sub: 'Ask me at agi1.app/live' }));
+        await browser.page.evaluate(() => window.studio.overlay('brb', { sub: 'Ask me in the chat · Telegram · agi1.app/live' }));
         brbLine = true;
         await say(L.BRB.start);
         brbLine = false;

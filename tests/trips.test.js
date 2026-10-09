@@ -392,7 +392,8 @@ test('viewers\' requests for her trips: a place, a snack, the weather, someone t
   there = true;
   assert.ok(acts.can().includes('meet'));
   acts.take({ act: 'meet' });
-  assert.ok(!acts.can().includes('meet'), 'rests after');
+  // (2026-10-09, the owner: "she will do everything asked to her") asked again: she does it again; by herself, not for a while
+  assert.ok(acts.can().includes('meet') && acts.resting('meet'), 'her own pace rests, a request never waits');
   // her extras: a snack, the weather, someone she meets; her trips on their own clock (--try trip on a recording)
   for (const id of ['eat', 'weather', 'meet']) assert.ok(EXTRA_IDS.includes(id), id);
   assert.deepEqual(parseArgs(['--try', 'trip,eat,weather,meet', '--record', 'x.mp4']).tryExtras, ['trip', 'eat', 'weather', 'meet']);

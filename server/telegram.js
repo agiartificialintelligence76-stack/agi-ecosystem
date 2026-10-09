@@ -20,7 +20,7 @@ import { tgLinesFor, TEXTS_A_DAY } from './tg-lines.js';
 import { fromTelegram } from '../src/i18n/langs.js';
 import { parseLaunch, checkIdea, bestPhoto, newDraftId, drafts, draftUrl, launchOpen, launchAllowed, gasOn } from './launch.js';
 import * as LAUNCH from './launch-lines.js';
-import { liveReady, liveDb, askLive, checkQuestion } from './live.js';
+import { liveReady, liveDb, askLive, checkQuestion, telegramName } from './live.js';
 import * as LIVE_L from './live-lines.js';
 
 const MAX_TEXT = 500;                       // characters per message she reads (the same as the site's chat)
@@ -183,16 +183,18 @@ async function onCommand(cfg, token, chat, name, arg, now, L, from) {
     await say(token, chat, L.ASK_TIME_AGAIN, buttons(L.timeButtons(now)));
     return 'ask_time';
   }
-  if (name === 'live') return onLive(cfg, token, chat, arg, now, L);
+  if (name === 'live') return onLive(cfg, token, chat, arg, now, L, from);
   await say(token, chat, L.helpFor({ launch: launchAllowed(cfg, from), live: liveReady(cfg) }));
   return 'help';
 }
 
 // Her live show (2026-10-02, server/live.js): "/live <question>" → into her line (18+: the bot's own check; the same checks
-// and limits as agi1.app/live; shown on stream without a name); "/live" alone → where their question is, or how it works
-// (never when her next show is: since 2026-10-07 the owner goes live at random times). Who asked is a daily code of the
-// chat, never its number.
-async function onLive(cfg, token, chat, arg, now, L) {
+// and limits as agi1.app/live); "/live" alone → where their question is, or how it works (never when her next show is:
+// since 2026-10-07 the owner goes live at random times). Who asked is a daily code of the chat, never its number.
+// (2026-10-09, the owner: "she will know every person's real name on the telegram") shown on stream with their own
+// Telegram name (telegramName: their first and last name, else their @username; "someone on Telegram" when none can go on
+// a public stream): her bot says so in its /live help before they ask, and again when it's in line
+async function onLive(cfg, token, chat, arg, now, L, from = null) {
   if (!liveReady(cfg)) { await say(token, chat, LIVE_L.NOT_YET); return 'live_not_yet'; }
   let row;
   try { row = await db.get(cfg, chat); } catch (err) {
@@ -221,8 +223,9 @@ async function onLive(cfg, token, chat, arg, now, L) {
     }
     const checked = checkQuestion(arg);
     if (!checked.ok) { await say(token, chat, LIVE_L.REFUSE[checked.why] || LIVE_L.REFUSE.spam); return `live_${checked.why}`; }
-    const r = await askLive(cfg, { source: 'telegram', asker, name: null, question: checked.text });
-    if (r?.ok === true) { await say(token, chat, LIVE_L.queued(r.position)); return 'live_queued'; }
+    const name = telegramName(from);
+    const r = await askLive(cfg, { source: 'telegram', asker, name, question: checked.text });
+    if (r?.ok === true) { await say(token, chat, LIVE_L.queued(r.position, name)); return 'live_queued'; }
     const why = String(r?.why || '');
     if (why === 'offline') { await say(token, chat, LIVE_L.OFFLINE); return 'live_offline'; }
     if (why === 'waiting') { await say(token, chat, r.position > 0 ? LIVE_L.inLine(r.position) : LIVE_L.UP_NEXT); return 'live_waiting'; }

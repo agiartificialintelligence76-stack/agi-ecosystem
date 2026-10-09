@@ -11,6 +11,9 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateKeyPairSync } from 'node:crypto';
 import sharp from 'sharp';
+// (2026-10-09) WebP's encoder at its lightest in these tests: at its hardest (her set's own pictures) it took about 8 s a
+// picture on a 2-core computer, and a test over 30 s fails the build
+const FAST = 0;
 import { artList, artRequest, imageFrom, toMake, makeArt, artSettings, extOf, ART_MODELS, PROMPTS, STYLE_REF, styleRef } from '../tools/live/art.mjs';
 import { PLACE_IDS } from '../tools/live/page/places.js';
 import { VEHICLE_IDS } from '../tools/live/page/vehicles.js';
@@ -291,7 +294,7 @@ test('(2026-10-08) what the first paintings needed: an olive green keyed too, a 
     try {
       writeFileSync(join(dir, 'hp.png'), await sharp(data, { raw: { width: W, height: H, channels: 4 } }).png().toBuffer());
       const opaque = async (id) => {
-        await cutOne(sharp, join(dir, 'hp.png'), { group: 'accessories', id }, { out: join(dir, 'out') });
+        await cutOne(sharp, join(dir, 'hp.png'), { group: 'accessories', id }, { out: join(dir, 'out'), effort: FAST });
         const { data: d, info } = await sharp(join(dir, 'out', 'accessories', `${id}.webp`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
         let n = 0; for (let p = 3; p < d.length; p += 4) n += d[p] > 128; return { n, w: info.width, h: info.height };
       };
@@ -337,7 +340,7 @@ test('(2026-10-08) what the first paintings needed: an olive green keyed too, a 
     const dir = mkdtempSync(join(tmpdir(), 'agi1-crop-'));
     try {
       writeFileSync(join(dir, 'b.jpg'), await sharp({ create: { width: 1376, height: 768, channels: 3, background: '#7fb9e8' } }).jpeg().toBuffer());
-      const made = await cutOne(sharp, join(dir, 'b.jpg'), { group: 'rides', id: 'balloon' }, { out: join(dir, 'out'), crop: [0, 115, 957, 538] });
+      const made = await cutOne(sharp, join(dir, 'b.jpg'), { group: 'rides', id: 'balloon' }, { out: join(dir, 'out'), crop: [0, 115, 957, 538], effort: FAST });
       assert.deepEqual([made.width, made.height], [1280, 720]);
       await assert.rejects(cutOne(sharp, join(dir, 'b.jpg'), { group: 'rides', id: 'balloon' }, { out: join(dir, 'out'), crop: [0, 0, 700, 700] }), /16:9/);
     } finally { rmSync(dir, { recursive: true, force: true }); }
@@ -383,7 +386,7 @@ test('(2026-10-08, the owner: "some hats not even wearing to her head") the coni
   try {
     writeFileSync(join(dir, 'h.png'), await sharp(Buffer.from(svg)).png().toBuffer());
     const darkOf = async (id) => {
-      await cutOne(sharp, join(dir, 'h.png'), { group: 'accessories', id }, { out: join(dir, 'out') });
+      await cutOne(sharp, join(dir, 'h.png'), { group: 'accessories', id }, { out: join(dir, 'out'), effort: FAST });
       const { data: d } = await sharp(join(dir, 'out', 'accessories', `${id}.webp`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
       let n = 0; for (let p = 0; p < d.length; p += 4) n += d[p + 3] > 128 && 0.3 * d[p] + 0.59 * d[p + 1] + 0.11 * d[p + 2] < 60; return n;
     };
@@ -516,19 +519,19 @@ test('(2026-10-08) a stand-in until its own painting is there: a painting asked 
     const star = (fill) => sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"><rect width="100%" height="100%" fill="#00ff00"/><polygon points="150,20 175,90 250,90 190,130 210,190 150,150 90,190 110,130 50,90 125,90" fill="${fill}" stroke="#4a3010" stroke-width="5"/></svg>`)).webp({ lossless: true }).toBuffer();
     writeFileSync(join(src, 'clips-honey-1.webp'), await star('#f2c84b'));
     const out = join(dir, 'out'), quiet = { log() {} };
-    const r = await cutAll(join(dir, 'art'), { only: ['clips-mint', 'clips-honey'], picks: {}, out, log: quiet });
+    const r = await cutAll(join(dir, 'art'), { only: ['clips-mint', 'clips-honey'], picks: {}, out, log: quiet, effort: FAST });
     assert.deepEqual(r.done.map((d) => [d.id, d.standIn]).sort(), [['clips-honey', null], ['clips-mint', 'clips-honey']]);
     const middle = async (id) => { const { data, info } = await sharp(readFileSync(join(out, 'accessories', `${id}.webp`))).raw().toBuffer({ resolveWithObject: true }); const o = (Math.round(info.height / 2) * info.width + Math.round(info.width / 2)) * info.channels; return Array.from(data.subarray(o, o + 3)); };
     const m1 = await middle('clips-mint');
     assert.ok(hueOf(m1) > 150 && hueOf(m1) < 185, `the stand-in is mint: ${m1}`);
     // its own painting arrives: used instead
     writeFileSync(join(src, 'clips-mint-1.webp'), await star('#ff4da6'));
-    const r2 = await cutAll(join(dir, 'art'), { only: ['clips-mint'], picks: {}, out, log: quiet });
+    const r2 = await cutAll(join(dir, 'art'), { only: ['clips-mint'], picks: {}, out, log: quiet, effort: FAST });
     assert.equal(r2.done[0].standIn, null);
     const m2 = await middle('clips-mint');
     assert.ok(hueOf(m2) > 315, `its own (pink here): ${m2}`);
     // nothing to make it from: drawn in code, as before
-    const r3 = await cutAll(join(dir, 'art'), { only: ['beanie-yellow', 'scarf-istanbul'], picks: {}, out, log: quiet });
+    const r3 = await cutAll(join(dir, 'art'), { only: ['beanie-yellow', 'scarf-istanbul'], picks: {}, out, log: quiet, effort: FAST });
     assert.deepEqual(r3.missing.sort(), ['accessories/beanie-yellow-1', 'accessories/scarf-istanbul-1']);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
@@ -573,7 +576,7 @@ test('a backdrop\'s light panel undone (2026-10-07: asked to keep her side calm,
   try {
     writeFileSync(join(dir, 'rio-2.jpg'), jpg);
     const out = join(dir, 'out');
-    const made = await cutOne(sharp, join(dir, 'rio-2.jpg'), { group: 'places', id: 'rio' }, { out, panel: [948, 1321], flip: true });
+    const made = await cutOne(sharp, join(dir, 'rio-2.jpg'), { group: 'places', id: 'rio' }, { out, panel: [948, 1321], flip: true, effort: FAST });
     assert.deepEqual([made.width, made.height, made.undone.x0, made.undone.x1], [1280, 720, 948, 1321]);
     const { data: m } = await sharp(join(out, 'places', 'rio.webp')).removeAlpha().raw().toBuffer({ resolveWithObject: true });
     // the pyramid (the left of the painting) is now on the right

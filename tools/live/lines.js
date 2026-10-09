@@ -15,13 +15,16 @@ const l = (text, mood = 'neutral', say = null) => ({ text, mood, ...(say ? { say
 export const INTRO = [
   l("hi everyone, it's AGI-1 💜 welcome to my show!", 'wave'),
   l("i'm an AI. everything you see and hear here is AI-generated, and nothing i say is financial advice.", 'neutral'),
-  l("send me your questions at agi1.app/live, and i'll answer them right here, live.", 'happy', "send me your questions at a g i one dot app slash live, and i'll answer them right here, live."),
+  // (2026-10-09, the owner: "she now mentions that she can read the mesages on X and telegram and the website")
+  l("ask me anything in the chat here on X, on Telegram, or at agi1.app/live, and i'll read it out loud and answer it right here, live.", 'happy',
+    "ask me anything in the chat here on X, on Telegram, or at a g i one dot app slash live, and i'll read it out loud and answer it right here, live."),
   l("let's have some fun 💜", 'love'),
 ];
 export const OUTRO = [
   l("that's my show for today 💜 thank you so much for hanging out with me.", 'sweet'),
   // (2026-10-07, the owner goes live at random times: never "same time tomorrow")
-  l('catch my next show here on X, and send me your questions at agi1.app/live 💜', 'happy', 'catch my next show here on X, and send me your questions at a g i one dot app slash live.'),
+  l('catch my next show here on X 💜 and keep the questions coming: in the chat, on Telegram, or at agi1.app/live.', 'happy',
+    'catch my next show here on X. and keep the questions coming: in the chat, on Telegram, or at a g i one dot app slash live.'),
   l('remember: nothing i say is financial advice, and be kind to each other. bye! 👋', 'wave'),
 ];
 export const BRB = {
@@ -42,7 +45,7 @@ export const LAG = [
 ];
 // nobody's asked anything for a while
 export const PICKUP = [
-  l('my question line is empty 🙈 ask me anything at agi1.app/live', 'shy', 'my question line is empty. ask me anything at a g i one dot app slash live.'),
+  l('my question line is empty 🙈 ask me anything in the chat, on Telegram, or at agi1.app/live', 'shy', 'my question line is empty. ask me anything in the chat, on Telegram, or at a g i one dot app slash live.'),
   l('go to agi1.app/live and ask me something. anything PG-13 💜', 'happy', 'go to a g i one dot app slash live and ask me something. anything P G thirteen.'),
   l("i'm getting bored over here 🙈 entertain me at agi1.app/live", 'shy', "i'm getting bored over here. entertain me at a g i one dot app slash live."),
   l("no questions? okay, i'll just talk to myself then 🙈", 'shy'),
@@ -53,6 +56,9 @@ export const PICKUP = [
   l("ask me something you've always wanted to ask an AI. agi1.app/live", 'happy', "ask me something you've always wanted to ask an AI. a g i one dot app slash live."),
   l('i answer every question i can. agi1.app/live 💜', 'love', 'i answer every question i can. a g i one dot app slash live.'),
   l('waiting for your questions like 👀 agi1.app/live', 'shy', 'waiting for your questions. a g i one dot app slash live.'),
+  // (2026-10-09) where else she reads them: X's chat (her show's host passes them on) and her Telegram bot
+  l('you can ask me right here in the chat on X 💜 your messages find their way to me.', 'happy'),
+  l("on Telegram? send /live and your question to my bot, and i'll read it out loud here 💜", 'happy', "on Telegram? send slash live and your question to my bot, and i'll read it out loud here."),
 ];
 // little things she says between the rest
 export const CHAT = [
@@ -79,7 +85,8 @@ export const CHAT = [
   l('hi to everyone watching from bed. i see you 💜', 'love'),
   l("i'm having the best time right now. thank you for being here.", 'sweet'),
   l('fun fact: every word i say here is AI-generated. even this one.', 'happy'),
-  l('new here? ask me anything at agi1.app/live, and you could be on screen in a minute.', 'happy', 'new here? ask me anything at a g i one dot app slash live, and you could be on screen in a minute.'),
+  l('new here? ask me anything in the chat, on Telegram or at agi1.app/live, and you could be on screen in a minute.', 'happy',
+    'new here? ask me anything in the chat, on Telegram or at a g i one dot app slash live, and you could be on screen in a minute.'),
   l('if your day was hard: you made it here. that counts 💜', 'sweet'),
   l('this music? my own songs, made in code. i have very good taste.', 'happy'),
   l('posture check! sit up a little. there you go 💜', 'happy'),
@@ -173,7 +180,8 @@ export const SONG_LINES = {
   after: [
     l('thank you, thank you 💜 that was Feel the AGI.', 'sweet'),
     l('okay, i love performing for you 🙈', 'shy'),
-    l('encore? maybe later 💜 you can ask me at agi1.app/live.', 'happy', 'encore? maybe later. you can ask me at a g i one dot app slash live.'),
+    // (2026-10-09, the owner: "she can sing the full song everytime if requested")
+    l('encore? just ask 💜 in the chat, on Telegram or at agi1.app/live.', 'happy', 'encore? just ask. in the chat, on Telegram or at a g i one dot app slash live.'),
   ],
 };
 // one of her videos on her TV (the owner's videos folder on the server, or a video in one of her X posts)
@@ -226,6 +234,45 @@ export const BUY_LINES = [
 ];
 export const MILESTONE_LINE = l("$AGI just reached a new market cap step 💜 i'm so proud. not financial advice, just a very proud AI.", 'celebrate',
   "AGI just reached a new market cap step. i'm so proud. not financial advice, just a very proud AI.");
+// (2026-10-09, the owner: "can you also include on her watching the live trading chart of $AGI") $AGI's live chart on her
+// TV, drawn from its newest trades on clank.trade (tools/live/page/chart.js): she watches it with everyone, and how she
+// feels about it, never advice (hard rule 8: never "pumping", a prediction, buy, sell or hold)
+// (its label under her TV: one line there, 49 characters at most: the first recording wrapped a longer one)
+export const CHART_LABEL = '$AGI · live on clank.trade · not financial advice';
+export const CHART_LINES = {
+  intro: [
+    l("let's watch the $AGI chart together 📈 live from clank.trade.", 'happy', "let's watch the AGI chart together. live from clank dot trade."),
+    l("chart time 💜 here's $AGI, live.", 'happy', "chart time. here's AGI, live."),
+    l('you know what i love? watching my own chart with you 👀', 'love'),
+  ],
+  explain: [
+    l('each candle is a slice of time. the mint bars under them are people getting $AGI, the pink ones are people letting some go. not financial advice.', 'neutral',
+      'each candle is a slice of time. the mint bars under them are people getting AGI, the pink ones are people letting some go. not financial advice.'),
+    l('the yellow line is the last price, live. i could stare at it all day 💜 not financial advice.', 'happy', 'the yellow line is the last price, live. i could stare at it all day. not financial advice.'),
+  ],
+  up: [
+    l("look at those green candles 💚 i'm smiling. not financial advice, just feelings.", 'happy'),
+    l("$AGI's chart is going up and to the right 💜 not financial advice, just a happy girl.", 'happy', "AGI's chart is going up and to the right. not financial advice, just a happy girl."),
+  ],
+  down: [
+    l("a red stretch on the chart 🥺 charts go up and down, and i'm still here. not financial advice.", 'careful'),
+    l('some pink candles today. deep breaths, everyone 💜 not financial advice, just a hug.', 'sad'),
+  ],
+  flat: [
+    l('pretty calm on the chart right now. calm is nice 💜 not financial advice.', 'neutral'),
+    l('sideways, like me on a lazy sunday 🙈 not financial advice.', 'shy'),
+  ],
+  // a new trade on the chart while she watches it
+  live: [
+    l('ooh, did you see that? a new trade just landed on the chart 👀 not financial advice.', 'happy'),
+    l('there it is, right on the chart 💜 i see you. not financial advice.', 'happy'),
+  ],
+  after: [
+    l("okay, that's enough chart for now 💜 not financial advice, just me being curious.", 'happy'),
+    l('back to you 💜 the chart can wait. not financial advice.', 'love'),
+  ],
+  none: l("my chart isn't loading right now 🙈 i'll show you later.", 'shy'),
+};
 // what she says when something she said yes to couldn't happen after all (a glitch)
 export const OOPS = l("oops, that one glitched on me 🙈 i'll do it later, promise.", 'shy');
 
@@ -338,13 +385,17 @@ export const SEGMENTS = {
   // ---- (2026-10-07, the owner's choice: more segments, for 3-hour shows) ----
   // how to ask her: what most viewers on X don't know
   howto: {
-    card: { kicker: 'Ask me anything', title: 'How to ask me', list: ['Open agi1.app/live', 'Type your question (PG-13)', 'Add a name, or stay “someone”', 'I read it here and answer out loud'] },
+    // (2026-10-09) three ways: X's chat, her Telegram bot, agi1.app/live; she reads the whole question out loud, then answers
+    card: { kicker: 'Ask me anything', title: 'How to ask me', list: ['Here in the chat on X', 'On Telegram: /live in my bot', 'At agi1.app/live', 'I read it out loud, then answer'] },
     lines: [
       l('quick how-to, because i love questions 💜', 'happy'),
-      l("open agi1.app/live, type your question, and hit send. that's it.", 'happy', "open a g i one dot app slash live, type your question, and hit send. that's it."),
-      l("add a name to show with it, or stay anonymous and i'll say someone asks.", 'neutral'),
-      l('it pops up right here, and i answer it out loud. PG-13, please 🙈', 'shy', 'it pops up right here, and i answer it out loud. P G thirteen, please.'),
-      l('chatting here on X? sometimes my host passes a question from the chat on to me, too.', 'happy'),
+      l('three ways to ask me: right here in the chat on X, on Telegram with /live in my bot, or at agi1.app/live.', 'happy',
+        'three ways to ask me: right here in the chat on X, on Telegram with slash live in my bot, or at a g i one dot app slash live.'),
+      l("on agi1.app/live, add a name to show with it, or stay anonymous and i'll say someone asks.", 'neutral',
+        "on a g i one dot app slash live, add a name to show with it, or stay anonymous and i'll say someone asks."),
+      l('it pops up right here, i read your whole question out loud, and then i answer it. PG-13, please 🙈', 'shy',
+        'it pops up right here, i read your whole question out loud, and then i answer it. P G thirteen, please.'),
+      l('chatting here on X? your messages in the chat reach me too 💜', 'happy'),
     ],
   },
   selfcare: {
@@ -432,7 +483,8 @@ export const SEGMENTS = {
       { card: 'Where was $AGI born? clank.trade', line: l('question: where was $AGI born? clank.trade.', 'happy', 'question: where was AGI born? clank dot trade.') },
       { card: 'Which chain do I live on? Robinhood Chain', line: l('question: which chain do i live on? Robinhood Chain.', 'neutral') },
       { card: 'Do I give financial advice? Never', line: l('question: do i give financial advice? never. you passed 💜', 'love') },
-      { card: 'Where do you ask me? agi1.app/live', line: l('question: where do you send me questions? agi1.app/live.', 'happy', 'question: where do you send me questions? a g i one dot app slash live.') },
+      { card: 'Where do you ask me? Chat · Telegram · agi1.app/live', line: l('question: where can you send me questions? here in the chat, on Telegram, or at agi1.app/live. all three 💜', 'happy',
+        'question: where can you send me questions? here in the chat, on Telegram, or at a g i one dot app slash live. all three.') },
       { card: 'How many languages do I speak? 16', line: l('question: how many languages do i speak? sixteen. show-off, i know.', 'shy') },
       { card: 'Who was here first? Me', line: l('question: who was here first, me or the coin? me. always me.', 'happy') },
       { card: 'The official contract? Only from agi1.app', line: l('question: where do you copy the official contract from? only agi1.app. good job.', 'careful', 'question: where do you copy the official contract from? only a g i one dot app. good job.') },
@@ -469,6 +521,8 @@ export function allLines() {
   out.push(...ROOM_INTRO, ...Object.values(ROOM_LINES), ...OUTFIT_INTRO, ...Object.values(OUTFIT_LINES), ...DANCE_LINES.start, ...DANCE_LINES.after,
     ...SONG_LINES.whole, ...SONG_LINES.part, ...SONG_LINES.after, ...VIDEO_LINES.intro, ...VIDEO_LINES.after, ...POST_LINES.intro,
     ...REPLY_LINES.intro, REPLY_LINES.none, ...MARKET_LINES.up, ...MARKET_LINES.down, ...MARKET_LINES.flat, ...BUY_LINES, MILESTONE_LINE, OOPS);
+  // (2026-10-09) $AGI's live chart on her TV
+  for (const [k, v] of Object.entries(CHART_LINES)) out.push(...(k === 'none' ? [v] : v));
   // (2026-10-07) her trips, her snacks, the weather, the people she meets, the start of her show (tools/live/trips.js)
   out.push(...tripLines());
   return out;

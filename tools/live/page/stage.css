@@ -231,16 +231,38 @@ body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: anti
 .tv-label { margin-top: 10px; color: #fff; font: 800 16px/1 var(--mono); letter-spacing: 0.05em; }
 .tv-label:empty { display: none; }
 
-/* karaoke: the hook of her song, each word lit as she sings it */
-.karaoke { position: absolute; left: 40px; bottom: 96px; max-width: 840px; padding: 14px 24px 16px; border: 4px solid var(--ink); border-radius: 22px;
-  background: rgba(23, 10, 54, 0.92); box-shadow: 0 8px 0 -2px var(--pink); animation: pop-in 0.22s cubic-bezier(.2, 1.4, .4, 1) both; }
-.karaoke[hidden] { display: none; }
-.karaoke p { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 900 40px/1.15 var(--display); font-stretch: 112%; color: rgba(255, 255, 255, 0.45); }
-.karaoke[data-big='1'] p { font-size: 58px; }
-.karaoke span { transition: color 0.12s, transform 0.12s; display: inline-block; }
-.karaoke span.sung { color: var(--honey); transform: translateY(-3px); text-shadow: 3px 3px 0 var(--pink); }
+/* her song's words (2026-10-09: all of them, line by line; only its hook before): the line she's singing, each word lit as
+   she sings it, and the next line under it */
+.lyrics { position: absolute; left: 40px; bottom: 92px; width: 860px; padding: 12px 22px 14px; border: 4px solid var(--ink); border-radius: 22px;
+  background: rgba(23, 10, 54, 0.92); box-shadow: 0 8px 0 -2px var(--pink); }
+.lyrics[hidden] { display: none; }
+.lyrics-now { display: flex; flex-wrap: wrap; gap: 2px 11px; font: 900 32px/1.12 var(--display); font-stretch: 108%; color: rgba(255, 255, 255, 0.5); }
+.lyrics-now:empty { display: none; }
+.lyrics-now.in { animation: lyric-in 0.2s ease-out both; }
+@keyframes lyric-in { from { transform: translateY(6px); opacity: 0.4; } }
+.lyrics-now span { display: inline-block; transition: color 0.1s, transform 0.1s; }
+.lyrics-now span.sung { color: var(--honey); transform: translateY(-2px); text-shadow: 2px 2px 0 var(--pink); }
+.lyrics-next { margin-top: 6px; font: 600 18px/1.2 var(--sans); color: rgba(228, 217, 255, 0.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lyrics-next:empty { display: none; }
 /* while she sings or a video plays, her captions step aside */
-.set[data-mode='song'] .caption, .set[data-mode='tv'] .caption { display: none; }
+.set[data-mode='song'] .caption, .set[data-mode='tv'] .caption, .set[data-mode='mv'] .caption { display: none; }
+
+/* (2026-10-09, the owner: "when she sings the full lyrics on the subtitle must shown with the full video on the live as
+   well"; "Full screen, her small") her song's music video fills the stream while she sings it (1280 × 548, its own 21:9),
+   behind her (she's small in the bottom right corner, singing along: stage.js), its words in the band under it. Her room,
+   the weather and her room's moving bits are hidden meanwhile. (The video is under her picture, never over it.) */
+.song-video { position: absolute; left: 0; top: 0; width: 1280px; height: 548px; background: rgba(0, 0, 0, 0.99); }
+.song-video[hidden] { display: none; }
+.song-video video { display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0.99; }
+.set[data-mode='mv'] { background: rgba(7, 4, 15, 0.99); }
+.set[data-mode='mv'] .set-bg, .set[data-mode='mv'] .amb, .set[data-mode='mv'] .wx-back, .set[data-mode='mv'] .wx-front { visibility: hidden; }
+.set[data-mode='mv'] .lyrics { left: 22px; top: 552px; bottom: auto; width: 990px; padding: 6px 4px 4px; border: 0; border-radius: 0; background: rgba(7, 4, 15, 0.99); box-shadow: none; }
+.set[data-mode='mv'] .lyrics-now { font-size: 30px; }
+.set[data-mode='mv'] .brand { padding: 5px 14px 8px; border-radius: 14px; background: rgba(23, 10, 54, 0.86); }
+
+/* (2026-10-09, the owner: "her watching the live trading chart of $AGI") $AGI's live chart on her TV (chart.js) */
+.tv-screen canvas.tv-chart { display: block; width: 100%; height: 100%; opacity: 0.99; }
+.tv-screen canvas.tv-chart[hidden] { display: none; }
 
 /* the comic wipe between rooms: four bands sweep across, covering everything midway (a little see-through) */
 .wipe { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 20; }

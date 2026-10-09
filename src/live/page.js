@@ -140,7 +140,8 @@ function start() {
     e.preventDefault();
     if (sending) return;
     const question = ui.q.value.trim();
-    if ([...question].length < 3) { ui.error.textContent = askError('question', { why: question ? 'short' : 'empty' }); ui.q.focus(); return; }
+    // (2026-10-09, the owner: "no restrictions on how short their message are": any question, a single letter included)
+    if (!question) { ui.error.textContent = askError('question', { why: 'empty' }); ui.q.focus(); return; }
     sending = true;
     ui.send.disabled = true;
     ui.send.textContent = 'Sending…';

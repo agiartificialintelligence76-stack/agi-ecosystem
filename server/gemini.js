@@ -162,7 +162,9 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
       contents,
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
-        maxOutputTokens: soulmate ? 330 : 300,      // hard cap on reply length (and cost); thinking counts too
+        // hard cap on reply length (and cost); thinking counts too. (2026-10-09: her show's answers up to 400 characters, so a
+        // little more room there: "she will do everything asked to her", a joke or a little story included)
+        maxOutputTokens: soulmate ? 330 : live ? 380 : 300,
         thinkingConfig: { thinkingLevel: 'MINIMAL' }, // Gemini 3 thinks at HIGH by default, and thinking is billed
         responseMimeType: 'application/json',
         responseJsonSchema: {

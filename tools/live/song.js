@@ -4,8 +4,14 @@
 //     to her show's rules ("Feel the AGI as it is": its words name real people and another project; nothing else on her
 //     show may). Without its tags, its lyrics or its cover (only the sound).
 //   • its timing: tools/live/songs/feel-the-agi.json (made once in Claude's workspace from the song itself: its vocals cut
-//     out with an open vocal-separation model, her mouth from their loudness, 50 values a second; the beats and bars; the
-//     karaoke lines of its hook only, so no real person's name is ever on screen; her moves on its big moments).
+//     out with an open vocal-separation model, her mouth from their loudness, 50 values a second; the beats and bars; her
+//     moves on its big moments; and since 2026-10-09 (the owner: "when she sings the full lyrics on the subtitle must shown
+//     with the full video on the live as well") all of its words, line by line, each word at the time it's sung: the
+//     song's own lyric sheet, timed by its vocal's words and by the hook's lines timed against the owner's music video.
+//     Until then only its hook was on screen).
+//   • its music video (2026-10-09): the owner's own (AGI-1_Feel_the_AGI_v9), full screen while she sings, from the
+//     server's videos folder (tools/live/media.js findSongVideo), in step with the song (the video's sound is the song's,
+//     MV_OFFSET apart: measured).
 // Pure but for decodeSong (ffmpeg, once: the sound kept on the server's disk as raw 48 kHz stereo).
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -17,6 +23,9 @@ import { withoutSecrets } from '../clips/make.mjs';
 export const SONG_DIR = new URL('./songs/', import.meta.url).pathname;
 export const SONG_RATE = 48000;          // her song is played as it is: 48 kHz stereo (the stream's own sound: run.mjs Mixer)
 export const SONG_LEVEL = 0.11;          // how loud (RMS, 0..1): about her voice's own level, above her quiet music
+// (2026-10-09) her music video's picture against the song: the video's own sound starts this many seconds after the song's
+// (measured: its sound against the song's, cross-correlated at six places along it: 0.003 s every time)
+export const MV_OFFSET = 0.003;
 
 // → { meta, file } (the song's timing, and where its sound is) or null when it isn't there
 export function readSong(dir = SONG_DIR, id = 'feel-the-agi') {
@@ -38,7 +47,8 @@ export function mouthOf(meta) {
 
 // One part of her song (server/live-acts.js SONG_PARTS: chorus, rap, intro, verse, final, whole), as her set needs it: when
 // it starts and ends in the song, and everything in it timed from its start → { part, name, from, to, seconds, step (ms per
-// mouth value), env (her mouth), lines (karaoke), beats, downbeats, cues (her moves), sections (its big moments), bpm, title }
+// mouth value), env (her mouth), lines (its words: every line that starts in it), beats, downbeats, cues (her moves),
+// sections (its big moments), bpm, title }
 export function partOf(meta, part) {
   const p = SONG_PARTS[part] || SONG_PARTS.chorus;
   const from = Math.max(0, p.from), to = Math.min(meta.seconds, p.to);
@@ -47,7 +57,8 @@ export function partOf(meta, part) {
   const env = Array.from(mouth.subarray(Math.floor(from * fps), Math.ceil(to * fps)), (x) => Math.round(x * 100) / 100);
   const within = (t) => t >= from - 0.01 && t < to;
   const at = (t) => Math.round((t - from) * 1000) / 1000;
-  const lines = (meta.lines || []).filter((x) => x.from >= from - 0.3 && x.to <= to + 0.3 && x.words?.length)
+  // (every line sung in the part: one that starts in it, its end cut at the part's end)
+  const lines = (meta.lines || []).filter((x) => x.from >= from - 0.3 && x.from < to - 0.2 && x.words?.length)
     .map((x) => ({ text: x.text, from: at(Math.max(from, x.from)), to: at(Math.min(to, x.to)), words: x.words.map((w) => ({ w: w.w, t: at(w.t) })) }));
   const beats = (meta.beats || []).filter(within).map(at);
   const downbeats = (meta.downbeats || []).filter(within).map(at);

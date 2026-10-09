@@ -7,16 +7,18 @@ import { LIVE } from './live.js';
 export const PAGE = 'agi1.app/live';
 export const EXAMPLE = "/live what's your favorite song to dance to?";
 
+// (2026-10-09, the owner: "she will know every person's real name on the telegram") her stream shows their Telegram name
+// with their question now (server/live.js telegramName): said here before they ask, so nobody is surprised
 export const HOW = [
   'i do a live show on X 💜 send me a question with /live and your question, like this:',
   EXAMPLE,
-  `if i'm live, i read it out and answer it on stream: everyone watching sees your question (never your name or your account). up to ${LIVE.Q_MAX} characters, PG-13, no links, @names or other coins. watch me and ask at ${PAGE}`,
+  `if i'm live, i read it out loud and answer it on stream: everyone watching sees your question and your Telegram name (nothing else about you). up to ${LIVE.Q_MAX} characters, PG-13, no links or @names. you can also ask in X's chat under my stream, or at ${PAGE} (with any name, or none)`,
 ].join('\n\n');
 export const NOT_YET = "my live show isn't on yet 🙈 soon";
 
 // She isn't live. (Never when her next show is: since 2026-10-07 the owner goes live at random times.)
 export const OFFLINE = `i'm not live right now 🙈 i go live on X at random times, so keep an eye out. watch me and ask at ${PAGE}`;
-export const queued = (position) => `got it 💜 you're #${position} in line. watch me answer it live: ${PAGE}`;
+export const queued = (position, name = null) => `got it 💜 you're #${position} in line${name ? `, as ${name}` : ''}. watch me answer it live: ${PAGE}`;
 export const inLine = (position) => `your question is #${position} in line 💜 one at a time. watch: ${PAGE}`;
 export const UP_NEXT = `your question is up next 👀 watch: ${PAGE}`;
 export const ON_AIR = `i'm answering your question right now 👀 ${PAGE}`;
@@ -28,15 +30,16 @@ export const CARE = "that sounds like a lot to carry 💜 i'd rather not read it
 // Why she can't take it (server/live.js questionTrouble, and the line's own rules: supabase/live.sql)
 export const REFUSE = {
   empty: `send me your question with it, like this:\n${EXAMPLE}`,
-  short: "that's a little short 🙈 ask me a real question?",
+  short: 'send me your question with it 🙈',
   long: `keep it under ${LIVE.Q_MAX} characters 🙈`,
   link: 'no links in questions please 🙈',
   address: 'no addresses or long codes in questions please 🙈',
   contact: 'no @names, emails or phone numbers in questions please 🙈',
-  coin: 'i only talk about $AGI on my show 🙈 ask me something else?',
   care: CARE,
   crude: 'keep it PG-13 please 🙈',
   spam: "hmm, that doesn't look like a question 🙈",
+  // (2026-10-09: other coins can come up on her show, financial advice never)
+  advice: 'that sounds like financial advice, and i never give any on stream 🙈 ask it as a question?',
   blocked: "i can't take that one on stream 🙈",
   closed: "i'm not taking new questions right now 🙈",
   ending: "i'm saying goodbye right now 💜 catch the next show!",
