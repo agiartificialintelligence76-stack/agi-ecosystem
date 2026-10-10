@@ -192,7 +192,7 @@ const postHint = (err) => (err.status === 403 ? ' (is she still in that group? a
 // The clock's call (api/feed.js ?games, every 2 minutes): quizzes that closed without Telegram telling us, a quiz in each
 // group whose turn it is, and now and then the tidy-up. → { posted, settled, failed, stopped? } · throws when the database
 // can't be used
-export async function gamesTick(cfg, token, { now = Date.now(), deadline = now + 19_000, env = process.env } = {}) {
+export async function gamesTick(cfg, token, { now = Date.now(), deadline = Date.now() + 19_000, env = process.env } = {}) {
   const out = { posted: 0, settled: 0, failed: 0 };
   await ensureUpdates(cfg, token, now);
   // 1. quizzes that closed over 20 s ago and nobody settled yet (a "closed" Telegram didn't send us)

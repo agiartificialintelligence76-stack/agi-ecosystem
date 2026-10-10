@@ -91,7 +91,7 @@ export async function picturesOf(sharp, bytes) {
 
 // One job moved along, if it's its turn. → { state: 'busy' | 'waiting' | 'started' | 'saving' | 'done' | 'failed', step?,
 // position? (its place in the AI service's queue) }
-export async function jobTick(cfg, id, { now = Date.now(), deadline = now + 20_000, files = null } = {}) {
+export async function jobTick(cfg, id, { now = Date.now(), deadline = Date.now() + 20_000, files = null } = {}) {
   if (!await rpc(cfg, 'inf_job_lease', { p_id: id, p_secs: JOBS.LEASE_S }, 'studio')) return { state: 'busy' };
   let j;
   try { j = await getJob(cfg, id); } catch (err) { await waitTurn(cfg, id).catch(() => {}); throw err; }
@@ -248,7 +248,10 @@ async function save(cfg, j, F, { deadline }) {
 // The clock (every minute, with the studio's: api/feed.js ?studio): the jobs whose turn it is, until its time is used; the
 // tidy-up every half hour (uploads, influencers that couldn't be made, deleted ones: their files deleted).
 // → { due, moved, done, failed, tidy? }
-export async function infClock(cfg, { now = Date.now(), deadline = now + 19_000, files = null } = {}) {
+// `now` says which minute it is (the tests give it); the deadline is always the real clock's (Vercel stops a function at
+// 25 s). Until 2026-10-10 the deadline was `now + 19 s`, so a test with another `now` ran out of time once the real clock
+// passed it: Vercel's builds of AGI Studio's round 2 failed that way after 12:00 UTC.
+export async function infClock(cfg, { now = Date.now(), deadline = Date.now() + 19_000, files = null } = {}) {
   const ids = await rpc(cfg, 'inf_job_due', { p_limit: 6 }, 'studio');
   const out = { due: Array.isArray(ids) ? ids.length : 0, moved: 0, done: 0, failed: 0 };
   for (const id of Array.isArray(ids) ? ids : []) {

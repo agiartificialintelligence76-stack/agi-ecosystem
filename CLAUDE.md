@@ -616,7 +616,10 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
   most 30 s (`--test-timeout`): a stuck test fails the build within a minute instead of hanging it for 45 minutes.
 - **Node versions:** Vercel most likely builds with Node 24 (Settings → Build and Deployment → Node.js Version; the local tests
   here ran on 22). Claude runs the tests with Node 20, 22 and 24 before handing over a change (a test that passed on 22 but
-  hung on 24 kept four pushes from going live, 2026-09-25).
+  hung on 24 kept four pushes from going live, 2026-09-25). Vercel's build log of 2026-10-10: "Build machine
+  configuration: 2 cores, 8 GB" (Washington, D.C., iad1), `npm test` about 93 s there (73 s in Claude's workspace), and
+  its npm runs no package's install script it hasn't approved ("npm warn install-scripts … @ffmpeg-installer/linux-x64
+  (postinstall: chmod u+x ffmpeg)"): harmless, `ffmpegBin()` makes its own runnable copy in /tmp when it has to.
 - Add `?dev` to the site's address (e.g. https://agi1.app/?dev) to test AGI-1's reactions with buttons.
 - `node tools/i18n/check.mjs` (or with codes: `… es ja`): checks her lines in every language against her rules, after
   changing one (see "Her languages"). `npm test` runs the same checks.
@@ -7728,7 +7731,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   example pictures (about $2.60) on the owner's page; optional settings. Tests: 688 unit (687 pass, 1 skipped as before;
   on Node 20, 22 and 24, with and without Vercel's settings), the build, 55 groups of SQL checks (PGlite), every view in a
   browser at 3 widths (axe 0 issues) and 210 checks with our own server's code. Not tried live (Kling O1 Edit on fal,
-  ffmpeg on Vercel, Gemini's verdicts on real photos, the first spotlight prize, real burns).
+  ffmpeg on Vercel, Gemini's verdicts on real photos, the first spotlight prize, real burns). **Its first push failed**
+  (the same day, about 12:30 UTC: three builds in Error, the site kept the last good one): two of AGI Studio's tests only
+  passed before 12:00 and 12:30 UTC that day (see the decisions log). Fixed the same day; **owner: push again** (no SQL or
+  setting). Tests: 688 unit (687 pass, 1 skipped), on Node 20, 22 and 24, with and without Vercel's settings, in UTC
+  (Vercel's time zone) and the workspace's own; the build; and the whole suite as if the clock said seven later times (all
+  passed but one 20 ms launch test that midnight itself caught: see "Tests pass on any day, at any time").
 
 ## Decisions log
 
@@ -7990,6 +7998,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-10 | The share mark's ffmpeg: the `@ffmpeg-installer/ffmpeg` package (its Linux binary, ffmpeg 4.1, GPLv3, 66 MB), shipped with `/api/feed` only (`vercel.json` `includeFiles`), so the other 11 functions stay as they were; it runs only on videos the AI service made, on our own server (never handed to visitors). Not picked: an outside video service (a new service and cost), marking videos in visitors' browsers (they'd download the unmarked file anyway), marking the video as it plays on its page (it's fine as it is) |
 | 2026-10-10 | Found by the round-2 browser test with our own server's code, and fixed: Create's "what a photo may be" was decided when the page was drawn, before the studio's settings arrived, so with `STUDIO_FACES` off it still said "A photo of you…": it's said again when they arrive (a page test checks it) |
 | 2026-10-10 | Found while writing round 2's notes: the home page's safety note still described AGI Studio's round 1 ("never a real person but your own face", live selfies) and said nothing of likes, the spotlight's prize or burn unlocks, against "every sentence must stay true". Brought up to date the same day (its four notes, two more `data-burn-only` parts), and `tests/influencer.test.js` now checks its round-2 sentences |
+| 2026-10-10 | Round 2's first push failed on Vercel (the owner signed in so Claude could read the build log: "Command "npm run build" exited with 1", 2 of 688 tests): two AGI Studio tests gave the studio clock a fixed `now` (12:00 and 12:30 UTC that day) and no deadline, and its default deadline was `now + 19 s`, so once the real clock passed those times the clock had "no time left" for its tidy-up. Not a bug on the live site (`api/feed.js` always passes the real clock), but every server function with a default deadline (9 of them) now takes it from the real clock, a test checks that none comes from `now` again, and the suite was run as if the clock said seven later times. Not picked: changing only the two tests (the same trap was in 8 more functions) |
 
 ## Open questions
 
@@ -8303,6 +8312,17 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   expected launching to be off, but the owner's Pinata key was already in Vercel. Since then Claude also runs every test
   with all the settings in "Environment variables" set to real-looking values before handing over a change. A failed build
   never touches the live site: Vercel keeps serving the last good deployment.
+- **Tests pass on any day, at any time** (2026-10-10): a test may give the code its own `now` (a fixed date, to say which
+  minute or week it is), but the code must never compare that with the real clock. AGI Studio's round 2 failed on Vercel
+  that way: its clock's deadline was `now + 19 s`, so two tests that passed 12:00 and 12:30 UTC of that day as `now` ran
+  out of time once the real clock passed them (it passed on Claude's computer in the morning). Every server deadline is
+  the real clock's since then (`tests/influencer.test.js` checks it). Before handing over a change Claude also runs the
+  whole suite with the clock moved forward (a preloaded `Date` shim, `CLOCK_SHIFT_MS`, in Claude's scratch): across
+  midnight, into a Monday, a week on, across a month's and a year's end, six months on; and with `TZ=UTC` (Vercel's) as
+  well as the workspace's own time zone. One kind stays, and is harmless: a test of a day's count that is running at the
+  very moment 00:00 UTC passes fails (its first half counts under one day, its check reads the next); the run moved to
+  2026-12-31 23:59:20 hit it once, in a 20 ms launch test. A build meets that about once in tens of thousands: if a build
+  that ran right at 00:00 UTC (8:00 the owner's time) fails on a count "for today", Redeploy.
 - **Claude checks every file it saves into this folder by checksum, on the owner's computer, after saving.** A file saved
   twice in one session goes the second time from a new place in Claude's workspace (2026-10-02: the second save of
   CLAUDE.md from the same place wrote the first copy again; the checksum check caught it).

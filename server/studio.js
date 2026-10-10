@@ -230,7 +230,7 @@ function warnOnce(what, message) {
 
 // One character moved along one step, if it's its turn. → { state: 'busy' | 'waiting' | 'started' | 'done' | 'failed' |
 // 'saving', step?, progress? }
-export async function tick(cfg, id, { now = Date.now(), deadline = now + 20_000, files = null } = {}) {
+export async function tick(cfg, id, { now = Date.now(), deadline = Date.now() + 20_000, files = null } = {}) {
   if (!await rpc(cfg, 'studio_lease', { p_id: id, p_secs: STUDIO.LEASE_S }, 'studio')) return { state: 'busy' };
   let o;
   try { o = await getOrder(cfg, id); } catch (err) { await waitTurn(cfg, id).catch(() => {}); throw err; }
@@ -358,7 +358,7 @@ async function save(cfg, o, tasks, { deadline, files = null }) {
 
 // The clock (every minute, /api/feed?studio): the characters whose turn it is, until 19 s are used; the tidy-up every
 // half hour. → { due, moved, done, failed, tidy? }
-export async function studioClock(cfg, { now = Date.now(), deadline = now + 19_000, files = null } = {}) {
+export async function studioClock(cfg, { now = Date.now(), deadline = Date.now() + 19_000, files = null } = {}) {
   const ids = await rpc(cfg, 'studio_due', { p_limit: 6 }, 'studio');
   const out = { due: Array.isArray(ids) ? ids.length : 0, moved: 0, done: 0, failed: 0 };
   for (const id of Array.isArray(ids) ? ids : []) {

@@ -120,7 +120,7 @@ export async function infPage(cfg, id, { wallet = null } = {}) {
 
 // Its own wallet's page moved along: one thing being made, one step (its looks or full body first, then its oldest photo or
 // video, then a 3D model). → the state of what moved, or null
-export async function moveAlong(cfg, page, { now = Date.now(), deadline = now + 17_000 } = {}) {
+export async function moveAlong(cfg, page, { now = Date.now(), deadline = Date.now() + 17_000 } = {}) {
   const i = page.raw;
   if (i.job && ['paid', 'making'].includes(i.job.status)) return { what: i.job.id, ...await jobTick(cfg, i.job.id, { now, deadline }) };
   const pending = page.jobs.filter((j) => j.mine && ['paid', 'making'].includes(j.status)).sort((a, b) => (a.created ?? 0) - (b.created ?? 0));

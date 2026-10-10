@@ -2766,6 +2766,12 @@ test('the clock: the jobs whose turn it is, one step each (never one already bei
   assert.deepEqual([filesOf(failed.id), filesOf(gone.id)], [[], []]);
   assert.ok(filesOf(recent.id).length >= 6 && fake.db.infs.has(recent.id));
   assert.equal((await infClock(cfg, { now: at(0) })).tidy.uploads, 0);
+  // its deadline is the real clock's, whatever minute `now` says (until 2026-10-10 it was `now + 19 s`, and Vercel's builds
+  // failed here once the real clock passed 12:00 UTC); so is every server deadline
+  assert.equal((await infClock(cfg, { now: Date.UTC(2020, 0, 1, 9, 30) })).tidy.uploads, 0);
+  for (const f of readdirSync(new URL('../server/', import.meta.url)).filter((n) => n.endsWith('.js'))) {
+    assert.doesNotMatch(read(`server/${f}`), /deadline\s*=\s*now\s*\+/, `server/${f}: a deadline from \`now\`, not the real clock`);
+  }
   // the tidy-up can't run (influencers.sql not run again): the clock still says what it moved, the log says why
   fake.missing.add('inf_tidy');
   r = await infClock(cfg, { now: at(30) });

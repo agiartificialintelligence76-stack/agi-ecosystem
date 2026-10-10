@@ -117,7 +117,7 @@ async function post(token, to, buy, until) {
 
 // The check (Supabase Cron, every minute, through api/feed.js) → { posted, buys, skipped, failed } or { off: why }.
 // Throws when clank.trade or the database can't be read (nothing is posted then: the next check tries again).
-export async function checkBuys(cfg, token, { now = Date.now(), deadline = now + 19_000 } = {}) {
+export async function checkBuys(cfg, token, { now = Date.now(), deadline = Date.now() + 19_000 } = {}) {
   if (!cfg.tgGroups) return { off: 'no_groups' };
   if (!cfg.tgBuys) return { off: 'off' };
   if (!token) return { off: 'no_bot' };

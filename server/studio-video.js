@@ -176,7 +176,7 @@ export function falInput(cfg, v, picUrl) {
 
 // One video moved along, if it's its turn. → { state: 'busy' | 'waiting' | 'started' | 'saving' | 'done' | 'failed', step?,
 // position? (its place in the video service's queue) }
-export async function videoTick(cfg, id, { now = Date.now(), deadline = now + 20_000, files = null } = {}) {
+export async function videoTick(cfg, id, { now = Date.now(), deadline = Date.now() + 20_000, files = null } = {}) {
   if (!await rpc(cfg, 'studio_video_lease', { p_id: id, p_secs: VIDEO.LEASE_S }, 'studio')) return { state: 'busy' };
   let v;
   try { v = await getVideo(cfg, id); } catch (err) { await waitTurn(cfg, id).catch(() => {}); throw err; }
@@ -293,7 +293,7 @@ async function save(cfg, v, F, { deadline }) {
 
 // The clock (every minute, with the characters': api/feed.js ?studio): the videos whose turn it is, until its time is used.
 // → { due, moved, done, failed }
-export async function videoClock(cfg, { now = Date.now(), deadline = now + 19_000, files = null } = {}) {
+export async function videoClock(cfg, { now = Date.now(), deadline = Date.now() + 19_000, files = null } = {}) {
   const ids = await rpc(cfg, 'studio_video_due', { p_limit: 4 }, 'studio');
   const out = { due: Array.isArray(ids) ? ids.length : 0, moved: 0, done: 0, failed: 0 };
   for (const id of Array.isArray(ids) ? ids : []) {
