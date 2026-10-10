@@ -2,7 +2,7 @@
 // rules: PG-13; never a real person, someone else's character or something passing for AGI-1), and the words the AI
 // services get to make its pictures and videos. Pure, light to load (server/influencer.js and server/inf-jobs.js use it).
 import { tidy, trouble, checkScene, videoPrompt } from './studio-words.js';
-import { NAME_MAX, MODES, INF_STYLES, OPTIONS, WORDS_MAX, trendOf } from '../src/studio/rules.js';
+import { NAME_MAX, MODES, INF_STYLES, OPTIONS, WORDS_MAX, trendOf, EXAMPLES } from '../src/studio/rules.js';
 
 const NAME_OK = /^[\p{L}\p{N}][\p{L}\p{N} '’.\-!?&]*$/u;
 
@@ -48,16 +48,17 @@ export const checkInfScene = (input) => checkScene(input);
 const STYLE = {
   real: {
     look: 'A photorealistic portrait photo', body: 'A photorealistic full-body photo', photo: 'A photorealistic photo',
-    clip: 'Realistic video', seedance: 'realistic',
+    clip: 'Realistic video', seedance: 'realistic', swap: 'photorealistic',
   },
   anime: {
     look: 'An anime-style character portrait illustration', body: 'An anime-style full-body character illustration',
-    photo: 'An anime-style illustration', clip: 'Anime-style animation', seedance: 'anime',
+    photo: 'An anime-style illustration', clip: 'Anime-style animation', seedance: 'anime', swap: 'anime-style',
   },
   toon: {
     look: 'A 3D animated-movie-style character portrait render (stylized cartoon, smooth shading)',
     body: 'A 3D animated-movie-style full-body character render (stylized cartoon, smooth shading)',
     photo: 'A 3D animated-movie-style render (stylized cartoon, smooth shading)', clip: 'Stylized 3D cartoon animation', seedance: 'cartoon',
+    swap: 'stylized 3D cartoon',
   },
 };
 const LOOK = { feminine: 'woman', masculine: 'man', androgynous: 'person with an androgynous look' };
@@ -91,18 +92,19 @@ const outfitOf = (inf) => OUTFIT[settingsOf(inf).outfit] || null;
 const vibeOf = (inf) => VIBE[settingsOf(inf).vibe] || null;
 
 // Its 4 looks to pick from: head and shoulders on a plain background, 1:1 (they make good coin pictures too). Designed: from
-// its choices, an original made-up adult; from a picture: the character in it; from a face: the person in the selfie.
+// its choices, an original made-up adult; from a picture: the character in it; from a photo of a real person (round 2, its
+// uploader's consent; before it, a selfie for "Use my face"): the person in it, their face kept recognizable.
 export function looksPrompt(inf) {
   const st = styleOf(inf), s = settingsOf(inf);
   const outfit = outfitOf(inf), vibe = vibeOf(inf);
   const extra = `${vibe ? `, ${vibe}` : ''}${outfit ? `, wearing ${outfit}` : ''}`;
   const frame = 'Head and shoulders, facing the camera';
   const backdrop = 'A plain soft-colored studio background, soft even light.';
-  if (inf.mode === 'picture') {
+  if (inf.mode === 'picture' && !inf.real) {
     return `${st.look} of the character in the picture: keep its face, hair, colors and features recognizable. ${frame}${extra}. `
       + `${backdrop} The character is an adult. ${SAFE}${details(inf)}`;
   }
-  if (inf.mode === 'face') {
+  if (inf.mode === 'face' || inf.real) {
     return `${st.look} of the person in the photo, keeping their face recognizable (the same face shape, eyes, nose, mouth, skin `
       + `tone and hair). ${frame}${extra}. ${backdrop} ${SAFE}${details(inf)}`;
   }
@@ -114,8 +116,9 @@ export function looksPrompt(inf) {
     + `existing character. ${SAFE}${details(inf)}`;
 }
 
-// Its full-body picture, from the look it picked (the first picture; from a face, its selfie too when it's still there: the
-// second picture), 9:16, on a plain light grey background: the picture its photos, videos and 3D model are made from
+// Its full-body picture, from the look it picked (the first picture; from a photo of a real person, or a face before round 2,
+// that photo too while it's still there: the second picture), 9:16, on a plain light grey background: the picture its photos,
+// videos and 3D model are made from
 export function bodyPrompt(inf, { withSelfie = false } = {}) {
   const st = styleOf(inf), outfit = outfitOf(inf);
   return `${st.body} of this exact character (the first picture), standing and facing the camera, the whole body visible from head `
@@ -130,10 +133,16 @@ export function photoPrompt(inf, scene) {
     + `${sentence(scene)} A scene may change the outfit, never to less covered. ${SAFE}`;
 }
 
-// A trend video: the character copies the moves of the video (the owner's trend move, or the person's own clip)
-export function motionPrompt(inf) {
-  return `The character from the picture copies the moves in the video, keeping exactly the same look, face, outfit and `
-    + `background. ${styleOf(inf).clip}, natural smooth motion. Family-friendly.`;
+// A trend video (round 2: the owner, "the trending videos should be real"): the person in a real-looking clip (one of the
+// owner's trend clips, or the person's own) is replaced by the influencer (@Element1: its picked look, with its full body and a
+// photo as more views), keeping everything else of the clip: its moves, its camera, its place, its light (and its sound, for
+// a trend clip: a person's own clip keeps none)
+export function swapPrompt(inf) {
+  const st = styleOf(inf);
+  return 'Replace the main person in the video with @Element1, keeping @Element1\'s face, hair, body, outfit and '
+    + `${st.swap} look exactly the same. Keep everything else in the video exactly as it is: the same movements, expressions and `
+    + 'timing, the same camera motion, the same place, background and lighting. Anyone else stays a blurred background extra. '
+    + 'Family-friendly, fully clothed. No text, no logos, no watermark.';
 }
 
 // A scene video from one of its photos (its first frame): what happens next
@@ -147,17 +156,44 @@ export const CLIP_NEGATIVE = 'text, captions, logos, watermark, distorted face, 
 // A scene video from its full-body picture with the reference-to-video model (only for anime and cartoon influencers: the
 // model says no to realistic faces): the studio's own words for it (server/studio-words.js)
 export const sceneVideoPrompt = (inf, scene) => videoPrompt({ scene, style: styleOf(inf).seedance });
-// Which video model a scene video needs: from one of its photos, or a realistic (or face) influencer → its photo, brought to
-// life ('photo': image to video); else its full body, put in the scene ('reference')
+// Which video model a scene video needs: from one of its photos, or a realistic influencer (or one made from a face) → its
+// photo, brought to life ('photo': image to video); else its full body, put in the scene ('reference')
 export const sceneWay = (inf, { image } = {}) => (image ? 'photo' : inf.style === 'real' || inf.mode === 'face' ? 'needs_photo' : 'reference');
 
-// The owner's trend move, made once: a made-up adult dancer doing it, the whole body in view, a still camera, a plain
-// background, no music (motion control copies only the moves)
+// The owner's trend clip, made once (round 2: real-looking, like the trending templates people make with AI video apps): a
+// made-up young adult in a cinematic vertical scene with its own camera move and sound (our own clips: never a real person,
+// never anyone's video or music), which trend videos then put the influencer into (swapPrompt)
 export function presetPrompt(trendId) {
   const t = trendOf(trendId);
   if (!t) return null;
-  return `A made-up adult dancer in a plain light grey t-shirt and dark grey sweatpants ${t.move}. The whole body is visible `
-    + 'from head to toe the whole time, the camera is still and straight on, a plain light grey studio background, even soft light. '
-    + 'Exactly one person. Realistic video, natural smooth motion.';
+  return `Realistic cinematic vertical video, 9:16. ${sentence(t.scene)} Camera: ${t.camera}. Exactly one main person in the `
+    + 'middle of the frame, a made-up young adult in casual clothes, fully clothed, clearly visible from the head to at least the '
+    + 'waist the whole time, their face clearly visible; anyone else is a blurred background extra. Natural smooth motion, film-like '
+    + `light. Sound: ${t.sound}, instrumental only: no speech, no singing, no lyrics. No text, no logos, no watermark.`;
 }
-export const PRESET_NEGATIVE = 'more than one person, cut-off limbs, the body out of frame, camera movement, text, logos, watermark, blur';
+export const PRESET_NEGATIVE = 'more than one main person, cut-off head, the face hidden or out of frame, text, logos, watermark, blur, distorted face, extra limbs, nudity';
+
+// An example picture for one of the design choices (round 2: the owner, "in the make it yours show example of the image not
+// just text"): the owner's, made once each (key: an EXAMPLES key, e.g. "outfit-cozy"); always an original made-up adult, so it
+// shows only what that choice changes. → its words, or null (not one of the examples)
+const EXAMPLE_PERSON = 'An original made-up adult (not a real person, not any existing character)';
+export function examplePrompt(key) {
+  if (!EXAMPLES.includes(key)) return null;
+  const [kind, value] = key.split('-');
+  const backdrop = 'A plain soft lavender studio background, soft even light.';
+  const portrait = (who, extra = '') => `${STYLE.real.look} of ${who}, head and shoulders, facing the camera${extra}. ${backdrop} `
+    + `${EXAMPLE_PERSON}. ${SAFE}`;
+  if (kind === 'style') {
+    return `${STYLE[value].look} of a friendly young adult with shoulder-length wavy brown hair in a cozy knit sweater, head and `
+      + `shoulders, smiling. ${backdrop} ${EXAMPLE_PERSON}. ${SAFE}`;
+  }
+  if (kind === 'look') return portrait(`a ${LOOK[value]} in their twenties with dark hair`, ', a soft smile');
+  if (kind === 'age') return portrait(`a person ${AGE[value]}`, ', a warm smile');
+  if (kind === 'cut') return portrait(`a person in their twenties with ${CUT[value]('dark brown').replace(/\s+/g, ' ')}`, ', the hair clearly visible');
+  if (kind === 'vibe') return portrait(`a person in their twenties with ${VIBE[value]}`);
+  if (kind === 'outfit') {
+    return `${STYLE.real.photo} of a person in their twenties wearing ${OUTFIT[value]}, from the head to the knees, standing, `
+      + `facing the camera. ${backdrop} ${EXAMPLE_PERSON}. ${SAFE}`;
+  }
+  return null;
+}

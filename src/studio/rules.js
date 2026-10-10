@@ -117,12 +117,14 @@ export const TOPUPS = [500, 1000, 2500];
 export const TOPUP_MIN = 100;
 export const creditsText = (n) => `${Number(n || 0).toLocaleString('en-US')} credit${Number(n) === 1 ? '' : 's'}`;
 
-// How an influencer starts, and its style
+// How an influencer starts, and its style. (Round 2, the owner: "remove the use your face", and photos of real people allowed
+// with consent: "From a picture" takes a photo too, with a box ticked first. Ones made before from a face stay as they are.)
 export const MODES = {
   design: { name: 'Design it', note: 'Pick a look: we make 4 to choose from.' },
-  picture: { name: 'From a picture', note: 'A drawing or a character of yours. Never a photo of a real person.' },
-  face: { name: 'Use my face', note: 'Take a selfie: your own AI twin. Only you, 18+.' },
+  picture: { name: 'From a photo', note: 'A photo of you, of a friend who said OK, or a character you drew.' },
 };
+// the box ticked before a picture can be picked (sent with it: our server refuses a picture without it)
+export const CONSENT_TEXT = "This is me, someone who said I may use their photo (an adult), or a character of my own.";
 export const INF_STYLES = { real: 'Realistic', anime: 'Anime', toon: '3D cartoon' };
 // The choices to design one with (each a few words for the AI on our server: server/inf-words.js). Adults only, PG-13.
 export const OPTIONS = {
@@ -132,34 +134,80 @@ export const OPTIONS = {
   hair: { label: 'Hair color', for: ['design'], choices: { black: 'Black', brown: 'Brown', blonde: 'Blonde', red: 'Red', pink: 'Pink', blue: 'Blue', silver: 'Silver', lavender: 'Lavender' } },
   cut: { label: 'Hair style', for: ['design'], choices: { short: 'Short', bob: 'Bob', long: 'Long', curly: 'Curly', wavy: 'Wavy', braids: 'Braids', ponytail: 'Ponytail', buzz: 'Buzz cut' } },
   eyes: { label: 'Eyes', for: ['design'], choices: { brown: 'Brown', hazel: 'Hazel', green: 'Green', blue: 'Blue', grey: 'Grey', violet: 'Violet' } },
-  outfit: { label: 'Outfit', for: ['design', 'picture', 'face'], choices: { street: 'Streetwear', cozy: 'Cozy knit', sporty: 'Sporty', smart: 'Smart casual', y2k: 'Y2K', cyber: 'Cyber', gamer: 'Gamer', elegant: 'Elegant' } },
-  vibe: { label: 'Vibe', for: ['design', 'picture', 'face'], choices: { cheerful: 'Cheerful', cool: 'Cool', calm: 'Calm', confident: 'Confident', playful: 'Playful', mysterious: 'Mysterious' } },
+  outfit: { label: 'Outfit', for: ['design', 'picture'], choices: { street: 'Streetwear', cozy: 'Cozy knit', sporty: 'Sporty', smart: 'Smart casual', y2k: 'Y2K', cyber: 'Cyber', gamer: 'Gamer', elegant: 'Elegant' } },
+  vibe: { label: 'Vibe', for: ['design', 'picture'], choices: { cheerful: 'Cheerful', cool: 'Cool', calm: 'Calm', confident: 'Confident', playful: 'Playful', mysterious: 'Mysterious' } },
 };
 export const WORDS_MAX = 200;
 
-// The trend moves (the owner's, made once with AI on the owner's page, then kept): a made-up dancer doing each move, which
-// a trend video copies onto your influencer. Never a real person, no music, nobody's choreography by name.
+// Example pictures for the design choices (round 2: the owner, "in the make it yours show example of the image not just
+// text"): the owner makes each once on the owner's page (an original made-up adult showing only that choice); skin, hair
+// color and eyes are shown as color swatches instead. Each key is "<kind>-<choice>" (supabase/influencers.sql's rule).
+export const EXAMPLE_KINDS = { style: 'style', look: 'look', age: 'age', cut: 'cut', outfit: 'outfit', vibe: 'vibe' };
+export const EXAMPLES = [
+  ...Object.keys(INF_STYLES).map((k) => `style-${k}`),
+  ...['look', 'age', 'cut', 'outfit', 'vibe'].flatMap((o) => Object.keys(OPTIONS[o].choices).map((k) => `${o}-${k}`)),
+];
+export const exampleKey = (option, value) => (Object.hasOwn(EXAMPLE_KINDS, option) && EXAMPLES.includes(`${option}-${value}`) ? `${option}-${value}` : null);
+export const EXAMPLE_JOB = /^[A-Za-z0-9_-]{22}$/;
+export const infExample = (job) => `/api/launch?inf-ex=${job}.webp`;
+// the color swatches for the choices that are only a color (CSS colors)
+export const SWATCHES = {
+  skin: { fair: '#f6dcc8', light: '#eac3a2', medium: '#c99a72', olive: '#b08a5c', brown: '#8a5a3c', deep: '#4e3022' },
+  hair: { black: '#1b1716', brown: '#5b3a24', blonde: '#e3c27a', red: '#a8392b', pink: '#f4a6c8', blue: '#4b7bd8', silver: '#c9ccd3', lavender: '#b9a3e3' },
+  eyes: { brown: '#6b4226', hazel: '#8e7240', green: '#4f8a5b', blue: '#4a7fc1', grey: '#8d949e', violet: '#8a62c7' },
+};
+
+// The trend clips (round 2, the owner: "the trending videos should be real like in higgsfield"): the owner's own short
+// cinematic clips, made once with AI on the owner's page (a made-up young adult in each, with its own camera move and sound),
+// which a trend video puts your influencer into, keeping the clip's moves, camera, place, light and sound. Like the trending
+// templates people make with AI video apps (ours, written for this app: never anyone's video, music or name).
 export const TREND_ID = /^[a-z][a-z0-9-]{1,30}$/;
 export const TRENDS = [
-  { id: 'heart-hands', name: 'Heart hands', emoji: '🫶', move: 'makes a heart shape with both hands in front of the chest, sways gently from side to side and smiles' },
-  { id: 'hip-sway', name: 'Hip sway', emoji: '💃', move: 'does a relaxed hip sway to a beat, shifting weight from foot to foot with loose arms' },
-  { id: 'wave-hi', name: 'Wave hello', emoji: '👋', move: 'waves hello with one hand, then with both hands, smiling at the camera' },
-  { id: 'peace-pose', name: 'Peace & pose', emoji: '✌️', move: 'shows a peace sign, tilts the head, then strikes a confident pose with one hand on the hip' },
-  { id: 'shoulder-shimmy', name: 'Shoulder shimmy', emoji: '✨', move: 'does a playful shoulder shimmy while bouncing lightly on the feet' },
-  { id: 'slow-spin', name: 'Slow spin', emoji: '🌀', move: 'turns slowly in one full spin with the arms slightly out, ending facing the camera' },
-  { id: 'happy-jump', name: 'Happy jump', emoji: '🦘', move: 'jumps up with joy twice, arms raised, landing softly' },
-  { id: 'point-laugh', name: 'Point & laugh', emoji: '👉', move: 'points at the camera, laughs, then covers the mouth with one hand' },
-  { id: 'clap-along', name: 'Clap along', emoji: '👏', move: 'claps along to a beat while nodding and stepping from side to side' },
-  { id: 'robot-moves', name: 'Robot moves', emoji: '🤖', move: 'does a playful robot dance with stiff arm movements and sharp head turns' },
-  { id: 'hair-flip', name: 'Hair flip', emoji: '💁', move: 'flips the hair over one shoulder with a hand and gives a confident look' },
-  { id: 'victory-dance', name: 'Victory dance', emoji: '🏆', move: 'does a short victory dance: two fist pumps, a little hop, then both arms up' },
+  { id: 'golden-flip', name: 'Golden hour', emoji: '🌅', camera: 'a slow dolly back in front of them, shallow depth of field',
+    scene: 'a sunlit park path at golden hour with a warm low sun and soft lens flare; the person walks toward the camera, flips their hair over one shoulder in slow motion and smiles',
+    sound: 'soft park ambience and a warm, dreamy synth pad' },
+  { id: 'paparazzi', name: 'Paparazzi', emoji: '📸', camera: 'a steady tracking shot backing away in front of them',
+    scene: 'a red-carpet walkway at night lined with out-of-focus photographers; camera flashes pop from both sides as the person walks confidently toward the camera and glances to one side',
+    sound: 'camera shutters clicking, flashes popping and a murmuring crowd' },
+  { id: 'rooftop-orbit', name: 'Rooftop orbit', emoji: '🌆', camera: 'a smooth 360-degree orbit around them at chest height',
+    scene: 'a city rooftop at sunset with the skyline behind; the person stands, turns their head slowly and smiles, the wind moving their hair and clothes',
+    sound: 'wind and distant city sounds with a soft cinematic swell' },
+  { id: 'neon-zoom', name: 'Neon crash zoom', emoji: '🕹️', camera: 'a fast crash zoom in to a close-up, then a little handheld shake',
+    scene: 'a neon-lit arcade at night full of glowing game machines; the person looks up from a game, turns to the camera and grins',
+    sound: 'arcade bleeps, a whoosh on the zoom and a punchy bass hit' },
+  { id: 'confetti-freeze', name: 'Confetti freeze', emoji: '🎉', camera: 'a slow arc around them while the moment is frozen, like bullet time',
+    scene: 'a party with colorful confetti in the air; the person jumps with joy, the moment freezes in mid-air with the confetti hanging still around them, then they land laughing',
+    sound: 'party noise, a whoosh into the freeze and a cheer as they land' },
+  { id: 'neon-runway', name: 'Neon runway', emoji: '💜', camera: 'a low-angle tracking shot backing away in front of them',
+    scene: 'a wet street at night lit by pink and violet neon signs in light rain; the person walks toward the camera with confident runway steps',
+    sound: 'rain on the street, footsteps and a deep runway beat' },
+  { id: 'night-drive', name: 'Night drive', emoji: '🚗', camera: 'a steady shot from the driver\'s side with a slight road vibration',
+    scene: 'the passenger seat of a car at night with city lights streaming past the window; the person rests an arm on the window, looks out, then turns to the camera and smiles',
+    sound: 'a soft engine hum, passing traffic and gentle late-night lo-fi music' },
+  { id: 'rain-twirl', name: 'Rain twirl', emoji: '☔', camera: 'a slow push in at eye level',
+    scene: 'a city street in gentle rain at dusk; the person holds a clear umbrella, twirls once on the spot and laughs',
+    sound: 'rain on the umbrella, far-off thunder and a soft piano melody' },
+  { id: 'sunset-run', name: 'Sunset run', emoji: '🏖️', camera: 'slow motion, tracking backward in front of them',
+    scene: 'a wide beach at sunset with small waves; the person runs along the waterline toward the camera, laughing, their hair moving in the wind',
+    sound: 'waves, wind and a warm, uplifting synth' },
+  { id: 'front-row', name: 'Front row', emoji: '🎤', camera: 'a handheld shot facing them from the stage side, light beams sweeping past',
+    scene: 'the front row of a big concert with bright stage lights and a blurred crowd behind; the person jumps to the beat with one hand in the air, cheering',
+    sound: 'a roaring crowd and a big drum beat, instrumental' },
+  { id: 'first-snow', name: 'First snow', emoji: '❄️', camera: 'a slow crane down from above to eye level',
+    scene: 'a quiet city square at night as the first snow falls under warm streetlights; the person looks up, catches a snowflake in their hand and smiles at the camera',
+    sound: 'the soft hush of falling snow, distant bells and a gentle music-box melody' },
+  { id: 'fireworks', name: 'Fireworks', emoji: '🎆', camera: 'a steady shot that slowly pushes in as they turn',
+    scene: 'a bridge over a river at night with fireworks bursting in the sky behind; the person walks away from the camera, then looks back over their shoulder and smiles',
+    sound: 'fireworks booming and crackling, a faint cheering crowd and a cinematic swell' },
 ];
 export const trendOf = (id) => TRENDS.find((t) => t.id === id) || null;
 
-// Their own clip for a trend video (a move to copy): 2 to 10 seconds, an MP4 or MOV, up to 30 MB, sent in parts of 3.5 MB
-// (Vercel takes at most 4.5 MB a request), with 3 small frames of it for the AI check
-export const CLIP = { MIN_S: 2, MAX_S: 10, MAX_BYTES: 30_000_000, PART: 3_500_000, FRAMES: 3, FRAME_BYTES: 300_000 };
-// A picture or a selfie: made at most 1536 px on its longest side in the browser, then sent (4 MB at most)
+// Their own clip for a trend video (round 2: their influencer put into it, in place of its person): 3 to 10 seconds (the video
+// model takes 3 to 10.05), an MP4 or MOV, up to 30 MB, 720 to 2160 pixels on each side, 24 to 60 frames a second (the video
+// model's own limits), sent in parts of 3.5 MB (Vercel takes at most 4.5 MB a request), with 3 small frames of it for the AI
+// check. Its sound is never used (it could be someone else's music or voice).
+export const CLIP = { MIN_S: 3, MAX_S: 10, MAX_BYTES: 30_000_000, PART: 3_500_000, FRAMES: 3, FRAME_BYTES: 300_000, MIN_PX: 720, MAX_PX: 2160, MIN_FPS: 24, MAX_FPS: 60 };
+// A picture or a photo: made at most 1536 px on its longest side in the browser, then sent (4 MB at most)
 export const PICTURE = { MAX_PX: 1536, MAX_BYTES: 4_000_000, POSTER_BYTES: 400_000 };
 // Reasons someone can report an influencer or one of its videos
 export const REPORT_WHYS = {
@@ -186,3 +234,7 @@ export const infPic = (inf, job, n = 0, small = false) => `/api/launch?inf-file=
 export const infPoster = (owner, job) => `/api/launch?inf-file=${owner}/${job}.poster.webp`;
 export const infVideo = (job) => `/api/launch?inf-video=${job}.mp4`;
 export const infVideoDl = (job) => `/api/launch?inf-video-dl=${job}.mp4`;
+// (round 2) a photo to download, with the share mark ("Made with AGI Studio"; the video's is on its download too, once the
+// clock has made its marked copy)
+export const INF_DL_RE = /^([A-Za-z0-9_-]{22})\/([A-Za-z0-9_-]{22})-([0-3])\.jpg$/;
+export const infPhotoDl = (inf, job, n = 0) => `/api/launch?inf-dl=${inf}/${job}-${n}.jpg`;

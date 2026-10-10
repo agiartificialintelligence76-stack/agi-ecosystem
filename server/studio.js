@@ -204,9 +204,10 @@ const inputsFor = (step, o, tasks) => ({
   prompt: meshyPrompt(o), texture: meshyTexture(o), previewId: tasks.preview, refineId: tasks.refine || tasks.image, rigId: tasks.rig,
 });
 // It couldn't be made: a character paid for can be made again with new words (its credit); a 3D model of an influencer
-// (AGI Studio, paid in credits) gets its credits back instead (or a Soulmate's free one back for this month)
+// (AGI Studio, paid in credits) gets its credits back instead (or a Soulmate's free one back for this month); one it got for
+// a big burn (round 2: a burn can't be given back) can be made again, free (its credit, like a character's)
 async function failOrder(cfg, o, error) {
-  if (!o.inf_id) return rpc(cfg, 'studio_fail', { p_id: o.id, p_error: error, p_credit: true }, 'studio');
+  if (!o.inf_id || o.kind === 'burn') return rpc(cfg, 'studio_fail', { p_id: o.id, p_error: error, p_credit: true }, 'studio');
   const done = await rpc(cfg, 'studio_fail', { p_id: o.id, p_error: error, p_credit: false }, 'studio');
   if (done) await rpc(cfg, 'inf_3d_back', { p_order: o.id }, 'studio');
   return done;

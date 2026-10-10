@@ -192,6 +192,16 @@
 >   AI twin is never in Explore, and "Delete my face" deletes it all at once. A character from words, and its videos,
 >   aren't ordered any more (410 `moved`). **Off until the owner sets it up** (fal.ai, `supabase/studio.sql` again then
 >   `supabase/influencers.sql`, the domain), then private like the studio. See "AGI Studio, the AI influencer app".
+>   **Round 2, the same day** (the owner: "remove the use your face", real people's photos "Allowed with consent
+>   (Recommended)", "the trending videos should be real like in higgsfield", "in the make it yours show example of the
+>   image", "the site looks mid lol", "large burns can make free 3d model", and the flywheel's four parts): no more "Use my
+>   face" (no camera at all); **"From a photo"** (theirs, or a friend's who said OK, a box ticked first; never a famous
+>   person, anyone who looks under 21 or anything sexual; such an influencer is private, never in Explore); trend videos
+>   put the influencer into **12 real-looking cinematic clips** with their own sound (or their own clip); **example
+>   pictures** for Create's choices; **a new look**; **likes and a weekly spotlight** with a prize in $AGI from her
+>   quizzes' prize wallet; **burn unlocks** (one more influencer for 5,000 $AGI burned, a 24-hour boost in Explore for
+>   10,000, a free 3D model for 25,000); **"Made with AGI Studio · AI-generated"** on every photo and video downloaded; a
+>   **live stats board**. **Run `supabase/influencers.sql` again before pushing it.** See "AGI Studio, round 2".
 > - **Her launch video** (2026-10-03, the owner: "now create me a professional launch video with motion design using only
 >   code about the website and its features … make it really good"): a 79-second film of agi1.app, every frame drawn in
 >   code and its music made in code (`tools/promo/`), wide (1920 × 1080) and tall (1080 × 1920), 60 frames a second, for
@@ -282,10 +292,13 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   and "Its videos". Since AGI Studio (the same day) its page is the app's, and a character is made from an influencer's
   full-body picture, paid in credits
 - **AGI Studio, the AI influencer app** (2026-10-10, the owner's idea): **studio.agi1.app** (and agi1.app/studio): make
-  your own AI influencer (designed in a few taps, from a picture of your character, or your own face), then its photos in
-  any scene, trend videos, short videos, a 3D model that moves when you type, and a coin with its face, all paid in
-  credits (USDG from your own wallet app; holder discounts and free credits). Its own simple dark look, phones first. Off
-  until it's set up, then private. See "AGI Studio, the AI influencer app"
+  your own AI influencer (designed in a few taps, or since its round 2 from a photo of you, of a friend who said OK, or of
+  your character; "your own face" from a live selfie until then), then its photos in any scene, trend videos (since round
+  2: it in real-looking cinematic clips), short videos, a 3D model that moves when you type, and a coin with its face, all
+  paid in credits (USDG from your own wallet app; holder discounts and free credits). Its own dark look, phones first
+  (redone in round 2). Since round 2 also likes and a weekly spotlight with a prize, burn unlocks (one more influencer, a
+  boost in Explore, a free 3D model), "Made with AGI Studio" on downloads and a live stats board. Off until it's set up,
+  then private. See "AGI Studio, the AI influencer app" and "AGI Studio, round 2"
 - **CloakMesh** (2026-10-03, the owner's next project): its page at **inference.agi1.app** (agi1.app/cloakmesh): what
   CloakMesh is, a demo of its privacy filter that runs only in the visitor's browser, and a free waitlist. Serious, its own
   look, never about the coin. Live at agi1.app/cloakmesh; inference.agi1.app once its domain is set up. See "CloakMesh
@@ -326,7 +339,11 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    secrets, `MESHY_API_KEY` and (its characters' videos, the same day) `FAL_KEY`, are on the secret check's list and never
    in a log (Meshy's and fal's errors are scrubbed of them). **AGI Studio** (2026-10-10, see "AGI Studio, the AI
    influencer app") adds no secret: `FAL_KEY` makes its pictures and videos, the chat's `GEMINI_API_KEY` looks at what's
-   uploaded and made, and `STUDIO_PAY_TO` (an address) is where USDG for its credits goes.
+   uploaded and made, and `STUDIO_PAY_TO` (an address) is where USDG for its credits goes. **Since its round 2** (the
+   same day, see "AGI Studio, round 2") the prize wallet (`PRIZE_WALLET_KEY`, her quizzes' own: no new key) also sends AGI
+   Studio's weekly spotlight prize, at most one a week (`STUDIO_WEEKLY_PRIZE`, 10,000 $AGI by default), only to the
+   signed-in wallet that made the creation, never twice. So it holds a few days of quiz prizes and a week's spotlight
+   prize at most.
 5. **The browser never writes to the database directly.** All writes (chat counters, wallet names and notes, voice
    counts) go through our own `/api` functions, which check and limit them.
 6. **No automatic posting** to X or anywhere public. "Share on X" only opens a pre-filled post that the visitor sends themselves.
@@ -379,7 +396,11 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    picture and video (about $0.08 a picture, up to about $2.40 a video), each paid for first in credits by the person who
    asks (1 credit = 1 cent; a Soulmate's 40% off is about the AI's own cost for some things), plus the free credits
    holders get (at most `STUDIO_FREE_CREDITS_A_MONTH`, 5,000 = $50 a month) and the owner's 12 trend moves once (about $10
-   in all). See its "Cost".
+   in all). See its "Cost". **Since its round 2** (the same day): the owner's 12 trend clips once (real-looking, with
+   sound: about $1.26 each, about $15 in all) and its 32 example pictures once (about $0.08 each, about $2.60); a weekly
+   spotlight prize in the owner's $AGI (`STUDIO_WEEKLY_PRIZE`, 10,000 by default, from the prize wallet; 0 = for glory
+   only), and a free 3D model for a big burn (about $1.20 of Meshy's credits each, paid by nobody: inside
+   `STUDIO_BURNS_A_MONTH`, 10). See "AGI Studio, round 2".
 8. **Not financial advice.** Nothing on the site, and nothing AGI-1 says, promises gains or tells people to buy or sell.
    **One exception, the owner's choice (2026-09-25):** when a Stranger or a Crush runs out of messages for the day, AGI-1's
    pre-written line (`src/chat/limit-lines.js`) suggests buying $AGI for more messages a day, always with "not financial
@@ -418,13 +439,18 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    app"): credits pay for things to make and have no cash value (never withdrawn, sold or refunded); a holder's discounts
    (Crush 20%, Soulmate 40%), free credits each month (100, 400) and a Soulmate's free 3D model a month are "a thank-you
    for holding, not an investment"; a Stranger's prices never say to buy. A coin with an influencer's face is its maker's
-   own (Launch with AGI-1's rules: never promoted, and it can lose all of its value).
+   own (Launch with AGI-1's rules: never promoted, and it can lose all of its value). **Since its round 2** (see "AGI
+   Studio, round 2"): its weekly spotlight's prize, "a thank-you for making, not an investment, not financial advice",
+   paid to the maker of the most liked creation (never to holders for holding: holders' likes only pick it); its burn
+   unlocks (one more influencer, a boost in Explore, a free 3D model), "a burn is gone for good: not an investment, no
+   refunds, not financial advice", never "burn to pump"; its stats board's "$AGI burned" a total, never a price.
 9. **Wallets: an address and a free signature, nothing else.** The site never asks a wallet for a transaction, a token
    approval, a network change or any signature other than the plain-text sign-in message (it may *read* which network the
    wallet is on). `tests/wallet.test.js` fails the build if the code in `src/` ever does. Levels never come with "buy more" wording,
    except the out-of-messages line in rule 8. The transactions the site ever suggests are ones the visitor sends themselves,
    from their own wallet app: a burn to the burn address `0x…dEaD` (2026-09-30, see "Burn $AGI for more messages"; since
-   2026-10-10 also for a 3D character) and (2026-10-10) USDG for a character or one of its videos, to the owner's own
+   2026-10-10 also for a 3D character, and since AGI Studio's round 2 for its burn unlocks and a free 3D model) and
+   (2026-10-10) USDG for a character or one of its videos, to the owner's own
    wallet (`STUDIO_PAY_TO`, see "AGI-1's 3D character studio" and "Its videos"; since AGI Studio, the same day, USDG for
    its credits: see "AGI Studio, the AI influencer app"). The page never asks a wallet for them, our server only reads
    them on the chain, and the test also refuses payment links (`ethereum:`, MetaMask's send links).
@@ -471,8 +497,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | Paying for a character (2026-10-10) | **USDG** (Paxos' dollar on Robinhood Chain) to the owner's wallet, or **$AGI burned**, sent from the person's own wallet app and read on the chain (like burns for messages) | The owner's choice ("Burn $AGI or USDG"); hard rule 9: nothing asked of a wallet |
 | Hosting, once the studio sells (2026-10-10) | **Vercel Pro** ($20 a month), the owner's choice, switched on by the owner | Selling characters is commercial use, which Hobby doesn't allow |
 | Characters' videos (2026-10-10) | **Seedance 2.5's reference-to-video on fal.ai** (fal's queue API, from our server only: `FAL_KEY`), from the character's own picture and a scene: 5 s, 720p, H.264; kept in the same private bucket and **played from our own address in parts** (HTTP Range → 206, at most 4 MB a part) | The owner's pick ("seedance 2.5 api"); fal sells it pay per video with no monthly plan; our own address keeps the CSP as it is (no other site's media) |
-| AGI Studio's AI (2026-10-10) | **fal.ai** (its queue API, `FAL_KEY`, pay per use): **Nano Banana 2** (Google's image model: an influencer's looks, its full body, its photos), **Kling V3 Standard** (Kuaishou's video model: a trend video copies a move with its motion control, a photo comes to life, the owner's trend moves made once from words) and **Seedance 2.5** (an anime or cartoon influencer's video from its full body) | The owner's picks ("something like Higgsfield", "Kling V3 Standard (Recommended)"); one key and one balance for every model, no monthly plan |
-| AGI Studio's checks (2026-10-10) | **Gemini** (the site's own key and chat model): every picture, selfie and clip uploaded, before it's kept, and every video made, before it's shown | No new service; about a tenth of a cent a look; fail closed |
+| AGI Studio's AI (2026-10-10) | **fal.ai** (its queue API, `FAL_KEY`, pay per use): **Nano Banana 2** (Google's image model: an influencer's looks, its full body, its photos; since round 2 also the example pictures), **Kling V3 Standard** (Kuaishou's video model: a photo comes to life; the owner's trend clips made once from words, since round 2 with their own sound; until round 2 also trend videos, with its motion control) and **Seedance 2.5** (an anime or cartoon influencer's video from its full body); since round 2 **Kling O1 Edit** (video to video: a trend video puts the influencer into a clip in place of its person) | The owner's picks ("something like Higgsfield", "Kling V3 Standard (Recommended)"; round 2: "the trending videos should be real like in higgsfield"); one key and one balance for every model, no monthly plan |
+| AGI Studio's checks (2026-10-10) | **Gemini** (the site's own key and chat model): every picture and clip uploaded (a selfie too, until round 2), before it's kept, and every video made, before it's shown | No new service; about a tenth of a cent a look; fail closed |
+| AGI Studio's share mark (round 2, 2026-10-10) | A "Made with AGI Studio · AI-generated · studio.agi1.app" pill (`server/media/studio-mark.png`, drawn once by `tools/studio/mark.mjs`) put on downloads: photos with **sharp** as they're downloaded, videos once by the studio's clock with **ffmpeg** (the `@ffmpeg-installer/ffmpeg` package's Linux binary, shipped with `/api/feed` only: `includeFiles` in `vercel.json`) | The owner's flywheel ("Share mark"); no service: each post that travels says where it was made and that it's AI |
 | Paying in AGI Studio (2026-10-10) | **Credits** (1 credit = 1 cent), bought with **USDG** from the person's own wallet app and read on the chain like the studio's payments; holder discounts and free credits a month | The owner's choice ("Credits (Recommended)"): one payment for many small things, never a transaction each |
 | studio.agi1.app (2026-10-10) | The same Vercel project and deployment: a host rewrite in `vercel.json` serves the app's page there | No second project, build or settings; the same `/api` |
 | Her X posts on stream (2026-10-07) | **X's API** (pay per use, read-only), with an app's Bearer Token in the server's live.env | The owner: "react to her own X posts/videos and replies"; read-only, so nothing posts; pay per use, capped per show (`LIVE_X_READS`) |
@@ -489,7 +516,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `studio.html` | AGI Studio, the AI influencer app (2026-10-10: studio.agi1.app, and agi1.app/studio and /studio/<anything>): one page, its views drawn by `src/studio/app.js` at their own addresses (Explore, Create, an influencer, My studio, a 3D model, the owner's page); its top bar (Explore · Create · My studio, the credits pill, the wallet), on phones a tab bar at the bottom, its footer with "How AGI Studio works, and its rules". Its own dark look (no `/theme.js`). That morning it was the 3D character studio's own page (its entry `src/studio/page.js`, gone since). Its own entry: `src/studio/app.js` |
 | `src/cloakmesh/` | CloakMesh's page (2026-10-03): `page.js` (its light and dark theme, the demo, the five checks lighting up, the waitlist with `/api/cloakmesh` and the human check, leaving with a leave link), `demo.js` (a small version of CloakMesh's privacy filter, only in the visitor's browser: what it finds, its keyed tokens, putting them back, the demo's made-up answer), `words.js` (everything it says that isn't in the page), `email.js` (what counts as an email address: one rule for the page and our server) |
 | `src/live/` | Her live show's page (2026-10-02): `page.js` (her status every 15 s, asking, following your question, the owner's panel; since 2026-10-07 its box for a question from X's chat; since 2026-10-10 connecting a wallet for her 💜 badge, the site's own sign-in and session), `words.js` (everything it says, and `/api/live`'s answers in plain words; `relayText()` for the owner's box; since 2026-10-10 `perkText()`, `badgeNote()`, `BADGE`) |
-| `src/studio/` | AGI Studio (2026-10-10): `app.js` (the app: its router (`/explore`, `/create`, `/i/<id>` an influencer, `/me`, `/3d/<id>` a 3D model and the old agi1.app/studio/<id>, `/owner`), the wallet sheet with the site's sign-in, 18+, its credits and "Buy credits" (USDG, "Check my payment")), `ui.js` (its small building blocks: elements, buttons, sheets (native dialogs), toasts, chips, pictures), `media.js` (pictures made small, the live camera for a selfie, a clip read and its 3 frames, uploads in parts, a video's poster), `app-words.js` (everything it says that isn't in studio.html, and our server's answers in plain words), `views/` (`explore.js`, `create.js`, `influencer.js`, `me.js`, `model3d.js`, `owner.js`, `shared.js`: one file a view, and the sheets more than one view opens); and from the 3D character studio (the same day; its own page, `page.js` and `words.js`, gone since AGI Studio): `viewer.js` (a character in 3D with three.js, loaded only on its page: its clips by move (`clipsFor()`), in place (`inPlace()`), framed for every pose (`movesBox()`, `lookTimes()`, `framing()`), its idle and moves), `words.js` (everything the pages say that isn't in studio.html, and our server's answers in plain words), `rules.js` (what the page and our server share: ids, words' lengths, styles, its 8 moves with Meshy's library ids and clip names, the words for them (`moveIn()`), prices and discounts, the steps, its files' addresses; its videos': their shapes (`SHAPES`), a scene's length, their 5 seconds, their addresses; since AGI Studio also the app's: prices in credits (`PRICES`, `creditPrice()`), the free credits a month (`FREE_CREDITS`), top-ups, the three ways to start (`MODES`), its styles and design choices (`OPTIONS`), the 12 trend moves (`TRENDS`), a clip's and a picture's limits (`CLIP`, `PICTURE`), reasons to report, a 3D model's steps, its files' addresses) |
+| `src/studio/` | AGI Studio (2026-10-10): `app.js` (the app: its router (`/explore`, `/create`, `/i/<id>` an influencer, `/me`, `/3d/<id>` a 3D model and the old agi1.app/studio/<id>, `/owner`), the wallet sheet with the site's sign-in, 18+, its credits and "Buy credits" (USDG, "Check my payment")), `ui.js` (its small building blocks: elements, buttons, sheets (native dialogs), toasts, chips, pictures), `media.js` (pictures made small, a clip read and its 3 frames (since round 2 also its size and frame rate), uploads in parts, a video's poster; the live camera for a selfie until round 2), `app-words.js` (everything it says that isn't in studio.html, and our server's answers in plain words), `views/` (`explore.js`, `create.js`, `influencer.js`, `me.js`, `model3d.js`, `owner.js`, `shared.js`: one file a view, and the sheets more than one view opens); and from the 3D character studio (the same day; its own page, `page.js` and `words.js`, gone since AGI Studio): `viewer.js` (a character in 3D with three.js, loaded only on its page: its clips by move (`clipsFor()`), in place (`inPlace()`), framed for every pose (`movesBox()`, `lookTimes()`, `framing()`), its idle and moves), `words.js` (everything the pages say that isn't in studio.html, and our server's answers in plain words), `rules.js` (what the page and our server share: ids, words' lengths, styles, its 8 moves with Meshy's library ids and clip names, the words for them (`moveIn()`), prices and discounts, the steps, its files' addresses; its videos': their shapes (`SHAPES`), a scene's length, their 5 seconds, their addresses; since AGI Studio also the app's: prices in credits (`PRICES`, `creditPrice()`), the free credits a month (`FREE_CREDITS`), top-ups, the three ways to start (`MODES`), its styles and design choices (`OPTIONS`), the 12 trend moves (`TRENDS`), a clip's and a picture's limits (`CLIP`, `PICTURE`), reasons to report, a 3D model's steps, its files' addresses) |
 | `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28); at agi1.app/talk (2026-10-02) it starts the page in full-screen talk (`is-talk`, its title and colors, no loader), and at agi1.app/talk?pip=1 inside a frame marks it as her pop-out window's page (`is-pip`); since 2026-10-10 a `studio` page gets the page's own bar color like the diary (the 3D studio's page loaded `/theme.js?v=8` for it that morning; AGI Studio's page, since, doesn't load it at all: one dark look, its bar color in its own `<head>`; the other pages keep `v=7`) |
 | `src/main.js` | Browser code entry point: styles, theme, the front, prices, sections, chat, then the 3D stage (loaded separately, after the front's entrance; at /talk at once, and the front only when you leave full-screen talk) |
 | `src/landing/landing.js` | The front (2026-09-28): the loader, the entrance, the focus lines, AGI-1 in WebGL, the orbit, her bubble, the ribbons, the manifesto, the cursor and hearts (see "The front") |
@@ -543,7 +570,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
 | `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards"); and (2026-10-03) `cloakmesh-card.html`, CloakMesh's link preview (`public/cards/cloakmesh.png`: a 1200 × 630 screenshot of it in Chromium, then 256 colors; Claude redoes it when the page's top changes) |
 | `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me; since 2026-09-30 "Check my burn" and, at `GET ?burns`, the burn monitor's numbers), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only; since 2026-10-01 also tidying up launch drafts and the pictures of coins never launched), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first; since 2026-10-06 also, at `?buys`, her buy bot's check, every minute from Supabase Cron; since 2026-10-09, at `?games`, her quizzes' clock, every 2 minutes), and since 2026-10-01 `launch.js` (the launch page's server: a draft and its picture, getting a launch ready, reading it back, its fee paid back), and since 2026-10-02 `live.js` (her live show: a visitor's question, its place and her answer; her stream's calls with `LIVE_SECRET`; the owner's controls), and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: open or not, joining, leaving); since 2026-10-10 AGI-1's 3D character studio shares two of them: `launch.js` (`?studio=`, `?studio-file=`, `?studio-list`, `?studio-info` and the `studio-…` actions: a character can be a coin's face) and `feed.js` (`?studio`, its clock every minute); since the same day its characters' videos too, in the same two: `launch.js` (`?studio-videos=`, `?studio-video=` (played in parts), `?studio-video-dl=` and the `studio-video-…` actions) and `feed.js` (`?studio` moves them along after the characters); and since AGI Studio (the same day) the same two again: `launch.js` (`?inf-info`, `?inf-explore`, `?inf=`, `?inf-file=`, `?inf-video=`, `?inf-video-dl=`, the `inf-…` and `trend-…` actions, and uploads' bytes as `?inf-up=` / `?inf-poster=`; a new character from words and a character's video answer 410 `moved`) and `feed.js` (`?studio` moves its jobs along too, and tidies up every 30 minutes). **That's 12: Vercel's Hobby plan allows 12 functions per deployment** (every file here is one), so a new feature must share one of these (or the project moves to Pro). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
-| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name; since 2026-10-06 also clank.trade's API itself, `clankApi()`, moved from `checker.js` so the buy bot loads light), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; where each coin's picture is; since 2026-10-05 every amount in dollars at the coin's own pair's price, ETH or SPCX), `coin-pictures.js` (2026-10-05: the coins' pictures, from public IPFS gateways or ClankBot's host, checked and made small with sharp; only `api/checker.js` loads it), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap; since 2026-10-05 also /mc's numbers in her Telegram groups, `agiNumbers()`: market cap, 24h change, liquidity), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it), and since 2026-10-03 `tg-api.js` (Telegram's API itself, her token, the daily chat codes: moved out of `telegram.js`) and `tg-groups.js` (her Telegram groups: which groups, leaving the others, her intro and welcomes, her answers there and their limits, her posts there); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and what's in it, what its creator holds; since 2026-10-05 the pairs' addresses, `ETH_PAIR` and `SPCX`, which `launch.js` shares; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-07 `live-acts.js` (what viewers can ask her to do on stream: the list, its rests, her prompt's part, her answer's request checked; shared with her stream's runner); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls); and since 2026-10-06 `buys.js` (her buy bot: $AGI's newest trades from clank.trade, the check (each buy once, the first look silent), her GIF and caption in her groups) and `media/agi1-buy.mp4` (her buy GIF, 138 KB: Vercel bundles it with `/api/feed` only; made by `tools/buybot/`); and since 2026-10-09 her quizzes: `games.js` (the clock's tick, a quiz posted, an answer kept, a quiz settled and her result; light to load), `game-questions.js` (her 97 questions), `game-lines.js` (what she says about them, in English), `game-prizes.js` (claiming in her private chat: the address checked, the prize wallet's plan, the transfer sent once) and `hot-wallet.js` (the chain's node and the never-twice send, moved out of `launch.js`: shared by the gas wallet and the prize wallet), and `secrets.js` (a seed phrase or a private key sent to her by mistake: caught before it goes anywhere); and since 2026-10-10 AGI-1's 3D character studio: `studio.js` (its quotes, payments, the making one step at a time, its clock), `studio-api.js` (its GETs and POSTs inside `/api/launch`), `studio-words.js` (a character's words checked, and what Meshy gets), `meshy.js` (Meshy's API: each step's request, its tasks, its errors without the key), `studio-files.js` (its files from Meshy, made small with gltf-transform and sharp, kept in Supabase Storage; since its videos also a video from fal's media addresses, and a part of a file read with Range: `byteRange()`, `getRange()`) and `studio-chain.js` (a payment read on Robinhood Chain: USDG or a burn); and (the same day) its characters' videos: `studio-video.js` (a video's quote, its USDG payment, the making one step at a time, its clock, its file played in parts or downloaded) and `fal.js` (fal.ai's queue: a request, its state and its result, its errors without the key; since AGI Studio a model's name up to 6 parts long, for Kling's); and (the same day) AGI Studio, the AI influencer app: `influencer.js` (an influencer: starting one, its looks, what's made for it, its 3D model, Explore, an influencer's page, deleting it, reports, its coin's launch draft, the owner's tools), `inf-api.js` (its GETs and POSTs inside `/api/launch`, and its uploads' bytes), `inf-jobs.js` (its AI jobs moved along one step at a time, its clock and its tidy-up), `inf-ai.js` (each AI model's request on fal, and Gemini's looks at uploads, videos and posters), `inf-uploads.js` (uploads: tickets, a picture made plain, a clip's parts put together and looked at, a video's poster), `inf-words.js` (an influencer's words checked, and the words the AI services get) and `credits.js` (credits: a wallet's, a holder's free ones, a USDG top-up read on the chain) |
+| `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name; since 2026-10-06 also clank.trade's API itself, `clankApi()`, moved from `checker.js` so the buy bot loads light), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; where each coin's picture is; since 2026-10-05 every amount in dollars at the coin's own pair's price, ETH or SPCX), `coin-pictures.js` (2026-10-05: the coins' pictures, from public IPFS gateways or ClankBot's host, checked and made small with sharp; only `api/checker.js` loads it), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap; since 2026-10-05 also /mc's numbers in her Telegram groups, `agiNumbers()`: market cap, 24h change, liquidity), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it), and since 2026-10-03 `tg-api.js` (Telegram's API itself, her token, the daily chat codes: moved out of `telegram.js`) and `tg-groups.js` (her Telegram groups: which groups, leaving the others, her intro and welcomes, her answers there and their limits, her posts there); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and what's in it, what its creator holds; since 2026-10-05 the pairs' addresses, `ETH_PAIR` and `SPCX`, which `launch.js` shares; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-07 `live-acts.js` (what viewers can ask her to do on stream: the list, its rests, her prompt's part, her answer's request checked; shared with her stream's runner); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls); and since 2026-10-06 `buys.js` (her buy bot: $AGI's newest trades from clank.trade, the check (each buy once, the first look silent), her GIF and caption in her groups) and `media/agi1-buy.mp4` (her buy GIF, 138 KB: Vercel bundles it with `/api/feed` only; made by `tools/buybot/`); and since 2026-10-09 her quizzes: `games.js` (the clock's tick, a quiz posted, an answer kept, a quiz settled and her result; light to load), `game-questions.js` (her 97 questions), `game-lines.js` (what she says about them, in English), `game-prizes.js` (claiming in her private chat: the address checked, the prize wallet's plan, the transfer sent once) and `hot-wallet.js` (the chain's node and the never-twice send, moved out of `launch.js`: shared by the gas wallet and the prize wallet), and `secrets.js` (a seed phrase or a private key sent to her by mistake: caught before it goes anywhere); and since 2026-10-10 AGI-1's 3D character studio: `studio.js` (its quotes, payments, the making one step at a time, its clock), `studio-api.js` (its GETs and POSTs inside `/api/launch`), `studio-words.js` (a character's words checked, and what Meshy gets), `meshy.js` (Meshy's API: each step's request, its tasks, its errors without the key), `studio-files.js` (its files from Meshy, made small with gltf-transform and sharp, kept in Supabase Storage; since its videos also a video from fal's media addresses, and a part of a file read with Range: `byteRange()`, `getRange()`) and `studio-chain.js` (a payment read on Robinhood Chain: USDG or a burn); and (the same day) its characters' videos: `studio-video.js` (a video's quote, its USDG payment, the making one step at a time, its clock, its file played in parts or downloaded) and `fal.js` (fal.ai's queue: a request, its state and its result, its errors without the key; since AGI Studio a model's name up to 6 parts long, for Kling's); and (the same day) AGI Studio, the AI influencer app: `influencer.js` (an influencer: starting one, its looks, what's made for it, its 3D model, Explore, an influencer's page, deleting it, reports, its coin's launch draft, the owner's tools), `inf-api.js` (its GETs and POSTs inside `/api/launch`, and its uploads' bytes), `inf-jobs.js` (its AI jobs moved along one step at a time, its clock and its tidy-up), `inf-ai.js` (each AI model's request on fal, and Gemini's looks at uploads, videos and posters), `inf-uploads.js` (uploads: tickets, a picture made plain, a clip's parts put together and looked at, a video's poster), `inf-words.js` (an influencer's words checked, and the words the AI services get) and `credits.js` (credits: a wallet's, a holder's free ones, a USDG top-up read on the chain); and (AGI Studio's round 2, the same day) `inf-week.js` (likes, the weekly spotlight: its pick once a week, the owner's look, its prize sent by the prize wallet), `inf-burns.js` (burn unlocks: one more influencer, a boost in Explore; their quotes and "Check my burn"), `inf-mark.js` (the share mark: a photo marked with sharp as it's downloaded, a video once by the clock with ffmpeg), `mp4.js` (an MP4's own header: its length, size and frame rate, without any package) and `media/studio-mark.png` (the share mark's picture, made by `tools/studio/mark.mjs`) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -558,15 +585,16 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `supabase/buys.sql` | Her buy bot (2026-10-06). Run once in the same Supabase project, after switching on Integrations → Cron and Database → Extensions → pg_net (running it again is safe): two new tables (`agi1_buys`, `agi1_buy_state`), 2 functions and two Supabase Cron jobs (the check every minute, a daily tidy-up of their run history), only added (nothing the original site uses changes). It ends with `buys_ready = 1` and `buys_scheduled = 1`. Until it's run, no buy is posted |
 | `supabase/games.sql` | Her quizzes (2026-10-09). Run once in the same Supabase project, after Integrations → Cron and Database → Extensions → pg_net are switched on (her buy bot's already did; running it again is safe): six new tables (`agi1_game_state`, `agi1_game_groups`, `agi1_game_rounds`, `agi1_game_answers`, `agi1_game_prizes`, `agi1_game_days`), 14 functions and a Supabase Cron job (her quizzes' clock every 2 minutes; it also sets the daily tidy of the run history, shared with her buy bot), only added. It ends with `games_ready = 1` and `games_scheduled = 1`. Until it's run, no quiz is posted |
 | `supabase/studio.sql` | AGI-1's 3D character studio (2026-10-10). Run once in the same Supabase project, after `burns.sql` (it shares its ledger of burns) and with Cron and pg_net on (running it again is safe): five new tables (`agi1_studio_state`, `agi1_studio_orders`, `agi1_studio_months`, `agi1_studio_free`, `agi1_studio_txs`), 20 functions, a private Storage bucket (`agi1-characters`) and a Supabase Cron job (its clock every minute), only added. It ends with `studio_ready = 1`, `studio_scheduled = 1` and `studio_storage = 1`. Until it's run (and `MESHY_API_KEY` is set), agi1.app/studio says it opens soon. **Since its characters' videos (the same day): six tables (`agi1_studio_videos`), 32 functions (12 for videos), the bucket 40 MB a file and `video/mp4` too: run it again if it was run before them** (it keeps everything; still `studio_ready = 1`). **Since AGI Studio (the same day): a 3D model from an influencer's full-body picture paid in credits (`inf_id`, `image_path`, the step `image`, the kind `credits`), and the bucket takes JPEG pictures and a clip's parts too: run it again, then `influencers.sql`** |
-| `supabase/influencers.sql` | AGI Studio, the AI influencer app (2026-10-10). Run once in the same Supabase project, after `burns.sql` and `studio.sql` in its version of 2026-10-10 (it shares its payment ledger, its months, its bucket and its clock; it says "Run supabase/studio.sql first" otherwise; running it again is safe): nine new tables (`agi1_inf`, `agi1_inf_jobs`, `agi1_credits`, `agi1_credit_log`, `agi1_credit_months`, `agi1_inf_uploads`, `agi1_inf_trends`, `agi1_inf_reports`, `agi1_inf_days`) and 39 functions, only added. It ends with `influencers_ready = 1`. Until it's run (and `FAL_KEY` is set), AGI Studio says it opens soon |
+| `supabase/influencers.sql` | AGI Studio, the AI influencer app (2026-10-10). Run once in the same Supabase project, after `burns.sql` and `studio.sql` in its version of 2026-10-10 (it shares its payment ledger, its months, its bucket and its clock; it says "Run supabase/studio.sql first" otherwise; running it again is safe): nine new tables (`agi1_inf`, `agi1_inf_jobs`, `agi1_credits`, `agi1_credit_log`, `agi1_credit_months`, `agi1_inf_uploads`, `agi1_inf_trends`, `agi1_inf_reports`, `agi1_inf_days`) and 39 functions, only added. It ends with `influencers_ready = 1`. Until it's run (and `FAL_KEY` is set), AGI Studio says it opens soon. **Since its round 2 (the same day): 13 tables (`agi1_inf_likes`, `agi1_inf_weeks`, `agi1_inf_burns`, `agi1_inf_slots`) and 59 functions, new columns (a real person's photo, a boost, example pictures, the share mark, likes): run it again** (after `studio.sql`; it keeps everything saved; it still ends with `influencers_ready = 1`) |
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, since 2026-10-08 her live show's hands (an arm reaching a point, a hand turned and curled, her round elbow), "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras; since 2026-10-09 questions of any length, any name but crude or posing ones, a Telegram question with the person's Telegram name, other coins and famous people in her live rules, the `ADVICE` safety net, her memory of the group on stream, her chart's trades; since 2026-10-10 her holder perks: a wallet's level with a question, her 💜 badge and its 5 a day, the head start in her line, old and new live.sql, the page's wallet), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page; since 2026-10-08 her poses (never a paddle, never on her chest), her hands (always her palm, never turned or curled past their limits, what she holds in front of her palm with her fingers or thumb over it) and her hands on their way, frame by frame on her springs; since 2026-10-09 requests that never wait, all of her song's words, reading the question out loud, her song's music video, her live $AGI chart and where she reads messages), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end; since 2026-10-08 cutting the paintings out, what the first ones needed, the stand-ins, the conical hat, her glasses' clear lenses, her headset on her ears and her headphones on her head), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note), `games.test.js` (2026-10-09: her quizzes: her questions' rules, a quiz as Telegram takes it, picking and shuffling, a winner's name, the settings, `/api/feed?games` and its key, a tick (just for fun without prizes), her bot hearing answers, answers, closing and the draw, her result, claiming in her private chat (18+, the address's checks, the transfer itself, every way sending can go, never twice), a secret sent to her by mistake, her groups' /help, intro and /claim, her quiz lines' rules, loading light, games.sql's promises, the safety note), `studio.test.js` (2026-10-10: AGI-1's 3D character studio: its rules, a character's words, Meshy's requests, its files made small, Storage, payments on the chain, the settings and codes, quotes, paying, "Check my payment", the making and every way it can go, the clock, `/api/launch` and `/api/feed?studio`; its page's 3D view (clips, in place, framed), words and promises, the safety note), `videos.test.js` (2026-10-10: its characters' videos: the rules and settings, a scene's checks and the video service's words, fal's queue (requests, states, results, errors, the key never in one), its files (only fal's addresses, MP4s, Storage, signed addresses, a part read with Range), what anyone sees, quotes, USDG payments, made again, the making and every way it can go, the clock, every GET (played in parts: 206, 416, 302) and POST, the page and its CSP, 12 functions), `influencer.test.js` (2026-10-10: AGI Studio: its rules and words, the AI requests as fal's pages write them, Gemini's looks, uploads (tickets, a picture made plain, a clip in parts, its length from its header, posters), credits (free first, given back once, top-ups once, a month's free ones), an influencer from start to ready, its photos, trend and scene videos, the clock and the tidy-up, Explore and its page, public and deleting, reports and the owner's tools, its 3D models, its coin, every GET and POST, the app's page and promises, `influencers.sql`'s promises). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, since 2026-10-08 her live show's hands (an arm reaching a point, a hand turned and curled, her round elbow), "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras; since 2026-10-09 questions of any length, any name but crude or posing ones, a Telegram question with the person's Telegram name, other coins and famous people in her live rules, the `ADVICE` safety net, her memory of the group on stream, her chart's trades; since 2026-10-10 her holder perks: a wallet's level with a question, her 💜 badge and its 5 a day, the head start in her line, old and new live.sql, the page's wallet), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page; since 2026-10-08 her poses (never a paddle, never on her chest), her hands (always her palm, never turned or curled past their limits, what she holds in front of her palm with her fingers or thumb over it) and her hands on their way, frame by frame on her springs; since 2026-10-09 requests that never wait, all of her song's words, reading the question out loud, her song's music video, her live $AGI chart and where she reads messages), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end; since 2026-10-08 cutting the paintings out, what the first ones needed, the stand-ins, the conical hat, her glasses' clear lenses, her headset on her ears and her headphones on her head), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note), `games.test.js` (2026-10-09: her quizzes: her questions' rules, a quiz as Telegram takes it, picking and shuffling, a winner's name, the settings, `/api/feed?games` and its key, a tick (just for fun without prizes), her bot hearing answers, answers, closing and the draw, her result, claiming in her private chat (18+, the address's checks, the transfer itself, every way sending can go, never twice), a secret sent to her by mistake, her groups' /help, intro and /claim, her quiz lines' rules, loading light, games.sql's promises, the safety note), `studio.test.js` (2026-10-10: AGI-1's 3D character studio: its rules, a character's words, Meshy's requests, its files made small, Storage, payments on the chain, the settings and codes, quotes, paying, "Check my payment", the making and every way it can go, the clock, `/api/launch` and `/api/feed?studio`; its page's 3D view (clips, in place, framed), words and promises, the safety note), `videos.test.js` (2026-10-10: its characters' videos: the rules and settings, a scene's checks and the video service's words, fal's queue (requests, states, results, errors, the key never in one), its files (only fal's addresses, MP4s, Storage, signed addresses, a part read with Range), what anyone sees, quotes, USDG payments, made again, the making and every way it can go, the clock, every GET (played in parts: 206, 416, 302) and POST, the page and its CSP, 12 functions), `influencer.test.js` (2026-10-10: AGI Studio: its rules and words, the AI requests as fal's pages write them, Gemini's looks, uploads (tickets, a picture made plain, a clip in parts, its length from its header, posters), credits (free first, given back once, top-ups once, a month's free ones), an influencer from start to ready, its photos, trend and scene videos, the clock and the tidy-up, Explore and its page, public and deleting, reports and the owner's tools, its 3D models, its coin, every GET and POST, the app's page and promises, `influencers.sql`'s promises; since its round 2 a photo of a real person with consent (and never one without its box), the trend clips and their swap, example pictures, likes and the weekly spotlight (its pick, the owner's look, its prize sent once), burn unlocks and a 3D model for a big burn, the share mark on photos and videos, the stats board, no camera anywhere). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`), `art-cut.mjs` (Claude makes them ready: one of each, cut out of its green, made small) and `art-picks.json` (which one of each), into `page/art/` (her places, rooms, rides, the people she meets and what she wears, WebP, in git), which `page/paint.js` finds when her set is built; and since 2026-10-09 `page/chart.js` ($AGI's live trading chart on her TV, drawn in code), her song's music video (`media.js`: found in her videos folder, made ready once) and all of her song's words (`songs/feel-the-agi.json`). See "Her live show on X", "Her stream, upgraded", "Her trips", "Her painted set" and "Her show, 2026-10-09" |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `tools/promo/` | Her launch video (2026-10-03, not part of the website): `make.mjs` (builds its page, draws every frame in Chromium, ffmpeg → the MP4s, the cover, the post text, a light copy), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen, from the site's own files where it can), `music.js` (its music, composed and played in code), `page/` (the renderer: `promo.js`, `kit.js`, `ui.js`, `transitions.js`, `her.js` (her Live2D model), `art.js` (the front's art and shader), `scenes/` (one file a scene); built into `tools/promo/dist/`, which git ignores). Its videos go to `promo/` (git ignores it). See "Her launch video" |
 | `tools/buybot/` | Her buy GIF (2026-10-06, not part of the website): `make.mjs` (builds its page, draws each frame in Chromium, ffmpeg → `server/media/agi1-buy.mp4`, a soundless MP4), `page/` (`gif.js`: her Live2D model through the launch video's renderer, cheering, on Pop mode's violet, with a "$AGI BUY!" sticker; built into `tools/buybot/dist/`, which git ignores). See "Her buy bot" |
+| `tools/studio/` | AGI Studio's share mark (round 2, 2026-10-10, not part of the website): `mark.mjs` draws `server/media/studio-mark.png` (the "Made with AGI Studio · AI-generated · studio.agi1.app" pill, with the site's own Geist, twice its size, on a transparent background) once in Chromium, so our server only scales and places it (sharp, ffmpeg) and needs no fonts. Run again only after changing its words or look: `node tools/studio/mark.mjs` (Chromium and `npm install --no-save playwright-core`, like the other tools) |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
 | `scripts/check-secrets.js` | Runs after every build and fails it if a secret would be shipped to browsers |
 | `tools/model/` | Offline 3D-model tools, not part of the site build: `fix-hair-weights.mjs`, `drop-tangents.mjs` (see "3D models") |
@@ -576,7 +604,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `tools/memory/` | Phase 6, offline: `build-memory.mjs` turns the Telegram export into `server/tg-memory-data.js`; `lore.json` (hand-written memory cards: eras, running jokes, big moments; edit freely); `forget.json` (people who asked to be left out). See "AGI-1's memory of the Telegram group" |
 | `telegram memories/` | The owner's Telegram export (`result.json`, 31 MB, thousands of people's messages). **Never in git** (`.gitignore`); only `tools/memory/` reads it |
 | `vite.config.js` | Six pages (`index.html`, `diary.html`, since 2026-10-01 `launch.html`, since 2026-10-02 `live.html`, since 2026-10-03 `cloakmesh.html` and since 2026-10-10 `studio.html`); raises Vite's file-size warning: three.js is large on purpose and loads separately; since 2026-10-02 serves /talk as the home page in `npm run dev` and Vite's preview, like Vercel, and since 2026-10-10 /studio/<anything> as the studio's page (AGI Studio's views), and on a `studio.` host (studio.agi1.app; locally studio.localhost) every address that isn't a file |
-| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk; 2026-10-10: `/studio/:path+` serves the studio's page (AGI Studio's views; `/studio/:id` that morning), its destination `/studio` for the same reason, and on the host studio.agi1.app every address serves it (a rewrite with a `has` host), its "/" redirected to /explore), security headers (CSP; since 2026-10-02 our own pages may frame each other, for her pop-out window, never another site; and `Permissions-Policy` lets our own pages share a window, `display-capture=(self)`, for "Show her"; since 2026-10-10 `camera=(self)`, for AGI Studio's live selfie, and `media-src 'self' blob:` in the CSP, for its videos and a visitor's own clip), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed`; since 2026-10-03 a redirect: inference.agi1.app/ → /cloakmesh (a redirect, not a rewrite: Vercel serves the home page's own file at "/" before any rewrite runs, so a rewrite there would never happen) |
+| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk; 2026-10-10: `/studio/:path+` serves the studio's page (AGI Studio's views; `/studio/:id` that morning), its destination `/studio` for the same reason, and on the host studio.agi1.app every address serves it (a rewrite with a `has` host), its "/" redirected to /explore), security headers (CSP; since 2026-10-02 our own pages may frame each other, for her pop-out window, never another site; and `Permissions-Policy` lets our own pages share a window, `display-capture=(self)`, for "Show her"; since 2026-10-10 `camera=(self)`, for AGI Studio's live selfie (`camera=()` again since its round 2, the same day: no selfies), and `media-src 'self' blob:` in the CSP, for its videos and a visitor's own clip; since that round 2 `api/feed.js` its own `functions` entry, `includeFiles` for the share mark's ffmpeg (the clock's function only)), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed`; since 2026-10-03 a redirect: inference.agi1.app/ → /cloakmesh (a redirect, not a rewrite: Vercel serves the home page's own file at "/" before any rewrite runs, so a rewrite there would never happen) |
 
 ## Commands
 
@@ -603,6 +631,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 - Her buy GIF (2026-10-06): `node tools/buybot/make.mjs` makes `server/media/agi1-buy.mp4` again (after her model
   changes; about a minute; Chromium, ffmpeg and `npm install --no-save playwright-core`, like her launch video);
   `--stills 0,0.9,1.6` saves pictures instead (see "Her buy bot").
+- AGI Studio's share mark (2026-10-10, round 2): `node tools/studio/mark.mjs` draws `server/media/studio-mark.png` again
+  (only after changing its words or look; Chromium and `npm install --no-save playwright-core`).
 - Her live show (2026-10-02): `node tools/live/run.mjs --demo --fake-voice --record try.mp4 --minutes 3` makes a short show
   into a file anywhere (made-up questions, a stand-in hum; needs Chromium, ffmpeg, Xvfb and `npm install --no-save
   playwright-core@1.63.0`). On the owner's server everything goes through `sh tools/live/live.sh …` (see "Her live show
@@ -5356,79 +5386,99 @@ know that right and like higgsfield genjuts and then they can launch a token wit
 studio.agi1.app , the ui will be different on this it will be user friendly and easy to use". So a new app, **AGI Studio**,
 in the spirit of Higgsfield's AI influencer and its trend videos (never its name, look or code): make your own AI
 influencer, then its photos, trend videos, short videos, a 3D model and a coin with its face. The owner's choices (asked
-one by one): uploads **"Their own face too"** (a live selfie with consent), **"2D influencer, 3D extra (Recommended)"**,
-trend moves **"Our presets + their clips (Recommended)"**, **"Kling V3 Standard (Recommended)"** for trend videos,
+one by one): uploads **"Their own face too"** (a live selfie with consent; since round 2 photos with consent instead),
+**"2D influencer, 3D extra (Recommended)"**, trend moves **"Our presets + their clips (Recommended)"** (since round 2
+real-looking clips), **"Kling V3 Standard (Recommended)"** for trend videos (since round 2 Kling O1 Edit),
 **"Credits (Recommended)"** (1 credit = 1 cent, bought with USDG), **"Discounts + free credits (Recommended)"** for
 holders, and the trend moves **"Made with AI once (Recommended)"**. It replaces the 3D studio's page: agi1.app/studio is
 the app too, and a character from words and its videos aren't ordered any more (see "AGI-1's 3D character studio").
 **Off until the owner sets it up** (below), then **private like the studio** (`STUDIO_ONLY_FOR`) until `STUDIO_OPEN`.
 Words visitors read never name the AI services ("an AI service"; a failure is kept as `ai:<kind>`, `refused`, `save`…).
+**Its round 2, the same day,** changed a good part of what follows: no "Use my face" (no camera at all), photos of real
+people with consent, real-looking trend clips, example pictures, a new look, likes and a weekly spotlight, burn unlocks,
+the share mark and a live stats board. See "AGI Studio, round 2" below; the parts here say what changed.
 
 **What visitors see** (studio.agi1.app; agi1.app/studio and agi1.app/studio/<view> are the same app):
 - **Its own look:** dark and simple, phones first: a top bar (AGI Studio, Explore · Create · My studio, a ⚡ credits pill
   and the wallet), on phones a tab bar at the bottom with a round **+ Create**; every step in a sheet (a native dialog);
-  short toasts; the footer's "How AGI Studio works, and its rules" (18+, PG-13 and AI-generated, never a real person but
-  your own face, credits with no cash value, the holder perks "a thank-you for holding, not an investment", a coin is
+  short toasts; the footer's "How AGI Studio works, and its rules" (18+, PG-13 and AI-generated; since round 2 real people
+  only with their OK and never a famous person (until then never a real person but your own face); credits with no cash value, the holder perks "a thank-you for holding, not an investment", a coin is
   yours and public for good, what's kept, not financial advice). Every rule names an `sa-` class
   (`src/styles/studio-app.css`). No Pop mode or theme button: one dark look.
 - **18+ first** (the site's own confirmation) and **a wallet** for anything that costs (the site's sign-in: an address and
   a free signature, never a transaction). On studio.agi1.app the browser keeps its own 18+ answer and wallet session
   (another address than agi1.app: connect once there); at agi1.app/studio they're the site's.
-- **Explore** (`/explore`, the front): "Your own AI influencer, in minutes", the three ways to start, **Trending moves**
-  (each a made-up dancer doing it: tap for its preview and "Make it with" one of yours), **Fresh videos** and **New
-  influencers** (the newest 24 public ones; never an AI twin).
-- **Create** (`/create`), four steps: **1 How do you want to start?** (Design it · From a picture · Use my face);
-  **2** *Its look* (Look and Age, 20s to 50+, needed; skin, hair color, hair style and eyes under "More details"; Surprise
-  me), *Its picture* (a drawing or a render of a character of theirs: one, an adult; never a photo of a real person or
-  someone else's character) or *Your selfie* (the live front camera, never a file, just them, and the consent box: "This
-  is my own face, I'm 18 or older…"); **3 Make it yours** (its style: Realistic, Anime or 3D cartoon; its outfit and vibe;
-  anything else, 200 characters; its name, 24); **4 Create it** (its price, and the human check). A picture or a selfie is
-  checked as it's sent, and a "no" says why ("That looks like a photo of a real person…").
+- **Explore** (`/explore`, the front): "Your own AI influencer, in minutes", **Trending** (tap one for its preview and
+  "Make it with" one of yours: since round 2 the owner's real-looking trend clips; until then trending moves, each a made-up
+  dancer doing it), **Fresh** photos and videos and **New influencers** (the newest 24 public ones; never a private one),
+  and the ways to start (two since round 2). Since round 2 also the live stats board, the spotlight of the week and
+  **Boosted** (see "AGI Studio, round 2").
+- **Create** (`/create`), four steps: **1 How do you want to start?** (Design it · From a photo; until round 2 Design it
+  · From a picture · Use my face); **2** *Its look* (Look and Age, 20s to 50+, needed; skin, hair color, hair style and
+  eyes under "More details"; Surprise me) or *Its photo* (since round 2: a photo of them, of a friend who said OK, or a
+  character they drew or rendered, the box "This is me, someone who said I may use their photo (an adult), or a character
+  of my own." ticked first; until then a drawing or render only, or *Your selfie* from the live front camera); **3 Make
+  it yours** (its style: Realistic, Anime or 3D cartoon; its outfit and vibe; anything else, 200 characters; its name,
+  24; since round 2 each choice with its example picture); **4 Create it** (its price, and the human check). A picture is
+  checked as it's sent, and a "no" says why ("That looks like a famous person: only you, someone who said OK, or a
+  character of yours.").
 - **An influencer's page** (`/i/<id>`): while it's made, "Making its looks" (about a minute, with its place in line),
   then **"Pick your favorite look"** (4: "Use this look" is free, "4 new looks · 40 credits"), then "Making its full
   body". Ready: its portrait, name and style, **Share** (its link, Share on X), **Shown in Explore** (a switch: never for
-  an AI twin, which is private), **Delete** (an AI twin: **"Delete my face"**) and, for anyone else, **Report**.
+  a private one: made from a photo of a real person, or an AI twin from before round 2), **Delete** (an AI twin: **"Delete
+  my face"**), since round 2 **Boost** (a burn: see "AGI Studio, round 2") and, for anyone else, **Report**.
   **Make something:**
   - **Photo** (15 credits): a scene (10 to 300 characters, with ideas) and its shape (Vertical, Wide, Square); about half
     a minute.
-  - **Trend video** (300): one of the owner's **Trending moves**, or **My own clip** (2 to 10 s, MP4 or MOV, 30 MB at most,
-    one person moving; its sound isn't used; checked as it's sent), from its full body or one of its photos; vertical, as
-    long as the move (a trending move is 10 s), no sound; a few minutes.
+  - **Trend video** (300): since round 2 one of the owner's **trend clips** (it takes the clip's person's place, with the
+    clip's camera, place, light and sound) or **My own clip** (3 to 10 s, 720 to 2160 px a side, 24 to 60 frames a second,
+    MP4 or MOV, 30 MB at most, one person; its sound never used; checked as it's sent), the clip's own length and shape;
+    a few minutes. (Until round 2: a trending move, or the moves of their own 2 to 10 s clip, copied onto its full body or
+    one of its photos, vertical, no sound.)
   - **Video** (400): 5 seconds in any scene, its shape, with sound or not, from its full body or one of its photos (a
-    realistic influencer or an AI twin always from one of its photos: "make a photo first").
-  - **3D model** (500; a Soulmate's first each month free): from its full-body picture, shaped, given bones and taught 8
+    realistic or private influencer always from one of its photos: "make a photo first").
+  - **3D model** (500; a Soulmate's first each month free; since round 2 also free for 25,000 $AGI burned): from its full-body picture, shaped, given bones and taught 8
     moves; its own page (`/3d/<id>`) moves when someone types, with its GLB and PNG to download; 5 to 10 minutes.
   - **Launch a coin** (free): its name, ticker and line, then **"Get my launch link"**: Launch with AGI-1's own page
-    (agi1.app/launch/<id>, 2 hours), where their own wallet launches it (10,000+ $AGI held or burned in it). For an AI twin
-    a second box first: "I understand this puts my own face on a public coin, for good".
-  Its photos and videos (All · Photos · Videos): each opens big (play, **Download**, Share on X, Report; a photo can start
-  a video or a trend video), one being made shows its step, one that couldn't be made says why and that its credits came
+    (agi1.app/launch/<id>, 2 hours), where their own wallet launches it (10,000+ $AGI held or burned in it). For a
+    private one (an AI twin, or since round 2 a real person's photo) a second box first (since round 2: "I understand this
+    puts a real person's face on a public coin, for good (deleting the influencer can't take it off the coin), and they
+    agreed to that too."; an AI twin's was about "my own face").
+  Its photos and videos (All · Photos · Videos): each opens big (play, **Download** (since round 2 with the share mark),
+  Share on X, Report, and since round 2 its heart: likes; a photo can start a video or a trend video), one being made shows its step, one that couldn't be made says why and that its credits came
   back. **In 3D:** its 3D models.
 - **My studio** (`/me`): the wallet and its level, its credits (and how many are this month's free ones), **Buy credits**,
-  its prices (with its discount), and its influencers with their state.
+  its prices (with its discount), and its influencers with their state; since round 2 its slots ("2 of 5") with **Unlock
+  one more**, its burn unlocks waiting for their burn, and its weekly spotlight prizes (to claim, or sent).
 - **Buy credits** (a sheet, also opened by itself when something needs more: "That needs 85 credits more."): $5, $10 or
   $25 (500, 1,000 or 2,500 credits), "Send $10 in USDG (1,000 credits)" from the connected wallet, in their own wallet
   app, on Robinhood Chain, to the studio's wallet (**Copy**), then **"Check my payment"** (a pasted link or ID if they
   like). "Credits have no cash value: they can't be withdrawn, sold or refunded. Something that can't be made gives its
   credits back." A holder's free credits come with a toast ("💜 Your Crush perk: 100 credits free this month").
 - **A 3D model's page** (`/3d/<id>`, and the old agi1.app/studio/<id>): the 3D studio's character page in the app's look.
-- **The owner's page** (`/owner`, only the owner's wallet): the 12 trend moves (make each, watch it, keep or hide it, make
-  it again) and the reports (take down, or clear).
+- **The owner's page** (`/owner`, only the owner's wallet): the 12 trend clips (since round 2; trend moves before: make
+  each, watch it, keep or hide it, make it again), since round 2 the 32 example pictures and the spotlight of the week,
+  and the reports (take down, or clear).
 
 **How it's made** (`server/influencer.js`, `server/inf-jobs.js`, `server/inf-ai.js`, `server/inf-words.js`):
 1. **Its words** are checked first (`checkStart()`: PG-13, never a real person, someone else's character or AGI-1; a
    designed one always an adult: Look and Age needed), and its upload already passed its check (below). Its credits are
    spent (`inf_start`: this month's free ones first) and its first job starts.
 2. **Its 4 looks** (head and shoulders, 1:1, 1K): **Nano Banana 2** (Google's image model, on fal.ai) from its choices, or
-   its edit model from the picture or the selfie. The person picks one (free), and **its full body** is made from it (9:16,
-   a plain light grey background; for an AI twin with the selfie too): the picture everything else starts from. A full
+   its edit model from the picture (or, until round 2, the selfie). The person picks one (free), and **its full body** is
+   made from it (9:16, a plain light grey background; for a private one with its photo (or selfie) too): the picture
+   everything else starts from. A full
    body that can't be made goes back to its looks (picking again is free, 3 times), then its creation's credits come back.
 3. **What it makes then:** a **photo** (Nano Banana 2's edit model, from its full body, in the scene); a **trend video**
-   (**Kling V3 Standard**'s motion control: its full body, or one of its photos, copies the moves of a trend move's video
-   or of their clip, no sound); a **video** (from one of its photos: Kling V3 Standard's image to video, 5 s, sound if
+   (since round 2 **Kling O1 Edit**, video to video: the influencer, its picked look as its face and its full body (and the
+   photo it starts from) as more views of it, takes the place of the clip's person, keeping the clip's moves, camera,
+   place and light, and the sound of the owner's trend clips (`keep_audio`; a person's own clip keeps none); until round 2
+   Kling V3 Standard's motion control copied a move onto its picture, no sound); a **video** (from one of its photos: Kling V3 Standard's image to video, 5 s, sound if
    asked; from its full body: **Seedance 2.5**'s reference to video, 5 s, 720p, only for an anime or cartoon influencer:
-   Seedance says no to realistic faces). The owner's **trend moves**: Kling V3 Standard's text to video, a made-up adult
-   dancer doing the move, 10 s, 9:16, no sound (`presetPrompt()`), kept only when the owner keeps it. Every request asks
+   Seedance says no to realistic faces). The owner's **trend clips** (round 2): Kling V3 Standard's text to video, a
+   made-up young adult in a cinematic scene with its own camera move, 10 s, 9:16, **with its own sound** (`presetPrompt()`;
+   until round 2 trend moves: a made-up dancer, no sound), kept only when the owner keeps it; and (round 2) the **example
+   pictures**: Nano Banana 2, one made-up adult showing one choice, 1:1 (`examplePrompt()`). Every request asks
    for something family-friendly with no text or logos (its pictures fully clothed: `server/inf-words.js`), its pictures
    with a strict safety setting (`safety_tolerance` 2: 1 is the strictest).
 4. **Moved along one step at a time**, like the 3D studio's characters: by its page (each look, every 5 s while something
@@ -5439,19 +5489,21 @@ Words visitors read never name the AI services ("an AI service"; a failure is ke
    again twice, keeping its files is tried 4 times, and a job not made in 12 hours is given up: its credits come back.
    fal's key refused, no balance left, or its queue full: it waits (never fails), and the log says so once.
 5. **Gemini looks first** (`server/inf-ai.js`: the site's own key and chat model, its safety filters on, a JSON answer, and
-   a check that can't be made counts as not passed yet): a **selfie** (a real camera photo of one face, looking 21 or
-   older, not a screen, a print or a mask, nothing sexual, hateful or violent), a **character's picture** (artwork, never a
-   photo of a real person, one character, an adult, not a well-known character or mascot, nothing sexual…), a **clip's 3
+   a check that can't be made counts as not passed yet): **a picture** (since round 2 `checkPicture()`: a photo of one
+   real person, looking 21 or older, or artwork of one original adult character; never a famous person, a well-known
+   character or mascot, nothing sexual, hateful or violent; a photo is marked `real`, and its influencer is private;
+   until round 2 a selfie (`checkSelfie()`) or artwork only (`checkArt()`)), a **clip's 3
    frames** (someone moving, everyone 18+, nothing sexual…), **every video made, before anyone sees it** (a "no": never
    shown, its credits back; one over 14 MB isn't looked at, and the log says so), and **a video's poster** (the same
    character, family-friendly). Photos aren't looked at again: they come from Nano Banana with its strict setting.
 6. **Uploads** (`server/inf-uploads.js`): opened with 18+ and the human check (a ticket for this upload and this wallet,
    30 minutes), then the file's bytes as their own requests (`POST /api/launch?inf-up=<ticket>&part=<n>`,
-   `application/octet-stream`: Vercel takes at most 4.5 MB a request). A picture or a selfie in one (made at most 1536 px
-   in the browser, 4 MB at most), made a plain JPEG on our server (no EXIF, no location) and looked at **before it's
-   kept**: one that doesn't pass is never stored. A clip in parts of 3.5 MB, then 3 frames taken in the browser, then
-   "done": put together, its length read from its own MP4 header (2 to 10 s), its frames looked at, and its parts and
-   frames deleted. 30 uploads a day per wallet.
+   `application/octet-stream`: Vercel takes at most 4.5 MB a request). A picture in one (made at most 1536 px in the
+   browser, 4 MB at most; since round 2 only with its box ticked, `consent`), made a plain JPEG on our server (no EXIF, no
+   location) and looked at **before it's kept**: one that doesn't pass is never stored. A clip in parts of 3.5 MB, then 3
+   frames taken in the browser, then "done": put together, its length, size and frame rate read from its own MP4 header
+   (`server/mp4.js`: since round 2 3 to 10 s, 720 to 2160 px a side, 24 to 60 frames a second, the video model's own
+   limits; 2 to 10 s before), its frames looked at, and its parts and frames deleted. 30 uploads a day per wallet.
 7. **Posters:** a done video's page takes a frame of it in the visitor's browser (from our own address) and sends it with a
    ticket (`?inf-poster=`); Gemini checks it next to the influencer's look, and Explore's tiles show it.
 
@@ -5480,12 +5532,14 @@ Words visitors read never name the AI services ("an AI service"; a failure is ke
 **Its 3D models** are the 3D studio's characters (`supabase/studio.sql`), now made from the influencer's full-body picture
 (Meshy's image to 3D, then its bones and 8 moves: 59 of Meshy's credits), paid in credits (`inf_3d`, one at a time per
 influencer), inside the studio's characters a month (`STUDIO_A_MONTH`); one that can't be made gives its credits back (or
-a Soulmate's free one). **Its coin** is a launch draft like her bot's (`coinDraft()`): her checks of the name, ticker and
+a Soulmate's free one). Since round 2 also for a big burn instead (`STUDIO_MODEL_BURN_AGI`, 25,000 $AGI: "AGI Studio,
+round 2"). **Its coin** is a launch draft like her bot's (`coinDraft()`): her checks of the name, ticker and
 line, its picture the picked look from our bucket (`studio:<influencer>/<job>-<n>`, a JPEG of 1 MB at most), and a
 scrambled code of the wallet instead of a Telegram chat; from there, the launch page's own rules (hard rule 9's exception).
 While `LAUNCH_ONLY_FOR` is set, only the owner and `STUDIO_ONLY_FOR`'s wallets get a link.
 
-**Limits:** 3 influencers being made at once per wallet, 4 photos and videos at once, 30 uploads a day, 2,000 AI jobs a
+**Limits:** 3 influencers being made at once per wallet (since round 2 also `STUDIO_SLOTS`, 5, in all, and one more for
+each slot unlocked by burning), 4 photos and videos at once, 30 uploads a day, 50 likes a day (round 2), 2,000 AI jobs a
 day for the whole site (`STUDIO_JOBS_A_DAY`: each paid in credits, a guard against a runaway), 10 reports a day each; speed
 bumps per server copy (60 looks, 20 actions, 90 upload parts and 300 files a minute per visitor).
 
@@ -5498,23 +5552,29 @@ influencer is made), influencers that couldn't be made after 30 days, deleted on
 days, reports after 90.
 
 **Its files:** the 3D studio's private bucket (`agi1-characters`, since then JPEG pictures and a clip's parts too):
-`inf/<influencer>/…` (pictures, videos, posters), `trends/…` and `up/…` (uploads). Served from our own address in a sandbox
-(`?inf-file=`; `?inf-video=` in parts like the studio's videos; `?inf-video-dl=` a signed address, 2 hours); an AI twin's
-are never kept by the CDN, so "Delete my face" takes them off at once.
+`inf/<influencer>/…` (pictures, videos, posters; since round 2 a video's copy with the share mark, `<job>.dl.mp4`),
+`trends/…`, `examples/…` (round 2) and `up/…` (uploads). Served from our own address in a sandbox (`?inf-file=`;
+`?inf-video=` in parts like the studio's videos; `?inf-video-dl=` a signed address, 2 hours; since round 2 `?inf-dl=` a
+photo with the share mark and `?inf-ex=` an example picture); a private one's are never kept by the CDN, so deleting it
+("Delete my face" for an AI twin) takes them off at once.
 
 **Its addresses** (`vercel.json`, `vite.config.js`): `/studio/:path+` serves the app's page; on the host studio.agi1.app
 every address that isn't a file serves it (a rewrite), and "/" there goes to /explore (a redirect: Vercel serves
 `index.html` at "/" before any rewrite). Everything it asks goes to `/api/launch` (`server/inf-api.js`: no 13th function).
 The page's CSP got `media-src 'self' blob:` (its videos from our own address, and a visitor's own clip in their browser)
-and `Permissions-Policy` `camera=(self)` (the live selfie), for our own pages only.
+and `Permissions-Policy` `camera=(self)` (the live selfie), for our own pages only; since round 2 `camera=()` again (no
+selfies: no page of the site may use the camera).
 
 **What's kept** (`supabase/influencers.sql`, row level security on, only the server's key): per influencer a scrambled
 code of its wallet (never the address), its name, how it was made, its style and choices, the upload it was made from
 (only until it's made), which look was picked, and whether it's in Explore or hidden; each picture or video made for it
 (its words, shape and sound, its credits, where it is at the AI service, its files' count and size); per wallet code its
 credits, and a log of each top-up, spend, refund and free grant; per month the free credits given; each upload's kind and
-whether it passed; the trend moves; reports (why, and a daily code of who reported); per day the AI jobs started. Never an
-address, a transaction, an IP address or anything else about anyone. The safety note's 01, 02, 03 and 04 say so.
+whether it passed; the trend moves; reports (why, and a daily code of who reported); per day the AI jobs started; since
+round 2 whether an upload and its influencer are a real person's photo, likes (per creation, a scrambled code of the wallet
+that liked it and its level), each week's spotlight (and once its prize is claimed, the address it went to and its
+transaction: 60 days), burn unlocks and the extra influencers a wallet unlocked. Never an address (but a prize's), a
+transaction (but a prize's), an IP address or anything else about anyone. The safety note's 01, 02, 03 and 04 say so.
 
 **The old 3D studio's orders** (`api/launch.js`): a character from words (`studio-quote`) and a character's video
 (`studio-video-quote`) answer **410 `moved`**; a character's page, its files and its videos still answer, and so does
@@ -5526,23 +5586,30 @@ finishing an order made before (choosing how to pay, "Check my payment", making 
    taken from it; when it's empty, things wait) → **API Keys** → a new key → Vercel → `FAL_KEY` (Production). A secret:
    never in chat, code, git or a screenshot.
 3. **Supabase** → SQL Editor: **all** of `supabase/studio.sql` again (after `burns.sql`; it keeps everything and ends with
-   `studio_ready = 1`), then **all** of `supabase/influencers.sql` (it ends with `influencers_ready = 1`).
+   `studio_ready = 1`), then **all** of `supabase/influencers.sql` (it ends with `influencers_ready = 1`; since round 2 its
+   version of round 2: run it again if it was run before, before pushing round 2).
 4. **Vercel** → Environment Variables (Production): `STUDIO_PAY_TO` (the owner's own wallet address on Robinhood Chain:
    where USDG for credits goes; an address, never a key), `STUDIO_ONLY_FOR` (the owner's wallet: private first; its first
-   wallet is the owner's page's, unless `STUDIO_OWNER` names another). Optional: `STUDIO_FACES` = `off` (no AI twins),
-   `STUDIO_FREE_CREDITS_A_MONTH` (5000), `STUDIO_JOBS_A_DAY` (2000), `MESHY_API_KEY` (3D models: the studio's setup),
-   `PINATA_JWT` (coins: Launch with AGI-1's). Then **Redeploy**.
+   wallet is the owner's page's, unless `STUDIO_OWNER` names another). Optional: `STUDIO_FACES` = `off` (since round 2:
+   no photos of real people, only drawings and characters; before: no AI twins), `STUDIO_FREE_CREDITS_A_MONTH` (5000),
+   `STUDIO_JOBS_A_DAY` (2000), `MESHY_API_KEY` (3D models: the studio's setup), `PINATA_JWT` (coins: Launch with AGI-1's);
+   since round 2 `PRIZE_WALLET_KEY` (her quizzes' prize wallet: the weekly spotlight's prize comes from it; without it
+   the spotlight is for glory only), `STUDIO_WEEKLY_PRIZE` (10000), `STUDIO_SLOTS` (5), `STUDIO_SLOT_AGI` (5000),
+   `STUDIO_BOOST_AGI` (10000), `STUDIO_MODEL_BURN_AGI` (25000), `STUDIO_BURNS_A_MONTH` (10). Then **Redeploy**.
 5. **The domain:** Vercel → agi-ecosystem → Settings → **Domains** → **Add Domain** → `studio.agi1.app` → the DNS record it
    shows (a CNAME) → Namecheap's hosting **cPanel → Zone Editor** (like inference.agi1.app: see "CloakMesh at
    inference.agi1.app") → wait for "Valid Configuration". Until then the app is at agi1.app/studio. Cloudflare's human
    check needs nothing (agi1.app's widget covers its subdomains).
 6. **Push.**
-7. **The trend moves:** at studio.agi1.app/owner (or agi1.app/studio/owner) with the owner's wallet: **Make** each of the 12
-   (about $0.84 each from fal's balance, a few minutes), watch it, **Keep** the good ones (**Make again** for one that
-   isn't). Until one is kept, the trend sheet says "No trending moves yet: use your own clip".
+7. **The trend clips and example pictures** (since round 2; trend moves before, about $0.84 each): at
+   studio.agi1.app/owner (or agi1.app/studio/owner) with the owner's wallet: **Make the 12 missing clips** (about $1.26
+   each from fal's balance, about $15 in all, a few minutes each), watch each, **Keep** the good ones (**Make it again** for
+   one that isn't); then **Make the 32 missing pictures** (about $0.08 each, about $2.60), and **Again** for one that
+   isn't right. Until a clip is kept, the trend sheet says "No trending clips yet: use your own clip."; until a picture is
+   made, its choice shows only its words.
 8. **Try it** with the owner's wallet: buy a few credits ($5), design one, pick a look, a photo, a trend video, a video, a
-   3D model, a coin link (open it only to look: launching makes a real coin); then "Use my face" on a phone, and "Delete my
-   face".
+   3D model, a coin link (open it only to look: launching makes a real coin); then (round 2) "From a photo" with a photo of
+   yourself (it's private: never in Explore), a like, a download (its mark), and Delete.
 9. **Before opening it** (`STUDIO_OPEN` = `yes`): the AI services' terms for selling what they make (see "Open
    questions"), then a link to it from the other pages (Claude adds it).
 
@@ -5553,11 +5620,14 @@ finishing an order made before (choosing how to pay, "Check my payment", making 
 | A new influencer | Nano Banana 2: 4 looks and its full body (5 pictures at $0.08) | $0.40 | $1.00 |
 | 4 new looks | Nano Banana 2 (4 pictures) | $0.32 | $0.40 |
 | A photo | Nano Banana 2 (1 picture) | $0.08 | $0.15 |
-| A trend video | Kling V3 Standard motion control, $0.126 a second, as long as the move | up to $1.26 | $3.00 |
+| A trend video | Since round 2 Kling O1 Edit (video to video), about $0.126 a second, the clip's length (3 to 10 s); motion control before | up to $1.26 | $3.00 |
 | A video from a photo | Kling V3 Standard image to video, 5 s: $0.084 a second, $0.126 with sound | $0.42 or $0.63 | $4.00 |
 | A video from its full body | Seedance 2.5 reference to video, 5 s, 720p | about $2.40 | $4.00 |
 | A 3D model | Meshy: 59 credits (Pro: about $20 for 1,000) | about $1.18 | $5.00 |
-| A trend move (the owner's, once each) | Kling V3 Standard text to video, 10 s, no sound | $0.84 | (the owner: about $10 for all 12) |
+| A trend clip (the owner's, once each; round 2) | Kling V3 Standard text to video, 10 s, with sound ($0.126 a second) | $1.26 | (the owner: about $15 for all 12; trend moves without sound, $0.84 each, before) |
+| An example picture (the owner's, once each; round 2) | Nano Banana 2 (1 picture) | $0.08 | (the owner: about $2.60 for all 32) |
+| A free 3D model for a big burn (round 2) | Meshy: 59 credits | about $1.18 | 25,000 $AGI burned (it pays nobody) |
+| The weekly spotlight's prize (round 2) | none: the owner's own $AGI, from the prize wallet | `STUDIO_WEEKLY_PRIZE` (10,000 $AGI) a week at most, and its network fee | (the maker of the most liked creation) |
 
 A Soulmate's 40% off is about the AI's own cost for a few things (4 new looks, 24 credits for $0.32; a video from its full
 body, $2.40), and the free credits (at most $50 a month for the site) and a Soulmate's free 3D model are the owner's to pay.
@@ -5578,13 +5648,18 @@ then a paid plan or the tidy-up of old ones. Vercel Pro $20 a month.
 | "Check my payment" finds nothing right after paying | (none) | The block explorer is a minute behind: check again, or paste the transaction's link |
 | "Couldn't look up your payments just now" | `[studio] checking a top-up (explorer): …` | The block explorer didn't answer: paste the link, or try later |
 | A video "wasn't family-friendly" | `[studio] job …'s video wasn't family-friendly (…): not shown, its credits back` | Working as planned (Gemini's look) |
-| The trend sheet: "No trending moves yet" | (none) | Setup step 7 (only kept moves show) |
+| The trend sheet: "No trending clips yet: use your own clip." ("No trending moves yet" before round 2) | (none) | Setup step 7 (only kept clips show) |
 | The owner's page says "Only the owner's wallet sees this page." | (none) | Connect the wallet in `STUDIO_OWNER` (else the first of `STUDIO_ONLY_FOR`) |
-| "Use my face" isn't there (or "is switched off for now") | (none) | `STUDIO_FACES` is `off` in Vercel |
+| "From a photo" says photos of real people are switched off for now (before round 2: "Use my face" isn't there) | (none) | `STUDIO_FACES` is `off` in Vercel |
+| (round 2) A like, a burn unlock, a prize or the owner's page says "AGI Studio isn't open yet." | `[studio] the studio app: inf_like not found: run supabase/influencers.sql again in this Supabase project (its round 2; it ends with influencers_ready = 1)` (or `inf_examples`, `inf_week_…`, `inf_burn_…`, `inf_stats`…) | Run `supabase/influencers.sql` again (it keeps everything) |
+| (round 2) Downloaded videos have no "Made with AGI Studio" mark | `[studio] marking video … (try 3 of 3): mark: ffmpeg isn't here` (or `ran out of time`) | The clock's function lost its ffmpeg (`vercel.json`: `api/feed.js`'s `includeFiles`): tell Claude. Meanwhile videos download as they were made; photos are marked anyway |
+| (round 2) The owner's page: "No week picked yet" | (none) | By design: each Monday (UTC) the clock picks the week before, once a creation of it has a holder's like |
+| (round 2) A maker hears "The prize wallet needs a top-up first" | `[games] the prize wallet 0x… is out of $AGI` (or `ETH`) | Top up the prize wallet (her quizzes' own); the prize waits, and they claim it again in My studio |
+| (round 2) "Check my burn" finds nothing right after burning | (none) | The block explorer is a minute behind: check again, or paste the burn's transaction link |
 | studio.agi1.app doesn't open | (none) | The domain isn't set up yet (setup step 5); agi1.app/studio works meanwhile |
 | studio.agi1.app shows the AGI-1 site | (none) | The host rewrite in `vercel.json` is missing (`tests/influencer.test.js` checks it) |
 
-**Tests:** `tests/influencer.test.js` (33, with fake fal, Supabase (`influencers.sql`'s rules in JavaScript) and its
+**Tests** (as of round 1; round 2's: see "AGI Studio, round 2"): `tests/influencer.test.js` (33, with fake fal, Supabase (`influencers.sql`'s rules in JavaScript) and its
 Storage, Gemini, Robinhood Chain, the block explorer and Cloudflare): the rules and words (every way to start, every check
 of its words, the words the AI services get), the AI requests as fal's pages write them (each model, every way a job is
 made, fal's model names accepted: `MODEL_RE`), Gemini's checks (every answer, fail closed), uploads (tickets, a picture
@@ -5605,6 +5680,155 @@ time to keep its video and showed the page from before, and a clip's frames now 
 fal's models themselves (what they make from real pictures, how long they take, Kling's motion control on a real clip,
 Seedance's refusals), Gemini's real verdicts on real selfies and pictures, USDG top-ups on Robinhood Chain, Supabase
 Storage, the domain, real phones' cameras (Safari on an iPhone) and wallets. The owner's first influencer is the check.
+
+### AGI Studio, round 2 (2026-10-10)
+
+**The owner's list** (after looking at AGI Studio the same day): "remove the use your face"; "no restrictions on That
+looks like a photo of a real person" (the owner's pick: **"Allowed with consent (Recommended)"**); "the trending videos
+should be real like in higgsfield genjutsu" (the owner: "from higgsfield trending with promps with them, just look up
+higgsfield"); "in the make it yours show example of the image not just text"; "the site looks mid lol unlike higgsfield,
+make the design like higs field just change it a bit so it doesn't look alike"; "large burns can make free 3d model" (the
+owner's pick: **25,000 $AGI**); and Claude's flywheel, all four parts the owner picked: **a share mark**, **a weekly
+spotlight with a prize**, **burn unlocks** and **a live stats board** (with likes, which the spotlight needs). Built the
+same day, in the same app (no new function file, no new service, no new secret). **Run `supabase/influencers.sql` again
+before pushing it** (it keeps everything saved; it ends with `influencers_ready = 1`).
+
+**Photos of real people, with consent; no "Use my face":**
+- No live camera anywhere (`Permissions-Policy` `camera=()` again; no `getUserMedia` in the app: a test fails the build
+  otherwise). Create's two ways are **Design it** and **From a photo**: a photo of you, of a friend who said OK, or a
+  character you drew or rendered, picked only once the box is ticked ("This is me, someone who said I may use their photo
+  (an adult), or a character of my own."), which our server needs too (`consent`, else 400).
+- Gemini looks at it before it's kept (`checkPicture()`): one person or character, clearly looking 21 or older (for a
+  photo, its guessed age too); **never a famous person** (a celebrity, a public figure, a big influencer, photographed or drawn), a
+  well-known character or mascot, anything sexual, hateful or violent. A photo is marked `real`.
+- An influencer made from a real person's photo is **private**, like an AI twin was: never in Explore, never liked,
+  spotlit or boosted, its files never kept by the CDN, its full body made with the photo too; deleting it deletes the
+  photo and everything made from it. Its coin needs a second box (a real person's face on a public coin, for good).
+- `STUDIO_FACES` = `off` now means only drawings and characters (Create says "photos of real people are switched off for
+  now", said again when the studio's settings arrive after the page is drawn: a bug the browser test found and fixed).
+- Influencers made from a face before round 2 stay as they were (private, "Delete my face"); no new ones.
+
+**Real-looking trend videos:**
+- The owner's **12 trend clips** (`TRENDS` in `src/studio/rules.js`): Golden hour, Paparazzi, Rooftop orbit, Neon crash
+  zoom, Confetti freeze, Neon runway, Night drive, Rain twirl, Sunset run, Front row, First snow, Fireworks: each a short
+  cinematic scene with a made-up young adult, its own camera move and its own sound, made once from words by Kling V3
+  Standard's text to video (10 s, 9:16, with sound: about $1.26 each, about $15 for all 12) on the owner's page and kept by
+  the owner. Like the trending templates people make with AI video apps; ours, written for this app: never anyone's video,
+  music or name.
+- **A trend video** puts the influencer into one (Kling O1 Edit, video to video: its picked look as its face, its full
+  body and the photo it starts from as more views of it) in place of the clip's person, keeping the clip's moves, camera,
+  place, light and sound (`keep_audio`), about $0.126 a second. Or into **their own clip** (3 to 10 s, 720 to 2160 px a
+  side, 24 to 60 frames a second: the model's own limits, read from the clip's own header by `server/mp4.js`; its sound
+  never used, since it could be someone else's music or voice). Still 300 credits.
+
+**Example pictures** ("make it yours"): each of Create's choices with a picture: its 3 styles, 3 looks, 4 ages, 8 hair
+styles, 8 outfits and 6 vibes, **32 pictures**, each one made-up adult showing only that choice (Nano Banana 2, 1:1, about
+$0.08 each: about $2.60 for all), made once by the owner on the owner's page (**Make the 32 missing pictures**, **Again**
+for one). Skin, hair color and eyes are color swatches instead. Served at `?inf-ex=<job>.webp` (kept a day by the CDN);
+a choice without its picture shows its words.
+
+**A new look** (`src/styles/studio-app.css`): media first, near-black, big pictures and videos in walls and rails,
+condensed heavy headings (Anybody, the site's own font, its width narrowed), one violet-to-pink gradient for what to
+press, honey for credits. Higgsfield's spirit, never its colors, logo, pictures or code. Still every rule an `sa-` class.
+
+**The flywheel:**
+- **Likes:** a heart on every done photo and video of a public influencer (never a private one, never your own), for any
+  signed-in wallet, 50 a day (`inf_like`). Everyone's likes show; **only holders' (Crush and Soulmate, by their level when
+  they liked) count toward the spotlight**, so a pile of new wallets can't pick it.
+- **The weekly spotlight** (`server/inf-week.js`): each Monday (UTC) the studio's clock picks the week before once
+  (`inf_week_pick`): its photo or video with the most holders' likes (at least one), then all likes, then the first made,
+  of a public influencer. It waits on the owner's page: **Approve** (with its prize in whole $AGI, `STUDIO_WEEKLY_PRIZE`,
+  10,000 by default, 0 = for glory) or **Skip to the next best**. Approved, it's Explore's "Spotlight of the week" for two
+  weeks, and its maker sees it in My studio and claims the prize there: to the wallet they're signed in with (the one that
+  made it), claimed in the database first (once), then $AGI's own transfer from **her quizzes' prize wallet**
+  (`PRIZE_WALLET_KEY`), recorded before it goes out, never twice (`server/hot-wallet.js`); a claim left behind is given
+  back after 2 minutes. Without the prize wallet, spotlights are for glory only. "A thank-you for making, not an
+  investment, not financial advice": never paid to holders for holding.
+- **Burn unlocks** (`server/inf-burns.js`): $AGI burned from the person's own wallet app (to `0x…dEaD`: never asked of a
+  wallet, hard rule 9), read on Robinhood Chain like every burn, each burn counted once (in studio.sql's and burns.sql's
+  ledgers: never also for messages or a character) and toward the wallet's level. A quote first (a day to burn toward it),
+  then **Check my burn** (or a pasted link); burns add up:
+  - **one more influencer** (`STUDIO_SLOT_AGI`, 5,000 $AGI): a wallet may have `STUDIO_SLOTS` (5) influencers being made
+    or ready, and one more for each slot unlocked ("Unlock one more" in My studio; deleting one makes room);
+  - **a boost** (`STUDIO_BOOST_AGI`, 10,000 $AGI): one of its own public influencers in Explore's **Boosted** row for 24
+    hours (added to a boost already on);
+  - **a free 3D model** (`STUDIO_MODEL_BURN_AGI`, 25,000 $AGI, the owner's): the 3D studio's own burn order (`inf_3d_burn`,
+    checked by `checkPayment`), inside `STUDIO_BURNS_A_MONTH` (now 10 a month, was 5); one that can't be made is made again
+    free (a burn can't be given back).
+  "A burn is gone for good: not an investment, no refunds, not financial advice."
+- **The share mark** (`server/inf-mark.js`): every photo and video downloaded carries a small "Made with AGI Studio ·
+  AI-generated · studio.agi1.app" pill (`server/media/studio-mark.png`, drawn once by `tools/studio/mark.mjs`). A photo:
+  marked with sharp as it's downloaded (`?inf-dl=<inf>/<job>-<n>.jpg`, bottom right). A video: marked once by the studio's
+  clock (`/api/feed?studio`, one at a time, only with 14 s left, the newest first, 3 tries), top left (TikTok's, Reels' and
+  Shorts' buttons sit at the bottom right), its picture encoded again, its sound copied as it is, kept beside it
+  (`<job>.dl.mp4`); its downloads use that copy from then on, and the video as it plays on its page never changes. ffmpeg
+  is the `@ffmpeg-installer/ffmpeg` package's Linux binary (ffmpeg 4.1, GPLv3, 66 MB), shipped with `/api/feed` only
+  (`vercel.json`: `includeFiles`); it only ever reads videos the AI service made, never a visitor's upload.
+- **The live stats board** at the top of Explore (`?inf-stats`, kept a minute): influencers, photos, videos, 3D models,
+  made today, likes, $AGI burned in the studio and boosted now. Public totals only; hidden while everything is 0.
+
+**Its addresses** (all in `/api/launch`): GET `?inf-dl=`, `?inf-ex=`, `?inf-stats`; POST `inf-like`, `inf-liked`,
+`inf-3d-burn`, `inf-3d-check`, `inf-3d-redo`, `inf-burn-quote`, `inf-burn-check`, `inf-week-claim`, and the owner's
+`inf-example-make`, `inf-week-set`; `?inf-info` adds `examples`, `burns`, `slots`, `weeklyPrize` and `likesADay`, and
+`?inf-explore` adds `boosted` and `spotlight`.
+
+**What's new in the database** (`supabase/influencers.sql`, 13 tables and 59 functions): `agi1_inf_likes` (per creation, a
+scrambled code of the wallet that liked it and its level), `agi1_inf_weeks` (each week's spotlight; a claimed prize keeps
+the address it went to and its transaction: the address 60 days after it's sent), `agi1_inf_burns` and `agi1_inf_slots`;
+columns for a real person's photo (`real`), a boost (`boost_until`), example pictures (`example`), the share mark
+(`marked`, `mark_tries`, `mark_at`) and likes. Row level security on all 13 tables, only the server's key.
+
+**The safety note** (the home page's, `index.html`; studio.html's own rules were rewritten with the rest): 01 the
+spotlight's prize ("a thank-you for making: not an investment, and not financial advice") and, once burns are open, burn
+unlocks; 02 burns for unlocks only to the burn address, and a prize claimed in My studio with the wallet that made it
+("nothing else is asked"); 03 "never a famous person or someone else's character, and a real person only from a photo of
+them they agreed to", downloads labeled; 04 photos with consent (private, deleted with everything made from them), likes,
+a prize's address (60 days) and transaction, and burns for unlocks (once burns are open). Two more `data-burn-only` parts
+(six in all).
+
+**Settings** (Vercel, all optional): `STUDIO_WEEKLY_PRIZE` (10000; 0 = for glory), `STUDIO_SLOTS` (5), `STUDIO_SLOT_AGI`
+(5000), `STUDIO_BOOST_AGI` (10000), `STUDIO_MODEL_BURN_AGI` (25000) (0 = that unlock off), `STUDIO_BURNS_A_MONTH` (10, was
+5), `PRIZE_WALLET_KEY` (her quizzes' prize wallet, for the spotlight's prize). See "Environment variables".
+
+**Owner, in this order:**
+1. **Supabase** → SQL Editor → New query → paste **all** of `supabase/influencers.sql` → Run → `influencers_ready = 1`.
+   Before pushing: the new code needs its new functions and parameters (with the version before it, creating an
+   influencer, likes, burns, prizes and the owner's page say "AGI Studio isn't open yet.").
+2. **Push.**
+3. Optional settings (above), then **Redeploy**. With `PRIZE_WALLET_KEY` already set for her quizzes, the spotlight's
+   prize works as it is: keep enough $AGI there for a week's prize on top of her quizzes' few days.
+4. **On the owner's page** (studio.agi1.app/owner, the owner's wallet): **Make the 12 missing clips** (about $15 from
+   fal's balance), watch each, **Keep** the good ones; **Make the 32 missing pictures** (about $2.60).
+5. Each Monday after the first holders' likes: **Approve** (or **Skip**) the spotlight on the owner's page.
+
+**Cost:** the 12 trend clips once (about $15) and the 32 example pictures once (about $2.60), from fal's balance; a trend
+video about $0.126 a second (up to $1.26; still 300 credits); the spotlight's prize, the owner's $AGI (10,000 a week at
+most by default) and its network fee; a free 3D model for a burn about $1.20 of Meshy's credits (10 burns a month at most,
+all kinds together); likes, unlocks and the stats board nothing new (a few small database calls); the share mark a few
+seconds of the clock's function for each video (on Vercel Pro's CPU), and photos marked as they're downloaded. The clock's
+function is about 66 MB bigger with ffmpeg (Vercel allows 250 MB a function).
+
+**Tests:** `tests/influencer.test.js` (43, 10 new: a photo of a real person with consent (never without its box; Gemini's
+answers; private everywhere; `STUDIO_FACES` off), the trend clips (Kling O1 Edit's request as fal's page writes it, their
+sound kept, a person's clip's never), a clip's size and frame rate from its header, example pictures (made, served, only
+the owner's), likes (holders' only for the spotlight, never a private one or your own, 50 a day), the spotlight (picked
+once, the owner's look, the prize claimed by its maker only, sent once, every way sending can go), burn unlocks (quotes,
+checks, slots, boosts) and the 3D model for a burn, the share mark (a photo marked, a video marked by the clock with a
+stand-in ffmpeg, its download), the stats board, no camera anywhere (and the page test's promises, the home page's safety
+note among them)); 688 in the whole suite (687 pass, 1 skipped as before) on Node 20, 22 and 24, with and without
+Vercel's settings. `supabase/influencers.sql` in
+PGlite (Claude's scratch `pg/infsql2.mjs`, 55 groups, run over the owner's version before round 2). In a browser: every view
+and sheet at 1440, 390 and 360 px with a fake API (`app/look2.mjs`: nothing sticks out, axe 0 issues, clean consoles), and
+with our own server's code answering the page (`app/real2.mjs`, 210 checks: Explore (the stats board, the spotlight, the
+boosted row, trend clips, fresh photos and videos with their hearts), likes, a photo of a real person (with and without
+its box, refused ones, `STUDIO_FACES` off), example pictures, trend videos from a clip and from their own clip, burn
+unlocks and the 3D model for a burn (read on a stand-in chain), the spotlight's prize claimed and sent, the owner's page
+(making clips and pictures, approving and skipping a week), downloads with their mark, phones; no 5xx, nothing blocked by
+the CSP, clean consoles). Found that way and fixed: Create's "what a photo may be" said "A photo of you…" even with
+`STUDIO_FACES` off when the studio's settings came after the page was drawn (a page test now checks it); and, writing
+these notes, the home page's safety note still said round 1's "never a real person but your own face" and "live selfie"
+(brought up to date, and tested). **Not tried live:** Kling O1 Edit and the trend clips on fal (how real they look, how long they take), Gemini's verdicts on real
+photos, ffmpeg on Vercel, the prize wallet's first spotlight prize, real burns: the owner's first week is the check.
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -6209,6 +6433,10 @@ agi1.app's code or pictures: the look is rebuilt in our own CSS, with free fonts
 **AGI Studio (2026-10-10) has its own look too**, like CloakMesh's page: a dark app made for phones first (a tab bar,
 sheets, big buttons), every rule naming an `sa-` class (`src/styles/studio-app.css`), the site's Geist and its accent; no
 Pop mode or light theme there. The owner: "the ui will be different on this it will be user friendly and easy to use".
+Since its round 2 (the owner: "the site looks mid lol unlike higgsfield, make the design like higs field just change it a
+bit so it doesn't look alike"): media first, near-black, big pictures and videos in walls and rails, condensed heavy
+headings in Anybody (the site's own font, Pop mode's), one violet-to-pink gradient for what to press, honey for credits;
+never another app's colors, logo, pictures or code.
 
 **Principles**
 - Minimal: one idea per section, lots of whitespace, a strict grid, 1 px hairlines instead of shadows and glows.
@@ -6319,7 +6547,13 @@ Pop mode or light theme there. The owner: "the ui will be different on this it w
   holder perks ("a thank-you for holding, not an investment"), note 02 that USDG for credits goes only to the studio's
   wallet its page shows and that a coin launch can start from AGI Studio, note 03 that AGI Studio is 18+, PG-13 and
   AI-generated, never a real person but your own face, and note 04 what it sends to AI services and keeps (an AI twin
-  never in Explore, "Delete my face"). Last updated October 10, 2026. **Owner's wording
+  never in Explore, "Delete my face"); and (its round 2, the same day) note 01 its weekly spotlight's prize ("a thank-you
+  for making") and, once burns are open, its burn unlocks ("gone for good, not an investment"), note 02 that a burn for an
+  unlock goes only to the burn address and that a spotlight prize is claimed with the wallet that made it, note 03 a real
+  person only from a photo they agreed to and never a famous person (no more "your own face"), and what's downloaded
+  labeled "Made with AGI Studio · AI-generated", note 04 photos of real people with consent (private, deleted with
+  everything made from them), likes, a prize's address (60 days) and transaction, and burns for unlocks (once burns are
+  open). Last updated October 10, 2026. **Owner's wording
   rules (2026-09-24):** the visitor-facing text doesn't name the
   AI provider (no "Google"/"Gemini"; it says "an AI service"), and there's no "Not a real lab" note. **2026-09-25:** "A parody"
   is gone from the bottom bar (both pages); it now reads "© 2026 AGI. No labs were harmed." and "$AGI is a token made
@@ -6450,7 +6684,7 @@ Pop mode or light theme there. The owner: "the ui will be different on this it w
   and it's sent exactly like a typed message (same checks, limits and PG-13 rules).
 - `Permissions-Policy: microphone=(self)` (was `microphone=()`): the mic for our own pages only, never for embedded frames
   (Turnstile). Location stays off, and so did the camera until AGI Studio's live selfie (2026-10-10: `camera=(self)`, our
-  own pages only).
+  own pages only); off again since its round 2, the same day (`camera=()`: no selfies).
 - The mic is only on while you see it's on (the button is filled and pulsing, the box says "Listening…"); a call ends when the
   page is hidden or left, on Clear, Forget me and the 18+ screen, and after about 25 s of silence.
 
@@ -6719,15 +6953,32 @@ Pop mode or light theme there. The owner: "the ui will be different on this it w
   payments: each once). A coin with an influencer's face goes through the launch page, hard rule 9's one exception.
 - **Its secrets:** `FAL_KEY` (only ever sent to fal's queue, scrubbed from every log) and the chat's `GEMINI_API_KEY`;
   nothing new on the secret check's list.
-- **What people upload is looked at before it's kept:** a picture or a selfie is made a plain JPEG (no EXIF, no location)
+- **What people upload is looked at before it's kept:** a picture (a selfie too, until round 2) is made a plain JPEG (no EXIF, no location)
   and looked at by Gemini (one that doesn't pass is never stored); a clip's 3 frames are looked at before its parts are put
   together and kept. Only real JPEG, PNG or WebP pictures (4 MB, 40 million pixels at most) and MP4 or MOV clips (30 MB in
-  parts of 3.5 MB, each part exactly its size, its length read from its own header). Every video made is looked at before
+  parts of 3.5 MB, each part exactly its size, its length (since round 2 also its size and frame rate) read from its own
+  header). Every video made is looked at before
   anyone sees it, and a poster next to the influencer's look. A check that can't be made counts as not passed yet.
-- **Faces:** only from the live camera (never a file), only with the consent box, 18+ (and Gemini: one face, looking 21 or
-  older, a real camera photo, not a screen or a print). An AI twin is never in Explore, its page and files are never kept
-  by the CDN, its selfie is deleted as soon as it's made, and "Delete my face" deletes it and everything made from it at
-  once (a coin already launched with it can't be: the page says so, with its own box).
+- **Faces** (until round 2): only from the live camera (never a file), only with the consent box, 18+ (and Gemini: one
+  face, looking 21 or older, a real camera photo, not a screen or a print). An AI twin is never in Explore, its page and
+  files are never kept by the CDN, its selfie is deleted as soon as it's made, and "Delete my face" deletes it and
+  everything made from it at once (a coin already launched with it can't be: the page says so, with its own box).
+- **Photos of real people** (since round 2, the owner's "Allowed with consent"): only with the box ticked (the uploader's
+  word that it's them, or someone who said OK; our server refuses a picture without it), and Gemini first: one person,
+  looking 21 or older, **never a famous person**, nothing sexual. Private like an AI twin (never in Explore, never liked,
+  spotlit or boosted, never kept by the CDN), its photo deleted once its influencer is made (the tidy-up, every 30
+  minutes), everything deleted with it; a coin with it needs its own box. Reports ("a real person who didn't agree") and the owner's page take one down.
+  No camera anywhere (`camera=()`).
+- **Likes and the weekly spotlight** (round 2): a like needs a signed-in wallet (50 a day, under a scrambled code of it,
+  never the address); only holders' likes pick the spotlight, and only the owner approves it. Its prize goes only to the
+  signed-in wallet that made it (its session proves it, and a sign-in is a plain signature, so an ordinary wallet), from
+  her quizzes' prize wallet (`PRIZE_WALLET_KEY`: $AGI's own transfer, at most 1,000,000 $AGI, recorded before it's sent,
+  never twice); the address it went to and its transaction are kept (the address 60 days).
+- **Burn unlocks** (round 2): never asked of a wallet; a burn counts only from the chain's own answer (the official $AGI's
+  Transfer events, from the signed-in wallet, to `0x…dEaD` or `0x0`, after its quote, in the last 7 days), once, in the same
+  ledgers as every burn.
+- **The share mark's ffmpeg** (round 2): only in `/api/feed` (the clock), only ever reading a video the AI service made
+  (never a visitor's upload), with a time limit (it's stopped), in its own temporary folder.
 - **Uploads come in their own requests** (`?inf-up=<ticket>`, `application/octet-stream`, 4.2 MB at most each): a ticket
   signed with PASS_SECRET for that upload, that wallet and 30 minutes, given only after 18+ and the human check.
 - **Who may do what:** everything but looking and reporting needs the wallet's session (its level read again on the chain
@@ -6741,9 +6992,10 @@ Pop mode or light theme there. The owner: "the ui will be different on this it w
   most; a video a real MP4) into the private bucket, and are served only from our own address, only while shown (not
   deleted, hidden or taken down), in a sandbox (`default-src 'none'; sandbox`, `nosniff`).
 - **What's kept:** never an address, a transaction or an IP address (a scrambled wallet code, scrambled payment codes, a
-  daily code of who reported); row level security on its 9 tables, only the server's key.
+  daily code of who reported), but a weekly prize's own address and transaction (round 2); row level security on its 9
+  tables (13 since round 2), only the server's key.
 - **The CSP:** `media-src 'self' blob:` (its videos from our own address, a visitor's own clip in their browser) and
-  `camera=(self)` in `Permissions-Policy`; still no other site and no wildcard.
+  `camera=(self)` in `Permissions-Policy` (`camera=()` again since round 2); still no other site and no wildcard.
 
 ### CloakMesh's waitlist (`/api/cloakmesh`, 2026-10-03, see "CloakMesh at inference.agi1.app")
 - The one piece of personal data is the email address, kept only to tell people about CloakMesh; never the internet
@@ -6813,7 +7065,7 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 
 | Service | Free allowance | If exceeded |
 |---|---|---|
-| Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, her Live2D model and the default since 2026-10-01: about 770 KB per visitor who sees her in 2D, instead of the 3D model's 1.7–2.2 MB, which now only downloads when picked; full-screen talk on a computer, 2026-10-02: her 4096 px texture too, about 1.1 MB; her buy bot, 2026-10-06: one small run a minute, about 43,000 calls a month, about 1 ms of CPU each, 50 ms when a server copy starts; her quizzes, 2026-10-09: one small run every 2 minutes, about 21,600 a month, and one webhook call per answer and per vote's poll update). **12 functions per deployment** (each file in `api/` is one: all 12 used since CloakMesh's waitlist, 2026-10-03, so a new feature must share one, or Pro) | Usually paused until 30 days have passed (a 13th function: the deployment fails, the site stays on the last good one) |
+| Vercel Hobby | 100 GB transfer · 1M edge requests · 1M function calls · 4 h active CPU per month · 1 rate-limit rule + 3 custom firewall rules (AGI-1 in 2D, her Live2D model and the default since 2026-10-01: about 770 KB per visitor who sees her in 2D, instead of the 3D model's 1.7–2.2 MB, which now only downloads when picked; full-screen talk on a computer, 2026-10-02: her 4096 px texture too, about 1.1 MB; her buy bot, 2026-10-06: one small run a minute, about 43,000 calls a month, about 1 ms of CPU each, 50 ms when a server copy starts; her quizzes, 2026-10-09: one small run every 2 minutes, about 21,600 a month, and one webhook call per answer and per vote's poll update; AGI Studio's round 2, 2026-10-10: `/api/feed` bundles ffmpeg for the share mark, about 66 MB of the 250 MB a function may be, and a few seconds of CPU for each video marked). **12 functions per deployment** (each file in `api/` is one: all 12 used since CloakMesh's waitlist, 2026-10-03, so a new feature must share one, or Pro) | Usually paused until 30 days have passed (a 13th function: the deployment fails, the site stays on the last good one) |
 | Supabase Free | 500 MB database · 5 GB egress · 200 realtime connections · 2M realtime messages/month. Paused after 1 week with no activity. Supabase Cron (pg_cron) and pg_net are in the free plan (her buy bot's clock, 2026-10-06: one tiny run a minute, its run history kept 3 days) | Grace period, then restricted (read-only or paused), never billed |
 | Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 5,000 a day ≈ $15 ($22.50 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten, her nine tap lines) are made once and kept (the database since 2026-09-26); since 2026-09-30 the replies paid for by burning $AGI, at most `BURN_DAILY_CAP` (1,000) a day ≈ $0.80 more; since 2026-10-02 a picture with a message ("Show her") about $0.0003 more, counted as one message | The key stops when credits hit $0 (the chat and the voice share them) |
 | Cloudflare Turnstile | Unlimited | — |
@@ -6832,9 +7084,9 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | The gas wallet (launch fees paid back, 2026-10-01) | Not a free tier: the owner's own ETH, at most `LAUNCH_GAS_DAILY` (0.01 ETH by default) a day plus each payback's own tiny fee | Paybacks pause ("out of ETH" / "all it can for today"); launches still work |
 | Meshy (the studio's 3D characters, 2026-10-10) | Not a free tier: the owner's Pro plan, about $20 a month for 1,000 credits; a character is 59 credits (about 16 a month); its key's own monthly credit limit, and `STUDIO_A_MONTH` (15) a month | Characters wait ("being made") until there are credits again; never failed |
 | Supabase Storage (the studio's files, 2026-10-10) | The free plan's 1 GB of files (a character is about 1 to 4 MB; since its videos, a video a few MB too; since AGI Studio, an influencer's pictures, about 200 to 400 KB each, and its videos) and its egress (shared with the database's 5 GB; Vercel's CDN keeps each character's file a day per region, but a video played on its page is read in parts through our server each time: about its size a play) | New characters' and videos' files can't be kept ("Its files couldn't be kept": made again free once there's room); the owner's call: a paid plan, or the oldest taken down |
-| fal.ai (the studio's videos and AGI Studio, 2026-10-10) | Not a free tier: pay per picture and video from a balance the owner tops up (fal's pages, 2026-10-10): Nano Banana 2 about $0.08 a picture; Kling V3 Standard $0.084 a second ($0.126 with sound, or copying moves); Seedance 2.5 about $2.40 a 5-second 720p video. Each paid for first (in credits in AGI Studio), at most `STUDIO_JOBS_A_DAY` (2,000) AI jobs a day | Everything waits ("Waiting its turn") until there's balance again; never failed |
+| fal.ai (the studio's videos and AGI Studio, 2026-10-10) | Not a free tier: pay per picture and video from a balance the owner tops up (fal's pages, 2026-10-10): Nano Banana 2 about $0.08 a picture; Kling V3 Standard $0.084 a second ($0.126 with sound, or copying moves); Seedance 2.5 about $2.40 a 5-second 720p video; since AGI Studio's round 2 Kling O1 Edit about $0.126 a second (trend videos), and the owner's 12 trend clips (about $15) and 32 example pictures (about $2.60) once. Each paid for first (in credits in AGI Studio), at most `STUDIO_JOBS_A_DAY` (2,000) AI jobs a day | Everything waits ("Waiting its turn") until there's balance again; never failed |
 | Vercel Pro (the studio, 2026-10-10) | Not a free tier: $20 a month, the owner's choice, for the studio's sales and AGI Studio's credits (Hobby is for non-commercial use) | — |
-| The prize wallet (her quizzes' prizes, 2026-10-09) | Not a free tier: the owner's own $AGI, at most `GAME_WINS_A_DAY` × `GAME_PRIZE` a day (2,500 $AGI by default), plus each prize's own tiny network fee in ETH | Quizzes are just for fun until it's topped up; prizes already won wait for their claim |
+| The prize wallet (her quizzes' prizes, 2026-10-09; AGI Studio's weekly spotlight prize since its round 2, 2026-10-10) | Not a free tier: the owner's own $AGI, at most `GAME_WINS_A_DAY` × `GAME_PRIZE` a day (2,500 $AGI by default) and one spotlight prize a week (`STUDIO_WEEKLY_PRIZE`, 10,000 by default, when the owner approves one), plus each prize's own tiny network fee in ETH | Quizzes are just for fun until it's topped up; prizes already won wait for their claim |
 
 ## Environment variables
 
@@ -6871,7 +7123,7 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `TELEGRAM_GROUP_WELCOME` | no, optional | `off` = she doesn't welcome people who join her groups (on by default; at most one welcome every 10 minutes) |
 | `TELEGRAM_BUYS` | no, optional | Her buy bot (2026-10-06, see "Her buy bot"): `off` = no buy alerts in her groups (on by default, once `supabase/buys.sql` has set up its clock) |
 | `TELEGRAM_BUY_MIN` | no, optional | The smallest $AGI buy her buy bot posts, in dollars (default 50, the owner's since 2026-10-06; 100 at first; at most 1,000,000). Redeploy after changing it |
-| `PRIZE_WALLET_KEY` | **yes** | Her quizzes' prizes (2026-10-09, see "Her quizzes in her Telegram groups"): the private key (64 hex characters, with or without `0x`) of the owner's prize wallet, a new wallet made only for this, holding only the $AGI for a few days of prizes and a little ETH. Without it (or with the launch gas wallet's key, which is refused), her quizzes are just for fun |
+| `PRIZE_WALLET_KEY` | **yes** | Her quizzes' prizes (2026-10-09, see "Her quizzes in her Telegram groups"): the private key (64 hex characters, with or without `0x`) of the owner's prize wallet, a new wallet made only for this, holding only the $AGI for a few days of prizes and a little ETH. Without it (or with the launch gas wallet's key, which is refused), her quizzes are just for fun. Since AGI Studio's round 2 (2026-10-10) it also sends the weekly spotlight's prize (without it, spotlights are for glory only) |
 | `TELEGRAM_GAMES` | no, optional | `off` = no quizzes in her groups (on by default, once `supabase/games.sql` has set up their clock) |
 | `GAMES_A_DAY` | no, optional | About how many quizzes a day in each group (default 10, the owner's; 1 to 48), at random times |
 | `GAME_PRIZE` | no, optional | A win's prize, in whole $AGI (default 250, the owner's; at most 1,000,000) |
@@ -6894,16 +7146,21 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `STUDIO_PRICE_USD` | no, optional | A Stranger's price in USDG, in dollars (default 5; 0.50 to 100); Crush 20% off, Soulmate 40% off. Since AGI Studio only for a character ordered before it (new ones are paid in credits) |
 | `STUDIO_PRICE_AGI` | no, optional | A Stranger's price in burned $AGI, whole (default 15,000). Since AGI Studio only for a character ordered before it |
 | `STUDIO_A_MONTH` | no, optional | Characters a month (UTC) for the whole site (default 15: Meshy Pro's credits make about 16), AGI Studio's 3D models included |
-| `STUDIO_BURNS_A_MONTH` | no, optional | Of those, how many may be paid by burning (default 5; 0 = none: a burn pays nobody). Since AGI Studio only for a character ordered before it (credits can't be paid by burning) |
+| `STUDIO_BURNS_A_MONTH` | no, optional | Of those, how many may be paid by burning (default 10 since AGI Studio's round 2, was 5; 0 = none: a burn pays nobody). Since AGI Studio for a character ordered before it, and since its round 2 for an influencer's free 3D model for a big burn (credits can't be paid by burning) |
 | `STUDIO_HIDE` | no, optional | Characters (and since 2026-10-10 their videos) taken down (their ids, separated by commas): their pages, files and gallery entries go; a character's videos go with it. Redeploy after changing it |
 | `FAL_KEY` | **yes** | Its characters' videos (2026-10-10): fal.ai's API key ("<id>:<secret>", from fal.ai → API Keys). Since AGI Studio (the same day) also every picture and video it makes: without it, AGI Studio is off (the 3D characters still work) |
 | `STUDIO_VIDEO_PRICE_USD` | no, optional | A video's price in USDG for a Stranger, in dollars (default 4; 1 to 100); Crush 20% off, Soulmate 40% off. Since AGI Studio only for a video ordered before it |
 | `STUDIO_VIDEOS_A_MONTH` | no, optional | Videos a month (UTC) for the whole site (default 30: each costs the owner about $2.40 at fal). Since AGI Studio only for videos ordered before it (AGI Studio's: `STUDIO_JOBS_A_DAY`) |
 | `STUDIO_VIDEO_MODEL` | no, optional | The video model on fal (default `bytedance/seedance-2.5/reference-to-video`); another one must take the same inputs. AGI Studio's anime and cartoon influencers' videos from their full body use it too. Ask Claude first |
 | `STUDIO_OWNER` | no, optional | AGI Studio (2026-10-10): the owner's wallet address, for its owner's page (the 12 trend moves, reports, taking things down). Not set: the first wallet in `STUDIO_ONLY_FOR` |
-| `STUDIO_FACES` | no, optional | `off` = no "Use my face" (AI twins) in AGI Studio (on by default) |
+| `STUDIO_FACES` | no, optional | Since AGI Studio's round 2: `off` = no photos of real people in "From a photo", only drawings and characters (on by default). Before round 2: `off` = no "Use my face" (AI twins) |
 | `STUDIO_FREE_CREDITS_A_MONTH` | no, optional | The free credits the whole site gives holders a month in AGI Studio (default 5,000 = $50 of AI at most; 0 = none): each Crush gets 100, each Soulmate 400, while they last |
 | `STUDIO_JOBS_A_DAY` | no, optional | AGI Studio's AI jobs a day for the whole site (default 2,000: each one paid in credits; a guard against a runaway) |
+| `STUDIO_WEEKLY_PRIZE` | no, optional | AGI Studio's round 2 (2026-10-10): the weekly spotlight's prize, in whole $AGI, from the prize wallet (`PRIZE_WALLET_KEY`) to its maker once claimed (default 10,000; at most 1,000,000; 0 = for glory only). The owner can change each week's when approving it |
+| `STUDIO_SLOTS` | no, optional | The influencers a wallet may have (being made or ready) before it unlocks more by burning (default 5) |
+| `STUDIO_SLOT_AGI` | no, optional | $AGI burned for one more influencer (default 5,000; 0 = that unlock off) |
+| `STUDIO_BOOST_AGI` | no, optional | $AGI burned for a 24-hour boost in Explore's "Boosted" row (default 10,000; 0 = off) |
+| `STUDIO_MODEL_BURN_AGI` | no, optional | $AGI burned for an influencer's free 3D model (default 25,000, the owner's; 0 = off), inside `STUDIO_BURNS_A_MONTH` |
 
 Her live show's own settings (X Live Studio's stream key, Google Cloud's key, the show's time, her music, and since
 2026-10-07 her new AI lines and X's Bearer Token for her own posts…) live only on the owner's server, in
@@ -7463,6 +7720,15 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   influencer. Tests: 678 unit (677 pass, 1 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings),
   the build, 38 groups of SQL checks (PGlite), 244 in a browser with a fake API and 108 with our own server's code. Not
   tried live (fal's models, Gemini's real verdicts, USDG top-ups, Storage, the domain, real phones' cameras).
+- **AGI Studio, round 2: built 2026-10-10, waiting for the owner's setup and push** (the owner's list the same day: "remove
+  the use your face", real people's photos "Allowed with consent (Recommended)", "the trending videos should be real like
+  in higgsfield", example pictures in "make it yours", "the site looks mid lol", "large burns can make free 3d model"
+  (25,000 $AGI), and the flywheel's four parts: a share mark, a weekly spotlight with a prize, burn unlocks, a live stats
+  board): see "AGI Studio, round 2". **Owner:** `supabase/influencers.sql` again, push, the trend clips (about $15) and
+  example pictures (about $2.60) on the owner's page; optional settings. Tests: 688 unit (687 pass, 1 skipped as before;
+  on Node 20, 22 and 24, with and without Vercel's settings), the build, 55 groups of SQL checks (PGlite), every view in a
+  browser at 3 widths (axe 0 issues) and 210 checks with our own server's code. Not tried live (Kling O1 Edit on fal,
+  ffmpeg on Vercel, Gemini's verdicts on real photos, the first spotlight prize, real burns).
 
 ## Decisions log
 
@@ -7714,6 +7980,16 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-10 | Credits (the owner's "Credits (Recommended)"): 1 credit = 1 cent, bought with USDG from the person's own wallet app (read on the chain like the studio's payments, never asked of a wallet: hard rule 9), spent in the database before any AI is asked, given back when something can't be made, no cash value. Prices: an influencer 100, 4 new looks 40, a photo 15, a trend video 300, a video 400, a 3D model 500. Holder perks (the owner's "Discounts + free credits (Recommended)"): Crush 20% off and 100 free credits a month, Soulmate 40% off, 400 and a free 3D model a month; the site's free credits capped at 5,000 a month ($50). Burning $AGI doesn't pay in the app (a burn pays nobody, and each thing costs the owner real money); a Soulmate's free 3D model stays. Not picked: paying for each thing in USDG (a transaction each), $AGI for credits |
 | 2026-10-10 | Uploads in their own requests (Vercel takes at most 4.5 MB a request): a ticket from our server (18+, the human check), then the bytes as `application/octet-stream` (`?inf-up=`); a clip in parts of 3.5 MB, put together on our server and checked by its own MP4 header and Gemini's look at 3 frames the browser took, its parts and frames deleted once it's put together. Not picked: uploading straight to Supabase Storage from the browser (Supabase's address in the CSP, and a file kept before it's checked) |
 | 2026-10-10 | Found by the browser tests against our own server's code, and fixed: fal's client refused Kling's model names (5 parts long: `MODEL_RE` in `server/fal.js` takes up to 6 now); the owner's page gave a trend move too little time to keep its video (15 s, under what keeping needs: 17 s now) and showed the page from before it moved (read again now); a clip's frames now go with its parts (they waited for the tidy-up). And from these notes: a trend video is as long as its move (up to 10 s), not "5 seconds", on its sheet and its tiles, and a trend move costs the owner about $0.84 (10 s at $0.084), not "$1.30", on the owner's page |
+| 2026-10-10 | AGI Studio, round 2: "Use my face" removed (the owner: "remove the use your face"), and with it the live camera (`camera=()` again for every page) and AI twins from now on (old ones stay private, with "Delete my face") |
+| 2026-10-10 | Photos of real people allowed with consent (the owner: "Allowed with consent (Recommended)", over keeping them refused): the uploader ticks a box first (it's them, or someone who said OK), our server needs it, and Gemini still refuses a famous person, anyone who looks under 21 and anything sexual. Such an influencer is private (never in Explore, never liked, spotlit or boosted, never kept by the CDN), its photo deleted once it's made. Not picked: no check at all (a stranger's or a celebrity's photo would be one upload away), a public influencer from a real person's photo (their consent can't be checked) |
+| 2026-10-10 | Real-looking trend videos (the owner: "the trending videos should be real like in higgsfield", "from higgsfield trending with promps with them"): 12 cinematic clips of our own, each written for this app and made once by the owner (Kling V3 Standard's text to video with its own sound, about $1.26 each), and Kling O1 Edit puts the influencer in place of the clip's person (keeping its camera, place, light and sound). Not picked: Higgsfield's own templates, prompts or videos (theirs, and other people's faces and music in them), real trending videos (copyright), a made-up dancer's moves copied onto a still picture (the first version: the owner asked for real-looking ones) |
+| 2026-10-10 | Example pictures for Create's choices (the owner: "show example of the image not just text"): 32 pictures made once by the owner (one made-up adult each, about $2.60 for all); skin, hair color and eyes as color swatches (a picture for each would show a face, not a color). Not picked: pictures from the web (rights), one picture for all choices |
+| 2026-10-10 | A new look for AGI Studio (the owner: "make the design like higs field just change it a bit so it doesn't look alike"): media first, near-black, condensed heavy headings in the site's own Anybody, one violet-to-pink gradient for actions, honey for credits; never another app's colors, logo, pictures or code |
+| 2026-10-10 | The flywheel (Claude's four, the owner: all four): **a share mark** on downloads ("Made with AGI Studio · AI-generated · studio.agi1.app": every post that travels says where it was made and that it's AI; photos with sharp as they're downloaded, videos once by the clock with ffmpeg, the copy kept, the video on its page never changed); **a weekly spotlight** (likes, 50 a day; only holders' likes pick it, so new wallets can't; the owner approves; a prize in $AGI from her quizzes' prize wallet to its maker, "a thank-you for making", never paid to holders for holding); **burn unlocks** (one more influencer 5,000 $AGI, a 24-hour boost 10,000; things to use, never "burn to pump"); **a live stats board** (public totals only) |
+| 2026-10-10 | A free 3D model for a big burn (the owner: "large burns can make free 3d model", then 25,000 $AGI): the 3D studio's own burn order, read on the chain like every burn and counted once; inside the studio's burns a month, raised to 10 (was 5); one that can't be made is made again free (a burn can't be given back) |
+| 2026-10-10 | The share mark's ffmpeg: the `@ffmpeg-installer/ffmpeg` package (its Linux binary, ffmpeg 4.1, GPLv3, 66 MB), shipped with `/api/feed` only (`vercel.json` `includeFiles`), so the other 11 functions stay as they were; it runs only on videos the AI service made, on our own server (never handed to visitors). Not picked: an outside video service (a new service and cost), marking videos in visitors' browsers (they'd download the unmarked file anyway), marking the video as it plays on its page (it's fine as it is) |
+| 2026-10-10 | Found by the round-2 browser test with our own server's code, and fixed: Create's "what a photo may be" was decided when the page was drawn, before the studio's settings arrived, so with `STUDIO_FACES` off it still said "A photo of you…": it's said again when they arrive (a page test checks it) |
+| 2026-10-10 | Found while writing round 2's notes: the home page's safety note still described AGI Studio's round 1 ("never a real person but your own face", live selfies) and said nothing of likes, the spotlight's prize or burn unlocks, against "every sentence must stay true". Brought up to date the same day (its four notes, two more `data-burn-only` parts), and `tests/influencer.test.js` now checks its round-2 sentences |
 
 ## Open questions
 
@@ -7974,21 +8250,36 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
     (Seedance) as fal sells them, fal's own, and Meshy's (3D). The owner checks them before `STUDIO_OPEN` (not legal
     advice).
   - **Faces:** a selfie used to make an AI twin may count as biometric data in some places (the EU's GDPR, Illinois'
-    BIPA…), and AI likenesses of people have their own rules in some places. Today: only the person's own face, from the
-    live camera, with consent, deleted once it's made, and "Delete my face". Worth checking before opening it (not legal
-    advice).
+    BIPA…), and AI likenesses of people have their own rules in some places. Until round 2: only the person's own face,
+    from the live camera, with consent, deleted once it's made, and "Delete my face". **Since round 2 a photo of a real
+    person** (theirs, or someone's who said OK): the same questions, and the box is only the uploader's word (nothing can
+    check it was really that person's OK); today it's never a famous person, private, its photo deleted once it's made,
+    everything deleted with it, and reports ("a real person who didn't agree") and the owner's page take one down. Worth
+    checking before opening it (not legal advice).
   - **Gemini's looks can be wrong** both ways (a real photo passing for art, an adult refused); reports and the owner's
     page catch the rest. Photos aren't looked at again once they're made (Nano Banana's own strict setting).
   - **Their own clips:** the page says "Only a clip you may use: yours, or one with the person's OK", and nothing checks
     who's in it beyond Gemini's look (everyone 18+, nothing sexual). Reports catch the rest.
-  - **The trend moves** are made once by Kling from words: how good they look is the owner's call (keep, or make again).
+  - **The trend clips** (round 2; trend moves before) are made once by Kling from words: how good they look is the owner's
+    call (keep, or make again). How real Kling O1 Edit makes an influencer in them is the first live check.
+  - **The weekly spotlight's prize** (round 2): a prize for the most liked creation, picked by holders' likes and approved
+    by the owner, is a prize promotion in many places, and one paid in a crypto token can bring in other rules (like her
+    quizzes' prizes): worth written rules, and a check before promoting it widely (not legal advice).
+  - **Likes from several wallets** (round 2): a holder with $AGI in several wallets can like their own creation from the
+    others (only a wallet's own creations are refused). The owner looks at each week's pick before approving it (**Skip
+    to the next best**); if it happens, ask Claude about a rule (a wallet's age, or likes only from wallets that made
+    something).
+  - **ffmpeg's license** (round 2): the share mark's ffmpeg is GPLv3; it runs only on our own server (Vercel) and is never
+    given to visitors. If it's ever shipped inside something people download (a desktop app), its license applies then
+    (not legal advice).
   - **Supabase Storage's free plan** (1 GB) fills with pictures and videos as people make them: a paid plan, or tidying
     old ones, when it grows.
   - **studio.agi1.app's DNS** is Namecheap's hosting cPanel, like inference.agi1.app's (see "agi1.app's DNS").
   - **Prices at a Soulmate's 40% off** are about the AI's own cost for a few things (4 new looks; a video from its full
     body): the owner's to change in `src/studio/rules.js` if they lose money.
   - **Not tried live:** fal's models on real pictures and clips, Gemini's real verdicts, USDG top-ups, Supabase Storage,
-    the domain, real phones' cameras (Safari on an iPhone) and wallets. The owner's first influencer is the check.
+    the domain and real phones' wallets; since round 2 Kling O1 Edit, ffmpeg on Vercel (the share mark), the first
+    spotlight prize and real burn unlocks. The owner's first influencer and first week are the check.
 
 ## Working in this repo
 
@@ -8022,5 +8313,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 - Claude's end-to-end tests build the site with Cloudflare's public test site key
   (`VITE_TURNSTILE_SITE_KEY=1x00000000000000000000BB npx vite build`): without a site key the chat answers "i'm still getting
   ready for the new site" and every suite that chats fails (2026-09-26). The real key only comes from Vercel's settings.
+- **Lightning CSS (Vite's CSS minifier) keeps only the last of a prefixed pair** (2026-10-10, AGI Studio's blurs): write
+  `-webkit-backdrop-filter` first, then `backdrop-filter` with the same value. The other way round, the build dropped the
+  unprefixed one, and Chrome lost the blur. `tests/influencer.test.js` checks every blur in `studio-app.css`.
+- **sharp's `.extract(…).stats()` describes the whole picture, not the part extracted** (2026-10-10, found in a test of
+  the share mark): to measure part of a picture, read its raw pixels (`.extract(…).raw().toBuffer()`) and average them.
+- **Browser tests read words with `textContent`, not `innerText`** (2026-10-10): `innerText` follows the CSS
+  (`text-transform: uppercase` made "Nova" read "NOVA"). And Playwright calls the label of a disabled input "not enabled":
+  a label that opens a file picker is clicked with `force: true`, after clearing toasts that may cover it.
 - The Claude desktop app saves copies of files Claude sends in chat into `Claude outputs/`. Git ignores that folder,
   and its copies (including any CLAUDE.md there) may be out of date. The CLAUDE.md at the top of this folder is the current one.

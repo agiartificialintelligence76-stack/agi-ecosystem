@@ -18,7 +18,9 @@
 // GET /api/feed?studio (2026-10-10): AGI-1's 3D character studio's clock (server/studio.js), every minute, from Supabase
 // Cron (supabase/studio.sql), with that file's own key: the characters being made, one step along each (Meshy's steps,
 // then their files kept). Loaded only for it. (The same day) and AGI Studio's, the AI influencer app (server/inf-jobs.js):
-// its looks, photos and videos being made, in the time left, and its tidy-up every half hour.
+// its looks, photos and videos being made, in the time left, and its tidy-up every half hour; and since its round 2 last
+// week's spotlight picked once (server/inf-week.js), and, with 14 s left, one done video given the share mark for its
+// downloads (server/inf-mark.js: ffmpeg, which vercel.json ships with this function only).
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../server/config.js';
 import { tgToken } from '../server/tg-api.js';
@@ -130,6 +132,24 @@ async function studioCheck(request) {
       if (err.code === 'PGRST202') warnedApps = true;
       if (!meshy) return answer({ error: err.code === 'PGRST202' ? 'not_set_up' : 'database' }, 502);
       out.inf = { error: err.code === 'PGRST202' ? 'not_set_up' : 'database' };
+      return answer(out);
+    }
+    // (round 2) last week's spotlight, picked once (one small question; then nothing more this week in this server copy)
+    try {
+      const { weekClock } = await import('../server/inf-week.js');
+      const w = await weekClock(cfg, { now });
+      if (w) out.week = { status: w.status ?? null, again: w.again === true };
+    } catch (err) {
+      console.warn(`[studio] picking last week's spotlight: ${err.message}`);
+    }
+    // (round 2) and one done video given the share mark for its downloads, when there's time for it (14 s)
+    if (deadline - Date.now() >= 14_000) {
+      try {
+        const { markClock } = await import('../server/inf-mark.js');
+        out.mark = await markClock(cfg, { deadline });
+      } catch (err) {
+        console.warn(`[studio] the share mark: ${err.message}`);
+      }
     }
   }
   return answer(out);

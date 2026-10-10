@@ -67,6 +67,11 @@ const ICONS = {
   shield: ['M12 3 5 6v5.5c0 4.4 3 8 7 9.5 4-1.5 7-5.1 7-9.5V6l-7-3Z'],
   wand: ['M5 19 15 9M13.5 5.5l.8-2 .8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8ZM18 12l.5-1.2.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5Z'],
   sound: ['M5 9.5h3.5L13 5.5v13l-4.5-4H5v-5Z', 'M16 9.2a4 4 0 0 1 0 5.6M18.5 6.8a7.5 7.5 0 0 1 0 10.4'],
+  heart: ['M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z'],
+  flame: ['M12 21c-3.8 0-6.5-2.6-6.5-6.3 0-3.2 2.2-5 3.5-7.4.6 1.6 1.6 2.6 2.7 3 .1-2.9 1.3-5.6 3.5-7.3-.2 2.6.6 4.4 2 6.2 1.3 1.6 1.8 3 1.8 4.9 0 4-3 6.9-7 6.9Z'],
+  trophy: ['M8 4h8v5.5a4 4 0 0 1-8 0V4Z', 'M8 6H5.2a3 3 0 0 0 2.9 4.2M16 6h2.8a3 3 0 0 1-2.9 4.2', 'M12 13.5V17M8.5 20.5h7M9.5 17h5'],
+  rocket: ['M14.5 4.5c2.6-.9 4.4-.8 5-.2.6.6.7 2.4-.2 5-1 2.9-3.6 5.7-6.4 7.4l-3.6-3.6c1.7-2.8 4.3-5.4 5.2-8.6Z', 'M9.3 13.1 6 12.6l2.6-3.1 3.3-.3M10.9 14.7l.5 3.3 3.1-2.6.3-3.3', 'M6.7 16.4c-1.3.4-2 1.4-2.2 3.1 1.7-.2 2.7-.9 3.1-2.2'],
+  grid: ['M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'],
 };
 export function icon(name, cls = 'sa-i') {
   const svg = document.createElementNS(SVG, 'svg');
@@ -116,19 +121,36 @@ export async function busy(button, label, work) {
 // ---------- chips: a group of radio buttons (or checkboxes) that look like chips ----------
 let uid = 0;
 export const nextId = (p = 'sa') => `${p}-${++uid}`;
-// chips({ name, legend, choices: { value: label } | [[value, label]], value, onchange, required, hint })
-export function chips({ name, legend, choices, value = null, onchange = null, hint = null, cls = '' }) {
+// chips({ name, legend, choices: { value: label } | [[value, label, look?]], value, onchange, hint, cls, media, swatches })
+//   media: each choice is a tile with a picture (round 2: "show example of the image not just text"): its picture comes
+//     later, with .media(value → its address, or null): a choice without one shows a soft tile
+//   swatches: each choice shows its color (look.swatch, a CSS color, set through the style object: never a style attribute,
+//     which the page's CSP refuses); one without a color ("Any") shows every color
+export function chips({ name, legend, choices, value = null, onchange = null, hint = null, cls = '', media = false, swatches = false }) {
   const list = Array.isArray(choices) ? choices : Object.entries(choices);
-  const set = h('fieldset', { class: `sa-chips ${cls}`.trim() });
+  const kind = media ? ' sa-chips-media' : swatches ? ' sa-chips-swatch' : '';
+  const set = h('fieldset', { class: `sa-chips${kind} ${cls}`.trim() });
   set.append(h('legend', { class: 'sa-label', text: legend }));
   if (hint) set.append(h('p', { class: 'sa-hint', text: hint }));
   const row = h('div', { class: 'sa-chip-row' });
   const groupName = name || nextId('chips');
-  for (const [v, label] of list) {
+  const boxes = new Map();
+  for (const [v, label, look = null] of list) {
     const id = nextId('chip');
     const input = h('input', { type: 'radio', class: 'sa-chip-input', name: groupName, id, value: v, checked: v === value });
     input.addEventListener('change', () => { if (input.checked) onchange?.(v); });
-    row.append(h('span', { class: 'sa-chip' }, input, h('label', { for: id, text: label })));
+    const lab = h('label', { for: id });
+    if (media) {
+      const box = h('span', { class: `sa-chip-media is-empty${v === '' ? ' is-any' : ''}`, 'aria-hidden': 'true' });
+      boxes.set(v, box);
+      lab.append(box);
+    } else if (swatches) {
+      const box = h('span', { class: `sa-chip-swatch${look?.swatch ? '' : ' is-any'}`, 'aria-hidden': 'true' });
+      if (look?.swatch) box.style.setProperty('--sw', look.swatch);
+      lab.append(box);
+    }
+    lab.append(h('span', { class: 'sa-chip-text', text: label }));
+    row.append(h('span', { class: 'sa-chip' }, input, lab));
   }
   set.append(row);
   return {
@@ -136,6 +158,17 @@ export function chips({ name, legend, choices, value = null, onchange = null, hi
     get value() { return set.querySelector('input:checked')?.value ?? null; },
     set(v) { for (const i of set.querySelectorAll('input')) i.checked = i.value === v; },
     clear() { for (const i of set.querySelectorAll('input')) i.checked = false; },
+    // the tiles' pictures (again when they arrive: the studio's settings can come after the page)
+    media(urlOf) {
+      for (const [v, box] of boxes) {
+        const url = v === '' ? null : urlOf(v);
+        const img = box.querySelector('img');
+        if (url && !img) box.append(pic(url, { cls: 'sa-chip-img' }));
+        else if (url && img && img.getAttribute('src') !== url) img.src = url;
+        else if (!url && img) img.remove();
+        box.classList.toggle('is-empty', !url);
+      }
+    },
   };
 }
 

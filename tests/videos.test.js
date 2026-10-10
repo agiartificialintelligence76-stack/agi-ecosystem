@@ -461,7 +461,7 @@ test("visitor-facing words never name the video service (an AI video service): A
   assert.ok(files.length >= 14, files.join(', '));
   for (const file of files) {
     const text = strip(readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'));
-    assert.doesNotMatch(text, /\bfal\b|fal\.ai|fal\.media|seedance|bytedance|kling/i, file);
+    assert.doesNotMatch(text, /\bfal\b|fal\.ai|fal\.media|seedance|bytedance|\bkling\b/i, file);
   }
   for (const words of Object.values(R.SHAPES).map((x) => x.name)) assert.doesNotMatch(words, /\b(?:buy|sell|pump|moon|profit|invest|gains?|100x)\b/i, words);
 });
@@ -1141,7 +1141,7 @@ test('GET ?studio-videos=<character>: its done videos, the same for everyone, sh
   process.env.FAL_KEY = FAL_KEY;
   delete process.env.STUDIO_PAY_TO;
   assert.equal((await get('studio-info')).body.video.on, false, 'videos are paid only in USDG');
-  assert.deepEqual(await monthLeft(getConfig()), { left: 15, burnsLeft: 5, videosLeft: 29 });
+  assert.deepEqual(await monthLeft(getConfig()), { left: 15, burnsLeft: 10, videosLeft: 29 });
 });
 
 // ---------- its owner's actions ----------
@@ -1256,7 +1256,7 @@ test("videos play only from our own address (and, since AGI Studio, a clip or a 
   // the safety note says what AGI Studio's videos do with money and data
   const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   for (const must of [/the words and choices you give go to AI services that make your influencer's pictures, videos and 3D model/,
-    /a picture, selfie or clip you upload goes to an AI service that checks it first/, /A picture or selfie you upload is deleted once its influencer is made, and a clip within 2 days\./,
+    /a photo, picture or clip you upload goes to an AI service that checks it first/, /A photo or picture you upload is deleted once its influencer is made, and a clip within 2 days\./,
     /What's made there is labeled AI-generated and kept in our storage/]) {
     assert.ok(index.search(must) > 0, String(must));
   }

@@ -155,8 +155,10 @@ test('the clips aren\'t part of the website: not in its build, no new packages, 
   const pkg = JSON.parse(read('package.json'));
   // (sharp since 2026-10-05: the risk check's coin pictures, made small on our server; @scure/bip39 since 2026-10-09: the
   // wallet word list her secret check reads, server/secrets.js, the same package viem uses; @gltf-transform/* since
-  // 2026-10-10: the 3D character studio makes its characters' files small on our server; the clips never add a package)
-  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@gltf-transform/core', '@gltf-transform/extensions', '@gltf-transform/functions', '@scure/bip39', 'sharp', 'three', 'viem']);
+  // 2026-10-10: the 3D character studio makes its characters' files small on our server; @ffmpeg-installer/ffmpeg since round
+  // 2 of AGI Studio, the same day: its clock puts the small "Made with AGI Studio" mark on a video's download copy, on our
+  // server; the clips never add a package: they bring their own ffmpeg)
+  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@ffmpeg-installer/ffmpeg', '@gltf-transform/core', '@gltf-transform/extensions', '@gltf-transform/functions', '@scure/bip39', 'sharp', 'three', 'viem']);
   assert.deepEqual(Object.keys(pkg.devDependencies), ['vite']);
   assert.match(pkg.scripts.test, /tests\/clips\.test\.js/);
   const ignore = read('.gitignore');

@@ -150,13 +150,14 @@ export function getConfig(env = process.env) {
     // one), the prices for a Stranger (5 USDG or 15,000 $AGI burned: src/studio/rules.js gives Crush 20% off and Soulmate
     // 40% off), the characters a month for the whole site (15: each costs the owner about 59 of Meshy's credits) and of them
     // paid by burning (5: a burn pays nobody), who may make one (STUDIO_OPEN=yes: everyone; else only the wallets in
-    // STUDIO_ONLY_FOR), and characters the owner hides (their ids)
+    // STUDIO_ONLY_FOR), and characters the owner hides (their ids). (Round 2 of AGI Studio, 2026-10-10: 10 a month may be
+    // paid by burning, was 5: a free 3D model for a big burn is one of them.)
     meshyKey: String(env.MESHY_API_KEY || '').trim(),
     studioPayTo: studioAddress(env.STUDIO_PAY_TO),
     studioUsdCents: Math.max(50, Math.round(Math.min(10_000, number('STUDIO_PRICE_USD', 5)) * 100)),
     studioAgi: Math.max(100, Math.min(1e9, Math.floor(number('STUDIO_PRICE_AGI', 15_000)) || 15_000)),
     studioMonthCap: Math.min(100_000, Math.floor(number('STUDIO_A_MONTH', 15)) || 15),
-    studioBurnCap: Math.min(100_000, wholeOrZero(env.STUDIO_BURNS_A_MONTH, 5)),
+    studioBurnCap: Math.min(100_000, wholeOrZero(env.STUDIO_BURNS_A_MONTH, 10)),
     studioOpen: /^(?:yes|on|true|1)$/i.test(String(env.STUDIO_OPEN ?? '').trim()),
     studioOnlyFor,
     studioHide: new Set(String(env.STUDIO_HIDE || '').split(/[\s,]+/).filter((a) => /^[A-Za-z0-9_-]{22}$/.test(a))),
@@ -171,11 +172,20 @@ export function getConfig(env = process.env) {
     // …and AGI Studio, the AI influencer app (2026-10-10, studio.agi1.app: server/influencer.js; on once FAL_KEY is set): the
     // owner's wallet for its owner's page (trend moves, reports: STUDIO_OWNER, else the first wallet in STUDIO_ONLY_FOR), the
     // free credits the whole site gives holders a month (5,000 = $50 of AI costs at most; 0 = none), the AI jobs a day for the
-    // whole site (2,000: each paid in credits, a guard against a runaway), and "Use my face" ("off" = no AI twins)
+    // whole site (2,000: each paid in credits, a guard against a runaway), and photos of real people (round 2: uploaded with
+    // their uploader's consent; STUDIO_FACES "off" = only drawings and characters, as "Use my face" was before it went)
     studioOwner: studioAddress(env.STUDIO_OWNER) || [...studioOnlyFor][0] || '',
     infFreeCap: Math.min(10_000_000, wholeOrZero(env.STUDIO_FREE_CREDITS_A_MONTH, 5000)),
     infDayCap: Math.min(100_000, Math.floor(number('STUDIO_JOBS_A_DAY', 2000)) || 2000),
-    infFaces: !isOff(env.STUDIO_FACES),
+    infPhotos: !isOff(env.STUDIO_FACES),
+    // …round 2 (2026-10-10): burns (the owner: "large burns can make free 3d model", 25,000 $AGI; 0 = off) and burn unlocks
+    // (one more influencer than STUDIO_SLOTS for 5,000; a 24-hour boost in Explore for 10,000; 0 = off), and the weekly
+    // spotlight's prize in whole $AGI from the prize wallet (PRIZE_WALLET_KEY, her quizzes' own; 0 = for glory only)
+    infModelBurnAgi: Math.min(100_000_000, wholeOrZero(env.STUDIO_MODEL_BURN_AGI, 25_000)),
+    infSlots: Math.max(1, Math.min(1000, wholeOrZero(env.STUDIO_SLOTS, 5) || 5)),
+    infSlotAgi: Math.min(100_000_000, wholeOrZero(env.STUDIO_SLOT_AGI, 5_000)),
+    infBoostAgi: Math.min(100_000_000, wholeOrZero(env.STUDIO_BOOST_AGI, 10_000)),
+    infWeeklyPrize: Math.min(1_000_000, wholeOrZero(env.STUDIO_WEEKLY_PRIZE, 10_000)),
     // Her live show (2026-10-02, server/live.js): the secret her stream runner (on the owner's own server) and our server
     // share (32+ characters); the owner's phone link is made from it. Without it, agi1.app/live says her show is coming soon
     liveSecret: String(env.LIVE_SECRET || '').trim(),

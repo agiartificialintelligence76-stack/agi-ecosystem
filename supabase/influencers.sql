@@ -35,7 +35,23 @@
 --   agi1_inf_trends     the trend moves (the owner's): their state and their video's job
 --   agi1_inf_reports    reports of an influencer or one of its videos: why, and a daily code of who reported (never an IP)
 --   agi1_inf_days       per day: the AI jobs started (the whole site's cap)
--- Never an address, a transaction, an IP address or anything else about anyone.
+-- Never an address, a transaction, an IP address or anything else about anyone (but a weekly spotlight's prize: below).
+--
+-- Round 2 (2026-10-10, the owner: "remove the use your face", "no restrictions on That looks like a photo of a real
+-- person" ("Allowed with consent"), "the trending videos should be real like in higgsfield", "in the make it yours show
+-- example of the image", "large burns can make free 3d model" (25,000 $AGI), and the flywheel: a share mark, a weekly
+-- spotlight, burn unlocks and a live stats board). Run this file again (it keeps everything saved). It adds:
+--   • a photo of a real person, with its uploader's consent: whether an upload (and the influencer made from it) is a real
+--     person's photo (`real`). One is never in Explore (like one made from a face before: no new ones of those).
+--   • example pictures for the design choices (jobs of the kind 'example', with no influencer: the owner's, made once)
+--   • the share mark on downloaded videos (`marked`: a copy with the mark, made by the clock)
+--   • likes (agi1_inf_likes: per creation, a scrambled code of the wallet that liked it and its level) and the weekly
+--     spotlight (agi1_inf_weeks: each week's most liked creation, approved by the owner; its prize, sent to its maker's
+--     wallet once they claim it, keeps the address it went to and its transaction, 60 days)
+--   • burn unlocks (agi1_inf_burns: a boost in Explore or one more influencer, paid by burning $AGI from the wallet's own
+--     app, each burn counted once in burns.sql's ledger; agi1_inf_slots: the extra influencers a wallet unlocked) and a free
+--     3D model for a burn (an order in studio.sql, paid like its characters' burns)
+--   • the live stats board's numbers (inf_stats: totals only)
 
 -- studio.sql first (its version of 2026-10-10): this file builds on its tables, its months and its payment ledger
 do $do$
@@ -173,7 +189,94 @@ create table if not exists public.agi1_inf_days (
   jobs integer not null default 0 check (jobs >= 0)
 );
 
+-- ---------- round 2 (2026-10-10): columns and rules added to tables that may be there already ----------
+-- a photo of a real person (uploaded with its uploader's consent): the upload, and the influencer made from it
+alter table public.agi1_inf_uploads add column if not exists real boolean not null default false;
+alter table public.agi1_inf add column if not exists real boolean not null default false;
+-- a boost in Explore, unlocked by a burn: until when
+alter table public.agi1_inf add column if not exists boost_until timestamptz;
+-- example pictures for the design choices: jobs with no influencer, each for one choice (e.g. "outfit-cozy")
+alter table public.agi1_inf_jobs add column if not exists example text check (example ~ '^[a-z]{3,6}-[a-z0-9]{2,12}$');
+-- the share mark on a done video's download: made (a copy with the mark), how many tries, the last try
+alter table public.agi1_inf_jobs add column if not exists marked boolean not null default false;
+alter table public.agi1_inf_jobs add column if not exists mark_tries smallint not null default 0 check (mark_tries between 0 and 20);
+alter table public.agi1_inf_jobs add column if not exists mark_at timestamptz;
+-- its likes (agi1_inf_likes holds who: this is their count, for the pages)
+alter table public.agi1_inf_jobs add column if not exists likes integer not null default 0 check (likes >= 0);
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_kind_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_kind_check
+  check (kind in ('looks', 'body', 'photo', 'trend', 'video', 'preset', 'example'));
+-- the owner's jobs (trend clips, example pictures) have no influencer; everyone else's have one
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_check;
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_owner_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_owner_check check ((kind in ('preset', 'example')) = (inf_id is null));
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_example_check2;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_example_check2 check ((kind = 'example') = (example is not null));
+create index if not exists agi1_inf_jobs_examples on public.agi1_inf_jobs (example, created_at) where kind = 'example';
+create index if not exists agi1_inf_jobs_mark on public.agi1_inf_jobs (done_at) where status = 'done' and not marked and kind in ('trend', 'video');
+create index if not exists agi1_inf_jobs_made on public.agi1_inf_jobs (done_at) where status = 'done' and kind in ('photo', 'trend', 'video');
+create index if not exists agi1_inf_boosted on public.agi1_inf (boost_until) where boost_until is not null;
+
+-- likes: one per wallet per creation (a scrambled code of the wallet, never its address), with its level when it liked it
+-- (the weekly spotlight counts holders' likes: one person can't make many Crush or Soulmate wallets)
+create table if not exists public.agi1_inf_likes (
+  job_id      text        not null references public.agi1_inf_jobs (id) on delete cascade,
+  wallet_code text        not null check (char_length(wallet_code) between 16 and 64),
+  level       smallint    not null check (level between 1 and 3),
+  at          timestamptz not null default now(),
+  primary key (job_id, wallet_code)
+);
+create index if not exists agi1_inf_likes_wallet on public.agi1_inf_likes (wallet_code, at);
+
+-- the weekly spotlight: a week (its Monday, UTC), its most liked creation (picked by the clock, approved or skipped by the
+-- owner), and its prize: claimed by the wallet that made it, sent once from the prize wallet (the address it went to and its
+-- transaction are kept 60 days after it's sent, then the address goes)
+create table if not exists public.agi1_inf_weeks (
+  week         date        primary key check (extract(isodow from week) = 1),
+  status       text        not null default 'none' check (status in ('none', 'picked', 'approved', 'claimed', 'sending', 'sent')),
+  job_id       text        check (job_id ~ '^[A-Za-z0-9_-]{22}$'),
+  inf_id       text        check (inf_id ~ '^[A-Za-z0-9_-]{22}$'),
+  wallet_code  text        check (char_length(wallet_code) between 16 and 64),
+  holder_likes integer     not null default 0 check (holder_likes >= 0),
+  likes        integer     not null default 0 check (likes >= 0),
+  skipped      text[]      not null default '{}'::text[],
+  prize        bigint      not null default 0 check (prize between 0 and 1000000000),     -- whole $AGI
+  address      text        check (address ~ '^0x[0-9a-f]{40}$'),
+  tx           text        check (tx ~ '^0x[0-9a-f]{64}$'),
+  picked_at    timestamptz not null default now(),
+  approved_at  timestamptz,
+  claimed_at   timestamptz,
+  sent_at      timestamptz
+);
+
+-- burn unlocks: a boost in Explore for one of its influencers ('boost', for so many hours) or one more influencer ('slot'),
+-- paid by burning $AGI from the wallet's own app (each burn counted once, in burns.sql's ledger too, and toward its level)
+create table if not exists public.agi1_inf_burns (
+  id          text        primary key check (id ~ '^[A-Za-z0-9_-]{22}$'),
+  wallet_code text        not null check (char_length(wallet_code) between 16 and 64),
+  burn_code   text        not null check (char_length(burn_code) between 16 and 64),     -- the wallet's code in burns.sql
+  what        text        not null check (what in ('boost', 'slot')),
+  inf_id      text        check (inf_id ~ '^[A-Za-z0-9_-]{22}$'),
+  agi         bigint      not null check (agi between 1 and 1000000000),                -- its price, whole $AGI
+  hours       smallint    not null default 0 check (hours between 0 and 720),           -- a boost's
+  paid        numeric     not null default 0 check (paid >= 0),                         -- burned toward it so far
+  status      text        not null default 'quote' check (status in ('quote', 'paid')),
+  created_at  timestamptz not null default now(),
+  paid_at     timestamptz,
+  check ((what = 'boost') = (inf_id is not null))
+);
+create index if not exists agi1_inf_burns_wallet on public.agi1_inf_burns (wallet_code, created_at);
+create table if not exists public.agi1_inf_slots (
+  wallet_code text    primary key check (char_length(wallet_code) between 16 and 64),
+  extra       integer not null default 0 check (extra between 0 and 1000)
+);
+
 -- Row Level Security ON, with no rules: the public (browser) keys can't read or change these tables.
+alter table public.agi1_inf_likes enable row level security;
+alter table public.agi1_inf_weeks enable row level security;
+alter table public.agi1_inf_burns enable row level security;
+alter table public.agi1_inf_slots enable row level security;
+revoke all on table public.agi1_inf_likes, public.agi1_inf_weeks, public.agi1_inf_burns, public.agi1_inf_slots from anon, authenticated;
 alter table public.agi1_inf enable row level security;
 alter table public.agi1_inf_jobs enable row level security;
 alter table public.agi1_credits enable row level security;
@@ -319,8 +422,9 @@ begin
 end;
 $$;
 
--- ---------- uploads (a picture, a selfie, a clip) ----------
--- A new upload, before its file comes (p_per_day: uploads one wallet may start a day).
+-- ---------- uploads (a picture or a photo, a clip; a selfie before round 2) ----------
+-- A new upload, before its file comes (p_per_day: uploads one wallet may start a day). Since round 2 never a selfie ('face':
+-- "Use my face" is gone; a photo of a real person is a 'picture', uploaded with its uploader's consent).
 -- → {"ok": true} or {"ok": false, "why": "too_many" | "bad" | "taken"}
 create or replace function public.inf_upload_open(p_id text, p_wallet text, p_kind text, p_per_day integer)
 returns json
@@ -329,7 +433,7 @@ set search_path = public
 as $$
 begin
   if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null or char_length(p_wallet) not between 16 and 64
-     or p_kind is null or p_kind not in ('picture', 'face', 'clip') or p_per_day is null or p_per_day < 1 then
+     or p_kind is null or p_kind not in ('picture', 'clip') or p_per_day is null or p_per_day < 1 then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
   perform pg_advisory_xact_lock(hashtext('agi1-inf-upload:' || p_wallet));
@@ -348,11 +452,14 @@ language sql
 stable
 set search_path = public
 as $$
-  select row_to_json(u) from (select id, wallet_code, kind, status, why, seconds, created_at from agi1_inf_uploads where id = p_id) u;
+  select row_to_json(u) from (select id, wallet_code, kind, status, why, seconds, real, created_at from agi1_inf_uploads where id = p_id) u;
 $$;
 
--- Its file is in and checked: 'ok' (it may be used) or 'refused' (why: the AI check's reason); a clip's length
-create or replace function public.inf_upload_set(p_id text, p_status text, p_why text, p_seconds numeric)
+-- Its file is in and checked: 'ok' (it may be used) or 'refused' (why: the AI check's reason); a clip's length; whether it's
+-- a photo of a real person (round 2: then its influencer is never in Explore). (Round 2 added p_real: the older version is
+-- dropped first, so the web API never has two to choose from.)
+drop function if exists public.inf_upload_set(text, text, text, numeric);
+create or replace function public.inf_upload_set(p_id text, p_status text, p_why text, p_seconds numeric, p_real boolean default false)
 returns boolean
 language plpgsql
 set search_path = public
@@ -361,7 +468,8 @@ begin
   if p_status is null or p_status not in ('ok', 'refused') or (p_seconds is not null and (p_seconds <= 0 or p_seconds > 60)) then
     return false;
   end if;
-  update agi1_inf_uploads set status = p_status, why = left(p_why, 40), seconds = coalesce(p_seconds, seconds), updated_at = now()
+  update agi1_inf_uploads set status = p_status, why = left(p_why, 40), seconds = coalesce(p_seconds, seconds),
+    real = coalesce(p_real, false), updated_at = now()
   where id = p_id and status in ('open', 'ok');
   return found;
 end;
@@ -387,11 +495,16 @@ end;
 $$;
 
 -- A new influencer (its words and choices checked by our server): its credits spent, its first looks started.
--- p_mode 'picture' or 'face' needs its upload (p_source: this wallet's, of that kind, passed by the AI check). p_per_wallet:
--- influencers one wallet may have being made at once · p_day_cap: AI jobs a day for the whole site.
--- → {"ok": true, "paid", "free"} or {"ok": false, "why": "short" | "source" | "too_many" | "busy_day" | "taken" | "bad"}
+-- p_mode 'picture' needs its upload (p_source: this wallet's, a picture, passed by the AI check: a photo of a real person
+-- makes one that's never in Explore). Since round 2 never 'face' (old ones stay as they are). p_per_wallet: influencers one
+-- wallet may have being made at once · p_day_cap: AI jobs a day for the whole site · p_slots (round 2): influencers one
+-- wallet may have at all (not deleted, nor failed), plus the ones it unlocked by burning (agi1_inf_slots); null: no limit.
+-- (Round 2 added p_slots: the older version is dropped first, so the web API never has two to choose from.)
+-- → {"ok": true, "paid", "free"} or {"ok": false, "why": "short" | "source" | "too_many" | "no_slot" | "busy_day" | "taken" | "bad"}
+drop function if exists public.inf_start(text, text, text, text, text, text, jsonb, text, text, integer, integer, integer, integer);
 create or replace function public.inf_start(p_id text, p_job text, p_wallet text, p_name text, p_mode text, p_style text,
-  p_settings jsonb, p_words text, p_source text, p_level integer, p_cost integer, p_per_wallet integer, p_day_cap integer)
+  p_settings jsonb, p_words text, p_source text, p_level integer, p_cost integer, p_per_wallet integer, p_day_cap integer,
+  p_slots integer default null)
 returns json
 language plpgsql
 set search_path = public
@@ -402,10 +515,10 @@ declare
 begin
   if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_job is null or p_job !~ '^[A-Za-z0-9_-]{22}$' or p_id = p_job
      or p_wallet is null or char_length(p_wallet) not between 16 and 64 or p_name is null or char_length(p_name) not between 1 and 24
-     or p_mode is null or p_mode not in ('design', 'picture', 'face') or p_style is null or p_style not in ('real', 'anime', 'toon')
+     or p_mode is null or p_mode not in ('design', 'picture') or p_style is null or p_style not in ('real', 'anime', 'toon')
      or p_settings is null or jsonb_typeof(p_settings) <> 'object' or char_length(coalesce(p_words, '')) > 200
      or p_level is null or p_level not between 1 and 3 or p_cost is null or p_cost not between 0 and 100000
-     or p_per_wallet is null or p_per_wallet < 1 or p_day_cap is null or p_day_cap < 1
+     or p_per_wallet is null or p_per_wallet < 1 or p_day_cap is null or p_day_cap < 1 or (p_slots is not null and p_slots < 1)
      or (p_mode = 'design') <> (p_source is null) then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
@@ -419,6 +532,10 @@ begin
   if (select count(*) from agi1_inf where wallet_code = p_wallet and status in ('looks', 'pick', 'body')) >= p_per_wallet then
     return json_build_object('ok', false, 'why', 'too_many');
   end if;
+  if p_slots is not null and (select count(*) from agi1_inf where wallet_code = p_wallet and status in ('looks', 'pick', 'body', 'ready'))
+       >= p_slots + coalesce((select extra from agi1_inf_slots where wallet_code = p_wallet), 0) then
+    return json_build_object('ok', false, 'why', 'no_slot');
+  end if;
   begin
     if not inf_day_take(p_day_cap) then return json_build_object('ok', false, 'why', 'busy_day'); end if;
     if p_cost > 0 then
@@ -429,8 +546,9 @@ begin
     else
       s := inf_credits(p_wallet);
     end if;
-    insert into agi1_inf (id, wallet_code, name, mode, style, settings, words, source, status, first_job, public, level)
-    values (p_id, p_wallet, p_name, p_mode, p_style, p_settings, coalesce(p_words, ''), p_source, 'looks', p_job, p_mode <> 'face', p_level);
+    insert into agi1_inf (id, wallet_code, name, mode, style, settings, words, source, status, first_job, public, real, level)
+    values (p_id, p_wallet, p_name, p_mode, p_style, p_settings, coalesce(p_words, ''), p_source, 'looks', p_job,
+      not coalesce(u.real, false), coalesce(u.real, false), p_level);
     insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, cost) values (p_job, p_id, p_wallet, 'looks', p_cost);
     if p_source is not null then update agi1_inf_uploads set status = 'used', updated_at = now() where id = p_source; end if;
   exception
@@ -452,7 +570,7 @@ set search_path = public
 as $$
   select row_to_json(x) from (
     select i.id, i.wallet_code, i.name, i.mode, i.style, i.settings, i.words, i.source, i.status, i.first_job, i.looks_job, i.pick,
-      i.body_job, i.body_tries, i.error, i.public, i.hidden, i.level, i.created_at, i.updated_at, i.ready_at,
+      i.body_job, i.body_tries, i.error, i.public, i.hidden, i.level, i.created_at, i.updated_at, i.ready_at, i.real, i.boost_until,
       (select json_build_object('id', j.id, 'kind', j.kind, 'status', j.status, 'saving', j.saving, 'req', j.req is not null)
          from agi1_inf_jobs j where j.inf_id = i.id and j.kind in ('looks', 'body') and j.status in ('paid', 'making')
          order by j.created_at desc limit 1) as job
@@ -595,10 +713,10 @@ as $$
   select row_to_json(x) from (
     select j.id, j.inf_id, j.wallet_code, j.kind, j.scene, j.shape, j.sound, j.trend, j.clip, j.image, j.pick, j.cost, j.status, j.req,
       j.status_url, j.result_url, j.saving, j.tries, j.error, j.refunded, j.files, j.bytes, j.poster, j.hidden, j.started_at,
-      j.created_at, j.updated_at, j.done_at,
+      j.created_at, j.updated_at, j.done_at, j.example, j.marked, j.mark_tries, j.likes,
       i.name as inf_name, i.mode as inf_mode, i.style as inf_style, i.settings as inf_settings, i.words as inf_words,
       i.source as inf_source, i.status as inf_status, i.looks_job as inf_looks_job, i.pick as inf_pick, i.body_job as inf_body_job,
-      i.hidden as inf_hidden, i.public as inf_public,
+      i.hidden as inf_hidden, i.public as inf_public, i.real as inf_real,
       (select t.job from agi1_inf_trends t where t.id = j.trend) as trend_job
     from agi1_inf_jobs j left join agi1_inf i on i.id = j.inf_id where j.id = p_id
   ) x;
@@ -643,7 +761,8 @@ as $$
 $$;
 
 -- Done: its files are kept (p_files pictures, or a video of p_bytes). Its looks are shown to pick from; its full body makes
--- its influencer ready; a trend move waits for the owner's look.
+-- its influencer ready; a trend clip waits for the owner's look (an example picture is shown at once: the owner sees it on
+-- the owner's page and can make it again).
 create or replace function public.inf_job_done(p_id text, p_files integer, p_bytes integer)
 returns boolean
 language plpgsql
@@ -694,6 +813,7 @@ begin
     update agi1_inf_trends set status = 'failed', updated_at = now() where id = j.trend and job = p_id;
     return true;
   end if;
+  if j.kind = 'example' then return true; end if;
   select * into i from agi1_inf where id = j.inf_id for update;
   if not found then return true; end if;
   if j.kind = 'looks' and i.status = 'looks' then
@@ -750,6 +870,7 @@ as $$
       'clip', clip is not null, 'image', image, 'status', status,
       'step', case when saving then 'save' when req is not null then 'make' else 'queue' end, 'error', error, 'refunded', refunded,
       'cost', cost, 'files', files, 'bytes', bytes, 'poster', poster, 'created_at', created_at, 'done_at', done_at,
+      'likes', likes, 'marked', marked,
       'mine', coalesce(wallet_code = p_wallet, false)) order by coalesce(done_at, created_at) desc), '[]'::json)
   from (
     select * from agi1_inf_jobs
@@ -769,7 +890,8 @@ stable
 set search_path = public
 as $$
   select coalesce(json_agg(json_build_object('id', id, 'name', name, 'mode', mode, 'style', style, 'status', status, 'looks_job', looks_job,
-      'pick', pick, 'body_job', body_job, 'public', public, 'hidden', hidden, 'created_at', created_at, 'ready_at', ready_at)
+      'pick', pick, 'body_job', body_job, 'public', public, 'hidden', hidden, 'created_at', created_at, 'ready_at', ready_at,
+      'real', real, 'boost_until', boost_until)
       order by created_at desc), '[]'::json)
   from (
     select * from agi1_inf where wallet_code = p_wallet and status <> 'deleted'
@@ -777,7 +899,9 @@ as $$
   ) d;
 $$;
 
--- Explore: the newest public influencers (never one made from a face), their newest videos, and the kept trend moves
+-- Explore: the newest public influencers (never one made from a face or from a photo of a real person), their newest photos
+-- and videos (with their likes), the kept trend clips, the boosted influencers (a burn unlocked it: round 2) and the
+-- spotlight of the week (the newest one the owner approved, in the last two weeks)
 create or replace function public.inf_explore(p_limit integer)
 returns json
 language sql
@@ -787,22 +911,34 @@ as $$
   select json_build_object(
     'influencers', (select coalesce(json_agg(json_build_object('id', id, 'name', name, 'style', style, 'looks_job', looks_job,
         'pick', pick, 'body_job', body_job, 'ready_at', ready_at) order by ready_at desc), '[]'::json)
-      from (select * from agi1_inf where status = 'ready' and public and not hidden and mode <> 'face'
+      from (select * from agi1_inf where status = 'ready' and public and not hidden and mode <> 'face' and not real
         order by ready_at desc limit least(greatest(coalesce(p_limit, 24), 1), 60)) a),
     'fresh', (select coalesce(json_agg(json_build_object('id', j.id, 'kind', j.kind, 'shape', j.shape, 'trend', j.trend, 'poster', j.poster,
-        'inf_id', j.inf_id, 'inf_name', j.inf_name, 'looks_job', j.inf_looks_job, 'pick', j.inf_pick, 'done_at', j.done_at) order by j.done_at desc), '[]'::json)
-      from (select x.id, x.kind, x.shape, x.trend, x.poster, x.inf_id, x.done_at, i.name as inf_name, i.looks_job as inf_looks_job,
-          i.pick as inf_pick
+        'files', j.files, 'likes', j.likes, 'inf_id', j.inf_id, 'inf_name', j.inf_name, 'looks_job', j.inf_looks_job, 'pick', j.inf_pick,
+        'done_at', j.done_at) order by j.done_at desc), '[]'::json)
+      from (select x.id, x.kind, x.shape, x.trend, x.poster, x.files, x.likes, x.inf_id, x.done_at, i.name as inf_name,
+          i.looks_job as inf_looks_job, i.pick as inf_pick
         from agi1_inf_jobs x join agi1_inf i on i.id = x.inf_id
-        where x.status = 'done' and x.kind in ('trend', 'video') and not x.hidden and i.status = 'ready' and i.public and not i.hidden
-          and i.mode <> 'face'
+        where x.status = 'done' and x.kind in ('photo', 'trend', 'video') and not x.hidden and i.status = 'ready' and i.public and not i.hidden
+          and i.mode <> 'face' and not i.real
         order by x.done_at desc limit least(greatest(coalesce(p_limit, 24), 1), 60)) j),
     'trends', (select coalesce(json_agg(json_build_object('id', t.id, 'job', t.job, 'poster', j.poster, 'bytes', j.bytes) order by t.sort, t.id), '[]'::json)
-      from agi1_inf_trends t join agi1_inf_jobs j on j.id = t.job where t.status = 'kept' and j.status = 'done'));
+      from agi1_inf_trends t join agi1_inf_jobs j on j.id = t.job where t.status = 'kept' and j.status = 'done'),
+    'boosted', (select coalesce(json_agg(json_build_object('id', id, 'name', name, 'style', style, 'looks_job', looks_job, 'pick', pick,
+        'body_job', body_job, 'until', boost_until) order by boost_until desc), '[]'::json)
+      from (select * from agi1_inf where boost_until > now() and status = 'ready' and public and not hidden and mode <> 'face' and not real
+        order by boost_until desc limit 12) b),
+    'spotlight', (select row_to_json(s) from (
+        select w.week, w.status, w.holder_likes, w.likes, w.prize, j.id, j.kind, j.shape, j.poster, j.files, j.inf_id,
+          i.name as inf_name, i.looks_job, i.pick
+        from agi1_inf_weeks w join agi1_inf_jobs j on j.id = w.job_id join agi1_inf i on i.id = j.inf_id
+        where w.status in ('approved', 'claimed', 'sending', 'sent') and w.week >= (date_trunc('week', now() at time zone 'utc')::date - 14)
+          and j.status = 'done' and not j.hidden and i.status = 'ready' and not i.hidden
+        order by w.week desc limit 1) s));
 $$;
 
--- Its owner shows it in Explore or not (never one made from a face). → {"ok": true} or {"ok": false, "why": "gone" |
--- "not_yours" | "face"}
+-- Its owner shows it in Explore or not (never one made from a face or a photo of a real person). → {"ok": true} or {"ok":
+-- false, "why": "gone" | "not_yours" | "private"}
 create or replace function public.inf_public(p_id text, p_wallet text, p_public boolean)
 returns json
 language plpgsql
@@ -814,7 +950,7 @@ begin
   select * into i from agi1_inf where id = p_id for update;
   if not found or i.status = 'deleted' then return json_build_object('ok', false, 'why', 'gone'); end if;
   if i.wallet_code <> p_wallet then return json_build_object('ok', false, 'why', 'not_yours'); end if;
-  if i.mode = 'face' and coalesce(p_public, false) then return json_build_object('ok', false, 'why', 'face'); end if;
+  if (i.mode = 'face' or i.real) and coalesce(p_public, false) then return json_build_object('ok', false, 'why', 'private'); end if;
   update agi1_inf set public = coalesce(p_public, false), updated_at = now() where id = p_id;
   return json_build_object('ok', true);
 end;
@@ -940,7 +1076,9 @@ begin
 end;
 $$;
 
--- An influencer's 3D models (studio.sql's characters made from it), the newest first
+-- An influencer's 3D models (studio.sql's characters made from it), the newest first: how each is paid (round 2: 'burn',
+-- with its price in $AGI and what's burned so far, until it's paid), and whether one that couldn't be made may be made again
+-- free (a burned one: `credit`), or a quote that went nowhere (`expired`)
 create or replace function public.inf_3d_list(p_inf text)
 returns json
 language sql
@@ -948,8 +1086,65 @@ stable
 set search_path = public
 as $$
   select coalesce(json_agg(json_build_object('id', id, 'status', status, 'step', step, 'error', error, 'moves', moves,
-      'glb_bytes', glb_bytes, 'created_at', created_at, 'done_at', done_at) order by created_at desc), '[]'::json)
+      'glb_bytes', glb_bytes, 'created_at', created_at, 'done_at', done_at, 'kind', kind, 'agi', agi, 'paid', paid,
+      'credit', credit and updated_at > now() - interval '30 days',
+      'expired', status = 'quote' and paid = 0 and created_at < now() - interval '1 day') order by created_at desc), '[]'::json)
   from (select * from agi1_studio_orders where inf_id = p_inf and not hidden order by created_at desc limit 10) d;
+$$;
+
+-- A free 3D model for a burn (round 2; the owner: "large burns can make free 3d model", 25,000 $AGI): its order waits for the
+-- burn, sent from the wallet's own app to the burn address and read on the chain by our server (studio.sql's studio_pay:
+-- counted once, in burns.sql's ledger too, and toward the wallet's level); paid, it's made like one from credits. One open at
+-- a time per influencer (asked again: the same one). Inside the studio's characters a month (p_cap) and its burns
+-- (p_burn_cap, studio.sql's STUDIO_BURNS_A_MONTH). p_agi: its price in whole $AGI.
+-- → {"ok": true, "order", "agi", "paid", "created", "again"} or {"ok": false, "why": "gone" | "not_yours" | "not_ready" |
+--   "busy3d" | "sold_out" | "burns_sold_out" | "bad"}
+create or replace function public.inf_3d_burn(p_order text, p_inf text, p_wallet text, p_burn text, p_level integer, p_agi bigint,
+  p_cap integer, p_burn_cap integer)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  i agi1_inf%rowtype;
+  o agi1_studio_orders%rowtype;
+  m agi1_studio_months%rowtype;
+  live integer;
+  burn_live integer;
+begin
+  if p_order is null or p_order !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null or char_length(p_wallet) not between 16 and 64
+     or p_burn is null or char_length(p_burn) not between 16 and 64 or p_level is null or p_level not between 1 and 3
+     or p_agi is null or p_agi not between 1 and 1000000000 or p_cap is null or p_cap < 0 or p_burn_cap is null or p_burn_cap < 0 then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  perform pg_advisory_xact_lock(hashtext('agi1-inf-wallet:' || p_wallet));
+  -- the month's row first (like every function that counts the studio's places)
+  insert into agi1_studio_months (month) values (studio_this_month()) on conflict (month) do nothing;
+  select * into m from agi1_studio_months where month = studio_this_month() for update;
+  select * into i from agi1_inf where id = p_inf for update;
+  if not found or i.status = 'deleted' or i.hidden then return json_build_object('ok', false, 'why', 'gone'); end if;
+  if i.wallet_code <> p_wallet then return json_build_object('ok', false, 'why', 'not_yours'); end if;
+  if i.status <> 'ready' or i.body_job is null then return json_build_object('ok', false, 'why', 'not_ready'); end if;
+  if exists (select 1 from agi1_studio_orders where inf_id = p_inf and status in ('paid', 'making')) then
+    return json_build_object('ok', false, 'why', 'busy3d');
+  end if;
+  select * into o from agi1_studio_orders where inf_id = p_inf and wallet_code = p_wallet and status = 'quote' and kind = 'burn'
+    and (paid > 0 or created_at > now() - interval '1 day') order by created_at desc limit 1;
+  if found then
+    return json_build_object('ok', true, 'order', o.id, 'agi', o.agi, 'paid', o.paid, 'created', o.created_at, 'again', true);
+  end if;
+  select count(*), count(*) filter (where kind = 'burn') into live, burn_live from agi1_studio_orders
+    where status = 'quote' and created_at > now() - interval '1 day';
+  if m.made + live >= p_cap then return json_build_object('ok', false, 'why', 'sold_out'); end if;
+  if m.burns + burn_live >= p_burn_cap then return json_build_object('ok', false, 'why', 'burns_sold_out'); end if;
+  insert into agi1_studio_orders (id, wallet_code, burn_code, name, about, style, level, usd_cents, agi, free, kind, status, inf_id, image_path)
+  values (p_order, p_wallet, p_burn, i.name, 'Made from ' || i.name || '''s full-body picture in AGI Studio.',
+    case i.style when 'anime' then 'anime' when 'toon' then 'cartoon' else 'realistic' end, p_level, 0, p_agi, false, 'burn', 'quote',
+    p_inf, 'inf/' || p_inf || '/' || i.body_job || '-0.jpg')
+  on conflict (id) do nothing;
+  if not found then return json_build_object('ok', false, 'why', 'taken'); end if;
+  return json_build_object('ok', true, 'order', p_order, 'agi', p_agi, 'paid', 0, 'created', now(), 'again', false);
+end;
 $$;
 
 -- ---------- the trend moves (the owner's, made once with AI) ----------
@@ -1030,7 +1225,7 @@ stable
 set search_path = public
 as $$
   select coalesce(json_agg(json_build_object('inf_id', r.inf_id, 'job_id', r.job_id, 'count', r.n, 'whys', r.whys, 'at', r.at,
-      'name', i.name, 'mode', i.mode, 'hidden', i.hidden or coalesce(j.hidden, false)) order by r.at desc), '[]'::json)
+      'name', i.name, 'mode', i.mode, 'real', i.real, 'hidden', i.hidden or coalesce(j.hidden, false)) order by r.at desc), '[]'::json)
   from (
     select inf_id, job_id, count(*) as n, array_agg(distinct why) as whys, max(at) as at from agi1_inf_reports
     group by inf_id, job_id order by max(at) desc limit least(greatest(coalesce(p_limit, 50), 1), 200)
@@ -1044,6 +1239,453 @@ language sql
 set search_path = public
 as $$
   delete from agi1_inf_reports where inf_id = p_inf and coalesce(job_id, '') = coalesce(p_job, '') returning true;
+$$;
+
+-- ---------- example pictures for the design choices (round 2: the owner's, made once each on the owner's page) ----------
+-- One made (again) for a choice (p_key, e.g. "outfit-cozy"): a job with no influencer, made by the AI service from the owner's
+-- balance (no credits). → {"ok": true} or {"ok": false, "why": "busy" (one is being made) | "taken" | "bad"}
+create or replace function public.inf_example_make(p_key text, p_job text)
+returns json
+language plpgsql
+set search_path = public
+as $$
+begin
+  if p_key is null or p_key !~ '^[a-z]{3,6}-[a-z0-9]{2,12}$' or p_job is null or p_job !~ '^[A-Za-z0-9_-]{22}$' then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  perform pg_advisory_xact_lock(hashtext('agi1-inf-example:' || p_key));
+  if exists (select 1 from agi1_inf_jobs where kind = 'example' and example = p_key and status in ('paid', 'making')) then
+    return json_build_object('ok', false, 'why', 'busy');
+  end if;
+  insert into agi1_inf_jobs (id, kind, example, shape, cost) values (p_job, 'example', p_key, 'square', 0) on conflict (id) do nothing;
+  if not found then return json_build_object('ok', false, 'why', 'taken'); end if;
+  return json_build_object('ok', true);
+end;
+$$;
+
+-- Every choice's example: its newest done picture (`done`, what the pages show) and its newest job (for the owner: being
+-- made, or why it couldn't be)
+create or replace function public.inf_examples()
+returns json
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(json_agg(json_build_object('key', k.example, 'done', d.id, 'latest', l.id, 'status', l.status, 'error', l.error,
+      'at', coalesce(d.done_at, l.created_at)) order by k.example), '[]'::json)
+  from (select distinct example from agi1_inf_jobs where kind = 'example' and example is not null) k
+  left join lateral (select id, done_at from agi1_inf_jobs where kind = 'example' and example = k.example and status = 'done' and not hidden
+    order by done_at desc limit 1) d on true
+  left join lateral (select id, status, error, created_at from agi1_inf_jobs where kind = 'example' and example = k.example
+    order by created_at desc limit 1) l on true;
+$$;
+
+-- ---------- the share mark on downloaded videos (round 2: server/inf-mark.js, on the studio's clock) ----------
+-- One done video to mark, the newest first (in its first 30 days): taken for 3 minutes, at most 3 tries (then its download
+-- stays unmarked). → {id, inf_id, kind, bytes, tries} or null (nothing to do)
+create or replace function public.inf_mark_take()
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  r agi1_inf_jobs%rowtype;
+begin
+  select * into r from agi1_inf_jobs
+  where kind in ('trend', 'video') and status = 'done' and not hidden and not marked and mark_tries < 3
+    and (mark_at is null or mark_at < now() - interval '3 minutes') and done_at > now() - interval '30 days'
+  order by done_at desc limit 1 for update skip locked;
+  if not found then return null; end if;
+  update agi1_inf_jobs set mark_tries = mark_tries + 1, mark_at = now() where id = r.id;
+  return json_build_object('id', r.id, 'inf_id', r.inf_id, 'kind', r.kind, 'bytes', r.bytes, 'tries', r.mark_tries + 1);
+end;
+$$;
+
+-- Its marked copy is kept: downloads use it from now on
+create or replace function public.inf_mark_done(p_job text)
+returns boolean
+language sql
+set search_path = public
+as $$
+  update agi1_inf_jobs set marked = true, mark_at = now() where id = p_job and status = 'done' returning true;
+$$;
+
+-- ---------- likes and the weekly spotlight (round 2: the owner's flywheel) ----------
+-- A like (p_like) or taking it back, by a signed-in wallet (p_level: its level now; at most p_per_day likes a day): only a
+-- done photo or video of a public influencer (never one made from a face or a photo of a real person), never its own.
+-- → {"ok": true, "liked", "likes"} or {"ok": false, "why": "gone" | "private" | "own" | "too_many" | "bad"}
+create or replace function public.inf_like(p_job text, p_wallet text, p_level integer, p_like boolean, p_per_day integer)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  j agi1_inf_jobs%rowtype;
+  i agi1_inf%rowtype;
+  n integer;
+begin
+  if p_job is null or p_job !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null or char_length(p_wallet) not between 16 and 64
+     or p_level is null or p_level not between 1 and 3 or p_like is null or p_per_day is null or p_per_day < 1 then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  select * into j from agi1_inf_jobs where id = p_job for update;
+  if not found or j.status <> 'done' or j.hidden or j.kind not in ('photo', 'trend', 'video') then
+    return json_build_object('ok', false, 'why', 'gone');
+  end if;
+  select * into i from agi1_inf where id = j.inf_id;
+  if not found or i.status <> 'ready' or i.hidden then return json_build_object('ok', false, 'why', 'gone'); end if;
+  if not i.public or i.mode = 'face' or i.real then return json_build_object('ok', false, 'why', 'private'); end if;
+  if j.wallet_code = p_wallet then return json_build_object('ok', false, 'why', 'own'); end if;
+  if p_like then
+    perform pg_advisory_xact_lock(hashtext('agi1-inf-likes:' || p_wallet));
+    if exists (select 1 from agi1_inf_likes where job_id = p_job and wallet_code = p_wallet) then
+      return json_build_object('ok', true, 'liked', true, 'likes', j.likes);
+    end if;
+    select count(*) into n from agi1_inf_likes where wallet_code = p_wallet and at > now() - interval '1 day';
+    if n >= p_per_day then return json_build_object('ok', false, 'why', 'too_many'); end if;
+    insert into agi1_inf_likes (job_id, wallet_code, level) values (p_job, p_wallet, p_level) on conflict do nothing;
+    if found then
+      update agi1_inf_jobs set likes = likes + 1 where id = p_job returning likes into n;
+      return json_build_object('ok', true, 'liked', true, 'likes', n);
+    end if;
+    return json_build_object('ok', true, 'liked', true, 'likes', j.likes);
+  end if;
+  delete from agi1_inf_likes where job_id = p_job and wallet_code = p_wallet;
+  if found then
+    update agi1_inf_jobs set likes = greatest(likes - 1, 0) where id = p_job returning likes into n;
+    return json_build_object('ok', true, 'liked', false, 'likes', n);
+  end if;
+  return json_build_object('ok', true, 'liked', false, 'likes', j.likes);
+end;
+$$;
+
+-- Which of these photos and videos this wallet liked (its hearts, filled in on the pages)
+create or replace function public.inf_liked(p_wallet text, p_jobs text[])
+returns text[]
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(array_agg(job_id order by job_id), '{}'::text[]) from agi1_inf_likes
+  where wallet_code = p_wallet and p_jobs is not null and cardinality(p_jobs) <= 200 and job_id = any(p_jobs);
+$$;
+
+-- A week's best creation: done that week (p_week: its Monday, UTC), of a public influencer (never one made from a face or a
+-- photo of a real person), not hidden, not skipped by the owner (p_skip), liked by at least one holder; the most holders'
+-- likes first (Crush and Soulmate wallets), then all likes, then the first made
+create or replace function public.inf_week_top(p_week date, p_skip text[])
+returns table (job_id text, inf_id text, wallet_code text, holder_likes integer, likes integer)
+language sql
+stable
+set search_path = public
+as $$
+  select c.id, c.inf_id, c.wallet_code, c.holder_likes, c.likes from (
+    select j.id, j.inf_id, j.wallet_code, j.likes, j.done_at,
+      (select count(*) from agi1_inf_likes l where l.job_id = j.id and l.level >= 2)::integer as holder_likes
+    from agi1_inf_jobs j join agi1_inf i on i.id = j.inf_id
+    where j.kind in ('photo', 'trend', 'video') and j.status = 'done' and not j.hidden
+      and j.done_at >= (p_week::timestamp at time zone 'utc') and j.done_at < ((p_week + 7)::timestamp at time zone 'utc')
+      and i.status = 'ready' and i.public and not i.hidden and i.mode <> 'face' and not i.real
+      and not (j.id = any(coalesce(p_skip, '{}'::text[])))
+  ) c
+  where c.holder_likes >= 1
+  order by c.holder_likes desc, c.likes desc, c.done_at asc
+  limit 1;
+$$;
+
+-- The clock picks a week's spotlight once, when the week is over (p_week: a past Monday): its best creation, waiting for the
+-- owner's look ('picked'), or 'none'. Asked again, the same week as it is. → {"ok": true, "status", "job"} or {"ok": false,
+-- "why": "bad"}
+create or replace function public.inf_week_pick(p_week date)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  w agi1_inf_weeks%rowtype;
+  t record;
+begin
+  if p_week is null or extract(isodow from p_week) <> 1 or p_week >= date_trunc('week', now() at time zone 'utc')::date then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  perform pg_advisory_xact_lock(hashtext('agi1-inf-week:' || p_week::text));
+  select * into w from agi1_inf_weeks where week = p_week;
+  if found then return json_build_object('ok', true, 'status', w.status, 'job', w.job_id, 'again', true); end if;
+  select * into t from inf_week_top(p_week, '{}'::text[]);
+  if not found then
+    insert into agi1_inf_weeks (week, status) values (p_week, 'none');
+    return json_build_object('ok', true, 'status', 'none', 'job', null, 'again', false);
+  end if;
+  insert into agi1_inf_weeks (week, status, job_id, inf_id, wallet_code, holder_likes, likes)
+  values (p_week, 'picked', t.job_id, t.inf_id, t.wallet_code, t.holder_likes, t.likes);
+  return json_build_object('ok', true, 'status', 'picked', 'job', t.job_id, 'again', false);
+end;
+$$;
+
+-- The owner approves a picked week (with its prize in whole $AGI, 0 = for glory only: it's shown in Explore), or skips it to
+-- the next best creation. → {"ok": true, "status", "job"} or {"ok": false, "why": "gone" | "state" | "bad"}
+create or replace function public.inf_week_set(p_week date, p_action text, p_prize bigint)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  w agi1_inf_weeks%rowtype;
+  t record;
+begin
+  if p_week is null or p_action is null or p_action not in ('approve', 'skip')
+     or (p_action = 'approve' and (p_prize is null or p_prize not between 0 and 1000000000)) then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  select * into w from agi1_inf_weeks where week = p_week for update;
+  if not found then return json_build_object('ok', false, 'why', 'gone'); end if;
+  if w.status <> 'picked' then return json_build_object('ok', false, 'why', 'state'); end if;
+  if p_action = 'approve' then
+    update agi1_inf_weeks set status = 'approved', prize = p_prize, approved_at = now() where week = p_week;
+    return json_build_object('ok', true, 'status', 'approved', 'job', w.job_id);
+  end if;
+  select * into t from inf_week_top(p_week, w.skipped || w.job_id);
+  if not found then
+    update agi1_inf_weeks set skipped = skipped || w.job_id, status = 'none', job_id = null, inf_id = null, wallet_code = null,
+      holder_likes = 0, likes = 0, picked_at = now()
+    where week = p_week;
+    return json_build_object('ok', true, 'status', 'none', 'job', null);
+  end if;
+  update agi1_inf_weeks set skipped = skipped || w.job_id, status = 'picked', job_id = t.job_id, inf_id = t.inf_id,
+    wallet_code = t.wallet_code, holder_likes = t.holder_likes, likes = t.likes, picked_at = now()
+  where week = p_week;
+  return json_build_object('ok', true, 'status', 'picked', 'job', t.job_id);
+end;
+$$;
+
+-- The weeks, the newest first (p_wallet: a signed-in wallet's own are marked "mine": its prize to claim). The owner's page
+-- sees every state; the pages show approved ones.
+create or replace function public.inf_weeks(p_wallet text, p_limit integer)
+returns json
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(json_agg(json_build_object('week', w.week, 'status', w.status, 'job', w.job_id, 'inf_id', w.inf_id,
+      'holder_likes', w.holder_likes, 'likes', w.likes, 'prize', w.prize, 'tx', w.tx, 'kind', j.kind, 'shape', j.shape,
+      'poster', j.poster, 'files', j.files, 'job_ok', coalesce(j.status = 'done' and not j.hidden, false), 'inf_name', i.name,
+      'looks_job', i.looks_job, 'pick', i.pick, 'skipped', cardinality(w.skipped),
+      'mine', coalesce(w.wallet_code = p_wallet, false)) order by w.week desc), '[]'::json)
+  from (select * from agi1_inf_weeks order by week desc limit least(greatest(coalesce(p_limit, 8), 1), 60)) w
+  left join agi1_inf_jobs j on j.id = w.job_id left join agi1_inf i on i.id = w.inf_id;
+$$;
+
+-- Its maker claims a week's prize, to the wallet they're signed in with (p_address: its address, checked by our server; it
+-- made the creation: p_wallet is its code), once (a claim that never got as far as sending is given back after 2 minutes).
+-- → {"ok": true, "amount", "address"} or {"ok": false, "why": "none" | "not_yours" | "no_prize" | "approved"… (its state),
+--   "tx", "amount"}
+create or replace function public.inf_week_claim(p_week date, p_wallet text, p_address text)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  w agi1_inf_weeks%rowtype;
+begin
+  if p_week is null or p_wallet is null or p_address is null or lower(p_address) !~ '^0x[0-9a-f]{40}$' then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  update agi1_inf_weeks set status = 'claimed', address = lower(p_address), claimed_at = now()
+  where week = p_week and wallet_code = p_wallet and prize > 0
+    and (status = 'approved' or (status = 'claimed' and claimed_at < now() - interval '2 minutes'))
+  returning * into w;
+  if found then return json_build_object('ok', true, 'amount', w.prize, 'address', w.address); end if;
+  select * into w from agi1_inf_weeks where week = p_week;
+  if not found or w.status in ('none', 'picked') then return json_build_object('ok', false, 'why', 'none'); end if;
+  if w.wallet_code is distinct from p_wallet then return json_build_object('ok', false, 'why', 'not_yours'); end if;
+  if w.prize = 0 then return json_build_object('ok', false, 'why', 'no_prize'); end if;
+  return json_build_object('ok', false, 'why', w.status, 'tx', w.tx, 'amount', w.prize);
+end;
+$$;
+
+-- Its prize's transaction, kept right before it's sent (so it's never sent twice) → true / false
+create or replace function public.inf_week_sending(p_week date, p_tx text)
+returns boolean
+language plpgsql
+set search_path = public
+as $$
+begin
+  if p_tx is null or p_tx !~ '^0x[0-9a-f]{64}$' then return false; end if;
+  update agi1_inf_weeks set status = 'sending', tx = p_tx where week = p_week and status in ('claimed', 'sending');
+  return found;
+end;
+$$;
+
+-- How sending went: sent (with its transaction), or nothing went out (back to approved: they can claim again; also a prize
+-- whose transaction p_tx failed on the chain, so its $AGI never moved) → true / false
+create or replace function public.inf_week_sent(p_week date, p_tx text, p_ok boolean)
+returns boolean
+language plpgsql
+set search_path = public
+as $$
+begin
+  if p_ok then
+    if p_tx is null or p_tx !~ '^0x[0-9a-f]{64}$' then return false; end if;
+    update agi1_inf_weeks set status = 'sent', tx = p_tx, sent_at = now() where week = p_week and status in ('claimed', 'sending');
+  else
+    update agi1_inf_weeks set status = 'approved', tx = null, address = null, sent_at = null
+    where week = p_week and (status in ('claimed', 'sending') or (status = 'sent' and p_tx is not null and tx = p_tx));
+  end if;
+  return found;
+end;
+$$;
+
+-- ---------- burn unlocks (round 2: a boost in Explore, one more influencer) ----------
+-- A quote for one (p_what: 'boost' for one of its own public influencers, for p_hours; or 'slot'), p_agi whole $AGI to burn
+-- from the wallet's own app. Asked again while one is open (in its day, or with something burned toward it): the same one.
+-- → {"ok": true, "id", "agi", "paid", "created", "again"} or {"ok": false, "why": "gone" | "not_yours" | "not_ready" |
+--   "private" | "too_many" | "taken" | "bad"}
+create or replace function public.inf_burn_quote(p_id text, p_wallet text, p_burn text, p_what text, p_inf text, p_agi bigint, p_hours integer)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  i agi1_inf%rowtype;
+  b agi1_inf_burns%rowtype;
+begin
+  if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null or char_length(p_wallet) not between 16 and 64
+     or p_burn is null or char_length(p_burn) not between 16 and 64 or p_what is null or p_what not in ('boost', 'slot')
+     or (p_what = 'boost') <> (p_inf is not null) or (p_inf is not null and p_inf !~ '^[A-Za-z0-9_-]{22}$')
+     or p_agi is null or p_agi not between 1 and 1000000000
+     or p_hours is null or (p_what = 'boost' and p_hours not between 1 and 720) or (p_what = 'slot' and p_hours <> 0) then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  perform pg_advisory_xact_lock(hashtext('agi1-inf-wallet:' || p_wallet));
+  if p_what = 'boost' then
+    select * into i from agi1_inf where id = p_inf;
+    if not found or i.status = 'deleted' or i.hidden then return json_build_object('ok', false, 'why', 'gone'); end if;
+    if i.wallet_code <> p_wallet then return json_build_object('ok', false, 'why', 'not_yours'); end if;
+    if i.status <> 'ready' then return json_build_object('ok', false, 'why', 'not_ready'); end if;
+    if not i.public or i.mode = 'face' or i.real then return json_build_object('ok', false, 'why', 'private'); end if;
+  end if;
+  select * into b from agi1_inf_burns where wallet_code = p_wallet and what = p_what and inf_id is not distinct from p_inf
+    and status = 'quote' and (paid > 0 or created_at > now() - interval '1 day') order by created_at desc limit 1;
+  if found then
+    return json_build_object('ok', true, 'id', b.id, 'agi', b.agi, 'paid', b.paid, 'created', b.created_at, 'again', true);
+  end if;
+  if (select count(*) from agi1_inf_burns where wallet_code = p_wallet and status = 'quote' and paid = 0
+      and created_at > now() - interval '1 day') >= 4 then
+    return json_build_object('ok', false, 'why', 'too_many');
+  end if;
+  insert into agi1_inf_burns (id, wallet_code, burn_code, what, inf_id, agi, hours) values (p_id, p_wallet, p_burn, p_what, p_inf, p_agi, p_hours)
+  on conflict (id) do nothing;
+  if not found then return json_build_object('ok', false, 'why', 'taken'); end if;
+  return json_build_object('ok', true, 'id', p_id, 'agi', p_agi, 'paid', 0, 'created', now(), 'again', false);
+end;
+$$;
+
+-- One burn toward it, read on Robinhood Chain by our server, counted once (p_tx its code; in studio.sql's payment ledger and
+-- burns.sql's own, so it never counts for messages or a character too), its $AGI added to the wallet's (toward its level).
+-- Burns add up; once it's all burned, it's unlocked: a boost (until: from now, or the end of a boost already on) or a slot.
+-- → {"ok": true, "paid": true|false, "have", "need", "until"} or {"ok": false, "why": "gone" | "not_yours" | "done" | "used" | "bad"}
+create or replace function public.inf_burn_pay(p_id text, p_wallet text, p_tx text, p_amount numeric)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  b agi1_inf_burns%rowtype;
+  have numeric;
+  v_until timestamptz;
+begin
+  if p_id is null or p_wallet is null or p_tx is null or char_length(p_tx) not between 16 and 64
+     or p_amount is null or p_amount <= 0 or p_amount > 1000000000 or p_amount <> trunc(p_amount) then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  select * into b from agi1_inf_burns where id = p_id for update;
+  if not found then return json_build_object('ok', false, 'why', 'gone'); end if;
+  if b.wallet_code <> p_wallet then return json_build_object('ok', false, 'why', 'not_yours'); end if;
+  if b.status <> 'quote' then return json_build_object('ok', false, 'why', 'done'); end if;
+  if b.paid = 0 and b.created_at < now() - interval '1 day' then return json_build_object('ok', false, 'why', 'gone'); end if;
+  insert into agi1_studio_txs (tx_code, kind, order_id) values (p_tx, 'burn', p_id) on conflict (tx_code) do nothing;
+  if not found then return json_build_object('ok', false, 'why', 'used'); end if;
+  insert into agi1_burn_txs (tx_code) values (p_tx) on conflict (tx_code) do nothing;
+  if not found then
+    delete from agi1_studio_txs where tx_code = p_tx;            -- counted for messages already: never twice
+    return json_build_object('ok', false, 'why', 'used');
+  end if;
+  insert into agi1_burn_wallets as w (wallet_code, agi) values (b.burn_code, p_amount)
+  on conflict (wallet_code) do update set agi = w.agi + excluded.agi;
+  have := b.paid + p_amount;
+  if have < b.agi then
+    update agi1_inf_burns set paid = have where id = p_id;
+    return json_build_object('ok', true, 'paid', false, 'have', have, 'need', b.agi);
+  end if;
+  update agi1_inf_burns set paid = have, status = 'paid', paid_at = now() where id = p_id;
+  if b.what = 'boost' then
+    update agi1_inf set boost_until = greatest(coalesce(boost_until, now()), now()) + make_interval(hours => b.hours), updated_at = now()
+    where id = b.inf_id returning boost_until into v_until;
+  else
+    insert into agi1_inf_slots as s (wallet_code, extra) values (b.wallet_code, 1)
+    on conflict (wallet_code) do update set extra = least(s.extra + 1, 1000);
+  end if;
+  return json_build_object('ok', true, 'paid', true, 'have', have, 'need', b.agi, 'until', v_until);
+end;
+$$;
+
+-- A burn unlock as our server needs it (expired: a quote nothing was burned toward, a day old)
+create or replace function public.inf_burn_get(p_id text)
+returns json
+language sql
+stable
+set search_path = public
+as $$
+  select row_to_json(b) from (
+    select id, wallet_code, burn_code, what, inf_id, agi, hours, paid, status, created_at, paid_at,
+      (status = 'quote' and paid = 0 and created_at < now() - interval '1 day') as expired
+    from agi1_inf_burns where id = p_id
+  ) b;
+$$;
+
+-- A wallet's open burn unlocks (and the ones it finished this week), the newest first
+create or replace function public.inf_burns_open(p_wallet text)
+returns json
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(json_agg(json_build_object('id', id, 'what', what, 'inf_id', inf_id, 'agi', agi, 'hours', hours, 'paid', paid,
+      'status', status, 'created_at', created_at, 'paid_at', paid_at) order by created_at desc), '[]'::json)
+  from (select * from agi1_inf_burns where wallet_code = p_wallet
+    and ((status = 'quote' and (paid > 0 or created_at > now() - interval '1 day')) or (status = 'paid' and paid_at > now() - interval '7 days'))
+    order by created_at desc limit 20) b;
+$$;
+
+-- A wallet's influencers (not deleted or failed) and the extra ones it unlocked by burning → {"used", "extra"}
+create or replace function public.inf_slots(p_wallet text)
+returns json
+language sql
+stable
+set search_path = public
+as $$
+  select json_build_object(
+    'used', (select count(*) from agi1_inf where wallet_code = p_wallet and status in ('looks', 'pick', 'body', 'ready')),
+    'extra', coalesce((select extra from agi1_inf_slots where wallet_code = p_wallet), 0));
+$$;
+
+-- ---------- the live stats board (round 2: public totals only, cached a minute) ----------
+create or replace function public.inf_stats()
+returns json
+language sql
+stable
+set search_path = public
+as $$
+  select json_build_object(
+    'influencers', (select count(*) from agi1_inf where status = 'ready'),
+    'photos', (select count(*) from agi1_inf_jobs where kind = 'photo' and status = 'done'),
+    'videos', (select count(*) from agi1_inf_jobs where kind in ('trend', 'video') and status = 'done'),
+    'models', (select count(*) from agi1_studio_orders where inf_id is not null and status = 'done'),
+    'today', (select count(*) from agi1_inf_jobs where kind in ('photo', 'trend', 'video') and status = 'done'
+      and done_at >= (date_trunc('day', now() at time zone 'utc') at time zone 'utc')),
+    'likes', (select coalesce(sum(likes), 0) from agi1_inf_jobs where likes > 0),
+    'burned', coalesce((select sum(paid) from agi1_studio_orders where kind = 'burn'), 0) + coalesce((select sum(paid) from agi1_inf_burns), 0),
+    'boosted', (select count(*) from agi1_inf where boost_until > now() and status = 'ready' and public and not hidden and mode <> 'face' and not real));
 $$;
 
 -- ---------- tidy-up (the studio's clock, every half hour) ----------
@@ -1081,6 +1723,9 @@ begin
   delete from agi1_inf_reports where at < now() - interval '90 days';
   get diagnostics reports = row_count;
   update agi1_inf_jobs set lease_until = null where lease_until < now() - interval '10 minutes';
+  -- (round 2) burn quotes nothing was burned toward go after 2 days; a sent prize's address after 60 days (its transaction stays)
+  delete from agi1_inf_burns where status = 'quote' and paid = 0 and created_at < now() - interval '2 days';
+  update agi1_inf_weeks set address = null where status = 'sent' and address is not null and sent_at < now() - interval '60 days';
   return json_build_object('uploads', ups, 'infs', infs, 'jobs', jobs, 'reports', reports);
 end;
 $$;
@@ -1093,8 +1738,8 @@ begin
   foreach f in array array[
     'inf_credits(text)', 'inf_spend(text, integer, text)', 'inf_refund(text)', 'inf_topup(text, text, integer)',
     'inf_free(text, integer, integer)', 'inf_upload_open(text, text, text, integer)', 'inf_upload_get(text)',
-    'inf_upload_set(text, text, text, numeric)', 'inf_day_take(integer)',
-    'inf_start(text, text, text, text, text, text, jsonb, text, text, integer, integer, integer, integer)', 'inf_get(text)',
+    'inf_upload_set(text, text, text, numeric, boolean)', 'inf_day_take(integer)',
+    'inf_start(text, text, text, text, text, text, jsonb, text, text, integer, integer, integer, integer, integer)', 'inf_get(text)',
     'inf_pick(text, text, integer, text)', 'inf_reroll(text, text, text, integer, integer)',
     'inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer)', 'inf_job_get(text)',
     'inf_job_lease(text, integer)', 'inf_job_step(text, text, text, text, boolean, integer)', 'inf_job_wait(text)',
@@ -1103,7 +1748,14 @@ begin
     'inf_delete(text, text)', 'inf_hide(text, boolean)', 'inf_job_hide(text, boolean)',
     'inf_3d(text, text, text, text, integer, integer, integer, boolean)', 'inf_3d_back(text)', 'inf_3d_list(text)',
     'trend_make(text, text, integer)', 'trend_set(text, text)', 'trend_list()', 'inf_report(text, text, text, text, integer)',
-    'inf_reports(integer)', 'inf_report_clear(text, text)', 'inf_tidy()'
+    'inf_reports(integer)', 'inf_report_clear(text, text)', 'inf_tidy()',
+    -- round 2
+    'inf_3d_burn(text, text, text, text, integer, bigint, integer, integer)', 'inf_example_make(text, text)', 'inf_examples()',
+    'inf_mark_take()', 'inf_mark_done(text)', 'inf_like(text, text, integer, boolean, integer)', 'inf_liked(text, text[])',
+    'inf_week_top(date, text[])', 'inf_week_pick(date)', 'inf_week_set(date, text, bigint)', 'inf_weeks(text, integer)',
+    'inf_week_claim(date, text, text)', 'inf_week_sending(date, text)', 'inf_week_sent(date, text, boolean)',
+    'inf_burn_quote(text, text, text, text, text, bigint, integer)', 'inf_burn_pay(text, text, text, numeric)', 'inf_burn_get(text)',
+    'inf_burns_open(text)', 'inf_slots(text)', 'inf_stats()'
   ] loop
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
     execute format('grant execute on function public.%s to service_role', f);
@@ -1114,14 +1766,22 @@ $do$;
 -- Tell Supabase's web API to notice the new functions right away.
 notify pgrst, 'reload schema';
 
--- Check: influencers_ready = 1 (its 39 functions, and studio.sql's new parts it builds on)
+-- Check: influencers_ready = 1 (its 59 functions, each exactly once: since round 2 an older inf_start or inf_upload_set left
+-- behind would count twice; round 2's new columns; and studio.sql's new parts it builds on)
 select
-  (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('inf_credits', 'inf_spend', 'inf_refund',
+  (case when (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('inf_credits', 'inf_spend', 'inf_refund',
     'inf_topup', 'inf_free', 'inf_upload_open', 'inf_upload_get', 'inf_upload_set', 'inf_day_take', 'inf_start', 'inf_get', 'inf_pick',
     'inf_reroll', 'inf_make', 'inf_job_get', 'inf_job_lease', 'inf_job_step', 'inf_job_wait', 'inf_job_done', 'inf_job_fail',
     'inf_job_due', 'inf_poster', 'inf_jobs', 'inf_mine', 'inf_explore', 'inf_public', 'inf_delete', 'inf_hide', 'inf_job_hide',
     'inf_3d', 'inf_3d_back', 'inf_3d_list', 'trend_make', 'trend_set', 'trend_list', 'inf_report', 'inf_reports',
-    'inf_report_clear', 'inf_tidy')) / 39
+    'inf_report_clear', 'inf_tidy',
+    'inf_3d_burn', 'inf_example_make', 'inf_examples', 'inf_mark_take', 'inf_mark_done', 'inf_like', 'inf_liked', 'inf_week_top',
+    'inf_week_pick', 'inf_week_set', 'inf_weeks', 'inf_week_claim', 'inf_week_sending', 'inf_week_sent', 'inf_burn_quote',
+    'inf_burn_pay', 'inf_burn_get', 'inf_burns_open', 'inf_slots', 'inf_stats')) = 59 then 1 else 0 end)
     * (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_studio_orders'
         and column_name = 'image_path') then 1 else 0 end)
+    * (case when (select count(*) from information_schema.columns where table_schema = 'public'
+        and ((table_name = 'agi1_inf' and column_name in ('real', 'boost_until'))
+          or (table_name = 'agi1_inf_uploads' and column_name = 'real')
+          or (table_name = 'agi1_inf_jobs' and column_name in ('example', 'marked', 'mark_tries', 'mark_at', 'likes')))) = 8 then 1 else 0 end)
     as influencers_ready;

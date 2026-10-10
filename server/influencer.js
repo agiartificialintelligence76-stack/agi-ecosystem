@@ -15,13 +15,20 @@
 //   report one; the owner's page lists reports and hides what shouldn't be there. "Delete" (for a face: "Delete my face")
 //   takes it off every page at once and deletes its files.
 // Off until FAL_KEY is set (and influencers.sql run). Private like the studio until STUDIO_OPEN=yes (STUDIO_ONLY_FOR).
+// Round 2 (2026-10-10, the owner's list): "Use my face" is gone (a photo of a real person is allowed instead, with its
+// uploader's consent: never in Explore), trend videos put the influencer into real-looking clips, example pictures for the
+// design choices, a free 3D model for a big burn, burn unlocks (one more influencer, a boost in Explore: server/inf-burns.js),
+// likes and the weekly spotlight with a prize (server/inf-week.js), the share mark on downloads (server/inf-mark.js) and the
+// live stats board.
 import { rpc } from './limits.js';
 import { burnKey, burnWallet } from './burn.js';
-import { studioOn, mayMake, studioWallet, newOrderId, tick as studioTick } from './studio.js';
+import { studioOn, mayMake, studioWallet, newOrderId, tick as studioTick, getOrder, checkPayment } from './studio.js';
 import { checkStart, checkInfScene, sceneWay } from './inf-words.js';
 import { creditsOf, grantFree } from './credits.js';
 import { jobTick, getJob, stepOf, infOn } from './inf-jobs.js';
-import { PRICES, creditPrice, trendOf, TRENDS, REPORT_WHYS, TREND_ID } from '../src/studio/rules.js';
+import { burnsOpen } from './inf-burns.js';
+import { weeksFor } from './inf-week.js';
+import { PRICES, creditPrice, trendOf, TRENDS, REPORT_WHYS, TREND_ID, EXAMPLES } from '../src/studio/rules.js';
 
 export const INF = {
   PER_WALLET: 3,               // influencers one wallet may have being made at once
@@ -41,16 +48,21 @@ const takenDown = (cfg, id) => Boolean(cfg.studioHide?.has(id));
 export const priceTable = (level) => Object.fromEntries(Object.keys(PRICES).map((k) => [k, creditPrice(k, level)]));
 
 // ---------- what the pages show ----------
-// An influencer: anyone sees a ready one (by its link: Explore lists only public ones not made from a face); its own wallet
+// One made from a face (before round 2) or from a photo of a real person (round 2) is private: never in Explore, never liked
+// or spotlit, its files never kept by the CDN
+export const isPrivate = (i) => Boolean(i && (i.mode === 'face' || i.real === true || i.inf_mode === 'face' || i.inf_real === true));
+// An influencer: anyone sees a ready one (by its link: Explore lists only public ones, never a private one); its own wallet
 // sees it while it's made too, with its choices, its looks to pick from and what's being made
 export function infView(cfg, i, { mine = false, looksFiles = null } = {}) {
   if (!i || i.status === 'deleted' || i.hidden === true || takenDown(cfg, i.id)) return null;
   if (!mine && i.status !== 'ready') return null;
+  const priv = isPrivate(i);
+  const boost = ms(i.boost_until);
   const v = {
-    id: i.id, name: i.name, mode: i.mode, style: i.style, status: i.status, face: i.mode === 'face',
-    public: i.public === true && i.mode !== 'face', created: ms(i.created_at), ready: ms(i.ready_at),
+    id: i.id, name: i.name, mode: i.mode, style: i.style, status: i.status, face: i.mode === 'face', real: i.real === true, private: priv,
+    public: i.public === true && !priv, created: ms(i.created_at), ready: ms(i.ready_at),
     portrait: i.looks_job && Number.isInteger(i.pick) ? { job: i.looks_job, n: i.pick } : null,
-    body: i.body_job || null,
+    body: i.body_job || null, boosted: boost && boost > Date.now() && !priv && i.public === true ? boost : null,
   };
   if (mine) {
     Object.assign(v, { mine: true, settings: i.settings || {}, words: i.words || '', error: i.error || null });
@@ -66,7 +78,7 @@ export function jobView(cfg, j, inf) {
   const v = {
     id: j.id, inf, kind: j.kind, scene: j.scene || null, shape: j.shape || (j.kind === 'trend' ? 'tall' : null), sound: j.sound === true,
     trend: j.trend || null, clip: j.clip === true, image: j.image || null, status: j.status, created: ms(j.created_at), done: ms(j.done_at),
-    files: n0(j.files), poster: j.poster === true, mine: j.mine === true,
+    files: n0(j.files), poster: j.poster === true, mine: j.mine === true, likes: n0(j.likes), marked: j.marked === true,
   };
   if (j.mine === true) Object.assign(v, { cost: n0(j.cost), refunded: j.refunded === true, error: j.error || null, step: j.step || null });
   return v;
@@ -94,8 +106,14 @@ export async function infPage(cfg, id, { wallet = null } = {}) {
   return {
     influencer: view,
     jobs: (Array.isArray(jobs) ? jobs : []).map((j) => jobView(cfg, j, id)).filter(Boolean),
-    models: (Array.isArray(models) ? models : []).filter((m) => !takenDown(cfg, m.id) && (mine || m.status === 'done'))
-      .map((m) => ({ id: m.id, status: m.status, step: m.step || null, error: mine ? m.error || null : null, moves: m.moves || null, created: ms(m.created_at), done: ms(m.done_at) })),
+    models: (Array.isArray(models) ? models : []).filter((m) => !takenDown(cfg, m.id) && (mine || m.status === 'done') && m.expired !== true)
+      .map((m) => ({
+        id: m.id, status: m.status, step: m.step || null, error: mine ? m.error || null : null, moves: m.moves || null, created: ms(m.created_at),
+        done: ms(m.done_at),
+        // (round 2) how it's paid: a big burn's quote waits for its burn (its $AGI, and what's burned so far); one that couldn't
+        // be made may be made again, free (a burn can't be given back)
+        ...(mine ? { kind: m.kind || null, agi: n0(m.agi), paid: n0(m.paid), credit: m.credit === true } : {}),
+      })),
     mine, raw: i,
   };
 }
@@ -117,32 +135,42 @@ export async function moveAlong(cfg, page, { now = Date.now(), deadline = now + 
   return null;
 }
 
-// This wallet: its credits (this month's free ones given first, for a holder), its influencers, its prices, and whether it
-// may make one. → { credits, free, influencers, prices, allowed, owner }
+// This wallet: its credits (this month's free ones given first, for a holder), its influencers, its prices, whether it may
+// make one, and (round 2) its slots (influencers it may have at all, and the ones it unlocked by burning), its burn unlocks
+// open, and its weekly prizes (to claim, or claimed). → { credits, free, influencers, prices, allowed, owner, slots, burns, weeks }
 export async function me(cfg, { wallet, level }) {
   const code = studioWallet(cfg.passSecret, wallet);
   let free = null;
   if (level >= 2) free = await grantFree(cfg, code, level);
-  const [credits, list] = await Promise.all([creditsOf(cfg, code), rpc(cfg, 'inf_mine', { p_wallet: code, p_limit: 30 }, 'studio')]);
+  const [credits, list, slots, burns, weeks] = await Promise.all([
+    creditsOf(cfg, code), rpc(cfg, 'inf_mine', { p_wallet: code, p_limit: 30 }, 'studio'), rpc(cfg, 'inf_slots', { p_wallet: code }, 'studio'),
+    burnsOpen(cfg, wallet), weeksFor(cfg, { wallet }),
+  ]);
+  const extra = n0(slots?.extra);
   return {
     credits, free, prices: priceTable(level), allowed: mayMake(cfg, wallet), owner: isOwner(cfg, wallet),
-    influencers: (Array.isArray(list) ? list : []).filter((i) => !takenDown(cfg, i.id)).map((i) => ({
-      id: i.id, name: i.name, mode: i.mode, style: i.style, status: i.status, public: i.public === true && i.mode !== 'face', hidden: i.hidden === true,
-      portrait: i.looks_job && Number.isInteger(i.pick) ? { job: i.looks_job, n: i.pick } : null, created: ms(i.created_at), ready: ms(i.ready_at),
-    })),
+    slots: { used: n0(slots?.used), extra, max: cfg.infSlots + extra },
+    burns, weeks,
+    influencers: (Array.isArray(list) ? list : []).filter((i) => !takenDown(cfg, i.id)).map((i) => {
+      const boost = ms(i.boost_until);
+      return {
+        id: i.id, name: i.name, mode: i.mode, style: i.style, status: i.status, private: isPrivate(i), public: i.public === true && !isPrivate(i),
+        hidden: i.hidden === true, portrait: i.looks_job && Number.isInteger(i.pick) ? { job: i.looks_job, n: i.pick } : null,
+        created: ms(i.created_at), ready: ms(i.ready_at), boosted: boost && boost > Date.now() ? boost : null,
+      };
+    }),
   };
 }
 
 // ---------- 1: a new influencer ----------
-// input: { name, mode, style, settings, words, source (its upload, for a picture or a face), consent (a face) }.
-// → { ok: true, id, credits } or { ok: false, field?, why, have? }: checkStart's, or 'closed' | 'faces_off' | 'consent' |
-// 'source' | 'short' | 'too_many' | 'busy_day' | 'busy'
+// input: { name, mode ('design' | 'picture'), style, settings, words, source (its upload, for a picture: its consent was given
+// when it was uploaded) }. → { ok: true, id, credits } or { ok: false, field?, why, have? }: checkStart's, or 'closed' |
+// 'source' | 'short' | 'too_many' | 'no_slot' (its influencers at all: STUDIO_SLOTS, and more unlocked by burning) |
+// 'busy_day' | 'busy'
 export async function startInf(cfg, { wallet, level, input }) {
   if (!mayMake(cfg, wallet)) return { ok: false, why: 'closed' };
   const c = checkStart(input);
   if (!c.ok) return c;
-  if (c.mode === 'face' && !cfg.infFaces) return { ok: false, why: 'faces_off' };
-  if (c.mode === 'face' && input?.consent !== true) return { ok: false, why: 'consent' };
   const source = c.mode === 'design' ? null : ID.test(String(input?.source)) ? input.source : null;
   if (c.mode !== 'design' && !source) return { ok: false, why: 'source' };
   const code = studioWallet(cfg.passSecret, wallet);
@@ -151,6 +179,7 @@ export async function startInf(cfg, { wallet, level, input }) {
     const r = await rpc(cfg, 'inf_start', {
       p_id: id, p_job: job, p_wallet: code, p_name: c.name, p_mode: c.mode, p_style: c.style, p_settings: c.settings, p_words: c.words,
       p_source: source, p_level: level, p_cost: creditPrice('influencer', level), p_per_wallet: INF.PER_WALLET, p_day_cap: cfg.infDayCap,
+      p_slots: cfg.infSlots,
     }, 'studio');
     if (r?.ok === true) return { ok: true, id, job, credits: { paid: n0(r.paid), free: n0(r.free) } };
     if (r?.why === 'taken') continue;
@@ -223,7 +252,9 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
       if (!ID.test(String(input.clip))) return { ok: false, why: 'clip' };
       clip = input.clip;
     }
-    shape = photo ? photo.shape : 'tall';
+    // (round 2) the video is the clip's own shape: a trend clip's is vertical; their own clip's, as the page read it in their
+    // browser (it only decides how its tile is drawn)
+    shape = clip && ['tall', 'wide', 'square'].includes(input.shape) ? input.shape : 'tall';
   }
   for (let t = 0; t < 2; t++) {
     const job = newOrderId();
@@ -253,6 +284,43 @@ export async function order3d(cfg, { wallet, level, id }) {
     if (r?.why !== 'taken') return shortOr(r);
   }
   return { ok: false, why: 'busy' };
+}
+
+// (round 2, the owner: "large burns can make free 3d model") A 3D model for a big burn: its order waits for STUDIO_MODEL_BURN_AGI
+// (25,000) $AGI burned from the wallet's own app (inside the studio's burns a month, STUDIO_BURNS_A_MONTH); asked again while
+// one is open, the same one. → { ok: true, order, agi, paid, created, again } or { ok: false, why: 'no_3d' | 'burns_off' |
+// inf_3d_burn's }
+export async function order3dBurn(cfg, { wallet, level, id }) {
+  if (!studioOn(cfg)) return { ok: false, why: 'no_3d' };
+  if (!(cfg.infModelBurnAgi > 0) || cfg.studioBurnCap < 1) return { ok: false, why: 'burns_off' };
+  if (!ID.test(String(id))) return { ok: false, why: 'bad' };
+  const key = await burnKey(cfg);
+  for (let t = 0; t < 2; t++) {
+    const r = await rpc(cfg, 'inf_3d_burn', {
+      p_order: newOrderId(), p_inf: id, p_wallet: studioWallet(cfg.passSecret, wallet), p_burn: burnWallet(key, wallet), p_level: level,
+      p_agi: cfg.infModelBurnAgi, p_cap: cfg.studioMonthCap, p_burn_cap: cfg.studioBurnCap,
+    }, 'studio');
+    if (r?.ok === true) return { ok: true, order: r.order, agi: n0(r.agi), paid: n0(r.paid), created: ms(r.created), again: r.again === true };
+    if (r?.why !== 'taken') return { ok: false, why: String(r?.why || 'busy') };
+  }
+  return { ok: false, why: 'busy' };
+}
+// Its "Check my burn" (the 3D studio's own: server/studio.js checkPayment, counted once, in burns.sql's ledger too) for one
+// of this influencer's models. → checkPayment's answer, or { ok: false, why: 'gone' }
+export async function check3dBurn(cfg, { wallet, id, order, tx = null, env, now = Date.now() }) {
+  if (!ID.test(String(id)) || !ID.test(String(order))) return { ok: false, why: 'gone' };
+  const o = await getOrder(cfg, order);
+  if (!o || o.inf_id !== id || o.kind !== 'burn') return { ok: false, why: 'gone' };
+  return checkPayment(cfg, { id: order, wallet, tx, env, now });
+}
+// One of them that couldn't be made, made again from the same full-body picture, free (a burn can't be given back)
+// → { ok: true } or { ok: false, why: 'gone' | 'not_yours' | 'no_credit' | 'busy' }
+export async function redo3d(cfg, { wallet, id, order }) {
+  if (!ID.test(String(id)) || !ID.test(String(order))) return { ok: false, why: 'gone' };
+  const o = await getOrder(cfg, order);
+  if (!o || o.inf_id !== id || o.kind !== 'burn' || takenDown(cfg, order)) return { ok: false, why: 'gone' };
+  const r = await rpc(cfg, 'studio_redo', { p_id: order, p_wallet: studioWallet(cfg.passSecret, wallet), p_name: o.name, p_about: o.about, p_style: o.style }, 'studio');
+  return r?.ok === true ? { ok: true } : { ok: false, why: String(r?.why || 'busy') };
 }
 
 // ---------- shown in Explore or not, and deleting it ----------
@@ -338,29 +406,61 @@ export async function studioPicture(cfg, photo) {
 }
 
 // ---------- Explore ----------
-// The newest public influencers (never one made from a face), their newest videos, and the owner's kept trend moves.
+// The newest public influencers (never a private one), their newest photos and videos (with their likes), the owner's kept
+// trend clips, and (round 2) the boosted influencers (a burn unlocked it) and the spotlight of the week.
+const portraitOf = (x) => (x.looks_job && Number.isInteger(x.pick) ? { job: x.looks_job, n: x.pick } : null);
 export async function explore(cfg) {
   const e = await rpc(cfg, 'inf_explore', { p_limit: 24 }, 'studio');
   const ok = (id) => ID.test(String(id)) && !takenDown(cfg, id);
+  const sp = e?.spotlight;
   return {
     influencers: (Array.isArray(e?.influencers) ? e.influencers : []).filter((i) => ok(i.id)).map((i) => ({
-      id: i.id, name: i.name, style: i.style, portrait: i.looks_job && Number.isInteger(i.pick) ? { job: i.looks_job, n: i.pick } : null, ready: ms(i.ready_at),
+      id: i.id, name: i.name, style: i.style, portrait: portraitOf(i), ready: ms(i.ready_at),
     })),
     fresh: (Array.isArray(e?.fresh) ? e.fresh : []).filter((j) => ok(j.id) && ok(j.inf_id)).map((j) => ({
-      id: j.id, kind: j.kind, shape: j.shape || 'tall', trend: j.trend || null, poster: j.poster === true, done: ms(j.done_at),
-      inf: { id: j.inf_id, name: j.inf_name, portrait: j.looks_job && Number.isInteger(j.pick) ? { job: j.looks_job, n: j.pick } : null },
+      id: j.id, kind: j.kind, shape: j.shape || (j.kind === 'photo' ? 'square' : 'tall'), trend: j.trend || null, poster: j.poster === true,
+      files: n0(j.files), likes: n0(j.likes), done: ms(j.done_at),
+      inf: { id: j.inf_id, name: j.inf_name, portrait: portraitOf(j) },
     })),
     trends: TRENDS.map((t) => {
       const kept = (Array.isArray(e?.trends) ? e.trends : []).find((k) => k.id === t.id);
       return kept && ok(kept.job) ? { id: t.id, name: t.name, emoji: t.emoji, job: kept.job, poster: kept.poster === true } : null;
     }).filter(Boolean),
+    boosted: (Array.isArray(e?.boosted) ? e.boosted : []).filter((i) => ok(i.id)).map((i) => ({
+      id: i.id, name: i.name, style: i.style, portrait: portraitOf(i), until: ms(i.until),
+    })),
+    spotlight: sp && ok(sp.id) && ok(sp.inf_id) ? {
+      week: sp.week, job: sp.id, kind: sp.kind, shape: sp.shape || (sp.kind === 'photo' ? 'square' : 'tall'), poster: sp.poster === true,
+      files: n0(sp.files), holderLikes: n0(sp.holder_likes), likes: n0(sp.likes), prize: n0(sp.prize),
+      inf: { id: sp.inf_id, name: sp.inf_name, portrait: portraitOf(sp) },
+    } : null,
   };
 }
 
+// (round 2) The example pictures for the design choices: { key: its picture's job } (only the done ones)
+export async function examplesMap(cfg) {
+  const list = await rpc(cfg, 'inf_examples', {}, 'studio');
+  const map = {};
+  for (const x of Array.isArray(list) ? list : []) if (EXAMPLES.includes(x.key) && ID.test(String(x.done))) map[x.key] = x.done;
+  return map;
+}
+// (round 2) The live stats board's numbers: public totals only → { influencers, photos, videos, models, today, likes, burned, boosted }
+export async function stats(cfg) {
+  const s = await rpc(cfg, 'inf_stats', {}, 'studio');
+  const keys = ['influencers', 'photos', 'videos', 'models', 'today', 'likes', 'burned', 'boosted'];
+  return Object.fromEntries(keys.map((k) => [k, n0(s?.[k])]));
+}
+
 // ---------- the owner's page ----------
+// Its trend clips, the reports, and (round 2) the example pictures (each choice's: done, being made, or why not) and the
+// weeks (the spotlight waiting for the owner's look, and the ones before)
 export async function ownerPage(cfg) {
-  const [trends, reports] = await Promise.all([rpc(cfg, 'trend_list', {}, 'studio'), rpc(cfg, 'inf_reports', { p_limit: 60 }, 'studio')]);
+  const [trends, reports, examples, weeks] = await Promise.all([
+    rpc(cfg, 'trend_list', {}, 'studio'), rpc(cfg, 'inf_reports', { p_limit: 60 }, 'studio'), rpc(cfg, 'inf_examples', {}, 'studio'),
+    weeksFor(cfg, { owner: true, limit: 12 }),
+  ]);
   const made = new Map((Array.isArray(trends) ? trends : []).map((t) => [t.id, t]));
+  const ex = new Map((Array.isArray(examples) ? examples : []).map((x) => [x.key, x]));
   return {
     trends: TRENDS.map((t) => {
       const m = made.get(t.id);
@@ -373,7 +473,27 @@ export async function ownerPage(cfg) {
       inf: r.inf_id, job: r.job_id || null, count: n0(r.count), whys: Array.isArray(r.whys) ? r.whys : [], at: ms(r.at), name: r.name, mode: r.mode,
       hidden: r.hidden === true,
     })),
+    examples: EXAMPLES.map((key) => {
+      const x = ex.get(key);
+      return {
+        key, done: ID.test(String(x?.done)) ? x.done : null, latest: ID.test(String(x?.latest)) ? x.latest : null,
+        status: x?.status || 'none', error: x?.error || null,
+      };
+    }),
+    weeks,
   };
+}
+// (round 2) Example pictures made (again) for these choices, by the AI service (from the owner's fal balance: no credits).
+// → { ok: true, started: [keys], busy: [keys] } or { ok: false, why: 'bad' }
+export async function exampleMake(cfg, keys) {
+  const list = [...new Set(Array.isArray(keys) ? keys : [])];
+  if (!list.length || list.length > EXAMPLES.length || list.some((k) => !EXAMPLES.includes(k))) return { ok: false, why: 'bad' };
+  const started = [], busy = [];
+  for (const key of list) {
+    const r = await rpc(cfg, 'inf_example_make', { p_key: key, p_job: newOrderId() }, 'studio');
+    (r?.ok === true ? started : busy).push(key);
+  }
+  return { ok: true, started, busy };
 }
 // One of the owner's trend moves made (again), by the AI service (from the owner's fal balance: no credits)
 export async function trendMake(cfg, trend) {

@@ -12,7 +12,7 @@ export async function render(ctx, route, root) {
   const id = route.id;
   let c = null, viewer = null, timer = null, started = false, loading = false;
   const back = h('a', { class: 'sa-back', href: ctx.href('/explore'), dataset: { saLink: '' } }, icon('back'), h('span', { text: 'Explore' }));
-  const title = h('h1', { class: 'sa-h1', tabindex: '-1', text: 'In 3D' });
+  const title = h('h1', { class: 'sa-display sa-page-title', tabindex: '-1', text: 'In 3D' });
   const meta = h('p', { class: 'sa-inf-meta' });
   const status = h('p', { class: 'sa-progress-line', role: 'status' });
   const steps = h('ol', { class: 'sa-steps', hidden: true });

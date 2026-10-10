@@ -15,6 +15,10 @@
     { "source": "/", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/explore", "permanent": false }
   ],
   "functions": {
+    "api/feed.js": {
+      "maxDuration": 25,
+      "includeFiles": "node_modules/@ffmpeg-installer/linux-x64/**"
+    },
     "api/**/*.js": {
       "maxDuration": 25
     }
@@ -54,7 +58,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "camera=(self), microphone=(self), geolocation=(), display-capture=(self)"
+          "value": "camera=(), microphone=(self), geolocation=(), display-capture=(self)"
         }
       ]
     },

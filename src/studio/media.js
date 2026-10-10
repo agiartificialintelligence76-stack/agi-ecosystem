@@ -1,10 +1,10 @@
-// AGI Studio (2026-10-10): pictures, the camera and clips, in the visitor's own browser, and sending them to our server.
-//   • A picture (a character of theirs) or a selfie is made a JPEG of at most 1536 px here, then sent in one request with
-//     the ticket our server gave for it (server/inf-uploads.js looks at it before keeping anything).
-//   • A selfie comes from the live camera only (getUserMedia, the front camera): never a file. The camera stops as soon as
-//     the picture is taken, or the sheet is closed.
-//   • A clip (a move to copy, 2 to 10 s) is sent in parts of 3.5 MB (Vercel takes at most 4.5 MB a request), with 3 small
-//     frames of it taken here for the AI check.
+// AGI Studio (2026-10-10): pictures and clips, in the visitor's own browser, and sending them to our server.
+//   • A picture for "From a photo" (a photo of the visitor, of someone who said OK, or a character of theirs: round 2, with
+//     the box ticked first, which our server needs) is made a JPEG of at most 1536 px here, then sent in one request with the
+//     ticket our server gave for it (server/inf-uploads.js looks at it before keeping anything). ("Use my face" and its live
+//     selfies are gone since round 2: nothing here opens a camera.)
+//   • A clip (their own, for a trend video: 3 to 10 s, 720 to 2160 px a side) is read here first (its length and shape), then
+//     sent in parts of 3.5 MB (Vercel takes at most 4.5 MB a request), with 3 small frames of it taken here for the AI check.
 //   • A video's poster: a frame of one of its own videos, taken here (our own address: the picture isn't tainted), sent with
 //     its ticket.
 // Nothing here is kept: the browser's copies go when the page does.
@@ -41,7 +41,7 @@ function toBlob(canvas, type, quality) {
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), type, quality));
 }
 // draws src (an image, a bitmap, a video frame) at most maxPx on its longest side → a JPEG of at most maxBytes, or null
-export async function canvasJpeg(src, w0, h0, { maxPx, maxBytes, mirror = false }) {
+export async function canvasJpeg(src, w0, h0, { maxPx, maxBytes }) {
   let scale = Math.min(1, maxPx / Math.max(w0, h0));
   for (let tries = 0; tries < 4; tries++) {
     const w = Math.max(1, Math.round(w0 * scale)), ht = Math.max(1, Math.round(h0 * scale));
@@ -51,7 +51,6 @@ export async function canvasJpeg(src, w0, h0, { maxPx, maxBytes, mirror = false 
     const g = canvas.getContext('2d');
     g.fillStyle = '#ffffff';
     g.fillRect(0, 0, w, ht);
-    if (mirror) { g.translate(w, 0); g.scale(-1, 1); }
     g.drawImage(src, 0, 0, w, ht);
     for (const q of [0.88, 0.8, 0.7]) {
       const blob = await toBlob(canvas, 'image/jpeg', q);
@@ -62,43 +61,11 @@ export async function canvasJpeg(src, w0, h0, { maxPx, maxBytes, mirror = false 
   return null;
 }
 
-// ---------- the camera (a live selfie) ----------
-// → { video (a playing <video>, its stream attached), stop(), snap() → a JPEG Blob (as the preview showed it: mirrored) }
-// · throws Error('camera_denied' | 'camera_none' | 'camera_off' | 'camera_busy')
-export async function openCamera(video) {
-  if (!navigator.mediaDevices?.getUserMedia) throw new Error('camera_none');
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: false });
-  } catch (err) {
-    const n = err?.name || '';
-    throw new Error(n === 'NotAllowedError' || n === 'SecurityError' ? 'camera_denied' : n === 'NotFoundError' || n === 'OverconstrainedError' ? 'camera_none' : n === 'NotReadableError' ? 'camera_busy' : 'camera_off');
-  }
-  video.muted = true;
-  video.playsInline = true;
-  video.srcObject = stream;
-  try { await video.play(); } catch { /* it starts when shown */ }
-  const stop = () => { for (const t of stream.getTracks()) t.stop(); video.srcObject = null; };
-  return {
-    video,
-    stop,
-    async snap() {
-      const w = video.videoWidth, ht = video.videoHeight;
-      if (!w || !ht) return null;
-      return canvasJpeg(video, w, ht, { maxPx: PICTURE.MAX_PX, maxBytes: PICTURE.MAX_BYTES, mirror: true });
-    },
-  };
-}
-export function cameraText(code) {
-  return {
-    camera_denied: 'Your browser blocked the camera: allow it in the address bar (or your phone\'s settings), then try again.',
-    camera_none: 'No camera found on this device.',
-    camera_busy: 'Another app is using your camera: close it, then try again.',
-  }[code] || "Couldn't open the camera. Try again.";
-}
-
-// ---------- a clip: its length and 3 frames ----------
-// → { seconds, frames: [JPEG Blob ×3] } · throws Error('clip_read' | 'clip_length' | 'clip_size' | 'clip_type')
+// ---------- a clip: its length, its shape and 3 frames ----------
+// Its shape from its size: tall, wide or square (a trend video is as tall or wide as its clip)
+export const shapeOfSize = (w, ht) => (ht > w * 1.15 ? 'tall' : w > ht * 1.15 ? 'wide' : 'square');
+// → { seconds, width, height, shape, frames: [JPEG Blob ×3] } · throws Error('clip_read' | 'clip_length' | 'clip_size' |
+// 'clip_type' | 'clip_pixels') (the video model's own limits: 3 to 10 s, 720 to 2160 px a side; our server reads them again)
 export async function readClip(file) {
   if (!/^video\/(mp4|quicktime)$/i.test(file.type || '') && !/\.(mp4|mov|m4v)$/i.test(file.name || '')) throw new Error('clip_type');
   if (file.size > CLIP.MAX_BYTES) throw new Error('clip_size');
@@ -117,16 +84,19 @@ export async function readClip(file) {
     video.src = url;
     await once('loadeddata');
     const seconds = video.duration;
-    if (!Number.isFinite(seconds) || seconds < CLIP.MIN_S - 0.05 || seconds > CLIP.MAX_S + 0.4) throw new Error('clip_length');
+    if (!Number.isFinite(seconds) || seconds < CLIP.MIN_S - 0.02 || seconds > CLIP.MAX_S + 0.05) throw new Error('clip_length');
+    const width = video.videoWidth, height = video.videoHeight;
+    if (!width || !height) throw new Error('clip_read');
+    if (Math.min(width, height) < CLIP.MIN_PX || Math.max(width, height) > CLIP.MAX_PX) throw new Error('clip_pixels');
     const frames = [];
     for (const at of [0.2, 0.5, 0.8]) {
       video.currentTime = Math.min(seconds - 0.05, Math.max(0.05, seconds * at));
       await once('seeked');
-      const blob = await canvasJpeg(video, video.videoWidth, video.videoHeight, { maxPx: 512, maxBytes: CLIP.FRAME_BYTES });
+      const blob = await canvasJpeg(video, width, height, { maxPx: 512, maxBytes: CLIP.FRAME_BYTES });
       if (!blob) throw new Error('clip_read');
       frames.push(blob);
     }
-    return { seconds, frames };
+    return { seconds, width, height, shape: shapeOfSize(width, height), frames };
   } finally {
     video.removeAttribute('src');
     video.load();
@@ -136,8 +106,9 @@ export async function readClip(file) {
 export function clipText(code) {
   return {
     clip_type: 'An MP4 or MOV video, please.',
-    clip_size: 'A clip of 30 MB at most, please (2 to 10 seconds).',
-    clip_length: 'A clip of 2 to 10 seconds, please.',
+    clip_size: 'A clip of 30 MB at most, please (3 to 10 seconds).',
+    clip_length: 'A clip of 3 to 10 seconds, please.',
+    clip_pixels: 'A clip of 720 to 2160 pixels on each side, please (most phone videos are: try exporting it in 1080p).',
     clip_read: "This browser can't read that video: try an MP4 (most phones save one when you share or export a clip).",
   }[code] || "Couldn't read that clip. Try another.";
 }
@@ -160,13 +131,15 @@ async function sendBytes(query, blob) {
   return last;
 }
 
-// A picture or a selfie: its ticket (with the human check), then its bytes, looked at by our server.
-// act: the app's request helper (ctx.act). → { ok: true, id } or { ok: false, error, why? }
-export async function uploadPicture(act, { kind, blob, consent = false, human }) {
-  const open = await act('inf-up-open', { kind, bytes: blob.size, adult: true, ...(kind === 'face' ? { consent: consent === true } : {}) }, { human });
+// A picture: its ticket (with the human check, and its box ticked: consent), then its bytes, looked at by our server.
+// act: the app's request helper (ctx.act). → { ok: true, id, real } (real: a photo of a real person, so its influencer stays
+// private) or { ok: false, error, why? }
+export async function uploadPicture(act, { blob, consent = false, human }) {
+  const open = await act('inf-up-open', { kind: 'picture', bytes: blob.size, adult: true, consent: consent === true }, { human });
   if (!open.ok || !open.data?.ticket) return { ok: false, error: open.data?.error || 'busy', why: open.data?.why };
+  // (sendBytes sends it once more when the AI check didn't answer: nothing was kept, the same ticket works)
   const r = await sendBytes(`inf-up=${encodeURIComponent(open.data.ticket)}&part=0`, blob);
-  if (r.ok && r.data?.ok) return { ok: true, id: r.data.id || open.data.id };
+  if (r.ok && r.data?.ok) return { ok: true, id: r.data.id || open.data.id, real: r.data.real === true };
   return { ok: false, error: r.data?.error || 'busy', why: r.data?.why };
 }
 

@@ -74,6 +74,13 @@ for (const fn of ['inf_credits', 'inf_spend', 'inf_refund', 'inf_topup', 'inf_fr
   'inf_report_clear', 'inf_tidy']) {
   MISSING[fn] = `${fn} not found: run supabase/studio.sql again, then supabase/influencers.sql, in this Supabase project (it ends with influencers_ready = 1)`;
 }
+// …and its round 2 (the same day: likes and the weekly spotlight, burn unlocks, a 3D model for a big burn, example pictures,
+// the share mark, the stats board): the same file, run again if it was run before them
+for (const fn of ['inf_3d_burn', 'inf_example_make', 'inf_examples', 'inf_mark_take', 'inf_mark_done', 'inf_like', 'inf_liked', 'inf_week_top',
+  'inf_week_pick', 'inf_week_set', 'inf_weeks', 'inf_week_claim', 'inf_week_sending', 'inf_week_sent', 'inf_burn_quote', 'inf_burn_pay',
+  'inf_burn_get', 'inf_burns_open', 'inf_slots', 'inf_stats']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (its round 2; it ends with influencers_ready = 1)`;
+}
 
 // CloakMesh's waitlist (inference.agi1.app, 2026-10-03): supabase/cloakmesh.sql
 for (const fn of ['cloakmesh_ready', 'cloakmesh_join', 'cloakmesh_leave']) {

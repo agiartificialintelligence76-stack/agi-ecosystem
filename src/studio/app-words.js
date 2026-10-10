@@ -1,11 +1,27 @@
 // AGI Studio (2026-10-10, studio.agi1.app): everything the app says that isn't in studio.html, and our server's answers
-// (server/inf-api.js, server/influencer.js, server/inf-uploads.js, server/inf-jobs.js) in plain words. Pure (tested in Node:
-// tests/influencer.test.js). Never an AI provider's name: "an AI service" (the owner's rule for every page).
+// (server/inf-api.js, server/influencer.js, server/inf-uploads.js, server/inf-jobs.js, and since round 2 server/inf-burns.js
+// and server/inf-week.js) in plain words. Pure (tested in Node: tests/influencer.test.js). Never an AI provider's name:
+// "an AI service" (the owner's rule for every page).
 import { usd, SHAPES, OPTIONS, MODES, INF_STYLES, PRICES, FREE_CREDITS, DISCOUNT, creditsText, trendOf } from './rules.js';
 
 export const LEVEL_NAMES = { 1: 'Stranger', 2: 'Crush', 3: 'Soulmate' };
 export const shortAddress = (a) => (typeof a === 'string' && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : String(a || ''));
 export const num = (n) => Math.round(Number(n) || 0).toLocaleString('en-US');
+// a big number, short: 950 · 12.4K · 3.1M
+export function compact(n) {
+  const v = Math.max(0, Math.round(Number(n) || 0));
+  if (v < 10_000) return v.toLocaleString('en-US');
+  if (v < 1_000_000) return `${(v / 1000).toFixed(v < 100_000 ? 1 : 0).replace(/\.0$/, '')}K`;
+  return `${(v / 1_000_000).toFixed(v < 100_000_000 ? 1 : 0).replace(/\.0$/, '')}M`;
+}
+
+// A number for a small tile (the live stats board): thousands as K from 1,000 ("1.3K"), so four fit across a phone
+export function tiny(n) {
+  const v = Math.max(0, Math.round(Number(n) || 0));
+  if (v < 1000) return String(v);
+  if (v < 10_000) return `${(Math.floor(v / 100) / 10).toFixed(1).replace(/\.0$/, '')}K`;
+  return compact(v);
+}
 
 // ---------- the studio's state ----------
 export function studioText(info, { allowed = true } = {}) {
@@ -54,6 +70,8 @@ export function failText(error) {
   if (e === 'gone' || e === 'deleted') return 'Its influencer was deleted.';
   if (e === 'pose') return "Its bones didn't fit: its full body needs to be one figure, standing.";
   if (e === 'no_picture') return "Its full-body picture wasn't there any more.";
+  if (e === 'clip') return 'Its clip expired before it was made.';
+  if (e === 'small') return 'It came out at a size trend videos can\'t use (720 to 2160 px a side).';
   if (e.startsWith('ai:')) return "The AI service couldn't make it this time.";
   return "It couldn't be made.";
 }
@@ -63,14 +81,14 @@ export const backText = (job) => (job?.refunded && job.cost > 0 ? ` Its ${credit
 export function jobTitle(j) {
   if (j.kind === 'photo') return j.scene || 'Photo';
   if (j.kind === 'video') return j.scene || 'Video';
-  if (j.kind === 'trend') return j.clip ? 'Trend video (your own move)' : `Trend video: ${trendOf(j.trend)?.name || 'a move'}`;
+  if (j.kind === 'trend') return j.clip ? 'Trend video (your own clip)' : `Trend video: ${trendOf(j.trend)?.name || 'a trend'}`;
   return '';
 }
 export const kindName = (k) => ({ photo: 'Photo', trend: 'Trend video', video: 'Video' }[k] || '');
 export const shapeName = (s) => SHAPES[s]?.name || SHAPES.tall.name;
 export function jobMeta(j) {
   const parts = ['AI-generated', kindName(j.kind)];
-  // (a scene video is 5 s; a trend video is as long as its move: a trend move's 10 s, or their clip's 2 to 10)
+  // (a scene video is 5 s; a trend video is as long as its clip: a trend clip's 10 s, or their own clip's 3 to 10)
   if (j.kind === 'video') parts.push('5 s');
   if (j.shape) parts.push(shapeName(j.shape));
   if (j.kind === 'video') parts.push(j.sound ? 'with sound' : 'no sound');
@@ -84,13 +102,18 @@ export function jobStateText(j, { position = null } = {}) {
   if (j.status === 'failed') return `${failText(j.error)}${j.refunded ? backText(j) : ''}`;
   return '';
 }
-// a 3D model of it (the studio's characters: its steps)
+// a 3D model of it (the studio's characters: its steps; round 2: one waiting for a big burn)
 const MODEL_STEP = { image: 'Shaping it', rig: 'Giving it bones', moves: 'Teaching it moves', save: 'Saving it' };
 export function modelText(m) {
   if (!m) return '';
   if (m.status === 'done') return 'Ready in 3D';
+  if (m.status === 'quote') return `Waiting for your burn: ${num(m.paid)} of ${num(m.agi)} $AGI`;
   if (m.status === 'paid' || m.status === 'making') return `${MODEL_STEP[m.step] || MODEL_STEP.image}…`;
-  if (m.status === 'failed') return `${failText(m.error)} Its credits came back.`;
+  if (m.status === 'failed') {
+    if (m.kind === 'burn') return `${failText(m.error)}${m.credit ? ' You can make it again, free.' : ''}`;
+    return `${failText(m.error)} Its credits came back.`;
+  }
+  if (m.status === 'expired') return 'Its burn never came: it expired.';
   return '';
 }
 export const MODEL_STEP_WORDS = MODEL_STEP;
@@ -107,7 +130,7 @@ const WORDS = {
   adult: 'Keep it PG-13: nothing sexual or suggestive.',
   minor: 'Adults only: never a child, or anyone made to look like one.',
   hate: 'Nothing hateful or gory.',
-  person: 'Never a real person (only your own face, with "Use my face").',
+  person: 'Never a famous or real person by name: describe a look, or use a photo of someone who said OK.',
   character: "Never someone else's character or a brand's mascot: make one of your own.",
   her: 'Nothing that passes for AGI-1, her team or anything official.',
 };
@@ -131,19 +154,22 @@ export const coinText = (reason) => COIN_WHY[reason] || 'Try another name or tic
 
 // ---------- an upload looked at (server/inf-ai.js), refused ----------
 const UPLOAD_WHY = {
-  none: { face: "We couldn't see one face clearly: try again in good light, looking at the camera.", picture: "We couldn't find one character in it: try a clearer picture.", clip: "We couldn't see a person moving in it: try another clip." },
-  many: { face: 'Only your face, please: nobody else in the picture.', picture: 'One character only, please.' },
-  minor: 'Adults only: it looked like it might show someone under 18.',
-  screen: 'A live selfie only: not a photo of a screen or a printed picture.',
-  real_person: 'That looks like a photo of a real person: use "Use my face" for your own face, or a drawing or character of yours.',
+  none: { picture: "We couldn't find one person or character in it: try a clearer picture.", clip: "We couldn't see a person moving in it: try another clip." },
+  many: { picture: 'One person or character only, please.', clip: 'One person in the clip, please.' },
+  minor: { picture: 'Adults only: a photo needs to clearly show someone 21 or older, a drawing an adult character.', clip: 'Adults only: everyone in the clip needs to clearly be 18 or older.' },
+  famous: 'That looks like a famous person: only you, someone who said OK, or a character of yours.',
+  real_person: 'That looks like a famous person: only you, someone who said OK, or a character of yours.',
   copyright: "That looks like someone else's character: use one of your own.",
+  faces_off: 'Photos of real people are switched off for now: use a drawing or a character of yours.',
   sexual: 'Keep it PG-13: nothing sexual or revealing.',
   hate: 'Nothing hateful.',
   violence: 'Nothing violent or gory.',
   other: "That one can't be used: try another.",
   picture: "That file isn't a picture we can read: a JPEG, PNG or WebP.",
   video: "That file isn't a video we can read: an MP4 or MOV.",
-  length: 'A clip of 2 to 10 seconds, please.',
+  length: 'A clip of 3 to 10 seconds, please.',
+  pixels: 'A clip of 720 to 2160 pixels on each side, please (most phone videos are).',
+  fps: 'A clip of 24 to 60 frames a second, please (most phone videos are).',
   parts: 'Your clip didn\'t arrive whole: try again.',
   frames: "We couldn't read your clip's frames: try again.",
   done: 'That upload is finished already: pick it again.',
@@ -168,8 +194,7 @@ const ERRORS = {
   closed: 'AGI Studio is private for now: it opens to everyone soon.',
   not_ready: "AGI Studio isn't open yet.",
   not_configured: "AGI Studio isn't open yet.",
-  faces_off: '"Use my face" is switched off for now.',
-  consent: 'Tick the box to agree first.',
+  consent: 'Tick the box first.',
   short: 'Not enough credits: buy some, then try again.',
   too_many: 'You have the most being made at once: wait for one to finish.',
   busy_day: 'AGI Studio is very busy today: try again tomorrow.',
@@ -180,13 +205,14 @@ const ERRORS = {
   launch_private: 'Launching coins is private for now: it opens to everyone soon.',
   coin_cap: "That's a lot of coins for today: try again tomorrow.",
   no_usdg: "Buying credits isn't open yet.",
-  face: 'An AI twin is never shown in Explore: only people with its link see it.',
+  face: 'A private influencer is never shown in Explore: only people with its link see it.',
+  private: 'A private influencer (made from a photo of a real person) is never shown in Explore, liked or boosted.',
   needs_photo: 'A realistic influencer\'s video starts from one of its photos: make a photo first, then pick it.',
-  trend: "That move isn't available any more: pick another.",
+  trend: "That trend isn't available any more: pick another.",
   clip: 'Your clip expired (a day): upload it again.',
   image: "That photo isn't available any more: pick another.",
   source: 'Your picture expired: upload it again.',
-  making: 'That move is being made already.',
+  making: 'That one is being made already.',
   state: 'Something changed in the meantime: have another look.',
   not_yours: "This influencer is another wallet's.",
   not_owner: 'Only the owner can do that.',
@@ -206,6 +232,26 @@ const ERRORS = {
   offline: "You're offline: try again when you're back.",
   bad: 'Something in that request was off: try again.',
   bad_request: 'Something in that request was off: try again.',
+  // round 2: slots and burn unlocks, likes, the weekly prize
+  no_slot: 'You have all the influencers your wallet may have: delete one, or unlock one more by burning $AGI.',
+  own: "That's your own: likes are for other people's creations.",
+  burns_off: "Burn unlocks aren't open right now.",
+  burns_sold_out: "This month's burn unlocks are all spoken for: try again on the 1st (UTC).",
+  off: "That isn't open right now.",
+  quote: 'That one is still waiting for its burn.',
+  done: "That's done already.",
+  no_credit: "This one can't be made again for free.",
+  no_kind: "That can't be paid for that way.",
+  prizes_off: "Prizes aren't switched on right now: your prize waits.",
+  none: "There's no spotlight to claim for that week.",
+  no_prize: "That week's spotlight is for glory: there's no prize to claim.",
+  claimed: 'Its prize is being sent right now: check again in a minute.',
+  sending: 'Its prize is on its way: check again in a few minutes.',
+  sent: 'Its prize was sent.',
+  empty: 'The prize wallet needs a top-up first: your prize is safe and waiting.',
+  failed: 'Nothing went out: try again.',
+  not_mine: "That week's spotlight isn't yours.",
+  burn_cap: "This month's burn unlocks are all spoken for: try again on the 1st (UTC).",
   busy: 'Something went wrong on our side: try again in a minute.',
 };
 export const errorText = (why) => ERRORS[why] || ERRORS.busy;
@@ -216,7 +262,7 @@ const RESULTS = {
   failed: 'That transaction failed on the chain: nothing was paid.',
   nothing: "It didn't pay the studio: it went somewhere else, or it wasn't USDG.",
   other_wallet: 'It came from another wallet: send from the wallet you connected.',
-  too_old: 'It was sent over 7 days ago.',
+  too_old: 'It was sent before this, or over 7 days ago.',
   used: 'That payment was counted already.',
   too_small: 'Too small to count.',
   chain: "Couldn't read it on the chain just now.",
@@ -230,6 +276,65 @@ export function topupCheckText(r) {
     ? "No new payment from your wallet found yet. It can take a minute to show up: check again, or paste the transaction's link."
     : 'Nothing counted.';
 }
+
+// ---------- burns (round 2: a free 3D model, one more influencer, a boost in Explore) ----------
+// What a burn unlocks, as the pages name it
+export const BURN_WHATS = { model: 'A free 3D model', slot: 'One more influencer', boost: 'A boost in Explore' };
+const BURN_RESULTS = { ...RESULTS, nothing: "It didn't burn $AGI: it went somewhere else, or it wasn't the official $AGI." };
+export const burnResultText = (why) => BURN_RESULTS[why] || errorText(why);
+// "Check my burn"'s answer (server/inf-burns.js burnCheck, server/studio.js checkPayment): { paid, have, need, results, source }
+export function burnCheckText(r) {
+  if (r.paid) return 'Burn found: it\'s unlocked 💜';
+  const counted = (r.results || []).filter((x) => x.ok).reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  if (counted > 0) return `Counted: ${num(r.have)} of ${num(r.need)} $AGI. Burn the rest (${num(Math.max(0, r.need - r.have))} $AGI) from the same wallet, then check again.`;
+  const first = (r.results || []).find((x) => !x.ok);
+  if (first) return burnResultText(first.why);
+  return r.source === 'explorer'
+    ? "No new burn from your wallet found yet. It can take a minute to show up: check again, or paste the transaction's link."
+    : 'Nothing counted.';
+}
+// The time left on a boost: "18 h more" · "40 min more"
+export function leftText(until, now = Date.now()) {
+  const ms = Number(until) - now;
+  if (!Number.isFinite(ms) || ms <= 0) return '';
+  const min = Math.ceil(ms / 60_000);
+  return min < 90 ? `${min} min more` : `${Math.round(min / 60)} h more`;
+}
+
+// ---------- likes (round 2: holders' likes pick the spotlight of the week) ----------
+export function likeErrorText(why) {
+  if (why === 'too_many') return "That's today's likes (50 a day): more tomorrow.";
+  if (why === 'own') return ERRORS.own;
+  if (why === 'private') return 'Private ones can\'t be liked.';
+  if (why === 'gone') return "It isn't here any more.";
+  return errorText(why);
+}
+export const likesText = (n) => `${num(n)} like${Number(n) === 1 ? '' : 's'}`;
+
+// ---------- the weekly spotlight (server/inf-week.js) ----------
+// "the week of Oct 5" (its Monday, UTC)
+export function weekText(week) {
+  const t = Date.parse(`${week}T00:00:00Z`);
+  return Number.isFinite(t) ? `the week of ${new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}` : '';
+}
+export const prizeText = (agi) => (Number(agi) > 0 ? `${num(agi)} $AGI` : 'For glory');
+// a week as the owner's page names its state
+export const WEEK_STATUS = {
+  none: 'Nothing picked', picked: 'Waiting for your look', approved: 'Approved: its maker can claim', claimed: 'Being sent…', sending: 'On its way', sent: 'Sent',
+};
+// the maker's own prize (My studio), its state
+export function myWeekText(w) {
+  if (w.status === 'approved') return `Your creation is the spotlight of ${weekText(w.week)}: ${prizeText(w.prize)} for you. A thank-you for making, not an investment.`;
+  if (w.status === 'claimed' || w.status === 'sending') return `Your prize for ${weekText(w.week)} (${prizeText(w.prize)}) is on its way.`;
+  if (w.status === 'sent') return `Your prize for ${weekText(w.week)} (${prizeText(w.prize)}) was sent ✓`;
+  return '';
+}
+
+// ---------- the live stats board (round 2; public totals only) ----------
+export const STAT_NAMES = [
+  ['influencers', 'Influencers'], ['photos', 'Photos'], ['videos', 'Videos'], ['models', '3D models'], ['today', 'Made today'],
+  ['likes', 'Likes'], ['burned', '$AGI burned'], ['boosted', 'Boosted now'],
+];
 
 // ---------- the choices, as the page offers them ----------
 export const MODE_CARDS = Object.entries(MODES).map(([id, m]) => ({ id, ...m }));

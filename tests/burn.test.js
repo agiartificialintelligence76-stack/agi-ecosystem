@@ -485,7 +485,7 @@ test('the page: a burn address to send to yourself, never a transaction, and the
   assert.doesNotMatch(code, /eth_|\.request\(|ethereum/, 'the burn screen never talks to a wallet');
   const safety = html.match(/<footer[\s\S]*<\/footer>/)?.[0] || '';
   assert.match(safety, /burn/i, 'the safety note says it');
-  assert.equal((html.match(/data-burn-only hidden/g) || []).length, 4, 'every sentence about burning waits until burns are open');
+  assert.equal((html.match(/data-burn-only hidden/g) || []).length, 6, 'every sentence about burning waits until burns are open (since AGI Studio\'s round 2, 2026-10-10, two more: its burn unlocks)');
 });
 
 test('the burn monitor: a huge live number right above the chat, hidden until burns are open', () => {

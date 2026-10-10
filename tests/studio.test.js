@@ -789,7 +789,7 @@ test("chain: the wallet's payments since the quote, as the block explorer lists 
 test('settings: off without Meshy\'s key; private until STUDIO_OPEN (only STUDIO_ONLY_FOR); prices, caps and hidden ones', () => {
   let cfg = cfgNow();
   assert.equal(studioOn(cfg), true);
-  assert.deepEqual([cfg.studioPayTo, cfg.studioUsdCents, cfg.studioAgi, cfg.studioMonthCap, cfg.studioBurnCap, cfg.studioOpen], [OWNER, 500, 15_000, 15, 5, true]);
+  assert.deepEqual([cfg.studioPayTo, cfg.studioUsdCents, cfg.studioAgi, cfg.studioMonthCap, cfg.studioBurnCap, cfg.studioOpen], [OWNER, 500, 15_000, 15, 10, true]);   // 10 by burning (round 2 of AGI Studio: 5 before)
   delete process.env.MESHY_API_KEY;
   assert.equal(studioOn(cfgNow()), false);
   process.env.MESHY_API_KEY = MESHY_KEY;
@@ -807,7 +807,7 @@ test('settings: off without Meshy\'s key; private until STUDIO_OPEN (only STUDIO
   assert.deepEqual([cfg.studioUsdCents, cfg.studioAgi, cfg.studioMonthCap, cfg.studioBurnCap], [399, 20_000, 40, 0], 'no burns at all is a choice');
   Object.assign(process.env, { STUDIO_PRICE_USD: '0.001', STUDIO_PRICE_AGI: '5', STUDIO_A_MONTH: 'lots', STUDIO_BURNS_A_MONTH: '-3' });
   cfg = cfgNow();
-  assert.deepEqual([cfg.studioUsdCents, cfg.studioAgi, cfg.studioMonthCap, cfg.studioBurnCap], [50, 100, 15, 5], 'never free by mistake; nonsense: the defaults');
+  assert.deepEqual([cfg.studioUsdCents, cfg.studioAgi, cfg.studioMonthCap, cfg.studioBurnCap], [50, 100, 15, 10], 'never free by mistake; nonsense: the defaults');
   for (const bad of ['0x123', '', `0x${'0'.repeat(40)}`, 'owner.eth']) assert.equal(studioAddress(bad), '', bad);
   assert.equal(studioAddress(` ${OWNER.toUpperCase().replace('0X', '0x')} `), OWNER);
   process.env.STUDIO_HIDE = `${'h'.repeat(22)}, bad, ${'k'.repeat(22)}`;
@@ -1013,7 +1013,7 @@ test('a paid one that couldn\'t be made: again with new words (checked), free; i
   const mine = await myCharacters(cfgNow(), WALLET);
   assert.deepEqual(mine.map((c) => [c.id, c.status, c.credit]), [[id, 'done', false]]);
   assert.deepEqual(Object.keys(mine[0]).sort(), ['created', 'credit', 'id', 'name', 'status']);
-  assert.deepEqual(await monthLeft(cfgNow()), { left: 13, burnsLeft: 5, videosLeft: 30 });   // (its videos': tests/videos.test.js)
+  assert.deepEqual(await monthLeft(cfgNow()), { left: 13, burnsLeft: 10, videosLeft: 30 });   // (its videos': tests/videos.test.js)
 });
 
 // ---------- the making ----------
@@ -1227,7 +1227,7 @@ test('GET ?studio-info: what the page needs (prices, discounts, where USDG goes,
   assert.equal(r.status, 200);
   assert.equal(r.headers.get('cache-control'), 'public, max-age=15, s-maxage=30');
   assert.deepEqual(r.body, { on: true, open: true, price: { usdCents: 500, agi: 15_000 }, discounts: { 1: 0, 2: 0.2, 3: 0.4 }, usdg: true, payTo: OWNER,
-    token: USDG, burnAddress: BURN_ADDRESS, left: 15, burnsLeft: 5, moves: R.MOVE_NAMES,
+    token: USDG, burnAddress: BURN_ADDRESS, left: 15, burnsLeft: 10, moves: R.MOVE_NAMES,
     video: { on: false, usdCents: 400, seconds: 5, left: 30 } });   // its videos: off without fal.ai's key (tests/videos.test.js)
   delete process.env.MESHY_API_KEY;
   assert.equal((await get('studio-info')).body.on, false, "off without Meshy's key");
@@ -1637,7 +1637,7 @@ test("its old page's addresses open the app: agi1.app/studio/<id> (the rewrite, 
   const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   for (const must of [/In AGI Studio \(studio\.agi1\.app\), you buy credits with USDG and spend them on what its AI services make: credits have no cash value and can't be withdrawn, sold or refunded, and something that can't be made gives its credits back\./,
     /Holding \$AGI gives a discount there and free credits each month \(Crush 20% off and 100 credits; Soulmate 40% off, 400 credits and a free 3D model\): a thank-you for holding, not an investment\./,
-    /a burn for more messages, only ever to the burn address <span class="mono">0x000…dEaD<\/span> \(zeros, then dEaD\); and USDG for credits in AGI Studio, only ever to the studio's wallet that its page shows\./,
+    /a burn for more messages or for an unlock in AGI Studio, only ever to the burn address <span class="mono">0x000…dEaD<\/span> \(zeros, then dEaD\); and USDG for credits in AGI Studio, only ever to the studio's wallet that its page shows\./,
     /Under a scrambled code of your wallet \(never its address\) we keep your credits and what they paid for, your influencers and what was made for them, and a scrambled code of each USDG payment counted \(never the transaction\)/]) {
     assert.ok(index.search(must) > 0, String(must));
   }

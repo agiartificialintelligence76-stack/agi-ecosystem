@@ -171,7 +171,7 @@ function requireAdult() {
     let yes = false;
     const s = sheet({ title: 'AGI Studio is 18+', sub: 'Everything here is AI-generated and kept PG-13.' });
     add(s.body,
-      h('p', { text: "You make AI influencers here: adults only, never a real person but your own face, never someone else's character. Please confirm you're 18 or older." }),
+      h('p', { text: "You make AI influencers here: adults only, never a famous person or anyone who didn't say OK, never someone else's character. Please confirm you're 18 or older." }),
     );
     const ok = btn("I'm 18 or older", { kind: 'primary', size: 'lg' });
     ok.addEventListener('click', () => { yes = true; store.set(KEYS.adult, true); emit('adult'); s.close(); });
@@ -331,7 +331,7 @@ let current = { stop: null, token: 0 };
 function missingView(ctx, route, root) {
   document.title = 'Not here · AGI Studio';
   add(root, h('section', { class: 'sa-empty-page' },
-    h('h1', { class: 'sa-h1', tabindex: '-1', text: "This page isn't here" }),
+    h('h1', { class: 'sa-display sa-page-title', tabindex: '-1', text: "This page isn't here" }),
     h('p', { class: 'sa-muted', text: 'It may have been deleted, or the link is mistyped.' }),
     linkBtn('Go to Explore', href('/explore'), { kind: 'primary', dataset: { saLink: '' } })));
 }

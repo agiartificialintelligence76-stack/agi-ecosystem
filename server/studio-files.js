@@ -125,12 +125,13 @@ const storageUrl = (cfg, path) => `${cfg.supabaseUrl}/storage/v1/object/${path}`
 const headers = (cfg) => ({ Authorization: `Bearer ${cfg.supabaseKey}`, apikey: cfg.supabaseKey });
 // Its files' names: a character's (<id>.glb|webp|png), a video's (videos/<id>.mp4), and since 2026-10-10 AGI Studio's
 // (server/influencer.js): an influencer's pictures, videos and posters (inf/<influencer>/<job>-<n>.jpg|webp,
-// inf/<influencer>/<job>.mp4, inf/<influencer>/<job>.poster.webp), the owner's trend moves (trends/<job>.mp4 and
-// .poster.webp), and what people upload (up/<upload>.jpg, up/<upload>.mp4, and a clip's parts and frames on the way:
+// inf/<influencer>/<job>.mp4, inf/<influencer>/<job>.poster.webp; round 2: a video's copy with the share mark,
+// inf/<influencer>/<job>.dl.mp4), the owner's trend clips (trends/<job>.mp4 and .poster.webp) and example pictures (round 2:
+// examples/<job>.webp), and what people upload (up/<upload>.jpg, up/<upload>.mp4, and a clip's parts and frames on the way:
 // up/<upload>/<n>.part, up/<upload>/f<n>.jpg)
 const ID = '[A-Za-z0-9_-]{22}';
-export const NAME = new RegExp(`^(?:${ID}\\.(?:glb|webp|png)|videos/${ID}\\.mp4|inf/${ID}/${ID}(?:-[0-3]\\.(?:jpg|webp)|\\.mp4|\\.poster\\.webp)`
-  + `|trends/${ID}(?:\\.mp4|\\.poster\\.webp)|up/${ID}(?:\\.(?:jpg|mp4)|/(?:[0-9]{1,2}\\.part|f[0-9]\\.jpg)))$`);
+export const NAME = new RegExp(`^(?:${ID}\\.(?:glb|webp|png)|videos/${ID}\\.mp4|inf/${ID}/${ID}(?:-[0-3]\\.(?:jpg|webp)|\\.mp4|\\.dl\\.mp4|\\.poster\\.webp)`
+  + `|trends/${ID}(?:\\.mp4|\\.poster\\.webp)|examples/${ID}\\.webp|up/${ID}(?:\\.(?:jpg|mp4)|/(?:[0-9]{1,2}\\.part|f[0-9]\\.jpg)))$`);
 
 // One of a character's files, kept (or replaced). Throws when Storage says no.
 export async function putFile(cfg, name, bytes, type, { timeoutMs = 10_000 } = {}) {

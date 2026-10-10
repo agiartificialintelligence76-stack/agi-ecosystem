@@ -1,19 +1,22 @@
 // AGI Studio (2026-10-10): what people upload, and a video's poster. Vercel takes at most 4.5 MB a request, so files come
 // to our server as their own requests (POST /api/launch?inf-up=<ticket>&part=<n>, the file's bytes as the body), each with
 // the ticket our server gave when the upload was opened (signed with PASS_SECRET: this upload, this wallet, 30 minutes).
-//   • A character's picture ("From a picture") or a selfie ("Use my face": a live camera picture, 18+, and their consent):
-//     one request (the page makes it at most 1536 px first). Made a plain JPEG here (no EXIF, no location), then looked at by
+//   • A picture for "From a photo" (round 2: a photo of a real person, theirs or someone's who said OK, or a character of
+//     theirs; the page's box ticked first, which our server needs: "consent"; "Use my face" and its live selfies are gone): one
+//     request (the page makes it at most 1536 px first). Made a plain JPEG here (no EXIF, no location), then looked at by
 //     Gemini (server/inf-ai.js) BEFORE it's kept: a picture that doesn't pass is never stored. Kept privately until its
 //     influencer is made (then deleted: supabase/influencers.sql inf_tidy).
-//   • A clip to copy the moves of (2 to 10 s, an MP4 or MOV, 30 MB at most): in parts of 3.5 MB, then 3 small frames of it
-//     the page took, then "done": the parts are put together into one MP4 (its length read from its own header), the frames
-//     looked at by Gemini, and the parts and frames deleted. The trend video made from it is looked at again before it's shown.
+//   • A clip to put an influencer into (round 2: 3 to 10 s, 720 to 2160 px a side, 24 to 60 frames a second: the video model's
+//     own limits; an MP4 or MOV, 30 MB at most): in parts of 3.5 MB, then 3 small frames of it the page took, then "done": the
+//     parts are put together into one MP4 (its length, size and frame rate read from its own header), the frames looked at by
+//     Gemini, and the parts and frames deleted. The trend video made from it is looked at again before it's shown.
 //   • A video's poster (a frame its page took, for Explore's tiles): looked at next to the influencer's own look first.
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { rpc } from './limits.js';
 import { loadSharp, putFile, getFile, deleteFiles, listFiles } from './studio-files.js';
-import { checkSelfie, checkArt, checkFrames, checkPoster } from './inf-ai.js';
+import { checkPicture, checkFrames, checkPoster } from './inf-ai.js';
 import { CLIP, PICTURE } from '../src/studio/rules.js';
+import { mp4Info, mp4Seconds } from './mp4.js';
 
 export const UPLOAD = {
   PER_DAY: 30,                     // uploads one wallet may start a day
@@ -46,38 +49,8 @@ export function readTicket(secret, what, ticket, now = Date.now()) {
   }
 }
 
-// ---------- an MP4's own header ----------
-// Its length in seconds, from its movie header ("moov" → "mvhd"), wherever it is in the file. → seconds, or null
-export function mp4Seconds(b) {
-  if (!Buffer.isBuffer(b) || b.length < 16) return null;
-  const find = (start, end, type) => {
-    let i = start;
-    while (i + 8 <= end) {
-      let size = b.readUInt32BE(i);
-      const t = b.toString('latin1', i + 4, i + 8);
-      let head = 8;
-      if (size === 1) {
-        if (i + 16 > end) return null;
-        size = Number(b.readBigUInt64BE(i + 8));
-        head = 16;
-      } else if (size === 0) size = end - i;
-      if (!Number.isSafeInteger(size) || size < head || i + size > end) return null;
-      if (t === type) return { start: i + head, end: i + size };
-      i += size;
-    }
-    return null;
-  };
-  if (b.toString('latin1', 4, 8) !== 'ftyp') return null;
-  const moov = find(0, b.length, 'moov');
-  const mvhd = moov && find(moov.start, moov.end, 'mvhd');
-  if (!mvhd) return null;
-  const v1 = b[mvhd.start] === 1;
-  if (mvhd.start + (v1 ? 32 : 20) > mvhd.end) return null;
-  const scale = b.readUInt32BE(mvhd.start + (v1 ? 20 : 12));
-  const length = v1 ? Number(b.readBigUInt64BE(mvhd.start + 24)) : b.readUInt32BE(mvhd.start + 16);
-  if (!scale || !Number.isFinite(length)) return null;
-  return length / scale;
-}
+// ---------- an MP4's own header (server/mp4.js: light, the clock's share mark reads it too) ----------
+export { mp4Info, mp4Seconds };
 
 // ---------- a picture, made plain ----------
 // Any JPEG, PNG or WebP → a JPEG at most `px` on its longest side, turned upright, without its metadata (sharp drops EXIF and
@@ -91,11 +64,11 @@ export async function plainJpeg(bytes, { px = PICTURE.MAX_PX, quality = 88, shar
 }
 
 // ---------- 1: opening an upload ----------
-// → { ok: true, id, ticket, part, parts } or { ok: false, why: 'kind' | 'size' | 'consent' | 'faces_off' | 'too_many' | 'busy' }
+// A picture needs its box ticked (consent: "This is me, someone who said I may use their photo, or a character of my own").
+// → { ok: true, id, ticket, part, parts } or { ok: false, why: 'kind' | 'size' | 'consent' | 'too_many' | 'busy' }
 export async function openUpload(cfg, { code, kind, bytes, consent, id }) {
-  if (!['picture', 'face', 'clip'].includes(kind)) return { ok: false, why: 'kind' };
-  if (kind === 'face' && !cfg.infFaces) return { ok: false, why: 'faces_off' };
-  if (kind === 'face' && consent !== true) return { ok: false, why: 'consent' };
+  if (!['picture', 'clip'].includes(kind)) return { ok: false, why: 'kind' };
+  if (kind === 'picture' && consent !== true) return { ok: false, why: 'consent' };
   const size = Number(bytes);
   const most = kind === 'clip' ? CLIP.MAX_BYTES : PICTURE.MAX_BYTES;
   if (!Number.isSafeInteger(size) || size < 1000 || size > most) return { ok: false, why: 'size' };
@@ -112,7 +85,7 @@ export async function receive(cfg, t, { part = null, frame = null, body }) {
   const up = await rpc(cfg, 'inf_upload_get', { p_id: t.u }, 'studio');
   if (!up || up.wallet_code !== t.w || up.kind !== t.k) return { status: 404, body: { error: 'gone' } };
   if (up.status !== 'open') return { status: 409, body: { error: 'done', status: up.status } };
-  if (t.k === 'picture' || t.k === 'face') {
+  if (t.k === 'picture') {
     if (part !== 0 || frame !== null) return { status: 400, body: { error: 'bad_request' } };
     if (body.length > PICTURE.MAX_BYTES) return { status: 413, body: { error: 'size' } };
     const jpeg = await plainJpeg(body);
@@ -121,17 +94,19 @@ export async function receive(cfg, t, { part = null, frame = null, body }) {
       return { status: 422, body: { error: 'picture' } };
     }
     let verdict;
-    try { verdict = t.k === 'face' ? await checkSelfie(cfg, jpeg) : await checkArt(cfg, jpeg); } catch (err) {
+    try { verdict = await checkPicture(cfg, jpeg); } catch (err) {
       console.warn(`[studio] an upload couldn't be looked at: ${err.message}`);
       return { status: 503, body: { error: 'ai' } };                    // nothing kept: the page sends it again
     }
+    // a photo of a real person, while the owner has them switched off (STUDIO_FACES=off): only drawings and characters
+    if (verdict.ok && verdict.real && !cfg.infPhotos) verdict = { ok: false, why: 'faces_off' };
     if (!verdict.ok) {
       await rpc(cfg, 'inf_upload_set', { p_id: t.u, p_status: 'refused', p_why: verdict.why, p_seconds: null }, 'studio');
       return { status: 422, body: { error: 'refused', why: verdict.why } };
     }
     await putFile(cfg, `up/${t.u}.jpg`, jpeg, 'image/jpeg', { timeoutMs: 9000 });
-    await rpc(cfg, 'inf_upload_set', { p_id: t.u, p_status: 'ok', p_why: null, p_seconds: null }, 'studio');
-    return { status: 200, body: { ok: true, id: t.u, status: 'ok' } };
+    await rpc(cfg, 'inf_upload_set', { p_id: t.u, p_status: 'ok', p_why: null, p_seconds: null, p_real: verdict.real === true }, 'studio');
+    return { status: 200, body: { ok: true, id: t.u, status: 'ok', real: verdict.real === true } };
   }
   // a clip: its parts, then its frames
   if (frame !== null) {
@@ -150,8 +125,9 @@ export async function receive(cfg, t, { part = null, frame = null, body }) {
 }
 
 // ---------- 3: a clip, put together and looked at ----------
-// → { ok: true, seconds } or { ok: false, why: 'gone' | 'done' | 'parts' | 'video' | 'length' | 'frames' | the frames' check
-// ('none', 'minor', 'sexual', …) } · throws (why 'ai') when Gemini can't say (nothing is decided: the page asks again)
+// → { ok: true, seconds } or { ok: false, why: 'gone' | 'done' | 'parts' | 'video' | 'length' | 'pixels' | 'fps' | 'frames' |
+// the frames' check ('none', 'minor', 'sexual', …) } · throws (why 'ai') when Gemini can't say (nothing is decided: the page
+// asks again)
 export async function finishClip(cfg, t) {
   const up = await rpc(cfg, 'inf_upload_get', { p_id: t.u }, 'studio');
   if (!up || up.wallet_code !== t.w || up.kind !== 'clip') return { ok: false, why: 'gone' };
@@ -168,9 +144,15 @@ export async function finishClip(cfg, t) {
   if (parts.some((p) => !p)) return { ok: false, why: 'parts' };
   const video = Buffer.concat(parts);
   if (video.length !== t.b) return refuse('parts');
-  const seconds = mp4Seconds(video);
+  const info = mp4Info(video);
+  const seconds = info?.seconds ?? null;
   if (seconds === null) return refuse('video');
-  if (seconds < CLIP.MIN_S - 0.05 || seconds > CLIP.MAX_S + 0.5) return refuse('length');
+  // the video model's own limits (3 to 10.05 s, 720 to 2160 px a side, 24 to 60 frames a second), a hair of leeway for how
+  // a header rounds its numbers
+  if (seconds < CLIP.MIN_S - 0.02 || seconds > CLIP.MAX_S + 0.05) return refuse('length');
+  if (info.width !== null && info.height !== null
+    && (Math.min(info.width, info.height) < CLIP.MIN_PX || Math.max(info.width, info.height) > CLIP.MAX_PX)) return refuse('pixels');
+  if (info.fps !== null && (info.fps < CLIP.MIN_FPS - 0.5 || info.fps > CLIP.MAX_FPS + 0.5)) return refuse('fps');
   const verdict = await checkFrames(cfg, frames);
   if (!verdict.ok) return refuse(verdict.why);
   await putFile(cfg, `up/${t.u}.mp4`, video, 'video/mp4', { timeoutMs: 14_000 });

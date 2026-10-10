@@ -1,9 +1,10 @@
-// AGI Studio (2026-10-10): the AI jobs behind an influencer (its looks, its full body, its photos, its trend and scene videos,
-// and the owner's trend moves), moved along one step at a time like the studio's characters (server/studio.js) and videos
+// AGI Studio (2026-10-10): the AI jobs behind an influencer (its looks, its full body, its photos, its trend and scene videos;
+// and the owner's trend clips and, since round 2, example pictures for the design choices), moved along one step at a time
+// like the studio's characters (server/studio.js) and videos
 // (server/studio-video.js): by its page while it's open, and by the studio's clock every minute (supabase/studio.sql's
 // Supabase Cron → /api/feed?studio), never two at once (a lease). Each job:
 //   1. sent to the AI service (server/inf-ai.js jobRequest: fal.ai's queue), with short-lived signed addresses of what it's
-//      made from (its upload, its picked look, its full body, one of its photos, a clip, a trend move), never public ones;
+//      made from (its upload, its picked look, its full body, one of its photos, a clip, a trend clip), never public ones;
 //   2. asked about while it's made (its place in the queue, then made or not);
 //   3. its pictures (a JPEG at most 1536 px and a small WebP for the pages) or its video (looked at by Gemini first: a video
 //      that isn't family-friendly is never shown, and its credits come back) kept in the studio's private bucket.
@@ -13,6 +14,8 @@ import { createHmac } from 'node:crypto';
 import { rpc } from './limits.js';
 import { falSubmit, falStatus, falOutput, refusedText } from './fal.js';
 import { jobRequest, outputOf, checkVideo } from './inf-ai.js';
+import { mp4Info } from './mp4.js';
+import { CLIP } from '../src/studio/rules.js';
 
 // On once fal's key is set (its looks, photos and videos), with the site's database, secrets and Gemini key (its checks)
 export const infOn = (cfg) => Boolean(cfg.falKey && cfg.supabaseUrl && cfg.supabaseKey && cfg.passSecret.length >= 32 && cfg.geminiKey);
@@ -34,6 +37,10 @@ const ID = /^[A-Za-z0-9_-]{22}$/;
 export const picPath = (inf, job, n = 0, ext = 'jpg') => `inf/${inf}/${job}-${n}.${ext}`;
 export const videoPath = (j) => (j.kind === 'preset' ? `trends/${j.id}.mp4` : `inf/${j.inf_id}/${j.id}.mp4`);
 export const posterPath = (j) => (j.kind === 'preset' ? `trends/${j.id}.poster.webp` : `inf/${j.inf_id}/${j.id}.poster.webp`);
+// (round 2) an example picture (384 px, for the design choices' chips), and a video's copy with the share mark (its download)
+export const examplePath = (job) => `examples/${job}.webp`;
+export const markedPath = (inf, job) => `inf/${inf}/${job}.dl.mp4`;
+const OWNERS = new Set(['preset', 'example']);           // the owner's jobs: no influencer
 
 // ---------- the database ----------
 export const getJob = async (cfg, id) => (ID.test(String(id)) ? rpc(cfg, 'inf_job_get', { p_id: id }, 'studio') : null);
@@ -58,8 +65,11 @@ async function inputsOf(cfg, F, j) {
   if (j.kind === 'looks' && j.inf_mode !== 'design' && j.inf_source) urls.source = await sign(`up/${j.inf_source}.jpg`);
   if (j.kind === 'body') {
     urls.look = await sign(picPath(j.inf_id, j.inf_looks_job, j.pick));
-    if (j.inf_mode === 'face' && j.inf_source) urls.source = await sign(`up/${j.inf_source}.jpg`);
+    // a photo of a real person (round 2; a selfie before it): its face, kept exactly
+    if ((j.inf_mode === 'face' || j.inf_real === true) && j.inf_source) urls.source = await sign(`up/${j.inf_source}.jpg`);
   }
+  // (round 2) a trend video: its picked look is its face in the clip
+  if (j.kind === 'trend' && j.inf_looks_job && Number.isInteger(j.inf_pick)) urls.look = await sign(picPath(j.inf_id, j.inf_looks_job, j.inf_pick));
   if (['photo', 'trend', 'video'].includes(j.kind) && j.inf_body_job) urls.body = await sign(picPath(j.inf_id, j.inf_body_job, 0));
   if (j.image) urls.image = await sign(picPath(j.inf_id, j.image, 0));
   if (j.kind === 'trend' && j.clip) urls.clip = await sign(`up/${j.clip}.mp4`);
@@ -87,7 +97,7 @@ export async function jobTick(cfg, id, { now = Date.now(), deadline = now + 20_0
   try { j = await getJob(cfg, id); } catch (err) { await waitTurn(cfg, id).catch(() => {}); throw err; }
   if (!j || !['paid', 'making'].includes(j.status)) return { state: 'busy' };
   // its influencer is still there (not deleted, not taken down): else it isn't made (its credits come back)
-  if (j.kind !== 'preset' && (!j.inf_id || j.inf_status === 'deleted' || j.inf_hidden === true || cfg.studioHide?.has(j.inf_id))) {
+  if (!OWNERS.has(j.kind) && (!j.inf_id || j.inf_status === 'deleted' || j.inf_hidden === true || cfg.studioHide?.has(j.inf_id))) {
     await fail(cfg, id, 'gone', true);
     return { state: 'failed', step: stepOf(j) };
   }
@@ -172,6 +182,11 @@ async function save(cfg, j, F, { deadline }) {
       if (made.some((m) => !m)) throw new Error("files: a picture the AI made isn't one");
       if (deadline - Date.now() < 2500) throw new Error('no time left to keep them');
       const t = left(1000, 9000);
+      if (j.kind === 'example') {
+        await F.putFile(cfg, examplePath(id), made[0].webp, 'image/webp', { timeoutMs: t });
+        await rpc(cfg, 'inf_job_done', { p_id: id, p_files: 1, p_bytes: made[0].webp.length }, 'studio');
+        return { state: 'done', step: 'save' };
+      }
       await Promise.all(made.flatMap((m, n) => [
         F.putFile(cfg, picPath(j.inf_id, id, n), m.jpg, 'image/jpeg', { timeoutMs: t }),
         F.putFile(cfg, picPath(j.inf_id, id, n, 'webp'), m.webp, 'image/webp', { timeoutMs: t }),
@@ -185,7 +200,15 @@ async function save(cfg, j, F, { deadline }) {
     }
     const bytes = await F.fromFal(out.video, { timeoutMs: left(7000, 14_000) });
     if (!F.isMp4(bytes)) throw new Error("files: its video isn't an MP4");
-    if (j.kind !== 'preset') {
+    if (j.kind === 'preset') {
+      // (round 2) a trend clip people's influencers are put into: the video model that does it takes 720 to 2160 px a side
+      const v = mp4Info(bytes);
+      if (v?.width && v?.height && (Math.min(v.width, v.height) < CLIP.MIN_PX || Math.max(v.width, v.height) > CLIP.MAX_PX)) {
+        await fail(cfg, id, 'small', false);
+        console.warn(`[studio] trend clip ${id} came out ${v.width}×${v.height}: trend videos need 720 to 2160 px a side (make it again)`);
+        return { state: 'failed', step: 'save' };
+      }
+    } else {
       const v = await checkVideo(cfg, bytes);
       if (!v.ok) {
         await fail(cfg, id, 'refused', true);

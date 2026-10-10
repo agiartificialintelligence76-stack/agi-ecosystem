@@ -3,24 +3,28 @@
 //       Nano Banana 2 (Google's image model): its looks from words (fal-ai/nano-banana-2) or from a picture (…/edit: its
 //         looks from a character's picture or a selfie, its full body from the look it picked, its photos in a scene);
 //         1K pictures, about $0.08 each; safety_tolerance "2" (strict)
-//       Kling V3 Standard (Kuaishou's video model): a trend video copies a video's moves onto its picture (motion-control,
-//         about $0.126 a second: at most 10 s), a scene video brings one of its photos to life (image-to-video, 5 s), and the
-//         owner's trend moves are made once from words (text-to-video, 10 s, no sound)
+//       Kling V3 Standard (Kuaishou's video model): a scene video brings one of its photos to life (image-to-video, 5 s), and
+//         the owner's trend clips are made once from words (text-to-video, 10 s, with their own sound; round 2)
+//       Kling O1 Edit (round 2, the owner: "the trending videos should be real"): a trend video puts the influencer into a
+//         real-looking clip in place of its person (video-to-video/edit, about $0.126 a second: 3 to 10 s), keeping the clip's
+//         moves, camera, place, light (and the sound of the owner's trend clips; a person's own clip keeps none)
 //       Seedance 2.5's reference-to-video (STUDIO_VIDEO_MODEL, the studio's video model): a scene video of an anime or cartoon
 //         influencer from its full body (it says no to realistic faces: those start from one of its photos instead)
-//   • Gemini (the site's own key, GEMINI_API_KEY, the chat's model): a look at each picture, selfie and clip uploaded before
-//     it's used, and at each video made before it's shown (family-friendly, never a minor, never a real person from a
-//     picture, never someone else's character). Fail closed: a check that can't be made counts as not passed yet.
+//   • Gemini (the site's own key, GEMINI_API_KEY, the chat's model): a look at each picture and clip uploaded before it's
+//     used, and at each video made before it's shown (family-friendly, never a minor, never a famous person, never someone
+//     else's character; since round 2 a photo of a real person may be used, with its uploader's consent). Fail closed: a
+//     check that can't be made counts as not passed yet.
 // Nothing here is shown to visitors as a provider's name (the page says "an AI service").
 import {
-  looksPrompt, bodyPrompt, photoPrompt, motionPrompt, clipPrompt, CLIP_NEGATIVE, sceneVideoPrompt, sceneWay, presetPrompt, PRESET_NEGATIVE,
+  looksPrompt, bodyPrompt, photoPrompt, swapPrompt, clipPrompt, CLIP_NEGATIVE, sceneVideoPrompt, sceneWay, presetPrompt, PRESET_NEGATIVE,
+  examplePrompt,
 } from './inf-words.js';
 import { SHAPES } from '../src/studio/rules.js';
 
 export const MODELS = {
   image: 'fal-ai/nano-banana-2',
   edit: 'fal-ai/nano-banana-2/edit',
-  motion: 'fal-ai/kling-video/v3/standard/motion-control',
+  swap: 'fal-ai/kling-video/o1/standard/video-to-video/edit',
   i2v: 'fal-ai/kling-video/v3/standard/image-to-video',
   t2v: 'fal-ai/kling-video/v3/standard/text-to-video',
 };
@@ -31,10 +35,11 @@ const picture = (extra) => ({ resolution: '1K', output_format: 'jpeg', safety_to
 // An influencer as the words need it, from a job (supabase/influencers.sql inf_job_get: its influencer's parts)
 export const infOfJob = (job) => ({
   name: job.inf_name, mode: job.inf_mode, style: job.inf_style, settings: job.inf_settings || {}, words: job.inf_words || '',
+  real: job.inf_real === true,
 });
 
 // The request for a job. urls: signed addresses of what it's made from (source: the upload; look: the picked look; body: its
-// full body; image: one of its photos; clip: the person's clip; trend: the trend move's video). → { model, input, way }
+// full body; image: one of its photos; clip: the person's clip; trend: the trend clip's video). → { model, input, way }
 // · throws (why 'request') when something it needs isn't there
 export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
   const need = (u, what) => {
@@ -47,7 +52,7 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
     return { model: MODELS.edit, way: 'edit', input: picture({ prompt: looksPrompt(inf), image_urls: [need(urls.source, 'picture')], num_images: 4, aspect_ratio: '1:1' }) };
   }
   if (job.kind === 'body') {
-    const selfie = inf.mode === 'face' && typeof urls.source === 'string' && /^https:\/\//.test(urls.source);
+    const selfie = (inf.mode === 'face' || inf.real) && typeof urls.source === 'string' && /^https:\/\//.test(urls.source);
     return {
       model: MODELS.edit, way: 'edit',
       input: picture({ prompt: bodyPrompt(inf, { withSelfie: selfie }), image_urls: [need(urls.look, 'look'), ...(selfie ? [urls.source] : [])], num_images: 1, aspect_ratio: '9:16' }),
@@ -57,11 +62,13 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
     return { model: MODELS.edit, way: 'edit', input: picture({ prompt: photoPrompt(inf, job.scene), image_urls: [need(urls.body, 'full body')], num_images: 1, aspect_ratio: RATIO(job.shape) }) };
   }
   if (job.kind === 'trend') {
+    // its picked look is its face (@Element1's front view); its full body (and the photo it starts from) more views of it
+    const more = [need(urls.body, 'full body'), ...(job.image ? [need(urls.image, 'photo')] : [])];
     return {
-      model: MODELS.motion, way: 'motion',
+      model: MODELS.swap, way: 'swap',
       input: {
-        prompt: motionPrompt(inf), image_url: need(urls.image || urls.body, 'picture'), video_url: need(job.clip ? urls.clip : urls.trend, 'video'),
-        character_orientation: 'video', keep_original_sound: false,
+        prompt: swapPrompt(inf), video_url: need(job.clip ? urls.clip : urls.trend, 'video'), keep_audio: !job.clip,
+        elements: [{ frontal_image_url: need(urls.look, 'look'), reference_image_urls: more }],
       },
     };
   }
@@ -84,8 +91,13 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
   }
   if (job.kind === 'preset') {
     const prompt = presetPrompt(job.trend);
-    if (!prompt) throw Object.assign(new Error('inf: not one of the trend moves'), { why: 'request' });
-    return { model: MODELS.t2v, way: 't2v', input: { prompt, duration: '10', aspect_ratio: '9:16', generate_audio: false, negative_prompt: PRESET_NEGATIVE } };
+    if (!prompt) throw Object.assign(new Error('inf: not one of the trend clips'), { why: 'request' });
+    return { model: MODELS.t2v, way: 't2v', input: { prompt, duration: '10', aspect_ratio: '9:16', generate_audio: true, negative_prompt: PRESET_NEGATIVE } };
+  }
+  if (job.kind === 'example') {
+    const prompt = examplePrompt(job.example);
+    if (!prompt) throw Object.assign(new Error('inf: not one of the example pictures'), { why: 'request' });
+    return { model: MODELS.image, way: 'image', input: picture({ prompt, num_images: 1, aspect_ratio: '1:1' }) };
   }
   throw Object.assign(new Error(`inf: no job kind ${job.kind}`), { why: 'request' });
 }
@@ -93,7 +105,7 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
 // What a finished request made: its pictures (up to 4) or its video. → { images: [url] } | { video: url } · throws (why
 // 'nothing') when there's none
 export function outputOf(kind, out) {
-  if (['looks', 'body', 'photo'].includes(kind)) {
+  if (['looks', 'body', 'photo', 'example'].includes(kind)) {
     const images = (Array.isArray(out?.images) ? out.images : []).map((i) => i?.url).filter((u) => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4);
     if (!images.length) throw Object.assign(new Error('fal: its result has no picture'), { why: 'nothing' });
     return { images };
@@ -138,60 +150,39 @@ const yes = { type: 'boolean' };
 const count = { type: 'integer' };
 const inline = (mimeType, bytes) => ({ inlineData: { mimeType, data: Buffer.from(bytes).toString('base64') } });
 
-// A selfie for "Use my face" (a live camera picture, its owner 18+ and agreeing). → { ok: true } | { ok: false, why: 'none' |
-// 'many' | 'minor' | 'screen' | 'sexual' | 'hate' | 'violence' | 'other' } · throws (why 'ai') when Gemini can't say
-export async function checkSelfie(cfg, jpeg) {
+// A picture for "From a photo" (round 2, the owner: "Allowed with consent"): a photo of a real person (the uploader, or
+// someone who said they may: the page's box, which our server needs first) or artwork of one original character. Never a
+// famous person, a well-known character or mascot, anyone who looks under 18 (21 for a photo, to be sure), more than one
+// person, or anything not family-friendly. → { ok: true, real } (real: a photo of a real person: its influencer is then never
+// in Explore) | { ok: false, why: 'none' | 'many' | 'minor' | 'famous' | 'copyright' | 'sexual' | 'hate' | 'violence' |
+// 'other' } · throws (why 'ai') when Gemini can't say
+export async function checkPicture(cfg, jpeg) {
   const r = await look(cfg, {
-    system: 'You check a selfie someone just took with their camera, to make an AI twin of themselves. Answer only about what '
-      + 'you see, in the JSON asked for. faces: how many human faces are clearly visible. photo: it is a real camera photo of a '
-      + 'real person (not a drawing, a render or AI art). apparentAge: your best guess of the main person\'s age in years. adult: '
-      + 'the main person clearly looks 21 or older (if in any doubt, false). screen: it is a photo of a screen, a printed photo, '
-      + 'a poster, a magazine or a mask rather than a live person in front of the camera. explicit: nudity, underwear, a '
-      + 'revealing outfit or anything sexual. hateful: hate symbols or gestures. violent: violence, weapons or blood. other: '
-      + 'anything else that makes it unsuitable for a family-friendly app (a child anywhere in it included).',
-    parts: [inline('image/jpeg', jpeg), { text: 'Check this selfie.' }],
-    schema: { type: 'object', properties: { faces: count, photo: yes, apparentAge: count, adult: yes, screen: yes, explicit: yes, hateful: yes, violent: yes, other: yes },
-      required: ['faces', 'photo', 'apparentAge', 'adult', 'screen', 'explicit', 'hateful', 'violent', 'other'] },
-  });
-  if (r.blocked) return { ok: false, why: 'sexual' };
-  if (r.explicit === true) return { ok: false, why: 'sexual' };
-  if (r.photo !== true || !(r.faces >= 1)) return { ok: false, why: 'none' };
-  if (r.faces > 1) return { ok: false, why: 'many' };
-  if (r.adult !== true || !(Number(r.apparentAge) >= 21)) return { ok: false, why: 'minor' };
-  if (r.screen === true) return { ok: false, why: 'screen' };
-  if (r.hateful === true) return { ok: false, why: 'hate' };
-  if (r.violent === true) return { ok: false, why: 'violence' };
-  if (r.other === true) return { ok: false, why: 'other' };
-  return { ok: true };
-}
-
-// A character's picture for "From a picture": artwork of one original adult character, never a photo of a real person or
-// someone else's well-known character. → { ok: true } | { ok: false, why: 'real_person' | 'none' | 'many' | 'minor' |
-// 'copyright' | 'sexual' | 'hate' | 'violence' | 'other' } · throws (why 'ai')
-export async function checkArt(cfg, jpeg) {
-  const r = await look(cfg, {
-    system: 'You check a picture someone uploaded to turn into an AI influencer character. It must be a drawing, a painting, a '
-      + '3D render or other artwork of one original character, never a photo of a real person. Answer only about what you see, '
-      + 'in the JSON asked for. characters: how many characters (people or person-like characters with a face) are clearly '
-      + 'visible. photo: it is a photo of a real person, or so realistic it could pass for one. adult: the main character '
-      + 'clearly looks like an adult (false for a child, a teen or a childlike character, and if in any doubt). known: it is a '
-      + 'well-known character or mascot from a film, a series, a game, an anime, a comic, a toy or a brand, or a real '
-      + 'celebrity drawn. explicit: nudity, underwear, a revealing outfit or anything sexual. hateful: hate symbols. violent: '
-      + 'violence, weapons or gore. other: anything else unsuitable for a family-friendly app.',
+    system: 'You check a picture someone uploaded to turn into an AI influencer. It may be a photo of a real person (the '
+      + 'uploader, or someone who agreed to it) or artwork (a drawing, a painting, a 3D render) of one original character. Answer '
+      + 'only about what you see, in the JSON asked for. people: how many people or person-like characters with a face are '
+      + 'clearly visible. photo: it is a photo of a real person, or so realistic it could pass for one. apparentAge: your best '
+      + 'guess of the main person\'s (or character\'s) age in years. adult: the main person or character clearly looks 21 or '
+      + 'older (false for a child, a teen or a childlike character, and if in any doubt). famous: the person is a celebrity, a '
+      + 'public figure or a well-known person (an actor, a singer, an athlete, a politician, a big influencer), photographed or '
+      + 'drawn. known: it is a well-known character or mascot from a film, a series, a game, an anime, a comic, a toy or a '
+      + 'brand. explicit: nudity, underwear, a revealing outfit or anything sexual. hateful: hate symbols or gestures. violent: '
+      + 'violence, weapons or gore. other: anything else unsuitable for a family-friendly app (a child anywhere in it included).',
     parts: [inline('image/jpeg', jpeg), { text: 'Check this picture.' }],
-    schema: { type: 'object', properties: { characters: count, photo: yes, adult: yes, known: yes, explicit: yes, hateful: yes, violent: yes, other: yes },
-      required: ['characters', 'photo', 'adult', 'known', 'explicit', 'hateful', 'violent', 'other'] },
+    schema: { type: 'object', properties: { people: count, photo: yes, apparentAge: count, adult: yes, famous: yes, known: yes, explicit: yes, hateful: yes, violent: yes, other: yes },
+      required: ['people', 'photo', 'apparentAge', 'adult', 'famous', 'known', 'explicit', 'hateful', 'violent', 'other'] },
   });
   if (r.blocked || r.explicit === true) return { ok: false, why: 'sexual' };
-  if (r.photo === true) return { ok: false, why: 'real_person' };
-  if (!(r.characters >= 1)) return { ok: false, why: 'none' };
-  if (r.characters > 1) return { ok: false, why: 'many' };
-  if (r.adult !== true) return { ok: false, why: 'minor' };
+  if (!(r.people >= 1)) return { ok: false, why: 'none' };
+  if (r.people > 1) return { ok: false, why: 'many' };
+  const real = r.photo === true;
+  if (r.adult !== true || (real && !(Number(r.apparentAge) >= 21))) return { ok: false, why: 'minor' };
+  if (r.famous === true) return { ok: false, why: 'famous' };
   if (r.known === true) return { ok: false, why: 'copyright' };
   if (r.hateful === true) return { ok: false, why: 'hate' };
   if (r.violent === true) return { ok: false, why: 'violence' };
   if (r.other === true) return { ok: false, why: 'other' };
-  return { ok: true };
+  return { ok: true, real };
 }
 
 // A clip's moves (its frames, taken in the person's browser): someone moving, nobody who looks under 18, nothing sexual.

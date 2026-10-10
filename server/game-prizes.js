@@ -141,8 +141,9 @@ export async function sendPrize(cfg, prize, env, { deadline = Date.now() + PLAN_
   if (sent.why === 'empty') emptyNote(prizeWallet(cfg), 'eth');
   return { ok: false, why: sent.why === 'unmarked' ? 'busy' : sent.why === 'empty' ? 'empty' : 'failed' };
 }
-// → true when the chain says this transaction failed; false when it went through, or nothing is known (yet)
-async function failedOnChain(tx, env, waitMs) {
+// → true when the chain says this transaction failed; false when it went through, or nothing is known (yet) (since round 2
+// of AGI Studio, 2026-10-10, its weekly spotlight's prize uses these two too: server/inf-week.js)
+export async function failedOnChain(tx, env, waitMs) {
   const until = Date.now() + Math.max(0, waitMs);
   for (;;) {
     let receipt = null;
@@ -155,7 +156,7 @@ async function failedOnChain(tx, env, waitMs) {
   }
 }
 // what the chain says about a prize's transaction → 'ok' | 'failed' | null (not known yet) · never throws
-async function txState(tx, env) {
+export async function txState(tx, env) {
   try {
     const receipt = await chain('eth_getTransactionReceipt', [tx], env, 2500);
     if (!receipt || typeof receipt !== 'object') return null;
