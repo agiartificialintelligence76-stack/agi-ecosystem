@@ -29,7 +29,6 @@ import { GET as launchGet, POST as launchPost } from '../api/launch.js';
 import { GET as feedGet } from '../api/feed.js';
 import * as THREE from 'three';
 import { clipsFor, inPlace, poseBox, movesBox, framing, lookTimes } from '../src/studio/viewer.js';
-import * as W from '../src/studio/words.js';
 
 const DAY = 864e5;
 const SECRET = 'test-pass-secret-that-is-long-enough-1234';
@@ -414,10 +413,17 @@ async function apiQuote(extra = {}, { session = sessionFor(), adult = true } = {
 }
 const req = (headers = {}) => new Request('https://www.agi1.app/api/launch', { method: 'POST', headers: { 'x-real-ip': IP, ...headers } });
 const getReq = (q) => new Request(`https://www.agi1.app/api/launch?${q}`, { headers: { 'x-real-ip': IP } });
-async function post(body) {
+// through api/launch.js, as the page asks; a new order (studio-quote) straight to server/studio-api.js, since api/launch.js
+// answers it 410 "moved" (AGI Studio makes 3D models from influencers since 2026-10-10: tests/influencer.test.js)
+async function routerPost(body) {
   const res = await launchPost(new Request('https://www.agi1.app/api/launch', {
     method: 'POST', headers: { 'content-type': 'application/json', 'x-real-ip': IP }, body: JSON.stringify(body),
   }));
+  return { status: res.status, body: await res.json(), headers: res.headers };
+}
+async function post(body) {
+  if (body?.action !== 'studio-quote') return routerPost(body);
+  const res = await studioPost(cfgNow(), new Request('https://www.agi1.app/api/launch', { method: 'POST', headers: { 'x-real-ip': IP } }), body);
   return { status: res.status, body: await res.json(), headers: res.headers };
 }
 async function get(q) {
@@ -565,9 +571,14 @@ test("Meshy: each step's request as its docs write it, with our key (never in an
     texture_prompt: 'T', texture_resolution: '2k', moderation: true, target_formats: ['glb'] });
   assert.deepEqual(meshyBody('rig', { refineId: 'rf-123456' }), { input_task_id: 'rf-123456', height_meters: 1.7 });
   assert.deepEqual(meshyBody('moves', { rigId: 'rg-123456' }), { rig_task_id: 'rg-123456', action_ids: [0, 28, 22, 44, 59, 41, 30, 64] });
+  // (2026-10-10, AGI Studio) an influencer's 3D model: image to 3D from its full-body picture, painted, in an A-pose
+  assert.deepEqual(meshyBody('image', { imageUrl: 'https://x.supabase.co/storage/v1/object/sign/a.png?token=t' }), {
+    image_url: 'https://x.supabase.co/storage/v1/object/sign/a.png?token=t', ai_model: 'latest', topology: 'triangle', target_polycount: 20000,
+    should_remesh: true, should_texture: true, enable_pbr: false, pose_mode: 'a-pose', moderation: true });
   assert.throws(() => meshyBody('paint'), /no step paint/);
-  assert.deepEqual(CREDITS, { preview: 20, refine: 10, rig: 5, moves: 24 });
-  assert.equal(Object.values(CREDITS).reduce((a, b) => a + b), 59, 'a character is 59 credits');
+  assert.deepEqual(CREDITS, { preview: 20, refine: 10, image: 30, rig: 5, moves: 24 });
+  assert.equal(CREDITS.preview + CREDITS.refine + CREDITS.rig + CREDITS.moves, 59, 'a character is 59 credits');
+  assert.equal(CREDITS.image + CREDITS.rig + CREDITS.moves, 59, 'an influencer\'s 3D model too');
   const cfg = cfgNow();
   const id = await meshyStart(cfg, 'preview', { prompt: meshyPrompt(GOOD) });
   assert.match(id, /^0193bfc5-/);
@@ -1371,6 +1382,13 @@ test('api/launch.js: the studio\'s questions and actions go to the studio, every
   assert.match(src, /const STUDIO_POSTS = \['studio-quote', 'studio-choose', 'studio-check', 'studio-redo', 'studio-mine', 'studio-video-mine', 'studio-video-quote',\s+'studio-video-check', 'studio-video-redo', 'studio-video-look'\];/);
   assert.match(src, /await import\('\.\.\/server\/studio-api\.js'\)/, 'loaded only for them');
   assert.doesNotMatch(src, /^import .*studio/m);
+  // (2026-10-10) new orders moved to AGI Studio (credits): a character from words, or a video paid on its own, isn't ordered here
+  assert.match(src, /const STUDIO_MOVED = \['studio-quote', 'studio-video-quote'\];/);
+  for (const action of ['studio-quote', 'studio-video-quote']) {
+    assert.deepEqual(await routerPost({ action, session: sessionFor(), ...GOOD, adult: true, turnstileToken: 'ts-token' }).then((x) => [x.status, x.body]),
+      [410, { error: 'moved' }], action);
+  }
+  assert.equal(calls.filter((c) => c.to === 'turnstile' || c.to === 'meshy').length, 0, 'nothing asked of anyone for it');
   assert.deepEqual(await get('d=nope').then((x) => [x.status, x.body]), [400, { error: 'bad_request' }], "the launch page's own questions as before");
   assert.deepEqual(await post({ action: 'prepare', draft: 'nope' }).then((x) => [x.status, x.body]), [400, { error: 'bad_request' }]);
   assert.equal((await post({ action: 'studio-nope', session: sessionFor() })).status, 400);
@@ -1423,8 +1441,8 @@ test('still 12 functions (Vercel); the Meshy key in the secret check; gltf-trans
     assert.match(sql, new RegExp(`alter table public\\.${t} enable row level security;`), t);
   }
   assert.match(sql, /insert into agi1_burn_txs \(tx_code\) values \(p_tx\)/, "a burn for a character goes in burns.sql's ledger");
-  assert.match(sql, /'agi1-characters', 'agi1-characters', false, 41943040, array\['model\/gltf-binary', 'image\/webp', 'image\/png', 'video\/mp4'\]/,
-    'a private bucket, 40 MB a file (a video), only its 3D model, its pictures and its videos');
+  assert.match(sql, /'agi1-characters', 'agi1-characters', false, 41943040,\s+array\['model\/gltf-binary', 'image\/webp', 'image\/png', 'image\/jpeg', 'video\/mp4', 'application\/octet-stream'\]/,
+    'a private bucket, 40 MB a file (a video), only its 3D model, its pictures and its videos (and since AGI Studio, 2026-10-10, JPEG pictures and the parts of a clip being uploaded)');
   assert.match(sql, /url := 'https:\/\/www\.agi1\.app\/api\/feed\?studio'/, 'www: agi1.app redirects, and a redirect would drop the key');
   assert.doesNotMatch(sql, /drop table|truncate/i);
   const code = sql.replace(/--.*$/gm, '');
@@ -1561,126 +1579,67 @@ test('its 3D view: framed for every pose of its moves (a jump stays in the pictu
   }
 });
 
-// ---------- its page: what it says (src/studio/words.js) ----------
-test("the page's words: the studio's state, a wallet's price by level, every \"no\" of our server in words; never the AI service's name", () => {
-  const info = { on: true, open: true, left: 12, price: { usdCents: 500, agi: 15000 }, discounts: { 1: 0, 2: 0.2, 3: 0.4 }, usdg: true, burnsLeft: 4 };
-  assert.equal(W.statusText(null), "Couldn't open the studio just now. Trying again…");
-  assert.equal(W.statusText({ ...info, on: false }), 'The studio opens soon.');
-  assert.equal(W.statusText(info), '12 characters left to make this month.');
-  assert.equal(W.statusText({ ...info, left: 1 }), '1 character left to make this month.');
-  assert.equal(W.statusText({ ...info, left: 0 }), "This month's characters are all made: the studio opens again on the 1st (UTC).");
-  assert.match(W.statusText({ ...info, open: false }, { allowed: false }), /^The studio is private for now/);
-  assert.equal(W.statusText({ ...info, open: false }, { allowed: true }), '12 characters left to make this month.', 'a wallet on its list makes one while it\'s private');
-  const me = (level) => ({ wallet: '0x12ab00000000000000000000000000000000cdef', level });
-  assert.equal(W.walletText(me(1), info), '0x12ab…cdef · Stranger. Your price: $5 in USDG or 15,000 $AGI burned. Crush (10,000+ $AGI) gets 20% off, Soulmate (1,000,000+) 40% off and one free a month.');
-  assert.equal(W.walletText(me(2), info), '0x12ab…cdef · Crush. Your price: $4 in USDG or 12,000 $AGI burned (Crush: 20% off).');
-  assert.equal(W.walletText(me(3), info), '0x12ab…cdef · Soulmate. Your price: $3 in USDG or 9,000 $AGI burned (Soulmate: 40% off). One free character a month, too.');
-  assert.equal(W.walletText(me(2), { ...info, usdg: false }), '0x12ab…cdef · Crush. Your price: 12,000 $AGI burned (Crush: 20% off).');
-  assert.equal(W.walletText(me(2), { ...info, burnsLeft: 0 }), '0x12ab…cdef · Crush. Your price: $4 in USDG (Crush: 20% off).');
-  assert.equal(W.walletText(null, info), '');
-  // what the words check can say (server/studio-words.js checkCharacter's reasons), each its own sentence
-  for (const [field, why] of [['name', 'empty'], ['name', 'long'], ['name', 'letters'], ['about', 'empty'], ['about', 'short'], ['about', 'long'], ['style', 'empty'],
-    ...['link', 'contact', 'adult', 'minor', 'hate', 'person', 'character', 'her'].flatMap((w) => [['name', w], ['about', w]])]) {
-    assert.notEqual(W.wordsText(field, why), 'Try other words.', `${field}/${why}`);
-  }
-  assert.equal(W.wordsText('about', 'whatever'), 'Try other words.');
-  // our server's every "no" (server/studio-api.js, server/studio.js, studio.sql), each in words (busy and 'bad' fall back)
-  for (const why of ['closed', 'not_yours', 'gone', 'sold_out', 'too_many', 'burns_sold_out', 'free_used', 'no_free', 'no_usdg', 'no_kind', 'done', 'no_credit',
-    'adult', 'human_check', 'signed_out', 'too_fast', 'chain', 'explorer', 'bad_tx', 'not_ready', 'not_configured', 'offline']) {
-    assert.notEqual(W.errorText(why), W.errorText('busy'), why);
-  }
-  for (const why of ['pending', 'failed', 'nothing', 'other_wallet', 'too_old', 'used', 'too_small', 'chain']) assert.notEqual(W.resultText(why), W.errorText('busy'), why);
-  // "Check my payment"
-  assert.equal(W.checkText({ paid: true }, 'usdg'), 'Payment found: your character is being made now 💜');
-  assert.equal(W.checkText({ paid: false, have: 150, need: 400, results: [{ ok: true }] }, 'usdg'), 'Counted: $1.50 of $4. Send the rest ($2.50) from the same wallet, then check again.');
-  assert.equal(W.checkText({ paid: false, have: 5000, need: 12000, results: [{ ok: true }] }, 'burn'), 'Counted: 5,000 $AGI of 12,000 $AGI. Send the rest (7,000 $AGI) from the same wallet, then check again.');
-  assert.equal(W.checkText({ paid: false, results: [{ ok: false, why: 'too_old' }] }, 'usdg'), W.resultText('too_old'));
-  assert.match(W.checkText({ paid: false, results: [], source: 'explorer' }, 'usdg'), /^No payment from your wallet found yet/);
-  // why one couldn't be made (what our server keeps), and a character's state
-  for (const e of ['refused', 'pose', 'too_big', 'expired', 'save', 'ai:preview', 'ai:rig', 'other']) assert.ok(W.failText(e).length > 10, e);
-  assert.equal(W.failText('ai:moves'), "The AI couldn't make it this time.");
-  assert.equal(W.charText({ status: 'making', step: 'rig' }), 'Giving it bones…');
-  assert.equal(W.charText({ status: 'paid' }), 'Shaping it…');
-  assert.equal(W.charText({ status: 'failed', error: 'pose' }), W.failText('pose'));
-  assert.equal(W.charText({ status: 'expired' }), 'This character expired before it was paid for.');
-  assert.equal(W.charText(null), "This character isn't here (or it was taken down).");
-  assert.deepEqual(Object.keys(W.STEP_WORDS), R.STEPS.map((x) => x.step));
-  for (const x of R.STEPS) assert.equal(W.STEP_WORDS[x.step], x.words);
-  // its reactions are its own moves (never standing still)
-  for (const m of W.REACTIONS) assert.ok(R.MOVE_NAMES.includes(m) && m !== 'idle', m);
+// ---------- its page: since AGI Studio (2026-10-10), the app's 3D view ----------
+// The studio's own page (studio.html with src/studio/page.js and its words) became AGI Studio the same day: a character's
+// page is the app's 3D view (src/studio/views/model3d.js), at agi1.app/studio/<id> and studio.agi1.app/3d/<id>. The app
+// itself: tests/influencer.test.js.
+const strip = (t) => t.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+test("a character's page is the app's 3D view: its steps in words, its reactions its own moves, why it couldn't be made, Share on X; never the AI service's name", async () => {
+  const view = readFileSync(new URL('../src/studio/views/model3d.js', import.meta.url), 'utf8');
+  // its 3D view (three.js) loaded only there, only once it's done; its steps (a character's, or a 3D model's of an influencer)
+  assert.doesNotMatch(view, /^import .*viewer/m, 'never imported up front');
+  assert.match(view, /const \{ createViewer \} = await import\('\.\.\/viewer\.js'\);/);
+  assert.doesNotMatch(view, /from 'three'/);
+  assert.match(view, /const list = c\.inf \? MODEL_STEPS : STEPS;/);
+  assert.doesNotMatch(view, /innerHTML|insertAdjacentHTML|outerHTML|document\.write/);
+  assert.doesNotMatch(view, /eth_sendTransaction|wallet_switchEthereumChain|eth_signTypedData|wallet_addEthereumChain|ethereum:/);
+  for (const x of [...R.STEPS, ...R.MODEL_STEPS]) assert.ok(x.words.length > 5 && !/\bAI service\b/.test(x.words), x.step);
+  assert.deepEqual(R.MODEL_STEPS.map((x) => x.step), ['image', 'rig', 'moves', 'save']);
+  // the app's router: agi1.app/studio/<id> (an old link) and studio.agi1.app/3d/<id> both open it
+  const app = readFileSync(new URL('../src/studio/app.js', import.meta.url), 'utf8');
+  assert.match(app, /m = new RegExp\(`\^\/3d\/\(\$\{ID\}\)\$`\)\.exec\(p\) \|\| new RegExp\(`\^\/\(\$\{ID\}\)\$`\)\.exec\(p\);/);
+  // its words (src/studio/app-words.js): its reactions are its own moves (never standing still), why one couldn't be made
+  const AW = await import('../src/studio/app-words.js');
+  for (const m of AW.REACTIONS) assert.ok(R.MOVE_NAMES.includes(m) && m !== 'idle', m);
+  for (const e of ['refused', 'pose', 'too_big', 'expired', 'save', 'no_picture']) assert.notEqual(AW.failText(e), "It couldn't be made.", e);
+  for (const e of ['ai:preview', 'ai:image', 'ai:rig', 'ai:moves']) assert.equal(AW.failText(e), "The AI service couldn't make it this time.", e);
+  assert.equal(AW.modelText({ status: 'making', step: 'rig' }), 'Giving it bones…');
+  assert.equal(AW.modelText({ status: 'done' }), 'Ready in 3D');
   // Share on X: the visitor posts it, it fits (a link counts 23), never money talk
-  const share = new URL(W.shareUrl('A name of twenty-four ch', 'https://www.agi1.app/studio/abcdefghijklmnopqrstuv'));
+  const share = new URL(AW.share3dUrl('A name of twenty-four ch', 'https://studio.agi1.app/3d/abcdefghijklmnopqrstuv'));
   assert.equal(share.origin + share.pathname, 'https://x.com/intent/tweet');
   const post = share.searchParams.get('text');
   assert.ok([...post].length + 1 + 23 <= 280, post);
   assert.doesNotMatch(post, /\b(buy|sell|pump|moon|profit|price|invest|gains?|100x|financial)\b|\$AGI/i);
-  // never the AI service's name where a visitor reads it (the owner's rule): its words, its page, its markup
-  // (a character that couldn't be made is kept as "ai:<step>", the code its page gets)
-  for (const f of ['src/studio/words.js', 'src/studio/page.js', 'src/studio/rules.js', 'src/studio/viewer.js', 'studio.html']) {
-    const text = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8').replace(/\/\/.*$/gm, '').replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-    assert.doesNotMatch(text, /meshy/i, f);
+  // never the AI service's name where a visitor reads it (the owner's rule): the app's page, its code, its rules (their comments
+  // aren't shipped: the build drops them)
+  for (const f of ['studio.html', 'src/studio/app.js', 'src/studio/app-words.js', 'src/studio/rules.js', 'src/studio/viewer.js', 'src/studio/views/model3d.js']) {
+    assert.doesNotMatch(strip(readFileSync(new URL(`../${f}`, import.meta.url), 'utf8')), /meshy/i, f);
   }
 });
 
-// ---------- its page: studio.html and src/studio/page.js ----------
-test("its page: agi1.app/studio and /studio/<id> (one page), its rules, never a transaction asked, its 3D view loaded only on a character's page", () => {
+test("its old page's addresses open the app: agi1.app/studio/<id> (the rewrite, its destination /studio), studio.agi1.app; the old page's files are gone", () => {
   const html = readFileSync(new URL('../studio.html', import.meta.url), 'utf8');
-  assert.match(html, /<html lang="en" data-page="studio">/);
-  assert.match(html, /<script src="\/theme\.js\?v=8"><\/script>/, 'the theme before the first paint (v=8: it knows the studio\'s page)');
-  assert.match(html, /<script type="module" src="\/src\/studio\/page\.js"><\/script>/);
-  assert.equal((html.match(/<script\b/g) || []).length, 2, 'no other scripts');
-  assert.doesNotMatch(html, /<script>|<style|\sstyle="/, 'no inline scripts or styles (the CSP)');
-  assert.equal((html.match(/<h1[\s>]/g) || []).length, 2, 'one h1 for each view (the studio, a character)');
-  assert.match(html, /<section class="section st" data-st aria-labelledby="st-title">/);
-  assert.match(html, /<h1 class="h2" id="st-c-title" data-st-c-name>/);
-  for (const a of html.matchAll(/<a [^>]*target="_blank"[^>]*>/g)) assert.match(a[0], /rel="noopener noreferrer"/);
-  assert.match(html, /AI-made · 18\+ · PG-13 · not financial advice/);
-  assert.match(html, /<p class="st-step-title">18\+ only<\/p>/);
-  assert.match(html, /Connecting takes a free signature, never a transaction\./);
-  const rules = html.slice(html.indexOf('Before you make one'), html.indexOf('</section>', html.indexOf('Before you make one')));
-  for (const must of [/made by an AI service/, /PG-13, and never a real person, someone else's character or a brand's mascot/, /This page never asks your wallet for a transaction\./,
-    /not an investment/, /No refunds\./, /try again with new words, free/, /Nothing here is financial advice/, /can lose all of its value/]) assert.match(rules, must);
-  assert.match(html, /This page never asks your wallet to send anything: you send it from your own wallet app, then check here\./);
-  assert.match(html, /<canvas class="st-canvas" data-st-canvas aria-label="The character in 3D"><\/canvas>/, 'one canvas, its 3D view');
-  assert.match(html, /<ul class="st-log" data-st-log aria-live="polite"><\/ul>/);
-  assert.match(html, /<label class="st-sr" for="st-say">A message for it<\/label>/);
+  assert.match(html, /<html lang="en" data-theme="dark" data-page="studio">/);
+  assert.match(html, /<script type="module" src="\/src\/studio\/app\.js"><\/script>/);
   assert.match(html, /meta property="og:url" content="__SITE__\/studio"/);
-  // the page's code: its words with textContent, never innerHTML; its wallet asked for nothing but the site's sign-in; its
-  // 3D view (three.js) loaded only on a character's page, after it's done
-  const page = readFileSync(new URL('../src/studio/page.js', import.meta.url), 'utf8');
-  assert.doesNotMatch(page, /innerHTML|insertAdjacentHTML|outerHTML|document\.write/);
-  assert.doesNotMatch(page, /eth_sendTransaction|wallet_switchEthereumChain|eth_signTypedData|wallet_addEthereumChain|ethereum:/);
-  assert.doesNotMatch(page, /^import .*viewer/m, 'never imported up front');
-  assert.match(page, /const \{ createViewer \} = await import\('\.\/viewer\.js'\);/);
-  assert.doesNotMatch(page, /from 'three'/);
-  assert.match(page, /\/\^\\\/studio\\\/\(\[A-Za-z0-9_-\]\{22\}\)\\\/\?\$\//, 'a character\'s page by its address');
-  // served at /studio/<id> (vercel.json's rewrite: its destination /studio, never studio.html, as cleanUrls needs), built as
-  // its own page, its link previews' address filled in, and `npm run dev` / vite preview the same
   const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
-  assert.deepEqual(vercel.rewrites.filter((r) => r.source.startsWith('/studio')), [{ source: '/studio/:id', destination: '/studio' }]);
+  assert.deepEqual(vercel.rewrites.filter((r) => r.source.startsWith('/studio')), [{ source: '/studio/:path+', destination: '/studio' }],
+    'every address under /studio (never /studio.html: cleanUrls drops ".html" before rewrites run)');
   const vite = readFileSync(new URL('../vite.config.js', import.meta.url), 'utf8');
   assert.match(vite, /studio: 'studio\.html'/);
-  assert.match(vite, /\/\^\\\/studio\\\/\[A-Za-z0-9_-\]\{22\}\\\/\?\$\/\.test\(path\)\) req\.url = `\/studio\.html/);
   assert.match(readFileSync(new URL('../scripts/share-pages.js', import.meta.url), 'utf8'), /'dist\/studio\.html'/);
-  // its styles: every rule names an st- class (the rest of the site can't change); Pop mode's scoped to Pop mode
-  const css = readFileSync(new URL('../src/styles/studio.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  const selectors = [...css.matchAll(/([^{}@]+)\{[^{}]*\}/g)].map((x) => x[1].trim()).filter((x) => x && !/^(from|to|\d+%)$/.test(x));
-  assert.ok(selectors.length > 40);
-  for (const sel of selectors) for (const one of sel.split(',')) assert.match(one, /\.st-/, `${one.trim()}: names an st- class`);
-  const pop = readFileSync(new URL('../src/styles/pop.css', import.meta.url), 'utf8').split('\n').filter((l) => /\.st-/.test(l));
-  assert.ok(pop.length >= 10);
-  for (const l of pop) assert.match(l, /^\[data-skin='pop'\]/, l);
-  // a swipe over its 3D view scrolls the page on phones
-  assert.match(css, /\.st-canvas \{[^}]*touch-action: pan-y/);
-  // the safety note (the home page's) says what the studio does with money and data; its sentences show with the burns'
-  // (the studio needs burns.sql: tests/burn.test.js counts those spans)
-  const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  for (const must of [/In AGI-1's studio, a 3D character is paid for in USDG or with burned \$AGI, and holding \$AGI gives a discount on it \(Crush 20%, Soulmate 40% and one free a month\): a thank-you for holding, not an investment\./,
-    /The only transactions we ever suggest are ones you send yourself, from your own wallet app, and our server just reads them on the chain: a burn, for more messages or for a 3D character in AGI-1's studio, only ever to the burn address/,
-    /and in her studio, USDG for a character or its video, only ever to the studio's wallet that its page shows\. Anyone who asks you to send \$AGI anywhere else, or to pay for anything else, isn't us\./,
-    /If you make a 3D character in AGI-1's studio, its name and description go to an AI service that makes it/, /a scrambled code of each payment counted \(never the transaction\)/]) {
-    const at = index.search(must);
-    assert.ok(at > 0, String(must));
-    assert.ok(index.lastIndexOf('<span data-burn-only hidden>', at) > index.lastIndexOf('</p>', at), `${must}: shown with the burns' sentences`);
+  for (const gone of ['src/studio/page.js', 'src/studio/words.js', 'src/styles/studio.css']) {
+    assert.throws(() => readFileSync(new URL(`../${gone}`, import.meta.url)), /ENOENT/, gone);
   }
+  assert.doesNotMatch(readFileSync(new URL('../src/styles/pop.css', import.meta.url), 'utf8'), /\.st-/, "Pop mode's rules for the old page went with it");
+  // the safety note (the home page's) says what AGI Studio does with money and data
+  const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  for (const must of [/In AGI Studio \(studio\.agi1\.app\), you buy credits with USDG and spend them on what its AI services make: credits have no cash value and can't be withdrawn, sold or refunded, and something that can't be made gives its credits back\./,
+    /Holding \$AGI gives a discount there and free credits each month \(Crush 20% off and 100 credits; Soulmate 40% off, 400 credits and a free 3D model\): a thank-you for holding, not an investment\./,
+    /a burn for more messages, only ever to the burn address <span class="mono">0x000…dEaD<\/span> \(zeros, then dEaD\); and USDG for credits in AGI Studio, only ever to the studio's wallet that its page shows\./,
+    /Under a scrambled code of your wallet \(never its address\) we keep your credits and what they paid for, your influencers and what was made for them, and a scrambled code of each USDG payment counted \(never the transaction\)/]) {
+    assert.ok(index.search(must) > 0, String(must));
+  }
+  assert.doesNotMatch(index, /AGI-1's studio/, "the old studio's sentences left with its page");
 });

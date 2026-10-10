@@ -5,12 +5,14 @@
   "cleanUrls": true,
   "rewrites": [
     { "source": "/launch/:draft", "destination": "/launch" },
-    { "source": "/studio/:id", "destination": "/studio" },
+    { "source": "/studio/:path+", "destination": "/studio" },
     { "source": "/talk", "destination": "/" },
-    { "source": "/talk/", "destination": "/" }
+    { "source": "/talk/", "destination": "/" },
+    { "source": "/:path*", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/studio" }
   ],
   "redirects": [
-    { "source": "/", "has": [{ "type": "host", "value": "inference.agi1.app" }], "destination": "/cloakmesh", "permanent": false }
+    { "source": "/", "has": [{ "type": "host", "value": "inference.agi1.app" }], "destination": "/cloakmesh", "permanent": false },
+    { "source": "/", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/explore", "permanent": false }
   ],
   "functions": {
     "api/**/*.js": {
@@ -36,7 +38,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' blob: https://api.dexscreener.com; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob: https://api.dexscreener.com; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
         },
         {
           "key": "X-Content-Type-Options",
@@ -52,7 +54,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(self), geolocation=(), display-capture=(self)"
+          "value": "camera=(self), microphone=(self), geolocation=(), display-capture=(self)"
         }
       ]
     },

@@ -190,7 +190,7 @@ test('the page: "Show her" by the message box (hidden until the browser can), th
   assert.match(foot, /If you show her a window \(“Show her”, on computers\), the one picture you pick goes with that message to the same AI service so she can see it, and nowhere else: we don't keep it, and your browser's chat history keeps only your words; check it shows no wallet, password or seed phrase\./);
   // sharing a window: our own pages only (her pop-out window's frame too), never the human check's frame
   const vercel = JSON.parse(read('vercel.json'));
-  assert.equal(vercel.headers[0].headers.find((h) => h.key === 'Permissions-Policy').value, 'camera=(), microphone=(self), geolocation=(), display-capture=(self)');
+  assert.equal(vercel.headers[0].headers.find((h) => h.key === 'Permissions-Policy').value, 'camera=(self), microphone=(self), geolocation=(), display-capture=(self)');
   assert.match(read('src/chat/popout.js'), /frame\.allow = 'microphone; autoplay; clipboard-write; display-capture';/);
   assert.doesNotMatch(html, /<script>|\sstyle=|\son[a-z]+=/i, 'no inline code (the CSP)');
 });

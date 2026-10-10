@@ -7,7 +7,7 @@ import { splitWords, REAL_PEOPLE } from './live-words.js';
 import { NAME_MAX, ABOUT_MIN, ABOUT_MAX, STYLES, SCENE_MIN, SCENE_MAX, SHAPES } from '../src/studio/rules.js';
 
 const INVISIBLE = new RegExp('[\\u0000-\\u001f\\u007f-\\u009f\\u00ad\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\ufeff]', 'g');
-const tidy = (s) => String(s ?? '').normalize('NFKC').replace(INVISIBLE, ' ').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim();
+export const tidy = (s) => String(s ?? '').normalize('NFKC').replace(INVISIBLE, ' ').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim();
 const words = (list) => new RegExp(`\\b(?:${list.join('|')})\\b`, 'i');
 
 // Not PG-13 (the site's rule everywhere): sexual words and what goes with them
@@ -53,7 +53,8 @@ const NAME_OK = /^[\p{L}\p{N}][\p{L}\p{N} '’.\-!?&]*$/u;
 
 // One of the checks above, on text and its words written together split apart ("ElonMusk", "TaylorSwift2026")
 const hits = (re, text) => re.test(text) || re.test(splitWords(text));
-function trouble(text) {
+// (exported 2026-10-10 for AGI Studio's words too: server/inf-words.js)
+export function trouble(text) {
   if (LINK.test(text)) return 'link';
   if (CONTACT.test(text)) return 'contact';
   if (hits(MINOR, text)) return 'minor';

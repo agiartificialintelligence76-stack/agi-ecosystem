@@ -624,34 +624,6 @@
 /* (2026-10-10) holder perks: the box with the wallet, a sticker-like outline */
 [data-skin='pop'] .lv-perk { border: 2px solid var(--edge); border-radius: 16px; }
 [data-skin='pop'] .lv-perk-title { font-family: var(--display); font-weight: 850; font-stretch: 110%; letter-spacing: 0; }
-/* AGI-1's 3D character studio (2026-10-10, studio.html): its cards like the launch page's, its pills honey when picked, the
-   address, its stage and the gallery's pictures outlined like stickers, a pink floor of light under a character */
-[data-skin='pop'] .st-card {
-  background: var(--bg); border: 3px solid var(--edge); border-radius: var(--radius); box-shadow: 0 9px 0 -2px var(--shade);
-}
-[data-skin='pop'][data-theme='dark'] .st-card { border-width: 2px; }
-[data-skin='pop'] .st-title, [data-skin='pop'] .st-how-title { font-family: var(--display); font-weight: 850; font-stretch: 110%; letter-spacing: 0; }
-[data-skin='pop'] .st-n { border: 2px solid var(--edge); color: var(--fg); }
-[data-skin='pop'] .st-step.is-done .st-n { background: var(--pop-honey); color: var(--pop-ink); border-color: var(--pop-ink); }
-[data-skin='pop'] .st-steps, [data-skin='pop'] .st-step, [data-skin='pop'] .st-mine-list, [data-skin='pop'] .st-mine-item { border-color: var(--edge); }
-[data-skin='pop'] .st-field input, [data-skin='pop'] .st-field textarea, [data-skin='pop'] .st-chat input { border: 2px solid var(--edge); border-radius: 12px; }
-[data-skin='pop'] .st-opt { border: 2px solid var(--edge); }
-[data-skin='pop'] .st-opt:has(input:checked) { background: var(--pop-honey); color: var(--pop-ink); border-color: var(--pop-ink); }
-[data-skin='pop'] .st-opt:has(input:checked) .st-opt-sub { color: #4a3d6e; }
-[data-skin='pop'] .st-opt input { accent-color: var(--pop-ink); }
-[data-skin='pop'] .st-how, [data-skin='pop'] .st-coin { border: 2px solid var(--edge); border-radius: 18px; }
-[data-skin='pop'] .st-addr-text { border: 2px solid var(--edge); }
-[data-skin='pop'] .st-stage, [data-skin='pop'] .st-g-pic { border: 3px solid var(--edge); border-radius: 22px; }
-[data-skin='pop'] .st-stage { background: radial-gradient(60% 46% at 50% 82%, color-mix(in srgb, var(--pop-pink) 34%, transparent), transparent 70%), var(--bg-2); }
-[data-skin='pop'] .st-move.is-on { background: var(--pop-pink); color: var(--pop-ink); border-color: var(--pop-ink); }
-[data-skin='pop'] .st-p-step.is-now .st-p-dot { background: var(--pop-pink); border-color: var(--edge); }
-/* (2026-10-10) its videos: their players outlined like its stage, their rows on ink lines */
-[data-skin='pop'] .st-v-list, [data-skin='pop'] .st-v-item { border-color: var(--edge); }
-[data-skin='pop'] .st-v-frame { border: 3px solid var(--edge); border-radius: 18px; }
-[data-skin='pop'] .st-v-state.is-now::before { background: var(--pop-pink); box-shadow: 0 0 0 2px var(--edge); }
-[data-skin='pop'] .st-v-sound input { accent-color: var(--pop-ink); }
-[data-skin='pop'][data-theme='dark'] .st-v-sound input { accent-color: var(--pop-honey); }
-
 /* ---------- things that float over the page: the market notice, the wallet screen ---------- */
 [data-skin='pop'] .notice { border: 2px solid var(--edge); border-radius: 22px; box-shadow: 0 8px 0 -1px var(--shade); }
 [data-skin='pop'] .notice-ava { box-shadow: 0 0 0 2px var(--edge); }

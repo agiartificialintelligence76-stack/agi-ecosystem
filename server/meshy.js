@@ -9,15 +9,25 @@
 // character with its 8 moves (src/studio/rules.js MOVES) is 59. The key (MESHY_API_KEY, "msy_…", secret) can have its own
 // monthly credit limit in Meshy's developer platform.
 // moderation: on, for its words (Meshy screens them and stops a task before it starts).
+// (2026-10-10, AGI Studio) image to 3D: a model from an influencer's full-body picture (a signed address to it in the
+// studio's private bucket), painted, in an A-pose: POST /openapi/v1/image-to-3d, about 30 credits with its texture; then the
+// same bones and moves (rigging from that task). A 3D model of an influencer is 59 credits as well (30 + 5 + 24).
 import { MOVES } from '../src/studio/rules.js';
 
 export const MESHY = 'https://api.meshy.ai';
-const PATHS = { preview: '/openapi/v2/text-to-3d', refine: '/openapi/v2/text-to-3d', rig: '/openapi/v1/rigging', moves: '/openapi/v1/animations' };
+const PATHS = {
+  preview: '/openapi/v2/text-to-3d', refine: '/openapi/v2/text-to-3d', image: '/openapi/v1/image-to-3d', rig: '/openapi/v1/rigging',
+  moves: '/openapi/v1/animations',
+};
 export const TASK_ID = /^[A-Za-z0-9_-]{6,80}$/;
-export const CREDITS = { preview: 20, refine: 10, rig: 5, moves: 3 * MOVES.length };
+export const CREDITS = { preview: 20, refine: 10, image: 30, rig: 5, moves: 3 * MOVES.length };
 
 // The request for a step. → the JSON body
-export function meshyBody(step, { prompt, texture, previewId, refineId, rigId } = {}) {
+export function meshyBody(step, { prompt, texture, previewId, refineId, rigId, imageUrl } = {}) {
+  if (step === 'image') {
+    return { image_url: imageUrl, ai_model: 'latest', topology: 'triangle', target_polycount: 20000, should_remesh: true,
+      should_texture: true, enable_pbr: false, pose_mode: 'a-pose', moderation: true };
+  }
   if (step === 'preview') {
     return { mode: 'preview', prompt, ai_model: 'latest', model_type: 'standard', pose_mode: 'a-pose', should_remesh: true,
       target_polycount: 20000, topology: 'triangle', moderation: true, target_formats: ['glb'] };

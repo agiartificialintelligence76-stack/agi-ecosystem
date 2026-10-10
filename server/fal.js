@@ -16,7 +16,8 @@ import { readLimited } from './coins.js';
 
 export const FAL_QUEUE = 'https://queue.fal.run';
 export const VIDEO_MODEL = 'bytedance/seedance-2.5/reference-to-video';
-export const MODEL_RE = /^[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*){1,3}$/;
+// A model's id: its owner, its app and up to 4 parts more (Kling's on fal are 5 long: fal-ai/kling-video/v3/standard/…)
+export const MODEL_RE = /^[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*){1,5}$/;
 export const REQ_ID = /^[A-Za-z0-9_-]{6,80}$/;
 const QUEUE_URL = /^https:\/\/queue\.fal\.run\/[A-Za-z0-9._/-]{1,240}$/;
 const KEEP_FILES_S = 7 * 86400;
@@ -118,6 +119,15 @@ export async function falResult(cfg, resultUrl, { timeoutMs = 8000 } = {}) {
   if (!v || typeof v.url !== 'string') throw Object.assign(new Error('fal: its result has no video'), { why: 'nothing' });
   const size = Number(v.file_size);
   return { url: v.url, type: String(v.content_type || ''), size: Number.isFinite(size) && size > 0 ? size : null };
+}
+
+// (2026-10-10, AGI Studio: server/inf-jobs.js) a finished request's whole output, for models whose result isn't one video (its
+// pictures, say). → the model's output (JSON) · throws a fal error (a model's "no": refused / nothing / request)
+export async function falOutput(cfg, resultUrl, { timeoutMs = 8000 } = {}) {
+  if (!QUEUE_URL.test(String(resultUrl))) throw Object.assign(new Error('fal: not a queue address'), { why: 'request' });
+  const out = await call(cfg, 'GET', resultUrl, null, timeoutMs);
+  if (!out || typeof out !== 'object') throw Object.assign(new Error('fal: an empty result'), { why: 'nothing' });
+  return out;
 }
 
 // A refusal by the model's safety check, as fal says it in a request's state (its words differ from model to model)

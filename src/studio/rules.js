@@ -1,5 +1,6 @@
 // AGI-1's 3D character studio (2026-10-10): the rules the page and our server share, so both always agree. Pure, no imports.
-// (server/studio.js makes the characters; src/studio/page.js is the page.)
+// (server/studio.js makes the characters; since AGI Studio, the same day, the page is the app: src/studio/app.js and its
+// views, and a character's page its 3D view, src/studio/views/model3d.js.)
 
 // A character's id: 22 random characters (its page: agi1.app/studio/<id>)
 export const ORDER_ID = /^[A-Za-z0-9_-]{22}$/;
@@ -97,3 +98,91 @@ export const VIDEO_STEPS = [
   { step: 'make', words: 'Making it' },
   { step: 'save', words: 'Saving it' },
 ];
+
+// ---------- AGI Studio (2026-10-10, studio.agi1.app; the owner: "i want it sopmething likehiggsfield ai influencer … and then
+// they can launch a token with it on clank … the ui will be different on this it will be user friendly and easy to use") ----
+// An AI influencer, made three ways (designed from a few choices, from a picture of a character, or from your own face), then
+// its photos, trend videos, scene videos, a 3D model and a coin with its face. Everything is paid in credits, bought with USDG
+// from your own wallet app: 1 credit = 1 cent (100 credits for $1). server/influencer.js makes them; src/studio/app.js is the app.
+
+// What each thing costs, in credits, before a holder's discount (DISCOUNT above: Crush 20% off, Soulmate 40% off): the owner's
+// numbers. An influencer is its 4 looks and its full-body picture; new looks while picking cost "looks".
+export const PRICES = { influencer: 100, looks: 40, photo: 15, trend: 300, video: 400, model: 500 };
+export const creditPrice = (what, level) => Math.round(PRICES[what] * (1 - (DISCOUNT[level] ?? 0)));
+// A holder's free credits each month (the owner's: "Discounts + free credits"): Crush 100, Soulmate 400 (the whole site's
+// free credits a month are capped on our server). A thank-you for holding, never an investment.
+export const FREE_CREDITS = { 1: 0, 2: 100, 3: 400 };
+// Top-ups: USDG sent from your own wallet app to the studio's wallet; any amount from $1 counts (these are suggestions)
+export const TOPUPS = [500, 1000, 2500];
+export const TOPUP_MIN = 100;
+export const creditsText = (n) => `${Number(n || 0).toLocaleString('en-US')} credit${Number(n) === 1 ? '' : 's'}`;
+
+// How an influencer starts, and its style
+export const MODES = {
+  design: { name: 'Design it', note: 'Pick a look: we make 4 to choose from.' },
+  picture: { name: 'From a picture', note: 'A drawing or a character of yours. Never a photo of a real person.' },
+  face: { name: 'Use my face', note: 'Take a selfie: your own AI twin. Only you, 18+.' },
+};
+export const INF_STYLES = { real: 'Realistic', anime: 'Anime', toon: '3D cartoon' };
+// The choices to design one with (each a few words for the AI on our server: server/inf-words.js). Adults only, PG-13.
+export const OPTIONS = {
+  look: { label: 'Look', for: ['design'], choices: { feminine: 'Feminine', masculine: 'Masculine', androgynous: 'Androgynous' } },
+  age: { label: 'Age', for: ['design'], choices: { '20s': '20s', '30s': '30s', '40s': '40s', '50s': '50+' } },
+  skin: { label: 'Skin', for: ['design'], choices: { fair: 'Fair', light: 'Light', medium: 'Medium', olive: 'Olive', brown: 'Brown', deep: 'Deep' } },
+  hair: { label: 'Hair color', for: ['design'], choices: { black: 'Black', brown: 'Brown', blonde: 'Blonde', red: 'Red', pink: 'Pink', blue: 'Blue', silver: 'Silver', lavender: 'Lavender' } },
+  cut: { label: 'Hair style', for: ['design'], choices: { short: 'Short', bob: 'Bob', long: 'Long', curly: 'Curly', wavy: 'Wavy', braids: 'Braids', ponytail: 'Ponytail', buzz: 'Buzz cut' } },
+  eyes: { label: 'Eyes', for: ['design'], choices: { brown: 'Brown', hazel: 'Hazel', green: 'Green', blue: 'Blue', grey: 'Grey', violet: 'Violet' } },
+  outfit: { label: 'Outfit', for: ['design', 'picture', 'face'], choices: { street: 'Streetwear', cozy: 'Cozy knit', sporty: 'Sporty', smart: 'Smart casual', y2k: 'Y2K', cyber: 'Cyber', gamer: 'Gamer', elegant: 'Elegant' } },
+  vibe: { label: 'Vibe', for: ['design', 'picture', 'face'], choices: { cheerful: 'Cheerful', cool: 'Cool', calm: 'Calm', confident: 'Confident', playful: 'Playful', mysterious: 'Mysterious' } },
+};
+export const WORDS_MAX = 200;
+
+// The trend moves (the owner's, made once with AI on the owner's page, then kept): a made-up dancer doing each move, which
+// a trend video copies onto your influencer. Never a real person, no music, nobody's choreography by name.
+export const TREND_ID = /^[a-z][a-z0-9-]{1,30}$/;
+export const TRENDS = [
+  { id: 'heart-hands', name: 'Heart hands', emoji: '🫶', move: 'makes a heart shape with both hands in front of the chest, sways gently from side to side and smiles' },
+  { id: 'hip-sway', name: 'Hip sway', emoji: '💃', move: 'does a relaxed hip sway to a beat, shifting weight from foot to foot with loose arms' },
+  { id: 'wave-hi', name: 'Wave hello', emoji: '👋', move: 'waves hello with one hand, then with both hands, smiling at the camera' },
+  { id: 'peace-pose', name: 'Peace & pose', emoji: '✌️', move: 'shows a peace sign, tilts the head, then strikes a confident pose with one hand on the hip' },
+  { id: 'shoulder-shimmy', name: 'Shoulder shimmy', emoji: '✨', move: 'does a playful shoulder shimmy while bouncing lightly on the feet' },
+  { id: 'slow-spin', name: 'Slow spin', emoji: '🌀', move: 'turns slowly in one full spin with the arms slightly out, ending facing the camera' },
+  { id: 'happy-jump', name: 'Happy jump', emoji: '🦘', move: 'jumps up with joy twice, arms raised, landing softly' },
+  { id: 'point-laugh', name: 'Point & laugh', emoji: '👉', move: 'points at the camera, laughs, then covers the mouth with one hand' },
+  { id: 'clap-along', name: 'Clap along', emoji: '👏', move: 'claps along to a beat while nodding and stepping from side to side' },
+  { id: 'robot-moves', name: 'Robot moves', emoji: '🤖', move: 'does a playful robot dance with stiff arm movements and sharp head turns' },
+  { id: 'hair-flip', name: 'Hair flip', emoji: '💁', move: 'flips the hair over one shoulder with a hand and gives a confident look' },
+  { id: 'victory-dance', name: 'Victory dance', emoji: '🏆', move: 'does a short victory dance: two fist pumps, a little hop, then both arms up' },
+];
+export const trendOf = (id) => TRENDS.find((t) => t.id === id) || null;
+
+// Their own clip for a trend video (a move to copy): 2 to 10 seconds, an MP4 or MOV, up to 30 MB, sent in parts of 3.5 MB
+// (Vercel takes at most 4.5 MB a request), with 3 small frames of it for the AI check
+export const CLIP = { MIN_S: 2, MAX_S: 10, MAX_BYTES: 30_000_000, PART: 3_500_000, FRAMES: 3, FRAME_BYTES: 300_000 };
+// A picture or a selfie: made at most 1536 px on its longest side in the browser, then sent (4 MB at most)
+export const PICTURE = { MAX_PX: 1536, MAX_BYTES: 4_000_000, POSTER_BYTES: 400_000 };
+// Reasons someone can report an influencer or one of its videos
+export const REPORT_WHYS = {
+  real_person: "It's a real person who didn't agree",
+  minor: 'It looks like a minor',
+  sexual: "It's sexual or too revealing",
+  hate: 'Hate or harassment',
+  violence: 'Violence or gore',
+  copyright: "It copies someone else's character or work",
+  other: 'Something else',
+};
+// The steps of a 3D model made from an influencer's full-body picture (Meshy: image to 3D, bones, moves, kept)
+export const MODEL_STEPS = [
+  { step: 'image', words: 'Shaping it' },
+  { step: 'rig', words: 'Giving it bones' },
+  { step: 'moves', words: 'Teaching it moves' },
+  { step: 'save', words: 'Saving it' },
+];
+
+// Its files, from our own address (api/launch.js): a picture (<influencer>/<job>-<n>.jpg, and a small one, .webp), a video's
+// poster (<influencer or "trends">/<job>.poster.webp), and a video (played in parts, or downloaded)
+export const INF_FILE_RE = /^(?:([A-Za-z0-9_-]{22})\/([A-Za-z0-9_-]{22})-([0-3])\.(jpg|webp)|([A-Za-z0-9_-]{22}|trends)\/([A-Za-z0-9_-]{22})\.poster\.webp)$/;
+export const infPic = (inf, job, n = 0, small = false) => `/api/launch?inf-file=${inf}/${job}-${n}.${small ? 'webp' : 'jpg'}`;
+export const infPoster = (owner, job) => `/api/launch?inf-file=${owner}/${job}.poster.webp`;
+export const infVideo = (job) => `/api/launch?inf-video=${job}.mp4`;
+export const infVideoDl = (job) => `/api/launch?inf-video-dl=${job}.mp4`;

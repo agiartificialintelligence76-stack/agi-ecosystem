@@ -35,7 +35,9 @@ export const STUDIO = {
   MAX_MAKING_MS: 3 * 864e5,   // Meshy keeps what it made 3 days: a character not done by then can't be finished
   CHECKS: 3,                  // payments read from the chain per "Check my payment"
 };
-const NEXT = { preview: 'refine', refine: 'rig', rig: 'moves', moves: 'save' };
+// (2026-10-10, AGI Studio) a 3D model of an influencer starts from its full-body picture ('image': Meshy's image to 3D),
+// then the same bones and moves
+const NEXT = { preview: 'refine', refine: 'rig', image: 'rig', rig: 'moves', moves: 'save' };
 const SAVE_NEEDS_MS = 15_000;  // keeping a character's files starts only with this much time left
 
 // ---------- settings ----------
@@ -82,6 +84,8 @@ export function pageView(cfg, o) {
   if (o.status === 'making' || o.status === 'paid') view.step = o.step || 'preview';
   if (o.status === 'done') Object.assign(view, { moves: Array.isArray(o.moves) ? o.moves : MOVE_NAMES, done: Date.parse(o.done_at) || null, glbBytes: o.glb_bytes });
   if (o.status === 'failed') Object.assign(view, { error: o.error || 'failed', credit: o.credit === true });
+  // (2026-10-10) a 3D model of an influencer (AGI Studio): its influencer's page
+  if (o.inf_id) view.inf = o.inf_id;
   return view;
 }
 
@@ -197,9 +201,16 @@ export async function monthLeft(cfg) {
 
 // ---------- 4: the making, one step at a time ----------
 const inputsFor = (step, o, tasks) => ({
-  prompt: meshyPrompt(o), texture: meshyTexture(o), previewId: tasks.preview, refineId: tasks.refine, rigId: tasks.rig,
+  prompt: meshyPrompt(o), texture: meshyTexture(o), previewId: tasks.preview, refineId: tasks.refine || tasks.image, rigId: tasks.rig,
 });
-const fail = (cfg, id, error, credit = true) => rpc(cfg, 'studio_fail', { p_id: id, p_error: error, p_credit: credit }, 'studio');
+// It couldn't be made: a character paid for can be made again with new words (its credit); a 3D model of an influencer
+// (AGI Studio, paid in credits) gets its credits back instead (or a Soulmate's free one back for this month)
+async function failOrder(cfg, o, error) {
+  if (!o.inf_id) return rpc(cfg, 'studio_fail', { p_id: o.id, p_error: error, p_credit: true }, 'studio');
+  const done = await rpc(cfg, 'studio_fail', { p_id: o.id, p_error: error, p_credit: false }, 'studio');
+  if (done) await rpc(cfg, 'inf_3d_back', { p_order: o.id }, 'studio');
+  return done;
+}
 const setStep = (cfg, id, step, task, tasks, tries) => rpc(cfg, 'studio_step', { p_id: id, p_step: step, p_task: task, p_tasks: tasks, p_tries: tries }, 'studio');
 const waitTurn = (cfg, id) => rpc(cfg, 'studio_wait', { p_id: id }, 'studio');
 
@@ -224,9 +235,26 @@ export async function tick(cfg, id, { now = Date.now(), deadline = now + 20_000,
   try { o = await getOrder(cfg, id); } catch (err) { await waitTurn(cfg, id).catch(() => {}); throw err; }
   if (!o || !['paid', 'making'].includes(o.status)) return { state: 'busy' };
   const tasks = o.tasks && typeof o.tasks === 'object' ? { ...o.tasks } : {};
+  const fail = (cfg2, id2, error) => failOrder(cfg2, o, error);
   const start = async (step, tries) => {
+    const inputs = inputsFor(step, o, tasks);
+    if (step === 'image') {
+      // its influencer's full-body picture, by a signed address (6 hours) in the private bucket
+      try {
+        const F = files || await import('./studio-files.js');
+        inputs.imageUrl = o.image_path ? await F.signedUrl(cfg, o.image_path, { expiresIn: 6 * 3600 }) : null;
+      } catch (err) {
+        console.warn(`[studio] ${id}: its picture couldn't be signed (${err.message})`);
+        await waitTurn(cfg, id);
+        return { state: 'waiting', step };
+      }
+      if (!inputs.imageUrl) {
+        await fail(cfg, id, 'no_picture', true);
+        return { state: 'failed', step };
+      }
+    }
     try {
-      const task = await meshyStart(cfg, step, inputsFor(step, o, tasks));
+      const task = await meshyStart(cfg, step, inputs);
       await setStep(cfg, id, step, task, tasks, tries);
       return { state: 'started', step };
     } catch (err) {
@@ -241,7 +269,7 @@ export async function tick(cfg, id, { now = Date.now(), deadline = now + 20_000,
       return { state: 'failed', step };
     }
   };
-  if (o.status === 'paid' || !o.step) return start('preview', 0);
+  if (o.status === 'paid' || !o.step) return start(o.inf_id ? 'image' : 'preview', 0);
   if (Date.parse(o.started_at || o.paid_at || o.created_at) < now - STUDIO.MAX_MAKING_MS) {
     await fail(cfg, id, 'expired', true);
     return { state: 'failed', step: o.step };
@@ -292,8 +320,9 @@ async function save(cfg, o, tasks, { deadline, files = null }) {
   const id = o.id;
   const left = (reserve, most) => Math.max(1500, Math.min(most, deadline - Date.now() - reserve));
   try {
+    const painted = tasks.refine ? 'refine' : 'image';
     const [moves, refine] = await Promise.all([meshyTask(cfg, 'moves', tasks.moves, { timeoutMs: left(12_000, 6000) }),
-      meshyTask(cfg, 'refine', tasks.refine, { timeoutMs: left(12_000, 6000) })]);
+      meshyTask(cfg, painted, tasks[painted], { timeoutMs: left(12_000, 6000) })]);
     const glbUrl = animationUrl(moves.task), picUrl = thumbnailUrl(refine.task);
     if (!glbUrl || !picUrl) throw Object.assign(new Error("Meshy's answer has no file address"), { gone: moves.status !== 'SUCCEEDED' });
     const [glbSource, picSource] = await Promise.all([F.fromMeshy(glbUrl, { timeoutMs: left(7000, 12_000) }),
@@ -316,7 +345,7 @@ async function save(cfg, o, tasks, { deadline, files = null }) {
       return { state: 'saving' };
     }
     if (err.tooBig || err.gone || o.tries + 1 >= STUDIO.SAVE_TRIES) {
-      await fail(cfg, id, err.tooBig ? 'too_big' : 'save', true);
+      await failOrder(cfg, o, err.tooBig ? 'too_big' : 'save');
       console.warn(`[studio] ${id}'s files couldn't be kept: ${err.message}`);
       return { state: 'failed', step: 'save' };
     }

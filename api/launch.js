@@ -22,6 +22,14 @@
 // (2026-10-10) AGI-1's 3D character studio lives here too (Vercel's Hobby plan allows 12 functions, all used; a character
 // can be a coin's face): GET ?studio=, ?studio-file=, ?studio-list, ?studio-info, and its characters' videos ?studio-videos=,
 // ?studio-video=, ?studio-video-dl=, and POST actions "studio-…", handled by server/studio-api.js (loaded only for them).
+// Since AGI Studio (the same day) its page is the app's: a character from words, paid for on its own (studio-quote) and its
+// videos paid one by one (studio-video-quote), aren't ordered any more (410 { error: 'moved' }): AGI Studio makes 3D models
+// from influencers, paid in credits. A character's page, its files and its videos still answer, and so does finishing an
+// order made before (choosing how to pay, "Check my payment", making one again).
+// (2026-10-10) And AGI Studio, the AI influencer app (studio.agi1.app): GET ?inf-info, ?inf-explore, ?inf=, ?inf-file=,
+// ?inf-video=, ?inf-video-dl=, POST actions "inf-…" and "trend-…", and its uploads (POST ?inf-up=… / ?inf-poster=…, the
+// file's bytes as the body), handled by server/inf-api.js (loaded only for them). An influencer's coin is a launch draft like
+// one from her bot, its picture the influencer's own look from our bucket ("studio:<influencer>/<job>-<n>"), no Telegram.
 import { getConfig } from '../server/config.js';
 import { clientIp, visitorCode } from '../server/security.js';
 import { readSession } from '../server/session.js';
@@ -38,6 +46,16 @@ const MAX_BODY = 4000;
 const STUDIO_GETS = ['studio', 'studio-file', 'studio-list', 'studio-info', 'studio-videos', 'studio-video', 'studio-video-dl'];
 const STUDIO_POSTS = ['studio-quote', 'studio-choose', 'studio-check', 'studio-redo', 'studio-mine', 'studio-video-mine', 'studio-video-quote',
   'studio-video-check', 'studio-video-redo', 'studio-video-look'];
+const STUDIO_MOVED = ['studio-quote', 'studio-video-quote'];            // new orders: AGI Studio's credits instead
+const INF_GETS = ['inf-info', 'inf-explore', 'inf', 'inf-file', 'inf-video', 'inf-video-dl'];
+const isInfAction = (a) => typeof a === 'string' && /^(?:inf|trend)-[a-z0-9-]{2,20}$/.test(a);
+// a draft made in AGI Studio: its picture is an influencer's look in our bucket (server/influencer.js studioPicture)
+const STUDIO_PHOTO = /^studio:[A-Za-z0-9_-]{22}\/[A-Za-z0-9_-]{22}-[0-3]$/;
+const fromStudio = (d) => STUDIO_PHOTO.test(String(d?.photo || ''));
+async function draftPicture(cfg, d) {
+  if (fromStudio(d)) return (await import('../server/influencer.js')).studioPicture(cfg, d.photo);
+  return telegramPicture(tgToken(), d.photo);
+}
 const BUDGET_MS = 20_000;                  // a request's payback must be done by then (Vercel stops a function at 25 s)
 const json = (status, body) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 const ms = (t) => { const n = Date.parse(t ?? ''); return Number.isFinite(n) ? n : null; };
@@ -65,6 +83,10 @@ export async function GET(request) {
     const { studioGet } = await import('../server/studio-api.js');
     return studioGet(getConfig(), request, keys[0], url.searchParams.get(keys[0]));
   }
+  if (keys.length === 1 && INF_GETS.includes(keys[0])) {
+    const { infGet } = await import('../server/inf-api.js');
+    return infGet(getConfig(), request, keys[0], url.searchParams.get(keys[0]));
+  }
   if (keys.length !== 1 || !['d', 'pic'].includes(keys[0])) return json(400, { error: 'bad_request' });
   const id = url.searchParams.get(keys[0]);
   if (!DRAFT_ID.test(id)) return json(400, { error: 'bad_request' });
@@ -77,18 +99,17 @@ export async function GET(request) {
   if (keys[0] === 'd') {
     return json(200, {
       name: d.name, symbol: d.symbol, description: d.description || '', expires: ms(d.expires),
-      expired: d.expired === true && !d.token, token: d.token || null, ready: launchReady(cfg) && Boolean(tgToken()),
+      expired: d.expired === true && !d.token, token: d.token || null, ready: launchReady(cfg) && (fromStudio(d) || Boolean(tgToken())),
       // her gas wallet pays the launch's network fee back (up to this much, in wei), and how that's going for this coin
       gasBack: gasOn(cfg) ? cfg.launchGasMaxWei.toString() : null,
       gas: gasForPage(cfg, d),
     });
   }
-  const token = tgToken();
-  if (!token) return json(503, { error: 'not_ready' });
+  if (!fromStudio(d) && !tgToken()) return json(503, { error: 'not_ready' });
   let pic;
-  try { pic = await telegramPicture(token, d.photo); } catch (err) {
+  try { pic = await draftPicture(cfg, d); } catch (err) {
     console.warn(`[launch] a draft's picture: ${err.message}`);
-    return json(502, { error: 'telegram' });
+    return json(502, { error: fromStudio(d) ? 'storage' : 'telegram' });
   }
   if (!pic) return json(404, { error: 'no_picture' });
   return new Response(pic.bytes, {
@@ -102,19 +123,31 @@ export async function GET(request) {
 
 export async function POST(request) {
   const cfg = getConfig();
+  // (2026-10-10) an AGI Studio upload: the file's own bytes, with its ticket in the address
+  const url = new URL(request.url);
+  if ((url.searchParams.has('inf-up') || url.searchParams.has('inf-poster')) && /^application\/octet-stream\b/i.test(request.headers.get('content-type') || '')) {
+    const { infBinary } = await import('../server/inf-api.js');
+    return infBinary(cfg, request, url);
+  }
   if (!(request.headers.get('content-type') || '').includes('application/json')) return json(415, { error: 'bad_request' });
   const raw = await request.text();
   if (raw.length > MAX_BODY) return json(413, { error: 'bad_request' });
   let body;
   try { body = JSON.parse(raw); } catch { return json(400, { error: 'bad_request' }); }
   if (body && typeof body === 'object' && STUDIO_POSTS.includes(body.action)) {
+    if (STUDIO_MOVED.includes(body.action)) return json(410, { error: 'moved' });
     const { studioPost } = await import('../server/studio-api.js');
     return studioPost(cfg, request, body);
+  }
+  if (body && typeof body === 'object' && isInfAction(body.action)) {
+    const { infPost, INF_POSTS } = await import('../server/inf-api.js');
+    if (INF_POSTS.includes(body.action)) return infPost(cfg, request, body);
+    return json(400, { error: 'bad_request' });
   }
   if (!body || typeof body !== 'object' || !['prepare', 'check', 'payback'].includes(body.action) || !DRAFT_ID.test(String(body.draft))) {
     return json(400, { error: 'bad_request' });
   }
-  if (!launchReady(cfg) || !tgToken()) {
+  if (!launchReady(cfg)) {
     console.error('[launch] not ready: PINATA_JWT, TELEGRAM_BOT_TOKEN, PASS_SECRET, SUPABASE_URL and SUPABASE_SECRET_KEY are needed');
     return json(503, { error: 'not_ready' });
   }
@@ -126,6 +159,11 @@ export async function POST(request) {
   let d;
   try { d = await drafts.get(cfg, body.draft); } catch (err) { return dbTrouble(err, 'reading a draft failed'); }
   if (!d || d.id !== body.draft) return json(404, { error: 'gone' });
+  // (a draft from her bot needs her bot's token for its picture; one from AGI Studio doesn't)
+  if (!fromStudio(d) && !tgToken()) {
+    console.error('[launch] not ready: PINATA_JWT, TELEGRAM_BOT_TOKEN, PASS_SECRET, SUPABASE_URL and SUPABASE_SECRET_KEY are needed');
+    return json(503, { error: 'not_ready' });
+  }
 
   // ---------- its payback, again ----------
   if (body.action === 'payback') {
@@ -216,10 +254,10 @@ export async function POST(request) {
   if (!cid) {
     const giveBack = () => drafts.uploadBack(cfg, d.id).catch((err) => console.error('[launch] giving an upload back failed:', err.message));
     let pic;
-    try { pic = await telegramPicture(tgToken(), d.photo); } catch (err) {
+    try { pic = await draftPicture(cfg, d); } catch (err) {
       console.warn(`[launch] a draft's picture: ${err.message}`);
       await giveBack();
-      return json(502, { error: 'telegram' });
+      return json(502, { error: fromStudio(d) ? 'storage' : 'telegram' });
     }
     if (!pic) { await giveBack(); return json(422, { error: 'picture' }); }
     let pinned;

@@ -19,6 +19,9 @@
 -- It only ADDS tables, functions, a bucket and a cron job (all named agi1_studio… / studio_… / agi1-studio…), and writes to
 -- burns.sql's own two tables only what a burn for a character needs (its code, so it never counts twice; its $AGI, so it
 -- counts toward the wallet's level like a burn for messages). Running it again changes nothing that's saved.
+-- (2026-10-10, AGI Studio at studio.agi1.app: supabase/influencers.sql builds on this file. Since then a character can also
+-- be a 3D model made from an influencer's full-body picture, and the bucket takes JPEG pictures and a clip's upload parts:
+-- run this file again if it was run before, then influencers.sql.)
 --
 -- What's kept, and why (only the server's secret key can read or change any of it):
 --   agi1_studio_state   one row: a random key, made here once, that the clock sends with each call
@@ -78,6 +81,18 @@ create index if not exists agi1_studio_orders_due on public.agi1_studio_orders (
 create index if not exists agi1_studio_orders_wallet on public.agi1_studio_orders (wallet_code, created_at);
 create index if not exists agi1_studio_orders_done on public.agi1_studio_orders (done_at) where status = 'done';
 create index if not exists agi1_studio_orders_quotes on public.agi1_studio_orders (created_at) where status = 'quote';
+-- (2026-10-10, AGI Studio, supabase/influencers.sql) a 3D model made from an influencer's full-body picture: paid in its
+-- credits ('credits', or a Soulmate's free one), made by Meshy from that picture (its first step: 'image'), with the
+-- influencer it belongs to and the picture it's made from. Columns and rules added to a table that may be there already.
+alter table public.agi1_studio_orders add column if not exists inf_id text check (inf_id is null or inf_id ~ '^[A-Za-z0-9_-]{22}$');
+alter table public.agi1_studio_orders add column if not exists image_path text
+  check (image_path is null or image_path ~ '^inf/[A-Za-z0-9_-]{22}/[A-Za-z0-9_-]{22}-0\.jpg$');
+alter table public.agi1_studio_orders drop constraint if exists agi1_studio_orders_step_check;
+alter table public.agi1_studio_orders add constraint agi1_studio_orders_step_check
+  check (step in ('image', 'preview', 'refine', 'rig', 'moves', 'save'));
+alter table public.agi1_studio_orders drop constraint if exists agi1_studio_orders_kind_check;
+alter table public.agi1_studio_orders add constraint agi1_studio_orders_kind_check check (kind in ('usdg', 'burn', 'free', 'credits'));
+create index if not exists agi1_studio_orders_inf on public.agi1_studio_orders (inf_id, created_at) where inf_id is not null;
 
 create table if not exists public.agi1_studio_months (
   month date    primary key,
@@ -334,7 +349,7 @@ set search_path = public
 as $$
   select row_to_json(o) from (
     select id, wallet_code, burn_code, name, about, style, level, usd_cents, agi, free, kind, paid, status, paid_at, started_at, step, task,
-      tasks, tries, error, credit, glb_bytes, pic_bytes, moves, hidden, created_at, updated_at, done_at,
+      tasks, tries, error, credit, glb_bytes, pic_bytes, moves, hidden, created_at, updated_at, done_at, inf_id, image_path,
       (status = 'quote' and paid = 0 and created_at < now() - interval '1 day') as expired
     from agi1_studio_orders where id = p_id
   ) o;
@@ -361,7 +376,7 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  if p_step is null or p_step not in ('preview', 'refine', 'rig', 'moves', 'save') or (p_task is not null and p_task !~ '^[A-Za-z0-9_-]{6,80}$')
+  if p_step is null or p_step not in ('image', 'preview', 'refine', 'rig', 'moves', 'save') or (p_task is not null and p_task !~ '^[A-Za-z0-9_-]{6,80}$')
      or p_tasks is null or jsonb_typeof(p_tasks) <> 'object' or p_tries is null or p_tries not between 0 and 20 then
     return false;
   end if;
@@ -484,7 +499,8 @@ as $$
   select exists (select 1 from agi1_studio_free where wallet_code = p_wallet and month = studio_this_month());
 $$;
 
--- The newest characters (done, not hidden), for the studio's gallery: [{ id, name, done_at, moves }]
+-- The newest characters (done, not hidden), for the studio's gallery: [{ id, name, done_at, moves }]. (2026-10-10) Never a 3D model
+-- of an AGI Studio influencer: it's shown on its influencer's own page (one made from a face is never in a gallery).
 create or replace function public.studio_list(p_limit integer)
 returns json
 language sql
@@ -492,12 +508,13 @@ stable
 set search_path = public
 as $$
   select coalesce(json_agg(json_build_object('id', id, 'name', name, 'done_at', done_at) order by done_at desc), '[]'::json) from (
-    select id, name, done_at from agi1_studio_orders where status = 'done' and not hidden
+    select id, name, done_at from agi1_studio_orders where status = 'done' and not hidden and inf_id is null
     order by done_at desc limit least(greatest(coalesce(p_limit, 24), 1), 60)
   ) d;
 $$;
 
--- One wallet's characters (not quotes that went nowhere): [{ id, name, status, credit, created_at }]
+-- One wallet's characters (not quotes that went nowhere): [{ id, name, status, credit, created_at }] (an influencer's 3D models:
+-- on its own page)
 create or replace function public.studio_mine(p_wallet text, p_limit integer)
 returns json
 language sql
@@ -507,7 +524,7 @@ as $$
   select coalesce(json_agg(json_build_object('id', id, 'name', name, 'status', status, 'credit', credit, 'created_at', created_at)
     order by created_at desc), '[]'::json) from (
     select id, name, status, credit, created_at from agi1_studio_orders
-    where wallet_code = p_wallet and not (status = 'quote' and paid = 0 and created_at < now() - interval '1 day')
+    where wallet_code = p_wallet and inf_id is null and not (status = 'quote' and paid = 0 and created_at < now() - interval '1 day')
     order by created_at desc limit least(greatest(coalesce(p_limit, 20), 1), 50)
   ) d;
 $$;
@@ -867,13 +884,16 @@ grant execute on function public.studio_video_hide(text, boolean) to service_rol
 -- The characters' files: a private bucket in Supabase Storage (only our server's secret key can read or write it; the
 -- pages get a character's files from our own address, /api/launch?studio-file=…, and its videos too, /api/launch?studio-
 -- video=…, downloaded through a short-lived signed address our server makes). 40 MB a file at most, only a 3D model (GLB),
--- pictures (WebP, PNG) and videos (MP4). Only when Supabase Storage is there (it always is in a Supabase project).
+-- pictures (WebP, PNG; since AGI Studio, 2026-10-10, JPEG too), videos (MP4) and the parts of a clip being uploaded to AGI
+-- Studio (application/octet-stream, put together by our server). Only when Supabase Storage is there (it always is in a
+-- Supabase project).
 do $do$
 begin
   if to_regclass('storage.buckets') is not null then
     if exists (select 1 from information_schema.columns where table_schema = 'storage' and table_name = 'buckets' and column_name = 'allowed_mime_types') then
       execute $q$insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-        values ('agi1-characters', 'agi1-characters', false, 41943040, array['model/gltf-binary', 'image/webp', 'image/png', 'video/mp4'])
+        values ('agi1-characters', 'agi1-characters', false, 41943040,
+          array['model/gltf-binary', 'image/webp', 'image/png', 'image/jpeg', 'video/mp4', 'application/octet-stream'])
         on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit,
           allowed_mime_types = excluded.allowed_mime_types$q$;
     else

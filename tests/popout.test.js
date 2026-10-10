@@ -75,8 +75,9 @@ test('our own pages may frame each other (her window holds her page), never anot
       if (key === 'Content-Security-Policy') assert.doesNotMatch(value, /frame-ancestors (?!'self')/, `${h.source}: never framed by another site`);
     }
   }
-  // her mic and calls work in her window's frame: the mic for our own pages only (the frame asks with allow="microphone")
-  assert.equal(header('Permissions-Policy'), 'camera=(), microphone=(self), geolocation=(), display-capture=(self)');
+  // her mic and calls work in her window's frame: the mic for our own pages only (the frame asks with allow="microphone");
+  // the camera (2026-10-10: the studio's live selfie) for our own pages only too, never another site's frame
+  assert.equal(header('Permissions-Policy'), 'camera=(self), microphone=(self), geolocation=(), display-capture=(self)');
 });
 
 // /theme.js (runs in <head>) in a sandbox, inside a frame or not

@@ -2,11 +2,18 @@ import { defineConfig } from 'vite';
 
 // agi1.app/talk (2026-10-02, full-screen talk) is the home page at another address: Vercel serves it with a rewrite
 // (vercel.json); this does the same for `npm run dev` and `vite preview`, so it can be tried locally too
+// AGI Studio (2026-10-10): agi1.app/studio/<anything> is its one page (its views at their own addresses), and on its own
+// host (studio.agi1.app; locally studio.localhost) every address that isn't a file is too (Vercel: files first, then the
+// host's catch-all rewrite; here: an address with no file extension, outside /api and Vite's own)
+const STUDIO_HOST = /^studio\./i;
+const STUDIO_VIEW = /^\/(?!api\/|@|src\/|node_modules\/)(?:[^.]*)$/;
 const talkPage = () => {
   const rewrite = (req, _res, next) => {
     const [path, query] = String(req.url || '').split('?');
-    if (/^\/talk\/?$/.test(path)) req.url = `/${query ? `?${query}` : ''}`;
-    else if (/^\/studio\/[A-Za-z0-9_-]{22}\/?$/.test(path)) req.url = `/studio.html${query ? `?${query}` : ''}`;   // a character's page (2026-10-10)
+    const q = query ? `?${query}` : '';
+    if (/^\/talk\/?$/.test(path)) req.url = `/${q}`;
+    else if (/^\/studio\/.+/.test(path)) req.url = `/studio.html${q}`;
+    else if (STUDIO_HOST.test(String(req.headers.host || '')) && STUDIO_VIEW.test(path)) req.url = `/studio.html${q}`;
     next();
   };
   return {
@@ -24,7 +31,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 800,
     // six pages: the home page (also at /talk since 2026-10-02), AGI-1's diary (/diary, Phase 5), "Launch with AGI-1"
     // (/launch/<id>, 2026-10-01), her live show (/live, 2026-10-02), CloakMesh (/cloakmesh, 2026-10-03: what
-    // inference.agi1.app shows) and AGI-1's 3D character studio (/studio and /studio/<id>, 2026-10-10)
+    // inference.agi1.app shows) and AGI Studio (/studio and /studio/<view>, and studio.agi1.app, 2026-10-10)
     rollupOptions: {
       input: { main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html', studio: 'studio.html' },
     },

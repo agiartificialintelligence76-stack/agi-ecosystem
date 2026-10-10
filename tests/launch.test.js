@@ -1795,6 +1795,7 @@ test('the page\'s words: which draft, every answer of the API in plain words, ET
   codes.add('reverted');
   for (const c of ['bad_request', 'bad_tx', 'busy', 'not_launched']) codes.delete(c);   // (the page never gets those: "Something went wrong")
   codes.delete('no_picture');                                                       // (its picture's own request: the <img> hides itself)
+  codes.delete('moved');                                                            // (the 3D studio's old orders, 2026-10-10: never this page's)
   for (const c of codes) assert.ok(WORDS[c], `words for "${c}"`);
   for (const c of ['failed', 'not_launch', 'other_wallet']) assert.ok(CHECK[c], c);
   for (const s of ['connect', 'sign', 'check', 'slow']) assert.ok(STEP[s]);
@@ -1869,7 +1870,7 @@ test('the page: its own address, private, the rules and warnings on it, no inlin
   assert.equal(vercel.cleanUrls, true);
   assert.deepEqual(vercel.rewrites.filter((r) => r.source.startsWith('/launch')), [{ source: '/launch/:draft', destination: '/launch' }]);   // (and /talk since 2026-10-02: tests/fullscreen.test.js)
   for (const r of vercel.rewrites) assert.doesNotMatch(r.destination, /\.html$/, 'never a .html destination with cleanUrls');
-  assert.equal(vercel.headers[0].headers[0].value, "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' blob: https://api.dexscreener.com; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests");   // (our own pages may frame each other since her pop-out window, 2026-10-02: tests/popout.test.js; a character's videos play from our own address: tests/videos.test.js)
+  assert.equal(vercel.headers[0].headers[0].value, "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob: https://api.dexscreener.com; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests");   // (our own pages may frame each other since her pop-out window, 2026-10-02: tests/popout.test.js; videos play from our own address, and since the studio app (2026-10-10) a clip or a selfie the visitor picks plays from the browser's own blob: address: tests/influencer.test.js)
   assert.match(readFileSync(new URL('../vite.config.js', import.meta.url), 'utf8'), /launch: 'launch\.html'/);
   // the page's code: its words with textContent only, its one transaction through send.js
   const page = readFileSync(new URL('../src/launch/page.js', import.meta.url), 'utf8');

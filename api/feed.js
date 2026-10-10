@@ -17,7 +17,8 @@
 // closed without Telegram telling us, the tidy-up.
 // GET /api/feed?studio (2026-10-10): AGI-1's 3D character studio's clock (server/studio.js), every minute, from Supabase
 // Cron (supabase/studio.sql), with that file's own key: the characters being made, one step along each (Meshy's steps,
-// then their files kept). Loaded only for it.
+// then their files kept). Loaded only for it. (The same day) and AGI Studio's, the AI influencer app (server/inf-jobs.js):
+// its looks, photos and videos being made, in the time left, and its tidy-up every half hour.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../server/config.js';
 import { tgToken } from '../server/tg-api.js';
@@ -96,28 +97,44 @@ async function studioCheck(request) {
     return answer({ error: err.code === 'PGRST202' ? 'not_set_up' : 'database' }, 503);
   }
   if (!key || !sameSecret(request.headers.get('authorization') || '', `Bearer ${key}`)) return answer({ error: 'unauthorized' }, 401);
-  if (!studioOn(cfg)) return answer({ ok: true, off: 'no_key' });       // MESHY_API_KEY not set: nothing to move along
+  const { infOn, infClock } = await import('../server/inf-jobs.js');
+  const meshy = studioOn(cfg), apps = infOn(cfg);
+  if (!meshy && !apps) return answer({ ok: true, off: 'no_key' });       // MESHY_API_KEY and FAL_KEY not set: nothing to move along
   const now = Date.now();
   const deadline = now + 19_000;
-  let out;
-  try {
-    out = { ok: true, ...await studioClock(cfg, { now, deadline }) };
-  } catch (err) {
-    console.warn(`[studio] the clock stopped: ${err.message}`);
-    return answer({ error: err.code === 'PGRST202' ? 'not_set_up' : 'database' }, 502);
-  }
-  // (2026-10-10) and its characters' videos, in the time left (only once FAL_KEY is set: server/studio-video.js)
-  const { videosOn, videoClock } = await import('../server/studio-video.js');
-  if (videosOn(cfg)) {
+  let out = { ok: true };
+  if (meshy) {
     try {
-      out.videos = Date.now() < deadline - 5000 ? await videoClock(cfg, { now: Date.now(), deadline }) : { due: 0, moved: 0, done: 0, failed: 0, later: true };
+      out = { ok: true, ...await studioClock(cfg, { now, deadline }) };
     } catch (err) {
-      console.warn(`[studio] the videos' clock stopped: ${err.message}`);
-      out.videos = { error: err.code === 'PGRST202' ? 'not_set_up' : 'database' };
+      console.warn(`[studio] the clock stopped: ${err.message}`);
+      return answer({ error: err.code === 'PGRST202' ? 'not_set_up' : 'database' }, 502);
+    }
+    // (2026-10-10) and its characters' videos, in the time left (only once FAL_KEY is set: server/studio-video.js)
+    const { videosOn, videoClock } = await import('../server/studio-video.js');
+    if (videosOn(cfg)) {
+      try {
+        out.videos = Date.now() < deadline - 5000 ? await videoClock(cfg, { now: Date.now(), deadline }) : { due: 0, moved: 0, done: 0, failed: 0, later: true };
+      } catch (err) {
+        console.warn(`[studio] the videos' clock stopped: ${err.message}`);
+        out.videos = { error: err.code === 'PGRST202' ? 'not_set_up' : 'database' };
+      }
+    }
+  }
+  // (2026-10-10) and AGI Studio's looks, photos and videos, in the time left (once FAL_KEY is set and influencers.sql run)
+  if (apps) {
+    try {
+      out.inf = Date.now() < deadline - 5000 ? await infClock(cfg, { now: Date.now(), deadline }) : { due: 0, moved: 0, done: 0, failed: 0, later: true };
+    } catch (err) {
+      if (err.code !== 'PGRST202' || !warnedApps) console.warn(`[studio] the studio app's clock stopped: ${err.message}`);
+      if (err.code === 'PGRST202') warnedApps = true;
+      if (!meshy) return answer({ error: err.code === 'PGRST202' ? 'not_set_up' : 'database' }, 502);
+      out.inf = { error: err.code === 'PGRST202' ? 'not_set_up' : 'database' };
     }
   }
   return answer(out);
 }
+let warnedApps = false;
 
 export async function GET(request) {
   const search = new URL(request.url).search;

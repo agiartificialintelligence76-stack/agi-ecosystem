@@ -10,7 +10,6 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import * as R from '../src/studio/rules.js';
-import * as W from '../src/studio/words.js';
 import { checkScene, videoPrompt } from '../server/studio-words.js';
 import { FAL_QUEUE, VIDEO_MODEL, falSubmit, falStatus, falResult, scrub, refusedText } from '../server/fal.js';
 import * as F from '../server/studio-files.js';
@@ -19,7 +18,7 @@ import { studioWallet, payCode, monthLeft, _resetStudioKey } from '../server/stu
 import {
   VIDEO, videosOn, videoView, charVideos, videoQuote, checkVideoPayment, videoRedo, videoTick, videoClock, videoFile, falInput,
 } from '../server/studio-video.js';
-import { studioLookBurst, studioFileBurst, studioActBurst } from '../server/studio-api.js';
+import { studioLookBurst, studioFileBurst, studioActBurst, studioPost } from '../server/studio-api.js';
 import { getConfig, falModel } from '../server/config.js';
 import { makeSession } from '../server/session.js';
 import { _resetBurnKey } from '../server/burn.js';
@@ -374,10 +373,15 @@ async function getRaw(q, headers = {}) {
   const res = await launchGet(new Request(`https://www.agi1.app/api/launch?${q}`, { headers: { 'x-real-ip': IP, ...headers } }));
   return { status: res.status, headers: res.headers, bytes: Buffer.from(await res.arrayBuffer()) };
 }
+// through api/launch.js, as a page asks; a new video order (studio-video-quote) straight to server/studio-api.js, since
+// api/launch.js answers it 410 "moved" (since AGI Studio, 2026-10-10, videos are an influencer's, paid in credits:
+// tests/influencer.test.js; tests/studio.test.js checks the 410)
 async function post(body) {
-  const res = await launchPost(new Request('https://www.agi1.app/api/launch', {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-real-ip': IP }, body: JSON.stringify(body),
-  }));
+  const res = body?.action === 'studio-video-quote'
+    ? await studioPost(getConfig(), new Request('https://www.agi1.app/api/launch', { method: 'POST', headers: { 'x-real-ip': IP } }), body)
+    : await launchPost(new Request('https://www.agi1.app/api/launch', {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-real-ip': IP }, body: JSON.stringify(body),
+    }));
   return { status: res.status, body: await res.json() };
 }
 const quoteBody = (extra = {}) => ({ action: 'studio-video-quote', session: sessionFor(), char: CHAR, scene: SCENE, shape: 'tall', sound: true, adult: true,
@@ -449,51 +453,17 @@ test("a scene: the studio's rules (PG-13, never a real person or someone else's 
   assert.match(videoPrompt({ scene: 'it bows', style: 'pixel' }), /Cartoon-style/, 'an unknown style: cartoon');
 });
 
-test("the page's words for its videos: always \"AI-generated\", its price by level, its states, every \"no\" in words; Share on X posts it as AI-made; never the video service's name", () => {
-  assert.equal(W.videoMeta({ shape: 'tall', sound: true }), 'AI-generated · 5 s · Vertical · with sound');
-  assert.equal(W.videoMeta({ shape: 'wide', sound: false }), 'AI-generated · 5 s · Wide · no sound');
-  assert.equal(W.videoMeta({ shape: 'nope' }), 'AI-generated · 5 s · Vertical · no sound');
-  assert.deepEqual([W.videoPriceText(400, 1), W.videoPriceText(320, 2), W.videoPriceText(240, 3)],
-    ['$4 in USDG', '$3.20 in USDG (Crush: 20% off)', '$2.40 in USDG (Soulmate: 40% off)']);
-  assert.equal(W.videoFailText('refused'), "The AI's safety check stopped this scene.");
-  assert.equal(W.videoFailText('too_big'), 'It came out too big to keep.');
-  assert.equal(W.videoFailText('expired'), 'It took too long to make.');
-  assert.equal(W.videoFailText('save'), "Its file couldn't be kept.");
-  assert.equal(W.videoFailText('no_char'), 'Its character was taken down.');
-  assert.equal(W.videoFailText('ai:make'), "The AI couldn't make it this time.");
-  assert.equal(W.videoFailText('weird'), "It couldn't be made.");
-  assert.equal(W.videoStateText({ status: 'quote', price: { usdCents: 400 }, paid: 0 }), 'Waiting for payment: $4 in USDG.');
-  assert.equal(W.videoStateText({ status: 'quote', price: { usdCents: 400 }, paid: 150 }), 'Waiting for payment: $4 in USDG ($1.50 counted so far).');
-  assert.equal(W.videoStateText({ status: 'paid', step: 'queue', position: 2 }), 'Waiting its turn… (#3 in line) It takes a few minutes: you can close this page.');
-  assert.equal(W.videoStateText({ status: 'making', step: 'make' }), 'Making it… It takes a few minutes: you can close this page.');
-  assert.equal(W.videoStateText({ status: 'making', step: 'save' }), 'Saving it… It takes a few minutes: you can close this page.');
-  assert.equal(W.videoStateText({ status: 'failed', error: 'refused', credit: true }),
-    "The AI's safety check stopped this scene. It was paid for, so it can be made again with a new scene, free.");
-  assert.equal(W.videoStateText({ status: 'failed', error: 'ai:make', credit: false }), "The AI couldn't make it this time.");
-  assert.equal(W.videoStateText({ status: 'expired' }), 'It expired before it was paid for.');
-  assert.equal(W.videoStateText({ status: 'done' }), '');
-  assert.match(W.videoErrorText('too_many'), /2 videos waiting to be paid for/);
-  assert.match(W.videoErrorText('sold_out'), /This month's videos are all spoken for/);
-  assert.match(W.videoErrorText('not_yours'), /Only the wallet that made this character can make its videos/);
-  assert.equal(W.videoErrorText('no_videos'), "Videos aren't open yet.");
-  assert.equal(W.videoErrorText('chain'), W.errorText('chain'), "the studio's own words for the rest");
-  assert.equal(W.videoErrorText('nope'), W.errorText('busy'));
-  assert.equal(W.videoCheckText({ paid: true }), 'Payment found: your video is being made now 💜');
-  assert.equal(W.videoCheckText({ paid: false, have: 150, need: 400, results: [{ ok: true, amount: 150 }] }),
-    'Counted: $1.50 of $4. Send the rest ($2.50) from the same wallet, then check again.');
-  assert.equal(W.videoCheckText({ paid: false, results: [{ ok: false, why: 'other_wallet' }] }), 'It came from another wallet: pay from the wallet you connected.');
-  const share = new URL(W.videoShareUrl('Mochi', 'https://www.agi1.app/studio/x#v-y'));
-  assert.equal(share.origin + share.pathname, 'https://x.com/intent/tweet');
-  assert.equal(share.searchParams.get('text'), "Mochi, my 3D character from AGI-1's studio, in an AI-made video 💜");
-  assert.equal(share.searchParams.get('url'), 'https://www.agi1.app/studio/x#v-y');
-  for (const words of [share.searchParams.get('text'), ...Object.values(R.SHAPES).map((s) => s.name)]) {
-    assert.doesNotMatch(words, /\b(?:buy|sell|pump|moon|profit|invest|gains?|100x)\b/i, words);
+// (2026-10-10) the old studio page's own words for its videos left with it: AGI Studio's are tests/influencer.test.js'
+test("visitor-facing words never name the video service (an AI video service): AGI Studio's page, its code and the safety note", () => {
+  const strip = (t) => t.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+  const files = ['studio.html', 'index.html', ...readdirSync(new URL('../src/studio/', import.meta.url)).filter((f) => f.endsWith('.js')).map((f) => `src/studio/${f}`),
+    ...readdirSync(new URL('../src/studio/views/', import.meta.url)).map((f) => `src/studio/views/${f}`), 'src/styles/studio-app.css'];
+  assert.ok(files.length >= 14, files.join(', '));
+  for (const file of files) {
+    const text = strip(readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'));
+    assert.doesNotMatch(text, /\bfal\b|fal\.ai|fal\.media|seedance|bytedance|kling/i, file);
   }
-  // visitor-facing words never name the video service (an AI video service): the pages, their scripts, the safety note
-  for (const file of ['studio.html', 'index.html', 'src/studio/page.js', 'src/studio/words.js', 'src/studio/rules.js']) {
-    const text = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
-    assert.doesNotMatch(text, /\bfal\b|fal\.ai|fal\.media|seedance|bytedance/i, file);
-  }
+  for (const words of Object.values(R.SHAPES).map((x) => x.name)) assert.doesNotMatch(words, /\b(?:buy|sell|pump|moon|profit|invest|gains?|100x)\b/i, words);
 });
 
 // ---------- fal.ai's queue (server/fal.js) ----------
@@ -1274,34 +1244,23 @@ test('POST studio-video-check, studio-video-look and studio-video-redo: paying f
 });
 
 // ---------- the rest of what it promises ----------
-test('its page: the videos section (on a done character\'s page only), its words and rules, played from our address, never a transaction asked; the CSP; the safety note', () => {
-  const html = readFileSync(new URL('../studio.html', import.meta.url), 'utf8');
-  assert.match(html, /<section class="st-card st-videos" data-st-videos aria-labelledby="st-v-title" hidden>/);
-  assert.match(html, /Short videos of it, made by an AI video service from its picture\. Every one is AI-generated\./);
-  assert.match(html, /Once it's made, the wallet that made it can have short videos of it made by an AI video service: 5 seconds of it in any scene you describe, paid in USDG with the same holder discounts\. The same rules: PG-13, never a real person\. Each is AI-generated and says so; when you post one, turn on the app's AI label too\./);
-  assert.match(html, /This page never asks your wallet to send anything: you send it from your own wallet app, then check here\./);
-  for (const shape of Object.keys(R.SHAPES)) assert.match(html, new RegExp(`name="st-v-shape" value="${shape}"`));
-  assert.match(html, /<textarea id="st-v-scene" data-st-v-scene rows="3" maxlength="300"/);
-  assert.doesNotMatch(html, /\sstyle="|\son[a-z]+="/i, 'no inline code or styles');
-  const page = readFileSync(new URL('../src/studio/page.js', import.meta.url), 'utf8');
-  assert.match(page, /if \(done\) \{ startViewer\(\); startVideos\(\); \}/, "its videos only on a done character's page");
-  for (const must of [/video\.preload = 'none';/, /video\.playsInline = true;/, /video\.controls = true;/, /video\.src = videoUrl\(v\.id\);/,
-    /dl\.href = videoDownload\(v\.id\);/, /share\.rel = 'noopener noreferrer';/, /withHuman\(ui\.vHuman, 'studio'/]) assert.match(page, must, String(must));
-  assert.doesNotMatch(page, /eth_sendTransaction|wallet_sendCalls|eth_signTypedData|ethereum:/, 'never a transaction asked of a wallet');
-  // played from our own address: the CSP as it was (no media from another site: default-src 'self')
+// (2026-10-10) the old studio page, and its videos section, became AGI Studio the same day: an influencer's videos, paid in
+// credits (tests/influencer.test.js). A character's videos made before still play from our own address (the GETs above).
+test("videos play only from our own address (and, since AGI Studio, a clip or a selfie the visitor picks, from the browser's own blob: address); never another site's media; the safety note", () => {
   const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
   const csp = vercel.headers[0].headers.find((h) => h.key === 'Content-Security-Policy').value;
   assert.match(csp, /^default-src 'self';/);
-  assert.doesNotMatch(csp, /media-src|supabase|fal/, "no other site's media");
-  // the safety note says what its videos do with money and data (with the burns' sentences: the studio needs burns.sql)
+  const media = csp.split(';').map((d) => d.trim()).filter((d) => d.startsWith('media-src'));
+  assert.deepEqual(media, ["media-src 'self' blob:"], 'our own address and the visitor\'s own picks, nothing else');
+  assert.doesNotMatch(csp, /supabase|fal|\*/, "no other site's media, no wildcard");
+  // the safety note says what AGI Studio's videos do with money and data
   const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  for (const must of [/A character's short videos, made by an AI video service, are paid for in USDG with the same discounts: they can't be refunded either, and one that can't be made is made again with a new scene, free\./,
-    /USDG for a character or its video, only ever to the studio's wallet that its page shows\./,
-    /the scene you describe and the character's picture go to an AI video service that makes it \(the scene is checked first, by us and by that service\); the video is kept in our storage, labeled AI-generated and public on its character's page/]) {
-    const at = index.search(must);
-    assert.ok(at > 0, String(must));
-    assert.ok(index.lastIndexOf('<span data-burn-only hidden>', at) > index.lastIndexOf('</p>', at), `${must}: shown with the burns' sentences`);
+  for (const must of [/the words and choices you give go to AI services that make your influencer's pictures, videos and 3D model/,
+    /a picture, selfie or clip you upload goes to an AI service that checks it first/, /A picture or selfie you upload is deleted once its influencer is made, and a clip within 2 days\./,
+    /What's made there is labeled AI-generated and kept in our storage/]) {
+    assert.ok(index.search(must) > 0, String(must));
   }
+  assert.doesNotMatch(index, /A character's short videos|USDG for a character or its video/, "the old studio's video sentences left with its page");
 });
 
 test("still 12 functions; fal.ai's key in the secret check (its value and its shape); studio.sql's promises for its videos; its tests run with the build", () => {
@@ -1330,7 +1289,7 @@ test("still 12 functions; fal.ai's key in the secret check (its value and its sh
   assert.match(sql, /alter table public\.agi1_studio_videos enable row level security;/);
   assert.match(sql, /alter table public\.agi1_studio_months add column if not exists videos integer not null default 0/);
   assert.match(sql, /status_url\s+text\s+check \(status_url ~ '\^https:\/\/queue\\\.fal\\\.run\//, "only ever fal's queue addresses");
-  assert.match(sql, /'agi1-characters', 'agi1-characters', false, 41943040, array\['model\/gltf-binary', 'image\/webp', 'image\/png', 'video\/mp4'\]/);
+  assert.match(sql, /'agi1-characters', 'agi1-characters', false, 41943040,\s+array\['model\/gltf-binary', 'image\/webp', 'image\/png', 'image\/jpeg', 'video\/mp4', 'application\/octet-stream'\]/);
   const code = sql.replace(/--.*$/gm, '');
   assert.doesNotMatch(code, /\b(?:wallet|address|tx|tx_hash|transaction|ip)\s+(?:text|inet|varchar|bytea)\b/i, 'never an address, a transaction or an IP address');
   const limits = readFileSync(new URL('../server/limits.js', import.meta.url), 'utf8');

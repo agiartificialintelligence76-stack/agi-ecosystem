@@ -123,7 +123,14 @@ export const PICTURE_SOURCE_MAX = PICTURE_MAX;
 // ---------- Supabase Storage (the private bucket) ----------
 const storageUrl = (cfg, path) => `${cfg.supabaseUrl}/storage/v1/object/${path}`;
 const headers = (cfg) => ({ Authorization: `Bearer ${cfg.supabaseKey}`, apikey: cfg.supabaseKey });
-const NAME = /^(?:[A-Za-z0-9_-]{22}\.(?:glb|webp|png)|videos\/[A-Za-z0-9_-]{22}\.mp4)$/;
+// Its files' names: a character's (<id>.glb|webp|png), a video's (videos/<id>.mp4), and since 2026-10-10 AGI Studio's
+// (server/influencer.js): an influencer's pictures, videos and posters (inf/<influencer>/<job>-<n>.jpg|webp,
+// inf/<influencer>/<job>.mp4, inf/<influencer>/<job>.poster.webp), the owner's trend moves (trends/<job>.mp4 and
+// .poster.webp), and what people upload (up/<upload>.jpg, up/<upload>.mp4, and a clip's parts and frames on the way:
+// up/<upload>/<n>.part, up/<upload>/f<n>.jpg)
+const ID = '[A-Za-z0-9_-]{22}';
+export const NAME = new RegExp(`^(?:${ID}\\.(?:glb|webp|png)|videos/${ID}\\.mp4|inf/${ID}/${ID}(?:-[0-3]\\.(?:jpg|webp)|\\.mp4|\\.poster\\.webp)`
+  + `|trends/${ID}(?:\\.mp4|\\.poster\\.webp)|up/${ID}(?:\\.(?:jpg|mp4)|/(?:[0-9]{1,2}\\.part|f[0-9]\\.jpg)))$`);
 
 // One of a character's files, kept (or replaced). Throws when Storage says no.
 export async function putFile(cfg, name, bytes, type, { timeoutMs = 10_000 } = {}) {
@@ -266,4 +273,50 @@ export async function getFile(cfg, name, { timeoutMs = 8000, max = GLB_MAX + 500
   const bytes = await readLimited(res, max);
   if (!bytes) throw new Error('storage: a file too big to serve');
   return bytes;
+}
+
+// AGI Studio (2026-10-10): the files in one of its folders (an influencer's, or an upload's parts), for deleting them.
+// → their names (whole paths) · throws when Storage says no
+const FOLDER = new RegExp(`^(?:inf/${ID}|up/${ID})$`);
+export async function listFiles(cfg, folder, { timeoutMs = 6000 } = {}) {
+  if (!FOLDER.test(folder)) throw new Error('storage: a bad folder');
+  let res;
+  try {
+    res = await fetch(`${cfg.supabaseUrl}/storage/v1/object/list/${BUCKET}`, {
+      method: 'POST',
+      headers: { ...headers(cfg), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix: folder, limit: 1000, offset: 0, sortBy: { column: 'name', order: 'asc' } }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    throw new Error(`storage: ${err.name === 'TimeoutError' || err.name === 'AbortError' ? 'no answer in time' : 'out of reach'}`);
+  }
+  if (!res.ok) throw new Error(`storage HTTP ${res.status}`);
+  const list = await res.json().catch(() => null);
+  if (!Array.isArray(list)) throw new Error('storage: an odd list');
+  return list.filter((f) => f && f.id && typeof f.name === 'string').map((f) => `${folder}/${f.name}`).filter((name) => NAME.test(name));
+}
+
+// Some of its files deleted (Storage's own bulk delete; ones that aren't there are fine). → how many it said it deleted ·
+// throws when Storage says no
+export async function deleteFiles(cfg, names, { timeoutMs = 8000 } = {}) {
+  const good = [...new Set((Array.isArray(names) ? names : []).filter((name) => typeof name === 'string' && NAME.test(name)))];
+  let gone = 0;
+  for (let i = 0; i < good.length; i += 100) {
+    let res;
+    try {
+      res = await fetch(`${cfg.supabaseUrl}/storage/v1/object/${BUCKET}`, {
+        method: 'DELETE',
+        headers: { ...headers(cfg), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefixes: good.slice(i, i + 100) }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (err) {
+      throw new Error(`storage: ${err.name === 'TimeoutError' || err.name === 'AbortError' ? 'no answer in time' : 'out of reach'}`);
+    }
+    if (!res.ok) throw new Error(`storage HTTP ${res.status}`);
+    const out = await res.json().catch(() => []);
+    gone += Array.isArray(out) ? out.length : 0;
+  }
+  return gone;
 }

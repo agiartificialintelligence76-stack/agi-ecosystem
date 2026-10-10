@@ -23,6 +23,9 @@
 //   POST { action: 'studio-video-redo', session, id, scene, shape, sound } → a paid one that couldn't be made, again (free)
 //   POST { action: 'studio-video-look', session, id } → one of its own videos (and, while it's made, one step along)
 // Every POST answer carries `session` when the wallet's level was read again (the page keeps it), or `signedOut: true`.
+// Since AGI Studio (2026-10-10) api/launch.js answers studio-quote and studio-video-quote itself, with 410 { error: 'moved' }:
+// new 3D models come from AGI Studio's influencers, paid in credits (server/influencer.js). The rest still finishes an order
+// made before, and every character's page, files and videos still answer.
 import { clientIp, visitorCode, makePass, checkPass } from './security.js';
 import { verifyHuman } from './turnstile.js';
 import { makeBurstLimit } from './burst.js';

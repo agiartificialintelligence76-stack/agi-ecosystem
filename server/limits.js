@@ -66,6 +66,15 @@ for (const fn of ['studio_video_quote', 'studio_video_pay', 'studio_video_get', 
   MISSING[fn] = `${fn} not found: run supabase/studio.sql again in this Supabase project (its characters' videos; it ends with studio_ready = 1)`;
 }
 
+// AGI Studio, the AI influencer app (2026-10-10): supabase/influencers.sql (after studio.sql's version of the same day)
+for (const fn of ['inf_credits', 'inf_spend', 'inf_refund', 'inf_topup', 'inf_free', 'inf_upload_open', 'inf_upload_get', 'inf_upload_set',
+  'inf_day_take', 'inf_start', 'inf_get', 'inf_pick', 'inf_reroll', 'inf_make', 'inf_job_get', 'inf_job_lease', 'inf_job_step', 'inf_job_wait',
+  'inf_job_done', 'inf_job_fail', 'inf_job_due', 'inf_poster', 'inf_jobs', 'inf_mine', 'inf_explore', 'inf_public', 'inf_delete', 'inf_hide',
+  'inf_job_hide', 'inf_3d', 'inf_3d_back', 'inf_3d_list', 'trend_make', 'trend_set', 'trend_list', 'inf_report', 'inf_reports',
+  'inf_report_clear', 'inf_tidy']) {
+  MISSING[fn] = `${fn} not found: run supabase/studio.sql again, then supabase/influencers.sql, in this Supabase project (it ends with influencers_ready = 1)`;
+}
+
 // CloakMesh's waitlist (inference.agi1.app, 2026-10-03): supabase/cloakmesh.sql
 for (const fn of ['cloakmesh_ready', 'cloakmesh_join', 'cloakmesh_leave']) {
   MISSING[fn] = `${fn} not found: run supabase/cloakmesh.sql in this Supabase project`;

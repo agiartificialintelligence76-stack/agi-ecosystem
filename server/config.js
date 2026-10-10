@@ -82,6 +82,7 @@ export function getConfig(env = process.env) {
     return Number.isFinite(n) && n > 0 ? n : fallback;
   };
   const models = voiceModels(env);
+  const studioOnlyFor = new Set(String(env.STUDIO_ONLY_FOR || '').toLowerCase().split(/[\s,]+/).filter((a) => /^0x[0-9a-f]{40}$/.test(a)));
   return {
     geminiKey: env.GEMINI_API_KEY || '',
     geminiModel: env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
@@ -157,7 +158,7 @@ export function getConfig(env = process.env) {
     studioMonthCap: Math.min(100_000, Math.floor(number('STUDIO_A_MONTH', 15)) || 15),
     studioBurnCap: Math.min(100_000, wholeOrZero(env.STUDIO_BURNS_A_MONTH, 5)),
     studioOpen: /^(?:yes|on|true|1)$/i.test(String(env.STUDIO_OPEN ?? '').trim()),
-    studioOnlyFor: new Set(String(env.STUDIO_ONLY_FOR || '').toLowerCase().split(/[\s,]+/).filter((a) => /^0x[0-9a-f]{40}$/.test(a))),
+    studioOnlyFor,
     studioHide: new Set(String(env.STUDIO_HIDE || '').split(/[\s,]+/).filter((a) => /^[A-Za-z0-9_-]{22}$/.test(a))),
     // …and its characters' videos (2026-10-10, server/studio-video.js): fal.ai's key (secret, "<id>:<secret>": without it, no
     // videos), the video model on fal (Seedance 2.5's reference-to-video; another one must take the same inputs), a video's
@@ -167,6 +168,14 @@ export function getConfig(env = process.env) {
     videoModel: falModel(env.STUDIO_VIDEO_MODEL),
     videoUsdCents: Math.max(100, Math.round(Math.min(10_000, number('STUDIO_VIDEO_PRICE_USD', 4)) * 100)),
     videoMonthCap: Math.min(100_000, Math.floor(number('STUDIO_VIDEOS_A_MONTH', 30)) || 30),
+    // …and AGI Studio, the AI influencer app (2026-10-10, studio.agi1.app: server/influencer.js; on once FAL_KEY is set): the
+    // owner's wallet for its owner's page (trend moves, reports: STUDIO_OWNER, else the first wallet in STUDIO_ONLY_FOR), the
+    // free credits the whole site gives holders a month (5,000 = $50 of AI costs at most; 0 = none), the AI jobs a day for the
+    // whole site (2,000: each paid in credits, a guard against a runaway), and "Use my face" ("off" = no AI twins)
+    studioOwner: studioAddress(env.STUDIO_OWNER) || [...studioOnlyFor][0] || '',
+    infFreeCap: Math.min(10_000_000, wholeOrZero(env.STUDIO_FREE_CREDITS_A_MONTH, 5000)),
+    infDayCap: Math.min(100_000, Math.floor(number('STUDIO_JOBS_A_DAY', 2000)) || 2000),
+    infFaces: !isOff(env.STUDIO_FACES),
     // Her live show (2026-10-02, server/live.js): the secret her stream runner (on the owner's own server) and our server
     // share (32+ characters); the owner's phone link is made from it. Without it, agi1.app/live says her show is coming soon
     liveSecret: String(env.LIVE_SECRET || '').trim(),
