@@ -1,10 +1,13 @@
-// AGI Studio: an influencer's own page (studio.agi1.app/i/<id>), like a creator's profile: its cover and look, its numbers,
-// its photos and videos (with their hearts, round 2), its 3D models. Anyone with its link sees a ready one; its own wallet
-// also sees it while it's made (its 4 looks to pick from), and makes things with it: photos, trend videos (round 2: put into
-// real-looking clips), videos, a 3D model (in credits, or free for a big burn: round 2), a coin with its face, and a boost in
-// Explore (round 2: a burn). Its page asks again every few seconds while something is being made (each ask moves it along
-// one step on our server), and takes the posters of its new videos (a frame, here).
-import { h, icon, btn, linkBtn, sheet, chips, say, busy, pic, copyText, nextId, put, add } from '../ui.js';
+// AGI Studio: an influencer's own page (studio.agi1.app/i/<id>), like a creator's profile: its look, its numbers, its photos
+// and videos (with their hearts, round 2), its 3D models. Anyone with its link sees a ready one; its own wallet also sees it
+// while it's made (its 4 looks to pick from). Round 3 (2026-10-10, the owner's "Pro tool layout"): its own wallet makes
+// things with it in a workspace (views/workspace.js): the tools in the panel on the left (Photo · Trend · Video · 3D · Coin,
+// each a form with a footer that stays: what it costs and its button), its profile and its gallery on the right; on a phone,
+// the tools slide up over its gallery. What it makes: photos, trend videos (round 2: put into real-looking clips), videos, a
+// 3D model (in credits, or free for a big burn: round 2), a coin with its face, and a boost in Explore (round 2: a burn). Its
+// page asks again every few seconds while something is being made (each ask moves it along one step on our server), and
+// takes the posters of its new videos (a frame, here).
+import { h, icon, btn, linkBtn, sheet, segmented, say, busy, pic, copyText, nextId, put, add } from '../ui.js';
 import { infPic, infVideo, fileUrl, trendOf, creditsText, SHAPES, SCENE_MIN, SCENE_MAX, INF_STYLES, CLIP } from '../rules.js';
 import {
   makingText, failText, jobTitle, jobStateText, modelText, wordsText, errorText, coinText, upErrorText, leftText, compact,
@@ -12,10 +15,12 @@ import {
 } from '../app-words.js';
 import { readClip, clipText, uploadClip, makePosters } from '../media.js';
 import { trendTile, videoSheet, photoSheet, reportSheet, confirmSheet, mediaTile, noteLikes, burnSheet, boostInf } from './shared.js';
+import { workspace, costLine, goButton } from './workspace.js';
 
 const POLL_MS = 5000;
 const visible = () => document.visibilityState === 'visible';
 const making = (s) => s === 'paid' || s === 'making';
+const SHAPE_CHOICES = Object.entries(SHAPES).map(([k, v]) => [k, `${v.name} ${v.ratio}`]);
 
 export async function render(ctx, route, root) {
   const id = route.id;
@@ -23,19 +28,21 @@ export async function render(ctx, route, root) {
   const postersTried = new Set();
   const sigs = {};
 
+  // its page: the workspace's shell, its panel (the tools) only for its own wallet once it's ready
+  const ws = workspace(ctx, root, { title: 'Make', open: false });
+  ws.setPanel(false);
   const skeleton = h('div', { class: 'sa-inf-skel', 'aria-hidden': 'true' }, h('div', { class: 'sa-skel sa-skel-head' }), h('div', { class: 'sa-skel sa-skel-grid' }));
   const back = h('a', { class: 'sa-back', href: ctx.href('/explore'), dataset: { saLink: '' } }, icon('back'), h('span', { text: 'Explore' }));
   const head = h('header', { class: 'sa-profile' });
   const makingBox = h('section', { class: 'sa-card sa-making', hidden: true, 'aria-live': 'polite' });
-  const actions = h('section', { class: 'sa-section sa-actions', hidden: true, 'aria-labelledby': 'sa-act-h' });
-  const gallery = h('section', { class: 'sa-section', hidden: true, 'aria-labelledby': 'sa-gal-h' });
+  const galleryBox = h('section', { class: 'sa-section sa-inf-gallery', hidden: true, 'aria-labelledby': 'sa-gal-h' });
   const models = h('section', { class: 'sa-section', hidden: true, 'aria-labelledby': 'sa-3d-h' });
   const cta = h('section', { class: 'sa-card sa-cta', hidden: true },
     h('p', { class: 'sa-cta-title', text: 'Make your own AI influencer' }),
     h('p', { class: 'sa-muted', text: 'Design one in a few taps, or start from a photo: photos, trend videos, 3D and more.' }),
     linkBtn('Create one', ctx.href('/create'), { kind: 'primary', icon: 'plus', dataset: { saLink: '' } }));
   const note = h('p', { class: 'sa-banner', role: 'status', hidden: true });
-  add(root, back, skeleton, note, head, makingBox, actions, gallery, models, cta);
+  add(ws.main, h('div', { class: 'sa-inf' }, back, skeleton, note, head, makingBox, galleryBox, models, cta));
 
   const inf = () => page?.influencer;
   const mine = () => inf()?.mine === true;
@@ -83,13 +90,14 @@ export async function render(ctx, route, root) {
 
   function gone() {
     document.title = 'Not here · AGI Studio';
+    ws.setPanel(false);
     put(head, h('div', { class: 'sa-profile-gone' }, h('h1', { class: 'sa-h1', tabindex: '-1', text: "This influencer isn't here" }),
       h('p', { class: 'sa-muted', text: "It was deleted or taken down, or it isn't ready yet (only its own wallet sees it while it's made)." })));
-    for (const s of [makingBox, actions, gallery, models]) s.hidden = true;
+    for (const s of [makingBox, galleryBox, models]) s.hidden = true;
     cta.hidden = false;
   }
 
-  // a section drawn again only when what it shows changed (so focus and pictures stay put between looks)
+  // a part drawn again only when what it shows changed (so focus, what's typed and pictures stay put between looks)
   function part(key, value, drawFn) {
     const sig = JSON.stringify(value);
     if (sigs[key] === sig) return;
@@ -109,17 +117,22 @@ export async function render(ctx, route, root) {
     makingBox.hidden = !pickOrMaking;
     if (pickOrMaking) part('making', { s: i.status, j: i.job, l: i.looks, e: i.error, p: page.position }, drawMaking);
     const ready = i.status === 'ready';
-    actions.hidden = !(ready && mine());
-    if (!actions.hidden) part('actions', { lvl: ctx.level, p: ctx.me?.prices, info: [ctx.info?.threeD, ctx.info?.coins, ctx.info?.launch, ctx.info?.open, ctx.info?.burns?.model], o: ctx.me?.owner }, drawActions);
-    gallery.hidden = !ready;
-    if (ready) part('gallery', { j: (page.jobs || []).map((j) => [j.id, j.status, j.step, j.poster, j.files, j.error]), b: i.body, f: gallery.dataset.filter || 'all', p: page.position }, drawGallery);
+    // its tools: its own wallet, once it's ready
+    const withTools = ready && mine();
+    ws.setPanel(withTools);
+    if (withTools) {
+      ws.setTitle(`Make with ${i.name}`, 'Photos, trend videos, videos, 3D and a coin');
+      part('tools', toolsSig(), drawTools);
+    }
+    galleryBox.hidden = !ready;
+    if (ready) part('gallery', { j: (page.jobs || []).map((j) => [j.id, j.status, j.step, j.poster, j.files, j.error]), b: i.body, f: galleryBox.dataset.filter || 'all', p: page.position }, drawGallery);
     const ms = page.models || [];
     models.hidden = !(ready && ms.length);
     if (!models.hidden) part('models', ms.map((m) => [m.id, m.status, m.step, m.error, m.paid, m.credit]), drawModels);
     cta.hidden = mine() || !ready;
   }
 
-  // ---------- its head: a cover, its look, its name, its numbers, what to do ----------
+  // ---------- its head: its look, its name, its numbers, what to do ----------
   function drawHead() {
     const i = inf();
     const jobs = page.jobs || [];
@@ -239,7 +252,7 @@ export async function render(ctx, route, root) {
     // 'pick': its 4 looks
     let picked = null;
     const n = Math.max(1, Math.min(4, i.looks?.files || 4));
-    const use = btn('Use this look', { kind: 'primary', size: 'lg', icon: 'check' });
+    const use = btn('Use this look', { kind: 'primary', icon: 'check' });
     use.disabled = true;
     const looks = h('div', { class: 'sa-looks', role: 'radiogroup', 'aria-label': 'Its looks' });
     for (let k = 0; k < n; k++) {
@@ -275,36 +288,11 @@ export async function render(ctx, route, root) {
       looks, msg, h('div', { class: 'sa-row' }, use, reroll));
   }
 
-  // ---------- ready, its own wallet: what to make (like an app's tools, each with its price) ----------
-  function drawActions() {
-    const i = inf();
-    const tiles = [
-      { what: 'photo', icon: 'image', name: 'Photo', note: 'In any scene you describe', open: () => photoSheetMake() },
-      { what: 'trend', icon: 'zap', name: 'Trend video', note: 'Put it into a trending clip, or your own', open: () => trendSheetMake() },
-      { what: 'video', icon: 'film', name: 'Video', note: '5 seconds in any scene', open: () => videoSheetMake() },
-    ];
-    if (ctx.info?.threeD) {
-      const burn = ctx.info?.burns?.model;
-      tiles.push({ what: 'model', icon: 'cube', name: '3D model', note: ctx.level === 3 ? 'Free once a month for Soulmates' : burn > 0 ? `Or free for a ${num(burn)} $AGI burn` : 'Moves when you type', open: modelSheet });
-    }
-    if (ctx.info?.coins && (ctx.info.launch || ctx.me?.owner || !ctx.info.open)) tiles.push({ what: 'coin', icon: 'coin', name: 'Launch a coin', note: 'With its face, from your own wallet', open: coinSheet, free: true });
-    const cover = i.body ? infPic(id, i.body, 0, true) : null;
-    put(actions, h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-act-h' }, icon('spark'), h('span', { text: `Create with ${i.name}` }))),
-      h('div', { class: 'sa-act-grid' }, ...tiles.map((t) => {
-        const b = h('button', { type: 'button', class: `sa-act sa-act-${t.what}` },
-          cover && ['photo', 'video', 'trend'].includes(t.what) ? pic(cover, { cls: 'sa-act-bg', alt: '' }) : null,
-          h('span', { class: 'sa-act-icon' }, icon(t.icon)), h('span', { class: 'sa-act-name', text: t.name }),
-          h('span', { class: 'sa-act-note', text: t.note }), h('span', { class: 'sa-act-cost' }, t.free ? h('span', { text: 'Free' }) : [icon('bolt'), h('span', { text: num(price(t.what)) })]));
-        b.addEventListener('click', () => t.open());
-        return b;
-      })));
-  }
-
   // ---------- its photos and videos ----------
   function drawGallery() {
     const i = inf();
     const jobs = page.jobs || [];
-    const filter = gallery.dataset.filter || 'all';
+    const filter = galleryBox.dataset.filter || 'all';
     const shows = (j) => filter === 'all' || (filter === 'photos' ? j.kind === 'photo' : j.kind !== 'photo');
     const position = page.position;
     const tiles = [];
@@ -331,20 +319,27 @@ export async function render(ctx, route, root) {
     }
     const filters = h('div', { class: 'sa-filter', role: 'group', 'aria-label': 'Show' }, ...[['all', 'All'], ['photos', 'Photos'], ['videos', 'Videos']].map(([v, label]) => {
       const b = h('button', { type: 'button', class: 'sa-filter-btn', 'aria-pressed': String(filter === v), text: label });
-      b.addEventListener('click', () => { gallery.dataset.filter = v; draw(); });
+      b.addEventListener('click', () => { galleryBox.dataset.filter = v; draw(); });
       return b;
     }));
     const empty = jobs.length === 0;
-    put(gallery,
-      h('div', { class: 'sa-section-head sa-row-between' }, h('h2', { class: 'sa-h2', id: 'sa-gal-h' }, icon('grid'), h('span', { text: mine() ? 'Its photos and videos' : `${i.name}'s photos and videos` })), jobs.length ? filters : null),
+    let emptyNote = null;
+    if (empty && mine()) {
+      const start = btn('Make its first photo', { kind: 'primary', size: 'sm', icon: 'image' });
+      start.addEventListener('click', () => openTool('photo'));
+      emptyNote = h('div', { class: 'sa-gempty' }, h('p', { class: 'sa-gempty-title', text: 'Nothing made yet' }),
+        h('p', { class: 'sa-muted', text: `Photos, trend videos and videos of ${i.name} show up here as they're made.` }), start);
+    }
+    put(galleryBox,
+      h('div', { class: 'sa-section-head sa-row-between' }, h('h2', { class: 'sa-h2', id: 'sa-gal-h', text: mine() ? 'Creations' : `${i.name}'s photos and videos` }), jobs.length ? filters : null),
       h('div', { class: 'sa-wall' }, ...tiles),
-      empty && mine() ? h('p', { class: 'sa-muted', text: 'Nothing yet: make its first photo or video above.' }) : null);
+      emptyNote);
   }
 
   function openJob(j) {
     const i = inf();
     if (j.kind === 'photo') {
-      photoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onVideo: (image) => videoSheetMake({ image }), onTrend: (image) => trendSheetMake({ image }) });
+      photoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onVideo: (image) => openTool('video', { image }), onTrend: (image) => openTool('trend', { image }) });
       return;
     }
     videoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv() });
@@ -353,7 +348,7 @@ export async function render(ctx, route, root) {
   // ---------- its 3D models ----------
   function drawModels() {
     const list = page.models || [];
-    put(models, h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-3d-h' }, icon('cube'), h('span', { text: 'In 3D' }))),
+    put(models, h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-3d-h', text: 'In 3D' })),
       h('ul', { class: 'sa-grid sa-grid-models' }, ...list.map((m) => {
         if (m.status === 'done') {
           return h('li', null, h('a', { class: 'sa-tile is-square sa-tile-model', href: ctx.href(`/3d/${m.id}`), dataset: { saLink: '' } },
@@ -385,7 +380,71 @@ export async function render(ctx, route, root) {
       })));
   }
 
-  // ---------- making: the sheets ----------
+  // ---------- the tools: the workspace's panel (its own wallet, once it's ready) ----------
+  const TOOLS = [
+    { id: 'photo', icon: 'image', name: 'Photo', build: photoTool },
+    { id: 'trend', icon: 'zap', name: 'Trend', build: trendTool },
+    { id: 'video', icon: 'film', name: 'Video', build: videoTool },
+    { id: '3d', icon: 'cube', name: '3D', build: modelTool, when: () => ctx.info?.threeD },
+    { id: 'coin', icon: 'coin', name: 'Coin', build: coinTool, when: () => ctx.info?.coins && (ctx.info.launch || ctx.me?.owner || !ctx.info.open) },
+  ];
+  const toolsNow = () => TOOLS.filter((t) => !t.when || t.when());
+  const toolTabs = h('div', { class: 'sa-tooltabs', role: 'tablist', 'aria-label': 'What to make' });
+  const toolBody = h('div', { class: 'sa-tool', role: 'tabpanel', id: nextId('tool') });
+  put(ws.body, toolTabs, toolBody);
+  const cost = costLine(ctx);
+  const quick = btn('Make', { kind: 'primary', size: 'sm', icon: 'spark' });
+  quick.addEventListener('click', () => ws.open());
+  ws.setQuick(quick);
+  let tool = { id: 'photo', opts: {} }, toolToken = 0, priced = [];
+  // the buttons' prices follow this wallet's (its level's discount, once inf-me answers)
+  ctx.on('me', () => { for (const [b, what] of priced) b.setPrice(price(what)); });
+
+  // what the tools' panel shows: drawn again only when this changes (so what's typed stays put between looks)
+  const toolsSig = () => ({ ids: toolsNow().map((t) => t.id), x: tool.id === '3d' ? [ctx.level, ctx.info?.burns?.model] : tool.id === 'coin' ? [priv()] : null });
+  function openTool(toolId, opts = {}) {
+    tool = { id: toolId, opts };
+    drawTools();
+    ws.open();
+    ws.body.scrollTop = 0;
+  }
+  function drawTools() {
+    const list = toolsNow();
+    if (!list.some((t) => t.id === tool.id)) tool = { id: 'photo', opts: {} };
+    sigs.tools = JSON.stringify(toolsSig());
+    put(toolTabs, ...list.map((t) => {
+      const b = h('button', { type: 'button', role: 'tab', class: 'sa-tooltab', 'aria-selected': String(t.id === tool.id), 'aria-controls': toolBody.id,
+        tabindex: t.id === tool.id ? '0' : '-1', dataset: { tool: t.id } }, icon(t.icon), h('span', { text: t.name }));
+      b.addEventListener('click', () => { if (t.id !== tool.id) { tool = { id: t.id, opts: {} }; drawTools(); } });
+      return b;
+    }));
+    const token = ++toolToken;
+    priced = [];
+    put(toolBody);
+    const host = {
+      body: toolBody,
+      alive: () => token === toolToken && ctx.alive(),
+      setFoot: (...nodes) => ws.setFoot(cost.node, ...nodes),
+      // (a tool that costs nothing: no line about credits)
+      setFootBare: (...nodes) => ws.setFoot(...nodes),
+      // after it started: a fresh form, and its tile in the gallery
+      done: () => { tool = { id: tool.id, opts: {} }; drawTools(); },
+    };
+    list.find((t) => t.id === tool.id).build(host, tool.opts || {});
+  }
+  toolTabs.addEventListener('keydown', (e) => {
+    const ids = toolsNow().map((t) => t.id);
+    const at = ids.indexOf(tool.id);
+    const to = e.key === 'ArrowRight' ? ids[(at + 1) % ids.length] : e.key === 'ArrowLeft' ? ids[(at - 1 + ids.length) % ids.length]
+      : e.key === 'Home' ? ids[0] : e.key === 'End' ? ids[ids.length - 1] : null;
+    if (!to) return;
+    e.preventDefault();
+    tool = { id: to, opts: {} };
+    drawTools();
+    toolTabs.querySelector(`[data-tool="${to}"]`)?.focus();
+  });
+
+  // ---------- making: what each tool shares ----------
   // what a "no" means for making something (and buying credits when it's short)
   function made(r, what, { onWords = null, msg }) {
     const d = r.data || {};
@@ -400,15 +459,23 @@ export async function render(ctx, route, root) {
     await ctx.buyCredits({ need: price(what) });
     return ctx.credits >= price(what);
   }
-  const costButton = (label, what) => btn(`${label} · ${num(price(what))} credits`, { kind: 'primary', size: 'lg', icon: 'spark', class: 'sa-btn sa-btn-primary sa-btn-lg sa-btn-wide' });
-  const haveLine = () => h('p', { class: 'sa-muted sa-small', text: `You have ${creditsText(ctx.credits)}.` });
+  // the panel's button for a tool, its price kept up to date
+  function goFor(label, what, iconName = 'spark') {
+    const go = goButton(label, iconName);
+    go.setPrice(price(what));
+    priced.push([go, what]);
+    cost.need(price(what));
+    return go;
+  }
+  const errLine = () => h('p', { class: 'sa-err', role: 'alert', hidden: true });
+  const hint = (text) => h('p', { class: 'sa-ws-hint', text });
   function sceneField(ideas, { value = '' } = {}) {
     const id2 = nextId('scene');
-    const area = h('textarea', { class: 'sa-input sa-textarea', id: id2, rows: 3, maxlength: SCENE_MAX, placeholder: 'Describe the scene…', value });
+    const area = h('textarea', { class: 'sa-input sa-textarea', id: id2, rows: 4, maxlength: SCENE_MAX, placeholder: 'Describe the scene…', value });
     const count = h('span', { class: 'sa-count', 'aria-hidden': 'true', text: `${[...value].length}/${SCENE_MAX}` });
-    const err = h('p', { class: 'sa-err', role: 'alert', hidden: true });
+    const err = errLine();
     area.addEventListener('input', () => { count.textContent = `${[...area.value].length}/${SCENE_MAX}`; say(err, ''); });
-    const ideaRow = h('div', { class: 'sa-ideas' }, h('span', { class: 'sa-hint', text: 'Ideas:' }), ...ideas.slice(0, 6).map((t) => {
+    const ideaRow = h('div', { class: 'sa-ideas' }, h('span', { class: 'sa-hint', text: 'Ideas' }), ...ideas.slice(0, 6).map((t) => {
       const b = h('button', { type: 'button', class: 'sa-idea', text: t });
       b.addEventListener('click', () => { area.value = t; area.dispatchEvent(new Event('input')); area.focus(); });
       return b;
@@ -419,12 +486,12 @@ export async function render(ctx, route, root) {
       get value() { return area.value.trim(); },
       check() {
         const v = area.value.trim();
-        if ([...v].length < SCENE_MIN) { say(err, wordsText('scene', v ? 'short' : 'empty')); area.focus(); return false; }
+        if ([...v].length < SCENE_MIN) { say(err, wordsText('scene', v ? 'short' : 'empty')); ws.reveal(area); return false; }
         return true;
       },
     };
   }
-  const shapeChips = (value = 'tall') => chips({ legend: 'Shape', choices: Object.fromEntries(Object.entries(SHAPES).map(([k, v]) => [k, `${v.name} (${v.where})`])), value });
+  const shapeSeg = (value = 'tall') => segmented({ legend: 'Shape', choices: SHAPE_CHOICES, value, showLegend: true, cls: 'sa-seg-shape' });
   // its done photos to start from (the full body when none is picked)
   function startFrom({ value = null, required = false, onchange = () => {} } = {}) {
     const photos = (page.jobs || []).filter((j) => j.kind === 'photo' && j.status === 'done');
@@ -453,109 +520,100 @@ export async function render(ctx, route, root) {
     };
   }
 
-  function photoSheetMake() {
+  // ---------- Photo ----------
+  function photoTool(host) {
     const i = inf();
-    const s = sheet({ title: 'A new photo', sub: `${i.name} in any scene you describe.`, size: 'md' });
     const scene = sceneField(PHOTO_IDEAS);
-    const shape = shapeChips('tall');
-    const msg = h('p', { class: 'sa-err', role: 'alert', hidden: true });
-    const go = costButton('Make photo', 'photo');
-    go.addEventListener('click', () => {
+    const shape = shapeSeg('tall');
+    const msg = errLine();
+    const go = goFor('Make photo', 'photo', 'image');
+    go.node.addEventListener('click', () => {
       if (!scene.check()) return;
-      busy(go, 'Starting…', async () => {
+      busy(go.node, 'Starting…', async () => {
         if (!(await enough('photo'))) return;
         const r = await ctx.act('inf-make', { id, kind: 'photo', scene: scene.value, shape: shape.value || 'tall' });
         if (made(r, 'photo', { msg, onWords: (d) => say(d.field === 'scene' ? scene.err : msg, wordsText(d.field, d.why)) })) {
           ctx.toast('Making its photo: about half a minute', 'good');
-          s.close();
+          host.done();
           load();
         }
       });
     });
-    add(s.body, scene.node, shape.node, haveLine(), msg);
-    s.setFoot(go);
-    if (matchMedia('(pointer: fine)').matches) scene.area.focus();
+    put(host.body, hint(`${i.name} in any scene you describe: about half a minute.`), scene.node, h('div', { class: 'sa-field' }, shape.node));
+    host.setFoot(msg, go.node);
   }
 
-  function videoSheetMake({ image = null } = {}) {
+  // ---------- Video ----------
+  function videoTool(host, { image = null } = {}) {
     const i = inf();
     const needsPhoto = i.style === 'real' || i.mode === 'face';
-    const s = sheet({ title: 'A new video', sub: `5 seconds of ${i.name} in any scene you describe.`, size: 'md' });
     const scene = sceneField(VIDEO_IDEAS);
-    const shape = shapeChips('tall');
-    const from = startFrom({ value: image, required: needsPhoto, onchange: (v) => { shape.node.hidden = Boolean(v); } });
-    shape.node.hidden = Boolean(from.value);
+    const shape = shapeSeg('tall');
+    const shapeBox = h('div', { class: 'sa-field' }, shape.node);
+    const from = startFrom({ value: image, required: needsPhoto, onchange: (v) => { shapeBox.hidden = Boolean(v); } });
+    shapeBox.hidden = Boolean(from.value);
     const soundId = nextId('sound');
     const sound = h('input', { type: 'checkbox', id: soundId, class: 'sa-check', checked: true });
-    const msg = h('p', { class: 'sa-err', role: 'alert', hidden: true });
-    const go = costButton('Make video', 'video');
+    const msg = errLine();
     if (needsPhoto && !from.photos.length) {
-      const mk = btn('Make a photo first', { kind: 'primary', icon: 'image' });
-      mk.addEventListener('click', () => { s.close(); photoSheetMake(); });
-      add(s.body, h('p', { class: 'sa-note', text: "A realistic influencer's videos start from one of its photos: make a photo first, then make a video from it." }));
-      s.setFoot(mk);
+      const mk = btn('Make a photo first', { kind: 'primary', size: 'lg', icon: 'image', class: 'sa-btn sa-btn-primary sa-btn-lg sa-btn-wide' });
+      mk.addEventListener('click', () => openTool('photo'));
+      put(host.body, hint(`5 seconds of ${i.name} in any scene you describe.`),
+        h('p', { class: 'sa-note', text: "A realistic influencer's videos start from one of its photos: make a photo first, then make a video from it." }));
+      host.setFoot(mk);
       return;
     }
-    go.addEventListener('click', () => {
+    const go = goFor('Make video', 'video', 'film');
+    go.node.addEventListener('click', () => {
       if (!scene.check()) return;
       if (needsPhoto && !from.value) { say(msg, errorText('needs_photo')); return; }
-      busy(go, 'Starting…', async () => {
+      busy(go.node, 'Starting…', async () => {
         if (!(await enough('video'))) return;
         const body = { id, kind: 'video', scene: scene.value, shape: shape.value || 'tall', sound: sound.checked, ...(from.value ? { image: from.value } : {}) };
         const r = await ctx.act('inf-make', body);
         if (made(r, 'video', { msg, onWords: (d) => say(d.field === 'scene' ? scene.err : msg, wordsText(d.field, d.why)) })) {
           ctx.toast('Making its video: a few minutes', 'good');
-          s.close();
+          host.done();
           load();
         }
       });
     });
-    add(s.body, scene.node, from.node, shape.node,
-      h('div', { class: 'sa-consent' }, sound, h('label', { for: soundId, text: 'With sound (its sounds and music, made by AI too)' })),
-      haveLine(), msg);
-    s.setFoot(go);
-    if (matchMedia('(pointer: fine)').matches) scene.area.focus();
+    put(host.body, hint(`5 seconds of ${i.name} in any scene you describe: a few minutes.`), scene.node, from.node, shapeBox,
+      h('div', { class: 'sa-consent sa-consent-sm' }, sound, h('label', { for: soundId, text: 'With sound (its sounds and music, made by AI too)' })));
+    host.setFoot(msg, go.node);
   }
 
-  // a trend video (round 2: the influencer put into a real-looking clip in place of its person, keeping the clip's moves,
-  // camera, place, light, and (a trend clip's) its sound; or into their own clip, without its sound)
-  async function trendSheetMake({ image = null, trend = null } = {}) {
+  // ---------- Trend video (round 2: the influencer put into a real-looking clip in place of its person, keeping the clip's
+  // moves, camera, place, light, and (a trend clip's) its sound; or into their own clip, without its sound) ----------
+  function trendTool(host, { image = null, trend = null } = {}) {
     const i = inf();
-    const s = sheet({ title: 'A trend video', sub: `${i.name} in a trending clip, in place of its person: as long as the clip, up to ${CLIP.MAX_S} seconds.`, size: 'lg' });
     const st = { trend, clip: null, shape: 'tall', tab: 'moves' };
-    const msg = h('p', { class: 'sa-err', role: 'alert', hidden: true });
+    const msg = errLine();
     const human = h('div', { class: 'sa-human' });
-    const go = costButton('Make trend video', 'trend');
-    const tabs = h('div', { class: 'sa-tabs-in', role: 'tablist', 'aria-label': 'The clip' });
-    const movesPanel = h('div', { class: 'sa-tab-panel', role: 'tabpanel' });
-    const clipPanel = h('div', { class: 'sa-tab-panel', role: 'tabpanel', hidden: true });
-    const tabBtn = (key, label) => {
-      const b = h('button', { type: 'button', role: 'tab', class: 'sa-tab-btn', 'aria-selected': String(st.tab === key), text: label });
-      b.addEventListener('click', () => {
-        st.tab = key;
-        for (const x of tabs.children) x.setAttribute('aria-selected', String(x === b));
-        movesPanel.hidden = key !== 'moves';
-        clipPanel.hidden = key !== 'clip';
-        say(msg, '');
-      });
-      return b;
-    };
-    add(tabs, tabBtn('moves', 'Trending clips'), tabBtn('clip', 'My own clip'));
+    const go = goFor('Make trend video', 'trend', 'zap');
+    const which = segmented({ legend: 'The clip', choices: [['moves', 'Trending clips', 'zap'], ['clip', 'My own clip', 'upload']], value: 'moves', onchange: (v) => {
+      st.tab = v;
+      movesPanel.hidden = v !== 'moves';
+      clipPanel.hidden = v !== 'clip';
+      say(msg, '');
+    } });
+    const movesPanel = h('div', { class: 'sa-tab-panel' });
+    const clipPanel = h('div', { class: 'sa-tab-panel', hidden: true });
     // the trend clips (the owner's, made with AI once: a made-up person, its camera move and its sound)
-    const about = h('p', { class: 'sa-muted sa-small', hidden: true });
+    const about = h('p', { class: 'sa-ws-hint', hidden: true });
     const showAbout = () => {
       const t = trendOf(st.trend);
       say(about, t ? `${t.emoji} ${t.name}: ${t.camera}, with its own sound.` : '');
     };
-    add(movesPanel, h('p', { class: 'sa-muted sa-small', text: 'Loading the clips…' }));
+    add(movesPanel, h('p', { class: 'sa-ws-hint', text: 'Loading the clips…' }));
     ctx.exploreData().then((data) => {
-      if (!s.dialog.isConnected) return;
+      if (!host.alive()) return;
       const list = (data?.trends || []).filter((t) => t.job);
-      if (!list.length) { put(movesPanel, h('p', { class: 'sa-muted', text: 'No trending clips yet: use your own clip.' })); return; }
+      if (!list.length) { put(movesPanel, h('p', { class: 'sa-ws-hint', text: 'No trending clips yet: use your own clip.' })); return; }
       const grid = h('div', { class: 'sa-trend-grid' });
       const fill = () => put(grid, ...list.map((t) => trendTile(t, { selected: st.trend === t.id, small: true, onpick: (x) => { st.trend = x.id; say(msg, ''); fill(); showAbout(); } })));
       fill();
-      put(movesPanel, grid, about, h('p', { class: 'sa-muted sa-small', text: 'Made-up people in our own clips: your influencer takes their place.' }));
+      put(movesPanel, grid, about, h('p', { class: 'sa-fine', text: 'Made-up people in our own clips: your influencer takes their place.' }));
       showAbout();
     });
     // their own clip: 3 to 10 s, 720 to 2160 px a side, checked as it's sent
@@ -573,7 +631,7 @@ export async function render(ctx, route, root) {
       try { read = await readClip(f); } catch (e) { say(clipState, clipText(e.message)); return; }
       say(clipState, 'Sending it…');
       const r = await uploadClip(ctx.act, { file: f, frames: read.frames, human, onProgress: (a, b) => say(clipState, a < b ? `Sending it… ${Math.round((a / b) * 100)}%` : 'Checking it… (a few seconds)') });
-      if (!s.dialog.isConnected) return;
+      if (!host.alive()) return;
       if (r.ok) {
         st.clip = r.id;
         st.shape = read.shape;
@@ -585,9 +643,9 @@ export async function render(ctx, route, root) {
     });
     add(clipPanel, file, h('label', { class: 'sa-drop', for: fileId }, icon('upload'), h('span', { class: 'sa-drop-title', text: 'Choose a clip' }),
       h('span', { class: 'sa-drop-note', text: `${CLIP.MIN_S} to ${CLIP.MAX_S} seconds, MP4 or MOV, 720 to 2160 px a side, one person. Its sound isn't used.` })), clipState,
-    h('p', { class: 'sa-muted sa-small', text: "Only a clip you may use: yours, or one with the person's OK. It's checked by AI, and the video made from it is checked again." }));
+    h('p', { class: 'sa-fine', text: "Only a clip you may use: yours, or one with the person's OK. It's checked by AI, and the video made from it is checked again." }));
     const from = startFrom({ value: image });
-    go.addEventListener('click', () => busy(go, 'Starting…', async () => {
+    go.node.addEventListener('click', () => busy(go.node, 'Starting…', async () => {
       const useClip = st.tab === 'clip';
       if (useClip && !st.clip) { say(msg, 'Choose your clip first (and wait for its check).'); return; }
       if (!useClip && !st.trend) { say(msg, 'Pick a clip first.'); return; }
@@ -595,28 +653,29 @@ export async function render(ctx, route, root) {
       const r = await ctx.act('inf-make', { id, kind: 'trend', ...(useClip ? { clip: st.clip, shape: st.shape } : { trend: st.trend }), ...(from.value ? { image: from.value } : {}) });
       if (made(r, 'trend', { msg })) {
         ctx.toast('Making its trend video: a few minutes', 'good');
-        s.close();
+        host.done();
         load();
       }
     }));
-    add(s.body, tabs, movesPanel, clipPanel, from.node, human, haveLine(), msg);
-    s.setFoot(go);
+    put(host.body, hint(`${i.name} in a trending clip, in place of its person: as long as the clip, up to ${CLIP.MAX_S} seconds.`),
+      which.node, movesPanel, clipPanel, from.node, human);
+    host.setFoot(msg, go.node);
   }
 
-  // a 3D model: in credits (a Soulmate's first each month free), or (round 2) free for a big burn of $AGI
-  function modelSheet() {
+  // ---------- 3D: in credits (a Soulmate's first each month free), or (round 2) free for a big burn of $AGI ----------
+  function modelTool(host) {
     const i = inf();
-    const s = sheet({ title: `${i.name} in 3D`, sub: 'From its full-body picture: shaped, given bones and taught 8 moves.', size: 'md' });
     const free = ctx.level === 3;
     const burnAgi = ctx.info?.burns?.model;
-    const msg = h('p', { class: 'sa-err', role: 'alert', hidden: true });
-    const go = free ? btn('Make it in 3D (your free one this month)', { kind: 'primary', size: 'lg', icon: 'cube', class: 'sa-btn sa-btn-primary sa-btn-lg sa-btn-wide' }) : costButton('Make it in 3D', 'model');
-    go.addEventListener('click', () => busy(go, 'Starting…', async () => {
+    const msg = errLine();
+    const go = goFor('Make it in 3D', 'model', 'cube');
+    if (free) { go.setLabel('Make it in 3D (free this month)'); go.setPrice('Free'); priced = priced.filter(([b]) => b !== go); }
+    go.node.addEventListener('click', () => busy(go.node, 'Starting…', async () => {
       if (!free && !(await enough('model'))) return;
       const r = await ctx.act('inf-3d', { id });
       if (made(r, 'model', { msg })) {
         ctx.toast(r.data?.free ? 'Making it in 3D, free: about 5 to 10 minutes' : 'Making it in 3D: about 5 to 10 minutes', 'good');
-        s.close();
+        host.done();
         load();
       }
     }));
@@ -625,18 +684,18 @@ export async function render(ctx, route, root) {
       if (!(await ctx.requireWallet())) return;
       const r = await ctx.act('inf-3d-burn', { id });
       const d = r.data || {};
-      if (r.ok && d.ok) { s.close(); burn3d({ order: d.order, agi: d.agi, paid: d.paid }); return; }
+      if (r.ok && d.ok) { burn3d({ order: d.order, agi: d.agi, paid: d.paid }); return; }
       say(msg, errorText(d.error));
     }));
-    add(s.body,
+    put(host.body,
+      hint('From its full-body picture: shaped, given bones and taught 8 moves.'),
       i.body ? h('div', { class: 'sa-big-wrap is-small' }, pic(infPic(id, i.body, 0, true), { cls: 'sa-big-pic is-tall', alt: `${i.name}'s full body`, lazy: false })) : null,
       h('ul', { class: 'sa-ticks' },
         h('li', { text: 'On its own page it moves when someone types: wave, dance, jump, cheer, bow, walk, party.' }),
         h('li', { text: 'Its 3D model (GLB, with its bones and moves) and its picture are yours to download.' }),
         h('li', { text: 'About 5 to 10 minutes. If it can\'t be made, its credits come back (a burn: made again, free).' })),
-      free ? h('p', { class: 'sa-note', text: `Soulmate: one free 3D model a month (after that, ${creditsText(price('model'))}).` }) : haveLine(),
-      msg);
-    s.setFoot(go, burn);
+      free ? h('p', { class: 'sa-note', text: `Soulmate: one free 3D model a month (after that, ${creditsText(price('model'))}).` }) : null);
+    host.setFoot(msg, go.node, burn);
   }
   // its big burn: the burn sheet, then made (by our server, once the burn is read on the chain)
   function burn3d(quote) {
@@ -649,41 +708,46 @@ export async function render(ctx, route, root) {
     });
   }
 
-  function coinSheet() {
+  // ---------- Coin: a launch link for a coin with its face (launched from their own wallet, on the launch page) ----------
+  function coinTool(host) {
     const i = inf();
-    const s = sheet({ title: `A coin with ${i.name}'s face`, sub: 'Launched from your own wallet, on clank.trade.', size: 'md' });
     const nameId = nextId('cn'), tickId = nextId('ct'), lineId = nextId('cl');
     const cname = h('input', { class: 'sa-input', id: nameId, type: 'text', maxlength: 32, autocomplete: 'off', value: i.name });
     const tick = h('input', { class: 'sa-input', id: tickId, type: 'text', maxlength: 16, autocomplete: 'off', spellcheck: 'false', placeholder: 'TICKER', value: String(i.name).replace(/[^\p{L}\p{N}]/gu, '').toUpperCase().slice(0, 10) });
     const line = h('input', { class: 'sa-input', id: lineId, type: 'text', maxlength: 100, autocomplete: 'off', placeholder: 'One line about it (optional)' });
-    const msg = h('p', { class: 'sa-err', role: 'alert', hidden: true });
+    const msg = errLine();
     for (const field of [cname, tick, line]) field.addEventListener('input', () => say(msg, ''));
     let agreed = !priv();
     const agreeId = nextId('agree');
     const agree = h('input', { type: 'checkbox', id: agreeId, class: 'sa-check' });
     agree.addEventListener('change', () => { agreed = agree.checked; say(msg, ''); });
-    const go = btn('Get my launch link', { kind: 'primary', size: 'lg', icon: 'coin', class: 'sa-btn sa-btn-primary sa-btn-lg sa-btn-wide' });
-    go.addEventListener('click', () => busy(go, 'Checking…', async () => {
-      if (!agreed) { say(msg, 'Tick the box first: it puts a real person\'s face on a public coin, for good.'); return; }
+    const go = goButton('Get my launch link', 'coin');
+    go.setPrice('Free');
+    go.node.addEventListener('click', () => busy(go.node, 'Checking…', async () => {
+      if (!agreed) { say(msg, 'Tick the box first: it puts a real person\'s face on a public coin, for good.'); ws.reveal(agree); return; }
       const r = await ctx.act('inf-coin', { id, name: cname.value.trim(), symbol: tick.value.trim().replace(/^\$+/, ''), description: line.value.trim() });
       const d = r.data || {};
       if (r.ok && d.ok && d.link) {
         const open = linkBtn('Open the launch page ↗', d.link, { kind: 'primary', size: 'lg', target: '_blank', rel: 'noopener noreferrer', class: 'sa-btn sa-btn-primary sa-btn-lg sa-btn-wide' });
         const linkCode = h('code', { class: 'sa-addr', text: d.link });
-        const copy = btn('Copy link', { kind: 'ghost', icon: 'copy' });
+        const copy = btn('Copy link', { kind: 'ghost', size: 'sm', icon: 'copy' });
         copy.addEventListener('click', async () => { const ok = await copyText(d.link, linkCode); ctx.toast(ok ? 'Link copied' : 'Link selected: copy it', 'good'); });
-        put(s.body,
+        const another = btn('Another coin', { kind: 'quiet', size: 'sm', icon: 'refresh' });
+        another.addEventListener('click', () => host.done());
+        put(host.body,
           h('p', { class: 'sa-pay-title', text: 'Your launch link is ready 💜' }),
           h('p', { class: 'sa-muted', text: "Open it where your wallet is (your wallet app's browser, or a computer with your wallet). It works for 2 hours; anyone with it could launch your coin, so keep it to yourself." }),
           h('div', { class: 'sa-addr-row' }, linkCode, copy),
-          h('p', { class: 'sa-fine', text: "The coin is yours: we never promote it. Meme coins can lose all of their value. Not financial advice." }));
-        s.setFoot(open);
+          h('p', { class: 'sa-fine', text: "The coin is yours: we never promote it. Meme coins can lose all of their value. Not financial advice." }),
+          another);
+        host.setFootBare(open);
         return;
       }
       if (d.error === 'coin') { say(msg, coinText(d.reason)); return; }
       say(msg, errorText(d.error));
     }));
-    add(s.body,
+    put(host.body,
+      hint('A coin with its face, launched from your own wallet on clank.trade.'),
       h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: nameId, text: 'Its name' }), cname),
       h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: tickId, text: 'Its ticker' }), tick),
       h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: lineId, text: 'Its line (optional)' }), line),
@@ -692,9 +756,8 @@ export async function render(ctx, route, root) {
         h('li', { text: 'The wallet that launches needs 10,000+ $AGI held or burned (nothing is spent). Launching is free; your wallet pays a small network fee in ETH.' }),
         h('li', { text: 'A coin is public and permanent: its name, ticker and picture can never be changed or deleted.' })),
       priv() ? h('div', { class: 'sa-consent is-warn' }, agree, h('label', { for: agreeId, text: "I understand this puts a real person's face on a public coin, for good (deleting the influencer can't take it off the coin), and they agreed to that too." })) : null,
-      h('p', { class: 'sa-fine', text: 'We never promote coins made here. Meme coins can lose all of their value. Not financial advice. 18+.' }),
-      msg);
-    s.setFoot(go);
+      h('p', { class: 'sa-fine', text: 'We never promote coins made here. Meme coins can lose all of their value. Not financial advice. 18+.' }));
+    host.setFootBare(msg, go.node);
   }
 
   // ---------- its new videos' posters (a frame each, taken here and checked by our server) ----------
@@ -718,7 +781,7 @@ export async function render(ctx, route, root) {
       const url = new URL(location.href);
       url.searchParams.delete('trend');
       history.replaceState(history.state, '', url.pathname + url.search + url.hash);
-      trendSheetMake({ trend });
+      openTool('trend', { trend });
     }
   }
   ctx.listen(window, 'hashchange', () => { if (page) deepLinks(); });

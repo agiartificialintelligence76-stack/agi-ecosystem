@@ -158,7 +158,7 @@ export function render(ctx, route, root) {
       h('section', { class: 'sa-section sa-mine', 'aria-labelledby': 'sa-mine-h' }, h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-mine-h' }, icon('user'), h('span', { text: 'My influencers' }))), grid),
       burnBox,
       prices,
-      me?.owner ? h('p', null, linkBtn('Owner tools', ctx.href('/owner'), { kind: 'ghost', icon: 'shield', dataset: { saLink: '' } })) : null,
+      me?.owner ? h('p', { class: 'sa-owner-link' }, linkBtn('Owner tools', ctx.href('/owner'), { kind: 'ghost', icon: 'shield', dataset: { saLink: '' } })) : null,
     );
   };
   draw();

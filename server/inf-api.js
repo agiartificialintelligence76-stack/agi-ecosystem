@@ -36,7 +36,8 @@
 //                  burn, tx? }                                          (burn unlocks)
 //             POST { action: 'inf-week-claim', session, week }      (a weekly spotlight's prize, to its maker's wallet)
 //   the owner's: { action: 'inf-owner' | 'trend-make' | 'trend-set' | 'inf-hide' | 'inf-report-clear' | 'inf-example-make' |
-//   'inf-week-set', session, … }
+//   'inf-week-set', session, … }, and (round 3) { action: 'inf-gift', session, to: 'me' | <a wallet's address>, credits }:
+//   credits for testing, free, to the owner's own wallet or a tester's (→ { ok, gave, self, to, allowed, credits? })
 // Every answer is "no-store" but the ones the same for everyone. POST answers carry `session` when the wallet's level was read
 // again (the page keeps it), or `signedOut: true`.
 import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass } from './security.js';
@@ -297,7 +298,7 @@ const WHY_STATUS = {
   no_slot: 409, private: 409, own: 409, burns_off: 409, burns_sold_out: 409, off: 409, used: 409, done: 409, no_credit: 409,
   no_kind: 409, prizes_off: 409, none: 404, no_prize: 409, claimed: 409, sending: 409, empty: 503, failed: 409, bad: 400,
 };
-const OWNER_ACTIONS = ['inf-owner', 'trend-make', 'trend-set', 'inf-hide', 'inf-report-clear', 'inf-example-make', 'inf-week-set'];
+const OWNER_ACTIONS = ['inf-owner', 'trend-make', 'trend-set', 'inf-hide', 'inf-report-clear', 'inf-example-make', 'inf-week-set', 'inf-gift'];
 export const INF_POSTS = ['inf-me', 'inf-look', 'inf-up-open', 'inf-up-done', 'inf-start', 'inf-pick', 'inf-reroll', 'inf-make', 'inf-3d',
   'inf-public', 'inf-delete', 'inf-coin', 'inf-topup', 'inf-report', 'inf-like', 'inf-liked', 'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo',
   'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', ...OWNER_ACTIONS];
@@ -335,7 +336,7 @@ export async function infPost(cfg, request, body) {
   const refuse = (r) => json(WHY_STATUS[r.why] || 422, { error: r.why, ...(r.have !== undefined ? { have: r.have } : {}), ...(r.reason ? { reason: r.reason } : {}), ...extra });
   const words = (r, more = {}) => json(422, { error: 'words', field: r.field, why: r.why, ...more, ...extra });
   const asks = ['inf-up-open', 'inf-up-done', 'inf-start', 'inf-make', 'inf-3d', 'inf-coin', 'inf-topup', 'inf-reroll', 'inf-delete', 'trend-make',
-    'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo', 'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-example-make'];
+    'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo', 'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-example-make', 'inf-gift'];
   if (asks.includes(body.action) && !infActBurst(who)) return json(429, { error: 'too_fast', ...extra });
   if (['inf-look', 'inf-like', 'inf-liked'].includes(body.action) && !infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
   try {
@@ -389,7 +390,7 @@ export async function infPost(cfg, request, body) {
     }
     if (OWNER_ACTIONS.includes(body.action)) {
       if (!isOwner(cfg, w.wallet)) return json(403, { error: 'not_owner', ...extra });
-      return await owner(cfg, body, extra, now);
+      return await owner(cfg, body, extra, now, w);
     }
     // (round 2) likes: any signed-in wallet (only holders' count toward the weekly spotlight)
     if (body.action === 'inf-like') {
@@ -526,7 +527,22 @@ async function look(cfg, w, id, extra, now) {
 }
 
 // The owner's tools
-async function owner(cfg, body, extra, now) {
+async function owner(cfg, body, extra, now, w) {
+  // (round 3) credits for testing: free, to the owner's own wallet ('me') or a tester's (its address). Whether that wallet may
+  // use them now (while it's private, only STUDIO_ONLY_FOR's wallets may make anything) comes back with it, for the page to say.
+  if (body.action === 'inf-gift') {
+    const self = body.to === 'me';
+    const { giftCredits, creditsOf } = await import('./credits.js');
+    const { newOrderId } = await import('./studio.js');
+    const to = self ? w.wallet : typeof body.to === 'string' ? body.to.trim() : '';
+    const r = await giftCredits(cfg, { to, credits: body.credits, ref: newOrderId() });
+    if (!r.ok) return ['credits', 'to'].includes(r.why) ? json(400, { error: `gift_${r.why}`, ...extra }) : json(503, { error: 'busy', ...extra });
+    const address = to.toLowerCase();
+    return json(200, {
+      ok: true, gave: body.credits, self, to: address, allowed: mayMake(cfg, address),
+      ...(self ? { credits: await creditsOf(cfg, studioWallet(cfg.passSecret, address)) } : {}), ...extra,
+    });
+  }
   if (body.action === 'inf-owner') {
     let page = await ownerPage(cfg);
     // the owner's trend clips (and, round 2, example pictures) being made: one moved along per look (the clock does the rest),

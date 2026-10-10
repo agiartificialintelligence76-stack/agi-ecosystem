@@ -1,10 +1,14 @@
 // AGI Studio: the owner's page (studio.agi1.app/owner; only the owner's wallet: STUDIO_OWNER, else the first of
-// STUDIO_ONLY_FOR). The trend clips (made once by the AI service from the owner's own balance, never credits; the owner keeps
-// the good ones), the example pictures for Create's choices (round 2), the spotlight of the week (round 2: approve it with
-// its prize, or skip it to the next best), and the reports (hide what shouldn't be here).
-import { h, icon, btn, linkBtn, busy, pic, put, add } from '../ui.js';
-import { infVideo, infPoster, infPic, infExample, REPORT_WHYS, EXAMPLES, EXAMPLE_KINDS, INF_STYLES, OPTIONS } from '../rules.js';
-import { errorText, agoText, failText, num, compact, weekText, prizeText, WEEK_STATUS } from '../app-words.js';
+// STUDIO_ONLY_FOR). Credits for testing (round 3: free, to the owner's own wallet or a tester's), the trend clips (made once
+// by the AI service from the owner's own balance, never credits; the owner keeps the good ones), the example pictures for
+// Create's choices (round 2), the spotlight of the week (round 2: approve it with its prize, or skip it to the next best), and
+// the reports (hide what shouldn't be here).
+import { h, icon, btn, linkBtn, busy, pic, put, add, say, nextId } from '../ui.js';
+import { infVideo, infPoster, infPic, infExample, REPORT_WHYS, EXAMPLES, EXAMPLE_KINDS, INF_STYLES, OPTIONS, creditsText } from '../rules.js';
+import {
+  errorText, agoText, failText, num, compact, weekText, prizeText, WEEK_STATUS, shortAddress, GIFT_AMOUNTS, GIFT_MAX, GIFT_CONFIRM,
+  giftPlanText, giftText,
+} from '../app-words.js';
 import { makePosters } from '../media.js';
 
 const STATUS = { none: 'Not made yet', making: 'Being made…', review: 'Made: keep it?', kept: 'Kept: people can use it', hidden: 'Hidden', failed: "Couldn't be made" };
@@ -19,13 +23,111 @@ export function exampleName(key) {
   return o ? `${o.label} · ${o.choices[value] || value}` : key;
 }
 
+// ---------- credits for testing (round 3, the owner: "i cant even test it myself i dont have enough credits lol") ----------
+// Drawn once (never with the page's redraws, so what's typed and the keyboard stay put): who gets them (the owner's own wallet,
+// or a tester's address), how many (1 to 100,000), what that means, and the button. From GIFT_CONFIRM credits it asks for a
+// second tap.
+export function giftSection(ctx) {
+  const id = nextId('sa-gift');
+  const mine = () => ctx.session?.wallet || '';
+  const have = h('p', { class: 'sa-gift-have' }, icon('bolt'), h('span'));
+  const showHave = () => { have.lastChild.textContent = ctx.me ? `You have ${creditsText(ctx.credits)}` : ''; have.hidden = !ctx.me; };
+  // who
+  const toMe = h('input', { type: 'radio', class: 'sa-chip-input', name: `${id}-to`, id: `${id}-me`, value: 'me', checked: true });
+  const toOther = h('input', { type: 'radio', class: 'sa-chip-input', name: `${id}-to`, id: `${id}-other`, value: 'other' });
+  const meLabel = h('span', { class: 'sa-chip-text' });
+  const who = h('fieldset', { class: 'sa-chips sa-gift-who' }, h('legend', { class: 'sa-label', text: 'Who gets them' }),
+    h('div', { class: 'sa-chip-row' },
+      h('span', { class: 'sa-chip' }, toMe, h('label', { for: `${id}-me` }, meLabel)),
+      h('span', { class: 'sa-chip' }, toOther, h('label', { for: `${id}-other` }, h('span', { class: 'sa-chip-text', text: "A tester's wallet" })))));
+  const showMe = () => { meLabel.textContent = mine() ? `My wallet (${shortAddress(mine())})` : 'My wallet'; };
+  const address = h('input', { class: 'sa-input sa-mono', id: `${id}-addr`, type: 'text', autocomplete: 'off', spellcheck: 'false', inputmode: 'text', maxlength: '42', placeholder: '0x…', 'aria-describedby': `${id}-addr-why` });
+  const addrWhy = h('p', { class: 'sa-field-why', id: `${id}-addr-why`, role: 'status', hidden: true });
+  const addrBox = h('div', { class: 'sa-field', hidden: true }, h('label', { class: 'sa-label', for: `${id}-addr`, text: "Their wallet's address" }), address, addrWhy,
+    h('p', { class: 'sa-hint', text: 'The wallet they connect to AGI Studio. While it is private, it also needs to be in STUDIO_ONLY_FOR in Vercel.' }));
+  // how many
+  const amount = h('input', { class: 'sa-input sa-input-num', id: `${id}-n`, type: 'number', min: '1', max: String(GIFT_MAX), step: '1', inputmode: 'numeric', value: String(GIFT_AMOUNTS[0]) });
+  const quick = h('div', { class: 'sa-gift-quick', role: 'group', 'aria-label': 'Quick amounts' }, ...GIFT_AMOUNTS.map((n) => {
+    const b = btn(num(n), { kind: 'ghost', size: 'sm' });
+    b.addEventListener('click', () => { amount.value = String(n); changed(); });
+    return b;
+  }));
+  const plan = h('p', { class: 'sa-gift-plan', 'aria-live': 'polite' });
+  const give = btn('', { kind: 'primary', icon: 'bolt', class: 'sa-btn sa-btn-primary sa-gift-go' });
+  const note = h('p', { class: 'sa-note', role: 'status', hidden: true });
+  let armed = 0, armTimer = null;
+  const value = () => {
+    const n = Number(amount.value);
+    return Number.isInteger(n) && n >= 1 && n <= GIFT_MAX ? n : null;
+  };
+  const label = () => {
+    const n = value();
+    give.lastChild.textContent = !n ? 'Give credits' : armed === n ? `Tap again to give ${creditsText(n)}` : `Give ${creditsText(n)}`;
+    give.classList.toggle('is-armed', Boolean(n) && armed === n);
+  };
+  function changed() {
+    armed = 0;
+    const n = value();
+    plan.textContent = n ? giftPlanText(n) : 'A whole number of credits, from 1 to 100,000.';
+    label();
+  }
+  give.append(h('span'));
+  for (const r of [toMe, toOther]) r.addEventListener('change', () => { addrBox.hidden = !toOther.checked; say(addrWhy, ''); armed = 0; label(); if (toOther.checked) address.focus(); });
+  amount.addEventListener('input', changed);
+  address.addEventListener('input', () => { say(addrWhy, ''); armed = 0; label(); });
+  give.addEventListener('click', () => {
+    say(note, '');
+    const n = value();
+    if (!n) { say(note, errorText('gift_credits')); amount.focus(); return; }
+    const to = toOther.checked ? address.value.trim() : 'me';
+    if (to !== 'me' && !/^0x[0-9a-fA-F]{40}$/.test(to)) { say(addrWhy, errorText('gift_to')); address.focus(); return; }
+    if (n >= GIFT_CONFIRM && armed !== n) {
+      armed = n;
+      label();
+      clearTimeout(armTimer);
+      armTimer = setTimeout(() => { armed = 0; label(); }, 6000);
+      return;
+    }
+    armed = 0;
+    clearTimeout(armTimer);
+    busy(give, 'Adding…', async () => {
+      const r = await ctx.act('inf-gift', { to, credits: n });
+      const d = r.data || {};
+      if (!r.ok || !d.ok) {
+        if (d.error === 'gift_to') { say(addrWhy, errorText('gift_to')); address.focus(); return; }
+        say(note, errorText(d.error));
+        return;
+      }
+      const text = giftText(d);
+      say(note, text);
+      ctx.toast(`Added ${creditsText(d.gave)} 💜`, 'good');
+      if (!d.self) address.value = '';
+      ctx.refreshMe();
+    }).finally(label);
+  });
+  showMe();
+  changed();
+  showHave();
+  ctx.on('me', showHave);
+  ctx.on('wallet', () => { showMe(); showHave(); });
+  const section = h('section', { class: 'sa-section sa-gift', 'aria-labelledby': `${id}-h`, hidden: true },
+    h('div', { class: 'sa-section-head sa-row-between' }, h('h2', { class: 'sa-h2', id: `${id}-h` }, icon('bolt'), h('span', { text: 'Credits for testing' })), have),
+    h('p', { class: 'sa-muted sa-small', text: "Free credits for your own wallet or a tester's: nothing is paid to anyone. What they make is paid from your own AI balance, like everything here. Credits have no cash value." }),
+    h('div', { class: 'sa-gift-form' },
+      who, addrBox,
+      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: `${id}-n`, text: 'How many credits' }), h('div', { class: 'sa-gift-amount' }, amount, quick)),
+      plan, give, note));
+  return section;
+}
+
 export async function render(ctx, route, root) {
   document.title = 'Owner tools · AGI Studio';
   const body = h('div', { class: 'sa-owner' });
+  const gift = giftSection(ctx);
   add(root, h('header', { class: 'sa-page-head' },
     h('p', { class: 'sa-eyebrow', text: 'Only your wallet sees this' }),
     h('h1', { class: 'sa-display sa-page-title', tabindex: '-1', text: 'Owner tools' }),
-    h('p', { class: 'sa-muted', text: 'Trend clips and example pictures (made once by the AI service from your own balance), the spotlight of the week, and reports.' })), body);
+    h('p', { class: 'sa-muted', text: 'Credits for testing, trend clips and example pictures (made once by the AI service from your own balance), the spotlight of the week, and reports.' })), gift, body);
   let data = null, loading = false, timer = null;
   const tried = new Set();
   // the weeks' prize boxes keep what the owner typed across redraws
@@ -33,12 +135,17 @@ export async function render(ctx, route, root) {
 
   async function load() {
     if (loading) return;
-    if (!ctx.session) { put(body, h('p', { class: 'sa-banner', text: 'Connect the owner\'s wallet to see this page.' })); return; }
+    if (!ctx.session) { gift.hidden = true; put(body, h('p', { class: 'sa-banner', text: 'Connect the owner\'s wallet to see this page.' })); return; }
     loading = true;
     const r = await ctx.act('inf-owner');
     loading = false;
     if (!ctx.alive()) return;
-    if (!r.ok) { put(body, h('p', { class: 'sa-banner', text: r.data?.error === 'not_owner' ? 'Only the owner\'s wallet sees this page.' : errorText(r.data?.error) })); return; }
+    if (!r.ok) {
+      gift.hidden = true;
+      put(body, h('p', { class: 'sa-banner', text: r.data?.error === 'not_owner' ? 'Only the owner\'s wallet sees this page.' : errorText(r.data?.error) }));
+      return;
+    }
+    gift.hidden = false;
     data = r.data;
     draw();
     clearTimeout(timer);

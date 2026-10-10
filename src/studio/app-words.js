@@ -252,6 +252,9 @@ const ERRORS = {
   failed: 'Nothing went out: try again.',
   not_mine: "That week's spotlight isn't yours.",
   burn_cap: "This month's burn unlocks are all spoken for: try again on the 1st (UTC).",
+  // round 3: the owner's credits for testing
+  gift_credits: 'A whole number of credits, from 1 to 100,000.',
+  gift_to: "That doesn't look like a wallet's address: 0x and 40 letters and numbers.",
   busy: 'Something went wrong on our side: try again in a minute.',
 };
 export const errorText = (why) => ERRORS[why] || ERRORS.busy;
@@ -275,6 +278,21 @@ export function topupCheckText(r) {
   return r.source === 'explorer'
     ? "No new payment from your wallet found yet. It can take a minute to show up: check again, or paste the transaction's link."
     : 'Nothing counted.';
+}
+
+// ---------- the owner's credits for testing (round 3: the owner's page) ----------
+// the amounts offered first (any whole number from 1 to 100,000 can be typed)
+export const GIFT_AMOUNTS = [1000, 5000, 20000];
+export const GIFT_MAX = 100_000;
+// from this many, the button asks for a second tap (a typo of a zero costs real AI money later)
+export const GIFT_CONFIRM = 20_000;
+// What a gift will do, before it's given: "1,000 credits: about $10 of AI, paid from your AI balance as they're used."
+export const giftPlanText = (n) => `${creditsText(n)}: about ${usd(n)} of AI, paid from your own AI balance as they're used.`;
+// …and what it did (server/inf-api.js inf-gift: { gave, self, to, allowed })
+export function giftText({ gave, self, to, allowed }) {
+  const line = `Added ${creditsText(gave)} to ${self ? 'your wallet' : shortAddress(to)} 💜`;
+  if (allowed === false) return `${line} While AGI Studio is private, that wallet can't use them yet: add it to STUDIO_ONLY_FOR in Vercel, then Redeploy.`;
+  return line;
 }
 
 // ---------- burns (round 2: a free 3D model, one more influencer, a boost in Explore) ----------

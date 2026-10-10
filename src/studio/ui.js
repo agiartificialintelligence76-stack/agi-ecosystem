@@ -56,6 +56,9 @@ const ICONS = {
   close: ['M6 6l12 12M18 6 6 18'],
   back: ['M15 5 8 12l7 7'],
   next: ['m9 5 7 7-7 7'],
+  up: ['m6 15 6-6 6 6'],
+  down: ['m6 9 6 6 6-6'],
+  sliders: ['M4 7h9M17 7h3M4 17h3M11 17h9', 'M15 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM9 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'],
   eye: ['M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z'],
   eyeOff: ['M4 4l16 16', 'M9.9 5.8c.7-.2 1.4-.3 2.1-.3 6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3 3.7M6.6 6.9C4 8.6 2.5 12 2.5 12S6 18.5 12 18.5c1.8 0 3.3-.5 4.6-1.3'],
   wallet: ['M4 7.5h15a1 1 0 0 1 1 1V19H5a1 1 0 0 1-1-1V7.5Z', 'M4 7.5 16 4v3.5', 'M16 13.2h.01'],
@@ -169,6 +172,26 @@ export function chips({ name, legend, choices, value = null, onchange = null, hi
         box.classList.toggle('is-empty', !url);
       }
     },
+  };
+}
+
+// ---------- a segmented control: a few radio buttons side by side (round 3: the pro tool layout's mode switch) ----------
+// segmented({ legend, choices: [[value, label, icon?]], value, onchange, showLegend }) → { node, value, set(v) }
+export function segmented({ legend, choices, value = null, onchange = null, cls = '', showLegend = false }) {
+  const set = h('fieldset', { class: `sa-seg ${cls}`.trim() }, h('legend', { class: showLegend ? 'sa-label' : 'sa-sr', text: legend }));
+  const row = h('div', { class: 'sa-seg-row' });
+  const groupName = nextId('seg');
+  for (const [v, label, ic = null] of choices) {
+    const id = nextId('seg');
+    const input = h('input', { type: 'radio', class: 'sa-seg-input', name: groupName, id, value: v, checked: v === value });
+    input.addEventListener('change', () => { if (input.checked) onchange?.(v); });
+    row.append(h('span', { class: 'sa-seg-opt' }, input, h('label', { for: id }, ic ? icon(ic) : null, h('span', { text: label }))));
+  }
+  set.append(row);
+  return {
+    node: set,
+    get value() { return set.querySelector('input:checked')?.value ?? null; },
+    set(v) { for (const i of set.querySelectorAll('input')) i.checked = i.value === v; },
   };
 }
 

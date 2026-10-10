@@ -239,6 +239,15 @@ function database() {
       this.log.push({ wallet_code: p_wallet, kind: 'topup', amount: p_cents, ref: p_tx });
       return ok({ paid: x.paid });
     },
+    // (round 3) the owner's gift: like bought credits, once per its ref
+    inf_gift({ p_wallet, p_credits, p_ref }) {
+      if (!code(p_wallet) || !(Number.isInteger(p_credits) && p_credits >= 1 && p_credits <= 100000) || !ID.test(String(p_ref))) return no('bad');
+      if (this.log.some((l) => l.kind === 'gift' && l.ref === p_ref)) return no('taken');
+      this.log.push({ wallet_code: p_wallet, kind: 'gift', amount: p_credits, paid_part: p_credits, free_part: 0, month: thisMonth(), ref: p_ref });
+      const x = this.cred(p_wallet);
+      x.paid = Math.min(x.paid + p_credits, 1e8);
+      return ok({ paid: x.paid });
+    },
     inf_free({ p_wallet, p_amount, p_cap }) {
       if (!code(p_wallet) || !(p_cap >= 0)) return { granted: false, why: 'bad', free: 0 };
       if (!(p_amount > 0 && p_amount <= 100000)) return { granted: false, why: 'level', free: 0 };
@@ -3019,6 +3028,98 @@ test('shown in Explore or not, and deleting it: off every page at once, what was
 });
 
 // ---------- reports and the owner's tools ----------
+test("the owner's credits for testing (round 3): free, to the owner's own wallet or a tester's, only the owner, 1 to 100,000, spent and given back like bought ones", async () => {
+  const boss = (extra) => act('inf-gift', extra, { wallet: BOSS });
+  // only the owner's wallet (STUDIO_OWNER)
+  let r = await act('inf-gift', { to: 'me', credits: 1000 });
+  assert.deepEqual([r.status, r.body.error], [403, 'not_owner']);
+  r = await act('inf-gift', { to: WALLET, credits: 1000 }, { wallet: OTHER });
+  assert.deepEqual([r.status, r.body.error], [403, 'not_owner']);
+  assert.deepEqual([credits().paid, credits(OTHER).paid], [0, 0]);
+  // to the owner's own wallet: its credits come back with it (the page's pill follows them)
+  r = await boss({ to: 'me', credits: 5000 });
+  assert.equal(r.status, 200);
+  assert.deepEqual([r.body.ok, r.body.gave, r.body.self, r.body.to, r.body.allowed], [true, 5000, true, BOSS, true]);
+  assert.deepEqual(r.body.credits, { paid: 5000, free: 0, total: 5000 });
+  let sent = dbCalls('inf_gift').at(-1);
+  assert.deepEqual([sent.p_wallet, sent.p_credits], [codeOf(BOSS), 5000]);
+  assert.match(sent.p_ref, ID);
+  assert.ok(!JSON.stringify(dbCalls('inf_gift')).includes(BOSS.slice(2)), 'never the address in the database');
+  // each gift its own (a second one adds; its ref is new)
+  r = await boss({ to: 'me', credits: 1 });
+  assert.equal(r.body.credits.total, 5001);
+  assert.notEqual(dbCalls('inf_gift')[0].p_ref, dbCalls('inf_gift')[1].p_ref);
+  assert.deepEqual(fake.db.log.filter((l) => l.kind === 'gift').map((l) => [l.wallet_code, l.amount, l.paid_part]), [[codeOf(BOSS), 5000, 5000], [codeOf(BOSS), 1, 1]]);
+  // to a tester's wallet (its address, in any case: the same scrambled code): no credits in the answer (they're not the owner's)
+  r = await boss({ to: ` ${WALLET.toUpperCase().replace('0X', '0x')} `, credits: 20_000 });
+  assert.deepEqual([r.status, r.body.gave, r.body.self, r.body.to, r.body.allowed, r.body.credits], [200, 20_000, false, WALLET, true, undefined]);
+  assert.equal(dbCalls('inf_gift').at(-1).p_wallet, codeOf(WALLET));
+  assert.deepEqual([credits().paid, credits(BOSS).paid], [20_000, 5001]);
+  r = await act('inf-me');
+  assert.deepEqual(r.body.credits, { paid: 20_000, free: 0, total: 20_000 }, "the tester's own credits");
+  // spent like bought ones (an influencer), and given back the same way when it couldn't be made
+  r = await act('inf-start', { name: 'Nova', mode: 'design', style: 'anime', settings: { look: 'feminine', age: '20s' }, adult: true, turnstileToken: 'tok' });
+  assert.equal(r.status, 200);
+  assert.equal(credits().paid, 20_000 - R.PRICES.influencer);
+  assert.equal(fake.db.refund(r.body.job), true);
+  assert.equal(credits().paid, 20_000);
+  // what can't be given: not a whole number from 1 to 100,000, not a wallet's address (nor nobody's: the zero and burn addresses)
+  const before = dbCalls('inf_gift').length;
+  infActBurst.reset();
+  for (const credits of [0, -5, 100_001, 1.5, '1000', null, undefined, 1e9, Number.NaN]) {
+    r = await boss({ to: 'me', credits });
+    assert.deepEqual([r.status, r.body.error], [400, 'gift_credits'], String(credits));
+  }
+  for (const to of ['', 'you', '0x123', `${WALLET}0`, WALLET.slice(2), '0x0000000000000000000000000000000000000000', DEAD, 42, null, { to: WALLET }]) {
+    r = await boss({ to, credits: 1000 });
+    assert.deepEqual([r.status, r.body.error], [400, 'gift_to'], JSON.stringify(to));
+  }
+  assert.equal(dbCalls('inf_gift').length, before, 'nothing asked of the database for those');
+  infActBurst.reset();
+  // while AGI Studio is private: a tester not on STUDIO_ONLY_FOR gets them, and the page is told it can't use them yet
+  process.env.STUDIO_OPEN = '';
+  process.env.STUDIO_ONLY_FOR = `${BOSS},${OTHER}`;
+  r = await boss({ to: WALLET, credits: 1000 });
+  assert.deepEqual([r.status, r.body.allowed], [200, false]);
+  r = await boss({ to: OTHER, credits: 1000 });
+  assert.deepEqual([r.status, r.body.allowed], [200, true]);
+  r = await boss({ to: 'me', credits: 1000 });
+  assert.deepEqual([r.status, r.body.allowed], [200, true]);
+  // influencers.sql not run again since round 3: a 503 that names the fix in the log (once), nothing given
+  fake.missing.add('inf_gift');
+  r = await boss({ to: 'me', credits: 1000 });
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  assert.ok(logs.some((l) => /inf_gift not found: run supabase\/influencers\.sql again in this Supabase project \(its round 3, the owner's credits; it ends with influencers_ready = 1\)/.test(l)));
+  fake.missing.clear();
+  // the database refusing it (a gift's ref already there: never, as its ref is new each time): something went wrong, nothing added
+  const was = credits(BOSS).paid;
+  const real = fake.db.inf_gift;
+  fake.db.inf_gift = () => ({ ok: false, why: 'taken' });
+  r = await boss({ to: 'me', credits: 1000 });
+  assert.deepEqual([r.status, r.body.error, credits(BOSS).paid], [503, 'busy', was]);
+  fake.db.inf_gift = real;
+  // a speed bump like the owner's other tools that ask for work: 20 a minute per visitor
+  infActBurst.reset();
+  for (let n = 0; n < 20; n++) await boss({ to: 'me', credits: 1 });
+  r = await boss({ to: 'me', credits: 1 });
+  assert.deepEqual([r.status, r.body.error], [429, 'too_fast']);
+  infActBurst.reset();
+  // the page's words
+  assert.equal(AW.giftPlanText(1000), '1,000 credits: about $10 of AI, paid from your own AI balance as they\'re used.');
+  assert.equal(AW.giftText({ gave: 5000, self: true, to: BOSS, allowed: true }), 'Added 5,000 credits to your wallet 💜');
+  assert.equal(AW.giftText({ gave: 20_000, self: false, to: WALLET, allowed: true }), `Added 20,000 credits to ${AW.shortAddress(WALLET)} 💜`);
+  assert.match(AW.giftText({ gave: 1, self: false, to: WALLET, allowed: false }), /^Added 1 credit to 0x8ba1…ba72 💜 While AGI Studio is private, that wallet can't use them yet: add it to STUDIO_ONLY_FOR in Vercel, then Redeploy\.$/);
+  assert.deepEqual([AW.GIFT_MAX, AW.GIFT_CONFIRM, AW.GIFT_AMOUNTS], [100_000, 20_000, [1000, 5000, 20_000]]);
+  for (const why of ['gift_credits', 'gift_to']) assert.notEqual(AW.errorText(why), AW.errorText('busy'), why);
+  // the owner's page: the section, drawn once (what's typed survives the page's redraws), its second tap for big gifts
+  const owner = read('src/studio/views/owner.js');
+  assert.match(owner, /export function giftSection\(ctx\)/);
+  assert.match(owner, /const gift = giftSection\(ctx\);[\s\S]*?\)\), gift, body\);/, 'outside the part the page redraws');
+  assert.match(owner, /if \(n >= GIFT_CONFIRM && armed !== n\)/);
+  assert.match(owner, /ctx\.act\('inf-gift', \{ to, credits: n \}\)/);
+  assert.match(owner, /What they make is paid from your own AI balance, like everything here\. Credits have no cash value\./);
+});
+
 test("reports (anyone: the human check, never an address or an IP, 10 a day) and the owner's page: reports, taking down, its trend moves", async () => {
   const a = await readyInf({ name: 'Nova' });
   const v = await doneJob(a.id, 'video');
@@ -3057,9 +3158,10 @@ test("reports (anyone: the human check, never an address or an IP, 10 a day) and
   // the owner's page: only the owner's wallet (STUDIO_OWNER)
   r = await act('inf-owner');
   assert.deepEqual([r.status, r.body.error], [403, 'not_owner']);
-  for (const action of ['trend-make', 'trend-set', 'inf-hide', 'inf-report-clear', 'inf-example-make', 'inf-week-set']) {
-    assert.equal((await act(action, { trend: 'golden-flip', inf: a.id })).status, 403, action);
+  for (const action of ['trend-make', 'trend-set', 'inf-hide', 'inf-report-clear', 'inf-example-make', 'inf-week-set', 'inf-gift']) {
+    assert.equal((await act(action, { trend: 'golden-flip', inf: a.id, to: 'me', credits: 1000 })).status, 403, action);
   }
+  assert.equal(credits().paid, 0, 'nothing given to a wallet that asked for it itself');
   const boss = (action, extra = {}) => act(action, extra, { wallet: BOSS });
   r = await boss('inf-owner');
   assert.equal(r.status, 200);
@@ -4227,7 +4329,7 @@ function rpcCalls(code) {
 test("influencers.sql's promises: every function our server calls is there with the parameters it sends, only the server's key, RLS on, never an address or an IP", async () => {
   const sql = read('supabase/influencers.sql');
   const fns = sqlFunctions(sql);
-  assert.equal(fns.size, 59);
+  assert.equal(fns.size, 60);
   const known = new Map([...fns, ...sqlFunctions(read('supabase/studio.sql'))]);
   const files = ['server/influencer.js', 'server/inf-api.js', 'server/inf-jobs.js', 'server/inf-uploads.js', 'server/credits.js',
     'server/inf-week.js', 'server/inf-burns.js', 'server/inf-mark.js'];
@@ -4266,13 +4368,17 @@ test("influencers.sql's promises: every function our server calls is there with 
   assert.doesNotMatch(code, /\b(?:wallet|address|wallet_address|tx|tx_hash|transaction|ip|ip_address)\s+(?:text|inet|varchar|bytea)\b/i);
   assert.match(code, /wallet_code\s+text/);
   assert.doesNotMatch(code, /drop table|truncate|delete from public\.agi1_studio/i);
-  assert.match(sql, /'inf_burns_open', 'inf_slots', 'inf_stats'\)\) = 59 then 1 else 0 end\)/, 'influencers_ready counts its 59 functions');
+  assert.match(sql, /'inf_burns_open', 'inf_slots', 'inf_stats', 'inf_gift'\)\) = 60 then 1 else 0 end\)/, 'influencers_ready counts its 60 functions');
+  // (round 3) the owner's gifts: a kind of their own in the credits' log (the older check dropped first), counted by the check
+  assert.match(sql, /kind\s+text\s+not null check \(kind in \('topup', 'spend', 'refund', 'free', 'gift'\)\)/);
+  assert.match(sql, /alter table public\.agi1_credit_log drop constraint if exists agi1_credit_log_kind_check;\nalter table public\.agi1_credit_log add constraint agi1_credit_log_kind_check check \(kind in \('topup', 'spend', 'refund', 'free', 'gift'\)\);/);
+  assert.match(sql, /conname = 'agi1_credit_log_kind_check' and pg_get_constraintdef\(oid\) like '%gift%'\) then 1 else 0 end\)\n    as influencers_ready;/);
   for (const fn of fns.keys()) assert.match(sql.slice(sql.indexOf('as influencers_ready') - 2500), new RegExp(`'${fn}'`), `influencers_ready counts ${fn}`);
   // the server's words when it isn't run yet: every one of its functions names the file
   const limits = read('server/limits.js');
   const part = limits.slice(limits.indexOf('AGI Studio, the AI influencer app'), limits.indexOf('CloakMesh'));
   const lists = [...part.matchAll(/for \(const fn of \[([\s\S]*?)\]\)/g)];
-  assert.equal(lists.length, 2, 'its first version, and its round 2 (run again)');
+  assert.equal(lists.length, 3, 'its first version, its round 2 and its round 3 (run again)');
   assert.deepEqual(lists.flatMap((l) => [...l[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1])).sort(), [...fns.keys()].sort());
   assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(its round 2; it ends with influencers_ready = 1\)/);
   fake.missing.add('inf_get');

@@ -306,16 +306,19 @@ function renderBar() {
   if (!slot) return;
   const s = state.session;
   if (!s) {
-    const b = btn('Connect', { kind: 'primary', size: 'sm', icon: 'wallet' });
+    const b = btn('Connect wallet', { kind: 'primary', size: 'sm', icon: 'wallet' });
     b.addEventListener('click', () => connect());
     put(slot, b);
     return;
   }
+  // (round 3) the credits pill with its own +: what you have (a tap: My studio), and buying more right there
   const pill = h('a', { class: 'sa-pill', href: href('/me'), dataset: { saLink: '' }, 'aria-label': `${creditsText(credits())}: my studio` },
     icon('bolt'), h('span', { text: state.me ? num(credits()) : '…' }));
+  const plus = h('button', { type: 'button', class: 'sa-pill-plus', 'aria-label': 'Buy credits' }, icon('plus'));
+  plus.addEventListener('click', () => buyCredits());
   const who = h('a', { class: 'sa-me-btn', href: href('/me'), dataset: { saLink: '' }, 'aria-label': `My studio: ${shortAddress(s.wallet)}, ${LEVEL_NAMES[s.level] || LEVEL_NAMES[1]}` },
     h('span', { class: `sa-dot sa-lvl-${s.level}`, 'aria-hidden': 'true' }), h('span', { class: 'sa-me-addr', text: shortAddress(s.wallet) }));
-  put(slot, pill, who);
+  put(slot, h('div', { class: 'sa-credits' }, pill, plus), who);
 }
 function markNav(view) {
   const tab = { explore: 'explore', create: 'create', me: 'me', influencer: null, model: null, owner: 'me', missing: null }[view];
@@ -342,6 +345,7 @@ async function show({ focus = false } = {}) {
   const route = parseRoute(location.pathname, location.search);
   const root = $('[data-sa-view]');
   put(root);
+  root.className = 'sa-view';
   root.dataset.view = route.view;
   markNav(route.view);
   const stops = [];

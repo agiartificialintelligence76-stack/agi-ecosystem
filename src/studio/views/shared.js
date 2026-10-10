@@ -85,6 +85,26 @@ export function mediaTile(ctx, item, { onopen, can = true, liked = null, showNam
   return h('div', { class: `sa-media is-${shape}`, id: `v-${item.id}` }, open, likeButton(ctx, { job: item.id, likes: item.likes, liked, can, cls: 'sa-media-heart' }));
 }
 
+// a trend clip's tile plays its clip while the pointer rests on it (a computer's mouse only: never on phones, never by itself)
+const fine = () => matchMedia('(hover: hover) and (pointer: fine)').matches;
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+export function hoverPlay(tile, src) {
+  if (!fine() || calm()) return;
+  let timer = null, video = null;
+  const frame = tile.querySelector('.sa-trend-frame') || tile;
+  tile.addEventListener('pointerenter', () => {
+    timer = setTimeout(() => {
+      video = h('video', { class: 'sa-trend-live', src, muted: true, loop: true, playsinline: true, autoplay: true, preload: 'auto', 'aria-hidden': 'true' });
+      frame.append(video);
+      video.play?.().catch(() => {});
+    }, 220);
+  });
+  tile.addEventListener('pointerleave', () => {
+    clearTimeout(timer);
+    if (video) { video.pause(); video.removeAttribute('src'); video.load(); video.remove(); video = null; }
+  });
+}
+
 // ---------- the trend clips (round 2: real-looking clips your influencer is put into) ----------
 // A trend clip's tile (its poster, else its emoji). onpick: a picker (aria-pressed) or a button that opens its preview
 export function trendTile(t, { onpick = null, selected = null, small = false } = {}) {

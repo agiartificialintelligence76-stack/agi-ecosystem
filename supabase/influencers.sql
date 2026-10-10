@@ -27,7 +27,8 @@
 --                       the owner's trend moves): its words, shape and sound, the credits it cost, where it is at the AI
 --                       service (its request id and the addresses it gave), and once done its files' count and size
 --   agi1_credits        per wallet code: its credits (bought, and this month's free ones)
---   agi1_credit_log     each top-up, spend, refund and free grant (its wallet code, the amount, what it was for)
+--   agi1_credit_log     each top-up, spend, refund and free grant, and (round 3) each gift from the owner (its wallet code,
+--                       the amount, what it was for)
 --   agi1_credit_months  per month: the free credits given out (the whole site's cap)
 --   agi1_inf_uploads    each picture, selfie or clip uploaded: its wallet code, its kind, whether the AI check passed it, a
 --                       clip's length (the files are deleted within 2 days, a selfie or picture as soon as its influencer is
@@ -52,6 +53,11 @@
 --     app, each burn counted once in burns.sql's ledger; agi1_inf_slots: the extra influencers a wallet unlocked) and a free
 --     3D model for a burn (an order in studio.sql, paid like its characters' burns)
 --   • the live stats board's numbers (inf_stats: totals only)
+-- Round 3 (2026-10-10, the owner: "i cant even test it myself i dont have enough credits lol", then "Owner credits button
+-- (Recommended)"). Run this file again (it keeps everything saved). It adds:
+--   • credits the owner gives from the owner's page, free, to the owner's own wallet or a tester's (inf_gift: like bought
+--     ones, they never run out; each gift in agi1_credit_log as kind 'gift'). Nothing is paid to anyone: what they're spent on
+--     is paid from the owner's own AI balance (fal.ai), like everything made here.
 
 -- studio.sql first (its version of 2026-10-10): this file builds on its tables, its months and its payment ledger
 do $do$
@@ -137,7 +143,7 @@ create table if not exists public.agi1_credits (
 create table if not exists public.agi1_credit_log (
   id          bigint      generated always as identity primary key,
   wallet_code text        not null check (char_length(wallet_code) between 16 and 64),
-  kind        text        not null check (kind in ('topup', 'spend', 'refund', 'free')),
+  kind        text        not null check (kind in ('topup', 'spend', 'refund', 'free', 'gift')),
   amount      integer     not null check (amount between 0 and 100000000),
   paid_part   integer     not null default 0 check (paid_part >= 0),
   free_part   integer     not null default 0 check (free_part >= 0),
@@ -270,6 +276,11 @@ create table if not exists public.agi1_inf_slots (
   wallet_code text    primary key check (char_length(wallet_code) between 16 and 64),
   extra       integer not null default 0 check (extra between 0 and 1000)
 );
+
+-- ---------- round 3 (2026-10-10): the owner's gifts of credits ----------
+-- a gift is a kind of its own in the credits' log (an older check, without it, goes first)
+alter table public.agi1_credit_log drop constraint if exists agi1_credit_log_kind_check;
+alter table public.agi1_credit_log add constraint agi1_credit_log_kind_check check (kind in ('topup', 'spend', 'refund', 'free', 'gift'));
 
 -- Row Level Security ON, with no rules: the public (browser) keys can't read or change these tables.
 alter table public.agi1_inf_likes enable row level security;
@@ -419,6 +430,35 @@ begin
   insert into agi1_credit_log (wallet_code, kind, amount, paid_part, free_part, month, ref)
   values (p_wallet, 'free', p_amount, 0, p_amount, m, to_char(m, 'YYYY-MM') || ':' || p_wallet) on conflict (kind, ref) do nothing;
   return json_build_object('granted', true, 'free', p_amount);
+end;
+$$;
+
+-- (round 3) Credits the owner gives (the owner's page: "Credits for testing"), free, to the owner's own wallet or a tester's
+-- (p_wallet: its scrambled code; p_ref: this gift's own id, so a gift counts once). Like bought ones: they never run out, and
+-- what's spent from them is given back the same way when something can't be made. Nothing is paid to anyone; what they're
+-- spent on is paid from the owner's own AI balance. Only our server calls it, and only for the owner's wallet.
+-- → {"ok": true, "paid"} or {"ok": false, "why": "taken" | "bad"}
+create or replace function public.inf_gift(p_wallet text, p_credits integer, p_ref text)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  v integer;
+begin
+  if p_wallet is null or char_length(p_wallet) not between 16 and 64 or p_credits is null or p_credits not between 1 and 100000
+     or p_ref is null or p_ref !~ '^[A-Za-z0-9_-]{22}$' then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  begin
+    insert into agi1_credit_log (wallet_code, kind, amount, paid_part, free_part, ref)
+    values (p_wallet, 'gift', p_credits, p_credits, 0, p_ref);
+  exception when unique_violation then
+    return json_build_object('ok', false, 'why', 'taken');
+  end;
+  insert into agi1_credits (wallet_code) values (p_wallet) on conflict (wallet_code) do nothing;
+  update agi1_credits set paid = least(paid + p_credits, 100000000), updated_at = now() where wallet_code = p_wallet returning paid into v;
+  return json_build_object('ok', true, 'paid', v);
 end;
 $$;
 
@@ -1755,7 +1795,9 @@ begin
     'inf_week_top(date, text[])', 'inf_week_pick(date)', 'inf_week_set(date, text, bigint)', 'inf_weeks(text, integer)',
     'inf_week_claim(date, text, text)', 'inf_week_sending(date, text)', 'inf_week_sent(date, text, boolean)',
     'inf_burn_quote(text, text, text, text, text, bigint, integer)', 'inf_burn_pay(text, text, text, numeric)', 'inf_burn_get(text)',
-    'inf_burns_open(text)', 'inf_slots(text)', 'inf_stats()'
+    'inf_burns_open(text)', 'inf_slots(text)', 'inf_stats()',
+    -- round 3
+    'inf_gift(text, integer, text)'
   ] loop
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
     execute format('grant execute on function public.%s to service_role', f);
@@ -1766,8 +1808,8 @@ $do$;
 -- Tell Supabase's web API to notice the new functions right away.
 notify pgrst, 'reload schema';
 
--- Check: influencers_ready = 1 (its 59 functions, each exactly once: since round 2 an older inf_start or inf_upload_set left
--- behind would count twice; round 2's new columns; and studio.sql's new parts it builds on)
+-- Check: influencers_ready = 1 (its 60 functions, each exactly once: since round 2 an older inf_start or inf_upload_set left
+-- behind would count twice; round 2's new columns; round 3's gifts in the credits' log; and studio.sql's new parts it builds on)
 select
   (case when (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('inf_credits', 'inf_spend', 'inf_refund',
     'inf_topup', 'inf_free', 'inf_upload_open', 'inf_upload_get', 'inf_upload_set', 'inf_day_take', 'inf_start', 'inf_get', 'inf_pick',
@@ -1777,11 +1819,13 @@ select
     'inf_report_clear', 'inf_tidy',
     'inf_3d_burn', 'inf_example_make', 'inf_examples', 'inf_mark_take', 'inf_mark_done', 'inf_like', 'inf_liked', 'inf_week_top',
     'inf_week_pick', 'inf_week_set', 'inf_weeks', 'inf_week_claim', 'inf_week_sending', 'inf_week_sent', 'inf_burn_quote',
-    'inf_burn_pay', 'inf_burn_get', 'inf_burns_open', 'inf_slots', 'inf_stats')) = 59 then 1 else 0 end)
+    'inf_burn_pay', 'inf_burn_get', 'inf_burns_open', 'inf_slots', 'inf_stats', 'inf_gift')) = 60 then 1 else 0 end)
     * (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_studio_orders'
         and column_name = 'image_path') then 1 else 0 end)
     * (case when (select count(*) from information_schema.columns where table_schema = 'public'
         and ((table_name = 'agi1_inf' and column_name in ('real', 'boost_until'))
           or (table_name = 'agi1_inf_uploads' and column_name = 'real')
           or (table_name = 'agi1_inf_jobs' and column_name in ('example', 'marked', 'mark_tries', 'mark_at', 'likes')))) = 8 then 1 else 0 end)
+    * (case when exists (select 1 from pg_constraint where conrelid = 'public.agi1_credit_log'::regclass
+        and conname = 'agi1_credit_log_kind_check' and pg_get_constraintdef(oid) like '%gift%') then 1 else 0 end)
     as influencers_ready;
