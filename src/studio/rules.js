@@ -203,6 +203,14 @@ export const TRENDS = [
     sound: 'fireworks booming and crackling, a faint cheering crowd and a cinematic swell' },
 ];
 export const trendOf = (id) => TRENDS.find((t) => t.id === id) || null;
+// (2026-10-11, the owner: "they can copy prompt from the trends") a trend clip's prompt as words anyone can copy and use in
+// their own tools: its scene, its camera and its sound (the sound left out when it wouldn't fit a scene's box, SCENE_MAX)
+export function trendPrompt(t) {
+  if (!t?.scene || !t.camera) return '';
+  const base = `${t.scene[0].toUpperCase()}${t.scene.slice(1)}. Camera: ${t.camera}.`;
+  const full = t.sound ? `${base} Sound: ${t.sound}.` : base;
+  return [...full].length <= SCENE_MAX ? full : base;
+}
 
 // Their own clip for a trend video (round 2: their influencer put into it, in place of its person): 3 to 10 seconds (the video
 // model takes 3 to 10.05), an MP4 or MOV, up to 30 MB, 720 to 2160 pixels on each side, 24 to 60 frames a second (the video

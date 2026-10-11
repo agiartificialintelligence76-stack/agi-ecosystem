@@ -1937,3 +1937,10 @@ a.sa-maker-name:hover { text-decoration: underline; }
 .sa-tip > p { margin: 0; flex: 1 1 200px; }
 .sa-tip-x { flex: none; width: 32px; height: 32px; border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer; font-size: 15px; }
 .sa-tip-x:hover { background: rgba(255, 255, 255, .08); }
+
+/* (2026-10-11, the owner: "they can copy prompt from the trends") the words something was made from, with "Copy prompt":
+   a trend clip's sheet, a photo or a video seen big */
+.sa-prompt { margin: 12px 0 0; padding: 11px 13px 12px; border: 1px solid var(--sa-line-2); border-radius: var(--sa-r); background: var(--sa-surface); }
+.sa-prompt-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 6px; }
+.sa-prompt-label { font-size: 12.5px; font-weight: 600; color: var(--sa-text-2); }
+.sa-prompt-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--sa-text); overflow-wrap: anywhere; }

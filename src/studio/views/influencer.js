@@ -9,7 +9,7 @@
 // takes the posters of its new videos (a frame, here).
 import { h, icon, btn, linkBtn, sheet, segmented, chips, cardPick, say, busy, pic, copyText, nextId, put, add } from '../ui.js';
 import {
-  infPic, infVideo, fileUrl, trendOf, creditsText, SHAPES, PHOTO_SHAPES, BANNER, SCENE_MIN, SCENE_MAX, INF_STYLES, CLIP, clankProfileUrl,
+  infPic, infVideo, fileUrl, trendOf, trendPrompt, creditsText, SHAPES, PHOTO_SHAPES, BANNER, SCENE_MIN, SCENE_MAX, INF_STYLES, CLIP, clankProfileUrl,
   PHOTO_MODELS, PHOTO_QUALITY, VIDEO_MODELS, ANIME_QUALITY, MEMES, MEME_LINE_MAX, REFS, photoCredits, videoCredits, videoPlan, jobPlan,
   jobStep, startPhotos,
 } from '../rules.js';
@@ -1034,9 +1034,19 @@ export async function render(ctx, route, root) {
     const clipPanel = h('div', { class: 'sa-tab-panel', hidden: true });
     // the trend clips (the owner's, made with AI once: a made-up person, its camera move and its sound)
     const about = h('p', { class: 'sa-ws-hint', hidden: true });
+    // (2026-10-11) the picked clip's prompt, to copy (and use in a video of your own)
+    const aboutCopy = btn('Copy its prompt', { kind: 'ghost', size: 'sm', icon: 'copy' });
+    aboutCopy.hidden = true;
+    aboutCopy.addEventListener('click', async () => {
+      const t = trendOf(st.trend);
+      if (!t) return;
+      const copied = await copyText(trendPrompt(t));
+      ctx.toast(copied ? 'Prompt copied: paste it into Video, or any of your tools' : "Couldn't copy it here: open the clip in Explore to see its prompt", copied ? 'good' : 'info');
+    });
     const showAbout = () => {
       const t = trendOf(st.trend);
       say(about, t ? `${t.emoji} ${t.name}: ${t.camera}, with its own sound.` : '');
+      aboutCopy.hidden = !t;
     };
     add(movesPanel, h('p', { class: 'sa-ws-hint', text: 'Loading the clips…' }));
     ctx.exploreData().then((data) => {
@@ -1046,7 +1056,7 @@ export async function render(ctx, route, root) {
       const grid = h('div', { class: 'sa-trend-grid' });
       const fill = () => put(grid, ...list.map((t) => trendTile(t, { selected: st.trend === t.id, small: true, onpick: (x) => { st.trend = x.id; say(msg, ''); fill(); showAbout(); } })));
       fill();
-      put(movesPanel, grid, about, h('p', { class: 'sa-fine', text: 'Made-up people in our own clips: your influencer takes their place.' }));
+      put(movesPanel, grid, about, aboutCopy, h('p', { class: 'sa-fine', text: 'Made-up people in our own clips: your influencer takes their place.' }));
       showAbout();
     });
     // their own clip: 3 to 10 s, 720 to 2160 px a side, checked as it's sent

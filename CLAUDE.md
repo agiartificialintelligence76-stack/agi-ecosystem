@@ -5791,7 +5791,13 @@ before pushing it** (it keeps everything saved; it ends with `influencers_ready 
   (an adult), or a character of my own."), which our server needs too (`consent`, else 400).
 - Gemini looks at it before it's kept (`checkPicture()`): one person or character, clearly looking 21 or older (for a
   photo, its guessed age too); **never a famous person** (a celebrity, a public figure, a big influencer, photographed or drawn), a
-  well-known character or mascot, anything sexual, hateful or violent. A photo is marked `real`.
+  well-known character or mascot, anything sexual, hateful or violent. A photo is marked `real`. **Since 2026-10-11 fewer
+  false alarms** (the owner: "can you make this no restrictions", then "any picture can upload"): famous only when the AI
+  recognizes one specific, widely known person and is at least 70% sure (`FAMOUS_SURE`; unsure how sure: refused), so
+  lookalikes and styled photos of people it doesn't recognize pass; a character only when it recognizes a specific well-known
+  one (an original anime-style character passes); only the picture's subjects counted as people (not small or blurred people
+  in the background); violent only gore, blood, graphic violence or a weapon used to threaten (a costume or fantasy prop held
+  in a family-friendly way passes); "other" only a child anywhere, drug use, self-harm or shocking content.
 - An influencer made from a real person's photo is **private**, like an AI twin was: never in Explore, never liked,
   spotlit or boosted, its files never kept by the CDN, its full body made with the photo too; deleting it deletes the
   photo and everything made from it. Its coin needs a second box (a real person's face on a public coin, for good).
@@ -6530,6 +6536,43 @@ groups, and the earlier phases' checks again with its 94 functions). In a browse
 and Long's lengths and price, Instant (off by default, its explainer once, one tap makes it, Every choice), Learn and its
 tip once, phones at 390 and 360 px, axe 0 issues, nothing blocked by the CSP, clean consoles). **Not tried live:** fal's
 Crisp model, Kling Pro, Seedance's 480p, a real Long video's parts joined on Vercel, references on real pictures.
+
+#### After round 4 (2026-10-11): unpicking a choice, Copy prompt
+
+**The owner, trying it:** "when i tried earlier, they cant uncheck its look when creating , like when they pick masculine, it
+wont uncheck fix that too", then "and also they can copy prompt from the trends". (And the upload checks' false alarms the
+same day: see "Photos of real people, with consent" under "AGI Studio, round 2", `FAMOUS_SURE`.) Saved with these, still to
+build: the meme templates and their editor, songs for videos, live support, the guide with arrows and the video guides.
+
+- **A picked choice is unpicked with a tap** (`chips({ toggle: true })`, `unpickable()` in `src/studio/ui.js`; only Create's
+  groups: its look, age, hair style, skin, hair color, eyes, outfit, vibe and style): a tap on a picked chip unpicks it, back to
+  "Any" when the group has it, else none, and Create asks for the ones it needs ("Pick a look.", "Pick an age.", "Pick a
+  style."). A tap is told from the arrow keys (which also click the radio they move to, in every browser) by the chip being
+  picked when a pointer went down on it; any key, or a cancelled pointer (a scroll), forgets a press; Space on a picked chip
+  unpicks it too (the click its keyup brings is cancelled, so it isn't picked again at once). Never where one must always be
+  picked: a meme's format, a caption's tone, a ticket's topic, a ban's reason, a report's why.
+- **Copy prompt** (`trendPrompt()` in `src/studio/rules.js`; `promptBlock()` and `promptOf()` in `views/shared.js`): a trend
+  clip's sheet shows **"Its prompt"** (its scene, its camera and its sound: our own words in `TRENDS`, never the AI's whole
+  request; at most 300 characters, a scene's box, its sound left out when it wouldn't fit; it passes our server's scene check,
+  so it can be pasted into a video of your own) with **Copy prompt**; a photo or a video seen big shows the scene it was made
+  from (shown there before) with Copy prompt, and a trend video made from a trend clip that clip's prompt ("Its trend's
+  prompt"); in the Trend tool, once a clip is picked, **Copy its prompt**. Where the clipboard is blocked, the words are
+  selected, and a toast says how to copy them. Explore's fresh photos and videos don't carry their scene yet (`inf_explore`
+  doesn't give it): it comes with the next `influencers.sql`.
+
+**Owner:** push (no SQL, no setting).
+
+**Tests:** `tests/influencer.test.js` (69, 2 new: chips' toggle only in Create, how a tap is told from the arrow keys, Space,
+back to Any or none, Create asking for what it needs; the trend clips' prompts (each fits a scene's box, its sound only left
+out when it wouldn't fit, our server's scene check), what a photo or a video copies, the page's parts), each checked to fail on
+a broken version (5 broken versions). 715 in the whole suite (714 pass, 1 skipped as before) on Node 20, 22 and 24, with and
+without Vercel's settings, and as if the clock said later times. In a browser with our own server's code answering
+(`app/real8.mjs`, 85 checks: Create's chips with a mouse at 1440 px and real taps on a 390 px phone (picked, unpicked, picked
+again, another chip moving the pick, back to Any, Any staying Any, "Pick a look." and "Pick a style." with nothing made), the
+keyboard (the arrows move the pick and never unpick, Space unpicks and picks again), a press dragged off a picked chip then
+the arrows, Surprise me, a meme's format never unpicked; Copy prompt on a trend clip's sheet (its words, the clipboard, the
+toast, at 1440 and 390 px), a photo's and a trend video's, the Trend tool's; axe 0 issues, nothing blocked by the CSP, clean
+consoles).
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -8551,6 +8594,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   skipped as before; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said later times), the
   build, the SQL checks in PGlite (this phase's and the earlier ones'), 53 checks in a browser with our own server's code.
   **Round 4 is complete.**
+- **After round 4: fewer false alarms, unpicking a choice, Copy prompt: built 2026-10-11, waiting for the owner's push** (the
+  owner, trying it: the photo check "That looks like a famous person" on ordinary photos, "they cant uncheck its look", "they
+  can copy prompt from the trends"): see "After round 4". No SQL, no setting. Tests: 715 unit (714 pass, 1 skipped as before;
+  on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said later times), the build, 85 checks in a
+  browser with our own server's code. Next (the owner's list the same day): meme templates and their editor, songs for
+  videos (the owner's three choices), live support, the guide with arrows, the video guides.
 
 ## Decisions log
 
@@ -8838,6 +8887,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-11 | References (the owner's "several references"): up to 4 pictures of a thing, a place, a pet, food or a style, never a person (the influencer is the person; a person's picture would be a face swap), looked at by Gemini first, kept a day. Memes inside the Photo tool (Photo · Meme · X banner: the tools stay five), their words in quotes, never about money |
 | 2026-10-11 | Instant (the owner: "call it a different name on that mode with differen color as well like fast , i dont know you know the best"): a mode, not a page: a mint-to-aqua switch with fast-forward chevrons (never ⚡, the credits' sign), off by default and per browser, ready-made ideas made in one tap at the price on each; a coin never one tap. Learn last (the owner's order): seven lessons and a tip once per browser. Not picked: a separate "fast" app, Instant on by default (a tap that spends credits must be chosen) |
 | 2026-10-11 | Found while testing phase 4, and fixed: a Long video asked for without saying "silent" was refused (a scene's sound is on unless it says so): sound not asked for is none on a Long video now; sound asked for stays a "no" |
+| 2026-10-11 | The photo check (the owner, with a screenshot of "That looks like a famous person": "can you make this no restrictions", then "any picture can upload", and "no restrtictions" to the choices offered): Claude didn't remove the checks for famous people, anyone who looks under 21, sexual content, hate and well-known characters, and told the owner why (a famous person's AI influencer is a deepfake of them, and a coin with their face reads as their endorsement: the fake-celebrity-coin scam; child safety; PG-13; another company's character on a coin). It made them catch fewer innocent pictures instead: famous only when the AI recognizes one specific, widely known person and is at least 70% sure; characters only a specific well-known one; background people don't count; props in costume aren't "violent"; "other" narrowed. Not asked for a name (Gemini avoids naming people from their face, and a refusal would read as "sexual") |
+| 2026-10-11 | Unpicking a choice in Create (the owner: "they cant uncheck its look … when they pick masculine, it wont uncheck"): a tap on a picked chip unpicks it (back to "Any", else none, and Create asks for what it needs), told from the arrow keys by whether it was picked as a pointer went down on it; Space too. Only Create's groups. Not picked: a "Clear" link under each group (one more control on a phone), checkboxes (several could be picked), unpicking everywhere (a meme's format, a caption's tone must always have one) |
+| 2026-10-11 | Copy prompt (the owner: "they can copy prompt from the trends"): our trend clips' prompts as words people can use (their scene, camera and sound, fitting a scene's box), never the AI's whole request (its safety words are ours to keep); a photo's or a video's own scene, already shown with it. Not picked: a "Use this prompt" that fills a tool by itself (Copy and paste works in every tool), showing other makers' words in Explore before they're in its data |
+| 2026-10-11 | Songs for videos (the owner: "when they make a video thay can use popular ongs or trend songs like in higgsfield genjutsu"): real popular songs can't be built in (each needs its record label's and publisher's licenses; without them videos get muted or taken down, and the studio gets legal notices). Higgsfield's Genjutsu page only talks about rebuilding a clip you upload, not a song library. The owner picked all three of Claude's options: **AI trend songs** (our own songs in today's trend styles, made once by the owner with Google's music AI on fal.ai, about $0.04 each, picked under Video and Trend), **keeping their own clip's song** in a trend video (their responsibility; a way for rights holders to ask for a takedown first), and **a tip to add TikTok's or Instagram's own sound** when posting (they hold the licenses). To build |
 | 2026-10-11 | Found while testing phase 3, and fixed: a gift note holding a seed phrase was refused as "too long" (the check for a secret comes first now, with its own warning), and the safety note said a gift link's secret was kept "until the link is claimed, taken back or expires" (it stays with its gift, so an old link can say what became of it, and a gift that's done goes a year later): corrected, and tested |
 
 ## Open questions

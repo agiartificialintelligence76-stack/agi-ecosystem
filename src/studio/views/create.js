@@ -48,11 +48,12 @@ export async function render(ctx, route, root) {
 
   // ---------- its style, outfit, vibe, words, name ----------
   const styleErr = h('p', { class: 'sa-err', role: 'alert', hidden: true });
-  const styleGroup = chips({ legend: 'Style', choices: Object.entries(INF_STYLES), media: true, onchange: () => { st.styleTouched = true; say(styleErr, ''); } });
+  // (2026-10-11) every choice in Create can be unpicked again, a tap on it (chips' toggle): Create then asks for one it needs
+  const styleGroup = chips({ legend: 'Style', choices: Object.entries(INF_STYLES), media: true, toggle: true, onchange: () => { st.styleTouched = true; say(styleErr, ''); } });
   const styleBox = h('section', { class: 'sa-ws-sec', 'aria-label': 'Style' }, styleGroup.node, styleErr);
   const extra = h('section', { class: 'sa-ws-sec', 'aria-label': 'Outfit and vibe' });
   for (const key of EXTRA_KEYS) {
-    groups[key] = chips({ legend: OPTIONS[key].label, choices: [['', 'Any'], ...Object.entries(OPTIONS[key].choices)], value: '', media: true });
+    groups[key] = chips({ legend: OPTIONS[key].label, choices: [['', 'Any'], ...Object.entries(OPTIONS[key].choices)], value: '', media: true, toggle: true });
     add(extra, groups[key].node);
   }
   const words = h('textarea', { class: 'sa-input sa-textarea', id: 'sa-words', rows: 3, maxlength: WORDS_MAX, placeholder: 'For example: freckles, round glasses, a little star tattoo on the wrist' });
@@ -157,7 +158,7 @@ export async function render(ctx, route, root) {
       const swatch = Object.hasOwn(SWATCHES, key);
       const entries = Object.entries(o.choices).map(([v, label]) => [v, label, swatch ? { swatch: SWATCHES[key][v] } : null]);
       const choices = need ? entries : [['', 'Any', null], ...entries];
-      groups[key] = chips({ legend: o.label, choices, value: need ? null : '', media: !swatch, swatches: swatch, onchange: () => say(sourceErr, '') });
+      groups[key] = chips({ legend: o.label, choices, value: need ? null : '', media: !swatch, swatches: swatch, toggle: true, onchange: () => say(sourceErr, '') });
       add(LOOK_KEYS.includes(key) ? box : moreBox, groups[key].node);
     }
     add(box, more);

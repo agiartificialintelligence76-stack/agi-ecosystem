@@ -149,7 +149,10 @@ export const nextId = (p = 'sa') => `${p}-${++uid}`;
 //     later, with .media(value → its address, or null): a choice without one shows a soft tile
 //   swatches: each choice shows its color (look.swatch, a CSS color, set through the style object: never a style attribute,
 //     which the page's CSP refuses); one without a color ("Any") shows every color
-export function chips({ name, legend, choices, value = null, onchange = null, hint = null, cls = '', media = false, swatches = false }) {
+//   toggle (2026-10-11, the owner: "they cant uncheck its look when creating, like when they pick masculine, it wont
+//     uncheck"): a picked chip tapped again is unpicked, back to "Any" when the group has it, else none (Create then asks for
+//     a choice it needs). Only where a group may be left empty: never a choice that must always have one (a shape, a tone)
+export function chips({ name, legend, choices, value = null, onchange = null, hint = null, cls = '', media = false, swatches = false, toggle = false }) {
   const list = Array.isArray(choices) ? choices : Object.entries(choices);
   const kind = media ? ' sa-chips-media' : swatches ? ' sa-chips-swatch' : '';
   const set = h('fieldset', { class: `sa-chips${kind} ${cls}`.trim() });
@@ -175,6 +178,7 @@ export function chips({ name, legend, choices, value = null, onchange = null, hi
     lab.append(h('span', { class: 'sa-chip-text', text: label }));
     row.append(h('span', { class: 'sa-chip' }, input, lab));
   }
+  if (toggle) unpickable(row, onchange);
   set.append(row);
   return {
     node: set,
@@ -193,6 +197,44 @@ export function chips({ name, legend, choices, value = null, onchange = null, hi
       }
     },
   };
+}
+
+// chips' toggle: a picked chip tapped again is unpicked, back to "Any" (the choice whose value is '') when the group has it,
+// else none. A radio clicked when it's picked already stays picked (and says nothing), so a tap is told by the chip being
+// picked when a pointer went down on it: the arrow keys click the radio they move to too, in every browser, and never
+// unpick. Space on a picked chip unpicks it as well (its keyup's click is cancelled, so it isn't picked again at once)
+function unpickable(row, onchange) {
+  let pressed = null; // { input, was }: the chip a pointer went down on, and whether it was picked then
+  let keyed = null; // the chip Space just unpicked
+  const inputs = () => [...row.querySelectorAll('.sa-chip-input')];
+  const unpick = (input) => {
+    const any = inputs().find((i) => i.value === '');
+    input.checked = false;
+    if (any) any.checked = true;
+    onchange?.(any ? '' : null);
+  };
+  row.addEventListener('pointerdown', (e) => {
+    const input = e.target.closest?.('.sa-chip')?.querySelector('.sa-chip-input') || null;
+    pressed = input ? { input, was: input.checked } : null;
+  });
+  row.addEventListener('pointercancel', () => { pressed = null; });
+  row.addEventListener('keydown', (e) => {
+    pressed = null;
+    const input = e.target;
+    if (e.key !== ' ' || !input.matches?.('.sa-chip-input') || !input.checked || input.value === '') return;
+    e.preventDefault();
+    keyed = input;
+    unpick(input);
+  });
+  row.addEventListener('keyup', () => { if (keyed) setTimeout(() => { keyed = null; }); });
+  row.addEventListener('click', (e) => {
+    const input = e.target;
+    if (!input.matches?.('.sa-chip-input')) return; // a label's own click: its radio's comes next
+    if (keyed === input) { e.preventDefault(); return; }
+    const p = pressed;
+    pressed = null;
+    if (p?.input === input && p.was && input.value !== '') unpick(input);
+  });
 }
 
 // ---------- cards to pick one from (round 4, phase 4: the model menu) ----------

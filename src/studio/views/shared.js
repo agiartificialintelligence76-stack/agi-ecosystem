@@ -1,9 +1,10 @@
 // AGI Studio: what more than one view shows or opens: media tiles and their hearts (round 2: likes), a trend clip's tile and
-// preview, a photo or a video seen big, burning $AGI for an unlock (round 2), a report, "are you sure?", and (round 4) captions
-// for a post of one of your own creations.
+// preview, a photo or a video seen big, burning $AGI for an unlock (round 2), a report, "are you sure?", (round 4) captions
+// for a post of one of your own creations, and (2026-10-11) the words something was made from, with "Copy prompt".
 import { h, icon, linkBtn, btn, sheet, pic, chips, segmented, say, busy, copyText, put, add } from '../ui.js';
 import {
-  infPic, infPoster, infVideo, infVideoDl, infPhotoDl, trendOf, creditsText, SHAPES, PHOTO_SHAPES, REPORT_WHYS, CAPTION_PLATFORMS, CAPTION_TONES,
+  infPic, infPoster, infVideo, infVideoDl, infPhotoDl, trendOf, trendPrompt, creditsText, SHAPES, PHOTO_SHAPES, REPORT_WHYS, CAPTION_PLATFORMS,
+  CAPTION_TONES,
 } from '../rules.js';
 import {
   priceOf, shareJobUrl, errorText, compact, likeErrorText, likesText, burnCheckText, shortAddress, num, jobMeta, captionErrorText,
@@ -137,6 +138,8 @@ export function trendSheet(ctx, t) {
   const list = h('div', { class: 'sa-pick-list' });
   add(s.body, h('div', { class: 'sa-trend-stage' }, video),
     about ? h('p', { class: 'sa-muted sa-small', text: `${about.camera[0].toUpperCase()}${about.camera.slice(1)}. Your influencer gets its place, its moves, its light and its sound (about 10 seconds, vertical).` }) : null,
+    // (2026-10-11) its prompt, to copy (and use in a video of your own)
+    about ? promptBlock(ctx, trendPrompt(about), { label: 'Its prompt' }) : null,
     list);
   const fill = () => {
     if (!s.dialog.isConnected) return;
@@ -160,6 +163,22 @@ export function trendSheet(ctx, t) {
   return s;
 }
 
+// ---------- the words something was made from, with "Copy prompt" (2026-10-11, the owner: "they can copy prompt from the
+// trends"): a trend clip's prompt (ours, rules.js), or the scene a photo or a video was made from (already shown with it) ----------
+// promptOf(a photo or a video): its scene, or (a trend video, from one of the trend clips) that clip's prompt; else ''
+export const promptOf = (j) => (j?.scene ? String(j.scene) : j?.kind === 'trend' && j.trend ? trendPrompt(trendOf(j.trend)) : '');
+export function promptBlock(ctx, text, { label = 'Prompt' } = {}) {
+  const words = h('p', { class: 'sa-prompt-text', text });
+  const live = h('span', { class: 'sa-sr', 'aria-live': 'polite' });
+  const copy = btn('Copy prompt', { kind: 'ghost', size: 'sm', icon: 'copy' });
+  copy.addEventListener('click', async () => {
+    const copied = await copyText(text, words);
+    live.textContent = copied ? 'Prompt copied' : 'The prompt is selected: copy it with your keyboard';
+    ctx.toast(copied ? 'Prompt copied: paste it into any of your tools' : 'Selected: press Ctrl+C (⌘C on a Mac) to copy it', copied ? 'good' : 'info');
+  });
+  return h('div', { class: 'sa-prompt' }, h('div', { class: 'sa-prompt-head' }, h('span', { class: 'sa-prompt-label', text: label }), copy), words, live);
+}
+
 // ---------- a done video, played: its influencer, a heart, Download (with the share mark once it's made), Share, Report ----------
 export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCaptions = null }) {
   const s = sheet({ title: name || 'A video', sub: jobMeta(v), size: 'md' });
@@ -169,7 +188,7 @@ export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCa
     ...(v.poster ? { poster: infPoster(inf, v.id) } : {}), 'aria-label': `${name}: an AI-made video`,
   });
   const url = `${location.origin}${ctx.href(`/i/${inf}`)}#v-${v.id}`;
-  add(s.body, h('div', { class: `sa-player-wrap is-${shape}` }, video), v.scene ? h('p', { class: 'sa-muted', text: v.scene }) : null);
+  add(s.body, h('div', { class: `sa-player-wrap is-${shape}` }, video), promptOf(v) ? promptBlock(ctx, promptOf(v), { label: v.scene ? 'Prompt' : 'Its trend\'s prompt' }) : null);
   const foot = [];
   if (ctx.route.view !== 'influencer') foot.push(linkBtn(`See ${name}`, ctx.href(`/i/${inf}`), { kind: 'primary', dataset: { saLink: '' } }));
   if (!priv) foot.push(likeButton(ctx, { job: v.id, likes: v.likes, can: !mine, cls: 'sa-heart-lg', fresh: false }));
@@ -200,7 +219,7 @@ export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind
   const memeWords = kind === 'photo' && j.meme && j.caption ? String(j.caption).split('\n').join(' / ') : null;
   const big = pic(infPic(inf, j.id, 0), { cls: `sa-big-pic is-${shape}`, alt: `${name}: ${kind === 'body' ? 'full body' : banner ? `an X banner${j.scene ? `, ${j.scene}` : ''}` : memeWords ? `a meme that says “${memeWords}”` : j.scene || 'a photo'}`, lazy: false });
   add(s.body, h('div', { class: `sa-big-wrap${banner ? ' is-banner' : ''}` }, big), memeWords ? h('p', { class: 'sa-meme-words', text: `“${memeWords}”` }) : null,
-    kind === 'photo' && j.scene ? h('p', { class: 'sa-muted', text: j.scene }) : null,
+    kind === 'photo' && j.scene ? promptBlock(ctx, String(j.scene)) : null,
     // (round 4) an X banner: where it goes on X
     banner && mine ? h('p', { class: 'sa-note', text: 'On X: your profile → Edit profile → tap the header picture, and pick this one. Its lower left is where your profile picture sits.' }) : null);
   const foot = [];

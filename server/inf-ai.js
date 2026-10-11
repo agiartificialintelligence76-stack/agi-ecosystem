@@ -213,28 +213,40 @@ const inline = (mimeType, bytes) => ({ inlineData: { mimeType, data: Buffer.from
 // person, or anything not family-friendly. → { ok: true, real } (real: a photo of a real person: its influencer is then never
 // in Explore) | { ok: false, why: 'none' | 'many' | 'minor' | 'famous' | 'copyright' | 'sexual' | 'hate' | 'violence' |
 // 'other' } · throws (why 'ai') when Gemini can't say
+export const FAMOUS_SURE = 70;
 export async function checkPicture(cfg, jpeg) {
   const r = await look(cfg, {
     system: 'You check a picture someone uploaded to turn into an AI influencer. It may be a photo of a real person (the '
       + 'uploader, or someone who agreed to it) or artwork (a drawing, a painting, a 3D render) of one original character. Answer '
-      + 'only about what you see, in the JSON asked for. people: how many people or person-like characters with a face are '
-      + 'clearly visible. photo: it is a photo of a real person, or so realistic it could pass for one. apparentAge: your best '
-      + 'guess of the main person\'s (or character\'s) age in years. adult: the main person or character clearly looks 21 or '
-      + 'older (false for a child, a teen or a childlike character, and if in any doubt). famous: the person is a celebrity, a '
-      + 'public figure or a well-known person (an actor, a singer, an athlete, a politician, a big influencer), photographed or '
-      + 'drawn. known: it is a well-known character or mascot from a film, a series, a game, an anime, a comic, a toy or a '
-      + 'brand. explicit: nudity, underwear, a revealing outfit or anything sexual. hateful: hate symbols or gestures. violent: '
-      + 'violence, weapons or gore. other: anything else unsuitable for a family-friendly app (a child anywhere in it included).',
+      + 'only about what you see, in the JSON asked for. people: how many people or person-like characters are the subject of the '
+      + 'picture (faces clearly visible and large enough to be the subject; small or blurred people in the background do not '
+      + 'count). photo: it is a photo of a real person, or so realistic it could pass for one. apparentAge: your best guess of '
+      + 'the main person\'s (or character\'s) age in years. adult: the main person or character clearly looks 21 or older (false '
+      + 'for a child, a teen or a childlike character, and if in any doubt). famous: you recognize the main person as one '
+      + 'specific, widely known real person (a celebrity, a public figure, a politician, an athlete, a musician, an actor or a '
+      + 'famous influencer). False for anyone you do not recognize: an ordinary person, someone who only resembles a famous '
+      + 'person, someone who merely looks like a model or an influencer, or a professional-looking, styled or red-carpet-style '
+      + 'photo of someone you do not recognize. famousSure: how sure you are of that, from 0 to 100 (0 when famous is false). '
+      + 'known: you recognize a specific, well-known character or mascot from a film, a series, a game, an anime, a comic, a '
+      + 'toy or a brand (false for an original character drawn in a popular style, such as an original anime-style character). '
+      + 'explicit: nudity, underwear, a revealing outfit or anything sexual. hateful: hate symbols or gestures. violent: gore, '
+      + 'blood, graphic violence, or a weapon used to threaten someone (a costume or fantasy prop held in a family-friendly way '
+      + 'is fine). other: something else clearly unsuitable for a family-friendly app: a child anywhere in it, drug use, '
+      + 'self-harm, or shocking content.',
     parts: [inline('image/jpeg', jpeg), { text: 'Check this picture.' }],
-    schema: { type: 'object', properties: { people: count, photo: yes, apparentAge: count, adult: yes, famous: yes, known: yes, explicit: yes, hateful: yes, violent: yes, other: yes },
-      required: ['people', 'photo', 'apparentAge', 'adult', 'famous', 'known', 'explicit', 'hateful', 'violent', 'other'] },
+    schema: { type: 'object', properties: { people: count, photo: yes, apparentAge: count, adult: yes, famous: yes, famousSure: count, known: yes, explicit: yes, hateful: yes, violent: yes, other: yes },
+      required: ['people', 'photo', 'apparentAge', 'adult', 'famous', 'famousSure', 'known', 'explicit', 'hateful', 'violent', 'other'] },
   });
   if (r.blocked || r.explicit === true) return { ok: false, why: 'sexual' };
   if (!(r.people >= 1)) return { ok: false, why: 'none' };
   if (r.people > 1) return { ok: false, why: 'many' };
   const real = r.photo === true;
   if (r.adult !== true || (real && !(Number(r.apparentAge) >= 21))) return { ok: false, why: 'minor' };
-  if (r.famous === true) return { ok: false, why: 'famous' };
+  // (2026-10-11, the owner: "can you make this no restrictions") a famous person only when the AI recognizes one specific,
+  // widely known person and is sure (FAMOUS_SURE): lookalikes and styled photos of ordinary people pass. Unsure of how sure:
+  // refused (fail closed)
+  const sure = typeof r.famousSure === 'number' ? r.famousSure : NaN;
+  if (r.famous === true && (!Number.isFinite(sure) || sure >= FAMOUS_SURE)) return { ok: false, why: 'famous' };
   if (r.known === true) return { ok: false, why: 'copyright' };
   if (r.hateful === true) return { ok: false, why: 'hate' };
   if (r.violent === true) return { ok: false, why: 'violence' };
@@ -251,17 +263,22 @@ export async function checkRef(cfg, jpeg) {
     system: 'You check a reference picture someone uploaded so that an AI can include what it shows in pictures and videos of '
       + 'their own AI character: it should show a thing (a product, an outfit laid flat or on a hanger, an accessory), a place, '
       + 'a pet or another animal, food or drink, or an art style. Answer only about what you see, in the JSON asked for. person: '
-      + 'a person or a person-like character with a face is clearly visible (just a hand or an arm holding something does not '
-      + 'count). famous: it shows a celebrity or a public figure. known: it shows a well-known character or mascot from a film, '
-      + 'a series, a game, an anime, a comic or a toy. explicit: nudity, underwear on a body, or anything sexual. hateful: hate '
-      + 'symbols or gestures. violent: violence, weapons or gore. other: anything else unsuitable for a family-friendly app '
-      + '(drugs, a child anywhere in it, anything shocking).',
+      + 'a person or a person-like character is the subject or clearly visible up close with their face (a hand or an arm '
+      + 'holding something, or small or blurred people in the background of a place, do not count). famous: you recognize a '
+      + 'specific, widely known real person in it (a celebrity or a public figure), and famousSure: how sure you are, from 0 to '
+      + '100 (0 when famous is false; someone who only resembles a famous person is not famous). known: you recognize a '
+      + 'specific, well-known character or mascot from a film, a series, a game, an anime, a comic or a toy (an original '
+      + 'character drawn in a popular style is not known). explicit: nudity, underwear on a body, or anything sexual. hateful: '
+      + 'hate symbols or gestures. violent: gore, blood, graphic violence, or a weapon used to threaten someone (a costume or '
+      + 'fantasy prop shown in a family-friendly way is fine). other: something else clearly unsuitable for a family-friendly '
+      + 'app: drugs, a child anywhere in it, self-harm, or shocking content.',
     parts: [inline('image/jpeg', jpeg), { text: 'Check this reference picture.' }],
-    schema: { type: 'object', properties: { person: yes, famous: yes, known: yes, explicit: yes, hateful: yes, violent: yes, other: yes },
-      required: ['person', 'famous', 'known', 'explicit', 'hateful', 'violent', 'other'] },
+    schema: { type: 'object', properties: { person: yes, famous: yes, famousSure: count, known: yes, explicit: yes, hateful: yes, violent: yes, other: yes },
+      required: ['person', 'famous', 'famousSure', 'known', 'explicit', 'hateful', 'violent', 'other'] },
   });
   if (r.blocked || r.explicit === true) return { ok: false, why: 'sexual' };
-  if (r.famous === true) return { ok: false, why: 'famous' };
+  const sure = typeof r.famousSure === 'number' ? r.famousSure : NaN;
+  if (r.famous === true && (!Number.isFinite(sure) || sure >= FAMOUS_SURE)) return { ok: false, why: 'famous' };
   if (r.person === true) return { ok: false, why: 'person' };
   if (r.known === true) return { ok: false, why: 'copyright' };
   if (r.hateful === true) return { ok: false, why: 'hate' };
@@ -302,8 +319,10 @@ export async function checkFrames(cfg, frames) {
     system: 'These are frames from a short video someone uploaded so that their AI character can copy the moves in it (a dance '
       + 'or a gesture). Answer only about what you see, in the JSON asked for. people: the most people visible in any frame. '
       + 'adult: everyone visible clearly looks 18 or older (if in any doubt, false). explicit: nudity, underwear, sexual moves '
-      + 'or poses, or a revealing outfit. hateful: hate symbols or gestures. violent: violence or weapons. other: anything else '
-      + 'unsuitable for a family-friendly app.',
+      + 'or poses, or a revealing outfit. hateful: hate symbols or gestures. violent: gore, blood, graphic violence, or a weapon '
+      + 'used to threaten someone (a costume or fantasy prop held in a family-friendly way, or a dance move, is fine). other: '
+      + 'something else clearly unsuitable for a family-friendly app: a child anywhere in it, drug use, self-harm, or shocking '
+      + 'content.',
     parts: [...frames.map((f) => inline('image/jpeg', f)), { text: 'Check these frames.' }],
     schema: { type: 'object', properties: { people: count, adult: yes, explicit: yes, hateful: yes, violent: yes, other: yes },
       required: ['people', 'adult', 'explicit', 'hateful', 'violent', 'other'] },
@@ -324,8 +343,9 @@ export async function checkVideo(cfg, mp4) {
   const r = await look(cfg, {
     system: 'This is a short AI-made video of an AI influencer character, about to be shown in a family-friendly app. Answer '
       + 'only about what you see and hear, in the JSON asked for. explicit: nudity, underwear, sexual moves or poses, or a '
-      + 'revealing outfit. minor: anyone in it looks under 18. hateful: hate symbols, gestures or words. violent: violence, '
-      + 'weapons or gore. other: anything else unsuitable for a family-friendly app.',
+      + 'revealing outfit. minor: anyone in it looks under 18. hateful: hate symbols, gestures or words. violent: gore, blood, '
+      + 'graphic violence, or a weapon used to threaten someone (a costume or fantasy prop shown in a family-friendly way is '
+      + 'fine). other: something else clearly unsuitable for a family-friendly app.',
     parts: [inline('video/mp4', mp4), { text: 'Check this video.' }],
     schema: { type: 'object', properties: { explicit: yes, minor: yes, hateful: yes, violent: yes, other: yes }, required: ['explicit', 'minor', 'hateful', 'violent', 'other'] },
     timeoutMs: 15_000,

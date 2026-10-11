@@ -32,7 +32,7 @@ import {
   checkStart, checkInfScene, looksPrompt, bodyPrompt, photoPrompt, swapPrompt, clipPrompt, sceneWay, presetPrompt, sceneVideoPrompt,
   examplePrompt, CLIP_NEGATIVE, PRESET_NEGATIVE,
 } from '../server/inf-words.js';
-import { MODELS, jobRequest, outputOf, infOfJob, checkPicture, checkFrames, checkVideo, checkPoster } from '../server/inf-ai.js';
+import { MODELS, jobRequest, outputOf, infOfJob, checkPicture, FAMOUS_SURE, checkFrames, checkVideo, checkPoster, checkRef } from '../server/inf-ai.js';
 import { makeTicket, readTicket, mp4Seconds, mp4Info, plainJpeg, UPLOAD } from '../server/inf-uploads.js';
 import { jobTick, infClock, picPath, examplePath, markedPath, picturesOf } from '../server/inf-jobs.js';
 import { readyCaptions, CAPTION_KINDS } from '../src/studio/captions.js';
@@ -1361,13 +1361,16 @@ process.on('exit', () => Object.assign(console, quiet));
 
 // the verdicts Gemini gives by default (all pass), by what it's asked to look at
 const VERDICTS = {
-  picture: { people: 1, photo: false, apparentAge: 29, adult: true, famous: false, known: false, explicit: false, hateful: false, violent: false, other: false },
+  picture: { people: 1, photo: false, apparentAge: 29, adult: true, famous: false, famousSure: 0, known: false, explicit: false, hateful: false, violent: false, other: false },
   frames: { people: 1, adult: true, explicit: false, hateful: false, violent: false, other: false },
   video: { explicit: false, minor: false, hateful: false, violent: false, other: false },
   poster: { same: true, explicit: false, minor: false, hateful: false, violent: false, other: false },
+  ref: { person: false, famous: false, famousSure: 0, known: false, explicit: false, hateful: false, violent: false, other: false },
+  meme: { explicit: false, minor: false, hateful: false, violent: false, badWords: false, other: false },
 };
 const whichCheck = (system) => (/uploaded to turn into an AI influencer/.test(system) ? 'picture' : /frames from a short video/.test(system) ? 'frames'
   : /thumbnail/.test(system) ? 'poster' : /AI-made video/.test(system) ? 'video' : /You write social media captions/.test(system) ? 'captions'
+    : /a reference picture someone uploaded/.test(system) ? 'ref' : /AI-made meme picture/.test(system) ? 'meme'
     : /AGI Studio's help assistant/.test(system) ? 'help' : 'unknown');
 // (round 4, phase 2) the helper's answer by default
 const HELP_ANSWER = { answer: 'Open My studio and press Buy credits: send USDG from your own wallet app, then press "Check my payment".', ticket: 'none' };
@@ -2159,7 +2162,7 @@ test('the AI checks of an upload and of a video: what each says no to, failing c
   assert.ok(Buffer.from(g.body.contents[0].parts[0].inlineData.data, 'base64').equals(jpg));
   assert.equal(g.body.generationConfig.responseMimeType, 'application/json');
   assert.deepEqual(g.body.generationConfig.thinkingConfig, { thinkingLevel: 'MINIMAL' });
-  assert.deepEqual(g.body.generationConfig.responseJsonSchema.required, ['people', 'photo', 'apparentAge', 'adult', 'famous', 'known', 'explicit', 'hateful', 'violent', 'other']);
+  assert.deepEqual(g.body.generationConfig.responseJsonSchema.required, ['people', 'photo', 'apparentAge', 'adult', 'famous', 'famousSure', 'known', 'explicit', 'hateful', 'violent', 'other']);
   assert.ok(Array.isArray(g.body.safetySettings) && g.body.safetySettings.length >= 4);
   const say = async (fn, which, verdict, ...args) => { fake.gemini[which] = verdict; try { return await fn(cfg, ...args); } finally { fake.gemini[which] = null; } };
   // (round 2) one check for "From a photo": a photo of a real person is allowed (its uploader ticked the box) and said so (its
@@ -2169,14 +2172,41 @@ test('the AI checks of an upload and of a video: what each says no to, failing c
   assert.deepEqual(await pic({ photo: true }), { ok: true, real: true });
   assert.deepEqual(await pic({ photo: true, apparentAge: 21 }), { ok: true, real: true });
   for (const [verdict, why] of [[{ people: 0 }, 'none'], [{ people: 2 }, 'many'], [{ adult: false }, 'minor'], [{ photo: true, apparentAge: 19 }, 'minor'],
-    [{ photo: true, apparentAge: null }, 'minor'], [{ famous: true }, 'famous'], [{ photo: true, famous: true }, 'famous'], [{ known: true }, 'copyright'],
+    [{ photo: true, apparentAge: null }, 'minor'], [{ famous: true, famousSure: 90 }, 'famous'], [{ photo: true, famous: true, famousSure: 70 }, 'famous'],
+    [{ photo: true, famous: true, famousSure: null }, 'famous'], [{ known: true }, 'copyright'],
     [{ explicit: true, people: 3 }, 'sexual'], [{ hateful: true }, 'hate'], [{ violent: true }, 'violence'], [{ other: true }, 'other']]) {
     assert.deepEqual(await pic(verdict), { ok: false, why }, JSON.stringify(verdict));
   }
   assert.match(g.body.systemInstruction.parts[0].text, /It may be a photo of a real person \(the uploader, or someone who agreed to it\)/);
+  // (2026-10-11) fewer false alarms: only a specific, widely known person the AI recognizes and is sure of; a lookalike, a
+  // model-style or styled photo of someone it doesn't recognize, an original character drawn in a popular style pass
+  assert.equal(FAMOUS_SURE, 70);
+  for (const v of [{ photo: true, famous: true, famousSure: 69 }, { photo: true, famous: false, famousSure: 95 }, { famous: true, famousSure: 20 }]) {
+    assert.deepEqual(await pic(v), { ok: true, real: v.photo === true }, JSON.stringify(v));
+  }
+  for (const words of [/only resembles a famous person/, /merely looks like a model or an influencer/, /red-carpet-style photo of someone you do not recognize/,
+    /an original character drawn in a popular style/, /small or blurred people in the background do not count/, /a costume or fantasy prop held in a family-friendly way is fine/]) {
+    assert.match(g.body.systemInstruction.parts[0].text, words);
+  }
+  // (2026-10-11) a reference: never a person as its subject, never a famous person it recognizes and is sure of, never a
+  // well-known character; background people, lookalikes and props pass
+  const ref = (v) => say(checkRef, 'ref', v, jpg);
+  assert.deepEqual(await ref({}), { ok: true });
+  for (const [verdict, why] of [[{ person: true }, 'person'], [{ famous: true, famousSure: 85 }, 'famous'], [{ famous: true, famousSure: null }, 'famous'],
+    [{ known: true }, 'copyright'], [{ explicit: true }, 'sexual'], [{ hateful: true }, 'hate'], [{ violent: true }, 'violence'], [{ other: true }, 'other']]) {
+    assert.deepEqual(await ref(verdict), { ok: false, why }, JSON.stringify(verdict));
+  }
+  assert.deepEqual(await ref({ famous: true, famousSure: 30 }), { ok: true });
+  const refSystem = geminiCalls().at(-1).body.systemInstruction.parts[0].text;
+  for (const words of [/small or blurred people in the background of a place, do not count/, /someone who only resembles a famous person is not famous/,
+    /an original character drawn in a popular style is not known/, /a costume or fantasy prop shown in a family-friendly way is fine/]) {
+    assert.match(refSystem, words);
+  }
+  assert.deepEqual(geminiCalls().at(-1).body.generationConfig.responseJsonSchema.required, ['person', 'famous', 'famousSure', 'known', 'explicit', 'hateful', 'violent', 'other']);
   const frames = (v) => say(checkFrames, 'frames', v, [jpg, jpg, jpg]);
   assert.deepEqual(await frames({}), { ok: true });
   assert.equal(geminiCalls().at(-1).body.contents[0].parts.filter((p) => p.inlineData).length, 3);
+  assert.match(geminiCalls().at(-1).body.systemInstruction.parts[0].text, /a costume or fantasy prop held in a family-friendly way, or a dance move, is fine/);
   assert.deepEqual(await frames({ people: 0 }), { ok: false, why: 'none' });
   assert.deepEqual(await frames({ adult: false }), { ok: false, why: 'minor' });
   const video = mp4();
@@ -2371,7 +2401,7 @@ test('a picture or a photo: made plain, then looked at by the AI check before an
   assert.deepEqual([fake.db.uploads.get(o.id).status, fake.db.uploads.get(o.id).real], ['ok', true]);
   assert.equal(dbCalls('inf_upload_set').at(-1).p_real, true);
   // …but never someone who may be under 21 in a photo, or a famous person
-  for (const [verdict, why] of [[{ photo: true, apparentAge: 19 }, 'minor'], [{ photo: true, famous: true }, 'famous']]) {
+  for (const [verdict, why] of [[{ photo: true, apparentAge: 19 }, 'minor'], [{ photo: true, famous: true, famousSure: 95 }, 'famous']]) {
     o = await open('picture', PNG);
     fake.gemini.picture = verdict;
     r = await send(o, PNG);
@@ -7162,4 +7192,85 @@ test('(round 4, phase 4) Learn and first-time tips: /learn, its lessons (each en
   assert.doesNotThrow(() => L.markTip('me', blocked));
   assert.match(readFileSync(new URL('../studio.html', import.meta.url), 'utf8'), /<a href="\/studio\/learn" data-sa-path="\/learn">How it works<\/a>/);
   assert.match(readFileSync(new URL('../src/studio/views/help.js', import.meta.url), 'utf8'), /ctx\.href\('\/learn'\)/);
+});
+
+test("(2026-10-11) Create's choices can be unpicked with a tap (the owner: \"when they pick masculine, it wont uncheck\"): chips' toggle, only in Create; back to Any, else none; the arrow keys never unpick", () => {
+  const ui = read('src/studio/ui.js');
+  assert.match(ui, /export function chips\(\{[^)]*\btoggle = false \}\)/);
+  assert.match(ui, /if \(toggle\) unpickable\(row, onchange\);/);
+  const fn = ui.slice(ui.indexOf('function unpickable('), ui.indexOf('// ---------- cards to pick one from'));
+  assert.ok(fn.length > 200);
+  for (const ev of ['pointerdown', 'pointercancel', 'keydown', 'keyup', 'click']) assert.match(fn, new RegExp(`row\\.addEventListener\\('${ev}'`), ev);
+  // a tap: only when the chip was picked as the pointer went down on it (the arrow keys click the radio they move to too)
+  assert.match(fn, /pressed = input \? \{ input, was: input\.checked \} : null;/);
+  assert.match(fn, /if \(p\?\.input === input && p\.was && input\.value !== ''\) unpick\(input\);/);
+  // any key forgets a press (a press dragged off a chip, then the arrows), and so does a cancelled pointer (a scroll)
+  assert.match(fn, /'keydown', \(e\) => \{\s*pressed = null;/);
+  assert.match(fn, /'pointercancel', \(\) => \{ pressed = null; \}/);
+  // Space on a picked chip unpicks it, and the click its keyup brings is cancelled (else it would be picked again)
+  assert.match(fn, /e\.key !== ' '/);
+  assert.match(fn, /if \(keyed === input\) \{ e\.preventDefault\(\); return; \}/);
+  // back to "Any" (the choice whose value is '') when the group has one, else none, and its onchange hears which
+  assert.match(fn, /const any = inputs\(\)\.find\(\(i\) => i\.value === ''\);/);
+  assert.match(fn, /onchange\?\.\(any \? '' : null\);/);
+  assert.doesNotMatch(fn, /innerHTML|insertAdjacentHTML/);
+  // Create: every chip group may be unpicked (its look, age, hair, skin, eyes, outfit, vibe and style); Create then asks for
+  // the ones it needs (look, age, style)
+  const create = read('src/studio/views/create.js');
+  const calls = create.match(/chips\(\{[^\n]*/g);
+  assert.equal(calls.length, 3);
+  for (const c of calls) assert.match(c, /\btoggle: true\b/, c);
+  assert.match(create, /if \(!groups\[key\]\?\.value\) \{ fix\(groups\[key\]\?\.node\.querySelector\('input'\), sourceErr, wordsText\(key, 'empty'\)\); return; \}/);
+  assert.match(create, /if \(!styleGroup\.value\) \{ fix\(styleGroup\.node\.querySelector\('input'\), styleErr, wordsText\('style', 'empty'\)\); return; \}/);
+  // never where one must always be picked: a meme's format, a caption's tone, a ticket's topic, a ban's reason, a report's why
+  for (const f of ['src/studio/views/influencer.js', 'src/studio/views/shared.js', 'src/studio/views/support.js']) {
+    for (const c of read(f).match(/chips\(\{[^\n]*/g) || []) assert.doesNotMatch(c, /\btoggle\b/, `${f}: ${c}`);
+  }
+});
+
+test('(2026-10-11) Copy prompt from the trends (the owner: "they can copy prompt from the trends"): a trend clip\'s prompt (its scene, camera and sound, fitting a scene\'s box and passing our server\'s scene check), shown with Copy prompt on its sheet, on a photo or a video seen big, and in the Trend tool', async () => {
+  const R = await import('../src/studio/rules.js');
+  const { checkInfScene } = await import('../server/inf-words.js');
+  const S = await import('../src/studio/views/shared.js');
+  let withSound = 0;
+  for (const t of R.TRENDS) {
+    const p = R.trendPrompt(t);
+    const n = [...p].length;
+    assert.ok(n >= R.SCENE_MIN && n <= R.SCENE_MAX, `${t.id}: ${n}`);
+    assert.ok(p.startsWith(`${t.scene[0].toUpperCase()}${t.scene.slice(1)}. Camera: ${t.camera}.`), t.id);
+    if (p.includes(' Sound: ')) { withSound += 1; assert.ok(p.endsWith(`Sound: ${t.sound}.`), t.id); }
+    // the sound only left out when it wouldn't fit
+    else assert.ok([...`${p} Sound: ${t.sound}.`].length > R.SCENE_MAX, `${t.id}: its sound fits, but it's left out`);
+    // pasted into a video of your own, it passes our server's own check of a scene
+    const c = checkInfScene({ scene: p, shape: 'tall', sound: true, kind: 'video' });
+    assert.ok(c.ok, `${t.id}: ${JSON.stringify(c)}`);
+    assert.equal(trouble(p), null, t.id);
+  }
+  assert.ok(withSound >= 6, `${withSound} with their sound`);
+  assert.equal(R.trendPrompt(null), '');
+  assert.equal(R.trendPrompt({ id: 'x', scene: '' }), '');
+  // what a photo or a video seen big copies: its own scene, or (a trend video made from a trend clip) that clip's prompt
+  assert.equal(S.promptOf({ kind: 'photo', scene: 'a rooftop café at golden hour' }), 'a rooftop café at golden hour');
+  assert.equal(S.promptOf({ kind: 'trend', trend: R.TRENDS[0].id, scene: null }), R.trendPrompt(R.TRENDS[0]));
+  assert.equal(S.promptOf({ kind: 'trend', clip: true, trend: null, scene: null }), '');
+  assert.equal(S.promptOf({ kind: 'trend', trend: 'not-a-trend' }), '');
+  assert.equal(S.promptOf(null), '');
+  // the page: the words as text, a button that copies them (or selects them where the clipboard is blocked), said to screen
+  // readers; on a trend clip's sheet, a video's and a photo's (its scene, which was already shown there), and the Trend tool
+  const shared = read('src/studio/views/shared.js');
+  const block = shared.slice(shared.indexOf('export function promptBlock('), shared.indexOf('// ---------- a done video, played'));
+  assert.match(block, /h\('p', \{ class: 'sa-prompt-text', text \}\)/);
+  assert.match(block, /btn\('Copy prompt', \{ kind: 'ghost', size: 'sm', icon: 'copy' \}\)/);
+  assert.match(block, /await copyText\(text, words\)/);
+  assert.match(block, /'aria-live': 'polite'/);
+  assert.doesNotMatch(block, /innerHTML|insertAdjacentHTML/);
+  assert.match(shared, /about \? promptBlock\(ctx, trendPrompt\(about\), \{ label: 'Its prompt' \}\) : null,/);
+  assert.match(shared, /promptOf\(v\) \? promptBlock\(ctx, promptOf\(v\)/);
+  assert.match(shared, /kind === 'photo' && j\.scene \? promptBlock\(ctx, String\(j\.scene\)\) : null,/);
+  const infView = read('src/studio/views/influencer.js');
+  assert.match(infView, /btn\('Copy its prompt', \{ kind: 'ghost', size: 'sm', icon: 'copy' \}\)/);
+  assert.match(infView, /await copyText\(trendPrompt\(t\)\)/);
+  assert.match(infView, /put\(movesPanel, grid, about, aboutCopy,/);
+  const css = read('src/styles/studio-app.css');
+  for (const c of ['sa-prompt', 'sa-prompt-head', 'sa-prompt-label', 'sa-prompt-text']) assert.match(css, new RegExp(`\\.${c} \\{`), c);
 });
