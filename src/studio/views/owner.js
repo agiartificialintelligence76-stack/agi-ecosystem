@@ -1,15 +1,22 @@
 // AGI Studio: the owner's page (studio.agi1.app/owner; only the owner's wallet: STUDIO_OWNER, else the first of
-// STUDIO_ONLY_FOR). Credits for testing (round 3: free, to the owner's own wallet or a tester's), the trend clips (made once
-// by the AI service from the owner's own balance, never credits; the owner keeps the good ones), the example pictures for
-// Create's choices (round 2), the spotlight of the week (round 2: approve it with its prize, or skip it to the next best), and
-// the reports (hide what shouldn't be here).
-import { h, icon, btn, linkBtn, busy, pic, put, add, say, nextId } from '../ui.js';
+// STUDIO_ONLY_FOR). Since round 4, phase 2 (2026-10-11, the owner's list: "API balances, stats, top-up links, low-balance
+// Telegram alerts, roles") in four tabs:
+//   • Overview: the AI services' balances our server can read (each with its top-up link, its state and the level under
+//     which the owner hears about it, editable), alerts on Telegram (AGI-1's bot), the numbers, the services to look at
+//     yourself. The services' names and links come from our server (server/inf-admin.js): this page's own words never name one;
+//   • Team: mods and support, added by their wallet's address (kept as a scrambled code), and taken off;
+//   • Content: the spotlight of the week (round 2: approve it with its prize, or skip it to the next best), the trend clips
+//     (made once by the AI service from the owner's own balance, never credits; the owner keeps the good ones), the example
+//     pictures for Create's choices (round 2), and the reports (hide what shouldn't be here);
+//   • Testing: credits for testing (round 3: free, to the owner's own wallet or a tester's).
+import { h, icon, btn, linkBtn, busy, pic, put, add, say, nextId, pageTabs, segmented } from '../ui.js';
 import { infVideo, infPoster, infPic, infExample, REPORT_WHYS, EXAMPLES, EXAMPLE_KINDS, INF_STYLES, OPTIONS, creditsText } from '../rules.js';
 import {
   errorText, agoText, failText, num, compact, weekText, prizeText, WEEK_STATUS, shortAddress, GIFT_AMOUNTS, GIFT_MAX, GIFT_CONFIRM,
-  giftPlanText, giftText,
+  giftPlanText, giftText, dayText, BALANCE_STATE, balanceValueText, balanceLowText, adminNumbers, MADE_KINDS, ROLE_NAMES, ROLE_NOTES,
 } from '../app-words.js';
 import { makePosters } from '../media.js';
+import { progressBar } from '../progress.js';
 
 const STATUS = { none: 'Not made yet', making: 'Being made…', review: 'Made: keep it?', kept: 'Kept: people can use it', hidden: 'Hidden', failed: "Couldn't be made" };
 const TX = (tx) => `https://robinhoodchain.blockscout.com/tx/${tx}`;
@@ -122,30 +129,75 @@ export function giftSection(ctx) {
 
 export async function render(ctx, route, root) {
   document.title = 'Owner tools · AGI Studio';
-  const body = h('div', { class: 'sa-owner' });
+  // (round 4, phase 2) four tabs: Overview (the AI services' balances and their alert levels, the alerts on Telegram, the
+  // numbers), Team (mods and support), Content (the spotlight of the week, the trend clips, the example pictures, reports) and
+  // Testing (credits for testing). Each panel is read when it's first shown.
   const gift = giftSection(ctx);
+  const body = h('div', { class: 'sa-owner' });
+  const overview = h('div', { class: 'sa-admin' });
+  const team = h('div', { class: 'sa-team' });
+  const gate = h('div', { class: 'sa-owner-gate' });
+  const TABS = [['overview', 'Overview', 'chart'], ['team', 'Team', 'team'], ['content', 'Content', 'image'], ['testing', 'Testing', 'bolt']];
+  const tabs = pageTabs({ label: 'Owner tools', items: TABS, value: route.q.get('tab') || 'overview', onchange: (k) => {
+    const url = new URL(location.href);
+    url.searchParams.set('tab', k);
+    history.replaceState(history.state, '', url.pathname + url.search);
+    show(k);
+  } });
+  put(tabs.panel('overview'), overview);
+  put(tabs.panel('team'), team);
+  put(tabs.panel('content'), body);
+  const testing = tabs.panel('testing');
+  put(testing, gift);
+  const tabsBox = h('div', { class: 'sa-owner-tabs', hidden: true }, tabs.node, ...TABS.map(([k]) => tabs.panel(k)));
   add(root, h('header', { class: 'sa-page-head' },
     h('p', { class: 'sa-eyebrow', text: 'Only your wallet sees this' }),
     h('h1', { class: 'sa-display sa-page-title', tabindex: '-1', text: 'Owner tools' }),
-    h('p', { class: 'sa-muted', text: 'Credits for testing, trend clips and example pictures (made once by the AI service from your own balance), the spotlight of the week, and reports.' })), gift, body);
+    h('p', { class: 'sa-muted', text: 'Your AI balances and alerts, the numbers, your team, what people see (the spotlight, trend clips, example pictures, reports), and credits for testing.' })), gate, tabsBox);
   let data = null, loading = false, timer = null;
+  let admin = null, adminLoading = false;
   const tried = new Set();
-  // the weeks' prize boxes keep what the owner typed across redraws
+  // the weeks' prize boxes, the alert levels and the team's form keep what the owner typed across redraws
   const typed = new Map();
+  const typedLevels = new Map();
+
+  // who may see it: an answer says (the owner's wallet, or not). Another "no" (the database busy, or influencers.sql not run
+  // again yet) stays in the panels that asked (into), with Try again: the other tabs keep working.
+  function allowed(r, into = null, retry = null) {
+    if (!ctx.session) {
+      tabsBox.hidden = true;
+      put(gate, h('p', { class: 'sa-banner', text: 'Connect the owner\'s wallet to see this page.' }));
+      return false;
+    }
+    if (!r.ok && (r.data?.error === 'not_owner' || !into)) {
+      tabsBox.hidden = true;
+      put(gate, h('p', { class: 'sa-banner', text: r.data?.error === 'not_owner' ? 'Only the owner\'s wallet sees this page.' : errorText(r.data?.error) }));
+      return false;
+    }
+    put(gate);
+    tabsBox.hidden = false;
+    gift.hidden = false;
+    if (r.ok) return true;
+    for (const panel of into) {
+      const again = retry ? btn('Try again', { kind: 'ghost', size: 'sm', icon: 'refresh' }) : null;
+      again?.addEventListener('click', () => busy(again, 'Trying…', retry));
+      put(panel, h('div', { class: 'sa-banner', role: 'status' }, h('p', { text: errorText(r.data?.error) }), again));
+    }
+    return false;
+  }
+  function show(k) {
+    if (k === 'content' && !data) load();
+    if ((k === 'overview' || k === 'team') && !admin) loadAdmin();
+  }
 
   async function load() {
     if (loading) return;
-    if (!ctx.session) { gift.hidden = true; put(body, h('p', { class: 'sa-banner', text: 'Connect the owner\'s wallet to see this page.' })); return; }
+    if (!ctx.session) { allowed({ ok: false }); return; }
     loading = true;
     const r = await ctx.act('inf-owner');
     loading = false;
     if (!ctx.alive()) return;
-    if (!r.ok) {
-      gift.hidden = true;
-      put(body, h('p', { class: 'sa-banner', text: r.data?.error === 'not_owner' ? 'Only the owner\'s wallet sees this page.' : errorText(r.data?.error) }));
-      return;
-    }
-    gift.hidden = false;
+    if (!allowed(r, [body], load)) return;
     data = r.data;
     draw();
     clearTimeout(timer);
@@ -154,6 +206,185 @@ export async function render(ctx, route, root) {
     const todo = Object.fromEntries(Object.entries(data.posters || {}).filter(([job]) => !tried.has(job)));
     for (const job of Object.keys(todo)) tried.add(job);
     if (Object.keys(todo).length) makePosters(todo, (job) => infVideo(job), { alive: ctx.alive, most: 12 }).then((n) => { if (n && ctx.alive()) load(); });
+  }
+
+  // ---------- (round 4, phase 2) the owner's tab: balances, alerts, the numbers, the team ----------
+  async function loadAdmin({ fresh = false } = {}) {
+    if (adminLoading) return;
+    if (!ctx.session) { allowed({ ok: false }); return; }
+    adminLoading = true;
+    if (!admin) put(overview, h('p', { class: 'sa-muted' }, h('span', { class: 'sa-spin', 'aria-hidden': 'true' }), ' Reading your balances…'));
+    const r = await ctx.act('inf-admin', fresh ? { fresh: true } : {});
+    adminLoading = false;
+    if (!ctx.alive()) return;
+    if (!allowed(r, [overview, team], () => loadAdmin({ fresh }))) return;
+    admin = r.data;
+    drawAdmin();
+  }
+  const UNIT = { USD: 'dollars', credits: 'credits', $AGI: '$AGI', ETH: 'ETH' };
+  function balanceCard(b) {
+    const levelText = b.state === 'off' ? null : balanceLowText(b);
+    return h('li', { class: `sa-card sa-balance is-${b.state}` },
+      h('div', { class: 'sa-row-between' },
+        h('p', { class: 'sa-h3', text: b.name }),
+        h('span', { class: `sa-tag sa-state is-${b.state === 'ok' ? 'kept' : b.state === 'low' ? 'failed' : 'none'}`, text: BALANCE_STATE[b.state] || BALANCE_STATE.error })),
+      h('p', { class: 'sa-balance-value', text: ['ok', 'low'].includes(b.state) ? balanceValueText(b) : '—' }),
+      levelText ? h('p', { class: 'sa-muted sa-small', text: levelText }) : null,
+      b.note ? h('p', { class: 'sa-small sa-balance-note', text: b.note }) : null,
+      b.link ? h('a', { class: 'sa-link sa-small', href: b.link, target: '_blank', rel: 'noopener noreferrer', text: b.text || 'Open ↗' }) : null);
+  }
+  function levelsForm() {
+    const levels = Array.isArray(admin.levels) ? admin.levels : [];
+    const note = h('p', { class: 'sa-note', role: 'status', hidden: true });
+    const inputs = new Map();
+    const rows = levels.map((l) => {
+      const id = nextId('lvl');
+      const input = h('input', { class: 'sa-input sa-input-num', id, type: 'number', min: '0', max: String(l.max), step: String(l.step), inputmode: 'decimal',
+        value: String(typedLevels.get(l.key) ?? admin.thresholds?.[l.key] ?? '') });
+      input.addEventListener('input', () => typedLevels.set(l.key, input.value));
+      inputs.set(l.key, input);
+      // its unit after its name, unless the name says it already ("Meshy's credits", "The prize wallet's ETH")
+      const unit = UNIT[l.unit] || l.unit;
+      const label = String(l.name).toLowerCase().includes(String(unit).toLowerCase()) ? l.name : `${l.name} (${unit})`;
+      return h('div', { class: 'sa-level' }, h('label', { class: 'sa-label', for: id, text: label }), input);
+    });
+    const save = btn('Save alert levels', { kind: 'primary', size: 'sm', icon: 'check' });
+    save.addEventListener('click', () => {
+      say(note, '');
+      const thresholds = {};
+      for (const [k, input] of inputs) {
+        const v = Number(input.value);
+        if (input.value.trim() === '' || !Number.isFinite(v) || v < 0) { say(note, errorText('levels')); input.focus(); return; }
+        thresholds[k] = v;
+      }
+      busy(save, 'Saving…', async () => {
+        const r = await ctx.act('inf-admin-set', { thresholds });
+        if (!r.ok || !r.data?.ok) { say(note, errorText(r.data?.error)); return; }
+        typedLevels.clear();
+        ctx.toast('Alert levels saved', 'good');
+        loadAdmin();
+      });
+    });
+    return h('section', { class: 'sa-card sa-levels', 'aria-labelledby': 'sa-levels-h' },
+      h('h2', { class: 'sa-h3', id: 'sa-levels-h', text: 'When to alert you' }),
+      h('p', { class: 'sa-muted sa-small', text: 'A balance under its level shows as Low here, and (with alerts on) reaches your Telegram, at most every 6 hours each. 0 = never.' }),
+      h('div', { class: 'sa-levels-grid' }, ...rows), h('div', { class: 'sa-row' }, save), note);
+  }
+  function alertsCard() {
+    const a = admin.alerts || {};
+    return h('section', { class: 'sa-card sa-alerts', 'aria-labelledby': 'sa-owner-alerts-h' },
+      h('h2', { class: 'sa-h3 sa-alerts-title', id: 'sa-owner-alerts-h' }, icon('bell'), h('span', { text: 'Alerts on Telegram' })),
+      a.link
+        ? [h('p', { class: 'sa-muted sa-small', text: `In AGI-1's Telegram bot: a balance running low, and new support tickets and reports. ${a.chats ? `On in ${a.chats === 1 ? '1 chat' : `${num(a.chats)} chats`}.` : 'Not on in any chat yet.'} The link works for a day; /stop in Telegram turns them off.` }),
+          h('div', { class: 'sa-row' }, h('a', { class: 'sa-btn sa-btn-ghost sa-btn-sm', href: a.link, target: '_blank', rel: 'noopener noreferrer' }, icon('bell'), h('span', { text: a.chats ? 'Add another chat ↗' : 'Turn them on in Telegram ↗' })))]
+        : h('p', { class: 'sa-muted sa-small', text: "AGI-1's Telegram bot isn't set up (TELEGRAM_BOT_TOKEN), so alerts are off. Everything here works without them." }));
+  }
+  function numbersCard() {
+    const s = admin.stats;
+    const made = Object.entries(MADE_KINDS).filter(([k]) => (s?.today?.[k] || 0) + (s?.week?.[k] || 0) > 0);
+    return h('section', { class: 'sa-section', 'aria-labelledby': 'sa-numbers-h' },
+      h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-numbers-h' }, icon('chart'), h('span', { text: 'The numbers' })),
+        h('p', { class: 'sa-muted', text: 'Days and weeks in UTC. The AI cost is an estimate from the AI services\' prices.' })),
+      h('dl', { class: 'sa-numbers' }, ...adminNumbers(s).map((n) => h('div', { class: 'sa-number' }, h('dt', { text: n.label }), h('dd', { text: n.value })))),
+      made.length ? h('table', { class: 'sa-made' },
+        h('caption', { class: 'sa-sr', text: 'What was made, by kind' }),
+        h('thead', null, h('tr', null, h('th', { scope: 'col', text: 'Made' }), h('th', { scope: 'col', text: 'Today' }), h('th', { scope: 'col', text: 'This week' }))),
+        h('tbody', null, ...made.map(([k, label]) => h('tr', null, h('th', { scope: 'row', text: label }), h('td', { text: num(s.today?.[k]) }), h('td', { text: num(s.week?.[k]) })))))
+        : h('p', { class: 'sa-muted sa-small', text: 'Nothing made this week yet.' }));
+  }
+  function drawAdmin() {
+    if (!admin) return;
+    const list = Array.isArray(admin.balances) ? admin.balances : [];
+    const low = list.filter((b) => b.state === 'low').length;
+    tabs.count('overview', low);
+    const again = btn('Read again', { kind: 'ghost', size: 'sm', icon: 'refresh' });
+    again.addEventListener('click', () => busy(again, 'Reading…', () => loadAdmin({ fresh: true })));
+    const read = Number.isFinite(admin.read) ? `Read ${agoText(admin.read, admin.now)}` : '';
+    put(overview,
+      low ? h('p', { class: 'sa-banner sa-banner-warn', role: 'status', text: `${low === 1 ? 'A balance is' : `${low} balances are`} under your alert level: top ${low === 1 ? 'it' : 'them'} up below.` }) : null,
+      h('section', { class: 'sa-section sa-section-first', 'aria-labelledby': 'sa-balances-h' },
+        h('div', { class: 'sa-section-head sa-row-between' }, h('h2', { class: 'sa-h2', id: 'sa-balances-h' }, icon('bolt'), h('span', { text: 'Balances' })),
+          h('div', { class: 'sa-row' }, h('span', { class: 'sa-fine', text: read }), again)),
+        h('ul', { class: 'sa-balances' }, ...list.map(balanceCard))),
+      h('div', { class: 'sa-admin-pair' }, alertsCard(), levelsForm()),
+      numbersCard(),
+      h('section', { class: 'sa-section', 'aria-labelledby': 'sa-links-h' },
+        h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-links-h' }, icon('link'), h('span', { text: 'Balances to look at yourself' })),
+          h('p', { class: 'sa-muted', text: 'These have no balance our server can read: their own pages show it.' })),
+        h('ul', { class: 'sa-admin-links' }, ...(admin.links || []).map((l) => h('li', null, h('span', { text: l.name }), h('a', { class: 'sa-link', href: l.link, target: '_blank', rel: 'noopener noreferrer', text: l.text }))))),
+      h('p', { class: 'sa-owner-link' }, linkBtn('Mod tools: tickets, reports, bans', ctx.href('/mod'), { kind: 'ghost', icon: 'shield', dataset: { saLink: '' } })));
+    drawTeam();
+  }
+
+  // ---------- the team: mods and support ----------
+  const teamForm = (() => {
+    const id = nextId('team');
+    const address = h('input', { class: 'sa-input sa-mono', id: `${id}-a`, type: 'text', autocomplete: 'off', spellcheck: 'false', maxlength: '42', placeholder: '0x…' });
+    const nick = h('input', { class: 'sa-input', id: `${id}-n`, type: 'text', autocomplete: 'off', maxlength: '24', placeholder: 'Mia' });
+    let role = 'support';
+    const roles = segmented({ legend: 'Their role', showLegend: true, choices: [['support', 'Support'], ['mod', 'Mod']], value: role, onchange: (v) => { role = v; roleNote.textContent = ROLE_NOTES[v]; } });
+    const roleNote = h('p', { class: 'sa-fine', text: ROLE_NOTES[role] });
+    const err = h('p', { class: 'sa-err', role: 'alert', hidden: true });
+    const add2 = btn('Add to the team', { kind: 'primary', icon: 'plus' });
+    add2.addEventListener('click', () => {
+      say(err, '');
+      const a = address.value.trim(), n = nick.value.trim();
+      if (!/^0x[0-9a-fA-F]{40}$/.test(a)) { say(err, errorText('team_address')); address.focus(); return; }
+      if (!/^[A-Za-z0-9](?:[A-Za-z0-9 ._-]{0,22}[A-Za-z0-9])$/.test(n)) { say(err, errorText('team_nick')); nick.focus(); return; }
+      busy(add2, 'Adding…', async () => {
+        const r = await ctx.act('inf-team-set', { address: a, nick: n, role });
+        const d = r.data || {};
+        if (!r.ok || !d.ok) { say(err, errorText(d.error)); (d.error === 'team_nick' || d.error === 'nick_taken' ? nick : address).focus(); return; }
+        address.value = '';
+        nick.value = '';
+        if (admin) admin.team = d.team;
+        ctx.toast(`${d.member?.nick || n} is on the team as ${ROLE_NAMES[role]} 💜`, 'good');
+        drawTeam();
+      });
+    });
+    return h('section', { class: 'sa-card sa-team-form', 'aria-labelledby': `${id}-h` },
+      h('h2', { class: 'sa-h3', id: `${id}-h`, text: 'Add someone (or change their role)' }),
+      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: `${id}-a`, text: 'Their wallet\'s address' }), address),
+      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: `${id}-n`, text: 'A nickname (the team sees it on answers)' }), nick),
+      h('div', { class: 'sa-field' }, roles.node, roleNote),
+      err, h('div', { class: 'sa-row' }, add2),
+      h('p', { class: 'sa-fine', text: "To change someone's role or nickname, add them again with the same address. We keep a scrambled code of their wallet, never its address. They connect that wallet to AGI Studio and find Mod tools in My studio (with their own alerts link). People who write in see every answer as \"AGI Studio support\"." }));
+  })();
+  const removing = new Set();
+  function drawTeam() {
+    if (!admin) { put(team, h('p', { class: 'sa-muted' }, h('span', { class: 'sa-spin', 'aria-hidden': 'true' }), ' Loading…')); return; }
+    const members = Array.isArray(admin.team) ? admin.team : [];
+    const rows = members.map((m) => {
+      const label = () => (removing.has(m.code) ? 'Tap again to remove' : 'Remove');
+      const rm = btn(label(), { kind: 'quiet', size: 'sm', icon: 'trash' });
+      rm.addEventListener('click', () => {
+        if (!removing.has(m.code)) {
+          removing.add(m.code);
+          rm.lastChild.textContent = label();
+          setTimeout(() => { removing.delete(m.code); if (rm.isConnected) rm.lastChild.textContent = label(); }, 5000);
+          return;
+        }
+        removing.delete(m.code);
+        busy(rm, 'Removing…', async () => {
+          const r = await ctx.act('inf-team-remove', { code: m.code });
+          const d = r.data || {};
+          if (!r.ok || !d.ok) { ctx.toast(errorText(d.error), 'bad'); return; }
+          admin.team = d.team;
+          ctx.toast(`${m.nick} is off the team`, 'good');
+          drawTeam();
+        });
+      });
+      return h('li', { class: 'sa-card sa-member' },
+        h('div', { class: 'sa-member-body' },
+          h('p', { class: 'sa-h3' }, h('span', { text: m.nick }), h('span', { class: `sa-tag sa-role is-${m.role}`, text: ROLE_NAMES[m.role] || m.role })),
+          h('p', { class: 'sa-muted sa-small' }, h('span', { class: 'sa-mono', text: m.short || '' }), h('span', { text: ` · added ${dayText(m.added)}` })),
+          h('p', { class: 'sa-fine', text: `${ROLE_NOTES[m.role] || ''}${m.alerts ? ` · alerts on in ${m.alerts === 1 ? '1 chat' : `${num(m.alerts)} chats`}` : ''}` })),
+        rm);
+    });
+    put(team,
+      h('p', { class: 'sa-muted sa-small sa-team-intro', text: 'Mods look at reports, take things down, ban makers who break the rules and answer support tickets; support answers tickets. You can do all of it, and only you manage the team (20 people at most).' }),
+      members.length ? h('ul', { class: 'sa-members' }, ...rows) : h('p', { class: 'sa-muted', text: 'Nobody on the team yet: it\'s just you.' }),
+      teamForm);
   }
 
   // ---------- the trend clips ----------
@@ -197,6 +428,8 @@ export async function render(ctx, route, root) {
       return h('li', { class: 'sa-card sa-owner-trend' }, preview, h('div', { class: 'sa-owner-trend-body' },
         h('p', { class: 'sa-h3', text: `${t.emoji} ${t.name}` }),
         h('p', { class: `sa-tag sa-state is-${t.status}`, text: STATUS[t.status] || t.status }),
+        // (round 4) how far along it is (a trend clip: about 4 to 5 minutes)
+        t.status === 'making' && t.job ? progressBar({ key: t.job, kind: 'clip', since: t.updated ?? null, small: true }) : null,
         t.error ? h('p', { class: 'sa-muted sa-small', text: failText(t.error) }) : null,
         t.updated ? h('p', { class: 'sa-muted sa-small', text: `Updated ${agoText(t.updated)}` }) : null,
         actions));
@@ -332,9 +565,17 @@ export async function render(ctx, route, root) {
 
   function draw() {
     put(body, weeksSection(), trendsSection(), examplesSection(), reportsSection());
+    tabs.count('content', (data.reports || []).filter((r) => !r.hidden).length + (data.weeks || []).filter((w) => w.status === 'picked').length);
   }
-  ctx.on('wallet', load);
+  // the tab shown first, and (for the tabs' counts, and to know it's the owner) the owner's tab
+  function start() {
+    if (!ctx.session) { allowed({ ok: false }); return; }
+    drawTeam();
+    show(tabs.value);
+    if (!['overview', 'team'].includes(tabs.value)) loadAdmin();
+  }
+  ctx.on('wallet', () => { data = null; admin = null; start(); });
   ctx.on('info', () => { if (data) draw(); });
-  await load();
+  start();
   return () => clearTimeout(timer);
 }

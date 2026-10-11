@@ -7,20 +7,54 @@
 // 3D model (in credits, or free for a big burn: round 2), a coin with its face, and a boost in Explore (round 2: a burn). Its
 // page asks again every few seconds while something is being made (each ask moves it along one step on our server), and
 // takes the posters of its new videos (a frame, here).
-import { h, icon, btn, linkBtn, sheet, segmented, say, busy, pic, copyText, nextId, put, add } from '../ui.js';
-import { infPic, infVideo, fileUrl, trendOf, creditsText, SHAPES, SCENE_MIN, SCENE_MAX, INF_STYLES, CLIP } from '../rules.js';
+import { h, icon, btn, linkBtn, sheet, segmented, chips, cardPick, say, busy, pic, copyText, nextId, put, add } from '../ui.js';
+import {
+  infPic, infVideo, fileUrl, trendOf, creditsText, SHAPES, PHOTO_SHAPES, BANNER, SCENE_MIN, SCENE_MAX, INF_STYLES, CLIP, clankProfileUrl,
+  PHOTO_MODELS, PHOTO_QUALITY, VIDEO_MODELS, ANIME_QUALITY, MEMES, MEME_LINE_MAX, REFS, photoCredits, videoCredits, videoPlan, jobPlan,
+  jobStep, startPhotos,
+} from '../rules.js';
 import {
   makingText, failText, jobTitle, jobStateText, modelText, wordsText, errorText, coinText, upErrorText, leftText, compact,
-  priceOf, shareInfUrl, dayText, PHOTO_IDEAS, VIDEO_IDEAS, num, likesText,
+  priceOf, shareInfUrl, dayText, PHOTO_IDEAS, BANNER_IDEAS, VIDEO_IDEAS, num, likesText, progressKind, BANNED_TEXT, secondsText,
+  leftWords,
 } from '../app-words.js';
-import { readClip, clipText, uploadClip, makePosters } from '../media.js';
-import { trendTile, videoSheet, photoSheet, reportSheet, confirmSheet, mediaTile, noteLikes, burnSheet, boostInf } from './shared.js';
+import { progressBar } from '../progress.js';
+import { readClip, clipText, uploadClip, makePosters, shrinkPicture, uploadRef } from '../media.js';
+import { INSTANT, INSTANT_MAKES, MEME_READY, memeInputs, instantOn, setInstant, instantSeen, markInstantSeen } from '../instant.js';
+import { trendTile, videoSheet, photoSheet, reportSheet, confirmSheet, mediaTile, noteLikes, burnSheet, boostInf, captionSheet } from './shared.js';
 import { workspace, costLine, goButton } from './workspace.js';
 
 const POLL_MS = 5000;
 const visible = () => document.visibilityState === 'visible';
+
+// (round 4, phase 4) the reference pictures this wallet uploaded on this visit (each good for a day at our server): shared by
+// its tools, and by its other influencers' pages; dropped when another wallet signs in. [{ id, url (its small copy here, a
+// blob: address), at }]
+const REF_TTL_MS = 23 * 3600e3;
+const refStore = { wallet: null, list: [] };
+function refsOf(wallet) {
+  if (refStore.wallet !== wallet) {
+    for (const r of refStore.list) URL.revokeObjectURL(r.url);
+    refStore.wallet = wallet;
+    refStore.list = [];
+  }
+  const now = Date.now();
+  refStore.list = refStore.list.filter((r) => {
+    if (now - r.at < REF_TTL_MS) return true;
+    URL.revokeObjectURL(r.url);
+    return false;
+  });
+  return refStore.list;
+}
+// Instant's explainer, once a visit when this browser keeps nothing
+let instantExplained = false;
+// a meme's scene ideas (what the picture shows), from the ready-made memes
+const MEME_IDEAS = MEME_READY.map((m) => m.scene);
 const making = (s) => s === 'paid' || s === 'making';
 const SHAPE_CHOICES = Object.entries(SHAPES).map(([k, v]) => [k, `${v.name} ${v.ratio}`]);
+// (round 4) a photo may also be an X banner, cut to X's own header size on our server
+const PHOTO_SHAPE_CHOICES = Object.entries(PHOTO_SHAPES).map(([k, v]) => [k, `${v.name} ${v.ratio}`]);
+const isBanner = (j) => j?.kind === 'photo' && j.shape === 'banner';
 
 export async function render(ctx, route, root) {
   const id = route.id;
@@ -42,10 +76,15 @@ export async function render(ctx, route, root) {
     h('p', { class: 'sa-muted', text: 'Design one in a few taps, or start from a photo: photos, trend videos, 3D and more.' }),
     linkBtn('Create one', ctx.href('/create'), { kind: 'primary', icon: 'plus', dataset: { saLink: '' } }));
   const note = h('p', { class: 'sa-banner', role: 'status', hidden: true });
-  add(ws.main, h('div', { class: 'sa-inf' }, back, skeleton, note, head, makingBox, galleryBox, models, cta));
+  // (round 4, phase 2) its own wallet banned: said here (no tools: it makes nothing), with a ticket to ask why
+  const bannedBox = h('div', { class: 'sa-banner sa-banner-warn', role: 'status', hidden: true },
+    h('p', { text: `${BANNED_TEXT} Its pictures and videos are hidden too, until a moderator lifts the ban.` }),
+    linkBtn('Open a support ticket', ctx.href('/help?new=account'), { kind: 'ghost', size: 'sm', icon: 'inbox', dataset: { saLink: '' } }));
+  add(ws.main, h('div', { class: 'sa-inf' }, back, skeleton, note, bannedBox, head, makingBox, galleryBox, models, cta));
 
   const inf = () => page?.influencer;
   const mine = () => inf()?.mine === true;
+  const banned = () => mine() && inf()?.banned === true;
   const priv = () => inf()?.private === true || inf()?.face === true;
   const price = (what) => priceOf(what, { prices: ctx.me?.prices, level: ctx.level });
 
@@ -111,24 +150,26 @@ export async function render(ctx, route, root) {
     back.href = ctx.href(mine() ? '/me' : '/explore');
     back.lastChild.textContent = mine() ? 'My studio' : 'Explore';
     const done = (page.jobs || []).filter((j) => j.status === 'done');
-    part('head', { i: [i.name, i.status, i.portrait, i.body, i.public, i.private, i.face, i.mine, i.style, i.ready, i.boosted], n: done.length,
-      l: done.reduce((s, j) => s + (Number(j.likes) || 0), 0), b: [ctx.info?.burns?.boost, ctx.info?.burns?.boostHours] }, drawHead);
-    const pickOrMaking = mine() && ['looks', 'pick', 'body', 'failed'].includes(i.status);
+    bannedBox.hidden = !banned();
+    part('head', { i: [i.name, i.status, i.portrait, i.body, i.public, i.private, i.face, i.mine, i.style, i.ready, i.boosted, i.maker?.name, i.banned], n: done.length,
+      l: done.reduce((s, j) => s + (Number(j.likes) || 0), 0), b: [ctx.info?.burns?.boost, ctx.info?.burns?.boostHours], c: ctx.me ? ctx.me.clank?.name ?? null : undefined }, drawHead);
+    const pickOrMaking = mine() && !banned() && ['looks', 'pick', 'body', 'failed'].includes(i.status);
     makingBox.hidden = !pickOrMaking;
     if (pickOrMaking) part('making', { s: i.status, j: i.job, l: i.looks, e: i.error, p: page.position }, drawMaking);
     const ready = i.status === 'ready';
-    // its tools: its own wallet, once it's ready
-    const withTools = ready && mine();
+    // its tools: its own wallet, once it's ready (never while it's banned: it makes nothing)
+    const withTools = ready && mine() && !banned();
     ws.setPanel(withTools);
     if (withTools) {
       ws.setTitle(`Make with ${i.name}`, 'Photos, trend videos, videos, 3D and a coin');
       part('tools', toolsSig(), drawTools);
     }
-    galleryBox.hidden = !ready;
-    if (ready) part('gallery', { j: (page.jobs || []).map((j) => [j.id, j.status, j.step, j.poster, j.files, j.error]), b: i.body, f: galleryBox.dataset.filter || 'all', p: page.position }, drawGallery);
+    // (round 4, phase 2) while its own wallet is banned its pictures and videos are hidden from everyone, itself too: no gallery
+    galleryBox.hidden = !ready || banned();
+    if (!galleryBox.hidden) part('gallery', { j: (page.jobs || []).map((j) => [j.id, j.status, j.step, j.poster, j.files, j.error]), b: i.body, f: galleryBox.dataset.filter || 'all', p: page.position }, drawGallery);
     const ms = page.models || [];
-    models.hidden = !(ready && ms.length);
-    if (!models.hidden) part('models', ms.map((m) => [m.id, m.status, m.step, m.error, m.paid, m.credit]), drawModels);
+    models.hidden = !(ready && ms.length) || banned();
+    if (!models.hidden) part('models', ms.map((m) => [m.id, m.status, m.step, m.error, m.paid, m.credit, page.progress?.id === m.id ? page.progress.at : null]), drawModels);
     cta.hidden = mine() || !ready;
   }
 
@@ -137,9 +178,11 @@ export async function render(ctx, route, root) {
     const i = inf();
     const jobs = page.jobs || [];
     const done = jobs.filter((j) => j.status === 'done');
-    const coverSrc = i.body ? infPic(id, i.body, 0, true) : i.portrait ? infPic(id, i.portrait.job, i.portrait.n, true) : null;
+    // (round 4, phase 2) banned: its pictures aren't asked for (our server shows them to nobody until the ban is lifted)
+    const shown = !banned();
+    const coverSrc = !shown ? null : i.body ? infPic(id, i.body, 0, true) : i.portrait ? infPic(id, i.portrait.job, i.portrait.n, true) : null;
     const cover = h('div', { class: 'sa-cover', 'aria-hidden': 'true' }, coverSrc ? pic(coverSrc, { cls: 'sa-cover-pic', lazy: false }) : null);
-    const portrait = i.portrait ? pic(infPic(id, i.portrait.job, i.portrait.n, true), { cls: 'sa-profile-pic', alt: '', lazy: false })
+    const portrait = i.portrait && shown ? pic(infPic(id, i.portrait.job, i.portrait.n, true), { cls: 'sa-profile-pic', alt: '', lazy: false })
       : h('span', { class: 'sa-profile-pic is-missing', 'aria-hidden': 'true' }, icon('spark'));
     const meta = [INF_STYLES[i.style], 'AI-generated', i.ready ? `made ${dayText(i.ready)}` : null].filter(Boolean).join(' · ');
     const badges = h('div', { class: 'sa-badges' });
@@ -157,7 +200,7 @@ export async function render(ctx, route, root) {
       add(tools, share);
     }
     if (mine()) {
-      if (i.status === 'ready' && !priv()) {
+      if (i.status === 'ready' && !priv() && !banned()) {
         const sw = h('button', { type: 'button', class: 'sa-switch', role: 'switch', 'aria-checked': String(i.public) }, h('span', { class: 'sa-switch-knob', 'aria-hidden': 'true' }), h('span', { text: 'Show in Explore' }));
         sw.addEventListener('click', () => setPublic(!i.public, sw));
         add(tools, sw);
@@ -177,8 +220,13 @@ export async function render(ctx, route, root) {
       rep.addEventListener('click', () => reportSheet(ctx, { inf: id, name: i.name }));
       add(tools, rep);
     }
+    // (round 4) its maker's clank.trade username ("by @name", their clank.trade profile), on a public one
+    const maker = i.maker?.name ? h('a', { class: 'sa-maker', href: clankProfileUrl(i.maker.name), target: '_blank', rel: 'noopener noreferrer', 'aria-label': `By @${i.maker.name} on clank.trade (opens clank.trade)` },
+      h('span', { text: 'by ' }), h('span', { class: 'sa-maker-name', text: `@${i.maker.name}` }), h('span', { 'aria-hidden': 'true', text: '\u00a0↗' })) : null;
+    const addName = !maker && mine() && !banned() && i.status === 'ready' && i.public && !priv() && !ctx.me?.clank
+      ? h('a', { class: 'sa-maker is-add', href: ctx.href('/me#clank'), dataset: { saLink: '' } }, h('span', { text: 'Show your clank.trade name here' }), h('span', { 'aria-hidden': 'true', text: '\u00a0→' })) : null;
     put(head, cover, h('div', { class: 'sa-profile-row' }, portrait,
-      h('div', { class: 'sa-profile-titles' }, h('h1', { class: 'sa-display sa-profile-name', tabindex: '-1', text: i.name }), h('p', { class: 'sa-inf-meta', text: meta }), badges),
+      h('div', { class: 'sa-profile-titles' }, h('h1', { class: 'sa-display sa-profile-name', tabindex: '-1', text: i.name }), h('p', { class: 'sa-inf-meta', text: meta }), maker || addName, badges),
       i.status === 'ready' ? counts : null),
       tools);
   }
@@ -237,6 +285,8 @@ export async function render(ctx, route, root) {
       put(makingBox,
         h('h2', { class: 'sa-h2', text: i.status === 'looks' ? 'Making its looks' : 'Making its full body' }),
         h('p', { class: 'sa-progress-line' }, h('span', { class: 'sa-spin', 'aria-hidden': 'true' }), h('span', { text: makingText(i, { position }) })),
+        // (round 4) how far along it is, and about how long is left
+        progressBar({ key: i.job?.id || `${id}-${i.status}`, kind: i.status, step: i.job?.step || 'queue', since: i.job?.created ?? null }),
         h('p', { class: 'sa-muted sa-small', text: 'About a minute. You can leave this page: it keeps going, and My studio shows it when it\'s ready.' }),
         tiles);
       return;
@@ -295,7 +345,8 @@ export async function render(ctx, route, root) {
     const filter = galleryBox.dataset.filter || 'all';
     const shows = (j) => filter === 'all' || (filter === 'photos' ? j.kind === 'photo' : j.kind !== 'photo');
     const position = page.position;
-    const tiles = [];
+    // (round 4) its X banners in a strip of their own above its wall (3:1 is too low for a column of the wall)
+    const tiles = [], banners = [];
     const item = (j) => ({ ...j, inf: { id, name: i.name, portrait: i.portrait } });
     if (i.body && filter !== 'videos') {
       const b = h('button', { type: 'button', class: 'sa-media-open', 'aria-label': `${i.name}'s full body` },
@@ -304,16 +355,21 @@ export async function render(ctx, route, root) {
       tiles.push(h('div', { class: 'sa-media is-tall' }, b));
     }
     for (const j of jobs.filter(shows)) {
-      const shape = SHAPES[j.shape] ? j.shape : 'tall';
+      const shape = PHOTO_SHAPES[j.shape] ? j.shape : 'tall';
+      const into = isBanner(j) ? banners : tiles;
       if (j.status === 'done') {
-        tiles.push(mediaTile(ctx, item(j), { onopen: () => openJob(j), can: !mine() && !priv(), showName: false,
-          badge: j.kind === 'trend' ? { text: 'Trend', icon: 'zap' } : j.kind === 'video' ? { text: 'Video', icon: 'film' } : null }));
+        into.push(mediaTile(ctx, item(j), { onopen: () => openJob(j), can: !mine() && !priv(), showName: false,
+          badge: j.kind === 'trend' ? { text: 'Trend', icon: 'zap' } : j.kind === 'video' ? { text: Number(j.parts) > 1 ? `Video · ${secondsText(j.seconds)}` : 'Video', icon: 'film' }
+            : isBanner(j) ? { text: 'X banner', icon: 'image' } : j.meme ? { text: 'Meme', icon: 'smile' } : null }));
       } else if (making(j.status)) {
-        tiles.push(h('div', { class: `sa-media is-${shape} is-making`, id: `v-${j.id}` }, h('span', { class: 'sa-shimmer', 'aria-hidden': 'true' }),
-          h('span', { class: 'sa-media-state' }, h('span', { class: 'sa-spin', 'aria-hidden': 'true' }), h('span', { text: jobStateText(j, { position: position && position.job === j.id ? position.at : null }) })),
+        into.push(h('div', { class: `sa-media is-${shape} is-making`, id: `v-${j.id}` }, h('span', { class: 'sa-shimmer', 'aria-hidden': 'true' }),
+          h('span', { class: 'sa-media-state' }, h('span', { class: 'sa-spin', 'aria-hidden': 'true' }), h('span', { text: jobStateText(j, { position: position && position.job === j.id ? position.at : null }) }),
+            // (round 4) how far along it is, and about how long is left (phase 4: its own plan, by its model, quality and
+            // length; a long video's by its parts)
+            progressBar({ key: j.id, kind: progressKind(j), plan: jobPlan(j), step: jobStep(j), since: j.created ?? null, small: true })),
           h('span', { class: 'sa-media-cap' }, h('span', { text: jobTitle(j) }))));
       } else if (j.status === 'failed') {
-        tiles.push(h('div', { class: `sa-media is-${shape} is-failed`, id: `v-${j.id}` },
+        into.push(h('div', { class: `sa-media is-${shape} is-failed`, id: `v-${j.id}` },
           h('span', { class: 'sa-media-state' }, h('span', { text: jobStateText(j) })), h('span', { class: 'sa-media-cap' }, h('span', { text: jobTitle(j) }))));
       }
     }
@@ -332,17 +388,24 @@ export async function render(ctx, route, root) {
     }
     put(galleryBox,
       h('div', { class: 'sa-section-head sa-row-between' }, h('h2', { class: 'sa-h2', id: 'sa-gal-h', text: mine() ? 'Creations' : `${i.name}'s photos and videos` }), jobs.length ? filters : null),
-      h('div', { class: 'sa-wall' }, ...tiles),
+      banners.length ? h('div', { class: 'sa-banners' }, h('h3', { class: 'sa-banners-title' }, icon('image'), h('span', { text: `X banners · ${BANNER.W} × ${BANNER.H}` })), h('div', { class: 'sa-banner-row' }, ...banners)) : null,
+      tiles.length || !banners.length ? h('div', { class: 'sa-wall' }, ...tiles) : null,
       emptyNote);
   }
 
   function openJob(j) {
     const i = inf();
+    // (round 4) its own creations: captions for a post of it
+    const onCaptions = mine() ? () => captionSheet(ctx, { job: j, name: i.name, inf: id }) : null;
     if (j.kind === 'photo') {
-      photoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onVideo: (image) => openTool('video', { image }), onTrend: (image) => openTool('trend', { image }) });
+      // (an X banner is too wide to start a video or a trend video: those are tall, wide or square; and a meme's words would
+      // come out garbled in one)
+      const starts = !isBanner(j) && !j.meme;
+      photoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onCaptions,
+        onVideo: starts ? (image) => openTool('video', { image }) : null, onTrend: starts ? (image) => openTool('trend', { image }) : null });
       return;
     }
-    videoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv() });
+    videoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onCaptions });
   }
 
   // ---------- its 3D models ----------
@@ -372,15 +435,21 @@ export async function render(ctx, route, root) {
           extra.push(again);
         }
         const isMaking = making(m.status) || m.status === 'quote';
+        // (round 4) how far along it is: its step, and that step's own percentage (the 3D service's) when this look brought it
+        const own = page.progress?.id === m.id && page.progress.step === m.step ? page.progress.at : null;
         return h('li', null, h('div', { class: `sa-tile is-square ${isMaking ? 'is-making' : 'is-failed'}` },
           making(m.status) ? h('span', { class: 'sa-shimmer', 'aria-hidden': 'true' }) : null,
           h('span', { class: 'sa-tile-state' }, making(m.status) ? h('span', { class: 'sa-spin', 'aria-hidden': 'true' }) : m.status === 'quote' ? icon('flame') : null,
-            h('span', { text: modelText(m) }), ...extra),
+            h('span', { text: modelText(m) }),
+            making(m.status) ? progressBar({ key: m.id, kind: 'model', step: m.step || 'image', stepPct: own, since: m.started ?? m.created ?? null, small: true }) : null,
+            ...extra),
           h('span', { class: 'sa-tile-cap' }, h('span', { text: '3D model' }))));
       })));
   }
 
   // ---------- the tools: the workspace's panel (its own wallet, once it's ready) ----------
+  // (Round 4, phase 4) Photo makes photos, memes and X banners (all three are photos); with Instant on, the panel is Instant's
+  // ready-made ideas instead (one tap makes one)
   const TOOLS = [
     { id: 'photo', icon: 'image', name: 'Photo', build: photoTool },
     { id: 'trend', icon: 'zap', name: 'Trend', build: trendTool },
@@ -398,11 +467,47 @@ export async function render(ctx, route, root) {
   ws.setQuick(quick);
   let tool = { id: 'photo', opts: {} }, toolToken = 0, priced = [];
   // the buttons' prices follow this wallet's (its level's discount, once inf-me answers)
-  ctx.on('me', () => { for (const [b, what] of priced) b.setPrice(price(what)); });
+  ctx.on('me', () => { for (const [b] of priced) b.refresh(); });
+
+  // ---------- Instant (round 4, phase 4): a switch in the panel's head; on, the panel is ready-made ideas, one tap each ----------
+  let instant = instantOn();
+  const instSwitch = h('button', { type: 'button', class: 'sa-instant', role: 'switch', 'aria-checked': String(instant), 'aria-label': 'Instant', title: 'Instant: one tap on an idea makes it' },
+    icon('ff'), h('span', { text: 'Instant' }));
+  instSwitch.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setInstantMode(!instant, { remember: true });
+  });
+  ws.setMode(instSwitch);
+  function setInstantMode(on, { remember = false } = {}) {
+    instant = Boolean(on);
+    if (remember) setInstant(instant);
+    instSwitch.setAttribute('aria-checked', String(instant));
+    drawTools();
+    if (instant && remember && !instantSeen() && !instantExplained) explainInstant();
+  }
+  function explainInstant() {
+    instantExplained = true;
+    markInstantSeen();
+    const s = sheet({ title: 'Instant: one tap, and it\'s made', sub: 'Ready-made ideas instead of choices: for when you just want to post.' });
+    add(s.body, h('ul', { class: 'sa-ticks' },
+      h('li', { text: 'Tap an idea and it starts at once, at the price on it. Credits are spent as you tap: there\'s no second step.' }),
+      h('li', { text: 'Photos are Classic at Standard quality, X banners HD, memes come with their words, and videos are 5 seconds (Standard, no sound) from its newest photo.' }),
+      h('li', { text: 'Anything that can\'t be made gives its credits back, as always.' }),
+      h('li', { text: 'A coin is never one tap. Switch Instant off any time for every choice: models, quality, length, references.' })));
+    const ok = btn('Got it', { kind: 'primary', icon: 'check' });
+    ok.addEventListener('click', () => s.close());
+    s.setFoot(ok);
+  }
 
   // what the tools' panel shows: drawn again only when this changes (so what's typed stays put between looks)
-  const toolsSig = () => ({ ids: toolsNow().map((t) => t.id), x: tool.id === '3d' ? [ctx.level, ctx.info?.burns?.model] : tool.id === 'coin' ? [priv()] : null });
+  const toolsSig = () => ({
+    ids: toolsNow().map((t) => t.id), instant,
+    x: instant ? [ctx.level, ctx.info?.threeD, startPhotos(page.jobs)[0]?.id ?? null] : tool.id === '3d' ? [ctx.level, ctx.info?.burns?.model]
+      : tool.id === 'coin' ? [priv()] : tool.id === 'video' || tool.id === 'photo' ? [startPhotos(page.jobs).map((j) => j.id).join()] : null,
+  });
   function openTool(toolId, opts = {}) {
+    // (Instant on: a tool asked for by name, like "Make a video from it", shows that tool with every choice)
+    if (instant) { instant = false; setInstant(false); instSwitch.setAttribute('aria-checked', 'false'); }
     tool = { id: toolId, opts };
     drawTools();
     ws.open();
@@ -412,12 +517,15 @@ export async function render(ctx, route, root) {
     const list = toolsNow();
     if (!list.some((t) => t.id === tool.id)) tool = { id: 'photo', opts: {} };
     sigs.tools = JSON.stringify(toolsSig());
+    toolTabs.hidden = instant;
     put(toolTabs, ...list.map((t) => {
       const b = h('button', { type: 'button', role: 'tab', class: 'sa-tooltab', 'aria-selected': String(t.id === tool.id), 'aria-controls': toolBody.id,
         tabindex: t.id === tool.id ? '0' : '-1', dataset: { tool: t.id } }, icon(t.icon), h('span', { text: t.name }));
       b.addEventListener('click', () => { if (t.id !== tool.id) { tool = { id: t.id, opts: {} }; drawTools(); } });
       return b;
     }));
+    if (instant) toolBody.removeAttribute('role'); else toolBody.setAttribute('role', 'tabpanel');
+    toolBody.classList.toggle('is-instant', instant);
     const token = ++toolToken;
     priced = [];
     put(toolBody);
@@ -430,6 +538,7 @@ export async function render(ctx, route, root) {
       // after it started: a fresh form, and its tile in the gallery
       done: () => { tool = { id: tool.id, opts: {} }; drawTools(); },
     };
+    if (instant) { instantTool(host); return; }
     list.find((t) => t.id === tool.id).build(host, tool.opts || {});
   }
   toolTabs.addEventListener('keydown', (e) => {
@@ -445,45 +554,56 @@ export async function render(ctx, route, root) {
   });
 
   // ---------- making: what each tool shares ----------
-  // what a "no" means for making something (and buying credits when it's short)
-  function made(r, what, { onWords = null, msg }) {
+  // what a "no" means for making something (and buying credits when it's short). need: what it costs, in credits
+  function made(r, need, { onWords = null, msg }) {
     const d = r.data || {};
     if (r.ok && (d.ok || d.job || d.order)) return true;
     if (d.error === 'words' && onWords) { onWords(d); return false; }
-    if (d.error === 'short') { say(msg, `That needs ${creditsText(price(what))}: you have ${creditsText(d.have ?? ctx.credits)}.`); ctx.buyCredits({ need: price(what) }); return false; }
+    if (d.error === 'short') { say(msg, `That needs ${creditsText(need)}: you have ${creditsText(d.have ?? ctx.credits)}.`); ctx.buyCredits({ need }); return false; }
     say(msg, errorText(d.error));
     return false;
   }
-  async function enough(what) {
-    if (ctx.credits >= price(what)) return true;
-    await ctx.buyCredits({ need: price(what) });
-    return ctx.credits >= price(what);
+  async function enough(need) {
+    if (ctx.credits >= need) return true;
+    await ctx.buyCredits({ need });
+    return ctx.credits >= need;
   }
-  // the panel's button for a tool, its price kept up to date
+  // the panel's button for a tool, its price kept up to date: what it makes (a key of the price table: 'trend', 'model'), or
+  // (phase 4, the model menu) a function that works out its price from the form's choices
   function goFor(label, what, iconName = 'spark') {
     const go = goButton(label, iconName);
-    go.setPrice(price(what));
-    priced.push([go, what]);
-    cost.need(price(what));
+    const entry = [go, what];
+    const now = () => (typeof entry[1] === 'function' ? entry[1]() : price(entry[1]));
+    go.refresh = () => { const n = now(); go.setPrice(n); cost.need(n); };
+    // (round 4) what it makes can change with a choice (a photo, a meme, an X banner): its price follows
+    go.setWhat = (w) => { entry[1] = w; go.refresh(); };
+    go.cost = now;
+    go.refresh();
+    priced.push(entry);
     return go;
   }
   const errLine = () => h('p', { class: 'sa-err', role: 'alert', hidden: true });
   const hint = (text) => h('p', { class: 'sa-ws-hint', text });
-  function sceneField(ideas, { value = '' } = {}) {
+  function sceneField(ideas, { value = '', label = 'The scene' } = {}) {
     const id2 = nextId('scene');
     const area = h('textarea', { class: 'sa-input sa-textarea', id: id2, rows: 4, maxlength: SCENE_MAX, placeholder: 'Describe the scene…', value });
     const count = h('span', { class: 'sa-count', 'aria-hidden': 'true', text: `${[...value].length}/${SCENE_MAX}` });
     const err = errLine();
+    const lab = h('label', { class: 'sa-label', for: id2, text: label });
     area.addEventListener('input', () => { count.textContent = `${[...area.value].length}/${SCENE_MAX}`; say(err, ''); });
-    const ideaRow = h('div', { class: 'sa-ideas' }, h('span', { class: 'sa-hint', text: 'Ideas' }), ...ideas.slice(0, 6).map((t) => {
+    const ideaRow = h('div', { class: 'sa-ideas' });
+    const fillIdeas = (list) => put(ideaRow, h('span', { class: 'sa-hint', text: 'Ideas' }), ...list.slice(0, 6).map((t) => {
       const b = h('button', { type: 'button', class: 'sa-idea', text: t });
       b.addEventListener('click', () => { area.value = t; area.dispatchEvent(new Event('input')); area.focus(); });
       return b;
     }));
+    fillIdeas(ideas);
     return {
-      node: h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: id2, text: 'The scene' }), area, h('div', { class: 'sa-field-foot' }, err, count), ideaRow),
-      area, err,
+      node: h('div', { class: 'sa-field' }, lab, area, h('div', { class: 'sa-field-foot' }, err, count), ideaRow),
+      area, err, setIdeas: fillIdeas,
+      setLabel(t, placeholder = null) { lab.textContent = t; if (placeholder) area.placeholder = placeholder; },
       get value() { return area.value.trim(); },
+      set value(v) { area.value = v; area.dispatchEvent(new Event('input')); },
       check() {
         const v = area.value.trim();
         if ([...v].length < SCENE_MIN) { say(err, wordsText('scene', v ? 'short' : 'empty')); ws.reveal(area); return false; }
@@ -491,15 +611,22 @@ export async function render(ctx, route, root) {
       },
     };
   }
-  const shapeSeg = (value = 'tall') => segmented({ legend: 'Shape', choices: SHAPE_CHOICES, value, showLegend: true, cls: 'sa-seg-shape' });
-  // its done photos to start from (the full body when none is picked)
-  function startFrom({ value = null, required = false, onchange = () => {} } = {}) {
-    const photos = (page.jobs || []).filter((j) => j.kind === 'photo' && j.status === 'done');
+  const shapeSeg = (value = 'tall', onchange = null) => segmented({ legend: 'Shape', choices: SHAPE_CHOICES, value, showLegend: true, cls: 'sa-seg-shape', onchange });
+  // its done photos to start from (its full body too when it isn't required); never an X banner or a meme (rules.js
+  // startPhotos). setRequired: whether a photo is needed (phase 4: Standard, Pro and Long start from one; Anime may start from
+  // its full body)
+  function startFrom({ value = null, required = false, onchange = () => {}, onEmpty = null } = {}) {
+    const photos = startPhotos(page.jobs);
     let pickedId = value && photos.some((p) => p.id === value) ? value : null;
+    let need = required;
+    const legend = h('legend', { class: 'sa-label' });
     const row = h('div', { class: 'sa-start-row', role: 'radiogroup', 'aria-label': 'Start from' });
+    const empty = h('div', { class: 'sa-start-empty', hidden: true });
     const draw0 = () => {
+      legend.textContent = need ? 'Start from one of its photos' : 'Start from (optional)';
+      if (need && pickedId === null && photos.length) pickedId = photos[0].id;
       const opts = [];
-      if (!required) {
+      if (!need) {
         const b = h('button', { type: 'button', class: 'sa-start', role: 'radio', 'aria-checked': String(pickedId === null) },
           inf().body ? pic(infPic(id, inf().body, 0, true), { cls: 'sa-start-pic' }) : h('span', { class: 'sa-start-pic is-missing' }), h('span', { text: 'Full body' }));
         b.addEventListener('click', () => { pickedId = null; draw0(); onchange(null); });
@@ -512,75 +639,381 @@ export async function render(ctx, route, root) {
         opts.push(b);
       }
       put(row, ...opts);
+      row.hidden = !opts.length;
+      // a photo is needed and there's none yet: say so, with a way to make one
+      empty.hidden = !(need && !photos.length);
+      if (!empty.hidden && !empty.childElementCount) {
+        const mk = btn('Make a photo first', { kind: 'ghost', size: 'sm', icon: 'image' });
+        mk.addEventListener('click', () => (onEmpty ? onEmpty() : openTool('photo')));
+        add(empty, h('p', { class: 'sa-ws-hint', text: 'It starts from one of its photos, and it has none yet.' }), mk);
+      }
     };
     draw0();
     return {
-      node: h('fieldset', { class: 'sa-chips' }, h('legend', { class: 'sa-label', text: required ? 'Start from one of its photos' : 'Start from (optional)' }), row),
-      get value() { return pickedId; }, photos,
+      node: h('fieldset', { class: 'sa-chips sa-start-set' }, legend, row, empty),
+      get value() { return pickedId; },
+      get ok() { return !need || Boolean(pickedId); },
+      photos,
+      setRequired(on) {
+        if (Boolean(on) === need) return;
+        need = Boolean(on);
+        draw0();
+        onchange(pickedId);
+      },
     };
   }
 
-  // ---------- Photo ----------
-  function photoTool(host) {
+  // Reference pictures (phase 4): a thing, a place, a pet, food or a style to put in it (never a person: the influencer is the
+  // person), uploaded here and looked at by our server first; kept for this visit (refsOf), so every tool shares them. max: how
+  // many this model takes (the first ones go in)
+  function refsField(host, { max = REFS.MAX } = {}) {
+    let limit = max, sending = false;
+    const wallet = () => ctx.session?.wallet || null;
+    const fileId = nextId('ref'), labelId = nextId('refl');
+    const file = h('input', { type: 'file', class: 'sa-file', id: fileId, accept: 'image/jpeg,image/png,image/webp', 'aria-describedby': `${labelId}-n` });
+    const row = h('div', { class: 'sa-refs-row' });
+    const count = h('span', { class: 'sa-count', 'aria-hidden': 'true' });
+    const state = h('p', { class: 'sa-up-state', role: 'status', hidden: true });
+    const note = h('p', { class: 'sa-fine sa-refs-extra', hidden: true });
+    const human = h('div', { class: 'sa-human' });
+    const draw0 = () => {
+      const list = refsOf(wallet());
+      const tiles = list.map((r, k) => {
+        const rm = h('button', { type: 'button', class: 'sa-ref-x', 'aria-label': `Remove reference ${k + 1}` }, icon('close'));
+        rm.addEventListener('click', () => {
+          const at = refStore.list.findIndex((x) => x.id === r.id);
+          if (at >= 0) { URL.revokeObjectURL(refStore.list[at].url); refStore.list.splice(at, 1); }
+          draw0();
+          (row.querySelector('.sa-ref-x') || row.querySelector('.sa-ref-add'))?.focus();
+        });
+        return h('span', { class: `sa-ref${k >= limit ? ' is-extra' : ''}` }, pic(r.url, { cls: 'sa-ref-pic', alt: `Reference ${k + 1}${k >= limit ? ' (not used by this one)' : ''}`, lazy: false }), rm);
+      });
+      const canAdd = list.length < REFS.MAX && !sending;
+      file.disabled = !canAdd;
+      put(row, ...tiles, list.length < REFS.MAX ? h('label', { class: `sa-ref-add${sending ? ' is-busy' : ''}`, for: fileId },
+        sending ? h('span', { class: 'sa-spin', 'aria-hidden': 'true' }) : icon('plus'), h('span', { text: sending ? 'Checking…' : list.length ? 'Add' : 'Add a reference' })) : null);
+      count.textContent = `${Math.min(list.length, limit)}/${limit}`;
+      say(note, list.length > limit ? `This one takes ${limit} reference${limit === 1 ? '' : 's'}: the first ${limit} go in.` : '');
+    };
+    file.addEventListener('change', async () => {
+      const f = file.files?.[0];
+      file.value = '';
+      if (!f || sending) return;
+      sending = true;
+      say(state, '');
+      draw0();
+      const blob = await shrinkPicture(f);
+      let r = { ok: false, error: 'picture' };
+      if (blob) r = await uploadRef(ctx.act, { blob, human });
+      sending = false;
+      if (r.ok) {
+        refsOf(wallet()).push({ id: r.id, url: URL.createObjectURL(blob), at: Date.now() });
+        if (host.alive()) { say(state, 'Reference added ✓'); draw0(); }
+        return;
+      }
+      if (!host.alive()) return;
+      draw0();
+      say(state, upErrorText(r, 'ref'));
+    });
+    draw0();
+    return {
+      node: h('div', { class: 'sa-field sa-refs' },
+        h('div', { class: 'sa-label-row' }, h('span', { class: 'sa-label', id: labelId }, icon('paperclip'), h('span', { text: 'References (optional)' })), count),
+        h('p', { class: 'sa-hint', id: `${labelId}-n`, text: REFS.NOTE }), file, row, state, note, human),
+      setMax(n) { limit = Math.max(0, Number(n) || 0); draw0(); },
+      ids() { return refsOf(wallet()).slice(0, limit).map((r) => r.id); },
+      get busy() { return sending; },
+    };
+  }
+
+  // ---------- Photo: a photo, a meme or an X banner (all three are photos) ----------
+  // (phase 4) the model menu: Classic or Crisp, and its quality; a meme (its format and words, written into the picture by the
+  // AI: Classic only); an X banner (round 4: made wide, then cut to exactly X's header size, 1500 × 500: Classic, HD); and
+  // reference pictures for each
+  function photoTool(host, { kind: startKind = null, shape: start = 'tall', meme: memeStart = null } = {}) {
     const i = inf();
-    const scene = sceneField(PHOTO_IDEAS);
-    const shape = shapeSeg('tall');
+    const st = {
+      kind: startKind || (start === 'banner' ? 'banner' : memeStart ? 'meme' : 'photo'),
+      model: 'classic', quality: 'std', meme: memeStart?.meme && MEMES[memeStart.meme] ? memeStart.meme : 'topbottom',
+    };
     const msg = errLine();
-    const go = goFor('Make photo', 'photo', 'image');
+    const shape = shapeSeg(SHAPES[start] ? start : st.kind === 'meme' ? 'square' : 'tall', () => sync());
+    const spec = () => (st.kind === 'banner' ? { model: 'classic', quality: 'hd', shape: 'banner' }
+      : st.kind === 'meme' ? { model: 'classic', quality: st.quality, shape: shape.value || 'square', meme: st.meme }
+        : { model: st.model, quality: st.quality, shape: shape.value || 'tall' });
+    const go = goFor('Make photo', () => photoCredits(spec(), ctx.level), 'image');
+    const kinds = segmented({ legend: 'What to make', choices: [['photo', 'Photo', 'image'], ['meme', 'Meme', 'smile'], ['banner', 'X banner', 'image']],
+      value: st.kind, cls: 'sa-seg-kind', onchange: (v) => { st.kind = v; sync(); } });
+    const models = cardPick({ legend: 'Model', choices: Object.entries(PHOTO_MODELS).map(([value, m]) => ({ value, name: m.name, note: m.note })), value: st.model,
+      onchange: (v) => { st.model = v; sync(); } });
+    const qualityBox = h('div', { class: 'sa-field' });
+    let qualityKey = null;
+    function drawQuality() {
+      const qs = Object.keys(PHOTO_MODELS[st.kind === 'meme' ? 'classic' : st.model].cents);
+      if (!qs.includes(st.quality)) st.quality = qs[0];
+      const key = `${qs.join()}|${st.quality}`;
+      if (key === qualityKey) return;
+      qualityKey = key;
+      put(qualityBox, segmented({ legend: 'Quality', choices: qs.map((q) => [q, `${PHOTO_QUALITY[q].name} · ${PHOTO_QUALITY[q].px}`]), value: st.quality, showLegend: true,
+        cls: 'sa-seg-shape', onchange: (v) => { st.quality = v; qualityKey = `${qs.join()}|${v}`; sync(); } }).node);
+    }
+    const scene = sceneField(PHOTO_IDEAS);
+    const about = h('p', { class: 'sa-ws-hint sa-shape-note', hidden: true });
+    const meme = memeFields();
+    const refs = refsField(host, { max: PHOTO_MODELS.classic.refs });
+    const modelBox = h('div', { class: 'sa-field' }, models.node);
+    const shapeBox = h('div', { class: 'sa-field' }, shape.node);
+    function sync() {
+      const banner = st.kind === 'banner', isMeme = st.kind === 'meme';
+      modelBox.hidden = banner || isMeme;
+      qualityBox.hidden = banner;
+      shapeBox.hidden = banner;
+      meme.node.hidden = !isMeme;
+      if (!banner) drawQuality();
+      scene.setIdeas(banner ? BANNER_IDEAS : isMeme ? MEME_IDEAS : PHOTO_IDEAS);
+      scene.setLabel(isMeme ? 'What the picture shows' : 'The scene', isMeme ? 'Describe the picture under the words…' : 'Describe the scene…');
+      say(about, banner ? `Exactly ${BANNER.W} × ${BANNER.H}, ready for your X header (HD, Classic). ${i.name} sits on the right: the lower left stays clear for your profile picture.`
+        : isMeme ? `${i.name} in a meme: the AI writes your words into the picture. Classic only (it writes words best). Never about money, coins or prices.` : '');
+      go.setLabel(banner ? 'Make X banner' : isMeme ? 'Make meme' : 'Make photo');
+      refs.setMax(PHOTO_MODELS[banner || isMeme ? 'classic' : st.model].refs);
+      // each model's price for this shape (from its cheapest quality)
+      const lvl = ctx.level;
+      models.update(Object.keys(PHOTO_MODELS).map((m) => {
+        const ps = Object.keys(PHOTO_MODELS[m].cents).map((q) => photoCredits({ model: m, quality: q, shape: shape.value || 'tall' }, lvl));
+        return { value: m, price: Math.min(...ps), from: new Set(ps).size > 1 };
+      }));
+      go.refresh();
+      say(msg, '');
+    }
     go.node.addEventListener('click', () => {
+      if (st.kind === 'meme' && !meme.check()) return;
       if (!scene.check()) return;
+      if (refs.busy) { say(msg, 'Wait for your reference to finish its check.'); return; }
+      const need = go.cost();
       busy(go.node, 'Starting…', async () => {
-        if (!(await enough('photo'))) return;
-        const r = await ctx.act('inf-make', { id, kind: 'photo', scene: scene.value, shape: shape.value || 'tall' });
-        if (made(r, 'photo', { msg, onWords: (d) => say(d.field === 'scene' ? scene.err : msg, wordsText(d.field, d.why)) })) {
-          ctx.toast('Making its photo: about half a minute', 'good');
+        if (!(await enough(need))) return;
+        const s0 = spec();
+        const body = { id, kind: 'photo', scene: scene.value, shape: s0.shape, model: s0.model, quality: s0.quality };
+        if (st.kind === 'meme') Object.assign(body, { meme: st.meme, lines: meme.lines });
+        const ids = refs.ids();
+        if (ids.length) body.refs = ids;
+        const r = await ctx.act('inf-make', body);
+        if (made(r, need, { msg, onWords: (d) => say(d.field === 'scene' ? scene.err : d.field === 'caption' || d.field === 'meme' ? meme.err : msg, wordsText(d.field, d.why)) })) {
+          ctx.toast(st.kind === 'banner' ? 'Making its X banner: about half a minute' : st.kind === 'meme' ? 'Making its meme: about half a minute' : 'Making its photo: about half a minute', 'good');
           host.done();
           load();
         }
       });
     });
-    put(host.body, hint(`${i.name} in any scene you describe: about half a minute.`), scene.node, h('div', { class: 'sa-field' }, shape.node));
+    put(host.body, hint(`${i.name} in any scene you describe: about half a minute.`), h('div', { class: 'sa-field' }, kinds.node, about),
+      meme.node, scene.node, modelBox, qualityBox, shapeBox, refs.node);
     host.setFoot(msg, go.node);
+    if (memeStart) meme.fill(memeStart);
+    sync();
+
+    // a meme's format and words (one box per line of its format)
+    function memeFields() {
+      const err = errLine();
+      const fmt = chips({ legend: 'Format', choices: Object.entries(MEMES).map(([k, m]) => [k, m.name]), value: st.meme, onchange: (v) => { st.meme = v; drawLines(); sync(); } });
+      const fmtNote = h('p', { class: 'sa-hint' });
+      const linesBox = h('div', { class: 'sa-meme-lines' });
+      let inputs = [];
+      const sample = (meme0, k) => MEME_READY.find((m) => m.meme === meme0)?.lines[k]?.replace(/^pov\s*:\s*/i, '') || '';
+      function drawLines(values = null) {
+        const was = values || inputs.map((x) => x.input.value);
+        const m = MEMES[st.meme];
+        fmtNote.textContent = m.note;
+        inputs = m.lines.map((label, k) => {
+          const fid = nextId('ml');
+          const input = h('input', { class: 'sa-input', id: fid, type: 'text', maxlength: MEME_LINE_MAX, autocomplete: 'off', placeholder: sample(st.meme, k), value: was[k] || '' });
+          input.addEventListener('input', () => say(err, ''));
+          const pov = st.meme === 'pov';
+          return { input, node: h('div', { class: 'sa-meme-line' }, h('label', { class: 'sa-label', for: fid, text: pov ? 'Your line' : label }),
+            pov ? h('div', { class: 'sa-pov' }, h('span', { class: 'sa-pov-pre', 'aria-hidden': 'true', text: 'POV:' }), input) : input) };
+        });
+        put(linesBox, ...inputs.map((x) => x.node));
+      }
+      const surprise = btn('Surprise me', { kind: 'quiet', size: 'sm', icon: 'wand' });
+      let last = null;
+      surprise.addEventListener('click', () => {
+        const pool = MEME_READY.filter((m) => m.id !== last);
+        const m = pool[Math.floor(Math.random() * pool.length)];
+        last = m.id;
+        api.fill(m);
+        sync();
+      });
+      drawLines([]);
+      const api = {
+        node: h('div', { class: 'sa-field sa-meme', hidden: true }, fmt.node, fmtNote, h('div', { class: 'sa-row-between sa-meme-head' }, h('span', { class: 'sa-label', text: 'Its words' }), surprise), linesBox, err),
+        err,
+        get lines() { return inputs.map((x) => (st.meme === 'pov' ? `POV: ${x.input.value.trim()}` : x.input.value.trim())); },
+        fill(m) {
+          st.meme = m.meme;
+          fmt.set(m.meme);
+          drawLines(memeInputs(m));
+          if (m.scene) scene.value = m.scene;
+          say(err, '');
+        },
+        check() {
+          const empty = inputs.find((x) => !x.input.value.trim());
+          if (empty) { say(err, wordsText('caption', 'empty')); ws.reveal(empty.input); return false; }
+          return true;
+        },
+      };
+      return api;
+    }
   }
 
   // ---------- Video ----------
+  // (phase 4) the model menu: Standard (720p) and Pro (1080p) from one of its photos, Anime (an anime or 3D cartoon influencer:
+  // from its full body or a photo), Long (up to a minute, made in parts, without sound); its length, Anime's quality, sound
+  // (Long: none), and reference pictures
   function videoTool(host, { image = null } = {}) {
     const i = inf();
-    const needsPhoto = i.style === 'real' || i.mode === 'face';
+    const animeOk = (i.style === 'anime' || i.style === 'toon') && i.mode !== 'face';
+    const st = { model: image ? 'standard' : animeOk ? 'anime' : 'standard', seconds: null, quality: '720p', sound: true };
     const scene = sceneField(VIDEO_IDEAS);
+    const msg = errLine();
     const shape = shapeSeg('tall');
     const shapeBox = h('div', { class: 'sa-field' }, shape.node);
-    const from = startFrom({ value: image, required: needsPhoto, onchange: (v) => { shapeBox.hidden = Boolean(v); } });
-    shapeBox.hidden = Boolean(from.value);
+    const spec = () => ({ model: st.model, seconds: st.seconds, sound: st.model === 'long' ? false : st.sound, quality: st.model === 'anime' ? st.quality : null });
+    const go = goFor('Make video', () => videoCredits(spec(), ctx.level), 'film');
+    const lvl = () => ctx.level;
+    const models = cardPick({
+      legend: 'Model',
+      choices: Object.entries(VIDEO_MODELS).map(([value, m]) => ({ value, name: m.name, note: m.note, off: value === 'anime' && !animeOk, why: 'For anime and 3D cartoon influencers' })),
+      value: st.model, onchange: (v) => { st.model = v; sync(); },
+    });
+    const lenBox = h('div', { class: 'sa-field' });
+    const qualBox = h('div', { class: 'sa-field' });
     const soundId = nextId('sound');
-    const sound = h('input', { type: 'checkbox', id: soundId, class: 'sa-check', checked: true });
-    const msg = errLine();
-    if (needsPhoto && !from.photos.length) {
-      const mk = btn('Make a photo first', { kind: 'primary', size: 'lg', icon: 'image', class: 'sa-btn sa-btn-primary sa-btn-lg sa-btn-wide' });
-      mk.addEventListener('click', () => openTool('photo'));
-      put(host.body, hint(`5 seconds of ${i.name} in any scene you describe.`),
-        h('p', { class: 'sa-note', text: "A realistic influencer's videos start from one of its photos: make a photo first, then make a video from it." }));
-      host.setFoot(mk);
-      return;
+    const sound = h('input', { type: 'checkbox', id: soundId, class: 'sa-check', checked: st.sound });
+    sound.addEventListener('change', () => { st.sound = sound.checked; sync(); });
+    const soundBox = h('div', { class: 'sa-consent sa-consent-sm' }, sound, h('label', { for: soundId, text: 'With sound (its sounds and music, made by AI too)' }));
+    const longNote = h('p', { class: 'sa-note', hidden: true });
+    const from = startFrom({ value: image, required: st.model !== 'anime', onchange: (v) => { shapeBox.hidden = Boolean(v); } });
+    const refs = refsField(host, { max: VIDEO_MODELS[st.model].refs });
+    let lenKey = null, qualKey = null;
+    function sync() {
+      const m = VIDEO_MODELS[st.model];
+      if (!m.seconds.includes(st.seconds)) st.seconds = m.seconds[0];
+      const lk = `${st.model}|${st.seconds}`;
+      if (lk !== lenKey) {
+        lenKey = lk;
+        put(lenBox, segmented({ legend: 'Length', choices: m.seconds.map((x) => [String(x), secondsText(x)]), value: String(st.seconds), showLegend: true, cls: 'sa-seg-shape',
+          onchange: (v) => { st.seconds = Number(v); lenKey = `${st.model}|${st.seconds}`; sync(); } }).node);
+      }
+      qualBox.hidden = st.model !== 'anime';
+      if (st.model === 'anime' && qualKey !== st.quality) {
+        qualKey = st.quality;
+        put(qualBox, segmented({ legend: 'Quality', choices: Object.entries(ANIME_QUALITY).map(([q, x]) => [q, x.name]), value: st.quality, showLegend: true, cls: 'sa-seg-shape',
+          onchange: (v) => { st.quality = v; qualKey = v; sync(); } }).node);
+      }
+      soundBox.hidden = st.model === 'long';
+      from.setRequired(st.model !== 'anime');
+      shapeBox.hidden = Boolean(from.value);
+      refs.setMax(m.refs);
+      // a long video: its parts, no sound, and how long it usually takes
+      const total = videoPlan({ model: st.model, seconds: st.seconds }).reduce((a, [, x]) => a + x, 0);
+      say(longNote, st.model === 'long'
+        ? `Made in ${Math.ceil(st.seconds / 15)} parts, each starting where the last one ended, then joined: ${leftWords(total).replace(' left', '')}. Without sound (add your own music when you post it).`
+        : '');
+      go.setLabel(st.model === 'long' ? `Make ${secondsText(st.seconds)} video` : 'Make video');
+      // each model's price from its cheapest length (silent; Anime at 480p, its sound free)
+      models.update(Object.keys(VIDEO_MODELS).map((k) => {
+        const vm = VIDEO_MODELS[k];
+        const p = videoCredits({ model: k, seconds: vm.seconds[0], sound: false, quality: k === 'anime' ? '480p' : null }, lvl());
+        return { value: k, price: p, from: true };
+      }));
+      go.refresh();
+      say(msg, '');
     }
-    const go = goFor('Make video', 'video', 'film');
     go.node.addEventListener('click', () => {
       if (!scene.check()) return;
-      if (needsPhoto && !from.value) { say(msg, errorText('needs_photo')); return; }
+      if (!from.ok) { say(msg, errorText('needs_photo')); ws.reveal(from.node, { focus: false }); return; }
+      if (refs.busy) { say(msg, 'Wait for your reference to finish its check.'); return; }
+      const need = go.cost();
       busy(go.node, 'Starting…', async () => {
-        if (!(await enough('video'))) return;
-        const body = { id, kind: 'video', scene: scene.value, shape: shape.value || 'tall', sound: sound.checked, ...(from.value ? { image: from.value } : {}) };
+        if (!(await enough(need))) return;
+        const s0 = spec();
+        const body = { id, kind: 'video', scene: scene.value, shape: shape.value || 'tall', model: s0.model, seconds: s0.seconds, sound: s0.sound, ...(s0.quality ? { quality: s0.quality } : {}),
+          ...(from.value ? { image: from.value } : {}) };
+        const ids = refs.ids();
+        if (ids.length) body.refs = ids;
         const r = await ctx.act('inf-make', body);
-        if (made(r, 'video', { msg, onWords: (d) => say(d.field === 'scene' ? scene.err : msg, wordsText(d.field, d.why)) })) {
-          ctx.toast('Making its video: a few minutes', 'good');
+        if (made(r, need, { msg, onWords: (d) => say(d.field === 'scene' ? scene.err : msg, wordsText(d.field, d.why)) })) {
+          ctx.toast(st.model === 'long' ? `Making its ${secondsText(st.seconds)} video: it takes a while, in parts` : 'Making its video: a few minutes', 'good');
           host.done();
           load();
         }
       });
     });
-    put(host.body, hint(`5 seconds of ${i.name} in any scene you describe: a few minutes.`), scene.node, from.node, shapeBox,
-      h('div', { class: 'sa-consent sa-consent-sm' }, sound, h('label', { for: soundId, text: 'With sound (its sounds and music, made by AI too)' })));
+    put(host.body, hint(`${i.name} in any scene you describe: a few minutes.`), h('div', { class: 'sa-field' }, models.node), scene.node, lenBox, qualBox, longNote,
+      from.node, shapeBox, soundBox, refs.node);
     host.setFoot(msg, go.node);
+    sync();
+  }
+
+  // ---------- Instant (phase 4): ready-made ideas, one tap makes one (Classic photos; X banners; memes with their words; a
+  // 5-second Standard video, silent, from its newest photo; its 3D model). Never a coin ----------
+  function instantTool(host) {
+    const i = inf();
+    const msg = errLine();
+    const newest = startPhotos(page.jobs)[0] || null;
+    const priceFor = (kind, idea) => (kind === 'video' ? videoCredits(INSTANT_MAKES.video, ctx.level)
+      : photoCredits({ ...INSTANT_MAKES[kind], meme: kind === 'meme' ? idea.meme : null }, ctx.level));
+    const chip = (kind, idea) => {
+      const n = priceFor(kind, idea);
+      const off = kind === 'video' && !newest;
+      const b = h('button', { type: 'button', class: 'sa-ichip', disabled: off, title: idea.lines ? idea.lines.join(' / ') : idea.scene },
+        h('span', { class: 'sa-ichip-emoji', 'aria-hidden': 'true', text: idea.emoji }), h('span', { class: 'sa-ichip-label', text: idea.label }),
+        h('span', { class: 'sa-ichip-price' }, icon('bolt'), h('span', { text: num(n) }), h('span', { class: 'sa-sr', text: ' credits' })));
+      b.addEventListener('click', () => makeIt(kind, idea, b, n));
+      return b;
+    };
+    const group = (kind, title, ic, list, extra = null) => h('section', { class: 'sa-igroup', 'aria-label': title },
+      h('h3', { class: 'sa-igroup-h' }, icon(ic), h('span', { text: title })), extra, h('div', { class: 'sa-igrid' }, ...list.map((idea) => chip(kind, idea))));
+    const parts = [
+      h('p', { class: 'sa-ws-hint', text: `One tap on an idea makes ${i.name}'s at once, at the price on it.` }),
+      group('photo', 'Photos', 'image', INSTANT.photo),
+      group('meme', 'Memes', 'smile', INSTANT.meme),
+      group('banner', 'X banners · 1500 × 500', 'image', INSTANT.banner),
+      group('video', 'Videos · 5 s', 'film', INSTANT.video, newest ? null : h('p', { class: 'sa-ws-hint', text: 'Videos start from its newest photo: make a photo first (one tap above).' })),
+    ];
+    // its 3D model (a Soulmate's first each month is free)
+    if (ctx.info?.threeD) {
+      const free = ctx.level === 3;
+      const b = h('button', { type: 'button', class: 'sa-ichip sa-ichip-wide' }, h('span', { class: 'sa-ichip-emoji', 'aria-hidden': 'true', text: '🧊' }),
+        h('span', { class: 'sa-ichip-label', text: 'Its 3D model' }),
+        h('span', { class: 'sa-ichip-price' }, free ? h('span', { text: 'Free this month' }) : [icon('bolt'), h('span', { text: num(price('model')) }), h('span', { class: 'sa-sr', text: ' credits' })]));
+      b.addEventListener('click', () => busy(b, 'Starting…', async () => {
+        if (!free && !(await enough(price('model')))) return;
+        const r = await ctx.act('inf-3d', { id });
+        if (made(r, price('model'), { msg })) { ctx.toast('Making it in 3D: about 5 to 10 minutes', 'good'); sigs.models = null; load(); }
+      }));
+      parts.push(h('section', { class: 'sa-igroup', 'aria-label': '3D' }, h('h3', { class: 'sa-igroup-h' }, icon('cube'), h('span', { text: '3D' })), h('div', { class: 'sa-igrid' }, b)));
+    }
+    parts.push(h('p', { class: 'sa-fine', text: 'A coin is never one tap: switch Instant off to launch one, or for every choice (models, quality, length, references).' }));
+    put(host.body, ...parts);
+    const off = btn('Every choice', { kind: 'ghost', icon: 'sliders' });
+    off.addEventListener('click', () => setInstantMode(false, { remember: true }));
+    host.setFoot(msg, off);
+
+    async function makeIt(kind, idea, b, need) {
+      if (kind === 'video' && !newest) return;
+      await busy(b, 'Starting…', async () => {
+        if (!(await enough(need))) return;
+        const mk = INSTANT_MAKES[kind];
+        const body = kind === 'video'
+          ? { id, kind: 'video', model: mk.model, seconds: mk.seconds, sound: mk.sound, scene: idea.scene, image: newest.id }
+          : { id, kind: 'photo', model: mk.model, quality: mk.quality, shape: mk.shape, scene: idea.scene, ...(kind === 'meme' ? { meme: idea.meme, lines: idea.lines } : {}) };
+        const r = await ctx.act('inf-make', body);
+        if (made(r, need, { msg })) {
+          ctx.toast(`Making “${idea.label}”: ${kind === 'video' ? 'a few minutes' : 'about half a minute'}`, 'good');
+          load();
+        }
+      });
+    }
   }
 
   // ---------- Trend video (round 2: the influencer put into a real-looking clip in place of its person, keeping the clip's
@@ -649,9 +1082,9 @@ export async function render(ctx, route, root) {
       const useClip = st.tab === 'clip';
       if (useClip && !st.clip) { say(msg, 'Choose your clip first (and wait for its check).'); return; }
       if (!useClip && !st.trend) { say(msg, 'Pick a clip first.'); return; }
-      if (!(await enough('trend'))) return;
+      if (!(await enough(price('trend')))) return;
       const r = await ctx.act('inf-make', { id, kind: 'trend', ...(useClip ? { clip: st.clip, shape: st.shape } : { trend: st.trend }), ...(from.value ? { image: from.value } : {}) });
-      if (made(r, 'trend', { msg })) {
+      if (made(r, price('trend'), { msg })) {
         ctx.toast('Making its trend video: a few minutes', 'good');
         host.done();
         load();
@@ -671,9 +1104,9 @@ export async function render(ctx, route, root) {
     const go = goFor('Make it in 3D', 'model', 'cube');
     if (free) { go.setLabel('Make it in 3D (free this month)'); go.setPrice('Free'); priced = priced.filter(([b]) => b !== go); }
     go.node.addEventListener('click', () => busy(go.node, 'Starting…', async () => {
-      if (!free && !(await enough('model'))) return;
+      if (!free && !(await enough(price('model')))) return;
       const r = await ctx.act('inf-3d', { id });
-      if (made(r, 'model', { msg })) {
+      if (made(r, price('model'), { msg })) {
         ctx.toast(r.data?.free ? 'Making it in 3D, free: about 5 to 10 minutes' : 'Making it in 3D: about 5 to 10 minutes', 'good');
         host.done();
         load();

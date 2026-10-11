@@ -75,6 +75,26 @@ const ICONS = {
   trophy: ['M8 4h8v5.5a4 4 0 0 1-8 0V4Z', 'M8 6H5.2a3 3 0 0 0 2.9 4.2M16 6h2.8a3 3 0 0 1-2.9 4.2', 'M12 13.5V17M8.5 20.5h7M9.5 17h5'],
   rocket: ['M14.5 4.5c2.6-.9 4.4-.8 5-.2.6.6.7 2.4-.2 5-1 2.9-3.6 5.7-6.4 7.4l-3.6-3.6c1.7-2.8 4.3-5.4 5.2-8.6Z', 'M9.3 13.1 6 12.6l2.6-3.1 3.3-.3M10.9 14.7l.5 3.3 3.1-2.6.3-3.3', 'M6.7 16.4c-1.3.4-2 1.4-2.2 3.1 1.7-.2 2.7-.9 3.1-2.2'],
   grid: ['M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'],
+  // (round 4) a caption: a speech bubble with lines
+  caption: ['M4.5 5.5h15v10h-9l-4.5 3.5v-3.5h-1.5v-10Z', 'M8 9.5h8M8 12.5h5'],
+  // (round 4) clank.trade's @name
+  at: ['M16 12a4 4 0 1 0-1.2 2.9', 'M16 9v4.2a2.3 2.3 0 0 0 4.5.6A9 9 0 1 0 17 19.2'],
+  // (round 4, phase 2) help and support, the team's page, the owner's tab
+  help: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.7M12 17h.01'],
+  send: ['M4.5 11.5 19.5 4.5l-5 15-3.2-6.3-6.8-1.7Z', 'M11.3 13.2 19.5 4.5'],
+  ban: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M5.7 5.7l12.6 12.6'],
+  bell: ['M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15l1.5-2Z', 'M10 20.5a2 2 0 0 0 4 0'],
+  team: ['M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z', 'M3 20c.9-3 3.2-4.5 6-4.5s5.1 1.5 6 4.5', 'M16 11a3 3 0 1 0 0-6', 'M17.5 15.6c1.9.4 3.1 1.9 3.5 4.4'],
+  inbox: ['M4 13.5 6.5 5h11l2.5 8.5V19H4v-5.5Z', 'M4 13.5h4.5l1.2 2.2h4.6l1.2-2.2H20'],
+  chart: ['M4 20h16', 'M7 16v-4M12 16V8M17 16v-7'],
+  // (round 4, phase 3) gifts of credits, and invites
+  gift: ['M4.5 11h15v9h-15z', 'M3.5 7.5h17V11h-17z', 'M12 7.5V20', 'M12 7.5c-.6-2.6-2.4-4-4-4-1.4 0-2.2 1-1.7 2.1.6 1.3 2.8 1.9 5.7 1.9Zm0 0c.6-2.6 2.4-4 4-4 1.4 0 2.2 1 1.7 2.1-.6 1.3-2.8 1.9-5.7 1.9Z'],
+  invite: ['M10 11a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z', 'M3.5 20c1-3.2 3.5-4.9 6.5-4.9 1.3 0 2.5.3 3.5.9', 'M18 13.5v6M15 16.5h6'],
+  // (round 4, phase 4) Instant (fast-forward chevrons: never a lightning bolt, the credits' sign), a meme, a reference, learning
+  ff: ['m4.5 6.5 5.5 5.5-5.5 5.5', 'm12 6.5 5.5 5.5-5.5 5.5'],
+  smile: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M8.5 14.2c.9 1.3 2.1 1.9 3.5 1.9s2.6-.6 3.5-1.9', 'M9 9.8h.01M15 9.8h.01'],
+  paperclip: ['M16.5 7.5 9.4 14.6a1.9 1.9 0 0 0 2.7 2.7l7.2-7.2a3.9 3.9 0 0 0-5.5-5.5l-7.4 7.4a5.8 5.8 0 0 0 8.2 8.2l6-6'],
+  learn: ['M2.5 9.5 12 5l9.5 4.5L12 14 2.5 9.5Z', 'M6.5 11.4v4.5c1.5 1.4 3.4 2.1 5.5 2.1s4-.7 5.5-2.1v-4.5', 'M21.5 9.5v5'],
 };
 export function icon(name, cls = 'sa-i') {
   const svg = document.createElementNS(SVG, 'svg');
@@ -175,6 +195,59 @@ export function chips({ name, legend, choices, value = null, onchange = null, hi
   };
 }
 
+// ---------- cards to pick one from (round 4, phase 4: the model menu) ----------
+// cardPick({ legend, choices: [{ value, name, note, price, from, off, why }], value, onchange, cls }) → { node, value, set(v),
+// update(choices) }. Radio buttons drawn as small cards: a name, a line about it, its price on the right ("⚡ 15", "from ⚡ 76"
+// with from: true, or a word like "Free"); a choice that's off (Anime for a realistic influencer) is disabled and says why
+// instead of its note
+export function cardPick({ legend, choices, value = null, onchange = null, cls = '', showLegend = true }) {
+  const set = h('fieldset', { class: `sa-cards ${cls}`.trim() }, h('legend', { class: showLegend ? 'sa-label' : 'sa-sr', text: legend }));
+  const row = h('div', { class: 'sa-cards-row' });
+  const groupName = nextId('card');
+  const parts = new Map();
+  for (const c of choices) {
+    const id = nextId('card');
+    const input = h('input', { type: 'radio', class: 'sa-card-input', name: groupName, id, value: c.value, checked: c.value === value, disabled: c.off === true });
+    input.addEventListener('change', () => { if (input.checked) onchange?.(c.value); });
+    const note = h('span', { class: 'sa-card-note', text: c.off ? c.why || c.note || '' : c.note || '' });
+    const priceN = h('span', { class: 'sa-card-n' });
+    const fromW = h('span', { class: 'sa-card-from', text: 'from ' });
+    const unit = h('span', { class: 'sa-sr', text: ' credits' });
+    const price = h('span', { class: 'sa-card-price' }, fromW, icon('bolt'), priceN, unit);
+    const lab = h('label', { for: id }, h('span', { class: 'sa-card-top' }, h('span', { class: 'sa-card-name', text: c.name }), price), note);
+    parts.set(c.value, { input, note, price, priceN, fromW, unit, c });
+    row.append(h('span', { class: `sa-card-opt${c.off ? ' is-off' : ''}` }, input, lab));
+  }
+  set.append(row);
+  const api = {
+    node: set,
+    get value() { return set.querySelector('input:checked')?.value ?? null; },
+    set(v) { for (const i of set.querySelectorAll('input')) i.checked = i.value === v; },
+    // a choice's price now ("from 76", "Free", a number), and whether it's off (and why)
+    update(list) {
+      for (const c of list) {
+        const p = parts.get(c.value);
+        if (!p) continue;
+        if (c.price !== undefined) {
+          const isNum = typeof c.price === 'number';
+          p.price.hidden = c.price === null;
+          p.price.classList.toggle('is-text', !isNum);
+          p.priceN.textContent = isNum ? c.price.toLocaleString('en-US') : String(c.price ?? '');
+          p.fromW.hidden = !(isNum && c.from === true);
+          p.unit.hidden = !isNum;
+        }
+        if (c.off !== undefined) {
+          p.input.disabled = c.off === true;
+          p.input.closest('.sa-card-opt').classList.toggle('is-off', c.off === true);
+          p.note.textContent = c.off ? c.why || p.c.note || '' : p.c.note || '';
+        }
+      }
+    },
+  };
+  api.update(choices);
+  return api;
+}
+
 // ---------- a segmented control: a few radio buttons side by side (round 3: the pro tool layout's mode switch) ----------
 // segmented({ legend, choices: [[value, label, icon?]], value, onchange, showLegend }) → { node, value, set(v) }
 export function segmented({ legend, choices, value = null, onchange = null, cls = '', showLegend = false }) {
@@ -192,6 +265,52 @@ export function segmented({ legend, choices, value = null, onchange = null, cls 
     node: set,
     get value() { return set.querySelector('input:checked')?.value ?? null; },
     set(v) { for (const i of set.querySelectorAll('input')) i.checked = i.value === v; },
+  };
+}
+
+// ---------- tabs over a page's panels (round 4, phase 2: the owner's tab, the team's page) ----------
+// pageTabs({ label, items: [[key, label, icon?]], value, onchange }) → { node, panel(key), show(key), value, count(key, n) }.
+// Real tabs (the arrow keys, Home and End move between them, like any tab list); each panel is drawn by its page.
+export function pageTabs({ label, items, value = null, onchange = null }) {
+  const id = nextId('ptab');
+  const keys = items.map(([k]) => k);
+  let current = keys.includes(value) ? value : keys[0];
+  const list = h('div', { class: 'sa-gtabs sa-ptabs', role: 'tablist', 'aria-label': label });
+  const panels = new Map(), buttons = new Map(), counts = new Map();
+  for (const [key, text, ic = null] of items) {
+    const n = h('span', { class: 'sa-gtab-n', hidden: true });
+    const b = h('button', { type: 'button', role: 'tab', class: 'sa-gtab', id: `${id}-${key}-t`, 'aria-controls': `${id}-${key}`, dataset: { tab: key } },
+      ic ? icon(ic) : null, h('span', { text }), n);
+    b.addEventListener('click', () => show(key));
+    buttons.set(key, b);
+    counts.set(key, n);
+    panels.set(key, h('div', { class: 'sa-ppanel', role: 'tabpanel', id: `${id}-${key}`, 'aria-labelledby': `${id}-${key}-t` }));
+    list.append(b);
+  }
+  list.addEventListener('keydown', (e) => {
+    const at = keys.indexOf(current);
+    const to = e.key === 'ArrowRight' ? keys[(at + 1) % keys.length] : e.key === 'ArrowLeft' ? keys[(at - 1 + keys.length) % keys.length]
+      : e.key === 'Home' ? keys[0] : e.key === 'End' ? keys[keys.length - 1] : null;
+    if (!to) return;
+    e.preventDefault();
+    show(to);
+    buttons.get(to)?.focus();
+  });
+  function show(key, { quiet = false } = {}) {
+    if (!panels.has(key)) return;
+    current = key;
+    for (const [k, b] of buttons) { b.setAttribute('aria-selected', String(k === key)); b.tabIndex = k === key ? 0 : -1; }
+    for (const [k, p] of panels) p.hidden = k !== key;
+    if (!quiet) onchange?.(key);
+  }
+  show(current, { quiet: true });
+  return {
+    node: h('div', { class: 'sa-ptabs-bar' }, list),
+    panel: (k) => panels.get(k),
+    show,
+    get value() { return current; },
+    // a small number on a tab (a count waiting there); 0 hides it
+    count(key, n) { const c = counts.get(key); if (c) { c.textContent = n > 0 ? String(n) : ''; c.hidden = !(n > 0); } },
   };
 }
 

@@ -81,7 +81,11 @@ export function pageView(cfg, o) {
     Object.assign(view, { price: { usdCents: o.usd_cents, agi: Number(o.agi) }, free: o.free === true, kind: o.kind || null,
       paid: Number(o.paid) || 0, level: o.level });
   }
-  if (o.status === 'making' || o.status === 'paid') view.step = o.step || 'preview';
+  if (o.status === 'making' || o.status === 'paid') {
+    view.step = o.step || 'preview';
+    // (round 4) when its making started (else when it was paid): its progress bar on the page ("42% · about 3 min left")
+    view.started = Date.parse(o.started_at || o.paid_at || '') || null;
+  }
   if (o.status === 'done') Object.assign(view, { moves: Array.isArray(o.moves) ? o.moves : MOVE_NAMES, done: Date.parse(o.done_at) || null, glbBytes: o.glb_bytes });
   if (o.status === 'failed') Object.assign(view, { error: o.error || 'failed', credit: o.credit === true });
   // (2026-10-10) a 3D model of an influencer (AGI Studio): its influencer's page

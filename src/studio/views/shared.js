@@ -1,8 +1,15 @@
 // AGI Studio: what more than one view shows or opens: media tiles and their hearts (round 2: likes), a trend clip's tile and
-// preview, a photo or a video seen big, burning $AGI for an unlock (round 2), a report, and "are you sure?".
-import { h, icon, linkBtn, btn, sheet, pic, chips, say, busy, copyText, put, add } from '../ui.js';
-import { infPic, infPoster, infVideo, infVideoDl, infPhotoDl, trendOf, creditsText, SHAPES, REPORT_WHYS } from '../rules.js';
-import { priceOf, shareJobUrl, errorText, compact, likeErrorText, likesText, burnCheckText, shortAddress, num, jobMeta } from '../app-words.js';
+// preview, a photo or a video seen big, burning $AGI for an unlock (round 2), a report, "are you sure?", and (round 4) captions
+// for a post of one of your own creations.
+import { h, icon, linkBtn, btn, sheet, pic, chips, segmented, say, busy, copyText, put, add } from '../ui.js';
+import {
+  infPic, infPoster, infVideo, infVideoDl, infPhotoDl, trendOf, creditsText, SHAPES, PHOTO_SHAPES, REPORT_WHYS, CAPTION_PLATFORMS, CAPTION_TONES,
+} from '../rules.js';
+import {
+  priceOf, shareJobUrl, errorText, compact, likeErrorText, likesText, burnCheckText, shortAddress, num, jobMeta, captionErrorText,
+  captionsLeftText, postOnXUrl,
+} from '../app-words.js';
+import { readyCaptions } from '../captions.js';
 import { BURN_ADDRESS, BURN_EXPLORER } from '../../lib/burns.js';
 import { TOKENS } from '../../prices/parse.js';
 
@@ -69,11 +76,11 @@ export async function loadLiked(ctx, jobs) {
 // item: { id, kind, shape, poster, files, likes, inf: { id, name, portrait } } · onopen: what a tap opens
 export function mediaTile(ctx, item, { onopen, can = true, liked = null, showName = true, badge = null } = {}) {
   const inf = item.inf?.id;
-  const shape = SHAPES[item.shape] ? item.shape : item.kind === 'photo' ? 'square' : 'tall';
+  const shape = PHOTO_SHAPES[item.shape] ? item.shape : item.kind === 'photo' ? 'square' : 'tall';
   const isPhoto = item.kind === 'photo';
   const cover = isPhoto ? infPic(inf, item.id, 0, true) : item.poster ? infPoster(inf, item.id)
     : item.inf?.portrait ? infPic(inf, item.inf.portrait.job, item.inf.portrait.n, true) : null;
-  const what = isPhoto ? 'a photo' : item.kind === 'trend' ? `a trend video${item.trend && trendOf(item.trend) ? ` (${trendOf(item.trend).name})` : ''}` : 'a video';
+  const what = isPhoto ? (item.shape === 'banner' ? 'an X banner' : 'a photo') : item.kind === 'trend' ? `a trend video${item.trend && trendOf(item.trend) ? ` (${trendOf(item.trend).name})` : ''}` : 'a video';
   const open = h('button', { type: 'button', class: 'sa-media-open', 'aria-label': `${item.inf?.name || 'An influencer'}: ${what}` },
     cover ? pic(cover, { cls: `sa-media-pic${!isPhoto && !item.poster ? ' is-blur' : ''}` }) : h('span', { class: 'sa-media-pic is-missing' }),
     isPhoto ? null : h('span', { class: 'sa-media-play', 'aria-hidden': 'true' }, icon('play')),
@@ -154,7 +161,7 @@ export function trendSheet(ctx, t) {
 }
 
 // ---------- a done video, played: its influencer, a heart, Download (with the share mark once it's made), Share, Report ----------
-export function videoSheet(ctx, v, { name, inf, mine = false, priv = false }) {
+export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCaptions = null }) {
   const s = sheet({ title: name || 'A video', sub: jobMeta(v), size: 'md' });
   const shape = SHAPES[v.shape] ? v.shape : 'tall';
   const video = h('video', {
@@ -168,6 +175,12 @@ export function videoSheet(ctx, v, { name, inf, mine = false, priv = false }) {
   if (!priv) foot.push(likeButton(ctx, { job: v.id, likes: v.likes, can: !mine, cls: 'sa-heart-lg', fresh: false }));
   foot.push(linkBtn('Download', infVideoDl(v.id), { kind: 'ghost', icon: 'download' }));
   foot.push(linkBtn('Share on X ↗', shareJobUrl(name, v.kind, url), { kind: 'ghost', icon: 'share', target: '_blank', rel: 'noopener noreferrer' }));
+  // (round 4) captions for a post of it (its own wallet's)
+  if (mine && onCaptions) {
+    const cap = btn('Captions', { kind: 'ghost', icon: 'caption' });
+    cap.addEventListener('click', () => { s.close(); onCaptions(v); });
+    foot.push(cap);
+  }
   if (!mine) {
     const report = btn('Report', { kind: 'quiet', icon: 'flag' });
     report.addEventListener('click', () => { s.close(); reportSheet(ctx, { inf, job: v.id, name }); });
@@ -179,11 +192,17 @@ export function videoSheet(ctx, v, { name, inf, mine = false, priv = false }) {
 
 // ---------- a photo seen big: a heart, Download (with the share mark), Share, and (its own) a video or a trend from it ----------
 // kind: 'photo' | 'body' (its full body: its photos, videos and 3D model start from it)
-export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind = 'photo', onVideo = null, onTrend = null }) {
-  const s = sheet({ title: kind === 'body' ? `${name}: full body` : name || 'Photo', sub: kind === 'body' ? 'Its photos, videos and 3D model start from this.' : jobMeta({ kind: 'photo', shape: j.shape }), size: 'md' });
-  const shape = SHAPES[j.shape] ? j.shape : 'tall';
-  const big = pic(infPic(inf, j.id, 0), { cls: `sa-big-pic is-${shape}`, alt: `${name}: ${kind === 'body' ? 'full body' : j.scene || 'a photo'}`, lazy: false });
-  add(s.body, h('div', { class: 'sa-big-wrap' }, big), kind === 'photo' && j.scene ? h('p', { class: 'sa-muted', text: j.scene }) : null);
+export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind = 'photo', onVideo = null, onTrend = null, onCaptions = null }) {
+  const s = sheet({ title: kind === 'body' ? `${name}: full body` : name || 'Photo', sub: kind === 'body' ? 'Its photos, videos and 3D model start from this.' : jobMeta({ ...j, kind: 'photo' }), size: 'md' });
+  const shape = PHOTO_SHAPES[j.shape] ? j.shape : 'tall';
+  const banner = kind === 'photo' && shape === 'banner';
+  // (round 4, phase 4) a meme: its words are in the picture (said here too, for anyone who can't see it)
+  const memeWords = kind === 'photo' && j.meme && j.caption ? String(j.caption).split('\n').join(' / ') : null;
+  const big = pic(infPic(inf, j.id, 0), { cls: `sa-big-pic is-${shape}`, alt: `${name}: ${kind === 'body' ? 'full body' : banner ? `an X banner${j.scene ? `, ${j.scene}` : ''}` : memeWords ? `a meme that says “${memeWords}”` : j.scene || 'a photo'}`, lazy: false });
+  add(s.body, h('div', { class: `sa-big-wrap${banner ? ' is-banner' : ''}` }, big), memeWords ? h('p', { class: 'sa-meme-words', text: `“${memeWords}”` }) : null,
+    kind === 'photo' && j.scene ? h('p', { class: 'sa-muted', text: j.scene }) : null,
+    // (round 4) an X banner: where it goes on X
+    banner && mine ? h('p', { class: 'sa-note', text: 'On X: your profile → Edit profile → tap the header picture, and pick this one. Its lower left is where your profile picture sits.' }) : null);
   const foot = [];
   if (mine && kind === 'photo' && onVideo) {
     const vid = btn('Make a video from it', { kind: 'primary', icon: 'film' });
@@ -200,6 +219,12 @@ export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind
   // (its download carries the share mark: "Made with AGI Studio · AI-generated", drawn on by our server)
   foot.push(h('a', { class: 'sa-btn sa-btn-ghost', href: infPhotoDl(inf, j.id, 0), download: '' }, icon('download'), h('span', { text: 'Download' })));
   if (kind === 'photo') foot.push(linkBtn('Share on X ↗', shareJobUrl(name, 'photo', `${location.origin}${ctx.href(`/i/${inf}`)}#v-${j.id}`), { kind: 'ghost', icon: 'share', target: '_blank', rel: 'noopener noreferrer' }));
+  // (round 4) captions for a post of it (its own wallet's)
+  if (mine && kind === 'photo' && onCaptions) {
+    const cap = btn('Captions', { kind: 'ghost', icon: 'caption' });
+    cap.addEventListener('click', () => { s.close(); onCaptions(j); });
+    foot.push(cap);
+  }
   if (!mine && kind === 'photo') {
     const rep = btn('Report', { kind: 'quiet', icon: 'flag' });
     rep.addEventListener('click', () => { s.close(); reportSheet(ctx, { inf, job: j.id, name }); });
@@ -335,4 +360,72 @@ export async function boostInf(ctx, inf, { quote = null, hours = 24, onDone = nu
     check: (tx) => ctx.act('inf-burn-check', { burn: q.id, ...(tx ? { tx } : {}) }),
     onDone: (d) => { ctx.refreshMe(); onDone?.(d); },
   });
+}
+
+// ---------- (round 4) captions for a post of one of its own creations (the owner: "can gerate raedy made captions on their
+// posts, or they can generate one too"): ready-made ones (free, at once: src/studio/captions.js), or written by AI in a tone
+// (free, a few a day: our server). For X, TikTok or Instagram; each says it's AI-made (a hashtag). Copy, or "Post on X" (X's own
+// new-post box: the visitor posts it, never us). ----------
+const KIND_WORDS = { photo: 'photo', banner: 'X banner', video: 'video', trend: 'trend video', meme: 'meme' };
+export function captionSheet(ctx, { job, name, inf }) {
+  const kind = job.kind === 'photo' && job.shape === 'banner' ? 'banner' : job.kind;
+  const s = sheet({ title: 'Captions', sub: `For your post of ${name}'s ${KIND_WORDS[kind] || 'creation'}: copy one, then paste it where you post.`, size: 'md' });
+  const link = `${location.origin}${ctx.href(`/i/${inf}`)}#v-${job.id}`;
+  const st = { platform: 'x', mode: 'ready', offset: 0, tone: 'funny', left: null, written: [] };
+  const msg = h('p', { class: 'sa-err', role: 'alert', hidden: true });
+  const where = h('p', { class: 'sa-fine' });
+
+  // one caption: its words, Copy, and on X "Post on X"
+  function row(text) {
+    const words = h('p', { class: 'sa-caption-text', text });
+    const copy = btn('Copy', { kind: 'ghost', size: 'sm', icon: 'copy' });
+    copy.addEventListener('click', async () => { const ok = await copyText(text, words); ctx.toast(ok ? 'Caption copied' : 'Caption selected: copy it', 'good'); });
+    return h('li', { class: 'sa-caption' }, words, h('div', { class: 'sa-caption-actions' }, copy,
+      st.platform === 'x' ? linkBtn('Post on X ↗', postOnXUrl(text, link), { kind: 'quiet', size: 'sm', icon: 'share', target: '_blank', rel: 'noopener noreferrer' }) : null));
+  }
+
+  // ready-made: four at a time, "More ideas" for the next four
+  const readyList = h('ul', { class: 'sa-captions' });
+  const more = btn('More ideas', { kind: 'quiet', size: 'sm', icon: 'refresh' });
+  more.addEventListener('click', () => { st.offset += 4; draw(); });
+  const readyBox = h('div', { class: 'sa-caption-box' }, readyList, more);
+
+  // written by AI: its tone, then three
+  const tones = chips({ legend: 'Tone', choices: CAPTION_TONES, value: st.tone, cls: 'sa-chips-sm', onchange: (v) => { st.tone = v; } });
+  const aiList = h('ul', { class: 'sa-captions', 'aria-live': 'polite' });
+  const leftLine = h('span', { class: 'sa-muted sa-small', text: captionsLeftText(null) });
+  const write = btn('Write 3 with AI', { kind: 'primary', icon: 'wand' });
+  write.addEventListener('click', () => busy(write, 'Writing…', async () => {
+    say(msg, '');
+    const r = await ctx.act('inf-caption', { job: job.id, tone: st.tone, platform: st.platform });
+    const d = r.data || {};
+    if (Number.isFinite(d.left)) { st.left = d.left; leftLine.textContent = captionsLeftText(d.left); }
+    if (r.ok && d.ok && Array.isArray(d.captions) && d.captions.length) {
+      st.written = d.captions.filter((c) => typeof c === 'string');
+      put(aiList, ...st.written.map(row));
+      return;
+    }
+    say(msg, captionErrorText(d.error));
+  }));
+  const aiBox = h('div', { class: 'sa-caption-box', hidden: true }, tones.node, h('div', { class: 'sa-row sa-caption-go' }, write, leftLine), aiList);
+
+  const platforms = segmented({ legend: 'Where you post', choices: Object.entries(CAPTION_PLATFORMS).map(([k, p]) => [k, p.name]), value: st.platform, showLegend: true,
+    onchange: (v) => { st.platform = v; st.offset = 0; st.written = []; put(aiList); draw(); } });
+  const modes = segmented({ legend: 'Captions', choices: [['ready', 'Ready-made', 'spark'], ['ai', 'Write with AI', 'wand']], value: st.mode, cls: 'sa-seg-wide',
+    onchange: (v) => { st.mode = v; draw(); } });
+
+  function draw() {
+    say(msg, '');
+    readyBox.hidden = st.mode !== 'ready';
+    aiBox.hidden = st.mode !== 'ai';
+    if (st.mode === 'ready') put(readyList, ...readyCaptions({ name, kind, trend: job.trend, platform: st.platform, seed: job.id, count: 4, offset: st.offset }).map(row));
+    else put(aiList, ...st.written.map(row));
+    where.textContent = st.platform === 'x'
+      ? 'Post on X opens X with the caption and its link: you post it, we never do.'
+      : `${CAPTION_PLATFORMS[st.platform].name}: download it first, then paste the caption as you post it.`;
+  }
+  add(s.body, platforms.node, modes.node, readyBox, aiBox, msg, where,
+    h('p', { class: 'sa-fine', text: 'Every caption says it\'s AI-made (a hashtag), and none talk about money or coins. Keep the AI label on where the app asks.' }));
+  draw();
+  return s;
 }

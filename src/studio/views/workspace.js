@@ -19,10 +19,13 @@ export function workspace(ctx, root, { title, sub = '', open = true, titleTag = 
   const titleEl = h(titleTag, { class: 'sa-ws-title', id: `${id}-t`, text: title, ...(titleTag === 'h1' ? { tabindex: '-1' } : {}) });
   const subEl = h('p', { class: 'sa-ws-sub', text: sub, hidden: !sub });
   const quick = h('div', { class: 'sa-ws-quick', hidden: true });
+  // (round 4, phase 4) a mode switch in the head (an influencer's page: Instant): shown on a computer, and on a phone while the
+  // drawer is open (closed, its quick button shows instead)
+  const mode = h('div', { class: 'sa-ws-mode', hidden: true });
   const toggle = h('button', { type: 'button', class: 'sa-ws-toggle', 'aria-controls': `${id}-b`, 'aria-expanded': 'true', 'aria-label': `${title}: show the controls` }, icon('up'));
   const head = h('div', { class: 'sa-ws-head' },
     h('span', { class: 'sa-ws-grip', 'aria-hidden': 'true' }),
-    h('div', { class: 'sa-ws-titles' }, titleEl, subEl), quick, toggle);
+    h('div', { class: 'sa-ws-titles' }, titleEl, subEl), mode, quick, toggle);
   const body = h('div', { class: 'sa-ws-body', id: `${id}-b` });
   const foot = h('div', { class: 'sa-ws-foot', hidden: true });
   const panel = h('aside', { class: 'sa-ws-panel', 'aria-labelledby': `${id}-t` }, head, body, foot);
@@ -43,6 +46,7 @@ export function workspace(ctx, root, { title, sub = '', open = true, titleTag = 
     body.inert = shut;
     foot.inert = shut;
     quick.hidden = !shut || !quick.childElementCount;
+    mode.hidden = shut || !mode.childElementCount;
   }
   function setOpen(on) {
     isOpen = Boolean(on);
@@ -50,7 +54,7 @@ export function workspace(ctx, root, { title, sub = '', open = true, titleTag = 
   }
   // a phone: the head opens and closes it (its quick button does its own thing)
   head.addEventListener('click', (e) => {
-    if (!node.classList.contains('is-drawer') || e.target.closest('.sa-ws-quick')) return;
+    if (!node.classList.contains('is-drawer') || e.target.closest('.sa-ws-quick') || e.target.closest('.sa-ws-mode')) return;
     setOpen(!isOpen);
   });
   panel.addEventListener('keydown', (e) => {
@@ -78,6 +82,11 @@ export function workspace(ctx, root, { title, sub = '', open = true, titleTag = 
     setFoot(...nodes) {
       put(foot, ...nodes);
       foot.hidden = !foot.childElementCount;
+    },
+    // (round 4, phase 4) a mode switch in its head (Instant)
+    setMode(...nodes) {
+      put(mode, ...nodes);
+      apply();
     },
     // a phone's quick button, shown while the drawer is closed
     setQuick(...nodes) {

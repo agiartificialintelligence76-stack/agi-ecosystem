@@ -3,7 +3,7 @@
 // gallery (Trending · Influencers · My creations: views/gallery.js), and the two ways to start. Everything public here is the
 // same for everyone (/api/launch?inf-explore and ?inf-stats, kept a little by the CDN); a signed-in wallet's hearts after.
 import { h, icon, btn, linkBtn, pic, put, add } from '../ui.js';
-import { infPic, infPoster, infExample } from '../rules.js';
+import { infPic, infPoster, infExample, clankProfileUrl } from '../rules.js';
 import { studioText, MODE_CARDS, STAT_NAMES, compact, tiny, weekText, prizeText } from '../app-words.js';
 import { videoSheet, photoSheet, loadLiked, likeButton } from './shared.js';
 import { gallery } from './gallery.js';
@@ -107,11 +107,14 @@ export async function render(ctx, route, root) {
       cover ? pic(cover, { cls: 'sa-spot-pic', lazy: false }) : null, sp.kind === 'photo' ? null : h('span', { class: 'sa-media-play', 'aria-hidden': 'true' }, icon('play')));
     media.addEventListener('click', () => open(item));
     put(spot,
-      h('div', { class: `sa-spot${sp.shape === 'wide' ? '' : ' is-side'}` },
+      h('div', { class: `sa-spot${sp.shape === 'wide' || sp.shape === 'banner' ? '' : ' is-side'}` },
         media,
         h('div', { class: 'sa-spot-copy' },
           h('p', { class: 'sa-tag sa-tag-gold' }, icon('trophy'), h('span', { text: 'Spotlight of the week' })),
           h('h2', { class: 'sa-display sa-spot-title', id: 'sa-spot-h', text: sp.inf.name }),
+          // (round 4) its maker's clank.trade username, when they show it
+          sp.inf.maker?.name ? h('a', { class: 'sa-maker', href: clankProfileUrl(sp.inf.maker.name), target: '_blank', rel: 'noopener noreferrer', 'aria-label': `By @${sp.inf.maker.name} on clank.trade (opens clank.trade)` },
+            h('span', { text: 'by ' }), h('span', { class: 'sa-maker-name', text: `@${sp.inf.maker.name}` }), h('span', { 'aria-hidden': 'true', text: '\u00a0↗' })) : null,
           h('p', { class: 'sa-muted', text: `The most loved creation of ${weekText(sp.week)}, picked by holders' hearts.` }),
           h('dl', { class: 'sa-spot-facts' },
             h('div', null, h('dt', { text: 'Likes' }), h('dd', { text: compact(sp.likes) })),

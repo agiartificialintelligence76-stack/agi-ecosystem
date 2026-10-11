@@ -12,7 +12,11 @@
 //   • (round 3, the owner: "i cant even test it myself i dont have enough credits lol", then "Owner credits button
 //     (Recommended)") Credits the owner gives from the owner's page, free, to the owner's own wallet or a tester's: like
 //     bought ones (they never run out). Nothing is paid to anyone: what they're spent on is paid from the owner's own AI
-//     balance (fal.ai), like everything made here.
+//     balance (fal.ai), like everything made here. Since round 4's phase 3 they're bonus credits (below).
+//   • (round 4, phase 3) Three kinds a wallet has: bought ones (`paid`: bought, and gifts it got; the only ones it may give as
+//     a gift), this month's free ones (`free`) and bonus ones (`bonus`: an invite's reward, a friend's welcome credits, the
+//     owner's credits for testing). Spent free first, then bonus, then bought (supabase/influencers.sql inf_spend). After a
+//     top-up, an invited wallet's welcome credits and its inviter's reward (server/inf-gifts.js settleInvites).
 import { rpc } from './limits.js';
 import { burnKey } from './burn.js';
 import { payCode, studioWallet } from './studio.js';
@@ -26,12 +30,18 @@ const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const NOBODY = new Set(['0x0000000000000000000000000000000000000000', '0x000000000000000000000000000000000000dead']);
 const n = (x) => Math.max(0, Math.floor(Number(x) || 0));
 
-// A wallet's credits now. → { paid, free, total }
+// A wallet's credits now. → { paid, free, bonus, total, bought (it ever bought credits), invited (it joined through an invite),
+// welcomed (its welcome credits came), got and gotN (the credits in gifts it got and hasn't seen yet, and how many gifts) }
 export async function creditsOf(cfg, code) {
   const c = await rpc(cfg, 'inf_credits', { p_wallet: code }, 'studio');
-  const paid = n(c?.paid), free = n(c?.free);
-  return { paid, free, total: paid + free };
+  const paid = n(c?.paid), free = n(c?.free), bonus = n(c?.bonus);
+  return {
+    paid, free, bonus, total: paid + free + bonus, bought: c?.bought === true, invited: c?.invited === true, welcomed: c?.welcomed === true,
+    got: n(c?.got), gotN: n(c?.got_n),
+  };
 }
+// The credits an action's answer carries (what's left after a spend): { paid, free, bonus }
+export const creditsLeft = (r) => ({ paid: n(r?.paid), free: n(r?.free), bonus: n(r?.bonus) });
 
 // This month's free credits for a holder, once a month (Crush and Soulmate). → { granted, why?, free }
 export async function grantFree(cfg, code, level) {
@@ -42,9 +52,10 @@ export async function grantFree(cfg, code, level) {
 }
 
 // "Check my payment" for a top-up: the one transaction pasted, or else the wallet's USDG payments to the studio's wallet in
-// the last 7 days (the block explorer: only which ones to read), each read from the chain and counted once.
-// → { ok: true, added (credits), results: [{ ok, why?, amount? }], source } or { ok: false, why: 'no_usdg' } · throws with
-// err.why 'chain' | 'explorer' when they can't say
+// the last 7 days (the block explorer: only which ones to read), each read from the chain and counted once; then (round 4,
+// phase 3) an invited wallet's welcome credits and its inviter's reward for them (a hiccup there is caught up by the clock).
+// → { ok: true, added (credits), welcome (its welcome credits now, if they came), results: [{ ok, why?, amount? }], source }
+// or { ok: false, why: 'no_usdg' } · throws with err.why 'chain' | 'explorer' when they can't say
 export async function checkTopup(cfg, { wallet, tx = null, env, now = Date.now() }) {
   if (!cfg.studioPayTo) return { ok: false, why: 'no_usdg' };
   const look = { kind: 'usdg', wallet, payTo: cfg.studioPayTo, after: now - PAY_WINDOW_MS + 120_000, env, now };
@@ -81,16 +92,26 @@ export async function checkTopup(cfg, { wallet, tx = null, env, now = Date.now()
     added += Math.min(cents, 10_000_000);
     results.push({ ok: true, amount: Math.min(cents, 10_000_000) });
   }
-  return { ok: true, added, results, source: tx ? 'pasted' : 'explorer' };
+  let welcome = 0;
+  if (added > 0) {
+    try {
+      const { settleInvites } = await import('./inf-gifts.js');
+      welcome = (await settleInvites(cfg, { wallet, limit: 20 })).welcome;
+    } catch (err) {
+      if (err?.code !== 'PGRST202') console.warn(`[studio] an invite's rewards after a top-up (the clock catches up): ${err.message}`);
+    }
+  }
+  return { ok: true, added, welcome, results, source: tx ? 'pasted' : 'explorer' };
 }
 
 // (round 3) The owner's gift: `credits` (a whole number, 1 to GIFT.MAX) to `to` (a wallet's address: the owner's own, or a
-// tester's), once per `ref` (its own id). → { ok: true, paid } or { ok: false, why: 'credits' | 'to' | 'taken' }
+// tester's), once per `ref` (its own id); since round 4's phase 3 bonus credits. → { ok: true, paid, bonus } or { ok: false,
+// why: 'credits' | 'to' | 'taken' }
 export async function giftCredits(cfg, { to, credits, ref }) {
   if (!Number.isInteger(credits) || credits < 1 || credits > GIFT.MAX) return { ok: false, why: 'credits' };
   const address = String(to || '').trim().toLowerCase();
   if (!ADDRESS.test(address) || NOBODY.has(address)) return { ok: false, why: 'to' };
   const r = await rpc(cfg, 'inf_gift', { p_wallet: studioWallet(cfg.passSecret, address), p_credits: credits, p_ref: ref }, 'studio');
   if (r?.ok !== true) return { ok: false, why: r?.why === 'taken' ? 'taken' : 'bad' };
-  return { ok: true, paid: n(r.paid) };
+  return { ok: true, paid: n(r.paid), bonus: n(r.bonus) };
 }

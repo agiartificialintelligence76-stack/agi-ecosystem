@@ -20,7 +20,8 @@
 // then their files kept). Loaded only for it. (The same day) and AGI Studio's, the AI influencer app (server/inf-jobs.js):
 // its looks, photos and videos being made, in the time left, and its tidy-up every half hour; and since its round 2 last
 // week's spotlight picked once (server/inf-week.js), and, with 14 s left, one done video given the share mark for its
-// downloads (server/inf-mark.js: ffmpeg, which vercel.json ships with this function only).
+// downloads (server/inf-mark.js: ffmpeg, which vercel.json ships with this function only); since its round 4 (phase 2,
+// 2026-10-11) the owner's and the team's alerts on Telegram (server/inf-admin.js), with 6 s left.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../server/config.js';
 import { tgToken } from '../server/tg-api.js';
@@ -151,10 +152,22 @@ async function studioCheck(request) {
         console.warn(`[studio] the share mark: ${err.message}`);
       }
     }
+    // (round 4, phase 2) the owner's and the team's alerts on Telegram, in the time left: new support tickets and reports (at
+    // most every 5 minutes), and a balance under the owner's level (read at most every 30 minutes; each at most every 6 hours)
+    if (deadline - Date.now() >= 6000) {
+      try {
+        const { adminClock } = await import('../server/inf-admin.js');
+        const a = await adminClock(cfg, { now: Date.now(), deadline });
+        if (a?.news || a?.low) out.alerts = { news: a.news, low: a.low };
+      } catch (err) {
+        if (err.code !== 'PGRST202' || !warnedAlerts) console.warn(`[studio] the alerts: ${err.message}`);
+        if (err.code === 'PGRST202') warnedAlerts = true;
+      }
+    }
   }
   return answer(out);
 }
-let warnedApps = false;
+let warnedApps = false, warnedAlerts = false;
 
 export async function GET(request) {
   const search = new URL(request.url).search;

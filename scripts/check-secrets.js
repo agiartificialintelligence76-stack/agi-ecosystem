@@ -10,9 +10,9 @@ const DIST = 'dist';
 // (2026-10-01, "Launch with AGI-1": the Pinata key that puts coin pictures on IPFS, and the private key of the owner's gas
 // wallet that pays launch fees back; 2026-10-02: her live show's secret, shared with her stream runner; 2026-10-09: the
 // private key of the prize wallet that sends her quizzes' prizes; 2026-10-10: the 3D character studio's Meshy key, and
-// fal.ai's key for its characters' videos)
+// fal.ai's key for its characters' videos; 2026-10-11: AGI Studio's owner's tab, fal.ai's key that may read its balance)
 const SECRET_ENV_VARS = ['GEMINI_API_KEY', 'SUPABASE_SECRET_KEY', 'TURNSTILE_SECRET_KEY', 'PASS_SECRET', 'CRON_SECRET', 'TELEGRAM_BOT_TOKEN',
-  'PINATA_JWT', 'LAUNCH_GAS_KEY', 'LIVE_SECRET', 'PRIZE_WALLET_KEY', 'MESHY_API_KEY', 'FAL_KEY'];
+  'PINATA_JWT', 'LAUNCH_GAS_KEY', 'LIVE_SECRET', 'PRIZE_WALLET_KEY', 'MESHY_API_KEY', 'FAL_KEY', 'FAL_BILLING_KEY'];
 
 // 2) Shapes of keys that must never be public, even when no env var is set.
 const PATTERNS = [

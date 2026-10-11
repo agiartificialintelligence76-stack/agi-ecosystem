@@ -3,6 +3,8 @@
 //     the box ticked first, which our server needs) is made a JPEG of at most 1536 px here, then sent in one request with the
 //     ticket our server gave for it (server/inf-uploads.js looks at it before keeping anything). ("Use my face" and its live
 //     selfies are gone since round 2: nothing here opens a camera.)
+//   • (Round 4, phase 4) a reference picture (a thing, a place, a pet, food or a style to put in its photos, memes and videos)
+//     is made small the same way and sent with its own ticket (no box to tick: it's never a person).
 //   • A clip (their own, for a trend video: 3 to 10 s, 720 to 2160 px a side) is read here first (its length and shape), then
 //     sent in parts of 3.5 MB (Vercel takes at most 4.5 MB a request), with 3 small frames of it taken here for the AI check.
 //   • A video's poster: a frame of one of its own videos, taken here (our own address: the picture isn't tainted), sent with
@@ -140,6 +142,17 @@ export async function uploadPicture(act, { blob, consent = false, human }) {
   // (sendBytes sends it once more when the AI check didn't answer: nothing was kept, the same ticket works)
   const r = await sendBytes(`inf-up=${encodeURIComponent(open.data.ticket)}&part=0`, blob);
   if (r.ok && r.data?.ok) return { ok: true, id: r.data.id || open.data.id, real: r.data.real === true };
+  return { ok: false, error: r.data?.error || 'busy', why: r.data?.why };
+}
+
+// (Round 4, phase 4) a reference picture: a thing, a place, a pet, food or a style for its photos, memes and videos, made
+// small here like a picture and looked at by our server before it's kept (never a person: the influencer is the person). No
+// box to tick (nobody's photo). → { ok: true, id } or { ok: false, error, why? }
+export async function uploadRef(act, { blob, human }) {
+  const open = await act('inf-up-open', { kind: 'ref', bytes: blob.size, adult: true }, { human });
+  if (!open.ok || !open.data?.ticket) return { ok: false, error: open.data?.error || 'busy', why: open.data?.why };
+  const r = await sendBytes(`inf-up=${encodeURIComponent(open.data.ticket)}&part=0`, blob);
+  if (r.ok && r.data?.ok) return { ok: true, id: r.data.id || open.data.id };
   return { ok: false, error: r.data?.error || 'busy', why: r.data?.why };
 }
 

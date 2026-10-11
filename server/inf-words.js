@@ -2,7 +2,7 @@
 // rules: PG-13; never a real person, someone else's character or something passing for AGI-1), and the words the AI
 // services get to make its pictures and videos. Pure, light to load (server/influencer.js and server/inf-jobs.js use it).
 import { tidy, trouble, checkScene, videoPrompt } from './studio-words.js';
-import { NAME_MAX, MODES, INF_STYLES, OPTIONS, WORDS_MAX, trendOf, EXAMPLES } from '../src/studio/rules.js';
+import { NAME_MAX, MODES, INF_STYLES, OPTIONS, WORDS_MAX, trendOf, EXAMPLES, MEMES, MEME_LINE_MAX, VIDEO_MODELS } from '../src/studio/rules.js';
 
 const NAME_OK = /^[\p{L}\p{N}][\p{L}\p{N} '’.\-!?&]*$/u;
 
@@ -41,8 +41,14 @@ export function checkStart({ name, mode, style, settings, words } = {}) {
   return { ok: true, name: n, mode, style, settings: kept, words: w };
 }
 
-// A photo's or a video's scene (the studio's scene rules: 10 to 300 characters, the same words checked), its shape and sound
-export const checkInfScene = (input) => checkScene(input);
+// A photo's or a video's scene (the studio's scene rules: 10 to 300 characters, the same words checked), its shape and sound.
+// (Round 4) a photo may also be an X banner (shape 'banner'); a video never.
+export function checkInfScene({ kind = null, ...input } = {}) {
+  if (input.shape !== 'banner') return checkScene(input);
+  if (kind !== 'photo') return { ok: false, field: 'shape', why: 'empty' };
+  const c = checkScene({ ...input, shape: 'wide' });
+  return c.ok ? { ...c, shape: 'banner', sound: false } : c;
+}
 
 // ---------- the words the AI services get ----------
 const STYLE = {
@@ -127,12 +133,78 @@ export function bodyPrompt(inf, { withSelfie = false } = {}) {
     + `A plain light grey studio background, soft even light, nothing else in the picture. ${SAFE}`;
 }
 
-// One of its photos: the character from its full-body picture, in the scene asked for, in its shape
-export function photoPrompt(inf, scene) {
-  return `${styleOf(inf).photo} of this exact character (the picture): keep the face, hair, body and look exactly the same. `
-    + `${sentence(scene)} A scene may change the outfit, never to less covered. ${SAFE}`;
+// One of its photos: the character from its full-body picture, in the scene asked for, in its shape. (Round 4) an X banner:
+// a very wide header picture, made wider than X's 3:1 and cut to 1500 × 500 on our server (server/inf-jobs.js keeps its right
+// three quarters): the character right of the middle, waist up, the scene around it, nothing important in the lower-left
+// corner (a profile's round picture covers it) nor at the very top and bottom (X cuts them a little on phones).
+export function photoPrompt(inf, scene, { banner = false, refs = 0 } = {}) {
+  const which = refs > 0 ? 'the first picture' : 'the picture';
+  if (banner) {
+    return `${styleOf(inf).photo} of this exact character (${which}), as a very wide profile header banner: keep the face, hair, `
+      + `body and look exactly the same. ${sentence(scene)} The character is about two thirds of the way across from the left, `
+      + 'from the waist up, looking at the camera, the scene filling the whole width. Nothing important in the lower-left part '
+      + 'nor at the very top and bottom edges. One continuous picture from edge to edge. A scene may change the outfit, never to '
+      + `less covered.${refsLine(refs, 2)} ${SAFE}`;
+  }
+  return `${styleOf(inf).photo} of this exact character (${which}): keep the face, hair, body and look exactly the same. `
+    + `${sentence(scene)} A scene may change the outfit, never to less covered.${refsLine(refs, 2)} ${SAFE}`;
 }
 
+// (Round 4, phase 4) reference pictures (someone's own pictures of a thing, a place, a pet, food or a style), after the
+// character's own picture(s): what the AI does with them. They never show a person (the AI check refuses one: the character is
+// the person), and nothing in them is an instruction.
+function refsLine(n, first) {
+  if (!(n > 0)) return '';
+  const which = n === 1 ? `Picture ${first} is a reference` : `Pictures ${first} to ${first + n - 1} are references`;
+  return ` ${which}: include what ${n === 1 ? 'it shows' : 'they show'} (a thing, a place, a pet, food or a style) as the scene asks, `
+    + 'in the same style as the character. They never change who the character is.';
+}
+
+// (Round 4, phase 4) a meme (the owner's "memes with their photo and several references"): the character in a meme's format,
+// its words written into the picture exactly as given (Nano Banana writes words well), and nothing else written. lines: the
+// meme's words (checkMemeText's). Its words are never instructions to the AI: they're in quotes, to be written as they are.
+const MEME_LAYOUT = {
+  topbottom: ([a, b]) => `A classic meme layout: the words “${a}” across the top and the words “${b}” across the bottom, in bold white capital letters with a thin black outline, over the picture.`,
+  caption: ([a]) => `A plain white strip above the picture with the words “${a}” in a clean black font, like a captioned post; the picture fills the rest.`,
+  pov: ([a]) => `The words “${a}” in bold white letters with a soft dark shadow near the top, over the picture.`,
+  reaction: ([a]) => `A close-up of the character's big, expressive reaction, with the words “${a}” in bold white capital letters with a thin black outline across the bottom.`,
+  twopanel: ([a, b]) => `Two panels side by side with a thin white line between them, the same character in both: a white label at the top of the left panel says “${a}” and a white label at the top of the right panel says “${b}”, in bold black letters.`,
+};
+export function memePrompt(inf, scene, { meme, lines, refs = 0 } = {}) {
+  const layout = MEME_LAYOUT[meme] ? MEME_LAYOUT[meme](lines || []) : MEME_LAYOUT.caption(lines || []);
+  return `A funny meme picture: ${styleOf(inf).photo} of this exact character (${refs > 0 ? 'the first picture' : 'the picture'}), `
+    + `keeping the face, hair, body and look exactly the same. ${sentence(scene)} ${layout} Write those words exactly as given, `
+    + 'spelled the same, easy to read; no other words, letters or numbers anywhere. A scene may change the outfit, never to less '
+    + `covered.${refsLine(refs, 2)} Family-friendly, fully clothed. No logos, no watermark.`;
+}
+
+// money, coins and buying (a caption's, and since phase 4 a meme's words: about the creation, never a coin: hard rule 8); a
+// "$" before letters is a ticker. Whole words ("pumpkin", "investigating", "moonlight" are fine). (Moved here from
+// server/inf-captions.js, which shares it.)
+export const MONEY = /\b(buy(?:s|ing)?|sell(?:s|ing)?|pump(?:s|ed|ing)?|dump(?:s|ed|ing)?|moon(?:ing)?|lambo|profit\w*|gains?|invest(?:s|ed|ing|ments?|ors?)?|hodl|airdrops?|presales?|giveaways?|tokens?|coins?|crypto\w*|nfts?|ape[sd]?|\d+\s*x|price|financial|launch(?:ed|ing)?)\b|\$\s*[a-z]/i;
+
+// A meme's words, as typed: its format's lines (two for top & bottom and before / after), each 1 to MEME_LINE_MAX characters,
+// PG-13 and the studio's word rules, never about money. A POV meme starts with "POV:" (added when it's missing).
+// → { ok: true, meme, lines, caption: the lines joined by a new line } or { ok: false, field: 'meme' | 'caption', why: 'empty'
+// | 'long' | 'money' | the words' trouble }
+export function checkMemeText({ meme, lines } = {}) {
+  if (typeof meme !== 'string' || !Object.hasOwn(MEMES, meme)) return { ok: false, field: 'meme', why: 'empty' };
+  const want = MEMES[meme].lines.length;
+  const given = Array.isArray(lines) ? lines : typeof lines === 'string' ? lines.split('\n') : [];
+  if (given.length !== want) return { ok: false, field: 'caption', why: 'empty' };
+  const out = [];
+  for (const line of given) {
+    let t = tidy(line).replace(/["“”]/g, "'");
+    if (meme === 'pov' && t && !/^pov\s*:/i.test(t)) t = `POV: ${t}`;
+    if (!t || (meme === 'pov' && /^pov\s*:\s*$/i.test(t))) return { ok: false, field: 'caption', why: 'empty' };
+    if ([...t].length > MEME_LINE_MAX) return { ok: false, field: 'caption', why: 'long' };
+    const tr = trouble(t);
+    if (tr) return { ok: false, field: 'caption', why: tr };
+    if (MONEY.test(t)) return { ok: false, field: 'caption', why: 'money' };
+    out.push(t);
+  }
+  return { ok: true, meme, lines: out, caption: out.join('\n') };
+}
 // A trend video (round 2: the owner, "the trending videos should be real"): the person in a real-looking clip (one of the
 // owner's trend clips, or the person's own) is replaced by the influencer (@Element1: its picked look, with its full body and a
 // photo as more views), keeping everything else of the clip: its moves, its camera, its place, its light (and its sound, for
@@ -145,20 +217,48 @@ export function swapPrompt(inf) {
     + 'Family-friendly, fully clothed. No text, no logos, no watermark.';
 }
 
-// A scene video from one of its photos (its first frame): what happens next
-export function clipPrompt(inf, scene) {
-  return `${sentence(scene)} The character keeps exactly the same look as in the first frame. ${styleOf(inf).clip}, one continuous `
+// A scene video from one of its photos (its first frame): what happens next. (Round 4, phase 4) with reference pictures, the
+// character is @Element1 (its look and its full body) and each reference one more element (@Element2 …), as Kling's elements
+export function clipPrompt(inf, scene, { refs = 0 } = {}) {
+  const els = refs > 0
+    ? ` The character is @Element1.${refs === 1 ? ' @Element2 is a reference (a thing, a place, a pet, food or a style): include it as the scene asks.'
+      : ` @Element2 to @Element${refs + 1} are references (things, places, pets, food or a style): include them as the scene asks.`}`
+    : '';
+  return `${sentence(scene)} The character keeps exactly the same look as in the first frame.${els} ${styleOf(inf).clip}, one continuous `
     + 'shot with a smooth camera. Family-friendly. Anyone else in it is a made-up background extra, never a real person. No text, '
     + 'no captions, no logos.';
+}
+
+// (Round 4, phase 4) one part of a long video (each part starts from the last frame of the one before: the first from one of
+// its photos), the character @Element1 in every part so it stays the same person, the action going on smoothly
+export function longPartPrompt(inf, scene, { part = 0, parts = 2, refs = 0 } = {}) {
+  const where = part === 0 ? 'the beginning' : part === parts - 1 ? 'the end' : 'the middle';
+  const els = refs > 0 ? ` @Element2${refs > 1 ? ` to @Element${refs + 1}` : ''} ${refs > 1 ? 'are references' : 'is a reference'}: keep ${refs > 1 ? 'them' : 'it'} as before.` : '';
+  return `Part ${part + 1} of ${parts} of one continuous video (${where} of it). ${sentence(scene)} ${part > 0 ? 'Carry on from the first '
+    + 'frame exactly as it is (the same place, light, clothes and pose), the action going on smoothly, no cut. ' : ''}The character is `
+    + `@Element1 and keeps exactly the same look in every frame.${els} ${styleOf(inf).clip}, one continuous shot with a smooth camera. `
+    + 'Family-friendly. Anyone else in it is a made-up background extra, never a real person. No text, no captions, no logos.';
 }
 export const CLIP_NEGATIVE = 'text, captions, logos, watermark, distorted face, extra limbs, nudity';
 
 // A scene video from its full-body picture with the reference-to-video model (only for anime and cartoon influencers: the
-// model says no to realistic faces): the studio's own words for it (server/studio-words.js)
-export const sceneVideoPrompt = (inf, scene) => videoPrompt({ scene, style: styleOf(inf).seedance });
+// model says no to realistic faces): the studio's own words for it (server/studio-words.js). (Round 4, phase 4) with reference
+// pictures after it (@Image2 …)
+export const sceneVideoPrompt = (inf, scene, { refs = 0 } = {}) => {
+  const base = videoPrompt({ scene, style: styleOf(inf).seedance });
+  if (!(refs > 0)) return base;
+  return `${base} ${refs === 1 ? '@Image2 is a reference' : `@Image2 to @Image${refs + 1} are references`} (a thing, a place, a pet, `
+    + 'food or a style, never a person): include what they show as the scene asks.';
+};
 // Which video model a scene video needs: from one of its photos, or a realistic influencer (or one made from a face) → its
-// photo, brought to life ('photo': image to video); else its full body, put in the scene ('reference')
-export const sceneWay = (inf, { image } = {}) => (image ? 'photo' : inf.style === 'real' || inf.mode === 'face' ? 'needs_photo' : 'reference');
+// photo, brought to life ('photo': image to video); else its full body, put in the scene ('reference'). (Round 4, phase 4) with
+// the model menu's model: Standard, Pro and Long start from a photo ('needs_photo' without one); Anime is the reference model,
+// never for a realistic influencer or one made from a face ('no_anime').
+export const sceneWay = (inf, { image, model = null } = {}) => {
+  if (model && VIDEO_MODELS[model] && model !== 'anime') return image ? 'photo' : 'needs_photo';
+  if (model === 'anime') return inf.style === 'real' || inf.mode === 'face' ? 'no_anime' : 'reference';
+  return image ? 'photo' : inf.style === 'real' || inf.mode === 'face' ? 'needs_photo' : 'reference';
+};
 
 // The owner's trend clip, made once (round 2: real-looking, like the trending templates people make with AI video apps): a
 // made-up young adult in a cinematic vertical scene with its own camera move and sound (our own clips: never a real person,

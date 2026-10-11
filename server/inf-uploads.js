@@ -11,10 +11,13 @@
 //     parts are put together into one MP4 (its length, size and frame rate read from its own header), the frames looked at by
 //     Gemini, and the parts and frames deleted. The trend video made from it is looked at again before it's shown.
 //   • A video's poster (a frame its page took, for Explore's tiles): looked at next to the influencer's own look first.
+//   • (Round 4, phase 4) a reference picture for a photo, a meme or a video (a thing, a place, a pet, food or a style: never a
+//     person): one request like a picture, made a plain JPEG, looked at by Gemini (checkRef) BEFORE it's kept; kept a day
+//     (the tidy-up deletes uploads after 2 days).
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { rpc } from './limits.js';
 import { loadSharp, putFile, getFile, deleteFiles, listFiles } from './studio-files.js';
-import { checkPicture, checkFrames, checkPoster } from './inf-ai.js';
+import { checkPicture, checkFrames, checkPoster, checkRef } from './inf-ai.js';
 import { CLIP, PICTURE } from '../src/studio/rules.js';
 import { mp4Info, mp4Seconds } from './mp4.js';
 
@@ -64,10 +67,11 @@ export async function plainJpeg(bytes, { px = PICTURE.MAX_PX, quality = 88, shar
 }
 
 // ---------- 1: opening an upload ----------
-// A picture needs its box ticked (consent: "This is me, someone who said I may use their photo, or a character of my own").
+// A picture needs its box ticked (consent: "This is me, someone who said I may use their photo, or a character of my own"); a
+// reference (round 4, phase 4) never shows a person, so it needs none.
 // → { ok: true, id, ticket, part, parts } or { ok: false, why: 'kind' | 'size' | 'consent' | 'too_many' | 'busy' }
 export async function openUpload(cfg, { code, kind, bytes, consent, id }) {
-  if (!['picture', 'clip'].includes(kind)) return { ok: false, why: 'kind' };
+  if (!['picture', 'clip', 'ref'].includes(kind)) return { ok: false, why: 'kind' };
   if (kind === 'picture' && consent !== true) return { ok: false, why: 'consent' };
   const size = Number(bytes);
   const most = kind === 'clip' ? CLIP.MAX_BYTES : PICTURE.MAX_BYTES;
@@ -85,7 +89,7 @@ export async function receive(cfg, t, { part = null, frame = null, body }) {
   const up = await rpc(cfg, 'inf_upload_get', { p_id: t.u }, 'studio');
   if (!up || up.wallet_code !== t.w || up.kind !== t.k) return { status: 404, body: { error: 'gone' } };
   if (up.status !== 'open') return { status: 409, body: { error: 'done', status: up.status } };
-  if (t.k === 'picture') {
+  if (t.k === 'picture' || t.k === 'ref') {
     if (part !== 0 || frame !== null) return { status: 400, body: { error: 'bad_request' } };
     if (body.length > PICTURE.MAX_BYTES) return { status: 413, body: { error: 'size' } };
     const jpeg = await plainJpeg(body);
@@ -94,7 +98,7 @@ export async function receive(cfg, t, { part = null, frame = null, body }) {
       return { status: 422, body: { error: 'picture' } };
     }
     let verdict;
-    try { verdict = await checkPicture(cfg, jpeg); } catch (err) {
+    try { verdict = t.k === 'ref' ? await checkRef(cfg, jpeg) : await checkPicture(cfg, jpeg); } catch (err) {
       console.warn(`[studio] an upload couldn't be looked at: ${err.message}`);
       return { status: 503, body: { error: 'ai' } };                    // nothing kept: the page sends it again
     }

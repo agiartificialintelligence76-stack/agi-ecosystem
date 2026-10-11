@@ -7,7 +7,8 @@
 //     top left (TikTok's, Reels' and Shorts' own buttons sit at the bottom right), its picture encoded again, its sound
 //     copied as it is. The copy is kept beside it (inf/<influencer>/<job>.dl.mp4) and its downloads use it from then on;
 //     until then (or after 3 tries that failed) the video downloads as it was made.
-// The video as it plays on its page is never changed.
+// The video as it plays on its page is never changed. (Round 4, phase 4: a long video is made in parts, each one encoded again
+// with the mark as it's kept, then joined: its one copy, played and downloaded, carries the mark: encodePart, joinParts.)
 import { readFileSync } from 'node:fs';
 import { rpc } from './limits.js';
 import { mp4Info } from './mp4.js';
@@ -105,6 +106,77 @@ export async function markVideo(sharp, bytes, { timeoutMs = 12_000, run = null }
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
 }
+// ---------- (round 4, phase 4) a long video's parts ----------
+// Each part (Kling's MP4, with its sound) is encoded again as it's kept: the same size for every part (by its shape), 24
+// frames a second, the mark top left, no sound (a long video is silent: its parts' sounds wouldn't join up), H.264 at about
+// 2.5 Mb/s (a minute is about 19 MB: under the bucket's 40 MB a file), its index first. Then they're joined as they are
+// (ffmpeg's concat, nothing encoded again: a tenth of a second). Measured 2026-10-11: a 15 s 720p part takes about 4.2 s on
+// one core, its last frame 0.45 s, joining four 0.09 s.
+export const PART = { SIZE: { tall: [720, 1280], wide: [1280, 720], square: [960, 960] }, FPS: 24, KBPS: 2500, NEEDS_MS: 14_000, JOIN_NEEDS_MS: 12_000 };
+export function partArgs({ input, mark, output, margin, w, h }) {
+  return [
+    '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', input, '-i', mark,
+    '-filter_complex', `[0:v]scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${PART.FPS}[b];`
+      + `[b][1:v]overlay=x=${margin}:y=${margin}:format=auto,format=yuv420p[v]`,
+    '-map', '[v]', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', `${PART.KBPS}k`, '-maxrate', `${Math.round(PART.KBPS * 1.2)}k`,
+    '-bufsize', `${PART.KBPS * 2}k`, '-movflags', '+faststart', output,
+  ];
+}
+// its last frame (the next part starts from it), from the part as Kling made it (its own pixels)
+export const lastFrameArgs = ({ input, output }) => ['-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-sseof', '-0.3', '-i', input, '-frames:v', '1', '-q:v', '2', output];
+// the parts joined as they are (each encoded the same way), its index first
+export const joinArgs = ({ list, output }) => ['-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', output];
+
+async function inTemp(fn) {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'agi1-part-'));
+  try { return await fn(dir, join); } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); }
+}
+// A part, encoded again with the mark (and its last frame, unless it's the last part) → { video, frame } · throws when ffmpeg
+// isn't there, fails, or runs out of time
+export async function encodePart(sharp, bytes, { shape = 'tall', last = false, timeoutMs = 12_000, run = null } = {}) {
+  if (!mp4Info(bytes)?.width) throw new Error('part: not a video we read');
+  const bin = run ? 'ffmpeg' : await ffmpegBin();
+  if (!bin) throw Object.assign(new Error('part: ffmpeg isn\'t here'), { why: 'no_ffmpeg' });
+  const [w, h] = PART.SIZE[shape] || PART.SIZE.tall;
+  const started = Date.now();
+  return inTemp(async (dir, join) => {
+    const { writeFile, readFile } = await import('node:fs/promises');
+    const { png, left } = await markFor(sharp, w, h, 'tl');
+    const input = join(dir, 'in.mp4'), mark = join(dir, 'mark.png'), output = join(dir, 'out.mp4'), frameOut = join(dir, 'last.jpg');
+    await Promise.all([writeFile(input, bytes), writeFile(mark, png)]);
+    const go = (args, ms) => (run ? run(args, ms) : runFfmpeg(bin, args, ms));
+    await Promise.all([
+      go(partArgs({ input, mark, output, margin: left, w, h }), timeoutMs),
+      last ? null : go(lastFrameArgs({ input, output: frameOut }), timeoutMs),
+    ]);
+    const video = await readFile(output);
+    if (!mp4Info(video)?.width) throw new Error('part: ffmpeg made no video');
+    const frame = last ? null : await readFile(frameOut).catch(() => null);
+    if (!last && !(frame && frame.length > 1000)) throw new Error('part: ffmpeg took no last frame');
+    return { video, frame, ms: Date.now() - started };
+  });
+}
+// The parts joined → its MP4 · throws when ffmpeg isn't there, fails, or runs out of time
+export async function joinParts(parts, { timeoutMs = 9000, run = null } = {}) {
+  if (!Array.isArray(parts) || parts.length < 2 || parts.some((p) => !mp4Info(p)?.width)) throw new Error('join: its parts aren\'t videos we read');
+  const bin = run ? 'ffmpeg' : await ffmpegBin();
+  if (!bin) throw Object.assign(new Error('join: ffmpeg isn\'t here'), { why: 'no_ffmpeg' });
+  return inTemp(async (dir, join) => {
+    const { writeFile, readFile } = await import('node:fs/promises');
+    const names = parts.map((_, n) => join(dir, `p${n}.mp4`));
+    await Promise.all(parts.map((p, n) => writeFile(names[n], p)));
+    const list = join(dir, 'list.txt'), output = join(dir, 'joined.mp4');
+    await writeFile(list, names.map((f) => `file '${f}'`).join('\n'));
+    await (run ? run(joinArgs({ list, output }), timeoutMs) : runFfmpeg(bin, joinArgs({ list, output }), timeoutMs));
+    const out = await readFile(output);
+    if (!mp4Info(out)?.width) throw new Error('join: ffmpeg made no video');
+    return out;
+  });
+}
+
 async function runFfmpeg(bin, args, timeoutMs) {
   const { spawn } = await import('node:child_process');
   await new Promise((resolve, reject) => {

@@ -177,7 +177,19 @@ export async function handleUpdate(cfg, token, update, now = Date.now()) {
   return onText(cfg, token, m, chat, text, now, L);
 }
 
+// AGI Studio's alerts (round 4, phase 2, server/inf-admin.js): "/start a…", from the owner's tab or the team's mod page (a
+// signed code that lasts a day). Not her chat: no 18+ question, nothing of the chat kept; /stop turns them off too.
+const ALERTS_ARG = /^a[os][0-9a-z]{7}[A-Za-z0-9_-]{16,32}$/;
 async function onCommand(cfg, token, chat, name, arg, now, L, from) {
+  if (name === 'start' && ALERTS_ARG.test(arg)) {
+    let text;
+    try { text = await (await import('./inf-admin.js')).alertsStart(cfg, chat, arg, now); } catch (err) {
+      console.warn(`[telegram] AGI Studio's alerts: ${err.message}`);
+      text = L.BUSY;
+    }
+    await say(token, chat, text);
+    return 'alerts';
+  }
   // (2026-10-09) /claim, or "/start claim" from a quiz winner's button in the group: their prize (18+ first)
   if (name === 'claim' || (name === 'start' && /^claim$/i.test(arg))) {
     const row = await db.get(cfg, chat);
@@ -197,7 +209,9 @@ async function onCommand(cfg, token, chat, name, arg, now, L, from) {
   }
   if (name === 'stop') {
     await db.forget(cfg, chat);
-    await say(token, chat, L.STOPPED);
+    // (round 4, phase 2) AGI Studio's alerts off too, when this chat had them
+    const alerts = await (await import('./inf-admin.js')).alertsOff(cfg, chat).catch(() => false);
+    await say(token, chat, alerts ? `${L.STOPPED}\n\nAGI Studio's alerts are off for this chat too.` : L.STOPPED);
     return 'stop';
   }
   if (name === 'time') {

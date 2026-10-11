@@ -107,7 +107,9 @@ export const VIDEO_STEPS = [
 
 // What each thing costs, in credits, before a holder's discount (DISCOUNT above: Crush 20% off, Soulmate 40% off): the owner's
 // numbers. An influencer is its 4 looks and its full-body picture; new looks while picking cost "looks".
-export const PRICES = { influencer: 100, looks: 40, photo: 15, trend: 300, video: 400, model: 500 };
+// (Round 4, 2026-10-11: an X banner is a photo made wider and sharper, 2K: about $0.12 of AI, so 22 credits: about 1.8× its
+// cost, the owner's choice for every price, so a Soulmate's 40% off still covers it.)
+export const PRICES = { influencer: 100, looks: 40, photo: 15, banner: 22, trend: 300, video: 400, model: 500 };
 export const creditPrice = (what, level) => Math.round(PRICES[what] * (1 - (DISCOUNT[level] ?? 0)));
 // A holder's free credits each month (the owner's: "Discounts + free credits"): Crush 100, Soulmate 400 (the whole site's
 // free credits a month are capped on our server). A thank-you for holding, never an investment.
@@ -219,6 +221,29 @@ export const REPORT_WHYS = {
   copyright: "It copies someone else's character or work",
   other: 'Something else',
 };
+// (round 4, phase 2, 2026-10-11) why a mod banned a maker (the page's words; the team's note is its own, never shown to them)
+export const BAN_REASONS = {
+  real_person: "A real person who didn't agree",
+  minor: 'Looked like a minor',
+  sexual: 'Sexual or too revealing',
+  hate: 'Hate or harassment',
+  violence: 'Violence or gore',
+  copyright: "Someone else's character or work",
+  spam: 'Spam',
+  scam: 'A scam, or pretending to be someone',
+  other: 'Something else',
+};
+// …a support ticket's topic, and how many a wallet may have open at once and write in a day (opening one is one)
+export const TICKET_TOPICS = {
+  payment: 'Credits or a payment',
+  making: 'Something I made, or that wasn\'t made',
+  account: 'My account, or a ban',
+  bug: 'Something broke',
+  other: 'Something else',
+};
+export const TICKETS = { OPEN: 3, MSGS_A_DAY: 20, BODY_MAX: 1000 };
+// …and the AI helper: answers a day for a wallet (or a visitor who isn't signed in), and a question's length
+export const HELPER = { PER_DAY: 20, QUESTION_MAX: 300 };
 // The steps of a 3D model made from an influencer's full-body picture (Meshy: image to 3D, bones, moves, kept)
 export const MODEL_STEPS = [
   { step: 'image', words: 'Shaping it' },
@@ -238,3 +263,234 @@ export const infVideoDl = (job) => `/api/launch?inf-video-dl=${job}.mp4`;
 // clock has made its marked copy)
 export const INF_DL_RE = /^([A-Za-z0-9_-]{22})\/([A-Za-z0-9_-]{22})-([0-3])\.jpg$/;
 export const infPhotoDl = (inf, job, n = 0) => `/api/launch?inf-dl=${inf}/${job}-${n}.jpg`;
+
+// ---------- round 4 (2026-10-11, the owner: "theres should be a percentage when they are creating the 3d model just like in
+// meshy so they know how long will it take", "on the photos they can ghenerate the banner on their X as well with the right
+// size", "can gerate raedy made captions on their posts, or they can generate one too", and "if they can have their
+// username in there [clank.trade] … their username will appear also on the studio") ----------
+
+// How long each part of the making usually takes, in seconds (the AI services' own pages, and our clock's minute): for a
+// progress bar and "about N min left". An estimate, never a promise: the step a thing is at comes from our server, and a 3D
+// model's step also says its own percentage (Meshy's).
+export const TYPICAL = {
+  character: [['preview', 120], ['refine', 150], ['rig', 60], ['moves', 100], ['save', 45]],
+  model: [['image', 150], ['rig', 60], ['moves', 100], ['save', 45]],
+  looks: [['queue', 8], ['make', 35], ['save', 10]],
+  body: [['queue', 8], ['make', 25], ['save', 8]],
+  photo: [['queue', 6], ['make', 22], ['save', 8]],
+  banner: [['queue', 6], ['make', 30], ['save', 8]],
+  trend: [['queue', 20], ['make', 270], ['save', 20]],
+  video: [['queue', 20], ['make', 150], ['save', 15]],
+  // (the owner's trend clips: 10 s made from words, with sound)
+  clip: [['queue', 20], ['make', 240], ['save', 20]],
+};
+// Where a thing being made is. kind: a TYPICAL key · step: its step now (none known: the time since it started, over the whole
+// plan) · stepPct: that step's own percentage (0–100), when known · since: when it started (ms) · stepSince: since when its
+// step is known to be the one it's at (ms: the page's first look at it there, so its step started then or earlier) · now.
+// Without a percentage of its own, a step is as far along as the time since it started says (its steps before it taking
+// their usual time), or as the time it's been seen in this step says, whichever is further: so a step that came sooner than
+// usual still moves from the moment it's seen (round 4's browser check: its looks' bar sat at 17% for 8 s otherwise).
+// → { pct (1–99), left (seconds), slow (it's taking longer than usual) } or null
+// (Round 4, phase 4) plan: a plan of its own instead of TYPICAL[kind] (a video's, by its model and length: videoPlan; a photo's,
+// by its model and quality: photoPlan)
+export function progressOf(kind, { plan: own = null, step = null, stepPct = null, since = null, stepSince = null, now = Date.now() } = {}) {
+  const plan = Array.isArray(own) && own.length ? own : TYPICAL[kind];
+  if (!plan) return null;
+  const total = plan.reduce((a, [, s]) => a + s, 0);
+  const elapsed = Number.isFinite(since) && since > 0 ? Math.max(0, (now - since) / 1000) : null;
+  const known = plan.findIndex(([s]) => s === step);
+  let doneS;
+  if (known < 0 && elapsed !== null) {
+    doneS = Math.min(0.95, Math.max(0.02, elapsed / total)) * total;
+  } else {
+    const at = Math.max(0, known);
+    const before = plan.slice(0, at).reduce((a, [, s]) => a + s, 0);
+    const cur = plan[at][1];
+    const inStep = known >= 0 && Number.isFinite(stepSince) && stepSince > 0 ? Math.max(0, (now - stepSince) / 1000) : null;
+    let frac;
+    if (Number.isFinite(stepPct) && stepPct > 0) frac = Math.min(0.98, stepPct / 100);
+    else if (elapsed !== null || inStep !== null) {
+      frac = Math.min(0.9, Math.max(elapsed !== null ? 0.03 : 0.05, elapsed !== null ? (elapsed - before) / cur : 0, inStep !== null ? inStep / cur : 0));
+    } else frac = 0.05;
+    doneS = before + frac * cur;
+  }
+  return {
+    pct: Math.max(1, Math.min(99, Math.round((doneS / total) * 100))),
+    left: Math.max(5, Math.round(total - doneS)),
+    slow: elapsed !== null && elapsed > total * 1.6,
+  };
+}
+
+// The X banner: a photo made wide, then cut to exactly X's header size (1500 × 500) on our server. Photos may be any of the
+// video shapes or this one (a banner can't start a video or a trend: those are tall, wide or square).
+export const BANNER = { W: 1500, H: 500 };
+export const PHOTO_SHAPES = { ...SHAPES, banner: { name: 'X banner', where: 'your X header, 1500 × 500', ratio: '3:1' } };
+
+// Captions for a post (each creation's own): ready-made ones (free: src/studio/captions.js), or written by AI in a tone, for
+// a platform (free, CAPTIONS_A_DAY a wallet: our server, server/inf-captions.js)
+export const CAPTION_PLATFORMS = { x: { name: 'X', max: 270 }, tiktok: { name: 'TikTok', max: 300 }, instagram: { name: 'Instagram', max: 600 } };
+export const CAPTION_TONES = { funny: 'Funny', flirty: 'Flirty', aesthetic: 'Aesthetic', hype: 'Hype', wholesome: 'Wholesome' };
+export const CAPTIONS_A_DAY = 30;
+
+// clank.trade usernames (its own rule: 3 to 32 letters, numbers or _, any case, kept lowercase): someone may show theirs in
+// AGI Studio once our server has read their clank.trade profile and its wallet is the one they connected here
+export const CLANK_NAME = /^[A-Za-z0-9_]{3,32}$/;
+export const clankProfileUrl = (name) => `https://clank.trade/@${encodeURIComponent(String(name || ''))}`;
+
+// ---------- (round 4, phase 3, 2026-10-11) gifts of credits, and invites ----------
+// The owner's choices: "gifting bought credits only" (to a wallet, an @name or a gift link; at most 50,000 credits a day), and
+// invites for credits only (a friend's 100 credits with its first top-up; its inviter 10% of what it buys, at most 500 credits
+// from one friend and 5,000 a month). Our server can change the numbers (STUDIO_GIFTS_A_DAY, STUDIO_REF_…): the page shows the
+// ones ?inf-info gives.
+//   • A gift: some of your BOUGHT credits (never this month's free ones or bonus ones) to another wallet, by its address or the
+//     clank.trade name it shows here, or a gift link anyone with it can claim once (held until then; you can take it back while
+//     nobody has; after LINK_DAYS days it comes back by itself). GIFTS: the fewest credits a gift, the most a day, gifts a day
+//     (links included), gift links open at once, a link's days, a note's length.
+export const GIFTS = { MIN: 10, A_DAY: 50_000, PER_DAY: 20, OPEN_LINKS: 10, LINK_DAYS: 30, NOTE_MAX: 80 };
+//   • Invites: a wallet that never bought credits joins through someone's invite link once; it gets WELCOME bonus credits with
+//     its first top-up of WELCOME_MIN cents or more, and its inviter PERCENT% of each of its top-ups as bonus credits (PER_FRIEND
+//     at most from one friend, A_MONTH a month). Bonus credits never run out and come back when something can't be made, but
+//     they're never passed on as a gift.
+export const REFERRALS = { WELCOME: 100, WELCOME_MIN: 500, PERCENT: 10, PER_FRIEND: 500, A_MONTH: 5000 };
+// an invite code (8 letters and numbers, never 0, 1, i, l or o: easy to read out), and a gift link's secret
+export const REF_CODE = /^[a-hj-km-np-z2-9]{8}$/;
+export const GIFT_TOKEN = /^[A-Za-z0-9_-]{22}$/;
+// where they lead: any page of the app with ?ref=<code> (the code kept in the browser until a wallet signs in), and a gift
+// link's secret after "#gift=" (never sent to a server with the page's address)
+export const inviteLink = (origin, base, code) => `${origin}${base}/explore?ref=${code}`;
+export const giftLink = (origin, base, token) => `${origin}${base}/explore#gift=${token}`;
+
+// ---------- (round 4, phase 4, 2026-10-11) the model menu, long videos, memes, Instant ----------
+// The owner's choices: a menu of photo and video models ("references, seconds, quality"), each price about 1.8× what its AI
+// costs (MARKUP: so a Soulmate's 40% off still covers it), long videos up to a minute, memes (a kind of photo: its format and
+// its words, which the AI writes into the picture) and Instant (one tap on a ready-made idea: src/studio/instant.js).
+export const MARKUP = 1.8;
+// credits for an AI cost in cents (a cent may have decimals: a video's cents a second): MARKUP × it, rounded up (to the
+// thousandth first, so 1.8 × 5 is 9, never 10 by a floating-point hair)
+export const creditsFor = (cents) => Math.ceil(Math.round(MARKUP * cents * 1000) / 1000);
+const offFor = (n, level) => Math.round(n * (1 - (DISCOUNT[level] ?? 0)));
+
+// Photo models (both on fal: server/inf-ai.js). Classic is Nano Banana 2's edit (1K, 2K or 4K: $0.08, $0.12, $0.16): X
+// banners and memes are always Classic (it writes words into pictures best). Crisp is Seedream 4.5's edit ($0.04 a picture,
+// 2K or 4K: it makes nothing smaller). refs: the reference pictures someone may add (things, places, pets, food, a style).
+export const PHOTO_QUALITY = { std: { name: 'Standard', px: '1K' }, hd: { name: 'HD', px: '2K' }, ultra: { name: 'Ultra', px: '4K' } };
+export const PHOTO_MODELS = {
+  classic: { name: 'Classic', note: 'True to life, and keeps faces closest', cents: { std: 8, hd: 12, ultra: 16 }, refs: 4 },
+  crisp: { name: 'Crisp', note: 'Bold color and sharp detail, always HD', cents: { hd: 4, ultra: 4 }, refs: 4 },
+};
+// A photo as asked for, tidied: → { model, quality } (an X banner and a meme are Classic; a banner is HD, its size fixed) or
+// null when it isn't one the menu offers
+export function photoSpec({ model = null, quality = null, shape = 'tall', meme = null } = {}) {
+  const m = model ?? 'classic';
+  if (!Object.hasOwn(PHOTO_MODELS, m)) return null;
+  if (shape === 'banner') return m === 'classic' && (quality === null || quality === 'hd') && !meme ? { model: 'classic', quality: 'hd' } : null;
+  if (meme && m !== 'classic') return null;
+  const q = quality ?? (m === 'crisp' ? 'hd' : 'std');
+  return Object.hasOwn(PHOTO_MODELS[m].cents, q) ? { model: m, quality: q } : null;
+}
+// what a photo costs, in credits, for this level (null: not one the menu offers)
+export function photoCredits(spec, level = 1) {
+  const s = photoSpec(spec || {});
+  return s ? offFor(creditsFor(PHOTO_MODELS[s.model].cents[s.quality]), level) : null;
+}
+
+// Video models. Standard and Pro are Kling V3's image to video (720p or 1080p: $0.084 or $0.112 a second, with sound $0.126
+// or $0.168), from one of its photos; Anime is Seedance 2.5's reference to video ($0.2205 a second at 480p, $0.473 at 720p,
+// its sound free), from its full body or a photo, only for an anime or 3D cartoon influencer (it says no to realistic faces);
+// Long is Kling V3 Standard made in parts (each starting from the last frame of the one before), up to a minute, without sound
+// (its parts' sounds wouldn't join up: add your own music when you post it).
+export const VIDEO_MODELS = {
+  standard: { name: 'Standard', note: '720p, natural motion', seconds: [5, 10, 15], cents: { silent: 8.4, sound: 12.6 }, refs: 2, photo: true },
+  pro: { name: 'Pro', note: '1080p, the finest detail', seconds: [5, 10, 15], cents: { silent: 11.2, sound: 16.8 }, refs: 2, photo: true },
+  anime: { name: 'Anime', note: 'For anime and 3D cartoon influencers', seconds: [5, 10, 15], cents: { '480p': 22.05, '720p': 47.3 }, refs: 4, photo: false, styles: ['anime', 'toon'] },
+  long: { name: 'Long', note: 'Up to a minute, made in parts, without sound', seconds: [20, 30, 45, 60], cents: { silent: 8.4 }, refs: 2, photo: true },
+};
+export const ANIME_QUALITY = { '480p': { name: '480p' }, '720p': { name: '720p' } };
+// a long video's parts: 20 s is 2 of 10 s, 30 s 2 of 15, 45 s 3 of 15, 60 s 4 of 15 (Kling makes 3 to 15 s at once)
+export const LONG = { PART_MAX: 15, MAX_S: 60 };
+export const partsOf = (seconds) => Math.max(1, Math.ceil(Number(seconds) / LONG.PART_MAX));
+// A video as asked for, tidied: → { model, seconds, sound, quality, parts } or null when it isn't one the menu offers (an
+// older page sends none of it: Standard, 5 s, as before)
+export function videoSpec({ model = null, seconds = null, sound = false, quality = null } = {}) {
+  const m = model ?? 'standard';
+  const v = VIDEO_MODELS[m];
+  if (!v || !Object.hasOwn(VIDEO_MODELS, m)) return null;
+  const s = seconds === null || seconds === undefined || seconds === '' ? v.seconds[0] : Number(seconds);
+  if (!v.seconds.includes(s)) return null;
+  if (m === 'anime') {
+    const q = quality ?? '720p';
+    if (!Object.hasOwn(v.cents, q)) return null;
+    return { model: m, seconds: s, sound: sound === true, quality: q, parts: 1 };
+  }
+  if (quality !== null && quality !== undefined) return null;
+  if (m === 'long') return sound === true ? null : { model: m, seconds: s, sound: false, quality: null, parts: partsOf(s) };
+  return { model: m, seconds: s, sound: sound === true, quality: null, parts: 1 };
+}
+// its AI cost in cents (Anime's sound is free; the others' sound costs more a second)
+export function videoCents(spec) {
+  const s = videoSpec(spec || {});
+  if (!s) return null;
+  const c = VIDEO_MODELS[s.model].cents;
+  const perSecond = s.model === 'anime' ? c[s.quality] : c[s.sound ? 'sound' : 'silent'];
+  return perSecond * s.seconds;
+}
+// what a video costs, in credits, for this level (null: not one the menu offers)
+export function videoCredits(spec, level = 1) {
+  const c = videoCents(spec);
+  return c === null ? null : offFor(creditsFor(c), level);
+}
+
+// Reference pictures (the owner: "references"): someone's own pictures of a thing, a place, a pet, food or a style to put in
+// a photo, a meme or a video, uploaded like a picture (made plain, at most 1536 px) and looked at by the AI first. Never a
+// person: their influencer is the person (a picture of someone is refused). Each kept a day.
+export const REFS = { MAX: 4, NOTE: 'A thing, a place, a pet, food or a style to include: never a person (your influencer is the person).' };
+export const refsFor = (what, model) => (what === 'video' ? VIDEO_MODELS[model]?.refs ?? 0 : PHOTO_MODELS[model]?.refs ?? 0);
+
+// Memes (the owner's "memes with their photo and several references"): a photo of the influencer in a meme's format, its words
+// written into the picture by the AI. Each format's lines (two lines: "top\nbottom"), MEME_LINE_MAX characters each. A meme's
+// words follow the captions' rules: PG-13, never about money, coins, prices or buying.
+export const MEMES = {
+  topbottom: { name: 'Top & bottom', lines: ['Top', 'Bottom'], note: 'Bold white words at the top and the bottom' },
+  caption: { name: 'Caption', lines: ['Caption'], note: 'A line of words above the picture, like a post' },
+  pov: { name: 'POV', lines: ['POV:'], note: 'Starts with “POV:”' },
+  reaction: { name: 'Reaction', lines: ['Caption'], note: 'A big reaction face, your words under it' },
+  twopanel: { name: 'Before / after', lines: ['Left panel', 'Right panel'], note: 'Two panels side by side, a label on each' },
+};
+export const MEME_LINE_MAX = 60;
+export const MEME_ID = /^[a-z]{2,12}$/;
+
+// How long a video usually takes (round 4's progress bars): longer videos take longer at the AI service; a long video is its
+// parts one after another (each made, then kept by our clock), then joined. → a TYPICAL-like plan
+export function videoPlan({ model = 'standard', seconds = 5, parts = 1 } = {}) {
+  if (model === 'long' || parts > 1) {
+    const n = Math.max(1, Number(parts) || partsOf(seconds));
+    const each = Math.round(Number(seconds) / n) || LONG.PART_MAX;
+    const plan = [];
+    for (let p = 0; p < n; p++) plan.push([`p${p}-queue`, 20], [`p${p}-make`, 90 + 12 * each], [`p${p}-save`, 45]);
+    plan.push(['join', 40]);
+    return plan;
+  }
+  const s = Number(seconds) || 5;
+  if (model === 'anime') return [['queue', 20], ['make', 120 + 15 * s], ['save', 15]];
+  if (model === 'pro') return [['queue', 20], ['make', Math.round(1.25 * (90 + 12 * s))], ['save', 15 + s]];
+  return [['queue', 20], ['make', 90 + 12 * s], ['save', 10 + s]];
+}
+// the step a long video is at, as its plan names it (its part, and its part's step; "join" once its parts are made)
+export const longStep = (part, parts, step) => (Number(part) >= Number(parts) ? 'join' : `p${Number(part) || 0}-${step || 'queue'}`);
+// How long a photo usually takes, by its model and quality (a bigger picture takes longer to make and to keep; a meme's words a
+// little longer); an X banner: TYPICAL.banner
+export function photoPlan({ model = 'classic', quality = null, meme = null } = {}) {
+  const q = quality || (model === 'crisp' ? 'hd' : 'std');
+  const make = model === 'crisp' ? (q === 'ultra' ? 35 : 25) : q === 'ultra' ? 45 : q === 'hd' ? 30 : 22;
+  return [['queue', 6], ['make', make + (meme ? 6 : 0)], ['save', q === 'ultra' ? 14 : q === 'hd' ? 10 : 8]];
+}
+// One of its photos, videos or trend videos being made (as our server shows it: src/studio/views/influencer.js): its plan and
+// its step now (a long video's part and that part's step)
+export function jobPlan(j) {
+  if (j?.kind === 'photo') return j.shape === 'banner' ? TYPICAL.banner : photoPlan({ model: j.model || 'classic', quality: j.quality, meme: j.meme });
+  if (j?.kind === 'video') return videoPlan({ model: j.model || 'standard', seconds: j.seconds || 5, parts: j.parts || 1 });
+  return TYPICAL[j?.kind] || null;
+}
+export const jobStep = (j) => (j?.kind === 'video' && Number(j.parts) > 1 ? longStep(j.part, j.parts, j.step) : j?.step || 'queue');
+// Its newest photo a video can start from (never an X banner or a meme: a meme's words in a video come out garbled)
+export const startPhotos = (jobs) => (jobs || []).filter((j) => j.kind === 'photo' && j.status === 'done' && j.shape !== 'banner' && !j.meme);

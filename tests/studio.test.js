@@ -1249,6 +1249,9 @@ test('GET ?studio=<id>: a character for its page (moved along a step while it\'s
   Object.assign(taskOf('preview'), { status: 'IN_PROGRESS', progress: 63 }); again(id);
   r = await get(`studio=${id}`);
   assert.deepEqual([r.body.character.step, r.body.character.progress], ['preview', 63]);
+  // (round 4) when its making started (else when it was paid), and our server's clock: its progress bar counts from them
+  assert.ok(Number.isFinite(r.body.character.started) && r.body.character.started <= Date.now());
+  assert.ok(Math.abs(r.body.now - Date.now()) < 5000);
   assert.equal((await get('studio=not-an-id')).status, 400);
   assert.deepEqual(await get(`studio=${newOrderId()}`).then((x) => [x.status, x.body]), [404, { error: 'gone' }]);
   Object.assign(fake.db.orders.get(id), { status: 'done', moves: R.MOVE_NAMES, done_at: Date.now(), glb_bytes: 10 });

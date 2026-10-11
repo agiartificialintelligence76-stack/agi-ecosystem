@@ -28,7 +28,7 @@
 // order made before (choosing how to pay, "Check my payment", making one again).
 // (2026-10-10) And AGI Studio, the AI influencer app (studio.agi1.app): GET ?inf-info, ?inf-explore, ?inf=, ?inf-file=,
 // ?inf-video=, ?inf-video-dl= (and since its round 2 ?inf-dl=, a photo with the share mark; ?inf-ex=, an example picture;
-// ?inf-stats, the live stats board), POST actions "inf-…" and "trend-…", and its uploads (POST ?inf-up=… / ?inf-poster=…, the
+// ?inf-stats, the live stats board), POST actions "inf-…" and "trend-…" (since its round 4, phase 2, also the team's "mod-…"), and its uploads (POST ?inf-up=… / ?inf-poster=…, the
 // file's bytes as the body), handled by server/inf-api.js (loaded only for them). An influencer's coin is a launch draft like
 // one from her bot, its picture the influencer's own look from our bucket ("studio:<influencer>/<job>-<n>"), no Telegram.
 import { getConfig } from '../server/config.js';
@@ -49,7 +49,8 @@ const STUDIO_POSTS = ['studio-quote', 'studio-choose', 'studio-check', 'studio-r
   'studio-video-check', 'studio-video-redo', 'studio-video-look'];
 const STUDIO_MOVED = ['studio-quote', 'studio-video-quote'];            // new orders: AGI Studio's credits instead
 const INF_GETS = ['inf-info', 'inf-explore', 'inf', 'inf-file', 'inf-video', 'inf-video-dl', 'inf-dl', 'inf-ex', 'inf-stats'];
-const isInfAction = (a) => typeof a === 'string' && /^(?:inf|trend)-[a-z0-9-]{2,20}$/.test(a);
+// (round 4, phase 2: and the team's "mod-…": a ban, a ticket as the team sees it)
+const isInfAction = (a) => typeof a === 'string' && /^(?:inf|trend|mod)-[a-z0-9-]{2,20}$/.test(a);
 // a draft made in AGI Studio: its picture is an influencer's look in our bucket (server/influencer.js studioPicture)
 const STUDIO_PHOTO = /^studio:[A-Za-z0-9_-]{22}\/[A-Za-z0-9_-]{22}-[0-3]$/;
 const fromStudio = (d) => STUDIO_PHOTO.test(String(d?.photo || ''));

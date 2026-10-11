@@ -5,6 +5,7 @@
 import { h, icon, btn, linkBtn, say, put, add } from '../ui.js';
 import { STEPS, MODEL_STEPS, MOVE_NAMES, fileUrl, moveIn } from '../rules.js';
 import { failText, share3dUrl, dayText, errorText, REACTIONS } from '../app-words.js';
+import { progressBar } from '../progress.js';
 
 const POLL_MS = 5000;
 
@@ -15,6 +16,9 @@ export async function render(ctx, route, root) {
   const title = h('h1', { class: 'sa-display sa-page-title', tabindex: '-1', text: 'In 3D' });
   const meta = h('p', { class: 'sa-inf-meta' });
   const status = h('p', { class: 'sa-progress-line', role: 'status' });
+  // (round 4, the owner: "a percentage when they are creating the 3d model just like in meshy"): how far along, and about how
+  // long is left
+  const barBox = h('div', { class: 'sa-model-prog', hidden: true });
   const steps = h('ol', { class: 'sa-steps', hidden: true });
   const madeNote = h('p', { class: 'sa-muted sa-small', hidden: true, text: "It takes about 5 to 10 minutes. You can close this page: it keeps going, and its link shows it when it's ready." });
   const canvas = h('canvas', { class: 'sa-canvas', 'aria-label': 'The model in 3D' });
@@ -30,7 +34,7 @@ export async function render(ctx, route, root) {
   const links = h('div', { class: 'sa-row' });
   const done = h('section', { class: 'sa-model-done', hidden: true }, stage, movebar, chat, log, hint, links);
   const infLink = h('p', { hidden: true });
-  add(root, back, h('header', { class: 'sa-page-head' }, title, meta, infLink), status, steps, madeNote, done);
+  add(root, back, h('header', { class: 'sa-page-head' }, title, meta, infLink), status, barBox, steps, madeNote, done);
   chat.querySelector('button').type = 'submit';
 
   async function load() {
@@ -60,9 +64,11 @@ export async function render(ctx, route, root) {
     const isMaking = c && (c.status === 'paid' || c.status === 'making');
     steps.hidden = !isMaking;
     madeNote.hidden = !isMaking;
+    barBox.hidden = !isMaking;
     if (isMaking) {
       const list = c.inf ? MODEL_STEPS : STEPS;
       const at = Math.max(0, list.findIndex((s) => s.step === (c.step || list[0].step)));
+      put(barBox, progressBar({ key: id, kind: c.inf ? 'model' : 'character', step: list[at].step, stepPct: Number.isFinite(c.progress) ? c.progress : null, since: c.started ?? null }));
       put(steps, ...list.map((s, i) => h('li', { class: `sa-step-item${i < at ? ' is-done' : i === at ? ' is-now' : ''}`, ...(i === at ? { 'aria-current': 'step' } : {}) },
         h('span', { class: 'sa-step-dot', 'aria-hidden': 'true' }, i < at ? icon('check') : null), h('span', { text: s.words }),
         i === at && Number.isFinite(c.progress) && c.progress > 0 ? h('span', { class: 'sa-mono', text: ` ${Math.round(c.progress)}%` }) : null)));

@@ -166,6 +166,9 @@ export function getConfig(env = process.env) {
     // price in USDG for a Stranger (4: Crush 20% off, Soulmate 40% off, like a character), and the videos a month for the
     // whole site (30: each costs the owner about $2.40 at fal)
     falKey: String(env.FAL_KEY || '').trim(),
+    // (round 4, 2026-10-11: the owner's tab reads fal.ai's balance with its billing API, which needs a key allowed to read
+    // billing: FAL_BILLING_KEY, a second key made with that permission, else FAL_KEY if it has it. Secret, optional)
+    falBillingKey: String(env.FAL_BILLING_KEY || '').trim(),
     videoModel: falModel(env.STUDIO_VIDEO_MODEL),
     videoUsdCents: Math.max(100, Math.round(Math.min(10_000, number('STUDIO_VIDEO_PRICE_USD', 4)) * 100)),
     videoMonthCap: Math.min(100_000, Math.floor(number('STUDIO_VIDEOS_A_MONTH', 30)) || 30),
@@ -186,6 +189,17 @@ export function getConfig(env = process.env) {
     infSlotAgi: Math.min(100_000_000, wholeOrZero(env.STUDIO_SLOT_AGI, 5_000)),
     infBoostAgi: Math.min(100_000_000, wholeOrZero(env.STUDIO_BOOST_AGI, 10_000)),
     infWeeklyPrize: Math.min(1_000_000, wholeOrZero(env.STUDIO_WEEKLY_PRIZE, 10_000)),
+    // …round 4, phase 3 (2026-10-11): gifts of bought credits (STUDIO_GIFTS "off": none; STUDIO_GIFTS_A_DAY: the most one wallet
+    // gives a day, 50,000 by default: the owner's) and invites (STUDIO_REFERRALS "off": none; a friend's welcome credits with
+    // its first top-up of $5 or more, 100; its inviter's percent of each of its top-ups, 10; at most 500 from one friend and
+    // 5,000 a month: the owner's). The same numbers as src/studio/rules.js GIFTS and REFERRALS (a test checks them).
+    infGifts: !isOff(env.STUDIO_GIFTS),
+    infGiftDayMax: Math.max(10, Math.min(999_999, wholeOrZero(env.STUDIO_GIFTS_A_DAY, 50_000) || 50_000)),
+    infRefs: !isOff(env.STUDIO_REFERRALS),
+    infRefWelcome: Math.min(100_000, wholeOrZero(env.STUDIO_REF_WELCOME, 100)),
+    infRefPercent: Math.min(100, wholeOrZero(env.STUDIO_REF_PERCENT, 10)),
+    infRefPerFriend: Math.min(999_999, wholeOrZero(env.STUDIO_REF_PER_FRIEND, 500)),
+    infRefMonth: Math.min(999_999, wholeOrZero(env.STUDIO_REF_A_MONTH, 5000)),
     // Her live show (2026-10-02, server/live.js): the secret her stream runner (on the owner's own server) and our server
     // share (32+ characters); the owner's phone link is made from it. Without it, agi1.app/live says her show is coming soon
     liveSecret: String(env.LIVE_SECRET || '').trim(),

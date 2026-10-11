@@ -85,6 +85,26 @@ for (const fn of ['inf_3d_burn', 'inf_example_make', 'inf_examples', 'inf_mark_t
 for (const fn of ['inf_gift']) {
   MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (its round 3, the owner's credits; it ends with influencers_ready = 1)`;
 }
+// …and its round 4 (2026-10-11: X banners, clank.trade names and captions): the same file, run again if it was run before it
+for (const fn of ['inf_name_get', 'inf_name_set', 'inf_caption_take']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (its round 4: X banners, clank.trade names and captions; it ends with influencers_ready = 1)`;
+}
+// AGI Studio's round 4, phase 2 (2026-10-11): the owner's tab, the team, bans, support tickets, the AI helper, alerts
+for (const fn of ['inf_who', 'inf_staff_list', 'inf_staff_set', 'inf_ban', 'inf_unban', 'inf_bans', 'inf_ticket_open', 'inf_ticket_say',
+  'inf_ticket_close', 'inf_tickets_mine', 'inf_ticket_get', 'inf_tickets_staff', 'inf_help_take', 'inf_alert_add', 'inf_alert_off',
+  'inf_alert_chats', 'inf_admin_get', 'inf_admin_set', 'inf_admin_claim', 'inf_admin_stats', 'inf_mod_news']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (its round 4, phase 2: the owner's tab, the team, support; it ends with influencers_ready = 1)`;
+}
+// …and its phase 3 (the same day: bonus credits, gifts of bought credits, invites): the same file, run again if it was run before it
+for (const fn of ['inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_ref_code',
+  'inf_ref_bind', 'inf_ref_settle']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (its round 4, phase 3: gifts and invites; it ends with influencers_ready = 1)`;
+}
+// …and its phase 4 (the same day: the model menu, reference pictures, long videos, memes): inf_make takes the menu's parts
+// (an older inf_make has none of them), inf_job_part is new
+for (const fn of ['inf_make', 'inf_job_part']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (its round 4, phase 4: the model menu, references, long videos and memes; it ends with influencers_ready = 1)`;
+}
 
 // CloakMesh's waitlist (inference.agi1.app, 2026-10-03): supabase/cloakmesh.sql
 for (const fn of ['cloakmesh_ready', 'cloakmesh_join', 'cloakmesh_leave']) {

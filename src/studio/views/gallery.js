@@ -71,11 +71,14 @@ export function gallery(ctx, { initial = 'trending', onTrend = null, alsoLiked =
   const openItem = (item) => (item.kind === 'photo'
     ? photoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id })
     : videoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id }));
-  const personCard = (i, { tag = null, note = null } = {}) => h('a', { class: 'sa-person', href: ctx.href(`/i/${i.id}`), dataset: { saLink: '' } },
-    i.portrait ? pic(infPic(i.id, i.portrait.job, i.portrait.n, true), { cls: 'sa-person-pic', alt: '' }) : h('span', { class: 'sa-person-pic is-missing' }, icon('user')),
+  // (hidden: a banned wallet's own, whose pictures our server shows to nobody until the ban is lifted)
+  const personCard = (i, { tag = null, note = null, hidden = false } = {}) => h('a', { class: 'sa-person', href: ctx.href(`/i/${i.id}`), dataset: { saLink: '' } },
+    i.portrait && !hidden ? pic(infPic(i.id, i.portrait.job, i.portrait.n, true), { cls: 'sa-person-pic', alt: '' }) : h('span', { class: 'sa-person-pic is-missing' }, icon('user')),
     tag,
     h('span', { class: 'sa-person-cap' },
       h('span', { class: 'sa-person-name' }, h('span', { text: i.name }), i.private ? icon('shield') : null),
+      // (round 4) its maker's clank.trade username, when they show it
+      i.maker?.name ? h('span', { class: 'sa-person-by', text: `by @${i.maker.name}` }) : null,
       note ? h('span', { class: 'sa-person-note', text: note }) : null));
 
   function draw(key) {
@@ -136,7 +139,8 @@ export function gallery(ctx, { initial = 'trending', onTrend = null, alsoLiked =
       ...mine.map((i) => h('li', null, personCard(i, {
         tag: i.status !== 'ready' ? h('span', { class: `sa-tag sa-state is-${i.status}`, text: statusChip(i.status) })
           : i.boosted ? h('span', { class: 'sa-tag sa-tag-boost' }, icon('rocket'), h('span', { text: 'Boosted' })) : null,
-        note: i.private ? 'Private' : i.status !== 'ready' ? (i.status === 'failed' ? 'Its credits came back' : 'Not in Explore yet') : i.public ? 'In Explore' : 'Only by its link',
+        note: ctx.me.banned ? 'Hidden while banned' : i.private ? 'Private' : i.status !== 'ready' ? (i.status === 'failed' ? 'Its credits came back' : 'Not in Explore yet') : i.public ? 'In Explore' : 'Only by its link',
+        hidden: ctx.me.banned === true,
       })))));
   }
 

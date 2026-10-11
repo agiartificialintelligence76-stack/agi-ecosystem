@@ -18,12 +18,14 @@
 //        influencers, its prices, whether it may make one, whether it's the owner, its slots, burn unlocks and weekly prizes
 //   POST { action: 'inf-look', session, id }                   → its own influencer's page (and one thing being made, one step;
 //        and which of its photos and videos this wallet liked)
-//   POST { action: 'inf-up-open', session, kind, bytes, consent? (a picture), adult: true, pass? | turnstileToken? } → an upload's ticket
+//   POST { action: 'inf-up-open', session, kind ('picture' | 'clip' | since phase 4 'ref'), bytes, consent? (a picture), adult: true,
+//        pass? | turnstileToken? } → an upload's ticket
 //   POST ?inf-up=<ticket>&part=<n> | &frame=<n>  (the file's bytes, application/octet-stream) → its file, a part or a frame
 //   POST { action: 'inf-up-done', session, ticket }            → a clip put together and looked at
 //   POST { action: 'inf-start', session, name, mode, style, settings, words, source?, adult: true, pass? | turnstileToken? }
 //   POST { action: 'inf-pick', session, id, look } · { action: 'inf-reroll', session, id }
-//   POST { action: 'inf-make', session, id, kind, scene?, shape?, sound?, trend? | clip?, image? }
+//   POST { action: 'inf-make', session, id, kind, scene?, shape?, sound?, trend? | clip?, image?, and (round 4, phase 4) the model
+//        menu's model?, quality?, seconds?, refs? (reference uploads' ids), meme? and lines? (a meme's words) } → { ok, job, cost }
 //   POST { action: 'inf-3d', session, id } · { action: 'inf-public', session, id, show } · { action: 'inf-delete', session, id }
 //   POST { action: 'inf-coin', session, id, name, symbol, description } → a launch link (Launch with AGI-1's page)
 //   POST { action: 'inf-topup', session, tx? }                 → "Check my payment" (USDG → credits)
@@ -35,9 +37,29 @@
 //             POST { action: 'inf-burn-quote', session, what: 'slot' | 'boost', id? } · { action: 'inf-burn-check', session,
 //                  burn, tx? }                                          (burn unlocks)
 //             POST { action: 'inf-week-claim', session, week }      (a weekly spotlight's prize, to its maker's wallet)
+//   (round 4) POST { action: 'inf-caption', session, job, tone, platform } → captions written by AI for a post of one of its own
+//                  creations ({ ok, captions, left }: CAPTIONS_A_DAY a wallet)
+//             POST { action: 'inf-name-set', session, name } · { action: 'inf-name-clear', session } → the clank.trade username it
+//                  shows ("by @name"), once our server read that clank.trade profile and its wallet is this one
 //   the owner's: { action: 'inf-owner' | 'trend-make' | 'trend-set' | 'inf-hide' | 'inf-report-clear' | 'inf-example-make' |
 //   'inf-week-set', session, … }, and (round 3) { action: 'inf-gift', session, to: 'me' | <a wallet's address>, credits }:
-//   credits for testing, free, to the owner's own wallet or a tester's (→ { ok, gave, self, to, allowed, credits? })
+//   credits for testing, free, to the owner's own wallet or a tester's (→ { ok, gave, self, to, allowed, credits? }); (round 4,
+//   phase 2) { action: 'inf-admin', session, fresh? } (the owner's tab: the numbers, the AI services' balances, the alert
+//   levels and link, the team), 'inf-admin-set' (thresholds), 'inf-team-set' (address, role, nick), 'inf-team-remove' (code)
+//   (round 4, phase 2) the team's (server/inf-team.js: a mod, support, or the owner): { action: 'inf-mod', session, status? }
+//   (its tickets, and for a mod the reports and bans), 'mod-ticket' | 'mod-ticket-say' | 'mod-ticket-close' (ticket, body?),
+//   'mod-ban' (inf, reason, note), 'mod-unban' (ban); and a mod may 'inf-hide' and 'inf-report-clear' too
+//   (round 4, phase 2) support: { action: 'inf-tickets' | 'inf-ticket' | 'inf-ticket-open' | 'inf-ticket-say' |
+//   'inf-ticket-close', session, ticket?, topic?, body? }, and the AI helper { action: 'inf-help', session? | pass? |
+//   turnstileToken?, question, before? } (anyone: signed out, after the human check)
+//   (round 4, phase 3) gifts of bought credits and invites (server/inf-gifts.js): { action: 'inf-gifts', session } (its gifts,
+//   invite rewards, invite link's code and numbers, its credits); 'inf-send' (to, credits, note?); 'inf-gift-link' (credits,
+//   note?) → its secret, for the page's "#gift=" link; 'inf-gift-cancel' (gift); 'inf-gift-claim' (token); 'inf-ref-bind'
+//   (code: from an invite link); and { action: 'inf-gift-peek', token } (anyone with a gift link: what it is, before
+//   signing in). A gift link's secret only ever comes in a POST's body, never a page's address (its "#gift=" part stays in
+//   the browser).
+//   A banned wallet (a mod's ban) makes nothing: every action that makes, picks, publishes, likes or unlocks answers 403
+//   'banned' (its tickets, the helper, its own pages, buying credits and deleting still work).
 // Every answer is "no-store" but the ones the same for everyone. POST answers carry `session` when the wallet's level was read
 // again (the page keeps it), or `signedOut: true`.
 import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass } from './security.js';
@@ -48,11 +70,16 @@ import {
   infOn, isOwner, infPage, moveAlong, me, startInf, pickLook, rerollLooks, makeJob, order3d, setPublic, deleteInf, report, coinDraft,
   explore, ownerPage, trendMake, trendSet, hide, clearReports, ID, order3dBurn, check3dBurn, redo3d, examplesMap, stats, exampleMake,
 } from './influencer.js';
-import { getJob, picPath, videoPath, posterPath, examplePath, markedPath } from './inf-jobs.js';
+import { getJob, picPath, videoPath, posterPath, examplePath, markedPath, hdPath, isLong } from './inf-jobs.js';
 import { USDG } from './studio-chain.js';
 import { WEEK, prizesOn } from './inf-week.js';
 import { BURNS } from './inf-burns.js';
-import { PRICES, DISCOUNT, FREE_CREDITS, TOPUPS, TOPUP_MIN, INF_FILE_RE, INF_DL_RE, REPORT_WHYS } from '../src/studio/rules.js';
+import {
+  whoIs, may, OWNER_NICK, teamList, teamSet, teamRemove, banMaker, unban, bansList, ticketOpen, ticketsMine, ticketThread, ticketSay,
+  ticketClose, ticketsStaff,
+} from './inf-team.js';
+import { giftsInfo, giftsOn, refsOn } from './inf-gifts.js';
+import { PRICES, DISCOUNT, FREE_CREDITS, TOPUPS, TOPUP_MIN, INF_FILE_RE, INF_DL_RE, REPORT_WHYS, clankProfileUrl, CAPTIONS_A_DAY, HELPER } from '../src/studio/rules.js';
 
 // speed bumps (per server copy): looking (each look may ask the AI service), what asks others (Cloudflare, the chain, Gemini,
 // the AI service), an upload's parts, and its files
@@ -77,7 +104,7 @@ const safeName = (s, fallback) => String(s || '').normalize('NFKD').replace(/[^A
 
 // ---------- GET ----------
 let statsCache = null;                 // (the stats board: one database question a minute per server copy at most)
-export const _resetInfApi = () => { statsCache = null; };
+export const _resetInfApi = () => { statsCache = null; warned = false; };
 export async function infGet(cfg, request, key, value) {
   if (!ready(cfg)) return json(503, { error: 'not_ready' });
   const who = visitorCode(cfg.passSecret, clientIp(request));
@@ -100,6 +127,8 @@ export async function infGet(cfg, request, key, value) {
         boostHours: BURNS.BOOST_HOURS,
       },
       slots: cfg.infSlots, weeklyPrize: prizesOn(cfg) ? cfg.infWeeklyPrize : 0, likesADay: WEEK.LIKES_A_DAY,
+      // (round 4, phase 3) gifts' and invites' numbers (null: switched off)
+      ...giftsInfo(cfg),
     }, 'public, max-age=15, s-maxage=30');
   }
   if (key === 'inf-explore') {
@@ -157,9 +186,22 @@ async function photoDownload(cfg, value, who) {
   const nth = Number(m[3]);
   // (a photo, or its full body: the picture its photos, videos and 3D model start from)
   const shown = j && j.status === 'done' && j.hidden !== true && ['photo', 'body'].includes(j.kind) && j.inf_id === m[1] && nth < Math.max(1, Number(j.files) || 0)
-    && !cfg.studioHide?.has(j.id) && j.inf_status !== 'deleted' && j.inf_hidden !== true && !cfg.studioHide?.has(j.inf_id);
+    && !cfg.studioHide?.has(j.id) && j.inf_status !== 'deleted' && j.inf_hidden !== true && j.inf_banned !== true && !cfg.studioHide?.has(j.inf_id);
   if (!shown) return json(404, { error: 'gone' });
   const F = await import('./studio-files.js');
+  const priv = j.inf_mode === 'face' || j.inf_real === true;
+  const name = `${safeName(j.inf_name, 'AGI-Studio')}-${j.kind === 'body' ? 'full-body' : j.shape === 'banner' ? 'X-banner' : j.meme ? 'meme' : 'photo'}${nth ? `-${nth + 1}` : ''}.jpg`;
+  // (round 4, phase 4) an HD or Ultra photo: its full-size copy (marked when it was kept), from a short-lived signed address
+  // (too big for an answer of ours: Vercel's are 4.5 MB at most)
+  if (j.kind === 'photo' && j.shape !== 'banner' && ['hd', 'ultra'].includes(j.quality)) {
+    try {
+      const url = await F.signedUrl(cfg, hdPath(m[1], m[2], nth), { expiresIn: 2 * 3600, download: name });
+      if (url) return new Response(null, { status: 302, headers: { Location: url, 'Referrer-Policy': 'no-referrer', 'Cache-Control': priv ? 'private, max-age=300' : 'public, max-age=300, s-maxage=1800' } });
+    } catch (err) {
+      console.warn(`[studio] an HD photo to download: ${err.message}`);
+    }
+    // (its copy isn't there: the picture shown, marked as it's downloaded, as for any photo)
+  }
   let bytes;
   try { bytes = await F.getFile(cfg, picPath(m[1], m[2], nth), { max: 4_000_000 }); } catch (err) {
     console.warn(`[studio] a photo to download: ${err.message}`);
@@ -168,8 +210,6 @@ async function photoDownload(cfg, value, who) {
   if (!bytes) return json(404, { error: 'gone' });
   const { markPhoto } = await import('./inf-mark.js');
   const marked = await markPhoto(await F.loadSharp(), bytes).catch(() => null);
-  const name = `${safeName(j.inf_name, 'AGI-Studio')}-${j.kind === 'body' ? 'full-body' : 'photo'}${nth ? `-${nth + 1}` : ''}.jpg`;
-  const priv = j.inf_mode === 'face' || j.inf_real === true;
   return new Response(marked || bytes, {
     status: 200,
     headers: {
@@ -187,8 +227,9 @@ async function fileAnswer(cfg, value, who) {
   const jobId = m[2] || m[6];
   let j;
   try { j = await getJob(cfg, jobId); } catch (err) { return dbTrouble(err, 'a picture'); }
+  // (round 4, phase 2: and never a banned maker's: shown to nobody, until a mod lifts its ban)
   const shown = j && j.status === 'done' && j.hidden !== true && !cfg.studioHide?.has(j.id)
-    && (j.kind === 'preset' || (j.inf_status !== 'deleted' && j.inf_hidden !== true && !cfg.studioHide?.has(j.inf_id)));
+    && (j.kind === 'preset' || (j.inf_status !== 'deleted' && j.inf_hidden !== true && j.inf_banned !== true && !cfg.studioHide?.has(j.inf_id)));
   if (!shown) return json(404, { error: 'gone' });
   let path, type;
   if (m[1]) {
@@ -221,7 +262,7 @@ async function videoAnswer(cfg, request, key, value, who) {
   let j;
   try { j = await getJob(cfg, m[1]); } catch (err) { return dbTrouble(err, 'a video'); }
   const shown = j && j.status === 'done' && j.hidden !== true && ['trend', 'video', 'preset'].includes(j.kind) && !cfg.studioHide?.has(j.id)
-    && (j.kind === 'preset' || (j.inf_status !== 'deleted' && j.inf_hidden !== true && !cfg.studioHide?.has(j.inf_id)));
+    && (j.kind === 'preset' || (j.inf_status !== 'deleted' && j.inf_hidden !== true && j.inf_banned !== true && !cfg.studioHide?.has(j.inf_id)));
   if (!shown) return json(404, { error: 'gone' });
   const F = await import('./studio-files.js');
   const path = videoPath(j);
@@ -245,8 +286,9 @@ async function videoAnswer(cfg, request, key, value, who) {
     }
     const name = key === 'inf-video-dl'
       ? `${safeName(j.kind === 'preset' ? `AGI-Studio-${j.trend}` : j.inf_name, 'AGI-Studio')}-${j.kind === 'video' ? 'video' : 'trend'}.mp4` : null;
-    // (round 2) its download: the copy with the share mark, once the clock has made it (until then, as it was made)
-    const from = key === 'inf-video-dl' && j.marked === true && j.kind !== 'preset' ? markedPath(j.inf_id, j.id) : path;
+    // (round 2) its download: the copy with the share mark, once the clock has made it (until then, as it was made); (phase 4)
+    // a long video's one copy carries the mark already
+    const from = key === 'inf-video-dl' && j.marked === true && j.kind !== 'preset' && !isLong(j) ? markedPath(j.inf_id, j.id) : path;
     const url = await F.signedUrl(cfg, from, { expiresIn: 2 * 3600, download: name });
     if (!url) return json(404, { error: 'gone' });
     return new Response(null, { status: 302, headers: { Location: url, 'Referrer-Policy': 'no-referrer', 'Cache-Control': face ? 'private, max-age=300' : 'public, max-age=300, s-maxage=1800' } });
@@ -297,11 +339,46 @@ const WHY_STATUS = {
   // round 2
   no_slot: 409, private: 409, own: 409, burns_off: 409, burns_sold_out: 409, off: 409, used: 409, done: 409, no_credit: 409,
   no_kind: 409, prizes_off: 409, none: 404, no_prize: 409, claimed: 409, sending: 409, empty: 503, failed: 409, bad: 400,
+  // round 4
+  banner: 409,
+  // round 4, phase 2 (a ban, the team, support tickets, the helper; with codes of their own, since "empty", "too_many" and
+  // "busy_day" mean other things above)
+  banned: 403, not_staff: 403, ban_protected: 409, ban_already: 409, ban_lifted: 409, too_many_open: 429, secret: 422,
+  ticket_topic: 400, ticket_empty: 400, ticket_long: 400, ticket_too_many: 429, ticket_busy_day: 429, ticket_closed: 409,
+  help_empty: 400, help_long: 400, help_used: 429, help_busy: 429, ai: 503,
+  team_address: 400, team_self: 409, team_role: 400, team_nick: 400, nick_taken: 409, team_full: 409, levels: 400, bad_request: 400,
+  // round 4, phase 3 (gifts and invites, with codes of their own, since "short", "gone", "own" and "claimed" mean other things above)
+  gifts_off: 409, give_to: 400, give_credits: 400, gift_no_name: 404, gift_self: 409, gift_to_banned: 409, gift_too_many: 429,
+  gift_links: 429, gift_day_cap: 429, gift_short: 402, gift_gone: 404, gift_claimed: 409, gift_canceled: 409, gift_expired: 409,
+  gift_own: 409, gift_held: 409, gift_state: 409, note_long: 422, note_link: 422, note_contact: 422, note_deal: 422, note_words: 422,
+  refs_off: 409, ref_bad: 400, ref_none: 404, ref_self: 409, ref_already: 409, ref_bought: 409, ref_loop: 409,
+  // round 4, phase 4 (the model menu, with a model it doesn't offer; Anime for a realistic influencer; reference pictures
+  // that can't be used, as not this wallet's, refused, older than a day or too many for its model)
+  model: 400, no_anime: 409, refs: 409,
 };
-const OWNER_ACTIONS = ['inf-owner', 'trend-make', 'trend-set', 'inf-hide', 'inf-report-clear', 'inf-example-make', 'inf-week-set', 'inf-gift'];
+// (round 4, phase 2) the team's and support's own "no"s, as the page names them
+const TICKET_WHY = { topic: 'ticket_topic', empty: 'ticket_empty', long: 'ticket_long', too_many: 'ticket_too_many', busy_day: 'ticket_busy_day', closed: 'ticket_closed', bad: 'bad_request' };
+const TEAM_WHY = { address: 'team_address', self: 'team_self', role: 'team_role', nick: 'team_nick', too_many: 'team_full', bad: 'bad_request' };
+const BAN_WHY = { already: 'ban_already', protected: 'ban_protected', done: 'ban_lifted', bad: 'bad_request' };
+const HELP_WHY = { empty: 'help_empty', long: 'help_long', too_many: 'help_used', busy_day: 'help_busy' };
+const OWNER_ACTIONS = ['inf-owner', 'trend-make', 'trend-set', 'inf-hide', 'inf-report-clear', 'inf-example-make', 'inf-week-set', 'inf-gift',
+  'inf-admin', 'inf-admin-set', 'inf-team-set', 'inf-team-remove'];
+// (round 4, phase 2) the team's: a mod's and support's (and the owner's); a mod may also hide and clear reports (OWNER_ACTIONS)
+const MOD_ACTIONS = ['inf-mod', 'mod-ticket', 'mod-ticket-say', 'mod-ticket-close', 'mod-ban', 'mod-unban'];
+const SHARED_WITH_MODS = ['inf-hide', 'inf-report-clear'];
+// (round 4, phase 2) support tickets, a wallet's own
+const TICKET_ACTIONS = ['inf-tickets', 'inf-ticket', 'inf-ticket-open', 'inf-ticket-say', 'inf-ticket-close'];
+// (round 4, phase 3) gifts and invites, a wallet's own
+const GIFT_ACTIONS = ['inf-gifts', 'inf-send', 'inf-gift-link', 'inf-gift-cancel', 'inf-gift-claim', 'inf-ref-bind'];
+// (round 4, phase 2) what a banned wallet may no longer do: make, pick, publish, like, unlock, claim, launch, show its name; and
+// (phase 3) give or claim gifts, or join through an invite (taking a gift link of its own back still works)
+const BANNED_FROM = ['inf-up-open', 'inf-up-done', 'inf-start', 'inf-pick', 'inf-reroll', 'inf-make', 'inf-3d', 'inf-3d-burn', 'inf-3d-check',
+  'inf-3d-redo', 'inf-public', 'inf-coin', 'inf-like', 'inf-caption', 'inf-name-set', 'inf-burn-quote', 'inf-burn-check', 'inf-week-claim',
+  'inf-send', 'inf-gift-link', 'inf-gift-claim', 'inf-ref-bind'];
 export const INF_POSTS = ['inf-me', 'inf-look', 'inf-up-open', 'inf-up-done', 'inf-start', 'inf-pick', 'inf-reroll', 'inf-make', 'inf-3d',
   'inf-public', 'inf-delete', 'inf-coin', 'inf-topup', 'inf-report', 'inf-like', 'inf-liked', 'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo',
-  'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', ...OWNER_ACTIONS];
+  'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-caption', 'inf-name-set', 'inf-name-clear', 'inf-help', 'inf-gift-peek',
+  ...GIFT_ACTIONS, ...TICKET_ACTIONS, ...MOD_ACTIONS, ...OWNER_ACTIONS];
 
 async function human(cfg, body, ip, who) {
   if (checkPass(cfg.passSecret, body.pass, who)) return { ok: true, pass: null };
@@ -329,6 +406,17 @@ export async function infPost(cfg, request, body) {
       return r.ok ? json(200, { ok: true, pass: h.pass }) : json(r.why === 'too_many' ? 429 : r.why === 'gone' ? 404 : 400, { error: r.why, pass: h.pass });
     } catch (err) { return dbTrouble(err, 'a report'); }
   }
+  // (round 4, phase 2) the AI helper: anyone (signed in: its wallet's answers a day; signed out: its visitor's, after the
+  // human check)
+  if (body.action === 'inf-help') return helpAnswer(cfg, body, ip, who, now);
+  // (round 4, phase 3) a gift link, as anyone with it sees it (before signing in: what it is, from whom, and whether it can
+  // still be claimed)
+  if (body.action === 'inf-gift-peek') {
+    if (!infLookBurst(who)) return json(429, { error: 'too_fast' });
+    if (!giftsOn(cfg)) return json(200, { gift: null, off: true });
+    const { peekGift } = await import('./inf-gifts.js');
+    try { return json(200, { gift: await peekGift(cfg, body.token) }); } catch (err) { return dbTrouble(err, 'a gift link'); }
+  }
   let w;
   try { w = await walletNow(cfg, body.session, { now }); } catch (err) { return dbTrouble(err, 'reading the wallet'); }
   if (!w) return json(401, { error: 'signed_out', signedOut: true });
@@ -336,11 +424,27 @@ export async function infPost(cfg, request, body) {
   const refuse = (r) => json(WHY_STATUS[r.why] || 422, { error: r.why, ...(r.have !== undefined ? { have: r.have } : {}), ...(r.reason ? { reason: r.reason } : {}), ...extra });
   const words = (r, more = {}) => json(422, { error: 'words', field: r.field, why: r.why, ...more, ...extra });
   const asks = ['inf-up-open', 'inf-up-done', 'inf-start', 'inf-make', 'inf-3d', 'inf-coin', 'inf-topup', 'inf-reroll', 'inf-delete', 'trend-make',
-    'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo', 'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-example-make', 'inf-gift'];
+    'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo', 'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-example-make', 'inf-gift',
+    'inf-caption', 'inf-name-set', 'inf-name-clear', 'inf-send', 'inf-gift-link', 'inf-gift-cancel', 'inf-gift-claim', 'inf-ref-bind'];
   if (asks.includes(body.action) && !infActBurst(who)) return json(429, { error: 'too_fast', ...extra });
-  if (['inf-look', 'inf-like', 'inf-liked'].includes(body.action) && !infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
+  if (['inf-look', 'inf-like', 'inf-liked', 'inf-tickets', 'inf-ticket', 'inf-mod', 'mod-ticket', 'inf-gifts'].includes(body.action) && !infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
+  if (['inf-ticket-open', 'inf-ticket-say', 'inf-ticket-close', 'mod-ticket-say', 'mod-ticket-close', 'mod-ban', 'mod-unban', 'inf-admin',
+    'inf-admin-set', 'inf-team-set', 'inf-team-remove'].includes(body.action) && !infActBurst(who)) return json(429, { error: 'too_fast', ...extra });
+  // (round 4, phase 2) a banned wallet makes nothing (supabase/influencers.sql refuses its making too)
+  if (BANNED_FROM.includes(body.action)) {
+    let t;
+    try { t = await whoIs(cfg, w.wallet, { now }); } catch (err) { return dbTrouble(err, 'reading the wallet'); }
+    if (t.banned) return json(403, { error: 'banned', ...extra });
+  }
   try {
-    if (body.action === 'inf-me') return json(200, { ...await me(cfg, w), ...extra });
+    if (body.action === 'inf-me') return await meAnswer(cfg, w, extra, now);
+    if (TICKET_ACTIONS.includes(body.action)) return await tickets(cfg, body, w, extra);
+    if (GIFT_ACTIONS.includes(body.action)) return await gifts(cfg, body, w, extra);
+    if (MOD_ACTIONS.includes(body.action)) {
+      const t = await whoIs(cfg, w.wallet, { now, fresh: true });
+      if (!t.role) return json(403, { error: 'not_staff', ...extra });
+      return await mod(cfg, body, extra, now, w, t);
+    }
     if (body.action === 'inf-look') return await look(cfg, w, id, extra, now);
     if (body.action === 'inf-up-open' || body.action === 'inf-start') {
       if (body.adult !== true) return json(400, { error: 'adult', ...extra });
@@ -389,7 +493,10 @@ export async function infPost(cfg, request, body) {
       return json(200, { ...r, credits: await creditsOf(cfg, studioWallet(cfg.passSecret, w.wallet)), ...extra });
     }
     if (OWNER_ACTIONS.includes(body.action)) {
-      if (!isOwner(cfg, w.wallet)) return json(403, { error: 'not_owner', ...extra });
+      // (round 4, phase 2) a mod may take things down and clear reports too
+      if (!isOwner(cfg, w.wallet) && !(SHARED_WITH_MODS.includes(body.action) && may(await whoIs(cfg, w.wallet, { now, fresh: true }), 'reports'))) {
+        return json(403, { error: 'not_owner', ...extra });
+      }
       return await owner(cfg, body, extra, now, w);
     }
     // (round 2) likes: any signed-in wallet (only holders' count toward the weekly spotlight)
@@ -434,6 +541,28 @@ export async function infPost(cfg, request, body) {
         throw err;
       }
       return r.ok ? json(200, { ...r, ...extra }) : refuse(r);
+    }
+    // (round 4) captions for a post of one of its own creations, written by AI (free: CAPTIONS_A_DAY a wallet, counted first)
+    if (body.action === 'inf-caption') {
+      const { writeCaptions } = await import('./inf-captions.js');
+      const r = await writeCaptions(cfg, { wallet: w.wallet, job: String(body.job || ''), tone: body.tone, platform: body.platform });
+      if (r.ok) return json(200, { ...r, perDay: CAPTIONS_A_DAY, ...extra });
+      const status = { bad: 400, gone: 404, not_yours: 403, too_many: 429, busy_day: 429, ai: 503, none: 422 }[r.why] || 503;
+      return json(status, { error: r.why, ...(r.left !== undefined ? { left: r.left } : {}), ...extra });
+    }
+    // (round 4) the clank.trade username it shows ("by @name" on its public influencers), checked against that clank.trade
+    // profile's own wallet; and taking it off
+    if (body.action === 'inf-name-set') {
+      if (!mayMake(cfg, w.wallet)) return refuse({ why: 'closed' });
+      const { claimClankName } = await import('./clank-names.js');
+      const r = await claimClankName(cfg, { wallet: w.wallet, input: body.name });
+      if (r.ok) return json(200, { ok: true, clank: { name: r.name, url: clankProfileUrl(r.name) }, ...extra });
+      return json({ bad: 400, none: 404, not_yours: 403, clank: 503 }[r.why] || 503, { error: r.why, ...extra });
+    }
+    if (body.action === 'inf-name-clear') {
+      const { clearClankName } = await import('./clank-names.js');
+      const r = await clearClankName(cfg, { wallet: w.wallet });
+      return r.ok ? json(200, { ok: true, clank: null, ...extra }) : json(503, { error: 'busy', ...extra });
     }
     if (!ID.test(id)) return json(400, { error: 'bad_request', ...extra });
     if (body.action === 'inf-pick') {
@@ -494,6 +623,169 @@ export async function infPost(cfg, request, body) {
   return json(400, { error: 'bad_request', ...extra });
 }
 
+// (round 4, phase 2) This wallet: me()'s, and its place on the team (the owner, a mod or support: the mod page's link), whether
+// it's banned, and its support tickets (how many are open, and the team's answers it hasn't read)
+let teamWarned = false;
+function teamTrouble(err) {
+  if (err?.code !== 'PGRST202' || !teamWarned) console.warn(`[studio] the team and support: ${err?.message}`);
+  if (err?.code === 'PGRST202') teamWarned = true;
+  return null;
+}
+async function meAnswer(cfg, w, extra, now) {
+  const [m, t, mine] = await Promise.all([
+    me(cfg, w), whoIs(cfg, w.wallet, { now }).catch(teamTrouble), ticketsMine(cfg, w.wallet).catch(teamTrouble),
+  ]);
+  return json(200, {
+    ...m, team: t?.role ? { role: t.role, nick: t.nick || (t.role === 'owner' ? OWNER_NICK : null) } : null, banned: t?.banned === true,
+    support: mine ? { open: mine.filter((x) => x.status !== 'closed').length, unread: mine.filter((x) => x.unread).length } : null,
+    ...extra,
+  });
+}
+
+// (round 4, phase 2) The AI helper's answer (server/inf-help.js): HELPER.PER_DAY a day for a wallet, or for a visitor who
+// isn't signed in (after the human check)
+async function helpAnswer(cfg, body, ip, who, now) {
+  if (!infActBurst(who)) return json(429, { error: 'too_fast' });
+  if (typeof body.question !== 'string' || body.question.length > 2000
+      || (body.before !== undefined && (!Array.isArray(body.before) || body.before.length > 5 || body.before.some((b) => typeof b !== 'string' || b.length > 2000)))) {
+    return json(400, { error: 'bad_request' });
+  }
+  const { askHelper, helpQuestion, HELP } = await import('./inf-help.js');
+  const q = helpQuestion(body.question);
+  if (!q.ok) return json(WHY_STATUS[HELP_WHY[q.why] || q.why] || 400, { error: HELP_WHY[q.why] || q.why });
+  let w = null, extra = {};
+  if (body.session) {
+    try { w = await walletNow(cfg, body.session, { now }); } catch (err) { return dbTrouble(err, 'reading the wallet'); }
+    extra = w ? (w.session ? { session: w.session, level: w.level } : { level: w.level }) : { signedOut: true };
+  }
+  let pass = {};
+  if (!w) {
+    const h = await human(cfg, body, ip, who);
+    if (!h.ok) return json(401, { error: 'human_check', ...extra });
+    if (h.pass) pass = { pass: h.pass };
+  }
+  const code = w ? `w:${studioWallet(cfg.passSecret, w.wallet)}` : `v:${visitorCodeForDay(cfg.passSecret, ip, new Date(now).toISOString().slice(0, 10))}`;
+  try {
+    const r = await askHelper(cfg, { question: q.text, before: body.before, who: code });
+    if (!r.ok) {
+      const error = HELP_WHY[r.why] || r.why;
+      return json(WHY_STATUS[error] || 503, { error, ...(r.left !== undefined ? { left: r.left } : {}), ...pass, ...extra });
+    }
+    return json(200, { ...r, perDay: HELP.PER_DAY, ...pass, ...extra });
+  } catch (err) { return dbTrouble(err, 'the helper'); }
+}
+
+// (round 4, phase 2) A wallet's own support tickets: its list, one ticket (read now), opening one, a message in one, closing one
+async function tickets(cfg, body, w, extra) {
+  const no = (r) => {
+    const error = TICKET_WHY[r.why] || r.why;
+    return json(WHY_STATUS[error] || 503, { error, ...extra });
+  };
+  if (body.action === 'inf-tickets') return json(200, { tickets: await ticketsMine(cfg, w.wallet), ...extra });
+  if (body.action === 'inf-ticket-open') {
+    const r = await ticketOpen(cfg, { wallet: w.wallet, topic: body.topic, body: body.body });
+    if (!r.ok) return no(r);
+    const t = await ticketThread(cfg, { id: r.id, wallet: w.wallet });
+    return json(200, { ok: true, id: r.id, ticket: t.ok ? t.ticket : null, ...extra });
+  }
+  const id = typeof body.ticket === 'string' ? body.ticket : '';
+  if (!ID.test(id)) return json(400, { error: 'bad_request', ...extra });
+  if (body.action === 'inf-ticket-say') {
+    const r = await ticketSay(cfg, { id, wallet: w.wallet, body: body.body });
+    if (!r.ok) return no(r);
+  }
+  if (body.action === 'inf-ticket-close') {
+    const r = await ticketClose(cfg, { id, wallet: w.wallet });
+    if (!r.ok) return no(r);
+  }
+  const t = await ticketThread(cfg, { id, wallet: w.wallet });
+  return t.ok ? json(200, { ok: true, ticket: t.ticket, ...extra }) : no(t);
+}
+
+// (round 4, phase 2) The team's page (/studio/mod): its tickets (everyone on the team), and a mod's reports and bans; a ticket
+// as the team sees it (who it is: their influencers, credits, and whether they're banned), answering and closing it; a ban
+// and lifting it. Who wrote each answer is kept as their nickname (the person sees "AGI Studio support").
+async function mod(cfg, body, extra, now, w, t) {
+  const by = t.role === 'owner' ? OWNER_NICK : t.nick || 'Team';
+  const notStaff = json(403, { error: 'not_staff', ...extra });
+  if (body.action === 'inf-mod') {
+    const status = ['open', 'answered', 'closed'].includes(body.status) ? body.status : null;
+    const { alertsLink } = await import('./inf-admin.js');
+    const [list, reports, bans, link] = await Promise.all([
+      ticketsStaff(cfg, { status }),
+      may(t, 'reports') ? (await import('./influencer.js')).reportsList(cfg) : null,
+      may(t, 'bans') ? bansList(cfg) : null,
+      alertsLink(cfg, { who: t.role === 'owner' ? 'owner' : studioWallet(cfg.passSecret, w.wallet), now }).catch(() => null),
+    ]);
+    return json(200, { me: { role: t.role, nick: by }, tickets: list, reports, bans, alerts: { link }, now, ...extra });
+  }
+  if (body.action === 'mod-ban' || body.action === 'mod-unban') {
+    if (!may(t, 'bans')) return notStaff;
+    const r = body.action === 'mod-ban'
+      ? await banMaker(cfg, { inf: body.inf, reason: body.reason, note: body.note ?? '', by })
+      : await unban(cfg, { id: body.ban, by });
+    if (!r.ok) {
+      const error = BAN_WHY[r.why] || r.why;
+      return json(WHY_STATUS[error] || 503, { error, ...extra });
+    }
+    return json(200, { ...r, bans: await bansList(cfg), ...extra });
+  }
+  const id = typeof body.ticket === 'string' ? body.ticket : '';
+  if (!ID.test(id)) return json(400, { error: 'bad_request', ...extra });
+  const no = (r) => {
+    const error = TICKET_WHY[r.why] || r.why;
+    return json(WHY_STATUS[error] || 503, { error, ...extra });
+  };
+  if (body.action === 'mod-ticket-say') {
+    const r = await ticketSay(cfg, { id, by, body: body.body });
+    if (!r.ok) return no(r);
+  }
+  if (body.action === 'mod-ticket-close') {
+    const r = await ticketClose(cfg, { id });
+    if (!r.ok) return no(r);
+  }
+  const th = await ticketThread(cfg, { id, staff: true });
+  return th.ok ? json(200, { ok: true, ticket: th.ticket, ...extra }) : no(th);
+}
+
+// (round 4, phase 3) Gifts of bought credits, and invites: a wallet's own (server/inf-gifts.js). Every answer that moved
+// credits carries the wallet's credits now (the page's credits pill follows them).
+async function gifts(cfg, body, w, extra) {
+  const G = await import('./inf-gifts.js');
+  const { creditsOf } = await import('./credits.js');
+  const code = studioWallet(cfg.passSecret, w.wallet);
+  const no = (r) => json(WHY_STATUS[r.why] || 503, {
+    error: r.why, ...(r.left !== undefined ? { left: r.left } : {}), ...(r.paid !== undefined ? { paid: r.paid } : {}),
+    ...(r.mine !== undefined ? { mine: r.mine } : {}), ...(r.status ? { status: r.status } : {}), ...extra,
+  });
+  if (body.action === 'inf-gifts') {
+    const [mine, invite, credits] = await Promise.all([
+      G.myGifts(cfg, w.wallet), refsOn(cfg) ? G.inviteOf(cfg, w.wallet) : null, creditsOf(cfg, code),
+    ]);
+    return json(200, { ...mine, invite, credits, ...extra });
+  }
+  if (body.action === 'inf-ref-bind') {
+    const r = await G.bindInvite(cfg, { wallet: w.wallet, code: body.code });
+    return r.ok ? json(200, { ok: true, ...extra }) : no(r);
+  }
+  if (body.action === 'inf-gift-claim') {
+    const r = await G.claimGift(cfg, { wallet: w.wallet, token: body.token });
+    return r.ok ? json(200, { ok: true, got: r.credits, from: r.from, credits: await creditsOf(cfg, code), ...extra }) : no(r);
+  }
+  if (body.action === 'inf-gift-cancel') {
+    const r = await G.cancelGift(cfg, { wallet: w.wallet, id: body.gift });
+    return r.ok ? json(200, { ok: true, status: r.status, credits: await creditsOf(cfg, code), ...extra }) : no(r);
+  }
+  // giving: while AGI Studio is private, only its wallets (nothing to spend credits on yet for anyone else)
+  if (!mayMake(cfg, w.wallet)) return json(WHY_STATUS.closed, { error: 'closed', ...extra });
+  if (body.action === 'inf-send') {
+    const r = await G.sendGift(cfg, { wallet: w.wallet, to: body.to, credits: body.credits, note: body.note });
+    return r.ok ? json(200, { ok: true, id: r.id, to: r.to, gave: r.credits, credits: await creditsOf(cfg, code), ...extra }) : no(r);
+  }
+  const r = await G.makeGiftLink(cfg, { wallet: w.wallet, credits: body.credits, note: body.note });
+  return r.ok ? json(200, { ok: true, id: r.id, token: r.token, expires: r.expires, gave: r.credits, credits: await creditsOf(cfg, code), ...extra }) : no(r);
+}
+
 // Its own influencer's page (another's: what anyone sees), one thing being made moved one step, and the tickets for posters
 // its page may take of its done videos
 async function look(cfg, w, id, extra, now) {
@@ -512,6 +804,8 @@ async function look(cfg, w, id, extra, now) {
   const { raw, mine, ...rest } = page;
   const out = { ...rest };
   if (moved?.position !== undefined) out.position = { job: moved.what, at: moved.position };
+  // (round 4) a 3D model being made: its own step's percentage (the 3D service's), for its progress bar
+  if (Number.isFinite(moved?.progress) && moved.step) out.progress = { id: moved.what, step: moved.step, at: Math.max(0, Math.min(100, moved.progress)) };
   // (round 2) which of its photos and videos this wallet liked (its hearts, filled in)
   if (!page.influencer.private) {
     const done = page.jobs.filter((j) => j.status === 'done').map((j) => j.id);
@@ -523,11 +817,29 @@ async function look(cfg, w, id, extra, now) {
     out.posters = Object.fromEntries(page.jobs.filter((j) => j.status === 'done' && !j.poster && ['trend', 'video'].includes(j.kind))
       .slice(0, 6).map((j) => [j.id, makeTicket(cfg.passSecret, 'poster', { j: j.id, o: id, l: lookPath }, now, 60 * 60_000)]));
   }
-  return json(200, { ...out, ...extra });
+  // (round 4) our server's clock: the page's progress bars count from it (a device's clock can be off)
+  return json(200, { ...out, now, ...extra });
 }
 
 // The owner's tools
 async function owner(cfg, body, extra, now, w) {
+  // (round 4, phase 2) the owner's tab: the numbers, the AI services' balances and their alert levels, the alerts link, the team
+  if (['inf-admin', 'inf-admin-set'].includes(body.action)) {
+    const A = await import('./inf-admin.js');
+    if (body.action === 'inf-admin') return json(200, { ...await A.adminPage(cfg, { now, fresh: body.fresh === true }), now, ...extra });
+    const r = await A.setThresholds(cfg, body.thresholds);
+    return r.ok ? json(200, { ...r, ...extra }) : json(r.why === 'bad' ? 400 : 503, { error: r.why === 'bad' ? 'levels' : 'busy', ...extra });
+  }
+  if (body.action === 'inf-team-set' || body.action === 'inf-team-remove') {
+    const r = body.action === 'inf-team-set'
+      ? await teamSet(cfg, { address: body.address, role: body.role, nick: body.nick })
+      : await teamRemove(cfg, { code: body.code });
+    if (!r.ok) {
+      const error = TEAM_WHY[r.why] || r.why;
+      return json(WHY_STATUS[error] || 503, { error, ...extra });
+    }
+    return json(200, { ...r, team: await teamList(cfg), ...extra });
+  }
   // (round 3) credits for testing: free, to the owner's own wallet ('me') or a tester's (its address). Whether that wallet may
   // use them now (while it's private, only STUDIO_ONLY_FOR's wallets may make anything) comes back with it, for the page to say.
   if (body.action === 'inf-gift') {
@@ -560,7 +872,7 @@ async function owner(cfg, body, extra, now, w) {
     const { makeTicket } = await import('./inf-uploads.js');
     const posters = Object.fromEntries(page.trends.filter((t) => t.job && t.jobStatus === 'done' && !t.poster)
       .map((t) => [t.job, makeTicket(cfg.passSecret, 'poster', { j: t.job, o: 'trends' }, now, 60 * 60_000)]));
-    return json(200, { ...page, posters, ...extra });
+    return json(200, { ...page, posters, now, ...extra });
   }
   if (body.action === 'inf-example-make') {
     const r = await exampleMake(cfg, body.keys);

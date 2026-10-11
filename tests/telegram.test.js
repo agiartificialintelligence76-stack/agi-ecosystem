@@ -390,6 +390,59 @@ test('/stop forgets them; /help; she only reads text; someone new gets her welco
   assert.equal(texts()[0], L.WELCOME);
 });
 
+test("(round 4, phase 2) AGI Studio's alerts: /start with the owner's or a team member's code turns them on (no 18+ question, nothing of her chat kept), /stop turns them off; an old, edited or someone else's code says so", async () => {
+  const A = await import('../server/inf-admin.js');
+  const alerts = new Map();
+  const team = [{ code: `${'k'.repeat(16)}Rest0fTheCode_x9`, role: 'mod', nick: 'Kai', short: '0x4444…4444', added_at: '2026-09-29T10:00:00Z', alerts: 0 }];
+  Object.assign(fake.db, {
+    inf_alert_add: ({ p_chat, p_who }) => {
+      if ([...alerts.values()].filter((w) => w === p_who).length >= 5 && !alerts.has(p_chat)) return { ok: false, why: 'too_many' };
+      alerts.set(p_chat, p_who);
+      return { ok: true };
+    },
+    inf_alert_off: ({ p_chat }) => (alerts.delete(p_chat) ? true : null),
+    inf_staff_list: () => team,
+  });
+  const owner = A.alertsCode(cfg(), { who: 'owner', now: NOW });
+  // the owner's: on (her bot answers that, and nothing else: no welcome, no 18+ buttons, nothing of her chat kept)
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg(`/start ${owner}`), NOW), 'alerts');
+  assert.deepEqual([...alerts], [[CHAT, 'owner']]);
+  assert.deepEqual(texts(), [A.ALERT_WORDS.on('owner')]);
+  assert.equal(tg('sendMessage')[0].body.reply_markup, undefined);
+  assert.deepEqual([fake.db.friends.has(CHAT), db('tg_join').length], [false, 0]);
+  // a team member's (its wallet's code, never an address): on, with its role's words
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg(`/start ${A.alertsCode(cfg(), { who: team[0].code, now: NOW })}`, { chat: { id: 777, type: 'private' }, from: { id: 777, is_bot: false } }), NOW), 'alerts');
+  assert.equal(alerts.get(777), team[0].code);
+  assert.equal(texts().at(-1), A.ALERT_WORDS.on('mod'));
+  // a day later, edited, signed with another secret, or someone no longer on the team: never on
+  const other = { ...cfg(), passSecret: 'another-pass-secret-that-is-long-123' };
+  for (const [code, words, at] of [
+    [owner, A.ALERT_WORDS.expired, NOW + 25 * 3600e3],                                            // a day later
+    [`${owner.slice(0, -1)}${owner.at(-1) === 'A' ? 'B' : 'A'}`, A.ALERT_WORDS.expired, NOW],     // edited
+    [A.alertsCode(other, { who: 'owner', now: NOW }), A.ALERT_WORDS.expired, NOW],              // not ours
+    [A.alertsCode(cfg(), { who: 'Gone0fTheTeamxxxRestOfIt', now: NOW }), A.ALERT_WORDS.not_staff, NOW],
+  ]) {
+    assert.equal(await handleUpdate(cfg(), TOKEN, msg(`/start ${code}`, { chat: { id: 888, type: 'private' }, from: { id: 888, is_bot: false } }), at), 'alerts');
+    assert.equal(texts().at(-1), words, code);
+  }
+  assert.equal(alerts.has(888), false);
+  // /stop: her chat forgotten (as always) and its alerts off, said once
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg('/stop'), NOW), 'stop');
+  assert.equal(alerts.has(CHAT), false);
+  assert.equal(texts().at(-1), `${L.STOPPED}\n\nAGI Studio's alerts are off for this chat too.`);
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg('/stop'), NOW), 'stop');
+  assert.equal(texts().at(-1), L.STOPPED, 'a chat without alerts: her usual words');
+  // a /start that isn't an alerts code is her usual start; influencers.sql from before phase 2: her words for "busy"
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg('/start site'), NOW), 'start');
+  assert.equal(texts().at(-1), L.WELCOME);
+  delete fake.db.inf_alert_add;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => (String(url).endsWith('/rpc/inf_alert_add')
+    ? Response.json({ code: 'PGRST202', message: 'not found' }, { status: 404 }) : realFetch(url, init));
+  assert.equal(await handleUpdate(cfg(), TOKEN, msg(`/start ${owner}`, { chat: { id: 999, type: 'private' }, from: { id: 999, is_bot: false } }), NOW), 'alerts');
+  assert.equal(texts().at(-1), L.BUSY);
+});
+
 test('a flood from one chat gets no answers at all (20 updates a minute), other chats are fine', async () => {
   friend();
   for (let i = 0; i < 20; i += 1) await handleUpdate(cfg(), TOKEN, msg('/help'), NOW + i);

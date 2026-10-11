@@ -244,6 +244,6 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   assert.match(chk, /a smaller scan comes straight from Robinhood Chain: .*never <b>Lower risk<\/b>/);
   assert.match(chk, /A coin clank\.trade hasn't listed is <b>High risk<\/b>: it's brand new, or one clank\.trade doesn't show\./);
   assert.match(chk, /If neither answers, the scan says <b>Not enough data<\/b> instead of guessing\./);
-  assert.match(foot, /Last updated October 10, 2026/);   // (2026-10-10: her 💜 badge for Crush and Soulmate questions on her show, and AGI-1's 3D character studio; 2026-10-09: her quizzes, and her Telegram name with a /live question; 2026-10-07: questions from X's chat on her show; 2026-10-06: her buy alerts; 2026-10-05: the risk check's pictures)
+  assert.match(foot, /Last updated October 11, 2026/);   // (2026-10-11: AGI Studio's clank.trade names and AI captions, then its gifts of credits and invites; 2026-10-10: her 💜 badge for Crush and Soulmate questions on her show, and AGI-1's 3D character studio; 2026-10-09: her quizzes, and her Telegram name with a /live question; 2026-10-07: questions from X's chat on her show; 2026-10-06: her buy alerts; 2026-10-05: the risk check's pictures)
   assert.equal(html.match(/<canvas/g).length, 1, 'still one canvas for the whole page');
 });

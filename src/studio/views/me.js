@@ -1,21 +1,50 @@
 // AGI Studio: My studio (the connected wallet: its credits, its influencers and how many it may have, its burn unlocks
-// waiting for their burn, its weekly prizes to claim, its holder perks and its prices).
-import { h, icon, btn, linkBtn, pic, put, add, busy } from '../ui.js';
-import { infPic, creditsText, PRICES } from '../rules.js';
+// waiting for their burn, its weekly prizes to claim, its holder perks and its prices; round 4: its clank.trade username,
+// shown on its public influencers as "by @name"; round 4, phase 2: Help & support with its tickets' news, a ban said in
+// words, and the team's tools; round 4, phase 3: its three kinds of credits, and "Gifts and invites": src/studio/views/gifts.js).
+import { h, icon, btn, linkBtn, pic, put, add, busy, say, nextId } from '../ui.js';
+import { infPic, creditsText, PRICES, BANNER, clankProfileUrl } from '../rules.js';
 import {
-  LEVEL_NAMES, shortAddress, num, perksText, statusChip, studioText, errorText, BURN_WHATS, myWeekText, prizeText, weekText,
+  LEVEL_NAMES, shortAddress, num, perksText, statusChip, studioText, errorText, BURN_WHATS, myWeekText, prizeText, weekText, clankErrorText,
+  BANNED_TEXT,
 } from '../app-words.js';
 import { unlockSlot, boostInf } from './shared.js';
+import { giftsCard } from './gifts.js';
 
-const PRICE_NAMES = { influencer: 'A new influencer (4 looks and its full body)', looks: '4 new looks', photo: 'A photo', trend: 'A trend video', video: 'A 5-second video', model: 'A 3D model' };
+const PRICE_NAMES = {
+  influencer: 'A new influencer (4 looks and its full body)', looks: '4 new looks', photo: 'A photo', banner: `An X banner (${BANNER.W} × ${BANNER.H})`,
+  trend: 'A trend video', video: 'A 5-second video', model: 'A 3D model',
+};
 const TX = (tx) => `https://robinhoodchain.blockscout.com/tx/${tx}`;
+
+// (round 4, phase 3) what its credits are made of: this month's free ones (spent first, they end with the month), bonus ones
+// (from invites, or the team: spent next, they never run out, can't be given) and bought ones (and gifts got: the ones it may give)
+function creditLines(c, info) {
+  if (!c) return [];
+  const lines = [];
+  if (c.free > 0) lines.push(`${creditsText(c.free)} of them are this month's free ones (used first; they end with the month).`);
+  if (c.bonus > 0) lines.push(`${creditsText(c.bonus)} are bonus credits, from invites or the team (used next; they don't run out, and can't be given).`);
+  if (info?.gifts && c.paid > 0 && (c.free > 0 || c.bonus > 0)) lines.push(`${creditsText(c.paid)} you bought or got as gifts: those you can give.`);
+  return lines.map((text) => h('p', { class: 'sa-muted sa-small', text }));
+}
 
 export function render(ctx, route, root) {
   document.title = 'My studio · AGI Studio';
   const body = h('div', { class: 'sa-me' });
+  // (round 4) its clank.trade name: a card of its own, drawn only when the name changes (so what's typed stays put while the
+  // rest of the page is drawn again), and the owner's link after it
+  const clankBox = h('section', { class: 'sa-card sa-clank-card', id: 'clank', 'aria-labelledby': 'sa-clank-h', hidden: true });
+  // (round 4, phase 2) help and support (its tickets: open ones, and the team's answers not read yet), and for the team its
+  // tools: Mod tools (a mod's, support's and the owner's), Owner tools (the owner's)
+  const helpBox = h('section', { class: 'sa-card sa-help-card', 'aria-labelledby': 'sa-help-h' });
+  // (round 4, phase 3) gifts and invites: a card of its own (its gifts are read when it's first shown; what's typed stays put)
+  const gifts = giftsCard(ctx);
+  const ownerLink = h('p', { class: 'sa-owner-link', hidden: true },
+    linkBtn('Owner tools', ctx.href('/owner'), { kind: 'ghost', icon: 'shield', dataset: { saLink: '', owner: '' } }),
+    linkBtn('Mod tools', ctx.href('/mod'), { kind: 'ghost', icon: 'inbox', dataset: { saLink: '', mod: '' } }));
   add(root, h('header', { class: 'sa-page-head' },
     h('p', { class: 'sa-eyebrow', text: 'Your wallet, your influencers' }),
-    h('h1', { class: 'sa-display sa-page-title', tabindex: '-1', text: 'My studio' })), body);
+    h('h1', { class: 'sa-display sa-page-title', tabindex: '-1', text: 'My studio' })), body, gifts.node, clankBox, helpBox, ownerLink);
   // a weekly prize being claimed keeps its button busy across redraws (the page is drawn again when credits change)
   const claiming = new Set();
 
@@ -77,7 +106,82 @@ export function render(ctx, route, root) {
     return row;
   }
 
+  // ---------- (round 4) its clank.trade username ----------
+  let clankSig = null, typed = '', jumped = false;
+  function drawClank() {
+    const me = ctx.me;
+    clankBox.hidden = !ctx.session || !me;
+    if (clankBox.hidden) { clankSig = null; return; }
+    const sig = JSON.stringify([ctx.session.wallet, me.clank?.name ?? null]);
+    if (sig === clankSig) return;
+    clankSig = sig;
+    // a link to it (an influencer's page: "Show your clank.trade name here") lands on it once
+    if (location.hash === '#clank' && !jumped) {
+      jumped = true;
+      requestAnimationFrame(() => { clankBox.scrollIntoView({ block: 'start' }); clankBox.querySelector('input')?.focus({ preventScroll: true }); });
+    }
+    const title = h('h2', { class: 'sa-h3 sa-clank-title', id: 'sa-clank-h' }, icon('at'), h('span', { text: 'Your clank.trade name' }));
+    const note = h('p', { class: 'sa-note', role: 'status', hidden: true });
+    if (me.clank?.name) {
+      const off = btn('Remove it', { kind: 'quiet', size: 'sm', icon: 'close' });
+      off.addEventListener('click', () => busy(off, 'Removing…', async () => {
+        const r = await ctx.act('inf-name-clear');
+        if (r.ok && r.data?.ok) { ctx.toast('Your clank.trade name is off your influencers', 'good'); ctx.refreshMe(); return; }
+        say(note, errorText(r.data?.error));
+      }));
+      put(clankBox, title,
+        h('p', null, h('span', { text: 'Shown as ' }), h('a', { class: 'sa-maker-name', href: clankProfileUrl(me.clank.name), target: '_blank', rel: 'noopener noreferrer', text: `@${me.clank.name}\u00a0↗` }),
+          h('span', { text: ' on your public influencers, and next to them in Explore.' })),
+        h('p', { class: 'sa-muted sa-small', text: 'We read your clank.trade profile again now and then: if it moves to another wallet, the name comes off.' }),
+        h('div', { class: 'sa-row' }, off), note);
+      return;
+    }
+    const fieldId = nextId('clank');
+    const input = h('input', { class: 'sa-input', id: fieldId, type: 'text', maxlength: 120, autocomplete: 'off', spellcheck: 'false', autocapitalize: 'none',
+      placeholder: '@yourname, or your profile\'s link', value: typed });
+    const err = h('p', { class: 'sa-err', role: 'alert', hidden: true });
+    input.addEventListener('input', () => { typed = input.value; say(err, ''); });
+    const go = btn('Show it', { kind: 'primary', icon: 'check' });
+    const send = () => {
+      const v = input.value.trim();
+      if (!v) { say(err, clankErrorText('bad')); input.focus(); return; }
+      busy(go, 'Checking clank.trade…', async () => {
+        const r = await ctx.act('inf-name-set', { name: v });
+        if (r.ok && r.data?.ok) { typed = ''; ctx.toast(`Shown as @${r.data.clank?.name} 💜`, 'good'); ctx.refreshMe(); return; }
+        say(err, clankErrorText(r.data?.error));
+        input.focus();
+      });
+    };
+    go.addEventListener('click', send);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+    put(clankBox, title,
+      h('p', { class: 'sa-muted', text: 'Show your clank.trade username on your public influencers ("by @name", a link to your clank.trade profile).' }),
+      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: fieldId, text: 'Your clank.trade username' }), h('div', { class: 'sa-clank-row' }, input, go), err),
+      h('p', { class: 'sa-fine', text: `We read that profile on clank.trade and show the name only if its wallet is the one you connected here (${shortAddress(ctx.session.wallet)}). Nothing is asked of your wallet.` }));
+  }
+
+  // ---------- (round 4, phase 2) help and support ----------
+  function drawHelp() {
+    const sup = ctx.me?.support;
+    const line = !ctx.session ? 'Questions about AGI Studio? Ask the helper, or open a ticket: a person on the team answers.'
+      : sup?.unread ? `The team answered you: ${sup.unread === 1 ? '1 new answer' : `${num(sup.unread)} new answers`} to read.`
+        : sup?.open ? `${sup.open === 1 ? '1 ticket' : `${num(sup.open)} tickets`} open: the team answers you there.`
+          : 'Quick answers from the helper, or a ticket a person answers.';
+    put(helpBox,
+      h('h2', { class: 'sa-h3 sa-help-title', id: 'sa-help-h' }, icon('help'), h('span', { text: 'Help & support' }),
+        sup?.unread ? h('span', { class: 'sa-tag sa-tag-new', text: 'New answer' }) : null),
+      h('p', { class: 'sa-muted sa-small', text: line }),
+      h('div', { class: 'sa-row' }, linkBtn(sup?.unread ? 'Read it' : 'Get help', ctx.href('/help'), { kind: sup?.unread ? 'primary' : 'ghost', size: 'sm', icon: 'help', dataset: { saLink: '' } })));
+    const team = ctx.me?.team?.role;
+    ownerLink.hidden = !ctx.me?.owner && !team;
+    ownerLink.querySelector('[data-owner]').hidden = !ctx.me?.owner;
+    ownerLink.querySelector('[data-mod]').hidden = !team;
+  }
+
   const draw = () => {
+    drawClank();
+    drawHelp();
+    gifts.draw();
     if (!ctx.session) {
       const go = btn('Connect your wallet', { kind: 'primary', size: 'lg', icon: 'wallet' });
       go.addEventListener('click', async () => { if (await ctx.requireAdult()) ctx.connect(); });
@@ -97,7 +201,7 @@ export function render(ctx, route, root) {
     const credits = h('section', { class: 'sa-stat-card sa-stat-credits', id: 'credits' },
       h('p', { class: 'sa-label', text: 'Credits' }),
       h('p', { class: 'sa-stat-big' }, icon('bolt'), h('span', { text: me ? num(me.credits?.total) : '…' })),
-      me && me.credits?.free > 0 ? h('p', { class: 'sa-muted sa-small', text: `${creditsText(me.credits.free)} of them are this month's free ones (used first; they end with the month).` }) : null,
+      ...creditLines(me?.credits, info),
       buy);
     const out = btn('Disconnect', { kind: 'quiet', size: 'sm' });
     out.addEventListener('click', () => ctx.signOut());
@@ -127,12 +231,12 @@ export function render(ctx, route, root) {
           h('span', { class: 'sa-person-note', text: canUnlock ? 'Unlock one more above' : 'Delete one to make room' }))
         : h('a', { class: 'sa-person sa-person-new', href: ctx.href('/create'), dataset: { saLink: '' } }, h('span', { class: 'sa-new-plus' }, icon('plus')), h('span', { class: 'sa-person-name', text: 'Create new' }))),
       ...list.map((i) => h('li', null, h('a', { class: 'sa-person', href: ctx.href(`/i/${i.id}`), dataset: { saLink: '' } },
-        i.portrait ? pic(infPic(i.id, i.portrait.job, i.portrait.n, true), { cls: 'sa-person-pic', alt: '' }) : h('span', { class: 'sa-person-pic is-missing' }, icon('user')),
+        i.portrait && !me?.banned ? pic(infPic(i.id, i.portrait.job, i.portrait.n, true), { cls: 'sa-person-pic', alt: '' }) : h('span', { class: 'sa-person-pic is-missing' }, icon('user')),
         i.status !== 'ready' ? h('span', { class: `sa-tag sa-state is-${i.status}`, text: statusChip(i.status) })
           : i.boosted ? h('span', { class: 'sa-tag sa-tag-boost' }, icon('rocket'), h('span', { text: 'Boosted' })) : null,
         h('span', { class: 'sa-person-cap' },
           h('span', { class: 'sa-person-name' }, h('span', { text: i.name }), i.private ? icon('shield') : null),
-          h('span', { class: 'sa-person-note', text: i.private ? 'Private' : i.status !== 'ready' ? (i.status === 'failed' ? 'Its credits came back' : 'Not in Explore yet') : i.public ? 'In Explore' : 'Only by its link' }))))));
+          h('span', { class: 'sa-person-note', text: me?.banned ? 'Hidden while banned' : i.private ? 'Private' : i.status !== 'ready' ? (i.status === 'failed' ? 'Its credits came back' : 'Not in Explore yet') : i.public ? 'In Explore' : 'Only by its link' }))))));
 
     const weeks = me?.weeks || [];
     const prizes = weeks.length ? h('section', { class: 'sa-section', 'aria-labelledby': 'sa-prizes-h' },
@@ -151,6 +255,9 @@ export function render(ctx, route, root) {
 
     // what people come back for first: prizes to claim, their influencers, their credits; then the rest
     put(body,
+      // (round 4, phase 2) a wallet a moderator banned: why it can't make anything, and where to ask
+      me?.banned ? h('div', { class: 'sa-banner sa-banner-warn', role: 'status' }, h('p', { text: BANNED_TEXT }),
+        linkBtn('Open a support ticket', ctx.href('/help?new=account'), { kind: 'ghost', size: 'sm', icon: 'inbox', dataset: { saLink: '' } })) : null,
       warn ? h('p', { class: 'sa-banner', text: warn }) : null,
       ctx.meError && !me ? h('p', { class: 'sa-banner', text: errorText(ctx.meError) }) : null,
       h('div', { class: 'sa-stat-cards' }, credits, slotCard, wallet),
@@ -158,7 +265,6 @@ export function render(ctx, route, root) {
       h('section', { class: 'sa-section sa-mine', 'aria-labelledby': 'sa-mine-h' }, h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-mine-h' }, icon('user'), h('span', { text: 'My influencers' }))), grid),
       burnBox,
       prices,
-      me?.owner ? h('p', { class: 'sa-owner-link' }, linkBtn('Owner tools', ctx.href('/owner'), { kind: 'ghost', icon: 'shield', dataset: { saLink: '' } })) : null,
     );
   };
   draw();

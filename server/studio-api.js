@@ -140,12 +140,13 @@ export async function studioGet(cfg, request, key, value) {
       if (r.state !== 'busy') o = (await getOrder(cfg, o.id)) || o;
       const view = pageView(cfg, o);
       if (view && r.progress !== undefined && view.step === r.step) view.progress = r.progress;
-      return json(200, { character: view });
+      // (round 4) our server's clock: its progress bar counts from it (a device's clock can be off)
+      return json(200, { character: view, now: Date.now() });
     } catch (err) {
       console.warn(`[studio] ${o.id}: ${err.message}`);
     }
   }
-  return json(200, { character: pageView(cfg, o) });
+  return json(200, { character: pageView(cfg, o), now: Date.now() });
 }
 
 const WHY_STATUS = { closed: 403, not_yours: 403, gone: 404, sold_out: 409, too_many: 429, burns_sold_out: 409, free_used: 409, no_free: 409,

@@ -1267,7 +1267,7 @@ test("still 12 functions; fal.ai's key in the secret check (its value and its sh
   const fns = readdirSync(new URL('../api/', import.meta.url)).filter((f) => f.endsWith('.js'));
   assert.equal(fns.length, 12, fns.join(', '));
   const check = readFileSync(new URL('../scripts/check-secrets.js', import.meta.url), 'utf8');
-  assert.match(check, /'FAL_KEY'\]/);
+  assert.match(check, /'FAL_KEY'(?:, 'FAL_BILLING_KEY')?\]/);
   const line = check.split('\n').find((l) => l.includes("'fal.ai key'"));
   const m = /re: \/(.+)\/([a-z]*) \}/.exec(line);
   const re = new RegExp(m[1], m[2]);

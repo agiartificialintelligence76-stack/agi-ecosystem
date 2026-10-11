@@ -1,7 +1,9 @@
 // AGI Studio (2026-10-10, studio.agi1.app; also agi1.app/studio): the AI influencer app. One page (studio.html), its views
-// drawn here: Explore, Create, an influencer's page, My studio, a 3D model's page and the owner's page, at their own
+// drawn here: Explore, Create, an influencer's page, My studio, a 3D model's page, the owner's page, and (round 4, phase 2)
+// Help & support and the team's page (Mod tools), at their own
 // addresses (history.pushState; Vercel serves this page at every one of them: vercel.json). The owner's words: "the ui will
-// be different on this it will be user friendly and easy to use".
+// be different on this it will be user friendly and easy to use". Since round 4's phase 3: an invite link's code (?ref=) kept
+// until a wallet signs in, then joined with; a gift link (#gift=<its secret>) opens its sheet; a gift got shows a toast.
 //   • 18+ (the site's own confirmation), a connected wallet (the site's sign-in: an address and a free signature, never a
 //     transaction: hard rule 9), credits bought with USDG from the person's own wallet app (this page only shows where to
 //     send it, and our server reads the chain after).
@@ -11,17 +13,28 @@ import { postJson, withHuman } from '../lib/human.js';
 import { findWallets, signInWithWallet, explainWalletError } from '../lib/wallet.js';
 import { WALLET_STEPS, NO_WALLET } from '../live/words.js';
 import { h, $, $$, icon, btn, linkBtn, sheet, closeSheets, toast, say, copyText, busy, put, add } from './ui.js';
-import { TOPUPS, TOPUP_MIN, usd, creditsText } from './rules.js';
-import { LEVEL_NAMES, shortAddress, num, errorText, topupCheckText } from './app-words.js';
+import { TOPUPS, TOPUP_MIN, usd, creditsText, REF_CODE } from './rules.js';
+import {
+  LEVEL_NAMES, shortAddress, num, errorText, topupCheckText, welcomeLine, inviteJoinedText, inviteLandingText, gotGiftText,
+  GIFT_APPS_NOTE,
+} from './app-words.js';
+import { noteServerNow, startBars } from './progress.js';
 import * as explore from './views/explore.js';
 import * as create from './views/create.js';
 import * as influencer from './views/influencer.js';
 import * as mine from './views/me.js';
 import * as owner from './views/owner.js';
 import * as model from './views/model3d.js';
+import * as help from './views/help.js';
+import * as learn from './views/learn.js';
+import * as mod from './views/mod.js';
+import { openGiftClaim } from './views/gifts.js';
 
 const API = '/api/launch';
-const KEYS = { adult: 'agi1_18plus', wallet: 'agi_wallet' };
+// (round 4, phase 3) an invite link's code, kept until a wallet signs in (30 days at most); the last gifts got that a toast
+// told (so it says each once)
+const KEYS = { adult: 'agi1_18plus', wallet: 'agi_wallet', invite: 'agi1_studio_ref', gotSeen: 'agi1_studio_got' };
+const INVITE_DAYS = 30;
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode: this visit only */ } },
@@ -41,6 +54,11 @@ export function parseRoute(pathname, search = '') {
   if (p === '/create') return { view: 'create', q };
   if (p === '/me') return { view: 'me', q };
   if (p === '/owner') return { view: 'owner', q };
+  // (round 4, phase 2) Help & support, and the team's page
+  if (p === '/help') return { view: 'help', q };
+  if (p === '/mod') return { view: 'mod', q };
+  // (round 4, phase 4) Learn: short lessons
+  if (p === '/learn') return { view: 'learn', q };
   let m = new RegExp(`^/i/(${ID})$`).exec(p);
   if (m) return { view: 'influencer', id: m[1], q };
   m = new RegExp(`^/3d/(${ID})$`).exec(p) || new RegExp(`^/(${ID})$`).exec(p);         // (agi1.app/studio/<id>: a 3D page)
@@ -57,7 +75,10 @@ const emit = (type) => events.dispatchEvent(new Event(type));
 async function getJson(query) {
   try {
     const res = await fetch(`${API}?${query}`);
-    return { ok: res.ok, status: res.status, data: await res.json().catch(() => ({})) };
+    const data = await res.json().catch(() => ({}));
+    // (round 4) an answer about something being made carries our server's clock: its progress bars count from it
+    if (res.ok && Number.isFinite(data?.now)) noteServerNow(data.now);
+    return { ok: res.ok, status: res.status, data };
   } catch {
     return { ok: false, status: 0, data: { error: 'offline' } };
   }
@@ -80,6 +101,7 @@ async function act(action, payload = {}, { human = null } = {}) {
     else if (typeof d.session === 'string' && [1, 2, 3].includes(d.level)) keep({ ...state.session, session: d.session, level: d.level }, { quiet: true });
   }
   if (d.credits && Number.isFinite(d.credits.paid) && state.me) setCredits(d.credits);
+  if (r.ok && Number.isFinite(d.now)) noteServerNow(d.now);
   return r;
 }
 
@@ -124,7 +146,9 @@ function connect() {
       linkBtn('Open in MetaMask ↗', `https://metamask.app.link/dapp/${location.host}${location.pathname}`, { size: 'sm', rel: 'noopener noreferrer' }),
       linkBtn('Open in Phantom ↗', `https://phantom.app/ul/browse/${encodeURIComponent(here)}?ref=${encodeURIComponent(location.origin)}`, { size: 'sm', rel: 'noopener noreferrer' }),
       linkBtn('Open in Coinbase Wallet ↗', `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(here)}`, { size: 'sm', rel: 'noopener noreferrer' })),
-    h('p', { class: 'sa-muted sa-small', text: "Robinhood Wallet: open its Web3 tab, then this page's address. Phantom: turn on Robinhood Chain first (Settings → Active Networks)." }));
+    h('p', { class: 'sa-muted sa-small', text: "Robinhood Wallet: open its Web3 tab, then this page's address. Phantom: turn on Robinhood Chain first (Settings → Active Networks)." }),
+    // a gift link is open: these links leave its secret behind (it never goes to those apps' servers)
+    /^#gift=/.test(location.hash) ? h('p', { class: 'sa-note sa-small', text: GIFT_APPS_NOTE }) : null);
     add(s.body,
       h('p', { class: 'sa-muted', text: "Your wallet shows it's you and reads your $AGI for holder perks. AGI Studio never asks your wallet to send anything: you buy credits from your own wallet app." }),
       list, apps, note,
@@ -205,10 +229,18 @@ function refreshMe() {
   })();
   return meLoading;
 }
+// A wallet's credits after an action (what's left after a spend, or a gift): since round 4's phase 3 three kinds (bought ones,
+// this month's free ones, bonus ones), and what an answer doesn't say (whether it bought, joined through an invite…) is kept
 function setCredits(c) {
-  if (!state.me) return;
-  const paid = Number(c.paid) || 0, free = Number(c.free) || 0;
-  state.me = { ...state.me, credits: { paid, free, total: paid + free } };
+  if (!state.me || !c) return;
+  const prev = state.me.credits || {};
+  const n = (k) => (c[k] !== undefined && c[k] !== null && Number.isFinite(Number(c[k])) ? Math.max(0, Number(c[k])) : Math.max(0, Number(prev[k]) || 0));
+  const paid = n('paid'), free = n('free'), bonus = n('bonus');
+  const flag = (k) => (typeof c[k] === 'boolean' ? c[k] : prev[k] === true);
+  state.me = {
+    ...state.me,
+    credits: { ...prev, paid, free, bonus, total: paid + free + bonus, bought: flag('bought'), invited: flag('invited'), welcomed: flag('welcomed'), got: n('got'), gotN: n('gotN') },
+  };
   emit('me');
 }
 const credits = () => state.me?.credits?.total ?? 0;
@@ -237,6 +269,9 @@ async function buyCredits({ need = 0 } = {}) {
   const pick = TOPUPS.find((c) => c >= short) ?? TOPUPS[TOPUPS.length - 1];
   const have = h('p', { class: 'sa-credit-now' }, icon('bolt'), h('span', { text: `You have ${creditsText(credits())}` }));
   const wantLine = short > 0 ? h('p', { class: 'sa-note', text: `That needs ${creditsText(short)} more.` }) : null;
+  // (round 4, phase 3) a wallet that joined through an invite: its welcome credits come with its first top-up of $5 or more
+  const c0 = state.me?.credits;
+  const welcome = info.refs && c0?.invited && !c0.welcomed ? h('p', { class: 'sa-banner', text: welcomeLine(info.refs, c0) }) : null;
   let amount = pick;
   const title = h('p', { class: 'sa-pay-title' });
   const showAmount = () => { title.textContent = `Send ${usd(amount)} in USDG (${creditsText(amount)})`; };
@@ -277,7 +312,7 @@ async function buyCredits({ need = 0 } = {}) {
     say(result, errorText(d.error));
   }));
   add(s.body,
-    have, wantLine, amounts,
+    have, wantLine, welcome, amounts,
     h('div', { class: 'sa-pay' },
       h('p', { class: 'sa-step-n', text: '1' }), title,
       h('p', { class: 'sa-muted', text: `From your connected wallet (${shortAddress(state.session?.wallet)}), in your own wallet app, on Robinhood Chain, to the studio's wallet:` }),
@@ -301,7 +336,18 @@ async function exploreData({ fresh = false } = {}) {
 }
 
 // ---------- the app bar and the tabs ----------
+// (round 4, phase 2) the tab bar's My studio (phones) with a dot when the team answered one of its support tickets
+function markNews() {
+  const unread = state.session ? Number(state.me?.support?.unread) || 0 : 0;
+  for (const a of $$('.sa-tabs a[data-sa-route="me"]')) {
+    a.classList.toggle('sa-has-news', unread > 0);
+    let sr = a.querySelector('.sa-news-sr');
+    if (unread > 0 && !sr) { sr = h('span', { class: 'sa-sr sa-news-sr' }); a.append(sr); }
+    if (sr) sr.textContent = unread > 0 ? `, ${unread === 1 ? 'a new answer' : `${unread} new answers`} from support` : '';
+  }
+}
 function renderBar() {
+  markNews();
   const slot = $('[data-sa-account]');
   if (!slot) return;
   const s = state.session;
@@ -316,12 +362,16 @@ function renderBar() {
     icon('bolt'), h('span', { text: state.me ? num(credits()) : '…' }));
   const plus = h('button', { type: 'button', class: 'sa-pill-plus', 'aria-label': 'Buy credits' }, icon('plus'));
   plus.addEventListener('click', () => buyCredits());
-  const who = h('a', { class: 'sa-me-btn', href: href('/me'), dataset: { saLink: '' }, 'aria-label': `My studio: ${shortAddress(s.wallet)}, ${LEVEL_NAMES[s.level] || LEVEL_NAMES[1]}` },
-    h('span', { class: `sa-dot sa-lvl-${s.level}`, 'aria-hidden': 'true' }), h('span', { class: 'sa-me-addr', text: shortAddress(s.wallet) }));
+  // (round 4, phase 2) a dot when the team answered one of its support tickets
+  const unread = Number(state.me?.support?.unread) || 0;
+  const who = h('a', { class: 'sa-me-btn', href: href('/me'), dataset: { saLink: '' },
+    'aria-label': `My studio: ${shortAddress(s.wallet)}, ${LEVEL_NAMES[s.level] || LEVEL_NAMES[1]}${unread ? `, ${unread === 1 ? 'a new answer' : `${unread} new answers`} from support` : ''}` },
+    h('span', { class: `sa-dot sa-lvl-${s.level}`, 'aria-hidden': 'true' }), h('span', { class: 'sa-me-addr', text: shortAddress(s.wallet) }),
+    unread ? h('span', { class: 'sa-unread-dot', 'aria-hidden': 'true' }) : null);
   put(slot, h('div', { class: 'sa-credits' }, pill, plus), who);
 }
 function markNav(view) {
-  const tab = { explore: 'explore', create: 'create', me: 'me', influencer: null, model: null, owner: 'me', missing: null }[view];
+  const tab = { explore: 'explore', create: 'create', me: 'me', influencer: null, model: null, owner: 'me', help: 'me', mod: 'me', missing: null }[view];
   for (const a of $$('[data-sa-route]')) {
     if (a.dataset.saRoute === tab) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
@@ -329,7 +379,7 @@ function markNav(view) {
 }
 
 // ---------- the router ----------
-const VIEWS = { explore, create, influencer, me: mine, owner, model, missing: { render: missingView } };
+const VIEWS = { explore, create, influencer, me: mine, owner, model, help, mod, learn, missing: { render: missingView } };
 let current = { stop: null, token: 0 };
 function missingView(ctx, route, root) {
   document.title = 'Not here · AGI Studio';
@@ -354,6 +404,9 @@ async function show({ focus = false } = {}) {
   try {
     const stop = await VIEWS[route.view].render(ctx, route, root);
     if (typeof stop === 'function') stops.push(stop);
+    // (round 4, phase 4) a first-time tip, once per browser (Explore, Create, My studio)
+    const tip = token === current.token ? learn.firstTip(ctx, route.view) : null;
+    if (tip) root.prepend(tip);
   } catch (err) {
     console.error('[studio]', err);
     if (token === current.token) put(root, h('p', { class: 'sa-note', text: errorText('busy') }));
@@ -409,14 +462,88 @@ function makeCtx(route, stops, alive) {
   return ctx;
 }
 
+// ---------- (round 4, phase 3) invites, gift links, gifts got ----------
+// An invite link (…?ref=<code>): its code is kept in this browser (30 days at most) and taken out of the page's address; once
+// a wallet is signed in, it joins with it (only a wallet that never bought credits, once: our server decides).
+let invitedNow = false;
+function catchInvite() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('ref')) return;
+  const code = String(q.get('ref') || '').trim().toLowerCase();
+  if (REF_CODE.test(code)) { store.set(KEYS.invite, { code, at: Date.now() }); invitedNow = true; }
+  q.delete('ref');
+  const rest = q.toString();
+  history.replaceState(history.state, '', `${location.pathname}${rest ? `?${rest}` : ''}${location.hash}`);
+}
+function inviteCode() {
+  const v = store.get(KEYS.invite);
+  if (!v) return null;
+  if (!REF_CODE.test(String(v.code)) || !(Date.now() - Number(v.at) < INVITE_DAYS * 86_400_000)) { store.del(KEYS.invite); return null; }
+  return v.code;
+}
+let joining = false;
+async function joinInvite() {
+  const code = inviteCode();
+  if (!code || joining || !state.session || !state.me?.credits || !state.info?.refs) return;
+  const c = state.me.credits;
+  if (c.invited || c.bought || state.me.banned) { store.del(KEYS.invite); return; }
+  joining = true;
+  const wallet = state.session.wallet;
+  const r = await act('inf-ref-bind', { code });
+  joining = false;
+  if (state.session?.wallet !== wallet) return;
+  if (r.ok && r.data?.ok) {
+    store.del(KEYS.invite);
+    toast(inviteJoinedText(state.info?.refs), 'good');
+    refreshMe();
+    return;
+  }
+  // a "no" that won't change (not an invite, their own, it bought already…): the code is dropped; a hiccup: tried next time
+  if (['refs_off', 'ref_bad', 'ref_none', 'ref_self', 'ref_already', 'ref_bought', 'ref_loop', 'banned', 'bad_request'].includes(r.data?.error)) store.del(KEYS.invite);
+}
+// Gifts it got and hasn't seen yet (our server counts them until My studio shows them): a toast, once for each
+function tellGifts() {
+  const c = state.me?.credits;
+  if (!state.session || !c || !(c.gotN > 0)) return;
+  const sig = `${state.session.wallet}|${c.gotN}|${c.got}`;
+  if (store.get(KEYS.gotSeen) === sig) return;
+  store.set(KEYS.gotSeen, sig);
+  if (parseRoute(location.pathname, location.search).view === 'me') return;          // (My studio shows them already)
+  toast(gotGiftText(c.gotN, c.got), 'good');
+}
+// A gift link (…#gift=<its secret>): its sheet. The secret stays in the fragment (never sent with the page's address) and
+// goes only in a POST's body; the sheet takes it out of the address when it closes.
+const appApi = { act, requireAdult, requireWallet, refreshMe, toast, href, signedIn: () => !!state.session, findWallets };
+let claiming = false;
+async function giftFromAddress() {
+  if (claiming || !/^#gift=/.test(location.hash)) return;
+  const m = /^#gift=([A-Za-z0-9_-]{22})(?![A-Za-z0-9_-])/.exec(location.hash);
+  claiming = true;
+  try { await openGiftClaim(appApi, m ? m[1] : location.hash.slice(6)); } finally { claiming = false; }
+}
+addEventListener('hashchange', giftFromAddress);
+
 // ---------- start ----------
 function start() {
+  // (round 4, phase 3) an invite link's code, before any view reads the address
+  catchInvite();
   // the static links in studio.html name /studio/…: on studio.agi1.app they become /…
   for (const a of $$('a[data-sa-path]')) a.href = href(a.dataset.saPath);
   events.addEventListener('wallet', renderBar);
   events.addEventListener('me', renderBar);
+  events.addEventListener('me', () => { tellGifts(); joinInvite(); });
+  events.addEventListener('info', () => {
+    joinInvite();
+    // a visitor who came through an invite link, without a wallet yet: what joining brings
+    if (invitedNow && state.info?.refs) {
+      invitedNow = false;
+      if (!state.session) toast(inviteLandingText(state.info.refs), 'good');
+    }
+  });
   renderBar();
   loadInfo();
+  // (round 4) the progress bars of what's being made move every second (one timer for every view)
+  startBars();
   if (state.session) {
     // its level now (our server reads the balance again when it's 30 minutes old), then its studio
     postJson('/api/wallet', { action: 'profile', session: state.session.session })
@@ -432,5 +559,7 @@ function start() {
     refreshMe();
   });
   show();
+  // (round 4, phase 3) a gift link opened here
+  giftFromAddress();
 }
 start();

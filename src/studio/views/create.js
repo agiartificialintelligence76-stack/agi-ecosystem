@@ -108,7 +108,9 @@ export async function render(ctx, route, root) {
     }
   };
   const showStatus = () => {
-    const t = ctx.info ? studioText(ctx.info, { allowed: ctx.me?.allowed !== false }) : ctx.infoFailed ? studioText(null) : '';
+    // (round 4, phase 2) a banned wallet makes nothing: said before anything is chosen
+    const t = ctx.session && ctx.me?.banned ? errorText('banned')
+      : ctx.info ? studioText(ctx.info, { allowed: ctx.me?.allowed !== false }) : ctx.infoFailed ? studioText(null) : '';
     say(status, t);
   };
   // the example pictures as soon as the studio's settings have them
@@ -254,6 +256,7 @@ export async function render(ctx, route, root) {
     if (!ctx.me) await ctx.refreshMe();
     if (!ctx.info?.on) { fail(errorText('not_ready')); return false; }
     if (ctx.me && ctx.me.allowed === false) { say(sourceErr, errorText('closed')); fail(errorText('closed')); return false; }
+    if (ctx.me?.banned) { fail(errorText('banned')); return false; }
     return true;
   }
   // a "no" for the whole form: above Create, and (when it can't be seen: a phone's closed drawer) a toast too

@@ -20,15 +20,25 @@
 // design choices, a free 3D model for a big burn, burn unlocks (one more influencer, a boost in Explore: server/inf-burns.js),
 // likes and the weekly spotlight with a prize (server/inf-week.js), the share mark on downloads (server/inf-mark.js) and the
 // live stats board.
+// Round 4 (2026-10-11, the owner's next list): an X banner is a kind of photo (1500 × 500, never what a video starts from),
+// a maker's clank.trade username shows with their public influencers ("by @name": server/clank-names.js), and what's being
+// made says when it started (its progress bar on the page). Its phase 4: the model menu (a photo's model and quality, a
+// video's model, seconds, quality and sound: each priced at about 1.8× its AI cost, src/studio/rules.js), reference
+// pictures (the person's own: things, places, pets, food, a style), long videos (in parts, up to a minute) and memes (a
+// photo with its format and words).
 import { rpc } from './limits.js';
 import { burnKey, burnWallet } from './burn.js';
 import { studioOn, mayMake, studioWallet, newOrderId, tick as studioTick, getOrder, checkPayment } from './studio.js';
-import { checkStart, checkInfScene, sceneWay } from './inf-words.js';
+import { checkStart, checkInfScene, sceneWay, checkMemeText } from './inf-words.js';
 import { creditsOf, grantFree } from './credits.js';
 import { jobTick, getJob, stepOf, infOn } from './inf-jobs.js';
 import { burnsOpen } from './inf-burns.js';
 import { weeksFor } from './inf-week.js';
-import { PRICES, creditPrice, trendOf, TRENDS, REPORT_WHYS, TREND_ID, EXAMPLES } from '../src/studio/rules.js';
+import { nameOf } from './clank-names.js';
+import {
+  PRICES, creditPrice, trendOf, TRENDS, REPORT_WHYS, TREND_ID, EXAMPLES, CLANK_NAME, clankProfileUrl, REFS, PHOTO_MODELS, VIDEO_MODELS,
+  photoSpec, photoCredits, videoSpec, videoCredits,
+} from '../src/studio/rules.js';
 
 export const INF = {
   PER_WALLET: 3,               // influencers one wallet may have being made at once
@@ -38,6 +48,8 @@ export const INF = {
 export const ID = /^[A-Za-z0-9_-]{22}$/;
 const ms = (t) => { const n = Date.parse(t ?? ''); return Number.isFinite(n) ? n : null; };
 const n0 = (x) => Math.max(0, Math.floor(Number(x) || 0));
+// (round 4) a maker's clank.trade username, as the pages show it ("by @name", a link to their profile), or null
+const makerOf = (name) => (typeof name === 'string' && CLANK_NAME.test(name) ? { name: name.toLowerCase(), url: clankProfileUrl(name.toLowerCase()) } : null);
 
 // ---------- settings ----------
 // On once fal's key is set (its looks, photos and videos), with the site's database, secrets and Gemini key (its checks)
@@ -56,6 +68,8 @@ export const isPrivate = (i) => Boolean(i && (i.mode === 'face' || i.real === tr
 export function infView(cfg, i, { mine = false, looksFiles = null } = {}) {
   if (!i || i.status === 'deleted' || i.hidden === true || takenDown(cfg, i.id)) return null;
   if (!mine && i.status !== 'ready') return null;
+  // (round 4, phase 2) a banned maker's influencers: shown to nobody but itself (a mod lifts the ban)
+  if (!mine && i.banned === true) return null;
   const priv = isPrivate(i);
   const boost = ms(i.boost_until);
   const v = {
@@ -63,11 +77,15 @@ export function infView(cfg, i, { mine = false, looksFiles = null } = {}) {
     public: i.public === true && !priv, created: ms(i.created_at), ready: ms(i.ready_at),
     portrait: i.looks_job && Number.isInteger(i.pick) ? { job: i.looks_job, n: i.pick } : null,
     body: i.body_job || null, boosted: boost && boost > Date.now() && !priv && i.public === true ? boost : null,
+    // (round 4) its maker's clank.trade username: only on a public one (shown in Explore), never a private one
+    maker: !priv && i.public === true ? makerOf(i.maker) : null,
   };
   if (mine) {
-    Object.assign(v, { mine: true, settings: i.settings || {}, words: i.words || '', error: i.error || null });
+    Object.assign(v, { mine: true, settings: i.settings || {}, words: i.words || '', error: i.error || null, banned: i.banned === true });
     if (i.looks_job && ['pick', 'body', 'ready'].includes(i.status)) v.looks = { job: i.looks_job, files: looksFiles ?? 4 };
-    if (i.job) v.job = { id: i.job.id, kind: i.job.kind, status: i.job.status, step: i.job.saving ? 'save' : i.job.req ? 'make' : 'queue' };
+    if (i.job) {
+      v.job = { id: i.job.id, kind: i.job.kind, status: i.job.status, step: i.job.saving ? 'save' : i.job.req ? 'make' : 'queue', created: ms(i.job.created) };
+    }
   }
   return v;
 }
@@ -79,6 +97,10 @@ export function jobView(cfg, j, inf) {
     id: j.id, inf, kind: j.kind, scene: j.scene || null, shape: j.shape || (j.kind === 'trend' ? 'tall' : null), sound: j.sound === true,
     trend: j.trend || null, clip: j.clip === true, image: j.image || null, status: j.status, created: ms(j.created_at), done: ms(j.done_at),
     files: n0(j.files), poster: j.poster === true, mine: j.mine === true, likes: n0(j.likes), marked: j.marked === true,
+    // (round 4, phase 4) its model, quality and seconds (none: made before the menu), a long video's parts, a meme's format
+    // and words, and how many reference pictures it has (never which)
+    model: j.model || null, quality: j.quality || null, seconds: Number.isFinite(Number(j.seconds)) && j.seconds !== null ? Number(j.seconds) : null,
+    parts: Math.max(1, n0(j.parts)), part: n0(j.part), meme: j.meme || null, caption: j.caption || null, refs: n0(j.refs),
   };
   if (j.mine === true) Object.assign(v, { cost: n0(j.cost), refunded: j.refunded === true, error: j.error || null, step: j.step || null });
   return v;
@@ -109,7 +131,7 @@ export async function infPage(cfg, id, { wallet = null } = {}) {
     models: (Array.isArray(models) ? models : []).filter((m) => !takenDown(cfg, m.id) && (mine || m.status === 'done') && m.expired !== true)
       .map((m) => ({
         id: m.id, status: m.status, step: m.step || null, error: mine ? m.error || null : null, moves: m.moves || null, created: ms(m.created_at),
-        done: ms(m.done_at),
+        done: ms(m.done_at), started: ms(m.started_at),
         // (round 2) how it's paid: a big burn's quote waits for its burn (its $AGI, and what's burned so far); one that couldn't
         // be made may be made again, free (a burn can't be given back)
         ...(mine ? { kind: m.kind || null, agi: n0(m.agi), paid: n0(m.paid), credit: m.credit === true } : {}),
@@ -137,20 +159,25 @@ export async function moveAlong(cfg, page, { now = Date.now(), deadline = Date.n
 
 // This wallet: its credits (this month's free ones given first, for a holder), its influencers, its prices, whether it may
 // make one, and (round 2) its slots (influencers it may have at all, and the ones it unlocked by burning), its burn unlocks
-// open, and its weekly prizes (to claim, or claimed). → { credits, free, influencers, prices, allowed, owner, slots, burns, weeks }
+// open, and its weekly prizes (to claim, or claimed); (round 4) the clank.trade username it shows, if any.
+// → { credits, free, influencers, prices, allowed, owner, slots, burns, weeks, clank }
 export async function me(cfg, { wallet, level }) {
   const code = studioWallet(cfg.passSecret, wallet);
   let free = null;
   if (level >= 2) free = await grantFree(cfg, code, level);
-  const [credits, list, slots, burns, weeks] = await Promise.all([
+  const [credits, list, slots, burns, weeks, clank] = await Promise.all([
     creditsOf(cfg, code), rpc(cfg, 'inf_mine', { p_wallet: code, p_limit: 30 }, 'studio'), rpc(cfg, 'inf_slots', { p_wallet: code }, 'studio'),
     burnsOpen(cfg, wallet), weeksFor(cfg, { wallet }),
+    nameOf(cfg, wallet).catch((err) => {
+      if (err?.code !== 'PGRST202') console.warn(`[studio] a clank.trade name: ${err?.message}`);
+      return null;
+    }),
   ]);
   const extra = n0(slots?.extra);
   return {
     credits, free, prices: priceTable(level), allowed: mayMake(cfg, wallet), owner: isOwner(cfg, wallet),
     slots: { used: n0(slots?.used), extra, max: cfg.infSlots + extra },
-    burns, weeks,
+    burns, weeks, clank: makerOf(clank),
     influencers: (Array.isArray(list) ? list : []).filter((i) => !takenDown(cfg, i.id)).map((i) => {
       const boost = ms(i.boost_until);
       return {
@@ -181,16 +208,17 @@ export async function startInf(cfg, { wallet, level, input }) {
       p_source: source, p_level: level, p_cost: creditPrice('influencer', level), p_per_wallet: INF.PER_WALLET, p_day_cap: cfg.infDayCap,
       p_slots: cfg.infSlots,
     }, 'studio');
-    if (r?.ok === true) return { ok: true, id, job, credits: { paid: n0(r.paid), free: n0(r.free) } };
+    if (r?.ok === true) return { ok: true, id, job, credits: { paid: n0(r.paid), free: n0(r.free), bonus: n0(r.bonus) } };
     if (r?.why === 'taken') continue;
     return shortOr(r);
   }
   return { ok: false, why: 'busy' };
 }
-// the database's "no", for the page (with what the wallet has when it's short of credits)
+// the database's "no", for the page (with what the wallet has when it's short of credits: since round 4's phase 3 its bonus
+// ones too)
 function shortOr(r) {
   const why = String(r?.why || 'busy');
-  return why === 'short' ? { ok: false, why, have: n0(r.paid) + n0(r.free) } : { ok: false, why };
+  return why === 'short' ? { ok: false, why, have: n0(r.paid) + n0(r.free) + n0(r.bonus) } : { ok: false, why };
 }
 
 // ---------- 2: its looks ----------
@@ -211,7 +239,7 @@ export async function rerollLooks(cfg, { wallet, level, id }) {
     const r = await rpc(cfg, 'inf_reroll', {
       p_id: id, p_wallet: studioWallet(cfg.passSecret, wallet), p_job: newOrderId(), p_cost: creditPrice('looks', level), p_day_cap: cfg.infDayCap,
     }, 'studio');
-    if (r?.ok === true) return { ok: true, credits: { paid: n0(r.paid), free: n0(r.free) } };
+    if (r?.ok === true) return { ok: true, credits: { paid: n0(r.paid), free: n0(r.free), bonus: n0(r.bonus) } };
     if (r?.why !== 'taken') return shortOr(r);
   }
   return { ok: false, why: 'busy' };
@@ -219,10 +247,19 @@ export async function rerollLooks(cfg, { wallet, level, id }) {
 
 // ---------- 3: its photos and videos ----------
 // input: { kind: 'photo' | 'trend' | 'video', scene, shape, sound, trend (a trend move's id) | clip (their clip's upload),
-// image (one of its done photos, to start from) }. → { ok: true, job, credits } or { ok: false, field?, why, have? }
+// image (one of its done photos, to start from) }. (Round 4) a photo's shape may be 'banner' (an X banner, at its own price);
+// a video or a trend video never starts from one ('banner'). → { ok: true, job, credits } or { ok: false, field?, why, have? }
 export async function makeJob(cfg, { wallet, level, id, input }) {
   const kind = input?.kind;
   if (!['photo', 'trend', 'video'].includes(kind) || !ID.test(String(id))) return { ok: false, why: 'bad' };
+  // (round 4, phase 4) its reference pictures: 1 to 4 of the person's own uploads (the database checks they're theirs, passed
+  // and fresh); never on a trend video
+  let refs = null;
+  if (input.refs !== undefined && input.refs !== null && !(Array.isArray(input.refs) && input.refs.length === 0)) {
+    if (kind === 'trend' || !Array.isArray(input.refs) || input.refs.length > REFS.MAX || !input.refs.every((r) => ID.test(String(r)))
+      || new Set(input.refs.map(String)).size !== input.refs.length) return { ok: false, why: 'refs' };
+    refs = input.refs.map(String);
+  }
   const i = await rpc(cfg, 'inf_get', { p_id: id }, 'studio');
   if (!i || i.status === 'deleted' || i.hidden === true || takenDown(cfg, id)) return { ok: false, why: 'gone' };
   if (i.wallet_code !== studioWallet(cfg.passSecret, wallet)) return { ok: false, why: 'not_yours' };
@@ -233,14 +270,48 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
   if (image) {
     photo = await getJob(cfg, image);
     if (!photo || photo.inf_id !== id || photo.kind !== 'photo' || photo.status !== 'done' || photo.hidden === true) return { ok: false, why: 'image' };
+    if (photo.shape === 'banner') return { ok: false, why: 'banner' };
   }
   let scene = null, shape = null, sound = false, trend = null, clip = null;
+  let model = null, quality = null, seconds = null, parts = 1, meme = null, caption = null, cost;
   if (kind === 'photo' || kind === 'video') {
-    const c = checkInfScene({ scene: input.scene, shape: photo ? photo.shape : input.shape, sound: input.sound });
+    const c = checkInfScene({ scene: input.scene, shape: photo ? photo.shape : input.shape, sound: input.sound, kind });
     if (!c.ok) return c;
     ({ scene, shape } = c);
     sound = kind === 'video' && c.sound === true;
-    if (kind === 'video' && sceneWay({ mode: i.mode, style: i.style }, { image }) === 'needs_photo') return { ok: false, why: 'needs_photo' };
+  }
+  if (kind === 'photo') {
+    // (phase 4) a meme: its format and words (checked like a caption's: PG-13, never about money)
+    if (input.meme !== undefined && input.meme !== null && input.meme !== '') {
+      if (shape === 'banner') return { ok: false, why: 'bad' };
+      const m = checkMemeText({ meme: input.meme, lines: input.lines });
+      if (!m.ok) return m;
+      ({ meme, caption } = m);
+    }
+    const spec = photoSpec({ model: input.model ?? null, quality: input.quality ?? null, shape, meme });
+    if (!spec) return { ok: false, why: 'model' };
+    if (refs && refs.length > PHOTO_MODELS[spec.model].refs) return { ok: false, why: 'refs' };
+    ({ model, quality } = spec);
+    cost = photoCredits({ ...spec, shape, meme }, level);
+  } else if (kind === 'video') {
+    // (phase 4) the model menu: one asked for, or (an older page) Standard from a photo, else Anime from its full body
+    let asked = input.model ?? null;
+    if (!asked) {
+      if (image) asked = 'standard';
+      else if (i.style === 'real' || i.mode === 'face') return { ok: false, why: 'needs_photo' };
+      else asked = 'anime';
+    }
+    // a long video is always silent: sound not asked for (a scene's sound is on unless it says so) is no sound; asked for, a "no"
+    if (asked === 'long' && input.sound !== true) sound = false;
+    const spec = videoSpec({ model: asked, seconds: input.seconds ?? null, sound, quality: input.quality ?? null });
+    if (!spec) return { ok: false, why: 'model' };
+    const way = sceneWay({ mode: i.mode, style: i.style }, { image, model: spec.model });
+    if (way === 'needs_photo') return { ok: false, why: 'needs_photo' };
+    if (way === 'no_anime') return { ok: false, why: 'no_anime' };
+    if (refs && refs.length > VIDEO_MODELS[spec.model].refs) return { ok: false, why: 'refs' };
+    ({ model, seconds, quality, parts } = spec);
+    sound = spec.sound;
+    cost = videoCredits(spec, level);
   } else {
     const hasTrend = input.trend !== undefined && input.trend !== null && input.trend !== '';
     const hasClip = input.clip !== undefined && input.clip !== null && input.clip !== '';
@@ -255,14 +326,17 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
     // (round 2) the video is the clip's own shape: a trend clip's is vertical; their own clip's, as the page read it in their
     // browser (it only decides how its tile is drawn)
     shape = clip && ['tall', 'wide', 'square'].includes(input.shape) ? input.shape : 'tall';
+    cost = creditPrice('trend', level);
   }
   for (let t = 0; t < 2; t++) {
     const job = newOrderId();
     const r = await rpc(cfg, 'inf_make', {
       p_job: job, p_inf: id, p_wallet: i.wallet_code, p_kind: kind, p_scene: scene, p_shape: shape, p_sound: sound, p_trend: trend, p_clip: clip,
-      p_image: image, p_cost: creditPrice(kind, level), p_per_wallet: INF.JOBS_PER_WALLET, p_day_cap: cfg.infDayCap,
+      p_image: image, p_cost: cost, p_per_wallet: INF.JOBS_PER_WALLET, p_day_cap: cfg.infDayCap,
+      // (round 4, phase 4) the model menu's parts (an older influencers.sql has none of them: run it again)
+      p_model: model, p_quality: quality, p_seconds: seconds, p_refs: refs, p_parts: parts, p_meme: meme, p_caption: caption,
     }, 'studio');
-    if (r?.ok === true) return { ok: true, job, credits: { paid: n0(r.paid), free: n0(r.free) } };
+    if (r?.ok === true) return { ok: true, job, cost, credits: { paid: n0(r.paid), free: n0(r.free), bonus: n0(r.bonus) } };
     if (r?.why !== 'taken') return shortOr(r);
   }
   return { ok: false, why: 'busy' };
@@ -280,7 +354,7 @@ export async function order3d(cfg, { wallet, level, id }) {
       p_order: order, p_inf: id, p_wallet: studioWallet(cfg.passSecret, wallet), p_burn: burnWallet(key, wallet), p_level: level,
       p_cost: creditPrice('model', level), p_cap: cfg.studioMonthCap, p_free: level === 3,
     }, 'studio');
-    if (r?.ok === true) return { ok: true, order, free: r.free === true, credits: { paid: n0(r.paid), free: n0(r.free_credits) } };
+    if (r?.ok === true) return { ok: true, order, free: r.free === true, credits: { paid: n0(r.paid), free: n0(r.free_credits), bonus: n0(r.bonus) } };
     if (r?.why !== 'taken') return shortOr(r);
   }
   return { ok: false, why: 'busy' };
@@ -415,24 +489,27 @@ export async function explore(cfg) {
   const sp = e?.spotlight;
   return {
     influencers: (Array.isArray(e?.influencers) ? e.influencers : []).filter((i) => ok(i.id)).map((i) => ({
-      id: i.id, name: i.name, style: i.style, portrait: portraitOf(i), ready: ms(i.ready_at),
+      id: i.id, name: i.name, style: i.style, portrait: portraitOf(i), ready: ms(i.ready_at), maker: makerOf(i.maker),
     })),
-    fresh: (Array.isArray(e?.fresh) ? e.fresh : []).filter((j) => ok(j.id) && ok(j.inf_id)).map((j) => ({
+    fresh: (Array.isArray(e?.fresh) ? e.fresh : []).filter((j) => ok(j.id) && ok(j.inf_id) && j.shape !== 'banner').map((j) => ({
       id: j.id, kind: j.kind, shape: j.shape || (j.kind === 'photo' ? 'square' : 'tall'), trend: j.trend || null, poster: j.poster === true,
       files: n0(j.files), likes: n0(j.likes), done: ms(j.done_at),
-      inf: { id: j.inf_id, name: j.inf_name, portrait: portraitOf(j) },
+      // (round 4, phase 4) its model, quality and length, sound, a meme's format and words (what its sheet says of it)
+      model: j.model || null, quality: j.quality || null, seconds: Number.isFinite(Number(j.seconds)) && j.seconds !== null && j.seconds !== undefined ? Number(j.seconds) : null,
+      sound: j.sound === true, meme: j.meme || null, caption: j.caption || null,
+      inf: { id: j.inf_id, name: j.inf_name, portrait: portraitOf(j), maker: makerOf(j.maker) },
     })),
     trends: TRENDS.map((t) => {
       const kept = (Array.isArray(e?.trends) ? e.trends : []).find((k) => k.id === t.id);
       return kept && ok(kept.job) ? { id: t.id, name: t.name, emoji: t.emoji, job: kept.job, poster: kept.poster === true } : null;
     }).filter(Boolean),
     boosted: (Array.isArray(e?.boosted) ? e.boosted : []).filter((i) => ok(i.id)).map((i) => ({
-      id: i.id, name: i.name, style: i.style, portrait: portraitOf(i), until: ms(i.until),
+      id: i.id, name: i.name, style: i.style, portrait: portraitOf(i), until: ms(i.until), maker: makerOf(i.maker),
     })),
     spotlight: sp && ok(sp.id) && ok(sp.inf_id) ? {
       week: sp.week, job: sp.id, kind: sp.kind, shape: sp.shape || (sp.kind === 'photo' ? 'square' : 'tall'), poster: sp.poster === true,
       files: n0(sp.files), holderLikes: n0(sp.holder_likes), likes: n0(sp.likes), prize: n0(sp.prize),
-      inf: { id: sp.inf_id, name: sp.inf_name, portrait: portraitOf(sp) },
+      inf: { id: sp.inf_id, name: sp.inf_name, portrait: portraitOf(sp), maker: makerOf(sp.maker) },
     } : null,
   };
 }
@@ -452,6 +529,16 @@ export async function stats(cfg) {
 }
 
 // ---------- the owner's page ----------
+// The reports (the owner's page, and since round 4's phase 2 a mod's): each influencer or creation reported, how many times
+// and why, and whether its maker is banned
+const reportOf = (r) => ({
+  inf: r.inf_id, job: r.job_id || null, count: n0(r.count), whys: Array.isArray(r.whys) ? r.whys : [], at: ms(r.at), name: r.name, mode: r.mode,
+  hidden: r.hidden === true, banned: r.banned === true,
+});
+export async function reportsList(cfg) {
+  const list = await rpc(cfg, 'inf_reports', { p_limit: 60 }, 'studio');
+  return (Array.isArray(list) ? list : []).map(reportOf);
+}
 // Its trend clips, the reports, and (round 2) the example pictures (each choice's: done, being made, or why not) and the
 // weeks (the spotlight waiting for the owner's look, and the ones before)
 export async function ownerPage(cfg) {
@@ -469,10 +556,7 @@ export async function ownerPage(cfg) {
         error: m?.error || null, poster: m?.poster === true, updated: ms(m?.updated_at),
       };
     }),
-    reports: (Array.isArray(reports) ? reports : []).map((r) => ({
-      inf: r.inf_id, job: r.job_id || null, count: n0(r.count), whys: Array.isArray(r.whys) ? r.whys : [], at: ms(r.at), name: r.name, mode: r.mode,
-      hidden: r.hidden === true,
-    })),
+    reports: (Array.isArray(reports) ? reports : []).map(reportOf),
     examples: EXAMPLES.map((key) => {
       const x = ex.get(key);
       return {
