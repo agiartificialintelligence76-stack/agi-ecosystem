@@ -7,6 +7,10 @@
 // a member is a scrambled code of their wallet (studioWallet), their short address ("0x12ab…cdef", to tell them apart) and
 // their nickname. Support tickets keep the person's own words (and the team's answers: the person sees "AGI Studio support",
 // the team sees who wrote it), never a seed phrase or a private key (refused before anything is kept).
+// And (2026-10-11, the owner: "i want to give access to someone but it said to them comins soon fix that please") who may use
+// AGI Studio while it's private: the owner's wallet, STUDIO_ONLY_FOR's in Vercel, the team, and the wallets the owner lets in
+// from the owner's tab (or gives credits for testing): canUse(). Those are kept like the team, as a scrambled code, a short
+// address and the owner's own note, never the address.
 import { rpc } from './limits.js';
 import { studioWallet, newOrderId } from './studio.js';
 import { secretIn } from './secrets.js';
@@ -42,14 +46,19 @@ const ms = (t) => { const n = Date.parse(t ?? ''); return Number.isFinite(n) ? n
 // ---------- who a wallet is ----------
 const cache = new Map();                // code → { at, who }
 export const _resetTeam = () => cache.clear();
-// → { role: 'owner' | 'mod' | 'support' | null, nick, banned } (the owner is never banned; cached a short while per server copy)
+// → { role: 'owner' | 'mod' | 'support' | null, nick, banned, access } (the owner is never banned; cached a short while per
+// server copy). access: the owner let this wallet in while AGI Studio is private (2026-10-11: an older influencers.sql never
+// says so, so false)
 export async function whoIs(cfg, wallet, { now = Date.now(), fresh = false } = {}) {
-  if (isOwner(cfg, wallet)) return { role: 'owner', nick: OWNER_NICK, banned: false };
+  if (isOwner(cfg, wallet)) return { role: 'owner', nick: OWNER_NICK, banned: false, access: true };
   const code = studioWallet(cfg.passSecret, wallet);
   const kept = cache.get(code);
   if (!fresh && kept && now - kept.at < TEAM.CACHE_MS) return kept.who;
   const r = await rpc(cfg, 'inf_who', { p_wallet: code }, 'studio');
-  const who = { role: ROLES.includes(r?.role) ? r.role : null, nick: typeof r?.nick === 'string' ? r.nick : null, banned: r?.banned === true };
+  const who = {
+    role: ROLES.includes(r?.role) ? r.role : null, nick: typeof r?.nick === 'string' ? r.nick : null, banned: r?.banned === true,
+    access: r?.access === true,
+  };
   cache.set(code, { at: now, who });
   if (cache.size > 5000) cache.delete(cache.keys().next().value);
   return who;
@@ -84,6 +93,73 @@ export async function teamSet(cfg, { address, role, nick }) {
 export async function teamRemove(cfg, { code }) {
   if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(code)) return { ok: false, why: 'bad' };
   const r = await rpc(cfg, 'inf_staff_set', { p_wallet: code, p_role: null, p_nick: null, p_short: null, p_max: TEAM.MAX }, 'studio');
+  forget(code);
+  return r?.ok === true ? { ok: true } : { ok: false, why: r?.why === 'gone' ? 'gone' : 'busy' };
+}
+
+// ---------- who may use AGI Studio while it's private (2026-10-11) ----------
+export const ACCESS = {
+  MAX: 200,                    // wallets the owner may let in at most (the team and STUDIO_ONLY_FOR's don't count)
+  NOTE_MAX: 24,                // the owner's own note for one (only the owner sees it)
+};
+// Whether this wallet may use AGI Studio now: it's open to everyone (STUDIO_OPEN), or this wallet is on its list (onList)
+export async function canUse(cfg, wallet, opts = {}) {
+  return cfg.studioOpen === true || onList(cfg, wallet, opts);
+}
+// On its list: the owner, STUDIO_ONLY_FOR's wallets (in Vercel), the team (mods and support), or a wallet the owner let in
+// from the owner's tab (or gave credits for testing). The database away (or an influencers.sql older than this): only the
+// first two (fail closed), said once in the log.
+let accessWarned = false;
+export async function onList(cfg, wallet, { now = Date.now() } = {}) {
+  const w = String(wallet ?? '').trim().toLowerCase();
+  if (!ADDRESS.test(w)) return false;
+  if (isOwner(cfg, w) || cfg.studioOnlyFor?.has(w)) return true;
+  try {
+    const who = await whoIs(cfg, w, { now });
+    return Boolean(who.role || who.access);
+  } catch (err) {
+    if (!accessWarned) { accessWarned = true; console.warn(`[studio] couldn't read who may use AGI Studio (only STUDIO_ONLY_FOR's wallets for now): ${err?.message}`); }
+    return false;
+  }
+}
+export const _resetAccess = () => { accessWarned = false; };
+// The owner's note for a wallet let in: invisible characters out, spaces tidied, at most NOTE_MAX characters (an empty note:
+// none). → { ok: true, note: string | null } or { ok: false }
+export function accessNote(text) {
+  const note = String(text ?? '').normalize('NFC').replace(CONTROL, '').replace(/\s+/g, ' ').trim();
+  if (!note) return { ok: true, note: null };
+  return [...note].length <= ACCESS.NOTE_MAX ? { ok: true, note } : { ok: false };
+}
+// The wallets the owner let in, newest first: each one's code (to take it away), its short address, the owner's note, how it
+// got in ('owner': the owner's tab; 'credits': credits for testing), since when, and whether it's on the team too
+export async function accessList(cfg) {
+  const list = await rpc(cfg, 'inf_access_list', {}, 'studio');
+  return (Array.isArray(list) ? list : []).map((a) => ({
+    code: a.code, short: a.short, note: typeof a.note === 'string' ? a.note : null, via: a.via === 'credits' ? 'credits' : 'owner',
+    added: ms(a.added_at), staff: a.staff === true,
+  }));
+}
+// A wallet let in by its address (or its note changed: let it in again), from the owner's tab ('owner') or by credits for
+// testing ('credits': a wallet already on the list stays as it is). → { ok: true, entry: { code, short, note }, added } or
+// { ok: false, why: 'address' | 'self' (the owner's own wallet: always in) | 'note' | 'too_many' | 'busy' }
+export async function accessSet(cfg, { address, note = '', via = 'owner' }) {
+  const a = String(address ?? '').trim();
+  if (!ADDRESS.test(a)) return { ok: false, why: 'address' };
+  if (isOwner(cfg, a)) return { ok: false, why: 'self' };
+  const n = accessNote(note);
+  if (!n.ok) return { ok: false, why: 'note' };
+  const code = studioWallet(cfg.passSecret, a);
+  const r = await rpc(cfg, 'inf_access_set', {
+    p_wallet: code, p_short: short(a), p_note: n.note, p_via: via === 'credits' ? 'credits' : 'owner', p_on: true, p_max: ACCESS.MAX,
+  }, 'studio');
+  forget(code);
+  if (r?.ok === true) return { ok: true, added: r.added === true, entry: { code, short: short(a), note: n.note } };
+  return { ok: false, why: r?.why === 'too_many' ? 'too_many' : 'busy' };
+}
+// A wallet taken off the list (by its code, from the list). → { ok: true } or { ok: false, why: 'gone' | 'bad' | 'busy' }
+export async function accessRemove(cfg, { code }) {
+  if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(code)) return { ok: false, why: 'bad' };
+  const r = await rpc(cfg, 'inf_access_set', { p_wallet: code, p_short: null, p_note: null, p_via: null, p_on: false, p_max: ACCESS.MAX }, 'studio');
   forget(code);
   return r?.ok === true ? { ok: true } : { ok: false, why: r?.why === 'gone' ? 'gone' : 'busy' };
 }

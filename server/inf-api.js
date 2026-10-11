@@ -65,7 +65,7 @@
 import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass } from './security.js';
 import { verifyHuman } from './turnstile.js';
 import { makeBurstLimit } from './burst.js';
-import { studioOn, walletNow, studioWallet, mayMake } from './studio.js';
+import { studioOn, walletNow, studioWallet } from './studio.js';
 import {
   infOn, isOwner, infPage, moveAlong, me, startInf, pickLook, rerollLooks, makeJob, order3d, setPublic, deleteInf, report, coinDraft,
   explore, ownerPage, trendMake, trendSet, hide, clearReports, ID, order3dBurn, check3dBurn, redo3d, examplesMap, stats, exampleMake,
@@ -76,7 +76,7 @@ import { WEEK, prizesOn } from './inf-week.js';
 import { BURNS } from './inf-burns.js';
 import {
   whoIs, may, OWNER_NICK, teamList, teamSet, teamRemove, banMaker, unban, bansList, ticketOpen, ticketsMine, ticketThread, ticketSay,
-  ticketClose, ticketsStaff,
+  ticketClose, ticketsStaff, canUse, accessList, accessSet, accessRemove, ACCESS,
 } from './inf-team.js';
 import { giftsInfo, giftsOn, refsOn } from './inf-gifts.js';
 import { PRICES, DISCOUNT, FREE_CREDITS, TOPUPS, TOPUP_MIN, INF_FILE_RE, INF_DL_RE, REPORT_WHYS, clankProfileUrl, CAPTIONS_A_DAY, HELPER } from '../src/studio/rules.js';
@@ -355,14 +355,18 @@ const WHY_STATUS = {
   // round 4, phase 4 (the model menu, with a model it doesn't offer; Anime for a realistic influencer; reference pictures
   // that can't be used, as not this wallet's, refused, older than a day or too many for its model)
   model: 400, no_anime: 409, refs: 409,
+  // (2026-10-11) giving access while AGI Studio is private (the owner's tab)
+  access_address: 400, access_self: 409, access_note: 400, access_full: 409, access_gone: 404,
 };
 // (round 4, phase 2) the team's and support's own "no"s, as the page names them
 const TICKET_WHY = { topic: 'ticket_topic', empty: 'ticket_empty', long: 'ticket_long', too_many: 'ticket_too_many', busy_day: 'ticket_busy_day', closed: 'ticket_closed', bad: 'bad_request' };
 const TEAM_WHY = { address: 'team_address', self: 'team_self', role: 'team_role', nick: 'team_nick', too_many: 'team_full', bad: 'bad_request' };
 const BAN_WHY = { already: 'ban_already', protected: 'ban_protected', done: 'ban_lifted', bad: 'bad_request' };
+// (2026-10-11) giving access: the owner's own "no"s, as the page names them
+const ACCESS_WHY = { address: 'access_address', self: 'access_self', note: 'access_note', too_many: 'access_full', gone: 'access_gone', bad: 'bad_request' };
 const HELP_WHY = { empty: 'help_empty', long: 'help_long', too_many: 'help_used', busy_day: 'help_busy' };
 const OWNER_ACTIONS = ['inf-owner', 'trend-make', 'trend-set', 'inf-hide', 'inf-report-clear', 'inf-example-make', 'inf-week-set', 'inf-gift',
-  'inf-admin', 'inf-admin-set', 'inf-team-set', 'inf-team-remove'];
+  'inf-admin', 'inf-admin-set', 'inf-team-set', 'inf-team-remove', 'inf-access', 'inf-access-set', 'inf-access-remove'];
 // (round 4, phase 2) the team's: a mod's and support's (and the owner's); a mod may also hide and clear reports (OWNER_ACTIONS)
 const MOD_ACTIONS = ['inf-mod', 'mod-ticket', 'mod-ticket-say', 'mod-ticket-close', 'mod-ban', 'mod-unban'];
 const SHARED_WITH_MODS = ['inf-hide', 'inf-report-clear'];
@@ -427,9 +431,9 @@ export async function infPost(cfg, request, body) {
     'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo', 'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-example-make', 'inf-gift',
     'inf-caption', 'inf-name-set', 'inf-name-clear', 'inf-send', 'inf-gift-link', 'inf-gift-cancel', 'inf-gift-claim', 'inf-ref-bind'];
   if (asks.includes(body.action) && !infActBurst(who)) return json(429, { error: 'too_fast', ...extra });
-  if (['inf-look', 'inf-like', 'inf-liked', 'inf-tickets', 'inf-ticket', 'inf-mod', 'mod-ticket', 'inf-gifts'].includes(body.action) && !infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
+  if (['inf-look', 'inf-like', 'inf-liked', 'inf-tickets', 'inf-ticket', 'inf-mod', 'mod-ticket', 'inf-gifts', 'inf-access'].includes(body.action) && !infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
   if (['inf-ticket-open', 'inf-ticket-say', 'inf-ticket-close', 'mod-ticket-say', 'mod-ticket-close', 'mod-ban', 'mod-unban', 'inf-admin',
-    'inf-admin-set', 'inf-team-set', 'inf-team-remove'].includes(body.action) && !infActBurst(who)) return json(429, { error: 'too_fast', ...extra });
+    'inf-admin-set', 'inf-team-set', 'inf-team-remove', 'inf-access-set', 'inf-access-remove'].includes(body.action) && !infActBurst(who)) return json(429, { error: 'too_fast', ...extra });
   // (round 4, phase 2) a banned wallet makes nothing (supabase/influencers.sql refuses its making too)
   if (BANNED_FROM.includes(body.action)) {
     let t;
@@ -454,7 +458,7 @@ export async function infPost(cfg, request, body) {
       if (body.action === 'inf-up-open') {
         const { openUpload } = await import('./inf-uploads.js');
         const { newOrderId } = await import('./studio.js');
-        if (!mayMake(cfg, w.wallet)) return refuse({ why: 'closed' });
+        if (!(await canUse(cfg, w.wallet, { now }))) return refuse({ why: 'closed' });
         const r = await openUpload(cfg, { code: studioWallet(cfg.passSecret, w.wallet), kind: body.kind, bytes: body.bytes, consent: body.consent, id: newOrderId() });
         if (!r.ok) return json(WHY_STATUS[r.why] || 422, { error: r.why, ...pass, ...extra });
         const { ok, ...rest } = r;
@@ -476,7 +480,7 @@ export async function infPost(cfg, request, body) {
       return r.ok ? json(200, { ok: true, id: t.u, seconds: r.seconds, ...extra }) : json(422, { error: 'refused', why: r.why, ...extra });
     }
     if (body.action === 'inf-topup') {
-      if (!mayMake(cfg, w.wallet)) return refuse({ why: 'closed' });             // (private: nothing to spend credits on yet)
+      if (!(await canUse(cfg, w.wallet, { now }))) return refuse({ why: 'closed' });   // (private: nothing to spend credits on yet)
       const { checkTopup, creditsOf } = await import('./credits.js');
       const { txFrom } = await import('./burn.js');
       const tx = body.tx === undefined || body.tx === null || body.tx === '' ? null : txFrom(body.tx);
@@ -522,7 +526,7 @@ export async function infPost(cfg, request, body) {
     }
     // (round 2) burn unlocks: one more influencer, or a boost in Explore (while it's private, only its wallets: nothing to unlock)
     if (body.action === 'inf-burn-quote') {
-      if (!mayMake(cfg, w.wallet)) return refuse({ why: 'closed' });
+      if (!(await canUse(cfg, w.wallet, { now }))) return refuse({ why: 'closed' });
       const { burnQuote } = await import('./inf-burns.js');
       const r = await burnQuote(cfg, { wallet: w.wallet, what: body.what, inf: body.what === 'boost' ? (ID.test(id) ? id : '') : null });
       return r.ok ? json(200, { ...r, ...extra }) : refuse(r);
@@ -553,7 +557,7 @@ export async function infPost(cfg, request, body) {
     // (round 4) the clank.trade username it shows ("by @name" on its public influencers), checked against that clank.trade
     // profile's own wallet; and taking it off
     if (body.action === 'inf-name-set') {
-      if (!mayMake(cfg, w.wallet)) return refuse({ why: 'closed' });
+      if (!(await canUse(cfg, w.wallet, { now }))) return refuse({ why: 'closed' });
       const { claimClankName } = await import('./clank-names.js');
       const r = await claimClankName(cfg, { wallet: w.wallet, input: body.name });
       if (r.ok) return json(200, { ok: true, clank: { name: r.name, url: clankProfileUrl(r.name) }, ...extra });
@@ -777,7 +781,7 @@ async function gifts(cfg, body, w, extra) {
     return r.ok ? json(200, { ok: true, status: r.status, credits: await creditsOf(cfg, code), ...extra }) : no(r);
   }
   // giving: while AGI Studio is private, only its wallets (nothing to spend credits on yet for anyone else)
-  if (!mayMake(cfg, w.wallet)) return json(WHY_STATUS.closed, { error: 'closed', ...extra });
+  if (!(await canUse(cfg, w.wallet))) return json(WHY_STATUS.closed, { error: 'closed', ...extra });
   if (body.action === 'inf-send') {
     const r = await G.sendGift(cfg, { wallet: w.wallet, to: body.to, credits: body.credits, note: body.note });
     return r.ok ? json(200, { ok: true, id: r.id, to: r.to, gave: r.credits, credits: await creditsOf(cfg, code), ...extra }) : no(r);
@@ -821,6 +825,15 @@ async function look(cfg, w, id, extra, now) {
   return json(200, { ...out, now, ...extra });
 }
 
+// (2026-10-11) who may use AGI Studio, for the owner's tab: whether it's open to everyone, the wallets the owner let in, and how
+// many more are in without the list (STUDIO_ONLY_FOR's in Vercel, besides the owner's own; the team)
+async function accessPage(cfg) {
+  const [list, team] = await Promise.all([accessList(cfg), teamList(cfg)]);
+  const owner = cfg.studioOwner || '';
+  const vercel = [...(cfg.studioOnlyFor || [])].filter((a) => a !== owner).map((a) => `${a.slice(0, 6)}…${a.slice(-4)}`);
+  return { open: cfg.studioOpen === true, list, max: ACCESS.MAX, noteMax: ACCESS.NOTE_MAX, vercel, team: team.length };
+}
+
 // The owner's tools
 async function owner(cfg, body, extra, now, w) {
   // (round 4, phase 2) the owner's tab: the numbers, the AI services' balances and their alert levels, the alerts link, the team
@@ -840,8 +853,9 @@ async function owner(cfg, body, extra, now, w) {
     }
     return json(200, { ...r, team: await teamList(cfg), ...extra });
   }
-  // (round 3) credits for testing: free, to the owner's own wallet ('me') or a tester's (its address). Whether that wallet may
-  // use them now (while it's private, only STUDIO_ONLY_FOR's wallets may make anything) comes back with it, for the page to say.
+  // (round 3) credits for testing: free, to the owner's own wallet ('me') or a tester's (its address). Since 2026-10-11 a
+  // tester's wallet is let in too while AGI Studio is private (the owner's access list, as "credits for testing"), and whether
+  // it may use them now comes back with it, for the page to say (no: its list was full, or influencers.sql is older).
   if (body.action === 'inf-gift') {
     const self = body.to === 'me';
     const { giftCredits, creditsOf } = await import('./credits.js');
@@ -850,10 +864,33 @@ async function owner(cfg, body, extra, now, w) {
     const r = await giftCredits(cfg, { to, credits: body.credits, ref: newOrderId() });
     if (!r.ok) return ['credits', 'to'].includes(r.why) ? json(400, { error: `gift_${r.why}`, ...extra }) : json(503, { error: 'busy', ...extra });
     const address = to.toLowerCase();
+    let allowed = await canUse(cfg, address, { now }), letIn = false;
+    if (!allowed) {
+      try {
+        const a = await accessSet(cfg, { address, via: 'credits' });
+        if (a.ok) { allowed = true; letIn = true; }
+      } catch (err) { console.warn(`[studio] letting a tester's wallet in: ${err?.message}`); }
+    }
     return json(200, {
-      ok: true, gave: body.credits, self, to: address, allowed: mayMake(cfg, address),
+      ok: true, gave: body.credits, self, to: address, allowed, letIn,
       ...(self ? { credits: await creditsOf(cfg, studioWallet(cfg.passSecret, address)) } : {}), ...extra,
     });
+  }
+  // (2026-10-11, the owner: "i want to give access to someone but it said to them comins soon fix that please") who may use
+  // AGI Studio while it's private: the list the owner manages (a wallet let in by its address, with a note only the owner
+  // sees), and who else is in without it (the owner, STUDIO_ONLY_FOR's in Vercel, the team)
+  if (['inf-access', 'inf-access-set', 'inf-access-remove'].includes(body.action)) {
+    if (body.action === 'inf-access-set' || body.action === 'inf-access-remove') {
+      const r = body.action === 'inf-access-set'
+        ? await accessSet(cfg, { address: body.address, note: body.note })
+        : await accessRemove(cfg, { code: body.code });
+      if (!r.ok) {
+        const error = ACCESS_WHY[r.why] || r.why;
+        return json(WHY_STATUS[error] || 503, { error, ...extra });
+      }
+      return json(200, { ok: true, ...(r.entry ? { entry: r.entry, added: r.added } : {}), ...await accessPage(cfg), ...extra });
+    }
+    return json(200, { ...await accessPage(cfg), ...extra });
   }
   if (body.action === 'inf-owner') {
     let page = await ownerPage(cfg);

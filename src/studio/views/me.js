@@ -2,11 +2,11 @@
 // waiting for their burn, its weekly prizes to claim, its holder perks and its prices; round 4: its clank.trade username,
 // shown on its public influencers as "by @name"; round 4, phase 2: Help & support with its tickets' news, a ban said in
 // words, and the team's tools; round 4, phase 3: its three kinds of credits, and "Gifts and invites": src/studio/views/gifts.js).
-import { h, icon, btn, linkBtn, pic, put, add, busy, say, nextId } from '../ui.js';
+import { h, icon, btn, linkBtn, pic, put, add, busy, say, nextId, copyText } from '../ui.js';
 import { infPic, creditsText, PRICES, BANNER, clankProfileUrl } from '../rules.js';
 import {
-  LEVEL_NAMES, shortAddress, num, perksText, statusChip, studioText, errorText, BURN_WHATS, myWeekText, prizeText, weekText, clankErrorText,
-  BANNED_TEXT,
+  LEVEL_NAMES, shortAddress, num, perksText, statusChip, studioText, errorText, BURN_WHATS, myWeekText, prizeText, weekText, clankErrorText, INVITE_TEXT,
+  FOLLOW_TEXT, BANNED_TEXT,
 } from '../app-words.js';
 import { unlockSlot, boostInf } from './shared.js';
 import { giftsCard } from './gifts.js';
@@ -26,6 +26,24 @@ function creditLines(c, info) {
   if (c.bonus > 0) lines.push(`${creditsText(c.bonus)} are bonus credits, from invites or the team (used next; they don't run out, and can't be given).`);
   if (info?.gifts && c.paid > 0 && (c.free > 0 || c.bonus > 0)) lines.push(`${creditsText(c.paid)} you bought or got as gifts: those you can give.`);
   return lines.map((text) => h('p', { class: 'sa-muted sa-small', text }));
+}
+
+// (2026-10-11) A wallet that isn't on AGI Studio's list while it's private: what to do if it was invited, its whole address to
+// copy and send (the owner gives it access from the owner's tab), and what to do if it wasn't. Its own words here (Explore's
+// and Create's say "it's in My studio")
+function inviteBanner(wallet) {
+  const addr = h('code', { class: 'sa-mono sa-invite-addr', text: wallet });
+  const copy = btn('Copy address', { kind: 'ghost', size: 'sm', icon: 'copy' });
+  copy.addEventListener('click', async () => {
+    const ok = await copyText(wallet, addr);
+    copy.lastChild.textContent = ok ? 'Copied' : 'Selected: copy it';
+    setTimeout(() => { if (copy.isConnected) copy.lastChild.textContent = 'Copy address'; }, 2500);
+  });
+  return h('div', { class: 'sa-banner sa-invite', role: 'status' },
+    h('p', { text: errorText('closed') }),
+    h('p', { class: 'sa-small', text: INVITE_TEXT }),
+    h('div', { class: 'sa-row sa-invite-row' }, addr, copy),
+    h('p', { class: 'sa-small', text: FOLLOW_TEXT }));
 }
 
 export function render(ctx, route, root) {
@@ -258,7 +276,7 @@ export function render(ctx, route, root) {
       // (round 4, phase 2) a wallet a moderator banned: why it can't make anything, and where to ask
       me?.banned ? h('div', { class: 'sa-banner sa-banner-warn', role: 'status' }, h('p', { text: BANNED_TEXT }),
         linkBtn('Open a support ticket', ctx.href('/help?new=account'), { kind: 'ghost', size: 'sm', icon: 'inbox', dataset: { saLink: '' } })) : null,
-      warn ? h('p', { class: 'sa-banner', text: warn }) : null,
+      warn ? (s.wallet && me?.allowed === false ? inviteBanner(s.wallet) : h('p', { class: 'sa-banner', text: warn })) : null,
       ctx.meError && !me ? h('p', { class: 'sa-banner', text: errorText(ctx.meError) }) : null,
       h('div', { class: 'sa-stat-cards' }, credits, slotCard, wallet),
       prizes,

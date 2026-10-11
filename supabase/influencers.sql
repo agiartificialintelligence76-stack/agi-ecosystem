@@ -41,6 +41,8 @@
 --   agi1_inf_names      (round 4) per wallet code: the clank.trade username it showed (public on clank.trade: our server
 --                       checked that profile's wallet is this one) and when it was last checked
 --   agi1_inf_caption_days (round 4) per wallet code and day: the AI captions it asked for (kept 2 days)
+--   agi1_inf_access     (2026-10-11) who may use AGI Studio while it's private: per wallet code, its short address
+--                       "0x12ab…cdef", the owner's own note and how it got in (the owner's tab, or credits for testing)
 -- Never an address, a transaction, an IP address or anything else about anyone (but a weekly spotlight's prize: below).
 --
 -- Round 2 (2026-10-10, the owner: "remove the use your face", "no restrictions on That looks like a photo of a real
@@ -100,6 +102,12 @@
 --   • invites (agi1_inf_refs: each wallet's invite code; agi1_inf_invited: the wallets that joined through one, whether their
 --     welcome credits came and what their inviter earned from them; agi1_inf_ref_months: what an inviter earned a month;
 --     agi1_inf_ref_paid: each friend's top-up counted once)
+-- Giving access (2026-10-11, the owner: "i want to give access to someone but it said to them comins soon fix that please").
+-- Run this file again (it keeps everything saved). It adds:
+--   • who may use AGI Studio while it's private (agi1_inf_access: a wallet the owner let in from the owner's tab by its address,
+--     or by giving it credits for testing; kept as a scrambled code, its short address "0x12ab…cdef" and the owner's own note).
+--     The owner's wallet, STUDIO_ONLY_FOR's in Vercel and the team's get in without a row here. inf_who says whether a wallet
+--     is on it; inf_access_list and inf_access_set are the owner's.
 
 -- studio.sql first (its version of 2026-10-10): this file builds on its tables, its months and its payment ledger
 do $do$
@@ -525,6 +533,20 @@ alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_menu_check check (
 -- a reference picture is an upload of its own kind (an older check, without it, goes first)
 alter table public.agi1_inf_uploads drop constraint if exists agi1_inf_uploads_kind_check;
 alter table public.agi1_inf_uploads add constraint agi1_inf_uploads_kind_check check (kind in ('picture', 'face', 'clip', 'ref'));
+
+-- ---------- (2026-10-11) who may use AGI Studio while it's private ----------
+-- The owner's "Give access" list: a wallet the owner let in from the owner's tab by its address ('owner'), or by giving it
+-- credits for testing ('credits'). Kept as a scrambled code, its short form "0x12ab…cdef" (to tell them apart) and the owner's
+-- own note, never the address. (The owner's wallet, STUDIO_ONLY_FOR's in Vercel and the team's get in without a row here.)
+create table if not exists public.agi1_inf_access (
+  wallet_code text        primary key check (char_length(wallet_code) between 16 and 64),
+  short       text        not null check (short ~ '^0x[0-9a-f]{4}…[0-9a-f]{4}$'),
+  note        text        check (char_length(note) between 1 and 24),
+  via         text        not null default 'owner' check (via in ('owner', 'credits')),
+  added_at    timestamptz not null default now()
+);
+alter table public.agi1_inf_access enable row level security;
+revoke all on table public.agi1_inf_access from anon, authenticated;
 
 -- Row Level Security ON, with no rules: the public (browser) keys can't read or change these tables.
 alter table public.agi1_inf_likes enable row level security;
@@ -2505,8 +2527,9 @@ end;
 $$;
 
 -- ---------- round 4, phase 2 (2026-10-11): the team, bans, support tickets, the AI helper, alerts, the owner's numbers ----------
--- A wallet as AGI Studio sees it now: its role in the team ('mod' | 'support', or null), its nickname there, and whether it's
--- banned. → {"role", "nick", "banned"}
+-- A wallet as AGI Studio sees it now: its role in the team ('mod' | 'support', or null), its nickname there, whether it's
+-- banned, and (2026-10-11) whether the owner let it in while AGI Studio is private (agi1_inf_access).
+-- → {"role", "nick", "banned", "access"}
 create or replace function public.inf_who(p_wallet text)
 returns json
 language sql
@@ -2516,7 +2539,8 @@ as $$
   select json_build_object(
     'role', (select role from agi1_inf_staff where wallet_code = p_wallet),
     'nick', (select nick from agi1_inf_staff where wallet_code = p_wallet),
-    'banned', exists (select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null));
+    'banned', exists (select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null),
+    'access', exists (select 1 from agi1_inf_access where wallet_code = p_wallet));
 $$;
 
 -- The team, for the owner's page: each member's code (to change or remove them), role, nickname, short address, since when,
@@ -2562,6 +2586,57 @@ begin
   insert into agi1_inf_staff (wallet_code, role, nick, short) values (p_wallet, p_role, p_nick, p_short)
   on conflict (wallet_code) do update set role = excluded.role, nick = excluded.nick, short = excluded.short;
   return json_build_object('ok', true);
+end;
+$$;
+
+-- (2026-10-11) The wallets the owner let in while AGI Studio is private, newest first: each one's code (to take it away), its
+-- short address, the owner's note, how it got in ('owner': the owner's tab; 'credits': credits for testing), since when, and
+-- whether it's on the team too
+create or replace function public.inf_access_list()
+returns json
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(json_agg(json_build_object('code', a.wallet_code, 'short', a.short, 'note', a.note, 'via', a.via,
+      'added_at', a.added_at, 'staff', exists (select 1 from agi1_inf_staff s where s.wallet_code = a.wallet_code))
+    order by a.added_at desc), '[]'::json)
+  from agi1_inf_access a;
+$$;
+
+-- The owner lets a wallet in (or changes its note), or takes it off the list (p_on false). Credits for testing (p_via
+-- 'credits') let in a wallet that isn't on it yet, and never change one that is. At most p_max wallets.
+-- → {"ok": true, "added": true | false} or {"ok": false, "why": "too_many" | "gone" | "bad"}
+create or replace function public.inf_access_set(p_wallet text, p_short text, p_note text, p_via text, p_on boolean, p_max integer)
+returns json
+language plpgsql
+set search_path = public
+as $$
+begin
+  if p_wallet is null or char_length(p_wallet) not between 16 and 64 or p_on is null then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  if not p_on then
+    delete from agi1_inf_access where wallet_code = p_wallet;
+    if not found then return json_build_object('ok', false, 'why', 'gone'); end if;
+    return json_build_object('ok', true, 'added', false);
+  end if;
+  if p_short is null or p_short !~ '^0x[0-9a-f]{4}…[0-9a-f]{4}$' or p_via is null or p_via not in ('owner', 'credits')
+     or (p_note is not null and char_length(p_note) not between 1 and 24) or p_max is null or p_max < 1 then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  perform pg_advisory_xact_lock(hashtext('agi1-inf-access'));
+  if exists (select 1 from agi1_inf_access where wallet_code = p_wallet) then
+    if p_via = 'owner' then
+      update agi1_inf_access set short = p_short, note = p_note, via = 'owner' where wallet_code = p_wallet;
+    end if;
+    return json_build_object('ok', true, 'added', false);
+  end if;
+  if (select count(*) from agi1_inf_access) >= p_max then
+    return json_build_object('ok', false, 'why', 'too_many');
+  end if;
+  insert into agi1_inf_access (wallet_code, short, note, via) values (p_wallet, p_short, p_note, p_via);
+  return json_build_object('ok', true, 'added', true);
 end;
 $$;
 
@@ -3101,7 +3176,9 @@ begin
     'inf_ref_code(text, text)', 'inf_ref_bind(text, text)',
     'inf_ref_settle(text, integer, integer, integer, integer, integer, integer)',
     -- round 4, phase 4
-    'inf_job_part(text, integer)'
+    'inf_job_part(text, integer)',
+    -- (2026-10-11) giving access
+    'inf_access_list()', 'inf_access_set(text, text, text, text, boolean, integer)'
   ] loop
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
     execute format('grant execute on function public.%s to service_role', f);
@@ -3112,11 +3189,12 @@ $do$;
 -- Tell Supabase's web API to notice the new functions right away.
 notify pgrst, 'reload schema';
 
--- Check: influencers_ready = 1 (its 94 functions, each exactly once: since round 2 an older inf_start or inf_upload_set left
+-- Check: influencers_ready = 1 (its 96 functions, each exactly once: since round 2 an older inf_start or inf_upload_set left
 -- behind would count twice, since round 4's phase 4 an older inf_make; round 2's new columns; round 3's gifts in the credits' log; round 4's banners, names and
 -- captions; round 4's phase 2: the team, bans (and the 5 functions that refuse a banned wallet), tickets, the AI helper's
 -- counts, alerts and the owner's numbers; round 4's phase 3: bonus credits, gifts and invites, and every kind they log;
--- round 4's phase 4: the model menu's columns, reference uploads and long videos' parts; and studio.sql's new parts it builds on)
+-- round 4's phase 4: the model menu's columns, reference uploads and long videos' parts; giving access (2026-10-11): its list,
+-- and inf_who reading it; and studio.sql's new parts it builds on)
 select
   (case when (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('inf_credits', 'inf_spend', 'inf_refund',
     'inf_topup', 'inf_free', 'inf_upload_open', 'inf_upload_get', 'inf_upload_set', 'inf_day_take', 'inf_start', 'inf_get', 'inf_pick',
@@ -3132,7 +3210,10 @@ select
     'inf_ticket_close', 'inf_tickets_mine', 'inf_ticket_get', 'inf_tickets_staff', 'inf_help_take', 'inf_alert_add', 'inf_alert_off',
     'inf_alert_chats', 'inf_admin_get', 'inf_admin_set', 'inf_admin_claim', 'inf_admin_stats', 'inf_mod_news',
     'inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_ref_code',
-    'inf_ref_bind', 'inf_ref_settle', 'inf_job_part')) = 94 then 1 else 0 end)
+    'inf_ref_bind', 'inf_ref_settle', 'inf_job_part', 'inf_access_list', 'inf_access_set')) = 96 then 1 else 0 end)
+    * (case when to_regclass('public.agi1_inf_access') is not null
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_who' and prosrc like '%agi1_inf_access%')
+      then 1 else 0 end)
     * (case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf_jobs'
         and column_name in ('model', 'quality', 'seconds', 'refs', 'parts', 'part', 'meme', 'caption')) = 8
       and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_uploads'::regclass

@@ -28,7 +28,7 @@
 // photo with its format and words).
 import { rpc } from './limits.js';
 import { burnKey, burnWallet } from './burn.js';
-import { studioOn, mayMake, studioWallet, newOrderId, tick as studioTick, getOrder, checkPayment } from './studio.js';
+import { studioOn, studioWallet, newOrderId, tick as studioTick, getOrder, checkPayment } from './studio.js';
 import { checkStart, checkInfScene, sceneWay, checkMemeText } from './inf-words.js';
 import { creditsOf, grantFree } from './credits.js';
 import { jobTick, getJob, stepOf, infOn } from './inf-jobs.js';
@@ -158,24 +158,27 @@ export async function moveAlong(cfg, page, { now = Date.now(), deadline = Date.n
 }
 
 // This wallet: its credits (this month's free ones given first, for a holder), its influencers, its prices, whether it may
-// make one, and (round 2) its slots (influencers it may have at all, and the ones it unlocked by burning), its burn unlocks
-// open, and its weekly prizes (to claim, or claimed); (round 4) the clank.trade username it shows, if any.
+// make one (while AGI Studio is private: whether it's on its list, server/inf-team.js canUse), and (round 2) its slots
+// (influencers it may have at all, and the ones it unlocked by burning), its burn unlocks open, and its weekly prizes (to
+// claim, or claimed); (round 4) the clank.trade username it shows, if any.
 // → { credits, free, influencers, prices, allowed, owner, slots, burns, weeks, clank }
 export async function me(cfg, { wallet, level }) {
   const code = studioWallet(cfg.passSecret, wallet);
+  const { canUse } = await import('./inf-team.js');
   let free = null;
   if (level >= 2) free = await grantFree(cfg, code, level);
-  const [credits, list, slots, burns, weeks, clank] = await Promise.all([
+  const [credits, list, slots, burns, weeks, clank, allowed] = await Promise.all([
     creditsOf(cfg, code), rpc(cfg, 'inf_mine', { p_wallet: code, p_limit: 30 }, 'studio'), rpc(cfg, 'inf_slots', { p_wallet: code }, 'studio'),
     burnsOpen(cfg, wallet), weeksFor(cfg, { wallet }),
     nameOf(cfg, wallet).catch((err) => {
       if (err?.code !== 'PGRST202') console.warn(`[studio] a clank.trade name: ${err?.message}`);
       return null;
     }),
+    canUse(cfg, wallet),
   ]);
   const extra = n0(slots?.extra);
   return {
-    credits, free, prices: priceTable(level), allowed: mayMake(cfg, wallet), owner: isOwner(cfg, wallet),
+    credits, free, prices: priceTable(level), allowed, owner: isOwner(cfg, wallet),
     slots: { used: n0(slots?.used), extra, max: cfg.infSlots + extra },
     burns, weeks, clank: makerOf(clank),
     influencers: (Array.isArray(list) ? list : []).filter((i) => !takenDown(cfg, i.id)).map((i) => {
@@ -195,7 +198,8 @@ export async function me(cfg, { wallet, level }) {
 // 'source' | 'short' | 'too_many' | 'no_slot' (its influencers at all: STUDIO_SLOTS, and more unlocked by burning) |
 // 'busy_day' | 'busy'
 export async function startInf(cfg, { wallet, level, input }) {
-  if (!mayMake(cfg, wallet)) return { ok: false, why: 'closed' };
+  const { canUse } = await import('./inf-team.js');
+  if (!(await canUse(cfg, wallet))) return { ok: false, why: 'closed' };
   const c = checkStart(input);
   if (!c.ok) return c;
   const source = c.mode === 'design' ? null : ID.test(String(input?.source)) ? input.source : null;
@@ -443,7 +447,9 @@ export const STUDIO_PHOTO = /^studio:([A-Za-z0-9_-]{22})\/([A-Za-z0-9_-]{22})-([
 export async function coinDraft(cfg, { wallet, id, name, symbol, description }) {
   const L = await import('./launch.js');
   if (!L.launchReady(cfg)) return { ok: false, why: 'launch_off' };
-  if (!L.launchOpen(cfg) && !isOwner(cfg, wallet) && !cfg.studioOnlyFor?.has(String(wallet).toLowerCase())) return { ok: false, why: 'launch_private' };
+  // while launching is private (LAUNCH_ONLY_FOR), only AGI Studio's own list gets a link (the owner, STUDIO_ONLY_FOR's, the
+  // team, and since 2026-10-11 the wallets the owner let in): never everyone just because AGI Studio is open
+  if (!L.launchOpen(cfg) && !(await (await import('./inf-team.js')).onList(cfg, wallet))) return { ok: false, why: 'launch_private' };
   const i = await rpc(cfg, 'inf_get', { p_id: id }, 'studio');
   if (!i || i.status === 'deleted' || i.hidden === true || takenDown(cfg, id)) return { ok: false, why: 'gone' };
   if (i.wallet_code !== studioWallet(cfg.passSecret, wallet)) return { ok: false, why: 'not_yours' };

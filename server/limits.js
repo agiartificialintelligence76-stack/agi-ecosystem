@@ -105,6 +105,10 @@ for (const fn of ['inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim'
 for (const fn of ['inf_make', 'inf_job_part']) {
   MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (its round 4, phase 4: the model menu, references, long videos and memes; it ends with influencers_ready = 1)`;
 }
+// …and giving access (2026-10-11: who may use AGI Studio while it's private, from the owner's tab)
+for (const fn of ['inf_access_list', 'inf_access_set']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (giving access from the owner's tab; it ends with influencers_ready = 1)`;
+}
 
 // CloakMesh's waitlist (inference.agi1.app, 2026-10-03): supabase/cloakmesh.sql
 for (const fn of ['cloakmesh_ready', 'cloakmesh_join', 'cloakmesh_leave']) {

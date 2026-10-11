@@ -170,6 +170,8 @@ function database() {
     // code → code), who joined through whose invite (wallet code → { by_code, welcomed, earned, at }), an inviter's rewards a
     // month (`${code}|${month}` → earned), and the top-ups whose rewards were settled (tx ref → { friend, reward, welcome, at })
     gifts: new Map(), refs: new Map(), invited: new Map(), refMonths: new Map(), refPaid: new Map(),
+    // (2026-10-11) who may use AGI Studio while it's private: the wallets the owner let in (wallet code → { short, note, via, added })
+    access: new Map(),
     makerOf(walletCode) { return this.names.get(walletCode)?.name ?? null; },
     bannedNow(c) { return this.bans.some((b) => b.wallet_code === c && !b.lifted); },
     cred(c) { if (!this.credits.has(c)) this.credits.set(c, { paid: 0, free: 0, free_month: null, bonus: 0 }); return this.credits.get(c); },
@@ -1080,7 +1082,27 @@ function database() {
     // ---- (round 4, phase 2) the team, bans, support tickets, the AI helper, alerts, the owner's numbers ----
     inf_who({ p_wallet }) {
       const m = this.staff.get(p_wallet);
-      return { role: m?.role ?? null, nick: m?.nick ?? null, banned: this.bannedNow(p_wallet) };
+      return { role: m?.role ?? null, nick: m?.nick ?? null, banned: this.bannedNow(p_wallet), access: this.access.has(p_wallet) };
+    },
+    // ---- (2026-10-11) giving access while AGI Studio is private ----
+    inf_access_list() {
+      return [...this.access.entries()].sort((x, y) => y[1].added - x[1].added).map(([c, a]) => ({
+        code: c, short: a.short, note: a.note, via: a.via, added_at: iso(a.added), staff: this.staff.has(c),
+      }));
+    },
+    inf_access_set({ p_wallet, p_short, p_note, p_via, p_on, p_max }) {
+      if (!code(p_wallet) || typeof p_on !== 'boolean') return no('bad');
+      if (!p_on) return this.access.delete(p_wallet) ? ok({ added: false }) : no('gone');
+      if (!/^0x[0-9a-f]{4}…[0-9a-f]{4}$/.test(String(p_short)) || !['owner', 'credits'].includes(p_via)
+        || (p_note !== null && ([...String(p_note)].length < 1 || [...String(p_note)].length > 24)) || !(p_max >= 1)) return no('bad');
+      const was = this.access.get(p_wallet);
+      if (was) {
+        if (p_via === 'owner') this.access.set(p_wallet, { ...was, short: p_short, note: p_note, via: 'owner' });
+        return ok({ added: false });
+      }
+      if (this.access.size >= p_max) return no('too_many');
+      this.access.set(p_wallet, { short: p_short, note: p_note, via: p_via, added: now() + this.access.size });
+      return ok({ added: true });
     },
     inf_staff_list() {
       return [...this.staff.entries()].sort((x, y) => x[1].added - y[1].added).map(([c, m]) => ({
@@ -1328,7 +1350,7 @@ beforeEach(async () => {
   for (const k of SETTINGS) delete process.env[k];
   Object.assign(process.env, ENV);
   _resetStudioKey(); _resetBurnKey(); _resetStudioChain(); _resetChainCache(); _resetInfApi(); W._resetWeekClock(); forgetPrizes(); K.forgetFfmpeg();
-  T._resetTeam(); A._resetAdmin();
+  T._resetTeam(); T._resetAccess(); A._resetAdmin();
   for (const b of [infLookBurst, infActBurst, infUpBurst, infFileBurst]) b.reset();
   logs = [];
   console.error = (...a) => logs.push(a.join(' ')); console.warn = (...a) => logs.push(a.join(' ')); console.log = (...a) => logs.push(a.join(' '));
@@ -2837,10 +2859,13 @@ test('a new influencer: 18+ and the human check, its words checked first, its cr
   assert.deepEqual([r.status, r.body.error], [429, 'busy_day']);
   assert.equal(credits(BOSS).paid, 100);
   delete process.env.STUDIO_JOBS_A_DAY;
-  // private: not on its list
+  // private: not on its list (since 2026-10-11 the owner, STUDIO_OWNER, is always on it, STUDIO_ONLY_FOR or not)
   delete process.env.STUDIO_OPEN;
-  r = await start({}, { wallet: BOSS });
+  r = await start({}, { wallet: '0x9999999999999999999999999999999999999999' });
   assert.deepEqual([r.status, r.body.error], [403, 'closed']);
+  process.env.STUDIO_ONLY_FOR = OTHER;
+  r = await act('inf-me', {}, { wallet: BOSS });
+  assert.deepEqual([r.body.allowed, r.body.owner], [true, true], 'the owner');
   process.env.STUDIO_ONLY_FOR = BOSS;
   r = await start({}, { wallet: BOSS });
   assert.equal(r.status, 200);
@@ -3676,15 +3701,28 @@ test("the owner's credits for testing (round 3): free, to the owner's own wallet
   }
   assert.equal(dbCalls('inf_gift').length, before, 'nothing asked of the database for those');
   infActBurst.reset();
-  // while AGI Studio is private: a tester not on STUDIO_ONLY_FOR gets them, and the page is told it can't use them yet
+  // while AGI Studio is private (since 2026-10-11): a tester's wallet that isn't on its list is let in with them (the owner's
+  // access list, as "credits for testing"), and the page is told; one on it already (STUDIO_ONLY_FOR, the owner) stays as it is
   process.env.STUDIO_OPEN = '';
   process.env.STUDIO_ONLY_FOR = `${BOSS},${OTHER}`;
+  assert.equal((await act('inf-me')).body.allowed, false, 'not on its list yet');
   r = await boss({ to: WALLET, credits: 1000 });
-  assert.deepEqual([r.status, r.body.allowed], [200, false]);
+  assert.deepEqual([r.status, r.body.allowed, r.body.letIn], [200, true, true]);
+  assert.deepEqual(fake.db.access.get(codeOf(WALLET)), { short: '0x8ba1…ba72', note: null, via: 'credits', added: fake.db.access.get(codeOf(WALLET)).added });
+  assert.equal((await act('inf-me')).body.allowed, true, 'in now');
+  r = await boss({ to: WALLET, credits: 1000 });
+  assert.deepEqual([r.status, r.body.allowed, r.body.letIn], [200, true, false], 'in already');
   r = await boss({ to: OTHER, credits: 1000 });
-  assert.deepEqual([r.status, r.body.allowed], [200, true]);
+  assert.deepEqual([r.status, r.body.allowed, r.body.letIn], [200, true, false]);
   r = await boss({ to: 'me', credits: 1000 });
-  assert.deepEqual([r.status, r.body.allowed], [200, true]);
+  assert.deepEqual([r.status, r.body.allowed, r.body.letIn], [200, true, false]);
+  assert.equal(fake.db.access.size, 1, 'only the tester that needed it');
+  // its list full (or influencers.sql older than giving access): the credits are given, and the page says it can't use them yet
+  const tester2 = '0x6666666666666666666666666666666666666666';
+  fake.missing.add('inf_access_set');
+  r = await boss({ to: tester2, credits: 1000 });
+  assert.deepEqual([r.status, r.body.allowed, r.body.letIn], [200, false, false]);
+  fake.missing.delete('inf_access_set');
   // influencers.sql not run again since round 3: a 503 that names the fix in the log (once), nothing given
   fake.missing.add('inf_gift');
   r = await boss({ to: 'me', credits: 1000 });
@@ -3708,14 +3746,17 @@ test("the owner's credits for testing (round 3): free, to the owner's own wallet
   assert.equal(AW.giftPlanText(1000), '1,000 credits: about $10 of AI, paid from your own AI balance as they\'re used.');
   assert.equal(AW.giftText({ gave: 5000, self: true, to: BOSS, allowed: true }), 'Added 5,000 credits to your wallet 💜');
   assert.equal(AW.giftText({ gave: 20_000, self: false, to: WALLET, allowed: true }), `Added 20,000 credits to ${AW.shortAddress(WALLET)} 💜`);
-  assert.match(AW.giftText({ gave: 1, self: false, to: WALLET, allowed: false }), /^Added 1 credit to 0x8ba1…ba72 💜 While AGI Studio is private, that wallet can't use them yet: add it to STUDIO_ONLY_FOR in Vercel, then Redeploy\.$/);
+  assert.match(AW.giftText({ gave: 1, self: false, to: WALLET, allowed: false }), /^Added 1 credit to 0x8ba1…ba72 💜 While AGI Studio is private, that wallet can't use them yet: give it access in "Who can use AGI Studio" above\.$/);
+  assert.equal(AW.giftText({ gave: 1000, self: false, to: WALLET, allowed: true, letIn: true }), "Added 1,000 credits to 0x8ba1…ba72 💜 It can use AGI Studio now too: it's on your list above.");
   assert.deepEqual([AW.GIFT_MAX, AW.GIFT_CONFIRM, AW.GIFT_AMOUNTS], [100_000, 20_000, [1000, 5000, 20_000]]);
   for (const why of ['gift_credits', 'gift_to']) assert.notEqual(AW.errorText(why), AW.errorText('busy'), why);
   // the owner's page: the section, drawn once (what's typed survives the page's redraws), its second tap for big gifts
   const owner = read('src/studio/views/owner.js');
-  assert.match(owner, /export function giftSection\(ctx\)/);
-  // (round 4, phase 2: in the owner's page's own Testing tab, drawn once; the Content tab's sections are what's drawn again)
-  assert.match(owner, /const gift = giftSection\(ctx\);[\s\S]*?const testing = tabs\.panel\('testing'\);\s*put\(testing, gift\);/, 'outside the part the page redraws');
+  assert.match(owner, /export function giftSection\(ctx, \{ onLetIn = null \} = \{\}\)/);
+  // (round 4, phase 2: in the owner's page's own Testing tab, drawn once; the Content tab's sections are what's drawn again;
+  // since 2026-10-11 under "Who can use AGI Studio", which it reads again when a tester's wallet was let in)
+  assert.match(owner, /const access = accessSection\(ctx\);\s*const gift = giftSection\(ctx, \{ onLetIn: \(\) => access\.load\(\) \}\);[\s\S]*?const testing = tabs\.panel\('testing'\);\s*put\(testing, access\.node, gift\);/, 'outside the part the page redraws');
+  assert.match(owner, /if \(d\.letIn\) onLetIn\?\.\(\);/);
   assert.match(owner, /function draw\(\) \{\s*put\(body, weeksSection\(\), trendsSection\(\), examplesSection\(\), reportsSection\(\)\);/);
   assert.doesNotMatch(owner.slice(owner.indexOf('function draw()')), /\bgift\b(?!s)/, 'never drawn again');
   assert.match(owner, /if \(n >= GIFT_CONFIRM && armed !== n\)/);
@@ -3906,7 +3947,16 @@ test('a coin with its face: a launch draft with its look as its picture (no Tele
   assert.deepEqual([r.status, r.body.error], [403, 'launch_private']);
   process.env.STUDIO_ONLY_FOR = WALLET;
   assert.equal((await coin()).status, 200);
-  delete process.env.STUDIO_ONLY_FOR; delete process.env.LAUNCH_ONLY_FOR;
+  delete process.env.STUDIO_ONLY_FOR;
+  // (2026-10-11) …and a wallet the owner let in from the owner's tab (AGI Studio open to everyone never lets everyone in here)
+  T._resetTeam();
+  assert.deepEqual([(await coin()).status, process.env.STUDIO_OPEN], [403, 'yes']);
+  fake.db.access.set(codeOf(WALLET), { short: '0x8ba1…ba72', note: null, via: 'owner', added: Date.now() });
+  T._resetTeam();
+  assert.equal((await coin()).status, 200);
+  fake.db.access.clear();
+  T._resetTeam();
+  delete process.env.LAUNCH_ONLY_FOR;
   infActBurst.reset();
   // her checks of a coin
   for (const [extra, reason] of [[{ symbol: 'AGI' }, 'agi'], [{ description: 'buy now, 100x' }, 'money'], [{ name: 'Official Nova' }, 'official'], [{ symbol: 'NO VA' }, 'symbol']]) {
@@ -5546,8 +5596,8 @@ test('(round 4, phase 2) the team: the owner adds mods and support by their wall
   assert.deepEqual(fake.db.staff.get(codeOf(WALLET)), { role: 'support', nick: 'Juno B', short: '0x8ba1…ba72', added: first });
   assert.equal(r.body.team.length, 3);
   // its role, as the studio sees it now (the cache is never stale for a change: whoIs is read fresh for the team's work)
-  assert.deepEqual(await T.whoIs(cfgNow(), WALLET, { fresh: true }), { role: 'support', nick: 'Juno B', banned: false });
-  assert.deepEqual(await T.whoIs(cfgNow(), BOSS), { role: 'owner', nick: 'Owner', banned: false });
+  assert.deepEqual(await T.whoIs(cfgNow(), WALLET, { fresh: true }), { role: 'support', nick: 'Juno B', banned: false, access: false });
+  assert.deepEqual(await T.whoIs(cfgNow(), BOSS), { role: 'owner', nick: 'Owner', banned: false, access: true });
   assert.equal(T.may({ role: 'support' }, 'tickets'), true);
   assert.equal(T.may({ role: 'support' }, 'reports'), false);
   assert.equal(T.may({ role: 'mod' }, 'bans'), true);
@@ -5576,6 +5626,193 @@ test('(round 4, phase 2) the team: the owner adds mods and support by their wall
   fake.dbDown = true;
   r = await boss('inf-team-set', { address: SUPW, role: 'support', nick: 'Zed' });
   assert.equal(r.status, 503);
+});
+
+test("(2026-10-11) who can use AGI Studio while it's private: the owner lets a wallet in by its address (a scrambled code, never the address) or takes it off; the team, STUDIO_ONLY_FOR's and the owner are in without it; an older influencers.sql fails closed", async () => {
+  const FRIEND = '0x7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a';
+  const boss = (action, extra = {}) => act(action, extra, { wallet: BOSS });
+  const friend = (action, extra = {}) => act(action, extra, { wallet: FRIEND });
+  const design = { name: 'Kai', mode: 'design', style: 'anime', settings: { look: 'feminine', age: '20s' }, adult: true, turnstileToken: 'tok' };
+  delete process.env.STUDIO_OPEN;
+  process.env.STUDIO_ONLY_FOR = `${BOSS},${OTHER}`;
+  onTeam(MODW, 'mod', 'Kai');
+  // only the owner sees and changes the list: never a mod, support or anyone else
+  for (const [action, extra] of [['inf-access', {}], ['inf-access-set', { address: FRIEND }], ['inf-access-remove', { code: codeOf(FRIEND) }]]) {
+    for (const wallet of [FRIEND, MODW, WALLET]) {
+      const r = await act(action, extra, { wallet });
+      assert.deepEqual([r.status, r.body.error], [403, 'not_owner'], `${action} by ${wallet}`);
+    }
+  }
+  assert.equal(dbCalls('inf_access_set').length + dbCalls('inf_access_list').length, 0);
+  infActBurst.reset(); infLookBurst.reset();
+  // the list, empty; who else is in: the owner, the team (1), STUDIO_ONLY_FOR's in Vercel besides the owner's own (short)
+  let r = await boss('inf-access');
+  assert.equal(r.status, 200);
+  assert.deepEqual([r.body.open, r.body.list, r.body.max, r.body.noteMax, r.body.vercel, r.body.team], [false, [], 200, 24, ['0x2222…2222'], 1]);
+  // a friend who isn't on it: "private", nothing made, its whole address shown to it in My studio (to send)
+  r = await friend('inf-me');
+  assert.deepEqual([r.status, r.body.allowed], [200, false]);
+  r = await friend('inf-start', design);
+  assert.deepEqual([r.status, r.body.error], [403, 'closed']);
+  r = await friend('inf-up-open', { kind: 'picture', bytes: 200_000, consent: true, adult: true, turnstileToken: 'tok' });
+  assert.deepEqual([r.status, r.body.error], [403, 'closed']);
+  r = await friend('inf-topup', {});
+  assert.deepEqual([r.status, r.body.error], [403, 'closed']);
+  // the owner lets it in (its address in any case, spaces around it; a note only the owner sees, tidied): a scrambled code,
+  // its short address, never the address itself
+  infActBurst.reset();
+  r = await boss('inf-access-set', { address: ` ${FRIEND.toUpperCase().replace('0X', '0x')} `, note: '  Kai,   my​ friend ' });
+  assert.equal(r.status, 200);
+  assert.deepEqual([r.body.ok, r.body.added, r.body.entry], [true, true, { code: codeOf(FRIEND), short: '0x7a7a…7a7a', note: 'Kai, my friend' }]);
+  assert.deepEqual(r.body.list.map((a) => [a.code, a.short, a.note, a.via, a.staff]), [[codeOf(FRIEND), '0x7a7a…7a7a', 'Kai, my friend', 'owner', false]]);
+  assert.ok(Number.isFinite(r.body.list[0].added));
+  assert.deepEqual(dbCalls('inf_access_set').at(-1), { p_wallet: codeOf(FRIEND), p_short: '0x7a7a…7a7a', p_note: 'Kai, my friend', p_via: 'owner', p_on: true, p_max: 200 });
+  for (const c of [...dbCalls('inf_access_set'), ...dbCalls('inf_who')]) assert.ok(!JSON.stringify(c).toLowerCase().includes('7a7a7a7a7a7a7a7a7a7a'), 'never the address');
+  // in at once (this server copy forgets what it knew of that wallet): it makes things like anyone
+  r = await friend('inf-me');
+  assert.equal(r.body.allowed, true);
+  giveCredits(1000, FRIEND);
+  r = await friend('inf-start', design);
+  assert.equal(r.status, 200);
+  // its note changed by letting it in again; an empty note takes it off
+  r = await boss('inf-access-set', { address: FRIEND, note: 'Kai' });
+  assert.deepEqual([r.status, r.body.added, r.body.list.length, r.body.list[0].note], [200, false, 1, 'Kai']);
+  r = await boss('inf-access-set', { address: FRIEND, note: '   ' });
+  assert.deepEqual([r.status, r.body.list[0].note], [200, null]);
+  // every "no", and nothing asked of the database for them
+  infActBurst.reset();
+  const before = dbCalls('inf_access_set').length;
+  for (const [extra, error, status] of [
+    [{ address: '0x1234' }, 'access_address', 400],
+    [{ address: FRIEND.slice(2) }, 'access_address', 400],
+    [{ address: `${FRIEND}0` }, 'access_address', 400],
+    [{ address: 42 }, 'access_address', 400],
+    [{}, 'access_address', 400],
+    [{ address: BOSS }, 'access_self', 409],
+    [{ address: BOSS.toUpperCase().replace('0X', '0x') }, 'access_self', 409],
+    [{ address: OTHER, note: 'x'.repeat(25) }, 'access_note', 400],
+  ]) {
+    r = await boss('inf-access-set', extra);
+    assert.deepEqual([r.status, r.body.error], [status, error], JSON.stringify(extra));
+  }
+  assert.equal(dbCalls('inf_access_set').length, before);
+  // its list full (200 wallets): someone off first; one already on it can still be changed
+  for (let n = 0; n < 199; n++) fake.db.access.set(`fakecode-full-${String(n).padStart(6, '0')}`, { short: '0x1111…1111', note: null, via: 'owner', added: 1 + n });
+  r = await boss('inf-access-set', { address: WALLET });
+  assert.deepEqual([r.status, r.body.error], [409, 'access_full']);
+  r = await boss('inf-access-set', { address: FRIEND, note: 'still fine' });
+  assert.equal(r.status, 200);
+  for (const k of [...fake.db.access.keys()]) if (k.startsWith('fakecode-full-')) fake.db.access.delete(k);
+  // taken off (by its code from the list): "private" again for it, at once
+  infActBurst.reset();
+  r = await boss('inf-access-remove', { code: codeOf(FRIEND) });
+  assert.deepEqual([r.status, r.body.ok, r.body.list], [200, true, []]);
+  assert.equal((await friend('inf-me')).body.allowed, false);
+  r = await friend('inf-start', { ...design, name: 'Kai Two' });
+  assert.deepEqual([r.status, r.body.error], [403, 'closed']);
+  r = await boss('inf-access-remove', { code: codeOf(FRIEND) });
+  assert.deepEqual([r.status, r.body.error], [404, 'access_gone']);
+  for (const code of ['not a code!', '', null, 42, 'x'.repeat(65)]) {
+    r = await boss('inf-access-remove', { code });
+    assert.deepEqual([r.status, r.body.error], [400, 'bad_request'], String(code));
+  }
+  // in without the list: the team (a mod, support), STUDIO_ONLY_FOR's wallets and the owner; a member let in too says so
+  infActBurst.reset();
+  onTeam(SUPW, 'support', 'Zed');
+  T._resetTeam();
+  for (const w of [MODW, SUPW, OTHER, BOSS]) assert.equal((await act('inf-me', {}, { wallet: w })).body.allowed, true, w);
+  assert.equal((await act('inf-me')).body.allowed, false, 'not on it');
+  assert.deepEqual(await Promise.all([MODW, SUPW, OTHER, BOSS, WALLET, 'nope', null].map((w) => T.onList(cfgNow(), w))), [true, true, true, true, false, false, false]);
+  r = await boss('inf-access-set', { address: MODW });
+  assert.deepEqual(r.body.list.map((a) => [a.short, a.staff]), [['0x4444…4444', true]]);
+  assert.equal(r.body.team, 2);
+  // open to everyone (STUDIO_OPEN): everyone's in, and the owner's tab says nobody needs letting in (its list stays)
+  process.env.STUDIO_OPEN = 'yes';
+  assert.equal((await act('inf-me')).body.allowed, true);
+  assert.equal(await T.canUse(cfgNow(), 'not even an address'), true);
+  r = await boss('inf-access');
+  assert.deepEqual([r.body.open, r.body.list.length], [true, 1]);
+  assert.match(AW.accessIntroText(r.body), /^AGI Studio is open to everyone \(STUDIO_OPEN in Vercel\): nobody needs letting in\./);
+  delete process.env.STUDIO_OPEN;
+  // an older influencers.sql (before giving access): the list says to run it again (named in the log), nobody let in by it
+  T._resetTeam(); _resetInfApi();
+  infActBurst.reset(); infLookBurst.reset();
+  fake.missing.add('inf_access_list'); fake.missing.add('inf_access_set');
+  r = await boss('inf-access');
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  assert.ok(logs.some((l) => /inf_access_list not found: run supabase\/influencers\.sql again in this Supabase project \(giving access from the owner's tab; it ends with influencers_ready = 1\)/.test(l)), logs.join('\n'));
+  r = await boss('inf-access-set', { address: FRIEND });
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  assert.equal(AW.accessErrorText('not_ready'), 'Run supabase/influencers.sql again in Supabase first (it ends with influencers_ready = 1), then try again.');
+  fake.missing.clear();
+  // …its inf_who as before (it never says "access"): a wallet on the list isn't in by it; the team still is
+  fake.db.access.set(codeOf(WALLET), { short: '0x8ba1…ba72', note: null, via: 'owner', added: Date.now() });
+  const realWho = fake.db.inf_who;
+  fake.db.inf_who = function (args) { const { access, ...rest } = realWho.call(this, args); return rest; };
+  T._resetTeam();
+  assert.deepEqual([(await act('inf-me')).body.allowed, (await act('inf-me', {}, { wallet: MODW })).body.allowed], [false, true]);
+  // …and before the team (round 4's phase 2, no inf_who at all): only STUDIO_ONLY_FOR's and the owner; inf-me still answers,
+  // said once in the log
+  fake.db.inf_who = realWho;
+  fake.missing.add('inf_who');
+  T._resetTeam(); T._resetAccess(); logs.length = 0;
+  for (const [w, yes] of [[WALLET, false], [MODW, false], [OTHER, true], [BOSS, true]]) {
+    r = await act('inf-me', {}, { wallet: w });
+    assert.deepEqual([r.status, r.body.allowed], [200, yes], w);
+  }
+  assert.equal(logs.filter((l) => l.startsWith("[studio] couldn't read who may use AGI Studio (only STUDIO_ONLY_FOR's wallets for now)")).length, 1, logs.join('\n'));
+  fake.missing.clear();
+  T._resetTeam();
+  // the database away: the owner's tab says something went wrong; nobody else is let in (fail closed)
+  fake.dbDown = true;
+  r = await boss('inf-access');
+  assert.equal(r.status, 503);
+  assert.equal(await T.onList(cfgNow(), WALLET), false);
+  assert.equal(await T.onList(cfgNow(), OTHER), true, "STUDIO_ONLY_FOR's never need the database");
+  fake.dbDown = false;
+  // speed bumps: looking at the list like the owner's other looks, changing it like their other tools (20 a minute)
+  infActBurst.reset();
+  for (let n = 0; n < 20; n++) await boss('inf-access-set', { address: FRIEND });
+  r = await boss('inf-access-set', { address: FRIEND });
+  assert.deepEqual([r.status, r.body.error], [429, 'too_fast']);
+  infActBurst.reset();
+
+  // the words
+  assert.equal(T.accessNote('  a  b ').note, 'a b');
+  assert.deepEqual([T.accessNote('').note, T.accessNote(null).note, T.accessNote('x'.repeat(25)).ok, T.accessNote(`${'k'.repeat(23)}💜`).ok], [null, null, false, true]);
+  assert.deepEqual([T.ACCESS.MAX, T.ACCESS.NOTE_MAX], [200, 24]);
+  assert.equal(AW.accessIntroText({ open: false, vercel: [], team: 0 }), 'While AGI Studio is private, only the wallets on this list can make anything. Also in, without the list: you.');
+  assert.equal(AW.accessIntroText({ open: false, vercel: ['0x2222…2222'], team: 2 }), 'While AGI Studio is private, only the wallets on this list can make anything. Also in, without the list: you, your team (2 people) and 1 wallet in STUDIO_ONLY_FOR in Vercel (0x2222…2222).');
+  assert.equal(AW.accessDoneText({ short: '0x7a7a…7a7a', added: true }), '0x7a7a…7a7a can use AGI Studio now 💜 They connect that wallet and reload the page.');
+  assert.equal(AW.accessDoneText({ short: '0x7a7a…7a7a', added: false }), '0x7a7a…7a7a was on the list already: its note is saved.');
+  assert.deepEqual(AW.ACCESS_VIA, { owner: 'Let in by you', credits: 'Got credits for testing' });
+  for (const why of ['access_address', 'access_self', 'access_note', 'access_full', 'access_gone']) {
+    assert.ok(AW.errorText(why) && AW.errorText(why) !== AW.errorText('busy'), why);
+  }
+  // a wallet that isn't on it, told how to get in (its address in My studio, with Copy); never before it's signed in
+  assert.match(AW.studioText({ on: true, open: false }, { allowed: false }), /^AGI Studio is private for now, and this wallet isn't on its list yet\. Invited\? Send whoever invited you this wallet's address \(it's in My studio\), then reload once you're in\./);
+  assert.equal(AW.studioText({ on: true, open: false }, { allowed: true }), '');
+  assert.equal(AW.errorText('closed'), "AGI Studio is private for now, and this wallet isn't on its list yet.");
+  const meView = read('src/studio/views/me.js');
+  assert.match(meView, /warn \? \(s\.wallet && me\?\.allowed === false \? inviteBanner\(s\.wallet\) : h\('p', \{ class: 'sa-banner', text: warn \}\)\) : null,/);
+  assert.match(meView, /function inviteBanner\(wallet\) \{[\s\S]*?h\('code', \{ class: 'sa-mono sa-invite-addr', text: wallet \}\)[\s\S]*?copyText\(wallet, addr\)[\s\S]*?h\('p', \{ text: errorText\('closed'\) \}\),\s*h\('p', \{ class: 'sa-small', text: INVITE_TEXT \}\),\s*h\('div', \{ class: 'sa-row sa-invite-row' \}, addr, copy\),\s*h\('p', \{ class: 'sa-small', text: FOLLOW_TEXT \}\)\);/);
+  // (My studio's own words: never "it's in My studio" there, and "Invited?" once)
+  assert.equal(AW.INVITE_TEXT, "Invited? Send this wallet's address to whoever invited you. Once they've let it in, reload this page.");
+  assert.equal(AW.FOLLOW_TEXT, 'Not invited? Follow @agi1dotapp on X to hear when it opens to everyone.');
+  // what's kept, in AGI Studio's own rules (and the home page's safety note: the pages' test)
+  assert.match(read('studio.html'), /while AGI Studio is private whether your wallet is on its list \(its short address and the owner's note\), and a scrambled code of your wallet \(never its address\)\./);
+  // the owner's Testing tab: the card, read when the tab is first shown, every change through our server
+  const owner = read('src/studio/views/owner.js');
+  assert.match(owner, /export function accessSection\(ctx\) \{/);
+  for (const a of ["ctx.act('inf-access')", "ctx.act('inf-access-set', { address: a, note: n })", "ctx.act('inf-access-remove', { code: a.code })"]) assert.ok(owner.includes(a), a);
+  assert.match(owner, /if \(k === 'testing' && !accessAsked && ctx\.session\) \{ accessAsked = true; access\.load\(\); \}/);
+  assert.match(owner, /'Tap again to take off'/);
+  assert.match(owner, /text: 'Who can use AGI Studio'/);
+  assert.match(owner, /h\('span', \{ class: 'sa-mono', text: a\.short \}\), a\.note \? h\('span', \{ class: 'sa-access-note', text: a\.note \}\) : null/, 'shown as text');
+  assert.doesNotMatch(owner, /STUDIO_ONLY_FOR in Vercel\./, "never sends the owner to Vercel to let someone in");
+  const api = read('server/inf-api.js');
+  assert.doesNotMatch(api, /mayMake/, "AGI Studio's gates: canUse (the list), never STUDIO_ONLY_FOR alone");
+  assert.doesNotMatch(read('server/influencer.js'), /mayMake/);
 });
 
 test('(round 4, phase 2) the team\'s page: the owner, a mod and support each see and do their part (support: tickets; a mod: reports and bans too); anyone else nothing', async () => {
@@ -6127,6 +6364,8 @@ test('(round 4, phase 2) the pages: Help & support (/help), Mod tools (/mod), th
   const home = read('index.html');
   assert.match(home, /A question you ask its helper goes to the same kind of AI service with your one or two questions before it \(never its answers\)/);
   assert.match(home, /If you open a support ticket there, we keep what you write and the team's answers under the same code/);
+  // (2026-10-11) who may use AGI Studio while it's private: what its list keeps
+  assert.match(home, /While AGI Studio is private, a wallet its owner lets in is kept on its list as a scrambled code, with its short address \(like 0x12ab…cdef\) and the owner's own note, until it's taken off\./);
   const views = (f) => strip(read(`src/studio/views/${f}`));
   const support = views('support.js'), help = views('help.js'), mod = views('mod.js'), owner = views('owner.js'), me = views('me.js');
   for (const [f, code] of [['support.js', support], ['help.js', help], ['mod.js', mod], ['owner.js', owner], ['me.js', me]]) {
@@ -6939,7 +7178,7 @@ function rpcCalls(code) {
 test("influencers.sql's promises: every function our server calls is there with the parameters it sends, only the server's key, RLS on, never an address or an IP", async () => {
   const sql = read('supabase/influencers.sql');
   const fns = sqlFunctions(sql);
-  assert.equal(fns.size, 94);
+  assert.equal(fns.size, 96);
   const known = new Map([...fns, ...sqlFunctions(read('supabase/studio.sql'))]);
   // (round 4, phase 2: the team, support, the helper and the owner's tab too; phase 3: gifts and invites)
   const files = ['server/influencer.js', 'server/inf-api.js', 'server/inf-jobs.js', 'server/inf-uploads.js', 'server/credits.js',
@@ -6967,7 +7206,7 @@ test("influencers.sql's promises: every function our server calls is there with 
   for (const [fn, params] of fns) assert.equal(granted.get(fn), params.map((p) => p.type).join(', '), fn);
   // its tables: row level security on, nothing that names a wallet, a transaction or an IP address
   const tables = [...sql.matchAll(/create table if not exists public\.([a-z0-9_]+)/g)].map((m) => m[1]);
-  assert.equal(tables.length, 27);
+  assert.equal(tables.length, 28);
   for (const t of tables) assert.match(sql, new RegExp(`alter table public\\.${t} enable row level security;`), t);
   // (the one exception: a weekly prize's address and transaction, kept so it's never sent twice, the address only 60 days after
   // it's sent: the address a prize went to, never a person's wallet code's address)
@@ -6980,7 +7219,16 @@ test("influencers.sql's promises: every function our server calls is there with 
   assert.doesNotMatch(code, /\b(?:wallet|address|wallet_address|tx|tx_hash|transaction|ip|ip_address)\s+(?:text|inet|varchar|bytea)\b/i);
   assert.match(code, /wallet_code\s+text/);
   assert.doesNotMatch(code, /drop table|truncate|delete from public\.agi1_studio/i);
-  assert.match(sql, /'inf_burns_open', 'inf_slots', 'inf_stats', 'inf_gift',\n    'inf_name_get', 'inf_name_set', 'inf_caption_take',\n    'inf_who', [\s\S]*?'inf_mod_news',\n    'inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_ref_code',\n    'inf_ref_bind', 'inf_ref_settle', 'inf_job_part'\)\) = 94 then 1 else 0 end\)/, 'influencers_ready counts its 94 functions');
+  assert.match(sql, /'inf_burns_open', 'inf_slots', 'inf_stats', 'inf_gift',\n    'inf_name_get', 'inf_name_set', 'inf_caption_take',\n    'inf_who', [\s\S]*?'inf_mod_news',\n    'inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_ref_code',\n    'inf_ref_bind', 'inf_ref_settle', 'inf_job_part', 'inf_access_list', 'inf_access_set'\)\) = 96 then 1 else 0 end\)/, 'influencers_ready counts its 96 functions');
+  // (2026-10-11) giving access: its table (a scrambled code, a short address, the owner's note, how it got in; never the
+  // address), inf_who reading it, the owner's two functions; each found by the ready check
+  const accessTable = /create table if not exists public\.agi1_inf_access \(([\s\S]*?)\n\);/.exec(sql)?.[1] || '';
+  assert.match(accessTable, /wallet_code text\s+primary key/);
+  assert.match(accessTable, /short\s+text\s+not null check \(short ~ '\^0x\[0-9a-f\]\{4\}…\[0-9a-f\]\{4\}\$'\)/);
+  assert.match(accessTable, /via\s+text\s+not null default 'owner' check \(via in \('owner', 'credits'\)\)/);
+  assert.match(sql, /'access', exists \(select 1 from agi1_inf_access where wallet_code = p_wallet\)\);/);
+  assert.match(sql, /to_regclass\('public\.agi1_inf_access'\) is not null\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_who' and prosrc like '%agi1_inf_access%'\)/);
+  assert.match(sql, /if p_via = 'owner' then\n\s+update agi1_inf_access set short = p_short, note = p_note, via = 'owner' where wallet_code = p_wallet;/, "credits for testing never change the owner's note");
   // (round 4, phase 4) the model menu's columns, reference uploads, long videos' parts: the older inf_make dropped first (the web
   // API never has two to choose from), its new parameters with defaults (an older page's call still works), the share mark's
   // clock never taking a long video (its joined copy is marked), each found by the ready check
@@ -7028,7 +7276,8 @@ test("influencers.sql's promises: every function our server calls is there with 
   const limits = read('server/limits.js');
   const part = limits.slice(limits.indexOf('AGI Studio, the AI influencer app'), limits.indexOf('CloakMesh'));
   const lists = [...part.matchAll(/for \(const fn of \[([\s\S]*?)\]\)/g)];
-  assert.equal(lists.length, 7, 'its first version, its round 2, its round 3, its round 4 and its round 4\'s phases 2, 3 and 4 (run again)');
+  assert.equal(lists.length, 8, 'its first version, its round 2, its round 3, its round 4, its round 4\'s phases 2, 3 and 4, and giving access (run again)');
+  assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(giving access from the owner's tab; it ends with influencers_ready = 1\)/);
   assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(its round 4, phase 4: the model menu, references, long videos and memes; it ends with influencers_ready = 1\)/);
   assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(its round 4, phase 3: gifts and invites; it ends with influencers_ready = 1\)/);
   assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(its round 4, phase 2: the owner's tab, the team, support; it ends with influencers_ready = 1\)/);

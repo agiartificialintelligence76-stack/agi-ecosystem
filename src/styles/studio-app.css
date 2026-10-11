@@ -1944,3 +1944,18 @@ a.sa-maker-name:hover { text-decoration: underline; }
 .sa-prompt-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 6px; }
 .sa-prompt-label { font-size: 12.5px; font-weight: 600; color: var(--sa-text-2); }
 .sa-prompt-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--sa-text); overflow-wrap: anywhere; }
+
+/* ---------- (2026-10-11) who can use AGI Studio while it's private: the owner's Testing tab, and My studio's line for a
+   wallet that isn't on the list yet (its whole address to copy and send) ---------- */
+.sa-access { display: grid; gap: 12px; margin: 8px 0 28px; padding: 16px; border-radius: var(--sa-r); border: 1px solid rgb(167 139 250 / 0.28); background: radial-gradient(60% 100% at 100% 0%, rgb(139 92 246 / 0.1) 0%, transparent 70%), var(--sa-surface); }
+.sa-access .sa-section-head { margin-bottom: 0; }
+.sa-access-intro { margin: 0; max-width: 720px; }
+.sa-access-list > .sa-muted, .sa-access-list > .sa-banner { margin: 0; }
+.sa-access-note { font-family: inherit; font-weight: 550; font-size: 13px; color: var(--sa-text-2); overflow-wrap: anywhere; }
+.sa-access-form { display: grid; gap: 12px; max-width: 560px; margin-top: 4px; }
+.sa-access-form .sa-field { margin-top: 0; }
+.sa-access-form .sa-note { justify-self: start; }
+.sa-invite { display: grid; gap: 8px; }
+.sa-invite p { margin: 0; }
+.sa-invite-row { align-items: center; }
+.sa-invite-addr { min-width: 0; max-width: 100%; padding: 6px 9px; border-radius: var(--sa-r-sm); border: 1px solid var(--sa-line); background: rgb(0 0 0 / 0.28); font-size: 12.5px; overflow-wrap: anywhere; word-break: break-all; -webkit-user-select: all; user-select: all; }

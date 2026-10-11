@@ -228,7 +228,11 @@
 >   formats, their words, "Surprise me"), **Instant** (the owner: "call it a different name on that mode with differen color
 >   as well like fast": a mint-to-aqua switch, off by default, one tap on a ready-made idea makes it) and **Learn** (short
 >   lessons, and a first-time tip). **Run `supabase/influencers.sql` again before pushing each phase.** See "AGI Studio,
->   round 4".
+>   round 4". **And giving access** (the same day, the owner: "i want to give access to someone but it said to them comins
+>   soon fix that please"): while it's private, the owner lets a wallet in from the owner's Testing tab ("Who can use AGI
+>   Studio": its address, a note, one tap; no Vercel, no Redeploy), the team and testers given credits get in by themselves,
+>   and a wallet that isn't on the list reads what to do (its address in My studio, with Copy) instead of "opens soon".
+>   **Run `supabase/influencers.sql` again before pushing it.** See "Giving access while it's private".
 > - **Her launch video** (2026-10-03, the owner: "now create me a professional launch video with motion design using only
 >   code about the website and its features … make it really good"): a 79-second film of agi1.app, every frame drawn in
 >   code and its music made in code (`tools/promo/`), wide (1920 × 1080) and tall (1080 × 1920), 60 frames a second, for
@@ -566,7 +570,8 @@ percentage and the time left for anything being made: `progressBar()`, `barState
 phase 2 (2026-10-11) `views/help.js` (Help & support: the AI helper, your tickets, what we never ask for), `views/mod.js`
 (Mod tools, the team's page: tickets, reports, bans, its alerts link), `views/support.js` (what those two share: a ticket's
 sheet, opening one, the helper, the ban sheet), `owner.js` in four tabs (Overview: the balances, their alert levels, the
-alerts on Telegram, the numbers; Team; Content; Testing), `pageTabs()` in `ui.js` (tabs over a page's panels), and in
+alerts on Telegram, the numbers; Team; Content; Testing: since 2026-10-11 who can use AGI Studio while it's private,
+`accessSection()`, then credits for testing), `pageTabs()` in `ui.js` (tabs over a page's panels), and in
 `rules.js` the topics and limits of tickets (`TICKET_TOPICS`, `TICKETS`), the helper's (`HELPER`) and the reasons for a ban
 (`BAN_REASONS`); and since round 4's phase 3 (the same day) `views/gifts.js` (My studio's "Gifts and invites" card, giving
 to a wallet, a gift link, the sheet a gift link opens) and in `rules.js` the rules of gifts and invites (`GIFTS`,
@@ -631,7 +636,8 @@ ideas and its switch's memory), `views/learn.js` (Learn and first-time tips), `c
 (captions written by AI for a post: counted first, every one checked again, `MONEY`) and `clank-names.js` (clank.trade
 usernames: a profile read with clank.trade's API, kept only when its wallet is the one signed in, read again weekly); and
 (round 4's phase 2, the same day) `inf-team.js` (the team: who a wallet is (`whoIs()`), what each role may do (`CAN`),
-adding and removing members, bans, support tickets), `inf-help.js` (the AI helper: its guide, `helpGuide()`, its request
+adding and removing members, bans, support tickets; since 2026-10-11 who may use AGI Studio while it's private: `canUse()`,
+`onList()` and the owner's list, `accessList()`, `accessSet()`, `accessRemove()`), `inf-help.js` (the AI helper: its guide, `helpGuide()`, its request
 and its answer cleaned) and `inf-admin.js` (the owner's tab: the AI services' balances, the alert levels, the numbers, the
 alerts on Telegram, their links' codes and the studio clock's part, `adminClock()`); and (round 4's phase 3, the same day)
 `inf-gifts.js` (gifts of bought credits, gift links, invite codes, joining through one, its rewards settled) |
@@ -661,7 +667,9 @@ the owner's levels and numbers): run it again, before pushing** (it keeps everyt
 rewards), and bonus credits (`agi1_credits.bonus`, and each spend's bonus part in the log): run it again, before
 pushing** (it keeps everything saved; it still ends with `influencers_ready = 1`). **Since round 4's phase 4 (the same day):
 94 functions (`inf_job_part`), a job's model menu (model, quality, seconds, parts, references, meme), reference uploads:
-run it again, before pushing** (it still ends with `influencers_ready = 1`) |
+run it again, before pushing** (it still ends with `influencers_ready = 1`). **Since giving access (the same day): 28 tables
+(`agi1_inf_access`, who may use AGI Studio while it's private) and 96 functions (`inf_access_list`, `inf_access_set`, and
+`inf_who` says whether a wallet is on the list): run it again, before pushing** (it still ends with `influencers_ready = 1`) |
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
 | `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, since 2026-10-08 her live show's hands (an arm reaching a point, a hand turned and curled, her round elbow), "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there; since 2026-10-11 AGI Studio's alerts: `/start` with an alerts link, and `/stop`), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras; since 2026-10-09 questions of any length, any name but crude or posing ones, a Telegram question with the person's Telegram name, other coins and famous people in her live rules, the `ADVICE` safety net, her memory of the group on stream, her chart's trades; since 2026-10-10 her holder perks: a wallet's level with a question, her 💜 badge and its 5 a day, the head start in her line, old and new live.sql, the page's wallet), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page; since 2026-10-08 her poses (never a paddle, never on her chest), her hands (always her palm, never turned or curled past their limits, what she holds in front of her palm with her fingers or thumb over it) and her hands on their way, frame by frame on her springs; since 2026-10-09 requests that never wait, all of her song's words, reading the question out loud, her song's music video, her live $AGI chart and where she reads messages), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end; since 2026-10-08 cutting the paintings out, what the first ones needed, the stand-ins, the conical hat, her glasses' clear lenses, her headset on her ears and her headphones on her head), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note), `games.test.js` (2026-10-09: her quizzes: her questions' rules, a quiz as Telegram takes it, picking and shuffling, a winner's name, the settings, `/api/feed?games` and its key, a tick (just for fun without prizes), her bot hearing answers, answers, closing and the draw, her result, claiming in her private chat (18+, the address's checks, the transfer itself, every way sending can go, never twice), a secret sent to her by mistake, her groups' /help, intro and /claim, her quiz lines' rules, loading light, games.sql's promises, the safety note), `studio.test.js` (2026-10-10: AGI-1's 3D character studio: its rules, a character's words, Meshy's requests, its files made small, Storage, payments on the chain, the settings and codes, quotes, paying, "Check my payment", the making and every way it can go, the clock, `/api/launch` and `/api/feed?studio`; its page's 3D view (clips, in place, framed), words and promises, the safety note), `videos.test.js` (2026-10-10: its characters' videos: the rules and settings, a scene's checks and the video service's words, fal's queue (requests, states, results, errors, the key never in one), its files (only fal's addresses, MP4s, Storage, signed addresses, a part read with Range), what anyone sees, quotes, USDG payments, made again, the making and every way it can go, the clock, every GET (played in parts: 206, 416, 302) and POST, the page and its CSP, 12 functions), `influencer.test.js` (2026-10-10: AGI Studio: its rules and words, the AI requests as fal's pages write them, Gemini's looks, uploads (tickets, a picture made plain, a clip in parts, its length from its header, posters), credits (free first, given back once, top-ups once, a month's free ones), an influencer from start to ready, its photos, trend and scene videos, the clock and the tidy-up, Explore and its page, public and deleting, reports and the owner's tools, its 3D models, its coin, every GET and POST, the app's page and promises, `influencers.sql`'s promises; since its round 2 a photo of a real person with consent (and never one without its box), the trend clips and their swap, example pictures, likes and the weekly spotlight (its pick, the owner's look, its prize sent once), burn unlocks and a 3D model for a big burn, the share mark on photos and videos, the stats board, no camera anywhere; since its round 3 the owner's credits for testing (only the owner, 1 to 100,000, to the owner's own wallet or a tester's, spent and given back like bought ones); since its round 4 progress bars (their numbers, never back, our server's clock), X
 banners (the cut, never a video's start), captions (ready-made and by AI, never about money) and clank.trade usernames
@@ -671,7 +679,9 @@ key), the AI helper, the owner's tab (balances, levels, numbers, the team) and i
 3 gifts of bought credits (to an address or a name, every "no"), gift links (claimed once, taken back, held while their
 sender is banned, back by themselves), invites (joined once, the welcome with a first top-up of $5 or more, the inviter's 10%
 and its caps), bonus credits (spent after free ones, before bought ones) and the page's promises (a gift link's secret only
-in POST bodies and the address's fragment)). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+in POST bodies and the address's fragment); since 2026-10-11 who may use AGI Studio while it's private (the owner's list, the
+team and `STUDIO_ONLY_FOR`'s, credits for testing letting a tester in, an older `influencers.sql` failing closed, the
+friend's words)). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`), `art-cut.mjs` (Claude makes them ready: one of each, cut out of its green, made small) and `art-picks.json` (which one of each), into `page/art/` (her places, rooms, rides, the people she meets and what she wears, WebP, in git), which `page/paint.js` finds when her set is built; and since 2026-10-09 `page/chart.js` ($AGI's live trading chart on her TV, drawn in code), her song's music video (`media.js`: found in her videos folder, made ready once) and all of her song's words (`songs/feel-the-agi.json`). See "Her live show on X", "Her stream, upgraded", "Her trips", "Her painted set" and "Her show, 2026-10-09" |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
@@ -6574,6 +6584,84 @@ the arrows, Surprise me, a meme's format never unpicked; Copy prompt on a trend 
 toast, at 1440 and 390 px), a photo's and a trend video's, the Trend tool's; axe 0 issues, nothing blocked by the CSP, clean
 consoles).
 
+#### Giving access while it's private (2026-10-11)
+
+**The owner:** "i want to give access to someone but it said to them comins soon fix that please". While AGI Studio is private,
+only the wallets in Vercel's `STUDIO_ONLY_FOR` could make anything, and everyone else read "AGI Studio is private for now: it
+opens to everyone soon" (the "coming soon" the friend saw). The quick way out that day (adding the friend's wallet to
+`STUDIO_ONLY_FOR`, then Redeploy) still works; this makes it one tap, with no Vercel and no Redeploy.
+
+**What the owner sees** (Owner tools → **Testing**, above credits for testing; `accessSection()` in `views/owner.js`):
+- **Who can use AGI Studio:** its first line says who's in without the list ("Also in, without the list: you, your team (2
+  people) and 1 wallet in STUDIO_ONLY_FOR in Vercel (0x2222…2222).", or that it's open to everyone with `STUDIO_OPEN`), then
+  the list, newest first: each wallet's short address, the owner's note, "Let in by you" or "Got credits for testing", since
+  when, "on your team too", and **Take off** (a second tap: "Tap again to take off", forgotten after 5 s).
+- **Give someone access:** their wallet's address (the one they'll connect: they can copy it from My studio) and a note if the
+  owner likes (24 characters, only the owner sees it), **Give access** → "0x6666…6666 can use AGI Studio now 💜 They connect
+  that wallet and reload the page." The same wallet again changes its note ("was on the list already: its note is saved").
+  Every "no" under the form, with the keyboard back on its box: not an address, the owner's own wallet ("it's always in"), a
+  note too long, the list full (200).
+- **Credits for testing let a tester in:** giving credits to a tester's wallet while AGI Studio is private puts it on the
+  list too ("Added 1,000 credits to 0x7777…7777 💜 It can use AGI Studio now too: it's on your list above."), as "Got credits
+  for testing". A wallet already on it stays as it was; one the list couldn't take (full, or an older `influencers.sql`) is
+  said ("…that wallet can't use them yet: give it access in "Who can use AGI Studio" above."). Never in Vercel any more.
+
+**What the friend sees** (a connected wallet that isn't on the list, while it's private): Explore and Create: "AGI Studio is
+private for now, and this wallet isn't on its list yet. Invited? Send whoever invited you this wallet's address (it's in My
+studio), then reload once you're in. Or follow @agi1dotapp on X to hear when it opens to everyone." My studio: "AGI Studio is
+private for now, and this wallet isn't on its list yet.", "Invited? Send this wallet's address to whoever invited you. Once
+they've let it in, reload this page.", their whole address with **Copy address**, and "Not invited? Follow @agi1dotapp on X to
+hear when it opens to everyone." Never "opens soon" (that's only for a studio that isn't set up). Signed out: nothing about the
+list (it can't know the wallet yet). Let in, a reload and it's theirs.
+
+**How it works:**
+- **Who may use it** (`canUse()` in `server/inf-team.js`, at every gate that used `STUDIO_ONLY_FOR` alone: starting an
+  influencer, its uploads, buying credits, giving credits, a burn's quote, a clank.trade name, `inf-me`'s `allowed`): open to
+  everyone (`STUDIO_OPEN`), or on its list (`onList()`): the owner's wallet, `STUDIO_ONLY_FOR`'s, the team's (mods and
+  support), or a wallet the owner let in. Read with the team's `whoIs()` (kept 20 s per server copy: a friend let in a moment
+  ago may need a second reload on another copy), so it costs no extra database call. The database away, or an
+  `influencers.sql` older than this: only the owner's and `STUDIO_ONLY_FOR`'s (fail closed), said once in the log.
+- **A coin link while launching is private** (`LAUNCH_ONLY_FOR`): AGI Studio's own list gets one (the owner,
+  `STUDIO_ONLY_FOR`'s, the team, the wallets let in), never everyone just because AGI Studio is open.
+- **The owner's actions** (`/api/launch`, the owner's tools' checks): `inf-access` (the list, and who's in without it),
+  `inf-access-set` (`address`, `note`), `inf-access-remove` (`code`).
+
+**What's kept** (`agi1_inf_access` in `supabase/influencers.sql`, only the server's key): per wallet let in its scrambled code
+(never the address), its short address ("0x12ab…cdef", to tell them apart), the owner's note, how it got in and when; taken off,
+it's deleted. The safety note's 04 and AGI Studio's own "What's kept" say so.
+
+**Owner, in this order:**
+1. **Supabase** → SQL Editor → New query → paste **all** of `supabase/influencers.sql` → Run → `influencers_ready = 1` (28
+   tables, 96 functions). **Before pushing:** the new code reads who's on the list from it (with the version before it, the
+   list says to run it again, and nobody gets in but you, `STUDIO_ONLY_FOR`'s and your team).
+2. **Push.**
+3. Owner tools → **Testing** → **Who can use AGI Studio** → paste the friend's wallet address (they copy it from My studio) →
+   **Give access**. They reload the page. To let someone go: **Take off** (two taps).
+
+**Cost:** nothing.
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| "Run supabase/influencers.sql again in Supabase first…" on the Testing tab | `[studio] the studio app: inf_access_list not found: run supabase/influencers.sql again in this Supabase project (giving access from the owner's tab; …)` | Owner step 1, then Try again |
+| A friend let in still reads "private for now" | (none) | They reload once more after a few seconds (a server copy keeps who's who 20 s), with the same wallet they sent you |
+| Nobody but you and `STUDIO_ONLY_FOR`'s get in | `[studio] couldn't read who may use AGI Studio (only STUDIO_ONLY_FOR's wallets for now): …` | The database (a paused Supabase project: resume it), or `influencers.sql` not run again |
+| "The list is full (200 wallets)" | (none) | Take someone off, or open AGI Studio to everyone (`STUDIO_OPEN`) |
+
+**Tests:** `tests/influencer.test.js` (70 since then: who can use it (the owner, `STUDIO_ONLY_FOR`'s, the team, the list; a
+friend let in, its note changed, every "no", taken off, gone and bad codes; open; an older `influencers.sql` failing closed
+with its log line once; the database away); credits for testing letting a tester in; coin links; the words, the pages and the
+safety note). `supabase/influencers.sql` in PGlite (Claude's scratch `pg/infsql8.mjs` and the earlier phases' checks with
+the access table: 10 groups, then 55, 9, 16, 12, 19 and 13). In a browser with our own server's code answering the page
+(`app/real9.mjs`, 164 checks: the Testing tab (its first line, an empty list, every "no", a friend let in with a note, the
+same wallet again, taken off with two taps, credits for testing letting a tester in, the list kept across tabs), the friend's
+My studio at 390, 360 and 1440 px (its three lines, the address, Copy) and Explore's and Create's words, then let in and
+reloaded, taken off again; a mod and `STUDIO_ONLY_FOR`'s wallet in without the list, the owner's first line naming them; open
+to everyone; an older `influencers.sql` and Try again; phones; axe 0 issues, nothing blocked by the CSP, clean consoles).
+715 in the whole suite (1 skipped as before) on Node 20, 22 and 24, with and without Vercel's settings, as if the clock said
+later times, and the full `npm run build`, in a copy of the owner's folder with only these changes.
+
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
 **The owner's project:** CloakMesh, "a Zero-Gateway P2P confidential AI inference network", whose Phase 1 Claude built in
@@ -7801,6 +7889,11 @@ that stays with the button and its price; the gallery on the right; on phones a 
   by a wallet that never bought credits (never its own code, never a wallet it invited); rewards only ever bonus credits
   (never money or $AGI), each friend's top-up counted once, at most 500 from one friend and 5,000 a month for an inviter,
   nothing for a banned friend or inviter. A code kept in a browser goes only in `inf-ref-bind`'s body, 30 days at most.
+- **Giving access** (2026-10-11): only the owner's signed-in wallet reads or changes the list (`inf-access…`, the owner's
+  tools' checks; a wallet let in by credits for testing, only through the owner's own gift); a wallet is kept as a scrambled
+  code and its short address, never the address. Who's in is decided on our server for every gate (`canUse()`), never by
+  the page; the database away: only the owner and `STUDIO_ONLY_FOR`'s (fail closed). Being on the list changes nothing else
+  (the same credits, prices, rules and bans as everyone).
 
 ### CloakMesh's waitlist (`/api/cloakmesh`, 2026-10-03, see "CloakMesh at inference.agi1.app")
 - The one piece of personal data is the email address, kept only to tell people about CloakMesh; never the internet
@@ -7949,7 +8042,7 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `LIVE_SECRET` | **yes** | Her live show (2026-10-02): 32+ random characters, the same as on the owner's server (`/opt/agi1-live/live.env`). Her stream runner's key for `/api/live`; the owner's phone link is made from it (changing it changes the link). Without it, agi1.app/live says her show is coming soon |
 | `MESHY_API_KEY` | **yes** | AGI-1's 3D character studio (2026-10-10): Meshy's API key (`msy_…`, from Meshy's developer platform; give it a monthly credit limit there). Without it, no 3D models (in AGI Studio too) |
 | `STUDIO_PAY_TO` | no | The owner's own wallet address on Robinhood Chain, where USDG for characters goes, and since AGI Studio for its credits (an address, never a key). Without it, nobody can buy credits |
-| `STUDIO_ONLY_FOR` | no | While the studio is private: the wallet addresses that may make a character, and in AGI Studio an influencer or buy credits (separated by commas). Nobody else can, until `STUDIO_OPEN`. Its first wallet is AGI Studio's owner, unless `STUDIO_OWNER` says otherwise |
+| `STUDIO_ONLY_FOR` | no | While the studio is private: the wallet addresses that may make a character, and in AGI Studio an influencer or buy credits (separated by commas). Nobody else can, until `STUDIO_OPEN`. Its first wallet is AGI Studio's owner, unless `STUDIO_OWNER` says otherwise. Since 2026-10-11 AGI Studio also lets in the team and the wallets the owner adds on the owner's tab (Testing → "Who can use AGI Studio": no Redeploy), so this needs only the owner's wallet |
 | `STUDIO_OPEN` | no, optional | `yes` = anyone may make a character, and use AGI Studio (after checking the AI services' terms: see "Open questions"). Not set: private |
 | `STUDIO_PRICE_USD` | no, optional | A Stranger's price in USDG, in dollars (default 5; 0.50 to 100); Crush 20% off, Soulmate 40% off. Since AGI Studio only for a character ordered before it (new ones are paid in credits) |
 | `STUDIO_PRICE_AGI` | no, optional | A Stranger's price in burned $AGI, whole (default 15,000). Since AGI Studio only for a character ordered before it |
@@ -8600,6 +8693,14 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said later times), the build, 85 checks in a
   browser with our own server's code. Next (the owner's list the same day): meme templates and their editor, songs for
   videos (the owner's three choices), live support, the guide with arrows, the video guides.
+- **Giving access while it's private: built 2026-10-11, waiting for the owner's setup and push** (the owner: "i want to give
+  access to someone but it said to them comins soon fix that please"; meanwhile the friend's wallet in `STUDIO_ONLY_FOR`,
+  then Redeploy): the owner's Testing tab lets a wallet in by its address (a note, one tap; taken off with two), the team and
+  testers given credits get in by themselves, coin links follow AGI Studio's list, and a wallet that isn't on it reads what to
+  do (its address in My studio, with Copy). See "Giving access while it's private". **Owner:** `supabase/influencers.sql`
+  again (before pushing), push. Tests: 716 unit (715 pass, 1 skipped as before; on Node 20, 22 and 24, with and without
+  Vercel's settings, and as if the clock said later times), the full build, the SQL checks in PGlite, 164 checks in a
+  browser with our own server's code (and phase 2's 186, phase 3's 225 and the chips' 85 again).
 
 ## Decisions log
 
@@ -8892,6 +8993,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-11 | Copy prompt (the owner: "they can copy prompt from the trends"): our trend clips' prompts as words people can use (their scene, camera and sound, fitting a scene's box), never the AI's whole request (its safety words are ours to keep); a photo's or a video's own scene, already shown with it. Not picked: a "Use this prompt" that fills a tool by itself (Copy and paste works in every tool), showing other makers' words in Explore before they're in its data |
 | 2026-10-11 | Songs for videos (the owner: "when they make a video thay can use popular ongs or trend songs like in higgsfield genjutsu"): real popular songs can't be built in (each needs its record label's and publisher's licenses; without them videos get muted or taken down, and the studio gets legal notices). Higgsfield's Genjutsu page only talks about rebuilding a clip you upload, not a song library. The owner picked all three of Claude's options: **AI trend songs** (our own songs in today's trend styles, made once by the owner with Google's music AI on fal.ai, about $0.04 each, picked under Video and Trend), **keeping their own clip's song** in a trend video (their responsibility; a way for rights holders to ask for a takedown first), and **a tip to add TikTok's or Instagram's own sound** when posting (they hold the licenses). To build |
 | 2026-10-11 | Found while testing phase 3, and fixed: a gift note holding a seed phrase was refused as "too long" (the check for a secret comes first now, with its own warning), and the safety note said a gift link's secret was kept "until the link is claimed, taken back or expires" (it stays with its gift, so an old link can say what became of it, and a gift that's done goes a year later): corrected, and tested |
+| 2026-10-11 | Giving access while AGI Studio is private (the owner: "i want to give access to someone but it said to them comins soon fix that please"; the friend read "AGI Studio is private for now: it opens to everyone soon"): a list in the database the owner changes from the owner's Testing tab (a wallet's address and a note, one tap; taken off with two), so letting someone in never needs Vercel or a Redeploy; the owner, `STUDIO_ONLY_FOR`'s and the team get in without it, and a tester given credits is put on it. One rule for every gate on our server (`canUse()`), read with the team's `whoIs()` (no extra database call; 20 s per server copy). A wallet that isn't on it is told what to do (its address in My studio, with Copy), never "opens soon". Coin links while launching is private follow the same list. Not picked: invite links (a link can be passed on), a list in Vercel's settings (a Redeploy each time), opening AGI Studio to everyone (the AI services' terms first: see "Open questions") |
 
 ## Open questions
 
@@ -9186,6 +9288,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   - **Credits for testing** (round 3): a gift has no daily cap, since only the owner's wallet can give them. Anyone signed
     in as the owner's wallet in a browser (a shared or borrowed computer) could give themselves credits and spend the
     owner's fal balance, up to `STUDIO_JOBS_A_DAY` jobs a day: Disconnect on a computer that isn't yours.
+  - **Giving access** (2026-10-11): letting a friend in while AGI Studio is private lets them make things with credits
+    they buy, and so sell-like questions start with them too (the AI services' terms, see above); the list says who's in
+    and since when, and **Take off** ends it. Someone let in can hand their wallet to someone else: the list is per wallet,
+    not per person.
   - **clank.trade's API for usernames** (round 4): `profiles.byUsername` is clank.trade's own, undocumented, read the way
     its website calls it; its answer's shape (a `username` and an `address`) isn't confirmed live (Claude's workspace can't
     reach clank.trade). If it changes, "Show it" says clank.trade didn't answer (nothing breaks); the owner's first "Show
@@ -9279,5 +9385,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 - **Browser tests read words with `textContent`, not `innerText`** (2026-10-10): `innerText` follows the CSS
   (`text-transform: uppercase` made "Nova" read "NOVA"). And Playwright calls the label of a disabled input "not enabled":
   a label that opens a file picker is clicked with `force: true`, after clearing toasts that may cover it.
+- **A button whose words change is found by where it is, not by its words** (2026-10-11): a Playwright locator by its name
+  ("Copy address") loses the button once it says "Copied", and waits until the words come back (2.5 s later), so the check
+  read "Copy address". And two forms on one page never share a class a test looks inside (`.sa-team-form .sa-err` found the
+  access form's too: it has its own class, `sa-access-form`, since).
+- **Claude runs the whole suite in a copy of this folder with only the change being handed over** (2026-10-11), when its
+  workspace holds unfinished work (the meme templates' files and `opentype.js` that day): this folder's own `package.json`,
+  the workspace's `node_modules` linked in, and `NODE_PRESERVE_SYMLINKS=1` (else the share mark's ffmpeg test reads the
+  link's real path and fails).
 - The Claude desktop app saves copies of files Claude sends in chat into `Claude outputs/`. Git ignores that folder,
   and its copies (including any CLAUDE.md there) may be out of date. The CLAUDE.md at the top of this folder is the current one.

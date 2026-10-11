@@ -8,12 +8,15 @@
 //   • Content: the spotlight of the week (round 2: approve it with its prize, or skip it to the next best), the trend clips
 //     (made once by the AI service from the owner's own balance, never credits; the owner keeps the good ones), the example
 //     pictures for Create's choices (round 2), and the reports (hide what shouldn't be here);
-//   • Testing: credits for testing (round 3: free, to the owner's own wallet or a tester's).
+//   • Testing: who can use AGI Studio while it's private (2026-10-11, the owner: "i want to give access to someone but it said
+//     to them comins soon fix that please": let a wallet in by its address, or take it off), and credits for testing (round 3:
+//     free, to the owner's own wallet or a tester's; a tester's wallet is let in with them).
 import { h, icon, btn, linkBtn, busy, pic, put, add, say, nextId, pageTabs, segmented } from '../ui.js';
 import { infVideo, infPoster, infPic, infExample, REPORT_WHYS, EXAMPLES, EXAMPLE_KINDS, INF_STYLES, OPTIONS, creditsText } from '../rules.js';
 import {
   errorText, agoText, failText, num, compact, weekText, prizeText, WEEK_STATUS, shortAddress, GIFT_AMOUNTS, GIFT_MAX, GIFT_CONFIRM,
   giftPlanText, giftText, dayText, BALANCE_STATE, balanceValueText, balanceLowText, adminNumbers, MADE_KINDS, ROLE_NAMES, ROLE_NOTES,
+  ACCESS_VIA, accessIntroText, accessDoneText, accessErrorText,
 } from '../app-words.js';
 import { makePosters } from '../media.js';
 import { progressBar } from '../progress.js';
@@ -33,8 +36,8 @@ export function exampleName(key) {
 // ---------- credits for testing (round 3, the owner: "i cant even test it myself i dont have enough credits lol") ----------
 // Drawn once (never with the page's redraws, so what's typed and the keyboard stay put): who gets them (the owner's own wallet,
 // or a tester's address), how many (1 to 100,000), what that means, and the button. From GIFT_CONFIRM credits it asks for a
-// second tap.
-export function giftSection(ctx) {
+// second tap. (2026-10-11) A tester's wallet is let in with them while AGI Studio is private: onLetIn reads the list again.
+export function giftSection(ctx, { onLetIn = null } = {}) {
   const id = nextId('sa-gift');
   const mine = () => ctx.session?.wallet || '';
   const have = h('p', { class: 'sa-gift-have' }, icon('bolt'), h('span'));
@@ -51,7 +54,7 @@ export function giftSection(ctx) {
   const address = h('input', { class: 'sa-input sa-mono', id: `${id}-addr`, type: 'text', autocomplete: 'off', spellcheck: 'false', inputmode: 'text', maxlength: '42', placeholder: '0x…', 'aria-describedby': `${id}-addr-why` });
   const addrWhy = h('p', { class: 'sa-field-why', id: `${id}-addr-why`, role: 'status', hidden: true });
   const addrBox = h('div', { class: 'sa-field', hidden: true }, h('label', { class: 'sa-label', for: `${id}-addr`, text: "Their wallet's address" }), address, addrWhy,
-    h('p', { class: 'sa-hint', text: 'The wallet they connect to AGI Studio. While it is private, it also needs to be in STUDIO_ONLY_FOR in Vercel.' }));
+    h('p', { class: 'sa-hint', text: "The wallet they connect to AGI Studio. While it's private, giving it credits lets it in too (it goes on the list above)." }));
   // how many
   const amount = h('input', { class: 'sa-input sa-input-num', id: `${id}-n`, type: 'number', min: '1', max: String(GIFT_MAX), step: '1', inputmode: 'numeric', value: String(GIFT_AMOUNTS[0]) });
   const quick = h('div', { class: 'sa-gift-quick', role: 'group', 'aria-label': 'Quick amounts' }, ...GIFT_AMOUNTS.map((n) => {
@@ -110,6 +113,7 @@ export function giftSection(ctx) {
       ctx.toast(`Added ${creditsText(d.gave)} 💜`, 'good');
       if (!d.self) address.value = '';
       ctx.refreshMe();
+      if (d.letIn) onLetIn?.();
     }).finally(label);
   });
   showMe();
@@ -127,12 +131,111 @@ export function giftSection(ctx) {
   return section;
 }
 
+// ---------- who can use AGI Studio while it's private (2026-10-11) ----------
+// The owner's list: each wallet let in (its short address, the owner's note, how it got in, since when, and Take off with a
+// second tap), who else is in without it (the owner, the team, STUDIO_ONLY_FOR's in Vercel), and the box to let a wallet in
+// by its address. The box is drawn once (what's typed survives the list's redraws). → { node, load }
+export function accessSection(ctx) {
+  const id = nextId('sa-access');
+  const intro = h('p', { class: 'sa-muted sa-small sa-access-intro' });
+  const listBox = h('div', { class: 'sa-access-list' });
+  const address = h('input', { class: 'sa-input sa-mono', id: `${id}-a`, type: 'text', autocomplete: 'off', spellcheck: 'false', maxlength: '42', placeholder: '0x…',
+    'aria-describedby': `${id}-a-hint` });
+  const note = h('input', { class: 'sa-input', id: `${id}-n`, type: 'text', autocomplete: 'off', maxlength: '24', placeholder: 'Kai, my friend' });
+  const err = h('p', { class: 'sa-err', role: 'alert', hidden: true });
+  const done = h('p', { class: 'sa-note', role: 'status', hidden: true });
+  const go = btn('Give access', { kind: 'primary', icon: 'check' });
+  let data = null, loading = false, failed = null;
+  const removing = new Set();
+  async function load() {
+    if (loading) return;
+    loading = true;
+    if (!data) put(listBox, h('p', { class: 'sa-muted' }, h('span', { class: 'sa-spin', 'aria-hidden': 'true' }), ' Loading…'));
+    const r = await ctx.act('inf-access');
+    loading = false;
+    if (!ctx.alive()) return;
+    if (!r.ok || !Array.isArray(r.data?.list)) { failed = r.data?.error || 'busy'; drawList(); return; }
+    failed = null;
+    data = r.data;
+    drawList();
+  }
+  function drawList() {
+    if (failed && !data) {
+      const again = btn('Try again', { kind: 'ghost', size: 'sm', icon: 'refresh' });
+      again.addEventListener('click', () => busy(again, 'Trying…', load));
+      intro.textContent = '';
+      put(listBox, h('div', { class: 'sa-banner', role: 'status' }, h('p', { text: accessErrorText(failed) }), again));
+      return;
+    }
+    if (!data) return;
+    intro.textContent = accessIntroText(data);
+    const rows = data.list.map((a) => {
+      const label = () => (removing.has(a.code) ? 'Tap again to take off' : 'Take off');
+      const rm = btn(label(), { kind: 'quiet', size: 'sm', icon: 'trash' });
+      rm.addEventListener('click', () => {
+        if (!removing.has(a.code)) {
+          removing.add(a.code);
+          rm.lastChild.textContent = label();
+          setTimeout(() => { removing.delete(a.code); if (rm.isConnected) rm.lastChild.textContent = label(); }, 5000);
+          return;
+        }
+        removing.delete(a.code);
+        busy(rm, 'Taking off…', async () => {
+          const r = await ctx.act('inf-access-remove', { code: a.code });
+          const d = r.data || {};
+          if (!r.ok || !d.ok) { ctx.toast(accessErrorText(d.error), 'bad'); if (d.error === 'access_gone') load(); return; }
+          data = d;
+          ctx.toast(`${a.short} is off the list`, 'good');
+          drawList();
+        });
+      });
+      return h('li', { class: 'sa-card sa-member sa-access-row' },
+        h('div', { class: 'sa-member-body' },
+          h('p', { class: 'sa-h3' }, h('span', { class: 'sa-mono', text: a.short }), a.note ? h('span', { class: 'sa-access-note', text: a.note }) : null),
+          h('p', { class: 'sa-muted sa-small', text: `${ACCESS_VIA[a.via] || ACCESS_VIA.owner} · ${dayText(a.added)}${a.staff ? ' · on your team too' : ''}` })),
+        rm);
+    });
+    put(listBox, rows.length ? h('ul', { class: 'sa-members' }, ...rows) : h('p', { class: 'sa-muted', text: data.open ? 'Nobody on the list.' : 'Nobody on the list yet: give someone access below.' }));
+  }
+  go.addEventListener('click', () => {
+    say(err, '');
+    say(done, '');
+    const a = address.value.trim(), n = note.value.trim();
+    if (!/^0x[0-9a-fA-F]{40}$/.test(a)) { say(err, accessErrorText('access_address')); address.focus(); return; }
+    if ([...n].length > 24) { say(err, accessErrorText('access_note')); note.focus(); return; }
+    busy(go, 'Giving access…', async () => {
+      const r = await ctx.act('inf-access-set', { address: a, note: n });
+      const d = r.data || {};
+      if (!r.ok || !d.ok) { say(err, accessErrorText(d.error)); (d.error === 'access_note' ? note : address).focus(); return; }
+      address.value = '';
+      note.value = '';
+      data = d;
+      drawList();
+      const text = accessDoneText({ short: d.entry?.short || a, added: d.added });
+      say(done, text);
+      ctx.toast(d.added === false ? 'Saved' : 'Access given 💜', 'good');
+    });
+  });
+  const node = h('section', { class: 'sa-section sa-access', 'aria-labelledby': `${id}-h`, hidden: true },
+    h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: `${id}-h` }, icon('invite'), h('span', { text: 'Who can use AGI Studio' }))),
+    intro, listBox,
+    h('div', { class: 'sa-card sa-access-form' },
+      h('h3', { class: 'sa-h3', text: 'Give someone access' }),
+      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: `${id}-a`, text: "Their wallet's address" }), address,
+        h('p', { class: 'sa-hint', id: `${id}-a-hint`, text: "The wallet they'll connect to AGI Studio (they can copy it from My studio, or their wallet app)." })),
+      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: `${id}-n`, text: 'A note, if you like (only you see it)' }), note),
+      err, h('div', { class: 'sa-row' }, go), done,
+      h('p', { class: 'sa-fine', text: "We keep a scrambled code of their wallet and its short form (to tell them apart), never its address. Their credits, prices and rules are everyone's: access only lets them in while AGI Studio is private." })));
+  return { node, load, reset: () => { data = null; failed = null; removing.clear(); } };
+}
+
 export async function render(ctx, route, root) {
   document.title = 'Owner tools · AGI Studio';
   // (round 4, phase 2) four tabs: Overview (the AI services' balances and their alert levels, the alerts on Telegram, the
   // numbers), Team (mods and support), Content (the spotlight of the week, the trend clips, the example pictures, reports) and
   // Testing (credits for testing). Each panel is read when it's first shown.
-  const gift = giftSection(ctx);
+  const access = accessSection(ctx);
+  const gift = giftSection(ctx, { onLetIn: () => access.load() });
   const body = h('div', { class: 'sa-owner' });
   const overview = h('div', { class: 'sa-admin' });
   const team = h('div', { class: 'sa-team' });
@@ -148,12 +251,12 @@ export async function render(ctx, route, root) {
   put(tabs.panel('team'), team);
   put(tabs.panel('content'), body);
   const testing = tabs.panel('testing');
-  put(testing, gift);
+  put(testing, access.node, gift);
   const tabsBox = h('div', { class: 'sa-owner-tabs', hidden: true }, tabs.node, ...TABS.map(([k]) => tabs.panel(k)));
   add(root, h('header', { class: 'sa-page-head' },
     h('p', { class: 'sa-eyebrow', text: 'Only your wallet sees this' }),
     h('h1', { class: 'sa-display sa-page-title', tabindex: '-1', text: 'Owner tools' }),
-    h('p', { class: 'sa-muted', text: 'Your AI balances and alerts, the numbers, your team, what people see (the spotlight, trend clips, example pictures, reports), and credits for testing.' })), gate, tabsBox);
+    h('p', { class: 'sa-muted', text: 'Your AI balances and alerts, the numbers, your team, what people see (the spotlight, trend clips, example pictures, reports), who can use AGI Studio while it\'s private, and credits for testing.' })), gate, tabsBox);
   let data = null, loading = false, timer = null;
   let admin = null, adminLoading = false;
   const tried = new Set();
@@ -177,6 +280,7 @@ export async function render(ctx, route, root) {
     put(gate);
     tabsBox.hidden = false;
     gift.hidden = false;
+    access.node.hidden = false;
     if (r.ok) return true;
     for (const panel of into) {
       const again = retry ? btn('Try again', { kind: 'ghost', size: 'sm', icon: 'refresh' }) : null;
@@ -185,9 +289,11 @@ export async function render(ctx, route, root) {
     }
     return false;
   }
+  let accessAsked = false;
   function show(k) {
     if (k === 'content' && !data) load();
     if ((k === 'overview' || k === 'team') && !admin) loadAdmin();
+    if (k === 'testing' && !accessAsked && ctx.session) { accessAsked = true; access.load(); }
   }
 
   async function load() {
@@ -574,7 +680,7 @@ export async function render(ctx, route, root) {
     show(tabs.value);
     if (!['overview', 'team'].includes(tabs.value)) loadAdmin();
   }
-  ctx.on('wallet', () => { data = null; admin = null; start(); });
+  ctx.on('wallet', () => { data = null; admin = null; accessAsked = false; access.reset(); start(); });
   ctx.on('info', () => { if (data) draw(); });
   start();
   return () => clearTimeout(timer);

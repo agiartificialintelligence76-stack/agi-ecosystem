@@ -27,12 +27,18 @@ export function tiny(n) {
 }
 
 // ---------- the studio's state ----------
+// (2026-10-11, the owner: "i want to give access to someone but it said to them comins soon fix that please") A wallet that
+// isn't on its list while it's private is told how to get in when it was invited: its address to whoever invited it (My studio
+// shows it, with Copy), then a reload once it's in.
 export function studioText(info, { allowed = true } = {}) {
   if (!info) return "Couldn't reach AGI Studio just now. Trying again…";
   if (!info.on) return 'AGI Studio opens soon. Follow @agi1dotapp on X to hear when.';
-  if (!info.open && !allowed) return 'AGI Studio is private for now: it opens to everyone soon. Follow @agi1dotapp on X to hear when.';
+  if (!info.open && !allowed) return "AGI Studio is private for now, and this wallet isn't on its list yet. Invited? Send whoever invited you this wallet's address (it's in My studio), then reload once you're in. Or follow @agi1dotapp on X to hear when it opens to everyone.";
   return '';
 }
+// My studio's lines for that wallet (its whole address between them, to copy and send)
+export const INVITE_TEXT = "Invited? Send this wallet's address to whoever invited you. Once they've let it in, reload this page.";
+export const FOLLOW_TEXT = 'Not invited? Follow @agi1dotapp on X to hear when it opens to everyone.';
 
 // ---------- what things cost ----------
 // A price in credits for this level, said with its discount. (prices: the wallet's own, from inf-me, or the base ones)
@@ -251,7 +257,7 @@ export function upErrorText(r, kind = 'picture') {
 
 // ---------- our server's "no", in words ----------
 const ERRORS = {
-  closed: 'AGI Studio is private for now: it opens to everyone soon.',
+  closed: "AGI Studio is private for now, and this wallet isn't on its list yet.",
   not_ready: "AGI Studio isn't open yet.",
   not_configured: "AGI Studio isn't open yet.",
   consent: 'Tick the box first.',
@@ -343,6 +349,12 @@ const ERRORS = {
   team_nick: 'A nickname of 2 to 24 letters, numbers, spaces, dots, dashes or underscores.',
   nick_taken: 'That nickname is taken (or it would pass for the owner or the studio): pick another.',
   team_full: 'The team is full (20 people): remove someone first.',
+  // (2026-10-11) giving access while AGI Studio is private (the owner's tab)
+  access_address: "That doesn't look like a wallet's address: 0x and 40 letters and numbers.",
+  access_self: "That's your own wallet: it's always in.",
+  access_note: 'A note of 24 characters at most (only you see it).',
+  access_full: 'The list is full (200 wallets): take someone off first, or open AGI Studio to everyone.',
+  access_gone: 'That wallet was already off the list.',
   levels: 'Each alert level is a number from 0 (never alert) up.',
   // round 4, phase 3: gifts of bought credits, gift links and invites (codes of their own: server/inf-gifts.js; round 3's
   // gift_credits and gift_to above are the owner's credits for testing)
@@ -414,12 +426,33 @@ export const GIFT_MAX = 100_000;
 export const GIFT_CONFIRM = 20_000;
 // What a gift will do, before it's given: "1,000 credits: about $10 of AI, paid from your AI balance as they're used."
 export const giftPlanText = (n) => `${creditsText(n)}: about ${usd(n)} of AI, paid from your own AI balance as they're used.`;
-// …and what it did (server/inf-api.js inf-gift: { gave, self, to, allowed })
-export function giftText({ gave, self, to, allowed }) {
+// …and what it did (server/inf-api.js inf-gift: { gave, self, to, allowed, letIn }). Since 2026-10-11 a tester's wallet is let
+// into AGI Studio with them while it's private (letIn); if it couldn't be (the list full, the database older), the owner can
+// give it access above.
+export function giftText({ gave, self, to, allowed, letIn }) {
   const line = `Added ${creditsText(gave)} to ${self ? 'your wallet' : shortAddress(to)} 💜`;
-  if (allowed === false) return `${line} While AGI Studio is private, that wallet can't use them yet: add it to STUDIO_ONLY_FOR in Vercel, then Redeploy.`;
+  if (allowed === false) return `${line} While AGI Studio is private, that wallet can't use them yet: give it access in "Who can use AGI Studio" above.`;
+  if (letIn === true) return `${line} It can use AGI Studio now too: it's on your list above.`;
   return line;
 }
+
+// ---------- who may use AGI Studio while it's private (2026-10-11: the owner's tab) ----------
+// How a wallet got onto the list, as the owner's tab says it
+export const ACCESS_VIA = { owner: 'Let in by you', credits: 'Got credits for testing' };
+// The card's first line: whether anyone needs letting in, and who else is in without the list
+export function accessIntroText({ open = false, vercel = [], team = 0 } = {}) {
+  if (open) return 'AGI Studio is open to everyone (STUDIO_OPEN in Vercel): nobody needs letting in. Wallets on this list stay on it in case you make it private again.';
+  const also = [`you`];
+  if (team > 0) also.push(team === 1 ? 'your team (1 person)' : `your team (${num(team)} people)`);
+  if (vercel.length) also.push(`${vercel.length === 1 ? '1 wallet' : `${num(vercel.length)} wallets`} in STUDIO_ONLY_FOR in Vercel (${vercel.join(', ')})`);
+  return `While AGI Studio is private, only the wallets on this list can make anything. Also in, without the list: ${also.length > 1 ? `${also.slice(0, -1).join(', ')} and ${also.at(-1)}` : also[0]}.`;
+}
+// Its "no"s, for the owner: an influencers.sql older than this says how to fix it (not "AGI Studio isn't open yet.")
+export const accessErrorText = (error) => (error === 'not_ready'
+  ? 'Run supabase/influencers.sql again in Supabase first (it ends with influencers_ready = 1), then try again.'
+  : errorText(error));
+// What letting a wallet in did: "0x12ab…cdef can use AGI Studio now 💜"
+export const accessDoneText = ({ short, added }) => (added === false ? `${short} was on the list already: its note is saved.` : `${short} can use AGI Studio now 💜 They connect that wallet and reload the page.`);
 
 // ---------- burns (round 2: a free 3D model, one more influencer, a boost in Explore) ----------
 // What a burn unlocks, as the pages name it
