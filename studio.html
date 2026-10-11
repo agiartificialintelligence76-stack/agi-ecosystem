@@ -36,12 +36,16 @@
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="sa-logo-mark"><path d="M12 3c.7 4.6 2.6 7 7 8-4.4 1-6.3 3.4-7 9-.7-5.6-2.6-8-7-9 4.4-1 6.3-3.4 7-8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
           <span class="sa-logo-agi">AGI</span><span class="sa-logo-studio">Studio</span>
         </a>
-        <nav class="sa-nav" aria-label="AGI Studio">
+        <nav class="sa-nav" aria-label="AGI Studio" data-guide="nav">
           <a href="/studio/explore" data-sa-path="/explore" data-sa-route="explore">Explore</a>
           <a href="/studio/create" data-sa-path="/create" data-sa-route="create">Create</a>
           <a href="/studio/me" data-sa-path="/me" data-sa-route="me">My studio</a>
         </nav>
-        <div class="sa-account" data-sa-account></div>
+        <!-- (2026-10-11) the guide: this page's, again (src/studio/guide.js) -->
+        <button type="button" class="sa-guide-btn" data-sa-guide data-guide="guide" aria-label="Show me around this page" title="Show me around">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" stroke="currentColor" stroke-width="1.8"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.7M12 17h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="sa-account" data-sa-account data-guide="account"></div>
       </div>
     </header>
 
@@ -85,7 +89,7 @@
       </div>
     </footer>
 
-    <nav class="sa-tabs" aria-label="AGI Studio">
+    <nav class="sa-tabs" aria-label="AGI Studio" data-guide="nav">
       <a href="/studio/explore" data-sa-path="/explore" data-sa-route="explore">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8 4.8-2.2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
         <span>Explore</span>

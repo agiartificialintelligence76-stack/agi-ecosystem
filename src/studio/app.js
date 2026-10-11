@@ -29,6 +29,7 @@ import * as help from './views/help.js';
 import * as learn from './views/learn.js';
 import * as mod from './views/mod.js';
 import { openGiftClaim } from './views/gifts.js';
+import { offerGuide, leaveGuides, wireGuideButton } from './guide.js';
 
 const API = '/api/launch';
 // (round 4, phase 3) an invite link's code, kept until a wallet signs in (30 days at most); the last gifts got that a toast
@@ -390,23 +391,32 @@ function missingView(ctx, route, root) {
 }
 async function show({ focus = false } = {}) {
   closeSheets();
+  // (2026-10-11) the guide on screen goes with its page
+  leaveGuides();
   current.stop?.();
   const token = ++current.token;
   const route = parseRoute(location.pathname, location.search);
+  // (2026-10-11) ?guide=1 (Learn's "Show me with arrows"): this page's guide at once, and the address without it
+  let guideNow = route.q.get('guide') === '1';
+  if (route.q.has('guide')) {
+    const q = new URLSearchParams(location.search);
+    q.delete('guide');
+    const rest = q.toString();
+    history.replaceState(history.state, '', `${location.pathname}${rest ? `?${rest}` : ''}${location.hash}`);
+  }
   const root = $('[data-sa-view]');
   put(root);
   root.className = 'sa-view';
   root.dataset.view = route.view;
   markNav(route.view);
+  // the bar's ? button: a page's guide (Learn has the lessons themselves)
+  for (const b of $$('[data-sa-guide]')) b.hidden = route.view === 'learn';
   const stops = [];
-  const ctx = makeCtx(route, stops, () => token === current.token);
+  const ctx = makeCtx(route, stops, () => token === current.token, () => { const f = guideNow; guideNow = false; return f; });
   current.stop = () => { for (const f of stops.splice(0)) { try { f(); } catch { /* ignore */ } } };
   try {
     const stop = await VIEWS[route.view].render(ctx, route, root);
     if (typeof stop === 'function') stops.push(stop);
-    // (round 4, phase 4) a first-time tip, once per browser (Explore, Create, My studio)
-    const tip = token === current.token ? learn.firstTip(ctx, route.view) : null;
-    if (tip) root.prepend(tip);
   } catch (err) {
     console.error('[studio]', err);
     if (token === current.token) put(root, h('p', { class: 'sa-note', text: errorText('busy') }));
@@ -440,7 +450,7 @@ document.addEventListener('click', (e) => {
 addEventListener('popstate', () => show({ focus: true }));
 
 // What every view gets
-function makeCtx(route, stops, alive) {
+function makeCtx(route, stops, alive, forced = () => false) {
   const ctx = {
     route, href, nav, alive, BASE,
     get info() { return state.info; },
@@ -458,6 +468,12 @@ function makeCtx(route, stops, alive) {
     later(fn, ms) { const t = setTimeout(() => { if (alive()) fn(); }, ms); stops.push(() => clearTimeout(t)); return t; },
     every(fn, ms) { const t = setInterval(() => { if (alive()) fn(); }, ms); stops.push(() => clearInterval(t)); return t; },
     listen(target, type, fn, opts) { target.addEventListener(type, fn, opts); stops.push(() => target.removeEventListener(type, fn, opts)); },
+    // (2026-10-11) this page's guide (src/studio/guide.js): it starts by itself the first time this browser opens the page, and
+    // the bar's ? button shows it again. env: what the page is like now and how to show its parts (a drawer: open, close)
+    guide(id, env = {}) {
+      if (!alive()) return;
+      offerGuide(id, { signedIn: () => Boolean(state.session), ...env }, { force: forced() });
+    },
   };
   return ctx;
 }
@@ -541,6 +557,8 @@ function start() {
     }
   });
   renderBar();
+  // (2026-10-11) the bar's ? button: this page's guide, else Learn's lessons
+  wireGuideButton(() => nav(href('/learn')));
   loadInfo();
   // (round 4) the progress bars of what's being made move every second (one timer for every view)
   startBars();

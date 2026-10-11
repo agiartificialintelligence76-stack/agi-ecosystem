@@ -23,7 +23,8 @@ export function gallery(ctx, { initial = 'trending', onTrend = null, alsoLiked =
   const tools = h('div', { class: 'sa-gtools' });
   const panels = Object.fromEntries(Object.keys(GALLERY_TABS).map((key) => [key,
     h('div', { class: 'sa-gpanel', role: 'tabpanel', id: `${id}-${key}`, 'aria-labelledby': `${id}-${key}-t`, hidden: key !== tab })]));
-  const node = h('section', { class: 'sa-gallery', 'aria-label': 'Gallery' }, h('div', { class: 'sa-ghead' }, tabsEl, tools), ...Object.values(panels));
+  // (2026-10-11) data-guide: Explore's guide points at its tabs
+  const node = h('section', { class: 'sa-gallery', 'aria-label': 'Gallery' }, h('div', { class: 'sa-ghead', dataset: { guide: 'gallery' } }, tabsEl, tools), ...Object.values(panels));
 
   // ---------- the tabs (arrow keys move between them, like any tab list) ----------
   function drawTabs() {

@@ -1,10 +1,12 @@
 // AGI Studio: Learn (/learn; round 4, phase 4, 2026-10-11, the owner's list: "tutorials", built last). Short lessons, each a
-// few steps and a button to where you do it; and first-time tips: one line on Explore, Create and My studio, the first time
-// this browser opens them, with "Show me how" (a lesson) and ✕ (kept in this browser only: TIPS_KEY). Nothing is sent
-// anywhere; every word is text (never HTML). The words never name the AI services, like the rest of the app.
+// few steps and a button to where you do it. Since the guide (2026-10-11, the owner: "a video guide on the site on every
+// step and arrows so they dont get confused … put vosials and video on the guidses"): each lesson with its video (its steps'
+// clips from the guide, recorded from the real app, one after the other: src/studio/guide-media.js), and "Show me with arrows"
+// where a page has the guide (?guide=1). The first-time tips it had are the guide now (src/studio/guide.js), which starts by
+// itself the first time this browser opens a page. Every word is text (never HTML); they never name the AI services.
 import { h, add, icon, linkBtn } from '../ui.js';
-
-export const TIPS_KEY = 'agi_tips';
+import { LESSON_CLIPS } from '../guide-steps.js';
+import { CLIPS } from '../guide-media.js';
 
 // each lesson: its id (the page's #anchor), its icon, title, a line, its steps, and where to try it
 export const LESSONS = [
@@ -38,52 +40,74 @@ export const LESSONS = [
       'We never ask for a seed phrase, a private key or a password, never to send money or sign anything: questions go to Help & support.'] },
 ];
 
+const layout = () => (matchMedia('(max-width: 959px)').matches ? 'p' : 'd');
+
+// a lesson's video: its clips one after the other (paused until its play button is pressed: nothing plays by itself here,
+// "reduce motion" or not), then back to the first. Muted, like the guide's; its words say the same.
+function lessonVideo(ctx, clips, title) {
+  const list = clips.map((id) => CLIPS[id]?.[layout()] || CLIPS[id]?.d).filter(Boolean);
+  if (!list.length) return null;
+  let at = 0, playing = false;
+  const video = h('video', { class: 'sa-learn-video', muted: true, playsinline: true, preload: 'none', disablepictureinpicture: true, disableremoteplayback: true, 'aria-hidden': 'true', tabindex: '-1' });
+  video.muted = true;
+  video.defaultMuted = true;
+  const label = h('span', { class: 'sa-learn-step', 'aria-hidden': 'true', hidden: list.length < 2 });
+  const play = h('button', { type: 'button', class: 'sa-learn-play' });
+  const box = h('div', { class: 'sa-learn-media' }, video, label, play);
+  const load = (k) => {
+    at = k;
+    video.poster = list[k].poster;
+    video.src = list[k].mp4;
+    label.textContent = `${k + 1} of ${list.length}`;
+  };
+  const draw = () => {
+    play.classList.toggle('is-playing', playing);
+    play.replaceChildren(icon(playing ? 'pause' : 'play'), h('span', { class: 'sa-sr', text: `${playing ? 'Pause' : 'Play'} the video: ${title}` }));
+  };
+  play.addEventListener('click', () => {
+    playing = !playing;
+    draw();
+    if (playing) video.play().catch(() => { playing = false; draw(); });
+    else video.pause();
+  });
+  video.addEventListener('ended', () => {
+    if (at + 1 < list.length) { load(at + 1); video.play().catch(() => { playing = false; draw(); }); return; }
+    playing = false;
+    load(0);
+    draw();
+  });
+  video.addEventListener('error', () => { box.hidden = true; });
+  ctx.listen(document, 'visibilitychange', () => { if (document.hidden && playing) { playing = false; video.pause(); draw(); } });
+  load(0);
+  draw();
+  return box;
+}
+
 export async function render(ctx, route, root) {
   document.title = 'Learn · AGI Studio';
   add(root,
     h('header', { class: 'sa-page-head' },
       h('p', { class: 'sa-eyebrow', text: 'Learn' }),
       h('h1', { class: 'sa-display sa-page-title', tabindex: '-1', text: 'How AGI Studio works' }),
-      h('p', { class: 'sa-muted', text: 'Seven short lessons. Each one ends where you try it.' })),
+      h('p', { class: 'sa-muted', text: 'Seven short lessons, each with its video. On any page, tap ? at the top for its guide with arrows.' })),
     h('nav', { class: 'sa-learn-toc', 'aria-label': 'Lessons' },
       ...LESSONS.map((l) => h('a', { href: `#learn-${l.id}`, class: 'sa-chip', text: l.title }))),
     h('ol', { class: 'sa-learn-list' },
-      ...LESSONS.map((l, n) => h('li', { class: 'sa-card sa-learn-card', id: `learn-${l.id}`, 'aria-labelledby': `learn-${l.id}-h` },
-        h('div', { class: 'sa-learn-head' },
-          h('span', { class: 'sa-learn-n', 'aria-hidden': 'true' }, icon(l.icon)),
-          h('div', null,
-            h('h2', { class: 'sa-learn-title', id: `learn-${l.id}-h`, text: `${n + 1}. ${l.title}` }),
-            h('p', { class: 'sa-muted', text: l.line }))),
-        h('ol', { class: 'sa-learn-steps' }, ...l.steps.map((s) => h('li', { text: s }))),
-        linkBtn(l.go, ctx.href(l.to), { kind: 'ghost' })))),
+      ...LESSONS.map((l, n) => {
+        const more = LESSON_CLIPS[l.id] || { clips: [], guide: null };
+        return h('li', { class: 'sa-card sa-learn-card', id: `learn-${l.id}`, 'aria-labelledby': `learn-${l.id}-h` },
+          h('div', { class: 'sa-learn-head' },
+            h('span', { class: 'sa-learn-n', 'aria-hidden': 'true' }, icon(l.icon)),
+            h('div', null,
+              h('h2', { class: 'sa-learn-title', id: `learn-${l.id}-h`, text: `${n + 1}. ${l.title}` }),
+              h('p', { class: 'sa-muted', text: l.line }))),
+          lessonVideo(ctx, more.clips, l.title),
+          h('ol', { class: 'sa-learn-steps' }, ...l.steps.map((s) => h('li', { text: s }))),
+          h('div', { class: 'sa-learn-links' },
+            linkBtn(l.go, ctx.href(l.to), { kind: 'ghost', dataset: { saLink: '' } }),
+            more.guide ? linkBtn('Show me with arrows', `${ctx.href(more.guide)}?guide=1`, { kind: 'quiet', icon: 'next', dataset: { saLink: '' } }) : null));
+      })),
     h('p', { class: 'sa-note', text: 'Still stuck? Help & support has an AI helper and a person on the team.' }));
   const hash = /^#learn-([a-z]+)$/.exec(location.hash || '');
   if (hash) document.getElementById(`learn-${hash[1]}`)?.scrollIntoView({ block: 'start' });
-}
-
-// ---------- first-time tips ----------
-export const TIPS = {
-  explore: { text: 'New here? See how AGI Studio works in 2 minutes.', lesson: 'start' },
-  create: { text: 'First influencer? Here\'s how making one works.', lesson: 'start' },
-  me: { text: 'Tip: open one of your influencers to make photos, memes, X banners and videos. Instant makes them in one tap.', lesson: 'instant' },
-};
-function seen(store) {
-  try { const v = JSON.parse(store?.getItem(TIPS_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
-}
-export function tipSeen(view, store = globalThis.localStorage) { return seen(store).includes(view); }
-export function markTip(view, store = globalThis.localStorage) {
-  try { store?.setItem(TIPS_KEY, JSON.stringify([...new Set([...seen(store), view])].slice(-20))); } catch { /* shown again: harmless */ }
-}
-// the tip for a view, the first time this browser opens it (or null)
-export function firstTip(ctx, view, store = globalThis.localStorage) {
-  const t = TIPS[view];
-  if (!t || tipSeen(view, store)) return null;
-  const close = h('button', { type: 'button', class: 'sa-tip-x', 'aria-label': 'Hide this tip', text: '✕' });
-  const node = h('aside', { class: 'sa-tip', role: 'note' },
-    icon('learn'), h('p', { text: t.text }),
-    linkBtn('Show me how', `${ctx.href('/learn')}#learn-${t.lesson}`, { kind: 'ghost', size: 'sm' }), close);
-  const done = () => { markTip(view, store); node.remove(); };
-  close.addEventListener('click', done);
-  node.querySelector('a')?.addEventListener('click', () => markTip(view, store));
-  return node;
 }

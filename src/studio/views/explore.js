@@ -31,7 +31,7 @@ export async function render(ctx, route, root) {
       h('h1', { class: 'sa-display sa-hero-title', tabindex: '-1' }, h('span', { text: 'Your own ' }), h('span', { class: 'sa-grad', text: 'AI influencer' })),
       h('p', { class: 'sa-hero-sub', text: 'Design one in a few taps or start from a photo. Then photos in any scene, trend videos, short videos, a 3D model and a coin with its face.' }),
       h('div', { class: 'sa-row sa-hero-cta' },
-        linkBtn('Create an influencer', ctx.href('/create'), { kind: 'primary', icon: 'plus', dataset: { saLink: '' } }),
+        linkBtn('Create an influencer', ctx.href('/create'), { kind: 'primary', icon: 'plus', dataset: { saLink: '', guide: 'start' } }),
         seeTrends),
       status),
     wall);
@@ -69,6 +69,8 @@ export async function render(ctx, route, root) {
     h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-modes-h', text: 'Two ways to start' })), modes);
 
   add(root, h('div', { class: 'sa-page sa-explore' }, hero, stats, spot, h('div', { class: 'sa-section sa-explore-gallery' }, g.node), modesBox));
+  // (2026-10-11) its guide: the first time this browser opens Explore, and with the bar's ? button
+  ctx.guide('explore');
   fillModes();
   showStatus();
   ctx.on('info', () => { showStatus(); fillModes(); });

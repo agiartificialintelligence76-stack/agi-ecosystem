@@ -1933,10 +1933,15 @@ a.sa-maker-name:hover { text-decoration: underline; }
 .sa-learn-title { margin: 0; font-size: 17px; line-height: 1.3; }
 .sa-learn-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; line-height: 1.5; }
 .sa-learn-card > .sa-btn { align-self: flex-start; margin-top: auto; }
-.sa-tip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; padding: 10px 12px; border: 1px solid rgba(139, 92, 246, .45); border-radius: 14px; background: rgba(139, 92, 246, .12); font-size: 14px; }
-.sa-tip > p { margin: 0; flex: 1 1 200px; }
-.sa-tip-x { flex: none; width: 32px; height: 32px; border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer; font-size: 15px; }
-.sa-tip-x:hover { background: rgba(255, 255, 255, .08); }
+/* a lesson's video (its steps' clips, one after the other) and its link to the page's guide */
+.sa-learn-media { position: relative; margin: 0 -2px; border-radius: 10px; overflow: hidden; background: #000; aspect-ratio: 16 / 10; }
+.sa-learn-video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.sa-learn-play { position: absolute; inset: 0; margin: auto; width: 52px; height: 52px; border-radius: 50%; border: 0; display: grid; place-items: center; background: rgb(124 58 237 / 0.9); color: #fff; cursor: pointer; box-shadow: 0 8px 26px rgb(0 0 0 / 0.5); }
+.sa-learn-play .sa-i { width: 22px; height: 22px; }
+.sa-learn-play.is-playing { inset: auto 8px 8px auto; width: 32px; height: 32px; background: rgb(0 0 0 / 0.55); box-shadow: none; }
+.sa-learn-play.is-playing .sa-i { width: 16px; height: 16px; }
+.sa-learn-step { position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgb(0 0 0 / 0.6); color: #fff; font-size: 11.5px; font-weight: 600; }
+.sa-learn-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
 
 /* (2026-10-11, the owner: "they can copy prompt from the trends") the words something was made from, with "Copy prompt":
    a trend clip's sheet, a photo or a video seen big */
@@ -1959,3 +1964,143 @@ a.sa-maker-name:hover { text-decoration: underline; }
 .sa-invite p { margin: 0; }
 .sa-invite-row { align-items: center; }
 .sa-invite-addr { min-width: 0; max-width: 100%; padding: 6px 9px; border-radius: var(--sa-r-sm); border: 1px solid var(--sa-line); background: rgb(0 0 0 / 0.28); font-size: 12.5px; overflow-wrap: anywhere; word-break: break-all; -webkit-user-select: all; user-select: all; }
+
+/* ---------- (2026-10-11, the owner: "a video guide on the site on every step and arrows so they dont get confused … they
+   have an option to X IT … put vosials and video on the guidses") the guide: coach marks over the real app (src/studio/guide.js).
+   A ring around the step's real button (the rest of the page a little dimmer, still usable: nothing here takes its clicks but
+   the card), and a card beside it with an arrow at it, its video, its words, Back, Next, ✕ and "Skip all guides". Hidden while
+   a sheet is open (the page is inert then). ---------- */
+.sa-guide-btn {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 9px;
+  border: 1px solid var(--sa-line-2);
+  background: var(--sa-surface);
+  color: var(--sa-text-2);
+  cursor: pointer;
+}
+.sa-guide-btn:hover { color: var(--sa-text); border-color: var(--sa-line-3); }
+.sa-guide-btn svg { width: 18px; height: 18px; }
+.sa-guide-btn + .sa-account { margin-left: 0; }
+.sa-guide { position: fixed; inset: 0; z-index: 120; pointer-events: none; }
+.sa-guide:not(.is-on) { visibility: hidden; }
+.sa-locked .sa-guide { visibility: hidden; }
+/* (while the page scrolls to the next step's button: out of sight, then shown where it belongs) */
+.sa-guide.is-moving .sa-guide-card, .sa-guide.is-moving .sa-guide-ring { opacity: 0; }
+.sa-guide.is-moving .sa-guide-card { pointer-events: none; }
+.sa-guide-ring {
+  position: fixed;
+  border-radius: 12px;
+  outline: 2px solid var(--sa-accent);
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.4);
+  transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease, opacity 0.15s ease;
+}
+.sa-guide-ring::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 17px;
+  border: 2px solid rgb(167 139 250 / 0.6);
+  animation: sa-guide-ping 1.7s ease-out infinite;
+}
+.sa-guide-card {
+  position: fixed;
+  width: 360px;
+  max-width: calc(100vw - 24px);
+  pointer-events: auto;
+  background: var(--sa-raised);
+  border: 1px solid rgb(167 139 250 / 0.5);
+  border-radius: 14px;
+  box-shadow: 0 22px 64px rgb(0 0 0 / 0.62), 0 0 0 1px rgb(0 0 0 / 0.4);
+  color: var(--sa-text);
+  animation: sa-pop 0.2s ease;
+  transition: opacity 0.15s ease;
+}
+.sa-guide-arrow {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--sa-raised);
+  border: 1px solid rgb(167 139 250 / 0.5);
+  transform: rotate(45deg);
+}
+.sa-guide-card[data-side='top'] .sa-guide-arrow { top: -8px; left: calc(var(--sa-arrow, 24px) - 7px); border-right: 0; border-bottom: 0; }
+.sa-guide-card[data-side='bottom'] .sa-guide-arrow { bottom: -8px; left: calc(var(--sa-arrow, 24px) - 7px); border-left: 0; border-top: 0; }
+.sa-guide-card[data-side='left'] .sa-guide-arrow { left: -8px; top: calc(var(--sa-arrow, 24px) - 7px); border-right: 0; border-top: 0; }
+.sa-guide-card[data-side='right'] .sa-guide-arrow { right: -8px; top: calc(var(--sa-arrow, 24px) - 7px); border-left: 0; border-bottom: 0; }
+.sa-guide-card[data-side='none'] .sa-guide-arrow { display: none; }
+.sa-guide-media { position: relative; margin: 10px 10px 0; border-radius: 10px; overflow: hidden; background: #000; aspect-ratio: 16 / 10; }
+.sa-guide-video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.sa-guide-play {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.58);
+  color: #fff;
+  cursor: pointer;
+}
+.sa-guide-play .sa-i { width: 15px; height: 15px; }
+.sa-guide-play.is-paused { inset: 0; margin: auto; width: 50px; height: 50px; background: rgb(124 58 237 / 0.9); box-shadow: 0 8px 24px rgb(0 0 0 / 0.5); }
+.sa-guide-play.is-paused .sa-i { width: 20px; height: 20px; }
+.sa-guide-body { display: grid; gap: 4px; padding: 10px 14px 2px 16px; }
+.sa-guide-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; }
+.sa-guide-count { margin: 0; color: #c4b5fd; font-size: 12px; font-weight: 650; letter-spacing: 0.01em; }
+.sa-guide-x {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-right: -6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sa-text-2);
+  cursor: pointer;
+}
+.sa-guide-x:hover { color: var(--sa-text); background: rgb(255 255 255 / 0.07); }
+.sa-guide-title { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; outline: none; }
+.sa-guide-text { margin: 0; color: var(--sa-text-2); font-size: 13.5px; line-height: 1.5; }
+.sa-guide-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 12px 12px 16px; }
+.sa-guide-skip { padding: 6px 0; border: 0; background: none; color: var(--sa-text-3); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.sa-guide-skip:hover { color: var(--sa-text-2); }
+.sa-guide-nav { display: flex; gap: 8px; }
+/* a card that would cover its button with its video goes without it; "Watch how" shows it */
+.sa-guide-card.is-compact .sa-guide-media { display: none; }
+.sa-guide-watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 5px 10px 5px 8px;
+  border: 1px solid rgb(167 139 250 / 0.5);
+  border-radius: 999px;
+  background: rgb(124 58 237 / 0.18);
+  color: #ddd6fe;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.sa-guide-watch[hidden] { display: none; }
+.sa-guide-watch:hover { background: rgb(124 58 237 / 0.3); color: var(--sa-text); }
+.sa-guide-watch .sa-i { width: 13px; height: 13px; }
+@keyframes sa-guide-ping { 0% { transform: scale(0.97); opacity: 1; } 100% { transform: scale(1.06); opacity: 0; } }
+@media (max-height: 700px) and (max-width: 719px) {
+  .sa-guide-media { aspect-ratio: auto; height: 24vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sa-guide-ring { transition: none; }
+  .sa-guide-ring::after { animation: none; opacity: 0.6; }
+  .sa-guide-card { animation: none; transition: none; }
+}

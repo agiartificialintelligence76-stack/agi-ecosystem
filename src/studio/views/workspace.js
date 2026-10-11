@@ -153,7 +153,8 @@ export function goButton(label, iconName = 'spark') {
   const n = h('span');
   const unit = h('span', { class: 'sa-sr', text: ' credits' });
   const cost = h('span', { class: 'sa-go-cost' }, icon('bolt'), n, unit);
-  const node = h('button', { type: 'button', class: 'sa-btn sa-btn-primary sa-btn-lg sa-btn-wide sa-go' }, icon(iconName), words, cost);
+  // (2026-10-11) data-guide: the guides' "Create it" and "Make it" point at it
+  const node = h('button', { type: 'button', class: 'sa-btn sa-btn-primary sa-btn-lg sa-btn-wide sa-go', dataset: { guide: 'go' } }, icon(iconName), words, cost);
   return {
     node,
     setLabel(t) { words.textContent = t; },

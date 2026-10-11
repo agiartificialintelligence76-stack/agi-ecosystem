@@ -7409,12 +7409,12 @@ test('(round 4, phase 4) making with the model menu on our server: each model\'s
   assert.match(sent.body.prompt, /part 1 of 2|first part/i);
 });
 
-test('(round 4, phase 4) Learn and first-time tips: /learn, its lessons (each ending where you try it, never an AI service named, never "buy" credits from anyone), a tip once per browser (kept only there; a broken or blocked store is harmless), its links in the footer and Help', async () => {
+test('(round 4, phase 4) Learn: /learn, its lessons (each ending where you try it, never an AI service named, never "buy" credits from anyone), its links in the footer and Help; (2026-10-11) its first-time tips are the guide now (tests/guide.test.js)', async () => {
   const L = await import('../src/studio/views/learn.js');
   const app = readFileSync(new URL('../src/studio/app.js', import.meta.url), 'utf8');
   assert.match(app, /if \(p === '\/learn'\) return \{ view: 'learn', q \};/);
   assert.match(app, /const VIEWS = \{[^}]*\blearn\b/);
-  assert.match(app, /learn\.firstTip\(ctx, route\.view\)/);
+  assert.doesNotMatch(app, /firstTip/);
   const ids = L.LESSONS.map((l) => l.id);
   assert.equal(new Set(ids).size, ids.length);
   for (const l of L.LESSONS) {
@@ -7423,22 +7423,11 @@ test('(round 4, phase 4) Learn and first-time tips: /learn, its lessons (each en
     assert.ok(l.steps.length >= 2 && l.steps.every((s) => s.length < 220), l.id);
     assert.equal(trouble(`${l.title} ${l.line} ${l.steps.join(' ')}`), null, l.id);
   }
-  for (const t of Object.values(L.TIPS)) assert.ok(ids.includes(t.lesson));
+  assert.equal(L.TIPS, undefined);
   const src = readFileSync(new URL('../src/studio/views/learn.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /\b(fal|kling|seedance|gemini|meshy|nano banana|google|bytedance|kuaishou)\b/i);
   assert.doesNotMatch(src, /innerHTML|insertAdjacentHTML/);
   assert.match(src, /never buy credits from anyone/);
-  // a tip: once per browser
-  const mem = new Map(), store = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)) };
-  assert.equal(L.tipSeen('create', store), false);
-  L.markTip('create', store); L.markTip('create', store); L.markTip('me', store);
-  assert.deepEqual([L.tipSeen('create', store), L.tipSeen('me', store), L.tipSeen('explore', store)], [true, true, false]);
-  assert.deepEqual(JSON.parse(mem.get(L.TIPS_KEY)), ['create', 'me']);
-  mem.set(L.TIPS_KEY, '{broken');
-  assert.equal(L.tipSeen('create', store), false);
-  const blocked = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
-  assert.equal(L.tipSeen('me', blocked), false);
-  assert.doesNotThrow(() => L.markTip('me', blocked));
   assert.match(readFileSync(new URL('../studio.html', import.meta.url), 'utf8'), /<a href="\/studio\/learn" data-sa-path="\/learn">How it works<\/a>/);
   assert.match(readFileSync(new URL('../src/studio/views/help.js', import.meta.url), 'utf8'), /ctx\.href\('\/learn'\)/);
 });

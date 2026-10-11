@@ -232,7 +232,13 @@
 >   soon fix that please"): while it's private, the owner lets a wallet in from the owner's Testing tab ("Who can use AGI
 >   Studio": its address, a note, one tap; no Vercel, no Redeploy), the team and testers given credits get in by themselves,
 >   and a wallet that isn't on the list reads what to do (its address in My studio, with Copy) instead of "opens soon".
->   **Run `supabase/influencers.sql` again before pushing it.** See "Giving access while it's private".
+>   **Run `supabase/influencers.sql` again before pushing it.** See "Giving access while it's private". **And its guide**
+>   (the same day, the owner: "theres should be a video guide on the site on every step and arrows so they dont get confused
+>   … they have an option to X IT but put vosials and video on the guidses please"; the owner's choice: "Guide next
+>   (Recommended)"): on each page, arrows on its real buttons one step at a time, each step with a short video of it being
+>   done in the real app (a computer's or a phone's, recorded by a tool here), ✕ to close and "Skip all guides"; it starts
+>   by itself the first time a page is opened (instead of the first-time tips), the **?** in the top bar shows it again, and
+>   Learn's lessons have the videos too. No SQL, no setting. See "AGI Studio's guide".
 > - **Her launch video** (2026-10-03, the owner: "now create me a professional launch video with motion design using only
 >   code about the website and its features … make it really good"): a 79-second film of agi1.app, every frame drawn in
 >   code and its music made in code (`tools/promo/`), wide (1920 × 1080) and tall (1080 × 1920), 60 frames a second, for
@@ -333,8 +339,10 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   testing. Since round 4 (2026-10-11) a progress bar with the time left for everything being made, X banners, captions and
   clank.trade usernames, and (its phase 2) Help & support (an AI helper and support tickets), the team's Mod tools (tickets,
   reports, bans) and the owner's tab (the AI services' balances, alerts on Telegram, the numbers, the team), and (its phase 3)
-  gifts of credits, gift links and invites. Off until it's set up, then private. See "AGI Studio, the AI influencer app", "AGI Studio, round
-  2", "AGI Studio, round 3" and "AGI Studio, round 4"
+  gifts of credits, gift links and invites, and (its phase 4) a model menu (Long videos up to 60 seconds), references, memes,
+  Instant and Learn; and (2026-10-11) its guide: arrows on each page's real buttons, each step with a short video of it in
+  the app. Off until it's set up, then private. See "AGI Studio, the AI influencer app", "AGI Studio, round 2", "AGI Studio,
+  round 3", "AGI Studio, round 4" and "AGI Studio's guide"
 - **CloakMesh** (2026-10-03, the owner's next project): its page at **inference.agi1.app** (agi1.app/cloakmesh): what
   CloakMesh is, a demo of its privacy filter that runs only in the visitor's browser, and a free waitlist. Serious, its own
   look, never about the coin. Live at agi1.app/cloakmesh; inference.agi1.app once its domain is set up. See "CloakMesh
@@ -559,7 +567,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `launch.html` | "Launch with AGI-1" (2026-10-01): the private launch page (`/launch/<id>`, never in search results): the coin, 18+, the three steps (your wallet, Robinhood Chain, Launch), the coin once it's live, "Before you launch". Its own entry: `src/launch/page.js` |
 | `live.html` | Her live show's page (2026-10-02, agi1.app/live): whether she's live on X (never when her next show is, since 2026-10-07: she goes live at random times), asking her a question (18+, the human check; since 2026-10-10 her holder perks: a wallet connected for her 💜 badge), where your question is and her answer, her rules; the owner's controls with the owner's link (since 2026-10-07 with a box for a question from X's chat). Its own entry: `src/live/page.js` |
 | `cloakmesh.html` | CloakMesh's page (2026-10-03, what inference.agi1.app shows; also agi1.app/cloakmesh): the top, how it works, the demo ("See what leaves your device"), who sees what, the five checks, the difference, speed, what Phase 1 doesn't do yet, questions, the waitlist, and a leave box (opened with someone's leave link). Its own look and theme (`/cloakmesh-theme.js`, not `/theme.js`: no Pop mode). Its own entry: `src/cloakmesh/page.js` |
-| `studio.html` | AGI Studio, the AI influencer app (2026-10-10: studio.agi1.app, and agi1.app/studio and /studio/<anything>): one page, its views drawn by `src/studio/app.js` at their own addresses (Explore, Create, an influencer, My studio, a 3D model, the owner's page; since round 4's phase 2 also Help & support at /help and the team's Mod tools at /mod); its top bar (Explore · Create · My studio, the credits pill, the wallet), on phones a tab bar at the bottom, its footer with "How AGI Studio works, and its rules". Its own dark look (no `/theme.js`). That morning it was the 3D character studio's own page (its entry `src/studio/page.js`, gone since). Its own entry: `src/studio/app.js` |
+| `studio.html` | AGI Studio, the AI influencer app (2026-10-10: studio.agi1.app, and agi1.app/studio and /studio/<anything>): one page, its views drawn by `src/studio/app.js` at their own addresses (Explore, Create, an influencer, My studio, a 3D model, the owner's page; since round 4's phase 2 also Help & support at /help and the team's Mod tools at /mod); its top bar (Explore · Create · My studio, the credits pill, the wallet; since 2026-10-11 the **?** button, "Show me around this page": its guide), on phones a tab bar at the bottom, its footer with "How AGI Studio works, and its rules". Its own dark look (no `/theme.js`). That morning it was the 3D character studio's own page (its entry `src/studio/page.js`, gone since). Its own entry: `src/studio/app.js` |
 | `src/cloakmesh/` | CloakMesh's page (2026-10-03): `page.js` (its light and dark theme, the demo, the five checks lighting up, the waitlist with `/api/cloakmesh` and the human check, leaving with a leave link), `demo.js` (a small version of CloakMesh's privacy filter, only in the visitor's browser: what it finds, its keyed tokens, putting them back, the demo's made-up answer), `words.js` (everything it says that isn't in the page), `email.js` (what counts as an email address: one rule for the page and our server) |
 | `src/live/` | Her live show's page (2026-10-02): `page.js` (her status every 15 s, asking, following your question, the owner's panel; since 2026-10-07 its box for a question from X's chat; since 2026-10-10 connecting a wallet for her 💜 badge, the site's own sign-in and session), `words.js` (everything it says, and `/api/live`'s answers in plain words; `relayText()` for the owner's box; since 2026-10-10 `perkText()`, `badgeNote()`, `BADGE`) |
 | `src/studio/` | AGI Studio (2026-10-10): `app.js` (the app: its router (`/explore`, `/create`, `/i/<id>` an influencer, `/me`, `/3d/<id>` a 3D model and the old agi1.app/studio/<id>, `/owner`), the wallet sheet with the site's sign-in, 18+, its credits and "Buy credits" (USDG, "Check my payment")), `ui.js` (its small building blocks: elements, buttons, sheets (native dialogs), toasts, chips, pictures), `media.js` (pictures made small, a clip read and its 3 frames (since round 2 also its size and frame rate), uploads in parts, a video's poster; the live camera for a selfie until round 2), `app-words.js` (everything it says that isn't in studio.html, and our server's answers in plain words), `views/` (`explore.js`, `create.js`, `influencer.js`, `me.js`, `model3d.js`, `owner.js`, `shared.js`: one file a view, and the sheets more than one view opens; since round 3 `workspace.js`, the pro tool's workspace (its panel of controls with a footer that stays: what it costs, what you have, the button with its price; the page beside it; on phones a drawer) and `gallery.js`, the gallery (Trending · Influencers · My creations, as tabs)); and from the 3D character studio (the same day; its own page, `page.js` and `words.js`, gone since AGI Studio): `viewer.js` (a character in 3D with three.js, loaded only on its page: its clips by move (`clipsFor()`), in place (`inPlace()`), framed for every pose (`movesBox()`, `lookTimes()`, `framing()`), its idle and moves), `words.js` (everything the pages say that isn't in studio.html, and our server's answers in plain words), `rules.js` (what the page and our server share: ids, words' lengths, styles, its 8 moves with Meshy's library ids and clip names, the words for them (`moveIn()`), prices and discounts, the steps, its files' addresses; its videos': their shapes (`SHAPES`), a scene's length, their 5 seconds, their addresses; since AGI Studio also the app's: prices in credits (`PRICES`, `creditPrice()`), the free credits a month (`FREE_CREDITS`), top-ups, the three ways to start (`MODES`), its styles and design choices (`OPTIONS`), the 12 trend moves (`TRENDS`), a clip's and a picture's limits (`CLIP`, `PICTURE`), reasons to report, a 3D model's steps, its files' addresses; since its round 4 (2026-10-11) how long each step usually takes (`TYPICAL`,
@@ -578,7 +586,14 @@ to a wallet, a gift link, the sheet a gift link opens) and in `rules.js` the rul
 `REFERRALS`, `REF_CODE`, `GIFT_TOKEN`, `inviteLink()`, `giftLink()`); and since round 4's phase 4 `instant.js` (Instant's
 ideas and its switch's memory), `views/learn.js` (Learn and first-time tips), `cardPick()` in `ui.js`, `uploadRef()` in
 `media.js`, and in `rules.js` the model menu (`PHOTO_MODELS`, `VIDEO_MODELS`, `photoSpec()`, `videoSpec()`, `creditsFor()`,
-`REFS`, `MEMES`, `LONG`, `videoPlan()`, `jobPlan()`) |
+`REFS`, `MEMES`, `LONG`, `videoPlan()`, `jobPlan()`); and since its guide (2026-10-11) `guide-steps.js` (each page's guide
+and its steps (`GUIDES`: where each arrow points, its words, its video), `CLIP_IDS`, Learn's lessons' videos
+(`LESSON_CLIPS`), what's kept in this browser (`GUIDE_KEY`, `readGuide()`, `markSeen()`, `setGuidesOff()`,
+`shouldOffer()`), which steps show now (`guideSteps()`), where a step's card goes (`placeCard()`, `ringBox()`): pure, read
+in Node), `guide.js` (the coach marks on the page: `offerGuide()`, `leaveGuides()`, `showGuide()`, `wireGuideButton()`),
+`guide-media.js` (the videos' list, written by the recorder: don't edit) and `guide/` (the videos themselves: 104 files,
+about 10 MB); `views/learn.js` (Learn, each lesson with its videos; its first-time tips gone) and the pages' `data-guide`
+names (what the arrows point at) |
 | `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28); at agi1.app/talk (2026-10-02) it starts the page in full-screen talk (`is-talk`, its title and colors, no loader), and at agi1.app/talk?pip=1 inside a frame marks it as her pop-out window's page (`is-pip`); since 2026-10-10 a `studio` page gets the page's own bar color like the diary (the 3D studio's page loaded `/theme.js?v=8` for it that morning; AGI Studio's page, since, doesn't load it at all: one dark look, its bar color in its own `<head>`; the other pages keep `v=7`) |
 | `src/main.js` | Browser code entry point: styles, theme, the front, prices, sections, chat, then the 3D stage (loaded separately, after the front's entrance; at /talk at once, and the front only when you leave full-screen talk) |
 | `src/landing/landing.js` | The front (2026-09-28): the loader, the entrance, the focus lines, AGI-1 in WebGL, the orbit, her bubble, the ribbons, the manifesto, the cursor and hearts (see "The front") |
@@ -681,14 +696,22 @@ sender is banned, back by themselves), invites (joined once, the welcome with a 
 and its caps), bonus credits (spent after free ones, before bought ones) and the page's promises (a gift link's secret only
 in POST bodies and the address's fragment); since 2026-10-11 who may use AGI Studio while it's private (the owner's list, the
 team and `STUDIO_ONLY_FOR`'s, credits for testing letting a tester in, an older `influencers.sql` failing closed, the
-friend's words)). `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
+friend's words)), `guide.test.js` (2026-10-11: AGI Studio's guide: each page's steps (their buttons on the pages, their
+words: PG-13, never an AI service named, never "buy"; their videos; when each shows), what's kept in this browser (and a
+broken or blocked store), where a step's card goes (a computer, a phone, never off the window or over its button while
+there's room), the ring, the coach marks' promises (text only, the keyboard and screen readers, a muted video that never
+plays by itself with "reduce motion" or "save data", ✕, Escape, "Skip all guides", the CSP), the pages offering their
+guides (the first time, the ? button, `?guide=1`), Learn's videos, the videos themselves (each step's, a computer's and a
+phone's: 2 to 14 s, under 700 KB, soundless H.264 with a WebP poster, about 20 MB at most in all) and the recorder's
+promises (never a secret, the 3D model or another site), and the AI helper's guide). `arena.test.js`, `champion.test.js`
+and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`), `art-cut.mjs` (Claude makes them ready: one of each, cut out of its green, made small) and `art-picks.json` (which one of each), into `page/art/` (her places, rooms, rides, the people she meets and what she wears, WebP, in git), which `page/paint.js` finds when her set is built; and since 2026-10-09 `page/chart.js` ($AGI's live trading chart on her TV, drawn in code), her song's music video (`media.js`: found in her videos folder, made ready once) and all of her song's words (`songs/feel-the-agi.json`). See "Her live show on X", "Her stream, upgraded", "Her trips", "Her painted set" and "Her show, 2026-10-09" |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `tools/promo/` | Her launch video (2026-10-03, not part of the website): `make.mjs` (builds its page, draws every frame in Chromium, ffmpeg → the MP4s, the cover, the post text, a light copy), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen, from the site's own files where it can), `music.js` (its music, composed and played in code), `page/` (the renderer: `promo.js`, `kit.js`, `ui.js`, `transitions.js`, `her.js` (her Live2D model), `art.js` (the front's art and shader), `scenes/` (one file a scene); built into `tools/promo/dist/`, which git ignores). Its videos go to `promo/` (git ignores it). See "Her launch video" |
 | `tools/buybot/` | Her buy GIF (2026-10-06, not part of the website): `make.mjs` (builds its page, draws each frame in Chromium, ffmpeg → `server/media/agi1-buy.mp4`, a soundless MP4), `page/` (`gif.js`: her Live2D model through the launch video's renderer, cheering, on Pop mode's violet, with a "$AGI BUY!" sticker; built into `tools/buybot/dist/`, which git ignores). See "Her buy bot" |
-| `tools/studio/` | AGI Studio's share mark (round 2, 2026-10-10, not part of the website): `mark.mjs` draws `server/media/studio-mark.png` (the "Made with AGI Studio · AI-generated · studio.agi1.app" pill, with the site's own Geist, twice its size, on a transparent background) once in Chromium, so our server only scales and places it (sharp, ffmpeg) and needs no fonts. Run again only after changing its words or look: `node tools/studio/mark.mjs` (Chromium and `npm install --no-save playwright-core`, like the other tools) |
+| `tools/studio/` | AGI Studio's share mark (round 2, 2026-10-10, not part of the website): `mark.mjs` draws `server/media/studio-mark.png` (the "Made with AGI Studio · AI-generated · studio.agi1.app" pill, with the site's own Geist, twice its size, on a transparent background) once in Chromium, so our server only scales and places it (sharp, ffmpeg) and needs no fonts. Run again only after changing its words or look: `node tools/studio/mark.mjs` (Chromium and `npm install --no-save playwright-core`, like the other tools). And since 2026-10-11 AGI Studio's guide videos: `guide-record.mjs` (the recorder: the app as Vite builds it in Chromium, at a computer's size and a phone's, our own server's code answering it with `tests/influencer.test.js`'s fake services, a demo studio of made-up people from the live show's 2D paintings, a cursor or taps drawn on top, a camera that follows what happens, frames from Chromium's screencast put together with sharp and encoded with ffmpeg → `src/studio/guide/` and `src/studio/guide-media.js`) and `guide-scripts.mjs` (what happens in each video: one scene a video, a computer's and a phone's). See "AGI Studio's guide" |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
 | `scripts/check-secrets.js` | Runs after every build and fails it if a secret would be shipped to browsers |
 | `tools/model/` | Offline 3D-model tools, not part of the site build: `fix-hair-weights.mjs`, `drop-tangents.mjs` (see "3D models") |
@@ -730,6 +753,11 @@ friend's words)). `arena.test.js`, `champion.test.js` and `coins.test.js` left w
   `--stills 0,0.9,1.6` saves pictures instead (see "Her buy bot").
 - AGI Studio's share mark (2026-10-10, round 2): `node tools/studio/mark.mjs` draws `server/media/studio-mark.png` again
   (only after changing its words or look; Chromium and `npm install --no-save playwright-core`).
+- AGI Studio's guide videos (2026-10-11): `node tools/studio/guide-record.mjs` records every step's video again from the
+  real app, a computer's and a phone's (about half a minute a video; Chromium, ffmpeg and `npm install --no-save
+  playwright-core`), after a page with a guide changes how it looks; `--only create-look,make-go --layout p` just those,
+  `--stills` pictures of each scene's moments, `--sheet` a contact sheet of each video, `--no-build` the app as last built
+  (see "AGI Studio's guide"). Then `npm test` (`tests/guide.test.js` checks every video).
 - Her live show (2026-10-02): `node tools/live/run.mjs --demo --fake-voice --record try.mp4 --minutes 3` makes a short show
   into a file anywhere (made-up questions, a stand-in hum; needs Chromium, ffmpeg, Xvfb and `npm install --no-save
   playwright-core@1.63.0`). On the owner's server everything goes through `sh tools/live/live.sh …` (see "Her live show
@@ -6520,7 +6548,9 @@ words, fast-forward chevrons: never ⚡, the credits' sign), **off by default**,
 **Learn** (`/learn`, `src/studio/views/learn.js`): 7 short lessons (your first influencer; photos, memes and X banners;
 videos; trend videos; Instant; credits, perks, gifts and invites; sharing safely), each ending with a button to where you try
 it; linked from the footer ("How it works") and Help. **First-time tips**: one line on Explore, Create and My studio the first
-time a browser opens them, "Show me how" (a lesson) and ✕, kept in that browser only (`agi_tips`).
+time a browser opens them, "Show me how" (a lesson) and ✕, kept in that browser only (`agi_tips`). (Since the guide, the same
+day: no first-time tips; each page's guide starts by itself the first time instead, and each lesson has its videos and "Show
+me with arrows": see "AGI Studio's guide".)
 
 **What's new in the database** (`supabase/influencers.sql`: 27 tables, 94 functions): a job's model, quality, seconds, parts
 and part, references, meme and caption (`inf_make`'s new parameters; a job made before has none and 1 part), `inf_job_part`
@@ -6661,6 +6691,115 @@ reloaded, taken off again; a mod and `STUDIO_ONLY_FOR`'s wallet in without the l
 to everyone; an older `influencers.sql` and Try again; phones; axe 0 issues, nothing blocked by the CSP, clean consoles).
 715 in the whole suite (1 skipped as before) on Node 20, 22 and 24, with and without Vercel's settings, as if the clock said
 later times, and the full `npm run build`, in a copy of the owner's folder with only these changes.
+
+### AGI Studio's guide (2026-10-11)
+
+**The owner's request:** "theres should be a video guide on the site on every step and arrows so they dont get confused
+everyone gets that ofcourse they have an option to X IT but put vosials and video on the guidses please". The owner's choice:
+**"Guide next (Recommended)"** (before the meme templates): arrows that walk through each step on the real buttons, an ✕ to
+close, and a short video for each step, recorded from the real app (never drawn or made by AI). Built the same day, tested
+and saved here; nothing goes live until the owner pushes it.
+
+**What visitors see** (`src/studio/guide.js`; the guides and their steps in `src/studio/guide-steps.js`):
+- **A guide on each page that needs one:** Explore (where to start, the gallery, your wallet or your credits, the bar, the
+  ? button), Create (how to start, its look or its photo, style, outfit and vibe, its name, Create), an influencer's looks
+  (pick one; 4 new looks), its tools (what to make, the scene, the model, Make, Instant, your creations) and My studio (your
+  wallet or your credits, your influencers, gifts and invites, Help & support): 25 steps. A step shows only when it fits the
+  page as it is (signed in or out, designed or from a photo, Instant on or off), and one whose button isn't on the page is
+  passed.
+- **Each step:** a card beside the step's real button, an arrow pointing at it and a ring around it (the rest of the page a
+  little dimmer, still usable); "2 of 6", its title and its words; a short muted video of that step being done in the real
+  app (a computer's recording on a computer, a phone's on a phone), with a pause button; **Back**, **Next** (**Done** on the
+  last), **✕**, and **Skip all guides**. A computer: the card beside its button (right, then left), else under or over it.
+  A phone: the card the width of the screen, under its button or over it, never covering it while there's room; a step in
+  the drawer of controls opens the drawer first ("Your creations" closes it). The page scrolls its button into view first
+  (a computer: in the middle when the card fits beside it, else near the top with the card under it; a phone: near the
+  top), and the card follows it if the page moves. **A card never covers its button for its video:** when the card with its
+  video can't fit beside, under or over its button (a short screen, a button at the end of what scrolls), it goes without
+  its video and shows **Watch how** instead, which shows it (playing, over its button then: they asked).
+- **When:** by itself the first time this browser opens that page, once the page is ready (no sheet open, the tab shown, its
+  first button there); never again by itself after that, however it was closed. The **?** in the top bar ("Show me around
+  this page") shows the page's guide again from its first step (on a page without one, it opens Learn; on Learn it's hidden).
+  Learn's **Show me with arrows** opens a page with `?guide=1`, its guide at once (the address is tidied right after). **Skip
+  all guides**: none starts by itself again in this browser ("Guides are off. Tap ? on any page to see one."). ✕ and Escape
+  close it; it goes when the page changes, and hides while a sheet is open.
+- **Kept in this browser only** (`agi_guide`: which guides were seen, and "Skip all guides"); nothing is sent anywhere. A
+  private window or blocked storage: a guide may show again on the next visit, nothing worse.
+- **Its videos:** muted and soundless; nothing is downloaded until a step shows (`preload="none"`, its poster first). They
+  play by themselves while they're shown, unless the visitor asked for "reduce motion" or the browser asks to save data
+  (then the poster, with a play button), never out of sight. A browser that can't play them (rare: they're H.264, which
+  Chrome, Edge, Safari and Firefox play) hides the box of the one it tried, and shows the next ones' posters. Each is 4.5
+  to 13 seconds and 45 to 465 KB (a whole guide's videos are about 1.3 MB at most).
+- **The keyboard and screen readers:** the card's title takes the keyboard when a guide starts; ← and → step, Escape closes
+  it; each step is said by a live region; the video is decoration (its words say the same). Back to the page's main part
+  when it closes.
+- **The first-time tips are gone** (round 4, phase 4's line on Explore, Create and My studio): the guide does their job.
+- **Learn** (`/learn`): each lesson with its video (its steps' videos from the guide, one after the other, never playing by
+  itself there) and **Show me with arrows** where a page has a guide; "On any page, tap ? at the top for its guide with
+  arrows."
+- **The AI helper** knows the guide (`helpGuide()` in `server/inf-help.js`: "THE GUIDE AND LEARN"), and its "MAKING
+  THINGS" line knows round 4's phase 4 (the model menu, memes, references, Long videos, Anime, Instant), which it had missed.
+
+**How it works:** each page names what its arrows point at (`data-guide` on its buttons and sections: `start`, `gallery`,
+`account`, `nav`, `guide` (the ? button), `mode`, `look`, `style`, `name`, `go`, `looks`, `reroll`, `tools`, `scene`,
+`models`, `instant`, `creations`, `connect`, `credits`, `mine`, `gifts`, `help`), and offers its guide through `ctx.guide(id,
+env)` in `src/studio/app.js` (what the page is like now, and how to open and close a phone's drawer). The card is made with
+`createElement` and its words set as text; its places only through the CSS object model (the CSP forbids style attributes);
+every rule names an `sa-guide` class (`src/styles/studio-app.css`). The videos come from our own address (Vite gives each its
+own name, kept a year by browsers): the CSP is unchanged (`media-src 'self' blob:`).
+
+**The videos** (`src/studio/guide/`, listed in `src/studio/guide-media.js`; made by `tools/studio/guide-record.mjs`, their
+scenes in `tools/studio/guide-scripts.mjs`):
+- **26 videos** (every step's, and two more for Learn: a trend video and a video being made), each twice: a computer's (672
+  × 420, filmed on a 1280 × 800 screen) and a phone's (624 × 390, filmed on a 390 × 844 phone, with touches): 16:10, 24
+  frames a second, soundless H.264 MP4s with WebP posters. 104 files, about 10 MB.
+- **Filmed from the real app:** AGI Studio as Vite builds it, in Chromium, with our own server's code answering it
+  (`api/launch.js`) and its outside services faked exactly as `tests/influencer.test.js` fakes them (read from that file as it
+  runs). A demo studio: made-up people from the live show's 2D paintings (`tools/live/page/art`: never anyone real, never the
+  3D model or anything rendered from it), their photos and videos made from those paintings, a made-up wallet with demo
+  credits. Each scene scripted (what's clicked, typed and tapped, and when), a cursor (a computer's) or a touch (a phone's)
+  drawn on top, and a camera that follows what happens (a 16:10 part of the screen), a little faster where the app waits.
+  Frames from Chromium's own screencast, put together with sharp, encoded with ffmpeg.
+- **Never** a secret (the browser and ffmpeg get none), another site (only the app's own address, which stands in as
+  https://studio.agi1.app), the 3D model, or a real person. A guide card in a video shows its words and arrows only (the app
+  being filmed has no videos of its own).
+- **Made again** by Claude after a page with a guide changes how it looks (see "Commands"); `tests/guide.test.js` fails the
+  build if a step's video is missing, too long, too big or not a real soundless MP4.
+
+**Owner:** push. No SQL, no setting, nothing on the live show's server. **Cost:** nothing to pay: about 10 MB more in the
+repo and its builds; each visitor downloads only the videos of the steps they see (from Vercel's CDN, inside its bandwidth).
+
+**Troubleshooting:**
+
+| What you see | Why | Fix |
+|---|---|---|
+| A page's guide doesn't start by itself | This browser has seen it (or "Skip all guides" was pressed) | Tap ? in the top bar |
+| A step's video doesn't match the page | The page changed after its video was filmed | Tell Claude: the recorder films it again |
+| The video is a still picture | "Reduce motion" is on, or the browser asks to save data | Tap its play button |
+| A step shows "Watch how" instead of its video | The card with its video would cover its button there (a short screen, the end of a page) | Tap Watch how |
+| A step is left out | Its button isn't on the page as it is (signed out, Instant on, the photo way) | Nothing to fix |
+
+**Tests:** `tests/guide.test.js` (10: each page's steps, their buttons on the pages, their words and videos and when they
+show; what's kept in this browser; where a step's card goes, its ring, and how much of its button a card would cover
+(`coverOf()`, `COVER`); the coach marks' promises (text only, the keyboard and screen readers, a muted video that plays
+only while it's shown and never by itself with "reduce motion" or "save data", "Watch how", ✕, Escape, "Skip all guides",
+the CSP); the pages offering their guides; Learn's videos; the videos themselves and the recorder's promises; the AI
+helper's guide), each new check seen to fail on a broken version; `tests/influencer.test.js` (Learn without first-time
+tips). 726 in the whole suite (on Node 20, 22 and 24, with and without Vercel's settings, as if the clock said later
+times, and the full `npm run build`), in a copy of this folder with only the guide's changes, and the build again with the
+videos as saved in this folder (each with its Content Credentials label: see "Working in this repo"). In a browser with
+our own server's code answering the page (Claude's scratch `app/guide1.mjs`, 2,742 checks; Playwright's own Chromium has
+no H.264 decoder, so the MP4s were answered with a VP8 stand-in there, and a run without it checked a browser that can't
+play them): every guide walked at 1440, 390 and 360 px (each step's card inside the window and never over its button, its
+ring, its arrow, its count, words and live region, its video the right recording for the screen, muted, playing by itself,
+or without it and "Watch how" where there's no room), Back, Next, Done, ✕, Escape, the arrow keys, the keyboard back on
+the page, "Skip all guides", the ? button, `?guide=1`, a photo's steps, signed in and out, "reduce motion", a sheet open,
+Learn's videos (nothing downloaded before its play button), "Watch how" on a phone, a browser without the codec; axe 0
+issues, nothing blocked by the CSP, clean consoles; and the earlier suites for giving access (164), the chips and Copy
+prompt (85) and round 3 (266), and every view's look at 3 widths (axe 0 issues), again (with the guide off in the suites
+that aren't about it). Found that way and fixed: with its video the card was too tall to fit beside a few buttons (a
+phone's "Name it" and "Help & support", the computer's gallery), so it covered them: a computer now scrolls a button as
+wide as the page to the top, and a card that would still cover its button goes without its video ("Watch how").
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -8701,6 +8840,15 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   again (before pushing), push. Tests: 716 unit (715 pass, 1 skipped as before; on Node 20, 22 and 24, with and without
   Vercel's settings, and as if the clock said later times), the full build, the SQL checks in PGlite, 164 checks in a
   browser with our own server's code (and phase 2's 186, phase 3's 225 and the chips' 85 again).
+- **AGI Studio's guide: built 2026-10-11, waiting for the owner's push** (the owner: "theres should be a video guide on the
+  site on every step and arrows so they dont get confused … they have an option to X IT but put vosials and video on the
+  guidses please"; the owner's choice: "Guide next (Recommended)"): on each page, arrows on its real buttons one step at a
+  time, each step with a short video of it being done in the real app (a computer's and a phone's, filmed by the recorder
+  from the real app), ✕ and "Skip all guides"; it starts by itself the first time, the ? in the top bar shows it again;
+  Learn's lessons with their videos; the first-time tips replaced; the AI helper knows it. See "AGI Studio's guide".
+  **Owner:** push (no SQL, no setting). Tests: 726 unit (on Node 20, 22 and 24, with and without Vercel's settings, and as
+  if the clock said later times; 10 new in `tests/guide.test.js`), the full build, 2,742 checks in a browser with our own
+  server's code. Next: the meme templates and their editor, then 12 more trend clips of our own.
 
 ## Decisions log
 
@@ -8994,6 +9142,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-11 | Songs for videos (the owner: "when they make a video thay can use popular ongs or trend songs like in higgsfield genjutsu"): real popular songs can't be built in (each needs its record label's and publisher's licenses; without them videos get muted or taken down, and the studio gets legal notices). Higgsfield's Genjutsu page only talks about rebuilding a clip you upload, not a song library. The owner picked all three of Claude's options: **AI trend songs** (our own songs in today's trend styles, made once by the owner with Google's music AI on fal.ai, about $0.04 each, picked under Video and Trend), **keeping their own clip's song** in a trend video (their responsibility; a way for rights holders to ask for a takedown first), and **a tip to add TikTok's or Instagram's own sound** when posting (they hold the licenses). To build |
 | 2026-10-11 | Found while testing phase 3, and fixed: a gift note holding a seed phrase was refused as "too long" (the check for a secret comes first now, with its own warning), and the safety note said a gift link's secret was kept "until the link is claimed, taken back or expires" (it stays with its gift, so an old link can say what became of it, and a gift that's done goes a year later): corrected, and tested |
 | 2026-10-11 | Giving access while AGI Studio is private (the owner: "i want to give access to someone but it said to them comins soon fix that please"; the friend read "AGI Studio is private for now: it opens to everyone soon"): a list in the database the owner changes from the owner's Testing tab (a wallet's address and a note, one tap; taken off with two), so letting someone in never needs Vercel or a Redeploy; the owner, `STUDIO_ONLY_FOR`'s and the team get in without it, and a tester given credits is put on it. One rule for every gate on our server (`canUse()`), read with the team's `whoIs()` (no extra database call; 20 s per server copy). A wallet that isn't on it is told what to do (its address in My studio, with Copy), never "opens soon". Coin links while launching is private follow the same list. Not picked: invite links (a link can be passed on), a list in Vercel's settings (a Redeploy each time), opening AGI Studio to everyone (the AI services' terms first: see "Open questions") |
+| 2026-10-11 | AGI Studio's guide (the owner: "a video guide on the site on every step and arrows so they dont get confused … they have an option to X IT"; the owner's choice: "Guide next (Recommended)"): coach marks over the real app, one guide for each page that needs one (Explore, Create, an influencer's looks, its tools, My studio), each step an arrow and a ring on its real button, its words and a short video of it; it starts by itself the first time a browser opens that page and never again by itself, ✕ and "Skip all guides" on every step, and the ? in the top bar shows it again; the page stays usable under it; kept in that browser only. A card never covers its button for its video: where the card with its video can't fit beside, under or over it, it goes without it and shows "Watch how" (found by the browser check: a phone's "Name it" and "Help & support"). It replaced the first-time tips (round 4, phase 4) and gave Learn's lessons their videos. Not picked: a guide on every visit (it would get in the way), a tour that blocks the page, a tour library from another site (outside code against the CSP, and ours is small), a separate "how to" page instead of arrows on the real buttons |
+| 2026-10-11 | The guide's videos filmed from the real app by a recorder (`tools/studio/guide-record.mjs`), not recorded by hand or made by AI: AGI Studio as it's built, our own server's code with the tests' fake services, a demo studio of made-up people from the live show's 2D paintings (never anyone real, never the 3D model); scripted scenes, a drawn cursor or touches, a camera that follows what happens; a computer's and a phone's, 4.5 to 13 s, soundless, 45 to 465 KB each (about 9 MB for all 52, 10 MB with their posters), each downloaded only when its step shows, still with "reduce motion" or "save data". So they can be filmed again whenever a page changes, and show exactly what the page does. Not picked: screen recordings by hand (redone by hand at every change, and real accounts in them), narration (the card's words say it, and sound would surprise people), one video for computers and phones alike (a phone's drawer and tab bar look nothing like a computer's panel) |
+| 2026-10-11 | The AI services' cost (the owner: "i just checked higgsfield api is cheaper? and fal ai is more expensive", then "if you decide whats the best?"): Claude's pick, to build after the guide and the meme templates: Higgsfield's API for two of the video models, where it sells them for less than fal.ai, only for influencers not made from a real person's photo, with fal.ai as the fallback whenever Higgsfield fails or is busy. A new service with its own account, key (a secret: on the secret check's list) and terms, set up by the owner first. Not built yet |
+| 2026-10-11 | Higgsfield's trending videos (the owner: "is it possible to get the trend videos on the higghsfield genjutsu tab and put it in my studio?", then "can i get the trending in higgsfield tab on their trending videos on my studio with the propmts?"): no. They're Higgsfield's and its users' work, which its terms of use don't let other services copy (read 2026-10-11, not legal advice), and the trending ones showed a real person and a brand's logo. Instead: 12 more trend clips of our own in today's popular styles (written for this app, made only when the owner presses Make: about $15 at fal), Trend → My own clip (a clip of their own, already there) and Copy prompt on our clips. Never Higgsfield's look, logo, pictures, prompts or code |
 
 ## Open questions
 
@@ -9326,6 +9478,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
     drift from the owner's 1.8×. A Long video's join on Vercel and fal's Crisp model weren't tried live: the owner's first Long video is the check.
   - **A gift link works for whoever has it** (round 4, phase 3): a screenshot or a group chat is enough to claim it. The page
     says to keep it to yourself, and its sender can take it back while nobody has claimed it.
+  - **The guide's videos fall behind the app** (2026-10-11) whenever a page with a guide changes how it looks: Claude films
+    them again (`node tools/studio/guide-record.mjs`) with each change to those pages; a video that doesn't match its page
+    is the sign. Not tried on real phones yet: Safari on an iPhone (whether a muted video plays by itself there, and the
+    card above a phone's keyboard), and real screen readers; the owner's first look is the check.
+  - **"Skip all guides" has no way back on** but the ? button (which shows a page's guide, without switching them back on).
+    If people ask for one, a switch in My studio is a small change.
 
 ## Working in this repo
 
@@ -9337,8 +9495,11 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 - Image files Claude copies into this folder (SVG, PNG, …) may get a small "content credentials" (C2PA) metadata block
   saying Claude made them. That's expected and harmless: keep it. Audio too (2026-10-07): her song
   `tools/live/songs/feel-the-agi.mp3` got it as an ID3 tag in front (one GEOB frame of type `application/c2pa`, 5,822
-  bytes; the sound itself unchanged), so `tests/stream.test.js` allows that label and no other tag. So these files'
-  checksums here differ from Claude's copies.
+  bytes; the sound itself unchanged), so `tests/stream.test.js` allows that label and no other tag. Videos and WebP pictures
+  too (2026-10-11, AGI Studio's guide videos): each MP4 got a 5,875-byte `uuid` box right after its `ftyp` (its `stco`
+  chunk offsets moved by as much, its `moov` still before its `mdat`, its video data unchanged), and each WebP a `C2PA`
+  chunk after its image data (5,768 bytes; the picture unchanged); `tests/guide.test.js` and the build pass with them. So
+  these files' checksums here differ from Claude's copies.
 - **Claude never runs git in this folder through its link to the owner's computer**, not even `git status`: that link can't
   delete files, so git leaves an empty `.git/index.lock` behind and the owner's next `git add` fails ("index.lock: File
   exists"). It happened once (2026-09-25; removed with the owner's permission). Claude compares files by checksum instead. If
@@ -9393,5 +9554,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   workspace holds unfinished work (the meme templates' files and `opentype.js` that day): this folder's own `package.json`,
   the workspace's `node_modules` linked in, and `NODE_PRESERVE_SYMLINKS=1` (else the share mark's ffmpeg test reads the
   link's real path and fails).
+- **A page with a guide keeps its `data-guide` names** (2026-10-11): the guide's arrows point at them, and
+  `tests/guide.test.js` fails the build if a step's name isn't on its page. After changing how such a page looks, Claude
+  films its videos again (`tools/studio/guide-record.mjs`) and looks at each one's contact sheet (`--sheet`) before saving
+  them; a scene that fails leaves a picture of the screen in `node_modules/.cache/agi1-guide/failed/`.
 - The Claude desktop app saves copies of files Claude sends in chat into `Claude outputs/`. Git ignores that folder,
   and its copies (including any CLAUDE.md there) may be out of date. The CLAUDE.md at the top of this folder is the current one.

@@ -39,10 +39,11 @@ export async function render(ctx, route, root) {
   // ---------- how it starts ----------
   const modeNote = h('p', { class: 'sa-ws-hint' });
   const modeSeg = segmented({ legend: 'How do you want to start?', choices: Object.entries(MODES).map(([id, m]) => [id, m.name, MODE_ICON[id]]), value: st.mode, onchange: (v) => setMode(v, { user: true }) });
-  const modeBox = h('section', { class: 'sa-ws-sec sa-ws-sec-mode', 'aria-label': 'How it starts' }, modeSeg.node, modeNote);
+  // (2026-10-11) data-guide: where its guide's arrows point (src/studio/guide-steps.js)
+  const modeBox = h('section', { class: 'sa-ws-sec sa-ws-sec-mode', 'aria-label': 'How it starts', dataset: { guide: 'mode' } }, modeSeg.node, modeNote);
 
   // ---------- its look (designed), or its photo ----------
-  const sourceBox = h('section', { class: 'sa-ws-sec', 'aria-labelledby': 'sa-src-h' });
+  const sourceBox = h('section', { class: 'sa-ws-sec', 'aria-labelledby': 'sa-src-h', dataset: { guide: 'look' } });
   const sourceErr = h('p', { class: 'sa-err', role: 'alert', hidden: true });
   const human = h('div', { class: 'sa-human' });
 
@@ -50,7 +51,7 @@ export async function render(ctx, route, root) {
   const styleErr = h('p', { class: 'sa-err', role: 'alert', hidden: true });
   // (2026-10-11) every choice in Create can be unpicked again, a tap on it (chips' toggle): Create then asks for one it needs
   const styleGroup = chips({ legend: 'Style', choices: Object.entries(INF_STYLES), media: true, toggle: true, onchange: () => { st.styleTouched = true; say(styleErr, ''); } });
-  const styleBox = h('section', { class: 'sa-ws-sec', 'aria-label': 'Style' }, styleGroup.node, styleErr);
+  const styleBox = h('section', { class: 'sa-ws-sec', 'aria-label': 'Style', dataset: { guide: 'style' } }, styleGroup.node, styleErr);
   const extra = h('section', { class: 'sa-ws-sec', 'aria-label': 'Outfit and vibe' });
   for (const key of EXTRA_KEYS) {
     groups[key] = chips({ legend: OPTIONS[key].label, choices: [['', 'Any'], ...Object.entries(OPTIONS[key].choices)], value: '', media: true, toggle: true });
@@ -69,7 +70,7 @@ export async function render(ctx, route, root) {
   suggest.addEventListener('click', () => { name.value = pickOne(NAMES.filter((n) => n !== name.value)); say(nameErr, ''); });
   const wordsBox = h('section', { class: 'sa-ws-sec', 'aria-label': 'Words and name' },
     h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: 'sa-words', text: 'Anything else? (optional)' }), words, h('div', { class: 'sa-field-foot' }, wordsErr, wordsCount)),
-    h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: 'sa-name', text: 'Its name' }), h('div', { class: 'sa-input-row' }, name, suggest), nameErr));
+    h('div', { class: 'sa-field', dataset: { guide: 'name' } }, h('label', { class: 'sa-label', for: 'sa-name', text: 'Its name' }), h('div', { class: 'sa-input-row' }, name, suggest), nameErr));
   const perks = h('p', { class: 'sa-fine' });
   const aboutBox = h('section', { class: 'sa-ws-sec sa-ws-sec-fine', 'aria-label': 'How it\'s made' },
     h('p', { class: 'sa-fine', text: "It's made by an AI service: 4 looks to pick from, then its full body (about a minute each). If it can't be made, its credits come back. Adults only, PG-13, never a famous person, a real person only with their OK, never someone else's character." }),
@@ -125,6 +126,8 @@ export async function render(ctx, route, root) {
   ctx.on('wallet', renderPrice);
   ctx.on('info', () => { showStatus(); showExamples(); renderPrice(); if (st.photosTick?.isConnected) st.photosTick.textContent = photosText(); });
   setMode(st.mode);
+  // (2026-10-11) its guide (the first time this browser opens Create, and with the bar's ? button): a phone's drawer opens for it
+  ctx.guide('create', { mode: () => st.mode, open: () => ws.open(), close: () => ws.close() });
 
   function dropPreview() { if (st.preview) URL.revokeObjectURL(st.preview); st.preview = null; }
 

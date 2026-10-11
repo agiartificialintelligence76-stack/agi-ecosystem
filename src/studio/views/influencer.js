@@ -69,7 +69,8 @@ export async function render(ctx, route, root) {
   const back = h('a', { class: 'sa-back', href: ctx.href('/explore'), dataset: { saLink: '' } }, icon('back'), h('span', { text: 'Explore' }));
   const head = h('header', { class: 'sa-profile' });
   const makingBox = h('section', { class: 'sa-card sa-making', hidden: true, 'aria-live': 'polite' });
-  const galleryBox = h('section', { class: 'sa-section sa-inf-gallery', hidden: true, 'aria-labelledby': 'sa-gal-h' });
+  // (2026-10-11) data-guide: where its guides' arrows point (src/studio/guide-steps.js: its looks, its tools)
+  const galleryBox = h('section', { class: 'sa-section sa-inf-gallery', hidden: true, 'aria-labelledby': 'sa-gal-h', dataset: { guide: 'creations' } });
   const models = h('section', { class: 'sa-section', hidden: true, 'aria-labelledby': 'sa-3d-h' });
   const cta = h('section', { class: 'sa-card sa-cta', hidden: true },
     h('p', { class: 'sa-cta-title', text: 'Make your own AI influencer' }),
@@ -156,6 +157,8 @@ export async function render(ctx, route, root) {
     const pickOrMaking = mine() && !banned() && ['looks', 'pick', 'body', 'failed'].includes(i.status);
     makingBox.hidden = !pickOrMaking;
     if (pickOrMaking) part('making', { s: i.status, j: i.job, l: i.looks, e: i.error, p: page.position }, drawMaking);
+    // (2026-10-11) its guide: picking a look, then (once it's ready) its tools
+    if (pickOrMaking && i.status === 'pick') ctx.guide('pick');
     const ready = i.status === 'ready';
     // its tools: its own wallet, once it's ready (never while it's banned: it makes nothing)
     const withTools = ready && mine() && !banned();
@@ -163,6 +166,7 @@ export async function render(ctx, route, root) {
     if (withTools) {
       ws.setTitle(`Make with ${i.name}`, 'Photos, trend videos, videos, 3D and a coin');
       part('tools', toolsSig(), drawTools);
+      ctx.guide('make', { instant: () => instant, open: () => ws.open(), close: () => ws.close() });
     }
     // (round 4, phase 2) while its own wallet is banned its pictures and videos are hidden from everyone, itself too: no gallery
     galleryBox.hidden = !ready || banned();
@@ -304,7 +308,7 @@ export async function render(ctx, route, root) {
     const n = Math.max(1, Math.min(4, i.looks?.files || 4));
     const use = btn('Use this look', { kind: 'primary', icon: 'check' });
     use.disabled = true;
-    const looks = h('div', { class: 'sa-looks', role: 'radiogroup', 'aria-label': 'Its looks' });
+    const looks = h('div', { class: 'sa-looks', role: 'radiogroup', 'aria-label': 'Its looks', dataset: { guide: 'looks' } });
     for (let k = 0; k < n; k++) {
       const b = h('button', { type: 'button', class: 'sa-look', role: 'radio', 'aria-checked': 'false', 'aria-label': `Look ${k + 1}` },
         pic(infPic(id, i.looks.job, k, true), { cls: 'sa-look-pic', lazy: false }), h('span', { class: 'sa-look-check', 'aria-hidden': 'true' }, icon('check')));
@@ -323,7 +327,7 @@ export async function render(ctx, route, root) {
       say(msg, errorText(r.data?.error));
       if (r.data?.error === 'state') load();
     }));
-    const reroll = btn(`4 new looks · ${num(price('looks'))} credits`, { kind: 'ghost', icon: 'refresh' });
+    const reroll = btn(`4 new looks · ${num(price('looks'))} credits`, { kind: 'ghost', icon: 'refresh', dataset: { guide: 'reroll' } });
     reroll.addEventListener('click', () => busy(reroll, 'Starting…', async () => {
       if (ctx.credits < price('looks')) { await ctx.buyCredits({ need: price('looks') }); if (ctx.credits < price('looks')) return; }
       const r = await ctx.act('inf-reroll', { id });
@@ -458,7 +462,7 @@ export async function render(ctx, route, root) {
     { id: 'coin', icon: 'coin', name: 'Coin', build: coinTool, when: () => ctx.info?.coins && (ctx.info.launch || ctx.me?.owner || !ctx.info.open) },
   ];
   const toolsNow = () => TOOLS.filter((t) => !t.when || t.when());
-  const toolTabs = h('div', { class: 'sa-tooltabs', role: 'tablist', 'aria-label': 'What to make' });
+  const toolTabs = h('div', { class: 'sa-tooltabs', role: 'tablist', 'aria-label': 'What to make', dataset: { guide: 'tools' } });
   const toolBody = h('div', { class: 'sa-tool', role: 'tabpanel', id: nextId('tool') });
   put(ws.body, toolTabs, toolBody);
   const cost = costLine(ctx);
@@ -471,7 +475,7 @@ export async function render(ctx, route, root) {
 
   // ---------- Instant (round 4, phase 4): a switch in the panel's head; on, the panel is ready-made ideas, one tap each ----------
   let instant = instantOn();
-  const instSwitch = h('button', { type: 'button', class: 'sa-instant', role: 'switch', 'aria-checked': String(instant), 'aria-label': 'Instant', title: 'Instant: one tap on an idea makes it' },
+  const instSwitch = h('button', { type: 'button', class: 'sa-instant', role: 'switch', 'aria-checked': String(instant), 'aria-label': 'Instant', title: 'Instant: one tap on an idea makes it', dataset: { guide: 'instant' } },
     icon('ff'), h('span', { text: 'Instant' }));
   instSwitch.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -599,7 +603,7 @@ export async function render(ctx, route, root) {
     }));
     fillIdeas(ideas);
     return {
-      node: h('div', { class: 'sa-field' }, lab, area, h('div', { class: 'sa-field-foot' }, err, count), ideaRow),
+      node: h('div', { class: 'sa-field', dataset: { guide: 'scene' } }, lab, area, h('div', { class: 'sa-field-foot' }, err, count), ideaRow),
       area, err, setIdeas: fillIdeas,
       setLabel(t, placeholder = null) { lab.textContent = t; if (placeholder) area.placeholder = placeholder; },
       get value() { return area.value.trim(); },
@@ -761,7 +765,7 @@ export async function render(ctx, route, root) {
     const about = h('p', { class: 'sa-ws-hint sa-shape-note', hidden: true });
     const meme = memeFields();
     const refs = refsField(host, { max: PHOTO_MODELS.classic.refs });
-    const modelBox = h('div', { class: 'sa-field' }, models.node);
+    const modelBox = h('div', { class: 'sa-field', dataset: { guide: 'models' } }, models.node);
     const shapeBox = h('div', { class: 'sa-field' }, shape.node);
     function sync() {
       const banner = st.kind === 'banner', isMeme = st.kind === 'meme';
@@ -948,7 +952,7 @@ export async function render(ctx, route, root) {
         }
       });
     });
-    put(host.body, hint(`${i.name} in any scene you describe: a few minutes.`), h('div', { class: 'sa-field' }, models.node), scene.node, lenBox, qualBox, longNote,
+    put(host.body, hint(`${i.name} in any scene you describe: a few minutes.`), h('div', { class: 'sa-field', dataset: { guide: 'models' } }, models.node), scene.node, lenBox, qualBox, longNote,
       from.node, shapeBox, soundBox, refs.node);
     host.setFoot(msg, go.node);
     sync();

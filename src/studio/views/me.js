@@ -54,9 +54,11 @@ export function render(ctx, route, root) {
   const clankBox = h('section', { class: 'sa-card sa-clank-card', id: 'clank', 'aria-labelledby': 'sa-clank-h', hidden: true });
   // (round 4, phase 2) help and support (its tickets: open ones, and the team's answers not read yet), and for the team its
   // tools: Mod tools (a mod's, support's and the owner's), Owner tools (the owner's)
-  const helpBox = h('section', { class: 'sa-card sa-help-card', 'aria-labelledby': 'sa-help-h' });
+  // (2026-10-11) data-guide: where its guide's arrows point (src/studio/guide-steps.js)
+  const helpBox = h('section', { class: 'sa-card sa-help-card', 'aria-labelledby': 'sa-help-h', dataset: { guide: 'help' } });
   // (round 4, phase 3) gifts and invites: a card of its own (its gifts are read when it's first shown; what's typed stays put)
   const gifts = giftsCard(ctx);
+  gifts.node.dataset.guide = 'gifts';
   const ownerLink = h('p', { class: 'sa-owner-link', hidden: true },
     linkBtn('Owner tools', ctx.href('/owner'), { kind: 'ghost', icon: 'shield', dataset: { saLink: '', owner: '' } }),
     linkBtn('Mod tools', ctx.href('/mod'), { kind: 'ghost', icon: 'inbox', dataset: { saLink: '', mod: '' } }));
@@ -203,7 +205,7 @@ export function render(ctx, route, root) {
     if (!ctx.session) {
       const go = btn('Connect your wallet', { kind: 'primary', size: 'lg', icon: 'wallet' });
       go.addEventListener('click', async () => { if (await ctx.requireAdult()) ctx.connect(); });
-      put(body, h('section', { class: 'sa-empty' },
+      put(body, h('section', { class: 'sa-empty', dataset: { guide: 'connect' } },
         h('span', { class: 'sa-empty-icon' }, icon('wallet')),
         h('p', { class: 'sa-empty-title', text: 'Your studio lives in your wallet' }),
         h('p', { class: 'sa-muted', text: 'Connect it to see your credits and your influencers. A free signature, never a transaction.' }), go));
@@ -216,7 +218,7 @@ export function render(ctx, route, root) {
     // the three numbers that matter: credits, its level, its influencers
     const buy = btn('Buy credits', { kind: 'primary', icon: 'bolt' });
     buy.addEventListener('click', () => ctx.buyCredits());
-    const credits = h('section', { class: 'sa-stat-card sa-stat-credits', id: 'credits' },
+    const credits = h('section', { class: 'sa-stat-card sa-stat-credits', id: 'credits', dataset: { guide: 'credits' } },
       h('p', { class: 'sa-label', text: 'Credits' }),
       h('p', { class: 'sa-stat-big' }, icon('bolt'), h('span', { text: me ? num(me.credits?.total) : '…' })),
       ...creditLines(me?.credits, info),
@@ -280,7 +282,7 @@ export function render(ctx, route, root) {
       ctx.meError && !me ? h('p', { class: 'sa-banner', text: errorText(ctx.meError) }) : null,
       h('div', { class: 'sa-stat-cards' }, credits, slotCard, wallet),
       prizes,
-      h('section', { class: 'sa-section sa-mine', 'aria-labelledby': 'sa-mine-h' }, h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-mine-h' }, icon('user'), h('span', { text: 'My influencers' }))), grid),
+      h('section', { class: 'sa-section sa-mine', 'aria-labelledby': 'sa-mine-h', dataset: { guide: 'mine' } }, h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-mine-h' }, icon('user'), h('span', { text: 'My influencers' }))), grid),
       burnBox,
       prices,
     );
@@ -289,6 +291,8 @@ export function render(ctx, route, root) {
   ctx.on('me', draw);
   ctx.on('wallet', draw);
   ctx.on('info', draw);
+  // (2026-10-11) its guide: the first time this browser opens My studio, and with the bar's ? button
+  ctx.guide('me');
   if (ctx.session) ctx.refreshMe();
   // influencers being made: their states change while you look
   ctx.every(() => {
