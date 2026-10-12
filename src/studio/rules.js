@@ -109,7 +109,9 @@ export const VIDEO_STEPS = [
 // numbers. An influencer is its 4 looks and its full-body picture; new looks while picking cost "looks".
 // (Round 4, 2026-10-11: an X banner is a photo made wider and sharper, 2K: about $0.12 of AI, so 22 credits: about 1.8× its
 // cost, the owner's choice for every price, so a Soulmate's 40% off still covers it.)
-export const PRICES = { influencer: 100, looks: 40, photo: 15, banner: 22, trend: 300, video: 400, model: 500 };
+// (2026-10-11) from a picture, two cheaper ways to start (WAYS below): just its full body, one picture of the AI (about $0.08:
+// 20 credits), or the photo as it is, no AI at all (10 credits: its checks and its keeping)
+export const PRICES = { influencer: 100, looks: 40, photo: 15, banner: 22, trend: 300, video: 400, model: 500, body: 20, asis: 10 };
 export const creditPrice = (what, level) => Math.round(PRICES[what] * (1 - (DISCOUNT[level] ?? 0)));
 // A holder's free credits each month (the owner's: "Discounts + free credits"): Crush 100, Soulmate 400 (the whole site's
 // free credits a month are capped on our server). A thank-you for holding, never an investment.
@@ -127,7 +129,44 @@ export const MODES = {
 };
 // the box ticked before a picture can be picked (sent with it: our server refuses a picture without it)
 export const CONSENT_TEXT = "This is me, someone who said I may use their photo (an adult), or a character of my own.";
-export const INF_STYLES = { real: 'Realistic', anime: 'Anime', toon: '3D cartoon' };
+// Its style (2026-10-11, the owner: "can you make the style optional and please add more styles like , ghiblifi etc. and many
+// more"; the owner's choices: "Their words, else photo (Recommended)", "Storybook anime (Recommended)" for the hand-painted
+// anime-film look, and all four groups): 26 styles in four groups, each in our own words (never a studio's, a brand's or an
+// artist's name: server/inf-words.js STYLE), and none needed. With no style picked ('auto'), it's the style its words name,
+// else a photo look; from a picture, the picture's own look (a photo stays a photo, a drawing stays a drawing). Styles with
+// childlike proportions (chibi) aren't offered; a toy figure or a plushie keeps adult proportions.
+export const STYLE_GROUPS = [
+  { id: 'photo', name: 'Photo looks', styles: { real: 'Realistic', film: 'Film photo', editorial: 'Editorial', cinematic: 'Cinematic' } },
+  { id: 'anime', name: 'Anime & comics', styles: { anime: 'Anime', storybook: 'Storybook anime', retro: '90s anime', manga: 'Manga', webcomic: 'Webcomic', comic: 'Comic book', celshade: 'Cel-shaded' } },
+  { id: 'toys', name: '3D & toys', styles: { toon: '3D cartoon', clay: 'Claymation', toy: 'Toy figure', plush: 'Plushie', pixel: 'Pixel art', lowpoly: 'Low poly' } },
+  { id: 'art', name: 'Art & paint', styles: { watercolor: 'Watercolor', oil: 'Oil painting', sketch: 'Pencil sketch', popart: 'Pop art', ukiyoe: 'Woodblock print', fantasy: 'Fantasy art', cyberpunk: 'Cyberpunk', vaporwave: 'Vaporwave', papercut: 'Paper cutout' } },
+];
+export const INF_STYLES = Object.fromEntries(STYLE_GROUPS.flatMap((g) => Object.entries(g.styles)));
+// no style picked: its words' style, else a photo look (from a picture: the picture's own)
+export const STYLE_AUTO = 'auto';
+export const STYLE_ANY = 'Any style';
+export const styleName = (style) => (style === STYLE_AUTO ? STYLE_ANY : INF_STYLES[style] || null);
+// The drawn styles: their faces are drawn, not photographic, so a video can be made straight from the full body by the
+// reference-to-video model (VIDEO_MODELS.anime), which says no to realistic faces. The photo looks, and the painted styles
+// that can come out true to life (oil painting, fantasy art, cyberpunk), start a video from one of their photos instead.
+export const DRAWN_STYLES = ['anime', 'storybook', 'retro', 'manga', 'webcomic', 'comic', 'celshade', 'toon', 'clay', 'toy', 'plush', 'pixel',
+  'lowpoly', 'watercolor', 'sketch', 'popart', 'ukiyoe', 'vaporwave', 'papercut'];
+// An influencer's style is drawn: one of those, or no style picked from a drawing (a picture that isn't a photo of a real
+// person keeps its own look); never one made from a face (before round 2)
+export const drawnStyle = (inf) => Boolean(inf) && inf.mode !== 'face' && (DRAWN_STYLES.includes(inf.style)
+  || (inf.style === STYLE_AUTO && inf.mode === 'picture' && inf.real !== true));
+
+// How one made from a picture starts (2026-10-11, the owner: "if they already have a full body they can skip the first
+// generate so they can save credits or maybe just crop it and put it in their picture"; "Both cheaper ways (Recommended)"):
+// 4 looks to pick from (as before), or just its full body (its portrait cut from it), or the photo as it is (no AI: the photo
+// is its full body and its face its portrait; only for a photo of the whole person, head to feet, and in the photo's own
+// look). Each its price (PRICES: influencer, body, asis).
+export const WAYS = {
+  looks: { name: '4 looks to pick from', note: 'Pick your favorite of 4, then its full body is made', price: 'influencer', time: 'about two minutes' },
+  body: { name: 'Just its full body', note: 'Its full body made from your photo; its portrait cut from it', price: 'body', time: 'about a minute' },
+  asis: { name: 'Use my photo as it is', note: 'No AI: your photo is its full body, its face its portrait', price: 'asis', time: 'a few seconds' },
+};
+export const WAY_FULL_WHY = 'Needs a photo showing the whole person, head to feet';
 // The choices to design one with (each a few words for the AI on our server: server/inf-words.js). Adults only, PG-13.
 export const OPTIONS = {
   look: { label: 'Look', for: ['design'], choices: { feminine: 'Feminine', masculine: 'Masculine', androgynous: 'Androgynous' } },
@@ -272,6 +311,48 @@ export const infVideoDl = (job) => `/api/launch?inf-video-dl=${job}.mp4`;
 export const INF_DL_RE = /^([A-Za-z0-9_-]{22})\/([A-Za-z0-9_-]{22})-([0-3])\.jpg$/;
 export const infPhotoDl = (inf, job, n = 0) => `/api/launch?inf-dl=${inf}/${job}-${n}.jpg`;
 
+// (2026-10-11, the owner: "they should have an option to change the profile even after generation and on the launch coin an
+// option to pick the current profile or choose from their own images") A square framed by its maker in one of its pictures:
+// its profile picture (one of its looks, its full body or one of its photos) and its coin's picture. A frame is { x, y, s }:
+// its top left corner in thousandths of the picture's width and height, and its side in thousandths of the picture's shorter
+// side (FRAME.MIN at least: 5× zoomed in). The same numbers on the page and on our server, whatever size the picture is shown
+// at. SIDE: the most a profile picture is kept at (px; a frame smaller than that keeps its own size, never under SMALL, its
+// small copy for the pages); COIN: a coin's picture (Launch with AGI-1's pictures are 1 MB at most).
+export const FRAME = { MIN: 200, SIDE: 1024, SMALL: 384, COIN: 1024 };
+export const isFrame = (f) => Boolean(f) && typeof f === 'object' && [f.x, f.y, f.s].every((v) => Number.isInteger(v))
+  && f.x >= 0 && f.x <= 1000 && f.y >= 0 && f.y <= 1000 && f.s >= FRAME.MIN && f.s <= 1000;
+// A frame on a picture of w × h pixels → its square in pixels { left, top, side }, always inside the picture (a corner past
+// its edge is moved back in)
+export function frameBox(f, w, h) {
+  const short = Math.min(w, h);
+  const side = Math.max(1, Math.min(short, Math.round((Math.min(1000, Math.max(FRAME.MIN, Number(f?.s) || 1000)) / 1000) * short)));
+  const left = Math.min(Math.max(0, Math.round(((Number(f?.x) || 0) / 1000) * w)), w - side);
+  const top = Math.min(Math.max(0, Math.round(((Number(f?.y) || 0) / 1000) * h)), h - side);
+  return { left, top, side };
+}
+// …and back: a square in pixels → its frame (always one isFrame takes)
+export function frameFrom({ left, top, side }, w, h) {
+  const short = Math.min(w, h);
+  const k = (v) => Math.min(1000, Math.max(0, Math.round(v)));
+  return { x: k((left / w) * 1000), y: k((top / h) * 1000), s: Math.min(1000, Math.max(FRAME.MIN, Math.round((side / short) * 1000))) };
+}
+// The frame a picture starts with: all of its shorter side, a tall picture's top (a full body's head and shoulders down to its
+// waist), a wide one's middle
+export const frameStart = (w, h) => frameFrom({ left: Math.max(0, (w - Math.min(w, h)) / 2), top: 0, side: Math.min(w, h) }, w, h);
+// A coin's picture in its launch draft (server/influencer.js coinDraft, api/launch.js): one of its pictures, and a frame when
+// its maker framed one ("studio:<influencer>/<job>-<n>@<x>,<y>,<s>"; before 2026-10-11 always its picked look, never framed)
+export const STUDIO_PHOTO = /^studio:([A-Za-z0-9_-]{22})\/([A-Za-z0-9_-]{22})-([0-3])(?:@(\d{1,4}),(\d{1,4}),(\d{1,4}))?$/;
+// Its profile picture as the pages show it (an influencer's row: its own picture once its maker framed one, `pfp`, while the
+// picture it was framed from is still shown: supabase/influencers.sql inf_pfp_of; else its picked look) → { job, n } or null.
+// hidden: a picture taken down (our server's STUDIO_HIDE)
+export function portraitRow(x, hidden = null) {
+  const p = x?.pfp;
+  if (p && typeof p === 'object' && ORDER_ID.test(String(p.id)) && ORDER_ID.test(String(p.job)) && !(hidden && (hidden(p.id) || hidden(p.job)))) {
+    return { job: p.id, n: 0 };
+  }
+  return x?.looks_job && Number.isInteger(x.pick) ? { job: x.looks_job, n: x.pick } : null;
+}
+
 // ---------- round 4 (2026-10-11, the owner: "theres should be a percentage when they are creating the 3d model just like in
 // meshy so they know how long will it take", "on the photos they can ghenerate the banner on their X as well with the right
 // size", "can gerate raedy made captions on their posts, or they can generate one too", and "if they can have their
@@ -285,12 +366,18 @@ export const TYPICAL = {
   model: [['image', 150], ['rig', 60], ['moves', 100], ['save', 45]],
   looks: [['queue', 8], ['make', 35], ['save', 10]],
   body: [['queue', 8], ['make', 25], ['save', 8]],
+  // (2026-10-11) a photo used as it is: no AI, only kept (its full body the photo, its portrait cut around its head)
+  asis: [['queue', 4], ['save', 4]],
   photo: [['queue', 6], ['make', 22], ['save', 8]],
   banner: [['queue', 6], ['make', 30], ['save', 8]],
   trend: [['queue', 20], ['make', 270], ['save', 20]],
   video: [['queue', 20], ['make', 150], ['save', 15]],
   // (the owner's trend clips: 10 s made from words, with sound)
   clip: [['queue', 20], ['make', 240], ['save', 20]],
+  // (2026-10-12, the video editor) a video edited in the browser: waiting for our clock's next minute (its first pieces made
+  // there, ffmpeg), its other pieces a minute later, then looked at by Gemini before anyone sees it; a 5-second one (one piece:
+  // made in that first minute) is cutSteps(5)
+  cut: [['queue', 40], ['make', 5], ['save', 12]],
 };
 // Where a thing being made is. kind: a TYPICAL key · step: its step now (none known: the time since it started, over the whole
 // plan) · stepPct: that step's own percentage (0–100), when known · since: when it started (ms) · stepSince: since when its
@@ -353,8 +440,17 @@ export const clankProfileUrl = (name) => `https://clank.trade/@${encodeURICompon
 //   • A gift: some of your BOUGHT credits (never this month's free ones or bonus ones) to another wallet, by its address or the
 //     clank.trade name it shows here, or a gift link anyone with it can claim once (held until then; you can take it back while
 //     nobody has; after LINK_DAYS days it comes back by itself). GIFTS: the fewest credits a gift, the most a day, gifts a day
-//     (links included), gift links open at once, a link's days, a note's length.
-export const GIFTS = { MIN: 10, A_DAY: 50_000, PER_DAY: 20, OPEN_LINKS: 10, LINK_DAYS: 30, NOTE_MAX: 80 };
+//     (links included), gift links open at once, a link's days, a note's length (80 until 2026-10-12; 200 since, the
+//     owner's "Up to 200 characters (Recommended)", for every gift's message).
+export const GIFTS = { MIN: 10, A_DAY: 50_000, PER_DAY: 20, OPEN_LINKS: 10, LINK_DAYS: 30, NOTE_MAX: 200 };
+//   • (2026-10-12) The owner's gift links of free credits. The owner: "i can put the a custome value of credits there then
+//     i can sent a message then theres gonna be a link for it then when i sahre it to someone they can see the meesage and
+//     the gifted credits and they can claim it"; the owner's choices: "Mine, free credits (Recommended)", "Up to 200
+//     characters (Recommended)", "Once (Recommended)". From the owner's tab only: any number of credits (MIN to MAX a
+//     link), the owner's message, a link anyone with it claims once, as bonus credits (paid from the owner's own AI
+//     balance, like credits for testing; never given on as a gift). OPEN links waiting at once, each for DAYS days (then
+//     nothing comes back: nothing was held). Claiming one while AGI Studio is private lets that wallet in.
+export const OWNER_LINKS = { MIN: 1, MAX: 100_000, OPEN: 50, DAYS: 30 };
 //   • Invites: a wallet that never bought credits joins through someone's invite link once; it gets WELCOME bonus credits with
 //     its first top-up of WELCOME_MIN cents or more, and its inviter PERCENT% of each of its top-ups as bonus credits (PER_FRIEND
 //     at most from one friend, A_MONTH a month). Bonus credits never run out and come back when something can't be made, but
@@ -401,16 +497,70 @@ export function photoCredits(spec, level = 1) {
   const s = photoSpec(spec || {});
   return s ? offFor(creditsFor(PHOTO_MODELS[s.model].cents[s.quality]), level) : null;
 }
+// (2026-10-12, the editor) "Edit with words" (the owner's choice: "type a change … a new photo from that one; same price as a
+// photo"): a change typed in words (EDIT.MIN to EDIT.MAX characters, checked like a scene), and a new photo made from one of its
+// own photos (a meme, an X banner) by Classic, next to it: the same shape and quality (a Crisp photo's own quality, by
+// Classic), an X banner still one (1500 × 500), a meme still that meme with its words. → { model, quality, shape, meme } (what
+// photoSpec and photoCredits take: its price is that photo's) or null when it isn't one of its photos
+export const EDIT = { MIN: 3, MAX: 200 };
+export function editSpec(photo) {
+  if (!photo || photo.kind !== 'photo') return null;
+  const shape = Object.hasOwn(PHOTO_SHAPES, photo.shape) ? photo.shape : 'tall';
+  if (shape === 'banner') return { model: 'classic', quality: 'hd', shape, meme: null };
+  return { model: 'classic', quality: ['hd', 'ultra'].includes(photo.quality) ? photo.quality : 'std', shape, meme: photo.meme || null };
+}
+
+// (2026-10-12, the editor) the photo editor (the owner's choices: "Photo editor (Recommended)", "New photo + download
+// (Recommended)"): one of its own photos (a meme, an X banner) cropped, turned, lit, filtered, with words and stickers on it,
+// in the visitor's own browser: free, no AI. Downloaded with the share mark (drawn here, as our server draws it), or saved as a
+// new photo next to it: our server looks at it first (Gemini, about $0.001: PER_DAY a wallet, SITE_DAY for the whole site) and
+// checks its words like a meme's. A crop is one of the photo shapes (an X banner stays as it is: 1500 × 500).
+export const EDITOR = {
+  PER_DAY: 20,                   // photos one wallet may save from it a day
+  SITE_DAY: 2000,                // …and the whole site
+  PX: 1536,                      // a saved photo's longest side at most (its picture's own size, never more)
+  LAYERS: 8,                     // words and stickers on one photo
+  TEXT_MAX: 80,                  // one text's characters
+  ZOOM_MAX: 4,                   // a crop's closest
+};
+export const EDITOR_CROPS = { original: 'Original', tall: 'Vertical', square: 'Square', wide: 'Wide' };
+export const EDITOR_FILTERS = { none: 'Original', vivid: 'Vivid', warm: 'Warm', cool: 'Cool', mono: 'Mono', vintage: 'Vintage', fade: 'Fade', noir: 'Noir' };
+export const EDITOR_LIGHT = { bright: 'Brightness', contrast: 'Contrast', sat: 'Saturation', warm: 'Warmth' };
+export const EDITOR_FONTS = { clean: 'Clean', bold: 'Bold', classic: 'Classic' };
+export const EDITOR_COLORS = { white: '#ffffff', black: '#111111', pink: '#ff5fa8', yellow: '#ffd84d', mint: '#5ef0c8', violet: '#a98bff' };
+export const EDITOR_STYLES = { outline: 'Outline', box: 'Box', plain: 'Plain' };
+export const STICKERS = ['💜', '✨', '🔥', '😎', '⭐', '👑', '🌸', '🎀', '☀️', '🌈', '💫', '🦋', '🍓', '☕', '🎧', '📸'];
+// the share mark's size and place on a picture (server/inf-mark.js MARK, the same numbers): its width a share of the shorter
+// side, its distance from the bottom right corner
+export const MARK_LOOK = { SHARE: 0.36, MARGIN: 0.035, MIN_W: 120 };
+
+// (2026-10-12, the editor) the video editor (the owner's choice: "Video editor": "trim, text on it (a layer drawn in the
+// browser as a PNG, so the server needs no fonts), change its shape (9:16, 1:1, 16:9); ffmpeg on our server makes an H.264
+// MP4 (the clock's function, like the share mark); free, 10 a day per wallet"): one of its own videos or trend videos trimmed
+// (1 to 15 seconds of it), its shape changed (a crop, zoomed and moved), its words and stickers drawn in the visitor's browser
+// as one transparent picture, saved as a new video next to it: made by our clock (src/studio/video-edit.js, server/inf-cut.js)
+// with the share mark, looked at by Gemini before anyone sees it.
+export const VIDEO_EDITOR = {
+  PER_DAY: 10,                   // videos one wallet may save from it a day
+  SITE_DAY: 500,                 // …and the whole site
+  MIN_S: 1,                      // a cut's shortest
+  MAX_S: 15,                     // …and longest
+  ZOOM_MAX: 2.5,                 // a crop's closest
+  OPEN: 3,                       // being made at once, per wallet
+  MIN_BOX_PX: 64,                // a crop's shorter side, at least, in the video's own pixels
+  AREA: 921_600,                 // "Original": at most 1280 × 720's pixels (its own shape, made smaller to fit)
+};
 
 // Video models. Standard and Pro are Kling V3's image to video (720p or 1080p: $0.084 or $0.112 a second, with sound $0.126
 // or $0.168), from one of its photos; Anime is Seedance 2.5's reference to video ($0.2205 a second at 480p, $0.473 at 720p,
-// its sound free), from its full body or a photo, only for an anime or 3D cartoon influencer (it says no to realistic faces);
+// its sound free), from its full body or a photo, only for an influencer in a drawn style (DRAWN_STYLES, drawnStyle(): it says
+// no to realistic faces);
 // Long is Kling V3 Standard made in parts (each starting from the last frame of the one before), up to a minute, without sound
 // (its parts' sounds wouldn't join up: add your own music when you post it).
 export const VIDEO_MODELS = {
   standard: { name: 'Standard', note: '720p, natural motion', seconds: [5, 10, 15], cents: { silent: 8.4, sound: 12.6 }, refs: 2, photo: true },
   pro: { name: 'Pro', note: '1080p, the finest detail', seconds: [5, 10, 15], cents: { silent: 11.2, sound: 16.8 }, refs: 2, photo: true },
-  anime: { name: 'Anime', note: 'For anime and 3D cartoon influencers', seconds: [5, 10, 15], cents: { '480p': 22.05, '720p': 47.3 }, refs: 4, photo: false, styles: ['anime', 'toon'] },
+  anime: { name: 'Anime', note: 'For drawn styles: anime, comics, 3D, toys and art', seconds: [5, 10, 15], cents: { '480p': 22.05, '720p': 47.3 }, refs: 4, photo: false, styles: DRAWN_STYLES },
   long: { name: 'Long', note: 'Up to a minute, made in parts, without sound', seconds: [20, 30, 45, 60], cents: { silent: 8.4 }, refs: 2, photo: true },
 };
 export const ANIME_QUALITY = { '480p': { name: '480p' }, '720p': { name: '720p' } };
@@ -492,10 +642,23 @@ export function photoPlan({ model = 'classic', quality = null, meme = null } = {
   const make = model === 'crisp' ? (q === 'ultra' ? 35 : 25) : q === 'ultra' ? 45 : q === 'hd' ? 30 : 22;
   return [['queue', 6], ['make', make + (meme ? 6 : 0)], ['save', q === 'ultra' ? 14 : q === 'hd' ? 10 : 8]];
 }
+// (2026-10-12, the video editor) How long a cut usually takes. Our clock comes once a minute (half a minute's wait on average)
+// and makes its pieces of 5 seconds there (server/inf-mark.js CUT.PIECE_S: about 4 to 5 s each on one processor, measured
+// 2026-10-12, two in that first minute), while its page still says it's waiting (its request is set once they're kept). One
+// piece (under 6 s) is joined in that same minute; two or three are joined the next minute (its "make" step). Then Gemini's
+// look (its page's, at once). → a TYPICAL-like plan (cutSteps(5) is TYPICAL.cut)
+export function cutSteps(seconds = 5) {
+  const s = Math.min(VIDEO_EDITOR.MAX_S, Math.max(VIDEO_EDITOR.MIN_S, Number(seconds) || 5));
+  // (as cutPlan splits it: at 24 frames a second, a last piece under a second goes into the one before)
+  const pieces = Math.max(1, Math.ceil((Math.round(s * 24) - 23) / 120));
+  return [['queue', 40], ['make', pieces > 1 ? 65 : 5], ['save', 12]];
+}
 // One of its photos, videos or trend videos being made (as our server shows it: src/studio/views/influencer.js): its plan and
 // its step now (a long video's part and that part's step)
 export function jobPlan(j) {
   if (j?.kind === 'photo') return j.shape === 'banner' ? TYPICAL.banner : photoPlan({ model: j.model || 'classic', quality: j.quality, meme: j.meme });
+  // (2026-10-12) a video saved from the video editor: made by our clock in pieces, then looked at
+  if (j?.kind === 'video' && j.editor === true) return cutSteps(j.seconds || 5);
   if (j?.kind === 'video') return videoPlan({ model: j.model || 'standard', seconds: j.seconds || 5, parts: j.parts || 1 });
   return TYPICAL[j?.kind] || null;
 }

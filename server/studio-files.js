@@ -128,9 +128,13 @@ const headers = (cfg) => ({ Authorization: `Bearer ${cfg.supabaseKey}`, apikey: 
 // inf/<influencer>/<job>.mp4, inf/<influencer>/<job>.poster.webp; round 2: a video's copy with the share mark,
 // inf/<influencer>/<job>.dl.mp4), the owner's trend clips (trends/<job>.mp4 and .poster.webp) and example pictures (round 2:
 // examples/<job>.webp), and what people upload (up/<upload>.jpg, up/<upload>.mp4, and a clip's parts and frames on the way:
-// up/<upload>/<n>.part, up/<upload>/f<n>.jpg)
+// up/<upload>/<n>.part, up/<upload>/f<n>.jpg). (Round 4, phase 4: an HD or Ultra photo's full-size download,
+// inf/<influencer>/<job>-<n>.hd.jpg, and a long video's parts and their last frames, inf/<influencer>/<job>.p<n>.mp4 and
+// .f<n>.jpg: missing here until 2026-10-11, so Storage refused them and those jobs couldn't be kept; server/inf-jobs.js's
+// names are all checked against this one by tests/influencer.test.js since); and (2026-10-12) a video editor's cut's words and
+// stickers, inf/<influencer>/<job>.layer.png (its pieces are its .p<n>.mp4)
 const ID = '[A-Za-z0-9_-]{22}';
-export const NAME = new RegExp(`^(?:${ID}\\.(?:glb|webp|png)|videos/${ID}\\.mp4|inf/${ID}/${ID}(?:-[0-3]\\.(?:jpg|webp)|\\.mp4|\\.dl\\.mp4|\\.poster\\.webp)`
+export const NAME = new RegExp(`^(?:${ID}\\.(?:glb|webp|png)|videos/${ID}\\.mp4|inf/${ID}/${ID}(?:-[0-3]\\.(?:jpg|webp|hd\\.jpg)|\\.mp4|\\.dl\\.mp4|\\.poster\\.webp|\\.layer\\.png|\\.[pf][0-3]\\.(?:mp4|jpg))`
   + `|trends/${ID}(?:\\.mp4|\\.poster\\.webp)|examples/${ID}\\.webp|up/${ID}(?:\\.(?:jpg|mp4)|/(?:[0-9]{1,2}\\.part|f[0-9]\\.jpg)))$`);
 
 // One of a character's files, kept (or replaced). Throws when Storage says no.

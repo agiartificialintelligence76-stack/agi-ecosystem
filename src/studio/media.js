@@ -9,6 +9,8 @@
 //     sent in parts of 3.5 MB (Vercel takes at most 4.5 MB a request), with 3 small frames of it taken here for the AI check.
 //   • A video's poster: a frame of one of its own videos, taken here (our own address: the picture isn't tainted), sent with
 //     its ticket.
+//   • (2026-10-12, the editor) a photo edited in the photo editor (drawn here, src/studio/views/photo-editor.js), sent with its
+//     ticket to be saved as a new photo.
 // Nothing here is kept: the browser's copies go when the page does.
 import { CLIP, PICTURE } from './rules.js';
 
@@ -134,14 +136,15 @@ async function sendBytes(query, blob) {
 }
 
 // A picture: its ticket (with the human check, and its box ticked: consent), then its bytes, looked at by our server.
-// act: the app's request helper (ctx.act). → { ok: true, id, real } (real: a photo of a real person, so its influencer stays
-// private) or { ok: false, error, why? }
+// act: the app's request helper (ctx.act). → { ok: true, id, real, full } (real: a photo of a real person, so its influencer
+// stays private; full (2026-10-11): it shows the whole person, head to feet, so it can be used as it is) or { ok: false, error,
+// why? }
 export async function uploadPicture(act, { blob, consent = false, human }) {
   const open = await act('inf-up-open', { kind: 'picture', bytes: blob.size, adult: true, consent: consent === true }, { human });
   if (!open.ok || !open.data?.ticket) return { ok: false, error: open.data?.error || 'busy', why: open.data?.why };
   // (sendBytes sends it once more when the AI check didn't answer: nothing was kept, the same ticket works)
   const r = await sendBytes(`inf-up=${encodeURIComponent(open.data.ticket)}&part=0`, blob);
-  if (r.ok && r.data?.ok) return { ok: true, id: r.data.id || open.data.id, real: r.data.real === true };
+  if (r.ok && r.data?.ok) return { ok: true, id: r.data.id || open.data.id, real: r.data.real === true, full: r.data.full === true };
   return { ok: false, error: r.data?.error || 'busy', why: r.data?.why };
 }
 
@@ -179,6 +182,32 @@ export async function uploadClip(act, { file, frames, human, onProgress = () => 
   if (!done.ok && done.data?.error === 'ai') done = await act('inf-up-done', { ticket });
   if (done.ok && done.data?.ok) return { ok: true, id: done.data.id, seconds: done.data.seconds };
   return { ok: false, error: done.data?.error || 'busy', why: done.data?.why };
+}
+
+// (2026-10-12, the editor) A photo edited in the photo editor, saved as a new photo next to the one it's from: its ticket (the
+// photo it's from, its shape, its words: checked by our server first), then its JPEG (looked at before it's kept;
+// server/inf-editor.js). → { ok: true, job, left } or { ok: false, error, field?, why? }
+export async function savePhoto(act, { from, shape, words, blob }) {
+  const open = await act('inf-photo-open', { from, shape, words });
+  if (!open.ok || !open.data?.ticket) return { ok: false, error: open.data?.error || 'busy', field: open.data?.field, why: open.data?.why };
+  const r = await sendBytes(`inf-photo=${encodeURIComponent(open.data.ticket)}`, blob);
+  if (r.ok && r.data?.ok) return { ok: true, job: r.data.job || open.data.job, left: Number(open.data.left) || 0 };
+  return { ok: false, error: r.data?.error || 'busy', why: r.data?.why };
+}
+
+// (2026-10-12, the video editor) A video edited in the video editor, saved as a new video next to the one it's from: its cut
+// (the video it's from, its part, its shape, its sound) and its words, checked by our server first; then, when it has words or
+// stickers, their picture (a transparent PNG at its size: server/inf-cut.js). Our clock makes it. → { ok: true, job, left } or
+// { ok: false, error, field?, why? }
+export async function saveCut(act, { from, cut, words, layer = null }) {
+  const open = await act('inf-cut-open', { from, cut, words, layer: !!layer });
+  if (!open.ok || !open.data?.ok) return { ok: false, error: open.data?.error || 'busy', field: open.data?.field, why: open.data?.why };
+  const left = Number(open.data.left) || 0;
+  if (!open.data.ticket) return { ok: true, job: open.data.job, left };
+  const r = await sendBytes(`inf-cut=${encodeURIComponent(open.data.ticket)}`, layer);
+  // (its picture sent twice, the first answer lost on the way: started by the first)
+  if ((r.ok && r.data?.ok) || r.data?.error === 'done') return { ok: true, job: r.data?.job || open.data.job, left: Number(r.data?.left ?? left) || 0 };
+  return { ok: false, error: r.data?.error || 'busy', why: r.data?.why };
 }
 
 // ---------- posters ----------

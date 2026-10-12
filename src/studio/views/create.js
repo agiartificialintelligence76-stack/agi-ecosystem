@@ -7,9 +7,20 @@
 // OK, or a character of theirs), with a box ticked first. Its words are checked on our server (server/inf-words.js), a photo
 // by the AI check as it's uploaded (server/inf-uploads.js), and it costs credits (with the holder discounts). A photo of a real
 // person makes a private influencer (never in Explore). Then its own page shows its 4 looks being made.
-import { h, btn, chips, segmented, say, busy, nextId, put, add, icon } from '../ui.js';
-import { MODES, INF_STYLES, OPTIONS, WORDS_MAX, NAME_MAX, CONSENT_TEXT, SWATCHES, creditsText, exampleKey, infExample } from '../rules.js';
-import { studioText, priceOf, perksText, wordsText, errorText, uploadText, upErrorText, NAMES, num } from '../app-words.js';
+// (2026-10-11, the owner: "can you make the style optional and please add more styles like , ghiblifi etc. and many more", and
+// "if they already have a full body they can skip the first generate so they can save credits or maybe just crop it"): its
+// style is optional ("Any style": its words' style, else a photo look; from a picture, the picture's own look), 26 styles in
+// four sections; and from a photo, three ways to make it (src/studio/rules.js WAYS): 4 looks to pick from, just its full body,
+// or the photo as it is (no AI: only a photo of the whole person, head to feet, which the upload check says).
+import { h, btn, chips, segmented, cardPick, say, busy, nextId, put, add, icon } from '../ui.js';
+import {
+  MODES, STYLE_GROUPS, INF_STYLES, STYLE_ANY, WAYS, WAY_FULL_WHY, OPTIONS, WORDS_MAX, NAME_MAX, CONSENT_TEXT, SWATCHES, creditsText,
+  exampleKey, infExample,
+} from '../rules.js';
+import {
+  studioText, priceOf, perksText, wordsText, errorText, uploadText, upErrorText, NAMES, num, STYLE_HINTS, WAY_LINES, wayToast, aboutWay,
+  photoReadyText,
+} from '../app-words.js';
 import { shrinkPicture, uploadPicture } from '../media.js';
 import { unlockSlot } from './shared.js';
 import { workspace, costLine, goButton } from './workspace.js';
@@ -21,11 +32,18 @@ const MORE_KEYS = ['cut', 'skin', 'hair', 'eyes'];  // folded away: its hair sty
 const REQUIRED = new Set(['look', 'age']);
 const EXTRA_KEYS = ['outfit', 'vibe'];
 const pickOne = (list) => list[Math.floor(Math.random() * list.length)];
+// what each way to start from a photo uses: its style, outfit and words are the AI's (none for the photo as it is), its vibe
+// only its 4 looks' (src/studio/rules.js WAYS; server/inf-words.js looksPrompt, bodyPrompt)
+const USES = {
+  looks: { style: true, outfit: true, vibe: true, words: true },
+  body: { style: true, outfit: true, vibe: false, words: true },
+  asis: { style: false, outfit: false, vibe: false, words: false },
+};
 
 export async function render(ctx, route, root) {
   document.title = 'Create an influencer · AGI Studio';
   const want = route.q.get('mode');
-  const st = { mode: Object.hasOwn(MODES, want) ? want : 'design', source: null, real: false, preview: null, styleTouched: false, photosTick: null };
+  const st = { mode: Object.hasOwn(MODES, want) ? want : 'design', source: null, real: false, full: false, preview: null, photosTick: null, way: 'looks' };
   const groups = {};
   // an example picture's address for a choice (the owner makes them once: ?inf-info's examples), or null
   const exampleOf = (option) => (value) => {
@@ -33,8 +51,11 @@ export async function render(ctx, route, root) {
     const job = k ? ctx.info?.examples?.[k] : null;
     return job ? infExample(job) : null;
   };
+  // the way it's made now: from a photo, the one picked; designed, always its 4 looks
+  const wayNow = () => (st.mode === 'picture' ? st.way : 'looks');
+  const uses = () => USES[wayNow()];
 
-  const ws = workspace(ctx, root, { title: 'Create an influencer', sub: '4 looks to pick from, in about a minute', titleTag: 'h1', open: true });
+  const ws = workspace(ctx, root, { title: 'Create an influencer', sub: WAY_LINES.looks, titleTag: 'h1', open: true });
 
   // ---------- how it starts ----------
   const modeNote = h('p', { class: 'sa-ws-hint' });
@@ -47,10 +68,25 @@ export async function render(ctx, route, root) {
   const sourceErr = h('p', { class: 'sa-err', role: 'alert', hidden: true });
   const human = h('div', { class: 'sa-human' });
 
+  // ---------- from a photo: how it's made (4 looks, just its full body, or the photo as it is) ----------
+  const wayErr = h('p', { class: 'sa-err', role: 'alert', hidden: true });
+  const wayChoices = () => Object.entries(WAYS).map(([value, w]) => ({
+    value, name: w.name, note: w.note, price: priceOf(w.price, { prices: ctx.me?.prices, level: ctx.level }),
+    off: value === 'asis' && !st.full, why: WAY_FULL_WHY,
+  }));
+  const wayPick = cardPick({ legend: 'How should it be made?', choices: wayChoices(), value: 'looks', cls: 'sa-cards-list', onchange: (v) => setWay(v) });
+  const wayBox = h('section', { class: 'sa-ws-sec sa-ws-sec-way', 'aria-label': 'How it\'s made from your photo', hidden: true, dataset: { guide: 'way' } },
+    wayPick.node, wayErr);
+
   // ---------- its style, outfit, vibe, words, name ----------
   const styleErr = h('p', { class: 'sa-err', role: 'alert', hidden: true });
-  // (2026-10-11) every choice in Create can be unpicked again, a tap on it (chips' toggle): Create then asks for one it needs
-  const styleGroup = chips({ legend: 'Style', choices: Object.entries(INF_STYLES), media: true, toggle: true, onchange: () => { st.styleTouched = true; say(styleErr, ''); } });
+  // (2026-10-11) its style is optional: "Any style" first, then 26 in four sections (each a tile with its example picture).
+  // Every choice in Create can be unpicked again, a tap on it (chips' toggle): back to "Any style"
+  const styleGroup = chips({ legend: 'Style', hint: STYLE_HINTS.design, choices: [['', STYLE_ANY]], value: '', media: true, toggle: true,
+    sections: STYLE_GROUPS.map((g) => ({ id: g.id, name: g.name, choices: Object.entries(g.styles) })),
+    onchange: () => say(styleErr, ''),
+  });
+  const styleHint = styleGroup.node.querySelector('.sa-hint');
   const styleBox = h('section', { class: 'sa-ws-sec', 'aria-label': 'Style', dataset: { guide: 'style' } }, styleGroup.node, styleErr);
   const extra = h('section', { class: 'sa-ws-sec', 'aria-label': 'Outfit and vibe' });
   for (const key of EXTRA_KEYS) {
@@ -68,13 +104,13 @@ export async function render(ctx, route, root) {
   name.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); submit(); } });
   const suggest = btn('Suggest', { kind: 'ghost', size: 'sm', icon: 'wand' });
   suggest.addEventListener('click', () => { name.value = pickOne(NAMES.filter((n) => n !== name.value)); say(nameErr, ''); });
+  const wordsField = h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: 'sa-words', text: 'Anything else? (optional)' }), words, h('div', { class: 'sa-field-foot' }, wordsErr, wordsCount));
   const wordsBox = h('section', { class: 'sa-ws-sec', 'aria-label': 'Words and name' },
-    h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: 'sa-words', text: 'Anything else? (optional)' }), words, h('div', { class: 'sa-field-foot' }, wordsErr, wordsCount)),
+    wordsField,
     h('div', { class: 'sa-field', dataset: { guide: 'name' } }, h('label', { class: 'sa-label', for: 'sa-name', text: 'Its name' }), h('div', { class: 'sa-input-row' }, name, suggest), nameErr));
   const perks = h('p', { class: 'sa-fine' });
-  const aboutBox = h('section', { class: 'sa-ws-sec sa-ws-sec-fine', 'aria-label': 'How it\'s made' },
-    h('p', { class: 'sa-fine', text: "It's made by an AI service: 4 looks to pick from, then its full body (about a minute each). If it can't be made, its credits come back. Adults only, PG-13, never a famous person, a real person only with their OK, never someone else's character." }),
-    perks);
+  const about = h('p', { class: 'sa-fine', text: aboutWay('looks') });
+  const aboutBox = h('section', { class: 'sa-ws-sec sa-ws-sec-fine', 'aria-label': 'How it\'s made' }, about, perks);
 
   // ---------- the footer that stays: what you have, Create with its price ----------
   const status = h('p', { class: 'sa-banner', role: 'status', hidden: true });
@@ -88,15 +124,16 @@ export async function render(ctx, route, root) {
   quick.node.addEventListener('click', () => submit());
   ws.setFoot(cost.node, slotNote, err, human, go.node);
   ws.setQuick(quick.node);
-  put(ws.body, status, modeBox, sourceBox, styleBox, extra, wordsBox, aboutBox);
+  put(ws.body, status, modeBox, sourceBox, wayBox, styleBox, extra, wordsBox, aboutBox);
   ws.main.append(gallery(ctx, { initial: route.q.get('tab') || 'trending' }).node);
 
-  const price = () => priceOf('influencer', { prices: ctx.me?.prices, level: ctx.level });
+  const price = () => priceOf(WAYS[wayNow()].price, { prices: ctx.me?.prices, level: ctx.level });
   const renderPrice = () => {
     go.setPrice(price());
     quick.setPrice(price());
     cost.need(price());
-    ws.setTitle('Create an influencer', `${num(price())} credits · 4 looks to pick from, in about a minute`);
+    ws.setTitle('Create an influencer', `${num(price())} credits · ${WAY_LINES[wayNow()]}`);
+    wayPick.update(wayChoices());
     perks.textContent = perksText(ctx.session ? ctx.level : 1);
     // (round 2) its slots: a wallet's influencers at all (STUDIO_SLOTS, and more unlocked by burning $AGI)
     const slots = ctx.me?.slots;
@@ -127,7 +164,7 @@ export async function render(ctx, route, root) {
   ctx.on('info', () => { showStatus(); showExamples(); renderPrice(); if (st.photosTick?.isConnected) st.photosTick.textContent = photosText(); });
   setMode(st.mode);
   // (2026-10-11) its guide (the first time this browser opens Create, and with the bar's ? button): a phone's drawer opens for it
-  ctx.guide('create', { mode: () => st.mode, open: () => ws.open(), close: () => ws.close() });
+  ctx.guide('create', { mode: () => st.mode, way: () => wayNow(), open: () => ws.open(), close: () => ws.close() });
 
   function dropPreview() { if (st.preview) URL.revokeObjectURL(st.preview); st.preview = null; }
 
@@ -136,18 +173,37 @@ export async function render(ctx, route, root) {
     st.mode = mode;
     st.source = null;
     st.real = false;
+    st.full = false;
     modeSeg.set(mode);
     // (a photo's own section says what it may be: its note would only repeat it)
     say(modeNote, mode === 'picture' ? '' : MODES[mode].note);
-    if (user || !styleGroup.value) { styleGroup.set(mode === 'picture' ? 'real' : 'anime'); st.styleTouched = false; }
+    if (styleHint) styleHint.textContent = STYLE_HINTS[mode] || STYLE_HINTS.design;
     if (mode === 'design') drawDesign();
     else drawPicture();
+    wayBox.hidden = mode !== 'picture';
+    setWay('looks');
     showExamples();
     if (user) {
       const url = new URL(location.href);
       url.searchParams.set('mode', mode);
       history.replaceState(history.state, '', url.pathname + url.search);
     }
+  }
+
+  // the way it's made, and what it uses: the photo as it is has no style, outfit, vibe or words (no AI), just its full body no
+  // vibe (that's its 4 looks')
+  function setWay(way) {
+    st.way = Object.hasOwn(WAYS, way) ? way : 'looks';
+    if (wayPick.value !== st.way) wayPick.set(st.way);
+    say(wayErr, '');
+    const u = uses();
+    styleBox.hidden = !u.style;
+    groups.outfit.node.hidden = !u.outfit;
+    groups.vibe.node.hidden = !u.vibe;
+    extra.hidden = !u.outfit && !u.vibe;
+    wordsField.hidden = !u.words;
+    about.textContent = aboutWay(wayNow());
+    renderPrice();
   }
 
   // ---------- designed: its look in a few taps, each choice a picture ----------
@@ -169,7 +225,6 @@ export async function render(ctx, route, root) {
     surprise.addEventListener('click', () => {
       for (const key of [...LOOK_KEYS, ...MORE_KEYS, ...EXTRA_KEYS]) groups[key].set(pickOne(Object.keys(OPTIONS[key].choices)));
       styleGroup.set(pickOne(Object.keys(INF_STYLES)));
-      st.styleTouched = true;
       if (!name.value.trim()) name.value = pickOne(NAMES);
       more.open = true;
       say(sourceErr, '');
@@ -206,6 +261,8 @@ export async function render(ctx, route, root) {
       if (!file || !consent.checked) return;
       st.source = null;
       st.real = false;
+      st.full = false;
+      showWays();
       privNote.hidden = true;
       say(sourceErr, '');
       if (!(await ready())) return;
@@ -224,11 +281,11 @@ export async function render(ctx, route, root) {
       if (r.ok) {
         st.source = r.id;
         st.real = r.real === true;
+        st.full = r.full === true;
         privNote.hidden = !st.real;
         preview.dataset.state = 'ok';
-        // its style from the photo, unless one was picked already: a photo looks realistic, a drawing like anime
-        if (!st.styleTouched) styleGroup.set(st.real ? 'real' : 'anime');
-        say(state, "Looks good: it's checked and ready ✓");
+        showWays();
+        say(state, photoReadyText(st.full));
         return;
       }
       preview.dataset.state = 'refused';
@@ -244,6 +301,13 @@ export async function render(ctx, route, root) {
         h('li', { text: "A real person's photo makes a private influencer: never in Explore, only people with its link see it. You can delete it, and everything made from it, at any time." })),
       h('div', { class: 'sa-consent' }, consent, h('label', { for: consentId, text: CONSENT_TEXT })),
       input, label, preview, privNote, state, sourceErr);
+  }
+
+  // the ways, for the photo there now: as it is only for a photo of the whole person (the way picked goes back to its 4 looks
+  // when a new photo isn't one)
+  function showWays() {
+    if (st.way === 'asis' && !st.full) setWay('looks');
+    else renderPrice();
   }
 
   // what a photo may be: photos of real people only while the owner allows them (STUDIO_FACES)
@@ -270,10 +334,17 @@ export async function render(ctx, route, root) {
   }
   // a field to fix: the drawer opens on a phone, and the field gets the keyboard
   const fix = (node, errNode, text) => { say(errNode, text); ws.reveal(node); };
+  const wayInput = () => wayPick.node.querySelector('input:checked:not(:disabled)') || wayPick.node.querySelector('input:not(:disabled)');
 
+  // its choices, only the ones its way uses (a hidden outfit or vibe is never sent)
   function settings() {
+    const u = uses();
     const out = {};
-    for (const [key, g] of Object.entries(groups)) if (OPTIONS[key]?.for.includes(st.mode) && g.value) out[key] = g.value;
+    for (const [key, g] of Object.entries(groups)) {
+      if (!OPTIONS[key]?.for.includes(st.mode) || !g.value) continue;
+      if ((key === 'outfit' && !u.outfit) || (key === 'vibe' && !u.vibe)) continue;
+      out[key] = g.value;
+    }
     return out;
   }
 
@@ -288,7 +359,8 @@ export async function render(ctx, route, root) {
       fix(sourceBox.querySelector('input'), sourceErr, 'Add your photo first (and wait for its check).');
       return;
     }
-    if (!styleGroup.value) { fix(styleGroup.node.querySelector('input'), styleErr, wordsText('style', 'empty')); return; }
+    const way = wayNow();
+    if (way === 'asis' && !st.full) { fix(wayInput(), wayErr, errorText('not_full')); return; }
     if (!name.value.trim()) { fix(name, nameErr, wordsText('name', 'empty')); return; }
     if (!(await ready())) return;
     if (ctx.credits < price()) {
@@ -297,14 +369,15 @@ export async function render(ctx, route, root) {
     }
     await busy(go.node, 'Creating…', async () => {
       quick.node.disabled = true;
-      const body = { name: name.value.trim(), mode: st.mode, style: styleGroup.value, settings: settings(), words: words.value.trim(), adult: true,
-        ...(st.mode === 'picture' ? { source: st.source } : {}) };
+      const u = uses();
+      const body = { name: name.value.trim(), mode: st.mode, style: u.style ? styleGroup.value || '' : '', settings: settings(),
+        words: u.words ? words.value.trim() : '', adult: true, ...(st.mode === 'picture' ? { source: st.source, way } : {}) };
       const r = await ctx.act('inf-start', body, { human });
       quick.node.disabled = false;
       if (!ctx.alive()) return;
       const d = r.data || {};
       if (r.ok && d.ok && d.id) {
-        ctx.toast('Making its 4 looks: about a minute', 'good');
+        ctx.toast(wayToast(way), 'good');
         ctx.refreshMe();
         ctx.nav(ctx.href(`/i/${d.id}`));
         return;
@@ -313,11 +386,13 @@ export async function render(ctx, route, root) {
         if (d.field === 'name') { fix(name, nameErr, wordsText('name', d.why)); return; }
         if (d.field === 'words') { fix(words, wordsErr, wordsText('words', d.why)); return; }
         if (d.field === 'style') { fix(styleGroup.node.querySelector('input'), styleErr, wordsText('style', d.why)); return; }
+        if (d.field === 'way') { fix(wayInput(), wayErr, wordsText('way', d.why)); return; }
         fix(sourceBox.querySelector('input'), sourceErr, wordsText(d.field, d.why));
         return;
       }
       if (d.error === 'short') { fail(`It needs ${creditsText(price())}, and you have ${creditsText(d.have ?? ctx.credits)}.`); ctx.buyCredits({ need: price() }); return; }
-      if (d.error === 'source') { st.source = null; fix(sourceBox.querySelector('input'), sourceErr, errorText('source')); return; }
+      if (d.error === 'source') { st.source = null; st.full = false; showWays(); fix(sourceBox.querySelector('input'), sourceErr, errorText('source')); return; }
+      if (d.error === 'not_full') { st.full = false; setWay('looks'); fix(wayInput(), wayErr, errorText('not_full')); return; }
       if (d.error === 'no_slot') { ctx.refreshMe(); fail(errorText('no_slot')); return; }
       fail(errorText(d.error));
     });

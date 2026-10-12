@@ -17,6 +17,11 @@
 //   with sound), Anime (Seedance 2.5, 480p or 720p) or Long (Kling V3 Standard in parts of up to 15 s, each from the last frame
 //   of the one before), each with the person's reference pictures (things, places, pets, food, a style: Kling's elements,
 //   the picture models' and Seedance's extra pictures)
+//   (2026-10-12, the editor) "Edit with words": Nano Banana 2's edit model makes a new photo from one of its photos (a meme, an
+//   X banner) with one change typed in words, at that photo's shape and quality (Classic's price)
+//   (the same day) a photo saved from the photo editor (edited in its maker's own browser, no AI) is looked at by Gemini before
+//   it's kept (checkEdited), and a video saved from the video editor (made by our clock with ffmpeg) before anyone sees it
+//   (checkCutVideo)
 //   • Gemini (the site's own key, GEMINI_API_KEY, the chat's model): a look at each picture and clip uploaded before it's
 //     used, and at each video made before it's shown (family-friendly, never a minor, never a famous person, never someone
 //     else's character; since round 2 a photo of a real person may be used, with its uploader's consent). Fail closed: a
@@ -24,7 +29,7 @@
 // Nothing here is shown to visitors as a provider's name (the page says "an AI service").
 import {
   looksPrompt, bodyPrompt, photoPrompt, swapPrompt, clipPrompt, CLIP_NEGATIVE, sceneVideoPrompt, sceneWay, presetPrompt, PRESET_NEGATIVE,
-  examplePrompt, memePrompt, longPartPrompt,
+  examplePrompt, memePrompt, longPartPrompt, editPrompt,
 } from './inf-words.js';
 import { SHAPES, photoSpec, videoSpec } from '../src/studio/rules.js';
 
@@ -51,7 +56,7 @@ const picture = (extra) => ({ resolution: '1K', output_format: 'jpeg', safety_to
 // An influencer as the words need it, from a job (supabase/influencers.sql inf_job_get: its influencer's parts)
 export const infOfJob = (job) => ({
   name: job.inf_name, mode: job.inf_mode, style: job.inf_style, settings: job.inf_settings || {}, words: job.inf_words || '',
-  real: job.inf_real === true,
+  real: job.inf_real === true, way: job.inf_way || 'looks',
 });
 
 // The request for a job. urls: signed addresses of what it's made from (source: the upload; look: the picked look; body: its
@@ -68,10 +73,32 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
     return { model: MODELS.edit, way: 'edit', input: picture({ prompt: looksPrompt(inf), image_urls: [need(urls.source, 'picture')], num_images: 4, aspect_ratio: '1:1' }) };
   }
   if (job.kind === 'body') {
-    const selfie = (inf.mode === 'face' || inf.real) && typeof urls.source === 'string' && /^https:\/\//.test(urls.source);
+    // (2026-10-11) "Just its full body": from its picture alone (src/studio/rules.js WAYS); the photo "as it is" needs no AI
+    if (inf.way === 'asis') throw Object.assign(new Error('inf: a photo used as it is needs no AI'), { why: 'request' });
+    if (inf.way === 'body') {
+      return { model: MODELS.edit, way: 'edit', input: picture({ prompt: bodyPrompt(inf, { way: 'body' }), image_urls: [need(urls.source, 'picture')], num_images: 1, aspect_ratio: '9:16' }) };
+    }
+    // from its picked look; one made from a picture has that picture too, while it's still there (its body, outfit, legs and
+    // shoes kept: the owner, "now the leg part is different"; a real person's photo, its face too)
+    const source = inf.mode !== 'design' && typeof urls.source === 'string' && /^https:\/\//.test(urls.source) ? urls.source : null;
     return {
       model: MODELS.edit, way: 'edit',
-      input: picture({ prompt: bodyPrompt(inf, { withSelfie: selfie }), image_urls: [need(urls.look, 'look'), ...(selfie ? [urls.source] : [])], num_images: 1, aspect_ratio: '9:16' }),
+      input: picture({ prompt: bodyPrompt(inf, { withSource: Boolean(source) }), image_urls: [need(urls.look, 'look'), ...(source ? [source] : [])], num_images: 1, aspect_ratio: '9:16' }),
+    };
+  }
+  // (2026-10-12, the editor) "Edit with words": one of its photos (a meme, an X banner: urls.image) made again with one change,
+  // by Classic, its full body after it (its face and look); the photo's own shape and quality (src/studio/rules.js editSpec), an
+  // X banner at 4:1 2K as when it was made (cut to 1500 × 500 again on our server)
+  if (job.kind === 'photo' && job.edit) {
+    const banner = job.shape === 'banner';
+    const spec = photoSpec({ model: 'classic', quality: job.quality ?? null, shape: job.shape, meme: job.meme ?? null });
+    if (!spec || (job.model && job.model !== 'classic')) throw Object.assign(new Error('inf: not an edit the menu offers'), { why: 'request' });
+    return {
+      model: MODELS.edit, way: 'edit',
+      input: picture({
+        prompt: editPrompt(inf, job.edit, { meme: Boolean(job.meme), banner }), image_urls: [need(urls.image, 'photo'), need(urls.body, 'full body')],
+        num_images: 1, aspect_ratio: banner ? '4:1' : RATIO(job.shape), resolution: banner ? '2K' : RES[spec.quality],
+      }),
     };
   }
   // (round 4, phase 4) its reference pictures (the person's own: things, places, pets, food, a style), after its own pictures
@@ -210,8 +237,8 @@ const inline = (mimeType, bytes) => ({ inlineData: { mimeType, data: Buffer.from
 // A picture for "From a photo" (round 2, the owner: "Allowed with consent"): a photo of a real person (the uploader, or
 // someone who said they may: the page's box, which our server needs first) or artwork of one original character. Never a
 // famous person, a well-known character or mascot, anyone who looks under 18 (21 for a photo, to be sure), more than one
-// person, or anything not family-friendly. → { ok: true, real } (real: a photo of a real person: its influencer is then never
-// in Explore) | { ok: false, why: 'none' | 'many' | 'minor' | 'famous' | 'copyright' | 'sexual' | 'hate' | 'violence' |
+// person, or anything not family-friendly. → { ok: true, real, full, head } (real: a photo of a real person: its influencer is
+// then never in Explore; full: the whole person, head to feet; head: its head's box, or null) | { ok: false, why: 'none' | 'many' | 'minor' | 'famous' | 'copyright' | 'sexual' | 'hate' | 'violence' |
 // 'other' } · throws (why 'ai') when Gemini can't say
 export const FAMOUS_SURE = 70;
 export async function checkPicture(cfg, jpeg) {
@@ -232,10 +259,13 @@ export async function checkPicture(cfg, jpeg) {
       + 'explicit: nudity, underwear, a revealing outfit or anything sexual. hateful: hate symbols or gestures. violent: gore, '
       + 'blood, graphic violence, or a weapon used to threaten someone (a costume or fantasy prop held in a family-friendly way '
       + 'is fine). other: something else clearly unsuitable for a family-friendly app: a child anywhere in it, drug use, '
-      + 'self-harm, or shocking content.',
+      + 'self-harm, or shocking content. full: the whole main person or character is in the picture, from the top of the head '
+      + 'to the feet (false when cut off at the knees or higher, or when the feet are out of the picture). head: the box around '
+      + 'the main person\'s or character\'s head, hair included, as [top, left, bottom, right] in thousandths of the picture\'s '
+      + 'height and width (each 0 to 1000).',
     parts: [inline('image/jpeg', jpeg), { text: 'Check this picture.' }],
-    schema: { type: 'object', properties: { people: count, photo: yes, apparentAge: count, adult: yes, famous: yes, famousSure: count, known: yes, explicit: yes, hateful: yes, violent: yes, other: yes },
-      required: ['people', 'photo', 'apparentAge', 'adult', 'famous', 'famousSure', 'known', 'explicit', 'hateful', 'violent', 'other'] },
+    schema: { type: 'object', properties: { people: count, photo: yes, apparentAge: count, adult: yes, famous: yes, famousSure: count, known: yes, explicit: yes, hateful: yes, violent: yes, other: yes, full: yes, head: { type: 'array', items: count } },
+      required: ['people', 'photo', 'apparentAge', 'adult', 'famous', 'famousSure', 'known', 'explicit', 'hateful', 'violent', 'other', 'full', 'head'] },
   });
   if (r.blocked || r.explicit === true) return { ok: false, why: 'sexual' };
   if (!(r.people >= 1)) return { ok: false, why: 'none' };
@@ -251,7 +281,17 @@ export async function checkPicture(cfg, jpeg) {
   if (r.hateful === true) return { ok: false, why: 'hate' };
   if (r.violent === true) return { ok: false, why: 'violence' };
   if (r.other === true) return { ok: false, why: 'other' };
-  return { ok: true, real };
+  // (2026-10-11) the whole person or character, head to feet (the photo may then be used "as it is": src/studio/rules.js WAYS),
+  // and where its head is (its portrait is cut there). A head taller than 45% of the picture is never a whole body.
+  const head = headBox(r.head);
+  const full = r.full === true && !(head && head[2] - head[0] > 450);
+  return { ok: true, real, full, head };
+}
+// A head's box from the AI: [top, left, bottom, right], whole thousandths of the picture (0 to 1000), with some size. → it, or null
+export function headBox(b) {
+  if (!Array.isArray(b) || b.length !== 4 || !b.every((n) => Number.isInteger(n) && n >= 0 && n <= 1000)) return null;
+  const [t, l, bo, r] = b;
+  return bo - t >= 10 && r - l >= 10 ? [t, l, bo, r] : null;
 }
 
 // (Round 4, phase 4) a reference picture: the person's own picture of a thing, a place, a pet, food or a style, to include in
@@ -302,6 +342,64 @@ export async function checkMeme(cfg, jpeg, caption) {
     parts: [inline('image/jpeg', jpeg), { text: `The words it was asked to show: “${String(caption ?? '').replace(/[\n\r]+/g, ' / ').slice(0, 140)}”. Check the picture.` }],
     schema: { type: 'object', properties: { explicit: yes, minor: yes, hateful: yes, violent: yes, badWords: yes, other: yes },
       required: ['explicit', 'minor', 'hateful', 'violent', 'badWords', 'other'] },
+  });
+  if (r.blocked || r.explicit === true) return { ok: false, why: 'sexual' };
+  if (r.minor === true) return { ok: false, why: 'minor' };
+  if (r.hateful === true) return { ok: false, why: 'hate' };
+  if (r.violent === true) return { ok: false, why: 'violence' };
+  if (r.badWords === true) return { ok: false, why: 'words' };
+  if (r.other === true) return { ok: false, why: 'other' };
+  return { ok: true };
+}
+
+// (2026-10-12, the editor) A photo its maker edited in the photo editor (cropped, its light and colors changed, words and
+// emoji stickers put on it: in its own browser, no AI), before it's kept as a new photo: family-friendly, nobody who looks
+// under 18, and the words in it too (they were checked as typed, server/inf-editor.js; what the picture shows is looked at
+// again). → { ok: true } | { ok: false, why: 'sexual' | 'minor' | 'hate' | 'violence' | 'words' | 'other' } · throws (why
+// 'ai') when Gemini can't say
+export async function checkEdited(cfg, jpeg) {
+  const r = await look(cfg, {
+    system: 'This is a photo of an AI character that its maker edited in our app (cropped, its light and colors changed, words '
+      + 'and emoji stickers put on it), about to be shown in a family-friendly app. Answer only about what you see, in the JSON '
+      + 'asked for. explicit: nudity, underwear, sexual poses or a revealing outfit. minor: anyone in it looks under 18. '
+      + 'hateful: hate symbols, gestures or words. violent: violence, weapons or gore. badWords: the picture shows readable '
+      + 'words that are rude, hateful, sexual, a web address, an @handle, a brand name, or about money, prices, coins or buying. '
+      + 'other: anything else unsuitable for a family-friendly app.',
+    parts: [inline('image/jpeg', jpeg), { text: 'Check the picture.' }],
+    schema: { type: 'object', properties: { explicit: yes, minor: yes, hateful: yes, violent: yes, badWords: yes, other: yes },
+      required: ['explicit', 'minor', 'hateful', 'violent', 'badWords', 'other'] },
+  });
+  if (r.blocked || r.explicit === true) return { ok: false, why: 'sexual' };
+  if (r.minor === true) return { ok: false, why: 'minor' };
+  if (r.hateful === true) return { ok: false, why: 'hate' };
+  if (r.violent === true) return { ok: false, why: 'violence' };
+  if (r.badWords === true) return { ok: false, why: 'words' };
+  if (r.other === true) return { ok: false, why: 'other' };
+  return { ok: true };
+}
+
+// (2026-10-12, the editor) A video its maker trimmed in the video editor (a part of one of its own videos, maybe cropped to
+// another shape, with words and emoji stickers put on it: made by our clock, server/inf-cut.js), before anyone sees it:
+// family-friendly, nobody who looks under 18, and the words on it too (they were checked as typed; what the video shows is
+// looked at again). The share mark in its corner is ours: never counted. Over what a request can carry: not looked at, so not
+// shown ('big': it never is, at its bitrate). → { ok: true } | { ok: false, why: 'sexual' | 'minor' | 'hate' | 'violence' |
+// 'words' | 'other' | 'big' } · throws (why 'ai') when Gemini can't say
+export async function checkCutVideo(cfg, mp4, { timeoutMs = 15_000 } = {}) {
+  if (mp4.length > INLINE_MAX) return { ok: false, why: 'big' };
+  const r = await look(cfg, {
+    system: 'This is a short video of an AI character that its maker trimmed in our video editor (a part of one of its own AI '
+      + 'videos, maybe cropped to another shape, with words and emoji stickers put on it), about to be shown in a family-friendly '
+      + 'app. The small label "Made with AGI Studio · AI-generated · studio.agi1.app" in a corner is the app\'s own: never count '
+      + 'it. Answer only about what you see and hear, in the JSON asked for. explicit: nudity, underwear, sexual moves or poses, '
+      + 'or a revealing outfit. minor: anyone in it looks under 18. hateful: hate symbols, gestures or words. violent: gore, '
+      + 'blood, graphic violence, or a weapon used to threaten someone (a costume or fantasy prop shown in a family-friendly way '
+      + 'is fine). badWords: the video shows readable words (other than that label) that are rude, hateful, sexual, a web '
+      + 'address, an @handle, a brand name, or about money, prices, coins or buying. other: something else clearly unsuitable '
+      + 'for a family-friendly app.',
+    parts: [inline('video/mp4', mp4), { text: 'Check this video.' }],
+    schema: { type: 'object', properties: { explicit: yes, minor: yes, hateful: yes, violent: yes, badWords: yes, other: yes },
+      required: ['explicit', 'minor', 'hateful', 'violent', 'badWords', 'other'] },
+    timeoutMs,
   });
   if (r.blocked || r.explicit === true) return { ok: false, why: 'sexual' };
   if (r.minor === true) return { ok: false, why: 'minor' };

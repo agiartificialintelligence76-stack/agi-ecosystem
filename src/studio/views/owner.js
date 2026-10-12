@@ -8,16 +8,24 @@
 //   • Content: the spotlight of the week (round 2: approve it with its prize, or skip it to the next best), the trend clips
 //     (made once by the AI service from the owner's own balance, never credits; the owner keeps the good ones), the example
 //     pictures for Create's choices (round 2), and the reports (hide what shouldn't be here);
-//   • Testing: who can use AGI Studio while it's private (2026-10-11, the owner: "i want to give access to someone but it said
-//     to them comins soon fix that please": let a wallet in by its address, or take it off), and credits for testing (round 3:
-//     free, to the owner's own wallet or a tester's; a tester's wallet is let in with them).
-import { h, icon, btn, linkBtn, busy, pic, put, add, say, nextId, pageTabs, segmented } from '../ui.js';
-import { infVideo, infPoster, infPic, infExample, REPORT_WHYS, EXAMPLES, EXAMPLE_KINDS, INF_STYLES, OPTIONS, creditsText } from '../rules.js';
+//   • Gifts (its address stays ?tab=testing): gift links of free credits (2026-10-12, the owner: "i can put the a custome value
+//     of credits there then i can sent a message then theres gonna be a link for it then when i sahre it to someone they can see
+//     the meesage and the gifted credits and they can claim it": any number of credits, the owner's message, claimed once), who
+//     can use AGI Studio while it's private (2026-10-11, the owner: "i want to give access to someone but it said to them comins
+//     soon fix that please": let a wallet in by its address, or take it off), and credits for testing (round 3: free, to the
+//     owner's own wallet or a tester's; a tester's wallet is let in with them).
+import { h, icon, btn, linkBtn, busy, pic, put, add, say, nextId, pageTabs, segmented, copyText } from '../ui.js';
+import {
+  infVideo, infPoster, infPic, infExample, REPORT_WHYS, EXAMPLES, EXAMPLE_KINDS, INF_STYLES, OPTIONS, creditsText, GIFTS, OWNER_LINKS,
+  GIFT_TOKEN, giftLink,
+} from '../rules.js';
 import {
   errorText, agoText, failText, num, compact, weekText, prizeText, WEEK_STATUS, shortAddress, GIFT_AMOUNTS, GIFT_MAX, GIFT_CONFIRM,
   giftPlanText, giftText, dayText, BALANCE_STATE, balanceValueText, balanceLowText, adminNumbers, MADE_KINDS, ROLE_NAMES, ROLE_NOTES,
-  ACCESS_VIA, accessIntroText, accessDoneText, accessErrorText,
+  ACCESS_VIA, accessIntroText, accessDoneText, accessErrorText, OWNER_LINK_INTRO, OWNER_LINK_AMOUNTS, OWNER_LINK_FINE, ownerLinkPlanText,
+  ownerLinksCount, ownerLinkState, ownerLinkShareText, ownerLinkMadeText, ownerLinkErrorText, giftCreditsFrom, giftErrorField,
 } from '../app-words.js';
+import { messageField, messageOf, linkBox } from './gifts.js';
 import { makePosters } from '../media.js';
 import { progressBar } from '../progress.js';
 
@@ -126,9 +134,189 @@ export function giftSection(ctx, { onLetIn = null } = {}) {
     h('p', { class: 'sa-muted sa-small', text: "Free credits for your own wallet or a tester's: nothing is paid to anyone. What they make is paid from your own AI balance, like everything here. Credits have no cash value." }),
     h('div', { class: 'sa-gift-form' },
       who, addrBox,
-      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: `${id}-n`, text: 'How many credits' }), h('div', { class: 'sa-gift-amount' }, amount, quick)),
+      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: `${id}-n`, text: 'How many credits' }), h('div', { class: 'sa-amount-row' }, amount, quick)),
       plan, give, note));
   return section;
+}
+
+// ---------- gift links of free credits (2026-10-12) ----------
+// The owner's choices: "Mine, free credits (Recommended)" (bonus credits paid from the owner's own AI balance as they're used,
+// like credits for testing), "Up to 200 characters (Recommended)" (the owner's message, its line breaks kept), "Once
+// (Recommended)" (each link claimed by one wallet). Its form is drawn once (what's typed survives the list's redraws): how many
+// credits (1 to 100,000; from GIFT_CONFIRM a second tap), the message, and Make the link; then the new link to copy or share.
+// Under it the owner's links, newest first: each one's credits, state and message, and while it waits, Copy link and Take it
+// back (a second tap). A link's secret is the part after "#gift=" (never in a page's or a request's address). → { node, load, reset }
+export function ownerLinksSection(ctx) {
+  const id = nextId('sa-olinks');
+  const SHOWN = 8;
+  // how many
+  const amount = h('input', { class: 'sa-input sa-input-num', id: `${id}-n`, type: 'text', inputmode: 'numeric', maxlength: '7', autocomplete: 'off',
+    placeholder: 'e.g. 1,000', value: String(OWNER_LINK_AMOUNTS[2]) });
+  const amountErr = h('p', { class: 'sa-err', role: 'alert', hidden: true });
+  const quick = h('div', { class: 'sa-gift-quick', role: 'group', 'aria-label': 'Quick amounts' }, ...OWNER_LINK_AMOUNTS.map((n) => {
+    const b = btn(num(n), { kind: 'ghost', size: 'sm' });
+    b.addEventListener('click', () => { amount.value = String(n); changed(); });
+    return b;
+  }));
+  // the message (up to 200 characters, its line breaks kept; Ctrl or ⌘ and Enter makes the link)
+  const message = messageField(GIFTS.NOTE_MAX, {
+    label: 'Your message (optional)', placeholder: "Welcome to AGI Studio! Here's something to start with 💜",
+    hint: `Whoever opens the link sees it, with the credits. Up to ${num(GIFTS.NOTE_MAX)} characters: no links, contacts or deals.`,
+    onSend: () => make.click(),
+  });
+  const plan = h('p', { class: 'sa-gift-plan', 'aria-live': 'polite' });
+  const make = btn('', { kind: 'primary', icon: 'link', class: 'sa-btn sa-btn-primary sa-gift-go sa-olinks-go' });
+  make.append(h('span'));
+  const general = h('p', { class: 'sa-note', role: 'status', hidden: true });
+  const made = h('div', { class: 'sa-olinks-made', hidden: true, tabindex: '-1' });
+  const count = h('p', { class: 'sa-fine sa-olinks-count' });
+  const listBox = h('div', { class: 'sa-olinks-list' });
+  let armed = 0, armTimer = null, data = null, loading = false, failed = null, showAll = false;
+  const taking = new Set();                        // links being taken back (their buttons stay busy across redraws)
+  const arming = new Set();                        // …and the ones a first tap armed
+  const value = () => {
+    const n = giftCreditsFrom(amount.value);
+    return n && n >= OWNER_LINKS.MIN && n <= OWNER_LINKS.MAX ? n : null;
+  };
+  const label = () => {
+    const n = value();
+    make.lastChild.textContent = !n ? 'Make the link' : armed === n ? `Tap again to make a link of ${creditsText(n)}` : `Make a link of ${creditsText(n)}`;
+    make.classList.toggle('is-armed', Boolean(n) && armed === n);
+  };
+  function changed() {
+    armed = 0;
+    say(amountErr, '');
+    const n = value();
+    plan.textContent = n ? ownerLinkPlanText(n, data?.days || OWNER_LINKS.DAYS) : errorText('link_credits');
+    label();
+  }
+  amount.addEventListener('input', changed);
+  amount.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); make.click(); } });
+  message.input.addEventListener('input', () => { if (armed) { armed = 0; label(); } });
+
+  async function load() {
+    if (loading) return;
+    loading = true;
+    if (!data) put(listBox, h('p', { class: 'sa-muted' }, h('span', { class: 'sa-spin', 'aria-hidden': 'true' }), ' Loading…'));
+    const r = await ctx.act('inf-owner-links');
+    loading = false;
+    if (!ctx.alive()) return;
+    if (!r.ok || !Array.isArray(r.data?.links)) { failed = r.data?.error || 'busy'; drawList(); return; }
+    failed = null;
+    data = r.data;
+    drawList();
+  }
+  function row(l) {
+    const body = h('div', { class: 'sa-gift-row-body' },
+      h('div', { class: 'sa-gift-row-top' }, h('span', { class: 'sa-gift-row-title', text: creditsText(l.credits) })),
+      h('p', { class: 'sa-muted sa-small', text: ownerLinkState(l) }),
+      l.note ? h('p', { class: 'sa-gift-note', text: `“${l.note}”` }) : null);
+    if (l.status === 'open' && GIFT_TOKEN.test(String(l.token || ''))) {
+      const url = giftLink(location.origin, ctx.BASE, l.token);
+      const copy = btn('Copy link', { kind: 'ghost', size: 'sm', icon: 'copy' });
+      copy.addEventListener('click', async () => {
+        const ok = await copyText(url);
+        ctx.toast(ok ? 'Gift link copied' : "Couldn't copy it: the browser blocked the clipboard", ok ? 'good' : 'bad');
+      });
+      const take = btn(arming.has(l.id) ? 'Tap again to take it back' : 'Take it back', { kind: arming.has(l.id) ? 'danger' : 'quiet', size: 'sm', icon: 'close' });
+      take.disabled = taking.has(l.id);
+      take.dataset.take = l.id;
+      take.addEventListener('click', () => {
+        if (!arming.has(l.id)) {
+          arming.add(l.id);
+          drawList();
+          listBox.querySelector(`[data-take="${l.id}"]`)?.focus();
+          // a first tap is forgotten after a few seconds
+          setTimeout(() => { if (arming.delete(l.id) && ctx.alive()) drawList(); }, 6000);
+          return;
+        }
+        arming.delete(l.id);
+        taking.add(l.id);
+        busy(take, 'Taking it back…', async () => {
+          const r = await ctx.act('inf-owner-link-cancel', { gift: l.id });
+          taking.delete(l.id);
+          const d = r.data || {};
+          if (r.ok && d.ok) {
+            ctx.toast(d.status === 'expired' ? 'It had expired already: nobody can claim it' : 'Taken back: nobody can claim it now', 'good');
+            if (Array.isArray(d.links)) { data = d; drawList(); } else load();
+            return;
+          }
+          ctx.toast(ownerLinkErrorText(d.error), 'bad');
+          load();
+        });
+      });
+      body.append(h('div', { class: 'sa-gift-actions' }, copy, take));
+    }
+    return h('li', { class: `sa-gift-row is-out is-${l.status}` },
+      h('span', { class: 'sa-gift-row-icon', 'aria-hidden': 'true' }, icon(l.status === 'claimed' ? 'check' : 'link')), body);
+  }
+  function drawList() {
+    if (failed && !data) {
+      const again = btn('Try again', { kind: 'ghost', size: 'sm', icon: 'refresh' });
+      again.addEventListener('click', () => busy(again, 'Trying…', load));
+      count.textContent = '';
+      put(listBox, h('div', { class: 'sa-banner', role: 'status' }, h('p', { text: accessErrorText(failed) }), again));
+      return;
+    }
+    if (!data) return;
+    count.textContent = ownerLinksCount(data);
+    const links = data.links || [];
+    const shown = showAll ? links : links.slice(0, SHOWN);
+    const more = links.length > shown.length ? btn(`Show all (${num(links.length)})`, { kind: 'quiet', size: 'sm' }) : null;
+    more?.addEventListener('click', () => { showAll = true; drawList(); });
+    put(listBox, links.length ? h('ul', { class: 'sa-gift-list' }, ...shown.map(row)) : h('p', { class: 'sa-muted', text: 'No gift links yet: make one above.' }), more);
+  }
+  make.addEventListener('click', () => {
+    say(amountErr, '');
+    say(message.err, '');
+    say(general, '');
+    const n = value();
+    if (!n) { say(amountErr, errorText('link_credits')); amount.focus(); return; }
+    const text = messageOf(message.input.value);
+    if ([...text].length > GIFTS.NOTE_MAX) { say(message.err, errorText('note_long')); message.input.focus(); return; }
+    if (n >= GIFT_CONFIRM && armed !== n) {
+      armed = n;
+      label();
+      clearTimeout(armTimer);
+      armTimer = setTimeout(() => { armed = 0; label(); }, 6000);
+      return;
+    }
+    armed = 0;
+    clearTimeout(armTimer);
+    busy(make, 'Making it…', async () => {
+      const r = await ctx.act('inf-owner-link', { credits: n, ...(text ? { note: text } : {}) });
+      const d = r.data || {};
+      if (!(r.ok && d.ok && GIFT_TOKEN.test(String(d.token)))) {
+        if (d.error === 'link_credits') { say(amountErr, errorText('link_credits')); amount.focus(); return; }
+        if (giftErrorField(d.error) === 'note') { say(message.err, errorText(d.error)); message.input.focus(); return; }
+        say(general, ownerLinkErrorText(d.error));
+        return;
+      }
+      const url = giftLink(location.origin, ctx.BASE, d.token);
+      put(made,
+        h('p', { class: 'sa-olinks-made-title' }, icon('gift'), h('span', { text: `Your gift link: ${creditsText(d.gave)}` })),
+        linkBox(ctx, url, { what: 'Gift link', share: { title: 'A gift from AGI Studio', text: ownerLinkShareText(d.gave) } }),
+        d.note ? h('p', { class: 'sa-gift-quote', text: `“${d.note}”` }) : null,
+        h('p', { class: 'sa-muted sa-small', text: ownerLinkMadeText(d.expires) }));
+      made.hidden = false;
+      made.focus();
+      ctx.toast(`Gift link made: ${creditsText(d.gave)} 💜`, 'good');
+      if (Array.isArray(d.links)) { data = d; failed = null; showAll = false; drawList(); } else load();
+    }).finally(label);
+  });
+  changed();
+  const node = h('section', { class: 'sa-section sa-olinks', 'aria-labelledby': `${id}-h`, hidden: true },
+    h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: `${id}-h` }, icon('gift'), h('span', { text: 'Gift links of free credits' }))),
+    h('p', { class: 'sa-muted sa-small sa-olinks-intro', text: OWNER_LINK_INTRO }),
+    h('div', { class: 'sa-card sa-olinks-form' },
+      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: `${id}-n`, text: 'How many credits' }), h('div', { class: 'sa-amount-row' }, amount, quick), amountErr),
+      message.node,
+      plan, make, general),
+    made,
+    h('div', { class: 'sa-olinks-head' }, h('h3', { class: 'sa-h3', text: 'Your gift links' }), count),
+    listBox,
+    h('p', { class: 'sa-fine', text: OWNER_LINK_FINE }));
+  return { node, load, reset: () => { data = null; failed = null; showAll = false; arming.clear(); taking.clear(); made.hidden = true; put(made); } };
 }
 
 // ---------- who can use AGI Studio while it's private (2026-10-11) ----------
@@ -233,14 +421,16 @@ export async function render(ctx, route, root) {
   document.title = 'Owner tools · AGI Studio';
   // (round 4, phase 2) four tabs: Overview (the AI services' balances and their alert levels, the alerts on Telegram, the
   // numbers), Team (mods and support), Content (the spotlight of the week, the trend clips, the example pictures, reports) and
-  // Testing (credits for testing). Each panel is read when it's first shown.
+  // Gifts (2026-10-12; "Testing" before, its address still ?tab=testing: gift links of free credits, who can use AGI Studio
+  // while it's private, credits for testing). Each panel is read when it's first shown.
   const access = accessSection(ctx);
+  const links = ownerLinksSection(ctx);
   const gift = giftSection(ctx, { onLetIn: () => access.load() });
   const body = h('div', { class: 'sa-owner' });
   const overview = h('div', { class: 'sa-admin' });
   const team = h('div', { class: 'sa-team' });
   const gate = h('div', { class: 'sa-owner-gate' });
-  const TABS = [['overview', 'Overview', 'chart'], ['team', 'Team', 'team'], ['content', 'Content', 'image'], ['testing', 'Testing', 'bolt']];
+  const TABS = [['overview', 'Overview', 'chart'], ['team', 'Team', 'team'], ['content', 'Content', 'image'], ['testing', 'Gifts', 'gift']];
   const tabs = pageTabs({ label: 'Owner tools', items: TABS, value: route.q.get('tab') || 'overview', onchange: (k) => {
     const url = new URL(location.href);
     url.searchParams.set('tab', k);
@@ -251,12 +441,12 @@ export async function render(ctx, route, root) {
   put(tabs.panel('team'), team);
   put(tabs.panel('content'), body);
   const testing = tabs.panel('testing');
-  put(testing, access.node, gift);
+  put(testing, links.node, access.node, gift);
   const tabsBox = h('div', { class: 'sa-owner-tabs', hidden: true }, tabs.node, ...TABS.map(([k]) => tabs.panel(k)));
   add(root, h('header', { class: 'sa-page-head' },
     h('p', { class: 'sa-eyebrow', text: 'Only your wallet sees this' }),
     h('h1', { class: 'sa-display sa-page-title', tabindex: '-1', text: 'Owner tools' }),
-    h('p', { class: 'sa-muted', text: 'Your AI balances and alerts, the numbers, your team, what people see (the spotlight, trend clips, example pictures, reports), who can use AGI Studio while it\'s private, and credits for testing.' })), gate, tabsBox);
+    h('p', { class: 'sa-muted', text: 'Your AI balances and alerts, the numbers, your team, what people see (the spotlight, trend clips, example pictures, reports), gift links of free credits with your message, who can use AGI Studio while it\'s private, and credits for testing.' })), gate, tabsBox);
   let data = null, loading = false, timer = null;
   let admin = null, adminLoading = false;
   const tried = new Set();
@@ -281,6 +471,7 @@ export async function render(ctx, route, root) {
     tabsBox.hidden = false;
     gift.hidden = false;
     access.node.hidden = false;
+    links.node.hidden = false;
     if (r.ok) return true;
     for (const panel of into) {
       const again = retry ? btn('Try again', { kind: 'ghost', size: 'sm', icon: 'refresh' }) : null;
@@ -293,7 +484,7 @@ export async function render(ctx, route, root) {
   function show(k) {
     if (k === 'content' && !data) load();
     if ((k === 'overview' || k === 'team') && !admin) loadAdmin();
-    if (k === 'testing' && !accessAsked && ctx.session) { accessAsked = true; access.load(); }
+    if (k === 'testing' && !accessAsked && ctx.session) { accessAsked = true; access.load(); links.load(); }
   }
 
   async function load() {
@@ -680,7 +871,7 @@ export async function render(ctx, route, root) {
     show(tabs.value);
     if (!['overview', 'team'].includes(tabs.value)) loadAdmin();
   }
-  ctx.on('wallet', () => { data = null; admin = null; accessAsked = false; access.reset(); start(); });
+  ctx.on('wallet', () => { data = null; admin = null; accessAsked = false; access.reset(); links.reset(); start(); });
   ctx.on('info', () => { if (data) draw(); });
   start();
   return () => clearTimeout(timer);

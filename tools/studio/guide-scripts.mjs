@@ -3,7 +3,7 @@
 // from (setup: before the browser opens; before: in the page, before the camera rolls), and what happens (run). Each scene is
 // filmed twice, on a computer's screen and on a phone's (phone: true), the way each is used there: a mouse and a computer's
 // layout, or taps and a phone's (its tab bar, its drawer of controls, its sheets from the bottom).
-import { LOOKS, LOOKS2, look } from './guide-record.mjs';
+import { LOOKS, LOOKS2, look, body, cutRun } from './guide-record.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -97,6 +97,12 @@ async function around(...locs) {
   const x0 = Math.min(...bs.map((b) => b.x)), y0 = Math.min(...bs.map((b) => b.y));
   return { x: x0, y: y0, width: Math.max(...bs.map((b) => b.x + b.width)) - x0, height: Math.max(...bs.map((b) => b.y + b.height)) - y0 };
 }
+// Explore's top, where a clip starts: a computer's camera sees all of its words; a phone's narrower picture, its heading
+// first (2026-10-11: the holders' line made its words taller than a phone's picture), then follows what's pressed
+async function heroStart(page, phone) {
+  const copy = page.locator('.sa-hero-copy').first();
+  return phone ? topOf(copy, 236) : copy;
+}
 // a sheet's own scroller (its words; on a phone it comes up from the bottom)
 const sheetIn = (page) => page.locator(`${SHEET} .sa-sheet-in`).last();
 // the guide settled on its step (it scrolls what its arrow points at into view first)
@@ -104,6 +110,17 @@ const guideStill = (page) => page.waitForFunction(() => document.querySelector('
 
 // a photo of Mira's to open (the first one in her creations)
 const aPhoto = (page) => page.locator('.sa-inf-gallery .sa-media-open[aria-label$=": a photo"]').first();
+// (2026-10-12) a video of hers to open (not her trend video)
+const aVideo = (page) => page.locator('.sa-inf-gallery .sa-media-open[aria-label$=": a video"]').first();
+// (2026-10-12) a video on the screen: playing, its picture there, then a moment for the screen to show it
+async function playingNow(page, video, ms = 600) {
+  await video.waitFor();
+  await video.evaluate((el) => (el.readyState >= 2 ? null : new Promise((r) => {
+    el.addEventListener('loadeddata', r, { once: true }); el.addEventListener('error', r, { once: true }); setTimeout(r, 8000);
+  })));
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await sleep(ms);
+}
 
 // what's just being made, in her creations: the frame around it (a computer's: the wall from the tile's side, as tall as the
 // tile, never the panel of controls beside the wall; a phone's: the tile), given where the tile is (dy: how far the page is
@@ -145,6 +162,17 @@ async function upToSheet(film, phone) {
   const V = film.lay.view;
   await film.cam({ x: 0, y: Math.round(V.height * 0.08), width: V.width, height: V.width / 1.6 }, { room: 1, dur: 0.45 });
 }
+// (2026-10-12) a picture on the screen: loaded, decoded, then a moment for the screen to show it (on a computer without a
+// graphics card the screen shows what the page did up to about half a second later)
+async function painted(page, img, ms = 900) {
+  await img.waitFor();
+  await img.evaluate((el) => (el.complete && el.naturalWidth ? null : new Promise((r) => {
+    el.addEventListener('load', r, { once: true }); el.addEventListener('error', r, { once: true }); setTimeout(r, 8000);
+  })));
+  await img.evaluate((el) => (el.decode ? el.decode().catch(() => {}) : null));
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await sleep(ms);
+}
 // a phone, a done video's sheet: after its top (its name, what it is), the video's middle (its person), where it plays
 async function onVideo(film, page, phone) {
   if (!phone) { await film.wait(2000); return; }
@@ -162,9 +190,9 @@ export const SCENES = {
     path: '/explore',
     async run({ page, film, phone }) {
       const cta = page.locator('[data-guide="start"]').first();
-      await film.start(page.locator('.sa-hero-copy').first(), { room: phone ? 1.02 : 1.08, y: phone ? 0.47 : 0.5 });
+      await film.start(await heroStart(page, phone), { room: phone ? 1.02 : 1.08 });
       await film.still('hero');
-      await film.wait(1000);
+      await film.wait(phone ? 1700 : 1000);
       await film.hover(cta, { after: phone ? 150 : 450 });
       film.poster();
       await film.click(cta, { after: 250 });
@@ -181,7 +209,7 @@ export const SCENES = {
   'explore-trends': {
     path: '/explore',
     async run({ page, film, phone }) {
-      await film.start(page.locator('.sa-hero-copy').first(), { room: phone ? 1.02 : 1.08, y: phone ? 0.47 : 0.5 });
+      await film.start(await heroStart(page, phone), { room: phone ? 1.02 : 1.08 });
       await film.wait(700);
       await film.click(byText(page, 'Browse trends'), { after: 1100 });
       const row = page.locator('.sa-trend-row').first();
@@ -371,7 +399,49 @@ export const SCENES = {
     },
   },
 
-  // its style, its outfit, its vibe
+  // from a photo, how it's made (2026-10-11): 4 looks, just its full body, or the photo as it is (only for a photo of the
+  // whole person, head to feet: the check says so), the price on the cards and the button following. The photo is checked
+  // before the camera rolls (create-photo films that); the camera stays on the words and the cards (the demo's paintings are
+  // waist up: a whole person's photo isn't one of them, so its picture stays out of the picture)
+  'create-way': {
+    path: '/create?mode=picture',
+    async setup({ B }) { B.fake.gemini.picture = { full: true, head: [200, 340, 400, 760] }; },
+    async before({ page, phone }) {
+      const box = page.locator('[data-guide="look"]').first();
+      await box.locator('.sa-consent input').check();
+      await page.locator('#sa-pic-file').setInputFiles({ name: 'my-photo.jpg', mimeType: 'image/jpeg', buffer: await body('sofia') });
+      await page.waitForFunction(() => /whole person/.test(document.querySelector('.sa-up-state')?.textContent || ''), null, { timeout: 20000 });
+      // (the check's words a little below the panel's top: the photo as it is hides its style and words, and a panel scrolled
+      // further down would then move up under the camera)
+      await page.locator('[data-guide="way"]').first().evaluate((el, phone) => {
+        const sc = el.closest('.sa-ws-body');
+        const st = phone ? el : sc.querySelector('.sa-up-state') || el;
+        sc.scrollTop += st.getBoundingClientRect().top - sc.getBoundingClientRect().top - (phone ? 70 : 110);
+      }, phone);
+      await sleep(500);
+    },
+    async run({ page, film, phone }) {
+      const way = page.locator('[data-guide="way"]').first();
+      const said = page.locator('.sa-up-state').first();
+      // (a computer: the check's words and the three ways; a phone's narrower picture: the three ways)
+      await film.start(phone ? way : await around(said, way), { room: phone ? 1.02 : 1.06 });
+      await film.wait(phone ? 1700 : 1400);
+      await film.still('ways');
+      await film.click(card(page, 'Just its full body'), { after: phone ? 1500 : 1100 });
+      await film.still('body');
+      await film.click(card(page, 'Use my photo as it is'), { after: phone ? 1300 : 900 });
+      film.poster();
+      await film.still('asis');
+      // what it costs now, on the button
+      const foot = page.locator('.sa-ws-foot').first();
+      await film.cam(foot, { room: phone ? 1.02 : 1.2, y: phone ? 0.6 : 0.5 });
+      await film.wait(1500);
+      await film.still('price');
+      await film.end(400);
+    },
+  },
+
+  // its style (optional: 26 in four sections), its outfit, its vibe
   'create-style': {
     path: '/create',
     async run({ page, film, phone }) {
@@ -380,9 +450,13 @@ export const SCENES = {
       await style.evaluate((el) => { const sc = el.closest('.sa-ws-body'); sc.scrollTop += el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 12; });
       await sleep(300);
       await film.start(await topOf(style, phone ? 230 : 280), { room: phone ? 1.02 : 1.08 });
-      await film.wait(600);
-      await film.click(chip(page, 'Style', '3D cartoon'), { after: 600 });
-      await film.click(chip(page, 'Style', 'Anime'), { after: 700 });
+      await film.wait(800);
+      await film.click(chip(page, 'Style', 'Film photo'), { after: 700 });
+      const anime = style.locator('.sa-chip-sec[data-section="anime"]').first();
+      await film.scrollTo(anime, { within: '.sa-ws-body', block: 'start' });
+      await film.cam(await topOf(anime, phone ? 230 : 280), { room: phone ? 1.02 : 1.08 });
+      await film.wait(300);
+      await film.click(chip(page, 'Style', 'Storybook anime'), { after: 800 });
       film.poster();
       await film.still('style');
       const outfit = chip(page, 'Outfit', 'Cozy knit');
@@ -654,6 +728,80 @@ export const SCENES = {
     },
   },
 
+  // (2026-10-11) its profile picture: the camera on its picture → its pictures → its full body, the square dragged onto its face
+  // and zoomed a little (a computer: the Zoom slider; a phone: two fingers) → Use this picture → its new picture on its page
+  'make-pfp': {
+    path: (state) => `/i/${state.mira.id}`,
+    async run({ page, film, phone }) {
+      const camBtn = page.locator('[data-guide="pfp"]').first();
+      await camBtn.waitFor();
+      const head = page.locator('.sa-profile').first();
+      const headView = async () => partOf(head, { w: phone ? 390 : 600, h: phone ? 236 : 330 });
+      await film.start(await headView(), { room: phone ? 1 : 1.04 });
+      await film.wait(400);
+      await film.click(camBtn, { after: phone ? 80 : 250 });
+      await upToSheet(film, phone);
+      const sh = openSheet(page);
+      await sh.locator('.sa-pp-tile').first().waitFor();
+      await sleep(300);
+      await film.cam(await topOf(sheetIn(page), phone ? 250 : 400), { room: phone ? 1.02 : 1.06 });
+      await film.wait(450);
+      await film.still('pictures');
+      const full = sh.locator('.sa-pp-tile').filter({ has: page.locator('.sa-pp-cap', { hasText: exact('Full body') }) }).first();
+      await film.click(full, phone ? { after: 0, lead: 240 } : { after: 200 });
+      // (2026-10-12) a cut from its tile to its picture, framed: what's between (its stage black while its picture loads, a
+      // phone's sheet scrolling to it, the camera still where the tiles were) is left out of the video (see Film.cut). Its
+      // picture painted before the cut ends: decoded, then a moment for the screen (on a computer without a graphics card the
+      // screen shows what the page did about half a second later)
+      film.cut();
+      await sh.locator('.sa-framer-stage:not(.is-loading)').first().waitFor();
+      const img = sh.locator('.sa-framer-img').first();
+      const box = sh.locator('.sa-framer-box').first();
+      await painted(page, img);
+      // the camera on the picture and its square, at once (and never on the page behind the sheet): a phone's on the top half of
+      // its picture, where its face is; a computer's as wide as the sheet, from the picture's top
+      const panel = await sheetIn(page).boundingBox();
+      const pic = await img.boundingBox();
+      const inSheet = (top) => ({ x: panel.x, y: top, width: panel.width, height: panel.width / 1.6 });
+      if (phone) await film.cam(img, { room: 1, y: 0.3, dur: 0 });
+      else await film.cam(inSheet(pic.y - 14), { room: 1, dur: 0 });
+      film.normal();
+      // (the sheet's backdrop without its blur while the camera sees only the sheet: see plainBackdrop in guide-record.mjs)
+      await film.plainBackdrop(true);
+      await film.wait(450);
+      // the square dragged onto its face (the demo's painting: its face about 38% down, in the middle), slowly at first (the
+      // screen still shows a drag a little after the page takes it)
+      const b = await box.boundingBox();
+      await film.drag({ x: b.x + b.width / 2, y: b.y + b.height * 0.45 }, { x: pic.x + pic.width * 0.5, y: pic.y + pic.height * 0.385 + b.height * -0.05 }, { ms: 1300, hold: 220, after: 450 });
+      // (its poster: the square on its face)
+      if (!phone) film.poster();
+      // zoomed in a little, around its middle (a computer: the camera down to the Zoom and its previews first, still in the sheet)
+      if (phone) {
+        const b2 = await box.boundingBox();
+        await film.pinch({ x: b2.x + b2.width / 2, y: b2.y + b2.height / 2 }, 58, 72, { ms: 1000, hold: 220, after: 450 });
+        film.poster();
+      } else {
+        const range = sh.locator('.sa-framer-zoom input[type="range"]').first();
+        const rb = await range.boundingBox();
+        await film.cam(inSheet(rb.y + rb.height + 52 - panel.width / 1.6), { room: 1, dur: 0.6 });
+        await film.wait(500);
+        const v = Number(await range.inputValue());
+        const xAt = (val) => rb.x + 8 + (rb.width - 16) * ((val - 100) / 400);
+        await film.drag({ x: xAt(v), y: rb.y + rb.height / 2 }, { x: xAt(v + 45), y: rb.y + rb.height / 2 }, { ms: 900, hold: 200, after: 400, cam: false });
+      }
+      await film.wait(phone ? 350 : 200);
+      await film.still('framed');
+      await film.plainBackdrop(false);
+      await film.click(byText(sh.locator('.sa-sheet-foot'), 'Use this picture'), { after: 120 });
+      // (the camera back on its page at once, while the sheet goes: its new picture there)
+      await film.cam(await headView(), { room: phone ? 1 : 1.04, dur: 0.8 });
+      await page.waitForFunction(() => !document.querySelector('dialog.sa-sheet[open]'), null, { timeout: 15000 });
+      await film.wait(1050);
+      await film.still('changed');
+      await film.end(400);
+    },
+  },
+
   // Creations: one opened (its prompt, Copy prompt), then Captions
   'make-creations': {
     path: (state) => `/i/${state.mira.id}`,
@@ -664,11 +812,22 @@ export const SCENES = {
       await sleep(400);
       await film.start(await partOf(gallery, { w: phone ? 390 : 640, h: phone ? 240 : 400 }), { room: phone ? 1 : 1.04 });
       await film.wait(700);
-      await film.click(aPhoto(page), { after: phone ? 80 : 400 });
+      await film.click(aPhoto(page), { after: phone ? 80 : 200 });
       await upToSheet(film, phone);
       await openSheet(page).waitFor();
-      await sleep(250);
-      await film.cam(await topOf(sheetIn(page), phone ? 250 : 420), { room: phone ? 1.02 : 1.06 });
+      if (phone) {
+        await sleep(250);
+        await film.cam(await topOf(sheetIn(page), 250), { room: 1.02 });
+        // (2026-10-12, the editor) its poster once the camera's there and its photo is painted: Make another and Delete over it
+        // (taken as the camera set off, it was the blur behind the sheet still coming up)
+        await painted(page, openSheet(page).locator('.sa-big-pic').first(), 700);
+      } else {
+        // (2026-10-12) a computer: a cut to its photo, big (a black box while it loaded was in the video, and was its poster)
+        film.cut();
+        await painted(page, openSheet(page).locator('.sa-big-pic').first());
+        await film.cam(await topOf(sheetIn(page), 420), { room: 1.06, dur: 0 });
+        film.normal();
+      }
       film.poster();
       await film.wait(800);
       await film.still('photo');
@@ -862,6 +1021,196 @@ export const SCENES = {
       await onVideo(film, page, phone);
       await film.still('playing');
       await film.end(400);
+    },
+  },
+
+  // (2026-10-12, the editor) the photo editor, Learn's lesson on photos: one of her photos opened → "Edit photo" → (a computer:
+  // cropped square) a filter, her words and a sticker on it → saved as a new photo next to it ("Edited"). A computer's camera
+  // sees its photo and its tools together; a phone's goes from its tools to its photo (a phone's screen has its photo on top,
+  // its tools under it)
+  // (2026-10-12) at most 14 s: the photo in view before the camera rolls (no scroll to it), a computer's cut while its photo
+  // loads, no crop step, and a computer's editing a little faster (its cursor travels further than a phone's taps)
+  'make-editor': {
+    path: (state) => `/i/${state.mira.id}`,
+    async run({ page, film, phone }) {
+      const gallery = page.locator('[data-guide="creations"]').first();
+      await gallery.waitFor();
+      const photo = aPhoto(page);
+      await photo.waitFor();
+      await photo.evaluate((el, top) => scrollBy({ top: el.getBoundingClientRect().top - top }), phone ? 150 : 170);
+      await sleep(400);
+      const g = await gallery.boundingBox(), p = await photo.boundingBox();
+      await film.start({ x: g.x, y: Math.max(0, p.y - (phone ? 70 : 110)), width: Math.min(g.width, phone ? 390 : 640), height: phone ? 240 : 400 },
+        { room: phone ? 1 : 1.04 });
+      await film.wait(250);
+      await film.click(photo, { after: phone ? 80 : 200 });
+      await upToSheet(film, phone);
+      const big = openSheet(page);
+      await big.waitFor();
+      const row = big.locator('.sa-edit-row').first();
+      if (phone) {
+        await painted(page, big.locator('.sa-big-pic').first(), 300);
+        await film.cam(row, { room: 1.02 });
+      } else {
+        // (a cut to its photo, big: a black box while it loads was in the video)
+        film.cut();
+        await painted(page, big.locator('.sa-big-pic').first(), 400);
+        await film.cam(row, { room: 1.6, dur: 0 });
+        film.normal();
+      }
+      await film.wait(300);
+      await film.click(row.locator('button').filter({ hasText: exact('Edit photo') }), { after: 100, lead: phone ? 200 : 0 });
+      // a cut to the editor, its photo drawn (the sheet going and the next one coming up are left out)
+      film.cut();
+      const ed = page.locator(`${SHEET} .sa-pe`).last();
+      await ed.locator('.sa-pe-stage:not(.is-loading)').waitFor();
+      await sleep(900);
+      const canvas = ed.locator('.sa-pe-canvas').first();
+      const panel = ed.locator('.sa-pe-panel').first();
+      // (a computer: its photo and its tools; a phone: its photo, then the camera down to its tools for each tap)
+      const whole = async () => around(canvas, panel);
+      const onPhoto = async (y = 0.5, dur = 0.55) => { await film.cam(canvas, { room: 1, y, dur }); await film.wait(650); };
+      const tab = (name) => panel.locator('[role="tab"]').filter({ hasText: exact(name) }).first();
+      const press = (target, after, more = {}) => film.click(target, { after, ...(phone ? {} : { hold: 160 }), ...more });
+      if (phone) await film.cam(canvas, { room: 1, dur: 0 });
+      else await film.cam(await whole(), { room: 1.02, dur: 0 });
+      film.normal();
+      await film.wait(350);
+      if (!phone) film.fast(1.45);
+      await press(tab('Filters'), phone ? 150 : 250);
+      await press(panel.locator('.sa-pe-filter').filter({ hasText: exact('Warm') }).first(), phone ? 60 : 320);
+      if (phone) await onPhoto(0.45);
+      await film.still('warm');
+      await press(tab('Text'), phone ? 150 : 250);
+      const words = panel.locator('.sa-pe-add input').first();
+      await press(words, 120, { dx: 0.3 });
+      await words.pressSequentially('Sunday mood', { delay: 45 });
+      await press(panel.locator('.sa-pe-add button').first(), phone ? 60 : 380);
+      if (phone) await onPhoto(0.8);
+      film.poster();
+      await film.still('words');
+      await press(tab('Stickers'), phone ? 150 : 250);
+      await press(panel.locator('.sa-pe-sticker').filter({ hasText: '✨' }).first(), phone ? 60 : 420);
+      if (phone) await onPhoto(0.42);
+      await film.still('sticker');
+      if (!phone) film.normal();
+      // saved: a new photo next to it (its tile says "Edited"), the camera back on her creations
+      await film.click(page.locator(`${SHEET} .sa-pe-save`).last(), { after: 100 });
+      film.cut();
+      await page.waitForFunction(() => !document.querySelector('dialog.sa-sheet[open]'), null, { timeout: 20000 });
+      const fresh = gallery.locator('.sa-media').filter({ has: page.locator('.sa-media-tag', { hasText: 'Edited' }) }).first();
+      await fresh.waitFor({ timeout: 15000 });
+      await painted(page, fresh.locator('img').first(), 500);
+      await fresh.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      await sleep(300);
+      await film.cam(await partOf(gallery, { w: phone ? 390 : 640, h: phone ? 240 : 400 }), { room: phone ? 1 : 1.04, dur: 0 });
+      await film.follow(fresh, { dur: 0 });
+      film.normal();
+      await film.wait(950);
+      await film.still('saved');
+      await film.end(300);
+    },
+  },
+
+  // (2026-10-12, the editor) the video editor, Learn's lesson on videos: one of her videos opened → "Edit video" → its part
+  // trimmed (its start dragged on), Square, her words on it → saved as a new video next to it ("Edited"), made by our clock
+  // (here: the clock's own code, with ffmpeg making VP9: this Chromium plays no H.264; sped up) → done, her words on its
+  // picture. A computer's camera sees its video and its tools together; a phone's goes from its tools to its video
+  // (at most 14 s: a cut while its video loads, a computer's editing a little faster, the clock's minute much faster, and the
+  // clip ends on the new video in her creations, as the photo editor's does)
+  'make-cut': {
+    path: (state) => `/i/${state.mira.id}`,
+    async run({ page, film, phone, B }) {
+      const gallery = page.locator('[data-guide="creations"]').first();
+      await gallery.waitFor();
+      const vid = aVideo(page);
+      await vid.waitFor();
+      await vid.evaluate((el, top) => scrollBy({ top: el.getBoundingClientRect().top - top }), phone ? 150 : 170);
+      await sleep(400);
+      const g = await gallery.boundingBox(), v = await vid.boundingBox();
+      const galleryView = (y) => ({ x: g.x, y: Math.max(0, y), width: Math.min(g.width, phone ? 390 : 640), height: phone ? 240 : 400 });
+      await film.start(galleryView(v.y - (phone ? 70 : 110)), { room: phone ? 1 : 1.04 });
+      await film.wait(250);
+      await film.click(vid, { after: phone ? 80 : 150 });
+      await upToSheet(film, phone);
+      const big = openSheet(page);
+      await big.waitFor();
+      const row = big.locator('.sa-edit-row').first();
+      // (a cut to its video, playing: a black box while it loads was in the video)
+      film.cut();
+      await playingNow(page, big.locator('.sa-player').first(), 400);
+      await film.cam(row, { room: phone ? 1.02 : 1.6, dur: 0 });
+      film.normal();
+      await film.wait(250);
+      await film.click(row.locator('button').filter({ hasText: exact('Edit video') }), { after: 100, lead: phone ? 200 : 0 });
+      // a cut to the editor, its video there (the sheet going and the next one coming up are left out)
+      film.cut();
+      const ed = page.locator(`${SHEET} .sa-ve`).last();
+      await ed.locator('.sa-ve-stage:not(.is-loading)').waitFor({ timeout: 15000 });
+      await playingNow(page, ed.locator('.sa-ve-video').first(), 700);
+      const frame = ed.locator('.sa-ve-frame').first();
+      const panel = ed.locator('.sa-pe-panel').first();
+      const whole = async () => around(ed.locator('.sa-ve-stage').first(), panel);
+      const onClip = async (y = 0.5, ms = 450) => { await film.cam(frame, { room: 1, y, dur: 0.5 }); await film.wait(ms); };
+      const tab = (name) => panel.locator('[role="tab"]').filter({ hasText: exact(name) }).first();
+      const press = (target, after, more = {}) => film.click(target, { after, ...(phone ? {} : { hold: 140 }), ...more });
+      // Trim: its start dragged on to about a second in (its part: the rest of it)
+      const startR = panel.locator('.sa-pe-range').filter({ has: page.locator('label', { hasText: exact('Start') }) }).locator('input[type="range"]').first();
+      if (phone) {
+        await startR.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+        await sleep(300);
+        await film.cam(startR, { room: 1.6, dur: 0 });
+      } else await film.cam(await whole(), { room: 1.02, dur: 0 });
+      film.normal();
+      await film.wait(300);
+      if (!phone) film.fast(1.7);
+      const rb = await startR.boundingBox();
+      const max = Number(await startR.getAttribute('max')) || 3;
+      const xAt = (val) => rb.x + 9 + (rb.width - 18) * (val / max);
+      await film.drag({ x: xAt(0), y: rb.y + rb.height / 2 }, { x: xAt(Math.min(max, 1)), y: rb.y + rb.height / 2 }, { ms: 700, hold: 150, after: 250, cam: false });
+      await film.still('trimmed');
+      // Shape: Square (its frame over the whole video)
+      await press(tab('Shape'), phone ? 120 : 200);
+      await press(seg(panel, 'Square 1:1'), phone ? 60 : 320);
+      if (phone) await onClip(0.5);
+      await film.still('square');
+      // Text: her words on it
+      await press(tab('Text'), phone ? 120 : 200);
+      const words = panel.locator('.sa-pe-add input').first();
+      await press(words, 100, { dx: 0.3 });
+      await words.pressSequentially('Sunset walk', { delay: 35 });
+      await press(panel.locator('.sa-pe-add button').first(), phone ? 60 : 350);
+      if (phone) await onClip(0.62, 800);
+      film.poster();
+      await film.still('words');
+      if (!phone) film.normal();
+      // saved: a new video next to it, made by our clock (much faster), then done
+      // (a phone: its finger on Save a moment before the cut, so the tap shows)
+      await film.click(page.locator(`${SHEET} .sa-pe-save`).last(), { after: 100, lead: phone ? 250 : 0 });
+      film.cut();
+      await page.waitForFunction(() => !document.querySelector('dialog.sa-sheet[open]'), null, { timeout: 20000 });
+      const tile = gallery.locator('.sa-media.is-making').first();
+      await tile.waitFor({ timeout: 15000 });
+      const id = (await tile.getAttribute('id')).replace(/^v-/, '');
+      await tile.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      await sleep(300);
+      await film.cam(await partOf(gallery, { w: phone ? 390 : 640, h: phone ? 240 : 400 }), { room: phone ? 1 : 1.04, dur: 0 });
+      await film.follow(tile, { dur: 0 });
+      film.normal();
+      await film.wait(700);
+      film.fast(12);
+      const made = await B.tick(id, { encode: true, run: cutRun, deadline: Date.now() + 45_000 });
+      if (made?.state !== 'done') throw new Error(`the cut wasn't made: ${JSON.stringify(made)}`);
+      await finish(page, B, shown(page.locator(`#v-${id} .sa-media-open`)));
+      // its poster: a frame of it, made by the page (her words on it)
+      const cover = page.locator(`#v-${id} img.sa-media-pic[src*="poster"]`).first();
+      await cover.waitFor({ timeout: 15000 }).catch(() => {});
+      if (await cover.count()) await painted(page, cover, 300);
+      await film.follow(page.locator(`#v-${id}`).first(), { dur: 0.3 });
+      film.normal();
+      await film.wait(1100);
+      await film.still('made');
+      await film.end(300);
     },
   },
 };

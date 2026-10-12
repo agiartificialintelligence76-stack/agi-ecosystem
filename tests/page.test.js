@@ -132,6 +132,21 @@ test('AGI on Telegram: a round button next to X (a menu row on small phones) and
     'under 380 px: the buttons go, the menu rows come');
 });
 
+// 2026-10-13 (the owner: "make it live for everyone now not only on my wallet"): AGI Studio linked from every page with the
+// top bar: a row in the phone menu (the top bar's links are full) and in the footer, after Live; on this site's own address
+test('AGI Studio: a menu row and a footer link on every page with the top bar, and the phone menu scrolls on a short screen', () => {
+  const css = readFileSync(new URL('../src/styles/layout.css', import.meta.url), 'utf8');
+  for (const name of ['index.html', 'diary.html', 'launch.html', 'live.html']) {
+    const page = readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
+    const nav = page.slice(page.indexOf('<nav class="nav" id="site-nav"'), page.indexOf('</nav>', page.indexOf('id="site-nav"')));
+    assert.match(nav, /<a class="nav-phone" href="\/live"( aria-current="page")?>Live<\/a>\s*<a class="nav-phone" href="\/studio">AGI Studio<\/a>/, `${name}: the menu row, after Live (only in the phone menu: the top bar is full)`);
+    const foot = page.slice(page.indexOf('<nav class="foot-nav"'), page.indexOf('</nav>', page.indexOf('<nav class="foot-nav"')));
+    assert.match(foot, /<a href="\/live">Live<\/a>\s*<a href="\/studio">AGI Studio<\/a>/, `${name}: the footer link, after Live`);
+  }
+  const menu = css.slice(css.indexOf('@media (max-width: 960px)'));
+  assert.match(menu, /max-height: calc\(100dvh - 64px\); overflow-y: auto;/, 'a short phone scrolls the menu instead of losing its last rows past the screen');
+});
+
 test('link previews: the home page and the diary have full preview tags (the address is filled in at build time)', () => {
   const diary = readFileSync(new URL('../diary.html', import.meta.url), 'utf8');
   assert.ok(html.includes('<meta property="og:image" content="__SITE__/cards/home.jpg" />'));
@@ -244,6 +259,6 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   assert.match(chk, /a smaller scan comes straight from Robinhood Chain: .*never <b>Lower risk<\/b>/);
   assert.match(chk, /A coin clank\.trade hasn't listed is <b>High risk<\/b>: it's brand new, or one clank\.trade doesn't show\./);
   assert.match(chk, /If neither answers, the scan says <b>Not enough data<\/b> instead of guessing\./);
-  assert.match(foot, /Last updated October 11, 2026/);   // (2026-10-11: AGI Studio's clank.trade names and AI captions, then its gifts of credits and invites; 2026-10-10: her 💜 badge for Crush and Soulmate questions on her show, and AGI-1's 3D character studio; 2026-10-09: her quizzes, and her Telegram name with a /live question; 2026-10-07: questions from X's chat on her show; 2026-10-06: her buy alerts; 2026-10-05: the risk check's pictures)
+  assert.match(foot, /Last updated October 12, 2026/);   // (2026-10-12: AGI Studio's own gift links of free credits; 2026-10-11: AGI Studio's clank.trade names and AI captions, then its gifts of credits and invites; 2026-10-10: her 💜 badge for Crush and Soulmate questions on her show, and AGI-1's 3D character studio; 2026-10-09: her quizzes, and her Telegram name with a /live question; 2026-10-07: questions from X's chat on her show; 2026-10-06: her buy alerts; 2026-10-05: the risk check's pictures)
   assert.equal(html.match(/<canvas/g).length, 1, 'still one canvas for the whole page');
 });

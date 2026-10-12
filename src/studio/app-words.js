@@ -5,7 +5,9 @@
 import {
   usd, SHAPES, PHOTO_SHAPES, BANNER, OPTIONS, MODES, INF_STYLES, PRICES, FREE_CREDITS, DISCOUNT, CAPTIONS_A_DAY, creditsText, trendOf, TICKETS,
   HELPER, GIFTS, REFERRALS, CLANK_NAME, MEME_LINE_MAX, REFS, MEMES, PHOTO_MODELS, PHOTO_QUALITY, VIDEO_MODELS,
+  STYLE_AUTO, STYLE_ANY, OWNER_LINKS, EDIT, EDITOR, VIDEO_EDITOR,
 } from './rules.js';
+import { LEVELS } from '../lib/levels.js';
 
 export const LEVEL_NAMES = { 1: 'Stranger', 2: 'Crush', 3: 'Soulmate' };
 export const shortAddress = (a) => (typeof a === 'string' && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : String(a || ''));
@@ -53,6 +55,17 @@ export function perksText(level) {
   if (level === 2) return `Crush: 20% off everything and ${FREE_CREDITS[2]} free credits a month. A thank-you for holding, not an investment.`;
   return `Holder perks start at Crush (10,000+ $AGI held, or burned for messages): 20% off and ${FREE_CREDITS[2]} free credits a month. Soulmate (1,000,000+): 40% off and ${FREE_CREDITS[3]} a month.`;
 }
+// (2026-10-11, the owner: "can you also add in the front page that holders get discounts") Explore's line about it, under its
+// heading: the numbers from DISCOUNT, FREE_CREDITS and the levels' $AGI (src/lib/levels.js), never "buy" (hard rule 8: a
+// thank-you for holding, not an investment)
+export const HOLDER_LINE = {
+  title: `$AGI holders get ${Math.round(DISCOUNT[2] * 100)}–${Math.round(DISCOUNT[3] * 100)}% off, and free credits every month`,
+  rows: [
+    [LEVEL_NAMES[2], `${num(LEVELS[1].min)}+ $AGI`, `${Math.round(DISCOUNT[2] * 100)}% off everything and ${FREE_CREDITS[2]} free credits a month`],
+    [LEVEL_NAMES[3], `${num(LEVELS[2].min)}+ $AGI`, `${Math.round(DISCOUNT[3] * 100)}% off, ${FREE_CREDITS[3]} free credits and a free 3D model a month`],
+  ],
+  fine: 'Held in your connected wallet, or burned for messages. A thank-you for holding, not an investment.',
+};
 // Credits after a top-up: "$10 → 1,000 credits"
 export const topupText = (cents) => `${usd(cents)} → ${creditsText(cents)}`;
 
@@ -61,9 +74,15 @@ const STEP = { queue: 'Waiting its turn', make: 'Making it', save: 'Saving it' }
 export function makingText(i, { position = null } = {}) {
   const line = Number.isInteger(position) && position >= 0 && i?.job?.step === 'queue' ? ` (#${position + 1} in line)` : '';
   if (i?.status === 'looks') return `Making 4 looks to choose from${line}…`;
+  // (2026-10-11) one that started from a photo with just its full body, or its photo as it is (src/studio/rules.js WAYS)
+  if (i?.status === 'body' && i.way === 'asis') return `Getting ${i.name} ready from your photo…`;
+  if (i?.status === 'body' && i.way === 'body') return `Making ${i.name}'s full body from your photo${line}…`;
   if (i?.status === 'body') return `Making ${i.name}'s full body from the look you picked${line}…`;
   return '';
 }
+// (2026-10-11) how long making it takes, by how it started: its 4 looks, just its full body, or its photo as it is
+export const WAY_LINES = { looks: '4 looks to pick from, in about a minute', body: 'Just its full body, in about a minute', asis: 'Your photo as it is, in a few seconds' };
+export const wayToast = (way) => ({ body: 'Making its full body: about a minute', asis: 'Getting it ready: a few seconds' }[way] || 'Making its 4 looks: about a minute');
 export const stepText = (step) => STEP[step] || STEP.queue;
 export const statusChip = (s) => ({ looks: 'Making looks', pick: 'Pick a look', body: 'Making it', ready: 'Ready', failed: "Couldn't be made" }[s] || '');
 
@@ -81,6 +100,9 @@ export function failText(error) {
   if (e === 'no_picture') return "Its full-body picture wasn't there any more.";
   if (e === 'clip') return 'Its clip expired before it was made.';
   if (e === 'small') return 'It came out at a size trend videos can\'t use (720 to 2160 px a side).';
+  // (2026-10-12, the video editor) a cut: its part couldn't be cut from its video, or its video went meanwhile
+  if (e === 'cut') return "That part couldn't be cut from its video.";
+  if (e === 'from') return "The video it's from isn't there any more.";
   if (e.startsWith('ai:')) return "The AI service couldn't make it this time.";
   return "It couldn't be made.";
 }
@@ -90,27 +112,40 @@ export const backText = (job) => (job?.refunded && job.cost > 0 ? ` Its ${credit
 export function jobTitle(j) {
   // (round 4, phase 4) a meme: its words (their first line)
   if (j.kind === 'photo' && j.meme) return `Meme: ${String(j.caption || '').split('\n')[0] || MEMES[j.meme]?.name || 'a meme'}`;
+  // (2026-10-12, the editor) a photo made with "Edit with words": its change
+  if (j.kind === 'photo' && j.edit) return `Edited: ${j.edit}`;
+  // …and one saved from the photo editor
+  if (j.kind === 'photo' && j.editor) return j.shape === 'banner' ? 'Edited X banner' : 'Edited photo';
   if (j.kind === 'photo') return j.scene || (j.shape === 'banner' ? 'X banner' : 'Photo');
+  // (2026-10-12) a video saved from the video editor
+  if (j.kind === 'video' && j.editor) return 'Edited video';
   if (j.kind === 'video') return j.scene || 'Video';
   if (j.kind === 'trend') return j.clip ? 'Trend video (your own clip)' : `Trend video: ${trendOf(j.trend)?.name || 'a trend'}`;
   return '';
 }
 export const kindName = (k) => ({ photo: 'Photo', trend: 'Trend video', video: 'Video' }[k] || '');
+// (2026-10-12, the editor) what one of its creations is, in a sentence: "photo", "meme", "X banner", "video", "trend video"
+export const creationWord = (j) => (j?.kind === 'photo' ? (j.shape === 'banner' ? 'X banner' : j.meme ? 'meme' : 'photo')
+  : j?.kind === 'trend' ? 'trend video' : 'video');
 export const shapeName = (s) => PHOTO_SHAPES[s]?.name || SHAPES.tall.name;
 // (round 4, phase 4) how long a video is, as people say it: "5 s", "1 min"
 export const secondsText = (s) => (Number(s) >= 60 && Number(s) % 60 === 0 ? `${Number(s) / 60} min` : `${Number(s) || 5} s`);
 export function jobMeta(j) {
   // (round 4) an X banner: the size X asks for its header
-  if (j.kind === 'photo' && j.shape === 'banner') return `AI-generated · X banner · ${BANNER.W} × ${BANNER.H}`;
+  if (j.kind === 'photo' && j.shape === 'banner') return `AI-generated · X banner${j.edit || j.editor ? ' · Edited' : ''} · ${BANNER.W} × ${BANNER.H}`;
   // (round 4, phase 4) a meme, its format; a photo's model and quality when it isn't the usual (Classic, Standard)
   const parts = ['AI-generated', j.kind === 'photo' && j.meme ? 'Meme' : kindName(j.kind)];
   if (j.kind === 'photo' && j.meme && MEMES[j.meme]) parts.push(MEMES[j.meme].name);
+  // (2026-10-12, the editor) made with "Edit with words"
+  if (j.kind === 'photo' && (j.edit || j.editor)) parts.push('Edited');
   if (j.kind === 'photo' && j.model === 'crisp') parts.push(PHOTO_MODELS.crisp.name);
   if (j.kind === 'photo' && (j.quality === 'hd' || j.quality === 'ultra')) parts.push(`${PHOTO_QUALITY[j.quality].name} ${PHOTO_QUALITY[j.quality].px}`);
   // (a scene video: its model when it isn't Standard, and its length (5 s before the menu); a trend video is as long as its
   // clip: a trend clip's 10 s, or their own clip's 3 to 10)
   if (j.kind === 'video') {
-    if (j.model && j.model !== 'standard' && VIDEO_MODELS[j.model]) parts.push(j.model === 'anime' && j.quality ? `${VIDEO_MODELS.anime.name} ${j.quality}` : VIDEO_MODELS[j.model].name);
+    // (2026-10-12) …saved from the video editor (no model of its own: cut from one of its videos)
+    if (j.editor) parts.push('Edited');
+    else if (j.model && j.model !== 'standard' && VIDEO_MODELS[j.model]) parts.push(j.model === 'anime' && j.quality ? `${VIDEO_MODELS.anime.name} ${j.quality}` : VIDEO_MODELS[j.model].name);
     parts.push(secondsText(j.seconds || 5));
   }
   if (j.shape) parts.push(shapeName(j.shape));
@@ -145,15 +180,17 @@ export const progressText = (p) => (p ? `${p.pct}% · ${p.slow ? 'taking longer 
 export const progressSpoken = (p) => (p ? `${p.pct}%, ${p.slow ? 'taking longer than usual' : leftWords(p.left)}` : '');
 // what each bar is for (its label)
 export const PROGRESS_LABELS = {
-  character: 'Making it in 3D', model: 'Making it in 3D', looks: 'Making its looks', body: 'Making its full body', photo: 'Making its photo',
+  character: 'Making it in 3D', model: 'Making it in 3D', looks: 'Making its looks', body: 'Making its full body', asis: 'Getting it ready', photo: 'Making its photo',
   banner: 'Making its X banner', trend: 'Making its trend video', video: 'Making its video', clip: 'Making the trend clip',
   // (round 4, phase 4)
   meme: 'Making its meme', long: 'Making its long video',
+  // (2026-10-12) a video saved from the video editor
+  cut: 'Making your edited video',
 };
 // a photo, video or trend video being made, as rules.js TYPICAL names it (an X banner is a photo of its own kind; a meme and a
 // long video have their own words, and their plans their own: rules.js jobPlan)
 export const progressKind = (j) => (j?.kind === 'photo' && j.shape === 'banner' ? 'banner' : j?.kind === 'photo' && j.meme ? 'meme'
-  : j?.kind === 'video' && Number(j.parts) > 1 ? 'long' : j?.kind);
+  : j?.kind === 'video' && j.editor ? 'cut' : j?.kind === 'video' && Number(j.parts) > 1 ? 'long' : j?.kind);
 
 // a 3D model of it (the studio's characters: its steps; round 2: one waiting for a big burn)
 const MODEL_STEP = { image: 'Shaping it', rig: 'Giving it bones', moves: 'Teaching it moves', save: 'Saving it' };
@@ -175,9 +212,14 @@ export const MODEL_STEP_WORDS = MODEL_STEP;
 const WORDS = {
   empty: { name: 'Give it a name.', mode: 'Pick how to start.', style: 'Pick a style.', look: 'Pick a look.', age: 'Pick an age.', scene: 'Describe the scene.', shape: 'Pick its shape.',
     // (round 4, phase 4) a meme: its format, and its words (one for each of its lines)
-    meme: 'Pick a meme format.', caption: 'Write its words: every line needs some.' },
-  long: { name: 'A name of 24 characters at most.', words: 'At most 200 characters.', scene: 'At most 300 characters.', caption: `A line of ${MEME_LINE_MAX} characters at most.` },
-  short: { scene: 'A few more words, please: at least 10 characters.' },
+    meme: 'Pick a meme format.', caption: 'Write its words: every line needs some.',
+    // (2026-10-12, the editor) "Edit with words": its change
+    edit: 'Type what should change.' },
+  long: { name: 'A name of 24 characters at most.', words: 'At most 200 characters.', scene: 'At most 300 characters.', caption: `A line of ${MEME_LINE_MAX} characters at most.`,
+    edit: `At most ${EDIT.MAX} characters.`,
+    // (2026-10-12, the editor) the photo editor's words: each text on it
+    text: `At most ${EDITOR.TEXT_MAX} characters for each of your words.` },
+  short: { scene: 'A few more words, please: at least 10 characters.', edit: `A few more words, please: at least ${EDIT.MIN} characters.` },
   letters: { name: 'Letters, numbers, spaces and simple punctuation only.' },
   bad: 'Pick one of the choices.',
   link: 'No links: just words.',
@@ -375,11 +417,20 @@ const ERRORS = {
   gift_own: "That's your own gift link: send it to someone else (or take it back in My studio).",
   gift_held: "This gift link is on hold while its sender's account is looked at.",
   gift_state: 'That gift changed in the meantime: have another look.',
-  note_long: `A note of ${GIFTS.NOTE_MAX} characters at most.`,
-  note_link: 'No links in a note.',
-  note_contact: 'No @names, addresses, emails or phone numbers in a note.',
-  note_deal: "A note can't talk about money, prices, deals or other apps: credits are a gift here, never sold.",
-  note_words: 'Keep the note PG-13 and kind.',
+  note_long: `A message of ${num(GIFTS.NOTE_MAX)} characters at most.`,
+  note_link: 'No links in a message.',
+  note_contact: 'No @names, addresses, emails or phone numbers in a message.',
+  note_deal: "A message can't talk about money, prices, deals or other apps: credits are a gift here, never sold.",
+  note_words: 'Keep the message PG-13 and kind.',
+  // (2026-10-12, the editor) deleting one of its creations
+  job_gone: "That one isn't here any more: it was deleted (or taken down).",
+  job_making: "It's still being made: you can delete it once it's done.",
+  job_in_use: 'Something is being made from it right now: you can delete it once that\'s done.',
+  // (2026-10-12, the editor) "Make another" of one saved from the photo editor
+  editor: 'It was made in the photo editor: open it and edit it again.',
+  // (2026-10-12) the owner's gift links of free credits (the owner's tab)
+  link_credits: `A whole number of credits, from ${num(OWNER_LINKS.MIN)} to ${num(OWNER_LINKS.MAX)}.`,
+  links_full: `You have ${num(OWNER_LINKS.OPEN)} gift links waiting: take one back, or wait until one is claimed.`,
   refs_off: "Invites aren't open right now.",
   ref_bad: "That isn't an invite code: 8 letters and numbers, from someone's invite link.",
   ref_none: 'No invite has that code: check it with whoever sent it.',
@@ -389,11 +440,141 @@ const ERRORS = {
   ref_loop: "That's the invite of someone you invited: an invite can't go both ways.",
   // round 4, phase 4: the model menu, references and memes
   model: "That model, length or quality isn't on its menu: pick one of its choices.",
-  no_anime: 'Anime is for anime and 3D cartoon influencers: pick Standard or Pro, and one of its photos to start from.',
+  no_anime: 'Anime is for drawn styles (anime, comics, 3D, toys and art): pick Standard or Pro, and one of its photos to start from.',
+  // (2026-10-11) "Use my photo as it is": only a photo of the whole person, head to feet
+  not_full: 'Your photo as it is needs a photo of the whole person, head to feet: pick another way to make it, or another photo.',
   refs: "One of your references can't be used (it's more than a day old, or it wasn't yours), or there are more than its model takes: pick them again.",
+  // (2026-10-11) its profile picture, and its coin's picture: one of its own pictures, done and shown
+  picture: "That picture isn't there any more: pick another one.",
+  // (2026-10-12, the video editor)
+  cut: "That part or shape can't be cut from this video: change it and try again.",
+  from: "The video it's from isn't there any more.",
+  cuts_open: `You have ${VIDEO_EDITOR.OPEN} edited videos being made: wait for one to finish.`,
   busy: 'Something went wrong on our side: try again in a minute.',
 };
 export const errorText = (why) => ERRORS[why] || ERRORS.busy;
+
+// ---------- the editor (2026-10-12): Make another and Delete, on its own creations ----------
+// "Make another"'s "no"s: what it was made from that isn't there any more (makeJob's), its words refused by a newer rule, else
+// our server's. d: the answer's data ({ error, field, why })
+const AGAIN = {
+  image: "The photo it started from isn't there any more: make a new one from its tools.",
+  clip: 'Its clip is kept a day: upload it again in the Trend tool.',
+  refs: 'Its reference pictures are kept a day: make a new one with new ones.',
+  trend: "That trend clip isn't available any more: pick another in the Trend tool.",
+  model: "Its model isn't on the menu any more: make a new one from its tools.",
+  needs_photo: "A realistic influencer's video starts from one of its photos: make one from the Video tool.",
+  // (2026-10-12) one saved from the photo editor
+  editor: "It was made in the photo editor: open it, or the photo it's from, and edit it again.",
+};
+// (j: the creation it was asked for, when the page has it: one saved from the video editor says so)
+export function againErrorText(d = {}, j = null) {
+  if (d.error === 'words') return `Its words can't be used as they are any more: ${wordsText(d.field, d.why)}`;
+  if (d.error === 'editor' && j?.kind === 'video') return "It was made in the video editor: open it, or the video it's from, and edit it again.";
+  return AGAIN[d.error] || errorText(d.error);
+}
+// …its toast: "Making another photo: about half a minute"
+export function againMadeText(j) {
+  const long = j?.kind === 'video' && Number(j.parts) > 1;
+  return `Making another ${creationWord(j)}: ${j?.kind === 'photo' ? 'about half a minute' : long ? 'several minutes' : 'a few minutes'}`;
+}
+// "Delete": its "are you sure?" ({ title, text: [lines], yes }). pfp: its influencer's profile picture was framed from it.
+// (Its link and download stop working "within minutes": a public one's files are kept by our CDN up to 10 minutes,
+// server/inf-api.js s-maxage=600, and its pages' data up to 30 seconds)
+export function deleteJobText(j, { name = '', pfp = false } = {}) {
+  const w = creationWord(j);
+  const text = j?.status === 'failed'
+    ? ['It couldn\'t be made: it just goes from your creations.']
+    : [`It's deleted from every page, and its link and download stop working within minutes. This can't be undone.`,
+      'Its credits don\'t come back: it was made.'];
+  if (pfp) text.push(`${name || 'Its'}${name ? "'s" : ''} profile picture was framed from it: it goes back to its picked look.`);
+  return { title: `Delete this ${w}?`, text, yes: `Delete the ${w}` };
+}
+export const deletedText = ({ pfp = false } = {}) => (pfp ? 'Deleted: its profile picture is its picked look again.' : 'Deleted.');
+// the failed ones worth a "Try again" (the same words and settings): never one the AI's safety check stopped, a clip at a size
+// trend videos can't use, an expired clip or a picture it started from that's gone (trying again would fail the same way)
+// (2026-10-12) never one saved from the video editor (it has no words and settings to make again: its video can be edited again)
+export const tryAgainOk = (j) => j?.status === 'failed' && j.editor !== true
+  && !['refused', 'small', 'clip', 'source', 'gone', 'deleted'].includes(String(j.error || ''));
+// "Edit with words" (the same day: a change typed in words, a new photo from that one, next to it, at that photo's price): ideas
+// to tap (a change each: PG-13, made up, never a real person, a brand or money)
+export const EDIT_IDEAS = [
+  'Make the jacket red', 'Add gently falling snow', 'Make it night, with soft city lights', 'Add round sunglasses',
+  'Warm golden-hour light', 'Add a small fluffy dog beside them', 'Make it rain, with a clear umbrella', 'Change the background to a beach',
+];
+// …what stays as it is (its sheet's note), for what it's made from: a photo, a meme (its words too) or an X banner (its size)
+export function editNote(j) {
+  const base = 'Only that changes: the same character, place and framing.';
+  if (j?.kind === 'photo' && j.shape === 'banner') return `${base} It stays an X banner, ${BANNER.W} × ${BANNER.H}.`;
+  if (j?.kind === 'photo' && j.meme) return `${base} Its words stay as they are.`;
+  return base;
+}
+// …its toast: "Editing your photo: the new one shows next to it in about half a minute"
+export const editMadeText = (j) => `Editing your ${creationWord(j)}: the new one shows next to it in about half a minute`;
+
+// ---------- the photo editor (2026-10-12, the editor: free, in the browser; src/studio/views/photo-editor.js) ----------
+// its sheet's line under its title
+export function editorNote(j) {
+  return j?.kind === 'photo' && j.shape === 'banner'
+    ? 'Free: its light, a filter, words and stickers (it stays 1500 × 500). Save it as a new X banner, or download it.'
+    : 'Free: crop and turn it, its light, a filter, words and stickers. Save it as a new photo, or download it.';
+}
+// …saved: its toast
+// (2026-10-12) its maker's own download (server/inf-clean.js): clean for a holder, else with our pill as everyone's; a real
+// person's, the reminder ("Same as the rest", the owner's choice). Never "buy" (hard rule 8)
+export function downloadText(d, { real = false } = {}) {
+  const label = real ? ' Post it with your app\'s AI label.' : '';
+  if (d?.clean) return `Downloaded without our pill 💜 (a thank-you for holding ${Number(d.need).toLocaleString('en-US')}+ $AGI). It still says inside its file that it's AI-made.${label}`;
+  if (d?.why === 'holding') return `Downloaded with our pill. A wallet holding ${Number(d.need).toLocaleString('en-US')}+ $AGI (or burned for messages) downloads its own without it.${label}`;
+  if (d?.why === 'made_with_it') return `Downloaded: its pill is part of the video (it was made with it), so it stays.${label}`;
+  return `Downloaded.${label}`;
+}
+export const editorSavedText = (j) => `Saved: your edited ${creationWord(j)} is next to the one it's from.`;
+// …and what stopped it being saved (our server's answer: server/inf-editor.js)
+const EDITOR_REFUSED = {
+  sexual: "It can't be saved: keep it PG-13, nothing sexual or revealing.",
+  minor: "It can't be saved: nobody in it may look under 18.",
+  hate: "It can't be saved: nothing hateful.",
+  violence: "It can't be saved: nothing violent or gory.",
+  words: "It can't be saved: some words on it aren't OK (no rude words, links, @names, brands or money talk).",
+};
+const EDITOR_WHY = {
+  too_many: `You've saved ${EDITOR.PER_DAY} edited photos today: more tomorrow. Downloading is always free.`,
+  busy_day: 'Saving edited photos is busy today: download it, or try again tomorrow.',
+  image: "The photo it's from isn't there any more.",
+  picture: "That picture couldn't be made here: try again.",
+  size: "That picture couldn't be made here: try again.",
+  ai: "We couldn't check it just now: try again in a moment.",
+  done: "It's saved already.",
+  ticket: 'That took too long: save it again.',
+};
+export function editorErrorText(d = {}) {
+  if (d.error === 'refused') return EDITOR_REFUSED[d.why] || "It can't be saved: try other words or stickers.";
+  return EDITOR_WHY[d.error] || errorText(d.error);
+}
+
+// ---------- the video editor (2026-10-12, the editor: in the browser, made by our clock; src/studio/views/video-editor.js) ----------
+// its sheet's line under its title (own: its video carries its share mark already, so it keeps its own shape)
+export function cutNote(j, { own = false } = {}) {
+  return own
+    ? 'Free: trim it, its sound, words and stickers (it keeps its shape: its mark is in it). Save it as a new video, made in a minute or two.'
+    : `Free: trim this ${creationWord(j)}, change its shape, its sound, words and stickers. Save it as a new video, made in a minute or two.`;
+}
+// …saved: its toast
+export const cutSavedText = () => "Saved: your edited video is being made next to the one it's from: a minute or two.";
+// …and what stopped it (our server's answer: server/inf-cut.js; its words' reasons come with error 'words': wordsText says them)
+const CUT_WHY = {
+  too_many: `You've saved ${VIDEO_EDITOR.PER_DAY} edited videos today: more tomorrow.`,
+  busy_day: 'Saving edited videos is busy today: try again tomorrow.',
+  picture: "Its words and stickers couldn't be made here: try again.",
+  size: "Its words and stickers couldn't be made here: try again.",
+  done: "It's saved already.",
+  ticket: 'That took too long: save it again.',
+};
+export const cutErrorText = (d = {}) => CUT_WHY[d.error] || errorText(d.error);
+// its part, in words: "2.4 s to 7.4 s · 5.0 s long"
+export const tenth = (s) => (Math.round(Number(s) * 10) / 10).toFixed(1);
+export const trimText = (start, end) => `${tenth(start)} s to ${tenth(end)} s · ${tenth(end - start)} s long`;
 
 // ---------- buying credits: "Check my payment" (server/credits.js checkTopup) ----------
 const RESULTS = {
@@ -437,8 +618,8 @@ export function giftText({ gave, self, to, allowed, letIn }) {
 }
 
 // ---------- who may use AGI Studio while it's private (2026-10-11: the owner's tab) ----------
-// How a wallet got onto the list, as the owner's tab says it
-export const ACCESS_VIA = { owner: 'Let in by you', credits: 'Got credits for testing' };
+// How a wallet got onto the list, as the owner's tab says it (since 2026-10-12 also one of the owner's gift links claimed)
+export const ACCESS_VIA = { owner: 'Let in by you', credits: 'Got credits for testing', link: 'Claimed your gift link' };
 // The card's first line: whether anyone needs letting in, and who else is in without the list
 export function accessIntroText({ open = false, vercel = [], team = 0 } = {}) {
   if (open) return 'AGI Studio is open to everyone (STUDIO_OPEN in Vercel): nobody needs letting in. Wallets on this list stay on it in case you make it private again.';
@@ -515,7 +696,26 @@ export const STAT_NAMES = [
 
 // ---------- the choices, as the page offers them ----------
 export const MODE_CARDS = Object.entries(MODES).map(([id, m]) => ({ id, ...m }));
-export const STYLE_NAMES = INF_STYLES;
+// (2026-10-11) its style's name: one of 26, or none picked ('auto': "Any style")
+export const STYLE_NAMES = { ...INF_STYLES, [STYLE_AUTO]: STYLE_ANY };
+// …what "Any style" makes (the owner's "Their words, else photo (Recommended)"), by how it starts
+export const STYLE_HINTS = {
+  design: 'Optional. With Any style, it takes the style your words name (like "watercolor"), else a photo look.',
+  picture: 'Optional. With Any style, it keeps your picture\'s own look: a photo stays a photo, a drawing stays a drawing.',
+};
+// …how it's made, by the way it starts (WAYS): the fine print under Create's choices
+const ABOUT_RULES = 'Adults only, PG-13, never a famous person, a real person only with their OK, never someone else\'s character.';
+export function aboutWay(way) {
+  if (way === 'asis') return `No AI: your photo is its full body as it is, and its portrait is cut around its face (a few seconds). Its photos and videos are made from it after. ${ABOUT_RULES}`;
+  if (way === 'body') return `It's made by an AI service: its full body from your photo, keeping its face, legs and shoes (and its outfit, unless you pick one), in about a minute; its portrait is cut from it. If it can't be made, its credits come back. ${ABOUT_RULES}`;
+  return `It's made by an AI service: 4 looks to pick from, then its full body (about a minute each). If it can't be made, its credits come back. ${ABOUT_RULES}`;
+}
+// …why a video's Anime model is off for it (src/studio/rules.js drawnStyle; our server's no_anime)
+export const ANIME_WHY = 'For drawn styles: anime, comics, 3D, toys and art';
+// …and what a checked photo can do (full: it shows the whole person, head to feet, so it can be used as it is)
+export const photoReadyText = (full) => (full
+  ? "Looks good: it's checked and ready ✓ It shows the whole person, so you can also use it as it is."
+  : "Looks good: it's checked and ready ✓");
 export const optionGroups = (mode) => Object.entries(OPTIONS).filter(([, o]) => o.for.includes(mode)).map(([key, o]) => ({ key, ...o }));
 
 // Scene ideas (a tap fills the box): made-up, PG-13, never a real place's brand or a real person
@@ -659,7 +859,7 @@ export const ADMIN_NUMBERS = [
   ['infs', 'Influencers ready'], ['infsToday', 'New influencers today'], ['makingNow', 'Being made now'], ['failedToday', "Couldn't be made today"],
   ['boughtToday', 'Credits bought today'], ['boughtMonth', 'Credits bought this month'], ['spentWeek', 'Credits spent this week'],
   ['aiToday', 'AI cost today (an estimate)'], ['aiWeek', 'AI cost this week (an estimate)'], ['freeMonth', 'Free credits this month'],
-  ['giftsMonth', 'Your test credits this month'], ['walletsWeek', 'Wallets that made something this week'], ['likesWeek', 'Likes this week'],
+  ['giftsMonth', 'Credits you gave this month (testing, gift links)'], ['walletsWeek', 'Wallets that made something this week'], ['likesWeek', 'Likes this week'],
   ['modelsMonth', '3D models this month'], ['ticketsOpen', 'Tickets waiting for the team'], ['reports', 'Reports to look at'],
   ['bans', 'Banned makers'], ['helpsToday', 'Helper answers today'],
   // (round 4, phase 3) gifts and invites
@@ -680,7 +880,7 @@ export function adminNumbers(s) {
   return ADMIN_NUMBERS.map(([k, label]) => ({ key: k, label, value: values[k] }));
 }
 // what was made, by kind (the owner's numbers: today and this week)
-export const MADE_KINDS = { looks: 'Looks', body: 'Full bodies', photo: 'Photos', banner: 'X banners', trend: 'Trend videos', video: 'Videos', preset: 'Trend clips (yours)', example: 'Example pictures (yours)' };
+export const MADE_KINDS = { looks: 'Looks', body: 'Full bodies', photo: 'Photos', banner: 'X banners', edited: 'Photos from the photo editor', trend: 'Trend videos', video: 'Videos', cut: 'Videos from the video editor', preset: 'Trend clips (yours)', example: 'Example pictures (yours)' };
 
 // ---------- (round 4, phase 3, 2026-10-11) gifts of bought credits, gift links, invites ----------
 // The owner's choices: "gifting bought credits only" (to a wallet, an @name or a gift link; 50,000 a day at most) and invites
@@ -769,7 +969,7 @@ export function giftRowTitle(g) {
   return g.other ? `To ${g.other}` : 'A gift';
 }
 export function giftRowState(g, now = Date.now()) {
-  if (g.dir === 'in') return `Got it ${agoText(g.done || g.created, now)}`;
+  if (g.dir === 'in') return `${g.owner ? 'Bonus credits · got them' : 'Got it'} ${agoText(g.done || g.created, now)}`;
   if (g.status === 'open') return Number.isFinite(g.expires) ? `Waiting to be claimed · until ${dayText(g.expires)}` : GIFT_STATUS.open;
   if (g.status === 'expired') return g.link ? 'Nobody claimed it: back to you' : GIFT_STATUS.expired;
   if (g.status === 'canceled') return `Taken back · back to you ${agoText(g.done || g.created, now)}`;
@@ -817,3 +1017,46 @@ export const CLAIM_STATUS = {
   claimed: 'This gift was claimed already.', canceled: 'Its sender took this gift back.',
   expired: 'This gift link expired: its credits went back to its sender.',
 };
+// (2026-10-12) …and one of the owner's gift links of free credits (nothing went back to anyone: nothing was held)
+export const OWNER_CLAIM_STATUS = {
+  claimed: 'This gift was claimed already.', canceled: 'AGI Studio took this gift link back.', expired: 'This gift link expired.',
+};
+export const claimStatusText = (status, owner = false) => (owner ? OWNER_CLAIM_STATUS : CLAIM_STATUS)[status] || '';
+
+// ---------- (2026-10-12) the owner's gift links of free credits ----------
+// The owner: "i can put the a custome value of credits there then i can sent a message then theres gonna be a link for it then
+// when i sahre it to someone they can see the meesage and the gifted credits and they can claim it"; the owner's choices: "Mine,
+// free credits (Recommended)", "Up to 200 characters (Recommended)", "Once (Recommended)".
+export const OWNER_LINK_INTRO = "Make a link of free credits with your message. Whoever you send it to sees your message and the credits, and claims them once with a connected wallet (18+). They're bonus credits, paid from your own AI balance as they're used, like credits for testing. While AGI Studio is private, claiming one lets that wallet in too.";
+// the amounts offered first (any whole number from 1 to 100,000 can be typed), and from how many a second tap is asked
+export const OWNER_LINK_AMOUNTS = [100, 500, 1000, 5000];
+// What one will do, before it's made: "1,000 credits: about $10 of AI, … Claimed once, within 30 days."
+export const ownerLinkPlanText = (n, days = OWNER_LINKS.DAYS) => `${giftPlanText(n)} Claimed once, within ${num(days)} days.`;
+// how many are waiting: "3 waiting (50 at most)"
+export const ownerLinksCount = ({ open = 0, max = OWNER_LINKS.OPEN } = {}) => `${num(open)} waiting (${num(max)} at most)`;
+// One of the owner's links (server/inf-gifts.js ownerLinks: { status, to, expires, done, created }): its state's words
+export function ownerLinkState(l, now = Date.now()) {
+  if (l.status === 'open') return Number.isFinite(l.expires) ? `Waiting to be claimed · until ${dayText(l.expires)}` : 'Waiting to be claimed';
+  if (l.status === 'claimed') return `Claimed by ${l.to || 'someone'} ${agoText(l.done || l.created, now)}`;
+  if (l.status === 'canceled') return `Taken back ${agoText(l.done || l.created, now)}`;
+  return Number.isFinite(l.expires) ? `Nobody claimed it by ${dayText(l.expires)}` : 'Nobody claimed it in time';
+}
+// the phone's own share sheet (the owner sends it; never a post by us)
+export const ownerLinkShareText = (credits) => `A gift from AGI Studio: ${creditsText(credits)} 💜`;
+// under a new link: until when, and to send it only to who it's for
+export const ownerLinkMadeText = (expires) => `It can be claimed once${Number.isFinite(expires) ? `, until ${dayText(expires)}` : ''}. Send it only to who it's for: anyone with the link can claim it. Until then you can take it back below.`;
+// the owner's tab's fine print
+export const OWNER_LINK_FINE = "Credits have no cash value: a gift is a gift, never a sale. Anyone with a link can claim it once, so send each one only to who it's for. Nobody from AGI Studio ever asks anyone to send credits.";
+// our server's "no" for one of the owner's links (made, or taken back): nothing was held, so nothing went back to anyone
+export function ownerLinkErrorText(e) {
+  const owner = { gift_claimed: 'claimed', gift_canceled: 'canceled', gift_expired: 'expired' }[e];
+  return owner ? OWNER_CLAIM_STATUS[owner] : accessErrorText(e);
+}
+// one of the owner's own links opened by the owner's wallet
+export const OWNER_GIFT_OWN = "That's your own gift link: send it to someone else (or take it back in Owner tools → Gifts).";
+// The sheet the link opens: what claiming one does, and after
+export const OWNER_GIFT_LINE = "Bonus credits from AGI Studio: use them for anything here. They don't run out (and they can't be given on).";
+export const OWNER_GIFT_LETS_IN = "Claiming it lets your wallet into AGI Studio too (it's private for now).";
+export const ownerClaimedText = (letIn) => (letIn
+  ? 'Bonus credits from AGI Studio, and you can use AGI Studio now 💜 Start with your first influencer.'
+  : "Bonus credits from AGI Studio: use them for anything here. They don't run out.");

@@ -44,3 +44,8 @@ google-key.json
 
 # Her launch video (tools/promo/make.mjs, 2026-10-03): the videos it makes (big files: the owner posts them by hand)
 /promo/
+
+# AGI Studio's launch video (tools/studio-promo/make.mjs, 2026-10-13): the videos it makes, and the example pictures
+# and clips it shows (made ready once by tools/studio-promo/media.mjs: big files, never in git)
+/studio-promo/
+tools/studio-promo/media/

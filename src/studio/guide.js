@@ -69,7 +69,7 @@ function whenReady(id, force) {
 }
 const envNow = (env = {}) => {
   const read = (f) => (typeof f === 'function' ? f() : f);
-  return { signedIn: read(env.signedIn) === true, mode: read(env.mode) || 'design', instant: read(env.instant) === true };
+  return { signedIn: read(env.signedIn) === true, mode: read(env.mode) || 'design', way: read(env.way) || 'looks', instant: read(env.instant) === true };
 };
 
 // the element a step points at: [data-guide="<name>"], the one most in view (a phone's tab bar or a computer's nav; a drawer's
@@ -148,16 +148,18 @@ function bringIn(el, phone) {
   if (sc) sc.scrollBy({ top: by, behavior });
   else scrollBy({ top: by, behavior });
 }
-// until it stops moving (a smooth scroll, a drawer sliding open): its place read every 90 ms, at most 1.5 s
+// until it stops moving (a smooth scroll, a drawer sliding open) in view: its place read every 90 ms, at most 1.5 s, or 3 s
+// while it isn't in view yet. (2026-10-11: since its 26 styles, Create's panel is long, and a long smooth scroll on a slow
+// phone can pause between frames, or outlast 1.5 s: its card then showed in the middle, without its ring, until it ended)
 async function settle(g, token, el) {
   let last = '', still = 0;
-  const until = Date.now() + 1500;
-  while (Date.now() < until) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < 1500 || (Date.now() - t0 < 3000 && !seenBox(el))) {
     await new Promise((r) => setTimeout(r, 90));
     if (token !== g.token || active !== g) return false;
     const r = el.getBoundingClientRect();
     const now = `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)},${Math.round(r.height)}`;
-    if (now === last) { if (++still >= 3) return true; } else { still = 0; last = now; }
+    if (now === last) { if (++still >= 3 && seenBox(el)) return true; } else { still = 0; last = now; }
   }
   return true;
 }

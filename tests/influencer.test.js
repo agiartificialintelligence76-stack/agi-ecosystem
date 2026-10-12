@@ -25,16 +25,18 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { keccak256, parseTransaction, decodeFunctionData, erc20Abi } from 'viem';
 import * as R from '../src/studio/rules.js';
 import { INSTANT, MEME_READY, INSTANT_MAKES, memeInputs } from '../src/studio/instant.js';
-import { checkMemeText } from '../server/inf-words.js';
+import { checkMemeText, checkEdit, editPrompt } from '../server/inf-words.js';
+import { checkEditorWords } from '../server/inf-editor.js';
 import * as AW from '../src/studio/app-words.js';
+import * as TAG from '../src/studio/ai-tag.js';
 import * as M from '../src/studio/media.js';
 import {
   checkStart, checkInfScene, looksPrompt, bodyPrompt, photoPrompt, swapPrompt, clipPrompt, sceneWay, presetPrompt, sceneVideoPrompt,
   examplePrompt, CLIP_NEGATIVE, PRESET_NEGATIVE,
 } from '../server/inf-words.js';
-import { MODELS, jobRequest, outputOf, infOfJob, checkPicture, FAMOUS_SURE, checkFrames, checkVideo, checkPoster, checkRef } from '../server/inf-ai.js';
+import { MODELS, jobRequest, outputOf, infOfJob, checkPicture, headBox, FAMOUS_SURE, checkFrames, checkVideo, checkPoster, checkRef } from '../server/inf-ai.js';
 import { makeTicket, readTicket, mp4Seconds, mp4Info, plainJpeg, UPLOAD } from '../server/inf-uploads.js';
-import { jobTick, infClock, picPath, examplePath, markedPath, picturesOf } from '../server/inf-jobs.js';
+import { jobTick, infClock, picPath, examplePath, markedPath, picturesOf, jobFiles, hdPath, partPath, framePath, posterPath, layerPath, tidy, aiTagged } from '../server/inf-jobs.js';
 import { readyCaptions, CAPTION_KINDS } from '../src/studio/captions.js';
 import * as PG from '../src/studio/progress.js';
 import { cleanCaption, captionAsk, MONEY, CAPTIONS as CAPTION_RULES } from '../server/inf-captions.js';
@@ -61,6 +63,7 @@ import { GET as feedGet } from '../api/feed.js';
 import * as T from '../server/inf-team.js';
 import * as A from '../server/inf-admin.js';
 import { helpGuide, helpQuestion, cleanAnswer, HELP } from '../server/inf-help.js';
+import { launchPictureBurst } from '../server/burst.js';
 
 const DAY = 864e5;
 const SECRET = 'test-pass-secret-that-is-long-enough-1234';
@@ -155,6 +158,10 @@ function database() {
   const code = (s) => typeof s === 'string' && s.length >= 16 && s.length <= 64;
   // one Explore may show (and likes, and the spotlight): ready, public, not hidden, never made from a face or a real photo
   const shown = (i) => Boolean(i && i.status === 'ready' && i.public && !i.hidden && i.mode !== 'face' && !i.real && !i.banned);
+  // (2026-10-11) a 3D model's style from an influencer's (its 26 styles: as influencers.sql's inf_3d and inf_3d_burn)
+  const style3d = (s) => (['anime', 'storybook', 'retro', 'manga', 'webcomic', 'celshade'].includes(s) ? 'anime'
+    : ['toon', 'comic', 'clay', 'toy', 'plush', 'pixel', 'lowpoly', 'watercolor', 'sketch', 'popart', 'ukiyoe', 'vaporwave', 'papercut'].includes(s) ? 'cartoon'
+      : 'realistic');
   let seq = 0;
   const db = {
     credits: new Map(), log: [], months: new Map(), uploads: new Map(), infs: new Map(), jobs: new Map(), trends: new Map(),
@@ -162,6 +169,8 @@ function database() {
     studioBurns: 0, dayJobs: 0, drafts: new Map(), likes: [], weeks: new Map(), burns: new Map(), slots: new Map(),
     // (round 4) clank.trade usernames (wallet code → { name, checked }), AI captions a day (per wallet, and the site's)
     names: new Map(), captionDays: new Map(), captionSite: new Map(),
+    // (2026-10-12, the editor) the photo editor's saves a day: a wallet's (by tool) and the site's
+    toolDays: new Map(), toolSite: new Map(),
     // (round 4, phase 2) the team (wallet code → { role, nick, short, added }), bans, support tickets and their messages, the
     // AI helper's answers a day (per who, and the site's), tickets a day (the site's), alert chats, the owner's settings
     staff: new Map(), bans: [], tickets: new Map(), msgs: [], helpDays: new Map(), helpSite: new Map(), ticketSite: new Map(),
@@ -309,11 +318,13 @@ function database() {
     },
     // ---- (round 4, phase 3) gifts of bought credits, gift links, invites (supabase/influencers.sql, in JavaScript) ----
     utcDay() { return Date.parse(`${new Date(now()).toISOString().slice(0, 10)}T00:00:00Z`); },
-    giftDay(from) { const g = [...this.gifts.values()].filter((x) => x.from_code === from && x.created >= this.utcDay()); return { n: g.length, sum: g.reduce((a, x) => a + x.credits, 0) }; },
+    giftDay(from) { const g = [...this.gifts.values()].filter((x) => x.from_code === from && x.kind === 'bought' && x.created >= this.utcDay()); return { n: g.length, sum: g.reduce((a, x) => a + x.credits, 0) }; },
+    // a message's length as Postgres counts it (char_length: by character, emoji included): up to 200 since 2026-10-12
+    noteBad(n) { return n != null && ([...n].length < 1 || [...n].length > 200); },
     inf_send(a) {
       if (!ID.test(String(a.p_id)) || !code(a.p_from) || !a.p_from_label || a.p_from_label.length < 3 || a.p_from_label.length > 40 || a.p_min == null
         || a.p_day_max == null || !(a.p_day_count >= 1) || !(Number.isInteger(a.p_credits) && a.p_credits >= Math.max(1, a.p_min) && a.p_credits <= Math.min(a.p_day_max, 1e6))
-        || (a.p_note != null && (a.p_note.length < 1 || a.p_note.length > 80)) || (a.p_to == null) === (a.p_to_name == null)) return no('bad');
+        || this.noteBad(a.p_note) || (a.p_to == null) === (a.p_to_name == null)) return no('bad');
       let to = a.p_to, label = a.p_to_label;
       if (a.p_to_name != null) {
         if (!/^[a-z0-9_]{3,32}$/.test(a.p_to_name)) return no('bad');
@@ -330,7 +341,7 @@ function database() {
       const x = this.cred(a.p_from), y = this.cred(to);
       if (x.paid < a.p_credits) return no('short', { paid: x.paid });
       if (this.gifts.has(a.p_id)) return no('taken');
-      this.gifts.set(a.p_id, { id: a.p_id, token: null, from_code: a.p_from, from_label: a.p_from_label, to_code: to, to_label: label, credits: a.p_credits,
+      this.gifts.set(a.p_id, { id: a.p_id, token: null, kind: 'bought', from_code: a.p_from, from_label: a.p_from_label, to_code: to, to_label: label, credits: a.p_credits,
         note: a.p_note ?? null, status: 'sent', seen: false, created: now(), expires: null, done: null });
       x.paid -= a.p_credits;
       y.paid = Math.min(y.paid + a.p_credits, 1e8);
@@ -342,23 +353,47 @@ function database() {
       if (!ID.test(String(a.p_id)) || !ID.test(String(a.p_token)) || a.p_token === a.p_id || !code(a.p_from) || !a.p_from_label || a.p_from_label.length < 3
         || a.p_from_label.length > 40 || a.p_min == null || a.p_day_max == null || !(a.p_day_count >= 1) || !(a.p_open_max >= 1) || !(a.p_days >= 1 && a.p_days <= 90)
         || !(Number.isInteger(a.p_credits) && a.p_credits >= Math.max(1, a.p_min) && a.p_credits <= Math.min(a.p_day_max, 1e6))
-        || (a.p_note != null && (a.p_note.length < 1 || a.p_note.length > 80))) return no('bad');
+        || this.noteBad(a.p_note)) return no('bad');
       if (this.bannedNow(a.p_from)) return no('banned');
       const d = this.giftDay(a.p_from);
       if (d.n >= a.p_day_count) return no('too_many');
       if (d.sum + a.p_credits > a.p_day_max) return no('day_cap', { left: Math.max(0, a.p_day_max - d.sum) });
-      if ([...this.gifts.values()].filter((g) => g.from_code === a.p_from && g.status === 'open').length >= a.p_open_max) return no('too_many_links');
+      if ([...this.gifts.values()].filter((g) => g.from_code === a.p_from && g.kind === 'bought' && g.status === 'open').length >= a.p_open_max) return no('too_many_links');
       const x = this.cred(a.p_from);
       if (x.paid < a.p_credits) return no('short', { paid: x.paid });
       if (this.gifts.has(a.p_id) || [...this.gifts.values()].some((g) => g.token === a.p_token)) return no('taken');
       const until = now() + a.p_days * DAY;
-      this.gifts.set(a.p_id, { id: a.p_id, token: a.p_token, from_code: a.p_from, from_label: a.p_from_label, to_code: null, to_label: null, credits: a.p_credits,
+      this.gifts.set(a.p_id, { id: a.p_id, token: a.p_token, kind: 'bought', from_code: a.p_from, from_label: a.p_from_label, to_code: null, to_label: null, credits: a.p_credits,
         note: a.p_note ?? null, status: 'open', seen: false, created: now(), expires: until, done: null });
       x.paid -= a.p_credits;
       this.log.push({ wallet_code: a.p_from, kind: 'hold', amount: a.p_credits, paid_part: a.p_credits, ref: a.p_id, other: 'a gift link', at: now() });
       return ok({ paid: x.paid, expires: iso(until) });
     },
+    // (2026-10-12) the owner's gift links of free credits: nothing held, claimed as bonus credits
+    inf_owner_link(a) {
+      if (!ID.test(String(a.p_id)) || !ID.test(String(a.p_token)) || a.p_token === a.p_id || !code(a.p_from)
+        || !(Number.isInteger(a.p_credits) && a.p_credits >= 1 && a.p_credits <= 100000) || !(a.p_open_max >= 1) || !(a.p_days >= 1 && a.p_days <= 90)
+        || this.noteBad(a.p_note)) return no('bad');
+      if ([...this.gifts.values()].filter((g) => g.from_code === a.p_from && g.kind === 'owner' && g.status === 'open' && g.expires > now()).length >= a.p_open_max) return no('too_many_links');
+      if (this.gifts.has(a.p_id) || [...this.gifts.values()].some((g) => g.token === a.p_token)) return no('taken');
+      const until = now() + a.p_days * DAY;
+      this.gifts.set(a.p_id, { id: a.p_id, token: a.p_token, kind: 'owner', from_code: a.p_from, from_label: 'AGI Studio', to_code: null, to_label: null, credits: a.p_credits,
+        note: a.p_note ?? null, status: 'open', seen: false, created: now() + this.gifts.size, expires: until, done: null });
+      return ok({ expires: iso(until) });
+    },
+    inf_owner_links({ p_from, p_limit }) {
+      const mine = [...this.gifts.values()].filter((g) => p_from != null && g.from_code === p_from && g.kind === 'owner');
+      return {
+        links: mine.sort((x, y) => y.created - x.created).slice(0, Math.min(Math.max(p_limit ?? 50, 1), 100)).map((g) => ({
+          id: g.id, credits: g.credits, note: g.note, status: g.status === 'open' && g.expires <= now() ? 'expired' : g.status,
+          token: g.status === 'open' && g.expires > now() ? g.token : null, to: g.status === 'claimed' ? g.to_label : null,
+          created_at: iso(g.created), expires_at: iso(g.expires), done_at: iso(g.done),
+        })),
+        open: mine.filter((g) => g.status === 'open' && g.expires > now()).length,
+      };
+    },
     unhold(g) {
+      if (g.kind === 'owner') return false;
       if (this.log.some((l) => l.kind === 'unhold' && l.ref === g.id)) return false;
       this.log.push({ wallet_code: g.from_code, kind: 'unhold', amount: g.credits, paid_part: g.credits, ref: g.id, other: 'a gift link', at: now() });
       const x = this.cred(g.from_code);
@@ -367,7 +402,7 @@ function database() {
     },
     inf_gift_peek({ p_token }) {
       const g = /^[A-Za-z0-9_-]{22}$/.test(String(p_token)) ? [...this.gifts.values()].find((x) => x.token === p_token) : null;
-      return g ? { credits: g.credits, from: g.from_label, note: g.note, status: g.status === 'open' && g.expires <= now() ? 'expired' : g.status, expires: iso(g.expires) } : null;
+      return g ? { credits: g.credits, from: g.from_label, note: g.note, status: g.status === 'open' && g.expires <= now() ? 'expired' : g.status, expires: iso(g.expires), owner: g.kind === 'owner' } : null;
     },
     inf_gift_claim({ p_token, p_wallet, p_label }) {
       if (!ID.test(String(p_token)) || !code(p_wallet) || !p_label || p_label.length < 3 || p_label.length > 40) return no('bad');
@@ -380,10 +415,16 @@ function database() {
       if (this.bannedNow(p_wallet)) return no('banned');
       if (this.bannedNow(g.from_code)) return no('held');
       const x = this.cred(p_wallet);
-      x.paid = Math.min(x.paid + g.credits, 1e8);
+      if (g.kind === 'owner') {
+        if (this.log.some((l) => l.kind === 'gift' && l.ref === g.id)) return no('claimed', { mine: true });
+        this.log.push({ wallet_code: p_wallet, kind: 'gift', amount: g.credits, paid_part: 0, free_part: 0, bonus_part: g.credits, month: thisMonth(), ref: g.id, other: g.from_label, at: now() });
+        x.bonus = Math.min(x.bonus + g.credits, 1e8);
+      } else {
+        x.paid = Math.min(x.paid + g.credits, 1e8);
+        this.log.push({ wallet_code: p_wallet, kind: 'receive', amount: g.credits, paid_part: g.credits, ref: g.id, other: g.from_label, at: now() });
+      }
       Object.assign(g, { status: 'claimed', to_code: p_wallet, to_label: p_label, seen: true, done: now() });
-      this.log.push({ wallet_code: p_wallet, kind: 'receive', amount: g.credits, paid_part: g.credits, ref: g.id, other: g.from_label, at: now() });
-      return ok({ credits: g.credits, from: g.from_label, paid: x.paid });
+      return ok({ credits: g.credits, from: g.from_label, paid: x.paid, bonus: x.bonus, owner: g.kind === 'owner' });
     },
     inf_gift_cancel({ p_id, p_from }) {
       if (!ID.test(String(p_id)) || !code(p_from)) return no('bad');
@@ -397,13 +438,13 @@ function database() {
     },
     inf_gifts_mine({ p_wallet }) {
       if (!code(p_wallet)) return { gifts: [], rewards: [] };
-      const gifts = [...this.gifts.values()].filter((g) => g.from_code === p_wallet || g.to_code === p_wallet).sort((x, y) => y.created - x.created).slice(0, 40)
+      const gifts = [...this.gifts.values()].filter((g) => (g.from_code === p_wallet && g.kind === 'bought') || g.to_code === p_wallet).sort((x, y) => y.created - x.created).slice(0, 40)
         .map((g) => {
           const out = g.from_code === p_wallet;
           return { id: g.id, dir: out ? 'out' : 'in', credits: g.credits, other: out ? g.to_label : g.from_label, note: g.note,
             status: g.status === 'open' && g.expires <= now() ? 'expired' : g.status, link: g.token !== null,
             token: out && g.status === 'open' && g.expires > now() ? g.token : null, seen: out || g.seen,
-            created_at: iso(g.created), expires_at: iso(g.expires), done_at: iso(g.done) };
+            created_at: iso(g.created), expires_at: iso(g.expires), done_at: iso(g.done), owner: g.kind === 'owner' };
         });
       const rewards = this.log.filter((l) => l.wallet_code === p_wallet && ['ref', 'welcome'].includes(l.kind)).sort((x, y) => y.at - x.at).slice(0, 20)
         .map((l) => ({ kind: l.kind, amount: l.amount, at: iso(l.at) }));
@@ -474,28 +515,34 @@ function database() {
       if (!ID.test(String(p_id)) || !code(p_wallet) || !['picture', 'clip', 'ref'].includes(p_kind) || !(p_per_day >= 1)) return no('bad');
       if ([...this.uploads.values()].filter((u) => u.wallet_code === p_wallet && u.created > now() - DAY).length >= p_per_day) return no('too_many');
       if (this.uploads.has(p_id)) return no('taken');
-      this.uploads.set(p_id, { id: p_id, wallet_code: p_wallet, kind: p_kind, status: 'open', why: null, seconds: null, real: false, created: now() });
+      this.uploads.set(p_id, { id: p_id, wallet_code: p_wallet, kind: p_kind, status: 'open', why: null, seconds: null, real: false, whole: false, head: null, created: now() });
       return ok();
     },
     inf_upload_get({ p_id }) { const u = this.uploads.get(p_id); return u ? { ...u, created_at: iso(u.created) } : null; },
-    inf_upload_set({ p_id, p_status, p_why, p_seconds, p_real }) {
+    // ((2026-10-11) a picture: whether it shows the whole person, and its head's box, as the SQL's check takes them)
+    inf_upload_set({ p_id, p_status, p_why, p_seconds, p_real, p_whole, p_head }) {
       const u = this.uploads.get(p_id);
       if (!['ok', 'refused'].includes(p_status) || (p_seconds != null && !(p_seconds > 0 && p_seconds <= 60))) return false;
+      if (p_head != null && !(Array.isArray(p_head) && p_head.length === 4 && p_head.every((n) => Number.isInteger(n) && n >= 0 && n <= 1000)
+        && p_head[2] > p_head[0] && p_head[3] > p_head[1])) throw new Error('agi1_inf_uploads_head_check');
       if (!u || !['open', 'ok'].includes(u.status)) return false;
-      Object.assign(u, { status: p_status, why: p_why ? String(p_why).slice(0, 40) : null, seconds: p_seconds ?? u.seconds, real: p_real === true });
+      Object.assign(u, { status: p_status, why: p_why ? String(p_why).slice(0, 40) : null, seconds: p_seconds ?? u.seconds, real: p_real === true, whole: p_whole === true, head: p_head ?? null });
       return true;
     },
     // ---- influencers ----
     inf_start(a) {
+      const way = a.p_way === undefined ? 'looks' : a.p_way;
       if (!ID.test(String(a.p_id)) || !ID.test(String(a.p_job)) || a.p_id === a.p_job || !code(a.p_wallet) || !a.p_name || [...a.p_name].length > 24
-        || !['design', 'picture'].includes(a.p_mode) || !['real', 'anime', 'toon'].includes(a.p_style) || typeof a.p_settings !== 'object'
+        || !['design', 'picture'].includes(a.p_mode) || !(a.p_style === 'auto' || Object.hasOwn(R.INF_STYLES, a.p_style)) || typeof a.p_settings !== 'object'
         || [...(a.p_words || '')].length > 200 || ![1, 2, 3].includes(a.p_level) || !(a.p_cost >= 0 && a.p_cost <= 100000)
-        || !(a.p_per_wallet >= 1) || !(a.p_day_cap >= 1) || (a.p_slots != null && !(a.p_slots >= 1)) || (a.p_mode === 'design') !== (a.p_source === null)) return no('bad');
+        || !(a.p_per_wallet >= 1) || !(a.p_day_cap >= 1) || (a.p_slots != null && !(a.p_slots >= 1)) || (a.p_mode === 'design') !== (a.p_source === null)
+        || !['looks', 'body', 'asis'].includes(way) || (way !== 'looks' && a.p_mode !== 'picture') || (way === 'asis' && a.p_style !== 'auto')) return no('bad');
       if (this.bannedNow(a.p_wallet)) return no('banned');
       let u = null;
       if (a.p_source !== null) {
         u = this.uploads.get(a.p_source);
         if (!u || u.wallet_code !== a.p_wallet || u.kind !== a.p_mode || u.status !== 'ok') return no('source');
+        if (way === 'asis' && u.whole !== true) return no('not_full');
       }
       const theirs = [...this.infs.values()].filter((i) => i.wallet_code === a.p_wallet);
       if (theirs.filter((i) => ['looks', 'pick', 'body'].includes(i.status)).length >= a.p_per_wallet) return no('too_many');
@@ -504,12 +551,14 @@ function database() {
       if (!this.dayTake(a.p_day_cap)) return no('busy_day');
       const s = a.p_cost > 0 ? this.spend(a.p_wallet, a.p_cost, a.p_job) : { ok: true, ...this.inf_credits({ p_wallet: a.p_wallet }) };
       if (!s.ok) { this.dayJobs -= 1; return s; }                // (the SQL's exception block rolls its day back)
+      // its first job: its looks, or (2026-10-11, from a picture) its full body straight away
       this.infs.set(a.p_id, {
         id: a.p_id, wallet_code: a.p_wallet, name: a.p_name, mode: a.p_mode, style: a.p_style, settings: a.p_settings, words: a.p_words || '',
-        source: a.p_source, status: 'looks', first_job: a.p_job, looks_job: null, pick: null, body_job: null, body_tries: 0, error: null,
+        source: a.p_source, status: way === 'looks' ? 'looks' : 'body', first_job: a.p_job, looks_job: null, pick: null, body_job: null, body_tries: 0, error: null,
         public: !(u?.real === true), real: u?.real === true, boost: null, hidden: false, banned: false, level: a.p_level, created: now(), updated: now(), ready: null,
+        way, pfp: null,
       });
-      this.addJob({ id: a.p_job, inf_id: a.p_id, wallet_code: a.p_wallet, kind: 'looks', cost: a.p_cost });
+      this.addJob({ id: a.p_job, inf_id: a.p_id, wallet_code: a.p_wallet, kind: way === 'looks' ? 'looks' : 'body', cost: a.p_cost });
       if (a.p_source) u.status = 'used';
       return ok({ paid: s.paid, free: s.free, bonus: s.bonus });
     },
@@ -520,6 +569,9 @@ function database() {
         example: null, marked: false, mark_tries: 0, mark_at: null, likes: 0,
         // (round 4, phase 4) the model menu, references, a long video's parts, a meme
         model: null, quality: null, seconds: null, refs: null, parts: 1, part: 0, meme: null, caption: null,
+        // (2026-10-12, the editor) when its maker deleted it (as agi1_inf_jobs.deleted_at), "Edit with words"' change, and
+        // whether it was saved from the photo editor (or the video editor: its cut, as agi1_inf_jobs.cut)
+        deleted: null, edit: null, editor: false, cut: null,
         started: null, created: now(), updated: now(), done: null, lease: 0, seq: ++seq, ...j,
       });
     },
@@ -531,7 +583,37 @@ function database() {
       return {
         ...i, created_at: iso(i.created), updated_at: iso(i.updated), ready_at: iso(i.ready), boost_until: iso(i.boost), maker: this.makerOf(i.wallet_code),
         job: job ? { id: job.id, kind: job.kind, status: job.status, saving: job.saving, req: job.req !== null, created: iso(job.created) } : null,
+        pfp: this.pfpOf(i.pfp),
       };
+    },
+    // (2026-10-11) its profile picture while the picture it was framed from is done and shown (as influencers.sql's inf_pfp_of)
+    pfpOf(p) {
+      if (!p) return null;
+      const j = this.jobs.get(p.job);
+      return j && j.status === 'done' && !j.hidden ? { ...p } : null;
+    },
+    // (2026-10-11) its maker frames its profile picture, or puts its picked look back (as influencers.sql's inf_pfp_set)
+    inf_pfp_set({ p_id, p_wallet, p_pfp }) {
+      if (!ID.test(String(p_id)) || typeof p_wallet !== 'string' || p_wallet.length < 16 || p_wallet.length > 64) return no('bad');
+      if (p_pfp !== null) {
+        const num = (v) => typeof v === 'number' && Number.isFinite(v);
+        if (typeof p_pfp !== 'object' || Array.isArray(p_pfp) || !ID.test(String(p_pfp.id)) || !ID.test(String(p_pfp.job)) || p_pfp.id === p_pfp.job
+          || !['n', 'x', 'y', 's'].every((k) => num(p_pfp[k])) || !/^[0-3]$/.test(String(p_pfp.n)) || !['x', 'y', 's'].every((k) => /^[0-9]{1,4}$/.test(String(p_pfp[k])))
+          || p_pfp.x > 1000 || p_pfp.y > 1000 || p_pfp.s < 200 || p_pfp.s > 1000) return no('bad');
+      }
+      const i = this.infs.get(p_id);
+      if (!i || i.status === 'deleted' || i.hidden) return no('gone');
+      if (i.wallet_code !== p_wallet) return no('not_yours');
+      if (i.banned || this.bannedNow(p_wallet)) return no('banned');
+      if (i.status !== 'ready') return no('not_ready');
+      if (p_pfp !== null) {
+        const j = this.jobs.get(p_pfp.job);
+        if (!j || j.inf_id !== p_id || !['looks', 'body', 'photo'].includes(j.kind) || j.status !== 'done' || j.hidden || p_pfp.n >= Math.max(j.files || 0, 1)) return no('source');
+      }
+      const old = i.pfp?.id ?? null;
+      i.pfp = p_pfp === null ? null : { id: p_pfp.id, job: p_pfp.job, n: p_pfp.n, x: p_pfp.x, y: p_pfp.y, s: p_pfp.s };
+      i.updated = now();
+      return ok({ old });
     },
     inf_pick({ p_id, p_wallet, p_look, p_job }) {
       if (!(Number.isInteger(p_look) && p_look >= 0 && p_look <= 3) || !ID.test(String(p_job))) return no('bad');
@@ -565,7 +647,10 @@ function database() {
         || (['photo', 'video'].includes(a.p_kind) && (!a.p_scene || [...a.p_scene].length > 300 || !['tall', 'wide', 'square', 'banner'].includes(a.p_shape) || a.p_trend !== null || a.p_clip !== null))
         || (a.p_kind !== 'photo' && a.p_shape === 'banner')
         || (a.p_kind === 'trend' && ((a.p_trend === null) === (a.p_clip === null) || a.p_scene !== null))
-        || (a.p_kind === 'photo' && a.p_image !== null)
+        || (a.p_kind === 'photo' && a.p_image !== null && a.p_edit == null)
+        // (2026-10-12, the editor) "Edit with words": only a photo, from one of its own, by Classic, without references
+        || (a.p_edit != null && (a.p_kind !== 'photo' || a.p_image === null || !([...a.p_edit].length >= 3 && [...a.p_edit].length <= 200)
+          || a.p_model !== 'classic' || a.p_refs != null))
         // (round 4, phase 4) the model menu (as influencers.sql's inf_make)
         || (a.p_model != null && !((a.p_kind === 'photo' && ['classic', 'crisp'].includes(a.p_model)) || (a.p_kind === 'video' && ['standard', 'pro', 'anime', 'long'].includes(a.p_model))))
         || (a.p_quality != null && !['std', 'hd', 'ultra', '480p', '720p'].includes(a.p_quality))
@@ -589,8 +674,10 @@ function database() {
       }
       if (a.p_image !== null) {
         const p = this.jobs.get(a.p_image);
-        if (!p || p.inf_id !== a.p_inf || p.kind !== 'photo' || p.status !== 'done' || p.hidden) return no('image');
-        if (p.shape === 'banner') return no('banner');
+        if (!p || p.inf_id !== a.p_inf || p.kind !== 'photo' || p.status !== 'done' || p.hidden || p.deleted) return no('image');
+        if (p.shape === 'banner' && a.p_edit == null) return no('banner');
+        // (2026-10-12) an edit keeps the photo's own shape, and a meme its own format and words
+        if (a.p_edit != null && (p.shape !== a.p_shape || (p.meme ?? null) !== (a.p_meme ?? null) || (p.caption ?? null) !== (a.p_caption ?? null))) return no('bad');
       }
       // (round 4, phase 4) its references: this wallet's own, passed, from the last day, each once
       if (a.p_refs != null && new Set(a.p_refs.filter((r) => {
@@ -605,7 +692,7 @@ function database() {
       this.addJob({ id: a.p_job, inf_id: a.p_inf, wallet_code: a.p_wallet, kind: a.p_kind, scene: a.p_scene, shape: a.p_shape,
         sound: a.p_sound === true && a.p_kind === 'video', trend: a.p_trend, clip: a.p_clip, image: a.p_image, cost: a.p_cost,
         model: a.p_model ?? null, quality: a.p_quality ?? null, seconds: a.p_seconds ?? null, refs: a.p_refs ?? null, parts: a.p_parts ?? 1,
-        meme: a.p_meme ?? null, caption: a.p_caption ?? null });
+        meme: a.p_meme ?? null, caption: a.p_caption ?? null, edit: a.p_edit ?? null });
       return ok({ paid: s.paid, free: s.free, bonus: s.bonus });
     },
     // (round 4, phase 4) a long video's next part: its request and saving cleared (as influencers.sql's inf_job_part)
@@ -620,11 +707,13 @@ function database() {
       if (!j) return null;
       const i = j.inf_id ? this.infs.get(j.inf_id) : null;
       return {
-        ...j, started_at: iso(j.started), created_at: iso(j.created), updated_at: iso(j.updated), done_at: iso(j.done),
+        ...j, started_at: iso(j.started), created_at: iso(j.created), updated_at: iso(j.updated), done_at: iso(j.done), deleted_at: iso(j.deleted),
         inf_name: i?.name ?? null, inf_mode: i?.mode ?? null, inf_style: i?.style ?? null, inf_settings: i?.settings ?? null, inf_words: i?.words ?? null,
         inf_source: i?.source ?? null, inf_status: i?.status ?? null, inf_looks_job: i?.looks_job ?? null, inf_pick: i?.pick ?? null,
         inf_body_job: i?.body_job ?? null, inf_hidden: i?.hidden ?? null, inf_public: i?.public ?? null, inf_real: i?.real ?? null,
         inf_banned: i ? i.banned === true : null,
+        // (2026-10-11) how it started from its picture, and where that picture's head is (as influencers.sql's inf_job_get)
+        inf_way: i ? i.way ?? 'looks' : null, inf_head: i?.source ? this.uploads.get(i.source)?.head ?? null : null,
         trend_job: j.trend ? this.trends.get(j.trend)?.job ?? null : null,
       };
     },
@@ -650,7 +739,12 @@ function database() {
       Object.assign(j, { status: 'done', files: p_files, bytes: p_bytes, saving: false, status_url: null, result_url: null, lease: 0, error: null, done: now(), updated: now() });
       const i = this.infs.get(j.inf_id);
       if (j.kind === 'looks' && i?.status === 'looks') Object.assign(i, { status: 'pick', looks_job: p_id, error: null, updated: now() });
-      if (j.kind === 'body' && i?.status === 'body') Object.assign(i, { status: 'ready', body_job: p_id, error: null, ready: now(), updated: now() });
+      // (2026-10-11) one that started with its full body has no looks: its portrait is that job's second picture
+      if (j.kind === 'body' && i?.status === 'body') {
+        const looks = (i.way ?? 'looks') === 'looks';
+        Object.assign(i, { status: 'ready', body_job: p_id, looks_job: looks ? i.looks_job : p_id, pick: looks ? i.pick : (p_files >= 2 ? 1 : 0),
+          error: null, ready: now(), updated: now() });
+      }
       if (j.kind === 'preset') { const t = this.trends.get(j.trend); if (t?.job === p_id) Object.assign(t, { status: 'review', updated: now() }); }
       return true;
     },
@@ -665,7 +759,8 @@ function database() {
       if (!i) return true;
       if (j.kind === 'looks' && i.status === 'looks') Object.assign(i, { status: i.looks_job ? 'pick' : 'failed', error: p_error });
       else if (j.kind === 'body' && i.status === 'body') {
-        if (i.body_tries + 1 >= 3) {
+        // (2026-10-11) one with no looks to go back to can't be made at once (its credits back)
+        if ((i.way ?? 'looks') !== 'looks' || i.body_tries + 1 >= 3) {
           Object.assign(i, { status: 'failed', body_tries: i.body_tries + 1, error: p_error });
           if (i.first_job && this.refund(i.first_job)) this.jobs.get(i.first_job).refunded = true;
         } else Object.assign(i, { status: 'pick', body_tries: i.body_tries + 1, error: p_error });
@@ -678,12 +773,13 @@ function database() {
     },
     inf_poster({ p_job }) {
       const j = this.jobs.get(p_job);
-      if (!j || j.status !== 'done' || !['trend', 'video', 'preset'].includes(j.kind)) return null;
+      // (2026-10-12) never one its maker deleted meanwhile (as influencers.sql)
+      if (!j || j.status !== 'done' || !['trend', 'video', 'preset'].includes(j.kind) || j.deleted) return null;
       j.poster = true;
       return true;
     },
     inf_jobs({ p_inf, p_wallet, p_limit }) {
-      return [...this.jobs.values()].filter((j) => j.inf_id === p_inf && ['photo', 'trend', 'video'].includes(j.kind)
+      return [...this.jobs.values()].filter((j) => j.inf_id === p_inf && ['photo', 'trend', 'video'].includes(j.kind) && !j.deleted
         && ((j.status === 'done' && !j.hidden) || (p_wallet && j.wallet_code === p_wallet && j.status !== 'done' && j.updated > now() - 7 * DAY)))
         .sort((x, y) => (y.done || y.created) - (x.done || x.created)).slice(0, p_limit || 40)
         .map((j) => ({
@@ -691,12 +787,13 @@ function database() {
           step: j.saving ? 'save' : j.req ? 'make' : 'queue', error: j.error, refunded: j.refunded, cost: j.cost, files: j.files, bytes: j.bytes,
           poster: j.poster, created_at: iso(j.created), done_at: iso(j.done), likes: j.likes, marked: j.marked, mine: Boolean(p_wallet) && j.wallet_code === p_wallet,
           model: j.model, quality: j.quality, seconds: j.seconds, refs: j.refs ? j.refs.length : 0, parts: j.parts, part: j.part, meme: j.meme, caption: j.caption,
+          edit: j.edit, editor: j.editor === true,
         }));
     },
     inf_mine({ p_wallet }) {
       return [...this.infs.values()].filter((i) => i.wallet_code === p_wallet && i.status !== 'deleted').sort((x, y) => y.created - x.created)
         .map((i) => ({ id: i.id, name: i.name, mode: i.mode, style: i.style, status: i.status, looks_job: i.looks_job, pick: i.pick, body_job: i.body_job,
-          public: i.public, hidden: i.hidden, created_at: iso(i.created), ready_at: iso(i.ready), real: i.real, boost_until: iso(i.boost) }));
+          public: i.public, hidden: i.hidden, created_at: iso(i.created), ready_at: iso(i.ready), real: i.real, boost_until: iso(i.boost), pfp: this.pfpOf(i.pfp) }));
     },
     inf_explore({ p_limit }) {
       const limit = Math.min(Math.max(p_limit || 24, 1), 60);
@@ -709,21 +806,22 @@ function database() {
       const sj = sw && this.jobs.get(sw.job_id), si = sj && this.infs.get(sj.inf_id);
       return {
         influencers: [...this.infs.values()].filter(shown).sort((x, y) => y.ready - x.ready).slice(0, limit)
-          .map((i) => ({ id: i.id, name: i.name, style: i.style, looks_job: i.looks_job, pick: i.pick, body_job: i.body_job, ready_at: iso(i.ready), maker: this.makerOf(i.wallet_code) })),
+          .map((i) => ({ id: i.id, name: i.name, style: i.style, looks_job: i.looks_job, pick: i.pick, body_job: i.body_job, ready_at: iso(i.ready), maker: this.makerOf(i.wallet_code), pfp: this.pfpOf(i.pfp) })),
         fresh: [...this.jobs.values()].filter((j) => j.status === 'done' && ['photo', 'trend', 'video'].includes(j.kind) && !j.hidden && j.shape !== 'banner' && shown(this.infs.get(j.inf_id)))
           .sort((x, y) => y.done - x.done || y.seq - x.seq).slice(0, limit).map((j) => {
             const i = this.infs.get(j.inf_id);
             return { id: j.id, kind: j.kind, shape: j.shape, trend: j.trend, poster: j.poster, files: j.files, likes: j.likes, inf_id: j.inf_id,
-              inf_name: i.name, looks_job: i.looks_job, pick: i.pick, done_at: iso(j.done), maker: this.makerOf(i.wallet_code),
+              inf_name: i.name, looks_job: i.looks_job, pick: i.pick, done_at: iso(j.done), maker: this.makerOf(i.wallet_code), pfp: this.pfpOf(i.pfp),
               model: j.model, quality: j.quality, seconds: j.seconds, sound: j.sound, meme: j.meme, caption: j.caption };
           }),
         trends: [...this.trends.values()].filter((t) => t.status === 'kept' && this.jobs.get(t.job)?.status === 'done').sort((x, y) => x.sort - y.sort)
           .map((t) => ({ id: t.id, job: t.job, poster: this.jobs.get(t.job).poster, bytes: this.jobs.get(t.job).bytes })),
         boosted: [...this.infs.values()].filter((i) => i.boost > now() && shown(i)).sort((x, y) => y.boost - x.boost).slice(0, 12)
-          .map((i) => ({ id: i.id, name: i.name, style: i.style, looks_job: i.looks_job, pick: i.pick, body_job: i.body_job, until: iso(i.boost), maker: this.makerOf(i.wallet_code) })),
+          .map((i) => ({ id: i.id, name: i.name, style: i.style, looks_job: i.looks_job, pick: i.pick, body_job: i.body_job, until: iso(i.boost), maker: this.makerOf(i.wallet_code), pfp: this.pfpOf(i.pfp) })),
         spotlight: sw ? {
           week: sw.week, status: sw.status, holder_likes: sw.holder_likes, likes: sw.likes, prize: sw.prize, id: sj.id, kind: sj.kind, shape: sj.shape,
           poster: sj.poster, files: sj.files, inf_id: sj.inf_id, inf_name: si.name, looks_job: si.looks_job, pick: si.pick, maker: this.makerOf(si.wallet_code),
+          pfp: this.pfpOf(si.pfp),
         } : null,
       };
     },
@@ -750,7 +848,87 @@ function database() {
       return ok({ source: i.source });
     },
     inf_hide({ p_id, p_hidden }) { const i = this.infs.get(p_id); if (!i || i.status === 'deleted') return null; i.hidden = p_hidden !== false; return true; },
-    inf_job_hide({ p_id, p_hidden }) { const j = this.jobs.get(p_id); if (!j) return null; j.hidden = p_hidden !== false; return true; },
+    // ((2026-10-12) one its maker deleted is never shown again)
+    inf_job_hide({ p_id, p_hidden }) { const j = this.jobs.get(p_id); if (!j || (j.deleted && p_hidden === false)) return null; j.hidden = p_hidden !== false; return true; },
+    // (2026-10-12, the editor) its maker deletes one of its photos, videos or trend videos (as influencers.sql's inf_job_delete)
+    inf_job_delete({ p_id, p_wallet }) {
+      if (!ID.test(String(p_id)) || typeof p_wallet !== 'string' || p_wallet.length < 16 || p_wallet.length > 64) return no('bad');
+      const j = this.jobs.get(p_id);
+      if (!j || !['photo', 'trend', 'video'].includes(j.kind) || j.deleted || this.infs.get(j.inf_id)?.status === 'deleted') return no('gone');
+      if (j.wallet_code !== p_wallet) return no('not_yours');
+      if (['paid', 'making'].includes(j.status)) return no('making');
+      if ([...this.jobs.values()].some((x) => x.inf_id === j.inf_id && x.image === p_id && ['paid', 'making'].includes(x.status))) return no('in_use');
+      const i = this.infs.get(j.inf_id);
+      let pfp = null;
+      if (i?.pfp?.job === p_id) { pfp = i.pfp.id; i.pfp = null; i.updated = now(); }
+      Object.assign(j, { hidden: true, deleted: now(), lease: 0, updated: now() });
+      return ok({ inf: j.inf_id, kind: j.kind, files: j.files, parts: j.parts, pfp });
+    },
+    // (2026-10-12, the editor) the photo editor: a save counted for its wallet and the site's day (p_take false: only asked),
+    // and one saved (as influencers.sql's inf_tool_take and inf_photo_add)
+    inf_tool_take({ p_wallet, p_tool, p_per_day, p_site_cap, p_take = true }) {
+      if (!code(p_wallet) || !['photo', 'video'].includes(p_tool) || !(p_per_day >= 1) || !(p_site_cap >= 1)) return no('bad');
+      const day = new Date(now()).toISOString().slice(0, 10), key = `${p_wallet}:${day}:${p_tool}`, siteKey = `${day}:${p_tool}`;
+      const mine = this.toolDays.get(key) || 0;
+      if (mine >= p_per_day) return no('too_many');
+      const site = this.toolSite.get(siteKey) || 0;
+      if (site >= p_site_cap) return no('busy_day');
+      if (p_take === false) return ok({ left: p_per_day - mine });
+      this.toolSite.set(siteKey, site + 1);
+      this.toolDays.set(key, mine + 1);
+      return ok({ left: p_per_day - mine - 1 });
+    },
+    inf_photo_add({ p_job, p_inf, p_wallet, p_from, p_shape, p_bytes }) {
+      if (!ID.test(String(p_job)) || typeof p_from !== 'string' || !code(p_wallet) || !['tall', 'wide', 'square', 'banner'].includes(p_shape)
+        || !(p_bytes >= 1 && p_bytes <= 10_000_000)) return no('bad');
+      const i = this.infs.get(p_inf);
+      if (!i || i.status === 'deleted' || i.hidden) return no('gone');
+      if (i.wallet_code !== p_wallet) return no('not_yours');
+      if (this.bannedNow(p_wallet)) return no('banned');
+      if (i.status !== 'ready') return no('not_ready');
+      const f = this.jobs.get(p_from);
+      if (!f || f.inf_id !== p_inf || f.kind !== 'photo' || f.status !== 'done' || f.hidden || f.deleted) return no('image');
+      if ((f.shape === 'banner') !== (p_shape === 'banner')) return no('bad');
+      if (this.jobs.has(p_job)) return no('taken');
+      this.addJob({ id: p_job, inf_id: p_inf, wallet_code: p_wallet, kind: 'photo', scene: f.scene, shape: p_shape, image: p_from, cost: 0,
+        status: 'done', files: 1, bytes: p_bytes, editor: true, done: now() });
+      return ok();
+    },
+    // (2026-10-12, the editor) the video editor: a cut started (one use counted, then a video of the same influencer, free,
+    // waiting for our clock), the clock's next one, and one made and passed (as influencers.sql's inf_cut_add, inf_cut_due and
+    // inf_cut_done)
+    inf_cut_add({ p_job, p_inf, p_wallet, p_from, p_shape, p_seconds, p_sound, p_cut, p_per_day, p_site_cap, p_open = 3 }) {
+      if (!ID.test(String(p_job)) || !ID.test(String(p_from)) || !code(p_wallet) || !['tall', 'wide', 'square'].includes(p_shape)
+        || !(Number.isInteger(p_seconds) && p_seconds >= 1 && p_seconds <= 15) || typeof p_sound !== 'boolean'
+        || !p_cut || typeof p_cut !== 'object' || Array.isArray(p_cut) || JSON.stringify(p_cut).length > 600
+        || !(p_per_day >= 1) || !(p_site_cap >= 1) || !(p_open >= 1)) return no('bad');
+      const i = this.infs.get(p_inf);
+      if (!i || i.status === 'deleted' || i.hidden) return no('gone');
+      if (i.wallet_code !== p_wallet) return no('not_yours');
+      if (this.bannedNow(p_wallet)) return no('banned');
+      if (i.status !== 'ready') return no('not_ready');
+      const f = this.jobs.get(p_from);
+      if (!f || f.inf_id !== p_inf || !['video', 'trend'].includes(f.kind) || f.status !== 'done' || f.hidden || f.deleted) return no('from');
+      if ([...this.jobs.values()].filter((j) => j.wallet_code === p_wallet && j.kind === 'video' && j.editor && ['paid', 'making'].includes(j.status)).length >= p_open) return no('cuts_open');
+      // (its id taken: nothing counted either, the SQL's use rolled back with it)
+      if (this.jobs.has(p_job)) return no('taken');
+      const t = this.inf_tool_take({ p_wallet, p_tool: 'video', p_per_day, p_site_cap, p_take: true });
+      if (!t.ok) return no(['too_many', 'busy_day'].includes(t.why) ? t.why : 'busy');
+      this.addJob({ id: p_job, inf_id: p_inf, wallet_code: p_wallet, kind: 'video', scene: f.scene, shape: p_shape, sound: p_sound, image: p_from,
+        cost: 0, seconds: p_seconds, editor: true, cut: p_cut });
+      return ok({ left: t.left });
+    },
+    inf_cut_due() {
+      return [...this.jobs.values()].filter((j) => j.editor && j.kind === 'video' && ['paid', 'making'].includes(j.status) && j.lease <= now())
+        .sort((x, y) => x.updated - y.updated || x.seq - y.seq)[0]?.id ?? null;
+    },
+    inf_cut_done({ p_id, p_bytes, p_sound, p_seconds }) {
+      const j = this.jobs.get(p_id);
+      if (!j || j.kind !== 'video' || !j.editor || !['paid', 'making'].includes(j.status) || j.deleted || !(p_bytes >= 1 && p_bytes <= 1e8)) return null;
+      Object.assign(j, { status: 'done', files: 0, bytes: p_bytes, sound: p_sound === true, seconds: Math.min(Math.max(p_seconds ?? j.seconds, 1), 15),
+        marked: true, mark_at: now(), saving: false, status_url: null, result_url: null, lease: 0, error: null, done: now(), updated: now() });
+      return true;
+    },
     // ---- a 3D model of it ----
     inf_3d(a) {
       if (!ID.test(String(a.p_order)) || !code(a.p_burn) || ![1, 2, 3].includes(a.p_level) || !(a.p_cost >= 0) || a.p_cap === null) return no('bad');
@@ -768,7 +946,7 @@ function database() {
       else { s = this.spend(a.p_wallet, a.p_cost, a.p_order); if (!s.ok) return s; }
       this.order({ id: a.p_order, inf_id: a.p_inf, wallet_code: a.p_wallet, burn_code: a.p_burn, status: 'paid', kind: free ? 'free' : 'credits',
         paid: free ? 0 : a.p_cost, free, name: i.name, about: `Made from ${i.name}'s full-body picture in AGI Studio.`,
-        style: { anime: 'anime', toon: 'cartoon' }[i.style] || 'realistic', level: a.p_level, paid_at: now(), image_path: `inf/${a.p_inf}/${i.body_job}-0.jpg` });
+        style: style3d(i.style), level: a.p_level, paid_at: now(), image_path: `inf/${a.p_inf}/${i.body_job}-0.jpg` });
       this.studioMade += 1;
       return ok({ free, paid: s.paid, free_credits: s.free, bonus: s.bonus });
     },
@@ -802,7 +980,7 @@ function database() {
       if (this.studioBurns + live.burn >= a.p_burn_cap) return no('burns_sold_out');
       if (this.orders.has(a.p_order)) return no('taken');
       this.order({ id: a.p_order, inf_id: a.p_inf, wallet_code: a.p_wallet, burn_code: a.p_burn, status: 'quote', kind: 'burn', agi: a.p_agi,
-        name: i.name, about: `Made from ${i.name}'s full-body picture in AGI Studio.`, style: { anime: 'anime', toon: 'cartoon' }[i.style] || 'realistic',
+        name: i.name, about: `Made from ${i.name}'s full-body picture in AGI Studio.`, style: style3d(i.style),
         level: a.p_level, image_path: `inf/${a.p_inf}/${i.body_job}-0.jpg` });
       return ok({ order: a.p_order, agi: a.p_agi, paid: 0, created: iso(now()), again: false });
     },
@@ -875,14 +1053,16 @@ function database() {
     // ---- the share mark (round 2) ----
     inf_mark_take() {
       // (round 4, phase 4: never a long video, whose one copy is marked as its parts are kept)
+      // ((2026-10-12) never one saved from the video editor: its mark is in it already)
       const j = [...this.jobs.values()].filter((x) => ['trend', 'video'].includes(x.kind) && x.status === 'done' && !x.hidden && !x.marked && x.mark_tries < 3 && x.parts === 1
-        && (x.mark_at === null || x.mark_at < now() - 180e3) && x.done > now() - 30 * DAY).sort((x, y) => y.done - x.done || y.seq - x.seq)[0];
+        && !x.editor && (x.mark_at === null || x.mark_at < now() - 180e3) && x.done > now() - 30 * DAY).sort((x, y) => y.done - x.done || y.seq - x.seq)[0];
       if (!j) return null;
       j.mark_tries += 1;
       j.mark_at = now();
       return { id: j.id, inf_id: j.inf_id, kind: j.kind, bytes: j.bytes, tries: j.mark_tries };
     },
-    inf_mark_done({ p_job }) { const j = this.jobs.get(p_job); if (!j || j.status !== 'done') return null; j.marked = true; j.mark_at = now(); return true; },
+    // ((2026-10-12) never one its maker deleted meanwhile: our server then deletes the copy it kept)
+    inf_mark_done({ p_job }) { const j = this.jobs.get(p_job); if (!j || j.status !== 'done' || j.deleted) return null; j.marked = true; j.mark_at = now(); return true; },
     // ---- likes and the weekly spotlight (round 2) ----
     inf_like({ p_job, p_wallet, p_level, p_like, p_per_day }) {
       if (!ID.test(String(p_job)) || !code(p_wallet) || ![1, 2, 3].includes(p_level) || typeof p_like !== 'boolean' || !(p_per_day >= 1)) return no('bad');
@@ -951,7 +1131,7 @@ function database() {
         return {
           week: w.week, status: w.status, job: w.job_id, inf_id: w.inf_id, holder_likes: w.holder_likes, likes: w.likes, prize: w.prize, tx: w.tx,
           kind: j?.kind ?? null, shape: j?.shape ?? null, poster: j?.poster ?? null, files: j?.files ?? null, job_ok: Boolean(j && j.status === 'done' && !j.hidden),
-          inf_name: i?.name ?? null, looks_job: i?.looks_job ?? null, pick: i?.pick ?? null, skipped: w.skipped.length,
+          inf_name: i?.name ?? null, looks_job: i?.looks_job ?? null, pick: i?.pick ?? null, pfp: this.pfpOf(i?.pfp), skipped: w.skipped.length,
           mine: Boolean(p_wallet) && w.wallet_code === p_wallet,
         };
       });
@@ -1093,7 +1273,7 @@ function database() {
     inf_access_set({ p_wallet, p_short, p_note, p_via, p_on, p_max }) {
       if (!code(p_wallet) || typeof p_on !== 'boolean') return no('bad');
       if (!p_on) return this.access.delete(p_wallet) ? ok({ added: false }) : no('gone');
-      if (!/^0x[0-9a-f]{4}…[0-9a-f]{4}$/.test(String(p_short)) || !['owner', 'credits'].includes(p_via)
+      if (!/^0x[0-9a-f]{4}…[0-9a-f]{4}$/.test(String(p_short)) || !['owner', 'credits', 'link'].includes(p_via)
         || (p_note !== null && ([...String(p_note)].length < 1 || [...String(p_note)].length > 24)) || !(p_max >= 1)) return no('bad');
       const was = this.access.get(p_wallet);
       if (was) {
@@ -1265,7 +1445,8 @@ function database() {
         const out = {};
         for (const j of this.jobs.values()) {
           if (j.created < from || j.status === 'failed' || !j.wallet_code) continue;
-          const k = j.shape === 'banner' ? 'banner' : j.kind;
+          // ((2026-10-12) the photos and videos saved from the editors on their own: they cost only a look each)
+          const k = j.editor && j.kind === 'photo' ? 'edited' : j.editor ? 'cut' : j.shape === 'banner' ? 'banner' : j.kind;
           out[k] = (out[k] || 0) + 1;
         }
         return out;
@@ -1286,7 +1467,7 @@ function database() {
           spent_week: this.log.reduce((a, l) => a + (l.kind === 'spend' ? l.amount : l.kind === 'refund' ? -l.amount : 0), 0),
           free_month: this.months.get(thisMonth()) || 0, gifts_month: this.log.filter((l) => l.kind === 'gift').reduce((a, l) => a + l.amount, 0),
           gifted_week: this.log.filter((l) => l.kind === 'receive' && l.at > now() - 7 * DAY).reduce((a, l) => a + l.amount, 0),
-          links_open: [...this.gifts.values()].filter((g) => g.status === 'open' && g.expires > now()).length,
+          links_open: [...this.gifts.values()].filter((g) => g.kind === 'bought' && g.status === 'open' && g.expires > now()).length,
           rewards_month: this.log.filter((l) => ['ref', 'welcome'].includes(l.kind)).reduce((a, l) => a + l.amount, 0),
           invited_month: this.invited.size,
         },
@@ -1314,7 +1495,14 @@ function database() {
         || (u.status === 'used' && ![...this.infs.values()].some((i) => i.source === u.id && ['looks', 'pick', 'body'].includes(i.status))));
       for (const u of ups) this.uploads.delete(u.id);
       const infs = [...this.infs.values()].filter((i) => (i.status === 'failed' && i.updated < now() - 30 * DAY) || (i.status === 'deleted' && i.updated < now() - 7 * DAY));
-      for (const i of infs) this.infs.delete(i.id);
+      for (const i of infs) {
+        this.infs.delete(i.id);
+        // (its jobs go with it: the SQL's foreign key, on delete cascade, and their likes with them)
+        for (const j of [...this.jobs.values()]) if (j.inf_id === i.id) { this.jobs.delete(j.id); this.likes = this.likes.filter((l) => l.job !== j.id); }
+      }
+      // (2026-10-12) photos and videos their makers deleted, a week later (at most 50, the oldest first; their likes with them)
+      const deleted = [...this.jobs.values()].filter((j) => j.deleted && j.deleted < now() - 7 * DAY).sort((x, y) => x.deleted - y.deleted).slice(0, 50);
+      for (const j of deleted) { this.jobs.delete(j.id); this.likes = this.likes.filter((l) => l.job !== j.id); }
       // (round 2) burn quotes nothing was burned toward, after 2 days; a sent prize's address, after 60 days
       for (const b of [...this.burns.values()]) if (b.status === 'quote' && b.paid === 0 && b.created < now() - 2 * DAY) this.burns.delete(b.id);
       for (const w of this.weeks.values()) if (w.status === 'sent' && w.address && w.sent_at < now() - 60 * DAY) w.address = null;
@@ -1326,7 +1514,8 @@ function database() {
         Object.assign(g, { status: 'expired', done: now() });
         gifts += 1;
       }
-      return { uploads: ups.map((u) => ({ id: u.id, kind: u.kind })), infs: infs.map((i) => i.id), jobs: 0, reports: 0, gifts };
+      return { uploads: ups.map((u) => ({ id: u.id, kind: u.kind })), infs: infs.map((i) => i.id), jobs: 0, reports: 0, gifts,
+        deleted: deleted.map((j) => ({ id: j.id, inf: j.inf_id, kind: j.kind })) };
     },
     // ---- Launch with AGI-1's drafts (a coin with its face) ----
     launch_draft_put({ p_id, p_chat, p_name, p_symbol, p_desc, p_photo }) {
@@ -1360,7 +1549,8 @@ beforeEach(async () => {
   JPEG_EXIF ??= await sharp({ create: { width: 2400, height: 1800, channels: 3, background: { r: 240, g: 200, b: 160 } } })
     .withExif({ IFD0: { ImageDescription: 'taken at 12 Secret Street', Copyright: 'someone' } }).jpeg().toBuffer();
   fake = {
-    db: database(), dbDown: false, missing: new Set(),
+    // (2026-10-11) oldArgs: a function as an older influencers.sql has it (its name → the parameters it doesn't take: PGRST202)
+    db: database(), dbDown: false, missing: new Set(), oldArgs: new Map(),
     storage: new Map(), storageDown: false,
     fal: { requests: new Map(), n: 0, submitFail: [], statusAnswer: null, statusFail: null, resultAnswer: null, resultFail: null, mediaStatus: 200, video: mp4({ seconds: 5 }), images: null,
       picture: null },
@@ -1389,10 +1579,14 @@ const VERDICTS = {
   poster: { same: true, explicit: false, minor: false, hateful: false, violent: false, other: false },
   ref: { person: false, famous: false, famousSure: 0, known: false, explicit: false, hateful: false, violent: false, other: false },
   meme: { explicit: false, minor: false, hateful: false, violent: false, badWords: false, other: false },
+  // (2026-10-12, the editor) a photo saved from the photo editor, and a video saved from the video editor
+  edited: { explicit: false, minor: false, hateful: false, violent: false, badWords: false, other: false },
+  cut: { explicit: false, minor: false, hateful: false, violent: false, badWords: false, other: false },
 };
 const whichCheck = (system) => (/uploaded to turn into an AI influencer/.test(system) ? 'picture' : /frames from a short video/.test(system) ? 'frames'
   : /thumbnail/.test(system) ? 'poster' : /AI-made video/.test(system) ? 'video' : /You write social media captions/.test(system) ? 'captions'
     : /a reference picture someone uploaded/.test(system) ? 'ref' : /AI-made meme picture/.test(system) ? 'meme'
+    : /trimmed in our video editor/.test(system) ? 'cut' : /that its maker edited in our app/.test(system) ? 'edited'
     : /AGI Studio's help assistant/.test(system) ? 'help' : 'unknown');
 // (round 4, phase 2) the helper's answer by default
 const HELP_ANSWER = { answer: 'Open My studio and press Buy credits: send USDG from your own wallet app, then press "Check my payment".', ticket: 'none' };
@@ -1409,7 +1603,9 @@ async function fakeFetch(url, init = {}) {
     const args = JSON.parse(init.body || '{}');
     calls.push({ to: 'db', fn, args });
     if (fake.dbDown) return new Response('{"message":"down"}', { status: 503 });
-    if (fake.missing.has(fn) || typeof fake.db[fn] !== 'function') return Response.json({ code: 'PGRST202', message: 'not found' }, { status: 404 });
+    if (fake.missing.has(fn) || typeof fake.db[fn] !== 'function' || (fake.oldArgs.get(fn) || []).some((k) => args[k] !== undefined)) {
+      return Response.json({ code: 'PGRST202', message: 'not found' }, { status: 404 });
+    }
     return Response.json(fake.db[fn](args) ?? null);
   }
   // Supabase Storage
@@ -1562,7 +1758,7 @@ async function fakeFetch(url, init = {}) {
     if (q.method === 'eth_call') {
       const { to, data } = q.params[0];
       if (data === '0x313ce567') return answer(`0x${pad(to.toLowerCase() === USDG.toLowerCase() ? 6 : 18)}`);
-      if (data.startsWith('0x70a08231') && to.toLowerCase() === AGI) return answer(`0x${pad(`0x${data.slice(-40)}` === PRIZE_ADDRESS ? c.agi : 0n)}`);
+      if (data.startsWith('0x70a08231') && to.toLowerCase() === AGI) return answer(`0x${pad(`0x${data.slice(-40)}` === PRIZE_ADDRESS ? c.agi : (c.held?.get(`0x${data.slice(-40)}`) ?? 0n))}`);
       return answer('0x');
     }
     if (q.method === 'eth_getTransactionReceipt') return answer(c.receipts.get(q.params[0]) ?? null);
@@ -1653,13 +1849,20 @@ const dbCalls = (fn) => calls.filter((c) => c.to === 'db' && c.fn === fn).map((c
 const onChain = (method) => calls.filter((c) => c.to === 'chain' && c.method === method);
 const stored = (prefix) => [...fake.storage.keys()].filter((k) => k.startsWith(prefix)).sort();
 // an upload that passed its check, straight in the database, its file in the bucket (a clip: a phone's vertical video)
-async function okUpload(kind = 'picture', { wallet = WALLET, seconds = null, real = false } = {}) {
+// ((2026-10-11) whole: a picture of the whole person, head to feet, with its head's box; bytes: its picture)
+async function okUpload(kind = 'picture', { wallet = WALLET, seconds = null, real = false, whole = false, head = null, bytes = null } = {}) {
   const id = idOf(`up${kind}${fake.db.uploads.size}x`);
-  fake.db.uploads.set(id, { id, wallet_code: codeOf(wallet), kind, status: 'ok', why: null, seconds, real, created: Date.now() - 60e3 });
+  fake.db.uploads.set(id, { id, wallet_code: codeOf(wallet), kind, status: 'ok', why: null, seconds, real, whole, head, created: Date.now() - 60e3 });
   if (kind === 'clip') fake.storage.set(`up/${id}.mp4`, { bytes: mp4({ seconds: seconds ?? 5, video: HD }), type: 'video/mp4' });
-  else fake.storage.set(`up/${id}.jpg`, { bytes: await sharp(PNG).jpeg().toBuffer(), type: 'image/jpeg' });
+  else fake.storage.set(`up/${id}.jpg`, { bytes: await sharp(bytes ?? PNG).jpeg().toBuffer(), type: 'image/jpeg' });
   return id;
 }
+// (2026-10-11) a whole person, head to feet, on a plain light background (as the AI makes a full body, or a photo of one):
+// 600 × 1200, a red head (its box: HEAD_BOX, in thousandths) over a blue body
+const HEAD_BOX = [83, 367, 217, 633];
+const fullBody = () => sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="1200">'
+  + '<rect width="600" height="1200" fill="rgb(232,232,232)"/><circle cx="300" cy="180" r="80" fill="rgb(220,50,50)"/>'
+  + '<rect x="220" y="260" width="160" height="840" fill="rgb(40,60,200)"/></svg>')).png().toBuffer();
 // one of the owner's trend clips, made and kept (its video in the bucket)
 function keptTrend(trend = 'golden-flip', { poster = true } = {}) {
   const job = idOf(`tr${trend.replace(/-/g, '')}${fake.db.jobs.size}`);
@@ -1734,9 +1937,16 @@ const PROVIDERS = /\b(?:fal(?:\.ai)?|kling|kuaishou|nano[\s-]?banana|gemini|goog
 
 // ---------- its rules and its words ----------
 test('its rules: the owner\'s prices and the holder discounts, free credits, the trend moves, its files, its limits', () => {
-  // (round 4) an X banner: a photo made wider and sharper (2K), about 1.8× its AI's cost like every price
-  assert.deepEqual(R.PRICES, { influencer: 100, looks: 40, photo: 15, banner: 22, trend: 300, video: 400, model: 500 });
+  // (round 4) an X banner: a photo made wider and sharper (2K), about 1.8× its AI's cost like every price. (2026-10-11) from a
+  // picture, two cheaper ways to start: just its full body (one picture of the AI) and the photo as it is (no AI)
+  assert.deepEqual(R.PRICES, { influencer: 100, looks: 40, photo: 15, banner: 22, trend: 300, video: 400, model: 500, body: 20, asis: 10 });
   assert.deepEqual([1, 2, 3].map((l) => R.creditPrice('banner', l)), [22, 18, 13]);
+  assert.deepEqual([1, 2, 3].map((l) => R.creditPrice('body', l)), [20, 16, 12]);
+  assert.deepEqual([1, 2, 3].map((l) => R.creditPrice('asis', l)), [10, 8, 6]);
+  assert.deepEqual(Object.keys(R.WAYS), ['looks', 'body', 'asis']);
+  assert.deepEqual(Object.values(R.WAYS).map((w) => w.price), ['influencer', 'body', 'asis']);
+  for (const w of Object.values(R.WAYS)) assert.ok(w.name && w.note && w.time && Object.hasOwn(R.PRICES, w.price), w.name);
+  assert.match(R.WAY_FULL_WHY, /whole person, head to feet/);
   assert.deepEqual([1, 2, 3].map((l) => R.creditPrice('influencer', l)), [100, 80, 60]);
   assert.deepEqual([1, 2, 3].map((l) => R.creditPrice('photo', l)), [15, 12, 9]);
   assert.deepEqual([1, 2, 3].map((l) => R.creditPrice('model', l)), [500, 400, 300]);
@@ -1786,17 +1996,37 @@ test('its rules: the owner\'s prices and the holder discounts, free credits, the
   assert.deepEqual(Object.entries(R.OPTIONS).filter(([, o]) => o.for.includes('picture')).map(([k]) => k), ['outfit', 'vibe']);
   assert.deepEqual(Object.keys(R.MODES), ['design', 'picture']);
   assert.match(R.CONSENT_TEXT, /^This is me, someone who said I may use their photo \(an adult\), or a character of my own\.$/);
-  assert.deepEqual(Object.keys(R.INF_STYLES), ['real', 'anime', 'toon']);
+  // (2026-10-11, the owner: "can you make the style optional and please add more styles like , ghiblifi etc. and many more")
+  // 26 styles in four groups, each in our own words: never a studio's, a brand's, a game's or an artist's name; no chibi
+  // (childlike proportions); the first three kept (influencers made before keep theirs); none needed ('auto': "Any style")
+  assert.deepEqual(R.STYLE_GROUPS.map((g) => [g.id, g.name]), [['photo', 'Photo looks'], ['anime', 'Anime & comics'], ['toys', '3D & toys'], ['art', 'Art & paint']]);
+  assert.deepEqual(Object.keys(R.INF_STYLES), R.STYLE_GROUPS.flatMap((g) => Object.keys(g.styles)));
+  assert.equal(Object.keys(R.INF_STYLES).length, 26);
+  assert.ok(['real', 'anime', 'toon'].every((s) => Object.hasOwn(R.INF_STYLES, s)));
+  assert.equal(R.INF_STYLES.storybook, 'Storybook anime');
+  const styleWords = Object.entries(R.INF_STYLES).flat().join(' ');
+  assert.doesNotMatch(styleWords, /ghibli|miyazaki|pixar|disney|dreamworks|studio|lego|funko|sanrio|nintendo|minecraft|roblox|marvel|simpsons|hokusai|warhol|chibi|kawaii/i);
+  assert.ok(Object.keys(R.INF_STYLES).every((k) => /^[a-z]{2,12}$/.test(k) && k !== R.STYLE_AUTO));
+  assert.deepEqual([R.STYLE_AUTO, R.STYLE_ANY, R.styleName('auto'), R.styleName('storybook'), R.styleName('nope')], ['auto', 'Any style', 'Any style', 'Storybook anime', null]);
+  // the drawn styles (a video straight from the full body): never a photo look, nor a painted style that can come out true to life
+  assert.ok(R.DRAWN_STYLES.every((s) => Object.hasOwn(R.INF_STYLES, s)));
+  for (const s of ['real', 'film', 'editorial', 'cinematic', 'oil', 'fantasy', 'cyberpunk']) assert.ok(!R.DRAWN_STYLES.includes(s), s);
+  assert.deepEqual([
+    R.drawnStyle({ mode: 'design', style: 'storybook' }), R.drawnStyle({ mode: 'design', style: 'toon' }), R.drawnStyle({ mode: 'design', style: 'real' }),
+    R.drawnStyle({ mode: 'picture', style: 'auto', real: false }), R.drawnStyle({ mode: 'picture', style: 'auto', real: true }),
+    R.drawnStyle({ mode: 'design', style: 'auto' }), R.drawnStyle({ mode: 'face', style: 'anime' }), R.drawnStyle(null),
+  ], [true, true, false, true, false, false, false, false]);
   assert.ok(['real_person', 'minor', 'sexual', 'copyright'].every((w) => Object.hasOwn(R.REPORT_WHYS, w)));
   // (round 2) its example pictures: one for each choice that's more than a color (supabase/influencers.sql's rule for their
   // keys), each with the words its picture is made from; skin, hair color and eyes are color swatches, exactly their choices
-  assert.equal(R.EXAMPLES.length, 3 + 3 + 4 + 8 + 8 + 6);
+  assert.equal(R.EXAMPLES.length, 26 + 3 + 4 + 8 + 8 + 6);
   assert.equal(new Set(R.EXAMPLES).size, R.EXAMPLES.length);
   for (const key of R.EXAMPLES) {
     assert.match(key, /^[a-z]{3,6}-[a-z0-9]{2,12}$/, key);
     assert.ok(examplePrompt(key), key);
   }
-  assert.deepEqual([R.exampleKey('outfit', 'cozy'), R.exampleKey('style', 'toon'), R.exampleKey('age', '50s')], ['outfit-cozy', 'style-toon', 'age-50s']);
+  assert.deepEqual([R.exampleKey('outfit', 'cozy'), R.exampleKey('style', 'toon'), R.exampleKey('age', '50s'), R.exampleKey('style', 'storybook')], ['outfit-cozy', 'style-toon', 'age-50s', 'style-storybook']);
+  assert.equal(R.exampleKey('style', 'auto'), null);
   assert.deepEqual([R.exampleKey('hair', 'pink'), R.exampleKey('outfit', 'tuxedo'), R.exampleKey('toString', 'x'), R.exampleKey('vibe', undefined)], [null, null, null, null]);
   for (const k of ['skin', 'hair', 'eyes']) {
     assert.deepEqual(Object.keys(R.SWATCHES[k]), Object.keys(R.OPTIONS[k].choices), k);
@@ -1818,6 +2048,8 @@ test('the app\'s words: every "no" our server sends has its own words, and never
     ...quoted(read('server/inf-week.js'), /why: '([a-z_]+)'/g), ...quoted(read('server/inf-burns.js'), /why: '([a-z_]+)'/g),
     // (round 4, phase 3) gifts and invites: the codes our server names them by
     ...quoted(read('server/inf-gifts.js'), /why: '([a-z_]+)'/g), ...quoted(read('server/inf-gifts.js'), /: '((?:gift|ref|give|note)_[a-z_]+)'/g),
+    // (2026-10-12, the editor) the photo editor's (its words' reasons come with error 'words': AW.wordsText says them)
+    ...quoted(read('server/inf-editor.js').split('export async function openSave')[1], /(?:why|error): '([a-z_]+)'/g),
   ]);
   // (said in their own way: a word check's field and reason, an AI check's reason, a coin check's reason; and the database's
   // reasons our server never passes on: a taken id is tried again, a free credits grant's and a payment's own answers, a
@@ -1830,6 +2062,13 @@ test('the app\'s words: every "no" our server sends has its own words, and never
     assert.match(gifts, new RegExp(`\\b${why}: '(?:gift|ref)_`), why);
     own.add(why);
   }
+  // (2026-10-12, the editor) deleting a creation: the database's reasons our server names by codes of their own (inf-api.js
+  // JOB_WHY: "gone" and "making" mean other things for an influencer)
+  for (const why of ['in_use']) {
+    assert.match(api, new RegExp(`\\b${why}: 'job_${why}'`), why);
+    own.add(why);
+  }
+  for (const why of ['job_gone', 'job_making', 'job_in_use']) assert.ok(codes.has(why) && AW.errorText(why) !== GENERIC, why);
   assert.ok(codes.size > 50 && codes.has('done') && codes.has('needs_photo') && codes.has('sold_out') && codes.has('no_slot') && codes.has('prizes_off'));
   for (const code of codes) {
     if (own.has(code) || code === 'busy') continue;
@@ -1996,8 +2235,15 @@ test('the app\'s words: prices, perks, what\'s being made, why something couldn\
 test('an influencer as typed: its name, its choices and its words checked before any credit is spent', () => {
   const base = { name: '  Nova  ', mode: 'design', style: 'anime', settings: { look: 'feminine', age: '20s', hair: 'pink', cut: '', vibe: 'playful' }, words: '  likes   neon  ' };
   assert.deepEqual(checkStart(base), {
-    ok: true, name: 'Nova', mode: 'design', style: 'anime', settings: { look: 'feminine', age: '20s', hair: 'pink', vibe: 'playful' }, words: 'likes neon',
+    ok: true, name: 'Nova', mode: 'design', style: 'anime', way: 'looks', settings: { look: 'feminine', age: '20s', hair: 'pink', vibe: 'playful' }, words: 'likes neon',
   });
+  // (2026-10-11) its style is optional: none is 'auto' (its words' style, else a photo look; from a picture, the picture's own)
+  for (const style of [undefined, null, '', 'auto']) assert.equal(checkStart({ ...base, style }).style, 'auto', String(style));
+  for (const style of ['storybook', 'watercolor', 'pixel', 'cyberpunk']) assert.equal(checkStart({ ...base, style }).style, style);
+  // …and one from a picture has a way to start: its 4 looks, just its full body, or the photo as it is (its own look: 'auto')
+  const pic = { ...base, mode: 'picture', settings: { outfit: 'cozy' } };
+  assert.deepEqual([checkStart(pic).way, checkStart({ ...pic, way: 'looks' }).way, checkStart({ ...pic, way: 'body' }).way], ['looks', 'looks', 'body']);
+  assert.deepEqual([checkStart({ ...pic, way: 'body' }).style, checkStart({ ...pic, way: 'asis' }).style, checkStart({ ...pic, way: 'asis' }).way], ['anime', 'auto', 'asis']);
   const no = (patch, field, why) => assert.deepEqual(checkStart({ ...base, ...patch }), { ok: false, field, why }, JSON.stringify(patch));
   no({ mode: 'clone' }, 'mode', 'empty');
   no({ mode: undefined }, 'mode', 'empty');
@@ -2008,7 +2254,14 @@ test('an influencer as typed: its name, its choices and its words checked before
   no({ name: 'Elon Musk' }, 'name', 'person');
   no({ name: 'AGI-1 Official' }, 'name', 'her');
   no({ name: 'Pikachu' }, 'name', 'character');
-  no({ style: 'pixel' }, 'style', 'empty');
+  no({ style: 'chibi' }, 'style', 'bad');
+  no({ style: 'toString' }, 'style', 'bad');
+  no({ style: 7 }, 'style', 'bad');
+  no({ way: 'body' }, 'way', 'bad');                                    // (designed: always its 4 looks)
+  no({ way: 'asis' }, 'way', 'bad');
+  no({ mode: 'picture', way: 'fast' }, 'way', 'bad');
+  no({ mode: 'picture', way: 1 }, 'way', 'bad');
+  no({ mode: 'picture', way: 'hasOwnProperty' }, 'way', 'bad');
   no({ settings: { look: 'feminine', age: '15' } }, 'age', 'bad');
   no({ settings: { look: 'feminine', age: '20s', wings: 'yes' } }, 'settings', 'bad');
   no({ settings: { look: 'feminine', age: '20s', hair: 7 } }, 'hair', 'bad');
@@ -2050,7 +2303,40 @@ test('the words the AI services get: an original adult, the same character, fami
   assert.doesNotMatch(looksPrompt({ mode: 'picture', real: false, style: 'anime', settings: {} }), /person in the photo/);
   assert.match(bodyPrompt({ style: 'anime', settings: {} }), /standing and facing the camera, the whole body visible from head to shoes/);
   assert.doesNotMatch(bodyPrompt({ style: 'real', settings: {} }), /second picture/);
-  assert.match(bodyPrompt({ style: 'real', settings: {} }, { withSelfie: true }), /The second picture shows their real face: keep it exactly\./);
+  // (2026-10-11, the owner: "when i upload a full body model already in the froom my photo … now the leg part is different")
+  // one made from a picture: its full body from its look AND the picture (the second one), whose body shape, legs, shoes and
+  // outfit (unless one was picked) are kept, and a real person's face
+  assert.match(bodyPrompt({ mode: 'picture', real: true, style: 'real', settings: {} }, { withSource: true }),
+    / The second picture is the original photo it comes from: keep the body shape, the outfit, the legs and the shoes exactly as in it, and the real face exactly\. /);
+  const picked = bodyPrompt({ mode: 'picture', style: 'anime', settings: { outfit: 'cozy' } }, { withSource: true });
+  assert.match(picked, /wearing a cozy knit sweater\. The second picture is the original picture it comes from: keep the body shape, the legs and the shoes exactly as in it\. /);
+  assert.doesNotMatch(picked, /real face/);
+  assert.doesNotMatch(bodyPrompt({ mode: 'design', style: 'real', settings: {} }, { withSource: true }), /second picture/);
+  // "Just its full body": made straight from the picture (the only one), in its style or, with none picked, the picture's own
+  assert.match(bodyPrompt({ mode: 'picture', real: true, style: 'auto', settings: {} }, { way: 'body' }),
+    /^A full-body picture, in exactly the same art style as the picture \(a photo stays a photo, a drawing stays a drawing\), of the person in the picture, standing and facing the camera, the whole body visible from head to shoes, arms relaxed slightly away from the body\. Keep the face, hair, skin, body shape, outfit, legs and shoes exactly as in the picture; anything the picture doesn't show is made to match it\. Keep their real face exactly\. A plain light grey studio background/);
+  const bodyWay = bodyPrompt({ mode: 'picture', style: 'storybook', settings: { outfit: 'street' }, words: 'round glasses' }, { way: 'body' });
+  assert.match(bodyWay, /^A hand-painted storybook anime full-body picture \(soft painterly colors.*\) of the character in the picture,/);
+  assert.match(bodyWay, /exactly as in the picture, but wearing streetwear \(an oversized hoodie and sneakers\); /);
+  assert.match(bodyWay, /The character is an adult\. Family-friendly, fully clothed\. No text, no logos, no watermark\. Details: Round glasses\.$/);
+  assert.doesNotMatch(bodyWay, /real face|second picture/);
+  // no style picked: designed, its words' style (else a photo look); from a picture, the picture's own; everything after keeps it
+  assert.match(looksPrompt({ mode: 'design', style: 'auto', settings: { look: 'feminine', age: '20s' } }), /^A photorealistic portrait photo of a woman in their twenties\./);
+  assert.match(looksPrompt({ mode: 'design', style: 'auto', settings: { look: 'feminine', age: '20s' }, words: 'in watercolor' }), /^A portrait \(photorealistic, unless the details below name another art style\) of a woman in their twenties\..*Details: In watercolor\.$/);
+  assert.match(looksPrompt({ mode: 'picture', style: 'auto', settings: {} }), /^A portrait, in exactly the same art style as the picture \(a photo stays a photo, a drawing stays a drawing\), of the character in the picture/);
+  assert.match(bodyPrompt({ mode: 'picture', style: 'auto', settings: {} }), /^A full-body picture, in exactly the same art style, of this exact character \(the first picture\)/);
+  assert.match(photoPrompt({ mode: 'design', style: 'auto', settings: {} }, 'at a café'), /^A picture, in exactly the same art style, of this exact character/);
+  // its 26 styles: each its own words for every picture and video, never a studio's, a brand's or an artist's name
+  for (const style of Object.keys(R.INF_STYLES)) {
+    const inf = { mode: 'design', style, settings: { look: 'feminine', age: '20s' } };
+    const words = [looksPrompt(inf), bodyPrompt(inf), photoPrompt(inf, 'at a café'), clipPrompt(inf, 'waves hello')];
+    // (a trend video's and a scene video's words name their pictures as @Element1 and @Image1: the AI service's own names)
+    for (const t of words) assert.equal(trouble(t), null, `${style}: ${t}`);
+    for (const t of [...words, swapPrompt(inf), sceneVideoPrompt(inf, 'waves hello')]) {
+      assert.doesNotMatch(t, /ghibli|miyazaki|pixar|disney|dreamworks|lego|funko|sanrio|nintendo|minecraft|marvel|hokusai|warhol|undefined|null/i, `${style}: ${t}`);
+    }
+    if (['toy', 'plush'].includes(style)) assert.match(looksPrompt(inf), /adult proportions/, style);
+  }
   assert.match(photoPrompt({ style: 'real', settings: {} }, 'at a café, morning light'), /^A photorealistic photo of this exact character .* At a café, morning light\. A scene may change the outfit, never to less covered\./);
   // (round 2) a trend video: the influencer (@Element1) in place of the clip's person, everything else of the clip kept
   assert.match(swapPrompt({ style: 'toon' }), /^Replace the main person in the video with @Element1, keeping @Element1's face, hair, body, outfit and stylized 3D cartoon look exactly the same\. Keep everything else in the video exactly as it is: the same movements, expressions and timing, the same camera motion, the same place, background and lighting\./);
@@ -2067,6 +2353,15 @@ test('the words the AI services get: an original adult, the same character, fami
   assert.equal(sceneWay({ style: 'toon', mode: 'picture' }), 'reference');
   assert.equal(sceneWay({ style: 'real', mode: 'design' }), 'needs_photo');
   assert.equal(sceneWay({ style: 'anime', mode: 'face' }), 'needs_photo');
+  // (2026-10-11) the drawn styles (src/studio/rules.js drawnStyle) from the full body, in their own motion words; a photo look or a
+  // painted style that can come out true to life from a photo; no style picked: a drawing's from its full body, a photo's not
+  for (const s of ['storybook', 'manga', 'clay', 'plush', 'watercolor', 'papercut']) assert.equal(sceneWay({ style: s, mode: 'design' }), 'reference', s);
+  for (const s of ['film', 'cinematic', 'oil', 'fantasy', 'cyberpunk']) assert.equal(sceneWay({ style: s, mode: 'design' }), 'needs_photo', s);
+  assert.deepEqual([sceneWay({ style: 'auto', mode: 'picture', real: false }), sceneWay({ style: 'auto', mode: 'picture', real: true }), sceneWay({ style: 'auto', mode: 'design' })],
+    ['reference', 'needs_photo', 'needs_photo']);
+  assert.deepEqual([sceneWay({ style: 'oil', mode: 'design' }, { model: 'anime' }), sceneWay({ style: 'storybook', mode: 'design' }, { model: 'anime' })], ['no_anime', 'reference']);
+  assert.match(sceneVideoPrompt({ style: 'storybook' }, 'spins in a field of flowers'), /Spins in a field of flowers\. Hand-painted storybook anime animation, soft painterly colors and gentle warm light, one continuous shot/);
+  assert.match(sceneVideoPrompt({ style: 'auto', mode: 'picture' }, 'waves'), /Waves\. Animation in exactly the same style as @Image1, one continuous shot/);
   // (round 2) the owner's trend clips: a cinematic vertical scene with its camera move and its sound, exactly one made-up young
   // adult in the middle (whose place an influencer takes), no speech or singing, no text
   for (const t of R.TRENDS) {
@@ -2112,18 +2407,30 @@ test('the AI service\'s requests: each kind of job, made from short-lived addres
   assert.throws(() => jobRequest(cfg, job('looks', { inf_mode: 'face' }), { source: 'http://insecure.example/x.jpg' }), asRequest);
   r = jobRequest(cfg, job('body', { inf_mode: 'face', inf_style: 'real' }), { look: u('look'), source: u('selfie') });
   assert.deepEqual([r.model, r.input.image_urls, r.input.aspect_ratio, r.input.num_images], [MODELS.edit, [u('look'), u('selfie')], '9:16', 1]);
-  assert.match(r.input.prompt, /The second picture shows their real face/);
+  assert.match(r.input.prompt, /The second picture is the original photo it comes from: .*and the real face exactly\./);
   r = jobRequest(cfg, job('body', { inf_mode: 'face' }), { look: u('look') });
   assert.deepEqual(r.input.image_urls, [u('look')]);
   assert.doesNotMatch(r.input.prompt, /second picture/);
-  // (round 2) a photo of a real person: its photo with its look, like a selfie was; a drawing's full body from its look alone
+  // (round 2) a photo of a real person: its photo with its look, like a selfie was. (2026-10-11, the owner: "when i upload a
+  // full body model already in the froom my photo … now the leg part is different") a drawing's too: its body shape, outfit,
+  // legs and shoes kept from it; designed: its look alone
   r = jobRequest(cfg, job('body', { inf_mode: 'picture', inf_real: true, inf_style: 'real' }), { look: u('look'), source: u('photo') });
   assert.deepEqual([r.input.image_urls, r.input.aspect_ratio], [[u('look'), u('photo')], '9:16']);
-  assert.match(r.input.prompt, /The second picture shows their real face: keep it exactly\./);
+  assert.match(r.input.prompt, /keep the body shape, the outfit, the legs and the shoes exactly as in it, and the real face exactly\./);
   r = jobRequest(cfg, job('body', { inf_mode: 'picture' }), { look: u('look'), source: u('drawing') });
+  assert.deepEqual(r.input.image_urls, [u('look'), u('drawing')]);
+  assert.match(r.input.prompt, /The second picture is the original picture it comes from: keep the body shape, the outfit, the legs and the shoes exactly as in it\. /);
+  r = jobRequest(cfg, job('body', { inf_mode: 'picture' }), { look: u('look') });                // (its picture gone: its look alone)
   assert.deepEqual(r.input.image_urls, [u('look')]);
-  assert.doesNotMatch(r.input.prompt, /second picture/);
+  r = jobRequest(cfg, job('body'), { look: u('look'), source: u('drawing') });
+  assert.deepEqual(r.input.image_urls, [u('look')]);
   assert.throws(() => jobRequest(cfg, job('body'), {}), asRequest);
+  // "Just its full body": straight from its picture, the only one; "as it is": no AI at all (never a request)
+  r = jobRequest(cfg, job('body', { inf_mode: 'picture', inf_way: 'body', inf_real: true, inf_style: 'auto' }), { look: u('look'), source: u('photo') });
+  assert.deepEqual([r.model, r.input.image_urls, r.input.aspect_ratio, r.input.num_images], [MODELS.edit, [u('photo')], '9:16', 1]);
+  assert.equal(r.input.prompt, bodyPrompt({ mode: 'picture', real: true, style: 'auto', settings: { look: 'feminine', age: '20s' }, words: '' }, { way: 'body' }));
+  assert.throws(() => jobRequest(cfg, job('body', { inf_mode: 'picture', inf_way: 'body' }), { look: u('look') }), asRequest);
+  assert.throws(() => jobRequest(cfg, job('body', { inf_mode: 'picture', inf_way: 'asis' }), { source: u('photo') }), asRequest);
   r = jobRequest(cfg, job('photo', { scene: 'at the beach', shape: 'wide' }), { body: u('body') });
   assert.deepEqual([r.model, r.input.aspect_ratio, r.input.image_urls], [MODELS.edit, '16:9', [u('body')]]);
   // (round 2) a trend video: the influencer put into one of the owner's trend clips (its sound kept) or their own clip (none
@@ -2177,22 +2484,32 @@ test('the AI service\'s requests: each kind of job, made from short-lived addres
 test('the AI checks of an upload and of a video: what each says no to, failing closed, never the key', async () => {
   const cfg = cfgNow();
   const jpg = await sharp(PNG).jpeg().toBuffer();
-  assert.deepEqual(await checkPicture(cfg, jpg), { ok: true, real: false });
+  assert.deepEqual(await checkPicture(cfg, jpg), { ok: true, real: false, full: false, head: null });
   const g = geminiCalls()[0];
   assert.deepEqual([g.which, g.model, g.key], ['picture', 'gemini-3.1-flash-lite', GEMINI_KEY]);
   assert.equal(g.body.contents[0].parts[0].inlineData.mimeType, 'image/jpeg');
   assert.ok(Buffer.from(g.body.contents[0].parts[0].inlineData.data, 'base64').equals(jpg));
   assert.equal(g.body.generationConfig.responseMimeType, 'application/json');
   assert.deepEqual(g.body.generationConfig.thinkingConfig, { thinkingLevel: 'MINIMAL' });
-  assert.deepEqual(g.body.generationConfig.responseJsonSchema.required, ['people', 'photo', 'apparentAge', 'adult', 'famous', 'famousSure', 'known', 'explicit', 'hateful', 'violent', 'other']);
+  assert.deepEqual(g.body.generationConfig.responseJsonSchema.required, ['people', 'photo', 'apparentAge', 'adult', 'famous', 'famousSure', 'known', 'explicit', 'hateful', 'violent', 'other', 'full', 'head']);
   assert.ok(Array.isArray(g.body.safetySettings) && g.body.safetySettings.length >= 4);
   const say = async (fn, which, verdict, ...args) => { fake.gemini[which] = verdict; try { return await fn(cfg, ...args); } finally { fake.gemini[which] = null; } };
   // (round 2) one check for "From a photo": a photo of a real person is allowed (its uploader ticked the box) and said so (its
   // influencer is private); never a famous person, someone else's character, a minor (a photo: 21 or older, to be sure), more
   // than one, or anything not family-friendly
   const pic = (v) => say(checkPicture, 'picture', v, jpg);
-  assert.deepEqual(await pic({ photo: true }), { ok: true, real: true });
-  assert.deepEqual(await pic({ photo: true, apparentAge: 21 }), { ok: true, real: true });
+  assert.deepEqual(await pic({ photo: true }), { ok: true, real: true, full: false, head: null });
+  assert.deepEqual(await pic({ photo: true, apparentAge: 21 }), { ok: true, real: true, full: false, head: null });
+  // (2026-10-11, the owner: "if they already have a full body they can skip the first generate") whether it shows the whole
+  // person, head to feet (then it may be used as it is), and where its head is (its portrait is cut there): a head box the AI
+  // gives that isn't one is none; a head taller than 45% of the picture is never a whole body
+  assert.deepEqual(await pic({ photo: true, full: true, head: [40, 420, 190, 580] }), { ok: true, real: true, full: true, head: [40, 420, 190, 580] });
+  assert.deepEqual(await pic({ full: true, head: [100, 300, 600, 700] }), { ok: true, real: false, full: false, head: [100, 300, 600, 700] });
+  assert.deepEqual(await pic({ full: true, head: [100, 300, 105, 700] }), { ok: true, real: false, full: true, head: null });
+  for (const head of [[0, 0, 1001, 10], [-1, 0, 100, 100], [1.5, 0, 100, 100], [0, 0, 100], 'x', null]) assert.deepEqual(headBox(head), null, JSON.stringify(head));
+  assert.deepEqual(headBox([0, 0, 1000, 1000]), [0, 0, 1000, 1000]);
+  assert.deepEqual(await pic({ full: 'yes' }), { ok: true, real: false, full: false, head: null });
+  assert.match(g.body.systemInstruction.parts[0].text, /full: the whole main person or character is in the picture, from the top of the head to the feet/);
   for (const [verdict, why] of [[{ people: 0 }, 'none'], [{ people: 2 }, 'many'], [{ adult: false }, 'minor'], [{ photo: true, apparentAge: 19 }, 'minor'],
     [{ photo: true, apparentAge: null }, 'minor'], [{ famous: true, famousSure: 90 }, 'famous'], [{ photo: true, famous: true, famousSure: 70 }, 'famous'],
     [{ photo: true, famous: true, famousSure: null }, 'famous'], [{ known: true }, 'copyright'],
@@ -2204,7 +2521,7 @@ test('the AI checks of an upload and of a video: what each says no to, failing c
   // model-style or styled photo of someone it doesn't recognize, an original character drawn in a popular style pass
   assert.equal(FAMOUS_SURE, 70);
   for (const v of [{ photo: true, famous: true, famousSure: 69 }, { photo: true, famous: false, famousSure: 95 }, { famous: true, famousSure: 20 }]) {
-    assert.deepEqual(await pic(v), { ok: true, real: v.photo === true }, JSON.stringify(v));
+    assert.deepEqual(await pic(v), { ok: true, real: v.photo === true, full: false, head: null }, JSON.stringify(v));
   }
   for (const words of [/only resembles a famous person/, /merely looks like a model or an influencer/, /red-carpet-style photo of someone you do not recognize/,
     /an original character drawn in a popular style/, /small or blurred people in the background do not count/, /a costume or fantasy prop held in a family-friendly way is fine/]) {
@@ -2405,7 +2722,7 @@ test('a picture or a photo: made plain, then looked at by the AI check before an
   // a character's picture: kept as a plain JPEG (no EXIF), its upload "ok"
   let o = await open('picture', JPEG_EXIF);
   let r = await send(o, JPEG_EXIF);
-  assert.deepEqual([r.status, r.body], [200, { ok: true, id: o.id, status: 'ok', real: false }]);
+  assert.deepEqual([r.status, r.body], [200, { ok: true, id: o.id, status: 'ok', real: false, full: false }]);
   assert.deepEqual([fake.db.uploads.get(o.id).status, fake.db.uploads.get(o.id).real], ['ok', false]);
   const kept = fake.storage.get(`up/${o.id}.jpg`);
   assert.equal(kept.type, 'image/jpeg');
@@ -2419,9 +2736,46 @@ test('a picture or a photo: made plain, then looked at by the AI check before an
   o = await open('picture', PNG);
   fake.gemini.picture = { photo: true };
   r = await send(o, PNG);
-  assert.deepEqual([r.status, r.body], [200, { ok: true, id: o.id, status: 'ok', real: true }]);
+  assert.deepEqual([r.status, r.body], [200, { ok: true, id: o.id, status: 'ok', real: true, full: false }]);
   assert.deepEqual([fake.db.uploads.get(o.id).status, fake.db.uploads.get(o.id).real], ['ok', true]);
   assert.equal(dbCalls('inf_upload_set').at(-1).p_real, true);
+  // (2026-10-11) the whole person, head to feet: said so (it may then be used as it is), and where its head is, kept
+  const HEAD = [40, 420, 160, 580];
+  o = await open('picture', PNG);
+  fake.gemini.picture = { photo: true, full: true, head: HEAD };
+  r = await send(o, PNG);
+  assert.deepEqual([r.status, r.body], [200, { ok: true, id: o.id, status: 'ok', real: true, full: true }]);
+  assert.deepEqual([fake.db.uploads.get(o.id).whole, fake.db.uploads.get(o.id).head], [true, HEAD]);
+  assert.deepEqual([dbCalls('inf_upload_set').at(-1).p_whole, dbCalls('inf_upload_set').at(-1).p_head], [true, HEAD]);
+  // a head taller than 45% of it is never a whole body (its box kept); a box that isn't one is none (the whole body kept)
+  o = await open('picture', PNG);
+  fake.gemini.picture = { full: true, head: [100, 300, 600, 700] };
+  r = await send(o, PNG);
+  assert.deepEqual([r.status, r.body.full, fake.db.uploads.get(o.id).whole, fake.db.uploads.get(o.id).head], [200, false, false, [100, 300, 600, 700]]);
+  for (const head of [[100, 300, 105, 700], [100, 300, 400], [-5, 300, 400, 700], [100.5, 300, 400, 700], 'top', null]) {
+    o = await open('picture', PNG);
+    fake.gemini.picture = { full: true, head };
+    r = await send(o, PNG);
+    assert.deepEqual([r.status, r.body.full, fake.db.uploads.get(o.id).whole, fake.db.uploads.get(o.id).head], [200, true, true, null], String(head));
+    infActBurst.reset();
+  }
+  // a reference picture never says so (it isn't a person)
+  o = await open('ref', PNG);
+  r = await send(o, PNG);
+  assert.deepEqual([r.status, r.body], [200, { ok: true, id: o.id, status: 'ok', real: false }]);
+  assert.equal(Object.hasOwn(dbCalls('inf_upload_set').at(-1), 'p_whole'), false);
+  // an influencers.sql from before it (inf_upload_set without them): kept without them, never "as it is", said once
+  fake.oldArgs.set('inf_upload_set', ['p_whole', 'p_head']);
+  for (let n = 0; n < 2; n++) {
+    o = await open('picture', PNG);
+    fake.gemini.picture = { full: true, head: HEAD };
+    r = await send(o, PNG);
+    assert.deepEqual([r.status, r.body.full, fake.db.uploads.get(o.id).status, fake.db.uploads.get(o.id).whole], [200, false, 'ok', false]);
+  }
+  assert.equal(logs.filter((l) => /from before 2026-10-11: a picture is kept without whether it shows the whole person/.test(l)).length, 1);
+  fake.oldArgs.clear();
+  fake.gemini.picture = null;
+  infActBurst.reset();
   // …but never someone who may be under 21 in a photo, or a famous person
   for (const [verdict, why] of [[{ photo: true, apparentAge: 19 }, 'minor'], [{ photo: true, famous: true, famousSure: 95 }, 'famous']]) {
     o = await open('picture', PNG);
@@ -2675,7 +3029,8 @@ test('credits: a holder\'s free ones once a month (while the site\'s last), its 
   let r = await act('inf-me', {}, { wallet: w3, level: 3 });
   assert.equal(r.status, 200);
   assert.deepEqual([r.body.free, r.body.credits], [{ granted: true, why: null, free: 400 }, CR(0, 400)]);
-  assert.deepEqual(r.body.prices, { influencer: 60, looks: 24, photo: 9, banner: 13, trend: 180, video: 240, model: 300 });
+  // ((2026-10-11) from a photo: just its full body 20, used as it is 10, a Soulmate's 40% off)
+  assert.deepEqual(r.body.prices, { influencer: 60, looks: 24, photo: 9, banner: 13, trend: 180, video: 240, model: 300, body: 12, asis: 6 });
   assert.deepEqual([r.body.level, r.body.allowed, r.body.owner, r.body.influencers], [3, true, false, []]);
   // (round 2) its slots (STUDIO_SLOTS: 5 influencers at all, more unlocked by burning), its burn unlocks and its weekly prizes
   assert.deepEqual([r.body.slots, r.body.burns, r.body.weeks], [{ used: 0, extra: 0, max: 5 }, [], []]);
@@ -3001,7 +3356,11 @@ test('from a picture or a photo: what it\'s made from signed for the AI service,
   await act('inf-pick', { id, look: 0 });
   const body = [...fake.db.jobs.values()].find((j) => j.inf_id === id && j.kind === 'body');
   await tick(body.id);
-  assert.equal(falCalls().at(-1).body.image_urls.length, 1);                   // (its full body from its look alone)
+  // (2026-10-11, the owner: "the leg part is different") its full body from its look, and the picture it came from: its body,
+  // outfit, legs and shoes kept as they are there (a drawing's too, not only a photo's)
+  assert.deepEqual(falCalls().at(-1).body.image_urls.map((u) => new URL(u).pathname.split('agi1-characters/')[1]), [picPath(id, job, 0), `up/${pic}.jpg`]);
+  assert.match(falCalls().at(-1).body.prompt, /The second picture is the original picture it comes from: keep the body shape, the outfit, the legs and the shoes exactly as in it\./);
+  assert.doesNotMatch(falCalls().at(-1).body.prompt, /real face/);
   assert.equal((await finish(body.id)).state, 'done');
   assert.equal(fake.storage.has(`up/${pic}.jpg`), false);
   // (round 2) a photo of a real person (its box ticked when it was uploaded): its looks keep the face recognizable, and the
@@ -3019,7 +3378,7 @@ test('from a picture or a photo: what it\'s made from signed for the AI service,
   await tick(fb.id);
   const sent = falCalls().at(-1).body;
   assert.deepEqual(sent.image_urls.map((u) => new URL(u).pathname.split('agi1-characters/')[1]), [picPath(f.id, f.job, 3), `up/${photo}.jpg`]);
-  assert.match(sent.prompt, /The second picture shows their real face/);
+  assert.match(sent.prompt, /The second picture is the original photo it comes from: keep the body shape, the outfit, the legs and the shoes exactly as in it, and the real face exactly\./);
   assert.equal((await finish(fb.id)).state, 'done');
   assert.equal(fake.storage.has(`up/${photo}.jpg`), false);
   // its picture gone before its looks are made: it can't be made, its credits come back
@@ -3030,6 +3389,145 @@ test('from a picture or a photo: what it\'s made from signed for the AI service,
   assert.equal((await tick(r.body.job)).state, 'failed');
   assert.deepEqual([fake.db.jobs.get(r.body.job).error, fake.db.infs.get(r.body.id).status], ['source', 'failed']);
   assert.equal(credits().paid, paid + 100);
+});
+
+test('(2026-10-11) from a photo, three ways (the owner: "they can skip the first generate so they can save credits or maybe just crop it"): 4 looks, just its full body (from the photo alone, its portrait cut around its head), or the photo as it is (no AI, only a photo of the whole person); every file\'s name one Storage takes', async () => {
+  const Fz = await import('../server/studio-files.js');
+  const J = await import('../server/inf-jobs.js');
+  const { bodyPrompt } = await import('../server/inf-words.js');
+  // every name a job's files are kept under is one Storage takes (an HD photo's download, a long video's parts and their last
+  // frames weren't, until 2026-10-11: those jobs couldn't be kept), and nothing else
+  const inf = idOf('nameinf'), job = idOf('namejob');
+  for (const name of [J.picPath(inf, job, 0), J.picPath(inf, job, 3, 'webp'), J.hdPath(inf, job, 0), J.hdPath(inf, job, 3), J.partPath(inf, job, 0),
+    J.partPath(inf, job, R.partsOf(R.LONG.MAX_S) - 1), J.framePath(inf, job, 0), J.framePath(inf, job, R.partsOf(R.LONG.MAX_S) - 2),
+    J.videoPath({ kind: 'video', id: job, inf_id: inf }), J.posterPath({ kind: 'trend', id: job, inf_id: inf }), J.videoPath({ kind: 'preset', id: job }),
+    J.posterPath({ kind: 'preset', id: job }), J.markedPath(inf, job), J.examplePath(job), `up/${job}.jpg`, `up/${job}.mp4`, `up/${job}/0.part`, `up/${job}/f2.jpg`]) {
+    assert.ok(Fz.NAME.test(name), name);
+  }
+  for (const name of [J.picPath(inf, job, 4), J.partPath(inf, job, 4), `inf/${inf}/${job}-0.png`, `inf/${inf}/../${job}.mp4`, `inf/${inf}/${job}.mp4.exe`,
+    `inf/${inf}/${job}`, `trends/${job}.jpg`]) {
+    assert.equal(Fz.NAME.test(name), false, name);
+  }
+
+  // its portrait, cut around its head: a square of about 2.4 heads with the head in its upper part, made 768 px (384 px for
+  // the pages); without its head's box, the top middle
+  const figure = await fullBody();
+  const red = (m) => m[0] > 170 && m[1] < 110 && m[2] < 110, blue = (m) => m[2] > 150 && m[0] < 110;
+  let face = await J.portraitOf(sharp, figure, HEAD_BOX);
+  assert.deepEqual([(await sharp(face.jpg).metadata()).width, (await sharp(face.jpg).metadata()).height, (await sharp(face.webp).metadata()).width], [768, 768, 384]);
+  // (cut around its head: its head's top about a tenth down, room above it; the top middle would start higher)
+  const aroundHead = async (jpg) => red(await meanOf(jpg, 354, 100, 60, 20)) && red(await meanOf(jpg, 354, 207, 60, 60)) && !red(await meanOf(jpg, 354, 5, 60, 30));
+  assert.ok(await aroundHead(face.jpg), 'its head in its upper middle');
+  assert.ok(blue(await meanOf(face.jpg, 354, 680, 60, 60)), 'its shoulders under it');
+  assert.ok(!red(await meanOf(face.jpg, 0, 0, 40, 40)), 'room around it');
+  face = await J.portraitOf(sharp, figure, null);
+  assert.ok(red(await meanOf(face.jpg, 354, 258, 60, 60)) && !red(await meanOf(face.jpg, 354, 100, 60, 20)), 'the top middle');
+  assert.equal(await aroundHead(face.jpg), false);
+  for (const bad of [[100, 300, 105, 700], 'top', [1, 2, 3]]) assert.ok(await J.portraitOf(sharp, figure, bad), String(bad));
+  assert.equal(await J.portraitOf(sharp, Buffer.from('not a picture')), null);
+  // where its head is in a full body the AI made (the figure on its plain background, its top seventh or so)
+  const found = await J.figureHead(sharp, figure);
+  assert.ok(found.every((v, n) => Math.abs(v - HEAD_BOX[n]) <= 12), JSON.stringify(found));
+  assert.equal(await J.figureHead(sharp, await sharp({ create: { width: 600, height: 1200, channels: 3, background: '#e8e8e8' } }).png().toBuffer()), null);
+  const small = await sharp({ create: { width: 600, height: 1200, channels: 3, background: '#e8e8e8' } })
+    .composite([{ input: { create: { width: 100, height: 200, channels: 3, background: '#2040c0' } }, left: 250, top: 500 }]).png().toBuffer();
+  assert.equal(await J.figureHead(sharp, small), null, 'a figure under 30% of the picture is no full body');
+
+  // ---- "Just its full body": 20 credits (a Stranger's), its full body from its photo alone, in the photo's own look ----
+  giveCredits(1000);
+  let paid = credits().paid;
+  const up = await okUpload('picture');
+  let r = await act('inf-start', { name: 'Kai', mode: 'picture', settings: {}, source: up, way: 'body', adult: true, turnstileToken: 'tok' });
+  assert.equal(r.status, 200);
+  assert.equal(paid - credits().paid, R.PRICES.body);
+  const k = r.body;
+  assert.deepEqual([fake.db.infs.get(k.id).status, fake.db.infs.get(k.id).way, fake.db.infs.get(k.id).style, fake.db.jobs.get(k.job).kind], ['body', 'body', 'auto', 'body']);
+  assert.equal(dbCalls('inf_start').at(-1).p_way, 'body');
+  fake.fal.picture = figure;
+  await tick(k.job);
+  let sent = falCalls().at(-1);
+  assert.equal(sent.path, MODELS.edit);
+  assert.deepEqual(sent.body.image_urls.map((u) => new URL(u).pathname.split('agi1-characters/')[1]), [`up/${up}.jpg`]);
+  assert.deepEqual([sent.body.num_images, sent.body.aspect_ratio], [1, '9:16']);
+  assert.equal(sent.body.prompt, bodyPrompt({ mode: 'picture', real: false, style: 'auto', settings: {}, words: '' }, { way: 'body' }));
+  assert.match(sent.body.prompt, /^A full-body picture, in exactly the same art style as the picture \(a photo stays a photo, a drawing stays a drawing\), of the character in the picture/);
+  assert.match(sent.body.prompt, /Keep the face, hair, skin, body shape, outfit, legs and shoes exactly as in the picture/);
+  // done: its full body (picture 0) and its portrait cut from it around its head (picture 1: its picked look), then ready
+  assert.equal((await finish(k.job)).state, 'done');
+  let i = fake.db.infs.get(k.id);
+  assert.deepEqual([i.status, i.body_job, i.looks_job, i.pick, fake.db.jobs.get(k.job).files], ['ready', k.job, k.job, 1, 2]);
+  assert.deepEqual(stored(`inf/${k.id}/`), [picPath(k.id, k.job, 0), picPath(k.id, k.job, 0, 'webp'), picPath(k.id, k.job, 1), picPath(k.id, k.job, 1, 'webp')].sort());
+  face = fake.storage.get(picPath(k.id, k.job, 1)).bytes;
+  assert.deepEqual([(await sharp(face).metadata()).width, (await sharp(face).metadata()).height], [768, 768]);
+  assert.ok(await aroundHead(face), 'its portrait around its head (where it found it)');
+  assert.equal(fake.storage.has(`up/${up}.jpg`), false);
+  fake.fal.picture = null;
+  // its page: its portrait is its full body's second picture; no looks to pick from (picking or new looks: not now)
+  r = await act('inf-look', { id: k.id });
+  assert.deepEqual([r.body.influencer.way, r.body.influencer.portrait, r.body.influencer.body, r.body.influencer.looks], ['body', { job: k.job, n: 1 }, k.job, undefined]);
+  assert.deepEqual([(await act('inf-pick', { id: k.id, look: 0 })).body.error, (await act('inf-reroll', { id: k.id })).body.error], ['state', 'state']);
+  // its photos start from its full body as any influencer's do
+  r = await act('inf-make', { id: k.id, kind: 'photo', scene: 'reading on a sunny balcony', shape: 'tall' });
+  assert.equal(r.status, 200);
+  await tick(r.body.job);
+  assert.deepEqual(falCalls().at(-1).body.image_urls.map((u) => new URL(u).pathname.split('agi1-characters/')[1]), [picPath(k.id, k.job, 0)]);
+  // its photo gone before it's made: it can't be made, and has no looks to go back to (its 20 credits back, once)
+  const gone = await okUpload('picture');
+  r = await act('inf-start', { name: 'Ash', mode: 'picture', settings: {}, source: gone, way: 'body', adult: true, turnstileToken: 'tok' });
+  fake.storage.delete(`up/${gone}.jpg`);
+  paid = credits().paid;
+  assert.equal((await tick(r.body.job)).state, 'failed');
+  assert.deepEqual([fake.db.infs.get(r.body.id).status, credits().paid], ['failed', paid + R.PRICES.body]);
+  assert.equal(fake.db.log.filter((l) => l.kind === 'refund' && l.ref === r.body.job).length, 1);
+
+  // ---- "Use my photo as it is": 10 credits, no AI, only a photo of the whole person, head to feet, always in its own look ----
+  const whole = await okUpload('picture', { whole: true, head: HEAD_BOX, bytes: figure });
+  const n0 = falCalls().length;
+  paid = credits().paid;
+  r = await act('inf-start', { name: 'Lux', mode: 'picture', style: 'anime', settings: {}, source: whole, way: 'asis', adult: true, turnstileToken: 'tok' });
+  assert.equal(r.status, 200);
+  assert.equal(paid - credits().paid, R.PRICES.asis);
+  const a = r.body;
+  assert.deepEqual([fake.db.infs.get(a.id).way, fake.db.infs.get(a.id).style, fake.db.jobs.get(a.job).kind], ['asis', 'auto', 'body']);
+  // made here at once: its full body is the photo, its portrait cut around its head where the upload check saw it
+  assert.deepEqual(await tick(a.job), { state: 'done', step: 'save' });
+  assert.equal(falCalls().length, n0, 'no AI');
+  i = fake.db.infs.get(a.id);
+  assert.deepEqual([i.status, i.body_job, i.looks_job, i.pick, fake.db.jobs.get(a.job).files], ['ready', a.job, a.job, 1, 2]);
+  const body0 = fake.storage.get(picPath(a.id, a.job, 0)).bytes;
+  assert.deepEqual([(await sharp(body0).metadata()).width, (await sharp(body0).metadata()).height], [600, 1200]);
+  assert.ok(await aroundHead(fake.storage.get(picPath(a.id, a.job, 1)).bytes), 'its portrait around its head (where the upload check saw it)');
+  assert.equal(fake.storage.has(`up/${whole}.jpg`), false);
+  assert.equal((await act('inf-look', { id: a.id })).body.influencer.way, 'asis');
+  // only a photo of the whole person (the upload check said so): else no, nothing spent
+  const half = await okUpload('picture');
+  paid = credits().paid;
+  r = await act('inf-start', { name: 'Mia', mode: 'picture', settings: {}, source: half, way: 'asis', adult: true, turnstileToken: 'tok' });
+  assert.deepEqual([r.status, r.body.error, credits().paid], [409, 'not_full', paid]);
+  // never a way but its 4 looks for a design; never a way it doesn't know
+  infActBurst.reset();
+  for (const way of ['body', 'asis']) {
+    r = await act('inf-start', { name: 'Zed', mode: 'design', settings: { look: 'feminine', age: '20s' }, way, adult: true, turnstileToken: 'tok' });
+    assert.deepEqual([r.status, r.body.error, r.body.field], [422, 'words', 'way'], way);
+  }
+  r = await act('inf-start', { name: 'Zed', mode: 'picture', settings: {}, source: half, way: 'fast', adult: true, turnstileToken: 'tok' });
+  assert.deepEqual([r.status, r.body.field, r.body.why], [422, 'way', 'bad']);
+  // its photo gone before it's made (or no longer a picture): it can't be made, its credits back
+  const lost = await okUpload('picture', { whole: true, head: HEAD_BOX, bytes: figure });
+  r = await act('inf-start', { name: 'Rio', mode: 'picture', settings: {}, source: lost, way: 'asis', adult: true, turnstileToken: 'tok' });
+  fake.storage.set(`up/${lost}.jpg`, { bytes: Buffer.from('not a picture'), type: 'image/jpeg' });
+  paid = credits().paid;
+  assert.equal((await tick(r.body.job)).state, 'failed');
+  assert.deepEqual([fake.db.jobs.get(r.body.job).error, fake.db.infs.get(r.body.id).status, credits().paid], ['source', 'failed', paid + R.PRICES.asis]);
+  // its progress: a few seconds (its own plan), never "about a minute"
+  assert.deepEqual(R.TYPICAL.asis, [['queue', 4], ['save', 4]]);
+  // an influencers.sql from before it (inf_start without its way): "AGI Studio isn't open yet", and the log names the fix
+  fake.oldArgs.set('inf_start', ['p_way']);
+  infActBurst.reset();
+  r = await act('inf-start', { name: 'Old', mode: 'picture', settings: {}, source: await okUpload('picture'), adult: true, turnstileToken: 'tok' });
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  assert.ok(logs.some((l) => /inf_start not found: run supabase\/influencers\.sql again in this Supabase project \(its 26 styles and the ways to start from a photo; it ends with influencers_ready = 1\)/.test(l)));
+  fake.oldArgs.clear();
 });
 
 // ---------- its photos and videos ----------
@@ -3065,8 +3563,10 @@ test('its photos and videos: made from its full body (or one of its photos), che
   // made: looked at before it's kept
   assert.equal((await finish(video)).state, 'done');
   assert.equal(geminiCalls().at(-1).which, 'video');
-  assert.ok(fake.storage.get(`inf/${id}/${video}.mp4`).bytes.equals(fake.fal.video));
-  assert.equal(fake.db.jobs.get(video).bytes, fake.fal.video.length);
+  // (2026-10-12) kept with our hidden AI tag (src/studio/ai-tag.js): the video as made, then its XMP box
+  assert.ok(fake.storage.get(`inf/${id}/${video}.mp4`).bytes.equals(aiTagged(fake.fal.video)));
+  assert.equal(fake.db.jobs.get(video).bytes, aiTagged(fake.fal.video).length);
+  assert.ok(TAG.hasAiTag(fake.storage.get(`inf/${id}/${video}.mp4`).bytes) && !TAG.hasAiTag(fake.fal.video));
   // from one of its photos: image to video (in the photo's shape, whatever was asked)
   r = await make({ kind: 'video', scene: 'the camera slowly zooms in as it smiles', shape: 'square', image: photo, sound: false });
   const fromPhoto = r.body.job;
@@ -3391,8 +3891,9 @@ test('the clock: the jobs whose turn it is, one step each (never one already bei
   assert.ok(before.failed >= 6 && before.gone >= 6);
   assert.equal((await infClock(cfg, { now: at(29) })).tidy, undefined);
   r = await infClock(cfg, { now: at(30), deadline: Date.now() + 19_000 });
-  // (round 4, phase 3: gift links past their days given back to their senders, and invites' rewards caught up: none here)
-  assert.deepEqual(r.tidy, { uploads: 2, infs: 2, jobs: 0, files: 1 + 3 + before.failed + before.gone, gifts: 0, invites: 0 });
+  // (round 4, phase 3: gift links past their days given back to their senders, and invites' rewards caught up: none here;
+  // 2026-10-12: creations their makers deleted a week ago: none here either)
+  assert.deepEqual(r.tidy, { uploads: 2, infs: 2, jobs: 0, files: 1 + 3 + before.failed + before.gone, gifts: 0, invites: 0, creations: 0 });
   assert.deepEqual([fake.db.uploads.has(jpgUp), fake.db.uploads.has(clipUp), fake.db.uploads.has(freshUp)], [false, false, true]);
   assert.deepEqual([stored(`up/${jpgUp}`), stored(`up/${clipUp}`), stored(`up/${freshUp}`)], [[], [], [`up/${freshUp}.jpg`]]);
   assert.deepEqual([filesOf(failed.id), filesOf(gone.id)], [[], []]);
@@ -3489,7 +3990,9 @@ test('Explore and its page: public ones only (never a private one: made from a f
   assert.deepEqual([r.status, r.headers.get('cache-control')], [200, 'public, max-age=10, s-maxage=20']);
   const i = fake.db.infs.get(a.id);
   assert.deepEqual(r.body.influencer, { id: a.id, name: 'Nova', mode: 'design', style: 'anime', status: 'ready', face: false, real: false, private: false,
-    public: true, created: i.created, ready: i.ready, portrait: { job: a.looks, n: 1 }, body: a.body, boosted: null, maker: null });
+    public: true, created: i.created, ready: i.ready, portrait: { job: a.looks, n: 1 }, body: a.body, boosted: null, maker: null, way: 'looks',
+    // (2026-10-11) its picked look (its profile picture is that, until its maker frames one)
+    look: { job: a.looks, n: 1 } });
   assert.deepEqual(r.body.jobs.map((j) => j.id).sort(), [v, v3].sort());
   assert.ok(r.body.jobs.every((j) => j.mine === false && j.cost === undefined && j.error === undefined && j.likes === 0));
   assert.deepEqual([r.body.models, r.body.raw, r.body.mine, r.body.liked], [[], undefined, undefined, undefined]);
@@ -3754,8 +4257,9 @@ test("the owner's credits for testing (round 3): free, to the owner's own wallet
   const owner = read('src/studio/views/owner.js');
   assert.match(owner, /export function giftSection\(ctx, \{ onLetIn = null \} = \{\}\)/);
   // (round 4, phase 2: in the owner's page's own Testing tab, drawn once; the Content tab's sections are what's drawn again;
-  // since 2026-10-11 under "Who can use AGI Studio", which it reads again when a tester's wallet was let in)
-  assert.match(owner, /const access = accessSection\(ctx\);\s*const gift = giftSection\(ctx, \{ onLetIn: \(\) => access\.load\(\) \}\);[\s\S]*?const testing = tabs\.panel\('testing'\);\s*put\(testing, access\.node, gift\);/, 'outside the part the page redraws');
+  // since 2026-10-11 under "Who can use AGI Studio", which it reads again when a tester's wallet was let in; since 2026-10-12
+  // the tab is "Gifts", the owner's gift links of free credits first)
+  assert.match(owner, /const access = accessSection\(ctx\);\s*const links = ownerLinksSection\(ctx\);\s*const gift = giftSection\(ctx, \{ onLetIn: \(\) => access\.load\(\) \}\);[\s\S]*?const testing = tabs\.panel\('testing'\);\s*put\(testing, links\.node, access\.node, gift\);/, 'outside the part the page redraws');
   assert.match(owner, /if \(d\.letIn\) onLetIn\?\.\(\);/);
   assert.match(owner, /function draw\(\) \{\s*put\(body, weeksSection\(\), trendsSection\(\), examplesSection\(\), reportsSection\(\)\);/);
   assert.doesNotMatch(owner.slice(owner.indexOf('function draw()')), /\bgift\b(?!s)/, 'never drawn again');
@@ -4008,6 +4512,385 @@ test('a coin with its face: a launch draft with its look as its picture (no Tele
   fake.db.launch_draft_put = put;
   const args = calls.filter((c) => c.fn === 'launch_draft_put').at(-1).args;
   assert.deepEqual([args.p_minutes > 0, args.p_per_chat > 0, args.p_site_daily > 0], [true, true, true]);
+});
+
+// ---------- (2026-10-11) its profile picture, changed after it's made, and its coin's picture ----------
+// (The owner: "they should have an option to change the profile even after generation and on the launch coin an option to pick
+// the current profile or choose from their own images"; the owner's choices: "Its looks and photos", "Only how it's shown",
+// "Profile or its photos".)
+// A tall picture (300 × 600, pink) with a blue square of 150 px at left 75, top 30: FACE_FRAME cuts exactly that square
+const FACE_FRAME = { x: 250, y: 50, s: 500 };
+const facePic = () => sharp({ create: { width: 300, height: 600, channels: 3, background: { r: 235, g: 120, b: 190 } } })
+  .composite([{ input: { create: { width: 150, height: 150, channels: 3, background: { r: 30, g: 60, b: 225 } } }, left: 75, top: 30 }])
+  .jpeg({ quality: 95 }).toBuffer();
+// blue all over (a picture cut from FACE_FRAME; its edges may carry a little pink from resizing, so not them)
+async function isBlue(bytes) {
+  const { width, height } = await sharp(bytes).metadata();
+  const [r, g, b] = await meanOf(bytes, Math.round(width * 0.06), Math.round(height * 0.06), Math.round(width * 0.88), Math.round(height * 0.88));
+  return b > 180 && r < 90 && g < 110;
+}
+
+test('(2026-10-11) a frame: a square in thousandths of a picture (FRAME), the same square on the page and on our server whatever the picture\'s size; where one starts; its profile picture as the pages show it (portraitRow); a coin picture\'s address (STUDIO_PHOTO, the same in api/launch.js)', () => {
+  assert.deepEqual(R.FRAME, { MIN: 200, SIDE: 1024, SMALL: 384, COIN: 1024 });
+  for (const f of [{ x: 0, y: 0, s: 1000 }, { x: 1000, y: 1000, s: 200 }, FACE_FRAME, { x: 7, y: 993, s: 731 }]) assert.equal(R.isFrame(f), true, JSON.stringify(f));
+  for (const f of [null, undefined, 'x', 7, [], {}, { x: 0, y: 0 }, { x: -1, y: 0, s: 500 }, { x: 0, y: 1001, s: 500 }, { x: 0, y: 0, s: 199 },
+    { x: 0, y: 0, s: 1001 }, { x: 0.5, y: 0, s: 500 }, { x: '10', y: 0, s: 500 }, { x: 0, y: 0, s: NaN }, { x: 0, y: 0, s: Infinity }]) {
+    assert.equal(R.isFrame(f), false, JSON.stringify(f));
+  }
+  // on a picture of 300 × 600: facePic()'s blue square; a corner past its edge is moved back in; all of its width
+  assert.deepEqual(R.frameBox(FACE_FRAME, 300, 600), { left: 75, top: 30, side: 150 });
+  assert.deepEqual(R.frameBox({ x: 1000, y: 1000, s: 500 }, 300, 600), { left: 150, top: 450, side: 150 });
+  assert.deepEqual(R.frameBox({ x: 0, y: 0, s: 1000 }, 640, 960), { left: 0, top: 0, side: 640 });
+  // the same part of a picture and of its small copy (a full body at 1024 × 2048, and its 384 × 768 copy): within a pixel of the small one
+  for (const f of [FACE_FRAME, { x: 120, y: 30, s: 420 }, { x: 600, y: 700, s: 250 }]) {
+    const big = R.frameBox(f, 1024, 2048), small = R.frameBox(f, 384, 768);
+    assert.ok(Math.abs(big.left / 1024 - small.left / 384) <= 1 / 384 && Math.abs(big.top / 2048 - small.top / 768) <= 1 / 768
+      && Math.abs(big.side / 1024 - small.side / 384) <= 1 / 384, JSON.stringify([f, big, small]));
+  }
+  // a frame → its square → its frame again: the same within a thousandth (pixels and thousandths both round), and its square
+  // again within a pixel; whatever square the page has, its frame is one our server takes
+  for (const [W, H] of [[1024, 2048], [640, 960], [1600, 900], [1024, 1024], [300, 600]]) {
+    for (const x of [0, 90, 310]) for (const y of [0, 140, 420]) for (const s of [200, 450, 700]) {
+      const f = { x, y, s };
+      const box = R.frameBox(f, W, H);
+      const back = R.frameFrom(box, W, H);
+      assert.ok(R.isFrame(back), JSON.stringify(back));
+      const short = Math.min(W, H);
+      const inside = (x / 1000) * W + (s / 1000) * short <= W && (y / 1000) * H + (s / 1000) * short <= H;
+      if (inside) assert.ok(Math.abs(back.x - x) <= 1 && Math.abs(back.y - y) <= 1 && Math.abs(back.s - s) <= 1, JSON.stringify([W, H, f, box, back]));
+      const again = R.frameBox(back, W, H);
+      assert.ok(['left', 'top', 'side'].every((k) => Math.abs(again[k] - box[k]) <= 1), JSON.stringify([W, H, f, box, again]));
+    }
+  }
+  for (const box of [{ left: -50, top: 9999, side: 5 }, { left: 0, top: 0, side: 5000 }, { left: 299, top: 599, side: 1 }]) {
+    assert.ok(R.isFrame(R.frameFrom(box, 300, 600)), JSON.stringify(box));
+  }
+  // where a picture starts: all of its shorter side, a tall picture's top (a full body's head and shoulders), a wide one's middle
+  assert.deepEqual(R.frameStart(300, 600), { x: 0, y: 0, s: 1000 });
+  assert.deepEqual(R.frameBox(R.frameStart(300, 600), 300, 600), { left: 0, top: 0, side: 300 });
+  assert.deepEqual(R.frameStart(1600, 900), { x: 219, y: 0, s: 1000 });
+  assert.deepEqual(R.frameBox(R.frameStart(1600, 900), 1600, 900), { left: 350, top: 0, side: 900 });
+  assert.deepEqual(R.frameStart(1024, 1024), { x: 0, y: 0, s: 1000 });
+  // a coin's picture in its draft: one of its pictures, and its frame when its maker framed one; api/launch.js keeps its own copy
+  // (a launch never loads the studio's code), the same
+  const own = /\nconst STUDIO_PHOTO = (\/.+\/);\n/.exec(read('api/launch.js'));
+  assert.ok(own, "api/launch.js's own copy");
+  assert.equal(own[1], String(R.STUDIO_PHOTO));
+  const A1 = idOf('infA'), J1 = idOf('jobB');
+  for (const ok of [`studio:${A1}/${J1}-1`, `studio:${A1}/${J1}-0@250,50,500`, `studio:${A1}/${J1}-3@0,1000,1000`]) assert.ok(R.STUDIO_PHOTO.test(ok), ok);
+  for (const no of [`studio:${A1}/${J1}-4`, `studio:${A1}/${J1}-0@250,50`, `studio:${A1}/${J1}-0@1,2,3,4`, `studio:${A1}/${J1}-0@12345,0,0`,
+    `studio:${A1}/${J1}-0@`, `studio:${A1}/${J1}-0@-1,0,500`, `studio:short/${J1}-0`, 'AgACAgQAAxkBAAIBe2Zfake_file_id', `Studio:${A1}/${J1}-0`,
+    `studio:${A1}/${J1}-0@250,50,500 `]) {
+    assert.equal(R.STUDIO_PHOTO.test(no), false, no);
+  }
+  // its profile picture as the pages show it: its own picture while it and the picture it was framed from are shown, else its
+  // picked look
+  const L = idOf('looksL'), B = idOf('bodyB'), P = idOf('pfpP');
+  const row = { looks_job: L, pick: 2, pfp: { id: P, job: B, n: 0, x: 0, y: 40, s: 500 } };
+  assert.deepEqual(R.portraitRow(row), { job: P, n: 0 });
+  assert.deepEqual(R.portraitRow({ ...row, pfp: null }), { job: L, n: 2 });
+  assert.deepEqual(R.portraitRow(row, (id) => id === P), { job: L, n: 2 }, 'its own picture taken down');
+  assert.deepEqual(R.portraitRow(row, (id) => id === B), { job: L, n: 2 }, 'the picture it was framed from taken down');
+  assert.deepEqual(R.portraitRow(row, (id) => id === idOf('other')), { job: P, n: 0 });
+  for (const pfp of ['x', 7, [], { id: 'nope', job: B }, { id: P, job: 'nope' }, { id: P }]) {
+    assert.deepEqual(R.portraitRow({ ...row, pfp }), { job: L, n: 2 }, JSON.stringify(pfp));
+  }
+  assert.equal(R.portraitRow({ looks_job: L, pick: null }), null);
+  assert.equal(R.portraitRow({ looks_job: null, pick: 1 }), null);
+  assert.equal(R.portraitRow(null), null);
+});
+
+test('(2026-10-11) its profile picture: its maker frames a square in one of its own pictures (its looks, its full body, one of its photos), kept as a picture of its own (free: nothing asked of an AI); shown on its page, in Explore, My studio and the spotlight, from our address; its picked look again; every "no"', async () => {
+  const a = await readyInf({ name: 'Nova' });
+  const other = await readyInf({ wallet: OTHER, name: 'Juno' });
+  // its full body: a tall picture, its face the blue square near its top
+  fake.storage.set(picPath(a.id, a.body, 0), { bytes: await facePic(), type: 'image/jpeg' });
+  const photo = await doneJob(a.id, 'photo');
+  giveCredits(40);
+  const before = credits(), falBefore = falCalls().length, geminiBefore = geminiCalls().length;
+  let r = await act('inf-pfp', { id: a.id, from: { job: a.body, n: 0, ...FACE_FRAME } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.ok, true);
+  const pid = r.body.portrait.job;
+  assert.match(pid, ID);
+  assert.ok(![a.looks, a.body, photo].includes(pid), 'an id of its own (never an old picture under its address)');
+  assert.deepEqual([r.body.portrait, r.body.pfp], [{ job: pid, n: 0 }, { job: a.body, n: 0, ...FACE_FRAME }]);
+  // its two files: a JPEG (the square's own size here, never under FRAME.SMALL) and its small WebP, each only the blue square
+  for (const [ext, type, format] of [['jpg', 'image/jpeg', 'jpeg'], ['webp', 'image/webp', 'webp']]) {
+    const f = fake.storage.get(picPath(a.id, pid, 0, ext));
+    assert.equal(f.type, type);
+    const m = await sharp(f.bytes).metadata();
+    assert.deepEqual([m.format, m.width, m.height], [format, R.FRAME.SMALL, R.FRAME.SMALL]);
+    assert.ok(await isBlue(f.bytes), ext);
+  }
+  // in the database: its id, the picture it was framed from and its frame, under the wallet's code (never its address)
+  assert.deepEqual(fake.db.infs.get(a.id).pfp, { id: pid, job: a.body, n: 0, ...FACE_FRAME });
+  assert.deepEqual(dbCalls('inf_pfp_set').at(-1), { p_id: a.id, p_wallet: codeOf(), p_pfp: { id: pid, job: a.body, n: 0, ...FACE_FRAME } });
+  assert.ok(!JSON.stringify(dbCalls('inf_pfp_set')).toLowerCase().includes(WALLET.slice(2)));
+  // free, and nothing asked of an AI service
+  assert.deepEqual([credits(), falCalls().length, geminiCalls().length], [before, falBefore, geminiBefore]);
+  // its page (its maker's: the frame its picker starts from next time; anyone's: its profile picture only)
+  r = await act('inf-look', { id: a.id });
+  assert.deepEqual([r.body.influencer.portrait, r.body.influencer.look, r.body.influencer.pfp], [{ job: pid, n: 0 }, { job: a.looks, n: 1 }, { job: a.body, n: 0, ...FACE_FRAME }]);
+  r = await get(`inf=${a.id}`);
+  assert.deepEqual([r.body.influencer.portrait, r.body.influencer.look, Object.hasOwn(r.body.influencer, 'pfp')], [{ job: pid, n: 0 }, { job: a.looks, n: 1 }, false]);
+  // Explore (its card, and its photo's), My studio, a spotlight's week
+  r = await get('inf-explore');
+  assert.deepEqual(r.body.influencers.find((i) => i.id === a.id).portrait, { job: pid, n: 0 });
+  assert.deepEqual(r.body.influencers.find((i) => i.id === other.id).portrait, { job: other.looks, n: 1 });
+  assert.deepEqual(r.body.fresh.find((j) => j.id === photo).inf.portrait, { job: pid, n: 0 });
+  r = await act('inf-me');
+  assert.deepEqual(r.body.influencers.find((i) => i.id === a.id).portrait, { job: pid, n: 0 });
+  const week = { week: '2026-10-05', status: 'approved', job: photo, inf_id: a.id, looks_job: a.looks, pick: 1, pfp: fake.db.pfpOf(fake.db.infs.get(a.id).pfp) };
+  assert.deepEqual(W.weekView(week, getConfig()).portrait, { job: pid, n: 0 });
+  // its files from our address (a public one's kept by the CDN a while); nothing else under its id, nor for another influencer
+  for (const [ext, type] of [['jpg', 'image/jpeg'], ['webp', 'image/webp']]) {
+    r = await get(`inf-file=${a.id}/${pid}-0.${ext}`);
+    assert.deepEqual([r.status, r.headers.get('content-type'), r.headers.get('cache-control')], [200, type, 'public, max-age=3600, s-maxage=600']);
+    assert.deepEqual([r.headers.get('content-security-policy'), r.headers.get('x-content-type-options')], ["default-src 'none'; sandbox", 'nosniff']);
+    assert.ok(r.body.equals(fake.storage.get(picPath(a.id, pid, 0, ext)).bytes));
+  }
+  for (const q of [`${a.id}/${pid}-1.jpg`, `${other.id}/${pid}-0.jpg`, `${a.id}/${idOf('nopfp')}-0.webp`]) assert.equal((await get(`inf-file=${q}`)).status, 404, q);
+  // changed again, from one of its looks (all of its width, 640 px: kept at its own size): a new id, the old one's files deleted
+  infActBurst.reset();
+  r = await act('inf-pfp', { id: a.id, from: { job: a.looks, n: 2, x: 0, y: 0, s: 1000 } });
+  assert.equal(r.status, 200);
+  const pid2 = r.body.portrait.job;
+  assert.notEqual(pid2, pid);
+  assert.equal((await sharp(fake.storage.get(picPath(a.id, pid2, 0)).bytes).metadata()).width, 640);
+  assert.deepEqual([fake.storage.has(picPath(a.id, pid, 0)), fake.storage.has(picPath(a.id, pid, 0, 'webp'))], [false, false]);
+  assert.equal((await get(`inf-file=${a.id}/${pid}-0.jpg`)).status, 404, 'the old one is gone');
+  // …and from a wide photo: its middle, all of its height (900 px)
+  const wide = await doneJob(a.id, 'photo', { shape: 'wide' });
+  fake.storage.set(picPath(a.id, wide, 0), { bytes: await sharp({ create: { width: 1600, height: 900, channels: 3, background: { r: 90, g: 200, b: 120 } } }).jpeg().toBuffer(), type: 'image/jpeg' });
+  r = await act('inf-pfp', { id: a.id, from: { job: wide, n: 0, ...R.frameStart(1600, 900) } });
+  assert.equal(r.status, 200);
+  const pid3 = r.body.portrait.job;
+  const m3 = await sharp(fake.storage.get(picPath(a.id, pid3, 0)).bytes).metadata();
+  assert.deepEqual([m3.width, m3.height, r.body.pfp], [900, 900, { job: wide, n: 0, x: 219, y: 0, s: 1000 }]);
+  assert.equal(fake.storage.has(picPath(a.id, pid2, 0)), false);
+  // its own picture taken down (STUDIO_HIDE), or the photo it was framed from hidden: its picked look again, and its file 404
+  process.env.STUDIO_HIDE = pid3;
+  r = await act('inf-look', { id: a.id });
+  assert.deepEqual([r.body.influencer.portrait, r.body.influencer.pfp], [{ job: a.looks, n: 1 }, null]);
+  assert.equal((await get(`inf-file=${a.id}/${pid3}-0.jpg`)).status, 404);
+  const week3 = { ...week, pfp: { id: pid3, job: wide, n: 0, x: 219, y: 0, s: 1000 } };
+  assert.deepEqual([W.weekView(week3, getConfig()).portrait, W.weekView(week3).portrait], [{ job: a.looks, n: 1 }, { job: pid3, n: 0 }]);
+  delete process.env.STUDIO_HIDE;
+  fake.db.jobs.get(wide).hidden = true;
+  r = await get('inf-explore');
+  assert.deepEqual(r.body.influencers.find((i) => i.id === a.id).portrait, { job: a.looks, n: 1 });
+  assert.equal((await get(`inf-file=${a.id}/${pid3}-0.webp`)).status, 404);
+  fake.db.jobs.get(wide).hidden = false;
+  assert.equal((await get(`inf-file=${a.id}/${pid3}-0.webp`)).status, 200);
+  // its picked look again: its own picture's files deleted, nothing kept in its place (and again: nothing to undo, still fine)
+  infActBurst.reset();
+  r = await act('inf-pfp', { id: a.id, from: null });
+  assert.deepEqual([r.status, r.body.ok, r.body.portrait, r.body.pfp], [200, true, { job: a.looks, n: 1 }, null]);
+  assert.deepEqual([fake.db.infs.get(a.id).pfp, stored(`inf/${a.id}/${pid3}`)], [null, []]);
+  r = await act('inf-look', { id: a.id });
+  assert.deepEqual([r.body.influencer.portrait, r.body.influencer.pfp], [{ job: a.looks, n: 1 }, null]);
+  assert.equal((await act('inf-pfp', { id: a.id, from: null })).status, 200);
+  // every "no": nothing kept, nothing changed
+  const video = await doneJob(a.id, 'video');
+  const lost = await doneJob(a.id, 'photo');
+  fake.storage.delete(picPath(a.id, lost, 0));
+  const ivy = await readyInf({ name: 'Ivy' });
+  fake.db.infs.get(ivy.id).status = 'pick';
+  const files = () => stored(`inf/${a.id}/`);
+  const keep = files();
+  const sq = { x: 0, y: 0, s: 500 };
+  for (const [extra, status, error, wallet = WALLET] of [
+    [{ id: a.id, from: 'x' }, 400, 'bad'], [{ id: a.id }, 400, 'bad'], [{ id: a.id, from: [] }, 400, 'bad'],
+    [{ id: a.id, from: { job: a.body, n: 0, x: 0, y: 0, s: 199 } }, 400, 'bad'], [{ id: a.id, from: { job: a.body, n: 0, x: 1001, y: 0, s: 500 } }, 400, 'bad'],
+    [{ id: a.id, from: { job: a.body, n: 4, ...sq } }, 400, 'bad'], [{ id: a.id, from: { job: a.body, n: 0.5, ...sq } }, 400, 'bad'],
+    [{ id: a.id, from: { job: 'nope', n: 0, ...sq } }, 400, 'bad'], [{ id: 'nope', from: null }, 400, 'bad_request'],
+    // not one of its own pictures, done and shown: a video, a picture it hasn't, an unknown one, another influencer's, a lost file
+    [{ id: a.id, from: { job: video, n: 0, ...sq } }, 409, 'picture'], [{ id: a.id, from: { job: photo, n: 1, ...sq } }, 409, 'picture'],
+    [{ id: a.id, from: { job: idOf('nosuchjob'), n: 0, ...sq } }, 409, 'picture'], [{ id: a.id, from: { job: other.looks, n: 0, ...sq } }, 409, 'picture'],
+    [{ id: a.id, from: { job: lost, n: 0, ...sq } }, 409, 'picture'],
+    [{ id: a.id, from: null }, 403, 'not_yours', OTHER], [{ id: other.id, from: { job: other.body, n: 0, ...sq } }, 403, 'not_yours'],
+    [{ id: ivy.id, from: { job: ivy.looks, n: 0, ...sq } }, 409, 'not_ready'], [{ id: idOf('nosuchinf'), from: null }, 404, 'gone'],
+  ]) {
+    infActBurst.reset();
+    r = await act('inf-pfp', extra, { wallet });
+    assert.deepEqual([r.status, r.body.error], [status, error], JSON.stringify(extra));
+  }
+  for (const hide of [() => { fake.db.infs.get(a.id).hidden = true; }, () => { process.env.STUDIO_HIDE = a.id; }]) {
+    hide();
+    infActBurst.reset();
+    r = await act('inf-pfp', { id: a.id, from: { job: a.body, n: 0, ...FACE_FRAME } });
+    assert.deepEqual([r.status, r.body.error], [404, 'gone']);
+    fake.db.infs.get(a.id).hidden = false;
+    delete process.env.STUDIO_HIDE;
+  }
+  assert.deepEqual([files(), fake.db.infs.get(a.id).pfp], [keep, null], 'nothing kept, nothing changed');
+  // our bucket away: "storage" (502), logged
+  fake.storageDown = true;
+  infActBurst.reset();
+  r = await act('inf-pfp', { id: a.id, from: { job: a.body, n: 0, ...FACE_FRAME } });
+  assert.deepEqual([r.status, r.body.error], [502, 'storage']);
+  fake.storageDown = false;
+  assert.ok(logs.some((l) => /\[studio\] a picture for a profile picture: storage HTTP 500/.test(l)), logs.join('\n'));
+  // the database says no once its files are kept (its picture hidden meanwhile, say): its new files deleted at once
+  const setPfp = fake.db.inf_pfp_set;
+  fake.db.inf_pfp_set = () => ({ ok: false, why: 'source' });
+  infActBurst.reset();
+  r = await act('inf-pfp', { id: a.id, from: { job: a.body, n: 0, ...FACE_FRAME } });
+  assert.deepEqual([r.status, r.body.error, files()], [409, 'picture', keep]);
+  fake.db.inf_pfp_set = setPfp;
+  // an influencers.sql from before it: "not_ready" (503), its new files deleted, and the log says what to run
+  fake.missing.add('inf_pfp_set');
+  infActBurst.reset();
+  r = await act('inf-pfp', { id: a.id, from: { job: a.body, n: 0, ...FACE_FRAME } });
+  assert.deepEqual([r.status, r.body.error, files()], [503, 'not_ready', keep]);
+  assert.ok(logs.some((l) => l.includes("inf_pfp_set not found: run supabase/influencers.sql again in this Supabase project (changing an influencer's profile picture; it ends with influencers_ready = 1)")), logs.join('\n'));
+  fake.missing.delete('inf_pfp_set');
+  // a private one (from a photo of a real person): its own picture never kept by the CDN
+  const ana = await readyInf({ name: 'Ana', mode: 'picture', style: 'real', real: true });
+  infActBurst.reset();
+  r = await act('inf-pfp', { id: ana.id, from: { job: ana.body, n: 0, x: 0, y: 0, s: 600 } });
+  assert.equal(r.status, 200);
+  r = await get(`inf-file=${ana.id}/${r.body.portrait.job}-0.webp`);
+  assert.deepEqual([r.status, r.headers.get('cache-control')], [200, 'private, max-age=600']);
+  // deleted: its files go with it (its own picture's too), and none is served
+  infActBurst.reset();
+  r = await act('inf-pfp', { id: a.id, from: { job: a.body, n: 0, ...FACE_FRAME } });
+  const last = r.body.portrait.job;
+  assert.equal((await get(`inf-file=${a.id}/${last}-0.jpg`)).status, 200);
+  infActBurst.reset();
+  assert.equal((await act('inf-delete', { id: a.id })).status, 200);
+  assert.deepEqual(stored(`inf/${a.id}/`), []);
+  assert.equal((await get(`inf-file=${a.id}/${last}-0.jpg`)).status, 404);
+  assert.equal((await act('inf-pfp', { id: a.id, from: null })).body.error, 'gone');
+});
+
+test('(2026-10-11) its coin\'s picture: its profile picture as it is (the default: its picked look, or the square its maker framed) or one of its own pictures framed as a square; kept in the draft as its source and frame, cut as the launch page reads it (1 MB at most), whatever its profile picture becomes; every "no"', async () => {
+  process.env.PINATA_JWT = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.c2lnbmF0dXJl';
+  delete process.env.TELEGRAM_BOT_TOKEN;
+  launchPictureBurst.reset();
+  const { id, looks, body } = await readyInf({ name: 'Nova' });
+  fake.storage.set(picPath(id, body, 0), { bytes: await facePic(), type: 'image/jpeg' });
+  const photo = await doneJob(id, 'photo');
+  const coin = (picture) => { infActBurst.reset(); return act('inf-coin', { id, name: 'Nova', symbol: 'NOVA', ...(picture === undefined ? {} : { picture }) }); };
+  const drafted = (r) => { assert.equal(r.status, 200, JSON.stringify(r.body)); return fake.db.drafts.get(r.body.draft).photo; };
+  const pic = async (draft) => { launchPictureBurst.reset(); return get(`pic=${draft}`); };
+  // the default, 'profile' and null: its profile picture, its picked look (no frame)
+  assert.equal(drafted(await coin()), `studio:${id}/${looks}-1`);
+  assert.equal(drafted(await coin('profile')), `studio:${id}/${looks}-1`);
+  assert.equal(drafted(await coin(null)), `studio:${id}/${looks}-1`);
+  // its maker framed its face in its full body: that's its profile picture now, so its coin's picture by default
+  infActBurst.reset();
+  assert.equal((await act('inf-pfp', { id, from: { job: body, n: 0, ...FACE_FRAME } })).status, 200);
+  let r = await coin();
+  assert.equal(drafted(r), `studio:${id}/${body}-0@250,50,500`);
+  const framed = r.body.draft;
+  r = await pic(framed);
+  assert.deepEqual([r.status, r.headers.get('content-type'), r.headers.get('cache-control')], [200, 'image/jpeg', 'private, max-age=3600']);
+  assert.deepEqual([r.headers.get('content-security-policy'), r.headers.get('x-content-type-options')], ["default-src 'none'; sandbox", 'nosniff']);
+  let meta = await sharp(r.body).metadata();
+  assert.deepEqual([meta.format, meta.width, meta.height], ['jpeg', R.FRAME.SMALL, R.FRAME.SMALL]);
+  assert.ok(await isBlue(r.body));
+  // …and its draft stays whole whatever its profile picture becomes meanwhile (its own picture's files are gone: the draft
+  // holds the picture it was framed from)
+  infActBurst.reset();
+  assert.equal((await act('inf-pfp', { id, from: null })).status, 200);
+  r = await pic(framed);
+  assert.equal(r.status, 200);
+  assert.ok(await isBlue(r.body));
+  // one of its photos, framed (all of its width: 640 px)
+  r = await coin({ job: photo, n: 0, x: 0, y: 0, s: 1000 });
+  assert.equal(drafted(r), `studio:${id}/${photo}-0@0,0,1000`);
+  const fromPhoto = r.body.draft;
+  r = await pic(fromPhoto);
+  meta = await sharp(r.body).metadata();
+  assert.deepEqual([r.status, meta.width, meta.height], [200, 640, 640]);
+  // a big, busy picture: cut at FRAME.COIN px at most, then smaller or plainer until it's 1 MB at most (Launch with AGI-1's limit)
+  const busy = await sharp({ create: { width: 1600, height: 1600, channels: 3, noise: { type: 'gaussian', mean: 128, sigma: 60 } } }).jpeg({ quality: 95 }).toBuffer();
+  assert.ok(busy.length > 1_000_000);
+  fake.storage.set(picPath(id, photo, 0), { bytes: busy, type: 'image/jpeg' });
+  r = await pic(fromPhoto);
+  meta = await sharp(r.body).metadata();
+  assert.ok(r.status === 200 && r.body.length <= 1_000_000 && meta.format === 'jpeg' && meta.width === meta.height && meta.width <= R.FRAME.COIN,
+    JSON.stringify([r.status, r.body.length, meta.width, meta.height]));
+  fake.storage.set(picPath(id, photo, 0), { bytes: await sharp(PNG).jpeg().toBuffer(), type: 'image/jpeg' });
+  // its photo hidden or taken down, its influencer hidden, or its maker banned: no picture (404), then back
+  for (const [off, on] of [
+    [() => { fake.db.jobs.get(photo).hidden = true; }, () => { fake.db.jobs.get(photo).hidden = false; }],
+    [() => { process.env.STUDIO_HIDE = photo; }, () => { delete process.env.STUDIO_HIDE; }],
+    [() => { fake.db.infs.get(id).hidden = true; }, () => { fake.db.infs.get(id).hidden = false; }],
+    [() => { fake.db.infs.get(id).banned = true; }, () => { fake.db.infs.get(id).banned = false; }],
+  ]) {
+    off();
+    r = await pic(fromPhoto);
+    assert.deepEqual([r.status, r.body.error], [404, 'no_picture']);
+    on();
+    assert.equal((await pic(fromPhoto)).status, 200);
+  }
+  // a frame our server wouldn't make (a draft written some other way): no picture
+  fake.db.launch_draft_put({ p_id: idOf('badframe'), p_chat: codeOf(), p_name: 'Nova', p_symbol: 'NOVA', p_desc: '', p_photo: `studio:${id}/${photo}-0@1001,0,500` });
+  assert.equal((await pic(idOf('badframe'))).status, 404);
+  // every "no": not a picture and its frame, or not one of its own pictures (done and shown); no draft made
+  const video = await doneJob(id, 'video');
+  const other = await readyInf({ wallet: OTHER, name: 'Juno' });
+  const drafts = fake.db.drafts.size;
+  for (const [picture, status, error] of [
+    ['x', 400, 'bad'], [{}, 400, 'bad'], [[], 400, 'bad'], [7, 400, 'bad'], [{ job: photo, n: 0, x: 0, y: 0, s: 100 }, 400, 'bad'],
+    [{ job: photo, n: 9, x: 0, y: 0, s: 500 }, 400, 'bad'],
+    [{ job: other.looks, n: 0, x: 0, y: 0, s: 1000 }, 409, 'picture'], [{ job: video, n: 0, x: 0, y: 0, s: 1000 }, 409, 'picture'],
+    [{ job: photo, n: 3, x: 0, y: 0, s: 1000 }, 409, 'picture'], [{ job: idOf('nojob'), n: 0, x: 0, y: 0, s: 1000 }, 409, 'picture'],
+  ]) {
+    r = await coin(picture);
+    assert.deepEqual([r.status, r.body.error], [status, error], JSON.stringify(picture));
+  }
+  assert.equal(fake.db.drafts.size, drafts);
+  // (a bad picture is said before anything else: even with launching off)
+  delete process.env.PINATA_JWT;
+  assert.deepEqual([(await coin('x')).body.error, (await coin()).body.error], ['bad', 'launch_off']);
+});
+
+test('(2026-10-11) its profile picture and its coin\'s picture on the page: the framer (drag, pinch, Ctrl + wheel, Zoom, the arrow keys; the CSS object model only), the camera on its own ready influencer, its picker, the coin tool\'s picture, the words', () => {
+  const frame = read('src/studio/views/frame.js');
+  const code = strip(frame);
+  // the rules' own numbers and helpers: the same square on the page and on our server
+  assert.match(frame, /import \{ FRAME, frameBox, frameFrom, frameStart \} from '\.\.\/rules\.js';/);
+  // placed through the CSS object model only (the CSP forbids style attributes): never innerHTML, cssText or a style="…"
+  assert.doesNotMatch(code, /innerHTML|outerHTML|insertAdjacentHTML|cssText|\.style\s*=|style:\s*['"`]|\bstyle=/);
+  assert.ok((code.match(/style\.setProperty\(/g) || []).length >= 5);
+  // a mouse and a finger (pointer capture), two fingers (a pinch), a trackpad's pinch (Ctrl + the wheel), the Zoom slider, the
+  // keyboard on the square (arrows, +, -), for every device
+  for (const want of [/'pointerdown'/, /'pointermove'/, /'pointerup'/, /'pointercancel'/, /setPointerCapture/, /mode: 'pinch'/, /e\.ctrlKey/,
+    /type: 'range'/, /ArrowLeft:/, /ArrowRight:/, /ArrowUp:/, /ArrowDown:/, /'\+':/, /'-':/, /passive: false/]) assert.match(code, want, String(want));
+  assert.match(code, /role: 'group', 'aria-roledescription': 'frame'/);
+  assert.match(code, /'aria-valuetext'/);
+  // ZOOM_MAX: all of its shorter side down to FRAME.MIN of it (5×)
+  assert.match(code, /const ZOOM_MAX = Math\.round\(100_000 \/ FRAME\.MIN\);/);
+  // its picker: its pictures, then the framer; a profile item is picked as it is
+  assert.match(code, /it\.profile \? finish\(\{ profile: true \}\) : frameStep\(it\)/);
+  const css = read('src/styles/studio-app.css');
+  assert.match(css, /\.sa-framer-stage \{[^}]*touch-action: none;/);
+  assert.match(css, /\.sa-framer-box\.is-round \{[^}]*border-radius: 50%/);
+  // the camera on its picture: only its own wallet's, ready and not banned; inf-pfp with a frame, and with null (its picked look)
+  const inf = read('src/studio/views/influencer.js');
+  assert.match(inf, /import \{ pickPicture, framedPic \} from '\.\/frame\.js';/);
+  assert.match(inf, /if \(mine\(\) && i\.status === 'ready' && !banned\(\)\) \{\s*const edit = h\('button', \{ type: 'button', class: 'sa-pfp-edit', 'aria-label': `Change \$\{i\.name\}'s profile picture`/);
+  assert.match(inf, /ctx\.act\('inf-pfp', \{ id, from: \{ job: c\.job, n: c\.n, x: c\.x, y: c\.y, s: c\.s \} \}\)/);
+  assert.match(inf, /ctx\.act\('inf-pfp', \{ id, from: null \}\)/);
+  assert.match(inf, /label: 'Use its picked look again'/);
+  // its coin's picture: its profile picture ('profile') or a frame, sent with the coin; a picture that's gone: back to its profile
+  // picture
+  assert.match(inf, /const picture = coinPic\.profile \? 'profile' : \{ job: coinPic\.job, n: coinPic\.n, x: coinPic\.x, y: coinPic\.y, s: coinPic\.s \};/);
+  assert.match(inf, /description: line\.value\.trim\(\), picture \}\);/);
+  assert.match(inf, /if \(d\.error === 'picture'\) \{ coinPic = \{ profile: true \}; drawPicRow\(\); \}/);
+  assert.match(inf, /text: 'Shown as a circle on clank\.trade'/);
+  // the words: our server's "no", the helper's guide, Learn's first lesson, the API's statuses and a banned wallet's
+  assert.equal(AW.errorText('picture'), "That picture isn't there any more: pick another one.");
+  assert.match(helpGuide(), /ITS PROFILE PICTURE: on its own page, the camera on its picture[^\n]*Free \(no AI, no credits\)/);
+  assert.match(read('src/studio/views/learn.js'), /Change its profile picture any time \(free\)/);
+  const api = read('server/inf-api.js');
+  assert.match(api, /picture: 409, storage: 502,/);
+  assert.match(api, /const BANNED_FROM = \[[^\]]*'inf-pfp'[,\s\]]/);
+  assert.match(api, /if \(!j && m\[1\] && m\[3\] === '0'\) return pfpAnswer\(cfg, m\[1\], jobId, m\[4\]\);/);
 });
 
 // ---------- round 2: likes and the weekly spotlight ----------
@@ -4435,10 +5318,11 @@ test('(round 2) a 3D model for a big burn (25,000 $AGI, the owner\'s): its quote
 // ---------- round 2: example pictures, the live stats board ----------
 test("(round 2) example pictures for the design choices: made by the owner (no credits), one small picture each, in inf-info's map, served from our own address", async () => {
   const boss = (action, extra = {}) => act(action, extra, { wallet: BOSS });
-  // only the owner, only the choices (32: never skin, hair color or eyes, which are color swatches)
+  // only the owner, only the choices (55 since 2026-10-11, its 26 styles: never skin, hair color or eyes, which are color
+  // swatches, nor "Any style", which is none)
   let r = await act('inf-example-make', { keys: ['outfit-cozy'] });
   assert.deepEqual([r.status, r.body.error], [403, 'not_owner']);
-  for (const keys of [[], ['hair-pink'], 'outfit-cozy', undefined, [...R.EXAMPLES, 'outfit-x']]) {
+  for (const keys of [[], ['hair-pink'], ['style-auto'], ['style-chibi'], 'outfit-cozy', undefined, [...R.EXAMPLES, 'outfit-x']]) {
     r = await boss('inf-example-make', { keys });
     assert.deepEqual([r.status, r.body.error], [400, 'bad'], JSON.stringify(keys));
   }
@@ -4449,7 +5333,8 @@ test("(round 2) example pictures for the design choices: made by the owner (no c
   const job = [...fake.db.jobs.values()].find((j) => j.kind === 'example').id;
   // the owner's page: each choice's state; its look moves the one being made along (one at a time, like the trend moves)
   r = await boss('inf-owner');
-  assert.equal(r.body.examples.length, 32);
+  assert.equal(r.body.examples.length, 55);
+  assert.deepEqual(r.body.examples.find((x) => x.key === 'style-storybook'), { key: 'style-storybook', done: null, latest: null, status: 'none', error: null });
   assert.deepEqual(r.body.examples.find((x) => x.key === 'outfit-cozy'), { key: 'outfit-cozy', done: null, latest: job, status: 'making', error: null });
   assert.deepEqual(r.body.examples.find((x) => x.key === 'style-real'), { key: 'style-real', done: null, latest: null, status: 'none', error: null });
   const sent = falCalls().at(-1);
@@ -4623,7 +5508,7 @@ test('(round 2) the share mark: its size and place on any picture, a photo marke
   assert.deepEqual(await K.markClock(cfg, { deadline: deadline() }), { none: true, why: 'no_ffmpeg' });
   assert.deepEqual(dbCalls('inf_mark_take'), [], 'nothing asked without ffmpeg');
   assert.deepEqual(await K.markClock(cfg, { deadline: deadline(), run: fakeRun() }), { marked: v });
-  assert.ok(fake.storage.get(markedPath(a.id, v)).bytes.equals(mp4({ seconds: 5, video: HD, size: 70_000 })));
+  assert.ok(fake.storage.get(markedPath(a.id, v)).bytes.equals(aiTagged(mp4({ seconds: 5, video: HD, size: 70_000 }))));
   assert.deepEqual([fake.db.jobs.get(v).marked, dbCalls('inf_mark_done')], [true, [{ p_job: v }]]);
   assert.ok(fake.storage.get(`inf/${a.id}/${v}.mp4`).bytes.equals(mp4({ seconds: 5, video: HD })), 'the video its page plays: never changed');
   // its download uses the marked copy from then on (a trend move's, the owner's, never has one)
@@ -4707,10 +5592,10 @@ test("inf-info (the same for everyone), and the POSTs that aren't one: off until
     topupMin: R.TOPUP_MIN, usdg: true, payTo: OWNER, token: USDG, threeD: false, coins: false, launch: false,
     // (round 2) its example pictures, what each burn unlock costs (a 3D model only with the 3D studio on), the influencers a
     // wallet may have, the weekly prize (only with the prize wallet), the likes a day
-    examples: {}, burns: { model: 0, slot: 5000, boost: 10_000, boostHours: 24 }, slots: 5, weeklyPrize: 0, likesADay: 50,
+    examples: {}, cleanAgi: 1000, burns: { model: 0, slot: 5000, boost: 10_000, boostHours: 24 }, slots: 5, weeklyPrize: 0, likesADay: 50,
     // (round 4, phase 3) gifts (bought credits only: 10 at least, 50,000 a day, 20 gifts a day, 10 open links, 30 days, an
     // 80-character note) and invites (100 bonus credits with a first top-up of $5 or more, 10% up to 500 a friend, 5,000 a month)
-    gifts: { min: 10, dayMax: 50_000, perDay: 20, openLinks: 10, linkDays: 30, noteMax: 80 },
+    gifts: { min: 10, dayMax: 50_000, perDay: 20, openLinks: 10, linkDays: 30, noteMax: 200 },
     refs: { welcome: 100, welcomeMin: 500, percent: 10, perFriend: 500, month: 5000 },
   });
   assert.deepEqual(dbCalls('inf_examples'), [{}]);
@@ -4892,7 +5777,7 @@ test("the page: studio.html, the app's code (never HTML from strings, never a wa
   const note = read('index.html').match(/<footer[\s\S]*<\/footer>/)?.[0] || '';
   for (const promise of [
     'never a famous person or someone else\'s character, and a real person only from a photo of them they agreed to',
-    'what you download carries “Made with AGI Studio · AI-generated”',
+    'what you download says inside its file that it\'s AI-made, and carries “Made with AGI Studio · AI-generated” on it, except a creation its own maker downloads while holding 1,000+ $AGI',
     'A photo of a real person needs your word first that it\'s you, or someone who said you may use it: that influencer is private (never in Explore, never liked or boosted), and deleting it deletes the photo and everything made from it',
     'Its weekly spotlight\'s prize, $AGI sent to the maker of the creation holders liked most, is a thank-you for making: not an investment, and not financial advice.',
     'you claim the prize in My studio, signed in with the wallet that made it, and it\'s sent to that wallet: nothing else is asked',
@@ -5785,7 +6670,7 @@ test("(2026-10-11) who can use AGI Studio while it's private: the owner lets a w
   assert.equal(AW.accessIntroText({ open: false, vercel: ['0x2222…2222'], team: 2 }), 'While AGI Studio is private, only the wallets on this list can make anything. Also in, without the list: you, your team (2 people) and 1 wallet in STUDIO_ONLY_FOR in Vercel (0x2222…2222).');
   assert.equal(AW.accessDoneText({ short: '0x7a7a…7a7a', added: true }), '0x7a7a…7a7a can use AGI Studio now 💜 They connect that wallet and reload the page.');
   assert.equal(AW.accessDoneText({ short: '0x7a7a…7a7a', added: false }), '0x7a7a…7a7a was on the list already: its note is saved.');
-  assert.deepEqual(AW.ACCESS_VIA, { owner: 'Let in by you', credits: 'Got credits for testing' });
+  assert.deepEqual(AW.ACCESS_VIA, { owner: 'Let in by you', credits: 'Got credits for testing', link: 'Claimed your gift link' });
   for (const why of ['access_address', 'access_self', 'access_note', 'access_full', 'access_gone']) {
     assert.ok(AW.errorText(why) && AW.errorText(why) !== AW.errorText('busy'), why);
   }
@@ -5805,7 +6690,7 @@ test("(2026-10-11) who can use AGI Studio while it's private: the owner lets a w
   const owner = read('src/studio/views/owner.js');
   assert.match(owner, /export function accessSection\(ctx\) \{/);
   for (const a of ["ctx.act('inf-access')", "ctx.act('inf-access-set', { address: a, note: n })", "ctx.act('inf-access-remove', { code: a.code })"]) assert.ok(owner.includes(a), a);
-  assert.match(owner, /if \(k === 'testing' && !accessAsked && ctx\.session\) \{ accessAsked = true; access\.load\(\); \}/);
+  assert.match(owner, /if \(k === 'testing' && !accessAsked && ctx\.session\) \{ accessAsked = true; access\.load\(\); links\.load\(\); \}/);
   assert.match(owner, /'Tap again to take off'/);
   assert.match(owner, /text: 'Who can use AGI Studio'/);
   assert.match(owner, /h\('span', \{ class: 'sa-mono', text: a\.short \}\), a\.note \? h\('span', \{ class: 'sa-access-note', text: a\.note \}\) : null/, 'shown as text');
@@ -5948,6 +6833,8 @@ test('(round 4, phase 2) bans: a mod bans an influencer\'s maker (why, and a not
     ['inf-public', { id: nova.id, show: true }], ['inf-coin', { id: nova.id, name: 'Nova', symbol: 'NOVA' }], ['inf-like', { job: jp, like: true }],
     ['inf-caption', { job: photo, tone: 'funny', platform: 'x' }], ['inf-name-set', { name: 'nova' }], ['inf-burn-quote', { what: 'slot' }],
     ['inf-burn-check', { burn: idOf('b') }], ['inf-week-claim', { week: '2026-10-05' }],
+    // (2026-10-11) nor a new profile picture
+    ['inf-pfp', { id: nova.id, from: null }], ['inf-pfp', { id: nova.id, from: { job: nova.body, n: 0, x: 0, y: 0, s: 500 } }],
   ]) {
     r = await act(action, extra);
     assert.deepEqual([r.status, r.body.error], [403, 'banned'], action);
@@ -6365,7 +7252,7 @@ test('(round 4, phase 2) the pages: Help & support (/help), Mod tools (/mod), th
   assert.match(home, /A question you ask its helper goes to the same kind of AI service with your one or two questions before it \(never its answers\)/);
   assert.match(home, /If you open a support ticket there, we keep what you write and the team's answers under the same code/);
   // (2026-10-11) who may use AGI Studio while it's private: what its list keeps
-  assert.match(home, /While AGI Studio is private, a wallet its owner lets in is kept on its list as a scrambled code, with its short address \(like 0x12ab…cdef\) and the owner's own note, until it's taken off\./);
+  assert.match(home, /While AGI Studio is private, a wallet its owner lets in \(or that claims one of AGI Studio's own gift links\) is kept on its list as a scrambled code, with its short address \(like 0x12ab…cdef\) and the owner's own note, until it's taken off\./);
   const views = (f) => strip(read(`src/studio/views/${f}`));
   const support = views('support.js'), help = views('help.js'), mod = views('mod.js'), owner = views('owner.js'), me = views('me.js');
   for (const [f, code] of [['support.js', support], ['help.js', help], ['mod.js', mod], ['owner.js', owner], ['me.js', me]]) {
@@ -6405,7 +7292,7 @@ test('(round 4, phase 2) the pages: Help & support (/help), Mod tools (/mod), th
   assert.match(infView, /galleryBox\.hidden = !ready \|\| banned\(\);/);
   assert.match(infView, /models\.hidden = !\(ready && ms\.length\) \|\| banned\(\);/);
   assert.match(infView, /const shown = !banned\(\);\s*const coverSrc = !shown \? null : /);
-  assert.match(infView, /const portrait = i\.portrait && shown \? pic\(/);
+  assert.match(infView, /const face = i\.portrait && shown \? pic\(/);
   assert.match(me, /i\.portrait && !me\?\.banned \? pic\(/);
   assert.match(me, /text: me\?\.banned \? 'Hidden while banned' : /);
   const galleryView = views('gallery.js');
@@ -6475,11 +7362,28 @@ test("(round 4, phase 3) a gift's helpers: who it's for (an address and its chec
   assert.deepEqual(G.giftNote(undefined), { ok: true, note: null });
   assert.deepEqual(G.giftNote(null), { ok: true, note: null });
   assert.deepEqual(G.giftNote(' \n\t '), { ok: true, note: null });
-  assert.deepEqual(G.giftNote('  Happy\n\tbirthday   💜 '), { ok: true, note: 'Happy birthday 💜' });
-  assert.deepEqual(G.giftNote('é'.repeat(80)), { ok: true, note: 'é'.repeat(80) });
-  assert.equal(G.giftNote('💜'.repeat(80)).ok, true, '80 emoji are 80 characters');
+  // (2026-10-12) its line breaks kept: each line tidied, empty ones out, at most 4 (more join the last); 200 characters
+  assert.deepEqual(G.giftNote('  Happy\n\tbirthday   💜 '), { ok: true, note: 'Happy\nbirthday 💜' });
+  assert.deepEqual(G.giftNote('  Happy  birthday \r\n\n \n  from   all of us 💜'), { ok: true, note: 'Happy birthday\nfrom all of us 💜' });
+  assert.deepEqual(G.giftNote('one\ntwo\nthree\nfour\nfive\nsix'), { ok: true, note: 'one\ntwo\nthree\nfour five six' });
+  assert.deepEqual(G.giftNote('a\u2028b\rc'), { ok: true, note: 'a\nb\nc' });
+  assert.equal(G.tidyMessage(' x \n\n y '), 'x\ny');
+  assert.equal(G.MESSAGE_LINES, 4);
+  assert.deepEqual(G.giftNote('é'.repeat(200)), { ok: true, note: 'é'.repeat(200) });
+  assert.equal(G.giftNote('💜'.repeat(200)).ok, true, '200 emoji are 200 characters');
+  assert.equal(G.giftNote(`${'a'.repeat(99)}\n${'b'.repeat(100)}`).ok, true, 'a line break is one character');
   assert.equal(G.giftNote('pumpkin pie for my favorite creator').ok, true, 'whole words only');
-  for (const [note, why] of [['x'.repeat(81), 'note_long'], ['💜'.repeat(81), 'note_long'], ['see https://x.com/abc', 'note_link'], ['come to mysite.xyz', 'note_link'],
+  // (2026-10-12) the owner's own message on one of the owner's gift links: also "giveaway" or "discounts", AGI-1 and anyone's
+  // name; never a link, a contact, a secret, crude words or another deal word
+  for (const note of ['Welcome to AGI Studio, our official giveaway 💜', 'holders get discounts', 'for AGI-1 fans', 'a gift for Elon Musk fans']) {
+    assert.equal(G.giftNote(note).ok, false, note);
+    assert.deepEqual(G.giftNote(note, { owner: true }), { ok: true, note }, note);
+  }
+  for (const [note, why] of [['x'.repeat(201), 'note_long'], ['see https://x.com/abc', 'note_link'], ['ping @mira', 'note_contact'], ['dm me', 'note_deal'],
+    ['airdrop soon', 'note_deal'], ['cheap credits here', 'note_deal'], ['fuck this', 'note_words'], [SEED, 'secret'], [PKEY, 'secret']]) {
+    assert.deepEqual(G.giftNote(note, { owner: true }), { ok: false, why }, `the owner's: ${note}`);
+  }
+  for (const [note, why] of [['x'.repeat(201), 'note_long'], ['💜'.repeat(201), 'note_long'], ['see https://x.com/abc', 'note_link'], ['come to mysite.xyz', 'note_link'],
     ['ping @mira', 'note_contact'], [`send them to ${WALLET}`, 'note_contact'], ['call +1 415 555 0100', 'note_contact'],
     ['cheap credits here', 'note_deal'], ['pay me back', 'note_deal'], ['$5 each', 'note_deal'], ['dm me', 'note_deal'], ['my telegram', 'note_deal'],
     ['airdrop soon', 'note_deal'], ['resell them', 'note_deal'], ['for AGI-1 fans', 'note_words'], ['fuck this', 'note_words'],
@@ -6563,7 +7467,7 @@ test("(round 4, phase 3) giving bought credits to a wallet (by its address, or t
     [{ to: OTHER, credits: 9 }, 400, 'give_credits'], [{ to: OTHER, credits: 2.5 }, 400, 'give_credits'], [{ to: OTHER, credits: '1,000' }, 400, 'give_credits'],
     [{ to: OTHER, credits: 50_001 }, 400, 'give_credits'], [{ to: OTHER }, 400, 'give_credits'],
     [{ to: OTHER, credits: 10, note: 'cheap credits, pay me' }, 422, 'note_deal'], [{ to: OTHER, credits: 10, note: 'see mysite.xyz' }, 422, 'note_link'],
-    [{ to: OTHER, credits: 10, note: 'ping @mira' }, 422, 'note_contact'], [{ to: OTHER, credits: 10, note: 'x'.repeat(81) }, 422, 'note_long'],
+    [{ to: OTHER, credits: 10, note: 'ping @mira' }, 422, 'note_contact'], [{ to: OTHER, credits: 10, note: 'x'.repeat(201) }, 422, 'note_long'],
     [{ to: OTHER, credits: 10, note: 'fuck this' }, 422, 'note_words'], [{ to: OTHER, credits: 10, note: `my words ${SEED}` }, 422, 'secret'],
   ]) {
     infActBurst.reset();
@@ -6684,7 +7588,8 @@ test('(round 4, phase 3) gift links: made with bought credits (its secret only i
   r = await post({ action: 'inf-gift-peek', token });
   assert.equal(r.status, 200);
   assert.deepEqual(pick(r.body.gift, ['credits', 'from', 'note', 'status']), { credits: 300, from: SHORT, note: 'For your first video 💜', status: 'open' });
-  assert.deepEqual(Object.keys(r.body.gift).sort(), ['credits', 'expires', 'from', 'note', 'status']);
+  assert.deepEqual(Object.keys(r.body.gift).sort(), ['credits', 'expires', 'from', 'note', 'owner', 'status']);
+  assert.equal(r.body.gift.owner, false, "a person's gift link (not one of the owner's)");
   assert.ok(Math.abs(r.body.gift.expires - (Date.now() + 30 * DAY)) < 60e3);
   assert.ok(!calls.some((c) => c.to === 'turnstile'));
   for (const bad of ['nope', `${token}x`, '', null, idOf('nosuchlinkatall')]) {
@@ -6716,6 +7621,7 @@ test('(round 4, phase 3) gift links: made with bought credits (its secret only i
   // claimed by another wallet, once (its claim names who claimed it, as they show)
   r = await act('inf-gift-claim', { token }, { wallet: OTHER });
   assert.deepEqual([r.status, r.body.ok, r.body.got, r.body.from, r.body.credits], [200, true, 300, SHORT, CR(300)]);
+  assert.deepEqual([r.body.owner, r.body.letIn], [false, false], "a person's gift: bought credits, and it never lets a wallet in");
   assert.deepEqual(pick(dbCalls('inf_gift_claim')[0], ['p_token', 'p_wallet', 'p_label']), { p_token: token, p_wallet: codeOf(OTHER), p_label: '0x2222…2222' });
   r = await act('inf-gift-claim', { token }, { wallet: OTHER });
   assert.deepEqual([r.status, r.body.error, r.body.mine], [409, 'gift_claimed', true]);
@@ -6839,6 +7745,194 @@ test('(round 4, phase 3) gift links: made with bought credits (its secret only i
   r = await post({ action: 'inf-gift-peek', token });
   assert.deepEqual([r.status, r.body.error], [503, 'busy']);
   fake.dbDown = false;
+});
+
+test("(2026-10-12) the owner's gift links of free credits: only the owner makes them (1 to 100,000 credits, the owner's message of up to 200 characters with its line breaks), nothing held; anyone opens one (from AGI Studio, its message), even with people's gifts off; claimed once as bonus credits, never by the owner or a banned wallet, letting its wallet in while AGI Studio is private; taken back; past its days just gone; never in anyone's gifts a day or My studio; an older influencers.sql", async () => {
+  const boss = (action, extra = {}) => act(action, extra, { wallet: BOSS });
+  const TIDY = "Welcome to AGI Studio!\nHere's something to start with 💜"; // its curly apostrophe made plain, as every note
+  // a person's gift link, made while AGI Studio is open (for people's gifts switched off, below)
+  giveCredits(1000);
+  let r = await act('inf-gift-link', { credits: 100 });
+  const person = r.body;
+  assert.match(person.token, R.GIFT_TOKEN);
+  // only the owner's wallet: never a mod or anyone else (nothing asked of the database)
+  onTeam(MODW, 'mod', 'Kai');
+  infActBurst.reset(); infLookBurst.reset();
+  for (const [action, extra] of [['inf-owner-links', {}], ['inf-owner-link', { credits: 1000 }], ['inf-owner-link-cancel', { gift: idOf('somelink') }]]) {
+    for (const wallet of [WALLET, MODW]) {
+      r = await act(action, extra, { wallet });
+      assert.deepEqual([r.status, r.body.error], [403, 'not_owner'], `${action} by ${wallet}`);
+    }
+  }
+  assert.equal(dbCalls('inf_owner_link').length + dbCalls('inf_owner_links').length, 0);
+  infActBurst.reset(); infLookBurst.reset();
+  // none yet, and what the owner's tab needs to make one
+  r = await boss('inf-owner-links');
+  assert.equal(r.status, 200);
+  assert.deepEqual([r.body.links, r.body.open, r.body.max, r.body.days, r.body.min, r.body.most, r.body.noteMax], [[], 0, 50, 30, 1, 100_000, 200]);
+  // one made: its secret only in its answer (and the database), its message tidied (its line breaks kept), nothing held
+  r = await boss('inf-owner-link', { credits: 1000, note: '  Welcome to AGI Studio!  \n\n Here’s something to start with 💜 ' });
+  assert.equal(r.status, 200);
+  const { id, token } = r.body;
+  assert.match(id, ID);
+  assert.match(token, R.GIFT_TOKEN);
+  assert.notEqual(id, token);
+  assert.deepEqual([r.body.ok, r.body.gave, r.body.note, r.body.open], [true, 1000, TIDY, 1]);
+  assert.ok(Math.abs(r.body.expires - (Date.now() + 30 * DAY)) < 60e3, '30 days');
+  assert.deepEqual(r.body.links.map((l) => [l.id, l.credits, l.status, l.token, l.note, l.to]), [[id, 1000, 'open', token, TIDY, null]]);
+  assert.deepEqual({ ...dbCalls('inf_owner_link')[0], p_id: '-', p_token: '-' }, {
+    p_id: '-', p_token: '-', p_from: codeOf(BOSS), p_credits: 1000, p_note: TIDY, p_open_max: 50, p_days: 30,
+  });
+  assert.ok(!JSON.stringify(dbCalls('inf_owner_link')).includes(BOSS.slice(2)), 'never the address');
+  assert.deepEqual([fake.db.log.filter((l) => l.ref === id).length, credits(BOSS).paid + credits(BOSS).bonus], [0, 0], "nothing held: they're paid from the owner's AI balance as they're used");
+  assert.ok(!logs.join('\n').includes(token));
+  assert.ok(calls.filter((c) => c.to !== 'db').every((c) => !JSON.stringify(c).includes(token)));
+  // the owner's message may say "giveaway", "discounts", AGI-1 or anyone's name; never more than 200 characters, a link, a
+  // contact, a deal, a secret or crude words; credits a whole number from 1 to 100,000 (nothing asked of the database otherwise)
+  const asked = dbCalls('inf_owner_link').length;
+  for (const [extra, status, error] of [
+    [{ credits: 0 }, 400, 'link_credits'], [{ credits: 100_001 }, 400, 'link_credits'], [{ credits: 1.5 }, 400, 'link_credits'],
+    [{ credits: -3 }, 400, 'link_credits'], [{ credits: '1,000' }, 400, 'link_credits'], [{ credits: null }, 400, 'link_credits'], [{}, 400, 'link_credits'],
+    [{ credits: 10, note: 'x'.repeat(201) }, 422, 'note_long'], [{ credits: 10, note: 'see https://x.com/abc' }, 422, 'note_link'],
+    [{ credits: 10, note: 'ping @mira' }, 422, 'note_contact'], [{ credits: 10, note: 'dm me for more' }, 422, 'note_deal'],
+    [{ credits: 10, note: SEED }, 422, 'secret'], [{ credits: 10, note: 'fuck this' }, 422, 'note_words'],
+  ]) {
+    infActBurst.reset();
+    r = await boss('inf-owner-link', extra);
+    assert.deepEqual([r.status, r.body.error], [status, error], JSON.stringify(extra).slice(0, 60));
+  }
+  assert.equal(dbCalls('inf_owner_link').length, asked);
+  infActBurst.reset();
+  r = await boss('inf-owner-link', { credits: 100_000, note: 'Our official giveaway for AGI-1 fans 💜\nholders get discounts too' });
+  assert.deepEqual([r.status, r.body.gave, r.body.open], [200, 100_000, 2]);
+  const big = r.body;
+  r = await boss('inf-owner-link', { credits: '250' });
+  assert.deepEqual([r.status, r.body.gave, r.body.note, r.body.open], [200, 250, null, 3], 'a whole number as typed; no message');
+  const small = r.body;
+  // anyone with it sees it, signed out: from AGI Studio, its message, one of the owner's
+  r = await post({ action: 'inf-gift-peek', token });
+  assert.deepEqual(pick(r.body.gift, ['credits', 'from', 'note', 'status', 'owner']), { credits: 1000, from: 'AGI Studio', note: TIDY, status: 'open', owner: true });
+  // never in the owner's gifts a day, its links waiting or My studio's list (they're on the owner's tab)
+  r = await boss('inf-gifts');
+  assert.deepEqual(r.body.gifts, []);
+  assert.deepEqual(fake.db.giftDay(codeOf(BOSS)), { n: 0, sum: 0 });
+  // claimed while AGI Studio is private: bonus credits (never given on), and its wallet let in ("Claimed your gift link")
+  delete process.env.STUDIO_OPEN;
+  process.env.STUDIO_ONLY_FOR = BOSS;
+  infActBurst.reset(); infLookBurst.reset();
+  assert.equal((await act('inf-me', {}, { wallet: FRIEND })).body.allowed, false, 'not on the list yet');
+  r = await act('inf-gift-claim', { token }, { wallet: FRIEND });
+  assert.deepEqual([r.status, r.body.ok, r.body.got, r.body.from, r.body.owner, r.body.letIn], [200, true, 1000, 'AGI Studio', true, true]);
+  assert.deepEqual(r.body.credits, CR(0, 0, { bonus: 1000 }));
+  assert.deepEqual(fake.db.log.filter((l) => l.ref === id).map((l) => [l.wallet_code, l.kind, l.amount, l.paid_part, l.bonus_part]), [[codeOf(FRIEND), 'gift', 1000, 0, 1000]]);
+  assert.deepEqual(fake.db.access.get(codeOf(FRIEND)), { short: '0x5555…5555', note: null, via: 'link', added: fake.db.access.get(codeOf(FRIEND)).added });
+  assert.deepEqual(dbCalls('inf_access_set').at(-1), { p_wallet: codeOf(FRIEND), p_short: '0x5555…5555', p_note: null, p_via: 'link', p_on: true, p_max: 200 });
+  assert.equal((await act('inf-me', {}, { wallet: FRIEND })).body.allowed, true, 'in now');
+  assert.equal(AW.ACCESS_VIA.link, 'Claimed your gift link');
+  // once: never again, by anyone
+  r = await act('inf-gift-claim', { token }, { wallet: FRIEND });
+  assert.deepEqual([r.status, r.body.error, r.body.mine], [409, 'gift_claimed', true]);
+  r = await act('inf-gift-claim', { token }, { wallet: OTHER });
+  assert.deepEqual([r.status, r.body.error, r.body.mine], [409, 'gift_claimed', false]);
+  r = await post({ action: 'inf-gift-peek', token });
+  assert.equal(r.body.gift.status, 'claimed');
+  // its claimer's My studio: "in", from AGI Studio, bonus credits
+  r = await act('inf-gifts', {}, { wallet: FRIEND });
+  assert.deepEqual(r.body.gifts.map((g) => [g.dir, g.other, g.owner, g.credits, g.seen, g.note]), [['in', 'AGI Studio', true, 1000, true, TIDY]]);
+  assert.match(AW.giftRowState(r.body.gifts[0]), /^Bonus credits · got them /);
+  // the owner's list: newest first, who claimed it (as the page shows them), each open one's secret to copy again
+  r = await boss('inf-owner-links');
+  assert.deepEqual(r.body.links.map((l) => [l.credits, l.status, l.to, l.token]), [[250, 'open', null, small.token], [100_000, 'open', null, big.token], [1000, 'claimed', '0x5555…5555', null]]);
+  assert.equal(r.body.open, 2);
+  assert.match(AW.ownerLinkState(r.body.links[2]), /^Claimed by 0x5555…5555 /);
+  assert.match(AW.ownerLinkState(r.body.links[0]), /^Waiting to be claimed · until /);
+  // never by the owner's own wallet, nor a banned one (and a claimer who's on the list already isn't added again)
+  infActBurst.reset();
+  r = await boss('inf-gift-claim', { token: big.token });
+  assert.deepEqual([r.status, r.body.error], [409, 'gift_own']);
+  assert.equal(AW.OWNER_GIFT_OWN, "That's your own gift link: send it to someone else (or take it back in Owner tools → Gifts).");
+  banWallet(FRIEND2);
+  r = await act('inf-gift-claim', { token: big.token }, { wallet: FRIEND2 });
+  assert.deepEqual([r.status, r.body.error], [403, 'banned']);
+  unbanWallet(FRIEND2);
+  // taken back: nothing held, so nothing back; once; never one that's claimed
+  r = await boss('inf-owner-link-cancel', { gift: small.id });
+  assert.deepEqual([r.status, r.body.ok, r.body.status, r.body.open], [200, true, 'canceled', 1]);
+  assert.equal(r.body.links.find((l) => l.id === small.id).status, 'canceled');
+  assert.equal(fake.db.log.filter((l) => l.ref === small.id).length, 0, 'nothing held, nothing back');
+  r = await boss('inf-owner-link-cancel', { gift: small.id });
+  assert.deepEqual([r.status, r.body.error, r.body.status], [409, 'gift_state', 'canceled']);
+  r = await boss('inf-owner-link-cancel', { gift: id });
+  assert.deepEqual([r.status, r.body.error, r.body.status], [409, 'gift_state', 'claimed']);
+  r = await boss('inf-owner-link-cancel', { gift: 'nope' });
+  assert.deepEqual([r.status, r.body.error], [400, 'bad_request']);
+  infActBurst.reset();
+  r = await act('inf-gift-claim', { token: small.token }, { wallet: OTHER });
+  assert.deepEqual([r.status, r.body.error], [409, 'gift_canceled']);
+  assert.equal(AW.ownerLinkErrorText('gift_canceled'), 'AGI Studio took this gift link back.');
+  r = await post({ action: 'inf-gift-peek', token: small.token });
+  assert.equal(AW.claimStatusText(r.body.gift.status, r.body.gift.owner), 'AGI Studio took this gift link back.');
+  // past its days: just gone (nothing goes back to anyone)
+  giftOf(big.id).expires = Date.now() - 1000;
+  r = await post({ action: 'inf-gift-peek', token: big.token });
+  assert.equal(r.body.gift.status, 'expired');
+  assert.equal(AW.claimStatusText('expired', true), 'This gift link expired.');
+  r = await act('inf-gift-claim', { token: big.token }, { wallet: OTHER });
+  assert.deepEqual([r.status, r.body.error], [409, 'gift_expired']);
+  assert.equal(fake.db.log.filter((l) => l.ref === big.id).length, 0);
+  assert.equal(AW.ownerLinkErrorText('gift_expired'), 'This gift link expired.');
+  // people's gifts switched off (STUDIO_GIFTS=off): the owner's links still open and can be claimed; a person's can't
+  infActBurst.reset();
+  r = await boss('inf-owner-link', { credits: 500, note: 'For you 💜' });
+  const later = r.body;
+  process.env.STUDIO_GIFTS = 'off';
+  r = await post({ action: 'inf-gift-peek', token: later.token });
+  assert.deepEqual([r.body.off, r.body.gift?.owner, r.body.gift?.credits], [undefined, true, 500]);
+  r = await post({ action: 'inf-gift-peek', token: person.token });
+  assert.deepEqual([r.body.off, r.body.gift], [true, null]);
+  r = await act('inf-gift-claim', { token: person.token }, { wallet: OTHER });
+  assert.deepEqual([r.status, r.body.error], [409, 'gifts_off']);
+  r = await act('inf-gift-claim', { token: later.token }, { wallet: OTHER });
+  assert.deepEqual([r.status, r.body.ok, r.body.owner, r.body.got, r.body.letIn], [200, true, true, 500, true]);
+  delete process.env.STUDIO_GIFTS;
+  // AGI Studio open to everyone: claiming lets nobody "in" (everyone is)
+  process.env.STUDIO_OPEN = 'yes';
+  infActBurst.reset();
+  r = await boss('inf-owner-link', { credits: 50 });
+  r = await act('inf-gift-claim', { token: r.body.token }, { wallet: FRIEND3 });
+  assert.deepEqual([r.status, r.body.ok, r.body.letIn], [200, true, false]);
+  assert.equal(fake.db.access.has(codeOf(FRIEND3)), false);
+  // at most 50 waiting at once (taken back, claimed or past their days don't count)
+  for (let n = r.body ? (await boss('inf-owner-links')).body.open : 0; n < R.OWNER_LINKS.OPEN; n++) {
+    infActBurst.reset();
+    assert.equal((await boss('inf-owner-link', { credits: 1 })).status, 200);
+  }
+  infActBurst.reset();
+  r = await boss('inf-owner-link', { credits: 1 });
+  assert.deepEqual([r.status, r.body.error], [409, 'links_full']);
+  assert.equal(AW.errorText('links_full'), 'You have 50 gift links waiting: take one back, or wait until one is claimed.');
+  // an older influencers.sql: the owner's tab says to run it again (and the log names it); a person's message over 80
+  // characters is refused there, said once in the log
+  fake.missing.add('inf_owner_link'); fake.missing.add('inf_owner_links');
+  infActBurst.reset(); infLookBurst.reset();
+  r = await boss('inf-owner-link', { credits: 10 });
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  r = await boss('inf-owner-links');
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  assert.ok(logs.some((l) => l.includes("inf_owner_link not found: run supabase/influencers.sql again in this Supabase project (the owner's gift links of free credits; it ends with influencers_ready = 1)")), logs.join('\n'));
+  assert.equal(AW.ownerLinkErrorText('not_ready'), 'Run supabase/influencers.sql again in Supabase first (it ends with influencers_ready = 1), then try again.');
+  fake.missing.clear();
+  const G = await import('../server/inf-gifts.js');
+  G._resetGiftWarnings();
+  fake.db.noteBad = (n) => n != null && ([...n].length < 1 || [...n].length > 80);
+  giveCredits(1000);
+  r = await act('inf-send', { to: OTHER, credits: 10, note: 'y'.repeat(120) });
+  assert.deepEqual([r.status, r.body.error], [503, 'busy']);
+  r = await act('inf-gift-link', { credits: 10, note: 'z'.repeat(150) });
+  assert.deepEqual([r.status, r.body.error], [503, 'busy']);
+  assert.equal(logs.filter((l) => l.includes("[studio] supabase/influencers.sql is from before 2026-10-12: a gift's message of more than 80 characters is refused (run it again: it ends with influencers_ready = 1)")).length, 1, 'said once');
+  r = await act('inf-send', { to: OTHER, credits: 10, note: 'Happy birthday 💜' });
+  assert.deepEqual([r.status, r.body.ok], [200, true], 'a short message still goes');
 });
 
 test('(round 4, phase 3) invites: a wallet\'s own code (made once), joined through once by a wallet that never bought credits; its welcome credits with a first top-up of $5 or more, 10% of each top-up to its inviter (up to 500 from a friend, 5,000 a month) as bonus credits, each top-up once; the clock catches up', async () => {
@@ -7078,7 +8172,7 @@ test("(round 4, phase 3) the page: its words (every gift's \"no\" under its own 
   for (const code of [gifts, app]) assert.doesNotMatch(code, /innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
   assert.match(gifts, /const r = await app\.act\('inf-gift-peek', \{ token \}\);/);
   assert.match(gifts, /const c = await app\.act\('inf-gift-claim', \{ token \}\);/);
-  assert.match(gifts, /if \(\/\^#gift=\/\.test\(location\.hash\)\) history\.replaceState\(history\.state, '', `\$\{location\.pathname\}\$\{location\.search\}`\);/);
+  assert.match(gifts, /if \(location\.hash\.startsWith\(`#gift=\$\{token\}`\)\) history\.replaceState\(history\.state, '', `\$\{location\.pathname\}\$\{location\.search\}`\);/);
   assert.match(gifts, /const url = giftLink\(location\.origin, ctx\.BASE, d\.token\);/);
   assert.equal(R.giftLink('https://studio.agi1.app', '', 'A'.repeat(22)), `https://studio.agi1.app/explore#gift=${'A'.repeat(22)}`);
   assert.equal(R.giftLink('https://agi1.app', '/studio', 'A'.repeat(22)), `https://agi1.app/studio/explore#gift=${'A'.repeat(22)}`);
@@ -7087,6 +8181,8 @@ test("(round 4, phase 3) the page: its words (every gift's \"no\" under its own 
   }
   assert.match(app, /const m = \/\^#gift=\(\[A-Za-z0-9_-\]\{22\}\)\(\?!\[A-Za-z0-9_-\]\)\/\.exec\(location\.hash\);/);
   assert.match(app, /addEventListener\('hashchange', giftFromAddress\);/);
+  // (2026-10-12) another gift link opened while one's sheet was closing: its sheet next (each sheet takes only its own secret out)
+  assert.match(app, /finally \{ claiming = false; \}\n(?:\s*\/\/[^\n]*\n)?\s+if \(\/\^#gift=\/\.test\(location\.hash\)\) giftFromAddress\(\);/);
   // a gift link in a browser without a wallet (a phone's Safari or Chrome): the wallet sheet's "Open in …" links never carry
   // its secret (their addresses go to those apps' servers: the page's address without its fragment), so the gift's sheet
   // says to open the link in a wallet app's own browser, with a button that copies it (only when no wallet is found here and
@@ -7094,7 +8190,9 @@ test("(round 4, phase 3) the page: its words (every gift's \"no\" under its own 
   assert.match(app, /const here = location\.href\.split\('#'\)\[0\];/);
   assert.match(app, /https:\/\/metamask\.app\.link\/dapp\/\$\{location\.host\}\$\{location\.pathname\}/);
   assert.doesNotMatch(app, /app\.link\/dapp\/[^`]*location\.(?:hash|href)/);
-  assert.match(app, /const appApi = \{ act, requireAdult, requireWallet, refreshMe, toast, href, signedIn: \(\) => !!state\.session, findWallets \};/);
+  // (2026-10-12) …and what the sheet of one of the owner's gift links needs: the studio's settings (whether it's private), when
+  // they've come, and whether the signed-in wallet may use AGI Studio
+  assert.match(app, /const appApi = \{\n\s+act, requireAdult, requireWallet, refreshMe, toast, href, signedIn: \(\) => !!state\.session, findWallets,\n\s+get info\(\) \{ return state\.info; \},\n\s+allowed: \(\) => \(state\.session && state\.me \? state\.me\.allowed !== false : null\),\n(?:\s*\/\/[^\n]*\n)?\s+infoReady: \(\) =>/);
   assert.match(app, /\/\^#gift=\/\.test\(location\.hash\) \? h\('p', \{ class: 'sa-note sa-small', text: GIFT_APPS_NOTE \}\) : null/);
   assert.match(gifts, /const ok = await copyText\(giftLink\(location\.origin, app\.href\(''\), token\)\);/);
   assert.match(gifts, /if \(app\.findWallets && !app\.signedIn\?\.\(\)\) \{\s+app\.findWallets\(\)\.then\(\(found\) => \{ if \(s\.dialog\.open && !found\.length && !app\.signedIn\?\.\(\)\) noWallet\.hidden = false; \}\)/);
@@ -7175,15 +8273,122 @@ function rpcCalls(code) {
   return out;
 }
 
+test("(2026-10-12) the owner's gift links on the page: Owner tools → Gifts (its form drawn once, a second tap from 20,000, the new link to copy or share, each waiting link's Copy and Take it back, Show all), its words (never a price, never an AI service), a claim sheet's words for one of them, the secret only through giftLink() and POST bodies, text only, its styles, the rules and the safety note", () => {
+  // its words
+  const now = Date.parse('2026-10-12T12:00:00Z');
+  assert.deepEqual(R.OWNER_LINKS, { MIN: 1, MAX: 100_000, OPEN: 50, DAYS: 30 });
+  assert.equal(R.GIFTS.NOTE_MAX, 200);
+  assert.deepEqual(AW.OWNER_LINK_AMOUNTS, [100, 500, 1000, 5000]);
+  assert.equal(AW.ownerLinkPlanText(1000), "1,000 credits: about $10 of AI, paid from your own AI balance as they're used. Claimed once, within 30 days.");
+  assert.equal(AW.ownerLinksCount({ open: 3, max: 50 }), '3 waiting (50 at most)');
+  assert.deepEqual([
+    { status: 'open', expires: now + 29 * DAY, created: now - 3600e3 }, { status: 'claimed', to: '0x5555…5555', done: now - 60e3, created: now - 7200e3 },
+    { status: 'canceled', done: now - 120e3, created: now - 7200e3 }, { status: 'expired', created: now - 40 * DAY, expires: now - DAY },
+  ].map((l) => AW.ownerLinkState(l, now)), [
+    'Waiting to be claimed · until Nov 10, 2026', 'Claimed by 0x5555…5555 1 min ago', 'Taken back 2 min ago', 'Nobody claimed it by Oct 11, 2026',
+  ]);
+  assert.equal(AW.ownerLinkShareText(500), 'A gift from AGI Studio: 500 credits 💜');
+  assert.equal(AW.ownerLinkMadeText(now + 30 * DAY), "It can be claimed once, until Nov 11, 2026. Send it only to who it's for: anyone with the link can claim it. Until then you can take it back below.");
+  assert.equal(AW.ownerLinkMadeText(undefined), "It can be claimed once. Send it only to who it's for: anyone with the link can claim it. Until then you can take it back below.");
+  assert.deepEqual(['gift_claimed', 'gift_canceled', 'gift_expired'].map(AW.ownerLinkErrorText), ['This gift was claimed already.', 'AGI Studio took this gift link back.', 'This gift link expired.']);
+  assert.deepEqual(['link_credits', 'links_full', 'not_owner', 'not_ready'].map(AW.ownerLinkErrorText), ['link_credits', 'links_full', 'not_owner', 'not_ready'].map(AW.accessErrorText));
+  // a claim sheet's words for one of the owner's: never "its credits went back to its sender" (nothing was held)
+  assert.deepEqual(['claimed', 'canceled', 'expired'].map((x) => AW.claimStatusText(x, true)), ['This gift was claimed already.', 'AGI Studio took this gift link back.', 'This gift link expired.']);
+  assert.notEqual(AW.claimStatusText('expired', true), AW.claimStatusText('expired', false));
+  assert.equal(AW.ownerClaimedText(true), 'Bonus credits from AGI Studio, and you can use AGI Studio now 💜 Start with your first influencer.');
+  assert.equal(AW.ownerClaimedText(false), "Bonus credits from AGI Studio: use them for anything here. They don't run out.");
+  assert.equal(AW.ACCESS_VIA.link, 'Claimed your gift link');
+  const words = [AW.OWNER_LINK_INTRO, AW.OWNER_LINK_FINE, AW.ownerLinkPlanText(5000), AW.ownerLinkShareText(5000), AW.ownerLinkMadeText(now), AW.OWNER_GIFT_OWN,
+    AW.OWNER_GIFT_LINE, AW.OWNER_GIFT_LETS_IN, AW.ownerClaimedText(true), AW.ownerClaimedText(false), AW.errorText('link_credits'), AW.errorText('links_full')];
+  for (const w of words) {
+    assert.doesNotMatch(w, /\b(?:invest|profit|earn money|cash out|sell|resell|price|buy)\w*\b/i, w);
+    assert.doesNotMatch(w, /\b(?:fal|gemini|google|kling|seedance|meshy|nano banana|bytedance)\b/i, w);
+  }
+  assert.match(AW.OWNER_LINK_FINE, /Credits have no cash value: a gift is a gift, never a sale\./);
+  assert.match(AW.OWNER_LINK_INTRO, /While AGI Studio is private, claiming one lets that wallet in too\.$/);
+  // Owner tools: its "Gifts" tab (still ?tab=testing), the owner's links first, then who can use AGI Studio, then credits for testing
+  const owner = read('src/studio/views/owner.js');
+  assert.doesNotMatch(owner, /innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
+  assert.match(owner, /const TABS = \[\['overview', 'Overview', 'chart'\], \['team', 'Team', 'team'\], \['content', 'Content', 'image'\], \['testing', 'Gifts', 'gift'\]\];/);
+  assert.match(owner, /put\(testing, links\.node, access\.node, gift\);/);
+  assert.match(owner, /if \(k === 'testing' && !accessAsked && ctx\.session\) \{ accessAsked = true; access\.load\(\); links\.load\(\); \}/);
+  assert.match(owner, /ctx\.on\('wallet', \(\) => \{ data = null; admin = null; accessAsked = false; access\.reset\(\); links\.reset\(\); start\(\); \}\);/);
+  assert.match(owner, /links\.node\.hidden = false;/);
+  // its section: what it asks of our server, the secret only through giftLink() (the address's fragment), a second tap from
+  // GIFT_CONFIRM credits, Take it back with two taps (the first forgotten after a few seconds), the newest 8 then Show all
+  const sec = owner.slice(owner.indexOf('export function ownerLinksSection(ctx) {'));
+  const section = sec.slice(0, sec.indexOf('\n}\n') + 2);
+  assert.ok(section.length > 2000, 'ownerLinksSection');
+  assert.match(section, /const r = await ctx\.act\('inf-owner-links'\);/);
+  assert.match(section, /const r = await ctx\.act\('inf-owner-link', \{ credits: n, \.\.\.\(text \? \{ note: text \} : \{\}\) \}\);/);
+  assert.match(section, /const r = await ctx\.act\('inf-owner-link-cancel', \{ gift: l\.id \}\);/);
+  assert.equal((section.match(/giftLink\(location\.origin, ctx\.BASE, (?:l|d)\.token\)/g) || []).length, 2);
+  assert.doesNotMatch(section, /[?&](?:gift|token)=/);
+  assert.match(section, /if \(n >= GIFT_CONFIRM && armed !== n\) \{/);
+  assert.match(section, /`Tap again to make a link of \$\{creditsText\(n\)\}`/);
+  assert.match(section, /'Tap again to take it back'/);
+  assert.match(section, /setTimeout\(\(\) => \{ if \(arming\.delete\(l\.id\) && ctx\.alive\(\)\) drawList\(\); \}, 6000\);/);
+  assert.match(section, /const SHOWN = 8;/);
+  assert.match(section, /`Show all \(\$\{num\(links\.length\)\}\)`/);
+  assert.match(section, /if \(l\.status === 'open' && GIFT_TOKEN\.test\(String\(l\.token \|\| ''\)\)\) \{/);
+  // its form is drawn once (what's typed never lost when the list is drawn again), its message up to 200 characters with its
+  // line breaks (messageField, the same as a person's gift link), checked by characters before anything is asked
+  const drawList = section.slice(section.indexOf('function drawList() {'), section.indexOf('make.addEventListener'));
+  assert.ok(drawList.length > 200);
+  for (const x of ['sa-olinks-form', 'messageField', 'sa-input-num', 'make =']) assert.ok(!drawList.includes(x), x);
+  assert.match(section, /const message = messageField\(GIFTS\.NOTE_MAX, \{/);
+  assert.match(section, /if \(\[\.\.\.text\]\.length > GIFTS\.NOTE_MAX\) \{ say\(message\.err, errorText\('note_long'\)\); message\.input\.focus\(\); return; \}/);
+  assert.match(section, /if \(giftErrorField\(d\.error\) === 'note'\) \{ say\(message\.err, errorText\(d\.error\)\); message\.input\.focus\(\); return; \}/);
+  // credits for testing's amounts in their own row (a gift row's amount is pushed right: .sa-gift-amount)
+  assert.equal((owner.match(/h\('div', \{ class: 'sa-amount-row' \}, amount, quick\)/g) || []).length, 2);
+  const gifts = read('src/studio/views/gifts.js');
+  const app = read('src/studio/app.js');
+  assert.match(gifts, /const input = h\('textarea', \{ class: 'sa-input sa-textarea sa-gift-message', id: nextId\('gnote'\), rows: '3', maxlength: String\(max\), autocomplete: 'off', placeholder \}\);/);
+  assert.match(gifts, /if \(onSend\) input\.addEventListener\('keydown', \(e\) => \{ if \(e\.key === 'Enter' && \(e\.ctrlKey \|\| e\.metaKey\)\) \{ e\.preventDefault\(\); onSend\(\); \} \}\);/);
+  // a claim sheet for one of the owner's: from AGI Studio, its bonus credits, and (while it's private, for a wallet not let in)
+  // that it lets you in; its own words when it's your own link, taken back or past its days
+  assert.match(gifts, /if \(g\.owner && !app\.info && app\.infoReady\) await app\.infoReady\(\);/);
+  assert.match(gifts, /if \(g\.owner && app\.signedIn\?\.\(\) && app\.allowed\?\.\(\) === null && app\.meReady\) await app\.meReady\(\);/);
+  assert.match(app, /meReady: \(\) => \(!state\.session \|\| state\.me \? Promise\.resolve\(state\.me \|\| null\) : new Promise\(\(done\) => \{/);
+  assert.match(gifts, /const letsIn = g\.owner && app\.info\?\.open === false && app\.allowed\?\.\(\) !== true;/);
+  assert.match(gifts, /text: OWNER_GIFT_LINE \}\),\s+letsIn \? h\('p', \{ class: 'sa-small sa-center sa-gift-owner-line', text: OWNER_GIFT_LETS_IN \}\) : null\]/);
+  assert.match(gifts, /x\.owner \? ownerClaimedText\(x\.letIn === true\)/);
+  assert.match(gifts, /const ownerWhy = g\.owner && \(x\.error === 'gift_own' \? OWNER_GIFT_OWN : \['gift_canceled', 'gift_expired'\]\.includes\(x\.error\) \? ownerLinkErrorText\(x\.error\) : null\);/);
+  assert.match(gifts, /claimStatusText\(g\.status, g\.owner\)/);
+  // its styles (every rule names an sa- class: the page's other test reads them all); a message's line breaks shown as typed
+  const css = read('src/styles/studio-app.css');
+  for (const c of ['sa-olinks', 'sa-olinks-intro', 'sa-olinks-form', 'sa-olinks-made', 'sa-olinks-made-title', 'sa-olinks-head', 'sa-olinks-count', 'sa-olinks-list',
+    'sa-amount-row', 'sa-gift-owner-line', 'sa-textarea']) {
+    assert.ok(css.includes(`.${c}`), c);
+  }
+  assert.match(css, /\.sa-amount-row \{ display: flex; flex-wrap: wrap; gap: 6px; align-items: center; \}/);
+  assert.match(css, /\.sa-gift-quote \{[^}]*white-space: pre-wrap;/);
+  assert.match(css, /\.sa-gift-note \{[^}]*white-space: pre-wrap;/);
+  assert.match(css, /\.sa-olinks-made:focus-visible \{ outline: 2px solid var\(--sa-accent\); outline-offset: 2px; \}/);
+  // the rules (studio.html) and the home page's safety note
+  const html = read('studio.html');
+  assert.match(html, /AGI Studio itself sends some gift links of free bonus credits, with a message: each is claimed once the same way, and while AGI Studio is private, claiming one lets that wallet in too\./);
+  const index = read('index.html');
+  assert.match(index, /claimed from a gift link \(AGI Studio's own gift links bring free bonus credits\)/);
+  assert.match(index, /or AGI Studio for one of its own gift links\);/);
+  assert.match(index, /a wallet its owner lets in \(or that claims one of AGI Studio's own gift links\) is kept on its list/);
+  // the AI helper's guide knows them
+  assert.match(helpGuide(), /GIFT LINKS FROM AGI STUDIO: AGI Studio itself sometimes sends a gift link of free credits with a message \("From AGI Studio"\)\./);
+  assert.match(helpGuide(), /While AGI Studio is private, claiming one also lets that wallet in\./);
+});
+
 test("influencers.sql's promises: every function our server calls is there with the parameters it sends, only the server's key, RLS on, never an address or an IP", async () => {
   const sql = read('supabase/influencers.sql');
   const fns = sqlFunctions(sql);
-  assert.equal(fns.size, 96);
+  // (2026-10-11: 98, with inf_pfp_of and inf_pfp_set, its profile picture; 2026-10-12: 100, with the owner's gift links of free
+  // credits, inf_owner_link and inf_owner_links; then 101, the editor's inf_job_delete; 103, the photo editor's inf_tool_take and
+  // inf_photo_add; 106, the video editor's inf_cut_add, inf_cut_done and inf_cut_due)
+  assert.equal(fns.size, 106);
   const known = new Map([...fns, ...sqlFunctions(read('supabase/studio.sql'))]);
   // (round 4, phase 2: the team, support, the helper and the owner's tab too; phase 3: gifts and invites)
   const files = ['server/influencer.js', 'server/inf-api.js', 'server/inf-jobs.js', 'server/inf-uploads.js', 'server/credits.js',
     'server/inf-week.js', 'server/inf-burns.js', 'server/inf-mark.js', 'server/clank-names.js', 'server/inf-captions.js',
-    'server/inf-team.js', 'server/inf-help.js', 'server/inf-admin.js', 'server/inf-gifts.js'];
+    'server/inf-team.js', 'server/inf-help.js', 'server/inf-admin.js', 'server/inf-gifts.js', 'server/inf-editor.js', 'server/inf-cut.js'];
   const used = new Set();
   for (const f of files) {
     for (const { fn, keys } of rpcCalls(read(f))) {
@@ -7195,9 +8400,10 @@ test("influencers.sql's promises: every function our server calls is there with 
       used.add(fn);
     }
   }
-  // its own functions called only by its others: what credits are spent and given back with, the day's count, and (round 2) a
-  // week's best creation (the clock's pick and the owner's skip ask it)
-  assert.deepEqual([...fns.keys()].filter((fn) => !used.has(fn)).sort(), ['inf_day_take', 'inf_refund', 'inf_spend', 'inf_week_top']);
+  // its own functions called only by its others: what credits are spent and given back with, the day's count, (round 2) a
+  // week's best creation (the clock's pick and the owner's skip ask it), and (2026-10-11) an influencer's profile picture as
+  // its rows give it (inf_get, inf_mine, inf_explore, inf_weeks)
+  assert.deepEqual([...fns.keys()].filter((fn) => !used.has(fn)).sort(), ['inf_day_take', 'inf_pfp_of', 'inf_refund', 'inf_spend', 'inf_week_top']);
   // only the server's key: each one's revoke and grant, with its exact parameter types
   const loop = /foreach f in array array\[([\s\S]*?)\] loop\s+execute format\('revoke all on function public\.%s from public, anon, authenticated', f\);\s+execute format\('grant execute on function public\.%s to service_role', f\);/.exec(sql);
   assert.ok(loop, 'the grants');
@@ -7206,7 +8412,7 @@ test("influencers.sql's promises: every function our server calls is there with 
   for (const [fn, params] of fns) assert.equal(granted.get(fn), params.map((p) => p.type).join(', '), fn);
   // its tables: row level security on, nothing that names a wallet, a transaction or an IP address
   const tables = [...sql.matchAll(/create table if not exists public\.([a-z0-9_]+)/g)].map((m) => m[1]);
-  assert.equal(tables.length, 28);
+  assert.equal(tables.length, 29);                                       // (2026-10-12, the editor: agi1_inf_tool_days)
   for (const t of tables) assert.match(sql, new RegExp(`alter table public\\.${t} enable row level security;`), t);
   // (the one exception: a weekly prize's address and transaction, kept so it's never sent twice, the address only 60 days after
   // it's sent: the address a prize went to, never a person's wallet code's address)
@@ -7219,20 +8425,23 @@ test("influencers.sql's promises: every function our server calls is there with 
   assert.doesNotMatch(code, /\b(?:wallet|address|wallet_address|tx|tx_hash|transaction|ip|ip_address)\s+(?:text|inet|varchar|bytea)\b/i);
   assert.match(code, /wallet_code\s+text/);
   assert.doesNotMatch(code, /drop table|truncate|delete from public\.agi1_studio/i);
-  assert.match(sql, /'inf_burns_open', 'inf_slots', 'inf_stats', 'inf_gift',\n    'inf_name_get', 'inf_name_set', 'inf_caption_take',\n    'inf_who', [\s\S]*?'inf_mod_news',\n    'inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_ref_code',\n    'inf_ref_bind', 'inf_ref_settle', 'inf_job_part', 'inf_access_list', 'inf_access_set'\)\) = 96 then 1 else 0 end\)/, 'influencers_ready counts its 96 functions');
+  assert.match(sql, /'inf_burns_open', 'inf_slots', 'inf_stats', 'inf_gift',\n    'inf_name_get', 'inf_name_set', 'inf_caption_take',\n    'inf_who', [\s\S]*?'inf_mod_news',\n    'inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_ref_code',\n    'inf_ref_bind', 'inf_ref_settle', 'inf_job_part', 'inf_access_list', 'inf_access_set', 'inf_pfp_of', 'inf_pfp_set',\n    'inf_owner_link', 'inf_owner_links', 'inf_job_delete', 'inf_tool_take', 'inf_photo_add', 'inf_cut_add', 'inf_cut_done',\n    'inf_cut_due'\)\) = 106 then 1 else 0 end\)/, 'influencers_ready counts its 106 functions');
   // (2026-10-11) giving access: its table (a scrambled code, a short address, the owner's note, how it got in; never the
   // address), inf_who reading it, the owner's two functions; each found by the ready check
   const accessTable = /create table if not exists public\.agi1_inf_access \(([\s\S]*?)\n\);/.exec(sql)?.[1] || '';
   assert.match(accessTable, /wallet_code text\s+primary key/);
   assert.match(accessTable, /short\s+text\s+not null check \(short ~ '\^0x\[0-9a-f\]\{4\}…\[0-9a-f\]\{4\}\$'\)/);
-  assert.match(accessTable, /via\s+text\s+not null default 'owner' check \(via in \('owner', 'credits'\)\)/);
+  assert.match(accessTable, /via\s+text\s+not null default 'owner' check \(via in \('owner', 'credits', 'link'\)\)/);
+  // (2026-10-12) a wallet let in by claiming one of the owner's gift links ('link'): the older check dropped first
+  assert.match(sql, /alter table public\.agi1_inf_access drop constraint if exists agi1_inf_access_via_check;\nalter table public\.agi1_inf_access add constraint agi1_inf_access_via_check check \(via in \('owner', 'credits', 'link'\)\);/);
   assert.match(sql, /'access', exists \(select 1 from agi1_inf_access where wallet_code = p_wallet\)\);/);
   assert.match(sql, /to_regclass\('public\.agi1_inf_access'\) is not null\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_who' and prosrc like '%agi1_inf_access%'\)/);
   assert.match(sql, /if p_via = 'owner' then\n\s+update agi1_inf_access set short = p_short, note = p_note, via = 'owner' where wallet_code = p_wallet;/, "credits for testing never change the owner's note");
   // (round 4, phase 4) the model menu's columns, reference uploads, long videos' parts: the older inf_make dropped first (the web
   // API never has two to choose from), its new parameters with defaults (an older page's call still works), the share mark's
   // clock never taking a long video (its joined copy is marked), each found by the ready check
-  assert.match(sql, /drop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer\);\ncreate or replace function public\.inf_make\(/);
+  // ((2026-10-12, the editor) and "Edit with words"' p_edit: round 4's phase 4 version dropped first too)
+  assert.match(sql, /drop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer\);\ndrop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,\n  integer, text\[\], integer, text, text\);\ncreate or replace function public\.inf_make\(/);
   for (const p of ['p_model text default null', 'p_quality text default null', 'p_seconds integer default null', 'p_refs text\\[\\] default null',
     'p_parts integer default 1', 'p_meme text default null', 'p_caption text default null']) assert.match(sql, new RegExp(p), p);
   for (const c of ['model', 'quality', 'seconds', 'refs', 'parts', 'part', 'meme', 'caption']) {
@@ -7266,6 +8475,33 @@ test("influencers.sql's promises: every function our server calls is there with 
   assert.match(giftsTable, /token\s+text\s+unique check \(token ~ '\^\[A-Za-z0-9_-\]\{22\}\$'\)/);
   assert.match(giftsTable, /check \(\(token is null\) = \(status = 'sent'\)\)/);
   assert.match(giftsTable, /check \(from_code is distinct from to_code\)/);
+  // (2026-10-12) a gift's kind ('bought', or 'owner': the owner's gift links of free credits, always a link), a message of 200
+  // characters (the older check dropped first), each found by the ready check; the owner's links never held anything, never
+  // count toward a person's gifts a day or links waiting, never in the owner's My studio list, never "unhold" when taken back or
+  // past their days; claimed as bonus credits (the log's 'gift', its bonus part), once
+  assert.match(sql, /alter table public\.agi1_credit_gifts add column if not exists kind text not null default 'bought';\nalter table public\.agi1_credit_gifts drop constraint if exists agi1_credit_gifts_kind_check;\nalter table public\.agi1_credit_gifts add constraint agi1_credit_gifts_kind_check\n  check \(kind in \('bought', 'owner'\) and \(kind = 'bought' or token is not null\)\);/);
+  assert.match(sql, /alter table public\.agi1_credit_gifts drop constraint if exists agi1_credit_gifts_note_check;\nalter table public\.agi1_credit_gifts add constraint agi1_credit_gifts_note_check check \(char_length\(note\) between 1 and 200\);/);
+  assert.match(giftsTable, /note\s+text\s+check \(char_length\(note\) between 1 and 200\)/);
+  const body = (fn) => new RegExp(`create or replace function public\\.${fn}\\([\\s\\S]*?\\n\\$\\$;`).exec(sql)?.[0] || '';
+  const ownerLink = body('inf_owner_link');
+  assert.match(ownerLink, /values \(p_id, p_token, 'owner', p_from, 'AGI Studio', p_credits, p_note, 'open', v_until\);/);
+  assert.match(ownerLink, /p_credits not between 1 and 100000/);
+  assert.match(ownerLink, /char_length\(p_note\) not between 1 and 200/);
+  assert.match(ownerLink, /kind = 'owner' and status = 'open'\n\s+and expires_at > now\(\)\) >= p_open_max then/);
+  assert.doesNotMatch(ownerLink, /agi1_credit_log|agi1_credits/, 'nothing held');
+  assert.match(body('inf_owner_links'), /g\.from_code = p_from and g\.kind = 'owner'/);
+  for (const fn of ['inf_send', 'inf_gift_link']) assert.match(body(fn), /from_code = p_from and kind = 'bought'/, `${fn}: a person's gifts a day count only bought ones`);
+  assert.match(body('inf_gift_link'), /where from_code = p_from and kind = 'bought' and status = 'open'\) >= p_open_max/);
+  const claim = body('inf_gift_claim');
+  assert.match(claim, /if g\.kind = 'owner' then[\s\S]*?insert into agi1_credit_log \(wallet_code, kind, amount, paid_part, free_part, bonus_part, ref, other\)\n\s+values \(p_wallet, 'gift', g\.credits, 0, 0, g\.credits, g\.id, g\.from_label\);[\s\S]*?update agi1_credits set bonus = least\(bonus \+ g\.credits, 100000000\)/);
+  assert.match(claim, /if g\.expires_at <= now\(\) then\n\s+if g\.kind = 'bought' then/);
+  assert.match(body('inf_gift_cancel'), /if g\.kind = 'bought' then\n\s+insert into agi1_credit_log \(wallet_code, kind, amount, paid_part, ref, other\)\n\s+values \(p_from, 'unhold'/);
+  assert.match(body('inf_tidy'), /if g\.kind = 'bought' then\n\s+insert into agi1_credit_log \(wallet_code, kind, amount, paid_part, ref, other\)\n\s+values \(g\.from_code, 'unhold'/);
+  assert.match(body('inf_gifts_mine'), /where \(g\.from_code = p_wallet and g\.kind = 'bought'\) or g\.to_code = p_wallet/);
+  assert.match(body('inf_gift_peek'), /'owner', g\.kind = 'owner'\)/);
+  assert.match(sql, /'links_open', \(select count\(\*\) from agi1_credit_gifts where kind = 'bought' and status = 'open' and expires_at > now\(\)\)/);
+  assert.match(sql, /and conname = 'agi1_credit_gifts_note_check' and pg_get_constraintdef\(oid\) like '%200%'\)/);
+  assert.match(sql, /proname in \('inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_tidy'\) and prosrc like '%g\.kind%'\) = 5/);
   // (round 3) the owner's gifts: a kind of their own in the credits' log (the older check dropped first), counted by the check;
   // (round 4, phase 3) and every kind gifts and invites log: sent, got, held in a link, given back, an invite's reward, a welcome
   assert.match(sql, /kind\s+text\s+not null check \(kind in \('topup', 'spend', 'refund', 'free', 'gift'\)\)/);
@@ -7276,13 +8512,50 @@ test("influencers.sql's promises: every function our server calls is there with 
   const limits = read('server/limits.js');
   const part = limits.slice(limits.indexOf('AGI Studio, the AI influencer app'), limits.indexOf('CloakMesh'));
   const lists = [...part.matchAll(/for \(const fn of \[([\s\S]*?)\]\)/g)];
-  assert.equal(lists.length, 8, 'its first version, its round 2, its round 3, its round 4, its round 4\'s phases 2, 3 and 4, and giving access (run again)');
+  assert.equal(lists.length, 14, 'its first version, its round 2, its round 3, its round 4, its round 4\'s phases 2, 3 and 4, giving access, its styles and ways, its profile picture, the owner\'s gift links, the editor, the photo editor and the video editor (run again)');
+  // (2026-10-12) the video editor's three
+  assert.match(part, /for \(const fn of \['inf_cut_add', 'inf_cut_done', 'inf_cut_due'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the video editor; it ends with influencers_ready = 1\)`;/);
+  assert.match(part, /for \(const fn of \['inf_job_delete', 'inf_make'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1\)`;/);
+  // (inf_make's hint is the editor's, its newest parameter: never round 4's phase 4's any more)
+  assert.match(part, /for \(const fn of \['inf_job_part'\]\) \{/);
+  assert.match(part, /for \(const fn of \['inf_owner_link', 'inf_owner_links'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the owner's gift links of free credits; it ends with influencers_ready = 1\)`;/);
+  assert.match(part, /for \(const fn of \['inf_pfp_set', 'inf_pfp_of'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(changing an influencer's profile picture; it ends with influencers_ready = 1\)`;/);
+  assert.match(part, /for \(const fn of \['inf_start', 'inf_upload_set'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(its 26 styles and the ways to start from a photo; it ends with influencers_ready = 1\)`;/);
   assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(giving access from the owner's tab; it ends with influencers_ready = 1\)/);
   assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(its round 4, phase 4: the model menu, references, long videos and memes; it ends with influencers_ready = 1\)/);
   assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(its round 4, phase 3: gifts and invites; it ends with influencers_ready = 1\)/);
   assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(its round 4, phase 2: the owner's tab, the team, support; it ends with influencers_ready = 1\)/);
   assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(its round 4: X banners, clank\.trade names and captions; it ends with influencers_ready = 1\)/);
   assert.deepEqual([...new Set(lists.flatMap((l) => [...l[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1])))].sort(), [...fns.keys()].sort());
+  // (2026-10-11) its 26 styles and 'auto' (none picked), in the table's check and inf_start's (as src/studio/rules.js has them);
+  // the three ways to start (a design only 'looks'; 'asis' only in its own look, and only for a picture of the whole person);
+  // a picture's whole body and head (the older inf_upload_set and inf_start dropped first); inf_job_get's way and head; a
+  // way without looks: its portrait the full body's second picture, never tried again (its credits back); a 3D model's style
+  // from all 26; each found by the ready check
+  const styleList = `'auto', ${Object.keys(R.INF_STYLES).map((k) => `'${k}'`).join(', ')}`;
+  assert.ok(sql.includes(`add constraint agi1_inf_style_check check (style in (${styleList}));`), 'the table takes the 26 styles and auto');
+  assert.ok(sql.includes(`p_style not in (${styleList})`), 'inf_start takes the 26 styles and auto');
+  assert.match(sql, /add constraint agi1_inf_way_check check \(way in \('looks', 'body', 'asis'\) and \(way = 'looks' or mode = 'picture'\)\);/);
+  assert.match(sql, /or p_way is null or p_way not in \('looks', 'body', 'asis'\) or \(p_way <> 'looks' and p_mode <> 'picture'\)\n\s+or \(p_way = 'asis' and p_style <> 'auto'\) then/);
+  assert.match(sql, /if p_way = 'asis' and not coalesce\(u\.whole, false\) then return json_build_object\('ok', false, 'why', 'not_full'\); end if;/);
+  assert.match(sql, /drop function if exists public\.inf_upload_set\(text, text, text, numeric, boolean\);\ncreate or replace function public\.inf_upload_set\(p_id text, p_status text, p_why text, p_seconds numeric, p_real boolean default false,\n  p_whole boolean default false, p_head smallint\[\] default null\)/);
+  assert.match(sql, /drop function if exists public\.inf_start\(text, text, text, text, text, text, jsonb, text, text, integer, integer, integer, integer, integer\);\ncreate or replace function public\.inf_start\(/);
+  assert.match(sql, /p_slots integer default null, p_way text default 'looks'\)/);
+  assert.match(sql, /i\.way as inf_way, \(select u\.head from agi1_inf_uploads u where u\.id = i\.source\) as inf_head,/);
+  assert.match(sql, /looks_job = case when way = 'looks' then looks_job else p_id end,\n\s+pick = case when way = 'looks' then pick when p_files >= 2 then 1 else 0 end,/);
+  assert.match(sql, /if i\.way <> 'looks' or i\.body_tries \+ 1 >= 3 then/);
+  const anime3d = R.DRAWN_STYLES.filter((k) => ['anime', 'storybook', 'retro', 'manga', 'webcomic', 'celshade'].includes(k));
+  assert.equal(anime3d.length, 6);
+  assert.equal((sql.match(/case when i\.style in \('anime', 'storybook', 'retro', 'manga', 'webcomic', 'celshade'\) then 'anime'\n\s+when i\.style in \('toon', 'comic', 'clay', 'toy', 'plush', 'pixel', 'lowpoly', 'watercolor', 'sketch', 'popart', 'ukiyoe', 'vaporwave',\n\s+'papercut'\) then 'cartoon' else 'realistic' end/g) || []).length, 2, "inf_3d's and inf_3d_burn's");
+  for (const k of Object.keys(R.INF_STYLES)) {
+    const in3d = /'anime', 'storybook', 'retro', 'manga', 'webcomic', 'celshade'|'toon', 'comic', 'clay', 'toy', 'plush', 'pixel', 'lowpoly', 'watercolor', 'sketch', 'popart', 'ukiyoe', 'vaporwave',\n\s+'papercut'/;
+    // every drawn style is drawn in 3D too (anime or cartoon); every photo look is realistic
+    assert.equal(new RegExp(`'${k}'`).test([...sql.matchAll(new RegExp(in3d, 'g'))].map((m) => m[0]).join(' ')), R.drawnStyle({ style: k }), k);
+  }
+  assert.match(sql, /and \(\(table_name = 'agi1_inf' and column_name = 'way'\) or \(table_name = 'agi1_inf_uploads' and column_name in \('whole', 'head'\)\)\)\) = 3/);
+  assert.match(sql, /conname = 'agi1_inf_style_check'\n\s+and pg_get_constraintdef\(oid\) like '%storybook%' and pg_get_constraintdef\(oid\) like '%''auto''%'\)/);
+  assert.match(sql, /proname = 'inf_start' and prosrc like '%not_full%'\)/);
+  assert.match(sql, /proname = 'inf_job_get' and prosrc like '%inf_way%'\)/);
   assert.match(part, /run supabase\/influencers\.sql again in this Supabase project \(its round 2; it ends with influencers_ready = 1\)/);
   fake.missing.add('inf_get');
   await assert.rejects(I.infPage(cfgNow(), idOf('anything')), /run supabase\/studio\.sql again, then supabase\/influencers\.sql/);
@@ -7434,8 +8707,9 @@ test('(round 4, phase 4) Learn: /learn, its lessons (each ending where you try i
 
 test("(2026-10-11) Create's choices can be unpicked with a tap (the owner: \"when they pick masculine, it wont uncheck\"): chips' toggle, only in Create; back to Any, else none; the arrow keys never unpick", () => {
   const ui = read('src/studio/ui.js');
-  assert.match(ui, /export function chips\(\{[^)]*\btoggle = false \}\)/);
-  assert.match(ui, /if \(toggle\) unpickable\(row, onchange\);/);
+  assert.match(ui, /export function chips\(\{[^)]*\btoggle = false\b[^)]*\}\)/);
+  // (on its whole fieldset: since 2026-10-11 its sections' chips too, the 26 styles)
+  assert.match(ui, /if \(toggle\) unpickable\(set, onchange\);/);
   const fn = ui.slice(ui.indexOf('function unpickable('), ui.indexOf('// ---------- cards to pick one from'));
   assert.ok(fn.length > 200);
   for (const ev of ['pointerdown', 'pointercancel', 'keydown', 'keyup', 'click']) assert.match(fn, new RegExp(`row\\.addEventListener\\('${ev}'`), ev);
@@ -7453,13 +8727,15 @@ test("(2026-10-11) Create's choices can be unpicked with a tap (the owner: \"whe
   assert.match(fn, /onchange\?\.\(any \? '' : null\);/);
   assert.doesNotMatch(fn, /innerHTML|insertAdjacentHTML/);
   // Create: every chip group may be unpicked (its look, age, hair, skin, eyes, outfit, vibe and style); Create then asks for
-  // the ones it needs (look, age, style)
+  // the ones it needs (look, age). Since 2026-10-11 its style is optional: unpicked, it's "Any style" (sent as none: 'auto')
   const create = read('src/studio/views/create.js');
   const calls = create.match(/chips\(\{[^\n]*/g);
   assert.equal(calls.length, 3);
   for (const c of calls) assert.match(c, /\btoggle: true\b/, c);
   assert.match(create, /if \(!groups\[key\]\?\.value\) \{ fix\(groups\[key\]\?\.node\.querySelector\('input'\), sourceErr, wordsText\(key, 'empty'\)\); return; \}/);
-  assert.match(create, /if \(!styleGroup\.value\) \{ fix\(styleGroup\.node\.querySelector\('input'\), styleErr, wordsText\('style', 'empty'\)\); return; \}/);
+  assert.doesNotMatch(create, /if \(!styleGroup\.value\)/);
+  assert.match(create, /choices: \[\['', STYLE_ANY\]\], value: '', media: true, toggle: true,/);
+  assert.match(create, /style: u\.style \? styleGroup\.value \|\| '' : '',/);
   // never where one must always be picked: a meme's format, a caption's tone, a ticket's topic, a ban's reason, a report's why
   for (const f of ['src/studio/views/influencer.js', 'src/studio/views/shared.js', 'src/studio/views/support.js']) {
     for (const c of read(f).match(/chips\(\{[^\n]*/g) || []) assert.doesNotMatch(c, /\btoggle\b/, `${f}: ${c}`);
@@ -7511,4 +8787,2538 @@ test('(2026-10-11) Copy prompt from the trends (the owner: "they can copy prompt
   assert.match(infView, /put\(movesPanel, grid, about, aboutCopy,/);
   const css = read('src/styles/studio-app.css');
   for (const c of ['sa-prompt', 'sa-prompt-head', 'sa-prompt-label', 'sa-prompt-text']) assert.match(css, new RegExp(`\\.${c} \\{`), c);
+});
+
+test('(2026-10-11) Explore\'s top: "Create your own ___", only the words after "own" moving, underlined (the owner: "the only moving is the words afer the word own and put under line"), and its wall of pictures scrolling ("and also the images moving there"); one steady sentence for screen readers, still for "reduce motion", resting off screen', () => {
+  const code = strip(read('src/studio/views/explore.js'));
+  // the words, in the owner's order (its last one in sentence case, like the others), and the one shown for "reduce motion"
+  assert.match(code, /export const HERO_WORDS = \['AGI-1', 'influencer', 'AI', 'viral content'\];/);
+  assert.match(code, /export const HERO_STILL = 1;/);
+  assert.match(code, /export const HERO_EVERY_MS = 2600;/);
+  // the heading: screen readers hear one sentence; the moving lines are hidden from them; "Create your own" stays still
+  assert.match(code, /const HERO_SAID = 'Create your own AGI-1, influencer, AI or viral content\.';/);
+  assert.match(code, /h\('span', \{ class: 'sa-sr', text: HERO_SAID \}\)/);
+  assert.match(code, /h\('span', \{ class: 'sa-hero-line', 'aria-hidden': 'true', text: 'Create your own' \}\)/);
+  assert.match(code, /h\('span', \{ class: 'sa-hero-line', 'aria-hidden': 'true' \}, rotor, h\('span', \{ text: '\.' \}\)\)/);
+  assert.match(code, /HERO_WORDS\.map\(\(w, k\) => h\('span', \{ class: `sa-rotor-word sa-grad\$\{k === first \? ' is-on' : ''\}`, text: w \}\)\)/);
+  // still for "reduce motion"; resting while the top is off screen or the tab is hidden; the page's own interval (stopped
+  // when the page changes)
+  assert.match(code, /const still = calm\(\);\s*const first = still \? HERO_STILL : 0;/);
+  assert.match(code, /if \(still\) \{ update\(\); return; \}/);
+  assert.match(code, /new IntersectionObserver\(/);
+  assert.match(code, /ctx\.listen\(document, 'visibilitychange', update\);/);
+  assert.match(code, /ctx\.every\(\(\) => \{\s*if \(!moving\(\)\) return;/);
+  assert.match(code, /const moving = \(\) => !still && seen && document\.visibilityState === 'visible';/);
+  assert.match(code, /hero\.classList\.toggle\('is-still', !moving\(\)\)/);
+  // its width follows its word (measured in em once its font is in), by the CSS object model (the CSP forbids style attributes)
+  assert.match(code, /rotor\.style\.width = `\$\{widths\[at\]\.toFixed\(3\)\}em`/);
+  assert.match(code, /document\.fonts\?\.ready\.then\(measure\)/);
+  assert.doesNotMatch(code, /setAttribute\('style'|innerHTML|insertAdjacentHTML/);
+  // the wall: each column its pictures twice over (one seamless loop), never more than 12 covers, a different turn of them each
+  assert.match(code, /h\('div', \{ class: 'sa-wall-col' \}, h\('div', \{ class: 'sa-wall-track' \}\)\)/);
+  assert.match(code, /for \(const \[k, url\] of \[\.\.\.mine, \.\.\.mine\]\.entries\(\)\) add\(track, pic\(url, \{ cls: 'sa-wall-pic', lazy: k > 1 \}\)\);/);
+  const wall = code.slice(code.indexOf('export function wallColumn('));
+  const wallColumn = new Function(`const WALL_EACH = 6; ${wall.slice(0, wall.indexOf('\n}\n') + 2).replace('export ', '')} return wallColumn;`)();
+  const covers = Array.from({ length: 12 }, (_, k) => `c${k}`);
+  for (let c = 0; c < 4; c++) {
+    const col = wallColumn(covers, c);
+    assert.equal(col.length, 6);
+    assert.equal(new Set(col).size, 6, `column ${c}: ${col}`);
+  }
+  assert.deepEqual(wallColumn(['a', 'b', 'c', 'd'], 1), ['d', 'a', 'b', 'c', 'd', 'a']);
+  assert.deepEqual(wallColumn([], 0), []);
+  // the styles: the line under the words follows their width, each word slides in clipped to its line, the wall's columns
+  // scroll up and down (paused while still), and for "reduce motion" the wall stands still
+  const css = read('src/styles/studio-app.css');
+  const rotorCss = css.match(/\.sa-hero-title \.sa-rotor \{[^}]*\}/)?.[0] || '';
+  assert.match(rotorCss, /display: inline-block;/);
+  assert.match(rotorCss, /clip-path: inset\(0\);/);
+  assert.match(rotorCss, /transition: width /);
+  assert.doesNotMatch(rotorCss, /overflow:/, 'an inline-block with overflow loses its baseline');
+  assert.match(css, /\.sa-hero-title \.sa-rotor::after \{[^}]*bottom: 0\.03em;[^}]*background: linear-gradient\(/);
+  assert.match(css, /\.sa-rotor-word\.is-on \{ opacity: 1; transform: none; \}/);
+  assert.match(css, /\.sa-rotor-word\.is-off \{ opacity: 0; transform: translateY\(-110%\); \}/);
+  assert.match(css, /\.sa-hero-title \.sa-hero-line \{ display: block; \}/);
+  assert.match(css, /@keyframes sa-wall-up \{ from \{ transform: translateY\(0\); \} to \{ transform: translateY\(-50%\); \} \}/);
+  assert.match(css, /@keyframes sa-wall-down \{ from \{ transform: translateY\(-50%\); \} to \{ transform: translateY\(0\); \} \}/);
+  assert.match(css, /\.sa-hero\.is-still \.sa-wall-track \{ animation-play-state: paused; \}/);
+  const calmCss = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce) {\n  .sa *,'));
+  assert.match(calmCss.slice(0, calmCss.indexOf('\n}\n')), /\.sa-wall-track \{ animation: none !important; \}/);
+  assert.doesNotMatch(css, /sa-float/);
+});
+
+test('(2026-10-11) the page: Explore\'s holder line (the owner: "add in the front page that holders get discounts"), Create\'s 26 styles in sections and its three ways from a photo, an influencer being made by each way, Anime for the drawn styles, and the AI helper\'s guide', async () => {
+  const { LEVELS } = await import('../src/lib/levels.js');
+  // ---- what holders get, under Explore's words: its numbers from the levels, DISCOUNT and FREE_CREDITS; never "buy" ----
+  const H = AW.HOLDER_LINE;
+  assert.equal(H.title, `$AGI holders get ${R.DISCOUNT[2] * 100}–${R.DISCOUNT[3] * 100}% off, and free credits every month`);
+  assert.deepEqual(H.rows.map((r) => r.slice(0, 2)), [['Crush', '10,000+ $AGI'], ['Soulmate', '1,000,000+ $AGI']]);
+  assert.deepEqual([LEVELS[1].min, LEVELS[2].min], [10_000, 1_000_000]);
+  assert.match(H.rows[0][2], new RegExp(`^${R.DISCOUNT[2] * 100}% off everything and ${R.FREE_CREDITS[2]} free credits a month$`));
+  assert.match(H.rows[1][2], new RegExp(`^${R.DISCOUNT[3] * 100}% off, ${R.FREE_CREDITS[3]} free credits and a free 3D model a month$`));
+  assert.match(H.fine, /A thank-you for holding, not an investment\.$/);
+  const said = JSON.stringify(H);
+  assert.doesNotMatch(said, /\bbuy|purchase|invest(?!ment\.)|profit|gains?\b|moon|pump/i);
+  assert.doesNotMatch(said, PROVIDERS);
+  const explore = read('src/studio/views/explore.js');
+  assert.match(explore, /h\('p', \{ class: 'sa-hero-sub', text: [^\n]*\}\),\n\s+holderLine\(\),/, 'right under the top\'s words');
+  const line = explore.slice(explore.indexOf('function holderLine('), explore.indexOf('// A wall column'));
+  assert.match(line, /role: 'group', 'aria-labelledby': 'sa-holders-h'/);
+  assert.match(line, /h\('span', \{ text: HOLDER_LINE\.title \}\)/);
+  assert.doesNotMatch(line, /innerHTML|insertAdjacentHTML|\btext: `/);
+  const css = read('src/styles/studio-app.css');
+  const holders = css.slice(css.indexOf('.sa-holders {'));
+  assert.match(holders.slice(0, holders.indexOf('}')), /-webkit-backdrop-filter: blur\(6px\);\s*backdrop-filter: blur\(6px\);/);
+  for (const rule of ['.sa-holders-title', '.sa-holders-rows', '.sa-holders-row', '.sa-holders-lvl', '.sa-holders-need', '.sa-holders-what', '.sa-holders-fine']) {
+    assert.ok(css.includes(`${rule} {`) || css.includes(`${rule},`), rule);
+  }
+  assert.match(css, /@media \(max-width: 479px\) \{[^@]*\.sa-holders-row \{/, 'two lines a level on a phone');
+
+  // ---- Create: "Any style" and 26 in four sections (every one always shown: a picked radio in a hidden section would take
+  // the whole group out of the keyboard's way), its way from a photo, what each way uses ----
+  const create = read('src/studio/views/create.js');
+  assert.match(create, /sections: STYLE_GROUPS\.map\(\(g\) => \(\{ id: g\.id, name: g\.name, choices: Object\.entries\(g\.styles\) \}\)\),/);
+  const ui = read('src/studio/ui.js');
+  const chipsFn = ui.slice(ui.indexOf('export function chips('), ui.indexOf('function unpickable('));
+  assert.match(chipsFn, /h\('div', \{ class: 'sa-chip-row', role: 'group', 'aria-labelledby': subId \}\)/);
+  assert.match(chipsFn, /h\('p', \{ class: 'sa-chip-subhead', id: subId, text: sec\.name \}\)/);
+  assert.doesNotMatch(chipsFn, /(?<!aria-)hidden\b|'details'|collapse/, 'every section always shown');
+  assert.match(css, /\.sa-chip-subhead \{/);
+  assert.match(css, /\.sa \[hidden\] \{ display: none !important; \}/);
+  assert.match(create, /const USES = \{\n\s+looks: \{ style: true, outfit: true, vibe: true, words: true \},\n\s+body: \{ style: true, outfit: true, vibe: false, words: true \},\n\s+asis: \{ style: false, outfit: false, vibe: false, words: false \},\n\};/);
+  assert.match(create, /const wayPick = cardPick\(\{ legend: 'How should it be made\?', choices: wayChoices\(\), value: 'looks', cls: 'sa-cards-list', onchange: \(v\) => setWay\(v\) \}\);/);
+  assert.match(create, /off: value === 'asis' && !st\.full, why: WAY_FULL_WHY/, '"as it is" only for a photo of the whole person');
+  assert.match(create, /wayBox\.hidden = mode !== 'picture'/, 'only from a photo');
+  assert.match(create, /\.\.\.\(st\.mode === 'picture' \? \{ source: st\.source, way \} : \{\}\)/);
+  assert.match(create, /if \(d\.field === 'way'\) \{ fix\(wayInput\(\), wayErr, wordsText\('way', d\.why\)\); return; \}/);
+  assert.ok(AW.wordsText('way', 'bad') && !/undefined|null/.test(AW.wordsText('way', 'bad')), AW.wordsText('way', 'bad'));
+  assert.match(create, /if \(way === 'asis' && !st\.full\) \{ fix\(wayInput\(\), wayErr, errorText\('not_full'\)\); return; \}/);
+  assert.match(create, /if \(d\.error === 'not_full'\) \{ st\.full = false; setWay\('looks'\);/);
+  assert.match(read('src/studio/media.js'), /return \{ ok: true, id: r\.data\.id \|\| open\.data\.id, real: r\.data\.real === true, full: r\.data\.full === true \};/);
+  // the words for each way and its price (from WAYS and PRICES), never an AI service's name
+  for (const [w, way] of Object.entries(R.WAYS)) {
+    assert.ok(Object.hasOwn(R.PRICES, way.price), w);
+    assert.ok(AW.WAY_LINES[w] && AW.aboutWay(w), w);
+    assert.doesNotMatch(`${way.name} ${way.note} ${AW.WAY_LINES[w]} ${AW.aboutWay(w)} ${AW.wayToast(w)}`, PROVIDERS);
+  }
+  assert.match(AW.aboutWay('asis'), /^No AI: /);
+  assert.match(AW.aboutWay('body'), /its full body from your photo, keeping its face, legs and shoes/);
+  assert.equal(AW.errorText('not_full'), 'Your photo as it is needs a photo of the whole person, head to feet: pick another way to make it, or another photo.');
+  assert.equal(AW.photoReadyText(true), "Looks good: it's checked and ready ✓ It shows the whole person, so you can also use it as it is.");
+  assert.equal(AW.photoReadyText(false), "Looks good: it's checked and ready ✓");
+  assert.equal(AW.makingText({ status: 'body', way: 'asis', name: 'Lux' }), 'Getting Lux ready from your photo…');
+  assert.equal(AW.PROGRESS_LABELS.asis, 'Getting it ready');
+
+  // ---- an influencer being made by each way; Anime for the drawn styles ----
+  const inf = read('src/studio/views/influencer.js');
+  assert.match(inf, /const asis = i\.status === 'body' && i\.way === 'asis';/);
+  assert.match(inf, /progressBar\(\{ key: i\.job\?\.id \|\| `\$\{id\}-\$\{i\.status\}`, kind: asis \? 'asis' : i\.status,/);
+  assert.match(inf, /const animeOk = drawnStyle\(i\);/);
+  assert.match(AW.ANIME_WHY, /drawn styles: anime, comics, 3D, toys and art/);
+  assert.equal(R.TYPICAL.asis.reduce((a, [, s]) => a + s, 0), 8, 'a few seconds');
+
+  // ---- the AI helper's guide: the styles (all 26, in their four groups), the three ways and their prices ----
+  const guide = helpGuide(cfgNow());
+  assert.match(guide, /STYLES: a style is optional: 26 of them in four groups \(Photo looks: Realistic, Film photo, Editorial, Cinematic; Anime & comics: /);
+  for (const name of Object.values(R.INF_STYLES)) assert.ok(guide.includes(name), name);
+  assert.match(guide, /FROM A PHOTO, THREE WAYS: "4 looks to pick from" \(as above\); "Just its full body" \(cheaper: /);
+  assert.ok(guide.includes(`one from a photo with just its full body: ${R.PRICES.body} credits (Crush ${R.creditPrice('body', 2)}, Soulmate ${R.creditPrice('body', 3)})`));
+  assert.ok(guide.includes(`one from a photo used as it is: ${R.PRICES.asis} credits (Crush ${R.creditPrice('asis', 2)}, Soulmate ${R.creditPrice('asis', 3)})`));
+  assert.match(guide, /a photo used as it is a few seconds/);
+  assert.doesNotMatch(guide, PROVIDERS);
+  assert.doesNotMatch(guide, /\b(?:ghibli|studio ghibli|miyazaki|pixar|disney|lego|funko)\b/i, 'never a studio\'s, a brand\'s or an artist\'s name');
+});
+
+// ---------- the editor (2026-10-12, the owner's choices): "Make another" and "Delete" on its own creations ----------
+test('(2026-10-12, the editor) "Make another": one of its own photos, memes, X banners, videos and trend videos made again with the same words and settings, next to it (never in its place), at the price of making it now (a holder\'s too, and the page\'s own sum for its button); one made before the model menu, one that couldn\'t be made; every "no" in words, with nothing made or paid for any', async () => {
+  giveCredits(50000);
+  const nova = await readyInf({ name: 'Nova', style: 'anime' });
+  const mira = await readyInf({ name: 'Mira', style: 'real' });
+  const photoN = await doneJob(nova.id, 'photo'), photoM = await doneJob(mira.id, 'photo');
+  keptTrend('golden-flip');
+  const clip = await okUpload('clip', { seconds: 6 });
+  const refs = [await okUpload('ref'), await okUpload('ref')];
+  const asked = () => dbCalls('inf_make').at(-1);
+  const without = ({ p_job, ...rest }) => rest;
+  const settle = (job, status = 'done') => Object.assign(fake.db.jobs.get(job), { status, done: status === 'done' ? Date.now() : null, lease: 0 });
+  // what the page's "Make another" button says it costs: src/studio/views/influencer.js againCost's own sum (the page test
+  // below checks its code), from the row its page gets
+  const pageCost = (j, level = 1) => {
+    if (j.kind === 'trend') return R.creditPrice('trend', level);
+    if (j.kind === 'photo') return R.photoCredits({ model: j.model ?? null, quality: j.quality ?? null, shape: j.shape || 'tall', meme: j.meme ?? null }, level);
+    const spec = R.videoSpec({ model: j.model || (j.image ? 'standard' : 'anime'), seconds: j.seconds ?? null, sound: j.sound === true, quality: j.quality ?? null });
+    return spec ? R.videoCredits(spec, level) : null;
+  };
+  const rowOf = async (inf, job) => { nextMinute(); return (await act('inf-look', { id: inf })).body.jobs.find((x) => x.id === job); };
+  const make = async (inf, input) => {
+    nextMinute();
+    const r = await act('inf-make', { id: inf, ...input });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    settle(r.body.job);
+    return { job: r.body.job, args: asked(), cost: r.body.cost };
+  };
+  const again = (job, { wallet = WALLET, level = 1 } = {}) => { nextMinute(); return act('inf-again', { job }, { wallet, level }); };
+  const scene = 'reading a book on a sunny balcony with a cup of tea';
+  const cases = [
+    ['a Classic HD photo', nova.id, { kind: 'photo', scene, shape: 'tall', model: 'classic', quality: 'hd' }, 22],
+    ['a Crisp photo', nova.id, { kind: 'photo', scene, shape: 'wide', model: 'crisp' }, 8],
+    ['an Ultra photo with references', nova.id, { kind: 'photo', scene, shape: 'square', model: 'classic', quality: 'ultra', refs }, 29],
+    ['a top & bottom meme', nova.id, { kind: 'photo', scene, shape: 'square', model: 'classic', meme: 'topbottom', lines: ['When the coffee kicks in', 'Main character energy'] }, 15],
+    ['a POV meme', nova.id, { kind: 'photo', scene, shape: 'square', meme: 'pov', lines: ['you finally found the perfect cafe'] }, 15],
+    ['an X banner', nova.id, { kind: 'photo', scene: 'a city skyline at night, its windows glowing', shape: 'banner' }, 22],
+    ['an Anime video, 10 s at 480p with sound', nova.id, { kind: 'video', scene: 'dances happily on a neon rooftop at night', shape: 'wide', model: 'anime', seconds: 10, quality: '480p', sound: true }, 397],
+    ['a Pro video from a photo', mira.id, { kind: 'video', scene: 'the camera slowly circles her as she waves', image: photoM, model: 'pro', seconds: 5, sound: false }, 101],
+    ['a Long video from a photo', mira.id, { kind: 'video', scene: 'she walks through a busy market at dusk', image: photoM, model: 'long', seconds: 30 }, 454],
+    ['a trend video', nova.id, { kind: 'trend', trend: 'golden-flip' }, 300],
+    ['a trend video from one of its photos', nova.id, { kind: 'trend', trend: 'golden-flip', image: photoN }, 300],
+    ['a trend video from its own clip', nova.id, { kind: 'trend', clip, shape: 'wide' }, 300],
+  ];
+  const made = {};
+  for (const [what, inf, input, cost] of cases) {
+    const m = await make(inf, input);
+    assert.equal(m.cost, cost, what);
+    const before = credits();
+    const r = await again(m.job);
+    assert.equal(r.status, 200, `${what}: ${JSON.stringify(r.body)}`);
+    assert.deepEqual([r.body.ok, r.body.kind, r.body.cost, r.body.credits.paid], [true, input.kind, cost, before.paid - cost], what);
+    // the same words and settings: the database asked exactly as when it was made (its scene, shape, sound, model, quality,
+    // length and parts, its meme's words, its references, its trend clip or own clip, the photo it started from), under a new id
+    assert.deepEqual(without(asked()), without(m.args), what);
+    assert.match(r.body.job, ID);
+    assert.notEqual(r.body.job, m.job, what);
+    // next to it, never in its place
+    const old = fake.db.jobs.get(m.job), fresh = fake.db.jobs.get(r.body.job);
+    assert.deepEqual([old.status, old.hidden, old.deleted, fresh.status, fresh.inf_id, fresh.cost], ['done', false, null, 'paid', inf, cost], what);
+    assert.equal(credits().paid, before.paid - cost, what);
+    settle(r.body.job);
+    // the page's button: the same price
+    assert.equal(pageCost(await rowOf(inf, m.job)), cost, what);
+    made[what] = m.job;
+  }
+  // a holder's price, as for making it (Crush 20% off, Soulmate 40% off), on the page's button too
+  let r = await again(made['a Classic HD photo'], { level: 2 });
+  assert.deepEqual([r.status, r.body.cost, asked().p_cost], [200, 18, 18], JSON.stringify(r.body));
+  settle(r.body.job);
+  assert.equal(pageCost(await rowOf(nova.id, made['a Classic HD photo']), 2), 18);
+  r = await again(made['an Anime video, 10 s at 480p with sound'], { level: 3 });
+  assert.deepEqual([r.status, r.body.cost], [200, 238]);
+  settle(r.body.job);
+  assert.equal(pageCost(await rowOf(nova.id, made['an Anime video, 10 s at 480p with sound']), 3), 238);
+  r = await again(made['a trend video'], { level: 2 });
+  assert.deepEqual([r.status, r.body.cost], [200, 240]);
+  settle(r.body.job);
+  // one made before the model menu (no model, length or quality kept): as our server picks today, Anime from its full body
+  // (a drawn style) or Standard from the photo it started from, 5 seconds
+  const oldAnime = idOf('oldanime'), oldStandard = idOf('oldstandard');
+  fake.db.addJob({ id: oldAnime, inf_id: nova.id, wallet_code: codeOf(), kind: 'video', scene: 'waves at the camera in a sunny park', shape: 'tall', sound: true, cost: 400, status: 'done', done: Date.now() - 5000 });
+  fake.db.addJob({ id: oldStandard, inf_id: mira.id, wallet_code: codeOf(), kind: 'video', scene: 'waves at the camera in a sunny park', shape: 'tall', sound: false, image: photoM, cost: 400, status: 'done', done: Date.now() - 5000 });
+  r = await again(oldAnime);
+  assert.deepEqual([r.status, r.body.cost], [200, 426], JSON.stringify(r.body));
+  assert.deepEqual(['p_model', 'p_seconds', 'p_quality', 'p_sound', 'p_image', 'p_parts'].map((k) => asked()[k]), ['anime', 5, '720p', true, null, 1]);
+  settle(r.body.job);
+  assert.equal(pageCost(await rowOf(nova.id, oldAnime)), 426);
+  r = await again(oldStandard);
+  assert.deepEqual([r.status, r.body.cost], [200, 76], JSON.stringify(r.body));
+  assert.deepEqual(['p_model', 'p_seconds', 'p_quality', 'p_sound', 'p_image', 'p_parts'].map((k) => asked()[k]), ['standard', 5, null, false, photoM, 1]);
+  settle(r.body.job);
+  assert.equal(pageCost(await rowOf(mira.id, oldStandard)), 76);
+  // one that couldn't be made ("Try again" on its tile: its credits came back by themselves): made again the same way
+  const crisp = made['a Crisp photo'];
+  Object.assign(fake.db.jobs.get(crisp), { status: 'failed', error: 'ai', refunded: true, done: null });
+  r = await again(crisp);
+  assert.deepEqual([r.status, r.body.cost, asked().p_model, asked().p_quality], [200, 8, 'crisp', 'hd'], JSON.stringify(r.body));
+  settle(r.body.job);
+  settle(crisp);
+
+  // ---- every "no": nothing made, nothing paid ----
+  const jobs0 = fake.db.jobs.size, log0 = fake.db.log.length, paid0 = credits().paid;
+  const hd = made['a Classic HD photo'];
+  const no = async (job, status, error, opts) => {
+    const x = await again(job, opts);
+    assert.deepEqual([x.status, x.body.error], [status, error], `${job}: ${JSON.stringify(x.body)}`);
+    return x;
+  };
+  await no('short', 400, 'bad');
+  await no(idOf('nobody'), 404, 'job_gone');
+  await no(nova.looks, 404, 'job_gone');                       // its looks: not a photo, a video or a trend video
+  await no(nova.body, 404, 'job_gone');
+  const asks = [dbCalls('inf_get').length, dbCalls('inf_make').length];
+  await no(hd, 403, 'not_yours', { wallet: OTHER });
+  assert.deepEqual([dbCalls('inf_get').length, dbCalls('inf_make').length], asks, 'another wallet\'s: refused as soon as its creation is read (never its influencer or its making)');
+  fake.db.jobs.get(hd).hidden = true;                          // taken down
+  await no(hd, 404, 'job_gone');
+  fake.db.jobs.get(hd).hidden = false;
+  process.env.STUDIO_HIDE = hd;                                // taken down by the owner's setting
+  await no(hd, 404, 'job_gone');
+  delete process.env.STUDIO_HIDE;
+  fake.db.jobs.get(hd).status = 'paid';                        // still being made
+  await no(hd, 409, 'making');
+  fake.db.jobs.get(hd).status = 'done';
+  banWallet(WALLET);
+  const reads = dbCalls('inf_job_get').length;
+  await no(hd, 403, 'banned');
+  assert.equal(dbCalls('inf_job_get').length, reads, 'a banned wallet: refused before anything is read (the database refuses its making too)');
+  unbanWallet(WALLET);
+  fake.db.cred(codeOf()).paid = 5;
+  assert.equal((await no(hd, 402, 'short')).body.have, 5, 'what it has, for the page\'s "Buy credits"');
+  fake.db.cred(codeOf()).paid = paid0;
+  // what it was made from, gone meanwhile: the photo it started from deleted, its clip and its references past their day, its
+  // trend clip taken down, a choice its model doesn't offer (any more), its words refused by a newer rule, its influencer deleted
+  nextMinute();
+  assert.equal((await act('inf-job-delete', { job: photoM })).status, 200);
+  // (the photo itself, its maker's deleted one: never made again, whatever else would show it)
+  await no(photoM, 404, 'job_gone');
+  fake.db.jobs.get(photoM).hidden = false;
+  await no(photoM, 404, 'job_gone');
+  fake.db.jobs.get(photoM).hidden = true;
+  await no(made['a Pro video from a photo'], 409, 'image');
+  await no(made['a Long video from a photo'], 409, 'image');
+  fake.db.uploads.get(clip).created = Date.now() - 2 * DAY;
+  await no(made['a trend video from its own clip'], 409, 'clip');
+  for (const u of refs) fake.db.uploads.get(u).created = Date.now() - 2 * DAY;
+  await no(made['an Ultra photo with references'], 409, 'refs');
+  fake.db.trends.get('golden-flip').status = 'hidden';
+  await no(made['a trend video'], 409, 'trend');
+  fake.db.jobs.get(crisp).quality = 'std';
+  await no(crisp, 400, 'model');
+  fake.db.jobs.get(hd).scene = 'come and see me at https://example.com tonight';
+  r = await again(hd);
+  assert.deepEqual([r.status, r.body.error, r.body.field, r.body.why], [422, 'words', 'scene', 'link']);
+  assert.equal(AW.againErrorText(r.body), `Its words can't be used as they are any more: ${AW.wordsText('scene', 'link')}`);
+  fake.db.jobs.get(hd).scene = scene;
+  fake.db.infs.get(nova.id).status = 'deleted';
+  await no(hd, 404, 'gone');
+  fake.db.infs.get(nova.id).status = 'ready';
+  assert.deepEqual([fake.db.jobs.size, fake.db.log.length, credits().paid], [jobs0, log0, paid0], 'nothing made or paid for any "no"');
+  assert.equal(falCalls().length, 0, 'the AI service is only asked by the clock, once it\'s paid for');
+});
+
+test('(2026-10-12, the editor) "Delete": one of its own photos, memes, X banners, videos and trend videos off every page at once and for good (all its files, a profile picture framed from it; its row and its likes a week later), only its maker\'s, never while it or something from it is being made, a banned wallet\'s own too; a poster or a share mark made meanwhile never kept; an older influencers.sql says what to run', async () => {
+  const cfg = cfgNow();
+  giveCredits(5000);
+  const nova = await readyInf({ name: 'Nova' });
+  const deletes = () => calls.filter((c) => c.to === 'delete');
+  // a photo with its full-size download, liked by someone else
+  const photo = await doneJob(nova.id, 'photo');
+  fake.storage.set(hdPath(nova.id, photo, 0), { bytes: Buffer.from('hd'), type: 'image/jpeg' });
+  nextMinute();
+  let r = await act('inf-like', { job: photo, like: true }, { wallet: OTHER, level: 2 });
+  assert.deepEqual([r.status, fake.db.jobs.get(photo).likes], [200, 1], JSON.stringify(r.body));
+  // only its maker
+  r = await act('inf-job-delete', { job: photo }, { wallet: OTHER });
+  assert.deepEqual([r.status, r.body.error], [403, 'not_yours']);
+  assert.deepEqual([deletes().length, fake.db.jobs.get(photo).deleted], [0, null]);
+  const before = credits();
+  r = await act('inf-job-delete', { job: photo });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.ok, r.body.files, r.body.pfp], [true, 3, false]);
+  assert.deepEqual(dbCalls('inf_job_delete').at(-1), { p_id: photo, p_wallet: codeOf() });
+  assert.ok(!JSON.stringify(dbCalls('inf_job_delete')).toLowerCase().includes(WALLET.slice(2)), 'never the address');
+  assert.deepEqual(credits(), before, "its credits don't come back: it was made");
+  assert.deepEqual(deletes().at(-1).names, jobFiles({ id: photo, inf_id: nova.id, kind: 'photo' }));
+  assert.deepEqual(stored(`inf/${nova.id}/${photo}`), []);
+  assert.deepEqual([fake.db.jobs.get(photo).hidden, typeof fake.db.jobs.get(photo).deleted], [true, 'number']);
+  // off every page at once: its files and its download, its page (its maker's and anyone's), Explore
+  nextMinute();
+  for (const q of [`inf-file=${nova.id}/${photo}-0.jpg`, `inf-file=${nova.id}/${photo}-0.webp`, `inf-dl=${nova.id}/${photo}-0.jpg`]) assert.equal((await get(q)).status, 404, q);
+  assert.ok(!(await act('inf-look', { id: nova.id })).body.jobs.some((j) => j.id === photo));
+  assert.ok(!(await get(`inf=${nova.id}`)).body.jobs.some((j) => j.id === photo));
+  assert.ok(!(await get('inf-explore')).body.fresh.some((j) => j.id === photo));
+  // for good: "Make another" says so, it isn't deleted twice, the owner can't show it again, nobody can like it
+  r = await act('inf-again', { job: photo });
+  assert.deepEqual([r.status, r.body.error], [404, 'job_gone']);
+  r = await act('inf-job-delete', { job: photo });
+  assert.deepEqual([r.status, r.body.error], [404, 'job_gone']);
+  r = await act('inf-hide', { job: photo, hidden: false }, { wallet: BOSS });
+  assert.deepEqual([r.status, fake.db.jobs.get(photo).hidden], [404, true]);
+  r = await act('inf-like', { job: photo, like: true }, { wallet: FRIEND, level: 2 });
+  assert.deepEqual([r.status, r.body.error], [404, 'gone']);
+
+  // a video: its file, its poster, its copy with the share mark, a long video's parts and their last frames
+  nextMinute();
+  const video = await doneJob(nova.id, 'video', { poster: true });
+  for (const name of [markedPath(nova.id, video), partPath(nova.id, video, 0), partPath(nova.id, video, 1), framePath(nova.id, video, 0), framePath(nova.id, video, 1)]) {
+    fake.storage.set(name, { bytes: Buffer.from('x'), type: name.endsWith('.jpg') ? 'image/jpeg' : 'video/mp4' });
+  }
+  r = await act('inf-job-delete', { job: video });
+  assert.deepEqual([r.status, r.body.files, r.body.pfp], [200, 7, false], JSON.stringify(r.body));
+  assert.deepEqual(stored(`inf/${nova.id}/${video}`), []);
+  for (const q of [`inf-video=${video}.mp4`, `inf-video-dl=${video}.mp4`, `inf-file=${nova.id}/${video}.poster.webp`]) assert.equal((await get(q)).status, 404, q);
+  // a trend video
+  const trend = await doneJob(nova.id, 'trend');
+  r = await act('inf-job-delete', { job: trend });
+  assert.deepEqual([r.status, r.body.files], [200, 1]);
+  // one that couldn't be made (its tile's "Remove it"): nothing to delete, gone from its page
+  const failed = idOf('failedone');
+  fake.db.addJob({ id: failed, inf_id: nova.id, wallet_code: codeOf(), kind: 'video', scene: 'dances in the rain', shape: 'tall', cost: 400, status: 'failed', error: 'ai', refunded: true });
+  assert.ok((await act('inf-look', { id: nova.id })).body.jobs.some((j) => j.id === failed));
+  r = await act('inf-job-delete', { job: failed });
+  assert.deepEqual([r.status, r.body.files], [200, 0]);
+  assert.ok(!(await act('inf-look', { id: nova.id })).body.jobs.some((j) => j.id === failed));
+
+  // never while it's being made…
+  nextMinute();
+  const making = idOf('makingone');
+  fake.db.addJob({ id: making, inf_id: nova.id, wallet_code: codeOf(), kind: 'photo', scene: 'on a beach at sunset', shape: 'tall', cost: 15, status: 'making' });
+  r = await act('inf-job-delete', { job: making });
+  assert.deepEqual([r.status, r.body.error], [409, 'job_making']);
+  fake.db.jobs.get(making).status = 'failed';
+  // …or while something is being made from it (its files kept); once that's done, it goes, and what was made from it can't
+  // be made again from it
+  const source = await doneJob(nova.id, 'photo');
+  r = await act('inf-make', { id: nova.id, kind: 'video', scene: 'the camera slowly circles her as she waves', image: source, model: 'standard', seconds: 5 });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const fromIt = r.body.job;
+  r = await act('inf-job-delete', { job: source });
+  assert.deepEqual([r.status, r.body.error], [409, 'job_in_use']);
+  assert.ok(fake.storage.has(picPath(nova.id, source, 0)) && fake.db.jobs.get(source).deleted === null, 'nothing deleted');
+  Object.assign(fake.db.jobs.get(fromIt), { status: 'done', done: Date.now() });
+  r = await act('inf-job-delete', { job: source });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await act('inf-again', { job: fromIt });
+  assert.deepEqual([r.status, r.body.error], [409, 'image']);
+
+  // a profile picture framed from it: back to its picked look, its own two files deleted with it
+  nextMinute();
+  const framed = await doneJob(nova.id, 'photo');
+  r = await act('inf-pfp', { id: nova.id, from: { job: framed, n: 0, ...FACE_FRAME } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const pid = r.body.portrait.job;
+  const pfpFiles = [picPath(nova.id, pid, 0), picPath(nova.id, pid, 0, 'webp')];
+  assert.ok(pfpFiles.every((n) => fake.storage.has(n)));
+  r = await act('inf-job-delete', { job: framed });
+  assert.deepEqual([r.status, r.body.files, r.body.pfp], [200, 4, true], JSON.stringify(r.body));
+  assert.equal(fake.db.infs.get(nova.id).pfp, null);
+  assert.ok(!pfpFiles.some((n) => fake.storage.has(n)));
+  r = await act('inf-look', { id: nova.id });
+  assert.deepEqual([r.body.influencer.portrait, r.body.influencer.pfp], [{ job: nova.looks, n: 1 }, null]);
+
+  // a banned wallet: nothing made ("Make another" says so), but it may still delete its own
+  nextMinute();
+  const own = await doneJob(nova.id, 'photo');
+  banWallet(WALLET);
+  r = await act('inf-again', { job: own });
+  assert.deepEqual([r.status, r.body.error], [403, 'banned']);
+  r = await act('inf-job-delete', { job: own });
+  assert.deepEqual([r.status, r.body.ok], [200, true]);
+  unbanWallet(WALLET);
+  // only a photo, a video or a trend video of an influencer that's still there
+  nextMinute();
+  for (const job of [nova.looks, nova.body, keptTrend('paparazzi'), idOf('nothing')]) {
+    r = await act('inf-job-delete', { job });
+    assert.deepEqual([r.status, r.body.error], [404, 'job_gone'], job);
+  }
+  r = await act('inf-job-delete', { job: 'nope' });
+  assert.deepEqual([r.status, r.body.error], [400, 'bad_request']);
+  const ada = await readyInf({ name: 'Ada' });
+  const orphan = await doneJob(ada.id, 'photo');
+  fake.db.infs.get(ada.id).status = 'deleted';
+  r = await act('inf-job-delete', { job: orphan });
+  assert.deepEqual([r.status, r.body.error], [404, 'job_gone']);
+
+  // its files can't be deleted just now: off every page anyway (the tidy-up deletes its files a week later)
+  nextMinute();
+  const lost = await doneJob(nova.id, 'photo');
+  fake.storageDown = true;
+  r = await act('inf-job-delete', { job: lost });
+  fake.storageDown = false;
+  assert.deepEqual([r.status, r.body.files, r.body.pfp], [200, 0, false]);
+  assert.ok(logs.includes("[studio] a deleted creation's files (they go with the tidy-up a week later): storage HTTP 500"), logs.join('\n'));
+  assert.ok(fake.storage.has(picPath(nova.id, lost, 0)) && fake.db.jobs.get(lost).hidden === true);
+  // a week later, the tidy-up: their rows and their likes go, and their files are deleted (again); one deleted since stays
+  for (const job of [photo, lost]) fake.db.jobs.get(job).deleted = Date.now() - 8 * DAY;
+  const t = await tidy(cfg);
+  assert.deepEqual([t.creations, t.files], [2, 2]);
+  assert.ok(![photo, lost].some((job) => fake.db.jobs.has(job)) && fake.db.jobs.has(video));
+  assert.ok(!fake.db.likes.some((l) => l.job === photo));
+  assert.deepEqual(stored(`inf/${nova.id}/${lost}`), []);
+
+  // the share mark's clock: a video its maker deleted while its marked copy was being made: the copy just kept goes too
+  const v2 = await doneJob(nova.id, 'video', { video: mp4({ seconds: 5, video: HD }), done: Date.now() + 5000 });
+  const run = async (args) => {
+    assert.equal((await I.deleteJob(cfg, { wallet: WALLET, job: v2 })).ok, true);
+    await writeFile(args.at(-1), mp4({ seconds: 5, video: HD, size: 70_000 }));
+  };
+  assert.deepEqual(await K.markClock(cfg, { deadline: Date.now() + 19_000, run }), { gone: v2 });
+  assert.equal(fake.storage.has(markedPath(nova.id, v2)), false);
+  assert.deepEqual([deletes().at(-1).names, fake.db.jobs.get(v2).marked], [[markedPath(nova.id, v2)], false]);
+  // a poster its page took of a video deleted meanwhile: not kept
+  const ticket = encodeURIComponent(makeTicket(SECRET, 'poster', { j: video, o: nova.id, l: picPath(nova.id, nova.looks, 1) }, Date.now(), 3600e3));
+  r = await postBytes(`inf-poster=${ticket}`, await sharp(PNG).jpeg().toBuffer());
+  assert.deepEqual([r.status, r.body.error], [404, 'gone']);
+  assert.equal(fake.storage.has(posterPath({ kind: 'video', id: video, inf_id: nova.id })), false);
+  assert.deepEqual(deletes().at(-1).names, [`inf/${nova.id}/${video}.poster.webp`]);
+
+  // an influencers.sql from before the editor: "not ready", nothing deleted, and the log says what to run
+  const left = await doneJob(nova.id, 'photo');
+  fake.missing.add('inf_job_delete');
+  const n = deletes().length;
+  nextMinute();
+  r = await act('inf-job-delete', { job: left });
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  assert.ok(logs.some((l) => l.includes('inf_job_delete not found: run supabase/influencers.sql again in this Supabase project (the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1)')), logs.join('\n'));
+  assert.ok(deletes().length === n && fake.storage.has(picPath(nova.id, left, 0)) && fake.db.jobs.get(left).deleted === null, 'nothing deleted');
+  fake.missing.delete('inf_job_delete');
+});
+
+test('(2026-10-12, the editor) "Edit with words": a new photo from one of its own photos, memes and X banners with one change typed in words, next to it (never in its place), at a photo\'s price at its quality (Classic: a Crisp one\'s too; a holder\'s price, and the page\'s own sum for its button); the AI asked for just that change, from that photo and its full body (a meme\'s words kept and looked at again, an X banner cut from its middle); an edit of an edit, "Make another" of an edit; its words checked like a scene; every "no" in words, with nothing made or paid for any; an older influencers.sql says what to run', async () => {
+  giveCredits(20000);
+  const nova = await readyInf({ name: 'Nova', style: 'anime' });
+  const mira = await readyInf({ name: 'Mira', style: 'real' });
+  const asked = () => dbCalls('inf_make').at(-1);
+  const settle = (job) => Object.assign(fake.db.jobs.get(job), { status: 'done', done: Date.now(), lease: 0 });
+  const jpg = await sharp(PNG).jpeg().toBuffer();
+  const keep = (inf, job) => {
+    fake.storage.set(picPath(inf, job, 0), { bytes: jpg, type: 'image/jpeg' });
+    fake.storage.set(picPath(inf, job, 0, 'webp'), { bytes: Buffer.from('RIFFwebp'), type: 'image/webp' });
+  };
+  // its photos, made as people make them, done (their files in the bucket)
+  const madeOne = async (inf, input) => {
+    nextMinute();
+    const r = await act('inf-make', { id: inf, kind: 'photo', ...input });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    settle(r.body.job);
+    keep(inf, r.body.job);
+    return r.body.job;
+  };
+  const edit = (inf, image, words, { wallet = WALLET, level = 1, ...more } = {}) => {
+    nextMinute();
+    return act('inf-make', { id: inf, kind: 'photo', image, edit: words, ...more }, { wallet, level });
+  };
+  const signed = (name) => `/storage/v1/object/sign/agi1-characters/${name}`;
+  const scene = 'reading a book on a sunny balcony with a cup of tea';
+  const lines = ['When the coffee kicks in', 'Main character energy'];
+  const src = {
+    std: await madeOne(nova.id, { scene, shape: 'tall' }),
+    crisp: await madeOne(nova.id, { scene, shape: 'wide', model: 'crisp' }),
+    crispUltra: await madeOne(nova.id, { scene, shape: 'square', model: 'crisp', quality: 'ultra' }),
+    ultra: await madeOne(nova.id, { scene, shape: 'square', model: 'classic', quality: 'ultra' }),
+    meme: await madeOne(nova.id, { scene, shape: 'square', meme: 'topbottom', lines }),
+    banner: await madeOne(nova.id, { scene: 'a city skyline at night, its windows glowing', shape: 'banner' }),
+    old: await doneJob(nova.id, 'photo'),                       // one made before the model menu (no model or quality kept)
+    real: await doneJob(mira.id, 'photo', { shape: 'wide' }),   // a realistic influencer's
+  };
+  const change = 'make her jacket red';
+  // what the AI makes for the X banner's edit: 2048 × 512, a red eighth at its left, a green one at its right, blue between
+  const wideBanner = await sharp({ create: { width: 2048, height: 512, channels: 3, background: { r: 20, g: 40, b: 220 } } })
+    .composite([
+      { input: { create: { width: 256, height: 512, channels: 3, background: { r: 230, g: 20, b: 20 } } }, left: 0, top: 0 },
+      { input: { create: { width: 256, height: 512, channels: 3, background: { r: 20, g: 220, b: 40 } } }, left: 1792, top: 0 },
+    ]).png().toBuffer();
+  // [what, influencer, the photo, its shape, its quality, credits, the AI's ratio and size]
+  const cases = [
+    ['a Standard photo', nova, src.std, 'tall', 'std', 15, '9:16', '1K'],
+    ['a Crisp photo (HD): Classic HD', nova, src.crisp, 'wide', 'hd', 22, '16:9', '2K'],
+    ['a Crisp Ultra photo: Classic Ultra', nova, src.crispUltra, 'square', 'ultra', 29, '1:1', '4K'],
+    ['an Ultra photo', nova, src.ultra, 'square', 'ultra', 29, '1:1', '4K'],
+    ['a meme', nova, src.meme, 'square', 'std', 15, '1:1', '1K'],
+    ['an X banner', nova, src.banner, 'banner', 'hd', 22, '4:1', '2K'],
+    ['one made before the model menu', nova, src.old, 'tall', 'std', 15, '9:16', '1K'],
+    ['a realistic influencer\'s photo', mira, src.real, 'wide', 'std', 15, '16:9', '1K'],
+  ];
+  const edits = {};
+  for (const [what, inf, image, shape, quality, cost, ratio, size] of cases) {
+    const before = credits().paid;
+    const r = await edit(inf.id, image, change);
+    assert.equal(r.status, 200, `${what}: ${JSON.stringify(r.body)}`);
+    assert.deepEqual([r.body.ok, r.body.cost, r.body.credits.paid], [true, cost, before - cost], what);
+    // the database asked for an edit of that photo: Classic, its shape and quality, its scene, a meme's format and words, its
+    // change (never references or sound)
+    const from = fake.db.jobs.get(image);
+    const a = asked();
+    assert.deepEqual(['p_kind', 'p_image', 'p_edit', 'p_model', 'p_quality', 'p_shape', 'p_scene', 'p_cost', 'p_refs', 'p_sound', 'p_meme', 'p_caption', 'p_trend', 'p_clip', 'p_parts'].map((k) => a[k]),
+      ['photo', image, change, 'classic', quality, shape, from.scene, cost, null, false, from.meme, from.caption, null, null, 1], what);
+    // a new one next to it, never in its place
+    const fresh = fake.db.jobs.get(r.body.job);
+    assert.notEqual(r.body.job, image);
+    assert.deepEqual([fresh.status, fresh.edit, fresh.image, fresh.inf_id, from.status, from.hidden, from.deleted], ['paid', change, image, inf.id, 'done', false, null], what);
+    // the AI: Classic's edit, from that photo then its full body (its face and look), at its shape and size, asked for just that
+    await tick(r.body.job);
+    const sent = falCalls().at(-1);
+    assert.deepEqual([sent.path, sent.body.aspect_ratio, sent.body.resolution, sent.body.num_images, sent.body.safety_tolerance], [MODELS.edit, ratio, size, 1, '2'], what);
+    assert.deepEqual(sent.body.image_urls.map((u) => new URL(u).pathname), [signed(picPath(inf.id, image, 0)), signed(picPath(inf.id, inf.body, 0))], what);
+    assert.match(sent.body.prompt, /^Edit the first picture: Make her jacket red\. Change only what that asks for, and keep everything else in the first picture exactly as it is: the character's face, hair, body, outfit and pose, the place, the light, the framing and the art style\. The second picture is the same character, only so the face and look stay exactly theirs\./, what);
+    assert.match(sent.body.prompt, /An edit may change the outfit, never to less covered\./, what);
+    assert.equal(sent.body.prompt.includes(from.scene), false, `${what}: its scene isn't asked for again (the photo shows it)`);
+    // kept (one at a time: a wallet has at most 4 being made); a meme looked at again before anyone sees it (the AI may write
+    // other words), a photo or an X banner not
+    if (shape === 'banner') fake.fal.picture = wideBanner;
+    const looks0 = geminiCalls().length;
+    assert.equal((await finish(r.body.job)).state, 'done', what);
+    fake.fal.picture = null;
+    assert.deepEqual(geminiCalls().slice(looks0).map((c) => c.which), from.meme ? ['meme'] : [], what);
+    // the page's own sums: its tile's row as the page gets it, its "Edit with words" button (editSpec) and the new one's
+    // "Make another" button (the edit's own row)
+    nextMinute();
+    const rows = (await act('inf-look', { id: inf.id })).body.jobs;
+    assert.equal(R.photoCredits(R.editSpec(rows.find((x) => x.id === image)), 1), cost, what);
+    const row = rows.find((x) => x.id === r.body.job);
+    assert.deepEqual([row.edit, row.image, row.model, row.quality, row.shape], [change, image, 'classic', quality, shape], what);
+    assert.equal(R.photoCredits({ model: row.model, quality: row.quality, shape: row.shape, meme: row.meme ?? null }, 1), cost, what);
+    edits[what] = r.body.job;
+  }
+  // a meme: its words kept exactly (no other words); a photo or an X banner: no words at all
+  const memePrompt = falCalls().find((c) => c.body.image_urls?.[0]?.includes(src.meme)).body.prompt;
+  assert.match(memePrompt, /Keep the words written in it exactly as they are, spelled the same and in the same place; write no other words, letters or numbers\./);
+  assert.match(memePrompt, /Family-friendly, fully clothed\. No logos, no watermark\.$/);
+  const photoPrompt = falCalls().find((c) => c.body.image_urls?.[0]?.includes(src.std)).body.prompt;
+  assert.match(photoPrompt, /Family-friendly, fully clothed\. No text, no logos, no watermark\.$/);
+  assert.doesNotMatch(photoPrompt, /Keep the words|banner/);
+  // an X banner: a little wider than its banner (4:1 from its 3:1), everything where it is, a little more at its sides
+  const bannerPrompt = falCalls().find((c) => c.body.image_urls?.[0]?.includes(src.banner)).body.prompt;
+  assert.match(bannerPrompt, /It stays a very wide profile header banner, a little wider than the first picture: everything where it is, with only a little more of the place at its left and right edges, and nothing important in the lower-left part nor at the very top and bottom edges\./);
+
+  // kept: an X banner cut to exactly X's header size from its middle (its red and green eighths both cut off), never its right
+  // part as a new X banner is (its own test above)
+  const bannerEdit = edits['an X banner'];
+  const cut = fake.storage.get(picPath(nova.id, bannerEdit, 0)).bytes;
+  const meta = await sharp(cut).metadata();
+  assert.deepEqual([meta.format, meta.width, meta.height], ['jpeg', 1500, 500]);
+  for (const [left, side] of [[0, 'left'], [1460, 'right']]) {
+    const m = await meanOf(cut, left, 0, 40, 500);
+    assert.ok(m[2] > 180 && m[0] < 60 && m[1] < 90, `its ${side} edge is the picture's middle (blue): ${m}`);
+  }
+  const rightOf = async (opts) => meanOf((await picturesOf(sharp, wideBanner, { banner: true, ...opts })).jpg, 1460, 0, 40, 500);
+  assert.ok((await rightOf({}))[1] > 180, 'a new X banner: its right part (green at its right edge)');
+  assert.ok((await rightOf({ centred: true }))[2] > 180, 'an edited one: its middle');
+  // an Ultra edit keeps its full-size download (with the share mark), as an Ultra photo does; a meme's look was given its words
+  assert.ok(fake.storage.has(hdPath(nova.id, edits['an Ultra photo'], 0)));
+  assert.ok(!fake.storage.has(hdPath(nova.id, edits['a Standard photo'], 0)));
+  const memeLook = geminiCalls().find((c) => c.which === 'meme');
+  assert.ok(JSON.stringify(memeLook.body).includes('When the coffee kicks in / Main character energy'));
+  // a meme edit that isn't family-friendly: not shown, its credits back
+  const bad = await edit(nova.id, src.meme, 'add a big sign on the wall');
+  assert.equal(bad.status, 200, JSON.stringify(bad.body));
+  const paidBad = credits().paid;
+  fake.gemini.meme = { badWords: true };
+  assert.equal((await finish(bad.body.job)).state, 'failed');
+  fake.gemini.meme = null;
+  assert.deepEqual([fake.db.jobs.get(bad.body.job).error, credits().paid], ['refused', paidBad + 15]);
+  // its page: "Edited" with its change, the photo it's from
+  nextMinute();
+  const shown = (await act('inf-look', { id: nova.id })).body.jobs.find((x) => x.id === edits['a Standard photo']);
+  assert.deepEqual([shown.edit, shown.image, shown.files], [change, src.std, 1]);
+  assert.deepEqual([AW.jobTitle(shown), AW.jobMeta(shown)], [`Edited: ${change}`, 'AI-generated · Photo · Edited · Vertical']);
+  nextMinute();
+  const shownBanner = (await act('inf-look', { id: nova.id })).body.jobs.find((x) => x.id === bannerEdit);
+  assert.equal(AW.jobMeta(shownBanner), 'AI-generated · X banner · Edited · 1500 × 500');
+  // anyone's view of its page shows it too
+  assert.ok((await get(`inf=${nova.id}`)).body.jobs.some((x) => x.id === edits['a Standard photo'] && x.edit === change));
+
+  // a holder's price, as for that photo (Crush 20% off, Soulmate 40% off)
+  let r = await edit(nova.id, src.crisp, change, { level: 2 });
+  assert.deepEqual([r.status, r.body.cost, asked().p_cost], [200, 18, 18], JSON.stringify(r.body));
+  settle(r.body.job);
+  r = await edit(nova.id, src.banner, 'add gently falling snow', { level: 3 });
+  assert.deepEqual([r.status, r.body.cost], [200, 13], JSON.stringify(r.body));
+  settle(r.body.job);
+  // an edit of an edit (it's one of its photos too): the edit's shape and quality
+  const second = await edit(nova.id, edits['a Standard photo'], 'add round sunglasses');
+  assert.equal(second.status, 200, JSON.stringify(second.body));
+  assert.deepEqual([asked().p_image, asked().p_edit, asked().p_quality, asked().p_shape, second.body.cost], [edits['a Standard photo'], 'add round sunglasses', 'std', 'tall', 15]);
+  settle(second.body.job);
+  // "Make another" of an edit: the same change to the same photo again, next to it, at its price
+  const ultraEdit = edits['an Ultra photo'];
+  nextMinute();
+  r = await act('inf-again', { job: ultraEdit });
+  assert.deepEqual([r.status, r.body.cost, r.body.kind], [200, 29, 'photo'], JSON.stringify(r.body));
+  assert.deepEqual([asked().p_image, asked().p_edit, asked().p_quality, asked().p_shape, asked().p_model], [src.ultra, change, 'ultra', 'square', 'classic']);
+  assert.notEqual(r.body.job, ultraEdit);
+  settle(r.body.job);
+  // the photo it's from deleted meanwhile: "Make another" of its edit says so
+  nextMinute();
+  assert.equal((await act('inf-job-delete', { job: src.old })).status, 200);
+  nextMinute();
+  r = await act('inf-again', { job: edits['one made before the model menu'] });
+  assert.deepEqual([r.status, r.body.error], [409, 'image']);
+  assert.equal(AW.againErrorText(r.body), "The photo it started from isn't there any more: make a new one from its tools.");
+  // never deleted while an edit is being made from it (its files kept)
+  const busyOne = await edit(nova.id, src.std, 'add a small fluffy dog beside them');
+  assert.equal(busyOne.status, 200, JSON.stringify(busyOne.body));
+  nextMinute();
+  r = await act('inf-job-delete', { job: src.std });
+  assert.deepEqual([r.status, r.body.error], [409, 'job_in_use']);
+  assert.ok(fake.storage.has(picPath(nova.id, src.std, 0)));
+  settle(busyOne.body.job);
+
+  // ---- its words: checked like a scene's (PG-13, nobody real by name, no links or contacts, nobody else's character) ----
+  assert.deepEqual(checkEdit('  make   her jacket\u200b red  '), { ok: true, edit: 'make her jacket red' });
+  for (const [words, why] of [[undefined, 'empty'], ['   ', 'empty'], ['ab', 'short'], ['x'.repeat(R.EDIT.MAX + 1), 'long'],
+    ['add a sign saying visit agi1.app', 'link'], ['write @nova_fans on the wall', 'contact'], ['make her naked', 'adult'],
+    ['make her look like a child', 'minor'], ['put Elon Musk next to her', 'person'], ['add pikachu on her shoulder', 'character'],
+    ['make her the official AGI-1', 'her'], ['add a swastika flag', 'hate']]) {
+    assert.deepEqual(checkEdit(words), { ok: false, field: 'edit', why }, String(words));
+  }
+  assert.equal(checkEdit('a'.repeat(R.EDIT.MAX)).ok, true);
+  assert.deepEqual([R.EDIT.MIN, R.EDIT.MAX], [3, 200]);
+  for (const idea of AW.EDIT_IDEAS) assert.equal(checkEdit(idea).ok, true, idea);
+  // the AI's words: its change as a sentence, a meme's words line, an X banner's line, never an AI service named
+  assert.match(editPrompt({ name: 'Nova' }, 'add snow!'), /^Edit the first picture: Add snow! Change only/);
+  assert.doesNotMatch(editPrompt({ name: 'Nova' }, 'add snow', { meme: true, banner: true }), PROVIDERS);
+
+  // ---- every "no": nothing made, nothing paid ----
+  const jobs0 = fake.db.jobs.size, log0 = fake.db.log.length, paid0 = credits().paid, fal0 = falCalls().length;
+  // (each refused by our server before the database is asked: only "short" is the database's to say)
+  const no = async (status, error, args, opts = {}) => {
+    nextMinute();
+    const asks = dbCalls('inf_make').length;
+    const x = await act('inf-make', args, opts);
+    assert.deepEqual([x.status, x.body.error], [status, error], `${JSON.stringify(args)}: ${JSON.stringify(x.body)}`);
+    assert.equal(dbCalls('inf_make').length, asks + (error === 'short' ? 1 : 0), `${JSON.stringify(args)}: refused before the database is asked`);
+    return x;
+  };
+  const E = (more = {}) => ({ id: nova.id, kind: 'photo', image: src.ultra, edit: change, ...more });
+  // its words: said under its box (field: edit)
+  for (const [words, why] of [['   ', 'empty'], ['ab', 'short'], ['x'.repeat(201), 'long'], ['add a sign saying visit agi1.app', 'link'],
+    ['put Elon Musk next to her', 'person'], ['make her naked', 'adult']]) {
+    const x = await no(422, 'words', E({ edit: words }));
+    assert.deepEqual([x.body.field, x.body.why], ['edit', why], words);
+    assert.equal(AW.wordsText(x.body.field, x.body.why), why === 'empty' ? 'Type what should change.' : why === 'short' ? 'A few more words, please: at least 3 characters.'
+      : why === 'long' ? 'At most 200 characters.' : AW.wordsText('scene', why), words);
+  }
+  // an edit is a photo from one of its photos: never a video's or a trend video's, never without the photo, never references
+  await no(400, 'bad', E({ kind: 'video', scene: 'the camera slowly circles her' }));
+  await no(400, 'bad', E({ kind: 'trend', trend: 'golden-flip' }));
+  await no(400, 'bad', E({ image: null }));
+  await no(400, 'bad', E({ image: 'nope' }));
+  await no(400, 'bad', { id: nova.id, kind: 'photo', image: src.ultra, scene, shape: 'tall' });   // a photo from a photo: only an edit
+  await no(409, 'refs', E({ refs: [await okUpload('ref')] }));
+  // the photo: its own influencer's, done, shown, still there, a photo (a meme and an X banner are photos; never its looks, its
+  // full body, a video or a trend video)
+  await no(409, 'image', E({ image: src.real }));                       // Mira's photo, asked for Nova
+  await no(409, 'image', E({ image: src.old }));                        // deleted
+  fake.db.jobs.get(src.old).hidden = false;                             // (deleted, whatever else would show it)
+  await no(409, 'image', E({ image: src.old }));
+  fake.db.jobs.get(src.old).hidden = true;
+  await no(409, 'image', E({ image: nova.looks }));
+  await no(409, 'image', E({ image: nova.body }));
+  await no(409, 'image', E({ image: await doneJob(nova.id, 'video') }));
+  await no(409, 'image', E({ image: await doneJob(nova.id, 'trend') }));
+  await no(409, 'image', E({ image: idOf('nothingthere') }));
+  fake.db.jobs.get(src.ultra).hidden = true;                            // taken down
+  await no(409, 'image', E());
+  fake.db.jobs.get(src.ultra).hidden = false;
+  fake.db.jobs.get(src.ultra).status = 'making';                        // still being made
+  await no(409, 'image', E());
+  fake.db.jobs.get(src.ultra).status = 'done';
+  // its influencer: its maker's, there, not banned
+  await no(403, 'not_yours', E(), { wallet: OTHER });
+  fake.db.infs.get(nova.id).status = 'deleted';
+  await no(404, 'gone', E());
+  fake.db.infs.get(nova.id).status = 'ready';
+  banWallet(WALLET);
+  await no(403, 'banned', E());
+  unbanWallet(WALLET);
+  // too few credits: what it has, for the page's "Buy credits"
+  fake.db.cred(codeOf()).paid = 5;
+  assert.equal((await no(402, 'short', E())).body.have, 5);
+  fake.db.cred(codeOf()).paid = paid0;
+  // the database's own rules (a page or a server out of step): a photo from a photo only as an edit, an edit's shape, a meme's
+  // format and words its photo's own, never a Crisp one, never references
+  const rpcNo = (args) => fake.db.inf_make({ p_job: idOf('rpcedit'), p_inf: nova.id, p_wallet: codeOf(), p_kind: 'photo', p_scene: scene, p_shape: 'square',
+    p_sound: false, p_trend: null, p_clip: null, p_image: src.ultra, p_cost: 29, p_per_wallet: 3, p_day_cap: 1000, p_model: 'classic', p_quality: 'ultra',
+    p_seconds: null, p_refs: null, p_parts: 1, p_meme: null, p_caption: null, p_edit: change, ...args });
+  for (const [args, why] of [[{ p_edit: null }, 'bad'], [{ p_edit: 'ab' }, 'bad'], [{ p_model: 'crisp' }, 'bad'], [{ p_kind: 'video' }, 'bad'],
+    [{ p_refs: [idOf('someref')] }, 'bad'], [{ p_shape: 'tall' }, 'bad'], [{ p_meme: 'pov', p_caption: 'hi' }, 'bad'], [{ p_image: src.real }, 'image']]) {
+    assert.deepEqual(rpcNo(args), { ok: false, why }, JSON.stringify(args));
+  }
+  assert.deepEqual([fake.db.jobs.size, fake.db.log.length, credits().paid, falCalls().length], [jobs0 + 2, log0, paid0, fal0], 'nothing made or paid for any "no" (a video and a trend video were added above to be asked for)');
+
+  // an influencers.sql from before the editor (inf_make without p_edit): "not ready", nothing made or paid, the log says what to
+  // run; everything else is made as before
+  fake.oldArgs.set('inf_make', ['p_edit']);
+  r = await edit(nova.id, src.ultra, change);
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready'], JSON.stringify(r.body));
+  assert.ok(logs.some((l) => l.includes('inf_make not found: run supabase/influencers.sql again in this Supabase project (the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1)')), logs.join('\n'));
+  assert.deepEqual([fake.db.jobs.size, credits().paid], [jobs0 + 2, paid0]);
+  nextMinute();
+  r = await act('inf-make', { id: nova.id, kind: 'photo', scene, shape: 'tall' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(Object.hasOwn(asked(), 'p_edit'), false, 'p_edit only when it\'s an edit');
+  fake.oldArgs.clear();
+});
+
+test('(2026-10-12, the editor) influencers.sql\'s promises for "Edit with words": its column and its check (3 to 200 characters, a photo made from one of its own), inf_make\'s p_edit (a photo starts from another only as an edit: by Classic, never with references, its photo\'s own shape and a meme\'s own format and words, never one deleted), inf_job_get and inf_jobs giving it, and the ready check finding each', () => {
+  const sql = read('supabase/influencers.sql');
+  assert.match(sql, /alter table public\.agi1_inf_jobs add column if not exists edit text;\nalter table public\.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_edit_check;\nalter table public\.agi1_inf_jobs add constraint agi1_inf_jobs_edit_check check \(edit is null\n  or \(char_length\(edit\) between 3 and 200 and kind = 'photo' and image is not null\)\);/);
+  const make = /create or replace function public\.inf_make\([\s\S]*?\n\$\$;/.exec(sql)?.[0] || '';
+  assert.match(make, /p_meme text default null, p_caption text default null, p_edit text default null\)/);
+  assert.match(make, /or \(p_kind = 'photo' and p_image is not null and p_edit is null\)/);
+  assert.match(make, /or \(p_edit is not null and \(p_kind <> 'photo' or p_image is null or char_length\(p_edit\) not between 3 and 200\n\s+or p_model is distinct from 'classic' or p_refs is not null\)\)/);
+  assert.match(make, /and status = 'done' and not hidden and deleted_at is null\) then\n\s+return json_build_object\('ok', false, 'why', 'image'\);/);
+  assert.match(make, /if p_image is not null and p_edit is null and exists \(select 1 from agi1_inf_jobs where id = p_image and shape = 'banner'\) then/);
+  assert.match(make, /if p_edit is not null and not exists \(select 1 from agi1_inf_jobs where id = p_image and shape = p_shape\n\s+and meme is not distinct from p_meme and caption is not distinct from p_caption\) then\n\s+return json_build_object\('ok', false, 'why', 'bad'\);/);
+  assert.match(make, /refs, parts, meme, caption, edit\)\n\s+values \([\s\S]*?p_meme, p_caption, p_edit\);/);
+  assert.match(sql, /j\.meme, j\.caption, j\.deleted_at, j\.edit,/);
+  assert.match(sql, /'meme', meme, 'caption', caption, 'edit', edit,/);
+  assert.match(sql, /and column_name = 'edit'\)\n\s+and exists \(select 1 from pg_constraint where conrelid = 'public\.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_edit_check'\)\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_make' and prosrc like '%p_edit%'\)\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_job_get' and prosrc like '%j\.edit%'\)\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_jobs' and prosrc like '%''edit'', edit%'\)/);
+});
+
+test('(2026-10-12, the editor) the page: "Make another" (its price on it) and "Delete" first in the sheet of its own creations seen big (in view as it opens), "Try again" and "Remove it" on a tile that couldn\'t be made (room for them), the keyboard kept in its gallery, a look asked for while one is on its way, their words (never an AI service named), Learn and the AI helper\'s guide', async () => {
+  // ---- its words ----
+  const P = (more) => ({ kind: 'photo', shape: 'tall', ...more });
+  assert.deepEqual([P(), P({ shape: 'banner' }), P({ meme: 'pov' }), { kind: 'video' }, { kind: 'trend' }].map(AW.creationWord), ['photo', 'X banner', 'meme', 'video', 'trend video']);
+  assert.deepEqual([P(), P({ meme: 'topbottom' }), P({ shape: 'banner' }), { kind: 'video', parts: 1 }, { kind: 'video', parts: 4 }, { kind: 'trend' }].map(AW.againMadeText), [
+    'Making another photo: about half a minute', 'Making another meme: about half a minute', 'Making another X banner: about half a minute',
+    'Making another video: a few minutes', 'Making another video: several minutes', 'Making another trend video: a few minutes',
+  ]);
+  // its "are you sure?": a done one (its credits don't come back), one its profile picture was framed from, one that couldn't be made
+  assert.deepEqual(AW.deleteJobText(P({ status: 'done' })), {
+    title: 'Delete this photo?', yes: 'Delete the photo',
+    text: ["It's deleted from every page, and its link and download stop working within minutes. This can't be undone.", "Its credits don't come back: it was made."],
+  });
+  const banner = AW.deleteJobText(P({ shape: 'banner', status: 'done' }), { name: 'Nova', pfp: true });
+  assert.deepEqual([banner.title, banner.yes, banner.text.length, banner.text.at(-1)],
+    ['Delete this X banner?', 'Delete the X banner', 3, "Nova's profile picture was framed from it: it goes back to its picked look."]);
+  assert.equal(AW.deleteJobText(P({ status: 'done' }), { pfp: true }).text.at(-1), 'Its profile picture was framed from it: it goes back to its picked look.');
+  assert.deepEqual(AW.deleteJobText({ kind: 'trend', status: 'failed' }), { title: 'Delete this trend video?', yes: 'Delete the trend video', text: ["It couldn't be made: it just goes from your creations."] });
+  assert.deepEqual([AW.deletedText(), AW.deletedText({ pfp: true })], ['Deleted.', 'Deleted: its profile picture is its picked look again.']);
+  // "Try again" only where trying again can work
+  const failed = (error) => ({ kind: 'photo', status: 'failed', error });
+  for (const e of [null, 'ai', 'busy', 'save', 'expired', 'too_big']) assert.equal(AW.tryAgainOk(failed(e)), true, String(e));
+  for (const e of ['refused', 'small', 'clip', 'source', 'gone', 'deleted']) assert.equal(AW.tryAgainOk(failed(e)), false, e);
+  assert.equal(AW.tryAgainOk({ kind: 'photo', status: 'done' }), false);
+  // "Make another"'s "no"s: what it was made from that isn't there any more, its words refused by a newer rule, else our server's
+  const GENERIC = AW.errorText('busy');
+  assert.deepEqual(['image', 'clip', 'refs', 'trend', 'model', 'needs_photo'].map((error) => AW.againErrorText({ error })), [
+    "The photo it started from isn't there any more: make a new one from its tools.",
+    'Its clip is kept a day: upload it again in the Trend tool.',
+    'Its reference pictures are kept a day: make a new one with new ones.',
+    "That trend clip isn't available any more: pick another in the Trend tool.",
+    "Its model isn't on the menu any more: make a new one from its tools.",
+    "A realistic influencer's video starts from one of its photos: make one from the Video tool.",
+  ]);
+  assert.equal(AW.againErrorText({ error: 'words', field: 'scene', why: 'link' }), `Its words can't be used as they are any more: ${AW.wordsText('scene', 'link')}`);
+  for (const error of ['job_gone', 'not_yours', 'making', 'banned', 'gone', 'bad', 'too_many', 'busy_day', 'no_anime', 'banner', 'not_ready']) {
+    assert.equal(AW.againErrorText({ error }), AW.errorText(error), error);
+    assert.notEqual(AW.againErrorText({ error }), GENERIC, error);
+  }
+  assert.equal(AW.againErrorText({ error: 'something new' }), GENERIC);
+  const api = read('server/inf-api.js');
+  for (const why of ['image', 'clip', 'refs', 'trend', 'model', 'needs_photo']) assert.match(api, new RegExp(`\\b${why}: \\d{3}\\b`), why);
+  for (const t of [AW.againMadeText(P()), ...Object.values(AW.deleteJobText(P({ status: 'done' }), { pfp: true })).flat(), AW.againErrorText({ error: 'image' })]) {
+    assert.doesNotMatch(t, PROVIDERS, t);
+  }
+
+  // ---- over one of its own creations seen big (src/studio/views/shared.js), its maker's only: first in its sheet, so they're
+  // in view as it opens (under a tall picture they were below the fold: the browser check measures it at nine sizes) ----
+  const shared = strip(read('src/studio/views/shared.js'));
+  assert.match(shared, /function editRow\(s, j, own\) \{\n  if \(!own\) return null;/);
+  // (each of its buttons closes the sheet first, then does its thing; since the photo editor, Delete is its trash can alone)
+  assert.match(shared, /const go = \(label, ic, fn, extra = \{\}\) => \{\n    const b = btn\(label, \{ kind: 'ghost', size: 'sm', icon: ic, \.\.\.extra \}\);\n    b\.addEventListener\('click', \(\) => \{ s\.close\(\); fn\(j\); \}\);\n    return b;\n  \};/);
+  assert.match(shared, /const again = own\.onAgain \? go\(Number\.isFinite\(own\.cost\) \? `Make another · \$\{num\(own\.cost\)\} credits` : 'Make another', 'refresh', own\.onAgain\) : null;/);
+  assert.match(shared, /const del = go\('', 'trash', own\.onDelete, \{ kind: 'quiet', class: 'sa-btn sa-btn-quiet sa-btn-sm sa-edit-delete', 'aria-label': 'Delete', title: 'Delete' \}\);/);
+  assert.match(shared, /return h\('div', \{ class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' \}, edit, editor, again, del\);/);
+  assert.match(shared, /export function videoSheet\(ctx, v, \{ [^}]*\bown = null \}\)/);
+  assert.match(shared, /add\(s\.body, mine \? editRow\(s, v, own\) : null, h\('div', \{ class: `sa-player-wrap is-\$\{shape\}` \}, video\),/);
+  assert.match(shared, /export function photoSheet\(ctx, j, \{ [^}]*\bown = null \}\)/);
+  assert.match(shared, /add\(s\.body, mine && kind === 'photo' \? editRow\(s, j, own\) : null, h\('div', \{ class: `sa-big-wrap\$\{banner \? ' is-banner' : ''\}` \}, big\),/, 'never over its full body');
+  assert.equal((shared.match(/\? editRow\(s, [vj], own\) : null/g) || []).length, 2);
+  // a sheet's "are you sure?" with a red button and lines of its own
+  assert.match(shared, /export function confirmSheet\(\{ title, text, yes, danger = false, sub = null \}\)/);
+  assert.match(shared, /\(Array\.isArray\(text\) \? text : \[text\]\)\.map\(\(t\) => h\('p', \{ text: t \}\)\)/);
+
+  // ---- an influencer's page (src/studio/views/influencer.js) ----
+  const inf = strip(read('src/studio/views/influencer.js'));
+  // (and, a photo's, "Edit with words": its own test below)
+  assert.match(inf, /const own = mine\(\) \? \{\n\s+cost: againCost\(j\), onAgain: (?:j\.editor \? null : )?\(x\) => again\(x\), onDelete: \(x\) => removeJob\(x\),[^}]*\} : null;/);
+  assert.match(inf, /photoSheet\(ctx, j, \{ name: i\.name, inf: id, mine: mine\(\), priv: priv\(\), onCaptions, own,/);
+  assert.match(inf, /videoSheet\(ctx, j, \{ name: i\.name, inf: id, mine: mine\(\), priv: priv\(\), onCaptions, own \}\);/);
+  // what "Make another" costs on its button: the sum the "Make another" test above checks against our server's price
+  assert.match(inf, /function againCost\(j\) \{\n    if \(j\.kind === 'trend'\) return price\('trend'\);\n    if \(j\.kind === 'photo'\) return photoCredits\(\{ model: j\.model \?\? null, quality: j\.quality \?\? null, shape: j\.shape \|\| 'tall', meme: j\.meme \?\? null \}, ctx\.level\);\n/);
+  assert.match(inf, /const spec = videoSpec\(\{ model: j\.model \|\| \(j\.image \? 'standard' : 'anime'\), seconds: j\.seconds \?\? null, sound: j\.sound === true, quality: j\.quality \?\? null \}\);\n    return spec \? videoCredits\(spec, ctx\.level\) : null;\n  \}/);
+  // making another: enough credits first, then our server; its toast, its gallery again; short: what it needs, and Buy credits
+  assert.match(inf, /if \(Number\.isFinite\(need\) && !\(await enough\(need\)\)\) return;\n\s+const r = await ctx\.act\('inf-again', \{ job: j\.id \}\);/);
+  assert.match(inf, /ctx\.toast\(againMadeText\(j\), 'good'\);\n\s+if \(at\) focusNext = \{ place: at, until: Date\.now\(\) \+ 15_000 \};\n\s+sigs\.gallery = null;\n\s+load\(\);/);
+  // (the keyboard's place, taken as it starts: its tile, or the tile's Try again)
+  assert.match(inf, /async function again\(j, b = null\) \{\n\s+const need = againCost\(j\);\n[^\n]*\n\s+const at = focusPlace\(galleryBox\);/);
+  assert.match(inf, /if \(d\.error === 'short'\) \{\n\s+ctx\.toast\(`That needs \$\{creditsText\(need \?\? 0\)\}: you have \$\{creditsText\(d\.have \?\? ctx\.credits\)\}\.`, 'bad'\);\n\s+ctx\.buyCredits\(\{ need: need \?\? 0 \}\);/);
+  assert.match(inf, /ctx\.toast\(againErrorText\(d, j\), 'bad'\);/);   // (its creation: since the video editor, a photo's or a video's words)
+  // deleting: something being made from it said at once; "are you sure?" (never for one that couldn't be made); its toast; gone
+  // from its gallery at once, then its page again (its profile picture); gone already: its page again
+  assert.match(inf, /if \(\(page\.jobs \|\| \[\]\)\.some\(\(x\) => x\.image === j\.id && making\(x\.status\)\)\) \{ ctx\.toast\(errorText\('job_in_use'\), 'bad'\); return; \}/);
+  assert.match(inf, /const pfp = i\?\.pfp\?\.job === j\.id;/);
+  assert.match(inf, /const words = deleteJobText\(j, \{ name: i\?\.name, pfp \}\);\n\s+if \(!\(await confirmSheet\(\{ title: words\.title, text: words\.text, yes: words\.yes, danger: true \}\)\)\) return;/);
+  assert.match(inf, /const r = await ctx\.act\('inf-job-delete', \{ job: j\.id \}\);/);
+  assert.match(inf, /ctx\.toast\(deletedText\(\{ pfp: r\.data\.pfp === true \}\), 'good'\);\n[^\n]*\n\s+page\.jobs = \(page\.jobs \|\| \[\]\)\.filter\(\(x\) => x\.id !== j\.id\);\n\s+toHeading\(\);\n\s+draw\(\);\n\s+load\(\);/);
+  assert.match(inf, /if \(r\.data\?\.error === 'job_gone'\) \{ toHeading\(\); load\(\); \}/);
+  // (its tile went: the keyboard to its gallery's heading, which takes it)
+  assert.match(inf, /const toHeading = \(\) => \{ focusNext = \{ place: \{ id: 'sa-gal-h', n: -1 \}, until: Date\.now\(\) \+ 15_000 \}; \};/);
+  // the keyboard's place kept when its gallery is drawn again (the same control of the same tile, else its heading), and a
+  // place left by Make another or Delete for a few seconds
+  assert.match(inf, /const place = focusPlace\(galleryBox\) \|\| \(focusNext && Date\.now\(\) < focusNext\.until \? focusNext\.place : null\);\n\s+focusNext = null;\n\s+put\(galleryBox,/);
+  assert.match(inf, /h\('h2', \{ class: 'sa-h2', id: 'sa-gal-h', tabindex: '-1', text: /);
+  assert.match(inf, /emptyNote\);\n\s+focusBack\(galleryBox, place, galleryBox\.querySelector\('#sa-gal-h'\)\);\n  \}/);
+  // (its full body's tile has an id of its own too: its job's)
+  assert.match(inf, /tiles\.push\(h\('div', \{ class: 'sa-media is-tall', id: `v-\$\{i\.body\}` \}, b\)\);/);
+  // a look asked for while one is on its way (its answer may be from before Make another or Delete): one more after it
+  assert.match(inf, /async function load\(\) \{\n\s+if \(loading\) \{ lookAgain = true; return; \}\n\s+loading = true;\n\s+lookAgain = false;/);
+  assert.match(inf, /loading = false;\n\s+if \(!ctx\.alive\(\)\) return;\n\s+if \(lookAgain\) \{ load\(\); return; \}/);
+  const ui = strip(read('src/studio/ui.js'));
+  assert.match(ui, /export function focusPlace\(box\) \{\n\s+const a = document\.activeElement;\n\s+if \(!a \|\| a === document\.body \|\| !box\.contains\(a\)\) return null;/);
+  assert.match(ui, /export function focusBack\(box, place, fallback = null\) \{\n\s+if \(!place\) return;\n\s+const now = document\.activeElement;\n\s+if \(now && now !== document\.body && now\.isConnected\) return;/);
+  assert.match(ui, /\(el \|\| fallback\)\?\.focus\(\{ preventScroll: true \}\);/);
+  // a tile that couldn't be made: "Try again" where it can work, and "Remove it" (named for screen readers), its own only
+  assert.match(inf, /if \(mine\(\) && tryAgainOk\(j\)\) \{\n\s+const tryB = btn\('Try again', \{ kind: 'ghost', size: 'sm', icon: 'refresh' \}\);\n\s+tryB\.addEventListener\('click', \(\) => again\(j, tryB\)\);/);
+  assert.match(inf, /const rm = btn\('', \{ kind: 'quiet', size: 'sm', icon: 'trash', 'aria-label': `Remove it: \$\{jobTitle\(j\)\}`, title: 'Remove it' \}\);\n\s+rm\.addEventListener\('click', \(\) => removeJob\(j, \{ ask: false, button: rm \}\)\);/);
+  assert.match(inf, /acts\.length \? h\('span', \{ class: 'sa-media-acts' \}, \.\.\.acts\) : null/);
+  // (room for them: such a tile is marked, and a square or a wide one is as tall as a 2:3)
+  assert.match(inf, /class: `sa-media is-\$\{shape\} is-failed\$\{acts\.length \? ' has-acts' : ''\}`/);
+  // its styles: every rule an sa- class (the page test's own rule), the Delete button pushed to the row's end
+  const css = read('src/styles/studio-app.css');
+  for (const sel of ['.sa-edit-row {', '.sa-edit-row .sa-edit-delete { margin-left: auto; }', '.sa-edit-delete:hover:not(:disabled)', '.sa-media-acts {', '.sa-media-acts .sa-btn-quiet',
+    '.sa-media.is-square.is-failed.has-acts,\n.sa-media.is-wide.is-failed.has-acts { aspect-ratio: 2 / 3; }']) {
+    assert.ok(css.includes(sel), sel);
+  }
+  // a computer's dialog (its own rules, from 720px): the picture or the video fits under them, its head and its foot
+  const at720 = css.indexOf('@media (min-width: 720px) {');
+  const wide = css.slice(at720, css.indexOf('\n}\n', at720));
+  for (const rule of ['.sa-edit-row + .sa-big-wrap .sa-big-pic { max-height: min(66vh, calc(88vh - 250px)); }',
+    '.sa-edit-row + .sa-player-wrap .sa-player.is-tall { height: min(64vh, 640px, calc(88vh - 250px)); }',
+    '.sa-edit-row + .sa-player-wrap .sa-player.is-square { width: min(100%, 520px, calc(88vh - 250px)); }']) {
+    assert.ok(wide.includes(rule), rule);
+  }
+
+  // ---- Learn and the AI helper's guide ----
+  const { LESSONS } = await import('../src/studio/views/learn.js');
+  assert.ok(LESSONS.find((l) => l.id === 'photos').steps.includes('Open one you made: Make another (the same words and settings, a new one next to it) or Delete it.'));
+  const guide = helpGuide(cfgNow());
+  assert.match(guide, /MAKE ANOTHER: open one of your own photos, memes, X banners or videos → "Make another" makes a new one with the same words and settings, next to it \(it never replaces it\), at the price of making it today\./);
+  assert.match(guide, /One that couldn't be made has "Try again" on its tile \(its credits came back by themselves\)\./);
+  assert.match(guide, /DELETING: an influencer's page → Delete removes it and everything made from it at once\. One of its photos, memes, X banners or videos: open it → Delete removes just that one, from every page, for good/);
+  assert.match(guide, /Not while it's being made, or while a video is being made from it\./);
+  assert.doesNotMatch(guide, PROVIDERS);
+});
+
+test('(2026-10-12, the editor) the page: "Edit with words" first in the sheet of its own photos, memes and X banners seen big (never a video\'s, never someone else\'s), its sheet (the photo it\'s from, a box for its change, its ideas, its price on its button, its words checked before anything is asked), "Edited" with its change in its sheet and its tile\'s words, their words (never an AI service named), its styles, Learn and the AI helper\'s guide', async () => {
+  // ---- its words ----
+  const P = (more) => ({ kind: 'photo', shape: 'tall', ...more });
+  assert.deepEqual([P(), P({ meme: 'pov' }), P({ shape: 'banner' })].map(AW.editMadeText), [
+    'Editing your photo: the new one shows next to it in about half a minute', 'Editing your meme: the new one shows next to it in about half a minute',
+    'Editing your X banner: the new one shows next to it in about half a minute',
+  ]);
+  assert.deepEqual([P(), P({ meme: 'pov' }), P({ shape: 'banner' })].map(AW.editNote), [
+    'Only that changes: the same character, place and framing.', 'Only that changes: the same character, place and framing. Its words stay as they are.',
+    'Only that changes: the same character, place and framing. It stays an X banner, 1500 × 500.',
+  ]);
+  // its tile and its sheet: "Edited", with its change (a meme's own words still its title's)
+  assert.equal(AW.jobTitle(P({ edit: 'add snow', scene: 'on a beach' })), 'Edited: add snow');
+  assert.equal(AW.jobTitle(P({ edit: 'add snow', meme: 'topbottom', caption: 'When the coffee kicks in\nMain character energy' })), 'Meme: When the coffee kicks in');
+  assert.equal(AW.jobMeta(P({ edit: 'add snow', shape: 'wide' })), 'AI-generated · Photo · Edited · Wide');
+  assert.equal(AW.jobMeta(P({ edit: 'add snow', shape: 'banner' })), 'AI-generated · X banner · Edited · 1500 × 500');
+  assert.equal(AW.jobMeta(P({ shape: 'wide' })), 'AI-generated · Photo · Wide');
+  assert.equal(AW.EDIT_IDEAS.length, 8);
+  for (const t of [...AW.EDIT_IDEAS, ...[P(), P({ meme: 'pov' }), P({ shape: 'banner' })].flatMap((j) => [AW.editMadeText(j), AW.editNote(j)]),
+    AW.wordsText('edit', 'empty'), AW.wordsText('edit', 'short'), AW.wordsText('edit', 'long')]) {
+    assert.doesNotMatch(t, PROVIDERS, t);
+    assert.equal(trouble(t), null, t);
+  }
+  assert.deepEqual(['empty', 'short', 'long'].map((why) => AW.wordsText('edit', why)), ['Type what should change.', 'A few more words, please: at least 3 characters.', 'At most 200 characters.']);
+  // what it costs: a photo's price at its quality, by Classic (rules.js editSpec): the server's own sum (the test above)
+  const spec = (j) => R.editSpec({ kind: 'photo', ...j });
+  assert.deepEqual(spec({ shape: 'tall' }), { model: 'classic', quality: 'std', shape: 'tall', meme: null });
+  assert.deepEqual(spec({ shape: 'wide', model: 'crisp', quality: 'hd' }), { model: 'classic', quality: 'hd', shape: 'wide', meme: null });
+  assert.deepEqual(spec({ shape: 'square', model: 'crisp', quality: 'ultra' }), { model: 'classic', quality: 'ultra', shape: 'square', meme: null });
+  assert.deepEqual(spec({ shape: 'square', meme: 'pov', quality: 'std' }), { model: 'classic', quality: 'std', shape: 'square', meme: 'pov' });
+  assert.deepEqual(spec({ shape: 'banner', quality: 'hd' }), { model: 'classic', quality: 'hd', shape: 'banner', meme: null });
+  assert.deepEqual(spec({ shape: 'nope' }), { model: 'classic', quality: 'std', shape: 'tall', meme: null });
+  assert.deepEqual([R.editSpec({ kind: 'video' }), R.editSpec(null), R.editSpec({ kind: 'body' })], [null, null, null]);
+  assert.deepEqual([1, 2, 3].map((l) => R.photoCredits(spec({ shape: 'banner' }), l)), [22, 18, 13]);
+  assert.deepEqual([1, 2, 3].map((l) => R.photoCredits(spec({ shape: 'tall' }), l)), [15, 12, 9]);
+
+  // ---- over one of its own photos seen big (src/studio/views/shared.js): "Edit with words" first, a photo's only ----
+  const shared = strip(read('src/studio/views/shared.js'));
+  assert.match(shared, /const edit = j\.kind === 'photo' && own\.onEdit \? go\('Edit with words', 'wand', own\.onEdit\) : null;/);
+  // its change said with it (and to screen readers in its picture's words)
+  assert.match(shared, /const edited = kind === 'photo' && j\.edit \? String\(j\.edit\) : null;/);
+  assert.match(shared, /\$\{edited \? `, edited: \$\{edited\}` : byEditor \? ', edited in the photo editor' : ''\}`, lazy: false \}\);/);
+  assert.match(shared, /edited \? h\('p', \{ class: 'sa-edit-words' \}, icon\('wand'\), h\('span', \{ text: `Edited with words: “\$\{edited\}”` \}\)\) : null,/);
+
+  // ---- an influencer's page (src/studio/views/influencer.js) ----
+  const inf = strip(read('src/studio/views/influencer.js'));
+  // its maker's photos only (a meme and an X banner are photos)
+  assert.match(inf, /const own = mine\(\) \? \{\n\s+cost: againCost\(j\), onAgain: [^,]*\(x\) => again\(x\), onDelete: \(x\) => removeJob\(x\),\n\s+onEdit: j\.kind === 'photo' \? \(x\) => editWithWords\(x\) : null,[^}]*\} : null;/);
+  // its price: the server's own sum
+  assert.match(inf, /const editCost = \(j\) => photoCredits\(editSpec\(j\), ctx\.level\);/);
+  const fn = inf.slice(inf.indexOf('function editWithWords(j) {'), inf.indexOf('function drawModels() {'));
+  assert.ok(fn.length > 1500, 'its sheet');
+  assert.match(fn, /const s = sheet\(\{ title: 'Edit with words', sub: `Type what should change: a new \$\{w\} is made from this one, next to it\.`, size: 'md' \}\);/);
+  // the photo it's from, small, with what stays as it is
+  assert.match(fn, /h\('div', \{ class: 'sa-edit-from' \}, pic\(infPic\(id, j\.id, 0, true\), \{ cls: `sa-edit-from-pic is-\$\{shape\}`, alt: `The \$\{w\} it's made from` \}\),/);
+  assert.match(fn, /h\('p', \{ class: 'sa-label', text: `From this \$\{w\}` \}\), h\('p', \{ class: 'sa-muted', text: editNote\(j\) \}\)/);
+  // its box: labelled, its length counted, at most EDIT.MAX characters, an example in it; six ideas a tap fills it with
+  assert.match(fn, /const area = h\('textarea', \{ class: 'sa-input sa-textarea', id: areaId, rows: 3, maxlength: EDIT\.MAX, placeholder: 'For example: make the jacket red' \}\);/);
+  assert.match(fn, /h\('label', \{ class: 'sa-label', for: areaId, text: 'What should change\?' \}\), area,/);
+  assert.match(fn, /count\.textContent = `\$\{\[\.\.\.area\.value\]\.length\}\/\$\{EDIT\.MAX\}`;/);
+  assert.match(fn, /\.\.\.EDIT_IDEAS\.slice\(0, 6\)\.map\(\(t\) => \{/);
+  assert.match(fn, /b\.addEventListener\('click', \(\) => \{ area\.value = t; area\.dispatchEvent\(new Event\('input'\)\); area\.focus\(\); \}\);/);
+  // its button: its price on it; too short or empty said at once (nothing asked)
+  assert.match(fn, /const go = btn\(Number\.isFinite\(need\) \? `Make it · \$\{num\(need\)\} credits` : 'Make it', \{ kind: 'primary', icon: 'wand' \}\);/);
+  assert.match(fn, /if \(\[\.\.\.v\]\.length < EDIT\.MIN\) \{ say\(err, wordsText\('edit', v \? 'short' : 'empty'\)\); area\.focus\(\); return; \}/);
+  // enough credits first, then our server; its words' "no" under its box, anything else under its buttons; its toast, its
+  // gallery again, the keyboard back on its tile
+  assert.match(fn, /if \(Number\.isFinite\(need\) && !\(await enough\(need\)\)\) return;\n\s+const r = await ctx\.act\('inf-make', \{ id, kind: 'photo', image: j\.id, edit: v \}\);/);
+  assert.match(fn, /if \(!made\(r, need \?\? 0, \{ msg, onWords: \(d\) => \{ say\(d\.field === 'edit' \? err : msg, wordsText\(d\.field, d\.why\)\); area\.focus\(\); \} \}\)\) return;/);
+  assert.match(fn, /s\.close\(\);\n\s+ctx\.toast\(editMadeText\(j\), 'good'\);/);
+  assert.match(fn, /const at = focusPlace\(galleryBox\);\n\s+if \(at\) focusNext = \{ place: at, until: Date\.now\(\) \+ 15_000 \};\n\s+sigs\.gallery = null;\n\s+load\(\);/);
+  assert.match(fn, /s\.setFoot\(cancel, go\);\n\s+requestAnimationFrame\(\(\) => area\.focus\(\)\);/);
+  assert.doesNotMatch(fn, /innerHTML|insertAdjacentHTML|style=|\.style\./);
+  // its tile, once made: "Edited" (an X banner's and a meme's own tags stay theirs)
+  assert.match(inf, /: j\.meme \? \{ text: 'Meme', icon: 'smile' \}\n\s+: j\.edit \? \{ text: 'Edited', icon: 'wand' \} : (?:j\.editor \? \{ text: 'Edited', icon: 'sliders' \} : )?null \}\)\);/);
+  // its words are the visitor's: never an AI service named in what the page says
+  assert.doesNotMatch(fn, PROVIDERS);
+
+  // ---- its styles: every rule an sa- class ----
+  const css = read('src/styles/studio-app.css');
+  for (const sel of ['.sa-edit-from {', '.sa-edit-from-pic {', '.sa-edit-from-pic.is-tall {', '.sa-edit-from-pic.is-wide {', '.sa-edit-from-pic.is-banner {',
+    '.sa-edit-from-text {', '.sa-edit-words {', '.sa-edit-words .sa-i {']) {
+    assert.ok(css.includes(sel), sel);
+  }
+
+  // ---- Learn and the AI helper's guide ----
+  const { LESSONS } = await import('../src/studio/views/learn.js');
+  assert.ok(LESSONS.find((l) => l.id === 'photos').steps.includes('Or Edit with words: type one change ("make the jacket red", "add snow") and a new one is made from it, next to it, at its price.'));
+  const guide = helpGuide(cfgNow());
+  assert.match(guide, /EDIT WITH WORDS: open one of your own photos, memes or X banners → "Edit with words", type one change \(like "make the jacket red" or "add falling snow", up to 200 characters\) → a new one is made from it, next to it \(it never replaces it\)/);
+  assert.match(guide, /at a photo's price at its quality \(shown on its button; a meme keeps its words, an X banner its size\)\. Its words follow the scene's rules: PG-13, never a real person by name, no links\./);
+  assert.doesNotMatch(guide, PROVIDERS);
+});
+
+test('(2026-10-12, the editor) the photo editor\'s numbers (src/studio/photo-edit.js): turning, a crop of each shape (zoomed and moved, kept inside), a saved picture\'s size (an X banner exactly 1500 × 500) and our server\'s check of it, one color matrix for the light and each filter, its words wrapped, a layer kept inside and found under a finger, the share mark where our server puts it, what changed', async () => {
+  const P = await import('../src/studio/photo-edit.js');
+  // turning
+  assert.deepEqual([P.turned(864, 1536, 0), P.turned(864, 1536, 90), P.turned(864, 1536, 180), P.turned(864, 1536, 270)],
+    [{ w: 864, h: 1536 }, { w: 1536, h: 864 }, { w: 864, h: 1536 }, { w: 1536, h: 864 }]);
+  // a crop: the biggest box of its shape, zoomed in from its middle, moved and kept inside
+  assert.deepEqual(P.cropBox({ w: 864, h: 1536, aspect: P.aspectOf('square', 864, 1536) }), { x: 0, y: 336, w: 864, h: 864 });
+  assert.deepEqual(P.cropBox({ w: 864, h: 1536, aspect: P.aspectOf('original', 864, 1536) }), { x: 0, y: 0, w: 864, h: 1536 });
+  const z = P.cropBox({ w: 1536, h: 864, aspect: P.aspectOf('tall', 1536, 864), zoom: 2, cx: 1, cy: 0 });
+  assert.deepEqual([Math.round(z.w), Math.round(z.h), Math.round(z.x), z.y], [243, 432, 1293, 0], 'zoomed 2×, moved to the top right corner and kept inside');
+  assert.deepEqual(P.cropBox({ w: 100, h: 100, aspect: 1, zoom: 99 }).w, 100 / R.EDITOR.ZOOM_MAX, 'zoomed in at most EDITOR.ZOOM_MAX');
+  assert.equal(P.aspectOf('square', 1500, 500, true), 3, 'an X banner stays 3:1');
+  // Original: its own shape (a little off one of ours: kept), else the nearest of ours (a saved one must be one)
+  assert.deepEqual([P.aspectOf('original', 857, 1536), P.aspectOf('original', 1000, 1500), P.aspectOf('original', 1600, 1000), P.aspectOf('banner', 864, 1536)],
+    [857 / 1536, 9 / 16, 16 / 9, 9 / 16]);
+  const odd = P.cropBox({ w: 1000, h: 1500, aspect: P.aspectOf('original', 1000, 1500) });
+  const oddOut = P.outSize(odd);
+  assert.ok(P.sizeFits(P.shapeOfCrop('original', odd.w, odd.h), oddOut.w, oddOut.h), `an odd one saved: ${JSON.stringify(oddOut)}`);
+  // the shape it's saved as
+  assert.deepEqual([P.shapeOfCrop('original', 864, 1536), P.shapeOfCrop('original', 1536, 864), P.shapeOfCrop('original', 1000, 1000), P.shapeOfCrop('wide', 864, 1536), P.shapeOfCrop('original', 1500, 500, true)],
+    ['tall', 'wide', 'square', 'wide', 'banner']);
+  assert.equal(P.shapeOfCrop('banner', 864, 1536), 'tall', 'never made an X banner');
+  // its size: its own pixels, 1080 to 1536 on its longest side; an X banner exactly
+  assert.deepEqual([P.outSize({ w: 864, h: 1536 }), P.outSize({ w: 432, h: 768 }), P.outSize({ w: 4000, h: 4000 }), P.outSize({ w: 10, h: 10 }, true)],
+    [{ w: 864, h: 1536 }, { w: 608, h: 1080 }, { w: 1536, h: 1536 }, { w: 1500, h: 500 }]);
+  // our server's check of a saved one
+  for (const [shape, w, h, okay] of [['tall', 864, 1536, true], ['tall', 608, 1080, true], ['wide', 1536, 864, true], ['square', 1536, 1536, true], ['banner', 1500, 500, true],
+    ['tall', 615, 1080, true], ['tall', 700, 1080, false], ['wide', 1536, 800, false], ['square', 1080, 1060, true], ['square', 1080, 1000, false],
+    ['tall', 1000, 1000, false], ['square', 1080, 1920, false], ['banner', 1536, 512, false], ['tall', 144, 256, false], ['wide', 1920, 1080, false], ['round', 500, 500, false], ['tall', 864.5, 1536, false]]) {
+    assert.equal(P.sizeFits(shape, w, h), okay, `${shape} ${w}×${h}`);
+  }
+  // one color matrix: nothing changed is nothing; each filter its own; the light's sliders on top
+  assert.ok(P.isIdentity(P.colorMatrix({ bright: 0, contrast: 0, sat: 0, warm: 0 }, 'none')));
+  assert.deepEqual(Object.keys(P.FILTER_M), Object.keys(R.EDITOR_FILTERS));
+  for (const k of Object.keys(R.EDITOR_FILTERS).filter((x) => x !== 'none')) assert.ok(!P.isIdentity(P.colorMatrix({}, k)), k);
+  const px = (light, filter, rgb) => [...P.applyMatrix(new Uint8ClampedArray([...rgb, 255]), P.colorMatrix(light, filter))].slice(0, 3);
+  assert.deepEqual(px({}, 'mono', [200, 100, 50]), [118, 118, 118], 'mono: its gray (by how bright each color looks)');
+  assert.deepEqual(px({ bright: 100 }, 'none', [200, 100, 50]), [255, 160, 80], 'brighter (clamped at 255)');
+  assert.deepEqual(px({ bright: -100 }, 'none', [200, 100, 50]), [80, 40, 20]);
+  const warm = px({ warm: 100 }, 'none', [100, 100, 100]), cool = px({ warm: -100 }, 'none', [100, 100, 100]);
+  assert.ok(warm[0] > warm[2] && cool[2] > cool[0], `warmer: more red, less blue (${warm}); cooler: the other way (${cool})`);
+  assert.deepEqual(px({ sat: -100 }, 'none', [200, 100, 50]), px({}, 'mono', [200, 100, 50]), 'no saturation is mono');
+  assert.deepEqual(px({ contrast: 100 }, 'none', [128, 128, 128]), [128, 128, 128], 'contrast around the middle gray');
+  assert.equal(px({}, 'none', [7, 8, 9]).join(), '7,8,9');
+  for (const k of Object.keys(P.FILTER_M)) assert.deepEqual([...P.applyMatrix(new Uint8ClampedArray([10, 20, 30, 77]), P.colorMatrix({}, k))].slice(3), [77], `${k}: its see-through part kept`);
+  // its words wrapped to its width, a long word kept whole
+  assert.deepEqual(P.wrapWords('make the jacket red and add snow', 100, (t) => t.length * 8), ['make the', 'jacket red', 'and add snow']);
+  assert.deepEqual(P.wrapWords('supercalifragilistic', 50, (t) => t.length * 8), ['supercalifragilistic']);
+  assert.deepEqual(P.wrapWords('   ', 50, (t) => t.length), ['']);
+  // a layer kept inside and within its sizes; found under a finger (turned too)
+  assert.deepEqual(P.tidyLayer({ kind: 'text', x: 2, y: -1, size: 9, turn: 400.4 }), { kind: 'text', x: 1, y: 0, size: P.LAYER.TEXT.max, turn: 180 });
+  assert.deepEqual(P.tidyLayer({ kind: 'sticker', x: 0.5, y: 0.5, size: 0, turn: -33.6 }).size, P.LAYER.STICKER.start);
+  assert.equal(P.tidyLayer({ kind: 'sticker', x: 0.5, y: 0.5, size: 0.001, turn: 0 }).size, P.LAYER.STICKER.min);
+  const box = { x: 0.5, y: 0.5, w: 0.2, h: 0.1, turn: 0 };
+  assert.deepEqual([P.hitLayer(box, 0.5, 0.5, 1000, 1000), P.hitLayer(box, 0.59, 0.54, 1000, 1000), P.hitLayer(box, 0.5, 0.6, 1000, 1000)], [true, true, false]);
+  assert.equal(P.hitLayer({ ...box, turn: 90 }, 0.5, 0.59, 1000, 1000), true, 'turned a quarter: its long side up');
+  assert.deepEqual([P.newText('Hi', 0).y, P.newText('Hi', 1).y], [0.82, 0.7]);
+  assert.deepEqual(Object.keys(P.newText('Hi')).sort(), ['color', 'font', 'kind', 'size', 'style', 'text', 'turn', 'x', 'y']);
+  assert.ok(Object.hasOwn(R.EDITOR_FONTS, P.newText('Hi').font) && Object.hasOwn(R.EDITOR_COLORS, P.newText('Hi').color) && Object.hasOwn(R.EDITOR_STYLES, P.newText('Hi').style));
+  // the share mark: where our server puts it on a download (server/inf-mark.js markFor, the same numbers)
+  assert.deepEqual([R.MARK_LOOK.SHARE, R.MARK_LOOK.MARGIN], [K.MARK.SHARE, K.MARK.MARGIN]);
+  const markPng = readFileSync(new URL('../server/media/studio-mark.png', import.meta.url));
+  const mm = await sharp(markPng).metadata();
+  for (const [w, h] of [[864, 1536], [1536, 864], [1500, 500], [1080, 1080]]) {
+    const ours = await K.markFor(sharp, w, h, 'br');
+    const om = await sharp(ours.png).metadata();
+    const at = P.markPlace(w, h, mm.width, mm.height);
+    assert.ok(Math.abs(at.x - ours.left) <= 1 && Math.abs(at.y - ours.top) <= 1 && at.w === om.width && Math.abs(at.h - om.height) <= 1, `${w}×${h}: ${JSON.stringify(at)} vs ${ours.left},${ours.top} ${om.width}×${om.height}`);
+  }
+  // what changed, and its words as our server checks them
+  assert.equal(P.changed(P.startState()), false);
+  for (const patch of [{ rot: 90 }, { flip: true }, { crop: 'square' }, { zoom: 1.5 }, { cx: 0.6 }, { light: { bright: 5 } }, { filter: 'mono' }, { layers: [P.newSticker('💜')] }]) {
+    assert.equal(P.changed({ ...P.startState(), ...patch }), true, JSON.stringify(patch));
+  }
+  assert.deepEqual(P.wordsOf({ layers: [P.newText('  Hello  '), P.newSticker('💜'), P.newText(' ')] }), ['Hello']);
+  // its stickers are emoji (the device's own pictures), its fonts named, never a provider
+  assert.equal(R.STICKERS.length, 16);
+  assert.ok(R.STICKERS.every((e) => /\p{Extended_Pictographic}/u.test(e)));
+  assert.deepEqual([R.EDITOR.PER_DAY, R.EDITOR.SITE_DAY, R.EDITOR.PX, R.EDITOR.LAYERS, R.EDITOR.TEXT_MAX], [20, 2000, 1536, 8, 80]);
+});
+
+test('(2026-10-12, the editor) the photo editor on our server: one of its own photos (a meme, an X banner) edited in its maker\'s browser saved as a new photo next to it, free; its words checked like a meme\'s line, its picture a plain JPEG of its shape, looked at by Gemini before it\'s kept; its maker\'s only; PER_DAY a wallet and SITE_DAY the site (a refused look counts too); every "no" with nothing kept; its page ("Edited"), Explore, Edit with words and a video from it, never Make another; Delete; an older influencers.sql says what to run', async () => {
+  giveCredits(5000);
+  const nova = await readyInf({ name: 'Nova' });
+  const theirs = await readyInf({ name: 'Mira', wallet: OTHER });
+  const photo = await doneJob(nova.id, 'photo');
+  const banner = await doneJob(nova.id, 'photo', { shape: 'banner' });
+  const jpegOf = (w, h, more = {}) => sharp({ create: { width: w, height: h, channels: 3, background: { r: 200, g: 120, b: 220 } } }).jpeg(more).toBuffer();
+  const open = (more = {}, opts) => { nextMinute(); return act('inf-photo-open', { from: photo, shape: 'tall', words: ['Hello from Nova'], ...more }, opts); };
+  const send = (ticket, bytes) => { nextMinute(); return postBytes(`inf-photo=${encodeURIComponent(ticket)}`, bytes); };
+  const tall = await jpegOf(864, 1536);
+  const paid0 = credits().paid;
+  // opened: a ticket for it and its new id; only asked whether one's left (nothing counted yet)
+  let r = await open();
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.match(r.body.job, ID);
+  assert.deepEqual([typeof r.body.ticket, r.body.left, r.body.perDay], ['string', 20, 20]);
+  assert.deepEqual(dbCalls('inf_tool_take').at(-1), { p_wallet: codeOf(), p_tool: 'photo', p_per_day: 20, p_site_cap: 2000, p_take: false });
+  assert.equal(fake.db.jobs.has(r.body.job), false, 'nothing made yet');
+  // its picture: kept as a plain JPEG (no metadata), looked at once, counted once, its row made: a done photo, free, next to it
+  const withExif = await sharp({ create: { width: 1080, height: 1920, channels: 3, background: { r: 200, g: 120, b: 220 } } })
+    .withExif({ IFD0: { ImageDescription: 'taken at 12 Secret Street' } }).jpeg().toBuffer();
+  let s = await send(r.body.ticket, withExif);
+  assert.deepEqual([s.status, s.body], [200, { ok: true, job: r.body.job }]);
+  const saved = fake.db.jobs.get(r.body.job);
+  assert.deepEqual([saved.kind, saved.status, saved.editor, saved.image, saved.cost, saved.shape, saved.scene, saved.files, saved.inf_id, saved.edit],
+    ['photo', 'done', true, photo, 0, 'tall', fake.db.jobs.get(photo).scene, 1, nova.id, null]);
+  const kept = fake.storage.get(picPath(nova.id, r.body.job, 0)).bytes;
+  const km = await sharp(kept).metadata();
+  assert.deepEqual([km.format, km.width, km.height, km.exif === undefined], ['jpeg', 864, 1536, true], 'a plain JPEG, 1536 at most on its longest side (a bigger one made smaller), nothing about where it was taken');
+  assert.ok(!kept.includes(Buffer.from('Secret Street')));
+  assert.equal((await sharp(fake.storage.get(picPath(nova.id, r.body.job, 0, 'webp')).bytes).metadata()).format, 'webp');
+  assert.deepEqual(geminiCalls().map((c) => c.which), ['edited']);
+  assert.match(JSON.stringify(geminiCalls()[0].body.systemInstruction), /edited in our app \(cropped, its light and colors changed, words and emoji stickers put on it\)/);
+  assert.match(JSON.stringify(geminiCalls()[0].body.systemInstruction), /badWords: the picture shows readable words that are rude, hateful, sexual, a web address, an @handle, a brand name, or about money/);
+  assert.deepEqual([dbCalls('inf_tool_take').at(-1).p_take, dbCalls('inf_photo_add').at(-1)], [true, { p_job: r.body.job, p_inf: nova.id, p_wallet: codeOf(), p_from: photo, p_shape: 'tall', p_bytes: kept.length }]);
+  assert.equal(credits().paid, paid0, 'free');
+  // the same ticket again: nothing looked at, nothing kept
+  s = await send(r.body.ticket, tall);
+  assert.deepEqual([s.status, s.body.error, geminiCalls().length], [409, 'done', 1]);
+  // its page: "Edited", from that photo; anyone's view too; Explore
+  nextMinute();
+  const row = (await act('inf-look', { id: nova.id })).body.jobs.find((x) => x.id === r.body.job);
+  assert.deepEqual([row.editor, row.edit, row.image, row.status, row.shape], [true, null, photo, 'done', 'tall']);
+  assert.deepEqual([AW.jobTitle(row), AW.jobMeta(row)], ['Edited photo', 'AI-generated · Photo · Edited · Vertical']);
+  assert.ok((await get(`inf=${nova.id}`)).body.jobs.some((x) => x.id === r.body.job && x.editor === true));
+  assert.ok((await get('inf-explore')).body.fresh.some((x) => x.id === r.body.job));
+  // never "Make another" (no words and settings of its own): its photo is edited again instead
+  nextMinute();
+  let x = await act('inf-again', { job: r.body.job });
+  assert.deepEqual([x.status, x.body.error], [409, 'editor']);
+  assert.equal(AW.againErrorText(x.body), "It was made in the photo editor: open it, or the photo it's from, and edit it again.");
+  // …but Edit with words from it (Classic, a standard photo's price) and a video from it, as from any of its photos
+  nextMinute();
+  x = await act('inf-make', { id: nova.id, kind: 'photo', image: r.body.job, edit: 'add gently falling snow' });
+  assert.deepEqual([x.status, x.body.cost, dbCalls('inf_make').at(-1).p_image], [200, 15, r.body.job], JSON.stringify(x.body));
+  Object.assign(fake.db.jobs.get(x.body.job), { status: 'done', done: Date.now() });
+  nextMinute();
+  x = await act('inf-make', { id: nova.id, kind: 'video', scene: 'the camera slowly circles her as she waves', image: r.body.job, model: 'standard', seconds: 5 });
+  assert.equal(x.status, 200, JSON.stringify(x.body));
+  Object.assign(fake.db.jobs.get(x.body.job), { status: 'done', done: Date.now() });
+  // an X banner: still one, exactly 1500 × 500
+  r = await open({ from: banner, shape: 'banner', words: [] });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  s = await send(r.body.ticket, await jpegOf(1500, 500));
+  assert.deepEqual([s.status, fake.db.jobs.get(r.body.job)?.shape], [200, 'banner'], JSON.stringify(s.body));
+  const bm = await sharp(fake.storage.get(picPath(nova.id, r.body.job, 0)).bytes).metadata();
+  assert.deepEqual([bm.width, bm.height], [1500, 500], 'kept exactly 1500 × 500');
+  const bw = await sharp(fake.storage.get(picPath(nova.id, r.body.job, 0, 'webp')).bytes).metadata();
+  assert.deepEqual([bw.width, bw.height], [768, 256], 'its tile picture an X banner\'s');
+  assert.equal(AW.jobMeta(fake.db.jobs.get(r.body.job)), 'AI-generated · X banner · Edited · 1500 × 500');
+  // Delete: as any photo (its two files)
+  nextMinute();
+  x = await act('inf-job-delete', { job: r.body.job });
+  assert.deepEqual([x.status, x.body.files], [200, 2]);
+
+  // ---- every "no" when it's opened: nothing counted ----
+  const counted = () => [...fake.db.toolDays.values()].reduce((a, n) => a + n, 0);
+  const n0 = counted();
+  const no = async (status, error, more, opts) => {
+    const y = await open(more, opts);
+    assert.deepEqual([y.status, y.body.error], [status, error], `${JSON.stringify(more)}: ${JSON.stringify(y.body)}`);
+    return y;
+  };
+  await no(400, 'bad', { from: 'nope' });
+  await no(400, 'bad', { shape: 'round' });
+  await no(400, 'bad', { shape: 'banner' });                              // a photo never becomes an X banner…
+  await no(400, 'bad', { from: banner, shape: 'tall' });                  // …and an X banner stays one
+  await no(409, 'image', { from: nova.looks });
+  await no(409, 'image', { from: nova.body });
+  await no(409, 'image', { from: await doneJob(nova.id, 'video') });
+  await no(409, 'image', { from: idOf('nothingthere') });
+  await no(403, 'not_yours', { from: await doneJob(theirs.id, 'photo', { wallet: OTHER }) });
+  fake.db.jobs.get(photo).hidden = true;
+  await no(409, 'image', {});
+  fake.db.jobs.get(photo).hidden = false;
+  fake.db.jobs.get(photo).status = 'making';
+  await no(409, 'image', {});
+  fake.db.jobs.get(photo).status = 'done';
+  fake.db.infs.get(nova.id).status = 'deleted';
+  await no(404, 'gone', {});
+  fake.db.infs.get(nova.id).status = 'body';
+  await no(409, 'not_ready', {});
+  fake.db.infs.get(nova.id).status = 'ready';
+  banWallet(WALLET);
+  await no(403, 'banned', {});
+  unbanWallet(WALLET);
+  // its words: each like a meme's line (PG-13, the studio's word rules, never about money), 80 characters each, at most 8
+  for (const [words, why] of [[['visit agi1.app now'], 'link'], [['buy my coin'], 'money'], [['x'.repeat(81)], 'long'], [Array(9).fill('hi'), 'bad'],
+    [['put Elon Musk here'], 'person'], [['naked'], 'adult'], [[42], 'bad'], ['hi', 'bad']]) {
+    const y = await no(422, 'words', { words });
+    assert.deepEqual([y.body.field, y.body.why], ['text', why], JSON.stringify(words));
+  }
+  assert.equal(AW.wordsText('text', 'long'), 'At most 80 characters for each of your words.');
+  assert.equal((await open({ words: ['  ', 'Hello  there '] })).status, 200, 'an empty one is no words');
+  assert.deepEqual(checkEditorWords(['  Hello  there ', '', '💜 love it']), { ok: true, words: ['Hello there', '💜 love it'] });
+  assert.equal(counted(), n0, 'nothing counted when it was opened');
+
+  // ---- every "no" when its picture comes: nothing kept (a look refused, or Gemini not answering, is counted) ----
+  const fresh = async () => (await open()).body.ticket;
+  const nothingKept = (job) => !fake.db.jobs.has(job) && !stored(`inf/${nova.id}/${job}`).length;
+  const jobOf = (ticket) => readTicket(SECRET, 'pe', ticket).j;
+  let t = await fresh();
+  s = await send(t, Buffer.from('not a picture at all, just words'));
+  assert.deepEqual([s.status, s.body.error], [422, 'picture']);
+  s = await send(t, await jpegOf(1000, 1000));                            // not its shape
+  assert.deepEqual([s.status, s.body.error], [422, 'size']);
+  s = await send(t, await jpegOf(1536, 1000));                            // none of our shapes
+  assert.deepEqual([s.status, s.body.error], [422, 'size']);
+  s = await send(t, await jpegOf(1500, 520));                             // an X banner's only exactly 1500 × 500 (and this ticket is a tall one's)
+  assert.deepEqual([s.status, s.body.error], [422, 'size']);
+  assert.equal(counted(), n0, 'a picture we can\'t use is never looked at, never counted');
+  s = await send('nope', tall);
+  assert.deepEqual([s.status, s.body.error], [401, 'ticket']);
+  s = await send(makeTicket('another secret', 'pe', { j: idOf('forged'), i: nova.id, f: photo, w: codeOf(), s: 'tall' }), tall);
+  assert.deepEqual([s.status, s.body.error], [401, 'ticket']);
+  s = await send(makeTicket(SECRET, 'up', { j: idOf('otherkind'), i: nova.id, f: photo, w: codeOf(), s: 'tall' }), tall);
+  assert.deepEqual([s.status, s.body.error], [401, 'ticket'], 'an upload\'s ticket is never a save\'s');
+  // Gemini says no: nothing kept, said why
+  fake.gemini.edited = { badWords: true };
+  const looks0 = geminiCalls().length;
+  s = await send(t, tall);
+  fake.gemini.edited = null;
+  assert.deepEqual([s.status, s.body.error, s.body.why, geminiCalls().length - looks0], [422, 'refused', 'words', 1]);
+  assert.ok(nothingKept(jobOf(t)));
+  assert.equal(AW.editorErrorText(s.body), "It can't be saved: some words on it aren't OK (no rude words, links, @names, brands or money talk).");
+  assert.equal(counted(), n0 + 1, 'a refused look is counted (it cost a look)');
+  // Gemini can't answer: nothing kept; the page sends it again
+  fake.gemini.status = 503;
+  s = await send(t, tall);
+  fake.gemini.status = 200;
+  assert.deepEqual([s.status, s.body.error], [503, 'ai']);
+  assert.ok(nothingKept(jobOf(t)));
+  s = await send(t, tall);
+  assert.equal(s.status, 200, 'sent again: kept');
+  // the photo it's from deleted meanwhile: looked at, then not kept (its files deleted)
+  t = await fresh();
+  const other = await doneJob(nova.id, 'photo');
+  const t2 = (await open({ from: other })).body.ticket;
+  nextMinute();
+  assert.equal((await act('inf-job-delete', { job: other })).status, 200);
+  s = await send(t2, tall);
+  assert.deepEqual([s.status, s.body.error], [409, 'image']);
+  assert.ok(nothingKept(jobOf(t2)));
+  // its maker banned meanwhile: not kept
+  banWallet(WALLET);
+  s = await send(t, tall);
+  unbanWallet(WALLET);
+  assert.deepEqual([s.status, s.body.error], [403, 'banned']);
+  assert.ok(nothingKept(jobOf(t)));
+  for (const [error, words] of [['too_many', `You've saved 20 edited photos today: more tomorrow. Downloading is always free.`], ['ai', "We couldn't check it just now: try again in a moment."],
+    ['image', "The photo it's from isn't there any more."], ['done', "It's saved already."]]) assert.equal(AW.editorErrorText({ error }), words, error);
+  for (const why of ['sexual', 'minor', 'hate', 'violence', 'other', 'something new']) assert.match(AW.editorErrorText({ error: 'refused', why }), /^It can't be saved: /);
+
+  // ---- PER_DAY a wallet (each look counted), SITE_DAY the site ----
+  const key = `${codeOf()}:${new Date().toISOString().slice(0, 10)}:photo`;
+  fake.db.toolDays.set(key, 19);
+  r = await open();
+  assert.deepEqual([r.status, r.body.left], [200, 1]);
+  fake.db.toolDays.set(key, 20);
+  const y = await open();
+  assert.deepEqual([y.status, y.body.error], [429, 'too_many']);
+  s = await send(r.body.ticket, tall);
+  assert.deepEqual([s.status, s.body.error], [429, 'too_many'], 'used up meanwhile: never looked at');
+  fake.db.toolDays.set(key, 0);
+  fake.db.toolSite.set(`${new Date().toISOString().slice(0, 10)}:photo`, 2000);
+  const z = await open();
+  assert.deepEqual([z.status, z.body.error], [429, 'busy_day']);
+  fake.db.toolSite.clear();
+
+  // Gemini's look (checkEdited): each "no" its own reason; a picture it won't look at is never kept
+  const { checkEdited } = await import('../server/inf-ai.js');
+  const look = async (v, blocked = false) => { fake.gemini.edited = v; fake.gemini.blocked = blocked; try { return await checkEdited(cfgNow(), tall); } finally { fake.gemini.edited = null; fake.gemini.blocked = false; } };
+  const g0 = geminiCalls().length;
+  assert.deepEqual(await look({}), { ok: true });
+  for (const [v, why] of [[{ explicit: true }, 'sexual'], [{ minor: true }, 'minor'], [{ hateful: true }, 'hate'], [{ violent: true }, 'violence'], [{ badWords: true }, 'words'], [{ other: true }, 'other']]) {
+    assert.deepEqual(await look(v), { ok: false, why }, JSON.stringify(v));
+  }
+  assert.deepEqual(await look({}, true), { ok: false, why: 'sexual' }, 'blocked');
+  assert.ok(geminiCalls().length === g0 + 8 && geminiCalls().slice(g0).every((c) => c.which === 'edited'));
+
+  // an influencers.sql from before the photo editor: "not ready", the log says what to run
+  fake.missing.add('inf_tool_take');
+  r = await open();
+  fake.missing.delete('inf_tool_take');
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  assert.ok(logs.some((l) => l.includes('inf_tool_take not found: run supabase/influencers.sql again in this Supabase project (the photo editor; it ends with influencers_ready = 1)')), logs.join('\n'));
+  assert.equal(credits().paid, paid0 - 15 - R.videoCredits(R.videoSpec({ model: 'standard', seconds: 5, sound: true }), 1), 'only the edit with words and the video were paid for');
+});
+
+test('(2026-10-12, the editor) influencers.sql\'s promises for the photo editor: its column and its check (a free photo made from one of its own, never an edit with words), how many a wallet and the site saved a day (inf_tool_take: only asked, or counted), a saved one (inf_photo_add: its maker\'s own done, shown photo, never a banned wallet, an X banner stays one), inf_job_get, inf_jobs and the tidy-up knowing it, the ready check finding each', () => {
+  const sql = read('supabase/influencers.sql');
+  assert.match(sql, /alter table public\.agi1_inf_jobs add column if not exists editor boolean not null default false;\n/);
+  // (its check since the video editor, the same day: a photo saved from one of its own, or a video cut from one of its own; one
+  // check, so the photo editor's first one (photos only), dropped by it, never refuses the videos)
+  assert.match(sql, /alter table public\.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_editor_check;\nalter table public\.agi1_inf_jobs add constraint agi1_inf_jobs_editor_check check \(not editor\n  or \(image is not null and cost = 0 and edit is null\n    and \(\(kind = 'photo' and cut is null\) or \(kind = 'video' and cut is not null and model is null and parts = 1\)\)\)\);/);
+  assert.equal((sql.match(/add constraint agi1_inf_jobs_editor_check/g) || []).length, 1);
+  const days = /create table if not exists public\.agi1_inf_tool_days \(([\s\S]*?)\n\);/.exec(sql)?.[1] || '';
+  assert.match(days, /tool\s+text\s+not null check \(tool in \('photo', 'video'\)\)/);
+  assert.match(days, /primary key \(wallet_code, day, tool\)/);
+  assert.match(sql, /alter table public\.agi1_inf_tool_days enable row level security;\nrevoke all on table public\.agi1_inf_tool_days from anon, authenticated;/);
+  assert.match(sql, /alter table public\.agi1_inf_days add column if not exists photo_edits integer not null default 0 check \(photo_edits >= 0\);/);
+  const body = (fn) => new RegExp(`create or replace function public\\.${fn}\\([\\s\\S]*?\\n\\$\\$;`).exec(sql)?.[0] || '';
+  const take = body('inf_tool_take');
+  assert.match(take, /p_take boolean default true\)/);
+  assert.match(take, /if mine >= p_per_day then return json_build_object\('ok', false, 'why', 'too_many'\); end if;/);
+  assert.match(take, /if site >= p_site_cap then return json_build_object\('ok', false, 'why', 'busy_day'\); end if;\n\s+if not coalesce\(p_take, true\) then return json_build_object\('ok', true, 'left', p_per_day - mine\); end if;/);
+  const add = body('inf_photo_add');
+  assert.match(add, /if exists \(select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null\) then\s+return json_build_object\('ok', false, 'why', 'banned'\);/);
+  assert.match(add, /f\.kind <> 'photo' or f\.status <> 'done' or f\.hidden or f\.deleted_at is not null then\n\s+return json_build_object\('ok', false, 'why', 'image'\);/);
+  assert.match(add, /if \(f\.shape = 'banner'\) <> \(p_shape = 'banner'\) then return json_build_object\('ok', false, 'why', 'bad'\); end if;/);
+  assert.match(add, /values \(p_job, p_inf, p_wallet, 'photo', f\.scene, p_shape, p_from, 0, 'done', 1, p_bytes, true, now\(\)\);/);
+  assert.match(sql, /j\.deleted_at, j\.edit, j\.editor,/);
+  assert.match(sql, /'edit', edit, 'editor', editor,/);
+  assert.match(body('inf_tidy'), /delete from agi1_inf_tool_days where day < \(now\(\) at time zone 'utc'\)::date - 2;/);
+  assert.match(sql, /'inf_job_delete\(text, text\)', 'inf_tool_take\(text, text, integer, integer, boolean\)',\n\s+'inf_photo_add\(text, text, text, text, text, integer\)'/);
+  assert.match(sql, /and column_name = 'editor'\)\n\s+and exists \(select 1 from pg_constraint where conrelid = 'public\.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_editor_check'\)\n\s+and to_regclass\('public\.agi1_inf_tool_days'\) is not null/);
+  assert.match(sql, /'inf_owner_link', 'inf_owner_links', 'inf_job_delete', 'inf_tool_take', 'inf_photo_add',/);
+  // the server's words when it isn't run again
+  const limits = read('server/limits.js');
+  assert.match(limits, /for \(const fn of \['inf_tool_take', 'inf_photo_add'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the photo editor; it ends with influencers_ready = 1\)`;/);
+});
+
+test('(2026-10-12, the editor) the page: "Edit photo" over its own photos (a meme, an X banner) seen big, Delete its trash can alone, never "Make another" for one saved from the photo editor; the photo editor (its tools as tabs, its picture on a canvas drawn with one color matrix, its words and stickers, the keyboard, Undo and Start again; Download with the share mark, drawn here; Save, our server first; every style through the CSSOM); its words (never an AI service named); its styles; Learn and the AI helper\'s guide', async () => {
+  // ---- over one of its own photos seen big (src/studio/views/shared.js) ----
+  const shared = strip(read('src/studio/views/shared.js'));
+  // (since the video editor, the same day: a video's or a trend video's is "Edit video")
+  assert.match(shared, /const editor = j\.kind === 'photo' && own\.onEditor \? go\('Edit photo', 'sliders', own\.onEditor\)\n\s+: \['video', 'trend'\]\.includes\(j\.kind\) && own\.onVideoEditor \? go\('Edit video', 'scissors', own\.onVideoEditor\) : null;/);
+  assert.match(shared, /const again = own\.onAgain \? go\(/);
+  assert.match(shared, /const del = go\('', 'trash', own\.onDelete, \{ kind: 'quiet', class: 'sa-btn sa-btn-quiet sa-btn-sm sa-edit-delete', 'aria-label': 'Delete', title: 'Delete' \}\);/);
+  assert.match(shared, /return h\('div', \{ class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' \}, edit, editor, again, del\);/);
+  assert.match(shared, /const byEditor = kind === 'photo' && j\.editor === true;/);
+  assert.match(shared, /byEditor \? h\('p', \{ class: 'sa-edit-words' \}, icon\('sliders'\), h\('span', \{ text: 'Edited in the photo editor' \}\)\) : null,/);
+  // ---- an influencer's page ----
+  const inf = strip(read('src/studio/views/influencer.js'));
+  assert.match(inf, /import \{ photoEditor \} from '\.\/photo-editor\.js';/);
+  assert.match(inf, /cost: againCost\(j\), onAgain: j\.editor \? null : \(x\) => again\(x\), onDelete: \(x\) => removeJob\(x\),\n\s+onEdit: j\.kind === 'photo' \? \(x\) => editWithWords\(x\) : null, onEditor: j\.kind === 'photo' \? \(x\) => openEditor\(x\) : null,\n\s+onVideoEditor: \['video', 'trend'\]\.includes\(j\.kind\) \? \(x\) => openVideoEditor\(x\) : null,/);
+  assert.match(inf, /photoEditor\(ctx, \{ inf: id, job: j, name: inf\(\)\?\.name, onSaved: \(\) => \{/);
+  assert.match(inf, /: j\.edit \? \{ text: 'Edited', icon: 'wand' \} : j\.editor \? \{ text: 'Edited', icon: 'sliders' \} : null \}\)\);/);
+  // ---- the photo editor (src/studio/views/photo-editor.js) ----
+  const pe = strip(read('src/studio/views/photo-editor.js'));
+  assert.doesNotMatch(pe, /innerHTML|insertAdjacentHTML|outerHTML|setAttribute\('style'|\.style\.(?!setProperty)|cssText/, 'every style through the CSSOM');
+  assert.doesNotMatch(pe, PROVIDERS);
+  assert.match(pe, /const MARK_SRC = new URL\('\.\.\/\.\.\/\.\.\/server\/media\/studio-mark\.png', import\.meta\.url\)\.href;/);
+  assert.match(pe, /const s = sheet\(\{ title: 'Edit photo', sub: editorNote\(job\), size: 'editor' \}\);/);
+  // its tools: real tabs (an X banner's without Crop)
+  assert.match(pe, /items: \[\.\.\.\(banner \? \[\] : \[\['crop', 'Crop', 'crop'\]\]\), \['light', 'Light', 'sun'\], \['filters', 'Filters', 'filter'\], \['text', 'Text', 'type'\], \['stickers', 'Stickers', 'sticker'\]\],/);
+  // its picture: turned, flipped and cropped, then one color matrix on its pixels
+  assert.match(pe, /const m = P\.colorMatrix\(state\.light, state\.filter\);\n\s+if \(!P\.isIdentity\(m\)\) \{\n\s+const data = g\.getImageData\(0, 0, c\.width, c\.height\);\n\s+P\.applyMatrix\(data\.data, m\);/);
+  // a download: the picture at its size with the share mark where our server puts it, named for the influencer
+  assert.match(pe, /if \(withMark && mark\) \{\n\s+const at = P\.markPlace\(out\.w, out\.h, mark\.naturalWidth, mark\.naturalHeight\);\n\s+g\.drawImage\(mark, at\.x, at\.y, at\.w, at\.h\);/);
+  // (2026-10-12) without the mark only when our server says this wallet's download is clean, and always with our hidden AI tag
+  assert.match(pe, /const r = Number\(ctx\.info\?\.cleanAgi\) > 0 \? await ctx\.act\('inf-dl', \{ job: job\.id \}\) : null;\n\s+const clean = Boolean\(r\?\.ok && r\.data\?\.clean\);\n\s+const made = await toBlob\(finished\(\{ withMark: !clean \}\)\);/);
+  assert.match(pe, /const tagged = withAiTag\(new Uint8Array\(await made\.arrayBuffer\(\)\)\);/);
+  assert.match(pe, /download: `\$\{String\(name\)\.replace\(\/\[\^\\p\{L\}\\p\{N\}\]\+\/gu, '-'\)\.replace\(\/\^-\|-\$\/g, ''\) \|\| 'photo'\}-edited\.jpg`/);
+  // a save: without the mark (its downloads get it on our server), its shape and its words, our server first
+  assert.match(pe, /const blob = await toBlob\(finished\(\)\);/);
+  assert.match(pe, /const r = await savePhoto\(ctx\.act, \{ from: job\.id, shape: P\.shapeOfCrop\(state\.crop, b\.w, b\.h, banner\), words: P\.wordsOf\(state\), blob \}\);/);
+  assert.match(pe, /if \(r\.error === 'words'\) \{\n\s+tabs\.show\('text'\);\n\s+say\(err, wordsText\(r\.field \|\| 'text', r\.why\)\);/);
+  assert.match(pe, /s\.close\(\);\n\s+ctx\.toast\(editorSavedText\(job\), 'good'\);\n\s+onSaved\?\.\(r\.job\);/);
+  // the keyboard: the stage moves what's picked (or the frame), + and - its size, Delete removes it
+  assert.match(pe, /const view = h\('canvas', \{ class: 'sa-pe-canvas', tabindex: '0', role: 'img', 'aria-label': 'Your photo as it will look' \}\);/);
+  assert.match(pe, /if \(e\.key === 'Delete' \|\| e\.key === 'Backspace'\) \{ e\.preventDefault\(\); removeLayer\(\); \}/);
+  assert.match(pe, /const undoB = btn\('Undo', \{ kind: 'ghost', icon: 'undo', class: 'sa-btn sa-btn-ghost sa-pe-quiet', 'aria-label': 'Undo', title: 'Undo' \}\);/);
+  assert.match(pe, /save\.disabled = !src \|\| !P\.changed\(state\);/);
+  // (its words and stickers: the editors' shared tools since the video editor, the same day, src/studio/views/layers.js)
+  assert.match(pe, /const LP = layerPanel\(\{ layers: \(\) => state\.layers, sel: \(\) => sel, pick: \(n\) => \{ sel = n; \}, after: \(o\) => after\(o\), commit: \(\) => commit\(\), err, view, what: 'photo' \}\);/);
+  const lp = strip(read('src/studio/views/layers.js'));
+  assert.match(lp, /if \(env\.layers\(\)\.length < EDITOR\.LAYERS\) return false;\n\s+say\(env\.err, `At most \$\{EDITOR\.LAYERS\} words and stickers on one \$\{env\.what\}\.`\);/);
+  assert.equal((lp.match(/if \(full\(\)\) return;/g) || []).length, 2, 'words and stickers: 8 at most together');
+  // its words, never an AI service named
+  for (const j of [{ kind: 'photo', shape: 'tall' }, { kind: 'photo', shape: 'banner' }, { kind: 'photo', meme: 'pov', shape: 'square' }]) {
+    for (const t of [AW.editorNote(j), AW.editorSavedText(j)]) { assert.doesNotMatch(t, PROVIDERS, t); assert.equal(trouble(t), null, t); }
+  }
+  assert.deepEqual([AW.editorSavedText({ kind: 'photo', shape: 'banner' }), AW.editorNote({ kind: 'photo', shape: 'banner' })],
+    ["Saved: your edited X banner is next to the one it's from.", 'Free: its light, a filter, words and stickers (it stays 1500 × 500). Save it as a new X banner, or download it.']);
+  // its styles: every rule an sa- class; a computer's dialog after the phone's rules it changes
+  const css = read('src/styles/studio-app.css');
+  for (const sel of ['.sa-sheet-editor .sa-sheet-in {', '.sa-pe {', '.sa-pe-stage {', '.sa-pe-canvas {', '.sa-pe-panel {', '.sa-pe-filters {', '.sa-pe-stickers {', '.sa-pe-color.is-pink {', '.sa-edit-row .sa-edit-delete { min-width: 32px; padding: 0 8px; }']) {
+    assert.ok(css.includes(sel), sel);
+  }
+  assert.ok(css.indexOf('@media (min-width: 720px) {\n  .sa-sheet-editor {') > css.indexOf('.sa-pe-panel {'));
+  // the media helper: its ticket, then its bytes
+  const media = read('src/studio/media.js');
+  assert.match(media, /const open = await act\('inf-photo-open', \{ from, shape, words \}\);/);
+  assert.match(media, /const r = await sendBytes\(`inf-photo=\$\{encodeURIComponent\(open\.data\.ticket\)\}`, blob\);/);
+  // ---- Learn and the AI helper's guide ----
+  const { LESSONS } = await import('../src/studio/views/learn.js');
+  assert.ok(LESSONS.find((l) => l.id === 'photos').steps.some((t) => /^Or Edit photo: crop it, its light, a filter, words and stickers \(free\)/.test(t)));
+  const guide = helpGuide(cfgNow());
+  assert.match(guide, /PHOTO EDITOR: open one of your own photos, memes or X banners → "Edit photo": crop and turn it, its light, a filter, words and stickers, in your browser, free\./);
+  assert.doesNotMatch(guide, PROVIDERS);
+});
+
+// ---------- the video editor (2026-10-12, the editor; the owner's choice: "Video editor") ----------
+test('(2026-10-12, the editor) the video editor\'s numbers (src/studio/video-edit.js): each shape\'s size ("Original" its own, made smaller, even sides), the shape kept, a crop of each shape (zoomed and moved, kept inside) in thousandths, our server\'s check of a cut (every "no"), "as it is", its crop in pixels (exactly its size\'s shape, even, inside), the share mark top left where our server puts it, the page\'s state (from the start, a trim kept inside its limits, what changed, the cut sent), a video whose mark is in it already, how long one takes', async () => {
+  const V = await import('../src/studio/video-edit.js');
+  const P = await import('../src/studio/photo-edit.js');
+  assert.deepEqual([R.VIDEO_EDITOR.PER_DAY, R.VIDEO_EDITOR.SITE_DAY, R.VIDEO_EDITOR.MIN_S, R.VIDEO_EDITOR.MAX_S, R.VIDEO_EDITOR.ZOOM_MAX, R.VIDEO_EDITOR.OPEN,
+    R.VIDEO_EDITOR.MIN_BOX_PX, R.VIDEO_EDITOR.AREA], [10, 500, 1, 15, 2.5, 3, 64, 1280 * 720]);
+  assert.deepEqual(Object.keys(V.CUT_SHAPES), ['original', 'tall', 'square', 'wide']);
+  assert.deepEqual(V.CUT_SIZE, K.PART.SIZE, 'the same sizes as a long video\'s parts');
+  // each shape's size; "Original" its video's own, made smaller to at most 1280 × 720's pixels (never bigger), its sides even
+  assert.deepEqual([V.cutSize('tall', 1080, 1920), V.cutSize('square', 1080, 1920), V.cutSize('wide', 1080, 1920)], [[720, 1280], [960, 960], [1280, 720]]);
+  assert.deepEqual([V.cutSize('original', 1080, 1920), V.cutSize('original', 1280, 720), V.cutSize('original', 640, 360), V.cutSize('original', 1921, 1081), V.cutSize('original', 333, 999)],
+    [[720, 1280], [1280, 720], [640, 360], [1278, 720], [332, 998]]);
+  for (const [w, h] of [[1080, 1920], [1921, 1081], [4096, 64], [333, 999]]) {
+    const [cw, ch] = V.cutSize('original', w, h);
+    assert.ok(cw % 2 === 0 && ch % 2 === 0 && cw * ch <= R.VIDEO_EDITOR.AREA && cw <= w && ch <= h, `${w}×${h} → ${cw}×${ch}`);
+  }
+  assert.equal(V.cutSize('original', 0, 5), null);
+  // the shape our server keeps for it (as a photo's are named): "Original" by its size
+  assert.deepEqual([V.storedShape('original', 1080, 1920), V.storedShape('original', 1920, 1080), V.storedShape('original', 1000, 1100), V.storedShape('wide', 1080, 1920)],
+    ['tall', 'wide', 'square', 'wide']);
+  // a crop: the biggest box of its shape, zoomed in from its middle (2.5× at most), moved and kept inside
+  assert.deepEqual(V.cropBox({ shape: 'square', w: 1080, h: 1920 }), { x: 0, y: 420, w: 1080, h: 1080 });
+  assert.deepEqual(V.cropBox({ shape: 'wide', w: 1080, h: 1920 }), { x: 0, y: 656.25, w: 1080, h: 607.5 });
+  assert.deepEqual(V.cropBox({ shape: 'original', w: 1080, h: 1920 }), { x: 0, y: 0, w: 1080, h: 1920 });
+  assert.deepEqual(V.cropBox({ shape: 'tall', w: 1920, h: 1080, zoom: 2, cx: 1, cy: 0 }), { x: 1616.25, y: 0, w: 303.75, h: 540 }, 'zoomed 2×, moved to the top right corner and kept inside');
+  assert.deepEqual(V.cropBox({ shape: 'original', w: 1080, h: 1920, zoom: 9 }), { x: 324, y: 576, w: 432, h: 768 }, 'zoomed in at most ZOOM_MAX');
+  // …in thousandths of its video, whole numbers, inside it
+  assert.deepEqual(V.thousandths({ x: 0, y: 656.25, w: 1080, h: 607.5 }, 1080, 1920), [0, 342, 1000, 316]);
+  assert.deepEqual(V.thousandths({ x: 1920, y: -5, w: 1920, h: 2000 }, 1920, 1080), [0, 0, 1000, 1000]);
+
+  // our server's check of a cut (the page's own too): tidied, or why not
+  const good = { start: 2.5, length: 6, shape: 'square', src: [1080, 1920], box: [0, 219, 1000, 563], sound: true };
+  assert.deepEqual(V.cutSpec(good), { ok: true, cut: good });
+  assert.deepEqual(V.cutSpec({ ...good, start: 0.30000000000000004, length: 1.0000000000000002 }).cut, { ...good, start: 0.3, length: 1 }, 'a tenth of a second at a time, its float dust tidied');
+  assert.deepEqual(V.cutSpec({ ...good, junk: 'x' }).cut, good, 'only what a cut is');
+  for (const [c, why] of [[null, 'bad'], [[], 'bad'], ['cut', 'bad'],
+    [{ ...good, start: -0.1 }, 'start'], [{ ...good, start: 600.1 }, 'start'], [{ ...good, start: 2.55 }, 'start'], [{ ...good, start: '2.5' }, 'start'], [{ ...good, start: NaN }, 'start'],
+    [{ ...good, length: 0.9 }, 'length'], [{ ...good, length: 15.1 }, 'length'], [{ ...good, length: 6.05 }, 'length'], [{ ...good, length: undefined }, 'length'],
+    [{ ...good, shape: 'banner' }, 'shape'], [{ ...good, shape: 'toString' }, 'shape'], [{ ...good, shape: 1 }, 'shape'],
+    [{ ...good, src: [1080] }, 'src'], [{ ...good, src: [1080, 1920.5] }, 'src'], [{ ...good, src: [63, 1920] }, 'src'], [{ ...good, src: [1080, 4097] }, 'src'], [{ ...good, src: '1080x1920' }, 'src'],
+    [{ ...good, box: [0, 219, 1000] }, 'box'], [{ ...good, box: [0, 219, 1000, 563.5] }, 'box'], [{ ...good, box: [-1, 219, 1000, 563] }, 'box'], [{ ...good, box: [0, 500, 1000, 563] }, 'box'],
+    [{ ...good, box: [0, 219, 0, 563] }, 'box'], [{ ...good, box: [0, 219, 1000, 700] }, 'box'], [{ ...good, box: [0, 0, 50, 28] }, 'box'],
+    [{ ...good, shape: 'wide' }, 'box'], [{ ...good, sound: 'yes' }, 'sound'], [{ ...good, sound: undefined }, 'sound']]) {
+    assert.deepEqual(V.cutSpec(c), { ok: false, why }, JSON.stringify(c));
+  }
+  assert.equal(V.cutSpec({ ...good, box: [0, 215, 1000, 570] }).ok, true, 'its shape within 3% (thousandths are rounded)');
+  assert.equal(V.cutSpec({ ...good, length: 15, start: 600 }).ok, true, 'a long video\'s last 15 seconds');
+  // "as it is": its own shape, the whole picture (a video whose mark is in it already: only that)
+  assert.equal(V.asItIs({ ...good, shape: 'original', box: [0, 0, 1000, 1000] }), true);
+  for (const c of [good, { ...good, box: [0, 0, 1000, 1000] }, { ...good, shape: 'original', box: [0, 0, 999, 1000] }, null]) assert.equal(V.asItIs(c), false, JSON.stringify(c));
+  assert.deepEqual([V.ownMark({ kind: 'video', editor: true }), V.ownMark({ kind: 'video', model: 'long', parts: 4 }), V.ownMark({ kind: 'video', model: 'long', parts: 1 }),
+    V.ownMark({ kind: 'trend' }), V.ownMark({ kind: 'video', model: 'standard' }), V.ownMark({ kind: 'photo', editor: true }), V.ownMark(null)], [true, true, false, false, false, false, false]);
+  // its crop in its video's own pixels (for ffmpeg): exactly its size's shape, centred in the box asked for, even, inside
+  assert.deepEqual(V.cropPixels([0, 219, 1000, 563], 1080, 1920, 960, 960), { x: 0, y: 420, w: 1080, h: 1080 });
+  assert.deepEqual(V.cropPixels([0, 0, 1000, 1000], 1080, 1920, 1080, 1920), { x: 0, y: 0, w: 1080, h: 1920 });
+  assert.deepEqual(V.cropPixels([500, 0, 500, 1000], 1919, 1081, 720, 1280), { x: 1134, y: 0, w: 608, h: 1080 });
+  for (const [box, W, H, [ow, oh]] of [[[0, 342, 1000, 316], 1080, 1920, [1280, 720]], [[740, 0, 260, 833], 1920, 1080, [720, 1280]], [[1, 1, 998, 998], 1081, 1921, [720, 1280]]]) {
+    const c = V.cropPixels(box, W, H, ow, oh);
+    assert.ok(c.w % 2 === 0 && c.h % 2 === 0 && c.x % 2 === 0 && c.y % 2 === 0 && c.x >= 0 && c.y >= 0 && c.x + c.w <= W && c.y + c.h <= H, JSON.stringify(c));
+    assert.ok(Math.abs(c.w / c.h / (ow / oh) - 1) < 0.01, `its shape: ${JSON.stringify(c)}`);
+  }
+  // the share mark: where our server puts it on videos (server/inf-mark.js markFor, top left: the same numbers)
+  const markPng = readFileSync(new URL('../server/media/studio-mark.png', import.meta.url));
+  const mm = await sharp(markPng).metadata();
+  // (a small one too: never narrower than 120 px, as on photos)
+  for (const [w, h] of [[720, 1280], [1280, 720], [960, 960], [640, 360], [320, 180], [180, 320]]) {
+    const ours = await K.markFor(sharp, w, h, 'tl');
+    const om = await sharp(ours.png).metadata();
+    const at = V.markTopLeft(w, h, mm.width, mm.height);
+    assert.ok(at.x === ours.left && at.y === ours.top && at.w === om.width && Math.abs(at.h - om.height) <= 1, `${w}×${h}: ${JSON.stringify(at)} vs ${ours.left},${ours.top} ${om.width}×${om.height}`);
+  }
+  assert.deepEqual(await K.markSize(sharp), { width: mm.width, height: mm.height });
+  assert.equal(V.markTopLeft(320, 180, mm.width, mm.height).w, 120, 'never narrower than 120 px');
+
+  // the page's state: from the start (its whole length up to 15 s, its own shape, its sound, no words)
+  assert.deepEqual(V.startCut(7.33), { start: 0, end: 7.3, shape: 'original', zoom: 1, cx: 0.5, cy: 0.5, sound: true, layers: [] });
+  assert.deepEqual([V.startCut(40).end, V.startCut(NaN).end], [15, 15]);
+  // its part kept inside its video and the editor's limits, a tenth of a second at a time
+  assert.deepEqual([V.tidyTrim(3, 3.5, 10), V.tidyTrim(-1, 30, 40), V.tidyTrim(9.5, 12, 10), V.tidyTrim(2.04, 4.06, 10)],
+    [{ start: 3, end: 4 }, { start: 0, end: 15 }, { start: 9, end: 10 }, { start: 2, end: 4.1 }]);
+  // what changed
+  assert.equal(V.cutChanged(V.startCut(10), 10), false);
+  for (const patch of [{ start: 0.1 }, { end: 9 }, { shape: 'tall' }, { zoom: 1.2 }, { cx: 0.4 }, { cy: 0.6 }, { sound: false }, { layers: [P.newSticker('💜')] }]) {
+    assert.equal(V.cutChanged({ ...V.startCut(10), ...patch }, 10), true, JSON.stringify(patch));
+  }
+  // …a silent video's (its video has no sound): it starts with its sound off, and that's no change (its Save waits for one: it
+  // was on as it opened, found 2026-10-12)
+  assert.deepEqual(V.startCut(6, false), { start: 0, end: 6, shape: 'original', zoom: 1, cx: 0.5, cy: 0.5, sound: false, layers: [] });
+  assert.equal(V.cutChanged(V.startCut(6, false), 6, false), false);
+  assert.equal(V.cutChanged(V.startCut(6, false), 6), true, 'against a video with sound: its sound off is a change');
+  for (const patch of [{ start: 0.1 }, { shape: 'wide' }, { layers: [P.newSticker('💜')] }]) {
+    assert.equal(V.cutChanged({ ...V.startCut(6, false), ...patch }, 6, false), true, JSON.stringify(patch));
+  }
+  // the cut our server gets: its numbers from the page's state, and our server's check passes it
+  const st = { ...V.startCut(10), start: 1.2, end: 7.2, shape: 'square', zoom: 1.5, cx: 0.3, cy: 0.7 };
+  const cut = V.cutOf(st, 1080, 1920);
+  assert.deepEqual(cut, { start: 1.2, length: 6, shape: 'square', src: [1080, 1920], box: [0, 513, 667, 375], sound: true });
+  assert.deepEqual(V.cutOf({ ...st, sound: false }, 1080, 1920), { ...cut, sound: false }, 'its sound off: made silent');
+  assert.deepEqual(V.cutSpec(cut), { ok: true, cut });
+  for (const shape of Object.keys(V.CUT_SHAPES)) {
+    for (const [W, H] of [[1080, 1920], [1920, 1080], [1000, 1000], [721, 1281]]) {
+      for (const zoom of [1, 1.7, 2.5]) {
+        for (const [cx, cy] of [[0, 0], [0.5, 0.5], [1, 1], [0.13, 0.91]]) {
+          const c = V.cutOf({ ...V.startCut(12), shape, zoom, cx, cy }, W, H);
+          assert.equal(V.cutSpec(c).ok, true, `${shape} ${W}×${H} ${zoom}× (${cx}, ${cy}): ${JSON.stringify(c)} ${JSON.stringify(V.cutSpec(c))}`);
+        }
+      }
+    }
+  }
+  assert.equal(V.asItIs(V.cutOf(V.startCut(12), 720, 1280)), true, 'from the start: as it is');
+  // how long one usually takes: our clock's next minute (its first pieces), its others a minute later, then its look
+  assert.deepEqual(R.TYPICAL.cut, R.cutSteps(5));
+  assert.deepEqual([R.cutSteps(1), R.cutSteps(5.9), R.cutSteps(6), R.cutSteps(15), R.cutSteps(99)].map((p) => p[1][1]), [5, 5, 65, 65, 65]);
+  for (const s of [1, 3, 5, 5.5, 5.9, 6, 6.5, 10, 10.5, 12, 15]) {
+    const pieces = K.cutPlan({ width: 720, height: 1280, seconds: 60 }, { start: 0, length: s, shape: 'tall', src: [720, 1280], box: [0, 0, 1000, 1000], sound: true }).pieces.length;
+    assert.equal(R.cutSteps(s)[1][1], pieces > 1 ? 65 : 5, `${s} s: ${pieces} pieces`);
+  }
+  assert.deepEqual(R.jobPlan({ kind: 'video', editor: true, seconds: 12 }), R.cutSteps(12));
+  assert.deepEqual(R.jobPlan({ kind: 'video', editor: true }), R.TYPICAL.cut);
+});
+
+test('(2026-10-12, the editor) a cut made with ffmpeg (server/inf-mark.js): its plan (pieces of 5 seconds, a last one under a second joined to the one before; only the video its page measured; never past its end; one with its mark in it only as it is), ffmpeg\'s exact words for a piece (its part, its crop at its size, its words\' picture and the share mark over it, no sound) and for joining them (as they are, with its sound or none), its pieces made while there\'s time (the first always; a later one that fails keeps the ones made), joined; no ffmpeg', async () => {
+  assert.deepEqual([K.CUT.PIECE_S, K.CUT.NEEDS_MS, K.CUT.KEEP_MS, K.CUT.JOIN_NEEDS_MS, K.CUT.CHECK_NEEDS_MS, K.CUT.PRESET, K.CUT.SOURCE_MAX, K.CUT.LAYER_MAX,
+    K.CUT.FPS, K.CUT.KBPS, K.CUT.SOUND_KBPS, K.CUT.NEAR_END_S, K.CUT.MORE], [5, 11_000, 2_500, 6_000, 14_000, 'superfast', 40_000_000, 4_000_000, 24, 2500, 128, 0.5, 1.3]);
+  const info = { width: 1080, height: 1920, seconds: 20 };
+  const cut = (more = {}) => ({ start: 2.5, length: 6, shape: 'square', src: [1080, 1920], box: [0, 219, 1000, 563], sound: true, ...more });
+  // its plan: its size, its crop, its frames (24 a second) in pieces of 120 (a last one under a second goes into the one before)
+  assert.deepEqual(K.cutPlan(info, cut()), { w: 960, h: 960, crop: { x: 0, y: 420, w: 1080, h: 1080 }, start: 2.5, seconds: 6, frames: 144,
+    pieces: [{ k: 0, from: 0, frames: 120 }, { k: 1, from: 5, frames: 24 }] });
+  const framesOf = (length) => K.cutPlan(info, cut({ length })).pieces.map((p) => p.frames);
+  assert.deepEqual([framesOf(1), framesOf(5), framesOf(5.5), framesOf(5.9), framesOf(6), framesOf(10.5), framesOf(12), framesOf(15)],
+    [[24], [120], [132], [142], [120, 24], [120, 132], [120, 120, 48], [120, 120, 120]]);
+  // as long as asked, or to its video's end; its size within 2 pixels of what its page measured
+  assert.deepEqual(K.cutPlan({ width: 1080, height: 1920, seconds: 8 }, cut({ start: 5, length: 5 })).pieces, [{ k: 0, from: 0, frames: 72 }]);
+  assert.equal(K.cutPlan({ width: 1080, height: 1920, seconds: 10 }, cut({ start: 9.5, length: 5 })).frames, 12, 'up to half a second before its end');
+  assert.equal(K.cutPlan({ width: 1078, height: 1921 }, cut()).frames, 144, 'its length unknown: as asked');
+  for (const [i, c, words] of [[null, cut(), /not a video we read/], [{ width: 1076, height: 1920, seconds: 20 }, cut(), /its video is 1076×1920, not 1080×1920/],
+    [{ width: 1080, height: 1920, seconds: 10 }, cut({ start: 9.6 }), /it starts at 9\.6 s, and its video is 10\.0 s/]]) {
+    assert.throws(() => K.cutPlan(i, c), (e) => e.why === 'cut' && words.test(e.message), JSON.stringify(c));
+  }
+  // its mark in it already: only as it is (its own shape, the whole picture)
+  assert.throws(() => K.cutPlan(info, cut(), { own: true }), (e) => e.why === 'cut' && /its mark is in it already/.test(e.message));
+  assert.deepEqual(K.cutPlan(info, cut({ shape: 'original', box: [0, 0, 1000, 1000] }), { own: true }).crop, { x: 0, y: 0, w: 1080, h: 1920 });
+  assert.deepEqual([K.cutPlan(info, cut({ shape: 'original', box: [0, 0, 1000, 1000] })).w, K.cutPlan(info, cut({ shape: 'original', box: [0, 0, 1000, 1000] })).h], [720, 1280]);
+
+  // ffmpeg's words for a piece: its part (input seeking), its crop at its size, its words' picture, then the share mark, no sound
+  const crop = { x: 0, y: 420, w: 1080, h: 1080 };
+  const head = ['-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-ss', '7.500', '-t', '5.500', '-i', '/t/in.mp4'];
+  const tail = ['-map', '[v]', '-an', '-frames:v', '120', '-c:v', 'libx264', '-preset', 'superfast', '-b:v', '2500k', '-maxrate', '3000k', '-bufsize', '5000k',
+    '-movflags', '+faststart', '/t/p1.mp4'];
+  const base = '[0:v]crop=1080:1080:0:420,scale=960:960:flags=bicubic,setsar=1,fps=24[base]';
+  const piece = (more) => K.pieceArgs({ input: '/t/in.mp4', output: '/t/p1.mp4', at: 7.5, frames: 120, crop, w: 960, h: 960, ...more });
+  assert.deepEqual(piece({ layer: '/t/layer.png', mark: '/t/mark.png', margin: 34 }), [...head, '-i', '/t/layer.png', '-i', '/t/mark.png', '-filter_complex',
+    `${base};[base][1:v]overlay=x=0:y=0:format=auto[words];[words][2:v]overlay=x=34:y=34:format=auto[marked];[marked]format=yuv420p[v]`, ...tail]);
+  assert.deepEqual(piece({ mark: '/t/mark.png', margin: 34 }), [...head, '-i', '/t/mark.png', '-filter_complex',
+    `${base};[base][1:v]overlay=x=34:y=34:format=auto[marked];[marked]format=yuv420p[v]`, ...tail], 'no words: the mark alone');
+  assert.deepEqual(piece({ layer: '/t/layer.png' }), [...head, '-i', '/t/layer.png', '-filter_complex',
+    `${base};[base][1:v]overlay=x=0:y=0:format=auto[words];[words]format=yuv420p[v]`, ...tail], 'its own mark in it already: no second one');
+  assert.deepEqual(piece({}), [...head, '-filter_complex', `${base};[base]format=yuv420p[v]`, ...tail]);
+  // …and for joining them: as they are (concat, nothing encoded again), its sound from the video it's cut from (its part) or none
+  assert.deepEqual(K.cutJoinArgs({ list: '/t/list.txt', source: '/t/in.mp4', output: '/t/cut.mp4', start: 2.5, seconds: 6 }), [
+    '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-f', 'concat', '-safe', '0', '-i', '/t/list.txt', '-ss', '2.500', '-t', '6.000', '-i', '/t/in.mp4',
+    '-map', '0:v', '-map', '1:a:0', '-c:a', 'aac', '-b:a', '128k', '-ac', '2', '-shortest', '-c:v', 'copy', '-movflags', '+faststart', '/t/cut.mp4']);
+  assert.deepEqual(K.cutJoinArgs({ list: '/t/list.txt', output: '/t/cut.mp4', start: 2.5, seconds: 6 }), [
+    '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-f', 'concat', '-safe', '0', '-i', '/t/list.txt', '-map', '0:v', '-an', '-c:v', 'copy',
+    '-movflags', '+faststart', '/t/cut.mp4']);
+
+  // its pieces, made with a stand-in ffmpeg on a copy in a folder of its own (deleted after); a fake clock: each piece takes `took`
+  const plan = K.cutPlan(info, cut({ start: 1, length: 12 }));
+  assert.equal(plan.pieces.length, 3);
+  const made = mp4({ seconds: 5, video: { width: 960, height: 960, fps: 24 } });
+  const layer = Buffer.from('a PNG of its words');
+  const src = mp4({ seconds: 20, video: HD });
+  let clock = 5_000_000, ran = [];
+  const realNow = Date.now;
+  const run = ({ took = 2500, fail = null, out = made } = {}) => async (args, ms) => {
+    ran.push({ args, ms, list: null });
+    clock += took;
+    if (fail && fail(ran.length)) throw new Error(`cut: ffmpeg stopped (1): piece ${ran.length}`);
+    await writeFile(args.at(-1), out);
+  };
+  const go = async (opts, more = {}) => { ran = []; Date.now = () => clock; try { return await K.cutPieces(sharp, src, { plan, until: clock + 9000, ...more, run: run(opts) }); } finally { Date.now = realNow; } };
+  // all three while there's time (each the time it takes again, CUT.MORE times what the last took)
+  let r = await go({ took: 2500 }, { layer });
+  assert.deepEqual(r.pieces.map((p) => [p.k, p.ms, p.video.equals(made)]), [[0, 2500, true], [1, 2500, true], [2, 2500, true]]);
+  assert.deepEqual(ran.map((x) => [x.args[6], x.args[x.args.indexOf('-frames:v') + 1], x.ms]), [['1.000', '120', 9000], ['6.000', '120', 6500], ['11.000', '48', 4000]], 'each from where it starts, its frames, the time it has');
+  const dir = ran[0].args[10].replace(/[\\/]in\.mp4$/, '');
+  assert.deepEqual([ran[0].args[10], ran[0].args[12], ran[0].args[14], ran[0].args.at(-1)].map((p) => p.slice(dir.length + 1)), ['in.mp4', 'layer.png', 'mark.png', 'p0.mp4']);
+  assert.match(ran[0].args[16], /\[words\]\[2:v\]overlay=x=34:y=34:format=auto\[marked\]/, 'the mark over its words, 3.5% in (a 960 × 960 cut)');
+  assert.equal(existsSync(dir), false, 'its folder deleted');
+  // fewer when they take longer: never one it hasn't time for (the rest wait for the clock's next minute)
+  r = await go({ took: 3000 });
+  assert.deepEqual(r.pieces.map((p) => p.k), [0, 1], '9 s: 3 s, then 6 s left (another), then 3 s left: under 3.9 s');
+  r = await go({ took: 8000 });
+  assert.deepEqual(r.pieces.map((p) => p.k), [0], 'the first always');
+  r = await go({ took: 2500 }, { from: 1 });
+  assert.deepEqual(r.pieces.map((p) => p.k), [1, 2], 'from where it got to');
+  assert.equal(ran[0].args[6], '6.000');
+  // its mark in it already: no second one (its words only)
+  r = await go({ took: 100 }, { layer, own: true });
+  assert.ok(ran.every((x) => !x.args.some((a) => /mark\.png$/.test(a)) && x.args.some((a) => /layer\.png$/.test(a))));
+  r = await go({ took: 100 });
+  assert.ok(ran.every((x) => !x.args.some((a) => /layer\.png$/.test(a)) && x.args.some((a) => /mark\.png$/.test(a))), 'no words: the mark alone');
+  // its first piece fails: it throws (a try); a later one fails: the ones made are kept (the log says so)
+  await assert.rejects(go({ fail: (n) => n === 1 }), /cut: ffmpeg stopped \(1\): piece 1/);
+  r = await go({ fail: (n) => n === 2 });
+  assert.deepEqual(r.pieces.map((p) => p.k), [0]);
+  assert.ok(logs.includes("[studio] a cut's piece 2 (it keeps the 1 made): cut: ffmpeg stopped (1): piece 2"), logs.join('\n'));
+  await assert.rejects(go({ out: Buffer.from('nothing') }), /cut: ffmpeg made no piece/);
+  await assert.rejects(K.cutPieces(sharp, src, { plan, until: Date.now() + 9000 }), (e) => e.why === 'no_ffmpeg', 'no ffmpeg here (FFMPEG_PATH points nowhere in the tests)');
+
+  // joined: its pieces in order (a list of them), with its sound from the video it's cut from, or none
+  const pieces = [0, 1, 2].map((k) => mp4({ seconds: k < 2 ? 5 : 2, video: { width: 960, height: 960, fps: 24 }, size: 9000 + k }));
+  let lists = [];
+  const joinRun = (out) => async (args) => {
+    const at = args.indexOf('-i') + 1;
+    lists.push({ args, list: readFileSync(args[at], 'utf8') });
+    await writeFile(args.at(-1), out);
+  };
+  const withSound = mp4({ seconds: 12, video: { width: 960, height: 960, fps: 24 }, audio: true });
+  let j = await K.joinCut(pieces, { plan, source: src, run: joinRun(withSound) });
+  assert.deepEqual([j.seconds, j.sound, j.width, j.height, j.video.equals(withSound)], [12, true, 960, 960, true]);
+  const jdir = lists[0].args[10].replace(/[\\/]list\.txt$/, '');
+  assert.equal(lists[0].list, [0, 1, 2].map((n) => `file '${join(jdir, `p${n}.mp4`)}'`).join('\n'), 'in order');
+  assert.deepEqual(lists[0].args.slice(11, 16), ['-ss', '1.000', '-t', '12.000', '-i']);
+  assert.ok(lists[0].args[16].endsWith('in.mp4') && lists[0].args.includes('1:a:0'));
+  j = await K.joinCut(pieces, { plan, run: joinRun(mp4({ seconds: 12, video: { width: 960, height: 960, fps: 24 } })) });
+  assert.deepEqual([j.sound, lists[1].args.includes('-an'), lists[1].args.filter((a) => a === '-i').length], [false, true, 1]);
+  assert.equal(existsSync(jdir), false, 'its folder deleted');
+  await assert.rejects(K.joinCut(pieces.slice(0, 2), { plan, run: joinRun(withSound) }), /its pieces aren't videos we read/, 'all of its pieces');
+  await assert.rejects(K.joinCut([pieces[0], Buffer.from('x'), pieces[2]], { plan, run: joinRun(withSound) }), /its pieces aren't videos we read/);
+  await assert.rejects(K.joinCut(pieces, { plan, run: joinRun(Buffer.from('nothing')) }), /cut: ffmpeg made no video/);
+  await assert.rejects(K.joinCut(pieces, { plan }), (e) => e.why === 'no_ffmpeg');
+});
+
+test('(2026-10-12, the editor) a cut with the real ffmpeg (the one vercel.json ships with the clock; skipped where there is none): saved from the video editor with its words\' picture, made by our clock in pieces of 5 seconds, joined with its sound, the share mark top left over its words, looked at, done; one as it is, its sound off', async (t) => {
+  const bundled = fileURLToPath(new URL('../node_modules/@ffmpeg-installer/linux-x64/ffmpeg', import.meta.url));
+  const bin = process.platform === 'linux' && process.arch === 'x64' && existsSync(bundled) ? bundled : ['/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg'].find((p) => existsSync(p));
+  if (!bin) { t.skip('no ffmpeg here'); return; }
+  process.env.FFMPEG_PATH = bin;
+  K.forgetFfmpeg();
+  const V = await import('../src/studio/video-edit.js');
+  // a 7-second wide video (1280 × 720, 24 frames a second) with sound, as the AI service sends one: its left half violet, its
+  // right half mint
+  const dir = mkdtempSync(join(tmpdir(), 'agi1-cuttest-'));
+  try {
+    const clipPath = join(dir, 'clip.mp4');
+    const made = spawnSync(bin, ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=0x6b3bff:s=1280x720:d=7:r=24', '-f', 'lavfi',
+      '-i', 'sine=frequency=440:duration=7', '-vf', 'drawbox=x=640:y=0:w=640:h=720:color=0x3ff0c3:t=fill', '-c:v', 'libx264', '-preset', 'ultrafast',
+      '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', '-movflags', '+faststart', clipPath]);
+    assert.equal(made.status, 0, String(made.stderr));
+    const clip = readFileSync(clipPath);
+    const nova = await readyInf({ name: 'Nova' });
+    const v = await doneJob(nova.id, 'video', { video: clip });
+    // its words' picture (a red box, as its maker's browser drew it): 720 × 1280, see-through elsewhere
+    const words = await sharp({ create: { width: 720, height: 1280, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+      .composite([{ input: await sharp({ create: { width: 320, height: 200, channels: 4, background: { r: 230, g: 20, b: 20, alpha: 1 } } }).png().toBuffer(), left: 200, top: 600 }])
+      .png().toBuffer();
+    // a part of 6 seconds (two pieces), Vertical, from its mint half, its sound on
+    const cut = V.cutOf({ ...V.startCut(7), start: 0.5, end: 6.5, shape: 'tall', cx: 0.75 }, 1280, 720);
+    nextMinute();
+    const o = await act('inf-cut-open', { from: v, cut, words: ['Hi from Nova'], layer: true });
+    assert.equal(o.status, 200, JSON.stringify(o.body));
+    assert.deepEqual(o.body.size, [720, 1280]);
+    nextMinute();
+    const s = await postBytes(`inf-cut=${encodeURIComponent(o.body.ticket)}`, words);
+    assert.equal(s.status, 200, JSON.stringify(s.body));
+    // our clock makes it (ffmpeg here), as many ticks as it takes
+    let r;
+    for (let n = 0; n < 4; n++) {
+      r = await tick(o.body.job, { encode: true, deadline: Date.now() + 24_000 });
+      if (['done', 'failed'].includes(r.state)) break;
+    }
+    assert.equal(r.state, 'done', JSON.stringify(r) + logs.join('\n'));
+    const job = fake.db.jobs.get(o.body.job);
+    assert.deepEqual([job.status, job.sound, job.seconds, job.marked, job.files], ['done', true, 6, true, 0]);
+    const out = fake.storage.get(`inf/${nova.id}/${o.body.job}.mp4`).bytes;
+    const info = mp4Info(out);
+    assert.deepEqual([info.width, info.height, Math.abs(info.seconds - 6) < 0.15], [720, 1280, true], JSON.stringify(info));
+    assert.ok(out.indexOf('moov') < out.indexOf('mdat'), 'its index first: it plays as it downloads');
+    assert.deepEqual([stored(`inf/${nova.id}/${o.body.job}.`).length, geminiCalls().at(-1).which], [1, 'cut'], 'its pieces and its words\' picture deleted once it\'s made');
+    const outPath = join(dir, 'out.mp4');
+    await writeFile(outPath, out);
+    const probe = String(spawnSync(bin, ['-hide_banner', '-i', outPath]).stderr);
+    assert.match(probe, /Video: h264/);
+    assert.match(probe, /Audio: aac/, 'its sound kept');
+    assert.match(probe, /24 fps/);
+    // a frame a second in (its first piece) and one in its last second (its second piece): mint (its crop from the mint half),
+    // the red box where its words are, the mark top left over them
+    for (const at of ['1', '5.5']) {
+      const framePath = join(dir, `frame${at}.png`);
+      assert.equal(spawnSync(bin, ['-hide_banner', '-loglevel', 'error', '-ss', at, '-i', outPath, '-frames:v', '1', framePath]).status, 0);
+      const frame = readFileSync(framePath);
+      assert.ok(farthest(await meanOf(frame, 400, 900, 200, 300), [0x3f, 0xf0, 0xc3]) < 14, `${at} s: mint`);
+      assert.ok(farthest(await meanOf(frame, 230, 630, 260, 140), [230, 20, 20]) < 20, `${at} s: its words`);
+      assert.ok(farthest(await meanOf(frame, 25, 25, 259, 55), [0x3f, 0xf0, 0xc3]) > 25, `${at} s: the mark`);
+    }
+
+    // one as it is (its own shape, the whole picture), its sound off, no words: started at once, made silent at 1280 × 720
+    const asIs = V.cutOf({ ...V.startCut(7), end: 3, sound: false }, 1280, 720);
+    nextMinute();
+    const o2 = await act('inf-cut-open', { from: v, cut: asIs, words: [], layer: false });
+    assert.equal(o2.status, 200, JSON.stringify(o2.body));
+    r = await tick(o2.body.job, { encode: true, deadline: Date.now() + 24_000 });
+    assert.equal(r.state, 'done', JSON.stringify(r) + logs.join('\n'));
+    const out2 = fake.storage.get(`inf/${nova.id}/${o2.body.job}.mp4`).bytes;
+    assert.deepEqual([mp4Info(out2).width, mp4Info(out2).height, fake.db.jobs.get(o2.body.job).sound], [1280, 720, false]);
+    await writeFile(outPath, out2);
+    assert.doesNotMatch(String(spawnSync(bin, ['-hide_banner', '-i', outPath]).stderr), /Audio:/, 'made silent');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('(2026-10-12, the editor) the video editor on our server: one of its own videos or trend videos, trimmed, its shape changed, its words and stickers drawn in its maker\'s browser, saved as a new video next to it, free: started at once, or once its words\' picture comes (a real PNG of its size, kept; on a video that carries its share mark, that corner cleared); its maker\'s only; PER_DAY a wallet, SITE_DAY the site, OPEN at once; every "no" with nothing kept or counted; its source never deleted while it\'s made; never Make another; an older influencers.sql says what to run', async () => {
+  const V = await import('../src/studio/video-edit.js');
+  const nova = await readyInf({ name: 'Nova' });
+  const theirs = await readyInf({ name: 'Mira', wallet: OTHER });
+  const SRC = { width: 1280, height: 720, fps: 24 };
+  const v = await doneJob(nova.id, 'video', { video: mp4({ seconds: 8, video: SRC, audio: true }) });
+  fake.db.jobs.get(v).seconds = 8;
+  const tr = await doneJob(nova.id, 'trend', { video: mp4({ seconds: 8, video: SRC, audio: true }) });
+  const cutAt = (more = {}) => V.cutOf({ ...V.startCut(8), start: 1, end: 6, shape: 'tall', ...more }, 1280, 720);
+  const open = (more = {}, opts) => { nextMinute(); return act('inf-cut-open', { from: v, cut: cutAt(), words: [], layer: false, ...more }, opts); };
+  const send = (ticket, bytes) => { nextMinute(); return postBytes(`inf-cut=${encodeURIComponent(ticket)}`, bytes); };
+  const clear = (w, h) => sharp({ create: { width: w, height: h, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer();
+  const alphaAt = async (png) => {
+    const { data, info } = await sharp(png).raw().toBuffer({ resolveWithObject: true });
+    return (x, y) => data[(y * info.width + x) * info.channels + 3];
+  };
+  const used = () => [...fake.db.toolDays.values()].reduce((x, n) => x + n, 0);
+  const paid0 = credits().paid;
+
+  // ---- without words or stickers: started at once (one use counted), a video of the same influencer, free, waiting for our clock ----
+  let r = await open();
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.match(r.body.job, ID);
+  assert.deepEqual([r.body.left, r.body.perDay, 'ticket' in r.body, 'size' in r.body], [9, 10, false, false]);
+  assert.deepEqual(dbCalls('inf_tool_take').at(-1), { p_wallet: codeOf(), p_tool: 'video', p_per_day: 10, p_site_cap: 500, p_take: false }, 'only asked first');
+  assert.deepEqual(dbCalls('inf_cut_add').at(-1), {
+    p_job: r.body.job, p_inf: nova.id, p_wallet: codeOf(), p_from: v, p_shape: 'tall', p_seconds: 5, p_sound: true,
+    p_cut: { ...V.cutSpec(cutAt()).cut, layer: false, own: false }, p_per_day: 10, p_site_cap: 500, p_open: 3,
+  });
+  const a = r.body.job, A = fake.db.jobs.get(a);
+  assert.deepEqual([A.kind, A.editor, A.image, A.cost, A.status, A.seconds, A.shape, A.sound, A.scene, A.inf_id],
+    ['video', true, v, 0, 'paid', 5, 'tall', true, fake.db.jobs.get(v).scene, nova.id]);
+  assert.deepEqual([credits().paid, used()], [paid0, 1], 'free; one use counted');
+  // its page while it's made: "Edited video", waiting for our clock
+  nextMinute();
+  let row = (await act('inf-look', { id: nova.id })).body.jobs.find((x) => x.id === a);
+  assert.deepEqual([row.editor, row.status, row.step, row.cost, AW.jobTitle(row)], [true, 'paid', 'queue', 0, 'Edited video']);
+  assert.equal(AW.progressKind(row), 'cut', "its bar: a cut's steps (our clock's minutes, then its look), never a video's");
+  // its source can't be deleted while it's being made (nor the cut itself)
+  nextMinute();
+  let x = await act('inf-job-delete', { job: v });
+  assert.deepEqual([x.status, x.body.error], [409, 'job_in_use']);
+  nextMinute();
+  x = await act('inf-job-delete', { job: a });
+  assert.deepEqual([x.status, x.body.error], [409, 'job_making']);
+  // made (by our clock: its own test): its share mark in it, so its download is the video itself; everywhere a video is
+  Object.assign(A, { status: 'done', done: Date.now(), marked: true, files: 0 });
+  nextMinute();
+  row = (await act('inf-look', { id: nova.id })).body.jobs.find((y) => y.id === a);
+  assert.deepEqual([row.editor, row.status, AW.jobMeta(row)], [true, 'done', 'AI-generated · Video · Edited · 5 s · Vertical · with sound']);
+  assert.ok((await get(`inf=${nova.id}`)).body.jobs.some((y) => y.id === a && y.editor === true));
+  assert.ok((await get('inf-explore')).body.fresh.some((y) => y.id === a));
+  // its download: the video itself (its mark is in it), never a marked copy, even one kept beside it
+  for (const end of ['mp4', 'dl.mp4']) fake.storage.set(`inf/${nova.id}/${a}.${end}`, { bytes: mp4({ seconds: 5, video: { width: 720, height: 1280, fps: 24 } }), type: 'video/mp4' });
+  const dl = await get(`inf-video-dl=${a}.mp4`);
+  assert.equal(dl.status, 302);
+  assert.match(dl.headers.get('location'), new RegExp(`/inf/${nova.id}/${a}\\.mp4\\?token=`), dl.headers.get('location'));
+  // never "Make another" (no words and settings of its own): it, or the video it's from, is edited again instead
+  nextMinute();
+  x = await act('inf-again', { job: a });
+  assert.deepEqual([x.status, x.body.error], [409, 'editor']);
+  assert.equal(AW.againErrorText(x.body, A), "It was made in the video editor: open it, or the video it's from, and edit it again.");
+
+  // ---- with words and stickers: a ticket for their picture (30 minutes) and its size; nothing started until it comes ----
+  const sq = V.cutOf({ ...V.startCut(8), start: 0, end: 4, shape: 'square', zoom: 1.5, cx: 0.3, cy: 0.6 }, 1280, 720);
+  r = await open({ cut: sq, words: ['  Hi from  Nova ', '💜'], layer: true });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([typeof r.body.ticket, r.body.size, r.body.left], ['string', [960, 960], 9]);
+  assert.deepEqual([fake.db.jobs.has(r.body.job), used()], [false, 1], 'nothing started or counted yet');
+  const t1 = readTicket(SECRET, 'vc', r.body.ticket);
+  assert.deepEqual([t1.j, t1.i, t1.f, t1.w, t1.o, t1.c], [r.body.job, nova.id, v, codeOf(), 0, V.cutSpec(sq).cut]);
+  const words = await sharp({ create: { width: 960, height: 960, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: await sharp({ create: { width: 300, height: 120, channels: 4, background: { r: 230, g: 20, b: 20, alpha: 1 } } }).png().toBuffer(), left: 10, top: 10 }])
+    .withExif({ IFD0: { ImageDescription: 'taken at 12 Secret Street' } }).png().toBuffer();
+  let s = await send(r.body.ticket, words);
+  assert.deepEqual([s.status, s.body], [200, { ok: true, job: r.body.job, left: 8 }]);
+  const sqJob = fake.db.jobs.get(r.body.job);
+  assert.deepEqual([sqJob.status, sqJob.shape, sqJob.seconds, sqJob.cut.layer, sqJob.cut.own, sqJob.cut.box], ['paid', 'square', 4, true, false, V.cutSpec(sq).cut.box]);
+  const kept = fake.storage.get(layerPath(nova.id, r.body.job));
+  const km = await sharp(kept.bytes).metadata();
+  assert.deepEqual([kept.type, km.format, km.width, km.height, km.hasAlpha, km.exif === undefined], ['image/png', 'png', 960, 960, true, true], 'kept plain, at its size');
+  assert.ok(!kept.bytes.includes(Buffer.from('Secret Street')));
+  const al = await alphaAt(kept.bytes);
+  assert.deepEqual([al(20, 20), al(500, 500)], [255, 0], 'its words where they were drawn: nothing cleared on a video without its mark');
+  assert.deepEqual(geminiCalls().length, 0, 'nothing looked at until it\'s made');
+  // the same ticket again: nothing kept twice
+  s = await send(r.body.ticket, words);
+  assert.deepEqual([s.status, s.body.error, stored(`inf/${nova.id}/${r.body.job}.`).length, used()], [409, 'done', 1, 2]);
+  assert.equal(AW.cutErrorText(s.body), "It's saved already.");
+  // …nor another picture with it: the one kept is the first one's
+  s = await send(r.body.ticket, await clear(960, 960));
+  assert.deepEqual([s.status, s.body.error, used()], [409, 'done', 2]);
+  assert.ok(fake.storage.get(layerPath(nova.id, r.body.job)).bytes.equals(kept.bytes), 'its picture as it was kept');
+  // a trend video too
+  r = await open({ from: tr });
+  assert.deepEqual([r.status, fake.db.jobs.get(r.body.job)?.image, fake.db.jobs.get(r.body.job)?.kind], [200, tr, 'video'], JSON.stringify(r.body));
+
+  // ---- a video that carries its share mark already (a long video, or one saved from here): only as it is, its mark never covered ----
+  const long = await doneJob(nova.id, 'video', { video: mp4({ seconds: 8, video: SRC }) });
+  Object.assign(fake.db.jobs.get(long), { model: 'long', parts: 4, part: 4, seconds: 8 });
+  for (const from of [long, a]) {
+    x = await open({ from });
+    assert.deepEqual([x.status, x.body.error], [400, 'cut'], 'a crop of it would cut its mark off');
+    x = await open({ from, cut: cutAt({ shape: 'original', start: 0, end: 8, zoom: 2 }) });
+    assert.deepEqual([x.status, x.body.error], [400, 'cut'], 'zoomed: the same');
+  }
+  assert.equal(AW.cutErrorText({ error: 'cut' }), "That part or shape can't be cut from this video: change it and try again.");
+  const asIs = V.cutOf({ ...V.startCut(8), start: 0.5, end: 7.5 }, 1280, 720);
+  assert.equal(V.asItIs(asIs), true);
+  r = await open({ from: long, cut: asIs, words: ['Hi'], layer: true });
+  assert.deepEqual([r.status, r.body.size, readTicket(SECRET, 'vc', r.body.ticket).o], [200, [1280, 720], 1], JSON.stringify(r.body));
+  // its words' picture covering everything: the mark's corner cleared (2 px around it), the rest as drawn
+  const opaque = await sharp({ create: { width: 1280, height: 720, channels: 4, background: { r: 230, g: 20, b: 20, alpha: 1 } } }).png().toBuffer();
+  s = await send(r.body.ticket, opaque);
+  assert.equal(s.status, 200, JSON.stringify(s.body));
+  const m = V.markTopLeft(1280, 720, (await K.markSize(sharp)).width, (await K.markSize(sharp)).height);
+  assert.deepEqual(m, { x: 25, y: 25, w: 259, h: 55 });
+  const ol = await alphaAt(fake.storage.get(layerPath(nova.id, r.body.job)).bytes);
+  for (const [px, py] of [[23, 23], [285, 81], [150, 50], [24, 80]]) assert.equal(ol(px, py), 0, `cleared at ${px}, ${py}`);
+  for (const [px, py] of [[22, 40], [286, 40], [150, 22], [150, 82], [640, 360], [1279, 719]]) assert.equal(ol(px, py), 255, `kept at ${px}, ${py}`);
+  const lj = fake.db.jobs.get(r.body.job);
+  assert.deepEqual([lj.shape, lj.seconds, lj.cut.own, lj.cut.layer], ['wide', 7, true, true], 'its own shape (a wide one), whole seconds');
+
+  // ---- OPEN at once: a fourth waits (nothing counted); with words, its picture isn't kept ----
+  assert.equal([...fake.db.jobs.values()].filter((j) => j.editor && j.kind === 'video' && j.status === 'paid').length, 3);
+  const u0 = used();
+  x = await open({ from: a, cut: V.cutOf(V.startCut(5), 1280, 720) });
+  assert.deepEqual([x.status, x.body.error, used()], [409, 'cuts_open', u0], JSON.stringify(x.body));
+  assert.equal(AW.cutErrorText(x.body), 'You have 3 edited videos being made: wait for one to finish.');
+  r = await open({ words: ['Hi'], layer: true });
+  assert.equal(r.status, 200, 'its ticket: only asked');
+  s = await send(r.body.ticket, await clear(720, 1280));
+  assert.deepEqual([s.status, s.body.error, fake.db.jobs.has(r.body.job), stored(`inf/${nova.id}/${r.body.job}`).length, used()], [409, 'cuts_open', false, 0, u0]);
+  for (const j of fake.db.jobs.values()) if (j.editor && j.kind === 'video' && j.status === 'paid') Object.assign(j, { status: 'failed', error: 'save' });
+
+  // ---- its sound off: started silent (its video's sound never asked for), whatever its video has ----
+  r = await open({ cut: cutAt({ sound: false }) });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([dbCalls('inf_cut_add').at(-1).p_sound, dbCalls('inf_cut_add').at(-1).p_cut.sound, fake.db.jobs.get(r.body.job).sound], [false, false, false]);
+  Object.assign(fake.db.jobs.get(r.body.job), { status: 'failed', error: 'save' });
+  // ---- its words' picture sent twice at the same moment: the second finds it started by the first (its id taken): "done",
+  // and the picture both kept stays (it's that one's) ----
+  const race = await open({ words: ['Hi'], layer: true });
+  const add0 = fake.db.inf_cut_add;
+  fake.db.inf_cut_add = function (args) { add0.call(this, args); return add0.call(this, args); };
+  try { s = await send(race.body.ticket, await clear(720, 1280)); } finally { fake.db.inf_cut_add = add0; }
+  assert.deepEqual([s.status, s.body.error], [409, 'done'], JSON.stringify(s.body));
+  assert.deepEqual([fake.storage.has(layerPath(nova.id, race.body.job)), fake.db.jobs.get(race.body.job)?.cut.layer], [true, true]);
+  Object.assign(fake.db.jobs.get(race.body.job), { status: 'failed', error: 'save' });
+
+  // ---- every "no" when it's opened: nothing counted ----
+  const n0 = used();
+  const no = async (status, error, more, opts) => {
+    const y = await open(more, opts);
+    assert.deepEqual([y.status, y.body.error], [status, error], `${JSON.stringify(more)}: ${JSON.stringify(y.body)}`);
+    return y;
+  };
+  // …and the same "no" with words (where no cut is started yet, so only our server's own checks say it: never a ticket)
+  const both = async (status, error, more, opts) => {
+    await no(status, error, more, opts);
+    const c0 = dbCalls('inf_cut_add').length;
+    const y = await open({ words: ['Hi'], layer: true, ...more }, opts);
+    assert.deepEqual([y.status, y.body.error, 'ticket' in y.body, dbCalls('inf_cut_add').length], [status, error, false, c0], `with words, ${JSON.stringify(more)}: ${JSON.stringify(y.body)}`);
+  };
+  await no(400, 'bad', { from: 'nope' });
+  await no(400, 'bad', { layer: 'yes' });
+  await no(400, 'bad', { layer: undefined });
+  await no(400, 'bad', { words: ['Hi from Nova'], layer: false });               // its words are drawn on its layer
+  await no(400, 'cut', { cut: null });
+  await no(400, 'cut', { cut: { ...cutAt(), length: 15.5 } });
+  await no(400, 'cut', { cut: { ...cutAt(), start: 1.25 } });
+  await no(400, 'cut', { cut: { ...cutAt(), shape: 'round' } });
+  await no(400, 'cut', { cut: { ...cutAt(), box: [0, 0, 1000, 1000] } });           // not a Vertical box
+  await no(400, 'cut', { cut: { ...cutAt(), src: [32, 32] } });
+  await no(400, 'cut', { cut: { ...cutAt(), sound: 'yes' } });
+  await no(400, 'cut', { cut: cutAt({ start: 7.6, end: 8.6 }) });                  // past its end (its row: 8 s)
+  await both(409, 'from', { from: await doneJob(nova.id, 'photo') });
+  await both(409, 'from', { from: nova.looks });
+  await both(409, 'from', { from: idOf('nothingthere') });
+  await both(403, 'not_yours', { from: await doneJob(theirs.id, 'video', { wallet: OTHER }) });
+  const src = fake.db.jobs.get(v);
+  for (const [k, val, back] of [['hidden', true, false], ['status', 'making', 'done'], ['deleted', Date.now(), null]]) {
+    src[k] = val;
+    await both(409, 'from', {});
+    src[k] = back;
+  }
+  fake.db.infs.get(nova.id).status = 'deleted';
+  await both(404, 'gone', {});
+  fake.db.infs.get(nova.id).status = 'ready';
+  fake.db.infs.get(nova.id).hidden = true;
+  await both(404, 'gone', {});
+  fake.db.infs.get(nova.id).hidden = false;
+  fake.db.infs.get(nova.id).status = 'body';
+  await both(409, 'not_ready', {});
+  fake.db.infs.get(nova.id).status = 'ready';
+  banWallet(WALLET);
+  await both(403, 'banned', {});
+  unbanWallet(WALLET);
+  // its words: each like a meme's line (as the photo editor's), drawn on its layer
+  for (const [w, why] of [[['visit agi1.app now'], 'link'], [['buy my coin'], 'money'], [['x'.repeat(81)], 'long'], [Array(9).fill('hi'), 'bad'],
+    [['put Elon Musk here'], 'person'], [['naked'], 'adult'], [[42], 'bad'], ['hi', 'bad']]) {
+    const y = await no(422, 'words', { words: w, layer: true });
+    assert.deepEqual([y.body.field, y.body.why], ['text', why], JSON.stringify(w));
+  }
+  assert.equal((await open({ words: ['  ', ''], layer: false })).status, 200, 'empty words are no words');
+  fake.db.toolDays.clear();
+  // PER_DAY a wallet, SITE_DAY the site
+  const day = new Date().toISOString().slice(0, 10), key = `${codeOf()}:${day}:video`;
+  fake.db.toolDays.set(key, 9);
+  r = await open({ words: ['Hi'], layer: true });
+  assert.deepEqual([r.status, r.body.left], [200, 1]);
+  fake.db.toolDays.set(key, 10);
+  await no(429, 'too_many', {});
+  assert.equal(AW.cutErrorText({ error: 'too_many' }), "You've saved 10 edited videos today: more tomorrow.");
+  s = await send(r.body.ticket, await clear(720, 1280));
+  assert.deepEqual([s.status, s.body.error, stored(`inf/${nova.id}/${r.body.job}`).length], [429, 'too_many', 0], 'used up meanwhile: its picture not kept');
+  fake.db.toolDays.set(key, 0);
+  fake.db.toolSite.set(`${day}:video`, 500);
+  await no(429, 'busy_day', {});
+  assert.equal(AW.cutErrorText({ error: 'busy_day' }), 'Saving edited videos is busy today: try again tomorrow.');
+  fake.db.toolSite.clear();
+  assert.equal(used(), 0, 'no "no" counted');
+
+  // ---- every "no" when its picture comes: nothing kept ----
+  const nothingKept = (job) => !fake.db.jobs.has(job) && !stored(`inf/${nova.id}/${job}`).length;
+  const fresh = async (more = {}) => (await open({ words: ['Hi'], layer: true, ...more })).body.ticket;
+  const jobOf = (ticket) => readTicket(SECRET, 'vc', ticket).j;
+  const tallPng = await clear(720, 1280);
+  const pay = { j: idOf('forged'), i: nova.id, f: v, w: codeOf(), c: V.cutSpec(cutAt()).cut, o: 0 };
+  for (const bad of ['nope', makeTicket('another secret', 'vc', pay), makeTicket(SECRET, 'pe', pay), makeTicket(SECRET, 'vc', { ...pay, c: { ...pay.c, start: -1 } }),
+    makeTicket(SECRET, 'vc', pay, Date.now() - 31 * 60e3, UPLOAD.TICKET_MS)]) {
+    s = await send(bad, tallPng);
+    assert.deepEqual([s.status, s.body.error], [401, 'ticket'], bad);
+  }
+  assert.ok(nothingKept(idOf('forged')));
+  assert.equal(AW.cutErrorText({ error: 'ticket' }), 'That took too long: save it again.');
+  let tk = await fresh();
+  s = await send(tk, Buffer.alloc(K.CUT.LAYER_MAX + 1000, 1));       // over its picture's most, under an upload's
+  assert.deepEqual([s.status, s.body.error], [413, 'size']);
+  s = await send(tk, await sharp(PNG).jpeg().toBuffer());
+  assert.deepEqual([s.status, s.body.error], [422, 'picture']);
+  s = await send(tk, await clear(720, 720));
+  assert.deepEqual([s.status, s.body.error], [422, 'picture'], 'not its size');
+  s = await send(tk, Buffer.concat([tallPng.subarray(0, 8), Buffer.alloc(200, 7)]));
+  assert.deepEqual([s.status, s.body.error], [422, 'picture'], 'a PNG\'s first bytes, then nothing a PNG is');
+  assert.equal(AW.cutErrorText({ error: 'picture' }), "Its words and stickers couldn't be made here: try again.");
+  assert.ok(nothingKept(jobOf(tk)));
+  // its maker banned meanwhile: not started, its picture deleted
+  banWallet(WALLET);
+  s = await send(tk, tallPng);
+  unbanWallet(WALLET);
+  assert.deepEqual([s.status, s.body.error], [403, 'banned']);
+  assert.ok(nothingKept(jobOf(tk)));
+  // the video it's from deleted meanwhile
+  const v2 = await doneJob(nova.id, 'video', { video: mp4({ seconds: 8, video: SRC }) });
+  tk = await fresh({ from: v2 });
+  nextMinute();
+  assert.equal((await act('inf-job-delete', { job: v2 })).status, 200);
+  s = await send(tk, tallPng);
+  assert.deepEqual([s.status, s.body.error, AW.cutErrorText(s.body)], [409, 'from', "The video it's from isn't there any more."]);
+  assert.ok(nothingKept(jobOf(tk)));
+  assert.equal(used(), 0);
+
+  // an influencers.sql from before the video editor: "not ready", the log says what to run; its picture never kept for nothing
+  fake.missing.add('inf_cut_add');
+  r = await open();
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  tk = await fresh();
+  s = await send(tk, tallPng);
+  fake.missing.delete('inf_cut_add');
+  assert.deepEqual([s.status, s.body.error], [503, 'not_ready']);
+  assert.ok(nothingKept(jobOf(tk)));
+  assert.ok(logs.some((l) => l.includes('inf_cut_add not found: run supabase/influencers.sql again in this Supabase project (the video editor; it ends with influencers_ready = 1)')), logs.join('\n'));
+  assert.equal(credits().paid, paid0, 'all of it free');
+});
+
+test('(2026-10-12, the editor) the video editor\'s cuts on our clock (ffmpeg is only there): made in pieces as each minute has time for them (its progress kept: "pieces-<k>"), joined with its sound and kept, then looked at before anyone sees it (by the clock, or its page once it\'s saved): done; or refused, too big, 12 hours, a piece gone missing (made again from its start), no ffmpeg (it waits), its join failing (4 tries), the video it\'s from changed or gone, its words\' picture gone, its influencer gone: each with its files deleted and its use never given back; its page never makes one; the clock: a cut first on even minutes, after the others on odd ones; the owner\'s numbers', async () => {
+  const V = await import('../src/studio/video-edit.js');
+  const C = await import('../server/inf-cut.js');
+  const { NAME } = await import('../server/studio-files.js');
+  C._resetCut();
+  const nova = await readyInf({ name: 'Nova' });
+  const SRC = { width: 1280, height: 720, fps: 24 }, TALL = { width: 720, height: 1280, fps: 24 };
+  const source = mp4({ seconds: 14, video: SRC, audio: true });
+  const v = await doneJob(nova.id, 'video', { video: source });
+  fake.db.jobs.get(v).seconds = 14;
+  // 12 seconds of it (from 1 s), Vertical, its sound on: three pieces of 120, 120 and 48 frames
+  const cut12 = V.cutOf({ ...V.startCut(14), start: 1, end: 13, shape: 'tall' }, 1280, 720);
+  assert.deepEqual([cut12.start, cut12.length, cut12.shape, cut12.sound], [1, 12, 'tall', true]);
+  const layerPng = await sharp({ create: { width: 720, height: 1280, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer();
+  // a cut started (a new day's use each time here: 10 a day never runs out in this test)
+  const newCut = async ({ from = v, cut = cut12, layer = false } = {}) => {
+    fake.db.toolDays.clear(); fake.db.toolSite.clear();
+    nextMinute();
+    const o = await act('inf-cut-open', { from, cut, words: layer ? ['Hi from Nova'] : [], layer });
+    assert.equal(o.status, 200, JSON.stringify(o.body));
+    if (layer) {
+      nextMinute();
+      const s = await postBytes(`inf-cut=${encodeURIComponent(o.body.ticket)}`, layerPng);
+      assert.equal(s.status, 200, JSON.stringify(s.body));
+    }
+    return o.body.job;
+  };
+  const job = (id) => fake.db.jobs.get(id);
+  const files = (id, inf = nova.id) => stored(`inf/${inf}/${id}.`);
+  const settle = () => new Promise((done) => setTimeout(done, 20));        // (what's deleted without waiting for it)
+  const at = (args, flag) => args[args.indexOf(flag) + 1];
+  // a stand-in ffmpeg on a fake clock: each run takes `took` ms; a piece is a 5-second Vertical video, a join its whole cut (with
+  // sound when its source's was asked for); failAt(n, join): the nth run fails
+  const realNow = Date.now;
+  let offset = 0, ran = [], took = 1000, failAt = null, joinOut = null;
+  Date.now = () => realNow() + offset;
+  const run = async (args, ms) => {
+    const joining = args.includes('concat');
+    ran.push({ join: joining, args, ms });
+    offset += took;
+    if (failAt?.(ran.length, joining)) throw new Error(`cut: ffmpeg stopped (1): ${joining ? 'its join' : `piece ${ran.length}`}`);
+    await writeFile(args.at(-1), joining ? (joinOut ?? mp4({ seconds: 12, video: TALL, audio: args.includes('1:a:0') })) : mp4({ seconds: 5, video: TALL }));
+  };
+  // our clock's turn for one cut: `ms` left in its minute
+  const go = (id, ms = 24_000, { withRun = true, t = 1000, fails = null, out = null } = {}) => {
+    ran = []; took = t; failAt = fails; joinOut = out;
+    free(id);
+    return jobTick(cfgNow(), id, { now: Date.now(), deadline: Date.now() + ms, encode: true, run: withRun ? run : null });
+  };
+  try {
+    // ---- A, with its words' picture. Its first minute: its first piece made, its second one failing (the one made is kept) ----
+    const a = await newCut({ layer: true });
+    let r = await go(a, 24_000, { t: 2500, fails: (n) => n === 2 });
+    assert.deepEqual(r, { state: 'started', step: 'make', piece: 1, pieces: 3 });
+    assert.deepEqual([job(a).status, job(a).req, job(a).saving, job(a).tries], ['making', 'pieces-1', false, 0]);
+    assert.deepEqual(files(a), [layerPath(nova.id, a), partPath(nova.id, a, 0)]);
+    assert.deepEqual(ran.map((x) => [x.join, at(x.args, '-ss'), at(x.args, '-frames:v')]), [[false, '1.000', '120'], [false, '6.000', '120']], 'each piece from where it starts, its frames');
+    assert.ok(ran[0].args.some((x) => x.endsWith('layer.png')) && ran[0].args.some((x) => x.endsWith('mark.png')), 'its words, and the share mark over them');
+    assert.ok(logs.some((l) => new RegExp(`^\\[studio\\] cut ${a}: 1 of 3 pieces \\(\\d+ ms\\)$`).test(l)), logs.join('\n'));
+    assert.ok(logs.includes("[studio] a cut's piece 2 (it keeps the 1 made): cut: ffmpeg stopped (1): piece 2"));
+    // its next minute, a short one (12 s left): its other two pieces, its join waiting for a minute with the 6 s it needs
+    r = await go(a, 12_000, { t: 3200 });
+    assert.deepEqual(r, { state: 'started', step: 'make', piece: 3, pieces: 3 });
+    assert.deepEqual(ran.map((x) => [x.join, at(x.args, '-ss'), at(x.args, '-frames:v')]), [[false, '6.000', '120'], [false, '11.000', '48']]);
+    assert.deepEqual([job(a).req, job(a).saving, files(a).length], ['pieces-3', false, 4]);
+    // then joined with its sound (its part of its video's) and kept, its pieces deleted; its look waits (it needs 14 s)
+    r = await go(a, 14_500);
+    assert.deepEqual(r, { state: 'saving', step: 'save' });
+    assert.deepEqual(ran.map((x) => x.join), [true]);
+    const ja = ran[0].args;
+    assert.deepEqual([at(ja, '-ss'), at(ja, '-t'), ja.includes('1:a:0')], ['1.000', '12.000', true], 'its sound, from its part of its video');
+    assert.deepEqual([job(a).req, job(a).saving, job(a).status], ['pieces-3', true, 'making']);
+    assert.ok(logs.includes(`[studio] cut ${a} is made: 12.0 s, 0.06 MB, with its sound`), logs.join('\n'));
+    await settle();
+    assert.deepEqual(files(a), [layerPath(nova.id, a), `inf/${nova.id}/${a}.mp4`]);
+    // its page, now it's saved: its look (Gemini's, before anyone sees it), then done (its share mark is in it), its words' picture deleted
+    const g0 = geminiCalls().length;
+    nextMinute();
+    const row = (await act('inf-look', { id: nova.id })).body.jobs.find((x) => x.id === a);
+    assert.deepEqual([row.status, row.editor], ['done', true]);
+    assert.deepEqual([job(a).status, job(a).sound, job(a).seconds, job(a).marked, job(a).files], ['done', true, 12, true, 0]);
+    assert.deepEqual(dbCalls('inf_cut_done').at(-1), { p_id: a, p_bytes: 60_000 + 24 + Buffer.byteLength(TAG.AI_XMP), p_sound: true, p_seconds: 12 });
+    assert.deepEqual(geminiCalls().slice(g0).map((x) => x.which), ['cut']);
+    await settle();
+    assert.deepEqual(files(a), [`inf/${nova.id}/${a}.mp4`]);
+
+    // ---- B, without words. Its page never makes one (ffmpeg is only on our clock) ----
+    const b = await newCut();
+    const leases0 = dbCalls('inf_job_lease').length;
+    nextMinute();
+    await act('inf-look', { id: nova.id });
+    assert.ok(!dbCalls('inf_job_lease').slice(leases0).some((x) => x.p_id === b), 'its page never takes it');
+    assert.deepEqual([job(b).status, job(b).req], ['paid', null]);
+    // …and anywhere but our clock (no encode) it waits its turn: its video never even read there
+    const reads0 = calls.length;
+    r = await tick(b);
+    assert.deepEqual(r, { state: 'waiting', step: 'queue' });
+    assert.ok(job(b).lease > Date.now(), 'its turn given back for a moment');
+    assert.deepEqual(calls.slice(reads0).filter((x) => x.to === 'read'), [], 'nothing read where ffmpeg isn\'t');
+    // made in one minute (its pieces with the share mark alone, its join, its look): refused, never shown, its files deleted,
+    // its use never given back
+    fake.gemini.cut = { badWords: true };
+    r = await go(b);
+    fake.gemini.cut = null;
+    assert.deepEqual(r, { state: 'failed', step: 'save' });
+    assert.deepEqual(ran.map((x) => x.join), [false, false, false, true]);
+    assert.ok(ran.filter((x) => !x.join).every((x) => !x.args.some((p) => p.endsWith('layer.png')) && x.args.some((p) => p.endsWith('mark.png'))), 'no words: the mark alone');
+    assert.deepEqual([job(b).status, job(b).error, job(b).refunded], ['failed', 'refused', false]);
+    assert.deepEqual(dbCalls('inf_job_fail').at(-1), { p_id: b, p_error: 'refused', p_refund: false });
+    assert.ok(logs.includes(`[studio] cut ${b} wasn't family-friendly (words): not shown, its files deleted`));
+    assert.equal(AW.failText(job(b).error), "The AI service's safety check stopped it.");
+    await settle();
+    assert.deepEqual(files(b), []);
+
+    // ---- C: too big to be looked at (Gemini takes 14 MB of video): never shown, its files deleted ----
+    const c = await newCut();
+    const g1 = geminiCalls().length;
+    r = await go(c, 24_000, { out: mp4({ seconds: 12, size: 14_500_000, video: TALL, audio: true }) });
+    assert.deepEqual(r, { state: 'failed', step: 'save' });
+    assert.deepEqual([job(c).error, geminiCalls().length], ['too_big', g1]);
+    assert.ok(logs.includes(`[studio] cut ${c} came out too big to be looked at (14.5 MB): not shown, its files deleted`), logs.join('\n'));
+    await settle();
+    assert.deepEqual(files(c), []);
+
+    // ---- D: started 12 hours ago and still not made: given up, nothing run ----
+    const d = await newCut({ layer: true });
+    job(d).created = Date.now() - 13 * 3600e3;
+    r = await go(d);
+    assert.deepEqual([r, ran.length, job(d).error], [{ state: 'failed', step: 'queue' }, 0, 'expired']);
+    assert.deepEqual(files(d), [], "its words' picture deleted");
+
+    // ---- E: a piece gone missing before its join: made again from its start (a try), then made ----
+    const e = await newCut();
+    r = await go(e, 12_000, { t: 2200 });
+    assert.deepEqual(r, { state: 'started', step: 'make', piece: 3, pieces: 3 });
+    fake.storage.delete(partPath(nova.id, e, 0));
+    r = await go(e);
+    assert.deepEqual([r, ran.length], [{ state: 'started', step: 'make' }, 0]);
+    assert.deepEqual([job(e).req, job(e).tries, job(e).saving], [null, 1, false]);
+    assert.ok(logs.includes(`[studio] cut ${e}: a piece of it is missing (trying again)`));
+    r = await go(e);
+    assert.deepEqual([r.state, ran.map((x) => x.join), job(e).status], ['done', [false, false, false, true], 'done']);
+
+    // ---- F: no ffmpeg here (vercel.json's includeFiles): it waits its turn, said once in the log; made once it's there ----
+    const f = await newCut();
+    for (let n = 0; n < 2; n++) {
+      r = await go(f, 24_000, { withRun: false });
+      assert.deepEqual(r, { state: 'waiting', step: 'queue' });
+    }
+    assert.deepEqual([job(f).status, job(f).req, job(f).tries], ['paid', null, 0]);
+    assert.equal(logs.filter((l) => l === "[studio] the video editor's cuts wait: cut: ffmpeg isn't here (vercel.json's includeFiles for api/feed.js)").length, 1);
+    r = await go(f);
+    assert.equal(r.state, 'done');
+
+    // ---- G: its join failing: tried again (its pieces kept) three times, then given up ----
+    const gj = await newCut();
+    r = await go(gj, 12_000, { t: 2200 });
+    assert.equal(r.piece, 3);
+    for (let n = 1; n <= 3; n++) {
+      r = await go(gj, 24_000, { fails: (_, joining) => joining });
+      assert.deepEqual([r, job(gj).tries, job(gj).req, files(gj).length], [{ state: 'started', step: 'make' }, n, 'pieces-3', 3]);
+    }
+    r = await go(gj, 24_000, { fails: (_, joining) => joining });
+    assert.deepEqual([r, job(gj).status, job(gj).error], [{ state: 'failed', step: 'make' }, 'failed', 'save']);
+    assert.equal(logs.filter((l) => l === `[studio] cut ${gj}: cut: ffmpeg stopped (1): its join (trying again)`).length, 3);
+    assert.ok(logs.includes(`[studio] cut ${gj} couldn't be made: cut: ffmpeg stopped (1): its join`));
+    assert.deepEqual(files(gj), []);
+
+    // ---- H: the video it's from isn't the size its page measured: it can't be made from it ----
+    const big = await doneJob(nova.id, 'video', { video: mp4({ seconds: 14, video: { width: 1920, height: 1080, fps: 24 } }) });
+    fake.db.jobs.get(big).seconds = 14;
+    const h = await newCut({ from: big });
+    r = await go(h);
+    assert.deepEqual([r, ran.length, job(h).error], [{ state: 'failed', step: 'queue' }, 0, 'cut']);
+    assert.ok(logs.includes(`[studio] cut ${h} can't be made from its video: cut: its video is 1920×1080, not 1280×720`), logs.join('\n'));
+    assert.equal(AW.failText('cut'), "That part couldn't be cut from its video.");
+
+    // ---- I: its video's file gone meanwhile ----
+    const v3 = await doneJob(nova.id, 'video', { video: source });
+    fake.db.jobs.get(v3).seconds = 14;
+    const i3 = await newCut({ from: v3, layer: true });
+    fake.storage.delete(`inf/${nova.id}/${v3}.mp4`);
+    r = await go(i3);
+    assert.deepEqual([r, ran.length, job(i3).error, files(i3)], [{ state: 'failed', step: 'queue' }, 0, 'from', []]);
+    assert.equal(AW.failText('from'), "The video it's from isn't there any more.");
+
+    // ---- J: its words' picture gone meanwhile ----
+    const jw = await newCut({ layer: true });
+    fake.storage.delete(layerPath(nova.id, jw));
+    r = await go(jw);
+    assert.deepEqual([r, ran.length, job(jw).error], [{ state: 'failed', step: 'queue' }, 0, 'save']);
+    assert.ok(logs.includes(`[studio] cut ${jw}: its words' picture is missing`));
+
+    // ---- L: its influencer taken down meanwhile: not made, what it kept deleted ----
+    const lumi = await readyInf({ name: 'Lumi' });
+    const vl = await doneJob(lumi.id, 'video', { video: source });
+    fake.db.jobs.get(vl).seconds = 14;
+    const l = await newCut({ from: vl, layer: true });
+    assert.deepEqual(files(l, lumi.id), [layerPath(lumi.id, l)]);
+    fake.db.infs.get(lumi.id).hidden = true;
+    r = await go(l);
+    assert.deepEqual([r, ran.length, job(l).error, files(l, lumi.id)], [{ state: 'failed', step: 'queue' }, 0, 'gone', []]);
+    // (a use is never given back: each of these was free, and its use stays counted)
+    assert.ok(dbCalls('inf_job_fail').filter((x) => [b, c, d, gj, h, i3, jw].includes(x.p_id)).every((x) => x.p_refund === false));
+
+    // ---- the clock: on even minutes the cut whose turn it is first, on odd ones after the others (while there's time) ----
+    const m = await newCut();
+    const p = idOf('clockphoto');
+    fake.db.addJob({ id: p, inf_id: nova.id, wallet_code: codeOf(), kind: 'photo', scene: 'on a sunny rooftop at noon', shape: 'tall', cost: 15 });
+    const EVEN = Date.UTC(2026, 9, 12, 12, 2), ODD = EVEN + 60e3;
+    const clock = async (now, ms) => {
+      ran = []; took = 1000; failAt = null; joinOut = null;
+      const n0 = dbCalls('inf_job_lease').length;
+      const out = await infClock(cfgNow(), { now, deadline: Date.now() + ms, run });
+      return [out, dbCalls('inf_job_lease').slice(n0).map((x) => x.p_id)];
+    };
+    // a short minute (4 s left): the cut first, and it waits for a minute with time for it; nothing else
+    let [out, ids] = await clock(EVEN, 4000);
+    assert.deepEqual([out.cut, ids], ['waiting', [m]]);
+    free(m);
+    [out, ids] = await clock(ODD, 4000);
+    assert.deepEqual(['cut' in out, ids], [false, []]);
+    // a whole minute: even, the cut first (made in it), then the others; odd, the others first, then the cut
+    [out, ids] = await clock(EVEN, 24_000);
+    assert.deepEqual([out.cut, ids, job(m).status], ['done', [m, p], 'done']);
+    const m2 = await newCut();
+    free(p);
+    [out, ids] = await clock(ODD, 24_000);
+    assert.deepEqual([out.cut, ids, job(m2).status], ['done', [p, m2], 'done']);
+    // an influencers.sql from before the video editor (no inf_cut_due): the others as before, nothing said
+    fake.missing.add('inf_cut_due');
+    const l0 = logs.length;
+    free(p);
+    [out, ids] = await clock(EVEN, 24_000);
+    fake.missing.delete('inf_cut_due');
+    assert.deepEqual(['cut' in out, ids], [false, [p]]);
+    assert.ok(!logs.slice(l0).some((x) => /the video editor's next cut/.test(x)), logs.slice(l0).join('\n'));
+
+    // ---- every file a cut may keep has a name Storage takes; the owner's numbers count cuts as their own kind ----
+    for (const name of jobFiles({ id: a, inf_id: nova.id, kind: 'video', editor: true })) assert.match(name, NAME, name);
+    assert.ok(jobFiles({ id: a, inf_id: nova.id, kind: 'video' }).includes(layerPath(nova.id, a)));
+    // (the day as this test's clock reads it (Date.now, moved on with each minute here: `new Date()` would read the real one),
+    // before and after: a run across 00:00 UTC counts either day's, both right)
+    const today = () => new Date(Date.now()).toISOString().slice(0, 10);
+    const day0 = today();
+    const st = await A.adminStats(cfgNow());
+    const madeSince = (day) => [a, e, f, m, m2].filter((id) => job(id).created >= Date.parse(`${day}T00:00:00Z`)).length;
+    assert.ok([day0, today()].map(madeSince).includes(st.today.cut), JSON.stringify(st.today));
+    assert.equal(madeSince('2026-01-01'), 5);
+    assert.deepEqual([A.AI_COST.cut, AW.MADE_KINDS.cut], [0.002, 'Videos from the video editor']);
+
+    // ---- N: its progress from a plan that changed ("pieces-7" of its 3): made again from its start ----
+    const n7 = await newCut();
+    job(n7).req = 'pieces-7';
+    r = await go(n7, 12_000, { t: 2200 });
+    assert.deepEqual(r, { state: 'started', step: 'make', piece: 3, pieces: 3 });
+    assert.deepEqual(ran.map((x) => [x.join, at(x.args, '-ss')]), [[false, '1.000'], [false, '6.000'], [false, '11.000']], 'from its first piece');
+    assert.equal((await go(n7)).state, 'done');
+
+    // ---- S: its sound on, but its video has none: joined silent (no sound asked of its video), kept silent ----
+    const quiet = await doneJob(nova.id, 'video', { video: mp4({ seconds: 14, video: SRC }) });
+    fake.db.jobs.get(quiet).seconds = 14;
+    const sl = await newCut({ from: quiet });
+    assert.equal(job(sl).sound, true, 'asked with its sound on');
+    r = await go(sl);
+    assert.equal(r.state, 'done');
+    const silentJoin = ran.find((x) => x.join).args;
+    assert.deepEqual([silentJoin.includes('1:a:0'), silentJoin.includes('-an'), silentJoin.filter((x) => x === '-i').length], [false, true, 1], 'its pieces alone');
+    assert.deepEqual([dbCalls('inf_cut_done').at(-1).p_sound, job(sl).sound], [false, false]);
+    assert.ok(logs.includes(`[studio] cut ${sl} is made: 12.0 s, 0.06 MB`), logs.join('\n'));
+
+    // ---- T: its join came out longer than its cut (16.4 s): its seconds as the database keeps them (whole, 15 at most) ----
+    const t16 = await newCut();
+    r = await go(t16, 24_000, { out: mp4({ seconds: 16.4, video: TALL, audio: true }) });
+    assert.equal(r.state, 'done');
+    assert.deepEqual([dbCalls('inf_cut_done').at(-1).p_seconds, job(t16).seconds], [15, 15]);
+
+    // ---- U: no longer one being made when its look passes (set aside meanwhile: inf_cut_done says no): never shown, its files
+    // deleted ----
+    const u = await newCut({ layer: true });
+    const done0 = fake.db.inf_cut_done;
+    fake.db.inf_cut_done = function (args) { this.jobs.get(args.p_id).status = 'failed'; return done0.call(this, args); };
+    try { r = await go(u); } finally { fake.db.inf_cut_done = done0; }
+    assert.deepEqual(r, { state: 'failed', step: 'save' });
+    await settle();
+    assert.deepEqual(files(u), [], "its video and its words' picture deleted");
+
+    // ---- W: its look can't be made (the AI check away: 4 tries): given up as "check", its files deleted ----
+    const w = await newCut();
+    fake.gemini.status = 503;
+    try {
+      r = await go(w);
+      assert.deepEqual([r, job(w).tries, job(w).saving], [{ state: 'saving', step: 'save' }, 1, true]);
+      for (let n = 2; n <= 3; n++) {
+        r = await go(w);
+        assert.deepEqual([r, job(w).tries, job(w).saving], [{ state: 'saving', step: 'save' }, n, true]);
+      }
+      r = await go(w);
+    } finally {
+      fake.gemini.status = 200;
+    }
+    assert.deepEqual([r, job(w).status, job(w).error, job(w).refunded], [{ state: 'failed', step: 'save' }, 'failed', 'check', false]);
+    assert.ok(logs.some((l) => l.startsWith(`[studio] cut ${w} couldn't be looked at: gemini`)), logs.join('\n'));
+    assert.equal(AW.failText('check'), "It couldn't be checked, so it isn't shown.");
+    await settle();
+    assert.deepEqual(files(w), []);
+
+    // ---- X: each "no" of its look (Gemini's): never shown, its files deleted ----
+    for (const [verdict, why] of [[{ explicit: true }, 'sexual'], [{ minor: true }, 'minor'], [{ hateful: true }, 'hate'], [{ violent: true }, 'violence'], [{ other: true }, 'other']]) {
+      const x = await newCut();
+      fake.gemini.cut = verdict;
+      try { r = await go(x); } finally { fake.gemini.cut = null; }
+      assert.deepEqual([r, job(x).error], [{ state: 'failed', step: 'save' }, 'refused'], why);
+      assert.ok(logs.includes(`[studio] cut ${x} wasn't family-friendly (${why}): not shown, its files deleted`), why);
+      await settle();
+      assert.deepEqual(files(x), [], why);
+    }
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test('(2026-10-12, the editor) influencers.sql\'s promises for the video editor: its column and its checks (what was asked, only on a video saved from it; a free video cut from one of its own, never a long one or an edit with words; seconds from 1), the clock\'s index, the site\'s count a day, a cut started (inf_cut_add: its maker\'s own done, shown video or trend video, never a banned wallet\'s, OPEN at once before its use is counted, its use counted with it or not at all, its id once), made (inf_cut_done: never one deleted meanwhile), its turn (inf_cut_due), the share mark never put on it again, its source never deleted while it\'s made, inf_job_get giving its cut, the owner\'s numbers counting it apart, the grants, the ready check and its header', () => {
+  const sql = read('supabase/influencers.sql');
+  assert.match(sql, /alter table public\.agi1_inf_jobs add column if not exists cut jsonb;\n/);
+  assert.match(sql, /alter table public\.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_cut_check;\nalter table public\.agi1_inf_jobs add constraint agi1_inf_jobs_cut_check check \(cut is null\n  or \(jsonb_typeof\(cut\) = 'object' and kind = 'video' and editor\)\);/);
+  assert.match(sql, /and \(\(kind = 'photo' and cut is null\) or \(kind = 'video' and cut is not null and model is null and parts = 1\)\)\)\);/, 'a video saved from it: its cut, never a long one');
+  assert.match(sql, /alter table public\.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_seconds_check;\nalter table public\.agi1_inf_jobs add constraint agi1_inf_jobs_seconds_check check \(seconds between 1 and 60\);/);
+  assert.match(sql, /create index if not exists agi1_inf_jobs_cuts on public\.agi1_inf_jobs \(updated_at\) where editor and kind = 'video' and status in \('paid', 'making'\);/);
+  assert.match(sql, /alter table public\.agi1_inf_days add column if not exists video_edits integer not null default 0 check \(video_edits >= 0\);/);
+  const body = (fn) => new RegExp(`create or replace function public\\.${fn}\\([\\s\\S]*?\\n\\$\\$;`).exec(sql)?.[0] || '';
+  const add = body('inf_cut_add');
+  assert.match(add, /^create or replace function public\.inf_cut_add\(p_job text, p_inf text, p_wallet text, p_from text, p_shape text, p_seconds integer,\n  p_sound boolean, p_cut jsonb, p_per_day integer, p_site_cap integer, p_open integer default 3\)/);
+  assert.match(add, /p_shape not in \('tall', 'wide', 'square'\)/);
+  assert.match(add, /p_seconds not between 1 and 15/);
+  assert.match(add, /jsonb_typeof\(p_cut\) <> 'object'\n\s+or octet_length\(p_cut::text\) > 600/);
+  assert.match(add, /perform pg_advisory_xact_lock\(hashtext\('agi1-inf-wallet:' \|\| p_wallet\)\);/);
+  assert.match(add, /if exists \(select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null\) then\s+return json_build_object\('ok', false, 'why', 'banned'\);/);
+  assert.match(add, /f\.kind not in \('video', 'trend'\) or f\.status <> 'done' or f\.hidden\n\s+or f\.deleted_at is not null then\n\s+return json_build_object\('ok', false, 'why', 'from'\);/);
+  assert.match(add, /if \(select count\(\*\) from agi1_inf_jobs where wallet_code = p_wallet and kind = 'video' and editor and status in \('paid', 'making'\)\) >= p_open then\n\s+return json_build_object\('ok', false, 'why', 'cuts_open'\);/);
+  assert.ok(add.indexOf("'cuts_open'") < add.indexOf('inf_tool_take('), 'a fourth waits, nothing counted');
+  // its use and the cut together (a "no", or its id taken: neither, the block rolled back)
+  assert.match(add, /begin\n\s+t := inf_tool_take\(p_wallet, 'video', p_per_day, p_site_cap, true\);\n\s+if \(t ->> 'ok'\)::boolean is not true then raise exception using errcode = 'P0001', message = coalesce\(t ->> 'why', 'busy'\); end if;/);
+  assert.match(add, /values \(p_job, p_inf, p_wallet, 'video', f\.scene, p_shape, p_sound, p_from, 0, 'paid', p_seconds, true, p_cut\);\n\s+exception\n\s+when unique_violation then return json_build_object\('ok', false, 'why', 'taken'\);/);
+  const done = body('inf_cut_done');
+  assert.match(done, /^create or replace function public\.inf_cut_done\(p_id text, p_bytes integer, p_sound boolean, p_seconds integer\)/);
+  assert.match(done, /seconds = least\(greatest\(coalesce\(p_seconds, seconds\), 1\), 15\)::smallint, marked = true, mark_at = now\(\)/);
+  assert.match(done, /where id = p_id and kind = 'video' and editor and status in \('paid', 'making'\) and deleted_at is null\n\s+and p_bytes between 1 and 100000000/);
+  assert.match(body('inf_cut_due'), /where editor and kind = 'video' and status in \('paid', 'making'\) and \(lease_until is null or lease_until < now\(\)\)\n\s+order by updated_at limit 1;/);
+  assert.match(body('inf_mark_take'), /parts = 1 and not editor\n/, 'its share mark is in it already');
+  assert.match(body('inf_job_delete'), /x\.image = p_id and x\.status in \('paid', 'making'\)\) then\n\s+return json_build_object\('ok', false, 'why', 'in_use'\);/);
+  assert.match(sql, /j\.deleted_at, j\.edit, j\.editor, j\.cut,/);
+  assert.equal((body('inf_admin_stats').match(/when editor and kind = 'photo' then 'edited' when editor then 'cut' when shape = 'banner'/g) || []).length, 2);
+  assert.match(sql, /'inf_cut_add\(text, text, text, text, text, integer, boolean, jsonb, integer, integer, integer\)',\n\s+'inf_cut_done\(text, integer, boolean, integer\)', 'inf_cut_due\(\)'\n\s+\] loop/);
+  // the ready check: its column, its checks, and the functions that know it
+  assert.match(sql, /column_name = 'cut'\)\n\s+and exists \(select 1 from pg_constraint where conrelid = 'public\.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_cut_check'\)/);
+  assert.match(sql, /conname = 'agi1_inf_jobs_editor_check'\n\s+and pg_get_constraintdef\(oid\) like '%''video''%'\)/);
+  assert.match(sql, /conname = 'agi1_inf_jobs_seconds_check'\n\s+and pg_get_constraintdef\(oid\) like '%seconds >= 1%'\)/);
+  for (const fn of ["proname = 'inf_mark_take' and prosrc like '%not editor%'", "proname = 'inf_job_get' and prosrc like '%j.cut%'", "proname = 'inf_admin_stats' and prosrc like '%''cut''%'"]) {
+    assert.ok(sql.includes(fn), fn);
+  }
+  // its header: what running it again adds
+  assert.match(sql, /-- And the video editor \(the same day, the owner's choice: "Video editor": trim, words on it, its shape; made into an H\.264 MP4\n-- on our server, free, 10 a day per wallet\)\. Run this file again \(it keeps everything saved\)\./);
+  // our server's words when it isn't run again
+  const limits = read('server/limits.js');
+  assert.match(limits, /for \(const fn of \['inf_cut_add', 'inf_cut_done', 'inf_cut_due'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the video editor; it ends with influencers_ready = 1\)`;/);
+});
+
+test('(2026-10-12, the editor) the page: "Edit video" over its own videos and trend videos seen big, "Edited" with scissors next to the video it\'s from, never "Make another" or "Try again" for one; the video editor (its video placed through the CSSOM, a canvas over it for its words, its stickers and the share mark (cleared where its own already is), its tools as tabs (a video with its mark in it without Shape), its sound only where it has one, the keyboard, Undo and Start again, Save: its words\' picture at its size, our server first); its words (never an AI service named); its styles; Learn and the AI helper\'s guide', async () => {
+  // ---- over one of its own videos seen big (src/studio/views/shared.js) ----
+  const shared = strip(read('src/studio/views/shared.js'));
+  assert.match(shared, /: \['video', 'trend'\]\.includes\(j\.kind\) && own\.onVideoEditor \? go\('Edit video', 'scissors', own\.onVideoEditor\) : null;/);
+  assert.match(shared, /v\.kind === 'video' && v\.editor === true \? h\('p', \{ class: 'sa-edit-words' \}, icon\('scissors'\), h\('span', \{ text: 'Edited in the video editor' \}\)\)\n\s+: promptOf\(v\)/);
+  // ---- an influencer's page ----
+  const inf = strip(read('src/studio/views/influencer.js'));
+  assert.match(inf, /import \{ videoEditor \} from '\.\/video-editor\.js';/);
+  assert.match(inf, /onVideoEditor: \['video', 'trend'\]\.includes\(j\.kind\) \? \(x\) => openVideoEditor\(x\) : null,/);
+  assert.match(inf, /videoEditor\(ctx, \{ inf: id, job: j, onSaved: \(\) => \{\n\s+const back = focusPlace\(galleryBox\) \|\| at;/);
+  assert.match(inf, /badge: j\.kind === 'trend' \? \{ text: 'Trend', icon: 'zap' \} : j\.kind === 'video' && j\.editor \? \{ text: 'Edited', icon: 'scissors' \}/);
+  assert.match(inf, /ctx\.toast\(againErrorText\(d, j\), 'bad'\);/);
+  assert.equal(AW.againErrorText({ error: 'editor' }, { kind: 'video' }), "It was made in the video editor: open it, or the video it's from, and edit it again.");
+  assert.deepEqual([AW.tryAgainOk({ status: 'failed', kind: 'video', editor: true }), AW.tryAgainOk({ status: 'failed', kind: 'video' })], [false, true]);
+  // ---- the video editor (src/studio/views/video-editor.js) ----
+  const ve = strip(read('src/studio/views/video-editor.js'));
+  assert.doesNotMatch(ve, /innerHTML|insertAdjacentHTML|outerHTML|setAttribute\('style'|\.style\.(?!setProperty)|cssText/, 'every style through the CSSOM');
+  assert.doesNotMatch(ve, PROVIDERS);
+  assert.match(ve, /const MARK_SRC = new URL\('\.\.\/\.\.\/\.\.\/server\/media\/studio-mark\.png', import\.meta\.url\)\.href;/);
+  assert.match(ve, /const own = V\.ownMark\(job\);/);
+  assert.match(ve, /const hasSound = job\.sound === true \|\| \(job\.kind === 'trend' && job\.clip !== true\);/, 'a trend video made from its maker\'s own clip has none of its sound');
+  // a silent video starts with its sound off, and that's no change: Save and Start again wait for one (they were on as it
+  // opened, found 2026-10-12)
+  assert.match(ve, /const fresh = \(\) => V\.startCut\(duration, hasSound\);/);
+  assert.match(ve, /if \(V\.cutChanged\(state, duration, hasSound\)\) return true;/);
+  assert.doesNotMatch(ve, /V\.startCut\(duration\)|V\.cutChanged\(state, duration\)/, 'never without whether its video has sound');
+  assert.match(ve, /const s = sheet\(\{ title: 'Edit video', sub: cutNote\(job, \{ own \}\), size: 'editor' \}\);/);
+  // its video: muted until its sound is on, played by the browser from our own address; a canvas over it
+  assert.match(ve, /video\.muted = true;/);
+  assert.match(ve, /video\.src = infVideo\(job\.id\);/);
+  assert.match(ve, /const view = h\('canvas', \{ class: 'sa-ve-over', tabindex: '0', role: 'img', 'aria-label': 'Your video as it will look' \}\);/);
+  // its frame as its tab shows it, every time it's drawn (a new tab only paints: from Shape to Text, its frame kept the whole
+  // video's shape until something else moved it, found by its guide video)
+  assert.match(ve, /function draw\(\) \{\n\s+if \(!state \|\| !W\) return;\n\s+place\(\);\n/);
+  // its tools: real tabs, Shape only where its own mark isn't in it already
+  assert.match(ve, /items: \[\['trim', 'Trim', 'scissors'\], \.\.\.\(own \? \[\] : \[\['shape', 'Shape', 'crop'\]\]\), \['text', 'Text', 'type'\], \['stickers', 'Stickers', 'sticker'\]\],/);
+  // the size it's made said again when its shape changes (the panel isn't drawn again then: it kept "640 × 360" after Square
+  // 1:1, found by its browser test)
+  assert.match(ve, /onchange: \(v\) => \{ state\.shape = v; state\.zoom = 1; state\.cx = 0\.5; state\.cy = 0\.5; zoom\.set\(1\); madeText\(\); after\(\); \}/);
+  assert.match(ve, /const madeText = \(\) => \{ const \[ow, oh\] = out\(\); made\.textContent = `It's made \$\{ow\} × \$\{oh\}\./);
+  // the share mark where our server puts it, over its words; on a video with its own, its words kept off it
+  assert.match(ve, /const m = V\.markTopLeft\(ow, oh, mark\.naturalWidth, mark\.naturalHeight\);/);
+  assert.match(ve, /if \(own\) g\.clearRect\(\(m\.x - 2\) \* k, \(m\.y - 2\) \* k, \(m\.w \+ 4\) \* k, \(m\.h \+ 4\) \* k\);\n\s+else g\.drawImage\(mark, m\.x \* k, m\.y \* k, m\.w \* k, m\.h \* k\);/);
+  // the keyboard: Trim plays and pauses and steps a tenth of a second; elsewhere it moves what's picked (or the frame)
+  assert.match(ve, /if \(e\.key === ' ' \|\| e\.key === 'k' \|\| e\.key === 'Enter'\) \{ e\.preventDefault\(\); toggle\(\); return; \}/);
+  assert.match(ve, /if \(e\.key === 'Delete' \|\| e\.key === 'Backspace'\) \{ e\.preventDefault\(\); LP\.remove\(\); \}/);
+  assert.match(ve, /const LP = layerPanel\(\{ layers: \(\) => state\.layers, sel: \(\) => sel, pick: \(n\) => \{ sel = n; \}, after: \(o\) => after\(o\), commit: \(\) => commit\(\), err, view, what: 'video' \}\);/);
+  assert.match(ve, /const undoB = btn\('Undo', \{ kind: 'ghost', icon: 'undo', class: 'sa-btn sa-btn-ghost sa-pe-quiet', 'aria-label': 'Undo', title: 'Undo' \}\);/);
+  assert.match(ve, /save\.disabled = !useful\(\);/);
+  // a save: the page's own check of its cut first, its words' and stickers' picture at its size, our server first
+  assert.match(ve, /if \(!V\.cutSpec\(cut\)\.ok \|\| \(own && !V\.asItIs\(cut\)\)\) \{ say\(err, cutErrorText\(\{ error: 'cut' \}\)\); return; \}/);
+  assert.match(ve, /layer = await toPng\(layersPicture\(state\.layers, w, ht\)\);/);
+  assert.match(ve, /const r = await saveCut\(ctx\.act, \{ from: job\.id, cut, words: P\.wordsOf\(state\), layer \}\);/);
+  assert.match(ve, /if \(r\.error === 'words'\) \{\n\s+tabs\.show\('text'\);\n\s+say\(err, wordsText\(r\.field \|\| 'text', r\.why\)\);/);
+  assert.match(ve, /s\.close\(\);\n\s+ctx\.toast\(cutSavedText\(job\), 'good'\);\n\s+onSaved\?\.\(r\.job\);/);
+  // its sheet closed: its video let go of (nothing keeps downloading)
+  assert.match(ve, /video\.pause\(\);\n\s+video\.removeAttribute\('src'\);\n\s+video\.load\(\);/);
+  // the media helper: its cut opened, then its picture (sent twice, the first answer lost: started by the first)
+  const media = read('src/studio/media.js');
+  assert.match(media, /const open = await act\('inf-cut-open', \{ from, cut, words, layer: !!layer \}\);/);
+  assert.match(media, /if \(!open\.data\.ticket\) return \{ ok: true, job: open\.data\.job, left \};/);
+  assert.match(media, /const r = await sendBytes\(`inf-cut=\$\{encodeURIComponent\(open\.data\.ticket\)\}`, layer\);/);
+  assert.match(media, /if \(\(r\.ok && r\.data\?\.ok\) \|\| r\.data\?\.error === 'done'\) return/);
+  // its words, never an AI service named
+  for (const j of [{ kind: 'video', shape: 'tall' }, { kind: 'trend', shape: 'tall' }]) {
+    for (const t of [AW.cutNote(j), AW.cutNote(j, { own: true }), AW.cutSavedText(j)]) { assert.doesNotMatch(t, PROVIDERS, t); assert.equal(trouble(t), null, t); }
+  }
+  assert.equal(AW.cutNote({ kind: 'video' }, { own: true }), 'Free: trim it, its sound, words and stickers (it keeps its shape: its mark is in it). Save it as a new video, made in a minute or two.');
+  assert.equal(AW.trimText(2.44, 7.4), '2.4 s to 7.4 s · 5.0 s long');
+  assert.equal(AW.jobTitle({ kind: 'video', editor: true }), 'Edited video');
+  // its styles: every rule an sa- class; its video placed under the canvas, never catching a pointer
+  const css = read('src/styles/studio-app.css');
+  for (const sel of ['.sa-ve-frame {', '.sa-ve-video {', '.sa-ve-over {', '.sa-ve-play {', '.sa-ve-bar {', '.sa-ve-part {', '.sa-ve-head {', '.sa-ve-len {', '.sa-ve-sound {']) {
+    assert.ok(css.includes(sel), sel);
+  }
+  assert.match(css, /\.sa-ve-video \{[^}]*pointer-events: none;/);
+  assert.match(css, /\.sa-ve-over \{[^}]*touch-action: none;/);
+  // ---- Learn and the AI helper's guide ----
+  const { LESSONS } = await import('../src/studio/views/learn.js');
+  assert.ok(LESSONS.find((l) => l.id === 'videos').steps.some((t) => /^Or Edit video \(free\): trim it to 1 to 15 seconds, its shape, its sound, words and stickers\./.test(t)));
+  const guide = helpGuide(cfgNow());
+  assert.match(guide, /VIDEO EDITOR: open one of your own videos or trend videos → "Edit video": trim it \(a part of 1 to 15 seconds, a tenth of a second at a time\)/);
+  assert.match(guide, /One saved from the editor has no "Make another": open it and edit it again\./);
+  assert.doesNotMatch(guide, PROVIDERS);
+});
+
+// ---------- 2026-10-12: clean downloads for holders, and our hidden AI tag on every download ----------
+test('(2026-10-12) our hidden AI tag (src/studio/ai-tag.js): a JPEG\'s XMP after its JFIF and Exif segments, an MP4\'s at its end, once; its MP4 still read the same', async () => {
+  const jpg = await sharp({ create: { width: 64, height: 48, channels: 3, background: '#8040c0' } }).jpeg().toBuffer();
+  const exif = await sharp(jpg).withMetadata({ exif: { IFD0: { Copyright: 'x' } } }).jpeg().toBuffer();
+  for (const b of [jpg, exif]) {
+    const t = TAG.withAiTag(b);
+    assert.ok(TAG.hasAiTag(t) && !TAG.hasAiTag(b));
+    assert.equal(TAG.withAiTag(t), t, 'tagged once');
+    const app1 = [];
+    for (let at = 2; at + 4 < t.length && t[at] === 0xff && t[at + 1] !== 0xda;) {
+      const len = (t[at + 2] << 8) | t[at + 3];
+      if (t[at + 1] === 0xe1) app1.push(Buffer.from(t.subarray(at + 4, at + 10)).toString('latin1'));
+      at += 2 + len;
+    }
+    assert.deepEqual(app1.at(-1).slice(0, 6), 'http:/', 'its XMP after any Exif');
+    if (b === exif) assert.equal(app1[0], 'Exif\0\0');
+    assert.equal((await sharp(t).metadata()).width, 64);
+  }
+  const v = mp4({ seconds: 5, video: { width: 720, height: 1280, fps: 24 } });
+  const tv = aiTagged(v);
+  assert.ok(Buffer.isBuffer(tv) && TAG.hasAiTag(tv) && tv.subarray(0, v.length).equals(v));
+  assert.equal(tv.length, v.length + 24 + Buffer.byteLength(TAG.AI_XMP));
+  assert.deepEqual(mp4Info(tv), mp4Info(v));
+  assert.match(TAG.AI_XMP, /trainedAlgorithmicMedia/);
+  assert.equal(aiTagged(Buffer.from('not a picture')).toString(), 'not a picture');
+});
+
+test('(2026-10-12) clean downloads: its maker holding STUDIO_CLEAN_AGI $AGI (a Crush at once, else read on the chain) gets its own photo or video without our pill, tagged; everyone else the marked one', async () => {
+  const a = await readyInf({ name: 'Nova' });
+  const photo = await doneJob(a.id, 'photo');
+  const jpg = fake.storage.get(picPath(a.id, photo, 0)).bytes;
+  // a Stranger holding nothing: the marked one, said why
+  let r = await act('inf-dl', { job: photo });
+  assert.deepEqual([r.status, r.body.clean, r.body.why, r.body.need, r.body.url], [200, false, 'holding', 1000, `/api/launch?inf-dl=${a.id}/${photo}-0.jpg`]);
+  // its marked download carries our tag too
+  const marked = await get(`inf-dl=${a.id}/${photo}-0.jpg`);
+  assert.ok(TAG.hasAiTag(Buffer.from(marked.body)));
+  // a Crush: clean at once, no chain read
+  const reads = calls.filter((c) => c.to === 'chain').length;
+  r = await act('inf-dl', { job: photo }, { level: 2 });
+  assert.deepEqual([r.status, r.body.clean, r.body.why], [200, true, undefined]);
+  assert.equal(calls.filter((c) => c.to === 'chain').length, reads);
+  const q = r.body.url.replace('/api/launch?', '');
+  assert.match(q, /^inf-clean=[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+  let g = await get(q);
+  assert.deepEqual([g.status, g.headers.get('content-type'), g.headers.get('cache-control'), g.headers.get('content-disposition')],
+    [200, 'image/jpeg', 'private, no-store', 'attachment; filename="Nova-photo.jpg"']);
+  assert.ok(Buffer.from(g.body).equals(aiTagged(jpg)), 'its picture as the page shows it, with our tag');
+  // a Stranger whose wallet holds 1,000+ (read on the chain, kept 10 minutes)
+  (await import('../server/inf-clean.js'))._resetClean();                     // (its first read is kept 10 minutes)
+  fake.chain.held = new Map([[WALLET.toLowerCase(), 1500n * E18]]);
+  r = await act('inf-dl', { job: photo }, { level: 1 });
+  assert.equal(r.body.clean, true);
+  // someone else's: never; a bad or tampered ticket: no
+  r = await act('inf-dl', { job: photo }, { wallet: OTHER, level: 3 });
+  assert.deepEqual([r.status, r.body.error], [403, 'not_yours']);
+  assert.equal((await get(`${q}x`)).status, 400);
+  assert.equal((await get('inf-clean=abc')).status, 400);
+  // a video: to its own file (no pill); a long video (made with its pill): the marked one
+  const v = await doneJob(a.id, 'video');
+  r = await act('inf-dl', { job: v }, { level: 2 });
+  assert.equal(r.body.clean, true);
+  g = await get(r.body.url.replace('/api/launch?', ''));
+  assert.equal(g.status, 302);
+  assert.match(g.headers.get('location'), new RegExp(`/inf/${a.id}/${v}\\.mp4\\?token=`));
+  fake.db.jobs.get(v).model = 'long';
+  fake.db.jobs.get(v).parts = 4;
+  r = await act('inf-dl', { job: v }, { level: 2 });
+  assert.deepEqual([r.body.clean, r.body.why, r.body.url], [false, 'made_with_it', `/api/launch?inf-video-dl=${v}.mp4`]);
+  // deleted meanwhile: its ticket stops
+  fake.db.jobs.get(photo).hidden = true;
+  assert.equal((await get(q)).status, 404);
+  // switched off (0): everyone's marked
+  process.env.STUDIO_CLEAN_AGI = '0';
+  try {
+    fake.db.jobs.get(photo).hidden = false;
+    r = await act('inf-dl', { job: photo }, { level: 3 });
+    assert.deepEqual([r.body.clean, r.body.why], [false, 'off']);
+    assert.equal((await get('inf-info')).body.cleanAgi, 0);
+  } finally { delete process.env.STUDIO_CLEAN_AGI; }
+});
+
+test('(2026-10-12) the page: its own Download asks our server first (clean for a holder), the photo editor without its mark for one, every download tagged; never "buy"', () => {
+  const sh = readFileSync(new URL('../src/studio/views/shared.js', import.meta.url), 'utf8');
+  assert.equal((sh.match(/foot\.push\(mine \? ownDownload\(ctx, dl, \{ job: (v|j)\.id, real: priv \}\) : dl\);/g) || []).length, 2);
+  assert.match(sh, /const r = await ctx\.act\('inf-dl', \{ job, n \}\);/);
+  assert.match(sh, /r\.data\.url\.startsWith\('\/api\/launch\?'\)/);
+  for (const d of [{ clean: true, need: 1000 }, { why: 'holding', need: 1000 }, { why: 'made_with_it' }, null]) {
+    for (const real of [false, true]) {
+      const t = AW.downloadText(d, { real });
+      assert.doesNotMatch(t, /\bbuy\b/i);
+      assert.equal(t.includes("Post it with your app's AI label."), real);
+    }
+  }
+  assert.match(AW.downloadText({ clean: true, need: 1000 }), /without our pill .*1,000\+ \$AGI.*AI-made/);
+  // (an HD photo's full-size copy and a long video's join are kept with our tag too, like every video: see the tests above)
+  const jobs = readFileSync(new URL('../server/inf-jobs.js', import.meta.url), 'utf8');
+  assert.match(jobs, /F\.putFile\(cfg, hdPath\(j\.inf_id, id, n\), aiTagged\(m\.hd\), 'image\/jpeg'/);
+  assert.match(jobs, /const video = aiTagged\(await joinParts\(files, /);
 });

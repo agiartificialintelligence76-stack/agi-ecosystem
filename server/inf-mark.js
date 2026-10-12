@@ -9,10 +9,14 @@
 //     until then (or after 3 tries that failed) the video downloads as it was made.
 // The video as it plays on its page is never changed. (Round 4, phase 4: a long video is made in parts, each one encoded again
 // with the mark as it's kept, then joined: its one copy, played and downloaded, carries the mark: encodePart, joinParts.)
+// (2026-10-12, the video editor) A video saved from the video editor is made here too, by the clock, in pieces of 5 seconds
+// (cutPlan, cutPieces) joined with its sound or none (joinCut): its part, its crop at its shape's size, its words and stickers
+// (the picture its maker's browser drew), the mark top left: its one copy, played and downloaded, carries the mark.
 import { readFileSync } from 'node:fs';
 import { rpc } from './limits.js';
-import { mp4Info } from './mp4.js';
-import { videoPath, markedPath } from './inf-jobs.js';
+import { mp4Info, mp4HasSound } from './mp4.js';
+import { videoPath, markedPath, aiTagged } from './inf-jobs.js';
+import { cutSize, cropPixels, asItIs } from '../src/studio/video-edit.js';
 
 export const MARK = {
   NEEDS_MS: 14_000,              // a video is marked only with this much of the clock's time left
@@ -177,6 +181,170 @@ export async function joinParts(parts, { timeoutMs = 9000, run = null } = {}) {
   });
 }
 
+// ---------- (2026-10-12) the video editor's cut ----------
+// One part of a video (1 to 15 s: ffmpeg seeks to where it starts, then reads only that long), its crop (at exactly its shape's
+// size: src/studio/video-edit.js cropPixels, even and inside the picture), made that size at 24 frames a second, with its
+// maker's words and stickers (one transparent PNG at that size, drawn in their browser: our server needs no fonts) and the mark
+// top left over them; H.264 at about 2.5 Mb/s (15 s is about 5 MB). One core makes 15 s of a 1080p video in about 13 s
+// (measured 2026-10-12), more than one minute of the clock may have, so it's made in pieces of 5 seconds, as many as a minute
+// has time for (each exactly its frames, without sound, kept until they're all made: server/inf-cut.js), then joined as they
+// are with its sound (from the video it's cut from: AAC, 128 kb/s, stereo) or none, its index first. A video whose mark is in
+// it already (a long video, or one saved from the video editor: video-edit.js ownMark) is only ever cut as it is (its own
+// shape, the whole picture: its mark where it was), and given no second one.
+export const CUT = {
+  PIECE_S: 5,                    // a piece's seconds (the last one up to a second more, never under one on its own)
+  NEEDS_MS: 11_000,              // the clock's time a piece needs left: its video read (about 1 s), a piece made (4 to 7 s on
+                                 // one core from a 1080p video, measured 2026-10-12) and kept
+  KEEP_MS: 2_500,                // …of which, keeping what was made and saying so
+  JOIN_NEEDS_MS: 6_000,          // its pieces joined with its sound (half a second to 2 s), and kept
+  CHECK_NEEDS_MS: 14_000,        // its look (Gemini's, before anyone sees it)
+  PRESET: 'superfast',           // x264's: a fifth faster than veryfast, at about the same size
+  SOURCE_MAX: 40_000_000,        // the most read for the video it's cut from (the bucket's limit)
+  LAYER_MAX: 4_000_000,          // its words' and stickers' picture
+  FPS: 24, KBPS: 2500, SOUND_KBPS: 128,
+  NEAR_END_S: 0.5,               // a part must start at least this long before its video's end
+  MORE: 1.3,                     // another piece in the same minute: when the time left is this many times the last one's
+};
+const sec = (v) => (Math.round(Number(v) * 1000) / 1000).toFixed(3);
+const cutNo = (what) => Object.assign(new Error(`cut: ${what}`), { why: 'cut' });
+// How a cut (video-edit.js cutSpec's, checked: { start, length, shape, src, box, sound }) of a video (mp4Info's) is made: its
+// size, its crop, its seconds (its frames over 24: as long as asked, or to its video's end) and its pieces ({ k, from: seconds
+// into the cut, frames }) → { w, h, crop, start, seconds, frames, pieces } · throws (why 'cut') when it can't be that video's (not
+// the video its page measured, or a part that starts past its end; one with its mark asked for more than its whole picture).
+// own: the video carries its mark already
+export function cutPlan(info, cut, { own = false } = {}) {
+  if (!info?.width || !info?.height) throw cutNo('not a video we read');
+  const [srcW, srcH] = Array.isArray(cut?.src) ? cut.src : [];
+  if (!(Math.abs(info.width - srcW) <= 2 && Math.abs(info.height - srcH) <= 2)) throw cutNo(`its video is ${info.width}×${info.height}, not ${srcW}×${srcH}`);
+  if (own && !asItIs(cut)) throw cutNo('its mark is in it already: it can only be cut as it is');
+  const size = cutSize(cut.shape, srcW, srcH);
+  if (!size) throw cutNo('no size');
+  const [w, h] = size;
+  const start = Number(cut.start);
+  let seconds = Number(cut.length);
+  if (!(Number.isFinite(start) && start >= 0 && Number.isFinite(seconds) && seconds > 0)) throw cutNo('no part');
+  if (Number.isFinite(info.seconds) && info.seconds > 0) {
+    if (start > info.seconds - CUT.NEAR_END_S) throw cutNo(`it starts at ${start} s, and its video is ${info.seconds.toFixed(1)} s`);
+    seconds = Math.min(seconds, info.seconds - start);
+  }
+  const frames = Math.max(1, Math.round(seconds * CUT.FPS));
+  const per = CUT.PIECE_S * CUT.FPS;
+  let n = Math.ceil(frames / per);
+  if (n > 1 && frames - (n - 1) * per < CUT.FPS) n -= 1;   // a last piece under a second goes into the one before
+  const pieces = Array.from({ length: n }, (_, k) => ({ k, from: k * CUT.PIECE_S, frames: k < n - 1 ? per : frames - k * per }));
+  return { w, h, crop: cropPixels(cut.box, info.width, info.height, w, h), start, seconds: frames / CUT.FPS, frames, pieces };
+}
+// ffmpeg's words for a piece: input the video from where the piece starts (and its layer, and the mark, each a still picture
+// overlaid on every frame), exactly its frames, no sound
+export function pieceArgs({ input, layer = null, mark = null, output, at, frames, crop, w, h, margin = 0 }) {
+  const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-ss', sec(at), '-t', sec(frames / CUT.FPS + 0.5), '-i', input];
+  const graph = [`[0:v]crop=${crop.w}:${crop.h}:${crop.x}:${crop.y},scale=${w}:${h}:flags=bicubic,setsar=1,fps=${CUT.FPS}[base]`];
+  let at2 = 'base', n = 0;
+  if (layer) {
+    args.push('-i', layer);
+    n += 1;
+    graph.push(`[${at2}][${n}:v]overlay=x=0:y=0:format=auto[words]`);
+    at2 = 'words';
+  }
+  if (mark) {
+    args.push('-i', mark);
+    n += 1;
+    graph.push(`[${at2}][${n}:v]overlay=x=${margin}:y=${margin}:format=auto[marked]`);
+    at2 = 'marked';
+  }
+  graph.push(`[${at2}]format=yuv420p[v]`);
+  return [
+    ...args, '-filter_complex', graph.join(';'), '-map', '[v]', '-an', '-frames:v', String(frames),
+    '-c:v', 'libx264', '-preset', CUT.PRESET, '-b:v', `${CUT.KBPS}k`, '-maxrate', `${Math.round(CUT.KBPS * 1.2)}k`, '-bufsize', `${CUT.KBPS * 2}k`,
+    '-movflags', '+faststart', output,
+  ];
+}
+// ffmpeg's words for its pieces joined as they are (each encoded alike), with its sound from the video it's cut from (source:
+// only when that video has one and its maker kept it on) or none
+export function cutJoinArgs({ list, source = null, output, start = 0, seconds = 0 }) {
+  const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-f', 'concat', '-safe', '0', '-i', list];
+  if (source) args.push('-ss', sec(start), '-t', sec(seconds), '-i', source);
+  return [
+    ...args, '-map', '0:v',
+    ...(source ? ['-map', '1:a:0', '-c:a', 'aac', '-b:a', `${CUT.SOUND_KBPS}k`, '-ac', '2', '-shortest'] : ['-an']),
+    '-c:v', 'copy', '-movflags', '+faststart', output,
+  ];
+}
+// Its pieces from piece `from` on, made one after another while there's time: the first always (it has its own time: until),
+// another only when the time left before `until` (a time, in ms) is CUT.MORE times what the last one took. A piece that fails
+// after one was made ends it (what was made is kept): the first throws. → { pieces: [{ k, video, ms }] } · throws when ffmpeg
+// isn't there, fails or runs out of time on its first piece. own: the video carries its mark already. layer: its words' and
+// stickers' PNG, or null.
+export async function cutPieces(sharp, bytes, { plan, from = 0, layer = null, own = false, until, run = null }) {
+  const bin = run ? 'ffmpeg' : await ffmpegBin();
+  if (!bin) throw Object.assign(new Error('cut: ffmpeg isn\'t here'), { why: 'no_ffmpeg' });
+  return inTemp(async (dir, join) => {
+    const { writeFile, readFile } = await import('node:fs/promises');
+    const input = join(dir, 'in.mp4');
+    const layerFile = layer ? join(dir, 'layer.png') : null;
+    let markFile = null, margin = 0;
+    const writes = [writeFile(input, bytes)];
+    if (layerFile) writes.push(writeFile(layerFile, layer));
+    if (!own) {
+      const m = await markFor(sharp, plan.w, plan.h, 'tl');
+      markFile = join(dir, 'mark.png');
+      margin = m.left;
+      writes.push(writeFile(markFile, m.png));
+    }
+    await Promise.all(writes);
+    const made = [];
+    for (const p of plan.pieces.slice(from)) {
+      const left = until - Date.now();
+      if (made.length && left < made[made.length - 1].ms * CUT.MORE) break;
+      if (left < 1000) break;
+      const output = join(dir, `p${p.k}.mp4`);
+      const args = pieceArgs({ input, layer: layerFile, mark: markFile, output, at: plan.start + p.from, frames: p.frames, crop: plan.crop, w: plan.w, h: plan.h, margin });
+      const t0 = Date.now();
+      try {
+        await (run ? run(args, left) : runFfmpeg(bin, args, left));
+        const video = await readFile(output);
+        if (!mp4Info(video)?.width) throw new Error('cut: ffmpeg made no piece');
+        made.push({ k: p.k, video, ms: Date.now() - t0 });
+      } catch (err) {
+        if (!made.length) throw err;
+        console.warn(`[studio] a cut's piece ${p.k + 1} (it keeps the ${made.length} made): ${err.message}`);
+        break;
+      }
+    }
+    return { pieces: made };
+  });
+}
+// Its pieces (all of them, in order) joined, with its sound (source: the video it's cut from, when its maker kept the sound on
+// and it has one) → { video, seconds, sound, width, height } · throws when ffmpeg isn't there, fails or runs out of time
+export async function joinCut(pieces, { plan, source = null, timeoutMs = 6000, run = null }) {
+  if (!Array.isArray(pieces) || !pieces.length || pieces.length !== plan.pieces.length || pieces.some((p) => !mp4Info(p)?.width)) throw new Error('cut: its pieces aren\'t videos we read');
+  const bin = run ? 'ffmpeg' : await ffmpegBin();
+  if (!bin) throw Object.assign(new Error('cut: ffmpeg isn\'t here'), { why: 'no_ffmpeg' });
+  return inTemp(async (dir, join) => {
+    const { writeFile, readFile } = await import('node:fs/promises');
+    const names = pieces.map((_, n) => join(dir, `p${n}.mp4`));
+    await Promise.all(pieces.map((p, n) => writeFile(names[n], p)));
+    const list = join(dir, 'list.txt'), output = join(dir, 'cut.mp4');
+    await writeFile(list, names.map((f) => `file '${f}'`).join('\n'));
+    let input = null;
+    if (source) {
+      input = join(dir, 'in.mp4');
+      await writeFile(input, source);
+    }
+    const args = cutJoinArgs({ list, source: input, output, start: plan.start, seconds: plan.seconds });
+    await (run ? run(args, timeoutMs) : runFfmpeg(bin, args, timeoutMs));
+    const video = await readFile(output);
+    const out = mp4Info(video);
+    if (!out?.width) throw new Error('cut: ffmpeg made no video');
+    return { video, seconds: out.seconds ?? plan.seconds, sound: mp4HasSound(video) === true, width: out.width, height: out.height };
+  });
+}
+// The share mark's own picture's size (the page clears a video's words where its mark already is: server/inf-cut.js)
+export async function markSize(sharp) {
+  const meta = await sharp(markSource()).metadata();
+  return { width: meta.width, height: meta.height };
+}
+
 async function runFfmpeg(bin, args, timeoutMs) {
   const { spawn } = await import('node:child_process');
   await new Promise((resolve, reject) => {
@@ -208,8 +376,12 @@ export async function markClock(cfg, { deadline, files = null, run = null } = {}
     if (!bytes) throw new Error('mark: its video isn\'t there');
     const sharp = await F.loadSharp();
     const marked = await markVideo(sharp, bytes, { timeoutMs: Math.max(3000, left() - 4000), run });
-    await F.putFile(cfg, markedPath(job.inf_id, job.id), marked, 'video/mp4', { timeoutMs: Math.max(2000, Math.min(9000, left() - 500)) });
-    await rpc(cfg, 'inf_mark_done', { p_job: job.id }, 'studio');
+    await F.putFile(cfg, markedPath(job.inf_id, job.id), aiTagged(marked), 'video/mp4', { timeoutMs: Math.max(2000, Math.min(9000, left() - 500)) });
+    if (await rpc(cfg, 'inf_mark_done', { p_job: job.id }, 'studio') !== true) {
+      // (2026-10-12) its maker deleted it while it was being marked: the copy just kept goes too
+      await F.deleteFiles(cfg, [markedPath(job.inf_id, job.id)]).catch(() => 0);
+      return { gone: job.id };
+    }
     return { marked: job.id };
   } catch (err) {
     console.warn(`[studio] marking video ${job.id} (try ${job.tries} of 3): ${err.message}`);

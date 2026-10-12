@@ -1,11 +1,9 @@
 // An MP4's (or a MOV's) own header, read without any package (2026-10-10, AGI Studio): its length, its video's size and its
-// frames a second. Pure, light to load: the uploads (server/inf-uploads.js), the jobs (server/inf-jobs.js) and the clock's
-// share mark (server/inf-mark.js) read it.
-// What its header says (the movie's "moov" box, wherever it is in the file): its length in seconds ("mvhd"), and its video
-// track's size in pixels ("tkhd": 16.16 fixed-point numbers) and frames a second (its samples ("stts") over its own length
-// ("mdhd"): unknown, null, for a fragmented file, whose samples aren't in its header). → { seconds, width, height, fps } (any
-// of them null when it can't be read), or null when it isn't an MP4
-export function mp4Info(b) {
+// frames a second; (2026-10-12, the video editor) and whether it has a sound track. Pure, light to load: the uploads
+// (server/inf-uploads.js), the jobs (server/inf-jobs.js), the clock's share mark (server/inf-mark.js) and the video editor
+// (server/inf-cut.js) read it.
+// Its boxes, and the movie's ("moov", wherever it is in the file): → { boxes, child, moov } or null when it isn't an MP4
+function parse(b) {
   if (!Buffer.isBuffer(b) || b.length < 16 || b.toString('latin1', 4, 8) !== 'ftyp') return null;
   const boxes = (start, end) => {
     const out = [];
@@ -27,7 +25,22 @@ export function mp4Info(b) {
   };
   const child = (box, type) => (box ? boxes(box.start, box.end).find((x) => x.type === type) || null : null);
   const moov = boxes(0, b.length).find((x) => x.type === 'moov');
-  if (!moov) return null;
+  return moov ? { boxes, child, moov } : null;
+}
+// each track's kind ("vide", "soun"…: its handler, "hdlr")
+const handlerOf = (b, { child }, trak) => {
+  const hdlr = child(child(trak, 'mdia'), 'hdlr');
+  return hdlr && hdlr.start + 12 <= hdlr.end ? b.toString('latin1', hdlr.start + 8, hdlr.start + 12) : null;
+};
+
+// What its header says: its length in seconds ("mvhd"), and its video track's size in pixels ("tkhd": 16.16 fixed-point
+// numbers) and frames a second (its samples ("stts") over its own length ("mdhd"): unknown, null, for a fragmented file, whose
+// samples aren't in its header). → { seconds, width, height, fps } (any of them null when it can't be read), or null when it
+// isn't an MP4
+export function mp4Info(b) {
+  const p = parse(b);
+  if (!p) return null;
+  const { boxes, child, moov } = p;
   const info = { seconds: null, width: null, height: null, fps: null };
   const mvhd = child(moov, 'mvhd');
   if (mvhd) {
@@ -40,8 +53,7 @@ export function mp4Info(b) {
   }
   for (const trak of boxes(moov.start, moov.end).filter((x) => x.type === 'trak')) {
     const mdia = child(trak, 'mdia');
-    const hdlr = child(mdia, 'hdlr');
-    if (!hdlr || hdlr.start + 12 > hdlr.end || b.toString('latin1', hdlr.start + 8, hdlr.start + 12) !== 'vide') continue;
+    if (handlerOf(b, p, trak) !== 'vide') continue;
     const tkhd = child(trak, 'tkhd');
     if (tkhd) {
       const at = tkhd.start + (b[tkhd.start] === 1 ? 88 : 76);
@@ -69,3 +81,10 @@ export function mp4Info(b) {
 }
 // Its length in seconds alone (mp4Info's), or null
 export const mp4Seconds = (b) => mp4Info(b)?.seconds ?? null;
+// (2026-10-12, the video editor) Whether it has a sound track (a track whose handler is "soun") → true | false, or null when it
+// isn't an MP4
+export function mp4HasSound(b) {
+  const p = parse(b);
+  if (!p) return null;
+  return p.boxes(p.moov.start, p.moov.end).some((x) => x.type === 'trak' && handlerOf(b, p, x) === 'soun');
+}

@@ -45,6 +45,8 @@
   .nav {
     display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; gap: 0;
     padding: 4px var(--gutter) 12px; background: var(--bg); border-bottom: 1px solid var(--line);
+    /* (2026-10-13, AGI Studio's row) a short phone scrolls the menu, never past the screen's bottom */
+    max-height: calc(100vh - 64px); max-height: calc(100dvh - 64px); overflow-y: auto; overscroll-behavior: contain;
   }
   .topbar.menu-open .nav { display: flex; }
   .nav a, .nav .nav-phone { display: block; padding: 14px 0; font-size: 17px; color: var(--fg); }

@@ -7,22 +7,25 @@
 // 3D model (in credits, or free for a big burn: round 2), a coin with its face, and a boost in Explore (round 2: a burn). Its
 // page asks again every few seconds while something is being made (each ask moves it along one step on our server), and
 // takes the posters of its new videos (a frame, here).
-import { h, icon, btn, linkBtn, sheet, segmented, chips, cardPick, say, busy, pic, copyText, nextId, put, add } from '../ui.js';
+import { h, icon, btn, linkBtn, sheet, segmented, chips, cardPick, say, busy, pic, copyText, nextId, put, add, focusPlace, focusBack } from '../ui.js';
 import {
   infPic, infVideo, fileUrl, trendOf, trendPrompt, creditsText, SHAPES, PHOTO_SHAPES, BANNER, SCENE_MIN, SCENE_MAX, INF_STYLES, CLIP, clankProfileUrl,
   PHOTO_MODELS, PHOTO_QUALITY, VIDEO_MODELS, ANIME_QUALITY, MEMES, MEME_LINE_MAX, REFS, photoCredits, videoCredits, videoPlan, jobPlan,
-  jobStep, startPhotos,
+  jobStep, startPhotos, drawnStyle, videoSpec, editSpec, EDIT,
 } from '../rules.js';
 import {
   makingText, failText, jobTitle, jobStateText, modelText, wordsText, errorText, coinText, upErrorText, leftText, compact,
   priceOf, shareInfUrl, dayText, PHOTO_IDEAS, BANNER_IDEAS, VIDEO_IDEAS, num, likesText, progressKind, BANNED_TEXT, secondsText,
-  leftWords,
+  leftWords, ANIME_WHY, againErrorText, againMadeText, deleteJobText, deletedText, tryAgainOk, creationWord, EDIT_IDEAS, editNote, editMadeText,
 } from '../app-words.js';
 import { progressBar } from '../progress.js';
 import { readClip, clipText, uploadClip, makePosters, shrinkPicture, uploadRef } from '../media.js';
 import { INSTANT, INSTANT_MAKES, MEME_READY, memeInputs, instantOn, setInstant, instantSeen, markInstantSeen } from '../instant.js';
 import { trendTile, videoSheet, photoSheet, reportSheet, confirmSheet, mediaTile, noteLikes, burnSheet, boostInf, captionSheet } from './shared.js';
 import { workspace, costLine, goButton } from './workspace.js';
+import { pickPicture, framedPic } from './frame.js';
+import { photoEditor } from './photo-editor.js';
+import { videoEditor } from './video-editor.js';
 
 const POLL_MS = 5000;
 const visible = () => document.visibilityState === 'visible';
@@ -58,7 +61,12 @@ const isBanner = (j) => j?.kind === 'photo' && j.shape === 'banner';
 
 export async function render(ctx, route, root) {
   const id = route.id;
-  let page = null, loading = false, first = true, pollTimer = null;
+  // (2026-10-12) lookAgain: asked to load while a look was on its way (its answer may be from before what was just done: Make
+  // another, Delete), so one more look follows it
+  let page = null, loading = false, lookAgain = false, first = true, pollTimer = null;
+  // (2026-10-12) where the keyboard goes when its gallery is drawn again after Make another or Delete, if it was lost on the
+  // way (a busy button gives it up; a sheet closes onto a tile drawn again meanwhile): { place (ui.js focusPlace's), until }
+  let focusNext = null;
   const postersTried = new Set();
   const sigs = {};
 
@@ -91,12 +99,14 @@ export async function render(ctx, route, root) {
 
   // ---------- loading (its own wallet: inf-look moves one thing along; anyone: the public page) ----------
   async function load() {
-    if (loading) return;
+    if (loading) { lookAgain = true; return; }
     loading = true;
+    lookAgain = false;
     let r = ctx.session ? await ctx.act('inf-look', { id }) : null;
     if (!r || (!r.ok && r.status !== 404 && r.status !== 400)) r = await ctx.getJson(`inf=${id}`);
     loading = false;
     if (!ctx.alive()) return;
+    if (lookAgain) { load(); return; }
     skeleton.remove();
     if (r.status === 404 || r.status === 400) { page = null; gone(); return; }
     if (!r.ok) {
@@ -186,8 +196,16 @@ export async function render(ctx, route, root) {
     const shown = !banned();
     const coverSrc = !shown ? null : i.body ? infPic(id, i.body, 0, true) : i.portrait ? infPic(id, i.portrait.job, i.portrait.n, true) : null;
     const cover = h('div', { class: 'sa-cover', 'aria-hidden': 'true' }, coverSrc ? pic(coverSrc, { cls: 'sa-cover-pic', lazy: false }) : null);
-    const portrait = i.portrait && shown ? pic(infPic(id, i.portrait.job, i.portrait.n, true), { cls: 'sa-profile-pic', alt: '', lazy: false })
+    const face = i.portrait && shown ? pic(infPic(id, i.portrait.job, i.portrait.n, true), { cls: 'sa-profile-pic', alt: '', lazy: false })
       : h('span', { class: 'sa-profile-pic is-missing', 'aria-hidden': 'true' }, icon('spark'));
+    // (2026-10-11, the owner: "an option to change the profile even after generation") its own wallet changes its profile
+    // picture: one of its looks, its full body or one of its photos, framed as a square (free: only how it's shown changes)
+    let portrait = face;
+    if (mine() && i.status === 'ready' && !banned()) {
+      const edit = h('button', { type: 'button', class: 'sa-pfp-edit', 'aria-label': `Change ${i.name}'s profile picture`, title: 'Change its profile picture', dataset: { guide: 'pfp' } }, icon('camera'));
+      edit.addEventListener('click', profileSheet);
+      portrait = h('div', { class: 'sa-pfp' }, face, edit);
+    }
     const meta = [INF_STYLES[i.style], 'AI-generated', i.ready ? `made ${dayText(i.ready)}` : null].filter(Boolean).join(' · ');
     const badges = h('div', { class: 'sa-badges' });
     if (priv()) add(badges, h('span', { class: 'sa-badge is-private' }, icon('shield'), h('span', { text: 'Private: only people with its link' })));
@@ -250,6 +268,69 @@ export async function render(ctx, route, root) {
     ctx.toast(errorText(r.data?.error), 'bad');
   }
 
+  // ---------- (2026-10-11) its profile picture: one of its own pictures, framed as a square ----------
+  // Its looks (or, made from a photo another way, the portrait cut for it), its full body and its photos; its picked look again
+  // when it has a framed one. Saved on our server (inf-pfp); its photos, videos and 3D models are still made from its full body.
+  function pictureGroups() {
+    const i = inf();
+    const groups = [];
+    const own = [];
+    if (i.looks?.job) {
+      for (let n = 0; n < Math.min(4, Math.max(1, Number(i.looks.files) || 4)); n++) {
+        own.push({ job: i.looks.job, n, src: infPic(id, i.looks.job, n, true), big: infPic(id, i.looks.job, n), label: `Look ${n + 1}` });
+      }
+    } else if (i.look?.job) {
+      own.push({ job: i.look.job, n: i.look.n, src: infPic(id, i.look.job, i.look.n, true), big: infPic(id, i.look.job, i.look.n), label: 'Its first portrait' });
+    }
+    if (i.body) own.push({ job: i.body, n: 0, src: infPic(id, i.body, 0, true), big: infPic(id, i.body, 0), label: 'Full body', start: 'head' });
+    if (own.length) groups.push({ label: i.looks?.job ? 'Its looks and full body' : 'Its portrait and full body', items: own });
+    groups.push({ label: 'Its photos', items: photoItems(), empty: 'No photos of it yet: a photo made with the Photo tool can be its profile picture too.' });
+    return groups;
+  }
+  // its done photos, newest first (a meme and an X banner too: any of them can be framed)
+  function photoItems() {
+    const out = [];
+    for (const j of (page.jobs || []).filter((x) => x.kind === 'photo' && x.status === 'done')) {
+      const label = j.meme ? 'Meme' : j.shape === 'banner' ? 'X banner' : SHAPES[j.shape]?.name || 'Photo';
+      for (let n = 0; n < Math.min(4, Math.max(1, Number(j.files) || 1)); n++) {
+        out.push({ job: j.id, n, src: infPic(id, j.id, n, true), big: infPic(id, j.id, n), label, start: j.shape === 'tall' ? 'head' : null });
+      }
+      if (out.length >= 36) break;
+    }
+    return out;
+  }
+  async function profileSheet() {
+    const i = inf();
+    const current = i.pfp ? { ...i.pfp } : i.look ? { ...i.look, x: 0, y: 0, s: 1000 } : null;
+    const saved = (d) => {
+      page.influencer.portrait = d.portrait || page.influencer.look;
+      page.influencer.pfp = d.pfp || null;
+      sigs.head = null;
+      draw();
+      ctx.refreshMe();
+    };
+    const choice = await pickPicture({
+      title: `${i.name}'s profile picture`,
+      sub: "Pick one of its pictures, then frame its face. Free: it changes how it's shown (its page, Explore, My studio, a coin at first), not what it's made from.",
+      groups: pictureGroups(), current, saveLabel: 'Use this picture',
+      save: async (c) => {
+        const r = await ctx.act('inf-pfp', { id, from: { job: c.job, n: c.n, x: c.x, y: c.y, s: c.s } });
+        if (r.ok && r.data?.ok) { saved(r.data); return true; }
+        return errorText(r.data?.error);
+      },
+      reset: i.pfp ? {
+        label: 'Use its picked look again',
+        run: async () => {
+          const r = await ctx.act('inf-pfp', { id, from: null });
+          if (r.ok && r.data?.ok) { saved(r.data); return true; }
+          return errorText(r.data?.error);
+        },
+      } : null,
+    });
+    if (!ctx.alive() || !choice) return;
+    ctx.toast(choice.reset ? 'Back to its picked look' : 'Profile picture changed', 'good');
+  }
+
   async function remove() {
     const i = inf();
     const ok = await confirmSheet({
@@ -283,15 +364,17 @@ export async function render(ctx, route, root) {
     const i = inf();
     const position = page.position && i.job && page.position.job === i.job.id ? page.position.at : null;
     if (i.status === 'looks' || i.status === 'body') {
+      // (2026-10-11) one made from a photo with just its full body, or the photo as it is (no AI: a few seconds)
+      const asis = i.status === 'body' && i.way === 'asis';
       const tiles = i.status === 'looks'
         ? h('div', { class: 'sa-looks' }, ...[0, 1, 2, 3].map(() => h('span', { class: 'sa-look is-making', 'aria-hidden': 'true' })))
         : h('div', { class: 'sa-body-making' }, i.portrait ? pic(infPic(id, i.portrait.job, i.portrait.n), { cls: 'sa-look-pic', lazy: false }) : null, h('span', { class: 'sa-shimmer', 'aria-hidden': 'true' }));
       put(makingBox,
-        h('h2', { class: 'sa-h2', text: i.status === 'looks' ? 'Making its looks' : 'Making its full body' }),
+        h('h2', { class: 'sa-h2', text: i.status === 'looks' ? 'Making its looks' : asis ? 'Getting it ready' : 'Making its full body' }),
         h('p', { class: 'sa-progress-line' }, h('span', { class: 'sa-spin', 'aria-hidden': 'true' }), h('span', { text: makingText(i, { position }) })),
         // (round 4) how far along it is, and about how long is left
-        progressBar({ key: i.job?.id || `${id}-${i.status}`, kind: i.status, step: i.job?.step || 'queue', since: i.job?.created ?? null }),
-        h('p', { class: 'sa-muted sa-small', text: 'About a minute. You can leave this page: it keeps going, and My studio shows it when it\'s ready.' }),
+        progressBar({ key: i.job?.id || `${id}-${i.status}`, kind: asis ? 'asis' : i.status, step: i.job?.step || 'queue', since: i.job?.created ?? null }),
+        h('p', { class: 'sa-muted sa-small', text: `${asis ? 'A few seconds' : 'About a minute'}. You can leave this page: it keeps going, and My studio shows it when it's ready.` }),
         tiles);
       return;
     }
@@ -356,15 +439,20 @@ export async function render(ctx, route, root) {
       const b = h('button', { type: 'button', class: 'sa-media-open', 'aria-label': `${i.name}'s full body` },
         pic(infPic(id, i.body, 0, true), { cls: 'sa-media-pic' }), h('span', { class: 'sa-tag sa-media-tag' }, h('span', { text: 'Full body' })));
       b.addEventListener('click', () => photoSheet(ctx, { id: i.body, shape: 'tall' }, { name: i.name, inf: id, mine: mine(), priv: priv(), kind: 'body' }));
-      tiles.push(h('div', { class: 'sa-media is-tall' }, b));
+      tiles.push(h('div', { class: 'sa-media is-tall', id: `v-${i.body}` }, b));
     }
     for (const j of jobs.filter(shows)) {
       const shape = PHOTO_SHAPES[j.shape] ? j.shape : 'tall';
       const into = isBanner(j) ? banners : tiles;
       if (j.status === 'done') {
         into.push(mediaTile(ctx, item(j), { onopen: () => openJob(j), can: !mine() && !priv(), showName: false,
-          badge: j.kind === 'trend' ? { text: 'Trend', icon: 'zap' } : j.kind === 'video' ? { text: Number(j.parts) > 1 ? `Video · ${secondsText(j.seconds)}` : 'Video', icon: 'film' }
-            : isBanner(j) ? { text: 'X banner', icon: 'image' } : j.meme ? { text: 'Meme', icon: 'smile' } : null }));
+          // (2026-10-12) one saved from the video editor: "Edited", next to the video it's from
+          badge: j.kind === 'trend' ? { text: 'Trend', icon: 'zap' } : j.kind === 'video' && j.editor ? { text: 'Edited', icon: 'scissors' }
+            : j.kind === 'video' ? { text: Number(j.parts) > 1 ? `Video · ${secondsText(j.seconds)}` : 'Video', icon: 'film' }
+            : isBanner(j) ? { text: 'X banner', icon: 'image' } : j.meme ? { text: 'Meme', icon: 'smile' }
+              // (2026-10-12) one made with "Edit with words", or saved from the photo editor, told apart from the photo it's
+              // from, next to it
+              : j.edit ? { text: 'Edited', icon: 'wand' } : j.editor ? { text: 'Edited', icon: 'sliders' } : null }));
       } else if (making(j.status)) {
         into.push(h('div', { class: `sa-media is-${shape} is-making`, id: `v-${j.id}` }, h('span', { class: 'sa-shimmer', 'aria-hidden': 'true' }),
           h('span', { class: 'sa-media-state' }, h('span', { class: 'sa-spin', 'aria-hidden': 'true' }), h('span', { text: jobStateText(j, { position: position && position.job === j.id ? position.at : null }) }),
@@ -373,8 +461,22 @@ export async function render(ctx, route, root) {
             progressBar({ key: j.id, kind: progressKind(j), plan: jobPlan(j), step: jobStep(j), since: j.created ?? null, small: true })),
           h('span', { class: 'sa-media-cap' }, h('span', { text: jobTitle(j) }))));
       } else if (j.status === 'failed') {
-        into.push(h('div', { class: `sa-media is-${shape} is-failed`, id: `v-${j.id}` },
-          h('span', { class: 'sa-media-state' }, h('span', { text: jobStateText(j) })), h('span', { class: 'sa-media-cap' }, h('span', { text: jobTitle(j) }))));
+        // (2026-10-12, the editor) its own: "Try again" (the same words and settings, at the price of making it now: its credits
+        // came back) when trying again can work, and "Remove" (nothing is lost: it was never made)
+        const acts = [];
+        if (mine() && tryAgainOk(j)) {
+          const tryB = btn('Try again', { kind: 'ghost', size: 'sm', icon: 'refresh' });
+          tryB.addEventListener('click', () => again(j, tryB));
+          acts.push(tryB);
+        }
+        if (mine()) {
+          const rm = btn('', { kind: 'quiet', size: 'sm', icon: 'trash', 'aria-label': `Remove it: ${jobTitle(j)}`, title: 'Remove it' });
+          rm.addEventListener('click', () => removeJob(j, { ask: false, button: rm }));
+          acts.push(rm);
+        }
+        into.push(h('div', { class: `sa-media is-${shape} is-failed${acts.length ? ' has-acts' : ''}`, id: `v-${j.id}` },
+          h('span', { class: 'sa-media-state' }, h('span', { text: jobStateText(j) }), acts.length ? h('span', { class: 'sa-media-acts' }, ...acts) : null),
+          h('span', { class: 'sa-media-cap' }, h('span', { text: jobTitle(j) }))));
       }
     }
     const filters = h('div', { class: 'sa-filter', role: 'group', 'aria-label': 'Show' }, ...[['all', 'All'], ['photos', 'Photos'], ['videos', 'Videos']].map(([v, label]) => {
@@ -390,26 +492,180 @@ export async function render(ctx, route, root) {
       emptyNote = h('div', { class: 'sa-gempty' }, h('p', { class: 'sa-gempty-title', text: 'Nothing made yet' }),
         h('p', { class: 'sa-muted', text: `Photos, trend videos and videos of ${i.name} show up here as they're made.` }), start);
     }
+    // (2026-10-12) the keyboard's place kept across it: the same control of the same tile again, else (its tile went: deleted)
+    // the gallery's heading, so a look's new answer never throws it back to the top of the page
+    const place = focusPlace(galleryBox) || (focusNext && Date.now() < focusNext.until ? focusNext.place : null);
+    focusNext = null;
     put(galleryBox,
-      h('div', { class: 'sa-section-head sa-row-between' }, h('h2', { class: 'sa-h2', id: 'sa-gal-h', text: mine() ? 'Creations' : `${i.name}'s photos and videos` }), jobs.length ? filters : null),
+      h('div', { class: 'sa-section-head sa-row-between' }, h('h2', { class: 'sa-h2', id: 'sa-gal-h', tabindex: '-1', text: mine() ? 'Creations' : `${i.name}'s photos and videos` }), jobs.length ? filters : null),
       banners.length ? h('div', { class: 'sa-banners' }, h('h3', { class: 'sa-banners-title' }, icon('image'), h('span', { text: `X banners · ${BANNER.W} × ${BANNER.H}` })), h('div', { class: 'sa-banner-row' }, ...banners)) : null,
       tiles.length || !banners.length ? h('div', { class: 'sa-wall' }, ...tiles) : null,
       emptyNote);
+    focusBack(galleryBox, place, galleryBox.querySelector('#sa-gal-h'));
   }
 
   function openJob(j) {
     const i = inf();
     // (round 4) its own creations: captions for a post of it
     const onCaptions = mine() ? () => captionSheet(ctx, { job: j, name: i.name, inf: id }) : null;
+    // (2026-10-12, the editor) …and "Make another" and "Delete"; on a photo (a meme, an X banner), "Edit with words" and the
+    // photo editor too (one saved from the photo editor has no words and settings to make again); on a video or a trend video,
+    // the video editor (one saved from it neither)
+    const own = mine() ? {
+      cost: againCost(j), onAgain: j.editor ? null : (x) => again(x), onDelete: (x) => removeJob(x),
+      onEdit: j.kind === 'photo' ? (x) => editWithWords(x) : null, onEditor: j.kind === 'photo' ? (x) => openEditor(x) : null,
+      onVideoEditor: ['video', 'trend'].includes(j.kind) ? (x) => openVideoEditor(x) : null,
+    } : null;
     if (j.kind === 'photo') {
       // (an X banner is too wide to start a video or a trend video: those are tall, wide or square; and a meme's words would
       // come out garbled in one)
       const starts = !isBanner(j) && !j.meme;
-      photoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onCaptions,
+      photoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onCaptions, own,
         onVideo: starts ? (image) => openTool('video', { image }) : null, onTrend: starts ? (image) => openTool('trend', { image }) : null });
       return;
     }
-    videoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onCaptions });
+    videoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onCaptions, own });
+  }
+
+  // ---------- the editor (2026-10-12, the owner's choices): "Make another" and "Delete", for its own creations ----------
+  // What "Make another" costs now: the same choices at today's price (a video made before the model menu: Standard from a
+  // photo, else Anime, as our server picks); null when its choices aren't on the menu any more (our server says so)
+  function againCost(j) {
+    if (j.kind === 'trend') return price('trend');
+    if (j.kind === 'photo') return photoCredits({ model: j.model ?? null, quality: j.quality ?? null, shape: j.shape || 'tall', meme: j.meme ?? null }, ctx.level);
+    // (videoCredits(null) would be Standard's 5 seconds: a spec the menu doesn't offer any more is null here)
+    const spec = videoSpec({ model: j.model || (j.image ? 'standard' : 'anime'), seconds: j.seconds ?? null, sound: j.sound === true, quality: j.quality ?? null });
+    return spec ? videoCredits(spec, ctx.level) : null;
+  }
+  // The same words and settings, a new one next to it (never in its place). b: the button that asked (a failed tile's "Try
+  // again"), busy while it starts
+  async function again(j, b = null) {
+    const need = againCost(j);
+    // (the keyboard's place: its tile, or the tile's Try again; it comes back there once its gallery shows the new one)
+    const at = focusPlace(galleryBox);
+    const run = async () => {
+      if (Number.isFinite(need) && !(await enough(need))) return;
+      const r = await ctx.act('inf-again', { job: j.id });
+      const d = r.data || {};
+      if (r.ok && d.ok) {
+        ctx.toast(againMadeText(j), 'good');
+        if (at) focusNext = { place: at, until: Date.now() + 15_000 };
+        sigs.gallery = null;
+        load();
+        return;
+      }
+      if (d.error === 'short') {
+        ctx.toast(`That needs ${creditsText(need ?? 0)}: you have ${creditsText(d.have ?? ctx.credits)}.`, 'bad');
+        ctx.buyCredits({ need: need ?? 0 });
+        return;
+      }
+      ctx.toast(againErrorText(d, j), 'bad');
+    };
+    if (b) await busy(b, 'Starting…', run);
+    else await run();
+  }
+  // Off every page for good (its files deleted; a profile picture framed from it goes back to its picked look). ask: false for
+  // one that couldn't be made (nothing is lost: it was never made)
+  async function removeJob(j, { ask = true, button = null } = {}) {
+    const i = inf();
+    // something being made from it right now (a video or a trend video from this photo): said at once (our server says so too)
+    if ((page.jobs || []).some((x) => x.image === j.id && making(x.status))) { ctx.toast(errorText('job_in_use'), 'bad'); return; }
+    const pfp = i?.pfp?.job === j.id;
+    if (ask) {
+      const words = deleteJobText(j, { name: i?.name, pfp });
+      if (!(await confirmSheet({ title: words.title, text: words.text, yes: words.yes, danger: true }))) return;
+    }
+    const run = async () => {
+      const r = await ctx.act('inf-job-delete', { job: j.id });
+      // (its tile goes: the keyboard to its gallery's heading)
+      const toHeading = () => { focusNext = { place: { id: 'sa-gal-h', n: -1 }, until: Date.now() + 15_000 }; };
+      if (r.ok && r.data?.ok) {
+        ctx.toast(deletedText({ pfp: r.data.pfp === true }), 'good');
+        // gone from its gallery at once, then its page as our server has it (its profile picture, its numbers)
+        page.jobs = (page.jobs || []).filter((x) => x.id !== j.id);
+        toHeading();
+        draw();
+        load();
+        return;
+      }
+      ctx.toast(errorText(r.data?.error), 'bad');
+      if (r.data?.error === 'job_gone') { toHeading(); load(); }
+    };
+    if (button) await busy(button, '', run);
+    else await run();
+  }
+
+  // "Edit with words" (the same day, the owner's choice: "type a change … a new photo from that one; same price as a photo"): a
+  // change typed in words, and a new photo made from this one (a meme, an X banner) next to it, at that photo's price (rules.js
+  // editSpec: Classic, its own shape and quality; a meme keeps its words, an X banner its size). Its words are checked by our
+  // server like a scene's (PG-13, nobody real by name, no links)
+  const editCost = (j) => photoCredits(editSpec(j), ctx.level);
+  function editWithWords(j) {
+    const need = editCost(j);
+    const w = creationWord(j);
+    const s = sheet({ title: 'Edit with words', sub: `Type what should change: a new ${w} is made from this one, next to it.`, size: 'md' });
+    const areaId = nextId('edit');
+    const area = h('textarea', { class: 'sa-input sa-textarea', id: areaId, rows: 3, maxlength: EDIT.MAX, placeholder: 'For example: make the jacket red' });
+    const count = h('span', { class: 'sa-count', 'aria-hidden': 'true', text: `0/${EDIT.MAX}` });
+    const err = errLine(), msg = errLine();
+    area.addEventListener('input', () => { count.textContent = `${[...area.value].length}/${EDIT.MAX}`; say(err, ''); say(msg, ''); });
+    const ideas = h('div', { class: 'sa-ideas' }, h('span', { class: 'sa-hint', text: 'Ideas' }), ...EDIT_IDEAS.slice(0, 6).map((t) => {
+      const b = h('button', { type: 'button', class: 'sa-idea', text: t });
+      b.addEventListener('click', () => { area.value = t; area.dispatchEvent(new Event('input')); area.focus(); });
+      return b;
+    }));
+    const shape = PHOTO_SHAPES[j.shape] ? j.shape : 'tall';
+    add(s.body,
+      h('div', { class: 'sa-edit-from' }, pic(infPic(id, j.id, 0, true), { cls: `sa-edit-from-pic is-${shape}`, alt: `The ${w} it's made from` }),
+        h('div', { class: 'sa-edit-from-text' }, h('p', { class: 'sa-label', text: `From this ${w}` }), h('p', { class: 'sa-muted', text: editNote(j) }))),
+      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: areaId, text: 'What should change?' }), area,
+        h('div', { class: 'sa-field-foot' }, err, count), ideas),
+      msg);
+    const cancel = btn('Cancel', { kind: 'ghost' });
+    cancel.addEventListener('click', () => s.close());
+    const go = btn(Number.isFinite(need) ? `Make it · ${num(need)} credits` : 'Make it', { kind: 'primary', icon: 'wand' });
+    go.addEventListener('click', () => {
+      const v = area.value.trim();
+      if ([...v].length < EDIT.MIN) { say(err, wordsText('edit', v ? 'short' : 'empty')); area.focus(); return; }
+      busy(go, 'Starting…', async () => {
+        if (Number.isFinite(need) && !(await enough(need))) return;
+        const r = await ctx.act('inf-make', { id, kind: 'photo', image: j.id, edit: v });
+        if (!made(r, need ?? 0, { msg, onWords: (d) => { say(d.field === 'edit' ? err : msg, wordsText(d.field, d.why)); area.focus(); } })) return;
+        s.close();
+        ctx.toast(editMadeText(j), 'good');
+        // (the keyboard: back on its tile, the sheet's closing put it there, once its gallery shows the new one)
+        const at = focusPlace(galleryBox);
+        if (at) focusNext = { place: at, until: Date.now() + 15_000 };
+        sigs.gallery = null;
+        load();
+      });
+    });
+    s.setFoot(cancel, go);
+    requestAnimationFrame(() => area.focus());
+  }
+
+  // The photo editor (the same day, the owner's choice: "Photo editor (Recommended)": free, no AI, in this browser): saved as a
+  // new photo, its gallery again, the keyboard back on the photo it's from
+  function openEditor(j) {
+    const at = focusPlace(galleryBox);
+    photoEditor(ctx, { inf: id, job: j, name: inf()?.name, onSaved: () => {
+      const back = focusPlace(galleryBox) || at;
+      if (back) focusNext = { place: back, until: Date.now() + 15_000 };
+      sigs.gallery = null;
+      load();
+    } });
+  }
+
+  // The video editor (the same day, the owner's choice: "Video editor": trim it, words on it, its shape; made by our clock, free,
+  // 10 a day): saved as a new video, its gallery again (the new one being made), the keyboard back on the video it's from
+  function openVideoEditor(j) {
+    const at = focusPlace(galleryBox);
+    videoEditor(ctx, { inf: id, job: j, onSaved: () => {
+      const back = focusPlace(galleryBox) || at;
+      if (back) focusNext = { place: back, until: Date.now() + 15_000 };
+      sigs.gallery = null;
+      load();
+    } });
   }
 
   // ---------- its 3D models ----------
@@ -507,7 +763,7 @@ export async function render(ctx, route, root) {
   const toolsSig = () => ({
     ids: toolsNow().map((t) => t.id), instant,
     x: instant ? [ctx.level, ctx.info?.threeD, startPhotos(page.jobs)[0]?.id ?? null] : tool.id === '3d' ? [ctx.level, ctx.info?.burns?.model]
-      : tool.id === 'coin' ? [priv()] : tool.id === 'video' || tool.id === 'photo' ? [startPhotos(page.jobs).map((j) => j.id).join()] : null,
+      : tool.id === 'coin' ? [priv(), inf()?.portrait?.job ?? null] : tool.id === 'video' || tool.id === 'photo' ? [startPhotos(page.jobs).map((j) => j.id).join()] : null,
   });
   function openTool(toolId, opts = {}) {
     // (Instant on: a tool asked for by name, like "Make a video from it", shows that tool with every choice)
@@ -874,7 +1130,9 @@ export async function render(ctx, route, root) {
   // (Long: none), and reference pictures
   function videoTool(host, { image = null } = {}) {
     const i = inf();
-    const animeOk = (i.style === 'anime' || i.style === 'toon') && i.mode !== 'face';
+    // (2026-10-11) Anime is for the drawn styles (src/studio/rules.js drawnStyle: anime, comics, 3D, toys and art, or a drawing
+    // with no style picked), as our server says
+    const animeOk = drawnStyle(i);
     const st = { model: image ? 'standard' : animeOk ? 'anime' : 'standard', seconds: null, quality: '720p', sound: true };
     const scene = sceneField(VIDEO_IDEAS);
     const msg = errLine();
@@ -885,7 +1143,7 @@ export async function render(ctx, route, root) {
     const lvl = () => ctx.level;
     const models = cardPick({
       legend: 'Model',
-      choices: Object.entries(VIDEO_MODELS).map(([value, m]) => ({ value, name: m.name, note: m.note, off: value === 'anime' && !animeOk, why: 'For anime and 3D cartoon influencers' })),
+      choices: Object.entries(VIDEO_MODELS).map(([value, m]) => ({ value, name: m.name, note: m.note, off: value === 'anime' && !animeOk, why: ANIME_WHY })),
       value: st.model, onchange: (v) => { st.model = v; sync(); },
     });
     const lenBox = h('div', { class: 'sa-field' });
@@ -1156,8 +1414,13 @@ export async function render(ctx, route, root) {
   }
 
   // ---------- Coin: a launch link for a coin with its face (launched from their own wallet, on the launch page) ----------
+  // (2026-10-11, the owner's "Profile or its photos") its picture: its profile picture as it is now, or one of its photos framed
+  // as a circle (kept here while the page is open: { profile: true } or { job, n, x, y, s, src })
+  let coinPic = { profile: true };
   function coinTool(host) {
     const i = inf();
+    // a photo picked before that's gone since: its profile picture again
+    if (!coinPic.profile && !(page.jobs || []).some((j) => j.id === coinPic.job && j.status === 'done')) coinPic = { profile: true };
     const nameId = nextId('cn'), tickId = nextId('ct'), lineId = nextId('cl');
     const cname = h('input', { class: 'sa-input', id: nameId, type: 'text', maxlength: 32, autocomplete: 'off', value: i.name });
     const tick = h('input', { class: 'sa-input', id: tickId, type: 'text', maxlength: 16, autocomplete: 'off', spellcheck: 'false', placeholder: 'TICKER', value: String(i.name).replace(/[^\p{L}\p{N}]/gu, '').toUpperCase().slice(0, 10) });
@@ -1172,7 +1435,8 @@ export async function render(ctx, route, root) {
     go.setPrice('Free');
     go.node.addEventListener('click', () => busy(go.node, 'Checking…', async () => {
       if (!agreed) { say(msg, 'Tick the box first: it puts a real person\'s face on a public coin, for good.'); ws.reveal(agree); return; }
-      const r = await ctx.act('inf-coin', { id, name: cname.value.trim(), symbol: tick.value.trim().replace(/^\$+/, ''), description: line.value.trim() });
+      const picture = coinPic.profile ? 'profile' : { job: coinPic.job, n: coinPic.n, x: coinPic.x, y: coinPic.y, s: coinPic.s };
+      const r = await ctx.act('inf-coin', { id, name: cname.value.trim(), symbol: tick.value.trim().replace(/^\$+/, ''), description: line.value.trim(), picture });
       const d = r.data || {};
       if (r.ok && d.ok && d.link) {
         const open = linkBtn('Open the launch page ↗', d.link, { kind: 'primary', size: 'lg', target: '_blank', rel: 'noopener noreferrer', class: 'sa-btn sa-btn-primary sa-btn-lg sa-btn-wide' });
@@ -1191,15 +1455,48 @@ export async function render(ctx, route, root) {
         return;
       }
       if (d.error === 'coin') { say(msg, coinText(d.reason)); return; }
+      if (d.error === 'picture') { coinPic = { profile: true }; drawPicRow(); }
       say(msg, errorText(d.error));
     }));
+    // its picture: a circle like clank.trade's, and Change (its profile picture, or one of its photos framed as a circle)
+    const picRow = h('div', { class: 'sa-coinpic' });
+    const picLabelId = nextId('cpl');
+    function drawPicRow() {
+      const now = inf();
+      const preview = coinPic.profile
+        ? (now.portrait ? h('img', { class: 'sa-coinpic-img', src: infPic(id, now.portrait.job, now.portrait.n, true), alt: '' }) : h('span', { class: 'sa-coinpic-img' }))
+        : framedPic(coinPic.src, coinPic, { round: true }).node;
+      const change = btn('Change', { kind: 'ghost', size: 'sm', icon: 'image', 'aria-describedby': picLabelId });
+      change.addEventListener('click', async () => {
+        const got = await pickPicture({
+          title: 'Its coin\'s picture', sub: 'Its profile picture as it is, or one of its photos framed as a circle.', round: true,
+          current: coinPic, saveLabel: 'Use this picture',
+          groups: [
+            { label: 'Its profile picture', items: now.portrait ? [{ profile: true, src: infPic(id, now.portrait.job, now.portrait.n, true), label: 'As it is now' }] : [] },
+            { label: 'Its photos', items: photoItems(), empty: 'No photos of it yet: a photo made with the Photo tool can be its coin\'s picture.' },
+          ],
+        });
+        if (!got || !host.alive()) return;
+        coinPic = got.profile ? { profile: true } : got;
+        say(msg, '');
+        drawPicRow();
+        picRow.querySelector('button')?.focus();
+      });
+      put(picRow, preview,
+        h('div', { class: 'sa-coinpic-words' },
+          h('span', { class: 'sa-coinpic-title', id: picLabelId, text: coinPic.profile ? 'Its profile picture' : 'One of its photos' }),
+          h('span', { class: 'sa-coinpic-note', text: 'Shown as a circle on clank.trade' })),
+        change);
+    }
+    drawPicRow();
     put(host.body,
       hint('A coin with its face, launched from your own wallet on clank.trade.'),
+      h('div', { class: 'sa-field' }, h('span', { class: 'sa-label', text: 'Its picture' }), picRow),
       h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: nameId, text: 'Its name' }), cname),
       h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: tickId, text: 'Its ticker' }), tick),
       h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: lineId, text: 'Its line (optional)' }), line),
       h('ul', { class: 'sa-ticks' },
-        h('li', { text: `Its picture is ${i.name}'s look. You launch it from your own wallet on the launch page, on clank.trade's own contracts: the coin is yours.` }),
+        h('li', { text: `Its picture is the one above: ${i.name}'s profile picture, or one of its photos you framed. You launch it from your own wallet on the launch page, on clank.trade's own contracts: the coin is yours.` }),
         h('li', { text: 'The wallet that launches needs 10,000+ $AGI held or burned (nothing is spent). Launching is free; your wallet pays a small network fee in ETH.' }),
         h('li', { text: 'A coin is public and permanent: its name, ticker and picture can never be changed or deleted.' })),
       priv() ? h('div', { class: 'sa-consent is-warn' }, agree, h('label', { for: agreeId, text: "I understand this puts a real person's face on a public coin, for good (deleting the influencer can't take it off the coin), and they agreed to that too." })) : null,

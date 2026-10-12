@@ -100,14 +100,40 @@ for (const fn of ['inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim'
   'inf_ref_bind', 'inf_ref_settle']) {
   MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (its round 4, phase 3: gifts and invites; it ends with influencers_ready = 1)`;
 }
-// …and its phase 4 (the same day: the model menu, reference pictures, long videos, memes): inf_make takes the menu's parts
-// (an older inf_make has none of them), inf_job_part is new
-for (const fn of ['inf_make', 'inf_job_part']) {
+// …and its phase 4 (the same day: the model menu, reference pictures, long videos, memes): inf_job_part is new (inf_make took
+// the menu's parts then: since the editor its own line, below)
+for (const fn of ['inf_job_part']) {
   MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (its round 4, phase 4: the model menu, references, long videos and memes; it ends with influencers_ready = 1)`;
 }
 // …and giving access (2026-10-11: who may use AGI Studio while it's private, from the owner's tab)
 for (const fn of ['inf_access_list', 'inf_access_set']) {
   MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (giving access from the owner's tab; it ends with influencers_ready = 1)`;
+}
+// …and its 26 styles and the three ways to start from a photo (2026-10-11): inf_start takes its way (an older one has none),
+// inf_upload_set whether a picture shows the whole person and where its head is
+for (const fn of ['inf_start', 'inf_upload_set']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (its 26 styles and the ways to start from a photo; it ends with influencers_ready = 1)`;
+}
+// …and changing an influencer's profile picture after it's made (2026-10-11)
+for (const fn of ['inf_pfp_set', 'inf_pfp_of']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (changing an influencer's profile picture; it ends with influencers_ready = 1)`;
+}
+// …and the owner's gift links of free credits (2026-10-12)
+for (const fn of ['inf_owner_link', 'inf_owner_links']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (the owner's gift links of free credits; it ends with influencers_ready = 1)`;
+}
+// …and the editor (2026-10-12): deleting a creation, and "Edit with words" (inf_make takes its change: an older one has none,
+// and before round 4's phase 4 none of the model menu's parts either)
+for (const fn of ['inf_job_delete', 'inf_make']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1)`;
+}
+// …and the photo editor (the same day): a photo saved from it, and how many a wallet saved today
+for (const fn of ['inf_tool_take', 'inf_photo_add']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (the photo editor; it ends with influencers_ready = 1)`;
+}
+// …and the video editor (the same day): a cut asked for, made by the clock, and the next one to make
+for (const fn of ['inf_cut_add', 'inf_cut_done', 'inf_cut_due']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (the video editor; it ends with influencers_ready = 1)`;
 }
 
 // CloakMesh's waitlist (inference.agi1.app, 2026-10-03): supabase/cloakmesh.sql

@@ -8,7 +8,7 @@ import {
 } from '../rules.js';
 import {
   priceOf, shareJobUrl, errorText, compact, likeErrorText, likesText, burnCheckText, shortAddress, num, jobMeta, captionErrorText,
-  captionsLeftText, postOnXUrl,
+  captionsLeftText, postOnXUrl, downloadText,
 } from '../app-words.js';
 import { readyCaptions } from '../captions.js';
 import { BURN_ADDRESS, BURN_EXPLORER } from '../../lib/burns.js';
@@ -179,8 +179,47 @@ export function promptBlock(ctx, text, { label = 'Prompt' } = {}) {
   return h('div', { class: 'sa-prompt' }, h('div', { class: 'sa-prompt-head' }, h('span', { class: 'sa-prompt-label', text: label }), copy), words, live);
 }
 
+// ---------- the editor (2026-10-12): over one of its own creations seen big, "Make another" (the same words and settings, a
+// new one next to it, at the price of making it now) and "Delete", first in its sheet so they're in view as it opens (under
+// it, a tall picture put them below the fold); and on a photo (a meme, an X banner) "Edit with words" first (a change typed in
+// words: a new photo from it, next to it) and "Edit photo" (the photo editor: free, in this browser). Delete is its trash can
+// alone (named for screen readers and on hover), so the four fit on one line on a computer. own: { cost (credits, or null when
+// its model left the menu), onAgain (none for one saved from the photo editor or the video editor), onDelete, onEdit and
+// onEditor (a photo's), onVideoEditor (a video's or a trend video's: "Edit video", the video editor) } (each called once the
+// sheet is closed) ----------
+function editRow(s, j, own) {
+  if (!own) return null;
+  const go = (label, ic, fn, extra = {}) => {
+    const b = btn(label, { kind: 'ghost', size: 'sm', icon: ic, ...extra });
+    b.addEventListener('click', () => { s.close(); fn(j); });
+    return b;
+  };
+  const edit = j.kind === 'photo' && own.onEdit ? go('Edit with words', 'wand', own.onEdit) : null;
+  const editor = j.kind === 'photo' && own.onEditor ? go('Edit photo', 'sliders', own.onEditor)
+    : ['video', 'trend'].includes(j.kind) && own.onVideoEditor ? go('Edit video', 'scissors', own.onVideoEditor) : null;
+  const again = own.onAgain ? go(Number.isFinite(own.cost) ? `Make another · ${num(own.cost)} credits` : 'Make another', 'refresh', own.onAgain) : null;
+  const del = go('', 'trash', own.onDelete, { kind: 'quiet', class: 'sa-btn sa-btn-quiet sa-btn-sm sa-edit-delete', 'aria-label': 'Delete', title: 'Delete' });
+  return h('div', { class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' }, edit, editor, again, del);
+}
+
+// (2026-10-12) its maker's own download: clean for a holder of STUDIO_CLEAN_AGI $AGI (server/inf-clean.js), else as everyone's
+function ownDownload(ctx, a, { job, n = 0, real = false }) {
+  a.addEventListener('click', async (e) => {
+    if (!(Number(ctx.info?.cleanAgi) > 0)) return;
+    e.preventDefault();
+    if (a.getAttribute('aria-busy') === 'true') return;
+    a.setAttribute('aria-busy', 'true');
+    const r = await ctx.act('inf-dl', { job, n });
+    a.removeAttribute('aria-busy');
+    const url = r.ok && typeof r.data?.url === 'string' && r.data.url.startsWith('/api/launch?') ? r.data.url : a.getAttribute('href');
+    location.assign(url);
+    ctx.toast(downloadText(r.ok ? r.data : null, { real }), r.ok && r.data?.clean ? 'good' : undefined);
+  });
+  return a;
+}
+
 // ---------- a done video, played: its influencer, a heart, Download (with the share mark once it's made), Share, Report ----------
-export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCaptions = null }) {
+export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCaptions = null, own = null }) {
   const s = sheet({ title: name || 'A video', sub: jobMeta(v), size: 'md' });
   const shape = SHAPES[v.shape] ? v.shape : 'tall';
   const video = h('video', {
@@ -188,11 +227,16 @@ export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCa
     ...(v.poster ? { poster: infPoster(inf, v.id) } : {}), 'aria-label': `${name}: an AI-made video`,
   });
   const url = `${location.origin}${ctx.href(`/i/${inf}`)}#v-${v.id}`;
-  add(s.body, h('div', { class: `sa-player-wrap is-${shape}` }, video), promptOf(v) ? promptBlock(ctx, promptOf(v), { label: v.scene ? 'Prompt' : 'Its trend\'s prompt' }) : null);
+  // (its own: Make another and Delete first, in view as it opens: under it they were below the fold)
+  add(s.body, mine ? editRow(s, v, own) : null, h('div', { class: `sa-player-wrap is-${shape}` }, video),
+    // (2026-10-12) one saved from the video editor: cut from one of its videos, with no prompt of its own
+    v.kind === 'video' && v.editor === true ? h('p', { class: 'sa-edit-words' }, icon('scissors'), h('span', { text: 'Edited in the video editor' }))
+      : promptOf(v) ? promptBlock(ctx, promptOf(v), { label: v.scene ? 'Prompt' : 'Its trend\'s prompt' }) : null);
   const foot = [];
   if (ctx.route.view !== 'influencer') foot.push(linkBtn(`See ${name}`, ctx.href(`/i/${inf}`), { kind: 'primary', dataset: { saLink: '' } }));
   if (!priv) foot.push(likeButton(ctx, { job: v.id, likes: v.likes, can: !mine, cls: 'sa-heart-lg', fresh: false }));
-  foot.push(linkBtn('Download', infVideoDl(v.id), { kind: 'ghost', icon: 'download' }));
+  const dl = linkBtn('Download', infVideoDl(v.id), { kind: 'ghost', icon: 'download' });
+  foot.push(mine ? ownDownload(ctx, dl, { job: v.id, real: priv }) : dl);
   foot.push(linkBtn('Share on X ↗', shareJobUrl(name, v.kind, url), { kind: 'ghost', icon: 'share', target: '_blank', rel: 'noopener noreferrer' }));
   // (round 4) captions for a post of it (its own wallet's)
   if (mine && onCaptions) {
@@ -211,15 +255,22 @@ export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCa
 
 // ---------- a photo seen big: a heart, Download (with the share mark), Share, and (its own) a video or a trend from it ----------
 // kind: 'photo' | 'body' (its full body: its photos, videos and 3D model start from it)
-export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind = 'photo', onVideo = null, onTrend = null, onCaptions = null }) {
+export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind = 'photo', onVideo = null, onTrend = null, onCaptions = null, own = null }) {
   const s = sheet({ title: kind === 'body' ? `${name}: full body` : name || 'Photo', sub: kind === 'body' ? 'Its photos, videos and 3D model start from this.' : jobMeta({ ...j, kind: 'photo' }), size: 'md' });
   const shape = PHOTO_SHAPES[j.shape] ? j.shape : 'tall';
   const banner = kind === 'photo' && shape === 'banner';
   // (round 4, phase 4) a meme: its words are in the picture (said here too, for anyone who can't see it)
   const memeWords = kind === 'photo' && j.meme && j.caption ? String(j.caption).split('\n').join(' / ') : null;
-  const big = pic(infPic(inf, j.id, 0), { cls: `sa-big-pic is-${shape}`, alt: `${name}: ${kind === 'body' ? 'full body' : banner ? `an X banner${j.scene ? `, ${j.scene}` : ''}` : memeWords ? `a meme that says “${memeWords}”` : j.scene || 'a photo'}`, lazy: false });
-  add(s.body, h('div', { class: `sa-big-wrap${banner ? ' is-banner' : ''}` }, big), memeWords ? h('p', { class: 'sa-meme-words', text: `“${memeWords}”` }) : null,
+  // (2026-10-12, the editor) a photo made with "Edit with words": its change, said with it
+  const edited = kind === 'photo' && j.edit ? String(j.edit) : null;
+  // (…and one saved from the photo editor: said so)
+  const byEditor = kind === 'photo' && j.editor === true;
+  const big = pic(infPic(inf, j.id, 0), { cls: `sa-big-pic is-${shape}`, alt: `${name}: ${kind === 'body' ? 'full body' : banner ? `an X banner${j.scene ? `, ${j.scene}` : ''}` : memeWords ? `a meme that says “${memeWords}”` : j.scene || 'a photo'}${edited ? `, edited: ${edited}` : byEditor ? ', edited in the photo editor' : ''}`, lazy: false });
+  add(s.body, mine && kind === 'photo' ? editRow(s, j, own) : null, h('div', { class: `sa-big-wrap${banner ? ' is-banner' : ''}` }, big),
+    memeWords ? h('p', { class: 'sa-meme-words', text: `“${memeWords}”` }) : null,
     kind === 'photo' && j.scene ? promptBlock(ctx, String(j.scene)) : null,
+    edited ? h('p', { class: 'sa-edit-words' }, icon('wand'), h('span', { text: `Edited with words: “${edited}”` })) : null,
+    byEditor ? h('p', { class: 'sa-edit-words' }, icon('sliders'), h('span', { text: 'Edited in the photo editor' })) : null,
     // (round 4) an X banner: where it goes on X
     banner && mine ? h('p', { class: 'sa-note', text: 'On X: your profile → Edit profile → tap the header picture, and pick this one. Its lower left is where your profile picture sits.' }) : null);
   const foot = [];
@@ -236,7 +287,9 @@ export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind
   if (ctx.route.view !== 'influencer') foot.push(linkBtn(`See ${name}`, ctx.href(`/i/${inf}`), { kind: 'primary', dataset: { saLink: '' } }));
   if (kind === 'photo' && !priv) foot.push(likeButton(ctx, { job: j.id, likes: j.likes, can: !mine, cls: 'sa-heart-lg', fresh: false }));
   // (its download carries the share mark: "Made with AGI Studio · AI-generated", drawn on by our server)
-  foot.push(h('a', { class: 'sa-btn sa-btn-ghost', href: infPhotoDl(inf, j.id, 0), download: '' }, icon('download'), h('span', { text: 'Download' })));
+  // (2026-10-12: its maker's own, clean for a holder; every download says inside its file that it's AI-made)
+  const dl = h('a', { class: 'sa-btn sa-btn-ghost', href: infPhotoDl(inf, j.id, 0), download: '' }, icon('download'), h('span', { text: 'Download' }));
+  foot.push(mine ? ownDownload(ctx, dl, { job: j.id, real: priv }) : dl);
   if (kind === 'photo') foot.push(linkBtn('Share on X ↗', shareJobUrl(name, 'photo', `${location.origin}${ctx.href(`/i/${inf}`)}#v-${j.id}`), { kind: 'ghost', icon: 'share', target: '_blank', rel: 'noopener noreferrer' }));
   // (round 4) captions for a post of it (its own wallet's)
   if (mine && kind === 'photo' && onCaptions) {

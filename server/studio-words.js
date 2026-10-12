@@ -127,10 +127,11 @@ const MOTION = {
   cartoon: 'Cartoon-style 3D animation with bright, clean colors',
   realistic: 'Polished video-game-style 3D animation',
 };
-export function videoPrompt({ scene, style }) {
+// (2026-10-11) motion: an AGI Studio influencer's own style words (server/inf-words.js STYLE), else the studio's three
+export function videoPrompt({ scene, style, motion = null }) {
   const s = String(scene ?? '').trim();
   const sentence = `${s.charAt(0).toUpperCase()}${s.slice(1)}${/[.!?…]$/.test(s) ? '' : '.'}`;
   return `@Image1 is the main character of this video: keep its look exactly as in the picture (its face, body, colors and `
-    + `outfit). ${sentence} ${MOTION[style] || MOTION.cartoon}, one continuous shot with a smooth camera. Family-friendly. Anyone `
+    + `outfit). ${sentence} ${motion || MOTION[style] || MOTION.cartoon}, one continuous shot with a smooth camera. Family-friendly. Anyone `
     + 'else in it is a made-up background extra, never a real person. No text, no captions, no logos, no watermarks.';
 }

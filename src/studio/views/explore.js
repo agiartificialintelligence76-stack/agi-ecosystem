@@ -4,7 +4,7 @@
 // same for everyone (/api/launch?inf-explore and ?inf-stats, kept a little by the CDN); a signed-in wallet's hearts after.
 import { h, icon, btn, linkBtn, pic, put, add } from '../ui.js';
 import { infPic, infPoster, infExample, clankProfileUrl } from '../rules.js';
-import { studioText, MODE_CARDS, STAT_NAMES, compact, tiny, weekText, prizeText } from '../app-words.js';
+import { studioText, MODE_CARDS, STAT_NAMES, HOLDER_LINE, compact, tiny, weekText, prizeText } from '../app-words.js';
 import { videoSheet, photoSheet, loadLiked, likeButton } from './shared.js';
 import { gallery } from './gallery.js';
 
@@ -12,6 +12,19 @@ const MODE_ICON = { design: 'wand', picture: 'image' };
 const MODE_EXAMPLES = { design: ['style-anime', 'style-real', 'style-toon'], picture: ['look-feminine', 'look-masculine', 'look-androgynous'] };
 const list = (x) => (Array.isArray(x) ? x : []);
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// (2026-10-11, the owner: "and i wan this moving pleae, Create your own AGI-1. / influencer. / AI. / Viral content. … the only
+// moving is the words afer the word "own" and put under line", then "and also the images moving there okay") The top's heading
+// is "Create your own ___": the words after "own" change every few seconds, sliding in, underlined (the line follows their
+// width); and its wall of what people made scrolls slowly, its columns in turns up and down (CSS). Both rest while the top is
+// off screen or the tab is hidden, and stand still for "reduce motion" (its word then: "influencer"). Screen readers get one
+// steady sentence.
+export const HERO_WORDS = ['AGI-1', 'influencer', 'AI', 'viral content'];
+export const HERO_STILL = 1;
+export const HERO_EVERY_MS = 2600;
+const HERO_SAID = 'Create your own AGI-1, influencer, AI or viral content.';
+// a wall's column: its pictures twice over, so it scrolls round without a seam (each set taller than the wall)
+const WALL_EACH = 6;
 
 export async function render(ctx, route, root) {
   document.title = 'AGI Studio · make your own AI influencer';
@@ -23,13 +36,23 @@ export async function render(ctx, route, root) {
   };
 
   // ---------- the top: the app in a line, and a wall of what people made ----------
-  const wall = h('div', { class: 'sa-hero-wall', 'aria-hidden': 'true' }, ...[0, 1, 2, 3].map(() => h('div', { class: 'sa-wall-col' })));
+  const wall = h('div', { class: 'sa-hero-wall', 'aria-hidden': 'true' }, ...[0, 1, 2, 3].map(() => h('div', { class: 'sa-wall-col' }, h('div', { class: 'sa-wall-track' }))));
   const seeTrends = btn('Browse trends', { kind: 'ghost', icon: 'zap' });
+  const still = calm();
+  const first = still ? HERO_STILL : 0;
+  const rotor = h('span', { class: 'sa-rotor' },
+    // (an invisible letter in the line: the words beside it are placed over it, so the line's height and baseline are its)
+    h('span', { class: 'sa-rotor-ghost', text: 'A' }),
+    ...HERO_WORDS.map((w, k) => h('span', { class: `sa-rotor-word sa-grad${k === first ? ' is-on' : ''}`, text: w })));
   const hero = h('section', { class: 'sa-hero' },
     h('div', { class: 'sa-hero-copy' },
       h('p', { class: 'sa-eyebrow' }, h('span', { class: 'sa-live-dot', 'aria-hidden': 'true' }), h('span', { text: 'AGI Studio · AI influencers' })),
-      h('h1', { class: 'sa-display sa-hero-title', tabindex: '-1' }, h('span', { text: 'Your own ' }), h('span', { class: 'sa-grad', text: 'AI influencer' })),
+      h('h1', { class: 'sa-display sa-hero-title', tabindex: '-1' },
+        h('span', { class: 'sa-sr', text: HERO_SAID }),
+        h('span', { class: 'sa-hero-line', 'aria-hidden': 'true', text: 'Create your own' }),
+        h('span', { class: 'sa-hero-line', 'aria-hidden': 'true' }, rotor, h('span', { text: '.' }))),
       h('p', { class: 'sa-hero-sub', text: 'Design one in a few taps or start from a photo. Then photos in any scene, trend videos, short videos, a 3D model and a coin with its face.' }),
+      holderLine(),
       h('div', { class: 'sa-row sa-hero-cta' },
         linkBtn('Create an influencer', ctx.href('/create'), { kind: 'primary', icon: 'plus', dataset: { saLink: '', guide: 'start' } }),
         seeTrends),
@@ -69,6 +92,7 @@ export async function render(ctx, route, root) {
     h('div', { class: 'sa-section-head' }, h('h2', { class: 'sa-h2', id: 'sa-modes-h', text: 'Two ways to start' })), modes);
 
   add(root, h('div', { class: 'sa-page sa-explore' }, hero, stats, spot, h('div', { class: 'sa-section sa-explore-gallery' }, g.node), modesBox));
+  heroMotion(ctx, hero, rotor, { still, first });
   // (2026-10-11) its guide: the first time this browser opens Explore, and with the bar's ? button
   ctx.guide('explore');
   fillModes();
@@ -90,13 +114,16 @@ export async function render(ctx, route, root) {
     ? photoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id })
     : videoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id }));
 
-  // the top's wall: what people made (pictures only: nothing plays by itself)
+  // the top's wall: what people made (pictures only: no video plays by itself), scrolling slowly (CSS: .sa-wall-track)
   const covers = fresh.map((v) => (v.kind === 'photo' ? infPic(v.inf?.id, v.id, 0, true) : v.poster ? infPoster(v.inf?.id, v.id) : null)).filter(Boolean)
     .concat(list(data.influencers).filter((i) => i.portrait).map((i) => infPic(i.id, i.portrait.job, i.portrait.n, true)));
   if (covers.length >= 4) {
-    // 12 pictures, so the wall is full (with fewer, some come round again: it's decoration, hidden from screen readers)
-    const cols = [...wall.children];
-    for (let k = 0; k < 12; k++) add(cols[k % 4], pic(covers[k % Math.min(covers.length, 12)], { cls: 'sa-wall-pic', lazy: k > 3 }));
+    // up to 12 pictures, each column its own turn of them (with fewer, some come round again: it's decoration, hidden from screen
+    // readers), and each column's twice over so it scrolls round without a seam (the same pictures: downloaded once)
+    for (const [c, track] of [...wall.querySelectorAll('.sa-wall-track')].entries()) {
+      const mine = wallColumn(covers, c);
+      for (const [k, url] of [...mine, ...mine].entries()) add(track, pic(url, { cls: 'sa-wall-pic', lazy: k > 1 }));
+    }
     hero.classList.add('has-wall');
   }
 
@@ -130,4 +157,65 @@ export async function render(ctx, route, root) {
     loadLiked(ctx, [sp.job]);
     ctx.on('wallet', () => loadLiked(ctx, [sp.job]));
   }
+}
+
+// (2026-10-11, the owner: "and can you also add in the front page that holders get discounts"; "AGI Studio's Explore
+// (Recommended)") Under the top's words: what $AGI holders get here (src/studio/app-words.js HOLDER_LINE: the numbers from
+// DISCOUNT and FREE_CREDITS), the levels and where they start, and that it's a thank-you, never an investment. Never "buy"
+// (hard rule 8): where it starts, held or burned for messages.
+function holderLine() {
+  return h('div', { class: 'sa-holders', role: 'group', 'aria-labelledby': 'sa-holders-h' },
+    h('p', { class: 'sa-holders-title', id: 'sa-holders-h' }, icon('heart'), h('span', { text: HOLDER_LINE.title })),
+    h('ul', { class: 'sa-holders-rows' }, ...HOLDER_LINE.rows.map(([lvl, need, what]) => h('li', { class: 'sa-holders-row' },
+      h('span', { class: 'sa-holders-lvl', text: lvl }), h('span', { class: 'sa-holders-need', text: need }), h('span', { class: 'sa-holders-what', text: what })))),
+    h('p', { class: 'sa-holders-fine', text: HOLDER_LINE.fine }));
+}
+
+// A wall column's pictures (column c of 4): WALL_EACH of the covers, starting a quarter further round for each column, so no
+// column shows the same picture twice in a row while there are enough of them
+export function wallColumn(covers, c) {
+  const n = Math.min(covers.length, 12);
+  return n ? Array.from({ length: WALL_EACH }, (_, k) => covers[(c * 3 + k) % n]) : [];
+}
+
+// The heading's words in turns (the wall scrolls by itself: CSS), resting while the top is off screen or the tab is hidden
+// (.is-still pauses the wall too), and never for "reduce motion". Each word's width is measured in em once its font is in
+// (so it follows the heading's size), and the rotor's width (and its underline) moves to the next word's.
+function heroMotion(ctx, hero, rotor, { still, first }) {
+  const words = [...rotor.querySelectorAll('.sa-rotor-word')];
+  let at = first;
+  let widths = [];
+  let seen = true;
+  const fit = () => { if (widths[at]) rotor.style.width = `${widths[at].toFixed(3)}em`; };
+  const measure = () => {
+    if (!ctx.alive() || !rotor.isConnected) return;
+    const size = parseFloat(getComputedStyle(rotor).fontSize) || 16;
+    widths = words.map((w) => w.getBoundingClientRect().width / size);
+    fit();
+  };
+  const moving = () => !still && seen && document.visibilityState === 'visible';
+  const update = () => hero.classList.toggle('is-still', !moving());
+  measure();
+  document.fonts?.ready.then(measure).catch(() => {});
+  if (still) { update(); return; }
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      if (!ctx.alive()) { io.disconnect(); return; }
+      seen = entries[entries.length - 1].isIntersecting;
+      update();
+    });
+    io.observe(hero);
+  }
+  ctx.listen(document, 'visibilitychange', update);
+  ctx.every(() => {
+    if (!moving()) return;
+    const next = (at + 1) % words.length;
+    words[at].classList.replace('is-on', 'is-off');
+    // the words before it rest below again, out of sight, for their next turn
+    for (const [k, w] of words.entries()) if (k !== at && k !== next) w.classList.remove('is-off');
+    words[next].classList.remove('is-off');
+    words[next].classList.add('is-on');
+    at = next;
+    fit();
+  }, HERO_EVERY_MS);
 }

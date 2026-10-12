@@ -85,6 +85,7 @@ export async function openUpload(cfg, { code, kind, bytes, consent, id }) {
 
 // ---------- 2: its file (or a part of it, or one of a clip's frames) ----------
 // t: the ticket read · part / frame: which one · body: its bytes. → { status, body } for the answer
+let oldSqlSaid = false;
 export async function receive(cfg, t, { part = null, frame = null, body }) {
   const up = await rpc(cfg, 'inf_upload_get', { p_id: t.u }, 'studio');
   if (!up || up.wallet_code !== t.w || up.kind !== t.k) return { status: 404, body: { error: 'gone' } };
@@ -109,8 +110,24 @@ export async function receive(cfg, t, { part = null, frame = null, body }) {
       return { status: 422, body: { error: 'refused', why: verdict.why } };
     }
     await putFile(cfg, `up/${t.u}.jpg`, jpeg, 'image/jpeg', { timeoutMs: 9000 });
-    await rpc(cfg, 'inf_upload_set', { p_id: t.u, p_status: 'ok', p_why: null, p_seconds: null, p_real: verdict.real === true }, 'studio');
-    return { status: 200, body: { ok: true, id: t.u, status: 'ok', real: verdict.real === true } };
+    // (2026-10-11) a picture: whether it shows the whole person, head to feet (it may then be used "as it is"), and where its
+    // head is (its portrait is cut there). An influencers.sql from before it has neither: kept without them (said once)
+    const real = verdict.real === true;
+    let full = t.k === 'picture' && verdict.full === true;
+    const keep = () => rpc(cfg, 'inf_upload_set', { p_id: t.u, p_status: 'ok', p_why: null, p_seconds: null, p_real: real }, 'studio');
+    if (t.k === 'picture') {
+      await rpc(cfg, 'inf_upload_set', {
+        p_id: t.u, p_status: 'ok', p_why: null, p_seconds: null, p_real: real, p_whole: full, p_head: verdict.head || null,
+      }, 'studio').catch(async (err) => {
+        if (err?.code !== 'PGRST202') throw err;
+        if (!oldSqlSaid) { oldSqlSaid = true; console.warn('[studio] supabase/influencers.sql is from before 2026-10-11: a picture is kept without whether it shows the whole person (run it again)'); }
+        await keep();
+        full = false;                                     // (not kept: it can't be used as it is)
+      });
+    } else {
+      await keep();
+    }
+    return { status: 200, body: { ok: true, id: t.u, status: 'ok', real, ...(t.k === 'picture' ? { full } : {}) } };
   }
   // a clip: its parts, then its frames
   if (frame !== null) {
@@ -193,7 +210,11 @@ export async function receivePoster(cfg, t, body) {
     if (!verdict.ok) return { status: 422, body: { error: 'refused', why: verdict.why } };
   }
   const webp = await s(jpeg).webp({ quality: 80 }).toBuffer();
-  await putFile(cfg, `${t.o === 'trends' ? 'trends' : `inf/${t.o}`}/${t.j}.poster.webp`, webp, 'image/webp', { timeoutMs: 8000 });
+  const name = `${t.o === 'trends' ? 'trends' : `inf/${t.o}`}/${t.j}.poster.webp`;
+  await putFile(cfg, name, webp, 'image/webp', { timeoutMs: 8000 });
   const ok = await rpc(cfg, 'inf_poster', { p_job: t.j }, 'studio');
-  return ok ? { status: 200, body: { ok: true } } : { status: 404, body: { error: 'gone' } };
+  if (ok) return { status: 200, body: { ok: true } };
+  // (2026-10-12) its maker deleted it meanwhile (or it's gone): the poster just kept goes too
+  await deleteFiles(cfg, [name]).catch(() => 0);
+  return { status: 404, body: { error: 'gone' } };
 }

@@ -7,13 +7,17 @@
 // A gift link's secret is the part after "#gift=": a page's address never carries it to a server (a fragment stays in the
 // browser), it goes only in a POST's body (inf-gift-peek, inf-gift-claim), and the page takes it out of its address as soon
 // as the sheet closes. Credits have no cash value: every gift's sheet says never to buy credits from anyone, and that nobody
-// from AGI Studio asks anyone to send credits. Everything anyone wrote (a note, a name) is shown with textContent.
+// from AGI Studio asks anyone to send credits. Everything anyone wrote (a message, a name) is shown with textContent.
+// (2026-10-12) A gift's message: up to 200 characters (80 before), its line breaks kept; and the owner's own gift links of free
+// credits ("From AGI Studio": bonus credits, claimed once; claiming one while AGI Studio is private lets that wallet in) open
+// in the same sheet. The owner makes them on the owner's tab (views/owner.js), with messageField and linkBox from here.
 import { h, icon, btn, linkBtn, sheet, put, add, busy, say, nextId, copyText } from '../ui.js';
 import { GIFTS, GIFT_TOKEN, REF_CODE, creditsText, usd, inviteLink, giftLink } from '../rules.js';
 import {
   num, errorText, agoText, dayText, GIFT_SAFETY, GIFT_LINK_NOTE, recipientShape, recipientLabel, giftCreditsFrom, giftPicks,
   giftErrorText, giftErrorField, giftRulesText, giftableText, giftRowTitle, giftRowState, rewardTitle, inviteText, INVITE_FINE,
-  inviteStats, welcomeLine, inviteJoinedText, shareInviteUrl, giftShareText, CLAIM_STATUS, bonusText, GIFT_NO_WALLET,
+  inviteStats, welcomeLine, inviteJoinedText, shareInviteUrl, giftShareText, claimStatusText, bonusText, GIFT_NO_WALLET,
+  OWNER_GIFT_LINE, OWNER_GIFT_LETS_IN, OWNER_GIFT_OWN, ownerClaimedText, ownerLinkErrorText,
 } from '../app-words.js';
 
 const SHOWN = 8;                                  // gifts and rewards shown before "Show all"
@@ -36,13 +40,18 @@ function field({ label, hint = null, input, count = null }) {
   const foot = count ? h('div', { class: 'sa-field-foot' }, err, count) : err;
   return { node: h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: input.id, text: label }), hintEl, input, foot), err };
 }
-// the note: up to GIFTS.NOTE_MAX characters (counted like our server: by character, emoji included)
-function noteField(max) {
-  const input = h('input', { class: 'sa-input', id: nextId('gnote'), type: 'text', maxlength: String(max), autocomplete: 'off', placeholder: 'Happy creating! (optional)' });
+// a gift's message: up to GIFTS.NOTE_MAX characters (200 since 2026-10-12, counted like our server: by character, emoji
+// included; a line break is one), its line breaks kept (Enter starts a new line; Ctrl or ⌘ and Enter sends: onSend)
+export function messageField(max, { label = 'A message (optional)', placeholder = 'Happy creating! 💜', hint = 'Kind words only: no links, contacts or deals.', onSend = null } = {}) {
+  const input = h('textarea', { class: 'sa-input sa-textarea sa-gift-message', id: nextId('gnote'), rows: '3', maxlength: String(max), autocomplete: 'off', placeholder });
   const count = h('span', { class: 'sa-count', 'aria-hidden': 'true', text: `0/${max}` });
   input.addEventListener('input', () => { count.textContent = `${[...input.value].length}/${max}`; });
-  return { input, ...field({ label: 'A note (optional)', hint: 'Kind words only: no links, contacts or deals.', input, count }) };
+  if (onSend) input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); onSend(); } });
+  return { input, ...field({ label, hint, input, count }) };
 }
+const noteField = (max, onSend) => messageField(max, { onSend });
+// what's typed as a message, as our server keeps it: its lines, each trimmed, empty ones out (its count is checked there too)
+export const messageOf = (value) => String(value ?? '').replace(/\r\n?/g, '\n').split('\n').map((l) => l.trim()).filter(Boolean).join('\n');
 // how many credits, with a few to tap
 function creditsField(paid, dayMax) {
   const input = h('input', { class: 'sa-input sa-input-num', id: nextId('gcr'), type: 'text', inputmode: 'numeric', maxlength: '9', autocomplete: 'off', placeholder: 'e.g. 500' });
@@ -74,7 +83,7 @@ export function giveSheet(ctx, { onDone = null } = {}) {
   const toInput = h('input', { class: 'sa-input', id: nextId('gto'), type: 'text', maxlength: '120', autocomplete: 'off', spellcheck: 'false', autocapitalize: 'none', placeholder: '0x… or @name' });
   const to = field({ label: 'Who is it for?', hint: "A wallet's address, or the clank.trade name it shows in AGI Studio.", input: toInput });
   const credits = creditsField(paid, g.dayMax);
-  const note = noteField(g.noteMax || GIFTS.NOTE_MAX);
+  const note = noteField(g.noteMax || GIFTS.NOTE_MAX, () => next.click());
   const general = h('p', { class: 'sa-note', role: 'status', hidden: true });
   const form = h('div', { class: 'sa-give-form' }, to.node, credits.node, note.node,
     h('p', { class: 'sa-muted sa-small', text: giftableText(paid) }), h('p', { class: 'sa-fine', text: giftRulesText(g) }));
@@ -95,7 +104,7 @@ export function giveSheet(ctx, { onDone = null } = {}) {
     if (!recipientShape(toInput.value)) { back(errorText('give_to'), 'to'); return; }
     const c = checkCredits(credits.input.value, { paid, g });
     if (c.why) { back(c.why, 'credits'); return; }
-    const text = note.input.value.trim();
+    const text = messageOf(note.input.value);
     if ([...text].length > (g.noteMax || GIFTS.NOTE_MAX)) { back(errorText('note_long'), 'note'); return; }
     const who = recipientLabel(toInput.value);
     put(review,
@@ -131,7 +140,6 @@ export function giveSheet(ctx, { onDone = null } = {}) {
   });
   toInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); credits.input.focus(); } });
   credits.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); next.click(); } });
-  note.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); next.click(); } });
   toInput.focus();
   return s.done;
 }
@@ -143,7 +151,7 @@ export function giftLinkSheet(ctx, { onDone = null } = {}) {
   const paid = Number(ctx.me?.credits?.paid) || 0;
   const s = sheet({ title: 'Make a gift link', sub: 'Anyone with the link can claim it once.' });
   const credits = creditsField(paid, g.dayMax);
-  const note = noteField(g.noteMax || GIFTS.NOTE_MAX);
+  const note = noteField(g.noteMax || GIFTS.NOTE_MAX, () => go());
   const general = h('p', { class: 'sa-note', role: 'status', hidden: true });
   add(s.body, credits.node, note.node,
     h('p', { class: 'sa-muted sa-small', text: `${giftableText(paid)} A link's credits are held until it's claimed (${num(g.openLinks || GIFTS.OPEN_LINKS)} links waiting at most).` }),
@@ -154,7 +162,7 @@ export function giftLinkSheet(ctx, { onDone = null } = {}) {
     say(general, '');
     const c = checkCredits(credits.input.value, { paid, g });
     if (c.why) { say(credits.err, c.why); credits.input.focus(); return; }
-    const text = note.input.value.trim();
+    const text = messageOf(note.input.value);
     if ([...text].length > (g.noteMax || GIFTS.NOTE_MAX)) { say(note.err, errorText('note_long')); note.input.focus(); return; }
     busy(make, 'Making it…', async () => {
       const r = await ctx.act('inf-gift-link', { credits: c.n, ...(text ? { note: text } : {}) });
@@ -181,13 +189,13 @@ export function giftLinkSheet(ctx, { onDone = null } = {}) {
     });
   };
   make.addEventListener('click', go);
-  for (const i of [credits.input, note.input]) i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+  credits.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
   credits.input.focus();
   return s.done;
 }
 
 // A link in a box, with Copy (and the phone's own share sheet where there is one)
-function linkBox(ctx, url, { what, share = null }) {
+export function linkBox(ctx, url, { what, share = null }) {
   const code = h('code', { class: 'sa-addr', text: url });
   const said = h('span', { class: 'sa-sr', 'aria-live': 'polite' });
   const copy = btn('Copy', { kind: 'ghost', size: 'sm', icon: 'copy' });
@@ -392,15 +400,18 @@ export function giftsCard(ctx) {
 
 // ---------- the sheet a gift link opens ----------
 // openGiftClaim(app, token) → a promise, resolved when its sheet closes. app: { act, requireAdult, requireWallet, refreshMe,
-// toast, href, signedIn, findWallets }. The gift link's secret is taken out of the page's address when it closes (it's in the
-// fragment: never sent). In a browser without a wallet (a phone's Safari or Chrome), it says to open the link in a wallet
-// app's own browser, with a button that copies it: the wallet sheet's "Open in …" links can't carry it.
+// toast, href, signedIn, findWallets, info (?inf-info), allowed() (whether the signed-in wallet may use AGI Studio: null when
+// unknown) }. The gift link's secret is taken out of the page's address when it closes (it's in the fragment: never sent). In
+// a browser without a wallet (a phone's Safari or Chrome), it says to open the link in a wallet app's own browser, with a
+// button that copies it: the wallet sheet's "Open in …" links can't carry it. (2026-10-12) One of the owner's gift links
+// ("From AGI Studio") says what its bonus credits are, and, while AGI Studio is private, that claiming it lets the wallet in.
 export function openGiftClaim(app, token) {
   const s = sheet({ title: 'A gift for you', sub: 'Credits for AGI Studio: photos, videos, 3D and more.' });
   const box = h('div', { class: 'sa-gift-claim', 'aria-live': 'polite' }, spinner('Opening the gift…'));
   add(s.body, box);
   s.done.then(() => {
-    if (/^#gift=/.test(location.hash)) history.replaceState(history.state, '', `${location.pathname}${location.search}`);
+    // its own secret out of the address (never another gift link's, opened as this one was closing: that one's sheet is next)
+    if (location.hash.startsWith(`#gift=${token}`)) history.replaceState(history.state, '', `${location.pathname}${location.search}`);
   });
   const explore = () => linkBtn('Explore AGI Studio', app.href('/explore'), { kind: 'ghost', dataset: { saLink: '' } });
   (async () => {
@@ -414,16 +425,24 @@ export function openGiftClaim(app, token) {
       return;
     }
     const g = d.gift;
+    if (g.owner && !app.info && app.infoReady) await app.infoReady();
+    // (a wallet that may use AGI Studio already is never told claiming lets it in: its answer first, when it's on its way)
+    if (g.owner && app.signedIn?.() && app.allowed?.() === null && app.meReady) await app.meReady();
+    if (!s.dialog.open) return;
     const hero = h('div', { class: 'sa-gift-hero' },
       h('span', { class: 'sa-gift-hero-icon', 'aria-hidden': 'true' }, icon('gift')),
       h('p', { class: 'sa-gift-big' }, icon('bolt'), h('span', { text: creditsText(g.credits) })),
       g.from ? h('p', { class: 'sa-gift-from', text: `From ${g.from}` }) : null,
       g.note ? h('p', { class: 'sa-gift-quote', text: `“${g.note}”` }) : null);
     if (g.status !== 'open') {
-      put(box, hero, h('p', { class: 'sa-note', text: CLAIM_STATUS[g.status] || errorText('gift_gone') }));
+      put(box, hero, h('p', { class: 'sa-note', text: claimStatusText(g.status, g.owner) || errorText('gift_gone') }));
       s.setFoot(explore());
       return;
     }
+    // the owner's: bonus credits, and (while AGI Studio is private, for a wallet that isn't let in yet) that it lets you in
+    const letsIn = g.owner && app.info?.open === false && app.allowed?.() !== true;
+    const ownerLines = g.owner ? [h('p', { class: 'sa-small sa-center sa-gift-owner-line', text: OWNER_GIFT_LINE }),
+      letsIn ? h('p', { class: 'sa-small sa-center sa-gift-owner-line', text: OWNER_GIFT_LETS_IN }) : null] : [];
     const msg = h('p', { class: 'sa-note', role: 'status', hidden: true });
     // no wallet in this browser (and none signed in): how to claim it from a wallet app, and its link to copy
     const copyLink = btn('Copy the gift link', { kind: 'ghost', size: 'sm', icon: 'copy' });
@@ -433,7 +452,7 @@ export function openGiftClaim(app, token) {
       const ok = await copyText(giftLink(location.origin, app.href(''), token));
       app.toast(ok ? 'Gift link copied: open it in your wallet app' : "Couldn't copy it: copy this page's address instead", ok ? 'good' : 'bad');
     });
-    put(box, hero,
+    put(box, hero, ...ownerLines,
       Number.isFinite(g.expires) ? h('p', { class: 'sa-muted sa-small sa-center', text: `Claim it by ${dayText(g.expires)}. A connected wallet (a free signature) and 18+.` }) : null,
       noWallet, msg, h('p', { class: 'sa-fine', text: GIFT_SAFETY }));
     if (app.findWallets && !app.signedIn?.()) {
@@ -456,7 +475,7 @@ export function openGiftClaim(app, token) {
             h('span', { class: 'sa-gift-hero-icon', 'aria-hidden': 'true' }, icon('check')),
             h('p', { class: 'sa-gift-hero-title', text: `💜 ${creditsText(x.got)} are yours` }),
             x.from ? h('p', { class: 'sa-gift-from', text: `From ${x.from}` }) : null,
-            h('p', { class: 'sa-muted sa-small', text: 'Use them for anything here, or give them on to someone else.' })));
+            h('p', { class: 'sa-muted sa-small', text: x.owner ? ownerClaimedText(x.letIn === true) : 'Use them for anything here, or give them on to someone else.' })));
           const make = linkBtn('Make something', app.href('/create'), { kind: 'primary', icon: 'spark', dataset: { saLink: '' } });
           const close = btn('Close', { kind: 'quiet' });
           close.addEventListener('click', () => s.close());
@@ -466,7 +485,9 @@ export function openGiftClaim(app, token) {
           app.refreshMe();
           return;
         }
-        say(msg, giftErrorText(x));
+        // one of the owner's links: nothing was held, so nothing went back to anyone (and the owner takes theirs back on the owner's tab)
+        const ownerWhy = g.owner && (x.error === 'gift_own' ? OWNER_GIFT_OWN : ['gift_canceled', 'gift_expired'].includes(x.error) ? ownerLinkErrorText(x.error) : null);
+        say(msg, ownerWhy || giftErrorText(x));
         if (['gift_claimed', 'gift_canceled', 'gift_expired', 'gift_gone', 'gift_own', 'banned'].includes(x.error)) claim.hidden = true;
       });
     });

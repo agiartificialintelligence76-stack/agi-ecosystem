@@ -30,7 +30,7 @@ test('the guides: each page\'s steps (its own ids), their buttons on the pages, 
   assert.equal(GUIDE_KEY, 'agi_guide');
   assert.deepEqual(Object.keys(GUIDES), ['explore', 'create', 'pick', 'make', 'me']);
   const pages = VIEWS.map(read).join('\n');
-  const WHENS = new Set(['signedIn', 'signedOut', 'design', 'photo', 'instantOff']);
+  const WHENS = new Set(['signedIn', 'signedOut', 'design', 'photo', 'styled', 'instantOff']);
   for (const [id, g] of Object.entries(GUIDES)) {
     assert.ok(g.name && g.steps.length >= 2 && g.steps.length <= 7, id);
     assert.equal(new Set(g.steps.map((s) => s.id)).size, g.steps.length, `${id}: its steps' own ids`);
@@ -54,7 +54,24 @@ test('the guides: each page\'s steps (its own ids), their buttons on the pages, 
   assert.equal(new Set(CLIP_IDS).size, CLIP_IDS.length);
   for (const c of CLIP_IDS) assert.match(c, /^(explore|create|pick|make|me)-[a-z]+$/, c);
   assert.ok(CLIP_IDS.includes('make-trend') && CLIP_IDS.includes('make-video'));
-  assert.equal(CLIP_IDS.length, 26);
+  assert.equal(CLIP_IDS.length, 30);
+  // (2026-10-11) from a photo, how it's made: its own step and video
+  assert.ok(CLIP_IDS.includes('create-way'));
+  // (2026-10-11) its profile picture: the camera on its picture (only on its own ready influencer: the step is left out where
+  // the camera isn't), its own video, and Learn's first lesson ends with it
+  const pfp = GUIDES.make.steps.find((s) => s.id === 'pfp');
+  assert.deepEqual({ target: pfp.target, open: pfp.open, clip: pfp.clip, when: pfp.when }, { target: 'pfp', open: 'gallery', clip: 'make-pfp', when: undefined });
+  assert.match(pfp.text, /camera/);
+  assert.match(pfp.text, /Free\.$/);
+  assert.equal(LESSON_CLIPS.start.clips.at(-1), 'make-pfp');
+  // (2026-10-12, the editor) "Your creations": one opened shows Edit with words and Edit photo (a photo's) or Edit video (a
+  // video's), Make another and Delete first, and its words say so; the photo editor's own video, in Learn's lesson on photos,
+  // and the video editor's, in its lesson on videos (its guide is full: 7 steps)
+  assert.match(GUIDES.make.steps.find((s) => s.id === 'creations').text, /^Open one to edit it with words or in the photo or video editor \(free\), make another, delete it, /);
+  assert.ok(CLIP_IDS.includes('make-editor'));
+  assert.equal(LESSON_CLIPS.photos.clips.at(-1), 'make-editor');
+  assert.ok(CLIP_IDS.includes('make-cut'));
+  assert.equal(LESSON_CLIPS.videos.clips.at(-1), 'make-cut');
 });
 
 test('a page\'s steps as it is now: signed in or out, designed or from a photo, Instant on or off; an unknown guide has none', () => {
@@ -63,17 +80,21 @@ test('a page\'s steps as it is now: signed in or out, designed or from a photo, 
   assert.deepEqual(ids('explore', { signedIn: true }), ['start', 'gallery', 'credits', 'nav', 'again']);
   assert.deepEqual(ids('create', { mode: 'design' }), ['mode', 'look', 'style', 'name', 'go']);
   assert.deepEqual(ids('create', {}), ['mode', 'look', 'style', 'name', 'go']);
-  assert.deepEqual(ids('create', { mode: 'picture' }), ['mode', 'photo', 'style', 'name', 'go']);
+  // (2026-10-11) from a photo: how it's made (its way); its photo as it is keeps its own look (no style, outfit or vibe)
+  assert.deepEqual(ids('create', { mode: 'picture' }), ['mode', 'photo', 'way', 'style', 'name', 'go']);
+  assert.deepEqual(ids('create', { mode: 'picture', way: 'body' }), ['mode', 'photo', 'way', 'style', 'name', 'go']);
+  assert.deepEqual(ids('create', { mode: 'picture', way: 'asis' }), ['mode', 'photo', 'way', 'name', 'go']);
+  assert.deepEqual(ids('create', { mode: 'design', way: 'asis' }), ['mode', 'look', 'style', 'name', 'go']);
   assert.deepEqual(ids('pick', {}), ['looks', 'reroll']);
-  assert.deepEqual(ids('make', { instant: false }), ['tools', 'scene', 'models', 'go', 'instant', 'creations']);
-  assert.deepEqual(ids('make', { instant: true }), ['instant', 'creations']);
+  assert.deepEqual(ids('make', { instant: false }), ['tools', 'scene', 'models', 'go', 'instant', 'pfp', 'creations']);
+  assert.deepEqual(ids('make', { instant: true }), ['instant', 'pfp', 'creations']);
   assert.deepEqual(ids('me', { signedIn: true }), ['credits', 'mine', 'gifts', 'help']);
   assert.deepEqual(ids('me', {}), ['connect', 'help']);
   assert.deepEqual(guideSteps('nope', {}), []);
   assert.deepEqual(guideSteps('__proto__', {}), []);
   // a phone's drawer: its controls' steps open it first, "Your creations" closes it (what's behind it shows)
   for (const s of GUIDES.create.steps) assert.equal(s.open, 'panel', s.id);
-  assert.deepEqual(GUIDES.make.steps.map((s) => s.open), ['panel', 'panel', 'panel', 'panel', 'panel', 'gallery']);
+  assert.deepEqual(GUIDES.make.steps.map((s) => s.open), ['panel', 'panel', 'panel', 'panel', 'panel', 'gallery', 'gallery']);
 });
 
 test('what\'s kept in this browser (never sent anywhere): the guides seen, and "Skip all guides"; a broken or blocked store is harmless', () => {
@@ -246,6 +267,10 @@ test('the coach marks (src/studio/guide.js): words only as text, a card the keyb
   // its button scrolled into view (smooth only without "reduce motion"), out of sight while the page moves
   assert.match(g, /const behavior = calm\(\) \? 'auto' : 'smooth';/);
   assert.match(g, /ui\.node\.classList\.add\('is-on', 'is-moving'\);/);
+  // (2026-10-11) shown once it's still and in view: a long smooth scroll (Create's panel, since its 26 styles) can pause
+  // between frames on a slow phone, or outlast 1.5 s: up to 3 s while its button isn't in view yet
+  assert.match(g, /while \(Date\.now\(\) - t0 < 1500 \|\| \(Date\.now\(\) - t0 < 3000 && !seenBox\(el\)\)\) \{/);
+  assert.match(g, /if \(now === last\) \{ if \(\+\+still >= 3 && seenBox\(el\)\) return true; \}/);
   // the words a guide uses and its places: nothing else on the page changes (its own elements, its own styles)
   const css = read('src/styles/studio-app.css');
   for (const c of ['sa-guide', 'sa-guide-ring', 'sa-guide-card', 'sa-guide-arrow', 'sa-guide-media', 'sa-guide-video', 'sa-guide-play', 'sa-guide-x', 'sa-guide-skip', 'sa-guide-btn', 'sa-guide-watch']) {
@@ -275,7 +300,9 @@ test('each page offers its guide (the first time by itself, the bar\'s ? button 
   assert.equal((html.match(/data-guide="nav"/g) || []).length, 2);
   assert.match(html, /data-sa-account data-guide="account"/);
   assert.match(read('src/studio/views/explore.js'), /ctx\.guide\('explore'\);/);
-  assert.match(read('src/studio/views/create.js'), /ctx\.guide\('create', \{ mode: \(\) => st\.mode, open: \(\) => ws\.open\(\), close: \(\) => ws\.close\(\) \}\);/);
+  assert.match(read('src/studio/views/create.js'), /ctx\.guide\('create', \{ mode: \(\) => st\.mode, way: \(\) => wayNow\(\), open: \(\) => ws\.open\(\), close: \(\) => ws\.close\(\) \}\);/);
+  assert.match(read('src/studio/guide.js'), /way: read\(env\.way\) \|\| 'looks'/);
+  assert.match(read('src/studio/views/create.js'), /dataset: \{ guide: 'way' \}/);
   const inf = read('src/studio/views/influencer.js');
   assert.match(inf, /if \(pickOrMaking && i\.status === 'pick'\) ctx\.guide\('pick'\);/);
   assert.match(inf, /ctx\.guide\('make', \{ instant: \(\) => instant, open: \(\) => ws\.open\(\), close: \(\) => ws\.close\(\) \}\);/);

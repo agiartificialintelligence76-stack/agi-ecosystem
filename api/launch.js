@@ -28,9 +28,10 @@
 // order made before (choosing how to pay, "Check my payment", making one again).
 // (2026-10-10) And AGI Studio, the AI influencer app (studio.agi1.app): GET ?inf-info, ?inf-explore, ?inf=, ?inf-file=,
 // ?inf-video=, ?inf-video-dl= (and since its round 2 ?inf-dl=, a photo with the share mark; ?inf-ex=, an example picture;
-// ?inf-stats, the live stats board), POST actions "inf-…" and "trend-…" (since its round 4, phase 2, also the team's "mod-…"), and its uploads (POST ?inf-up=… / ?inf-poster=…, the
-// file's bytes as the body), handled by server/inf-api.js (loaded only for them). An influencer's coin is a launch draft like
-// one from her bot, its picture the influencer's own look from our bucket ("studio:<influencer>/<job>-<n>"), no Telegram.
+// ?inf-stats, the live stats board), POST actions "inf-…" and "trend-…" (since its round 4, phase 2, also the team's "mod-…"), and its uploads (POST ?inf-up=… / ?inf-poster=… / since 2026-10-12 ?inf-photo=… and
+// ?inf-cut=…, the file's bytes as the body), handled by server/inf-api.js (loaded only for them). An influencer's coin is a launch draft like
+// one from her bot, its picture the influencer's own look from our bucket ("studio:<influencer>/<job>-<n>"), no Telegram;
+// since 2026-10-11 its profile picture or one of its photos, framed as a square ("…-<n>@<x>,<y>,<s>": cut when it's read).
 import { getConfig } from '../server/config.js';
 import { clientIp, visitorCode } from '../server/security.js';
 import { readSession } from '../server/session.js';
@@ -48,11 +49,13 @@ const STUDIO_GETS = ['studio', 'studio-file', 'studio-list', 'studio-info', 'stu
 const STUDIO_POSTS = ['studio-quote', 'studio-choose', 'studio-check', 'studio-redo', 'studio-mine', 'studio-video-mine', 'studio-video-quote',
   'studio-video-check', 'studio-video-redo', 'studio-video-look'];
 const STUDIO_MOVED = ['studio-quote', 'studio-video-quote'];            // new orders: AGI Studio's credits instead
-const INF_GETS = ['inf-info', 'inf-explore', 'inf', 'inf-file', 'inf-video', 'inf-video-dl', 'inf-dl', 'inf-ex', 'inf-stats'];
+const INF_GETS = ['inf-info', 'inf-explore', 'inf', 'inf-file', 'inf-video', 'inf-video-dl', 'inf-dl', 'inf-ex', 'inf-stats', 'inf-clean'];
 // (round 4, phase 2: and the team's "mod-…": a ban, a ticket as the team sees it)
 const isInfAction = (a) => typeof a === 'string' && /^(?:inf|trend|mod)-[a-z0-9-]{2,20}$/.test(a);
-// a draft made in AGI Studio: its picture is an influencer's look in our bucket (server/influencer.js studioPicture)
-const STUDIO_PHOTO = /^studio:[A-Za-z0-9_-]{22}\/[A-Za-z0-9_-]{22}-[0-3]$/;
+// a draft made in AGI Studio: its picture is one of an influencer's pictures in our bucket (server/influencer.js
+// studioPicture), and since 2026-10-11 the square its maker framed in it ("…@<x>,<y>,<s>"). The same pattern as
+// src/studio/rules.js STUDIO_PHOTO (a test checks it), kept here so a launch never loads the studio's code
+const STUDIO_PHOTO = /^studio:([A-Za-z0-9_-]{22})\/([A-Za-z0-9_-]{22})-([0-3])(?:@(\d{1,4}),(\d{1,4}),(\d{1,4}))?$/;
 const fromStudio = (d) => STUDIO_PHOTO.test(String(d?.photo || ''));
 async function draftPicture(cfg, d) {
   if (fromStudio(d)) return (await import('../server/influencer.js')).studioPicture(cfg, d.photo);
@@ -127,7 +130,10 @@ export async function POST(request) {
   const cfg = getConfig();
   // (2026-10-10) an AGI Studio upload: the file's own bytes, with its ticket in the address
   const url = new URL(request.url);
-  if ((url.searchParams.has('inf-up') || url.searchParams.has('inf-poster')) && /^application\/octet-stream\b/i.test(request.headers.get('content-type') || '')) {
+  // (2026-10-12, the editor) …and a photo saved from the photo editor (?inf-photo=…), and a video editor's layer (?inf-cut=…)
+  if ((url.searchParams.has('inf-up') || url.searchParams.has('inf-poster') || url.searchParams.has('inf-photo')
+    || url.searchParams.has('inf-cut'))
+    && /^application\/octet-stream\b/i.test(request.headers.get('content-type') || '')) {
     const { infBinary } = await import('../server/inf-api.js');
     return infBinary(cfg, request, url);
   }

@@ -130,18 +130,23 @@ export function accessNote(text) {
   if (!note) return { ok: true, note: null };
   return [...note].length <= ACCESS.NOTE_MAX ? { ok: true, note } : { ok: false };
 }
+// How a wallet got onto the list: 'owner' (the owner's tab), 'credits' (credits for testing), 'link' (since 2026-10-12: it
+// claimed one of the owner's gift links)
+const VIAS = ['owner', 'credits', 'link'];
+const viaOf = (v) => (VIAS.includes(v) ? v : 'owner');
 // The wallets the owner let in, newest first: each one's code (to take it away), its short address, the owner's note, how it
-// got in ('owner': the owner's tab; 'credits': credits for testing), since when, and whether it's on the team too
+// got in (VIAS), since when, and whether it's on the team too
 export async function accessList(cfg) {
   const list = await rpc(cfg, 'inf_access_list', {}, 'studio');
   return (Array.isArray(list) ? list : []).map((a) => ({
-    code: a.code, short: a.short, note: typeof a.note === 'string' ? a.note : null, via: a.via === 'credits' ? 'credits' : 'owner',
+    code: a.code, short: a.short, note: typeof a.note === 'string' ? a.note : null, via: viaOf(a.via),
     added: ms(a.added_at), staff: a.staff === true,
   }));
 }
-// A wallet let in by its address (or its note changed: let it in again), from the owner's tab ('owner') or by credits for
-// testing ('credits': a wallet already on the list stays as it is). → { ok: true, entry: { code, short, note }, added } or
-// { ok: false, why: 'address' | 'self' (the owner's own wallet: always in) | 'note' | 'too_many' | 'busy' }
+// A wallet let in by its address (or its note changed: let it in again), from the owner's tab ('owner'), or by credits for
+// testing ('credits') or one of the owner's gift links claimed ('link', 2026-10-12): those two leave a wallet already on the
+// list as it is. → { ok: true, entry: { code, short, note }, added } or { ok: false, why: 'address' | 'self' (the owner's own
+// wallet: always in) | 'note' | 'too_many' | 'busy' }
 export async function accessSet(cfg, { address, note = '', via = 'owner' }) {
   const a = String(address ?? '').trim();
   if (!ADDRESS.test(a)) return { ok: false, why: 'address' };
@@ -150,7 +155,7 @@ export async function accessSet(cfg, { address, note = '', via = 'owner' }) {
   if (!n.ok) return { ok: false, why: 'note' };
   const code = studioWallet(cfg.passSecret, a);
   const r = await rpc(cfg, 'inf_access_set', {
-    p_wallet: code, p_short: short(a), p_note: n.note, p_via: via === 'credits' ? 'credits' : 'owner', p_on: true, p_max: ACCESS.MAX,
+    p_wallet: code, p_short: short(a), p_note: n.note, p_via: viaOf(via), p_on: true, p_max: ACCESS.MAX,
   }, 'studio');
   forget(code);
   if (r?.ok === true) return { ok: true, added: r.added === true, entry: { code, short: short(a), note: n.note } };

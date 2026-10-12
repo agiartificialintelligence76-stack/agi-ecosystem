@@ -97,6 +97,19 @@ const ICONS = {
   smile: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M8.5 14.2c.9 1.3 2.1 1.9 3.5 1.9s2.6-.6 3.5-1.9', 'M9 9.8h.01M15 9.8h.01'],
   paperclip: ['M16.5 7.5 9.4 14.6a1.9 1.9 0 0 0 2.7 2.7l7.2-7.2a3.9 3.9 0 0 0-5.5-5.5l-7.4 7.4a5.8 5.8 0 0 0 8.2 8.2l6-6'],
   learn: ['M2.5 9.5 12 5l9.5 4.5L12 14 2.5 9.5Z', 'M6.5 11.4v4.5c1.5 1.4 3.4 2.1 5.5 2.1s4-.7 5.5-2.1v-4.5', 'M21.5 9.5v5'],
+  // (2026-10-12, the editor) the photo editor's tools
+  crop: ['M6.5 3v12.5a2 2 0 0 0 2 2H21', 'M17.5 21V8.5a2 2 0 0 0-2-2H3'],
+  sun: ['M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z', 'M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4'],
+  filter: ['M12 11.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z', 'M8 19a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z', 'M16 19a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z'],
+  type: ['M5 7V4.5h14V7', 'M12 4.5v15', 'M9 19.5h6'],
+  sticker: ['M20.5 12a8.5 8.5 0 1 0-8.5 8.5l8.5-8.5Z', 'M20.5 12H16a4 4 0 0 0-4 4v4.5', 'M9 9.5h.01M14.5 9.5h.01'],
+  turnLeft: ['M3.5 4v5h5', 'M3.9 9a8.5 8.5 0 1 1 .8 7'],
+  turnRight: ['M20.5 4v5h-5', 'M20.1 9a8.5 8.5 0 1 0-.8 7'],
+  flip: ['M12 3v18', 'M9 7.5 3.5 17H9V7.5Z', 'M15 7.5 20.5 17H15V7.5Z'],
+  undo: ['M9.5 14 4.5 9l5-5', 'M4.5 9H15a5 5 0 0 1 0 10h-3.5'],
+  // (2026-10-12, the video editor) Edit video and its Trim tool; its sound off
+  scissors: ['M6.5 9.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6.5 20.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z', 'M20 4.5 8.8 15.7M14.4 14.2 20 19.5M8.8 8.3l3.3 3.3'],
+  soundOff: ['M5 9.5h3.5L13 5.5v13l-4.5-4H5v-5Z', 'M16.5 9.5l5 5M21.5 9.5l-5 5'],
 };
 export function icon(name, cls = 'sa-i') {
   const svg = document.createElementNS(SVG, 'svg');
@@ -131,6 +144,28 @@ export function linkBtn(label, href, { kind = 'ghost', icon: ic = null, size = n
   return a;
 }
 // a button busy with a request: its label while it waits, then back
+// ---------- (2026-10-12) the keyboard's place in a part drawn again (a look's new answer, Make another, Delete) ----------
+// focusPlace(box) before it: which control has the keyboard (by its own id, or its place among the controls of the element
+// with an id around it: a tile), or null (the keyboard isn't in it). focusBack(box, place, fallback) after it: the same
+// control again, else the fallback (its tile went: deleted); never when the keyboard is somewhere else already
+const CONTROLS = 'button, a[href], input, select, textarea, [tabindex]';
+export function focusPlace(box) {
+  const a = document.activeElement;
+  if (!a || a === document.body || !box.contains(a)) return null;
+  if (a.id) return { id: a.id, n: -1 };
+  const scope = a.parentElement?.closest('[id]');
+  const inBox = scope && box.contains(scope) ? scope : null;
+  return { id: inBox?.id || null, n: [...(inBox || box).querySelectorAll(CONTROLS)].indexOf(a) };
+}
+export function focusBack(box, place, fallback = null) {
+  if (!place) return;
+  const now = document.activeElement;
+  if (now && now !== document.body && now.isConnected) return;
+  const scope = place.id ? document.getElementById(place.id) : box;
+  const el = scope && box.contains(scope) ? (place.n < 0 ? scope : scope.querySelectorAll(CONTROLS)[place.n] || scope.querySelector(CONTROLS)) : null;
+  (el || fallback)?.focus({ preventScroll: true });
+}
+
 export async function busy(button, label, work) {
   const old = [...button.childNodes];
   button.disabled = true;
@@ -154,21 +189,25 @@ export const nextId = (p = 'sa') => `${p}-${++uid}`;
 //   toggle (2026-10-11, the owner: "they cant uncheck its look when creating, like when they pick masculine, it wont
 //     uncheck"): a picked chip tapped again is unpicked, back to "Any" when the group has it, else none (Create then asks for
 //     a choice it needs). Only where a group may be left empty: never a choice that must always have one (a shape, a tone)
-export function chips({ name, legend, choices, value = null, onchange = null, hint = null, cls = '', media = false, swatches = false, toggle = false }) {
+//   sections (2026-10-11, 26 styles in four groups): [{ id, name, choices }]: more choices after the first ones, in named
+//     sections, each a heading over its own tiles (as media: the first ones, like "Any style", stay plain chips). One group of
+//     radio buttons all the same, and every section always shown: a picked one in a hidden or folded section would take the
+//     whole group out of the keyboard's way (a browser's Tab only stops at a group's picked radio)
+export function chips({ name, legend, choices, value = null, onchange = null, hint = null, cls = '', media = false, swatches = false, toggle = false, sections = null }) {
   const list = Array.isArray(choices) ? choices : Object.entries(choices);
-  const kind = media ? ' sa-chips-media' : swatches ? ' sa-chips-swatch' : '';
+  const secs = Array.isArray(sections) ? sections : [];
+  const kind = media && !secs.length ? ' sa-chips-media' : swatches ? ' sa-chips-swatch' : secs.length ? ' sa-chips-sectioned' : '';
   const set = h('fieldset', { class: `sa-chips${kind} ${cls}`.trim() });
   set.append(h('legend', { class: 'sa-label', text: legend }));
   if (hint) set.append(h('p', { class: 'sa-hint', text: hint }));
-  const row = h('div', { class: 'sa-chip-row' });
   const groupName = name || nextId('chips');
   const boxes = new Map();
-  for (const [v, label, look = null] of list) {
+  const chip = (row, [v, label, look = null], asMedia) => {
     const id = nextId('chip');
     const input = h('input', { type: 'radio', class: 'sa-chip-input', name: groupName, id, value: v, checked: v === value });
     input.addEventListener('change', () => { if (input.checked) onchange?.(v); });
     const lab = h('label', { for: id });
-    if (media) {
+    if (asMedia) {
       const box = h('span', { class: `sa-chip-media is-empty${v === '' ? ' is-any' : ''}`, 'aria-hidden': 'true' });
       boxes.set(v, box);
       lab.append(box);
@@ -179,9 +218,18 @@ export function chips({ name, legend, choices, value = null, onchange = null, hi
     }
     lab.append(h('span', { class: 'sa-chip-text', text: label }));
     row.append(h('span', { class: 'sa-chip' }, input, lab));
+  };
+  const row = h('div', { class: 'sa-chip-row' });
+  for (const c of list) chip(row, c, media && !secs.length);
+  if (list.length) set.append(row);
+  for (const sec of secs) {
+    const subId = nextId('chipsec');
+    const subRow = h('div', { class: 'sa-chip-row', role: 'group', 'aria-labelledby': subId });
+    for (const c of (Array.isArray(sec.choices) ? sec.choices : Object.entries(sec.choices))) chip(subRow, c, media);
+    set.append(h('div', { class: `sa-chip-sec${media ? ' sa-chips-media' : ''}`, dataset: { section: sec.id } },
+      h('p', { class: 'sa-chip-subhead', id: subId, text: sec.name }), subRow));
   }
-  if (toggle) unpickable(row, onchange);
-  set.append(row);
+  if (toggle) unpickable(set, onchange);
   return {
     node: set,
     get value() { return set.querySelector('input:checked')?.value ?? null; },
@@ -204,7 +252,8 @@ export function chips({ name, legend, choices, value = null, onchange = null, hi
 // chips' toggle: a picked chip tapped again is unpicked, back to "Any" (the choice whose value is '') when the group has it,
 // else none. A radio clicked when it's picked already stays picked (and says nothing), so a tap is told by the chip being
 // picked when a pointer went down on it: the arrow keys click the radio they move to too, in every browser, and never
-// unpick. Space on a picked chip unpicks it as well (its keyup's click is cancelled, so it isn't picked again at once)
+// unpick. Space on a picked chip unpicks it as well (its keyup's click is cancelled, so it isn't picked again at once).
+// row: what holds its chips (its fieldset, with its sections)
 function unpickable(row, onchange) {
   let pressed = null; // { input, was }: the chip a pointer went down on, and whether it was picked then
   let keyed = null; // the chip Space just unpicked

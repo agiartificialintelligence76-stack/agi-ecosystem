@@ -189,6 +189,8 @@ export function getConfig(env = process.env) {
     infSlotAgi: Math.min(100_000_000, wholeOrZero(env.STUDIO_SLOT_AGI, 5_000)),
     infBoostAgi: Math.min(100_000_000, wholeOrZero(env.STUDIO_BOOST_AGI, 10_000)),
     infWeeklyPrize: Math.min(1_000_000, wholeOrZero(env.STUDIO_WEEKLY_PRIZE, 10_000)),
+    // (2026-10-12) the $AGI a creation's maker holds (or burned) to download its own without our pill (0: never)
+    infCleanAgi: Math.min(1_000_000_000, wholeOrZero(env.STUDIO_CLEAN_AGI, 1000)),
     // …round 4, phase 3 (2026-10-11): gifts of bought credits (STUDIO_GIFTS "off": none; STUDIO_GIFTS_A_DAY: the most one wallet
     // gives a day, 50,000 by default: the owner's) and invites (STUDIO_REFERRALS "off": none; a friend's welcome credits with
     // its first top-up of $5 or more, 100; its inviter's percent of each of its top-ups, 10; at most 500 from one friend and

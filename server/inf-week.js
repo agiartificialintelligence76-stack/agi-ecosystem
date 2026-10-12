@@ -12,6 +12,7 @@
 // A prize is "a thank-you for making, not an investment, not financial advice": never a reason to buy, never paid to holders.
 import { rpc } from './limits.js';
 import { studioWallet } from './studio.js';
+import { portraitRow } from '../src/studio/rules.js';
 
 export const WEEK = {
   LIKES_A_DAY: 50,
@@ -67,13 +68,15 @@ export async function weekClock(cfg, { now = Date.now() } = {}) {
 }
 
 // ---------- what the pages show ----------
-// A week as the pages need it (the owner's page sees every state; anyone else only approved ones, through Explore)
-export function weekView(w) {
+// A week as the pages need it (the owner's page sees every state; anyone else only approved ones, through Explore). Its
+// influencer's portrait is its profile picture (since 2026-10-11 the square its maker framed, else its picked look; one taken
+// down with STUDIO_HIDE isn't shown: cfg's)
+export function weekView(w, cfg = null) {
   if (!w || !WEEK_RE.test(String(w.week))) return null;
   return {
     week: w.week, status: w.status, job: ID.test(String(w.job)) ? w.job : null, inf: ID.test(String(w.inf_id)) ? w.inf_id : null,
     name: w.inf_name || null, kind: w.kind || null, shape: w.shape || null, poster: w.poster === true, files: n0(w.files),
-    portrait: w.looks_job && Number.isInteger(w.pick) ? { job: w.looks_job, n: w.pick } : null, holderLikes: n0(w.holder_likes),
+    portrait: portraitRow(w, (id) => cfg?.studioHide?.has(id) === true), holderLikes: n0(w.holder_likes),
     likes: n0(w.likes), prize: n0(w.prize), tx: TXHASH.test(String(w.tx)) ? w.tx : null, shown: w.job_ok === true, skipped: n0(w.skipped),
     mine: w.mine === true,
   };
@@ -82,7 +85,8 @@ export function weekView(w) {
 export async function weeksFor(cfg, { wallet = null, owner = false, limit = 8 } = {}) {
   const code = wallet ? studioWallet(cfg.passSecret, wallet) : null;
   const list = await rpc(cfg, 'inf_weeks', { p_wallet: code, p_limit: owner ? Math.max(limit, 12) : limit }, 'studio');
-  const weeks = (Array.isArray(list) ? list : []).map(weekView).filter(Boolean);
+  // (an explicit arrow: map would pass its index as cfg)
+  const weeks = (Array.isArray(list) ? list : []).map((x) => weekView(x, cfg)).filter(Boolean);
   if (owner) return weeks;
   return weeks.filter((w) => w.mine && w.prize > 0 && ['approved', 'claimed', 'sending', 'sent'].includes(w.status));
 }

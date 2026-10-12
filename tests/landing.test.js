@@ -47,11 +47,17 @@ test("the front has the page's one h1 (the lab hero's title is an h2 now); its d
   assert.match(front, /<img class="lp-figure-img" data-lp-img src="\/images\/landing\/agi1-cutout\.webp" width="796" height="1510" alt="AGI-1[^"]+"/, 'her picture has a description');
 });
 
-test('its links: the Playground, "Risk check your coins on clank", her diary, $AGI and AGI on X; "Talk to AGI-1" opens the chat', () => {
+test('its links: the Playground, AGI Studio, "Risk check your coins on clank", her diary, $AGI and AGI on X; "Talk to AGI-1" opens the chat', () => {
   const nav = front.slice(front.indexOf('<nav class="lp-eco"'), front.indexOf('</nav>', front.indexOf('<nav class="lp-eco"')));
   assert.match(nav, /<nav class="lp-eco" aria-labelledby="lp-eco-label">/);
-  assert.match(nav, /<p class="lp-eco-label" id="lp-eco-label">Her world <span>\(05\)<\/span><\/p>/, 'the list is "Her world" (the owner, 2026-09-28: no "ecosystem")');
-  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#playground', '#checker', '/diary', '#model-card', 'https://x.com/agi1dotapp']);
+  assert.match(nav, /<p class="lp-eco-label" id="lp-eco-label">Her world <span>\(06\)<\/span><\/p>/, 'the list is "Her world" (the owner, 2026-09-28: no "ecosystem")');
+  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#playground', '/studio', '#checker', '/diary', '#model-card', 'https://x.com/agi1dotapp']);
+  assert.equal((nav.match(/<li>/g) || []).length, 6, 'its count says how many rows it has');
+  // (2026-10-13, the owner: "make it live for everyone now") AGI Studio, on this site's own address: the same 18+ answer
+  // and wallet session as the rest of agi1.app
+  assert.match(nav, /<a class="lp-c-studio" href="\/studio" [^>]*><span class="lp-dot"><\/span>AGI Studio <small>your own AI influencer<\/small><i aria-hidden="true">→<\/i><\/a>/);
+  assert.match(css, /\.lp-c-studio \{ --c: [^}]+\}/, 'its own color');
+  assert.match(css, /\.lp-intro\.lp-go \.lp-eco li:nth-child\(6\) \{ animation-delay: 1\.21s; \}/, 'its row comes in last, like the others in turn');
   assert.match(nav, /<span class="lp-dot"><\/span>Risk check your coins on clank<i aria-hidden="true">↓<\/i>/, 'the risk check under its name (the owner, 2026-09-28), in the Arena\'s old place');
   const planets = [...front.matchAll(/<a class="lp-planet [^>]*href="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(planets, ['#playground', '#checker', '#model-card', 'https://x.com/agi1dotapp'], 'the planets: the same places');

@@ -11,7 +11,7 @@ export const GUIDE_KEY = 'agi_guide';
 
 // A step: id; target (the element its arrow points at: [data-guide="<target>"] on the page); title and text (words only, set
 // as text); clip (its video, src/studio/guide-media.js); when (only while the page is like that: 'signedIn', 'signedOut',
-// 'design', 'photo', 'instantOff'); open ('panel': a phone's drawer of controls opens first; 'gallery': it closes first, so
+// 'design', 'photo', 'styled', 'instantOff'); open ('panel': a phone's drawer of controls opens first; 'gallery': it closes first, so
 // what's behind it shows).
 export const GUIDES = {
   explore: {
@@ -40,12 +40,15 @@ export const GUIDES = {
         text: 'Its look and age are needed; More details has its hair, skin and eyes. Tap a picked one again to unpick it.' },
       { id: 'photo', target: 'look', open: 'panel', when: 'photo', title: 'Add its photo', clip: 'create-photo',
         text: "Tick the box first, then choose a photo: it's checked in a few seconds. A real person's photo makes a private influencer." },
-      { id: 'style', target: 'style', open: 'panel', title: 'Style, outfit and vibe', clip: 'create-style',
-        text: 'Realistic, anime or 3D cartoon. An outfit and a vibe are up to you.' },
+      // (2026-10-11) from a photo, how it's made: 4 looks, just its full body, or the photo as it is (src/studio/rules.js WAYS)
+      { id: 'way', target: 'way', open: 'panel', when: 'photo', title: 'How it\'s made', clip: 'create-way',
+        text: '4 looks to pick from, or save credits: just its full body, or your photo as it is (a photo of the whole person, head to feet).' },
+      { id: 'style', target: 'style', open: 'panel', when: 'styled', title: 'Style, outfit and vibe', clip: 'create-style',
+        text: 'A style is optional: 26 of them, from film photo to storybook anime. Any style keeps its own look. An outfit and a vibe are up to you.' },
       { id: 'name', target: 'name', open: 'panel', title: 'Name it', clip: 'create-name',
         text: 'Type a name, or tap Suggest. Anything else you want goes in the box above it.' },
       { id: 'go', target: 'go', open: 'panel', title: 'Create it', clip: 'create-go',
-        text: 'The price is on the button, in credits. You get 4 looks to pick from in about a minute.' },
+        text: 'The price is on the button, in credits. Its 4 looks come in about a minute; the cheaper ways from a photo, sooner.' },
     ],
   },
   pick: {
@@ -70,8 +73,11 @@ export const GUIDES = {
         text: 'The price is on the button. It shows up in Creations with a progress bar and the time left.' },
       { id: 'instant', target: 'instant', open: 'panel', title: 'Instant: one tap', clip: 'make-instant',
         text: "Switch it on for ready-made ideas: one tap makes one, at the price on it. It's off until you switch it on." },
+      // (2026-10-11) its profile picture: the camera on its picture (only its own wallet's, once it's ready: src/studio/views/frame.js)
+      { id: 'pfp', target: 'pfp', open: 'gallery', title: 'Its profile picture', clip: 'make-pfp',
+        text: 'Tap the camera on its picture to change it: one of its looks, its full body or a photo, framed on its face. Free.' },
       { id: 'creations', target: 'creations', open: 'gallery', title: 'Your creations', clip: 'make-creations',
-        text: 'Open one to download it (with its AI-made mark), get captions, post on X or copy its prompt.' },
+        text: 'Open one to edit it with words or in the photo or video editor (free), make another, delete it, download it marked AI-made, or get captions.' },
     ],
   },
   me: {
@@ -92,29 +98,33 @@ export const GUIDES = {
 };
 
 // Every video a guide or a lesson shows (src/studio/guide-media.js has each one twice: '-d' recorded on a computer, '-p' on a
-// phone). The lessons' own two: a trend video and a video, made on an influencer's page.
+// phone). The lessons' own four: a trend video and a video, made on an influencer's page, and (2026-10-12) the photo editor
+// and the video editor.
 export const CLIP_IDS = [...new Set([
   ...Object.values(GUIDES).flatMap((g) => g.steps.map((s) => s.clip)),
-  'make-trend', 'make-video',
+  'make-trend', 'make-video', 'make-editor', 'make-cut',
 ])];
 
 // Learn's lessons and their videos (played one after the other), and the page whose guide shows it with arrows
 export const LESSON_CLIPS = {
-  start: { clips: ['create-mode', 'create-look', 'create-go', 'pick-look'], guide: '/create' },
-  photos: { clips: ['make-scene', 'make-models', 'make-go'], guide: null },
-  videos: { clips: ['make-video'], guide: null },
+  start: { clips: ['create-mode', 'create-look', 'create-go', 'pick-look', 'create-way', 'make-pfp'], guide: '/create' },
+  photos: { clips: ['make-scene', 'make-models', 'make-go', 'make-editor'], guide: null },
+  videos: { clips: ['make-video', 'make-cut'], guide: null },
   trends: { clips: ['explore-trends', 'make-trend'], guide: '/explore' },
   instant: { clips: ['make-instant'], guide: null },
   credits: { clips: ['explore-credits', 'me-credits', 'me-gifts'], guide: '/me' },
   share: { clips: ['make-creations'], guide: null },
 };
 
-// the conditions a step may have, against what the page is like now: { signedIn, mode: 'design' | 'picture', instant }
+// the conditions a step may have, against what the page is like now: { signedIn, mode: 'design' | 'picture', way: 'looks' |
+// 'body' | 'asis' (2026-10-11: how one from a photo is made), instant }
 const WHEN = {
   signedIn: (env) => env.signedIn === true,
   signedOut: (env) => env.signedIn !== true,
   design: (env) => env.mode !== 'picture',
   photo: (env) => env.mode === 'picture',
+  // a style to pick (a photo used as it is keeps its own look: no style, outfit or vibe)
+  styled: (env) => env.mode !== 'picture' || env.way !== 'asis',
   instantOff: (env) => env.instant !== true,
 };
 // a guide's steps for the page as it is (a step whose target isn't on the page is left out later, when it's looked for)

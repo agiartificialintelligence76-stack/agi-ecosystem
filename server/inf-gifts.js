@@ -4,12 +4,21 @@
 //   • Gifts: some of a wallet's BOUGHT credits (the ones it bought, and gifts it got; never this month's free ones or bonus
 //     ones) to another wallet: by its address, or by the clank.trade name it shows here ("@name"); or a gift link: held until
 //     someone claims it once (its secret is the link's part after "#gift=": a page's address never carries it to a server),
-//     taken back by its sender while nobody has, and back by itself after its days. A note (80 characters) may go with one.
+//     taken back by its sender while nobody has, and back by itself after its days. A message (80 characters until
+//     2026-10-12; 200 since, its line breaks kept: the owner's "Up to 200 characters (Recommended)") may go with one.
 //     Credits have no cash value: a gift is a gift, never a sale (the page says never to buy credits from anyone).
 //   • Invites: each wallet's own invite link (agi1.app/studio/explore?ref=<code>); a wallet that never bought credits joins
 //     through one once. With its first top-up of $5 or more it gets 100 bonus credits, and its inviter 10% of each of its
 //     top-ups as bonus credits (at most 500 from one friend, 5,000 a month). Settled right after a top-up (server/credits.js),
 //     and by the studio's clock for anything missed (server/inf-jobs.js).
+//   • (2026-10-12) The owner's gift links of free credits (the owner: "i can put the a custome value of credits there then i
+//     can sent a message then theres gonna be a link for it then when i sahre it to someone they can see the meesage and the
+//     gifted credits and they can claim it"; the owner's choices: "Mine, free credits (Recommended)", "Up to 200 characters
+//     (Recommended)", "Once (Recommended)"): from the owner's tab only, any number of credits (1 to 100,000), the owner's
+//     message, from "AGI Studio"; nothing is held (they're free credits, paid from the owner's own AI balance like credits for
+//     testing), claimed once by anyone with the link as bonus credits (never given on), gone when taken back or past their
+//     days. They open even while people's gifts are switched off, and claiming one while AGI Studio is private lets that
+//     wallet in (server/inf-api.js).
 // What's kept: supabase/influencers.sql (gifts, invites), under scrambled wallet codes; the other side of a gift is kept as the
 // page shows it (a clank.trade name, or a short address "0x12ab…cdef").
 import { randomBytes } from 'node:crypto';
@@ -19,7 +28,7 @@ import { studioWallet, newOrderId } from './studio.js';
 import { tidy, trouble } from './studio-words.js';
 import { secretIn } from './secrets.js';
 import { clankNameFrom } from './clank-names.js';
-import { GIFTS, REFERRALS, REF_CODE, GIFT_TOKEN } from '../src/studio/rules.js';
+import { GIFTS, REFERRALS, REF_CODE, GIFT_TOKEN, OWNER_LINKS } from '../src/studio/rules.js';
 
 const ID = /^[A-Za-z0-9_-]{22}$/;
 const NOBODY = new Set(['0x0000000000000000000000000000000000000000', '0x000000000000000000000000000000000000dead']);
@@ -49,13 +58,27 @@ export function recipientFrom(input) {
   return name ? { kind: 'name', name } : null;
 }
 
-// A gift's note: none, or up to GIFTS.NOTE_MAX characters, PG-13, never a link, a contact, a secret or a deal (a gift is never
-// a sale: never "cheap", a price, a payment or a place to talk elsewhere). → { ok: true, note (or null) } or { ok: false,
-// why: 'note_long' | 'secret' | 'note_link' | 'note_contact' | 'note_deal' | 'note_words' }
+// (2026-10-12) A gift's message, tidied: its lines kept (at most MESSAGE_LINES: more join the last one), each line's spaces and
+// invisible characters tidied, empty lines out. → the message ('' for none)
+export const MESSAGE_LINES = 4;
+export function tidyMessage(input) {
+  const lines = String(input ?? '').replace(/\r\n?|[\u2028\u2029]/g, '\n').split('\n').map((l) => tidy(l)).filter(Boolean);
+  if (lines.length > MESSAGE_LINES) lines.splice(MESSAGE_LINES - 1, lines.length, lines.slice(MESSAGE_LINES - 1).join(' '));
+  return lines.join('\n');
+}
+
+// A gift's message: none, or up to GIFTS.NOTE_MAX characters (200 since 2026-10-12; a line break counts as one), PG-13, never a
+// link, a contact, a secret or a deal (a gift is never a sale: never "cheap", a price, a payment or a place to talk elsewhere).
+// (2026-10-12) The owner's own message on one of the owner's gift links (owner: true) may also say "giveaway" or "discounts"
+// (its link is one, and holders get them), AGI-1, AGI Studio or "official" (it is), and name anyone; the rest holds.
+// → { ok: true, note (or null) } or { ok: false, why: 'note_long' | 'secret' | 'note_link' | 'note_contact' | 'note_deal' |
+// 'note_words' }
 const DEAL = /\b(?:sell(?:s|ing)?|resell\w*|cheap(?:er|est)?|discounts?|prices?|pay(?:s|ing|ment)?|paid|cash|usd[gtc]?|eth|btc|sol|dm|dms|telegram|whatsapp|discord|signal|airdrops?|giveaways?|presales?|invest\w*|profit\w*|refunds?)\b|\$\s*\d/i;
-export function giftNote(input) {
+const OWNER_DEAL = /\b(?:sell(?:s|ing)?|resell\w*|cheap(?:er|est)?|prices?|pay(?:s|ing|ment)?|paid|cash|usd[gtc]?|eth|btc|sol|dm|dms|telegram|whatsapp|discord|signal|airdrops?|presales?|invest\w*|profit\w*|refunds?)\b|\$\s*\d/i;
+const OWNER_MAY = new Set(['person', 'character', 'her']);
+export function giftNote(input, { owner = false } = {}) {
   if (input === undefined || input === null) return { ok: true, note: null };
-  const note = tidy(input);
+  const note = tidyMessage(input);
   if (!note) return { ok: true, note: null };
   // a seed phrase or a private key first, whatever its length (its own warning: never kept, never sent anywhere)
   if (secretIn(note)) return { ok: false, why: 'secret' };
@@ -63,10 +86,21 @@ export function giftNote(input) {
   const t = trouble(note);
   if (t === 'link') return { ok: false, why: 'note_link' };
   if (t === 'contact') return { ok: false, why: 'note_contact' };
-  if (DEAL.test(note)) return { ok: false, why: 'note_deal' };
-  if (t) return { ok: false, why: 'note_words' };
+  if ((owner ? OWNER_DEAL : DEAL).test(note)) return { ok: false, why: 'note_deal' };
+  if (t && !(owner && OWNER_MAY.has(t))) return { ok: false, why: 'note_words' };
   return { ok: true, note };
 }
+// an influencers.sql from before 2026-10-12 refuses a message over 80 characters as "bad": the log says to run it again
+let oldNoteWarned = false;
+function oldNote(r, note) {
+  if (r?.why !== 'bad' || !note || [...note].length <= 80) return false;
+  if (!oldNoteWarned) {
+    oldNoteWarned = true;
+    console.warn("[studio] supabase/influencers.sql is from before 2026-10-12: a gift's message of more than 80 characters is refused (run it again: it ends with influencers_ready = 1)");
+  }
+  return true;
+}
+export const _resetGiftWarnings = () => { oldNoteWarned = false; };
 
 // How a wallet is shown on the other side of a gift: its clank.trade name ("@name") when it shows one here, else its short
 // address ("0x12ab…cdef")
@@ -115,6 +149,7 @@ export async function sendGift(cfg, { wallet, to, credits, note }) {
       p_day_max: cfg.infGiftDayMax, p_day_count: GIFTS.PER_DAY,
     }, 'studio');
     if (r?.ok === true) return { ok: true, id, to: String(r.to_label || ''), paid: n0(r.paid), credits: c };
+    if (oldNote(r, n.note)) return { ok: false, why: 'busy' };
     if (r?.why !== 'taken') return giftNo(r);
   }
   return { ok: false, why: 'busy' };
@@ -139,13 +174,14 @@ export async function makeGiftLink(cfg, { wallet, credits, note }) {
       p_min: GIFTS.MIN, p_day_max: cfg.infGiftDayMax, p_day_count: GIFTS.PER_DAY, p_open_max: GIFTS.OPEN_LINKS, p_days: GIFTS.LINK_DAYS,
     }, 'studio');
     if (r?.ok === true) return { ok: true, id, token, expires: ms(r.expires), paid: n0(r.paid), credits: c };
+    if (oldNote(r, n.note)) return { ok: false, why: 'busy' };
     if (r?.why !== 'taken') return giftNo(r);
   }
   return { ok: false, why: 'busy' };
 }
 
-// A gift link as anyone with it sees it. → { credits, from, note, status ('open' | 'claimed' | 'canceled' | 'expired'),
-// expires } | null (no such link)
+// A gift link as anyone with it sees it; (2026-10-12) owner: one of the owner's gift links of free credits. → { credits, from,
+// note, status ('open' | 'claimed' | 'canceled' | 'expired'), expires, owner } | null (no such link)
 export async function peekGift(cfg, token) {
   if (!GIFT_TOKEN.test(String(token || ''))) return null;
   const g = await rpc(cfg, 'inf_gift_peek', { p_token: token }, 'studio');
@@ -153,18 +189,21 @@ export async function peekGift(cfg, token) {
   return {
     credits: n0(g.credits), from: String(g.from || ''), note: typeof g.note === 'string' ? g.note : null,
     status: ['open', 'claimed', 'canceled', 'expired'].includes(g.status) ? g.status : 'expired', expires: ms(g.expires),
+    owner: g.owner === true,
   };
 }
 
-// A gift link claimed by this wallet. → { ok: true, credits, from, paid } or { ok: false, why ('gift_gone' | 'gift_claimed'
-// (with mine) | 'gift_canceled' | 'gift_expired' | 'gift_own' | 'gift_held' | 'banned' | …) }
+// A gift link claimed by this wallet. (2026-10-12) One of the owner's links comes as bonus credits (owner: true), and still
+// opens while people's gifts are switched off. → { ok: true, credits, from, paid, bonus, owner } or { ok: false, why
+// ('gifts_off' | 'gift_gone' | 'gift_claimed' (with mine) | 'gift_canceled' | 'gift_expired' | 'gift_own' | 'gift_held' |
+// 'banned' | …) }
 export async function claimGift(cfg, { wallet, token }) {
-  if (!giftsOn(cfg)) return { ok: false, why: 'gifts_off' };
-  if (!GIFT_TOKEN.test(String(token || ''))) return { ok: false, why: 'gift_gone' };
+  if (!GIFT_TOKEN.test(String(token || ''))) return { ok: false, why: giftsOn(cfg) ? 'gift_gone' : 'gifts_off' };
+  if (!giftsOn(cfg) && !(await peekGift(cfg, token))?.owner) return { ok: false, why: 'gifts_off' };
   const r = await rpc(cfg, 'inf_gift_claim', {
     p_token: token, p_wallet: studioWallet(cfg.passSecret, wallet), p_label: await labelOf(cfg, wallet),
   }, 'studio');
-  if (r?.ok === true) return { ok: true, credits: n0(r.credits), from: String(r.from || ''), paid: n0(r.paid) };
+  if (r?.ok === true) return { ok: true, credits: n0(r.credits), from: String(r.from || ''), paid: n0(r.paid), bonus: n0(r.bonus), owner: r.owner === true };
   return giftNo(r);
 }
 
@@ -176,9 +215,10 @@ export async function cancelGift(cfg, { wallet, id }) {
   return giftNo(r);
 }
 
-// A wallet's gifts (the newest 40 it gave or got: the ones it got are seen from then on) and its invite rewards (the newest
-// 20). → { gifts: [{ id, dir ('in' | 'out'), credits, other, note, status, link, token (its own open links' secret), seen,
-// created, expires, done }], rewards: [{ kind ('ref' | 'welcome'), amount, at }] }
+// A wallet's gifts (the newest 40 it gave or got: the ones it got are seen from then on; the owner's own gift links of free
+// credits are on the owner's tab instead) and its invite rewards (the newest 20). → { gifts: [{ id, dir ('in' | 'out'),
+// credits, other, note, status, link, token (its own open links' secret), seen, created, expires, done, owner (one of the
+// owner's links it claimed: bonus credits) }], rewards: [{ kind ('ref' | 'welcome'), amount, at }] }
 export async function myGifts(cfg, wallet) {
   const r = await rpc(cfg, 'inf_gifts_mine', { p_wallet: studioWallet(cfg.passSecret, wallet) }, 'studio');
   const gifts = (Array.isArray(r?.gifts) ? r.gifts : []).filter((g) => ID.test(String(g?.id))).map((g) => ({
@@ -186,11 +226,58 @@ export async function myGifts(cfg, wallet) {
     note: typeof g.note === 'string' ? g.note : null,
     status: ['sent', 'open', 'claimed', 'canceled', 'expired'].includes(g.status) ? g.status : 'expired', link: g.link === true,
     token: g.dir === 'out' && g.status === 'open' && GIFT_TOKEN.test(String(g.token || '')) ? g.token : null, seen: g.seen !== false,
-    created: ms(g.created_at), expires: ms(g.expires_at), done: ms(g.done_at),
+    created: ms(g.created_at), expires: ms(g.expires_at), done: ms(g.done_at), owner: g.owner === true,
   }));
   const rewards = (Array.isArray(r?.rewards) ? r.rewards : []).filter((x) => ['ref', 'welcome'].includes(x?.kind))
     .map((x) => ({ kind: x.kind, amount: n0(x.amount), at: ms(x.at) }));
   return { gifts, rewards };
+}
+
+// ---------- (2026-10-12) the owner's gift links of free credits ----------
+// The credits of one, as typed: a whole number from OWNER_LINKS.MIN to OWNER_LINKS.MAX. → the number, or null
+export function ownerCreditsFrom(x) {
+  const v = typeof x === 'string' && /^\d{1,6}$/.test(x.trim()) ? Number(x.trim()) : x;
+  return Number.isInteger(v) && v >= OWNER_LINKS.MIN && v <= OWNER_LINKS.MAX ? v : null;
+}
+// One made (the owner's wallet: our server checked it's the owner's), with the owner's message. → { ok: true, id, token (its
+// secret: the page puts it after "#gift="), expires, credits, note } or { ok: false, why: 'link_credits' | 'links_full' |
+// 'note_…' | 'secret' | 'bad_request' | 'busy' }
+export async function makeOwnerLink(cfg, { wallet, credits, note }) {
+  const c = ownerCreditsFrom(credits);
+  if (!c) return { ok: false, why: 'link_credits' };
+  const n = giftNote(note, { owner: true });
+  if (!n.ok) return { ok: false, why: n.why };
+  for (let t = 0; t < 2; t++) {
+    const id = newOrderId();
+    let token = newOrderId();
+    if (token === id) token = newOrderId();
+    const r = await rpc(cfg, 'inf_owner_link', {
+      p_id: id, p_token: token, p_from: studioWallet(cfg.passSecret, String(wallet || '').toLowerCase()), p_credits: c, p_note: n.note,
+      p_open_max: OWNER_LINKS.OPEN, p_days: OWNER_LINKS.DAYS,
+    }, 'studio');
+    if (r?.ok === true) return { ok: true, id, token, expires: ms(r.expires), credits: c, note: n.note };
+    if (r?.why === 'too_many_links') return { ok: false, why: 'links_full' };
+    if (r?.why !== 'taken') return { ok: false, why: r?.why === 'bad' ? 'bad_request' : 'busy' };
+  }
+  return { ok: false, why: 'busy' };
+}
+// The owner's links (the newest 60), and what the owner's tab needs to make one. → { links: [{ id, credits, note, status
+// ('open' | 'claimed' | 'canceled' | 'expired'), token (only while it can be claimed), to (who claimed it, as the page shows
+// them), created, expires, done }], open (waiting now), max (waiting at most), days, min, most, noteMax }
+export async function ownerLinks(cfg, wallet) {
+  const r = await rpc(cfg, 'inf_owner_links', { p_from: studioWallet(cfg.passSecret, String(wallet || '').toLowerCase()), p_limit: 60 }, 'studio');
+  const links = (Array.isArray(r?.links) ? r.links : []).filter((l) => ID.test(String(l?.id))).map((l) => {
+    const status = ['open', 'claimed', 'canceled', 'expired'].includes(l.status) ? l.status : 'expired';
+    return {
+      id: l.id, credits: n0(l.credits), note: typeof l.note === 'string' ? l.note : null, status,
+      token: status === 'open' && GIFT_TOKEN.test(String(l.token || '')) ? l.token : null,
+      to: status === 'claimed' && typeof l.to === 'string' ? l.to : null, created: ms(l.created_at), expires: ms(l.expires_at), done: ms(l.done_at),
+    };
+  });
+  return {
+    links, open: n0(r?.open), max: OWNER_LINKS.OPEN, days: OWNER_LINKS.DAYS, min: OWNER_LINKS.MIN, most: OWNER_LINKS.MAX,
+    noteMax: GIFTS.NOTE_MAX,
+  };
 }
 
 // ---------- invites ----------

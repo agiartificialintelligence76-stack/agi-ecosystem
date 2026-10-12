@@ -72,7 +72,9 @@ export const LINKS = [
 // the AI's own cost of each kind of thing made, in dollars (an estimate: fal's and Meshy's prices, 2026-10-10): its looks (4
 // pictures), its full body, a photo, an X banner (2K), a trend video (up to 10 s), a video (with or without sound, or from its
 // full body), the owner's trend clips and example pictures
-export const AI_COST = { looks: 0.32, body: 0.08, photo: 0.08, banner: 0.12, trend: 1.0, video: 0.9, preset: 1.26, example: 0.08, model: 1.18 };
+// (2026-10-12, the editor) a photo saved from the photo editor ('edited') and a video cut in the video editor ('cut') cost
+// only Gemini's look (and the clock's ffmpeg): about a tenth and a fifth of a cent
+export const AI_COST = { looks: 0.32, body: 0.08, photo: 0.08, banner: 0.12, trend: 1.0, video: 0.9, preset: 1.26, example: 0.08, edited: 0.001, cut: 0.002, model: 1.18 };
 
 const ms = (t) => { const n = Date.parse(t ?? ''); return Number.isFinite(n) ? n : null; };
 const n0 = (x) => Math.max(0, Number(x) || 0);

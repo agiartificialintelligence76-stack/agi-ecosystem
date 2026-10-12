@@ -529,13 +529,31 @@ function tellGifts() {
 }
 // A gift link (…#gift=<its secret>): its sheet. The secret stays in the fragment (never sent with the page's address) and
 // goes only in a POST's body; the sheet takes it out of the address when it closes.
-const appApi = { act, requireAdult, requireWallet, refreshMe, toast, href, signedIn: () => !!state.session, findWallets };
+// (2026-10-12) For one of the owner's gift links it also reads ?inf-info (whether AGI Studio is private) and whether the
+// signed-in wallet may use it already (null when unknown): claiming one lets a wallet in while it's private.
+const appApi = {
+  act, requireAdult, requireWallet, refreshMe, toast, href, signedIn: () => !!state.session, findWallets,
+  get info() { return state.info; },
+  allowed: () => (state.session && state.me ? state.me.allowed !== false : null),
+  // ?inf-info once it's here (a gift link opened as the page starts: at most 4 s)
+  infoReady: () => (state.info ? Promise.resolve(state.info) : new Promise((done) => {
+    const t = setTimeout(() => done(state.info || null), 4000);
+    events.addEventListener('info', () => { clearTimeout(t); done(state.info || null); }, { once: true });
+  })),
+  // …and, signed in, this wallet's own answer once it's here (at most 4 s): whether it may use AGI Studio already
+  meReady: () => (!state.session || state.me ? Promise.resolve(state.me || null) : new Promise((done) => {
+    const t = setTimeout(() => done(state.me || null), 4000);
+    events.addEventListener('me', () => { clearTimeout(t); done(state.me || null); }, { once: true });
+  })),
+};
 let claiming = false;
 async function giftFromAddress() {
   if (claiming || !/^#gift=/.test(location.hash)) return;
   const m = /^#gift=([A-Za-z0-9_-]{22})(?![A-Za-z0-9_-])/.exec(location.hash);
   claiming = true;
   try { await openGiftClaim(appApi, m ? m[1] : location.hash.slice(6)); } finally { claiming = false; }
+  // another gift link opened while this one's sheet was open or closing (it took only its own secret out): its sheet now
+  if (/^#gift=/.test(location.hash)) giftFromAddress();
 }
 addEventListener('hashchange', giftFromAddress);
 

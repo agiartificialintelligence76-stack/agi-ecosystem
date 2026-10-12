@@ -50,6 +50,18 @@ const T0 = Date.now();
 const dbg = (...a) => { if (process.env.GUIDE_DEBUG) process.stdout.write(`  [${((Date.now() - T0) / 1000).toFixed(1)} s] ${a.join(' ')}\n`); };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
+// (2026-10-11) a motion over ms of real time: step(k) for k from 0 to 1, as often as the browser takes each step (each one waits
+// for the page to take it: on a computer without a graphics card that can be a tenth of a second), so it lasts ms however slow
+// the page is, and ends exactly at 1
+async function along(ms, step) {
+  const t0 = Date.now();
+  for (;;) {
+    const k = Math.min(1, (Date.now() - t0) / ms);
+    await step(k);
+    if (k >= 1) return;
+    await sleep(16);
+  }
+}
 
 // ---------- the app, as Vite builds it ----------
 async function buildApp() {
@@ -89,7 +101,7 @@ export async function init() {
 ${setup}
 }
 ${fetchPart}
-export { SECRET, IP, WALLET, OTHER, BOSS, OWNER, codeOf, idOf, sessionFor, readyInf, doneJob, keptTrend, picPath, makeSession, launchGet, launchPost, giveCredits, R };
+export { SECRET, IP, WALLET, OTHER, BOSS, OWNER, codeOf, idOf, sessionFor, readyInf, doneJob, keptTrend, picPath, makeSession, launchGet, launchPost, giveCredits, tick, R };
 `;
   mkdirSync(CACHE, { recursive: true });
   const file = join(CACHE, 'demo-backend.mjs');
@@ -182,6 +194,27 @@ export async function sceneVideo(who, place, { shape = 'tall', seconds = 4, pan 
   writeFileSync(kept, out);
   ART_CACHE.set(key, out);
   return out;
+}
+
+// (2026-10-12, the video editor) a cut made by our clock, as on Vercel (server/inf-cut.js, with ffmpeg), only VP9 instead of
+// H.264: the Chromium this records with plays VP9, never H.264. run(args, ms) for its run stand-in: x264's own words (its
+// encoder, preset and bitrate) swapped for VP9's; everything else (its crop, its words' picture, the share mark, the join) as
+// our server asks for it
+export function cutRun(args, ms) {
+  const a = [...args];
+  const at = a.indexOf('libx264');
+  if (at > 0) {
+    const end = a.indexOf('-movflags', at);
+    a.splice(at - 1, (end > at ? end : at + 1) - (at - 1), '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '34', '-deadline', 'realtime', '-cpu-used', '8', '-row-mt', '1');
+  }
+  return new Promise((resolve, reject) => {
+    const p = spawn('ffmpeg', a, { stdio: ['ignore', 'ignore', 'pipe'], env: withoutSecrets() });
+    let err = '';
+    p.stderr.on('data', (d) => { if (err.length < 2000) err += d; });
+    const timer = setTimeout(() => { p.kill('SIGKILL'); reject(new Error('a cut: ffmpeg ran out of time')); }, Math.max(1000, ms));
+    p.on('error', (e) => { clearTimeout(timer); reject(e); });
+    p.on('close', (code) => { clearTimeout(timer); if (code === 0) resolve(); else reject(new Error(`a cut: ffmpeg (${code}): ${err.trim().slice(0, 300)}`)); });
+  });
 }
 
 // ---------- the demo studio: what each scene starts from ----------
@@ -336,6 +369,8 @@ export class Film {
   constructor(page, L) {
     this.page = page; this.L = L; this.lay = LAYOUTS[L]; this.phone = this.lay.mobile;
     this.t0 = null; this.t1 = null; this.cams = []; this.path = []; this.taps = []; this.speeds = []; this.posterAt = null; this.stills = [];
+    // (2026-10-11, a drag and a pinch: a finger's track on a phone, a press held down on a computer)
+    this.touches = []; this.holds = []; this.cdp = null;
     this.pos = { x: this.lay.view.width * 0.62, y: this.lay.view.height * 0.55 };
   }
   now() { return Date.now() / 1000; }
@@ -370,24 +405,24 @@ export class Film {
   async wait(ms) { await sleep(ms); }
   fast(speed = 3) { this.speeds.push({ t: this.now(), speed }); }
   normal() { this.speeds.push({ t: this.now(), speed: 1 }); }
+  // (2026-10-12) a cut: nothing from now until the next normal() (or fast()) is in the video
+  cut() { this.speeds.push({ t: this.now(), speed: Infinity }); }
   poster() { this.posterAt = this.now(); }
   async still(name) { if (this.stills) this.stills.push({ name, png: await this.page.screenshot() }); }
-  // the cursor to a point, along a gentle curve (the page's own mouse too, so hovers show)
+  // the cursor to a point, along a gentle curve (the page's own mouse too, so hovers show), in its own time however long the
+  // page takes each move (2026-10-11: each step drawn where and when the mouse really was)
   async moveTo(x, y, { ms = null } = {}) {
     const from = { ...this.pos };
     const dist = Math.hypot(x - from.x, y - from.y);
     const dur = ms ?? clamp(260 + dist * 0.75, 320, 900);
-    const t = this.now();
-    const steps = Math.max(6, Math.round(dur / 40));
     const bend = { x: (from.y - y) * 0.12, y: (x - from.x) * 0.12 };
-    for (let i = 1; i <= steps; i++) {
-      const k = ease(i / steps);
+    await along(dur, async (s) => {
+      const k = ease(s);
       const arc = Math.sin(Math.PI * k);
       const p = { x: from.x + (x - from.x) * k + bend.x * arc, y: from.y + (y - from.y) * k + bend.y * arc };
-      this.path.push({ t: t + (dur / 1000) * (i / steps), ...p, show: !this.phone });
+      this.path.push({ t: this.now(), ...p, show: !this.phone });
       if (!this.phone) await this.page.mouse.move(p.x, p.y);
-      await sleep(dur / steps);
-    }
+    });
     this.pos = { x, y };
   }
   // the camera now (where its newest move goes)
@@ -432,7 +467,9 @@ export class Film {
     return b;
   }
   // a click (a computer: the cursor goes there and presses; a phone: a touch there)
-  async click(target, { cam = 'follow', room, dx = 0.5, dy = 0.5, hold = 260, after = 420 } = {}) {
+  // (2026-10-12, lead: a phone's finger drawn on the screen that long before the page gets its tap, as a finger rests a moment
+  // before it lifts: a cut right after a tap still shows the tap)
+  async click(target, { cam = 'follow', room, dx = 0.5, dy = 0.5, hold = 260, after = 420, lead = 0 } = {}) {
     const loc = typeof target === 'string' ? this.page.locator(target).first() : target;
     const b = await this.reach(loc, dx, dy);
     if (!b) throw new Error(`nothing to click: ${target}`);
@@ -442,6 +479,7 @@ export class Film {
       await sleep(moved ? 480 : 160);
       this.pos = { x, y };
       this.taps.push({ t: this.now(), x, y });
+      if (lead) await sleep(lead);
       await this.page.touchscreen.tap(x, y);
     } else {
       await this.moveTo(x, y);
@@ -461,6 +499,78 @@ export class Film {
     await this.aim(b, { cam, room });
     if (!this.phone) await this.moveTo(b.x + b.width * dx, b.y + b.height * dy);
     await sleep(after);
+  }
+  // (2026-10-11) a press dragged from one point of the window to another (a computer: the cursor goes there, presses, moves and
+  // lets go; a phone: a finger, its touches sent as a phone's: Chromium's own touch events, which a page sees as pointer events
+  // of the "touch" kind), the camera keeping both ends in the picture
+  async drag(from, to, { ms = 900, hold = 240, after = 450, cam = 'follow' } = {}) {
+    await this.aim({ x: Math.min(from.x, to.x) - 20, y: Math.min(from.y, to.y) - 20, width: Math.abs(to.x - from.x) + 40, height: Math.abs(to.y - from.y) + 40 }, { cam });
+    const at = (k) => ({ x: from.x + (to.x - from.x) * ease(k), y: from.y + (to.y - from.y) * ease(k) });
+    if (this.phone) {
+      await sleep(260);
+      const pad = await this.touchPad();
+      const pts = [];
+      const send = async (type, p) => {
+        pts.push({ t: this.now(), ...p });
+        await pad.send('Input.dispatchTouchEvent', { type, touchPoints: [{ x: p.x, y: p.y, id: 1, radiusX: 9, radiusY: 9, force: 1 }] });
+      };
+      await send('touchStart', from);
+      await sleep(hold);
+      await along(ms, (k) => send('touchMove', at(k)));
+      await sleep(140);
+      await pad.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      this.touches.push({ pts, end: this.now(), after });
+    } else {
+      await this.moveTo(from.x, from.y);
+      await sleep(hold);
+      const t0 = this.now();
+      await this.page.mouse.down();
+      await sleep(120);
+      await along(ms, async (k) => {
+        const p = at(k);
+        this.path.push({ t: this.now(), ...p, show: true });
+        await this.page.mouse.move(p.x, p.y);
+      });
+      await sleep(140);
+      await this.page.mouse.up();
+      this.holds.push({ t0, t1: this.now(), after });
+    }
+    this.pos = { ...to };
+    await sleep(after);
+  }
+  // (2026-10-11, a phone) two fingers around a point, from d0 to d1 apart (wider: zoomed in), along a slant
+  async pinch(center, d0, d1, { ms = 1000, hold = 220, after = 450, angle = -0.7 } = {}) {
+    if (!this.phone) throw new Error('a pinch is a phone\'s');
+    await sleep(260);
+    const pad = await this.touchPad();
+    const dir = { x: Math.cos(angle), y: Math.sin(angle) };
+    const two = (d) => [{ x: center.x - (dir.x * d) / 2, y: center.y - (dir.y * d) / 2 }, { x: center.x + (dir.x * d) / 2, y: center.y + (dir.y * d) / 2 }];
+    const tracks = [[], []];
+    const send = async (type, d) => {
+      const ps = two(d);
+      const t = this.now();
+      ps.forEach((p, i) => tracks[i].push({ t, ...p }));
+      await pad.send('Input.dispatchTouchEvent', { type, touchPoints: ps.map((p, i) => ({ x: p.x, y: p.y, id: i + 1, radiusX: 9, radiusY: 9, force: 1 })) });
+    };
+    await send('touchStart', d0);
+    await sleep(hold);
+    await along(ms, (k) => send('touchMove', d0 + (d1 - d0) * ease(k)));
+    await sleep(140);
+    await pad.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    const end = this.now();
+    const gesture = {};                                      // (both fingers' lag is measured once: see gestureLag)
+    for (const pts of tracks) this.touches.push({ pts, end, after, gesture });
+    this.pos = { ...center };
+    await sleep(after);
+  }
+  async touchPad() {
+    this.cdp ||= await this.page.context().newCDPSession(this.page);
+    return this.cdp;
+  }
+  // (2026-10-12) a sheet's backdrop without its blur (on) or with it again (off): for a drag or a pinch in a sheet, while the
+  // camera sees only the sheet (see openPage)
+  async plainBackdrop(on) {
+    await this.page.evaluate((v) => document.documentElement.classList.toggle('guide-plain-backdrop', v), Boolean(on));
   }
   // typing, a letter at a time
   async type(target, text, { delay = 75 } = {}) {
@@ -511,6 +621,10 @@ function camAt(film, t) {
   return cur;
 }
 function cursorAt(film, t) {
+  // (2026-10-12) during a drag, where the cursor was its lag earlier (see gestureLag): the screen shows what the page did that
+  // much later, so the cursor stays on what it drags
+  const hd = film.holds.find((h) => h.lag && t >= h.t0 && t <= h.t1 + h.lag);
+  if (hd) t = Math.max(hd.t0, t - hd.lag);
   const p = film.path;
   if (!p.length) return null;
   let i = 0;
@@ -519,6 +633,15 @@ function cursorAt(film, t) {
   if (!b || t <= a.t) return a;
   const k = clamp((t - a.t) / (b.t - a.t), 0, 1);
   return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, show: a.show };
+}
+// (2026-10-11) where a finger was at a moment of its track
+function trackAt(pts, t) {
+  let i = 0;
+  while (i + 1 < pts.length && pts[i + 1].t <= t) i++;
+  const a = pts[i], b = pts[i + 1];
+  if (!b || t <= a.t) return a;
+  const k = clamp((t - a.t) / (b.t - a.t), 0, 1);
+  return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
 }
 // the clip's own time (out) → the recording's (in): faster where the scene said so
 function timeline(film) {
@@ -534,6 +657,7 @@ function timeline(film) {
     let left = u;
     for (const s of segs) {
       const len = (s.to - s.from) / s.speed;
+      if (!len) continue;                                   // (a cut: see Film.cut)
       if (left <= len) return s.from + left * s.speed;
       left -= len;
     }
@@ -591,8 +715,18 @@ export async function compose(frames, film, { mp4, poster, director = false }) {
         layers.push({ input: ring(r, a, film.phone ? '#ffffff' : '#a78bfa'), left: Math.round(x - r - 4), top: Math.round(y - r - 4) });
       }
     }
+    // (2026-10-11) a finger on the screen, dragging or pinching (a phone): a dot that follows it
+    for (const tr of film.touches) {
+      const lag = tr.lag || 0;
+      const a = tr.pts[0].t + lag, b = (tr.end ?? tr.pts.at(-1).t) + lag;
+      if (t < a - 0.06 || t > b + 0.16) continue;
+      const p = trackAt(tr.pts, t - lag);
+      const alpha = t < a ? 0.6 : t > b ? clamp(1 - (t - b) / 0.16, 0, 1) : 1;
+      const r = 15, x = (p.x - c.x) * scale, y = (p.y - c.y) * scale;
+      layers.push({ input: dot(r, alpha), left: Math.round(x - r - 2), top: Math.round(y - r - 2) });
+    }
     if (cur && cur.show) {
-      const pressed = film.taps.some((tap) => t - tap.t >= 0 && t - tap.t < 0.14);
+      const pressed = film.taps.some((tap) => t - tap.t >= 0 && t - tap.t < 0.14) || film.holds.some((hd) => t >= hd.t0 + (hd.lag || 0) && t <= hd.t1 + (hd.lag || 0));
       const s = pressed ? 26 : 30;
       layers.push({ input: pressed ? await sharp(CURSOR).resize(s, s).png().toBuffer() : cursorPng, left: Math.round((cur.x - c.x) * scale - 4), top: Math.round((cur.y - c.y) * scale - 2) });
     }
@@ -711,12 +845,79 @@ async function openPage(browser, dist, B, L, { signedIn = true, store = {} } = {
     const announce = () => dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: Object.freeze({ info, provider }) }));
     addEventListener('eip6963:requestProvider', announce);
   }, { wallet: B.WALLET, icon: WALLET_ICON });
+  // (2026-10-12) where the page itself saw each press and move, and when it did (seconds, the same clock as the screencast's
+  // frames): a press dragged, or a finger, is drawn where the page saw it, so it never runs ahead of what it moves on screen
+  await ctx.addInitScript(() => {
+    const log = (window.__guidePtr = []);
+    const at = () => (performance.timeOrigin + performance.now()) / 1000;
+    for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
+      addEventListener(type, (e) => { if (log.length < 20000) log.push({ t: at(), type, id: e.pointerId, kind: e.pointerType, x: e.clientX, y: e.clientY }); }, { capture: true, passive: true });
+    }
+  });
+  // (2026-10-12) a sheet's backdrop without its blur, while a scene says so (Film.plainBackdrop): only while the camera sees
+  // none of it, so the video still shows the page exactly. On a computer without a graphics card every frame blurs the whole
+  // screen behind the sheet again, and the screen showed a drag in it half a second after the page took it
+  await ctx.addInitScript(() => {
+    const add = () => {
+      const s = new CSSStyleSheet();
+      s.replaceSync('.guide-plain-backdrop .sa-sheet::backdrop { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }');
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, s];
+    };
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', add); else add();
+  });
   const page = await ctx.newPage();
   page.setDefaultTimeout(15000);
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|ERR_ABORTED|ERR_FAILED/.test(m.text())) errors.push(m.text()); });
   return { ctx, page, errors };
+}
+
+// ---------- how late the screen showed a drag or a pinch ----------
+// (2026-10-12) On a computer without a graphics card the screen shows what the page did a quarter to half a second after the
+// page took it (the page itself takes each move at once: its own log, window.__guidePtr, says when). A cursor or a finger drawn
+// where it really was then ran ahead of the square it dragged. So each drag's and pinch's lag is measured here (the first frame
+// where the screen around it changed after the page took its first move), and the cursor or the finger is drawn that much
+// later (cursorAt, compose), at most 0.45 s and never into what comes after it (its `after`)
+async function gestureLag(frames, seen, t0, t1, pts, { sx, w, h }) {
+  const moves = (seen || []).filter((e) => e.type === 'pointermove' && e.t >= t0 && e.t <= t1 + 0.05);
+  if (!moves.length || !pts.length) return null;
+  const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y), pad = 40;
+  const left = clamp(Math.round((Math.min(...xs) - pad) * sx), 0, w - 2), top = clamp(Math.round((Math.min(...ys) - pad) * sx), 0, h - 2);
+  const r = {
+    left, top,
+    width: clamp(Math.round((Math.max(...xs) - Math.min(...xs) + 2 * pad) * sx), 2, w - left),
+    height: clamp(Math.round((Math.max(...ys) - Math.min(...ys) + 2 * pad) * sx), 2, h - top),
+  };
+  const grey = (buf) => sharp(buf).extract(r).greyscale().raw().toBuffer();
+  const bi = frames.findLastIndex((f) => f.t <= moves[0].t);
+  if (bi < 0) return null;
+  const base = await grey(frames[bi].buf);
+  for (let k = bi + 1; k < frames.length && frames[k].t <= moves[0].t + 1.5; k++) {
+    const cur = await grey(frames[k].buf);
+    let n = 0;
+    for (let p = 0; p < cur.length; p++) if (Math.abs(cur[p] - base[p]) > 24) n++;
+    if (n >= 60 * sx * sx) return frames[k].t - moves[0].t;
+  }
+  return null;
+}
+async function gestureLags(film, frames) {
+  if (!frames.length || !(film.holds.length || film.touches.length)) return;
+  const meta = await sharp(frames[0].buf).metadata();
+  const size = { sx: meta.width / film.lay.view.width, w: meta.width, h: meta.height };
+  const fit = (lag, after) => (lag == null ? 0 : clamp(lag, 0, Math.min(0.45, (after ?? 450) / 1000 - 0.08)));
+  for (const hd of film.holds) {
+    hd.seenLag = await gestureLag(frames, film.seen, hd.t0, hd.t1, film.path.filter((p) => p.t >= hd.t0 && p.t <= hd.t1), size);
+    hd.lag = fit(hd.seenLag, hd.after);
+  }
+  for (const tr of film.touches) {
+    const g = tr.gesture || tr;                              // (a pinch's two fingers: one gesture, measured once)
+    if (!('seenLag' in g)) {
+      const pts = film.touches.filter((x) => (x.gesture || x) === g).flatMap((x) => x.pts);
+      g.seenLag = await gestureLag(frames, film.seen, tr.pts[0].t, tr.end, pts, size);
+    }
+    tr.lag = fit(g.seenLag, tr.after);
+  }
 }
 
 // ---------- one video: its scene filmed, then put together ----------
@@ -762,11 +963,27 @@ async function film1(browser, dist, B, id, L, scenes, { stills = false } = {}) {
     await sleep(200);
     await cdp.send('Page.stopScreencast').catch(() => {});
   }
+  // (where the page itself saw each press and move, and each drag's lag on screen: see gestureLag)
+  film.seen = await page.evaluate(() => window.__guidePtr || []).catch(() => []);
+  await gestureLags(film, frames);
+  if (process.env.GUIDE_DEBUG) {
+    const rel = (t) => (t - film.t0).toFixed(2);
+    const said = (g) => `the screen ${g.seenLag == null ? 'never changed around it' : `${g.seenLag.toFixed(2)} s late`}, drawn ${g.lag.toFixed(2)} s later`;
+    for (const hd of film.holds) dbg(id, L, `drag ${rel(hd.t0)}–${rel(hd.t1)}: ${said(hd)}`);
+    for (const tr of film.touches) dbg(id, L, `finger ${rel(tr.pts[0].t)}–${rel(tr.end)}: ${said({ seenLag: (tr.gesture || tr).seenLag, lag: tr.lag })}`);
+  }
   if (!film.t0 || !film.t1) throw new Error(`${id}: its scene never said start() and end()`);
   // the frames before the clip starts: only the newest one (what's on screen as it starts)
   const first = frames.filter((f) => f.t <= film.t0).at(-1);
   const used = [...(first ? [{ ...first, t: film.t0 }] : []), ...frames.filter((f) => f.t > film.t0 && f.t <= film.t1 + 0.2)];
   if (used.length < 2) throw new Error(`${id}/${L}: only ${used.length} frames`);
+  // (GUIDE_DEBUG: where the screencast sent no frame for a while, in the clip's own seconds)
+  if (process.env.GUIDE_DEBUG) {
+    const gaps = [];
+    for (let k = 1; k < used.length; k++) if (used[k].t - used[k - 1].t > 0.4) gaps.push(`${(used[k - 1].t - film.t0).toFixed(1)}→${(used[k].t - film.t0).toFixed(1)}`);
+    const marks = [...film.holds.map((hd) => `held ${(hd.t0 - film.t0).toFixed(1)}–${(hd.t1 - film.t0).toFixed(1)}`), ...film.touches.map((tr) => `touch ${(tr.pts[0].t - film.t0).toFixed(1)}–${(tr.end - film.t0).toFixed(1)}`)];
+    dbg(id, L, `no frames: ${gaps.join(', ') || 'none'}${marks.length ? `; ${marks.join(', ')}` : ''}`);
+  }
   if (errors.length) console.warn(`  ${id}/${L}: the page said ${JSON.stringify(errors.slice(0, 3))}`);
   await ctx.close();
   return { film, frames: used };

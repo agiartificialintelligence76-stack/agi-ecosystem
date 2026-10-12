@@ -238,13 +238,66 @@
 >   (Recommended)"): on each page, arrows on its real buttons one step at a time, each step with a short video of it being
 >   done in the real app (a computer's or a phone's, recorded by a tool here), ✕ to close and "Skip all guides"; it starts
 >   by itself the first time a page is opened (instead of the first-time tips), the **?** in the top bar shows it again, and
->   Learn's lessons have the videos too. No SQL, no setting. See "AGI Studio's guide".
+>   Learn's lessons have the videos too. No SQL, no setting. See "AGI Studio's guide". **And Explore's moving top** (the
+>   same day, the owner: "Create your own AGI-1. / Create your own influencer. / Create your own AI. / Create your own
+>   Viral content. … the only moving is the words afer the word "own" and put under line", then "and also the images
+>   moving there okay"): Explore's heading is "Create your own" with the words after "own" taking turns (AGI-1,
+>   influencer, AI, viral content), underlined, and the wall of pictures beside it scrolls slowly, its columns up and
+>   down in turns; both stand still with "reduce motion". No SQL, no setting. See "Explore's moving top". **And its styles
+>   and ways** (the same day, the owner: "can you make the style optional and please add more styles like , ghiblifi etc.
+>   and many more", a full body whose legs came out different from the photo, "they can skip the first generate so they
+>   can save credits", and "add in the front page that holders get discounts"): a style is optional, 26 of them in four
+>   groups ("Storybook anime" among them, in our own words); a full body that keeps the photo's body, outfit, legs and
+>   shoes; from a photo, two cheaper ways (just its full body, 20 credits; the photo as it is, no AI, 10, for a photo of the
+>   whole person); and on Explore what holders get. **Run `supabase/influencers.sql` again before pushing it.** See "AGI
+>   Studio's styles and ways". **And its profile pictures** (the same day, the owner: "i thinj they should have an option
+>   to change the profile even after generation and on the launch coin an option to pick the current profile or choose
+>   from their own images"): a camera on an influencer's picture changes its profile picture (one of its looks, its full
+>   body or one of its photos, framed by dragging and zooming; free, only how it's shown), and the Coin tool picks its
+>   coin's picture (its profile picture, or one of its photos framed as a circle). **Run `supabase/influencers.sql` again
+>   before pushing it.** See "Profile pictures and coin pictures". **And the owner's gift links** (2026-10-12, the owner:
+>   "i can put the a custome value of credits there then i can sent a message then theres gonna be a link for it … they
+>   can see the meesage and the gifted credits and they can claim it"): on the owner's tab (its Gifts tab), a link of any
+>   number of free credits with the owner's message, claimed once as bonus credits; claiming one while AGI Studio is
+>   private lets that wallet in; every gift's message up to 200 characters. **Run `supabase/influencers.sql` again before
+>   pushing it.** See "The owner's gift links of free credits". **And the editor's first part** (the same day; the owner's
+>   choices for the editor: "Make another (Recommended)", "Edit with words (Recommended)", "Photo editor (Recommended)",
+>   "Video editor"): over each of its own photos, memes, X banners, videos and trend videos seen big, **Make another** (the
+>   same words and settings, a new one next to it, at the price of making it) and **Delete** (off every page for good); on
+>   a tile that couldn't be made, **Try again** and its remove button. **Run `supabase/influencers.sql` again before pushing
+>   it.** See "The editor: Make another and Delete". **And Edit with words** (the same day): over each of its own photos,
+>   memes and X banners seen big, **Edit with words**: type one change ("make her jacket red", "add snow") and a new one is
+>   made from it with just that change, next to it, at a photo's price (its words checked like a scene's). **Run
+>   `supabase/influencers.sql` again before pushing it.** See "The editor: Edit with words". **And the photo editor** (the
+>   same day): over each of its own photos, memes and X banners seen big, **Edit photo**: crop and turn it, its light, a
+>   filter, words and emoji stickers, in its maker's own browser, free; **Download** (with the share mark, drawn there) or
+>   **Save as a new photo** next to it (looked at by Gemini first, 20 a day). Delete is now its trash can alone. **Run
+>   `supabase/influencers.sql` again before pushing it.** See "The editor: the photo editor". **And the video editor** (the
+>   same day): over each of its own videos and trend videos seen big, **Edit video**: trim it (1 to 15 seconds), its shape
+>   (Vertical 9:16, Square 1:1, Wide 16:9: a crop), its sound, words and emoji stickers, in its maker's own browser, free;
+>   **Save as a new video** next to it, made by our clock with ffmpeg (an H.264 MP4 with the share mark) and looked at by
+>   Gemini before anyone sees it, 10 a day. **Run `supabase/influencers.sql` again before pushing it.** See "The editor:
+>   the video editor". **And clean downloads for holders** (the same day, the owner: "can youi put watermark when they
+>   download or export their vid,photos it will be removed if they hold $agi atleast 1000"): every download says inside its
+>   file that it's AI-made (a hidden XMP tag), and a creation's own maker holding 1,000+ $AGI downloads its photos and
+>   videos without our pill. No SQL, no setting. See "Clean downloads for holders". **And it opens to everyone** (2026-10-13,
+>   the owner: "make it live for everyone now not only on my wallet"): links to it from agi1.app (the front's "Her world"
+>   list, the phone menu and the footer of every page), and the owner's one setting in Vercel, `STUDIO_OPEN=yes`. See "AGI
+>   Studio opens to everyone".
 > - **Her launch video** (2026-10-03, the owner: "now create me a professional launch video with motion design using only
 >   code about the website and its features … make it really good"): a 79-second film of agi1.app, every frame drawn in
 >   code and its music made in code (`tools/promo/`), wide (1920 × 1080) and tall (1080 × 1920), 60 frames a second, for
 >   the owner to post by hand. AGI-1 only in 2D (her Live2D model and the front's art; the owner: "use the 2d art … the 3d
 >   model is 18+"), never CloakMesh (the owner: "dont announce on the video about cloackmesh"), only $AGI and only what's
 >   live. See "Her launch video".
+> - **AGI Studio's launch video** (2026-10-13, the owner: "go make a promotional marketing launch video of AGI studio. all
+>   the features therem do it with top notch motion design and easy to understand and visible make it 4:3 video"): a
+>   103-second film of AGI Studio and what it makes, every frame drawn in code and its music made in code
+>   (`tools/studio-promo/`), 1440 × 1080 (4:3), 60 frames a second, around example creations of four made-up influencers,
+>   made for it on the owner's fal.ai and Dreamina accounts (never "made in AGI Studio": "Examples · AI-generated" on it).
+>   For the owner to post by hand once AGI Studio is open to everyone (its finale says "Live now"), and its X article with
+>   its banner (the owner: "and also after the video create me a n X article also for it with banner ready"). See "AGI
+>   Studio's launch video".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -295,6 +348,9 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   The owner downloads it and posts it by hand, with the apps' AI labels. Not part of the website. See "Her daily clips"
 - **Her launch video** (2026-10-03, the owner's request): a 79-second film of the site and everything she does, drawn and
   scored in code, wide and tall, for the owner to post by hand. Not part of the website. See "Her launch video"
+- **AGI Studio's launch video** (2026-10-13, the owner's request): a 103-second film of AGI Studio, drawn and scored in
+  code, 4:3 (1440 × 1080) at 60 frames a second, around example creations made for it, for the owner to post by hand once
+  AGI Studio is open to everyone. Not part of the website. See "AGI Studio's launch video"
 - **Burn $AGI for more messages** (2026-09-30, the owner's idea): after the free messages, 10 $AGI a message, burned by the
   visitor from their own wallet app (the site never asks a wallet for the burn) and checked on Robinhood Chain; what was
   burned counts toward the level; a huge live **burn monitor** above the chat. Off until `supabase/burns.sql` is run. See
@@ -341,8 +397,14 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   reports, bans) and the owner's tab (the AI services' balances, alerts on Telegram, the numbers, the team), and (its phase 3)
   gifts of credits, gift links and invites, and (its phase 4) a model menu (Long videos up to 60 seconds), references, memes,
   Instant and Learn; and (2026-10-11) its guide: arrows on each page's real buttons, each step with a short video of it in
-  the app. Off until it's set up, then private. See "AGI Studio, the AI influencer app", "AGI Studio, round 2", "AGI Studio,
-  round 3", "AGI Studio, round 4" and "AGI Studio's guide"
+  the app; and (the same day) 26 styles, none needed, two cheaper ways to start from a photo, and what holders get on
+  Explore; and (the same day) a profile picture changed after it's made, and a coin's picture picked; and (2026-10-12)
+  the owner's gift links of free credits, and (the same day) Make another, Delete, Edit with words, the photo editor and
+  the video editor on its own creations. Off until it's
+  set up, then private. See "AGI Studio, the AI influencer app", "AGI Studio, round 2", "AGI Studio, round 3", "AGI Studio,
+  round 4", "AGI Studio's guide", "AGI Studio's styles and ways", "Profile pictures and coin pictures", "The owner's gift
+  links of free credits", "The editor: Make another and Delete", "The editor: Edit with words", "The editor: the photo
+  editor" and "The editor: the video editor"
 - **CloakMesh** (2026-10-03, the owner's next project): its page at **inference.agi1.app** (agi1.app/cloakmesh): what
   CloakMesh is, a demo of its privacy filter that runs only in the visitor's browser, and a free waitlist. Serious, its own
   look, never about the coin. Live at agi1.app/cloakmesh; inference.agi1.app once its domain is set up. See "CloakMesh
@@ -443,7 +505,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    asks (1 credit = 1 cent; a Soulmate's 40% off is about the AI's own cost for some things), plus the free credits
    holders get (at most `STUDIO_FREE_CREDITS_A_MONTH`, 5,000 = $50 a month) and the owner's 12 trend moves once (about $10
    in all). See its "Cost". **Since its round 2** (the same day): the owner's 12 trend clips once (real-looking, with
-   sound: about $1.26 each, about $15 in all) and its 32 example pictures once (about $0.08 each, about $2.60); a weekly
+   sound: about $1.26 each, about $15 in all) and its 32 example pictures once (about $0.08 each, about $2.60; 55 since
+   2026-10-11, its styles and ways: 23 more, about $1.85); a weekly
    spotlight prize in the owner's $AGI (`STUDIO_WEEKLY_PRIZE`, 10,000 by default, from the prize wallet; 0 = for glory
    only), and a free 3D model for a big burn (about $1.20 of Meshy's credits each, paid by nobody: inside
    `STUDIO_BURNS_A_MONTH`, 10). See "AGI Studio, round 2". **Since its round 3** (the same day): the credits the owner
@@ -578,22 +641,48 @@ percentage and the time left for anything being made: `progressBar()`, `barState
 phase 2 (2026-10-11) `views/help.js` (Help & support: the AI helper, your tickets, what we never ask for), `views/mod.js`
 (Mod tools, the team's page: tickets, reports, bans, its alerts link), `views/support.js` (what those two share: a ticket's
 sheet, opening one, the helper, the ban sheet), `owner.js` in four tabs (Overview: the balances, their alert levels, the
-alerts on Telegram, the numbers; Team; Content; Testing: since 2026-10-11 who can use AGI Studio while it's private,
-`accessSection()`, then credits for testing), `pageTabs()` in `ui.js` (tabs over a page's panels), and in
+alerts on Telegram, the numbers; Team; Content; Testing, called Gifts since 2026-10-12 (still `?tab=testing`): that day's
+gift links of free credits, then since 2026-10-11 who can use AGI Studio while it's private, `accessSection()`, then credits
+for testing), `pageTabs()` in `ui.js` (tabs over a page's panels), and in
 `rules.js` the topics and limits of tickets (`TICKET_TOPICS`, `TICKETS`), the helper's (`HELPER`) and the reasons for a ban
 (`BAN_REASONS`); and since round 4's phase 3 (the same day) `views/gifts.js` (My studio's "Gifts and invites" card, giving
 to a wallet, a gift link, the sheet a gift link opens) and in `rules.js` the rules of gifts and invites (`GIFTS`,
 `REFERRALS`, `REF_CODE`, `GIFT_TOKEN`, `inviteLink()`, `giftLink()`); and since round 4's phase 4 `instant.js` (Instant's
 ideas and its switch's memory), `views/learn.js` (Learn and first-time tips), `cardPick()` in `ui.js`, `uploadRef()` in
 `media.js`, and in `rules.js` the model menu (`PHOTO_MODELS`, `VIDEO_MODELS`, `photoSpec()`, `videoSpec()`, `creditsFor()`,
-`REFS`, `MEMES`, `LONG`, `videoPlan()`, `jobPlan()`); and since its guide (2026-10-11) `guide-steps.js` (each page's guide
+`REFS`, `MEMES`, `LONG`, `videoPlan()`, `jobPlan()`); and since its styles and ways (2026-10-11) in `rules.js` its 26 styles (`STYLE_GROUPS`,
+`STYLE_AUTO`, `DRAWN_STYLES`, `drawnStyle()`) and the three ways from a photo (`WAYS`, `WAY_FULL_WHY`); and since its guide (2026-10-11) `guide-steps.js` (each page's guide
 and its steps (`GUIDES`: where each arrow points, its words, its video), `CLIP_IDS`, Learn's lessons' videos
 (`LESSON_CLIPS`), what's kept in this browser (`GUIDE_KEY`, `readGuide()`, `markSeen()`, `setGuidesOff()`,
 `shouldOffer()`), which steps show now (`guideSteps()`), where a step's card goes (`placeCard()`, `ringBox()`): pure, read
 in Node), `guide.js` (the coach marks on the page: `offerGuide()`, `leaveGuides()`, `showGuide()`, `wireGuideButton()`),
-`guide-media.js` (the videos' list, written by the recorder: don't edit) and `guide/` (the videos themselves: 104 files,
-about 10 MB); `views/learn.js` (Learn, each lesson with its videos; its first-time tips gone) and the pages' `data-guide`
-names (what the arrows point at) |
+`guide-media.js` (the videos' list, written by the recorder: don't edit) and `guide/` (the videos themselves: 120 files
+since the video editor, about 13 MB); `views/learn.js` (Learn, each lesson with its videos; its first-time tips gone)
+and the pages' `data-guide` names (what the arrows point at); and since 2026-10-11 `views/frame.js` (picking one of an
+influencer's own pictures and framing a square in it, by dragging and zooming: `pickPicture()`, `framer()`, `framedPic()`;
+its profile picture and its coin's picture) and in `rules.js` a frame's numbers (`FRAME`, `isFrame()`, `frameBox()`,
+`frameFrom()`, `frameStart()`), its profile picture as the pages show it (`portraitRow()`) and a coin draft's picture
+(`STUDIO_PHOTO`); and since 2026-10-12 the owner's gift links of free credits (`ownerLinksSection()` in `views/owner.js`,
+first on its **Gifts** tab, the tab that was Testing, and `OWNER_LINKS` in `rules.js`); and since 2026-10-12 the editor's
+Make another and Delete (`editRow()` in `views/shared.js`, `again()` and `removeJob()` in `views/influencer.js`, the
+keyboard kept across a gallery's redraws: `focusPlace()` and `focusBack()` in `ui.js`, and their words in `app-words.js`:
+`againErrorText()`, `againMadeText()`, `deleteJobText()`, `deletedText()`, `creationWord()`, `tryAgainOk()`); and its Edit with
+words (`editWithWords()` in `views/influencer.js`, its button first in `editRow()` and its change under its picture in
+`photoSheet()`, `editSpec()` and `EDIT` in `rules.js`, `EDIT_IDEAS`, `editNote()` and `editMadeText()` in `app-words.js`); and its
+photo editor (`views/photo-editor.js`: the editor itself, `photoEditor()`, drawn on a canvas; `photo-edit.js`: its numbers,
+pure and read in Node: a crop of each shape, turning, a saved picture's size, one color matrix for the light and a filter,
+its words wrapped, a layer kept inside and found under a finger, the share mark's place; `openEditor()` in
+`views/influencer.js`, "Edit photo" in `editRow()`, `savePhoto()` in `media.js`, `EDITOR`, `EDITOR_CROPS`, `EDITOR_FILTERS`,
+`EDITOR_LIGHT`, `EDITOR_FONTS`, `EDITOR_COLORS`, `EDITOR_STYLES`, `STICKERS` and `MARK_LOOK` in `rules.js`, `editorNote()`,
+`editorSavedText()` and `editorErrorText()` in `app-words.js`, the icons `crop`, `sun`, `filter`, `type`, `sticker`,
+`turnLeft`, `turnRight`, `flip` and `undo` in `ui.js`); and its video editor (`views/video-editor.js`: the editor itself,
+`videoEditor()`, its video played by the browser and placed through the CSSOM, a canvas over it; `video-edit.js`: its
+numbers, pure and read in Node, our server's too: each shape's size, a crop, a cut checked (`cutSpec()`), its crop in
+pixels, the share mark top left (`markTopLeft()`), a video whose mark is in it already (`ownMark()`), the page's state;
+`views/layers.js`: what the photo editor and the video editor share (a layer drawn, the words-and-stickers panel, its
+sliders, `layersPicture()`); `openVideoEditor()` in `views/influencer.js`, "Edit video" in `editRow()`, `saveCut()` in
+`media.js`, `VIDEO_EDITOR` and `cutSteps()` in `rules.js`, `cutNote()`, `cutSavedText()`, `cutErrorText()` and
+`trimText()` in `app-words.js`, the icons `scissors` and `soundOff` in `ui.js`) |
 | `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28); at agi1.app/talk (2026-10-02) it starts the page in full-screen talk (`is-talk`, its title and colors, no loader), and at agi1.app/talk?pip=1 inside a frame marks it as her pop-out window's page (`is-pip`); since 2026-10-10 a `studio` page gets the page's own bar color like the diary (the 3D studio's page loaded `/theme.js?v=8` for it that morning; AGI Studio's page, since, doesn't load it at all: one dark look, its bar color in its own `<head>`; the other pages keep `v=7`) |
 | `src/main.js` | Browser code entry point: styles, theme, the front, prices, sections, chat, then the 3D stage (loaded separately, after the front's entrance; at /talk at once, and the front only when you leave full-screen talk) |
 | `src/landing/landing.js` | The front (2026-09-28): the loader, the entrance, the focus lines, AGI-1 in WebGL, the orbit, her bubble, the ribbons, the manifesto, the cursor and hearts (see "The front") |
@@ -655,7 +744,24 @@ adding and removing members, bans, support tickets; since 2026-10-11 who may use
 `onList()` and the owner's list, `accessList()`, `accessSet()`, `accessRemove()`), `inf-help.js` (the AI helper: its guide, `helpGuide()`, its request
 and its answer cleaned) and `inf-admin.js` (the owner's tab: the AI services' balances, the alert levels, the numbers, the
 alerts on Telegram, their links' codes and the studio clock's part, `adminClock()`); and (round 4's phase 3, the same day)
-`inf-gifts.js` (gifts of bought credits, gift links, invite codes, joining through one, its rewards settled) |
+`inf-gifts.js` (gifts of bought credits, gift links, invite codes, joining through one, its rewards settled; since 2026-10-12
+the owner's gift links of free credits, `makeOwnerLink()`, `ownerLinks()`, and every gift's message, `giftNote()`,
+`tidyMessage()`); and (2026-10-11) in `influencer.js` an influencer's profile picture changed after it's made
+(`setProfile()`, `pfpShown()`) and its coin's picture (`coinDraft()`'s `picture`, `studioPicture()`), and in `inf-jobs.js`
+the square cut from a picture (`frameOf()`); and (2026-10-12, the editor) in `influencer.js` "Make another" (`againJob()`,
+`againInput()`) and deleting one of its creations (`deleteJob()`), and in `inf-jobs.js` every file a creation may have kept
+(`jobFiles()`); and its Edit with words: `makeJob()`'s `image` and `edit` in `influencer.js` (the rest its photo's own:
+`editSpec()`), `checkEdit()` and `editPrompt()` in `inf-words.js`, its request in `inf-ai.js` (Nano Banana 2's edit: the
+photo, then its full body), and in `inf-jobs.js` an edited X banner cut from its middle (`picturesOf()`'s `centred`); and its
+photo editor: `inf-editor.js` (a photo saved from it: its words checked, `checkEditorWords()`; its ticket, `openSave()`; its
+picture received, looked at and kept, `receiveSave()`), `checkEdited()` in `inf-ai.js` (Gemini's look at it), the action
+`inf-photo-open` and the upload `?inf-photo=<ticket>` in `inf-api.js` (and `api/launch.js`), `againJob()`'s "no" for one
+saved from it in `influencer.js`; and its video editor: `inf-cut.js` (a video saved from it: its ticket or started at once,
+`openCut()`, `addCut()`; its words' and stickers' picture received and kept, `receiveCut()`, `layerOf()`; made by our clock
+in pieces and looked at, `cutTick()`), in `inf-mark.js` a cut made with ffmpeg (`CUT`, `cutPlan()`, `pieceArgs()`,
+`cutJoinArgs()`, `cutPieces()`, `joinCut()`, `markSize()`), `checkCutVideo()` in `inf-ai.js` (Gemini's look at it),
+`mp4HasSound()` in `mp4.js`, the clock's turn for cuts in `inf-jobs.js`, the action `inf-cut-open` and the upload
+`?inf-cut=<ticket>` in `inf-api.js` (and `api/launch.js`) |
 | `supabase/chat-limits.sql` | Run once in the Supabase SQL editor: the counter table + `chat_take()` limit function |
 | `supabase/arena.sql` | The Arena's tables + `arena_vote()`, `arena_state()` and `arena_history()`. **The original site's since 2026-09-28** (its Arena, in the database both sites share): never run it again from here, never drop its tables. This site only calls `arena_state()`, before the diary reads a day's numbers |
 | `supabase/levels.sql` | Run once in the same Supabase project: what AGI-1 remembers per wallet + `friend_get/set_name/add_note/forget()` |
@@ -684,9 +790,9 @@ pushing** (it keeps everything saved; it still ends with `influencers_ready = 1`
 94 functions (`inf_job_part`), a job's model menu (model, quality, seconds, parts, references, meme), reference uploads:
 run it again, before pushing** (it still ends with `influencers_ready = 1`). **Since giving access (the same day): 28 tables
 (`agi1_inf_access`, who may use AGI Studio while it's private) and 96 functions (`inf_access_list`, `inf_access_set`, and
-`inf_who` says whether a wallet is on the list): run it again, before pushing** (it still ends with `influencers_ready = 1`) |
+`inf_who` says whether a wallet is on the list): run it again, before pushing** (it still ends with `influencers_ready = 1`). **Since its styles and ways (the same day): the 26 styles and `auto` (`agi1_inf.style`), the ways to start (`agi1_inf.way`), a picture's whole body and head (`agi1_inf_uploads.whole`, `.head`), `inf_start`'s `p_way` and `inf_upload_set`'s `p_whole` and `p_head` (still 28 tables and 96 functions): run it again, before pushing** (it still ends with `influencers_ready = 1`). **Since its profile pictures (the same day): 98 functions (`inf_pfp_set`, `inf_pfp_of`) and an influencer's own profile picture (`agi1_inf.pfp`): run it again, before pushing.** **Since the owner's gift links (2026-10-12): 100 functions (`inf_owner_link`, `inf_owner_links`), a gift's kind (`agi1_credit_gifts.kind`: `bought`, or the owner's `owner`), every gift's message up to 200 characters (80 before), and a wallet let in by claiming one (`agi1_inf_access.via` `link`): run it again, before pushing** (still 28 tables; it still ends with `influencers_ready = 1`). **Since the editor (the same day): 101 functions (`inf_job_delete`) and a creation its maker deleted (`agi1_inf_jobs.deleted_at`: hidden at once, its row and its likes a week later): run it again, before pushing** (still 28 tables; it still ends with `influencers_ready = 1`). **Since Edit with words (the same day): a photo's change (`agi1_inf_jobs.edit`, with its check) and `inf_make`'s `p_edit` (its older version dropped first; still 101 functions): run it again, before pushing** (still 28 tables; it still ends with `influencers_ready = 1`). **Since the photo editor (the same day): 103 functions (`inf_tool_take`, `inf_photo_add`), 29 tables (`agi1_inf_tool_days`: how many each wallet saved a day), a photo saved from it (`agi1_inf_jobs.editor`, with its check) and the site's counts a day (`agi1_inf_days.photo_edits`, and `.video_edits` for the video editor to come): run it again, before pushing** (it still ends with `influencers_ready = 1`). **Since the video editor (the same day): 106 functions (`inf_cut_add`, `inf_cut_done`, `inf_cut_due`), a video saved from it (`agi1_inf_jobs.editor` and `.cut`, what was asked, with their checks; its seconds 1 to 60, 3 to 60 before) and the clock's index for cuts: run it again, before pushing** (still 29 tables; it still ends with `influencers_ready = 1`) |
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, since 2026-10-08 her live show's hands (an arm reaching a point, a hand turned and curled, her round elbow), "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there; since 2026-10-11 AGI Studio's alerts: `/start` with an alerts link, and `/stop`), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras; since 2026-10-09 questions of any length, any name but crude or posing ones, a Telegram question with the person's Telegram name, other coins and famous people in her live rules, the `ADVICE` safety net, her memory of the group on stream, her chart's trades; since 2026-10-10 her holder perks: a wallet's level with a question, her 💜 badge and its 5 a day, the head start in her line, old and new live.sql, the page's wallet), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page; since 2026-10-08 her poses (never a paddle, never on her chest), her hands (always her palm, never turned or curled past their limits, what she holds in front of her palm with her fingers or thumb over it) and her hands on their way, frame by frame on her springs; since 2026-10-09 requests that never wait, all of her song's words, reading the question out loud, her song's music video, her live $AGI chart and where she reads messages), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end; since 2026-10-08 cutting the paintings out, what the first ones needed, the stand-ins, the conical hat, her glasses' clear lenses, her headset on her ears and her headphones on her head), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note), `games.test.js` (2026-10-09: her quizzes: her questions' rules, a quiz as Telegram takes it, picking and shuffling, a winner's name, the settings, `/api/feed?games` and its key, a tick (just for fun without prizes), her bot hearing answers, answers, closing and the draw, her result, claiming in her private chat (18+, the address's checks, the transfer itself, every way sending can go, never twice), a secret sent to her by mistake, her groups' /help, intro and /claim, her quiz lines' rules, loading light, games.sql's promises, the safety note), `studio.test.js` (2026-10-10: AGI-1's 3D character studio: its rules, a character's words, Meshy's requests, its files made small, Storage, payments on the chain, the settings and codes, quotes, paying, "Check my payment", the making and every way it can go, the clock, `/api/launch` and `/api/feed?studio`; its page's 3D view (clips, in place, framed), words and promises, the safety note), `videos.test.js` (2026-10-10: its characters' videos: the rules and settings, a scene's checks and the video service's words, fal's queue (requests, states, results, errors, the key never in one), its files (only fal's addresses, MP4s, Storage, signed addresses, a part read with Range), what anyone sees, quotes, USDG payments, made again, the making and every way it can go, the clock, every GET (played in parts: 206, 416, 302) and POST, the page and its CSP, 12 functions), `influencer.test.js` (2026-10-10: AGI Studio: its rules and words, the AI requests as fal's pages write them, Gemini's looks, uploads (tickets, a picture made plain, a clip in parts, its length from its header, posters), credits (free first, given back once, top-ups once, a month's free ones), an influencer from start to ready, its photos, trend and scene videos, the clock and the tidy-up, Explore and its page, public and deleting, reports and the owner's tools, its 3D models, its coin, every GET and POST, the app's page and promises, `influencers.sql`'s promises; since its round 2 a photo of a real person with consent (and never one without its box), the trend clips and their swap, example pictures, likes and the weekly spotlight (its pick, the owner's look, its prize sent once), burn unlocks and a 3D model for a big burn, the share mark on photos and videos, the stats board, no camera anywhere; since its round 3 the owner's credits for testing (only the owner, 1 to 100,000, to the owner's own wallet or a tester's, spent and given back like bought ones); since its round 4 progress bars (their numbers, never back, our server's clock), X
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, since 2026-10-08 her live show's hands (an arm reaching a point, a hand turned and curled, her round elbow), "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there; since 2026-10-11 AGI Studio's alerts: `/start` with an alerts link, and `/stop`), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras; since 2026-10-09 questions of any length, any name but crude or posing ones, a Telegram question with the person's Telegram name, other coins and famous people in her live rules, the `ADVICE` safety net, her memory of the group on stream, her chart's trades; since 2026-10-10 her holder perks: a wallet's level with a question, her 💜 badge and its 5 a day, the head start in her line, old and new live.sql, the page's wallet), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page; since 2026-10-08 her poses (never a paddle, never on her chest), her hands (always her palm, never turned or curled past their limits, what she holds in front of her palm with her fingers or thumb over it) and her hands on their way, frame by frame on her springs; since 2026-10-09 requests that never wait, all of her song's words, reading the question out loud, her song's music video, her live $AGI chart and where she reads messages), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end; since 2026-10-08 cutting the paintings out, what the first ones needed, the stand-ins, the conical hat, her glasses' clear lenses, her headset on her ears and her headphones on her head), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `studio-promo.test.js` (2026-10-13: AGI Studio's launch video: never an AI service's name, never "buy" or money talk, PG-13, only $AGI, never "made in AGI Studio", "not financial advice", 18+ and "AI-generated" where they belong, never AGI-1 in 3D, CloakMesh or another coin's data, its 3D figure labeled "Illustration", AGI Studio's own words and numbers, the scenes on bars, the cuts, the music on the picture's moments and its sections, the renderer and its own server; with `STUDIO_PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note), `games.test.js` (2026-10-09: her quizzes: her questions' rules, a quiz as Telegram takes it, picking and shuffling, a winner's name, the settings, `/api/feed?games` and its key, a tick (just for fun without prizes), her bot hearing answers, answers, closing and the draw, her result, claiming in her private chat (18+, the address's checks, the transfer itself, every way sending can go, never twice), a secret sent to her by mistake, her groups' /help, intro and /claim, her quiz lines' rules, loading light, games.sql's promises, the safety note), `studio.test.js` (2026-10-10: AGI-1's 3D character studio: its rules, a character's words, Meshy's requests, its files made small, Storage, payments on the chain, the settings and codes, quotes, paying, "Check my payment", the making and every way it can go, the clock, `/api/launch` and `/api/feed?studio`; its page's 3D view (clips, in place, framed), words and promises, the safety note), `videos.test.js` (2026-10-10: its characters' videos: the rules and settings, a scene's checks and the video service's words, fal's queue (requests, states, results, errors, the key never in one), its files (only fal's addresses, MP4s, Storage, signed addresses, a part read with Range), what anyone sees, quotes, USDG payments, made again, the making and every way it can go, the clock, every GET (played in parts: 206, 416, 302) and POST, the page and its CSP, 12 functions), `influencer.test.js` (2026-10-10: AGI Studio: its rules and words, the AI requests as fal's pages write them, Gemini's looks, uploads (tickets, a picture made plain, a clip in parts, its length from its header, posters), credits (free first, given back once, top-ups once, a month's free ones), an influencer from start to ready, its photos, trend and scene videos, the clock and the tidy-up, Explore and its page, public and deleting, reports and the owner's tools, its 3D models, its coin, every GET and POST, the app's page and promises, `influencers.sql`'s promises; since its round 2 a photo of a real person with consent (and never one without its box), the trend clips and their swap, example pictures, likes and the weekly spotlight (its pick, the owner's look, its prize sent once), burn unlocks and a 3D model for a big burn, the share mark on photos and videos, the stats board, no camera anywhere; since its round 3 the owner's credits for testing (only the owner, 1 to 100,000, to the owner's own wallet or a tester's, spent and given back like bought ones); since its round 4 progress bars (their numbers, never back, our server's clock), X
 banners (the cut, never a video's start), captions (ready-made and by AI, never about money) and clank.trade usernames
 (only a profile with this wallet, never on a private influencer); since round 4's phase 2 the team and its roles, bans
 (what a banned wallet can't do, its influencers hidden from everyone), support tickets (never a seed phrase or a private
@@ -696,7 +802,27 @@ sender is banned, back by themselves), invites (joined once, the welcome with a 
 and its caps), bonus credits (spent after free ones, before bought ones) and the page's promises (a gift link's secret only
 in POST bodies and the address's fragment); since 2026-10-11 who may use AGI Studio while it's private (the owner's list, the
 team and `STUDIO_ONLY_FOR`'s, credits for testing letting a tester in, an older `influencers.sql` failing closed, the
-friend's words)), `guide.test.js` (2026-10-11: AGI Studio's guide: each page's steps (their buttons on the pages, their
+friend's words); and its 26 styles, the three ways to start from a photo and Explore's holder line; and (the same day) an
+influencer's profile picture changed after it's made and its coin's picture (a square framed in one of its own pictures,
+cut on our server, shown everywhere its portrait is, and a coin draft's framed picture); since 2026-10-12 the owner's gift
+links of free credits (made, claimed once as bonus credits, taken back, past their days, letting a wallet in while it's
+private, their page's words) and every gift's message up to 200 characters; and the editor: "Make another" (the same words
+and settings for every kind, at today's price, every "no") and "Delete" (off every page for good, its files, a profile picture
+framed from it, never while it or something from it is being made, a banned wallet's own, the tidy-up a week later), and the
+page's (the row first in its sheet, the keyboard kept, a look asked for while one is on its way); and "Edit with words" (a
+new photo from a photo, a Crisp one, an Ultra one, a meme, an X banner and an older photo at a photo's price at its quality, a
+holder's too, and the page's own sums; the AI's request; an X banner cut from its middle; a meme looked at again; an edit of
+an edit and Make another of one; every "no"; an older `influencers.sql`; its SQL's promises; the page's); and the photo
+editor (its numbers: a crop of each shape, turning, a saved picture's size and our server's check of it, the color matrix,
+the share mark's place; a photo, a meme and an X banner saved free as a new photo next to it, a plain JPEG, looked at by
+Gemini first; its words checked like a meme's line; 20 a day and the site's day; every "no" with nothing kept; never Make
+another; an older `influencers.sql`; its SQL's promises; the page's); and the video editor (its numbers: each shape's size,
+a crop in thousandths, our server's check of a cut, its crop in pixels, the share mark top left; a cut's plan and
+ffmpeg's exact words for its pieces and their join, with a stand-in ffmpeg, and made with the real one where it's there; a
+video or a trend video saved from it free, started at once or once its words' picture comes (a real PNG of its size, the
+mark's corner cleared on a video with its own); made by our clock in pieces of 5 seconds, joined with its sound, looked at
+by Gemini, every way it can fail with its files deleted; 10 a day, the site's 500, 3 at once; never Make another or Try
+again; an older `influencers.sql`; its SQL's promises; the page's)), `guide.test.js` (2026-10-11: AGI Studio's guide: each page's steps (their buttons on the pages, their
 words: PG-13, never an AI service named, never "buy"; their videos; when each shows), what's kept in this browser (and a
 broken or blocked store), where a step's card goes (a computer, a phone, never off the window or over its button while
 there's room), the ring, the coach marks' promises (text only, the keyboard and screen readers, a muted video that never
@@ -710,6 +836,7 @@ and `coins.test.js` left with the Arena (2026-09-28) |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `tools/promo/` | Her launch video (2026-10-03, not part of the website): `make.mjs` (builds its page, draws every frame in Chromium, ffmpeg → the MP4s, the cover, the post text, a light copy), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen, from the site's own files where it can), `music.js` (its music, composed and played in code), `page/` (the renderer: `promo.js`, `kit.js`, `ui.js`, `transitions.js`, `her.js` (her Live2D model), `art.js` (the front's art and shader), `scenes/` (one file a scene); built into `tools/promo/dist/`, which git ignores). Its videos go to `promo/` (git ignores it). See "Her launch video" |
+| `tools/studio-promo/` | AGI Studio's launch video (2026-10-13, not part of the website): `make.mjs` (builds its page, serves it on this computer only, draws every frame in Chromium, ffmpeg → the MP4, the cover, the post text, a light copy, `README.txt`), `media.mjs` (the example pictures and clips made ready once, into `tools/studio-promo/media/`, which git ignores), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen and the post, from AGI Studio's own files), `music.js` (its music, composed and played in code), `README.txt` (for the owner, copied next to the video), `page/` (the renderer: `main.js`, `look.js` (AGI Studio's look), `parts.js`, `media.js`, `cuts.js`, `model3d.js` (its 3D figure: three.js shapes, never a model file), `scenes/` (one file a scene); built into `tools/studio-promo/dist/`, which git ignores). Its videos go to `studio-promo/` (git ignores it). See "AGI Studio's launch video" |
 | `tools/buybot/` | Her buy GIF (2026-10-06, not part of the website): `make.mjs` (builds its page, draws each frame in Chromium, ffmpeg → `server/media/agi1-buy.mp4`, a soundless MP4), `page/` (`gif.js`: her Live2D model through the launch video's renderer, cheering, on Pop mode's violet, with a "$AGI BUY!" sticker; built into `tools/buybot/dist/`, which git ignores). See "Her buy bot" |
 | `tools/studio/` | AGI Studio's share mark (round 2, 2026-10-10, not part of the website): `mark.mjs` draws `server/media/studio-mark.png` (the "Made with AGI Studio · AI-generated · studio.agi1.app" pill, with the site's own Geist, twice its size, on a transparent background) once in Chromium, so our server only scales and places it (sharp, ffmpeg) and needs no fonts. Run again only after changing its words or look: `node tools/studio/mark.mjs` (Chromium and `npm install --no-save playwright-core`, like the other tools). And since 2026-10-11 AGI Studio's guide videos: `guide-record.mjs` (the recorder: the app as Vite builds it in Chromium, at a computer's size and a phone's, our own server's code answering it with `tests/influencer.test.js`'s fake services, a demo studio of made-up people from the live show's 2D paintings, a cursor or taps drawn on top, a camera that follows what happens, frames from Chromium's screencast put together with sharp and encoded with ffmpeg → `src/studio/guide/` and `src/studio/guide-media.js`) and `guide-scripts.mjs` (what happens in each video: one scene a video, a computer's and a phone's). See "AGI Studio's guide" |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
@@ -748,6 +875,10 @@ and `coins.test.js` left with the Arena (2026-09-28) |
 - Her launch video (2026-10-03): `node tools/promo/make.mjs --format both --out promo --light 28` makes both videos into
   `promo/` (about 15 minutes each; Chromium, ffmpeg and `npm install --no-save playwright-core`, like her clips). Quick
   looks: `--scale 0.5 --fps 30`, `--from 48 --to 54`, `--stills 9.6,24.4`, `--sheet 0.5` (see "Her launch video").
+- AGI Studio's launch video (2026-10-13): `node tools/studio-promo/make.mjs --out studio-promo --light 27` makes it into
+  `studio-promo/` (about 25 minutes; its examples made ready once first, `node tools/studio-promo/media.mjs --from
+  <folders>`; Chromium, ffmpeg and `npm install --no-save playwright-core`). Quick looks: `--scale 0.5 --fps 30`,
+  `--from 46 --to 52`, `--stills 9.5,46.2`, `--sheet 0.5` (see "AGI Studio's launch video").
 - Her buy GIF (2026-10-06): `node tools/buybot/make.mjs` makes `server/media/agi1-buy.mp4` again (after her model
   changes; about a minute; Chromium, ffmpeg and `npm install --no-save playwright-core`, like her launch video);
   `--stills 0,0.9,1.6` saves pictures instead (see "Her buy bot").
@@ -2924,6 +3055,159 @@ build, its output never in git); and with `PROMO_RENDER=1` the whole music rende
 the drop bigger than the cold open, the breath before the drop, the fade). In Claude's workspace: previews and contact sheets
 of both formats looked at frame by frame, the music's loudness (about -14 LUFS) and tonal balance measured, and a
 spectrogram looked at.
+
+## AGI Studio's launch video (2026-10-13)
+
+**The owner's request** (the night AGI Studio was opened to everyone, 2026-10-12): "and i forgot to say after you finished
+everything, go make a promotional marketing launch video of AGI studio. all the features therem do it with top notch motion
+design and easy to understand and visible make it 4:3 video, ake your time as much as you needed i want everything polished
+good night", then "make the examples of the geeeration really good lie what higgsfield ai influencer did you can use that as
+inspiration as well and if you need to generate yourself one you can use the agi studio yourself. you can also use my
+seedance account and use all the credits there left. just for examples thanks. do your best and impressed me", and "i just
+saw your message yes you can use my chrome, i loged in my fal ai, meshy and dreamina as well". The owner's choices: "fal.ai
+and Dreamina only" and "Up to $9, I'll top up (Recommended)" on fal. And: "and also after the video create me a n X article
+also for it with banner ready".
+
+**What it is:** a 103-second launch film for AGI Studio, made like her launch video: every frame drawn in code and its music
+composed and played in code (`tools/studio-promo/`), around real example creations: **1440 × 1080 (4:3)**, 60 frames a
+second, one video for every app. Not part of the website, and nothing posts it: the owner posts it by hand.
+
+**The examples:** four made-up influencers, **Nova** and **Kai** (realistic), **Mika** (anime) and **Juno** (3D cartoon),
+their looks and full bodies, photos in scenes, two memes, an X banner, eight style pictures, nine trend clips and four trend
+videos (an influencer put into one of them), and videos from photos: 34 pictures and 17 clips. Made by Claude on the owner's fal.ai (about $6.70 of the $9) and
+Dreamina accounts (37 credits left; one of its 12 generations failed), in the owner's Chrome, with the same kinds of AI
+models AGI Studio uses, **before AGI Studio opened**: never "made in AGI Studio" (the video says "Examples · AI-generated").
+In the spirit of the owner's reference (Higgsfield's AI influencer pages): never its name, look, pictures, prompts or code.
+The trend clips are stand-ins made on Dreamina (the app's own 12 trend clips are the owner's to make, with Kling, on the
+owner's page). Downloaded into the owner's `Downloads\AGI Studio examples` (in subfolders; its `_to_delete` holds the 3
+zips they came in, for the owner to delete). No 3D model was made (Meshy wasn't in "fal.ai and Dreamina only", and a GLB
+download wasn't in what the owner allowed): the 3D scene's figure is drawn in code, labeled "Illustration".
+
+**The story** (15 scenes, each starting on a bar of the music: 120 beats a minute, a bar is 2 s):
+
+| Time | Scene | What happens |
+|---|---|---|
+| 0–8 s | the hook | Nova's photos, a shutter each (the beach, a café, golden hour), "Meet Nova.", "She posts every day." (her feed fills in, hearts on it), one photo comes alive (her trend video), "She's not real." with "AI-generated", "You made her.", "In about a minute." and ✦ Create; Kai, Mika and Juno pop in |
+| 8–14 s | the drop: AGI Studio | its logo slams in with a ring over a dim wall of everything made, then Explore's own heading: "Create your own" with the words after it taking turns (influencer · AGI-1 · AI · viral content), "Photos, videos and trends of it, in minutes.", agi1.app/studio |
+| 14–26 s | creating one | the app's Create: "Design it in a few taps." (Design it, Feminine, 20s, Wavy, Smart casual, Cheerful, Realistic: a tap each on the beat), "Nova" typed, ✦ Create · 100, "Pick your favorite of 4." (4 looks, one picked), "Its full body, ready to use."; then "Or start from a photo.": a photo dropped in, the OK box ticked, its three ways and their prices (4 looks 100, just its full body 20, the photo as it is 10) |
+| 26–30 s | any look, any style | the four of them side by side, then nine style tiles in a quick cascade, "26 styles" stamped on the clap, and under them "Or Any style: it follows your words." (a whole second before the cut) |
+| 30–36 s | photos in any scene | a scene typed ("At the beach at sunset, laughing, waves rolling in behind"), Make photo · 15, the photo develops; six more, a shutter each, their words under them; halfway through, the pile glides right and its photo models build beside it: Classic or Crisp · Standard, HD, Ultra (4K) · up to 4 reference pictures · from 8 credits |
+| 36–40 s | memes and X banners | two memes with their words and the five formats; Nova's X banner on her profile, 1500 × 500 measured, the room for the profile picture ringed |
+| 40–46 s | edits | "Edit with words.": "Make the jacket red" typed, Edit, a wipe, and only the jacket is red; "Or edit it yourself. Free.": the photo editor's filters, a sticker, words; "Now… make it move." |
+| 46–58 s | the second drop: trend videos | a carousel of trending clips, one picked; four times a clip, the influencer and the influencer in the clip (Nova: Golden hour; Kai: Neon runway; Juno: Confetti freeze; Mika: Rain twirl); the four side by side; "Or bring your own clip." |
+| 58–64 s | videos from a photo | the Video tool: Make video, the photo comes alive; a row of videos; Standard 720p · Pro 1080p · Anime for drawn styles · Long up to 60 s, with sound |
+| 64–72 s | everything to post it | eight cards, one a beat, each a small working piece of the app (the video editor, captions, Make another, Instant, progress, profile pictures, downloads that say they're AI-made, guides and help), then the camera reads them |
+| 72–78 s | a 3D model and a coin | Juno's full body becomes a figure, shaped, given bones and taught moves (drawn in code: "Illustration"), waving; "Launch a coin with its face.": her coin flips and lands, "$TICKER", "From your own wallet, on clank.trade.", "18+ · Meme coins can go to zero · Not financial advice" |
+| 78–84 s | paying | the coin opens onto "Pay as you go.": Top up ($5 · $10 · $25), 1,000 credits counting up, "1 credit = 1 cent", what things cost; "$AGI holders get more.": Crush and Soulmate, the prices falling to theirs, their free credits, "A thank-you for holding, not an investment. Not financial advice." |
+| 84–90 s | the community | "Share it. Get liked.": a wall of creations, hearts; "Spotlight of the week"; "Gifts & invites.": a gift of 300 credits claimed, an invite link, bonus credits for both |
+| 90–98 s | the finale | a tilted wall of everything the four made, slammed in on the last drop; the logo, "Create your own influencer.", Start creating, agi1.app/studio, "Live now" |
+| 98–103 s | the end card | the four of them, AGI Studio, "Your own AI influencer, in minutes.", agi1.app/studio and @agi1dotapp, the fine print (18+, everything AI-generated, PG-13; credits have no cash value; not financial advice), two last hits, black |
+
+From the app's first look to the finale, "agi1.app/studio" stays in a small pill at the top right; from "She's not real" to
+the end card, "Examples · AI-generated" stays at the bottom left, on a dark plate so it reads over any picture.
+
+**Its rules** (`tests/studio-promo.test.js`):
+- **Never an AI service by name** (fal, Kling, Seedance, Nano Banana, Gemini, Meshy, Dreamina, Higgsfield…) in any word
+  on screen, the post or the code that draws it; **never "buy"** (credits are topped up), never price talk, "safe", "scam"
+  or "rug"; PG-13; only $AGI (`$TICKER` is a coin's own ticker, a placeholder); "investment" only as "not an investment".
+- **"Not financial advice"** wherever money comes up (the coin, holders, the end card, the post), 18+ where it applies,
+  "AI-generated" on every frame from the reveal on, and never "made in AGI Studio".
+- **AGI-1 never in 3D, never CloakMesh, never another coin's data:** the code never loads a model file; its 3D figure is
+  three.js shapes, labeled "Illustration".
+- **AGI Studio's own words and numbers, imported** (`src/studio/rules.js`, `src/studio/app-words.js`, Explore's heading):
+  every price at each level, the three ways, the 26 styles and their groups, the meme formats, the X banner's size, the
+  trend clips, the video models, the editors' limits, the 3D model's moves, the top-ups, the holder perks: change them in the
+  app and the next video says the new ones.
+- **The picture and the music keep one clock** (`tools/studio-promo/timeline.js`): a shutter for each photo, a tap for each
+  choice, a tick for each letter typed, a tick for each 100 credits counted, a glitch and a hit for each trend swap, the
+  coin's flip and landing, the hits, a riser up to each breath, nothing in a breath, a sound on every cut, four kicks a bar
+  on the beat where it's full. The test reads the music's plan and checks each one.
+
+**How it's made** (`tools/studio-promo/`):
+- `timeline.js` (its clock: the scenes and every moment), `words.js` (every word on screen and the post, from the app's own
+  files), `music.js` (its music), `media.mjs` (the examples made ready once: pictures at most 1600 px; each clip as two runs
+  of JPEG frames, 720 × 1280 and 360 × 640, since Chromium in Claude's workspace can't play H.264; into
+  `tools/studio-promo/media`, which git ignores), `make.mjs` (builds the page, serves it on this computer only, draws
+  every frame in Chromium, ffmpeg makes the MP4, then the cover, the post, a light copy and README.txt), `README.txt` (for
+  the owner, next to the video).
+- `page/` (built by Vite into `tools/studio-promo/dist/`): `main.js` (the canvas, the scenes, the cuts, the overlays, a
+  still grain and a vignette, `window.promo`), `look.js` (AGI Studio's look: its colors, headlines, pills, panels, the
+  pointer, icons drawn in code), `parts.js` (pictures and clips, easing, springs), `media.js` (the pictures, and each clip's
+  frames waited for before a frame is finished), `cuts.js` (the 14 cuts: slams on the drops, pushes, wipes, a zoom flash, a
+  whip pan, irises (from the memes into the edits, from the coin into paying), through dark), `model3d.js` (the 3D
+  figure, three.js shapes with bones and moves) and `scenes/` (one file a scene). Everything is a function of time: a frame
+  drawn twice is the same.
+- `music.js`: composed and synthesized in code by Claude (no samples, no service, nobody else's music), the engine of her
+  launch video's: D major, vi–IV–I–V (Bm7, Gmaj7, D(add9), A(add9)), the hook previewed on an electric piano over the
+  opening, the drops on Bm (four-on-the-floor, claps, hats, supersaw chords breathing with the kick, a bass, the hook on a
+  lead, an octave down and bells in the finale), a half-time verse under creating, a lift into the styles, a groove for
+  photos and memes, a build into the second drop, a darker bar for the 3D model, a breakdown for the community, a breath of
+  silence before each drop and the end chord. About -13 LUFS, true peaks about -1.5 dBFS. `musicPlan()` lists every sound
+  without making it (the tests); `renderMusic()` makes the WAV (48 kHz stereo, in 15 to 20 s).
+- A headline's words leave before the next headline's arrive in the same place (found in the first preview: "Meet Nova."
+  and "She's not real." were still there as the next lines rose in, the two overlapping for a moment).
+- Found looking at the finished video, and fixed before it was made again: the styles' last line ("Or Any style…") sat
+  under the grid's bottom row and was on screen for less than half a second, and the photo models' last item ("From 8
+  credits") came in after the cut to the memes had begun. Now the grid is a little smaller and higher, its line under it a
+  whole second before the cut, and the photo models build beside the montage, all four in with more than a second to
+  read them.
+
+**Make it again** (after the app's words or prices change; Claude does this: Chromium, ffmpeg, `npm install --no-save
+playwright-core`, and the examples):
+- Once, the examples: `node tools/studio-promo/media.mjs --from <folders>` (the folders of `Downloads\AGI Studio examples`,
+  copied into Claude's workspace).
+- `node tools/studio-promo/make.mjs --out studio-promo --light 27`: the video, its light copy, the cover, the post and
+  README.txt into `studio-promo/` (git ignores it), about 25 minutes on 2 processor cores.
+- Quicker looks: `--scale 0.5 --fps 30` (a half-size preview in about 5 minutes), `--from 46 --to 52` (one stretch),
+  `--stills 9.5,46.2` (PNG pictures), `--sheet 0.5` (a contact sheet, a picture every half second).
+
+**The files** (`studio-promo/`):
+
+| File | What |
+|---|---|
+| `agi-studio-launch-light.mp4` | **the one to post**: 1440 × 1080, 60 fps, 103 s, 26 MB, in the chat and in this folder's `studio-promo/` |
+| `agi-studio-launch.mp4` | the full one (62 MB): it stays in Claude's workspace (the chat takes about 40 MB at most, and Claude's link to this folder writes at most 30 MB a file) |
+| `agi-studio-launch-cover.jpg` | a cover picture (the finale: "Create your own influencer.", Start creating, agi1.app/studio) |
+| `agi-studio-launch-post.txt` | a post to paste with it (fits X) |
+| `README.txt` | what's in it, and what to do before posting it, for the owner |
+| `how-to-post.md` | how and when to post the video and its X article, with every picture's alt text |
+| `x-article/` | its X article (see "Its X article" below) |
+
+**Posting it:** only once AGI Studio is open to everyone: its finale says "Live now" (`STUDIO_OPEN=yes` in Vercel,
+Redeploy, then a check in a private window with another wallet). When an app asks about AI content, say yes (TikTok
+"AI-generated content", YouTube "Altered or synthetic content", Instagram "AI label"). Never add price talk, "buy" or
+"number go up" to the post.
+
+**Its X article** (the owner: "and also after the video create me a n X article also for it with banner ready"): made the
+same night, for the owner to post by hand on X (Articles need X Premium: @agi1dotapp has it), in this folder's
+`studio-promo/x-article/` (git ignores it):
+- `article.html` (open it in a browser: **Copy title** and **Copy article** keep its headings, bold, lists and links when
+  pasted into X; a pink line where each picture goes) and `article.md` (the same text, plain): "Introducing AGI Studio:
+  your own AI influencer, in minutes", a tour of the app in simple words (creating one, its styles, photos, edits, trend
+  videos, videos, the tools, the 3D model and the coin, paying and what holders get, sharing, the serious part), with the
+  video's rules (never an AI service by name, never "buy", "not financial advice" where money comes up, the examples
+  never "made in AGI Studio").
+- `cover.jpg`, its banner: 2000 × 800 (5:2), drawn in code in AGI Studio's look ("Create your own influencer.",
+  agi1.app/studio, "Live now", the four influencers, "Examples · AI-generated"), its words and faces inside its middle (x
+  300 to 1700, y 100 to 700), where every crop X makes keeps them.
+- `01-meet-nova.jpg` … `10-share.jpg`: ten stills of the video (1440 × 1080); `trend-videos.mp4`: 11 seconds of it (its
+  trend videos, with its music); `posts.md`: 9 posts for the launch week, with X's character counts and alt text.
+- `studio-promo/how-to-post.md`: what to check before posting (as for the video), the order (the video first and pinned,
+  the article a few hours later, then one post a day), every picture's alt text, and its sources.
+
+They're made with a small page and script in Claude's workspace (not in the repo): Claude makes them again if its words
+change.
+
+**Tests:** `tests/studio-promo.test.js` (10): its words (never an AI service, never "buy", PG-13, only $AGI, "investment"
+only as "not an investment", never "made in AGI Studio", no AI service's name in the code that draws it), "not financial
+advice" / 18+ / AI-generated where they belong and the post fits X, never AGI-1 in 3D / CloakMesh / another coin's data
+and the figure labeled "Illustration", AGI Studio's own words and numbers, the scenes on bars and every moment in its own
+scene, the cuts, the music on its moments, its sections and its beat, the renderer (15 scenes in order, its options, its
+own server never serving outside its folders, no secrets for the browser or ffmpeg, never in the site's build, its media
+and videos never in git); and with `STUDIO_PROMO_RENDER=1` the whole music rendered (its length, stereo, never clipping,
+the drops bigger, silent breaths, the fade). Each seen to fail on a broken version (18). In Claude's workspace: stills of
+every scene, a half-size preview's contact sheets looked at frame by frame, the drops' hits measured in the muxed video
+(within half a millisecond of their frames, silence before each), and the music's loudness measured.
 
 ## Burn $AGI for more messages, and the burn monitor (2026-09-30)
 
@@ -5570,8 +5854,12 @@ the share mark and a live stats board. See "AGI Studio, round 2" below; the part
     puts a real person's face on a public coin, for good (deleting the influencer can't take it off the coin), and they
     agreed to that too."; an AI twin's was about "my own face").
   Its photos and videos (All · Photos · Videos): each opens big (play, **Download** (since round 2 with the share mark),
-  Share on X, Report, and since round 2 its heart: likes; a photo can start a video or a trend video), one being made shows its step, one that couldn't be made says why and that its credits came
-  back. **In 3D:** its 3D models.
+  Share on X, Report, and since round 2 its heart: likes; a photo can start a video or a trend video; since 2026-10-12, for
+  its maker, **Make another** and **Delete** first, and before them a photo's, a meme's or an X banner's **Edit with words**
+  and **Edit photo** (the photo editor, free, in the browser): see "The editor: Make another and Delete", "The editor: Edit
+  with words" and "The editor: the photo editor"), one being made shows its
+  step, one that couldn't be made says why and that its credits came back (since 2026-10-12 with Try again and its remove
+  button). **In 3D:** its 3D models.
 - **My studio** (`/me`): the wallet and its level, its credits (and how many are this month's free ones), **Buy credits**,
   its prices (with its discount), and its influencers with their state; since round 2 its slots ("2 of 5") with **Unlock
   one more**, its burn unlocks waiting for their burn, and its weekly spotlight prizes (to claim, or sent).
@@ -6621,7 +6909,8 @@ only the wallets in Vercel's `STUDIO_ONLY_FOR` could make anything, and everyone
 opens to everyone soon" (the "coming soon" the friend saw). The quick way out that day (adding the friend's wallet to
 `STUDIO_ONLY_FOR`, then Redeploy) still works; this makes it one tap, with no Vercel and no Redeploy.
 
-**What the owner sees** (Owner tools → **Testing**, above credits for testing; `accessSection()` in `views/owner.js`):
+**What the owner sees** (Owner tools → **Testing**, called **Gifts** since 2026-10-12, above credits for testing;
+`accessSection()` in `views/owner.js`):
 - **Who can use AGI Studio:** its first line says who's in without the list ("Also in, without the list: you, your team (2
   people) and 1 wallet in STUDIO_ONLY_FOR in Vercel (0x2222…2222).", or that it's open to everyone with `STUDIO_OPEN`), then
   the list, newest first: each wallet's short address, the owner's note, "Let in by you" or "Got credits for testing", since
@@ -6665,7 +6954,7 @@ it's deleted. The safety note's 04 and AGI Studio's own "What's kept" say so.
    tables, 96 functions). **Before pushing:** the new code reads who's on the list from it (with the version before it, the
    list says to run it again, and nobody gets in but you, `STUDIO_ONLY_FOR`'s and your team).
 2. **Push.**
-3. Owner tools → **Testing** → **Who can use AGI Studio** → paste the friend's wallet address (they copy it from My studio) →
+3. Owner tools → **Testing** (**Gifts** since 2026-10-12) → **Who can use AGI Studio** → paste the friend's wallet address (they copy it from My studio) →
    **Give access**. They reload the page. To let someone go: **Take off** (two taps).
 
 **Cost:** nothing.
@@ -6702,9 +6991,10 @@ and saved here; nothing goes live until the owner pushes it.
 
 **What visitors see** (`src/studio/guide.js`; the guides and their steps in `src/studio/guide-steps.js`):
 - **A guide on each page that needs one:** Explore (where to start, the gallery, your wallet or your credits, the bar, the
-  ? button), Create (how to start, its look or its photo, style, outfit and vibe, its name, Create), an influencer's looks
-  (pick one; 4 new looks), its tools (what to make, the scene, the model, Make, Instant, your creations) and My studio (your
-  wallet or your credits, your influencers, gifts and invites, Help & support): 25 steps. A step shows only when it fits the
+  ? button), Create (how to start, its look or its photo, how it's made (from a photo, since its styles and ways), style,
+  outfit and vibe, its name, Create), an influencer's looks (pick one; 4 new looks), its tools (what to make, the scene, the
+  model, Make, Instant, your creations) and My studio (your wallet or your credits, your influencers, gifts and invites,
+  Help & support): 26 steps (25 until "How it's made", the same day). A step shows only when it fits the
   page as it is (signed in or out, designed or from a photo, Instant on or off), and one whose button isn't on the page is
   passed.
 - **Each step:** a card beside the step's real button, an arrow pointing at it and a ring around it (the rest of the page a
@@ -6741,7 +7031,7 @@ and saved here; nothing goes live until the owner pushes it.
   THINGS" line knows round 4's phase 4 (the model menu, memes, references, Long videos, Anime, Instant), which it had missed.
 
 **How it works:** each page names what its arrows point at (`data-guide` on its buttons and sections: `start`, `gallery`,
-`account`, `nav`, `guide` (the ? button), `mode`, `look`, `style`, `name`, `go`, `looks`, `reroll`, `tools`, `scene`,
+`account`, `nav`, `guide` (the ? button), `mode`, `look`, `way` (since its styles and ways), `style`, `name`, `go`, `looks`, `reroll`, `tools`, `scene`,
 `models`, `instant`, `creations`, `connect`, `credits`, `mine`, `gifts`, `help`), and offers its guide through `ctx.guide(id,
 env)` in `src/studio/app.js` (what the page is like now, and how to open and close a phone's drawer). The card is made with
 `createElement` and its words set as text; its places only through the CSS object model (the CSP forbids style attributes);
@@ -6750,9 +7040,10 @@ own name, kept a year by browsers): the CSP is unchanged (`media-src 'self' blob
 
 **The videos** (`src/studio/guide/`, listed in `src/studio/guide-media.js`; made by `tools/studio/guide-record.mjs`, their
 scenes in `tools/studio/guide-scripts.mjs`):
-- **26 videos** (every step's, and two more for Learn: a trend video and a video being made), each twice: a computer's (672
-  × 420, filmed on a 1280 × 800 screen) and a phone's (624 × 390, filmed on a 390 × 844 phone, with touches): 16:10, 24
-  frames a second, soundless H.264 MP4s with WebP posters. 104 files, about 10 MB.
+- **30 videos** (every step's, and four more for Learn: a trend video, a video being made, the photo editor and the video
+  editor; 26 until "How it's made", 28 until the photo editor, 29 until the video editor), each twice: a computer's (672 ×
+  420, filmed on a 1280 × 800 screen) and a phone's (624 × 390, filmed on a 390 × 844 phone, with touches): 16:10, 24 frames
+  a second, soundless H.264 MP4s with WebP posters. 120 files, about 13 MB.
 - **Filmed from the real app:** AGI Studio as Vite builds it, in Chromium, with our own server's code answering it
   (`api/launch.js`) and its outside services faked exactly as `tests/influencer.test.js` fakes them (read from that file as it
   runs). A demo studio: made-up people from the live show's 2D paintings (`tools/live/page/art`: never anyone real, never the
@@ -6800,6 +7091,852 @@ prompt (85) and round 3 (266), and every view's look at 3 widths (axe 0 issues),
 that aren't about it). Found that way and fixed: with its video the card was too tall to fit beside a few buttons (a
 phone's "Name it" and "Help & support", the computer's gallery), so it covered them: a computer now scrolls a button as
 wide as the page to the top, and a card that would still cover its button goes without its video ("Watch how").
+
+### Explore's moving top (2026-10-11)
+
+**The owner's request** (with a screenshot of Explore's top, which said "Your own AI influencer"): "and i wan this moving
+pleae, Create your own AGI-1. / Create your own influencer. / Create your own AI. / Create your own Viral content. you
+understand what i mean right? the only moving is the words afer the word "own" and put under line", then "and also the
+images moving there okay". Built the same day.
+
+**What visitors see** (Explore's top: `src/studio/views/explore.js`, `src/styles/studio-app.css`):
+- **Its heading**, on two lines: "Create your own", and under it the words that take turns, with a period after them:
+  **AGI-1**, **influencer**, **AI**, **viral content** (the owner's order; the last in sentence case, like the app's other
+  words), in the app's violet-to-pink, a new one every 2.6 s, sliding up into the line as the one before slides up out of
+  it (both clipped to the line). A rounded line under them, in the same colors, follows each one's width, and the period
+  follows the word. The heading never changes height (the second line is always one line: "viral content" fits at 320 px).
+- **The wall** of what people made beside it (on a computer the right side of the top; on a phone faint behind its words,
+  as before): its four columns scroll slowly, in turns up and down (64 to 82 s round), round again without a seam (each
+  column's pictures twice over, moved by half its height). Each column starts a little further round the pictures, so no
+  column shows the same one twice in a row while there are enough. Nothing more is downloaded (at most 12 pictures, as
+  before: each second copy is the same file). It replaced the slow float the wall had on computers.
+- **Resting:** both stop while the top is off screen (scrolled past) or the tab is hidden, and go on when it's back.
+  **"Reduce motion":** nothing moves: its word is "influencer", and the wall stands still.
+- **Screen readers** hear one steady sentence, "Create your own AGI-1, influencer, AI or viral content." (the two lines on
+  screen are hidden from them), never a word that keeps changing.
+
+**How it works:** `HERO_WORDS`, `HERO_STILL` (the word shown for "reduce motion") and `HERO_EVERY_MS` in `views/explore.js`;
+`heroMotion()` turns the words with the app's own timer (`ctx.every`: it stops when the page changes), measures each
+word's width in em once the font is in (so it follows the heading's size; set through the CSS object model, since the CSP
+forbids style attributes), and rests with an IntersectionObserver and the page's visibility (`is-still` on the top, which
+also pauses the wall's CSS animation). The line keeps an invisible letter in it (`sa-rotor-ghost`), so its height and
+baseline stay put while the words are placed over it; `clip-path`, not `overflow` (which would take the baseline away),
+keeps them inside the line. `wallColumn()` picks each column's pictures; the wall's motion is CSS (`.sa-wall-track`,
+`sa-wall-up`, `sa-wall-down`). Explore's two guide videos (where to start, the gallery) were filmed again with it.
+
+**Owner:** push. No SQL, no setting. **Cost:** nothing.
+
+**Tests:** `tests/influencer.test.js` (1 new: the words and their order, the steady sentence and its lines hidden from
+screen readers, the word for "reduce motion" and standing still, resting off screen and in a hidden tab, the width in em
+through the CSS object model, the wall's columns (`wallColumn()` run: 6 different pictures a column from 12, fewer coming
+round, none for none), its CSS (the line clipped, never `overflow`, its underline, both directions, paused while still,
+still with "reduce motion"), the old float gone); `tests/guide.test.js` (its two videos filmed again). 727 in the whole
+suite (on Node 20, 22 and 24, with and without Vercel's settings, as if the clock said later times, and the full `npm run
+build`), in a copy of this folder with only this change. In a browser with the site's real CSP (Claude's scratch
+`app/heroprobe.mjs`, 51 checks at 1440, 390 and 320 px and with "reduce motion": the first word, the steady sentence, the
+line as wide as its word, the wall's 48 pictures moving, every word coming round, the width following each word, the
+heading's height steady, the period after the word, resting off screen and moving again, no sideways scrolling, axe 0
+issues, clean consoles, nothing blocked by the CSP).
+
+### AGI Studio's styles and ways (2026-10-11)
+
+**The owner's requests** (the same day, one after the other), and the owner's choices, asked one by one:
+- "can you make the style optional and please add more styles like , ghiblifi etc. and many more": with no style picked,
+  **"Their words, else photo (Recommended)"**; the hand-painted anime-film look as **"Storybook anime (Recommended)"** (a
+  look in our own words: never a studio's, a brand's or an artist's name); and all four groups (**"Photo looks, Anime &
+  comics, 3D & toys, Art & paint"**).
+- "when i upload a full body model already in the froom my photo it will be a aquarethen when it generate a full body , now
+  the leg part is different, can you fix that ?": its full body keeps the photo's body, outfit, legs and shoes.
+- "can you have an option if they already have a full body they can skip the first generate so they can save credits or
+  maybe just crop it and put it in their picture": **"Both cheaper ways (Recommended)"**: "Just its full body" and "Use my
+  photo as it is".
+- "can you also add in the front page that holders get discounts": **"AGI Studio's Explore (Recommended)"**, a line under
+  Explore's heading.
+- Also asked the same day, answered in the chat, nothing built: people paying the AI service directly instead of the
+  owner's wallet, paying with crypto and which stablecoins, and staking $AGI.
+
+**What visitors see** (`src/studio/views/create.js`, `src/studio/ui.js`, `src/studio/views/explore.js`,
+`src/styles/studio-app.css`):
+- **A style is optional:** Create's Style section starts with **Any style** (picked at first), then 26 styles in four
+  sections, each its heading and its picture tiles (each style's example picture once the owner makes it, else its name):
+  **Photo looks** (Realistic, Film photo, Editorial, Cinematic), **Anime & comics** (Anime, Storybook anime, 90s anime,
+  Manga, Webcomic, Comic book, Cel-shaded), **3D & toys** (3D cartoon, Claymation, Toy figure, Plushie, Pixel art, Low
+  poly) and **Art & paint** (Watercolor, Oil painting, Pencil sketch, Pop art, Woodblock print, Fantasy art, Cyberpunk,
+  Vaporwave, Paper cutout). A tap picks one, a second tap unpicks it (back to Any style). Its note says what Any style
+  makes: designed, the style its words name (like "watercolor"), else a photo look; from a photo, the photo's own look (a
+  photo stays a photo, a drawing stays a drawing). A tile's long name wraps onto two lines ("Storybook anime" and "Woodblock
+  print" were cut off with "…"). No chibi (childlike proportions); a toy figure and a plushie keep adult proportions.
+- **From a photo, "How should it be made?"**, once the photo is checked: three cards with their price (a Crush's here):
+  **4 looks to pick from** (80, as before), **Just its full body** (16: "Its full body made from your photo; its portrait
+  cut from it") and **Use my photo as it is** (8: "No AI: your photo is its full body, its face its portrait"). Use my
+  photo as it is stays off until a photo shows the whole person ("Needs a photo showing the whole person, head to feet"),
+  and the photo's check says when it does ("Looks good: it's checked and ready ✓ It shows the whole person, so you can
+  also use it as it is."); another photo that doesn't goes back to 4 looks. Each way shows only what it uses: Just its
+  full body its style, outfit and words (no vibe: that's for its looks); Use my photo as it is none of them (its own look).
+  Create's button, its line ("8 credits · Your photo as it is, in a few seconds") and the fine print under it follow.
+- **Its page while it's made:** "Making its full body" (no looks to pick) or "Getting it ready" (as it is), with its bar;
+  My studio says "Making Bo's full body from your photo…" or "Getting Ada ready from your photo…". Ready, it's like any
+  influencer: its portrait, its full body, its tools.
+- **Explore's holder line** (under its heading's words, above its buttons, on computers and phones): "$AGI holders get
+  20–40% off, and free credits every month"; **Crush** 10,000+ $AGI: 20% off everything and 100 free credits a month;
+  **Soulmate** 1,000,000+ $AGI: 40% off, 400 free credits and a free 3D model a month; "Held in your connected wallet, or
+  burned for messages. A thank-you for holding, not an investment." Never "buy" (hard rule 8). Its numbers come from the
+  code (`HOLDER_LINE` in `src/studio/app-words.js`, from `DISCOUNT`, `FREE_CREDITS` and the levels' $AGI).
+- A video's **Anime** model is for every drawn style now (anime, comics, 3D, toys and art: `DRAWN_STYLES`, `drawnStyle()`
+  in `src/studio/rules.js`), not only Anime and 3D cartoon; the photo looks, Oil painting, Fantasy art and Cyberpunk (which
+  can come out true to life) start a video from one of their photos.
+- **The AI helper** knows the styles and the three ways (`helpGuide()`), and so does Learn's first lesson; **the guide** has
+  a step for the ways (see below).
+
+**How it's made:**
+- **Its style's words** (`STYLE` in `server/inf-words.js`): each style its own words for its looks, full body, photos and
+  videos (Storybook anime: "hand-painted storybook anime, soft painterly colors, gentle warm light, lush hand-painted
+  backgrounds, a cozy whimsical feel"). **Any style** (`auto`): from a picture, "in exactly the same art style as the
+  picture"; designed with words, photorealistic unless the words name another style; without words, photorealistic; what
+  it makes after its first pictures keeps their style. A 3D model maps the 26 to the 3D studio's three (anime, cartoon,
+  realistic).
+- **Its full body from 4 looks** (the fix): made from its picked look and, for one made from a picture, that picture too
+  ("The second picture is the original photo it comes from: keep the body shape, the outfit, the legs and the shoes
+  exactly as in it", and a real person's face exactly; an outfit picked in Create replaces the photo's). Until then only a
+  real person's photo went with it, so a drawing's legs and shoes were made anew.
+- **Just its full body** (`way: 'body'`): its first job is its full body, one picture from Nano Banana 2's edit model from
+  the photo alone (9:16; its face, hair, skin, body shape, outfit, legs and shoes kept, anything the photo doesn't show made
+  to match), in its style or the photo's own; its portrait cut from it around its head (found on the plain background:
+  `figureHead()`, `portraitOf()` in `server/inf-jobs.js`). About $0.08 of AI.
+- **Use my photo as it is** (`way: 'asis'`): no AI. The photo's check as it's uploaded (Gemini: `checkPicture()` in
+  `server/inf-ai.js`) also says whether it shows the whole person, head to feet, and where the head is (a box; a head taller
+  than 45% of the picture is never a whole body), kept with the upload (`whole`, `head`). Our server makes the photo its
+  full body (the plain JPEG it was kept as), cuts its portrait around that head (a square about 2.4 heads across, 768 to
+  1024 px), keeps both and deletes the photo, in a few seconds (by its page or the clock, with 8 s to spare:
+  `ASIS_NEEDS_MS`). Its style is the photo's own (`auto`); our server and the database refuse it for a photo that isn't
+  whole (`not_full`: Create says so, under the ways, and goes back to 4 looks).
+- **Prices** (`PRICES` in `src/studio/rules.js`, with the holder discounts): 4 looks 100 / 80 / 60 credits (as before), just
+  its full body 20 / 16 / 12, as it is 10 / 8 / 6 (Stranger / Crush / Soulmate). One that can't be made gives its credits
+  back (just its full body has no looks to go back to).
+
+**Found while building this, and fixed:** an HD or Ultra photo's full-size download and a Long video's parts (round 4's
+phase 4) couldn't be kept: their names (`….hd.jpg`, `….p<n>.mp4`, `….f<n>.jpg`) weren't in the names our Storage code
+allows (`NAME` in `server/studio-files.js`), so those jobs failed with their credits back. They're allowed now, and a test
+checks every name the jobs use against it.
+
+**What's new in the database** (`supabase/influencers.sql`, still 28 tables and 96 functions): `agi1_inf.style` takes the
+26 styles and `auto`; `agi1_inf.way` (`looks`, `body`, `asis`: the last two only from a picture); `agi1_inf_uploads.whole`
+and `.head`; `inf_start` takes `p_way` (a picture as it is only when it's whole, `not_full` otherwise, its style `auto`);
+`inf_upload_set` takes `p_whole` and `p_head`; a full body made first is its own portrait (`looks_job` and `pick` point at
+it: its second picture). **Run it again before pushing:** with the version before it, creating an influencer says "AGI
+Studio isn't open yet." (the log names the fix), and pictures are kept without whether they're whole (so "as it is" stays
+off).
+
+**The example pictures:** 55 now (the 26 styles and 29 other choices; 32 before), so the owner's page offers **Make the 23
+missing pictures** (about $0.08 each, about $1.85). Until a style's picture is made, its tile shows its name.
+
+**The guide:** Create's guide has a step for the ways ("How it's made", only from a photo), and its style step says a style
+is optional (left out when the photo is used as it is): 26 steps. Its videos of Create and Explore were filmed again
+(Explore's top is taller with the holder line; on phones they start at its heading), and one is new: `create-way` (a photo
+of the whole person checked, the three ways, ending on the price): 27 videos, 108 files. And a step's card now waits for its
+button to be in view, up to 3 s (`settle()` in `src/studio/guide.js`): Create's panel is long now, and a long smooth scroll
+on a slow phone can pause between frames or outlast the 1.5 s it waited, so its card showed in the middle of the screen,
+without its ring, until the scroll ended.
+
+**Owner, in this order:**
+1. **Supabase** → SQL Editor → New query → paste **all** of `supabase/influencers.sql` → Run → `influencers_ready = 1`.
+   **Before pushing.**
+2. **Push.**
+3. On the owner's page (Content): **Make the 23 missing pictures** (about $1.85 from fal's balance), **Again** for one that
+   isn't right.
+4. Try it: a photo of yourself head to feet, each of the three ways.
+
+**Cost:** cheaper for people: just its full body is one picture of AI (about $0.08) for 20 credits, and as it is no AI (its
+check, about $0.001) for 10. The 23 new example pictures once (about $1.85). Nothing else.
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| Creating says "AGI Studio isn't open yet." | `[studio] the studio app: inf_start not found: run supabase/influencers.sql again in this Supabase project (its 26 styles and the ways to start from a photo; it ends with influencers_ready = 1)` | Run `supabase/influencers.sql` again |
+| "Use my photo as it is" stays off for a photo of the whole person | `[studio] supabase/influencers.sql is from before 2026-10-11: a picture is kept without whether it shows the whole person (run it again)` | Run it again, then upload the photo again |
+| "Use my photo as it is" stays off | (none) | The check didn't see the whole person, head to feet (cut off at the knees, the feet out of the picture): another photo, or Just its full body |
+| A portrait made "as it is" is cut off-center | (none) | The check's head box was off: Delete it, and use Just its full body; tell Claude if it happens often |
+| A style's tile shows only its name | (none) | Its example picture isn't made yet: owner step 3 |
+
+**Tests:** `tests/influencer.test.js` (2 new: from a photo, the three ways (what our server asks of the AI for each, the
+photo as it is with no AI and its portrait cut around its head, every "no", their prices, old SQL), and the page (Explore's
+holder line, never "buy", Create's styles and ways, their words); and the others brought along: the 26 styles' words, Any
+style, the full body with its photo, `NAME` against every name the jobs use); `tests/guide.test.js` (its new step and
+video, and its card shown once its button is in view). 729 in the whole suite (727 pass, 2 skipped as before: the daily
+clips' workflow file isn't saved in this folder, and the launch video's music render runs only with `PROMO_RENDER=1`), on
+Node 20, 22 and 24, with and without Vercel's settings, as if the clock said later times, and the full `npm run build`, in
+a copy of this folder with only these changes. `supabase/influencers.sql` in PGlite (Claude's scratch `pg/infsql9.mjs`, 14 groups: run over the owner's version
+and twice, every new promise, the old calls, permissions, a fresh database). In a browser with our own server's code
+answering the page (`app/real10.mjs`, 142 checks: Explore's holder line at 1440, 390 and 360 px; Create's styles (Any style
+first, the four sections and their 26 tiles, every name whole, a tap picks and a second unpicks, created with Storybook
+anime and with Any style); the ways (a Crush's prices, as it is off until a whole photo, what each uses, back to 4 looks,
+created as it is: ready in seconds, its portrait cut around its head, 8 credits, no AI asked; just its full body: one
+picture from the photo alone, 16 credits; 4 looks: its full body from its look and the photo; our server's "no" for one
+that isn't whole); phones at 390 and 360 px; axe 0 issues, nothing blocked by the CSP, clean consoles), and the guide's
+(`app/guide1.mjs`, 3,045 checks: every guide again, and a photo's guide on Create walked to its end at 1440, 390 and 360 px,
+its new step among them). Found that way: a card that didn't wait for its button (fixed: above); and a section taller than
+the screen (the 26 styles on a 360 px phone) has its top 128 px ringed, its heading, its note and its first choice, the card
+under it (the check's own rule allows that now).
+
+### Profile pictures and coin pictures (2026-10-11)
+
+**The owner's request:** "i thinj they should have an option to change the profile even after generation and on the launch
+coin an option to pick the current profile or choose from their own images". The owner's choices (asked one by one): **"Its
+looks and photos (Recommended)"** (a profile picture from one of its looks, its full body or one of its photos), **"Only how
+it's shown (Recommended)"** (what's made with it still starts from its full body) and, for a coin, **"Profile or its photos
+(Recommended)"**. Built the same day; nothing goes live until the owner's steps below.
+
+**What its maker sees** (an influencer's own page, its own wallet, once it's ready; never while it's banned):
+- **A camera on its picture** ("Change Nova's profile picture" for screen readers) opens **Nova's profile picture**: its
+  pictures in two groups, **Its looks and full body** (Look 1 to 4, Full body) and **Its photos** (each by its shape:
+  Square, Vertical, Wide; never an X banner or a meme), the one it uses now marked **Now**.
+- **Framing it** (`src/studio/views/frame.js`): the picture big, with a square on it. Drag the square (a mouse, a finger; a
+  press outside it brings it there), zoom (pinch, Ctrl + the wheel on a trackpad, the **Zoom** slider from 1× to 5×, or + and
+  − on the square), the arrow keys move it (with Shift, further). A full body starts on its head and shoulders, any other
+  picture on all of its shorter side. Two small previews show how it will look: **Its page** and **Its card** (Explore's and
+  My studio's 3:4 cards). **Use this picture** saves it ("Profile picture changed"); **Use its picked look again** puts back
+  the look picked when it was made ("Back to its picked look"). Escape or ✕ closes it with nothing changed.
+- **Free, and quick:** nothing is asked of an AI service. Our server cuts the same square (the frame is kept in thousandths
+  of the picture, so the page and our server agree whatever size it's shown at) and keeps it as a picture of its own (a JPEG
+  of at most 1024 px and a 384 px WebP), under a new address each time (a copy kept anywhere is never an old picture under
+  its address); the old one's files are deleted.
+- **Where it shows:** its page, Explore's influencers and Boosted row, My studio, its 3D model's page, the spotlight of the
+  week, and its coin's picture at first. **Only how it's shown:** its photos, videos, trend videos and 3D models are still
+  made from its full body. When the picture it was framed from goes (deleted, taken down), its picked look shows again by
+  itself.
+- **Its coin's picture** (the Coin tool, first): a round picture with **Its profile picture** (or **One of its photos**),
+  "Shown as a circle on clank.trade", and **Change**: "Its coin's picture", with **Its profile picture** ("As it is now":
+  picked at once) and **Its photos** (framed as a circle, its preview "On its coin"). The pick stays while the page is open
+  (**Another coin** keeps it). The launch draft keeps the picture it came from and its frame
+  (`studio:<influencer>/<job>-<n>@<x>,<y>,<s>`), cut when the launch page reads it (a JPEG of at most 1024 px and 1 MB,
+  Launch with AGI-1's limit): a draft stays as it was made, whatever its profile picture becomes meanwhile.
+- **Its guide** has a step for it ("Its profile picture", the camera, on an influencer's page) with its own video
+  (`make-pfp`), and Learn's first lesson a line and that video: 27 steps and 28 videos (112 files, about 11 MB). The guide's
+  videos of an influencer's page were filmed again (it has the camera now).
+
+**How it works:** `POST /api/launch { action: 'inf-pfp', session, id, from }` (`setProfile()` in `server/influencer.js`):
+`from` is one of its own pictures, done and shown, with its frame (`{ job, n, x, y, s }`), or null (its picked look again).
+The square is cut with sharp (`frameOf()` in `server/inf-jobs.js`), kept in the bucket first, then saved (`inf_pfp_set`), then
+the old one's files deleted. Its files are served (`?inf-file=<influencer>/<its id>-0.jpg | .webp`) only while it's its
+profile picture and the influencer is shown (`pfpShown()`). Every place a portrait is read uses `portraitRow()`
+(`src/studio/rules.js`): its profile picture while `inf_pfp_of` says the picture it came from is still shown, else its picked
+look. A coin: `inf-coin`'s `picture` (`'profile'`, the default, or `{ job, n, x, y, s }`), `coinDraft()` and
+`studioPicture()`; `api/launch.js` reads the framed draft (`STUDIO_PHOTO`, the same pattern as `rules.js`'s: a test checks
+they're the same).
+
+**What's new in the database** (`supabase/influencers.sql`: 98 functions): `agi1_inf.pfp` (which picture, its frame in
+thousandths, its own id), `inf_pfp_set` (its maker's), `inf_pfp_of`, and the pages' reads (`inf_get`, Explore, the
+spotlight…) carry it.
+
+**Owner, in this order:** `supabase/influencers.sql` again (**before pushing**: with the version before it, saving a profile
+picture says "AGI Studio isn't open yet." and the log names the fix), then push. **Cost:** nothing (no AI; a few hundred KB
+in storage for each profile picture changed, the old one deleted).
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| Saving a profile picture says "AGI Studio isn't open yet." | `[studio] the studio app: inf_pfp_set not found: run supabase/influencers.sql again in this Supabase project (changing an influencer's profile picture; …)` | Run `supabase/influencers.sql` again |
+| "That picture didn't load: go back and pick another one." | (none) | The picture couldn't be read in the browser (a connection hiccup): Back, and pick it again |
+| A profile picture went back to its picked look by itself | (none) | By design: the picture it was framed from was deleted or taken down |
+
+**Tests:** `tests/influencer.test.js` (a frame's numbers on the page and our server, cutting the square on pictures with a
+different color at each edge, only its own pictures (done and shown), every "no", its new address each time and the old one
+deleted, everywhere a portrait is read, a coin draft's framed picture and `STUDIO_PHOTO` the same in both files, old SQL);
+`tests/guide.test.js` (its step and video). `supabase/influencers.sql` in PGlite (Claude's scratch `pg/infsql10.mjs`, 11
+groups). In a browser with our own server's code answering the page (`app/real11.mjs`, its `pfp` and `coin` flows: the
+camera, its sheet and groups, "Now", the framer (the keyboard on the square, + zooming in, its previews), saved and served,
+its picked look again, another wallet seeing no camera; the Coin tool's picture, framed as a circle, its draft with its
+picture and frame, Another coin keeping it, its profile picture picked at once; axe 0 issues, nothing blocked by the CSP,
+clean consoles), and the guide's (`app/guide1.mjs`: an influencer's page and Learn at 1440, 390 and 360 px, its new step's
+card and ring on the camera; 710 checks). Found that way: the test read the Coin tool's row right as the picture sheet
+closed, before its `close` event (a task of its own) let the tool draw the pick; the tool was right, the test now waits for
+it.
+
+### The owner's gift links of free credits (2026-10-12)
+
+**The owner's request:** "can you also make the gifting system like ie i can put the a custome value of credits there then i
+can sent a message then theres gonna be a link for it then when i sahre it to someone they can see the meesage and the
+gifted credits and they can claim it". The owner's choices: **"Mine, free credits (Recommended)"** (on the owner's tab, free
+credits paid from the owner's own AI balance like credits for testing, any number of them; people keep their own gift links
+of bought credits), **"Up to 200 characters (Recommended)"** (every gift's message, the owner's and people's, up to 200
+characters, with the same checks) and **"Once (Recommended)"** (each link claimed once). Claude told the owner that claiming
+one while AGI Studio is private also lets that wallet in (shown on "Who can use AGI Studio", where it can be taken off).
+
+**What the owner sees** (Owner tools → **Gifts**, the tab that was Testing, still `?tab=testing`; first on it, then "Who can
+use AGI Studio", then credits for testing):
+- **Gift links of free credits:** what it is in a few lines; **How many credits** (1 to 100,000; 100, 500, 1,000 and 5,000 a
+  tap away; 1,000 to start with) and what that is ("1,000 credits: about $10 of AI … Claimed once, within 30 days.");
+  **Your message (optional)**, a text box of 200 characters with its count (line breaks kept; Ctrl or ⌘ + Enter makes the
+  link); **Make a link of 1,000 credits** (from 20,000 a second tap: "Tap again to make a link of 20,000 credits"). Every
+  "no" under its own field, with the keyboard there: not a whole number from 1 to 100,000 is said before anything is asked
+  of our server, and our server's "no" for the message under the message.
+- **Made:** "Your gift link: 1,000 credits", the link (`…/explore#gift=<its secret>`) with **Copy** (on a phone also its
+  share sheet), its message, "It can be claimed once, until Nov 11, 2026. Send it only to who it's for: anyone with the link
+  can claim it. Until then you can take it back below.", and a toast.
+- **Your gift links** ("1 waiting (50 at most)"), newest first: each one's credits, its state ("Waiting to be claimed · until
+  …", "Claimed by 0x5555…5555 3 min ago", "Taken back …", "Nobody claimed it by …"), its message, and while it waits **Copy
+  link** and **Take it back** (two taps: "Tap again to take it back", forgotten after 6 s); the newest 8, then **Show all**.
+
+**What whoever opens it sees** (the sheet a person's gift link opens): "A gift for you", "⚡ 1,000 credits", "From AGI
+Studio", the message with its line breaks, "Bonus credits from AGI Studio: use them for anything here. They don't run out
+(and they can't be given on).", while AGI Studio is private and that wallet isn't in yet "Claiming it lets your wallet into
+AGI Studio too (it's private for now).", until when, "A connected wallet (a free signature) and 18+", the safety line ("Never
+buy credits from anyone…"), and **Claim 1,000 credits**. Claimed: "💜 1,000 credits are yours", "Bonus credits from AGI Studio,
+and you can use AGI Studio now 💜 Start with your first influencer." (or, already in, that they don't run out). Claimed
+already; taken back ("AGI Studio took this gift link back."); past its days ("This gift link expired.", never "its credits
+went back to its sender": nothing was held); the owner's own ("That's your own gift link: send it to someone else (or take it
+back in Owner tools → Gifts).").
+
+**How it works** (`server/inf-gifts.js`, `ownerLinksSection()` in `src/studio/views/owner.js`, `OWNER_LINKS` in
+`src/studio/rules.js`):
+- Only the owner's signed-in wallet (`STUDIO_OWNER`, else the first of `STUDIO_ONLY_FOR`): `POST /api/launch { action:
+  'inf-owner-link', session, credits, note }` (→ its secret), `'inf-owner-links'` (the list) and `'inf-owner-link-cancel'`
+  (gift). 1 to 100,000 credits a link, 50 waiting at once, 30 days each.
+- **Nothing is held:** they're free credits, made when claimed, as **bonus credits** (spent after this month's free ones and
+  before bought ones, never given on), in the credits' log as a gift; taken back or past their days, they're just gone. They
+  cost what they're spent on (fal's balance, like credits for testing).
+- Claimed like a person's gift link (`inf-gift-peek`, `inf-gift-claim`): once (the database locks it), never by the owner's
+  own wallet, never by a banned wallet; from "AGI Studio" (`from_label`). They're never counted in a person's gifts a day or
+  gift links waiting, and the owner's My studio card doesn't list them (the owner's tab does).
+- **Letting a wallet in:** claiming one while AGI Studio is private puts that wallet on "Who can use AGI Studio" (as "Claimed
+  your gift link", `via: 'link'`; a wallet already on the list stays as it was); the owner can take it off there.
+- **The secret** is the part after "#gift=", as for people's links: only in POST bodies, out of the address once its sheet
+  closes, never in a request's address or a log.
+- **The owner's message** may say what a person's note can't: "giveaway" or "discounts" (its link is one, and holders get
+  them), AGI-1, AGI Studio or "official", and anyone's name; never a link, a contact, a price, a payment, a place to talk
+  elsewhere, a seed phrase or a private key (`giftNote()`, its `owner` rules).
+- **Every gift's message** (people's too): up to 200 characters (80 before; a line break counts as one), at most 4 lines
+  (`tidyMessage()`: more join the last one), its line breaks kept and shown.
+
+**What's new in the database** (`supabase/influencers.sql`: 100 functions): `agi1_credit_gifts.kind` (`bought`, or the
+owner's `owner`), `inf_owner_link` and `inf_owner_links`, messages up to 200 characters, and `agi1_inf_access.via` `link`.
+With the version before it, the owner's tab says to run it again (503 `not_ready`), and a message over 80 characters is
+refused (the log says to run it again, once).
+
+**Owner, in this order:** `supabase/influencers.sql` again (**before pushing**), then push. On the owner's tab → **Gifts**:
+make a link, send it only to who it's for (a link anyone has can be claimed by them). **Cost:** what the claimed credits are
+spent on, from fal's balance (1,000 credits about $10 of AI at most, a little less with a holder's discount on what they make);
+nothing for a link nobody claims.
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| The Gifts tab says to run influencers.sql again | `[studio] the studio app: inf_owner_links not found: run supabase/influencers.sql again in this Supabase project (the owner's gift links of free credits; …)` | Run `supabase/influencers.sql` again, then Try again |
+| A message over 80 characters is refused | `[studio] … supabase/influencers.sql is from before 2026-10-12 …` (once) | The same |
+| "You have 50 gift links waiting" | (none) | Take one back, or wait until one is claimed |
+| A friend says the link "expired" | (none) | Past its 30 days: make a new one |
+| Someone you didn't send it to claimed it | (none) | Anyone with a link can claim it: take back the ones still waiting, and send each only to who it's for. "Who can use AGI Studio" shows who got in by claiming one: take them off there if they shouldn't be |
+
+**Tests:** `tests/influencer.test.js` (the owner's links through our server: made, its message, every "no", 50 waiting, taken
+back, past their days (nothing back to anyone), claimed once as bonus credits, never by the owner's own wallet or a banned one,
+never in a person's limits, letting a wallet in (and one already in staying as it was), its secret only in POST bodies, old
+SQL; every gift's 200-character message and its lines; the page's words, the Gifts tab, the claim sheet, the safety note and
+AGI Studio's rules). `supabase/influencers.sql` in PGlite (Claude's scratch `pg/infsql11.mjs`, 15 groups; and the earlier
+rounds' checks again with the gift links). In a browser with our own server's code answering the page (`app/real11.mjs`, 221
+checks: the owner's tab (its words, every "no" before and from our server, made with a two-line message, Copy, the list, a
+second tap from 20,000, taken back with two taps, Show all), claimed by a wallet that wasn't in yet (its sheet, "lets you
+in", bonus credits, its secret only in two POST bodies, in after a reload, the same link again), the owner's own link, taken
+back while its sheet was open, past its days, people's gifts switched off (the owner's still claimed), a person's gift link
+with a two-line, 200-character message, phones at 390 and 360 px; axe 0 issues, nothing blocked by the CSP, clean consoles).
+Found that way, and fixed: a wallet that's let in already was told claiming "lets you in" (the page asked before it knew the
+wallet's own answer: it waits for it now, at most 4 s, `meReady()` in `src/studio/app.js`); a second gift link opened while
+the first one's sheet was closing lost its sheet (each sheet now takes only its own secret out of the address, and the next
+one opens after); and a form's amount and its quick picks shared a class name with a gift row's number (which never wraps,
+pushed to the row's end), so on a 360 px phone they ran past the screen's edge, credits for testing's too: a class of their
+own now (`.sa-amount-row`).
+
+### The editor: Make another and Delete (2026-10-12)
+
+**The owner's choices** (2026-10-11, asked one by one, for "the editor": "Make another (Recommended)", "Photo editor
+(Recommended)", "Edit with words (Recommended)", "Video editor"; then "Same as making it (Recommended)" for its price):
+**Make another** (the same prompt and settings, a new one next to the old one, never in its place, at the price of making it)
+plus **Delete** for the maker's own creations. Built first, on 2026-10-12; then Edit with words (the same day: see "The
+editor: Edit with words"). Next: the photo editor in the browser, then the video editor (built last).
+
+**What its maker sees** (one of its own influencers' pages, its own wallet):
+- **Over each of its own photos (a meme, an X banner), videos and trend videos seen big**, first in its sheet (in view as it
+  opens): **Make another · 18 credits** (its price now, for this wallet, a holder's discount included; just "Make another"
+  when its model has left the menu: pressing it says so) and **Delete**. Not on its looks, its full body or its 3D models,
+  and never on someone else's.
+- **Make another:** the sheet closes and the same words and settings go again: its scene, shape, model, quality, length,
+  sound, a meme's format and words, its trend clip or its own clip, the photo a video started from, its reference pictures.
+  A new one shows next to it, with its progress bar ("Making another photo: about half a minute"), paid like making it today;
+  the keyboard stays where it was. The "no"s, in words: its clip or reference pictures are past their day ("Its clip is kept
+  a day: upload it again in the Trend tool."), its trend clip was taken down, its model left the menu, the photo it started
+  from is gone, its words can't be used as they are any more (a newer rule), a realistic influencer's video needs a photo;
+  short of credits: the Buy credits sheet (nothing asked of our server). A banned wallet can't.
+- **Delete:** "Delete this photo?" (meme, X banner, video, trend video): "It's deleted from every page, and its link and
+  download stop working within minutes. This can't be undone." "Its credits don't come back: it was made." (and when its
+  influencer's profile picture was framed from it, that it goes back to its picked look), a red **Delete the photo**, Cancel
+  first for the keyboard. Then "Deleted." and the keyboard on its gallery's heading. Never while it's being made, or while a
+  video or a trend video is being made from it (said at once: "Something is being made from it right now: you can delete it
+  once that's done."). A banned wallet may still delete its own.
+- **A tile that couldn't be made:** under its words, **Try again** (the same words and settings, its credits taken again: never
+  for one the AI's safety check stopped, a clip at a size it can't use, an expired clip or a picture that's gone) and its
+  remove button ("Remove it": no confirm, there's nothing to lose). Such a tile is as tall as a 2:3 (`has-acts`), so its
+  words and buttons fit on a phone.
+
+**How it works:**
+- `POST /api/launch { action: 'inf-again', session, job }` → `againJob()` in `server/influencer.js`: its maker's (its
+  scrambled wallet code), done or failed, never deleted, hidden or taken down; its words and settings (`againInput()`) go
+  through `makeJob()` exactly as if made from its tools, so every check and price is today's. `{ ok, job, cost, kind }`.
+- `POST /api/launch { action: 'inf-job-delete', session, job }` → `deleteJob()`: the database first (`inf_job_delete`: its
+  maker's; 404 `job_gone`, 409 `job_making`, 409 `job_in_use`): hidden at once and for good (`deleted_at`), a profile
+  picture framed from it back to its picked look; then its files (`jobFiles()` in `server/inf-jobs.js`: its picture and small
+  copy, an HD download, a video, its poster, its marked copy, a long video's parts and their frames) and the profile
+  picture's. Files that couldn't be deleted go with the tidy-up a week later, when its row (and its likes) goes. A poster or
+  a share mark that comes in for it meanwhile is deleted again (`inf_poster`, `inf_mark_done`).
+- **The page** (`editRow()` in `views/shared.js`, `again()` and `removeJob()` in `views/influencer.js`): on computers the
+  picture or video is capped at `calc(88vh - 250px)`, so the row, the sheet's head and its foot fit (under the picture, a
+  tall one put the row below the fold). The gallery keeps the keyboard where it was across its redraws (`focusPlace()`,
+  `focusBack()` in `ui.js`; for a button that went busy or a sheet closing onto a replaced tile, `focusNext`, 15 s), and a
+  look asked for while one is on its way is asked again right after (`lookAgain`), so the new one is never missed.
+- **Links stop working within minutes, not at once:** a public creation's files are kept by Vercel's CDN up to 10 minutes
+  (`s-maxage=600`), and its pages' data up to 30 seconds. A browser that showed it keeps its own copy (an hour).
+
+**What's kept:** `agi1_inf_jobs.deleted_at` (when its maker deleted it); a week later its row and its likes go. Nothing new
+about anyone. The safety note's "Your data" is unchanged (a creation's words and files go when it's deleted, as it said).
+
+**Owner, in this order:** `supabase/influencers.sql` again (**before pushing**: 101 functions; still 28 tables; it ends with
+`influencers_ready = 1`), then push. No setting. **Cost:** Make another costs what making it costs (paid in credits first,
+from fal's balance); Delete nothing.
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| Delete says "AGI Studio isn't open yet." | `[studio] the studio app: inf_job_delete not found: run supabase/influencers.sql again in this Supabase project (the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1)` | Run `supabase/influencers.sql` again |
+| A deleted photo still opens from a link for a few minutes | (none) | By design: Vercel's CDN keeps a public one's files up to 10 minutes |
+| (nothing wrong to see) | `[studio] a deleted creation's files (they go with the tidy-up a week later): …` | Supabase Storage didn't answer: the tidy-up deletes them a week later |
+| "Make another" says its clip (or its reference pictures) is kept a day | (none) | By design: upload it again in its tool |
+
+**Tests:** `tests/influencer.test.js` (3 new: "Make another" for every kind (a photo, a meme, an X banner, a video from its full
+body and from a photo, a Long video, a trend video from a trend clip and from its own clip), at today's price for each level
+and the page's own sum for its button, one made before the model menu, one that couldn't be made, every "no" with nothing
+made or paid; "Delete" (off every page and for good, all its files, a profile picture framed from it, its row and likes a week
+later, only its maker's, never while it or something from it is being made, a banned wallet's own, a poster or a share mark
+made meanwhile never kept, an older `influencers.sql`); the page (the row first in its sheet, the 720 px caps, the keyboard kept,
+`lookAgain`, `has-acts`, the words, Learn and the AI helper's guide)); `tests/guide.test.js` ("Your creations" says so). Each
+seen to fail on a broken version of the code (23 broken versions: each setting Make another sends, whose it is, a deleted
+one, every file Delete deletes, a poster or a mark kept meanwhile, the page's words, the log's hint). The SQL in PGlite (Claude's scratch `pg/infsql12.mjs`: run over the owner's version and twice, every "no", the 6 functions that
+leave a deleted one out, the tidy-up, a banned wallet, permissions, a fresh database). In a browser with our own server's code
+answering the page (`app/real12.mjs`, 294 checks: the sheet (the row first, at 9 sizes from 1920 × 1080 to 360 × 740: the row,
+the picture and the foot in view), Make another for every kind (its price equal to what our server takes, one request with
+only the job, the same settings, the old tile kept, the new one made), every "no", Delete (its confirm, gone from the gallery,
+the database and storage, its addresses 404, a profile picture back to its look, in use, gone already, a video), failed tiles
+(Try again, Remove it), the keyboard after each, phones at 390 and 360; axe 0 issues, nothing blocked by the CSP, no 5xx,
+clean consoles). The guide's three videos that open one of its own creations (`make-creations`, `make-trend`, `make-video`)
+filmed again: the row shows above the picture or video (and the phone's poster of `make-creations` waits for the sheet now:
+it was the blur behind it). Found that way, and fixed: the row below the fold on computers (it sat under the picture), the
+keyboard lost to the page after Make another and Delete, a new tile missed when a look was asked for while another was on
+its way, a failed square tile's words and buttons overflowing on a 360 px phone, axe reading a sheet's colors mid-fade.
+
+### The editor: Edit with words (2026-10-12)
+
+**The owner's choice** (2026-10-11, "Edit with words (Recommended)": "type a change ("make her jacket red", "add snow");
+Nano Banana 2's edit model makes a new photo from that one; same price as a photo; words checked like a scene (PG-13, never
+a real person)"). Built second, the same day, after Make another and Delete. Next: the photo editor in the browser, then
+the video editor (built last).
+
+**What its maker sees** (one of its own influencers' pages, its own wallet):
+- **Over each of its own photos, memes and X banners seen big**, first in its row: **Edit with words** (a wand), then Make
+  another and Delete. Never on a video or a trend video, its looks or its full body, and never on someone else's.
+- **Its sheet, "Edit with words":** "Type what should change: a new photo is made from this one, next to it." The photo it's
+  made from, small, and what stays as it is ("Only that changes: the same character, place and framing."; a meme: "Its words
+  stay as they are."; an X banner: "It stays an X banner, 1500 × 500."); a box, **What should change?** (3 to 200 characters,
+  counted; "For example: make the jacket red"), six ideas a tap fills it with ("Make the jacket red", "Add gently falling
+  snow", "Make it night, with soft city lights", …); Cancel and **Make it · 12 credits** (a photo's price at its quality,
+  by Classic: here a Crush's standard photo). Nothing typed, or too short, is said under the box at once (nothing asked);
+  our server's "no" to its words too ("Never a famous or real person by name: …", "No links: just words."), with nothing
+  made or paid and the sheet kept. Short of credits: Buy credits over it (its words kept), nothing asked.
+- **Made:** "Editing your photo: the new one shows next to it in about half a minute" (meme, X banner); a new tile next to
+  it ("Edited: make her jacket red" while it's made, then tagged **Edited**; an X banner in the banners' strip), the photo
+  it's from as it was, the keyboard back on its tile. Seen big: "Edited with words: “make her jacket red”" under its picture
+  (and in its picture's words for screen readers), "AI-generated · Photo · Edited · Vertical", and its own row: another
+  edit, Make another (the same change to the same photo again, at its price) and Delete.
+
+**How it works:**
+- **No new action:** `POST /api/launch { action: 'inf-make', session, id, kind: 'photo', image, edit }` → `makeJob()` in
+  `server/influencer.js`. `image`: one of this influencer's own photos (a meme, an X banner), done, shown, never deleted
+  (else 409 `image`); `edit`: `checkEdit()` in `server/inf-words.js` (tidied; 3 to 200 characters; the scene's own
+  `trouble()`: no links or contacts, nobody real by name, nobody else's character, PG-13; else 422 `words`, field `edit`);
+  no reference pictures (409 `refs`). Everything else is the photo's own (`editSpec()` in `src/studio/rules.js`): Classic,
+  its shape, its quality (a Crisp photo's HD or Ultra by Classic: Crisp has no edit of its own here), a meme's format and
+  words, an X banner at HD; its scene kept, as it says where it is. Its price: `photoCredits(editSpec(photo), level)`, the
+  page's button the same sum. A photo starts from another one only this way (an `image` without `edit`: 400 `bad`).
+  `p_edit` is only sent for an edit, so an older `influencers.sql` still makes everything else.
+- **The AI** (`jobRequest()` in `server/inf-ai.js`): Nano Banana 2's edit (`fal-ai/nano-banana-2/edit`), the photo first and
+  its full body second (only for its face and look), at its ratio and size (1K, 2K or 4K; an X banner 4:1 at 2K), with
+  `editPrompt()`: "Edit the first picture: Make her jacket red. Change only what that asks for, and keep everything else in
+  the first picture exactly as it is: the character's face, hair, body, outfit and pose, the place, the light, the framing
+  and the art style. …", never less covered; a meme "Keep the words written in it exactly as they are …" (then Gemini looks
+  at it again, as at every meme: not family-friendly, it's never shown and its credits come back); an X banner "a little
+  wider than the first picture: everything where it is, with only a little more of the place at its left and right edges",
+  cut to 1500 × 500 **from its middle** (`picturesOf(…, { centred })` in `server/inf-jobs.js`; a new X banner's is its right
+  part). An HD or Ultra one keeps its full-size download, like any photo.
+- **Make another** of an edit sends the same change to the same photo again (`againInput()`); once that photo is deleted it
+  says so ("The photo it started from isn't there any more: …"). A photo being edited can't be deleted until the edit is
+  made (`inf_job_delete`'s `in_use`, as for a video from it); its edits stay when it's deleted (their own pictures).
+- **The database** (`supabase/influencers.sql`): `agi1_inf_jobs.edit` (3 to 200 characters, only on a photo made from another
+  one: `agi1_inf_jobs_edit_check`) and `inf_make`'s `p_edit` (its older version, from round 4's phase 4, dropped first: one
+  to choose from); a photo from a photo only as an edit: by Classic, never with references, its photo's own shape and a
+  meme's own format and words, never one deleted; `inf_job_get` and `inf_jobs` give it; the ready check finds each. Still 101
+  functions, 28 tables.
+
+**What's kept:** its change, with it (`agi1_inf_jobs.edit`), shown with it like its scene. Nothing new about anyone. The
+safety note's "Your data" is unchanged (a creation's words go when it's deleted).
+
+**Owner, in this order:** `supabase/influencers.sql` again (**before pushing**: 101 functions; still 28 tables; it ends with
+`influencers_ready = 1`), then push. No setting. **Cost:** a photo's: Classic at its quality, about $0.08 (Standard) to $0.16
+(Ultra) of fal's balance a picture, an X banner about $0.12; paid in credits first.
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| "Make it" says "AGI Studio isn't open yet." | `[studio] the studio app: inf_make not found: run supabase/influencers.sql again in this Supabase project (the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1)` | Run `supabase/influencers.sql` again (everything else is still made as before) |
+| An edit changed more than it was asked to | (none) | The AI's own choice: Make another tries again; fewer words often work better |
+| An edited meme says it couldn't be made, its credits back | `[studio] job …'s meme wasn't family-friendly (…): not shown, its credits back` | By design: Gemini looked at it again |
+
+**Tests:** `tests/influencer.test.js` (3 new: "Edit with words" on our server (a standard photo, a Crisp one (Classic HD), a Crisp
+Ultra one, an Ultra one, a meme, an X banner, one made before the model menu and a realistic influencer's: each at its price,
+the database asked with the photo's own settings, the AI's request (its model, its two pictures in order, its ratio and size,
+its words), kept (an X banner cut from its middle, an Ultra one's download, a meme looked at again, and refused), the page's
+sums; a holder's price, an edit of an edit, Make another of one, a photo deleted meanwhile, never deleted while edited; its
+words' every "no"; every other "no" (a video, a trend video, no photo, references, someone else's, a deleted, hidden or
+unfinished one, its looks or full body, banned, short), the database's own rules, and an older `influencers.sql` (only an
+edit needs it)); influencers.sql's promises for it; the page (the button first, never a video's, its sheet's parts, its
+checks before asking, its toast, "Edited" with its change, its tag, its styles, Learn and the AI helper's guide)), and the
+"Make another" page test allows the new button; `tests/guide.test.js` ("Your creations" says "edit it with words"; its video, `make-creations`, filmed again). Each
+seen to fail on a broken version of the code (26 broken versions: what an edit is and what it's made from (refused before
+the database is asked), references, a holder's price, a meme's words, p_edit only for an edit, Make another of one, its
+words' checks, the AI's request (its pictures' order, its ratio and size, a meme's words), an X banner cut from its middle,
+the log's hint, its price's quality and a meme's format, the page's words, its button only a photo's, enough credits first,
+its words checked first). The SQL in PGlite (Claude's scratch `pg/infsql13.mjs`, 7 groups:
+run over the owner's version and the editor's first part and twice, an edit of a photo, a meme, an X banner, a Crisp one and
+an edit, every "no", its column's check, never deleted while edited, permissions, a fresh database, the ready check; and every
+earlier `infsql` over it). In a browser with our own server's code answering the page (`app/real13.mjs`, 126 checks:
+the button first for a photo, a meme and an X banner and never a video's, a trend video's, its full body's or someone
+else's; its sheet; its "no"s under its box (nothing asked, or our server's: nothing made or paid); an idea; made (one
+request with its photo and its words, its credits once, a new tile next to it, "Edited", the keyboard back); the new one seen
+big; Make another of it; Cancel; a meme and an X banner; short of credits; the keyboard alone; phones at 390 and 360; axe 0
+issues, nothing blocked by the CSP, no 5xx, clean consoles) and `app/real12.mjs` again (294 checks: the row with three
+buttons in view as it opens at 9 sizes).
+
+### The editor: the photo editor (2026-10-12)
+
+**The owner's choices** (2026-10-11, "Photo editor (Recommended)": "free, no AI, in the browser (canvas, CSSOM only for the
+CSP)"; then "New photo + download (Recommended)": "Save as a new photo (checked by Gemini's look, ~$0.001, its words
+checked) joining its photos (Explore if public), or download with the share mark"). Built third, the same day, after Make
+another and Delete, and Edit with words. Next: the video editor (built last).
+
+**What its maker sees** (one of its own influencers' pages, its own wallet):
+- **Over each of its own photos, memes and X banners seen big**, after Edit with words: **Edit photo** (sliders). Never on a
+  video or a trend video, its looks or its full body, and never on someone else's. **Delete is now its trash can alone**
+  (named "Delete" for screen readers and on hover), so the four fit on one line on a computer.
+- **Its sheet, "Edit photo":** "Free: crop and turn it, its light, a filter, words and stickers. Save it as a new photo, or
+  download it." (an X banner's: "Free: its light, a filter, words and stickers (it stays 1500 × 500). Save it as a new X
+  banner, or download it."). Its photo big on a canvas (a computer: its tools beside it; a phone: under it), its tools as
+  tabs (the arrow keys move between them):
+  - **Crop** (never an X banner's): Original, Vertical, Square or Wide; Zoom (1× to 4×); Turn left, Turn right, Flip (the
+    frame flips with it); the frame dragged on the photo, or moved with the arrow keys (Shift: further).
+  - **Light:** Brightness, Contrast, Saturation and Warmth (−100 to +100, each value said), Reset light.
+  - **Filters:** Original, Vivid, Warm, Cool, Mono, Vintage, Fade and Noir, each with its own small picture.
+  - **Text:** Add words (80 characters each); one picked (a tap on it, or its button under "Your words"): its words, Font
+    (Clean, Bold, Classic), Color (6), Style (Outline, Box, Plain), Size and Turn, Remove these words. Dragged with a finger
+    or the mouse (two fingers: its size); on the canvas with the keyboard: the arrows move it, + and − its size, Delete
+    removes it. When its panel is drawn again the keyboard stays on the same control.
+  - **Stickers:** 16 emoji (💜 ✨ 🔥 😎 ⭐ 👑 🌸 🎀 ☀️ 🌈 💫 🦋 🍓 ☕ 🎧 📸: the device's own pictures, no files), picked and
+    changed the same way.
+  - At most 8 words and stickers on one photo. **Undo** (40 steps) and **Start again** (just their icons on a phone).
+  - **Download** (always free; nothing sent to our server): a JPEG at its size, "Nova-edited.jpg", with the share mark
+    drawn where our server puts it on downloads ("Downloaded, with its "Made with AGI Studio · AI-generated" mark").
+  - **Save as a new photo** (once something changed): "Saved: your edited photo is next to the one it's from." A new tile
+    next to it, tagged **Edited** (sliders; an X banner in the banners' strip), the keyboard back on the tile it was on. Seen
+    big: "Edited in the photo editor", "AI-generated · Photo · Edited · Vertical", and its row: Edit with words, Edit
+    photo and Delete (**no Make another**: it has no words and settings of its own to make again). Its words refused are
+    said under its tools, on Text ("No links: just words." …); Gemini's "no" ("It can't be saved: some words on it aren't
+    OK …"); "You've saved 20 edited photos today: more tomorrow. Downloading is always free."
+
+**How it works:**
+- **In the browser** (`src/studio/views/photo-editor.js`, its numbers in `src/studio/photo-edit.js`): the photo (the same
+  address as its big view: our own, so the canvas can read it) turned and flipped, cropped (`cropBox()`), then **one 4 × 5
+  color matrix** on its pixels for the light and the filter together (`colorMatrix()`, `applyMatrix()`: the same on every
+  browser, no CSS filters), then its words and stickers (`drawLayer()`). Saved at its own pixels, 1080 to 1536 on its
+  longest side (`outSize()`; an X banner exactly 1500 × 500), as a JPEG. Every style through the CSSOM (the CSP allows no
+  style attributes); no new font files (the device's own fonts and emoji). The editor draws in the browser's next frame
+  (`requestAnimationFrame`), its picture made again only when its crop, light, filter or size changes.
+- **Saving** (`server/inf-editor.js`), two steps, like an upload: `POST /api/launch { action: 'inf-photo-open', session,
+  from, shape, words }` → `openSave()`: the photo it's from (its maker's own photo, meme or X banner: done, shown, never
+  deleted, of a ready influencer; else 409 `image`, 404 `gone`, 403 `not_yours`), its shape (an X banner only from one, and
+  it stays one: else 400 `bad`), its words (each like a meme's line, `checkEditorWords()`: the studio's word rules, PG-13,
+  never about money, 80 characters, 8 at most; else 422 `words`, field `text`), one left today (`inf_tool_take` only asked:
+  else 429 `too_many` or `busy_day`) → `{ job, ticket, left, perDay }` (its ticket 30 minutes). Then `POST
+  /api/launch?inf-photo=<ticket>` (its JPEG, `application/octet-stream`) → `receiveSave()`: its id never saved before (409
+  `done`), a plain JPEG (no metadata, 1536 at most: `plainJpeg()`), its size fitting its shape (`sizeFits()`: 422 `size`),
+  one save counted (`inf_tool_take`: 20 a wallet a day, 2,000 the site; a refused look counts too: it cost one), **looked
+  at by Gemini before anything is kept** (`checkEdited()` in `server/inf-ai.js`: family-friendly, the words on it too; 422
+  `refused` with why, 503 `ai`), then its two files (JPEG and WebP, `picturesOf()`) and its row (`inf_photo_add`: a done
+  photo of the same influencer, free, made from that one (`image`), its scene the photo's, the editor's (`editor`)). Every
+  "no" keeps nothing (its files deleted if its row couldn't be made).
+- **After:** its downloads are like any photo's (our server puts the share mark on); it's in Explore if its influencer is
+  public; Edit with words and a video can start from it; **Make another can't** (`againJob()`: 409 `editor`, "It was made
+  in the photo editor: open it, or the photo it's from, and edit it again."). Deleted like any photo.
+- **The database** (`supabase/influencers.sql`): `agi1_inf_jobs.editor` (its check: a photo made from one of its own,
+  free, never an edit with words too), `agi1_inf_tool_days` (each wallet code's saves a day, kept 2 days; its `tool`
+  'photo', and 'video' for the video editor), `agi1_inf_days.photo_edits` and `.video_edits` (the site's),
+  `inf_tool_take(p_wallet, p_tool, p_per_day, p_site_cap, p_take)` (p_take false: only asked) and `inf_photo_add(p_job,
+  p_inf, p_wallet, p_from, p_shape, p_bytes)` (never a banned wallet's); `inf_job_get`, `inf_jobs` and `inf_tidy` know
+  it; the ready check finds each. **103 functions, 29 tables.**
+- **The guide:** Learn's lesson on photos has its step ("Or Edit photo: crop it, its light, a filter, words and stickers
+  (free), …") and its own video, `make-editor` (a photo opened → Edit photo → a filter, words and a sticker → saved,
+  "Edited": 12.9 s on a computer, its editing a little faster than real time, and 12.1 s on a phone); the Make guide's
+  "Your creations" says "edit it with words or in the photo editor (free)" (that guide is full: 7 steps); its video,
+  `make-creations`, filmed again (the row's new buttons). The AI helper's guide has a PHOTO EDITOR line.
+
+**What's kept:** the new photo (its two files and its row, like any photo) and how many photos each wallet's code saved a
+day (2 days). A download is never sent anywhere. Nothing new about anyone; the safety note's "Your data" is unchanged.
+
+**Owner, in this order:** `supabase/influencers.sql` again (**before pushing**: 103 functions, 29 tables; it ends with
+`influencers_ready = 1`), then push. No setting. **Cost:** each save's look, about $0.001 of Gemini (the site's 2,000 a day
+at most: about $2 a day); the editor and its downloads are free.
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| "Save as a new photo" says "AGI Studio isn't open yet." | `[studio] the studio app: inf_tool_take not found: run supabase/influencers.sql again in this Supabase project (the photo editor; it ends with influencers_ready = 1)` | Run `supabase/influencers.sql` again |
+| "We couldn't check it just now: try again in a moment." | `[studio] an edited photo couldn't be looked at: …` | Gemini didn't answer (its key, its balance): see "The chat's cost, setup and troubleshooting" |
+| A sticker looks a little different on another device | (none) | By design: emoji are each device's own pictures; a saved photo keeps how it looked where it was made |
+
+**Tests:** `tests/influencer.test.js` (4 new: the photo editor's numbers (`photo-edit.js`: turning, a crop of each shape,
+zoomed and moved and kept inside, a saved picture's size (an X banner exactly 1500 × 500) and our server's check of it, one
+color matrix for the light and each filter, its words wrapped, a layer kept inside and found under a finger, the share mark
+where our server puts it, what counts as a change); on our server (one of its own photos, memes and X banners saved as a
+new photo next to it, free; its words checked like a meme's line; its picture a plain JPEG of its shape; Gemini's look
+before anything is kept, and each of its answers; its maker's only; 20 a wallet and 2,000 the site a day, a refused look
+counted too; every "no" with nothing kept; Edit with words, a video and Delete from it, never Make another; an older
+`influencers.sql`); influencers.sql's promises (its column and its check, `inf_tool_take`, `inf_photo_add`, 103 functions,
+29 tables); the page (Edit photo over its own photos, Delete its trash can alone, never Make another of one saved from it;
+the editor's tabs, its canvas and its one color matrix, words and stickers, the keyboard, Undo and Start again, Download
+with the share mark, Save; the CSSOM only; its words, never an AI service named; Learn and the AI helper's guide)), and the
+editor's first two parts' page tests brought along (the row's four buttons); `tests/guide.test.js` (`make-editor` a clip
+and the last of Learn's photos lesson; "Your creations" says so). Each seen to fail on a broken version of the code (51
+broken versions: its words' checks, whose photo it is, a deleted, hidden or unfinished one, an X banner staying one, only
+asking first, the size check, the counts, Gemini's look and its answers, its files kept or deleted, the route's ticket,
+Make another refused, the page's parts and words). 745 in the whole suite (743 pass, 2 skipped as before; on Node 20, 22
+and 24, with and without Vercel's settings, and as if the clock said later times), the full build. The SQL in PGlite
+(Claude's scratch `pg/infsql14.mjs`, 8 groups: run over the owner's version and twice, `inf_tool_take` and `inf_photo_add`
+and their every "no", the column's check, deleting one and an edit with words or a video from it, permissions, a fresh
+database and the ready check; and every earlier one over it). In a browser with our own server's code answering the page
+(`app/real14.mjs`, 265 checks: the row (Edit photo, Delete its trash can alone); the editor opening on its photo; Crop (each
+shape, Flip, Zoom and a drag, the arrow keys, turned), the pictures saved read by their pixels (a photo of four colors, one
+in each corner); Light; Filters (each one, Mono gray); Text (picked, its controls, its words changing as typed with the
+keyboard kept, a second one, 8 at most, Undo, the keyboard on the canvas: arrows, + and −, Delete; dragged); Stickers;
+saved, its words checked by our server; Start again; Download with the share mark where our server puts it (a save has
+none); Edit with words from it, never Make another; its words refused, Gemini's "no" and 20 a day said; a meme and an X
+banner; the tabs with the arrow keys; phones at 390 and 360; axe 0 issues, nothing blocked by the CSP, no 5xx, clean
+consoles), and real13's 126 and real12's 294 again. Found that way, and fixed: a hidden tab's panel kept its old controls
+(a slider filled on a tab nobody saw: the panels not shown are emptied now), the keyboard lost when a panel was drawn
+again (it goes back to the same control), Start again left Save on, and typing in "Its words" redrew the whole panel. The
+Learn video `make-editor` filmed (12.9 s and 12.1 s: its first take, 21.5 s, was over the guide's 14 s), and
+`make-creations` filmed again (the row's new buttons).
+
+### The editor: the video editor (2026-10-12)
+
+**The owner's choice** (2026-10-11, "Video editor": "trim, text on it (a layer drawn in the browser as a PNG, so the server
+needs no fonts), change its shape (9:16, 1:1, 16:9); ffmpeg on our server makes an H.264 MP4 (the clock's function, like
+the share mark); free, 10 a day per wallet"). Built last of the editor's four parts, the same day.
+
+**What its maker sees** (one of its own influencers' pages, its own wallet):
+- **Over each of its own videos and trend videos seen big**, first in its row: **Edit video** (scissors), then Make another
+  and Delete (its trash can). Never on someone else's, never on its photos (they have Edit photo), its looks or its full
+  body.
+- **Its sheet, "Edit video":** "Free: trim this video, change its shape, its sound, words and stickers. Save it as a new
+  video, made in a minute or two." (a trend video's says "trend video"). Its video big, played by the browser (a tap on it
+  plays or pauses it: "Tap it to play or pause"), with a canvas over it for its words, its stickers and the share mark at
+  its top left, where our server puts it on videos. Its tools as tabs (the arrow keys move between them):
+  - **Trim:** a bar with its part and the playhead, "2.4 s to 7.4 s · 5.0 s long", **Play its part** (it loops), **Start
+    here** and **End here** (where it's playing), the Start and End sliders (a tenth of a second at a time, "2.0 s"; the
+    part stays 1 to 15 seconds), and **Its sound** ("Off: it's made silent."; a video without any: "This video has no
+    sound.", its switch off). On the video with the keyboard: Space, K or Enter plays and pauses, ← and → a tenth of a
+    second (Shift: a second).
+  - **Shape:** Original, Vertical 9:16, Square 1:1 or Wide 16:9, and Zoom (1× to 2.5×): the whole video with its frame
+    over it (the rest dimmed, its thirds), dragged with a finger or the mouse or moved with the arrow keys ("Drag the
+    frame to move it"); "It's made 960 × 960. Drag the frame on the video, or move it with the arrow keys." (Original: its
+    own shape, at most 1280 × 720's pixels). The other tabs show its crop.
+  - **Text** and **Stickers:** the photo editor's (its words, Font, Color, Style, Size and Turn; the 16 emoji stickers;
+    dragged, picked, the keyboard), at most 8 on a video.
+  - **Undo** (40 steps), **Start again**, and **Save as a new video** (once something changed, or at once for a video
+    longer than 15 seconds: its first 15).
+- **A Long video, or one saved from here,** carries its share mark already: "Free: trim it, its sound, words and stickers
+  (it keeps its shape: its mark is in it). …", no Shape tab (its own shape and the whole picture), its words kept off its
+  mark (that corner cleared on the canvas, and by our server).
+- **Saved:** "Saved: your edited video is being made next to the one it's from: a minute or two." A new tile next to it,
+  "Making your edited video" with its bar, then tagged **Edited** (scissors). Seen big: "Edited in the video editor", and
+  its row: Edit video and Delete (**no Make another**: "It was made in the video editor: open it, or the video it's from,
+  and edit it again."; and no Try again if it couldn't be made). Its download is the video itself (its share mark is in
+  it). Its "no"s are said under its tools: its words on Text ("No links: just words." …), "You've saved 10 edited videos
+  today: more tomorrow.", "You have 3 edited videos being made: wait for one to finish.", "That part or shape can't be cut
+  from this video: change it and try again."; once made, a "no" from Gemini's look: "The AI service's safety check
+  stopped it." on its tile, with Remove it.
+
+**How it works:**
+- **In the browser** (`src/studio/views/video-editor.js`, its numbers in `src/studio/video-edit.js`, the words and stickers
+  in `src/studio/views/layers.js`, shared with the photo editor): its video placed and cropped through the CSSOM (in Shape
+  the whole video, else its crop filling the frame: the CSP allows no style attributes), the canvas over it drawn in the
+  browser's next frame. What's sent: the cut `{ start, length (tenths of a second), shape, src: [its video's width,
+  height], box: [x, y, w, h] in thousandths of its video, sound }`, its words (for our server's check) and, only when it has
+  some, its words and stickers as one transparent PNG at its size (`layersPicture()`): our server needs no fonts.
+- **Saving** (`server/inf-cut.js`), like the photo editor's: `POST /api/launch { action: 'inf-cut-open', session, from,
+  cut, words, layer }` → `openCut()`: the video it's from (its maker's own video or trend video: done, shown, never deleted
+  or taken down, of a ready influencer; else 409 `from`, 404 `gone`, 403 `not_yours`), its cut (`cutSpec()`: 1 to 15
+  seconds starting within 600, its shape, a crop of that shape (within 3%, at least 64 of its pixels), its sound; never
+  starting past its video's end; a video whose mark is in it already only as it is: else `cut`), its words (each like a
+  meme's line, `checkEditorWords()`: 422 `words`), one left today (`inf_tool_take` 'video', only asked: 429 `too_many` or
+  `busy_day`). Without words or stickers it's started at once (`addCut()`), else a ticket for its picture (30 minutes) and
+  its size; then `POST /api/launch?inf-cut=<ticket>` (its PNG) → `receiveCut()`: a real PNG of exactly its size (4 MB at
+  most), made plain, with a video's own mark's corner cleared (`layerOf()`: its words never cover it), kept
+  (`inf/<influencer>/<job>.layer.png`), then started. Started = `inf_cut_add`: one use counted, at most 3 being made at once
+  per wallet, a video of the same influencer, free, waiting for our clock. A cut that isn't started deletes its picture.
+- **Made by our clock** (`/api/feed?studio`: the only function with ffmpeg), `cutTick()`: the video it's from read, its
+  plan (`cutPlan()`: only the video its page measured, never past its end, 24 frames a second, in pieces of 5 seconds, a
+  last one under a second joined to the one before), its pieces made one after another while the minute has time
+  (`cutPieces()`: ffmpeg seeks to its part, crops it at exactly its size (`cropPixels()`), puts its words' picture and the
+  share mark top left over it (never a second mark on a video with its own), H.264 superfast at about 2.5 Mb/s, no sound;
+  each kept as it's made, `.p<n>.mp4`), then joined as they are with its sound (AAC, 128 kb/s, from the video it's cut
+  from, when its maker kept it on and that video has some) or none, its index first (`joinCut()`), kept as its video. Then
+  Gemini looks at it before anyone sees it (`checkCutVideo()`: family-friendly, its words too), by the clock or by its page
+  once it's made: done (`inf_cut_done`), or refused (its files deleted). One core makes 15 seconds of a 1080p video in
+  about 13 s (measured 2026-10-12), so a 5-second cut is usually made in its first minute and a longer one over two
+  (`cutSteps()`, its bar). The clock takes cuts first on even minutes and after its other jobs on odd ones.
+- **When it can't be made** (its files deleted; its use never given back: each costs its look): the video it's from gone
+  or not the one measured, Gemini's "no", too big to look at, 12 hours, its join failing 4 times; a piece gone missing:
+  made again from its start; no ffmpeg: it waits (the log says so once).
+- **After:** its share mark is in it (the share mark's clock leaves it alone, and it's its own download); it's in Explore
+  if its influencer is public; **Make another can't** (`againJob()`: 409 `editor`); the video it's from can't be deleted
+  while it's being made (`inf_job_delete`'s `in_use`). Deleted like any video.
+- **The database** (`supabase/influencers.sql`): `agi1_inf_jobs.editor` and `.cut` (what was asked, with their checks:
+  only on a video saved from it; a free video cut from one of its own, never a Long one or an edit with words), seconds 1
+  to 60 (3 to 60 before), the clock's index, the site's count a day (`agi1_inf_days.video_edits`); `inf_cut_add` (its
+  maker's own done, shown video or trend video, never a banned wallet's, 3 at once before its use is counted, its use
+  counted with it or not at all, its id once), `inf_cut_done` (never one deleted meanwhile), `inf_cut_due` (the clock's
+  next); `inf_job_get` gives its cut; the owner's numbers count edited photos and cuts apart. **106 functions, 29 tables.**
+- **The guide:** Learn's lesson on videos has its step ("Or Edit video (free): trim it to 1 to 15 seconds, its shape, its
+  sound, words and stickers. Save it as a new video next to it, made in a minute or two.") and its own video, `make-cut`
+  (one of her videos opened → Edit video → trimmed, Square, her words → saved, made by our clock, done with her words on
+  it); the Make guide's "Your creations" says "edit it with words or in the photo or video editor (free)"; `make-trend` and
+  `make-video` filmed again (their videos' rows have Edit video now). The AI helper's guide has a VIDEO EDITOR line.
+
+**What's kept:** the new video (its file and its row, like any video), its words' picture only until it's made, its pieces
+only until they're joined, and how many each wallet's code saved a day (2 days). Nothing new about anyone; the safety
+note's "Your data" is unchanged.
+
+**Owner, in this order:** `supabase/influencers.sql` again (**before pushing**: 106 functions, 29 tables; it ends with
+`influencers_ready = 1`), then push. No setting. **Cost:** each cut's look, about $0.002 of Gemini, and its making, the
+clock's CPU and memory (Vercel Pro bills them on demand, from its monthly usage credit first: $0.128 an hour of CPU in
+Washington D.C.), about $0.0005 a cut; at most 500 a day for the site (about $1.25 a day at most). Free for people.
+
+**Troubleshooting** (Vercel → agi-ecosystem → Logs):
+
+| What you see | Log line | Fix |
+|---|---|---|
+| "Save as a new video" says "AGI Studio isn't open yet." | `[studio] the studio app: inf_cut_add not found: run supabase/influencers.sql again in this Supabase project (the video editor; it ends with influencers_ready = 1)` | Run `supabase/influencers.sql` again |
+| Edited videos stay at "Making your edited video" | `[studio] the video editor's cuts wait: cut: ffmpeg isn't here (vercel.json's includeFiles for api/feed.js)` | The clock's function lost its ffmpeg: tell Claude. They carry on by themselves once it's back |
+| "The AI service's safety check stopped it." on an edited video | `[studio] cut … wasn't family-friendly (…): not shown, its files deleted` | By design (Gemini's look) |
+| An edited video has no sound | (none) | Its maker switched Its sound off, or the video it's from has none (a trend video made from their own clip never keeps its clip's sound) |
+
+**Tests:** `tests/influencer.test.js` (7 new: the video editor's numbers (`video-edit.js`: each shape's size, "Original" its own made smaller with even sides, a crop of each shape zoomed and moved and kept inside, in thousandths, our server's check of a cut and every "no", "as it is", its crop in pixels, the share mark top left where our server puts it (never narrower than 120 px), the page's state from the start, a trim kept inside its limits, what counts as a change (a silent video's sound off is none), the cut sent (its sound off too), how long one takes); a cut's plan and ffmpeg's exact words for its pieces and their join, with a stand-in ffmpeg (pieces of 5 seconds, a last one under a second joined to the one before, only the video its page measured, never past its end, one with its mark in it only as it is; its part, its crop at its size, its words' picture and the share mark over it, no sound; joined as they are with its sound or none; its pieces made while there's time, the ones made kept when a later one fails; no ffmpeg); a cut with the real ffmpeg (skipped where there's none: made in pieces of 5 seconds, joined with its sound, the share mark top left over its words, read back as H.264 and AAC at 24 fps; one as it is, its sound off); on our server (one of its own videos or trend videos saved as a new video, free, started at once or once its words' picture comes: a real PNG of its size, kept plain, its mark's corner cleared on a video that carries its own; its sound off kept silent; the same ticket twice, and twice at the same moment: kept once; 10 a wallet, 500 the site, 3 at once; every "no" with nothing kept or counted, with words or without; its source never deleted while it's made; its download the video itself; never Make another; an older `influencers.sql`); our clock (made in pieces as each minute has time for them, its progress kept, and made again from its start when its plan changed; joined with its sound (none from a silent video); its seconds as the database keeps them; looked at by Gemini by the clock or its page: done; or refused for each of its look's "no"s, too big, its look away 4 times, set aside meanwhile, 12 hours, a piece gone missing, no ffmpeg (it waits), its join failing 4 times, the video it's from changed or gone, its words' picture gone, its influencer gone: each with its files deleted and its use never given back; never made or read anywhere but our clock; a cut first on even minutes; the owner's numbers); influencers.sql's promises (its column and its checks, `inf_cut_add`, `inf_cut_done`, `inf_cut_due`, the share mark's clock leaving it alone, the ready check); the page (Edit video over its own videos and trend videos, "Edited" with scissors, never Make another or Try again for one; the editor: its video through the CSSOM, a canvas over it, its tabs (no Shape for one with its mark in it), its sound only where it has one, the keyboard, Undo and Start again, Save; its words, never an AI service named; Learn and the AI helper's guide)), and the earlier editor tests brought along (a video's row, Edit video first); `tests/guide.test.js` (`make-cut` a clip and the last of Learn's videos lesson; "Your creations" says so). Each seen to fail on a broken version of the code (111 broken versions: opening one, its words' picture, our clock, how it's made (`inf-mark.js`), its numbers (`video-edit.js`), the page, a silent video, its words, the row and the gallery, our server's other parts, its database; 21 got past the tests at first: 20 more checks for them, and a branch that could never run taken out). 752 in the whole suite (750 pass, 2 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said later times), the full build. The SQL in PGlite (Claude's scratch `pg/infsql15.mjs`, 10 groups: run over the owner's version and twice, a cut of a video and of a trend video and every "no", a wallet's and the site's day, three at once, the clock's next one and its steps to done, the share mark's clock, failing and deleting, the columns' checks, the owner's numbers, permissions, a fresh database and the ready check; and every earlier one over it). In a browser with our own server's code answering the page and our clock making each cut with real ffmpeg (`app/real15.mjs`, 266 checks: its row; its sheet and its tabs; trimming (its part played in a loop, Start here and End here, its sound switch), saved, made and done; its shapes and its frame (dragged, the arrow keys, Zoom), words and a sticker, made at its crop with its words and the share mark; a long video's and a saved one's (no Shape, its words off its mark); every "no" (its words, 10 a day, 3 at once, Gemini's); the keyboard alone; phones at 390 and 360; axe 0 issues, nothing blocked by the CSP, no 5xx, clean consoles), and real14's 265, real13's 126 and real12's 294 again (a video's row starts with Edit video now). Found that way, and fixed: from Shape to Text its frame kept the whole video's shape (found by its guide video), "It's made 640 × 360" stayed after another shape was picked, a cut that couldn't be started kept its words' picture, and a cut too big to look at was said like a refusal in the log; and reading the code over: a silent video's Save and Start again were on as it opened (its sound off counted as a change). The Learn video `make-cut` filmed, and `make-trend` and `make-video` filmed again.
+
+### Clean downloads for holders (2026-10-12)
+
+**The owner's request:** "can youi put watermark when they download or export their vid,photos it will be removed if they
+hold $agi atleast 1000". The owner's choices (asked one by one): the mark is **"Our pill, as now (Recommended)"** (the "Made
+with AGI Studio · AI-generated" pill downloads already carry), a **"Hidden AI tag (Recommended)"** in every file, and a real
+person's influencer **"Same as the rest"** (clean for its holder too, with a reminder to use the app's AI label).
+
+**What people see:**
+- **Everyone's downloads keep the pill**, as before. Someone else's creation always comes with it, whatever its downloader
+  holds.
+- **A creation's own maker holding 1,000+ $AGI** (held in the signed-in wallet, or burned for messages; `STUDIO_CLEAN_AGI`)
+  downloads its own photos (memes, X banners, edited ones, its full body), videos and trend videos **without the pill**: its
+  Download asks our server first. A toast says which ("Downloaded without our pill 💜 (a thank-you for holding 1,000+ $AGI).
+  It still says inside its file that it's AI-made.", or with it and why; never "buy"); for a real person's influencer also
+  "Post it with your app's AI label."
+- **A long video and one saved from the video editor keep their pill** (made into the video). A clean HD or Ultra photo comes
+  at the size the page shows (1536 px at most).
+- **The photo editor's Download** draws no pill for a holder (our server says so first), and always adds the tag.
+- **Every download says inside its file that it's AI-made** (`src/studio/ai-tag.js`, the same code on our server and in the
+  browser): XMP with the IPTC's Digital Source Type "trainedAlgorithmicMedia" (what Instagram, Facebook and Google read) and
+  "AI-generated with AGI Studio (studio.agi1.app)"; in a JPEG an APP1 segment after its JFIF and Exif segments, in an MP4 a
+  top-level `uuid` box (Adobe's XMP UUID) at its end, so nothing in it moves. Photos are tagged as they're downloaded,
+  videos when they're kept (made, joined, cut, or marked by the clock): videos made before stay untagged.
+- studio.html's rules, the home page's safety note (03) and the AI helper's guide say so.
+
+**How it works** (`server/inf-clean.js`):
+- `POST /api/launch { action: 'inf-dl', session, job, n? }` → `{ url, clean, need, why? }`: only its maker (403
+  `not_yours`), only one that's shown; clean when it can be (`cleanable()`: never a video whose own file has its pill,
+  `ownMark()`) and the wallet holds enough (`holdsEnough()`: a Crush or a Soulmate from its session, without a chain read;
+  else its $AGI held and burned, read on Robinhood Chain, kept 10 minutes per server copy, 1 minute when it couldn't be
+  read). A clean `url` is `?inf-clean=<ticket>` (signed with PASS_SECRET for that creation, picture and wallet, 10 minutes),
+  else the marked one, as everyone's. `why`: `holding`, `made_with_it` or `off`.
+- `GET ?inf-clean=<ticket>`: a photo → its picture as the page shows it, tagged, `private, no-store`, an attachment; a video
+  → 302 to its own file (a signed address, 2 hours, its download name). Checked again: still shown, still clean.
+- `inf-info` says `cleanAgi` (0: off). No SQL change.
+
+**Owner:** push (no SQL, no setting). Optional: `STUDIO_CLEAN_AGI` (default 1000; 0 = everyone's downloads carry the pill).
+
+**Cost:** nothing new: a wallet below Crush has its $AGI read on the chain's free node at most every 10 minutes per server
+copy, when it downloads its own creation.
+
+**Not built (the owner's call):** clean copies of long videos and editor cuts (each part or piece made twice, with and without
+the pill: about twice the clock's work for them), and a clean full-size HD or Ultra photo (one more file kept for each).
+
+**Tests:** `tests/influencer.test.js` (3 new: our hidden AI tag (a JPEG's XMP after its JFIF and Exif segments, an MP4's at its end, each once; the picture and the MP4 read the same after it); clean downloads through `/api/launch` (a Stranger holding nothing: the marked one and why; a Crush at once, with no chain read; a Stranger holding 1,500 $AGI, read on the chain; its clean photo its picture as the page shows it with our tag, `private, no-store`; its video to its own file; a long video's pill kept; someone else's never; a bad or tampered ticket; one hidden meanwhile; `STUDIO_CLEAN_AGI=0`; the marked download tagged too); the page (its own Download asks our server first, the photo editor without its mark only when our server says so and always tagged, the toasts' words, never "buy", the real person's reminder; an HD photo's copy and a long video's join kept tagged)), and the earlier ones brought along (videos, the share mark's copy and a cut kept with our tag, `inf-info`'s `cleanAgi`, the safety note's sentence). Each seen to fail on a broken version of the code (12 broken versions: whose it is, a Crush's shortcut, still shown, a video with its pill, each place a download is tagged, the Exif placement, the page's button, switched off, the reminder). 755 in the whole suite (753 pass, 2 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said later times), the full build. In a browser with our own server's code answering the page (`app/real16.mjs`, 66 checks: a Crush's own photo (Download asks our server, then its clean picture: no pill in its corner, our tag, "Nova-photo.jpg", its toast), a Stranger's (the marked one, tagged, "…with our pill", never "buy"), a Crush's own video (to its own file, never its marked copy, its name, its toast), someone else's photo for a Soulmate (a plain link to the marked one, never asking first), the photo editor's Download at both levels, a real person's (the reminder), a phone at 390 px; axe 0 issues, nothing blocked by the CSP, no 5xx, clean consoles).
+
+### AGI Studio opens to everyone (2026-10-13)
+
+**The owner** (that night, after clean downloads): "and also make it live for everyone now not only on my wallet after you
+finished". AGI Studio was built to open with one setting (`STUDIO_OPEN=yes`: `canUse()` in `server/inf-team.js`, every gate on
+our server), which only the owner can change (hard rule 2: the owner does every click in Vercel). What Claude added for it:
+- **Links to it from agi1.app** (the top bar is full, so not there): a 6th row in the front's **"Her world (06)"** list,
+  second, "AGI Studio · your own AI influencer →" (its own pink-to-lavender, `.lp-c-studio`; on a short computer screen the
+  list's rows are a little tighter, so its six rows sit where its five were: taller, its heading met the planets' names going
+  round her), a row in the **phone menu** after Live (`nav-phone`: only in the menu) and a link in the **footer** after Live,
+  on every page with the top bar (home, diary, launch, live). All to `/studio`, this site's own address for it (the same 18+
+  answer and wallet session as the rest of agi1.app; studio.agi1.app is the same app).
+- **The phone menu scrolls** on a short screen (`max-height: calc(100dvh - 64px)`, `overflow-y: auto`): with its new row, a
+  320 × 568 phone's menu ran past the screen's bottom, its last rows out of reach.
+- Nothing in AGI Studio itself: every "private for now" line was already shown only while it's private (`info.open`).
+
+**Owner, in this order:**
+1. **Push** (the links; with the editor's and clean downloads' steps first, if they aren't done yet: `supabase/influencers.sql`
+   again, 106 functions).
+2. **Vercel** → agi-ecosystem → Settings → Environment Variables → **Add** `STUDIO_OPEN` = `yes` (Production) → Save →
+   **Redeploy**. Leave `STUDIO_ONLY_FOR` as it is: its first wallet stays AGI Studio's owner (the owner's tab).
+3. **Check** in a private window: agi1.app/studio → Connect wallet (any wallet): Create, Buy credits and My studio work, with
+   no "private for now".
+4. Optional, the owner's call: a word in her Telegram groups, and on X.
+
+What opening means: any 18+ signed-in wallet can buy credits (USDG to `STUDIO_PAY_TO`) and make things with them; Crush and
+Soulmate wallets get their free credits a month while the site's 5,000 last (`STUDIO_FREE_CREDITS_A_MONTH`, about $50 of AI at
+most); invites and gifts work for everyone; the owner's list ("Who can use AGI Studio") no longer matters. **Coins:** while
+`LAUNCH_ONLY_FOR` is set in Vercel, the Coin tool's launch links stay the owner's list's (delete it, Redeploy, to open coins
+too). **To close it again:** delete `STUDIO_OPEN`, Redeploy. Worth knowing before opening (the owner's decision, not legal
+advice): the AI services' terms for selling what they make (see "Open questions").
+
+**Tests:** `tests/landing.test.js` (the list's six rows in order, AGI Studio's row, its color and its turn in the entrance),
+`tests/page.test.js` (1 new: the menu row and the footer link after Live on all four pages, the phone menu's scroll). In a
+browser (Claude's scratch `app/open17.mjs`, 150 checks: the list at 1920 × 1080, 1440 × 900, 1366 × 768, 1280 × 720 and
+1024 × 768 in both looks (six rows, under the top bar, above the ribbons, beside the left column, no higher than its five rows
+were, its hover fill), phones at 390, 375, 360 and 320 px (the contract address in the first screen, the list's rows, the
+menu's AGI Studio row, the menu never past the screen's bottom and its last row reachable), every link landing on AGI Studio,
+no sideways scrolling, no page errors). Found that way, and not from this change: in the lab look on a 320 × 568 phone the
+contract address is just under the first screen (Pop mode, the default, has it in), and on a 1280 × 720 computer in the lab
+look with "reduce motion" one planet's name sits over the list's heading (both the same with five rows).
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -7531,7 +8668,10 @@ that stays with the button and its price; the gallery on the right; on phones a 
   key), and (its phase 3) note 01 gifts of credits and invites ("a gift is a gift and never a sale", an invite's reward "a
   thank-you, not an investment"), note 02 that a gift link only asks for a free signature to claim it and nobody from AGI
   Studio asks anyone to send credits, note 04 what's kept of a gift (until a year after it's done, under scrambled codes;
-  a gift link's secret never in a page's address, kept with its gift) and of an invite. Last updated October 11, 2026.
+  a gift link's secret never in a page's address, kept with its gift) and of an invite; and (2026-10-11, giving access) note
+  04 a wallet the owner lets in while AGI Studio is private; and (2026-10-12, the owner's gift links) note 01 that AGI
+  Studio's own gift links bring free bonus credits, note 04 that a wallet that claims one is kept on its list while it's
+  private, and that a gift's other side can be AGI Studio itself. Last updated October 12, 2026.
   **Owner's wording
   rules (2026-09-24):** the visitor-facing text doesn't name the
   AI provider (no "Google"/"Gemini"; it says "an AI service"), and there's no "Not a real lab" note. **2026-09-25:** "A parody"
@@ -8033,6 +9173,37 @@ that stays with the button and its price; the gallery on the right; on phones a 
   code and its short address, never the address. Who's in is decided on our server for every gate (`canUse()`), never by
   the page; the database away: only the owner and `STUDIO_ONLY_FOR`'s (fail closed). Being on the list changes nothing else
   (the same credits, prices, rules and bans as everyone).
+- **Profile pictures and coin pictures** (2026-10-11): only an influencer's own wallet changes its profile picture (its
+  session; never while banned), and only from one of its own pictures, done and shown (our server reads it from our bucket,
+  never from an address the page sends); the frame is only numbers (`isFrame()`), the square cut on our server with sharp; a
+  new id each time, its files served only while it's the influencer's profile picture and the influencer is shown. A coin
+  draft's framed picture is checked again when the launch page reads it (still one of its own pictures, shown), and is a JPEG
+  of 1 MB at most.
+- **The owner's gift links** (2026-10-12): only the owner's signed-in wallet makes, lists or takes them back (the owner's
+  tools' checks); 1 to 100,000 credits a link, 50 waiting at once, 30 days each; nothing held. Each claimed once (the
+  database locks it), never by the owner's own wallet or a banned one, as bonus credits (never given on). Their secret is a
+  random 22 characters, only ever in POST bodies and the page's fragment, like a person's gift link. The owner's message is
+  checked on our server like any gift's (never a link, a contact, a price, a payment, a seed phrase or a private key) and
+  shown as text. A link anyone has can be claimed by them, and while AGI Studio is private it lets that wallet in: the
+  owner's tab says to send each one only to who it's for, and the list says who got in that way.
+- **Edit with words** (2026-10-12, the editor): only a photo's maker. Its words are checked on our server before anything is
+  paid, as a scene's are (PG-13, never a real person by name, never someone else's character, no links or contacts), and the
+  AI is told to keep its character as it is and never make it less covered; an edited meme is looked at by Gemini again
+  before anyone sees it, as every meme is. Its price is a photo's, paid in credits first.
+- **Make another and Delete** (2026-10-12, the editor): only a creation's maker (its session's wallet, matched by its
+  scrambled code, never an address). Make another is `makeJob()` again with its stored words and settings: its credits spent
+  first, every check of today (a newer rule, a model off the menu, a clip or references past their day), refused to a banned
+  wallet. Delete: the database decides first (`inf_job_delete`: its maker's, never while it or something from it is being
+  made), hidden at once and for good, then its files deleted; its credits never come back (it was made). A banned wallet may
+  still delete its own. A copy Vercel's CDN keeps can show for up to 10 minutes (the confirm says "within minutes").
+- **The photo editor and the video editor** (2026-10-12, the editor): only a creation's maker, only from one of its own done,
+  shown photos (the photo editor) or videos and trend videos (the video editor), never a banned wallet's. Their words are
+  checked on our server like a meme's line; a picture comes only behind a ticket for that save, that wallet and 30
+  minutes, and only as a real file of its exact size (a JPEG for a photo, a transparent PNG for a video's words); a video's
+  cut is checked on our server (`cutSpec()`) and again against the video itself by the clock (`cutPlan()`). ffmpeg runs
+  only in the clock's function, only on our own videos (never a visitor's upload), with a time limit. Gemini looks at what
+  was made before anyone sees it; counted in the database first (20 photos and 10 videos a wallet a day, 2,000 and 500 the
+  site, 3 videos being made at once), a use never given back.
 
 ### CloakMesh's waitlist (`/api/cloakmesh`, 2026-10-03, see "CloakMesh at inference.agi1.app")
 - The one piece of personal data is the email address, kept only to tell people about CloakMesh; never the internet
@@ -8121,11 +9292,12 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | The gas wallet (launch fees paid back, 2026-10-01) | Not a free tier: the owner's own ETH, at most `LAUNCH_GAS_DAILY` (0.01 ETH by default) a day plus each payback's own tiny fee | Paybacks pause ("out of ETH" / "all it can for today"); launches still work |
 | Meshy (the studio's 3D characters, 2026-10-10) | Not a free tier: the owner's Pro plan, about $20 a month for 1,000 credits; a character is 59 credits (about 16 a month); its key's own monthly credit limit, and `STUDIO_A_MONTH` (15) a month | Characters wait ("being made") until there are credits again; never failed |
 | Supabase Storage (the studio's files, 2026-10-10) | The free plan's 1 GB of files (a character is about 1 to 4 MB; since its videos, a video a few MB too; since AGI Studio, an influencer's pictures, about 200 to 400 KB each, and its videos) and its egress (shared with the database's 5 GB; Vercel's CDN keeps each character's file a day per region, but a video played on its page is read in parts through our server each time: about its size a play) | New characters' and videos' files can't be kept ("Its files couldn't be kept": made again free once there's room); the owner's call: a paid plan, or the oldest taken down |
-| fal.ai (the studio's videos and AGI Studio, 2026-10-10) | Not a free tier: pay per picture and video from a balance the owner tops up (fal's pages, 2026-10-10): Nano Banana 2 about $0.08 a picture; Kling V3 Standard $0.084 a second ($0.126 with sound, or copying moves); Seedance 2.5 about $2.40 a 5-second 720p video; since AGI Studio's round 2 Kling O1 Edit about $0.126 a second (trend videos), and the owner's 12 trend clips (about $15) and 32 example pictures (about $2.60) once. Each paid for first (in credits in AGI Studio), at most `STUDIO_JOBS_A_DAY` (2,000) AI jobs a day | Everything waits ("Waiting its turn") until there's balance again; never failed |
+| fal.ai (the studio's videos and AGI Studio, 2026-10-10) | Not a free tier: pay per picture and video from a balance the owner tops up (fal's pages, 2026-10-10): Nano Banana 2 about $0.08 a picture; Kling V3 Standard $0.084 a second ($0.126 with sound, or copying moves); Seedance 2.5 about $2.40 a 5-second 720p video; since AGI Studio's round 2 Kling O1 Edit about $0.126 a second (trend videos), and the owner's 12 trend clips (about $15) and 32 example pictures (about $2.60) once; since 2026-10-11 23 more example pictures (about $1.85) once, and "Just its full body" one picture each. Each paid for first (in credits in AGI Studio), at most `STUDIO_JOBS_A_DAY` (2,000) AI jobs a day | Everything waits ("Waiting its turn") until there's balance again; never failed |
 | Vercel Pro (the studio, 2026-10-10) | Not a free tier: $20 a month, the owner's choice, for the studio's sales and AGI Studio's credits (Hobby is for non-commercial use) | — |
 | Gemini for AGI Studio's AI captions (round 4, 2026-10-11) | Pay per use from the same prepaid credits as the chat: about $0.0003 a request of 3 captions (at most about $0.001), free for the person, at most 30 a day per wallet and 3,000 a day for the site (about $3 a day at most) | "The AI didn't answer just now": the ready-made captions still work |
 | Gemini for AGI Studio's AI helper (round 4, phase 2, 2026-10-11) | Pay per use from the same prepaid credits: about $0.001 an answer, free for the person, at most 20 a day per wallet (or visitor) and 600 a day for the site (about $0.60 a day at most) | "The helper is resting for today": support tickets still work |
-| Bonus credits (AGI Studio's invites, round 4, phase 3, 2026-10-11) | Not a tier: spent on AI like any credits (fal's balance): a friend's 100 welcome credits once, with its first top-up of $5 or more, and its inviter's 10% of what the friend buys (at most 500 credits from one friend, 5,000 a month for each inviter). Gifts move credits already bought: nothing new | Invites switched off (`STUDIO_REFERRALS=off`) if they ever cost too much |
+| AGI Studio's editors (2026-10-12): Gemini's look at what's saved, and the video editor's cuts on the clock | Gemini from the same prepaid credits: about $0.001 a photo saved from the photo editor (2,000 a day at most) and $0.002 a video cut in the video editor (500 a day at most); a cut's making is the clock's own CPU and memory, which Vercel Pro bills on demand from its monthly usage credit first ($0.128 an hour of CPU and $0.0106 a GB-hour in Washington D.C., read 2026-10-12): about $0.0005 a cut. About $3.25 a day at most, all free for people | "Saving edited … is busy today" (the site's day used: downloads still work); cuts wait their turn on the clock |
+| Bonus credits (AGI Studio's invites, round 4, phase 3, 2026-10-11; the owner's gift links, 2026-10-12) | Not a tier: spent on AI like any credits (fal's balance): a friend's 100 welcome credits once, with its first top-up of $5 or more, and its inviter's 10% of what the friend buys (at most 500 credits from one friend, 5,000 a month for each inviter); and since 2026-10-12 the credits of the owner's gift links that get claimed (as many as the owner puts in each: 1,000 credits are at most about $10 of AI). Gifts move credits already bought: nothing new | Invites switched off (`STUDIO_REFERRALS=off`) if they ever cost too much; the owner takes back gift links still waiting |
 | The prize wallet (her quizzes' prizes, 2026-10-09; AGI Studio's weekly spotlight prize since its round 2, 2026-10-10) | Not a free tier: the owner's own $AGI, at most `GAME_WINS_A_DAY` × `GAME_PRIZE` a day (2,500 $AGI by default) and one spotlight prize a week (`STUDIO_WEEKLY_PRIZE`, 10,000 by default, when the owner approves one), plus each prize's own tiny network fee in ETH | Quizzes are just for fun until it's topped up; prizes already won wait for their claim |
 
 ## Environment variables
@@ -8181,7 +9353,7 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `LIVE_SECRET` | **yes** | Her live show (2026-10-02): 32+ random characters, the same as on the owner's server (`/opt/agi1-live/live.env`). Her stream runner's key for `/api/live`; the owner's phone link is made from it (changing it changes the link). Without it, agi1.app/live says her show is coming soon |
 | `MESHY_API_KEY` | **yes** | AGI-1's 3D character studio (2026-10-10): Meshy's API key (`msy_…`, from Meshy's developer platform; give it a monthly credit limit there). Without it, no 3D models (in AGI Studio too) |
 | `STUDIO_PAY_TO` | no | The owner's own wallet address on Robinhood Chain, where USDG for characters goes, and since AGI Studio for its credits (an address, never a key). Without it, nobody can buy credits |
-| `STUDIO_ONLY_FOR` | no | While the studio is private: the wallet addresses that may make a character, and in AGI Studio an influencer or buy credits (separated by commas). Nobody else can, until `STUDIO_OPEN`. Its first wallet is AGI Studio's owner, unless `STUDIO_OWNER` says otherwise. Since 2026-10-11 AGI Studio also lets in the team and the wallets the owner adds on the owner's tab (Testing → "Who can use AGI Studio": no Redeploy), so this needs only the owner's wallet |
+| `STUDIO_ONLY_FOR` | no | While the studio is private: the wallet addresses that may make a character, and in AGI Studio an influencer or buy credits (separated by commas). Nobody else can, until `STUDIO_OPEN`. Its first wallet is AGI Studio's owner, unless `STUDIO_OWNER` says otherwise. Since 2026-10-11 AGI Studio also lets in the team and the wallets the owner adds on the owner's tab (Gifts, called Testing until 2026-10-12 → "Who can use AGI Studio": no Redeploy), so this needs only the owner's wallet |
 | `STUDIO_OPEN` | no, optional | `yes` = anyone may make a character, and use AGI Studio (after checking the AI services' terms: see "Open questions"). Not set: private |
 | `STUDIO_PRICE_USD` | no, optional | A Stranger's price in USDG, in dollars (default 5; 0.50 to 100); Crush 20% off, Soulmate 40% off. Since AGI Studio only for a character ordered before it (new ones are paid in credits) |
 | `STUDIO_PRICE_AGI` | no, optional | A Stranger's price in burned $AGI, whole (default 15,000). Since AGI Studio only for a character ordered before it |
@@ -8209,6 +9381,7 @@ For local testing, put them in `.env.local` (git ignores it). **Never paste a se
 | `STUDIO_REF_PERCENT` | no, optional | An inviter's share of each of its friends' top-ups, as bonus credits, in percent (default 10; 0 = none) |
 | `STUDIO_REF_PER_FRIEND` | no, optional | The most bonus credits an inviter gets from one friend, in all (default 500) |
 | `STUDIO_REF_A_MONTH` | no, optional | The most bonus credits an inviter gets a month, from all its friends (default 5,000) |
+| `STUDIO_CLEAN_AGI` | no, optional | Clean downloads for holders (2026-10-12): the $AGI a creation's maker holds (or burned for messages) to download its own photos and videos without our pill (default 1,000; 0 = everyone's downloads carry it) |
 
 Her live show's own settings (X Live Studio's stream key, Google Cloud's key, the show's time, her music, and since
 2026-10-07 her new AI lines and X's Bearer Token for her own posts…) live only on the owner's server, in
@@ -8849,7 +10022,101 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   **Owner:** push (no SQL, no setting). Tests: 726 unit (on Node 20, 22 and 24, with and without Vercel's settings, and as
   if the clock said later times; 10 new in `tests/guide.test.js`), the full build, 2,742 checks in a browser with our own
   server's code. Next: the meme templates and their editor, then 12 more trend clips of our own.
+- **Explore's moving top: built 2026-10-11, waiting for the owner's push** (the owner: "Create your own AGI-1. / Create your
+  own influencer. / Create your own AI. / Create your own Viral content. … the only moving is the words afer the word
+  "own" and put under line", then "and also the images moving there okay"): "Create your own" with the words after it
+  taking turns, underlined, and the wall of pictures scrolling; still with "reduce motion", resting off screen. See
+  "Explore's moving top". **Owner:** push (no SQL, no setting). Tests: 727 unit (on Node 20, 22 and 24, with and without
+  Vercel's settings, and as if the clock said later times), the full build, 51 checks in a browser; Explore's two guide
+  videos filmed again. Next (the owner's list the same day): the style made optional with more styles, the full body
+  that keeps a photo's legs, two cheaper ways to start from a photo, then "💜 With AGI-1".
+- **AGI Studio's styles and ways: built 2026-10-11, waiting for the owner's setup and push** (the owner: "can you make the
+  style optional and please add more styles like , ghiblifi etc. and many more", a full body whose legs came out different
+  from the photo, "they can skip the first generate so they can save credits", "add in the front page that holders get
+  discounts"; the owner's choices: "Their words, else photo", "Storybook anime", all four groups, "Both cheaper ways",
+  "AGI Studio's Explore"): 26 styles, none needed; a full body that keeps the photo's body, outfit, legs and shoes; from a
+  photo, just its full body (20 credits) or the photo as it is (no AI, 10); Explore's line about what holders get; tile
+  names on two lines; HD photos and Long videos kept again. See "AGI Studio's styles and ways". **Owner:**
+  `supabase/influencers.sql` again (before pushing), push, then the 23 missing example pictures (about $1.85). Tests: 729
+  unit (727 pass, 2 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said
+  later times), the full build, 14 groups of SQL checks (PGlite), 142 checks in a browser with our own server's code and
+  the guide's 3,045; Create's and Explore's guide videos filmed again, and one new; a guide card that waits for its button. Next: "💜 With AGI-1" (the owner's: a group selfie, a
+  meme together and a video together with AGI-1, highlighted, PG-13), then the meme templates and their editor.
+- **Profile pictures and coin pictures: built 2026-10-11, waiting for the owner's setup and push** (the owner: "i thinj
+  they should have an option to change the profile even after generation and on the launch coin an option to pick the
+  current profile or choose from their own images"; the owner's choices: "Its looks and photos", "Only how it's shown",
+  "Profile or its photos"): a camera on an influencer's picture to frame its profile picture in one of its looks, its full
+  body or one of its photos (free), and the Coin tool's picture (its profile picture, or one of its photos framed as a
+  circle); its guide step and video. See "Profile pictures and coin pictures". Saved with the owner's gift links (below).
+- **The owner's gift links of free credits: built 2026-10-12, waiting for the owner's setup and push** (the owner: "can you
+  also make the gifting system like ie i can put the a custome value of credits there then i can sent a message then
+  theres gonna be a link for it …"; the owner's choices: "Mine, free credits", "Up to 200 characters", "Once"): on the
+  owner's Gifts tab, links of any number of free credits with the owner's message, claimed once as bonus credits, letting a
+  wallet in while AGI Studio is private; every gift's message up to 200 characters. See "The owner's gift links of free
+  credits". **Owner (for both):** `supabase/influencers.sql` again (before pushing: 100 functions), push. Tests for both:
+  735 unit (733 pass, 2 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock
+  said six later times: across midnight, a Monday, a week on, a month's end, a year's end, six months on), the full build,
+  the SQL checks in PGlite (Claude's scratch `pg/infsql11.mjs`, 15 groups; `infsql10.mjs`, 11; and every earlier round's
+  again), 221 checks in a browser with our own server's code (`app/real11.mjs`) and the guide's 710 (an influencer's page and
+  Learn at 1440, 390 and 360 px, its new step among them). Next (the owner's answers, 2026-10-11): the editor (Make another
+  and Delete on every creation, Edit with words, a photo editor, a video editor), then "💜 With AGI-1".
+- **The editor, its first part (Make another and Delete): built 2026-10-12, waiting for the owner's setup and push** (the
+  owner's choices for the editor, 2026-10-11: "Make another (Recommended)", "Edit with words (Recommended)", "Photo editor
+  (Recommended)", "Video editor", and "Same as making it (Recommended)"): over each of its own photos, memes, X banners,
+  videos and trend videos seen big, Make another (the same words and settings, next to it, at today's price) and Delete;
+  Try again and Remove it on a tile that couldn't be made. See "The editor: Make another and Delete". **Owner:**
+  `supabase/influencers.sql` again (before pushing: 101 functions), push. Tests: 738 unit (736 pass, 2 skipped as before; on
+  Node 20, 22 and 24, with and without Vercel's settings), the full build, the SQL checks in PGlite (`pg/infsql12.mjs`), 294
+  checks in a browser with our own server's code (`app/real12.mjs`); the guide's three videos that open one of its own
+  creations filmed again. Then Edit with words (below).
+- **The editor, Edit with words: built 2026-10-12, waiting for the owner's setup and push** (the owner's choice, 2026-10-11:
+  "Edit with words (Recommended)"): over each of its own photos, memes and X banners seen big, type one change and a new one
+  is made from it next to it, at a photo's price at its quality. See "The editor: Edit with words". **Owner:**
+  `supabase/influencers.sql` again (before pushing: 101 functions), push. Tests: 741 unit (739 pass, 2 skipped as
+  before; on Node 20, 22 and 24, with and without Vercel's settings), the full build, the SQL checks in PGlite
+  (`pg/infsql13.mjs`, and every earlier one over it), 126 checks in a browser with our own server's code
+  (`app/real13.mjs`) and real12's 294 again; the guide's "Your creations" video filmed again (its row with Edit with
+  words). Next: the photo editor, the video editor (built last), then "💜 With AGI-1".
+- **The editor, the photo editor: built 2026-10-12, waiting for the owner's setup and push** (the owner's choices,
+  2026-10-11: "Photo editor (Recommended)", "New photo + download (Recommended)"): over each of its own photos, memes and X
+  banners seen big, Edit photo: crop and turn it, its light, a filter, words and emoji stickers, free, in the browser;
+  Download with the share mark, or Save as a new photo next to it (looked at by Gemini first, 20 a day). See "The editor:
+  the photo editor". **Owner:** `supabase/influencers.sql` again (before pushing: 103 functions, 29 tables), push.
+  Tests: 745 unit (743 pass, 2 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings, and as if
+  the clock said later times), the full build, the SQL checks in PGlite (`pg/infsql14.mjs`, and every earlier one over
+  it), 265 checks in a browser with our own server's code (`app/real14.mjs`) and real13's 126 and real12's 294 again; 51
+  broken versions, all caught; the Learn video `make-editor` filmed, and `make-creations` filmed again. Next: the video
+  editor (built last), then "💜 With AGI-1".
+- **The editor, the video editor: built 2026-10-12, waiting for the owner's setup and push** (the owner's choice,
+  2026-10-11: "Video editor"): over each of its own videos and trend videos seen big, Edit video: trim it (1 to 15
+  seconds), its shape (Vertical 9:16, Square 1:1, Wide 16:9: a crop), its sound, words and emoji stickers, free, in the
+  browser; Save as a new video next to it, made by our clock with ffmpeg (an H.264 MP4 with the share mark), looked at by
+  Gemini first, 10 a day. See "The editor: the video editor". **Owner:** `supabase/influencers.sql` again (before
+  pushing: 106 functions, 29 tables), push. Tests: 752 unit (750 pass, 2 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said later times), the full build, the SQL checks in PGlite (`pg/infsql15.mjs`, and every earlier one over it), 266 checks in a browser with our own server's code and our clock's real ffmpeg (`app/real15.mjs`), and real14's 265, real13's 126 and real12's 294 again; 111 broken versions, all caught; the Learn video `make-cut` filmed, and `make-trend` and `make-video` filmed again. **The editor is complete.** Next: "💜 With
+  AGI-1".
+- **Clean downloads for holders: built 2026-10-12, waiting for the owner's push** (the owner: "can youi put watermark when they
+  download or export their vid,photos it will be removed if they hold $agi atleast 1000"; the owner's choices: "Our pill, as
+  now", "Hidden AI tag", "Same as the rest"): every download says inside its file that it's AI-made, and a creation's own
+  maker holding 1,000+ $AGI downloads its photos and videos without the pill (long videos and editor cuts keep theirs). See
+  "Clean downloads for holders". **Owner:** push (no SQL, no setting). Tests: 755 unit (753 pass, 2 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said later times), the full build, 66 checks in a browser with our own server's code (`app/real16.mjs`); 12 broken versions, all caught. Next: "💜 With AGI-1".
+- **AGI Studio opens to everyone: ready 2026-10-13, waiting for the owner's push and setting** (the owner: "make it live for
+  everyone now not only on my wallet"): links to it from agi1.app (the front's "Her world" list, the phone menu, the footer),
+  and the owner's `STUDIO_OPEN=yes` in Vercel. See "AGI Studio opens to everyone". **Owner:** push, then `STUDIO_OPEN` = `yes`,
+  Redeploy. Tests: 756 unit (754 pass, 2 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings), the full build, 150 checks in a browser (`app/open17.mjs`).
 
+- **AGI Studio's launch video and its X article: made 2026-10-13, waiting for the owner's OK** (the owner: "go make a
+  promotional marketing launch video of AGI studio. all the features therem do it with top notch motion design and easy
+  to understand and visible make it 4:3 video, ake your time as much as you needed i want everything polished", "make the
+  examples of the geeeration really good lie what higgsfield ai influencer did", and "after the video create me a n X
+  article also for it with banner ready"): 103 s, 15 scenes, 1440 × 1080 at 60 frames a second, its music made in code,
+  around example creations of four made-up influencers made on the owner's fal.ai and Dreamina accounts; and its X article
+  (the article, its banner, 10 pictures, a clip and 9 posts). See "AGI Studio's launch video" and "Its X article".
+  **Owner:** watch it and read the article; once AGI Studio is open to everyone and checked, post the video by hand (the
+  light copy, in the chat and in `studio-promo/` here) and then the article (`studio-promo/how-to-post.md`); push (its code
+  and its test, no SQL, no setting). Tests: 766 unit (763 pass, 3 skipped as before: the daily clips' workflow file, and
+  the two videos' music renders, run only with `PROMO_RENDER=1` and `STUDIO_PROMO_RENDER=1`; on Node 20, 22 and 24, with
+  and without Vercel's settings), the full build, its own test as if the clock said four later times and once with its
+  music rendered. Next: "💜 With AGI-1".
 ## Decisions log
 
 | Date | Decision |
@@ -9146,6 +10413,40 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-11 | The guide's videos filmed from the real app by a recorder (`tools/studio/guide-record.mjs`), not recorded by hand or made by AI: AGI Studio as it's built, our own server's code with the tests' fake services, a demo studio of made-up people from the live show's 2D paintings (never anyone real, never the 3D model); scripted scenes, a drawn cursor or touches, a camera that follows what happens; a computer's and a phone's, 4.5 to 13 s, soundless, 45 to 465 KB each (about 9 MB for all 52, 10 MB with their posters), each downloaded only when its step shows, still with "reduce motion" or "save data". So they can be filmed again whenever a page changes, and show exactly what the page does. Not picked: screen recordings by hand (redone by hand at every change, and real accounts in them), narration (the card's words say it, and sound would surprise people), one video for computers and phones alike (a phone's drawer and tab bar look nothing like a computer's panel) |
 | 2026-10-11 | The AI services' cost (the owner: "i just checked higgsfield api is cheaper? and fal ai is more expensive", then "if you decide whats the best?"): Claude's pick, to build after the guide and the meme templates: Higgsfield's API for two of the video models, where it sells them for less than fal.ai, only for influencers not made from a real person's photo, with fal.ai as the fallback whenever Higgsfield fails or is busy. A new service with its own account, key (a secret: on the secret check's list) and terms, set up by the owner first. Not built yet |
 | 2026-10-11 | Higgsfield's trending videos (the owner: "is it possible to get the trend videos on the higghsfield genjutsu tab and put it in my studio?", then "can i get the trending in higgsfield tab on their trending videos on my studio with the propmts?"): no. They're Higgsfield's and its users' work, which its terms of use don't let other services copy (read 2026-10-11, not legal advice), and the trending ones showed a real person and a brand's logo. Instead: 12 more trend clips of our own in today's popular styles (written for this app, made only when the owner presses Make: about $15 at fal), Trend → My own clip (a clip of their own, already there) and Copy prompt on our clips. Never Higgsfield's look, logo, pictures, prompts or code |
+| 2026-10-11 | Explore's moving top (the owner: "the only moving is the words afer the word "own" and put under line", "and also the images moving there okay"): two lines, "Create your own" and under it the word that takes turns (AGI-1, influencer, AI, viral content), so the heading never changes height or reflows; the word slides up into its line, its underline follows its width; the wall's columns scroll round without a seam (each column's pictures twice over), in turns up and down; both rest off screen and in a hidden tab, and never move with "reduce motion" (its word then: "influencer"); screen readers hear one steady sentence. Not picked: one line that reflows as the word changes (the words under it jump every few seconds), typing the words out letter by letter (busy, and slow to read), new pictures for the wall (it scrolls what's there) |
+| 2026-10-11 | A style is optional, and there are 26 (the owner: "can you make the style optional and please add more styles like , ghiblifi etc. and many more"; the owner's choices: "Their words, else photo (Recommended)", "Storybook anime (Recommended)", all four groups): four groups of picture tiles with **Any style** first (designed: the style its words name, else a photo look; from a picture: the picture's own look), a second tap unpicks one; every style described in our own words. Not picked: a studio's, a brand's or an artist's name for a style (their names are their own: the look is described instead), chibi (childlike proportions), a style needed before anything can be made |
+| 2026-10-11 | A full body made from a picture keeps it (the owner: "now the leg part is different"): the picture goes to the AI with its picked look for every influencer made from a picture (a drawing's too; before, only a real person's photo did), "keep the body shape, the outfit, the legs and the shoes exactly as in it" (an outfit picked in Create replaces the photo's) |
+| 2026-10-11 | Two cheaper ways from a picture (the owner: "they can skip the first generate so they can save credits or maybe just crop it"; "Both cheaper ways (Recommended)"): **Just its full body** (one picture of AI from the photo alone, 20 credits, its portrait cut from it) and **Use my photo as it is** (no AI, 10 credits: only a photo of the whole person, head to feet, as its upload check saw it; its portrait cut around the head the check saw; the photo's own look). Their credits about 2.5 times the AI's cost, like an influencer's 100; "as it is" pays for its check and its keeping. Not picked: framing the crop by hand in the browser (more to do on a phone; the check already says where the head is), "as it is" for any photo (one cut off at the knees has no full body for its videos and 3D model) |
+| 2026-10-11 | What holders get, on Explore (the owner: "can you also add in the front page that holders get discounts"; "AGI Studio's Explore (Recommended)"): a line under its heading, its numbers from the code (`DISCOUNT`, `FREE_CREDITS`, the levels' $AGI), held or burned for messages, "a thank-you for holding, not an investment", never "buy" (hard rule 8). Not picked: agi1.app's own front (the owner picked AGI Studio's), a pop-up |
+| 2026-10-11 | Picture tiles' names wrap onto two lines instead of being cut off ("Storybook an…", "Woodblock p…"); the guide's phone videos of Explore start at its heading (it's taller with the holder line) |
+| 2026-10-11 | Found while building the styles and ways: an HD or Ultra photo's full-size download and a Long video's parts (round 4's phase 4) couldn't be kept, their names missing from `NAME` (`server/studio-files.js`), so those jobs failed with their credits back. Fixed, and a test checks every name the jobs use against it. And the guide's card waits up to 3 s for its button to be in view (Create's panel is long now: a long smooth scroll on a slow phone showed the card in the middle, without its ring, until it ended) |
+| 2026-10-11 | An influencer's profile picture changed after it's made (the owner: "they should have an option to change the profile even after generation"; the owner's choices: "Its looks and photos (Recommended)", "Only how it's shown (Recommended)"): a square its maker frames (drag, zoom, the keyboard) in one of its looks, its full body or one of its photos; free (no AI: our server cuts the same square, the frame kept in thousandths so the page and our server agree at any size); kept as a picture of its own under a new id each time (a copy kept anywhere is never an old picture under its address), the old one deleted; only how it's shown, what's made still starts from its full body; its picked look again when the picture it came from goes. Not picked: a picture from the device (it would need its checks again; its own pictures were checked already), what's made after it changing too (everything would start from a new full body) |
+| 2026-10-11 | A coin's picture (the owner: "on the launch coin an option to pick the current profile or choose from their own images"; "Profile or its photos (Recommended)"): its profile picture as it is now, or one of its photos framed as a circle (clank.trade shows a coin's picture as one); the launch draft keeps the picture it came from and its frame, cut when the launch page reads it, so a draft stays as made whatever its profile picture becomes. Not picked: any picture from the device (unchecked pictures on a public, permanent coin) |
+| 2026-10-12 | The owner's gift links of free credits (the owner's request; the owner's choices: "Mine, free credits (Recommended)", "Up to 200 characters (Recommended)", "Once (Recommended)"): from the owner's tab only, any number of credits (1 to 100,000), the owner's message, a link claimed once as bonus credits; nothing held (free credits, paid from the owner's AI balance as they're used, like credits for testing), so taken back or past its 30 days it's just gone; from "AGI Studio"; never counted in a person's gifts a day or links waiting; 50 waiting at once. People keep their own gift links of bought credits. Not picked: a link several people can claim (a link posted once would be claimed by whoever sees it, each claim more of the owner's AI balance) |
+| 2026-10-12 | Claiming one of the owner's links while AGI Studio is private lets that wallet in (Claude's choice, told to the owner: a gift the friend can't use would be odd); shown on "Who can use AGI Studio" as "Claimed your gift link", where the owner can take it off; a wallet already on the list stays as it was. The claim sheet says so first ("Claiming it lets your wallet into AGI Studio too"), only to a wallet that isn't in yet |
+| 2026-10-12 | Every gift's message up to 200 characters, line breaks kept (at most 4 lines), with the same checks (the owner's "Up to 200 characters", for every gift: 80 before). The owner's own message may say what a person's note can't (a giveaway, discounts, AGI-1, AGI Studio, "official", anyone's name: it's the studio speaking); never a link, a contact, a price, a payment, a place to talk elsewhere or a secret |
+| 2026-10-12 | Owner tools' Testing tab is **Gifts** (the owner's gift links first, then who can use AGI Studio, then credits for testing: all three give something), still `?tab=testing` so old links work |
+| 2026-10-12 | Found by the browser test with our own server's code, and fixed: a wallet that's let in already was told claiming one "lets you in" (the page asked whether it may use AGI Studio before it had the wallet's own answer: `meReady()` in `src/studio/app.js` waits for it, at most 4 s); a second gift link opened while the first one's sheet was closing lost its sheet (the closing sheet took the new link's secret out of the address: each sheet now takes out only its own, and the next one opens after it); a form's amount and quick picks shared a class name with a gift row's number (never wrapping), so they ran past a 360 px phone's edge (`.sa-amount-row`) |
+| 2026-10-12 | The editor's first part (the owner's choices, 2026-10-11: "Make another (Recommended)", "Same as making it (Recommended)", and Delete for the maker's own creations): Make another sends the stored words and settings through `makeJob()` again, so a new one is made next to it (never in its place), with today's checks and price (a holder's discount too); one whose clip, references, trend clip, model or starting photo is gone says what to do instead. Delete hides it at once and for good, then deletes its files; never while it or something from it is being made, its credits never back (it was made), and a banned wallet may still delete its own. Not picked: the new one replacing the old one, a free Make another (each costs real AI money), deleting one while it's being made (its AI request is paid and running), credits back on delete |
+| 2026-10-12 | Make another and Delete first in their sheet (found by the browser check: under a tall picture they were below the fold on a computer, behind the sheet's foot), and the picture or video capped on computers so the row, the sheet's head and its foot fit; the keyboard kept across the gallery's redraws (after Make another it fell to the page itself), the gallery's heading after Delete; a look asked for while one is on its way asked again right after (the new tile was missed); a failed tile with buttons as tall as a 2:3 (its words and buttons ran over on a 360 px phone) |
+| 2026-10-12 | A deleted creation's link and download stop working "within minutes", not "at once" (the confirm's words): Vercel's CDN keeps a public one's files up to 10 minutes, its pages' data up to 30 seconds. Not picked: purging Vercel's CDN on delete (a Vercel token on our server: a new secret), shorter CDN times for every creation (more function calls on every view) |
+| 2026-10-12 | Edit with words (the owner's choices: "Edit with words (Recommended)", "Same as making it (Recommended)"): a new photo made from one of its own photos, memes or X banners with one change typed in words, by Classic (Nano Banana 2's edit: the photo first, its full body second for its face and look), next to it; its shape, its quality (a Crisp photo's by Classic: Crisp has no edit of its own here), a meme's format and words and an X banner's size kept; its price a photo's at that quality (Classic's), the page's button the same sum; its words checked like a scene's (3 to 200 characters); no references; no new action (`inf-make` with `image` and `edit`; `p_edit` only for an edit, so an older `influencers.sql` still makes everything else) |
+| 2026-10-12 | An edited X banner is made 4:1 (Nano Banana 2 has no 3:1) from its 1500 × 500 banner, asked to stay as it is with a little more at its sides, and cut from its middle (a new one is cut from its right part, its character two thirds across); an edited photo is tagged "Edited" in its gallery and its change is said under it when it's seen big; Make another of an edit makes the same change to the same photo again |
+| 2026-10-12 | The guide's "Your creations" step says "make another or delete it", and its three videos that open one of its own creations (`make-creations`, `make-trend`, `make-video`) were filmed again; the phone's `make-creations` poster waits for the sheet (it was the blur behind it). With Edit with words it says "edit it with words, make another, delete it", and `make-creations` was filmed again (its row with Edit with words first) |
+| 2026-10-12 | The photo editor (the owner's choices: "Photo editor (Recommended)": free, no AI, in the browser, canvas, the CSSOM only; "New photo + download (Recommended)"): crop (Original, Vertical, Square, Wide; Zoom; Turn; Flip), light (4 sliders), 8 filters, words (3 fonts, 6 colors, 3 styles) and 16 emoji stickers, at most 8 on a photo, Undo and Start again; Download with the share mark drawn in the browser where our server puts it; Save as a new photo next to it: free, a plain JPEG of a photo shape (an X banner stays 1500 × 500), its words checked like a meme's line, looked at by Gemini before it's kept (about $0.001), 20 a wallet a day and 2,000 the site (a refused look counts: it cost one) |
+| 2026-10-12 | Claude's choices for the photo editor, told to the owner: one 4 × 5 color matrix for the light and a filter together (the same pixels on every browser; CSS filters differ between browsers and can't be saved as they show); the device's own emoji as stickers (no image files, nothing to license); the device's own fonts (no font files); a save counted when its picture comes, before Gemini's look (only asked when it's opened); no Make another for one saved from the editor (it has no words and settings to make again: its "Edit photo" instead); Original kept as it is unless it's none of our shapes (then the nearest one's: a saved one must be one) |
+| 2026-10-12 | Delete is its trash can alone (named "Delete" for screen readers and on hover), so Edit with words, Edit photo, Make another and Delete fit on one line on a computer; its "are you sure?" unchanged. Learn's lesson on photos has the photo editor's step and its own video (`make-editor`); the Make guide's "Your creations" step says "edit it with words or in the photo editor (free)" (that guide is full at 7 steps), and `make-creations` was filmed again (its row's new buttons) |
+| 2026-10-12 | The video editor (the owner's choice: "Video editor": "trim, text on it (a layer drawn in the browser as a PNG, so the server needs no fonts), change its shape (9:16, 1:1, 16:9); ffmpeg on our server makes an H.264 MP4 (the clock's function, like the share mark); free, 10 a day per wallet"): one of its own videos or trend videos, 1 to 15 seconds of it (a tenth of a second at a time), Original, Vertical 9:16, Square 1:1 or Wide 16:9 (a crop, zoomed up to 2.5× and moved), its sound on or off, words and emoji stickers (the photo editor's, shared in `views/layers.js`); saved as a new video next to it, made by our clock (the only function with ffmpeg), with the share mark top left, looked at by Gemini before anyone sees it; 10 a wallet a day, 500 the site, 3 being made at once per wallet; a use never given back (each costs its look) |
+| 2026-10-12 | Claude's choices for the video editor, told to the owner: made in pieces of 5 seconds over the clock's minutes (one core makes 15 s of a 1080p video in about 13 s, more than one minute's run has after its other jobs), each kept as it's made, then joined as they are with its sound; its sound from the video it's cut from (AAC), never a trend video's made from their own clip (its sound is never used); a video whose share mark is in it already (a Long video, one saved from the editor) only as it is (its own shape, the whole picture, its words kept off its mark), so it never gets a second mark; what the editor shows is the video itself in the browser with a canvas over it (no preview made on our server); "Original" at most 1280 × 720's pixels; no Make another or Try again for one (it has no words and settings to make again: Edit video instead). Not picked: making the video in the browser (not every browser can, and our server would have to trust its file), cutting without encoding (only at a video's keyframes, and no crop or words), a video service (a cost each) |
+| 2026-10-13 | AGI Studio opens to everyone (the owner: "make it live for everyone now not only on my wallet"): the owner's one setting in Vercel (`STUDIO_OPEN=yes`), and links to it from agi1.app: a 6th row in the front's "Her world" list, a phone-menu row and a footer link on every page (the top bar is full), all to `/studio` (the same 18+ answer and wallet session as agi1.app). Not picked: opening it in code (a setting the owner can switch back without a push), a top-bar link (it would push the phone menu's start past 960 px) |
+| 2026-10-12 | Clean downloads for holders (the owner: "it will be removed if they hold $agi atleast 1000"; the owner's choices: "Our pill, as now", "Hidden AI tag", "Same as the rest"): only a creation's own maker, holding 1,000+ $AGI (held or burned, read like the levels), downloads its own without the pill; everyone's downloads say inside their file that they're AI-made (XMP, IPTC trainedAlgorithmicMedia). Long videos and editor cuts keep theirs for now (made into the video: a clean copy would double the clock's work). Not picked: removing the pill for anyone who holds (someone else's creation would travel unlabeled), a visible label inside the picture for holders (the owner's "Our pill, as now") |
+| 2026-10-12 | Found while building and testing the video editor, and fixed: from Shape to Text its frame kept the whole video's shape (found by its guide video: its frame is placed each time it's drawn now); "It's made 640 × 360" stayed after another shape was picked (found by its browser test: said again on each change); a cut that couldn't be started kept its words' picture (deleted now: the database away, or an older `influencers.sql`); a cut too big to look at is said apart from a refusal in the log; and reading the code over: a silent video's Save and Start again were on as it opened (its sound off counted as a change) |
+| 2026-10-13 | AGI Studio's launch video (the owner: "make it 4:3 video"): one video, 1440 × 1080 (4:3) at 60 frames a second, for every app, made like her launch video (every frame drawn in code, its music composed and played in code, on one clock), around real example creations shown in AGI Studio's own look, with its own words and prices imported from the app. Not picked: a wide and a tall one (the owner asked for 4:3), recordings of the app (it wasn't live, and a recording would show a test wallet and a test database), an AI-generated ad (not exact, never the same twice), stock music |
+| 2026-10-13 | Its examples (the owner: "make the examples of the geeeration really good lie what higgsfield ai influencer did", then "fal.ai and Dreamina only", up to $9 on fal): made by Claude in the owner's Chrome on the owner's fal.ai (about $6.70) and Dreamina accounts, with the same kinds of AI models AGI Studio uses, never in AGI Studio itself (it wasn't pushed or set up yet), so the video says "Examples · AI-generated" and never "made in AGI Studio". Four made-up influencers, PG-13, never anyone real or famous. The owner's reference only as inspiration (never its name, look, pictures, prompts or code). Its trend clips are stand-ins made on Dreamina (AGI Studio's own 12 are the owner's to make, with Kling, on the owner's page). No 3D model: Meshy wasn't in "fal.ai and Dreamina only" and a GLB download wasn't in what the owner allowed, so the 3D scene's figure is drawn in code, labeled "Illustration" |
+| 2026-10-13 | Its finale says "Live now": the video is to be posted only once `STUDIO_OPEN=yes` is set and checked (its README.txt and the owner's message say so). Not picked: a finale without it (a launch video says it's live) |
+| 2026-10-13 | Found in its first preview, and fixed: a headline's words now leave before the next headline's arrive in the same place ("Meet Nova." and "She's not real." were still there as the next lines rose); and the X banner's profile said "AI influencer · made in AGI Studio", untrue for these examples (now "AI influencer · golden hours & lattes"), with a test that refuses "made in" or "made with AGI Studio" anywhere in it |
+| 2026-10-13 | Found looking at the finished video (the owner: "i want everything polished"), and fixed before making it again: the styles' last line sat under the grid's bottom row and showed for less than half a second, and the photo models' last item came after the cut had begun. The grid smaller and higher, the tiles in a quick cascade (a thirty-second each), "26 styles" on the clap and the line a whole second before the cut; the photo models build beside the montage as it glides right. Not picked: a longer video (every later moment and the music's sections would move) |
+| 2026-10-13 | Its X article (the owner: "create me a n X article also for it with banner ready"): an X Article (X Premium), its pictures stills of the video (the same examples, already labeled), its banner 2000 × 800 drawn in code with its words and faces in its middle (X doesn't say how it crops a cover: 5:2 is the common guide), its text pasted with its headings from a page with Copy buttons; posted a few hours after the video. Not picked: an AI-made banner (not exact, and another example to label), screenshots of the live app (it wasn't open yet), a thread instead of an article (the owner asked for an article) |
 
 ## Open questions
 
@@ -9282,6 +10583,11 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   video promotes a site with a coin: before relying on it commercially, buy Cubism PRO, export her model again and make
   the video again (one command; the owner: "i will pay the commercial later"). Not seen on real phones yet: how TikTok's,
   Reels' and Shorts' own buttons fall on the tall version (it keeps clear of their usual places).
+- **AGI Studio's launch video** (2026-10-13): its examples were made with fal.ai's and Dreamina's AI models, on the
+  owner's accounts: their terms for using what they make in an ad are the owner's to check before posting it (not legal
+  advice), like the AI services' terms for AGI Studio itself. Its media (`tools/studio-promo/media/`, made from the
+  owner's `Downloads\AGI Studio examples`) is only in Claude's workspace (git ignores it): to make the video again in
+  another session, copy those folders in and run `media.mjs` first. Not seen on real phones yet.
 - **Her live show's LIVE_SECRET** (2026-10-06): a screenshot in the chat showed it, the day it was made; the owner chose
   to keep it. If anyone else ever sees that chat: make a new one (step 6's command on the server), paste it into Vercel,
   Redeploy (the owner's phone link changes with it: `--owner-link` again). **The stream key and the phone link**
@@ -9384,8 +10690,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
     screening on real words, USDG payments on Robinhood Chain, Supabase Storage and the studio's cron job. The owner's
     first character is the check; tell Claude what its page shows.
   - **Supabase Storage's free plan** (1 GB) holds a few hundred characters; then a paid plan, or old ones taken down.
-  - **When it opens:** a link from the other pages (the top bar is full: the footer, the front's "Her world" list), and
-    maybe a word in her Telegram groups (the owner's call).
+  - **When it opens:** the links from the other pages are in (2026-10-13: the footer, the phone menu, the front's "Her world"
+    list); a word in her Telegram groups is the owner's call.
   - **Next:** a character on her live show, or in a Telegram bot of its own, later, if the owner wants them (its videos:
     built the same day, below).
 - **Its characters' videos** (2026-10-10):
@@ -9484,6 +10790,30 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
     card above a phone's keyboard), and real screen readers; the owner's first look is the check.
   - **"Skip all guides" has no way back on** but the ? button (which shows a page's guide, without switching them back on).
     If people ask for one, a switch in My studio is a small change.
+  - **"Use my photo as it is"** (2026-10-11) cuts its portrait where the upload check saw the head: a wrong box gives an
+    off-center portrait (Delete it, and use Just its full body). Not tried live: Gemini's real head boxes and whole-body
+    answers, Nano Banana 2 keeping a real photo's legs and shoes, and the 23 new example pictures. A style described in our
+    own words can still come out close to a famous studio's look: the owner's to watch (not legal advice).
+  - **Profile pictures** (2026-10-11): one framed in a photo of a real person stays as private as its influencer (it's the
+    same influencer). Not tried live: sharp cutting the square on Vercel (the share mark's sharp, already used there), and a
+    coin launched with a framed picture (its picture as clank.trade shows it: see "Its picture on clank.trade" above).
+  - **The owner's gift links** (2026-10-12): a link works for whoever has it (a screenshot, a forwarded message), each claim
+    is free credits spent from the owner's AI balance, and while AGI Studio is private a claim also lets that wallet in. The
+    owner's tab says to send each one only to who it's for; take back the ones still waiting if one may have leaked, and
+    take a wallet off "Who can use AGI Studio" if it shouldn't be in. Giving free credits away in public (a giveaway) may
+    count as a prize promotion in some places, like the spotlight's prize (not legal advice). Not tried live: a real claim on
+    a phone's wallet app.
+  - **Deleting a creation** (2026-10-12, the editor): it goes from AGI Studio, not from the internet: a copy Vercel's CDN
+    keeps can show for up to 10 minutes, a browser that showed it keeps its own (an hour), and anyone who downloaded or posted
+    it keeps theirs. The confirm says so in short ("within minutes"). Not tried live: Supabase Storage deleting its files (a
+    Long video's parts too), and Make another on fal's real models (it's the same request as making it); and Edit with
+    words on Nano Banana 2's real edit model (how closely it keeps the rest of a photo, and an X banner's sides).
+  - **The video editor** (2026-10-12): not tried live: ffmpeg's cuts on Vercel's clock function (the share mark's ffmpeg,
+    itself not tried live yet: see above) and how many pieces a minute's run makes there, Gemini's look at real cuts, and
+    real phones (Safari plays the editor's video muted and inline). Playwright's Chromium plays no H.264 or AAC, so its
+    browser test played VP9 stand-ins and its clock made VP9 with Opus; ffmpeg's real H.264 and AAC were made and checked
+    in Node (`tests/influencer.test.js`). The owner's first edited video is the check. A cut that can't be made keeps its
+    use counted (each costs its look): if people hit that often, tell Claude.
 
 ## Working in this repo
 
@@ -9521,6 +10851,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   very moment 00:00 UTC passes fails (its first half counts under one day, its check reads the next); the run moved to
   2026-12-31 23:59:20 hit it once, in a 20 ms launch test. A build meets that about once in tens of thousands: if a build
   that ran right at 00:00 UTC (8:00 the owner's time) fails on a count "for today", Redeploy.
+- **A test that moves `Date.now` reads its day with `new Date(Date.now())`** (2026-10-12, the video editor's clock test):
+  `new Date()` with no date reads the real clock, not a replaced `Date.now`. The clock test moves `Date.now` on a minute
+  at a time and the fake database counts "today" by it, so a day read with `new Date()` disagreed with it for about a
+  minute before 00:00 UTC (found by the clock shift to 23:59:00 UTC; it would have failed a build started then).
 - **Claude checks every file it saves into this folder by checksum, on the owner's computer, after saving.** A file saved
   twice in one session goes the second time from a new place in Claude's workspace (2026-10-02: the second save of
   CLAUDE.md from the same place wrote the first copy again; the checksum check caught it).
@@ -9537,6 +10871,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 - **The unit tests read the app's files as text, so a syntax error in a view only shows in the Vite build** (2026-10-10,
   AGI Studio's round 3: an extra parenthesis in `views/gallery.js`, with every unit test passing). Claude always runs the
   build (and a browser test) too before handing a change over; Vercel's `npm run build` would have failed on it.
+- **Downloads in a browser test** (2026-10-12, clean downloads): Playwright's routes never see an `<a download>` click (the
+  browser's download manager fetches it: it reached Vite's preview and saved `launch.html`), so such a link's bytes are
+  read from our server for its own href; and under Playwright's request interception, a navigation redirected to another
+  site's attachment (our 302 to a video's signed address, the long-live `?inf-video-dl` link too) shows Chromium's error page
+  before downloading, while real Chromium without interception downloads it and stays on the page (Claude's scratch
+  `dlprobe/probe.mjs`): a test serves such a target from a real local server instead.
 - **Browser tests wait for what closing a sheet does, never a fixed pause** (2026-10-11, phase 3's browser test): a native
   dialog's `close` event comes in a task of its own, and in Claude's software-drawn Chromium a frame can take long enough
   that what it does (a gift link's secret taken out of the address) came more than 400 ms after the click. Wait for the
@@ -9550,6 +10890,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   ("Copy address") loses the button once it says "Copied", and waits until the words come back (2.5 s later), so the check
   read "Copy address". And two forms on one page never share a class a test looks inside (`.sa-team-form .sa-err` found the
   access form's too: it has its own class, `sa-access-form`, since).
+- **Browser tests count a fake service's requests from before the click they wait for** (2026-10-11): waiting for "two
+  requests" in all found one made earlier, and checked the wrong request. And a word's edge (`\b`) is never between a
+  letter and a number: a button's `textContent` reads "Create8 credits" (its parts have no space between them).
 - **Claude runs the whole suite in a copy of this folder with only the change being handed over** (2026-10-11), when its
   workspace holds unfinished work (the meme templates' files and `opentype.js` that day): this folder's own `package.json`,
   the workspace's `node_modules` linked in, and `NODE_PRESERVE_SYMLINKS=1` (else the share mark's ffmpeg test reads the
@@ -9558,5 +10901,32 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   `tests/guide.test.js` fails the build if a step's name isn't on its page. After changing how such a page looks, Claude
   films its videos again (`tools/studio/guide-record.mjs`) and looks at each one's contact sheet (`--sheet`) before saving
   them; a scene that fails leaves a picture of the screen in `node_modules/.cache/agi1-guide/failed/`.
+- **In AGI Studio's pages, `app.allowed()` is null until the wallet's own answer arrives** (2026-10-12): words that depend
+  on whether this wallet may use AGI Studio wait for it (`app.meReady()`, at most 4 s); reading null as "no" told a wallet
+  that's in already that a gift link "lets you in".
+- **Browser tests that share one fake database across their flows find a row by what it is, not by being among the newest
+  shown** (2026-10-12: by the claim flow, the owner's first gift link was the 11th, behind Show all). And the Coin tool's
+  picture, like everything a closed sheet does, is waited for (see the sheets' `close` event above).
+- **An accessibility scan waits for a sheet's fade-in** (2026-10-12): a sheet comes in from 0.4 opacity (`sa-up`), and axe
+  read a red button's colors mid-fade as too little contrast. Browser tests wait for the page's animations to end first.
+- **A guide video's poster is the frame where `film.poster()` is called** (2026-10-12): call it once the camera has arrived and
+  what it shows is painted (`painted()` in `tools/studio/guide-scripts.mjs`), never as a camera move starts (the phone's
+  `make-creations` poster was the blur behind a sheet still coming up).
+- **A canvas is read only after the page drew it** (2026-10-12, the photo editor's browser test): the editor draws in the
+  browser's next frame, and Claude's software-drawn Chromium draws a page with a sheet's blurred backdrop about once a
+  second, so a check waits two animation frames (`requestAnimationFrame`) before reading a canvas's pixels. And a tile found
+  in a gallery that's drawn again when a job finishes can be gone a moment later: a check looks for it again.
+- **The guide recorder runs on its own** (2026-10-12): Claude starts it with `setsid`, so a stopped command never stops its
+  ffmpeg halfway (a half-written video, and the clips' list left as it was: record that clip again). A clip over the
+  guide's 14 s is tightened with a cut while something loads (`film.cut()`), what's pressed in view before the camera rolls,
+  shorter pauses and, only if it must, a little faster (`film.fast(1.45)`: the photo editor's on a computer).
+- **Playwright's Chromium plays no H.264 or AAC** (2026-10-12, the video editor): its browser test plays stand-ins made by
+  ffmpeg (VP9, with Opus for sound, in MP4), and the clock's ffmpeg there makes VP9 with Opus instead of H.264 with AAC
+  (the guide recorder's `cutRun`); the real H.264 and AAC are made and read back in Node, by `tests/influencer.test.js`.
+- **Anything a page shows that depends on a choice is said again when the choice changes** (2026-10-12): a tab's panel
+  isn't drawn again for every change, so the video editor's Shape panel kept "It's made 640 × 360" after Square 1:1 was
+  picked (its browser test found it). And what the editor sets in its next animation frame (its frame's shape, its hint,
+  its play buttons after the video's own "play" event) is waited for by a test (`waitFor`), never read after a fixed
+  pause; a canvas's sample points stay clear of what's drawn on purpose (a frame's thirds' lines).
 - The Claude desktop app saves copies of files Claude sends in chat into `Claude outputs/`. Git ignores that folder,
   and its copies (including any CLAUDE.md there) may be out of date. The CLAUDE.md at the top of this folder is the current one.

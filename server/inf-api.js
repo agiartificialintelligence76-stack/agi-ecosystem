@@ -22,12 +22,32 @@
 //        pass? | turnstileToken? } → an upload's ticket
 //   POST ?inf-up=<ticket>&part=<n> | &frame=<n>  (the file's bytes, application/octet-stream) → its file, a part or a frame
 //   POST { action: 'inf-up-done', session, ticket }            → a clip put together and looked at
-//   POST { action: 'inf-start', session, name, mode, style, settings, words, source?, adult: true, pass? | turnstileToken? }
+//   POST { action: 'inf-start', session, name, mode, style?, settings, words, source?, way? (2026-10-11, from a picture: 'looks',
+//        'body' or 'asis'), adult: true, pass? | turnstileToken? }
 //   POST { action: 'inf-pick', session, id, look } · { action: 'inf-reroll', session, id }
 //   POST { action: 'inf-make', session, id, kind, scene?, shape?, sound?, trend? | clip?, image?, and (round 4, phase 4) the model
-//        menu's model?, quality?, seconds?, refs? (reference uploads' ids), meme? and lines? (a meme's words) } → { ok, job, cost }
+//        menu's model?, quality?, seconds?, refs? (reference uploads' ids), meme? and lines? (a meme's words), and (2026-10-12, the
+//        editor) edit? (a photo with image: "Edit with words", its change; the rest is that photo's own) } → { ok, job, cost }
+//   POST { action: 'inf-again', session, job } (2026-10-12, the editor: "Make another") → one of its own photos, videos or trend
+//        videos made again with the same words and settings, next to it, at the price of making it now → { ok, job, cost, kind }
+//   POST { action: 'inf-job-delete', session, job } (2026-10-12, the editor) → one of its own photos, videos or trend videos
+//        off every page for good (its files deleted; a profile picture framed from it goes back to its picked look) → { ok,
+//        files, pfp }; never while it's being made ('job_making') or while something is made from it ('job_in_use')
+//   POST { action: 'inf-photo-open', session, from, shape, words } (2026-10-12, the editor: the photo editor, in its maker's own
+//        browser) → a ticket to save one of its own photos edited as a new photo next to it ({ ok, job, ticket, left }: free,
+//        EDITOR.PER_DAY a wallet; server/inf-editor.js); then POST ?inf-photo=<ticket> (its JPEG) → looked at, then kept ({ ok, job })
+//   POST { action: 'inf-cut-open', session, from, cut, words, layer } (2026-10-12, the video editor: one of its own videos or trend
+//        videos trimmed, its shape changed, words and stickers drawn in its maker's browser) → { ok, job, left } (started: made by
+//        our clock, then looked at) or, with its words' picture (layer: true), { ok, job, ticket, size, left }; then POST
+//        ?inf-cut=<ticket> (that PNG, exactly its size) → started ({ ok, job, left }). Free, VIDEO_EDITOR.PER_DAY a wallet
+//        (server/inf-cut.js)
 //   POST { action: 'inf-3d', session, id } · { action: 'inf-public', session, id, show } · { action: 'inf-delete', session, id }
-//   POST { action: 'inf-coin', session, id, name, symbol, description } → a launch link (Launch with AGI-1's page)
+//   POST { action: 'inf-pfp', session, id, from } (2026-10-11) → its profile picture: a square framed in one of its own
+//        pictures (from: { job, n, x, y, s }: one of its looks, its full body or one of its photos), or its picked look again
+//        (from: null) → { ok, portrait, pfp }; no credits. Its files: ?inf-file=<id>/<its own id>-0.jpg | .webp
+//   POST { action: 'inf-coin', session, id, name, symbol, description, picture? } → a launch link (Launch with AGI-1's page);
+//        (2026-10-11) its picture: its profile picture ('profile', the default) or { job, n, x, y, s } (one of its own pictures,
+//        framed as a square)
 //   POST { action: 'inf-topup', session, tx? }                 → "Check my payment" (USDG → credits)
 //   POST { action: 'inf-report', id, job?, why, pass? | turnstileToken? } (anyone)
 //   POST ?inf-poster=<ticket> (a frame as a picture)           → a video's poster, looked at first
@@ -58,6 +78,9 @@
 //   (code: from an invite link); and { action: 'inf-gift-peek', token } (anyone with a gift link: what it is, before
 //   signing in). A gift link's secret only ever comes in a POST's body, never a page's address (its "#gift=" part stays in
 //   the browser).
+//   (2026-10-12) the owner's gift links of free credits (only the owner's wallet): { action: 'inf-owner-links', session } (the
+//   owner's list), 'inf-owner-link' (credits, note?) → its secret, for the page's "#gift=" link; 'inf-owner-link-cancel'
+//   (gift). Claimed with 'inf-gift-claim' and seen with 'inf-gift-peek' like a person's (as bonus credits, from "AGI Studio").
 //   A banned wallet (a mod's ban) makes nothing: every action that makes, picks, publishes, likes or unlocks answers 403
 //   'banned' (its tickets, the helper, its own pages, buying credits and deleting still work).
 // Every answer is "no-store" but the ones the same for everyone. POST answers carry `session` when the wallet's level was read
@@ -69,8 +92,11 @@ import { studioOn, walletNow, studioWallet } from './studio.js';
 import {
   infOn, isOwner, infPage, moveAlong, me, startInf, pickLook, rerollLooks, makeJob, order3d, setPublic, deleteInf, report, coinDraft,
   explore, ownerPage, trendMake, trendSet, hide, clearReports, ID, order3dBurn, check3dBurn, redo3d, examplesMap, stats, exampleMake,
+  setProfile, pfpShown, againJob, deleteJob,
 } from './influencer.js';
-import { getJob, picPath, videoPath, posterPath, examplePath, markedPath, hdPath, isLong } from './inf-jobs.js';
+import { getJob, picPath, videoPath, posterPath, examplePath, markedPath, hdPath, aiTagged } from './inf-jobs.js';
+import { ownMark } from '../src/studio/video-edit.js';
+import { downloadFor, cleanFile, cleanNeed } from './inf-clean.js';
 import { USDG } from './studio-chain.js';
 import { WEEK, prizesOn } from './inf-week.js';
 import { BURNS } from './inf-burns.js';
@@ -79,7 +105,7 @@ import {
   ticketClose, ticketsStaff, canUse, accessList, accessSet, accessRemove, ACCESS,
 } from './inf-team.js';
 import { giftsInfo, giftsOn, refsOn } from './inf-gifts.js';
-import { PRICES, DISCOUNT, FREE_CREDITS, TOPUPS, TOPUP_MIN, INF_FILE_RE, INF_DL_RE, REPORT_WHYS, clankProfileUrl, CAPTIONS_A_DAY, HELPER } from '../src/studio/rules.js';
+import { PRICES, DISCOUNT, FREE_CREDITS, TOPUPS, TOPUP_MIN, INF_FILE_RE, INF_DL_RE, REPORT_WHYS, clankProfileUrl, CAPTIONS_A_DAY, HELPER, EDITOR, VIDEO_EDITOR } from '../src/studio/rules.js';
 
 // speed bumps (per server copy): looking (each look may ask the AI service), what asks others (Cloudflare, the chain, Gemini,
 // the AI service), an upload's parts, and its files
@@ -108,6 +134,15 @@ export const _resetInfApi = () => { statsCache = null; warned = false; };
 export async function infGet(cfg, request, key, value) {
   if (!ready(cfg)) return json(503, { error: 'not_ready' });
   const who = visitorCode(cfg.passSecret, clientIp(request));
+  // (2026-10-12) a holder's clean download of its own creation (server/inf-clean.js)
+  if (key === 'inf-clean') {
+    if (!infFileBurst(who)) return json(429, { error: 'too_fast' });
+    let r;
+    try { r = await cleanFile(cfg, value); } catch (err) { return dbTrouble(err, 'a clean download'); }
+    if (r.location) return new Response(null, { status: 302, headers: { Location: r.location, 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'private, no-store' } });
+    if (!r.bytes) return json(r.status, r.body);
+    return new Response(r.bytes, { status: 200, headers: { ...MEDIA, 'Content-Type': 'image/jpeg', 'Content-Disposition': `attachment; filename="${r.name}"`, 'Cache-Control': 'private, no-store' } });
+  }
   if (key === 'inf-info') {
     let examples = {};
     if (infOn(cfg)) {
@@ -121,7 +156,7 @@ export async function infGet(cfg, request, key, value) {
       threeD: studioOn(cfg), coins: Boolean(cfg.pinataJwt), launch: Boolean(cfg.pinataJwt) && !cfg.launchTesters,
       // (round 2) the example pictures, what each burn unlock costs in whole $AGI (0: off), the influencers a wallet may have
       // before an unlock, the weekly spotlight's prize (0: for glory only) and the likes a wallet may give a day
-      examples,
+      examples, cleanAgi: cleanNeed(cfg),
       burns: {
         model: studioOn(cfg) && cfg.studioBurnCap > 0 ? cfg.infModelBurnAgi : 0, slot: cfg.infSlotAgi, boost: cfg.infBoostAgi,
         boostHours: BURNS.BOOST_HOURS,
@@ -210,7 +245,8 @@ async function photoDownload(cfg, value, who) {
   if (!bytes) return json(404, { error: 'gone' });
   const { markPhoto } = await import('./inf-mark.js');
   const marked = await markPhoto(await F.loadSharp(), bytes).catch(() => null);
-  return new Response(marked || bytes, {
+  // (2026-10-12) with our hidden AI tag too (src/studio/ai-tag.js)
+  return new Response(aiTagged(marked || bytes), {
     status: 200,
     headers: {
       ...MEDIA, 'Content-Type': 'image/jpeg', 'Content-Disposition': `attachment; filename="${name}"`,
@@ -227,6 +263,9 @@ async function fileAnswer(cfg, value, who) {
   const jobId = m[2] || m[6];
   let j;
   try { j = await getJob(cfg, jobId); } catch (err) { return dbTrouble(err, 'a picture'); }
+  // (2026-10-11) its profile picture: a square its maker framed, kept under an id of its own (not a job's), while it's its
+  // profile picture and the influencer is shown
+  if (!j && m[1] && m[3] === '0') return pfpAnswer(cfg, m[1], jobId, m[4]);
   // (round 4, phase 2: and never a banned maker's: shown to nobody, until a mod lifts its ban)
   const shown = j && j.status === 'done' && j.hidden !== true && !cfg.studioHide?.has(j.id)
     && (j.kind === 'preset' || (j.inf_status !== 'deleted' && j.inf_hidden !== true && j.inf_banned !== true && !cfg.studioHide?.has(j.inf_id)));
@@ -252,6 +291,20 @@ async function fileAnswer(cfg, value, who) {
   // (one made from a face or a photo of a real person: never kept by the CDN, so deleting it takes it off at once)
   const cache = j.inf_mode === 'face' || j.inf_real === true ? 'private, max-age=600' : 'public, max-age=3600, s-maxage=600';
   return new Response(bytes, { status: 200, headers: { ...MEDIA, 'Content-Type': type, 'Cache-Control': cache } });
+}
+// (2026-10-11) Its profile picture's files (?inf-file=<influencer>/<its id>-0.jpg | .webp)
+async function pfpAnswer(cfg, inf, pid, ext) {
+  let shown;
+  try { shown = await pfpShown(cfg, inf, pid); } catch (err) { return dbTrouble(err, 'a profile picture'); }
+  if (!shown) return json(404, { error: 'gone' });
+  let bytes;
+  try { bytes = await (await import('./studio-files.js')).getFile(cfg, picPath(inf, pid, 0, ext), { max: 4_000_000 }); } catch (err) {
+    console.warn(`[studio] a profile picture: ${err.message}`);
+    return json(502, { error: 'storage' });
+  }
+  if (!bytes) return json(404, { error: 'gone' });
+  const cache = shown.private ? 'private, max-age=600' : 'public, max-age=3600, s-maxage=600';
+  return new Response(bytes, { status: 200, headers: { ...MEDIA, 'Content-Type': ext === 'jpg' ? 'image/jpeg' : 'image/webp', 'Cache-Control': cache } });
 }
 
 // One of its videos: played in parts (its player's "Range"), whole when it's small, or downloaded by a signed address
@@ -287,8 +340,8 @@ async function videoAnswer(cfg, request, key, value, who) {
     const name = key === 'inf-video-dl'
       ? `${safeName(j.kind === 'preset' ? `AGI-Studio-${j.trend}` : j.inf_name, 'AGI-Studio')}-${j.kind === 'video' ? 'video' : 'trend'}.mp4` : null;
     // (round 2) its download: the copy with the share mark, once the clock has made it (until then, as it was made); (phase 4)
-    // a long video's one copy carries the mark already
-    const from = key === 'inf-video-dl' && j.marked === true && j.kind !== 'preset' && !isLong(j) ? markedPath(j.inf_id, j.id) : path;
+    // a long video's one copy carries the mark already, and (2026-10-12) so does one saved from the video editor (ownMark)
+    const from = key === 'inf-video-dl' && j.marked === true && j.kind !== 'preset' && !ownMark(j) ? markedPath(j.inf_id, j.id) : path;
     const url = await F.signedUrl(cfg, from, { expiresIn: 2 * 3600, download: name });
     if (!url) return json(404, { error: 'gone' });
     return new Response(null, { status: 302, headers: { Location: url, 'Referrer-Policy': 'no-referrer', 'Cache-Control': face ? 'private, max-age=300' : 'public, max-age=300, s-maxage=1800' } });
@@ -311,6 +364,22 @@ export async function infBinary(cfg, request, url) {
   if (body.length > UP_MAX) return json(413, { error: 'size' });
   const { readTicket, receive, receivePoster } = await import('./inf-uploads.js');
   try {
+    // (2026-10-12, the editor) the video editor's words and stickers, for a cut to start
+    if (url.searchParams.has('inf-cut')) {
+      const t = readTicket(cfg.passSecret, 'vc', url.searchParams.get('inf-cut'));
+      if (!t) return json(401, { error: 'ticket' });
+      const { receiveCut } = await import('./inf-cut.js');
+      const r = await receiveCut(cfg, t, body);
+      return json(r.status, r.body);
+    }
+    // (2026-10-12, the editor) a photo saved from the photo editor
+    if (url.searchParams.has('inf-photo')) {
+      const t = readTicket(cfg.passSecret, 'pe', url.searchParams.get('inf-photo'));
+      if (!t) return json(401, { error: 'ticket' });
+      const { receiveSave } = await import('./inf-editor.js');
+      const r = await receiveSave(cfg, t, body);
+      return json(r.status, r.body);
+    }
     if (url.searchParams.has('inf-poster')) {
       const t = readTicket(cfg.passSecret, 'poster', url.searchParams.get('inf-poster'));
       if (!t || !ID.test(String(t.j))) return json(401, { error: 'ticket' });
@@ -357,7 +426,24 @@ const WHY_STATUS = {
   model: 400, no_anime: 409, refs: 409,
   // (2026-10-11) giving access while AGI Studio is private (the owner's tab)
   access_address: 400, access_self: 409, access_note: 400, access_full: 409, access_gone: 404,
+  // (2026-10-11) "Use my photo as it is": only a photo of the whole person, head to feet (its upload check says so)
+  not_full: 409,
+  // (2026-10-11) a profile picture or a coin's picture: not one of its own pictures (done and shown) any more, or one that
+  // couldn't be kept or read from our bucket just now
+  picture: 409, storage: 502,
+  // (2026-10-12) the owner's gift links (their credits from 1 to 100,000, and too many waiting at once)
+  link_credits: 400, links_full: 409,
+  // (2026-10-12, the editor) deleting a creation, with codes of their own ("gone" and "making" mean other things above): gone
+  // already (or taken down), still being made, or something being made from it
+  job_gone: 404, job_making: 409, job_in_use: 409,
+  // …and a photo saved from the photo editor can't be made again ("Make another": open the photo it's from instead)
+  editor: 409,
+  // …and the video editor: its cut isn't one (or doesn't fit the video it's from), the video it's from isn't one of its own done
+  // videos any more, or its maker has the most being made at once already
+  cut: 400, from: 409, cuts_open: 409,
 };
+// (2026-10-12) the editor's "no"s for deleting a creation, as the page names them
+const JOB_WHY = { gone: 'job_gone', making: 'job_making', in_use: 'job_in_use', bad: 'bad_request' };
 // (round 4, phase 2) the team's and support's own "no"s, as the page names them
 const TICKET_WHY = { topic: 'ticket_topic', empty: 'ticket_empty', long: 'ticket_long', too_many: 'ticket_too_many', busy_day: 'ticket_busy_day', closed: 'ticket_closed', bad: 'bad_request' };
 const TEAM_WHY = { address: 'team_address', self: 'team_self', role: 'team_role', nick: 'team_nick', too_many: 'team_full', bad: 'bad_request' };
@@ -366,7 +452,9 @@ const BAN_WHY = { already: 'ban_already', protected: 'ban_protected', done: 'ban
 const ACCESS_WHY = { address: 'access_address', self: 'access_self', note: 'access_note', too_many: 'access_full', gone: 'access_gone', bad: 'bad_request' };
 const HELP_WHY = { empty: 'help_empty', long: 'help_long', too_many: 'help_used', busy_day: 'help_busy' };
 const OWNER_ACTIONS = ['inf-owner', 'trend-make', 'trend-set', 'inf-hide', 'inf-report-clear', 'inf-example-make', 'inf-week-set', 'inf-gift',
-  'inf-admin', 'inf-admin-set', 'inf-team-set', 'inf-team-remove', 'inf-access', 'inf-access-set', 'inf-access-remove'];
+  'inf-admin', 'inf-admin-set', 'inf-team-set', 'inf-team-remove', 'inf-access', 'inf-access-set', 'inf-access-remove',
+  // (2026-10-12) the owner's gift links of free credits: the list, one made, one taken back
+  'inf-owner-links', 'inf-owner-link', 'inf-owner-link-cancel'];
 // (round 4, phase 2) the team's: a mod's and support's (and the owner's); a mod may also hide and clear reports (OWNER_ACTIONS)
 const MOD_ACTIONS = ['inf-mod', 'mod-ticket', 'mod-ticket-say', 'mod-ticket-close', 'mod-ban', 'mod-unban'];
 const SHARED_WITH_MODS = ['inf-hide', 'inf-report-clear'];
@@ -375,13 +463,18 @@ const TICKET_ACTIONS = ['inf-tickets', 'inf-ticket', 'inf-ticket-open', 'inf-tic
 // (round 4, phase 3) gifts and invites, a wallet's own
 const GIFT_ACTIONS = ['inf-gifts', 'inf-send', 'inf-gift-link', 'inf-gift-cancel', 'inf-gift-claim', 'inf-ref-bind'];
 // (round 4, phase 2) what a banned wallet may no longer do: make, pick, publish, like, unlock, claim, launch, show its name; and
-// (phase 3) give or claim gifts, or join through an invite (taking a gift link of its own back still works)
+// (phase 3) give or claim gifts, or join through an invite (taking a gift link of its own back still works); and (2026-10-11)
+// change a profile picture
 const BANNED_FROM = ['inf-up-open', 'inf-up-done', 'inf-start', 'inf-pick', 'inf-reroll', 'inf-make', 'inf-3d', 'inf-3d-burn', 'inf-3d-check',
   'inf-3d-redo', 'inf-public', 'inf-coin', 'inf-like', 'inf-caption', 'inf-name-set', 'inf-burn-quote', 'inf-burn-check', 'inf-week-claim',
-  'inf-send', 'inf-gift-link', 'inf-gift-claim', 'inf-ref-bind'];
+  'inf-send', 'inf-gift-link', 'inf-gift-claim', 'inf-ref-bind', 'inf-pfp',
+  // (2026-10-12) "Make another" makes something (deleting its own still works), and so does the photo editor's save, and the
+  // video editor's
+  'inf-again', 'inf-photo-open', 'inf-cut-open'];
 export const INF_POSTS = ['inf-me', 'inf-look', 'inf-up-open', 'inf-up-done', 'inf-start', 'inf-pick', 'inf-reroll', 'inf-make', 'inf-3d',
-  'inf-public', 'inf-delete', 'inf-coin', 'inf-topup', 'inf-report', 'inf-like', 'inf-liked', 'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo',
+  'inf-public', 'inf-pfp', 'inf-delete', 'inf-coin', 'inf-topup', 'inf-report', 'inf-like', 'inf-liked', 'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo',
   'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-caption', 'inf-name-set', 'inf-name-clear', 'inf-help', 'inf-gift-peek',
+  'inf-again', 'inf-job-delete', 'inf-photo-open', 'inf-cut-open', 'inf-dl',
   ...GIFT_ACTIONS, ...TICKET_ACTIONS, ...MOD_ACTIONS, ...OWNER_ACTIONS];
 
 async function human(cfg, body, ip, who) {
@@ -417,9 +510,13 @@ export async function infPost(cfg, request, body) {
   // still be claimed)
   if (body.action === 'inf-gift-peek') {
     if (!infLookBurst(who)) return json(429, { error: 'too_fast' });
-    if (!giftsOn(cfg)) return json(200, { gift: null, off: true });
     const { peekGift } = await import('./inf-gifts.js');
-    try { return json(200, { gift: await peekGift(cfg, body.token) }); } catch (err) { return dbTrouble(err, 'a gift link'); }
+    try {
+      const gift = await peekGift(cfg, body.token);
+      // (2026-10-12) people's gifts switched off (STUDIO_GIFTS=off): only the owner's own gift links still open
+      if (!giftsOn(cfg) && !gift?.owner) return json(200, { gift: null, off: true });
+      return json(200, { gift });
+    } catch (err) { return dbTrouble(err, 'a gift link'); }
   }
   let w;
   try { w = await walletNow(cfg, body.session, { now }); } catch (err) { return dbTrouble(err, 'reading the wallet'); }
@@ -427,13 +524,19 @@ export async function infPost(cfg, request, body) {
   const extra = w.session ? { session: w.session, level: w.level } : { level: w.level };
   const refuse = (r) => json(WHY_STATUS[r.why] || 422, { error: r.why, ...(r.have !== undefined ? { have: r.have } : {}), ...(r.reason ? { reason: r.reason } : {}), ...extra });
   const words = (r, more = {}) => json(422, { error: 'words', field: r.field, why: r.why, ...more, ...extra });
-  const asks = ['inf-up-open', 'inf-up-done', 'inf-start', 'inf-make', 'inf-3d', 'inf-coin', 'inf-topup', 'inf-reroll', 'inf-delete', 'trend-make',
+  const asks = ['inf-up-open', 'inf-up-done', 'inf-start', 'inf-make', 'inf-3d', 'inf-coin', 'inf-pfp', 'inf-topup', 'inf-reroll', 'inf-delete', 'trend-make',
     'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo', 'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-example-make', 'inf-gift',
-    'inf-caption', 'inf-name-set', 'inf-name-clear', 'inf-send', 'inf-gift-link', 'inf-gift-cancel', 'inf-gift-claim', 'inf-ref-bind'];
+    'inf-caption', 'inf-name-set', 'inf-name-clear', 'inf-send', 'inf-gift-link', 'inf-gift-cancel', 'inf-gift-claim', 'inf-ref-bind',
+    'inf-again', 'inf-job-delete', 'inf-photo-open', 'inf-cut-open'];
   if (asks.includes(body.action) && !infActBurst(who)) return json(429, { error: 'too_fast', ...extra });
-  if (['inf-look', 'inf-like', 'inf-liked', 'inf-tickets', 'inf-ticket', 'inf-mod', 'mod-ticket', 'inf-gifts', 'inf-access'].includes(body.action) && !infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
+  if (['inf-look', 'inf-like', 'inf-liked', 'inf-tickets', 'inf-ticket', 'inf-mod', 'mod-ticket', 'inf-gifts', 'inf-access', 'inf-owner-links'].includes(body.action) && !infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
   if (['inf-ticket-open', 'inf-ticket-say', 'inf-ticket-close', 'mod-ticket-say', 'mod-ticket-close', 'mod-ban', 'mod-unban', 'inf-admin',
-    'inf-admin-set', 'inf-team-set', 'inf-team-remove', 'inf-access-set', 'inf-access-remove'].includes(body.action) && !infActBurst(who)) return json(429, { error: 'too_fast', ...extra });
+    'inf-admin-set', 'inf-team-set', 'inf-team-remove', 'inf-access-set', 'inf-access-remove', 'inf-owner-link', 'inf-owner-link-cancel'].includes(body.action) && !infActBurst(who)) return json(429, { error: 'too_fast', ...extra });
+  // (2026-10-12) where its maker downloads one of its own creations from: clean for a holder (server/inf-clean.js)
+  if (body.action === 'inf-dl') {
+    if (!infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
+    try { const r = await downloadFor(cfg, w, body, { now }); return json(r.status, { ...r.body, ...extra }); } catch (err) { return dbTrouble(err, 'a download'); }
+  }
   // (round 4, phase 2) a banned wallet makes nothing (supabase/influencers.sql refuses its making too)
   if (BANNED_FROM.includes(body.action)) {
     let t;
@@ -568,6 +671,35 @@ export async function infPost(cfg, request, body) {
       const r = await clearClankName(cfg, { wallet: w.wallet });
       return r.ok ? json(200, { ok: true, clank: null, ...extra }) : json(503, { error: 'busy', ...extra });
     }
+    // (2026-10-12, the editor) "Make another": one of its own photos (a meme, an X banner), videos or trend videos made again
+    // with the same words and settings, next to it, at the price of making it now (makeJob's own checks)
+    if (body.action === 'inf-again') {
+      const r = await againJob(cfg, { wallet: w.wallet, level: w.level, job: String(body.job || '') });
+      if (!r.ok) return r.field ? words(r) : refuse(r);
+      return json(200, { ...r, ...extra });
+    }
+    // …and "Delete": one of them, off every page at once and for good (a banned wallet may still delete its own)
+    if (body.action === 'inf-job-delete') {
+      const r = await deleteJob(cfg, { wallet: w.wallet, job: String(body.job || '') });
+      return r.ok ? json(200, { ...r, ...extra }) : refuse({ why: JOB_WHY[r.why] || r.why });
+    }
+    // …and the photo editor: a ticket to save one of its own photos, edited in its maker's browser, as a new photo (free)
+    if (body.action === 'inf-photo-open') {
+      const { openSave } = await import('./inf-editor.js');
+      const { newOrderId } = await import('./studio.js');
+      const r = await openSave(cfg, { wallet: w.wallet, from: String(body.from || ''), shape: body.shape, words: body.words, id: newOrderId() });
+      if (!r.ok) return r.field ? words(r) : refuse(r);
+      return json(200, { ...r, perDay: EDITOR.PER_DAY, ...extra });
+    }
+    // …and the video editor: one of its own videos or trend videos, edited in its maker's browser, saved as a new video (free):
+    // started at once, or a ticket for its words' and stickers' picture
+    if (body.action === 'inf-cut-open') {
+      const { openCut } = await import('./inf-cut.js');
+      const { newOrderId } = await import('./studio.js');
+      const r = await openCut(cfg, { wallet: w.wallet, from: String(body.from || ''), cut: body.cut, words: body.words, layer: body.layer, id: newOrderId() });
+      if (!r.ok) return r.field ? words(r) : refuse(r);
+      return json(200, { ...r, perDay: VIDEO_EDITOR.PER_DAY, ...extra });
+    }
     if (!ID.test(id)) return json(400, { error: 'bad_request', ...extra });
     if (body.action === 'inf-pick') {
       const r = await pickLook(cfg, { wallet: w.wallet, id, look: body.look });
@@ -613,12 +745,19 @@ export async function infPost(cfg, request, body) {
       const r = await setPublic(cfg, { wallet: w.wallet, id, show: body.show });
       return r.ok ? json(200, { ok: true, ...extra }) : refuse(r);
     }
+    // (2026-10-11) its profile picture: a square framed in one of its own pictures (from: { job, n, x, y, s }), or its picked
+    // look again (from: null)
+    if (body.action === 'inf-pfp') {
+      const r = await setProfile(cfg, { wallet: w.wallet, id, from: body.from });
+      return r.ok ? json(200, { ...r, ...extra }) : refuse(r);
+    }
     if (body.action === 'inf-delete') {
       const r = await deleteInf(cfg, { wallet: w.wallet, id });
       return r.ok ? json(200, { ok: true, ...extra }) : refuse(r);
     }
+    // (since 2026-10-11 with its picture: its profile picture, the default, or a square framed in one of its own pictures)
     if (body.action === 'inf-coin') {
-      const r = await coinDraft(cfg, { wallet: w.wallet, id, name: body.name, symbol: body.symbol, description: body.description });
+      const r = await coinDraft(cfg, { wallet: w.wallet, id, name: body.name, symbol: body.symbol, description: body.description, picture: body.picture });
       return r.ok ? json(200, { ...r, ...extra }) : refuse(r);
     }
   } catch (err) {
@@ -774,7 +913,16 @@ async function gifts(cfg, body, w, extra) {
   }
   if (body.action === 'inf-gift-claim') {
     const r = await G.claimGift(cfg, { wallet: w.wallet, token: body.token });
-    return r.ok ? json(200, { ok: true, got: r.credits, from: r.from, credits: await creditsOf(cfg, code), ...extra }) : no(r);
+    if (!r.ok) return no(r);
+    // (2026-10-12) one of the owner's gift links lets its claimer in while AGI Studio is private (on the owner's list, as
+    // "claimed your gift link"): its credits are to use here
+    let letIn = false;
+    if (r.owner && !(await canUse(cfg, w.wallet))) {
+      try { letIn = (await accessSet(cfg, { address: w.wallet, via: 'link' })).ok === true; } catch (err) {
+        console.warn(`[studio] letting a gift link's claimer in: ${err?.message}`);
+      }
+    }
+    return json(200, { ok: true, got: r.credits, from: r.from, owner: r.owner, letIn, credits: await creditsOf(cfg, code), ...extra });
   }
   if (body.action === 'inf-gift-cancel') {
     const r = await G.cancelGift(cfg, { wallet: w.wallet, id: body.gift });
@@ -875,6 +1023,24 @@ async function owner(cfg, body, extra, now, w) {
       ok: true, gave: body.credits, self, to: address, allowed, letIn,
       ...(self ? { credits: await creditsOf(cfg, studioWallet(cfg.passSecret, address)) } : {}), ...extra,
     });
+  }
+  // (2026-10-12) the owner's gift links of free credits (the owner: "i can put the a custome value of credits there then i can
+  // sent a message then theres gonna be a link for it then when i sahre it to someone they can see the meesage and the gifted
+  // credits and they can claim it"): the owner's list, one made (any number of credits, the owner's message), one taken back.
+  // Each answer brings the list again.
+  if (['inf-owner-links', 'inf-owner-link', 'inf-owner-link-cancel'].includes(body.action)) {
+    const G = await import('./inf-gifts.js');
+    if (body.action === 'inf-owner-link') {
+      const r = await G.makeOwnerLink(cfg, { wallet: w.wallet, credits: body.credits, note: body.note });
+      if (!r.ok) return json(WHY_STATUS[r.why] || 503, { error: r.why, ...extra });
+      return json(200, { ok: true, id: r.id, token: r.token, expires: r.expires, gave: r.credits, note: r.note, ...await G.ownerLinks(cfg, w.wallet), ...extra });
+    }
+    if (body.action === 'inf-owner-link-cancel') {
+      const r = await G.cancelGift(cfg, { wallet: w.wallet, id: body.gift });
+      if (!r.ok) return json(WHY_STATUS[r.why] || 503, { error: r.why, ...(r.status ? { status: r.status } : {}), ...extra });
+      return json(200, { ok: true, status: r.status, ...await G.ownerLinks(cfg, w.wallet), ...extra });
+    }
+    return json(200, { ...await G.ownerLinks(cfg, w.wallet), ...extra });
   }
   // (2026-10-11, the owner: "i want to give access to someone but it said to them comins soon fix that please") who may use
   // AGI Studio while it's private: the list the owner manages (a wallet let in by its address, with a note only the owner

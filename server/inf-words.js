@@ -2,14 +2,19 @@
 // rules: PG-13; never a real person, someone else's character or something passing for AGI-1), and the words the AI
 // services get to make its pictures and videos. Pure, light to load (server/influencer.js and server/inf-jobs.js use it).
 import { tidy, trouble, checkScene, videoPrompt } from './studio-words.js';
-import { NAME_MAX, MODES, INF_STYLES, OPTIONS, WORDS_MAX, trendOf, EXAMPLES, MEMES, MEME_LINE_MAX, VIDEO_MODELS } from '../src/studio/rules.js';
+import {
+  NAME_MAX, MODES, INF_STYLES, OPTIONS, WORDS_MAX, trendOf, EXAMPLES, MEMES, MEME_LINE_MAX, VIDEO_MODELS, STYLE_AUTO, WAYS, drawnStyle, EDIT,
+} from '../src/studio/rules.js';
 
 const NAME_OK = /^[\p{L}\p{N}][\p{L}\p{N} '’.\-!?&]*$/u;
 
-// An influencer as typed. → { ok: true, name, mode, style, settings, words } (tidied; settings only the known choices for its
-// mode) or { ok: false, field: 'mode' | 'name' | 'style' | a setting | 'words', why: 'empty' | 'long' | 'letters' | 'bad' |
-// the words' trouble ('link', 'contact', 'adult', 'minor', 'hate', 'person', 'character', 'her') }
-export function checkStart({ name, mode, style, settings, words } = {}) {
+// An influencer as typed. → { ok: true, name, mode, style, way, settings, words } (tidied; settings only the known choices for
+// its mode) or { ok: false, field: 'mode' | 'name' | 'style' | 'way' | a setting | 'words', why: 'empty' | 'long' | 'letters' |
+// 'bad' | the words' trouble ('link', 'contact', 'adult', 'minor', 'hate', 'person', 'character', 'her') }. (2026-10-11) its
+// style is optional (none: 'auto', the style its words name, else a photo look; from a picture, the picture's own), and one
+// made from a picture has a way to start (src/studio/rules.js WAYS: 4 looks, just its full body, or the photo as it is, which
+// keeps the photo's own look: 'auto')
+export function checkStart({ name, mode, style, settings, words, way } = {}) {
   if (!Object.hasOwn(MODES, mode)) return { ok: false, field: 'mode', why: 'empty' };
   const n = tidy(name);
   if (!n) return { ok: false, field: 'name', why: 'empty' };
@@ -17,7 +22,10 @@ export function checkStart({ name, mode, style, settings, words } = {}) {
   if (!NAME_OK.test(n)) return { ok: false, field: 'name', why: 'letters' };
   const tn = trouble(n);
   if (tn) return { ok: false, field: 'name', why: tn };
-  if (!Object.hasOwn(INF_STYLES, style)) return { ok: false, field: 'style', why: 'empty' };
+  const st = style === undefined || style === null || style === '' ? STYLE_AUTO : style;
+  if (st !== STYLE_AUTO && (typeof st !== 'string' || !Object.hasOwn(INF_STYLES, st))) return { ok: false, field: 'style', why: 'bad' };
+  const w8 = way === undefined || way === null || way === '' ? 'looks' : way;
+  if (typeof w8 !== 'string' || !Object.hasOwn(WAYS, w8) || (w8 !== 'looks' && mode !== 'picture')) return { ok: false, field: 'way', why: 'bad' };
   const given = settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : {};
   const kept = {};
   for (const [key, value] of Object.entries(given)) {
@@ -38,7 +46,7 @@ export function checkStart({ name, mode, style, settings, words } = {}) {
     const tw = trouble(w);
     if (tw) return { ok: false, field: 'words', why: tw };
   }
-  return { ok: true, name: n, mode, style, settings: kept, words: w };
+  return { ok: true, name: n, mode, style: w8 === 'asis' ? STYLE_AUTO : st, way: w8, settings: kept, words: w };
 }
 
 // A photo's or a video's scene (the studio's scene rules: 10 to 300 characters, the same words checked), its shape and sound.
@@ -50,22 +58,77 @@ export function checkInfScene({ kind = null, ...input } = {}) {
   return c.ok ? { ...c, shape: 'banner', sound: false } : c;
 }
 
+// (2026-10-12, the editor) "Edit with words": the change, as typed (EDIT.MIN to EDIT.MAX characters; the studio's word rules,
+// like a scene's: PG-13, never a real person by name, someone else's character or anything passing for AGI-1, no links or
+// contacts). → { ok: true, edit } (tidied) or { ok: false, field: 'edit', why: 'empty' | 'short' | 'long' | the words' trouble }
+export function checkEdit(input) {
+  const e = tidy(input);
+  if (!e) return { ok: false, field: 'edit', why: 'empty' };
+  if ([...e].length < EDIT.MIN) return { ok: false, field: 'edit', why: 'short' };
+  if ([...e].length > EDIT.MAX) return { ok: false, field: 'edit', why: 'long' };
+  const t = trouble(e);
+  return t ? { ok: false, field: 'edit', why: t } : { ok: true, edit: e };
+}
+
 // ---------- the words the AI services get ----------
+// Each style's words: look (its 4 looks: head and shoulders), body (its full body), photo (its photos), clip (a video from one
+// of its photos), seedance and motion (a drawn style's video from its full body: server/studio-words.js videoPrompt) and swap
+// (a trend video keeps its look). (2026-10-11) 26 styles (src/studio/rules.js STYLE_GROUPS), in our own words: never a
+// studio's, a brand's or an artist's name; a toy figure and a plushie keep adult proportions.
+const an = (w) => `${/^[aeiou]/i.test(w) ? 'An' : 'A'} ${w}`;
+const mk = (adj, extra, { clip, seedance = 'cartoon', swap, motion = null }) => ({
+  look: `${an(adj)} portrait (${extra})`, body: `${an(adj)} full-body picture (${extra})`, photo: `${an(adj)} picture (${extra})`,
+  clip, seedance, swap, motion,
+});
 const STYLE = {
   real: {
     look: 'A photorealistic portrait photo', body: 'A photorealistic full-body photo', photo: 'A photorealistic photo',
     clip: 'Realistic video', seedance: 'realistic', swap: 'photorealistic',
   },
+  film: mk('35 mm film photo', 'real film grain, soft natural colors, a candid feel', { clip: 'Realistic video with a 35 mm film look (grain, soft natural colors)', seedance: 'realistic', swap: 'photorealistic film-look' }),
+  editorial: mk('high-fashion editorial photo', 'studio lighting, magazine quality, crisp detail', { clip: 'Realistic fashion-film video (studio lighting, crisp detail)', seedance: 'realistic', swap: 'photorealistic editorial' }),
+  cinematic: mk('cinematic film still', 'dramatic movie lighting, shallow depth of field, rich color grading', { clip: 'Realistic cinematic video (dramatic movie lighting, rich color grading)', seedance: 'realistic', swap: 'photorealistic cinematic' }),
   anime: {
     look: 'An anime-style character portrait illustration', body: 'An anime-style full-body character illustration',
     photo: 'An anime-style illustration', clip: 'Anime-style animation', seedance: 'anime', swap: 'anime-style',
   },
+  storybook: mk('hand-painted storybook anime', 'soft painterly colors, gentle warm light, lush hand-painted backgrounds, a cozy whimsical feel', { clip: 'Hand-painted storybook anime animation (soft painterly colors, gentle warm light)', seedance: 'anime', swap: 'hand-painted storybook anime', motion: 'Hand-painted storybook anime animation, soft painterly colors and gentle warm light' }),
+  retro: mk('1990s retro anime', 'a hand-drawn cel look, muted film colors, soft grain', { clip: '1990s retro anime animation (a hand-drawn cel look, muted film colors)', seedance: 'anime', swap: '1990s retro anime', motion: '1990s retro anime cel animation with muted film colors' }),
+  manga: mk('black-and-white manga', 'crisp ink lines and screentone shading', { clip: 'Black-and-white manga-style animation (ink lines, screentone shading)', seedance: 'anime', swap: 'black-and-white manga', motion: 'Black-and-white manga-style animation with crisp ink lines' }),
+  webcomic: mk('clean digital webcomic', 'crisp line art, flat bright colors', { clip: 'Clean webcomic-style animation (crisp line art, flat bright colors)', seedance: 'anime', swap: 'webcomic', motion: 'Clean webcomic-style animation with flat bright colors' }),
+  comic: mk('comic book', 'bold ink outlines, halftone dots, vivid colors', { clip: 'Comic-book-style animation (bold ink outlines, vivid colors)', swap: 'comic-book', motion: 'Comic-book-style animation with bold ink outlines and vivid colors' }),
+  celshade: mk('cel-shaded 3D', 'flat toon shading, crisp outlines', { clip: 'Cel-shaded 3D animation (flat toon shading, crisp outlines)', seedance: 'anime', swap: 'cel-shaded 3D', motion: 'Cel-shaded 3D animation with crisp outlines' }),
   toon: {
     look: 'A 3D animated-movie-style character portrait render (stylized cartoon, smooth shading)',
     body: 'A 3D animated-movie-style full-body character render (stylized cartoon, smooth shading)',
     photo: 'A 3D animated-movie-style render (stylized cartoon, smooth shading)', clip: 'Stylized 3D cartoon animation', seedance: 'cartoon',
     swap: 'stylized 3D cartoon',
   },
+  clay: mk('claymation', 'a handmade clay figure, soft studio light, tiny fingerprints in the clay', { clip: 'Stop-motion claymation (handmade clay figures)', swap: 'claymation', motion: 'Stop-motion claymation animation of handmade clay figures' }),
+  toy: mk('collectible toy figure', 'glossy vinyl, adult proportions, studio product light', { clip: 'Stylized 3D animation of a collectible toy figure (glossy vinyl, adult proportions)', swap: 'collectible toy figure', motion: 'Stylized 3D animation of a glossy collectible toy figure with adult proportions' }),
+  plush: mk('soft plush doll', 'felt and fabric textures, stitched seams, adult proportions', { clip: 'Stop-motion animation of a soft plush doll (felt and fabric textures)', swap: 'plush doll', motion: 'Stop-motion animation of a soft plush doll with adult proportions' }),
+  pixel: mk('pixel-art', 'a 16-bit retro game style, crisp square pixels, a limited color palette', { clip: 'Pixel-art animation (a 16-bit retro game style)', swap: 'pixel-art', motion: 'Pixel-art animation in a 16-bit retro game style' }),
+  lowpoly: mk('low-poly 3D', 'faceted geometric shapes, flat colors', { clip: 'Low-poly 3D animation (faceted shapes, flat colors)', swap: 'low-poly 3D', motion: 'Low-poly 3D animation with faceted shapes and flat colors' }),
+  watercolor: mk('watercolor painting', 'loose soft brush strokes, paper texture', { clip: 'Animated watercolor painting (soft brush strokes, paper texture)', seedance: 'anime', swap: 'watercolor', motion: 'Animated watercolor painting with soft brush strokes' }),
+  oil: mk('classical oil painting', 'rich brush strokes, canvas texture, warm light', { clip: 'Animated oil painting (rich brush strokes, canvas texture)', seedance: 'realistic', swap: 'oil-painting' }),
+  sketch: mk('pencil sketch', 'graphite lines and soft shading on paper', { clip: 'Animated pencil sketch (graphite lines on paper)', seedance: 'anime', swap: 'pencil-sketch', motion: 'Animated pencil sketch with graphite lines on paper' }),
+  popart: mk('bold pop-art print', 'thick outlines, flat bright colors, halftone dots', { clip: 'Pop-art animation (thick outlines, flat bright colors, halftone dots)', swap: 'pop-art', motion: 'Pop-art animation with thick outlines and flat bright colors' }),
+  ukiyoe: mk('Japanese woodblock print', 'flat colors, fine outlines, a washi paper texture', { clip: 'Animated Japanese woodblock print (flat colors, fine outlines)', seedance: 'anime', swap: 'woodblock-print', motion: 'Animated Japanese woodblock print with flat colors and fine outlines' }),
+  fantasy: mk('painterly fantasy art', 'epic light, rich detail, an enchanted mood', { clip: 'Painterly fantasy-art video (epic light, rich detail)', seedance: 'realistic', swap: 'painterly fantasy-art' }),
+  cyberpunk: mk('cyberpunk digital painting', 'neon city light, rain, high-tech details', { clip: 'Cyberpunk video (neon city light, rain, high-tech details)', seedance: 'realistic', swap: 'cyberpunk' }),
+  vaporwave: mk('vaporwave digital art', 'pastel pink and teal, retro gradients, a glowing grid', { clip: 'Vaporwave-style animation (pastel pink and teal, retro gradients)', swap: 'vaporwave', motion: 'Vaporwave-style animation in pastel pink and teal' }),
+  papercut: mk('layered paper-cutout', 'cut paper shapes, soft shadows between the layers', { clip: 'Paper-cutout stop-motion animation (layered cut paper)', swap: 'paper-cutout', motion: 'Paper-cutout stop-motion animation with layered cut paper' }),
+};
+// No style picked ('auto'): its first pictures take the style of what it's made from (from a picture: the picture's own look,
+// a photo staying a photo and a drawing a drawing; designed with words: the style they name, else photorealistic; designed
+// without words: photorealistic), and everything after keeps the style of its first pictures
+const SAME = {
+  body: 'A full-body picture, in exactly the same art style,', photo: 'A picture, in exactly the same art style,',
+  clip: 'Video in exactly the same style as the first frame', seedance: 'cartoon', swap: '', motion: 'Animation in exactly the same style as @Image1',
+};
+const AUTO = {
+  picture: { ...SAME, look: 'A portrait, in exactly the same art style as the picture (a photo stays a photo, a drawing stays a drawing),' },
+  words: { ...SAME, look: 'A portrait (photorealistic, unless the details below name another art style)' },
 };
 const LOOK = { feminine: 'woman', masculine: 'man', androgynous: 'person with an androgynous look' };
 const AGE = { '20s': 'in their twenties', '30s': 'in their thirties', '40s': 'in their forties', '50s': 'in their fifties' };
@@ -92,7 +155,11 @@ const sentence = (s) => {
   return t ? `${t.charAt(0).toUpperCase()}${t.slice(1)}${/[.!?…]$/.test(t) ? '' : '.'}` : '';
 };
 const details = (inf) => (inf.words ? ` Details: ${sentence(inf.words)}` : '');
-const styleOf = (inf) => STYLE[inf.style] || STYLE.real;
+const styleOf = (inf) => {
+  if (inf.style !== STYLE_AUTO) return (Object.hasOwn(STYLE, inf.style) && STYLE[inf.style]) || STYLE.real;
+  if (inf.mode !== 'design') return AUTO.picture;
+  return inf.words ? AUTO.words : { ...SAME, look: STYLE.real.look };
+};
 const settingsOf = (inf) => (inf.settings && typeof inf.settings === 'object' ? inf.settings : {});
 const outfitOf = (inf) => OUTFIT[settingsOf(inf).outfit] || null;
 const vibeOf = (inf) => VIBE[settingsOf(inf).vibe] || null;
@@ -122,15 +189,32 @@ export function looksPrompt(inf) {
     + `existing character. ${SAFE}${details(inf)}`;
 }
 
-// Its full-body picture, from the look it picked (the first picture; from a photo of a real person, or a face before round 2,
-// that photo too while it's still there: the second picture), 9:16, on a plain light grey background: the picture its photos,
-// videos and 3D model are made from
-export function bodyPrompt(inf, { withSelfie = false } = {}) {
+// Its full-body picture, from the look it picked (the first picture), 9:16, on a plain light grey background: the picture its
+// photos, videos and 3D model are made from. (2026-10-11, the owner: "when i upload a full body model already in the photo …
+// now the leg part is different") one made from a picture has that picture too (withSource: the second picture), whose body
+// shape, outfit, legs and shoes are kept (the outfit changed only when one was picked; a photo of a real person: its face
+// too). way 'body' (src/studio/rules.js WAYS: "Just its full body"): made straight from the picture, the only one, in its
+// style (or, with no style picked, the picture's own), anything the picture doesn't show made to match it.
+export function bodyPrompt(inf, { withSource = false, way = 'looks' } = {}) {
   const st = styleOf(inf), outfit = outfitOf(inf);
-  return `${st.body} of this exact character (the first picture), standing and facing the camera, the whole body visible from head `
-    + `to shoes, arms relaxed slightly away from the body. Keep the face, hair, skin, style and look exactly the same`
-    + `${outfit ? `, wearing ${outfit}` : ''}.${withSelfie ? ' The second picture shows their real face: keep it exactly.' : ''} `
-    + `A plain light grey studio background, soft even light, nothing else in the picture. ${SAFE}`;
+  const real = inf.real === true || inf.mode === 'face';
+  const frame = 'standing and facing the camera, the whole body visible from head to shoes, arms relaxed slightly away from the body';
+  const backdrop = 'A plain light grey studio background, soft even light, nothing else in the picture.';
+  if (way === 'body') {
+    const who = real ? 'person' : 'character';
+    const as = inf.style === STYLE_AUTO
+      ? 'A full-body picture, in exactly the same art style as the picture (a photo stays a photo, a drawing stays a drawing),'
+      : st.body;
+    return `${as} of the ${who} in the picture, ${frame}. Keep the face, hair, skin, body shape, outfit, legs and shoes exactly as in `
+      + `the picture${outfit ? `, but wearing ${outfit}` : ''}; anything the picture doesn't show is made to match it.`
+      + `${real ? ' Keep their real face exactly.' : ''} ${backdrop} The ${who} is an adult. ${SAFE}${details(inf)}`;
+  }
+  const src = withSource && inf.mode !== 'design'
+    ? ` The second picture is the original ${real ? 'photo' : 'picture'} it comes from: keep the body shape, ${outfit ? '' : 'the outfit, '}`
+      + `the legs and the shoes exactly as in it${real ? ', and the real face exactly' : ''}.`
+    : '';
+  return `${st.body} of this exact character (the first picture), ${frame}. Keep the face, hair, skin, style and look exactly the same`
+    + `${outfit ? `, wearing ${outfit}` : ''}.${src} ${backdrop} ${SAFE}`;
 }
 
 // One of its photos: the character from its full-body picture, in the scene asked for, in its shape. (Round 4) an X banner:
@@ -148,6 +232,26 @@ export function photoPrompt(inf, scene, { banner = false, refs = 0 } = {}) {
   }
   return `${styleOf(inf).photo} of this exact character (${which}): keep the face, hair, body and look exactly the same. `
     + `${sentence(scene)} A scene may change the outfit, never to less covered.${refsLine(refs, 2)} ${SAFE}`;
+}
+
+// (2026-10-12, the editor) "Edit with words": one of its photos (the first picture) made again with one change, typed by its
+// maker (checkEdit's): only that changes; the character's face, hair, body, outfit and pose, the place, the light, the framing
+// and the art style stay as they are. The second picture is its full body, only so its face and look stay its own (the
+// photo's outfit stays the photo's). A meme keeps its words exactly (Gemini looks at it again, server/inf-jobs.js); an X
+// banner stays a very wide header, a little wider than the first picture (4:1 from its 3:1), everything where it is and only a
+// little more of the place at its sides: our server cuts it to 1500 × 500 again from its middle (picturesOf's centred).
+export function editPrompt(inf, edit, { meme = false, banner = false } = {}) {
+  const words = meme
+    ? ' Keep the words written in it exactly as they are, spelled the same and in the same place; write no other words, letters or numbers.'
+    : '';
+  const wide = banner
+    ? ' It stays a very wide profile header banner, a little wider than the first picture: everything where it is, with only a little'
+      + ' more of the place at its left and right edges, and nothing important in the lower-left part nor at the very top and bottom edges.'
+    : '';
+  return `Edit the first picture: ${sentence(edit)} Change only what that asks for, and keep everything else in the first picture exactly `
+    + 'as it is: the character\'s face, hair, body, outfit and pose, the place, the light, the framing and the art style. The second picture '
+    + `is the same character, only so the face and look stay exactly theirs.${words}${wide} An edit may change the outfit, never to less `
+    + `covered. ${meme ? 'Family-friendly, fully clothed. No logos, no watermark.' : SAFE}`;
 }
 
 // (Round 4, phase 4) reference pictures (someone's own pictures of a thing, a place, a pet, food or a style), after the
@@ -212,7 +316,7 @@ export function checkMemeText({ meme, lines } = {}) {
 export function swapPrompt(inf) {
   const st = styleOf(inf);
   return 'Replace the main person in the video with @Element1, keeping @Element1\'s face, hair, body, outfit and '
-    + `${st.swap} look exactly the same. Keep everything else in the video exactly as it is: the same movements, expressions and `
+    + `${st.swap ? `${st.swap} ` : ''}look exactly the same. Keep everything else in the video exactly as it is: the same movements, expressions and `
     + 'timing, the same camera motion, the same place, background and lighting. Anyone else stays a blurred background extra. '
     + 'Family-friendly, fully clothed. No text, no logos, no watermark.';
 }
@@ -241,23 +345,27 @@ export function longPartPrompt(inf, scene, { part = 0, parts = 2, refs = 0 } = {
 }
 export const CLIP_NEGATIVE = 'text, captions, logos, watermark, distorted face, extra limbs, nudity';
 
-// A scene video from its full-body picture with the reference-to-video model (only for anime and cartoon influencers: the
-// model says no to realistic faces): the studio's own words for it (server/studio-words.js). (Round 4, phase 4) with reference
+// A scene video from its full-body picture with the reference-to-video model (only for a drawn style, src/studio/rules.js
+// drawnStyle: the model says no to realistic faces; since 2026-10-11 in that style's own motion words): the studio's own words for it (server/studio-words.js). (Round 4, phase 4) with reference
 // pictures after it (@Image2 …)
 export const sceneVideoPrompt = (inf, scene, { refs = 0 } = {}) => {
-  const base = videoPrompt({ scene, style: styleOf(inf).seedance });
+  const st = styleOf(inf);
+  const base = videoPrompt({ scene, style: st.seedance, motion: st.motion });
   if (!(refs > 0)) return base;
   return `${base} ${refs === 1 ? '@Image2 is a reference' : `@Image2 to @Image${refs + 1} are references`} (a thing, a place, a pet, `
     + 'food or a style, never a person): include what they show as the scene asks.';
 };
-// Which video model a scene video needs: from one of its photos, or a realistic influencer (or one made from a face) → its
+// Which video model a scene video needs: from one of its photos, or one not in a drawn style (or made from a face) → its
 // photo, brought to life ('photo': image to video); else its full body, put in the scene ('reference'). (Round 4, phase 4) with
 // the model menu's model: Standard, Pro and Long start from a photo ('needs_photo' without one); Anime is the reference model,
 // never for a realistic influencer or one made from a face ('no_anime').
 export const sceneWay = (inf, { image, model = null } = {}) => {
   if (model && VIDEO_MODELS[model] && model !== 'anime') return image ? 'photo' : 'needs_photo';
-  if (model === 'anime') return inf.style === 'real' || inf.mode === 'face' ? 'no_anime' : 'reference';
-  return image ? 'photo' : inf.style === 'real' || inf.mode === 'face' ? 'needs_photo' : 'reference';
+  // (2026-10-11) a drawn style (src/studio/rules.js drawnStyle: anime, comics, 3D, toys and most art; no style picked from a
+  // drawing); never a photo look, a painted style that can come out true to life, or one made from a face
+  const drawn = drawnStyle(inf);
+  if (model === 'anime') return drawn ? 'reference' : 'no_anime';
+  return image ? 'photo' : drawn ? 'reference' : 'needs_photo';
 };
 
 // The owner's trend clip, made once (round 2: real-looking, like the trending templates people make with AI video apps): a

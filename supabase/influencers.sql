@@ -22,10 +22,12 @@
 --   agi1_inf            per influencer: a scrambled code of its wallet (never the address), its name, how it was made (designed,
 --                       from a picture, or from the person's face), its style and the choices it was designed with, the
 --                       upload it was made from (only until it's made: then the upload is deleted), which of its looks was
---                       picked, and whether it's shown in Explore (never one made from a face) or hidden by the owner
+--                       picked, and whether it's shown in Explore (never one made from a face) or hidden by the owner;
+--                       (2026-10-11) the profile picture its maker framed, if any (which of its pictures, and the frame)
 --   agi1_inf_jobs       each picture or video made for it (its looks, its full body, its photos, trend and scene videos; and
 --                       the owner's trend moves): its words, shape and sound, the credits it cost, where it is at the AI
---                       service (its request id and the addresses it gave), and once done its files' count and size
+--                       service (its request id and the addresses it gave), and once done its files' count and size;
+--                       (2026-10-12) when its maker deleted it (its row goes a week later, its files at once)
 --   agi1_credits        per wallet code: its credits (bought, and this month's free ones; since round 4's phase 3 its bonus
 --                       ones too)
 --   agi1_credit_log     each top-up, spend, refund and free grant, and (round 3) each gift from the owner (its wallet code,
@@ -42,7 +44,10 @@
 --                       checked that profile's wallet is this one) and when it was last checked
 --   agi1_inf_caption_days (round 4) per wallet code and day: the AI captions it asked for (kept 2 days)
 --   agi1_inf_access     (2026-10-11) who may use AGI Studio while it's private: per wallet code, its short address
---                       "0x12ab…cdef", the owner's own note and how it got in (the owner's tab, or credits for testing)
+--                       "0x12ab…cdef", the owner's own note and how it got in (the owner's tab, credits for testing, or
+--                       since 2026-10-12 one of the owner's gift links claimed)
+--   agi1_inf_tool_days  (2026-10-12, the editor) per wallet code, day and tool: the photos saved from the photo editor and
+--                       the videos saved from the video editor (kept 2 days)
 -- Never an address, a transaction, an IP address or anything else about anyone (but a weekly spotlight's prize: below).
 --
 -- Round 2 (2026-10-10, the owner: "remove the use your face", "no restrictions on That looks like a photo of a real
@@ -108,6 +113,69 @@
 --     or by giving it credits for testing; kept as a scrambled code, its short address "0x12ab…cdef" and the owner's own note).
 --     The owner's wallet, STUDIO_ONLY_FOR's in Vercel and the team's get in without a row here. inf_who says whether a wallet
 --     is on it; inf_access_list and inf_access_set are the owner's.
+-- Styles and ways (2026-10-11, the owner: "can you make the style optional and please add more styles like , ghiblifi etc. and
+-- many more", "when i upload a full body model already in the froom my photo … now the leg part is different", and "if they
+-- already have a full body they can skip the first generate so they can save credits or maybe just crop it"). Run this file
+-- again (it keeps everything saved). It adds:
+--   • 26 styles instead of 3, and none needed ('auto': the style its words name, else a photo look; from a picture, the
+--     picture's own look): agi1_inf.style
+--   • two cheaper ways to start from a picture (agi1_inf.way): 'body', just its full body made from the picture (its portrait
+--     cut from it), and 'asis', the picture as it is (no AI: it's its full body, its face its portrait), only for a photo of the
+--     whole person; 'looks' (4 looks to pick from, then its full body) as before. Neither has looks to pick from: its full body
+--     is its first job, and once it's made its portrait is that job's second picture (looks_job and pick point at it)
+--   • whether an uploaded picture shows the whole person, head to feet, and where its head is (agi1_inf_uploads.whole and
+--     .head: the AI check's answer, a box in thousandths of the picture), for the photo as it is and its portrait
+-- Profile pictures (2026-10-11, the owner: "they should have an option to change the profile even after generation and on the
+-- launch coin an option to pick the current profile or choose from their own images"). Run this file again (it keeps
+-- everything saved). It adds:
+--   • its profile picture, changed after it's made (agi1_inf.pfp): the square its maker framed in one of its looks, its full
+--     body or one of its photos (which picture, and the frame in thousandths), kept as a picture of its own (its own id: our
+--     server keeps its files first, and deletes the old one's). Only how it's shown: what's made with it still starts from its
+--     full body. Shown while the picture it was framed from is shown (inf_pfp_of); else its picked look, as before.
+--     inf_pfp_set is its maker's. (A coin's picture needs nothing here: it's in the coin's launch draft, launch.sql's.)
+-- Gift links of free credits (2026-10-12, the owner: "i can put the a custome value of credits there then i can sent a message
+-- then theres gonna be a link for it then when i sahre it to someone they can see the meesage and the gifted credits and they
+-- can claim it"; the owner's choices: "Mine, free credits (Recommended)", "Up to 200 characters (Recommended)", "Once
+-- (Recommended)"). Run this file again (it keeps everything saved). It adds:
+--   • the owner's own gift links (agi1_credit_gifts.kind 'owner'; a person's gift links of bought credits are 'bought', as
+--     before): any number of credits, the owner's message, from "AGI Studio"; nothing is held (they're free credits, paid
+--     from the owner's own AI balance like credits for testing), claimed once as bonus credits (in agi1_credit_log as kind
+--     'gift'), past their days or taken back they're just gone. inf_owner_link and inf_owner_links are the owner's.
+--   • a gift's message up to 200 characters (80 before), for every gift
+--   • a wallet let in by claiming one of the owner's links while AGI Studio is private (agi1_inf_access.via 'link')
+-- The editor (2026-10-12, the owner's choices: "Make another (Recommended)": the same words and settings, a new one next to the
+-- old one, at the price of making it now; and Delete for the maker's own creations). Run this file again (it keeps everything
+-- saved). It adds:
+--   • a photo (a meme, an X banner), video or trend video its maker deleted (agi1_inf_jobs.deleted_at): hidden from every page
+--     at once and for good (inf_job_hide never shows one again), its files deleted at once by our server, its row a week later
+--     (inf_tidy hands our server its files' names again then, in case deleting them at once failed), its likes with its row.
+--     Never one being made, or one something is being made from (a video or a trend video from a photo); its credits don't
+--     come back (it was made). inf_job_delete is its maker's. A profile picture framed from it goes back to its picked look.
+--   ("Make another" needs nothing here: it's inf_make again, with its words and settings, at today's price.)
+-- And "Edit with words" (the same day, the owner's choice: "type a change … a new photo from that one; same price as a
+-- photo"). Run this file again (it keeps everything saved). It adds:
+--   • a photo made from one of its own photos (a meme, an X banner) with a change typed in words (agi1_inf_jobs.edit, 3 to 200
+--     characters, with image: the photo it's made from): inf_make's p_edit (its older version, from round 4's phase 4, is
+--     dropped first), by Classic, no references, the photo's own shape (an X banner stays one) and a meme's own format and
+--     words; inf_job_get and inf_jobs give it. Never from a photo that's being deleted: inf_job_delete already refuses to
+--     delete a photo something is being made from.
+-- And the photo editor (the same day, the owner's choices: "Photo editor (Recommended)": free, no AI, in its maker's own
+-- browser; "New photo + download (Recommended)"). Run this file again (it keeps everything saved). It adds:
+--   • a photo saved from the photo editor (agi1_inf_jobs.editor): a done photo of the same influencer, free, made from one of
+--     its own photos (image), its files kept by our server first (looked at by Gemini before that); inf_photo_add.
+--     inf_job_get and inf_jobs say so.
+--   • how many a wallet saved today, and the whole site (agi1_inf_tool_days, agi1_inf_days.photo_edits; and, for the video
+--     editor, .video_edits): inf_tool_take counts one, or only says whether one is left.
+-- And the video editor (the same day, the owner's choice: "Video editor": trim, words on it, its shape; made into an H.264 MP4
+-- on our server, free, 10 a day per wallet). Run this file again (it keeps everything saved). It adds:
+--   • a video saved from the video editor (agi1_inf_jobs.editor, as a photo saved from the photo editor, and .cut: what was
+--     asked, checked by our server: its part, its shape and crop, its sound): a video of the same influencer, free, made from
+--     one of its own videos or trend videos (image), waiting for our clock (it makes it with ffmpeg, then Gemini looks at it
+--     before anyone sees it: inf_cut_done). inf_cut_add counts one use (inf_tool_take 'video') and starts it; inf_cut_due is
+--     the clock's next one. 1 to 15 seconds long (agi1_inf_jobs.seconds: 1 to 60 now, 3 to 60 before). Its share mark is in
+--     it (marked: inf_mark_take leaves it alone). inf_job_get gives its cut; inf_admin_stats counts edited photos and videos
+--     apart ('edited', 'cut'). Its source can't be deleted while it's being made (inf_job_delete's "in_use", as for a video
+--     from a photo).
 
 -- studio.sql first (its version of 2026-10-10): this file builds on its tables, its months and its payment ledger
 do $do$
@@ -460,7 +528,7 @@ create table if not exists public.agi1_credit_gifts (
   to_code     text        check (char_length(to_code) between 16 and 64),
   to_label    text        check (char_length(to_label) between 3 and 40),
   credits     integer     not null check (credits between 1 and 1000000),
-  note        text        check (char_length(note) between 1 and 80),
+  note        text        check (char_length(note) between 1 and 200),
   status      text        not null check (status in ('sent', 'open', 'claimed', 'canceled', 'expired')),
   seen        boolean     not null default false,
   created_at  timestamptz not null default now(),
@@ -536,17 +604,98 @@ alter table public.agi1_inf_uploads add constraint agi1_inf_uploads_kind_check c
 
 -- ---------- (2026-10-11) who may use AGI Studio while it's private ----------
 -- The owner's "Give access" list: a wallet the owner let in from the owner's tab by its address ('owner'), or by giving it
--- credits for testing ('credits'). Kept as a scrambled code, its short form "0x12ab…cdef" (to tell them apart) and the owner's
--- own note, never the address. (The owner's wallet, STUDIO_ONLY_FOR's in Vercel and the team's get in without a row here.)
+-- credits for testing ('credits'), or (2026-10-12) one that claimed one of the owner's gift links ('link'). Kept as a scrambled
+-- code, its short form "0x12ab…cdef" (to tell them apart) and the owner's own note, never the address. (The owner's wallet,
+-- STUDIO_ONLY_FOR's in Vercel and the team's get in without a row here.)
 create table if not exists public.agi1_inf_access (
   wallet_code text        primary key check (char_length(wallet_code) between 16 and 64),
   short       text        not null check (short ~ '^0x[0-9a-f]{4}…[0-9a-f]{4}$'),
   note        text        check (char_length(note) between 1 and 24),
-  via         text        not null default 'owner' check (via in ('owner', 'credits')),
+  via         text        not null default 'owner' check (via in ('owner', 'credits', 'link')),
   added_at    timestamptz not null default now()
 );
 alter table public.agi1_inf_access enable row level security;
+
+-- ---------- (2026-10-11) styles and ways ----------
+-- 26 styles (src/studio/rules.js STYLE_GROUPS), and 'auto' when none is picked
+alter table public.agi1_inf drop constraint if exists agi1_inf_style_check;
+alter table public.agi1_inf add constraint agi1_inf_style_check check (style in ('auto', 'real', 'film', 'editorial', 'cinematic', 'anime', 'storybook', 'retro', 'manga', 'webcomic', 'comic', 'celshade', 'toon', 'clay', 'toy', 'plush', 'pixel', 'lowpoly', 'watercolor', 'oil', 'sketch', 'popart', 'ukiyoe', 'fantasy', 'cyberpunk', 'vaporwave', 'papercut'));
+-- how one made from a picture starts: 4 looks to pick from (as before), just its full body, or the picture as it is
+alter table public.agi1_inf add column if not exists way text not null default 'looks';
+alter table public.agi1_inf drop constraint if exists agi1_inf_way_check;
+alter table public.agi1_inf add constraint agi1_inf_way_check check (way in ('looks', 'body', 'asis') and (way = 'looks' or mode = 'picture'));
+-- an uploaded picture: the whole person in it, head to feet (it may then be used as it is), and its head's box ([top, left,
+-- bottom, right] in thousandths of its height and width: its portrait is cut there)
+alter table public.agi1_inf_uploads add column if not exists whole boolean not null default false;
+alter table public.agi1_inf_uploads add column if not exists head smallint[];
+alter table public.agi1_inf_uploads drop constraint if exists agi1_inf_uploads_head_check;
+alter table public.agi1_inf_uploads add constraint agi1_inf_uploads_head_check check (head is null or (cardinality(head) = 4
+  and array_position(head, null) is null and 0 <= all (head) and 1000 >= all (head) and head[3] > head[1] and head[4] > head[2]));
 revoke all on table public.agi1_inf_access from anon, authenticated;
+
+-- ---------- (2026-10-11) its profile picture, changed after it's made ----------
+-- The square its maker framed in one of its pictures (one of its looks, its full body or one of its photos), kept as a picture
+-- of its own: { id (that picture's own id: its files are inf/<influencer>/<id>-0.jpg and .webp), job and n (the picture it was
+-- framed from), x, y, s (the frame, in thousandths: src/studio/rules.js FRAME) }. None: its picked look, as before.
+alter table public.agi1_inf add column if not exists pfp jsonb;
+alter table public.agi1_inf drop constraint if exists agi1_inf_pfp_check;
+alter table public.agi1_inf add constraint agi1_inf_pfp_check check (pfp is null or (jsonb_typeof(pfp) = 'object'
+  and coalesce(pfp ->> 'id', '') ~ '^[A-Za-z0-9_-]{22}$' and coalesce(pfp ->> 'job', '') ~ '^[A-Za-z0-9_-]{22}$'
+  and coalesce(pfp ->> 'n', '') ~ '^[0-3]$' and coalesce(pfp ->> 'x', '') ~ '^[0-9]{1,4}$'
+  and coalesce(pfp ->> 'y', '') ~ '^[0-9]{1,4}$' and coalesce(pfp ->> 's', '') ~ '^[0-9]{1,4}$'));
+
+-- ---------- (2026-10-12) the owner's gift links of free credits ----------
+-- A gift's kind: 'bought' (a person's gift of bought credits, to a wallet or as a link, as before) or 'owner' (the owner's
+-- gift link of free credits: always a link, nothing held, claimed as bonus credits). A gift's message up to 200 characters
+-- (80 before: the older check goes first).
+alter table public.agi1_credit_gifts add column if not exists kind text not null default 'bought';
+alter table public.agi1_credit_gifts drop constraint if exists agi1_credit_gifts_kind_check;
+alter table public.agi1_credit_gifts add constraint agi1_credit_gifts_kind_check
+  check (kind in ('bought', 'owner') and (kind = 'bought' or token is not null));
+alter table public.agi1_credit_gifts drop constraint if exists agi1_credit_gifts_note_check;
+alter table public.agi1_credit_gifts add constraint agi1_credit_gifts_note_check check (char_length(note) between 1 and 200);
+create index if not exists agi1_credit_gifts_owner on public.agi1_credit_gifts (from_code, created_at) where kind = 'owner';
+-- a wallet that claimed one of the owner's links while AGI Studio is private is let in ('link')
+alter table public.agi1_inf_access drop constraint if exists agi1_inf_access_via_check;
+alter table public.agi1_inf_access add constraint agi1_inf_access_via_check check (via in ('owner', 'credits', 'link'));
+
+-- ---------- (2026-10-12) the editor: a creation its maker deleted ----------
+-- When its maker deleted it (a photo, a meme, an X banner, a video or a trend video: inf_job_delete). It's hidden at once
+-- (hidden = true: every page already leaves hidden ones out), never shown again, and its row goes a week later (inf_tidy).
+alter table public.agi1_inf_jobs add column if not exists deleted_at timestamptz;
+create index if not exists agi1_inf_jobs_deleted on public.agi1_inf_jobs (deleted_at) where deleted_at is not null;
+-- …and "Edit with words" (the same day): a photo made from one of its own (image) with this change, typed in words
+alter table public.agi1_inf_jobs add column if not exists edit text;
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_edit_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_edit_check check (edit is null
+  or (char_length(edit) between 3 and 200 and kind = 'photo' and image is not null));
+-- …and the photo editor (the same day): a photo saved from it (made in its maker's browser from one of its own photos: free)
+alter table public.agi1_inf_jobs add column if not exists editor boolean not null default false;
+-- (its check, agi1_inf_jobs_editor_check, is the video editor's, below: one that allows both; this file's earlier one, for
+-- photos only, would refuse the videos saved from it once there are some)
+-- how many photos a wallet saved from it today ('photo'; the video editor to come, 'video'), and the whole site's
+create table if not exists public.agi1_inf_tool_days (
+  wallet_code text    not null check (char_length(wallet_code) between 16 and 64),
+  day         date    not null,
+  tool        text    not null check (tool in ('photo', 'video')),
+  n           integer not null default 0 check (n >= 0),
+  primary key (wallet_code, day, tool)
+);
+alter table public.agi1_inf_days add column if not exists photo_edits integer not null default 0 check (photo_edits >= 0);
+alter table public.agi1_inf_days add column if not exists video_edits integer not null default 0 check (video_edits >= 0);
+-- …and the video editor (the same day): a video saved from it (made by our clock with ffmpeg from one of its own videos or trend
+-- videos: free), what was asked (cut: its part, its shape and crop, its sound, as our server checked it); 1 to 15 seconds
+alter table public.agi1_inf_jobs add column if not exists cut jsonb;
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_cut_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_cut_check check (cut is null
+  or (jsonb_typeof(cut) = 'object' and kind = 'video' and editor));
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_editor_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_editor_check check (not editor
+  or (image is not null and cost = 0 and edit is null
+    and ((kind = 'photo' and cut is null) or (kind = 'video' and cut is not null and model is null and parts = 1))));
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_seconds_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_seconds_check check (seconds between 1 and 60);
+create index if not exists agi1_inf_jobs_cuts on public.agi1_inf_jobs (updated_at) where editor and kind = 'video' and status in ('paid', 'making');
 
 -- Row Level Security ON, with no rules: the public (browser) keys can't read or change these tables.
 alter table public.agi1_inf_likes enable row level security;
@@ -565,6 +714,9 @@ alter table public.agi1_inf_reports enable row level security;
 alter table public.agi1_inf_days enable row level security;
 revoke all on table public.agi1_inf, public.agi1_inf_jobs, public.agi1_credits, public.agi1_credit_log, public.agi1_credit_months,
   public.agi1_inf_uploads, public.agi1_inf_trends, public.agi1_inf_reports, public.agi1_inf_days from anon, authenticated;
+-- (2026-10-12, the editor)
+alter table public.agi1_inf_tool_days enable row level security;
+revoke all on table public.agi1_inf_tool_days from anon, authenticated;
 
 -- ---------- credits ----------
 -- A wallet's credits now: { paid (bought, and gifts it got), free (this month's), month, and (round 4, phase 3) bonus (an
@@ -766,7 +918,7 @@ begin
   if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_from is null or char_length(p_from) not between 16 and 64
      or p_from_label is null or char_length(p_from_label) not between 3 and 40 or p_min is null or p_day_max is null
      or p_day_count is null or p_day_count < 1 or p_credits is null or p_credits < greatest(1, p_min)
-     or p_credits > least(p_day_max, 1000000) or (p_note is not null and char_length(p_note) not between 1 and 80)
+     or p_credits > least(p_day_max, 1000000) or (p_note is not null and char_length(p_note) not between 1 and 200)
      or (p_to is null) = (p_to_name is null) then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
@@ -789,7 +941,7 @@ begin
   -- giving to each other at once never wait on each other)
   perform pg_advisory_xact_lock(hashtext('agi1-inf-gifts:' || p_from));
   select count(*), coalesce(sum(credits), 0) into v_n, v_sum from agi1_credit_gifts
-  where from_code = p_from and created_at >= ((now() at time zone 'utc')::date)::timestamp at time zone 'utc';
+  where from_code = p_from and kind = 'bought' and created_at >= ((now() at time zone 'utc')::date)::timestamp at time zone 'utc';
   if v_n >= p_day_count then return json_build_object('ok', false, 'why', 'too_many'); end if;
   if v_sum + p_credits > p_day_max then return json_build_object('ok', false, 'why', 'day_cap', 'left', greatest(0, p_day_max - v_sum)); end if;
   insert into agi1_credits (wallet_code) values (p_from), (v_to) on conflict (wallet_code) do nothing;
@@ -830,7 +982,7 @@ begin
      or p_from is null or char_length(p_from) not between 16 and 64 or p_from_label is null or char_length(p_from_label) not between 3 and 40
      or p_min is null or p_day_max is null or p_day_count is null or p_day_count < 1 or p_open_max is null or p_open_max < 1
      or p_days is null or p_days not between 1 and 90 or p_credits is null or p_credits < greatest(1, p_min)
-     or p_credits > least(p_day_max, 1000000) or (p_note is not null and char_length(p_note) not between 1 and 80) then
+     or p_credits > least(p_day_max, 1000000) or (p_note is not null and char_length(p_note) not between 1 and 200) then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
   if exists (select 1 from agi1_inf_bans where wallet_code = p_from and lifted_at is null) then
@@ -838,10 +990,10 @@ begin
   end if;
   perform pg_advisory_xact_lock(hashtext('agi1-inf-gifts:' || p_from));
   select count(*), coalesce(sum(credits), 0) into v_n, v_sum from agi1_credit_gifts
-  where from_code = p_from and created_at >= ((now() at time zone 'utc')::date)::timestamp at time zone 'utc';
+  where from_code = p_from and kind = 'bought' and created_at >= ((now() at time zone 'utc')::date)::timestamp at time zone 'utc';
   if v_n >= p_day_count then return json_build_object('ok', false, 'why', 'too_many'); end if;
   if v_sum + p_credits > p_day_max then return json_build_object('ok', false, 'why', 'day_cap', 'left', greatest(0, p_day_max - v_sum)); end if;
-  if (select count(*) from agi1_credit_gifts where from_code = p_from and status = 'open') >= p_open_max then
+  if (select count(*) from agi1_credit_gifts where from_code = p_from and kind = 'bought' and status = 'open') >= p_open_max then
     return json_build_object('ok', false, 'why', 'too_many_links');
   end if;
   insert into agi1_credits (wallet_code) values (p_from) on conflict (wallet_code) do nothing;
@@ -860,8 +1012,68 @@ begin
 end;
 $$;
 
+-- (2026-10-12) The owner's gift link of free credits: p_credits (1 to 100,000) and the owner's message, from "AGI Studio",
+-- claimed once by anyone with its link (p_token: its secret) as bonus credits, until p_days days pass. Nothing is held: they're
+-- the owner's free credits (what they're spent on is paid from the owner's own AI balance, like credits for testing), so one
+-- taken back or past its days is just gone. At most p_open_max waiting at once. Only our server calls it, and only for the
+-- owner's wallet (p_from: its code). → {"ok": true, "expires"} or {"ok": false, "why": "bad" | "too_many_links" | "taken"}
+create or replace function public.inf_owner_link(p_id text, p_token text, p_from text, p_credits integer, p_note text,
+  p_open_max integer, p_days integer)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_until timestamptz;
+begin
+  if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_token is null or p_token !~ '^[A-Za-z0-9_-]{22}$' or p_token = p_id
+     or p_from is null or char_length(p_from) not between 16 and 64 or p_credits is null or p_credits not between 1 and 100000
+     or p_open_max is null or p_open_max < 1 or p_days is null or p_days not between 1 and 90
+     or (p_note is not null and char_length(p_note) not between 1 and 200) then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  perform pg_advisory_xact_lock(hashtext('agi1-inf-owner-links:' || p_from));
+  if (select count(*) from agi1_credit_gifts where from_code = p_from and kind = 'owner' and status = 'open'
+      and expires_at > now()) >= p_open_max then
+    return json_build_object('ok', false, 'why', 'too_many_links');
+  end if;
+  v_until := now() + make_interval(days => p_days);
+  begin
+    insert into agi1_credit_gifts (id, token, kind, from_code, from_label, credits, note, status, expires_at)
+    values (p_id, p_token, 'owner', p_from, 'AGI Studio', p_credits, p_note, 'open', v_until);
+  exception when unique_violation then
+    return json_build_object('ok', false, 'why', 'taken');
+  end;
+  return json_build_object('ok', true, 'expires', v_until);
+end;
+$$;
+
+-- The owner's gift links (the newest p_limit, at most 100): each one's credits, message, state, who claimed it (as the page
+-- shows them: a clank.trade name or a short address) and, while it can still be claimed, its secret (to copy it again); and how
+-- many are waiting. → {"links": [{"id", "credits", "note", "status", "token", "to", "created_at", "expires_at", "done_at"}],
+-- "open"}
+create or replace function public.inf_owner_links(p_from text, p_limit integer)
+returns json
+language sql
+stable
+set search_path = public
+as $$
+  select json_build_object(
+    'links', coalesce((select json_agg(x order by x.created_at desc) from (
+      select g.id, g.credits, g.note,
+        case when g.status = 'open' and g.expires_at <= now() then 'expired' else g.status end as status,
+        case when g.status = 'open' and g.expires_at > now() then g.token end as token,
+        case when g.status = 'claimed' then g.to_label end as "to", g.created_at, g.expires_at, g.done_at
+      from agi1_credit_gifts g
+      where p_from is not null and g.from_code = p_from and g.kind = 'owner'
+      order by g.created_at desc limit least(greatest(coalesce(p_limit, 50), 1), 100)) x), '[]'::json),
+    'open', (select count(*) from agi1_credit_gifts g where p_from is not null and g.from_code = p_from and g.kind = 'owner'
+      and g.status = 'open' and g.expires_at > now()));
+$$;
+
 -- A gift link as anyone with it sees it: its credits, who it's from (as its sender shows), its note, and whether it can still
--- be claimed. → {"credits", "from", "note", "status" ("open" | "claimed" | "canceled" | "expired"), "expires"} or null
+-- be claimed; (2026-10-12) "owner": one of the owner's gift links of free credits (bonus credits once claimed).
+-- → {"credits", "from", "note", "status" ("open" | "claimed" | "canceled" | "expired"), "expires", "owner"} or null
 create or replace function public.inf_gift_peek(p_token text)
 returns json
 language sql
@@ -869,14 +1081,17 @@ stable
 set search_path = public
 as $$
   select json_build_object('credits', g.credits, 'from', g.from_label, 'note', g.note,
-    'status', case when g.status = 'open' and g.expires_at <= now() then 'expired' else g.status end, 'expires', g.expires_at)
+    'status', case when g.status = 'open' and g.expires_at <= now() then 'expired' else g.status end, 'expires', g.expires_at,
+    'owner', g.kind = 'owner')
   from agi1_credit_gifts g where p_token ~ '^[A-Za-z0-9_-]{22}$' and g.token = p_token;
 $$;
 
 -- A gift link claimed by p_wallet (p_label: how its sender sees who claimed it): once; never by its own sender (who takes it
 -- back instead), never by a banned wallet, never while its sender is banned. One past its days goes back to its sender now.
--- → {"ok": true, "credits", "from", "paid" (the claimer's bought credits now)} or {"ok": false, "why": "gone" | "claimed"
--- (with "mine") | "canceled" | "expired" | "own" | "banned" | "held" | "bad"}
+-- (2026-10-12) One of the owner's gift links ("owner": true) comes as bonus credits (in the credits' log as kind 'gift'), and
+-- one past its days is just gone (nothing was held).
+-- → {"ok": true, "credits", "from", "paid" (the claimer's bought credits now), "bonus" (its bonus credits now), "owner"} or
+-- {"ok": false, "why": "gone" | "claimed" (with "mine") | "canceled" | "expired" | "own" | "banned" | "held" | "bad"}
 create or replace function public.inf_gift_claim(p_token text, p_wallet text, p_label text)
 returns json
 language plpgsql
@@ -885,6 +1100,7 @@ as $$
 declare
   g agi1_credit_gifts%rowtype;
   v_paid integer;
+  v_bonus integer;
 begin
   if p_token is null or p_token !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null or char_length(p_wallet) not between 16 and 64
      or p_label is null or char_length(p_label) not between 3 and 40 then
@@ -895,10 +1111,12 @@ begin
   if g.status = 'claimed' then return json_build_object('ok', false, 'why', 'claimed', 'mine', g.to_code = p_wallet); end if;
   if g.status in ('canceled', 'expired') then return json_build_object('ok', false, 'why', g.status); end if;
   if g.expires_at <= now() then
-    insert into agi1_credit_log (wallet_code, kind, amount, paid_part, ref, other)
-    values (g.from_code, 'unhold', g.credits, g.credits, g.id, 'a gift link') on conflict (kind, ref) do nothing;
-    if found then
-      update agi1_credits set paid = least(paid + g.credits, 100000000), updated_at = now() where wallet_code = g.from_code;
+    if g.kind = 'bought' then
+      insert into agi1_credit_log (wallet_code, kind, amount, paid_part, ref, other)
+      values (g.from_code, 'unhold', g.credits, g.credits, g.id, 'a gift link') on conflict (kind, ref) do nothing;
+      if found then
+        update agi1_credits set paid = least(paid + g.credits, 100000000), updated_at = now() where wallet_code = g.from_code;
+      end if;
     end if;
     update agi1_credit_gifts set status = 'expired', done_at = now() where id = g.id;
     return json_build_object('ok', false, 'why', 'expired');
@@ -912,14 +1130,30 @@ begin
     return json_build_object('ok', false, 'why', 'held');
   end if;
   insert into agi1_credits (wallet_code) values (p_wallet) on conflict (wallet_code) do nothing;
-  update agi1_credits set paid = least(paid + g.credits, 100000000), updated_at = now() where wallet_code = p_wallet returning paid into v_paid;
+  if g.kind = 'owner' then
+    -- the owner's free credits: bonus ones (spent after this month's free ones, never given on as a gift), like credits for
+    -- testing; the log's 'gift' first, so it counts once
+    begin
+      insert into agi1_credit_log (wallet_code, kind, amount, paid_part, free_part, bonus_part, ref, other)
+      values (p_wallet, 'gift', g.credits, 0, 0, g.credits, g.id, g.from_label);
+    exception when unique_violation then
+      return json_build_object('ok', false, 'why', 'claimed', 'mine', true);
+    end;
+    update agi1_credits set bonus = least(bonus + g.credits, 100000000), updated_at = now() where wallet_code = p_wallet
+    returning paid, bonus into v_paid, v_bonus;
+  else
+    update agi1_credits set paid = least(paid + g.credits, 100000000), updated_at = now() where wallet_code = p_wallet
+    returning paid, bonus into v_paid, v_bonus;
+    insert into agi1_credit_log (wallet_code, kind, amount, paid_part, ref, other) values (p_wallet, 'receive', g.credits, g.credits, g.id, g.from_label);
+  end if;
   update agi1_credit_gifts set status = 'claimed', to_code = p_wallet, to_label = p_label, seen = true, done_at = now() where id = g.id;
-  insert into agi1_credit_log (wallet_code, kind, amount, paid_part, ref, other) values (p_wallet, 'receive', g.credits, g.credits, g.id, g.from_label);
-  return json_build_object('ok', true, 'credits', g.credits, 'from', g.from_label, 'paid', v_paid);
+  return json_build_object('ok', true, 'credits', g.credits, 'from', g.from_label, 'paid', v_paid, 'bonus', v_bonus,
+    'owner', g.kind = 'owner');
 end;
 $$;
 
--- Its sender takes a gift link back while nobody has claimed it (one past its days too: its credits come back either way).
+-- Its sender takes a gift link back while nobody has claimed it (one past its days too: its credits come back either way;
+-- (2026-10-12) one of the owner's gift links held nothing, so nothing comes back).
 -- → {"ok": true, "paid", "status" ("canceled" | "expired")} or {"ok": false, "why": "gone" | "state" (with "status") | "bad"}
 create or replace function public.inf_gift_cancel(p_id text, p_from text)
 returns json
@@ -938,11 +1172,14 @@ begin
   if not found or g.from_code <> p_from or g.token is null then return json_build_object('ok', false, 'why', 'gone'); end if;
   if g.status <> 'open' then return json_build_object('ok', false, 'why', 'state', 'status', g.status); end if;
   v_status := case when g.expires_at <= now() then 'expired' else 'canceled' end;
-  insert into agi1_credit_log (wallet_code, kind, amount, paid_part, ref, other)
-  values (p_from, 'unhold', g.credits, g.credits, g.id, 'a gift link') on conflict (kind, ref) do nothing;
-  if found then
-    update agi1_credits set paid = least(paid + g.credits, 100000000), updated_at = now() where wallet_code = p_from returning paid into v_paid;
-  else
+  if g.kind = 'bought' then
+    insert into agi1_credit_log (wallet_code, kind, amount, paid_part, ref, other)
+    values (p_from, 'unhold', g.credits, g.credits, g.id, 'a gift link') on conflict (kind, ref) do nothing;
+    if found then
+      update agi1_credits set paid = least(paid + g.credits, 100000000), updated_at = now() where wallet_code = p_from returning paid into v_paid;
+    end if;
+  end if;
+  if v_paid is null then
     select paid into v_paid from agi1_credits where wallet_code = p_from;
   end if;
   update agi1_credit_gifts set status = v_status, done_at = now() where id = g.id;
@@ -951,7 +1188,9 @@ end;
 $$;
 
 -- A wallet's gifts (the newest 40 it gave or got; its own open gift links with their secret, to copy them again) and its
--- invite rewards (the newest 20); the gifts it got are seen from now on. → {"gifts": […], "rewards": […]}
+-- invite rewards (the newest 20); the gifts it got are seen from now on. (2026-10-12) The owner's own gift links of free
+-- credits are on the owner's tab instead (inf_owner_links); one a wallet claimed says so ("owner").
+-- → {"gifts": […], "rewards": […]}
 create or replace function public.inf_gifts_mine(p_wallet text)
 returns json
 language plpgsql
@@ -969,8 +1208,8 @@ begin
         case when g.from_code = p_wallet then g.to_label else g.from_label end as other, g.note,
         case when g.status = 'open' and g.expires_at <= now() then 'expired' else g.status end as status,
         g.token is not null as link, case when g.from_code = p_wallet and g.status = 'open' and g.expires_at > now() then g.token end as token,
-        g.from_code = p_wallet or g.seen as seen, g.created_at, g.expires_at, g.done_at
-      from agi1_credit_gifts g where g.from_code = p_wallet or g.to_code = p_wallet
+        g.from_code = p_wallet or g.seen as seen, g.created_at, g.expires_at, g.done_at, g.kind = 'owner' as owner
+      from agi1_credit_gifts g where (g.from_code = p_wallet and g.kind = 'bought') or g.to_code = p_wallet
       order by g.created_at desc limit 40) x), '[]'::json),
     'rewards', coalesce((select json_agg(y order by y.at desc) from (
       select l.kind, l.amount, l.at from agi1_credit_log l where l.wallet_code = p_wallet and l.kind in ('ref', 'welcome')
@@ -1154,24 +1393,31 @@ language sql
 stable
 set search_path = public
 as $$
-  select row_to_json(u) from (select id, wallet_code, kind, status, why, seconds, real, created_at from agi1_inf_uploads where id = p_id) u;
+  select row_to_json(u) from (select id, wallet_code, kind, status, why, seconds, real, whole, head, created_at from agi1_inf_uploads where id = p_id) u;
 $$;
 
 -- Its file is in and checked: 'ok' (it may be used) or 'refused' (why: the AI check's reason); a clip's length; whether it's
--- a photo of a real person (round 2: then its influencer is never in Explore). (Round 2 added p_real: the older version is
--- dropped first, so the web API never has two to choose from.)
+-- a photo of a real person (round 2: then its influencer is never in Explore); (2026-10-11) a picture: whether it shows the
+-- whole person, head to feet, and its head's box (a box that isn't one is kept as none). (Round 2 added p_real, 2026-10-11
+-- p_whole and p_head: the older versions are dropped first, so the web API never has two to choose from.)
 drop function if exists public.inf_upload_set(text, text, text, numeric);
-create or replace function public.inf_upload_set(p_id text, p_status text, p_why text, p_seconds numeric, p_real boolean default false)
+drop function if exists public.inf_upload_set(text, text, text, numeric, boolean);
+create or replace function public.inf_upload_set(p_id text, p_status text, p_why text, p_seconds numeric, p_real boolean default false,
+  p_whole boolean default false, p_head smallint[] default null)
 returns boolean
 language plpgsql
 set search_path = public
 as $$
+declare
+  v_head smallint[] := case when p_head is not null and cardinality(p_head) = 4 and array_position(p_head, null) is null
+    and 0 <= all (p_head) and 1000 >= all (p_head) and p_head[3] > p_head[1] and p_head[4] > p_head[2] then p_head end;
 begin
   if p_status is null or p_status not in ('ok', 'refused') or (p_seconds is not null and (p_seconds <= 0 or p_seconds > 60)) then
     return false;
   end if;
   update agi1_inf_uploads set status = p_status, why = left(p_why, 40), seconds = coalesce(p_seconds, seconds),
-    real = coalesce(p_real, false), updated_at = now()
+    real = coalesce(p_real, false), whole = coalesce(p_whole, false) and kind = 'picture', head = case when kind = 'picture' then v_head end,
+    updated_at = now()
   where id = p_id and status in ('open', 'ok');
   return found;
 end;
@@ -1201,12 +1447,16 @@ $$;
 -- makes one that's never in Explore). Since round 2 never 'face' (old ones stay as they are). p_per_wallet: influencers one
 -- wallet may have being made at once · p_day_cap: AI jobs a day for the whole site · p_slots (round 2): influencers one
 -- wallet may have at all (not deleted, nor failed), plus the ones it unlocked by burning (agi1_inf_slots); null: no limit.
--- (Round 2 added p_slots: the older version is dropped first, so the web API never has two to choose from.)
--- → {"ok": true, "paid", "free", "bonus"} or {"ok": false, "why": "short" | "source" | "too_many" | "no_slot" | "busy_day" | "taken" | "bad"}
+-- (2026-10-11) p_style may be 'auto' (none picked) or one of 26; p_way: how one made from a picture starts ('looks': 4 looks to
+-- pick from, then its full body; 'body': just its full body, its first job; 'asis': the picture as it is, its first job too,
+-- only for a picture of the whole person, head to feet: 'not_full' otherwise, and always in its own look, 'auto').
+-- (Round 2 added p_slots, 2026-10-11 p_way: the older versions are dropped first, so the web API never has two to choose from.)
+-- → {"ok": true, "paid", "free", "bonus"} or {"ok": false, "why": "short" | "source" | "not_full" | "too_many" | "no_slot" | "busy_day" | "taken" | "bad"}
 drop function if exists public.inf_start(text, text, text, text, text, text, jsonb, text, text, integer, integer, integer, integer);
+drop function if exists public.inf_start(text, text, text, text, text, text, jsonb, text, text, integer, integer, integer, integer, integer);
 create or replace function public.inf_start(p_id text, p_job text, p_wallet text, p_name text, p_mode text, p_style text,
   p_settings jsonb, p_words text, p_source text, p_level integer, p_cost integer, p_per_wallet integer, p_day_cap integer,
-  p_slots integer default null)
+  p_slots integer default null, p_way text default 'looks')
 returns json
 language plpgsql
 set search_path = public
@@ -1217,11 +1467,13 @@ declare
 begin
   if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_job is null or p_job !~ '^[A-Za-z0-9_-]{22}$' or p_id = p_job
      or p_wallet is null or char_length(p_wallet) not between 16 and 64 or p_name is null or char_length(p_name) not between 1 and 24
-     or p_mode is null or p_mode not in ('design', 'picture') or p_style is null or p_style not in ('real', 'anime', 'toon')
+     or p_mode is null or p_mode not in ('design', 'picture') or p_style is null or p_style not in ('auto', 'real', 'film', 'editorial', 'cinematic', 'anime', 'storybook', 'retro', 'manga', 'webcomic', 'comic', 'celshade', 'toon', 'clay', 'toy', 'plush', 'pixel', 'lowpoly', 'watercolor', 'oil', 'sketch', 'popart', 'ukiyoe', 'fantasy', 'cyberpunk', 'vaporwave', 'papercut')
      or p_settings is null or jsonb_typeof(p_settings) <> 'object' or char_length(coalesce(p_words, '')) > 200
      or p_level is null or p_level not between 1 and 3 or p_cost is null or p_cost not between 0 and 100000
      or p_per_wallet is null or p_per_wallet < 1 or p_day_cap is null or p_day_cap < 1 or (p_slots is not null and p_slots < 1)
-     or (p_mode = 'design') <> (p_source is null) then
+     or (p_mode = 'design') <> (p_source is null)
+     or p_way is null or p_way not in ('looks', 'body', 'asis') or (p_way <> 'looks' and p_mode <> 'picture')
+     or (p_way = 'asis' and p_style <> 'auto') then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
   perform pg_advisory_xact_lock(hashtext('agi1-inf-wallet:' || p_wallet));
@@ -1234,6 +1486,8 @@ begin
     if not found or u.wallet_code <> p_wallet or u.kind <> p_mode or u.status <> 'ok' then
       return json_build_object('ok', false, 'why', 'source');
     end if;
+    -- (2026-10-11) the picture as it is: only one of the whole person, head to feet
+    if p_way = 'asis' and not coalesce(u.whole, false) then return json_build_object('ok', false, 'why', 'not_full'); end if;
   end if;
   if (select count(*) from agi1_inf where wallet_code = p_wallet and status in ('looks', 'pick', 'body')) >= p_per_wallet then
     return json_build_object('ok', false, 'why', 'too_many');
@@ -1252,10 +1506,12 @@ begin
     else
       s := inf_credits(p_wallet);
     end if;
-    insert into agi1_inf (id, wallet_code, name, mode, style, settings, words, source, status, first_job, public, real, level)
-    values (p_id, p_wallet, p_name, p_mode, p_style, p_settings, coalesce(p_words, ''), p_source, 'looks', p_job,
-      not coalesce(u.real, false), coalesce(u.real, false), p_level);
-    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, cost) values (p_job, p_id, p_wallet, 'looks', p_cost);
+    -- its first job: its looks, or (2026-10-11, from a picture) its full body straight away
+    insert into agi1_inf (id, wallet_code, name, mode, style, settings, words, source, status, first_job, public, real, level, way)
+    values (p_id, p_wallet, p_name, p_mode, p_style, p_settings, coalesce(p_words, ''), p_source,
+      case when p_way = 'looks' then 'looks' else 'body' end, p_job, not coalesce(u.real, false), coalesce(u.real, false), p_level, p_way);
+    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, cost)
+    values (p_job, p_id, p_wallet, case when p_way = 'looks' then 'looks' else 'body' end, p_cost);
     if p_source is not null then update agi1_inf_uploads set status = 'used', updated_at = now() where id = p_source; end if;
   exception
     when unique_violation then return json_build_object('ok', false, 'why', 'taken');
@@ -1269,6 +1525,76 @@ $$;
 
 -- An influencer as our server needs it (the page gets only some of it), with the looks or full body being made for it now
 -- (since round 4 with when it started, for its progress bar) and its maker's clank.trade username, if they showed one
+-- (2026-10-11) Its profile picture (agi1_inf.pfp), while the picture it was framed from is still shown (done, not taken down);
+-- else none, and its picked look shows instead
+create or replace function public.inf_pfp_of(p_pfp jsonb)
+returns jsonb
+language sql
+stable
+set search_path = public
+as $$
+  select case when p_pfp is not null and exists (select 1 from agi1_inf_jobs j where j.id = p_pfp ->> 'job' and j.status = 'done'
+      and not j.hidden) then p_pfp end;
+$$;
+
+-- (2026-10-11) Its maker changes its profile picture to a square framed in one of its own pictures (only how it's shown: its
+-- photos, videos and 3D models are still made from its full body), or (p_pfp null) puts its picked look back. Our server has
+-- kept the new picture's files first; it deletes the old one's (→ "old": its id), or the new one's on a "no".
+-- p_pfp: {"id", "job", "n", "x", "y", "s"} (numbers; x and y 0 to 1000, s 200 to 1000). → {"ok": true, "old"} or {"ok":
+-- false, "why": "gone" | "not_yours" | "banned" | "not_ready" | "source" (not one of its own pictures, done and shown) | "bad"}
+create or replace function public.inf_pfp_set(p_id text, p_wallet text, p_pfp jsonb)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  i agi1_inf%rowtype;
+  j agi1_inf_jobs%rowtype;
+  v_n integer;
+  v_x integer;
+  v_y integer;
+  v_s integer;
+begin
+  if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null or char_length(p_wallet) not between 16 and 64 then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  if p_pfp is not null then
+    if jsonb_typeof(p_pfp) <> 'object' or coalesce(p_pfp ->> 'id', '') !~ '^[A-Za-z0-9_-]{22}$'
+       or coalesce(p_pfp ->> 'job', '') !~ '^[A-Za-z0-9_-]{22}$' or p_pfp ->> 'id' = p_pfp ->> 'job'
+       or jsonb_typeof(p_pfp -> 'n') is distinct from 'number' or jsonb_typeof(p_pfp -> 'x') is distinct from 'number'
+       or jsonb_typeof(p_pfp -> 'y') is distinct from 'number' or jsonb_typeof(p_pfp -> 's') is distinct from 'number'
+       or p_pfp ->> 'n' !~ '^[0-3]$' or p_pfp ->> 'x' !~ '^[0-9]{1,4}$' or p_pfp ->> 'y' !~ '^[0-9]{1,4}$'
+       or p_pfp ->> 's' !~ '^[0-9]{1,4}$' then
+      return json_build_object('ok', false, 'why', 'bad');
+    end if;
+    v_n := (p_pfp ->> 'n')::integer;
+    v_x := (p_pfp ->> 'x')::integer;
+    v_y := (p_pfp ->> 'y')::integer;
+    v_s := (p_pfp ->> 's')::integer;
+    if v_x > 1000 or v_y > 1000 or v_s not between 200 and 1000 then return json_build_object('ok', false, 'why', 'bad'); end if;
+  end if;
+  select * into i from agi1_inf where id = p_id for update;
+  if not found or i.status = 'deleted' or i.hidden then return json_build_object('ok', false, 'why', 'gone'); end if;
+  if i.wallet_code <> p_wallet then return json_build_object('ok', false, 'why', 'not_yours'); end if;
+  if i.banned or exists (select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null) then
+    return json_build_object('ok', false, 'why', 'banned');
+  end if;
+  if i.status <> 'ready' then return json_build_object('ok', false, 'why', 'not_ready'); end if;
+  if p_pfp is not null then
+    select * into j from agi1_inf_jobs where id = p_pfp ->> 'job';
+    if not found or j.inf_id is distinct from p_id or j.kind not in ('looks', 'body', 'photo') or j.status <> 'done' or j.hidden
+       or v_n >= greatest(j.files, 1) then
+      return json_build_object('ok', false, 'why', 'source');
+    end if;
+  end if;
+  update agi1_inf set pfp = case when p_pfp is null then null else jsonb_build_object('id', p_pfp ->> 'id', 'job', p_pfp ->> 'job',
+      'n', v_n, 'x', v_x, 'y', v_y, 's', v_s) end, updated_at = now()
+  where id = p_id;
+  return json_build_object('ok', true, 'old', i.pfp ->> 'id');
+end;
+$$;
+
+-- (2026-10-11: and its profile picture, while the picture it was framed from is still shown: inf_pfp_of)
 create or replace function public.inf_get(p_id text)
 returns json
 language sql
@@ -1278,7 +1604,7 @@ as $$
   select row_to_json(x) from (
     select i.id, i.wallet_code, i.name, i.mode, i.style, i.settings, i.words, i.source, i.status, i.first_job, i.looks_job, i.pick,
       i.body_job, i.body_tries, i.error, i.public, i.hidden, i.level, i.created_at, i.updated_at, i.ready_at, i.real, i.boost_until,
-      i.banned,
+      i.banned, i.way, inf_pfp_of(i.pfp) as pfp,
       (select json_build_object('id', j.id, 'kind', j.kind, 'status', j.status, 'saving', j.saving, 'req', j.req is not null,
            'created', j.created_at)
          from agi1_inf_jobs j where j.inf_id = i.id and j.kind in ('looks', 'body') and j.status in ('paid', 'making')
@@ -1360,11 +1686,16 @@ $$;
 --   "banner" | "too_many" | "short" | "busy_day" | "taken" | "bad"}
 -- (Round 4, phase 4 added p_model … p_caption, with defaults: the older version is dropped first, so the web API never has
 -- two to choose from; an older page's call still works: Classic, Standard for 5 s.)
+-- (2026-10-12, the editor) p_edit: "Edit with words", a photo made from one of its own (p_image) with this change (3 to 200
+-- characters), by Classic, no references, the photo's own shape and a meme's own format and words; round 4's phase 4 version
+-- is dropped first too. Without p_edit a photo never starts from another one, as before.
 drop function if exists public.inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer);
+drop function if exists public.inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,
+  integer, text[], integer, text, text);
 create or replace function public.inf_make(p_job text, p_inf text, p_wallet text, p_kind text, p_scene text, p_shape text, p_sound boolean,
   p_trend text, p_clip text, p_image text, p_cost integer, p_per_wallet integer, p_day_cap integer, p_model text default null,
   p_quality text default null, p_seconds integer default null, p_refs text[] default null, p_parts integer default 1,
-  p_meme text default null, p_caption text default null)
+  p_meme text default null, p_caption text default null, p_edit text default null)
 returns json
 language plpgsql
 set search_path = public
@@ -1379,7 +1710,10 @@ begin
        or p_shape not in ('tall', 'wide', 'square', 'banner') or p_trend is not null or p_clip is not null))
      or (p_kind <> 'photo' and p_shape = 'banner')
      or (p_kind = 'trend' and ((p_trend is null) = (p_clip is null) or p_scene is not null))
-     or (p_kind = 'photo' and p_image is not null)
+     or (p_kind = 'photo' and p_image is not null and p_edit is null)
+     -- (2026-10-12, the editor) "Edit with words": only a photo, from one of its own, by Classic, without references
+     or (p_edit is not null and (p_kind <> 'photo' or p_image is null or char_length(p_edit) not between 3 and 200
+       or p_model is distinct from 'classic' or p_refs is not null))
      -- (round 4, phase 4) the model menu: a photo's model is Classic or Crisp, a video's Standard, Pro, Anime or Long; a long
      -- video has 2 to 4 parts (a trend is as before: none of it); a meme is a Classic photo with its words; references 1 to 4
      or (p_model is not null and not ((p_kind = 'photo' and p_model in ('classic', 'crisp'))
@@ -1410,11 +1744,16 @@ begin
     return json_build_object('ok', false, 'why', 'clip');
   end if;
   if p_image is not null and not exists (select 1 from agi1_inf_jobs where id = p_image and inf_id = p_inf and kind = 'photo'
-      and status = 'done' and not hidden) then
+      and status = 'done' and not hidden and deleted_at is null) then
     return json_build_object('ok', false, 'why', 'image');
   end if;
-  if p_image is not null and exists (select 1 from agi1_inf_jobs where id = p_image and shape = 'banner') then
+  if p_image is not null and p_edit is null and exists (select 1 from agi1_inf_jobs where id = p_image and shape = 'banner') then
     return json_build_object('ok', false, 'why', 'banner');
+  end if;
+  -- (2026-10-12) an edit keeps the photo's own shape (an X banner stays one), and a meme its own format and words
+  if p_edit is not null and not exists (select 1 from agi1_inf_jobs where id = p_image and shape = p_shape
+      and meme is not distinct from p_meme and caption is not distinct from p_caption) then
+    return json_build_object('ok', false, 'why', 'bad');
   end if;
   -- (round 4, phase 4) its references: this wallet's own, looked at and passed, from the last day, each once
   if p_refs is not null and (select count(distinct id) from agi1_inf_uploads where id = any(p_refs) and wallet_code = p_wallet
@@ -1433,9 +1772,9 @@ begin
       s := inf_credits(p_wallet);
     end if;
     insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, sound, trend, clip, image, cost, model, quality, seconds,
-      refs, parts, meme, caption)
+      refs, parts, meme, caption, edit)
     values (p_job, p_inf, p_wallet, p_kind, p_scene, p_shape, coalesce(p_sound, false) and p_kind = 'video', p_trend, p_clip, p_image, p_cost,
-      p_model, p_quality, p_seconds, p_refs, p_parts, p_meme, p_caption);
+      p_model, p_quality, p_seconds, p_refs, p_parts, p_meme, p_caption, p_edit);
   exception
     when unique_violation then return json_build_object('ok', false, 'why', 'taken');
     when sqlstate 'P0001' then
@@ -1458,10 +1797,12 @@ as $$
     select j.id, j.inf_id, j.wallet_code, j.kind, j.scene, j.shape, j.sound, j.trend, j.clip, j.image, j.pick, j.cost, j.status, j.req,
       j.status_url, j.result_url, j.saving, j.tries, j.error, j.refunded, j.files, j.bytes, j.poster, j.hidden, j.started_at,
       j.created_at, j.updated_at, j.done_at, j.example, j.marked, j.mark_tries, j.likes,
-      j.model, j.quality, j.seconds, j.refs, j.parts, j.part, j.meme, j.caption,
+      j.model, j.quality, j.seconds, j.refs, j.parts, j.part, j.meme, j.caption, j.deleted_at, j.edit, j.editor, j.cut,
       i.name as inf_name, i.mode as inf_mode, i.style as inf_style, i.settings as inf_settings, i.words as inf_words,
       i.source as inf_source, i.status as inf_status, i.looks_job as inf_looks_job, i.pick as inf_pick, i.body_job as inf_body_job,
       i.hidden as inf_hidden, i.public as inf_public, i.real as inf_real, i.banned as inf_banned,
+      -- (2026-10-11) how it started from its picture, and where that picture's head is (the picture as it is: its portrait)
+      i.way as inf_way, (select u.head from agi1_inf_uploads u where u.id = i.source) as inf_head,
       (select t.job from agi1_inf_trends t where t.id = j.trend) as trend_job
     from agi1_inf_jobs j left join agi1_inf i on i.id = j.inf_id where j.id = p_id
   ) x;
@@ -1519,8 +1860,9 @@ as $$
 $$;
 
 -- Done: its files are kept (p_files pictures, or a video of p_bytes). Its looks are shown to pick from; its full body makes
--- its influencer ready; a trend clip waits for the owner's look (an example picture is shown at once: the owner sees it on
--- the owner's page and can make it again).
+-- its influencer ready (2026-10-11: one that started with its full body has no looks: its portrait is that job's second
+-- picture); a trend clip waits for the owner's look (an example picture is shown at once: the owner sees it on the owner's
+-- page and can make it again).
 create or replace function public.inf_job_done(p_id text, p_files integer, p_bytes integer)
 returns boolean
 language plpgsql
@@ -1538,7 +1880,10 @@ begin
   if j.kind = 'looks' then
     update agi1_inf set status = 'pick', looks_job = p_id, error = null, updated_at = now() where id = j.inf_id and status = 'looks';
   elsif j.kind = 'body' then
-    update agi1_inf set status = 'ready', body_job = p_id, error = null, ready_at = now(), updated_at = now() where id = j.inf_id and status = 'body';
+    update agi1_inf set status = 'ready', body_job = p_id,
+      looks_job = case when way = 'looks' then looks_job else p_id end,
+      pick = case when way = 'looks' then pick when p_files >= 2 then 1 else 0 end,
+      error = null, ready_at = now(), updated_at = now() where id = j.inf_id and status = 'body';
   elsif j.kind = 'preset' then
     update agi1_inf_trends set status = 'review', updated_at = now() where id = j.trend and job = p_id;
   end if;
@@ -1548,7 +1893,7 @@ $$;
 
 -- It couldn't be made: why (a few words for the page), and its credits given back (p_refund). Its influencer goes back to
 -- its looks (a full body tried again, free, at most 3 times: then it can't be made, and its creation's credits come back), or
--- can't be made (its first looks).
+-- can't be made (its first looks; 2026-10-11: its full body when it had no looks to go back to, its credits back).
 create or replace function public.inf_job_fail(p_id text, p_error text, p_refund boolean)
 returns boolean
 language plpgsql
@@ -1578,7 +1923,7 @@ begin
     update agi1_inf set status = case when i.looks_job is null then 'failed' else 'pick' end, error = left(p_error, 200), updated_at = now()
     where id = i.id;
   elsif j.kind = 'body' and i.status = 'body' then
-    if i.body_tries + 1 >= 3 then
+    if i.way <> 'looks' or i.body_tries + 1 >= 3 then
       update agi1_inf set status = 'failed', body_tries = i.body_tries + 1, error = left(p_error, 200), updated_at = now() where id = i.id;
       if i.first_job is not null and inf_refund(i.first_job) then
         update agi1_inf_jobs set refunded = true where id = i.first_job;
@@ -1612,12 +1957,13 @@ language sql
 set search_path = public
 as $$
   update agi1_inf_jobs set poster = true, updated_at = now() where id = p_job and status = 'done' and kind in ('trend', 'video', 'preset')
+    and deleted_at is null   -- (2026-10-12) never one its maker deleted meanwhile (our server then deletes the poster it kept)
   returning true;
 $$;
 
 -- ---------- what the pages show ----------
 -- An influencer's photos and videos: the done ones (not hidden) for everyone; its own wallet's others too (being made, and
--- ones that couldn't be made in the last week), the newest first
+-- ones that couldn't be made in the last week), the newest first; (2026-10-12) never one its maker deleted
 create or replace function public.inf_jobs(p_inf text, p_wallet text, p_limit integer)
 returns json
 language sql
@@ -1630,11 +1976,11 @@ as $$
       'cost', cost, 'files', files, 'bytes', bytes, 'poster', poster, 'created_at', created_at, 'done_at', done_at,
       'likes', likes, 'marked', marked,
       'model', model, 'quality', quality, 'seconds', seconds, 'refs', coalesce(cardinality(refs), 0), 'parts', parts, 'part', part,
-      'meme', meme, 'caption', caption,
+      'meme', meme, 'caption', caption, 'edit', edit, 'editor', editor,
       'mine', coalesce(wallet_code = p_wallet, false)) order by coalesce(done_at, created_at) desc), '[]'::json)
   from (
     select * from agi1_inf_jobs
-    where inf_id = p_inf and kind in ('photo', 'trend', 'video')
+    where inf_id = p_inf and kind in ('photo', 'trend', 'video') and deleted_at is null
       and ((status = 'done' and not hidden)
         or (p_wallet is not null and wallet_code = p_wallet and status <> 'done' and updated_at > now() - interval '7 days'))
     order by coalesce(done_at, created_at) desc
@@ -1642,7 +1988,7 @@ as $$
   ) d;
 $$;
 
--- One wallet's influencers (not deleted), the newest first
+-- One wallet's influencers (not deleted), the newest first (2026-10-11: with their profile pictures)
 create or replace function public.inf_mine(p_wallet text, p_limit integer)
 returns json
 language sql
@@ -1651,7 +1997,7 @@ set search_path = public
 as $$
   select coalesce(json_agg(json_build_object('id', id, 'name', name, 'mode', mode, 'style', style, 'status', status, 'looks_job', looks_job,
       'pick', pick, 'body_job', body_job, 'public', public, 'hidden', hidden, 'created_at', created_at, 'ready_at', ready_at,
-      'real', real, 'boost_until', boost_until)
+      'real', real, 'boost_until', boost_until, 'pfp', inf_pfp_of(pfp))
       order by created_at desc), '[]'::json)
   from (
     select * from agi1_inf where wallet_code = p_wallet and status <> 'deleted'
@@ -1663,6 +2009,7 @@ $$;
 -- and videos (with their likes), the kept trend clips, the boosted influencers (a burn unlocked it: round 2) and the
 -- spotlight of the week (the newest one the owner approved, in the last two weeks). (Round 4) each with its maker's
 -- clank.trade username when they showed one ("by @name"), and no X banners among the fresh photos (an X header, not a post).
+-- (2026-10-11) And each influencer's profile picture, when its maker framed one (inf_pfp_of).
 create or replace function public.inf_explore(p_limit integer)
 returns json
 language sql
@@ -1671,17 +2018,17 @@ set search_path = public
 as $$
   select json_build_object(
     'influencers', (select coalesce(json_agg(json_build_object('id', a.id, 'name', a.name, 'style', a.style, 'looks_job', a.looks_job,
-        'pick', a.pick, 'body_job', a.body_job, 'ready_at', a.ready_at, 'maker', n.name) order by a.ready_at desc), '[]'::json)
+        'pick', a.pick, 'body_job', a.body_job, 'ready_at', a.ready_at, 'maker', n.name, 'pfp', inf_pfp_of(a.pfp)) order by a.ready_at desc), '[]'::json)
       from (select * from agi1_inf where status = 'ready' and public and not hidden and mode <> 'face' and not real and not banned
         order by ready_at desc limit least(greatest(coalesce(p_limit, 24), 1), 60)) a
       left join agi1_inf_names n on n.wallet_code = a.wallet_code),
     'fresh', (select coalesce(json_agg(json_build_object('id', j.id, 'kind', j.kind, 'shape', j.shape, 'trend', j.trend, 'poster', j.poster,
         'files', j.files, 'likes', j.likes, 'inf_id', j.inf_id, 'inf_name', j.inf_name, 'looks_job', j.inf_looks_job, 'pick', j.inf_pick,
         'done_at', j.done_at, 'maker', n.name, 'model', j.model, 'quality', j.quality, 'seconds', j.seconds, 'sound', j.sound, 'meme', j.meme,
-        'caption', j.caption) order by j.done_at desc), '[]'::json)
+        'caption', j.caption, 'pfp', inf_pfp_of(j.inf_pfp)) order by j.done_at desc), '[]'::json)
       from (select x.id, x.kind, x.shape, x.trend, x.poster, x.files, x.likes, x.inf_id, x.done_at, x.model, x.quality, x.seconds, x.sound,
           x.meme, x.caption, i.name as inf_name,
-          i.looks_job as inf_looks_job, i.pick as inf_pick, i.wallet_code as inf_wallet
+          i.looks_job as inf_looks_job, i.pick as inf_pick, i.wallet_code as inf_wallet, i.pfp as inf_pfp
         from agi1_inf_jobs x join agi1_inf i on i.id = x.inf_id
         where x.status = 'done' and x.kind in ('photo', 'trend', 'video') and not x.hidden and i.status = 'ready' and i.public and not i.hidden
           and i.mode <> 'face' and not i.real and not i.banned and x.shape is distinct from 'banner'
@@ -1690,14 +2037,15 @@ as $$
     'trends', (select coalesce(json_agg(json_build_object('id', t.id, 'job', t.job, 'poster', j.poster, 'bytes', j.bytes) order by t.sort, t.id), '[]'::json)
       from agi1_inf_trends t join agi1_inf_jobs j on j.id = t.job where t.status = 'kept' and j.status = 'done'),
     'boosted', (select coalesce(json_agg(json_build_object('id', b.id, 'name', b.name, 'style', b.style, 'looks_job', b.looks_job, 'pick', b.pick,
-        'body_job', b.body_job, 'until', b.boost_until, 'maker', n.name) order by b.boost_until desc), '[]'::json)
+        'body_job', b.body_job, 'until', b.boost_until, 'maker', n.name, 'pfp', inf_pfp_of(b.pfp)) order by b.boost_until desc), '[]'::json)
       from (select * from agi1_inf where boost_until > now() and status = 'ready' and public and not hidden and mode <> 'face' and not real
           and not banned
         order by boost_until desc limit 12) b
       left join agi1_inf_names n on n.wallet_code = b.wallet_code),
     'spotlight', (select row_to_json(s) from (
         select w.week, w.status, w.holder_likes, w.likes, w.prize, j.id, j.kind, j.shape, j.poster, j.files, j.inf_id,
-          i.name as inf_name, i.looks_job, i.pick, (select n.name from agi1_inf_names n where n.wallet_code = i.wallet_code) as maker
+          i.name as inf_name, i.looks_job, i.pick, (select n.name from agi1_inf_names n where n.wallet_code = i.wallet_code) as maker,
+          inf_pfp_of(i.pfp) as pfp
         from agi1_inf_weeks w join agi1_inf_jobs j on j.id = w.job_id join agi1_inf i on i.id = j.inf_id
         where w.status in ('approved', 'claimed', 'sending', 'sent') and w.week >= (date_trunc('week', now() at time zone 'utc')::date - 14)
           and j.status = 'done' and not j.hidden and i.status = 'ready' and not i.hidden and not i.banned
@@ -1762,7 +2110,204 @@ returns boolean
 language sql
 set search_path = public
 as $$
-  update agi1_inf_jobs set hidden = coalesce(p_hidden, true), updated_at = now() where id = p_id returning true;
+  -- (2026-10-12) one its maker deleted is never shown again
+  update agi1_inf_jobs set hidden = coalesce(p_hidden, true), updated_at = now()
+  where id = p_id and (deleted_at is null or coalesce(p_hidden, true)) returning true;
+$$;
+
+-- (2026-10-12, the editor) Its maker deletes one of its photos (a meme, an X banner), videos or trend videos, done or one that
+-- couldn't be made: hidden from every page at once and for good, and our server deletes its files. When its influencer's
+-- profile picture was framed from it, that goes back to its picked look (inf_pfp_of stops showing it anyway once it's hidden),
+-- and its own id comes back for our server to delete its files. Never while it's being made, or while a video or a trend video
+-- is being made from it; its credits don't come back (it was made: one that couldn't be made got them back already). Deleting
+-- still works for a banned wallet. → {"ok": true, "inf", "kind", "files", "parts", "pfp"} or {"ok": false, "why": "bad" |
+-- "gone" | "not_yours" | "making" | "in_use"}
+-- (Locks: this job, then its influencer, only when its profile picture was framed from it, and never once it's being made, so
+-- it can't wait on inf_delete, which locks the influencer and then its jobs being made.)
+create or replace function public.inf_job_delete(p_id text, p_wallet text)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  j agi1_inf_jobs%rowtype;
+  v_pfp text;
+begin
+  if p_id is null or p_id !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null or char_length(p_wallet) not between 16 and 64 then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  select * into j from agi1_inf_jobs where id = p_id for update;
+  if not found or j.kind not in ('photo', 'trend', 'video') or j.deleted_at is not null
+     or exists (select 1 from agi1_inf where id = j.inf_id and status = 'deleted') then
+    return json_build_object('ok', false, 'why', 'gone');
+  end if;
+  if j.wallet_code is distinct from p_wallet then return json_build_object('ok', false, 'why', 'not_yours'); end if;
+  if j.status in ('paid', 'making') then return json_build_object('ok', false, 'why', 'making'); end if;
+  if exists (select 1 from agi1_inf_jobs x where x.inf_id = j.inf_id and x.image = p_id and x.status in ('paid', 'making')) then
+    return json_build_object('ok', false, 'why', 'in_use');
+  end if;
+  select pfp ->> 'id' into v_pfp from agi1_inf where id = j.inf_id and pfp ->> 'job' = p_id for update;
+  if found then update agi1_inf set pfp = null, updated_at = now() where id = j.inf_id; end if;
+  update agi1_inf_jobs set hidden = true, deleted_at = now(), lease_until = null, updated_at = now() where id = p_id;
+  return json_build_object('ok', true, 'inf', j.inf_id, 'kind', j.kind, 'files', j.files, 'parts', j.parts, 'pfp', v_pfp);
+end;
+$$;
+
+-- (2026-10-12, the editor) The photo editor and, to come, the video editor: one use counted for a wallet and for the whole
+-- site's day (p_tool 'photo': a photo saved from the photo editor, looked at by Gemini first; 'video'); p_take false only says
+-- whether one is left (nothing counted). → {"ok": true, "left"} or {"ok": false, "why": "too_many" | "busy_day" | "bad"}
+create or replace function public.inf_tool_take(p_wallet text, p_tool text, p_per_day integer, p_site_cap integer, p_take boolean default true)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  today date := (now() at time zone 'utc')::date;
+  mine integer;
+  site integer;
+begin
+  if p_wallet is null or char_length(p_wallet) not between 16 and 64 or p_tool is null or p_tool not in ('photo', 'video')
+     or p_per_day is null or p_per_day < 1 or p_site_cap is null or p_site_cap < 1 then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  insert into agi1_inf_tool_days (wallet_code, day, tool) values (p_wallet, today, p_tool) on conflict do nothing;
+  select n into mine from agi1_inf_tool_days where wallet_code = p_wallet and day = today and tool = p_tool for update;
+  if mine >= p_per_day then return json_build_object('ok', false, 'why', 'too_many'); end if;
+  insert into agi1_inf_days (day) values (today) on conflict (day) do nothing;
+  select case when p_tool = 'photo' then photo_edits else video_edits end into site from agi1_inf_days where day = today for update;
+  if site >= p_site_cap then return json_build_object('ok', false, 'why', 'busy_day'); end if;
+  if not coalesce(p_take, true) then return json_build_object('ok', true, 'left', p_per_day - mine); end if;
+  update agi1_inf_days set photo_edits = photo_edits + (p_tool = 'photo')::int, video_edits = video_edits + (p_tool = 'video')::int
+  where day = today;
+  update agi1_inf_tool_days set n = n + 1 where wallet_code = p_wallet and day = today and tool = p_tool;
+  return json_build_object('ok', true, 'left', p_per_day - mine - 1);
+end;
+$$;
+
+-- (2026-10-12, the editor) A photo saved from the photo editor (its files kept by our server first, after Gemini looked at
+-- it: server/inf-editor.js): a done photo of the same influencer, free, made from p_from (its maker's own photo, done, shown,
+-- never deleted), marked as the editor's; its scene the photo's (it says where it is), its shape p_shape (an X banner only
+-- from one, and it stays one). Never a banned wallet's. → {"ok": true} or {"ok": false, "why": "bad" | "gone" | "not_yours" |
+-- "banned" | "not_ready" | "image" | "taken"}
+create or replace function public.inf_photo_add(p_job text, p_inf text, p_wallet text, p_from text, p_shape text, p_bytes integer)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  i agi1_inf%rowtype;
+  f agi1_inf_jobs%rowtype;
+begin
+  if p_job is null or p_job !~ '^[A-Za-z0-9_-]{22}$' or p_from is null or p_wallet is null or p_shape is null
+     or p_shape not in ('tall', 'wide', 'square', 'banner') or p_bytes is null or p_bytes not between 1 and 10000000 then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  perform pg_advisory_xact_lock(hashtext('agi1-inf-wallet:' || p_wallet));
+  select * into i from agi1_inf where id = p_inf;
+  if not found or i.status = 'deleted' or i.hidden then return json_build_object('ok', false, 'why', 'gone'); end if;
+  if i.wallet_code <> p_wallet then return json_build_object('ok', false, 'why', 'not_yours'); end if;
+  if exists (select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null) then
+    return json_build_object('ok', false, 'why', 'banned');
+  end if;
+  if i.status <> 'ready' then return json_build_object('ok', false, 'why', 'not_ready'); end if;
+  select * into f from agi1_inf_jobs where id = p_from;
+  if not found or f.inf_id is distinct from p_inf or f.kind <> 'photo' or f.status <> 'done' or f.hidden or f.deleted_at is not null then
+    return json_build_object('ok', false, 'why', 'image');
+  end if;
+  if (f.shape = 'banner') <> (p_shape = 'banner') then return json_build_object('ok', false, 'why', 'bad'); end if;
+  begin
+    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, image, cost, status, files, bytes, editor, done_at)
+    values (p_job, p_inf, p_wallet, 'photo', f.scene, p_shape, p_from, 0, 'done', 1, p_bytes, true, now());
+  exception when unique_violation then
+    return json_build_object('ok', false, 'why', 'taken');
+  end;
+  return json_build_object('ok', true);
+end;
+$$;
+
+-- (2026-10-12, the editor) A video saved from the video editor (the owner's choice: "Video editor": free, 10 a day per wallet):
+-- made from one of its maker's own videos or trend videos (p_from: done, shown, never deleted, of a ready influencer of this
+-- wallet), what was asked (p_cut, checked by our server: src/studio/video-edit.js cutSpec; its layer of words and stickers,
+-- when it has one, kept by our server first). One use counted (inf_tool_take 'video': p_per_day a wallet, p_site_cap the whole
+-- site), then a video of the same influencer, free, waiting for our clock (status 'paid', its scene the one it's from): the
+-- clock makes it with ffmpeg (server/inf-cut.js), then Gemini looks at it (inf_cut_done). At most p_open of a wallet's being
+-- made at once. Never a banned wallet's. → {"ok": true, "left"} or {"ok": false, "why": "bad" | "gone" | "not_yours" |
+-- "banned" | "not_ready" | "from" | "cuts_open" | "too_many" | "busy_day" | "taken"}
+create or replace function public.inf_cut_add(p_job text, p_inf text, p_wallet text, p_from text, p_shape text, p_seconds integer,
+  p_sound boolean, p_cut jsonb, p_per_day integer, p_site_cap integer, p_open integer default 3)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  i agi1_inf%rowtype;
+  f agi1_inf_jobs%rowtype;
+  t json;
+begin
+  if p_job is null or p_job !~ '^[A-Za-z0-9_-]{22}$' or p_from is null or p_from !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null
+     or char_length(p_wallet) not between 16 and 64 or p_shape is null or p_shape not in ('tall', 'wide', 'square')
+     or p_seconds is null or p_seconds not between 1 and 15 or p_sound is null or p_cut is null or jsonb_typeof(p_cut) <> 'object'
+     or octet_length(p_cut::text) > 600 or p_per_day is null or p_per_day < 1 or p_site_cap is null or p_site_cap < 1
+     or p_open is null or p_open < 1 then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  perform pg_advisory_xact_lock(hashtext('agi1-inf-wallet:' || p_wallet));
+  select * into i from agi1_inf where id = p_inf;
+  if not found or i.status = 'deleted' or i.hidden then return json_build_object('ok', false, 'why', 'gone'); end if;
+  if i.wallet_code <> p_wallet then return json_build_object('ok', false, 'why', 'not_yours'); end if;
+  if exists (select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null) then
+    return json_build_object('ok', false, 'why', 'banned');
+  end if;
+  if i.status <> 'ready' then return json_build_object('ok', false, 'why', 'not_ready'); end if;
+  select * into f from agi1_inf_jobs where id = p_from;
+  if not found or f.inf_id is distinct from p_inf or f.kind not in ('video', 'trend') or f.status <> 'done' or f.hidden
+     or f.deleted_at is not null then
+    return json_build_object('ok', false, 'why', 'from');
+  end if;
+  if (select count(*) from agi1_inf_jobs where wallet_code = p_wallet and kind = 'video' and editor and status in ('paid', 'making')) >= p_open then
+    return json_build_object('ok', false, 'why', 'cuts_open');
+  end if;
+  begin
+    t := inf_tool_take(p_wallet, 'video', p_per_day, p_site_cap, true);
+    if (t ->> 'ok')::boolean is not true then raise exception using errcode = 'P0001', message = coalesce(t ->> 'why', 'busy'); end if;
+    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, sound, image, cost, status, seconds, editor, cut)
+    values (p_job, p_inf, p_wallet, 'video', f.scene, p_shape, p_sound, p_from, 0, 'paid', p_seconds, true, p_cut);
+  exception
+    when unique_violation then return json_build_object('ok', false, 'why', 'taken');
+    when sqlstate 'P0001' then
+      return json_build_object('ok', false, 'why', case when sqlerrm in ('too_many', 'busy_day') then sqlerrm else 'busy' end);
+  end;
+  return json_build_object('ok', true, 'left', (t ->> 'left')::integer);
+end;
+$$;
+
+-- (2026-10-12) A video from the video editor is made and Gemini passed it: done (its file kept by our server: p_bytes), with
+-- its sound or not (as made), its length (whole seconds, 1 to 15), its share mark in it (marked: its download is the video
+-- itself). Never one its maker deleted meanwhile. → true once
+create or replace function public.inf_cut_done(p_id text, p_bytes integer, p_sound boolean, p_seconds integer)
+returns boolean
+language sql
+set search_path = public
+as $$
+  update agi1_inf_jobs set status = 'done', files = 0, bytes = p_bytes, sound = coalesce(p_sound, false),
+    seconds = least(greatest(coalesce(p_seconds, seconds), 1), 15)::smallint, marked = true, mark_at = now(), saving = false,
+    status_url = null, result_url = null, lease_until = null, error = null, done_at = now(), updated_at = now()
+  where id = p_id and kind = 'video' and editor and status in ('paid', 'making') and deleted_at is null
+    and p_bytes between 1 and 100000000
+  returning true;
+$$;
+
+-- (2026-10-12) The video from the video editor whose turn it is (paid or being made, not someone else's turn), the
+-- longest-waiting first: the clock makes it first on even minutes (ffmpeg needs most of its time). → its id, or null
+create or replace function public.inf_cut_due()
+returns text
+language sql
+stable
+set search_path = public
+as $$
+  select id from agi1_inf_jobs
+  where editor and kind = 'video' and status in ('paid', 'making') and (lease_until is null or lease_until < now())
+  order by updated_at limit 1;
 $$;
 
 -- ---------- a 3D model of it (supabase/studio.sql's characters, made by Meshy from its full-body picture) ----------
@@ -1817,7 +2362,9 @@ begin
     insert into agi1_studio_orders (id, wallet_code, burn_code, name, about, style, level, usd_cents, agi, free, kind, paid, status, paid_at,
       inf_id, image_path)
     values (p_order, p_wallet, p_burn, i.name, 'Made from ' || i.name || '''s full-body picture in AGI Studio.',
-      case i.style when 'anime' then 'anime' when 'toon' then 'cartoon' else 'realistic' end, p_level, 0, 0, is_free,
+      case when i.style in ('anime', 'storybook', 'retro', 'manga', 'webcomic', 'celshade') then 'anime'
+        when i.style in ('toon', 'comic', 'clay', 'toy', 'plush', 'pixel', 'lowpoly', 'watercolor', 'sketch', 'popart', 'ukiyoe', 'vaporwave',
+          'papercut') then 'cartoon' else 'realistic' end, p_level, 0, 0, is_free,
       case when is_free then 'free' else 'credits' end, case when is_free then 0 else p_cost end, 'paid', now(),
       p_inf, 'inf/' || p_inf || '/' || i.body_job || '-0.jpg');
     update agi1_studio_months set made = made + 1 where month = m;
@@ -1913,7 +2460,9 @@ begin
   if m.burns + burn_live >= p_burn_cap then return json_build_object('ok', false, 'why', 'burns_sold_out'); end if;
   insert into agi1_studio_orders (id, wallet_code, burn_code, name, about, style, level, usd_cents, agi, free, kind, status, inf_id, image_path)
   values (p_order, p_wallet, p_burn, i.name, 'Made from ' || i.name || '''s full-body picture in AGI Studio.',
-    case i.style when 'anime' then 'anime' when 'toon' then 'cartoon' else 'realistic' end, p_level, 0, p_agi, false, 'burn', 'quote',
+    case when i.style in ('anime', 'storybook', 'retro', 'manga', 'webcomic', 'celshade') then 'anime'
+        when i.style in ('toon', 'comic', 'clay', 'toy', 'plush', 'pixel', 'lowpoly', 'watercolor', 'sketch', 'popart', 'ukiyoe', 'vaporwave',
+          'papercut') then 'cartoon' else 'realistic' end, p_level, 0, p_agi, false, 'burn', 'quote',
     p_inf, 'inf/' || p_inf || '/' || i.body_job || '-0.jpg')
   on conflict (id) do nothing;
   if not found then return json_build_object('ok', false, 'why', 'taken'); end if;
@@ -2058,6 +2607,7 @@ $$;
 -- ---------- the share mark on downloaded videos (round 2: server/inf-mark.js, on the studio's clock) ----------
 -- One done video to mark, the newest first (in its first 30 days): taken for 3 minutes, at most 3 tries (then its download
 -- stays unmarked). → {id, inf_id, kind, bytes, tries} or null (nothing to do)
+-- (2026-10-12: never one saved from the video editor: its mark is in it already)
 create or replace function public.inf_mark_take()
 returns json
 language plpgsql
@@ -2067,7 +2617,7 @@ declare
   r agi1_inf_jobs%rowtype;
 begin
   select * into r from agi1_inf_jobs
-  where kind in ('trend', 'video') and status = 'done' and not hidden and not marked and mark_tries < 3 and parts = 1
+  where kind in ('trend', 'video') and status = 'done' and not hidden and not marked and mark_tries < 3 and parts = 1 and not editor
     and (mark_at is null or mark_at < now() - interval '3 minutes') and done_at > now() - interval '30 days'
   order by done_at desc limit 1 for update skip locked;
   if not found then return null; end if;
@@ -2076,13 +2626,14 @@ begin
 end;
 $$;
 
--- Its marked copy is kept: downloads use it from now on
+-- Its marked copy is kept: downloads use it from now on (2026-10-12: never one its maker deleted meanwhile: our server then
+-- deletes the copy it kept)
 create or replace function public.inf_mark_done(p_job text)
 returns boolean
 language sql
 set search_path = public
 as $$
-  update agi1_inf_jobs set marked = true, mark_at = now() where id = p_job and status = 'done' returning true;
+  update agi1_inf_jobs set marked = true, mark_at = now() where id = p_job and status = 'done' and deleted_at is null returning true;
 $$;
 
 -- ---------- likes and the weekly spotlight (round 2: the owner's flywheel) ----------
@@ -2234,7 +2785,7 @@ end;
 $$;
 
 -- The weeks, the newest first (p_wallet: a signed-in wallet's own are marked "mine": its prize to claim). The owner's page
--- sees every state; the pages show approved ones.
+-- sees every state; the pages show approved ones. (2026-10-11: with each influencer's profile picture, inf_pfp_of.)
 create or replace function public.inf_weeks(p_wallet text, p_limit integer)
 returns json
 language sql
@@ -2244,7 +2795,7 @@ as $$
   select coalesce(json_agg(json_build_object('week', w.week, 'status', w.status, 'job', w.job_id, 'inf_id', w.inf_id,
       'holder_likes', w.holder_likes, 'likes', w.likes, 'prize', w.prize, 'tx', w.tx, 'kind', j.kind, 'shape', j.shape,
       'poster', j.poster, 'files', j.files, 'job_ok', coalesce(j.status = 'done' and not j.hidden, false), 'inf_name', i.name,
-      'looks_job', i.looks_job, 'pick', i.pick, 'skipped', cardinality(w.skipped),
+      'looks_job', i.looks_job, 'pick', i.pick, 'pfp', inf_pfp_of(i.pfp), 'skipped', cardinality(w.skipped),
       'mine', coalesce(w.wallet_code = p_wallet, false)) order by w.week desc), '[]'::json)
   from (select * from agi1_inf_weeks order by week desc limit least(greatest(coalesce(p_limit, 8), 1), 60)) w
   left join agi1_inf_jobs j on j.id = w.job_id left join agi1_inf i on i.id = w.inf_id;
@@ -2590,8 +3141,8 @@ end;
 $$;
 
 -- (2026-10-11) The wallets the owner let in while AGI Studio is private, newest first: each one's code (to take it away), its
--- short address, the owner's note, how it got in ('owner': the owner's tab; 'credits': credits for testing), since when, and
--- whether it's on the team too
+-- short address, the owner's note, how it got in ('owner': the owner's tab; 'credits': credits for testing; 'link': one of the
+-- owner's gift links claimed, since 2026-10-12), since when, and whether it's on the team too
 create or replace function public.inf_access_list()
 returns json
 language sql
@@ -2605,7 +3156,8 @@ as $$
 $$;
 
 -- The owner lets a wallet in (or changes its note), or takes it off the list (p_on false). Credits for testing (p_via
--- 'credits') let in a wallet that isn't on it yet, and never change one that is. At most p_max wallets.
+-- 'credits') and (2026-10-12) one of the owner's gift links claimed (p_via 'link') let in a wallet that isn't on it yet, and
+-- never change one that is. At most p_max wallets.
 -- → {"ok": true, "added": true | false} or {"ok": false, "why": "too_many" | "gone" | "bad"}
 create or replace function public.inf_access_set(p_wallet text, p_short text, p_note text, p_via text, p_on boolean, p_max integer)
 returns json
@@ -2621,7 +3173,7 @@ begin
     if not found then return json_build_object('ok', false, 'why', 'gone'); end if;
     return json_build_object('ok', true, 'added', false);
   end if;
-  if p_short is null or p_short !~ '^0x[0-9a-f]{4}…[0-9a-f]{4}$' or p_via is null or p_via not in ('owner', 'credits')
+  if p_short is null or p_short !~ '^0x[0-9a-f]{4}…[0-9a-f]{4}$' or p_via is null or p_via not in ('owner', 'credits', 'link')
      or (p_note is not null and char_length(p_note) not between 1 and 24) or p_max is null or p_max < 1 then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
@@ -2988,7 +3540,8 @@ end;
 $$;
 
 -- The owner's numbers: influencers (ready, made today and this week, being made), what was made today and this week by
--- kind (an X banner on its own: for the AI's cost), what failed today, credits bought (cents), spent and given (free this
+-- kind (an X banner on its own: for the AI's cost; since 2026-10-12 the photos and videos saved from the editors on their own
+-- too, 'edited' and 'cut': they cost only a look each), what failed today, credits bought (cents), spent and given (free this
 -- month, gifts this month; since round 4's phase 3 gifts between people this week, gift links waiting, invites' rewards and
 -- the wallets invited this month), wallets that made something this week, likes this week, 3D models this month, support
 -- tickets, reports, live bans and the AI helper's answers today
@@ -3009,10 +3562,12 @@ as $$
       'week', (select count(*) from agi1_inf where status <> 'deleted' and created_at > now() - interval '7 days'),
       'making', (select count(*) from agi1_inf where status in ('looks', 'pick', 'body'))),
     'jobs_today', (select coalesce(json_object_agg(k, n), '{}'::json) from (
-      select case when shape = 'banner' then 'banner' else kind end as k, count(*) as n from agi1_inf_jobs, b
+      select case when editor and kind = 'photo' then 'edited' when editor then 'cut' when shape = 'banner' then 'banner' else kind end as k,
+        count(*) as n from agi1_inf_jobs, b
       where created_at >= b.today and status <> 'failed' group by 1) x),
     'jobs_week', (select coalesce(json_object_agg(k, n), '{}'::json) from (
-      select case when shape = 'banner' then 'banner' else kind end as k, count(*) as n from agi1_inf_jobs
+      select case when editor and kind = 'photo' then 'edited' when editor then 'cut' when shape = 'banner' then 'banner' else kind end as k,
+        count(*) as n from agi1_inf_jobs
       where created_at > now() - interval '7 days' and status <> 'failed' group by 1) x),
     'failed_today', (select count(*) from agi1_inf_jobs, b where status = 'failed' and updated_at >= b.today),
     'making', (select count(*) from agi1_inf_jobs where status in ('paid', 'making')),
@@ -3027,7 +3582,7 @@ as $$
       -- (round 4, phase 3) bought credits passed on as gifts this week (sent, or a link claimed), gift links waiting, invites'
       -- rewards and welcome credits this month, and the wallets that joined through an invite this month
       'gifted_week', (select coalesce(sum(amount), 0) from agi1_credit_log where kind = 'receive' and at > now() - interval '7 days'),
-      'links_open', (select count(*) from agi1_credit_gifts where status = 'open' and expires_at > now()),
+      'links_open', (select count(*) from agi1_credit_gifts where kind = 'bought' and status = 'open' and expires_at > now()),
       'rewards_month', (select coalesce(sum(amount), 0) from agi1_credit_log, b where kind in ('ref', 'welcome') and at >= b.month),
       'invited_month', (select count(*) from agi1_inf_invited, b where at >= b.month)),
     'wallets_week', (select count(distinct wallet_code) from agi1_inf_jobs where created_at > now() - interval '7 days' and wallet_code is not null),
@@ -3062,8 +3617,10 @@ $$;
 -- Uploads go after 2 days (a selfie or a picture as soon as its influencer is made, or can't be: our server deletes their
 -- files), influencers that couldn't be made after 30 days, deleted ones after a week (their files went at once), jobs that
 -- failed after 60 days, reports after 90 days; leases left behind are given back; (round 4, phase 3) gift links past their
--- days give their credits back to their senders. → {"uploads": [{id, kind}], "infs": [ids] (their folders deleted again by
--- our server, in case deleting them at once failed), "jobs", "reports", "gifts" (gift links given back)}
+-- days give their credits back to their senders; (2026-10-12) photos and videos their makers deleted go a week later, at most
+-- 50 at a time (their likes with them). → {"uploads": [{id, kind}], "infs": [ids] (their folders deleted again by our
+-- server, in case deleting them at once failed), "jobs", "reports", "gifts" (gift links given back), "deleted": [{id, inf,
+-- kind}] (their files deleted again by our server, the same way)}
 create or replace function public.inf_tidy()
 returns json
 language plpgsql
@@ -3076,6 +3633,7 @@ declare
   reports integer;
   g record;
   v_gifts integer := 0;
+  v_deleted json;
 begin
   with gone as (
     delete from agi1_inf_uploads u
@@ -3091,6 +3649,13 @@ begin
     returning id, status
   )
   select coalesce(json_agg(id), '[]'::json) into infs from gone;
+  -- (2026-10-12) photos and videos their makers deleted, a week later (first: so their files' names always come back once)
+  with gone as (
+    delete from agi1_inf_jobs where id in (select id from agi1_inf_jobs where deleted_at < now() - interval '7 days'
+      order by deleted_at limit 50)
+    returning id, inf_id, kind
+  )
+  select coalesce(json_agg(json_build_object('id', id, 'inf', inf_id, 'kind', kind)), '[]'::json) into v_deleted from gone;
   delete from agi1_inf_jobs where status = 'failed' and updated_at < now() - interval '60 days';
   get diagnostics jobs = row_count;
   delete from agi1_inf_reports where at < now() - interval '90 days';
@@ -3101,6 +3666,8 @@ begin
   update agi1_inf_weeks set address = null where status = 'sent' and address is not null and sent_at < now() - interval '60 days';
   -- (round 4) a wallet's captions a day go after 2 days
   delete from agi1_inf_caption_days where day < (now() at time zone 'utc')::date - 2;
+  -- (2026-10-12, the editor) the photo editor's counts
+  delete from agi1_inf_tool_days where day < (now() at time zone 'utc')::date - 2;
   -- (round 4, phase 2) the AI helper's answers a day after 2 days; a ticket the team answered and nobody wrote in for 14 days
   -- is closed; closed tickets go after 90 days (with their messages); lifted bans after 180 days
   delete from agi1_inf_help_days where day < (now() at time zone 'utc')::date - 2;
@@ -3111,13 +3678,16 @@ begin
   -- first); a gift that's done goes after a year (the credits' log keeps each one); each friend's counted top-up after 60 days
   -- (only a top-up from the last 30 days is ever counted); what an inviter earned a month after 400 days
   for g in
-    select id, from_code, credits from agi1_credit_gifts where status = 'open' and expires_at <= now()
+    select id, from_code, credits, kind from agi1_credit_gifts where status = 'open' and expires_at <= now()
     order by expires_at limit 500 for update skip locked
   loop
-    insert into agi1_credit_log (wallet_code, kind, amount, paid_part, ref, other)
-    values (g.from_code, 'unhold', g.credits, g.credits, g.id, 'a gift link') on conflict (kind, ref) do nothing;
-    if found then
-      update agi1_credits set paid = least(paid + g.credits, 100000000), updated_at = now() where wallet_code = g.from_code;
+    -- (2026-10-12) the owner's gift links held nothing: they're just gone
+    if g.kind = 'bought' then
+      insert into agi1_credit_log (wallet_code, kind, amount, paid_part, ref, other)
+      values (g.from_code, 'unhold', g.credits, g.credits, g.id, 'a gift link') on conflict (kind, ref) do nothing;
+      if found then
+        update agi1_credits set paid = least(paid + g.credits, 100000000), updated_at = now() where wallet_code = g.from_code;
+      end if;
     end if;
     update agi1_credit_gifts set status = 'expired', done_at = now() where id = g.id;
     v_gifts := v_gifts + 1;
@@ -3126,7 +3696,7 @@ begin
   delete from agi1_inf_ref_paid p where p.at < now() - interval '60 days'
     and not exists (select 1 from agi1_credit_log l where l.kind = 'topup' and l.ref = p.tx_ref and l.at > now() - interval '31 days');
   delete from agi1_inf_ref_months where month < (now() at time zone 'utc')::date - 400;
-  return json_build_object('uploads', ups, 'infs', infs, 'jobs', jobs, 'reports', reports, 'gifts', v_gifts);
+  return json_build_object('uploads', ups, 'infs', infs, 'jobs', jobs, 'reports', reports, 'gifts', v_gifts, 'deleted', v_deleted);
 end;
 $$;
 
@@ -3138,10 +3708,10 @@ begin
   foreach f in array array[
     'inf_credits(text)', 'inf_spend(text, integer, text)', 'inf_refund(text)', 'inf_topup(text, text, integer)',
     'inf_free(text, integer, integer)', 'inf_upload_open(text, text, text, integer)', 'inf_upload_get(text)',
-    'inf_upload_set(text, text, text, numeric, boolean)', 'inf_day_take(integer)',
-    'inf_start(text, text, text, text, text, text, jsonb, text, text, integer, integer, integer, integer, integer)', 'inf_get(text)',
+    'inf_upload_set(text, text, text, numeric, boolean, boolean, smallint[])', 'inf_day_take(integer)',
+    'inf_start(text, text, text, text, text, text, jsonb, text, text, integer, integer, integer, integer, integer, text)', 'inf_get(text)',
     'inf_pick(text, text, integer, text)', 'inf_reroll(text, text, text, integer, integer)',
-    'inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text, integer, text[], integer, text, text)',
+    'inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text, integer, text[], integer, text, text, text)',
     'inf_job_get(text)',
     'inf_job_lease(text, integer)', 'inf_job_step(text, text, text, text, boolean, integer)', 'inf_job_wait(text)',
     'inf_job_done(text, integer, integer)', 'inf_job_fail(text, text, boolean)', 'inf_job_due(integer)', 'inf_poster(text)',
@@ -3178,7 +3748,17 @@ begin
     -- round 4, phase 4
     'inf_job_part(text, integer)',
     -- (2026-10-11) giving access
-    'inf_access_list()', 'inf_access_set(text, text, text, text, boolean, integer)'
+    'inf_access_list()', 'inf_access_set(text, text, text, text, boolean, integer)',
+    -- (2026-10-11) profile pictures
+    'inf_pfp_of(jsonb)', 'inf_pfp_set(text, text, jsonb)',
+    -- (2026-10-12) the owner's gift links of free credits
+    'inf_owner_link(text, text, text, integer, text, integer, integer)', 'inf_owner_links(text, integer)',
+    -- (2026-10-12) the editor: deleting a creation; the photo editor
+    'inf_job_delete(text, text)', 'inf_tool_take(text, text, integer, integer, boolean)',
+    'inf_photo_add(text, text, text, text, text, integer)',
+    -- (2026-10-12) the video editor
+    'inf_cut_add(text, text, text, text, text, integer, boolean, jsonb, integer, integer, integer)',
+    'inf_cut_done(text, integer, boolean, integer)', 'inf_cut_due()'
   ] loop
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
     execute format('grant execute on function public.%s to service_role', f);
@@ -3189,14 +3769,71 @@ $do$;
 -- Tell Supabase's web API to notice the new functions right away.
 notify pgrst, 'reload schema';
 
--- Check: influencers_ready = 1 (its 96 functions, each exactly once: since round 2 an older inf_start or inf_upload_set left
+-- Check: influencers_ready = 1 (its 106 functions, each exactly once: since round 2 an older inf_start or inf_upload_set left
 -- behind would count twice, since round 4's phase 4 an older inf_make; round 2's new columns; round 3's gifts in the credits' log; round 4's banners, names and
 -- captions; round 4's phase 2: the team, bans (and the 5 functions that refuse a banned wallet), tickets, the AI helper's
 -- counts, alerts and the owner's numbers; round 4's phase 3: bonus credits, gifts and invites, and every kind they log;
 -- round 4's phase 4: the model menu's columns, reference uploads and long videos' parts; giving access (2026-10-11): its list,
--- and inf_who reading it; and studio.sql's new parts it builds on)
+-- and inf_who reading it; styles and ways (2026-10-11): the 26 styles and 'auto', the ways to start, a picture's whole body and
+-- head; profile pictures (2026-10-11): their column, and the 4 functions that show them; the owner's gift links of free
+-- credits (2026-10-12): a gift's kind, a message of 200 characters, a wallet let in by one, and the 7 functions that tell them
+-- apart; the editor (2026-10-12): a creation its maker deleted, and the 6 functions that leave one out, and "Edit with words":
+-- its column and its check, inf_make's p_edit, and inf_job_get and inf_jobs giving it, and the photo editor: its column and its
+-- check, its days' table and the site's counts, inf_tool_take and inf_photo_add, and inf_job_get, inf_jobs and inf_tidy knowing
+-- it, and the video editor: its column and its checks (a video's seconds from 1), inf_cut_add, inf_cut_done and inf_cut_due,
+-- inf_mark_take leaving its videos alone, inf_job_get giving its cut and inf_admin_stats counting it; and studio.sql's new
+-- parts it builds on)
 select
-  (case when (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('inf_credits', 'inf_spend', 'inf_refund',
+  (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf_jobs'
+        and column_name = 'cut')
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_cut_check')
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_editor_check'
+        and pg_get_constraintdef(oid) like '%''video''%')
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_seconds_check'
+        and pg_get_constraintdef(oid) like '%seconds >= 1%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_mark_take' and prosrc like '%not editor%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_job_get' and prosrc like '%j.cut%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_admin_stats' and prosrc like '%''cut''%')
+    then 1 else 0 end)
+  * (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf_jobs'
+        and column_name = 'editor')
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_editor_check')
+      and to_regclass('public.agi1_inf_tool_days') is not null
+      and (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf_days'
+        and column_name in ('photo_edits', 'video_edits')) = 2
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_job_get' and prosrc like '%j.editor%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_jobs' and prosrc like '%''editor'', editor%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_tidy' and prosrc like '%agi1_inf_tool_days%')
+    then 1 else 0 end)
+  * (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf_jobs'
+        and column_name = 'edit')
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_edit_check')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_make' and prosrc like '%p_edit%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_job_get' and prosrc like '%j.edit%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_jobs' and prosrc like '%''edit'', edit%')
+    then 1 else 0 end)
+  * (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf_jobs'
+        and column_name = 'deleted_at')
+      and (select count(*) from pg_proc where pronamespace = 'public'::regnamespace
+        and proname in ('inf_jobs', 'inf_job_hide', 'inf_job_get', 'inf_poster', 'inf_mark_done', 'inf_tidy') and prosrc like '%deleted_at%') = 6
+    then 1 else 0 end)
+  * (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_credit_gifts'
+        and column_name = 'kind')
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_credit_gifts'::regclass
+        and conname = 'agi1_credit_gifts_note_check' and pg_get_constraintdef(oid) like '%200%')
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_access'::regclass
+        and conname = 'agi1_inf_access_via_check' and pg_get_constraintdef(oid) like '%''link''%')
+      and (select count(*) from pg_proc where pronamespace = 'public'::regnamespace
+        and proname in ('inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_tidy') and prosrc like '%g.kind%') = 5
+      and (select count(*) from pg_proc where pronamespace = 'public'::regnamespace
+        and proname in ('inf_send', 'inf_gift_link') and prosrc like '%kind = ''bought''%') = 2
+    then 1 else 0 end)
+  * (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf' and column_name = 'pfp')
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf'::regclass and conname = 'agi1_inf_pfp_check')
+      and (select count(*) from pg_proc where pronamespace = 'public'::regnamespace
+        and proname in ('inf_get', 'inf_mine', 'inf_explore', 'inf_weeks') and prosrc like '%inf_pfp_of%') = 4
+    then 1 else 0 end)
+  * (case when (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('inf_credits', 'inf_spend', 'inf_refund',
     'inf_topup', 'inf_free', 'inf_upload_open', 'inf_upload_get', 'inf_upload_set', 'inf_day_take', 'inf_start', 'inf_get', 'inf_pick',
     'inf_reroll', 'inf_make', 'inf_job_get', 'inf_job_lease', 'inf_job_step', 'inf_job_wait', 'inf_job_done', 'inf_job_fail',
     'inf_job_due', 'inf_poster', 'inf_jobs', 'inf_mine', 'inf_explore', 'inf_public', 'inf_delete', 'inf_hide', 'inf_job_hide',
@@ -3210,7 +3847,16 @@ select
     'inf_ticket_close', 'inf_tickets_mine', 'inf_ticket_get', 'inf_tickets_staff', 'inf_help_take', 'inf_alert_add', 'inf_alert_off',
     'inf_alert_chats', 'inf_admin_get', 'inf_admin_set', 'inf_admin_claim', 'inf_admin_stats', 'inf_mod_news',
     'inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_ref_code',
-    'inf_ref_bind', 'inf_ref_settle', 'inf_job_part', 'inf_access_list', 'inf_access_set')) = 96 then 1 else 0 end)
+    'inf_ref_bind', 'inf_ref_settle', 'inf_job_part', 'inf_access_list', 'inf_access_set', 'inf_pfp_of', 'inf_pfp_set',
+    'inf_owner_link', 'inf_owner_links', 'inf_job_delete', 'inf_tool_take', 'inf_photo_add', 'inf_cut_add', 'inf_cut_done',
+    'inf_cut_due')) = 106 then 1 else 0 end)
+    * (case when (select count(*) from information_schema.columns where table_schema = 'public'
+        and ((table_name = 'agi1_inf' and column_name = 'way') or (table_name = 'agi1_inf_uploads' and column_name in ('whole', 'head')))) = 3
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf'::regclass and conname = 'agi1_inf_style_check'
+        and pg_get_constraintdef(oid) like '%storybook%' and pg_get_constraintdef(oid) like '%''auto''%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_start' and prosrc like '%not_full%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_job_get' and prosrc like '%inf_way%')
+      then 1 else 0 end)
     * (case when to_regclass('public.agi1_inf_access') is not null
       and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_who' and prosrc like '%agi1_inf_access%')
       then 1 else 0 end)
