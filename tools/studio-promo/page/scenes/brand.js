@@ -5,12 +5,15 @@ import { S, GRAD, grad, backdrop, headline, logo, say, icon, glow, pill } from '
 import { media, E, prog, clamp, mix, spring, around, popK, text, measure } from '../parts.js';
 import { BRAND, SITE } from '../../words.js';
 
+// seven columns, edge to edge in the wide frame (five in 4:3)
 const COLS = [
+  ['kai-body', 'style-anime', 'nova-look-2', 'mika-snow', 'juno-meme', 'nova-cafe-edit-red'],
   ['nova-look-1', 'mika-flowers', 'style-storybook', 'kai-neon', 'juno-look-2', 'nova-golden'],
   ['kai-look-1', 'juno-gaming', 'mika-snow', 'style-clay', 'nova-cafe', 'style-cyberpunk'],
   ['mika-look-1', 'nova-beach', 'kai-gaming', 'style-anime', 'juno-meme', 'mika-look-2'],
   ['juno-look-1', 'style-popart', 'nova-look-3', 'mika-body', 'kai-look-2', 'style-watercolor'],
   ['nova-look-4', 'kai-meme', 'style-toy', 'juno-body', 'style-pixel', 'nova-x-banner'],
+  ['mika-look-2', 'nova-body', 'style-clay', 'kai-look-1', 'nova-golden', 'style-popart'],
 ];
 const TW = 268, TH = 335, GAP = 22;
 
@@ -56,12 +59,12 @@ export default {
     const wv = prog(t, M.drop, M.drop + 0.7);
     if (wv > 0 && wv < 1) {
       g.save();
-      g.beginPath(); g.arc(W / 2, 470, 60 + 760 * E.outCubic(wv), 0, Math.PI * 2);
+      g.beginPath(); g.arc(W / 2, 470, 60 + 980 * E.outCubic(wv), 0, Math.PI * 2);
       g.lineWidth = 14 * (1 - wv); g.strokeStyle = grad(g, W / 2 - 400, 70, 800, 800, GRAD.light, 120);
       g.globalAlpha = 1 - wv; g.stroke();
       g.restore();
       for (let i = 0; i < 18; i++) {
-        const a = (i / 18) * Math.PI * 2 + 0.2, d = 120 + 520 * E.outCubic(wv) * (0.6 + 0.4 * ((i * 37) % 10) / 10);
+        const a = (i / 18) * Math.PI * 2 + 0.2, d = 120 + 640 * E.outCubic(wv) * (0.6 + 0.4 * ((i * 37) % 10) / 10);
         icon(g, 'spark', W / 2 + Math.cos(a) * d, 470 + Math.sin(a) * d * 0.8, 26 * (1 - wv) + 6, i % 3 === 0 ? S.pink : i % 3 === 1 ? S.accent : S.gold, { fill: true, lw: 1, alpha: 1 - wv });
       }
     }

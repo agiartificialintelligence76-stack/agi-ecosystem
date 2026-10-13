@@ -110,6 +110,8 @@ const ICONS = {
   // (2026-10-12, the video editor) Edit video and its Trim tool; its sound off
   scissors: ['M6.5 9.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6.5 20.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z', 'M20 4.5 8.8 15.7M14.4 14.2 20 19.5M8.8 8.3l3.3 3.3'],
   soundOff: ['M5 9.5h3.5L13 5.5v13l-4.5-4H5v-5Z', 'M16.5 9.5l5 5M21.5 9.5l-5 5'],
+  // (2026-10-13) "Remove watermark": an eraser
+  eraser: ['M13.3 4.4 20.6 11.7 12.4 19.9 5.1 12.6 13.3 4.4Z', 'M8.4 9.3 15.7 16.6', 'M12.4 19.9H20'],
 };
 export function icon(name, cls = 'sa-i') {
   const svg = document.createElementNS(SVG, 'svg');
@@ -418,7 +420,14 @@ export function sheet({ title, sub = null, size = 'md', onclose = null } = {}) {
   const dialog = h('dialog', { class: `sa-sheet sa-sheet-${size}`, 'aria-labelledby': id }, h('div', { class: 'sa-sheet-in' }, head, body, foot));
   let resolve;
   const done = new Promise((r) => { resolve = r; });
+  // (2026-10-13) how tall its foot is, for the rules that fit a picture or a video above it (studio-app.css: a foot can
+  // wrap onto a third line of buttons, since "Remove watermark"), kept as it changes; through the CSS object model (the
+  // CSP forbids style attributes)
+  const footH = () => dialog.style.setProperty('--sa-foot-h', `${foot.hidden ? 0 : foot.offsetHeight}px`);
+  const footWatch = typeof ResizeObserver === 'function' ? new ResizeObserver(footH) : null;
+  footWatch?.observe(foot);
   const finish = () => {
+    footWatch?.disconnect();
     // its toasts (said while it was open) carry on where the next one shows, already read out
     const left = [...(dialog.querySelector(':scope > .sa-toasts')?.children || [])];
     dialog.remove();
@@ -437,7 +446,7 @@ export function sheet({ title, sub = null, size = 'md', onclose = null } = {}) {
   return {
     dialog, body, foot, done,
     close: () => { if (dialog.open) dialog.close(); },
-    setFoot(...nodes) { const list = kidsOf(nodes); foot.replaceChildren(...list); foot.hidden = !list.length; },
+    setFoot(...nodes) { const list = kidsOf(nodes); foot.replaceChildren(...list); foot.hidden = !list.length; footH(); },
   };
 }
 // closes every open sheet (leaving a page)

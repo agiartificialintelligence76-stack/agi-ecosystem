@@ -1,5 +1,6 @@
 // AGI Studio's launch video (2026-10-13, the owner: "go make a promotional marketing launch video of AGI studio. all the
-// features there, do it with top notch motion design and easy to understand and visible make it 4:3 video"): its clock,
+// features there, do it with top notch motion design and easy to understand and visible make it 4:3 video"; 16:9 since
+// the same day, its clock unchanged): its clock,
 // shared by the picture (tools/studio-promo/page) and the sound (tools/studio-promo/music.js), so every cut, tap, shutter
 // and hit lands on the same frame. Pure: no browser, no Node.
 // 120 beats a minute: a beat is half a second, a bar (4 beats) two seconds. Scenes start on bars.

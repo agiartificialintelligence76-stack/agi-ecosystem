@@ -9673,11 +9673,20 @@ test('(2026-10-12, the editor) the page: "Make another" (its price on it) and "D
   // a computer's dialog (its own rules, from 720px): the picture or the video fits under them, its head and its foot
   const at720 = css.indexOf('@media (min-width: 720px) {');
   const wide = css.slice(at720, css.indexOf('\n}\n', at720));
-  for (const rule of ['.sa-edit-row + .sa-big-wrap .sa-big-pic { max-height: min(66vh, calc(88vh - 250px)); }',
-    '.sa-edit-row + .sa-player-wrap .sa-player.is-tall { height: min(64vh, 640px, calc(88vh - 250px)); }',
-    '.sa-edit-row + .sa-player-wrap .sa-player.is-square { width: min(100%, 520px, calc(88vh - 250px)); }']) {
+  // (2026-10-13) its foot as tall as it is: "Remove watermark" can wrap it onto a third line of buttons (145px for the head,
+  // the row and the gaps; a two-line foot is 105px, so 250px in all as before)
+  for (const rule of ['.sa-edit-row + .sa-big-wrap .sa-big-pic { max-height: min(66vh, calc(88vh - 145px - var(--sa-foot-h, 105px))); }',
+    '.sa-edit-row + .sa-player-wrap .sa-player.is-tall { height: min(64vh, 640px, calc(88vh - 145px - var(--sa-foot-h, 105px))); }',
+    '.sa-edit-row + .sa-player-wrap .sa-player.is-square { width: min(100%, 520px, calc(88vh - 145px - var(--sa-foot-h, 105px))); }']) {
     assert.ok(wide.includes(rule), rule);
   }
+  assert.doesNotMatch(css, /calc\(88vh - 250px\)/);
+  // …the sheet sets it, through the CSS object model, when its foot is set and whenever it changes (its words, the window)
+  const sheetFn = read('src/studio/ui.js').slice(read('src/studio/ui.js').indexOf('export function sheet('));
+  assert.match(sheetFn, /const footH = \(\) => dialog\.style\.setProperty\('--sa-foot-h', `\$\{foot\.hidden \? 0 : foot\.offsetHeight\}px`\);/);
+  assert.match(sheetFn, /const footWatch = typeof ResizeObserver === 'function' \? new ResizeObserver\(footH\) : null;\n\s+footWatch\?\.observe\(foot\);/);
+  assert.match(sheetFn, /const finish = \(\) => \{\n\s+footWatch\?\.disconnect\(\);/);
+  assert.match(sheetFn, /setFoot\(\.\.\.nodes\) \{ const list = kidsOf\(nodes\); foot\.replaceChildren\(\.\.\.list\); foot\.hidden = !list\.length; footH\(\); \},/);
 
   // ---- Learn and the AI helper's guide ----
   const { LESSONS } = await import('../src/studio/views/learn.js');
@@ -11304,19 +11313,47 @@ test('(2026-10-12) clean downloads: its maker holding STUDIO_CLEAN_AGI $AGI (a C
   } finally { delete process.env.STUDIO_CLEAN_AGI; }
 });
 
-test('(2026-10-12) the page: its own Download asks our server first (clean for a holder), the photo editor without its mark for one, every download tagged; never "buy"', () => {
+test('(2026-10-12; 2026-10-13: "Remove watermark") the page: Download keeps the watermark (as everyone\'s); "Remove watermark" next to it on its maker\'s own photos and videos, our server first, nothing downloaded without a clean answer (its own in Explore\'s walls too); the photo editor without its mark for a holder; every download tagged; never "buy"', () => {
   const sh = readFileSync(new URL('../src/studio/views/shared.js', import.meta.url), 'utf8');
-  assert.equal((sh.match(/foot\.push\(mine \? ownDownload\(ctx, dl, \{ job: (v|j)\.id, real: priv \}\) : dl\);/g) || []).length, 2);
-  assert.match(sh, /const r = await ctx\.act\('inf-dl', \{ job, n \}\);/);
-  assert.match(sh, /r\.data\.url\.startsWith\('\/api\/launch\?'\)/);
-  for (const d of [{ clean: true, need: 1000 }, { why: 'holding', need: 1000 }, { why: 'made_with_it' }, null]) {
+  // Download: the marked one, for everyone (a plain link: it never asks our server)
+  assert.doesNotMatch(sh, /ownDownload/);
+  assert.match(sh, /foot\.push\(linkBtn\('Download', infVideoDl\(v\.id\), \{ kind: 'ghost', icon: 'download' \}\)\);\n\s+if \(mine && cleanOn\(ctx\)\) foot\.push\(removeMark\(ctx, \{ job: v\.id, real: priv \}\)\);/);
+  assert.match(sh, /foot\.push\(h\('a', \{ class: 'sa-btn sa-btn-ghost', href: infPhotoDl\(inf, j\.id, 0\), download: '' \}, icon\('download'\), h\('span', \{ text: 'Download' \}\)\)\);\n\s+if \(mine && cleanOn\(ctx\)\) foot\.push\(removeMark\(ctx, \{ job: j\.id, real: priv \}\)\);/);
+  // "Remove watermark": only while clean downloads are on; our server first; a download only with a clean answer's own address
+  assert.match(sh, /const cleanOn = \(ctx\) => Number\(ctx\.info\?\.cleanAgi\) > 0;/);
+  assert.match(sh, /const b = btn\('Remove watermark', \{ kind: 'ghost', icon: 'eraser' \}\);\n\s+b\.addEventListener\('click', async \(\) => \{\n\s+const had = document\.activeElement === b;\n\s+await busy\(b, 'Checking…', async \(\) => \{\n\s+const r = await ctx\.act\('inf-dl', \{ job, n \}\);\n\s+if \(!r\.ok\) \{ ctx\.toast\(removeMarkErrorText\(r\.error\), 'bad'\); return; \}/);
+  // (the keyboard back on it after: a busy button is disabled for a moment)
+  assert.match(sh, /if \(had && b\.isConnected && \(!document\.activeElement \|\| document\.activeElement === document\.body\)\) b\.focus\(\);/);
+  assert.match(sh, /if \(r\.data\?\.clean === true && url\.startsWith\('\/api\/launch\?inf-clean='\)\) \{\n\s+location\.assign\(url\);\n\s+ctx\.toast\(removeMarkText\(r\.data, \{ real \}\), 'good'\);\n\s+return;\n\s+\}\n\s+ctx\.toast\(removeMarkText\(r\.data, \{ real \}\)\);/);
+  assert.equal((sh.match(/location\.assign\(/g) || []).length, 1);
+  assert.match(readFileSync(new URL('../src/studio/ui.js', import.meta.url), 'utf8'), /\n {2}eraser: \['M[^']+'(, '[^']+')*\],\n/);
+  // its own in Explore's walls (its influencer is in My studio): its maker's sheet
+  assert.match(sh, /export const ownItem = \(ctx, item\) => Boolean\(item\?\.inf\?\.id && Array\.isArray\(ctx\.me\?\.influencers\)\n\s+&& ctx\.me\.influencers\.some\(\(i\) => i\?\.id === item\.inf\.id\)\);/);
+  for (const f of ['explore.js', 'gallery.js']) {
+    const src = readFileSync(new URL(`../src/studio/views/${f}`, import.meta.url), 'utf8');
+    assert.equal((src.match(/, mine: ownItem\(ctx, item\) \}\)/g) || []).length, 2, f);
+  }
+  // its words: never "buy"; the AI-label reminder only with a clean download of a real person's
+  for (const d of [{ clean: true, need: 1000 }, { why: 'holding', need: 1000 }, { why: 'made_with_it', need: 1000 }, { why: 'off', need: 0 }, null]) {
     for (const real of [false, true]) {
-      const t = AW.downloadText(d, { real });
+      const t = AW.removeMarkText(d, { real });
       assert.doesNotMatch(t, /\bbuy\b/i);
-      assert.equal(t.includes("Post it with your app's AI label."), real);
+      assert.equal(t.includes("Post it with your app's AI label."), real && d?.clean === true);
     }
   }
-  assert.match(AW.downloadText({ clean: true, need: 1000 }), /without our pill .*1,000\+ \$AGI.*AI-made/);
+  assert.equal(AW.removeMarkText({ clean: true, need: 1000 }), "Downloaded without the watermark 💜 (a thank-you for holding 1,000+ $AGI). It still says inside its file that it's AI-made.");
+  assert.equal(AW.removeMarkText({ why: 'holding', need: 2500 }), 'Removing the watermark is a thank-you for holding 2,500+ $AGI (in your connected wallet, or burned for messages), not an investment. Download keeps the watermark.');
+  assert.match(AW.removeMarkText({ why: 'made_with_it', need: 1000 }), /^This video's watermark is part of the video/);
+  assert.equal(AW.removeMarkText({ why: 'off', need: 0 }), 'Downloads keep the watermark for now.');
+  assert.equal(AW.removeMarkErrorText('not_yours'), 'Only its maker can remove its watermark.');
+  assert.equal(AW.removeMarkErrorText('gone'), "It isn't here any more (or it was taken down).");
+  assert.equal(AW.removeMarkErrorText('busy'), AW.errorText('busy'));
+  // the photo editor: its toast for a clean one, the same words
+  assert.match(readFileSync(new URL('../src/studio/views/photo-editor.js', import.meta.url), 'utf8'), /ctx\.toast\(clean \? removeMarkText\(r\.data\) : 'Downloaded, with its "Made with AGI Studio · AI-generated" watermark', 'good'\);/);
+  // said where people read how it works: its rules, Learn, the AI helper
+  assert.match(readFileSync(new URL('../studio.html', import.meta.url), 'utf8'), /On your own creations, "Remove watermark" downloads them without it while your wallet holds 1,000\+ \$AGI \(or burned them for messages\): a thank-you for holding, not an investment\./);
+  assert.match(readFileSync(new URL('../src/studio/views/learn.js', import.meta.url), 'utf8'), /Holding 1,000\+ \$AGI\? "Remove watermark" downloads your own without it\./);
+  assert.match(readFileSync(new URL('../server/inf-help.js', import.meta.url), 'utf8'), /open one of your own and tap "Remove watermark" to download it without the mark while your wallet holds 1,000\+ \$AGI \(held, or burned for messages\); "Download" keeps the mark\./);
   // (an HD photo's full-size copy and a long video's join are kept with our tag too, like every video: see the tests above)
   const jobs = readFileSync(new URL('../server/inf-jobs.js', import.meta.url), 'utf8');
   assert.match(jobs, /F\.putFile\(cfg, hdPath\(j\.inf_id, id, n\), aiTagged\(m\.hd\), 'image\/jpeg'/);

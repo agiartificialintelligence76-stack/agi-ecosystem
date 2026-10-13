@@ -8,7 +8,7 @@ import {
 } from '../rules.js';
 import {
   priceOf, shareJobUrl, errorText, compact, likeErrorText, likesText, burnCheckText, shortAddress, num, jobMeta, captionErrorText,
-  captionsLeftText, postOnXUrl, downloadText,
+  captionsLeftText, postOnXUrl, removeMarkText, removeMarkErrorText,
 } from '../app-words.js';
 import { readyCaptions } from '../captions.js';
 import { BURN_ADDRESS, BURN_EXPLORER } from '../../lib/burns.js';
@@ -202,21 +202,36 @@ function editRow(s, j, own) {
   return h('div', { class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' }, edit, editor, again, del);
 }
 
-// (2026-10-12) its maker's own download: clean for a holder of STUDIO_CLEAN_AGI $AGI (server/inf-clean.js), else as everyone's
-function ownDownload(ctx, a, { job, n = 0, real = false }) {
-  a.addEventListener('click', async (e) => {
-    if (!(Number(ctx.info?.cleanAgi) > 0)) return;
-    e.preventDefault();
-    if (a.getAttribute('aria-busy') === 'true') return;
-    a.setAttribute('aria-busy', 'true');
-    const r = await ctx.act('inf-dl', { job, n });
-    a.removeAttribute('aria-busy');
-    const url = r.ok && typeof r.data?.url === 'string' && r.data.url.startsWith('/api/launch?') ? r.data.url : a.getAttribute('href');
-    location.assign(url);
-    ctx.toast(downloadText(r.ok ? r.data : null, { real }), r.ok && r.data?.clean ? 'good' : undefined);
+// (2026-10-13, the owner: "when i open a video and photo, there should be a button that says remove watermark"; the owner's
+// choice: "Everyone, holders use it (Recommended)") "Remove watermark", next to Download on its maker's own photos and videos
+// (Download always keeps the watermark, as everyone's): our server says whether this wallet holds STUDIO_CLEAN_AGI $AGI
+// (server/inf-clean.js). A holder's comes without it; anyone else hears why (never "buy"), and nothing is downloaded. Only
+// while clean downloads are on (cleanAgi > 0). Every download says inside its file that it's AI-made.
+const cleanOn = (ctx) => Number(ctx.info?.cleanAgi) > 0;
+function removeMark(ctx, { job, n = 0, real = false }) {
+  const b = btn('Remove watermark', { kind: 'ghost', icon: 'eraser' });
+  b.addEventListener('click', async () => {
+    const had = document.activeElement === b;
+    await busy(b, 'Checking…', async () => {
+      const r = await ctx.act('inf-dl', { job, n });
+      if (!r.ok) { ctx.toast(removeMarkErrorText(r.error), 'bad'); return; }
+      const url = typeof r.data?.url === 'string' ? r.data.url : '';
+      if (r.data?.clean === true && url.startsWith('/api/launch?inf-clean=')) {
+        location.assign(url);
+        ctx.toast(removeMarkText(r.data, { real }), 'good');
+        return;
+      }
+      ctx.toast(removeMarkText(r.data, { real }));
+    });
+    // (the keyboard back on it: a busy button is disabled for a moment, and a disabled button loses the keyboard)
+    if (had && b.isConnected && (!document.activeElement || document.activeElement === document.body)) b.focus();
   });
-  return a;
+  return b;
 }
+// (2026-10-13) a photo or a video in Explore's walls that's one of this wallet's own (its influencer is in My studio): its
+// sheet as its maker's (Remove watermark, its heart not for itself, no Report)
+export const ownItem = (ctx, item) => Boolean(item?.inf?.id && Array.isArray(ctx.me?.influencers)
+  && ctx.me.influencers.some((i) => i?.id === item.inf.id));
 
 // ---------- a done video, played: its influencer, a heart, Download (with the share mark once it's made), Share, Report ----------
 export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCaptions = null, own = null }) {
@@ -235,8 +250,8 @@ export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCa
   const foot = [];
   if (ctx.route.view !== 'influencer') foot.push(linkBtn(`See ${name}`, ctx.href(`/i/${inf}`), { kind: 'primary', dataset: { saLink: '' } }));
   if (!priv) foot.push(likeButton(ctx, { job: v.id, likes: v.likes, can: !mine, cls: 'sa-heart-lg', fresh: false }));
-  const dl = linkBtn('Download', infVideoDl(v.id), { kind: 'ghost', icon: 'download' });
-  foot.push(mine ? ownDownload(ctx, dl, { job: v.id, real: priv }) : dl);
+  foot.push(linkBtn('Download', infVideoDl(v.id), { kind: 'ghost', icon: 'download' }));
+  if (mine && cleanOn(ctx)) foot.push(removeMark(ctx, { job: v.id, real: priv }));
   foot.push(linkBtn('Share on X ↗', shareJobUrl(name, v.kind, url), { kind: 'ghost', icon: 'share', target: '_blank', rel: 'noopener noreferrer' }));
   // (round 4) captions for a post of it (its own wallet's)
   if (mine && onCaptions) {
@@ -286,10 +301,10 @@ export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind
   }
   if (ctx.route.view !== 'influencer') foot.push(linkBtn(`See ${name}`, ctx.href(`/i/${inf}`), { kind: 'primary', dataset: { saLink: '' } }));
   if (kind === 'photo' && !priv) foot.push(likeButton(ctx, { job: j.id, likes: j.likes, can: !mine, cls: 'sa-heart-lg', fresh: false }));
-  // (its download carries the share mark: "Made with AGI Studio · AI-generated", drawn on by our server)
-  // (2026-10-12: its maker's own, clean for a holder; every download says inside its file that it's AI-made)
-  const dl = h('a', { class: 'sa-btn sa-btn-ghost', href: infPhotoDl(inf, j.id, 0), download: '' }, icon('download'), h('span', { text: 'Download' }));
-  foot.push(mine ? ownDownload(ctx, dl, { job: j.id, real: priv }) : dl);
+  // (its download carries the share mark: "Made with AGI Studio · AI-generated", drawn on by our server; every download says
+  // inside its file that it's AI-made. Since 2026-10-13 its maker's own "Remove watermark" next to it, for a holder)
+  foot.push(h('a', { class: 'sa-btn sa-btn-ghost', href: infPhotoDl(inf, j.id, 0), download: '' }, icon('download'), h('span', { text: 'Download' })));
+  if (mine && cleanOn(ctx)) foot.push(removeMark(ctx, { job: j.id, real: priv }));
   if (kind === 'photo') foot.push(linkBtn('Share on X ↗', shareJobUrl(name, 'photo', `${location.origin}${ctx.href(`/i/${inf}`)}#v-${j.id}`), { kind: 'ghost', icon: 'share', target: '_blank', rel: 'noopener noreferrer' }));
   // (round 4) captions for a post of it (its own wallet's)
   if (mine && kind === 'photo' && onCaptions) {

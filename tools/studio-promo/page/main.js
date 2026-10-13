@@ -1,9 +1,11 @@
 // AGI Studio's launch video (2026-10-13, the owner: "go make a promotional marketing launch video of AGI studio. all the
-// features there, do it with top notch motion design and easy to understand and visible make it 4:3 video"): the page
-// that draws it, one frame at a time. tools/studio-promo/make.mjs opens it in a browser, calls promo.load({ scale }),
-// then promo.frame(0), promo.frame(1)… and turns the pictures into an MP4 with its music (tools/studio-promo/music.js).
-// 1440 × 1080 (4:3), 60 frames a second. Every frame is a function of its time: drawing a frame twice gives the same
-// picture (the clips' frames are waited for before a frame is finished: page/media.js).
+// features there, do it with top notch motion design and easy to understand and visible make it 4:3 video", then the
+// same day: "i just decided can you make the launch video 16:9"): the page that draws it, one frame at a time.
+// tools/studio-promo/make.mjs opens it in a browser, calls promo.load({ scale }), then promo.frame(0), promo.frame(1)…
+// and turns the pictures into an MP4 with its music (tools/studio-promo/music.js). 1920 × 1080 (16:9; 1440 × 1080, 4:3,
+// at first: every scene laid out again for the wide frame, never stretched), 60 frames a second. Every frame is a
+// function of its time: drawing a frame twice gives the same picture (the clips' frames are waited for before a frame
+// is finished: page/media.js).
 // What it shows was made for it with the same kinds of AI models AGI Studio uses (made-up people, AI-generated: never
 // "made in AGI Studio"), and what it says comes from the app's own words (tools/studio-promo/words.js). Never an AI
 // service's name, never AGI-1 in 3D, never another coin.
@@ -30,7 +32,7 @@ import finale from './scenes/finale.js';
 import end from './scenes/end.js';
 
 const MODULES = { hook, brand, create, styles, photos, memes, edit, trends, videos, tools, model, pay, community, finale, end };
-export const SIZE = { W: 1440, H: 1080 };
+export const SIZE = { W: 1920, H: 1080 };
 
 let ctx = null, cv = null, g = null, bufA = null, bufB = null, scale = 1;
 

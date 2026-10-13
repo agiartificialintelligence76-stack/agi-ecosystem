@@ -5,7 +5,9 @@ import { S, GRAD, grad, backdrop, headline, logo, pill, glow, icon, sheen } from
 import { media, E, prog, clamp, mix, spring, around, popK, text, measure, rr, clipCard } from '../parts.js';
 import { FINALE, SITE } from '../../words.js';
 
+// ten columns, so the tilted wall covers the wide frame's corners (eight in 4:3)
 const COLS = [
+  ['kai-meme', 'nova-golden', 'style-storybook', 'mika-rain-trend', 'juno-body', 'nova-look-3'],
   ['nova-look-2', 'kai-neon', 'style-watercolor', 'juno-video', 'mika-snow', 'nova-x-banner'],
   ['mika-rain-trend', 'juno-gaming', 'nova-cafe', 'kai-look-1', 'style-clay', 'mika-look-1'],
   ['kai-gaming', 'style-anime', 'nova-golden-trend', 'juno-meme', 'mika-body', 'kai-look-2'],
@@ -14,6 +16,7 @@ const COLS = [
   ['mika-video', 'nova-cafe-edit-red', 'juno-look-2', 'kai-body', 'style-cyberpunk', 'nova-golden'],
   ['juno-confetti-trend', 'mika-flowers', 'style-pixel', 'nova-look-3', 'kai-neon', 'juno-gaming'],
   ['kai-look-1', 'nova-cafe-video', 'mika-snow', 'juno-meme', 'style-clay', 'nova-beach'],
+  ['mika-look-1', 'style-popart', 'nova-golden-trend', 'kai-gaming', 'juno-look-1', 'style-anime'],
 ];
 const VIDS = new Set(['juno-video', 'mika-rain-trend', 'nova-golden-trend', 'kai-neon-runway-trend', 'mika-video', 'juno-confetti-trend', 'nova-cafe-video']);
 const TW = 236, TH = 300, GAP = 18;

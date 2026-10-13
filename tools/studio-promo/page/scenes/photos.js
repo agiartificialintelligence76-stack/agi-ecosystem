@@ -6,7 +6,9 @@ import { S, backdrop, headline, goButton, inputBox, typedAt, pointer, ripple, pi
 import { panel, card, popK, around, E, prog, clamp, mix, text, rr, label } from '../parts.js';
 import { PHOTOS } from '../../words.js';
 
-const PANEL = { x: 80, y: 222, w: 560, h: 560 };
+// 16:9: the tool on the left (from LM), the photo in the middle of the room right of it (RX)
+const LM = 120, RX = 1300;
+const PANEL = { x: LM, y: 222, w: 560, h: 560 };
 const U = 1.5;
 // where each photo lands on the pile, and where it comes from (from: left −1 / right 1; fromY: below 1): the ones that
 // land once the photo models are on the left come from the right or from below, never across them
@@ -20,7 +22,7 @@ export default {
   draw(g, t, c) {
     const { W, H, M, media: md } = c;
     backdrop(g, W, H, t, { a: 0.65, b: 0.85, ax: 0.1, ay: 0.3, bx: 0.95, by: 0.6, hueB: 'rgba(219,39,119,0.3)' });
-    headline(g, PHOTOS.head, t, M.typeScene - 0.02, { x: 80, y: 140, size: 88 });
+    headline(g, PHOTOS.head, t, M.typeScene - 0.02, { x: LM, y: 140, size: 88 });
 
     // ---- the photo tool: its scene typed, Make photo ----
     const toolOut = E.inCubic(prog(t, M.montage[0] - 0.35, M.montage[0] + 0.05));
@@ -64,7 +66,7 @@ export default {
     // ---- it develops: Nova at the beach at sunset ----
     const devOut = E.inCubic(prog(t, M.montage[0] - 0.3, M.montage[0] + 0.1));
     if (t >= M.makePhoto && devOut < 1) {
-      const cx = 1010, cy = 560, w = 520, h = 650;
+      const cx = RX, cy = 560, w = 520, h = 650;
       const inP = E.outCubic(prog(t, M.makePhoto, M.makePhoto + 0.3));
       g.save();
       g.globalAlpha = inP * (1 - devOut);
@@ -91,9 +93,9 @@ export default {
       const depth = M.montage.filter((m) => m > t0 && t >= m).length;      // how many came after it
       // the pile glides right (a little smaller) as the photo models come in on the left
       const glide = E.inOutCubic(prog(t, M.photoModels[0] - 0.5, M.photoModels[0] + 0.1));
-      const baseX = mix(720, 1010, glide), baseY = mix(560, 552, glide);
+      const baseX = mix(c.W / 2, RX, glide), baseY = mix(560, 552, glide);
       const sc = (1 - depth * 0.035) * mix(1, 0.88, glide);
-      const cx = baseX + s.dx + (1 - p) * s.from * 700, cy = baseY + s.dy - depth * 6 + (1 - p) * (s.fromY || 0) * 560;
+      const cx = baseX + s.dx + (1 - p) * s.from * 900, cy = baseY + s.dy - depth * 6 + (1 - p) * (s.fromY || 0) * 560;
       // a camera's flash: one bright frame, gone in a sixth of a second (never a strobe)
       const flash = 0.7 * (1 - E.outCubic(prog(t, t0 - 0.02, t0 + 0.16)));
       card(g, md.pic(pic), cx, cy, 500, 625, { rot: s.rot * (1 + (1 - p) * 2), sc, alpha: clamp(p * 2), flash, r: 22, sh: 0.8, focus: [0.5, 0.42], dim: depth * 0.12 });
@@ -113,13 +115,13 @@ export default {
       g.save();
       g.globalAlpha = p;
       g.translate((1 - p) * -50, 0);
-      rr(g, 80, y - 40, 520, 80, 20);
+      rr(g, LM, y - 40, 560, 80, 20);
       g.fillStyle = 'rgba(20,20,24,0.88)'; g.fill();
       g.lineWidth = 1.5; g.strokeStyle = S.line2; g.stroke();
-      rr(g, 98, y - 26, 52, 52, 14);
+      rr(g, LM + 18, y - 26, 52, 52, 14);
       g.fillStyle = 'rgba(139,92,246,0.2)'; g.fill();
-      icon(g, MODEL_ICONS[k], 124, y, 30, MODEL_ICONS[k] === 'bolt' ? S.honey : S.accent, { fill: MODEL_ICONS[k] === 'bolt' });
-      text(g, m, { x: 170, y: y + 10, font: { f: 'sans', w: 650, s: 28 }, color: S.text });
+      icon(g, MODEL_ICONS[k], LM + 44, y, 30, MODEL_ICONS[k] === 'bolt' ? S.honey : S.accent, { fill: MODEL_ICONS[k] === 'bolt' });
+      text(g, m, { x: LM + 90, y: y + 10, font: { f: 'sans', w: 650, s: 28 }, color: S.text });
       g.restore();
     });
   },

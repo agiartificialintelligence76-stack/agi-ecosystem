@@ -5,7 +5,7 @@ import { S, GRAD, grad, backdrop, headline, chip, seg, tile, goButton, costChip,
 import { appWindow, label, media, popK, around, card, E, prog, clamp, mix, text, rr, measure, captionFade } from '../parts.js';
 import { CREATE, CAST } from '../../words.js';
 
-const WIN = { x: 72, y: 190, w: 1296, h: 828 };
+const WIN = { x: 96, y: 190, w: 1728, h: 828 };          // 16:9 (1296 wide in 4:3): the panel as it was, more room on the right
 const UB = 1.65;            // the window's own scale
 const U = 1.5;              // the panel's controls
 const PW = 560;             // the panel's width
@@ -68,7 +68,7 @@ export default {
     heads.forEach((h, k) => {
       const out = k < 3 ? hT[k + 1] - 0.3 : null;
       if (t < hT[k] - 0.01 || (out != null && t > out + 0.7)) return;
-      headline(g, h, t, hT[k], { x: 80, y: 136, size: 74, out, outDur: 0.3, stagger: 0.04 });
+      headline(g, h, t, hT[k], { x: WIN.x + 8, y: 136, size: 74, out, outDur: 0.3, stagger: 0.04 });
     });
 
     // ---- the window comes up ----
@@ -348,7 +348,7 @@ function pointerKeys(t, c, lay, P, box) {
   const { M } = c;
   const sAt = (tt) => scrollAt(tt, M);
   const at = (tt, x, y) => [tt, P.x + x, P.y + y - sAt(tt)];
-  const keys = [[M.appIn + 0.3, 900, 1120]];
+  const keys = [[M.appIn + 0.3, 1200, 1120]];
   keys.push([...at(M.taps[0], lay.pad + lay.inner * 0.25, 108 + 30 * U), true]);
   lay.rows.forEach((r, ri) => {
     const ch = r.chips.find((x) => x.on);

@@ -88,7 +88,7 @@ export const CLIPS = {
     p: { mp4: new URL('./guide/make-pfp-p.mp4', import.meta.url).href, poster: new URL('./guide/make-pfp-p.webp', import.meta.url).href, w: 624, h: 390, s: 10 },
   },
   'make-creations': {
-    d: { mp4: new URL('./guide/make-creations-d.mp4', import.meta.url).href, poster: new URL('./guide/make-creations-d.webp', import.meta.url).href, w: 672, h: 420, s: 10.75 },
+    d: { mp4: new URL('./guide/make-creations-d.mp4', import.meta.url).href, poster: new URL('./guide/make-creations-d.webp', import.meta.url).href, w: 672, h: 420, s: 10.79 },
     p: { mp4: new URL('./guide/make-creations-p.mp4', import.meta.url).href, poster: new URL('./guide/make-creations-p.webp', import.meta.url).href, w: 624, h: 390, s: 9.29 },
   },
   'me-credits': {

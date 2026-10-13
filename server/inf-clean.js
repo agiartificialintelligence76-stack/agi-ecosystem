@@ -2,7 +2,9 @@
 // vid,photos it will be removed if they hold $agi atleast 1000"; the owner's choices: "Our pill, as now", "Hidden AI tag",
 // "Same as the rest"). Everyone's downloads carry our pill ("Made with AGI Studio · AI-generated"), as before; a creation's own
 // maker holding STUDIO_CLEAN_AGI $AGI or more (1,000 by default; held, or burned for messages) downloads its own without it.
-// Every download, with the pill or without, says inside its file that it's AI-made (src/studio/ai-tag.js).
+// Every download, with the pill or without, says inside its file that it's AI-made (src/studio/ai-tag.js). Since 2026-10-13
+// (the owner: "when i open a video and photo, there should be a button that says remove watermark"; the owner's choice:
+// "Everyone, holders use it") its maker asks with "Remove watermark", next to Download (which always keeps it).
 //   POST { action: 'inf-dl', session, job, n? } (server/inf-api.js) → { url, clean, need, why? }: the address to download it
 //   from: a clean one (`?inf-clean=<ticket>`, 10 minutes, for that creation and that wallet) or the marked one, as everyone's.
 //   GET ?inf-clean=<ticket> → a photo: its picture as the page shows it (no pill) with our tag, never kept by a CDN; a video:

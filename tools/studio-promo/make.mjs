@@ -1,5 +1,6 @@
 // AGI Studio's launch video (2026-10-13, the owner: "go make a promotional marketing launch video of AGI studio. all the
-// features there, do it with top notch motion design and easy to understand and visible make it 4:3 video"): makes it.
+// features there, do it with top notch motion design and easy to understand and visible make it 4:3 video"; then the
+// same day: "i just decided can you make the launch video 16:9"): makes it, 1920 × 1080.
 // Everything on screen is drawn in code (tools/studio-promo/page/) around the example pictures and clips made for it
 // with the same kinds of AI models AGI Studio uses (tools/studio-promo/media, made ready once by media.mjs), its music is made in code (music.js), and both
 // follow one clock (timeline.js). Not part of the website, and nothing here posts anything: the owner posts it by hand.

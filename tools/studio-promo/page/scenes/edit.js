@@ -4,8 +4,10 @@ import { S, backdrop, headline, goButton, inputBox, typedAt, pointer, ripple, pi
 import { panel, popK, around, E, prog, clamp, mix, text, rr, media, label, shadow } from '../parts.js';
 import { EDIT } from '../../words.js';
 
-const PH = { cx: 470, cy: 590, w: 450, h: 800 };       // the photo
-const SH = { x: 760, y: 236, w: 600, h: 720 };        // the sheet beside it
+// 16:9 (the photo at 470 and the sheet at 760 in 4:3): the two side by side, in the middle of the wide frame
+const LM = 120;
+const PH = { cx: 600, cy: 590, w: 450, h: 800 };       // the photo
+const SH = { x: 940, y: 236, w: 600, h: 720 };        // the sheet beside it
 const U = 1.5;
 const FILTERS = { Vivid: 'saturate(1.55) contrast(1.12)', Mono: 'grayscale(1) contrast(1.08)', Warm: 'sepia(0.32) saturate(1.25) hue-rotate(-8deg)' };
 
@@ -55,9 +57,9 @@ export default {
   draw(g, t, c) {
     const { W, H, M, media: md } = c;
     backdrop(g, W, H, t, { a: 0.7, b: 0.75, ax: 0.3, ay: 0.4, bx: 0.9, by: 0.2 });
-    headline(g, EDIT.head, t, M.typeEdit - 0.25, { x: 80, y: 140, size: 88, out: M.editor - 0.32 });
-    headline(g, EDIT.editor, t, M.editor, { x: 80, y: 140, size: 88, out: M.move - 0.32 });
-    headline(g, EDIT.move, t, M.move, { x: 80, y: 140, size: 88 });
+    headline(g, EDIT.head, t, M.typeEdit - 0.25, { x: LM, y: 140, size: 88, out: M.editor - 0.32 });
+    headline(g, EDIT.editor, t, M.editor, { x: LM, y: 140, size: 88, out: M.move - 0.32 });
+    headline(g, EDIT.move, t, M.move, { x: LM, y: 140, size: 88 });
 
     // the filter the editor has on now
     let filter = 'none', fname = null;

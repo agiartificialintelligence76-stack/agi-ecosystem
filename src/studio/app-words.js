@@ -519,16 +519,21 @@ export function editorNote(j) {
     ? 'Free: its light, a filter, words and stickers (it stays 1500 × 500). Save it as a new X banner, or download it.'
     : 'Free: crop and turn it, its light, a filter, words and stickers. Save it as a new photo, or download it.';
 }
-// …saved: its toast
-// (2026-10-12) its maker's own download (server/inf-clean.js): clean for a holder, else with our pill as everyone's; a real
-// person's, the reminder ("Same as the rest", the owner's choice). Never "buy" (hard rule 8)
-export function downloadText(d, { real = false } = {}) {
-  const label = real ? ' Post it with your app\'s AI label.' : '';
-  if (d?.clean) return `Downloaded without our pill 💜 (a thank-you for holding ${Number(d.need).toLocaleString('en-US')}+ $AGI). It still says inside its file that it's AI-made.${label}`;
-  if (d?.why === 'holding') return `Downloaded with our pill. A wallet holding ${Number(d.need).toLocaleString('en-US')}+ $AGI (or burned for messages) downloads its own without it.${label}`;
-  if (d?.why === 'made_with_it') return `Downloaded: its pill is part of the video (it was made with it), so it stays.${label}`;
-  return `Downloaded.${label}`;
+// (2026-10-12) a download without our watermark (server/inf-clean.js), and since 2026-10-13 (the owner: "when i open a video
+// and photo, there should be a button that says remove watermark"; the owner's choice: "Everyone, holders use it") the "Remove
+// watermark" button on its maker's own photos and videos: what it did, or why not. A real person's, the reminder ("Same as the
+// rest", the owner's choice). Never "buy" (hard rule 8)
+export function removeMarkText(d, { real = false } = {}) {
+  const need = `${(Number(d?.need) > 0 ? Number(d.need) : 1000).toLocaleString('en-US')}+ $AGI`;
+  if (d?.clean) return `Downloaded without the watermark 💜 (a thank-you for holding ${need}). It still says inside its file that it's AI-made.${real ? ' Post it with your app\'s AI label.' : ''}`;
+  if (d?.why === 'holding') return `Removing the watermark is a thank-you for holding ${need} (in your connected wallet, or burned for messages), not an investment. Download keeps the watermark.`;
+  if (d?.why === 'made_with_it') return "This video's watermark is part of the video (it was made with it), so it stays. Download keeps it.";
+  return 'Downloads keep the watermark for now.';
 }
+// …and our server's "no"
+export const removeMarkErrorText = (why) => (why === 'gone' ? "It isn't here any more (or it was taken down)."
+  : why === 'not_yours' ? 'Only its maker can remove its watermark.' : errorText(why));
+// …saved: its toast
 export const editorSavedText = (j) => `Saved: your edited ${creationWord(j)} is next to the one it's from.`;
 // …and what stopped it being saved (our server's answer: server/inf-editor.js)
 const EDITOR_REFUSED = {

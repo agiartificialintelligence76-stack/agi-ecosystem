@@ -30,9 +30,9 @@ export default {
       if (p <= 0 || p >= 1) continue;
       g.save();
       // from just outside the card's words (never across them) to past the frame's edges
-      g.beginPath(); g.arc(W / 2, LOGO_Y, 370 + 700 * E.outCubic(p), 0, Math.PI * 2);
+      g.beginPath(); g.arc(W / 2, LOGO_Y, 370 + 820 * E.outCubic(p), 0, Math.PI * 2);
       g.lineWidth = 9 * (1 - p) + 1;
-      g.strokeStyle = grad(g, W / 2 - 700, LOGO_Y - 700, 1400, 1400, GRAD.light, 120);
+      g.strokeStyle = grad(g, W / 2 - 820, LOGO_Y - 820, 1640, 1640, GRAD.light, 120);
       g.globalAlpha = 0.6 * (1 - p);
       g.stroke();
       g.restore();

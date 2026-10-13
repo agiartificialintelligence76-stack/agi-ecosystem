@@ -10,7 +10,7 @@ import { EDITOR, EDITOR_CROPS, EDITOR_FILTERS, EDITOR_LIGHT, infPic } from '../r
 import * as P from '../photo-edit.js';
 import { drawLayer, drawPicked, range, toolBtn, layerPanel } from './layers.js';
 import { savePhoto } from '../media.js';
-import { editorErrorText, editorSavedText, editorNote, wordsText, downloadText } from '../app-words.js';
+import { editorErrorText, editorSavedText, editorNote, wordsText, removeMarkText } from '../app-words.js';
 import { withAiTag } from '../ai-tag.js';
 
 // the share mark (server/media/studio-mark.png: the same picture our server puts on downloads)
@@ -372,7 +372,7 @@ export function photoEditor(ctx, { inf, job, name = 'Your influencer', onSaved =
     document.body.append(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
-    ctx.toast(clean ? downloadText(r.data) : 'Downloaded, with its "Made with AGI Studio · AI-generated" mark', 'good');
+    ctx.toast(clean ? removeMarkText(r.data) : 'Downloaded, with its "Made with AGI Studio · AI-generated" watermark', 'good');
   }));
   save.addEventListener('click', () => busy(save, 'Saving…', async () => {
     say(err, '');

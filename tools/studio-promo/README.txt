@@ -1,11 +1,12 @@
 AGI Studio's launch video (made 2026-10-13)
 
 THE FILES
-- agi-studio-launch-light.mp4: the one to post. 1440 x 1080 (4:3), 60 frames a second, 103 seconds, with its music.
+- agi-studio-launch-light.mp4: the one to post. 1920 x 1080 (16:9), 60 frames a second, 103 seconds, with its music.
   About 26 MB, so X, TikTok, Instagram and YouTube all take it.
 - agi-studio-launch.mp4: the same video at full quality (bigger: keep it as the master copy, if it's there).
 - agi-studio-launch-cover.jpg: a cover picture (the finale: "Create your own influencer.", its button and the address).
 - agi-studio-launch-post.txt: a post to go with it (it fits X).
+- 4x3: the first version, 1440 x 1080 (4:3), kept in case you want it.
 
 BEFORE YOU POST IT
 - Post it only once AGI Studio is open to everyone: its finale says "Live now". So first set STUDIO_OPEN = yes in Vercel,
@@ -15,7 +16,8 @@ BEFORE YOU POST IT
   (before it opened). A note in its corner says "Examples · AI-generated" from the moment it says "She's not real" until
   the end card, and the end card says it again. When an app asks whether a post is AI-made, say yes (TikTok:
   "AI-generated content"; YouTube: "Altered or synthetic content"; Instagram: "AI label").
-- Its 3D model scene shows a figure drawn in code, labeled "Illustration", not a 3D model made in AGI Studio.
+- Its 3D model is Juno's own, made for this video from her full-body picture with the same kind of 3D AI AGI Studio
+  uses (shaped, given bones and taught a move, its wave), so it says "AI-generated" on it too.
 - Never add price talk, "buy" or "number go up" to the post. It ends with "Not financial advice": keep it.
 
 WHAT'S IN IT (103 SECONDS)

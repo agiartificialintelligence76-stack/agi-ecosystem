@@ -5,7 +5,7 @@
 import { h, icon, btn, linkBtn, pic, put, add } from '../ui.js';
 import { infPic, infPoster, infExample, clankProfileUrl } from '../rules.js';
 import { studioText, MODE_CARDS, STAT_NAMES, HOLDER_LINE, compact, tiny, weekText, prizeText } from '../app-words.js';
-import { videoSheet, photoSheet, loadLiked, likeButton } from './shared.js';
+import { videoSheet, photoSheet, loadLiked, likeButton, ownItem } from './shared.js';
 import { gallery } from './gallery.js';
 
 const MODE_ICON = { design: 'wand', picture: 'image' };
@@ -110,9 +110,10 @@ export async function render(ctx, route, root) {
   const data = await g.loaded;
   if (!ctx.alive() || !data) return;
   const fresh = list(data.fresh);
+  // (2026-10-13) one of this wallet's own: as its maker sees it (Remove watermark; its heart isn't for itself; no Report)
   const open = (item) => (item.kind === 'photo'
-    ? photoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id })
-    : videoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id }));
+    ? photoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id, mine: ownItem(ctx, item) })
+    : videoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id, mine: ownItem(ctx, item) }));
 
   // the top's wall: what people made (pictures only: no video plays by itself), scrolling slowly (CSS: .sa-wall-track)
   const covers = fresh.map((v) => (v.kind === 'photo' ? infPic(v.inf?.id, v.id, 0, true) : v.poster ? infPoster(v.inf?.id, v.id) : null)).filter(Boolean)

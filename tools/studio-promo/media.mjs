@@ -8,8 +8,10 @@
 // Each file is looked for by its name in those folders (and the folders inside them). Pictures are made at most 1600 px
 // on their longer side (JPEG). A video becomes two runs of JPEG frames, a sharp one (720 × 1280) and a small one
 // (360 × 640) for when it's shown small: Chromium on Claude's computer can't play H.264, and a frame read from a file is
-// the same on every render anyway. index.json lists what's there, with each picture's size and each clip's frame rate.
-// Needs ffmpeg and sharp (the site's own package).
+// the same on every render anyway. Juno's 3D model (made for it the way AGI Studio makes one: from her full-body
+// picture, given bones and taught a move, its Wave) is made ready for three.js: four bones a vertex (three.js draws
+// four, and the file has up to sixteen), its pictures smaller. index.json lists what's there, with each picture's size,
+// each clip's frame rate and the model's move. Needs ffmpeg, sharp and gltf-transform (the site's own packages).
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { join, resolve, dirname } from 'node:path';
@@ -49,9 +51,83 @@ export const VIDS = [
   ['mika-video', ['agiex-mika-video.mp4', 'mika-video.mp4']],
   ['juno-video', ['agiex-juno-video.mp4', 'juno-video.mp4']],
 ];
+// its 3D model: [its name in the video, the file names it may have]
+export const MODELS = [['juno-3d', ['juno-3d.glb']]];
 export const FULL = [720, 1280];
 export const SMALL = [360, 640];
 const PIC_MAX = 1600;
+// the model's pictures: its colors sharp (it's seen big), its bumps and its shine smaller
+const MODEL_TEX = { base: [2048, 'jpeg', 92], normal: [1024, 'png', null], mr: [1024, 'jpeg', 90] };
+const MODEL_SIG = 'm1';
+
+// A vertex's bones, at most four (the biggest, their weights adding up to one): three.js reads only a model's first set
+// (JOINTS_0 and WEIGHTS_0), and a vertex whose weights don't add up to one is drawn shrunk toward the model's middle.
+export function fourBones(prim) {
+  const sets = [];
+  for (let k = 0; ; k++) {
+    const j = prim.getAttribute(`JOINTS_${k}`), w = prim.getAttribute(`WEIGHTS_${k}`);
+    if (!j || !w) break;
+    sets.push([j, w]);
+  }
+  if (!sets.length) return 0;
+  const n = sets[0][0].getCount();
+  const J = new Uint16Array(n * 4), W = new Float32Array(n * 4);
+  const jj = [], ww = [];
+  let changed = 0;
+  for (let i = 0; i < n; i++) {
+    const pairs = [];
+    for (const [ja, wa] of sets) {
+      ja.getElement(i, jj); wa.getElement(i, ww);
+      for (let c = 0; c < 4; c++) if (ww[c] > 0) pairs.push([jj[c], ww[c]]);
+    }
+    pairs.sort((a, b) => b[1] - a[1]);
+    const top = pairs.slice(0, 4);
+    const sum = top.reduce((s, p) => s + p[1], 0);
+    if (pairs.length > 4 || Math.abs(sum - 1) > 1e-3) changed++;
+    top.forEach(([j, w], c) => { J[i * 4 + c] = j; W[i * 4 + c] = sum > 0 ? w / sum : (c === 0 ? 1 : 0); });
+  }
+  sets[0][0].setArray(J);
+  sets[0][1].setNormalized(false).setArray(W);
+  for (let k = 1; k < sets.length; k++) { prim.setAttribute(`JOINTS_${k}`, null); prim.setAttribute(`WEIGHTS_${k}`, null); }
+  return changed;
+}
+
+// Juno's 3D model, made ready: → { bytes, clips: [{ name, duration }], triangles, height, changed (vertices given four bones) }
+export async function readyModel(src, dst, { sharp } = {}) {
+  const [{ NodeIO, Logger, getBounds }, { ALL_EXTENSIONS }, { dedup, prune, resample, compressTexture }] = await Promise.all([
+    import('@gltf-transform/core'), import('@gltf-transform/extensions'), import('@gltf-transform/functions'),
+  ]);
+  const encoder = sharp || (await import('sharp')).default;
+  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+  const doc = await io.read(src);
+  doc.setLogger(new Logger(Logger.Verbosity.WARN));
+  const root = doc.getRoot();
+  if (!root.listSkins().length) throw new Error(`${src}: the model has no bones`);
+  if (!root.listAnimations().length) throw new Error(`${src}: the model has no move`);
+  let changed = 0, triangles = 0;
+  for (const mesh of root.listMeshes()) {
+    for (const p of mesh.listPrimitives()) {
+      changed += fourBones(p);
+      const idx = p.getIndices(), pos = p.getAttribute('POSITION');
+      triangles += Math.floor((idx ? idx.getCount() : pos ? pos.getCount() : 0) / 3);
+    }
+  }
+  await doc.transform(dedup(), resample(), prune({ keepAttributes: false }));
+  for (const mat of root.listMaterials()) {
+    for (const [kind, tex] of [['base', mat.getBaseColorTexture()], ['normal', mat.getNormalTexture()], ['mr', mat.getMetallicRoughnessTexture()]]) {
+      if (!tex || !tex.getImage()) continue;
+      const [size, targetFormat, quality] = MODEL_TEX[kind];
+      await compressTexture(tex, { encoder, targetFormat, resize: [size, size], quality, chromaSubsampling: '4:4:4' });
+    }
+  }
+  const height = +getBounds(root.listScenes()[0]).max[1].toFixed(3);
+  const clips = root.listAnimations().map((a) => ({
+    name: a.getName(),
+    duration: +Math.max(...a.listSamplers().map((s) => { const t = s.getInput().getArray(); return t[t.length - 1]; })).toFixed(3),
+  }));
+  await io.write(dst, doc);
+  return { bytes: statSync(dst).size, clips, triangles, height, changed };
+}
 
 function args(argv) {
   const a = { from: [], out: join(HERE, 'media'), force: false };
@@ -105,9 +181,10 @@ async function main() {
   const sharp = (await import('sharp')).default;
   mkdirSync(join(a.out, 'pic'), { recursive: true });
   mkdirSync(join(a.out, 'vid'), { recursive: true });
+  mkdirSync(join(a.out, 'model'), { recursive: true });
   const indexFile = join(a.out, 'index.json');
-  const old = existsSync(indexFile) ? JSON.parse(readFileSync(indexFile, 'utf8')) : { pics: {}, vids: {} };
-  const index = { made: new Date().toISOString(), pics: {}, vids: {} };
+  const old = existsSync(indexFile) ? JSON.parse(readFileSync(indexFile, 'utf8')) : { pics: {}, vids: {}, models: {} };
+  const index = { made: new Date().toISOString(), pics: {}, vids: {}, models: {} };
   const missing = [];
 
   for (const [name, names] of PICS) {
@@ -143,12 +220,27 @@ async function main() {
     console.log(`[media] ${name}: ${n} frames at ${fps} fps (${(n / fps).toFixed(2)} s)`);
   }
 
+  for (const [name, names] of MODELS) {
+    const src = names.map((n) => files.get(n)).find(Boolean);
+    if (!src) { missing.push(name); continue; }
+    // its version first: a change to how it's made ready makes it again
+    const sig = `${MODEL_SIG}:${statSync(src).size}:${Math.round(statSync(src).mtimeMs)}`;
+    const dst = join(a.out, 'model', `${name}.glb`);
+    if (!a.force && existsSync(dst) && old.models?.[name]?.sig === sig) { index.models[name] = old.models[name]; continue; }
+    const info = await readyModel(src, dst, { sharp });
+    index.models[name] = { ...info, sig };
+    console.log(`[media] ${name}: ${(info.bytes / 1e6).toFixed(1)} MB, ${info.triangles} triangles, ${info.height} m tall, `
+      + `${info.clips.map((c) => `${c.name} ${c.duration} s`).join(', ')}; ${info.changed} vertices given four bones`);
+  }
+
   writeFileSync(indexFile, `${JSON.stringify(index, null, 1)}\n`);
   if (missing.length) {
     console.warn(`[media] not found (the video shows a stand-in for each): ${missing.join(', ')}`);
     process.exitCode = 2;
   }
-  console.log(`[media] ${Object.keys(index.pics).length} pictures and ${Object.keys(index.vids).length} clips in ${a.out}`);
+  const nModels = Object.keys(index.models).length;
+  console.log(`[media] ${Object.keys(index.pics).length} pictures, ${Object.keys(index.vids).length} clips and `
+    + `${nModels} 3D model${nModels === 1 ? '' : 's'} in ${a.out}`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

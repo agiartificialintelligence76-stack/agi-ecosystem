@@ -1,18 +1,23 @@
 // 11. A 3D model and a coin (72–78 s): "A 3D model that moves." From Juno's full body: shaped (a wireframe builds up,
-// then its colors sweep up), given bones (its joints light up), taught moves; Wave is tapped and it waves. Then "Launch a
-// coin with its face.": a gold coin with her face flips and lands. The figure is an illustration (said on it): no real
-// 3D model was made for the video. The cut into paying opens from the coin.
+// then its colors sweep up), given bones (its joints light up), taught moves (it eases from the pose it was made in into
+// its move's stance); Wave is tapped and it waves. The figure is Juno's own 3D model, made for the video the way AGI
+// Studio makes one (labeled "AI-generated" on it); if its file isn't there, her full body shows instead. Then "Launch a
+// coin with its face.": a gold coin with her face flips and lands. The cut into paying opens from the coin.
 import { S, backdrop, headline, say, pill, glow, icon, chip, pointer, ripple, costChip } from '../look.js';
 import { card, popK, around, E, prog, clamp, mix, text, rr, media, grad, GRAD, panel } from '../parts.js';
 import { MODEL } from '../../words.js';
-import { createModel3D } from '../model3d.js';
+import { loadModel3D } from '../model3d.js';
 
-const BODY = { cx: 205, cy: 590, w: 250, h: 448 };
-const VP = { x: 410, y: 215, w: 620, h: 720 };                    // the 3D view
-const COL = { x: 1062, y: 236 };                                   // its steps and moves
-const COIN = { cx: 720, cy: 560, r: 205 };
+// 16:9 (the body at 205, the view at 410, its steps at 1062 and the coin at 720 in 4:3)
+const LM = 120;
+const BODY = { cx: LM + 125, cy: 590, w: 250, h: 448 };
+const VP = { x: 560, y: 215, w: 620, h: 720 };                    // the 3D view
+const COL = { x: 1290, y: 236, w: 380 };                           // its steps and moves
+const COIN = { cx: 960, cy: 560, r: 205 };
+const AR = { x0: BODY.cx + BODY.w / 2 + 14, x1: VP.x - 16 };       // the arrow from the body into the view
+// its wave: its move's second at the tap on Wave, and how fast it plays (a little quicker than as it was made)
+const WAVE_AT = 0.45, WAVE_SPEED = 1.25;
 let fig = null;
-let figFailed = false;
 
 function coin(g, c, t, M) {
   const inP = popK(t, M.coin + 0.05, 0.55);
@@ -75,12 +80,15 @@ function coin(g, c, t, M) {
 }
 
 export default {
-  prepare(c) { c.irisFrom.model = [COIN.cx, COIN.cy]; },
+  async prepare(c) {
+    c.irisFrom.model = [COIN.cx, COIN.cy];
+    fig = await loadModel3D(720).catch((e) => { console.warn('[studio-promo] no 3D model (her full body instead):', e.message); return null; });
+  },
   draw(g, t, c) {
     const { W, H, M } = c;
     backdrop(g, W, H, t, { a: 0.7, b: 0.75, ax: 0.62, ay: 0.4, bx: 0.1, by: 0.9, hueB: t >= M.coin ? 'rgba(245,158,11,0.18)' : 'rgba(219,39,119,0.26)' });
     const leave = E.inCubic(prog(t, M.coin - 0.35, M.coin + 0.05));          // the 3D part leaves for the coin
-    headline(g, MODEL.head, t, M.model, { x: 80, y: 140, size: 88, out: M.coin - 0.35, outDur: 0.3 });
+    headline(g, MODEL.head, t, M.model, { x: LM, y: 140, size: 88, out: M.coin - 0.35, outDur: 0.3 });
 
     if (leave < 1) {
       g.save();
@@ -93,9 +101,9 @@ export default {
       // its arrow into the 3D view
       const ap = E.inOutCubic(prog(t, M.model + 0.25, M.model + 0.5));
       if (ap > 0) {
-        g.save(); g.lineWidth = 5; g.lineCap = 'round'; g.strokeStyle = grad(g, 340, BODY.cy - 3, 60, 6, GRAD.light, 90);
-        g.beginPath(); g.moveTo(342, BODY.cy); g.lineTo(mix(342, 396, ap), BODY.cy); g.stroke();
-        if (ap > 0.95) { g.beginPath(); g.moveTo(384, BODY.cy - 12); g.lineTo(397, BODY.cy); g.lineTo(384, BODY.cy + 12); g.stroke(); }
+        g.save(); g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = grad(g, AR.x0, BODY.cy - 3, AR.x1 - AR.x0, 6, GRAD.light, 90);
+        g.beginPath(); g.moveTo(AR.x0, BODY.cy); g.lineTo(mix(AR.x0, AR.x1, ap), BODY.cy); g.stroke();
+        if (ap > 0.95) { g.beginPath(); g.moveTo(AR.x1 - 14, BODY.cy - 13); g.lineTo(AR.x1 + 1, BODY.cy); g.lineTo(AR.x1 - 14, BODY.cy + 13); g.stroke(); }
         g.restore();
       }
       // ---- the 3D view ----
@@ -107,7 +115,6 @@ export default {
         g.save(); rr(g, x, y, VP.w, VP.h, 26); g.clip();
         glow(g, 0, -40, 380, 'rgba(139,92,246,0.3)', 1);
         // the figure
-        if (!fig && !figFailed) { try { fig = createModel3D(720); } catch (e) { figFailed = true; console.warn('[studio-promo] no 3D figure:', e.message); } }
         const dw = VP.w, dh = VP.w;                                   // the render, square, at the top
         const dx = x, dy = y + 10;
         if (fig && t >= M.model) {
@@ -116,9 +123,9 @@ export default {
             rotY,
             reveal: E.inOutCubic(prog(t, M.modelSteps[0], M.modelSteps[0] + 0.42)),
             sweep: E.inOutCubic(prog(t, M.modelSteps[0] + 0.36, M.modelSteps[1] + 0.12)),
-            breath: t * 2.3, sway: Math.sin(t * 1.3) * 0.7,
-            wave: E.inOutCubic(prog(t, M.wave + 0.02, M.wave + 0.26)) * (1 - E.inOutCubic(prog(t, M.coin - 0.2, M.coin))),
-            waveT: t - M.wave,
+            // taught moves: from the pose it was made in to its move's stance, which plays on into the wave at the tap
+            pose: E.inOutCubic(prog(t, M.modelSteps[2], M.modelSteps[2] + 0.45)),
+            clip: Math.max(0, WAVE_AT + (t - M.wave) * WAVE_SPEED),
           };
           g.drawImage(fig.render(st), dx, dy, dw, dh);
           // its bones, lit up while it's given them
@@ -136,11 +143,11 @@ export default {
           media(g, c.media.pic('juno-body'), dx + dw / 2 - 170, dy + 40, 340, dh - 80, { r: 18, focus: [0.5, 0.5] });
         }
         g.restore();
-        // its footer: the name and "Illustration"
+        // its footer: the name and "AI-generated"
         g.fillStyle = S.line; g.fillRect(x, y + VP.h - 70, VP.w, 1.2);
         icon(g, 'cube', x + 34, y + VP.h - 35, 26, S.accent);
         text(g, 'Juno · 3D model', { x: x + 58, y: y + VP.h - 26, font: { f: 'sans', w: 700, s: 24 }, color: S.text });
-        pill(g, 'Illustration', x + VP.w - 24, y + VP.h - 35, { size: 15, align: 'right', mono: true, bg: 'rgba(255,255,255,0.06)', line: S.line2, color: S.text3 });
+        pill(g, 'AI-generated', x + VP.w - 24, y + VP.h - 35, { size: 15, align: 'right', mono: true, bg: 'rgba(255,255,255,0.06)', line: S.line2, color: S.text3 });
       });
 
       // ---- its steps, then its moves ----
@@ -168,7 +175,7 @@ export default {
         let x = COL.x, y = COL.y + 312;
         MODEL.moves.forEach((m, i) => {
           const w = chip(g, m, 0, 0, { u: 1.5, measureOnly: true, size: 15 }).w;
-          if (x + w > COL.x + 300) { x = COL.x; y += 58; }
+          if (x + w > COL.x + COL.w) { x = COL.x; y += 58; }
           const on = i === 0 ? E.outCubic(prog(t, M.wave, M.wave + 0.15)) : 0;
           chip(g, m, x, y - 24, { u: 1.5, on, size: 15 });
           x += w + 10;

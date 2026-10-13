@@ -9,13 +9,15 @@ const STACK = [
   { name: 'nova-golden', dx: 0, dy: 0, rot: -0.018 },
 ];
 const GRID = ['nova-beach', 'nova-cafe', 'nova-golden', 'nova-look-1', 'nova-cafe-edit-red', 'nova-body'];
-const CW = 206, CH = 258, GAP = 18, GX = 693, GY = 273;
+// 16:9: the words on the left (from X), her photos in the right part, around MID
+const MID = 1290, X = 140;
+const CW = 206, CH = 258, GAP = 18, GX = MID - (3 * CW + 2 * GAP) / 2, GY = 273;
 const cell = (k) => ({ cx: GX + (k % 3) * (CW + GAP) + CW / 2, cy: GY + Math.floor(k / 3) * (CH + GAP) + CH / 2 });
-const BIG = { cx: 1010, cy: 540, w: 470, h: 836 };
+const BIG = { cx: MID - 10, cy: 540, w: 470, h: 836 };
 const SQUAD = [
-  { name: 'kai-look-1', who: 'Kai', cx: 742, cy: 772, rot: -0.11 },
-  { name: 'mika-look-1', who: 'Mika', cx: 1290, cy: 318, rot: 0.09 },
-  { name: 'juno-look-1', who: 'Juno', cx: 1296, cy: 790, rot: 0.07 },
+  { name: 'kai-look-1', who: 'Kai', cx: MID - 278, cy: 772, rot: -0.11 },
+  { name: 'mika-look-1', who: 'Mika', cx: MID + 270, cy: 318, rot: 0.09 },
+  { name: 'juno-look-1', who: 'Juno', cx: MID + 276, cy: 790, rot: 0.07 },
 ];
 const LIKED = [0, 4, 1, 3];
 
@@ -57,7 +59,7 @@ export default {
       if (t < t0) return;
       const drop = E.outCubic(prog(t, t0, t0 + 0.32));
       const flash = 1 - E.outQuad(prog(t, M.shots[k], M.shots[k] + 0.5));
-      const stackX = 1020 + s.dx, stackY = 540 + s.dy - (1 - drop) * 90;
+      const stackX = MID + s.dx, stackY = 540 + s.dy - (1 - drop) * 90;
       const { cx: gx, cy: gy } = cell(k);
       let cx = mix(stackX, gx, toGrid), cy = mix(stackY, gy, toGrid);
       let w = mix(360, CW, toGrid), h = mix(450, CH, toGrid), rot = mix(s.rot, 0, toGrid);
@@ -91,7 +93,6 @@ export default {
     }
 
     // ---- the words ----
-    const X = 108;
     headline(g, ['Meet ', 'Nova.'], t, M.meet, { x: X, y: 572, size: 118, maxW: 560, out: M.feed - 0.23, outDur: 0.2 });
     headline(g, ['She posts ', 'every day.'], t, M.feed + 0.02, { x: X, y: 508, size: 104, maxW: 540, out: M.zoom - 0.05, grad: [1] });
     headline(g, ["She's not real."], t, M.notReal, { x: X, y: 508, size: 104, maxW: 540, out: M.youMade - 0.23, outDur: 0.2, grad: [] });
@@ -114,7 +115,7 @@ export default {
       around(g, bx + bw / 2, by + 40, { sc: p, alpha: clamp(p) }, () => {
         goButton(g, 'Create', -bw / 2, -40, bw, { u: 1.85, press: clamp(1 - Math.abs(t - M.createClick) / 0.12), glowA: 0.6 + 0.4 * Math.exp(-Math.max(0, t - M.createClick) * 3) * (t >= M.createClick ? 1 : 0), align: 'center', size: 16 });
       });
-      const keys = [[M.youMade + 0.5, 520, 980], [M.createClick, bx + bw * 0.6, by + 44, true], [M.breath, bx + bw * 0.62, by + 50]];
+      const keys = [[M.youMade + 0.5, X + 450, 980], [M.createClick, bx + bw * 0.6, by + 44, true], [M.breath, bx + bw * 0.62, by + 50]];
       const pt = keysAt(keys, t);
       ripple(g, bx + bw * 0.6, by + 44, t, M.createClick, { r: 70 });
       pointer(g, pt.x, pt.y, { s: 1.7, press: pt.press, alpha: clamp(prog(t, M.youMade + 0.45, M.youMade + 0.7)) });

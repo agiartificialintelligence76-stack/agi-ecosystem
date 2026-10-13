@@ -5,8 +5,10 @@ import { S, backdrop, headline, pill, glow, icon, progressBar, typedAt } from '.
 import { popK, around, E, prog, clamp, mix, text, rr, media, grad, GRAD, panel, measure } from '../parts.js';
 import { TOOLS } from '../../words.js';
 
-const CW = 300, CH = 336, GAP = 24;
-const GX = 720 - (CW * 4 + GAP * 3) / 2, GY = 222;
+// 16:9: four cards a row across the wide frame (300 wide in 4:3), lined up with the headline
+const LM = 120;
+const CW = 400, CH = 336, GAP = 28;
+const GX = 960 - (CW * 4 + GAP * 3) / 2, GY = 222;
 const pos = (k) => ({ x: GX + (k % 4) * (CW + GAP), y: GY + Math.floor(k / 4) * (CH + GAP) });
 
 // each card's little loop, in its lower part (x, y: the area's top left; w, h: its size; s: seconds since it came)
@@ -91,7 +93,7 @@ export default {
   draw(g, t, c) {
     const { W, H, M } = c;
     backdrop(g, W, H, t, { a: 0.7, b: 0.75, ax: 0.5, ay: 0.05, bx: 0.5, by: 1.05, grid: 0.4 });
-    headline(g, TOOLS.head, t, M.tools[0] - 0.05, { x: 80, y: 140, size: 88 });
+    headline(g, TOOLS.head, t, M.tools[0] - 0.05, { x: LM, y: 140, size: 88 });
     // a light reads them, one after another
     const readT = t - M.toolsRead[0];
     const reading = readT >= 0 ? Math.floor(readT / 0.48) : -1;

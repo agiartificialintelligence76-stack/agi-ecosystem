@@ -283,7 +283,10 @@
 >   videos without our pill. No SQL, no setting. See "Clean downloads for holders". **And it opens to everyone** (2026-10-13,
 >   the owner: "make it live for everyone now not only on my wallet"): links to it from agi1.app (the front's "Her world"
 >   list, the phone menu and the footer of every page), and the owner's one setting in Vercel, `STUDIO_OPEN=yes`. See "AGI
->   Studio opens to everyone".
+>   Studio opens to everyone". **And "Remove watermark"** (the same day, the owner: "when i open a video and photo, there
+>   should be a button that says remove watermark?"; the owner's choice: "Everyone, holders use it"): a button next to
+>   Download on its maker's own photos and videos (Download keeps the watermark); a holder of 1,000+ $AGI gets the file
+>   without it, anyone else is told why (never "buy"). No SQL, no setting. See ""Remove watermark"".
 > - **Her launch video** (2026-10-03, the owner: "now create me a professional launch video with motion design using only
 >   code about the website and its features … make it really good"): a 79-second film of agi1.app, every frame drawn in
 >   code and its music made in code (`tools/promo/`), wide (1920 × 1080) and tall (1080 × 1920), 60 frames a second, for
@@ -291,12 +294,15 @@
 >   model is 18+"), never CloakMesh (the owner: "dont announce on the video about cloackmesh"), only $AGI and only what's
 >   live. See "Her launch video".
 > - **AGI Studio's launch video** (2026-10-13, the owner: "go make a promotional marketing launch video of AGI studio. all
->   the features therem do it with top notch motion design and easy to understand and visible make it 4:3 video"): a
->   103-second film of AGI Studio and what it makes, every frame drawn in code and its music made in code
->   (`tools/studio-promo/`), 1440 × 1080 (4:3), 60 frames a second, around example creations of four made-up influencers,
->   made for it on the owner's fal.ai and Dreamina accounts (never "made in AGI Studio": "Examples · AI-generated" on it).
->   For the owner to post by hand once AGI Studio is open to everyone (its finale says "Live now"), and its X article with
->   its banner (the owner: "and also after the video create me a n X article also for it with banner ready"). See "AGI
+>   the features therem do it with top notch motion design and easy to understand and visible make it 4:3 video", then
+>   the same day "i just decided can you make the launch video 16:9"): a 103-second film of AGI Studio and what it makes,
+>   every frame drawn in code and its music made in code (`tools/studio-promo/`), **1920 × 1080 (16:9)** (1440 × 1080,
+>   4:3, at first: every scene laid out again for the wide frame, the 4:3 one kept), 60 frames a second, around example
+>   creations of four made-up influencers, made for it on the owner's fal.ai and Dreamina accounts (never "made in AGI
+>   Studio": "Examples · AI-generated" on it); its 3D scene shows Juno's own 3D model, made on the owner's Meshy account
+>   (the owner, after its first version: "why the 3d model is like that?", then "Real 3D model (Recommended)"). For the
+>   owner to post by hand once AGI Studio is open to everyone (its finale says "Live now"), and its X article with its
+>   banner (the owner: "and also after the video create me a n X article also for it with banner ready"). See "AGI
 >   Studio's launch video".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
@@ -349,8 +355,9 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
 - **Her launch video** (2026-10-03, the owner's request): a 79-second film of the site and everything she does, drawn and
   scored in code, wide and tall, for the owner to post by hand. Not part of the website. See "Her launch video"
 - **AGI Studio's launch video** (2026-10-13, the owner's request): a 103-second film of AGI Studio, drawn and scored in
-  code, 4:3 (1440 × 1080) at 60 frames a second, around example creations made for it, for the owner to post by hand once
-  AGI Studio is open to everyone. Not part of the website. See "AGI Studio's launch video"
+  code, 16:9 (1920 × 1080; 4:3 at first, kept) at 60 frames a second, around example creations made for it (Juno's 3D
+  model among them), for the owner to post by hand once AGI Studio is open to everyone. Not part of the website. See "AGI
+  Studio's launch video"
 - **Burn $AGI for more messages** (2026-09-30, the owner's idea): after the free messages, 10 $AGI a message, burned by the
   visitor from their own wallet app (the site never asks a wallet for the burn) and checked on Robinhood Chain; what was
   burned counts toward the level; a huge live **burn monitor** above the chat. Off until `supabase/burns.sql` is run. See
@@ -682,7 +689,10 @@ pixels, the share mark top left (`markTopLeft()`), a video whose mark is in it a
 `views/layers.js`: what the photo editor and the video editor share (a layer drawn, the words-and-stickers panel, its
 sliders, `layersPicture()`); `openVideoEditor()` in `views/influencer.js`, "Edit video" in `editRow()`, `saveCut()` in
 `media.js`, `VIDEO_EDITOR` and `cutSteps()` in `rules.js`, `cutNote()`, `cutSavedText()`, `cutErrorText()` and
-`trimText()` in `app-words.js`, the icons `scissors` and `soundOff` in `ui.js`) |
+`trimText()` in `app-words.js`, the icons `scissors` and `soundOff` in `ui.js`); and since 2026-10-12 every download's
+hidden AI tag (`ai-tag.js`, read by our server too); and since 2026-10-13 "Remove watermark" (`removeMark()` and `ownItem()`
+in `views/shared.js`, `removeMarkText()` and `removeMarkErrorText()` in `app-words.js`, the icon `eraser` and a sheet's
+foot height, `--sa-foot-h`, in `ui.js`) |
 | `public/theme.js` | Tiny script in `<head>`: picks light or dark, and Pop mode unless the visitor switched it off, before the page paints (no flash), and sets the phone's browser-bar color to match; on the home page it also arms the front's entrance and loader (2026-09-28); at agi1.app/talk (2026-10-02) it starts the page in full-screen talk (`is-talk`, its title and colors, no loader), and at agi1.app/talk?pip=1 inside a frame marks it as her pop-out window's page (`is-pip`); since 2026-10-10 a `studio` page gets the page's own bar color like the diary (the 3D studio's page loaded `/theme.js?v=8` for it that morning; AGI Studio's page, since, doesn't load it at all: one dark look, its bar color in its own `<head>`; the other pages keep `v=7`) |
 | `src/main.js` | Browser code entry point: styles, theme, the front, prices, sections, chat, then the 3D stage (loaded separately, after the front's entrance; at /talk at once, and the front only when you leave full-screen talk) |
 | `src/landing/landing.js` | The front (2026-09-28): the loader, the entrance, the focus lines, AGI-1 in WebGL, the orbit, her bubble, the ribbons, the manifesto, the cursor and hearts (see "The front") |
@@ -792,7 +802,7 @@ run it again, before pushing** (it still ends with `influencers_ready = 1`). **S
 (`agi1_inf_access`, who may use AGI Studio while it's private) and 96 functions (`inf_access_list`, `inf_access_set`, and
 `inf_who` says whether a wallet is on the list): run it again, before pushing** (it still ends with `influencers_ready = 1`). **Since its styles and ways (the same day): the 26 styles and `auto` (`agi1_inf.style`), the ways to start (`agi1_inf.way`), a picture's whole body and head (`agi1_inf_uploads.whole`, `.head`), `inf_start`'s `p_way` and `inf_upload_set`'s `p_whole` and `p_head` (still 28 tables and 96 functions): run it again, before pushing** (it still ends with `influencers_ready = 1`). **Since its profile pictures (the same day): 98 functions (`inf_pfp_set`, `inf_pfp_of`) and an influencer's own profile picture (`agi1_inf.pfp`): run it again, before pushing.** **Since the owner's gift links (2026-10-12): 100 functions (`inf_owner_link`, `inf_owner_links`), a gift's kind (`agi1_credit_gifts.kind`: `bought`, or the owner's `owner`), every gift's message up to 200 characters (80 before), and a wallet let in by claiming one (`agi1_inf_access.via` `link`): run it again, before pushing** (still 28 tables; it still ends with `influencers_ready = 1`). **Since the editor (the same day): 101 functions (`inf_job_delete`) and a creation its maker deleted (`agi1_inf_jobs.deleted_at`: hidden at once, its row and its likes a week later): run it again, before pushing** (still 28 tables; it still ends with `influencers_ready = 1`). **Since Edit with words (the same day): a photo's change (`agi1_inf_jobs.edit`, with its check) and `inf_make`'s `p_edit` (its older version dropped first; still 101 functions): run it again, before pushing** (still 28 tables; it still ends with `influencers_ready = 1`). **Since the photo editor (the same day): 103 functions (`inf_tool_take`, `inf_photo_add`), 29 tables (`agi1_inf_tool_days`: how many each wallet saved a day), a photo saved from it (`agi1_inf_jobs.editor`, with its check) and the site's counts a day (`agi1_inf_days.photo_edits`, and `.video_edits` for the video editor to come): run it again, before pushing** (it still ends with `influencers_ready = 1`). **Since the video editor (the same day): 106 functions (`inf_cut_add`, `inf_cut_done`, `inf_cut_due`), a video saved from it (`agi1_inf_jobs.editor` and `.cut`, what was asked, with their checks; its seconds 1 to 60, 3 to 60 before) and the clock's index for cuts: run it again, before pushing** (still 29 tables; it still ends with `influencers_ready = 1`) |
 | `supabase/cloakmesh.sql` | CloakMesh's waitlist (2026-10-03). Run once in the same Supabase project (any time; running it again is safe): two new tables (`agi1_cloakmesh_waitlist`, `agi1_cloakmesh_days`) and 3 functions, only added (nothing the original site uses changes). Until it's run, CloakMesh's page says the waitlist opens soon |
-| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, since 2026-10-08 her live show's hands (an arm reaching a point, a hand turned and curled, her round elbow), "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there; since 2026-10-11 AGI Studio's alerts: `/start` with an alerts link, and `/stop`), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras; since 2026-10-09 questions of any length, any name but crude or posing ones, a Telegram question with the person's Telegram name, other coins and famous people in her live rules, the `ADVICE` safety net, her memory of the group on stream, her chart's trades; since 2026-10-10 her holder perks: a wallet's level with a question, her 💜 badge and its 5 a day, the head start in her line, old and new live.sql, the page's wallet), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page; since 2026-10-08 her poses (never a paddle, never on her chest), her hands (always her palm, never turned or curled past their limits, what she holds in front of her palm with her fingers or thumb over it) and her hands on their way, frame by frame on her springs; since 2026-10-09 requests that never wait, all of her song's words, reading the question out loud, her song's music video, her live $AGI chart and where she reads messages), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end; since 2026-10-08 cutting the paintings out, what the first ones needed, the stand-ins, the conical hat, her glasses' clear lenses, her headset on her ears and her headphones on her head), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `studio-promo.test.js` (2026-10-13: AGI Studio's launch video: never an AI service's name, never "buy" or money talk, PG-13, only $AGI, never "made in AGI Studio", "not financial advice", 18+ and "AI-generated" where they belong, never AGI-1 in 3D, CloakMesh or another coin's data, its 3D figure labeled "Illustration", AGI Studio's own words and numbers, the scenes on bars, the cuts, the music on the picture's moments and its sections, the renderer and its own server; with `STUDIO_PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note), `games.test.js` (2026-10-09: her quizzes: her questions' rules, a quiz as Telegram takes it, picking and shuffling, a winner's name, the settings, `/api/feed?games` and its key, a tick (just for fun without prizes), her bot hearing answers, answers, closing and the draw, her result, claiming in her private chat (18+, the address's checks, the transfer itself, every way sending can go, never twice), a secret sent to her by mistake, her groups' /help, intro and /claim, her quiz lines' rules, loading light, games.sql's promises, the safety note), `studio.test.js` (2026-10-10: AGI-1's 3D character studio: its rules, a character's words, Meshy's requests, its files made small, Storage, payments on the chain, the settings and codes, quotes, paying, "Check my payment", the making and every way it can go, the clock, `/api/launch` and `/api/feed?studio`; its page's 3D view (clips, in place, framed), words and promises, the safety note), `videos.test.js` (2026-10-10: its characters' videos: the rules and settings, a scene's checks and the video service's words, fal's queue (requests, states, results, errors, the key never in one), its files (only fal's addresses, MP4s, Storage, signed addresses, a part read with Range), what anyone sees, quotes, USDG payments, made again, the making and every way it can go, the clock, every GET (played in parts: 206, 416, 302) and POST, the page and its CSP, 12 functions), `influencer.test.js` (2026-10-10: AGI Studio: its rules and words, the AI requests as fal's pages write them, Gemini's looks, uploads (tickets, a picture made plain, a clip in parts, its length from its header, posters), credits (free first, given back once, top-ups once, a month's free ones), an influencer from start to ready, its photos, trend and scene videos, the clock and the tidy-up, Explore and its page, public and deleting, reports and the owner's tools, its 3D models, its coin, every GET and POST, the app's page and promises, `influencers.sql`'s promises; since its round 2 a photo of a real person with consent (and never one without its box), the trend clips and their swap, example pictures, likes and the weekly spotlight (its pick, the owner's look, its prize sent once), burn unlocks and a 3D model for a big burn, the share mark on photos and videos, the stats board, no camera anywhere; since its round 3 the owner's credits for testing (only the owner, 1 to 100,000, to the owner's own wallet or a tester's, spent and given back like bought ones); since its round 4 progress bars (their numbers, never back, our server's clock), X
+| `tests/` | Automated tests (run on every build): `chat.test.js`, `prices.test.js`, `keepalive.test.js`, `evals.test.js`, `page.test.js` (the page's must-have warnings; since 2026-09-28 also that the Arena is gone; since 2026-10-05 the Telegram links next to X), `wallet.test.js` (sign-in, levels, memory, the no-transaction guard), `diary.test.js` (writing and listing the diary, never about the Arena), `share.test.js` (X posts, share pages, voice text), `memory.test.js` (Phase 6: the Telegram memory), `voice.test.js` (AGI-1's voice: tickets, limits, the request to Gemini's speech model, WAV, the greeting), `talk.test.js` (her talking level: the rhythm, pretending, the sound meter), `listen.test.js` (voice chat: listening for one message with a fake recognizer), `limit.test.js` (her out-of-messages line: only Strangers and Crushes, the real numbers, "not financial advice", tomorrow, no prices/gains/pressure, her voice says exactly that), `market.test.js` (market moments: her lines (the number and a feeling only, "not financial advice", no advice words), when she says them (steps, wobbles, -20% days, 12 hours, the first look), the page's watcher), `models.test.js` (2026-09-26: the model picker and her AGI-2 lines), `checker.test.js` (2026-09-26: ClankChecker's scan rules, reading clank.trade, the list, the newest coins and the page's merge, pictures, the API, her lines; since 2026-10-05 coins paired with SPCX at SPCX's price, and the pictures from public IPFS gateways, made small with sharp), `pop.test.js` (2026-09-27: Pop mode's button, its styles scoped so the default look can't change, its fonts and licenses, the ribbons' words, the pre-paint script, where the menu starts), `agi1-2d.test.js` (2026-09-27; her Live2D model since 2026-10-01: which AGI-1 (2D first), her springs, blinks, eyes, mouth, where she looks, her chest's PG-13 limits measured on her model, her physics against Live2D's own runtime, her model's files, her puppet and controller with Live2D's real runtime in Node, her arms and hips moved in code, since 2026-10-03 her arms' finer meshes, her elbow and the top of her upper arm under her sleeve, since 2026-10-08 her live show's hands (an arm reaching a point, a hand turned and curled, her round elbow), "reduce motion", the page's "3D · 2D" buttons), `landing.test.js` (2026-09-28: the front: first on the page, the one h1, its links, pictures and font, scoped styles, her bubble lines and (2026-09-30) her bubble's place on phones, what `/theme.js` arms, "reduce motion", the stage waiting for it, no removed coin, nothing of the Arena), `telegram.test.js` (2026-09-29: her Telegram lines, the bot, connecting it, the feed, her texts first, `/api/telegram`, `/api/feed`, the page's link; since 2026-10-03 her Telegram groups: which groups and leaving the others, her intro and welcomes, her answers there and their limits, her group menu, her posts there; since 2026-10-11 AGI Studio's alerts: `/start` with an alerts link, and `/stop`), `i18n.test.js` (2026-09-29: her 16 languages, every language's lines against her rules, the page's language state, her prompt's language part, her voice lines' words, the mic, her Telegram lines, the Soulmate note filter), `clips.test.js` (2026-09-29: her daily clips: only AGI (never another coin), her diary clip's words, captions, her voice's loudness and pauses, ffmpeg never hanging, the GitHub job, nothing in the site's build), `burn.test.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain, counting it once and per wallet, "Check my burn", the chat using burned messages after the free ones and giving one back, her voice allowance, the level, the burn monitor's numbers, the page's promises), `launch.test.js` (2026-10-01: "Launch with AGI-1": the one file that sends, her checks, the coins a day by holdings, one link one coin, SPCX, the launch call as clank.trade's docs write it, the dry run, reading a launch back, the payback (never twice), the caps, `/api/launch`, the uploads, the tidy-up, her bot's flow, the page's words and rules, the safety note, the secret check), `fullscreen.test.js` (2026-10-02: full-screen talk and the AGI-1 app: the /talk address, `/theme.js` there, the ways in, the manifest and icons, the app's screen in each browser, the layout's rules all naming `.is-talk`, her framing, the chat's two tabs), `popout.test.js` (2026-10-02: her pop-out window: its address, which browsers and pages may open it, the frame headers (our own pages only), `/theme.js`'s mark, the buttons and the page's card, the window itself with a stand-in browser, what the chat, full-screen talk and the looks do while she's out), `shot.test.js` (2026-10-02: "Show her": the picture's checks, `/api/chat` with a picture, every refusal before anything is asked, a picture never logged or kept, her picture rules, no Soulmate note from a picture, her replies' cleanup of links, handles and emails, the page and its check screen, taking the picture, the chat's part), `live.test.js` (2026-10-02: her live show's website side: a question's and a name's checks, tickets, who may call what, her live prompt and the AI's decision, the line, the runner's calls, the owner's controls, /live in her bot, the page; since 2026-10-07 a question from X's chat passed on by the owner, and her "i'm live" post in her Telegram groups; since her stream's upgrade a viewer's request in her answer, her new lines from the site's AI, her reactions to her posts, their replies and her videos, $AGI on her show, and agi1.app/live's names for her extras; since 2026-10-09 questions of any length, any name but crude or posing ones, a Telegram question with the person's Telegram name, other coins and famous people in her live rules, the `ADVICE` safety net, her memory of the group on stream, her chart's trades; since 2026-10-10 her holder perks: a wallet's level with a question, her 💜 badge and its 5 a day, the head start in her line, old and new live.sql, the page's wallet), `livestream.test.js` (2026-10-02: her stream: her lines, the director, her voice, her music, the runner, ffmpeg's settings, the site client, her set, the Docker image; since 2026-10-07 the new segments and their picks, a 3-hour show, the question card for X's chat; since her stream's upgrade her full-width picture with nothing opaque over it, and the stream's 48 kHz stereo sound), `stream.test.js` (2026-10-07, her stream, upgraded: viewers' requests (the site's list and her set's, what she can do now, her answer's request checked, the rests), her song (its file, timing, parts, sound and level), her dance songs, the stream's 48 kHz stereo sound (her song or a video's on its own, the music resting under it), her videos and her posts' pictures (made ready, downloaded only from X's media addresses), her X posts (the Bearer Token never in a log, the budget, never who replied), the director's extras, her new lines' rules, the runner's new options, her set's own server, the demo, her set's page; since 2026-10-08 her poses (never a paddle, never on her chest), her hands (always her palm, never turned or curled past their limits, what she holds in front of her palm with her fingers or thumb over it) and her hands on their way, frame by frame on her springs; since 2026-10-09 requests that never wait, all of her song's words, reading the question out loud, her song's music video, her live $AGI chart and where she reads messages), `trips.test.js` (2026-10-07, her trips: her places and vehicles, the people she meets and their voices, her snacks, the weather, her emotions and their marks, eating and her umbrella, her trip lines in their languages, where she goes next, the sounds around her and the mixer's fades, the site writing a meeting, viewers' requests for trips, the runner, her set's page), `art.test.js` (2026-10-07, her painted set: what each picture asks for (never anyone real, text or logos), the request to Google's image AI, her 2D picture as the style to match (never the 3D model), carrying on where a run stopped, a fake Google end to end; since 2026-10-08 cutting the paintings out, what the first ones needed, the stand-ins, the conical hat, her glasses' clear lenses, her headset on her ears and her headphones on her head), `cloakmesh.test.js` (2026-10-03: CloakMesh's page and waitlist: what counts as an email address, `/api/cloakmesh` (its checks first, the human check, a leave link, the same answer for an address already there, the limits, leaving), the SQL's promises, the demo (what it finds and what it leaves alone, its tokens, putting them back, fast on anything typed, never sending anything), the page's promises, its scoped styles, inference.agi1.app's redirect, the 12-function limit). `promo.test.js` (2026-10-03: her launch video: only $AGI and no money talk, "not financial advice", 18+ and an AI where they belong, never CloakMesh or the 3D model, the site's own numbers and lines, the scenes on bars, the music on the picture's moments, the renderer; with `PROMO_RENDER=1` the whole music rendered), `studio-promo.test.js` (2026-10-13: AGI Studio's launch video: never an AI service's name, never "buy" or money talk, PG-13, only $AGI, never "made in AGI Studio", "not financial advice", 18+ and "AI-generated" where they belong, never AGI-1 in 3D, CloakMesh or another coin's data, its 3D model Juno's own, labeled "AI-generated" (made ready: four bones a point, its move over its turntable, its bones shown), AGI Studio's own words and numbers, the scenes on bars, the cuts, the music on the picture's moments and its sections, the renderer and its own server; with `STUDIO_PROMO_RENDER=1` the whole music rendered), `buys.test.js` (2026-10-06: her buy bot: reading clank.trade's trades, her caption, the check (the first look, each buy once, $50 and up, only fresh ones, at most 6, two checks at once), her GIF uploaded once and then by Telegram's id, Telegram's answers, `/api/feed?buys` and its key, the settings, her GIF itself, the tool that makes it, loading light, buys.sql's promises, the safety note), `games.test.js` (2026-10-09: her quizzes: her questions' rules, a quiz as Telegram takes it, picking and shuffling, a winner's name, the settings, `/api/feed?games` and its key, a tick (just for fun without prizes), her bot hearing answers, answers, closing and the draw, her result, claiming in her private chat (18+, the address's checks, the transfer itself, every way sending can go, never twice), a secret sent to her by mistake, her groups' /help, intro and /claim, her quiz lines' rules, loading light, games.sql's promises, the safety note), `studio.test.js` (2026-10-10: AGI-1's 3D character studio: its rules, a character's words, Meshy's requests, its files made small, Storage, payments on the chain, the settings and codes, quotes, paying, "Check my payment", the making and every way it can go, the clock, `/api/launch` and `/api/feed?studio`; its page's 3D view (clips, in place, framed), words and promises, the safety note), `videos.test.js` (2026-10-10: its characters' videos: the rules and settings, a scene's checks and the video service's words, fal's queue (requests, states, results, errors, the key never in one), its files (only fal's addresses, MP4s, Storage, signed addresses, a part read with Range), what anyone sees, quotes, USDG payments, made again, the making and every way it can go, the clock, every GET (played in parts: 206, 416, 302) and POST, the page and its CSP, 12 functions), `influencer.test.js` (2026-10-10: AGI Studio: its rules and words, the AI requests as fal's pages write them, Gemini's looks, uploads (tickets, a picture made plain, a clip in parts, its length from its header, posters), credits (free first, given back once, top-ups once, a month's free ones), an influencer from start to ready, its photos, trend and scene videos, the clock and the tidy-up, Explore and its page, public and deleting, reports and the owner's tools, its 3D models, its coin, every GET and POST, the app's page and promises, `influencers.sql`'s promises; since its round 2 a photo of a real person with consent (and never one without its box), the trend clips and their swap, example pictures, likes and the weekly spotlight (its pick, the owner's look, its prize sent once), burn unlocks and a 3D model for a big burn, the share mark on photos and videos, the stats board, no camera anywhere; since its round 3 the owner's credits for testing (only the owner, 1 to 100,000, to the owner's own wallet or a tester's, spent and given back like bought ones); since its round 4 progress bars (their numbers, never back, our server's clock), X
 banners (the cut, never a video's start), captions (ready-made and by AI, never about money) and clank.trade usernames
 (only a profile with this wallet, never on a private influencer); since round 4's phase 2 the team and its roles, bans
 (what a banned wallet can't do, its influencers hidden from everyone), support tickets (never a seed phrase or a private
@@ -836,7 +846,7 @@ and `coins.test.js` left with the Arena (2026-09-28) |
 | `.dockerignore` | 2026-10-02: what her stream's Docker image never gets (packages it installs itself, build output, git, anything secret or private) |
 | `tools/clips/` | Her daily clips (2026-09-29, not part of the website; only AGI, never another coin): `make.mjs` (the whole day: her diary entry, her voice, every frame, the MP4), `lines.js` (her words, with her rules), `captions.js` (her captions and their timing), `audio.js` (WAV files, her mouth's loudness, her pauses, a stand-in voice), `page/` (the renderer page: her 2D rig, the background, the title, the captions, the label; built into `tools/clips/dist/`, which git ignores). See "Her daily clips" |
 | `tools/promo/` | Her launch video (2026-10-03, not part of the website): `make.mjs` (builds its page, draws every frame in Chromium, ffmpeg → the MP4s, the cover, the post text, a light copy), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen, from the site's own files where it can), `music.js` (its music, composed and played in code), `page/` (the renderer: `promo.js`, `kit.js`, `ui.js`, `transitions.js`, `her.js` (her Live2D model), `art.js` (the front's art and shader), `scenes/` (one file a scene); built into `tools/promo/dist/`, which git ignores). Its videos go to `promo/` (git ignores it). See "Her launch video" |
-| `tools/studio-promo/` | AGI Studio's launch video (2026-10-13, not part of the website): `make.mjs` (builds its page, serves it on this computer only, draws every frame in Chromium, ffmpeg → the MP4, the cover, the post text, a light copy, `README.txt`), `media.mjs` (the example pictures and clips made ready once, into `tools/studio-promo/media/`, which git ignores), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen and the post, from AGI Studio's own files), `music.js` (its music, composed and played in code), `README.txt` (for the owner, copied next to the video), `page/` (the renderer: `main.js`, `look.js` (AGI Studio's look), `parts.js`, `media.js`, `cuts.js`, `model3d.js` (its 3D figure: three.js shapes, never a model file), `scenes/` (one file a scene); built into `tools/studio-promo/dist/`, which git ignores). Its videos go to `studio-promo/` (git ignores it). See "AGI Studio's launch video" |
+| `tools/studio-promo/` | AGI Studio's launch video (2026-10-13, not part of the website): `make.mjs` (builds its page, serves it on this computer only, draws every frame in Chromium, ffmpeg → the MP4, the cover, the post text, a light copy, `README.txt`), `media.mjs` (the example pictures and clips, and since 2026-10-13 Juno's 3D model, made ready once, into `tools/studio-promo/media/`, which git ignores), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen and the post, from AGI Studio's own files), `music.js` (its music, composed and played in code), `README.txt` (for the owner, copied next to the video), `page/` (the renderer: `main.js`, `look.js` (AGI Studio's look), `parts.js`, `media.js`, `cuts.js`, `model3d.js` (Juno's own 3D model, shown with three.js: never AGI-1's; three.js shapes, labeled "Illustration", until 2026-10-13), `scenes/` (one file a scene); built into `tools/studio-promo/dist/`, which git ignores). Its videos go to `studio-promo/` (git ignores it). See "AGI Studio's launch video" |
 | `tools/buybot/` | Her buy GIF (2026-10-06, not part of the website): `make.mjs` (builds its page, draws each frame in Chromium, ffmpeg → `server/media/agi1-buy.mp4`, a soundless MP4), `page/` (`gif.js`: her Live2D model through the launch video's renderer, cheering, on Pop mode's violet, with a "$AGI BUY!" sticker; built into `tools/buybot/dist/`, which git ignores). See "Her buy bot" |
 | `tools/studio/` | AGI Studio's share mark (round 2, 2026-10-10, not part of the website): `mark.mjs` draws `server/media/studio-mark.png` (the "Made with AGI Studio · AI-generated · studio.agi1.app" pill, with the site's own Geist, twice its size, on a transparent background) once in Chromium, so our server only scales and places it (sharp, ffmpeg) and needs no fonts. Run again only after changing its words or look: `node tools/studio/mark.mjs` (Chromium and `npm install --no-save playwright-core`, like the other tools). And since 2026-10-11 AGI Studio's guide videos: `guide-record.mjs` (the recorder: the app as Vite builds it in Chromium, at a computer's size and a phone's, our own server's code answering it with `tests/influencer.test.js`'s fake services, a demo studio of made-up people from the live show's 2D paintings, a cursor or taps drawn on top, a camera that follows what happens, frames from Chromium's screencast put together with sharp and encoded with ffmpeg → `src/studio/guide/` and `src/studio/guide-media.js`) and `guide-scripts.mjs` (what happens in each video: one scene a video, a computer's and a phone's). See "AGI Studio's guide" |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
@@ -876,8 +886,8 @@ and `coins.test.js` left with the Arena (2026-09-28) |
   `promo/` (about 15 minutes each; Chromium, ffmpeg and `npm install --no-save playwright-core`, like her clips). Quick
   looks: `--scale 0.5 --fps 30`, `--from 48 --to 54`, `--stills 9.6,24.4`, `--sheet 0.5` (see "Her launch video").
 - AGI Studio's launch video (2026-10-13): `node tools/studio-promo/make.mjs --out studio-promo --light 27` makes it into
-  `studio-promo/` (about 25 minutes; its examples made ready once first, `node tools/studio-promo/media.mjs --from
-  <folders>`; Chromium, ffmpeg and `npm install --no-save playwright-core`). Quick looks: `--scale 0.5 --fps 30`,
+  `studio-promo/` (about 30 minutes; its examples made ready once first, Juno's 3D model among them, `node
+  tools/studio-promo/media.mjs --from <folders>`; Chromium, ffmpeg and `npm install --no-save playwright-core`). Quick looks: `--scale 0.5 --fps 30`,
   `--from 46 --to 52`, `--stills 9.5,46.2`, `--sheet 0.5` (see "AGI Studio's launch video").
 - Her buy GIF (2026-10-06): `node tools/buybot/make.mjs` makes `server/media/agi1-buy.mp4` again (after her model
   changes; about a minute; Chromium, ffmpeg and `npm install --no-save playwright-core`, like her launch video);
@@ -3066,11 +3076,24 @@ inspiration as well and if you need to generate yourself one you can use the agi
 seedance account and use all the credits there left. just for examples thanks. do your best and impressed me", and "i just
 saw your message yes you can use my chrome, i loged in my fal ai, meshy and dreamina as well". The owner's choices: "fal.ai
 and Dreamina only" and "Up to $9, I'll top up (Recommended)" on fal. And: "and also after the video create me a n X article
-also for it with banner ready".
+also for it with banner ready". Then, the same day, after the 4:3 one was made: "i just decided can you make the launch
+video 16:9".
 
 **What it is:** a 103-second launch film for AGI Studio, made like her launch video: every frame drawn in code and its music
-composed and played in code (`tools/studio-promo/`), around real example creations: **1440 × 1080 (4:3)**, 60 frames a
+composed and played in code (`tools/studio-promo/`), around real example creations: **1920 × 1080 (16:9)**, 60 frames a
 second, one video for every app. Not part of the website, and nothing posts it: the owner posts it by hand.
+
+**16:9** (the owner's "i just decided can you make the launch video 16:9"): it was made at 1440 × 1080 (4:3) first. Every
+scene was laid out again for the wide frame, never stretched or put between bars, with the same story, timing, words and
+music: its headlines from 120 px from the left (80 in 4:3), what sat side by side spread across the width (the hook's photos
+around 1290, the trend pairs 500 apart, the four results 380 apart, the video row 370 apart, the tools' cards 400 wide),
+its walls wider (the drop's 7 columns, the community's 5, the finale's 10, so the tilted wall still covers every corner),
+the style tiles in rows of 5 and 4, the X banner 1440 × 480 on its profile, the end card's rings reaching the corners.
+Pictures and cards keep about their size (the height is the same 1080). The 4:3 video is kept, in `studio-promo\4x3\`.
+Its light copy is 26 MB at the same bitrate as the 4:3 one's, and measured frame by frame against the full one it looks
+the same (46.6 dB PSNR on average, 34.5 at worst, in the finale's slam as its tiles pop in; SSIM 0.992), its sound lined
+up with the music to the sample. Its X article's ten stills and its clip were made again from it; its banner (2000 ×
+800) stays as it was.
 
 **The examples:** four made-up influencers, **Nova** and **Kai** (realistic), **Mika** (anime) and **Juno** (3D cartoon),
 their looks and full bodies, photos in scenes, two memes, an X banner, eight style pictures, nine trend clips and four trend
@@ -3080,8 +3103,15 @@ models AGI Studio uses, **before AGI Studio opened**: never "made in AGI Studio"
 In the spirit of the owner's reference (Higgsfield's AI influencer pages): never its name, look, pictures, prompts or code.
 The trend clips are stand-ins made on Dreamina (the app's own 12 trend clips are the owner's to make, with Kling, on the
 owner's page). Downloaded into the owner's `Downloads\AGI Studio examples` (in subfolders; its `_to_delete` holds the 3
-zips they came in, for the owner to delete). No 3D model was made (Meshy wasn't in "fal.ai and Dreamina only", and a GLB
-download wasn't in what the owner allowed): the 3D scene's figure is drawn in code, labeled "Illustration".
+zips they came in, for the owner to delete).
+
+**Juno's 3D model** (the same day, after the owner saw the first version: "why the 3d model is like that?"; the owner's
+choice: "Real 3D model (Recommended)", about 60 Meshy credits approved): made by Claude on the owner's Meshy account, in the
+owner's Chrome, from Juno's full-body picture, the way AGI Studio makes one (its Image to 3D, 35 credits; then its bones and
+one move from its library, Big Wave Hello, at no extra cost), and one GLB downloaded into `Downloads\AGI Studio
+examples\juno-3d.glb` (26.5 MB: 31,050 triangles, 1.7 m tall, its wave 5.3 s). It says "AI-generated" on it, like
+everything else. (The first version's figure was drawn in code with three.js shapes, labeled "Illustration": Meshy wasn't in
+"fal.ai and Dreamina only", and a GLB download wasn't in what the owner had allowed.)
 
 **The story** (15 scenes, each starting on a bar of the music: 120 beats a minute, a bar is 2 s):
 
@@ -3097,7 +3127,7 @@ download wasn't in what the owner allowed): the 3D scene's figure is drawn in co
 | 46–58 s | the second drop: trend videos | a carousel of trending clips, one picked; four times a clip, the influencer and the influencer in the clip (Nova: Golden hour; Kai: Neon runway; Juno: Confetti freeze; Mika: Rain twirl); the four side by side; "Or bring your own clip." |
 | 58–64 s | videos from a photo | the Video tool: Make video, the photo comes alive; a row of videos; Standard 720p · Pro 1080p · Anime for drawn styles · Long up to 60 s, with sound |
 | 64–72 s | everything to post it | eight cards, one a beat, each a small working piece of the app (the video editor, captions, Make another, Instant, progress, profile pictures, downloads that say they're AI-made, guides and help), then the camera reads them |
-| 72–78 s | a 3D model and a coin | Juno's full body becomes a figure, shaped, given bones and taught moves (drawn in code: "Illustration"), waving; "Launch a coin with its face.": her coin flips and lands, "$TICKER", "From your own wallet, on clank.trade.", "18+ · Meme coins can go to zero · Not financial advice" |
+| 72–78 s | a 3D model and a coin | "A 3D model that moves.": Juno's full body becomes her own 3D model on a turntable ("Juno · 3D model", "AI-generated"), its steps lighting up: Shaping it (its wireframe built from the floor up, then its colors sweeping up from its feet), Giving it bones (its bones lit), Teaching it moves (eased from the pose it was made in into its move's stance); then she waves, with "TYPE A MOVE" and "GLB · to download" beside her; "Launch a coin with its face.": her coin flips and lands, "$TICKER", "From your own wallet, on clank.trade.", "18+ · Meme coins can go to zero · Not financial advice" |
 | 78–84 s | paying | the coin opens onto "Pay as you go.": Top up ($5 · $10 · $25), 1,000 credits counting up, "1 credit = 1 cent", what things cost; "$AGI holders get more.": Crush and Soulmate, the prices falling to theirs, their free credits, "A thank-you for holding, not an investment. Not financial advice." |
 | 84–90 s | the community | "Share it. Get liked.": a wall of creations, hearts; "Spotlight of the week"; "Gifts & invites.": a gift of 300 credits claimed, an invite link, bonus credits for both |
 | 90–98 s | the finale | a tilted wall of everything the four made, slammed in on the last drop; the logo, "Create your own influencer.", Start creating, agi1.app/studio, "Live now" |
@@ -3112,8 +3142,9 @@ the end card, "Examples · AI-generated" stays at the bottom left, on a dark pla
   or "rug"; PG-13; only $AGI (`$TICKER` is a coin's own ticker, a placeholder); "investment" only as "not an investment".
 - **"Not financial advice"** wherever money comes up (the coin, holders, the end card, the post), 18+ where it applies,
   "AI-generated" on every frame from the reveal on, and never "made in AGI Studio".
-- **AGI-1 never in 3D, never CloakMesh, never another coin's data:** the code never loads a model file; its 3D figure is
-  three.js shapes, labeled "Illustration".
+- **AGI-1 never in 3D, never CloakMesh, never another coin's data:** its one model file is Juno's own 3D model
+  (`/media/model/juno-3d.glb`, made for it, labeled "AI-generated"), never AGI-1's 3D model or anything rendered from it
+  (until 2026-10-13 its figure was three.js shapes, labeled "Illustration").
 - **AGI Studio's own words and numbers, imported** (`src/studio/rules.js`, `src/studio/app-words.js`, Explore's heading):
   every price at each level, the three ways, the 26 styles and their groups, the meme formats, the X banner's size, the
   trend clips, the video models, the editors' limits, the 3D model's moves, the top-ups, the holder perks: change them in the
@@ -3126,7 +3157,10 @@ the end card, "Examples · AI-generated" stays at the bottom left, on a dark pla
 **How it's made** (`tools/studio-promo/`):
 - `timeline.js` (its clock: the scenes and every moment), `words.js` (every word on screen and the post, from the app's own
   files), `music.js` (its music), `media.mjs` (the examples made ready once: pictures at most 1600 px; each clip as two runs
-  of JPEG frames, 720 × 1280 and 360 × 640, since Chromium in Claude's workspace can't play H.264; into
+  of JPEG frames, 720 × 1280 and 360 × 640, since Chromium in Claude's workspace can't play H.264; Juno's 3D model as
+  one GLB of 7.4 MB, `model/juno-3d.glb`: its textures made small (its colors 2048 px, its normals and its metal and
+  roughness 1024 px), its move resampled, and each point's four biggest bones kept, since three.js draws four (Meshy gave
+  682 of its points more; checked against all of them: 0.02 mm apart on average, 13 mm at most, at fingertips); into
   `tools/studio-promo/media`, which git ignores), `make.mjs` (builds the page, serves it on this computer only, draws
   every frame in Chromium, ffmpeg makes the MP4, then the cover, the post, a light copy and README.txt), `README.txt` (for
   the owner, next to the video).
@@ -3134,9 +3168,12 @@ the end card, "Examples · AI-generated" stays at the bottom left, on a dark pla
   still grain and a vignette, `window.promo`), `look.js` (AGI Studio's look: its colors, headlines, pills, panels, the
   pointer, icons drawn in code), `parts.js` (pictures and clips, easing, springs), `media.js` (the pictures, and each clip's
   frames waited for before a frame is finished), `cuts.js` (the 14 cuts: slams on the drops, pushes, wipes, a zoom flash, a
-  whip pan, irises (from the memes into the edits, from the coin into paying), through dark), `model3d.js` (the 3D
-  figure, three.js shapes with bones and moves) and `scenes/` (one file a scene). Everything is a function of time: a frame
-  drawn twice is the same.
+  whip pan, irises (from the memes into the edits, from the coin into paying), through dark), `model3d.js` (Juno's 3D
+  model with three.js, on its own WebGL canvas the scene copies onto the frame: its wireframe over its own surface drawn
+  to depth only, so only the lines facing the camera show; its colors below a sweep; its bones on screen; held at a time of
+  its move with a weight, 0 the pose it was made in and 1 its move; its move's hips put back over the turntable and lifted
+  2.2 cm, since Meshy made its wave a little to one side and low) and `scenes/` (one file a scene). Everything is a
+  function of time: a frame drawn twice is the same. Without its model file, the 3D scene shows her full body instead.
 - `music.js`: composed and synthesized in code by Claude (no samples, no service, nobody else's music), the engine of her
   launch video's: D major, vi–IV–I–V (Bm7, Gmaj7, D(add9), A(add9)), the hook previewed on an electric piano over the
   opening, the drops on Bm (four-on-the-floor, claps, hats, supersaw chords breathing with the kick, a bass, the hook on a
@@ -3155,23 +3192,25 @@ the end card, "Examples · AI-generated" stays at the bottom left, on a dark pla
 **Make it again** (after the app's words or prices change; Claude does this: Chromium, ffmpeg, `npm install --no-save
 playwright-core`, and the examples):
 - Once, the examples: `node tools/studio-promo/media.mjs --from <folders>` (the folders of `Downloads\AGI Studio examples`,
-  copied into Claude's workspace).
+  copied into Claude's workspace, `juno-3d.glb` among them; made again only when a file or how it's made ready changes).
 - `node tools/studio-promo/make.mjs --out studio-promo --light 27`: the video, its light copy, the cover, the post and
-  README.txt into `studio-promo/` (git ignores it), about 25 minutes on 2 processor cores.
-- Quicker looks: `--scale 0.5 --fps 30` (a half-size preview in about 5 minutes), `--from 46 --to 52` (one stretch),
+  README.txt into `studio-promo/` (git ignores it), about 30 minutes on 2 processor cores (at 16:9, 2026-10-13: its
+  frames 22 minutes, its light copy's two passes 9).
+- Quicker looks: `--scale 0.5 --fps 30` (a half-size preview in a few minutes), `--from 46 --to 52` (one stretch),
   `--stills 9.5,46.2` (PNG pictures), `--sheet 0.5` (a contact sheet, a picture every half second).
 
 **The files** (`studio-promo/`):
 
 | File | What |
 |---|---|
-| `agi-studio-launch-light.mp4` | **the one to post**: 1440 × 1080, 60 fps, 103 s, 26 MB, in the chat and in this folder's `studio-promo/` |
-| `agi-studio-launch.mp4` | the full one (62 MB): it stays in Claude's workspace (the chat takes about 40 MB at most, and Claude's link to this folder writes at most 30 MB a file) |
+| `agi-studio-launch-light.mp4` | **the one to post**: 1920 × 1080 (16:9), 60 fps, 103 s, 26 MB, in the chat and in this folder's `studio-promo/` |
+| `agi-studio-launch.mp4` | the full one (71 MB): it stays in Claude's workspace (the chat takes about 40 MB at most, and Claude's link to this folder writes at most 30 MB a file) |
 | `agi-studio-launch-cover.jpg` | a cover picture (the finale: "Create your own influencer.", Start creating, agi1.app/studio) |
 | `agi-studio-launch-post.txt` | a post to paste with it (fits X) |
 | `README.txt` | what's in it, and what to do before posting it, for the owner |
 | `how-to-post.md` | how and when to post the video and its X article, with every picture's alt text |
 | `x-article/` | its X article (see "Its X article" below) |
+| `4x3/` | the first version, 1440 × 1080 (4:3), kept in case: its light copy, cover, post and README, and in `4x3/x-article/` its X article's ten stills and clip |
 
 **Posting it:** only once AGI Studio is open to everyone: its finale says "Live now" (`STUDIO_OPEN=yes` in Vercel,
 Redeploy, then a check in a private window with another wallet). When an app asks about AI content, say yes (TikTok
@@ -3190,24 +3229,28 @@ same night, for the owner to post by hand on X (Articles need X Premium: @agi1do
 - `cover.jpg`, its banner: 2000 × 800 (5:2), drawn in code in AGI Studio's look ("Create your own influencer.",
   agi1.app/studio, "Live now", the four influencers, "Examples · AI-generated"), its words and faces inside its middle (x
   300 to 1700, y 100 to 700), where every crop X makes keeps them.
-- `01-meet-nova.jpg` … `10-share.jpg`: ten stills of the video (1440 × 1080); `trend-videos.mp4`: 11 seconds of it (its
-  trend videos, with its music); `posts.md`: 9 posts for the launch week, with X's character counts and alt text.
+- `01-meet-nova.jpg` … `10-share.jpg`: ten stills of the video (1920 × 1080; 1440 × 1080 until the 16:9 version, kept
+  in `studio-promo/4x3/x-article/`); `trend-videos.mp4`: 11 seconds of it (its trend videos, with its music); `posts.md`:
+  9 posts for the launch week, with X's character counts and alt text.
 - `studio-promo/how-to-post.md`: what to check before posting (as for the video), the order (the video first and pinned,
   the article a few hours later, then one post a day), every picture's alt text, and its sources.
 
 They're made with a small page and script in Claude's workspace (not in the repo): Claude makes them again if its words
 change.
 
-**Tests:** `tests/studio-promo.test.js` (10): its words (never an AI service, never "buy", PG-13, only $AGI, "investment"
+**Tests:** `tests/studio-promo.test.js` (11): its words (never an AI service, never "buy", PG-13, only $AGI, "investment"
 only as "not an investment", never "made in AGI Studio", no AI service's name in the code that draws it), "not financial
 advice" / 18+ / AI-generated where they belong and the post fits X, never AGI-1 in 3D / CloakMesh / another coin's data
-and the figure labeled "Illustration", AGI Studio's own words and numbers, the scenes on bars and every moment in its own
-scene, the cuts, the music on its moments, its sections and its beat, the renderer (15 scenes in order, its options, its
-own server never serving outside its folders, no secrets for the browser or ffmpeg, never in the site's build, its media
-and videos never in git); and with `STUDIO_PROMO_RENDER=1` the whole music rendered (its length, stereo, never clipping,
-the drops bigger, silent breaths, the fade). Each seen to fail on a broken version (18). In Claude's workspace: stills of
-every scene, a half-size preview's contact sheets looked at frame by frame, the drops' hits measured in the muxed video
-(within half a millisecond of their frames, silence before each), and the music's loudness measured.
+and its one model file Juno's own, labeled "AI-generated", Juno's 3D model made ready (four bones a point, the biggest,
+weighed again; its move over its turntable; its bones on screen), AGI Studio's own words and numbers, the scenes on bars and every moment in its own
+scene, the cuts, the music on its moments, its sections and its beat, the renderer (15 scenes in order, 1920 × 1080 since
+the owner's 16:9, its options, its own server never serving outside its folders, no secrets for the browser or ffmpeg,
+never in the site's build, its media and videos never in git); and with `STUDIO_PROMO_RENDER=1` the whole music rendered (its length, stereo, never clipping,
+the drops bigger, silent breaths, the fade). Each seen to fail on a broken version (18, and 8 more for Juno's 3D model). In
+Claude's workspace: stills of every scene, a half-size preview's contact sheets looked at frame by frame, the drops' hits
+measured in the muxed video (within half a millisecond of their frames, silence before each), and the music's loudness
+measured; Juno's 3D model looked at every tenth of a second from 73.4 to 75 s (its hand in the picture at the top of its
+wave).
 
 ## Burn $AGI for more messages, and the burn monitor (2026-09-30)
 
@@ -7862,13 +7905,15 @@ person's influencer **"Same as the rest"** (clean for its holder too, with a rem
 - **Everyone's downloads keep the pill**, as before. Someone else's creation always comes with it, whatever its downloader
   holds.
 - **A creation's own maker holding 1,000+ $AGI** (held in the signed-in wallet, or burned for messages; `STUDIO_CLEAN_AGI`)
-  downloads its own photos (memes, X banners, edited ones, its full body), videos and trend videos **without the pill**: its
-  Download asks our server first. A toast says which ("Downloaded without our pill 💜 (a thank-you for holding 1,000+ $AGI).
-  It still says inside its file that it's AI-made.", or with it and why; never "buy"); for a real person's influencer also
-  "Post it with your app's AI label."
+  downloads its own photos (memes, X banners, edited ones, its full body), videos and trend videos **without the pill**.
+  Since 2026-10-13 with its own button, **Remove watermark**, next to Download, and Download always keeps the pill (see
+  ""Remove watermark""). Until then its Download asked our server first and came without it by itself, with a toast
+  ("Downloaded without our pill 💜 (a thank-you for holding 1,000+ $AGI). It still says inside its file that it's
+  AI-made.", or with it and why; never "buy"; for a real person's influencer also "Post it with your app's AI label.").
 - **A long video and one saved from the video editor keep their pill** (made into the video). A clean HD or Ultra photo comes
   at the size the page shows (1536 px at most).
-- **The photo editor's Download** draws no pill for a holder (our server says so first), and always adds the tag.
+- **The photo editor's Download** draws no pill for a holder (our server says so first), and always adds the tag (unchanged
+  by "Remove watermark"; its toasts say "watermark" since then).
 - **Every download says inside its file that it's AI-made** (`src/studio/ai-tag.js`, the same code on our server and in the
   browser): XMP with the IPTC's Digital Source Type "trainedAlgorithmicMedia" (what Instagram, Facebook and Google read) and
   "AI-generated with AGI Studio (studio.agi1.app)"; in a JPEG an APP1 segment after its JFIF and Exif segments, in an MP4 a
@@ -7937,6 +7982,63 @@ menu's AGI Studio row, the menu never past the screen's bottom and its last row 
 no sideways scrolling, no page errors). Found that way, and not from this change: in the lab look on a 320 × 568 phone the
 contract address is just under the first screen (Pop mode, the default, has it in), and on a 1280 × 720 computer in the lab
 look with "reduce motion" one planet's name sits over the list's heading (both the same with five rows).
+
+### "Remove watermark" (2026-10-13)
+
+**The owner's request:** "when i open a video and photo, there should be a button that says remove watermark?". Asked who
+should see it, the owner picked **"Everyone, holders use it (Recommended)"**: the button on every maker's own photos and
+videos; it works for a holder of 1,000+ $AGI, and tells anyone else what it's for.
+
+**What people see** (one of their own photos (a meme, an X banner, an edited one, its full body), videos or trend videos
+seen big: on its influencer's page, and since then from Explore's walls too):
+- **Download, then Remove watermark** (an eraser) in its sheet's foot. **Download always keeps the watermark** now: before, a
+  holder's Download came without it by itself, which nothing on screen said before the tap.
+- **Remove watermark** asks our server first ("Checking…" on the button meanwhile; the keyboard stays on it):
+  - **a holder of 1,000+ $AGI** (held in the signed-in wallet, or burned for messages): the file without our pill, still
+    with its hidden AI tag, and "Downloaded without the watermark 💜 (a thank-you for holding 1,000+ $AGI). It still says
+    inside its file that it's AI-made." (a real person's influencer: also "Post it with your app's AI label.");
+  - **anyone else:** nothing downloaded, and "Removing the watermark is a thank-you for holding 1,000+ $AGI (in your
+    connected wallet, or burned for messages), not an investment. Download keeps the watermark." (never "buy");
+  - **a long video, or one saved from the video editor:** nothing downloaded, and "This video's watermark is part of the
+    video (it was made with it), so it stays. Download keeps it.";
+  - one deleted or taken down meanwhile: "It isn't here any more (or it was taken down)."
+- **Someone else's** creation never shows it (its Download as before), and with `STUDIO_CLEAN_AGI=0` no sheet does.
+- **One of its own opened from Explore's walls** is its maker's sheet now (`ownItem()`): Remove watermark, no Report, its
+  heart its own (as on its page).
+- **The photo editor's Download** is unchanged (without the watermark for a holder: our server says so first).
+- studio.html's rules, Learn's lesson on sharing and the AI helper's guide say so; the guide's "Your creations" video
+  (`make-creations`) was filmed again (the sheet's foot: Download, Remove watermark).
+
+**How it works:** no new action and no SQL. `removeMark()` in `src/studio/views/shared.js` asks `inf-dl` (see "Clean
+downloads for holders") and follows only a clean ticket's own address (`/api/launch?inf-clean=…`, a navigation the browser
+downloads); its words are `removeMarkText()` and `removeMarkErrorText()` in `app-words.js` (`downloadText()` gone);
+`ownItem()` (exported from `shared.js`) tells Explore's and the gallery's sheets which creations are the viewer's own
+(`ctx.me.influencers`); its icon is `eraser` in `ui.js`. The button shows only while clean downloads are on (`inf-info`'s
+`cleanAgi`). On a computer it wraps an own photo's foot onto a third line of buttons (Make a video from it, Use it in a
+trend, its heart / Download, Remove watermark, Share on X / Captions), so the picture or video above a foot is now sized to
+the foot's real height (`--sa-foot-h`, set by the sheet in `ui.js` when its foot is set and whenever it changes, through
+the CSS object model; `calc(88vh - 145px - var(--sa-foot-h, 105px))`, 250px in all for two lines, as before): all of it
+stays in view as it opens (found by real12's check at 9 sizes: with two lines assumed, a photo's bottom went 14 px under the
+foot).
+
+**Owner:** push (no SQL, no setting). **Cost:** nothing new.
+
+**Tests:** `tests/influencer.test.js` (clean downloads' page test, made this one: no `ownDownload`; Download a plain link
+to the marked one; the button only on its maker's own and only while clean downloads are on, right after Download; asking
+our server, following only a clean ticket's address, the keyboard put back; the eraser; `ownItem()` used by Explore and the
+gallery; its words, never "buy", the AI-label reminder only when clean and a real person's, every "no"; the photo editor's
+toast; studio.html's, Learn's and the AI helper's sentences; and in the editor's page test the caps from a foot's real
+height and the sheet that sets it, never `88vh - 250px` again); `tests/guide.test.js` (`make-creations` filmed again).
+767 in the whole suite (764 pass, 3 skipped as before; on Node 20, 22 and 24, with and without Vercel's settings, and
+as if the clock said four later times), the full build. In a browser with our own server's code answering the page (`app/real18.mjs`, 106 checks: a holder's photo
+(Download a plain link to the marked one, never asking our server: our pill in its corner, our tag; Remove watermark right
+after it: our server asked, then its clean picture with our tag, "Nova-photo.jpg", its toast, the button back), holding
+nothing (asked, nothing downloaded, why, never "buy"), a holder's video (to its own file, its name), a long video (asked,
+nothing downloaded, "part of the video"), someone else's (no button, Report), one of its own from Explore's wall (its
+maker's sheet: no Report) and someone else's there, switched off, the photo editor at both levels, a real person's (the
+reminder), the keyboard alone (Tab from Download, Enter, the keyboard kept), phones at 390 and 360 px (the foot and its
+toast inside the screen); axe 0 issues, nothing blocked by the CSP, no 5xx, clean consoles), and real12's 294 (Make another and Delete: the row and all of the picture in view as it opens at 9 sizes, with the
+foot's real height) and real14's 265 (the photo editor; its Download flow a Stranger's since clean downloads) again.
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -10117,6 +10219,31 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   the two videos' music renders, run only with `PROMO_RENDER=1` and `STUDIO_PROMO_RENDER=1`; on Node 20, 22 and 24, with
   and without Vercel's settings), the full build, its own test as if the clock said four later times and once with its
   music rendered. Next: "💜 With AGI-1".
+- **Juno's real 3D model in the launch video: made 2026-10-13, waiting for the owner's OK** (the owner, after its first
+  version's figure drawn in code: "why the 3d model is like that?"; the owner's choice: "Real 3D model (Recommended)"):
+  made on the owner's Meshy account from Juno's full-body picture (35 credits: its shape, its bones and its wave), one GLB
+  downloaded into `Downloads\AGI Studio examples`, made ready (`media.mjs`) and shown with three.js in the 3D scene (its
+  wireframe, its colors sweeping up, its bones, its wave), labeled "AI-generated"; the video made again (the light copy
+  26 MB, in the chat and in `studio-promo/` here, with its README.txt and how-to-post.md). See "AGI Studio's launch video".
+  **Owner:** watch it; push (its code and its test, no SQL, no setting). Tests: `tests/studio-promo.test.js` (11; 8 more broken versions, all caught), 767 in the whole suite (764 pass, 3
+  skipped as before; on Node 20, 22 and 24, with and without Vercel's settings), the full build; its frames looked at every
+  tenth of a second from 73.4 to 75 s.
+- **"Remove watermark": built 2026-10-13, waiting for the owner's push** (the owner: "when i open a video and photo, there
+  should be a button that says remove watermark?"; the owner's choice: "Everyone, holders use it (Recommended)"): a button
+  next to Download on its maker's own photos and videos (Download keeps the watermark); a holder of 1,000+ $AGI gets the
+  file without it, anyone else is told why (never "buy"); a sheet's picture sized to its foot's real height. See ""Remove
+  watermark"". **Owner:** push (no SQL, no setting). Tests: 767 in the whole suite (764 pass, 3 skipped as before; on Node 20, 22 and 24, with and
+  without Vercel's settings, and as if the clock said four later times), the full build, 106 checks in a browser with our
+  own server's code (`app/real18.mjs`), and real12's 294 and real14's 265 again; the guide's `make-creations` filmed again.
+- **AGI Studio's launch video at 16:9: made 2026-10-13, waiting for the owner's OK** (the owner: "i just decided can you make
+  the launch video 16:9"): 1920 × 1080 at 60 frames a second, every scene laid out again for the wide frame (never
+  stretched or put between bars), with the same story, timing, words and music; its light copy 26 MB (in the chat and in
+  `studio-promo/` here, with its cover, post, README and how-to-post.md), its X article's ten stills and clip made again
+  from it; the 4:3 one kept in `studio-promo\4x3\`. See "AGI Studio's launch video". **Owner:** watch it; push (its code
+  and its test, no SQL, no setting). Tests: 767 in the whole suite (764 pass, 3 skipped as before; on Node 20, 22 and 24,
+  with and without Vercel's settings, and as if the clock said four later times), the full build; its stills and frames
+  looked at, its light copy measured against the full one.
+
 ## Decisions log
 
 | Date | Decision |
@@ -10447,6 +10574,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-13 | Found in its first preview, and fixed: a headline's words now leave before the next headline's arrive in the same place ("Meet Nova." and "She's not real." were still there as the next lines rose); and the X banner's profile said "AI influencer · made in AGI Studio", untrue for these examples (now "AI influencer · golden hours & lattes"), with a test that refuses "made in" or "made with AGI Studio" anywhere in it |
 | 2026-10-13 | Found looking at the finished video (the owner: "i want everything polished"), and fixed before making it again: the styles' last line sat under the grid's bottom row and showed for less than half a second, and the photo models' last item came after the cut had begun. The grid smaller and higher, the tiles in a quick cascade (a thirty-second each), "26 styles" on the clap and the line a whole second before the cut; the photo models build beside the montage as it glides right. Not picked: a longer video (every later moment and the music's sections would move) |
 | 2026-10-13 | Its X article (the owner: "create me a n X article also for it with banner ready"): an X Article (X Premium), its pictures stills of the video (the same examples, already labeled), its banner 2000 × 800 drawn in code with its words and faces in its middle (X doesn't say how it crops a cover: 5:2 is the common guide), its text pasted with its headings from a page with Copy buttons; posted a few hours after the video. Not picked: an AI-made banner (not exact, and another example to label), screenshots of the live app (it wasn't open yet), a thread instead of an article (the owner asked for an article) |
+| 2026-10-13 | Juno's real 3D model in the launch video (the owner, after its first version's figure drawn in code: "why the 3d model is like that?"; the owner's choice: "Real 3D model (Recommended)", about 60 Meshy credits approved, the exact cost checked first): made on the owner's Meshy account, in the owner's Chrome, from Juno's full-body picture (its Image to 3D, 35 credits; its bones and one move from its library, Big Wave Hello, at no extra cost), one GLB downloaded into `Downloads\AGI Studio examples`; made ready by `media.mjs` (7.4 MB; each point's four biggest bones, since three.js draws four) and shown with three.js (its wireframe built up, its colors sweeping up, its bones, the pose it was made in eased into its move, its wave), labeled "AI-generated" like everything else. Never AGI-1: the owner's 3D models of her, on Meshy and in Downloads, untouched. Not picked: a better figure drawn in code (it can't look like a real model), a free model from elsewhere (not hers), more of Meshy's moves (the scene shows one) |
+| 2026-10-13 | "Remove watermark" (the owner: "when i open a video and photo, there should be a button that says remove watermark?"; the owner's choice: "Everyone, holders use it (Recommended)"): a button next to Download on its maker's own photos and videos (also when it opens one of its own from Explore's walls); Download always keeps the watermark (it had come without it by itself for a holder, which nothing on screen said before the tap); the button asks our server: a holder of 1,000+ $AGI gets the file without it, anyone else is told why (never "buy") and nothing is downloaded; a long video and one from the video editor keep theirs (it's part of the video). The photo editor's Download stays as it was (without the watermark for a holder). Not picked: the button only for holders (the owner's choice), no watermark for anyone (every post that travels would lose its visible AI label) |
+| 2026-10-13 | A sheet's picture or video sized to its foot's real height (found by real12's check: "Remove watermark" wraps an own photo's foot onto a third line on a computer, and the cap assumed two, so a photo's bottom went 14 px under the foot): the sheet measures its foot (`--sa-foot-h`, kept as it changes). Not picked: a shorter label ("Remove watermark" is the owner's), moving Captions before Download to keep two lines (it fits by about 10 px, and a heart with a bigger number would wrap it again), a wider sheet (more black beside a tall photo) |
+| 2026-10-13 | AGI Studio's launch video at 16:9 (the owner, after the 4:3 one was made: "i just decided can you make the launch video 16:9"): 1920 × 1080, every scene laid out again for the wide frame (its headlines further in, what sat side by side spread across the width, its walls wider so a tilted wall still covers every corner, the end card's rings reaching the corners), its pictures and cards about their size (the height is the same 1080); the same story, timing, words and music; one video for every app; the 4:3 one kept in `studio-promo\4x3\`, with its X article's pictures and clip; its light copy at the same 27 MB target (1853 kb/s, as the 4:3 one's: measured, it looks the same as the full one). Not picked: stretching or cropping the 4:3 frames (stretched, or its sides lost), the 4:3 one between bars (empty sides), a tall 9:16 version too (not asked) |
 
 ## Open questions
 
@@ -10583,11 +10714,12 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   video promotes a site with a coin: before relying on it commercially, buy Cubism PRO, export her model again and make
   the video again (one command; the owner: "i will pay the commercial later"). Not seen on real phones yet: how TikTok's,
   Reels' and Shorts' own buttons fall on the tall version (it keeps clear of their usual places).
-- **AGI Studio's launch video** (2026-10-13): its examples were made with fal.ai's and Dreamina's AI models, on the
-  owner's accounts: their terms for using what they make in an ad are the owner's to check before posting it (not legal
-  advice), like the AI services' terms for AGI Studio itself. Its media (`tools/studio-promo/media/`, made from the
-  owner's `Downloads\AGI Studio examples`) is only in Claude's workspace (git ignores it): to make the video again in
-  another session, copy those folders in and run `media.mjs` first. Not seen on real phones yet.
+- **AGI Studio's launch video** (2026-10-13): its examples were made with fal.ai's and Dreamina's AI models, and Juno's
+  3D model with Meshy's, on the owner's accounts: their terms for using what they make in an ad are the owner's to check
+  before posting it (not legal advice), like the AI services' terms for AGI Studio itself. Its media
+  (`tools/studio-promo/media/`, made from the owner's `Downloads\AGI Studio examples`, `juno-3d.glb` among them) is only
+  in Claude's workspace (git ignores it): to make the video again in another session, copy those folders in and run
+  `media.mjs` first. Not seen on real phones yet.
 - **Her live show's LIVE_SECRET** (2026-10-06): a screenshot in the chat showed it, the day it was made; the owner chose
   to keep it. If anyone else ever sees that chat: make a new one (step 6's command on the server), paste it into Vercel,
   Redeploy (the owner's phone link changes with it: `--owner-link` again). **The stream key and the phone link**

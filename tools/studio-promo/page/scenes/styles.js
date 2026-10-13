@@ -10,8 +10,14 @@ const LINEUP = [
   { pic: 'mika-body', who: CAST.mika },
   { pic: 'juno-body', who: CAST.juno },
 ];
-// the nine tiles' grid, its middle (and the stamp's) at GY: under it, room for the last line
-const TW = 204, TH = 240, TG = 18, GY = 566;
+// the nine tiles: two rows (five, then four) across the wide frame (a 3 × 3 grid in 4:3), their middle (and the
+// stamp's) at GY: under them, room for the last line
+const TW = 232, TH = 274, TG = 20, GY = 548;
+const tileAt = (W, k) => {
+  const row = k < 5 ? 0 : 1, n = row ? 4 : 5, i = row ? k - 5 : k;
+  const rw = n * TW + (n - 1) * TG;
+  return { x: W / 2 - rw / 2 + i * (TW + TG) + TW / 2, y: GY + (row - 0.5) * (TH + TG) };
+};
 
 export default {
   draw(g, t, c) {
@@ -25,7 +31,7 @@ export default {
       LINEUP.forEach((l, k) => {
         const p = popK(t, M.lineup[k], 0.5);
         if (p <= 0) return;
-        const cx = W / 2 + (k - 1.5) * 330, cy = 590 + away * 120;
+        const cx = W / 2 + (k - 1.5) * 410, cy = 590 + away * 120;
         const rot = (k - 1.5) * 0.035;
         const bob = Math.sin((t - M.lineup[k]) * 1.8 + k) * 4;
         glow(g, cx, cy + 40, 260, k % 2 ? 'rgba(219,39,119,0.18)' : 'rgba(124,58,237,0.22)', clamp(p) * (1 - away));
@@ -38,15 +44,13 @@ export default {
 
     // nine of its styles
     if (t >= M.styleTiles[0] - 0.02) {
-      const gw = TW * 3 + TG * 2, gh = TH * 3 + TG * 2;
-      const gx = W / 2 - gw / 2, gy = GY - gh / 2;
       g.save();
       g.translate(W / 2, GY); g.rotate(-0.045); g.translate(-W / 2, -GY);
       STYLES.tiles.forEach(([pic, name], k) => {
         const t0 = M.styleTiles[k];
         const p = popK(t, t0, 0.45);
         if (p <= 0) return;
-        const x = gx + (k % 3) * (TW + TG) + TW / 2, y = gy + Math.floor(k / 3) * (TH + TG) + TH / 2;
+        const { x, y } = tileAt(W, k);
         const dim = t >= M.stamp26 ? 0.25 * E.outCubic(prog(t, M.stamp26, M.stamp26 + 0.3)) : 0;
         card(g, md.pic(pic), x, y, TW, TH, { sc: p, alpha: clamp(p), r: 18, sh: 0.6, focus: [0.5, 0.35], dim });
         around(g, x, y + TH / 2 - 26, { sc: clamp(p), alpha: clamp(p) }, () => pill(g, name, 0, 0, { size: 18, align: 'center', bg: 'rgba(10,10,13,0.82)', line: S.line2 }));
@@ -54,10 +58,10 @@ export default {
       g.restore();
       stamp(g, STYLES.stamp, W / 2, GY, t, M.stamp26, { size: 104, rot: -0.07 });
     }
-    // or Any style: under the grid, clear of its lowest corner (958 px) however it's turned
+    // or Any style: under the tiles, clear of their lowest corner (about 880 px) however they're turned
     if (t >= M.anyStyle) {
       const p = E.outCubic(prog(t, M.anyStyle, M.anyStyle + 0.35));
-      say(g, STYLES.any, { x: W / 2, y: 1024 + (1 - p) * 14, size: 34, weight: 600, color: S.text2, align: 'center', alpha: p });
+      say(g, STYLES.any, { x: W / 2, y: 960 + (1 - p) * 14, size: 36, weight: 600, color: S.text2, align: 'center', alpha: p });
     }
   },
 };

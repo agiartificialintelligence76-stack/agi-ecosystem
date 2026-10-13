@@ -1496,10 +1496,11 @@ a.sa-maker-name:hover { text-decoration: underline; }
   .sa-sheet-body { padding: 4px 18px 18px; }
   .sa-sheet-foot { padding: 12px 18px; justify-content: flex-end; }
   /* (2026-10-12) one of its own creations seen big: the picture or the video fits under Make another and Delete, the sheet's
-     head and its foot (two lines of buttons: about 250px in all) */
-  .sa-edit-row + .sa-big-wrap .sa-big-pic { max-height: min(66vh, calc(88vh - 250px)); }
-  .sa-edit-row + .sa-player-wrap .sa-player.is-tall { height: min(64vh, 640px, calc(88vh - 250px)); }
-  .sa-edit-row + .sa-player-wrap .sa-player.is-square { width: min(100%, 520px, calc(88vh - 250px)); }
+     head and its foot (two lines of buttons: about 250px in all). (2026-10-13) its foot as tall as it is (--sa-foot-h, set
+     by the sheet: "Remove watermark" can wrap it onto a third line), 145px for the rest */
+  .sa-edit-row + .sa-big-wrap .sa-big-pic { max-height: min(66vh, calc(88vh - 145px - var(--sa-foot-h, 105px))); }
+  .sa-edit-row + .sa-player-wrap .sa-player.is-tall { height: min(64vh, 640px, calc(88vh - 145px - var(--sa-foot-h, 105px))); }
+  .sa-edit-row + .sa-player-wrap .sa-player.is-square { width: min(100%, 520px, calc(88vh - 145px - var(--sa-foot-h, 105px))); }
   .sa-sheet .sa-toasts { bottom: 18px; }
   .sa-stat-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sa-stat-level { grid-column: 1 / -1; }

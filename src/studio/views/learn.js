@@ -42,7 +42,7 @@ export const LESSONS = [
       'Holding $AGI: Crush 20% off and 100 free credits a month, Soulmate 40% off and 400 (a thank-you, not an investment).',
       'Give bought credits to a friend, or invite friends: never buy credits from anyone.'] },
   { id: 'share', icon: 'share', title: 'Share it, safely', line: 'Captions, X, and what we never ask.', to: '/help', go: 'Help & support',
-    steps: ['Open a photo or video: Download (with its "Made with AGI Studio · AI-generated" mark), Captions, Post on X.',
+    steps: ['Open a photo or video: Download (with its "Made with AGI Studio · AI-generated" watermark), Captions, Post on X. Holding 1,000+ $AGI? "Remove watermark" downloads your own without it.',
       'Say it\'s AI when the app you post on asks.',
       'We never ask for a seed phrase, a private key or a password, never to send money or sign anything: questions go to Help & support.'] },
 ];

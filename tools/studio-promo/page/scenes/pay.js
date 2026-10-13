@@ -6,8 +6,10 @@ import { S, backdrop, headline, say, pill, glow, icon, seg, costChip, bolt } fro
 import { popK, around, E, prog, clamp, mix, text, rr, panel, grad, GRAD, label, measure } from '../parts.js';
 import { PAY } from '../../words.js';
 
-const TOP = { x: 80, y: 220, w: 560, h: 620 };          // the top-up card (then the holders' cards)
-const LIST = { x: 690, y: 220, w: 670, h: 620 };        // what things cost
+// 16:9 (the top-up at 80, 560 wide, and the list at 690, 670 wide in 4:3)
+const LM = 120;
+const TOP = { x: LM, y: 220, w: 620, h: 620 };          // the top-up card (then the holders' cards)
+const LIST = { x: 800, y: 220, w: 1000, h: 620 };       // what things cost
 const U = 1.5;
 const usd = (cents) => `$${Math.round(cents / 100)}`;
 const n = (x) => Math.round(x).toLocaleString('en-US');
@@ -101,8 +103,8 @@ export default {
   draw(g, t, c) {
     const { W, H, M } = c;
     backdrop(g, W, H, t, { a: 0.7, b: 0.75, ax: 0.15, ay: 0.3, bx: 0.85, by: 0.85, hueB: t >= M.holders ? 'rgba(219,39,119,0.28)' : 'rgba(245,158,11,0.16)' });
-    headline(g, PAY.head, t, M.pay, { x: 80, y: 140, size: 88, out: M.holders - 0.35, outDur: 0.3 });
-    headline(g, PAY.holders, t, M.holders, { x: 80, y: 140, size: 88 });
+    headline(g, PAY.head, t, M.pay, { x: LM, y: 140, size: 88, out: M.holders - 0.35, outDur: 0.3 });
+    headline(g, PAY.holders, t, M.holders, { x: LM, y: 140, size: 88 });
 
     // ---- the top-up, then the holders ----
     const out = E.inCubic(prog(t, M.holders - 0.35, M.holders));
@@ -163,8 +165,8 @@ export default {
 
     // ---- the fine print ----
     const fp = E.outCubic(prog(t, M.prices[5] + 0.45, M.prices[5] + 0.85)) * (1 - E.inCubic(prog(t, M.holders - 0.3, M.holders)));
-    say(g, PAY.fine, { x: 80, y: 902, size: 22, weight: 500, color: S.text3, alpha: fp });
+    say(g, PAY.fine, { x: LM, y: 902, size: 22, weight: 500, color: S.text3, alpha: fp });
     const hf = E.outCubic(prog(t, M.holderRows[1] + 0.4, M.holderRows[1] + 0.8));
-    say(g, PAY.holderFine, { x: 80, y: 902 + (1 - hf) * 8, size: 21, weight: 500, color: S.text3, alpha: hf });
+    say(g, PAY.holderFine, { x: LM, y: 902 + (1 - hf) * 8, size: 21, weight: 500, color: S.text3, alpha: hf });
   },
 };

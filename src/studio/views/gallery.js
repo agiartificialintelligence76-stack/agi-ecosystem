@@ -8,7 +8,7 @@
 import { h, icon, btn, linkBtn, pic, put, add, nextId } from '../ui.js';
 import { infPic, infVideo } from '../rules.js';
 import { leftText, statusChip } from '../app-words.js';
-import { trendTile, trendSheet, videoSheet, photoSheet, mediaTile, loadLiked, hoverPlay } from './shared.js';
+import { trendTile, trendSheet, videoSheet, photoSheet, mediaTile, loadLiked, hoverPlay, ownItem } from './shared.js';
 
 export const GALLERY_TABS = { trending: 'Trending', influencers: 'Influencers', mine: 'My creations' };
 const list = (x) => (Array.isArray(x) ? x : []);
@@ -69,9 +69,10 @@ export function gallery(ctx, { initial = 'trending', onTrend = null, alsoLiked =
   const empty = (title, text, action = null) => h('div', { class: 'sa-gempty' }, h('p', { class: 'sa-gempty-title', text: title }), h('p', { class: 'sa-muted', text }), action);
   const section = (title, note, ...kids) => h('div', { class: 'sa-gsec' },
     h('div', { class: 'sa-gsec-head' }, h('h2', { class: 'sa-gsec-title', text: title }), note ? h('p', { class: 'sa-gsec-note', text: note }) : null), ...kids);
+  // (2026-10-13) one of this wallet's own: as its maker sees it (Remove watermark; its heart isn't for itself; no Report)
   const openItem = (item) => (item.kind === 'photo'
-    ? photoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id })
-    : videoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id }));
+    ? photoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id, mine: ownItem(ctx, item) })
+    : videoSheet(ctx, item, { name: item.inf?.name || 'An influencer', inf: item.inf?.id, mine: ownItem(ctx, item) }));
   // (hidden: a banned wallet's own, whose pictures our server shows to nobody until the ban is lifted)
   const personCard = (i, { tag = null, note = null, hidden = false } = {}) => h('a', { class: 'sa-person', href: ctx.href(`/i/${i.id}`), dataset: { saLink: '' } },
     i.portrait && !hidden ? pic(infPic(i.id, i.portrait.job, i.portrait.n, true), { cls: 'sa-person-pic', alt: '' }) : h('span', { class: 'sa-person-pic is-missing' }, icon('user')),

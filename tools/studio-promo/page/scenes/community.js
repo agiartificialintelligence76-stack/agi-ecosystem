@@ -5,16 +5,19 @@ import { S, backdrop, headline, say, pill, glow, icon, goButton, pointer, ripple
 import { popK, around, E, prog, clamp, mix, text, rr, panel, grad, GRAD, media, captionFade, clipCard, measure } from '../parts.js';
 import { COMMUNITY, CAST } from '../../words.js';
 
-// Explore's wall: four columns, each a little lower than the one before, scrolling up slowly
+// Explore's wall: five columns across the wide frame (four in 4:3), each a little lower than the one before,
+// scrolling up slowly
 const COLS = [
   ['nova-beach', 'kai-neon-video', 'mika-flowers', 'juno-meme', 'nova-look-3'],
   ['nova-golden-trend', 'juno-gaming', 'kai-meme', 'mika-video', 'nova-cafe'],
   ['mika-snow', 'nova-cafe-video', 'kai-look-2', 'juno-confetti-trend', 'mika-look-2'],
   ['kai-gaming', 'mika-rain-trend', 'nova-look-2', 'juno-look-2', 'kai-body'],
+  ['kai-neon-runway-trend', 'nova-look-4', 'juno-video', 'mika-look-1', 'nova-golden'],
 ];
-const CLIPS = new Set(['kai-neon-video', 'nova-golden-trend', 'mika-video', 'nova-cafe-video', 'juno-confetti-trend', 'mika-rain-trend']);
-const TW = 302, TH = 380, GAP = 24, X0 = 80, Y0 = 262;
-const PHASE = [0, 120, 46, 170];
+const CLIPS = new Set(['kai-neon-video', 'nova-golden-trend', 'mika-video', 'nova-cafe-video', 'juno-confetti-trend', 'mika-rain-trend', 'kai-neon-runway-trend', 'juno-video']);
+const LM = 120;
+const TW = 320, TH = 402, GAP = 24, X0 = 960 - (5 * TW + 4 * GAP) / 2, Y0 = 262;
+const PHASE = [0, 120, 46, 170, 84];
 const SPEED = 30;                                              // px a second
 const LIKED = [[1, 0], [0, 0], [2, 0], [3, 0], [0, 1], [2, 1]]; // [column, row]: a heart at each of the hearts' moments
 const SPOT = [1, 0];                                           // the most liked: Nova's golden hour trend video
@@ -77,9 +80,9 @@ export default {
     const dim = 0.8 * E.inOutCubic(prog(t, M.spotlight, M.spotlight + 0.45)) + 0.1 * E.inOutCubic(prog(t, M.gifts - 0.3, M.gifts));
     if (dim > 0) { g.fillStyle = `rgba(9,9,11,${dim})`; g.fillRect(0, 0, W, H); }
 
-    headline(g, COMMUNITY.head, t, M.likesWall, { x: 80, y: 140, size: 88, out: M.spotlight - 0.3, outDur: 0.3 });
+    headline(g, COMMUNITY.head, t, M.likesWall, { x: LM, y: 140, size: 88, out: M.spotlight - 0.3, outDur: 0.3 });
     const sp = E.outCubic(prog(t, M.likesWall + 0.3, M.likesWall + 0.7)) * (1 - E.inCubic(prog(t, M.spotlight - 0.3, M.spotlight)));
-    say(g, COMMUNITY.sub, { x: 80, y: 206 + (1 - sp) * 10, size: 28, weight: 500, color: S.text2, alpha: sp });
+    say(g, COMMUNITY.sub, { x: LM, y: 206 + (1 - sp) * 10, size: 28, weight: 500, color: S.text2, alpha: sp });
 
     // ---- the spotlight of the week ----
     if (lift > 0 && away < 1) {
@@ -101,7 +104,7 @@ export default {
         }
         g.restore();
       }
-      const sc = mix(1, 420 / 302, lift);
+      const sc = mix(1, 420 / TW, lift);
       tile(g, c, t, M, COLS[SPOT[0]][SPOT[1]], cx - w / 2, cy - h / 2, w, h, { liked: M.hearts[0], sc });
       // its gold frame
       rr(g, cx - w / 2 - 6, cy - h / 2 - 6, w + 12, h + 12, 24);
@@ -138,10 +141,11 @@ export default {
 
     // ---- gifts and invites ----
     if (t >= M.gifts - 0.05) {
-      headline(g, COMMUNITY.gifts, t, M.gifts, { x: 80, y: 140, size: 88 });
+      // a gift card and an invite, side by side in the middle (at 80 and 760 in 4:3), the headline over the first
+      const G = { x: 300, y: 250, w: 600, h: 560 }, I = { x: 1020, y: 250, w: 600, h: 560 };
+      headline(g, COMMUNITY.gifts, t, M.gifts, { x: G.x, y: 140, size: 88 });
       // a gift card, claimed
       const gp = popK(t, M.gifts + 0.08, 0.5);
-      const G = { x: 80, y: 250, w: 600, h: 560 };
       if (gp > 0) around(g, G.x + G.w / 2, G.y + G.h / 2 + (1 - clamp(gp)) * 50, { sc: 0.94 + 0.06 * gp, alpha: clamp(gp) }, () => {
         const ox = -G.w / 2, oy = -G.h / 2;
         glow(g, 0, -60, 380, 'rgba(251,191,36,0.2)', 1);
@@ -173,7 +177,6 @@ export default {
 
       // an invite link
       const ip = popK(t, M.invite, 0.5);
-      const I = { x: 760, y: 250, w: 600, h: 560 };
       if (ip > 0) around(g, I.x + I.w / 2, I.y + I.h / 2 + (1 - clamp(ip)) * 50, { sc: 0.94 + 0.06 * ip, alpha: clamp(ip) }, () => {
         const ox = -I.w / 2, oy = -I.h / 2;
         glow(g, 0, -60, 380, 'rgba(139,92,246,0.24)', 1);

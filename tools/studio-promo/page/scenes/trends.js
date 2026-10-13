@@ -5,12 +5,14 @@ import { S, backdrop, headline, say, pill, glow, costChip, icon } from '../look.
 import { clipCard, frameOf, popK, around, nameTag, E, prog, clamp, mix, text, rr, media, grad, GRAD } from '../parts.js';
 import { TRENDS_SCENE, CAST } from '../../words.js';
 
-// the carousel: its cards and their speed
-const CW = 292, CH = 520, CG = 24, SPEED = 110;
+// 16:9 (the middle at 720 in 4:3; the pairs 390 apart, the four results 320)
+// the carousel: its cards and their speed; the picked one starts at PICK
+const CW = 292, CH = 520, CG = 24, SPEED = 110, PICK = 1125;
 // a pair: the clip on the left, the influencer in the middle, the result on the right
-const PW = 360, PH = 640, PY = 215, LX = 330, RX = 1110, MX = 720, MY = 470;
+const PW = 360, PH = 640, PY = 215, MX = 960, LX = MX - 500, RX = MX + 500, MY = 470;
 // the four results at the end
-const FW = 300, FH = 533, FY = 250;
+const FW = 320, FH = 569, FY = 236, FS = 380;
+const fourX = (k) => MX + (k - 1.5) * FS;
 const LOOKS = { Nova: 'nova-look-1', Kai: 'kai-look-1', Juno: 'juno-look-1', Mika: 'mika-look-1' };
 
 // an arrow from (x0, y) to (x1, y), drawn to p
@@ -84,9 +86,9 @@ export default {
     if (t < M.pairs[0] + 0.15) {
       const shift = (Math.min(t, M.pickTrend) - M.drop2) * SPEED;
       const n = TRENDS_SCENE.carousel.length;
-      for (let k = -4; k <= 5; k++) {
+      for (let k = -5; k <= 6; k++) {
         const [name, tr] = TRENDS_SCENE.carousel[((k % n) + n) % n];
-        const pos = k * (CW + CG) + 885 - shift;
+        const pos = k * (CW + CG) + PICK - shift;
         if (pos < -CW || pos > W + CW) continue;
         const inP = E.outCubic(prog(t, M.drop2 + 0.05 + Math.abs(k) * 0.05, M.drop2 + 0.5 + Math.abs(k) * 0.05));
         const picked = k === 0;
@@ -102,7 +104,7 @@ export default {
       }
       // the picked one: Golden hour
       const [name, tr] = TRENDS_SCENE.carousel[0];
-      const pos0 = 885 - shift;
+      const pos0 = PICK - shift;
       const inP = E.outCubic(prog(t, M.drop2 + 0.05, M.drop2 + 0.5));
       const cx = mix(pos0, LX, goP), cy = mix(655 + (1 - inP) * 120, PY + PH / 2, goP);
       const w = mix(CW, PW, goP), h = mix(CH, PH, goP);
@@ -153,7 +155,7 @@ export default {
       arrow(g, LX + PW / 2 + 18, MX - 104, MY, ar, 1 - gather);
       arrow(g, MX + 104, RX - PW / 2 - 18, MY, E.inOutCubic(prog(t, t0 + 0.3, sw + 0.02)), 1 - gather);
       // the result: waiting, then wiped in on the beat
-      const rxL = mix(RX - PW / 2, 720 + 1.5 * 320 - FW / 2, gather), ryT = mix(PY, FY, gather);
+      const rxL = mix(RX - PW / 2, fourX(3) - FW / 2, gather), ryT = mix(PY, FY, gather);
       const rw = mix(PW, FW, gather), rh = mix(PH, FH, gather);
       const wp = E.inOutCubic(prog(t, sw, sw + 0.28));
       const wa = E.outCubic(prog(t, t0, t0 + 0.3));
@@ -190,7 +192,7 @@ export default {
       TRENDS_SCENE.pairs.slice(0, -1).forEach(([, result, name], k) => {
         const p = popK(t, M.ownClip - 0.05 + k * 0.08, 0.5);
         if (p <= 0) return;
-        const cx = 720 + (k - 1.5) * 320;
+        const cx = fourX(k);
         glow(g, cx, FY + FH / 2, 220, 'rgba(139,92,246,0.22)', clamp(p));
         around(g, cx, FY + FH / 2 + (1 - clamp(p)) * 80, { sc: p, alpha: clamp(p) }, () => {
           clipCard(g, c, result, t, M.swaps[k], -FW / 2, -FH / 2, FW, FH, { sh: 0.8 });

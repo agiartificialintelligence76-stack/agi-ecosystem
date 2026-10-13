@@ -4,12 +4,14 @@ import { S, backdrop, headline, say, pill, glow, seg, goButton, pointer, ripple,
 import { clipCard, card, popK, around, E, prog, clamp, mix, text, rr, panel, label } from '../parts.js';
 import { VIDEOS } from '../../words.js';
 
-const PH = { cx: 450, cy: 600, w: 430, h: 764 };                    // the photo, then its video
-const P = { x: 770, y: 236, w: 590, h: 600 };                       // the Video tool
+// 16:9 (the photo at 450, the tool at 770 and the row 320 apart in 4:3)
+const LM = 120;
+const PH = { cx: 560, cy: 600, w: 430, h: 764 };                    // the photo, then its video
+const P = { x: 960, y: 236, w: 590, h: 600 };                       // the Video tool
 const U = 1.5;
 const ROW = [['nova-cafe-video'], ['kai-neon-video'], ['mika-video'], ['juno-video']];
 const RW = 300, RH = 533, RY = 232;
-const slotX = (k) => 720 + (k - 1.5) * 320;
+const slotX = (k) => 960 + (k - 1.5) * 370;
 
 // a small on/off switch
 function toggle(g, x, y, on, { u = 1.5, alpha = 1 } = {}) {
@@ -26,7 +28,7 @@ export default {
   draw(g, t, c) {
     const { W, H, M } = c;
     backdrop(g, W, H, t, { a: 0.75, b: 0.85, ax: 0.85, ay: 0.15, bx: 0.1, by: 0.95 });
-    headline(g, VIDEOS.head, t, M.videoIn, { x: 80, y: 140, size: 88 });
+    headline(g, VIDEOS.head, t, M.videoIn, { x: LM, y: 140, size: 88 });
 
     // ---- the photo, the tool, Make video ----
     const toRow = E.inOutCubic(prog(t, M.row[0] - 0.4, M.row[0] + 0.15));     // the photo becomes the row's first

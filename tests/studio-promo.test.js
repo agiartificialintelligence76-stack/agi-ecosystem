@@ -1,9 +1,11 @@
 // AGI Studio's launch video (2026-10-13, tools/studio-promo/: the owner's "go make a promotional marketing launch video of
 // AGI studio. all the features there, do it with top notch motion design and easy to understand and visible make it 4:3
-// video"). Its words hold the site's rules (never an AI service's name, never "buy": credits are topped up, PG-13, only
-// $AGI, "not financial advice" wherever money comes up, AI-generated said on every frame from the hook's reveal to the end
-// card), its words and numbers are AGI Studio's own (imported from src/studio, and checked here against it), AGI-1 is never
-// in 3D (its 3D model scene is a code-made figure, labeled "Illustration"), and the picture and the music keep one clock.
+// video", then the same day "i just decided can you make the launch video 16:9": 1920 × 1080). Its words hold the site's
+// rules (never an AI service's name, never "buy": credits are topped up, PG-13, only $AGI, "not financial advice"
+// wherever money comes up, AI-generated said on every frame from the hook's reveal to the end card), its words and
+// numbers are AGI Studio's own (imported from src/studio, and checked here against it), AGI-1 is never in 3D (its 3D
+// model scene shows Juno's own 3D model, made for it, labeled "AI-generated"), and the picture and the music keep one
+// clock.
 // No browser or ffmpeg here, and never its pictures and clips (tools/studio-promo/media: big, made once, never in git).
 // STUDIO_PROMO_RENDER=1 also renders the whole music (about 15 s).
 // Run: npm test
@@ -95,18 +97,97 @@ test('"not financial advice" wherever money comes up, 18+ where it applies, and 
   assert.match(W.POST, /https:\/\/agi1\.app\/studio/);
 });
 
-test('never AGI-1 in 3D, never CloakMesh, never another coin\'s data in the code that draws it; its 3D figure is labeled "Illustration"', () => {
+test('never AGI-1 in 3D, never CloakMesh, never another coin\'s data in the code that draws it; its 3D model is Juno\'s, labeled "AI-generated"', () => {
+  // a 3D model file only where Juno's is made ready (media.mjs) and shown (page/model3d.js)
+  const modelCode = new Set(['tools/studio-promo/media.mjs', 'tools/studio-promo/page/model3d.js']);
   for (const f of CODE) {
     const code = read(f);
     assert.doesNotMatch(noComments(code), /cloak ?mesh|inference\.agi1/i, `${f}: no CloakMesh`);
-    assert.doesNotMatch(code, /\.glb\b|GLTFLoader|src\/stage\/|agi1-portrait|agi1-avatar|agi1-live|agi1-cutout|loadAgi1_2D|live2d/i, `${f}: never AGI-1 (in 3D or her model files)`);
+    assert.doesNotMatch(code, /src\/stage\/|agi1[\w-]*\.glb|models\/agi1|public\/models|agi1-portrait|agi1-avatar|agi1-live|agi1-cutout|loadAgi1_2D|live2d/i, `${f}: never AGI-1 (in 3D or her model files)`);
+    if (!modelCode.has(f)) assert.doesNotMatch(code, /\.glb\b|\.gltf\b|GLTFLoader/i, `${f}: no 3D model file`);
     assert.doesNotMatch(code, /server\/checker|clank-chain|coinsSince|clank\.trade\/v1|mypinata|dexscreener/i, `${f}: never another coin's data`);
   }
-  // the 3D model scene draws a figure made in code (three.js shapes), and says so where it's shown
+  // the 3D model scene shows Juno's own 3D model (made ready by media.mjs, never in git), and says it's AI-generated
   const m3d = read('tools/studio-promo/page/model3d.js');
   assert.match(m3d, /from 'three'/);
-  assert.doesNotMatch(m3d, /Loader\b|fetch\(|\.glb|\.gltf/);
-  assert.match(read('tools/studio-promo/page/scenes/model.js'), /pill\(g, 'Illustration'/);
+  assert.match(m3d, /GLTFLoader/);
+  const files = [...noComments(m3d).matchAll(/['"`]([^'"`]*\.(?:glb|gltf))['"`]/gi)].map((m) => m[1]);
+  assert.deepEqual(files, ['/media/model/juno-3d.glb'], 'only Juno\'s model, from its media');
+  assert.match(read('tools/studio-promo/media.mjs'), /export const MODELS = \[\['juno-3d', \['juno-3d\.glb'\]\]\];/);
+  const scene = read('tools/studio-promo/page/scenes/model.js');
+  assert.match(scene, /pill\(g, 'AI-generated'/);
+  assert.doesNotMatch(scene, /Illustration/);
+});
+
+test('Juno\'s 3D model: four bones a vertex (three.js draws four), its move over its turntable, its bones shown', async () => {
+  const { Document, NodeIO } = await import('@gltf-transform/core');
+  const { fourBones, readyModel, MODELS } = await import('../tools/studio-promo/media.mjs');
+  assert.deepEqual(MODELS, [['juno-3d', ['juno-3d.glb']]]);
+  // a vertex with more than four bones keeps its four biggest, their weights adding up to one; the rest go
+  const doc = new Document();
+  const buf = doc.createBuffer();
+  const acc = (type, array) => doc.createAccessor().setType(type).setArray(array).setBuffer(buf);
+  const prim = doc.createPrimitive()
+    .setAttribute('POSITION', acc('VEC3', new Float32Array([0, 0, 0, 0, 1, 0, 1, 0, 0])))
+    .setAttribute('JOINTS_0', acc('VEC4', new Uint8Array([0, 1, 2, 3, 0, 1, 0, 0, 1, 0, 0, 0])))
+    .setAttribute('WEIGHTS_0', acc('VEC4', new Float32Array([0.1, 0.1, 0.1, 0.1, 0.5, 0.5, 0, 0, 0.6, 0, 0, 0])))
+    .setAttribute('JOINTS_1', acc('VEC4', new Uint8Array([4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0])))
+    .setAttribute('WEIGHTS_1', acc('VEC4', new Float32Array([0.3, 0.2, 0.05, 0.05, 0, 0, 0, 0, 0, 0, 0, 0])));
+  assert.equal(fourBones(prim), 2, 'the vertex with eight bones, and the one whose weights added up to 0.6');
+  assert.deepEqual(prim.listSemantics().sort(), ['JOINTS_0', 'POSITION', 'WEIGHTS_0']);
+  const J = prim.getAttribute('JOINTS_0').getArray(), Wt = prim.getAttribute('WEIGHTS_0').getArray();
+  assert.ok(J instanceof Uint16Array);
+  assert.deepEqual([...J], [4, 5, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0]);
+  const near = (a, b) => a.every((x, i) => Math.abs(x - b[i]) < 1e-6);
+  assert.ok(near([...Wt], [0.3 / 0.7, 0.2 / 0.7, 0.1 / 0.7, 0.1 / 0.7, 0.5, 0.5, 0, 0, 1, 0, 0, 0]), String([...Wt]));
+  // made ready: a tiny skinned model with a move, through the same steps as Juno's
+  const tmp = mkdtempSync(join(tmpdir(), 'studio-promo-model-'));
+  try {
+    const d = new Document();
+    const b = d.createBuffer();
+    const a = (type, array) => d.createAccessor().setType(type).setArray(array).setBuffer(b);
+    const hips = d.createNode('Hips').setTranslation([0, 0.9, 0]);
+    const head = d.createNode('Head').setTranslation([0, 0.8, 0]);
+    hips.addChild(head);
+    const skin = d.createSkin().addJoint(hips).addJoint(head)
+      .setInverseBindMatrices(a('MAT4', new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, -0.9, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, -1.7, 0, 1])));
+    const p = d.createPrimitive()
+      .setAttribute('POSITION', a('VEC3', new Float32Array([-0.2, 0, 0, 0.2, 0, 0, 0, 1.7, 0])))
+      .setAttribute('JOINTS_0', a('VEC4', new Uint8Array([0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0])))
+      .setAttribute('WEIGHTS_0', a('VEC4', new Float32Array([0.5, 0.25, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0])))
+      .setAttribute('JOINTS_1', a('VEC4', new Uint8Array(12)))
+      .setAttribute('WEIGHTS_1', a('VEC4', new Float32Array(12)));
+    const body = d.createNode('Body').setMesh(d.createMesh().addPrimitive(p)).setSkin(skin);
+    d.createScene().addChild(hips).addChild(body);
+    const anim = d.createAnimation('Wave');
+    const sampler = d.createAnimationSampler().setInput(a('SCALAR', new Float32Array([0, 1, 2]))).setOutput(a('VEC3', new Float32Array([0.2, 0.9, 0, 0.3, 0.92, 0, 0.2, 0.9, 0])));
+    anim.addSampler(sampler).addChannel(d.createAnimationChannel().setTargetNode(hips).setTargetPath('translation').setSampler(sampler));
+    await new NodeIO().write(join(tmp, 'in.glb'), d);
+    const info = await readyModel(join(tmp, 'in.glb'), join(tmp, 'out.glb'));
+    assert.equal(info.triangles, 1);
+    assert.equal(info.height, 1.7);
+    assert.equal(info.changed, 1);
+    assert.deepEqual(info.clips, [{ name: 'Wave', duration: 2 }]);
+    const out = await new NodeIO().read(join(tmp, 'out.glb'));
+    const op = out.getRoot().listMeshes()[0].listPrimitives()[0];
+    assert.deepEqual(op.listSemantics().sort(), ['JOINTS_0', 'POSITION', 'WEIGHTS_0']);
+    assert.equal(out.getRoot().listAnimations()[0].getName(), 'Wave');
+    assert.equal(info.bytes, statSync(join(tmp, 'out.glb')).size);
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+  // in the page: its move's hips put back over the turntable and lifted (its feet on the floor), the move itself the same
+  const THREE = await import('three');
+  const { centerHips, BONES, JOINTS, MODEL_URL } = await import('../tools/studio-promo/page/model3d.js');
+  assert.equal(MODEL_URL, '/media/model/juno-3d.glb');
+  const bone = new THREE.Bone(); bone.name = 'mixamorigHips'; bone.position.set(0.0033, 0.9146, 0.0168);
+  const track = new THREE.VectorKeyframeTrack('mixamorigHips.position', [0, 1], [0.2477, 0.8843, -0.1829, 0.3477, 0.9, -0.0829]);
+  const moved = centerHips(new THREE.AnimationClip('Big_Wave_Hello', 1, [track]), bone);
+  assert.ok(Math.abs(moved - Math.hypot(0.2444, 0.1997)) < 1e-4, String(moved));
+  const v = [...track.values];
+  assert.ok(near(v, [0.0033, 0.9063, 0.0168, 0.1033, 0.922, 0.1168]), String(v));
+  assert.equal(centerHips(new THREE.AnimationClip('x', 1, []), bone), 0, 'no hips track: nothing to move');
+  // the bones shown are its own skeleton's joints
+  for (const [x, y] of BONES) assert.ok(JOINTS[x] && JOINTS[y], `${x}-${y}`);
+  for (const n of Object.values(JOINTS)) assert.match(n, /^(Hips|Spine\d?|Neck|Head(Top_End)?|(Left|Right)(Shoulder|Arm|ForeArm|Hand|UpLeg|Leg|Foot|ToeBase))$/);
 });
 
 // ---------- AGI Studio's own words and numbers ----------
@@ -345,7 +426,7 @@ test('the renderer: its 15 scenes in order, its own server, no secrets for the b
   const ids = SCENES.map((s) => s.id);
   for (const id of ids) assert.match(main, new RegExp(`import ${id} from './scenes/${id}\\.js'`), id);
   assert.match(main, new RegExp(`const MODULES = \\{ ${ids.join(', ')} \\}`));
-  assert.match(main, /SIZE = \{ W: 1440, H: 1080 \}/, '4:3');
+  assert.match(main, /SIZE = \{ W: 1920, H: 1080 \}/, '16:9 (the owner: "i just decided can you make the launch video 16:9")');
   assert.deepEqual(withoutSecrets({ PATH: '/bin', GEMINI_API_KEY: 'x', FAL_KEY: 'k', LIVE_SECRET: 'y', TELEGRAM_BOT_TOKEN: 'z', PASS_SECRET: 'p', HOME: '/h' }), { PATH: '/bin', HOME: '/h' });
   // its options
   assert.deepEqual(args([]), { out: 'studio-promo', fps: 60, scale: 1, from: 0, to: TOTAL, stills: null, sheet: null, music: true, crf: 18, name: 'agi-studio-launch', quality: 0.95, light: 0 });
