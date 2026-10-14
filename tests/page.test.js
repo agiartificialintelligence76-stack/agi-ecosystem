@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import vm from 'node:vm';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const part = (start, end) => {
@@ -261,4 +262,235 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   assert.match(chk, /If neither answers, the scan says <b>Not enough data<\/b> instead of guessing\./);
   assert.match(foot, /Last updated October 12, 2026/);   // (2026-10-12: AGI Studio's own gift links of free credits; 2026-10-11: AGI Studio's clank.trade names and AI captions, then its gifts of credits and invites; 2026-10-10: her 💜 badge for Crush and Soulmate questions on her show, and AGI-1's 3D character studio; 2026-10-09: her quizzes, and her Telegram name with a /live question; 2026-10-07: questions from X's chat on her show; 2026-10-06: her buy alerts; 2026-10-05: the risk check's pictures)
   assert.equal(html.match(/<canvas/g).length, 1, 'still one canvas for the whole page');
+});
+
+// ---------- The roadmap (2026-10-14) ----------
+// The owner: "when they go to agi1.app/roadmap they will see a roadmap. Talk to daria, agi studio is already checked and done,
+// all below they will see, make the roadmap page cool and beautiful … and also they can visit this now but everything is
+// coming soon for now", then /stake, /games, /giveaway and "/18+ ?". The owner's choices: a mystery card for 18+ (locked, no
+// details, no page) and the owner's words with the safety lines (coming soon, not financial advice, 18+ only where it's
+// legal, no rates or amounts). "Talk to daria" is "Talk to AGI-1" (the site's name for her since 2026-09-28)
+const ROADMAP = ['roadmap', 'stake', 'games', 'giveaway'];
+const SOON = { stake: 'Stake $AGI', games: 'AGI games', giveaway: 'Giveaways' };
+const readPage = (name) => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
+const between = (s, start, end) => { const from = s.indexOf(start); assert.ok(from >= 0, `has ${start}`); return s.slice(from, s.indexOf(end, from) + end.length); };
+const mainOf = (page) => between(page, '<main id="main">', '</main>');
+const textOf = (h) => h.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+
+// a stylesheet's rules, with the at-rule each is in (a @keyframes' own steps left out)
+function cssRules(source) {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, '');
+  const out = [];
+  const walk = (from, to, at) => {
+    let i = from;
+    while (i < to) {
+      const open = css.indexOf('{', i);
+      if (open < 0 || open >= to) break;
+      let depth = 1, close = open + 1;
+      for (; close < to && depth; close++) { if (css[close] === '{') depth++; else if (css[close] === '}') depth--; }
+      const head = css.slice(i, open).trim();
+      if (/^@(media|supports|container|layer)\b/.test(head)) walk(open + 1, close - 1, head);
+      else if (!head.startsWith('@')) out.push({ at, head, body: css.slice(open + 1, close - 1) });
+      i = close;
+    }
+  };
+  walk(0, css.length, '');
+  return out;
+}
+const selectorsOf = (head) => {
+  const out = []; let depth = 0, cur = '';
+  for (const ch of head) {
+    if (ch === '(') depth++; else if (ch === ')') depth--;
+    if (ch === ',' && !depth) { out.push(cur.trim()); cur = ''; } else cur += ch;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+};
+
+test('the roadmap: four pages at their own addresses, built and previewed, with no inline code', () => {
+  for (const f of ['src/roadmap/page.js', 'src/styles/roadmap.css', ...ROADMAP.map((p) => `${p}.html`)]) assert.ok(existsSync(new URL(`../${f}`, import.meta.url)), `${f} exists`);
+  assert.match(readPage('vite.config.js'), /roadmap: 'roadmap\.html', stake: 'stake\.html', games: 'games\.html', giveaway: 'giveaway\.html'/, 'the build makes all four');
+  assert.match(readPage('scripts/share-pages.js'), /'dist\/roadmap\.html', 'dist\/stake\.html',\s+'dist\/games\.html', 'dist\/giveaway\.html'/, 'their link previews get the site\'s address');
+  assert.equal(JSON.parse(readPage('vercel.json')).cleanUrls, true, '/roadmap serves roadmap.html (and /stake, /games, /giveaway theirs)');
+  for (const p of ROADMAP) {
+    const page = readPage(`${p}.html`);
+    assert.match(page, new RegExp(`<html lang="en" data-page="${p}">`), `${p}: its own page key (/theme.js: its browser bar)`);
+    assert.match(page, /<script src="\/theme\.js\?v=7"><\/script>/, `${p}: the page's look before it paints`);
+    assert.match(page, new RegExp(`<link rel="canonical" href="__SITE__/${p}" />`), p);
+    assert.match(page, new RegExp(`<meta property="og:url" content="__SITE__/${p}" />`), p);
+    assert.ok(page.includes('<meta property="og:image" content="__SITE__/cards/home.jpg" />'), `${p}: a link preview`);
+    for (const re of [/<meta name="description" content="([^"]+)"/, /<meta property="og:description" content="([^"]+)"/]) assert.match(page.match(re)[1], /not financial advice/i, `${p}: its preview says so`);
+    assert.match(page, /<script type="module" src="\/src\/roadmap\/page\.js"><\/script>/, `${p}: one script for all four`);
+    assert.equal((page.match(/<script\b/g) || []).length, 2, `${p}: /theme.js and its module, nothing inline (the CSP)`);
+    assert.doesNotMatch(page, /style="/, `${p}: no inline styles (the CSP)`);
+    for (const a of page.match(/<a [^>]*target="_blank"[^>]*>/g)) assert.match(a, /rel="noopener noreferrer"/, `${p}: ${a}`);
+    assert.doesNotMatch(page, /daria/i, `${p}: AGI-1, never her old name`);
+    assert.match(page, /<p><b>The only serious part of this page\.<\/b>[^<]*Nothing here is financial advice or a promise of profit\./, `${p}: the short safety paragraph`);
+  }
+});
+
+test('the roadmap: AGI-1 and AGI Studio live, staking, games and giveaways coming soon, and the 18+ card locked', () => {
+  const main = mainOf(readPage('roadmap.html'));
+  assert.match(main, /<h1 class="rm-title" id="rm-title">The AGI roadmap<\/h1>/);
+  assert.match(main, /<div class="rm-meter" role="img" aria-label="2 of 6 live now, 4 coming soon">/, 'the meter, said in words');
+  const segs = between(main, '<div class="rm-segs"', '</div>');
+  assert.deepEqual(segs.match(/class="rm-seg(?: [^"]*)?"/g), ['class="rm-seg is-done"', 'class="rm-seg is-done"', 'class="rm-seg"', 'class="rm-seg"', 'class="rm-seg"', 'class="rm-seg is-lock"']);
+  // the steps in order: the owner's two done ones, the three to come, the mystery card last
+  assert.deepEqual([...main.matchAll(/<li class="rm-item (is-done|is-soon|is-locked)"/g)].map((m) => m[1]), ['is-done', 'is-done', 'is-soon', 'is-soon', 'is-soon', 'is-locked']);
+  assert.deepEqual([...main.matchAll(/<span class="rm-step mono">([^<]+)<\/span>/g)].map((m) => m[1]), [1, 2, 3, 4, 5, 6].map((n) => `Step ${n} of 6`));
+  assert.deepEqual([...main.matchAll(/<h3 class="rm-name">([^<]+)<\/h3>/g)].map((m) => m[1]), ['Talk to AGI-1', 'AGI Studio', 'Stake $AGI', 'AGI games', 'Giveaways'], '"Talk to daria" is AGI-1 here');
+  assert.deepEqual([...main.matchAll(/<a class="rm-go" href="([^"]+)"/g)].map((m) => m[1]), ['/#playground', '/studio', '/stake', '/games', '/giveaway'], 'each live one opens, each coming one its page');
+  assert.match(main, /<ol class="rm-list rm-list-soon" start="3">/, 'screen readers count on from 3');
+  assert.deepEqual([...main.matchAll(/<p class="rm-status"><span class="rm-status-dot" aria-hidden="true"><\/span>([^<]+)<\/p>/g)].map((m) => m[1]), ['Live', 'Live', 'Coming soon', 'Coming soon', 'Coming soon', 'Locked']);
+  // the owner's words, and the safety lines under each coming one
+  const text = textOf(main);
+  for (const words of ['Stake your $AGI and get rewards. Choose how: in USDG only, in $AGI only, or free AI with sAGI.',
+    'Earn $AGI while you play. A lot of types of games, casino-style ones included.', 'Win giveaways by creating viral content for AGI.']) assert.ok(text.includes(words), words);
+  assert.deepEqual([...main.matchAll(/<p class="rm-meta">([^<]+)<\/p>/g)].map((m) => m[1]).slice(2), ['coming soon · not financial advice · 18+, only where it\'s legal',
+    'coming soon · not financial advice · 18+, only where it\'s legal', 'coming soon · not financial advice · 18+', 'coming soon']);
+  // the mystery card (the owner's choice): 18+, nothing else said, no link and no page
+  const locked = between(main, '<li class="rm-item is-locked"', '</li>');
+  assert.doesNotMatch(locked, /<a\b/, 'nothing to open');
+  assert.match(locked, /<h3 class="rm-name rm-name-locked"><span class="rm-adult">18\+<\/span><span class="rm-q" aria-hidden="true">\?\?\?<\/span><span class="sr-only">: a secret for now<\/span><\/h3>/);
+  assert.match(textOf(locked), /Locked\. No details yet\./);
+  assert.doesNotMatch(readPage('vite.config.js'), /adult|18\.html|secret/i, 'no page behind it');
+  // what the fine print promises
+  const fine = textOf(between(main, '<section class="rm-fine"', '</section>'));
+  for (const words of ['no dates are promised', 'this page never asks your wallet for anything', 'Anyone asking you to stake, send $AGI or claim a prize now isn\'t us.',
+    'never guaranteed and never an investment', 'Not financial advice: $AGI is a meme token and can lose all of its value.', 'are 18+, and only where they\'re legal where you live']) assert.ok(fine.includes(words), words);
+});
+
+test('the coming-soon pages: the owner\'s words with the safety lines, no rates or amounts, nothing to stake, play or win yet', () => {
+  const words = {
+    stake: ['Stake your $AGI, get rewards.', 'in USDG only, in $AGI only, or free AI with sAGI', 'In USDG only', 'In $AGI only', 'Free AI with sAGI', '18+, and only where staking is legal where you live.'],
+    games: ['Earn $AGI while you play.', 'A lot of types of games, casino-style ones included.', 'Casino-style games', 'Casino-style games are 18+ and only where they\'re legal where you live.', 'never with more than you can afford to lose'],
+    giveaway: ['Create viral content for AGI. Win giveaways.', 'Create', 'Post', 'Win', '18+, and only where it\'s legal where you live.', 'Say what\'s AI-made when you post it'],
+  };
+  for (const [p, title] of Object.entries(SOON)) {
+    const main = mainOf(readPage(`${p}.html`)), text = textOf(main);
+    assert.match(main, new RegExp(`<h1 class="rm-title" id="rm-title">${title.replace('$', '\\$')}</h1>`), p);
+    assert.ok(main.indexOf('<a href="/roadmap"><span aria-hidden="true">← </span>The roadmap</a>') < main.indexOf('<h1'), `${p}: the way back first`);
+    assert.match(main, /<a class="btn btn-ghost btn-sm" href="\/roadmap">The roadmap<\/a>/, `${p}: and under what's coming`);
+    assert.equal((main.match(/<p class="rm-status is-soon">/g) || []).length, 2, `${p}: "Coming soon" at the top and over "Not open yet"`);
+    assert.equal((main.match(/<li class="rm-feat rm-rv" data-rm-reveal>/g) || []).length, 3, `${p}: three cards`);
+    assert.match(main, /<h2 class="rm-soon-title">Not open yet<\/h2>/);
+    assert.match(main, /<textPath href="#rm-ring"[^>]*>COMING SOON · /, `${p}: its stamp says it`);
+    for (const w of words[p]) assert.ok(text.includes(w), `${p}: ${w}`);
+    assert.match(text, /not financial advice/i, p);
+    assert.match(text, /(is not us|isn't us)/, `${p}: what a scam would ask, said as one`);
+  }
+  // all four: no rates, amounts or yields; "guaranteed" and "investment" only ever as nevers; never "buy"; and nothing to press
+  for (const p of ROADMAP) {
+    const main = mainOf(readPage(`${p}.html`)), text = textOf(main);
+    assert.doesNotMatch(text, /%|\bAPY\b|\bAPR\b|\byield/i, `${p}: no rates`);
+    assert.doesNotMatch(text, /\$\s?\d|\d[\d,.]*\s*(USDG|\$AGI)\b/, `${p}: no amounts`);
+    for (const m of text.matchAll(/guarantee\w*/gi)) assert.match(text.slice(Math.max(0, m.index - 10), m.index), /never $/, `${p}: "${m[0]}" only as never`);
+    for (const m of text.matchAll(/invest\w*/gi)) assert.match(text.slice(Math.max(0, m.index - 10), m.index), /(never|not) an $/, `${p}: "${m[0]}" only as never or not one`);
+    assert.doesNotMatch(text, /\bbuy\b/i, `${p}: never "buy" (hard rule 8)`);
+    assert.doesNotMatch(main, /<button|<form|<input|data-wallet|data-connect/, `${p}: no wallet button and no form (hard rule 9)`);
+    assert.match(text, /18\+/, p);
+    assert.match(text, /never asks your wallet for anything/, `${p}: it says so`);
+  }
+});
+
+test('the roadmap: linked from every page with the top bar, after AGI Studio; the same top bar and footer as the others', () => {
+  for (const name of ['index.html', 'diary.html', 'launch.html', 'live.html']) {
+    const page = readPage(name);
+    assert.match(page, /<a class="nav-phone" href="\/studio">AGI Studio<\/a>\s*<a class="nav-phone" href="\/roadmap">Roadmap<\/a>/, `${name}: its menu row, after AGI Studio`);
+    assert.match(between(page, '<nav class="foot-nav"', '</nav>'), /<a href="\/studio">AGI Studio<\/a>\s*<a href="\/roadmap">Roadmap<\/a>/, `${name}: its footer link`);
+  }
+  const strip = (s) => s.replace(/ aria-current="page"/g, '');
+  const live = readPage('live.html');
+  for (const p of ROADMAP) {
+    const page = readPage(`${p}.html`);
+    assert.equal(strip(between(page, '<header class="topbar">', '</header>')), strip(between(live, '<header class="topbar">', '</header>')), `${p}: the site's own top bar`);
+    assert.equal(strip(between(page, '<footer class="foot">', '</footer>')), strip(between(live, '<footer class="foot">', '</footer>')), `${p}: and footer`);
+    const current = (page.match(/<a [^>]*aria-current="page"[^>]*>[^<]*<\/a>/g) || []);
+    assert.deepEqual(current, p === 'roadmap' ? ['<a class="nav-phone" href="/roadmap" aria-current="page">Roadmap</a>', '<a href="/roadmap" aria-current="page">Roadmap</a>'] : [], `${p}: the current page marked only on the roadmap`);
+  }
+});
+
+test('the roadmap\'s look: every rule names an rm- class; Pop mode\'s are scoped, its heroes violet like the browser bar; "reduce motion"', () => {
+  const css = readPage('src/styles/roadmap.css');
+  const all = cssRules(css);
+  assert.ok(all.length > 150, `${all.length} rules`);
+  const loose = all.flatMap(({ at, head }) => selectorsOf(head).filter((s) => !s.includes('.rm-')).map((s) => `${at} ${s}`.trim()));
+  assert.deepEqual(loose, [], 'every rule names an rm- class, so no other page changes');
+  // hidden only while waiting to come in (is-pending, set by src/roadmap/page.js): never 0 (browsers time the main content),
+  // so without the script everything is simply there
+  for (const { head, body } of all) {
+    if (/opacity:\s*0?\.01/.test(body)) assert.match(head, /is-pending/, `${head}: hidden only while it waits`);
+    assert.doesNotMatch(body, /opacity:\s*0\s*[;}]|opacity:\s*0$/, `${head}: never fully see-through`);
+  }
+  const still = all.filter(({ at }) => at === '@media (prefers-reduced-motion: reduce)').map(({ head }) => head).join(', ');
+  for (const s of ['.rm-hero-text > *', '.rm-meter', '.rm-art', '.rm-seg', '.rm-stamp', '.rm-here-dot::after', '.rm-redact span', '.rm-here::before',
+    '.rm-list-soon .rm-item::before', '.rm-item.is-soon .rm-status-dot']) assert.ok(still.includes(s), `"reduce motion" stops ${s}`);
+  // Pop mode: every rm- rule under [data-skin='pop'] (tests/pop.test.js checks the whole file), its heroes violet like the
+  // phone's browser bar there (/theme.js: these pages aren't the diary's kind, so the violet one)
+  const pop = cssRules(readPage('src/styles/pop.css')).filter(({ head }) => head.includes('.rm-'));
+  assert.ok(pop.length > 60, `${pop.length} Pop mode rules`);
+  for (const { at, head } of pop) for (const s of selectorsOf(head)) assert.match(s, /^\[data-skin='pop'\]/, `${at} ${s}`);
+  assert.match(pop.find(({ head }) => head === "[data-skin='pop'] .rm-hero").body, /background: var\(--pop-violet\)/);
+  assert.match(pop.find(({ head }) => head === "[data-skin='pop'][data-theme='dark'] .rm-hero").body, /background: #2a0f7a/);
+  // under Pop mode's floating top bar, and its band once the hero is gone (src/menu.js)
+  assert.match(pop.find(({ head }) => head === "[data-skin='pop'] .rm-hero").body, /margin-top: -72px; padding-top: calc\(72px \+/);
+  assert.match(readPage('src/menu.js'), /document\.querySelector\('\.lp-hero, \.hero, \.rm-hero'\)/);
+  // found by the browser check (2026-10-14): one long word ("Giveaways") fits a 320 px phone in Pop mode; "Step n of 6" stays
+  // on one line (under its status when there's no room beside it); Pop light's live numbers stand out from the lavender
+  // (violet, 4.2:1; honey was 1.1:1), honey on Pop dark
+  const rule = (h) => all.find(({ head }) => head === h)?.body || '';
+  const popRule = (h) => pop.find(({ head }) => head === h)?.body || '';
+  assert.match(popRule("[data-skin='pop'] .rm-hero-sub .rm-title"), /font-size: clamp\(min\(44px, 12\.4vw\), 8\.4vw, 112px\)/);
+  assert.match(rule('.rm-card-top'), /flex-wrap: wrap;.*min-height: 28px/);
+  assert.match(rule('.rm-step'), /line-height: 28px;.*white-space: nowrap/);
+  assert.match(popRule("[data-skin='pop'] .rm-item.is-done .rm-num"), /color: var\(--pop-violet\)/);
+  assert.match(popRule("[data-skin='pop'][data-theme='dark'] .rm-item.is-done .rm-num"), /color: var\(--pop-honey\)/);
+  // the stamps' words, in Geist Mono (every letter 0.6em wide, plus its letter-spacing), never longer than their textLength,
+  // so it only ever spreads them a little (never squeezes them together); and that never past their ring (2π × 78 px)
+  assert.match(rule('.rm-stamp-text'), /font-family: var\(--mono\); font-size: 13px; letter-spacing: \.1em/);
+  for (const p of ['stake', 'games', 'giveaway']) {
+    const [, d, len, words] = readPage(`${p}.html`).match(/<path id="rm-ring" d="([^"]+)"\/>[\s\S]*?<textPath href="#rm-ring" textLength="(\d+)" lengthAdjust="spacing">([^<]+)<\/textPath>/);
+    assert.equal(d, 'M100 100m-78 0a78 78 0 1 1 156 0a78 78 0 1 1-156 0', `${p}: its ring`);
+    const natural = [...words.trim()].length * 13 * (0.6 + 0.1);
+    assert.ok(natural <= Number(len) && Number(len) <= 2 * Math.PI * 78, `${p}: its stamp's words ${natural.toFixed(1)} px, spread to ${len} on a ${(2 * Math.PI * 78).toFixed(1)} px ring`);
+  }
+});
+
+test('the roadmap\'s script: the theme, the menu and the cards coming in, nothing else; never with "reduce motion"', () => {
+  const src = readPage('src/roadmap/page.js');
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  assert.deepEqual([...code.matchAll(/^import ([^;]+);/gm)].map((m) => m[1]), ["'../styles/tokens.css'", "'../styles/base.css'", "'../styles/layout.css'",
+    "'../styles/sections.css'", "'../styles/footer.css'", "'../styles/diary.css'", "'../styles/roadmap.css'", "'../styles/pop.css'",
+    "{ startTheme } from '../theme.js'", "{ startMenu } from '../menu.js'"]);
+  assert.doesNotMatch(code, /wallet|ethereum|eth_|personal_sign|fetch\(|XMLHttpRequest|sendBeacon|WebSocket|localStorage|sessionStorage|import\(|innerHTML/, 'nothing sent, kept or asked of a wallet');
+  assert.match(code, /if \(matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\) return;/, 'still with "reduce motion"');
+  assert.match(code, /typeof IntersectionObserver !== 'function'\) return;/, 'everything simply there without IntersectionObserver');
+  assert.match(code, /getBoundingClientRect\(\)\.top > fold/, 'only what\'s below the first screen waits (what\'s on screen would flash)');
+  assert.match(code, /node\.style\.setProperty\('--rm-delay'/, 'its delay through the CSS object model (the CSP allows no style attributes)');
+  assert.doesNotMatch(code, /\.style\.(?!setProperty)|setAttribute\('style'/, 'no other style');
+});
+
+// /theme.js in a sandbox (as in tests/pop.test.js): the phone's browser bar on the roadmap's pages
+function barOf(page, skin, theme) {
+  const attrs = { 'data-page': page };
+  const meta = { content: '#fafaf8', setAttribute(k, v) { this[k] = v; } };
+  const root = { setAttribute: (k, v) => { attrs[k] = String(v); }, getAttribute: (k) => attrs[k] ?? null, classList: { add() {}, remove() {}, contains: () => false } };
+  vm.runInNewContext(readPage('public/theme.js'), {
+    localStorage: { getItem: (k) => ({ 'dr-skin': skin, 'dr-theme': theme })[k] ?? null },
+    location: { pathname: `/${page}`, search: '', hash: '' }, window: {}, setTimeout() {}, sessionStorage: { getItem: () => '1' },
+    document: { documentElement: root, querySelector: (s) => (s === 'meta[name="theme-color"]' ? meta : null) },
+  });
+  return meta.content;
+}
+
+test('the roadmap\'s pages: the phone\'s browser bar is Pop mode\'s violet hero (the lab look: the page), from the first paint', () => {
+  for (const p of ROADMAP) {
+    assert.equal(barOf(p, 'pop', 'light'), '#6b3bff', `${p}: Pop mode, light`);
+    assert.equal(barOf(p, 'pop', 'dark'), '#2a0f7a', `${p}: Pop mode, dark`);
+    assert.equal(barOf(p, null, null), '#2a0f7a', `${p}: the defaults (Pop mode, dark)`);
+    assert.equal(barOf(p, 'lab', 'light'), '#fafaf8', `${p}: the lab look, light`);
+    assert.equal(barOf(p, 'lab', 'dark'), '#0b0b0c', `${p}: the lab look, dark`);
+  }
+  // src/theme.js says the same once the page runs (only the diary's kind of page gets the page's own color in Pop mode)
+  assert.match(readPage('src/theme.js'), /\['diary', 'launch', 'live', 'studio'\]\.includes\(root\.dataset\.page\)/);
 });

@@ -6,6 +6,7 @@ import {
   usd, SHAPES, PHOTO_SHAPES, BANNER, OPTIONS, MODES, INF_STYLES, PRICES, FREE_CREDITS, DISCOUNT, CAPTIONS_A_DAY, creditsText, trendOf, TICKETS,
   HELPER, GIFTS, REFERRALS, CLANK_NAME, MEME_LINE_MAX, REFS, MEMES, PHOTO_MODELS, PHOTO_QUALITY, VIDEO_MODELS,
   STYLE_AUTO, STYLE_ANY, OWNER_LINKS, EDIT, EDITOR, VIDEO_EDITOR,
+  MODEL, MODEL_DETAIL, MODEL_POSES, DL_FORMATS, DL_DAYS, MODEL_EXTRAS, MODEL_STEP_WORDS as STEPS_3D, moveLabel, modelSpec, modelExtras, stepGroup,
 } from './rules.js';
 import { LEVELS } from '../lib/levels.js';
 
@@ -116,9 +117,12 @@ export function jobTitle(j) {
   if (j.kind === 'photo' && j.edit) return `Edited: ${j.edit}`;
   // …and one saved from the photo editor
   if (j.kind === 'photo' && j.editor) return j.shape === 'banner' ? 'Edited X banner' : 'Edited photo';
+  // (2026-10-13) one with AGI-1 in it ("With AGI-1", or "Add AGI-1" to one of its photos)
+  if (j.kind === 'photo' && j.agi1) return `With AGI-1: ${j.scene || (j.shape === 'banner' ? 'an X banner' : 'a photo')}`;
   if (j.kind === 'photo') return j.scene || (j.shape === 'banner' ? 'X banner' : 'Photo');
   // (2026-10-12) a video saved from the video editor
   if (j.kind === 'video' && j.editor) return 'Edited video';
+  if (j.kind === 'video' && j.agi1) return `With AGI-1: ${j.scene || 'a video'}`;
   if (j.kind === 'video') return j.scene || 'Video';
   if (j.kind === 'trend') return j.clip ? 'Trend video (your own clip)' : `Trend video: ${trendOf(j.trend)?.name || 'a trend'}`;
   return '';
@@ -132,20 +136,22 @@ export const shapeName = (s) => PHOTO_SHAPES[s]?.name || SHAPES.tall.name;
 export const secondsText = (s) => (Number(s) >= 60 && Number(s) % 60 === 0 ? `${Number(s) / 60} min` : `${Number(s) || 5} s`);
 export function jobMeta(j) {
   // (round 4) an X banner: the size X asks for its header
-  if (j.kind === 'photo' && j.shape === 'banner') return `AI-generated · X banner${j.edit || j.editor ? ' · Edited' : ''} · ${BANNER.W} × ${BANNER.H}`;
+  // (2026-10-13) …and with AGI-1 in it
+  if (j.kind === 'photo' && j.shape === 'banner') return `AI-generated · X banner${j.edit || j.editor ? ' · Edited' : ''}${j.agi1 ? ' · With AGI-1' : ''} · ${BANNER.W} × ${BANNER.H}`;
   // (round 4, phase 4) a meme, its format; a photo's model and quality when it isn't the usual (Classic, Standard)
   const parts = ['AI-generated', j.kind === 'photo' && j.meme ? 'Meme' : kindName(j.kind)];
   if (j.kind === 'photo' && j.meme && MEMES[j.meme]) parts.push(MEMES[j.meme].name);
-  // (2026-10-12, the editor) made with "Edit with words"
-  if (j.kind === 'photo' && (j.edit || j.editor)) parts.push('Edited');
+  // (2026-10-12, the editor) made with "Edit with words", or saved from the photo editor; a video saved from the video editor
+  // (no model of its own: cut from one of its videos)
+  if ((j.kind === 'photo' && (j.edit || j.editor)) || (j.kind === 'video' && j.editor)) parts.push('Edited');
+  // (2026-10-13) AGI-1 is in it (after "Edited", as on an X banner)
+  if (j.agi1 && (j.kind === 'photo' || j.kind === 'video')) parts.push('With AGI-1');
   if (j.kind === 'photo' && j.model === 'crisp') parts.push(PHOTO_MODELS.crisp.name);
   if (j.kind === 'photo' && (j.quality === 'hd' || j.quality === 'ultra')) parts.push(`${PHOTO_QUALITY[j.quality].name} ${PHOTO_QUALITY[j.quality].px}`);
   // (a scene video: its model when it isn't Standard, and its length (5 s before the menu); a trend video is as long as its
   // clip: a trend clip's 10 s, or their own clip's 3 to 10)
   if (j.kind === 'video') {
-    // (2026-10-12) …saved from the video editor (no model of its own: cut from one of its videos)
-    if (j.editor) parts.push('Edited');
-    else if (j.model && j.model !== 'standard' && VIDEO_MODELS[j.model]) parts.push(j.model === 'anime' && j.quality ? `${VIDEO_MODELS.anime.name} ${j.quality}` : VIDEO_MODELS[j.model].name);
+    if (!j.editor && j.model && j.model !== 'standard' && VIDEO_MODELS[j.model]) parts.push(j.model === 'anime' && j.quality ? `${VIDEO_MODELS.anime.name} ${j.quality}` : VIDEO_MODELS[j.model].name);
     parts.push(secondsText(j.seconds || 5));
   }
   if (j.shape) parts.push(shapeName(j.shape));
@@ -192,13 +198,14 @@ export const PROGRESS_LABELS = {
 export const progressKind = (j) => (j?.kind === 'photo' && j.shape === 'banner' ? 'banner' : j?.kind === 'photo' && j.meme ? 'meme'
   : j?.kind === 'video' && j.editor ? 'cut' : j?.kind === 'video' && Number(j.parts) > 1 ? 'long' : j?.kind);
 
-// a 3D model of it (the studio's characters: its steps; round 2: one waiting for a big burn)
-const MODEL_STEP = { image: 'Shaping it', rig: 'Giving it bones', moves: 'Teaching it moves', save: 'Saving it' };
+// a 3D model of it (the studio's characters: its steps; round 2: one waiting for a big burn). (2026-10-13, the 3D tool) a
+// step's number left out: motion1 and motion2 are both "Making its own moves" (rules.js MODEL_STEP_WORDS)
+const MODEL_STEP = STEPS_3D;
 export function modelText(m) {
   if (!m) return '';
   if (m.status === 'done') return 'Ready in 3D';
   if (m.status === 'quote') return `Waiting for your burn: ${num(m.paid)} of ${num(m.agi)} $AGI`;
-  if (m.status === 'paid' || m.status === 'making') return `${MODEL_STEP[m.step] || MODEL_STEP.image}…`;
+  if (m.status === 'paid' || m.status === 'making') return `${MODEL_STEP[stepGroup(m.step)] || MODEL_STEP.image}…`;
   if (m.status === 'failed') {
     if (m.kind === 'burn') return `${failText(m.error)}${m.credit ? ' You can make it again, free.' : ''}`;
     return `${failText(m.error)} Its credits came back.`;
@@ -207,6 +214,109 @@ export function modelText(m) {
   return '';
 }
 export const MODEL_STEP_WORDS = MODEL_STEP;
+
+// ---------- (2026-10-13) the 3D tool's choices (the owner: "i wish theres more tools to customize the 3d like in meshy") ----------
+// Its sections' short notes, what it costs, a model's choices in a line, and its "no"s (rules.js MODEL; our server checks every
+// choice again: server/influencer.js readChoices, server/studio-words.js checkModelWords)
+const plural = (n, one, many = `${one}s`) => `${num(n)} ${Number(n) === 1 ? one : many}`;
+// a download's short name (its summary, the 3D page's buttons)
+export const DL_SHORT = { full: 'Full GLB', fbx: 'FBX', usdz: 'USDZ', stl: 'STL', obj: 'OBJ' };
+// how long it takes: a move described in words adds its own steps (rules.js modelPlan)
+export const modelTimeText = (spec) => (modelSpec(spec)?.own.length ? 'about 10 to 15 minutes' : 'about 5 to 10 minutes');
+// The 3D tool's sections' notes take what's picked now (views/model-tool.js keeps it), never a whole model's choices: a move of
+// its own or its look half-typed isn't a model's choices yet, and its notes must still say what's picked.
+// its moves' section (n: how many are picked): "7 of 9", "9 of 9 · +22"
+export function movesNote(n) {
+  const k = Math.max(0, Math.round(Number(n) || 0));
+  const more = Math.max(0, k - MODEL.PICKS_FREE);
+  return `${k} of ${MODEL.PICKS_MAX}${more ? ` · +${num(more * MODEL_EXTRAS.move)}` : ''}`;
+}
+// …the line under its moves (n: how many are picked)
+export function movesLine(n) {
+  if (n < 1) return 'Pick at least one move.';
+  const free = MODEL.PICKS_FREE, more = Math.max(0, n - free);
+  if (!more) return `${n} picked: up to ${free} are in its price, each one more +${MODEL_EXTRAS.move} credits.`;
+  const most = n >= MODEL.PICKS_MAX;
+  return `${n} picked${most ? ', the most' : ''}: ${free} are in its price, ${more === 1 ? 'the other one' : `the other ${more}`} +${num(more * MODEL_EXTRAS.move)} credits.${most ? ' Unpick one to pick another.' : ''}`;
+}
+// its moves of its own (own: [{ name }], as typed so far: one without a name yet is "Move 2"): "None · +47 each",
+// "kick, salute · +94"
+export function ownNote(own) {
+  const list = Array.isArray(own) ? own : [];
+  if (!list.length) return `None · +${MODEL_EXTRAS.own} each`;
+  const names = list.map((o, i) => String(o?.name ?? '').trim().toLowerCase() || `Move ${i + 1}`);
+  return `${names.join(', ')} · +${num(list.length * MODEL_EXTRAS.own)}`;
+}
+// its shape and look ({ detail, pose, height, shine, look }: a model's choices, or what's picked now): "Standard · A-pose ·
+// 170 cm", "High detail · T-pose · 182 cm · Shine · New look"
+export function lookNote(spec) {
+  const d = Object.hasOwn(MODEL_DETAIL, spec?.detail ?? '') ? MODEL_DETAIL[spec.detail] : MODEL_DETAIL.std;
+  const p = Object.hasOwn(MODEL_POSES, spec?.pose ?? '') ? MODEL_POSES[spec.pose] : MODEL_POSES.a;
+  const height = Number.isInteger(spec?.height) ? spec.height : MODEL.HEIGHT;
+  return [d.name, p.name, `${height} cm`, spec?.shine === true ? 'Shine' : null, String(spec?.look ?? '').trim() ? 'New look' : null].filter(Boolean).join(' · ');
+}
+// more downloads (formats: their keys, in any order): "None · free", "FBX, STL"
+export function dlNote(formats) {
+  const f = Array.isArray(formats) ? formats : [];
+  const list = Object.keys(DL_FORMATS).filter((k) => f.includes(k));
+  return list.length ? list.map((k) => DL_SHORT[k]).join(', ') : 'None · free';
+}
+// what it costs, when it has extras (the button says the total): "Its price is 500, and its extras: 2 more moves +22 · …
+// (Crush: 20% off all of it)." A Soulmate's free model a month covers its price, never its extras. → '' (nothing extra)
+export function modelPriceText(spec, level = 1, { free = false } = {}) {
+  const s = modelSpec(spec), e = modelExtras(spec);
+  if (!s || !e) return '';
+  const parts = [];
+  const more = Math.max(0, s.moves.length - MODEL.PICKS_FREE);
+  if (more) parts.push(`${plural(more, 'more move')} +${num(e.moves)}`);
+  if (s.own.length) parts.push(`${plural(s.own.length, 'move')} of its own +${num(e.own)}`);
+  if (e.high) parts.push(`High detail +${num(e.high)}`);
+  const pct = Math.round((DISCOUNT[level] || 0) * 100);
+  if (free) return parts.length ? `Your free 3D model this month covers its price; its extras are paid: ${parts.join(' · ')}${pct ? ` (${pct}% off)` : ''}.` : '';
+  if (!parts.length) return '';
+  return `Its price is ${num(PRICES.model)}, and its extras: ${parts.join(' · ')}${pct ? ` (${LEVEL_NAMES[level]}: ${pct}% off all of it)` : ''}.`;
+}
+export const MODEL_FREE_LINE = 'Free: its look in words, shine, its pose and height, Low-poly, and more downloads.';
+// a model's choices in a line (a burn's sheet, the 3D page): "8 moves: Wave, Dance, … · Standard · A-pose · 170 cm"
+export function specSummary(spec) {
+  const s = modelSpec(spec);
+  if (!s) return '';
+  const parts = [`${plural(s.moves.length, 'move')}: ${s.moves.map(moveLabel).join(', ')}`];
+  if (s.own.length) parts.push(`of its own: ${s.own.map((o) => o.name).join(', ')}`);
+  parts.push(MODEL_DETAIL[s.detail].name, MODEL_POSES[s.pose].name, `${s.height} cm`);
+  if (s.shine) parts.push('Shine');
+  if (s.look) parts.push(`its look: “${s.look}”`);
+  if (s.formats.length) parts.push(`downloads: ${s.formats.map((f) => DL_SHORT[f]).join(', ')}`);
+  return parts.join(' · ');
+}
+// what's typed for it, checked here first: a move of its own (its name, what it does) and its look in words
+export function ownText(why, name = '') {
+  if (why === 'name_empty') return 'Give it a name: what people type to play it.';
+  if (why === 'name_bad') return 'A name of 2 to 16 letters and numbers, starting with a letter, with no spaces.';
+  if (why === 'name_taken') return `“${name}” plays a move from the library already: pick another name.`;
+  if (why === 'name_twice') return 'Each move of its own needs a name of its own.';
+  if (why === 'prompt_empty') return 'Describe the move: what it does.';
+  if (why === 'prompt_short') return `A few more words, please: at least ${MODEL.OWN_MIN} characters.`;
+  if (why === 'prompt_long') return `At most ${MODEL.OWN_LONG} characters.`;
+  return 'Try other words.';
+}
+export const lookText = (why) => (why === 'short' ? `A few more words, please: at least ${MODEL.LOOK_MIN} characters.` : `At most ${MODEL.LOOK_MAX} characters.`);
+// our server's "no" for one of its choices (400 spec, with which one)
+const SPEC_WHY = {
+  moves: `Pick 1 to ${MODEL.PICKS_MAX} moves from the library.`,
+  own: `Up to ${MODEL.OWN_MAX} moves of its own, each with a name, what it does and its length.`,
+  pose: 'Pick A-pose or T-pose.',
+  height: `A height from ${MODEL.HEIGHT_MIN} to ${MODEL.HEIGHT_MAX} cm.`,
+  look: `Its look in words: ${MODEL.LOOK_MIN} to ${MODEL.LOOK_MAX} characters.`,
+  formats: 'Pick downloads from the list.',
+};
+export const specFieldText = (field) => SPEC_WHY[field] || errorText('spec');
+// …and its words' "no" (422: its look, or a move of its own's name or what it does), said for a 3D model
+const MODEL_WORDS = {
+  person: { look: 'Never a famous or real person by name: describe the look itself.', own: 'Never a famous or real person by name: describe the move itself.' },
+  character: { look: "Never someone else's character or a brand's mascot: describe a look of your own.", own: "Never someone else's character or a brand's mascot: describe the move itself." },
+};
+export const modelWordsText = (field, why) => MODEL_WORDS[why]?.[field] || wordsText(field, why);
 
 // ---------- what was typed, refused (server/inf-words.js checkStart, checkInfScene; the coin: server/launch.js) ----------
 const WORDS = {
@@ -232,6 +342,8 @@ const WORDS = {
   her: 'Nothing that passes for AGI-1, her team or anything official.',
   // (round 4, phase 4) a meme's words are never about money (server/inf-words.js MONEY)
   money: 'Keep it off money: nothing about coins, prices, buying or selling.',
+  // (2026-10-13, the 3D tool) a move described in words never hurts anyone or holds a weapon (server/studio-words.js moveTrouble)
+  violence: 'Nothing violent: no weapons, and never hurting anyone.',
 };
 export function wordsText(field, why) {
   const w = WORDS[why];
@@ -450,6 +562,19 @@ const ERRORS = {
   cut: "That part or shape can't be cut from this video: change it and try again.",
   from: "The video it's from isn't there any more.",
   cuts_open: `You have ${VIDEO_EDITOR.OPEN} edited videos being made: wait for one to finish.`,
+  // (2026-10-13, the 3D tool) a 3D model's choices, and its extra downloads
+  spec: "One of its choices isn't one we have: have another look at them.",
+  not_burnable: `A burn makes a 3D model with nothing extra: at most ${MODEL.PICKS_FREE} moves from the library, none of its own, and not High detail. Take the extras off, or make it with credits.`,
+  dl_none: "That download wasn't asked for when it was made.",
+  dl_wait: "That download is still being made: it's ready a few minutes after its 3D model.",
+  dl_failed: "That download couldn't be made.",
+  dl_expired: `Its extra downloads are kept ${DL_DAYS} days: they're gone now (its 3D model and its picture stay).`,
+  dl_missing: "That download's file isn't there any more.",
+  // (2026-10-13) "With AGI-1"
+  agi1_trend: 'AGI-1 never joins a trend video: it puts your influencer in place of one person in the clip. Make a photo or a video with her instead.',
+  agi1_model: 'AGI-1 joins Classic photos: it keeps her exactly as she\'s drawn. Pick Classic.',
+  agi1_photo: 'A Standard, Pro or Long video with AGI-1 starts from a photo she\'s in: make one With AGI-1 (or add her to one), then pick it.',
+  agi1_has: 'AGI-1 is in that photo already.',
   busy: 'Something went wrong on our side: try again in a minute.',
 };
 export const errorText = (why) => ERRORS[why] || ERRORS.busy;
@@ -511,6 +636,42 @@ export function editNote(j) {
 }
 // …its toast: "Editing your photo: the new one shows next to it in about half a minute"
 export const editMadeText = (j) => `Editing your ${creationWord(j)}: the new one shows next to it in about half a minute`;
+
+// ---------- (2026-10-13) "With AGI-1" (the owner's choices: her own 2D anime self, cute and a little flirty, PG-13, the same
+// price: src/studio/rules.js WITH_AGI1) ----------
+// its switch's line in a tool: a photo's (Classic only), or a video's (its model: a Standard, Pro or Long video starts from a
+// photo she's in; Anime puts her in from her own pictures)
+export function herNote(name, { video = false, model = null } = {}) {
+  const who = name ? `AGI-1 joins ${name}` : 'AGI-1 joins your influencer';
+  if (video && model === 'anime') return `${who}, put in from her own pictures (with or without a photo). The same price.`;
+  if (video) return `${who}: it starts from a photo she's in. The same price.`;
+  return `${who}: her own 2D anime self, cute and a little flirty. Classic only, the same price.`;
+}
+// a photo's model card with her on (only Classic keeps her exactly as she's drawn)
+export const HER_CLASSIC_WHY = 'Classic only with AGI-1: it keeps her exactly as she\'s drawn.';
+// her own name typed in a scene with the switch off (our server says "her"): what to do instead
+export const HER_NAME_HINT = 'To have AGI-1 in it, switch on “With AGI-1”.';
+// the video tool's start photos with her on, when it has none she's in yet
+export const HER_NO_PHOTO = 'It starts from a photo AGI-1 is in, and it has none yet: make one With AGI-1, or open one of its photos and tap Add AGI-1.';
+// scene ideas with her (made up, PG-13, cute and a little flirty: never a real place's brand or a real person)
+export const AGI1_IDEAS = [
+  'posing for a photo together with AGI-1 at a sunny café, both smiling', 'sharing popcorn with AGI-1 at the cinema, both laughing',
+  'walking side by side with AGI-1 down a neon street at night', 'on a rooftop at golden hour, AGI-1 making a heart with her hands',
+  'playing video games with AGI-1 at a cozy desk with RGB lights', 'having a picnic with AGI-1 in a pastel flower field',
+];
+export const AGI1_VIDEO_IDEAS = [
+  'waves at the camera with AGI-1 on a sunny rooftop, then both laugh', 'dances happily with AGI-1 in a cozy living room',
+  'walks with AGI-1 down a neon street at night, AGI-1 waving at the camera', 'clinks milkshakes with AGI-1 in a retro diner, both smiling',
+];
+// "Add AGI-1" (she's put into one of its own photos, memes or X banners: a new one next to it, at its price): what stays as it
+// is, and its toast
+export function addHerNote(j) {
+  const base = 'The same character, place and framing, with AGI-1 added in her own 2D anime style.';
+  if (j?.kind === 'photo' && j.shape === 'banner') return `${base} It stays an X banner, ${BANNER.W} × ${BANNER.H}.`;
+  if (j?.kind === 'photo' && j.meme) return `${base} Its words stay as they are.`;
+  return base;
+}
+export const addHerMadeText = (j) => `Adding AGI-1 to your ${creationWord(j)}: the new one shows next to it in about half a minute`;
 
 // ---------- the photo editor (2026-10-12, the editor: free, in the browser; src/studio/views/photo-editor.js) ----------
 // its sheet's line under its title

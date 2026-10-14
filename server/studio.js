@@ -17,6 +17,11 @@
 // Off until MESHY_API_KEY is set (and studio.sql run). Private until STUDIO_OPEN=yes: until then only the wallets in
 // STUDIO_ONLY_FOR may make one (Meshy's terms say its service is for the customer's own use: the owner asks Meshy before
 // opening it to everyone; see CLAUDE.md). Character pages are public.
+// (2026-10-13, the 3D tool's choices) a 3D model of an influencer follows its choices (src/studio/rules.js modelSpec, kept
+// with its order: `spec`): its steps are its plan (modelPlan: its moves described in words first, so words the AI refuses
+// stop it before anything is made; then its shape, bones and library moves; then each described move put on its bones), its
+// described moves are merged into its model when it's kept (server/studio-files.js), and the extra downloads asked for are
+// made afterwards, one a run, by the clock (server/studio-dl.js).
 import { createHmac, randomBytes } from 'node:crypto';
 import { rpc } from './limits.js';
 import { readSession, makeSession, needsRecheck, RECHECK_MS } from './session.js';
@@ -24,7 +29,7 @@ import { burnKey, burnWallet, txCode } from './burn.js';
 import { checkCharacter, meshyPrompt, meshyTexture } from './studio-words.js';
 import { meshyStart, meshyTask, animationUrl, thumbnailUrl } from './meshy.js';
 import { readPayment, amountOf, recentPayments } from './studio-chain.js';
-import { priceFor, MOVES, MOVE_NAMES, ORDER_ID } from '../src/studio/rules.js';
+import { priceFor, MOVE_NAMES, ORDER_ID, MODEL_DEFAULT, modelSpec, modelPlan, modelTimes, ownClip } from '../src/studio/rules.js';
 
 export const STUDIO = {
   PER_WALLET: 2,              // quotes one wallet may hold at once
@@ -35,10 +40,22 @@ export const STUDIO = {
   MAX_MAKING_MS: 3 * 864e5,   // Meshy keeps what it made 3 days: a character not done by then can't be finished
   CHECKS: 3,                  // payments read from the chain per "Check my payment"
 };
-// (2026-10-10, AGI Studio) a 3D model of an influencer starts from its full-body picture ('image': Meshy's image to 3D),
-// then the same bones and moves
-const NEXT = { preview: 'refine', refine: 'rig', image: 'rig', rig: 'moves', moves: 'save' };
-const SAVE_NEEDS_MS = 15_000;  // keeping a character's files starts only with this much time left
+// A character from words: its four steps. (2026-10-10, AGI Studio) a 3D model of an influencer starts from its full-body
+// picture ('image': Meshy's image to 3D), then the same bones and moves; (2026-10-13) its plan follows its choices (rules.js
+// modelPlan: motion1 and motion2 before it, apply1 and apply2 after its library moves, when it has moves described in words)
+const WORDS_PLAN = ['preview', 'refine', 'rig', 'moves', 'save'];
+// its choices (none, or a character from words: the model as before)
+export const specOf = (o) => (o?.inf_id ? modelSpec(o.spec ?? null) || MODEL_DEFAULT : MODEL_DEFAULT);
+export const planOf = (o) => (o?.inf_id ? modelPlan(specOf(o)) : WORDS_PLAN);
+const nextOf = (o, step) => {
+  const plan = planOf(o);
+  const i = plan.indexOf(step);
+  return i >= 0 && i + 1 < plan.length ? plan[i + 1] : null;
+};
+// keeping a character's files starts only with this much time left (its moves described in words: their files read and
+// merged into its model too)
+const SAVE_NEEDS_MS = 15_000;
+export const saveNeeds = (o) => (specOf(o).own.length ? 16_000 : SAVE_NEEDS_MS);
 
 // ---------- settings ----------
 export const studioOn = (cfg) => Boolean(cfg.meshyKey && cfg.supabaseUrl && cfg.supabaseKey && cfg.passSecret.length >= 32);
@@ -82,9 +99,11 @@ export function pageView(cfg, o) {
       paid: Number(o.paid) || 0, level: o.level });
   }
   if (o.status === 'making' || o.status === 'paid') {
-    view.step = o.step || 'preview';
+    view.step = o.step || planOf(o)[0];
     // (round 4) when its making started (else when it was paid): its progress bar on the page ("42% · about 3 min left")
     view.started = Date.parse(o.started_at || o.paid_at || '') || null;
+    // (2026-10-13) a 3D model's own plan, for its progress bar (its steps and how long each usually takes)
+    if (o.inf_id) view.plan = modelTimes(specOf(o));
   }
   if (o.status === 'done') Object.assign(view, { moves: Array.isArray(o.moves) ? o.moves : MOVE_NAMES, done: Date.parse(o.done_at) || null, glbBytes: o.glb_bytes });
   if (o.status === 'failed') Object.assign(view, { error: o.error || 'failed', credit: o.credit === true });
@@ -206,6 +225,8 @@ export async function monthLeft(cfg) {
 // ---------- 4: the making, one step at a time ----------
 const inputsFor = (step, o, tasks) => ({
   prompt: meshyPrompt(o), texture: meshyTexture(o), previewId: tasks.preview, refineId: tasks.refine || tasks.image, rigId: tasks.rig,
+  // (2026-10-13) its choices, and for a described move put on its bones (apply1, apply2) the motion made from its words
+  spec: o.inf_id ? specOf(o) : null, motionId: /^apply\d$/.test(step) ? tasks[`motion${step.slice(5)}`] || null : null,
 });
 // It couldn't be made: a character paid for can be made again with new words (its credit); a 3D model of an influencer
 // (AGI Studio, paid in credits) gets its credits back instead (or a Soulmate's free one back for this month); one it got for
@@ -223,6 +244,7 @@ const waitTurn = (cfg, id) => rpc(cfg, 'studio_wait', { p_id: id }, 'studio');
 function meshyTrouble(err) {
   if (err.why === 'key' || err.why === 'credits' || err.why === 'busy' || err.why === 'meshy') return 'wait';       // the owner's to fix, or a moment
   if (err.why === 'pose') return 'pose';
+  if (err.why === 'refused') return 'refused';                     // (2026-10-13) a 403: its screening stopped these words
   return /moderat|harm|inappropriate|policy|violat|nsfw|sensitive/i.test(err.message) ? 'refused' : 'request';
 }
 const warned = new Set();
@@ -274,13 +296,13 @@ export async function tick(cfg, id, { now = Date.now(), deadline = Date.now() + 
       return { state: 'failed', step };
     }
   };
-  if (o.status === 'paid' || !o.step) return start(o.inf_id ? 'image' : 'preview', 0);
+  if (o.status === 'paid' || !o.step) return start(planOf(o)[0], 0);
   if (Date.parse(o.started_at || o.paid_at || o.created_at) < now - STUDIO.MAX_MAKING_MS) {
     await fail(cfg, id, 'expired', true);
     return { state: 'failed', step: o.step };
   }
   if (o.step === 'save') {
-    if (deadline - Date.now() < SAVE_NEEDS_MS) { await waitTurn(cfg, id); return { state: 'saving' }; }
+    if (deadline - Date.now() < saveNeeds(o)) { await waitTurn(cfg, id); return { state: 'saving' }; }
     return save(cfg, o, tasks, { now, deadline, files });
   }
   let t;
@@ -295,10 +317,15 @@ export async function tick(cfg, id, { now = Date.now(), deadline = Date.now() + 
   }
   if (t.status === 'SUCCEEDED') {
     tasks[o.step] = o.task;
-    const next = NEXT[o.step];
+    const next = nextOf(o, o.step);
+    if (!next) {
+      await fail(cfg, id, `ai:${o.step}`, true);
+      console.warn(`[studio] ${id}: ${o.step} isn't one of its steps (${planOf(o).join(', ')})`);
+      return { state: 'failed', step: o.step };
+    }
     if (next === 'save') {
       await setStep(cfg, id, 'save', null, tasks, 0);
-      if (deadline - Date.now() < SAVE_NEEDS_MS) return { state: 'saving' };
+      if (deadline - Date.now() < saveNeeds(o)) return { state: 'saving' };
       if (!await rpc(cfg, 'studio_lease', { p_id: id, p_secs: STUDIO.SAVE_LEASE_S }, 'studio')) return { state: 'saving' };
       return save(cfg, { ...o, step: 'save', task: null, tries: 0 }, tasks, { now, deadline, files });
     }
@@ -320,28 +347,46 @@ export async function tick(cfg, id, { now = Date.now(), deadline = Date.now() + 
 
 // Keeping its files: its model and picture from Meshy (fresh addresses: they expire), made small, into Storage. Every wait
 // fits in the time left (a save cut off by Vercel would never count as a try), and a save that runs out of time is a try.
+// (2026-10-13) Its moves described in words: each one's own file (its bones with that move) read too, and its move merged
+// into its model (server/studio-files.js smallGlb's extras: own_<name>); and the extra downloads asked for waiting for the
+// clock (studio_done's p_todo, sent only when there are some: an older studio.sql never needs it).
 async function save(cfg, o, tasks, { deadline, files = null }) {
   const F = files || await import('./studio-files.js');
   const id = o.id;
   const left = (reserve, most) => Math.max(1500, Math.min(most, deadline - Date.now() - reserve));
+  const spec = specOf(o);
+  const own = o.inf_id ? spec.own : [];
   try {
     const painted = tasks.refine ? 'refine' : 'image';
-    const [moves, refine] = await Promise.all([meshyTask(cfg, 'moves', tasks.moves, { timeoutMs: left(12_000, 6000) }),
-      meshyTask(cfg, painted, tasks[painted], { timeoutMs: left(12_000, 6000) })]);
+    const applies = own.map((_, i) => `apply${i + 1}`);
+    const [moves, refine, ...applied] = await Promise.all([meshyTask(cfg, 'moves', tasks.moves, { timeoutMs: left(12_000, 6000) }),
+      meshyTask(cfg, painted, tasks[painted], { timeoutMs: left(12_000, 6000) }),
+      ...applies.map((step) => meshyTask(cfg, step, tasks[step], { timeoutMs: left(12_000, 6000) }))]);
     const glbUrl = animationUrl(moves.task), picUrl = thumbnailUrl(refine.task);
-    if (!glbUrl || !picUrl) throw Object.assign(new Error("Meshy's answer has no file address"), { gone: moves.status !== 'SUCCEEDED' });
-    const [glbSource, picSource] = await Promise.all([F.fromMeshy(glbUrl, { timeoutMs: left(7000, 12_000) }),
-      F.fromMeshy(picUrl, { max: F.PICTURE_SOURCE_MAX, timeoutMs: left(7000, 12_000) })]);
-    const glb = await F.smallGlb(glbSource);
+    const ownUrls = applied.map((a) => animationUrl(a.task));
+    if (!glbUrl || !picUrl || ownUrls.some((u) => !u)) {
+      throw Object.assign(new Error("Meshy's answer has no file address"), { gone: [moves, ...applied].some((a) => a.status !== 'SUCCEEDED') });
+    }
+    const [glbSource, picSource, ...ownSources] = await Promise.all([F.fromMeshy(glbUrl, { timeoutMs: left(7000, 12_000) }),
+      F.fromMeshy(picUrl, { max: F.PICTURE_SOURCE_MAX, timeoutMs: left(7000, 12_000) }),
+      ...ownUrls.map((u) => F.fromMeshy(u, { timeoutMs: left(7000, 12_000) }))]);
+    const glb = await F.smallGlb(glbSource, { extras: own.map((m, i) => ({ name: ownClip(m.name), bytes: ownSources[i] })) });
     const pic = await F.pictures(picSource);
     if (deadline - Date.now() < 2500) throw new Error('no time left to keep them');
-    if (glb.clips.length !== MOVES.length) console.warn(`[studio] ${id}'s file has ${glb.clips.length} moves (${MOVES.length} asked for)`);
+    // its moves, in its file's order: idle and its library moves (by Meshy's clips: their names, else their order), then its
+    // described ones (each where its clip is: own_<name>)
+    const library = ['idle', ...spec.moves];
+    const libraryClips = glb.clips.filter((c) => !own.some((m) => c === ownClip(m.name))).length;
+    if (libraryClips !== library.length) console.warn(`[studio] ${id}'s file has ${libraryClips} moves (${library.length} asked for)`);
     const t = left(1000, 10_000);
     await Promise.all([F.putFile(cfg, `${id}.glb`, glb.bytes, 'model/gltf-binary', { timeoutMs: t }),
       F.putFile(cfg, `${id}.webp`, pic.webp, 'image/webp', { timeoutMs: t }), F.putFile(cfg, `${id}.png`, pic.png, 'image/png', { timeoutMs: t })]);
-    const moveNames = MOVE_NAMES.slice(0, Math.min(MOVES.length, glb.clips.length));
-    await rpc(cfg, 'studio_done', { p_id: id, p_glb: glb.bytes.length, p_pic: pic.webp.length, p_moves: moveNames }, 'studio');
-    console.log(`[studio] ${id} is done: ${(glb.bytes.length / 1e6).toFixed(2)} MB, ${glb.triangles} triangles, ${moveNames.length} moves`);
+    const moveNames = [...library.slice(0, Math.min(library.length, libraryClips)),
+      ...own.filter((m) => glb.clips.includes(ownClip(m.name))).map((m) => m.name)];
+    const todo = o.inf_id ? spec.formats : [];
+    await rpc(cfg, 'studio_done', { p_id: id, p_glb: glb.bytes.length, p_pic: pic.webp.length, p_moves: moveNames, ...(todo.length ? { p_todo: todo } : {}) }, 'studio');
+    console.log(`[studio] ${id} is done: ${(glb.bytes.length / 1e6).toFixed(2)} MB, ${glb.triangles} triangles, ${moveNames.length} moves`
+      + `${todo.length ? `, ${todo.join(', ')} to make` : ''}`);
     return { state: 'done' };
   } catch (err) {
     if (['key', 'credits', 'busy', 'meshy'].includes(err.why)) {    // Meshy itself, for a moment (or the owner's key): not a try
@@ -361,10 +406,23 @@ async function save(cfg, o, tasks, { deadline, files = null }) {
 }
 
 // The clock (every minute, /api/feed?studio): the characters whose turn it is, until 19 s are used; the tidy-up every
-// half hour. → { due, moved, done, failed, tidy? }
+// half hour. (2026-10-13) And one of the extra downloads waiting (server/studio-dl.js: one file a run): first on odd minutes,
+// else after the characters when there's time for it. → { due, moved, done, failed, dl?, tidy? }
+let warnedDl = false;
+async function dlTurn(cfg, { now, deadline, files }) {
+  try {
+    return await (await import('./studio-dl.js')).dlClock(cfg, { now, deadline, files });
+  } catch (err) {
+    if (err.code !== 'PGRST202' || !warnedDl) console.warn(`[studio] the extra downloads: ${err.message}`);
+    if (err.code === 'PGRST202') warnedDl = true;
+    return { error: err.code === 'PGRST202' ? 'not_set_up' : 'database' };
+  }
+}
 export async function studioClock(cfg, { now = Date.now(), deadline = Date.now() + 19_000, files = null } = {}) {
+  const dlFirst = new Date(now).getUTCMinutes() % 2 === 1;
+  const dl = dlFirst ? await dlTurn(cfg, { now, deadline, files }) : null;
   const ids = await rpc(cfg, 'studio_due', { p_limit: 6 }, 'studio');
-  const out = { due: Array.isArray(ids) ? ids.length : 0, moved: 0, done: 0, failed: 0 };
+  const out = { due: Array.isArray(ids) ? ids.length : 0, moved: 0, done: 0, failed: 0, ...(dl ? { dl } : {}) };
   for (const id of Array.isArray(ids) ? ids : []) {
     if (Date.now() > deadline - 5_000) break;
     try {
@@ -376,6 +434,7 @@ export async function studioClock(cfg, { now = Date.now(), deadline = Date.now()
       console.warn(`[studio] ${id}: ${err.message}`);
     }
   }
+  if (!dlFirst) out.dl = await dlTurn(cfg, { now, deadline, files });
   if (new Date(now).getUTCMinutes() % 30 === 0) {
     try { out.tidy = await rpc(cfg, 'studio_tidy', {}, 'studio'); } catch (err) { console.warn(`[studio] tidy-up: ${err.message}`); }
   }

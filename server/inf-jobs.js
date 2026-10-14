@@ -21,6 +21,7 @@ import { rpc } from './limits.js';
 import { falSubmit, falStatus, falOutput, refusedText } from './fal.js';
 import { jobRequest, outputOf, checkVideo, checkMeme, headBox } from './inf-ai.js';
 import { mp4Info } from './mp4.js';
+import { agi1Urls } from './inf-agi1.js';
 import { CLIP, BANNER, FRAME, isFrame, frameBox } from '../src/studio/rules.js';
 import { withAiTag } from '../src/studio/ai-tag.js';
 // (2026-10-12) what's downloaded says inside its file that it's AI-made (src/studio/ai-tag.js): as it is when it can't be read
@@ -120,8 +121,11 @@ async function inputsOf(cfg, F, j) {
   // references or is a long one; a long video's part after the first starts from the one before's last frame
   const refs = Array.isArray(j.refs) ? j.refs.filter((r) => ID.test(String(r))) : [];
   if (refs.length) urls.refs = await Promise.all(refs.map((r) => sign(`up/${r}.jpg`)));
-  if (j.kind === 'video' && (refs.length || isLong(j)) && j.inf_looks_job && Number.isInteger(j.inf_pick)) urls.look = await sign(picPath(j.inf_id, j.inf_looks_job, j.inf_pick));
+  // (2026-10-13) "With AGI-1": in a video the character is always Kling's element then (AGI-1 is the next one)
+  if (j.kind === 'video' && (refs.length || isLong(j) || j.agi1 === true) && j.inf_looks_job && Number.isInteger(j.inf_pick)) urls.look = await sign(picPath(j.inf_id, j.inf_looks_job, j.inf_pick));
   if (isLong(j) && Number(j.part) > 0) urls.frame = await sign(framePath(j.inf_id, j.id, Number(j.part) - 1));
+  // (2026-10-13) her own pictures (server/inf-agi1.js), kept in the bucket the first time: her whole body, and in a video her face
+  if (j.agi1 === true && (j.kind === 'photo' || j.kind === 'video')) urls.agi1 = await agi1Urls(cfg, F, { face: j.kind === 'video' });
   return urls;
 }
 
@@ -381,7 +385,8 @@ async function save(cfg, j, F, { deadline }) {
       const hd = j.kind === 'photo' && j.shape !== 'banner' && ['hd', 'ultra'].includes(j.quality);
       const sources = await Promise.all(out.images.map((u) => F.fromFal(u, { max: hd ? HD_IMAGE_MAX : IMAGE_MAX, timeoutMs: left(8000, 10_000) })));
       const sharp = await F.loadSharp();
-      const made = await Promise.all(sources.map((b) => picturesOf(sharp, b, { banner: j.kind === 'photo' && j.shape === 'banner', hd, centred: Boolean(j.edit) })));
+      // an X banner made from one (an edit, or since 2026-10-13 "Add AGI-1": made a little wider than it) is cut from its middle
+      const made = await Promise.all(sources.map((b) => picturesOf(sharp, b, { banner: j.kind === 'photo' && j.shape === 'banner', hd, centred: Boolean(j.edit || (j.image && j.agi1 === true)) })));
       if (made.some((m) => !m)) throw new Error("files: a picture the AI made isn't one");
       // (2026-10-11) "Just its full body": its portrait is cut from it, around its head (its picked look, n = 1)
       if (j.kind === 'body' && j.inf_way === 'body') {

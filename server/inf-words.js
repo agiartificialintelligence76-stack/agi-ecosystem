@@ -50,23 +50,26 @@ export function checkStart({ name, mode, style, settings, words, way } = {}) {
 }
 
 // A photo's or a video's scene (the studio's scene rules: 10 to 300 characters, the same words checked), its shape and sound.
-// (Round 4) a photo may also be an X banner (shape 'banner'); a video never.
-export function checkInfScene({ kind = null, ...input } = {}) {
-  if (input.shape !== 'banner') return checkScene(input);
+// (Round 4) a photo may also be an X banner (shape 'banner'); a video never. (2026-10-13, "With AGI-1") agi1: she's in it,
+// so her own name may be in its words ("a photo with AGI-1 at the beach"); never "official", an admin or her team.
+export function checkInfScene({ kind = null, agi1 = false, ...input } = {}) {
+  const herName = agi1 === true;
+  if (input.shape !== 'banner') return checkScene({ ...input, herName });
   if (kind !== 'photo') return { ok: false, field: 'shape', why: 'empty' };
-  const c = checkScene({ ...input, shape: 'wide' });
+  const c = checkScene({ ...input, shape: 'wide', herName });
   return c.ok ? { ...c, shape: 'banner', sound: false } : c;
 }
 
 // (2026-10-12, the editor) "Edit with words": the change, as typed (EDIT.MIN to EDIT.MAX characters; the studio's word rules,
 // like a scene's: PG-13, never a real person by name, someone else's character or anything passing for AGI-1, no links or
-// contacts). → { ok: true, edit } (tidied) or { ok: false, field: 'edit', why: 'empty' | 'short' | 'long' | the words' trouble }
-export function checkEdit(input) {
+// contacts). → { ok: true, edit } (tidied) or { ok: false, field: 'edit', why: 'empty' | 'short' | 'long' | the words' trouble }.
+// (2026-10-13) agi1: the photo has AGI-1 in it, so her own name may be in the change ("make AGI-1 wave")
+export function checkEdit(input, { agi1 = false } = {}) {
   const e = tidy(input);
   if (!e) return { ok: false, field: 'edit', why: 'empty' };
   if ([...e].length < EDIT.MIN) return { ok: false, field: 'edit', why: 'short' };
   if ([...e].length > EDIT.MAX) return { ok: false, field: 'edit', why: 'long' };
-  const t = trouble(e);
+  const t = trouble(e, { herName: agi1 === true });
   return t ? { ok: false, field: 'edit', why: t } : { ok: true, edit: e };
 }
 
@@ -150,6 +153,24 @@ const VIBE = {
   playful: 'a playful grin', mysterious: 'a mysterious half-smile',
 };
 const SAFE = 'Family-friendly, fully clothed. No text, no logos, no watermark.';
+// (2026-10-13) "With AGI-1" (the owner's: "Her 2D anime self", "Cute and flirty"): AGI-1 joins the influencer, always her own
+// 2D anime self exactly as drawn in her picture (the owner's art: server/media/agi1-with.jpg, and agi1-face.jpg for a video
+// model's element), even beside a photorealistic influencer, like an animated character in a live-action film; an adult; cute
+// and a little flirty with them, PG-13 (never a kiss, nothing suggestive); never less covered than in her picture; the AGI on
+// her t-shirt the only lettering she brings. where: how the AI is told which picture she is ('the second picture',
+// '@Element2', '@Image2'); video: in a video (she's animated, and she's in its first frame already)
+const HER_LOOK = 'her long wavy blonde hair, brown eyes, lavender t-shirt with AGI on it, lavender shorts with white trim and lavender sneakers';
+export function herLine(where, { video = false } = {}) {
+  const who = video
+    ? `AGI-1 (${where}) is a 2D anime girl and stays exactly as in her pictures (${HER_LOOK}), animated in her own flat 2D anime style`
+    : `AGI-1 is the 2D anime girl in ${where}: she stays exactly as drawn there (${HER_LOOK}), in her own flat 2D anime style`;
+  return `${who} even beside a photorealistic character, like an animated character in a live-action film: never 3D, never `
+    + 'photorealistic, never someone else. She is an adult woman, never childlike. She is cute and a little flirty with the '
+    + 'character: a shy smile and a blush, a playful wink, heart hands, leaning in close, her arm linked with theirs or her head '
+    + 'on their shoulder, whatever suits the scene; sweet and PG-13, never a kiss, nothing suggestive. She keeps her own outfit '
+    + '(warmer clothes only if the scene needs them), never less covered than in her picture.';
+}
+const SAFE_HER = 'Family-friendly, both fully clothed. No text, no logos, no watermark (only the AGI on her t-shirt).';
 const sentence = (s) => {
   const t = String(s ?? '').trim();
   return t ? `${t.charAt(0).toUpperCase()}${t.slice(1)}${/[.!?…]$/.test(t) ? '' : '.'}` : '';
@@ -221,7 +242,22 @@ export function bodyPrompt(inf, { withSource = false, way = 'looks' } = {}) {
 // a very wide header picture, made wider than X's 3:1 and cut to 1500 × 500 on our server (server/inf-jobs.js keeps its right
 // three quarters): the character right of the middle, waist up, the scene around it, nothing important in the lower-left
 // corner (a profile's round picture covers it) nor at the very top and bottom (X cuts them a little on phones).
-export function photoPrompt(inf, scene, { banner = false, refs = 0 } = {}) {
+export function photoPrompt(inf, scene, { banner = false, refs = 0, agi1 = false } = {}) {
+  // (2026-10-13) with AGI-1: her full body is the second picture, the references after it
+  if (agi1) {
+    const her = ` ${herLine('the second picture')}`;
+    if (banner) {
+      return `${styleOf(inf).photo} of this exact character (the first picture) together with AGI-1 (the second picture), as a very `
+        + 'wide profile header banner: keep the character\'s face, hair, body and look exactly the same. '
+        + `${sentence(scene)}${her} The character is about two thirds of the way across from the left with AGI-1 right beside them, `
+        + 'both from the waist up and looking at the camera, the scene filling the whole width. Nothing important in the lower-left '
+        + 'part nor at the very top and bottom edges. One continuous picture from edge to edge. A scene may change the character\'s '
+        + `outfit, never to less covered.${refsLine(refs, 3)} ${SAFE_HER}`;
+    }
+    return `${styleOf(inf).photo} of this exact character (the first picture) together with AGI-1 (the second picture): keep the `
+      + `character's face, hair, body and look exactly the same. ${sentence(scene)}${her} A scene may change the character's outfit, `
+      + `never to less covered.${refsLine(refs, 3)} ${SAFE_HER}`;
+  }
   const which = refs > 0 ? 'the first picture' : 'the picture';
   if (banner) {
     return `${styleOf(inf).photo} of this exact character (${which}), as a very wide profile header banner: keep the face, hair, `
@@ -240,18 +276,44 @@ export function photoPrompt(inf, scene, { banner = false, refs = 0 } = {}) {
 // photo's outfit stays the photo's). A meme keeps its words exactly (Gemini looks at it again, server/inf-jobs.js); an X
 // banner stays a very wide header, a little wider than the first picture (4:1 from its 3:1), everything where it is and only a
 // little more of the place at its sides: our server cuts it to 1500 × 500 again from its middle (picturesOf's centred).
-export function editPrompt(inf, edit, { meme = false, banner = false } = {}) {
+export function editPrompt(inf, edit, { meme = false, banner = false, agi1 = false } = {}) {
   const words = meme
-    ? ' Keep the words written in it exactly as they are, spelled the same and in the same place; write no other words, letters or numbers.'
+    ? ` Keep the words written in it exactly as they are, spelled the same and in the same place; write no other words, letters or numbers${agi1 ? ' (only the AGI on her t-shirt)' : ''}.`
     : '';
   const wide = banner
     ? ' It stays a very wide profile header banner, a little wider than the first picture: everything where it is, with only a little'
       + ' more of the place at its left and right edges, and nothing important in the lower-left part nor at the very top and bottom edges.'
     : '';
+  // (2026-10-13) a photo with AGI-1 in it: she stays as she is too (her full body is the third picture, only for that)
+  const her = agi1
+    ? ' AGI-1, the 2D anime girl in the first picture, stays exactly as she is unless the change is about her; the third picture is her,'
+      + ' only so she stays exactly as drawn: her own flat 2D anime look, never 3D or photorealistic, an adult woman, never a kiss, never'
+      + ' less covered.'
+    : '';
   return `Edit the first picture: ${sentence(edit)} Change only what that asks for, and keep everything else in the first picture exactly `
     + 'as it is: the character\'s face, hair, body, outfit and pose, the place, the light, the framing and the art style. The second picture '
-    + `is the same character, only so the face and look stay exactly theirs.${words}${wide} An edit may change the outfit, never to less `
-    + `covered. ${meme ? 'Family-friendly, fully clothed. No logos, no watermark.' : SAFE}`;
+    + `is the same character, only so the face and look stay exactly theirs.${her}${words}${wide} An edit may change the outfit, never to less `
+    + `covered. ${meme ? `Family-friendly, ${agi1 ? 'both ' : ''}fully clothed. No logos, no watermark.` : agi1 ? SAFE_HER : SAFE}`;
+}
+
+// (2026-10-13) "Add AGI-1": one of its photos (a meme, an X banner: the first picture) made again with AGI-1 added beside the
+// character (her full body: the third picture), everything else as it is; the second picture is its full body, only so its
+// face and look stay its own. A meme keeps its words exactly; an X banner stays a very wide header, a little wider than the
+// first picture, cut from its middle again on our server (like an edit: picturesOf's centred).
+export function addPrompt(inf, { meme = false, banner = false } = {}) {
+  const words = meme
+    ? ' Keep the words written in it exactly as they are, spelled the same and in the same place; write no other words, letters or'
+      + ' numbers (only the AGI on her t-shirt).'
+    : '';
+  const wide = banner
+    ? ' It stays a very wide profile header banner, a little wider than the first picture: everything where it is, AGI-1 beside the'
+      + ' character, with only a little more of the place at its left and right edges, and nothing important in the lower-left part nor'
+      + ' at the very top and bottom edges.'
+    : '';
+  return 'Edit the first picture: add AGI-1 into it, right beside the character, as if she had been there all along. '
+    + `${herLine('the third picture')} Keep everything else in the first picture exactly as it is: the character's face, hair, body, `
+    + 'outfit and pose, the place, the light, the framing and the art style. The second picture is the same character, only so the '
+    + `face and look stay exactly theirs.${words}${wide} ${meme ? 'Family-friendly, both fully clothed. No logos, no watermark.' : SAFE_HER}`;
 }
 
 // (Round 4, phase 4) reference pictures (someone's own pictures of a thing, a place, a pet, food or a style), after the
@@ -274,8 +336,16 @@ const MEME_LAYOUT = {
   reaction: ([a]) => `A close-up of the character's big, expressive reaction, with the words “${a}” in bold white capital letters with a thin black outline across the bottom.`,
   twopanel: ([a, b]) => `Two panels side by side with a thin white line between them, the same character in both: a white label at the top of the left panel says “${a}” and a white label at the top of the right panel says “${b}”, in bold black letters.`,
 };
-export function memePrompt(inf, scene, { meme, lines, refs = 0 } = {}) {
+export function memePrompt(inf, scene, { meme, lines, refs = 0, agi1 = false } = {}) {
   const layout = MEME_LAYOUT[meme] ? MEME_LAYOUT[meme](lines || []) : MEME_LAYOUT.caption(lines || []);
+  // (2026-10-13) with AGI-1: her full body is the second picture, the references after it
+  if (agi1) {
+    return `A funny meme picture: ${styleOf(inf).photo} of this exact character (the first picture) together with AGI-1 (the second `
+      + `picture), keeping the character's face, hair, body and look exactly the same. ${sentence(scene)} ${herLine('the second picture')} `
+      + `${layout} Write those words exactly as given, spelled the same, easy to read; no other words, letters or numbers anywhere (only `
+      + 'the AGI on her t-shirt). A scene may change the character\'s outfit, never to less covered.'
+      + `${refsLine(refs, 3)} Family-friendly, both fully clothed. No logos, no watermark.`;
+  }
   return `A funny meme picture: ${styleOf(inf).photo} of this exact character (${refs > 0 ? 'the first picture' : 'the picture'}), `
     + `keeping the face, hair, body and look exactly the same. ${sentence(scene)} ${layout} Write those words exactly as given, `
     + 'spelled the same, easy to read; no other words, letters or numbers anywhere. A scene may change the outfit, never to less '
@@ -291,7 +361,8 @@ export const MONEY = /\b(buy(?:s|ing)?|sell(?:s|ing)?|pump(?:s|ed|ing)?|dump(?:s
 // PG-13 and the studio's word rules, never about money. A POV meme starts with "POV:" (added when it's missing).
 // → { ok: true, meme, lines, caption: the lines joined by a new line } or { ok: false, field: 'meme' | 'caption', why: 'empty'
 // | 'long' | 'money' | the words' trouble }
-export function checkMemeText({ meme, lines } = {}) {
+// (2026-10-13, "With AGI-1") agi1: she's in the meme, so her own name may be in its words ("POV: AGI-1 texts back first")
+export function checkMemeText({ meme, lines, agi1 = false } = {}) {
   if (typeof meme !== 'string' || !Object.hasOwn(MEMES, meme)) return { ok: false, field: 'meme', why: 'empty' };
   const want = MEMES[meme].lines.length;
   const given = Array.isArray(lines) ? lines : typeof lines === 'string' ? lines.split('\n') : [];
@@ -302,7 +373,7 @@ export function checkMemeText({ meme, lines } = {}) {
     if (meme === 'pov' && t && !/^pov\s*:/i.test(t)) t = `POV: ${t}`;
     if (!t || (meme === 'pov' && /^pov\s*:\s*$/i.test(t))) return { ok: false, field: 'caption', why: 'empty' };
     if ([...t].length > MEME_LINE_MAX) return { ok: false, field: 'caption', why: 'long' };
-    const tr = trouble(t);
+    const tr = trouble(t, { herName: agi1 === true });
     if (tr) return { ok: false, field: 'caption', why: tr };
     if (MONEY.test(t)) return { ok: false, field: 'caption', why: 'money' };
     out.push(t);
@@ -323,7 +394,20 @@ export function swapPrompt(inf) {
 
 // A scene video from one of its photos (its first frame): what happens next. (Round 4, phase 4) with reference pictures, the
 // character is @Element1 (its look and its full body) and each reference one more element (@Element2 …), as Kling's elements
-export function clipPrompt(inf, scene, { refs = 0 } = {}) {
+// (2026-10-13) the references' elements from one number on (@Element3 … with AGI-1 as @Element2)
+function refEls(refs, from) {
+  if (!(refs > 0)) return '';
+  return refs === 1
+    ? ` @Element${from} is a reference (a thing, a place, a pet, food or a style): include it as the scene asks.`
+    : ` @Element${from} to @Element${from + refs - 1} are references (things, places, pets, food or a style): include them as the scene asks.`;
+}
+export function clipPrompt(inf, scene, { refs = 0, agi1 = false } = {}) {
+  // (2026-10-13) with AGI-1 (its first frame, one of its photos with her, has her in it already): she's @Element2
+  if (agi1) {
+    return `${sentence(scene)} The character is @Element1 and AGI-1 is @Element2: both keep exactly the same look as in the first `
+      + `frame. ${herLine('@Element2', { video: true })}${refEls(refs, 3)} ${styleOf(inf).clip}, one continuous shot with a smooth `
+      + 'camera. Family-friendly. Anyone else in it is a made-up background extra, never a real person. No text, no captions, no logos.';
+  }
   const els = refs > 0
     ? ` The character is @Element1.${refs === 1 ? ' @Element2 is a reference (a thing, a place, a pet, food or a style): include it as the scene asks.'
       : ` @Element2 to @Element${refs + 1} are references (things, places, pets, food or a style): include them as the scene asks.`}`
@@ -335,12 +419,17 @@ export function clipPrompt(inf, scene, { refs = 0 } = {}) {
 
 // (Round 4, phase 4) one part of a long video (each part starts from the last frame of the one before: the first from one of
 // its photos), the character @Element1 in every part so it stays the same person, the action going on smoothly
-export function longPartPrompt(inf, scene, { part = 0, parts = 2, refs = 0 } = {}) {
+export function longPartPrompt(inf, scene, { part = 0, parts = 2, refs = 0, agi1 = false } = {}) {
   const where = part === 0 ? 'the beginning' : part === parts - 1 ? 'the end' : 'the middle';
-  const els = refs > 0 ? ` @Element2${refs > 1 ? ` to @Element${refs + 1}` : ''} ${refs > 1 ? 'are references' : 'is a reference'}: keep ${refs > 1 ? 'them' : 'it'} as before.` : '';
+  // (2026-10-13) with AGI-1: she's @Element2 in every part, the references after her
+  const from = agi1 ? 3 : 2;
+  const els = refs > 0 ? ` @Element${from}${refs > 1 ? ` to @Element${from + refs - 1}` : ''} ${refs > 1 ? 'are references' : 'is a reference'}: keep ${refs > 1 ? 'them' : 'it'} as before.` : '';
+  const who = agi1
+    ? `The character is @Element1 and AGI-1 is @Element2, both keeping exactly the same look in every frame. ${herLine('@Element2', { video: true })}`
+    : 'The character is @Element1 and keeps exactly the same look in every frame.';
   return `Part ${part + 1} of ${parts} of one continuous video (${where} of it). ${sentence(scene)} ${part > 0 ? 'Carry on from the first '
-    + 'frame exactly as it is (the same place, light, clothes and pose), the action going on smoothly, no cut. ' : ''}The character is `
-    + `@Element1 and keeps exactly the same look in every frame.${els} ${styleOf(inf).clip}, one continuous shot with a smooth camera. `
+    + 'frame exactly as it is (the same place, light, clothes and pose), the action going on smoothly, no cut. ' : ''}`
+    + `${who}${els} ${styleOf(inf).clip}, one continuous shot with a smooth camera. `
     + 'Family-friendly. Anyone else in it is a made-up background extra, never a real person. No text, no captions, no logos.';
 }
 export const CLIP_NEGATIVE = 'text, captions, logos, watermark, distorted face, extra limbs, nudity';
@@ -348,11 +437,14 @@ export const CLIP_NEGATIVE = 'text, captions, logos, watermark, distorted face, 
 // A scene video from its full-body picture with the reference-to-video model (only for a drawn style, src/studio/rules.js
 // drawnStyle: the model says no to realistic faces; since 2026-10-11 in that style's own motion words): the studio's own words for it (server/studio-words.js). (Round 4, phase 4) with reference
 // pictures after it (@Image2 …)
-export const sceneVideoPrompt = (inf, scene, { refs = 0 } = {}) => {
+export const sceneVideoPrompt = (inf, scene, { refs = 0, agi1 = false } = {}) => {
   const st = styleOf(inf);
   const base = videoPrompt({ scene, style: st.seedance, motion: st.motion });
-  if (!(refs > 0)) return base;
-  return `${base} ${refs === 1 ? '@Image2 is a reference' : `@Image2 to @Image${refs + 1} are references`} (a thing, a place, a pet, `
+  // (2026-10-13) with AGI-1: her full body is @Image2, the references after her
+  const her = agi1 ? ` ${herLine('@Image2', { video: true })}` : '';
+  if (!(refs > 0)) return `${base}${her}`;
+  const from = agi1 ? 3 : 2;
+  return `${base}${her} ${refs === 1 ? `@Image${from} is a reference` : `@Image${from} to @Image${from + refs - 1} are references`} (a thing, a place, a pet, `
     + 'food or a style, never a person): include what they show as the scene asks.';
 };
 // Which video model a scene video needs: from one of its photos, or one not in a drawn style (or made from a face) → its

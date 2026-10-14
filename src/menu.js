@@ -29,8 +29,9 @@ export function startMenu() {
 
   // Pop mode's top bar floats see-through over the hero; once the hero has scrolled away (on the diary page: once the page
   // scrolls at all), pop.css gives it a frosted band, so the pills stay readable over busy content and any section's color.
-  // On the home page the first hero is the front's (2026-09-28): the band comes once it has scrolled away
-  const hero = document.querySelector('.lp-hero, .hero');
+  // On the home page the first hero is the front's (2026-09-28): the band comes once it has scrolled away; on the roadmap and
+  // its coming-soon pages (2026-10-14), theirs
+  const hero = document.querySelector('.lp-hero, .hero, .rm-hero');
   let stuck = null;
   const band = () => {
     const on = hero ? hero.getBoundingClientRect().bottom <= bar.offsetHeight : scrollY > 0;

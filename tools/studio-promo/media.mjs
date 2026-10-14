@@ -3,19 +3,25 @@
 // trend clips, the influencers put into them, and videos. Not part of the website, and never in git (they're big: git
 // ignores tools/studio-promo/media/).
 //
-//   node tools/studio-promo/media.mjs --from <folder>[,<folder>…] [--out tools/studio-promo/media] [--force]
+//   node tools/studio-promo/media.mjs --from <folder>[,<folder>…] [--out tools/studio-promo/media] [--force] [--only …]
 //
 // Each file is looked for by its name in those folders (and the folders inside them). Pictures are made at most 1600 px
 // on their longer side (JPEG). A video becomes two runs of JPEG frames, a sharp one (720 × 1280) and a small one
 // (360 × 640) for when it's shown small: Chromium on Claude's computer can't play H.264, and a frame read from a file is
 // the same on every render anyway. Juno's 3D model (made for it the way AGI Studio makes one: from her full-body
 // picture, given bones and taught a move, its Wave) is made ready for three.js: four bones a vertex (three.js draws
-// four, and the file has up to sixteen), its pictures smaller. index.json lists what's there, with each picture's size,
-// each clip's frame rate and the model's move. Needs ffmpeg, sharp and gltf-transform (the site's own packages).
+// four, and the file has up to sixteen), its pictures smaller. Since 2026-10-13 AGI-1's voice too: her takes (her own
+// voice, the site's, made in Google AI Studio with the owner's account: agi1-vo-01-meet.wav…) made ready by voice.js
+// (readyLine: 48 kHz, trimmed around her words, a long pause shortened, her loudness set), one mono WAV each.
+// index.json lists what's there, with each picture's size, each clip's frame rate, the model's move and where her words
+// are in each line. Needs ffmpeg, sharp and gltf-transform (the site's own packages).
+//   --only voice   just that kind (pics, vids, models, voice: separated by commas); the others stay as they were
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { readyLine, wav16, LINE } from './voice.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -53,6 +59,16 @@ export const VIDS = [
 ];
 // its 3D model: [its name in the video, the file names it may have]
 export const MODELS = [['juno-3d', ['juno-3d.glb']]];
+// her voice: [her line (words.js VOICE), the file names her take may have]
+export const VOICES = [
+  ['meet', ['agi1-vo-01-meet.wav']], ['not-real', ['agi1-vo-02-not-real.wav']], ['you-made', ['agi1-vo-03-you-made.wav']],
+  ['studio', ['agi1-vo-04-studio.wav']], ['design', ['agi1-vo-05-design.wav']], ['styles', ['agi1-vo-06-styles.wav']],
+  ['edit', ['agi1-vo-07-edit.wav']], ['move', ['agi1-vo-08-move.wav']], ['model', ['agi1-vo-09-model.wav']],
+  ['share', ['agi1-vo-10-share.wav']], ['live', ['agi1-vo-11-live.wav']], ['url', ['agi1-vo-12-url.wav']],
+];
+// how her takes are made ready: a change to it makes them again
+export const VOICE_SIG = `v1-${createHash('sha256').update(JSON.stringify(LINE)).digest('hex').slice(0, 8)}`;
+const KINDS = ['pics', 'vids', 'models', 'voice'];
 export const FULL = [720, 1280];
 export const SMALL = [360, 640];
 const PIC_MAX = 1600;
@@ -129,14 +145,18 @@ export async function readyModel(src, dst, { sharp } = {}) {
   return { bytes: statSync(dst).size, clips, triangles, height, changed };
 }
 
-function args(argv) {
-  const a = { from: [], out: join(HERE, 'media'), force: false };
+export function args(argv) {
+  const a = { from: [], out: join(HERE, 'media'), force: false, only: KINDS };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = () => argv[++i];
     if (k === '--from') a.from.push(...v().split(',').filter(Boolean));
     else if (k === '--out') a.out = resolve(v());
     else if (k === '--force') a.force = true;
-    else throw new Error(`unknown option ${k}`);
+    else if (k === '--only') {
+      a.only = v().split(',').filter(Boolean);
+      const bad = a.only.find((x) => !KINDS.includes(x));
+      if (bad || !a.only.length) throw new Error(`--only: ${KINDS.join(', ')}`);
+    } else throw new Error(`unknown option ${k}`);
   }
   if (!a.from.length) throw new Error('say where the files are: --from <folder>[,<folder>…]');
   return a;
@@ -182,12 +202,16 @@ async function main() {
   mkdirSync(join(a.out, 'pic'), { recursive: true });
   mkdirSync(join(a.out, 'vid'), { recursive: true });
   mkdirSync(join(a.out, 'model'), { recursive: true });
+  mkdirSync(join(a.out, 'voice'), { recursive: true });
   const indexFile = join(a.out, 'index.json');
-  const old = existsSync(indexFile) ? JSON.parse(readFileSync(indexFile, 'utf8')) : { pics: {}, vids: {}, models: {} };
-  const index = { made: new Date().toISOString(), pics: {}, vids: {}, models: {} };
+  const old = existsSync(indexFile) ? JSON.parse(readFileSync(indexFile, 'utf8')) : {};
+  const index = { made: new Date().toISOString(), pics: {}, vids: {}, models: {}, voice: {} };
+  // the kinds not made this time stay as they were
+  for (const k of KINDS) if (!a.only.includes(k)) index[k] = old[k] || {};
   const missing = [];
+  const doing = (k) => a.only.includes(k);
 
-  for (const [name, names] of PICS) {
+  for (const [name, names] of doing('pics') ? PICS : []) {
     const src = names.map((n) => files.get(n)).find(Boolean);
     if (!src) { missing.push(name); continue; }
     const dst = join(a.out, 'pic', `${name}.jpg`);
@@ -199,7 +223,7 @@ async function main() {
     console.log(`[media] ${name}: ${info.width} × ${info.height}`);
   }
 
-  for (const [name, names] of VIDS) {
+  for (const [name, names] of doing('vids') ? VIDS : []) {
     const src = names.map((n) => files.get(n)).find(Boolean);
     if (!src) { missing.push(name); continue; }
     const sig = `${statSync(src).size}:${Math.round(statSync(src).mtimeMs)}`;
@@ -220,7 +244,7 @@ async function main() {
     console.log(`[media] ${name}: ${n} frames at ${fps} fps (${(n / fps).toFixed(2)} s)`);
   }
 
-  for (const [name, names] of MODELS) {
+  for (const [name, names] of doing('models') ? MODELS : []) {
     const src = names.map((n) => files.get(n)).find(Boolean);
     if (!src) { missing.push(name); continue; }
     // its version first: a change to how it's made ready makes it again
@@ -233,14 +257,27 @@ async function main() {
       + `${info.clips.map((c) => `${c.name} ${c.duration} s`).join(', ')}; ${info.changed} vertices given four bones`);
   }
 
+  for (const [name, names] of doing('voice') ? VOICES : []) {
+    const src = names.map((n) => files.get(n)).find(Boolean);
+    if (!src) { missing.push(name); continue; }
+    const sig = `${VOICE_SIG}:${statSync(src).size}:${Math.round(statSync(src).mtimeMs)}`;
+    const dst = join(a.out, 'voice', `${name}.wav`);
+    if (!a.force && existsSync(dst) && old.voice?.[name]?.sig === sig) { index.voice[name] = old.voice[name]; continue; }
+    const r = readyLine(readFileSync(src));
+    writeFileSync(dst, wav16([r.pcm]));
+    index.voice[name] = { onset: r.onset, len: r.len, lufs: r.lufs, gain: r.gain, peak: r.peak, pauses: r.pauses, from: r.from, sig };
+    console.log(`[media] her voice, ${name}: her words ${r.len} s (from ${r.from} s in her take), ${r.lufs} LUFS, peak ${r.peak} dBFS`
+      + `${r.pauses.length ? `, a pause of ${r.pauses.map((p) => `${p.was} s made ${p.now} s`).join(', ')}` : ''}`);
+  }
+
   writeFileSync(indexFile, `${JSON.stringify(index, null, 1)}\n`);
   if (missing.length) {
     console.warn(`[media] not found (the video shows a stand-in for each): ${missing.join(', ')}`);
     process.exitCode = 2;
   }
   const nModels = Object.keys(index.models).length;
-  console.log(`[media] ${Object.keys(index.pics).length} pictures, ${Object.keys(index.vids).length} clips and `
-    + `${nModels} 3D model${nModels === 1 ? '' : 's'} in ${a.out}`);
+  console.log(`[media] ${Object.keys(index.pics).length} pictures, ${Object.keys(index.vids).length} clips, `
+    + `${nModels} 3D model${nModels === 1 ? '' : 's'} and ${Object.keys(index.voice).length} of her lines in ${a.out}`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

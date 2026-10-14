@@ -261,7 +261,7 @@ test('the page script starts the front first, and the 3D stage after its entranc
   assert.match(mainJs, /addEventListener\('agi:landing-ready', start, \{ once: true \}\);/);
   assert.match(mainJs, /addEventListener\('agi:chat-open', start, \{ once: true \}\);/, 'sooner when the chat opens');
   assert.match(mainJs, /setTimeout\(start, Math\.max\(0, 6000 - performance\.now\(\)\)\);/, 'at the latest 6 s after the page opened');
-  assert.match(read('src/menu.js'), /document\.querySelector\('\.lp-hero, \.hero'\)/, "Pop mode's top bar gets its band once the front has scrolled away");
+  assert.match(read('src/menu.js'), /document\.querySelector\('\.lp-hero, \.hero, \.rm-hero'\)/, "Pop mode's top bar gets its band once the front has scrolled away (the front's hero first; the roadmap's pages since 2026-10-14)");
 });
 
 test('the front names no coin, project or part the site no longer has, nor "ecosystem"', () => {

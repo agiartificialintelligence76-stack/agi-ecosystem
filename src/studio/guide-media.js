@@ -64,32 +64,32 @@ export const CLIPS = {
     p: { mp4: new URL('./guide/pick-reroll-p.mp4', import.meta.url).href, poster: new URL('./guide/pick-reroll-p.webp', import.meta.url).href, w: 624, h: 390, s: 7.83 },
   },
   'make-tools': {
-    d: { mp4: new URL('./guide/make-tools-d.mp4', import.meta.url).href, poster: new URL('./guide/make-tools-d.webp', import.meta.url).href, w: 672, h: 420, s: 9.13 },
-    p: { mp4: new URL('./guide/make-tools-p.mp4', import.meta.url).href, poster: new URL('./guide/make-tools-p.webp', import.meta.url).href, w: 624, h: 390, s: 7.58 },
+    d: { mp4: new URL('./guide/make-tools-d.mp4', import.meta.url).href, poster: new URL('./guide/make-tools-d.webp', import.meta.url).href, w: 672, h: 420, s: 9.42 },
+    p: { mp4: new URL('./guide/make-tools-p.mp4', import.meta.url).href, poster: new URL('./guide/make-tools-p.webp', import.meta.url).href, w: 624, h: 390, s: 7.79 },
   },
   'make-scene': {
-    d: { mp4: new URL('./guide/make-scene-d.mp4', import.meta.url).href, poster: new URL('./guide/make-scene-d.webp', import.meta.url).href, w: 672, h: 420, s: 9.96 },
+    d: { mp4: new URL('./guide/make-scene-d.mp4', import.meta.url).href, poster: new URL('./guide/make-scene-d.webp', import.meta.url).href, w: 672, h: 420, s: 9.79 },
     p: { mp4: new URL('./guide/make-scene-p.mp4', import.meta.url).href, poster: new URL('./guide/make-scene-p.webp', import.meta.url).href, w: 624, h: 390, s: 7.63 },
   },
   'make-models': {
-    d: { mp4: new URL('./guide/make-models-d.mp4', import.meta.url).href, poster: new URL('./guide/make-models-d.webp', import.meta.url).href, w: 672, h: 420, s: 7.33 },
-    p: { mp4: new URL('./guide/make-models-p.mp4', import.meta.url).href, poster: new URL('./guide/make-models-p.webp', import.meta.url).href, w: 624, h: 390, s: 6.29 },
+    d: { mp4: new URL('./guide/make-models-d.mp4', import.meta.url).href, poster: new URL('./guide/make-models-d.webp', import.meta.url).href, w: 672, h: 420, s: 8.92 },
+    p: { mp4: new URL('./guide/make-models-p.mp4', import.meta.url).href, poster: new URL('./guide/make-models-p.webp', import.meta.url).href, w: 624, h: 390, s: 6.33 },
   },
   'make-go': {
-    d: { mp4: new URL('./guide/make-go-d.mp4', import.meta.url).href, poster: new URL('./guide/make-go-d.webp', import.meta.url).href, w: 672, h: 420, s: 8.54 },
-    p: { mp4: new URL('./guide/make-go-p.mp4', import.meta.url).href, poster: new URL('./guide/make-go-p.webp', import.meta.url).href, w: 624, h: 390, s: 8.79 },
+    d: { mp4: new URL('./guide/make-go-d.mp4', import.meta.url).href, poster: new URL('./guide/make-go-d.webp', import.meta.url).href, w: 672, h: 420, s: 8.58 },
+    p: { mp4: new URL('./guide/make-go-p.mp4', import.meta.url).href, poster: new URL('./guide/make-go-p.webp', import.meta.url).href, w: 624, h: 390, s: 10.92 },
   },
   'make-instant': {
-    d: { mp4: new URL('./guide/make-instant-d.mp4', import.meta.url).href, poster: new URL('./guide/make-instant-d.webp', import.meta.url).href, w: 672, h: 420, s: 11.13 },
-    p: { mp4: new URL('./guide/make-instant-p.mp4', import.meta.url).href, poster: new URL('./guide/make-instant-p.webp', import.meta.url).href, w: 624, h: 390, s: 12.33 },
+    d: { mp4: new URL('./guide/make-instant-d.mp4', import.meta.url).href, poster: new URL('./guide/make-instant-d.webp', import.meta.url).href, w: 672, h: 420, s: 11.25 },
+    p: { mp4: new URL('./guide/make-instant-p.mp4', import.meta.url).href, poster: new URL('./guide/make-instant-p.webp', import.meta.url).href, w: 624, h: 390, s: 12.25 },
   },
   'make-pfp': {
     d: { mp4: new URL('./guide/make-pfp-d.mp4', import.meta.url).href, poster: new URL('./guide/make-pfp-d.webp', import.meta.url).href, w: 672, h: 420, s: 13.21 },
     p: { mp4: new URL('./guide/make-pfp-p.mp4', import.meta.url).href, poster: new URL('./guide/make-pfp-p.webp', import.meta.url).href, w: 624, h: 390, s: 10 },
   },
   'make-creations': {
-    d: { mp4: new URL('./guide/make-creations-d.mp4', import.meta.url).href, poster: new URL('./guide/make-creations-d.webp', import.meta.url).href, w: 672, h: 420, s: 10.79 },
-    p: { mp4: new URL('./guide/make-creations-p.mp4', import.meta.url).href, poster: new URL('./guide/make-creations-p.webp', import.meta.url).href, w: 624, h: 390, s: 9.29 },
+    d: { mp4: new URL('./guide/make-creations-d.mp4', import.meta.url).href, poster: new URL('./guide/make-creations-d.webp', import.meta.url).href, w: 672, h: 420, s: 10.63 },
+    p: { mp4: new URL('./guide/make-creations-p.mp4', import.meta.url).href, poster: new URL('./guide/make-creations-p.webp', import.meta.url).href, w: 624, h: 390, s: 9.33 },
   },
   'me-credits': {
     d: { mp4: new URL('./guide/me-credits-d.mp4', import.meta.url).href, poster: new URL('./guide/me-credits-d.webp', import.meta.url).href, w: 672, h: 420, s: 8.96 },
@@ -112,12 +112,12 @@ export const CLIPS = {
     p: { mp4: new URL('./guide/make-trend-p.mp4', import.meta.url).href, poster: new URL('./guide/make-trend-p.webp', import.meta.url).href, w: 624, h: 390, s: 12.13 },
   },
   'make-video': {
-    d: { mp4: new URL('./guide/make-video-d.mp4', import.meta.url).href, poster: new URL('./guide/make-video-d.webp', import.meta.url).href, w: 672, h: 420, s: 12.58 },
-    p: { mp4: new URL('./guide/make-video-p.mp4', import.meta.url).href, poster: new URL('./guide/make-video-p.webp', import.meta.url).href, w: 624, h: 390, s: 12.67 },
+    d: { mp4: new URL('./guide/make-video-d.mp4', import.meta.url).href, poster: new URL('./guide/make-video-d.webp', import.meta.url).href, w: 672, h: 420, s: 12.33 },
+    p: { mp4: new URL('./guide/make-video-p.mp4', import.meta.url).href, poster: new URL('./guide/make-video-p.webp', import.meta.url).href, w: 624, h: 390, s: 12.58 },
   },
   'make-editor': {
-    d: { mp4: new URL('./guide/make-editor-d.mp4', import.meta.url).href, poster: new URL('./guide/make-editor-d.webp', import.meta.url).href, w: 672, h: 420, s: 12.88 },
-    p: { mp4: new URL('./guide/make-editor-p.mp4', import.meta.url).href, poster: new URL('./guide/make-editor-p.webp', import.meta.url).href, w: 624, h: 390, s: 12.13 },
+    d: { mp4: new URL('./guide/make-editor-d.mp4', import.meta.url).href, poster: new URL('./guide/make-editor-d.webp', import.meta.url).href, w: 672, h: 420, s: 11.46 },
+    p: { mp4: new URL('./guide/make-editor-p.mp4', import.meta.url).href, poster: new URL('./guide/make-editor-p.webp', import.meta.url).href, w: 624, h: 390, s: 11.17 },
   },
   'make-cut': {
     d: { mp4: new URL('./guide/make-cut-d.mp4', import.meta.url).href, poster: new URL('./guide/make-cut-d.webp', import.meta.url).href, w: 672, h: 420, s: 14 },

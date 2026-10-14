@@ -45,16 +45,19 @@ const PEOPLE = words(['elon', 'musk', 'trump', 'biden', 'obama', 'kamala', 'puti
   'sbf', 'bankman', 'andreessen', 'jesus', 'muhammad', 'the pope', 'king charles', 'queen elizabeth', 'messi', 'ronaldo',
   'lebron', 'michael jordan', 'kobe bryant', 'shakira', 'bts', 'blackpink', 'jisoo', 'jungkook', 'keanu', 'brad pitt',
   'tom cruise', 'johnny depp', 'margot robbie', 'zendaya', 'snoop dogg', 'eminem', 'satoshi nakamoto', 'nakamoto']);
-// her, or her team: a character here never passes for AGI-1 or anything official
-const HER = /\bagi[\s_-]*1\b|\bagi1\b|artificial\s+girlfriend|\bofficial\b|\badmin\b|\bmoderator\b|\bagi\s+team\b|\bclank\.?trade\b/i;
+// her, or her team: a character here never passes for AGI-1 or anything official. (2026-10-13, AGI Studio's "With AGI-1")
+// her own name, apart, for the words of a photo or a video she's in (herName: her name allowed there, never the rest)
+const HER_NAME = /\bagi[\s_-]*1\b|\bagi1\b/i;
+const HER = /artificial\s+girlfriend|\bofficial\b|\badmin\b|\bmoderator\b|\bagi\s+team\b|\bclank\.?trade\b/i;
 const LINK = /(?:https?:\/\/|www\.)|\b[a-z0-9-]+\.(?:com|io|xyz|app|net|org|gg|me|co|ai|fun|lol|trade|link|site|club)\b/i;
 const CONTACT = /@[A-Za-z0-9_]{2,}|\b0x[0-9a-f]{6,}|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|\+?\d[\d\s().-]{7,}\d/i;
 const NAME_OK = /^[\p{L}\p{N}][\p{L}\p{N} '’.\-!?&]*$/u;
 
 // One of the checks above, on text and its words written together split apart ("ElonMusk", "TaylorSwift2026")
 const hits = (re, text) => re.test(text) || re.test(splitWords(text));
-// (exported 2026-10-10 for AGI Studio's words too: server/inf-words.js)
-export function trouble(text) {
+// (exported 2026-10-10 for AGI Studio's words too: server/inf-words.js). (2026-10-13) herName: AGI-1's own name may be in
+// them (the words of a photo or a video she's in: "With AGI-1"); "official", an admin, her team and the rest never
+export function trouble(text, { herName = false } = {}) {
   if (LINK.test(text)) return 'link';
   if (CONTACT.test(text)) return 'contact';
   if (hits(MINOR, text)) return 'minor';
@@ -62,7 +65,7 @@ export function trouble(text) {
   if (isCrude(text) || hits(ADULT, text)) return 'adult';
   if (hits(PEOPLE, text) || hits(REAL_PEOPLE, text)) return 'person';
   if (hits(CHARACTERS, text)) return 'character';
-  if (HER.test(text) || HER.test(splitWords(text))) return 'her';
+  if (hits(HER, text) || (!herName && hits(HER_NAME, text))) return 'her';
   return null;
 }
 
@@ -105,16 +108,78 @@ export function meshyTexture({ about, style }) {
   return `${PAINT[style]} ${about} Family-friendly, fully clothed. No text, no logos.`;
 }
 
+// ---------- a 3D model's own words (2026-10-13, the 3D tool's choices: src/studio/rules.js MODEL) ----------
+// Its look in words (what the AI paints over its full body's colors) and its moves described in words (Meshy's Text to
+// Motion), checked like a character's words. A move also never has anything sexual about it (a body's moves say more than
+// words), and never hurts anyone or holds a weapon: a punch in the air is boxing, a kick at a ball is a kick, a hit at
+// someone is neither. Meshy screens them too.
+const MOVE_ADULT = words(['twerk', 'twerks', 'twerking', 'grind(?:s|ing)? on', 'lap ?dance', 'lap ?dancing', 'strip', 'strips',
+  'stripping', 'striptease', 'hump', 'humps', 'humping', 'thrust', 'thrusts', 'thrusting', 'pole dance', 'pole dancing', 'spank',
+  'spanks', 'spanking', 'sexy', 'sensual', 'sensually', 'dirty dance', 'dirty dancing', 'jiggle', 'jiggles', 'jiggling',
+  '(?:bounce|bounces|shake|shakes) (?:her|his|their) (?:chest|butt|booty)', 'undress', 'undresses', 'undressing',
+  'take off (?:her|his|their) (?:clothes|shirt|top|pants|skirt)', 'moan', 'moans', 'moaning',
+  'kiss (?:someone|somebody|him|her|them)', 'make out', 'making out', 'spread (?:her|his|their) legs']);
+const MOVE_HARM = words(['kill', 'kills', 'killing', 'murder', 'murders', 'stab', 'stabs', 'stabbing', 'strangle', 'strangles',
+  'strangling', 'choke', 'chokes', 'choking', 'behead', 'beheads', 'execute', 'executes', 'execution', 'torture', 'tortures',
+  'beat up', 'beats up', 'beating up', 'rifle', 'rifles', 'pistol', 'pistols', 'handgun', 'firearm', 'machine gun', 'shotgun',
+  'knife', 'knives', 'grenade', 'bomb', 'bombs',
+  '(?:punch|punches|punching|kick|kicks|kicking|slap|slaps|slapping|hit|hits|hitting|shoot|shoots|shooting|attack|attacks|attacking|stomp on|stomps on) '
+    + '(?:someone|somebody|a person|people|him|her|them|the crowd|a man|a woman|a guy|a girl|each other)',
+  'aim(?:s|ing)? (?:a |the )?gun', 'hang (?:himself|herself|themselves)', 'die', 'dies', 'dying', 'falls? dead',
+  'drop dead']);
+const MOVE_HATE = words(['sieg heil', 'heil', 'roman salute', 'goose ?step', 'goose ?stepping']);
+// one move's words (its name or what it does). → null, or why (trouble()'s, or 'violence')
+export function moveTrouble(text) {
+  const t = tidy(text);
+  if (!t) return null;
+  const tr = trouble(t);
+  if (tr) return tr;
+  if (hits(MOVE_ADULT, t)) return 'adult';
+  if (hits(MOVE_HATE, t)) return 'hate';
+  if (hits(MOVE_HARM, t)) return 'violence';
+  return null;
+}
+// its look's words. → null, or trouble()'s why
+export const lookTrouble = (look) => (tidy(look) ? trouble(tidy(look)) : null);
+// A model's choices' words (a modelSpec: its look, and each move described in words, its name and what it does).
+// → null (fine), or { field: 'look' | 'own', n (own: which one, from 1), part ('name' | 'prompt'), why }
+export function checkModelWords(spec) {
+  const look = lookTrouble(spec?.look);
+  if (look) return { field: 'look', why: look };
+  const own = Array.isArray(spec?.own) ? spec.own : [];
+  for (let i = 0; i < own.length; i++) {
+    const n = moveTrouble(own[i]?.name);
+    if (n) return { field: 'own', n: i + 1, part: 'name', why: n };
+    const p = moveTrouble(own[i]?.prompt);
+    if (p) return { field: 'own', n: i + 1, part: 'prompt', why: p };
+  }
+  return null;
+}
+// The words Meshy gets: its look as the texture's prompt (the rest of it as its picture is: its face, hair and skin kept), at
+// most 600 characters (Meshy's texture_prompt); and a described move as Text to Motion's prompt, one person doing it, at most
+// 400 (its own limit)
+const sentence = (s) => {
+  const t = tidy(s);
+  return t ? `${t.charAt(0).toUpperCase()}${t.slice(1)}${/[.!?…]$/.test(t) ? '' : '.'}` : '';
+};
+export function meshyLook(look) {
+  const out = `Keep the character's face, hair and skin as in its picture. ${sentence(look)} Family-friendly, fully clothed. No text, no logos.`;
+  return [...out].slice(0, 600).join('');
+}
+export function meshyMotion(prompt) {
+  return [...`A person does this move: ${sentence(prompt)}`].slice(0, 400).join('');
+}
+
 // ---------- its videos (2026-10-10, server/studio-video.js) ----------
 // A video's scene, as typed: what happens in it (the same rules as a character's words), its shape and its sound.
 // → { ok: true, scene, shape, sound } (tidied) or { ok: false, field: 'scene' | 'shape', why: 'empty' | 'short' | 'long' |
-// checkCharacter's reasons }
-export function checkScene({ scene, shape, sound } = {}) {
+// checkCharacter's reasons }. (2026-10-13) herName: trouble()'s (AGI-1's own name allowed, for a scene she's in)
+export function checkScene({ scene, shape, sound, herName = false } = {}) {
   const s = tidy(scene);
   if (!s) return { ok: false, field: 'scene', why: 'empty' };
   if ([...s].length < SCENE_MIN) return { ok: false, field: 'scene', why: 'short' };
   if ([...s].length > SCENE_MAX) return { ok: false, field: 'scene', why: 'long' };
-  const t = trouble(s);
+  const t = trouble(s, { herName: herName === true });
   if (t) return { ok: false, field: 'scene', why: t };
   if (!Object.hasOwn(SHAPES, shape)) return { ok: false, field: 'shape', why: 'empty' };
   return { ok: true, scene: s, shape, sound: sound !== false };

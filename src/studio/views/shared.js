@@ -1,10 +1,11 @@
 // AGI Studio: what more than one view shows or opens: media tiles and their hearts (round 2: likes), a trend clip's tile and
 // preview, a photo or a video seen big, burning $AGI for an unlock (round 2), a report, "are you sure?", (round 4) captions
 // for a post of one of your own creations, and (2026-10-11) the words something was made from, with "Copy prompt".
+// (2026-10-13, "With AGI-1") a tile with her says so, and so does its sheet; "Add AGI-1" on its maker's own photo she isn't in.
 import { h, icon, linkBtn, btn, sheet, pic, chips, segmented, say, busy, copyText, put, add } from '../ui.js';
 import {
   infPic, infPoster, infVideo, infVideoDl, infPhotoDl, trendOf, trendPrompt, creditsText, SHAPES, PHOTO_SHAPES, REPORT_WHYS, CAPTION_PLATFORMS,
-  CAPTION_TONES,
+  CAPTION_TONES, WITH_AGI1,
 } from '../rules.js';
 import {
   priceOf, shareJobUrl, errorText, compact, likeErrorText, likesText, burnCheckText, shortAddress, num, jobMeta, captionErrorText,
@@ -74,18 +75,24 @@ export async function loadLiked(ctx, jobs) {
 }
 
 // ---------- a photo or a video, as a tile (Explore, an influencer's page) ----------
-// item: { id, kind, shape, poster, files, likes, inf: { id, name, portrait } } · onopen: what a tap opens
+// item: { id, kind, shape, poster, files, likes, agi1, inf: { id, name, portrait } } · onopen: what a tap opens · badge: { text,
+// icon, cls } (what it is: a trend video, a meme…). (2026-10-13) one with AGI-1 in it carries a "With AGI-1" tag too
 export function mediaTile(ctx, item, { onopen, can = true, liked = null, showName = true, badge = null } = {}) {
   const inf = item.inf?.id;
   const shape = PHOTO_SHAPES[item.shape] ? item.shape : item.kind === 'photo' ? 'square' : 'tall';
   const isPhoto = item.kind === 'photo';
+  const her = item.agi1 === true;
   const cover = isPhoto ? infPic(inf, item.id, 0, true) : item.poster ? infPoster(inf, item.id)
     : item.inf?.portrait ? infPic(inf, item.inf.portrait.job, item.inf.portrait.n, true) : null;
   const what = isPhoto ? (item.shape === 'banner' ? 'an X banner' : 'a photo') : item.kind === 'trend' ? `a trend video${item.trend && trendOf(item.trend) ? ` (${trendOf(item.trend).name})` : ''}` : 'a video';
-  const open = h('button', { type: 'button', class: 'sa-media-open', 'aria-label': `${item.inf?.name || 'An influencer'}: ${what}` },
+  const tags = [
+    badge ? h('span', { class: `sa-tag sa-media-tag ${badge.cls || ''}`.trim() }, badge.icon ? icon(badge.icon) : null, h('span', { text: badge.text })) : null,
+    her ? h('span', { class: 'sa-tag sa-media-tag sa-tag-agi1' }, icon('agi1'), h('span', { text: WITH_AGI1.NAME })) : null,
+  ].filter(Boolean);
+  const open = h('button', { type: 'button', class: 'sa-media-open', 'aria-label': `${item.inf?.name || 'An influencer'}: ${what}${her ? ', with AGI-1' : ''}` },
     cover ? pic(cover, { cls: `sa-media-pic${!isPhoto && !item.poster ? ' is-blur' : ''}` }) : h('span', { class: 'sa-media-pic is-missing' }),
     isPhoto ? null : h('span', { class: 'sa-media-play', 'aria-hidden': 'true' }, icon('play')),
-    badge ? h('span', { class: `sa-tag sa-media-tag ${badge.cls || ''}`.trim() }, badge.icon ? icon(badge.icon) : null, h('span', { text: badge.text })) : null,
+    tags.length ? h('span', { class: 'sa-media-tags' }, ...tags) : null,
     showName && item.inf?.name ? h('span', { class: 'sa-media-cap' },
       item.inf.portrait ? pic(infPic(inf, item.inf.portrait.job, item.inf.portrait.n, true), { cls: 'sa-avatar sa-avatar-xs' }) : null,
       h('span', { text: item.inf.name })) : null);
@@ -186,7 +193,9 @@ export function promptBlock(ctx, text, { label = 'Prompt' } = {}) {
 // alone (named for screen readers and on hover), so the four fit on one line on a computer. own: { cost (credits, or null when
 // its model left the menu), onAgain (none for one saved from the photo editor or the video editor), onDelete, onEdit and
 // onEditor (a photo's), onVideoEditor (a video's or a trend video's: "Edit video", the video editor) } (each called once the
-// sheet is closed) ----------
+// sheet is closed). (2026-10-13, "With AGI-1") on a photo (a meme, an X banner) she isn't in, "Add AGI-1" (own.onAddHer: she's
+// put into it, a new one next to it, at its price), highlighted; the row can wrap onto a second line, so its height is measured
+// (--sa-row-h, through the CSS object model) for the rules that fit the picture under it ----------
 function editRow(s, j, own) {
   if (!own) return null;
   const go = (label, ic, fn, extra = {}) => {
@@ -197,10 +206,21 @@ function editRow(s, j, own) {
   const edit = j.kind === 'photo' && own.onEdit ? go('Edit with words', 'wand', own.onEdit) : null;
   const editor = j.kind === 'photo' && own.onEditor ? go('Edit photo', 'sliders', own.onEditor)
     : ['video', 'trend'].includes(j.kind) && own.onVideoEditor ? go('Edit video', 'scissors', own.onVideoEditor) : null;
+  const addHer = j.kind === 'photo' && j.agi1 !== true && own.onAddHer ? go('Add AGI-1', 'agi1', own.onAddHer, { class: 'sa-btn sa-btn-ghost sa-btn-sm sa-edit-her' }) : null;
   const again = own.onAgain ? go(Number.isFinite(own.cost) ? `Make another · ${num(own.cost)} credits` : 'Make another', 'refresh', own.onAgain) : null;
   const del = go('', 'trash', own.onDelete, { kind: 'quiet', class: 'sa-btn sa-btn-quiet sa-btn-sm sa-edit-delete', 'aria-label': 'Delete', title: 'Delete' });
-  return h('div', { class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' }, edit, editor, again, del);
+  const row = h('div', { class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' }, edit, editor, addHer, again, del);
+  const rowH = () => s.dialog.style.setProperty('--sa-row-h', `${row.offsetHeight}px`);
+  const watch = typeof ResizeObserver === 'function' ? new ResizeObserver(rowH) : null;
+  watch?.observe(row);
+  s.done.then(() => watch?.disconnect());
+  return row;
 }
+// (2026-10-13) a photo or a video with AGI-1 in it, said under it in its sheet: "With AGI-1", or (one made with "Add AGI-1":
+// from a photo, without words) "AGI-1 added"
+const herLine = (j) => (j?.agi1 === true
+  ? h('p', { class: 'sa-edit-words is-agi1' }, icon('agi1'), h('span', { text: j.kind === 'photo' && j.image && !j.edit && !j.editor ? 'AGI-1 added to it, as her own 2D anime self' : 'With AGI-1, as her own 2D anime self' }))
+  : null);
 
 // (2026-10-13, the owner: "when i open a video and photo, there should be a button that says remove watermark"; the owner's
 // choice: "Everyone, holders use it (Recommended)") "Remove watermark", next to Download on its maker's own photos and videos
@@ -239,14 +259,15 @@ export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCa
   const shape = SHAPES[v.shape] ? v.shape : 'tall';
   const video = h('video', {
     class: `sa-player is-${shape}`, src: infVideo(v.id), controls: true, playsinline: true, autoplay: true, preload: 'auto',
-    ...(v.poster ? { poster: infPoster(inf, v.id) } : {}), 'aria-label': `${name}: an AI-made video`,
+    ...(v.poster ? { poster: infPoster(inf, v.id) } : {}), 'aria-label': `${name}: an AI-made video${v.agi1 === true ? ', with AGI-1' : ''}`,
   });
   const url = `${location.origin}${ctx.href(`/i/${inf}`)}#v-${v.id}`;
   // (its own: Make another and Delete first, in view as it opens: under it they were below the fold)
   add(s.body, mine ? editRow(s, v, own) : null, h('div', { class: `sa-player-wrap is-${shape}` }, video),
     // (2026-10-12) one saved from the video editor: cut from one of its videos, with no prompt of its own
     v.kind === 'video' && v.editor === true ? h('p', { class: 'sa-edit-words' }, icon('scissors'), h('span', { text: 'Edited in the video editor' }))
-      : promptOf(v) ? promptBlock(ctx, promptOf(v), { label: v.scene ? 'Prompt' : 'Its trend\'s prompt' }) : null);
+      : promptOf(v) ? promptBlock(ctx, promptOf(v), { label: v.scene ? 'Prompt' : 'Its trend\'s prompt' }) : null,
+    herLine(v));
   const foot = [];
   if (ctx.route.view !== 'influencer') foot.push(linkBtn(`See ${name}`, ctx.href(`/i/${inf}`), { kind: 'primary', dataset: { saLink: '' } }));
   if (!priv) foot.push(likeButton(ctx, { job: v.id, likes: v.likes, can: !mine, cls: 'sa-heart-lg', fresh: false }));
@@ -280,12 +301,14 @@ export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind
   const edited = kind === 'photo' && j.edit ? String(j.edit) : null;
   // (…and one saved from the photo editor: said so)
   const byEditor = kind === 'photo' && j.editor === true;
-  const big = pic(infPic(inf, j.id, 0), { cls: `sa-big-pic is-${shape}`, alt: `${name}: ${kind === 'body' ? 'full body' : banner ? `an X banner${j.scene ? `, ${j.scene}` : ''}` : memeWords ? `a meme that says “${memeWords}”` : j.scene || 'a photo'}${edited ? `, edited: ${edited}` : byEditor ? ', edited in the photo editor' : ''}`, lazy: false });
+  const her = kind === 'photo' && j.agi1 === true;
+  const big = pic(infPic(inf, j.id, 0), { cls: `sa-big-pic is-${shape}`, alt: `${name}${her ? ' with AGI-1' : ''}: ${kind === 'body' ? 'full body' : banner ? `an X banner${j.scene ? `, ${j.scene}` : ''}` : memeWords ? `a meme that says “${memeWords}”` : j.scene || 'a photo'}${edited ? `, edited: ${edited}` : byEditor ? ', edited in the photo editor' : ''}`, lazy: false });
   add(s.body, mine && kind === 'photo' ? editRow(s, j, own) : null, h('div', { class: `sa-big-wrap${banner ? ' is-banner' : ''}` }, big),
     memeWords ? h('p', { class: 'sa-meme-words', text: `“${memeWords}”` }) : null,
     kind === 'photo' && j.scene ? promptBlock(ctx, String(j.scene)) : null,
     edited ? h('p', { class: 'sa-edit-words' }, icon('wand'), h('span', { text: `Edited with words: “${edited}”` })) : null,
     byEditor ? h('p', { class: 'sa-edit-words' }, icon('sliders'), h('span', { text: 'Edited in the photo editor' })) : null,
+    her ? herLine(j) : null,
     // (round 4) an X banner: where it goes on X
     banner && mine ? h('p', { class: 'sa-note', text: 'On X: your profile → Edit profile → tap the header picture, and pick this one. Its lower left is where your profile picture sits.' }) : null);
   const foot = [];

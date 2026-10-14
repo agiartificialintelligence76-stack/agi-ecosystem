@@ -22,6 +22,9 @@
 //   (the same day) a photo saved from the photo editor (edited in its maker's own browser, no AI) is looked at by Gemini before
 //   it's kept (checkEdited), and a video saved from the video editor (made by our clock with ffmpeg) before anyone sees it
 //   (checkCutVideo)
+//   (2026-10-13) "With AGI-1": AGI-1's own picture (her 2D self, the owner's art: server/inf-agi1.js) after the character's in
+//   a photo, a meme or an X banner (Classic), "Add AGI-1" (Nano Banana 2's edit: the photo, its full body, her), and in a video
+//   her picture too (Kling's elements: her face and her whole body; Seedance: her whole body as @Image2)
 //   • Gemini (the site's own key, GEMINI_API_KEY, the chat's model): a look at each picture and clip uploaded before it's
 //     used, and at each video made before it's shown (family-friendly, never a minor, never a famous person, never someone
 //     else's character; since round 2 a photo of a real person may be used, with its uploader's consent). Fail closed: a
@@ -29,7 +32,7 @@
 // Nothing here is shown to visitors as a provider's name (the page says "an AI service").
 import {
   looksPrompt, bodyPrompt, photoPrompt, swapPrompt, clipPrompt, CLIP_NEGATIVE, sceneVideoPrompt, sceneWay, presetPrompt, PRESET_NEGATIVE,
-  examplePrompt, memePrompt, longPartPrompt, editPrompt,
+  examplePrompt, memePrompt, longPartPrompt, editPrompt, addPrompt,
 } from './inf-words.js';
 import { SHAPES, photoSpec, videoSpec } from '../src/studio/rules.js';
 
@@ -86,37 +89,50 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
       input: picture({ prompt: bodyPrompt(inf, { withSource: Boolean(source) }), image_urls: [need(urls.look, 'look'), ...(source ? [source] : [])], num_images: 1, aspect_ratio: '9:16' }),
     };
   }
+  // (2026-10-13) "With AGI-1": her whole body (urls.agi1.body: server/inf-agi1.js), after the character's own picture(s);
+  // in a video, her head and shoulders too (urls.agi1.face: Kling's element for her)
+  const agi1 = job.agi1 === true;
+  const herBody = () => need(urls.agi1?.body, "AGI-1's picture");
   // (2026-10-12, the editor) "Edit with words": one of its photos (a meme, an X banner: urls.image) made again with one change,
   // by Classic, its full body after it (its face and look); the photo's own shape and quality (src/studio/rules.js editSpec), an
-  // X banner at 4:1 2K as when it was made (cut to 1500 × 500 again on our server)
-  if (job.kind === 'photo' && job.edit) {
+  // X banner at 4:1 2K as when it was made (cut to 1500 × 500 again on our server). (2026-10-13) "Add AGI-1" (a photo with her
+  // made from one of its photos, without words: job.image and job.agi1) the same way, her whole body after its full body; and an
+  // edit of a photo with her in it has her whole body after its full body too (so she stays as drawn)
+  if (job.kind === 'photo' && (job.edit || (job.image && agi1))) {
     const banner = job.shape === 'banner';
     const spec = photoSpec({ model: 'classic', quality: job.quality ?? null, shape: job.shape, meme: job.meme ?? null });
     if (!spec || (job.model && job.model !== 'classic')) throw Object.assign(new Error('inf: not an edit the menu offers'), { why: 'request' });
+    const prompt = job.edit
+      ? editPrompt(inf, job.edit, { meme: Boolean(job.meme), banner, agi1 })
+      : addPrompt(inf, { meme: Boolean(job.meme), banner });
     return {
       model: MODELS.edit, way: 'edit',
       input: picture({
-        prompt: editPrompt(inf, job.edit, { meme: Boolean(job.meme), banner }), image_urls: [need(urls.image, 'photo'), need(urls.body, 'full body')],
+        prompt, image_urls: [need(urls.image, 'photo'), need(urls.body, 'full body'), ...(agi1 ? [herBody()] : [])],
         num_images: 1, aspect_ratio: banner ? '4:1' : RATIO(job.shape), resolution: banner ? '2K' : RES[spec.quality],
       }),
     };
   }
   // (round 4, phase 4) its reference pictures (the person's own: things, places, pets, food, a style), after its own pictures
+  // (2026-10-13: and after AGI-1's, when she's in it)
   const refs = Array.isArray(urls.refs) ? urls.refs.map((u, n) => need(u, `reference ${n + 1}`)) : [];
+  const own = () => [need(urls.body, 'full body'), ...(agi1 ? [herBody()] : [])];
   if (job.kind === 'photo' && job.shape === 'banner') {
     // (round 4) wider than X's 3:1 and sharp enough for 1500 px across: our server cuts it to exactly 1500 × 500
     return {
       model: MODELS.edit, way: 'edit',
-      input: picture({ prompt: photoPrompt(inf, job.scene, { banner: true, refs: refs.length }), image_urls: [need(urls.body, 'full body'), ...refs], num_images: 1, aspect_ratio: '4:1', resolution: '2K' }),
+      input: picture({ prompt: photoPrompt(inf, job.scene, { banner: true, refs: refs.length, agi1 }), image_urls: [...own(), ...refs], num_images: 1, aspect_ratio: '4:1', resolution: '2K' }),
     };
   }
   if (job.kind === 'photo') {
     const spec = photoSpec({ model: job.model ?? null, quality: job.quality ?? null, shape: job.shape, meme: job.meme ?? null });
     if (!spec) throw Object.assign(new Error('inf: not a photo the menu offers'), { why: 'request' });
+    // (2026-10-13) with AGI-1 only by Classic (it keeps her exactly as drawn: src/studio/rules.js WITH_AGI1)
+    if (agi1 && spec.model !== 'classic') throw Object.assign(new Error('inf: AGI-1 joins only Classic photos'), { why: 'request' });
     const prompt = job.meme
-      ? memePrompt(inf, job.scene, { meme: job.meme, lines: String(job.caption ?? '').split('\n'), refs: refs.length })
-      : photoPrompt(inf, job.scene, { refs: refs.length });
-    const images = [need(urls.body, 'full body'), ...refs];
+      ? memePrompt(inf, job.scene, { meme: job.meme, lines: String(job.caption ?? '').split('\n'), refs: refs.length, agi1 })
+      : photoPrompt(inf, job.scene, { refs: refs.length, agi1 });
+    const images = [...own(), ...refs];
     if (spec.model === 'crisp') {
       const [width, height] = (CRISP_SIZE[spec.quality][job.shape] || CRISP_SIZE[spec.quality].tall);
       return { model: MODELS.crisp, way: 'crisp', input: { prompt, image_urls: images, image_size: { width, height }, num_images: 1, max_images: 1, enable_safety_checker: true } };
@@ -139,9 +155,12 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
     const spec = videoSpec({ model, seconds: job.seconds ?? null, sound: job.sound === true, quality: job.quality ?? null });
     if (model && !spec) throw Object.assign(new Error('inf: not a video the menu offers'), { why: 'request' });
     const seconds = String(spec?.seconds || 5);
-    // the character as Kling's element (its look its front view, its full body more of it), then each reference
+    // the character as Kling's element (its look its front view, its full body more of it), then (2026-10-13) AGI-1 when she's
+    // in it (her head and shoulders her front view, her whole body more of her), then each reference. Kling takes 3 elements
+    // at most with a first frame (src/studio/rules.js refsFor: one reference less with her)
     const elements = () => [
       { frontal_image_url: need(urls.look, 'look'), reference_image_urls: [need(urls.body, 'full body')] },
+      ...(agi1 ? [{ frontal_image_url: need(urls.agi1?.face, "AGI-1's face"), reference_image_urls: [herBody()] }] : []),
       ...refs.map((u) => ({ frontal_image_url: u, reference_image_urls: [u] })),
     ];
     if (model === 'long') {
@@ -150,7 +169,7 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
       return {
         model: MODELS.i2v, way: 'long',
         input: {
-          prompt: longPartPrompt(inf, job.scene, { part, parts, refs: refs.length }),
+          prompt: longPartPrompt(inf, job.scene, { part, parts, refs: refs.length, agi1 }),
           start_image_url: part === 0 ? need(urls.image, 'photo') : need(urls.frame, 'last frame'),
           duration: String(Math.round(spec.seconds / parts)), generate_audio: false, negative_prompt: CLIP_NEGATIVE, elements: elements(),
         },
@@ -158,15 +177,15 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
     }
     const way = sceneWay(inf, { image: job.image, model });
     if (way === 'photo') {
-      const input = { prompt: clipPrompt(inf, job.scene, { refs: refs.length }), start_image_url: need(urls.image, 'photo'), duration: seconds, generate_audio: job.sound === true, negative_prompt: CLIP_NEGATIVE };
-      if (refs.length) input.elements = elements();
+      const input = { prompt: clipPrompt(inf, job.scene, { refs: refs.length, agi1 }), start_image_url: need(urls.image, 'photo'), duration: seconds, generate_audio: job.sound === true, negative_prompt: CLIP_NEGATIVE };
+      if (refs.length || agi1) input.elements = elements();
       return { model: model === 'pro' ? MODELS.i2vPro : MODELS.i2v, way: 'i2v', input };
     }
     if (way !== 'reference') throw Object.assign(new Error("inf: a realistic influencer's video starts from one of its photos"), { why: 'request' });
     return {
       model: cfg.videoModel, way: 'reference',
       input: {
-        prompt: sceneVideoPrompt(inf, job.scene, { refs: refs.length }), image_urls: [need(urls.body, 'full body'), ...refs], resolution: spec?.quality || '720p', duration: seconds,
+        prompt: sceneVideoPrompt(inf, job.scene, { refs: refs.length, agi1 }), image_urls: [...own(), ...refs], resolution: spec?.quality || '720p', duration: seconds,
         aspect_ratio: RATIO(job.shape), generate_audio: job.sound === true, bitrate_mode: 'standard', codec: 'H264', ...(user ? { end_user_id: user } : {}),
       },
     };

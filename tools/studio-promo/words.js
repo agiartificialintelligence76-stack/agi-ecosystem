@@ -276,6 +276,26 @@ export const END = {
   fine: ['18+ · Every influencer, photo and video here is AI-generated · PG-13', 'Credits have no cash value · Not financial advice'],
 };
 
+// ---------- her voice (2026-10-13, the owner: "will it be good if you add voice over to the launch video", then "Short,
+// AGI-1's voice") ----------
+// what AGI-1 says over its music, in time order (timeline.js VOICE says where): short lines at the big moments, the words
+// on screen as they were. Her takes are her own voice, the site's (made in Google AI Studio with the owner's account),
+// saying exactly these words; `said`: how she says one that isn't read as it's written
+export const VOICE = [
+  { id: 'meet', text: HOOK.meet },
+  { id: 'not-real', text: HOOK.notReal },
+  { id: 'you-made', text: HOOK.you.join('') },
+  { id: 'studio', text: `This is ${NAME}.` },
+  { id: 'design', text: 'Design yours in a few taps.' },
+  { id: 'styles', text: 'Any look, any style.' },
+  { id: 'edit', text: 'Just say what to change.' },
+  { id: 'move', text: 'Now, make it move.' },
+  { id: 'model', text: MODEL.head.join('') },
+  { id: 'share', text: COMMUNITY.head.join('') },
+  { id: 'url', text: SITE, said: 'A G I one dot app slash studio.' },
+  { id: 'live', text: 'Live now.' },
+];
+
 // the post to go with it (the owner posts it, by hand)
 export const POST = `Introducing ${NAME} 💜\n\nCreate your own AI influencer: photos in any scene, trend videos, videos, memes, X banners, a 3D model and a coin with its face.\n\nPay as you go. $AGI holders get ${Math.round(DISCOUNT[2] * 100)}–${Math.round(DISCOUNT[3] * 100)}% off.\n\nhttps://${SITE}\n\nEverything is AI-generated · Not financial advice`;
 
@@ -288,6 +308,6 @@ export function allWords() {
     else if (Array.isArray(v)) v.forEach(walk);
     else if (v && typeof v === 'object') Object.values(v).forEach(walk);
   };
-  walk([SITE, HANDLE, NAME, OVERLAY, CAST, HOOK, BRAND, CREATE, STYLES, PHOTOS, MEMES_SCENE, EDIT, TRENDS_SCENE, VIDEOS, TOOLS, MODEL, PAY, COMMUNITY, FINALE, END, POST]);
+  walk([SITE, HANDLE, NAME, OVERLAY, CAST, HOOK, BRAND, CREATE, STYLES, PHOTOS, MEMES_SCENE, EDIT, TRENDS_SCENE, VIDEOS, TOOLS, MODEL, PAY, COMMUNITY, FINALE, END, VOICE, POST]);
   return out;
 }

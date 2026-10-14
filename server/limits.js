@@ -65,6 +65,11 @@ for (const fn of ['studio_video_quote', 'studio_video_pay', 'studio_video_get', 
   'studio_video_done', 'studio_video_fail', 'studio_video_redo', 'studio_video_due', 'studio_video_list', 'studio_video_hide']) {
   MISSING[fn] = `${fn} not found: run supabase/studio.sql again in this Supabase project (its characters' videos; it ends with studio_ready = 1)`;
 }
+// …and a 3D model's choices and its extra downloads (2026-10-13, the 3D tool): the same file, run again (then influencers.sql
+// again: below)
+for (const fn of ['studio_dl_due', 'studio_dl_lease', 'studio_dl_put', 'studio_dl_expired', 'studio_dl_clear', 'studio_done']) {
+  MISSING[fn] = `${fn} not found: run supabase/studio.sql again in this Supabase project (the 3D tool's choices and downloads; it ends with studio_ready = 1), then supabase/influencers.sql again`;
+}
 
 // AGI Studio, the AI influencer app (2026-10-10): supabase/influencers.sql (after studio.sql's version of the same day)
 for (const fn of ['inf_credits', 'inf_spend', 'inf_refund', 'inf_topup', 'inf_free', 'inf_upload_open', 'inf_upload_get', 'inf_upload_set',
@@ -124,8 +129,12 @@ for (const fn of ['inf_owner_link', 'inf_owner_links']) {
 }
 // …and the editor (2026-10-12): deleting a creation, and "Edit with words" (inf_make takes its change: an older one has none,
 // and before round 4's phase 4 none of the model menu's parts either)
-for (const fn of ['inf_job_delete', 'inf_make']) {
+for (const fn of ['inf_job_delete']) {
   MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1)`;
+}
+// …and "With AGI-1" (2026-10-13): inf_make takes whether she's in it (an older one has no p_agi1, the editor's p_edit before it)
+for (const fn of ['inf_make']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (Edit with words and With AGI-1; it ends with influencers_ready = 1)`;
 }
 // …and the photo editor (the same day): a photo saved from it, and how many a wallet saved today
 for (const fn of ['inf_tool_take', 'inf_photo_add']) {
@@ -134,6 +143,10 @@ for (const fn of ['inf_tool_take', 'inf_photo_add']) {
 // …and the video editor (the same day): a cut asked for, made by the clock, and the next one to make
 for (const fn of ['inf_cut_add', 'inf_cut_done', 'inf_cut_due']) {
   MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (the video editor; it ends with influencers_ready = 1)`;
+}
+// …and the 3D tool's choices (2026-10-13): influencers.sql orders a model with its choices (after studio.sql again: above)
+for (const fn of ['inf_3d', 'inf_3d_burn']) {
+  MISSING[fn] = `${fn} not found: run supabase/studio.sql again, then supabase/influencers.sql again, in this Supabase project (the 3D tool's choices; they end with studio_ready = 1 and influencers_ready = 1)`;
 }
 
 // CloakMesh's waitlist (inference.agi1.app, 2026-10-03): supabase/cloakmesh.sql

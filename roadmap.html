@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en" data-page="roadmap">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Roadmap · AGI</title>
+    <meta name="description" content="What's live on AGI today, and what's coming next: staking, games, giveaways and one secret. Coming soon · not financial advice." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fafaf8" />
+    <!-- link previews (X and others). __SITE__ becomes the site's address at build time (scripts/share-pages.js) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AGI" />
+    <meta property="og:title" content="Roadmap · AGI" />
+    <meta property="og:description" content="AGI-1 and AGI Studio are live. Staking, games and giveaways are next. Coming soon · not financial advice." />
+    <meta property="og:image" content="__SITE__/cards/home.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="__SITE__/roadmap" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="__SITE__/roadmap" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/theme.js?v=7"></script>
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="wordmark" href="/">AGI</a>
+        <!-- On phones this list becomes the drop-down menu (src/menu.js) -->
+        <nav class="nav" id="site-nav" aria-label="Sections">
+          <a href="/#evaluations">Evaluations</a>
+          <a href="/#model-card">Model card</a>
+          <a href="/#playground">Playground</a>
+          <a href="/#checker">Risk check your coins on clank</a>
+          <a href="/diary">Diary</a>
+          <a class="nav-phone" href="/live">Live</a>
+          <a class="nav-phone" href="/studio">AGI Studio</a>
+          <a class="nav-phone" href="/roadmap" aria-current="page">Roadmap</a>
+          <a class="nav-phone" href="/#safety">Safety note</a>
+          <a class="nav-x" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
+          <a class="nav-tg" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">AGI on Telegram ↗</a>
+          <button class="nav-pop" type="button" data-skin-toggle aria-pressed="true">Pop mode <span class="nav-pop-state mono" aria-hidden="true">On</span></button>
+        </nav>
+        <div class="topbar-actions">
+          <a class="icon-btn x-btn" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on X (@agi1dotapp)" title="@agi1dotapp on X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a class="icon-btn tg-btn" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on Telegram (@agi2dotapp)" title="@agi2dotapp: the $AGI community group on Telegram"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21.4 2.6 2.8 10.2l7.7 3.3 3.3 7.7 7.6-18.6ZM21.4 2.6 10.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></a>
+          <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
+            <svg class="i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the bold AGI look">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <a class="btn btn-primary btn-sm" href="/#playground">Try AGI-1</a>
+          <button class="icon-btn menu-btn" type="button" data-menu aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+            <svg class="i-menu" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <svg class="i-close" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- The roadmap (2026-10-14, the owner: "when they go to agi1.app/roadmap they will see a roadmap … make the roadmap page
+           cool and beautiful"): what's live (AGI-1, AGI Studio) and what's coming (staking, games, giveaways: their pages are
+           open, everything on them coming soon), and a locked 18+ card with no details. Its look: src/styles/roadmap.css (and
+           pop.css); src/roadmap/page.js brings the cards below the first screen in as they scroll into view -->
+      <section class="rm-hero" aria-labelledby="rm-title">
+        <div class="wrap rm-hero-in">
+          <div class="rm-hero-text">
+            <p class="kicker rm-kicker">Roadmap · October 2026</p>
+            <h1 class="rm-title" id="rm-title">The AGI roadmap</h1>
+            <p class="rm-sub">What's live today, and what's coming next.</p>
+            <p class="rm-lede">AGI-1 and AGI Studio are live. Staking, games and giveaways are next: their pages are open, and everything on them is coming soon.</p>
+            <p class="rm-say"><img src="/images/landing/agi1-face.webp" alt="" width="36" height="36" /> <span><b>AGI-1:</b> two live, four on the way. i'm a little excited 💜</span></p>
+          </div>
+          <div class="rm-meter" role="img" aria-label="2 of 6 live now, 4 coming soon">
+            <p class="rm-meter-big" aria-hidden="true"><span class="rm-meter-n">2</span><span class="rm-meter-of">of 6</span></p>
+            <p class="rm-meter-text" aria-hidden="true">live now · 4 coming soon</p>
+            <div class="rm-segs" aria-hidden="true">
+              <span class="rm-seg is-done"></span><span class="rm-seg is-done"></span><span class="rm-seg"></span><span class="rm-seg"></span><span class="rm-seg"></span><span class="rm-seg is-lock"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section rm-track" aria-label="The roadmap, step by step">
+        <div class="wrap">
+          <div class="rm-tl">
+            <div class="rm-head" data-rm-reveal>
+              <span class="rm-cap" aria-hidden="true"></span>
+              <h2 class="rm-label">Live now</h2>
+            </div>
+
+            <ol class="rm-list rm-list-live">
+              <li class="rm-item is-done" data-rm-reveal>
+                <span class="rm-num" aria-hidden="true">01</span>
+                <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5.5 12.5 10 17l8.5-9.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <div class="rm-card is-link">
+                  <div class="rm-card-top">
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Live</p>
+                    <span class="rm-step mono">Step 1 of 6</span>
+                  </div>
+                  <h3 class="rm-name">Talk to AGI-1</h3>
+                  <p class="rm-text">Chat with her, call her and hear her voice, in 16 languages. Her live show on X, her Telegram bot and her groups too.</p>
+                  <p class="rm-meta">chat · voice · calls · 16 languages · live on X</p>
+                  <a class="rm-go" href="/#playground">Talk to her<span class="sr-only">: AGI-1's chat</span> <span class="rm-arrow" aria-hidden="true">→</span></a>
+                </div>
+              </li>
+              <li class="rm-item is-done" data-rm-reveal>
+                <span class="rm-num" aria-hidden="true">02</span>
+                <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5.5 12.5 10 17l8.5-9.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <div class="rm-card is-link">
+                  <div class="rm-card-top">
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Live</p>
+                    <span class="rm-step mono">Step 2 of 6</span>
+                  </div>
+                  <h3 class="rm-name">AGI Studio</h3>
+                  <p class="rm-text">Your own AI influencer in minutes: its photos, trend videos, videos, a 3D model that moves, and a coin with its face.</p>
+                  <p class="rm-meta">photos · trend videos · videos · 3D · coins</p>
+                  <a class="rm-go" href="/studio">Open AGI Studio <span class="rm-arrow" aria-hidden="true">→</span></a>
+                </div>
+              </li>
+            </ol>
+
+            <div class="rm-here" data-rm-reveal>
+              <p class="rm-here-tag">We're here</p>
+              <span class="rm-here-dot" aria-hidden="true"></span>
+              <h2 class="rm-label">Coming soon</h2>
+            </div>
+
+            <ol class="rm-list rm-list-soon" start="3">
+              <li class="rm-item is-soon" data-rm-reveal>
+                <span class="rm-num" aria-hidden="true">03</span>
+                <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6.5" rx="7" ry="2.8"/><path d="M5 6.5v5.2c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8V6.5"/><path d="M5 11.7v5.3c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8v-5.3"/></svg></span>
+                <div class="rm-card is-link">
+                  <div class="rm-card-top">
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Coming soon</p>
+                    <span class="rm-step mono">Step 3 of 6</span>
+                  </div>
+                  <h3 class="rm-name">Stake $AGI</h3>
+                  <p class="rm-text">Stake your $AGI and get rewards. Choose how: in USDG only, in $AGI only, or free AI with sAGI.</p>
+                  <p class="rm-meta">coming soon · not financial advice · 18+, only where it's legal</p>
+                  <a class="rm-go" href="/stake">See what's coming<span class="sr-only">: staking</span> <span class="rm-arrow" aria-hidden="true">→</span></a>
+                </div>
+              </li>
+              <li class="rm-item is-soon" data-rm-reveal>
+                <span class="rm-num" aria-hidden="true">04</span>
+                <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.6 7.5h8.8a4.6 4.6 0 0 1 4.5 5.6l-.8 3.6a2.3 2.3 0 0 1-3.9 1.1L14.1 16H9.9l-2.1 1.8a2.3 2.3 0 0 1-3.9-1.1l-.8-3.6a4.6 4.6 0 0 1 4.5-5.6Z"/><path d="M8.2 10.4v3.2M6.6 12h3.2"/><path d="M15.6 10.8h.01M17.6 13h.01" stroke-width="2.4"/></svg></span>
+                <div class="rm-card is-link">
+                  <div class="rm-card-top">
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Coming soon</p>
+                    <span class="rm-step mono">Step 4 of 6</span>
+                  </div>
+                  <h3 class="rm-name">AGI games</h3>
+                  <p class="rm-text">Earn $AGI while you play. A lot of types of games, casino-style ones included.</p>
+                  <p class="rm-meta">coming soon · not financial advice · 18+, only where it's legal</p>
+                  <a class="rm-go" href="/games">See what's coming<span class="sr-only">: AGI games</span> <span class="rm-arrow" aria-hidden="true">→</span></a>
+                </div>
+              </li>
+              <li class="rm-item is-soon" data-rm-reveal>
+                <span class="rm-num" aria-hidden="true">05</span>
+                <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="4" rx="1.2"/><path d="M5 12.5v6.3A1.2 1.2 0 0 0 6.2 20h11.6a1.2 1.2 0 0 0 1.2-1.2v-6.3M12 8.5V20"/><path d="M12 8.5C10.6 5 6.6 4.6 6.6 6.9c0 1.3 1.9 1.6 5.4 1.6Zm0 0c1.4-3.5 5.4-3.9 5.4-1.6 0 1.3-1.9 1.6-5.4 1.6Z"/></svg></span>
+                <div class="rm-card is-link">
+                  <div class="rm-card-top">
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Coming soon</p>
+                    <span class="rm-step mono">Step 5 of 6</span>
+                  </div>
+                  <h3 class="rm-name">Giveaways</h3>
+                  <p class="rm-text">Win giveaways by creating viral content for AGI.</p>
+                  <p class="rm-meta">coming soon · not financial advice · 18+</p>
+                  <a class="rm-go" href="/giveaway">See what's coming<span class="sr-only">: giveaways</span> <span class="rm-arrow" aria-hidden="true">→</span></a>
+                </div>
+              </li>
+              <!-- the owner's "/18+ ?", a mystery card (the owner's choice): locked, no details, no page -->
+              <li class="rm-item is-locked" data-rm-reveal>
+                <span class="rm-num" aria-hidden="true">06</span>
+                <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.6"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.4v2.3"/></svg></span>
+                <div class="rm-card rm-card-locked">
+                  <div class="rm-card-top">
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Locked</p>
+                    <span class="rm-step mono">Step 6 of 6</span>
+                  </div>
+                  <h3 class="rm-name rm-name-locked"><span class="rm-adult">18+</span><span class="rm-q" aria-hidden="true">???</span><span class="sr-only">: a secret for now</span></h3>
+                  <div class="rm-redact" aria-hidden="true"><span></span><span></span><span></span></div>
+                  <p class="rm-text">Locked. No details yet.</p>
+                  <p class="rm-meta">coming soon</p>
+                </div>
+              </li>
+            </ol>
+          </div>
+
+          <div class="rm-loop rm-rv" data-rm-reveal>
+            <div>
+              <h2 class="rm-loop-title">Be the first to know</h2>
+              <p class="rm-text">Each one opens here on agi1.app, and we say so on X and in the $AGI group on Telegram.</p>
+            </div>
+            <div class="rm-actions">
+              <a class="btn btn-primary btn-sm" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">Follow @agi1dotapp ↗</a>
+              <a class="btn btn-ghost btn-sm" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">Join on Telegram ↗</a>
+            </div>
+          </div>
+
+          <section class="rm-fine" aria-labelledby="rm-fine-title">
+            <h2 class="rm-fine-title" id="rm-fine-title">The fine print</h2>
+            <ul>
+              <li>Coming soon means not built yet: no dates are promised, and any of it can change or not happen at all.</li>
+              <li>Nothing can be staked, played or won yet, and this page never asks your wallet for anything. Anyone asking you to stake, send $AGI or claim a prize now isn't us.</li>
+              <li>Staking rewards, game prizes and giveaways are never guaranteed and never an investment. Not financial advice: $AGI is a meme token and can lose all of its value.</li>
+              <li>Staking, games and giveaways with real value are 18+, and only where they're legal where you live.</li>
+              <li>When one opens, it's here on agi1.app first. Read the full <a href="/#safety">safety note</a>.</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap diary-foot">
+        <p><b>The only serious part of this page.</b> AGI-1 is a fictional character voiced by an AI language model; she can be wrong. $AGI is a meme token on Robinhood Chain, made for entertainment, and meme tokens can lose all of their value. Nothing here is financial advice or a promise of profit. Read the full <a href="/#safety">safety note</a>.</p>
+      </div>
+      <div class="foot-bar">
+        <div class="wrap foot-bar-in">
+          <p class="foot-brand">AGI</p>
+          <nav class="foot-nav" aria-label="Footer">
+            <a href="/#evaluations">Evaluations</a>
+            <a href="/#model-card">Model card</a>
+            <a href="/#playground">Playground</a>
+            <a href="/#checker">Risk check your coins on clank</a>
+            <a href="/diary">Diary</a>
+            <a href="/live">Live</a>
+            <a href="/studio">AGI Studio</a>
+            <a href="/roadmap" aria-current="page">Roadmap</a>
+            <a href="https://clank.trade/coin/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">clank.trade ↗</a>
+            <a href="https://dexscreener.com/robinhood/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">DexScreener ↗</a>
+            <a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">X @agi1dotapp ↗</a>
+            <a href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">Telegram @agi2dotapp ↗</a>
+          </nav>
+          <p class="foot-legal">
+            <span>© 2026 AGI. No labs were harmed.</span>
+            <span>$AGI is a token made by the AGI team, launched on clank.trade. Entertainment only · Not financial advice.</span>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/roadmap/page.js"></script>
+  </body>
+</html>

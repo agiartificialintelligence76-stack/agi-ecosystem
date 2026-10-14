@@ -1,13 +1,18 @@
 // AGI-1's 3D character studio (2026-10-10): a character on its page (agi1.app/studio/<id>), in 3D with three.js. Its file
 // (made by Meshy, kept small on our server: its bones and its moves, one clip each, named as Meshy's library names them
-// and in src/studio/rules.js MOVES' order) comes from our own address; it stands in its idle and plays a move when its page
+// (a move described in words: own_<its name>), idle first, then its library moves, then its own) comes from our own
+// address; it stands in its idle and plays a move when its page
 // asks (its chat box, its buttons). Nothing here talks to anyone. Loaded only on a character's page (three.js is big; the
-// studio's own page never loads it).
+// studio's own page never loads it). Since 2026-10-13 (the owner: "i wish theres more tools to customize the 3d like in
+// meshy"): every move of the library and its moves described in words, and its page's tools (src/studio/stage-tools.js): its
+// lights, how it's drawn (its colors, clay, a wireframe), a turntable spin, a zoom, its moves' speed and a frozen pose, and
+// its pictures and clips' frames, drawn in the visitor's browser.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { LOOPING, MOVES } from './rules.js';
+import { LOOPING, MOVE_LIBRARY, MOVE_BY_NAME, ownClip } from './rules.js';
+import { LIGHTS, LOOKS, ZOOM, SPIN_TURN_S, SPEEDS, ratioFor } from './stage-tools.js';
 
 const LOOPS = 3;          // a move that goes on (dance, walk, party) plays this many times, then it stands again
 const FADE = 0.3;         // seconds from one move to the next
@@ -15,11 +20,13 @@ const FOV = 26;
 const SAMPLES = 8;        // each move looked at this many times a second (6 to 20 times), to frame every pose of it
 const VERTS = 1000;       // at most this many of a mesh's points looked at each time (a box, not a picture)
 
-// Its clips, by move: by the library's names when every clip has one (Meshy names them so), else in the order asked for.
-// "Armature|Idle" counts as "Idle" (Blender's way of naming them). → Map(move → clip)
+// Its clips, by move: by their names when every clip has one we know (the library's names, as Meshy names them; a move
+// described in words, own_<its name>: server/studio.js), else in the order asked for (its file's: idle, its library moves,
+// its own). "Armature|Idle" counts as "Idle" (Blender's way of naming them). → Map(move → clip)
 const norm = (s) => String(s ?? '').split('|').pop().toLowerCase().replace(/[^a-z0-9]/g, '');
 export function clipsFor(animations, moves) {
-  const byName = new Map(MOVES.map((m) => [norm(m.clip), m.name]));
+  const byName = new Map(MOVE_LIBRARY.map((m) => [norm(m.clip), m.name]));
+  for (const m of moves) if (!MOVE_BY_NAME.has(m)) byName.set(norm(ownClip(m)), m);
   const named = animations.map((c) => byName.get(norm(c.name)));
   const out = new Map();
   if (named.length && named.every(Boolean) && new Set(named).size === named.length) {
@@ -127,8 +134,37 @@ export function framing(box, aspect, fov = FOV) {
   return { distance: Math.max(byHeight, byWidth) + size.z / 2, center };
 }
 
-// → { play(move) → true if it has it, moves (the ones its file has), dispose() }. Throws when it can't be shown (no
-// WebGL, its file can't be read): then its page shows its picture.
+// Where the camera looks at a zoom: at ZOOM.MIN (1×) the middle of the box of every pose of its moves, as before; at ZOOM.MAX
+// its face, a little under the top of its box standing still (rest: its idle's box, so a jump's top never pulls the camera
+// into the air above it). moves, rest: Box3s → the height to look at (y)
+export const HEAD = 0.13;
+export function aimFor(moves, rest, zoom) {
+  const z = Math.min(ZOOM.MAX, Math.max(ZOOM.MIN, Number(zoom) || ZOOM.MIN));
+  const k = (z - ZOOM.MIN) / (ZOOM.MAX - ZOOM.MIN);
+  const mid = (moves.min.y + moves.max.y) / 2;
+  const face = rest.max.y - (rest.max.y - rest.min.y) * HEAD;
+  return mid + (face - mid) * k;
+}
+
+// Its light rigs (src/studio/stage-tools.js LIGHTS): the soft room's light (env), a sky light (hemi: its sky, its ground, its
+// strength), a sun (its color, strength and where it comes from) and two rim lights behind it ([strength, color]: on its left,
+// on its right). Studio is the light it always had.
+export const RIGS = {
+  studio: { env: 0.75, hemi: [0xffffff, 0x3a2a5a, 0.9], sun: [0xffffff, 1.6, [1.2, 3, 2.4]], rims: [[0, 0xffffff], [0, 0xffffff]] },
+  soft: { env: 1.05, hemi: [0xffffff, 0x4b4566, 1.3], sun: [0xffffff, 0.65, [0.3, 2.2, 3]], rims: [[0, 0xffffff], [0, 0xffffff]] },
+  golden: { env: 0.5, hemi: [0xffe2c2, 0x3d2648, 0.6], sun: [0xffa04d, 2.4, [-2.6, 1.3, 1.6]], rims: [[0.9, 0xffc27a], [0, 0xffffff]] },
+  neon: { env: 0.3, hemi: [0x8f86ff, 0x10081f, 0.45], sun: [0xffffff, 0.4, [0.5, 2.5, 2.5]], rims: [[3.2, 0xff3fd2], [3.2, 0x3fe7ff]] },
+  moon: { env: 0.22, hemi: [0x7d8cff, 0x05060f, 0.4], sun: [0xc4d4ff, 1.1, [-1.4, 3, -1.8]], rims: [[1.6, 0x9fb6ff], [0, 0xffffff]] },
+};
+const RIM_AT = [[-2.2, 1.6, -2.4], [2.2, 1.6, -2.4]];
+// how it's drawn: clay (one matte grey for all of it), and a wireframe over its own surface written to depth only (pushed back
+// a little), so only the lines on the side facing the camera show, like a mesh in a 3D tool (not an x-ray of every line in it)
+const CLAY = { color: 0xd9d3c9, roughness: 0.82, metalness: 0 };
+const WIRE = { color: 0xa78bfa, opacity: 0.9 };
+
+// → { play(move) → true if it has it, moves (the ones its file has), its tools (setLight, setLook, setSpin, setFrozen, setSpeed,
+// setZoom, resetView, zoom), capture(long, draw), hires(long) → undo, onFrame(fn) → off, dispose() }. Throws when it can't be
+// shown (no WebGL, its file can't be read): then its page shows its picture.
 export async function createViewer(canvas, { url, moves, onMove = () => {} }) {
   const coarse = matchMedia('(pointer: coarse)').matches;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !coarse, alpha: true, powerPreference: 'high-performance' });
@@ -149,20 +185,29 @@ async function build(renderer, canvas, { url, moves, onMove, coarse }) {
   const room = new RoomEnvironment();
   scene.environment = pmrem.fromScene(room, 0.04).texture;
   room.dispose?.();
-  scene.environmentIntensity = 0.75;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x3a2a5a, 0.9));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-  sun.position.set(1.2, 3, 2.4);
+  scene.environmentIntensity = RIGS.studio.env;
+  const hemi = new THREE.HemisphereLight(...RIGS.studio.hemi);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight(RIGS.studio.sun[0], RIGS.studio.sun[1]);
+  sun.position.set(...RIGS.studio.sun[2]);
   scene.add(sun);
+  const rims = RIM_AT.map((at) => {
+    const l = new THREE.DirectionalLight(0xffffff, 0);
+    l.position.set(...at);
+    scene.add(l);
+    return l;
+  });
 
   const gltf = await new GLTFLoader().loadAsync(url);
   const model = gltf.scene;
+  const meshes = [];
   model.traverse((o) => {
     if (o.isMesh) {
       o.frustumCulled = false;                         // a skinned mesh's box is its rest pose's: a move could leave it
       for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
         if (m && 'metalness' in m && !m.metalnessMap && m.metalness > 0.2) m.metalness = 0.2;   // glTF's default (1) reads as chrome
       }
+      meshes.push(o);
     }
   });
   scene.add(model);
@@ -179,20 +224,39 @@ async function build(renderer, canvas, { url, moves, onMove, coarse }) {
   idle.setLoop(THREE.LoopRepeat, Infinity).play();
   let current = idle;
   mixer.update(0);
+  const rest = poseBox(model);                         // standing in its idle: where its face is, for the zoom
 
-  // the camera: its whole body (and every move of it), a little from above
+  // a turntable: it turns about the middle of its box, under lights that stay where they are (like a real one)
+  const mid = box.getCenter(new THREE.Vector3());
+  const turn = new THREE.Group();
+  turn.position.set(mid.x, 0, mid.z);
+  scene.add(turn);
+  model.position.x -= mid.x;
+  model.position.z -= mid.z;
+  turn.add(model);
+  model.updateMatrixWorld(true);
+
+  // the camera: its whole body (and every move of it), a little from above; closer at a zoom, toward its face
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.01, 200);
   const controls = coarse ? null : new OrbitControls(camera, canvas);
+  const FRONT = new THREE.Vector3(0, 0.08, 1).normalize();
+  const _dir = new THREE.Vector3();
+  let zoom = ZOOM.MIN, base = null;
+  function place(dir) {
+    const d = base.distance / zoom;
+    const aim = new THREE.Vector3(base.center.x, aimFor(box, rest, zoom), base.center.z);
+    camera.position.copy(aim).addScaledVector(dir, d * Math.hypot(1, 0.08));
+    camera.near = d / 100; camera.far = base.distance * 10;
+    camera.updateProjectionMatrix();
+    camera.lookAt(aim);
+    if (controls) { controls.target.copy(aim); controls.minDistance = d * 0.6; controls.maxDistance = d * 1.6; controls.update(); }
+  }
   function frame() {
     const w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    const { distance, center } = framing(box, camera.aspect);
-    camera.position.set(center.x, center.y + distance * 0.08, center.z + distance);
-    camera.near = distance / 100; camera.far = distance * 10;
-    camera.updateProjectionMatrix();
-    camera.lookAt(center);
-    if (controls) { controls.target.copy(center); controls.minDistance = distance * 0.6; controls.maxDistance = distance * 1.6; controls.update(); }
+    base = framing(box, camera.aspect);
+    place(FRONT);
   }
   if (controls) {
     Object.assign(controls, { enableZoom: false, enablePan: false, enableDamping: true, dampingFactor: 0.08, rotateSpeed: 0.6 });
@@ -224,20 +288,108 @@ async function build(renderer, canvas, { url, moves, onMove, coarse }) {
     return true;
   }
 
-  // drawn only while it's on screen and the page is shown, at most about 60 times a second
+  // ---------- its tools (2026-10-13) ----------
+  // its light
+  function setLight(key) {
+    const r = RIGS[key];
+    if (!r || !Object.hasOwn(LIGHTS, key)) return false;
+    scene.environmentIntensity = r.env;
+    hemi.color.setHex(r.hemi[0]); hemi.groundColor.setHex(r.hemi[1]); hemi.intensity = r.hemi[2];
+    sun.color.setHex(r.sun[0]); sun.intensity = r.sun[1]; sun.position.set(...r.sun[2]);
+    r.rims.forEach(([strength, color], n) => { rims[n].intensity = strength; rims[n].color.setHex(color); });
+    wake();
+    return true;
+  }
+  // how it's drawn: its own colors, clay, or its wireframe (two more passes of each of its meshes, made the first time)
+  const originals = new Map(meshes.map((o) => [o, o.material]));
+  let clay = null, wireMats = null, passes = null;
+  function wirePasses() {
+    if (passes) return passes;
+    wireMats = [
+      new THREE.MeshBasicMaterial({ colorWrite: false, polygonOffset: true, polygonOffsetFactor: 1.5, polygonOffsetUnits: 2 }),
+      new THREE.MeshBasicMaterial({ color: WIRE.color, wireframe: true, transparent: true, opacity: WIRE.opacity }),
+    ];
+    passes = meshes.flatMap((o) => wireMats.map((mat) => {
+      const p = o.isSkinnedMesh ? new THREE.SkinnedMesh(o.geometry, mat) : new THREE.Mesh(o.geometry, mat);
+      p.position.copy(o.position); p.quaternion.copy(o.quaternion); p.scale.copy(o.scale);
+      if (o.isSkinnedMesh) p.bind(o.skeleton, o.bindMatrix);
+      if (o.morphTargetInfluences) { p.morphTargetInfluences = o.morphTargetInfluences; p.morphTargetDictionary = o.morphTargetDictionary; }
+      p.frustumCulled = false;
+      p.visible = false;
+      o.parent.add(p);
+      return p;
+    }));
+    return passes;
+  }
+  let look = 'color';
+  function setLook(key) {
+    if (!Object.hasOwn(LOOKS, key)) return false;
+    look = key;
+    if (key === 'clay' && !clay) clay = new THREE.MeshStandardMaterial(CLAY);
+    if (key === 'wire') wirePasses();
+    for (const o of meshes) { o.visible = key !== 'wire'; o.material = key === 'clay' ? clay : originals.get(o); }
+    for (const p of passes || []) p.visible = key === 'wire';
+    wake();
+    return true;
+  }
+  // its zoom (the user's own turn of the camera kept, on a computer), and back to the front at 1× (its turntable's turn too)
+  function setZoom(z) {
+    zoom = Math.min(ZOOM.MAX, Math.max(ZOOM.MIN, Number(z) || ZOOM.MIN));
+    place(controls ? _dir.copy(camera.position).sub(controls.target).normalize() : FRONT);
+    wake();
+    return zoom;
+  }
+  function resetView() {
+    zoom = ZOOM.MIN;
+    turn.rotation.y = 0;
+    place(FRONT);
+    wake();
+  }
+  let spinning = false, frozen = false;
+  const SPIN = (Math.PI * 2) / SPIN_TURN_S;
+  // one frame drawn again at about `long` px on its longest side, then draw(canvas) at once (a WebGL canvas can only be read in
+  // the task it was drawn in), then back to the screen's own pixels → what draw returns
+  function capture(long, draw) {
+    const w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
+    const own = renderer.getPixelRatio();
+    renderer.setPixelRatio(ratioFor(w, h, long, own));
+    renderer.setSize(w, h, false);
+    renderer.render(scene, camera);
+    try {
+      return draw(canvas);
+    } finally {
+      renderer.setPixelRatio(own);
+      renderer.setSize(w, h, false);
+      renderer.render(scene, camera);
+    }
+  }
+  // drawn with more pixels while a clip is recorded (about `long` px on its longest side) → undo
+  function hires(long) {
+    const own = renderer.getPixelRatio();
+    const set = (r) => { renderer.setPixelRatio(r); renderer.setSize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight), false); };
+    set(ratioFor(canvas.clientWidth, canvas.clientHeight, long, own));
+    return () => set(own);
+  }
+
+  // drawn only while it's on screen (or a clip is being recorded: onFrame) and the page is shown, at most about 60 times a second
   const clock = new THREE.Clock();
+  const after = new Set();
   let shown = true, raf = 0, last = 0;
+  const live = () => (shown || after.size > 0) && document.visibilityState === 'visible';
   const loop = (t) => {
     raf = 0;
-    if (!shown || document.visibilityState !== 'visible') return;
+    if (!live()) return;
     raf = requestAnimationFrame(loop);
     if (t - last < 15) return;
     last = t;
-    mixer.update(Math.min(clock.getDelta(), 0.1));
+    const dt = Math.min(clock.getDelta(), 0.1);
+    if (!frozen) mixer.update(dt);
+    if (spinning) turn.rotation.y = (turn.rotation.y + dt * SPIN) % (Math.PI * 2);
     controls?.update();
     renderer.render(scene, camera);
+    for (const fn of after) fn(canvas);
   };
-  function wake() { if (!raf && shown && document.visibilityState === 'visible') { clock.getDelta(); raf = requestAnimationFrame(loop); } }
+  function wake() { if (!raf && live()) { clock.getDelta(); raf = requestAnimationFrame(loop); } }
   const seen = new IntersectionObserver((entries) => { shown = entries.some((e) => e.isIntersecting); wake(); });
   seen.observe(canvas);
   document.addEventListener('visibilitychange', wake);
@@ -246,11 +398,31 @@ async function build(renderer, canvas, { url, moves, onMove, coarse }) {
   return {
     play,
     moves: [...actions.keys()],
+    setLight,
+    setLook,
+    get look() { return look; },
+    setSpin(on) { spinning = on === true; wake(); },
+    setFrozen(on) { frozen = on === true; wake(); },
+    setSpeed(s) {
+      if (!SPEEDS.includes(Number(s))) return false;
+      mixer.timeScale = Number(s);
+      return true;
+    },
+    setZoom,
+    get zoom() { return zoom; },
+    resetView,
+    capture,
+    hires,
+    // fn(canvas) right after each frame is drawn (a clip's frames) → off
+    onFrame(fn) { after.add(fn); wake(); return () => { after.delete(fn); }; },
     dispose() {
       cancelAnimationFrame(raf);
+      after.clear();
       seen.disconnect(); resize.disconnect();
       document.removeEventListener('visibilitychange', wake);
       controls?.dispose();
+      clay?.dispose();
+      for (const m of wireMats || []) m.dispose();
       pmrem.dispose();
       renderer.dispose();
     },

@@ -146,3 +146,24 @@ export const MOMENTS = {
   end: at(49),
   lastHits: [at(50), at(50, 1)],
 };
+
+// AGI-1's voice over its music (2026-10-13, the owner: "will it be good if you add voice over to the launch video", then
+// "Short, AGI-1's voice"): her lines (words.js VOICE), each where her first sound goes, at the picture's big moments. Never
+// over a drop or the trend videos' drop, never in a breath; each starts after the music's hit at its moment, so the hit
+// gets through at full level (tools/studio-promo/voice.js dips the music under her, and leaves the hits alone), except
+// the hits in `over`, which she speaks over. `len`: how long her words last in her take (voice.js readyLine): a take that
+// lasts much longer or shorter needs its place checked again (make.mjs says so).
+export const VOICE = [
+  { id: 'meet', at: MOMENTS.meet + 0.05, len: 1.13 },                       // "Meet Nova.", with its headline
+  { id: 'not-real', at: MOMENTS.notReal - 0.32, len: 1.25, over: [MOMENTS.notReal] }, // "She's | not real.": its hit between
+  { id: 'you-made', at: MOMENTS.youMade + 0.15, len: 1.17 },                // "You made her."
+  { id: 'studio', at: MOMENTS.headline + 0.15, len: 2.3 },                  // "This is AGI Studio.", the drop's second bar
+  { id: 'design', at: MOMENTS.appIn + 0.25, len: 2.66 },                    // "Design yours in a few taps.", as they start
+  { id: 'styles', at: MOMENTS.lineup[0] + 0.15, len: 1.87 },                // "Any look, any style.", with the four of them
+  { id: 'edit', at: MOMENTS.typeEdit + 0.1, len: 1.54 },                    // "Just say what to change.", as it's typed
+  { id: 'move', at: MOMENTS.move + 0.2, len: 1.29 },                        // "Now, make it move."
+  { id: 'model', at: MOMENTS.model + 0.2, len: 2.24 },                      // "A 3D model that moves."
+  { id: 'share', at: MOMENTS.likesWall, len: 1.58 },                        // "Share it. Get liked.", with its wall of likes
+  { id: 'url', at: MOMENTS.cta + 0.3, len: 2.92 },                          // the address, as its pill pops up
+  { id: 'live', at: MOMENTS.end + 0.25, len: 1.39 },                        // "Live now.", on the end card
+];

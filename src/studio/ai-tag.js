@@ -3,9 +3,12 @@
 // video downloaded says inside its file that it's AI-made, whether or not it carries our visible pill (a holder of 1,000+ $AGI
 // downloads its own without the pill): XMP with the IPTC's "Digital Source Type" (trainedAlgorithmicMedia: the standard tag
 // Instagram, Facebook and Google read for pictures). Pure: our server (server/inf-api.js, server/inf-jobs.js) and the
-// browser (the photo editor's download) both use it; nothing here is Node's or a browser's own.
+// browser (the photo editor's download; since 2026-10-13 a 3D model's page's pictures and clips) both use it; nothing here
+// is Node's or a browser's own.
 //   A JPEG: one APP1 segment of XMP right after its start (after a JFIF APP0, where there is one), as Adobe's XMP spec puts it.
 //   An MP4: one top-level 'uuid' box of XMP (Adobe's XMP UUID) appended after everything else, so no offset in it moves.
+//   (2026-10-13) A PNG: one iTXt chunk of XMP (its keyword "XML:com.adobe.xmp", uncompressed) right after its IHDR, as Adobe's
+//   XMP spec puts it (before its picture's data).
 export const DIGITAL_SOURCE = 'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia';
 export const AI_WORDS = 'AI-generated with AGI Studio (studio.agi1.app)';
 export const AI_XMP = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -114,13 +117,68 @@ export function mp4WithXmp(bytes) {
   return out;
 }
 
-// Whether a JPEG or an MP4 carries our tag
+// ---------- (2026-10-13) a PNG ----------
+const PNG_SIG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const PNG_XMP = 'XML:com.adobe.xmp';
+export const isPng = (bytes) => { const b = u8(bytes); return Boolean(b && b.length > 8 && PNG_SIG.every((v, k) => b[k] === v)); };
+// its chunks, up to its IEND: [{ type, at, end }] · null when they don't add up (or there's no IEND)
+function pngChunks(b) {
+  const out = [];
+  let at = 8;
+  while (at + 12 <= b.length) {
+    const len = u32(b, at);
+    const end = at + 12 + len;
+    if (end > b.length) return null;
+    const type = ascii(b, at + 4, 4);
+    out.push({ type, at, end });
+    if (type === 'IEND') return out;
+    at = end;
+  }
+  return null;
+}
+const isXmpChunk = (b, c) => c.type === 'iTXt' && ascii(b, c.at + 8, PNG_XMP.length + 1) === `${PNG_XMP}\0`;
+let CRC = null;
+// a PNG chunk's CRC (over its type and its data)
+export function crc32(b, from = 0, to = b.length) {
+  if (!CRC) {
+    CRC = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; CRC[n] = c >>> 0; }
+  }
+  let c = 0xffffffff;
+  for (let i = from; i < to; i++) c = CRC[(c ^ b[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+// A PNG with our tag (as it is when it has it already) → Uint8Array · null when it isn't a PNG we read
+export function pngWithXmp(bytes) {
+  const b = u8(bytes);
+  if (!isPng(b)) return null;
+  const chunks = pngChunks(b);
+  if (!chunks || chunks[0]?.type !== 'IHDR') return null;
+  if (chunks.some((c) => isXmpChunk(b, c) && holds(b, c.at, c.end))) return b;
+  // its data: the keyword, a null, no compression (0, 0), no language (an empty tag, a null), no translated keyword (a null)
+  const data = new Uint8Array([...encoder.encode(PNG_XMP), 0, 0, 0, 0, 0, ...encoder.encode(AI_XMP)]);
+  const chunk = new Uint8Array(12 + data.length);
+  const n = data.length;
+  chunk.set([n >>> 24, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff, 0x69, 0x54, 0x58, 0x74], 0);   // its length, 'iTXt'
+  chunk.set(data, 8);
+  const crc = crc32(chunk, 4, 8 + n);
+  chunk.set([crc >>> 24, (crc >>> 16) & 0xff, (crc >>> 8) & 0xff, crc & 0xff], 8 + n);
+  const at = chunks[0].end;                                                     // right after its IHDR
+  const out = new Uint8Array(b.length + chunk.length);
+  out.set(b.subarray(0, at), 0);
+  out.set(chunk, at);
+  out.set(b.subarray(at), at + chunk.length);
+  return out;
+}
+
+// Whether a JPEG, an MP4 or a PNG carries our tag
 export function hasAiTag(bytes) {
   const b = u8(bytes);
   if (!b) return false;
   if (isJpeg(b)) return Boolean(jpegSegments(b)?.some((s) => xmpSegment(b, s) && holds(b, s.at, s.end)));
+  if (isPng(b)) return Boolean(pngChunks(b)?.some((c) => isXmpChunk(b, c) && holds(b, c.at, c.end)));
   if (b.length >= 16 && ascii(b, 4, 4) === 'ftyp') return Boolean(mp4Boxes(b)?.some((x) => isXmpBox(b, x) && holds(b, x.at, x.end)));
   return false;
 }
-// Either kind, by what it is → Uint8Array (with our tag) · null when it's neither one we read
-export const withAiTag = (bytes) => (isJpeg(bytes) ? jpegWithXmp(bytes) : mp4WithXmp(bytes));
+// Any of them, by what it is → Uint8Array (with our tag) · null when it's none we read
+export const withAiTag = (bytes) => (isJpeg(bytes) ? jpegWithXmp(bytes) : isPng(bytes) ? pngWithXmp(bytes) : mp4WithXmp(bytes));

@@ -599,6 +599,10 @@ export const SCENES = {
         await film.click(t, { after: 750 });
         if (id === 'video') film.poster();
       }
+      // (2026-10-14) back on Photo, its "With AGI-1" switch drawn again: her face painted before the clip ends (on a computer
+      // without a graphics card it came a second late, and the clip ended on an empty circle)
+      const face = page.locator('.sa-ws-panel .sa-her-face').first();
+      if (await face.count()) await painted(page, face, 250);
       await film.still('tools');
       await film.end(400);
     },
@@ -995,7 +999,10 @@ export const SCENES = {
     async run({ page, film, phone, B }) {
       const models = page.locator('[data-guide="models"]').first();
       await models.waitFor();
-      await film.start(await topOf(models, phone ? 230 : 280), { room: phone ? 1.02 : 1.1 });
+      // (2026-10-14) from the top of its "With AGI-1" switch, so its card is seen whole above the models (from the models' top,
+      // the camera's margin showed the card's bottom edge alone)
+      const her = page.locator('.sa-ws-panel .sa-her').first();
+      await film.start(await topOf((await her.count()) ? her : models, phone ? 230 : 300), { room: phone ? 1.02 : 1.08 });
       await film.wait(800);
       const idea = page.locator('[data-guide="scene"] .sa-idea').first();
       await film.scrollTo(idea, { within: '.sa-ws-body' });

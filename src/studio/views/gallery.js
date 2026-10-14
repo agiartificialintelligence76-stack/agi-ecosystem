@@ -1,12 +1,13 @@
 // AGI Studio (round 3, 2026-10-10, the owner's "Pro tool layout": "gallery of real videos/pictures on the right: Trending ·
 // Influencers · My creations"). Tabs over a wall, the same on Create and Explore:
 //   • Trending: the owner's trend clips (each plays under a computer's mouse; a tap opens it, or on an influencer's page picks
-//     it for its trend video), then the newest public photos and videos with their hearts (All · Photos · Videos);
+//     it for its trend video), (2026-10-13) a row of public photos and videos "With AGI-1", then the newest public photos and
+//     videos with their hearts (All · Photos · Videos);
 //   • Influencers: the boosted ones (a burn put them there for a day), then the newest public ones;
 //   • My creations: this wallet's own influencers (being made, ready, private), and Create new.
 // Everything public here is Explore's answer (/api/launch?inf-explore, kept a little); a signed-in wallet's hearts after.
 import { h, icon, btn, linkBtn, pic, put, add, nextId } from '../ui.js';
-import { infPic, infVideo } from '../rules.js';
+import { infPic, infVideo, WITH_AGI1 } from '../rules.js';
 import { leftText, statusChip } from '../app-words.js';
 import { trendTile, trendSheet, videoSheet, photoSheet, mediaTile, loadLiked, hoverPlay, ownItem } from './shared.js';
 
@@ -89,7 +90,11 @@ export function gallery(ctx, { initial = 'trending', onTrend = null, alsoLiked =
     if (!data) { put(box, failed ? empty("Couldn't load the gallery just now", 'Try again in a moment.') : loadingTiles()); return; }
     if (key === 'trending') {
       const trends = list(data.trends);
-      const fresh = list(data.fresh).filter((v) => filter.value === 'all' || (filter.value === 'photos' ? v.kind === 'photo' : v.kind !== 'photo'));
+      const shows = (v) => filter.value === 'all' || (filter.value === 'photos' ? v.kind === 'photo' : v.kind !== 'photo');
+      const fresh = list(data.fresh).filter(shows);
+      // (2026-10-13) public ones with AGI-1 in them (never a private influencer's: our server's answer), in a row of their own
+      const withHer = list(data.agi1).filter(shows);
+      const badgeOf = (v) => (v.kind === 'trend' ? { text: 'Trend', icon: 'zap' } : v.kind === 'video' ? { text: 'Video', icon: 'film' } : null);
       const trendRow = h('div', { class: 'sa-trend-row', role: 'list' }, ...trends.map((t) => {
         const tile = trendTile(t, { onpick: () => (onTrend ? onTrend(t) : trendSheet(ctx, t)) });
         hoverPlay(tile, infVideo(t.job));
@@ -97,9 +102,11 @@ export function gallery(ctx, { initial = 'trending', onTrend = null, alsoLiked =
       }));
       put(box,
         trends.length ? section('Trend clips', onTrend ? 'Pick one: your influencer takes its person\'s place.' : 'Real-looking clips: your influencer takes its person\'s place.', trendRow) : null,
+        withHer.length ? section(WITH_AGI1.NAME, 'Influencers together with AGI-1, in her own 2D anime style. Switch on “With AGI-1” in Photo or Video for yours.',
+          h('div', { class: 'sa-media-rail', role: 'list', 'aria-label': WITH_AGI1.NAME }, ...withHer.map((v) => h('div', { role: 'listitem' }, mediaTile(ctx, v, { onopen: openItem, badge: badgeOf(v) }))))) : null,
         list(data.fresh).length
           ? section('Fresh', "Holders' hearts pick the spotlight of the week.", fresh.length
-            ? h('div', { class: 'sa-wall' }, ...fresh.map((v) => mediaTile(ctx, v, { onopen: openItem, badge: v.kind === 'trend' ? { text: 'Trend', icon: 'zap' } : v.kind === 'video' ? { text: 'Video', icon: 'film' } : null })))
+            ? h('div', { class: 'sa-wall' }, ...fresh.map((v) => mediaTile(ctx, v, { onopen: openItem, badge: badgeOf(v) })))
             : h('p', { class: 'sa-muted', text: filter.value === 'photos' ? 'No photos yet.' : 'No videos yet.' }))
           : null,
         !trends.length && !list(data.fresh).length
@@ -151,7 +158,7 @@ export function gallery(ctx, { initial = 'trending', onTrend = null, alsoLiked =
   draw(tab);
   ctx.on('me', () => { drawTabs(); drawMine(); });
   ctx.on('wallet', () => { drawTabs(); drawMine(); liked(); });
-  const liked = () => loadLiked(ctx, [...list(data?.fresh).map((v) => v.id), ...alsoLiked]);
+  const liked = () => loadLiked(ctx, [...list(data?.fresh).map((v) => v.id), ...list(data?.agi1).map((v) => v.id), ...alsoLiked]);
   const loaded = ctx.exploreData({ fresh: true }).then((d) => {
     if (!ctx.alive()) return null;
     data = d;

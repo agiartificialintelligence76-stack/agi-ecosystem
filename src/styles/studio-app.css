@@ -1284,7 +1284,9 @@ a.sa-tile:hover { box-shadow: 0 0 0 1px var(--sa-line-3) inset; }
 .sa-step-item.is-done .sa-step-dot { background: var(--sa-good); border-color: var(--sa-good); color: #052e1f; }
 .sa-step-item.is-now .sa-step-dot { border-color: var(--sa-accent); box-shadow: 0 0 0 4px rgb(167 139 250 / 0.18); animation: sa-pulse 1.6s ease infinite; }
 .sa-model-done { display: grid; gap: 10px; margin-top: 6px; }
-.sa-stage { position: relative; aspect-ratio: 4 / 5; border-radius: var(--sa-r); overflow: hidden; border: 1px solid var(--sa-line); background: radial-gradient(90% 70% at 50% 30%, #241a45 0%, #0b0b0f 75%); }
+/* (2026-10-13) its background is the visitor's pick (src/studio/stage-tools.js: backdropCss, set through the CSS object
+   model as --sa-stage-bg), Studio's until then */
+.sa-stage { position: relative; aspect-ratio: 4 / 5; border-radius: var(--sa-r); overflow: hidden; border: 1px solid var(--sa-line); background: var(--sa-stage-bg, radial-gradient(90% 70% at 50% 30%, #241a45 0%, #0b0b0f 75%)); }
 .sa-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: pan-y; }
 .sa-stage-pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 0.2s ease; }
 .sa-stage[data-state='loading'] .sa-stage-pic { opacity: 0.35; }
@@ -1292,7 +1294,8 @@ a.sa-tile:hover { box-shadow: 0 0 0 1px var(--sa-line-3) inset; }
 .sa-stage[data-state='picture'] .sa-canvas { display: none; }
 .sa-stage-note { position: absolute; left: 10px; right: 10px; bottom: 10px; text-align: center; font-size: 13px; color: var(--sa-text-2); }
 .sa-movebar { display: flex; flex-wrap: wrap; gap: 6px; }
-.sa-move { min-height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--sa-line-2); background: var(--sa-surface); color: var(--sa-text); font: inherit; font-weight: 600; font-size: 13px; text-transform: capitalize; cursor: pointer; }
+/* (2026-10-13) a move's own label (rules.js: "Big wave", "Hip-hop"), as written: never capitalized by the page */
+.sa-move { min-height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--sa-line-2); background: var(--sa-surface); color: var(--sa-text); font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; }
 .sa-move:hover { border-color: var(--sa-line-3); background: var(--sa-raised); }
 .sa-move.is-on { border-color: var(--sa-accent); background: var(--sa-accent-bg); }
 .sa-chat { display: flex; gap: 6px; }
@@ -1497,10 +1500,11 @@ a.sa-maker-name:hover { text-decoration: underline; }
   .sa-sheet-foot { padding: 12px 18px; justify-content: flex-end; }
   /* (2026-10-12) one of its own creations seen big: the picture or the video fits under Make another and Delete, the sheet's
      head and its foot (two lines of buttons: about 250px in all). (2026-10-13) its foot as tall as it is (--sa-foot-h, set
-     by the sheet: "Remove watermark" can wrap it onto a third line), 145px for the rest */
-  .sa-edit-row + .sa-big-wrap .sa-big-pic { max-height: min(66vh, calc(88vh - 145px - var(--sa-foot-h, 105px))); }
-  .sa-edit-row + .sa-player-wrap .sa-player.is-tall { height: min(64vh, 640px, calc(88vh - 145px - var(--sa-foot-h, 105px))); }
-  .sa-edit-row + .sa-player-wrap .sa-player.is-square { width: min(100%, 520px, calc(88vh - 145px - var(--sa-foot-h, 105px))); }
+     by the sheet: "Remove watermark" can wrap it onto a third line), and its row of buttons as tall as it is (--sa-row-h,
+     set by the row: "Add AGI-1" can wrap it onto a second line), 115px for the rest */
+  .sa-edit-row + .sa-big-wrap .sa-big-pic { max-height: min(66vh, calc(88vh - 115px - var(--sa-row-h, 30px) - var(--sa-foot-h, 105px))); }
+  .sa-edit-row + .sa-player-wrap .sa-player.is-tall { height: min(64vh, 640px, calc(88vh - 115px - var(--sa-row-h, 30px) - var(--sa-foot-h, 105px))); }
+  .sa-edit-row + .sa-player-wrap .sa-player.is-square { width: min(100%, 520px, calc(88vh - 115px - var(--sa-row-h, 30px) - var(--sa-foot-h, 105px))); }
   .sa-sheet .sa-toasts { bottom: 18px; }
   .sa-stat-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sa-stat-level { grid-column: 1 / -1; }
@@ -1556,8 +1560,16 @@ a.sa-maker-name:hover { text-decoration: underline; }
     -webkit-mask-image: linear-gradient(transparent 0%, #000 18%, #000 82%, transparent 100%);
     mask-image: linear-gradient(transparent 0%, #000 18%, #000 82%, transparent 100%);
   }
-  .sa-model-done { grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr); column-gap: 20px; align-items: start; }
-  .sa-model-done > .sa-stage { grid-row: 1 / span 6; aspect-ratio: 4 / 5; max-height: 80vh; width: 100%; }
+  /* (2026-10-13) a 3D model's page: its stage on the left, staying in view (under the top bar) while its side scrolls: its
+     moves, its studio tools, its downloads. As tall as the window allows, its shape kept (4:5) */
+  .sa-model-done { grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr); column-gap: 20px; align-items: start; }
+  .sa-model-done > .sa-stage {
+    position: sticky;
+    top: calc(var(--sa-bar-h) + 12px);
+    justify-self: center;
+    width: min(100%, calc((100vh - var(--sa-bar-h) - 32px) * 0.8));
+    width: min(100%, calc((100dvh - var(--sa-bar-h) - 32px) * 0.8));
+  }
 }
 @media (min-width: 1600px) {
   .sa { --sa-panel-w: 404px; }
@@ -2426,3 +2438,146 @@ a.sa-maker-name:hover { text-decoration: underline; }
   .sa-sheet-editor .sa-pe-save { flex: 1 1 100%; }
   .sa-pe-stickers { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
+
+/* (2026-10-13) the 3D tool's choices (views/model-tool.js, on an influencer's page): four folding sections (its moves, moves of
+   its own, its shape and look, more downloads), each with a note of what's picked in its summary */
+.sa-m3 { display: grid; gap: 12px; }
+.sa-m3-sec > summary .sa-more-note { margin-left: auto; text-align: right; }
+.sa-m3-title { min-width: 0; }
+.sa-m3-in { display: grid; gap: 12px; }
+.sa-m3-in > .sa-ws-hint { margin-top: 0; }
+/* its moves: checkboxes that look like chips; at its most, the ones not picked wait */
+.sa-mchips .sa-chip-sec:first-of-type { margin-top: 0; }
+.sa-mchips .sa-chip-input:disabled + label { opacity: 0.45; cursor: not-allowed; }
+.sa-mchips .sa-chip-input:disabled + label:hover { border-color: var(--sa-line-2); background: var(--sa-surface); }
+.sa-m3-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.sa-m3-count { margin: 0; flex: 1 1 220px; min-width: 0; }
+/* moves of its own: a card each (its name, what it does, its length) */
+.sa-own-list { display: grid; gap: 10px; }
+.sa-own { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--sa-line-2); border-radius: var(--sa-r-sm); background: var(--sa-surface); }
+.sa-own-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sa-own-title { font-size: 12.5px; font-weight: 650; color: var(--sa-text-2); }
+.sa-own-hint { margin: 0; }
+/* more downloads: a row each, its name and what it's for */
+.sa-dl-opts { display: grid; gap: 6px; }
+.sa-dl-opt label { display: grid; gap: 2px; }
+.sa-dl-name { font-weight: 600; color: var(--sa-text); }
+.sa-dl-note { font-size: 12px; color: var(--sa-text-3); line-height: 1.4; }
+.sa-m3-note { margin: 2px 0 0; }
+.sa-m3-price,
+.sa-m3-burn-note { margin: 0; }
+
+/* (2026-10-13) a 3D model's page (views/model3d.js): its side, in three cards: its moves (and its chat), its studio tools (the
+   owner: "i wish theres more tools to customize the 3d like in meshy"; free, in the visitor's browser), its downloads (its
+   maker's "More downloads" in it) */
+.sa-model-side { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.sa-model-moves,
+.sa-stage-tools,
+.sa-model-files { display: grid; gap: 12px; min-width: 0; padding: 14px; border-radius: var(--sa-r); background: var(--sa-surface); border: 1px solid var(--sa-line); }
+.sa-model-moves > .sa-h2,
+.sa-model-files > .sa-h2 { margin: 0; }
+.sa-model-moves > .sa-muted,
+.sa-model-moves > .sa-log { margin: 0; }
+.sa-tools-head { display: grid; gap: 4px; }
+.sa-tools-head > .sa-h2,
+.sa-tools-head > .sa-fine { margin: 0; }
+.sa-tool-group { display: grid; gap: 8px; min-width: 0; }
+.sa-tool-group > .sa-label,
+.sa-tool-group > .sa-fine { margin: 0; }
+.sa-stage-tools .sa-chips,
+.sa-stage-tools .sa-seg { min-width: 0; margin: 0; }
+/* its moves' speed: five choices side by side, even on a small phone */
+.sa-tool-speed .sa-seg-opt label { padding: 0 4px; }
+/* Spin and Freeze pose: switches (pressed: the accent's) */
+.sa-toggle[aria-pressed='true'] { border-color: var(--sa-accent); background: var(--sa-accent-bg); color: #fff; }
+.sa-toggle[aria-pressed='true'] .sa-i { color: var(--sa-accent); }
+/* a picture or a clip of it: last, under a line */
+.sa-tool-capture { padding-top: 12px; border-top: 1px solid var(--sa-line); }
+.sa-cap-clip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sa-cap-clip > .sa-seg { flex: 1 1 130px; }
+.sa-cap-msg { color: var(--sa-text-2); }
+/* recording: a red dot and the seconds left, top right on the stage (only on the page: never in the clip; our watermark is
+   top left in a clip), and a red ring round the stage */
+.sa-rec {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.62);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.sa-rec::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: sa-rec-blink 1.2s ease-in-out infinite; }
+@keyframes sa-rec-blink { 50% { opacity: 0.3; } }
+.sa-stage[data-rec] { box-shadow: 0 0 0 2px rgb(239 68 68 / 0.75); }
+/* its maker's more downloads: a row each (its name, what it's for, its button or how it's going) */
+.sa-dl3d { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--sa-line); }
+.sa-dl3d > .sa-h3,
+.sa-dl3d > .sa-fine,
+.sa-dl3d > .sa-err { margin: 0; }
+.sa-dl3d-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sa-dl3d-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border-radius: var(--sa-r-sm); background: var(--sa-raised); border: 1px solid var(--sa-line); }
+.sa-dl3d-what { display: grid; gap: 2px; min-width: 0; }
+.sa-dl3d-name { font-size: 13.5px; font-weight: 600; color: var(--sa-text); }
+.sa-dl3d-note { font-size: 12px; line-height: 1.4; color: var(--sa-text-3); }
+.sa-dl3d-state { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: 12.5px; color: var(--sa-text-2); white-space: nowrap; }
+.sa-dl3d-state.is-failed { color: var(--sa-bad); }
+.sa-dl3d-row > .sa-btn { flex: none; }
+
+/* (2026-10-13) "With AGI-1": her switch at the top of the Photo and Video tools (her face, its name and its line, a switch:
+   highlighted, pink like her), the tag on a tile she's in, "Add AGI-1" in a creation's row, her line under one seen big, a
+   start photo she's in, the "Add AGI-1" sheet, her row in the gallery, Instant's ideas with her */
+.sa-her {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px 9px 9px;
+  border-radius: 12px;
+  border: 1px solid rgb(244 114 182 / 0.38);
+  background: linear-gradient(100deg, rgb(124 58 237 / 0.16) 0%, rgb(219 39 119 / 0.12) 100%), var(--sa-surface);
+  color: var(--sa-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.sa-her:hover { border-color: rgb(244 114 182 / 0.65); }
+.sa-her:focus-visible { outline: 2px solid var(--sa-pink); outline-offset: 2px; }
+.sa-her[aria-checked='true'] { border-color: var(--sa-pink); box-shadow: 0 0 0 1px var(--sa-pink) inset, 0 0 22px rgb(219 39 119 / 0.22); }
+.sa-her-face { display: block; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--sa-raised); box-shadow: 0 0 0 2px rgb(244 114 182 / 0.55); }
+.sa-her-text { display: grid; gap: 1px; min-width: 0; }
+.sa-her-name { font-size: 13.5px; font-weight: 700; letter-spacing: -0.01em; }
+.sa-her-note { font-size: 12px; line-height: 1.4; color: var(--sa-text-2); }
+.sa-her .sa-switch-knob { flex: none; }
+.sa-her[aria-checked='true'] .sa-switch-knob { background: #db2777; box-shadow: none; }
+.sa-her[aria-checked='true'] .sa-switch-knob::after { transform: translateX(12px); }
+.sa-tag-agi1 { background-color: #be185d; background-image: linear-gradient(100deg, #be185d 0%, #7c3aed 100%); color: #fff; }
+.sa-media-tags { position: absolute; top: 7px; left: 7px; right: 38px; z-index: 1; display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none; }
+.sa-media-tags .sa-media-tag { position: static; }
+.sa-edit-row .sa-edit-her { border-color: rgb(244 114 182 / 0.5); color: #fbcfe8; }
+.sa-edit-row .sa-edit-her .sa-i { color: var(--sa-pink); }
+.sa-edit-row .sa-edit-her:hover:not(:disabled) { border-color: var(--sa-pink); background: rgb(219 39 119 / 0.12); }
+.sa-edit-words.is-agi1 .sa-i { color: var(--sa-pink); }
+.sa-start { position: relative; }
+.sa-start-her { position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background-color: #be185d; background-image: linear-gradient(100deg, #be185d 0%, #7c3aed 100%); color: #fff; box-shadow: 0 0 0 2px var(--sa-bg); }
+.sa-start-her .sa-i { width: 12px; height: 12px; }
+.sa-her-from { gap: 10px; }
+.sa-her-plus { flex: none; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--sa-raised-2); color: var(--sa-text-2); }
+.sa-her-plus .sa-i { width: 13px; height: 13px; }
+.sa-her-face.is-lg { flex: none; width: 56px; height: 56px; }
+.sa-igroup.is-agi1 { padding: 10px; border-radius: 12px; border: 1px solid rgb(244 114 182 / 0.34); background: linear-gradient(100deg, rgb(124 58 237 / 0.12) 0%, rgb(219 39 119 / 0.08) 100%); }
+.sa-igroup.is-agi1 .sa-igroup-h .sa-i { color: var(--sa-pink); }
+.sa-media-rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(140px, 168px); align-items: start; gap: 8px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; scroll-snap-type: x proximity; }
+.sa-media-rail > * { min-width: 0; scroll-snap-align: start; }
+.sa-media-rail .sa-media { margin: 0; }

@@ -176,14 +176,41 @@
 --     it (marked: inf_mark_take leaves it alone). inf_job_get gives its cut; inf_admin_stats counts edited photos and videos
 --     apart ('edited', 'cut'). Its source can't be deleted while it's being made (inf_job_delete's "in_use", as for a video
 --     from a photo).
+-- The 3D tool's choices (2026-10-13, the owner: "i wish theres more tools to customize the 3d like in meshy, please fixx and
+-- make it better"; the owner's choices: its moves, its shape and look, its page's tools, more downloads; "Per extra, ~1.8×";
+-- "30 days"). Run supabase/studio.sql again first (its version of 2026-10-13: the choices' columns, the steps for moves
+-- described in words, the extra downloads' clock), then this file again (it keeps everything saved). It adds:
+--   • a 3D model's choices (studio.sql's agi1_studio_orders.spec, checked by our server: its library moves, up to 2 moves
+--     described in words, its detail, shine, pose, height, its look in words; and the extra downloads asked for, .formats):
+--     inf_3d's p_spec, its price with its extras (p_cost), and what a Soulmate's free model a month still costs (p_free_cost:
+--     its extras; the free one covers its standard price only); inf_3d_burn's p_spec (only choices with nothing extra: a burn
+--     pays nobody; while nothing is burned toward an open one, its choices are the ones asked for last); inf_3d_list gives its
+--     choices and its extra downloads (asked for, made, waiting, couldn't be made, their sizes, until when). Both functions'
+--     older versions are dropped first (one of each to choose from).
+-- "With AGI-1" (2026-10-13, the owner's choices: "Her 2D anime self", "Cute and flirty", "Same as without her", "Yes, kept
+-- private"). Run this file again (it keeps everything saved; still 106 functions). It adds:
+--   • AGI-1 in a photo, a meme, an X banner or a video (agi1_inf_jobs.agi1; never a trend video's): inf_make's p_agi1 (its
+--     version from the editor, 21 arguments, is dropped first). A photo with her by Classic only; "Add AGI-1" (a photo with
+--     p_image and p_agi1, without p_edit: she's put into one of its photos, by Classic, without references, the photo's own
+--     shape and a meme's own format and words, never one she's in already); an edit of a photo with her, and a video from one,
+--     have her too; a Standard, Pro or Long video with her starts from a photo she's in (Anime puts her in from her own
+--     pictures), with one reference at most; a trend video never starts from a photo with her. At the same price as without
+--     her. inf_job_get and inf_jobs give it; a photo or a video saved from the editors from one with her has her
+--     (inf_photo_add, inf_cut_add).
+--   • Explore's newest photos and videos with her (inf_explore's 'agi1': public influencers only, never a private one, one made
+--     from a real person's photo, a banned maker's, a hidden or deleted one, or an X banner); its newest photos and videos say
+--     whether she's in them.
 
--- studio.sql first (its version of 2026-10-10): this file builds on its tables, its months and its payment ledger
+-- studio.sql first (its version of 2026-10-13, with the 3D tool's choices): this file builds on its tables, its months and its
+-- payment ledger
 do $do$
 begin
   if to_regclass('public.agi1_studio_orders') is null or to_regclass('public.agi1_studio_txs') is null
      or not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_studio_orders'
-       and column_name = 'image_path') then
-    raise exception 'Run supabase/studio.sql first (its version of 2026-10-10, with AGI Studio), then this file again';
+       and column_name = 'image_path')
+     or not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_studio_orders'
+       and column_name = 'spec') then
+    raise exception 'Run supabase/studio.sql first (its version of 2026-10-13, with the 3D tool''s choices), then this file again';
   end if;
 end
 $do$;
@@ -696,6 +723,14 @@ alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_editor_check check
 alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_seconds_check;
 alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_seconds_check check (seconds between 1 and 60);
 create index if not exists agi1_inf_jobs_cuts on public.agi1_inf_jobs (updated_at) where editor and kind = 'video' and status in ('paid', 'making');
+
+-- ---------- (2026-10-13) "With AGI-1": AGI-1 in a photo, a meme, an X banner or a video ----------
+-- She's in it: asked for (inf_make's p_agi1), "Add AGI-1" to one of its photos, an edit of a photo with her or a video from one
+-- (inf_make), or a photo or a video saved from the editors from one with her (inf_photo_add, inf_cut_add). Never a trend video.
+alter table public.agi1_inf_jobs add column if not exists agi1 boolean not null default false;
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_agi1_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_agi1_check check (not agi1 or kind in ('photo', 'video'));
+create index if not exists agi1_inf_jobs_agi1 on public.agi1_inf_jobs (done_at) where agi1 and status = 'done';
 
 -- Row Level Security ON, with no rules: the public (browser) keys can't read or change these tables.
 alter table public.agi1_inf_likes enable row level security;
@@ -1683,19 +1718,29 @@ $$;
 -- p_per_wallet: jobs one wallet may have being made at once · p_day_cap: AI jobs a day for the whole site.
 -- (Round 4) a photo may be an X banner (p_shape 'banner'); a video or trend video never starts from one ("banner").
 -- → {"ok": true, "paid", "free", "bonus"} or {"ok": false, "why": "gone" | "not_yours" | "not_ready" | "trend" | "clip" | "image" |
---   "banner" | "too_many" | "short" | "busy_day" | "taken" | "bad"}
+--   "banner" | "too_many" | "short" | "busy_day" | "taken" | "bad" | (2026-10-13) "agi1_trend" | "agi1_model" | "agi1_photo" |
+--   "agi1_has" | "refs"}
 -- (Round 4, phase 4 added p_model … p_caption, with defaults: the older version is dropped first, so the web API never has
 -- two to choose from; an older page's call still works: Classic, Standard for 5 s.)
 -- (2026-10-12, the editor) p_edit: "Edit with words", a photo made from one of its own (p_image) with this change (3 to 200
 -- characters), by Classic, no references, the photo's own shape and a meme's own format and words; round 4's phase 4 version
 -- is dropped first too. Without p_edit a photo never starts from another one, as before.
+-- (2026-10-13) p_agi1: "With AGI-1", AGI-1 in it (src/studio/rules.js WITH_AGI1): never a trend video ("agi1_trend", a trend
+-- video never starts from a photo with her either); a photo with her by Classic only ("agi1_model"); a photo with p_image and
+-- no p_edit is "Add AGI-1" (she's put into that photo: by Classic, no references, the photo's own shape, format and words, and
+-- never one she's in already: "agi1_has"); an edit of a photo with her, and a video from one, have her too (she's in it); a
+-- Standard, Pro or Long video with her starts from a photo she's in ("agi1_photo"; Anime puts her in from her own pictures),
+-- with one reference at most (Kling's 3 elements with a first frame: the character, her, one reference). The editor's
+-- version (21 arguments) is dropped first too.
 drop function if exists public.inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer);
 drop function if exists public.inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,
   integer, text[], integer, text, text);
+drop function if exists public.inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,
+  integer, text[], integer, text, text, text);
 create or replace function public.inf_make(p_job text, p_inf text, p_wallet text, p_kind text, p_scene text, p_shape text, p_sound boolean,
   p_trend text, p_clip text, p_image text, p_cost integer, p_per_wallet integer, p_day_cap integer, p_model text default null,
   p_quality text default null, p_seconds integer default null, p_refs text[] default null, p_parts integer default 1,
-  p_meme text default null, p_caption text default null, p_edit text default null)
+  p_meme text default null, p_caption text default null, p_edit text default null, p_agi1 boolean default false)
 returns json
 language plpgsql
 set search_path = public
@@ -1703,6 +1748,11 @@ as $$
 declare
   i agi1_inf%rowtype;
   s json;
+  v_asked boolean := coalesce(p_agi1, false);
+  -- (2026-10-13) "Add AGI-1": a photo with her from one of its photos, without words
+  v_add boolean := coalesce(p_kind = 'photo' and p_image is not null and p_edit is null and p_agi1, false);
+  v_her boolean := coalesce(p_agi1, false);
+  v_photo_her boolean := false;
 begin
   if p_job is null or p_job !~ '^[A-Za-z0-9_-]{22}$' or p_kind is null or p_kind not in ('photo', 'trend', 'video')
      or p_cost is null or p_cost not between 0 and 100000 or p_per_wallet is null or p_per_wallet < 1 or p_day_cap is null
@@ -1710,10 +1760,12 @@ begin
        or p_shape not in ('tall', 'wide', 'square', 'banner') or p_trend is not null or p_clip is not null))
      or (p_kind <> 'photo' and p_shape = 'banner')
      or (p_kind = 'trend' and ((p_trend is null) = (p_clip is null) or p_scene is not null))
-     or (p_kind = 'photo' and p_image is not null and p_edit is null)
+     or (p_kind = 'photo' and p_image is not null and p_edit is null and not v_add)
      -- (2026-10-12, the editor) "Edit with words": only a photo, from one of its own, by Classic, without references
      or (p_edit is not null and (p_kind <> 'photo' or p_image is null or char_length(p_edit) not between 3 and 200
        or p_model is distinct from 'classic' or p_refs is not null))
+     -- (2026-10-13) "Add AGI-1": likewise by Classic, without references
+     or (v_add and (p_model is distinct from 'classic' or p_refs is not null))
      -- (round 4, phase 4) the model menu: a photo's model is Classic or Crisp, a video's Standard, Pro, Anime or Long; a long
      -- video has 2 to 4 parts (a trend is as before: none of it); a meme is a Classic photo with its words; references 1 to 4
      or (p_model is not null and not ((p_kind = 'photo' and p_model in ('classic', 'crisp'))
@@ -1726,6 +1778,11 @@ begin
        or char_length(p_caption) not between 1 and 130 or p_model = 'crisp' or p_shape = 'banner'))
      or (p_refs is not null and (p_kind = 'trend' or cardinality(p_refs) not between 1 and 4)) then
     return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  -- (2026-10-13) never in a trend video; a photo with her by Classic only (an older page's photo is Classic)
+  if v_asked and p_kind = 'trend' then return json_build_object('ok', false, 'why', 'agi1_trend'); end if;
+  if v_asked and p_kind = 'photo' and p_model is not null and p_model <> 'classic' then
+    return json_build_object('ok', false, 'why', 'agi1_model');
   end if;
   perform pg_advisory_xact_lock(hashtext('agi1-inf-wallet:' || p_wallet));
   select * into i from agi1_inf where id = p_inf for update;
@@ -1747,13 +1804,31 @@ begin
       and status = 'done' and not hidden and deleted_at is null) then
     return json_build_object('ok', false, 'why', 'image');
   end if;
-  if p_image is not null and p_edit is null and exists (select 1 from agi1_inf_jobs where id = p_image and shape = 'banner') then
+  if p_image is not null then
+    select coalesce(agi1, false) into v_photo_her from agi1_inf_jobs where id = p_image;
+  end if;
+  -- (an X banner never starts a video or a trend video; edited, or with AGI-1 added, it's an X banner again)
+  if p_image is not null and p_edit is null and not v_add and exists (select 1 from agi1_inf_jobs where id = p_image and shape = 'banner') then
     return json_build_object('ok', false, 'why', 'banner');
   end if;
-  -- (2026-10-12) an edit keeps the photo's own shape (an X banner stays one), and a meme its own format and words
-  if p_edit is not null and not exists (select 1 from agi1_inf_jobs where id = p_image and shape = p_shape
+  -- (2026-10-12) an edit keeps the photo's own shape (an X banner stays one), and a meme its own format and words; (2026-10-13)
+  -- so does "Add AGI-1"
+  if (p_edit is not null or v_add) and not exists (select 1 from agi1_inf_jobs where id = p_image and shape = p_shape
       and meme is not distinct from p_meme and caption is not distinct from p_caption) then
     return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  -- (2026-10-13) with AGI-1: "Add AGI-1" to a photo she's in already; an edit never adds her ("Add AGI-1" does); a trend video
+  -- never starts from a photo with her; a Standard, Pro or Long video with her from a photo she's in. She stays in an edit of a
+  -- photo with her, and in a video from one.
+  if v_add and v_photo_her then return json_build_object('ok', false, 'why', 'agi1_has'); end if;
+  if p_edit is not null and v_asked and not v_photo_her then return json_build_object('ok', false, 'why', 'bad'); end if;
+  if p_kind = 'trend' and v_photo_her then return json_build_object('ok', false, 'why', 'agi1_trend'); end if;
+  if p_kind = 'video' and v_asked and p_image is not null and coalesce(p_model, 'standard') <> 'anime' and not v_photo_her then
+    return json_build_object('ok', false, 'why', 'agi1_photo');
+  end if;
+  if v_photo_her and (p_edit is not null or p_kind = 'video') then v_her := true; end if;
+  if v_her and p_kind = 'video' and coalesce(p_model, 'standard') <> 'anime' and p_refs is not null and cardinality(p_refs) > 1 then
+    return json_build_object('ok', false, 'why', 'refs');
   end if;
   -- (round 4, phase 4) its references: this wallet's own, looked at and passed, from the last day, each once
   if p_refs is not null and (select count(distinct id) from agi1_inf_uploads where id = any(p_refs) and wallet_code = p_wallet
@@ -1772,9 +1847,9 @@ begin
       s := inf_credits(p_wallet);
     end if;
     insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, sound, trend, clip, image, cost, model, quality, seconds,
-      refs, parts, meme, caption, edit)
+      refs, parts, meme, caption, edit, agi1)
     values (p_job, p_inf, p_wallet, p_kind, p_scene, p_shape, coalesce(p_sound, false) and p_kind = 'video', p_trend, p_clip, p_image, p_cost,
-      p_model, p_quality, p_seconds, p_refs, p_parts, p_meme, p_caption, p_edit);
+      p_model, p_quality, p_seconds, p_refs, p_parts, p_meme, p_caption, p_edit, v_her);
   exception
     when unique_violation then return json_build_object('ok', false, 'why', 'taken');
     when sqlstate 'P0001' then
@@ -1797,7 +1872,7 @@ as $$
     select j.id, j.inf_id, j.wallet_code, j.kind, j.scene, j.shape, j.sound, j.trend, j.clip, j.image, j.pick, j.cost, j.status, j.req,
       j.status_url, j.result_url, j.saving, j.tries, j.error, j.refunded, j.files, j.bytes, j.poster, j.hidden, j.started_at,
       j.created_at, j.updated_at, j.done_at, j.example, j.marked, j.mark_tries, j.likes,
-      j.model, j.quality, j.seconds, j.refs, j.parts, j.part, j.meme, j.caption, j.deleted_at, j.edit, j.editor, j.cut,
+      j.model, j.quality, j.seconds, j.refs, j.parts, j.part, j.meme, j.caption, j.deleted_at, j.edit, j.editor, j.cut, j.agi1,
       i.name as inf_name, i.mode as inf_mode, i.style as inf_style, i.settings as inf_settings, i.words as inf_words,
       i.source as inf_source, i.status as inf_status, i.looks_job as inf_looks_job, i.pick as inf_pick, i.body_job as inf_body_job,
       i.hidden as inf_hidden, i.public as inf_public, i.real as inf_real, i.banned as inf_banned,
@@ -1976,7 +2051,7 @@ as $$
       'cost', cost, 'files', files, 'bytes', bytes, 'poster', poster, 'created_at', created_at, 'done_at', done_at,
       'likes', likes, 'marked', marked,
       'model', model, 'quality', quality, 'seconds', seconds, 'refs', coalesce(cardinality(refs), 0), 'parts', parts, 'part', part,
-      'meme', meme, 'caption', caption, 'edit', edit, 'editor', editor,
+      'meme', meme, 'caption', caption, 'edit', edit, 'editor', editor, 'agi1', agi1,
       'mine', coalesce(wallet_code = p_wallet, false)) order by coalesce(done_at, created_at) desc), '[]'::json)
   from (
     select * from agi1_inf_jobs
@@ -2025,14 +2100,28 @@ as $$
     'fresh', (select coalesce(json_agg(json_build_object('id', j.id, 'kind', j.kind, 'shape', j.shape, 'trend', j.trend, 'poster', j.poster,
         'files', j.files, 'likes', j.likes, 'inf_id', j.inf_id, 'inf_name', j.inf_name, 'looks_job', j.inf_looks_job, 'pick', j.inf_pick,
         'done_at', j.done_at, 'maker', n.name, 'model', j.model, 'quality', j.quality, 'seconds', j.seconds, 'sound', j.sound, 'meme', j.meme,
-        'caption', j.caption, 'pfp', inf_pfp_of(j.inf_pfp)) order by j.done_at desc), '[]'::json)
+        'caption', j.caption, 'agi1', j.agi1, 'pfp', inf_pfp_of(j.inf_pfp)) order by j.done_at desc), '[]'::json)
       from (select x.id, x.kind, x.shape, x.trend, x.poster, x.files, x.likes, x.inf_id, x.done_at, x.model, x.quality, x.seconds, x.sound,
-          x.meme, x.caption, i.name as inf_name,
+          x.meme, x.caption, x.agi1, i.name as inf_name,
           i.looks_job as inf_looks_job, i.pick as inf_pick, i.wallet_code as inf_wallet, i.pfp as inf_pfp
         from agi1_inf_jobs x join agi1_inf i on i.id = x.inf_id
         where x.status = 'done' and x.kind in ('photo', 'trend', 'video') and not x.hidden and i.status = 'ready' and i.public and not i.hidden
           and i.mode <> 'face' and not i.real and not i.banned and x.shape is distinct from 'banner'
         order by x.done_at desc limit least(greatest(coalesce(p_limit, 24), 1), 60)) j
+      left join agi1_inf_names n on n.wallet_code = j.inf_wallet),
+    -- (2026-10-13) the newest photos and videos with AGI-1 in them: public influencers only, as above (never a private one, one
+    -- made from a real person's photo or a face, a banned maker's, hidden or deleted ones, or an X banner)
+    'agi1', (select coalesce(json_agg(json_build_object('id', j.id, 'kind', j.kind, 'shape', j.shape, 'trend', j.trend, 'poster', j.poster,
+        'files', j.files, 'likes', j.likes, 'inf_id', j.inf_id, 'inf_name', j.inf_name, 'looks_job', j.inf_looks_job, 'pick', j.inf_pick,
+        'done_at', j.done_at, 'maker', n.name, 'model', j.model, 'quality', j.quality, 'seconds', j.seconds, 'sound', j.sound, 'meme', j.meme,
+        'caption', j.caption, 'agi1', j.agi1, 'pfp', inf_pfp_of(j.inf_pfp)) order by j.done_at desc), '[]'::json)
+      from (select x.id, x.kind, x.shape, x.trend, x.poster, x.files, x.likes, x.inf_id, x.done_at, x.model, x.quality, x.seconds, x.sound,
+          x.meme, x.caption, x.agi1, i.name as inf_name,
+          i.looks_job as inf_looks_job, i.pick as inf_pick, i.wallet_code as inf_wallet, i.pfp as inf_pfp
+        from agi1_inf_jobs x join agi1_inf i on i.id = x.inf_id
+        where x.agi1 and x.status = 'done' and x.kind in ('photo', 'video') and not x.hidden and x.deleted_at is null and i.status = 'ready'
+          and i.public and not i.hidden and i.mode <> 'face' and not i.real and not i.banned and x.shape is distinct from 'banner'
+        order by x.done_at desc limit 12) j
       left join agi1_inf_names n on n.wallet_code = j.inf_wallet),
     'trends', (select coalesce(json_agg(json_build_object('id', t.id, 'job', t.job, 'poster', j.poster, 'bytes', j.bytes) order by t.sort, t.id), '[]'::json)
       from agi1_inf_trends t join agi1_inf_jobs j on j.id = t.job where t.status = 'kept' and j.status = 'done'),
@@ -2216,8 +2305,9 @@ begin
   end if;
   if (f.shape = 'banner') <> (p_shape = 'banner') then return json_build_object('ok', false, 'why', 'bad'); end if;
   begin
-    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, image, cost, status, files, bytes, editor, done_at)
-    values (p_job, p_inf, p_wallet, 'photo', f.scene, p_shape, p_from, 0, 'done', 1, p_bytes, true, now());
+    -- (2026-10-13: AGI-1 is in it when she's in the photo it's from)
+    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, image, cost, status, files, bytes, editor, done_at, agi1)
+    values (p_job, p_inf, p_wallet, 'photo', f.scene, p_shape, p_from, 0, 'done', 1, p_bytes, true, now(), coalesce(f.agi1, false));
   exception when unique_violation then
     return json_build_object('ok', false, 'why', 'taken');
   end;
@@ -2270,8 +2360,9 @@ begin
   begin
     t := inf_tool_take(p_wallet, 'video', p_per_day, p_site_cap, true);
     if (t ->> 'ok')::boolean is not true then raise exception using errcode = 'P0001', message = coalesce(t ->> 'why', 'busy'); end if;
-    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, sound, image, cost, status, seconds, editor, cut)
-    values (p_job, p_inf, p_wallet, 'video', f.scene, p_shape, p_sound, p_from, 0, 'paid', p_seconds, true, p_cut);
+    -- (2026-10-13: AGI-1 is in it when she's in the video it's from)
+    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, sound, image, cost, status, seconds, editor, cut, agi1)
+    values (p_job, p_inf, p_wallet, 'video', f.scene, p_shape, p_sound, p_from, 0, 'paid', p_seconds, true, p_cut, coalesce(f.agi1, false));
   exception
     when unique_violation then return json_build_object('ok', false, 'why', 'taken');
     when sqlstate 'P0001' then
@@ -2313,10 +2404,14 @@ $$;
 -- ---------- a 3D model of it (supabase/studio.sql's characters, made by Meshy from its full-body picture) ----------
 -- Its owner orders one: p_cost credits, or a Soulmate's free one this month (p_free: studio.sql's agi1_studio_free); one at a
 -- time per influencer; inside the studio's characters a month (p_cap, studio.sql's STUDIO_A_MONTH). p_burn: the wallet's code
--- in burns.sql (a studio order keeps it). → {"ok": true, "free", "paid", "free_credits", "bonus"} or {"ok": false, "why": "gone" |
--- "not_yours" | "not_ready" | "busy3d" | "sold_out" | "short" | "taken" | "bad"}
+-- in burns.sql (a studio order keeps it). (2026-10-13, the 3D tool) p_spec: its choices, checked by our server (null: the model
+-- as before), kept with its order, and the extra downloads asked for (its formats); p_cost is its price with its extras, and
+-- p_free_cost what a Soulmate's free one still costs (its extras: the free one covers its standard price only). Its older
+-- version (without p_spec and p_free_cost) is dropped first. → {"ok": true, "free", "paid", "free_credits", "bonus"} or
+-- {"ok": false, "why": "gone" | "not_yours" | "not_ready" | "busy3d" | "sold_out" | "short" | "taken" | "bad"}
+drop function if exists public.inf_3d(text, text, text, text, integer, integer, integer, boolean);
 create or replace function public.inf_3d(p_order text, p_inf text, p_wallet text, p_burn text, p_level integer, p_cost integer,
-  p_cap integer, p_free boolean)
+  p_cap integer, p_free boolean, p_spec jsonb default null, p_free_cost integer default 0)
 returns json
 language plpgsql
 set search_path = public
@@ -2328,11 +2423,17 @@ declare
   s json;
   v_made integer;
   v_live integer;
+  v_formats text[];
 begin
   if p_order is null or p_order !~ '^[A-Za-z0-9_-]{22}$' or p_burn is null or char_length(p_burn) not between 16 and 64
-     or p_level is null or p_level not between 1 and 3 or p_cost is null or p_cost not between 0 and 100000 or p_cap is null then
+     or p_level is null or p_level not between 1 and 3 or p_cost is null or p_cost not between 0 and 100000 or p_cap is null
+     or p_free_cost is null or p_free_cost not between 0 and 100000
+     or (p_spec is not null and (jsonb_typeof(p_spec) <> 'object' or octet_length(p_spec::text) > 8000)) then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
+  -- the extra downloads it asks for, in their own order (only ones studio.sql knows)
+  v_formats := array(select f from unnest(array['full', 'fbx', 'usdz', 'stl', 'obj']::text[]) with ordinality as u(f, n)
+    where jsonb_typeof(p_spec -> 'formats') = 'array' and (p_spec -> 'formats') @> to_jsonb(f) order by n);
   perform pg_advisory_xact_lock(hashtext('agi1-inf-wallet:' || p_wallet));
   select * into i from agi1_inf where id = p_inf for update;
   if not found or i.status = 'deleted' or i.hidden then return json_build_object('ok', false, 'why', 'gone'); end if;
@@ -2352,7 +2453,13 @@ begin
     if coalesce(p_free, false) and not exists (select 1 from agi1_studio_free where wallet_code = p_wallet and month = m) then
       insert into agi1_studio_free (wallet_code, month, order_id) values (p_wallet, m, p_order);
       is_free := true;
-      s := inf_credits(p_wallet);
+      -- (2026-10-13) its extras still cost (the free one covers its standard price only)
+      if p_free_cost > 0 then
+        s := inf_spend(p_wallet, p_free_cost, p_order);
+        if (s ->> 'ok')::boolean is not true then raise exception using errcode = 'P0001', message = coalesce(s ->> 'why', 'busy'); end if;
+      else
+        s := inf_credits(p_wallet);
+      end if;
     elsif p_cost > 0 then
       s := inf_spend(p_wallet, p_cost, p_order);
       if (s ->> 'ok')::boolean is not true then raise exception using errcode = 'P0001', message = coalesce(s ->> 'why', 'busy'); end if;
@@ -2360,13 +2467,13 @@ begin
       s := inf_credits(p_wallet);
     end if;
     insert into agi1_studio_orders (id, wallet_code, burn_code, name, about, style, level, usd_cents, agi, free, kind, paid, status, paid_at,
-      inf_id, image_path)
+      inf_id, image_path, spec, formats)
     values (p_order, p_wallet, p_burn, i.name, 'Made from ' || i.name || '''s full-body picture in AGI Studio.',
       case when i.style in ('anime', 'storybook', 'retro', 'manga', 'webcomic', 'celshade') then 'anime'
         when i.style in ('toon', 'comic', 'clay', 'toy', 'plush', 'pixel', 'lowpoly', 'watercolor', 'sketch', 'popart', 'ukiyoe', 'vaporwave',
           'papercut') then 'cartoon' else 'realistic' end, p_level, 0, 0, is_free,
-      case when is_free then 'free' else 'credits' end, case when is_free then 0 else p_cost end, 'paid', now(),
-      p_inf, 'inf/' || p_inf || '/' || i.body_job || '-0.jpg');
+      case when is_free then 'free' else 'credits' end, case when is_free then p_free_cost else p_cost end, 'paid', now(),
+      p_inf, 'inf/' || p_inf || '/' || i.body_job || '-0.jpg', p_spec, v_formats);
     update agi1_studio_months set made = made + 1 where month = m;
   exception
     when unique_violation then return json_build_object('ok', false, 'why', 'taken');
@@ -2395,7 +2502,9 @@ $$;
 
 -- An influencer's 3D models (studio.sql's characters made from it), the newest first: how each is paid (round 2: 'burn',
 -- with its price in $AGI and what's burned so far, until it's paid), and whether one that couldn't be made may be made again
--- free (a burned one: `credit`), or a quote that went nowhere (`expired`); (round 4) when its making started, for its progress
+-- free (a burned one: `credit`), or a quote that went nowhere (`expired`); (round 4) when its making started, for its progress;
+-- (2026-10-13, the 3D tool) its choices (`spec`: our server shows its maker all of them, anyone else only its shape) and its
+-- extra downloads: asked for, made (with their sizes), waiting, couldn't be made, and until when they're kept
 create or replace function public.inf_3d_list(p_inf text)
 returns json
 language sql
@@ -2406,7 +2515,9 @@ as $$
       'glb_bytes', glb_bytes, 'created_at', created_at, 'done_at', done_at, 'kind', kind, 'agi', agi, 'paid', paid,
       'started_at', coalesce(started_at, paid_at),
       'credit', credit and updated_at > now() - interval '30 days',
-      'expired', status = 'quote' and paid = 0 and created_at < now() - interval '1 day') order by created_at desc), '[]'::json)
+      'expired', status = 'quote' and paid = 0 and created_at < now() - interval '1 day',
+      'spec', spec, 'formats', formats, 'formats_todo', formats_todo, 'formats_done', formats_done, 'formats_failed', formats_failed,
+      'format_bytes', format_bytes, 'dl_until', dl_until) order by created_at desc), '[]'::json)
   from (select * from agi1_studio_orders where inf_id = p_inf and not hidden order by created_at desc limit 10) d;
 $$;
 
@@ -2414,11 +2525,16 @@ $$;
 -- burn, sent from the wallet's own app to the burn address and read on the chain by our server (studio.sql's studio_pay:
 -- counted once, in burns.sql's ledger too, and toward the wallet's level); paid, it's made like one from credits. One open at
 -- a time per influencer (asked again: the same one). Inside the studio's characters a month (p_cap) and its burns
--- (p_burn_cap, studio.sql's STUDIO_BURNS_A_MONTH). p_agi: its price in whole $AGI.
--- → {"ok": true, "order", "agi", "paid", "created", "again"} or {"ok": false, "why": "gone" | "not_yours" | "not_ready" |
---   "busy3d" | "sold_out" | "burns_sold_out" | "bad"}
+-- (p_burn_cap, studio.sql's STUDIO_BURNS_A_MONTH). p_agi: its price in whole $AGI. (2026-10-13, the 3D tool) p_spec: its
+-- choices, as for inf_3d, only ones with nothing extra (a burn pays nobody, and its extras cost the owner: no moves described
+-- in words, not High detail, no more library moves than its price has); kept with its order. While nothing is burned toward an
+-- open one, asking again changes its choices to the ones asked for now; once something is, they stay. Its older version
+-- (without p_spec) is dropped first.
+-- → {"ok": true, "order", "agi", "paid", "created", "again", "spec"} or {"ok": false, "why": "gone" | "not_yours" | "not_ready" |
+--   "busy3d" | "sold_out" | "burns_sold_out" | "not_burnable" | "bad"}
+drop function if exists public.inf_3d_burn(text, text, text, text, integer, bigint, integer, integer);
 create or replace function public.inf_3d_burn(p_order text, p_inf text, p_wallet text, p_burn text, p_level integer, p_agi bigint,
-  p_cap integer, p_burn_cap integer)
+  p_cap integer, p_burn_cap integer, p_spec jsonb default null)
 returns json
 language plpgsql
 set search_path = public
@@ -2429,12 +2545,25 @@ declare
   m agi1_studio_months%rowtype;
   live integer;
   burn_live integer;
+  v_formats text[];
 begin
   if p_order is null or p_order !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null or char_length(p_wallet) not between 16 and 64
      or p_burn is null or char_length(p_burn) not between 16 and 64 or p_level is null or p_level not between 1 and 3
-     or p_agi is null or p_agi not between 1 and 1000000000 or p_cap is null or p_cap < 0 or p_burn_cap is null or p_burn_cap < 0 then
+     or p_agi is null or p_agi not between 1 and 1000000000 or p_cap is null or p_cap < 0 or p_burn_cap is null or p_burn_cap < 0
+     or (p_spec is not null and (jsonb_typeof(p_spec) <> 'object' or octet_length(p_spec::text) > 8000)) then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
+  -- nothing extra (our server checked it first: src/studio/rules.js burnable): no moves described in words, not High detail,
+  -- at most the 7 library moves its price has
+  if p_spec is not null and (
+       case jsonb_typeof(p_spec -> 'own') when 'array' then jsonb_array_length(p_spec -> 'own') > 0 when 'null' then false
+         else p_spec -> 'own' is not null end
+       or coalesce(p_spec ->> 'detail', 'std') = 'high'
+       or case jsonb_typeof(p_spec -> 'moves') when 'array' then jsonb_array_length(p_spec -> 'moves') > 7 else false end) then
+    return json_build_object('ok', false, 'why', 'not_burnable');
+  end if;
+  v_formats := array(select f from unnest(array['full', 'fbx', 'usdz', 'stl', 'obj']::text[]) with ordinality as u(f, n)
+    where jsonb_typeof(p_spec -> 'formats') = 'array' and (p_spec -> 'formats') @> to_jsonb(f) order by n);
   perform pg_advisory_xact_lock(hashtext('agi1-inf-wallet:' || p_wallet));
   -- the month's row first (like every function that counts the studio's places)
   insert into agi1_studio_months (month) values (studio_this_month()) on conflict (month) do nothing;
@@ -2452,21 +2581,27 @@ begin
   select * into o from agi1_studio_orders where inf_id = p_inf and wallet_code = p_wallet and status = 'quote' and kind = 'burn'
     and (paid > 0 or created_at > now() - interval '1 day') order by created_at desc limit 1;
   if found then
-    return json_build_object('ok', true, 'order', o.id, 'agi', o.agi, 'paid', o.paid, 'created', o.created_at, 'again', true);
+    -- (2026-10-13) nothing burned toward it yet: its choices are the ones asked for now (once something is, they stay)
+    if o.paid = 0 then
+      update agi1_studio_orders set spec = p_spec, formats = v_formats, updated_at = now() where id = o.id;
+    end if;
+    return json_build_object('ok', true, 'order', o.id, 'agi', o.agi, 'paid', o.paid, 'created', o.created_at, 'again', true,
+      'spec', case when o.paid = 0 then p_spec else o.spec end);
   end if;
   select count(*), count(*) filter (where kind = 'burn') into live, burn_live from agi1_studio_orders
     where status = 'quote' and created_at > now() - interval '1 day';
   if m.made + live >= p_cap then return json_build_object('ok', false, 'why', 'sold_out'); end if;
   if m.burns + burn_live >= p_burn_cap then return json_build_object('ok', false, 'why', 'burns_sold_out'); end if;
-  insert into agi1_studio_orders (id, wallet_code, burn_code, name, about, style, level, usd_cents, agi, free, kind, status, inf_id, image_path)
+  insert into agi1_studio_orders (id, wallet_code, burn_code, name, about, style, level, usd_cents, agi, free, kind, status, inf_id, image_path,
+    spec, formats)
   values (p_order, p_wallet, p_burn, i.name, 'Made from ' || i.name || '''s full-body picture in AGI Studio.',
     case when i.style in ('anime', 'storybook', 'retro', 'manga', 'webcomic', 'celshade') then 'anime'
         when i.style in ('toon', 'comic', 'clay', 'toy', 'plush', 'pixel', 'lowpoly', 'watercolor', 'sketch', 'popart', 'ukiyoe', 'vaporwave',
           'papercut') then 'cartoon' else 'realistic' end, p_level, 0, p_agi, false, 'burn', 'quote',
-    p_inf, 'inf/' || p_inf || '/' || i.body_job || '-0.jpg')
+    p_inf, 'inf/' || p_inf || '/' || i.body_job || '-0.jpg', p_spec, v_formats)
   on conflict (id) do nothing;
   if not found then return json_build_object('ok', false, 'why', 'taken'); end if;
-  return json_build_object('ok', true, 'order', p_order, 'agi', p_agi, 'paid', 0, 'created', now(), 'again', false);
+  return json_build_object('ok', true, 'order', p_order, 'agi', p_agi, 'paid', 0, 'created', now(), 'again', false, 'spec', p_spec);
 end;
 $$;
 
@@ -3711,17 +3846,17 @@ begin
     'inf_upload_set(text, text, text, numeric, boolean, boolean, smallint[])', 'inf_day_take(integer)',
     'inf_start(text, text, text, text, text, text, jsonb, text, text, integer, integer, integer, integer, integer, text)', 'inf_get(text)',
     'inf_pick(text, text, integer, text)', 'inf_reroll(text, text, text, integer, integer)',
-    'inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text, integer, text[], integer, text, text, text)',
+    'inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text, integer, text[], integer, text, text, text, boolean)',
     'inf_job_get(text)',
     'inf_job_lease(text, integer)', 'inf_job_step(text, text, text, text, boolean, integer)', 'inf_job_wait(text)',
     'inf_job_done(text, integer, integer)', 'inf_job_fail(text, text, boolean)', 'inf_job_due(integer)', 'inf_poster(text)',
     'inf_jobs(text, text, integer)', 'inf_mine(text, integer)', 'inf_explore(integer)', 'inf_public(text, text, boolean)',
     'inf_delete(text, text)', 'inf_hide(text, boolean)', 'inf_job_hide(text, boolean)',
-    'inf_3d(text, text, text, text, integer, integer, integer, boolean)', 'inf_3d_back(text)', 'inf_3d_list(text)',
+    'inf_3d(text, text, text, text, integer, integer, integer, boolean, jsonb, integer)', 'inf_3d_back(text)', 'inf_3d_list(text)',
     'trend_make(text, text, integer)', 'trend_set(text, text)', 'trend_list()', 'inf_report(text, text, text, text, integer)',
     'inf_reports(integer)', 'inf_report_clear(text, text)', 'inf_tidy()',
     -- round 2
-    'inf_3d_burn(text, text, text, text, integer, bigint, integer, integer)', 'inf_example_make(text, text)', 'inf_examples()',
+    'inf_3d_burn(text, text, text, text, integer, bigint, integer, integer, jsonb)', 'inf_example_make(text, text)', 'inf_examples()',
     'inf_mark_take()', 'inf_mark_done(text)', 'inf_like(text, text, integer, boolean, integer)', 'inf_liked(text, text[])',
     'inf_week_top(date, text[])', 'inf_week_pick(date)', 'inf_week_set(date, text, bigint)', 'inf_weeks(text, integer)',
     'inf_week_claim(date, text, text)', 'inf_week_sending(date, text)', 'inf_week_sent(date, text, boolean)',
@@ -3781,9 +3916,30 @@ notify pgrst, 'reload schema';
 -- its column and its check, inf_make's p_edit, and inf_job_get and inf_jobs giving it, and the photo editor: its column and its
 -- check, its days' table and the site's counts, inf_tool_take and inf_photo_add, and inf_job_get, inf_jobs and inf_tidy knowing
 -- it, and the video editor: its column and its checks (a video's seconds from 1), inf_cut_add, inf_cut_done and inf_cut_due,
--- inf_mark_take leaving its videos alone, inf_job_get giving its cut and inf_admin_stats counting it; and studio.sql's new
--- parts it builds on)
+-- inf_mark_take leaving its videos alone, inf_job_get giving its cut and inf_admin_stats counting it; the 3D tool's choices
+-- (2026-10-13): inf_3d and inf_3d_burn taking them (p_spec) and inf_3d_list giving them and the extra downloads' state; "With
+-- AGI-1" (2026-10-13): its column and its check, inf_make's p_agi1, inf_job_get, inf_jobs and inf_explore giving it, and the
+-- editors' saves carrying it; and studio.sql's new parts it builds on)
 select
+  (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf_jobs'
+        and column_name = 'agi1')
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_agi1_check')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_make' and prosrc like '%p_agi1%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_job_get' and prosrc like '%j.agi1%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_jobs' and prosrc like '%''agi1'', agi1%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_explore' and prosrc like '%x.agi1 and%')
+      and (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('inf_photo_add', 'inf_cut_add')
+        and prosrc like '%f.agi1%') = 2
+    then 1 else 0 end)
+  *
+  (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_studio_orders'
+        and column_name = 'spec')
+      and (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('inf_3d', 'inf_3d_burn')
+        and prosrc like '%p_spec%') = 2
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_3d' and prosrc like '%p_free_cost%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_3d_list' and prosrc like '%formats_done%')
+    then 1 else 0 end)
+  *
   (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf_jobs'
         and column_name = 'cut')
       and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_cut_check')

@@ -29,6 +29,9 @@ import { checkMemeText, checkEdit, editPrompt } from '../server/inf-words.js';
 import { checkEditorWords } from '../server/inf-editor.js';
 import * as AW from '../src/studio/app-words.js';
 import * as TAG from '../src/studio/ai-tag.js';
+import * as ST from '../src/studio/stage-tools.js';
+import { modelState, specOf, priceSpecOf } from '../src/studio/views/model-tool.js';
+import { reactionFor } from '../src/studio/views/model3d.js';
 import * as M from '../src/studio/media.js';
 import {
   checkStart, checkInfScene, looksPrompt, bodyPrompt, photoPrompt, swapPrompt, clipPrompt, sceneWay, presetPrompt, sceneVideoPrompt,
@@ -162,6 +165,10 @@ function database() {
   const style3d = (s) => (['anime', 'storybook', 'retro', 'manga', 'webcomic', 'celshade'].includes(s) ? 'anime'
     : ['toon', 'comic', 'clay', 'toy', 'plush', 'pixel', 'lowpoly', 'watercolor', 'sketch', 'popart', 'ukiyoe', 'vaporwave', 'papercut'].includes(s) ? 'cartoon'
       : 'realistic');
+  // (2026-10-13, the 3D tool) a 3D model's choices as influencers.sql takes them (null, or an object of at most 8,000
+  // characters), and the extra downloads they ask for, in their own order (only ones studio.sql knows)
+  const specOk = (s) => s === undefined || s === null || (typeof s === 'object' && !Array.isArray(s) && JSON.stringify(s).length <= 8000);
+  const formatsOf = (s) => ['full', 'fbx', 'usdz', 'stl', 'obj'].filter((f) => Array.isArray(s?.formats) && s.formats.includes(f));
   let seq = 0;
   const db = {
     credits: new Map(), log: [], months: new Map(), uploads: new Map(), infs: new Map(), jobs: new Map(), trends: new Map(),
@@ -572,6 +579,8 @@ function database() {
         // (2026-10-12, the editor) when its maker deleted it (as agi1_inf_jobs.deleted_at), "Edit with words"' change, and
         // whether it was saved from the photo editor (or the video editor: its cut, as agi1_inf_jobs.cut)
         deleted: null, edit: null, editor: false, cut: null,
+        // (2026-10-13) "With AGI-1": she's in it (as agi1_inf_jobs.agi1)
+        agi1: false,
         started: null, created: now(), updated: now(), done: null, lease: 0, seq: ++seq, ...j,
       });
     },
@@ -642,15 +651,21 @@ function database() {
       return ok({ paid: s.paid, free: s.free, bonus: s.bonus });
     },
     inf_make(a) {
+      // (2026-10-13) "With AGI-1": asked for, and "Add AGI-1" (a photo with her from one of its photos, without words), as
+      // influencers.sql's inf_make
+      const asked = a.p_agi1 === true;
+      const add = a.p_kind === 'photo' && a.p_image !== null && a.p_image !== undefined && a.p_edit == null && asked;
       if (!ID.test(String(a.p_job)) || !['photo', 'trend', 'video'].includes(a.p_kind) || !(a.p_cost >= 0 && a.p_cost <= 100000) || !(a.p_per_wallet >= 1)
         || a.p_day_cap === null
         || (['photo', 'video'].includes(a.p_kind) && (!a.p_scene || [...a.p_scene].length > 300 || !['tall', 'wide', 'square', 'banner'].includes(a.p_shape) || a.p_trend !== null || a.p_clip !== null))
         || (a.p_kind !== 'photo' && a.p_shape === 'banner')
         || (a.p_kind === 'trend' && ((a.p_trend === null) === (a.p_clip === null) || a.p_scene !== null))
-        || (a.p_kind === 'photo' && a.p_image !== null && a.p_edit == null)
+        || (a.p_kind === 'photo' && a.p_image !== null && a.p_edit == null && !add)
         // (2026-10-12, the editor) "Edit with words": only a photo, from one of its own, by Classic, without references
         || (a.p_edit != null && (a.p_kind !== 'photo' || a.p_image === null || !([...a.p_edit].length >= 3 && [...a.p_edit].length <= 200)
           || a.p_model !== 'classic' || a.p_refs != null))
+        // (2026-10-13) "Add AGI-1": likewise by Classic, without references
+        || (add && (a.p_model !== 'classic' || a.p_refs != null))
         // (round 4, phase 4) the model menu (as influencers.sql's inf_make)
         || (a.p_model != null && !((a.p_kind === 'photo' && ['classic', 'crisp'].includes(a.p_model)) || (a.p_kind === 'video' && ['standard', 'pro', 'anime', 'long'].includes(a.p_model))))
         || (a.p_quality != null && !['std', 'hd', 'ultra', '480p', '720p'].includes(a.p_quality))
@@ -659,6 +674,9 @@ function database() {
         || ((a.p_meme == null) !== (a.p_caption == null)) || (a.p_meme != null && (a.p_kind !== 'photo' || !/^[a-z]{2,12}$/.test(a.p_meme)
           || !([...a.p_caption].length >= 1 && [...a.p_caption].length <= 130) || a.p_model === 'crisp' || a.p_shape === 'banner'))
         || (a.p_refs != null && (a.p_kind === 'trend' || !Array.isArray(a.p_refs) || !(a.p_refs.length >= 1 && a.p_refs.length <= 4)))) return no('bad');
+      // (2026-10-13) never in a trend video; a photo with her by Classic only
+      if (asked && a.p_kind === 'trend') return no('agi1_trend');
+      if (asked && a.p_kind === 'photo' && a.p_model != null && a.p_model !== 'classic') return no('agi1_model');
       const i = this.infs.get(a.p_inf);
       if (!i || i.status === 'deleted' || i.hidden) return no('gone');
       if (i.wallet_code !== a.p_wallet) return no('not_yours');
@@ -675,10 +693,20 @@ function database() {
       if (a.p_image !== null) {
         const p = this.jobs.get(a.p_image);
         if (!p || p.inf_id !== a.p_inf || p.kind !== 'photo' || p.status !== 'done' || p.hidden || p.deleted) return no('image');
-        if (p.shape === 'banner' && a.p_edit == null) return no('banner');
-        // (2026-10-12) an edit keeps the photo's own shape, and a meme its own format and words
-        if (a.p_edit != null && (p.shape !== a.p_shape || (p.meme ?? null) !== (a.p_meme ?? null) || (p.caption ?? null) !== (a.p_caption ?? null))) return no('bad');
+        if (p.shape === 'banner' && a.p_edit == null && !add) return no('banner');
+        // (2026-10-12) an edit keeps the photo's own shape, and a meme its own format and words ((2026-10-13) so does "Add AGI-1")
+        if ((a.p_edit != null || add) && (p.shape !== a.p_shape || (p.meme ?? null) !== (a.p_meme ?? null) || (p.caption ?? null) !== (a.p_caption ?? null))) return no('bad');
       }
+      // (2026-10-13) with AGI-1: "Add AGI-1" to a photo she's in already; an edit never adds her; a trend video never from a photo
+      // with her; a Standard, Pro or Long video with her from a photo she's in. She stays in an edit of a photo with her, and in a
+      // video from one; with her, Kling's videos take one reference less
+      const photoHer = a.p_image != null && this.jobs.get(a.p_image)?.agi1 === true;
+      if (add && photoHer) return no('agi1_has');
+      if (a.p_edit != null && asked && !photoHer) return no('bad');
+      if (a.p_kind === 'trend' && photoHer) return no('agi1_trend');
+      if (a.p_kind === 'video' && asked && a.p_image != null && (a.p_model ?? 'standard') !== 'anime' && !photoHer) return no('agi1_photo');
+      const her = asked || (photoHer && (a.p_edit != null || a.p_kind === 'video'));
+      if (her && a.p_kind === 'video' && (a.p_model ?? 'standard') !== 'anime' && a.p_refs != null && a.p_refs.length > 1) return no('refs');
       // (round 4, phase 4) its references: this wallet's own, passed, from the last day, each once
       if (a.p_refs != null && new Set(a.p_refs.filter((r) => {
         const u = this.uploads.get(r);
@@ -692,7 +720,7 @@ function database() {
       this.addJob({ id: a.p_job, inf_id: a.p_inf, wallet_code: a.p_wallet, kind: a.p_kind, scene: a.p_scene, shape: a.p_shape,
         sound: a.p_sound === true && a.p_kind === 'video', trend: a.p_trend, clip: a.p_clip, image: a.p_image, cost: a.p_cost,
         model: a.p_model ?? null, quality: a.p_quality ?? null, seconds: a.p_seconds ?? null, refs: a.p_refs ?? null, parts: a.p_parts ?? 1,
-        meme: a.p_meme ?? null, caption: a.p_caption ?? null, edit: a.p_edit ?? null });
+        meme: a.p_meme ?? null, caption: a.p_caption ?? null, edit: a.p_edit ?? null, agi1: her });
       return ok({ paid: s.paid, free: s.free, bonus: s.bonus });
     },
     // (round 4, phase 4) a long video's next part: its request and saving cleared (as influencers.sql's inf_job_part)
@@ -787,7 +815,7 @@ function database() {
           step: j.saving ? 'save' : j.req ? 'make' : 'queue', error: j.error, refunded: j.refunded, cost: j.cost, files: j.files, bytes: j.bytes,
           poster: j.poster, created_at: iso(j.created), done_at: iso(j.done), likes: j.likes, marked: j.marked, mine: Boolean(p_wallet) && j.wallet_code === p_wallet,
           model: j.model, quality: j.quality, seconds: j.seconds, refs: j.refs ? j.refs.length : 0, parts: j.parts, part: j.part, meme: j.meme, caption: j.caption,
-          edit: j.edit, editor: j.editor === true,
+          edit: j.edit, editor: j.editor === true, agi1: j.agi1 === true,
         }));
     },
     inf_mine({ p_wallet }) {
@@ -812,7 +840,16 @@ function database() {
             const i = this.infs.get(j.inf_id);
             return { id: j.id, kind: j.kind, shape: j.shape, trend: j.trend, poster: j.poster, files: j.files, likes: j.likes, inf_id: j.inf_id,
               inf_name: i.name, looks_job: i.looks_job, pick: i.pick, done_at: iso(j.done), maker: this.makerOf(i.wallet_code), pfp: this.pfpOf(i.pfp),
-              model: j.model, quality: j.quality, seconds: j.seconds, sound: j.sound, meme: j.meme, caption: j.caption };
+              model: j.model, quality: j.quality, seconds: j.seconds, sound: j.sound, meme: j.meme, caption: j.caption, agi1: j.agi1 === true };
+          }),
+        // (2026-10-13) the newest photos and videos with AGI-1 in them: public influencers only, never an X banner
+        agi1: [...this.jobs.values()].filter((j) => j.agi1 === true && j.status === 'done' && ['photo', 'video'].includes(j.kind) && !j.hidden && !j.deleted
+          && j.shape !== 'banner' && shown(this.infs.get(j.inf_id)))
+          .sort((x, y) => y.done - x.done || y.seq - x.seq).slice(0, 12).map((j) => {
+            const i = this.infs.get(j.inf_id);
+            return { id: j.id, kind: j.kind, shape: j.shape, trend: j.trend, poster: j.poster, files: j.files, likes: j.likes, inf_id: j.inf_id,
+              inf_name: i.name, looks_job: i.looks_job, pick: i.pick, done_at: iso(j.done), maker: this.makerOf(i.wallet_code), pfp: this.pfpOf(i.pfp),
+              model: j.model, quality: j.quality, seconds: j.seconds, sound: j.sound, meme: j.meme, caption: j.caption, agi1: true };
           }),
         trends: [...this.trends.values()].filter((t) => t.status === 'kept' && this.jobs.get(t.job)?.status === 'done').sort((x, y) => x.sort - y.sort)
           .map((t) => ({ id: t.id, job: t.job, poster: this.jobs.get(t.job).poster, bytes: this.jobs.get(t.job).bytes })),
@@ -891,7 +928,7 @@ function database() {
       if ((f.shape === 'banner') !== (p_shape === 'banner')) return no('bad');
       if (this.jobs.has(p_job)) return no('taken');
       this.addJob({ id: p_job, inf_id: p_inf, wallet_code: p_wallet, kind: 'photo', scene: f.scene, shape: p_shape, image: p_from, cost: 0,
-        status: 'done', files: 1, bytes: p_bytes, editor: true, done: now() });
+        status: 'done', files: 1, bytes: p_bytes, editor: true, done: now(), agi1: f.agi1 === true });
       return ok();
     },
     // (2026-10-12, the editor) the video editor: a cut started (one use counted, then a video of the same influencer, free,
@@ -915,7 +952,7 @@ function database() {
       const t = this.inf_tool_take({ p_wallet, p_tool: 'video', p_per_day, p_site_cap, p_take: true });
       if (!t.ok) return no(['too_many', 'busy_day'].includes(t.why) ? t.why : 'busy');
       this.addJob({ id: p_job, inf_id: p_inf, wallet_code: p_wallet, kind: 'video', scene: f.scene, shape: p_shape, sound: p_sound, image: p_from,
-        cost: 0, seconds: p_seconds, editor: true, cut: p_cut });
+        cost: 0, seconds: p_seconds, editor: true, cut: p_cut, agi1: f.agi1 === true });
       return ok({ left: t.left });
     },
     inf_cut_due() {
@@ -930,8 +967,12 @@ function database() {
       return true;
     },
     // ---- a 3D model of it ----
+    // (2026-10-13, the 3D tool) its choices (p_spec: an object, kept with its order, and the extra downloads it asks for in
+    // their own order) and what a Soulmate's free one still costs (p_free_cost: its extras), as influencers.sql's inf_3d
     inf_3d(a) {
-      if (!ID.test(String(a.p_order)) || !code(a.p_burn) || ![1, 2, 3].includes(a.p_level) || !(a.p_cost >= 0) || a.p_cap === null) return no('bad');
+      const freeCost = a.p_free_cost === undefined ? 0 : a.p_free_cost;
+      if (!ID.test(String(a.p_order)) || !code(a.p_burn) || ![1, 2, 3].includes(a.p_level) || !(Number.isInteger(a.p_cost) && a.p_cost >= 0 && a.p_cost <= 100000)
+        || a.p_cap === null || a.p_cap === undefined || !(Number.isInteger(freeCost) && freeCost >= 0 && freeCost <= 100000) || !specOk(a.p_spec)) return no('bad');
       const i = this.infs.get(a.p_inf);
       if (!i || i.status === 'deleted' || i.hidden) return no('gone');
       if (i.wallet_code !== a.p_wallet) return no('not_yours');
@@ -942,14 +983,21 @@ function database() {
       if (this.orders.has(a.p_order)) return no('taken');
       const key = `${a.p_wallet}:${thisMonth()}`;
       let free = false, s;
-      if (a.p_free && !this.free3d.has(key)) { this.free3d.set(key, a.p_order); free = true; s = this.inf_credits({ p_wallet: a.p_wallet }); }
-      else { s = this.spend(a.p_wallet, a.p_cost, a.p_order); if (!s.ok) return s; }
+      if (a.p_free && !this.free3d.has(key)) {
+        // its extras still cost (the free one covers its standard price only); not enough credits: the free one isn't used
+        if (freeCost > 0) { s = this.spend(a.p_wallet, freeCost, a.p_order); if (!s.ok) return s; } else s = this.inf_credits({ p_wallet: a.p_wallet });
+        this.free3d.set(key, a.p_order);
+        free = true;
+      } else if (a.p_cost > 0) { s = this.spend(a.p_wallet, a.p_cost, a.p_order); if (!s.ok) return s; } else s = this.inf_credits({ p_wallet: a.p_wallet });
       this.order({ id: a.p_order, inf_id: a.p_inf, wallet_code: a.p_wallet, burn_code: a.p_burn, status: 'paid', kind: free ? 'free' : 'credits',
-        paid: free ? 0 : a.p_cost, free, name: i.name, about: `Made from ${i.name}'s full-body picture in AGI Studio.`,
-        style: style3d(i.style), level: a.p_level, paid_at: now(), image_path: `inf/${a.p_inf}/${i.body_job}-0.jpg` });
+        paid: free ? freeCost : a.p_cost, free, name: i.name, about: `Made from ${i.name}'s full-body picture in AGI Studio.`,
+        style: style3d(i.style), level: a.p_level, paid_at: now(), image_path: `inf/${a.p_inf}/${i.body_job}-0.jpg`,
+        spec: a.p_spec ?? null, formats: formatsOf(a.p_spec) });
       this.studioMade += 1;
       return ok({ free, paid: s.paid, free_credits: s.free, bonus: s.bonus });
     },
+    // (2026-10-13) whether this wallet's free one this month is used (studio.sql's studio_free_used: a Soulmate's)
+    studio_free_used({ p_wallet }) { return this.free3d.has(`${p_wallet}:${thisMonth()}`); },
     inf_3d_back({ p_order }) {
       const back = this.refund(p_order);
       let found = false;
@@ -961,11 +1009,18 @@ function database() {
         .map((o) => ({ id: o.id, status: o.status, step: o.step, error: o.error, moves: o.moves, glb_bytes: o.glb_bytes, created_at: iso(o.created),
           started_at: iso(o.started_at ?? o.paid_at),
           done_at: iso(o.done), kind: o.kind, agi: o.agi, paid: o.paid, credit: o.credit === true && o.updated > now() - 30 * DAY,
-          expired: o.status === 'quote' && o.paid === 0 && o.created < now() - DAY }));
+          expired: o.status === 'quote' && o.paid === 0 && o.created < now() - DAY,
+          // (2026-10-13, the 3D tool) its choices and its extra downloads
+          spec: o.spec ?? null, formats: o.formats ?? [], formats_todo: o.formats_todo ?? [], formats_done: o.formats_done ?? [],
+          formats_failed: o.formats_failed ?? [], format_bytes: o.format_bytes ?? {}, dl_until: o.dl_until ?? null }));
     },
     inf_3d_burn(a) {
       if (!ID.test(String(a.p_order)) || !code(a.p_wallet) || !code(a.p_burn) || ![1, 2, 3].includes(a.p_level)
-        || !(Number.isInteger(a.p_agi) && a.p_agi >= 1 && a.p_agi <= 1e9) || !(a.p_cap >= 0) || !(a.p_burn_cap >= 0)) return no('bad');
+        || !(Number.isInteger(a.p_agi) && a.p_agi >= 1 && a.p_agi <= 1e9) || !(a.p_cap >= 0) || !(a.p_burn_cap >= 0) || !specOk(a.p_spec)) return no('bad');
+      // (2026-10-13) nothing extra: no moves described in words, not High detail, at most the 7 library moves its price has
+      const s = a.p_spec;
+      if (s != null && ((Array.isArray(s.own) ? s.own.length > 0 : s.own !== undefined && s.own !== null) || (s.detail ?? 'std') === 'high'
+        || (Array.isArray(s.moves) && s.moves.length > 7))) return no('not_burnable');
       const i = this.infs.get(a.p_inf);
       if (!i || i.status === 'deleted' || i.hidden) return no('gone');
       if (i.wallet_code !== a.p_wallet) return no('not_yours');
@@ -974,15 +1029,19 @@ function database() {
       if ([...this.orders.values()].some((o) => o.inf_id === a.p_inf && ['paid', 'making'].includes(o.status))) return no('busy3d');
       const open = [...this.orders.values()].filter((o) => o.inf_id === a.p_inf && o.wallet_code === a.p_wallet && o.status === 'quote' && o.kind === 'burn'
         && (o.paid > 0 || o.created > now() - DAY)).sort((x, y) => y.created - x.created || y.seq - x.seq)[0];
-      if (open) return ok({ order: open.id, agi: open.agi, paid: open.paid, created: iso(open.created), again: true });
+      if (open) {
+        // nothing burned toward it yet: its choices are the ones asked for now (once something is, they stay)
+        if (open.paid === 0) Object.assign(open, { spec: a.p_spec ?? null, formats: formatsOf(a.p_spec), updated: now() });
+        return ok({ order: open.id, agi: open.agi, paid: open.paid, created: iso(open.created), again: true, spec: open.spec ?? null });
+      }
       const live = this.liveQuotes();
       if (this.studioMade + live.all >= a.p_cap) return no('sold_out');
       if (this.studioBurns + live.burn >= a.p_burn_cap) return no('burns_sold_out');
       if (this.orders.has(a.p_order)) return no('taken');
       this.order({ id: a.p_order, inf_id: a.p_inf, wallet_code: a.p_wallet, burn_code: a.p_burn, status: 'quote', kind: 'burn', agi: a.p_agi,
         name: i.name, about: `Made from ${i.name}'s full-body picture in AGI Studio.`, style: style3d(i.style),
-        level: a.p_level, image_path: `inf/${a.p_inf}/${i.body_job}-0.jpg` });
-      return ok({ order: a.p_order, agi: a.p_agi, paid: 0, created: iso(now()), again: false });
+        level: a.p_level, image_path: `inf/${a.p_inf}/${i.body_job}-0.jpg`, spec: a.p_spec ?? null, formats: formatsOf(a.p_spec) });
+      return ok({ order: a.p_order, agi: a.p_agi, paid: 0, created: iso(now()), again: false, spec: a.p_spec ?? null });
     },
     // ---- the trend clips (the owner's) ----
     trend_make({ p_trend, p_job, p_sort }) {
@@ -3982,6 +4041,8 @@ test('Explore and its page: public ones only (never a private one: made from a f
   assert.deepEqual(r.body.fresh[1], { id: v, kind: 'video', shape: 'tall', trend: null, poster: true, files: 0, likes: 0, done: fake.db.jobs.get(v).done,
     // (round 4, phase 4) its menu choices, as the database gives them (none here)
     model: null, quality: null, seconds: null, sound: false, meme: null, caption: null,
+    // (2026-10-13, 💜 With AGI-1) whether AGI-1 is in it (never here)
+    agi1: false,
     inf: { id: a.id, name: 'Nova', portrait: { job: a.looks, n: 1 }, maker: null } });
   assert.deepEqual(r.body.trends, [{ id: 'golden-flip', name: 'Golden hour', emoji: '🌅', job: move, poster: true }]);
   assert.deepEqual([r.body.boosted, r.body.spotlight], [[], null]);
@@ -4436,6 +4497,472 @@ test('its 3D model: from its full body, in credits (a Soulmate\'s first each mon
   assert.deepEqual(r.body.models.map((m) => [m.status, m.error]).sort(), [['done', null], ['done', null], ['failed', 'ai:image']].sort());
   process.env.STUDIO_HIDE = first.id;
   assert.equal((await get(`inf=${id}`)).body.models.length, 1);
+});
+
+// (2026-10-13, the 3D tool) its choices: its moves, moves described in words, its shape and look, more downloads
+const SPEC_3D = {
+  moves: ['wave', 'shrug', 'backflip', 'dance', 'jump', 'cheer', 'bow', 'walk', 'party'],
+  own: [{ name: 'zoomies', prompt: 'Runs in a little circle, arms out.', seconds: 3 }, { name: 'curtsy', prompt: 'A polite curtsy, then a smile.' }],
+  detail: 'high', shine: true, pose: 't', height: 182, look: 'a red leather jacket', formats: ['obj', 'full', 'usdz'],
+};
+test("(2026-10-13) the 3D tool's choices: its price with its extras at each level (a Soulmate's free one pays its extras only), kept with its order and shown on its page (all of it to its maker alone); a choice that isn't one, its words' no, an older influencers.sql", async () => {
+  process.env.MESHY_API_KEY = `msy_${'a1'.repeat(20)}`;
+  giveCredits(5000);
+  const { id } = await readyInf({ name: 'Nova' });
+  infActBurst.reset();
+  const tidy = R.modelSpec(SPEC_3D);
+  // its price: 500 for its standard price, 2 library moves past its 7 (11 each), 2 moves of its own (47 each), High detail (18)
+  assert.deepEqual([R.modelCost(SPEC_3D, 1), R.modelCost(SPEC_3D, 2), R.modelCost(SPEC_3D, 3), R.modelCost(SPEC_3D, 3, { free: true })], [634, 507, 380, 80]);
+  let r = await act('inf-3d', { id, spec: SPEC_3D });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.free, r.body.cost, r.body.credits], [false, 634, { paid: 5000 - 634, free: 0, bonus: 0 }]);
+  let sent = dbCalls('inf_3d').at(-1);
+  assert.deepEqual([sent.p_cost, sent.p_free, sent.p_spec, sent.p_free_cost], [634, false, tidy, 134], 'its choices tidied (its moves and downloads in their own order)');
+  const first = fake.db.orders.get(r.body.order);
+  assert.deepEqual([first.spec, first.formats, first.paid], [tidy, ['full', 'usdz', 'obj'], 634]);
+  // on its page: its shape for anyone (once it's done), all of its choices and its downloads for its maker
+  Object.assign(first, { status: 'done', done: Date.now() - 1000, moves: R.modelMoveNames(tidy), formats_todo: ['usdz', 'obj'], formats_done: ['full'],
+    format_bytes: { full: 9_000_000 }, dl_until: new Date(Date.now() + 30 * DAY).toISOString() });
+  r = await get(`inf=${id}`);
+  const seen = r.body.models[0];
+  assert.deepEqual([seen.detail, seen.pose, seen.height, seen.shine, seen.spec, seen.dl], ['high', 't', 182, true, undefined, undefined],
+    'anyone: its shape, never its words or its downloads');
+  assert.deepEqual(seen.moves, ['idle', 'wave', 'dance', 'jump', 'cheer', 'bow', 'walk', 'party', 'shrug', 'backflip', 'zoomies', 'curtsy']);
+  r = await act('inf-look', { id });
+  const mine = r.body.models[0];
+  assert.deepEqual(mine.spec, tidy);
+  assert.deepEqual(mine.dl, { formats: ['full', 'usdz', 'obj'], done: ['full'], todo: ['usdz', 'obj'], failed: [], until: Date.parse(first.dl_until) });
+  // one made as before: no choices sent (an older influencers.sql makes it the same), and nothing shown but what it always was
+  first.status = 'done';
+  r = await act('inf-3d', { id, spec: { moves: R.DEFAULT_PICKS, detail: 'std', pose: 'a', height: 170 } });
+  assert.equal(r.status, 200);
+  sent = dbCalls('inf_3d').at(-1);
+  assert.deepEqual([sent.p_cost, 'p_spec' in sent, 'p_free_cost' in sent], [500, false, false]);
+  const plain = fake.db.orders.get(r.body.order);
+  plain.status = 'done';
+  assert.deepEqual([plain.spec, plain.formats], [null, []]);
+  r = await get(`inf=${id}`);
+  const shown = r.body.models.find((m) => m.id === plain.id);
+  assert.deepEqual([shown.detail, shown.pose, shown.spec, shown.dl], [undefined, undefined, undefined, undefined]);
+  // a Crush: 20% off all of it
+  r = await act('inf-3d', { id, spec: SPEC_3D }, { level: 2 });
+  assert.deepEqual([r.status, r.body.cost, dbCalls('inf_3d').at(-1).p_cost, dbCalls('inf_3d').at(-1).p_free_cost], [200, 507, 507, 107]);
+  fake.db.orders.get(r.body.order).status = 'done';
+  // a Soulmate: its free model a month covers its standard price, its extras still paid (40% off)
+  const before = credits().paid;
+  r = await act('inf-3d', { id, spec: SPEC_3D }, { level: 3 });
+  assert.deepEqual([r.status, r.body.free, r.body.cost, r.body.credits.paid], [200, true, 80, before - 80]);
+  const freeOne = fake.db.orders.get(r.body.order);
+  assert.deepEqual([freeOne.kind, freeOne.paid, freeOne.free], ['free', 80, true]);
+  freeOne.status = 'done';
+  // …its free one used: its whole price after it
+  r = await act('inf-3d', { id, spec: SPEC_3D }, { level: 3 });
+  assert.deepEqual([r.status, r.body.free, r.body.cost], [200, false, 380]);
+  fake.db.orders.get(r.body.order).status = 'done';
+  // …and a free one whose extras it can't pay: not enough credits, and its free one still there for later
+  const soul = '0x4444444444444444444444444444444444444444';
+  const s = await readyInf({ wallet: soul, name: 'Zoe' });
+  giveCredits(50, soul);
+  r = await act('inf-3d', { id: s.id, spec: SPEC_3D }, { wallet: soul, level: 3 });
+  assert.deepEqual([r.status, r.body.error, r.body.have], [402, 'short', 50]);
+  assert.equal(fake.db.studio_free_used({ p_wallet: codeOf(soul) }), false, 'its free one not used');
+  r = await act('inf-3d', { id: s.id }, { wallet: soul, level: 3 });
+  assert.deepEqual([r.status, r.body.free, r.body.cost], [200, true, 0], 'the model as before: free');
+  infActBurst.reset();
+  // a choice that isn't one: 400 with which (nothing paid or asked of the database)
+  const n = dbCalls('inf_3d').length, paid = credits().paid;
+  for (const [bad, field] of [[{ moves: ['idle'] }, 'moves'], [{ moves: [] }, 'moves'], [{ moves: R.MOVE_LIBRARY.slice(1, 11).map((m) => m.name) }, 'moves'],
+    [{ own: [{ name: 'wave', prompt: 'A big wave.' }] }, 'own'], [{ own: [{ name: 'a', prompt: 'A big wave.' }] }, 'own'],
+    [{ own: [{ name: 'spin2', prompt: 'ok' }] }, 'own'], [{ own: [{ name: 'spinny', prompt: 'A slow spin.', seconds: 4 }] }, 'own'],
+    [{ own: [1, 2, 3] }, 'own'], [{ detail: 'ultra' }, 'detail'], [{ shine: 'yes' }, 'shine'], [{ pose: 'x' }, 'pose'], [{ height: 139 }, 'height'],
+    [{ height: 211 }, 'height'], [{ height: 170.5 }, 'height'], [{ look: 'ab' }, 'look'], [{ look: 'x'.repeat(301) }, 'look'], [{ formats: ['gif'] }, 'formats'],
+    [{ formats: 'glb' }, 'formats'], [[], 'spec'], ['high', 'spec']]) {
+    r = await act('inf-3d', { id, spec: bad });
+    assert.deepEqual([r.status, r.body.error, r.body.field], [400, 'spec', field], JSON.stringify(bad));
+    infActBurst.reset();
+  }
+  assert.deepEqual([dbCalls('inf_3d').length, credits().paid], [n, paid]);
+  // its words: checked like a character's (its look; each move of its own, its name and what it does): 422 with which
+  for (const [bad, out] of [[{ look: 'see https://example.com for it' }, { field: 'look', why: 'link' }],
+    [{ own: [{ name: 'zoomies', prompt: 'Runs in a circle.' }, { name: 'shimmy', prompt: 'A sexy shimmy for the camera.' }] }, { field: 'own', n: 2, part: 'prompt', why: 'adult' }],
+    [{ own: [{ name: 'swoop', prompt: 'Stabs someone with a knife.' }] }, { field: 'own', n: 1, part: 'prompt', why: 'violence' }],
+    [{ own: [{ name: 'stab', prompt: 'A slow little spin.' }] }, { field: 'own', n: 1, part: 'name', why: 'violence' }]]) {
+    r = await act('inf-3d', { id, spec: bad });
+    assert.equal(r.status, 422, JSON.stringify(bad));
+    assert.deepEqual({ field: r.body.field, n: r.body.n, part: r.body.part, why: r.body.why }, { n: undefined, part: undefined, ...out }, JSON.stringify(bad));
+    infActBurst.reset();
+  }
+  assert.deepEqual([dbCalls('inf_3d').length, credits().paid], [n, paid]);
+  // an older influencers.sql (its inf_3d without the choices): the model as before still made; with choices, it says what to run
+  fake.oldArgs.set('inf_3d', ['p_spec', 'p_free_cost']);
+  r = await act('inf-3d', { id, spec: SPEC_3D });
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  assert.ok(logs.some((l) => l.includes('inf_3d not found: run supabase/studio.sql again, then supabase/influencers.sql again')), logs.join('\n'));
+  r = await act('inf-3d', { id });
+  assert.equal(r.status, 200);
+  fake.oldArgs.clear();
+});
+
+test("(2026-10-13) a 3D model for a big burn with its choices: only ones with nothing extra; an open quote's choices are the ones asked for now until something is burned toward it, then they stay", async () => {
+  process.env.MESHY_API_KEY = `msy_${'a1'.repeat(20)}`;
+  const { id } = await readyInf({ name: 'Nova' });
+  infActBurst.reset();
+  // extras: never for a burn (a burn pays nobody), nothing asked of the database
+  for (const bad of [{ detail: 'high' }, { own: [{ name: 'zoomies', prompt: 'Runs in a little circle.' }] }, { moves: SPEC_3D.moves }]) {
+    const r = await act('inf-3d-burn', { id, spec: bad });
+    assert.deepEqual([r.status, r.body.error], [409, 'not_burnable'], JSON.stringify(bad));
+  }
+  assert.equal(dbCalls('inf_3d_burn').length, 0);
+  // the database says so too (our server checked first: src/studio/rules.js burnable)
+  assert.deepEqual(fake.db.inf_3d_burn({ p_order: idOf('burnq'), p_inf: id, p_wallet: codeOf(), p_burn: burnWallet(BURN_KEY, WALLET), p_level: 1, p_agi: 25_000,
+    p_cap: 15, p_burn_cap: 10, p_spec: { detail: 'high' } }), { ok: false, why: 'not_burnable' });
+  // free choices: its look in words, its pose, height, shine, Low-poly and more downloads
+  const free = { detail: 'light', shine: true, pose: 't', height: 150, look: 'a mint raincoat', formats: ['stl', 'fbx'] };
+  assert.equal(R.burnable(free), true);
+  let r = await act('inf-3d-burn', { id, spec: free });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const { order } = r.body;
+  assert.deepEqual([r.body.again, r.body.spec], [false, R.modelSpec(free)]);
+  assert.deepEqual([fake.db.orders.get(order).spec, fake.db.orders.get(order).formats], [R.modelSpec(free), ['fbx', 'stl']]);
+  // asked again with other choices while nothing is burned: the same quote, its choices the new ones
+  r = await act('inf-3d-burn', { id, spec: { pose: 'a', formats: ['full'] } });
+  assert.deepEqual([r.body.order, r.body.again, r.body.spec?.pose, r.body.spec?.formats], [order, true, 'a', ['full']]);
+  assert.deepEqual(fake.db.orders.get(order).formats, ['full']);
+  // the model as before: no choices sent (null kept)
+  r = await act('inf-3d-burn', { id });
+  assert.deepEqual([r.body.order, 'p_spec' in dbCalls('inf_3d_burn').at(-1), fake.db.orders.get(order).spec], [order, false, null]);
+  assert.deepEqual(r.body.spec, R.MODEL_DEFAULT);
+  // something burned toward it: its choices stay as they were (its answer says which)
+  r = await act('inf-3d-burn', { id, spec: free });
+  fake.db.orders.get(order).paid = 5000;
+  r = await act('inf-3d-burn', { id, spec: { pose: 'a' } });
+  assert.deepEqual([r.body.order, r.body.paid, r.body.spec.pose, r.body.spec.look], [order, 5000, 't', 'a mint raincoat']);
+  assert.deepEqual(fake.db.orders.get(order).spec, R.modelSpec(free));
+  // an older influencers.sql (its inf_3d_burn without the choices): with choices, it says what to run
+  fake.oldArgs.set('inf_3d_burn', ['p_spec']);
+  r = await act('inf-3d-burn', { id, spec: free });
+  assert.deepEqual([r.status, r.body.error], [503, 'not_ready']);
+  fake.oldArgs.clear();
+});
+
+test("(2026-10-13) a 3D model's more downloads: its maker's alone, from a signed address with its file's name; every no (not asked, being made, couldn't be made, past its days, gone, its file missing), and whether its page's pictures come without our watermark", async () => {
+  process.env.MESHY_API_KEY = `msy_${'a1'.repeat(20)}`;
+  giveCredits(2000);
+  const { id } = await readyInf({ name: 'NovaStar' });
+  fake.db.infs.get(id).name = 'Nova Star';
+  let r = await act('inf-3d', { id, spec: { formats: ['full', 'fbx', 'usdz', 'stl', 'obj'] } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const order = r.body.order;
+  const o = fake.db.orders.get(order);
+  // not done yet: gone (nothing to download)
+  r = await act('inf-3d-dl', { order });
+  assert.deepEqual([r.status, r.body.error], [404, 'gone']);
+  const until = new Date(Date.now() + 30 * DAY).toISOString();
+  Object.assign(o, { status: 'done', done: Date.now(), formats_done: ['full', 'fbx'], formats_todo: ['usdz', 'stl'], formats_failed: ['obj'], dl_until: until });
+  for (const f of ['full', 'fbx']) fake.storage.set(R.dlPath(order, f), { bytes: Buffer.from(f), type: R.DL_FORMATS[f].type });
+  // its list: what was asked for, what's ready, being made, couldn't be made, until when; and whether its page is clean for it
+  r = await act('inf-3d-dl', { order });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.formats, r.body.done, r.body.todo, r.body.failed, r.body.until, r.body.clean],
+    [['full', 'fbx', 'usdz', 'stl', 'obj'], ['full', 'fbx'], ['usdz', 'stl'], ['obj'], Date.parse(until), false]);
+  r = await act('inf-3d-dl', { order }, { level: 2 });
+  assert.equal(r.body.clean, true, "a Crush's page comes without our watermark");
+  process.env.STUDIO_CLEAN_AGI = '0';
+  r = await act('inf-3d-dl', { order }, { level: 2 });
+  assert.equal(r.body.clean, false, 'clean downloads off');
+  delete process.env.STUDIO_CLEAN_AGI;
+  // one: a signed address of 2 hours, named after it
+  r = await act('inf-3d-dl', { order, format: 'full' });
+  assert.deepEqual([r.status, r.body.name], [200, 'Nova-Star-3D-full.glb']);
+  assert.ok(r.body.url.startsWith(`${SB}/storage/v1/object/sign/agi1-characters/dl/${order}.glb?token=`) && r.body.url.endsWith('&download=Nova-Star-3D-full.glb'), r.body.url);
+  assert.equal(calls.filter((c) => c.to === 'sign').at(-1).body.expiresIn, 7200);
+  r = await act('inf-3d-dl', { order, format: 'fbx' });
+  assert.deepEqual([r.status, r.body.name], [200, 'Nova-Star-3D.fbx']);
+  // every no
+  for (const [body, status, error] of [[{ order, format: 'usdz' }, 409, 'dl_wait'], [{ order, format: 'obj' }, 409, 'dl_failed'],
+    [{ order, format: 'gif' }, 400, 'bad'], [{ order: 'nope' }, 400, 'bad'], [{ order: idOf('nothere') }, 404, 'gone']]) {
+    r = await act('inf-3d-dl', body);
+    assert.deepEqual([r.status, r.body.error], [status, error], JSON.stringify(body));
+  }
+  r = await act('inf-3d-dl', { order, format: 'full' }, { wallet: OTHER });
+  assert.deepEqual([r.status, r.body.error], [403, 'not_yours']);
+  o.formats = ['full', 'fbx'];
+  r = await act('inf-3d-dl', { order, format: 'stl' });
+  assert.deepEqual([r.status, r.body.error], [404, 'dl_none']);
+  fake.storage.delete(R.dlPath(order, 'fbx'));
+  r = await act('inf-3d-dl', { order, format: 'fbx' });
+  assert.deepEqual([r.status, r.body.error], [404, 'dl_missing']);
+  fake.storageDown = true;
+  r = await act('inf-3d-dl', { order, format: 'full' });
+  assert.deepEqual([r.status, r.body.error], [502, 'storage']);
+  fake.storageDown = false;
+  o.dl_until = new Date(Date.now() - 1000).toISOString();
+  r = await act('inf-3d-dl', { order, format: 'full' });
+  assert.deepEqual([r.status, r.body.error], [410, 'dl_expired']);
+  // taken down: gone (its own influencer's, or itself)
+  o.dl_until = until;
+  o.hidden = true;
+  assert.deepEqual((await act('inf-3d-dl', { order })).body.error, 'gone');
+  o.hidden = false;
+  process.env.STUDIO_HIDE = id;
+  assert.deepEqual((await act('inf-3d-dl', { order })).body.error, 'gone');
+  delete process.env.STUDIO_HIDE;
+  // a banned maker: never (its creations are shown to nobody, itself included)
+  fake.db.bans.push({ wallet_code: codeOf(), lifted: false });
+  T._resetTeam();
+  r = await act('inf-3d-dl', { order });
+  assert.deepEqual([r.status, r.body.error], [403, 'banned']);
+});
+
+test("(2026-10-13) a Soulmate's free 3D model this month as My studio says it (true, false once used, null when 3D models are off); deleting an influencer deletes its 3D models' more downloads too", async () => {
+  // My studio: freeModel
+  let r = await act('inf-me', {}, { level: 3 });
+  assert.equal(r.body.freeModel, null, '3D models off: unknown');
+  process.env.MESHY_API_KEY = `msy_${'a1'.repeat(20)}`;
+  r = await act('inf-me', {}, { level: 3 });
+  assert.equal(r.body.freeModel, true);
+  assert.equal((await act('inf-me', {}, { level: 2 })).body.freeModel, false, 'not a Soulmate');
+  const { id } = await readyInf({ name: 'Nova' });
+  r = await act('inf-3d', { id }, { level: 3 });
+  assert.deepEqual([r.status, r.body.free], [200, true]);
+  const order = r.body.order;
+  r = await act('inf-me', {}, { level: 3 });
+  assert.equal(r.body.freeModel, false, 'used this month');
+  fake.missing.add('studio_free_used');
+  assert.equal((await act('inf-me', {}, { level: 3 })).body.freeModel, null, "the database didn't say");
+  fake.missing.delete('studio_free_used');
+  // deleting it: its 3D models' files and their more downloads
+  Object.assign(fake.db.orders.get(order), { status: 'done', formats_done: ['full', 'obj'] });
+  for (const k of [`${order}.glb`, `${order}.webp`, `${order}.png`, R.dlPath(order, 'full'), R.dlPath(order, 'obj')]) {
+    fake.storage.set(k, { bytes: Buffer.from('x'), type: 'application/octet-stream' });
+  }
+  r = await act('inf-delete', { id });
+  assert.deepEqual([r.status, fake.db.orders.get(order).hidden], [200, true]);
+  assert.deepEqual([...fake.storage.keys()].filter((k) => k.includes(order)), [], 'its model, its pictures and its more downloads');
+});
+
+test('(2026-10-13) the AI helper knows the 3D tool: its moves, its own moves, its shape and look, its page\'s studio tools and its more downloads, from the code\'s own numbers', () => {
+  const guide = helpGuide(cfgNow());
+  const line = guide.split('\n').find((l) => l.includes("3D MODELS (the 3D tool on an influencer's page)"));
+  assert.ok(line, 'its line');
+  for (const part of [
+    `a library of ${R.MOVE_LIBRARY.length}`, `up to ${R.MODEL.PICKS_MAX}, ${R.MODEL.PICKS_FREE} in its price, each one more ${R.MODEL_EXTRAS.move} credits`,
+    `up to ${R.MODEL.OWN_MAX} moves of its own described in words (${R.MODEL.OWN_SECONDS.join(', ')} seconds`, `${R.MODEL_EXTRAS.own} credits each`,
+    Object.values(R.MODEL_DETAIL).map((d) => d.name).join(', '), `High detail ${R.MODEL_EXTRAS.high} credits more`,
+    `its height (${R.MODEL.HEIGHT_MIN} to ${R.MODEL.HEIGHT_MAX} cm)`, '"Change its look with words" (free',
+    "a Soulmate's free 3D model covers its standard price, not its extras",
+    Object.values(R.DL_FORMATS).map((f) => f.name).join(', '), `kept ${R.DL_DAYS} days`, 'its small 3D model and its picture stay for good',
+  ]) assert.ok(line.includes(part), part);
+  assert.doesNotMatch(line, PROVIDERS);
+  assert.doesNotMatch(line, /\bbuy\b/i);
+});
+
+test('(2026-10-13) the 3D tool on an influencer\'s page (views/model-tool.js): what\'s picked as a model starts, what\'s sent, its price from what\'s picked (a move of its own half-typed already counts), its sections\' notes and its "no"s in words', () => {
+  // as a model starts: its usual moves, nothing extra; sent as it is, it's the model as before (no choices for the database)
+  const st = modelState();
+  assert.deepEqual({ ...st, open: undefined }, { moves: R.DEFAULT_PICKS, own: [], detail: 'std', shine: false, pose: 'a', height: R.MODEL.HEIGHT, look: '', formats: [], open: undefined, nextKey: 1 });
+  assert.deepEqual(st.open, { moves: true, own: false, look: false, dl: false });
+  st.moves.push('shrug');
+  assert.deepEqual(modelState().moves, R.DEFAULT_PICKS, 'each its own');
+  assert.ok(R.isDefaultSpec(specOf(modelState())));
+  assert.deepEqual(R.modelSpec(specOf(modelState())), R.MODEL_DEFAULT);
+  assert.equal(R.modelCost(specOf(modelState()), 1), R.PRICES.model);
+  // what's sent: its words tidied (a name lowercased and trimmed, what it does and its look with one space), no look: null
+  const b = modelState();
+  Object.assign(b, { moves: [...R.DEFAULT_PICKS, 'shrug', 'backflip'], detail: 'high', shine: true, pose: 't', height: 182, look: '  a red\n leather   jacket ', formats: ['full', 'obj'],
+    own: [{ key: 1, name: ' Zoomies ', prompt: '  runs   in a circle ', seconds: 3 }, { key: 2, name: 'curtsy', prompt: 'A polite little curtsy.', seconds: 5 }] });
+  const sent = specOf(b);
+  assert.deepEqual(sent, { moves: [...R.DEFAULT_PICKS, 'shrug', 'backflip'], own: [{ name: 'zoomies', prompt: 'runs in a circle', seconds: 3 }, { name: 'curtsy', prompt: 'A polite little curtsy.', seconds: 5 }],
+    detail: 'high', shine: true, pose: 't', height: 182, look: 'a red leather jacket', formats: ['full', 'obj'] });
+  assert.ok(R.modelSpec(sent), 'a spec our server takes');
+  assert.equal(specOf(modelState()).look, null);
+  // its price follows what's picked, never how far its words are typed: the same as the whole spec once typed…
+  for (const level of [1, 2, 3]) {
+    assert.equal(R.modelCost(priceSpecOf(b), level), R.modelCost(sent, level), `level ${level}`);
+    assert.equal(R.modelCost(priceSpecOf(b), level, { free: true }), R.modelCost(sent, level, { free: true }), `level ${level}, free`);
+  }
+  // …and half-typed (a move of its own with no name or words yet already counts), no moves (its price as one: its button says why)
+  const half = modelState();
+  half.own = [{ key: 1, name: '', prompt: '', seconds: 5 }];
+  assert.equal(R.modelSpec(specOf(half)), null, 'not a spec yet');
+  assert.equal(R.modelCost(priceSpecOf(half), 1), R.PRICES.model + R.MODEL_EXTRAS.own);
+  assert.ok(R.modelSpec(priceSpecOf(half)) && !R.burnable(priceSpecOf(half)), 'never burnable with a move of its own');
+  half.own.push({ key: 2, name: 'x', prompt: 'y', seconds: 8 });
+  assert.equal(R.modelCost(priceSpecOf(half), 1), R.PRICES.model + 2 * R.MODEL_EXTRAS.own);
+  const none = modelState();
+  none.moves = [];
+  assert.deepEqual(priceSpecOf(none).moves, [R.DEFAULT_PICKS[0]]);
+  assert.equal(R.modelCost(priceSpecOf(none), 1), R.PRICES.model);
+  assert.ok(R.burnable(priceSpecOf(modelState())));
+  // its sections' notes, and the line under its moves
+  assert.deepEqual([AW.movesNote(7), AW.movesNote(8), AW.movesNote(9), AW.movesNote(-2)], ['7 of 9', '8 of 9 · +11', '9 of 9 · +22', '0 of 9']);
+  assert.equal(AW.movesLine(0), 'Pick at least one move.');
+  assert.equal(AW.movesLine(7), '7 picked: up to 7 are in its price, each one more +11 credits.');
+  assert.equal(AW.movesLine(8), '8 picked: 7 are in its price, the other one +11 credits.');
+  assert.equal(AW.movesLine(9), '9 picked, the most: 7 are in its price, the other 2 +22 credits. Unpick one to pick another.');
+  assert.deepEqual([AW.ownNote([]), AW.ownNote([{ name: 'Kick ' }, { name: '' }])], ['None · +47 each', 'kick, Move 2 · +94']);
+  assert.equal(AW.lookNote(modelState()), 'Standard · A-pose · 170 cm');
+  assert.equal(AW.lookNote(b), 'High detail · T-pose · 182 cm · Shine · New look');
+  assert.deepEqual([AW.dlNote([]), AW.dlNote(['stl', 'fbx', 'gif'])], ['None · free', 'FBX, STL']);
+  // what its extras cost (the button says the total); a Soulmate's free one covers its price, never its extras
+  assert.equal(AW.modelPriceText(specOf(modelState()), 1), '');
+  assert.equal(AW.modelPriceText(sent, 2), 'Its price is 500, and its extras: 2 more moves +22 · 2 moves of its own +94 · High detail +18 (Crush: 20% off all of it).');
+  assert.equal(AW.modelPriceText(sent, 3, { free: true }), 'Your free 3D model this month covers its price; its extras are paid: 2 more moves +22 · 2 moves of its own +94 · High detail +18 (40% off).');
+  assert.equal(AW.modelPriceText(specOf(modelState()), 3, { free: true }), '');
+  assert.match(AW.specSummary(sent), /^9 moves: Wave, Dance, Jump, Cheer, Bow, Walk, Party, Shrug, Backflip · of its own: zoomies, curtsy · High detail · T-pose · 182 cm · Shine · its look: “a red leather jacket” · downloads: Full GLB, OBJ$/);
+  assert.deepEqual([AW.modelTimeText(sent), AW.modelTimeText(specOf(modelState())), AW.modelTimeText(null)], ['about 10 to 15 minutes', 'about 5 to 10 minutes', 'about 5 to 10 minutes']);
+  // its "no"s in words: each its own, said as our server says it
+  const whys = ['name_empty', 'name_bad', 'name_taken', 'name_twice', 'prompt_empty', 'prompt_short', 'prompt_long'];
+  const texts = whys.map((w) => AW.ownText(w, 'wave'));
+  assert.equal(new Set(texts).size, whys.length);
+  assert.ok(!texts.includes(AW.ownText('nope')));
+  assert.equal(AW.ownText('name_taken', 'wave'), '“wave” plays a move from the library already: pick another name.');
+  assert.match(AW.ownText('name_bad'), /2 to 16 letters and numbers, starting with a letter/);
+  assert.deepEqual([AW.lookText('short'), AW.lookText('long')], ['A few more words, please: at least 3 characters.', 'At most 300 characters.']);
+  for (const f of ['moves', 'own', 'pose', 'height', 'look', 'formats']) assert.notEqual(AW.specFieldText(f), AW.errorText('spec'), f);
+  assert.equal(AW.specFieldText('detail'), AW.errorText('spec'));
+  assert.match(AW.modelWordsText('look', 'person'), /^Never a famous or real person by name: describe the look itself\.$/);
+  assert.match(AW.modelWordsText('own', 'character'), /describe the move itself\.$/);
+  for (const e of ['not_burnable', 'dl_none', 'dl_wait', 'dl_failed', 'dl_expired', 'dl_missing', 'spec']) assert.notEqual(AW.errorText(e), AW.errorText('nope_nope'), e);
+  assert.match(AW.errorText('dl_expired'), /kept 30 days: they're gone now \(its 3D model and its picture stay\)\./);
+  assert.match(AW.errorText('not_burnable'), /at most 7 moves from the library, none of its own, and not High detail/);
+  const all = [...texts, AW.lookText('short'), AW.MODEL_FREE_LINE, AW.modelPriceText(sent, 2), AW.movesLine(9), ...['not_burnable', 'dl_none', 'dl_wait', 'dl_failed', 'dl_expired', 'dl_missing'].map(AW.errorText)].join(' ');
+  assert.doesNotMatch(all, PROVIDERS);
+  assert.doesNotMatch(all, /\bbuy\b/i);
+  // its page's code: checked here as our server checks it (rules.js), its "no" under its own field, never HTML from strings,
+  // never a style attribute, every field with its label
+  const tool = strip(read('src/studio/views/model-tool.js'));
+  assert.doesNotMatch(tool, /innerHTML|insertAdjacentHTML|outerHTML|document\.write|setAttribute\('style'|style: /);
+  assert.match(tool, /const nameWhy = !nm \? 'name_empty' : !OWN_NAME\.test\(nm\) \? 'name_bad' : moveWord\(nm\) \? 'name_taken' : seen\.has\(nm\) \? 'name_twice' : null;/);
+  assert.match(tool, /const promptWhy = !p \? 'prompt_empty' : p\.length < MODEL\.OWN_MIN \? 'prompt_short' : p\.length > MODEL\.OWN_LONG \? 'prompt_long' : null;/);
+  assert.match(tool, /if \(lk && \(lk\.length < MODEL\.LOOK_MIN \|\| lk\.length > MODEL\.LOOK_MAX\)\)/);
+  assert.match(tool, /if \(st\.moves\.length >= MODEL\.PICKS_MAX\) \{ input\.checked = false; drawMoves\(\); return; \}/);
+  assert.match(tool, /input\.disabled = full && !input\.checked;/);
+  for (const id of ['cid', 'nameId', 'promptId', 'shineId', 'lookId']) assert.match(tool, new RegExp(`h\\('label', \\{ (?:class: 'sa-label', )?for: ${id}`), id);
+  const page = strip(read('src/studio/views/influencer.js'));
+  assert.match(page, /if \(!choices\.check\(\)\) return;\s*const spec = specOf\(st\);/);
+  assert.match(page, /const r = await ctx\.act\('inf-3d', \{ id, spec \}\);/);
+  assert.match(page, /if \(!burnable\(asked\)\) \{ say\(msg, errorText\('not_burnable'\)\); return; \}/);
+  assert.match(page, /const r = await ctx\.act\('inf-3d-burn', \{ id, spec: asked \}\);/);
+  assert.match(page, /const soulmateFree = \(\) => ctx\.level === 3 && ctx\.me\?\.freeModel !== false;/);
+});
+
+test('(2026-10-13) a 3D model\'s page tools (src/studio/stage-tools.js, views/model3d.js): its backgrounds as the stage\'s CSS draws them and as a picture or a clip gets them, a clip\'s kind, sizes and names, what it does when a message names no move; free, in the browser, nothing sent', () => {
+  // its backgrounds: each one kind, its stops in order; the default the stage's own (its CSS before a pick: the same string)
+  for (const [k, b] of Object.entries(ST.BACKDROPS)) {
+    assert.ok(b.name && [b.color, b.linear, b.radial, b.clear].filter(Boolean).length === 1, k);
+    const stops = b.linear || b.radial?.stops || [];
+    for (let i = 0; i < stops.length; i++) assert.ok(stops[i][0] >= 0 && stops[i][0] <= 1 && (!i || stops[i][0] > stops[i - 1][0]) && /^#[0-9a-f]{6}$/.test(stops[i][1]), k);
+    if (b.color) assert.match(b.color, /^#[0-9a-f]{6}$/);
+  }
+  assert.ok(Object.hasOwn(ST.BACKDROPS, ST.BACKDROP_DEFAULT) && !ST.BACKDROPS[ST.CLIP_CLEAR].clear);
+  assert.equal(ST.backdropCss('studio'), 'radial-gradient(90% 70% at 50% 30%, #241a45 0%, #0b0b0f 75%)');
+  const css = read('src/styles/studio-app.css');
+  assert.ok(css.includes(`background: var(--sa-stage-bg, ${ST.backdropCss(ST.BACKDROP_DEFAULT)});`), 'the stage before a pick: Studio, as it always was');
+  assert.equal(ST.backdropCss('violet'), 'linear-gradient(180deg, #7c4dff 0%, #2e1478 100%)');
+  assert.equal(ST.backdropCss('sunset'), 'linear-gradient(180deg, #ffb36b 0%, #ff5f8f 55%, #2a1650 100%)');
+  assert.equal(ST.backdropCss('green'), '#00b140');
+  assert.match(ST.backdropCss('clear'), /^conic-gradient\(.+\) 0 0 \/ 24px 24px$/);
+  assert.match(ST.backdropCss('clear', { checker: 6 }), / 6px 6px$/);
+  assert.equal(ST.backdropCss('nope'), ST.backdropCss(ST.BACKDROP_DEFAULT));
+  // …drawn under a picture or a clip's frames as the CSS draws it (a 2D context that keeps its transform)
+  const ctx2d = () => {
+    let m = [1, 0, 0, 1, 0, 0];
+    const stack = [], log = [];
+    const at = (x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+    const grad = (g) => { g.stops = []; g.addColorStop = (s, c) => g.stops.push([s, c]); log.push(g); return g; };
+    return {
+      log, depth: () => stack.length, ident: () => m.join(),
+      set fillStyle(v) { this.fill = v; },
+      fillRect(x, y, w, h) { log.push({ rect: [...at(x, y), ...at(x + w, y + h)], fill: this.fill }); },
+      save() { stack.push([...m]); }, restore() { m = stack.pop(); },
+      translate(x, y) { m = [m[0], m[1], m[2], m[3], m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]; },
+      scale(x, y) { m = [m[0] * x, m[1] * x, m[2] * y, m[3] * y, m[4], m[5]]; },
+      createLinearGradient: (x0, y0, x1, y1) => grad({ kind: 'linear', from: at(x0, y0), to: at(x1, y1) }),
+      createRadialGradient: (x0, y0, r0, x1, y1, r1) => grad({ kind: 'radial', center: at(x1, y1), radii: [m[0] * r1, m[3] * r1], inner: r0 }),
+    };
+  };
+  const near = (a, b) => a.length === b.length && a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
+  for (const [w, h] of [[1280, 1600], [640, 360]]) {
+    let g = ctx2d();
+    assert.equal(ST.paintBackdrop(g, 'studio', w, h), true);
+    const [radial, fill] = g.log;
+    assert.ok(radial.kind === 'radial' && near(radial.center, [0.5 * w, 0.3 * h]) && near(radial.radii, [0.9 * w, 0.7 * h]) && radial.inner === 0, JSON.stringify(radial));
+    assert.deepEqual(radial.stops, [[0, '#241a45'], [0.75, '#0b0b0f']]);
+    assert.ok(near(fill.rect, [0, 0, w, h]) && fill.fill === radial, 'all of it, under its gradient');
+    assert.ok(g.depth() === 0 && g.ident() === '1,0,0,1,0,0', 'its transform put back');
+    g = ctx2d();
+    assert.equal(ST.paintBackdrop(g, 'sunset', w, h), true);
+    assert.ok(near(g.log[0].from, [0, 0]) && near(g.log[0].to, [0, h]) && g.log[0].stops.length === 3 && near(g.log[1].rect, [0, 0, w, h]));
+    g = ctx2d();
+    assert.equal(ST.paintBackdrop(g, 'dark', w, h), true);
+    assert.deepEqual(g.log, [{ rect: [0, 0, w, h], fill: '#111116' }]);
+    for (const k of ['clear', 'nope']) { g = ctx2d(); assert.equal(ST.paintBackdrop(g, k, w, h), false); assert.deepEqual(g.log, [], k); }
+  }
+  // what a browser records a clip as: an MP4 where it can (it says inside it's AI-made), else a WebM; none, null
+  assert.deepEqual(ST.clipType(() => true), { mime: 'video/mp4;codecs=avc1.42E01F', ext: 'mp4' }, 'an MP4 first where both are recorded');
+  assert.deepEqual(ST.clipType((t) => t === 'video/mp4;codecs=avc1'), { mime: 'video/mp4;codecs=avc1', ext: 'mp4' });
+  assert.deepEqual(ST.clipType((t) => t.startsWith('video/webm')), { mime: 'video/webm;codecs=vp9', ext: 'webm' });
+  assert.deepEqual(ST.clipType((t) => { if (t.includes('avc1')) throw new Error('no'); return t === 'video/mp4'; }), { mime: 'video/mp4', ext: 'mp4' });
+  assert.equal(ST.clipType(() => false), null);
+  assert.equal(ST.clipType(undefined), null);
+  // a clip's size: its shape, at most CLIP_LONG on its longest side, both even; a picture's pixels: enough for PICTURE_LONG
+  for (const [w, h] of [[1919, 1081], [640, 801], [3, 5], [0, 0], [1280, 720], [999, 1599]]) {
+    const f = ST.evenFit(w, h, ST.CLIP_LONG);
+    assert.ok(f.w % 2 === 0 && f.h % 2 === 0 && f.w >= 2 && f.h >= 2 && Math.max(f.w, f.h) <= ST.CLIP_LONG + 1, `${w}×${h} → ${f.w}×${f.h}`);
+    if (w > 10 && h > 10) assert.ok(Math.abs(f.w / f.h - w / h) < 0.01, `${w}×${h}: its shape`);
+  }
+  assert.deepEqual(ST.evenFit(1919, 1081, 1280), { w: 1280, h: 722 });
+  assert.deepEqual(ST.evenFit(640, 801, 1280), { w: 640, h: 802 });
+  assert.deepEqual([ST.ratioFor(800, 600, 1600, 1), ST.ratioFor(800, 600, 1600, 2.5), ST.ratioFor(200, 100, 1600, 1), ST.ratioFor(0, 0, 1600)], [2, 2.5, ST.MAX_RATIO, ST.MAX_RATIO]);
+  // their names: its name, then what it is
+  assert.deepEqual([ST.captureName('Nova Star', 'picture', 'png'), ST.captureName('Zoë', 'clip', 'mp4'), ST.captureName('', 'clip', 'webm'), ST.captureName('a'.repeat(60), 'picture', 'png')],
+    ['Nova-Star-3D-picture.png', 'Zoe-3D-clip.mp4', 'AGI-Studio-3D-clip.webm', `${'a'.repeat(40)}-3D-picture.png`]);
+  // its moves' speeds, its zoom, a clip's length (Spin on and its usual length: one whole turn)
+  assert.ok(ST.SPEEDS.includes(1) && ST.SPEEDS.every((v, i) => !i || v > ST.SPEEDS[i - 1]));
+  assert.deepEqual([ST.speedText(0.25), ST.zoomText(1), ST.zoomText(2.25), ST.zoomText('3')], ['0.25×', '1.0×', '2.3×', '3.0×']);
+  assert.ok(ST.CLIP_SECONDS.includes(ST.CLIP_SECONDS_DEFAULT) && ST.CLIP_SECONDS_DEFAULT === ST.SPIN_TURN_S);
+  assert.deepEqual(Object.keys(ST.LOOKS), ['color', 'clay', 'wire']);
+  // what it does when a message names no move (it always does something): a reaction it has, else a move that plays once,
+  // else any of its moves, else standing
+  const first = () => 0, last = () => 0.9999, over = () => 1;
+  assert.equal(reactionFor(['idle', 'dance', 'wave', 'bow'], first), 'wave');
+  assert.equal(reactionFor(['idle', 'dance', 'wave', 'bow'], over), 'bow');
+  assert.equal(reactionFor(['idle', 'dance', 'shrug', 'zoomies'], first), 'shrug', 'one that plays once (its own too)');
+  assert.equal(reactionFor(['idle', 'dance', 'shrug', 'zoomies'], last), 'zoomies');
+  assert.equal(reactionFor(['idle', 'shrug', 'bow'], first), 'bow', 'a reaction before any other move');
+  assert.equal(reactionFor(['idle', 'dance', 'walk'], last), 'walk', 'only ones that go on');
+  assert.equal(reactionFor(['idle', 'dance', 'walk'], first), 'dance', 'never standing while it has a move');
+  assert.equal(reactionFor(['idle'], first), 'idle');
+  for (const r of AW.REACTIONS) assert.ok(!R.LOOPING.has(r) && R.MOVE_BY_NAME.has(r), r);
+  // its page's code: its background through the CSS object model only; a picture its background under it and our mark bottom
+  // right (as on photos), a PNG that says inside it's AI-made; a clip Studio's background for Clear, our mark top left (as on
+  // videos), an MP4's tag; stopped when the page is hidden; free, nothing sent (its maker's more downloads asked of our server)
+  const view = strip(read('src/studio/views/model3d.js'));
+  assert.doesNotMatch(view, /innerHTML|insertAdjacentHTML|outerHTML|document\.write|setAttribute\('style'|style: |\bfetch\(/);
+  assert.match(view, /stage\.style\.setProperty\('--sa-stage-bg', backdropCss\(key\)\);/);
+  assert.match(view, /paintBackdrop\(g, st\.bg, out\.width, out\.height\);\s*g\.drawImage\(src, 0, 0\);\s*if \(mark\) \{ const at = markPlace\(/);
+  assert.match(view, /save\(await tagged\(made, 'image\/png'\), captureName\(c\.name, 'picture', 'png'\)\);/);
+  assert.match(view, /const bg = BACKDROPS\[st\.bg\]\?\.clear \? CLIP_CLEAR : st\.bg;/);
+  assert.match(view, /const at = mark \? markTopLeft\(size\.w, size\.h, mark\.naturalWidth, mark\.naturalHeight\) : null;/);
+  assert.match(view, /if \(kind\.ext === 'mp4'\) blob = await tagged\(blob, 'video\/mp4'\);/);
+  assert.match(view, /if \(!ctx\.alive\(\) \|\| document\.visibilityState !== 'visible'\) \{ cancelled = true; resolve\(\); return; \}/);
+  assert.match(view, /new MediaRecorder\(stream, \{ mimeType: kind\.mime, videoBitsPerSecond: CLIP_BITS \}\)/);
+  assert.match(view, /const withMark = \(\) => !st\.clean;/);
+  assert.match(view, /if \(!c\?\.inf \|\| c\.status !== 'done' \|\| !ctx\.session\) \{ dlKey = null; hideDl\(\); return; \}/);
+  // its more downloads asked of our server only for its maker (its influencer in this wallet's own list), never for anyone else's
+  // wallet (it would only hear "not yours"); a wallet just signed in asks once its list is here (the 'me' event), once per wallet
+  // and level (the event comes again whenever credits change)
+  assert.match(view, /if \(!Array\.isArray\(list\) && !ctx\.meError\) \{ dlKey = null; hideDl\(\); return; \}/);
+  assert.match(view, /if \(Array\.isArray\(list\) && list\.length < 30 && !list\.some\(\(i\) => i\?\.id === c\.inf\)\) \{ hideDl\(\); return; \}\s*const r = await ctx\.act\('inf-3d-dl', \{ order: id \}\);/);
+  assert.match(view, /ctx\.on\('me', \(\) => \{ if \(started && ctx\.session && keyNow\(\) !== dlKey\) loadDl\(\); \}\);/);
+  assert.match(view, /'Free, in your browser: nothing you change here is sent anywhere\.'/);
+  assert.match(view, /if \(r\.ok && r\.data\?\.ok && typeof r\.data\.url === 'string'\) \{ location\.assign\(r\.data\.url\); return; \}/);
+  assert.doesNotMatch(view, /\bbuy\b/i);
+  // its styles: its stage's size and place on a computer; recording's pill never in a clip (the page's alone); its buttons'
+  // pressed state
+  for (const rule of ['.sa-stage-tools', '.sa-dl3d-row', '.sa-rec', '.sa-stage[data-rec]', ".sa-toggle[aria-pressed='true']", '.sa-m3', '.sa-own', '.sa-dl-opts']) assert.ok(css.includes(rule), rule);
+  assert.match(css, /\.sa-rec \{[^}]*pointer-events: none;/);
 });
 
 // ---------- a coin with its face ----------
@@ -8440,8 +8967,9 @@ test("influencers.sql's promises: every function our server calls is there with 
   // (round 4, phase 4) the model menu's columns, reference uploads, long videos' parts: the older inf_make dropped first (the web
   // API never has two to choose from), its new parameters with defaults (an older page's call still works), the share mark's
   // clock never taking a long video (its joined copy is marked), each found by the ready check
-  // ((2026-10-12, the editor) and "Edit with words"' p_edit: round 4's phase 4 version dropped first too)
-  assert.match(sql, /drop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer\);\ndrop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,\n  integer, text\[\], integer, text, text\);\ncreate or replace function public\.inf_make\(/);
+  // ((2026-10-12, the editor) and "Edit with words"' p_edit: round 4's phase 4 version dropped first too; (2026-10-13,
+  // 💜 With AGI-1) and p_agi1: the editor's version dropped first as well)
+  assert.match(sql, /drop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer\);\ndrop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,\n  integer, text\[\], integer, text, text\);\ndrop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,\n  integer, text\[\], integer, text, text, text\);\ncreate or replace function public\.inf_make\(/);
   for (const p of ['p_model text default null', 'p_quality text default null', 'p_seconds integer default null', 'p_refs text\\[\\] default null',
     'p_parts integer default 1', 'p_meme text default null', 'p_caption text default null']) assert.match(sql, new RegExp(p), p);
   for (const c of ['model', 'quality', 'seconds', 'refs', 'parts', 'part', 'meme', 'caption']) {
@@ -8512,11 +9040,15 @@ test("influencers.sql's promises: every function our server calls is there with 
   const limits = read('server/limits.js');
   const part = limits.slice(limits.indexOf('AGI Studio, the AI influencer app'), limits.indexOf('CloakMesh'));
   const lists = [...part.matchAll(/for \(const fn of \[([\s\S]*?)\]\)/g)];
-  assert.equal(lists.length, 14, 'its first version, its round 2, its round 3, its round 4, its round 4\'s phases 2, 3 and 4, giving access, its styles and ways, its profile picture, the owner\'s gift links, the editor, the photo editor and the video editor (run again)');
+  assert.equal(lists.length, 16, 'its first version, its round 2, its round 3, its round 4, its round 4\'s phases 2, 3 and 4, giving access, its styles and ways, its profile picture, the owner\'s gift links, the editor, With AGI-1, the photo editor, the video editor and the 3D tool\'s choices (run again)');
+  // (2026-10-13) the 3D tool's choices: inf_3d and inf_3d_burn take a model's spec (studio.sql first: its orders keep it)
+  assert.match(part, /for \(const fn of \['inf_3d', 'inf_3d_burn'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} [^`]*supabase\/studio\.sql[^`]*supabase\/influencers\.sql again, in this Supabase project \(the 3D tool's choices; they end with studio_ready = 1 and influencers_ready = 1\)`;/);
   // (2026-10-12) the video editor's three
   assert.match(part, /for \(const fn of \['inf_cut_add', 'inf_cut_done', 'inf_cut_due'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the video editor; it ends with influencers_ready = 1\)`;/);
-  assert.match(part, /for \(const fn of \['inf_job_delete', 'inf_make'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1\)`;/);
-  // (inf_make's hint is the editor's, its newest parameter: never round 4's phase 4's any more)
+  assert.match(part, /for \(const fn of \['inf_job_delete'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1\)`;/);
+  // (2026-10-13) inf_make's hint names its two newest parameters' reasons: the editor's p_edit and "With AGI-1"'s p_agi1
+  assert.match(part, /for \(const fn of \['inf_make'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(Edit with words and With AGI-1; it ends with influencers_ready = 1\)`;/);
+  // (inf_make's hint is its newest parameters': never round 4's phase 4's any more)
   assert.match(part, /for \(const fn of \['inf_job_part'\]\) \{/);
   assert.match(part, /for \(const fn of \['inf_owner_link', 'inf_owner_links'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the owner's gift links of free credits; it ends with influencers_ready = 1\)`;/);
   assert.match(part, /for \(const fn of \['inf_pfp_set', 'inf_pfp_of'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(changing an influencer's profile picture; it ends with influencers_ready = 1\)`;/);
@@ -8613,6 +9145,22 @@ test("(round 4, phase 4) the model menu: its prices (about 1.8× each AI's cost,
       assert.equal(trouble(`${idea.label} ${idea.scene}`), null, idea.id);
     }
   }
+  // (2026-10-13, 💜 With AGI-1) its ideas with her: sent with agi1 (they name her, which only a creation she's in may), never
+  // without it (her name alone is refused: switch it on), by Classic, a 5-second video silent from a photo she's in
+  assert.deepEqual([INSTANT_MAKES.agi1, INSTANT_MAKES.agi1Video],
+    [{ kind: 'photo', model: 'classic', quality: 'std', shape: 'tall', agi1: true }, { kind: 'video', model: 'standard', seconds: 5, sound: false, agi1: true }]);
+  for (const kind of ['agi1', 'agi1Video']) {
+    const make = INSTANT_MAKES[kind];
+    assert.ok(INSTANT[kind].length >= 2, kind);
+    for (const idea of INSTANT[kind]) {
+      assert.match(idea.scene, /\bAGI-1\b/, idea.id);
+      const c = checkInfScene({ kind: make.kind, agi1: true, scene: idea.scene, shape: make.shape || 'tall', sound: make.sound });
+      assert.ok(c.ok, `${kind} ${idea.id}: ${JSON.stringify(c)}`);
+      assert.equal(checkInfScene({ kind: make.kind, scene: idea.scene, shape: make.shape || 'tall', sound: make.sound }).why, 'her', idea.id);
+      assert.equal(trouble(`${idea.label} ${idea.scene}`, { herName: true }), null, idea.id);
+      assert.doesNotMatch(`${idea.label} ${idea.scene}`, /selfie|kiss|bed|lingerie|bikini|sexy/i, idea.id);
+    }
+  }
   assert.equal(MEME_READY.length, 10);
   for (const m of MEME_READY) {
     assert.ok(checkMemeText({ meme: m.meme, lines: m.lines }).ok, m.id);
@@ -8694,8 +9242,14 @@ test('(round 4, phase 4) Learn: /learn, its lessons (each ending where you try i
     assert.match(l.id, /^[a-z]+$/);
     assert.ok(['/create', '/me', '/explore', '/help'].includes(l.to), l.id);
     assert.ok(l.steps.length >= 2 && l.steps.every((s) => s.length < 220), l.id);
-    assert.equal(trouble(`${l.title} ${l.line} ${l.steps.join(' ')}`), null, l.id);
+    // (2026-10-13, 💜 With AGI-1) its steps may name AGI-1 (how to have her in it), and nothing else the words' rules refuse
+    assert.equal(trouble(`${l.title} ${l.line} ${l.steps.join(' ')}`, { herName: true }), null, l.id);
   }
+  // 💜 With AGI-1: the photos and videos lessons say how (the switch, Add AGI-1, never in a trend video)
+  const lesson = (id) => L.LESSONS.find((l) => l.id === id).steps.join(' ');
+  assert.match(lesson('photos'), /With AGI-1: switch it on at the top of Photo[\s\S]*her own 2D anime self[\s\S]*Add AGI-1/);
+  assert.match(lesson('videos'), /With AGI-1: switch it on at the top of Video[\s\S]*a photo she's in[\s\S]*Never in a trend video/);
+  assert.match(lesson('instant'), /With AGI-1 ideas put AGI-1 in it too/);
   assert.equal(L.TIPS, undefined);
   const src = readFileSync(new URL('../src/studio/views/learn.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /\b(fal|kling|seedance|gemini|meshy|nano banana|google|bytedance|kuaishou)\b/i);
@@ -9529,7 +10083,7 @@ test('(2026-10-12, the editor) "Edit with words": a new photo from one of its ow
   fake.oldArgs.set('inf_make', ['p_edit']);
   r = await edit(nova.id, src.ultra, change);
   assert.deepEqual([r.status, r.body.error], [503, 'not_ready'], JSON.stringify(r.body));
-  assert.ok(logs.some((l) => l.includes('inf_make not found: run supabase/influencers.sql again in this Supabase project (the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1)')), logs.join('\n'));
+  assert.ok(logs.some((l) => l.includes('inf_make not found: run supabase/influencers.sql again in this Supabase project (Edit with words and With AGI-1; it ends with influencers_ready = 1)')), logs.join('\n'));
   assert.deepEqual([fake.db.jobs.size, credits().paid], [jobs0 + 2, paid0]);
   nextMinute();
   r = await act('inf-make', { id: nova.id, kind: 'photo', scene, shape: 'tall' });
@@ -9542,13 +10096,15 @@ test('(2026-10-12, the editor) influencers.sql\'s promises for "Edit with words"
   const sql = read('supabase/influencers.sql');
   assert.match(sql, /alter table public\.agi1_inf_jobs add column if not exists edit text;\nalter table public\.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_edit_check;\nalter table public\.agi1_inf_jobs add constraint agi1_inf_jobs_edit_check check \(edit is null\n  or \(char_length\(edit\) between 3 and 200 and kind = 'photo' and image is not null\)\);/);
   const make = /create or replace function public\.inf_make\([\s\S]*?\n\$\$;/.exec(sql)?.[0] || '';
-  assert.match(make, /p_meme text default null, p_caption text default null, p_edit text default null\)/);
-  assert.match(make, /or \(p_kind = 'photo' and p_image is not null and p_edit is null\)/);
+  assert.match(make, /p_meme text default null, p_caption text default null, p_edit text default null, p_agi1 boolean default false\)/);
+  // ((2026-10-13, 💜 With AGI-1) or as "Add AGI-1": with p_agi1, without words)
+  assert.match(make, /v_add boolean := coalesce\(p_kind = 'photo' and p_image is not null and p_edit is null and p_agi1, false\);/);
+  assert.match(make, /or \(p_kind = 'photo' and p_image is not null and p_edit is null and not v_add\)/);
   assert.match(make, /or \(p_edit is not null and \(p_kind <> 'photo' or p_image is null or char_length\(p_edit\) not between 3 and 200\n\s+or p_model is distinct from 'classic' or p_refs is not null\)\)/);
   assert.match(make, /and status = 'done' and not hidden and deleted_at is null\) then\n\s+return json_build_object\('ok', false, 'why', 'image'\);/);
-  assert.match(make, /if p_image is not null and p_edit is null and exists \(select 1 from agi1_inf_jobs where id = p_image and shape = 'banner'\) then/);
-  assert.match(make, /if p_edit is not null and not exists \(select 1 from agi1_inf_jobs where id = p_image and shape = p_shape\n\s+and meme is not distinct from p_meme and caption is not distinct from p_caption\) then\n\s+return json_build_object\('ok', false, 'why', 'bad'\);/);
-  assert.match(make, /refs, parts, meme, caption, edit\)\n\s+values \([\s\S]*?p_meme, p_caption, p_edit\);/);
+  assert.match(make, /if p_image is not null and p_edit is null and not v_add and exists \(select 1 from agi1_inf_jobs where id = p_image and shape = 'banner'\) then/);
+  assert.match(make, /if \(p_edit is not null or v_add\) and not exists \(select 1 from agi1_inf_jobs where id = p_image and shape = p_shape\n\s+and meme is not distinct from p_meme and caption is not distinct from p_caption\) then\n\s+return json_build_object\('ok', false, 'why', 'bad'\);/);
+  assert.match(make, /refs, parts, meme, caption, edit, agi1\)\n\s+values \([\s\S]*?p_meme, p_caption, p_edit, v_her\);/);
   assert.match(sql, /j\.meme, j\.caption, j\.deleted_at, j\.edit,/);
   assert.match(sql, /'meme', meme, 'caption', caption, 'edit', edit,/);
   assert.match(sql, /and column_name = 'edit'\)\n\s+and exists \(select 1 from pg_constraint where conrelid = 'public\.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_edit_check'\)\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_make' and prosrc like '%p_edit%'\)\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_job_get' and prosrc like '%j\.edit%'\)\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_jobs' and prosrc like '%''edit'', edit%'\)/);
@@ -9608,7 +10164,9 @@ test('(2026-10-12, the editor) the page: "Make another" (its price on it) and "D
   assert.match(shared, /const go = \(label, ic, fn, extra = \{\}\) => \{\n    const b = btn\(label, \{ kind: 'ghost', size: 'sm', icon: ic, \.\.\.extra \}\);\n    b\.addEventListener\('click', \(\) => \{ s\.close\(\); fn\(j\); \}\);\n    return b;\n  \};/);
   assert.match(shared, /const again = own\.onAgain \? go\(Number\.isFinite\(own\.cost\) \? `Make another · \$\{num\(own\.cost\)\} credits` : 'Make another', 'refresh', own\.onAgain\) : null;/);
   assert.match(shared, /const del = go\('', 'trash', own\.onDelete, \{ kind: 'quiet', class: 'sa-btn sa-btn-quiet sa-btn-sm sa-edit-delete', 'aria-label': 'Delete', title: 'Delete' \}\);/);
-  assert.match(shared, /return h\('div', \{ class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' \}, edit, editor, again, del\);/);
+  // (2026-10-13, 💜 With AGI-1) "Add AGI-1" after its editors, on a photo she isn't in (the row measured: it can wrap onto two lines)
+  assert.match(shared, /const addHer = j\.kind === 'photo' && j\.agi1 !== true && own\.onAddHer \? go\('Add AGI-1', 'agi1', own\.onAddHer, \{ class: 'sa-btn sa-btn-ghost sa-btn-sm sa-edit-her' \}\) : null;/);
+  assert.match(shared, /const row = h\('div', \{ class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' \}, edit, editor, addHer, again, del\);\n\s+const rowH = \(\) => s\.dialog\.style\.setProperty\('--sa-row-h', `\$\{row\.offsetHeight\}px`\);\n\s+const watch = typeof ResizeObserver === 'function' \? new ResizeObserver\(rowH\) : null;\n\s+watch\?\.observe\(row\);\n\s+s\.done\.then\(\(\) => watch\?\.disconnect\(\)\);\n\s+return row;/);
   assert.match(shared, /export function videoSheet\(ctx, v, \{ [^}]*\bown = null \}\)/);
   assert.match(shared, /add\(s\.body, mine \? editRow\(s, v, own\) : null, h\('div', \{ class: `sa-player-wrap is-\$\{shape\}` \}, video\),/);
   assert.match(shared, /export function photoSheet\(ctx, j, \{ [^}]*\bown = null \}\)/);
@@ -9673,11 +10231,12 @@ test('(2026-10-12, the editor) the page: "Make another" (its price on it) and "D
   // a computer's dialog (its own rules, from 720px): the picture or the video fits under them, its head and its foot
   const at720 = css.indexOf('@media (min-width: 720px) {');
   const wide = css.slice(at720, css.indexOf('\n}\n', at720));
-  // (2026-10-13) its foot as tall as it is: "Remove watermark" can wrap it onto a third line of buttons (145px for the head,
-  // the row and the gaps; a two-line foot is 105px, so 250px in all as before)
-  for (const rule of ['.sa-edit-row + .sa-big-wrap .sa-big-pic { max-height: min(66vh, calc(88vh - 145px - var(--sa-foot-h, 105px))); }',
-    '.sa-edit-row + .sa-player-wrap .sa-player.is-tall { height: min(64vh, 640px, calc(88vh - 145px - var(--sa-foot-h, 105px))); }',
-    '.sa-edit-row + .sa-player-wrap .sa-player.is-square { width: min(100%, 520px, calc(88vh - 145px - var(--sa-foot-h, 105px))); }']) {
+  // (2026-10-13) its foot as tall as it is: "Remove watermark" can wrap it onto a third line of buttons; and (the same day,
+  // 💜 With AGI-1) its row as tall as it is: "Add AGI-1" can wrap it onto a second line (115px for the head and the gaps; a
+  // one-line row is 30px and a two-line foot 105px, so 250px in all as before)
+  for (const rule of ['.sa-edit-row + .sa-big-wrap .sa-big-pic { max-height: min(66vh, calc(88vh - 115px - var(--sa-row-h, 30px) - var(--sa-foot-h, 105px))); }',
+    '.sa-edit-row + .sa-player-wrap .sa-player.is-tall { height: min(64vh, 640px, calc(88vh - 115px - var(--sa-row-h, 30px) - var(--sa-foot-h, 105px))); }',
+    '.sa-edit-row + .sa-player-wrap .sa-player.is-square { width: min(100%, 520px, calc(88vh - 115px - var(--sa-row-h, 30px) - var(--sa-foot-h, 105px))); }']) {
     assert.ok(wide.includes(rule), rule);
   }
   assert.doesNotMatch(css, /calc\(88vh - 250px\)/);
@@ -10104,7 +10663,8 @@ test('(2026-10-12, the editor) influencers.sql\'s promises for the photo editor:
   assert.match(add, /if exists \(select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null\) then\s+return json_build_object\('ok', false, 'why', 'banned'\);/);
   assert.match(add, /f\.kind <> 'photo' or f\.status <> 'done' or f\.hidden or f\.deleted_at is not null then\n\s+return json_build_object\('ok', false, 'why', 'image'\);/);
   assert.match(add, /if \(f\.shape = 'banner'\) <> \(p_shape = 'banner'\) then return json_build_object\('ok', false, 'why', 'bad'\); end if;/);
-  assert.match(add, /values \(p_job, p_inf, p_wallet, 'photo', f\.scene, p_shape, p_from, 0, 'done', 1, p_bytes, true, now\(\)\);/);
+  // (2026-10-13, 💜 With AGI-1: AGI-1 is in it when she's in the photo it's from)
+  assert.match(add, /insert into agi1_inf_jobs \(id, inf_id, wallet_code, kind, scene, shape, image, cost, status, files, bytes, editor, done_at, agi1\)\n\s+values \(p_job, p_inf, p_wallet, 'photo', f\.scene, p_shape, p_from, 0, 'done', 1, p_bytes, true, now\(\), coalesce\(f\.agi1, false\)\);/);
   assert.match(sql, /j\.deleted_at, j\.edit, j\.editor,/);
   assert.match(sql, /'edit', edit, 'editor', editor,/);
   assert.match(body('inf_tidy'), /delete from agi1_inf_tool_days where day < \(now\(\) at time zone 'utc'\)::date - 2;/);
@@ -10123,7 +10683,9 @@ test('(2026-10-12, the editor) the page: "Edit photo" over its own photos (a mem
   assert.match(shared, /const editor = j\.kind === 'photo' && own\.onEditor \? go\('Edit photo', 'sliders', own\.onEditor\)\n\s+: \['video', 'trend'\]\.includes\(j\.kind\) && own\.onVideoEditor \? go\('Edit video', 'scissors', own\.onVideoEditor\) : null;/);
   assert.match(shared, /const again = own\.onAgain \? go\(/);
   assert.match(shared, /const del = go\('', 'trash', own\.onDelete, \{ kind: 'quiet', class: 'sa-btn sa-btn-quiet sa-btn-sm sa-edit-delete', 'aria-label': 'Delete', title: 'Delete' \}\);/);
-  assert.match(shared, /return h\('div', \{ class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' \}, edit, editor, again, del\);/);
+  // (2026-10-13, 💜 With AGI-1) "Add AGI-1" after its editors, on a photo she isn't in (the row measured: it can wrap onto two lines)
+  assert.match(shared, /const addHer = j\.kind === 'photo' && j\.agi1 !== true && own\.onAddHer \? go\('Add AGI-1', 'agi1', own\.onAddHer, \{ class: 'sa-btn sa-btn-ghost sa-btn-sm sa-edit-her' \}\) : null;/);
+  assert.match(shared, /const row = h\('div', \{ class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' \}, edit, editor, addHer, again, del\);\n\s+const rowH = \(\) => s\.dialog\.style\.setProperty\('--sa-row-h', `\$\{row\.offsetHeight\}px`\);\n\s+const watch = typeof ResizeObserver === 'function' \? new ResizeObserver\(rowH\) : null;\n\s+watch\?\.observe\(row\);\n\s+s\.done\.then\(\(\) => watch\?\.disconnect\(\)\);\n\s+return row;/);
   assert.match(shared, /const byEditor = kind === 'photo' && j\.editor === true;/);
   assert.match(shared, /byEditor \? h\('p', \{ class: 'sa-edit-words' \}, icon\('sliders'\), h\('span', \{ text: 'Edited in the photo editor' \}\)\) : null,/);
   // ---- an influencer's page ----
@@ -11120,7 +11682,8 @@ test('(2026-10-12, the editor) influencers.sql\'s promises for the video editor:
   assert.ok(add.indexOf("'cuts_open'") < add.indexOf('inf_tool_take('), 'a fourth waits, nothing counted');
   // its use and the cut together (a "no", or its id taken: neither, the block rolled back)
   assert.match(add, /begin\n\s+t := inf_tool_take\(p_wallet, 'video', p_per_day, p_site_cap, true\);\n\s+if \(t ->> 'ok'\)::boolean is not true then raise exception using errcode = 'P0001', message = coalesce\(t ->> 'why', 'busy'\); end if;/);
-  assert.match(add, /values \(p_job, p_inf, p_wallet, 'video', f\.scene, p_shape, p_sound, p_from, 0, 'paid', p_seconds, true, p_cut\);\n\s+exception\n\s+when unique_violation then return json_build_object\('ok', false, 'why', 'taken'\);/);
+  // (2026-10-13, 💜 With AGI-1: AGI-1 is in it when she's in the video it's from)
+  assert.match(add, /insert into agi1_inf_jobs \(id, inf_id, wallet_code, kind, scene, shape, sound, image, cost, status, seconds, editor, cut, agi1\)\n\s+values \(p_job, p_inf, p_wallet, 'video', f\.scene, p_shape, p_sound, p_from, 0, 'paid', p_seconds, true, p_cut, coalesce\(f\.agi1, false\)\);\n\s+exception\n\s+when unique_violation then return json_build_object\('ok', false, 'why', 'taken'\);/);
   const done = body('inf_cut_done');
   assert.match(done, /^create or replace function public\.inf_cut_done\(p_id text, p_bytes integer, p_sound boolean, p_seconds integer\)/);
   assert.match(done, /seconds = least\(greatest\(coalesce\(p_seconds, seconds\), 1\), 15\)::smallint, marked = true, mark_at = now\(\)/);
@@ -11258,6 +11821,60 @@ test('(2026-10-12) our hidden AI tag (src/studio/ai-tag.js): a JPEG\'s XMP after
   assert.equal(aiTagged(Buffer.from('not a picture')).toString(), 'not a picture');
 });
 
+test('(2026-10-13) our hidden AI tag in a PNG (a 3D model\'s picture, tagged in the browser): an iTXt chunk right after its IHDR with a valid CRC, once; every other chunk as it was; still read the same', async () => {
+  const zlib = await import('node:zlib');
+  // a PNG chunk's CRC: IEND's is the same in every PNG
+  assert.equal(TAG.crc32(Buffer.from('IEND')), 0xae426082);
+  const chunksOf = (b) => {
+    const out = [];
+    for (let at = 8; at + 12 <= b.length;) {
+      const len = b.readUInt32BE(at), type = b.toString('latin1', at + 4, at + 8);
+      out.push({ type, len, at, data: b.subarray(at + 8, at + 8 + len), crc: b.readUInt32BE(at + 8 + len) });
+      at += 12 + len;
+      if (type === 'IEND') break;
+    }
+    return out;
+  };
+  for (const png of [
+    await sharp({ create: { width: 40, height: 30, channels: 4, background: { r: 128, g: 64, b: 192, alpha: 0.5 } } }).png().toBuffer(),
+    await sharp({ create: { width: 64, height: 48, channels: 3, background: '#8040c0' } }).png({ palette: true }).toBuffer(),
+  ]) {
+    assert.ok(TAG.isPng(png) && !TAG.hasAiTag(png));
+    const t = TAG.withAiTag(png);
+    assert.ok(t instanceof Uint8Array && TAG.hasAiTag(t), 'tagged');
+    assert.equal(TAG.withAiTag(t), t, 'tagged once');
+    assert.equal(TAG.pngWithXmp(t), t);
+    const tb = Buffer.from(t), before = chunksOf(png), after = chunksOf(tb);
+    assert.deepEqual(after.map((c) => c.type), [before[0].type, 'iTXt', ...before.slice(1).map((c) => c.type)], 'its IHDR, then ours, then the rest');
+    assert.equal(after[0].type, 'IHDR');
+    // ours: the XMP keyword, no compression, no language, then our XMP
+    const ours = after[1];
+    assert.equal(ours.data.toString('latin1', 0, 22), 'XML:com.adobe.xmp\0\0\0\0\0');
+    assert.equal(ours.data.subarray(22).toString('utf8'), TAG.AI_XMP);
+    assert.equal(ours.len, 22 + Buffer.byteLength(TAG.AI_XMP));
+    // every chunk's CRC right (ours made here, the others as they were)
+    for (const c of after) assert.equal(c.crc, TAG.crc32(tb, c.at + 4, c.at + 8 + c.len), c.type);
+    if (typeof zlib.crc32 === 'function') assert.equal(ours.crc, zlib.crc32(tb.subarray(ours.at + 4, ours.at + 8 + ours.len)));
+    // the rest exactly as it was
+    assert.ok(Buffer.concat([tb.subarray(0, ours.at), tb.subarray(ours.at + 12 + ours.len)]).equals(png));
+    // still the same picture, and its XMP read by another reader
+    const m = await sharp(tb).metadata(), m0 = await sharp(png).metadata();
+    assert.deepEqual([m.format, m.width, m.height], ['png', m0.width, m0.height]);
+    assert.match(m.xmp.toString(), /trainedAlgorithmicMedia/);
+    assert.ok((await sharp(tb).raw().toBuffer()).equals(await sharp(png).raw().toBuffer()), 'the same pixels');
+  }
+  // what it doesn't read: a PNG cut short, one whose first chunk isn't its IHDR (null, so nothing's changed by it)
+  const whole = await sharp({ create: { width: 8, height: 8, channels: 3, background: '#000' } }).png().toBuffer();
+  assert.equal(TAG.pngWithXmp(whole.subarray(0, whole.length - 6)), null);
+  assert.equal(TAG.withAiTag(whole.subarray(0, whole.length - 6)), null);
+  assert.equal(TAG.hasAiTag(whole.subarray(0, whole.length - 6)), false);
+  const first = chunksOf(whole)[0];
+  const noIhdr = Buffer.from(whole);
+  noIhdr.write('IHDX', first.at + 4, 'latin1');
+  assert.equal(TAG.pngWithXmp(noIhdr), null);
+  assert.equal(TAG.pngWithXmp(Buffer.from('not a picture')), null);
+});
+
 test('(2026-10-12) clean downloads: its maker holding STUDIO_CLEAN_AGI $AGI (a Crush at once, else read on the chain) gets its own photo or video without our pill, tagged; everyone else the marked one', async () => {
   const a = await readyInf({ name: 'Nova' });
   const photo = await doneJob(a.id, 'photo');
@@ -11358,4 +11975,346 @@ test('(2026-10-12; 2026-10-13: "Remove watermark") the page: Download keeps the 
   const jobs = readFileSync(new URL('../server/inf-jobs.js', import.meta.url), 'utf8');
   assert.match(jobs, /F\.putFile\(cfg, hdPath\(j\.inf_id, id, n\), aiTagged\(m\.hd\), 'image\/jpeg'/);
   assert.match(jobs, /const video = aiTagged\(await joinParts\(files, /);
+});
+
+// ---------- (2026-10-13) 💜 With AGI-1: AGI-1 joins an influencer's photos, memes, X banners and videos ----------
+test('(2026-10-13, 💜 With AGI-1) her rules and words: Classic photos and videos, references, her name only with the switch', async () => {
+  const IW = await import('../server/inf-words.js');
+  assert.deepEqual(R.WITH_AGI1, { NAME: 'With AGI-1', NOTE: 'AGI-1 joins your influencer: her own 2D anime self, cute and a little flirty. The same price.',
+    PHOTO_MODEL: 'classic', KINDS: ['photo', 'video'], FACE: '/images/landing/agi1-face.webp' });
+  assert.ok(existsSync(new URL('../public/images/landing/agi1-face.webp', import.meta.url)));
+  // references: she takes one of Kling's two elements' places, never a photo's or Anime's
+  assert.deepEqual([R.refsFor('photo', 'classic'), R.refsFor('photo', 'classic', true), R.refsFor('video', 'standard'), R.refsFor('video', 'standard', true),
+    R.refsFor('video', 'pro', true), R.refsFor('video', 'long', true), R.refsFor('video', 'standard', 'yes'), R.refsFor('video', 'anime', true), R.refsFor('video', 'nope', true)],
+  [4, 4, 2, 1, 1, 1, 2, 4, 0]);
+  // her name: only with the switch on (and never "official", her team or anything that passes for her)
+  for (const t of ['AGI-1', 'agi1', 'AGI 1', 'agi_1', "AGI-1's"]) assert.equal(R.mentionsAgi1(t), true, t);
+  for (const t of ['AGI', 'agi10', 'agi12', 'magi1', '$AGI', '', null]) assert.equal(R.mentionsAgi1(t), false, String(t));
+  for (const t of ['AGI-1', 'agi1', 'AGI 1', 'agi_1']) assert.deepEqual([trouble(t), trouble(t, { herName: true })], ['her', null], t);
+  for (const t of ['official', 'the admin', 'the AGI team', 'artificial girlfriend']) assert.deepEqual([trouble(t), trouble(t, { herName: true })], ['her', 'her'], t);
+  assert.deepEqual([trouble('$AGI'), trouble('magi1')], [null, null]);
+  const scene = 'posing for a photo together with AGI-1 at a sunny café, both smiling';
+  assert.equal(checkInfScene({ kind: 'photo', scene, shape: 'tall' }).why, 'her');
+  assert.equal(checkInfScene({ kind: 'photo', scene, shape: 'tall', agi1: true }).ok, true);
+  assert.equal(checkInfScene({ kind: 'photo', scene: 'with the official AGI team on a rooftop', shape: 'tall', agi1: true }).why, 'her');
+  assert.deepEqual(checkInfScene({ kind: 'photo', scene: 'a city skyline at night with AGI-1', shape: 'banner', agi1: true }),
+    { ok: true, scene: 'a city skyline at night with AGI-1', shape: 'banner', sound: false });
+  assert.deepEqual(checkInfScene({ kind: 'video', scene, shape: 'banner', agi1: true }), { ok: false, field: 'shape', why: 'empty' });
+  assert.equal(checkEdit('make AGI-1 wave').why, 'her');
+  assert.equal(checkEdit('make AGI-1 wave', { agi1: true }).ok, true);
+  assert.equal(checkMemeText({ meme: 'pov', lines: ['AGI-1 texts back first'] }).why, 'her');
+  assert.deepEqual(checkMemeText({ meme: 'pov', lines: ['AGI-1 texts back first'], agi1: true }),
+    { ok: true, meme: 'pov', lines: ['POV: AGI-1 texts back first'], caption: 'POV: AGI-1 texts back first' });
+  for (const s of AW.AGI1_IDEAS) {
+    assert.equal(checkInfScene({ kind: 'photo', scene: s, shape: 'tall', agi1: true }).ok, true, s);
+    assert.equal(checkInfScene({ kind: 'photo', scene: s, shape: 'tall' }).why, 'her', s);
+  }
+  for (const s of AW.AGI1_VIDEO_IDEAS) assert.equal(checkInfScene({ kind: 'video', scene: s, shape: 'tall', sound: false, agi1: true }).ok, true, s);
+  // the photos a video with her may start from: done photos with her (never an X banner, a meme or one being made)
+  const jobs = [{ kind: 'photo', status: 'done', shape: 'tall', agi1: true }, { kind: 'photo', status: 'done', shape: 'tall' },
+    { kind: 'photo', status: 'done', shape: 'banner', agi1: true }, { kind: 'photo', status: 'done', shape: 'tall', meme: 'pov', agi1: true },
+    { kind: 'photo', status: 'making', shape: 'tall', agi1: true }, { kind: 'video', status: 'done', shape: 'tall', agi1: true }];
+  assert.deepEqual([R.startPhotos(jobs).map((j) => jobs.indexOf(j)), R.herPhotos(jobs).map((j) => jobs.indexOf(j)), R.herPhotos(null)], [[0, 1], [0], []]);
+  // its words on the page
+  assert.deepEqual([AW.jobTitle({ kind: 'photo', status: 'done', scene: 'at the beach', shape: 'tall', agi1: true }),
+    AW.jobMeta({ kind: 'photo', status: 'done', scene: 'at the beach', shape: 'tall', agi1: true })], ['With AGI-1: at the beach', 'AI-generated · Photo · With AGI-1 · Vertical']);
+  assert.equal(AW.jobMeta({ kind: 'photo', status: 'done', shape: 'banner', agi1: true }), 'AI-generated · X banner · With AGI-1 · 1500 × 500');
+  assert.deepEqual([AW.jobTitle({ kind: 'photo', status: 'done', agi1: true }), AW.jobTitle({ kind: 'photo', status: 'done', shape: 'banner', agi1: true }),
+    AW.jobTitle({ kind: 'video', status: 'done', agi1: true })], ['With AGI-1: a photo', 'With AGI-1: an X banner', 'With AGI-1: a video']);
+  assert.equal(AW.jobMeta({ kind: 'video', status: 'done', model: 'standard', seconds: 5, shape: 'tall', sound: false, agi1: true }), 'AI-generated · Video · With AGI-1 · 5 s · Vertical · no sound');
+  assert.doesNotMatch(AW.jobMeta({ kind: 'photo', status: 'done', shape: 'tall' }), /AGI-1/);
+  for (const why of ['agi1_trend', 'agi1_model', 'agi1_photo', 'agi1_has']) {
+    assert.notEqual(AW.errorText(why), AW.errorText('busy'), why);
+    assert.match(AW.errorText(why), /AGI-1/, why);
+  }
+  assert.match(AW.herNote('Nova'), /^AGI-1 joins Nova: her own 2D anime self, cute and a little flirty\. Classic only, the same price\.$/);
+  assert.match(AW.herNote('Nova', { video: true }), /it starts from a photo she's in/);
+  assert.match(AW.herNote('Nova', { video: true, model: 'anime' }), /from her own pictures/);
+  // Make another of one with her makes her again; of one without her never asks for her
+  const P = idOf('photoP');
+  const add = I.againInput({ kind: 'photo', scene: 'on a sunny rooftop', shape: 'tall', model: 'classic', quality: 'standard', image: P, agi1: true });
+  assert.deepEqual([add.agi1, add.image, add.edit], [true, P, undefined]);
+  assert.equal('agi1' in I.againInput({ kind: 'photo', scene: 'on a sunny rooftop', shape: 'tall', model: 'classic', quality: 'standard' }), false);
+  const vid = I.againInput({ kind: 'video', scene: 'waves at the camera', shape: 'tall', model: 'standard', seconds: 5, quality: '720p', sound: false, image: P, agi1: true });
+  assert.deepEqual([vid.agi1, vid.image], [true, P]);
+  // her own words: her 2D self, an adult, PG-13, never 3D, never an AI service or money
+  const photoHer = IW.herLine('the second picture'), videoHer = IW.herLine('@Element2', { video: true });
+  assert.match(photoHer, /^AGI-1 is the 2D anime girl in the second picture: she stays exactly as drawn there \(her long wavy blonde hair/);
+  assert.match(videoHer, /^AGI-1 \(@Element2\) is a 2D anime girl and stays exactly as in her pictures \(/);
+  for (const h of [photoHer, videoHer]) {
+    assert.match(h, /never 3D, never photorealistic, never someone else\. She is an adult woman, never childlike\./);
+    assert.match(h, /sweet and PG-13, never a kiss, nothing suggestive\. She keeps her own outfit/);
+    assert.doesNotMatch(h.replace(/never 3D/g, ''), /\b3D\b/);
+    assert.doesNotMatch(h, PROVIDERS);
+    assert.doesNotMatch(h, IW.MONEY);
+  }
+  const addP = IW.addPrompt({});
+  assert.ok(addP.startsWith(`Edit the first picture: add AGI-1 into it, right beside the character, as if she had been there all along. ${IW.herLine('the third picture')}`));
+  assert.match(addP, /The second picture is the same character, only so the face and look stay exactly theirs\. Family-friendly, both fully clothed\. No text, no logos, no watermark \(only the AGI on her t-shirt\)\.$/);
+  assert.match(IW.addPrompt({}, { meme: true }), /Keep the words written in it exactly as they are.*\(only the AGI on her t-shirt\)\. Family-friendly, both fully clothed\. No logos, no watermark\.$/);
+  assert.match(IW.addPrompt({}, { banner: true }), /It stays a very wide profile header banner, a little wider than the first picture: everything where it is, AGI-1 beside the character/);
+  assert.match(editPrompt({}, 'make her wave', { agi1: true }), /AGI-1, the 2D anime girl in the first picture, stays exactly as she is unless the change is about her; the third picture is her/);
+  assert.doesNotMatch(editPrompt({}, 'make her wave'), /AGI-1/);
+});
+
+test('(2026-10-13, 💜 With AGI-1) the AI requests with her: her picture after the influencer\'s, her face as a video\'s second element', () => {
+  const IW_herLine = (where, o) => import('../server/inf-words.js').then((m) => m.herLine(where, o));
+  const cfg = cfgNow();
+  const u = (n) => `${SB}/storage/v1/object/sign/agi1-characters/${n}?token=t`;
+  const job = (kind, extra = {}) => ({ id: idOf('j'), kind, inf_name: 'Nova', inf_mode: 'design', inf_style: 'anime', inf_settings: { look: 'feminine', age: '20s' },
+    inf_words: '', scene: 'at a sunny café', shape: 'tall', sound: false, agi1: true, ...extra });
+  const her = { body: u('agi1/with-0123456789abcdef.jpg'), face: u('agi1/face-0123456789abcdef.jpg') };
+  const asRequest = (e) => e.why === 'request';
+  // a Classic photo: the influencer's full body, then her
+  let r = jobRequest(cfg, job('photo', { model: 'classic', quality: 'std' }), { body: u('body'), agi1: her });
+  assert.deepEqual([r.model, r.input.image_urls, r.input.aspect_ratio, r.input.num_images], [MODELS.edit, [u('body'), her.body], '9:16', 1]);
+  assert.match(r.input.prompt, /together with AGI-1 \(the second picture\)/);
+  assert.match(r.input.prompt, /Family-friendly, both fully clothed\. No text, no logos, no watermark \(only the AGI on her t-shirt\)\.$/);
+  assert.throws(() => jobRequest(cfg, job('photo', { model: 'classic' }), { body: u('body') }), asRequest);            // her picture missing
+  assert.throws(() => jobRequest(cfg, job('photo', { model: 'crisp' }), { body: u('body'), agi1: her }), /AGI-1 joins only Classic photos/);
+  r = jobRequest(cfg, job('photo', { model: 'classic', quality: 'std', refs: ['a'] }), { body: u('body'), agi1: her, refs: [u('ref')] });
+  if (r.input.image_urls.length === 3) {
+    assert.deepEqual(r.input.image_urls, [u('body'), her.body, u('ref')]);
+    assert.match(r.input.prompt, /Picture 3 is a reference/);
+  }
+  // an X banner with her: 4:1 at 2K
+  r = jobRequest(cfg, job('photo', { model: 'classic', shape: 'banner' }), { body: u('body'), agi1: her });
+  assert.deepEqual([r.input.image_urls, r.input.aspect_ratio, r.input.resolution], [[u('body'), her.body], '4:1', '2K']);
+  assert.match(r.input.prompt, /with AGI-1 right beside them/);
+  // Add AGI-1 to a photo: the photo, its full body, then her
+  r = jobRequest(cfg, job('photo', { model: 'classic', quality: 'hd', shape: 'wide', image: idOf('P') }), { image: u('photo'), body: u('body'), agi1: her });
+  assert.deepEqual([r.model, r.input.image_urls, r.input.aspect_ratio, r.input.resolution], [MODELS.edit, [u('photo'), u('body'), her.body], '16:9', '2K']);
+  assert.match(r.input.prompt, /^Edit the first picture: add AGI-1 into it, right beside the character/);
+  assert.throws(() => jobRequest(cfg, job('photo', { model: 'crisp', image: idOf('P') }), { image: u('photo'), body: u('body'), agi1: her }), /edit the menu offers/);
+  // an edit with words of a photo she's in: her picture third
+  r = jobRequest(cfg, job('photo', { model: 'classic', image: idOf('P'), edit: 'make her wave' }), { image: u('photo'), body: u('body'), agi1: her });
+  assert.deepEqual(r.input.image_urls, [u('photo'), u('body'), her.body]);
+  assert.match(r.input.prompt, /the third picture is her/);
+  r = jobRequest(cfg, job('photo', { model: 'classic', image: idOf('P'), edit: 'make her wave', agi1: false }), { image: u('photo'), body: u('body') });
+  assert.deepEqual(r.input.image_urls, [u('photo'), u('body')]);
+  // a video from a photo she's in: the influencer's look and full body, then her face and body (Kling's elements)
+  const v = (extra) => job('video', { model: 'standard', seconds: 5, image: idOf('P'), ...extra });
+  const vUrls = { image: u('photo'), look: u('look'), body: u('body'), agi1: her };
+  r = jobRequest(cfg, v(), vUrls);
+  assert.deepEqual([r.model, r.way, r.input.start_image_url, r.input.duration], [MODELS.i2v, 'i2v', u('photo'), '5']);
+  assert.deepEqual(r.input.elements, [{ frontal_image_url: u('look'), reference_image_urls: [u('body')] }, { frontal_image_url: her.face, reference_image_urls: [her.body] }]);
+  assert.match(r.input.prompt, /The character is @Element1 and AGI-1 is @Element2/);
+  assert.throws(() => jobRequest(cfg, v(), { ...vUrls, agi1: { body: her.body } }), asRequest);                       // her face missing
+  assert.equal(jobRequest(cfg, v({ model: 'pro' }), vUrls).model, MODELS.i2vPro);
+  r = jobRequest(cfg, v({ model: 'long', seconds: 20, parts: 2, part: 0 }), vUrls);
+  assert.deepEqual([r.model, r.way, r.input.duration, r.input.start_image_url, r.input.elements.length], [MODELS.i2v, 'long', '10', u('photo'), 2]);
+  assert.match(r.input.prompt, /^Part 1 of 2 of one continuous video/);
+  r = jobRequest(cfg, v({ model: 'long', seconds: 20, parts: 2, part: 1 }), { ...vUrls, frame: u('frame') });
+  assert.equal(r.input.start_image_url, u('frame'));
+  // Anime: her own pictures beside the influencer's full body (with or without a photo)
+  r = jobRequest(cfg, job('video', { model: 'anime', seconds: 5, quality: '720p', image: null }), { body: u('body'), agi1: her });
+  assert.deepEqual([r.model, r.way, r.input.image_urls], [cfg.videoModel, 'reference', [u('body'), her.body]]);
+  return IW_herLine('@Image2', { video: true }).then((line) => assert.ok(r.input.prompt.endsWith(line)));
+});
+
+test('(2026-10-13, 💜 With AGI-1) her two pictures: made from her 2D cutout, named by their bytes, kept once, signed', async () => {
+  const { agi1Names, agi1Urls } = await import('../server/inf-agi1.js');
+  const { NAME } = await import('../server/studio-files.js');
+  const { createHash } = await import('node:crypto');
+  const { makeRefs, WITH_SIZE, FACE_SIZE } = await import('../tools/studio/agi1-refs.mjs');
+  const media = (f) => readFileSync(new URL(`../server/media/${f}`, import.meta.url));
+  const hash = (b) => createHash('sha256').update(b).digest('hex').slice(0, 16);
+  assert.deepEqual(agi1Names(), { body: `agi1/with-${hash(media('agi1-with.jpg'))}.jpg`, face: `agi1/face-${hash(media('agi1-face.jpg'))}.jpg` });
+  for (const n of Object.values(agi1Names())) assert.ok(new RegExp(NAME).test(n), n);
+  const [w, f] = await Promise.all([sharp(media('agi1-with.jpg')).metadata(), sharp(media('agi1-face.jpg')).metadata()]);
+  assert.deepEqual([w.format, w.width, w.height, f.format, f.width, f.height], ['jpeg', WITH_SIZE.width, WITH_SIZE.height, 'jpeg', FACE_SIZE, FACE_SIZE]);
+  assert.ok(farthest(await meanOf(media('agi1-with.jpg'), 0, 0, 20, 20), [233, 233, 238]) < 6);
+  // made again from her cutout, they're the same pictures
+  const { withJpg, faceJpg } = await makeRefs();
+  for (const [made, kept] of [[withJpg, media('agi1-with.jpg')], [faceJpg, media('agi1-face.jpg')]]) {
+    const [a, b] = await Promise.all([sharp(made).resize(48, 48, { fit: 'fill' }).raw().toBuffer(), sharp(kept).resize(48, 48, { fit: 'fill' }).raw().toBuffer()]);
+    let d = 0;
+    for (let i = 0; i < a.length; i++) d += Math.abs(a[i] - b[i]);
+    assert.ok(d / a.length < 3, `${d / a.length}`);
+  }
+  // the tool reads only her 2D cutout: never the 3D model or its renders
+  const tool = strip(read('tools/studio/agi1-refs.mjs'));
+  assert.match(tool, /agi1-cutout\.webp/);
+  assert.doesNotMatch(tool, /\.glb|agi1-avatar|agi1-portrait|live-2d/);
+  // kept in the bucket once (as JPEGs), then only signed: 6 hours; her face only when a video asks for it
+  const kept = new Map(), log = [];
+  const F = { signedUrl: async (cfg, name, o) => { log.push(['sign', name, o.expiresIn]); return kept.has(name) ? `https://x/${name}` : null; },
+    putFile: async (cfg, name, bytes, type) => { log.push(['put', name, type, bytes.length]); kept.set(name, bytes); } };
+  const { body, face } = agi1Names();
+  assert.deepEqual(await agi1Urls(cfgNow(), F), { body: `https://x/${body}` });
+  assert.deepEqual(log, [['sign', body, 21600], ['put', body, 'image/jpeg', media('agi1-with.jpg').length], ['sign', body, 21600]]);
+  log.length = 0;
+  assert.deepEqual(await agi1Urls(cfgNow(), F, { face: true }), { body: `https://x/${body}`, face: `https://x/${face}` });
+  assert.deepEqual(log.filter((x) => x[0] === 'put').map((x) => x[1]), [face]);
+  log.length = 0;
+  await agi1Urls(cfgNow(), F, { face: true });
+  assert.equal(log.filter((x) => x[0] === 'put').length, 0);
+  const lost = { signedUrl: async () => null, putFile: async () => {} };
+  await assert.rejects(agi1Urls(cfgNow(), lost), /AGI-1's picture couldn't be kept/);
+});
+
+test('(2026-10-13, 💜 With AGI-1) photos, memes and X banners with her, and Add AGI-1: their price, her picture kept once, every "no"', async () => {
+  const IW = await import('../server/inf-words.js');
+  const { agi1Names } = await import('../server/inf-agi1.js');
+  giveCredits(20000);
+  const nova = await readyInf({ name: 'Nova', style: 'anime' });
+  const mira = await readyInf({ name: 'Mira', style: 'real' });
+  const make = (inf, input, opts) => { nextMinute(); for (const j of fake.db.jobs.values()) if (!['done', 'failed'].includes(j.status)) Object.assign(j, { status: 'done', done: Date.now(), lease: 0 }); return act('inf-make', { id: inf, kind: 'photo', shape: 'tall', ...input }, opts); };
+  const asked = () => dbCalls('inf_make').at(-1);
+  const signed = (name) => `/storage/v1/object/sign/agi1-characters/${name}`;
+  const paths = (f) => f.input.image_urls.map((x) => new URL(x).pathname);
+  const jpg = await sharp(PNG).jpeg().toBuffer();
+  const settle = (inf, job) => {
+    Object.assign(fake.db.jobs.get(job), { status: 'done', done: Date.now(), lease: 0 });
+    fake.storage.set(picPath(inf, job, 0), { bytes: jpg, type: 'image/jpeg' });
+    fake.storage.set(picPath(inf, job, 0, 'webp'), { bytes: Buffer.from('RIFFwebp'), type: 'image/webp' });
+  };
+  const scene = 'posing for a photo together with AGI-1 at a sunny café, both smiling';
+  // a Classic photo with her: a photo's price, her picture second, kept in the bucket once
+  let r = await make(nova.id, { scene, agi1: true });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.cost, asked().p_agi1, 'p_edit' in asked(), fake.db.jobs.get(r.body.job).agi1], [15, true, false, true]);
+  await tick(r.body.job);
+  assert.equal(lastFal().model, MODELS.edit);
+  assert.deepEqual(paths(lastFal()), [signed(picPath(nova.id, nova.body, 0)), signed(agi1Names().body)]);
+  assert.ok(lastFal().input.prompt.includes(IW.herLine('the second picture')));
+  assert.equal(fake.storage.get(agi1Names().body).type, 'image/jpeg');
+  const herPhoto = r.body.job;
+  settle(nova.id, herPhoto);
+  r = await make(mira.id, { scene: 'walking side by side with AGI-1 down a neon street at night', agi1: true });   // a realistic influencer too
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  await tick(r.body.job);
+  assert.equal(calls.filter((c) => c.to === 'put' && c.name === agi1Names().body).length, 1);                     // then only signed
+  assert.ok(!calls.some((c) => (c.to === 'put' || c.to === 'sign') && c.name === agi1Names().face));            // a photo never needs her face
+  const row = (await get(`inf=${nova.id}`, {})).body;
+  if (Array.isArray(row?.jobs)) assert.equal(row.jobs.find((j) => j.id === herPhoto)?.agi1, true);
+  // an X banner (22) and a meme with her
+  r = await make(nova.id, { scene: 'a city skyline at night with AGI-1', shape: 'banner', agi1: true });
+  assert.deepEqual([r.status, r.body.cost], [200, 22]);
+  await tick(r.body.job);
+  assert.deepEqual([lastFal().input.aspect_ratio, lastFal().input.resolution, paths(lastFal()).length], ['4:1', '2K', 2]);
+  r = await make(nova.id, { scene, shape: 'square', meme: 'pov', lines: ['AGI-1 texts back first'], agi1: true });
+  assert.deepEqual([r.status, asked().p_caption], [200, 'POV: AGI-1 texts back first']);
+  // every "no", with nothing made: her name without the switch, "official", Crisp, a switch that isn't one, 2 references with her in a video
+  const before = dbCalls('inf_make').length;
+  r = await make(nova.id, { scene });
+  assert.deepEqual([r.status, r.body.error, r.body.field, r.body.why], [422, 'words', 'scene', 'her']);
+  r = await make(nova.id, { scene: 'on a rooftop with AGI-1 and the official AGI team', agi1: true });
+  assert.deepEqual([r.status, r.body.why], [422, 'her']);
+  r = await make(nova.id, { scene, model: 'crisp', agi1: true });
+  assert.deepEqual([r.status, r.body.error], [409, 'agi1_model']);
+  for (const bad of ['yes', 1, {}]) assert.equal((await make(nova.id, { scene, agi1: bad })).status, 400, String(bad));
+  assert.equal(dbCalls('inf_make').length, before);
+  for (const off of [false, null]) {
+    r = await make(nova.id, { scene: 'reading a book on a sunny balcony', agi1: off });
+    assert.deepEqual([r.status, 'p_agi1' in asked()], [200, false], String(off));
+  }
+  const plain = r.body.job;
+  settle(nova.id, plain);
+  // Add AGI-1 to a photo without her: a photo's price at its quality, the photo, its full body, then her
+  r = await make(nova.id, { image: plain, agi1: true, shape: undefined });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.cost, asked().p_image, asked().p_agi1, asked().p_model, 'p_edit' in asked()], [15, plain, true, 'classic', false]);
+  await tick(r.body.job);
+  assert.deepEqual(paths(lastFal()), [signed(picPath(nova.id, plain, 0)), signed(picPath(nova.id, nova.body, 0)), signed(agi1Names().body)]);
+  assert.equal(lastFal().input.prompt, IW.addPrompt({}, {}));
+  r = await make(nova.id, { image: herPhoto, agi1: true, shape: undefined });                                    // she's in it already
+  assert.deepEqual([r.status, r.body.error], [409, 'agi1_has']);
+  r = await make(nova.id, { image: plain, edit: 'make AGI-1 wave', agi1: true, shape: undefined });             // an edit can't add her
+  assert.equal(r.status, 400);
+  r = await make(nova.id, { image: plain, edit: 'make AGI-1 wave', shape: undefined });                         // nor name her
+  assert.deepEqual([r.status, r.body.field, r.body.why], [422, 'edit', 'her']);
+  // an edit of a photo she's in keeps her (her name allowed, her picture third)
+  r = await make(nova.id, { image: herPhoto, edit: 'make AGI-1 wave at the camera', shape: undefined });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(asked().p_agi1, true);
+  await tick(r.body.job);
+  assert.equal(paths(lastFal())[2], signed(agi1Names().body));
+  assert.match(lastFal().input.prompt, /the third picture is her/);
+  // Make another of a photo with her makes her again
+  nextMinute();
+  r = await act('inf-again', { job: herPhoto });
+  assert.deepEqual([r.status, asked().p_agi1], [200, true], JSON.stringify(r.body));
+  // an older influencers.sql: nothing made or paid, and the log says to run it again
+  fake.oldArgs.set('inf_make', ['p_agi1']);
+  const paid = credits().paid;
+  r = await make(nova.id, { scene, agi1: true });
+  assert.deepEqual([r.status, r.body.error, credits().paid], [503, 'not_ready', paid]);
+  assert.ok(logs.some((l) => /run supabase\/influencers\.sql again.*With AGI-1/.test(l)), logs.join('\n'));
+  assert.equal((await make(nova.id, { scene: 'reading a book on a sunny balcony' })).status, 200);              // without her, made as before
+  fake.oldArgs.clear();
+});
+
+test('(2026-10-13, 💜 With AGI-1) videos with her: from a photo she\'s in (Anime from her own pictures), never a trend video', async () => {
+  const { agi1Names } = await import('../server/inf-agi1.js');
+  giveCredits(20000);
+  const nova = await readyInf({ name: 'Nova', style: 'anime' });
+  const vid = (input, opts) => { nextMinute(); for (const j of fake.db.jobs.values()) if (!['done', 'failed'].includes(j.status)) Object.assign(j, { status: 'done', done: Date.now(), lease: 0 }); return act('inf-make', { id: nova.id, kind: 'video', shape: 'tall', sound: false, seconds: 5, ...input }, opts); };
+  const asked = () => dbCalls('inf_make').at(-1);
+  const without = await doneJob(nova.id, 'photo');
+  const withHer = await doneJob(nova.id, 'photo');
+  fake.db.jobs.get(withHer).agi1 = true;
+  const scene = 'waves at the camera with AGI-1 on a sunny rooftop, then both laugh';
+  // a trend video never: before anything is asked of the database
+  for (const input of [{ kind: 'trend', trend: 'golden-flip', agi1: true }, { kind: 'trend', image: withHer, trend: 'golden-flip' }]) {
+    nextMinute();
+    const n = calls.length;
+    const r = await act('inf-make', { id: nova.id, ...input });
+    assert.deepEqual([r.status, r.body.error], [409, 'agi1_trend'], JSON.stringify(input));
+    if (input.agi1) assert.ok(!calls.slice(n).some((c) => c.to === 'db' && ['inf_get', 'inf_make'].includes(c.fn)));   // before the influencer is even read
+  }
+  // Standard from a photo without her: no
+  let r = await vid({ scene, model: 'standard', image: without, agi1: true });
+  assert.deepEqual([r.status, r.body.error], [409, 'agi1_photo']);
+  // from a photo she's in: a video's price, her face and body as Kling's second element (each kept once), her name allowed unasked
+  r = await vid({ scene, model: 'standard', image: withHer });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.cost, asked().p_agi1, fake.db.jobs.get(r.body.job).agi1], [76, true, true]);
+  await tick(r.body.job);
+  assert.deepEqual([lastFal().model, lastFal().input.elements.length], [MODELS.i2v, 2]);
+  assert.deepEqual(lastFal().input.elements[1].frontal_image_url && new URL(lastFal().input.elements[1].frontal_image_url).pathname,
+    `/storage/v1/object/sign/agi1-characters/${agi1Names().face}`);
+  for (const n of Object.values(agi1Names())) assert.equal(calls.filter((c) => c.to === 'put' && c.name === n).length, 1, n);
+  r = await vid({ scene, model: 'pro', image: withHer });
+  assert.deepEqual([r.status, r.body.cost], [200, 101]);
+  r = await vid({ scene, model: 'long', seconds: 20, image: withHer });
+  assert.deepEqual([r.status, r.body.cost], [200, 303]);
+  // with her, Kling takes one reference; without her two
+  const refs = [await okUpload('ref'), await okUpload('ref')];
+  r = await vid({ scene, model: 'standard', image: withHer, refs });
+  assert.deepEqual([r.status, r.body.error], [409, 'refs']);
+  r = await vid({ scene: 'waves at the camera on a sunny rooftop', model: 'standard', image: without, refs });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  // Anime: from her own pictures, with or without a photo
+  r = await vid({ scene, model: 'anime', quality: '720p', agi1: true });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.cost, 426);
+  await tick(r.body.job);
+  assert.equal(lastFal().model, cfgNow().videoModel);
+  assert.equal(new URL(lastFal().input.image_urls[1]).pathname, `/storage/v1/object/sign/agi1-characters/${agi1Names().body}`);
+  // a realistic influencer still starts from a photo
+  const mira = await readyInf({ name: 'Mira', style: 'real' });
+  nextMinute();
+  r = await act('inf-make', { id: mira.id, kind: 'video', shape: 'tall', sound: false, seconds: 5, scene, agi1: true });
+  assert.deepEqual([r.status, r.body.error], [409, 'needs_photo']);
+});
+
+test('(2026-10-13, 💜 With AGI-1) Explore\'s row of creations with her: only public photos and videos, never a banner or a private one', async () => {
+  const nova = await readyInf({ name: 'Nova', style: 'anime' });
+  const ada = await readyInf({ name: 'Ada', style: 'real', real: true });
+  const photo = await doneJob(nova.id, 'photo'), video = await doneJob(nova.id, 'video', { poster: true }), plain = await doneJob(nova.id, 'photo');
+  const banner = await doneJob(nova.id, 'photo', { shape: 'banner' }), hidden = await doneJob(nova.id, 'photo'), priv = await doneJob(ada.id, 'photo');
+  for (const j of [photo, video, banner, hidden, priv]) fake.db.jobs.get(j).agi1 = true;
+  fake.db.jobs.get(hidden).hidden = true;
+  // our server keeps only creations with her in that row, whatever the database gives it
+  const explore = fake.db.inf_explore.bind(fake.db);
+  fake.db.inf_explore = (a) => { const e = explore(a); return { ...e, agi1: [...e.agi1, ...e.fresh.filter((t) => t.id === plain)] }; };
+  const r = await get('inf-explore');
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('cache-control'), 'public, max-age=15, s-maxage=30');
+  const ids = r.body.agi1.map((t) => t.id);
+  assert.deepEqual(new Set(ids), new Set([photo, video]));
+  assert.ok(r.body.agi1.every((t) => t.agi1 === true && t.inf.id === nova.id && t.inf.name === 'Nova'));
+  for (const j of [plain, banner, hidden, priv]) assert.ok(!ids.includes(j), j);
+  assert.equal(r.body.fresh.find((t) => t.id === plain)?.agi1, false);
 });

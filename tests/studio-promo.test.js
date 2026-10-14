@@ -6,8 +6,11 @@
 // numbers are AGI Studio's own (imported from src/studio, and checked here against it), AGI-1 is never in 3D (its 3D
 // model scene shows Juno's own 3D model, made for it, labeled "AI-generated"), and the picture and the music keep one
 // clock.
-// No browser or ffmpeg here, and never its pictures and clips (tools/studio-promo/media: big, made once, never in git).
-// STUDIO_PROMO_RENDER=1 also renders the whole music (about 15 s).
+// Since 2026-10-13 AGI-1's voice over its music (the owner: "will it be good if you add voice over to the launch video",
+// then "Short, AGI-1's voice"): her lines, where they go, and the mix (voice.js), checked with stand-in takes and music.
+// No browser here, and never its pictures, clips or her takes (tools/studio-promo/media: big, made once, never in git);
+// ffmpeg only where it's there (the sound put on a video: its pictures copied). STUDIO_PROMO_RENDER=1 also renders the
+// whole music (about 15 s), with stand-in takes over it.
 // Run: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,11 +18,14 @@ import { readFileSync, readdirSync, statSync, mkdtempSync, mkdirSync, writeFileS
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { request } from 'node:http';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import * as W from '../tools/studio-promo/words.js';
-import { SCENES, TOTAL, MOMENTS as M, BAR, BEAT, at, sceneAt, sceneOf } from '../tools/studio-promo/timeline.js';
+import { SCENES, TOTAL, MOMENTS as M, BAR, BEAT, at, sceneAt, sceneOf, VOICE as PLACES } from '../tools/studio-promo/timeline.js';
 import { musicPlan, renderMusic, RATE, SECTIONS, sectionAt, letterTimes, countTicks, BREATHS } from '../tools/studio-promo/music.js';
 import { TRANSITIONS } from '../tools/studio-promo/page/cuts.js';
-import { withoutSecrets, serve, args, COVER_AT } from '../tools/studio-promo/make.mjs';
+import { withoutSecrets, serve, args, COVER_AT, voiceLines, LEN_SLACK, soundOnly } from '../tools/studio-promo/make.mjs';
+import * as V from '../tools/studio-promo/voice.js';
 import {
   PRICES, TRENDS, STYLE_GROUPS, INF_STYLES, OPTIONS, VIDEO_MODELS, MEMES, BANNER, DISCOUNT, FREE_CREDITS, WAYS, MODES,
   EDITOR_FILTERS, VIDEO_EDITOR, LONG, STYLE_ANY, TOPUPS, MOVE_NAMES, REF_CODE, photoCredits, videoCredits, creditPrice,
@@ -429,9 +435,15 @@ test('the renderer: its 15 scenes in order, its own server, no secrets for the b
   assert.match(main, /SIZE = \{ W: 1920, H: 1080 \}/, '16:9 (the owner: "i just decided can you make the launch video 16:9")');
   assert.deepEqual(withoutSecrets({ PATH: '/bin', GEMINI_API_KEY: 'x', FAL_KEY: 'k', LIVE_SECRET: 'y', TELEGRAM_BOT_TOKEN: 'z', PASS_SECRET: 'p', HOME: '/h' }), { PATH: '/bin', HOME: '/h' });
   // its options
-  assert.deepEqual(args([]), { out: 'studio-promo', fps: 60, scale: 1, from: 0, to: TOTAL, stills: null, sheet: null, music: true, crf: 18, name: 'agi-studio-launch', quality: 0.95, light: 0 });
+  assert.deepEqual(args([]), { out: 'studio-promo', fps: 60, scale: 1, from: 0, to: TOTAL, stills: null, sheet: null, music: true, voice: true, crf: 18, name: 'agi-studio-launch', quality: 0.95, light: 0, soundOnly: false });
   assert.equal(args(['--light', '27', '--scale', '0.5']).light, 27);
+  assert.equal(args(['--no-voice']).voice, false);
+  assert.equal(args(['--sound-only']).soundOnly, true);
   assert.throws(() => args(['--nope']), /unknown option/);
+  // ffmpeg and ffprobe never get a secret
+  const calls = read('tools/studio-promo/make.mjs').split('\n').filter((x) => /\b(spawn|execFileSync)\(/.test(x));
+  assert.equal(calls.length, 3, 'the frames\' encoder, ffmpeg and ffprobe');
+  for (const line of calls) assert.match(line, /env: withoutSecrets\(\)/, line.trim());
   // its own server: this computer only, its page and its media, nothing else
   const dir = mkdtempSync(join(tmpdir(), 'studio-promo-'));
   try {
@@ -460,4 +472,372 @@ test('the renderer: its 15 scenes in order, its own server, no secrets for the b
   assert.match(ignore, /^tools\/studio-promo\/media\/$/m);
   assert.match(ignore, /^dist\/$/m, 'its build (tools/studio-promo/dist) too');
   assert.match(read('package.json'), /tests\/studio-promo\.test\.js/);
+});
+
+// ---------- her voice (2026-10-13, the owner: "will it be good if you add voice over to the launch video", then "Short,
+// AGI-1's voice": about ten short lines at the big moments, the music dipping under her, the words on screen as they were)
+const SR = V.RATE;
+const sine = (n, f, amp, rate = SR) => Float32Array.from({ length: n }, (_, i) => amp * Math.sin((2 * Math.PI * f * i) / rate));
+// a tone's amplitude in a stretch of samples (a Hann window: a pure tone read exactly, its neighbours left out)
+function toneAmp(x, f, a, b, rate = SR) {
+  let re = 0, im = 0, ws = 0;
+  for (let i = a; i < b; i++) {
+    const w = 0.5 - 0.5 * Math.cos((2 * Math.PI * (i - a)) / (b - a - 1)), ph = (2 * Math.PI * f * i) / rate;
+    re += x[i] * w * Math.cos(ph); im += x[i] * w * Math.sin(ph); ws += w;
+  }
+  return (2 * Math.hypot(re, im)) / ws;
+}
+// the same noise every run
+const noise = (seed) => { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32) * 2 - 1; };
+// a biquad's response at a frequency (complex): the mixer splits the music with one of each (12 dB an octave)
+function response(f, type, fc) {
+  const q = V.biquad(type, fc), w = (2 * Math.PI * f) / SR;
+  const c1 = Math.cos(w), s1 = -Math.sin(w), c2 = Math.cos(2 * w), s2 = -Math.sin(2 * w);
+  const nr = q.b0 + q.b1 * c1 + q.b2 * c2, ni = q.b1 * s1 + q.b2 * s2, dr = 1 + q.a1 * c1 + q.a2 * c2, di = q.a1 * s1 + q.a2 * s2;
+  const d = dr * dr + di * di;
+  return [(nr * dr + ni * di) / d, (ni * dr - nr * di) / d];
+}
+
+test('her voice: her twelve lines and where they go (never over a drop, the trend videos or a breath; every hit at full level)', async () => {
+  const { VOICES, VOICE_SIG, args: mediaArgs } = await import('../tools/studio-promo/media.mjs');
+  const ids = W.VOICE.map((l) => l.id);
+  assert.equal(ids.length, 12);
+  assert.deepEqual(PLACES.map((l) => l.id), ids, 'timeline.js places each of her lines (words.js), in the same order');
+  assert.deepEqual(VOICES.map(([id]) => id).sort(), [...ids].sort(), 'media.mjs makes each of her takes ready');
+  for (const [, names] of VOICES) assert.match(names[0], /^agi1-vo-\d\d-[a-z-]+\.wav$/);
+  assert.match(VOICE_SIG, /^v1-[0-9a-f]{8}$/, 'a change to how her takes are made ready makes them again');
+  assert.deepEqual(mediaArgs(['--from', 'x', '--only', 'voice']).only, ['voice']);
+  assert.deepEqual(mediaArgs(['--from', 'x']).only, ['pics', 'vids', 'models', 'voice']);
+  assert.throws(() => mediaArgs(['--from', 'x', '--only', 'voice,nope']), /--only: pics, vids, models, voice/);
+  // her words: short, among the video's words (its rules hold for them), and said as written but its address
+  for (const l of W.VOICE) {
+    assert.ok(l.text.length <= 30, `a short line: "${l.text}"`);
+    assert.ok(words.includes(l.text), l.text);
+    if (l.said) assert.ok(words.includes(l.said), l.said);
+  }
+  const url = W.VOICE.find((l) => l.id === 'url');
+  assert.equal(url.text, W.SITE);
+  assert.equal(url.said, 'A G I one dot app slash studio.');
+  assert.equal(W.VOICE.find((l) => l.id === 'meet').text, W.HOOK.meet, 'her first line is the hook\'s own words');
+  // in time order, each in its own scene, short, and before the end fades
+  const scene = { meet: 'hook', 'not-real': 'hook', 'you-made': 'hook', studio: 'brand', design: 'create', styles: 'styles', edit: 'edit', move: 'edit', model: 'model', share: 'community', url: 'finale', live: 'end' };
+  PLACES.forEach((l, k) => {
+    if (k) assert.ok(l.at > PLACES[k - 1].at + PLACES[k - 1].len, `${l.id} after ${PLACES[k - 1].id}`);
+    const s = sceneOf(scene[l.id]);
+    assert.ok(l.at >= s.from && l.at + l.len <= s.to, `${l.id} in its scene (${s.id})`);
+    assert.ok(l.len > 0.8 && l.len < 3.2, `${l.id}: a short line (${l.len} s)`);
+  });
+  assert.ok(PLACES.at(-1).at + PLACES.at(-1).len < TOTAL - 1.6, 'all of her words before the end fades');
+  const spoken = PLACES.reduce((s, l) => s + l.len, 0);
+  assert.ok(spoken < TOTAL * 0.25, `short lines, never a narration (${spoken.toFixed(1)} s of ${TOTAL})`);
+  // never over the trend videos (their drop and all of their scene), never on a drop's first second
+  const trends = sceneOf('trends');
+  for (const l of PLACES) {
+    assert.ok(l.at + l.len <= trends.from || l.at >= trends.to, `${l.id}: never over the trend videos`);
+    for (const d of [M.drop, M.drop2, M.finale]) assert.ok(l.at + l.len < d || l.at >= d + 1, `${l.id}: never on the drop at ${d}`);
+  }
+  // the music dips for each with every hit at full level and every breath silent: nothing wrong with any place
+  const hits = V.hitsOf(musicPlan());
+  assert.ok(hits.length > 15 && hits.includes(M.drop) && hits.includes(M.drop2), 'the music\'s hits, its drops among them');
+  for (const p of V.planDucks(PLACES, { hits, breaths: BREATHS })) assert.deepEqual(p.problems, [], p.id);
+  // the one hit she speaks over ("She's | not real.") is the music's own
+  for (const l of PLACES) for (const h of l.over || []) assert.ok(hits.includes(h), `${l.id} over ${h}`);
+  assert.deepEqual(PLACES.find((l) => l.id === 'not-real').over, [M.notReal]);
+  assert.deepEqual(PLACES.filter((l) => l.over).map((l) => l.id), ['not-real']);
+});
+
+test('her voice, mixed: the music dips under her by loudness (8 to 12 dB; its lows and highs less), and everywhere else it\'s exactly the music', () => {
+  const n = 6 * SR;
+  const mk = () => Float32Array.from({ length: n }, (_, i) => 0.12 * Math.sin((2 * Math.PI * 50 * i) / SR) + 0.12 * Math.sin((2 * Math.PI * 1000 * i) / SR) + 0.06 * Math.sin((2 * Math.PI * 16000 * i) / SR));
+  const music = { L: mk(), R: mk() };
+  // her lines: a 300 Hz voice, a breath in its take before her first word (never heard where the music isn't dipped)
+  const line = (id, at, len, amp, extra = {}) => {
+    const onset = 0.15, pcm = new Float32Array(Math.round((onset + len + 0.2) * SR));
+    const rnd = noise(id.length);
+    for (let i = 0; i < Math.round(onset * SR); i++) pcm[i] = 0.02 * rnd();
+    for (let i = Math.round(onset * SR); i < Math.round((onset + len) * SR); i++) pcm[i] = amp * Math.sin((2 * Math.PI * 300 * i) / SR);
+    return { id, at, len, onset, pcm, ...extra };
+  };
+  // quiet under the music (it dips its most), loud over it (its least), and one with its own dip
+  const lines = [line('quiet', 0.6, 0.8, 0.02), line('loud', 2.2, 0.8, 0.3), line('own', 4.2, 0.8, 0.1, { duck: 10 })];
+  const hits = [2.0, 3.3];          // one just before 'loud' (its dip waits 60 ms for it), one after it (the music back up by then)
+  const breaths = [[5.3, 5.6]];     // after 'own': the music back up by its silence
+  const mix = V.mixVoice(music, lines, { hits, breaths });
+  const [q, l, o] = mix.report;
+  assert.equal(q.duck, 12, `the music far louder than her: its most (${q.music} vs ${q.her})`);
+  assert.equal(l.duck, 8, `her louder than the music: its least (${l.music} vs ${l.her})`);
+  assert.equal(o.duck, 10, 'a line\'s own dip');
+  for (const r of [q, l]) assert.equal(r.duck, +Math.min(12, Math.max(8, r.music - r.her + V.DUCK.margin)).toFixed(2));
+  // her loudness and the music's over her words, as the report says
+  const seg =(x, a, b) => x.subarray(Math.round(a * SR), Math.round(b * SR));
+  const vl = lines[1].pcm.subarray(Math.round(0.15 * SR), Math.round(0.95 * SR));
+  assert.ok(Math.abs(l.her - V.loudness([vl, vl])) < 0.05, `${l.her}`);
+  assert.ok(Math.abs(l.music - V.loudness([seg(music.L, 2.2, 3.0), seg(music.R, 2.2, 3.0)])) < 0.01);
+  // where each dip starts and ends: after the hit just before 'loud', and back up before the next hit or the breath
+  assert.ok(Math.abs(l.a0 - 2.06) < 1e-9 && Math.abs(l.a1 - 2.16) < 1e-9, `${l.a0}, ${l.a1}`);
+  assert.ok(Math.abs(l.r1 - 3.29) < 1e-9 && Math.abs(l.r0 - 3.06) < 1e-9, `${l.r0}, ${l.r1}`);
+  assert.ok(Math.abs(o.r1 - 5.31) < 1e-9, `${o.r1}`);
+  assert.ok(Math.abs(q.a0 - 0.4) < 1e-9 && Math.abs(q.r1 - 1.96) < 1e-9, `${q.a0}, ${q.r1}`);
+  // everywhere else, exactly the music (her take's breath before her first word included: never where the music isn't dipped)
+  const inDip = (t) => mix.report.some((r) => t >= r.a0 - 1 / SR && t < r.r1 + 1 / SR);
+  let changed = 0, outside = 0;
+  for (let i = 0; i < n; i++) {
+    const same = mix.L[i] === music.L[i] && mix.R[i] === music.R[i];
+    if (!same) changed++;
+    if (!same && !inDip(i / SR)) outside++;
+  }
+  assert.equal(outside, 0, 'nothing changed outside her dips');
+  assert.equal(changed, mix.changed);
+  for (const h of hits) for (let i = Math.round(h * SR); i < Math.round((h + 0.06) * SR); i++) assert.ok(mix.L[i] === music.L[i] && mix.R[i] === music.R[i], `the hit at ${h}`);
+  for (let i = Math.round(5.31 * SR); i < Math.round(5.6 * SR); i++) assert.ok(mix.L[i] === music.L[i], 'the breath');
+  assert.equal(mix.limiter.under, 0, 'nothing near the ceiling here');
+  // in the middle of each dip: the music's middle band (her voice's) down by its dip, its lows and highs by their share of
+  // it (each band from its own crossover: what the three bands make, exactly), and her voice on top
+  for (const r of mix.report) {
+    const a = Math.round((r.a1 + 0.05) * SR), b = Math.round((r.r0 - 0.05) * SR);
+    const gm = 10 ** (-r.duck / 20), gl = gm ** V.DUCK.lows, gh = gm ** V.DUCK.highs;
+    const dips = {};
+    for (const f of [50, 1000, 16000]) {
+      const [lr, li] = response(f, 'lp', V.DUCK.split[0]), [hr, hi] = response(f, 'hp', V.DUCK.split[1]);
+      const want = 20 * Math.log10(Math.hypot(gm + (gl - gm) * lr + (gh - gm) * hr, (gl - gm) * li + (gh - gm) * hi));
+      const got = 20 * Math.log10(toneAmp(mix.L, f, a, b) / toneAmp(music.L, f, a, b));
+      assert.ok(Math.abs(got - want) < 0.1, `${r.id} at ${f} Hz: ${got.toFixed(2)} dB, ${want.toFixed(2)} wanted`);
+      dips[f] = -got;
+    }
+    // her band dips by its dip (the other bands' gentle slopes reach into it: at most half a dB more)
+    assert.ok(dips[1000] > r.duck - 0.1 && dips[1000] < r.duck + 0.5, `${r.id}: her band dips ${dips[1000].toFixed(2)} dB (${r.duck})`);
+    assert.ok(dips[50] < dips[1000] - 2 && dips[50] > r.duck * V.DUCK.lows - 0.3, `${r.id}: the lows dip about half as much (${dips[50].toFixed(2)})`);
+    assert.ok(dips[16000] < dips[1000] - 0.5 && dips[16000] > r.duck * V.DUCK.highs - 0.3, `${r.id}: the highs a little less (${dips[16000].toFixed(2)})`);
+    const amp = { quiet: 0.02, loud: 0.3, own: 0.1 }[r.id];
+    assert.ok(Math.abs(toneAmp(mix.L, 300, a, b) / amp - 1) < 0.01, `${r.id}: her voice on top`);
+  }
+  // the same takes and music always make the same soundtrack
+  const again = V.mixVoice(music, lines, { hits, breaths });
+  assert.ok(again.L.every((x, i) => x === mix.L[i]) && again.R.every((x, i) => x === mix.R[i]), 'the same soundtrack');
+  // two of her lines with one id, or a line that doesn't fit (a hit under her words): never mixed
+  assert.throws(() => V.mixVoice(music, [line('a', 0.6, 0.8, 0.1), line('a', 3.0, 0.8, 0.1)], { hits: [], breaths: [] }), /same id/);
+  assert.throws(() => V.mixVoice(music, [line('a', 0.6, 0.8, 0.1)], { hits: [1.0], breaths: [] }), /her lines don't fit: a: a hit under her words \(1\)/);
+  assert.equal(V.mixVoice(music, [line('a', 0.6, 0.8, 0.1)], { hits: [1.0], breaths: [], anyway: true }).report[0].problems.length, 1);
+});
+
+test('her voice, mixed: never over the ceiling where she is, and where the music alone is louder, the music as it was', () => {
+  const n = 3 * SR;
+  const L = sine(n, 1000, 0.5), R = sine(n, 1000, 0.5);
+  L[Math.round(0.3 * SR)] = 0.95; R[Math.round(0.3 * SR)] = -0.95;   // the music's own peaks: one far from her,
+  L[Math.round(1.5 * SR)] = 0.95;                                      // one under her words
+  const pcm = new Float32Array(Math.round(1.15 * SR));
+  for (let i = Math.round(0.15 * SR); i < pcm.length; i++) pcm[i] = 0.8 * Math.sin((2 * Math.PI * 300 * i) / SR);
+  const mix = V.mixVoice({ L, R }, [{ id: 'x', at: 1.0, len: 0.8, onset: 0.15, pcm }], { hits: [], breaths: [] });
+  assert.ok(mix.limiter.under > 0, 'her loud voice over loud music: the limiter at work');
+  for (let i = 0; i < n; i++) {
+    for (const [out, src] of [[mix.L, L], [mix.R, R]]) {
+      assert.ok(Math.abs(out[i]) <= Math.max(V.DUCK.ceiling, Math.abs(src[i])) + 1e-6, `${i}: ${out[i]}`);
+    }
+  }
+  assert.equal(mix.L[Math.round(0.3 * SR)], Math.fround(0.95), 'the music\'s own peak as it was');
+  assert.equal(mix.R[Math.round(0.3 * SR)], Math.fround(-0.95));
+  assert.ok(V.DUCK.ceiling < 0.89, 'under the music\'s own ceiling (music.js: 0.89)');
+});
+
+test('her voice, planned: a hit under her words, a breath, a hit too close or two lines too close are said', () => {
+  const plan = (lines, hits = [], breaths = []) => V.planDucks(lines, { hits, breaths });
+  const one = { id: 'a', at: 2, len: 1 };
+  assert.deepEqual(plan([one])[0].problems, []);
+  const p = plan([one])[0];
+  assert.ok(Math.abs(p.a0 - 1.8) < 1e-9 && Math.abs(p.a1 - 1.96) < 1e-9 && Math.abs(p.r0 - 3.06) < 1e-9 && Math.abs(p.r1 - 3.56) < 1e-9);
+  assert.match(plan([one], [2.5])[0].problems.join(), /a hit under her words \(2\.5\)/);
+  assert.match(plan([one], [], [[2.8, 3.2]])[0].problems.join(), /her words in a breath \(2\.8\)/);
+  assert.match(plan([one], [1.93])[0].problems.join(), /a hit too close before her first word/);
+  assert.match(plan([one], [3.02])[0].problems.join(), /a hit or a breath too close after her last word/);
+  assert.match(plan([one, { id: 'b', at: 3.05, len: 1 }])[1].problems.join(), /too close after "a"/);
+  assert.match(plan([{ ...one, over: [3.5] }], [3.5])[0].problems.join(), /a hit she speaks over isn't under her words \(3\.5\)/);
+  assert.deepEqual(plan([{ ...one, over: [2.5] }], [2.5])[0].problems, [], 'a hit she speaks over');
+  // a hit just after her last word: the music back up 10 ms before it
+  const after = plan([one], [3.4])[0];
+  assert.deepEqual(after.problems, []);
+  assert.ok(Math.abs(after.r1 - 3.39) < 1e-9);
+  assert.deepEqual(V.hitsOf([{ name: 'impact', t: 2 }, { name: 'kick', t: 1 }, { name: 'crash', t: 2 }, { name: 'crash', t: 0.5 }]), [0.5, 2]);
+});
+
+test('her takes, made ready: trimmed around her words (a soft first sound kept), a long pause shortened, her loudness set, her peaks held', () => {
+  const R24 = 24000;
+  const take = new Float32Array(Math.round(2.6 * R24));
+  const rnd = noise(3);
+  for (let i = 0; i < take.length; i++) take[i] = 1e-4 * rnd();   // the room's quiet
+  const put = (t0, t1, fn) => { for (let i = Math.round(t0 * R24); i < Math.round(t1 * R24); i++) take[i] += fn(i / R24); };
+  put(0.42, 0.5, () => 0.004 * rnd());                            // a soft "sh" before her first word
+  const voiced = (t) => 0.3 * (0.25 * Math.sin(2 * Math.PI * 220 * t) + 0.1 * Math.sin(2 * Math.PI * 440 * t) + 0.05 * Math.sin(2 * Math.PI * 660 * t));
+  put(0.5, 1.1, voiced);                                           // her words…
+  put(1.7, 2.1, voiced);                                           // …after a long pause (0.6 s)
+  put(0.8, 0.8005, () => 0.6);                                     // a click, far louder than her words
+  const r = V.readyLine(V.wav16([take], R24));
+  assert.equal(r.rate, SR);
+  assert.ok(Math.abs(r.from - 0.42) < 0.011, `its first sound, the "sh" (${r.from})`);
+  assert.ok(Math.abs(r.soft[0] - 0.08) < 0.011, `${r.soft}`);
+  assert.ok(Math.abs(r.onset - 0.15) < 1e-4, `kept before it: ${r.onset}`);
+  assert.equal(r.pauses.length, 1);
+  assert.ok(r.pauses[0].was > 0.56 && r.pauses[0].was < 0.61 && r.pauses[0].now === V.LINE.maxPause, JSON.stringify(r.pauses));
+  assert.ok(Math.abs(r.len - (2.1 - 0.42 - (r.pauses[0].was - V.LINE.maxPause))) < 0.025, `her words last ${r.len} s`);
+  assert.ok(Math.abs(r.pcm.length / SR - (r.len + V.LINE.pre + V.LINE.post)) < 0.001, 'kept after her last word too');
+  assert.ok(Math.abs(r.lufs - V.LINE.lufs) < 0.06 && Math.abs(V.loudness([r.pcm, r.pcm]) - V.LINE.lufs) < 0.06, `${r.lufs} LUFS`);
+  assert.ok(r.gain > 5, `louder: ${r.gain} dB`);
+  assert.ok(r.peak <= V.LINE.peak + 0.01, `her peaks held: ${r.peak} dBFS`);
+  // without holding her peaks, the click would be over full scale
+  const free = V.readyLine(V.wav16([take], R24), { peak: null });
+  assert.ok(free.peak > 0, `${free.peak}`);
+  assert.ok(Math.abs(free.len - r.len) < 1e-9 && Math.abs(free.lufs - V.LINE.lufs) < 0.06);
+  // a take in two channels: the same line
+  const st = V.readyLine(V.wav16([take, take], R24));
+  assert.ok(Math.abs(st.len - r.len) < 1e-9 && Math.abs(st.lufs - r.lufs) < 0.02 && Math.abs(st.from - r.from) < 1e-9);
+  // a take with no voice in it
+  assert.throws(() => V.readyLine(V.wav16([Float32Array.from({ length: SR }, () => 1e-4 * rnd())])), /no voice in this take/);
+});
+
+test('her voice\'s maths: loudness (BS.1770: a full-scale 997 Hz sine in one channel is -3.01 LUFS), another rate, WAV files', () => {
+  const n = 3 * SR;
+  const s = sine(n, 997, 1), zero = new Float32Array(n);
+  assert.ok(Math.abs(V.loudness([s, zero]) + 3.01) < 0.03, `${V.loudness([s, zero])}`);
+  assert.ok(Math.abs(V.loudness([s, s])) < 0.03);
+  const quiet = sine(n, 997, 0.1);
+  assert.ok(Math.abs(V.loudness([quiet, quiet]) + 20) < 0.03);
+  assert.equal(V.loudness([zero, zero]), -Infinity);
+  assert.throws(() => V.loudness([s], 44100), /48 kHz/);
+  // another rate: a 1 kHz sine stays one, at its level
+  for (const from of [24000, 44100]) {
+    const x = sine(from, 1000, 0.5, from);
+    const y = V.resample(x, from, SR);
+    assert.equal(y.length, Math.floor(x.length / (from / SR)));
+    let worst = 0;
+    for (let k = Math.round(0.1 * SR); k < Math.round(0.9 * SR); k++) worst = Math.max(worst, Math.abs(y[k] - 0.5 * Math.sin((2 * Math.PI * 1000 * k) / SR)));
+    assert.ok(worst < 2e-3, `${from}: ${worst}`);
+  }
+  assert.deepEqual(V.resample(Float32Array.from([0.1, 0.2]), SR, SR), Float32Array.from([0.1, 0.2]));
+  // WAV files: 16-bit samples come back exactly (the music's, outside her dips, never changed), 24-bit and float read
+  const vals = Float32Array.from([0, 1, -1, 0.5, -0.25, 12345 / 32767]);
+  const back = V.readWav(V.wav16([vals, vals], 22050));
+  assert.equal(back.rate, 22050);
+  assert.equal(back.channels.length, 2);
+  assert.deepEqual(V.wav16(back.channels, 22050), V.wav16([vals, vals], 22050));
+  const wavOf = (format, bits, values) => {
+    const bytes = bits / 8, data = Buffer.alloc(values.length * bytes);
+    values.forEach((v, i) => {
+      if (format === 3) data.writeFloatLE(v, i * 4);
+      else data.writeIntLE(Math.round(v * 8388607), i * 3, 3);
+    });
+    const h = Buffer.alloc(44);
+    h.write('RIFF', 0); h.writeUInt32LE(36 + data.length, 4); h.write('WAVE', 8); h.write('fmt ', 12); h.writeUInt32LE(16, 16);
+    h.writeUInt16LE(format, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(SR, 24); h.writeUInt32LE(SR * bytes, 28);
+    h.writeUInt16LE(bytes, 32); h.writeUInt16LE(bits, 34); h.write('data', 36); h.writeUInt32LE(data.length, 40);
+    return Buffer.concat([h, data]);
+  };
+  assert.deepEqual([...V.readWav(wavOf(3, 32, [0.5, -0.75])).channels[0]], [0.5, -0.75]);
+  const t24 = V.readWav(wavOf(1, 24, [0.5, -0.25])).channels[0];
+  assert.ok(Math.abs(t24[0] - 0.5) < 1e-6 && Math.abs(t24[1] + 0.25) < 1e-6);
+  assert.throws(() => V.readWav(Buffer.from('not a wav file at all')), /not a WAV file/);
+});
+
+test('make.mjs: her lines as media.mjs made them ready, where timeline.js puts them; a take that doesn\'t fit its place is said', () => {
+  assert.equal(LEN_SLACK, 0.15);
+  const dir = mkdtempSync(join(tmpdir(), 'studio-promo-voice-'));
+  try {
+    assert.throws(() => voiceLines(dir), /her line "meet" isn't made ready: node tools\/studio-promo\/media\.mjs --only voice/);
+    mkdirSync(join(dir, 'voice'));
+    const index = { voice: {} };
+    const save = () => writeFileSync(join(dir, 'index.json'), JSON.stringify(index));
+    for (const l of PLACES) {
+      writeFileSync(join(dir, 'voice', `${l.id}.wav`), V.wav16([sine(Math.round((l.len + 0.35) * SR), 300, 0.1)]));
+      index.voice[l.id] = { onset: 0.15, len: l.len };
+    }
+    save();
+    const lines = voiceLines(dir);
+    assert.deepEqual(lines.map((l) => l.id), PLACES.map((l) => l.id));
+    lines.forEach((l, k) => {
+      assert.equal(l.at, PLACES[k].at);
+      assert.equal(l.len, PLACES[k].len);
+      assert.equal(l.onset, 0.15);
+      assert.deepEqual(l.over, PLACES[k].over);
+      assert.ok(l.pcm instanceof Float32Array && l.pcm.length === Math.round((PLACES[k].len + 0.35) * SR));
+    });
+    // a take's words a little longer: mixed as long as they last; much longer: its place is checked again first
+    const move = PLACES.find((l) => l.id === 'move');
+    index.voice.move.len = +(move.len + 0.1).toFixed(2); save();
+    assert.equal(voiceLines(dir).find((l) => l.id === 'move').len, index.voice.move.len);
+    index.voice.move.len = +(move.len + LEN_SLACK + 0.05).toFixed(2); save();
+    assert.throws(() => voiceLines(dir), /her take of "move" lasts [\d.]+ s, and its place in timeline\.js \(VOICE\) was made for [\d.]+ s: check where it goes/);
+    index.voice.move.len = move.len; save();
+    // not as media.mjs makes it: two channels, or another rate
+    writeFileSync(join(dir, 'voice', 'meet.wav'), V.wav16([sine(SR, 300, 0.1), sine(SR, 300, 0.1)]));
+    assert.throws(() => voiceLines(dir), /her line "meet" isn't as media\.mjs makes it/);
+    writeFileSync(join(dir, 'voice', 'meet.wav'), V.wav16([sine(SR, 300, 0.1)], 44100));
+    assert.throws(() => voiceLines(dir), /her line "meet" isn't as media\.mjs makes it/);
+    writeFileSync(join(dir, 'voice', 'meet.wav'), V.wav16([sine(SR, 300, 0.1)]));
+    rmSync(join(dir, 'voice', 'live.wav'));
+    assert.throws(() => voiceLines(dir), /her line "live" isn't made ready/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+const hasFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0 && spawnSync('ffprobe', ['-version']).status === 0;
+test('make.mjs --sound-only: each video keeps its pictures exactly (copied), gets the soundtrack, and the first time keeps its music-only copy (ffmpeg, where it\'s there)', { skip: !hasFfmpeg }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'studio-promo-sound-'));
+  const empty = mkdtempSync(join(tmpdir(), 'studio-promo-none-'));
+  try {
+    const make = (f) => spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc=size=64x36:rate=30:duration=1', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000:duration=1', '-c:v', 'mpeg4', '-q:v', '5', '-c:a', 'aac', '-shortest', join(dir, f)]).status;
+    assert.equal(make('agi-studio-launch.mp4'), 0);
+    assert.equal(make('agi-studio-launch-light.mp4'), 0);
+    const orig = readFileSync(join(dir, 'agi-studio-launch.mp4')), origLight = readFileSync(join(dir, 'agi-studio-launch-light.mp4'));
+    const sha = (b) => createHash('sha256').update(b).digest('hex');
+    const hash = (f) => spawnSync('ffmpeg', ['-v', 'error', '-i', join(dir, f), '-map', '0:v', '-c', 'copy', '-f', 'streamhash', '-hash', 'sha256', '-']).stdout.toString().trim();
+    const sound = (f) => { const b = spawnSync('ffmpeg', ['-v', 'error', '-i', join(dir, f), '-map', '0:a', '-ac', '1', '-ar', String(SR), '-f', 'f32le', '-'], { maxBuffer: 1e8 }).stdout; return new Float32Array(b.buffer, b.byteOffset, b.length / 4); };
+    const probe = (f) => JSON.parse(spawnSync('ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', join(dir, f)]).stdout.toString());
+    const track = join(dir, 'soundtrack.wav');
+    const a = { name: 'agi-studio-launch', outDir: dir };
+    for (const hz of [880, 660]) {
+      // a soundtrack longer than the videos: each stays as long as its pictures
+      writeFileSync(track, V.wav16([sine(1.5 * SR, hz, 0.3), sine(1.5 * SR, hz, 0.3)]));
+      await soundOnly(a, { file: track });
+      // the videos as they were, kept (the first time; never again after it). By their hashes: a failed deepEqual of two
+      // videos would try to print both
+      assert.equal(sha(readFileSync(join(dir, 'agi-studio-launch-music-only.mp4'))), sha(orig), 'the video as it was');
+      assert.equal(sha(readFileSync(join(dir, 'agi-studio-launch-light-music-only.mp4'))), sha(origLight), 'its light copy as it was');
+      for (const base of ['agi-studio-launch', 'agi-studio-launch-light']) {
+        const h = hash(`${base}.mp4`);
+        assert.match(h, /SHA256=[0-9a-f]{64}/);
+        assert.equal(h, hash(`${base}-music-only.mp4`), `${base}: its pictures exactly as they were`);
+        const p = probe(`${base}.mp4`), au = p.streams.find((s) => s.codec_type === 'audio');
+        assert.equal(au.codec_name, 'aac');
+        assert.equal(+au.sample_rate, SR);
+        assert.equal(au.channels, 2);
+        assert.ok(Math.abs(+p.format.duration - 1) < 0.05, p.format.duration);
+        const x = sound(`${base}.mp4`), A = Math.round(0.2 * SR), B = Math.round(0.8 * SR);
+        assert.ok(toneAmp(x, hz, A, B) > 0.25 && toneAmp(x, 440, A, B) < 0.01, `${base}: its sound the soundtrack's (${hz} Hz)`);
+      }
+    }
+    await assert.rejects(soundOnly({ name: 'agi-studio-launch', outDir: empty }, { file: track }), /no video in .* to give its sound to: make it first/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(empty, { recursive: true, force: true });
+  }
+});
+
+test('her voice over the music, rendered (STUDIO_PROMO_RENDER=1): every line where it goes, the music exactly as it was everywhere else, never over its ceiling', { skip: !process.env.STUDIO_PROMO_RENDER }, () => {
+  const wav = renderMusic();
+  const { channels: [L, R] } = V.readWav(wav);
+  // stand-in takes: each line's words as long as its place, a little quiet before and after them
+  const lines = PLACES.map((l, k) => {
+    const pcm = new Float32Array(Math.round((0.15 + l.len + 0.2) * SR));
+    for (let i = Math.round(0.15 * SR); i < Math.round((0.15 + l.len) * SR); i++) pcm[i] = 0.25 * Math.sin((2 * Math.PI * (200 + 10 * k) * i) / SR);
+    return { id: l.id, at: l.at, len: l.len, onset: 0.15, pcm, over: l.over };
+  });
+  const mix = V.mixVoice({ L, R }, lines, { hits: V.hitsOf(musicPlan()), breaths: BREATHS });
+  for (const r of mix.report) assert.ok(r.duck >= V.DUCK.min && r.duck <= V.DUCK.max, `${r.id}: ${r.duck}`);
+  const back = V.readWav(V.wav16([mix.L, mix.R]));
+  let outside = 0, over = 0;
+  for (let i = 0; i < L.length; i++) {
+    const t = i / SR;
+    const same = back.channels[0][i] === L[i] && back.channels[1][i] === R[i];
+    if (!same && !mix.report.some((r) => t >= r.a0 - 1 / SR && t < r.r1 + 1 / SR)) outside++;
+    if (Math.abs(mix.L[i]) > Math.max(V.DUCK.ceiling, Math.abs(L[i])) + 1e-6 || Math.abs(mix.R[i]) > Math.max(V.DUCK.ceiling, Math.abs(R[i])) + 1e-6) over++;
+  }
+  assert.equal(outside, 0, 'the music exactly as it was outside her dips (as the WAV file keeps it)');
+  assert.equal(over, 0, 'never over the ceiling');
 });

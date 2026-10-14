@@ -22,6 +22,15 @@
 -- (2026-10-10, AGI Studio at studio.agi1.app: supabase/influencers.sql builds on this file. Since then a character can also
 -- be a 3D model made from an influencer's full-body picture, and the bucket takes JPEG pictures and a clip's upload parts:
 -- run this file again if it was run before, then influencers.sql.)
+-- (2026-10-13, the 3D tool's choices; the owner: "i wish theres more tools to customize the 3d like in meshy, please fixx and
+-- make it better", then "Pick its moves", "Shape and look", "3D page tools", "More downloads", "Per extra, ~1.8×" and "30
+-- days". Run this file again, then influencers.sql again: it keeps everything saved.) A 3D model of an influencer keeps its
+-- choices (spec: its library moves, up to 2 moves described in words, its detail, shine, pose, height, its look in words,
+-- checked by our server); its making has two more kinds of steps (motion1 and motion2: a move made from its words, before
+-- anything else; apply1 and apply2: that move put on its bones, after its library moves); and the extra downloads asked for
+-- (formats: a full-quality GLB, FBX, USDZ, STL, OBJ) are made by the clock once it's done, one a run, and kept 30 days in the
+-- bucket (dl/<id>.<ext>), then deleted (studio_dl_due, studio_dl_lease, studio_dl_put, studio_dl_expired, studio_dl_clear;
+-- studio_done's p_todo: its older version is dropped first). The bucket takes USDZ, STL and zip files too.
 --
 -- What's kept, and why (only the server's secret key can read or change any of it):
 --   agi1_studio_state   one row: a random key, made here once, that the clock sends with each call
@@ -29,7 +38,9 @@
 --                       description and style, the price it was offered at, how it was paid and how much so far, a
 --                       scrambled code of each payment's transaction (never the transaction), where it is in the
 --                       making (Meshy's task ids), and once done the sizes of its files and its moves. Characters are
---                       public by link, so a done one is kept; one never paid goes after 2 days
+--                       public by link, so a done one is kept; one never paid goes after 2 days. (2026-10-13) A 3D model
+--                       of an influencer: its choices (spec) and the extra downloads asked for: which ones, which are made,
+--                       waiting or couldn't be made, their sizes, and until when they're kept (30 days)
 --   agi1_studio_videos  per video of a character (2026-10-10, its videos: made by an AI video service from its picture,
 --                       paid in USDG only): the same scrambled wallet code, the scene its owner described, its shape and
 --                       whether it has sound, its price and what's paid so far, where it is in the making (the video
@@ -87,12 +98,37 @@ create index if not exists agi1_studio_orders_quotes on public.agi1_studio_order
 alter table public.agi1_studio_orders add column if not exists inf_id text check (inf_id is null or inf_id ~ '^[A-Za-z0-9_-]{22}$');
 alter table public.agi1_studio_orders add column if not exists image_path text
   check (image_path is null or image_path ~ '^inf/[A-Za-z0-9_-]{22}/[A-Za-z0-9_-]{22}-0\.jpg$');
+-- (2026-10-13, the 3D tool) its steps: motion1 and motion2 (a move made from its words) first, apply1 and apply2 (that move
+-- put on its bones) after its library moves
 alter table public.agi1_studio_orders drop constraint if exists agi1_studio_orders_step_check;
 alter table public.agi1_studio_orders add constraint agi1_studio_orders_step_check
-  check (step in ('image', 'preview', 'refine', 'rig', 'moves', 'save'));
+  check (step in ('motion1', 'motion2', 'image', 'preview', 'refine', 'rig', 'moves', 'apply1', 'apply2', 'save'));
 alter table public.agi1_studio_orders drop constraint if exists agi1_studio_orders_kind_check;
 alter table public.agi1_studio_orders add constraint agi1_studio_orders_kind_check check (kind in ('usdg', 'burn', 'free', 'credits'));
 create index if not exists agi1_studio_orders_inf on public.agi1_studio_orders (inf_id, created_at) where inf_id is not null;
+-- (2026-10-13, the 3D tool) a 3D model of an influencer: its choices (spec, checked by our server: src/studio/rules.js
+-- modelSpec; null = the model as before), the extra downloads asked for (formats) and, once it's done, which are waiting for
+-- the clock (formats_todo), made (formats_done, with their sizes: format_bytes) or couldn't be made (formats_failed), the
+-- current one's tries, until when they're kept (dl_until: 30 days) and the clock's turn on them (dl_lease)
+alter table public.agi1_studio_orders add column if not exists spec jsonb;
+alter table public.agi1_studio_orders add column if not exists formats text[] not null default '{}';
+alter table public.agi1_studio_orders add column if not exists formats_todo text[] not null default '{}';
+alter table public.agi1_studio_orders add column if not exists formats_done text[] not null default '{}';
+alter table public.agi1_studio_orders add column if not exists formats_failed text[] not null default '{}';
+alter table public.agi1_studio_orders add column if not exists format_bytes jsonb not null default '{}'::jsonb;
+alter table public.agi1_studio_orders add column if not exists format_tries smallint not null default 0;
+alter table public.agi1_studio_orders add column if not exists dl_until timestamptz;
+alter table public.agi1_studio_orders add column if not exists dl_lease timestamptz;
+alter table public.agi1_studio_orders drop constraint if exists agi1_studio_orders_spec_check;
+alter table public.agi1_studio_orders add constraint agi1_studio_orders_spec_check
+  check (spec is null or (jsonb_typeof(spec) = 'object' and octet_length(spec::text) <= 8000));
+alter table public.agi1_studio_orders drop constraint if exists agi1_studio_orders_formats_check;
+alter table public.agi1_studio_orders add constraint agi1_studio_orders_formats_check
+  check (formats <@ array['full', 'fbx', 'usdz', 'stl', 'obj']::text[] and cardinality(formats) <= 5
+    and formats_todo <@ formats and formats_done <@ formats and formats_failed <@ formats
+    and jsonb_typeof(format_bytes) = 'object' and format_tries between 0 and 20);
+create index if not exists agi1_studio_orders_dl on public.agi1_studio_orders (done_at)
+  where cardinality(formats_todo) > 0 or cardinality(formats_done) > 0;
 
 create table if not exists public.agi1_studio_months (
   month date    primary key,
@@ -350,7 +386,9 @@ as $$
   select row_to_json(o) from (
     select id, wallet_code, burn_code, name, about, style, level, usd_cents, agi, free, kind, paid, status, paid_at, started_at, step, task,
       tasks, tries, error, credit, glb_bytes, pic_bytes, moves, hidden, created_at, updated_at, done_at, inf_id, image_path,
-      (status = 'quote' and paid = 0 and created_at < now() - interval '1 day') as expired
+      (status = 'quote' and paid = 0 and created_at < now() - interval '1 day') as expired,
+      -- (2026-10-13, the 3D tool) its choices and its extra downloads
+      spec, formats, formats_todo, formats_done, formats_failed, format_bytes, format_tries, dl_until
     from agi1_studio_orders where id = p_id
   ) o;
 $$;
@@ -369,14 +407,17 @@ begin
 end;
 $$;
 
--- Where it is in the making: its step, Meshy's task for it, each step's task so far, and its tries; its turn is given back
+-- Where it is in the making: its step, Meshy's task for it, each step's task so far, and its tries; its turn is given back.
+-- (2026-10-13, the 3D tool) and a 3D model's moves described in words: motion1 and motion2 (made from its words), apply1 and
+-- apply2 (put on its bones)
 create or replace function public.studio_step(p_id text, p_step text, p_task text, p_tasks jsonb, p_tries integer)
 returns boolean
 language plpgsql
 set search_path = public
 as $$
 begin
-  if p_step is null or p_step not in ('image', 'preview', 'refine', 'rig', 'moves', 'save') or (p_task is not null and p_task !~ '^[A-Za-z0-9_-]{6,80}$')
+  if p_step is null or p_step not in ('motion1', 'motion2', 'image', 'preview', 'refine', 'rig', 'moves', 'apply1', 'apply2', 'save')
+     or (p_task is not null and p_task !~ '^[A-Za-z0-9_-]{6,80}$')
      or p_tasks is null or jsonb_typeof(p_tasks) <> 'object' or p_tries is null or p_tries not between 0 and 20 then
     return false;
   end if;
@@ -398,21 +439,33 @@ as $$
   update agi1_studio_orders set lease_until = now() + interval '3 seconds' where id = p_id and status in ('paid', 'making') returning true;
 $$;
 
--- Done: its files are kept (their sizes) and its moves (in the order of its file's clips)
-create or replace function public.studio_done(p_id text, p_glb integer, p_pic integer, p_moves text[])
+-- Done: its files are kept (their sizes) and its moves (in the order of its file's clips). (2026-10-13, the 3D tool) p_todo:
+-- the extra downloads it asked for (only ones in its formats, in their own order), waiting for the clock from now, kept 30
+-- days (dl_until). Its older version (without p_todo) is dropped first: one to choose from.
+drop function if exists public.studio_done(text, integer, integer, text[]);
+create or replace function public.studio_done(p_id text, p_glb integer, p_pic integer, p_moves text[], p_todo text[] default '{}')
 returns boolean
 language plpgsql
 set search_path = public
 as $$
+declare
+  v_formats text[];
+  v_todo text[];
 begin
   if p_glb is null or p_glb not between 1 and 100000000 or p_pic is null or p_pic not between 1 and 100000000
      or p_moves is null or cardinality(p_moves) not between 1 and 12 then
     return false;
   end if;
+  select formats into v_formats from agi1_studio_orders where id = p_id and status in ('paid', 'making') for update;
+  if not found then return false; end if;
+  v_todo := array(select f from unnest(array['full', 'fbx', 'usdz', 'stl', 'obj']::text[]) with ordinality as u(f, n)
+    where f = any(coalesce(p_todo, '{}'::text[])) and f = any(coalesce(v_formats, '{}'::text[])) order by n);
   update agi1_studio_orders set status = 'done', glb_bytes = p_glb, pic_bytes = p_pic, moves = p_moves, step = null, task = null,
-    lease_until = null, credit = false, error = null, done_at = now(), updated_at = now()
-  where id = p_id and status in ('paid', 'making');
-  return found;
+    lease_until = null, credit = false, error = null, done_at = now(), updated_at = now(),
+    formats_todo = v_todo, formats_done = '{}', formats_failed = '{}', format_bytes = '{}'::jsonb, format_tries = 0, dl_lease = null,
+    dl_until = case when cardinality(v_todo) > 0 then now() + interval '30 days' else null end
+  where id = p_id;
+  return true;
 end;
 $$;
 
@@ -567,6 +620,101 @@ begin
   update agi1_studio_videos set lease_until = null where lease_until < now() - interval '10 minutes';
   return json_build_object('quotes', quotes, 'failed', failed, 'video_quotes', video_quotes, 'video_failed', video_failed);
 end;
+$$;
+
+-- ---------- a 3D model's extra downloads (2026-10-13, the 3D tool: "More downloads", kept "30 days") ----------
+-- Made by the clock once it's done (server/studio-dl.js: one file a run, from what Meshy made), kept in the bucket
+-- (dl/<id>.<ext>) until dl_until, then deleted by the clock's tidy-up. Only its maker downloads them (our server).
+
+-- The models with a download waiting (done, shown, inside their 30 days, not someone else's turn), the longest-done first
+create or replace function public.studio_dl_due(p_limit integer)
+returns text[]
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(array_agg(id order by done_at), '{}'::text[]) from (
+    select id, done_at from agi1_studio_orders
+    where status = 'done' and not hidden and cardinality(formats_todo) > 0 and dl_until > now()
+      and (dl_lease is null or dl_lease < now())
+    order by done_at limit least(greatest(coalesce(p_limit, 1), 1), 20)
+  ) d;
+$$;
+
+-- Its turn on its downloads, for p_secs seconds: true once (two server copies never make the same model's files at once)
+create or replace function public.studio_dl_lease(p_id text, p_secs integer)
+returns boolean
+language plpgsql
+set search_path = public
+as $$
+begin
+  if p_secs is null or p_secs not between 5 and 300 then return false; end if;
+  update agi1_studio_orders set dl_lease = now() + make_interval(secs => p_secs)
+  where id = p_id and status = 'done' and not hidden and cardinality(formats_todo) > 0 and dl_until > now()
+    and (dl_lease is null or dl_lease < now());
+  return found;
+end;
+$$;
+
+-- One download's turn ended: made (p_ok: its file is kept, its size p_bytes), or not: given up (p_final: too big, the AI
+-- service no longer has what it's made from, or its last try), else tried again on a later run (its tries counted, a 2-minute
+-- rest). Only for a download it's still waiting for (its model shown, inside its days). → true, or false (then a file just
+-- made isn't wanted: our server deletes it again)
+create or replace function public.studio_dl_put(p_id text, p_format text, p_ok boolean, p_bytes integer, p_final boolean)
+returns boolean
+language plpgsql
+set search_path = public
+as $$
+begin
+  if p_format is null or p_format not in ('full', 'fbx', 'usdz', 'stl', 'obj') or p_ok is null
+     or (p_ok and (p_bytes is null or p_bytes not between 1 and 100000000)) then
+    return false;
+  end if;
+  if p_ok then
+    update agi1_studio_orders set formats_todo = array_remove(formats_todo, p_format),
+      formats_done = case when p_format = any(formats_done) then formats_done else formats_done || p_format end,
+      format_bytes = format_bytes || jsonb_build_object(p_format, p_bytes), format_tries = 0, dl_lease = null
+    where id = p_id and status = 'done' and not hidden and dl_until > now() and p_format = any(formats_todo);
+  elsif coalesce(p_final, false) then
+    update agi1_studio_orders set formats_todo = array_remove(formats_todo, p_format),
+      formats_failed = case when p_format = any(formats_failed) then formats_failed else formats_failed || p_format end,
+      format_tries = 0, dl_lease = null
+    where id = p_id and status = 'done' and not hidden and dl_until > now() and p_format = any(formats_todo);
+  else
+    update agi1_studio_orders set format_tries = least(format_tries + 1, 20), dl_lease = now() + interval '2 minutes'
+    where id = p_id and status = 'done' and not hidden and dl_until > now() and p_format = any(formats_todo);
+  end if;
+  return found;
+end;
+$$;
+
+-- The tidy-up's list: models whose downloads are past their days (or hidden, deleted from its page, or no longer done) and
+-- still have some, or some waiting: their files go, then studio_dl_clear
+create or replace function public.studio_dl_expired(p_limit integer)
+returns text[]
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(array_agg(id order by dl_until nulls first), '{}'::text[]) from (
+    select id, dl_until from agi1_studio_orders
+    where (cardinality(formats_done) > 0 or cardinality(formats_todo) > 0)
+      and (dl_until is null or dl_until < now() or hidden or status <> 'done')
+    order by dl_until nulls first limit least(greatest(coalesce(p_limit, 20), 1), 100)
+  ) d;
+$$;
+
+-- Its downloads' files deleted (by our server): none made, none waiting (which were asked for, and which couldn't be made,
+-- stay, so its page can say they're gone). Only one past its days, hidden or no longer done. → true, or null
+create or replace function public.studio_dl_clear(p_id text)
+returns boolean
+language sql
+set search_path = public
+as $$
+  update agi1_studio_orders set formats_todo = '{}', formats_done = '{}', format_bytes = '{}'::jsonb, format_tries = 0, dl_lease = null
+  where id = p_id and (cardinality(formats_done) > 0 or cardinality(formats_todo) > 0)
+    and (dl_until is null or dl_until < now() or hidden or status <> 'done')
+  returning true;
 $$;
 
 -- ---------- a character's videos (2026-10-10) ----------
@@ -826,7 +974,7 @@ revoke all on function public.studio_get(text) from public, anon, authenticated;
 revoke all on function public.studio_lease(text, integer) from public, anon, authenticated;
 revoke all on function public.studio_step(text, text, text, jsonb, integer) from public, anon, authenticated;
 revoke all on function public.studio_wait(text) from public, anon, authenticated;
-revoke all on function public.studio_done(text, integer, integer, text[]) from public, anon, authenticated;
+revoke all on function public.studio_done(text, integer, integer, text[], text[]) from public, anon, authenticated;
 revoke all on function public.studio_fail(text, text, boolean) from public, anon, authenticated;
 revoke all on function public.studio_redo(text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.studio_due(integer) from public, anon, authenticated;
@@ -836,6 +984,11 @@ revoke all on function public.studio_list(integer) from public, anon, authentica
 revoke all on function public.studio_mine(text, integer) from public, anon, authenticated;
 revoke all on function public.studio_hide(text, boolean) from public, anon, authenticated;
 revoke all on function public.studio_tidy() from public, anon, authenticated;
+revoke all on function public.studio_dl_due(integer) from public, anon, authenticated;
+revoke all on function public.studio_dl_lease(text, integer) from public, anon, authenticated;
+revoke all on function public.studio_dl_put(text, text, boolean, integer, boolean) from public, anon, authenticated;
+revoke all on function public.studio_dl_expired(integer) from public, anon, authenticated;
+revoke all on function public.studio_dl_clear(text) from public, anon, authenticated;
 revoke all on function public.studio_video_quote(text, text, text, text, text, boolean, integer, integer, integer, integer) from public, anon, authenticated;
 revoke all on function public.studio_video_pay(text, text, text, integer) from public, anon, authenticated;
 revoke all on function public.studio_video_get(text) from public, anon, authenticated;
@@ -858,7 +1011,7 @@ grant execute on function public.studio_get(text) to service_role;
 grant execute on function public.studio_lease(text, integer) to service_role;
 grant execute on function public.studio_step(text, text, text, jsonb, integer) to service_role;
 grant execute on function public.studio_wait(text) to service_role;
-grant execute on function public.studio_done(text, integer, integer, text[]) to service_role;
+grant execute on function public.studio_done(text, integer, integer, text[], text[]) to service_role;
 grant execute on function public.studio_fail(text, text, boolean) to service_role;
 grant execute on function public.studio_redo(text, text, text, text, text) to service_role;
 grant execute on function public.studio_due(integer) to service_role;
@@ -868,6 +1021,11 @@ grant execute on function public.studio_list(integer) to service_role;
 grant execute on function public.studio_mine(text, integer) to service_role;
 grant execute on function public.studio_hide(text, boolean) to service_role;
 grant execute on function public.studio_tidy() to service_role;
+grant execute on function public.studio_dl_due(integer) to service_role;
+grant execute on function public.studio_dl_lease(text, integer) to service_role;
+grant execute on function public.studio_dl_put(text, text, boolean, integer, boolean) to service_role;
+grant execute on function public.studio_dl_expired(integer) to service_role;
+grant execute on function public.studio_dl_clear(text) to service_role;
 grant execute on function public.studio_video_quote(text, text, text, text, text, boolean, integer, integer, integer, integer) to service_role;
 grant execute on function public.studio_video_pay(text, text, text, integer) to service_role;
 grant execute on function public.studio_video_get(text) to service_role;
@@ -885,15 +1043,17 @@ grant execute on function public.studio_video_hide(text, boolean) to service_rol
 -- pages get a character's files from our own address, /api/launch?studio-file=…, and its videos too, /api/launch?studio-
 -- video=…, downloaded through a short-lived signed address our server makes). 40 MB a file at most, only a 3D model (GLB),
 -- pictures (WebP, PNG; since AGI Studio, 2026-10-10, JPEG too), videos (MP4) and the parts of a clip being uploaded to AGI
--- Studio (application/octet-stream, put together by our server). Only when Supabase Storage is there (it always is in a
--- Supabase project).
+-- Studio (application/octet-stream, put together by our server); since the 3D tool (2026-10-13) a 3D model's extra
+-- downloads too: FBX (application/octet-stream), USDZ, STL and its OBJ zipped. Only when Supabase Storage is there (it
+-- always is in a Supabase project).
 do $do$
 begin
   if to_regclass('storage.buckets') is not null then
     if exists (select 1 from information_schema.columns where table_schema = 'storage' and table_name = 'buckets' and column_name = 'allowed_mime_types') then
       execute $q$insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
         values ('agi1-characters', 'agi1-characters', false, 41943040,
-          array['model/gltf-binary', 'image/webp', 'image/png', 'image/jpeg', 'video/mp4', 'application/octet-stream'])
+          array['model/gltf-binary', 'image/webp', 'image/png', 'image/jpeg', 'video/mp4', 'application/octet-stream',
+            'model/vnd.usdz+zip', 'model/stl', 'application/zip'])
         on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit,
           allowed_mime_types = excluded.allowed_mime_types$q$;
     else
@@ -907,7 +1067,8 @@ end
 $do$;
 
 -- The clock: every minute, Supabase Cron calls our site's studio with the key (pg_net, an HTTPS request; nothing else is
--- sent): it moves the characters being made along (Meshy's steps, then their files kept), and their videos, and tidies up.
+-- sent): it moves the characters being made along (Meshy's steps, then their files kept), and their videos, makes a 3D model's
+-- extra downloads (2026-10-13: one file a run), and tidies up.
 -- Only when both switches above are on.
 do $do$
 begin
@@ -931,15 +1092,25 @@ $do$;
 -- Tell Supabase's web API to notice the new functions right away.
 notify pgrst, 'reload schema';
 
--- Check: studio_ready = 1 (its 32 functions: 20 for characters, 12 for their videos; and burns.sql's two tables it shares),
--- studio_scheduled = 1 (the clock, every minute), studio_storage = 1 (the private bucket for the characters' files).
+-- Check: studio_ready = 1 (its 37 functions, each exactly once: 20 for characters, 12 for their videos, and since the 3D tool,
+-- 2026-10-13, 5 for a 3D model's extra downloads, with studio_done's older version gone; the 3D tool's columns and its steps;
+-- and burns.sql's two tables it shares), studio_scheduled = 1 (the clock, every minute), studio_storage = 1 (the private
+-- bucket for the characters' files).
 select
-  (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('studio_key', 'studio_this_month',
+  (case when (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('studio_key', 'studio_this_month',
     'studio_quote', 'studio_choose', 'studio_pay', 'studio_seen', 'studio_get', 'studio_lease', 'studio_step', 'studio_wait',
     'studio_done', 'studio_fail', 'studio_redo', 'studio_due', 'studio_month', 'studio_free_used', 'studio_list', 'studio_mine',
     'studio_hide', 'studio_tidy', 'studio_video_quote', 'studio_video_pay', 'studio_video_get', 'studio_video_lease',
     'studio_video_step', 'studio_video_wait', 'studio_video_done', 'studio_video_fail', 'studio_video_redo', 'studio_video_due',
-    'studio_video_list', 'studio_video_hide')) / 32
+    'studio_video_list', 'studio_video_hide', 'studio_dl_due', 'studio_dl_lease', 'studio_dl_put', 'studio_dl_expired',
+    'studio_dl_clear')) = 37
+      and (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'agi1_studio_orders'
+        and column_name in ('spec', 'formats', 'formats_todo', 'formats_done', 'formats_failed', 'format_bytes', 'format_tries',
+          'dl_until', 'dl_lease')) = 9
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_studio_orders'::regclass
+        and conname = 'agi1_studio_orders_step_check' and pg_get_constraintdef(oid) like '%apply2%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'studio_get' and prosrc like '%formats_todo%')
+    then 1 else 0 end)
     * (case when to_regclass('public.agi1_burn_txs') is not null and to_regclass('public.agi1_burn_wallets') is not null then 1 else 0 end)
     as studio_ready,
   (select count(*) from pg_extension where extname = 'pg_cron') * (select count(*) from pg_extension where extname = 'pg_net') as studio_scheduled,

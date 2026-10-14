@@ -31,18 +31,24 @@
 // change typed in words: the same shape and quality, at that photo's price); and the photo editor (in its maker's own browser,
 // free: a photo saved from it is server/inf-editor.js's), and the video editor (free, 10 a day: a video saved from it is made by
 // our clock, server/inf-cut.js; its page moves it along only for its look, and "Make another" never makes one again).
+// The 3D tool's choices (2026-10-13, the owner: "i wish theres more tools to customize the 3d like in meshy"; the owner's
+// choices: its moves, its shape and look, more downloads, "Per extra, ~1.8×", "30 days"): a 3D model's order carries its
+// choices (src/studio/rules.js modelSpec), its words checked first, its price its standard price and its extras; its extra
+// downloads are its maker's alone (dl3d: made by the studio's clock, server/studio-dl.js, kept DL_DAYS days).
 import { rpc } from './limits.js';
 import { burnKey, burnWallet } from './burn.js';
 import { studioOn, studioWallet, newOrderId, tick as studioTick, getOrder, checkPayment } from './studio.js';
 import { checkStart, checkInfScene, sceneWay, checkMemeText, checkEdit } from './inf-words.js';
+import { checkModelWords } from './studio-words.js';
 import { creditsOf, grantFree } from './credits.js';
 import { jobTick, getJob, stepOf, infOn, picPath, frameOf, jobFiles } from './inf-jobs.js';
 import { burnsOpen } from './inf-burns.js';
 import { weeksFor } from './inf-week.js';
 import { nameOf } from './clank-names.js';
 import {
-  PRICES, creditPrice, trendOf, TRENDS, REPORT_WHYS, TREND_ID, EXAMPLES, CLANK_NAME, clankProfileUrl, REFS, PHOTO_MODELS, VIDEO_MODELS,
+  PRICES, creditPrice, trendOf, TRENDS, REPORT_WHYS, TREND_ID, EXAMPLES, CLANK_NAME, clankProfileUrl, REFS, refsFor, WITH_AGI1,
   photoSpec, photoCredits, videoSpec, videoCredits, WAYS, drawnStyle, FRAME, isFrame, portraitRow, STUDIO_PHOTO, editSpec,
+  modelSpec, modelSpecField, modelCost, isDefaultSpec, burnable, DL_FORMATS, dlPath, MODEL_DEFAULT,
 } from '../src/studio/rules.js';
 
 export const INF = {
@@ -130,6 +136,8 @@ export function jobView(cfg, j, inf) {
     // (2026-10-12, the editor) the change "Edit with words" made to the photo it's made from (image); and a photo saved from
     // the photo editor (made in its maker's browser from that one: free, no AI)
     edit: j.edit || null, editor: j.editor === true,
+    // (2026-10-13) AGI-1 is in it ("With AGI-1", "Add AGI-1", or made from one with her)
+    agi1: j.agi1 === true,
   };
   if (j.mine === true) Object.assign(v, { cost: n0(j.cost), refunded: j.refunded === true, error: j.error || null, step: j.step || null });
   return v;
@@ -164,6 +172,10 @@ export async function infPage(cfg, id, { wallet = null } = {}) {
         // (round 2) how it's paid: a big burn's quote waits for its burn (its $AGI, and what's burned so far); one that couldn't
         // be made may be made again, free (a burn can't be given back)
         ...(mine ? { kind: m.kind || null, agi: n0(m.agi), paid: n0(m.paid), credit: m.credit === true } : {}),
+        // (2026-10-13, the 3D tool) its choices as its page shows them (its moves, its detail, pose and height: anyone), and its
+        // maker's own: its look in words and its moves' words, and its extra downloads (asked for, ready, being made, couldn't be
+        // made, and until when they're kept)
+        ...modelInfo(m, mine),
       })),
     mine, raw: i,
   };
@@ -191,14 +203,16 @@ export async function moveAlong(cfg, page, { now = Date.now(), deadline = Date.n
 // This wallet: its credits (this month's free ones given first, for a holder), its influencers, its prices, whether it may
 // make one (while AGI Studio is private: whether it's on its list, server/inf-team.js canUse), and (round 2) its slots
 // (influencers it may have at all, and the ones it unlocked by burning), its burn unlocks open, and its weekly prizes (to
-// claim, or claimed); (round 4) the clank.trade username it shows, if any.
-// → { credits, free, influencers, prices, allowed, owner, slots, burns, weeks, clank }
+// claim, or claimed); (round 4) the clank.trade username it shows, if any; (2026-10-13) a Soulmate's free 3D model this month:
+// true (still to use), false (used, or not a Soulmate) or null (unknown: 3D models are off, or the database didn't say), so
+// the page never says "free" to a Soulmate whose free model is used (our server charged its price then, the page said Free).
+// → { credits, free, influencers, prices, allowed, owner, slots, burns, weeks, clank, freeModel }
 export async function me(cfg, { wallet, level }) {
   const code = studioWallet(cfg.passSecret, wallet);
   const { canUse } = await import('./inf-team.js');
   let free = null;
   if (level >= 2) free = await grantFree(cfg, code, level);
-  const [credits, list, slots, burns, weeks, clank, allowed] = await Promise.all([
+  const [credits, list, slots, burns, weeks, clank, allowed, freeUsed] = await Promise.all([
     creditsOf(cfg, code), rpc(cfg, 'inf_mine', { p_wallet: code, p_limit: 30 }, 'studio'), rpc(cfg, 'inf_slots', { p_wallet: code }, 'studio'),
     burnsOpen(cfg, wallet), weeksFor(cfg, { wallet }),
     nameOf(cfg, wallet).catch((err) => {
@@ -206,10 +220,12 @@ export async function me(cfg, { wallet, level }) {
       return null;
     }),
     canUse(cfg, wallet),
+    level === 3 && studioOn(cfg) ? rpc(cfg, 'studio_free_used', { p_wallet: code }, 'studio').catch(() => null) : null,
   ]);
   const extra = n0(slots?.extra);
   return {
     credits, free, prices: priceTable(level), allowed, owner: isOwner(cfg, wallet),
+    freeModel: level === 3 ? (typeof freeUsed === 'boolean' ? !freeUsed : null) : false,
     slots: { used: n0(slots?.used), extra, max: cfg.infSlots + extra },
     burns, weeks, clank: makerOf(clank),
     influencers: (Array.isArray(list) ? list : []).filter((i) => !takenDown(cfg, i.id)).map((i) => {
@@ -286,11 +302,19 @@ export async function rerollLooks(cfg, { wallet, level, id }) {
 // image (one of its done photos, to start from) }. (Round 4) a photo's shape may be 'banner' (an X banner, at its own price);
 // a video or a trend video never starts from one ('banner'). (2026-10-12, the editor) a photo with image and edit (a change in
 // words): "Edit with words", a new photo from that one (a meme or an X banner too), its scene, shape, quality and a meme's words
-// the photo's own (src/studio/rules.js editSpec), at that photo's price. → { ok: true, job, credits } or { ok: false, field?,
-// why, have? }
+// the photo's own (src/studio/rules.js editSpec), at that photo's price. (2026-10-13, "With AGI-1": src/studio/rules.js
+// WITH_AGI1) agi1: true puts AGI-1 in a photo, a meme, an X banner or a video, at the same price: a photo by Classic only
+// ('agi1_model'); a Standard, Pro or Long video from a photo she's in ('agi1_photo'), Anime from her own pictures; never a
+// trend video ('agi1_trend'). A photo with image and agi1 and no edit is "Add AGI-1": she's put into that photo (its scene,
+// shape, quality and a meme's words its own, at its price, like an edit; 'agi1_has' when she's in it already). An edit of a
+// photo with her, and a video from one, have her too. → { ok: true, job, credits } or { ok: false, field?, why, have? }
 export async function makeJob(cfg, { wallet, level, id, input }) {
   const kind = input?.kind;
   if (!['photo', 'trend', 'video'].includes(kind) || !ID.test(String(id))) return { ok: false, why: 'bad' };
+  // (2026-10-13) "With AGI-1": a yes or a no, nothing else; never in a trend video (it puts the influencer in place of one person)
+  if (input.agi1 !== undefined && input.agi1 !== null && typeof input.agi1 !== 'boolean') return { ok: false, why: 'bad' };
+  const askedHer = input.agi1 === true;
+  if (askedHer && !WITH_AGI1.KINDS.includes(kind)) return { ok: false, why: 'agi1_trend' };
   // (round 4, phase 4) its reference pictures: 1 to 4 of the person's own uploads (the database checks they're theirs, passed
   // and fresh); never on a trend video
   let refs = null;
@@ -307,47 +331,63 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
   // (2026-10-12, the editor) "Edit with words": a photo made from one of its own (image) with a change typed in words (edit);
   // a photo starts from another one only that way
   const editing = input.edit !== undefined && input.edit !== null && input.edit !== '';
+  // (2026-10-13) "Add AGI-1": she's put into one of its own photos (a meme, an X banner), without words
+  const adding = kind === 'photo' && !editing && askedHer && image !== null;
   if (editing && (kind !== 'photo' || image === null)) return { ok: false, why: 'bad' };
-  if (image !== null && (!ID.test(image) || (kind === 'photo' && !editing))) return { ok: false, why: 'bad' };
+  if (image !== null && (!ID.test(image) || (kind === 'photo' && !editing && !adding))) return { ok: false, why: 'bad' };
   let photo = null;
   if (image) {
     photo = await getJob(cfg, image);
     if (!photo || photo.inf_id !== id || photo.kind !== 'photo' || photo.status !== 'done' || photo.hidden === true || photo.deleted_at) return { ok: false, why: 'image' };
-    // (an X banner never starts a video or a trend video; edited, it's an X banner again)
-    if (photo.shape === 'banner' && !editing) return { ok: false, why: 'banner' };
+    // (an X banner never starts a video or a trend video; edited, or with AGI-1 added, it's an X banner again)
+    if (photo.shape === 'banner' && !editing && !adding) return { ok: false, why: 'banner' };
+    // (she's in it already: nothing to add; an edit never adds her: "Add AGI-1" does; a trend video never starts from a photo
+    // with her: it puts the influencer in place of one person, and the photo is only more views of it)
+    if (adding && photo.agi1 === true) return { ok: false, why: 'agi1_has' };
+    if (editing && askedHer && photo.agi1 !== true) return { ok: false, why: 'bad' };
+    if (kind === 'trend' && photo.agi1 === true) return { ok: false, why: 'agi1_trend' };
   }
+  // (2026-10-13) whether she's in it: asked for; or an edit of a photo with her, or a video from one (she's in its first frame)
+  const her = askedHer || (photo?.agi1 === true && (editing || kind === 'video'));
   let scene = null, shape = null, sound = false, trend = null, clip = null, edit = null;
   let model = null, quality = null, seconds = null, parts = 1, meme = null, caption = null, cost;
-  if ((kind === 'photo' && !editing) || kind === 'video') {
-    const c = checkInfScene({ scene: input.scene, shape: photo ? photo.shape : input.shape, sound: input.sound, kind });
+  if ((kind === 'photo' && !editing && !adding) || kind === 'video') {
+    // (2026-10-13: with AGI-1 in it, its words may name her)
+    const c = checkInfScene({ scene: input.scene, shape: photo ? photo.shape : input.shape, sound: input.sound, kind, agi1: her });
     if (!c.ok) return c;
     ({ scene, shape } = c);
     sound = kind === 'video' && c.sound === true;
   }
-  if (kind === 'photo' && editing) {
-    // its change, checked like a scene (PG-13, nobody real by name, no links); no reference pictures (it's words); the rest is
-    // the photo's own: its scene (as it says where it is), shape, a meme's format and words, its quality (Classic: editSpec)
-    const e = checkEdit(input.edit);
-    if (!e.ok) return e;
+  if (kind === 'photo' && (editing || adding)) {
+    // an edit: its change, checked like a scene (PG-13, nobody real by name, no links; her name only when she's in it); "Add
+    // AGI-1": no words. No reference pictures either way; the rest is the photo's own: its scene (as it says where it is),
+    // shape, a meme's format and words, its quality (Classic: editSpec)
+    let e = null;
+    if (editing) {
+      e = checkEdit(input.edit, { agi1: her });
+      if (!e.ok) return e;
+    }
     if (refs) return { ok: false, why: 'refs' };
     const spec = editSpec(photo);
     cost = photoCredits(spec, level);
     if (!spec || !Number.isFinite(cost) || !photo.scene || (spec.meme && !photo.caption)) return { ok: false, why: 'image' };
     ({ model, quality, shape, meme } = spec);
-    ({ edit } = e);
+    if (e) ({ edit } = e);
     scene = String(photo.scene);
     caption = meme ? String(photo.caption) : null;
   } else if (kind === 'photo') {
     // (phase 4) a meme: its format and words (checked like a caption's: PG-13, never about money)
     if (input.meme !== undefined && input.meme !== null && input.meme !== '') {
       if (shape === 'banner') return { ok: false, why: 'bad' };
-      const m = checkMemeText({ meme: input.meme, lines: input.lines });
+      const m = checkMemeText({ meme: input.meme, lines: input.lines, agi1: her });
       if (!m.ok) return m;
       ({ meme, caption } = m);
     }
     const spec = photoSpec({ model: input.model ?? null, quality: input.quality ?? null, shape, meme });
     if (!spec) return { ok: false, why: 'model' };
-    if (refs && refs.length > PHOTO_MODELS[spec.model].refs) return { ok: false, why: 'refs' };
+    // (2026-10-13) with AGI-1, by Classic only: it keeps her exactly as drawn
+    if (her && spec.model !== WITH_AGI1.PHOTO_MODEL) return { ok: false, why: 'agi1_model' };
+    if (refs && refs.length > refsFor('photo', spec.model, her)) return { ok: false, why: 'refs' };
     ({ model, quality } = spec);
     cost = photoCredits({ ...spec, shape, meme }, level);
   } else if (kind === 'video') {
@@ -365,7 +405,10 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
     const way = sceneWay({ mode: i.mode, style: i.style, real: i.real === true }, { image, model: spec.model });
     if (way === 'needs_photo') return { ok: false, why: 'needs_photo' };
     if (way === 'no_anime') return { ok: false, why: 'no_anime' };
-    if (refs && refs.length > VIDEO_MODELS[spec.model].refs) return { ok: false, why: 'refs' };
+    // (2026-10-13) with AGI-1, a video from a photo starts from one she's in (Anime puts her in from her own pictures); with
+    // her, Kling's videos take one reference less (refsFor)
+    if (askedHer && way === 'photo' && photo?.agi1 !== true) return { ok: false, why: 'agi1_photo' };
+    if (refs && refs.length > refsFor('video', spec.model, her)) return { ok: false, why: 'refs' };
     ({ model, seconds, quality, parts } = spec);
     sound = spec.sound;
     cost = videoCredits(spec, level);
@@ -394,6 +437,8 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
       p_model: model, p_quality: quality, p_seconds: seconds, p_refs: refs, p_parts: parts, p_meme: meme, p_caption: caption,
       // (2026-10-12, the editor) only when it's an edit: an older influencers.sql makes everything else as before
       ...(edit ? { p_edit: edit } : {}),
+      // (2026-10-13) only when AGI-1 is in it: likewise
+      ...(her ? { p_agi1: true } : {}),
     }, 'studio');
     if (r?.ok === true) return { ok: true, job, cost, credits: { paid: n0(r.paid), free: n0(r.free), bonus: n0(r.bonus) } };
     if (r?.why !== 'taken') return shortOr(r);
@@ -422,6 +467,12 @@ export function againInput(j) {
   if (j.image && j.kind !== 'photo') input.image = j.image;
   // (an edit: the same change to the same photo, which is still there)
   if (j.kind === 'photo' && j.edit && j.image) Object.assign(input, { image: j.image, edit: j.edit });
+  // (2026-10-13) with AGI-1: asked for again; "Add AGI-1" (a photo with her from a photo, without words): put into the same
+  // photo again (an edit's or a video's photo has her already, or the video is Anime: her own pictures)
+  if (j.agi1 === true) {
+    input.agi1 = true;
+    if (j.kind === 'photo' && j.image && !j.edit) input.image = j.image;
+  }
   if (Array.isArray(j.refs) && j.refs.length) input.refs = j.refs;
   return input;
 }
@@ -465,18 +516,45 @@ export async function deleteJob(cfg, { wallet, job }) {
 }
 
 // ---------- a 3D model of it (the studio's characters, from its full body) ----------
-// → { ok: true, order, free, credits } or { ok: false, why: 'no_3d' | inf_3d's }
-export async function order3d(cfg, { wallet, level, id }) {
+// (2026-10-13, the 3D tool) its choices as the page sent them (none: the model as before) → { spec } (tidied) or a "no":
+// { why: 'spec', part } (which choice isn't one: moves, own, detail, shine, pose, height, look, formats or spec) · { field:
+// 'look' | 'own', n?, part?, why } (its words: server/studio-words.js checkModelWords)
+function readChoices(input) {
+  const spec = modelSpec(input ?? null);
+  if (!spec) return { no: { ok: false, why: 'spec', part: modelSpecField(input) || 'spec' } };
+  const words = checkModelWords(spec);
+  if (words) return { no: { ok: false, ...words } };
+  return { spec };
+}
+// spec: its choices (src/studio/rules.js modelSpec: its library moves, up to 2 moves described in words, its detail, shine,
+// pose, height, its look in words, and more downloads). Its price: its standard price and its extras (each library move past
+// MODEL.PICKS_FREE, each move described in words, High detail), a holder's discount on all of it; a Soulmate's free model a
+// month covers its standard price only (its extras still paid: p_free_cost). An older influencers.sql makes only the model as
+// before: its choices go to the database only when they're other ones (p_spec), so the model as before works with either.
+// → { ok: true, order, free, cost, credits } or { ok: false, why: 'no_3d' | 'bad' | 'spec' (part) | inf_3d's } or its words'
+// "no" ({ ok: false, field, n?, part?, why })
+export async function order3d(cfg, { wallet, level, id, spec: input = null }) {
   if (!studioOn(cfg)) return { ok: false, why: 'no_3d' };
   if (!ID.test(String(id))) return { ok: false, why: 'bad' };
+  const c = readChoices(input);
+  if (c.no) return c.no;
+  const plain = isDefaultSpec(c.spec);
+  const cost = modelCost(c.spec, level);
   const key = await burnKey(cfg);
   for (let t = 0; t < 2; t++) {
     const order = newOrderId();
     const r = await rpc(cfg, 'inf_3d', {
       p_order: order, p_inf: id, p_wallet: studioWallet(cfg.passSecret, wallet), p_burn: burnWallet(key, wallet), p_level: level,
-      p_cost: creditPrice('model', level), p_cap: cfg.studioMonthCap, p_free: level === 3,
+      p_cost: cost, p_cap: cfg.studioMonthCap, p_free: level === 3,
+      ...(plain ? {} : { p_spec: c.spec, p_free_cost: modelCost(c.spec, level, { free: true }) }),
     }, 'studio');
-    if (r?.ok === true) return { ok: true, order, free: r.free === true, credits: { paid: n0(r.paid), free: n0(r.free_credits), bonus: n0(r.bonus) } };
+    if (r?.ok === true) {
+      const free = r.free === true;
+      return {
+        ok: true, order, free, cost: free ? (plain ? 0 : modelCost(c.spec, level, { free: true })) : cost,
+        credits: { paid: n0(r.paid), free: n0(r.free_credits), bonus: n0(r.bonus) },
+      };
+    }
     if (r?.why !== 'taken') return shortOr(r);
   }
   return { ok: false, why: 'busy' };
@@ -486,17 +564,30 @@ export async function order3d(cfg, { wallet, level, id }) {
 // (25,000) $AGI burned from the wallet's own app (inside the studio's burns a month, STUDIO_BURNS_A_MONTH); asked again while
 // one is open, the same one. → { ok: true, order, agi, paid, created, again } or { ok: false, why: 'no_3d' | 'burns_off' |
 // inf_3d_burn's }
-export async function order3dBurn(cfg, { wallet, level, id }) {
+// (2026-10-13, the 3D tool) spec: its choices, as for order3d, only ones with nothing extra (a burn pays nobody, and its
+// extras cost the owner: 'not_burnable'); its look in words, its pose, height, shine, Low-poly and more downloads are free.
+// An open quote asked again: while nothing is burned toward it, its choices are the ones asked for now; once something is,
+// they stay as they were (its answer's spec says which).
+export async function order3dBurn(cfg, { wallet, level, id, spec: input = null }) {
   if (!studioOn(cfg)) return { ok: false, why: 'no_3d' };
   if (!(cfg.infModelBurnAgi > 0) || cfg.studioBurnCap < 1) return { ok: false, why: 'burns_off' };
   if (!ID.test(String(id))) return { ok: false, why: 'bad' };
+  const c = readChoices(input);
+  if (c.no) return c.no;
+  if (!burnable(c.spec)) return { ok: false, why: 'not_burnable' };
+  const plain = isDefaultSpec(c.spec);
   const key = await burnKey(cfg);
   for (let t = 0; t < 2; t++) {
     const r = await rpc(cfg, 'inf_3d_burn', {
       p_order: newOrderId(), p_inf: id, p_wallet: studioWallet(cfg.passSecret, wallet), p_burn: burnWallet(key, wallet), p_level: level,
-      p_agi: cfg.infModelBurnAgi, p_cap: cfg.studioMonthCap, p_burn_cap: cfg.studioBurnCap,
+      p_agi: cfg.infModelBurnAgi, p_cap: cfg.studioMonthCap, p_burn_cap: cfg.studioBurnCap, ...(plain ? {} : { p_spec: c.spec }),
     }, 'studio');
-    if (r?.ok === true) return { ok: true, order: r.order, agi: n0(r.agi), paid: n0(r.paid), created: ms(r.created), again: r.again === true };
+    if (r?.ok === true) {
+      return {
+        ok: true, order: r.order, agi: n0(r.agi), paid: n0(r.paid), created: ms(r.created), again: r.again === true,
+        spec: r.spec === undefined ? c.spec : modelSpec(r.spec) || MODEL_DEFAULT,
+      };
+    }
     if (r?.why !== 'taken') return { ok: false, why: String(r?.why || 'busy') };
   }
   return { ok: false, why: 'busy' };
@@ -517,6 +608,52 @@ export async function redo3d(cfg, { wallet, id, order }) {
   if (!o || o.inf_id !== id || o.kind !== 'burn' || takenDown(cfg, order)) return { ok: false, why: 'gone' };
   const r = await rpc(cfg, 'studio_redo', { p_id: order, p_wallet: studioWallet(cfg.passSecret, wallet), p_name: o.name, p_about: o.about, p_style: o.style }, 'studio');
   return r?.ok === true ? { ok: true } : { ok: false, why: String(r?.why || 'busy') };
+}
+
+// (2026-10-13, the 3D tool's "More downloads") A 3D model's extra downloads, its maker's alone. format null: what was asked
+// for, what's ready, what's still being made and what couldn't be made, and until when they're kept (DL_DAYS days after it
+// was done) → { ok: true, formats, done, todo, failed, until }. A format: one of them, from a short-lived signed address (2
+// hours) with its file's name (<Name>-3D.<ext>; the full-quality GLB <Name>-3D-full.glb) → { ok: true, url, name }. Or
+// { ok: false, why: 'bad' | 'gone' (not there, not done, taken down, or not an influencer's) | 'not_yours' | 'dl_none' (not
+// asked for) | 'dl_wait' (still being made) | 'dl_failed' (couldn't be made) | 'dl_expired' (past its days) | 'dl_missing'
+// (its file isn't there) | 'storage' }
+const dlList = (o, k) => (Array.isArray(o?.[k]) ? o[k].filter((f) => typeof f === 'string' && Object.hasOwn(DL_FORMATS, f)) : []);
+// a 3D model's choices as its influencer's page shows them (inf_3d_list's row): its detail, pose, height and shine for anyone
+// (none: the model as before); for its maker all of its choices (its look in words, its moves described in words: spec) and
+// its extra downloads (dl)
+function modelInfo(m, mine) {
+  const s = m?.spec ? modelSpec(m.spec) : null;
+  const out = s ? { detail: s.detail, pose: s.pose, height: s.height, shine: s.shine } : {};
+  if (!mine) return out;
+  return {
+    ...out, spec: s,
+    dl: { formats: dlList(m, 'formats'), done: dlList(m, 'formats_done'), todo: dlList(m, 'formats_todo'), failed: dlList(m, 'formats_failed'), until: ms(m.dl_until) },
+  };
+}
+export async function dl3d(cfg, { wallet, order, format = null, now = Date.now() }) {
+  if (!ID.test(String(order)) || (format !== null && !Object.hasOwn(DL_FORMATS, format))) return { ok: false, why: 'bad' };
+  const o = await getOrder(cfg, order);
+  if (!o || !ID.test(String(o.inf_id)) || o.hidden === true || takenDown(cfg, order) || takenDown(cfg, o.inf_id) || o.status !== 'done') {
+    return { ok: false, why: 'gone' };
+  }
+  if (o.wallet_code !== studioWallet(cfg.passSecret, wallet)) return { ok: false, why: 'not_yours' };
+  const state = { formats: dlList(o, 'formats'), done: dlList(o, 'formats_done'), todo: dlList(o, 'formats_todo'), failed: dlList(o, 'formats_failed'), until: ms(o.dl_until) };
+  if (format === null) return { ok: true, ...state };
+  if (!state.formats.includes(format)) return { ok: false, why: 'dl_none' };
+  if (state.until !== null && state.until <= now) return { ok: false, why: 'dl_expired' };
+  if (state.failed.includes(format)) return { ok: false, why: 'dl_failed' };
+  if (!state.done.includes(format)) return { ok: false, why: 'dl_wait' };
+  const ext = DL_FORMATS[format].ext;
+  const name = `${String(o.name || 'AGI-Studio').normalize('NFKD').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'AGI-Studio'}-3D${format === 'full' ? '-full' : format === 'obj' ? '-obj' : ''}.${ext}`;
+  let url;
+  try {
+    url = await (await import('./studio-files.js')).signedUrl(cfg, dlPath(order, format), { expiresIn: 2 * 3600, download: name });
+  } catch (err) {
+    console.warn(`[studio] a 3D model's download: ${err.message}`);
+    return { ok: false, why: 'storage' };
+  }
+  // (its file isn't in the bucket: deleted by hand, or by a tidy-up that ran a moment ago)
+  return url ? { ok: true, url, name } : { ok: false, why: 'dl_missing' };
 }
 
 // ---------- shown in Explore or not, and deleting it ----------
@@ -611,7 +748,8 @@ export async function deleteInf(cfg, { wallet, id }) {
       await rpc(cfg, 'inf_3d_back', { p_order: m.id }, 'studio').catch(() => {});
     }
     await rpc(cfg, 'studio_hide', { p_id: m.id, p_hidden: true }, 'studio').catch(() => {});
-    files += await F.deleteFiles(cfg, [`${m.id}.glb`, `${m.id}.webp`, `${m.id}.png`]).catch(() => 0);
+    // (2026-10-13) and its extra downloads (any the clock made: the tidy-up deletes what's left of a hidden one's too)
+    files += await F.deleteFiles(cfg, [`${m.id}.glb`, `${m.id}.webp`, `${m.id}.png`, ...Object.keys(DL_FORMATS).map((f) => dlPath(m.id, f))]).catch(() => 0);
   }
   try {
     files += await F.deleteFiles(cfg, [...await F.listFiles(cfg, `inf/${id}`), ...(ID.test(String(r.source)) ? [`up/${r.source}.jpg`] : [])]);
@@ -711,25 +849,34 @@ export async function studioPicture(cfg, photo) {
 
 // ---------- Explore ----------
 // The newest public influencers (never a private one), their newest photos and videos (with their likes), the owner's kept
-// trend clips, and (round 2) the boosted influencers (a burn unlocked it) and the spotlight of the week. Each one's portrait
-// is its profile picture (since 2026-10-11 the square its maker framed, else its picked look: portraitFor).
+// trend clips, and (round 2) the boosted influencers (a burn unlocked it) and the spotlight of the week, and (2026-10-13) the
+// newest photos and videos with AGI-1 in them. Each one's portrait is its profile picture (since 2026-10-11 the square its
+// maker framed, else its picked look: portraitFor).
 export async function explore(cfg) {
   const e = await rpc(cfg, 'inf_explore', { p_limit: 24 }, 'studio');
   const ok = (id) => ID.test(String(id)) && !takenDown(cfg, id);
   const face = (x) => portraitFor(cfg, x);
   const sp = e?.spotlight;
+  // one of the newest photos and videos (never an X banner: an X header, not a post)
+  const tile = (j) => ({
+    id: j.id, kind: j.kind, shape: j.shape || (j.kind === 'photo' ? 'square' : 'tall'), trend: j.trend || null, poster: j.poster === true,
+    files: n0(j.files), likes: n0(j.likes), done: ms(j.done_at),
+    // (round 4, phase 4) its model, quality and length, sound, a meme's format and words (what its sheet says of it)
+    model: j.model || null, quality: j.quality || null, seconds: Number.isFinite(Number(j.seconds)) && j.seconds !== null && j.seconds !== undefined ? Number(j.seconds) : null,
+    sound: j.sound === true, meme: j.meme || null, caption: j.caption || null,
+    // (2026-10-13) AGI-1 is in it ("With AGI-1")
+    agi1: j.agi1 === true,
+    inf: { id: j.inf_id, name: j.inf_name, portrait: face(j), maker: makerOf(j.maker) },
+  });
+  const tiles = (list) => (Array.isArray(list) ? list : []).filter((j) => ok(j.id) && ok(j.inf_id) && j.shape !== 'banner').map(tile);
   return {
     influencers: (Array.isArray(e?.influencers) ? e.influencers : []).filter((i) => ok(i.id)).map((i) => ({
       id: i.id, name: i.name, style: i.style, portrait: face(i), ready: ms(i.ready_at), maker: makerOf(i.maker),
     })),
-    fresh: (Array.isArray(e?.fresh) ? e.fresh : []).filter((j) => ok(j.id) && ok(j.inf_id) && j.shape !== 'banner').map((j) => ({
-      id: j.id, kind: j.kind, shape: j.shape || (j.kind === 'photo' ? 'square' : 'tall'), trend: j.trend || null, poster: j.poster === true,
-      files: n0(j.files), likes: n0(j.likes), done: ms(j.done_at),
-      // (round 4, phase 4) its model, quality and length, sound, a meme's format and words (what its sheet says of it)
-      model: j.model || null, quality: j.quality || null, seconds: Number.isFinite(Number(j.seconds)) && j.seconds !== null && j.seconds !== undefined ? Number(j.seconds) : null,
-      sound: j.sound === true, meme: j.meme || null, caption: j.caption || null,
-      inf: { id: j.inf_id, name: j.inf_name, portrait: face(j), maker: makerOf(j.maker) },
-    })),
+    fresh: tiles(e?.fresh),
+    // (2026-10-13) the newest photos and videos with AGI-1 in them (public influencers only, like fresh: an older
+    // influencers.sql has none)
+    agi1: tiles(e?.agi1).filter((j) => j.agi1),
     trends: TRENDS.map((t) => {
       const kept = (Array.isArray(e?.trends) ? e.trends : []).find((k) => k.id === t.id);
       return kept && ok(kept.job) ? { id: t.id, name: t.name, emoji: t.emoji, job: kept.job, poster: kept.poster === true } : null;

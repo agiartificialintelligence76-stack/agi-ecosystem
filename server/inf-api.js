@@ -4,8 +4,8 @@
 //                                   threeD, coins (Launch with AGI-1 set up), launch (and open to everyone), and since round 2
 //                                   examples ({ choice: its picture's job }), burns (what each unlock costs in $AGI), slots,
 //                                   weeklyPrize, likesADay } (the same for everyone)
-//   GET  ?inf-explore             → Explore: { influencers, fresh (photos and videos), trends, boosted, spotlight } (the same
-//                                   for everyone)
+//   GET  ?inf-explore             → Explore: { influencers, fresh (photos and videos), agi1 (2026-10-13: the newest with AGI-1
+//                                   in them), trends, boosted, spotlight } (the same for everyone)
 //   GET  ?inf=<id>                → a ready influencer's page: { influencer, jobs, models } (anyone with its link)
 //   GET  ?inf-file=<…>            → one of its pictures (a JPEG, or a small WebP) or a video's poster, from the private bucket
 //   GET  ?inf-video=<job>.mp4     → one of its videos (or a trend clip), played in parts (Range), like the 3D studio's
@@ -27,7 +27,8 @@
 //   POST { action: 'inf-pick', session, id, look } · { action: 'inf-reroll', session, id }
 //   POST { action: 'inf-make', session, id, kind, scene?, shape?, sound?, trend? | clip?, image?, and (round 4, phase 4) the model
 //        menu's model?, quality?, seconds?, refs? (reference uploads' ids), meme? and lines? (a meme's words), and (2026-10-12, the
-//        editor) edit? (a photo with image: "Edit with words", its change; the rest is that photo's own) } → { ok, job, cost }
+//        editor) edit? (a photo with image: "Edit with words", its change; the rest is that photo's own), and (2026-10-13) agi1?
+//        (true: "With AGI-1", AGI-1 in it; a photo with image and agi1 and no edit is "Add AGI-1") } → { ok, job, cost }
 //   POST { action: 'inf-again', session, job } (2026-10-12, the editor: "Make another") → one of its own photos, videos or trend
 //        videos made again with the same words and settings, next to it, at the price of making it now → { ok, job, cost, kind }
 //   POST { action: 'inf-job-delete', session, job } (2026-10-12, the editor) → one of its own photos, videos or trend videos
@@ -41,7 +42,14 @@
 //        our clock, then looked at) or, with its words' picture (layer: true), { ok, job, ticket, size, left }; then POST
 //        ?inf-cut=<ticket> (that PNG, exactly its size) → started ({ ok, job, left }). Free, VIDEO_EDITOR.PER_DAY a wallet
 //        (server/inf-cut.js)
-//   POST { action: 'inf-3d', session, id } · { action: 'inf-public', session, id, show } · { action: 'inf-delete', session, id }
+//   POST { action: 'inf-3d', session, id, spec? } · { action: 'inf-public', session, id, show } · { action: 'inf-delete', session, id }
+//        (2026-10-13, the 3D tool) spec: a 3D model's choices (src/studio/rules.js modelSpec: its library moves, moves described in
+//        words, its detail, shine, pose, height, its look in words, more downloads); none is the model as before. Its price is its
+//        standard price and its extras (→ { ok, order, free, cost }); a choice that isn't one is 400 { error: 'spec', field }, its
+//        words' "no" 422 { error: 'words', field: 'look' | 'own', n?, part?, why }
+//   POST { action: 'inf-3d-dl', session, order, format? } (2026-10-13) → a 3D model's extra downloads, its maker's alone: without
+//        a format { ok, formats, done, todo, failed, until, clean } (clean: its page's pictures and clips come without our
+//        watermark for it, a holder's, as its photos do); with one { ok, url, name } (a signed address, 2 hours)
 //   POST { action: 'inf-pfp', session, id, from } (2026-10-11) → its profile picture: a square framed in one of its own
 //        pictures (from: { job, n, x, y, s }: one of its looks, its full body or one of its photos), or its picked look again
 //        (from: null) → { ok, portrait, pfp }; no credits. Its files: ?inf-file=<id>/<its own id>-0.jpg | .webp
@@ -92,11 +100,11 @@ import { studioOn, walletNow, studioWallet } from './studio.js';
 import {
   infOn, isOwner, infPage, moveAlong, me, startInf, pickLook, rerollLooks, makeJob, order3d, setPublic, deleteInf, report, coinDraft,
   explore, ownerPage, trendMake, trendSet, hide, clearReports, ID, order3dBurn, check3dBurn, redo3d, examplesMap, stats, exampleMake,
-  setProfile, pfpShown, againJob, deleteJob,
+  setProfile, pfpShown, againJob, deleteJob, dl3d,
 } from './influencer.js';
 import { getJob, picPath, videoPath, posterPath, examplePath, markedPath, hdPath, aiTagged } from './inf-jobs.js';
 import { ownMark } from '../src/studio/video-edit.js';
-import { downloadFor, cleanFile, cleanNeed } from './inf-clean.js';
+import { downloadFor, cleanFile, cleanNeed, holdsEnough } from './inf-clean.js';
 import { USDG } from './studio-chain.js';
 import { WEEK, prizesOn } from './inf-week.js';
 import { BURNS } from './inf-burns.js';
@@ -441,6 +449,12 @@ const WHY_STATUS = {
   // …and the video editor: its cut isn't one (or doesn't fit the video it's from), the video it's from isn't one of its own done
   // videos any more, or its maker has the most being made at once already
   cut: 400, from: 409, cuts_open: 409,
+  // (2026-10-13) "With AGI-1": she's never in a trend video; a photo with her is made by Classic; a Standard, Pro or Long video
+  // with her starts from a photo she's in; "Add AGI-1" to a photo she's in already
+  agi1_trend: 409, agi1_model: 409, agi1_photo: 409, agi1_has: 409,
+  // (2026-10-13, the 3D tool) a 3D model's choice that isn't one; choices with extras for a burn (a burn pays nobody); and its
+  // extra downloads (not asked for, still being made, couldn't be made, past their days, or its file gone)
+  spec: 400, not_burnable: 409, dl_none: 404, dl_wait: 409, dl_failed: 409, dl_expired: 410, dl_missing: 404,
 };
 // (2026-10-12) the editor's "no"s for deleting a creation, as the page names them
 const JOB_WHY = { gone: 'job_gone', making: 'job_making', in_use: 'job_in_use', bad: 'bad_request' };
@@ -470,11 +484,13 @@ const BANNED_FROM = ['inf-up-open', 'inf-up-done', 'inf-start', 'inf-pick', 'inf
   'inf-send', 'inf-gift-link', 'inf-gift-claim', 'inf-ref-bind', 'inf-pfp',
   // (2026-10-12) "Make another" makes something (deleting its own still works), and so does the photo editor's save, and the
   // video editor's
-  'inf-again', 'inf-photo-open', 'inf-cut-open'];
+  'inf-again', 'inf-photo-open', 'inf-cut-open',
+  // (2026-10-13) a 3D model's extra downloads (a banned maker's creations are shown to nobody, itself included)
+  'inf-3d-dl'];
 export const INF_POSTS = ['inf-me', 'inf-look', 'inf-up-open', 'inf-up-done', 'inf-start', 'inf-pick', 'inf-reroll', 'inf-make', 'inf-3d',
   'inf-public', 'inf-pfp', 'inf-delete', 'inf-coin', 'inf-topup', 'inf-report', 'inf-like', 'inf-liked', 'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo',
   'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-caption', 'inf-name-set', 'inf-name-clear', 'inf-help', 'inf-gift-peek',
-  'inf-again', 'inf-job-delete', 'inf-photo-open', 'inf-cut-open', 'inf-dl',
+  'inf-again', 'inf-job-delete', 'inf-photo-open', 'inf-cut-open', 'inf-dl', 'inf-3d-dl',
   ...GIFT_ACTIONS, ...TICKET_ACTIONS, ...MOD_ACTIONS, ...OWNER_ACTIONS];
 
 async function human(cfg, body, ip, who) {
@@ -524,6 +540,13 @@ export async function infPost(cfg, request, body) {
   const extra = w.session ? { session: w.session, level: w.level } : { level: w.level };
   const refuse = (r) => json(WHY_STATUS[r.why] || 422, { error: r.why, ...(r.have !== undefined ? { have: r.have } : {}), ...(r.reason ? { reason: r.reason } : {}), ...extra });
   const words = (r, more = {}) => json(422, { error: 'words', field: r.field, why: r.why, ...more, ...extra });
+  // (2026-10-13, the 3D tool) a 3D model's choices: one that isn't one (400, with which: field), or its words' "no" (422: its
+  // look, or which move described in words, n from 1, and which part of it: its name or what it does) · null
+  const choiceNo = (r) => {
+    if (r.why === 'spec') return json(400, { error: 'spec', field: r.part || 'spec', ...extra });
+    if (r.field) return words(r, { ...(r.n ? { n: r.n } : {}), ...(r.part ? { part: r.part } : {}) });
+    return null;
+  };
   const asks = ['inf-up-open', 'inf-up-done', 'inf-start', 'inf-make', 'inf-3d', 'inf-coin', 'inf-pfp', 'inf-topup', 'inf-reroll', 'inf-delete', 'trend-make',
     'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo', 'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-example-make', 'inf-gift',
     'inf-caption', 'inf-name-set', 'inf-name-clear', 'inf-send', 'inf-gift-link', 'inf-gift-cancel', 'inf-gift-claim', 'inf-ref-bind',
@@ -700,6 +723,21 @@ export async function infPost(cfg, request, body) {
       if (!r.ok) return r.field ? words(r) : refuse(r);
       return json(200, { ...r, perDay: VIDEO_EDITOR.PER_DAY, ...extra });
     }
+    // (2026-10-13, the 3D tool's "More downloads") a 3D model's extra downloads, its maker's alone: what's ready, or one of them
+    if (body.action === 'inf-3d-dl') {
+      if (!infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
+      const format = body.format === undefined || body.format === null || body.format === '' ? null : String(body.format);
+      const r = await dl3d(cfg, { wallet: w.wallet, order: String(body.order || ''), format, now });
+      if (!r.ok) return refuse(r);
+      // (its list) and whether its page's pictures and clips come without our watermark for it: its maker holding
+      // STUDIO_CLEAN_AGI $AGI, as for its photos and videos (server/inf-clean.js)
+      if (format === null) {
+        let clean = false;
+        try { clean = cleanNeed(cfg) > 0 && await holdsEnough(cfg, w, { now }); } catch { clean = false; }
+        return json(200, { ...r, clean, ...extra });
+      }
+      return json(200, { ...r, ...extra });
+    }
     if (!ID.test(id)) return json(400, { error: 'bad_request', ...extra });
     if (body.action === 'inf-pick') {
       const r = await pickLook(cfg, { wallet: w.wallet, id, look: body.look });
@@ -714,14 +752,18 @@ export async function infPost(cfg, request, body) {
       if (!r.ok) return r.field ? words(r) : refuse(r);
       return json(200, { ...r, ...extra });
     }
+    // (2026-10-13, the 3D tool) its choices (spec): a choice that isn't one is 400 with which (field), its words' "no" 422
     if (body.action === 'inf-3d') {
-      const r = await order3d(cfg, { wallet: w.wallet, level: w.level, id });
-      return r.ok ? json(200, { ...r, ...extra }) : refuse(r);
+      const r = await order3d(cfg, { wallet: w.wallet, level: w.level, id, spec: body.spec ?? null });
+      if (r.ok) return json(200, { ...r, ...extra });
+      return choiceNo(r) || refuse(r);
     }
-    // (round 2) a free 3D model for a big burn: its quote, "Check my burn", and making it again (free) if it couldn't be made
+    // (round 2) a free 3D model for a big burn: its quote, "Check my burn", and making it again (free) if it couldn't be made;
+    // (2026-10-13) with its choices, only ones with nothing extra ('not_burnable')
     if (body.action === 'inf-3d-burn') {
-      const r = await order3dBurn(cfg, { wallet: w.wallet, level: w.level, id });
-      return r.ok ? json(200, { ...r, ...extra }) : refuse(r);
+      const r = await order3dBurn(cfg, { wallet: w.wallet, level: w.level, id, spec: body.spec ?? null });
+      if (r.ok) return json(200, { ...r, ...extra });
+      return choiceNo(r) || refuse(r);
     }
     if (body.action === 'inf-3d-check') {
       const { txFrom } = await import('./burn.js');

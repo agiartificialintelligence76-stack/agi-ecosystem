@@ -4,7 +4,9 @@
 // On, an influencer's tools are these ready-made ideas, and one tap makes one at its price: a photo (Classic, Standard), an X
 // banner (Classic, HD), a meme (Classic, Standard, square, its words ready), a video (Standard, 5 seconds, silent, from its
 // newest photo) or its 3D model. A coin is never one tap (launching stays manual). MEME_READY also fills the Meme tool's
-// "Surprise me". Pure (tests/influencer.test.js: every idea passes our server's own word checks).
+// "Surprise me". (2026-10-13, "With AGI-1") photos of it together with AGI-1 (Classic, Standard), and videos with her (from its
+// newest photo she's in; the plain videos from its newest photo she isn't in). Pure (tests/influencer.test.js: every idea
+// passes our server's own word checks).
 export const INSTANT_KEY = 'agi_instant';
 export const INSTANT_SEEN_KEY = 'agi_instant_seen';
 
@@ -14,6 +16,9 @@ export const INSTANT_MAKES = {
   banner: { kind: 'photo', model: 'classic', quality: 'hd', shape: 'banner' },
   meme: { kind: 'photo', model: 'classic', quality: 'std', shape: 'square' },
   video: { kind: 'video', model: 'standard', seconds: 5, sound: false },
+  // (2026-10-13) with AGI-1: a photo by Classic (it keeps her exactly as she's drawn), a video from a photo she's in
+  agi1: { kind: 'photo', model: 'classic', quality: 'std', shape: 'tall', agi1: true },
+  agi1Video: { kind: 'video', model: 'standard', seconds: 5, sound: false, agi1: true },
 };
 
 // Ready-made memes: a format, its words (one per line of the format) and what the picture shows. PG-13, never about money,
@@ -64,6 +69,19 @@ export const INSTANT = {
     { id: 'spin', emoji: '💃', label: 'Little spin', scene: 'does a happy little spin, then strikes a pose' },
     { id: 'walk', emoji: '🚶', label: 'Walk up', scene: 'walks toward the camera with confidence, hair moving in the breeze' },
     { id: 'wink', emoji: '😉', label: 'Wink', scene: 'looks into the camera, winks and smiles' },
+  ],
+  // (2026-10-13) with AGI-1: cute and a little flirty, PG-13, made-up places (never a real brand or person)
+  agi1: [
+    { id: 'her-pose', emoji: '📸', label: 'Photo together', scene: 'posing for a photo together with AGI-1 at a sunny café, both smiling' },
+    { id: 'her-heart', emoji: '💜', label: 'Heart hands', scene: 'on a rooftop at golden hour with AGI-1, making a heart with their hands together' },
+    { id: 'her-movie', emoji: '🍿', label: 'Movie night', scene: 'sharing popcorn with AGI-1 at the cinema, both laughing' },
+    { id: 'her-games', emoji: '🎮', label: 'Game night', scene: 'playing video games with AGI-1 at a cozy desk with RGB lights, AGI-1 cheering' },
+    { id: 'her-neon', emoji: '🌃', label: 'Neon walk', scene: 'walking side by side with AGI-1 down a neon street at night' },
+    { id: 'her-picnic', emoji: '🌸', label: 'Picnic', scene: 'having a picnic with AGI-1 in a pastel flower field, AGI-1 offering a strawberry' },
+  ],
+  agi1Video: [
+    { id: 'her-wave', emoji: '👋', label: 'Wave together', scene: 'waves at the camera together with AGI-1, then both laugh' },
+    { id: 'her-dance', emoji: '💃', label: 'Little dance', scene: 'does a happy little dance with AGI-1, both smiling' },
   ],
 };
 

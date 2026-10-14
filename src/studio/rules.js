@@ -13,40 +13,109 @@ export const ABOUT_MAX = 400;
 // How it looks: the three styles the page offers (the words Meshy gets for each: server/studio-words.js)
 export const STYLES = { anime: 'Anime', cartoon: 'Cartoon', realistic: 'Realistic' };
 
-// The moves every character learns, in the order of its file's clips (Meshy's animation library: each an action id, and
-// the name the library gives its clip). Each costs 3 of Meshy's credits once, when it's made. Its page plays them when
-// someone types their name (or a word for them: MOVE_WORDS). "idle" is how it stands between moves.
-export const MOVES = [
-  { name: 'idle', action: 0, clip: 'Idle' },
-  { name: 'wave', action: 28, clip: 'Big_Wave_Hello' },
-  { name: 'dance', action: 22, clip: 'FunnyDancing_01' },
-  { name: 'jump', action: 44, clip: 'Happy_jump_f' },
-  { name: 'cheer', action: 59, clip: 'Victory_Cheer' },
-  { name: 'bow', action: 41, clip: 'Formal_Bow' },
-  { name: 'walk', action: 30, clip: 'Casual_Walk' },
-  { name: 'party', action: 64, clip: 'All_Night_Dance' },
-];
-export const MOVE_NAMES = MOVES.map((m) => m.name);
-// moves that go on a while (they loop a few times), the rest play once and it goes back to standing
-export const LOOPING = new Set(['dance', 'walk', 'party']);
-// what someone may type for each (a whole word, any case, with or without "!" or "/")
-export const MOVE_WORDS = {
-  wave: ['wave', 'hi', 'hello', 'hey', 'hiya', 'gm', 'yo'],
-  dance: ['dance', 'dancing', 'boogie'],
-  jump: ['jump', 'hop', 'jumping'],
-  cheer: ['cheer', 'yay', 'woo', 'woohoo', 'celebrate', 'win'],
-  bow: ['bow', 'thanks', 'thank', 'ty', 'bye'],
-  walk: ['walk', 'walking', 'strut'],
-  party: ['party', 'groove', 'vibe'],
-  idle: ['idle', 'stop', 'rest', 'chill'],
+// The moves a character can learn (Meshy's animation library: each an action id, and the name the library gives its clip in
+// the file), grouped as the page shows them. Each costs 3 of Meshy's credits once, when it's made. Its page plays them when
+// someone types their name (or a word for them: `words`, whole words, any case). "idle" is how it stands between moves.
+// (2026-10-13, the owner: "i wish theres more tools to customize the 3d like in meshy"; the owner's choice: "Pick its moves
+// (Recommended)": up to MODEL.PICKS_MAX of these instead of the same 8 for every model.) loop: a move that goes on a while
+// (it loops a few times), the rest play once and it goes back to standing. label: its name on a button.
+export const MOVE_GROUPS = {
+  greet: 'Greet & talk',
+  feel: 'Feelings',
+  cheer: 'Celebrate',
+  dance: 'Dance',
+  walk: 'Walk & run',
+  sport: 'Sports & fitness',
+  rest: 'Rest',
 };
-const WORD_TO_MOVE = new Map(Object.entries(MOVE_WORDS).flatMap(([move, words]) => words.map((w) => [w, move])));
-// The move a chat message asks for: the first word that names one, among the moves this character has. → its name or null
+const mv = (name, action, clip, group, label, words, loop = false) => ({ name, action, clip, group, label, words, loop });
+export const MOVE_LIBRARY = [
+  mv('idle', 0, 'Idle', null, 'Idle', ['idle', 'stop', 'rest', 'chill']),
+  mv('wave', 28, 'Big_Wave_Hello', 'greet', 'Wave', ['wave', 'hi', 'hello', 'hey', 'hiya', 'gm', 'yo']),
+  mv('bow', 41, 'Formal_Bow', 'greet', 'Bow', ['bow', 'thanks', 'thank', 'ty', 'bye']),
+  mv('nod', 25, 'Agree_Gesture', 'greet', 'Nod', ['nod', 'yes', 'yeah', 'yep', 'agree', 'agreed']),
+  mv('wag', 409, 'Finger_Wag_No', 'greet', 'Finger wag', ['wag', 'nope', 'nah', 'tsk']),
+  mv('shrug', 317, 'Shrug', 'greet', 'Shrug', ['shrug', 'idk', 'dunno']),
+  mv('talk', 313, 'Talk_with_Hands_Open', 'greet', 'Talk', ['talk', 'explain', 'speech']),
+  mv('phone', 50, 'Phone_Call_Gesture', 'greet', 'Phone call', ['phone', 'call', 'ring']),
+  mv('heart', 27, 'Big_Heart_Gesture', 'greet', 'Heart', ['heart', 'love', 'ily', 'luv', 'xoxo']),
+  mv('think', 36, 'Confused_Scratch', 'feel', 'Think', ['think', 'thinking', 'hmm', 'hmmm', 'confused', 'huh']),
+  mv('sass', 315, 'Hand_on_Hip_Gesture', 'feel', 'Sass', ['sass', 'sassy', 'pose']),
+  mv('stomp', 26, 'Angry_Stomp', 'feel', 'Stomp', ['stomp', 'mad', 'angry', 'grr']),
+  mv('tired', 31, 'Catching_Breath', 'feel', 'Tired', ['tired', 'phew', 'breathe', 'exhausted']),
+  mv('mirror', 48, 'Mirror_Viewing', 'feel', 'Mirror', ['mirror', 'primp', 'glam']),
+  mv('cheer', 59, 'Victory_Cheer', 'cheer', 'Cheer', ['cheer', 'yay', 'woo', 'woohoo', 'celebrate', 'win']),
+  mv('jump', 44, 'Happy_jump_f', 'cheer', 'Jump', ['jump', 'hop', 'jumping']),
+  mv('victory', 403, 'Victory_Fist_Pump', 'cheer', 'Fist pump', ['victory', 'nailed', 'gg']),
+  mv('hooray', 298, 'Cheer_with_Both_Hands_Up', 'cheer', 'Hooray', ['hooray', 'hurray', 'hurrah', 'handsup']),
+  mv('flex', 388, 'Show_Both_Arm_Muscles', 'cheer', 'Flex', ['flex', 'strong', 'muscle', 'muscles']),
+  mv('thumbs', 387, 'Half_Squat_with_Thumb_Up', 'cheer', 'Thumbs up', ['thumbs', 'thumbsup', 'noice']),
+  mv('spin', 397, '360_Power_Spin_Jump', 'cheer', 'Spin jump', ['spin', 'twirl']),
+  mv('backflip', 452, 'Backflip', 'cheer', 'Backflip', ['backflip', 'flip']),
+  mv('dance', 22, 'FunnyDancing_01', 'dance', 'Dance', ['dance', 'dancing', 'boogie'], true),
+  mv('party', 64, 'All_Night_Dance', 'dance', 'Party', ['party', 'groove', 'vibe'], true),
+  mv('silly', 23, 'FunnyDancing_02', 'dance', 'Silly dance', ['silly', 'goofy', 'funny'], true),
+  mv('shuffle', 63, 'Arm_Circle_Shuffle', 'dance', 'Shuffle', ['shuffle'], true),
+  mv('bass', 65, 'Bass_Beats', 'dance', 'Bass beats', ['bass', 'beat', 'beats', 'drop'], true),
+  mv('bubble', 67, 'Bubble_Dance', 'dance', 'Bubble dance', ['bubble', 'bubbles'], true),
+  mv('swing', 75, 'Indoor_Swing', 'dance', 'Swing', ['swing'], true),
+  mv('genie', 77, 'Magic_Genie', 'dance', 'Genie', ['genie', 'magic'], true),
+  mv('omg', 79, 'OMG_Groove', 'dance', 'OMG groove', ['omg', 'wow'], true),
+  mv('bop', 81, 'Pod_Baby_Groove', 'dance', 'Bop', ['bop', 'bopping'], true),
+  mv('hiphop', 591, 'Hip_Hop_Dance', 'dance', 'Hip hop', ['hiphop', 'rap'], true),
+  mv('breakdance', 395, 'Breakdance_1990', 'dance', 'Breakdance', ['breakdance', 'breaking', 'bboy'], true),
+  mv('walk', 30, 'Casual_Walk', 'walk', 'Walk', ['walk', 'walking', 'strut'], true),
+  mv('strut', 107, 'Confident_Strut', 'walk', 'Strut', ['strut', 'swagger'], true),
+  mv('runway', 117, 'Red_Carpet_Walk', 'walk', 'Runway', ['runway', 'catwalk', 'redcarpet'], true),
+  mv('skip', 118, 'Skip_Forward', 'walk', 'Skip', ['skip', 'skipping'], true),
+  mv('funky', 554, 'Funky_Walk', 'walk', 'Funky walk', ['funky', 'funk'], true),
+  mv('penguin', 62, 'penguin_walk', 'walk', 'Penguin walk', ['penguin', 'waddle'], true),
+  mv('run', 14, 'Run_02', 'walk', 'Run', ['run', 'running', 'sprint'], true),
+  mv('jacks', 326, 'jumping_jacks', 'sport', 'Jumping jacks', ['jacks', 'jumpingjack', 'jumpingjacks'], true),
+  mv('squat', 319, 'air_squat', 'sport', 'Squats', ['squat', 'squats', 'workout'], true),
+  mv('pushup', 329, 'push_up', 'sport', 'Push-ups', ['pushup', 'pushups'], true),
+  mv('jumprope', 46, 'Jump_Rope', 'sport', 'Jump rope', ['jumprope', 'rope'], true),
+  mv('kick', 410, 'Kick_a_Soccer_Ball', 'sport', 'Kick a ball', ['kick', 'soccer', 'football', 'goal']),
+  mv('boxing', 385, 'Boxing_Warmup', 'sport', 'Boxing', ['boxing', 'box', 'boxer'], true),
+  mv('sit', 362, 'Sit_Cross_Legged', 'rest', 'Sit', ['sit', 'sitdown']),
+  mv('drink', 342, 'Stand_and_Drink', 'rest', 'Drink', ['drink', 'sip', 'coffee', 'tea']),
+];
+export const MOVE_BY_NAME = new Map(MOVE_LIBRARY.map((m) => [m.name, m]));
+// The moves every model made before 2026-10-13 learned, in the order of its file's clips (and the 7 picked for a new one
+// unless someone picks others): idle, then wave, dance, jump, cheer, bow, walk and party. Each its library entry.
+export const MOVES = ['idle', 'wave', 'dance', 'jump', 'cheer', 'bow', 'walk', 'party'].map((n) => MOVE_BY_NAME.get(n));
+export const MOVE_NAMES = MOVES.map((m) => m.name);
+// the moves picked for a new model when nobody picks others (every move but idle, which comes with every model)
+export const DEFAULT_PICKS = MOVE_NAMES.filter((n) => n !== 'idle');
+// one order for a model's moves (its file's clips): those 8 first, as before, then the library's
+export const MOVE_ORDER = [...MOVE_NAMES, ...MOVE_LIBRARY.map((m) => m.name).filter((n) => !MOVE_NAMES.includes(n))];
+// moves that go on a while (they loop a few times), the rest play once and it goes back to standing
+export const LOOPING = new Set(MOVE_LIBRARY.filter((m) => m.loop).map((m) => m.name));
+// what someone may type for each (a whole word, any case, with or without "!" or "/"), and a move's name on a button
+export const MOVE_WORDS = Object.fromEntries(MOVE_LIBRARY.map((m) => [m.name, m.words]));
+export const moveLabel = (name) => MOVE_BY_NAME.get(name)?.label || String(name || '');
+// every word → the moves it may mean: the move it names first, then the moves listing it, in the library's order (so
+// "strut" is the strut, or the walk on a model without it)
+const WORD_TO_MOVES = new Map(MOVE_LIBRARY.map((m) => [m.name, [m.name]]));
+for (const m of MOVE_LIBRARY) {
+  for (const w of m.words) {
+    const list = WORD_TO_MOVES.get(w) || [];
+    if (!list.includes(m.name)) list.push(m.name);
+    WORD_TO_MOVES.set(w, list);
+  }
+}
+// a word or a name some move already answers to (a move described in words never takes one: MODEL)
+export const moveWord = (w) => WORD_TO_MOVES.has(String(w || '').toLowerCase());
+// The move a chat message asks for: the first word (or two words written together: "hip hop", "jump rope", "thumbs up")
+// that names one, among the moves this character has (a move described in words answers to its own name). → its name or null
 export function moveIn(text, has = MOVE_NAMES) {
   const words = String(text ?? '').toLowerCase().normalize('NFKC').match(/[\p{L}\p{N}]+/gu) || [];
-  for (const w of words.slice(0, 40)) {
-    const move = WORD_TO_MOVE.get(w);
-    if (move && has.includes(move)) return move;
+  const read = words.slice(0, 40);
+  for (let i = 0; i < read.length; i++) {
+    const tries = i + 1 < read.length ? [`${read[i]}${read[i + 1]}`, read[i]] : [read[i]];
+    for (const w of tries) {
+      for (const move of WORD_TO_MOVES.get(w) || [w]) if (has.includes(move)) return move;
+    }
   }
   return null;
 }
@@ -602,7 +671,36 @@ export function videoCredits(spec, level = 1) {
 // a photo, a meme or a video, uploaded like a picture (made plain, at most 1536 px) and looked at by the AI first. Never a
 // person: their influencer is the person (a picture of someone is refused). Each kept a day.
 export const REFS = { MAX: 4, NOTE: 'A thing, a place, a pet, food or a style to include: never a person (your influencer is the person).' };
-export const refsFor = (what, model) => (what === 'video' ? VIDEO_MODELS[model]?.refs ?? 0 : PHOTO_MODELS[model]?.refs ?? 0);
+// (2026-10-13) with AGI-1 in a Standard, Pro or Long video, one less: Kling takes 3 elements at most with a first frame (the
+// character, AGI-1, then the references); a photo (Nano Banana takes 14 pictures) and Anime (Seedance) keep theirs
+export const refsFor = (what, model, agi1 = false) => {
+  if (what !== 'video') return PHOTO_MODELS[model]?.refs ?? 0;
+  const n = VIDEO_MODELS[model]?.refs ?? 0;
+  return agi1 === true && model !== 'anime' ? Math.max(0, n - 1) : n;
+};
+
+// (2026-10-13) "With AGI-1" (the owner's choices: "Her 2D anime self", "Cute and flirty", "Same as without her", "Yes, kept
+// private"): AGI-1 in an influencer's photo, meme, X banner or video, together with it, as her own 2D anime self (the owner's
+// art: never 3D, never photorealistic, even next to a realistic influencer), cute and a little flirty, PG-13, at the same
+// price as without her. A photo with her is made by Classic (it keeps her exactly as drawn); "Add AGI-1" puts her into one of
+// its done photos (a photo's price at its quality, like Edit with words); a Standard, Pro or Long video with her starts from a
+// photo she's in (she's in its first frame), and Anime puts her in from her own pictures. Never in a trend video (it puts the
+// influencer in place of one person in a clip). One made from a real person's photo may have her too, and stays private.
+export const WITH_AGI1 = {
+  NAME: 'With AGI-1',
+  NOTE: 'AGI-1 joins your influencer: her own 2D anime self, cute and a little flirty. The same price.',
+  PHOTO_MODEL: 'classic',
+  KINDS: ['photo', 'video'],
+  // her face on the page's switch: the owner's own 2D art (the front's, public/images/landing/agi1-face.webp: never her 3D
+  // model, or a picture rendered from it)
+  FACE: '/images/landing/agi1-face.webp',
+};
+// (2026-10-13) her own name in someone's words ("a photo with AGI-1"): allowed only in a photo or a video she's in (our
+// server's server/studio-words.js HER_NAME says the same); the page then says to switch "With AGI-1" on
+export const mentionsAgi1 = (text) => /\bagi[\s_-]*1\b|\bagi1\b/i.test(String(text || ''));
+// its done photos AGI-1 is in (a Standard, Pro or Long video with her starts from one), and its photos to start a trend video
+// from (never one she's in: a trend video puts the influencer in place of one person)
+export const herPhotos = (jobs) => startPhotos(jobs).filter((j) => j.agi1 === true);
 
 // Memes (the owner's "memes with their photo and several references"): a photo of the influencer in a meme's format, its words
 // written into the picture by the AI. Each format's lines (two lines: "top\nbottom"), MEME_LINE_MAX characters each. A meme's
@@ -665,3 +763,182 @@ export function jobPlan(j) {
 export const jobStep = (j) => (j?.kind === 'video' && Number(j.parts) > 1 ? longStep(j.part, j.parts, j.step) : j?.step || 'queue');
 // Its newest photo a video can start from (never an X banner or a meme: a meme's words in a video come out garbled)
 export const startPhotos = (jobs) => (jobs || []).filter((j) => j.kind === 'photo' && j.status === 'done' && j.shape !== 'banner' && !j.meme);
+
+// ---------- (2026-10-13) the 3D model's choices, like a 3D tool's (the owner: "i wish theres more tools to customize the 3d
+// like in meshy, please fixx and make it better"; the owner's choices: "Pick its moves (Recommended)", "Shape and look
+// (Recommended)", "3D page tools (Recommended)", "More downloads"; "Per extra, ~1.8× (Recommended)"; "30 days
+// (Recommended)") ----------
+// Its moves: up to PICKS_MAX of the library's (PICKS_FREE in its price, each one past that MODEL_EXTRAS.move), and up to
+// OWN_MAX moves described in words (Meshy's Text to Motion: each MODEL_EXTRAS.own). Its shape and look: its detail
+// (MODEL_DETAIL: High detail costs MODEL_EXTRAS.high), shine (PBR maps: metal, roughness and bumps), its pose (A or T), its
+// height (cm: its bones' scale) and its look changed with words (what the AI paints, the rest of it from its full body). And
+// more downloads (DL_FORMATS: made once it's ready, kept DL_DAYS days). Everything else in it is free; a holder's discount
+// on all of it, and a Soulmate's free model a month covers its standard price (its extras still cost).
+export const MODEL = {
+  PICKS_MAX: 9,                  // library moves to pick (idle comes with every model: Meshy makes 10 moves in one file at most)
+  PICKS_FREE: 7,                 // …in its price
+  OWN_MAX: 2,                    // moves described in words
+  OWN_MIN: 3,                    // a described move's words, shortest
+  OWN_LONG: 200,                 // …and longest
+  OWN_SECONDS: [3, 5, 8],        // a described move's length
+  OWN_SECONDS_DEFAULT: 5,
+  HEIGHT_MIN: 140,               // its height, cm
+  HEIGHT_MAX: 210,
+  HEIGHT: 170,
+  LOOK_MIN: 3,                   // its look in words, shortest
+  LOOK_MAX: 300,                 // …and longest
+};
+// a move described in words answers to a name of its own (2 to 16 lowercase letters and numbers, starting with a letter;
+// never one a library move answers to: moveWord)
+export const OWN_NAME = /^[a-z][a-z0-9]{1,15}$/;
+// its clip's name in its file (the library's are the library's names)
+export const ownClip = (name) => `own_${name}`;
+// how much of a shape it gets: its faces (Meshy's target_polycount), and a finer geometry for High detail (Meshy 7.1's
+// geometry_resolution "2k": 5 of Meshy's credits more)
+export const MODEL_DETAIL = {
+  light: { name: 'Low-poly', note: 'About 8,000 faces: the lightest, for games and VR', faces: 8000 },
+  std: { name: 'Standard', note: 'About 20,000 faces', faces: 20000 },
+  high: { name: 'High detail', note: 'About 40,000 faces and a finer shape', faces: 40000, geometry: '2k' },
+};
+export const MODEL_POSES = {
+  a: { name: 'A-pose', note: 'Arms down at an angle: the usual' },
+  t: { name: 'T-pose', note: 'Arms straight out, as some 3D apps want' },
+};
+// more downloads: each one file, made from what the 3D service made once the model is ready, kept DL_DAYS days (its small
+// 3D model and its picture stay for good). Only its maker downloads them.
+export const DL_FORMATS = {
+  full: { name: 'Full-quality GLB', ext: 'glb', type: 'model/gltf-binary', note: 'Every move, its textures as made: bigger' },
+  fbx: { name: 'FBX', ext: 'fbx', type: 'application/octet-stream', note: 'Its bones and library moves, for Unity, Unreal and Blender' },
+  usdz: { name: 'USDZ', ext: 'usdz', type: 'model/vnd.usdz+zip', note: 'For AR on an iPhone or iPad (standing still)' },
+  stl: { name: 'STL', ext: 'stl', type: 'model/stl', note: 'For 3D printing: its shape, no colors' },
+  obj: { name: 'OBJ', ext: 'zip', type: 'application/zip', note: 'Its shape, material and textures, zipped (standing still)' },
+};
+export const DL_DAYS = 30;
+// a download's file in the studio's bucket (dl/<the model's id>.<ext>)
+export const dlPath = (id, format) => `dl/${id}.${DL_FORMATS[format]?.ext}`;
+// What the extras cost: a Meshy credit is about 2 cents (Pro: about $20 for 1,000), each extra about 1.8× (MARKUP) what it
+// costs the owner: a move more is 3 of Meshy's credits, a described move 13 (Text to Motion's "prime" 10, then put on its
+// bones 3), High detail 5. → credits before a holder's discount
+export const AI3D_CENTS = 2;
+export const MODEL_EXTRAS = { move: creditsFor(3 * AI3D_CENTS), own: creditsFor(13 * AI3D_CENTS), high: creditsFor(5 * AI3D_CENTS) };
+
+// words as they're checked: NFKC, invisible and control characters as spaces, spaces joined, trimmed (the 3D tool counts a
+// move's words and its look this way before sending them, as our server does: views/model-tool.js)
+export const tidyWords = (v) => String(v ?? '').normalize('NFKC').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2064\ufeff]/g, ' ').replace(/\s+/g, ' ').trim();
+const byOrder = (a, b) => MOVE_ORDER.indexOf(a) - MOVE_ORDER.indexOf(b);
+// A model's choices as asked for, tidied. → { spec } or { field } (the first one that isn't right: moves, own, detail, shine,
+// pose, height, look, formats or spec). Nothing asked for is the model as before: its 7 moves, Standard, A-pose, 170 cm.
+function readSpec(input) {
+  if (input === null || input === undefined) input = {};
+  if (typeof input !== 'object' || Array.isArray(input)) return { field: 'spec' };
+  let moves = [...DEFAULT_PICKS];
+  if (input.moves !== undefined && input.moves !== null) {
+    if (!Array.isArray(input.moves) || input.moves.length > MOVE_LIBRARY.length) return { field: 'moves' };
+    const picked = [];
+    for (const m of input.moves) {
+      if (typeof m !== 'string' || m === 'idle' || !MOVE_BY_NAME.has(m)) return { field: 'moves' };
+      if (!picked.includes(m)) picked.push(m);
+    }
+    if (picked.length < 1 || picked.length > MODEL.PICKS_MAX) return { field: 'moves' };
+    moves = picked.sort(byOrder);
+  }
+  const own = [];
+  if (input.own !== undefined && input.own !== null) {
+    if (!Array.isArray(input.own) || input.own.length > MODEL.OWN_MAX) return { field: 'own' };
+    for (const o of input.own) {
+      if (!o || typeof o !== 'object' || Array.isArray(o)) return { field: 'own' };
+      const name = String(o.name ?? '').trim().toLowerCase();
+      const prompt = tidyWords(o.prompt);
+      const seconds = o.seconds === undefined || o.seconds === null ? MODEL.OWN_SECONDS_DEFAULT : Number(o.seconds);
+      if (!OWN_NAME.test(name) || moveWord(name) || own.some((p) => p.name === name)) return { field: 'own' };
+      if (prompt.length < MODEL.OWN_MIN || prompt.length > MODEL.OWN_LONG) return { field: 'own' };
+      if (!MODEL.OWN_SECONDS.includes(seconds)) return { field: 'own' };
+      own.push({ name, prompt, seconds });
+    }
+  }
+  const detail = input.detail ?? 'std';
+  if (!Object.hasOwn(MODEL_DETAIL, detail)) return { field: 'detail' };
+  const shine = input.shine ?? false;
+  if (typeof shine !== 'boolean') return { field: 'shine' };
+  const pose = input.pose ?? 'a';
+  if (!Object.hasOwn(MODEL_POSES, pose)) return { field: 'pose' };
+  const height = input.height === undefined || input.height === null ? MODEL.HEIGHT : Number(input.height);
+  if (!Number.isInteger(height) || height < MODEL.HEIGHT_MIN || height > MODEL.HEIGHT_MAX) return { field: 'height' };
+  let look = null;
+  if (input.look !== undefined && input.look !== null) {
+    if (typeof input.look !== 'string') return { field: 'look' };
+    const t = tidyWords(input.look);
+    if (t && (t.length < MODEL.LOOK_MIN || t.length > MODEL.LOOK_MAX)) return { field: 'look' };
+    look = t || null;
+  }
+  let formats = [];
+  if (input.formats !== undefined && input.formats !== null) {
+    if (!Array.isArray(input.formats) || input.formats.length > 10) return { field: 'formats' };
+    if (input.formats.some((f) => typeof f !== 'string' || !Object.hasOwn(DL_FORMATS, f))) return { field: 'formats' };
+    formats = Object.keys(DL_FORMATS).filter((f) => input.formats.includes(f));
+  }
+  return { spec: { moves, own, detail, shine, pose, height, look, formats } };
+}
+export const modelSpec = (input) => readSpec(input).spec ?? null;
+export const modelSpecField = (input) => readSpec(input).field ?? null;
+// the model as before (its 7 moves, Standard, no shine, A-pose, 170 cm, its own look, no extra downloads)
+export const MODEL_DEFAULT = Object.freeze(modelSpec(null));
+export function isDefaultSpec(spec) {
+  const s = modelSpec(spec);
+  return !!s && JSON.stringify(s) === JSON.stringify(MODEL_DEFAULT);
+}
+// What its extras cost, before a holder's discount → { moves, own, high, total } (null: not a model the tool makes)
+export function modelExtras(spec) {
+  const s = modelSpec(spec);
+  if (!s) return null;
+  const moves = Math.max(0, s.moves.length - MODEL.PICKS_FREE) * MODEL_EXTRAS.move;
+  const own = s.own.length * MODEL_EXTRAS.own;
+  const high = s.detail === 'high' ? MODEL_EXTRAS.high : 0;
+  return { moves, own, high, total: moves + own + high };
+}
+// What it costs, in credits, for this level: its price and its extras (free: a Soulmate's free model a month, its extras
+// still paid). → credits, or null
+export function modelCost(spec, level = 1, { free = false } = {}) {
+  const e = modelExtras(spec);
+  if (!e) return null;
+  return offFor((free ? 0 : PRICES.model) + e.total, level);
+}
+// a model a big burn may pay for: one with nothing extra (a burn pays nobody, and its extras cost the owner)
+export const burnable = (spec) => modelExtras(spec)?.total === 0;
+// its moves, in its file's order: idle and its picks (each a library entry), then its own described moves (by name)
+export const modelMoves = (spec) => {
+  const s = modelSpec(spec) || MODEL_DEFAULT;
+  return ['idle', ...s.moves].map((n) => MOVE_BY_NAME.get(n));
+};
+export const modelMoveNames = (spec) => {
+  const s = modelSpec(spec) || MODEL_DEFAULT;
+  return ['idle', ...s.moves, ...s.own.map((o) => o.name)];
+};
+// Its making, step by step: its described moves first (so a description the AI refuses stops it before anything is made),
+// its shape, bones and library moves, then each described move put on its bones, then its files kept. → the steps' names
+export function modelPlan(spec) {
+  const s = modelSpec(spec) || MODEL_DEFAULT;
+  const own = s.own.map((_, i) => i + 1);
+  return [...own.map((i) => `motion${i}`), 'image', 'rig', 'moves', ...own.map((i) => `apply${i}`), 'save'];
+}
+// …and how long each usually takes (seconds: a TYPICAL-like plan for its progress bar; the model as before is TYPICAL.model)
+export function modelTimes(spec) {
+  const s = modelSpec(spec) || MODEL_DEFAULT;
+  const more = Math.max(0, s.moves.length - MODEL.PICKS_FREE);
+  const t = { image: s.detail === 'high' ? 190 : s.detail === 'light' ? 130 : 150, rig: 60, moves: 100 + 6 * more, save: 45 + 12 * s.own.length };
+  return modelPlan(s).map((step) => [step, /^motion/.test(step) ? 100 : /^apply/.test(step) ? 70 : t[step]]);
+}
+// its steps as its page names them (a step's number left out: motion1 and motion2 are both "Making its own moves")
+export const MODEL_STEP_WORDS = {
+  motion: 'Making its own moves', image: 'Shaping it', rig: 'Giving it bones', moves: 'Teaching it moves', apply: 'Teaching its own moves', save: 'Saving it',
+};
+export const stepGroup = (step) => String(step || '').replace(/\d+$/, '');
+// a plan's steps (names, or [name, seconds] pairs) → [{ step (its group), words }], each group once, in order
+export function modelStepList(plan) {
+  const groups = [];
+  for (const p of Array.isArray(plan) && plan.length ? plan : modelPlan(null)) {
+    const g = stepGroup(Array.isArray(p) ? p[0] : p);
+    if (Object.hasOwn(MODEL_STEP_WORDS, g) && !groups.includes(g)) groups.push(g);
+  }
+  return groups.map((step) => ({ step, words: MODEL_STEP_WORDS[step] }));
+}

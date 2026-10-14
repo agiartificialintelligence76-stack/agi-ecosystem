@@ -7,19 +7,21 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { crc32 as zlibCrc32 } from 'node:zlib';
 import sharp from 'sharp';
 import { Document, NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import * as R from '../src/studio/rules.js';
-import { checkCharacter, meshyPrompt, meshyTexture } from '../server/studio-words.js';
-import { meshyBody, meshyStart, meshyTask, animationUrl, thumbnailUrl, CREDITS, MESHY } from '../server/meshy.js';
+import { checkCharacter, meshyPrompt, meshyTexture, moveTrouble, lookTrouble, checkModelWords, meshyLook, meshyMotion } from '../server/studio-words.js';
+import { meshyBody, meshyStart, meshyTask, animationUrl, animationFbxUrl, thumbnailUrl, modelUrl, textureUrls, CREDITS, MESHY } from '../server/meshy.js';
 import * as F from '../server/studio-files.js';
 import { USDG, paidIn, readPayment, amountOf, recentPayments, PAY_WINDOW_MS, _resetStudioChain } from '../server/studio-chain.js';
 import {
   STUDIO, studioOn, mayMake, studioWallet, payCode, walletNow, pageView, makeQuote, choosePay, checkPayment, redo, myCharacters,
-  gallery, monthLeft, tick, studioClock, studioKey, _resetStudioKey, getOrder, newOrderId,
+  gallery, monthLeft, tick, studioClock, studioKey, _resetStudioKey, getOrder, newOrderId, specOf, planOf, saveNeeds,
 } from '../server/studio.js';
 import { studioGet, studioPost, studioLookBurst, studioFileBurst, studioActBurst } from '../server/studio-api.js';
+import { DL, makeFormat, dlTick, dlTidy, dlClock } from '../server/studio-dl.js';
 import { getConfig, studioAddress } from '../server/config.js';
 import { makeSession } from '../server/session.js';
 import { txCode, burnWallet, _resetBurnKey } from '../server/burn.js';
@@ -28,7 +30,8 @@ import { BURN_ADDRESS } from '../src/lib/burns.js';
 import { GET as launchGet, POST as launchPost } from '../api/launch.js';
 import { GET as feedGet } from '../api/feed.js';
 import * as THREE from 'three';
-import { clipsFor, inPlace, poseBox, movesBox, framing, lookTimes } from '../src/studio/viewer.js';
+import { clipsFor, inPlace, poseBox, movesBox, framing, lookTimes, aimFor, HEAD, RIGS } from '../src/studio/viewer.js';
+import * as ST from '../src/studio/stage-tools.js';
 
 const DAY = 864e5;
 const SECRET = 'test-pass-secret-that-is-long-enough-1234';
@@ -152,9 +155,9 @@ function database() {
     studio_get({ p_id }) {
       const o = this.orders.get(p_id);
       if (!o) return null;
-      const { lease, created, updated, ...row } = o;
+      const { lease, created, updated, dl_lease, ...row } = o;
       return { ...row, paid_at: iso(o.paid_at), started_at: iso(o.started_at), done_at: iso(o.done_at), created_at: iso(created), updated_at: iso(updated),
-        expired: this.expired(o) };
+        dl_until: iso(o.dl_until), expired: this.expired(o) };
     },
     studio_lease({ p_id, p_secs }) {
       const o = this.orders.get(p_id);
@@ -164,7 +167,9 @@ function database() {
     },
     studio_step({ p_id, p_step, p_task, p_tasks, p_tries }) {
       const o = this.orders.get(p_id);
-      if (!['preview', 'refine', 'rig', 'moves', 'save'].includes(p_step) || (p_task !== null && !/^[A-Za-z0-9_-]{6,80}$/.test(p_task))
+      // (2026-10-13, the 3D tool) and a 3D model's described moves: motion1/2 (made from its words), apply1/2 (on its bones)
+      if (!['motion1', 'motion2', 'image', 'preview', 'refine', 'rig', 'moves', 'apply1', 'apply2', 'save'].includes(p_step)
+        || (p_task !== null && !/^[A-Za-z0-9_-]{6,80}$/.test(p_task))
         || !p_tasks || typeof p_tasks !== 'object' || Array.isArray(p_tasks) || !(p_tries >= 0 && p_tries <= 20)) return false;
       if (!o || !['paid', 'making'].includes(o.status)) return false;
       if (o.status === 'paid') o.started_at = now();
@@ -177,12 +182,57 @@ function database() {
       o.lease = now() + 3000;
       return true;
     },
-    studio_done({ p_id, p_glb, p_pic, p_moves }) {
+    // (2026-10-13, the 3D tool) p_todo: the extra downloads it asked for, only ones in its formats, in their own order, kept 30 days
+    studio_done({ p_id, p_glb, p_pic, p_moves, p_todo = [] }) {
       const o = this.orders.get(p_id);
       if (!(p_glb >= 1 && p_glb <= 1e8) || !(p_pic >= 1 && p_pic <= 1e8) || !Array.isArray(p_moves) || p_moves.length < 1 || p_moves.length > 12) return false;
       if (!o || !['paid', 'making'].includes(o.status)) return false;
+      const todo = ['full', 'fbx', 'usdz', 'stl', 'obj'].filter((f) => (p_todo || []).includes(f) && (o.formats || []).includes(f));
       Object.assign(o, { status: 'done', glb_bytes: p_glb, pic_bytes: p_pic, moves: [...p_moves], step: null, task: null, lease: 0, credit: false,
-        error: null, done_at: now(), updated: now() });
+        error: null, done_at: now(), updated: now(), formats_todo: todo, formats_done: [], formats_failed: [], format_bytes: {}, format_tries: 0,
+        dl_lease: 0, dl_until: todo.length ? now() + 30 * DAY : null });
+      return true;
+    },
+    // a 3D model's extra downloads (2026-10-13): the clock's list, its turn, one format's end, the tidy-up's list and its end
+    studio_dl_due({ p_limit }) {
+      return [...this.orders.values()].filter((o) => o.status === 'done' && !o.hidden && o.formats_todo?.length && o.dl_until > now()
+        && !(o.dl_lease > now())).sort((a, b) => a.done_at - b.done_at).slice(0, Math.min(Math.max(p_limit ?? 1, 1), 20)).map((o) => o.id);
+    },
+    studio_dl_lease({ p_id, p_secs }) {
+      const o = this.orders.get(p_id);
+      if (!(p_secs >= 5 && p_secs <= 300) || !o || o.status !== 'done' || o.hidden || !o.formats_todo?.length || !(o.dl_until > now())
+        || o.dl_lease > now()) return false;
+      o.dl_lease = now() + p_secs * 1000;
+      return true;
+    },
+    studio_dl_put({ p_id, p_format, p_ok, p_bytes, p_final }) {
+      if (!['full', 'fbx', 'usdz', 'stl', 'obj'].includes(p_format) || typeof p_ok !== 'boolean' || (p_ok && !(p_bytes >= 1 && p_bytes <= 1e8))) return false;
+      const o = this.orders.get(p_id);
+      if (!o || o.status !== 'done' || o.hidden || !(o.dl_until > now()) || !o.formats_todo?.includes(p_format)) return false;
+      if (p_ok || p_final) {
+        o.formats_todo = o.formats_todo.filter((f) => f !== p_format);
+        const into = p_ok ? 'formats_done' : 'formats_failed';
+        if (!o[into].includes(p_format)) o[into] = [...o[into], p_format];
+        if (p_ok) o.format_bytes = { ...o.format_bytes, [p_format]: p_bytes };
+        Object.assign(o, { format_tries: 0, dl_lease: 0 });
+      } else {
+        Object.assign(o, { format_tries: Math.min(o.format_tries + 1, 20), dl_lease: now() + 120_000 });
+      }
+      return true;
+    },
+    studio_dl_expired({ p_limit }) {
+      return [...this.orders.values()].filter((o) => (o.formats_done?.length || o.formats_todo?.length)
+        && (!o.dl_until || o.dl_until < now() || o.hidden || o.status !== 'done')).slice(0, Math.min(Math.max(p_limit ?? 20, 1), 100)).map((o) => o.id);
+    },
+    studio_dl_clear({ p_id }) {
+      const o = this.orders.get(p_id);
+      if (!o || !(o.formats_done?.length || o.formats_todo?.length) || !(!o.dl_until || o.dl_until < now() || o.hidden || o.status !== 'done')) return null;
+      Object.assign(o, { formats_todo: [], formats_done: [], format_bytes: {}, format_tries: 0, dl_lease: 0 });
+      return true;
+    },
+    // (AGI Studio, influencers.sql) a 3D model of an influencer that couldn't be made: its credits back (once)
+    inf_3d_back({ p_order }) {
+      this.backs = [...(this.backs || []), p_order];
       return true;
     },
     studio_fail({ p_id, p_error, p_credit }) {
@@ -275,6 +325,9 @@ async function characterGlb({ clips = CLIP_NAMES, skin = true, texturePx = 2048 
   }
   return Buffer.from(await new NodeIO().writeBinary(doc));
 }
+// a GLB read back (gltf-transform), and its clips' names
+const readGlb = async (bytes) => new NodeIO().registerExtensions(ALL_EXTENSIONS).readBinary(new Uint8Array(bytes));
+const clipsIn = async (bytes) => (await readGlb(bytes)).getRoot().listAnimations().map((a) => a.getName());
 
 // ---------- the fakes ----------
 let fake, calls, logs;
@@ -285,8 +338,19 @@ function meshyObject(t) {
     o.model_urls = { glb: `https://assets.meshy.ai/tasks/${t.id}/model.glb?Expires=1` };
     o.thumbnail_url = `https://assets.meshy.ai/tasks/${t.id}/preview.png?Expires=1`;
   }
+  // (2026-10-10, AGI Studio) image to 3D: its model in every format, its picture and its textures (2026-10-13: more downloads)
+  if (t.status === 'SUCCEEDED' && t.step === 'image') {
+    const at = (f) => `https://assets.meshy.ai/tasks/${t.id}/model.${f}?Expires=1`;
+    o.model_urls = { glb: at('glb'), fbx: at('fbx'), obj: at('obj'), mtl: at('mtl'), usdz: at('usdz'), stl: at('stl') };
+    o.thumbnail_url = `https://assets.meshy.ai/tasks/${t.id}/preview.png?Expires=1`;
+    o.texture_urls = [{ base_color: `https://assets.meshy.ai/tasks/${t.id}/texture_0.png?Expires=1`, normal: `https://assets.meshy.ai/tasks/${t.id}/texture_0_normal.png?Expires=1` }];
+  }
   if (t.status === 'SUCCEEDED' && t.step === 'rig') o.result = { rigged_character_glb_url: `https://assets.meshy.ai/tasks/${t.id}/rigged.glb` };
-  if (t.status === 'SUCCEEDED' && t.step === 'moves') o.result = { animation_glb_url: `https://assets.meshy.ai/tasks/${t.id}/animations.glb?Expires=1` };
+  if (t.status === 'SUCCEEDED' && t.step === 'moves') {
+    o.result = { animation_glb_url: `https://assets.meshy.ai/tasks/${t.id}/animations.glb?Expires=1`, animation_fbx_url: `https://assets.meshy.ai/tasks/${t.id}/animations.fbx?Expires=1` };
+  }
+  // (2026-10-13) a move from its words, and that move put on its bones (its own file, one clip)
+  if (t.status === 'SUCCEEDED' && t.step === 'apply') o.result = { animation_glb_url: `https://assets.meshy.ai/tasks/${t.id}/motion.glb?Expires=1` };
   return o;
 }
 // the newest task Meshy has for a step
@@ -306,7 +370,7 @@ beforeEach(() => {
     db: database(), dbDown: false, missing: new Set(),
     storage: new Map(), storageDown: false,
     meshy: { tasks: new Map(), n: 0, fail: [], getFail: null },
-    files: { glb: null, png: null, status: 200 },
+    files: { glb: null, png: null, motion: null, byExt: {}, gone: [], status: 200 },
     chain: { receipts: new Map(), blockTime: Date.now() + 5000, balance: 0n, down: false, usdgDecimals: 6 },   // its blocks: just after the quotes
     explorer: { items: [], status: 200 },
     human: true,
@@ -324,11 +388,21 @@ beforeEach(() => {
       if (fake.missing.has(fn) || typeof fake.db[fn] !== 'function') return Response.json({ code: 'PGRST202', message: 'not found' }, { status: 404 });
       return Response.json(fake.db[fn](args));
     }
-    // Supabase Storage: the private bucket
+    // Supabase Storage: the private bucket (2026-10-13: a file's name may have folders, dl/<id>.glb; its signed addresses; its
+    // bulk delete)
     if (url.startsWith(`${SB}/storage/v1/object/`)) {
-      calls.push({ to: 'storage', method, url, headers: init.headers });
+      calls.push({ to: 'storage', method, url, headers: init.headers, body: method === 'DELETE' ? JSON.parse(init.body) : undefined });
       if (fake.storageDown) return new Response('{"message":"internal"}', { status: 500 });
-      const m = /\/storage\/v1\/object\/(authenticated\/)?agi1-characters\/([^/?]+)$/.exec(url);
+      if (method === 'DELETE' && url === `${SB}/storage/v1/object/agi1-characters`) {
+        const gone = JSON.parse(init.body).prefixes.filter((n) => fake.storage.delete(n));
+        return Response.json(gone.map((name) => ({ name })));
+      }
+      const signed = /\/storage\/v1\/object\/sign\/agi1-characters\/([^?]+)$/.exec(url);
+      if (signed) {
+        return fake.storage.has(signed[1]) ? Response.json({ signedURL: `/object/sign/agi1-characters/${signed[1]}?token=signed-token` })
+          : new Response('{"statusCode":"404","error":"not_found","message":"Object not found"}', { status: 400 });
+      }
+      const m = /\/storage\/v1\/object\/(authenticated\/)?agi1-characters\/([^?]+)$/.exec(url);
       if (!m) return new Response('{"statusCode":"404","error":"Bucket not found","message":"Bucket not found"}', { status: 400 });
       if (method === 'POST') {
         fake.storage.set(m[2], { bytes: Buffer.from(init.body), type: init.headers['Content-Type'] });
@@ -346,7 +420,8 @@ beforeEach(() => {
         const f = fake.meshy.fail.shift();
         if (f) return new Response(f.text, { status: f.status });
         const body = JSON.parse(init.body);
-        const step = path === '/openapi/v2/text-to-3d' ? body.mode : path === '/openapi/v1/rigging' ? 'rig' : path === '/openapi/v1/animations' ? 'moves' : null;
+        const step = path === '/openapi/v2/text-to-3d' ? body.mode : path === '/openapi/v1/image-to-3d' ? 'image' : path === '/openapi/v1/rigging' ? 'rig'
+          : path === '/openapi/v1/animations' ? (body.motion_task_id ? 'apply' : 'moves') : path === '/openapi/v1/text-to-motion' ? 'motion' : null;
         if (!step) return new Response('{"message":"no such path"}', { status: 404 });
         const id = `0193bfc5-ee4f-73f8-8525-${String(++fake.meshy.n).padStart(12, '0')}`;
         fake.meshy.tasks.set(id, { id, step, body, status: 'PENDING', progress: 0, error: '', at: Date.now() });
@@ -360,7 +435,12 @@ beforeEach(() => {
     if (url.startsWith('https://assets.meshy.ai/')) {
       calls.push({ to: 'files', url, redirect: init.redirect });
       if (fake.files.status !== 200) return new Response('expired', { status: fake.files.status });
-      const bytes = /\.glb/.test(url) ? fake.files.glb : fake.files.png;
+      // (2026-10-13) a described move's own file (motion.glb), and the image task's other formats and its textures, by their
+      // extension; a file Meshy let go of (gone: its path's end)
+      const path = new URL(url).pathname, ext = path.split('.').pop();
+      if (fake.files.gone.some((end) => path.endsWith(end))) return new Response('expired', { status: 404 });
+      const bytes = path.endsWith('/motion.glb') && fake.files.motion ? fake.files.motion : ext === 'glb' ? fake.files.glb
+        : fake.files.byExt[ext] ?? fake.files.png;
       return new Response(bytes, { headers: { 'Content-Type': 'application/octet-stream' } });
     }
     // Robinhood Chain's public node
@@ -463,9 +543,10 @@ test('rules: its moves (Meshy library ids, at most 10 in one file), ids, files, 
   assert.equal(new Set(R.MOVES.map((m) => m.action)).size, R.MOVES.length, 'unique ids (Meshy asks for them)');
   assert.ok(R.MOVES.length <= 10, "Meshy's merged file takes 1 to 10 actions");
   assert.equal(R.MOVE_NAMES[0], 'idle', 'how it stands comes first');
-  for (const m of R.LOOPING) assert.ok(R.MOVE_NAMES.includes(m));
+  for (const m of ['dance', 'walk', 'party']) assert.ok(R.LOOPING.has(m), m);
+  for (const m of R.LOOPING) assert.ok(R.MOVE_BY_NAME.has(m), m);
   for (const [move, words] of Object.entries(R.MOVE_WORDS)) {
-    assert.ok(R.MOVE_NAMES.includes(move), move);
+    assert.ok(R.MOVE_BY_NAME.has(move), move);
     for (const w of words) assert.match(w, /^[a-z]+$/);
   }
   assert.ok(R.ORDER_ID.test(newOrderId()) && R.ORDER_ID.test(newOrderId()));
@@ -499,6 +580,128 @@ test('rules: the move a chat message asks for (whole words, any case, only the m
   assert.equal(R.moveIn('dance', ['idle', 'wave']), null, 'a move its file lacks');
   assert.equal(R.moveIn('ｄａｎｃｅ'), 'dance', 'full-width letters read as plain ones');
   assert.equal(R.moveIn(`${'blah '.repeat(60)}dance`), null, 'only its first 40 words are read');
+});
+
+// (2026-10-13) "Pick its moves": the library a model's moves come from, and its other choices
+const LIBRARY = ['0:Idle', '28:Big_Wave_Hello', '41:Formal_Bow', '25:Agree_Gesture', '409:Finger_Wag_No', '317:Shrug', '313:Talk_with_Hands_Open',
+  '50:Phone_Call_Gesture', '27:Big_Heart_Gesture', '36:Confused_Scratch', '315:Hand_on_Hip_Gesture', '26:Angry_Stomp', '31:Catching_Breath',
+  '48:Mirror_Viewing', '59:Victory_Cheer', '44:Happy_jump_f', '403:Victory_Fist_Pump', '298:Cheer_with_Both_Hands_Up', '388:Show_Both_Arm_Muscles',
+  '387:Half_Squat_with_Thumb_Up', '397:360_Power_Spin_Jump', '452:Backflip', '22:FunnyDancing_01', '64:All_Night_Dance', '23:FunnyDancing_02',
+  '63:Arm_Circle_Shuffle', '65:Bass_Beats', '67:Bubble_Dance', '75:Indoor_Swing', '77:Magic_Genie', '79:OMG_Groove', '81:Pod_Baby_Groove',
+  '591:Hip_Hop_Dance', '395:Breakdance_1990', '30:Casual_Walk', '107:Confident_Strut', '117:Red_Carpet_Walk', '118:Skip_Forward', '554:Funky_Walk',
+  '62:penguin_walk', '14:Run_02', '326:jumping_jacks', '319:air_squat', '329:push_up', '46:Jump_Rope', '410:Kick_a_Soccer_Ball', '385:Boxing_Warmup',
+  '362:Sit_Cross_Legged', '342:Stand_and_Drink'];
+test('rules: the move library (Meshy library ids and clips, groups, labels, the words for each, one order)', () => {
+  assert.deepEqual(R.MOVE_LIBRARY.map((m) => `${m.action}:${m.clip}`), LIBRARY, "Meshy's animation library, as its list names them");
+  const names = R.MOVE_LIBRARY.map((m) => m.name);
+  assert.equal(new Set(names).size, names.length, 'one name each');
+  assert.equal(new Set(R.MOVE_LIBRARY.map((m) => m.clip.toLowerCase())).size, names.length, 'one clip each');
+  for (const m of R.MOVE_LIBRARY) {
+    assert.match(m.name, /^[a-z]+$/);
+    assert.ok(m.label.length >= 2 && m.label.length <= 16, m.label);
+    assert.ok(m.words.includes(m.name), `${m.name} answers to its own name`);
+    assert.equal(R.MOVE_BY_NAME.get(m.name), m);
+    if (m.name === 'idle') assert.equal(m.group, null);
+    else assert.ok(Object.hasOwn(R.MOVE_GROUPS, m.group), m.name);
+  }
+  assert.equal(names[0], 'idle');
+  for (const g of Object.keys(R.MOVE_GROUPS)) assert.ok(R.MOVE_LIBRARY.some((m) => m.group === g), g);
+  for (const m of R.MOVE_LIBRARY) {
+    if (['dance', 'walk'].includes(m.group)) assert.ok(m.loop, `${m.name} goes on a while`);
+    if (['greet', 'feel', 'cheer', 'rest'].includes(m.group) || m.name === 'idle') assert.ok(!m.loop, `${m.name} plays once`);
+  }
+  assert.deepEqual(R.MOVES.map((m) => m.name), R.MOVE_NAMES, 'the 8 of every model made before');
+  assert.deepEqual(R.DEFAULT_PICKS, R.MOVE_NAMES.slice(1));
+  assert.deepEqual(R.MOVE_ORDER.slice(0, 8), R.MOVE_NAMES, 'the 8 first, as before');
+  assert.deepEqual([...R.MOVE_ORDER].sort(), [...names].sort(), 'every move once');
+  assert.equal(R.moveLabel('hiphop'), 'Hip hop'); assert.equal(R.moveLabel('moonwalk'), 'moonwalk');
+  // what someone types
+  const all = names;
+  assert.equal(R.moveIn('strut'), 'walk', 'a word another move answers to, on a model without it');
+  assert.equal(R.moveIn('strut', all), 'strut', 'its own name first');
+  assert.equal(R.moveIn('do a hip hop dance', all), 'hiphop', 'two words written together');
+  assert.equal(R.moveIn('jump rope!', all), 'jumprope');
+  assert.equal(R.moveIn('jump rope!'), 'jump', 'without it, the first word');
+  assert.equal(R.moveIn('thumbs up', all), 'thumbs'); assert.equal(R.moveIn('sit down please', all), 'sit');
+  assert.equal(R.moveIn('jumping jacks', all), 'jacks'); assert.equal(R.moveIn('red carpet', all), 'runway');
+  assert.equal(R.moveIn('i love you', all), 'heart'); assert.equal(R.moveIn('i love you'), null);
+  assert.equal(R.moveIn('moonwalk!', [...R.MOVE_NAMES, 'moonwalk']), 'moonwalk', 'a move described in words, by its own name');
+  assert.equal(R.moveIn('moonwalk!'), null);
+  assert.equal(R.moveIn('hello, now hiphop', all), 'wave', 'still the first word that names one');
+  assert.ok(R.moveWord('love') && R.moveWord('HIPHOP') && R.moveWord('idle'));
+  assert.equal(R.moveWord('moonwalk'), false);
+});
+
+test('rules: a 3D model\'s choices (moves, described moves, shape and look, downloads), their prices and its steps', () => {
+  assert.deepEqual(R.MODEL_DEFAULT, { moves: R.DEFAULT_PICKS, own: [], detail: 'std', shine: false, pose: 'a', height: 170, look: null, formats: [] });
+  assert.deepEqual(R.modelSpec(null), R.MODEL_DEFAULT); assert.deepEqual(R.modelSpec({}), R.MODEL_DEFAULT);
+  assert.ok(R.isDefaultSpec(null) && R.isDefaultSpec({}) && R.isDefaultSpec({ moves: [...R.DEFAULT_PICKS].reverse(), look: '  ' }));
+  assert.equal(R.isDefaultSpec({ moves: ['wave'] }), false);
+  const spec = R.modelSpec({
+    moves: ['hiphop', 'wave', 'backflip', 'wave', 'dance'], own: [{ name: 'Moonwalk', prompt: '  does the\nmoonwalk  backwards ', seconds: 8 }],
+    detail: 'high', shine: true, pose: 't', height: 160, look: ' a red  tracksuit ', formats: ['obj', 'full', 'obj'],
+  });
+  assert.deepEqual(spec, {
+    moves: ['wave', 'dance', 'backflip', 'hiphop'], own: [{ name: 'moonwalk', prompt: 'does the moonwalk backwards', seconds: 8 }],
+    detail: 'high', shine: true, pose: 't', height: 160, look: 'a red tracksuit', formats: ['full', 'obj'],
+  }, 'tidied: in one order, once each, their words tidied');
+  const firstBad = (x) => R.modelSpecField(x);
+  const cases = [
+    [{ moves: [] }, 'moves'], [{ moves: ['idle'] }, 'moves'], [{ moves: ['moonwalk'] }, 'moves'], [{ moves: 'wave' }, 'moves'],
+    [{ moves: R.MOVE_LIBRARY.slice(1, 11).map((m) => m.name) }, 'moves'],
+    [{ own: [{ name: 'wave', prompt: 'a move' }] }, 'own'], [{ own: [{ name: 'love', prompt: 'a move' }] }, 'own'],
+    [{ own: [{ name: 'x', prompt: 'a move' }] }, 'own'], [{ own: [{ name: '9lives', prompt: 'a move' }] }, 'own'],
+    [{ own: [{ name: 'moon', prompt: 'ab' }] }, 'own'], [{ own: [{ name: 'moon', prompt: 'x'.repeat(201) }] }, 'own'],
+    [{ own: [{ name: 'moon', prompt: 'a move', seconds: 4 }] }, 'own'],
+    [{ own: [{ name: 'moon', prompt: 'a move' }, { name: 'moon', prompt: 'another' }] }, 'own'],
+    [{ own: [1, 2, 3].map((i) => ({ name: `move${i}`, prompt: 'a move' })) }, 'own'],
+    [{ detail: 'ultra' }, 'detail'], [{ shine: 'yes' }, 'shine'], [{ pose: 'x' }, 'pose'],
+    [{ height: 139 }, 'height'], [{ height: 211 }, 'height'], [{ height: 170.5 }, 'height'], [{ height: '170cm' }, 'height'],
+    [{ look: 'ab' }, 'look'], [{ look: 'x'.repeat(301) }, 'look'], [{ look: 7 }, 'look'],
+    [{ formats: ['png'] }, 'formats'], [{ formats: 'glb' }, 'formats'], [[], 'spec'], ['x', 'spec'], [7, 'spec'],
+  ];
+  for (const [x, field] of cases) {
+    assert.equal(firstBad(x), field, JSON.stringify(x));
+    assert.equal(R.modelSpec(x), null);
+  }
+  assert.equal(R.modelSpecField({ moves: ['wave'] }), null);
+  assert.ok(R.modelSpec({ moves: R.MOVE_LIBRARY.slice(1, 10).map((m) => m.name) }), 'nine');
+  assert.deepEqual(R.modelSpec({ own: [{ name: 'moon', prompt: 'a move' }] }).own, [{ name: 'moon', prompt: 'a move', seconds: 5 }]);
+  // prices: each extra about 1.8× what it costs (a Meshy credit about 2 cents)
+  assert.deepEqual(R.MODEL_EXTRAS, { move: 11, own: 47, high: 18 });
+  assert.deepEqual(R.MODEL_EXTRAS, { move: R.creditsFor(6), own: R.creditsFor(26), high: R.creditsFor(10) });
+  assert.deepEqual(R.modelExtras(null), { moves: 0, own: 0, high: 0, total: 0 });
+  assert.deepEqual(R.modelExtras({ moves: ['wave'] }), { moves: 0, own: 0, high: 0, total: 0 }, 'fewer moves cost the same');
+  assert.deepEqual(R.modelExtras(spec), { moves: 0, own: 47, high: 18, total: 65 });
+  const nine = R.modelSpec({ moves: R.MOVE_LIBRARY.slice(1, 10).map((m) => m.name), own: [{ name: 'moon', prompt: 'a move' }, { name: 'star', prompt: 'b move' }], detail: 'high' });
+  assert.deepEqual(R.modelExtras(nine), { moves: 22, own: 94, high: 18, total: 134 });
+  for (const level of [1, 2, 3]) assert.equal(R.modelCost(null, level), R.creditPrice('model', level), 'as before');
+  assert.deepEqual([1, 2, 3].map((l) => R.modelCost(nine, l)), [634, 507, 380]);
+  assert.deepEqual([1, 2, 3].map((l) => R.modelCost(nine, l, { free: true })), [134, 107, 80], 'a free model: its extras still paid');
+  assert.equal(R.modelCost(null, 3, { free: true }), 0);
+  assert.equal(R.modelCost({ height: 1 }), null);
+  assert.ok(R.burnable(null) && R.burnable({ shine: true, look: 'red', pose: 't', formats: ['stl'], detail: 'light', height: 150 }), 'the free choices');
+  for (const x of [{ moves: R.MOVE_LIBRARY.slice(1, 9).map((m) => m.name) }, { own: [{ name: 'moon', prompt: 'a move' }] }, { detail: 'high' }]) assert.equal(R.burnable(x), false);
+  // its moves and steps
+  assert.deepEqual(R.modelMoves(null).map((m) => m.name), R.MOVE_NAMES);
+  assert.deepEqual(R.modelMoves(spec).map((m) => m.action), [0, 28, 22, 452, 591]);
+  assert.deepEqual(R.modelMoveNames(spec), ['idle', 'wave', 'dance', 'backflip', 'hiphop', 'moonwalk']);
+  assert.ok(R.modelMoves(nine).length <= 10, "Meshy's file: 10 moves at most");
+  assert.ok(R.modelMoveNames(nine).length <= 12, 'its moves: 12 at most (studio_done)');
+  assert.deepEqual(R.modelPlan(null), ['image', 'rig', 'moves', 'save']);
+  assert.deepEqual(R.modelPlan(nine), ['motion1', 'motion2', 'image', 'rig', 'moves', 'apply1', 'apply2', 'save']);
+  assert.deepEqual(R.modelTimes(null), R.TYPICAL.model, 'as before');
+  assert.deepEqual(R.modelTimes(nine), [['motion1', 100], ['motion2', 100], ['image', 190], ['rig', 60], ['moves', 112], ['apply1', 70], ['apply2', 70], ['save', 69]]);
+  assert.deepEqual(R.modelStepList(R.modelTimes(nine)).map((s) => s.step), ['motion', 'image', 'rig', 'moves', 'apply', 'save']);
+  assert.deepEqual(R.modelStepList(null).map((s) => s.words), R.MODEL_STEPS.map((s) => s.words));
+  assert.equal(R.stepGroup('apply2'), 'apply'); assert.equal(R.stepGroup('rig'), 'rig');
+  const p = R.progressOf('model', { plan: R.modelTimes(nine), step: 'apply1', since: 1000, now: 1000 + 500_000 });
+  assert.ok(p.pct > 70 && p.pct < 99, JSON.stringify(p));
+  // downloads
+  assert.deepEqual(Object.keys(R.DL_FORMATS), ['full', 'fbx', 'usdz', 'stl', 'obj']);
+  assert.equal(R.dlPath('a'.repeat(22), 'obj'), `dl/${'a'.repeat(22)}.zip`);
+  assert.equal(R.DL_DAYS, 30);
+  assert.equal(R.ownClip('moon'), 'own_moon');
 });
 
 // ---------- its words ----------
@@ -563,6 +766,47 @@ test("words: what Meshy gets (one humanoid in an A-pose, family-friendly, no tex
   assert.match(meshyPrompt({ about: GOOD.about, style: 'anime' }), /^Full body, a stylized anime-style 3D character/);
 });
 
+test("words: a 3D model's look and its moves described in words (PG-13, nothing sexual in a move, never hurting anyone), and what Meshy gets", () => {
+  // a move's words: what people would ask for passes (a punch in the air is boxing, a kick at a ball is a kick)
+  for (const fine of ['spin around twice', 'punch the air like a boxer', 'kick a ball', 'karate kick', 'a high kick', 'boxing combo', 'hit the griddy',
+    'shoot a basketball', 'moonwalk like a pop star', 'a shy little wave', 'jump and clap', 'make it rain', '', '   ']) {
+    assert.equal(moveTrouble(fine), null, fine);
+  }
+  // …never anything sexual about a body's moves, never hurting anyone or holding a weapon, never a hateful salute; and the
+  // character's own checks (people, links, contacts, minors), words written together too
+  for (const [bad, why] of [['twerk', 'adult'], ['TwerkTime', 'adult'], ['a sexy dance', 'adult'], ['lap dance', 'adult'], ['take off her shirt', 'adult'],
+    ['bounce her chest', 'adult'], ['grinding on him', 'adult'], ['slap someone', 'violence'], ['punch someone in the face', 'violence'],
+    ['PunchSomeone', 'violence'], ['kick someone', 'violence'], ['stab the air', 'violence'], ['shoot him', 'violence'], ['aim a gun', 'violence'],
+    ['falls dead', 'violence'], ['holds a knife', 'violence'], ['sieg heil', 'hate'], ['goose step', 'hate'], ['a nazi salute', 'hate'],
+    ['dance like Taylor Swift', 'person'], ['visit agi1.app', 'link'], ['wave at @bob', 'contact'], ['a child dancing', 'minor']]) {
+    assert.equal(moveTrouble(bad), why, bad);
+  }
+  // its look in words: the character's checks (what it wears is painted over its full body)
+  assert.equal(lookTrouble('a red leather jacket and silver boots'), null);
+  assert.equal(lookTrouble(''), null);
+  assert.equal(lookTrouble(null), null);
+  for (const [bad, why] of [['a bikini', 'adult'], ['lingerie', 'adult'], ['a Spider-Man suit', 'character'], ['looks like Elon Musk', 'person'],
+    ['logo of example.com', 'link'], ['a nazi armband', 'hate'], ['bloody clothes', 'hate']]) {
+    assert.equal(lookTrouble(bad), why, bad);
+  }
+  // a model's words together: its look first, then each described move's name, then what it does (which one, from 1)
+  const own = [{ name: 'zoomies', prompt: 'runs in a little circle' }, { name: 'shake', prompt: 'twerk on the floor' }];
+  assert.equal(checkModelWords({ look: 'a red jacket', own: own.slice(0, 1) }), null);
+  assert.deepEqual(checkModelWords({ look: 'a red jacket', own }), { field: 'own', n: 2, part: 'prompt', why: 'adult' });
+  assert.deepEqual(checkModelWords({ look: 'a bikini', own: [{ name: 'nazi', prompt: 'a wave' }] }), { field: 'look', why: 'adult' });
+  assert.deepEqual(checkModelWords({ look: null, own: [{ name: 'nazi', prompt: 'a wave' }] }), { field: 'own', n: 1, part: 'name', why: 'hate' });
+  assert.deepEqual([checkModelWords(null), checkModelWords({}), checkModelWords(R.MODEL_DEFAULT)], [null, null, null]);
+  // what Meshy gets: its look as the texture's prompt (its face, hair and skin kept, family-friendly, no text), at most 600
+  // characters; a described move as one person doing it, at most 400 (Text to Motion's own limit); invisible characters gone
+  assert.equal(meshyLook('a red leather jacket'), "Keep the character's face, hair and skin as in its picture. A red leather jacket. Family-friendly, fully clothed. No text, no logos.");
+  assert.equal(meshyLook('silver boots!'), "Keep the character's face, hair and skin as in its picture. Silver boots! Family-friendly, fully clothed. No text, no logos.");
+  assert.equal(meshyLook('a\u200bred\u0000 jacket   with “quotes”'), 'Keep the character\'s face, hair and skin as in its picture. A red jacket with "quotes". Family-friendly, fully clothed. No text, no logos.');
+  assert.equal([...meshyLook('x'.repeat(700))].length, 600);
+  assert.equal(meshyMotion('spins twice'), 'A person does this move: Spins twice.');
+  assert.equal(meshyMotion('Jumps!'), 'A person does this move: Jumps!');
+  assert.equal([...meshyMotion('y'.repeat(500))].length, 400);
+});
+
 // ---------- Meshy ----------
 test("Meshy: each step's request as its docs write it, with our key (never in an error)", async () => {
   assert.deepEqual(meshyBody('preview', { prompt: 'P' }), { mode: 'preview', prompt: 'P', ai_model: 'latest', model_type: 'standard', pose_mode: 'a-pose',
@@ -576,9 +820,34 @@ test("Meshy: each step's request as its docs write it, with our key (never in an
     image_url: 'https://x.supabase.co/storage/v1/object/sign/a.png?token=t', ai_model: 'latest', topology: 'triangle', target_polycount: 20000,
     should_remesh: true, should_texture: true, enable_pbr: false, pose_mode: 'a-pose', moderation: true });
   assert.throws(() => meshyBody('paint'), /no step paint/);
-  assert.deepEqual(CREDITS, { preview: 20, refine: 10, image: 30, rig: 5, moves: 24 });
+  assert.deepEqual(CREDITS, { preview: 20, refine: 10, image: 30, rig: 5, moves: 24, motion: 10, apply: 3, high: 5 });
   assert.equal(CREDITS.preview + CREDITS.refine + CREDITS.rig + CREDITS.moves, 59, 'a character is 59 credits');
   assert.equal(CREDITS.image + CREDITS.rig + CREDITS.moves, 59, 'an influencer\'s 3D model too');
+  // (2026-10-13, the 3D tool) a model's choices (rules.js modelSpec) in each step's request: its detail (faces; High detail a
+  // finer geometry too), shine (PBR maps), its pose, its look in words (the texture's prompt), its height (its bones' scale),
+  // its picked moves (idle first, then in the library's order), and each move described in words (Text to Motion, then put on
+  // its bones)
+  const own = [{ name: 'zoomies', prompt: 'runs in a little circle, arms out', seconds: 3 }, { name: 'curtsy', prompt: 'a polite curtsy, then a smile' }];
+  const spec = { moves: ['shrug', 'wave', 'backflip'], own, detail: 'high', shine: true, pose: 't', height: 182, look: 'a red leather jacket' };
+  const pic = 'https://x.supabase.co/storage/v1/object/sign/a.png?token=t';
+  assert.deepEqual(meshyBody('image', { imageUrl: pic, spec }), { image_url: pic, ai_model: 'latest', topology: 'triangle', target_polycount: 40000,
+    should_remesh: true, should_texture: true, enable_pbr: true, pose_mode: 't-pose', moderation: true, geometry_resolution: '2k',
+    texture_prompt: "Keep the character's face, hair and skin as in its picture. A red leather jacket. Family-friendly, fully clothed. No text, no logos." });
+  assert.deepEqual(meshyBody('image', { imageUrl: pic, spec: { detail: 'light' } }), { image_url: pic, ai_model: 'latest', topology: 'triangle',
+    target_polycount: 8000, should_remesh: true, should_texture: true, enable_pbr: false, pose_mode: 'a-pose', moderation: true });
+  assert.deepEqual(meshyBody('image', { imageUrl: pic, spec: { detail: 'ultra' } }), meshyBody('image', { imageUrl: pic }), 'choices that aren\'t ours: the model as before');
+  assert.equal(meshyBody('image', { imageUrl: pic, spec: { look: 'x'.repeat(301) } }).texture_prompt, undefined, 'a look too long is no look (and never asked: the server refuses it first)');
+  assert.deepEqual(meshyBody('rig', { refineId: 'rf-123456', spec }), { input_task_id: 'rf-123456', height_meters: 1.82 });
+  assert.deepEqual(meshyBody('moves', { rigId: 'rg-123456', spec }), { rig_task_id: 'rg-123456', action_ids: [0, 28, 317, 452] }, 'idle, wave, shrug, backflip');
+  assert.deepEqual(meshyBody('moves', { rigId: 'rg-123456', spec: R.MODEL_DEFAULT }), { rig_task_id: 'rg-123456', action_ids: [0, 28, 22, 44, 59, 41, 30, 64] });
+  assert.deepEqual(meshyBody('motion1', { spec }), { prompt: 'A person does this move: Runs in a little circle, arms out.', mode: 'prime', duration: 3 });
+  assert.deepEqual(meshyBody('motion2', { spec }), { prompt: 'A person does this move: A polite curtsy, then a smile.', mode: 'prime', duration: 5 });
+  assert.deepEqual(meshyBody('apply2', { rigId: 'rg-123456', motionId: 'mo-123456', spec }), { rig_task_id: 'rg-123456', motion_task_id: 'mo-123456' });
+  for (const [step, inputs] of [['motion3', { spec }], ['motion0', { spec }], ['motion', { spec }], ['apply1', { rigId: 'rg-123456', spec }],
+    ['apply1x', { rigId: 'rg-123456', motionId: 'mo-123456', spec }], ['motion1', { spec: { own: [] } }], ['motion1', {}]]) {
+    assert.throws(() => meshyBody(step, inputs), new RegExp(`meshy: no step ${step}$`), step);
+  }
+  assert.ok([...meshyBody('motion1', { spec: { own: [{ name: 'long', prompt: 'x'.repeat(200) }] } }).prompt].length <= 400, "Text to Motion's own limit");
   const cfg = cfgNow();
   const id = await meshyStart(cfg, 'preview', { prompt: meshyPrompt(GOOD) });
   assert.match(id, /^0193bfc5-/);
@@ -588,6 +857,23 @@ test("Meshy: each step's request as its docs write it, with our key (never in an
   await meshyStart(cfg, 'rig', { refineId: id });
   await meshyStart(cfg, 'moves', { rigId: id });
   assert.deepEqual(calls.filter((x) => x.to === 'meshy').map((x) => x.path), ['/openapi/v2/text-to-3d', '/openapi/v1/rigging', '/openapi/v1/animations']);
+  // (2026-10-13) a model's own steps: image to 3D, Text to Motion (motion1 and motion2 alike), its motion put on its bones
+  // (apply: the animations path again), each with its spec's words
+  calls.length = 0;
+  const mo = await meshyStart(cfg, 'motion2', { spec });
+  await meshyStart(cfg, 'image', { imageUrl: pic, spec });
+  await meshyStart(cfg, 'apply2', { rigId: id, motionId: mo, spec });
+  assert.deepEqual(calls.map((x) => [x.path, x.body]), [['/openapi/v1/text-to-motion', meshyBody('motion2', { spec })],
+    ['/openapi/v1/image-to-3d', meshyBody('image', { imageUrl: pic, spec })], ['/openapi/v1/animations', { rig_task_id: id, motion_task_id: mo }]]);
+  assert.equal((await meshyTask(cfg, 'motion2', mo)).status, 'PENDING');
+  assert.equal(calls.at(-1).path, `/openapi/v1/text-to-motion/${mo}`, 'its state read on its own path');
+  await assert.rejects(meshyStart(cfg, 'motion3', { spec }), (e) => e.why === 'request' && /no step motion3/.test(e.message));
+  await assert.rejects(meshyTask(cfg, 'unknown', mo), (e) => e.why === 'request');
+  // Text to Motion says 403 when its screening stops a move's words: "refused" (never tried again: server/studio.js)
+  fake.meshy.fail.push({ status: 403, text: '{"message":"The prompt was flagged"}' });
+  const refused = await meshyStart(cfg, 'motion1', { spec }).catch((e) => e);
+  assert.deepEqual([refused.why, refused.status], ['refused', 403]);
+  assert.match(refused.message, /its screening stopped these words/);
   // its answers
   let t = await meshyTask(cfg, 'preview', id);
   assert.deepEqual([t.status, t.progress, t.refused], ['PENDING', 0, false]);
@@ -620,6 +906,15 @@ test("Meshy: each step's request as its docs write it, with our key (never in an
   assert.equal(animationUrl({}), null);
   assert.equal(thumbnailUrl({ thumbnail_url: 'https://assets.meshy.ai/p.png' }), 'https://assets.meshy.ai/p.png');
   assert.equal(thumbnailUrl({ thumbnail_url: 'javascript:alert(1)' }), null);
+  // (2026-10-13, more downloads) the same moves as an FBX, the image task's shape in other formats, its textures
+  assert.equal(animationFbxUrl({ result: { animation_fbx_url: 'https://assets.meshy.ai/a.fbx' } }), 'https://assets.meshy.ai/a.fbx');
+  assert.equal(animationFbxUrl({ result: { animation_glb_url: 'https://assets.meshy.ai/a.glb' } }), null);
+  const done = { model_urls: { glb: 'https://assets.meshy.ai/m.glb', usdz: 'https://assets.meshy.ai/m.usdz', stl: 'http://assets.meshy.ai/m.stl', obj: 'data:,x' },
+    texture_urls: [{ base_color: 'https://assets.meshy.ai/c.png', normal: 'https://assets.meshy.ai/n.png', metallic: 'ftp://x/m.png', emission: 'https://assets.meshy.ai/e.png' },
+      { base_color: 'https://assets.meshy.ai/second.png' }] };
+  assert.deepEqual(['glb', 'usdz', 'stl', 'obj', 'fbx'].map((f) => modelUrl(done, f)), ['https://assets.meshy.ai/m.glb', 'https://assets.meshy.ai/m.usdz', null, null, null]);
+  assert.deepEqual(textureUrls(done), { base_color: 'https://assets.meshy.ai/c.png', normal: 'https://assets.meshy.ai/n.png' }, 'its first material, the four maps it has (https only)');
+  assert.deepEqual([textureUrls({}), textureUrls({ texture_urls: 'x' }), modelUrl(null, 'glb')], [{}, {}, null]);
 });
 
 // ---------- its files ----------
@@ -707,6 +1002,218 @@ test('files: kept in the private bucket and read back with our secret key; a fil
   fake.storageDown = false;
   globalThis.fetch = async () => new Response('{"statusCode":"404","error":"Bucket not found","message":"Bucket not found"}', { status: 400 });
   await assert.rejects(F.putFile(cfg, name, Buffer.from('x'), 'model/gltf-binary'), /run supabase\/studio\.sql: it makes the bucket/);
+});
+
+// (2026-10-13, the 3D tool) a stored ZIP read back the way an unzip tool reads it: its end record, its central directory,
+// each file's local header (stored, 1980-01-01 00:00) and its bytes
+function readZip(buf) {
+  const end = buf.length - 22;
+  assert.equal(buf.readUInt32LE(end), 0x06054b50, 'its end record, last');
+  const count = buf.readUInt16LE(end + 10), size = buf.readUInt32LE(end + 12), at = buf.readUInt32LE(end + 16);
+  assert.deepEqual([buf.readUInt16LE(end + 4), buf.readUInt16LE(end + 6), buf.readUInt16LE(end + 8), buf.readUInt16LE(end + 20)], [0, 0, count, 0]);
+  assert.equal(at + size, end, 'its central directory right before its end record');
+  const files = [];
+  let p = at;
+  for (let i = 0; i < count; i++) {
+    assert.equal(buf.readUInt32LE(p), 0x02014b50, 'a central entry');
+    const [made, needs, flags, method, time, date] = [4, 6, 8, 10, 12, 14].map((k) => buf.readUInt16LE(p + k));
+    const crc = buf.readUInt32LE(p + 16), csize = buf.readUInt32LE(p + 20), usize = buf.readUInt32LE(p + 24);
+    const nlen = buf.readUInt16LE(p + 28), xlen = buf.readUInt16LE(p + 30), clen = buf.readUInt16LE(p + 32);
+    const local = buf.readUInt32LE(p + 42);
+    const name = buf.toString('latin1', p + 46, p + 46 + nlen);
+    assert.deepEqual([made, needs, flags, method, time, date, xlen, clen], [20, 20, 0, 0, 0, 0x21, 0, 0], `${name}: stored, 1980-01-01 00:00`);
+    assert.equal(csize, usize, `${name}: stored as it is`);
+    p += 46 + nlen + xlen + clen;
+    assert.equal(buf.readUInt32LE(local), 0x04034b50, `${name}'s local header`);
+    assert.deepEqual([4, 6, 8, 10, 12].map((k) => buf.readUInt16LE(local + k)), [20, 0, 0, 0, 0x21]);
+    assert.deepEqual([buf.readUInt32LE(local + 14), buf.readUInt32LE(local + 18), buf.readUInt32LE(local + 22)], [crc, csize, usize]);
+    const lnlen = buf.readUInt16LE(local + 26), lxlen = buf.readUInt16LE(local + 28);
+    assert.equal(buf.toString('latin1', local + 30, local + 30 + lnlen), name);
+    const data = buf.subarray(local + 30 + lnlen + lxlen, local + 30 + lnlen + lxlen + csize);
+    assert.equal(F.crc32(data), crc, `${name}'s CRC`);
+    files.push({ name, data });
+  }
+  assert.equal(p, end, 'nothing between its entries and its end');
+  return files;
+}
+// sharp, counting its pictures' looks (smallGlb's own: once a texture, each way it tries; gltf-transform's never call it)
+function countingSharp() {
+  const n = { stats: 0 };
+  const encoder = (input, opts) => {
+    const s = sharp(input, opts);
+    const stats = s.stats.bind(s);
+    s.stats = () => { n.stats += 1; return stats(); };
+    return s;
+  };
+  return { n, encoder };
+}
+// a model with a big shape (many points: what High detail and more moves make) and a small texture
+async function bigShapeGlb(points = 120_000) {
+  const doc = await readGlb(await characterGlb({ clips: ['Idle', 'Big_Wave_Hello'], texturePx: 64 }));
+  const root = doc.getRoot();
+  const buffer = root.listBuffers()[0];
+  const acc = (type, array) => doc.createAccessor().setType(type).setArray(array).setBuffer(buffer);
+  let x = 99991;
+  const rnd = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 10000) / 10000; };
+  const pos = new Float32Array(points * 3).map(() => rnd() * 2 - 1);
+  const nrm = new Float32Array(points * 3);
+  for (let i = 0; i < points; i++) {
+    const v = [rnd() - 0.5, rnd() - 0.5, rnd() - 0.5];
+    const l = Math.hypot(...v) || 1;
+    nrm.set(v.map((c) => c / l), i * 3);
+  }
+  const uv = new Float32Array(points * 2).map(() => rnd());
+  const prim = doc.createPrimitive().setAttribute('POSITION', acc('VEC3', pos)).setAttribute('NORMAL', acc('VEC3', nrm))
+    .setAttribute('TEXCOORD_0', acc('VEC2', uv)).setIndices(acc('SCALAR', new Uint32Array(points).map((_, i) => i)))
+    .setMaterial(root.listMaterials()[0]);
+  root.listScenes()[0].addChild(doc.createNode('Shape').setMesh(doc.createMesh('shape').addPrimitive(prim)));
+  return Buffer.from(await new NodeIO().writeBinary(doc));
+}
+
+test("files: a move described in words merged into the model (onto its bones by name: their turns, moves and scale; its biggest clip), or a clear no", async () => {
+  const doc = await readGlb(await characterGlb({ clips: ['Idle', 'Big_Wave_Hello'], texturePx: 0 }));
+  const motion = await readGlb(await motionGlb());
+  const root = doc.getRoot();
+  const before = root.listAccessors().length;
+  assert.equal(F.mergeClip(doc, motion, 'own_zoomies'), 2, "its Spine's turn and its Hips' move: a tail the model hasn't got, and a morph's weights, left out");
+  assert.deepEqual(root.listAnimations().map((a) => a.getName()), ['Idle', 'Big_Wave_Hello', 'own_zoomies']);
+  const clip = root.listAnimations().at(-1);
+  assert.deepEqual(clip.listChannels().map((c) => [c.getTargetNode().getName(), c.getTargetPath()]), [['Spine', 'rotation'], ['Hips', 'translation']]);
+  assert.equal(clip.listChannels()[0].getTargetNode(), root.listNodes().find((n) => n.getName() === 'Spine'), "the model's own bone");
+  assert.equal(clip.listSamplers().length, 2, 'a sampler each (the one its move shared with the tail copied once)');
+  assert.equal(root.listAccessors().length, before + 4, "its two samplers' times and values, copied");
+  // its keys copied as they are (from its biggest clip: never the one-key rest clip beside it)
+  const src = motion.getRoot().listAnimations().find((a) => a.getName() === 'Armature|Motion').listChannels()[0].getSampler();
+  const got = clip.listChannels()[0].getSampler();
+  assert.deepEqual([...got.getInput().getArray()], [...src.getInput().getArray()]);
+  assert.deepEqual([...got.getOutput().getArray()], [...src.getOutput().getArray()]);
+  assert.equal(got.getInterpolation(), 'LINEAR');
+  assert.equal(got.getInput().getArray().length, 31);
+  // written and read back: the same clips
+  assert.deepEqual(await clipsIn(Buffer.from(await new NodeIO().writeBinary(doc))), ['Idle', 'Big_Wave_Hello', 'own_zoomies']);
+  // a file with no move in it, and one whose bones aren't the model's: a clear no, and nothing left behind
+  const still = new Document();
+  still.createScene().addChild(still.createNode('Hips'));
+  assert.throws(() => F.mergeClip(doc, still, 'own_still'), /its own move "own_still" has no move in its file/);
+  const others = await readGlb(await motionGlb({ bones: ['Root', 'Chest'], extra: null }));
+  const n = root.listAccessors().length;
+  assert.throws(() => F.mergeClip(doc, others, 'own_strange'), /its own move "own_strange" doesn't fit its bones/);
+  assert.deepEqual(root.listAnimations().map((a) => a.getName()), ['Idle', 'Big_Wave_Hello', 'own_zoomies'], 'no empty clip left');
+  assert.equal(root.listAccessors().length, n, 'nothing of it left');
+});
+
+test("files: a model with its moves described in words (own_<name> after its library's); still too big: 512 px, then its shape quantized (straight there when 512 px can't be enough)", async () => {
+  const motion = await motionGlb();
+  const source = await characterGlb({ clips: ['Idle', 'Big_Wave_Hello'], texturePx: 64 });
+  const own = await F.smallGlb(source, { extras: [{ name: 'own_zoomies', bytes: motion }, { name: 'own_curtsy', bytes: motion }] });
+  assert.deepEqual(own.clips, ['Idle', 'Big_Wave_Hello', 'own_zoomies', 'own_curtsy']);
+  assert.deepEqual([own.size, own.quantized, own.skins], [1024, false, 1]);
+  const back = await readGlb(own.bytes);
+  assert.deepEqual(back.getRoot().listAnimations().map((a) => a.getName()), own.clips);
+  for (const a of back.getRoot().listAnimations().slice(2)) {
+    assert.deepEqual(a.listChannels().map((c) => [c.getTargetNode().getName(), c.getTargetPath()]), [['Spine', 'rotation'], ['Hips', 'translation']], a.getName());
+  }
+  await assert.rejects(F.smallGlb(source, { extras: [{ name: 'own_x', bytes: Buffer.from('not a glb, not at all') }] }), /its own move "own_x" isn't a GLB/);
+  await assert.rejects(F.smallGlb(source, { extras: [{ name: 'own_y', bytes: await motionGlb({ bones: ['Root', 'Chest'], extra: null }) }] }),
+    /its own move "own_y" doesn't fit its bones/);
+  // a big texture: its 1024 px way too big, its 512 px way enough (half-size textures can bring it under)
+  const textured = await characterGlb({ clips: ['Idle'], texturePx: 1024 });
+  const a = countingSharp();
+  const half = await F.smallGlb(textured, { sharp: a.encoder, max: 1_000_000 });
+  assert.deepEqual([half.size, half.quantized], [512, false]);
+  assert.ok(half.bytes.length <= 1_000_000);
+  assert.equal(a.n.stats, 2, 'its 1024 px way, then its 512 px way');
+  // a big shape and a small texture: half-size textures can't bring it under, so straight to the quantized way (its 512 px
+  // way never made)
+  const shape = await bigShapeGlb();
+  const b = countingSharp();
+  const plain = await F.smallGlb(shape, { sharp: b.encoder, max: 1e9 });
+  assert.ok(plain.bytes.length > 3_500_000, `${plain.bytes.length} bytes as it is`);
+  const c = countingSharp();
+  const q = await F.smallGlb(shape, { sharp: c.encoder, max: 3_500_000 });
+  assert.deepEqual([q.size, q.quantized, q.triangles, q.clips], [512, true, 40_004, ['Idle', 'Big_Wave_Hello']]);
+  assert.ok(q.bytes.length <= 3_500_000 && q.bytes.length < plain.bytes.length * 0.8, `${q.bytes.length} bytes quantized`);
+  assert.equal(c.n.stats, 2, 'its 1024 px way, then straight to the quantized one');
+  const qdoc = await readGlb(q.bytes);
+  assert.deepEqual(qdoc.getRoot().listExtensionsUsed().map((e) => e.extensionName), ['KHR_mesh_quantization']);
+  assert.equal(qdoc.getRoot().listSkins().length, 1, 'its bones kept');
+  const tooBig = await F.smallGlb(shape, { max: 1_000_000 }).catch((e) => e);
+  assert.equal(tooBig.tooBig, true);
+  assert.match(tooBig.message, /still \d+\.\d MB made small \(at most 1\.0\)/);
+});
+
+test("files: the full-quality GLB: every move (its own ones merged in), its textures as made, else 2048 px JPEG, then 1024; never over the bucket's 40 MB", async () => {
+  assert.equal(F.DL_MAX, 40_000_000);
+  const source = await characterGlb({ clips: ['Idle', 'Big_Wave_Hello'], texturePx: 1536 });
+  const extras = [{ name: 'own_zoomies', bytes: await motionGlb() }];
+  const texOf = async (bytes) => (await readGlb(bytes)).getRoot().listTextures()[0];
+  const made = await F.fullGlb(source, { extras });
+  assert.deepEqual(made.clips, ['Idle', 'Big_Wave_Hello', 'own_zoomies']);
+  const t0 = await texOf(made.bytes);
+  assert.equal(t0.getMimeType(), 'image/png');
+  assert.ok(Buffer.from(t0.getImage()).equals(pngCache[1536]), 'its texture as made, byte for byte');
+  assert.deepEqual(await clipsIn(made.bytes), made.clips);
+  // too big as made: a 2048 px JPEG at most (a 1536 px one never enlarged), then 1024 px
+  const at2048 = await F.fullGlb(source, { extras, max: made.bytes.length - 1 });
+  const t1 = await texOf(at2048.bytes);
+  const m1 = await sharp(Buffer.from(t1.getImage())).metadata();
+  assert.deepEqual([t1.getMimeType(), m1.format, m1.width, m1.height], ['image/jpeg', 'jpeg', 1536, 1536]);
+  assert.deepEqual(at2048.clips, made.clips);
+  const at1024 = await F.fullGlb(source, { extras, max: at2048.bytes.length - 1 });
+  const m2 = await sharp(Buffer.from((await texOf(at1024.bytes)).getImage())).metadata();
+  assert.deepEqual([m2.format, m2.width, m2.height], ['jpeg', 1024, 1024]);
+  assert.deepEqual(at1024.clips, made.clips);
+  const tooBig = await F.fullGlb(source, { max: 10_000 }).catch((e) => e);
+  assert.equal(tooBig.tooBig, true);
+  assert.match(tooBig.message, /the full model is \d+\.\d MB \(at most 0\.0\)/);
+  await assert.rejects(F.fullGlb(Buffer.from('x'.repeat(100))), /isn't a GLB/);
+  await assert.rejects(F.fullGlb(await characterGlb({ clips: [], texturePx: 0 })), /no moves/);
+  await assert.rejects(F.fullGlb(source, { extras: [{ name: 'own_z', bytes: Buffer.from('nope, not a model') }] }), /its own move "own_z" isn't a GLB/);
+});
+
+test('files: a CRC-32 as zlib makes it; a stored ZIP read back (each file, its CRC, 1980-01-01, the same bytes every time); bad names refused', async () => {
+  assert.equal(F.crc32(Buffer.alloc(0)), 0);
+  assert.equal(F.crc32(Buffer.from('123456789')), 0xcbf43926, "the check value every CRC-32 is tested with");
+  const raw = await noisePng(64);
+  for (const b of [raw, Buffer.from('hello'), Buffer.alloc(1000, 0xff)]) assert.equal(F.crc32(b), zlibCrc32(b));
+  const entries = [{ name: 'model.obj', bytes: OBJ }, { name: 'texture_base_color.png', bytes: raw }, { name: 'empty.txt', bytes: Buffer.alloc(0) },
+    { name: 'a-B_9.x', bytes: Buffer.from('dashes, dots and underscores') }];
+  const zip = F.zipStore(entries);
+  const files = readZip(zip);
+  assert.deepEqual(files.map((f) => f.name), entries.map((e) => e.name));
+  for (const [i, f] of files.entries()) assert.ok(f.data.equals(Buffer.from(entries[i].bytes)), f.name);
+  assert.ok(F.zipStore(entries).equals(zip), 'the same bytes every time (no time of day in it)');
+  assert.equal(zip.length, entries.reduce((n, e) => n + 30 + 46 + 2 * e.name.length + Buffer.from(e.bytes).length, 0) + 22, 'stored: nothing added');
+  assert.equal(readZip(F.zipStore([])).length, 0, 'an empty ZIP is a ZIP');
+  for (const bad of ['', '../x.obj', 'a/b.obj', 'x'.repeat(65), 'naïve.txt', 'a b.txt', 'c:\\x.obj']) {
+    assert.throws(() => F.zipStore([{ name: bad, bytes: Buffer.from('x') }]), /zip: a bad file name/, JSON.stringify(bad));
+  }
+});
+
+test("files: its OBJ zipped (model.obj naming model.mtl; the material's maps named as they are in the zip, their options kept, the ones it hasn't got left out; textures by their own bytes)", async () => {
+  const png = await sharp({ create: { width: 8, height: 8, channels: 3, background: '#c08' } }).png().toBuffer();
+  const jpg = await sharp({ create: { width: 8, height: 8, channels: 3, background: '#08c' } }).jpeg().toBuffer();
+  const zip = F.objZip({ obj: OBJ, mtl: MTL, textures: { base_color: png, normal: jpg, metallic: Buffer.from('not a picture at all'), emissive: png } });
+  const files = readZip(zip);
+  assert.deepEqual(files.map((f) => f.name), ['model.obj', 'model.mtl', 'texture_base_color.png', 'texture_normal.jpg']);
+  const text = (n) => files.find((f) => f.name === n).data.toString('utf8');
+  assert.deepEqual(text('model.obj').split('\n'), ['# made by the 3D service', 'mtllib model.mtl', 'v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'vt 0 0', 'vt 1 0', 'vt 0 1',
+    'f 1/1 2/2 3/3', '']);
+  assert.deepEqual(text('model.mtl').split('\n'), ['newmtl Material', 'Kd 1 1 1', 'map_Kd texture_base_color.png', 'map_Bump -bm 1 texture_normal.jpg', ''],
+    'its specular map and its metal map (not a picture) left out');
+  assert.ok(files[2].data.equals(png) && files[3].data.equals(jpg), 'its textures as they are');
+  // an OBJ that names no material file gets model.mtl named first; without a material, no material line at all; line ends
+  // as Windows writes them are read the same
+  const plain = readZip(F.objZip({ obj: Buffer.from('v 0 0 0\r\nf 1 1 1\r\n'), mtl: Buffer.from('newmtl M\r\nmap_Kd t.png\r\n'), textures: { base_color: png } }));
+  assert.deepEqual(plain.find((f) => f.name === 'model.obj').data.toString().split('\n'), ['mtllib model.mtl', 'v 0 0 0', 'f 1 1 1', '']);
+  assert.deepEqual(plain.find((f) => f.name === 'model.mtl').data.toString().split('\n'), ['newmtl M', 'map_Kd texture_base_color.png', '']);
+  const noMtl = readZip(F.objZip({ obj: Buffer.from('mtllib some.mtl\nv 0 0 0\nmtllib other.mtl\n') }));
+  assert.deepEqual(noMtl.map((f) => f.name), ['model.obj']);
+  assert.deepEqual(noMtl[0].data.toString().split('\n'), ['v 0 0 0', ''], 'no material file to name');
+  const twice = readZip(F.objZip({ obj: Buffer.from('mtllib a.mtl\nmtllib b.mtl\nv 0 0 0\n'), mtl: Buffer.from('newmtl M\n') }));
+  assert.deepEqual(twice[0].data.toString().split('\n'), ['mtllib model.mtl', 'v 0 0 0', ''], 'model.mtl named once');
+  assert.throws(() => F.objZip({ obj: Buffer.alloc(0), mtl: MTL }), /no OBJ/);
+  assert.throws(() => F.objZip({}), /no OBJ/);
 });
 
 // ---------- payments, read on Robinhood Chain ----------
@@ -1022,6 +1529,81 @@ async function readyFiles() {
   fake.files.png = await sharp({ create: { width: 1024, height: 1024, channels: 4, background: { r: 230, g: 200, b: 255, alpha: 1 } } }).png().toBuffer();
 }
 
+// (2026-10-13, the 3D tool) a move described in words, as Meshy makes it: its rig (the same bones' names) with one clip, and
+// a smaller one (the biggest is the one taken), a bone the model hasn't got (left out) and a morph-weights channel (never a
+// bone's: left out)
+async function motionGlb({ bones = ['Hips', 'Spine'], extra = 'Tail' } = {}) {
+  const doc = new Document();
+  const buffer = doc.createBuffer();
+  const acc = (type, array) => doc.createAccessor().setType(type).setArray(array).setBuffer(buffer);
+  const nodes = [...bones, extra].filter(Boolean).map((n) => doc.createNode(n));
+  for (let i = 1; i < nodes.length; i++) nodes[0].addChild(nodes[i]);
+  doc.createScene().addChild(nodes[0]);
+  const times = acc('SCALAR', new Float32Array(31).map((_, k) => k / 30));
+  const rot = new Float32Array(31 * 4);
+  for (let k = 0; k < 31; k++) { const a = Math.sin(k / 5) * 0.4; rot.set([Math.sin(a / 2), 0, 0, Math.cos(a / 2)], k * 4); }
+  const pos = new Float32Array(31 * 3).map((_, i) => (i % 3 === 1 ? 0.9 + Math.sin(i / 9) * 0.05 : 0));
+  const big = doc.createAnimation('Armature|Motion');
+  const sRot = doc.createAnimationSampler().setInput(times).setOutput(acc('VEC4', rot)).setInterpolation('LINEAR');
+  const sPos = doc.createAnimationSampler().setInput(times).setOutput(acc('VEC3', pos)).setInterpolation('LINEAR');
+  big.addSampler(sRot).addSampler(sPos);
+  big.addChannel(doc.createAnimationChannel().setTargetNode(nodes[1]).setTargetPath('rotation').setSampler(sRot));
+  big.addChannel(doc.createAnimationChannel().setTargetNode(nodes[0]).setTargetPath('translation').setSampler(sPos));
+  if (extra) big.addChannel(doc.createAnimationChannel().setTargetNode(nodes.at(-1)).setTargetPath('rotation').setSampler(sRot));
+  big.addChannel(doc.createAnimationChannel().setTargetNode(nodes[1]).setTargetPath('weights').setSampler(sPos));
+  const small = doc.createAnimation('Armature|Rest');
+  const sOne = doc.createAnimationSampler().setInput(acc('SCALAR', new Float32Array([0]))).setOutput(acc('VEC4', new Float32Array([0, 0, 0, 1])));
+  small.addSampler(sOne).addChannel(doc.createAnimationChannel().setTargetNode(nodes[1]).setTargetPath('rotation').setSampler(sOne));
+  return Buffer.from(await new NodeIO().writeBinary(doc));
+}
+// a 3D model of an influencer (AGI Studio), paid in credits and ready to be made, with its choices (influencers.sql inf_3d
+// keeps its order so: its influencer, its full-body picture's place, its spec and the formats it asked for, in their order)
+const INF = 'InfluencerAbcdefghij01';
+const BODY = `inf/${INF}/BodyJobAbcdefghijk0123-0.jpg`;
+const MODEL_SPEC = { moves: ['shrug', 'wave', 'backflip'], own: [{ name: 'zoomies', prompt: 'runs in a little circle, arms out', seconds: 3 },
+  { name: 'curtsy', prompt: 'a polite curtsy, then a smile' }], detail: 'high', shine: true, pose: 't', height: 182, look: 'a red leather jacket',
+formats: ['usdz', 'full', 'obj'] };
+function infOrder({ spec = MODEL_SPEC, kind = 'credits', wallet = WALLET, inf = INF } = {}) {
+  const id = newOrderId();
+  const s = spec === null ? null : R.modelSpec(spec);
+  fake.db.orders.set(id, {
+    id, wallet_code: studioWallet(SECRET, wallet), burn_code: 'b'.repeat(32), name: 'Nova', about: "Made from Nova's full-body picture in AGI Studio.",
+    style: 'realistic', level: 1, usd_cents: 0, agi: 0, free: false, kind, paid: 500, status: 'paid', paid_at: Date.now(), started_at: null, step: null,
+    task: null, tasks: {}, tries: 0, error: null, credit: false, glb_bytes: null, pic_bytes: null, moves: null, hidden: false, lease: 0,
+    created: Date.now(), updated: Date.now(), done_at: null, inf_id: inf, image_path: `inf/${inf}/BodyJobAbcdefghijk0123-0.jpg`, spec: s,
+    formats: s ? s.formats : [],
+  });
+  return id;
+}
+// a 3D model's Meshy files: its library moves (Idle and its picks, as the library names its clips), a described move's own
+// file, the image task's other formats and its textures (an OBJ naming its material, its material naming its maps)
+const OBJ = Buffer.from('# made by the 3D service\nmtllib 0193bfc5.mtl\nv 0 0 0\nv 1 0 0\nv 0 1 0\nvt 0 0\nvt 1 0\nvt 0 1\nf 1/1 2/2 3/3\n');
+const MTL = Buffer.from('newmtl Material\nKd 1 1 1\nmap_Kd texture_0.png\nmap_Bump -bm 1 texture_0_normal.png\nmap_Ks texture_0_specular.png\nmap_Pm texture_0_metallic.png\n');
+async function readyModelFiles() {
+  await readyFiles();
+  fake.files.glb = await characterGlb({ clips: ['Idle', 'Big_Wave_Hello', 'Shrug', 'Backflip'], texturePx: 512 });
+  fake.files.motion = await motionGlb();
+  fake.files.byExt = { fbx: Buffer.from('Kaydara FBX Binary  \0 its library moves'), usdz: Buffer.from('PK usdz: its shape, standing still'),
+    stl: Buffer.from('solid its shape for printing'), obj: OBJ, mtl: MTL };
+  fake.storage.set(BODY, { bytes: fake.files.png, type: 'image/jpeg' });
+}
+// a 3D model already made: its order done, Meshy's tasks done (image, rig, moves, each described move put on its bones),
+// the downloads it asked for waiting (30 days)
+function doneModel({ spec = MODEL_SPEC, todo = null } = {}) {
+  const id = infOrder({ spec });
+  const s = R.modelSpec(spec);
+  const tasks = {};
+  for (const step of ['image', 'rig', 'moves', ...s.own.map((_, i) => `motion${i + 1}`), ...s.own.map((_, i) => `apply${i + 1}`)]) {
+    const tid = `0193bfc5-ee4f-73f8-8525-${String(++fake.meshy.n).padStart(12, '0')}`;
+    fake.meshy.tasks.set(tid, { id: tid, step: step.replace(/\d$/, ''), body: {}, status: 'SUCCEEDED', progress: 100, error: '', at: Date.now() });
+    tasks[step] = tid;
+  }
+  const formats = todo ?? s.formats;
+  Object.assign(fake.db.orders.get(id), { status: 'done', tasks, glb_bytes: 1000, pic_bytes: 100, moves: R.modelMoveNames(s), done_at: Date.now(),
+    formats_todo: [...formats], formats_done: [], formats_failed: [], format_bytes: {}, format_tries: 0, dl_lease: 0, dl_until: Date.now() + 30 * DAY });
+  return id;
+}
+
 test('the making: Meshy\'s steps one at a time (words → painted → bones → moves), then its files kept: done', async () => {
   await readyFiles();
   const cfg = cfgNow();
@@ -1201,11 +1783,18 @@ test('the clock (every minute): the characters whose turn it is, until its time 
   const ids = [];
   for (const w of [WALLET, OTHER, '0x3333333333333333333333333333333333333333']) ids.push(await paidOrder({ wallet: w }));
   const at30 = new Date('2026-10-10T12:30:00Z').getTime();
+  const order = (from) => fake.db.calls.slice(from).filter((c) => c === 'studio_due' || c === 'studio_dl_due');
+  let from = fake.db.calls.length;
   let out = await studioClock(cfg, { now: at30, deadline: Date.now() + 19_000 });
-  assert.deepEqual(out, { due: 3, moved: 3, done: 0, failed: 0, tidy: { quotes: 0, failed: 0 } });
+  // (2026-10-13) and a 3D model's extra downloads (none waiting): after the characters on an even minute, with their tidy-up
+  // at :30 (nothing past its days)
+  assert.deepEqual(out, { due: 3, moved: 3, done: 0, failed: 0, dl: { tidy: 0 }, tidy: { quotes: 0, failed: 0 } });
+  assert.deepEqual(order(from), ['studio_due', 'studio_dl_due'], 'on an even minute the characters go first');
   for (const id of ids) assert.equal(fake.db.orders.get(id).step, 'preview');
+  from = fake.db.calls.length;
   out = await studioClock(cfg, { now: at30 + 60_000, deadline: Date.now() + 19_000 });
-  assert.deepEqual(out, { due: 3, moved: 0, done: 0, failed: 0 }, 'still at Meshy: looked at, no tidy-up at :31');
+  assert.deepEqual(out, { due: 3, moved: 0, done: 0, failed: 0, dl: {} }, 'still at Meshy: looked at, no tidy-up at :31 (its downloads first: none)');
+  assert.deepEqual(order(from), ['studio_dl_due', 'studio_due'], 'on an odd minute the downloads go first');
   for (const id of ids) again(id);
   out = await studioClock(cfg, { deadline: Date.now() + 4000 });
   assert.equal(out.moved + out.done + out.failed, 0, 'no time left: nothing started');
@@ -1219,6 +1808,306 @@ test('the clock (every minute): the characters whose turn it is, until its time 
   _resetStudioKey();
   fake.missing.add('studio_key');
   assert.equal((await studioKey(cfg).catch((e) => e)).code, 'PGRST202');
+});
+
+// ---------- (2026-10-13) a 3D model with its choices: the making, and its extra downloads ----------
+// the order's current task at Meshy, finished (SUCCEEDED, or how it failed), and its turn free again
+function finishOrder(id, status = 'SUCCEEDED', error = '') {
+  const t = fake.meshy.tasks.get(fake.db.orders.get(id).task);
+  Object.assign(t, { status, progress: status === 'SUCCEEDED' ? 100 : 0, error });
+  again(id);
+  return t.id;
+}
+const meshyPosts = () => calls.filter((c) => c.to === 'meshy' && c.method === 'POST');
+
+test("the making: a 3D model's choices: its moves in words first, its shape from its full body (signed), bones at its height, its library moves, each own move on its bones; all of them in its file", async () => {
+  await readyModelFiles();
+  const cfg = cfgNow();
+  const spec = R.modelSpec(MODEL_SPEC);
+  const id = infOrder();
+  assert.deepEqual(planOf(fake.db.orders.get(id)), ['motion1', 'motion2', 'image', 'rig', 'moves', 'apply1', 'apply2', 'save']);
+  let r = await tick(cfg, id);
+  assert.deepEqual(r, { state: 'started', step: 'motion1' });
+  assert.deepEqual([meshyPosts()[0].path, meshyPosts()[0].body], ['/openapi/v1/text-to-motion',
+    { prompt: 'A person does this move: Runs in a little circle, arms out.', mode: 'prime', duration: 3 }]);
+  // its page while it's made: where it is in its own plan (its progress bar)
+  const view = pageView(cfg, await getOrder(cfg, id));
+  assert.deepEqual([view.status, view.step, view.inf, view.plan], ['making', 'motion1', INF, R.modelTimes(spec)]);
+  const motion1 = finishOrder(id);
+  assert.deepEqual(await tick(cfg, id), { state: 'started', step: 'motion2' });
+  assert.deepEqual(meshyPosts()[1].body, { prompt: 'A person does this move: A polite curtsy, then a smile.', mode: 'prime', duration: 5 });
+  const motion2 = finishOrder(id);
+  assert.deepEqual(await tick(cfg, id), { state: 'started', step: 'image' });
+  const sign = calls.filter((c) => c.to === 'storage' && c.url.includes('/object/sign/'));
+  assert.deepEqual(sign.map((c) => c.url), [`${SB}/storage/v1/object/sign/agi1-characters/${BODY}`], 'its full-body picture, signed once');
+  const img = meshyPosts()[2];
+  assert.equal(img.path, '/openapi/v1/image-to-3d');
+  assert.equal(img.body.image_url, `${SB}/storage/v1/object/sign/agi1-characters/${BODY}?token=signed-token`);
+  assert.deepEqual([img.body.target_polycount, img.body.geometry_resolution, img.body.enable_pbr, img.body.pose_mode, img.body.texture_prompt, img.body.moderation],
+    [40000, '2k', true, 't-pose', meshyLook('a red leather jacket'), true]);
+  const image = finishOrder(id);
+  assert.deepEqual(await tick(cfg, id), { state: 'started', step: 'rig' });
+  assert.deepEqual(meshyPosts()[3].body, { input_task_id: image, height_meters: 1.82 });
+  const rig = finishOrder(id);
+  assert.deepEqual(await tick(cfg, id), { state: 'started', step: 'moves' });
+  assert.deepEqual(meshyPosts()[4].body, { rig_task_id: rig, action_ids: [0, 28, 317, 452] }, 'idle, then its picks in the library\'s order');
+  finishOrder(id);
+  assert.deepEqual(await tick(cfg, id), { state: 'started', step: 'apply1' });
+  assert.deepEqual([meshyPosts()[5].path, meshyPosts()[5].body], ['/openapi/v1/animations', { rig_task_id: rig, motion_task_id: motion1 }]);
+  finishOrder(id);
+  assert.deepEqual(await tick(cfg, id), { state: 'started', step: 'apply2' });
+  assert.deepEqual(meshyPosts()[6].body, { rig_task_id: rig, motion_task_id: motion2 });
+  finishOrder(id);
+  r = await tick(cfg, id);
+  assert.deepEqual(r, { state: 'done' });
+  assert.equal(meshyPosts().length, 7, 'seven tasks at Meshy, each once');
+  const o = fake.db.orders.get(id);
+  assert.deepEqual(o.moves, ['idle', 'wave', 'shrug', 'backflip', 'zoomies', 'curtsy']);
+  assert.deepEqual(o.formats_todo, ['full', 'usdz', 'obj']);
+  assert.ok(Math.abs(o.dl_until - (Date.now() + 30 * DAY)) < 60_000, 'its extra downloads waited for 30 days');
+  assert.deepEqual(await clipsIn(fake.storage.get(`${id}.glb`).bytes), ['Idle', 'Big_Wave_Hello', 'Shrug', 'Backflip', 'own_zoomies', 'own_curtsy']);
+  assert.ok(fake.storage.has(`${id}.webp`) && fake.storage.has(`${id}.png`));
+  assert.deepEqual(calls.filter((c) => c.fn === 'studio_done').at(-1).args.p_todo, ['full', 'usdz', 'obj']);
+  assert.match(log(), /is done: [\d.]+ MB, \d+ triangles, 6 moves, full, usdz, obj to make/);
+  assert.deepEqual(pageView(cfg, await getOrder(cfg, id)).moves, o.moves);
+  assert.deepEqual(fake.db.backs ?? [], [], 'nothing given back');
+  // a model without choices (from before the 3D tool): its plan as before, nothing more to make, no p_todo at all (an
+  // older studio.sql never needs it)
+  fake.files.glb = await characterGlb({ texturePx: 512 });
+  const plain = infOrder({ spec: null });
+  assert.deepEqual(planOf(fake.db.orders.get(plain)), ['image', 'rig', 'moves', 'save']);
+  for (const step of ['image', 'rig', 'moves']) {
+    assert.deepEqual(await tick(cfg, plain), { state: 'started', step });
+    finishOrder(plain);
+  }
+  const posts = meshyPosts().slice(7);
+  assert.deepEqual([posts[0].body.target_polycount, posts[0].body.enable_pbr, posts[0].body.pose_mode], [20000, false, 'a-pose']);
+  assert.ok(!('geometry_resolution' in posts[0].body) && !('texture_prompt' in posts[0].body));
+  assert.equal(posts[1].body.height_meters, 1.7);
+  assert.deepEqual(posts[2].body.action_ids, R.modelMoves(null).map((m) => m.action));
+  assert.deepEqual(await tick(cfg, plain), { state: 'done' });
+  assert.deepEqual(fake.db.orders.get(plain).moves, R.modelMoveNames(null));
+  assert.equal('p_todo' in calls.filter((c) => c.fn === 'studio_done').at(-1).args, false);
+  assert.deepEqual(fake.db.orders.get(plain).formats_todo, []);
+  assert.equal(fake.db.orders.get(plain).dl_until, null);
+  // a character from words keeps its own four steps (never a model's)
+  const words = await paidOrder();
+  assert.deepEqual(planOf(fake.db.orders.get(words)), ['preview', 'refine', 'rig', 'moves', 'save']);
+  assert.deepEqual(specOf(fake.db.orders.get(words)), R.MODEL_DEFAULT);
+  assert.equal(saveNeeds(fake.db.orders.get(words)), 15_000);
+  assert.equal(saveNeeds(fake.db.orders.get(id)), 16_000, 'its own moves read and merged too');
+});
+
+test("the making: a move described in words the AI refuses stops it before anything is made: its credits back (once), never for one a burn paid", async () => {
+  await readyModelFiles();
+  const cfg = cfgNow();
+  // its words stopped as it starts (a 403)
+  const id = infOrder();
+  fake.meshy.fail.push({ status: 403, text: '{"message":"The prompt was flagged by our content moderation"}' });
+  assert.deepEqual(await tick(cfg, id), { state: 'failed', step: 'motion1' });
+  let o = fake.db.orders.get(id);
+  assert.deepEqual([o.status, o.error, o.credit], ['failed', 'refused', false]);
+  assert.deepEqual(fake.db.backs, [id], 'its credits back');
+  assert.equal(meshyPosts().length, 1, 'nothing else asked of Meshy');
+  assert.equal(calls.some((c) => c.to === 'storage'), false, 'its picture never even signed');
+  // its move stopped while it's made (its moderation's words)
+  const late = infOrder();
+  assert.deepEqual(await tick(cfg, late), { state: 'started', step: 'motion1' });
+  finishOrder(late, 'FAILED', 'Your prompt was flagged as inappropriate');
+  assert.deepEqual(await tick(cfg, late), { state: 'failed', step: 'motion1' });
+  o = fake.db.orders.get(late);
+  assert.deepEqual([o.status, o.error, o.credit], ['failed', 'refused', false]);
+  assert.deepEqual(fake.db.backs, [id, late]);
+  // one a big burn paid for (a burn can't be given back): made again, free (its credit), no credits back
+  const burnt = infOrder({ kind: 'burn' });
+  fake.meshy.fail.push({ status: 403, text: '{"message":"flagged"}' });
+  assert.deepEqual(await tick(cfg, burnt), { state: 'failed', step: 'motion1' });
+  o = fake.db.orders.get(burnt);
+  assert.deepEqual([o.status, o.error, o.credit], ['failed', 'refused', true]);
+  assert.deepEqual(fake.db.backs, [id, late], 'never for a burn');
+  // a move that keeps failing on its bones: tried again twice (the same motion each time), then given up, its credits back
+  const stuck = infOrder();
+  const s = R.modelSpec(MODEL_SPEC);
+  const tasks = {};
+  for (const step of ['motion1', 'motion2', 'image', 'rig', 'moves']) {
+    const tid = `0193bfc5-ee4f-73f8-8525-${String(++fake.meshy.n).padStart(12, '0')}`;
+    fake.meshy.tasks.set(tid, { id: tid, step: step.replace(/\d$/, ''), body: {}, status: 'SUCCEEDED', progress: 100, error: '', at: Date.now() });
+    tasks[step] = tid;
+  }
+  const first = `0193bfc5-ee4f-73f8-8525-${String(++fake.meshy.n).padStart(12, '0')}`;
+  fake.meshy.tasks.set(first, { id: first, step: 'apply', body: {}, status: 'FAILED', progress: 0, error: 'Animation retargeting failed', at: Date.now() });
+  Object.assign(fake.db.orders.get(stuck), { status: 'making', step: 'apply1', task: first, tasks, tries: 0, started_at: Date.now() });
+  const before = meshyPosts().length;
+  for (const tries of [1, 2]) {
+    assert.deepEqual(await tick(cfg, stuck), { state: 'started', step: 'apply1' });
+    assert.equal(fake.db.orders.get(stuck).tries, tries);
+    finishOrder(stuck, 'FAILED', 'Animation retargeting failed');
+  }
+  assert.deepEqual(await tick(cfg, stuck), { state: 'failed', step: 'apply1' });
+  assert.deepEqual(meshyPosts().slice(before).map((c) => c.body), [1, 2].map(() => ({ rig_task_id: tasks.rig, motion_task_id: tasks.motion1 })));
+  o = fake.db.orders.get(stuck);
+  assert.deepEqual([o.status, o.error, o.credit], ['failed', 'ai:apply1', false]);
+  assert.deepEqual(fake.db.backs, [id, late, stuck]);
+  assert.match(log(), /apply1 failed at Meshy 3 times \(Animation retargeting failed\): given up/);
+  assert.equal(s.own.length, 2);
+  // a step that isn't one of its own (its plan has one described move, its order says apply2): never a step past its plan
+  const one = infOrder({ spec: { ...MODEL_SPEC, own: [MODEL_SPEC.own[0]] } });
+  const odd = `0193bfc5-ee4f-73f8-8525-${String(++fake.meshy.n).padStart(12, '0')}`;
+  fake.meshy.tasks.set(odd, { id: odd, step: 'apply', body: {}, status: 'SUCCEEDED', progress: 100, error: '', at: Date.now() });
+  Object.assign(fake.db.orders.get(one), { status: 'making', step: 'apply2', task: odd, tasks: {}, tries: 0, started_at: Date.now() });
+  assert.deepEqual(await tick(cfg, one), { state: 'failed', step: 'apply2' });
+  assert.equal(fake.db.orders.get(one).error, 'ai:apply2');
+  assert.match(log(), /apply2 isn't one of its steps \(motion1, image, rig, moves, apply1, save\)/);
+});
+
+test('downloads: each format made once the model is done (the full GLB with its own moves, FBX, USDZ, STL, its OBJ zipped), kept 30 days at dl/<id>.<ext>', async () => {
+  await readyModelFiles();
+  const cfg = cfgNow();
+  const id = doneModel();
+  assert.deepEqual(DL, { TRIES: 4, LEASE_S: 90, NEEDS_MS: 12_000, TIDY: 20 });
+  assert.deepEqual(await dlTick(cfg, id), { state: 'done', format: 'full' });
+  const full = fake.storage.get(`dl/${id}.glb`);
+  assert.equal(full.type, 'model/gltf-binary');
+  assert.deepEqual(await clipsIn(full.bytes), ['Idle', 'Big_Wave_Hello', 'Shrug', 'Backflip', 'own_zoomies', 'own_curtsy']);
+  let o = fake.db.orders.get(id);
+  assert.deepEqual([o.formats_todo, o.formats_done, o.format_bytes], [['usdz', 'obj'], ['full'], { full: full.bytes.length }]);
+  assert.match(log(), new RegExp(`${id}'s full is ready: [\\d.]+ MB`));
+  assert.deepEqual(await dlTick(cfg, id), { state: 'done', format: 'usdz' });
+  assert.deepEqual([fake.storage.get(`dl/${id}.usdz`).type, fake.storage.get(`dl/${id}.usdz`).bytes], ['model/vnd.usdz+zip', fake.files.byExt.usdz]);
+  assert.deepEqual(await dlTick(cfg, id), { state: 'done', format: 'obj' });
+  const zip = fake.storage.get(`dl/${id}.zip`);
+  assert.equal(zip.type, 'application/zip');
+  const files = readZip(zip.bytes);
+  assert.deepEqual(files.map((f) => f.name), ['model.obj', 'model.mtl', 'texture_base_color.png', 'texture_normal.png']);
+  assert.match(files[0].data.toString(), /^# made by the 3D service\nmtllib model\.mtl\n/);
+  assert.deepEqual(files[1].data.toString().split('\n'), ['newmtl Material', 'Kd 1 1 1', 'map_Kd texture_base_color.png', 'map_Bump -bm 1 texture_normal.png', '']);
+  assert.ok(files[2].data.equals(fake.files.png));
+  o = fake.db.orders.get(id);
+  assert.deepEqual([o.formats_todo, o.formats_done, Object.keys(o.format_bytes)], [[], ['full', 'usdz', 'obj'], ['full', 'usdz', 'obj']]);
+  assert.deepEqual(await dlTick(cfg, id), { state: 'busy' }, 'nothing more to make');
+  // the moves' FBX and its shape's STL
+  const two = doneModel({ todo: ['fbx', 'stl'] });
+  assert.deepEqual(await dlTick(cfg, two), { state: 'done', format: 'fbx' });
+  assert.deepEqual(await dlTick(cfg, two), { state: 'done', format: 'stl' });
+  assert.deepEqual([fake.storage.get(`dl/${two}.fbx`).bytes, fake.storage.get(`dl/${two}.fbx`).type], [fake.files.byExt.fbx, 'application/octet-stream']);
+  assert.deepEqual([fake.storage.get(`dl/${two}.stl`).bytes, fake.storage.get(`dl/${two}.stl`).type], [fake.files.byExt.stl, 'model/stl']);
+  const reads = calls.filter((c) => c.to === 'files').map((c) => new URL(c.url).pathname.split('/').pop());
+  assert.ok(reads.includes('animations.fbx') && reads.includes('model.stl') && reads.includes('model.usdz'), reads.join(' '));
+  assert.ok(calls.filter((c) => c.to === 'files').every((c) => c.redirect === 'error'), "only Meshy's addresses, never a redirect");
+  // someone else's turn on it (another run): not touched
+  const busy = doneModel({ todo: ['usdz'] });
+  fake.db.orders.get(busy).dl_lease = Date.now() + 60_000;
+  assert.deepEqual(await dlTick(cfg, busy), { state: 'busy' });
+});
+
+test("downloads: Meshy away for a moment isn't a try; a hiccup is tried again (4 in all); a file Meshy let go of, too big, or a task that isn't done: given up at once", async () => {
+  await readyModelFiles();
+  const cfg = cfgNow();
+  // Meshy itself away: waiting (no try counted; its turn ends by itself)
+  const waits = doneModel({ todo: ['usdz'] });
+  fake.meshy.getFail = { status: 503, text: 'busy' };
+  assert.deepEqual(await dlTick(cfg, waits), { state: 'waiting', format: 'usdz' });
+  let o = fake.db.orders.get(waits);
+  assert.deepEqual([o.format_tries, o.formats_todo, o.formats_failed], [0, ['usdz'], []]);
+  assert.deepEqual(await dlTick(cfg, waits), { state: 'busy' }, 'its turn still on');
+  fake.meshy.getFail = null;
+  o.dl_lease = 0;
+  // Storage away: tried again, 4 times in all, then given up
+  fake.storageDown = true;
+  for (const tries of [1, 2, 3]) {
+    assert.deepEqual(await dlTick(cfg, waits), { state: 'again', format: 'usdz' });
+    assert.equal(o.format_tries, tries);
+    assert.ok(o.dl_lease > Date.now() + 100_000, 'two minutes before the next try');
+    o.dl_lease = 0;
+  }
+  assert.deepEqual(await dlTick(cfg, waits), { state: 'failed', format: 'usdz' });
+  assert.deepEqual([o.formats_todo, o.formats_failed, o.format_tries], [[], ['usdz'], 0]);
+  assert.match(log(), /usdz failed \(trying again\): storage HTTP 500/);
+  assert.match(log(), /usdz couldn't be made: storage HTTP 500/);
+  fake.storageDown = false;
+  // a file Meshy let go of: given up at once
+  const gone = doneModel({ todo: ['stl', 'usdz'] });
+  fake.files.gone = ['/model.stl'];
+  assert.deepEqual(await dlTick(cfg, gone), { state: 'failed', format: 'stl' });
+  assert.deepEqual(fake.db.orders.get(gone).formats_failed, ['stl']);
+  assert.deepEqual(await dlTick(cfg, gone), { state: 'done', format: 'usdz' }, 'the next one made as usual');
+  fake.files.gone = [];
+  // too big for the bucket: given up at once
+  const big = doneModel({ todo: ['fbx'] });
+  assert.deepEqual(await dlTick(cfg, big, { files: { ...F, DL_MAX: 10 } }), { state: 'failed', format: 'fbx' });
+  assert.match(log(), /fbx couldn't be made: files: Meshy's file is too big \(over 10 bytes\)/);
+  // a task Meshy didn't finish: given up at once
+  const undone = doneModel({ todo: ['usdz'] });
+  fake.meshy.tasks.get(fake.db.orders.get(undone).tasks.image).status = 'FAILED';
+  assert.deepEqual(await dlTick(cfg, undone), { state: 'failed', format: 'usdz' });
+  assert.match(log(), /usdz couldn't be made: Meshy's answer has no image result/);
+  // no time left to keep it: a try, never final
+  const late = doneModel({ todo: ['usdz'] });
+  assert.deepEqual(await dlTick(cfg, late, { deadline: Date.now() + 1400 }), { state: 'again', format: 'usdz' });
+  assert.equal(fake.db.orders.get(late).format_tries, 1);
+  assert.equal(fake.storage.has(`dl/${late}.usdz`), false);
+  // hidden (or its days over) while it's made: no longer waited for, so its file goes again
+  const hidden = doneModel({ todo: ['usdz'] });
+  const files = { ...F, putFile: async (...a) => { fake.db.orders.get(hidden).hidden = true; return F.putFile(...a); } };
+  assert.deepEqual(await dlTick(cfg, hidden, { files }), { state: 'none', format: 'usdz' });
+  assert.equal(fake.storage.has(`dl/${hidden}.usdz`), false, 'its file deleted again');
+  assert.ok(calls.some((c) => c.to === 'storage' && c.method === 'DELETE' && c.body.prefixes.includes(`dl/${hidden}.usdz`)));
+  // not done, not its own, or nothing asked for: nothing made
+  const making = infOrder();
+  assert.deepEqual(await dlTick(cfg, making), { state: 'busy' });
+  assert.deepEqual(await dlTick(cfg, 'NoSuchOrderAbcdefghij0'), { state: 'busy' });
+});
+
+test("downloads: the tidy-up (past their days, or its model taken down): their files deleted, its lists cleared; the clock's turn (only with time for it; the tidy-up at :00 and :30)", async () => {
+  await readyModelFiles();
+  const cfg = cfgNow();
+  const old = doneModel({ todo: ['usdz'] });
+  assert.deepEqual(await dlTick(cfg, old), { state: 'done', format: 'usdz' });
+  fake.db.orders.get(old).dl_until = Date.now() - 1000;
+  const down = doneModel({ todo: ['stl'] });
+  fake.db.orders.get(down).hidden = true;
+  const fresh = doneModel({ todo: ['fbx'] });
+  const from = calls.length;
+  assert.equal(await dlTidy(cfg), 2);
+  const deletes = calls.slice(from).filter((c) => c.to === 'storage' && c.method === 'DELETE').map((c) => c.body.prefixes);
+  assert.deepEqual(deletes, [old, down].map((x) => ['glb', 'fbx', 'usdz', 'stl', 'zip'].map((e) => `dl/${x}.${e}`)));
+  assert.equal(fake.storage.has(`dl/${old}.usdz`), false);
+  for (const x of [old, down]) {
+    const o = fake.db.orders.get(x);
+    assert.deepEqual([o.formats_todo, o.formats_done, o.format_bytes], [[], [], {}], x);
+  }
+  assert.deepEqual(fake.db.orders.get(fresh).formats_todo, ['fbx'], 'one within its days untouched');
+  assert.equal(await dlTidy(cfg), 0, 'nothing left to tidy');
+  // Storage away: tried at the next tidy-up (its lists kept)
+  const later = doneModel({ todo: ['usdz'] });
+  fake.db.orders.get(later).dl_until = Date.now() - 1;
+  fake.storageDown = true;
+  assert.equal(await dlTidy(cfg), 0);
+  assert.deepEqual(fake.db.orders.get(later).formats_todo, ['usdz']);
+  assert.match(log(), new RegExp(`${later}'s extra downloads \\(next tidy-up\\): storage HTTP 500`));
+  fake.storageDown = false;
+  assert.equal(await dlTidy(cfg), 1);
+  // the clock's turn: one download made when there's time (12 s), the tidy-up at :00 and :30 (with 3 s left)
+  const at31 = Date.UTC(2026, 9, 13, 12, 31), at30 = Date.UTC(2026, 9, 13, 12, 30);
+  assert.deepEqual(await dlClock(cfg, { now: at31, deadline: Date.now() + 19_000 }), { made: { state: 'done', format: 'fbx' } });
+  const due = fake.db.calls.filter((c) => c === 'studio_dl_due').length;
+  assert.deepEqual(await dlClock(cfg, { now: at31, deadline: Date.now() + 5_000 }), {});
+  assert.equal(fake.db.calls.filter((c) => c === 'studio_dl_due').length, due, 'not even asked without time to make one');
+  assert.deepEqual(await dlClock(cfg, { now: at30, deadline: Date.now() + 5_000 }), { tidy: 0 });
+  assert.deepEqual(await dlClock(cfg, { now: at30, deadline: Date.now() + 2_000 }), {});
+  assert.deepEqual(await dlClock(cfg, { now: at31, deadline: Date.now() + 19_000 }), {}, 'none waiting');
+  // the studio clock's turn for them: studio.sql from before the 3D tool (said once), the database away (said each time)
+  fake.missing.add('studio_dl_due');
+  const n0 = logs.filter((l) => /the extra downloads/.test(l)).length;
+  for (const now of [at31, at30 + 2 * 60_000]) {
+    const out = await studioClock(cfg, { now, deadline: Date.now() + 19_000 });
+    assert.deepEqual(out.dl, { error: 'not_set_up' });
+  }
+  assert.equal(logs.filter((l) => /the extra downloads/.test(l)).length - n0, 1, 'said once');
+  fake.missing.delete('studio_dl_due');
+  fake.db.studio_dl_due = () => { throw new Error('the database went away'); };
+  assert.deepEqual((await studioClock(cfg, { now: at31, deadline: Date.now() + 19_000 })).dl, { error: 'database' });
+  assert.equal(logs.filter((l) => /the extra downloads/.test(l)).length - n0, 2);
 });
 
 // ---------- its web side: api/launch.js ----------
@@ -1405,7 +2294,10 @@ test('GET /api/feed?studio: only with studio.sql\'s key (from the database); off
   assert.equal(res.status, 401);
   res = await call(`Bearer ${STUDIO_KEY}`);
   assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { ok: true, due: 0, moved: 0, done: 0, failed: 0, ...(new Date().getUTCMinutes() % 30 === 0 ? { tidy: { quotes: 0, failed: 0 } } : {}) });
+  const at30 = new Date().getUTCMinutes() % 30 === 0;
+  // (2026-10-13) with a 3D model's extra downloads' turn: none waiting (their tidy-up with the characters')
+  assert.deepEqual(await res.json(), { ok: true, due: 0, moved: 0, done: 0, failed: 0, dl: at30 ? { tidy: 0 } : {},
+    ...(at30 ? { tidy: { quotes: 0, failed: 0 } } : {}) });
   assert.equal(res.headers.get('cache-control'), 'no-store');
   delete process.env.MESHY_API_KEY;
   assert.deepEqual(await (await call(`Bearer ${STUDIO_KEY}`)).json(), { ok: true, off: 'no_key' });
@@ -1439,13 +2331,22 @@ test('still 12 functions (Vercel); the Meshy key in the secret check; gltf-trans
     assert.match(sql, new RegExp(`revoke all on function public\\.${fn}\\(`), `${fn}: never the browser's keys`);
     assert.match(sql, new RegExp(`grant execute on function public\\.${fn}\\(.*\\) to service_role;`), fn);
   }
-  assert.match(sql, /\/ 32\s/, 'studio_ready counts its 32 functions (20 for characters, 12 for their videos: tests/videos.test.js)');
+  assert.match(sql, /'studio_dl_clear'\)\) = 37\n/, 'studio_ready counts its 37 functions (20 for characters, 12 for their videos: tests/videos.test.js; 5 for a 3D model\'s downloads)');
+  // (2026-10-13) a 3D model's more downloads: made by the clock, kept DL_DAYS days, tidied; only our server's key
+  for (const [fn, args] of [['studio_dl_due', 'integer'], ['studio_dl_lease', 'text, integer'], ['studio_dl_put', 'text, text, boolean, integer, boolean'],
+    ['studio_dl_expired', 'integer'], ['studio_dl_clear', 'text']]) {
+    assert.match(sql, new RegExp(`create or replace function public\\.${fn}\\(`), fn);
+    assert.ok(sql.includes(`revoke all on function public.${fn}(${args}) from public, anon, authenticated;`), `${fn}: never the browser's keys`);
+    assert.ok(sql.includes(`grant execute on function public.${fn}(${args}) to service_role;`), fn);
+  }
+  const steps = "('motion1', 'motion2', 'image', 'preview', 'refine', 'rig', 'moves', 'apply1', 'apply2', 'save')";
+  assert.ok(sql.includes(`check (step in ${steps})`) && sql.includes(`p_step not in ${steps}`), "a model's described moves are its own steps (the table and studio_step)");
   for (const t of ['agi1_studio_state', 'agi1_studio_orders', 'agi1_studio_months', 'agi1_studio_free', 'agi1_studio_txs']) {
     assert.match(sql, new RegExp(`alter table public\\.${t} enable row level security;`), t);
   }
   assert.match(sql, /insert into agi1_burn_txs \(tx_code\) values \(p_tx\)/, "a burn for a character goes in burns.sql's ledger");
-  assert.match(sql, /'agi1-characters', 'agi1-characters', false, 41943040,\s+array\['model\/gltf-binary', 'image\/webp', 'image\/png', 'image\/jpeg', 'video\/mp4', 'application\/octet-stream'\]/,
-    'a private bucket, 40 MB a file (a video), only its 3D model, its pictures and its videos (and since AGI Studio, 2026-10-10, JPEG pictures and the parts of a clip being uploaded)');
+  assert.match(sql, /'agi1-characters', 'agi1-characters', false, 41943040,\s+array\['model\/gltf-binary', 'image\/webp', 'image\/png', 'image\/jpeg', 'video\/mp4', 'application\/octet-stream',\s+'model\/vnd\.usdz\+zip', 'model\/stl', 'application\/zip'\]/,
+    'a private bucket, 40 MB a file (a video), only its 3D model, its pictures and its videos (and since AGI Studio, 2026-10-10, JPEG pictures and the parts of a clip being uploaded; since the 3D tool, 2026-10-13, its USDZ, STL and zipped OBJ downloads)');
   assert.match(sql, /url := 'https:\/\/www\.agi1\.app\/api\/feed\?studio'/, 'www: agi1.app redirects, and a redirect would drop the key');
   assert.doesNotMatch(sql, /drop table|truncate/i);
   const code = sql.replace(/--.*$/gm, '');
@@ -1582,6 +2483,61 @@ test('its 3D view: framed for every pose of its moves (a jump stays in the pictu
   }
 });
 
+test("(2026-10-13) its 3D view's tools: its moves of its own by their clips' names (own_<name>), the zoom's aim (its middle at 1×, its face at 3×, never the air above a jump), a light rig for each light", () => {
+  const clip = (name) => new THREE.AnimationClip(name, 1, []);
+  const byName = (m) => [...m].map(([k, c]) => `${k}=${c.name}`);
+  // a model with moves of its own: its file's clips named own_<its name> (server/studio.js), found by name in any order
+  const moves = ['idle', 'wave', 'shrug', 'zoomies', 'curtsy'];
+  assert.equal(R.ownClip('zoomies'), 'own_zoomies');
+  let m = clipsFor([clip('own_curtsy'), clip('Idle'), clip('Armature|own_zoomies'), clip('Big_Wave_Hello'), clip(R.MOVE_BY_NAME.get('shrug').clip)], moves);
+  assert.deepEqual(byName(m).sort(), ['curtsy=own_curtsy', 'idle=Idle', 'shrug=' + R.MOVE_BY_NAME.get('shrug').clip, 'wave=Big_Wave_Hello', 'zoomies=Armature|own_zoomies'].sort());
+  // a clip of its own it wasn't asked for (or one we don't know): all of them in the order asked for
+  m = clipsFor([clip('Idle'), clip('Big_Wave_Hello'), clip('own_salute')], ['idle', 'wave', 'zoomies']);
+  assert.deepEqual(byName(m), ['idle=Idle', 'wave=Big_Wave_Hello', 'zoomies=own_salute']);
+  // a clip of its own named after a library move (never made: a move of its own never has a library word as its name) isn't
+  // known by name: all of them in the order asked for
+  m = clipsFor([clip('own_wave'), clip('Idle')], ['idle', 'wave']);
+  assert.deepEqual(byName(m), ['idle=own_wave', 'wave=Idle']);
+  // where the camera looks at a zoom (y): the middle of every pose's box at 1× (as before), its face at 3×, in between
+  // between; never past its limits (a zoom out of range, or none, is 1× or 3×)
+  const box = new THREE.Box3(new THREE.Vector3(-0.4, 0, -0.3), new THREE.Vector3(0.4, 2.05, 0.3));    // a jump's top at 2.05 m
+  const rest = new THREE.Box3(new THREE.Vector3(-0.3, 0, -0.2), new THREE.Vector3(0.3, 1.7, 0.2));     // standing: 1.7 m
+  const face = 1.7 - 1.7 * HEAD;
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  assert.ok(near(aimFor(box, rest, 1), 1.025), String(aimFor(box, rest, 1)));
+  assert.ok(near(aimFor(box, rest, 3), face) && face < 1.7 && face > 1.4, String(aimFor(box, rest, 3)));
+  assert.ok(near(aimFor(box, rest, 2), (1.025 + face) / 2));
+  for (const [z, want] of [[0.5, 1.025], [9, face], [NaN, 1.025], [undefined, 1.025], ['2', (1.025 + face) / 2]]) assert.ok(near(aimFor(box, rest, z), want), String(z));
+  assert.ok(aimFor(box, rest, 3) < rest.max.y, 'never the air above its head standing');
+  // at 1× the camera is where it always was: its box's middle, a little from above (the page's own place())
+  const { distance, center } = framing(box, 0.8);
+  const front = new THREE.Vector3(0, 0.08, 1).normalize();
+  const cam = new THREE.Vector3(center.x, aimFor(box, rest, 1), center.z).addScaledVector(front, distance * Math.hypot(1, 0.08));
+  assert.ok(cam.distanceTo(new THREE.Vector3(center.x, center.y + distance * 0.08, center.z + distance)) < 1e-9);
+  // its lights: a rig for each of the page's lights (and no other), each whole; Studio is the light it always had
+  assert.deepEqual(Object.keys(RIGS).sort(), Object.keys(ST.LIGHTS).sort());
+  assert.ok(Object.hasOwn(RIGS, ST.LIGHT_DEFAULT));
+  for (const [k, r] of Object.entries(RIGS)) {
+    assert.ok(r.env > 0 && r.env <= 1.5, k);
+    assert.ok(r.hemi.length === 3 && r.hemi.slice(0, 2).every((c) => Number.isInteger(c) && c >= 0 && c <= 0xffffff) && r.hemi[2] > 0, k);
+    assert.ok(r.sun.length === 3 && Number.isInteger(r.sun[0]) && r.sun[1] > 0 && r.sun[2].length === 3 && r.sun[2][1] > 0, `${k}: a sun from above`);
+    assert.ok(r.rims.length === 2 && r.rims.every(([s, c]) => s >= 0 && s <= 5 && Number.isInteger(c)), k);
+  }
+  assert.deepEqual(RIGS.studio, { env: 0.75, hemi: [0xffffff, 0x3a2a5a, 0.9], sun: [0xffffff, 1.6, [1.2, 3, 2.4]], rims: [[0, 0xffffff], [0, 0xffffff]] });
+  // its tools' code: its light only from its rigs, its looks only the page's, its speeds only the page's, its zoom kept in
+  // its limits, its pictures' pixels never past MAX_RATIO; nothing sent anywhere (no fetch but its own file's loader)
+  const code = readFileSync(new URL('../src/studio/viewer.js', import.meta.url), 'utf8');
+  assert.match(code, /if \(!r \|\| !Object\.hasOwn\(LIGHTS, key\)\) return false;/);
+  assert.match(code, /if \(!Object\.hasOwn\(LOOKS, key\)\) return false;/);
+  assert.match(code, /if \(!SPEEDS\.includes\(Number\(s\)\)\) return false;/);
+  assert.match(code, /zoom = Math\.min\(ZOOM\.MAX, Math\.max\(ZOOM\.MIN, Number\(z\) \|\| ZOOM\.MIN\)\);/);
+  assert.match(code, /renderer\.setPixelRatio\(ratioFor\(w, h, long, own\)\);/);
+  assert.doesNotMatch(code, /\bfetch\(|XMLHttpRequest|sendBeacon|WebSocket/);
+  // a wireframe over its own surface written to depth only (only the lines facing the camera show), made the first time
+  assert.match(code, /new THREE\.MeshBasicMaterial\(\{ colorWrite: false, polygonOffset: true/);
+  assert.match(code, /if \(o\.isSkinnedMesh\) p\.bind\(o\.skeleton, o\.bindMatrix\);/);
+});
+
 // ---------- its page: since AGI Studio (2026-10-10), the app's 3D view ----------
 // The studio's own page (studio.html with src/studio/page.js and its words) became AGI Studio the same day: a character's
 // page is the app's 3D view (src/studio/views/model3d.js), at agi1.app/studio/<id> and studio.agi1.app/3d/<id>. The app
@@ -1593,7 +2549,7 @@ test("a character's page is the app's 3D view: its steps in words, its reactions
   assert.doesNotMatch(view, /^import .*viewer/m, 'never imported up front');
   assert.match(view, /const \{ createViewer \} = await import\('\.\.\/viewer\.js'\);/);
   assert.doesNotMatch(view, /from 'three'/);
-  assert.match(view, /const list = c\.inf \? MODEL_STEPS : STEPS;/);
+  assert.match(view, /const list = c\.inf \? modelStepList\(c\.plan\) : STEPS;/);
   assert.doesNotMatch(view, /innerHTML|insertAdjacentHTML|outerHTML|document\.write/);
   assert.doesNotMatch(view, /eth_sendTransaction|wallet_switchEthereumChain|eth_signTypedData|wallet_addEthereumChain|ethereum:/);
   for (const x of [...R.STEPS, ...R.MODEL_STEPS]) assert.ok(x.words.length > 5 && !/\bAI service\b/.test(x.words), x.step);
@@ -1616,7 +2572,8 @@ test("a character's page is the app's 3D view: its steps in words, its reactions
   assert.doesNotMatch(post, /\b(buy|sell|pump|moon|profit|price|invest|gains?|100x|financial)\b|\$AGI/i);
   // never the AI service's name where a visitor reads it (the owner's rule): the app's page, its code, its rules (their comments
   // aren't shipped: the build drops them)
-  for (const f of ['studio.html', 'src/studio/app.js', 'src/studio/app-words.js', 'src/studio/rules.js', 'src/studio/viewer.js', 'src/studio/views/model3d.js']) {
+  for (const f of ['studio.html', 'src/studio/app.js', 'src/studio/app-words.js', 'src/studio/rules.js', 'src/studio/viewer.js', 'src/studio/views/model3d.js',
+    'src/studio/views/model-tool.js', 'src/studio/stage-tools.js']) {
     assert.doesNotMatch(strip(readFileSync(new URL(`../${f}`, import.meta.url), 'utf8')), /meshy/i, f);
   }
 });

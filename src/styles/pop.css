@@ -624,6 +624,141 @@
 /* (2026-10-10) holder perks: the box with the wallet, a sticker-like outline */
 [data-skin='pop'] .lv-perk { border: 2px solid var(--edge); border-radius: 16px; }
 [data-skin='pop'] .lv-perk-title { font-family: var(--display); font-weight: 850; font-stretch: 110%; letter-spacing: 0; }
+/* ---------- the roadmap (2026-10-14: roadmap.html and its coming-soon pages; their layout is src/styles/roadmap.css) ----------
+   Its hero is violet like the home page's (/theme.js colors these pages' browser bar violet), under the floating top bar,
+   with speed lines and pink halftone; its meter a white sticker; the timeline on lavender with ink-outlined cards, honey
+   checks on what's live, a pink "We're here"; each coming-soon page its own color block (stake mint, games lavender,
+   giveaways honey) */
+[data-skin='pop'] .rm-hero {
+  margin-top: -72px; padding-top: calc(72px + clamp(40px, 6vw, 84px)); padding-bottom: clamp(64px, 8vw, 112px);
+  color: #fff; background: var(--pop-violet); border-bottom: 3px solid var(--pop-ink);
+  --fg: #fff; --fg-2: rgb(255 255 255 / .9); --fg-3: rgb(255 255 255 / .82); --line: rgb(255 255 255 / .35); --kicker-dot: var(--pop-honey);
+}
+[data-skin='pop'] .rm-hero::before {
+  background: repeating-conic-gradient(from 2deg at 80% 42%, rgb(255 255 255 / .11) 0deg 1.2deg, transparent 1.2deg 6.5deg);
+  -webkit-mask-image: radial-gradient(circle at 80% 42%, transparent 0 12%, #000 64%); mask-image: radial-gradient(circle at 80% 42%, transparent 0 12%, #000 64%);
+}
+[data-skin='pop'] .rm-hero::after {
+  content: ''; position: absolute; left: 0; bottom: 0; z-index: -1; width: 46%; height: 60%; pointer-events: none;
+  background-image: radial-gradient(circle, var(--pop-pink) 1.8px, transparent 2.1px); background-size: 15px 15px;
+  -webkit-mask-image: radial-gradient(ellipse at 0% 100%, #000 0%, transparent 72%); mask-image: radial-gradient(ellipse at 0% 100%, #000 0%, transparent 72%);
+}
+[data-skin='pop'] .rm-hero :focus-visible { outline-color: #fff; }
+[data-skin='pop'] .rm-title {
+  font-family: var(--display); font-size: clamp(44px, 9.2vw, 124px); font-weight: 900; font-stretch: 116%;
+  line-height: .9; letter-spacing: -0.03em; color: var(--pop-lav); text-shadow: .045em .05em 0 var(--pop-pink);
+}
+[data-skin='pop'] .rm-hero-sub .rm-title { font-size: clamp(min(44px, 12.4vw), 8.4vw, 112px); }   /* "Giveaways" (one long word) fits a 320 px phone */
+[data-skin='pop'] .rm-sub {
+  margin-top: 20px; font-family: var(--serif); font-style: italic; font-size: clamp(28px, 3.8vw, 48px); line-height: 1.04;
+  letter-spacing: -0.01em; color: #fff;
+}
+[data-skin='pop'] .rm-lede { font-size: 18px; color: rgb(255 255 255 / .92); }
+[data-skin='pop'] .rm-say { color: var(--pop-ink); background: #fff; border: 2px solid var(--pop-ink); box-shadow: 3px 3px 0 var(--pop-ink); font-weight: 500; }
+[data-skin='pop'] .rm-say img { box-shadow: 0 0 0 2px var(--pop-ink); }
+[data-skin='pop'] .rm-meter {
+  color: var(--pop-ink); background: #fff; border: 3px solid var(--pop-ink); border-radius: 24px; box-shadow: 0 9px 0 -2px var(--pop-ink);
+  --fg: #170a36; --fg-2: #4a3d6e; --fg-3: #5f537f;
+}
+[data-skin='pop'] .rm-meter-big { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
+[data-skin='pop'] .rm-meter-n { color: var(--pop-violet); text-shadow: .05em .05em 0 var(--pop-pink); }
+[data-skin='pop'] .rm-seg { height: 12px; border: 2px solid var(--pop-ink); background: #fff; }
+[data-skin='pop'] .rm-seg.is-done { background: var(--pop-pink); }
+[data-skin='pop'] .rm-seg.is-lock { background: repeating-linear-gradient(-45deg, var(--pop-ink) 0 2px, #fff 2px 5px); }
+[data-skin='pop'] .rm-hero .rm-status { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); }
+[data-skin='pop'] .rm-stamp-text { fill: #fff; font-weight: 700; }
+[data-skin='pop'] .rm-art-ic { color: var(--pop-ink); background: var(--pop-honey); border: 3px solid var(--pop-ink); box-shadow: 0 8px 0 -1px var(--pop-ink); }
+/* the timeline: on lavender, its line violet where it's live, ink dashes where it's coming */
+[data-skin='pop'] .rm-track { --sec: var(--pop-lav); }
+[data-skin='pop'] .rm-tl { --rm-w: 4px; --rm-cb: 3px; --rm-done: var(--pop-violet); --rm-soon: rgb(23 10 54 / .45); }
+[data-skin='pop'] .rm-cap { width: 20px; height: 20px; background: var(--pop-honey); border: 3px solid var(--pop-ink); box-shadow: 0 0 0 5px var(--sec); }
+[data-skin='pop'] .rm-label { font-weight: 700; letter-spacing: .12em; color: var(--fg); }
+[data-skin='pop'] .rm-here-tag { color: var(--pop-ink); background: var(--pop-pink); border: 2px solid var(--pop-ink); box-shadow: 3px 3px 0 var(--pop-ink); font-weight: 700; }
+[data-skin='pop'] .rm-here-dot { width: 22px; height: 22px; border: 3px solid var(--pop-ink); background: var(--pop-pink); box-shadow: 0 0 0 5px var(--sec); }
+[data-skin='pop'] .rm-here-dot::after { inset: -3px; border: 3px solid var(--pop-pink); }
+[data-skin='pop'] .rm-node { border: 3px solid var(--edge); background: var(--bg); color: var(--fg); box-shadow: 0 5px 0 -1px var(--shade); }
+[data-skin='pop'] .rm-item.is-done .rm-node { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); }
+[data-skin='pop'] .rm-item.is-locked .rm-node { border-style: dashed; box-shadow: none; }
+[data-skin='pop'] .rm-num {
+  font-family: var(--display); font-weight: 900; font-stretch: 116%; letter-spacing: -0.03em;
+  color: transparent; -webkit-text-stroke: 2.5px var(--pop-ink);
+}
+[data-skin='pop'] .rm-item.is-done .rm-num { color: var(--pop-violet); text-shadow: .045em .05em 0 var(--pop-pink); }   /* like the meter's number */
+[data-skin='pop'] .rm-card { background: var(--bg); border-color: var(--edge); border-radius: var(--radius); box-shadow: 0 9px 0 -2px var(--shade); }
+[data-skin='pop'] .rm-card.is-link:hover { border-color: var(--edge); box-shadow: 0 13px 0 -2px var(--shade); }
+[data-skin='pop'] .rm-card:focus-within { border-color: var(--pop-violet); }
+[data-skin='pop'] .rm-status { color: var(--fg); border: 2px solid var(--edge); font-weight: 700; }
+[data-skin='pop'] .rm-item.is-done .rm-status { color: var(--pop-ink); background: var(--pop-mint); border-color: var(--pop-ink); }
+[data-skin='pop'] .rm-item.is-done .rm-status-dot { background: var(--pop-ink); }
+[data-skin='pop'] .rm-status.is-soon .rm-status-dot, [data-skin='pop'] .rm-item.is-soon .rm-status-dot { background: var(--pop-pink); }
+[data-skin='pop'] .rm-name { font-family: var(--display); font-weight: 850; font-stretch: 110%; letter-spacing: -0.01em; }
+[data-skin='pop'] .rm-go { font-weight: 700; }
+[data-skin='pop'] .rm-card-locked {
+  border-style: dashed; box-shadow: none;
+  background: repeating-linear-gradient(-45deg, transparent 0 11px, rgb(23 10 54 / .06) 11px 22px), var(--bg);
+}
+[data-skin='pop'] .rm-adult { font-family: var(--display); font-weight: 900; font-stretch: 116%; color: var(--pop-pink); -webkit-text-stroke: 2px var(--pop-ink); paint-order: stroke fill; }
+/* after it: a honey sticker to stay in the loop (in both themes), and the fine print */
+[data-skin='pop'] .rm-loop {
+  color: var(--pop-ink); background: var(--pop-honey); border: 3px solid var(--pop-ink); border-radius: 26px; box-shadow: 0 10px 0 -2px var(--pop-ink);
+  --fg: #170a36; --fg-2: #2d1f52; --fg-3: #3d3064;
+}
+[data-skin='pop'] .rm-loop-title { font-family: var(--display); font-size: clamp(22px, 2.6vw, 30px); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
+[data-skin='pop'] .rm-loop .btn-primary { color: #fff; background: var(--pop-ink); border-color: var(--pop-ink); }
+[data-skin='pop'] .rm-loop .btn-primary:hover { background: var(--pop-violet); border-color: var(--pop-violet); }
+[data-skin='pop'] .rm-loop .btn-ghost { color: var(--pop-ink); background: #fff; border-color: var(--pop-ink); }
+[data-skin='pop'] .rm-loop .btn-ghost:hover { background: var(--pop-lav); }
+[data-skin='pop'] .rm-loop :focus-visible { outline-color: var(--pop-ink); }
+[data-skin='pop'] .rm-fine { border-top: 3px solid var(--edge); }
+[data-skin='pop'] .rm-fine-title { font-family: var(--display); font-size: 17px; font-weight: 850; font-stretch: 110%; }
+/* the coming-soon pages: their own color block, white cards, a dashed "not open yet" card */
+[data-skin='pop'] .rm-page-stake { --sec: var(--pop-mint); --fg-2: #2d1f52; --fg-3: #3d3064; }
+[data-skin='pop'] .rm-page-games { --sec: var(--pop-lav); }
+[data-skin='pop'] .rm-page-giveaway { --sec: var(--pop-honey); --fg-2: #2d1f52; --fg-3: #3d3064; }
+[data-skin='pop'] .rm-page-giveaway :focus-visible { outline-color: var(--pop-ink); }
+[data-skin='pop'] .rm-feats-title { font-family: var(--display); font-size: clamp(30px, 4.4vw, 52px); font-weight: 900; font-stretch: 112%; line-height: .98; letter-spacing: -0.03em; }
+[data-skin='pop'] .rm-feat { background: var(--bg); border: 3px solid var(--edge); border-radius: var(--radius); box-shadow: 0 9px 0 -2px var(--shade); }
+[data-skin='pop'] .rm-feat-ic { color: var(--pop-ink); background: var(--pop-honey); border: 2px solid var(--pop-ink); }
+[data-skin='pop'] .rm-feat-n { font-weight: 700; color: var(--fg-2); }
+[data-skin='pop'] .rm-feat-name { font-family: var(--display); font-weight: 850; font-stretch: 110%; letter-spacing: -0.01em; }
+[data-skin='pop'] .rm-soon { background: var(--bg); border: 3px dashed var(--edge); border-radius: var(--radius); }
+[data-skin='pop'] .rm-soon-title { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
+[data-skin='pop'] .rm-warn { background: var(--bg-2); border: 2px solid var(--edge); }
+[data-skin='pop'] .rm-warn-ic { color: var(--pop-pink); }
+[data-skin='pop'] .rm-tip a { font-weight: 600; }
+/* night: a deep violet hero, deep blocks, each keeping its color for its cards' shadows */
+[data-skin='pop'][data-theme='dark'] .rm-hero { background: #2a0f7a; border-bottom-color: rgb(205 184 255 / .45); }
+[data-skin='pop'][data-theme='dark'] .rm-say { color: #f4efff; background: #1d0e40; border-color: var(--pop-lav-2); box-shadow: 3px 3px 0 var(--pop-pink); }
+[data-skin='pop'][data-theme='dark'] .rm-say img { box-shadow: 0 0 0 2px var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .rm-meter { color: #f4efff; background: #1d0e40; border-color: var(--pop-lav-2); box-shadow: 0 9px 0 -2px var(--pop-pink);
+  --fg: #f4efff; --fg-2: #cbbff0; --fg-3: #ad9fdb; }
+[data-skin='pop'][data-theme='dark'] .rm-meter-n { color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .rm-seg { border-color: var(--pop-lav-2); background: #28155a; }
+[data-skin='pop'][data-theme='dark'] .rm-seg.is-lock { background: repeating-linear-gradient(-45deg, var(--pop-lav-2) 0 2px, #1d0e40 2px 5px); }
+[data-skin='pop'][data-theme='dark'] .rm-stamp-text { fill: var(--pop-lav); }
+[data-skin='pop'][data-theme='dark'] .rm-art-ic { box-shadow: 0 8px 0 -1px var(--pop-pink); }
+[data-skin='pop'][data-theme='dark'] .rm-track { --sec: #1a0d3d; --shade: var(--pop-violet); --kicker-dot: var(--pop-violet-2); }
+[data-skin='pop'][data-theme='dark'] .rm-tl { --rm-cb: 2px; --rm-done: var(--pop-pink); --rm-soon: rgb(228 217 255 / .5); }
+[data-skin='pop'][data-theme='dark'] .rm-cap { border-color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .rm-here-tag { box-shadow: 3px 3px 0 var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .rm-here-dot { border-color: var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .rm-item.is-done .rm-node { border-color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .rm-num { -webkit-text-stroke-color: var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .rm-item.is-done .rm-num { color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .rm-card:focus-within { border-color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .rm-item.is-done .rm-status { border-color: var(--pop-mint); }
+[data-skin='pop'][data-theme='dark'] .rm-card-locked { background: repeating-linear-gradient(-45deg, transparent 0 11px, rgb(228 217 255 / .06) 11px 22px), var(--bg); }
+[data-skin='pop'][data-theme='dark'] .rm-adult { -webkit-text-stroke-color: transparent; }
+[data-skin='pop'][data-theme='dark'] .rm-fine { border-top-width: 2px; }
+[data-skin='pop'][data-theme='dark'] .rm-page-stake { --sec: #0b2126; --shade: var(--pop-mint); --kicker-dot: var(--pop-mint); --fg-2: #cbbff0; --fg-3: #ad9fdb; }
+[data-skin='pop'][data-theme='dark'] .rm-page-games { --sec: #1a0d3d; --shade: var(--pop-violet); --kicker-dot: var(--pop-violet-2); }
+[data-skin='pop'][data-theme='dark'] .rm-page-giveaway { --sec: #1c1036; --shade: var(--pop-honey); --kicker-dot: var(--pop-honey); --fg-2: #cbbff0; --fg-3: #ad9fdb; }
+[data-skin='pop'][data-theme='dark'] .rm-page-giveaway :focus-visible { outline-color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .rm-feat { border-width: 2px; }
+[data-skin='pop'][data-theme='dark'] .rm-soon { border-width: 2px; }
+@media (max-width: 760px) {
+  [data-skin='pop'] .rm-hero { margin-top: -64px; padding-top: calc(64px + 36px); }
+}
 /* ---------- things that float over the page: the market notice, the wallet screen ---------- */
 [data-skin='pop'] .notice { border: 2px solid var(--edge); border-radius: 22px; box-shadow: 0 8px 0 -1px var(--shade); }
 [data-skin='pop'] .notice-ava { box-shadow: 0 0 0 2px var(--edge); }

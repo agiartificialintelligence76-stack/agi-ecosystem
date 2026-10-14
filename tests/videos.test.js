@@ -1289,7 +1289,7 @@ test("still 12 functions; fal.ai's key in the secret check (its value and its sh
   assert.match(sql, /alter table public\.agi1_studio_videos enable row level security;/);
   assert.match(sql, /alter table public\.agi1_studio_months add column if not exists videos integer not null default 0/);
   assert.match(sql, /status_url\s+text\s+check \(status_url ~ '\^https:\/\/queue\\\.fal\\\.run\//, "only ever fal's queue addresses");
-  assert.match(sql, /'agi1-characters', 'agi1-characters', false, 41943040,\s+array\['model\/gltf-binary', 'image\/webp', 'image\/png', 'image\/jpeg', 'video\/mp4', 'application\/octet-stream'\]/);
+  assert.match(sql, /'agi1-characters', 'agi1-characters', false, 41943040,\s+array\['model\/gltf-binary', 'image\/webp', 'image\/png', 'image\/jpeg', 'video\/mp4', 'application\/octet-stream',\s+'model\/vnd\.usdz\+zip', 'model\/stl', 'application\/zip'\]/);
   const code = sql.replace(/--.*$/gm, '');
   assert.doesNotMatch(code, /\b(?:wallet|address|tx|tx_hash|transaction|ip)\s+(?:text|inet|varchar|bytea)\b/i, 'never an address, a transaction or an IP address');
   const limits = readFileSync(new URL('../server/limits.js', import.meta.url), 'utf8');
