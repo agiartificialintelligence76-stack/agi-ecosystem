@@ -337,7 +337,8 @@
 >   type /music the songs will pop and they can choose, once they choose the audio will be sent, will worked in group mode
 >   and private chat"): `/music` shows her three songs ("Feel the AGI", "SI (It's Better)", "Send It": the owner's own) as
 >   buttons, in her private chat and in her groups, and a tap sends that song there as a Telegram audio, with its title,
->   "AGI-1" and its length. The songs are files of the site (`public/music/`); Telegram fetches each once from agi1.app,
+>   "AGI-1", its length and (the same day, the owner: "can you add these covers on the songs just that") its own cover
+>   from the owner. The songs are files of the site (`public/music/`); Telegram fetches each once from agi1.app,
 >   then sends it by its own id. No AI, nothing kept; spam guards in groups; `TELEGRAM_MUSIC=off` turns it off. No SQL, no
 >   setting. See "Her songs: /music".
 
@@ -894,7 +895,7 @@ plays by itself with "reduce motion" or "save data", ✕, Escape, "Skip all guid
 guides (the first time, the ? button, `?guide=1`), Learn's videos, the videos themselves (each step's, a computer's and a
 phone's: 2 to 14 s, under 700 KB, soundless H.264 with a WebP poster, about 20 MB at most in all) and the recorder's
 promises (never a secret, the 3D model or another site), and the AI helper's guide). `music.test.js` (2026-10-14: her songs in her bot: the files (MP3s Telegram takes, as long as her
-buttons say, no tags but their title, AGI-1 and a cover; the Claude app's label allowed), /music and a tap in her private chat
+buttons say, no tags but their title, AGI-1 and their cover (a square JPEG, the owner's, 1400 px); the Claude app's label allowed), /music and a tap in her private chat
 and her groups, by our address and then by Telegram's id, our own upload when Telegram can't fetch it, a slow Telegram never
 sending twice, the guards, Telegram saying no, `TELEGRAM_MUSIC=off`, her lines, Vercel's cache and its 12 functions).
 `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
@@ -2830,7 +2831,7 @@ no SQL, nothing to set in Vercel.
 - **/music in her private chat:** "my songs 🎧 tap one and i'll send it 💜" and a button for each song ("💜 Feel the AGI ·
   3:13", "✨ SI (It's Better) · 3:10", "🚀 Send It · 3:59"). A tap: Telegram's little note at the top ("🎧 Send It, coming
   up"), then **the song as a Telegram audio** (it plays in Telegram's own player, with its title, "AGI-1", its length and
-  its cover), captioned "🎧 Send It · AGI-1 / my song, made with AI 💜 /music for the others". The menu stays: another song
+  its cover: the owner's), captioned "🎧 Send It · AGI-1 / my song, made with AI 💜 /music for the others". The menu stays: another song
   is a tap away. No 18+ question first (the songs are PG-13 and nothing is kept, like /help). In her menu ("Her songs: tap
   one and she sends it") and in her /help ("/music: my songs 🎧 pick one and i'll send it", in her 16 languages).
 - **/music in her groups** (the ones in `TELEGRAM_GROUPS`): the same menu under their message (like /ca: at most once every
@@ -2847,15 +2848,22 @@ no SQL, nothing to set in Vercel.
 
 **How it works** (`server/tg-music.js`; `server/telegram.js` sends it /music in her private chat, every tap on a "music:"
 button there and every button tapped in a group; `server/tg-groups.js` answers /music in a group like /ca):
-- The songs are files of the site: `public/music/feel-the-agi.mp3`, `si-its-better.mp3` and `send-it.mp3` (4.4, 7.6 and
-  9.6 MB; Telegram fetches files of up to 20 MB from an address). Their sound is exactly the owner's (not encoded again):
-  Suno's tags and words were taken out, and only their title, "AGI-1" and their cover kept ("Send It" has none). In the
-  owner's folder each also carries the Claude app's Content Credentials label (about 6 KB, inside its tag: the tests allow
-  it, and the sound is the same to the byte). `vercel.json` lets browsers and Vercel keep them a day. No new function
+- The songs are files of the site: `public/music/feel-the-agi.mp3`, `si-its-better.mp3` and `send-it.mp3` (5.0, 8.0 and
+  10.1 MB; Telegram fetches files of up to 20 MB from an address). Their sound is exactly the owner's (not encoded again):
+  Suno's tags and words were taken out, and only their title and "AGI-1" kept, with **their covers** (the same day, the
+  owner: "can you add these covers on the songs just that … on the tg bot"): the owner's single covers from
+  `VTuber_Project\17_song_covers\out\`, the **1400 px** JPGs ("the 1400 JPGs are for socials and players", the covers'
+  own notes; the same art as the 3000 px ones, about 0.5 MB in each song instead of 2 MB), as they are, not encoded again.
+  Telegram shows a song's cover in its player. They're AI-made pictures of AGI-1 from her 2D reference sheets (never the
+  3D model), PG-13, with the song's title, "AGI-1" and an "AGI" T-shirt, no other names or logos. In the owner's folder
+  each song also carries the Claude app's Content Credentials label (about 6 KB, inside its tag: the tests allow it, and
+  the sound is the same to the byte). `vercel.json` lets browsers and Vercel keep them a day. No new function
   (still 12).
 - A tap: Telegram's note first (so the button's spinner stops), then `sendAudio` **by our address**
-  (`https://agi1.app/music/send-it.mp3`: `SITE_URL`, else Vercel's production address, the same as her webhook's,
-  `siteBase()` in `server/tg-api.js`): Telegram fetches it from Vercel, and answers with its own id for it (`file_id`),
+  (`https://agi1.app/music/send-it.mp3?v=2`: `SITE_URL`, else Vercel's production address, the same as her webhook's,
+  `siteBase()` in `server/tg-api.js`; `?v=` is `MUSIC_V`, the songs' version, 2 since their covers: Telegram keeps what
+  it once fetched from an address, so a changed file needs a new one): Telegram fetches it from Vercel, and answers with
+  its own id for it (`file_id`),
   which this server copy sends from then on (instant, nothing fetched again). If Telegram can't fetch it from our address,
   our server reads it itself and uploads it (only with 8 seconds to spare: Vercel stops a function at 25 s); if Telegram
   no longer knows an id, by the address again. If Telegram doesn't answer in time, the song may still arrive, so it's
@@ -2869,7 +2877,7 @@ they're made with AI.
 **What the owner does:** push. Then, for her menus at once (otherwise at the next run, within 3 hours), Vercel → Cron Jobs
 → `/api/feed` → **Run**. To check: /music in her private chat and in the group, then a tap on each song. To add a song
 later, tell Claude (its file in `public/music/`, its line in `SONGS` in `server/tg-music.js`; the tests check its length
-against its button).
+against its button, and its cover). Any change to a song's file (a new cover, say) also makes `MUSIC_V` one more.
 
 | What you see | Log line | Fix |
 |---|---|---|
@@ -11033,8 +11041,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 - **Her songs in her Telegram bot (/music): built 2026-10-14, waiting for the owner's push** (the owner: "do this first can
   you put these songs to the telegeram bot … when they type /music the songs will pop and they can choose, once they
   choose the audio will be sent, will worked in group mode and private chat"): her three songs as buttons in her private
-  chat and in her groups, and a tap sends that song there. See "Her songs: /music". **Owner:** push (no SQL, no setting),
-  then Run `/api/feed` (her menus). Tests: 831 in the whole suite (827 pass, 4 skipped as before; on Node 20, 22 and 24,
+  chat and in her groups, and a tap sends that song there; **and their covers** (the same day, the owner: "can you add
+  these covers on the songs just that … on the tg bot": the owner's 1400 px covers inside the songs, their sound the same
+  to the byte). See "Her songs: /music". **Owner:** push (no SQL, no setting), then Run `/api/feed` (her menus). Tests:
+  831 in the whole suite (827 pass, 4 skipped as before; on Node 20, 22 and 24,
   with and without Vercel's settings, and as if the clock said later times), the full build, 19 broken versions caught.
   Next: the meme templates (paused again), then "Add someone" and "Animate", the meme page, and the whole suite with these
   notes again.
@@ -11396,6 +11406,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-14 | Her songs in her bot (the owner's request): `/music` in her private chat and in her groups shows her three songs as buttons, and a tap sends that song as a Telegram audio (its title, "AGI-1", its length and cover) where it was tapped. The songs are files of the site (`public/music/`: their sound as the owner made them, Suno's tags and words taken out), sent by our address (Telegram fetches them), then by Telegram's own id; our server uploads one itself only when Telegram can't fetch it. On by default (`TELEGRAM_MUSIC=off`). No 18+ question first (PG-13, nothing kept, like /help). Not picked: uploading each song from our server every time (slower, more of Vercel's time), keeping Telegram's ids in the database (SQL for little: each server copy learns them with its first send), the menu in 16 languages (the songs' titles are English; /help's line is translated), a player on the website (not asked) |
 | 2026-10-14 | Their words name real people and another project: the owner's second exception to "never other coins or real people" (hard rule 6), after "Feel the AGI" on her show, since the owner asked for these songs. Checked first: PG-13, none says to buy anything; her captions say they're made with AI |
 | 2026-10-14 | Her songs' guards in groups (Claude's call): a song at most once every 30 seconds and the same one once every 5 minutes per group, 6 taps a minute per person, the menu once every 30 seconds (like /ca), "couldn't send" at most once every 10 minutes; in her private chat only a double tap's 10 seconds |
+| 2026-10-14 | Her songs' covers (the owner's request, "just that"): the owner's single covers inside the three songs' files, at 1400 px (the covers' own notes: "the 1400 JPGs are for socials and players"), not the 3000 px upload files (2 MB each: every listener would download 1.5 MB more per song for a picture Telegram shows small). Nothing else changed: the same title, "AGI-1", the same sound to the byte. The tests now ask every song for its cover (a square JPEG, 600 to 3000 px, under 1 MB) |
 
 ## Open questions
 
@@ -11792,9 +11803,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   check above comes before promoting them widely.
 - **Her songs in her bot** (2026-10-14): they were made with Suno, whose terms decide who may use its songs and how (they've
   differed between its free and paid plans): worth the owner checking for these three before promoting them (not legal
-  advice). Their words name real people (the owner's exception, hard rule 6). "Send It" has no cover (Telegram shows a
-  plain note), and a picture could be added to its file. Not tried live: Telegram fetching them from agi1.app (the first
-  /music is the check).
+  advice). Their words name real people (the owner's exception, hard rule 6). Their covers (2026-10-14) are AI-made
+  (Midjourney, per the covers' notes): if a store or distributor asks, they're AI-generated. Not tried live: Telegram
+  fetching them from agi1.app and showing their covers (the first /music is the check).
 
 ## Working in this repo
 

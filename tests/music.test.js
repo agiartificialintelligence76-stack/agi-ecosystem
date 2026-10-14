@@ -1,7 +1,7 @@
 // AGI-1's songs in her Telegram bot (2026-10-14, server/tg-music.js; the owner: "when they type /music the songs will pop
 // and they can choose, once they choose the audio will be sent, will worked in group mode and private chat"): /music in her
 // private chat and in her groups, a tap sends that song there; the songs themselves (public/music/: real MP3s Telegram
-// takes, as long as her buttons say, with no tags but their title, "AGI-1" and a cover); the off switch; her lines.
+// takes, as long as her buttons say, with no tags but their title, "AGI-1" and their cover); the off switch; her lines.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { handleUpdate, connectBot, COMMANDS, commandsFor, webhookSecret, webhookUrl } from '../server/telegram.js';
 import { POST as webhook } from '../api/telegram.js';
 import {
-  SONGS, PERFORMER, MAX_BYTES, MUSIC_MENU, GROUP_MUSIC, TOAST, SEND_FAILED, GAPS, musicButtons, songCaption, songOf, forgetMusic,
+  SONGS, PERFORMER, MAX_BYTES, MUSIC_V, MUSIC_MENU, GROUP_MUSIC, TOAST, SEND_FAILED, GAPS, musicButtons, songCaption, songOf, forgetMusic,
   knownFileId, sendSong, isMp3,
 } from '../server/tg-music.js';
 import { siteBase } from '../server/tg-api.js';
@@ -86,13 +86,32 @@ const textOf = (f) => {
   return s.replace(/\0+$/, '');
 };
 const mimeOf = (f) => f.body.subarray(1, Math.max(1, f.body.indexOf(0, 1))).toString('latin1');
+// a cover (APIC): its type, its picture's own bytes, and the picture's size from its JPEG header (SOF), when it's a JPEG
+function coverOf(f) {
+  const b = f.body, m = b.indexOf(0, 1);
+  if (m < 0) return null;
+  const wide = b[0] === 1 || b[0] === 2;                  // (a description in UTF-16 ends with two zero bytes)
+  let d = m + 2;
+  if (wide) { while (d + 1 < b.length && (b[d] !== 0 || b[d + 1] !== 0)) d += 2; d += 2; } else { while (d < b.length && b[d] !== 0) d += 1; d += 1; }
+  const data = b.subarray(d);
+  let width = 0, height = 0;
+  if (data[0] === 0xff && data[1] === 0xd8) {
+    for (let o = 2; o + 9 < data.length && data[o] === 0xff;) {
+      const kind = data[o + 1];
+      if (kind >= 0xc0 && kind <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(kind)) { height = data.readUInt16BE(o + 5); width = data.readUInt16BE(o + 7); break; }
+      o += 2 + data.readUInt16BE(o + 2);
+    }
+  }
+  return { mime: mimeOf(f), type: b[m + 1], data, width, height };
+}
 // the Claude app labels a media file it saves into the owner's folder with its content credentials (C2PA: a GEOB frame of
 // type application/c2pa, about 6 KB): in an ID3v2.4 tag of its own in front (tests/stream.test.js), or, as with her songs on
 // 2026-10-14, in the song's own tag (made ID3v2.4, its title, artist and cover kept): that label may be there too
 const isLabelFrame = (f) => f.id === 'GEOB' && mimeOf(f) === 'application/c2pa';
 const isLabel = (tag) => tag.frames.length > 0 && tag.frames.every(isLabelFrame);
 // What's wrong with one of her song files ([] = fine): an MP3 Telegram takes, its sound from the first byte after the tags
-// to the last, as long as her button says, and nothing in its tags but its title, "AGI-1" and a cover
+// to the last, as long as her button says, and nothing in its tags but its title, "AGI-1" and its cover (2026-10-14, the
+// owner's covers: a square JPEG, 600 to 3000 px, under 1 MB, as the front cover)
 function songTrouble(buf, song) {
   const trouble = [];
   if (buf.length > MAX_BYTES) trouble.push(`${buf.length} bytes: over 20 MB, Telegram won't fetch it`);
@@ -105,8 +124,12 @@ function songTrouble(buf, song) {
     if (ids.some((id) => !['TIT2', 'TPE1', 'APIC'].includes(id)) || new Set(ids).size !== ids.length) trouble.push(`its tags: ${ids.join(',')}`);
     if (textOf(t.frames.find((f) => f.id === 'TIT2')) !== song.title) trouble.push(`its title: ${textOf(t.frames.find((f) => f.id === 'TIT2'))}`);
     if (textOf(t.frames.find((f) => f.id === 'TPE1')) !== PERFORMER) trouble.push(`its artist: ${textOf(t.frames.find((f) => f.id === 'TPE1'))}`);
-    const cover = t.frames.find((f) => f.id === 'APIC');
-    if (cover && (!/^image\/(jpeg|png)$/.test(mimeOf(cover)) || cover.body.length > 300_000)) trouble.push('its cover: a small JPEG or PNG');
+    const apic = t.frames.find((f) => f.id === 'APIC');
+    const cover = apic ? coverOf(apic) : null;
+    if (!cover) trouble.push('its cover: missing');
+    else if (cover.mime !== 'image/jpeg' || cover.type !== 3 || cover.data.length > 1_000_000 || cover.width !== cover.height || cover.width < 600 || cover.width > 3000) {
+      trouble.push(`its cover: ${cover.mime}, ${cover.width} × ${cover.height}, ${cover.data.length} bytes (a square JPEG, 600 to 3000 px, under 1 MB, the front cover)`);
+    }
     const words = Buffer.concat(t.frames.filter((f) => f.id !== 'APIC').map((f) => f.body)).toString('latin1').replace(/\0/g, '');
     if (/suno|lyrics|http|www\./i.test(words)) trouble.push('words in its tags beyond its title and AGI-1');
   }
@@ -177,7 +200,7 @@ beforeEach(() => {
       calls.push({ to: 'site', url });
       if (fake.siteDown) return new Response('not found', { status: 404 });
       if (fake.sitePage) return new Response(`<!doctype html><title>AGI-1</title>${' '.repeat(20_000)}`, { headers: { 'content-type': 'text/html' } });
-      const song = SONGS.find((s) => url.endsWith(`/music/${s.file}`));
+      const song = SONGS.find((s) => url.split('?')[0].endsWith(`/music/${s.file}`));
       return song ? new Response(bytesOf(song), { headers: { 'content-type': 'audio/mpeg' } }) : new Response('not found', { status: 404 });
     }
     calls.push({ to: 'elsewhere', url });
@@ -204,7 +227,7 @@ const quietLog = () => { const lines = []; console.warn = (...a) => lines.push(a
 const NOT_OK = /\b(babe|baby|cutie|honey|darling|sweetie|love)\b|\b(buy|buying|sell|selling|hold|hodl|invest\w*|moon\w*|pump\w*|dump\w*|profit\w*|gains?|lambo|scam\w*|rug\w*|fraud\w*|safe|guarantee\w*)\b|\b\d+x\b|sex|nude|naked|horny/i;
 
 // ---------- the songs ----------
-test('her songs: real MP3s Telegram takes (20 MB at most), as long as her buttons say, no tags but their title, "AGI-1" and a cover', () => {
+test('her songs: real MP3s Telegram takes (20 MB at most), as long as her buttons say, no tags but their title, "AGI-1" and their cover', () => {
   assert.deepEqual(SONGS.map((s) => [s.id, s.title, s.file, s.seconds]), [
     ['feel', 'Feel the AGI', 'feel-the-agi.mp3', 193], ['si', "SI (It's Better)", 'si-its-better.mp3', 190], ['send', 'Send It', 'send-it.mp3', 239]]);
   const mp3s = readdirSync(MUSIC_DIR).filter((f) => /\.mp3$/i.test(f)).sort();
@@ -215,6 +238,9 @@ test('her songs: real MP3s Telegram takes (20 MB at most), as long as her button
     total += mp3.length;
     assert.deepEqual(songTrouble(mp3, song), [], song.file);
     assert.ok(mp3.length > 1_000_000, `${song.file}: the whole song`);
+    // (2026-10-14) the owner's covers, as made (1400 px: "the 1400 JPGs are for socials and players")
+    const cover = coverOf(id3Tags(mp3).tags.flatMap((t) => t.frames).find((f) => f.id === 'APIC'));
+    assert.deepEqual([cover.width, cover.height], [1400, 1400], song.file);
   }
   assert.ok(total < 25_000_000, `${total} bytes: the site's code stays light to download`);
   // the rules themselves: with the Claude app's label in front (as in the owner's folder) it's still her song; anything else isn't
@@ -229,14 +255,25 @@ test('her songs: real MP3s Telegram takes (20 MB at most), as long as her button
   const ourTag = mp3.subarray(0, tags[0].size), sound = mp3.subarray(audioAt);
   const retag = (...frames) => { const all = Buffer.concat(frames); return Buffer.concat([Buffer.from('ID3\x04\x00\x00', 'latin1'), syncsafe(all.length), all, sound]); };
   const title = frame('TIT2', Buffer.from('\x03Send It', 'utf8')), artist = frame('TPE1', Buffer.from('\x03AGI-1', 'utf8'));
-  assert.deepEqual(songTrouble(retag(title, artist), send), [], 'its title and AGI-1 (in UTF-8 too): fine');
+  const jpeg = coverOf(tags[0].frames.find((f) => f.id === 'APIC')).data;
+  const art = (pic = jpeg, mime = 'image/jpeg', type = 3) => frame('APIC', Buffer.concat([Buffer.from(`\x03${mime}\x00`, 'latin1'), Buffer.from([type]), Buffer.from('cover\x00', 'utf8'), pic]));
+  assert.deepEqual(songTrouble(retag(title, artist, art()), send), [], 'its title, AGI-1 and its cover (in UTF-8 too): fine');
+  assert.match(songTrouble(retag(title, artist), send).join(), /its cover: missing/);
+  assert.match(songTrouble(retag(title, artist, art(Buffer.concat([jpeg, Buffer.alloc(600_000)]))), send).join(), /its cover: image\/jpeg, 1400 × 1400, \d+ bytes/, 'over 1 MB: no');
+  assert.match(songTrouble(retag(title, artist, art(jpeg, 'image/png')), send).join(), /its cover: image\/png/);
+  assert.match(songTrouble(retag(title, artist, art(jpeg, 'image/jpeg', 4)), send).join(), /its cover: /, 'a back cover: no');
+  const narrow = Buffer.from(jpeg);
+  for (let o = 2; o + 9 < narrow.length && narrow[o] === 0xff; o += 2 + narrow.readUInt16BE(o + 2)) {
+    if (narrow[o + 1] >= 0xc0 && narrow[o + 1] <= 0xc3) { narrow.writeUInt16BE(1000, o + 7); break; }
+  }
+  assert.match(songTrouble(retag(title, artist, art(narrow)), send).join(), /its cover: image\/jpeg, 1000 × 1400/, 'not square: no');
   const c2pa = frame('GEOB', Buffer.concat([Buffer.from('\x00application/c2pa\x00c2pa\x00c2pa manifest store\x00', 'latin1'), Buffer.alloc(6000, 1)]));
-  assert.deepEqual(songTrouble(retag(title, artist, c2pa), send), [], 'the Claude app\'s label inside its own tag (as in the owner\'s folder): fine');
-  assert.match(songTrouble(retag(title, artist, frame('GEOB', Buffer.from('\x00application/octet-stream\x00x\x00y\x00', 'latin1'))), send).join(), /its tags: TIT2,TPE1,GEOB/,
+  assert.deepEqual(songTrouble(retag(title, artist, art(), c2pa), send), [], 'the Claude app\'s label inside its own tag (as in the owner\'s folder): fine');
+  assert.match(songTrouble(retag(title, artist, art(), frame('GEOB', Buffer.from('\x00application/octet-stream\x00x\x00y\x00', 'latin1'))), send).join(), /its tags: TIT2,TPE1,APIC,GEOB/,
     'any other data: no');
-  assert.match(songTrouble(retag(title, artist, frame('TXXX', Buffer.from('\x00made with\x00Suno', 'latin1'))), send).join(), /its tags: TIT2,TPE1,TXXX/);
-  assert.match(songTrouble(retag(frame('TIT2', Buffer.from('\x03Send It (v2)', 'utf8')), artist), send).join(), /its title: Send It \(v2\)/);
-  assert.match(songTrouble(retag(title, frame('TPE1', Buffer.from('\x03someone', 'utf8'))), send).join(), /its artist: someone/);
+  assert.match(songTrouble(retag(title, artist, art(), frame('TXXX', Buffer.from('\x00made with\x00Suno', 'latin1'))), send).join(), /its tags: TIT2,TPE1,APIC,TXXX/);
+  assert.match(songTrouble(retag(frame('TIT2', Buffer.from('\x03Send It (v2)', 'utf8')), artist, art()), send).join(), /its title: Send It \(v2\)/);
+  assert.match(songTrouble(retag(title, frame('TPE1', Buffer.from('\x03someone', 'utf8')), art()), send).join(), /its artist: someone/);
   assert.match(songTrouble(Buffer.concat([ourTag, sound.subarray(0, sound.length / 2)]), send).join(), /s long, her button says 239/, 'half a song: no');
   assert.match(songTrouble(Buffer.concat([mp3, Buffer.alloc(5000, 0x41)]), send).join(), /5000 bytes after its sound/);
   assert.equal(isMp3(Buffer.from('<!doctype html>')), false);
@@ -272,7 +309,7 @@ test('a tap in her private chat: that song as an audio (its title, AGI-1, its le
   assert.deepEqual(tg('answerCallbackQuery')[0].body, { callback_query_id: 'cb1', text: '🎧 Feel the AGI, coming up' });
   assert.deepEqual(sent()[0].body, {
     chat_id: CHAT, title: 'Feel the AGI', performer: 'AGI-1', duration: 193, caption: '🎧 Feel the AGI · AGI-1\nmy song, made with AI 💜 /music for the others',
-    audio: 'https://agi1.app/music/feel-the-agi.mp3',
+    audio: 'https://agi1.app/music/feel-the-agi.mp3?v=2',
   });
   const id = knownFileId('feel');
   assert.match(id, /^CQAC/, 'Telegram\'s id for it, kept by this server copy');
@@ -286,10 +323,12 @@ test('a tap in her private chat: that song as an audio (its title, AGI-1, its le
   assert.equal(sent().at(-1).body.audio, id);
   // the others, from the site's own address (SITE_URL, as for her webhook)
   assert.equal(await handleUpdate(cfg(), TOKEN, tap('music:send'), NOW + 20_000), 'music_send');
-  assert.deepEqual([sent().at(-1).body.audio, sent().at(-1).body.duration], ['https://agi1.app/music/send-it.mp3', 239]);
+  assert.deepEqual([sent().at(-1).body.audio, sent().at(-1).body.duration], ['https://agi1.app/music/send-it.mp3?v=2', 239]);
   process.env.SITE_URL = 'https://www.agi1.app/';
   assert.equal(await handleUpdate(cfg(), TOKEN, tap('music:si'), NOW + 21_000), 'music_si');
-  assert.equal(sent().at(-1).body.audio, 'https://www.agi1.app/music/si-its-better.mp3');
+  assert.equal(sent().at(-1).body.audio, 'https://www.agi1.app/music/si-its-better.mp3?v=2');
+  // (2026-10-14) a song's version in its address: Telegram fetches a changed song again (it keeps what it fetched from an address)
+  assert.equal(MUSIC_V, 2, 'their covers: make it one more with any change to a file in public/music/');
   assert.equal(calls.filter((c) => c.to === 'site').length, 0, 'Telegram fetches it, not our server');
   // anything else: answered (the spinner stops), nothing sent
   const before = sent().length;
@@ -307,7 +346,7 @@ test('when Telegram can\'t fetch it from our address: our server uploads it itse
   fake.urlRefused = true;
   assert.equal(await handleUpdate(cfg(), TOKEN, tap('music:send'), NOW), 'music_send');
   assert.deepEqual(calls.map((c) => c.method ?? c.to), ['answerCallbackQuery', 'sendAudio', 'site', 'sendAudio']);
-  assert.equal(calls[2].url, 'https://agi1.app/music/send-it.mp3');
+  assert.equal(calls[2].url, 'https://agi1.app/music/send-it.mp3?v=2');
   const up = sent().at(-1).body;
   assert.equal(up.form, true, 'uploaded (a form)');
   assert.deepEqual([up.audio.name, up.audio.type, md5(up.audio.bytes)], ['send-it.mp3', 'audio/mpeg', md5(bytesOf(SONGS[2]))], 'the song itself');
@@ -319,7 +358,7 @@ test('when Telegram can\'t fetch it from our address: our server uploads it itse
   fake.siteDown = true;
   assert.equal(await handleUpdate(cfg(), TOKEN, tap('music:send'), NOW + 20_000), 'music_failed');
   assert.equal(texts().at(-1), "couldn't send that song just now 🙈 try again in a minute?");
-  assert.match(log.join('\n'), /couldn't read https:\/\/agi1\.app\/music\/send-it\.mp3 either \(HTTP 404\): is public\/music\/ in the deployment\?/);
+  assert.match(log.join('\n'), /couldn't read https:\/\/agi1\.app\/music\/send-it\.mp3\?v=2 either \(HTTP 404\): is public\/music\/ in the deployment\?/);
   fake.siteDown = false;
   fake.sitePage = true;                                        // a page where the song should be: never sent as her song
   assert.equal(await handleUpdate(cfg(), TOKEN, tap('music:send'), NOW + 21_000), 'music_failed', 'a tap again works at once (not "just sent")');
@@ -382,7 +421,7 @@ test('in her groups: /music under their message (once every 30 s there); a tap s
   assert.equal(await handleUpdate(cfg(), TOKEN, gtap('music:si'), NOW + 40_000), 'music_si');
   assert.equal(toasts()[0], "🎧 SI (It's Better), coming up");
   const song = sent()[0].body;
-  assert.deepEqual([song.chat_id, song.audio, song.title, song.duration], [GROUP, 'https://agi1.app/music/si-its-better.mp3', "SI (It's Better)", 190]);
+  assert.deepEqual([song.chat_id, song.audio, song.title, song.duration], [GROUP, 'https://agi1.app/music/si-its-better.mp3?v=2', "SI (It's Better)", 190]);
   assert.deepEqual(song.reply_parameters, { message_id: 60, allow_sending_without_reply: true });
   assert.equal(song.message_thread_id, undefined);
   // the same song again: it's right above (5 minutes); another one: one song at a time (30 s)

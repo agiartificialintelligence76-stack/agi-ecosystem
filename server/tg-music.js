@@ -25,6 +25,10 @@ export const SONGS = [
   { id: 'send', title: 'Send It', file: 'send-it.mp3', seconds: 239, emoji: '🚀' },
 ];
 export const MUSIC_PATH = '/music/';
+// her songs' version, in their address (…/send-it.mp3?v=2), so Telegram fetches a song again once its file has changed (it
+// keeps what it once fetched from an address). 2: their covers (2026-10-14). Make it one more with any change to a file in
+// public/music/ (Vercel serves the file the same with any ?v=).
+export const MUSIC_V = 2;
 export const MAX_BYTES = 20 * 1024 * 1024;     // Telegram fetches files of up to 20 MB from an address (50 MB uploaded)
 export const songOf = (id) => SONGS.find((s) => s.id === id) || null;
 export const musicOn = (cfg) => cfg?.tgMusic === true;
@@ -141,7 +145,7 @@ export async function sendSong(token, chat, song, extra = {}, { deadline = Date.
     warnOnce('base', "[music] the site's address isn't a plain https address (SITE_URL in Vercel), so her songs can't be sent: fix it, then Redeploy");
     return 'failed';
   }
-  const url = `${base}${MUSIC_PATH}${song.file}`;
+  const url = `${base}${MUSIC_PATH}${song.file}?v=${MUSIC_V}`;
   try { return kept(await tgCall(token, 'sendAudio', { ...params, audio: url }, { timeoutMs: Math.max(1000, Math.min(15_000, left() - 1000)) })); } catch (err) {
     if (isTimeout(err)) return 'unsure';
     if (!(err.status === 400 && /url|http|content|file|identifier|type|fetch/i.test(said(err))) || left() < 8000) return failed(err, chat);
