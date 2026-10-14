@@ -1,6 +1,7 @@
 // Telegram's Bot API for AGI-1's bot (2026-09-29; moved here from server/telegram.js on 2026-10-03, so her group mode,
 // server/tg-groups.js, can use it without the two files importing each other): her token, one API call, sending a text,
-// and a daily code of a chat or a person. Every call to Telegram comes from our server; the token never reaches a browser.
+// a daily code of a chat or a person, and the site's address. Every call to Telegram comes from our server; the token
+// never reaches a browser.
 import { createHmac } from 'node:crypto';
 
 const API = 'https://api.telegram.org/bot';
@@ -13,6 +14,15 @@ export const botIdOf = (token) => {
   const id = Number(String(token ?? '').split(':')[0]);
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 };
+
+// The site's address, where Telegram finds us: SITE_URL, else Vercel's production address (like the link previews'), else
+// agi1.app. Her bot's webhook is <it>/api/telegram, and (2026-10-14) her songs are <it>/music/… (server/tg-music.js), so a
+// song is sent from the same address that already works for the webhook. null when it isn't a plain https address.
+export function siteBase(env = process.env) {
+  const raw = env.SITE_URL || (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : 'https://agi1.app');
+  const base = String(raw).trim().replace(/\/+$/, '');
+  return /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}$/i.test(base) ? base : null;
+}
 
 // A daily code for one Telegram chat's (or one person's) message limits, like the site's daily visitor code: never the
 // number itself. A private chat's number is its person's account number, so a person's code is the same in her private
@@ -27,10 +37,12 @@ export const scrub = (text, token) => {
   return s.replace(/\d{5,15}:[A-Za-z0-9_-]{30,60}/g, '[token]').replace(/\s+/g, ' ').trim().slice(0, 200);
 };
 
-// One Bot API call. → its result · throws an error with .status, .retryAfter (seconds, when Telegram says "too many") and
-// .gone (the person blocked the bot or deleted their account, or the chat doesn't exist: forget them)
+// One Bot API call. → its result · throws an error with .status, .description (Telegram's own words, without the token),
+// .retryAfter (seconds, when Telegram says "too many") and .gone (the person blocked the bot or deleted their account, or the
+// chat doesn't exist: forget them)
 export async function tgCall(token, method, params = {}, { timeoutMs = 5000, files = null } = {}) {
-  // (files: { name: { bytes, filename, type } } → sent as a form, for a file Telegram doesn't have yet: her buy GIF)
+  // (files: { name: { bytes, filename, type } } → sent as a form, for a file Telegram doesn't have yet: her buy GIF, and a
+  // song Telegram couldn't fetch from our address, server/tg-music.js)
   let body = JSON.stringify(params), headers = { 'Content-Type': 'application/json' };
   if (files) {
     body = new FormData();
@@ -48,6 +60,7 @@ async function answerOf(res, method, token) {
   const said = scrub(body?.description, token);
   const err = new Error(`telegram ${method}: HTTP ${res.status}${said ? ` (${said})` : ''}`);
   err.status = res.status;
+  err.description = said;
   err.retryAfter = Number(body?.parameters?.retry_after) > 0 ? Number(body.parameters.retry_after) : null;
   err.gone = res.status === 403 || (res.status === 400 && /chat not found|user is deactivated|bot was blocked|can't initiate/i.test(said));
   throw err;

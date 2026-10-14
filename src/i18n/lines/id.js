@@ -148,6 +148,7 @@ export default {
     ],
     helpLaunch: '/launch: yuk luncurin koin bareng di clank.trade, dari wallet kamu sendiri (18+)',
     helpLive: '/live: tanya aku sesuatu di live show-ku di X',
+    helpMusic: '/music: lagu-laguku 🎧 pilih satu, nanti aku kirim',
     stopped: "oke 💜 aku udah berhenti, dan udah lupain obrolan ini. kalau kamu kangen aku: /start",
     notStarted: "kita belum kenalan 💜 tekan /start ya",
     tooLong: "banyak banget kata-katanya 🙈 bisa di bawah 500 karakter?",

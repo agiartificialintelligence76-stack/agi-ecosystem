@@ -127,6 +127,8 @@ export function getConfig(env = process.env) {
     gamePrize: Math.min(1_000_000, Math.floor(number('GAME_PRIZE', 250)) || 250),
     gameWinsADay: Math.min(1000, Math.floor(number('GAME_WINS_A_DAY', 10)) || 10),
     prizeKey: gasKey(env.PRIZE_WALLET_KEY),
+    // …and her songs there and in her private chat (2026-10-14, server/tg-music.js: /music): on unless "off"
+    tgMusic: !isOff(env.TELEGRAM_MUSIC),
     // Messages paid for by burning $AGI (2026-09-30, server/burn.js): whole $AGI a message (10 by default: 1,000 $AGI =
     // 100 messages), and the burned messages the whole site may use a day, on top of the free ones (1,000: about $0.80 of
     // AI replies at most)

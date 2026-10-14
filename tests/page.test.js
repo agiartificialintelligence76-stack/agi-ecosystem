@@ -318,7 +318,8 @@ test('the roadmap: four pages at their own addresses, built and previewed, with 
     assert.match(page, /<script src="\/theme\.js\?v=7"><\/script>/, `${p}: the page's look before it paints`);
     assert.match(page, new RegExp(`<link rel="canonical" href="__SITE__/${p}" />`), p);
     assert.match(page, new RegExp(`<meta property="og:url" content="__SITE__/${p}" />`), p);
-    assert.ok(page.includes('<meta property="og:image" content="__SITE__/cards/home.jpg" />'), `${p}: a link preview`);
+    assert.ok(page.includes('<meta property="og:image" content="__SITE__/cards/roadmap.jpg" />'), `${p}: the roadmap's own link preview (tools/roadmap-promo, --cards)`);
+    assert.match(page, /<meta property="og:image:alt" content="AGI-1 next to the words The AGI roadmap[^"]*" \/>/, `${p}: its preview's words for screen readers`);
     for (const re of [/<meta name="description" content="([^"]+)"/, /<meta property="og:description" content="([^"]+)"/]) assert.match(page.match(re)[1], /not financial advice/i, `${p}: its preview says so`);
     assert.match(page, /<script type="module" src="\/src\/roadmap\/page\.js"><\/script>/, `${p}: one script for all four`);
     assert.equal((page.match(/<script\b/g) || []).length, 2, `${p}: /theme.js and its module, nothing inline (the CSP)`);

@@ -18,6 +18,7 @@ import { prizeWallet, addressIn, checkAddress, forgetPrizes, BURN, ZERO } from '
 import { secretIn, SECRET_WARNING } from '../server/secrets.js';
 import { handleUpdate, UPDATE_TYPES, COMMANDS, commandsFor, connectBot } from '../server/telegram.js';
 import { forgetGroups } from '../server/tg-groups.js';
+import { GROUP_MUSIC } from '../server/tg-music.js';
 import { questionTrouble } from '../server/live.js';
 import { REFUSE as LIVE_REFUSE } from '../server/live-lines.js';
 import { askError } from '../src/live/words.js';
@@ -179,7 +180,7 @@ beforeEach(() => {
   // (the build's own settings never decide a test: Vercel runs the tests with the project's real ones present)
   for (const k of ['TELEGRAM_GAMES', 'GAMES_A_DAY', 'GAME_PRIZE', 'GAME_WINS_A_DAY', 'PRIZE_WALLET_KEY', 'LAUNCH_GAS_KEY', 'TELEGRAM_GROUPS',
     'TELEGRAM_GROUP_POSTS', 'TELEGRAM_GROUP_WELCOME', 'VITE_TELEGRAM_BOT', 'GEMINI_API_KEY', 'LIVE_SECRET', 'PINATA_JWT', 'LAUNCH_ONLY_FOR',
-    'SITE_URL', 'ROBINHOOD_RPC_URL', 'CRON_SECRET', 'TELEGRAM_BUYS']) delete process.env[k];
+    'SITE_URL', 'ROBINHOOD_RPC_URL', 'CRON_SECRET', 'TELEGRAM_BUYS', 'TELEGRAM_MUSIC']) delete process.env[k];
   Object.assign(process.env, ENV);
   forgetGames(); forgetGroups(); forgetPrizes(); telegramBurst.reset(); _resetChainCache();
   logs = [];
@@ -645,7 +646,7 @@ test('/claim: 18+ first (her private chat\'s own check); then where their prize 
   assert.equal(await handleUpdate(cfg(), TOKEN, pm('/claim', { from: { id: 9999, is_bot: false, first_name: 'X' } })), 'claim_none');
   assert.equal(texts().at(-1), G.CLAIM_NONE);
   assert.ok(COMMANDS.some((c) => c.command === 'claim'));
-  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'claim', 'stop'], '/claim in her menu while her quizzes have prizes');
+  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'claim', 'stop'], '/claim in her menu while her quizzes have prizes');
   delete process.env.PRIZE_WALLET_KEY;
   assert.ok(!commandsFor(cfg()).some((c) => c.command === 'claim'), 'not without prizes');
 });
@@ -837,7 +838,7 @@ test('a seed phrase or a private key sent to her: a warning, and nothing of it g
 test('in her groups: /help and her intro say she runs quizzes (with prizes, or just for fun); /claim points to her private chat', async () => {
   const group = (text, id = 41) => ({ update_id: 4, message: { message_id: 40 + id, from: { id, is_bot: false, first_name: 'G' }, chat: { id: GROUP_ID, type: 'supergroup' }, date: 1, text } });
   assert.equal(await handleUpdate(cfg(), TOKEN, group('/help')), 'group_help');
-  assert.equal(texts().at(-1), `${L.GROUP_HELP}\n\n${G.gamesNote(true)}`);
+  assert.equal(texts().at(-1), `${L.GROUP_HELP}\n\n${GROUP_MUSIC}\n\n${G.gamesNote(true)}`, '(her songs\' line since 2026-10-14)');
   assert.match(G.gamesNote(true), /one right answer wins a little \$AGI \(drawn at random\), claimed in my private chat\. a prize is a thank-you for playing, not financial advice/);
   assert.equal(await handleUpdate(cfg(), TOKEN, group('/claim', 42)), 'group_claim');
   const claim = tg('sendMessage').at(-1);
@@ -854,7 +855,7 @@ test('in her groups: /help and her intro say she runs quizzes (with prizes, or j
   await handleUpdate(cfg(), TOKEN, joined);
   assert.match(texts().at(-1), /and now and then a quiz, just for fun\./);
   assert.equal(await handleUpdate(cfg(), TOKEN, group('/help', 44)), 'group_help');
-  assert.equal(texts().at(-1), `${L.GROUP_HELP}\n\n${G.gamesNote(false)}`);
+  assert.equal(texts().at(-1), `${L.GROUP_HELP}\n\n${GROUP_MUSIC}\n\n${G.gamesNote(false)}`);
   assert.equal(await handleUpdate(cfg(), TOKEN, group('/claim', 45)), 'ignored', 'no prizes: /claim is someone else\'s command');
   process.env.TELEGRAM_GAMES = 'off';
   forgetGroups();

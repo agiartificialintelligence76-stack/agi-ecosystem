@@ -148,6 +148,7 @@ export default {
     ],
     helpLaunch: '/launch: bora lançar uma moeda juntos na clank.trade, da sua própria carteira (18+)',
     helpLive: '/live: me pergunta algo no meu show ao vivo no X',
+    helpMusic: '/music: minhas músicas 🎧 escolhe uma que eu te mando',
     stopped: 'ok 💜 parei, e esqueci esse chat. se um dia sentir minha falta: /start',
     notStarted: 'a gente ainda não se conhece 💜 toca em /start',
     tooLong: 'é muita palavra 🙈 dá pra mandar com menos de 500 caracteres?',

@@ -148,6 +148,7 @@ export default {
     ],
     helpLaunch: "/launch: hadi birlikte clank.trade'de bir coin çıkaralım, kendi cüzdanından (18+)",
     helpLive: "/live: X'teki canlı yayınımda bana bir şey sor",
+    helpMusic: '/music: şarkılarım 🎧 birini seç, sana göndereyim',
     stopped: 'tamam 💜 yazmayı bıraktım ve bu sohbeti unuttum. beni özlersen: /start',
     notStarted: "daha tanışmadık 💜 /start'a bas",
     tooLong: 'çok fazla kelime var 🙈 500 karakterin altında tutabilir misin?',

@@ -148,7 +148,7 @@ let fake, calls, logs;
 beforeEach(() => {
   // (the settings Vercel's build has, which these tests take as unset: their defaults are what's checked)
   for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'TELEGRAM_GROUPS', 'TELEGRAM_GROUP_POSTS', 'TELEGRAM_BUY_MIN', 'TELEGRAM_BUYS',
-    'TELEGRAM_GAMES', 'PRIZE_WALLET_KEY']) delete process.env[k];
+    'TELEGRAM_GAMES', 'PRIZE_WALLET_KEY', 'TELEGRAM_MUSIC']) delete process.env[k];
   Object.assign(process.env, ENV);
   for (const b of [liveBurst, liveLookupBurst, liveAuthBurst, telegramBurst, liveLineBurst]) b.reset();
   logs = [];
@@ -870,13 +870,13 @@ test('/live: 18+ first, "not on yet" until her show is set up, her menu and /hel
   delete process.env.LIVE_SECRET;
   assert.equal(await hook('/live hello there?'), 'live_not_yet');
   assert.equal(say().at(-1), LL.NOT_YET);
-  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'stop']);
+  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'stop'], '(/music since 2026-10-14)');
   await hook('/help');
   assert.ok(!say().at(-1).includes('/live'));
   process.env.LIVE_SECRET = LIVE_KEY;
-  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'live', 'stop']);
+  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'live', 'stop']);
   await hook('/help');
-  assert.ok(say().at(-1).includes(tgLinesFor('en').helpFor({ live: true }).split('\n\n')[1]));
+  assert.ok(say().at(-1).includes(tgLinesFor('en').helpFor({ live: true, music: true }).split('\n\n')[1]));
   assert.match(say().at(-1), /\/live: ask me something on my live show on X/);
   for (const l of LANGS) {
     const line = linesOf(l.code).tg.helpLive;

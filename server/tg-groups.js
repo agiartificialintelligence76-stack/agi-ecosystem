@@ -19,6 +19,8 @@
 //   • api/feed.js posts her diary and $AGI's market moments there as they happen (postToGroups; TELEGRAM_GROUP_POSTS=off:
 //     none): never a moment about another coin (no egirl coins, no copies of $AGI), never twice;
 //   • (2026-10-07) api/live.js tells them once a day when her show goes live on X (postLiveNow; the same switch).
+//   • (2026-10-14) /music: her songs as buttons, and a tap sends that song there (server/tg-music.js: its own guards; the
+//     menu, like /ca, at most once every 30 seconds in a group; TELEGRAM_MUSIC=off: none).
 // Kept (supabase/telegram.sql, agi1_tg_group_usage): per group and day, how many replies she gave there and when she last
 // welcomed someone. Only the group's own number: never a message, a name or anyone's account.
 import { tgCall, say, chatCode, botIdOf, scrub, MEDIA } from './tg-api.js';
@@ -35,6 +37,7 @@ import { botName } from '../src/chat/telegram-link.js';
 import { gamesOn, prizesOn } from './games.js';
 import { gamesNote, groupClaim, CLAIM_BUTTON } from './game-lines.js';
 import { secretIn, SECRET_WARNING } from './secrets.js';
+import { musicOn, MUSIC_MENU, musicButtons, GROUP_MUSIC } from './tg-music.js';
 
 const MAX_TEXT = 500;                        // characters she reads (the same as the site's chat and her private chat)
 const MINUTE = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
@@ -45,8 +48,11 @@ export const GROUP_COMMANDS = [
   { command: 'ca', description: 'The official $AGI contract' },
   { command: 'mc', description: '$AGI market cap, 24h change and liquidity' },
   { command: 'website', description: 'The official website, agi1.app' },
+  { command: 'music', description: "AGI-1's songs: tap one and she sends it" },
   { command: 'help', description: 'How to talk to her in here' },
 ];
+// …as connectBot sets them: /music only while her songs are on (2026-10-14, server/tg-music.js)
+export const groupCommandsFor = (cfg) => GROUP_COMMANDS.filter((c) => c.command !== 'music' || musicOn(cfg));
 // /ca, /website and /mc: what she answers (the contract marked as code: Telegram copies it with a tap; $AGI's numbers read
 // when asked, kept a minute), at most once every 30 s in a group
 export const FIXED_GAP_MS = 30_000;
@@ -58,12 +64,18 @@ const FIXED = {
     const n = await agiNumbers(now);
     return { text: n ? groupMarket(n) : GROUP_MARKET_DOWN };
   },
+  // (2026-10-14) /music: her songs as buttons (a tap sends one: server/tg-music.js)
+  music: async () => ({ text: MUSIC_MENU, markup: { inline_keyboard: musicButtons() } }),
   // (2026-10-09) /claim typed in a group, by a quiz's winner: her private chat is where prizes are claimed (server/games.js)
   claim: async (now, me) => ({
     text: groupClaim(Boolean(me?.username)),
     ...(me?.username ? { markup: { inline_keyboard: [[{ text: CLAIM_BUTTON, url: `https://t.me/${me.username}?start=claim` }]] } } : {}),
   }),
 };
+// which of them are on: /claim while her quizzes have prizes, /music while her songs are on
+const fixedOn = (cfg, name) => Object.hasOwn(FIXED, name) && (name !== 'claim' || (gamesOn(cfg) && prizesOn(cfg))) && (name !== 'music' || musicOn(cfg));
+// her /help in a group: how to talk to her, then /music (while it's on) and her quizzes (while they're on)
+export const groupHelp = (cfg) => [GROUP_HELP, musicOn(cfg) ? GROUP_MUSIC : null, gamesOn(cfg) ? gamesNote(prizesOn(cfg)) : null].filter(Boolean).join('\n\n');
 // /ask, /ask@her_bot, "/help@her_bot something" → [, name, @name, the rest]
 const COMMAND = /^\/([A-Za-z0-9_]{1,32})(?:@([A-Za-z0-9_]{3,64}))?(?:\s+([\s\S]*))?$/;
 
@@ -186,7 +198,7 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
     if (cmd[2] && me.username && cmd[2].toLowerCase() !== me.username) return 'ignored';   // another bot's command
     const name = cmd[1].toLowerCase();
     if (name === 'ask') ask = withoutHer(cmd[3] || '', [], me);
-    else if (Object.hasOwn(FIXED, name) && (name !== 'claim' || (gamesOn(cfg) && prizesOn(cfg)))) fixed = name;   // /ca, /website, /mc, /claim (plain, or with her name)
+    else if (fixedOn(cfg, name)) fixed = name;                  // /ca, /website, /mc, /music, /claim (plain, or with her name)
     else if (name === 'help' || cmd[2]) help = true;            // /help, or another of her commands sent to her by name
     else return 'ignored';                                       // someone else's plain command (/start, /warn…)
   } else if (toHer || mentionsHer(body, ents, me)) {
@@ -196,8 +208,8 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
   // speed bumps, only for messages meant for her: 4 a minute per person, 15 a minute per group (per server copy)
   if (!groupPersonBurst(chatCode(cfg.passSecret, m.from.id, 'gburst'), now) || !groupBurst(chatCode(cfg.passSecret, chat.id, 'gburst'), now)) return 'too_many';
 
-  // /ca, /website and /mc: her answer under their message (on its own if a bot already cleaned their command away), at
-  // most once every 30 seconds in a group (asked again sooner: the answer is right above); no AI, nothing counted
+  // /ca, /website, /mc and /music: her answer under their message (on its own if a bot already cleaned their command away),
+  // at most once every 30 seconds in a group (asked again sooner: the answer is right above); no AI, nothing counted
   if (fixed) {
     if (!firstTime(`${fixed}:${chat.id}`, now, FIXED_GAP_MS)) return 'group_recent';
     if (fixed === 'claim' && !me.username) me = await botIdentity(token, process.env, now);
@@ -220,7 +232,7 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
     return 'not_text';
   }
   // how to talk to her: once every 10 minutes per person (so /help can't fill the group)
-  if (help || !ask) { if (firstTime(`help:${person}`, now, 10 * MINUTE)) await send(gamesOn(cfg) ? `${GROUP_HELP}\n\n${gamesNote(prizesOn(cfg))}` : GROUP_HELP); return 'group_help'; }
+  if (help || !ask) { if (firstTime(`help:${person}`, now, 10 * MINUTE)) await send(groupHelp(cfg)); return 'group_help'; }
   if (ask.length > MAX_TEXT) { await send(E.TOO_LONG); return 'too_long'; }
   // (2026-10-09) a seed phrase or a private key, by mistake: a warning, and nothing of it goes to the AI (server/secrets.js)
   const secret = secretIn(ask);

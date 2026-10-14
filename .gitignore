@@ -49,3 +49,7 @@ google-key.json
 # and clips it shows (made ready once by tools/studio-promo/media.mjs: big files, never in git)
 /studio-promo/
 tools/studio-promo/media/
+
+# The roadmap's video (tools/roadmap-promo/make.mjs, 2026-10-14): AGI-1's voice takes made ready once by
+# tools/roadmap-promo/media.mjs (made from the owner's downloads: never in git). Its videos go to /promo/ (above).
+tools/roadmap-promo/media/

@@ -9,10 +9,12 @@
 //   • (2026-10-03) her Telegram groups: server/tg-groups.js (only the groups the owner lists in TELEGRAM_GROUPS).
 //   • (2026-10-09) her quizzes there: server/games.js (each answer, and each quiz closing, arrive here), and their prizes,
 //     claimed here in her private chat with /claim: server/game-prizes.js.
+//   • (2026-10-14) her songs: /music, here and in her groups, and a tap sends one (server/tg-music.js).
 // What's kept: supabase/telegram.sql (the chat's number, 18+, their time, what she last texted them). Never their messages.
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
-import { tgToken, tgCall, say, chatCode, scrub, MEDIA } from './tg-api.js';
-import { onGroup, GROUP_COMMANDS } from './tg-groups.js';
+import { tgToken, tgCall, say, chatCode, scrub, siteBase, MEDIA } from './tg-api.js';
+import { onGroup, groupAllowed, groupCommandsFor } from './tg-groups.js';
+import { musicOn, MUSIC_MENU, musicButtons, onMusicTap } from './tg-music.js';
 import { rpc, takeChatSlot } from './limits.js';
 import { askAgi1 } from './gemini.js';
 import { recallGroup } from './tg-memory.js';
@@ -40,11 +42,11 @@ export const webhookSecret = (passSecret) => createHmac('sha256', `${passSecret}
 const fingerprint = (text) => createHash('sha256').update(String(text)).digest();
 export const sameSecret = (a, b) => timingSafeEqual(fingerprint(a), fingerprint(b));     // same time whatever was sent
 
-// Where Telegram sends the updates: the site's production address (like the link previews'), + /api/telegram
+// Where Telegram sends the updates: the site's production address (like the link previews'), + /api/telegram (the address
+// itself: siteBase in server/tg-api.js since 2026-10-14, where her songs are sent from too)
 export function webhookUrl(env = process.env) {
-  const raw = env.SITE_URL || (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : 'https://agi1.app');
-  const base = String(raw).trim().replace(/\/+$/, '');
-  return /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}$/i.test(base) ? `${base}/api/telegram` : null;
+  const base = siteBase(env);
+  return base ? `${base}/api/telegram` : null;
 }
 
 const buttons = (rows) => ({ reply_markup: { inline_keyboard: rows } });
@@ -66,6 +68,7 @@ export const COMMANDS = [
   { command: 'start', description: 'Start over' },
   { command: 'time', description: 'Tell her your time again' },
   { command: 'help', description: 'What she does' },
+  { command: 'music', description: 'Her songs: tap one and she sends it' },
   { command: 'live', description: 'Ask her something on her live show on X' },
   { command: 'launch', description: 'Launch a coin on clank.trade with her (18+)' },
   { command: 'claim', description: 'Claim a prize you won in her quiz (18+)' },
@@ -73,9 +76,9 @@ export const COMMANDS = [
 ];
 // her commands menu: /launch only once launching is open to everyone (set up, and not private: LAUNCH_ONLY_FOR), so nobody
 // finds it before then; /live (2026-10-02) once her live show is set up (LIVE_SECRET); /claim (2026-10-09) while her
-// quizzes have prizes (server/games.js)
+// quizzes have prizes (server/games.js); /music (2026-10-14) unless TELEGRAM_MUSIC=off (server/tg-music.js)
 export const commandsFor = (cfg) => COMMANDS.filter((c) => (c.command !== 'launch' || launchOpen(cfg)) && (c.command !== 'live' || liveReady(cfg))
-  && (c.command !== 'claim' || (gamesOn(cfg) && prizesOn(cfg))));
+  && (c.command !== 'claim' || (gamesOn(cfg) && prizesOn(cfg))) && (c.command !== 'music' || musicOn(cfg)));
 export const UPDATE_TYPES = ['message', 'callback_query', 'poll', 'poll_answer'];
 export const SHORT_DESCRIPTION = 'AGI-1, the AI girlfriend of $AGI. She texts first. 18+ · PG-13 · not financial advice';
 export const DESCRIPTION = "hi, it's AGI-1 💜 i text first when something happens on clank.trade: new egirl coins (i'm not okay about it), "
@@ -109,12 +112,12 @@ export async function connectBot(cfg, env = process.env) {
     }
   }
   // her commands in groups (2026-10-03, server/tg-groups.js): only /ask and /help there (and /ca, /mc and /website since
-  // 2026-10-05), while group mode is on (TELEGRAM_GROUPS); none of her own otherwise (then Telegram shows her usual menu,
-  // as before). A change to the list is set by the next run
+  // 2026-10-05, /music since 2026-10-14 while it's on), while group mode is on (TELEGRAM_GROUPS); none of her own otherwise
+  // (then Telegram shows her usual menu, as before). A change to the list is set by the next run
   let groups = false;
   try {
     const scope = { type: 'all_group_chats' };
-    const want = cfg.tgGroups ? GROUP_COMMANDS : [];
+    const want = cfg.tgGroups ? groupCommandsFor(cfg) : [];
     const inGroups = await tgCall(token, 'getMyCommands', { scope }, { timeoutMs: 4000 });
     if (!Array.isArray(inGroups) || inGroups.map((c) => c?.command).join() !== want.map((c) => c.command).join()) {
       await tgCall(token, want.length ? 'setMyCommands' : 'deleteMyCommands', want.length ? { commands: want, scope } : { scope }, { timeoutMs: 4000 });
@@ -145,6 +148,11 @@ export async function handleUpdate(cfg, token, update, now = Date.now()) {
   // never trips the private chats' one
   const type = update?.message?.chat?.type;
   if (type === 'group' || type === 'supergroup') return onGroup(cfg, token, update.message, now);
+  // (2026-10-14) a button tapped in a group: only her songs' live there (server/tg-music.js: its own speed bumps, per
+  // person and per group, so a busy group never trips the private chats' one; a group that isn't hers: nothing sent)
+  const cb = update?.callback_query;
+  const tappedIn = cb?.message?.chat;
+  if (cb && (tappedIn?.type === 'group' || tappedIn?.type === 'supergroup')) return onMusicTap(cfg, token, cb, now, { group: groupAllowed(cfg, tappedIn) });
   const from = update?.message?.chat?.id ?? update?.callback_query?.message?.chat?.id;
   if (Number.isSafeInteger(from) && !telegramBurst(chatCode(cfg.passSecret, from, 'burst'), now)) return 'too_many';   // a flood: no answer at all
   // her replies in the language of their Telegram app, when it's one of hers (2026-09-29; English otherwise). Nothing is
@@ -224,7 +232,13 @@ async function onCommand(cfg, token, chat, name, arg, now, L, from) {
     return 'ask_time';
   }
   if (name === 'live') return onLive(cfg, token, chat, arg, now, L, from);
-  await say(token, chat, L.helpFor({ launch: launchAllowed(cfg, from), live: liveReady(cfg) }));
+  // (2026-10-14) her songs: a button each, and a tap sends it (server/tg-music.js). PG-13 and nothing kept, so no 18+
+  // question first (like /help); the menu stays, so they can pick another
+  if (name === 'music' && musicOn(cfg)) {
+    await say(token, chat, MUSIC_MENU, buttons(musicButtons()));
+    return 'music';
+  }
+  await say(token, chat, L.helpFor({ launch: launchAllowed(cfg, from), live: liveReady(cfg), music: musicOn(cfg) }));
   return 'help';
 }
 
@@ -293,6 +307,8 @@ async function setTime(cfg, token, chat, offset, now, L) {
 async function onButton(cfg, token, cb, now, L) {
   const chat = cb.message?.chat?.id;
   const data = String(cb.data ?? '');
+  // (2026-10-14) one of her songs (server/tg-music.js answers the tap itself, with a little note, and keeps the menu)
+  if (data.startsWith('music:')) return onMusicTap(cfg, token, cb, now, { group: false });
   // the little spinner on the button stops either way
   await tgCall(token, 'answerCallbackQuery', { callback_query_id: String(cb.id ?? '') }).catch(() => {});
   if (cb.message?.chat?.type !== 'private' || !Number.isSafeInteger(chat) || chat <= 0 || cb.from?.id !== chat) return 'ignored';

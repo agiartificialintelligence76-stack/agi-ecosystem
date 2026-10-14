@@ -148,6 +148,7 @@ export default {
     ],
     helpLaunch: '/launch: mag-launch tayo ng coin sa clank.trade, gamit ang sarili mong wallet (18+)',
     helpLive: '/live: magtanong sa akin sa live show ko sa X',
+    helpMusic: '/music: mga kanta ko 🎧 pumili ka ng isa at ipapadala ko',
     stopped: "okay 💜 tumigil na ako, at kinalimutan ko na ang chat na 'to. kung ma-miss mo ako: /start",
     notStarted: "hindi pa tayo magkakilala 💜 pindutin mo ang /start",
     tooLong: "ang daming words 🙈 pwede under 500 characters lang?",

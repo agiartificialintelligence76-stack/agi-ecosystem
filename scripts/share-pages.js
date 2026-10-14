@@ -59,7 +59,7 @@ export function allSharePages(site) {
 }
 
 // the card pictures every share page needs (public/cards/, see "Share cards" in CLAUDE.md)
-export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg'];
+export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg', 'roadmap.jpg'];
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const site = siteUrl();

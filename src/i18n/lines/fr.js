@@ -148,6 +148,7 @@ export default {
     ],
     helpLaunch: '/launch : on lance un coin ensemble sur clank.trade, depuis ton propre wallet (18+)',
     helpLive: '/live : pose-moi une question pendant mon live sur X',
+    helpMusic: "/music : mes chansons 🎧 choisis-en une et je te l'envoie",
     stopped: "ok 💜 j'ai arrêté, et j'ai oublié ce chat. si un jour je te manque : /start",
     notStarted: 'on se connaît pas encore 💜 appuie sur /start',
     tooLong: 'ça fait beaucoup de mots 🙈 tu peux rester sous les 500 caractères ?',

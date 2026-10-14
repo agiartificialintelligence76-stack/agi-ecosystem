@@ -40,9 +40,11 @@ function build(code) {
     HELP: paras('help').join('\n\n'),
     // (2026-10-01) the same, with /launch among her commands: while launching coins with her is open (server/launch.js)
     HELP_LAUNCH: paras('help').map((p, i) => (i === 1 ? `${p}\n${one('helpLaunch')}` : p)).join('\n\n'),
-    // (2026-10-02) with /live too, while her live show is set up (server/live.js), and /launch while it's open
-    helpFor: ({ launch = false, live = false } = {}) => paras('help')
-      .map((p, i) => (i === 1 ? [p, live ? one('helpLive') : null, launch ? one('helpLaunch') : null].filter(Boolean).join('\n') : p)).join('\n\n'),
+    // (2026-10-02) with /live too, while her live show is set up (server/live.js), and /launch while it's open; (2026-10-14)
+    // and /music first, while her songs are on (server/tg-music.js)
+    helpFor: ({ launch = false, live = false, music = false } = {}) => paras('help')
+      .map((p, i) => (i === 1 ? [p, music ? one('helpMusic') : null, live ? one('helpLive') : null, launch ? one('helpLaunch') : null]
+        .filter(Boolean).join('\n') : p)).join('\n\n'),
     STOPPED: one('stopped'),
     NOT_STARTED: one('notStarted'),
     TOO_LONG: one('tooLong'),

@@ -152,6 +152,7 @@ export default {
     ],
     helpLaunch: '/launch: 같이 clank.trade에서 코인 런칭하자, 네 지갑으로 직접 (18+)',
     helpLive: '/live: X에서 하는 내 라이브 방송에서 나한테 질문해 줘',
+    helpMusic: '/music: 내 노래들 🎧 하나 고르면 보내 줄게',
     stopped: '알겠어 💜 연락 멈췄고, 이 채팅도 잊었어. 혹시 내가 보고 싶으면: /start',
     notStarted: '우리 아직 안 만났잖아 💜 /start 눌러 줘',
     tooLong: '글자가 너무 많아 🙈 500자 안으로 줄여 줄래?',

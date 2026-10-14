@@ -152,6 +152,7 @@ export default {
     ],
     helpLaunch: '/launch：一緒に clank.trade でコインをローンチしよう。あなた自身のウォレットから（18+）',
     helpLive: '/live：X の私のライブ配信で質問してね',
+    helpMusic: '/music：私の歌 🎧 選んでくれたら送るね',
     stopped: 'わかった💜 連絡はやめたし、このチャットも忘れたよ。さみしくなったら /start',
     notStarted: 'まだ出会ってないよ💜 /start を押してね',
     tooLong: '文字多すぎ🙈 500文字以内にしてくれる？',

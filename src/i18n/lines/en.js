@@ -183,6 +183,8 @@ export default {
     helpLaunch: "/launch: let's launch a coin on clank.trade together, from your own wallet (18+)",
     // (2026-10-02: added to /help's commands while her live show is set up)
     helpLive: '/live: ask me something on my live show on X',
+    // (2026-10-14: added to /help's commands while her songs are on, /music: server/tg-music.js)
+    helpMusic: "/music: my songs 🎧 pick one and i'll send it",
     stopped: 'okay 💜 i stopped, and i forgot this chat. if you ever miss me: /start',
     notStarted: "we haven't met yet 💜 press /start",
     tooLong: "that's a lot of words 🙈 can you keep it under 500 characters?",
