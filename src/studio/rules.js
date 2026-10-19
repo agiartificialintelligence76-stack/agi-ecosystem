@@ -369,9 +369,11 @@ export const MODEL_STEPS = [
 ];
 
 // Its files, from our own address (api/launch.js): a picture (<influencer>/<job>-<n>.jpg, and a small one, .webp), a video's
-// poster (<influencer or "trends">/<job>.poster.webp), and a video (played in parts, or downloaded)
-export const INF_FILE_RE = /^(?:([A-Za-z0-9_-]{22})\/([A-Za-z0-9_-]{22})-([0-3])\.(jpg|webp)|([A-Za-z0-9_-]{22}|trends)\/([A-Za-z0-9_-]{22})\.poster\.webp)$/;
+// poster (<influencer or "trends">/<job>.poster.webp), and a video (played in parts, or downloaded); (2026-10-14) a template
+// meme's picture without its words (<influencer>/<job>.pic.jpg: what its editor draws its words over, src/studio/memes.js)
+export const INF_FILE_RE = /^(?:([A-Za-z0-9_-]{22})\/([A-Za-z0-9_-]{22})-([0-3])\.(jpg|webp)|([A-Za-z0-9_-]{22}|trends)\/([A-Za-z0-9_-]{22})\.poster\.webp|([A-Za-z0-9_-]{22})\/([A-Za-z0-9_-]{22})\.pic\.jpg)$/;
 export const infPic = (inf, job, n = 0, small = false) => `/api/launch?inf-file=${inf}/${job}-${n}.${small ? 'webp' : 'jpg'}`;
+export const infMemePic = (inf, job) => `/api/launch?inf-file=${inf}/${job}.pic.jpg`;
 export const infPoster = (owner, job) => `/api/launch?inf-file=${owner}/${job}.poster.webp`;
 export const infVideo = (job) => `/api/launch?inf-video=${job}.mp4`;
 export const infVideoDl = (job) => `/api/launch?inf-video-dl=${job}.mp4`;

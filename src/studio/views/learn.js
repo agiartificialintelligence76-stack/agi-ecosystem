@@ -7,6 +7,7 @@
 import { h, add, icon, linkBtn } from '../ui.js';
 import { LESSON_CLIPS } from '../guide-steps.js';
 import { CLIPS } from '../guide-media.js';
+import { TEMPLATE_IDS, TEMPLATE_CATS } from '../memes.js';
 
 // each lesson: its id (the page's #anchor), its icon, title, a line, its steps, and where to try it
 export const LESSONS = [
@@ -21,10 +22,11 @@ export const LESSONS = [
     steps: ['On your influencer\'s page, open Photo and pick Photo, Meme or X banner.',
       'Pick a model and its quality: each card shows its price in credits. Classic keeps faces closest; Crisp is bold and cheap.',
       'Add up to 4 references if you like (a thing, a place, a pet, food or a style: never a person).',
-      'A meme: pick its format and type its words (or Surprise me). An X banner comes out exactly 1500 × 500.',
+      `A meme: pick one of ${TEMPLATE_IDS.length} ready templates (${Object.values(TEMPLATE_CATS).join(', ').toLowerCase()}): your influencer in its picture, your words in its boxes (or Surprise me). An X banner comes out exactly 1500 × 500.`,
       'Open one you made: Make another (the same words and settings, a new one next to it) or Delete it.',
       'Or Edit with words: type one change ("make the jacket red", "add snow") and a new one is made from it, next to it, at its price.',
       'Or Edit photo: crop it, its light, a filter, words and stickers (free), in your browser. Save it as a new one next to it, or download it.',
+      'A meme you made: Edit meme changes its words, their font, colors, size and place (free). Add someone puts AGI-1 or another of your influencers in it; Animate it brings it to life for 5 seconds.',
       'With AGI-1: switch it on at the top of Photo, and AGI-1 joins it as her own 2D anime self, cute and a little flirty (Classic, the same price). Or open one you made and tap Add AGI-1.'] },
   { id: 'videos', icon: 'play', title: 'Videos, up to a minute', line: 'Standard, Pro, Anime or Long.', to: '/me', go: 'Open my influencers',
     steps: ['Make a photo first: a video starts from one of its photos (Anime starts from its full body, for drawn styles: anime, comics, 3D, toys and art).',

@@ -17,6 +17,7 @@ import { rpc } from './limits.js';
 import { mp4Info, mp4HasSound } from './mp4.js';
 import { videoPath, markedPath, aiTagged } from './inf-jobs.js';
 import { cutSize, cropPixels, asItIs } from '../src/studio/video-edit.js';
+import { MEME_CANVAS, MARK_SPOTS, picBox } from '../src/studio/memes.js';
 
 export const MARK = {
   NEEDS_MS: 14_000,              // a video is marked only with this much of the clock's time left
@@ -27,21 +28,28 @@ export const MARK = {
 let markPng = null;
 const markSource = () => (markPng ??= readFileSync(new URL('./media/studio-mark.png', import.meta.url)));
 
-// The mark at the size for a picture of w × h (sharp) → { png, left, top } for the corner asked ('br' bottom right, 'tl' top left)
+// The mark at the size for a picture of w × h (sharp) → { png, left, top } for the spot asked ('br' bottom right, 'tl' top left;
+// since 2026-10-14 also 'bl', 'tr', and 'mr' / 'ml', the middle of a side: a meme's mark goes where its words aren't,
+// src/studio/memes.js markSpot)
 export async function markFor(sharp, w, h, corner = 'br') {
   const short = Math.max(1, Math.min(w, h));
   const width = Math.max(120, Math.round(short * MARK.SHARE));
   const png = await sharp(markSource()).resize({ width }).png().toBuffer();
   const meta = await sharp(png).metadata();
   const m = Math.round(short * MARK.MARGIN);
-  return corner === 'tl' ? { png, left: m, top: m } : { png, left: Math.max(0, w - meta.width - m), top: Math.max(0, h - meta.height - m) };
+  const spot = MARK_SPOTS.includes(corner) ? corner : 'br';
+  const left = spot[1] === 'l' ? m : Math.max(0, w - meta.width - m);
+  const top = spot[0] === 't' ? m : spot[0] === 'b' ? Math.max(0, h - meta.height - m) : Math.max(0, Math.round((h - meta.height) / 2));
+  return { png, left, top };
 }
 
-// A photo with the mark (bottom right) → a JPEG, or null when it isn't a picture we read
-export async function markPhoto(sharp, jpeg) {
-  const meta = await sharp(jpeg, { limitInputPixels: 40_000_000 }).metadata().catch(() => null);
+// A photo with the mark (bottom right, or a meme's own spot) → a JPEG, or null when it isn't a picture we read
+export async function markPhoto(sharp, jpeg, spot = 'br') {
+  // (an empty buffer makes sharp throw as it's made, before any promise: so a try, not only .catch)
+  let meta = null;
+  try { meta = await sharp(jpeg, { limitInputPixels: 40_000_000 }).metadata(); } catch { meta = null; }
   if (!meta?.width || !meta?.height) return null;
-  const { png, left, top } = await markFor(sharp, meta.width, meta.height, 'br');
+  const { png, left, top } = await markFor(sharp, meta.width, meta.height, spot);
   return sharp(jpeg, { limitInputPixels: 40_000_000 }).composite([{ input: png, left, top }]).jpeg({ quality: 90 }).toBuffer().catch(() => null);
 }
 
@@ -177,6 +185,58 @@ export async function joinParts(parts, { timeoutMs = 9000, run = null } = {}) {
     await (run ? run(joinArgs({ list, output }), timeoutMs) : runFfmpeg(bin, joinArgs({ list, output }), timeoutMs));
     const out = await readFile(output);
     if (!mp4Info(out)?.width) throw new Error('join: ffmpeg made no video');
+    return out;
+  });
+}
+
+// ---------- (2026-10-14) a meme's 5-second video ("Animate") ----------
+// Its picture (the meme's own, without its words: <job>.pic.jpg) comes to life at the AI video service (5 s); then the clock
+// puts it back on its template's canvas: the video cut to fit the template's picture area (cover), its canvas's own color
+// around it, its words (the same layers as the meme, drawn by our server at the video's size: server/meme-render.js wordsPng)
+// and the share mark where the words aren't (its mark_spot), at 24 frames a second, H.264 at about 2.5 Mb/s, its sound (if it
+// was asked for) copied as it is, its index first. One core makes it in about 3 to 5 s. Its one copy, played and downloaded,
+// carries the mark (like a long video's).
+export const MEME_VIDEO = { FPS: 24, KBPS: 2500, PRESET: 'superfast', NEEDS_MS: 16_000, SOURCE_MAX: 40_000_000 };
+const evenOf = (v) => 2 * Math.round(v / 2);
+// The video's size (a square or a tall template's: PART.SIZE) and where its picture goes in it → { w, h, pic: {x, y, w, h}, bg }
+export function memeVideoPlan(tpl) {
+  const c = MEME_CANVAS[tpl.canvas];
+  const [w, h] = PART.SIZE[tpl.canvas === 'tall' ? 'tall' : 'square'];
+  const k = w / c.w;
+  const p = picBox(tpl);
+  const x = Math.min(w - 2, Math.max(0, evenOf(p.x * k))), y = Math.min(h - 2, Math.max(0, evenOf(p.y * k)));
+  const pw = Math.max(2, Math.min(w - x, evenOf(p.w * k))), ph = Math.max(2, Math.min(h - y, evenOf(p.h * k)));
+  return { w, h, pic: { x, y, w: pw, h: ph }, bg: /^#[0-9a-f]{6}$/i.test(tpl.bg || '') ? tpl.bg.toLowerCase() : '#ffffff' };
+}
+// ffmpeg's words: the video cut to fit its picture area, padded to the canvas in its color, its words over it, the mark over
+// them at (mx, my)
+export function memeVideoArgs({ input, words, mark, output, plan, mx, my }) {
+  const { w, h, pic, bg } = plan;
+  return [
+    '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', input, '-i', words, '-i', mark,
+    '-filter_complex', `[0:v]scale=${pic.w}:${pic.h}:force_original_aspect_ratio=increase,crop=${pic.w}:${pic.h},setsar=1,fps=${MEME_VIDEO.FPS}[p];`
+      + `[p]pad=${w}:${h}:${pic.x}:${pic.y}:color=0x${bg.slice(1)}[b];[b][1:v]overlay=x=0:y=0:format=auto[t];`
+      + `[t][2:v]overlay=x=${mx}:y=${my}:format=auto,format=yuv420p[v]`,
+    '-map', '[v]', '-map', '0:a?', '-c:v', 'libx264', '-preset', MEME_VIDEO.PRESET, '-b:v', `${MEME_VIDEO.KBPS}k`,
+    '-maxrate', `${Math.round(MEME_VIDEO.KBPS * 1.2)}k`, '-bufsize', `${MEME_VIDEO.KBPS * 2}k`, '-c:a', 'copy', '-movflags', '+faststart', output,
+  ];
+}
+// The AI's video put on its meme's canvas with its words and the mark → its MP4 · throws when ffmpeg isn't there, fails or runs
+// out of time. words: its words as a see-through PNG of the plan's size; spot: where its mark goes.
+export async function composeMemeVideo(sharp, bytes, { plan, words, spot = 'tl', timeoutMs = 12_000, run = null } = {}) {
+  if (!mp4Info(bytes)?.width) throw new Error('meme video: not a video we read');
+  if (!Buffer.isBuffer(words) || !words.length) throw new Error('meme video: no words picture');
+  const bin = run ? 'ffmpeg' : await ffmpegBin();
+  if (!bin) throw Object.assign(new Error('meme video: ffmpeg isn\'t here'), { why: 'no_ffmpeg' });
+  return inTemp(async (dir, join) => {
+    const { writeFile, readFile } = await import('node:fs/promises');
+    const m = await markFor(sharp, plan.w, plan.h, spot);
+    const input = join(dir, 'in.mp4'), wordsFile = join(dir, 'words.png'), mark = join(dir, 'mark.png'), output = join(dir, 'out.mp4');
+    await Promise.all([writeFile(input, bytes), writeFile(wordsFile, words), writeFile(mark, m.png)]);
+    const args = memeVideoArgs({ input, words: wordsFile, mark, output, plan, mx: m.left, my: m.top });
+    await (run ? run(args, timeoutMs) : runFfmpeg(bin, args, timeoutMs));
+    const out = await readFile(output);
+    if (!mp4Info(out)?.width) throw new Error('meme video: ffmpeg made no video');
     return out;
   });
 }

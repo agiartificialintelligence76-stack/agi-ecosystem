@@ -123,4 +123,8 @@ export const CLIPS = {
     d: { mp4: new URL('./guide/make-cut-d.mp4', import.meta.url).href, poster: new URL('./guide/make-cut-d.webp', import.meta.url).href, w: 672, h: 420, s: 14 },
     p: { mp4: new URL('./guide/make-cut-p.mp4', import.meta.url).href, poster: new URL('./guide/make-cut-p.webp', import.meta.url).href, w: 624, h: 390, s: 13.5 },
   },
+  'make-meme': {
+    d: { mp4: new URL('./guide/make-meme-d.mp4', import.meta.url).href, poster: new URL('./guide/make-meme-d.webp', import.meta.url).href, w: 672, h: 420, s: 12.33 },
+    p: { mp4: new URL('./guide/make-meme-p.mp4', import.meta.url).href, poster: new URL('./guide/make-meme-p.webp', import.meta.url).href, w: 624, h: 390, s: 10.83 },
+  },
 };

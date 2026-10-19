@@ -132,9 +132,10 @@ for (const fn of ['inf_owner_link', 'inf_owner_links']) {
 for (const fn of ['inf_job_delete']) {
   MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1)`;
 }
-// …and "With AGI-1" (2026-10-13): inf_make takes whether she's in it (an older one has no p_agi1, the editor's p_edit before it)
+// …and "With AGI-1" (2026-10-13): inf_make takes whether she's in it (an older one has no p_agi1, the editor's p_edit before it);
+// and meme templates (2026-10-14): a template meme's layers of words, who else is in it, their role and the share mark's spot
 for (const fn of ['inf_make']) {
-  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (Edit with words and With AGI-1; it ends with influencers_ready = 1)`;
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (Edit with words, With AGI-1 and meme templates; it ends with influencers_ready = 1)`;
 }
 // …and the photo editor (the same day): a photo saved from it, and how many a wallet saved today
 for (const fn of ['inf_tool_take', 'inf_photo_add']) {
@@ -147,6 +148,11 @@ for (const fn of ['inf_cut_add', 'inf_cut_done', 'inf_cut_due']) {
 // …and the 3D tool's choices (2026-10-13): influencers.sql orders a model with its choices (after studio.sql again: above)
 for (const fn of ['inf_3d', 'inf_3d_burn']) {
   MISSING[fn] = `${fn} not found: run supabase/studio.sql again, then supabase/influencers.sql again, in this Supabase project (the 3D tool's choices; they end with studio_ready = 1 and influencers_ready = 1)`;
+}
+// …and meme templates (2026-10-14): "Save as a new meme" from the meme editor, and whether someone else in a creation may
+// still be seen (inf_cast_shown: only the database's own functions ask it, but it's named here like the others)
+for (const fn of ['inf_meme_add', 'inf_cast_shown']) {
+  MISSING[fn] = `${fn} not found: run supabase/influencers.sql again in this Supabase project (meme templates; it ends with influencers_ready = 1)`;
 }
 
 // CloakMesh's waitlist (inference.agi1.app, 2026-10-03): supabase/cloakmesh.sql

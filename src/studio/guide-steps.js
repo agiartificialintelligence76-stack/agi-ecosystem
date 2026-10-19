@@ -102,13 +102,13 @@ export const GUIDES = {
 // and the video editor.
 export const CLIP_IDS = [...new Set([
   ...Object.values(GUIDES).flatMap((g) => g.steps.map((s) => s.clip)),
-  'make-trend', 'make-video', 'make-editor', 'make-cut',
+  'make-trend', 'make-video', 'make-editor', 'make-cut', 'make-meme',
 ])];
 
 // Learn's lessons and their videos (played one after the other), and the page whose guide shows it with arrows
 export const LESSON_CLIPS = {
   start: { clips: ['create-mode', 'create-look', 'create-go', 'pick-look', 'create-way', 'make-pfp'], guide: '/create' },
-  photos: { clips: ['make-scene', 'make-models', 'make-go', 'make-editor'], guide: null },
+  photos: { clips: ['make-scene', 'make-models', 'make-go', 'make-meme', 'make-editor'], guide: null },
   videos: { clips: ['make-video', 'make-cut'], guide: null },
   trends: { clips: ['explore-trends', 'make-trend'], guide: '/explore' },
   instant: { clips: ['make-instant'], guide: null },

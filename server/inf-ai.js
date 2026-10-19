@@ -25,6 +25,10 @@
 //   (2026-10-13) "With AGI-1": AGI-1's own picture (her 2D self, the owner's art: server/inf-agi1.js) after the character's in
 //   a photo, a meme or an X banner (Classic), "Add AGI-1" (Nano Banana 2's edit: the photo, its full body, her), and in a video
 //   her picture too (Kling's elements: her face and her whole body; Seedance: her whole body as @Image2)
+//   (2026-10-14) a meme template (src/studio/memes.js): Nano Banana 2's edit makes its picture without any words (the influencer
+//   as its main character; AGI-1, or another of the person's influencers, in one of its roles), at its template's ratio; an edit
+//   with words and "Add someone" start from that picture (<job>.pic.jpg); "Animate" brings it to life for 5 seconds (Kling V3
+//   Standard's image to video, from that picture). Our server draws the words over it (server/meme-render.js, server/inf-mark.js)
 //   • Gemini (the site's own key, GEMINI_API_KEY, the chat's model): a look at each picture and clip uploaded before it's
 //     used, and at each video made before it's shown (family-friendly, never a minor, never a famous person, never someone
 //     else's character; since round 2 a photo of a real person may be used, with its uploader's consent). Fail closed: a
@@ -32,9 +36,10 @@
 // Nothing here is shown to visitors as a provider's name (the page says "an AI service").
 import {
   looksPrompt, bodyPrompt, photoPrompt, swapPrompt, clipPrompt, CLIP_NEGATIVE, sceneVideoPrompt, sceneWay, presetPrompt, PRESET_NEGATIVE,
-  examplePrompt, memePrompt, longPartPrompt, editPrompt, addPrompt,
+  examplePrompt, memePrompt, longPartPrompt, editPrompt, addPrompt, templatePrompt, templateEditPrompt, castAddPrompt, memeMotionPrompt,
 } from './inf-words.js';
 import { SHAPES, photoSpec, videoSpec } from '../src/studio/rules.js';
+import { templateOf, memeRatio, memeQuality, roleOf, castOf, motionOf } from '../src/studio/memes.js';
 
 export const MODELS = {
   image: 'fal-ai/nano-banana-2',
@@ -93,6 +98,42 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
   // in a video, her head and shoulders too (urls.agi1.face: Kling's element for her)
   const agi1 = job.agi1 === true;
   const herBody = () => need(urls.agi1?.body, "AGI-1's picture");
+  // (2026-10-14) a template meme (its layers of words are our server's to draw: the AI's picture has none). Someone in one of its
+  // roles comes after its full body: AGI-1 (her whole body) or another of the person's influencers (job.cast_inf: its full body,
+  // urls.cast); the references after them. Its role: the one picked (job.cast_role), else its template's first.
+  if (job.kind === 'photo' && Array.isArray(job.layers)) {
+    const tpl = templateOf(job.meme);
+    if (!tpl) throw Object.assign(new Error('inf: not one of the meme templates'), { why: 'request' });
+    const castOn = /^[A-Za-z0-9_-]{22}$/.test(String(job.cast_inf ?? ''));
+    const other = agi1 ? [herBody()] : castOn ? [need(urls.cast, "the other influencer's full body")] : [];
+    const role = roleOf(tpl, job.cast_role) || castOf(tpl)[0] || null;
+    const size = { num_images: 1, aspect_ratio: memeRatio(tpl), resolution: RES[job.quality] || RES[memeQuality(tpl)] };
+    if (job.edit) {
+      // an edit with words of its picture without words (urls.image: <job>.pic.jpg), still with none
+      return {
+        model: MODELS.edit, way: 'edit',
+        input: picture({ prompt: templateEditPrompt(inf, job.edit, { agi1, cast: castOn }), image_urls: [need(urls.image, 'meme picture'), need(urls.body, 'full body'), ...other], ...size }),
+      };
+    }
+    if (job.image) {
+      // "Add someone": its picture without words, made again with AGI-1 or another influencer in one of its roles
+      if (!other.length) throw Object.assign(new Error('inf: nobody to add to the meme'), { why: 'request' });
+      return {
+        model: MODELS.edit, way: 'edit',
+        input: picture({ prompt: castAddPrompt(inf, { role, agi1 }), image_urls: [need(urls.image, 'meme picture'), need(urls.body, 'full body'), ...other], ...size }),
+      };
+    }
+    // a new one: its template's situation (its card's line stands in for a scene nobody typed: never told to the AI)
+    const refs = Array.isArray(urls.refs) ? urls.refs.map((u, n) => need(u, `reference ${n + 1}`)) : [];
+    const scene = job.scene && job.scene !== tpl.about ? job.scene : '';
+    return {
+      model: MODELS.edit, way: 'edit',
+      input: picture({
+        prompt: templatePrompt(inf, tpl, scene, { refs: refs.length, agi1, cast: castOn, role: agi1 || castOn ? role : null }),
+        image_urls: [need(urls.body, 'full body'), ...other, ...refs], ...size,
+      }),
+    };
+  }
   // (2026-10-12, the editor) "Edit with words": one of its photos (a meme, an X banner: urls.image) made again with one change,
   // by Classic, its full body after it (its face and look); the photo's own shape and quality (src/studio/rules.js editSpec), an
   // X banner at 4:1 2K as when it was made (cut to 1500 × 500 again on our server). (2026-10-13) "Add AGI-1" (a photo with her
@@ -147,6 +188,21 @@ export function jobRequest(cfg, job, urls = {}, { user = null } = {}) {
       input: {
         prompt: swapPrompt(inf), video_url: need(job.clip ? urls.clip : urls.trend, 'video'), keep_audio: !job.clip,
         elements: [{ frontal_image_url: need(urls.look, 'look'), reference_image_urls: more }],
+      },
+    };
+  }
+  if (job.kind === 'video' && Array.isArray(job.layers)) {
+    // (2026-10-14) "Animate": a template meme's picture without words (urls.image: <job>.pic.jpg) as its first frame, 5 seconds by
+    // Standard; what moves: its template's motion, or the person's own words. No elements: everyone in it is in its first frame
+    // already (Kling keeps who's in it). Our clock puts its words and the share mark over it (server/inf-mark.js)
+    const tpl = templateOf(job.meme);
+    if (!tpl) throw Object.assign(new Error('inf: not one of the meme templates'), { why: 'request' });
+    const scene = job.scene && job.scene !== motionOf(tpl) ? job.scene : '';
+    return {
+      model: MODELS.i2v, way: 'i2v',
+      input: {
+        prompt: memeMotionPrompt(inf, tpl, { scene, agi1 }), start_image_url: need(urls.image, 'meme picture'), duration: '5',
+        generate_audio: job.sound === true, negative_prompt: CLIP_NEGATIVE,
       },
     };
   }

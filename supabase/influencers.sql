@@ -27,7 +27,9 @@
 --   agi1_inf_jobs       each picture or video made for it (its looks, its full body, its photos, trend and scene videos; and
 --                       the owner's trend moves): its words, shape and sound, the credits it cost, where it is at the AI
 --                       service (its request id and the addresses it gave), and once done its files' count and size;
---                       (2026-10-12) when its maker deleted it (its row goes a week later, its files at once)
+--                       (2026-10-12) when its maker deleted it (its row goes a week later, its files at once); (2026-10-14) a
+--                       template meme's words (their places, fonts and colors) and who else is in it (another of its maker's
+--                       influencers, and the role they play)
 --   agi1_credits        per wallet code: its credits (bought, and this month's free ones; since round 4's phase 3 its bonus
 --                       ones too)
 --   agi1_credit_log     each top-up, spend, refund and free grant, and (round 3) each gift from the owner (its wallet code,
@@ -200,6 +202,25 @@
 --   • Explore's newest photos and videos with her (inf_explore's 'agi1': public influencers only, never a private one, one made
 --     from a real person's photo, a banned maker's, a hidden or deleted one, or an X banner); its newest photos and videos say
 --     whether she's in them.
+-- Meme templates (2026-10-14, the owner: "ready made meme templates already the popular ones … the character on that meme will
+-- be replaced by their influencer by default", "even after the result they can still edit the text after, change font, change
+-- the text color, add characters to that picture, animate it"; the owner's answers: "Save as a new meme", "Other influencers",
+-- "5-second video"). Run this file again (it keeps everything saved; 108 functions now, still 29 tables). It adds:
+--   • a template meme (agi1_inf_jobs.layers: its words as our server drew them, 1 to 8; meme: its template's id; caption: all
+--     of its words, up to 1000 characters now; mark_spot: where its share mark goes, away from its words): inf_make's p_layers
+--     and p_mark (its version from "With AGI-1", 22 arguments, is dropped first), by Classic at its template's quality, tall or
+--     square, a photo's price. Its edits, someone added to it and its 5-second video keep its words; a trend video never starts
+--     from one; the photo editor never saves one (the meme editor is its editor).
+--   • another of its maker's influencers in it, in one of its template's roles (cast_inf, cast_role; or AGI-1, agi1, in a role:
+--     one of them at most): inf_make's p_cast and p_role ("Other influencers": theirs, ready, never a private one in a public
+--     one's memes), and "Add someone" to a template meme (by Classic, at its price). inf_job_get gives that influencer's full
+--     body (cast_body: what the AI is given). A creation with someone in it who may no longer be seen (deleted, hidden by the
+--     owner, a banned maker's) is shown to nobody (inf_cast_shown, in the 11 functions that read creations for the pages), and
+--     deleting an influencer (inf_delete) deletes everything it's in (cast_jobs: our server deletes their files).
+--   • its 5-second video ("Animate": a video with its layers, Standard for 5 seconds, its words and who's in it its own); the
+--     share mark's clock leaves it alone (inf_mark_take: its mark is drawn with its words); a video cut from it keeps who's in it.
+--   • "Save as a new meme" from the meme editor (inf_meme_add: its words, fonts and colors changed, a template meme of its own
+--     next to it, free, counted like a photo saved from the photo editor; "same": nothing changed).
 
 -- studio.sql first (its version of 2026-10-13, with the 3D tool's choices): this file builds on its tables, its months and its
 -- payment ledger
@@ -621,10 +642,8 @@ alter table public.agi1_inf_jobs add column if not exists part smallint not null
 alter table public.agi1_inf_jobs add column if not exists meme text check (meme ~ '^[a-z]{2,12}$');
 alter table public.agi1_inf_jobs add column if not exists caption text check (char_length(caption) between 1 and 130);
 alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_menu_check;
-alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_menu_check check (
-  (model is null or (kind = 'photo' and model in ('classic', 'crisp')) or (kind = 'video' and model in ('standard', 'pro', 'anime', 'long')))
-  and (meme is null or (kind = 'photo' and caption is not null and model is distinct from 'crisp')) and (caption is null or meme is not null)
-  and part <= parts and (parts = 1 or (kind = 'video' and model = 'long')));
+-- (its check, agi1_inf_jobs_menu_check, is the meme templates' (2026-10-14), below: one that also allows a template meme's
+-- 5-second video; this file's earlier one, for photos only, would refuse those videos once there are some)
 -- a reference picture is an upload of its own kind (an older check, without it, goes first)
 alter table public.agi1_inf_uploads drop constraint if exists agi1_inf_uploads_kind_check;
 alter table public.agi1_inf_uploads add constraint agi1_inf_uploads_kind_check check (kind in ('picture', 'face', 'clip', 'ref'));
@@ -731,6 +750,48 @@ alter table public.agi1_inf_jobs add column if not exists agi1 boolean not null 
 alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_agi1_check;
 alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_agi1_check check (not agi1 or kind in ('photo', 'video'));
 create index if not exists agi1_inf_jobs_agi1 on public.agi1_inf_jobs (done_at) where agi1 and status = 'done';
+
+-- ---------- (2026-10-14) meme templates: the popular formats, with the influencer as their main character ----------
+-- A template meme (src/studio/memes.js TEMPLATES) is a photo made for one of our meme templates (meme: its id): its picture
+-- made by the AI without words, its words drawn on it by our server (layers: each one's words, place, size, font, color and
+-- outline, as our server checked them: 1 to 8; caption: all of its words, for its page and the AI's look, up to 1000
+-- characters now), and where its share mark goes (mark_spot: a corner, or the middle of a side, away from its words; never
+-- mark_at, which says when a video's marked copy was made). Someone else in it, in one of its template's roles (cast_role):
+-- another of its maker's influencers (cast_inf) or AGI-1 (agi1), one at most. Its 5-second video ("Animate") is a video with
+-- its layers (its picture comes to life, its words drawn over it by our clock). A video saved from the video editor from one
+-- with another influencer in it keeps who (cast_inf, with editor). A meme saved from the meme editor ("Save as a new meme") is
+-- a template meme with editor (inf_meme_add).
+alter table public.agi1_inf_jobs add column if not exists layers jsonb;
+alter table public.agi1_inf_jobs add column if not exists cast_inf text;
+alter table public.agi1_inf_jobs add column if not exists cast_role text;
+alter table public.agi1_inf_jobs add column if not exists mark_spot text;
+-- (a CASE, not an OR, guards jsonb_array_length: a check's terms may be evaluated in any order)
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_layers_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_layers_check check (layers is null
+  or (case when jsonb_typeof(layers) = 'array' then jsonb_array_length(layers) between 1 and 8 else false end
+    and octet_length(layers::text) <= 8000 and meme is not null and caption is not null and kind in ('photo', 'video')));
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_cast_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_cast_check check (cast_inf is null
+  or (cast_inf ~ '^[A-Za-z0-9_-]{22}$' and (layers is not null or editor) and not agi1 and cast_inf is distinct from inf_id));
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_role_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_role_check check (cast_role is null
+  or (cast_role ~ '^[a-z]{2,16}$' and layers is not null and (cast_inf is not null or agi1)));
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_mark_spot_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_mark_spot_check check (mark_spot is null
+  or (mark_spot in ('br', 'bl', 'tr', 'tl', 'mr', 'ml') and layers is not null));
+-- a template meme's words up to 1000 characters (a format meme's two lines up to 130, as before: the older check goes first)
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_caption_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_caption_check check (caption is null
+  or char_length(caption) between 1 and (case when layers is null then 130 else 1000 end));
+-- the model menu's check (round 4, phase 4), now with a template meme's video (a meme was a photo only)
+alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_menu_check;
+alter table public.agi1_inf_jobs add constraint agi1_inf_jobs_menu_check check (
+  (model is null or (kind = 'photo' and model in ('classic', 'crisp')) or (kind = 'video' and model in ('standard', 'pro', 'anime', 'long')))
+  and (meme is null or (caption is not null and ((kind = 'photo' and model is distinct from 'crisp') or (kind = 'video' and layers is not null))))
+  and (caption is null or meme is not null)
+  and part <= parts and (parts = 1 or (kind = 'video' and model = 'long')));
+-- (an influencer's own deleting finds what it's in: inf_delete)
+create index if not exists agi1_inf_jobs_cast on public.agi1_inf_jobs (cast_inf) where cast_inf is not null;
 
 -- Row Level Security ON, with no rules: the public (browser) keys can't read or change these tables.
 alter table public.agi1_inf_likes enable row level security;
@@ -1560,8 +1621,21 @@ $$;
 
 -- An influencer as our server needs it (the page gets only some of it), with the looks or full body being made for it now
 -- (since round 4 with when it started, for its progress bar) and its maker's clank.trade username, if they showed one
--- (2026-10-11) Its profile picture (agi1_inf.pfp), while the picture it was framed from is still shown (done, not taken down);
--- else none, and its picked look shows instead
+-- (2026-10-14, meme templates) Whether someone else in a creation (agi1_inf_jobs.cast_inf: another influencer of its maker's,
+-- in a template meme) may still be seen: none, or one that's there (not deleted), not hidden by the owner and not a banned
+-- maker's. A creation with someone who may not is shown to nobody (every page leaves it out), like a hidden one.
+create or replace function public.inf_cast_shown(p_cast text)
+returns boolean
+language sql
+stable
+set search_path = public
+as $$
+  select p_cast is null or exists (select 1 from agi1_inf c where c.id = p_cast and c.status <> 'deleted' and not c.hidden
+    and not c.banned);
+$$;
+
+-- (2026-10-11) Its profile picture (agi1_inf.pfp), while the picture it was framed from is still shown (done, not taken down;
+-- 2026-10-14: and anyone else in it too); else none, and its picked look shows instead
 create or replace function public.inf_pfp_of(p_pfp jsonb)
 returns jsonb
 language sql
@@ -1569,7 +1643,7 @@ stable
 set search_path = public
 as $$
   select case when p_pfp is not null and exists (select 1 from agi1_inf_jobs j where j.id = p_pfp ->> 'job' and j.status = 'done'
-      and not j.hidden) then p_pfp end;
+      and not j.hidden and inf_cast_shown(j.cast_inf)) then p_pfp end;
 $$;
 
 -- (2026-10-11) Its maker changes its profile picture to a square framed in one of its own pictures (only how it's shown: its
@@ -1618,7 +1692,7 @@ begin
   if p_pfp is not null then
     select * into j from agi1_inf_jobs where id = p_pfp ->> 'job';
     if not found or j.inf_id is distinct from p_id or j.kind not in ('looks', 'body', 'photo') or j.status <> 'done' or j.hidden
-       or v_n >= greatest(j.files, 1) then
+       or v_n >= greatest(j.files, 1) or not inf_cast_shown(j.cast_inf) then
       return json_build_object('ok', false, 'why', 'source');
     end if;
   end if;
@@ -1719,7 +1793,7 @@ $$;
 -- (Round 4) a photo may be an X banner (p_shape 'banner'); a video or trend video never starts from one ("banner").
 -- → {"ok": true, "paid", "free", "bonus"} or {"ok": false, "why": "gone" | "not_yours" | "not_ready" | "trend" | "clip" | "image" |
 --   "banner" | "too_many" | "short" | "busy_day" | "taken" | "bad" | (2026-10-13) "agi1_trend" | "agi1_model" | "agi1_photo" |
---   "agi1_has" | "refs"}
+--   "agi1_has" | "refs" | (2026-10-14) "cast" | "cast_ready" | "cast_private" | "cast_one" | "cast_has"}
 -- (Round 4, phase 4 added p_model … p_caption, with defaults: the older version is dropped first, so the web API never has
 -- two to choose from; an older page's call still works: Classic, Standard for 5 s.)
 -- (2026-10-12, the editor) p_edit: "Edit with words", a photo made from one of its own (p_image) with this change (3 to 200
@@ -1732,25 +1806,41 @@ $$;
 -- Standard, Pro or Long video with her starts from a photo she's in ("agi1_photo"; Anime puts her in from her own pictures),
 -- with one reference at most (Kling's 3 elements with a first frame: the character, her, one reference). The editor's
 -- version (21 arguments) is dropped first too.
+-- (2026-10-14, meme templates: the owner's answers "Save as a new meme", "Other influencers", "5-second video") p_layers: a
+-- template meme (a photo for one of our meme templates, p_meme its id, its words drawn on it by our server: 1 to 8 layers as our
+-- server checked them, p_caption all of its words, up to 1000 characters, p_mark where its share mark goes), by Classic at its
+-- template's quality (std or hd), tall or square; p_cast: another of this wallet's influencers in it ("Other influencers":
+-- ready, shown, never a private one in a public one's memes: "cast" | "cast_ready" | "cast_private"), or p_agi1 (AGI-1), one of
+-- them only ("cast_one"), in one of its template's roles (p_role). From a template meme (p_image): an edit of it, someone added
+-- to it ("Add someone": p_cast or p_agi1 without p_edit, never when someone's in it already: "cast_has" | "agi1_has") or its
+-- 5-second video ("Animate": Standard for 5 seconds, no references) keep its words, template and who's in it; a trend video never
+-- starts from one ("image"). A template meme with someone else in it who may no longer be seen never starts anything ("image":
+-- inf_cast_shown). Its version from "With AGI-1" (22 arguments) is dropped first too.
 drop function if exists public.inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer);
 drop function if exists public.inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,
   integer, text[], integer, text, text);
 drop function if exists public.inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,
   integer, text[], integer, text, text, text);
+drop function if exists public.inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,
+  integer, text[], integer, text, text, text, boolean);
 create or replace function public.inf_make(p_job text, p_inf text, p_wallet text, p_kind text, p_scene text, p_shape text, p_sound boolean,
   p_trend text, p_clip text, p_image text, p_cost integer, p_per_wallet integer, p_day_cap integer, p_model text default null,
   p_quality text default null, p_seconds integer default null, p_refs text[] default null, p_parts integer default 1,
-  p_meme text default null, p_caption text default null, p_edit text default null, p_agi1 boolean default false)
+  p_meme text default null, p_caption text default null, p_edit text default null, p_agi1 boolean default false,
+  p_layers jsonb default null, p_cast text default null, p_role text default null, p_mark text default null)
 returns json
 language plpgsql
 set search_path = public
 as $$
 declare
   i agi1_inf%rowtype;
+  c agi1_inf%rowtype;
+  f agi1_inf_jobs%rowtype;
   s json;
   v_asked boolean := coalesce(p_agi1, false);
-  -- (2026-10-13) "Add AGI-1": a photo with her from one of its photos, without words
-  v_add boolean := coalesce(p_kind = 'photo' and p_image is not null and p_edit is null and p_agi1, false);
+  -- (2026-10-13) "Add AGI-1": a photo with her from one of its photos, without words; (2026-10-14) or, into a template meme,
+  -- another of the maker's influencers ("Add someone")
+  v_add boolean := coalesce(p_kind = 'photo' and p_image is not null and p_edit is null and (coalesce(p_agi1, false) or p_cast is not null), false);
   v_her boolean := coalesce(p_agi1, false);
   v_photo_her boolean := false;
 begin
@@ -1774,9 +1864,26 @@ begin
      or (p_seconds is not null and (p_kind <> 'video' or p_seconds not between 3 and 60))
      or p_parts is null or p_parts not between 1 and 4 or (p_parts > 1 and p_model is distinct from 'long')
      or (p_model = 'long' and p_parts < 2)
-     or ((p_meme is null) <> (p_caption is null)) or (p_meme is not null and (p_kind <> 'photo' or p_meme !~ '^[a-z]{2,12}$'
-       or char_length(p_caption) not between 1 and 130 or p_model = 'crisp' or p_shape = 'banner'))
-     or (p_refs is not null and (p_kind = 'trend' or cardinality(p_refs) not between 1 and 4)) then
+     -- (2026-10-14) a meme is a photo, or a template meme's video ("Animate"); a template meme's words up to 1000 characters
+     or ((p_meme is null) <> (p_caption is null)) or (p_meme is not null and ((p_kind <> 'photo' and not (p_kind = 'video'
+       and p_layers is not null)) or p_meme !~ '^[a-z]{2,12}$'
+       or char_length(p_caption) not between 1 and (case when p_layers is null then 130 else 1000 end)
+       or p_model = 'crisp' or p_shape = 'banner'))
+     or (p_refs is not null and (p_kind = 'trend' or cardinality(p_refs) not between 1 and 4))
+     -- (2026-10-14) a template meme: its words and its share mark's spot go together; 1 to 8 layers (jsonb_typeof first: the
+     -- terms of an OR are taken in order and it stops at the first true one, so jsonb_array_length only ever sees an array); a
+     -- photo by Classic at its template's quality (std or hd), tall or square; its video ("Animate") from one of them, Standard
+     -- for 5 seconds, no references; never a trend video
+     or ((p_layers is null) <> (p_mark is null)) or (p_mark is not null and p_mark not in ('br', 'bl', 'tr', 'tl', 'mr', 'ml'))
+     or (p_layers is not null and (jsonb_typeof(p_layers) <> 'array' or jsonb_array_length(p_layers) not between 1 and 8
+       or octet_length(p_layers::text) > 8000 or p_meme is null or p_shape is null or p_shape not in ('tall', 'square')
+       or p_kind = 'trend'
+       or (p_kind = 'photo' and (p_model is distinct from 'classic' or p_quality is null or p_quality not in ('std', 'hd')))
+       or (p_kind = 'video' and (p_image is null or p_model is distinct from 'standard' or p_seconds is distinct from 5
+         or p_quality is not null or p_refs is not null or p_parts <> 1 or p_edit is not null))))
+     -- (2026-10-14) someone else in it (another influencer: checked below; or AGI-1), in one of its template's roles
+     or (p_cast is not null and (p_cast !~ '^[A-Za-z0-9_-]{22}$' or p_layers is null))
+     or (p_role is not null and (p_role !~ '^[a-z]{2,16}$' or p_layers is null or (p_cast is null and not v_asked))) then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
   -- (2026-10-13) never in a trend video; a photo with her by Classic only (an older page's photo is Classic)
@@ -1784,6 +1891,9 @@ begin
   if v_asked and p_kind = 'photo' and p_model is not null and p_model <> 'classic' then
     return json_build_object('ok', false, 'why', 'agi1_model');
   end if;
+  -- (2026-10-14) one other character at most: AGI-1, or another of its maker's influencers (never itself)
+  if p_cast is not null and v_asked then return json_build_object('ok', false, 'why', 'cast_one'); end if;
+  if p_cast = p_inf then return json_build_object('ok', false, 'why', 'cast'); end if;
   perform pg_advisory_xact_lock(hashtext('agi1-inf-wallet:' || p_wallet));
   select * into i from agi1_inf where id = p_inf for update;
   if not found or i.status = 'deleted' or i.hidden then return json_build_object('ok', false, 'why', 'gone'); end if;
@@ -1800,21 +1910,23 @@ begin
       and status = 'ok' and created_at > now() - interval '1 day') then
     return json_build_object('ok', false, 'why', 'clip');
   end if;
-  if p_image is not null and not exists (select 1 from agi1_inf_jobs where id = p_image and inf_id = p_inf and kind = 'photo'
-      and status = 'done' and not hidden and deleted_at is null) then
-    return json_build_object('ok', false, 'why', 'image');
-  end if;
+  -- (2026-10-14: and never one with someone else in it who may no longer be seen)
   if p_image is not null then
-    select coalesce(agi1, false) into v_photo_her from agi1_inf_jobs where id = p_image;
+    select * into f from agi1_inf_jobs where id = p_image;
+    if not found or f.inf_id is distinct from p_inf or f.kind <> 'photo' or f.status <> 'done' or f.hidden
+       or f.deleted_at is not null or not inf_cast_shown(f.cast_inf) then
+      return json_build_object('ok', false, 'why', 'image');
+    end if;
+    v_photo_her := coalesce(f.agi1, false);
   end if;
   -- (an X banner never starts a video or a trend video; edited, or with AGI-1 added, it's an X banner again)
-  if p_image is not null and p_edit is null and not v_add and exists (select 1 from agi1_inf_jobs where id = p_image and shape = 'banner') then
+  if p_image is not null and p_edit is null and not v_add and f.shape = 'banner' then
     return json_build_object('ok', false, 'why', 'banner');
   end if;
   -- (2026-10-12) an edit keeps the photo's own shape (an X banner stays one), and a meme its own format and words; (2026-10-13)
-  -- so does "Add AGI-1"
-  if (p_edit is not null or v_add) and not exists (select 1 from agi1_inf_jobs where id = p_image and shape = p_shape
-      and meme is not distinct from p_meme and caption is not distinct from p_caption) then
+  -- so does "Add AGI-1"; (2026-10-14) and a template meme's video ("Animate"), its own words
+  if (p_edit is not null or v_add or (p_kind = 'video' and f.layers is not null))
+     and (f.shape is distinct from p_shape or f.meme is distinct from p_meme or f.caption is distinct from p_caption) then
     return json_build_object('ok', false, 'why', 'bad');
   end if;
   -- (2026-10-13) with AGI-1: "Add AGI-1" to a photo she's in already; an edit never adds her ("Add AGI-1" does); a trend video
@@ -1829,6 +1941,31 @@ begin
   if v_photo_her and (p_edit is not null or p_kind = 'video') then v_her := true; end if;
   if v_her and p_kind = 'video' and coalesce(p_model, 'standard') <> 'anime' and p_refs is not null and cardinality(p_refs) > 1 then
     return json_build_object('ok', false, 'why', 'refs');
+  end if;
+  -- (2026-10-14) from a template meme: an edit of it, its video and someone added to it keep its words, and who's in it (someone
+  -- is added only when nobody else is in it yet); never a trend video. Words, and another influencer, only on a template meme.
+  if f.layers is not null then
+    if p_kind = 'trend' then return json_build_object('ok', false, 'why', 'image'); end if;
+    if p_layers is null or p_layers <> f.layers then return json_build_object('ok', false, 'why', 'bad'); end if;
+    if not v_add and (p_cast is distinct from f.cast_inf or (p_role is not null and p_role is distinct from f.cast_role)) then
+      return json_build_object('ok', false, 'why', 'bad');
+    end if;
+    if v_add and f.cast_inf is not null then return json_build_object('ok', false, 'why', 'cast_has'); end if;
+  elsif p_image is not null and p_layers is not null then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  -- (2026-10-14) another influencer in it: one of this wallet's own, there and shown, ready (its full body made: what the AI is
+  -- given), and never a private one (made from a real person's photo, or a face) in the memes of one that isn't (they may be
+  -- public). Held while this is made (for share: deleting it waits).
+  if p_cast is not null then
+    select * into c from agi1_inf where id = p_cast for share;
+    if not found or c.status = 'deleted' or c.hidden or c.banned or c.wallet_code <> p_wallet then
+      return json_build_object('ok', false, 'why', 'cast');
+    end if;
+    if c.status <> 'ready' or c.body_job is null then return json_build_object('ok', false, 'why', 'cast_ready'); end if;
+    if (c.mode = 'face' or c.real) and not (i.mode = 'face' or i.real) then
+      return json_build_object('ok', false, 'why', 'cast_private');
+    end if;
   end if;
   -- (round 4, phase 4) its references: this wallet's own, looked at and passed, from the last day, each once
   if p_refs is not null and (select count(distinct id) from agi1_inf_uploads where id = any(p_refs) and wallet_code = p_wallet
@@ -1847,9 +1984,9 @@ begin
       s := inf_credits(p_wallet);
     end if;
     insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, sound, trend, clip, image, cost, model, quality, seconds,
-      refs, parts, meme, caption, edit, agi1)
+      refs, parts, meme, caption, edit, agi1, layers, cast_inf, cast_role, mark_spot)
     values (p_job, p_inf, p_wallet, p_kind, p_scene, p_shape, coalesce(p_sound, false) and p_kind = 'video', p_trend, p_clip, p_image, p_cost,
-      p_model, p_quality, p_seconds, p_refs, p_parts, p_meme, p_caption, p_edit, v_her);
+      p_model, p_quality, p_seconds, p_refs, p_parts, p_meme, p_caption, p_edit, v_her, p_layers, p_cast, p_role, p_mark);
   exception
     when unique_violation then return json_build_object('ok', false, 'why', 'taken');
     when sqlstate 'P0001' then
@@ -1869,10 +2006,15 @@ stable
 set search_path = public
 as $$
   select row_to_json(x) from (
+    -- (2026-10-14) hidden too when someone else in it may no longer be seen (inf_cast_shown); a template meme's words, who's in
+    -- it and where its share mark goes, and that other influencer's full body (what the AI is given), while it's ready and shown
     select j.id, j.inf_id, j.wallet_code, j.kind, j.scene, j.shape, j.sound, j.trend, j.clip, j.image, j.pick, j.cost, j.status, j.req,
-      j.status_url, j.result_url, j.saving, j.tries, j.error, j.refunded, j.files, j.bytes, j.poster, j.hidden, j.started_at,
+      j.status_url, j.result_url, j.saving, j.tries, j.error, j.refunded, j.files, j.bytes, j.poster,
+      (j.hidden or not inf_cast_shown(j.cast_inf)) as hidden, j.started_at,
       j.created_at, j.updated_at, j.done_at, j.example, j.marked, j.mark_tries, j.likes,
       j.model, j.quality, j.seconds, j.refs, j.parts, j.part, j.meme, j.caption, j.deleted_at, j.edit, j.editor, j.cut, j.agi1,
+      j.layers, j.cast_inf, j.cast_role, j.mark_spot,
+      (select c.body_job from agi1_inf c where c.id = j.cast_inf and c.status = 'ready' and not c.hidden and not c.banned) as cast_body,
       i.name as inf_name, i.mode as inf_mode, i.style as inf_style, i.settings as inf_settings, i.words as inf_words,
       i.source as inf_source, i.status as inf_status, i.looks_job as inf_looks_job, i.pick as inf_pick, i.body_job as inf_body_job,
       i.hidden as inf_hidden, i.public as inf_public, i.real as inf_real, i.banned as inf_banned,
@@ -2038,7 +2180,9 @@ $$;
 
 -- ---------- what the pages show ----------
 -- An influencer's photos and videos: the done ones (not hidden) for everyone; its own wallet's others too (being made, and
--- ones that couldn't be made in the last week), the newest first; (2026-10-12) never one its maker deleted
+-- ones that couldn't be made in the last week), the newest first; (2026-10-12) never one its maker deleted; (2026-10-14) a
+-- template meme's words, who else is in it and where its share mark goes, and a cut's (the video editor's) part and shape; a
+-- done one with someone else in it who may no longer be seen (inf_cast_shown) is shown to nobody
 create or replace function public.inf_jobs(p_inf text, p_wallet text, p_limit integer)
 returns json
 language sql
@@ -2052,11 +2196,12 @@ as $$
       'likes', likes, 'marked', marked,
       'model', model, 'quality', quality, 'seconds', seconds, 'refs', coalesce(cardinality(refs), 0), 'parts', parts, 'part', part,
       'meme', meme, 'caption', caption, 'edit', edit, 'editor', editor, 'agi1', agi1,
+      'layers', layers, 'cast_inf', cast_inf, 'cast_role', cast_role, 'mark_spot', mark_spot, 'cut', cut,
       'mine', coalesce(wallet_code = p_wallet, false)) order by coalesce(done_at, created_at) desc), '[]'::json)
   from (
     select * from agi1_inf_jobs
     where inf_id = p_inf and kind in ('photo', 'trend', 'video') and deleted_at is null
-      and ((status = 'done' and not hidden)
+      and ((status = 'done' and not hidden and inf_cast_shown(cast_inf))
         or (p_wallet is not null and wallet_code = p_wallet and status <> 'done' and updated_at > now() - interval '7 days'))
     order by coalesce(done_at, created_at) desc
     limit least(greatest(coalesce(p_limit, 40), 1), 100)
@@ -2084,7 +2229,9 @@ $$;
 -- and videos (with their likes), the kept trend clips, the boosted influencers (a burn unlocked it: round 2) and the
 -- spotlight of the week (the newest one the owner approved, in the last two weeks). (Round 4) each with its maker's
 -- clank.trade username when they showed one ("by @name"), and no X banners among the fresh photos (an X header, not a post).
--- (2026-10-11) And each influencer's profile picture, when its maker framed one (inf_pfp_of).
+-- (2026-10-11) And each influencer's profile picture, when its maker framed one (inf_pfp_of). (2026-10-14) Never a creation with
+-- someone else in it who may no longer be seen (inf_cast_shown), and who else is in one ('cast': our server leaves out one the
+-- owner took down with STUDIO_HIDE).
 create or replace function public.inf_explore(p_limit integer)
 returns json
 language sql
@@ -2100,13 +2247,13 @@ as $$
     'fresh', (select coalesce(json_agg(json_build_object('id', j.id, 'kind', j.kind, 'shape', j.shape, 'trend', j.trend, 'poster', j.poster,
         'files', j.files, 'likes', j.likes, 'inf_id', j.inf_id, 'inf_name', j.inf_name, 'looks_job', j.inf_looks_job, 'pick', j.inf_pick,
         'done_at', j.done_at, 'maker', n.name, 'model', j.model, 'quality', j.quality, 'seconds', j.seconds, 'sound', j.sound, 'meme', j.meme,
-        'caption', j.caption, 'agi1', j.agi1, 'pfp', inf_pfp_of(j.inf_pfp)) order by j.done_at desc), '[]'::json)
+        'caption', j.caption, 'agi1', j.agi1, 'cast', j.cast_inf, 'pfp', inf_pfp_of(j.inf_pfp)) order by j.done_at desc), '[]'::json)
       from (select x.id, x.kind, x.shape, x.trend, x.poster, x.files, x.likes, x.inf_id, x.done_at, x.model, x.quality, x.seconds, x.sound,
-          x.meme, x.caption, x.agi1, i.name as inf_name,
+          x.meme, x.caption, x.agi1, x.cast_inf, i.name as inf_name,
           i.looks_job as inf_looks_job, i.pick as inf_pick, i.wallet_code as inf_wallet, i.pfp as inf_pfp
         from agi1_inf_jobs x join agi1_inf i on i.id = x.inf_id
         where x.status = 'done' and x.kind in ('photo', 'trend', 'video') and not x.hidden and i.status = 'ready' and i.public and not i.hidden
-          and i.mode <> 'face' and not i.real and not i.banned and x.shape is distinct from 'banner'
+          and i.mode <> 'face' and not i.real and not i.banned and x.shape is distinct from 'banner' and inf_cast_shown(x.cast_inf)
         order by x.done_at desc limit least(greatest(coalesce(p_limit, 24), 1), 60)) j
       left join agi1_inf_names n on n.wallet_code = j.inf_wallet),
     -- (2026-10-13) the newest photos and videos with AGI-1 in them: public influencers only, as above (never a private one, one
@@ -2114,13 +2261,14 @@ as $$
     'agi1', (select coalesce(json_agg(json_build_object('id', j.id, 'kind', j.kind, 'shape', j.shape, 'trend', j.trend, 'poster', j.poster,
         'files', j.files, 'likes', j.likes, 'inf_id', j.inf_id, 'inf_name', j.inf_name, 'looks_job', j.inf_looks_job, 'pick', j.inf_pick,
         'done_at', j.done_at, 'maker', n.name, 'model', j.model, 'quality', j.quality, 'seconds', j.seconds, 'sound', j.sound, 'meme', j.meme,
-        'caption', j.caption, 'agi1', j.agi1, 'pfp', inf_pfp_of(j.inf_pfp)) order by j.done_at desc), '[]'::json)
+        'caption', j.caption, 'agi1', j.agi1, 'cast', j.cast_inf, 'pfp', inf_pfp_of(j.inf_pfp)) order by j.done_at desc), '[]'::json)
       from (select x.id, x.kind, x.shape, x.trend, x.poster, x.files, x.likes, x.inf_id, x.done_at, x.model, x.quality, x.seconds, x.sound,
-          x.meme, x.caption, x.agi1, i.name as inf_name,
+          x.meme, x.caption, x.agi1, x.cast_inf, i.name as inf_name,
           i.looks_job as inf_looks_job, i.pick as inf_pick, i.wallet_code as inf_wallet, i.pfp as inf_pfp
         from agi1_inf_jobs x join agi1_inf i on i.id = x.inf_id
         where x.agi1 and x.status = 'done' and x.kind in ('photo', 'video') and not x.hidden and x.deleted_at is null and i.status = 'ready'
           and i.public and not i.hidden and i.mode <> 'face' and not i.real and not i.banned and x.shape is distinct from 'banner'
+          and inf_cast_shown(x.cast_inf)
         order by x.done_at desc limit 12) j
       left join agi1_inf_names n on n.wallet_code = j.inf_wallet),
     'trends', (select coalesce(json_agg(json_build_object('id', t.id, 'job', t.job, 'poster', j.poster, 'bytes', j.bytes) order by t.sort, t.id), '[]'::json)
@@ -2134,10 +2282,10 @@ as $$
     'spotlight', (select row_to_json(s) from (
         select w.week, w.status, w.holder_likes, w.likes, w.prize, j.id, j.kind, j.shape, j.poster, j.files, j.inf_id,
           i.name as inf_name, i.looks_job, i.pick, (select n.name from agi1_inf_names n where n.wallet_code = i.wallet_code) as maker,
-          inf_pfp_of(i.pfp) as pfp
+          inf_pfp_of(i.pfp) as pfp, j.cast_inf
         from agi1_inf_weeks w join agi1_inf_jobs j on j.id = w.job_id join agi1_inf i on i.id = j.inf_id
         where w.status in ('approved', 'claimed', 'sending', 'sent') and w.week >= (date_trunc('week', now() at time zone 'utc')::date - 14)
-          and j.status = 'done' and not j.hidden and i.status = 'ready' and not i.hidden and not i.banned
+          and j.status = 'done' and not j.hidden and i.status = 'ready' and not i.hidden and not i.banned and inf_cast_shown(j.cast_inf)
         order by w.week desc limit 1) s));
 $$;
 
@@ -2161,8 +2309,13 @@ end;
 $$;
 
 -- Its owner deletes it (for one made from their face: "Delete my face"): it's gone from every page at once, its jobs being
--- made stop (their credits come back), and our server deletes its files. → {"ok": true, "source"} or {"ok": false, "why":
--- "gone" | "not_yours"}
+-- made stop (their credits come back), and our server deletes its files. (2026-10-14) And everything another of its maker's
+-- influencers made with it in it (a template meme it was put into, its 5-second video, a video cut from one): those being
+-- made stop (their credits come back: error 'cast'), and all of them are deleted like a creation its maker deleted (hidden at
+-- once and for good, their rows a week later); our server deletes their files (cast_jobs: each one's id, influencer and kind,
+-- and the id of a profile picture framed from it, whose files go too; that profile picture stops showing at once, inf_pfp_of).
+-- (Locks: this influencer, then jobs: never another influencer, which inf_make may hold while it waits for this one.)
+-- → {"ok": true, "source", "cast_jobs": [{"id", "inf", "kind", "pfp"}]} or {"ok": false, "why": "gone" | "not_yours"}
 create or replace function public.inf_delete(p_id text, p_wallet text)
 returns json
 language plpgsql
@@ -2171,6 +2324,7 @@ as $$
 declare
   i agi1_inf%rowtype;
   j record;
+  v_cast json;
 begin
   select * into i from agi1_inf where id = p_id for update;
   if not found or i.status = 'deleted' then return json_build_object('ok', false, 'why', 'gone'); end if;
@@ -2179,9 +2333,22 @@ begin
     update agi1_inf_jobs set status = 'failed', error = 'deleted', lease_until = null, updated_at = now() where id = j.id;
     if j.cost > 0 and not j.refunded and inf_refund(j.id) then update agi1_inf_jobs set refunded = true where id = j.id; end if;
   end loop;
+  -- (2026-10-14) what it's in, as someone else in another of its maker's influencers' memes
+  for j in select id, cost, refunded from agi1_inf_jobs where cast_inf = p_id and status in ('paid', 'making') for update loop
+    update agi1_inf_jobs set status = 'failed', error = 'cast', lease_until = null, updated_at = now() where id = j.id;
+    if j.cost > 0 and not j.refunded and inf_refund(j.id) then update agi1_inf_jobs set refunded = true where id = j.id; end if;
+  end loop;
+  with x as (
+    update agi1_inf_jobs set hidden = true, deleted_at = now(), lease_until = null, updated_at = now()
+    where cast_inf = p_id and deleted_at is null
+    returning id, inf_id, kind
+  )
+  select coalesce(json_agg(json_build_object('id', x.id, 'inf', x.inf_id, 'kind', x.kind,
+      'pfp', (select a.pfp ->> 'id' from agi1_inf a where a.id = x.inf_id and a.pfp ->> 'job' = x.id))), '[]'::json)
+    into v_cast from x;
   update agi1_inf set status = 'deleted', hidden = true, public = false, updated_at = now() where id = p_id;
   update agi1_inf_uploads set status = 'refused', why = 'deleted', updated_at = now() where id = i.source;
-  return json_build_object('ok', true, 'source', i.source);
+  return json_build_object('ok', true, 'source', i.source, 'cast_jobs', v_cast);
 end;
 $$;
 
@@ -2276,8 +2443,9 @@ $$;
 -- (2026-10-12, the editor) A photo saved from the photo editor (its files kept by our server first, after Gemini looked at
 -- it: server/inf-editor.js): a done photo of the same influencer, free, made from p_from (its maker's own photo, done, shown,
 -- never deleted), marked as the editor's; its scene the photo's (it says where it is), its shape p_shape (an X banner only
--- from one, and it stays one). Never a banned wallet's. → {"ok": true} or {"ok": false, "why": "bad" | "gone" | "not_yours" |
--- "banned" | "not_ready" | "image" | "taken"}
+-- from one, and it stays one). Never a banned wallet's. (2026-10-14) Never from a template meme: the meme editor is its editor
+-- (inf_meme_add). → {"ok": true} or {"ok": false, "why": "bad" | "gone" | "not_yours" | "banned" | "not_ready" | "image" |
+-- "taken"}
 create or replace function public.inf_photo_add(p_job text, p_inf text, p_wallet text, p_from text, p_shape text, p_bytes integer)
 returns json
 language plpgsql
@@ -2300,7 +2468,8 @@ begin
   end if;
   if i.status <> 'ready' then return json_build_object('ok', false, 'why', 'not_ready'); end if;
   select * into f from agi1_inf_jobs where id = p_from;
-  if not found or f.inf_id is distinct from p_inf or f.kind <> 'photo' or f.status <> 'done' or f.hidden or f.deleted_at is not null then
+  if not found or f.inf_id is distinct from p_inf or f.kind <> 'photo' or f.status <> 'done' or f.hidden or f.deleted_at is not null
+     or f.layers is not null then
     return json_build_object('ok', false, 'why', 'image');
   end if;
   if (f.shape = 'banner') <> (p_shape = 'banner') then return json_build_object('ok', false, 'why', 'bad'); end if;
@@ -2315,14 +2484,68 @@ begin
 end;
 $$;
 
+-- (2026-10-14, meme templates) A meme saved from the meme editor (the owner's answer: "Save as a new meme"): its words changed,
+-- their fonts, colors and places (p_layers, as our server checked them; p_caption all of its words; p_mark where its share mark
+-- goes now, away from them), drawn by our server on the picture without words of the meme it's from (its files kept by our
+-- server first, after Gemini looked at it): a done template meme of the same influencer, free, made from p_from (its maker's own
+-- template meme: done, shown, never deleted, with anyone else in it still to be seen), marked as the editor's; its template,
+-- picture's words, shape, quality and who's in it (another influencer, or AGI-1, and their role) the meme's own. Our server
+-- counts one save first (inf_tool_take 'photo': the photo editor's). Never a banned wallet's. → {"ok": true} or {"ok": false,
+-- "why": "bad" | "gone" | "not_yours" | "banned" | "not_ready" | "image" | "same" (its words as they were) | "taken"}
+create or replace function public.inf_meme_add(p_job text, p_inf text, p_wallet text, p_from text, p_layers jsonb, p_caption text,
+  p_mark text, p_bytes integer)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  i agi1_inf%rowtype;
+  f agi1_inf_jobs%rowtype;
+begin
+  -- (jsonb_typeof first: the terms of an OR are taken in order and it stops at the first true one)
+  if p_job is null or p_job !~ '^[A-Za-z0-9_-]{22}$' or p_from is null or p_from !~ '^[A-Za-z0-9_-]{22}$' or p_wallet is null
+     or char_length(p_wallet) not between 16 and 64 or p_layers is null or jsonb_typeof(p_layers) <> 'array'
+     or jsonb_array_length(p_layers) not between 1 and 8 or octet_length(p_layers::text) > 8000 or p_caption is null
+     or char_length(p_caption) not between 1 and 1000 or p_mark is null or p_mark not in ('br', 'bl', 'tr', 'tl', 'mr', 'ml')
+     or p_bytes is null or p_bytes not between 1 and 10000000 then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  perform pg_advisory_xact_lock(hashtext('agi1-inf-wallet:' || p_wallet));
+  select * into i from agi1_inf where id = p_inf;
+  if not found or i.status = 'deleted' or i.hidden then return json_build_object('ok', false, 'why', 'gone'); end if;
+  if i.wallet_code <> p_wallet then return json_build_object('ok', false, 'why', 'not_yours'); end if;
+  if exists (select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null) then
+    return json_build_object('ok', false, 'why', 'banned');
+  end if;
+  if i.status <> 'ready' then return json_build_object('ok', false, 'why', 'not_ready'); end if;
+  select * into f from agi1_inf_jobs where id = p_from;
+  if not found or f.inf_id is distinct from p_inf or f.kind <> 'photo' or f.status <> 'done' or f.hidden or f.deleted_at is not null
+     or f.layers is null or f.meme is null or not inf_cast_shown(f.cast_inf) then
+    return json_build_object('ok', false, 'why', 'image');
+  end if;
+  if f.layers = p_layers then return json_build_object('ok', false, 'why', 'same'); end if;
+  begin
+    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, image, cost, status, files, bytes, editor, done_at, model,
+      quality, meme, caption, layers, cast_inf, cast_role, mark_spot, agi1)
+    values (p_job, p_inf, p_wallet, 'photo', f.scene, f.shape, p_from, 0, 'done', 1, p_bytes, true, now(), f.model, f.quality, f.meme,
+      p_caption, p_layers, f.cast_inf, f.cast_role, p_mark, coalesce(f.agi1, false));
+  exception when unique_violation then
+    return json_build_object('ok', false, 'why', 'taken');
+  end;
+  return json_build_object('ok', true);
+end;
+$$;
+
 -- (2026-10-12, the editor) A video saved from the video editor (the owner's choice: "Video editor": free, 10 a day per wallet):
 -- made from one of its maker's own videos or trend videos (p_from: done, shown, never deleted, of a ready influencer of this
 -- wallet), what was asked (p_cut, checked by our server: src/studio/video-edit.js cutSpec; its layer of words and stickers,
 -- when it has one, kept by our server first). One use counted (inf_tool_take 'video': p_per_day a wallet, p_site_cap the whole
 -- site), then a video of the same influencer, free, waiting for our clock (status 'paid', its scene the one it's from): the
 -- clock makes it with ffmpeg (server/inf-cut.js), then Gemini looks at it (inf_cut_done). At most p_open of a wallet's being
--- made at once. Never a banned wallet's. → {"ok": true, "left"} or {"ok": false, "why": "bad" | "gone" | "not_yours" |
--- "banned" | "not_ready" | "from" | "cuts_open" | "too_many" | "busy_day" | "taken"}
+-- made at once. Never a banned wallet's. (2026-10-14) Never from one with someone else in it who may no longer be seen
+-- (inf_cast_shown: "from"); one cut from a template meme's video keeps who else is in it (cast_inf), not its words (they're in
+-- the video). → {"ok": true, "left"} or {"ok": false, "why": "bad" | "gone" | "not_yours" | "banned" | "not_ready" | "from" |
+-- "cuts_open" | "too_many" | "busy_day" | "taken"}
 create or replace function public.inf_cut_add(p_job text, p_inf text, p_wallet text, p_from text, p_shape text, p_seconds integer,
   p_sound boolean, p_cut jsonb, p_per_day integer, p_site_cap integer, p_open integer default 3)
 returns json
@@ -2351,7 +2574,7 @@ begin
   if i.status <> 'ready' then return json_build_object('ok', false, 'why', 'not_ready'); end if;
   select * into f from agi1_inf_jobs where id = p_from;
   if not found or f.inf_id is distinct from p_inf or f.kind not in ('video', 'trend') or f.status <> 'done' or f.hidden
-     or f.deleted_at is not null then
+     or f.deleted_at is not null or not inf_cast_shown(f.cast_inf) then
     return json_build_object('ok', false, 'why', 'from');
   end if;
   if (select count(*) from agi1_inf_jobs where wallet_code = p_wallet and kind = 'video' and editor and status in ('paid', 'making')) >= p_open then
@@ -2360,9 +2583,12 @@ begin
   begin
     t := inf_tool_take(p_wallet, 'video', p_per_day, p_site_cap, true);
     if (t ->> 'ok')::boolean is not true then raise exception using errcode = 'P0001', message = coalesce(t ->> 'why', 'busy'); end if;
-    -- (2026-10-13: AGI-1 is in it when she's in the video it's from)
-    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, sound, image, cost, status, seconds, editor, cut, agi1)
-    values (p_job, p_inf, p_wallet, 'video', f.scene, p_shape, p_sound, p_from, 0, 'paid', p_seconds, true, p_cut, coalesce(f.agi1, false));
+    -- (2026-10-13: AGI-1 is in it when she's in the video it's from; 2026-10-14: and another influencer, when one's in a
+    -- template meme's video it's cut from)
+    insert into agi1_inf_jobs (id, inf_id, wallet_code, kind, scene, shape, sound, image, cost, status, seconds, editor, cut, agi1,
+      cast_inf)
+    values (p_job, p_inf, p_wallet, 'video', f.scene, p_shape, p_sound, p_from, 0, 'paid', p_seconds, true, p_cut, coalesce(f.agi1, false),
+      f.cast_inf);
   exception
     when unique_violation then return json_build_object('ok', false, 'why', 'taken');
     when sqlstate 'P0001' then
@@ -2742,7 +2968,8 @@ $$;
 -- ---------- the share mark on downloaded videos (round 2: server/inf-mark.js, on the studio's clock) ----------
 -- One done video to mark, the newest first (in its first 30 days): taken for 3 minutes, at most 3 tries (then its download
 -- stays unmarked). → {id, inf_id, kind, bytes, tries} or null (nothing to do)
--- (2026-10-12: never one saved from the video editor: its mark is in it already)
+-- (2026-10-12: never one saved from the video editor: its mark is in it already; 2026-10-14: nor a template meme's 5-second
+-- video: our clock drew its mark with its words, where they aren't)
 create or replace function public.inf_mark_take()
 returns json
 language plpgsql
@@ -2753,6 +2980,7 @@ declare
 begin
   select * into r from agi1_inf_jobs
   where kind in ('trend', 'video') and status = 'done' and not hidden and not marked and mark_tries < 3 and parts = 1 and not editor
+    and layers is null
     and (mark_at is null or mark_at < now() - interval '3 minutes') and done_at > now() - interval '30 days'
   order by done_at desc limit 1 for update skip locked;
   if not found then return null; end if;
@@ -2773,7 +3001,8 @@ $$;
 
 -- ---------- likes and the weekly spotlight (round 2: the owner's flywheel) ----------
 -- A like (p_like) or taking it back, by a signed-in wallet (p_level: its level now; at most p_per_day likes a day): only a
--- done photo or video of a public influencer (never one made from a face or a photo of a real person), never its own.
+-- done photo or video of a public influencer (never one made from a face or a photo of a real person), never its own;
+-- (2026-10-14) never one with someone else in it who may no longer be seen (inf_cast_shown: "gone").
 -- → {"ok": true, "liked", "likes"} or {"ok": false, "why": "gone" | "private" | "own" | "too_many" | "bad"}
 create or replace function public.inf_like(p_job text, p_wallet text, p_level integer, p_like boolean, p_per_day integer)
 returns json
@@ -2790,7 +3019,7 @@ begin
     return json_build_object('ok', false, 'why', 'bad');
   end if;
   select * into j from agi1_inf_jobs where id = p_job for update;
-  if not found or j.status <> 'done' or j.hidden or j.kind not in ('photo', 'trend', 'video') then
+  if not found or j.status <> 'done' or j.hidden or j.kind not in ('photo', 'trend', 'video') or not inf_cast_shown(j.cast_inf) then
     return json_build_object('ok', false, 'why', 'gone');
   end if;
   select * into i from agi1_inf where id = j.inf_id;
@@ -2832,8 +3061,9 @@ as $$
 $$;
 
 -- A week's best creation: done that week (p_week: its Monday, UTC), of a public influencer (never one made from a face or a
--- photo of a real person), not hidden, not skipped by the owner (p_skip), liked by at least one holder; the most holders'
--- likes first (Crush and Soulmate wallets), then all likes, then the first made
+-- photo of a real person), not hidden (2026-10-14: nor one with someone else in it who may no longer be seen), not skipped by
+-- the owner (p_skip), liked by at least one holder; the most holders' likes first (Crush and Soulmate wallets), then all likes,
+-- then the first made
 create or replace function public.inf_week_top(p_week date, p_skip text[])
 returns table (job_id text, inf_id text, wallet_code text, holder_likes integer, likes integer)
 language sql
@@ -2844,7 +3074,7 @@ as $$
     select j.id, j.inf_id, j.wallet_code, j.likes, j.done_at,
       (select count(*) from agi1_inf_likes l where l.job_id = j.id and l.level >= 2)::integer as holder_likes
     from agi1_inf_jobs j join agi1_inf i on i.id = j.inf_id
-    where j.kind in ('photo', 'trend', 'video') and j.status = 'done' and not j.hidden
+    where j.kind in ('photo', 'trend', 'video') and j.status = 'done' and not j.hidden and inf_cast_shown(j.cast_inf)
       and j.done_at >= (p_week::timestamp at time zone 'utc') and j.done_at < ((p_week + 7)::timestamp at time zone 'utc')
       and i.status = 'ready' and i.public and not i.hidden and i.mode <> 'face' and not i.real and not i.banned
       and not (j.id = any(coalesce(p_skip, '{}'::text[])))
@@ -2920,7 +3150,8 @@ end;
 $$;
 
 -- The weeks, the newest first (p_wallet: a signed-in wallet's own are marked "mine": its prize to claim). The owner's page
--- sees every state; the pages show approved ones. (2026-10-11: with each influencer's profile picture, inf_pfp_of.)
+-- sees every state; the pages show approved ones. (2026-10-11: with each influencer's profile picture, inf_pfp_of; 2026-10-14:
+-- a creation with someone else in it who may no longer be seen is no longer shown, job_ok false, like a hidden one.)
 create or replace function public.inf_weeks(p_wallet text, p_limit integer)
 returns json
 language sql
@@ -2929,7 +3160,8 @@ set search_path = public
 as $$
   select coalesce(json_agg(json_build_object('week', w.week, 'status', w.status, 'job', w.job_id, 'inf_id', w.inf_id,
       'holder_likes', w.holder_likes, 'likes', w.likes, 'prize', w.prize, 'tx', w.tx, 'kind', j.kind, 'shape', j.shape,
-      'poster', j.poster, 'files', j.files, 'job_ok', coalesce(j.status = 'done' and not j.hidden, false), 'inf_name', i.name,
+      'poster', j.poster, 'files', j.files, 'job_ok', coalesce(j.status = 'done' and not j.hidden and inf_cast_shown(j.cast_inf), false),
+      'inf_name', i.name,
       'looks_job', i.looks_job, 'pick', i.pick, 'pfp', inf_pfp_of(i.pfp), 'skipped', cardinality(w.skipped),
       'mine', coalesce(w.wallet_code = p_wallet, false)) order by w.week desc), '[]'::json)
   from (select * from agi1_inf_weeks order by week desc limit least(greatest(coalesce(p_limit, 8), 1), 60)) w
@@ -3846,7 +4078,7 @@ begin
     'inf_upload_set(text, text, text, numeric, boolean, boolean, smallint[])', 'inf_day_take(integer)',
     'inf_start(text, text, text, text, text, text, jsonb, text, text, integer, integer, integer, integer, integer, text)', 'inf_get(text)',
     'inf_pick(text, text, integer, text)', 'inf_reroll(text, text, text, integer, integer)',
-    'inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text, integer, text[], integer, text, text, text, boolean)',
+    'inf_make(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text, integer, text[], integer, text, text, text, boolean, jsonb, text, text, text)',
     'inf_job_get(text)',
     'inf_job_lease(text, integer)', 'inf_job_step(text, text, text, text, boolean, integer)', 'inf_job_wait(text)',
     'inf_job_done(text, integer, integer)', 'inf_job_fail(text, text, boolean)', 'inf_job_due(integer)', 'inf_poster(text)',
@@ -3893,7 +4125,9 @@ begin
     'inf_photo_add(text, text, text, text, text, integer)',
     -- (2026-10-12) the video editor
     'inf_cut_add(text, text, text, text, text, integer, boolean, jsonb, integer, integer, integer)',
-    'inf_cut_done(text, integer, boolean, integer)', 'inf_cut_due()'
+    'inf_cut_done(text, integer, boolean, integer)', 'inf_cut_due()',
+    -- (2026-10-14) meme templates
+    'inf_cast_shown(text)', 'inf_meme_add(text, text, text, text, jsonb, text, text, integer)'
   ] loop
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
     execute format('grant execute on function public.%s to service_role', f);
@@ -3904,7 +4138,7 @@ $do$;
 -- Tell Supabase's web API to notice the new functions right away.
 notify pgrst, 'reload schema';
 
--- Check: influencers_ready = 1 (its 106 functions, each exactly once: since round 2 an older inf_start or inf_upload_set left
+-- Check: influencers_ready = 1 (its 108 functions, each exactly once: since round 2 an older inf_start or inf_upload_set left
 -- behind would count twice, since round 4's phase 4 an older inf_make; round 2's new columns; round 3's gifts in the credits' log; round 4's banners, names and
 -- captions; round 4's phase 2: the team, bans (and the 5 functions that refuse a banned wallet), tickets, the AI helper's
 -- counts, alerts and the owner's numbers; round 4's phase 3: bonus credits, gifts and invites, and every kind they log;
@@ -3919,8 +4153,30 @@ notify pgrst, 'reload schema';
 -- inf_mark_take leaving its videos alone, inf_job_get giving its cut and inf_admin_stats counting it; the 3D tool's choices
 -- (2026-10-13): inf_3d and inf_3d_burn taking them (p_spec) and inf_3d_list giving them and the extra downloads' state; "With
 -- AGI-1" (2026-10-13): its column and its check, inf_make's p_agi1, inf_job_get, inf_jobs and inf_explore giving it, and the
--- editors' saves carrying it; and studio.sql's new parts it builds on)
+-- editors' saves carrying it; meme templates (2026-10-14): their 4 columns and 4 checks, a template meme's words up to 1000
+-- characters, a meme's video in the model menu's check, inf_make's p_layers, inf_job_get giving another influencer's full body,
+-- inf_jobs a meme's share mark's spot, inf_mark_take leaving a meme's video alone, inf_delete deleting what an influencer is in,
+-- and the 11 functions that leave out a creation with someone in it who may no longer be seen (inf_cast_shown); and
+-- studio.sql's new parts it builds on)
 select
+  (case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf_jobs'
+        and column_name in ('layers', 'cast_inf', 'cast_role', 'mark_spot')) = 4
+      and (select count(*) from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass and conname in
+        ('agi1_inf_jobs_layers_check', 'agi1_inf_jobs_cast_check', 'agi1_inf_jobs_role_check', 'agi1_inf_jobs_mark_spot_check')) = 4
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass
+        and conname = 'agi1_inf_jobs_caption_check' and pg_get_constraintdef(oid) like '%1000%')
+      and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass
+        and conname = 'agi1_inf_jobs_menu_check' and pg_get_constraintdef(oid) like '%layers%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_make' and prosrc like '%p_layers%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_job_get' and prosrc like '%cast_body%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_jobs' and prosrc like '%''mark_spot''%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_mark_take' and prosrc like '%layers is null%')
+      and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_delete' and prosrc like '%cast_inf%')
+      and (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('inf_pfp_of', 'inf_pfp_set',
+        'inf_make', 'inf_job_get', 'inf_jobs', 'inf_explore', 'inf_like', 'inf_week_top', 'inf_weeks', 'inf_cut_add', 'inf_meme_add')
+        and prosrc like '%inf_cast_shown%') = 11
+    then 1 else 0 end)
+  *
   (case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'agi1_inf_jobs'
         and column_name = 'agi1')
       and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_agi1_check')
@@ -4005,7 +4261,7 @@ select
     'inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_ref_code',
     'inf_ref_bind', 'inf_ref_settle', 'inf_job_part', 'inf_access_list', 'inf_access_set', 'inf_pfp_of', 'inf_pfp_set',
     'inf_owner_link', 'inf_owner_links', 'inf_job_delete', 'inf_tool_take', 'inf_photo_add', 'inf_cut_add', 'inf_cut_done',
-    'inf_cut_due')) = 106 then 1 else 0 end)
+    'inf_cut_due', 'inf_cast_shown', 'inf_meme_add')) = 108 then 1 else 0 end)
     * (case when (select count(*) from information_schema.columns where table_schema = 'public'
         and ((table_name = 'agi1_inf' and column_name = 'way') or (table_name = 'agi1_inf_uploads' and column_name in ('whole', 'head')))) = 3
       and exists (select 1 from pg_constraint where conrelid = 'public.agi1_inf'::regclass and conname = 'agi1_inf_style_check'

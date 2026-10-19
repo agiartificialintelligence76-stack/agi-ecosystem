@@ -699,7 +699,8 @@
 .sa-media-pic { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.45s ease; }
 .sa-media-pic.is-blur { filter: blur(8px) brightness(0.6); transform: scale(1.12); }
 .sa-media-open:hover .sa-media-pic:not(.is-blur) { transform: scale(1.03); }
-.sa-media-play {
+.sa-media-play,
+.sa-media-corner {
   position: absolute;
   top: 7px;
   right: 7px;
@@ -713,7 +714,9 @@
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
-.sa-media-play .sa-i { width: 11px; height: 11px; }
+.sa-media-play .sa-i,
+.sa-media-corner .sa-i { width: 11px; height: 11px; }
+.sa-media-corner { z-index: 1; }
 .sa-media-tag { position: absolute; top: 7px; left: 7px; z-index: 1; }
 .sa-media-cap {
   position: absolute;
@@ -2581,3 +2584,67 @@ a.sa-maker-name:hover { text-decoration: underline; }
 .sa-media-rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(140px, 168px); align-items: start; gap: 8px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; scroll-snap-type: x proximity; }
 .sa-media-rail > * { min-width: 0; scroll-snap-align: start; }
 .sa-media-rail .sa-media { margin: 0; }
+
+/* ---------- (2026-10-14, meme templates) the meme editor (views/meme-editor.js): the photo editor's stage and tools (.sa-pe),
+   its words as cards, its fonts' chips each in its own font (the same files the meme is drawn with: public/fonts/meme/,
+   downloaded only when the editor's Style tool shows them), any color besides its swatches ---------- */
+@font-face { font-family: 'AGI Meme Classic'; src: url('/fonts/meme/anton-v1.woff') format('woff'); font-display: swap; }
+@font-face { font-family: 'AGI Meme Comic'; src: url('/fonts/meme/bangers-v1.woff') format('woff'); font-display: swap; }
+@font-face { font-family: 'AGI Meme Marker'; src: url('/fonts/meme/marker-v1.woff') format('woff'); font-display: swap; }
+@font-face { font-family: 'AGI Meme Casual'; src: url('/fonts/meme/comicneue-v1.woff') format('woff'); font-display: swap; }
+@font-face { font-family: 'AGI Meme Bold'; src: url('/fonts/meme/archivo-v1.woff') format('woff'); font-display: swap; }
+@font-face { font-family: 'AGI Meme Clean'; src: url('/fonts/meme/notosans-v1.woff') format('woff'); font-display: swap; }
+.sa-mx-font-classic { font-family: 'AGI Meme Classic', 'Geist', sans-serif; }
+.sa-mx-font-comic { font-family: 'AGI Meme Comic', 'Geist', sans-serif; letter-spacing: 0.02em; }
+.sa-mx-font-marker { font-family: 'AGI Meme Marker', 'Geist', sans-serif; }
+.sa-mx-font-casual { font-family: 'AGI Meme Casual', 'Geist', sans-serif; font-weight: 700; }
+.sa-mx-font-bold { font-family: 'AGI Meme Bold', 'Geist', sans-serif; }
+.sa-mx-font-clean { font-family: 'AGI Meme Clean', 'Geist', sans-serif; }
+.sa-mx-fonts .sa-chip-text { font-size: 15px; line-height: 1.2; }
+.sa-mx-words { display: grid; gap: 10px; }
+.sa-mx-word { display: grid; gap: 6px; padding: 10px; border-radius: var(--sa-r-sm); border: 1px solid var(--sa-line); background: var(--sa-surface); }
+.sa-mx-word.is-picked { border-color: var(--sa-accent); background: var(--sa-accent-bg); }
+.sa-mx-word-top { display: flex; align-items: center; gap: 8px; min-height: 30px; }
+.sa-mx-word-top .sa-label { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sa-mx-word .sa-count.is-over { color: var(--sa-bad); }
+.sa-mx-text { min-height: 60px; resize: vertical; }
+.sa-mx-warn { margin: 0; }
+.sa-mx-fit { margin: -6px 0 0; }
+.sa-mx-any-row { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 8px; font-size: 12.5px; color: var(--sa-text-2); cursor: pointer; }
+.sa-mx-any { width: 40px; height: 30px; padding: 2px; border-radius: 8px; border: 1px solid var(--sa-line-2); background: var(--sa-raised); cursor: pointer; }
+.sa-mx-any:focus-visible { outline: 2px solid var(--sa-accent); outline-offset: 2px; }
+/* a phone: the meme bigger (it's square, so the stage's height decides its size), its words' cards scrolling under it */
+@media (max-width: 719.98px) {
+  .sa-mx .sa-pe-panel { max-height: 30vh; }
+}
+
+/* (2026-10-19, meme templates) "Add someone": a card with a face on its left (cardPick's pic), its name and line beside it */
+.sa-card-opt label.has-pic { grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: center; }
+.sa-card-opt label.has-pic > .sa-card-pic { grid-row: 1 / span 2; grid-column: 1; display: flex; }
+.sa-card-opt label.has-pic > :not(.sa-card-pic) { grid-column: 2; }
+.sa-card-face { display: block; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--sa-raised); }
+.sa-card-face.is-agi1 { box-shadow: 0 0 0 2px rgb(244 114 182 / 0.55); }
+.sa-card-face.is-missing { background: linear-gradient(135deg, var(--sa-raised), var(--sa-line-2)); }
+.sa-cards-who .sa-card-opt label { min-height: 0; }
+.sa-who-none { margin: 8px 0 0; }
+.sa-who-part { margin: 10px 0 0; }
+/* "With Nova as “The partner (right)”" under a template meme seen big (shared.js castLine) */
+.sa-edit-words.is-cast .sa-i { color: var(--sa-pink); }
+
+/* (2026-10-19, meme templates) the Photo tool's template picker (views/meme-pick.js): a tile per template, its sketch and name */
+.sa-tpl-pick { display: grid; gap: 10px; }
+.sa-tpl-group { margin: 0; padding: 0; border: 0; min-width: 0; }
+.sa-tpl-cat { padding: 0; margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--sa-text-3); }
+.sa-tpl-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.sa-tpl-opt { position: relative; display: flex; min-width: 0; }
+.sa-tpl-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.sa-tpl-opt label { display: grid; gap: 5px; width: 100%; padding: 6px; border-radius: 10px; border: 1px solid var(--sa-line-2); background: var(--sa-surface); cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
+.sa-tpl-opt label:hover { border-color: var(--sa-line-3); background: var(--sa-raised); }
+.sa-tpl-input:checked + label { border-color: var(--sa-accent); background: var(--sa-raised); box-shadow: 0 0 0 1px var(--sa-accent); }
+.sa-tpl-input:focus-visible + label { outline: 2px solid var(--sa-accent); outline-offset: 2px; }
+.sa-tpl-sketch { display: block; width: 100%; height: auto; max-height: 96px; border-radius: 6px; }
+.sa-tpl-pic { fill: rgb(167 139 250 / 0.35); }
+.sa-tpl-box { fill: rgb(255 255 255 / 0.85); }
+.sa-tpl-box.is-dark { fill: rgb(17 17 17 / 0.8); }
+.sa-tpl-box.is-tag { fill: rgb(244 114 182 / 0.85); }
+.sa-tpl-name { font-size: 11.5px; line-height: 1.25; color: var(--sa-text-2); overflow-wrap: anywhere; }

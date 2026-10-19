@@ -692,6 +692,63 @@ export const SCENES = {
     },
   },
 
+  // (2026-10-19, meme templates) a meme: the Meme kind, a template picked in its picker (its sketches), its words and a scene
+  // idea → made in Creations, its words drawn on it (Learn's lesson on photos)
+  'make-meme': {
+    path: (state) => `/i/${state.mira.id}`,
+    async before({ page, phone }) {
+      await drawerOpen(page, phone);
+      const kinds = page.locator('.sa-seg-kind').first();
+      await kinds.waitFor();
+      await kinds.evaluate((el) => { const sc = el.closest('.sa-ws-body'); sc.scrollTop += el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 12; });
+      await sleep(300);
+    },
+    async run({ page, film, phone, B }) {
+      const kinds = page.locator('.sa-seg-kind').first();
+      await film.start(await topOf(kinds, phone ? 230 : 280), { room: phone ? 1.02 : 1.1 });
+      await film.wait(300);
+      await film.click(kinds.locator('label').filter({ hasText: exact('Meme') }).first(), { after: 250 });
+      const pick = page.locator('.sa-tpl-pick').first();
+      await pick.waitFor();
+      await film.cam(await topOf(pick, phone ? 240 : 290), { room: phone ? 1.02 : 1.08 });
+      await film.wait(250);
+      await film.click(pick.locator('label').filter({ hasText: exact('Caption') }).first(), { after: 350 });
+      film.poster();
+      await film.still('picked');
+      const line = page.locator('.sa-meme-line input').first();
+      await film.scrollTo(line, { within: '.sa-ws-body' });
+      await film.cam(line, { room: phone ? 1.02 : 1.5 });
+      await film.click(line, { after: 100 });
+      film.fast(1.4);
+      await line.pressSequentially('Me pretending I\'m a morning person', { delay: 32 });
+      const idea = page.locator('[data-guide="scene"] .sa-idea').first();
+      await film.scrollTo(idea, { within: '.sa-ws-body' });
+      await film.cam(await around(page.locator('[data-guide="scene"] textarea'), idea), { room: phone ? 1.02 : 1.15 });
+      await film.click(idea, { after: 250 });
+      film.normal();
+      await film.still('words');
+      const go = page.locator('.sa-ws-foot [data-guide="go"]').first();
+      await film.cam(page.locator('.sa-ws-foot').first(), { room: phone ? 1.02 : 1.3, y: phone ? 0.6 : 0.5 });
+      await film.click(go, { after: 250 });
+      await closeDrawer(film, page);
+      const tile = page.locator('.sa-inf-gallery .sa-media.is-making').first();
+      await tile.waitFor({ timeout: 15000 });
+      const id = await tile.getAttribute('id');
+      await toMaking(film, page, tile, phone);
+      await film.wait(700);
+      // (a cut while it's made: its bar was seen)
+      film.cut();
+      await finish(page, B, shown(page.locator(`#${id} .sa-media-open`)));
+      await sleep(500);
+      await painted(page, page.locator(`#${id} img`).first(), 400);
+      await onMade(film, page, page.locator(`#${id}`), phone);
+      film.normal();
+      await film.wait(1500);
+      await film.still('done');
+      await film.end(300);
+    },
+  },
+
   // Instant: switched on, one tap on an idea makes it
   'make-instant': {
     path: (state) => `/i/${state.mira.id}`,

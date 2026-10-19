@@ -54,7 +54,7 @@ test('the guides: each page\'s steps (its own ids), their buttons on the pages, 
   assert.equal(new Set(CLIP_IDS).size, CLIP_IDS.length);
   for (const c of CLIP_IDS) assert.match(c, /^(explore|create|pick|make|me)-[a-z]+$/, c);
   assert.ok(CLIP_IDS.includes('make-trend') && CLIP_IDS.includes('make-video'));
-  assert.equal(CLIP_IDS.length, 30);
+  assert.equal(CLIP_IDS.length, 31);
   // (2026-10-11) from a photo, how it's made: its own step and video
   assert.ok(CLIP_IDS.includes('create-way'));
   // (2026-10-11) its profile picture: the camera on its picture (only on its own ready influencer: the step is left out where
@@ -70,6 +70,9 @@ test('the guides: each page\'s steps (its own ids), their buttons on the pages, 
   assert.match(GUIDES.make.steps.find((s) => s.id === 'creations').text, /^Open one to edit it with words or in the photo or video editor \(free\), make another, delete it, /);
   assert.ok(CLIP_IDS.includes('make-editor'));
   assert.equal(LESSON_CLIPS.photos.clips.at(-1), 'make-editor');
+  // (2026-10-19, meme templates) a meme from a template: its own video, in Learn's lesson on photos, just before the photo editor's
+  assert.ok(CLIP_IDS.includes('make-meme'));
+  assert.deepEqual(LESSON_CLIPS.photos.clips.slice(-2), ['make-meme', 'make-editor']);
   assert.ok(CLIP_IDS.includes('make-cut'));
   assert.equal(LESSON_CLIPS.videos.clips.at(-1), 'make-cut');
 });

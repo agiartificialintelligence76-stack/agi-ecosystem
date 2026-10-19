@@ -8,10 +8,12 @@
 //                                   in them), trends, boosted, spotlight } (the same for everyone)
 //   GET  ?inf=<id>                → a ready influencer's page: { influencer, jobs, models } (anyone with its link)
 //   GET  ?inf-file=<…>            → one of its pictures (a JPEG, or a small WebP) or a video's poster, from the private bucket
+//                                   (2026-10-14: or a template meme's picture without its words, <inf>/<job>.pic.jpg)
 //   GET  ?inf-video=<job>.mp4     → one of its videos (or a trend clip), played in parts (Range), like the 3D studio's
 //   GET  ?inf-video-dl=<job>.mp4  → a redirect to a short-lived signed address, to download it with its own name (round 2:
 //                                   its copy with the share mark, once the clock has made it: server/inf-mark.js)
 //   GET  ?inf-dl=<inf>/<job>-<n>.jpg → (round 2) one of its photos (or its full body) to download, with the share mark
+//                                   (2026-10-14: a template meme's where its words aren't)
 //   GET  ?inf-ex=<job>.webp       → (round 2) an example picture for a design choice
 //   GET  ?inf-stats               → (round 2) the live stats board: public totals only, kept a minute
 //   POST { action: 'inf-me', session }                         → its credits (a holder's free ones given first), its
@@ -42,6 +44,10 @@
 //        our clock, then looked at) or, with its words' picture (layer: true), { ok, job, ticket, size, left }; then POST
 //        ?inf-cut=<ticket> (that PNG, exactly its size) → started ({ ok, job, left }). Free, VIDEO_EDITOR.PER_DAY a wallet
 //        (server/inf-cut.js)
+//   POST { action: 'inf-meme-save', session, from, layers } (2026-10-14, meme templates: the meme editor, "Save as a new meme")
+//        → one of its own template memes with its words changed (their text, font, color, outline, background, size and place),
+//        drawn by our server on its picture without words, looked at, then kept as a new meme next to it ({ ok, job, left }: free,
+//        counted like the photo editor's saves, EDITOR.PER_DAY a wallet; server/inf-meme-save.js); "same" when nothing changed
 //   POST { action: 'inf-3d', session, id, spec? } · { action: 'inf-public', session, id, show } · { action: 'inf-delete', session, id }
 //        (2026-10-13, the 3D tool) spec: a 3D model's choices (src/studio/rules.js modelSpec: its library moves, moves described in
 //        words, its detail, shine, pose, height, its look in words, more downloads); none is the model as before. Its price is its
@@ -102,8 +108,9 @@ import {
   explore, ownerPage, trendMake, trendSet, hide, clearReports, ID, order3dBurn, check3dBurn, redo3d, examplesMap, stats, exampleMake,
   setProfile, pfpShown, againJob, deleteJob, dl3d,
 } from './influencer.js';
-import { getJob, picPath, videoPath, posterPath, examplePath, markedPath, hdPath, aiTagged } from './inf-jobs.js';
+import { getJob, picPath, videoPath, posterPath, examplePath, markedPath, hdPath, aiTagged, memePicPath } from './inf-jobs.js';
 import { ownMark } from '../src/studio/video-edit.js';
+import { isMarkSpot } from '../src/studio/memes.js';
 import { downloadFor, cleanFile, cleanNeed, holdsEnough } from './inf-clean.js';
 import { USDG } from './studio-chain.js';
 import { WEEK, prizesOn } from './inf-week.js';
@@ -235,8 +242,10 @@ async function photoDownload(cfg, value, who) {
   const priv = j.inf_mode === 'face' || j.inf_real === true;
   const name = `${safeName(j.inf_name, 'AGI-Studio')}-${j.kind === 'body' ? 'full-body' : j.shape === 'banner' ? 'X-banner' : j.meme ? 'meme' : 'photo'}${nth ? `-${nth + 1}` : ''}.jpg`;
   // (round 4, phase 4) an HD or Ultra photo: its full-size copy (marked when it was kept), from a short-lived signed address
-  // (too big for an answer of ours: Vercel's are 4.5 MB at most)
-  if (j.kind === 'photo' && j.shape !== 'banner' && ['hd', 'ultra'].includes(j.quality)) {
+  // (too big for an answer of ours: Vercel's are 4.5 MB at most). (2026-10-14) Never a template meme's: it has none (its
+  // download is the meme itself, its mark where its words aren't)
+  const template = Array.isArray(j.layers);
+  if (j.kind === 'photo' && !template && j.shape !== 'banner' && ['hd', 'ultra'].includes(j.quality)) {
     try {
       const url = await F.signedUrl(cfg, hdPath(m[1], m[2], nth), { expiresIn: 2 * 3600, download: name });
       if (url) return new Response(null, { status: 302, headers: { Location: url, 'Referrer-Policy': 'no-referrer', 'Cache-Control': priv ? 'private, max-age=300' : 'public, max-age=300, s-maxage=1800' } });
@@ -252,7 +261,8 @@ async function photoDownload(cfg, value, who) {
   }
   if (!bytes) return json(404, { error: 'gone' });
   const { markPhoto } = await import('./inf-mark.js');
-  const marked = await markPhoto(await F.loadSharp(), bytes).catch(() => null);
+  // (2026-10-14) a template meme's mark goes where its words aren't (its row's mark_spot), any other photo's bottom right
+  const marked = await markPhoto(await F.loadSharp(), bytes, template && isMarkSpot(j.mark_spot) ? j.mark_spot : 'br').catch(() => null);
   // (2026-10-12) with our hidden AI tag too (src/studio/ai-tag.js)
   return new Response(aiTagged(marked || bytes), {
     status: 200,
@@ -268,7 +278,7 @@ async function fileAnswer(cfg, value, who) {
   const m = INF_FILE_RE.exec(value || '');
   if (!m) return json(400, { error: 'bad_request' });
   if (!infFileBurst(who)) return json(429, { error: 'too_fast' });
-  const jobId = m[2] || m[6];
+  const jobId = m[2] || m[6] || m[8];
   let j;
   try { j = await getJob(cfg, jobId); } catch (err) { return dbTrouble(err, 'a picture'); }
   // (2026-10-11) its profile picture: a square its maker framed, kept under an id of its own (not a job's), while it's its
@@ -284,6 +294,11 @@ async function fileAnswer(cfg, value, who) {
     if (j.inf_id !== m[1] || !['looks', 'body', 'photo'].includes(j.kind) || nth >= Math.max(1, Number(j.files) || 0)) return json(404, { error: 'gone' });
     path = picPath(m[1], jobId, nth, m[4]);
     type = m[4] === 'jpg' ? 'image/jpeg' : 'image/webp';
+  } else if (m[7]) {
+    // (2026-10-14) a template meme's picture without its words (<job>.pic.jpg): what its editor draws its words over
+    if (j.inf_id !== m[7] || j.kind !== 'photo' || !Array.isArray(j.layers)) return json(404, { error: 'gone' });
+    path = memePicPath(m[7], jobId);
+    type = 'image/jpeg';
   } else {
     const fits = m[5] === 'trends' ? j.kind === 'preset' : j.inf_id === m[5] && ['trend', 'video'].includes(j.kind);
     if (!fits || j.poster !== true) return json(404, { error: 'gone' });
@@ -452,6 +467,12 @@ const WHY_STATUS = {
   // (2026-10-13) "With AGI-1": she's never in a trend video; a photo with her is made by Classic; a Standard, Pro or Long video
   // with her starts from a photo she's in; "Add AGI-1" to a photo she's in already
   agi1_trend: 409, agi1_model: 409, agi1_photo: 409, agi1_has: 409,
+  // (2026-10-14, meme templates, "Other influencers") another of the person's influencers in a template meme, not one of theirs
+  // (or gone), not ready, a private one into a public one's meme, both it and AGI-1, someone in it already, nobody fits its
+  // template, gone since (an edit or "Animate" of one with them in it), a role its template doesn't have; and "Save as a new
+  // meme" with nothing changed (never a colon after a word in this list's comments, as the page's test reads each such word
+  // as a code)
+  cast: 409, cast_ready: 409, cast_private: 409, cast_one: 400, cast_has: 409, cast_none: 409, cast_gone: 409, role: 400, same: 409,
   // (2026-10-13, the 3D tool) a 3D model's choice that isn't one; choices with extras for a burn (a burn pays nobody); and its
   // extra downloads (not asked for, still being made, couldn't be made, past their days, or its file gone)
   spec: 400, not_burnable: 409, dl_none: 404, dl_wait: 409, dl_failed: 409, dl_expired: 410, dl_missing: 404,
@@ -485,12 +506,14 @@ const BANNED_FROM = ['inf-up-open', 'inf-up-done', 'inf-start', 'inf-pick', 'inf
   // (2026-10-12) "Make another" makes something (deleting its own still works), and so does the photo editor's save, and the
   // video editor's
   'inf-again', 'inf-photo-open', 'inf-cut-open',
+  // (2026-10-14) the meme editor's "Save as a new meme"
+  'inf-meme-save',
   // (2026-10-13) a 3D model's extra downloads (a banned maker's creations are shown to nobody, itself included)
   'inf-3d-dl'];
 export const INF_POSTS = ['inf-me', 'inf-look', 'inf-up-open', 'inf-up-done', 'inf-start', 'inf-pick', 'inf-reroll', 'inf-make', 'inf-3d',
   'inf-public', 'inf-pfp', 'inf-delete', 'inf-coin', 'inf-topup', 'inf-report', 'inf-like', 'inf-liked', 'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo',
   'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-caption', 'inf-name-set', 'inf-name-clear', 'inf-help', 'inf-gift-peek',
-  'inf-again', 'inf-job-delete', 'inf-photo-open', 'inf-cut-open', 'inf-dl', 'inf-3d-dl',
+  'inf-again', 'inf-job-delete', 'inf-photo-open', 'inf-cut-open', 'inf-dl', 'inf-3d-dl', 'inf-meme-save',
   ...GIFT_ACTIONS, ...TICKET_ACTIONS, ...MOD_ACTIONS, ...OWNER_ACTIONS];
 
 async function human(cfg, body, ip, who) {
@@ -550,7 +573,7 @@ export async function infPost(cfg, request, body) {
   const asks = ['inf-up-open', 'inf-up-done', 'inf-start', 'inf-make', 'inf-3d', 'inf-coin', 'inf-pfp', 'inf-topup', 'inf-reroll', 'inf-delete', 'trend-make',
     'inf-3d-burn', 'inf-3d-check', 'inf-3d-redo', 'inf-burn-quote', 'inf-burn-check', 'inf-week-claim', 'inf-example-make', 'inf-gift',
     'inf-caption', 'inf-name-set', 'inf-name-clear', 'inf-send', 'inf-gift-link', 'inf-gift-cancel', 'inf-gift-claim', 'inf-ref-bind',
-    'inf-again', 'inf-job-delete', 'inf-photo-open', 'inf-cut-open'];
+    'inf-again', 'inf-job-delete', 'inf-photo-open', 'inf-cut-open', 'inf-meme-save'];
   if (asks.includes(body.action) && !infActBurst(who)) return json(429, { error: 'too_fast', ...extra });
   if (['inf-look', 'inf-like', 'inf-liked', 'inf-tickets', 'inf-ticket', 'inf-mod', 'mod-ticket', 'inf-gifts', 'inf-access', 'inf-owner-links'].includes(body.action) && !infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
   if (['inf-ticket-open', 'inf-ticket-say', 'inf-ticket-close', 'mod-ticket-say', 'mod-ticket-close', 'mod-ban', 'mod-unban', 'inf-admin',
@@ -723,6 +746,16 @@ export async function infPost(cfg, request, body) {
       if (!r.ok) return r.field ? words(r) : refuse(r);
       return json(200, { ...r, perDay: VIDEO_EDITOR.PER_DAY, ...extra });
     }
+    // (2026-10-14, meme templates) …and the meme editor: one of its own template memes with its words changed, saved as a new
+    // meme next to it (free): its words drawn by our server, looked at by Gemini, then kept (server/inf-meme-save.js). Its
+    // words' "no": which text (n, from 0) and, for letters our fonts can't draw, which ones (chars)
+    if (body.action === 'inf-meme-save') {
+      const { saveMeme } = await import('./inf-meme-save.js');
+      const { newOrderId } = await import('./studio.js');
+      const r = await saveMeme(cfg, { wallet: w.wallet, from: String(body.from || ''), layers: body.layers, id: newOrderId() });
+      if (!r.ok) return r.field ? words(r, { ...(Number.isInteger(r.n) ? { n: r.n } : {}), ...(Array.isArray(r.chars) ? { chars: r.chars } : {}) }) : refuse(r);
+      return json(200, { ...r, perDay: EDITOR.PER_DAY, ...extra });
+    }
     // (2026-10-13, the 3D tool's "More downloads") a 3D model's extra downloads, its maker's alone: what's ready, or one of them
     if (body.action === 'inf-3d-dl') {
       if (!infLookBurst(who)) return json(429, { error: 'too_fast', ...extra });
@@ -749,7 +782,8 @@ export async function infPost(cfg, request, body) {
     }
     if (body.action === 'inf-make') {
       const r = await makeJob(cfg, { wallet: w.wallet, level: w.level, id, input: body });
-      if (!r.ok) return r.field ? words(r) : refuse(r);
+      // ((2026-10-14) a template meme's words: which text (n, from 0) and, for letters our fonts can't draw, which ones)
+      if (!r.ok) return r.field ? words(r, { ...(Number.isInteger(r.n) ? { n: r.n } : {}), ...(Array.isArray(r.chars) ? { chars: r.chars } : {}) }) : refuse(r);
       return json(200, { ...r, ...extra });
     }
     // (2026-10-13, the 3D tool) its choices (spec): a choice that isn't one is 400 with which (field), its words' "no" 422

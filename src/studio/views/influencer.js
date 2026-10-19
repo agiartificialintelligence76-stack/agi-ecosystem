@@ -10,9 +10,9 @@
 import { h, icon, btn, linkBtn, sheet, segmented, chips, cardPick, say, busy, pic, copyText, nextId, put, add, focusPlace, focusBack } from '../ui.js';
 import {
   infPic, infVideo, fileUrl, trendOf, trendPrompt, creditsText, SHAPES, PHOTO_SHAPES, BANNER, SCENE_MIN, SCENE_MAX, INF_STYLES, CLIP, clankProfileUrl,
-  PHOTO_MODELS, PHOTO_QUALITY, VIDEO_MODELS, ANIME_QUALITY, MEMES, MEME_LINE_MAX, REFS, photoCredits, videoCredits, videoPlan, jobPlan,
+  PHOTO_MODELS, PHOTO_QUALITY, VIDEO_MODELS, ANIME_QUALITY, REFS, photoCredits, videoCredits, videoPlan, jobPlan,
   jobStep, startPhotos, drawnStyle, videoSpec, editSpec, EDIT, modelCost, burnable, modelTimes, isDefaultSpec, modelSpec,
-  WITH_AGI1, refsFor, herPhotos, mentionsAgi1,
+  WITH_AGI1, refsFor, herPhotos, mentionsAgi1, styleName,
 } from '../rules.js';
 import {
   makingText, failText, jobTitle, jobStateText, modelText, wordsText, errorText, coinText, upErrorText, leftText, compact,
@@ -20,15 +20,19 @@ import {
   leftWords, ANIME_WHY, againErrorText, againMadeText, deleteJobText, deletedText, tryAgainOk, creationWord, EDIT_IDEAS, editNote, editMadeText,
   specSummary, modelPriceText, MODEL_FREE_LINE, modelTimeText, specFieldText,
   herNote, HER_CLASSIC_WHY, HER_NAME_HINT, HER_NO_PHOTO, AGI1_IDEAS, AGI1_VIDEO_IDEAS, addHerNote, addHerMadeText,
+  CAST_HER_NOTE, CAST_PRIVATE_WHY, CAST_NONE_YET, ADD_SOMEONE_NOTE, addSomeoneMadeText, ANIMATE_NOTE, ANIMATE_HER_HINT, animateMadeText,
 } from '../app-words.js';
+import { templateOf, castOf, motionOf, TEMPLATES, TEMPLATE_IDS, defaultLayers, memeQuality, memeShape, LAYERS } from '../memes.js';
+import { templatePicker } from './meme-pick.js';
 import { progressBar } from '../progress.js';
 import { readClip, clipText, uploadClip, makePosters, shrinkPicture, uploadRef } from '../media.js';
-import { INSTANT, INSTANT_MAKES, MEME_READY, memeInputs, instantOn, setInstant, instantSeen, markInstantSeen } from '../instant.js';
+import { INSTANT, INSTANT_MAKES, MEME_READY, instantOn, setInstant, instantSeen, markInstantSeen } from '../instant.js';
 import { trendTile, videoSheet, photoSheet, reportSheet, confirmSheet, mediaTile, noteLikes, burnSheet, boostInf, captionSheet } from './shared.js';
 import { workspace, costLine, goButton } from './workspace.js';
 import { pickPicture, framedPic } from './frame.js';
 import { photoEditor } from './photo-editor.js';
 import { videoEditor } from './video-editor.js';
+import { memeEditor } from './meme-editor.js';
 import { modelState, specOf, priceSpecOf, modelChoices } from './model-tool.js';
 
 const POLL_MS = 5000;
@@ -57,6 +61,12 @@ function refsOf(wallet) {
 let instantExplained = false;
 // a meme's scene ideas (what the picture shows), from the ready-made memes
 const MEME_IDEAS = MEME_READY.map((m) => m.scene);
+// (2026-10-19, meme templates) a template meme as our server makes and prices it: Classic at its template's quality, in its
+// template's shape (server/influencer.js makeJob's template branch)
+const memeSpecOf = (k) => {
+  const id = Object.hasOwn(TEMPLATES, k) ? k : 'topbottom';
+  return { model: 'classic', quality: memeQuality(TEMPLATES[id]), shape: memeShape(TEMPLATES[id]), meme: id };
+};
 const making = (s) => s === 'paid' || s === 'making';
 const SHAPE_CHOICES = Object.entries(SHAPES).map(([k, v]) => [k, `${v.name} ${v.ratio}`]);
 // (round 4) a photo may also be an X banner, cut to X's own header size on our server
@@ -456,8 +466,12 @@ export async function render(ctx, route, root) {
         into.push(mediaTile(ctx, item(j), { onopen: () => openJob(j), can: !mine() && !priv(), showName: false,
           // (2026-10-12) one saved from the video editor: "Edited", next to the video it's from
           badge: j.kind === 'trend' ? { text: 'Trend', icon: 'zap' } : j.kind === 'video' && j.editor ? { text: 'Edited', icon: 'scissors' }
+            // (2026-10-19, meme templates) one of its template memes, animated: "Animated", next to the meme it's from
+            : j.kind === 'video' && j.template ? { text: 'Animated', icon: 'film' }
             : j.kind === 'video' ? { text: Number(j.parts) > 1 ? `Video · ${secondsText(j.seconds)}` : 'Video', icon: 'film' }
-            : isBanner(j) ? { text: 'X banner', icon: 'image' } : j.meme ? { text: 'Meme', icon: 'smile' }
+            // (2026-10-14) a template meme saved from the meme editor: "Edited", next to the meme it's from. (2026-10-19) a meme's
+            // as a small round mark in its top right corner (corner), never a tag over its words at the top left
+            : isBanner(j) ? { text: 'X banner', icon: 'image' } : j.meme ? (j.template && j.editor ? { text: 'Edited', icon: 'type', corner: true } : { text: 'Meme', icon: 'smile', corner: true })
               // (2026-10-12) one made with "Edit with words", or saved from the photo editor, told apart from the photo it's
               // from, next to it
               : j.edit ? { text: 'Edited', icon: 'wand' } : j.editor ? { text: 'Edited', icon: 'sliders' } : null }));
@@ -520,19 +534,26 @@ export async function render(ctx, route, root) {
     // photo editor too (one saved from the photo editor has no words and settings to make again); on a video or a trend video,
     // the video editor (one saved from it neither)
     // (2026-10-13) …and on a photo (a meme, an X banner) AGI-1 isn't in yet, "Add AGI-1" (a new one with her, at its price)
+    // (2026-10-14) a template meme: "Edit meme" (the meme editor: its words, free) instead of the photo editor; one saved from it
+    // can be made again (its words on a new picture: our server's againJob)
+    // (2026-10-19) …and "Add someone" instead of "Add AGI-1" (AGI-1 or another of its influencers, in one of its template's roles:
+    // only while nobody else is in it, and when its template has room for someone)
     const own = mine() ? {
-      cost: againCost(j), onAgain: j.editor ? null : (x) => again(x), onDelete: (x) => removeJob(x),
-      onEdit: j.kind === 'photo' ? (x) => editWithWords(x) : null, onEditor: j.kind === 'photo' ? (x) => openEditor(x) : null,
+      cost: againCost(j), onAgain: j.editor && !j.template ? null : (x) => again(x), onDelete: (x) => removeJob(x),
+      onEdit: j.kind === 'photo' ? (x) => editWithWords(x) : null, onEditor: j.kind === 'photo' ? (x) => (x.template ? openMemeEditor(x) : openEditor(x)) : null,
       onVideoEditor: ['video', 'trend'].includes(j.kind) ? (x) => openVideoEditor(x) : null,
-      onAddHer: j.kind === 'photo' && j.agi1 !== true ? (x) => addHer(x) : null,
+      onAddHer: j.kind === 'photo' && !j.template && j.agi1 !== true ? (x) => addHer(x) : null,
+      onAddSomeone: canAddSomeone(j) ? (x) => addSomeone(x) : null,
     } : null;
     if (j.kind === 'photo') {
       // (an X banner is too wide to start a video or a trend video: those are tall, wide or square; and a meme's words would
       // come out garbled in one. (2026-10-13) A photo with AGI-1 never starts a trend video: it puts the influencer in place of
-      // one person in the clip; a video from it has her too)
+      // one person in the clip; a video from it has her too. (2026-10-19) A template meme comes to life instead: "Animate it",
+      // its words drawn on it by our clock)
       const starts = !isBanner(j) && !j.meme;
       photoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onCaptions, own,
-        onVideo: starts ? (image) => openTool('video', { image }) : null, onTrend: starts && j.agi1 !== true ? (image) => openTool('trend', { image }) : null });
+        onVideo: starts ? (image) => openTool('video', { image }) : null, onTrend: starts && j.agi1 !== true ? (image) => openTool('trend', { image }) : null,
+        onAnimate: mine() && tplOf(j) ? (x) => animate(x) : null });
       return;
     }
     videoSheet(ctx, j, { name: i.name, inf: id, mine: mine(), priv: priv(), onCaptions, own });
@@ -692,11 +713,179 @@ export async function render(ctx, route, root) {
     requestAnimationFrame(() => cancel.focus());
   }
 
+  // (2026-10-19, meme templates) one of its own template memes (src/studio/memes.js), or null
+  function tplOf(j) { return j?.kind === 'photo' && j.template === true ? templateOf(j.meme) : null; }
+  // "Add someone" shows on a template meme nobody else is in yet, whose template has a part for someone (memes.js castOf)
+  function canAddSomeone(j) { const t = tplOf(j); return Boolean(t) && j.agi1 !== true && !j.cast && castOf(t).length > 0; }
+
+  // "Add someone" (2026-10-19, the owner's "Other influencers"): AGI-1, or another of its maker's ready influencers, joins one
+  // of its own template memes in one of the template's parts (its first by default): a new meme next to it, its words, its
+  // template and its framing as they are, at that meme's price (rules.js editSpec, Classic, like Add AGI-1). A private one (made
+  // from a real person's photo) only joins another private one's memes (our server's 'cast_private'). The list follows My
+  // studio's (ctx.on('me')), redrawn only when it changes
+  function addSomeone(j) {
+    const i = inf();
+    const tpl = tplOf(j);
+    if (!i || !tpl) return;
+    const need = editCost(j);
+    const w = creationWord(j);
+    const roles = castOf(tpl);
+    const s = sheet({ title: 'Add someone', sub: `Someone joins ${i.name} in this ${w}: a new one is made from it, next to it.`, size: 'md' });
+    const msg = errLine();
+    const shape = PHOTO_SHAPES[j.shape] ? j.shape : 'tall';
+    const others = () => (ctx.me?.influencers || []).filter((x) => x && x.id !== id && x.status === 'ready' && x.hidden !== true);
+    const offFor = (x) => x.private === true && !priv();
+    const face = (x) => (x.portrait?.job
+      ? pic(infPic(x.id, x.portrait.job, x.portrait.n, true), { cls: 'sa-card-face', alt: '' })
+      : h('span', { class: 'sa-card-face is-missing' }));
+    const nameOf = (v) => (v === 'agi1' ? 'AGI-1' : others().find((x) => x.id === v)?.name || 'them');
+    let who = 'agi1';
+    let role = roles[0]?.id || null;
+    let working = false;
+    let pick = null, sig = '';
+    const whoBox = h('div', { class: 'sa-field sa-who' });
+    const go = btn(`Add AGI-1 · ${num(need)} credits`, { kind: 'primary', icon: 'invite' });
+    const label = () => {
+      if (working) return;
+      const span = go.lastElementChild;
+      if (span) span.textContent = Number.isFinite(need) ? `Add ${nameOf(who)} · ${num(need)} credits` : `Add ${nameOf(who)}`;
+    };
+    function fill() {
+      if (!s.dialog.isConnected && pick) return;
+      const list = others();
+      const next = list.map((x) => `${x.id}:${x.name}:${offFor(x) ? 1 : 0}:${x.portrait?.job || ''}:${x.portrait?.n ?? ''}:${x.style || ''}`).join('|');
+      if (pick && next === sig) return;
+      sig = next;
+      if (who !== 'agi1') { const x = list.find((y) => y.id === who); if (!x || offFor(x)) who = 'agi1'; }
+      pick = cardPick({
+        legend: 'Who joins', cls: 'sa-cards-list sa-cards-who', value: who, onchange: (v) => { who = v; label(); },
+        choices: [
+          { value: 'agi1', name: 'AGI-1', note: CAST_HER_NOTE, price: null, pic: pic(WITH_AGI1.FACE, { cls: 'sa-card-face is-agi1', alt: '', lazy: false }) },
+          ...list.map((x) => ({ value: x.id, name: x.name, note: styleName(x.style) || '', price: null, off: offFor(x), why: CAST_PRIVATE_WHY, pic: face(x) })),
+        ],
+      });
+      put(whoBox, pick.node, list.length ? null : h('p', { class: 'sa-hint sa-who-none' }, h('span', { text: `${CAST_NONE_YET} ` }),
+        h('a', { class: 'sa-link', href: ctx.href('/create'), dataset: { saLink: '' }, text: 'Create another' })));
+      label();
+    }
+    fill();
+    ctx.on('me', fill);
+    let roleNode = null;
+    if (roles.length > 1) {
+      roleNode = chips({ name: nextId('role'), legend: 'Their part', choices: roles.map((r) => [r.id, r.name]), value: role, onchange: (v) => { role = v; } }).node;
+    } else if (roles[0]) {
+      roleNode = h('p', { class: 'sa-muted sa-who-part', text: roles[0].id === 'beside' ? `Beside ${i.name}` : `Their part: ${roles[0].name}` });
+    }
+    add(s.body,
+      h('div', { class: 'sa-edit-from' }, pic(infPic(id, j.id, 0, true), { cls: `sa-edit-from-pic is-${shape}`, alt: `The ${w} they join` }),
+        h('div', { class: 'sa-edit-from-text' }, h('p', { class: 'sa-label', text: tpl.name }), h('p', { class: 'sa-muted', text: ADD_SOMEONE_NOTE }))),
+      whoBox, roleNode,
+      h('p', { class: 'sa-fine', text: 'AGI-1 joins as her own 2D anime self, cute and a little flirty, always PG-13. The same price as the meme it\'s from.' }),
+      msg);
+    const cancel = btn('Cancel', { kind: 'ghost' });
+    cancel.addEventListener('click', () => s.close());
+    go.addEventListener('click', () => busy(go, 'Starting…', async () => {
+      working = true;
+      try {
+        if (Number.isFinite(need) && !(await enough(need))) return;
+        const name = nameOf(who);
+        const body = { id, kind: 'photo', image: j.id, ...(role ? { role } : {}), ...(who === 'agi1' ? { agi1: true } : { cast: who }) };
+        const r = await ctx.act('inf-make', body);
+        if (!made(r, need ?? 0, { msg })) return;
+        s.close();
+        ctx.toast(addSomeoneMadeText(j, name), 'good');
+        // (the keyboard: back on its tile once its gallery shows the new one, as after Add AGI-1)
+        const at = focusPlace(galleryBox);
+        if (at) focusNext = { place: at, until: Date.now() + 15_000 };
+        sigs.gallery = null;
+        load();
+      } finally { working = false; }
+    }));
+    s.setFoot(cancel, go);
+    label();
+    requestAnimationFrame(() => cancel.focus());
+  }
+
+  // "Animate" (2026-10-19, the owner's "5-second video"): one of its own template memes comes to life for 5 seconds (Standard;
+  // its words drawn on it by our server, whoever is in it kept in it), a new video next to it, at a Standard 5-second video's
+  // price. What moves is optional (its template's own motion words otherwise: memes.js motionOf); AGI-1's name only when she's
+  // in the meme (Add someone puts her in a new one first); never "agi1" sent: our server keeps whoever is in it
+  function animate(j) {
+    const tpl = tplOf(j);
+    if (!tpl) return;
+    const w = creationWord(j);
+    let sound = true, working = false;
+    const cost = () => videoCredits(videoSpec({ model: 'standard', seconds: 5, sound }), ctx.level);
+    const s = sheet({ title: 'Animate this meme', sub: 'Its picture comes to life for 5 seconds, its words on top: a new video next to it.', size: 'md' });
+    const areaId = nextId('motion');
+    const area = h('textarea', { class: 'sa-input sa-textarea', id: areaId, rows: 3, maxlength: SCENE_MAX, placeholder: motionOf(tpl) });
+    const count = h('span', { class: 'sa-count', 'aria-hidden': 'true', text: `0/${SCENE_MAX}` });
+    const err = errLine(), msg = errLine();
+    area.addEventListener('input', () => { count.textContent = `${[...area.value].length}/${SCENE_MAX}`; say(err, ''); say(msg, ''); });
+    const soundId = nextId('sound');
+    const snd = h('input', { type: 'checkbox', id: soundId, class: 'sa-check', checked: true });
+    const go = btn(`Animate · ${num(cost())} credits`, { kind: 'primary', icon: 'film' });
+    const label = () => { if (!working && go.lastElementChild) go.lastElementChild.textContent = `Animate · ${num(cost())} credits`; };
+    snd.addEventListener('change', () => { sound = snd.checked; label(); });
+    const shape = PHOTO_SHAPES[j.shape] ? j.shape : 'tall';
+    add(s.body,
+      h('div', { class: 'sa-edit-from' }, pic(infPic(id, j.id, 0, true), { cls: `sa-edit-from-pic is-${shape}`, alt: `The ${w} it animates` }),
+        h('div', { class: 'sa-edit-from-text' }, h('p', { class: 'sa-label', text: tpl.name }), h('p', { class: 'sa-muted', text: ANIMATE_NOTE }))),
+      h('div', { class: 'sa-field' }, h('label', { class: 'sa-label', for: areaId, text: 'What moves (optional)' }), area,
+        h('div', { class: 'sa-field-foot' }, err, count),
+        h('p', { class: 'sa-hint', text: 'Leave it empty and its template\'s own moves are used.' })),
+      h('div', { class: 'sa-consent sa-consent-sm' }, snd, h('label', { for: soundId, text: 'With sound (its sounds and music, made by AI too)' })),
+      h('p', { class: 'sa-fine', text: 'The price of a Standard 5-second video. It shows next to the meme in a few minutes.' }),
+      msg);
+    const cancel = btn('Cancel', { kind: 'ghost' });
+    cancel.addEventListener('click', () => s.close());
+    const herHint = (v) => mentionsAgi1(v) && j.agi1 !== true;
+    go.addEventListener('click', () => {
+      const v = area.value.trim();
+      if (v && [...v].length < SCENE_MIN) { say(err, wordsText('scene', 'short')); area.focus(); return; }
+      if (v && herHint(v)) { say(err, ANIMATE_HER_HINT); area.focus(); return; }
+      busy(go, 'Starting…', async () => {
+        working = true;
+        try {
+          const need = cost();
+          if (!(await enough(need))) return;
+          const r = await ctx.act('inf-make', { id, kind: 'video', image: j.id, sound, ...(v ? { scene: v } : {}) });
+          if (!made(r, need, { msg, onWords: (d) => {
+            say(d.field === 'scene' ? err : msg, d.why === 'her' && herHint(area.value) ? ANIMATE_HER_HINT : wordsText(d.field, d.why));
+            area.focus();
+          } })) return;
+          s.close();
+          ctx.toast(animateMadeText(), 'good');
+          const at = focusPlace(galleryBox);
+          if (at) focusNext = { place: at, until: Date.now() + 15_000 };
+          sigs.gallery = null;
+          load();
+        } finally { working = false; }
+      });
+    });
+    s.setFoot(cancel, go);
+    requestAnimationFrame(() => area.focus());
+  }
+
   // The photo editor (the same day, the owner's choice: "Photo editor (Recommended)": free, no AI, in this browser): saved as a
   // new photo, its gallery again, the keyboard back on the photo it's from
   function openEditor(j) {
     const at = focusPlace(galleryBox);
     photoEditor(ctx, { inf: id, job: j, name: inf()?.name, onSaved: () => {
+      const back = focusPlace(galleryBox) || at;
+      if (back) focusNext = { place: back, until: Date.now() + 15_000 };
+      sigs.gallery = null;
+      load();
+    } });
+  }
+
+  // (2026-10-14, meme templates; the owner: "even after the result they can still edit the text after, change font, change the
+  // text color", then "Save as a new meme (Recommended)") The meme editor, for one of its own template memes: its words, free,
+  // in this browser; saved as a new meme next to it (our server draws its words), its gallery again, the keyboard back on the
+  // meme it's from
+  function openMemeEditor(j) {
+    const at = focusPlace(galleryBox);
+    memeEditor(ctx, { inf: id, job: j, name: inf()?.name, onSaved: () => {
       const back = focusPlace(galleryBox) || at;
       if (back) focusNext = { place: back, until: Date.now() + 15_000 };
       sigs.gallery = null;
@@ -1099,13 +1288,13 @@ export async function render(ctx, route, root) {
     const i = inf();
     const st = {
       kind: startKind || (start === 'banner' ? 'banner' : memeStart ? 'meme' : 'photo'),
-      model: 'classic', quality: 'std', meme: memeStart?.meme && MEMES[memeStart.meme] ? memeStart.meme : 'topbottom',
+      model: 'classic', quality: 'std', meme: memeStart?.meme && TEMPLATES[memeStart.meme] ? memeStart.meme : 'topbottom',
       her: agi1 === true,
     };
     const msg = errLine();
     const shape = shapeSeg(SHAPES[start] ? start : st.kind === 'meme' ? 'square' : 'tall', () => sync());
     const spec = () => (st.kind === 'banner' ? { model: 'classic', quality: 'hd', shape: 'banner' }
-      : st.kind === 'meme' ? { model: 'classic', quality: st.quality, shape: shape.value || 'square', meme: st.meme }
+      : st.kind === 'meme' ? memeSpecOf(st.meme)
         : { model: st.model, quality: st.quality, shape: shape.value || 'tall' });
     const go = goFor('Make photo', () => photoCredits(spec(), ctx.level), 'image');
     const kinds = segmented({ legend: 'What to make', choices: [['photo', 'Photo', 'image'], ['meme', 'Meme', 'smile'], ['banner', 'X banner', 'image']],
@@ -1138,15 +1327,20 @@ export async function render(ctx, route, root) {
     function sync() {
       const banner = st.kind === 'banner', isMeme = st.kind === 'meme';
       modelBox.hidden = banner || isMeme;
-      qualityBox.hidden = banner;
-      shapeBox.hidden = banner;
+      qualityBox.hidden = banner || isMeme;
+      shapeBox.hidden = banner || isMeme;
       meme.node.hidden = !isMeme;
       if (!banner) drawQuality();
       her.setNote(herNote(i.name));
       scene.setIdeas(banner ? BANNER_IDEAS : st.her ? AGI1_IDEAS : isMeme ? MEME_IDEAS : PHOTO_IDEAS);
-      scene.setLabel(isMeme ? 'What the picture shows' : 'The scene', isMeme ? 'Describe the picture under the words…' : 'Describe the scene…');
+      // (2026-10-19) a template that doesn't ask for a scene: it's optional (our server uses the template's own words), and
+      // a "Describe the scene." left from another template goes
+      const sceneOptional = isMeme && TEMPLATES[st.meme]?.ask !== 'scene';
+      scene.setLabel(isMeme ? (sceneOptional ? 'What the picture shows (optional)' : 'What the picture shows') : 'The scene',
+        isMeme ? (sceneOptional ? 'Optional: leave it empty and the picture follows its template…' : 'Describe the picture under the words…') : 'Describe the scene…');
+      if (sceneOptional && !scene.value) say(scene.err, '');
       say(about, banner ? `Exactly ${BANNER.W} × ${BANNER.H}, ready for your X header (HD, Classic). ${i.name} sits on the right: the lower left stays clear for your profile picture.`
-        : isMeme ? `${i.name} in a meme: the AI writes your words into the picture. Classic only (it writes words best). Never about money, coins or prices.` : '');
+        : isMeme ? `${i.name} in the template's picture, your words drawn on it in its own lettering (change them later with Edit meme, free). Never about money, coins or prices.` : '');
       go.setLabel(banner ? 'Make X banner' : isMeme ? 'Make meme' : 'Make photo');
       refs.setMax(refsFor('photo', banner || isMeme ? 'classic' : st.model, st.her));
       // each model's price for this shape (from its cheapest quality); with AGI-1, Classic only
@@ -1162,7 +1356,9 @@ export async function render(ctx, route, root) {
     const herNamed = (field) => !st.her && (field === 'caption' ? meme.lines.some(mentionsAgi1) : mentionsAgi1(scene.value));
     go.node.addEventListener('click', () => {
       if (st.kind === 'meme' && !meme.check()) return;
-      if (!scene.check()) return;
+      // (2026-10-19) a template that doesn't ask for a scene: optional (our server uses its own words then)
+      const asks = st.kind !== 'meme' || TEMPLATES[st.meme].ask === 'scene';
+      if ((asks || scene.value.trim()) && !scene.check()) return;
       if (st.kind === 'meme' && herNamed('caption')) { say(meme.err, HER_NAME_HINT); ws.reveal(meme.err, { focus: false }); return; }
       if (herNamed('scene')) { say(scene.err, HER_NAME_HINT); ws.reveal(scene.area); return; }
       if (refs.busy) { say(msg, 'Wait for your reference to finish its check.'); return; }
@@ -1171,13 +1367,14 @@ export async function render(ctx, route, root) {
         if (!(await enough(need))) return;
         const s0 = spec();
         const body = { id, kind: 'photo', scene: scene.value, shape: s0.shape, model: s0.model, quality: s0.quality };
-        if (st.kind === 'meme') Object.assign(body, { meme: st.meme, lines: meme.lines });
+        if (st.kind === 'meme') Object.assign(body, { meme: st.meme, layers: meme.layers, shape: s0.shape });
+        if (st.kind === 'meme' && !scene.value.trim()) delete body.scene;
         if (st.her) body.agi1 = true;
         const ids = refs.ids();
         if (ids.length) body.refs = ids;
         const r = await ctx.act('inf-make', body);
-        const onWords = (d) => say(d.field === 'scene' ? scene.err : d.field === 'caption' || d.field === 'meme' ? meme.err : msg,
-          d.why === 'her' && herNamed(d.field) ? HER_NAME_HINT : wordsText(d.field, d.why));
+        const onWords = (d) => (d.field === 'layers' ? meme.sayAt(d.n, wordsText('layers', d.why)) : say(d.field === 'scene' ? scene.err : d.field === 'caption' || d.field === 'meme' ? meme.err : msg,
+          d.why === 'her' && herNamed(d.field) ? HER_NAME_HINT : wordsText(d.field, d.why)));
         if (made(r, need, { msg, onWords })) {
           const w = st.kind === 'banner' ? 'X banner' : st.kind === 'meme' ? 'meme' : 'photo';
           ctx.toast(st.her ? `Making its ${w} with AGI-1: about half a minute` : `Making its ${w}: about half a minute`, 'good');
@@ -1192,53 +1389,59 @@ export async function render(ctx, route, root) {
     if (memeStart) meme.fill(memeStart);
     sync();
 
-    // a meme's format and words (one box per line of its format)
+    // (2026-10-19, meme templates) a meme's template (views/meme-pick.js: every template of memes.js in its group, its sketch)
+    // and its words (one box per text of its template); Surprise me: a template and one of its samples
     function memeFields() {
       const err = errLine();
-      const fmt = chips({ legend: 'Format', choices: Object.entries(MEMES).map(([k, m]) => [k, m.name]), value: st.meme, onchange: (v) => { st.meme = v; drawLines(); sync(); } });
+      const pick = templatePicker({ value: st.meme, onchange: (v) => { st.meme = v; drawLines([]); sync(); } });
       const fmtNote = h('p', { class: 'sa-hint' });
       const linesBox = h('div', { class: 'sa-meme-lines' });
       let inputs = [];
-      const sample = (meme0, k) => MEME_READY.find((m) => m.meme === meme0)?.lines[k]?.replace(/^pov\s*:\s*/i, '') || '';
       function drawLines(values = null) {
         const was = values || inputs.map((x) => x.input.value);
-        const m = MEMES[st.meme];
-        fmtNote.textContent = m.note;
-        inputs = m.lines.map((label, k) => {
+        const tpl = TEMPLATES[st.meme];
+        fmtNote.textContent = tpl.about;
+        inputs = tpl.layers.map((l, k) => {
           const fid = nextId('ml');
-          const input = h('input', { class: 'sa-input', id: fid, type: 'text', maxlength: MEME_LINE_MAX, autocomplete: 'off', placeholder: sample(st.meme, k), value: was[k] || '' });
+          const input = h('input', { class: 'sa-input', id: fid, type: 'text', maxlength: LAYERS.TEXT_MAX, autocomplete: 'off', placeholder: tpl.samples[0]?.[k] || '', value: was[k] || '' });
           input.addEventListener('input', () => say(err, ''));
-          const pov = st.meme === 'pov';
-          return { input, node: h('div', { class: 'sa-meme-line' }, h('label', { class: 'sa-label', for: fid, text: pov ? 'Your line' : label }),
-            pov ? h('div', { class: 'sa-pov' }, h('span', { class: 'sa-pov-pre', 'aria-hidden': 'true', text: 'POV:' }), input) : input) };
+          return { input, node: h('div', { class: 'sa-meme-line' }, h('label', { class: 'sa-label', for: fid, text: l.label }), input) };
         });
         put(linesBox, ...inputs.map((x) => x.node));
       }
       const surprise = btn('Surprise me', { kind: 'quiet', size: 'sm', icon: 'wand' });
       let last = null;
       surprise.addEventListener('click', () => {
-        const pool = MEME_READY.filter((m) => m.id !== last);
-        const m = pool[Math.floor(Math.random() * pool.length)];
-        last = m.id;
-        api.fill(m);
+        const pool = TEMPLATE_IDS.filter((k) => k !== last);
+        const k = pool[Math.floor(Math.random() * pool.length)];
+        last = k;
+        const tpl = TEMPLATES[k];
+        api.fill({ meme: k, texts: tpl.samples[Math.floor(Math.random() * tpl.samples.length)] || [] });
         sync();
       });
       drawLines([]);
       const api = {
-        node: h('div', { class: 'sa-field sa-meme', hidden: true }, fmt.node, fmtNote, h('div', { class: 'sa-row-between sa-meme-head' }, h('span', { class: 'sa-label', text: 'Its words' }), surprise), linesBox, err),
+        node: h('div', { class: 'sa-field sa-meme', hidden: true }, h('span', { class: 'sa-label', text: 'Its template' }), pick.node, fmtNote,
+          h('div', { class: 'sa-row-between sa-meme-head' }, h('span', { class: 'sa-label', text: 'Its words' }), surprise), linesBox, err),
         err,
-        get lines() { return inputs.map((x) => (st.meme === 'pov' ? `POV: ${x.input.value.trim()}` : x.input.value.trim())); },
+        get lines() { return inputs.map((x) => x.input.value.trim()); },
+        get layers() { return defaultLayers(TEMPLATES[st.meme], inputs.map((x) => x.input.value.trim())); },
+        sayAt(n, text) { say(err, text); const x = inputs[n]; if (x) ws.reveal(x.input); },
         fill(m) {
-          st.meme = m.meme;
-          fmt.set(m.meme);
-          drawLines(memeInputs(m));
+          const k = TEMPLATES[m.meme] ? m.meme : 'topbottom';
+          st.meme = k;
+          pick.set(k);
+          drawLines(Array.isArray(m.texts) ? m.texts : TEMPLATES[m.meme] && Array.isArray(m.lines) ? m.lines : []);
           if (m.scene) scene.value = m.scene;
           say(err, '');
         },
+        // (2026-10-19) a box may stay empty (some templates' own samples leave one out: our server draws the others), but
+        // not all of them
         check() {
-          const empty = inputs.find((x) => !x.input.value.trim());
-          if (empty) { say(err, wordsText('caption', 'empty')); ws.reveal(empty.input); return false; }
-          return true;
+          if (inputs.some((x) => x.input.value.trim())) return true;
+          say(err, 'Type its words: at least one of its boxes.');
+          if (inputs[0]) ws.reveal(inputs[0].input);
+          return false;
         },
       };
       return api;
@@ -1367,7 +1570,7 @@ export async function render(ctx, route, root) {
     const isVideo = (kind) => kind === 'video' || kind === 'agi1Video';
     const fromOf = (kind) => (kind === 'agi1Video' ? newestHer : newest);
     const priceFor = (kind, idea) => (isVideo(kind) ? videoCredits(INSTANT_MAKES[kind], ctx.level)
-      : photoCredits({ ...INSTANT_MAKES[kind], meme: kind === 'meme' ? idea.meme : null }, ctx.level));
+      : photoCredits(kind === 'meme' ? memeSpecOf(idea.meme) : { ...INSTANT_MAKES[kind] }, ctx.level));
     const chip = (kind, idea) => {
       const n = priceFor(kind, idea);
       const off = isVideo(kind) && !fromOf(kind);
@@ -1422,7 +1625,9 @@ export async function render(ctx, route, root) {
         const her = mk.agi1 === true ? { agi1: true } : {};
         const body = isVideo(kind)
           ? { id, kind: 'video', model: mk.model, seconds: mk.seconds, sound: mk.sound, scene: idea.scene, image: fromOf(kind).id, ...her }
-          : { id, kind: 'photo', model: mk.model, quality: mk.quality, shape: mk.shape, scene: idea.scene, ...(kind === 'meme' ? { meme: idea.meme, lines: idea.lines } : {}), ...her };
+          : kind === 'meme'
+            ? { id, kind: 'photo', ...memeSpecOf(idea.meme), scene: idea.scene, layers: defaultLayers(TEMPLATES[memeSpecOf(idea.meme).meme], idea.lines), ...her }
+            : { id, kind: 'photo', model: mk.model, quality: mk.quality, shape: mk.shape, scene: idea.scene, ...her };
         const r = await ctx.act('inf-make', body);
         if (made(r, need, { msg })) {
           ctx.toast(`Making “${idea.label}”: ${isVideo(kind) ? 'a few minutes' : 'about half a minute'}`, 'good');

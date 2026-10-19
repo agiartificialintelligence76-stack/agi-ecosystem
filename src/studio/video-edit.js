@@ -8,6 +8,7 @@
 //   A cut, as the page sends it and our server keeps it: { start, length (seconds, in tenths), shape, src: [its video's width,
 //   height], box: [x, y, w, h] (its crop, in thousandths of its video, whole numbers), sound }
 import { VIDEO_EDITOR, MARK_LOOK } from './rules.js';
+import { isMarkSpot } from './memes.js';
 
 export const CUT_SHAPES = { original: 'Original', tall: 'Vertical 9:16', square: 'Square 1:1', wide: 'Wide 16:9' };
 // each shape's size (a long video's parts' sizes too: server/inf-mark.js PART.SIZE)
@@ -18,9 +19,14 @@ const even = (v) => Math.max(2, 2 * Math.floor(v / 2 + 1e-6));
 const tenths = (v) => Math.abs(v * 10 - Math.round(v * 10)) < 1e-6;
 export const toTenth = (v) => Math.round(Number(v) * 10) / 10;
 
-// A video whose share mark is in it already (a long video's parts were each encoded with it; one saved from the video editor):
-// edited only as it is (its own shape, the whole picture), and given no second one (its words are kept off the mark)
-export const ownMark = (j) => j?.kind === 'video' && (j.editor === true || (j.model === 'long' && Number(j.parts) > 1));
+// A video whose share mark is in it already (a long video's parts were each encoded with it; one saved from the video editor;
+// since 2026-10-14 a template meme's video, its words and mark drawn in by our clock: its row's layers, or its page's view's
+// template): edited only as it is (its own shape, the whole picture), and given no second one (its words are kept off the mark)
+export const ownMark = (j) => j?.kind === 'video'
+  && (j.editor === true || (j.model === 'long' && Number(j.parts) > 1) || Array.isArray(j.layers) || j.template === true);
+// (2026-10-14) Where a video's own share mark is: a meme video's where its words aren't (its row's mark_spot, its view's markSpot:
+// src/studio/memes.js markSpot), a cut's where the video it's cut from had it (its cut's spot), else top left
+export const markSpotOf = (j) => [j?.mark_spot, j?.markSpot, j?.cut?.spot].find(isMarkSpot) || 'tl';
 
 // A cut's size: a shape's own; "Original" its video's own shape, made smaller to at most AREA pixels (never bigger), its sides
 // even (H.264 keeps its colors in 2 × 2 blocks) → [w, h], or null without a video's size
@@ -95,12 +101,17 @@ export function cropPixels(box, W, H, outW, outH) {
 
 // Where the share mark goes on a cut of w × h (top left, as server/inf-mark.js markFor puts it on videos: TikTok's, Reels' and
 // Shorts' own buttons sit at the bottom right), from its picture's own size (mw0 × mh0) → { x, y, w, h }
-export function markTopLeft(w, h, mw0, mh0) {
+export const markTopLeft = (w, h, mw0, mh0) => markBox(w, h, mw0, mh0, 'tl');
+// (2026-10-14) …at any of its spots (a meme video's mark goes where its words aren't: markSpotOf) → { x, y, w, h }
+export function markBox(w, h, mw0, mh0, spot = 'tl') {
   const short = Math.max(1, Math.min(w, h));
   const mw = Math.max(MARK_LOOK.MIN_W, Math.round(short * MARK_LOOK.SHARE));
   const mh = Math.round((mh0 / Math.max(1, mw0)) * mw);
   const m = Math.round(short * MARK_LOOK.MARGIN);
-  return { x: m, y: m, w: mw, h: mh };
+  const s = isMarkSpot(spot) ? spot : 'tl';
+  const x = s[1] === 'l' ? m : Math.max(0, w - mw - m);
+  const y = s[0] === 't' ? m : s[0] === 'b' ? Math.max(0, h - mh - m) : Math.max(0, Math.round((h - mh) / 2));
+  return { x, y, w: mw, h: mh };
 }
 
 // ---------- the page's state ----------

@@ -169,6 +169,16 @@ function database() {
   // characters), and the extra downloads they ask for, in their own order (only ones studio.sql knows)
   const specOk = (s) => s === undefined || s === null || (typeof s === 'object' && !Array.isArray(s) && JSON.stringify(s).length <= 8000);
   const formatsOf = (s) => ['full', 'fbx', 'usdz', 'stl', 'obj'].filter((f) => Array.isArray(s?.formats) && s.formats.includes(f));
+  // (2026-10-14, meme templates) a jsonb value's text as Postgres writes it (", " and ": " between its parts, an object's keys by
+  // their length, then their bytes), for octet_length(p_layers::text); and two jsonb values equal as jsonb's = says (an object's
+  // keys in any order)
+  const byKey = (x, y) => Buffer.byteLength(x) - Buffer.byteLength(y) || Buffer.compare(Buffer.from(x), Buffer.from(y));
+  const jsonbText = (v) => (Array.isArray(v) ? `[${v.map(jsonbText).join(', ')}]`
+    : v && typeof v === 'object' ? `{${Object.keys(v).sort(byKey).map((k) => `${JSON.stringify(k)}: ${jsonbText(v[k])}`).join(', ')}}`
+      : JSON.stringify(v));
+  const jsonbBytes = (v) => Buffer.byteLength(jsonbText(v));
+  const jsonbEq = (x, y) => jsonbText(x) === jsonbText(y);
+  const SPOTS = ['br', 'bl', 'tr', 'tl', 'mr', 'ml'];
   let seq = 0;
   const db = {
     credits: new Map(), log: [], months: new Map(), uploads: new Map(), infs: new Map(), jobs: new Map(), trends: new Map(),
@@ -190,6 +200,13 @@ function database() {
     access: new Map(),
     makerOf(walletCode) { return this.names.get(walletCode)?.name ?? null; },
     bannedNow(c) { return this.bans.some((b) => b.wallet_code === c && !b.lifted); },
+    // (2026-10-14) whether someone else in a creation (cast_inf) may still be seen: none, or one that's there (not deleted), not
+    // hidden by the owner and not a banned maker's (as influencers.sql's inf_cast_shown)
+    castShown(id) {
+      if (id === null || id === undefined) return true;
+      const c = this.infs.get(id);
+      return Boolean(c && c.status !== 'deleted' && !c.hidden && !c.banned);
+    },
     cred(c) { if (!this.credits.has(c)) this.credits.set(c, { paid: 0, free: 0, free_month: null, bonus: 0 }); return this.credits.get(c); },
     freeNow(c) { const x = this.cred(c); return x.free_month === thisMonth() ? x.free : 0; },
     // (round 4, phase 3) this month's free ones first, then bonus ones, then bought ones
@@ -581,6 +598,9 @@ function database() {
         deleted: null, edit: null, editor: false, cut: null,
         // (2026-10-13) "With AGI-1": she's in it (as agi1_inf_jobs.agi1)
         agi1: false,
+        // (2026-10-14) a template meme: its layers of words, someone else in it (another influencer of its maker's) and their
+        // role, and where its share mark goes (as agi1_inf_jobs.layers, cast_inf, cast_role and mark_spot)
+        layers: null, cast_inf: null, cast_role: null, mark_spot: null,
         started: null, created: now(), updated: now(), done: null, lease: 0, seq: ++seq, ...j,
       });
     },
@@ -595,11 +615,12 @@ function database() {
         pfp: this.pfpOf(i.pfp),
       };
     },
-    // (2026-10-11) its profile picture while the picture it was framed from is done and shown (as influencers.sql's inf_pfp_of)
+    // (2026-10-11) its profile picture while the picture it was framed from is done and shown (as influencers.sql's inf_pfp_of;
+    // (2026-10-14) and anyone else in it too)
     pfpOf(p) {
       if (!p) return null;
       const j = this.jobs.get(p.job);
-      return j && j.status === 'done' && !j.hidden ? { ...p } : null;
+      return j && j.status === 'done' && !j.hidden && this.castShown(j.cast_inf) ? { ...p } : null;
     },
     // (2026-10-11) its maker frames its profile picture, or puts its picked look back (as influencers.sql's inf_pfp_set)
     inf_pfp_set({ p_id, p_wallet, p_pfp }) {
@@ -617,7 +638,8 @@ function database() {
       if (i.status !== 'ready') return no('not_ready');
       if (p_pfp !== null) {
         const j = this.jobs.get(p_pfp.job);
-        if (!j || j.inf_id !== p_id || !['looks', 'body', 'photo'].includes(j.kind) || j.status !== 'done' || j.hidden || p_pfp.n >= Math.max(j.files || 0, 1)) return no('source');
+        if (!j || j.inf_id !== p_id || !['looks', 'body', 'photo'].includes(j.kind) || j.status !== 'done' || j.hidden || p_pfp.n >= Math.max(j.files || 0, 1)
+          || !this.castShown(j.cast_inf)) return no('source');
       }
       const old = i.pfp?.id ?? null;
       i.pfp = p_pfp === null ? null : { id: p_pfp.id, job: p_pfp.job, n: p_pfp.n, x: p_pfp.x, y: p_pfp.y, s: p_pfp.s };
@@ -651,10 +673,11 @@ function database() {
       return ok({ paid: s.paid, free: s.free, bonus: s.bonus });
     },
     inf_make(a) {
-      // (2026-10-13) "With AGI-1": asked for, and "Add AGI-1" (a photo with her from one of its photos, without words), as
-      // influencers.sql's inf_make
+      // (2026-10-13) "With AGI-1": asked for, and "Add AGI-1" (a photo with her from one of its photos, without words); (2026-10-14)
+      // or, into a template meme, another of its maker's influencers ("Add someone"), as influencers.sql's inf_make
       const asked = a.p_agi1 === true;
-      const add = a.p_kind === 'photo' && a.p_image !== null && a.p_image !== undefined && a.p_edit == null && asked;
+      const layers = a.p_layers ?? null, cast = a.p_cast ?? null, role = a.p_role ?? null, mark = a.p_mark ?? null;
+      const add = a.p_kind === 'photo' && a.p_image !== null && a.p_image !== undefined && a.p_edit == null && (asked || cast !== null);
       if (!ID.test(String(a.p_job)) || !['photo', 'trend', 'video'].includes(a.p_kind) || !(a.p_cost >= 0 && a.p_cost <= 100000) || !(a.p_per_wallet >= 1)
         || a.p_day_cap === null
         || (['photo', 'video'].includes(a.p_kind) && (!a.p_scene || [...a.p_scene].length > 300 || !['tall', 'wide', 'square', 'banner'].includes(a.p_shape) || a.p_trend !== null || a.p_clip !== null))
@@ -671,12 +694,29 @@ function database() {
         || (a.p_quality != null && !['std', 'hd', 'ultra', '480p', '720p'].includes(a.p_quality))
         || (a.p_seconds != null && (a.p_kind !== 'video' || !(a.p_seconds >= 3 && a.p_seconds <= 60)))
         || !((a.p_parts ?? 1) >= 1 && (a.p_parts ?? 1) <= 4) || ((a.p_parts ?? 1) > 1 && a.p_model !== 'long') || (a.p_model === 'long' && (a.p_parts ?? 1) < 2)
-        || ((a.p_meme == null) !== (a.p_caption == null)) || (a.p_meme != null && (a.p_kind !== 'photo' || !/^[a-z]{2,12}$/.test(a.p_meme)
-          || !([...a.p_caption].length >= 1 && [...a.p_caption].length <= 130) || a.p_model === 'crisp' || a.p_shape === 'banner'))
-        || (a.p_refs != null && (a.p_kind === 'trend' || !Array.isArray(a.p_refs) || !(a.p_refs.length >= 1 && a.p_refs.length <= 4)))) return no('bad');
+        // (2026-10-14) a meme is a photo, or a template meme's video ("Animate"); a template meme's words up to 1000 characters
+        || ((a.p_meme == null) !== (a.p_caption == null)) || (a.p_meme != null && ((a.p_kind !== 'photo' && !(a.p_kind === 'video' && layers !== null))
+          || !/^[a-z]{2,12}$/.test(a.p_meme) || !([...a.p_caption].length >= 1 && [...a.p_caption].length <= (layers === null ? 130 : 1000))
+          || a.p_model === 'crisp' || a.p_shape === 'banner'))
+        || (a.p_refs != null && (a.p_kind === 'trend' || !Array.isArray(a.p_refs) || !(a.p_refs.length >= 1 && a.p_refs.length <= 4)))
+        // (2026-10-14) a template meme: its words and its share mark's spot go together; 1 to 8 layers; a photo by Classic at its
+        // template's quality (std or hd), tall or square; its video ("Animate") from one of them, Standard for 5 seconds, no
+        // references; never a trend video
+        || ((layers === null) !== (mark === null)) || (mark !== null && !SPOTS.includes(mark))
+        || (layers !== null && (!Array.isArray(layers) || !(layers.length >= 1 && layers.length <= 8) || jsonbBytes(layers) > 8000 || a.p_meme == null
+          || !['tall', 'square'].includes(a.p_shape) || a.p_kind === 'trend'
+          || (a.p_kind === 'photo' && (a.p_model !== 'classic' || !['std', 'hd'].includes(a.p_quality)))
+          || (a.p_kind === 'video' && (a.p_image == null || a.p_model !== 'standard' || a.p_seconds !== 5 || a.p_quality != null || a.p_refs != null
+            || (a.p_parts ?? 1) !== 1 || a.p_edit != null))))
+        // (2026-10-14) someone else in it (another influencer: checked below; or AGI-1), in one of its template's roles
+        || (cast !== null && (!ID.test(String(cast)) || layers === null))
+        || (role !== null && (!/^[a-z]{2,16}$/.test(String(role)) || layers === null || (cast === null && !asked)))) return no('bad');
       // (2026-10-13) never in a trend video; a photo with her by Classic only
       if (asked && a.p_kind === 'trend') return no('agi1_trend');
       if (asked && a.p_kind === 'photo' && a.p_model != null && a.p_model !== 'classic') return no('agi1_model');
+      // (2026-10-14) one other character at most: AGI-1, or another of its maker's influencers (never itself)
+      if (cast !== null && asked) return no('cast_one');
+      if (cast !== null && cast === a.p_inf) return no('cast');
       const i = this.infs.get(a.p_inf);
       if (!i || i.status === 'deleted' || i.hidden) return no('gone');
       if (i.wallet_code !== a.p_wallet) return no('not_yours');
@@ -690,23 +730,43 @@ function database() {
         const u = this.uploads.get(a.p_clip);
         if (!u || u.wallet_code !== a.p_wallet || u.kind !== 'clip' || u.status !== 'ok' || u.created < now() - DAY) return no('clip');
       }
-      if (a.p_image !== null) {
-        const p = this.jobs.get(a.p_image);
-        if (!p || p.inf_id !== a.p_inf || p.kind !== 'photo' || p.status !== 'done' || p.hidden || p.deleted) return no('image');
-        if (p.shape === 'banner' && a.p_edit == null && !add) return no('banner');
-        // (2026-10-12) an edit keeps the photo's own shape, and a meme its own format and words ((2026-10-13) so does "Add AGI-1")
-        if ((a.p_edit != null || add) && (p.shape !== a.p_shape || (p.meme ?? null) !== (a.p_meme ?? null) || (p.caption ?? null) !== (a.p_caption ?? null))) return no('bad');
+      // ((2026-10-14) and never one with someone else in it who may no longer be seen)
+      let f = null;
+      if (a.p_image !== null && a.p_image !== undefined) {
+        f = this.jobs.get(a.p_image);
+        if (!f || f.inf_id !== a.p_inf || f.kind !== 'photo' || f.status !== 'done' || f.hidden || f.deleted || !this.castShown(f.cast_inf)) return no('image');
+        if (f.shape === 'banner' && a.p_edit == null && !add) return no('banner');
       }
+      // (2026-10-12) an edit keeps the photo's own shape, and a meme its own format and words ((2026-10-13) so does "Add AGI-1";
+      // (2026-10-14) and a template meme's video ("Animate"), its own words)
+      if (f && (a.p_edit != null || add || (a.p_kind === 'video' && f.layers != null))
+        && (f.shape !== a.p_shape || (f.meme ?? null) !== (a.p_meme ?? null) || (f.caption ?? null) !== (a.p_caption ?? null))) return no('bad');
       // (2026-10-13) with AGI-1: "Add AGI-1" to a photo she's in already; an edit never adds her; a trend video never from a photo
       // with her; a Standard, Pro or Long video with her from a photo she's in. She stays in an edit of a photo with her, and in a
       // video from one; with her, Kling's videos take one reference less
-      const photoHer = a.p_image != null && this.jobs.get(a.p_image)?.agi1 === true;
+      const photoHer = f?.agi1 === true;
       if (add && photoHer) return no('agi1_has');
       if (a.p_edit != null && asked && !photoHer) return no('bad');
       if (a.p_kind === 'trend' && photoHer) return no('agi1_trend');
-      if (a.p_kind === 'video' && asked && a.p_image != null && (a.p_model ?? 'standard') !== 'anime' && !photoHer) return no('agi1_photo');
+      if (a.p_kind === 'video' && asked && f && (a.p_model ?? 'standard') !== 'anime' && !photoHer) return no('agi1_photo');
       const her = asked || (photoHer && (a.p_edit != null || a.p_kind === 'video'));
       if (her && a.p_kind === 'video' && (a.p_model ?? 'standard') !== 'anime' && a.p_refs != null && a.p_refs.length > 1) return no('refs');
+      // (2026-10-14) from a template meme: an edit of it, its video and someone added to it keep its words, and who's in it
+      // (someone is added only when nobody else is in it yet); never a trend video. Words only on a template meme.
+      if (f && f.layers != null) {
+        if (a.p_kind === 'trend') return no('image');
+        if (layers === null || !jsonbEq(layers, f.layers)) return no('bad');
+        if (!add && (cast !== (f.cast_inf ?? null) || (role !== null && role !== (f.cast_role ?? null)))) return no('bad');
+        if (add && f.cast_inf != null) return no('cast_has');
+      } else if (f && layers !== null) return no('bad');
+      // (2026-10-14) another influencer in it: one of this wallet's own, there and shown, ready, and never a private one (made from
+      // a real person's photo, or a face) in the memes of one that isn't
+      if (cast !== null) {
+        const c = this.infs.get(cast);
+        if (!c || c.status === 'deleted' || c.hidden || c.banned || c.wallet_code !== a.p_wallet) return no('cast');
+        if (c.status !== 'ready' || !c.body_job) return no('cast_ready');
+        if ((c.mode === 'face' || c.real) && !(i.mode === 'face' || i.real)) return no('cast_private');
+      }
       // (round 4, phase 4) its references: this wallet's own, passed, from the last day, each once
       if (a.p_refs != null && new Set(a.p_refs.filter((r) => {
         const u = this.uploads.get(r);
@@ -720,7 +780,8 @@ function database() {
       this.addJob({ id: a.p_job, inf_id: a.p_inf, wallet_code: a.p_wallet, kind: a.p_kind, scene: a.p_scene, shape: a.p_shape,
         sound: a.p_sound === true && a.p_kind === 'video', trend: a.p_trend, clip: a.p_clip, image: a.p_image, cost: a.p_cost,
         model: a.p_model ?? null, quality: a.p_quality ?? null, seconds: a.p_seconds ?? null, refs: a.p_refs ?? null, parts: a.p_parts ?? 1,
-        meme: a.p_meme ?? null, caption: a.p_caption ?? null, edit: a.p_edit ?? null, agi1: her });
+        meme: a.p_meme ?? null, caption: a.p_caption ?? null, edit: a.p_edit ?? null, agi1: her,
+        layers: layers === null ? null : structuredClone(layers), cast_inf: cast, cast_role: role, mark_spot: mark });
       return ok({ paid: s.paid, free: s.free, bonus: s.bonus });
     },
     // (round 4, phase 4) a long video's next part: its request and saving cleared (as influencers.sql's inf_job_part)
@@ -734,8 +795,12 @@ function database() {
       const j = this.jobs.get(p_id);
       if (!j) return null;
       const i = j.inf_id ? this.infs.get(j.inf_id) : null;
+      // (2026-10-14) hidden too when someone else in it may no longer be seen; that other influencer's full body while it's ready
+      // and shown (as influencers.sql's inf_job_get)
+      const c = j.cast_inf ? this.infs.get(j.cast_inf) : null;
       return {
-        ...j, started_at: iso(j.started), created_at: iso(j.created), updated_at: iso(j.updated), done_at: iso(j.done), deleted_at: iso(j.deleted),
+        ...j, hidden: j.hidden || !this.castShown(j.cast_inf), cast_body: c && c.status === 'ready' && !c.hidden && !c.banned ? c.body_job : null,
+        started_at: iso(j.started), created_at: iso(j.created), updated_at: iso(j.updated), done_at: iso(j.done), deleted_at: iso(j.deleted),
         inf_name: i?.name ?? null, inf_mode: i?.mode ?? null, inf_style: i?.style ?? null, inf_settings: i?.settings ?? null, inf_words: i?.words ?? null,
         inf_source: i?.source ?? null, inf_status: i?.status ?? null, inf_looks_job: i?.looks_job ?? null, inf_pick: i?.pick ?? null,
         inf_body_job: i?.body_job ?? null, inf_hidden: i?.hidden ?? null, inf_public: i?.public ?? null, inf_real: i?.real ?? null,
@@ -807,8 +872,9 @@ function database() {
       return true;
     },
     inf_jobs({ p_inf, p_wallet, p_limit }) {
+      // ((2026-10-14) a done one with someone else in it who may no longer be seen is shown to nobody)
       return [...this.jobs.values()].filter((j) => j.inf_id === p_inf && ['photo', 'trend', 'video'].includes(j.kind) && !j.deleted
-        && ((j.status === 'done' && !j.hidden) || (p_wallet && j.wallet_code === p_wallet && j.status !== 'done' && j.updated > now() - 7 * DAY)))
+        && ((j.status === 'done' && !j.hidden && this.castShown(j.cast_inf)) || (p_wallet && j.wallet_code === p_wallet && j.status !== 'done' && j.updated > now() - 7 * DAY)))
         .sort((x, y) => (y.done || y.created) - (x.done || x.created)).slice(0, p_limit || 40)
         .map((j) => ({
           id: j.id, kind: j.kind, scene: j.scene, shape: j.shape, sound: j.sound, trend: j.trend, clip: j.clip !== null, image: j.image, status: j.status,
@@ -816,6 +882,8 @@ function database() {
           poster: j.poster, created_at: iso(j.created), done_at: iso(j.done), likes: j.likes, marked: j.marked, mine: Boolean(p_wallet) && j.wallet_code === p_wallet,
           model: j.model, quality: j.quality, seconds: j.seconds, refs: j.refs ? j.refs.length : 0, parts: j.parts, part: j.part, meme: j.meme, caption: j.caption,
           edit: j.edit, editor: j.editor === true, agi1: j.agi1 === true,
+          // (2026-10-14) a template meme's words, who else is in it and where its share mark goes; a cut's part and shape
+          layers: j.layers, cast_inf: j.cast_inf, cast_role: j.cast_role, mark_spot: j.mark_spot, cut: j.cut,
         }));
     },
     inf_mine({ p_wallet }) {
@@ -827,29 +895,32 @@ function database() {
       const limit = Math.min(Math.max(p_limit || 24, 1), 60);
       const monday = Date.parse(`${W.mondayOf(now())}T00:00:00Z`);
       const since = new Date(monday - 14 * DAY).toISOString().slice(0, 10);
+      // ((2026-10-14) never a creation with someone else in it who may no longer be seen; its spotlight never a banned maker's)
       const sw = [...this.weeks.values()].filter((w) => ['approved', 'claimed', 'sending', 'sent'].includes(w.status) && w.week >= since).filter((w) => {
         const j = this.jobs.get(w.job_id), i = j && this.infs.get(j.inf_id);
-        return Boolean(j && j.status === 'done' && !j.hidden && i && i.status === 'ready' && !i.hidden);
+        return Boolean(j && j.status === 'done' && !j.hidden && i && i.status === 'ready' && !i.hidden && !i.banned && this.castShown(j.cast_inf));
       }).sort((x, y) => (x.week < y.week ? 1 : -1))[0];
       const sj = sw && this.jobs.get(sw.job_id), si = sj && this.infs.get(sj.inf_id);
       return {
         influencers: [...this.infs.values()].filter(shown).sort((x, y) => y.ready - x.ready).slice(0, limit)
           .map((i) => ({ id: i.id, name: i.name, style: i.style, looks_job: i.looks_job, pick: i.pick, body_job: i.body_job, ready_at: iso(i.ready), maker: this.makerOf(i.wallet_code), pfp: this.pfpOf(i.pfp) })),
-        fresh: [...this.jobs.values()].filter((j) => j.status === 'done' && ['photo', 'trend', 'video'].includes(j.kind) && !j.hidden && j.shape !== 'banner' && shown(this.infs.get(j.inf_id)))
+        // ((2026-10-14) never one with someone else in it who may no longer be seen, and who else is in one: 'cast')
+        fresh: [...this.jobs.values()].filter((j) => j.status === 'done' && ['photo', 'trend', 'video'].includes(j.kind) && !j.hidden && j.shape !== 'banner'
+          && shown(this.infs.get(j.inf_id)) && this.castShown(j.cast_inf))
           .sort((x, y) => y.done - x.done || y.seq - x.seq).slice(0, limit).map((j) => {
             const i = this.infs.get(j.inf_id);
             return { id: j.id, kind: j.kind, shape: j.shape, trend: j.trend, poster: j.poster, files: j.files, likes: j.likes, inf_id: j.inf_id,
               inf_name: i.name, looks_job: i.looks_job, pick: i.pick, done_at: iso(j.done), maker: this.makerOf(i.wallet_code), pfp: this.pfpOf(i.pfp),
-              model: j.model, quality: j.quality, seconds: j.seconds, sound: j.sound, meme: j.meme, caption: j.caption, agi1: j.agi1 === true };
+              model: j.model, quality: j.quality, seconds: j.seconds, sound: j.sound, meme: j.meme, caption: j.caption, agi1: j.agi1 === true, cast: j.cast_inf };
           }),
         // (2026-10-13) the newest photos and videos with AGI-1 in them: public influencers only, never an X banner
         agi1: [...this.jobs.values()].filter((j) => j.agi1 === true && j.status === 'done' && ['photo', 'video'].includes(j.kind) && !j.hidden && !j.deleted
-          && j.shape !== 'banner' && shown(this.infs.get(j.inf_id)))
+          && j.shape !== 'banner' && shown(this.infs.get(j.inf_id)) && this.castShown(j.cast_inf))
           .sort((x, y) => y.done - x.done || y.seq - x.seq).slice(0, 12).map((j) => {
             const i = this.infs.get(j.inf_id);
             return { id: j.id, kind: j.kind, shape: j.shape, trend: j.trend, poster: j.poster, files: j.files, likes: j.likes, inf_id: j.inf_id,
               inf_name: i.name, looks_job: i.looks_job, pick: i.pick, done_at: iso(j.done), maker: this.makerOf(i.wallet_code), pfp: this.pfpOf(i.pfp),
-              model: j.model, quality: j.quality, seconds: j.seconds, sound: j.sound, meme: j.meme, caption: j.caption, agi1: true };
+              model: j.model, quality: j.quality, seconds: j.seconds, sound: j.sound, meme: j.meme, caption: j.caption, agi1: true, cast: j.cast_inf };
           }),
         trends: [...this.trends.values()].filter((t) => t.status === 'kept' && this.jobs.get(t.job)?.status === 'done').sort((x, y) => x.sort - y.sort)
           .map((t) => ({ id: t.id, job: t.job, poster: this.jobs.get(t.job).poster, bytes: this.jobs.get(t.job).bytes })),
@@ -858,7 +929,7 @@ function database() {
         spotlight: sw ? {
           week: sw.week, status: sw.status, holder_likes: sw.holder_likes, likes: sw.likes, prize: sw.prize, id: sj.id, kind: sj.kind, shape: sj.shape,
           poster: sj.poster, files: sj.files, inf_id: sj.inf_id, inf_name: si.name, looks_job: si.looks_job, pick: si.pick, maker: this.makerOf(si.wallet_code),
-          pfp: this.pfpOf(si.pfp),
+          pfp: this.pfpOf(si.pfp), cast_inf: sj.cast_inf,
         } : null,
       };
     },
@@ -879,10 +950,24 @@ function database() {
         Object.assign(j, { status: 'failed', error: 'deleted', lease: 0 });
         if (j.cost > 0 && !j.refunded && this.refund(j.id)) j.refunded = true;
       }
+      // (2026-10-14) what it's in, as someone else in another of its maker's influencers' memes: those being made stop (their
+      // credits back: 'cast'), and all of them are deleted like a creation its maker deleted (as influencers.sql's inf_delete)
+      for (const j of this.jobs.values()) {
+        if (j.cast_inf !== p_id || !['paid', 'making'].includes(j.status)) continue;
+        Object.assign(j, { status: 'failed', error: 'cast', lease: 0, updated: now() });
+        if (j.cost > 0 && !j.refunded && this.refund(j.id)) j.refunded = true;
+      }
+      const castJobs = [];
+      for (const j of this.jobs.values()) {
+        if (j.cast_inf !== p_id || j.deleted) continue;
+        Object.assign(j, { hidden: true, deleted: now(), lease: 0, updated: now() });
+        const a = this.infs.get(j.inf_id);
+        castJobs.push({ id: j.id, inf: j.inf_id, kind: j.kind, pfp: a?.pfp?.job === j.id ? a.pfp.id : null });
+      }
       Object.assign(i, { status: 'deleted', hidden: true, public: false, updated: now() });
       const u = this.uploads.get(i.source);
       if (u) Object.assign(u, { status: 'refused', why: 'deleted' });
-      return ok({ source: i.source });
+      return ok({ source: i.source, cast_jobs: castJobs });
     },
     inf_hide({ p_id, p_hidden }) { const i = this.infs.get(p_id); if (!i || i.status === 'deleted') return null; i.hidden = p_hidden !== false; return true; },
     // ((2026-10-12) one its maker deleted is never shown again)
@@ -924,11 +1009,34 @@ function database() {
       if (this.bannedNow(p_wallet)) return no('banned');
       if (i.status !== 'ready') return no('not_ready');
       const f = this.jobs.get(p_from);
-      if (!f || f.inf_id !== p_inf || f.kind !== 'photo' || f.status !== 'done' || f.hidden || f.deleted) return no('image');
+      // ((2026-10-14) never from a template meme: the meme editor is its editor, inf_meme_add)
+      if (!f || f.inf_id !== p_inf || f.kind !== 'photo' || f.status !== 'done' || f.hidden || f.deleted || f.layers != null) return no('image');
       if ((f.shape === 'banner') !== (p_shape === 'banner')) return no('bad');
       if (this.jobs.has(p_job)) return no('taken');
       this.addJob({ id: p_job, inf_id: p_inf, wallet_code: p_wallet, kind: 'photo', scene: f.scene, shape: p_shape, image: p_from, cost: 0,
         status: 'done', files: 1, bytes: p_bytes, editor: true, done: now(), agi1: f.agi1 === true });
+      return ok();
+    },
+    // (2026-10-14, meme templates) a meme saved from the meme editor ("Save as a new meme"): a done template meme of the same
+    // influencer, free, made from p_from (its maker's own template meme), its words, their places and its share mark's spot new,
+    // everything else the meme's own (as influencers.sql's inf_meme_add)
+    inf_meme_add({ p_job, p_inf, p_wallet, p_from, p_layers, p_caption, p_mark, p_bytes }) {
+      if (!ID.test(String(p_job)) || !ID.test(String(p_from)) || !code(p_wallet) || !Array.isArray(p_layers) || !(p_layers.length >= 1 && p_layers.length <= 8)
+        || jsonbBytes(p_layers) > 8000 || typeof p_caption !== 'string' || !([...p_caption].length >= 1 && [...p_caption].length <= 1000)
+        || !SPOTS.includes(p_mark) || !(p_bytes >= 1 && p_bytes <= 10_000_000)) return no('bad');
+      const i = this.infs.get(p_inf);
+      if (!i || i.status === 'deleted' || i.hidden) return no('gone');
+      if (i.wallet_code !== p_wallet) return no('not_yours');
+      if (this.bannedNow(p_wallet)) return no('banned');
+      if (i.status !== 'ready') return no('not_ready');
+      const f = this.jobs.get(p_from);
+      if (!f || f.inf_id !== p_inf || f.kind !== 'photo' || f.status !== 'done' || f.hidden || f.deleted || f.layers == null || f.meme == null
+        || !this.castShown(f.cast_inf)) return no('image');
+      if (jsonbEq(f.layers, p_layers)) return no('same');
+      if (this.jobs.has(p_job)) return no('taken');
+      this.addJob({ id: p_job, inf_id: p_inf, wallet_code: p_wallet, kind: 'photo', scene: f.scene, shape: f.shape, image: p_from, cost: 0,
+        status: 'done', files: 1, bytes: p_bytes, editor: true, done: now(), model: f.model, quality: f.quality, meme: f.meme, caption: p_caption,
+        layers: structuredClone(p_layers), cast_inf: f.cast_inf ?? null, cast_role: f.cast_role ?? null, mark_spot: p_mark, agi1: f.agi1 === true });
       return ok();
     },
     // (2026-10-12, the editor) the video editor: a cut started (one use counted, then a video of the same influencer, free,
@@ -945,14 +1053,16 @@ function database() {
       if (this.bannedNow(p_wallet)) return no('banned');
       if (i.status !== 'ready') return no('not_ready');
       const f = this.jobs.get(p_from);
-      if (!f || f.inf_id !== p_inf || !['video', 'trend'].includes(f.kind) || f.status !== 'done' || f.hidden || f.deleted) return no('from');
+      // ((2026-10-14) never from one with someone else in it who may no longer be seen)
+      if (!f || f.inf_id !== p_inf || !['video', 'trend'].includes(f.kind) || f.status !== 'done' || f.hidden || f.deleted
+        || !this.castShown(f.cast_inf)) return no('from');
       if ([...this.jobs.values()].filter((j) => j.wallet_code === p_wallet && j.kind === 'video' && j.editor && ['paid', 'making'].includes(j.status)).length >= p_open) return no('cuts_open');
       // (its id taken: nothing counted either, the SQL's use rolled back with it)
       if (this.jobs.has(p_job)) return no('taken');
       const t = this.inf_tool_take({ p_wallet, p_tool: 'video', p_per_day, p_site_cap, p_take: true });
       if (!t.ok) return no(['too_many', 'busy_day'].includes(t.why) ? t.why : 'busy');
       this.addJob({ id: p_job, inf_id: p_inf, wallet_code: p_wallet, kind: 'video', scene: f.scene, shape: p_shape, sound: p_sound, image: p_from,
-        cost: 0, seconds: p_seconds, editor: true, cut: p_cut, agi1: f.agi1 === true });
+        cost: 0, seconds: p_seconds, editor: true, cut: p_cut, agi1: f.agi1 === true, cast_inf: f.cast_inf ?? null });
       return ok({ left: t.left });
     },
     inf_cut_due() {
@@ -1113,8 +1223,9 @@ function database() {
     inf_mark_take() {
       // (round 4, phase 4: never a long video, whose one copy is marked as its parts are kept)
       // ((2026-10-12) never one saved from the video editor: its mark is in it already)
+      // ((2026-10-14) nor a template meme's 5-second video: our clock drew its mark with its words, where they aren't)
       const j = [...this.jobs.values()].filter((x) => ['trend', 'video'].includes(x.kind) && x.status === 'done' && !x.hidden && !x.marked && x.mark_tries < 3 && x.parts === 1
-        && !x.editor && (x.mark_at === null || x.mark_at < now() - 180e3) && x.done > now() - 30 * DAY).sort((x, y) => y.done - x.done || y.seq - x.seq)[0];
+        && !x.editor && x.layers == null && (x.mark_at === null || x.mark_at < now() - 180e3) && x.done > now() - 30 * DAY).sort((x, y) => y.done - x.done || y.seq - x.seq)[0];
       if (!j) return null;
       j.mark_tries += 1;
       j.mark_at = now();
@@ -1126,7 +1237,7 @@ function database() {
     inf_like({ p_job, p_wallet, p_level, p_like, p_per_day }) {
       if (!ID.test(String(p_job)) || !code(p_wallet) || ![1, 2, 3].includes(p_level) || typeof p_like !== 'boolean' || !(p_per_day >= 1)) return no('bad');
       const j = this.jobs.get(p_job);
-      if (!j || j.status !== 'done' || j.hidden || !['photo', 'trend', 'video'].includes(j.kind)) return no('gone');
+      if (!j || j.status !== 'done' || j.hidden || !['photo', 'trend', 'video'].includes(j.kind) || !this.castShown(j.cast_inf)) return no('gone');
       const i = this.infs.get(j.inf_id);
       if (!i || i.status !== 'ready' || i.hidden || i.banned) return no('gone');
       if (!i.public || i.mode === 'face' || i.real) return no('private');
@@ -1151,7 +1262,7 @@ function database() {
     weekTop(week, skip = []) {
       const from = Date.parse(`${week}T00:00:00Z`), to = from + 7 * DAY;
       const best = [...this.jobs.values()].filter((j) => ['photo', 'trend', 'video'].includes(j.kind) && j.status === 'done' && !j.hidden
-        && j.done >= from && j.done < to && shown(this.infs.get(j.inf_id)) && !skip.includes(j.id))
+        && this.castShown(j.cast_inf) && j.done >= from && j.done < to && shown(this.infs.get(j.inf_id)) && !skip.includes(j.id))
         .map((j) => ({ j, holder: this.likes.filter((l) => l.job === j.id && l.level >= 2).length })).filter((x) => x.holder >= 1)
         .sort((x, y) => y.holder - x.holder || y.j.likes - x.j.likes || x.j.done - y.j.done)[0];
       return best ? { job_id: best.j.id, inf_id: best.j.inf_id, wallet_code: best.j.wallet_code, holder_likes: best.holder, likes: best.j.likes } : null;
@@ -1189,7 +1300,7 @@ function database() {
         const j = this.jobs.get(w.job_id), i = this.infs.get(w.inf_id);
         return {
           week: w.week, status: w.status, job: w.job_id, inf_id: w.inf_id, holder_likes: w.holder_likes, likes: w.likes, prize: w.prize, tx: w.tx,
-          kind: j?.kind ?? null, shape: j?.shape ?? null, poster: j?.poster ?? null, files: j?.files ?? null, job_ok: Boolean(j && j.status === 'done' && !j.hidden),
+          kind: j?.kind ?? null, shape: j?.shape ?? null, poster: j?.poster ?? null, files: j?.files ?? null, job_ok: Boolean(j && j.status === 'done' && !j.hidden && this.castShown(j.cast_inf)),
           inf_name: i?.name ?? null, looks_job: i?.looks_job ?? null, pick: i?.pick ?? null, pfp: this.pfpOf(i?.pfp), skipped: w.skipped.length,
           mine: Boolean(p_wallet) && w.wallet_code === p_wallet,
         };
@@ -1610,7 +1721,7 @@ beforeEach(async () => {
   fake = {
     // (2026-10-11) oldArgs: a function as an older influencers.sql has it (its name → the parameters it doesn't take: PGRST202)
     db: database(), dbDown: false, missing: new Set(), oldArgs: new Map(),
-    storage: new Map(), storageDown: false,
+    storage: new Map(), storageDown: false, putFail: null,
     fal: { requests: new Map(), n: 0, submitFail: [], statusAnswer: null, statusFail: null, resultAnswer: null, resultFail: null, mediaStatus: 200, video: mp4({ seconds: 5 }), images: null,
       picture: null },
     gemini: { picture: null, frames: null, video: null, poster: null, captions: null, help: null, status: 200, blocked: false },
@@ -1707,7 +1818,8 @@ async function fakeFetch(url, init = {}) {
   if (url.startsWith(`${OBJ}agi1-characters/`)) {
     const name = url.slice(`${OBJ}agi1-characters/`.length);
     calls.push({ to: 'put', name, type: init.headers['Content-Type'] });
-    if (fake.storageDown) return new Response('{"message":"internal"}', { status: 500 });
+    // ((2026-10-19) putFail: one file that can't be kept, the others kept as before)
+    if (fake.storageDown || fake.putFail?.(name)) return new Response('{"message":"internal"}', { status: 500 });
     fake.storage.set(name, { bytes: Buffer.from(init.body), type: init.headers['Content-Type'] });
     return Response.json({ Key: `agi1-characters/${name}` });
   }
@@ -2128,6 +2240,13 @@ test('the app\'s words: every "no" our server sends has its own words, and never
     own.add(why);
   }
   for (const why of ['job_gone', 'job_making', 'job_in_use']) assert.ok(codes.has(why) && AW.errorText(why) !== GENERIC, why);
+  // (2026-10-14, meme templates) a template meme's texts: a word check's reasons for its field (layers), never codes of their own
+  // ('chars': letters our fonts can't draw, with which ones)
+  own.add('chars');
+  for (const why of ['empty', 'long', 'lines', 'many', 'chars', 'money', 'link', 'adult']) assert.notEqual(AW.wordsText('layers', why), 'Try other words.', why);
+  for (const why of ['cast', 'cast_ready', 'cast_private', 'cast_one', 'cast_has', 'cast_none', 'cast_gone', 'role', 'same']) {
+    assert.ok(codes.has(why) && AW.errorText(why) !== GENERIC, why);
+  }
   assert.ok(codes.size > 50 && codes.has('done') && codes.has('needs_photo') && codes.has('sold_out') && codes.has('no_slot') && codes.has('prizes_off'));
   for (const code of codes) {
     if (own.has(code) || code === 'busy') continue;
@@ -4043,6 +4162,8 @@ test('Explore and its page: public ones only (never a private one: made from a f
     model: null, quality: null, seconds: null, sound: false, meme: null, caption: null,
     // (2026-10-13, 💜 With AGI-1) whether AGI-1 is in it (never here)
     agi1: false,
+    // (2026-10-14, meme templates) another of its maker's influencers in it (never here)
+    cast: null,
     inf: { id: a.id, name: 'Nova', portrait: { job: a.looks, n: 1 }, maker: null } });
   assert.deepEqual(r.body.trends, [{ id: 'golden-flip', name: 'Golden hour', emoji: '🌅', job: move, poster: true }]);
   assert.deepEqual([r.body.boosted, r.body.spotlight], [[], null]);
@@ -8909,13 +9030,16 @@ test("influencers.sql's promises: every function our server calls is there with 
   const fns = sqlFunctions(sql);
   // (2026-10-11: 98, with inf_pfp_of and inf_pfp_set, its profile picture; 2026-10-12: 100, with the owner's gift links of free
   // credits, inf_owner_link and inf_owner_links; then 101, the editor's inf_job_delete; 103, the photo editor's inf_tool_take and
-  // inf_photo_add; 106, the video editor's inf_cut_add, inf_cut_done and inf_cut_due)
-  assert.equal(fns.size, 106);
+  // inf_photo_add; 106, the video editor's inf_cut_add, inf_cut_done and inf_cut_due; 2026-10-14: 108, meme templates'
+  // inf_cast_shown and inf_meme_add)
+  assert.equal(fns.size, 108);
   const known = new Map([...fns, ...sqlFunctions(read('supabase/studio.sql'))]);
   // (round 4, phase 2: the team, support, the helper and the owner's tab too; phase 3: gifts and invites)
   const files = ['server/influencer.js', 'server/inf-api.js', 'server/inf-jobs.js', 'server/inf-uploads.js', 'server/credits.js',
     'server/inf-week.js', 'server/inf-burns.js', 'server/inf-mark.js', 'server/clank-names.js', 'server/inf-captions.js',
-    'server/inf-team.js', 'server/inf-help.js', 'server/inf-admin.js', 'server/inf-gifts.js', 'server/inf-editor.js', 'server/inf-cut.js'];
+    'server/inf-team.js', 'server/inf-help.js', 'server/inf-admin.js', 'server/inf-gifts.js', 'server/inf-editor.js', 'server/inf-cut.js',
+    // (2026-10-14) the meme editor's "Save as a new meme"
+    'server/inf-meme-save.js'];
   const used = new Set();
   for (const f of files) {
     for (const { fn, keys } of rpcCalls(read(f))) {
@@ -8929,8 +9053,9 @@ test("influencers.sql's promises: every function our server calls is there with 
   }
   // its own functions called only by its others: what credits are spent and given back with, the day's count, (round 2) a
   // week's best creation (the clock's pick and the owner's skip ask it), and (2026-10-11) an influencer's profile picture as
-  // its rows give it (inf_get, inf_mine, inf_explore, inf_weeks)
-  assert.deepEqual([...fns.keys()].filter((fn) => !used.has(fn)).sort(), ['inf_day_take', 'inf_pfp_of', 'inf_refund', 'inf_spend', 'inf_week_top']);
+  // its rows give it (inf_get, inf_mine, inf_explore, inf_weeks), and (2026-10-14) whether someone else in a creation may still
+  // be seen (inf_cast_shown: the functions that read creations ask it)
+  assert.deepEqual([...fns.keys()].filter((fn) => !used.has(fn)).sort(), ['inf_cast_shown', 'inf_day_take', 'inf_pfp_of', 'inf_refund', 'inf_spend', 'inf_week_top']);
   // only the server's key: each one's revoke and grant, with its exact parameter types
   const loop = /foreach f in array array\[([\s\S]*?)\] loop\s+execute format\('revoke all on function public\.%s from public, anon, authenticated', f\);\s+execute format\('grant execute on function public\.%s to service_role', f\);/.exec(sql);
   assert.ok(loop, 'the grants');
@@ -8952,7 +9077,7 @@ test("influencers.sql's promises: every function our server calls is there with 
   assert.doesNotMatch(code, /\b(?:wallet|address|wallet_address|tx|tx_hash|transaction|ip|ip_address)\s+(?:text|inet|varchar|bytea)\b/i);
   assert.match(code, /wallet_code\s+text/);
   assert.doesNotMatch(code, /drop table|truncate|delete from public\.agi1_studio/i);
-  assert.match(sql, /'inf_burns_open', 'inf_slots', 'inf_stats', 'inf_gift',\n    'inf_name_get', 'inf_name_set', 'inf_caption_take',\n    'inf_who', [\s\S]*?'inf_mod_news',\n    'inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_ref_code',\n    'inf_ref_bind', 'inf_ref_settle', 'inf_job_part', 'inf_access_list', 'inf_access_set', 'inf_pfp_of', 'inf_pfp_set',\n    'inf_owner_link', 'inf_owner_links', 'inf_job_delete', 'inf_tool_take', 'inf_photo_add', 'inf_cut_add', 'inf_cut_done',\n    'inf_cut_due'\)\) = 106 then 1 else 0 end\)/, 'influencers_ready counts its 106 functions');
+  assert.match(sql, /'inf_burns_open', 'inf_slots', 'inf_stats', 'inf_gift',\n    'inf_name_get', 'inf_name_set', 'inf_caption_take',\n    'inf_who', [\s\S]*?'inf_mod_news',\n    'inf_send', 'inf_gift_link', 'inf_gift_peek', 'inf_gift_claim', 'inf_gift_cancel', 'inf_gifts_mine', 'inf_ref_code',\n    'inf_ref_bind', 'inf_ref_settle', 'inf_job_part', 'inf_access_list', 'inf_access_set', 'inf_pfp_of', 'inf_pfp_set',\n    'inf_owner_link', 'inf_owner_links', 'inf_job_delete', 'inf_tool_take', 'inf_photo_add', 'inf_cut_add', 'inf_cut_done',\n    'inf_cut_due', 'inf_cast_shown', 'inf_meme_add'\)\) = 108 then 1 else 0 end\)/, 'influencers_ready counts its 108 functions');
   // (2026-10-11) giving access: its table (a scrambled code, a short address, the owner's note, how it got in; never the
   // address), inf_who reading it, the owner's two functions; each found by the ready check
   const accessTable = /create table if not exists public\.agi1_inf_access \(([\s\S]*?)\n\);/.exec(sql)?.[1] || '';
@@ -8968,8 +9093,9 @@ test("influencers.sql's promises: every function our server calls is there with 
   // API never has two to choose from), its new parameters with defaults (an older page's call still works), the share mark's
   // clock never taking a long video (its joined copy is marked), each found by the ready check
   // ((2026-10-12, the editor) and "Edit with words"' p_edit: round 4's phase 4 version dropped first too; (2026-10-13,
-  // 💜 With AGI-1) and p_agi1: the editor's version dropped first as well)
-  assert.match(sql, /drop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer\);\ndrop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,\n  integer, text\[\], integer, text, text\);\ndrop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,\n  integer, text\[\], integer, text, text, text\);\ncreate or replace function public\.inf_make\(/);
+  // 💜 With AGI-1) and p_agi1: the editor's version dropped first as well; (2026-10-14, meme templates) and p_layers, p_cast,
+  // p_role and p_mark: "With AGI-1"'s version dropped first too)
+  assert.match(sql, /drop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer\);\ndrop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,\n  integer, text\[\], integer, text, text\);\ndrop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,\n  integer, text\[\], integer, text, text, text\);\ndrop function if exists public\.inf_make\(text, text, text, text, text, text, boolean, text, text, text, integer, integer, integer, text, text,\n  integer, text\[\], integer, text, text, text, boolean\);\ncreate or replace function public\.inf_make\(/);
   for (const p of ['p_model text default null', 'p_quality text default null', 'p_seconds integer default null', 'p_refs text\\[\\] default null',
     'p_parts integer default 1', 'p_meme text default null', 'p_caption text default null']) assert.match(sql, new RegExp(p), p);
   for (const c of ['model', 'quality', 'seconds', 'refs', 'parts', 'part', 'meme', 'caption']) {
@@ -9040,14 +9166,17 @@ test("influencers.sql's promises: every function our server calls is there with 
   const limits = read('server/limits.js');
   const part = limits.slice(limits.indexOf('AGI Studio, the AI influencer app'), limits.indexOf('CloakMesh'));
   const lists = [...part.matchAll(/for \(const fn of \[([\s\S]*?)\]\)/g)];
-  assert.equal(lists.length, 16, 'its first version, its round 2, its round 3, its round 4, its round 4\'s phases 2, 3 and 4, giving access, its styles and ways, its profile picture, the owner\'s gift links, the editor, With AGI-1, the photo editor, the video editor and the 3D tool\'s choices (run again)');
+  assert.equal(lists.length, 17, 'its first version, its round 2, its round 3, its round 4, its round 4\'s phases 2, 3 and 4, giving access, its styles and ways, its profile picture, the owner\'s gift links, the editor, With AGI-1, the photo editor, the video editor, the 3D tool\'s choices (run again) and meme templates');
+  // (2026-10-14) meme templates: "Save as a new meme" and whether someone else in a creation may still be seen
+  assert.match(part, /for \(const fn of \['inf_meme_add', 'inf_cast_shown'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(meme templates; it ends with influencers_ready = 1\)`;/);
   // (2026-10-13) the 3D tool's choices: inf_3d and inf_3d_burn take a model's spec (studio.sql first: its orders keep it)
   assert.match(part, /for \(const fn of \['inf_3d', 'inf_3d_burn'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} [^`]*supabase\/studio\.sql[^`]*supabase\/influencers\.sql again, in this Supabase project \(the 3D tool's choices; they end with studio_ready = 1 and influencers_ready = 1\)`;/);
   // (2026-10-12) the video editor's three
   assert.match(part, /for \(const fn of \['inf_cut_add', 'inf_cut_done', 'inf_cut_due'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the video editor; it ends with influencers_ready = 1\)`;/);
   assert.match(part, /for \(const fn of \['inf_job_delete'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the editor: deleting a creation and Edit with words; it ends with influencers_ready = 1\)`;/);
-  // (2026-10-13) inf_make's hint names its two newest parameters' reasons: the editor's p_edit and "With AGI-1"'s p_agi1
-  assert.match(part, /for \(const fn of \['inf_make'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(Edit with words and With AGI-1; it ends with influencers_ready = 1\)`;/);
+  // (2026-10-13) inf_make's hint names its newest parameters' reasons: the editor's p_edit, "With AGI-1"'s p_agi1 and (2026-10-14)
+  // meme templates' p_layers, p_cast, p_role and p_mark
+  assert.match(part, /for \(const fn of \['inf_make'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(Edit with words, With AGI-1 and meme templates; it ends with influencers_ready = 1\)`;/);
   // (inf_make's hint is its newest parameters': never round 4's phase 4's any more)
   assert.match(part, /for \(const fn of \['inf_job_part'\]\) \{/);
   assert.match(part, /for \(const fn of \['inf_owner_link', 'inf_owner_links'\]\) \{\n\s+MISSING\[fn\] = `\$\{fn\} not found: run supabase\/influencers\.sql again in this Supabase project \(the owner's gift links of free credits; it ends with influencers_ready = 1\)`;/);
@@ -10083,7 +10212,7 @@ test('(2026-10-12, the editor) "Edit with words": a new photo from one of its ow
   fake.oldArgs.set('inf_make', ['p_edit']);
   r = await edit(nova.id, src.ultra, change);
   assert.deepEqual([r.status, r.body.error], [503, 'not_ready'], JSON.stringify(r.body));
-  assert.ok(logs.some((l) => l.includes('inf_make not found: run supabase/influencers.sql again in this Supabase project (Edit with words and With AGI-1; it ends with influencers_ready = 1)')), logs.join('\n'));
+  assert.ok(logs.some((l) => l.includes('inf_make not found: run supabase/influencers.sql again in this Supabase project (Edit with words, With AGI-1 and meme templates; it ends with influencers_ready = 1)')), logs.join('\n'));
   assert.deepEqual([fake.db.jobs.size, credits().paid], [jobs0 + 2, paid0]);
   nextMinute();
   r = await act('inf-make', { id: nova.id, kind: 'photo', scene, shape: 'tall' });
@@ -10096,15 +10225,17 @@ test('(2026-10-12, the editor) influencers.sql\'s promises for "Edit with words"
   const sql = read('supabase/influencers.sql');
   assert.match(sql, /alter table public\.agi1_inf_jobs add column if not exists edit text;\nalter table public\.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_edit_check;\nalter table public\.agi1_inf_jobs add constraint agi1_inf_jobs_edit_check check \(edit is null\n  or \(char_length\(edit\) between 3 and 200 and kind = 'photo' and image is not null\)\);/);
   const make = /create or replace function public\.inf_make\([\s\S]*?\n\$\$;/.exec(sql)?.[0] || '';
-  assert.match(make, /p_meme text default null, p_caption text default null, p_edit text default null, p_agi1 boolean default false\)/);
-  // ((2026-10-13, 💜 With AGI-1) or as "Add AGI-1": with p_agi1, without words)
-  assert.match(make, /v_add boolean := coalesce\(p_kind = 'photo' and p_image is not null and p_edit is null and p_agi1, false\);/);
+  // ((2026-10-14, meme templates) four more after it: a template meme's words, who else is in it, their role, its mark's spot)
+  assert.match(make, /p_meme text default null, p_caption text default null, p_edit text default null, p_agi1 boolean default false,\n\s+p_layers jsonb default null, p_cast text default null, p_role text default null, p_mark text default null\)/);
+  // ((2026-10-13, 💜 With AGI-1) or as "Add AGI-1": with p_agi1, without words; (2026-10-14) or "Add someone": with p_cast)
+  assert.match(make, /v_add boolean := coalesce\(p_kind = 'photo' and p_image is not null and p_edit is null and \(coalesce\(p_agi1, false\) or p_cast is not null\), false\);/);
   assert.match(make, /or \(p_kind = 'photo' and p_image is not null and p_edit is null and not v_add\)/);
   assert.match(make, /or \(p_edit is not null and \(p_kind <> 'photo' or p_image is null or char_length\(p_edit\) not between 3 and 200\n\s+or p_model is distinct from 'classic' or p_refs is not null\)\)/);
-  assert.match(make, /and status = 'done' and not hidden and deleted_at is null\) then\n\s+return json_build_object\('ok', false, 'why', 'image'\);/);
-  assert.match(make, /if p_image is not null and p_edit is null and not v_add and exists \(select 1 from agi1_inf_jobs where id = p_image and shape = 'banner'\) then/);
-  assert.match(make, /if \(p_edit is not null or v_add\) and not exists \(select 1 from agi1_inf_jobs where id = p_image and shape = p_shape\n\s+and meme is not distinct from p_meme and caption is not distinct from p_caption\) then\n\s+return json_build_object\('ok', false, 'why', 'bad'\);/);
-  assert.match(make, /refs, parts, meme, caption, edit, agi1\)\n\s+values \([\s\S]*?p_meme, p_caption, p_edit, v_her\);/);
+  // (the photo it's from, read once: done, shown, never deleted, and (2026-10-14) with nobody in it who may no longer be seen)
+  assert.match(make, /select \* into f from agi1_inf_jobs where id = p_image;\n\s+if not found or f\.inf_id is distinct from p_inf or f\.kind <> 'photo' or f\.status <> 'done' or f\.hidden\n\s+or f\.deleted_at is not null or not inf_cast_shown\(f\.cast_inf\) then\n\s+return json_build_object\('ok', false, 'why', 'image'\);/);
+  assert.match(make, /if p_image is not null and p_edit is null and not v_add and f\.shape = 'banner' then/);
+  assert.match(make, /if \(p_edit is not null or v_add or \(p_kind = 'video' and f\.layers is not null\)\)\n\s+and \(f\.shape is distinct from p_shape or f\.meme is distinct from p_meme or f\.caption is distinct from p_caption\) then\n\s+return json_build_object\('ok', false, 'why', 'bad'\);/);
+  assert.match(make, /refs, parts, meme, caption, edit, agi1, layers, cast_inf, cast_role, mark_spot\)\n\s+values \([\s\S]*?p_meme, p_caption, p_edit, v_her, p_layers, p_cast, p_role, p_mark\);/);
   assert.match(sql, /j\.meme, j\.caption, j\.deleted_at, j\.edit,/);
   assert.match(sql, /'meme', meme, 'caption', caption, 'edit', edit,/);
   assert.match(sql, /and column_name = 'edit'\)\n\s+and exists \(select 1 from pg_constraint where conrelid = 'public\.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_edit_check'\)\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_make' and prosrc like '%p_edit%'\)\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_job_get' and prosrc like '%j\.edit%'\)\n\s+and exists \(select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'inf_jobs' and prosrc like '%''edit'', edit%'\)/);
@@ -10166,7 +10297,7 @@ test('(2026-10-12, the editor) the page: "Make another" (its price on it) and "D
   assert.match(shared, /const del = go\('', 'trash', own\.onDelete, \{ kind: 'quiet', class: 'sa-btn sa-btn-quiet sa-btn-sm sa-edit-delete', 'aria-label': 'Delete', title: 'Delete' \}\);/);
   // (2026-10-13, 💜 With AGI-1) "Add AGI-1" after its editors, on a photo she isn't in (the row measured: it can wrap onto two lines)
   assert.match(shared, /const addHer = j\.kind === 'photo' && j\.agi1 !== true && own\.onAddHer \? go\('Add AGI-1', 'agi1', own\.onAddHer, \{ class: 'sa-btn sa-btn-ghost sa-btn-sm sa-edit-her' \}\) : null;/);
-  assert.match(shared, /const row = h\('div', \{ class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' \}, edit, editor, addHer, again, del\);\n\s+const rowH = \(\) => s\.dialog\.style\.setProperty\('--sa-row-h', `\$\{row\.offsetHeight\}px`\);\n\s+const watch = typeof ResizeObserver === 'function' \? new ResizeObserver\(rowH\) : null;\n\s+watch\?\.observe\(row\);\n\s+s\.done\.then\(\(\) => watch\?\.disconnect\(\)\);\n\s+return row;/);
+  assert.match(shared, /const row = h\('div', \{ class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' \}, edit, editor, addHer, addSomeone, again, del\);\n\s+const rowH = \(\) => s\.dialog\.style\.setProperty\('--sa-row-h', `\$\{row\.offsetHeight\}px`\);\n\s+const watch = typeof ResizeObserver === 'function' \? new ResizeObserver\(rowH\) : null;\n\s+watch\?\.observe\(row\);\n\s+s\.done\.then\(\(\) => watch\?\.disconnect\(\)\);\n\s+return row;/);
   assert.match(shared, /export function videoSheet\(ctx, v, \{ [^}]*\bown = null \}\)/);
   assert.match(shared, /add\(s\.body, mine \? editRow\(s, v, own\) : null, h\('div', \{ class: `sa-player-wrap is-\$\{shape\}` \}, video\),/);
   assert.match(shared, /export function photoSheet\(ctx, j, \{ [^}]*\bown = null \}\)/);
@@ -10179,7 +10310,9 @@ test('(2026-10-12, the editor) the page: "Make another" (its price on it) and "D
   // ---- an influencer's page (src/studio/views/influencer.js) ----
   const inf = strip(read('src/studio/views/influencer.js'));
   // (and, a photo's, "Edit with words": its own test below)
-  assert.match(inf, /const own = mine\(\) \? \{\n\s+cost: againCost\(j\), onAgain: (?:j\.editor \? null : )?\(x\) => again\(x\), onDelete: \(x\) => removeJob\(x\),[^}]*\} : null;/);
+  // (one saved from an editor has no words and settings to make again: never Make another, but a template meme saved from the
+  // meme editor (2026-10-19), which our server makes again from its template)
+  assert.match(inf, /const own = mine\(\) \? \{\n\s+cost: againCost\(j\), onAgain: j\.editor && !j\.template \? null : \(x\) => again\(x\), onDelete: \(x\) => removeJob\(x\),[^}]*\} : null;/);
   assert.match(inf, /photoSheet\(ctx, j, \{ name: i\.name, inf: id, mine: mine\(\), priv: priv\(\), onCaptions, own,/);
   assert.match(inf, /videoSheet\(ctx, j, \{ name: i\.name, inf: id, mine: mine\(\), priv: priv\(\), onCaptions, own \}\);/);
   // what "Make another" costs on its button: the sum the "Make another" test above checks against our server's price
@@ -10299,7 +10432,9 @@ test('(2026-10-12, the editor) the page: "Edit with words" first in the sheet of
   assert.match(shared, /const edit = j\.kind === 'photo' && own\.onEdit \? go\('Edit with words', 'wand', own\.onEdit\) : null;/);
   // its change said with it (and to screen readers in its picture's words)
   assert.match(shared, /const edited = kind === 'photo' && j\.edit \? String\(j\.edit\) : null;/);
-  assert.match(shared, /\$\{edited \? `, edited: \$\{edited\}` : byEditor \? ', edited in the photo editor' : ''\}`, lazy: false \}\);/);
+  // (2026-10-19) one saved from an editor: the photo editor's, or a template meme's from the meme editor
+  assert.match(shared, /const editorName = j\.template === true \? 'meme' : 'photo';/);
+  assert.match(shared, /\$\{edited \? `, edited: \$\{edited\}` : byEditor \? `, edited in the \$\{editorName\} editor` : ''\}`, lazy: false \}\);/);
   assert.match(shared, /edited \? h\('p', \{ class: 'sa-edit-words' \}, icon\('wand'\), h\('span', \{ text: `Edited with words: “\$\{edited\}”` \}\)\) : null,/);
 
   // ---- an influencer's page (src/studio/views/influencer.js) ----
@@ -10331,8 +10466,9 @@ test('(2026-10-12, the editor) the page: "Edit with words" first in the sheet of
   assert.match(fn, /const at = focusPlace\(galleryBox\);\n\s+if \(at\) focusNext = \{ place: at, until: Date\.now\(\) \+ 15_000 \};\n\s+sigs\.gallery = null;\n\s+load\(\);/);
   assert.match(fn, /s\.setFoot\(cancel, go\);\n\s+requestAnimationFrame\(\(\) => area\.focus\(\)\);/);
   assert.doesNotMatch(fn, /innerHTML|insertAdjacentHTML|style=|\.style\./);
-  // its tile, once made: "Edited" (an X banner's and a meme's own tags stay theirs)
-  assert.match(inf, /: j\.meme \? \{ text: 'Meme', icon: 'smile' \}\n\s+: j\.edit \? \{ text: 'Edited', icon: 'wand' \} : (?:j\.editor \? \{ text: 'Edited', icon: 'sliders' \} : )?null \}\)\);/);
+  // its tile, once made: "Edited" (an X banner's and a meme's own tags stay theirs; since 2026-10-19 a template meme saved from
+  // the meme editor is "Edited" with the meme editor's icon)
+  assert.match(inf, /: j\.meme \? \(j\.template && j\.editor \? \{ text: 'Edited', icon: 'type', corner: true \} : \{ text: 'Meme', icon: 'smile', corner: true \}\)\n\s+: j\.edit \? \{ text: 'Edited', icon: 'wand' \} : (?:j\.editor \? \{ text: 'Edited', icon: 'sliders' \} : )?null \}\)\);/);
   // its words are the visitor's: never an AI service named in what the page says
   assert.doesNotMatch(fn, PROVIDERS);
 
@@ -10661,7 +10797,8 @@ test('(2026-10-12, the editor) influencers.sql\'s promises for the photo editor:
   assert.match(take, /if site >= p_site_cap then return json_build_object\('ok', false, 'why', 'busy_day'\); end if;\n\s+if not coalesce\(p_take, true\) then return json_build_object\('ok', true, 'left', p_per_day - mine\); end if;/);
   const add = body('inf_photo_add');
   assert.match(add, /if exists \(select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null\) then\s+return json_build_object\('ok', false, 'why', 'banned'\);/);
-  assert.match(add, /f\.kind <> 'photo' or f\.status <> 'done' or f\.hidden or f\.deleted_at is not null then\n\s+return json_build_object\('ok', false, 'why', 'image'\);/);
+  // ((2026-10-14) never a template meme: its words are layers its own editor changes, "Save as a new meme")
+  assert.match(add, /f\.kind <> 'photo' or f\.status <> 'done' or f\.hidden or f\.deleted_at is not null\n\s+or f\.layers is not null then\n\s+return json_build_object\('ok', false, 'why', 'image'\);/);
   assert.match(add, /if \(f\.shape = 'banner'\) <> \(p_shape = 'banner'\) then return json_build_object\('ok', false, 'why', 'bad'\); end if;/);
   // (2026-10-13, 💜 With AGI-1: AGI-1 is in it when she's in the photo it's from)
   assert.match(add, /insert into agi1_inf_jobs \(id, inf_id, wallet_code, kind, scene, shape, image, cost, status, files, bytes, editor, done_at, agi1\)\n\s+values \(p_job, p_inf, p_wallet, 'photo', f\.scene, p_shape, p_from, 0, 'done', 1, p_bytes, true, now\(\), coalesce\(f\.agi1, false\)\);/);
@@ -10679,20 +10816,34 @@ test('(2026-10-12, the editor) influencers.sql\'s promises for the photo editor:
 test('(2026-10-12, the editor) the page: "Edit photo" over its own photos (a meme, an X banner) seen big, Delete its trash can alone, never "Make another" for one saved from the photo editor; the photo editor (its tools as tabs, its picture on a canvas drawn with one color matrix, its words and stickers, the keyboard, Undo and Start again; Download with the share mark, drawn here; Save, our server first; every style through the CSSOM); its words (never an AI service named); its styles; Learn and the AI helper\'s guide', async () => {
   // ---- over one of its own photos seen big (src/studio/views/shared.js) ----
   const shared = strip(read('src/studio/views/shared.js'));
-  // (since the video editor, the same day: a video's or a trend video's is "Edit video")
-  assert.match(shared, /const editor = j\.kind === 'photo' && own\.onEditor \? go\('Edit photo', 'sliders', own\.onEditor\)\n\s+: \['video', 'trend'\]\.includes\(j\.kind\) && own\.onVideoEditor \? go\('Edit video', 'scissors', own\.onVideoEditor\) : null;/);
+  // (since the video editor, the same day: a video's or a trend video's is "Edit video"; since 2026-10-19 a template meme's is
+  // "Edit meme", the meme editor's)
+  assert.match(shared, /const editor = j\.kind === 'photo' && own\.onEditor \? \(j\.template \? go\('Edit meme', 'type', own\.onEditor\) : go\('Edit photo', 'sliders', own\.onEditor\)\)\n\s+: \['video', 'trend'\]\.includes\(j\.kind\) && own\.onVideoEditor \? go\('Edit video', 'scissors', own\.onVideoEditor\) : null;/);
   assert.match(shared, /const again = own\.onAgain \? go\(/);
   assert.match(shared, /const del = go\('', 'trash', own\.onDelete, \{ kind: 'quiet', class: 'sa-btn sa-btn-quiet sa-btn-sm sa-edit-delete', 'aria-label': 'Delete', title: 'Delete' \}\);/);
   // (2026-10-13, 💜 With AGI-1) "Add AGI-1" after its editors, on a photo she isn't in (the row measured: it can wrap onto two lines)
   assert.match(shared, /const addHer = j\.kind === 'photo' && j\.agi1 !== true && own\.onAddHer \? go\('Add AGI-1', 'agi1', own\.onAddHer, \{ class: 'sa-btn sa-btn-ghost sa-btn-sm sa-edit-her' \}\) : null;/);
-  assert.match(shared, /const row = h\('div', \{ class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' \}, edit, editor, addHer, again, del\);\n\s+const rowH = \(\) => s\.dialog\.style\.setProperty\('--sa-row-h', `\$\{row\.offsetHeight\}px`\);\n\s+const watch = typeof ResizeObserver === 'function' \? new ResizeObserver\(rowH\) : null;\n\s+watch\?\.observe\(row\);\n\s+s\.done\.then\(\(\) => watch\?\.disconnect\(\)\);\n\s+return row;/);
+  assert.match(shared, /const row = h\('div', \{ class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' \}, edit, editor, addHer, addSomeone, again, del\);\n\s+const rowH = \(\) => s\.dialog\.style\.setProperty\('--sa-row-h', `\$\{row\.offsetHeight\}px`\);\n\s+const watch = typeof ResizeObserver === 'function' \? new ResizeObserver\(rowH\) : null;\n\s+watch\?\.observe\(row\);\n\s+s\.done\.then\(\(\) => watch\?\.disconnect\(\)\);\n\s+return row;/);
   assert.match(shared, /const byEditor = kind === 'photo' && j\.editor === true;/);
-  assert.match(shared, /byEditor \? h\('p', \{ class: 'sa-edit-words' \}, icon\('sliders'\), h\('span', \{ text: 'Edited in the photo editor' \}\)\) : null,/);
+  assert.match(shared, /byEditor \? h\('p', \{ class: 'sa-edit-words' \}, icon\(editorName === 'meme' \? 'type' : 'sliders'\), h\('span', \{ text: `Edited in the \$\{editorName\} editor` \}\)\) : null,/);
   // ---- an influencer's page ----
   const inf = strip(read('src/studio/views/influencer.js'));
   assert.match(inf, /import \{ photoEditor \} from '\.\/photo-editor\.js';/);
-  assert.match(inf, /cost: againCost\(j\), onAgain: j\.editor \? null : \(x\) => again\(x\), onDelete: \(x\) => removeJob\(x\),\n\s+onEdit: j\.kind === 'photo' \? \(x\) => editWithWords\(x\) : null, onEditor: j\.kind === 'photo' \? \(x\) => openEditor\(x\) : null,\n\s+onVideoEditor: \['video', 'trend'\]\.includes\(j\.kind\) \? \(x\) => openVideoEditor\(x\) : null,/);
+  assert.match(inf, /import \{ memeEditor \} from '\.\/meme-editor\.js';/);
+  // (a template meme opens the meme editor, any other photo the photo editor; one saved from the meme editor keeps Make another:
+  // our server makes it again from its template)
+  assert.match(inf, /cost: againCost\(j\), onAgain: j\.editor && !j\.template \? null : \(x\) => again\(x\), onDelete: \(x\) => removeJob\(x\),\n\s+onEdit: j\.kind === 'photo' \? \(x\) => editWithWords\(x\) : null, onEditor: j\.kind === 'photo' \? \(x\) => \(x\.template \? openMemeEditor\(x\) : openEditor\(x\)\) : null,\n\s+onVideoEditor: \['video', 'trend'\]\.includes\(j\.kind\) \? \(x\) => openVideoEditor\(x\) : null,/);
   assert.match(inf, /photoEditor\(ctx, \{ inf: id, job: j, name: inf\(\)\?\.name, onSaved: \(\) => \{/);
+  assert.match(inf, /memeEditor\(ctx, \{ inf: id, job: j, name: inf\(\)\?\.name, onSaved: \(\) => \{/);
+  // its gallery's badge: an edited template meme "Edited" (its own icon), any other meme "Meme"; (2026-10-19) both as a round
+  // mark in the tile's top right corner, never a tag over the meme's words at its top left
+  assert.match(inf, /: j\.meme \? \(j\.template && j\.editor \? \{ text: 'Edited', icon: 'type', corner: true \} : \{ text: 'Meme', icon: 'smile', corner: true \}\)/);
+  const tileFn = shared.slice(shared.indexOf('export function mediaTile('), shared.indexOf('export function hoverPlay('));
+  assert.match(tileFn, /const corner = Boolean\(badge\?\.corner && badge\.icon && isPhoto\);/);
+  assert.match(tileFn, /badge && !corner \? h\('span', \{ class: `sa-tag sa-media-tag/);
+  assert.match(tileFn, /isPhoto \? \(corner \? h\('span', \{ class: 'sa-media-corner', title: badge\.text, 'aria-hidden': 'true' \}, icon\(badge\.icon\)\) : null\)\n\s+: h\('span', \{ class: 'sa-media-play', 'aria-hidden': 'true' \}, icon\('play'\)\),/);
+  assert.match(tileFn, /item\.shape === 'banner' \? 'an X banner' : item\.meme \? 'a meme' : 'a photo'/);
+  assert.match(read('src/styles/studio-app.css'), /\.sa-media-play,\n\.sa-media-corner \{\n\s+position: absolute;\n\s+top: 7px;\n\s+right: 7px;/);
   assert.match(inf, /: j\.edit \? \{ text: 'Edited', icon: 'wand' \} : j\.editor \? \{ text: 'Edited', icon: 'sliders' \} : null \}\)\);/);
   // ---- the photo editor (src/studio/views/photo-editor.js) ----
   const pe = strip(read('src/studio/views/photo-editor.js'));
@@ -11677,13 +11828,15 @@ test('(2026-10-12, the editor) influencers.sql\'s promises for the video editor:
   assert.match(add, /jsonb_typeof\(p_cut\) <> 'object'\n\s+or octet_length\(p_cut::text\) > 600/);
   assert.match(add, /perform pg_advisory_xact_lock\(hashtext\('agi1-inf-wallet:' \|\| p_wallet\)\);/);
   assert.match(add, /if exists \(select 1 from agi1_inf_bans where wallet_code = p_wallet and lifted_at is null\) then\s+return json_build_object\('ok', false, 'why', 'banned'\);/);
-  assert.match(add, /f\.kind not in \('video', 'trend'\) or f\.status <> 'done' or f\.hidden\n\s+or f\.deleted_at is not null then\n\s+return json_build_object\('ok', false, 'why', 'from'\);/);
+  // ((2026-10-14) never from one with someone else in it who may no longer be seen)
+  assert.match(add, /f\.kind not in \('video', 'trend'\) or f\.status <> 'done' or f\.hidden\n\s+or f\.deleted_at is not null or not inf_cast_shown\(f\.cast_inf\) then\n\s+return json_build_object\('ok', false, 'why', 'from'\);/);
   assert.match(add, /if \(select count\(\*\) from agi1_inf_jobs where wallet_code = p_wallet and kind = 'video' and editor and status in \('paid', 'making'\)\) >= p_open then\n\s+return json_build_object\('ok', false, 'why', 'cuts_open'\);/);
   assert.ok(add.indexOf("'cuts_open'") < add.indexOf('inf_tool_take('), 'a fourth waits, nothing counted');
   // its use and the cut together (a "no", or its id taken: neither, the block rolled back)
   assert.match(add, /begin\n\s+t := inf_tool_take\(p_wallet, 'video', p_per_day, p_site_cap, true\);\n\s+if \(t ->> 'ok'\)::boolean is not true then raise exception using errcode = 'P0001', message = coalesce\(t ->> 'why', 'busy'\); end if;/);
   // (2026-10-13, 💜 With AGI-1: AGI-1 is in it when she's in the video it's from)
-  assert.match(add, /insert into agi1_inf_jobs \(id, inf_id, wallet_code, kind, scene, shape, sound, image, cost, status, seconds, editor, cut, agi1\)\n\s+values \(p_job, p_inf, p_wallet, 'video', f\.scene, p_shape, p_sound, p_from, 0, 'paid', p_seconds, true, p_cut, coalesce\(f\.agi1, false\)\);\n\s+exception\n\s+when unique_violation then return json_build_object\('ok', false, 'why', 'taken'\);/);
+  // ((2026-10-14) and who else is in it when it's cut from a template meme's video)
+  assert.match(add, /insert into agi1_inf_jobs \(id, inf_id, wallet_code, kind, scene, shape, sound, image, cost, status, seconds, editor, cut, agi1,\n\s+cast_inf\)\n\s+values \(p_job, p_inf, p_wallet, 'video', f\.scene, p_shape, p_sound, p_from, 0, 'paid', p_seconds, true, p_cut, coalesce\(f\.agi1, false\),\n\s+f\.cast_inf\);\n\s+exception\n\s+when unique_violation then return json_build_object\('ok', false, 'why', 'taken'\);/);
   const done = body('inf_cut_done');
   assert.match(done, /^create or replace function public\.inf_cut_done\(p_id text, p_bytes integer, p_sound boolean, p_seconds integer\)/);
   assert.match(done, /seconds = least\(greatest\(coalesce\(p_seconds, seconds\), 1\), 15\)::smallint, marked = true, mark_at = now\(\)/);
@@ -11693,7 +11846,8 @@ test('(2026-10-12, the editor) influencers.sql\'s promises for the video editor:
   assert.match(body('inf_job_delete'), /x\.image = p_id and x\.status in \('paid', 'making'\)\) then\n\s+return json_build_object\('ok', false, 'why', 'in_use'\);/);
   assert.match(sql, /j\.deleted_at, j\.edit, j\.editor, j\.cut,/);
   assert.equal((body('inf_admin_stats').match(/when editor and kind = 'photo' then 'edited' when editor then 'cut' when shape = 'banner'/g) || []).length, 2);
-  assert.match(sql, /'inf_cut_add\(text, text, text, text, text, integer, boolean, jsonb, integer, integer, integer\)',\n\s+'inf_cut_done\(text, integer, boolean, integer\)', 'inf_cut_due\(\)'\n\s+\] loop/);
+  // ((2026-10-14) the meme templates' two after them)
+  assert.match(sql, /'inf_cut_add\(text, text, text, text, text, integer, boolean, jsonb, integer, integer, integer\)',\n\s+'inf_cut_done\(text, integer, boolean, integer\)', 'inf_cut_due\(\)',\n\s+-- \(2026-10-14\) meme templates\n\s+'inf_cast_shown\(text\)', 'inf_meme_add\(text, text, text, text, jsonb, text, text, integer\)'\n\s+\] loop/);
   // the ready check: its column, its checks, and the functions that know it
   assert.match(sql, /column_name = 'cut'\)\n\s+and exists \(select 1 from pg_constraint where conrelid = 'public\.agi1_inf_jobs'::regclass and conname = 'agi1_inf_jobs_cut_check'\)/);
   assert.match(sql, /conname = 'agi1_inf_jobs_editor_check'\n\s+and pg_get_constraintdef\(oid\) like '%''video''%'\)/);
@@ -12317,4 +12471,901 @@ test('(2026-10-13, 💜 With AGI-1) Explore\'s row of creations with her: only p
   assert.ok(r.body.agi1.every((t) => t.agi1 === true && t.inf.id === nova.id && t.inf.name === 'Nova'));
   for (const j of [plain, banner, hidden, priv]) assert.ok(!ids.includes(j), j);
   assert.equal(r.body.fresh.find((t) => t.id === plain)?.agi1, false);
+});
+
+// ---------- (2026-10-14) meme templates: src/studio/memes.js (its own rules and drawing: tests/memes.test.js) ----------
+const MEME_TPL = async () => {
+  const [MT, MR, IW, J, H] = await Promise.all([import('../src/studio/memes.js'), import('../server/meme-render.js'), import('../server/inf-words.js'),
+    import('../server/inf-jobs.js'), import('../server/inf-agi1.js')]);
+  const signed = (name) => `/storage/v1/object/sign/agi1-characters/${name}`;
+  const paths = (f) => (f.input.image_urls || [f.input.start_image_url]).map((x) => new URL(x).pathname);
+  // a template's words as its card has them (its first sample), checked as our server keeps them
+  const words = (id, texts) => MT.checkLayers(MT.defaultLayers(MT.templateOf(id), texts ?? MT.templateOf(id).samples[0])).layers;
+  // one made, as its page asks (every other job of the person's done first: 4 at once at most)
+  const make = (inf, input, opts) => {
+    nextMinute();
+    for (const j of fake.db.jobs.values()) if (!['done', 'failed'].includes(j.status)) Object.assign(j, { status: 'done', done: Date.now(), lease: 0 });
+    return act('inf-make', { id: inf, kind: 'photo', ...input }, opts);
+  };
+  const asked = () => dbCalls('inf_make').at(-1);
+  // a template meme made and kept (its picture without words and the meme with them), straight through our server
+  const kept = async (inf, input) => {
+    const r = await make(inf, input);
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const t = await finish(r.body.job);
+    assert.equal(t.state, 'done', JSON.stringify(t));
+    return r.body.job;
+  };
+  return { MT, MR, IW, J, H, signed, paths, words, make, asked, kept };
+};
+
+test('(2026-10-14, meme templates) a new template meme: a photo\'s price (Classic at its template\'s quality and shape), its words and its share mark\'s spot, its scene or its card\'s line, someone in one of its roles, the AI asked for a picture without words, kept as its picture without words and the meme with ours; every "no" with nothing made or paid', async () => {
+  const { MT, MR, H, signed, paths, words, make, asked } = await MEME_TPL();
+  giveCredits(20000);
+  const nova = await readyInf({ name: 'Nova', style: 'anime' });
+  const kai = await readyInf({ name: 'Kai', style: 'anime' });
+  const tpl = MT.templateOf('distracted');
+  const layers = words('distracted');
+  // a popular format without a scene typed: its card's line stands in for it (never told to the AI); Classic at its quality
+  let r = await make(nova.id, { meme: 'distracted', layers });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const spec = { model: 'classic', quality: MT.memeQuality(tpl), shape: MT.memeShape(tpl), meme: 'distracted' };
+  assert.equal(r.body.cost, R.photoCredits(spec, 1));
+  let a = asked();
+  assert.deepEqual([a.p_meme, a.p_model, a.p_quality, a.p_shape, a.p_scene, a.p_caption], ['distracted', 'classic', spec.quality, spec.shape, tpl.about, MT.layersCaption(layers)]);
+  assert.deepEqual(a.p_layers, layers);
+  assert.equal(a.p_mark, await MR.markSpotFor(layers, tpl, 'photo'));
+  assert.ok(MT.isMarkSpot(a.p_mark));
+  assert.ok(!('p_cast' in a) && !('p_role' in a) && !('p_agi1' in a), JSON.stringify(a));
+  const job = r.body.job;
+  await tick(job);
+  let f = lastFal();
+  assert.equal(f.model, MODELS.edit);
+  assert.deepEqual([f.input.aspect_ratio, f.input.num_images, f.input.resolution], [MT.memeRatio(tpl), 1, '1K']);
+  assert.deepEqual(paths(f), [signed(picPath(nova.id, nova.body, 0))]);
+  assert.match(f.input.prompt, /No words anywhere in the picture/);
+  assert.ok(!f.input.prompt.includes(tpl.about), "its card's line is never told to the AI");
+  for (const l of layers) if (l.t.length > 12) assert.ok(!f.input.prompt.includes(l.t), `its words are ours to draw: ${l.t}`);
+  // kept: its picture without words (exactly its picture box), the meme with our words (its canvas) and a small WebP; Gemini
+  // looked at the meme first
+  const looks = geminiCalls().length;
+  let t = await finish(job);
+  assert.equal(t.state, 'done', JSON.stringify(t));
+  assert.ok(geminiCalls().length > looks, 'Gemini looked at it');
+  const box = MT.picBox(tpl), C = MT.MEME_CANVAS[tpl.canvas];
+  const picMeta = await sharp(fake.storage.get(`inf/${nova.id}/${job}.pic.jpg`).bytes).metadata();
+  const memeMeta = await sharp(fake.storage.get(picPath(nova.id, job, 0)).bytes).metadata();
+  assert.deepEqual([picMeta.width, picMeta.height, memeMeta.width, memeMeta.height, memeMeta.format], [box.w, box.h, C.w, C.h, 'jpeg']);
+  assert.equal(fake.storage.get(picPath(nova.id, job, 0, 'webp')).type, 'image/webp');
+  assert.equal(stored(hdPath(nova.id, job, 0)).length, 0, 'no full-size copy: its download is the meme itself');
+  assert.equal(dbCalls('inf_job_done').at(-1).p_files, 1);
+  // its own words for its picture: kept and told to the AI
+  r = await make(nova.id, { meme: 'distracted', layers, scene: 'at a crowded summer street market, everyone in bright colors' });
+  assert.deepEqual([r.status, asked().p_scene], [200, 'at a crowded summer street market, everyone in bright colors'], JSON.stringify(r.body));
+  await tick(r.body.job);
+  assert.match(lastFal().input.prompt, /crowded summer street market/);
+  // a classic says what its picture shows: its words needed
+  r = await make(nova.id, { meme: 'topbottom', layers: words('topbottom') });
+  assert.deepEqual([r.status, r.body.error, r.body.field, r.body.why], [422, 'words', 'scene', 'empty']);
+  r = await make(nova.id, { meme: 'topbottom', layers: words('topbottom'), scene: 'at a desk with a big mug of coffee, eyes wide open' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  // another of the person's influencers in one of its roles (picked, else its first), after its full body; AGI-1 the same way
+  r = await make(nova.id, { meme: 'distracted', layers, cast: kai.id, role: 'partner' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([asked().p_cast, asked().p_role, r.body.cost], [kai.id, 'partner', R.photoCredits(spec, 1)]);
+  await tick(r.body.job);
+  assert.deepEqual(paths(lastFal()), [signed(picPath(nova.id, nova.body, 0)), signed(picPath(kai.id, kai.body, 0))]);
+  r = await make(nova.id, { meme: 'distracted', layers, cast: kai.id });
+  assert.deepEqual([r.status, asked().p_role], [200, MT.castOf(tpl)[0].id]);
+  r = await make(nova.id, { meme: 'distracted', layers, agi1: true, role: 'stranger' });
+  assert.deepEqual([r.status, asked().p_agi1, asked().p_role, 'p_cast' in asked()], [200, true, 'stranger', false], JSON.stringify(r.body));
+  await tick(r.body.job);
+  assert.deepEqual(paths(lastFal()), [signed(picPath(nova.id, nova.body, 0)), signed(H.agi1Names().body)]);
+  // every "no", with nothing made or paid
+  const lee = await readyInf({ name: 'Lee' });
+  fake.db.infs.get(lee.id).status = 'making';
+  const priv = await readyInf({ name: 'Priv', real: true });
+  const other = await readyInf({ name: 'Other', wallet: OTHER });
+  const n0 = dbCalls('inf_make').length, paid = credits().paid;
+  const big = Array.from({ length: MT.LAYERS.MAX + 1 }, () => ({ ...layers[0] }));
+  const L = MT.checkLayers(big);
+  const cases = [
+    [{ meme: 'nope', layers }, [422, 'words', 'meme', 'empty']],
+    [{ meme: 'distracted', layers: [] }, [422, 'words', 'layers', 'empty']],
+    [{ meme: 'distracted', layers: big }, [422, 'words', 'layers', L.why]],
+    [{ meme: 'distracted', layers: [layers[0], { ...layers[1], t: 'x'.repeat(MT.LAYERS.TEXT_MAX + 1) }] }, [422, 'words', 'layers', 'long', 1]],
+    [{ meme: 'distracted', layers: [{ ...layers[0], t: 'BUY $AGI NOW' }] }, [422, 'words', 'layers', 'money', 0]],
+    [{ meme: 'distracted', layers: [layers[0], { ...layers[1], t: 'Nova 漢字' }] }, [422, 'words', 'layers', 'chars', 1]],
+    [{ meme: 'distracted', layers, model: 'crisp' }, [400, 'model']],
+    [{ meme: 'distracted', layers, quality: 'ultra' }, [400, 'model']],
+    [{ meme: 'distracted', layers, kind: 'video' }, [400, 'bad']],
+    [{ meme: 'distracted', layers, lines: ['one'] }, [400, 'bad']],
+    [{ meme: 'nahyeah', layers: words('nahyeah'), cast: kai.id }, [409, 'cast_none']],
+    [{ meme: 'nahyeah', layers: words('nahyeah'), agi1: true }, [409, 'cast_none']],
+    [{ meme: 'distracted', layers, cast: kai.id, role: 'nope' }, [400, 'role']],
+    [{ meme: 'distracted', layers, role: 'partner' }, [400, 'bad']],
+    [{ meme: 'distracted', layers, cast: kai.id, agi1: true }, [400, 'cast_one']],
+    [{ meme: 'distracted', layers, cast: nova.id }, [409, 'cast']],
+    [{ meme: 'distracted', layers, cast: other.id }, [409, 'cast']],
+    [{ meme: 'distracted', layers, cast: 'not an id' }, [409, 'cast']],
+    [{ meme: 'distracted', layers, cast: lee.id }, [409, 'cast_ready']],
+    [{ meme: 'distracted', layers, cast: priv.id }, [409, 'cast_private']],
+    [{ scene: 'reading a book on a sunny balcony', cast: kai.id }, [409, 'cast']],      // a plain photo never takes another influencer
+  ];
+  for (const [input, want] of cases) {
+    r = await make(nova.id, input);
+    const got = r.body.error === 'words' ? [r.status, r.body.error, r.body.field, r.body.why, ...(want.length > 4 ? [r.body.n ?? null] : [])] : [r.status, r.body.error];
+    assert.deepEqual(got, want, `${JSON.stringify(input).slice(0, 120)} → ${JSON.stringify(r.body)}`);
+    if (r.body.why === 'chars') assert.deepEqual(r.body.chars, ['漢', '字']);
+  }
+  assert.deepEqual([dbCalls('inf_make').length, credits().paid], [n0, paid], 'nothing made or paid');
+  // a private influencer may have a public one in its memes (never the other way round)
+  r = await make(priv.id, { meme: 'distracted', layers, cast: nova.id });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  // an older influencers.sql: nothing made or paid, and the log says to run it again
+  fake.oldArgs.set('inf_make', ['p_layers']);
+  const paid2 = credits().paid;
+  r = await make(nova.id, { meme: 'distracted', layers });
+  assert.deepEqual([r.status, r.body.error, credits().paid], [503, 'not_ready', paid2]);
+  assert.ok(logs.some((l) => /run supabase\/influencers\.sql again.*meme templates/.test(l)), logs.join('\n'));
+  assert.equal((await make(nova.id, { scene: 'reading a book on a sunny balcony', shape: 'tall' })).status, 200);   // without them, as before
+  fake.oldArgs.clear();
+});
+
+test('(2026-10-14, meme templates) from a template meme: Add someone (AGI-1 or another of the person\'s influencers, in one of its roles), Edit with words, Animate (5 seconds, its words and who\'s in it its own), never a trend video; someone gone meanwhile; Make another of each', async () => {
+  const { MT, MR, IW, J, H, signed, paths, words, make, asked, kept } = await MEME_TPL();
+  giveCredits(40000);
+  const nova = await readyInf({ name: 'Nova', style: 'anime' });
+  const kai = await readyInf({ name: 'Kai', style: 'anime' });
+  const tpl = MT.templateOf('distracted');
+  const layers = words('distracted');
+  const spec = { model: 'classic', quality: MT.memeQuality(tpl), shape: MT.memeShape(tpl), meme: 'distracted' };
+  const M = await kept(nova.id, { meme: 'distracted', layers });
+  const row = fake.db.jobs.get(M);
+  assert.ok(MT.isMarkSpot(row.mark_spot));
+  const pic = signed(J.memePicPath(nova.id, M)), body = signed(picPath(nova.id, nova.body, 0)), kaiBody = signed(picPath(kai.id, kai.body, 0));
+  const same = (a) => [a.p_meme, a.p_caption, a.p_mark, a.p_model, a.p_quality, a.p_shape, JSON.stringify(a.p_layers)];
+  const own = [row.meme, row.caption, row.mark_spot, 'classic', spec.quality, spec.shape, JSON.stringify(layers)];
+  // Add AGI-1: its picture without words made again with her in its first role, its words, template and mark its own
+  let r = await make(nova.id, { image: M, agi1: true });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.cost, asked().p_image, asked().p_agi1, asked().p_role, 'p_edit' in asked()], [R.photoCredits(spec, 1), M, true, 'stranger', false]);
+  assert.deepEqual(same(asked()), own);
+  const addHer = r.body.job;
+  await tick(addHer);
+  assert.equal(lastFal().model, MODELS.edit);
+  assert.deepEqual(paths(lastFal()), [pic, body, signed(H.agi1Names().body)]);
+  assert.match(lastFal().input.prompt, /^Edit the first picture: put /);
+  assert.match(lastFal().input.prompt, /No words anywhere in the picture/);
+  // Add Kai (another of the person's influencers) in the role picked: after its full body
+  r = await make(nova.id, { image: M, cast: kai.id, role: 'partner' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([asked().p_cast, asked().p_role, 'p_agi1' in asked()], [kai.id, 'partner', false]);
+  assert.deepEqual(same(asked()), own);
+  const addKai = r.body.job;
+  await tick(addKai);
+  assert.deepEqual(paths(lastFal()), [pic, body, kaiBody]);
+  // one at most: never into one with someone in it already; a plain photo never takes another influencer
+  const MK = await kept(nova.id, { meme: 'distracted', layers, cast: kai.id });
+  const MH = await kept(nova.id, { meme: 'distracted', layers, agi1: true });
+  const plain = await doneJob(nova.id, 'photo');
+  for (const [input, want] of [[{ image: MK, agi1: true }, [409, 'cast_has']], [{ image: MK, cast: kai.id }, [409, 'cast_has']],
+    [{ image: MH, cast: kai.id }, [409, 'agi1_has']], [{ image: MH, agi1: true }, [409, 'agi1_has']], [{ image: plain, cast: kai.id }, [409, 'cast']],
+    [{ image: plain, cast: kai.id, role: 'partner' }, [409, 'cast']], [{ image: M, cast: kai.id, role: 'nope' }, [400, 'role']]]) {
+    r = await make(nova.id, input);
+    assert.deepEqual([r.status, r.body.error], want, JSON.stringify(input));
+  }
+  // Edit with words: its picture without words, its full body (and whoever is in it after them), still no words of the AI's
+  r = await make(nova.id, { image: M, edit: 'make it snow' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([asked().p_edit, asked().p_image, r.body.cost], ['make it snow', M, R.photoCredits(spec, 1)]);
+  assert.deepEqual(same(asked()), own);
+  const edited = r.body.job;
+  await tick(edited);
+  assert.deepEqual(paths(lastFal()), [pic, body]);
+  assert.match(lastFal().input.prompt, /^Edit the first picture: Make it snow\./);
+  assert.match(lastFal().input.prompt, /No words anywhere in the picture/);
+  r = await make(nova.id, { image: MK, edit: 'make it snow' });
+  assert.deepEqual([r.status, asked().p_cast, asked().p_role], [200, kai.id, 'stranger'], JSON.stringify(r.body));
+  await tick(r.body.job);
+  assert.deepEqual(paths(lastFal()), [signed(J.memePicPath(nova.id, MK)), body, kaiBody]);
+  // Animate: 5 seconds by Standard from its picture without words (its first frame), its template's motion unless they say
+  // what moves, with sound unless asked without; a square or tall video; its words and the mark (a video's spot) its own
+  r = await make(nova.id, { kind: 'video', image: M });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const vspec = R.videoSpec({ model: 'standard', seconds: 5, sound: true });
+  let a = asked();
+  assert.deepEqual([r.body.cost, a.p_kind, a.p_model, a.p_seconds, a.p_shape, a.p_scene, a.p_meme, a.p_caption, a.p_mark],
+    [R.videoCredits(vspec, 1), 'video', 'standard', 5, 'square', MT.motionOf(tpl), 'distracted', row.caption, await MR.markSpotFor(layers, tpl, 'video')]);
+  assert.deepEqual(a.p_layers, layers);
+  const animated = r.body.job;
+  await tick(animated);
+  let f = lastFal();
+  assert.deepEqual([f.model, f.input.duration, f.input.generate_audio, paths(f)], [MODELS.i2v, '5', true, [pic]]);
+  assert.ok(f.input.prompt.includes(MT.motionOf(tpl)), f.input.prompt);
+  r = await make(nova.id, { kind: 'video', image: M, sound: false, scene: 'everyone in the street starts dancing to a song' });
+  assert.deepEqual([r.status, asked().p_scene], [200, 'everyone in the street starts dancing to a song'], JSON.stringify(r.body));
+  await tick(r.body.job);
+  assert.deepEqual([lastFal().input.generate_audio, /starts dancing/.test(lastFal().input.prompt)], [false, true]);
+  r = await make(nova.id, { kind: 'video', image: MK });
+  assert.deepEqual([r.status, asked().p_cast, asked().p_role], [200, kai.id, 'stranger'], JSON.stringify(r.body));
+  const animatedKai = r.body.job;
+  r = await make(nova.id, { kind: 'video', image: MH });
+  assert.deepEqual([r.status, asked().p_agi1], [200, true], JSON.stringify(r.body));
+  // …and its "no"s: another model, length or quality, references, AGI-1 when she isn't in it; never a trend video from one
+  const n0 = dbCalls('inf_make').length;
+  for (const [input, want] of [[{ model: 'pro' }, [400, 'model']], [{ seconds: 10 }, [400, 'model']], [{ quality: '720p' }, [400, 'model']],
+    [{ refs: [idOf('someref')] }, [409, 'refs']], [{ agi1: true }, [409, 'agi1_photo']]]) {
+    r = await make(nova.id, { kind: 'video', image: M, ...input });
+    assert.deepEqual([r.status, r.body.error], want, JSON.stringify(input));
+  }
+  r = await make(nova.id, { kind: 'trend', image: M, trend: 'golden-flip' });
+  assert.deepEqual([r.status, r.body.error], [409, 'image']);
+  assert.equal(dbCalls('inf_make').length, n0);
+  // someone in it gone (deleted): the memes they're in go with them (never a start again); there but not ready: an edit or its
+  // video can't be made (nothing paid)…
+  for (const [status, want] of [['deleted', ['image', 'image', 'cast']], ['making', ['cast_gone', 'cast_gone', 'cast_ready']]]) {
+    fake.db.infs.get(kai.id).status = status;
+    for (const [n, input] of [{ kind: 'video', image: MK }, { image: MK, edit: 'make it rain' }, { meme: 'distracted', layers, cast: kai.id }].entries()) {
+      r = await make(nova.id, input);
+      assert.deepEqual([r.status, r.body.error], [409, want[n]], `${status}: ${JSON.stringify(input)}`);
+    }
+  }
+  fake.db.infs.get(kai.id).status = 'ready';
+  assert.equal(dbCalls('inf_make').length, n0);
+  // …and one made before they went: never sent, its credits back (gone, or taken down by the owner: STUDIO_HIDE)
+  for (const away of ['deleted', 'hidden']) {
+    r = await make(nova.id, { meme: 'distracted', layers, cast: kai.id });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const paid = credits().paid;
+    if (away === 'deleted') fake.db.infs.get(kai.id).status = 'deleted';
+    else process.env.STUDIO_HIDE = kai.id;
+    const sent = falCalls().length;
+    const t = await tick(r.body.job);
+    assert.deepEqual([t.state, t.step, fake.db.jobs.get(r.body.job).status, falCalls().length], ['failed', 'queue', 'failed', sent], away);
+    assert.equal(credits().paid, paid + R.photoCredits(spec, 1), `${away}: its credits back`);
+    fake.db.infs.get(kai.id).status = 'ready';
+    delete process.env.STUDIO_HIDE;
+  }
+  // Make another of each: the same words and settings, at today's price
+  const again = async (job) => { nextMinute(); for (const j of fake.db.jobs.values()) if (!['done', 'failed'].includes(j.status)) Object.assign(j, { status: 'done', done: Date.now(), lease: 0 }); return act('inf-again', { job }); };
+  r = await again(M);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  a = asked();
+  assert.deepEqual([a.p_kind, a.p_scene, a.p_image ?? null, 'p_cast' in a], ['photo', tpl.about, null, false]);
+  assert.deepEqual(same(a), own);
+  r = await again(MK);
+  assert.deepEqual([r.status, asked().p_cast, asked().p_role], [200, kai.id, 'stranger'], JSON.stringify(r.body));
+  r = await again(addHer);
+  assert.deepEqual([r.status, asked().p_image, asked().p_agi1, asked().p_role], [200, M, true, 'stranger'], JSON.stringify(r.body));
+  r = await again(addKai);
+  assert.deepEqual([r.status, asked().p_image, asked().p_cast, asked().p_role], [200, M, kai.id, 'partner'], JSON.stringify(r.body));
+  r = await again(edited);
+  assert.deepEqual([r.status, asked().p_image, asked().p_edit], [200, M, 'make it snow'], JSON.stringify(r.body));
+  r = await again(animated);
+  a = asked();
+  assert.deepEqual([r.status, a.p_kind, a.p_image, a.p_model, a.p_seconds, a.p_scene], [200, 'video', M, 'standard', 5, MT.motionOf(tpl)], JSON.stringify(r.body));
+  assert.deepEqual([fake.db.jobs.get(animated).sound, fake.db.jobs.get(r.body.job).sound], [true, true], 'its sound as it was');
+  r = await again(animatedKai);
+  assert.deepEqual([r.status, asked().p_cast], [200, kai.id], JSON.stringify(r.body));
+});
+
+test('(2026-10-14, meme templates) kept: a template meme Gemini refuses is never shown (its credits back), one whose template isn\'t ours any more fails; a meme\'s 5-second video only by the clock (ffmpeg: a stand-in here), with its words and the mark where they aren\'t, tagged, its mark noted; no ffmpeg: it waits; refused: never shown', async () => {
+  const { MT, J, words, make, kept } = await MEME_TPL();
+  giveCredits(40000);
+  const nova = await readyInf({ name: 'Nova', style: 'anime' });
+  const tpl = MT.templateOf('distracted');
+  const layers = words('distracted');
+  const price = R.photoCredits({ model: 'classic', quality: MT.memeQuality(tpl), shape: MT.memeShape(tpl), meme: 'distracted' }, 1);
+  // a meme Gemini refuses (its words were checked as typed; the picture with them is looked at as every meme is)
+  let r = await make(nova.id, { meme: 'distracted', layers });
+  let paid = credits().paid;
+  fake.gemini.meme = { badWords: true };
+  let t = await finish(r.body.job);
+  fake.gemini.meme = null;
+  assert.deepEqual([t.state, fake.db.jobs.get(r.body.job).error, credits().paid], ['failed', 'refused', paid + price]);
+  assert.deepEqual(stored(`inf/${nova.id}/${r.body.job}`), [], 'nothing kept');
+  // one whose template or words aren't ones we draw any more (asked for before a change): fails, its credits back
+  r = await make(nova.id, { meme: 'distracted', layers });
+  paid = credits().paid;
+  await tick(r.body.job);
+  fake.db.jobs.get(r.body.job).meme = 'gone';
+  t = await finish(r.body.job);
+  assert.deepEqual([t.state, fake.db.jobs.get(r.body.job).error, credits().paid], ['failed', 'source', paid + price]);
+  // a meme's video: its page moves it along but never keeps it; the clock does, with enough time left
+  assert.equal(J.MEME_NEEDS_MS, K.MEME_VIDEO.NEEDS_MS);
+  const M = await kept(nova.id, { meme: 'distracted', layers });
+  r = await make(nova.id, { kind: 'video', image: M });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const V = r.body.job;
+  fake.fal.video = mp4({ seconds: 5, video: { width: 1080, height: 1080, fps: 24 }, audio: true });   // the AI's video, from its square picture
+  const made = mp4({ seconds: 5, video: { width: 960, height: 960, fps: 24 }, audio: true });
+  const runs = [];
+  const run = async (args, ms) => { runs.push({ args, ms }); await writeFile(args.at(-1), made); };
+  const clock = (id, opts = {}) => { free(id); return jobTick(cfgNow(), id, { now: Date.now(), deadline: Date.now() + 20_000, encode: true, run, ...opts }); };
+  await tick(V);
+  for (const fr of fake.fal.requests.values()) fr.status = 'COMPLETED';
+  t = await tick(V, { run });                                                                   // its page (ffmpeg at hand: never used)
+  assert.deepEqual([t.state, runs.length], ['saving', 0]);
+  t = await tick(V, { run });                                                                   // its page again, now that it's saving
+  assert.deepEqual([t.state, runs.length], ['saving', 0]);
+  t = await clock(V, { deadline: Date.now() + J.MEME_NEEDS_MS - 1000 });                        // the clock, without the time
+  assert.deepEqual([t.state, runs.length], ['saving', 0]);
+  const looks = geminiCalls().length, noted = dbCalls('inf_mark_done').filter((a) => a.p_job === V).length;
+  t = await clock(V);
+  assert.deepEqual([t.state, runs.length, fake.db.jobs.get(V).status], ['done', 1, 'done'], JSON.stringify(t) + logs.slice(-3).join('\n'));
+  assert.ok(geminiCalls().length > looks, "Gemini looked at the AI's video");
+  const kept2 = fake.storage.get(`inf/${nova.id}/${V}.mp4`);
+  assert.ok(kept2 && kept2.type === 'video/mp4' && kept2.bytes.equals(aiTagged(made)), 'its one copy: ffmpeg\'s, tagged');
+  const args = runs[0].args;
+  assert.equal(args.filter((x) => x === '-i').length, 3, 'the video, its words and the mark');
+  assert.ok(args.includes('-c:a') && args[args.indexOf('-c:a') + 1] === 'copy', 'its sound as the AI made it');
+  assert.deepEqual([dbCalls('inf_job_done').at(-1).p_files, dbCalls('inf_mark_done').filter((a) => a.p_job === V).length - noted], [0, 1], 'its mark noted once, by the clock that made it');
+  // no ffmpeg here (and no stand-in): it waits, and the log says why once
+  r = await make(nova.id, { kind: 'video', image: M });
+  const V2 = r.body.job;
+  await tick(V2);
+  for (const fr of fake.fal.requests.values()) fr.status = 'COMPLETED';
+  await tick(V2);
+  process.env.FFMPEG_PATH = '/nowhere/ffmpeg';
+  K.forgetFfmpeg();
+  try {
+    free(V2);
+    t = await jobTick(cfgNow(), V2, { now: Date.now(), deadline: Date.now() + 20_000, encode: true });
+    assert.deepEqual([t.state, fake.db.jobs.get(V2).status], ['saving', 'making']);
+    assert.ok(logs.some((l) => /a meme's video waits: ffmpeg isn't here/.test(l)), logs.join('\n'));
+  } finally { delete process.env.FFMPEG_PATH; K.forgetFfmpeg(); }
+  // refused by Gemini: never shown, its credits back
+  paid = credits().paid;
+  fake.gemini.video = { explicit: true };
+  t = await clock(V2);
+  fake.gemini.video = null;
+  assert.deepEqual([t.state, fake.db.jobs.get(V2).error, credits().paid], ['failed', 'refused', paid + R.videoCredits(R.videoSpec({ model: 'standard', seconds: 5, sound: true }), 1)]);
+  assert.equal(fake.storage.get(`inf/${nova.id}/${V2}.mp4`), undefined);
+});
+
+test('(2026-10-14, meme templates) its files and pages: its picture without words only for its own page\'s editor (?inf-file=…pic.jpg), downloads marked where its words aren\'t, its words and who\'s in it only for its maker, Explore without one whose other influencer was taken down; deleted with its picture, and with the other influencer in it', async () => {
+  const { MT, J, words, make, kept } = await MEME_TPL();
+  giveCredits(40000);
+  const nova = await readyInf({ name: 'Nova', style: 'anime' });
+  const kai = await readyInf({ name: 'Kai', style: 'anime' });
+  const layers = words('distracted');
+  const M = await kept(nova.id, { meme: 'distracted', layers });
+  const MK = await kept(nova.id, { meme: 'distracted', layers, cast: kai.id, role: 'partner' });
+  const plain = await doneJob(nova.id, 'photo');
+  const row = fake.db.jobs.get(M);
+  // its picture without words: a JPEG, only a template meme's and only at its own influencer's address
+  let r = await get(`inf-file=${nova.id}/${M}.pic.jpg`);
+  assert.deepEqual([r.status, r.headers.get('content-type')], [200, 'image/jpeg']);
+  assert.ok(r.body.equals(fake.storage.get(J.memePicPath(nova.id, M)).bytes));
+  fake.storage.set(J.memePicPath(nova.id, plain), { ...fake.storage.get(J.memePicPath(nova.id, M)) });   // even with a file there, a plain photo's never served
+  for (const q of [`inf-file=${nova.id}/${plain}.pic.jpg`, `inf-file=${kai.id}/${M}.pic.jpg`, `inf-file=${nova.id}/${idOf('nothere')}.pic.jpg`]) {
+    assert.equal((await get(q)).status, 404, q);
+  }
+  // its download: the meme with our mark at its own spot (where its words aren't), never at the corner a photo's goes
+  const spotOf = async (job) => {
+    const marked = (await get(`inf-dl=${nova.id}/${job}-0.jpg`)).body;
+    const [x, y] = await Promise.all([marked, fake.storage.get(picPath(nova.id, job, 0)).bytes].map((b) => sharp(b).removeAlpha().raw().toBuffer({ resolveWithObject: true })));
+    const { width: W, height: H } = x.info;
+    let minX = W, minY = H, maxX = -1, maxY = -1;
+    for (let p = 0; p < W * H; p++) {
+      let d = 0;
+      for (let c = 0; c < 3; c++) d += Math.abs(x.data[p * 3 + c] - y.data[p * 3 + c]);
+      if (d > 90) { const px = p % W, py = (p / W) | 0; minX = Math.min(minX, px); maxX = Math.max(maxX, px); minY = Math.min(minY, py); maxY = Math.max(maxY, py); }
+    }
+    const cx = (minX + maxX) / 2 / W, cy = (minY + maxY) / 2 / H;
+    return (cy < 0.4 ? 't' : cy > 0.6 ? 'b' : 'm') + (cx < 0.5 ? 'l' : 'r');
+  };
+  assert.equal(await spotOf(M), row.mark_spot);
+  fake.db.jobs.get(M).mark_spot = row.mark_spot === 'tl' ? 'br' : 'tl';                           // where its row says
+  assert.equal(await spotOf(M), fake.db.jobs.get(M).mark_spot);
+  fake.db.jobs.get(M).mark_spot = row.mark_spot;
+  // its page: a template meme, where its mark is; its words, who's in it and their role only to its maker
+  const mine = (await act('inf-look', { id: nova.id })).body.jobs;
+  const anyone = (await get(`inf=${nova.id}`)).body.jobs;
+  const m1 = mine.find((j) => j.id === MK), a1 = anyone.find((j) => j.id === MK);
+  assert.deepEqual([m1.template, m1.markSpot, m1.cast, m1.role], [true, fake.db.jobs.get(MK).mark_spot, kai.id, 'partner']);
+  assert.deepEqual(m1.layers, layers);
+  assert.deepEqual([a1.template, a1.markSpot, 'layers' in a1, 'cast' in a1, 'role' in a1], [true, fake.db.jobs.get(MK).mark_spot, false, false, false]);
+  assert.deepEqual([mine.find((j) => j.id === plain).template, mine.find((j) => j.id === plain).markSpot], [false, null]);
+  // Explore: its tile says who else is in it; taken down by the owner (STUDIO_HIDE), it's left out (and its picture too)
+  let e = (await get('inf-explore')).body;
+  assert.deepEqual([e.fresh.find((t) => t.id === MK)?.cast, e.fresh.find((t) => t.id === M)?.cast], [kai.id, null]);
+  process.env.STUDIO_HIDE = kai.id;
+  try {
+    e = (await get('inf-explore')).body;
+    assert.deepEqual([e.fresh.some((t) => t.id === MK), e.fresh.some((t) => t.id === M)], [false, true]);
+    assert.equal((await get(`inf-file=${nova.id}/${MK}.pic.jpg`)).status, 404);
+    assert.equal((await get(`inf-file=${nova.id}/${MK}-0.jpg`)).status, 404);
+  } finally { delete process.env.STUDIO_HIDE; }
+  // deleted: its picture without words goes with its files
+  assert.ok(jobFiles({ ...row, inf_id: nova.id }).includes(J.memePicPath(nova.id, M)));
+  nextMinute();
+  r = await act('inf-job-delete', { job: M });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(stored(`inf/${nova.id}/${M}`), []);
+  assert.equal((await get(`inf-file=${nova.id}/${M}.pic.jpg`)).status, 404);
+  // the other influencer deleted: the memes they're in go too (their files: the database names them)
+  assert.ok(stored(`inf/${nova.id}/${MK}`).length >= 3);
+  nextMinute();
+  r = await act('inf-delete', { id: kai.id });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(stored(`inf/${nova.id}/${MK}`), [], 'the memes Kai was in');
+  assert.equal((await act('inf-look', { id: nova.id })).body.jobs.some((j) => j.id === MK), false);
+});
+
+test('(2026-10-19, meme templates) the meme editor\'s "Save as a new meme" on our server: one of its own template memes with its words changed in its browser, drawn by our server on its picture without words, looked at by Gemini first, kept free next to it (with its own picture without words, so it never depends on the one it\'s from; its share mark where its new words aren\'t); its words checked like a template meme\'s (every letter one our fonts draw); never as they were; 20 a day and the site\'s day (each look counted); every "no" with nothing kept; edited again, and made again from its words (Make another); an older influencers.sql, a file that can\'t be kept', async () => {
+  const { MT, MR, J, words, kept } = await MEME_TPL();
+  giveCredits(40000);
+  const nova = await readyInf({ name: 'Nova', style: 'anime' });
+  const tpl = MT.templateOf('distracted');
+  const layers = words('distracted');
+  const M = await kept(nova.id, { meme: 'distracted', layers });
+  const C = MT.MEME_CANVAS[tpl.canvas];
+  const save = (from, ls, opts) => { nextMinute(); return act('inf-meme-save', { from, layers: ls }, opts); };
+  const counted = () => [...fake.db.toolDays.values()].reduce((a, n) => a + n, 0);
+  const files = () => stored(`inf/${nova.id}/`);
+  // its words as its editor sends them: the first changed (new words, another font and color, moved down), the others as they were
+  const changed = MT.checkLayers(layers.map((l, n) => (n === 0 ? { ...l, t: 'Me on a Monday', f: 'comic', c: '#ffd23f', y: 0.75 } : l))).layers;
+  const paid = credits().paid, looks = geminiCalls().length, n0 = counted();
+
+  // ---- saved: free, next to it ----
+  let r = await save(M, changed);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.ok, r.body.left, r.body.perDay, credits().paid, counted()], [true, R.EDITOR.PER_DAY - 1, R.EDITOR.PER_DAY, paid, n0 + 1]);
+  const S1 = r.body.job;
+  assert.ok(/^[A-Za-z0-9_-]{22}$/.test(S1) && S1 !== M);
+  // Gemini looked at it first, told its words (only as a description)
+  assert.equal(geminiCalls().length, looks + 1);
+  assert.match(JSON.stringify(geminiCalls().at(-1).body), /The words it was asked to show: “Me on a Monday \/ Me \/ The hobby I started last week”/);
+  // its row: the meme's own (its template, picture's words, model, quality, shape), its words, caption and mark new, the editor's, free
+  const a = dbCalls('inf_meme_add').at(-1);
+  const mark = await MR.markSpotFor(changed, tpl, 'photo');
+  assert.deepEqual([a.p_job, a.p_inf, a.p_wallet, a.p_from, a.p_caption, a.p_mark], [S1, nova.id, codeOf(), M, MT.layersCaption(changed), mark]);
+  assert.deepEqual(a.p_layers, changed);
+  const row = fake.db.jobs.get(S1), from = fake.db.jobs.get(M);
+  assert.deepEqual([row.kind, row.status, row.cost, row.editor, row.image, row.meme, row.scene, row.model, row.quality, row.shape, row.mark_spot],
+    ['photo', 'done', 0, true, M, 'distracted', from.scene, from.model, from.quality, from.shape, mark]);
+  // its files: the meme with our words (its canvas, a plain JPEG), a small WebP, and its own picture without words (a copy of the one
+  // it's from: what its editor, an edit, someone added or its video start from)
+  const meme = fake.storage.get(picPath(nova.id, S1, 0));
+  const memeMeta = await sharp(meme.bytes).metadata();
+  assert.deepEqual([meme.type, memeMeta.format, memeMeta.width, memeMeta.height, memeMeta.exif === undefined], ['image/jpeg', 'jpeg', C.w, C.h, true]);
+  assert.equal(fake.storage.get(picPath(nova.id, S1, 0, 'webp')).type, 'image/webp');
+  assert.ok(fake.storage.get(J.memePicPath(nova.id, S1)).bytes.equals(fake.storage.get(J.memePicPath(nova.id, M)).bytes));
+  assert.equal(a.p_bytes, meme.bytes.length + fake.storage.get(J.memePicPath(nova.id, S1)).bytes.length);
+  // only its first words changed: where the two memes differ is within their old and new boxes
+  const [x, y] = await Promise.all([fake.storage.get(picPath(nova.id, M, 0)).bytes, meme.bytes].map((b) => sharp(b).removeAlpha().raw().toBuffer({ resolveWithObject: true })));
+  let minX = C.w, minY = C.h, maxX = -1, maxY = -1;
+  for (let p = 0; p < C.w * C.h; p++) {
+    let d = 0;
+    for (let c = 0; c < 3; c++) d += Math.abs(x.data[p * 3 + c] - y.data[p * 3 + c]);
+    if (d > 90) { const px = p % C.w, py = (p / C.w) | 0; minX = Math.min(minX, px); maxX = Math.max(maxX, px); minY = Math.min(minY, py); maxY = Math.max(maxY, py); }
+  }
+  assert.ok(maxX > minX && maxY > minY, 'its words changed');
+  const L0 = layers[0], m = 0.04;
+  assert.ok(minX / C.w >= L0.x - L0.w / 2 - m && maxX / C.w <= L0.x + L0.w / 2 + m, `x ${minX}–${maxX}`);
+  assert.ok(minY / C.h >= Math.min(L0.y, 0.75) - L0.h / 2 - m && maxY / C.h <= Math.max(L0.y, 0.75) + L0.h / 2 + m, `y ${minY}–${maxY}`);
+  // its page: a template meme saved from the editor, where its mark is; its words only to its maker
+  const mine = (await act('inf-look', { id: nova.id })).body.jobs.find((j) => j.id === S1);
+  const anyone = (await get(`inf=${nova.id}`)).body.jobs.find((j) => j.id === S1);
+  assert.deepEqual([mine.template, mine.editor, mine.markSpot, mine.image, mine.cost], [true, true, mark, M, 0]);
+  assert.deepEqual(mine.layers, changed);
+  assert.deepEqual([anyone.template, anyone.editor, 'layers' in anyone], [true, true, false]);
+  assert.deepEqual([AW.jobTitle(mine), AW.jobMeta(mine)], ['Meme: Me on a Monday', `AI-generated · Meme · ${tpl.name} · Edited · ${AW.shapeName(from.shape)}`]);
+  // its picture without words: for its own page's editor, as any template meme's
+  const pr = await get(`inf-file=${nova.id}/${S1}.pic.jpg`);
+  assert.deepEqual([pr.status, pr.headers.get('content-type')], [200, 'image/jpeg']);
+
+  // ---- never as they were; every "no" with nothing kept, counted or paid ----
+  // (what some of them are tried on, made first: a plain photo (the photo editor's), and another wallet's template meme)
+  const P = await doneJob(nova.id, 'photo');
+  const theirs = await readyInf({ name: 'Theirs', wallet: OTHER });
+  const TJ = await doneJob(theirs.id, 'photo', { wallet: OTHER });
+  Object.assign(fake.db.jobs.get(TJ), { meme: 'distracted', layers: structuredClone(layers), mark_spot: 'br' });
+  const kept0 = files().join(), jobs0 = fake.db.jobs.size, n1 = counted();
+  const no = async (from, ls, want, opts) => {
+    const y2 = await save(from, ls, opts);
+    const got = y2.body.error === 'words' ? [y2.status, y2.body.error, y2.body.field, y2.body.why, y2.body.n ?? null] : [y2.status, y2.body.error];
+    assert.deepEqual(got, want, `${String(from).slice(0, 8)} ${JSON.stringify(ls)?.slice(0, 80)} → ${JSON.stringify(y2.body)}`);
+    return y2;
+  };
+  await no(M, layers, [409, 'same']);
+  await no(S1, changed, [409, 'same']);
+  await no(M, structuredClone(layers), [409, 'same']);
+  await no('nope', changed, [400, 'bad']);
+  await no(M, [], [422, 'words', 'layers', 'empty', 0]);
+  await no(M, [changed[0], { ...changed[1], t: 'x'.repeat(MT.LAYERS.TEXT_MAX + 1) }], [422, 'words', 'layers', 'long', 1]);
+  await no(M, [{ ...changed[0], c: 'red' }], [422, 'words', 'layers', 'bad', 0]);
+  await no(M, [{ ...changed[0], t: 'BUY $AGI NOW' }], [422, 'words', 'layers', 'money', 0]);
+  await no(M, [{ ...changed[0], t: 'visit agi1.app now' }], [422, 'words', 'layers', 'link', 0]);
+  await no(M, [{ ...changed[0], t: 'AGI-1 and me' }], [422, 'words', 'layers', 'her', 0], );             // she isn't in it
+  const ch = await no(M, [changed[0], { ...changed[1], t: 'Nova 漢字' }], [422, 'words', 'layers', 'chars', 1]);
+  assert.deepEqual(ch.body.chars, ['漢', '字']);
+  await no(P, changed, [409, 'image']);
+  await no(nova.body, changed, [409, 'image']);
+  await no(idOf('nothere'), changed, [409, 'image']);
+  await no(TJ, changed, [403, 'not_yours']);
+  for (const [k, v] of [['hidden', true], ['status', 'making']]) {
+    const was = fake.db.jobs.get(M)[k];
+    fake.db.jobs.get(M)[k] = v;
+    await no(M, changed, [409, 'image']);
+    fake.db.jobs.get(M)[k] = was;
+  }
+  process.env.STUDIO_HIDE = M;
+  try { await no(M, changed, [409, 'image']); } finally { delete process.env.STUDIO_HIDE; }
+  fake.db.infs.get(nova.id).status = 'body';
+  await no(M, changed, [409, 'not_ready']);
+  fake.db.infs.get(nova.id).status = 'deleted';
+  await no(M, changed, [404, 'gone']);
+  fake.db.infs.get(nova.id).status = 'ready';
+  banWallet(WALLET);
+  await no(M, changed, [403, 'banned']);
+  unbanWallet(WALLET);
+  // its picture without words gone (a meme made before 2026-10-14's templates has none): it can't be edited here
+  const picM = fake.storage.get(J.memePicPath(nova.id, M));
+  fake.storage.delete(J.memePicPath(nova.id, M));
+  await no(M, changed, [409, 'source']);
+  fake.storage.set(J.memePicPath(nova.id, M), picM);
+  assert.deepEqual([files().join(), fake.db.jobs.size, counted(), credits().paid], [kept0, jobs0, n1, paid], 'nothing kept, counted or paid');
+
+  // ---- Gemini's look: a "no" kept nothing, said why (it cost a look: counted); can't answer: the same ----
+  fake.gemini.meme = { badWords: true };
+  let y3 = await save(M, changed.map((l, n) => (n === 2 ? { ...l, t: 'Still a hobby' } : l)));
+  fake.gemini.meme = null;
+  assert.deepEqual([y3.status, y3.body.error, y3.body.reason, counted()], [422, 'refused', 'words', n1 + 1]);
+  assert.equal(AW.memeErrorText(y3.body), "It can't be saved: some words on it aren't OK (no rude words, links, @names, brands or money talk).");
+  fake.gemini.status = 503;
+  y3 = await save(M, changed.map((l, n) => (n === 2 ? { ...l, t: 'Still a hobby' } : l)));
+  fake.gemini.status = 200;
+  assert.deepEqual([y3.status, y3.body.error, counted()], [503, 'ai', n1 + 2]);
+  assert.deepEqual([files().join(), fake.db.jobs.size], [kept0, jobs0], 'nothing kept');
+
+  // ---- PER_DAY a wallet, SITE_DAY the site ----
+  const day = new Date().toISOString().slice(0, 10), key = `${codeOf()}:${day}:photo`;
+  const was = fake.db.toolDays.get(key);
+  fake.db.toolDays.set(key, R.EDITOR.PER_DAY);
+  y3 = await save(M, changed.map((l, n) => (n === 2 ? { ...l, t: 'Still a hobby' } : l)));
+  assert.deepEqual([y3.status, y3.body.error], [429, 'too_many']);
+  assert.equal(AW.memeErrorText(y3.body), `You've saved ${R.EDITOR.PER_DAY} edited photos and memes today: more tomorrow. Downloading is always free.`);
+  fake.db.toolDays.set(key, was);
+  fake.db.toolSite.set(`${day}:photo`, R.EDITOR.SITE_DAY);
+  y3 = await save(M, changed.map((l, n) => (n === 2 ? { ...l, t: 'Still a hobby' } : l)));
+  assert.deepEqual([y3.status, y3.body.error], [429, 'busy_day']);
+  fake.db.toolSite.clear();
+
+  // ---- a file that can't be kept: none left behind (the database never asked) ----
+  const adds = dbCalls('inf_meme_add').length;
+  fake.putFail = (name) => name.endsWith('.pic.jpg');
+  y3 = await save(M, changed.map((l, n) => (n === 2 ? { ...l, t: 'Still a hobby' } : l)));
+  fake.putFail = null;
+  assert.deepEqual([y3.status, y3.body.error, dbCalls('inf_meme_add').length], [503, 'busy', adds]);
+  assert.deepEqual([files().join(), fake.db.jobs.size], [kept0, jobs0], 'its files deleted');
+  // ---- an older influencers.sql (no inf_meme_add): none left behind either, and the log says to run it again ----
+  fake.missing.add('inf_meme_add');
+  y3 = await save(M, changed.map((l, n) => (n === 2 ? { ...l, t: 'Still a hobby' } : l)));
+  fake.missing.delete('inf_meme_add');
+  assert.deepEqual([y3.status, y3.body.error], [503, 'not_ready']);
+  assert.deepEqual([files().join(), fake.db.jobs.size], [kept0, jobs0], 'its files deleted');
+  assert.ok(logs.some((l) => /inf_meme_add not found: run supabase\/influencers\.sql again in this Supabase project \(meme templates/.test(l)), logs.join('\n'));
+  // (the page tells a 503 "not_ready" (the studio off) from the save's own 409 (its influencer not ready yet))
+  assert.equal(AW.memeErrorText({ error: 'not_ready' }, { status: 503 }), AW.errorText('not_ready'));
+  assert.equal(AW.memeErrorText({ error: 'not_ready' }, { status: 409 }), "Its influencer isn't ready just now: try again in a moment.");
+
+  // ---- edited again from the one saved: it never needs the meme it came from (deleted meanwhile) ----
+  nextMinute();
+  assert.equal((await act('inf-job-delete', { job: M })).status, 200);
+  // (its second words moved to the bottom right, where a photo's mark goes first: its mark goes where its words aren't)
+  const again = changed.map((l, n) => (n === 1 ? { ...l, t: 'Me again', x: 0.8, y: 0.9 } : l));
+  r = await save(S1, again);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const S2 = r.body.job;
+  const spot2 = await MR.markSpotFor(MT.checkLayers(again).layers, tpl, 'photo');
+  assert.notEqual(spot2, 'br');
+  assert.deepEqual([fake.db.jobs.get(S2).image, fake.db.jobs.get(S2).mark_spot, dbCalls('inf_meme_add').at(-1).p_mark], [S1, spot2, spot2]);
+  assert.ok(fake.storage.get(J.memePicPath(nova.id, S2)).bytes.equals(fake.storage.get(J.memePicPath(nova.id, S1)).bytes));
+
+  // ---- made again from its words ("Make another": its template and picture's words the meme's own, a new picture) ----
+  const price = R.photoCredits({ model: 'classic', quality: MT.memeQuality(tpl), shape: MT.memeShape(tpl), meme: 'distracted' }, 1);
+  const before = credits().paid;
+  nextMinute();
+  r = await act('inf-again', { job: S1 });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const asked = dbCalls('inf_make').at(-1);
+  assert.deepEqual([asked.p_meme, asked.p_scene, asked.p_caption, r.body.cost, before - credits().paid], ['distracted', tpl.about, MT.layersCaption(changed), price, price]);
+  assert.deepEqual(asked.p_layers, changed);
+  assert.ok(!('p_image' in asked) || asked.p_image == null, 'a new picture, never an edit of the one it came from');
+});
+
+test('(2026-10-19, meme templates) the page: the meme editor (src/studio/views/meme-editor.js): its words drawn as shapes from our own meme fonts (opentype.js, loaded only when it opens, the fonts only from our own address), its picture without words, every style through the CSSOM, the share mark where our server puts it, "Save as a new meme" through our server (a "no" about one text said on that text), its words plain and never an AI service named; its styles and its fonts\' @font-face', async () => {
+  const MT = await import('../src/studio/memes.js');
+  const mx = strip(read('src/studio/views/meme-editor.js'));
+  // every style through the CSSOM (the page's CSP allows no style attributes), no HTML from strings, never an AI service named
+  assert.doesNotMatch(mx, /innerHTML|insertAdjacentHTML|outerHTML|setAttribute\('style'|\.style\.(?!setProperty)|cssText|document\.write/, 'every style through the CSSOM');
+  assert.doesNotMatch(mx, PROVIDERS);
+  assert.match(mx, /const s = sheet\(\{ title: 'Edit meme', sub: memeEditorNote\(job\), size: 'editor' \}\);/);
+  // ---- opentype.js: its own ES module (its package's "browser" field is its UMD build), only here, when the editor opens ----
+  assert.match(mx, /const m = await import\('opentype\.js\/dist\/opentype\.mjs'\);\n\s+const parse = \[m, m\.default, m\.default\?\.default\]\.find\(\(x\) => typeof x\?\.parse === 'function'\)\?\.parse;/);
+  assert.doesNotMatch(mx, /^import[^\n]*opentype/m, 'never a static import: its own chunk, downloaded only by the editor');
+  const srcFiles = (dir) => readdirSync(new URL(`../${dir}/`, import.meta.url), { withFileTypes: true })
+    .flatMap((d) => (d.isDirectory() ? srcFiles(`${dir}/${d.name}`) : /\.(js|mjs)$/.test(d.name) ? [`${dir}/${d.name}`] : []));
+  const using = srcFiles('src').filter((f) => /from 'opentype\.js|import\('opentype\.js/.test(read(f)));
+  assert.deepEqual(using, ['src/studio/views/meme-editor.js'], 'the only page file that loads opentype.js');
+  // a failure lets the next editor try again (never a broken promise kept)
+  assert.match(mx, /const parser = \(\) => \(parseP \|\|= opentypeParse\(\)\.catch\(\(e\) => \{ parseP = null; throw e; \}\)\);/);
+  assert.match(mx, /\}\)\.catch\(\(e\) => \{ fontsP = null; throw e; \}\);/);
+  assert.match(mx, /\.catch\(\(e\) => \{ emojiP = null; throw e; \}\);/);
+  // ---- the fonts: only our own address (/fonts/meme/<file>), the same files our server draws with (server/meme-render.js) ----
+  assert.match(mx, /const url = memeFontUrl\(file\);\s*\n\s+const r = await fetch\(url, \{ credentials: 'same-origin' \}\);\n\s+if \(!r\.ok\) throw new Error\(`font \$\{file\}: HTTP \$\{r\.status\}`\);/);
+  assert.match(mx, /const list = await Promise\.all\(ids\.map\(\(id\) => fontFile\(parse, MEME_FONTS\[id\]\.file\)\)\);/);
+  assert.match(mx, /emojiP = parser\(\)\.then\(\(parse\) => fontFile\(parse, MEME_EMOJI_FILE\)\)/);
+  assert.equal((mx.match(/fontFile\(parse, (?!file\))/g) || []).length, 2, 'only these: the six fonts and the emoji font');
+  for (const f of [...Object.values(MT.MEME_FONTS).map((x) => x.file), MT.MEME_EMOJI_FILE]) {
+    assert.equal(MT.memeFontUrl(f), `/fonts/meme/${f}`);
+    assert.ok(existsSync(new URL(`../public/fonts/meme/${f}`, import.meta.url)), f);
+  }
+  // the emoji font only once some words need it (102 KB), and its texts drawn again with it
+  assert.match(mx, /if \(fonts && !fonts\.emoji && needsEmoji\(fonts, layers\[n\]\.f, tidyText\(ta\.value\)\)\) wantEmoji\(\);/);
+  assert.match(mx, /fonts = \{ \.\.\.fonts, emoji: e \};\n\s+memo\.clear\(\);\n\s+paint\(\);/);
+  // ---- its picture without words (our own address) and the share mark (the picture our server puts on downloads) ----
+  assert.match(mx, /Promise\.all\(\[loadImage\(infMemePic\(inf, job\.id\)\), loadMemeFonts\(\)\.catch\(\(\) => null\), loadImage\(MARK_SRC\)\]\)/);
+  assert.equal(R.infMemePic('I1', 'J1'), '/api/launch?inf-file=I1/J1.pic.jpg');
+  assert.match(mx, /const MARK_SRC = new URL\('\.\.\/\.\.\/\.\.\/server\/media\/studio-mark\.png', import\.meta\.url\)\.href;/);
+  // its picture put in its template's picture area as our server puts it (covered, centred: server/meme-render.js composeBase)
+  assert.match(mx, /const k = Math\.max\(PB\.w \/ iw, PB\.h \/ ih\);\n\s+const sw = PB\.w \/ k, sh = PB\.h \/ k;/);
+  assert.match(mx, /g\.drawImage\(src, \(iw - sw\) \/ 2, \(ih - sh\) \/ 2, sw, sh, PB\.x \* kx, PB\.y \* ky, PB\.w \* kx, PB\.h \* ky\);/);
+  // its words: the shapes our server draws (src/studio/meme-layout.js drawLayers), never the browser's own text
+  assert.doesNotMatch(mx, /fillText|strokeText|\.font = /, 'never the browser\'s text: what\'s shown is what\'s saved');
+  assert.match(mx, /drawLayers\(g, fonts, drawn\(\), C\.w, C\.h, shapeOf\);/);
+  // a download's mark: where its words aren't, as our server picks it (a photo's preference), drawn at our server's box
+  assert.match(mx, /const b = markBoxAt\(C\.w, C\.h, markSpot\(wordBoxes\(fonts, words, C\.w, C\.h, shapeOf\), C\.w, C\.h, MARK_PREFER\.photo\)\);\n\s+g\.drawImage\(mark, b\.x, b\.y, b\.w, b\.h\);/);
+  // …without it only when our server says this wallet's download is clean, and always with our hidden AI tag
+  assert.match(mx, /const r = Number\(ctx\.info\?\.cleanAgi\) > 0 \? await ctx\.act\('inf-dl', \{ job: job\.id \}\) : null;\n\s+const clean = Boolean\(r\?\.ok && r\.data\?\.clean\);/);
+  assert.match(mx, /const made = await toBlob\(finished\(\{ withMark: !clean \}\)\);/);
+  assert.match(mx, /const tagged = withAiTag\(new Uint8Array\(await made\.arrayBuffer\(\)\)\);/);
+  assert.match(mx, /download: `\$\{String\(name\)\.replace\(\/\[\^\\p\{L\}\\p\{N\}\]\+\/gu, '-'\)\.replace\(\/\^-\|-\$\/g, ''\) \|\| 'meme'\}-meme\.jpg`/);
+  // ---- "Save as a new meme": its words checked here first (as our server checks them), then our server draws them ----
+  assert.match(mx, /const L = checkLayers\(layers\);\n\s+if \(!L\.ok\) \{ wordsNo\(L\.n, L\.why\); return; \}\n\s+if \(JSON\.stringify\(L\.layers\) === firstJson\) \{ say\(err, errorText\('same'\)\); return; \}/);
+  assert.match(mx, /const miss = missingChars\(fonts, L\.layers\[n\]\.f, L\.layers\[n\]\.t\);\n\s+if \(miss\.length\) \{ wordsNo\(n, 'chars', miss\); return; \}/);
+  assert.match(mx, /const r = await ctx\.act\('inf-meme-save', \{ from: job\.id, layers: L\.layers \}\);/);
+  // our server's "no" about one text: said on that text (its Words card, the keyboard in its words); any other: under its tools,
+  // a 503 "not_ready" (the studio off) told from its own 409 (its influencer not ready yet)
+  assert.match(mx, /if \(d\.error === 'words'\) \{ wordsNo\(Number\.isInteger\(d\.n\) \? d\.n : -1, d\.why, d\.chars\); return; \}\n\s+say\(err, memeErrorText\(d, \{ status: r\.status \}\)\);/);
+  assert.match(mx, /tabs\.show\('words'\);\n\s+const card = tabs\.panel\('words'\)\?\.querySelector\(`\.sa-mx-word\[data-n="\$\{n\}"\]`\);/);
+  assert.match(mx, /s\.close\(\);\n\s+ctx\.toast\(editorSavedText\(job\), 'good'\);\n\s+onSaved\?\.\(d\.job\);/);
+  // Save only once its words differ from the meme's own (a text that can't be saved counts: Save says why)
+  assert.match(mx, /const changed = \(\) => \{ const c = checkLayers\(layers\); return !c\.ok \|\| JSON\.stringify\(c\.layers\) !== firstJson; \};/);
+  assert.match(mx, /save\.disabled = !\(src && fonts && changed\(\)\);/);
+  // one it can't edit (made before templates, or its words broken): said, nothing else
+  assert.match(mx, /if \(!tpl \|\| !first\.ok\) \{\n\s+const s = sheet\(\{ title: 'Edit meme', size: 'md' \}\);\n\s+put\(s\.body, h\('p', \{ class: 'sa-err', role: 'alert', text: memeErrorText\(\{ error: 'old' \}\) \}\)\);/);
+  // ---- the keyboard and screen readers ----
+  assert.match(mx, /const view = h\('canvas', \{ class: 'sa-pe-canvas', tabindex: '0', role: 'img', 'aria-label': 'Your meme as it will look' \}\);/);
+  assert.match(mx, /const live = h\('p', \{ class: 'sa-sr', 'aria-live': 'polite' \}\);/);
+  assert.match(mx, /const d = \{ ArrowLeft: \[-step, 0\], ArrowRight: \[step, 0\], ArrowUp: \[0, -step\], ArrowDown: \[0, step\] \}\[e\.key\];/);
+  assert.match(mx, /if \(layers\.length >= LAYERS\.MAX\) \{ say\(err, memeWordsText\('many'\)\); return; \}/);
+  assert.match(mx, /if \(layers\.length < 2\) \{ say\(err, memeErrorText\(\{ error: 'last' \}\)\); return; \}/);
+  // a text left empty says so once a press is let go (a tick after, its click first), and only on its own card as it is: said
+  // at once, its warning moved "Add words" and the remove buttons under it between their press and their release (lost clicks)
+  assert.match(mx, /const onLift = \(\) => \{ if \(!pressing\) return; pressing = false; setTimeout\(showHeld, 0\); \};/);
+  assert.match(mx, /const PRESS = \[\['pointerdown', onPress\], \['mousedown', onPress\], \['pointerup', onLift\], \['mouseup', onLift\], \['pointercancel', onLift\]\];\n\s+for \(const \[t, f\] of PRESS\) document\.addEventListener\(t, f, true\);/);
+  assert.match(mx, /ta\.addEventListener\('blur', \(\) => later\(\(\) => \{\n\s+if \(layers\[n\] && warn\.isConnected && document\.activeElement !== ta\) say\(warn, warnOf\(n, \{ blurred: true \}\)\);/);
+  assert.match(mx, /for \(const \[t, f\] of PRESS\) document\.removeEventListener\(t, f, true\);\n\s+window\.removeEventListener\('blur', onLift\);/);
+  assert.doesNotMatch(mx, /addEventListener\('blur', \(\) => \{ if \(layers\[n\]\) say\(warn/, 'never said at once as a press moves the keyboard');
+  // ---- its words: plain, never an AI service named, never "buy" ----
+  const job = { kind: 'photo', meme: 'distracted', template: true, layers: [], shape: 'square' };
+  const texts = [AW.memeEditorNote(job), AW.editorSavedText(job),
+    ...['empty', 'long', 'lines', 'many', 'bad', 'money', 'link', 'contact', 'her', 'adult', 'person', 'character', 'chars'].map((w) => AW.memeWordsText(w)),
+    AW.memeWordsText('chars', ['漢', '字']),
+    ...['too_many', 'busy_day', 'image', 'source', 'ai', 'fonts', 'old', 'picture', 'last', 'not_ready', 'same', 'gone', 'not_yours', 'banned', 'busy'].map((e) => AW.memeErrorText({ error: e }, { status: 409 })),
+    ...['words', 'sexual', 'minor', 'hate', 'violence', 'other'].map((r) => AW.memeErrorText({ error: 'refused', reason: r }))];
+  for (const t of texts) {
+    assert.equal(typeof t, 'string', JSON.stringify(t));
+    assert.ok(t.length > 5 && t.length < 220, t);
+    assert.doesNotMatch(t, PROVIDERS, t);
+    assert.doesNotMatch(t, /\bbuy\b|undefined|null|\[object/i, t);
+  }
+  assert.deepEqual([AW.editorSavedText(job), AW.memeWordsText('chars', ['漢', '字'])],
+    ["Saved: your edited meme is next to the one it's from.", "Our meme fonts can't draw 漢 字: change those (they draw Latin, Greek and Cyrillic letters, and emoji)."]);
+  assert.equal(AW.memeWordsText('chars', ['漢']), "Our meme fonts can't draw 漢: change that (they draw Latin, Greek and Cyrillic letters, and emoji).");
+  assert.equal(AW.memeWordsText('chars', [...'一二三四五六七八九十']).match(/[一二三四五六七八九十]/g).length, 8, 'at most 8 letters said');
+  // ---- its styles: every rule an sa- class; its font chips in their own fonts (@font-face: the same files as MEME_FONTS) ----
+  const css = read('src/styles/studio-app.css');
+  for (const sel of ['.sa-mx-words {', '.sa-mx-word {', '.sa-mx-word.is-picked {', '.sa-mx-text {', '.sa-mx-warn {', '.sa-mx-any {', '.sa-mx-any-row {', '.sa-mx-fonts .sa-chip-text {']) assert.ok(css.includes(sel), sel);
+  // a phone: the meme bigger than the photo editor's stage gives it (a square: the stage's height decides its size)
+  assert.ok(css.includes('@media (max-width: 719.98px) {\n  .sa-mx .sa-pe-panel { max-height: 30vh; }\n}'));
+  for (const [id, f] of Object.entries(MT.MEME_FONTS)) {
+    const fam = css.match(new RegExp(`\\.sa-mx-font-${id} \\{ font-family: '(AGI Meme ${f.name})', 'Geist', sans-serif;`))?.[1];
+    assert.ok(fam, id);
+    assert.ok(css.includes(`@font-face { font-family: '${fam}'; src: url('/fonts/meme/${f.file}') format('woff'); font-display: swap; }`), `${id}: ${f.file}`);
+    assert.match(mx, /i\.closest\('\.sa-chip'\)\?\.querySelector\('\.sa-chip-text'\)\?\.classList\.add\(`sa-mx-font-\$\{i\.value\}`\);/);
+  }
+  const rules = css.slice(css.indexOf("@font-face { font-family: 'AGI Meme Classic'"));
+  for (const sel of rules.split('\n').filter((l) => /^\.[^{]+\{/.test(l)).map((l) => l.slice(0, l.indexOf('{')).trim())) {
+    if (!/^\.sa-mx/.test(sel)) break;
+    assert.match(sel, /^\.sa-/, sel);
+  }
+});
+
+test('(2026-10-19, meme templates) the page: "Add someone" and "Animate" on one of its own template memes (who joins: AGI-1 or another of its ready influencers, faces on their cards, a private one off; its part; the body our server takes; never agi1 sent to animate one), the "Animated" badge, its title and line, who\'s in it said under it, cardPick\'s faces, their words and styles', async () => {
+  const MT = await import('../src/studio/memes.js');
+  const view = strip(read('src/studio/views/influencer.js'));
+  const shared = strip(read('src/studio/views/shared.js'));
+  const ui = strip(read('src/studio/ui.js'));
+  const css = read('src/styles/studio-app.css');
+  // ---- which creations: a template meme (memes.js), "Add someone" only while nobody else is in it and its template has a part ----
+  assert.match(view, /function tplOf\(j\) \{ return j\?\.kind === 'photo' && j\.template === true \? templateOf\(j\.meme\) : null; \}/);
+  assert.match(view, /function canAddSomeone\(j\) \{ const t = tplOf\(j\); return Boolean\(t\) && j\.agi1 !== true && !j\.cast && castOf\(t\)\.length > 0; \}/);
+  assert.match(view, /onAddSomeone: canAddSomeone\(j\) \? \(x\) => addSomeone\(x\) : null,/);
+  assert.match(view, /onAnimate: mine\(\) && tplOf\(j\) \? \(x\) => animate\(x\) : null/);
+  assert.match(view, /j\.kind === 'video' && j\.template \? \{ text: 'Animated', icon: 'film' \}/, 'an animated meme\'s badge');
+  // ---- Add someone: who joins (AGI-1 first, its ready influencers but itself, a private one off for a public one), its part ----
+  const addS = view.slice(view.indexOf('function addSomeone(j) {'), view.indexOf('function animate(j) {'));
+  assert.ok(addS.length > 500);
+  assert.match(addS, /x\.id !== id && x\.status === 'ready' && x\.hidden !== true/);
+  assert.match(addS, /const offFor = \(x\) => x\.private === true && !priv\(\);/);
+  assert.match(addS, /\{ value: 'agi1', name: 'AGI-1', note: CAST_HER_NOTE, price: null, pic: pic\(WITH_AGI1\.FACE/);
+  assert.match(addS, /off: offFor\(x\), why: CAST_PRIVATE_WHY, pic: face\(x\)/);
+  assert.match(addS, /ctx\.on\('me', fill\);/, 'the list follows My studio');
+  assert.match(addS, /if \(pick && next === sig\) return;/, 'redrawn only when it changes');
+  assert.match(addS, /roles\.length > 1/);
+  assert.match(addS, /const body = \{ id, kind: 'photo', image: j\.id, \.\.\.\(role \? \{ role \} : \{\}\), \.\.\.\(who === 'agi1' \? \{ agi1: true \} : \{ cast: who \}\) \};/);
+  assert.match(addS, /if \(Number\.isFinite\(need\) && !\(await enough\(need\)\)\) return;/, 'enough credits first');
+  assert.match(addS, /const need = editCost\(j\);/, 'its price: the meme\'s (Classic), like Add AGI-1');
+  assert.match(addS, /if \(working\) return;/, 'its label never changed while it\'s busy');
+  // ---- Animate: what moves optional, its sound, a Standard 5-second video's price, never agi1 sent ----
+  const anim = view.slice(view.indexOf('function animate(j) {'), view.indexOf('function openEditor(j) {'));
+  assert.ok(anim.length > 500);
+  assert.match(anim, /const cost = \(\) => videoCredits\(videoSpec\(\{ model: 'standard', seconds: 5, sound \}\), ctx\.level\);/);
+  assert.match(anim, /ctx\.act\('inf-make', \{ id, kind: 'video', image: j\.id, sound, \.\.\.\(v \? \{ scene: v \} : \{\}\) \}\)/);
+  assert.doesNotMatch(anim, /agi1: true|cast:/, 'never who\'s in it: our server keeps them');
+  assert.match(anim, /placeholder: motionOf\(tpl\)/);
+  assert.match(anim, /if \(v && \[\.\.\.v\]\.length < SCENE_MIN\)/);
+  assert.match(anim, /mentionsAgi1\(v\) && j\.agi1 !== true/, 'her name only when she\'s in it');
+  for (const lv of [1, 2, 3]) {
+    for (const sound of [false, true]) {
+      const n = R.videoCredits(R.videoSpec({ model: 'standard', seconds: 5, sound }), lv);
+      assert.ok(Number.isInteger(n) && n > 0);
+    }
+  }
+  assert.ok(R.videoCredits(R.videoSpec({ model: 'standard', seconds: 5, sound: true }), 1) > R.videoCredits(R.videoSpec({ model: 'standard', seconds: 5, sound: false }), 1));
+  // ---- the sheets: Add someone in its row (after Add AGI-1), Animate it first in a photo's foot, who's in it under it ----
+  assert.match(shared, /const addSomeone = j\.kind === 'photo' && j\.template === true && j\.agi1 !== true && !j\.cast && own\.onAddSomeone/);
+  assert.match(shared, /const anim = btn\('Animate it', \{ kind: 'primary', icon: 'film' \}\);/);
+  assert.match(shared, /function castLine\(ctx, j\) \{/);
+  assert.match(shared, /mine && kind === 'photo' \? castLine\(ctx, j\) : null,/, 'only for its maker');
+  assert.match(shared, /herLine\(v\), mine \? castLine\(ctx, v\) : null\);/);
+  assert.match(shared, /return r && r\.id !== 'beside' \? ` as “\$\{r\.name\}”` : '';/);
+  assert.match(shared, /const animated = v\.kind === 'video' && v\.template === true;/);
+  // ---- its title and line ----
+  const tpl = MT.templateOf('distracted');
+  assert.ok(tpl && MT.castOf(tpl).length === 2);
+  assert.equal(AW.jobTitle({ kind: 'video', template: true, caption: 'Me\nmy new meme', meme: 'distracted' }), 'Animated meme: Me');
+  assert.match(AW.jobTitle({ kind: 'video', template: true, meme: 'distracted' }), new RegExp(`^Animated meme: ${tpl.name.replace(/[()]/g, '\\$&')}$`));
+  const meta = AW.jobMeta({ kind: 'video', template: true, meme: 'distracted', seconds: 5, shape: 'square' });
+  assert.match(meta, /Animated meme/);
+  assert.ok(meta.includes(tpl.name));
+  assert.doesNotMatch(AW.jobMeta({ kind: 'video', seconds: 5, shape: 'wide', sound: true }), /Animated/, 'a video from a photo as before');
+  // ---- their words: plain, never "buy", never an AI service named ----
+  const words = [AW.CAST_HER_NOTE, AW.CAST_PRIVATE_WHY, AW.CAST_NONE_YET, AW.ADD_SOMEONE_NOTE, AW.addSomeoneMadeText({ kind: 'photo', meme: 'distracted' }, 'Nova'),
+    AW.ANIMATE_NOTE, AW.ANIMATE_HER_HINT, AW.animateMadeText()];
+  for (const w of words) {
+    assert.ok(typeof w === 'string' && w.length > 10);
+    assert.doesNotMatch(w, PROVIDERS);
+    assert.doesNotMatch(w, /\bbuy\b/i);
+  }
+  assert.match(AW.addSomeoneMadeText({ kind: 'photo', meme: 'distracted' }, 'Nova'), /Nova/);
+  assert.match(AW.CAST_HER_NOTE, /PG-13/);
+  // ---- cardPick's faces, and their styles (every rule an sa- class) ----
+  assert.match(ui, /c\.pic \? h\('span', \{ class: 'sa-card-pic', 'aria-hidden': 'true' \}, c\.pic\) : null,/);
+  assert.match(css, /\.sa-card-opt label\.has-pic \{ grid-template-columns: auto minmax\(0, 1fr\);/);
+  assert.match(css, /\.sa-card-face \{ display: block; width: 40px; height: 40px; border-radius: 50%;/);
+  assert.match(css, /\.sa-card-face\.is-agi1 \{/);
+  assert.match(css, /\.sa-edit-words\.is-cast \.sa-i \{ color: var\(--sa-pink\); \}/);
+});
+
+test('(2026-10-19, meme templates) the page: the Photo tool\'s template picker (views/meme-pick.js: every template in its group, its sketch drawn as SVG with presentation attributes only, one radio group), a template meme as our server makes and prices it (Classic at its template\'s quality and shape), its words sent as layers (never the old lines), its scene optional unless its template asks; Instant\'s ready memes as template memes our server takes', async () => {
+  const MT = await import('../src/studio/memes.js');
+  const { checkLayerWords } = await import('../server/inf-words.js');
+  const pick = strip(read('src/studio/views/meme-pick.js'));
+  const view = strip(read('src/studio/views/influencer.js'));
+  // ---- the picker: nothing from HTML strings, no style attributes (the CSP), SVG made with createElementNS ----
+  assert.doesNotMatch(pick, /innerHTML|insertAdjacentHTML|outerHTML|setAttribute\('style'|\.style\b|cssText|document\.write/);
+  assert.doesNotMatch(pick, PROVIDERS);
+  assert.match(pick, /document\.createElementNS\(SVG, 'svg'\)/);
+  assert.match(pick, /svg\.setAttribute\('aria-hidden', 'true'\);/);
+  assert.match(pick, /for \(const \[cat, catName\] of Object\.entries\(TEMPLATE_CATS\)\)/);
+  assert.match(pick, /name: groupName/, 'one radio group across its groups');
+  assert.match(pick, /h\('span', \{ class: 'sa-sr', 'aria-live': 'polite' \}\)/);
+  assert.match(pick, /\/\^#\[0-9a-f\]\{6\}\$\/i\.test\(k\.bg \|\| ''\)/, 'only a color goes into a fill');
+  for (const id of MT.TEMPLATE_IDS) {
+    const k = MT.templateSketch(MT.TEMPLATES[id]);
+    assert.ok(k.w > 0 && k.h > 0 && k.boxes.length === MT.TEMPLATES[id].layers.length, id);
+    assert.ok(Object.hasOwn(MT.TEMPLATE_CATS, MT.TEMPLATES[id].cat), `${id}: its group`);
+  }
+  // ---- the Photo tool: a template meme as our server prices it, its words as layers, its scene only when asked for ----
+  assert.match(view, /return \{ model: 'classic', quality: memeQuality\(TEMPLATES\[id\]\), shape: memeShape\(TEMPLATES\[id\]\), meme: id \};/);
+  assert.match(view, /: st\.kind === 'meme' \? memeSpecOf\(st\.meme\)/);
+  assert.match(view, /Object\.assign\(body, \{ meme: st\.meme, layers: meme\.layers, shape: s0\.shape \}\);/);
+  assert.doesNotMatch(view, /lines: meme\.lines|lines: idea\.lines/, 'never the old lines');
+  assert.match(view, /const asks = st\.kind !== 'meme' \|\| TEMPLATES\[st\.meme\]\.ask === 'scene';/);
+  assert.match(view, /if \(st\.kind === 'meme' && !scene\.value\.trim\(\)\) delete body\.scene;/);
+  // a box may stay empty (some templates' own samples leave one out: Surprise me fills those), never all of them; and our
+  // server draws the words (the AI never writes them)
+  assert.match(view, /if \(inputs\.some\(\(x\) => x\.input\.value\.trim\(\)\)\) return true;\n\s+say\(err, 'Type its words: at least one of its boxes\.'\);/);
+  assert.doesNotMatch(view, /the AI writes your words|it writes words best/);
+  for (const id of MT.TEMPLATE_IDS) {
+    MT.TEMPLATES[id].samples.forEach((texts, k) => {
+      const L = MT.checkLayers(MT.defaultLayers(MT.TEMPLATES[id], texts));
+      assert.ok(L.ok && L.layers.length >= 1, `${id} sample ${k}: ${JSON.stringify(L)}`);
+      assert.ok(checkLayerWords(L.layers).ok, `${id} sample ${k}: its words`);
+    });
+  }
+  // its label says so when it's optional, and a "Describe the scene." left from a template that asked for one goes
+  assert.match(view, /const sceneOptional = isMeme && TEMPLATES\[st\.meme\]\?\.ask !== 'scene';/);
+  assert.match(view, /sceneOptional \? 'What the picture shows \(optional\)' : 'What the picture shows'/);
+  assert.match(view, /if \(sceneOptional && !scene\.value\) say\(scene\.err, ''\);/);
+  assert.match(view, /qualityBox\.hidden = banner \|\| isMeme;\n\s+shapeBox\.hidden = banner \|\| isMeme;/);
+  assert.match(view, /d\.field === 'layers' \? meme\.sayAt\(d\.n, wordsText\('layers', d\.why\)\)/);
+  assert.match(view, /const pick = templatePicker\(\{ value: st\.meme, onchange:/);
+  // the page's price for each template is what our server takes (server/influencer.js: photoCredits of Classic at memeQuality)
+  for (const id of MT.TEMPLATE_IDS) {
+    const tpl = MT.TEMPLATES[id];
+    for (const lv of [1, 2, 3]) {
+      const page = R.photoCredits({ model: 'classic', quality: MT.memeQuality(tpl), shape: MT.memeShape(tpl), meme: id }, lv);
+      assert.ok(Number.isInteger(page) && page > 0, `${id}: its price`);
+    }
+  }
+  // ---- Learn and the AI helper know the templates, the meme editor, Add someone and Animate (their numbers from the code) ----
+  const { LESSONS } = await import('../src/studio/views/learn.js');
+  const photos = LESSONS.find((l) => l.id === 'photos').steps.join(' ');
+  assert.ok(photos.includes(`one of ${MT.TEMPLATE_IDS.length} ready templates`), 'Learn: the templates');
+  for (const w of ['Edit meme', 'Add someone', 'Animate it', '5 seconds']) assert.ok(photos.includes(w), `Learn: ${w}`);
+  const g = helpGuide({});
+  const making = g.split('\n').find((l) => l.startsWith('MAKING THINGS'));
+  assert.ok(making.includes(`one of ${MT.TEMPLATE_IDS.length} ready meme templates, among classics, choices, reactions and panels`), 'the helper: the templates');
+  assert.doesNotMatch(making, /Top & bottom, Caption, POV, Reaction or Before \/ after/, 'never the old five formats alone');
+  const mine = g.split('\n').find((l) => l.startsWith('MEMES YOU MADE'));
+  assert.ok(mine, 'the helper: its own line');
+  for (const w of ['"Edit meme"', `up to ${R.EDITOR.PER_DAY} a day, shared with the photo editor`, '"Add someone"', 'at a photo\'s price', '"Animate it"', 'a Standard 5-second video\'s price']) {
+    assert.ok(mine.includes(w), `the helper: ${w}`);
+  }
+  assert.doesNotMatch(g, PROVIDERS);
+  // ---- Instant's ready memes: template memes our server takes, their words as they are (POV: kept: the template draws it) ----
+  assert.match(view, /\? \{ id, kind: 'photo', \.\.\.memeSpecOf\(idea\.meme\), scene: idea\.scene, layers: defaultLayers\(TEMPLATES\[memeSpecOf\(idea\.meme\)\.meme\], idea\.lines\), \.\.\.her \}/);
+  for (const m of MEME_READY) {
+    const tpl = MT.TEMPLATES[m.meme];
+    assert.ok(tpl, `${m.id}: a template`);
+    assert.equal(m.lines.length, tpl.layers.length, `${m.id}: one line per text of its template`);
+    const L = MT.checkLayers(MT.defaultLayers(tpl, m.lines));
+    assert.ok(L.ok, `${m.id}: its layers (${JSON.stringify(L)})`);
+    assert.ok(checkLayerWords(L.layers).ok, `${m.id}: its words`);
+  }
+});
+
+test('(2026-10-14, meme templates) influencers.sql\'s promises: a creation\'s layers of words, someone else in it and their role, its share mark\'s spot (each with its check), the index for who\'s in what, inf_cast_shown in every function that shows or makes from a creation, inf_make\'s four new settings (its older version dropped first), inf_meme_add, the grants and the ready check', () => {
+  const sql = read('supabase/influencers.sql');
+  for (const c of ['layers jsonb', 'cast_inf text', 'cast_role text', 'mark_spot text']) assert.ok(sql.includes(`alter table public.agi1_inf_jobs add column if not exists ${c};`), c);
+  for (const k of ['layers', 'cast', 'role', 'mark_spot']) {
+    assert.ok(sql.includes(`alter table public.agi1_inf_jobs drop constraint if exists agi1_inf_jobs_${k}_check;\nalter table public.agi1_inf_jobs add constraint agi1_inf_jobs_${k}_check check (`), k);
+  }
+  assert.ok(sql.includes('create index if not exists agi1_inf_jobs_cast on public.agi1_inf_jobs (cast_inf) where cast_inf is not null;'));
+  const bodies = new Map([...sql.matchAll(/create or replace function public\.(\w+)\(([\s\S]*?)\$\$;/g)].map((m) => [m[1], m[2]]));
+  assert.ok(bodies.has('inf_cast_shown') && bodies.has('inf_meme_add'));
+  const using = [...bodies].filter(([n, b]) => n !== 'inf_cast_shown' && b.includes('inf_cast_shown(')).map(([n]) => n).sort();
+  assert.deepEqual(using, ['inf_cut_add', 'inf_explore', 'inf_job_get', 'inf_jobs', 'inf_like', 'inf_make', 'inf_meme_add', 'inf_pfp_of', 'inf_pfp_set', 'inf_week_top', 'inf_weeks']);
+  const make = sql.match(/create or replace function public\.inf_make\(([\s\S]*?)\)\s*returns/)[1];
+  assert.equal(make.match(/\bp_\w+/g).length, 26);
+  assert.match(make, /p_agi1 boolean default false,\s+p_layers jsonb default null, p_cast text default null, p_role text default null, p_mark text default null$/);
+  assert.ok(sql.indexOf('drop function if exists public.inf_make(') < sql.indexOf('create or replace function public.inf_make('), 'its older version dropped first');
+  // a photo saved from the photo editor is never from a template meme (its meme editor is its editor); the share mark's clock
+  // never marks a meme's video again (our clock drew its mark with its words)
+  assert.match(bodies.get('inf_photo_add'), /or f\.layers is not null then\s+return json_build_object\('ok', false, 'why', 'image'\)/);
+  assert.match(bodies.get('inf_mark_take'), /and layers is null/);
+  assert.ok(sql.includes("'inf_cast_shown(text)', 'inf_meme_add(text, text, text, text, jsonb, text, text, integer)'"));
+  assert.match(sql, /'inf_cut_due', 'inf_cast_shown', 'inf_meme_add'\)\) = 108 then 1 else 0 end\)/);
+  assert.match(sql, /\('agi1_inf_jobs_layers_check', 'agi1_inf_jobs_cast_check', 'agi1_inf_jobs_role_check', 'agi1_inf_jobs_mark_spot_check'\)\) = 4/);
+  // the code that calls them says to run it again when they're missing
+  const limits = read('server/limits.js');
+  assert.match(limits, /inf_meme_add[\s\S]{0,200}meme templates/);
+  assert.match(limits, /inf_cast_shown[\s\S]{0,200}meme templates/);
 });

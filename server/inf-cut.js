@@ -24,7 +24,7 @@ import { checkEditorWords } from './inf-editor.js';
 import { getJob, videoPath, partPath, layerPath, jobFiles, stepOf, fail, setStep, waitTurn, JOBS, aiTagged } from './inf-jobs.js';
 import { CUT } from './inf-mark.js';
 import { VIDEO_EDITOR } from '../src/studio/rules.js';
-import { cutSpec, cutSize, storedShape, ownMark, asItIs, markTopLeft } from '../src/studio/video-edit.js';
+import { cutSpec, cutSize, storedShape, ownMark, asItIs, markBox, markSpotOf } from '../src/studio/video-edit.js';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const PIECES = /^pieces-([0-9])$/;
@@ -58,22 +58,25 @@ export async function openCut(cfg, { wallet, from, cut, words, layer, id }) {
   if (src.inf_status !== 'ready') return { ok: false, why: 'not_ready' };
   const own = ownMark(src);
   if (own && !asItIs(spec.cut)) return { ok: false, why: 'cut' };
+  // (2026-10-14) where its own mark is (a meme video's where its words aren't: its row's mark_spot), else top left
+  const spot = own ? markSpotOf(src) : 'tl';
   // (the clock checks it against the video itself; here only what its row says: a part that starts past its end)
   const seconds = Number(src.seconds);
   if (Number.isFinite(seconds) && seconds > 0 && spec.cut.start > seconds - CUT.NEAR_END_S) return { ok: false, why: 'cut' };
   const left = await rpc(cfg, 'inf_tool_take', { p_wallet: code, p_tool: 'video', p_per_day: VIDEO_EDITOR.PER_DAY, p_site_cap: VIDEO_EDITOR.SITE_DAY, p_take: false }, 'studio');
   if (left?.ok !== true) return { ok: false, why: ['too_many', 'busy_day'].includes(left?.why) ? left.why : 'busy' };
   if (!layer) {
-    const r = await addCut(cfg, { id, inf: src.inf_id, code, from, cut: { ...spec.cut, layer: false, own } });
+    const r = await addCut(cfg, { id, inf: src.inf_id, code, from, cut: { ...spec.cut, layer: false, own, ...(own ? { spot } : {}) } });
     return r.ok ? { ok: true, job: id, left: n0(r.left) } : { ok: false, why: String(r.why || 'busy') };
   }
   const { makeTicket, UPLOAD } = await import('./inf-uploads.js');
-  const ticket = makeTicket(cfg.passSecret, 'vc', { j: id, i: src.inf_id, f: from, w: code, c: spec.cut, o: own ? 1 : 0 }, Date.now(), UPLOAD.TICKET_MS);
+  const ticket = makeTicket(cfg.passSecret, 'vc', { j: id, i: src.inf_id, f: from, w: code, c: spec.cut, o: own ? 1 : 0, s: spot }, Date.now(), UPLOAD.TICKET_MS);
   return { ok: true, job: id, ticket, size: cutSize(spec.cut.shape, ...spec.cut.src), left: n0(left.left) };
 }
 
 // One use counted and the cut started (a video of the same influencer, free, waiting for our clock: inf_cut_add). cut: its
-// tidied cut, with layer (its words' picture is kept) and own (its mark is in it already). → the database's answer
+// tidied cut, with layer (its words' picture is kept), own (its mark is in it already) and spot (where that mark is, since
+// 2026-10-14: a meme video's isn't always top left). → the database's answer
 export async function addCut(cfg, { id, inf, code, from, cut }) {
   const [W, H] = cut.src;
   return rpc(cfg, 'inf_cut_add', {
@@ -84,8 +87,9 @@ export async function addCut(cfg, { id, inf, code, from, cut }) {
 
 // ---------- 2: its words' and stickers' picture ----------
 // A real PNG of exactly w × h, made plain (no metadata, an alpha channel), and where a video's own share mark is (own: in its
-// top left corner, as server/inf-mark.js puts it), cleared: its words never cover it. → a PNG, or null when it isn't one
-export async function layerOf(sharp, bytes, { w, h, own = false }) {
+// top left corner, as server/inf-mark.js puts it; since 2026-10-14 at its spot, a meme video's where its words aren't),
+// cleared: its words never cover it. → a PNG, or null when it isn't one
+export async function layerOf(sharp, bytes, { w, h, own = false, spot = 'tl' }) {
   if (!Buffer.isBuffer(bytes) || bytes.length < 64 || !bytes.subarray(0, 8).equals(PNG)) return null;
   const meta = await sharp(bytes, { limitInputPixels: 4_000_000 }).metadata().catch(() => null);
   if (!meta || meta.format !== 'png' || meta.width !== w || meta.height !== h) return null;
@@ -93,7 +97,7 @@ export async function layerOf(sharp, bytes, { w, h, own = false }) {
   if (own) {
     const { markSize } = await import('./inf-mark.js');
     const m = await markSize(sharp);
-    const box = markTopLeft(w, h, m.width, m.height);
+    const box = markBox(w, h, m.width, m.height, spot);
     const left = Math.max(0, box.x - 2), top = Math.max(0, box.y - 2);
     const width = Math.min(w - left, box.w + 4), height = Math.min(h - top, box.h + 4);
     const hole = await sharp({ create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } } }).png().toBuffer();
@@ -103,7 +107,7 @@ export async function layerOf(sharp, bytes, { w, h, own = false }) {
 }
 
 // t: its ticket read ({ j: its id, i: its influencer, f: the video it's from, w: its wallet's code, c: its cut, o: 1 when that
-// video's mark is in it already }) · body: its bytes. → { status, body } for the answer
+// video's mark is in it already, s: where (2026-10-14; a ticket from before: top left) }) · body: its bytes. → { status, body }
 export async function receiveCut(cfg, t, body) {
   const spec = cutSpec(t?.c);
   if (!ID.test(String(t?.j)) || !ID.test(String(t?.i)) || !ID.test(String(t?.f)) || !spec.ok) return { status: 401, body: { error: 'ticket' } };
@@ -114,12 +118,13 @@ export async function receiveCut(cfg, t, body) {
   const sharp = await loadSharp();
   const [w, h] = cutSize(spec.cut.shape, ...spec.cut.src);
   const own = t.o === 1;
-  const png = await layerOf(sharp, body, { w, h, own });
+  const spot = own && ['tl', 'tr', 'bl', 'br', 'ml', 'mr'].includes(t.s) ? t.s : 'tl';
+  const png = await layerOf(sharp, body, { w, h, own, spot });
   if (!png) return { status: 422, body: { error: 'picture' } };
   const name = layerPath(t.i, t.j);
   await putFile(cfg, name, png, 'image/png', { timeoutMs: 9000 });
   let r;
-  try { r = await addCut(cfg, { id: t.j, inf: t.i, code: t.w, from: t.f, cut: { ...spec.cut, layer: true, own } }); } catch (err) {
+  try { r = await addCut(cfg, { id: t.j, inf: t.i, code: t.w, from: t.f, cut: { ...spec.cut, layer: true, own, ...(own ? { spot } : {}) } }); } catch (err) {
     // (the database away, or an influencers.sql from before the video editor: never kept for nothing)
     await deleteFiles(cfg, [name]).catch(() => 0);
     throw err;

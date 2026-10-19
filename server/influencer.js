@@ -38,7 +38,7 @@
 import { rpc } from './limits.js';
 import { burnKey, burnWallet } from './burn.js';
 import { studioOn, studioWallet, newOrderId, tick as studioTick, getOrder, checkPayment } from './studio.js';
-import { checkStart, checkInfScene, sceneWay, checkMemeText, checkEdit } from './inf-words.js';
+import { checkStart, checkInfScene, sceneWay, checkMemeText, checkEdit, checkLayerWords } from './inf-words.js';
 import { checkModelWords } from './studio-words.js';
 import { creditsOf, grantFree } from './credits.js';
 import { jobTick, getJob, stepOf, infOn, picPath, frameOf, jobFiles } from './inf-jobs.js';
@@ -50,6 +50,7 @@ import {
   photoSpec, photoCredits, videoSpec, videoCredits, WAYS, drawnStyle, FRAME, isFrame, portraitRow, STUDIO_PHOTO, editSpec,
   modelSpec, modelSpecField, modelCost, isDefaultSpec, burnable, DL_FORMATS, dlPath, MODEL_DEFAULT,
 } from '../src/studio/rules.js';
+import { templateOf, checkLayers, layersCaption, memeShape, memeQuality, castOf, roleOf, motionOf, isMarkSpot } from '../src/studio/memes.js';
 
 export const INF = {
   PER_WALLET: 3,               // influencers one wallet may have being made at once
@@ -124,7 +125,8 @@ export function infView(cfg, i, { mine = false, looksFiles = null } = {}) {
 
 // One of its photos or videos: a done one for anyone; its own wallet's others too (being made, or that couldn't be made)
 export function jobView(cfg, j, inf) {
-  if (!j || takenDown(cfg, j.id)) return null;
+  // (2026-10-14) …or someone else in it taken down (the database leaves out one deleted, hidden or a banned maker's)
+  if (!j || takenDown(cfg, j.id) || (j.cast_inf && takenDown(cfg, j.cast_inf))) return null;
   const v = {
     id: j.id, inf, kind: j.kind, scene: j.scene || null, shape: j.shape || (j.kind === 'trend' ? 'tall' : null), sound: j.sound === true,
     trend: j.trend || null, clip: j.clip === true, image: j.image || null, status: j.status, created: ms(j.created_at), done: ms(j.done_at),
@@ -138,8 +140,15 @@ export function jobView(cfg, j, inf) {
     edit: j.edit || null, editor: j.editor === true,
     // (2026-10-13) AGI-1 is in it ("With AGI-1", "Add AGI-1", or made from one with her)
     agi1: j.agi1 === true,
+    // (2026-10-14) a template meme (its words drawn by our server: src/studio/memes.js), or its 5-second video; and where its
+    // share mark is (where its words aren't: a meme's own spot; a video saved from the video editor, where the video it's cut
+    // from had it), so the editors keep their words off it
+    template: Array.isArray(j.layers), markSpot: isMarkSpot(j.mark_spot) ? j.mark_spot : isMarkSpot(j.cut?.spot) ? j.cut.spot : null,
   };
   if (j.mine === true) Object.assign(v, { cost: n0(j.cost), refunded: j.refunded === true, error: j.error || null, step: j.step || null });
+  // (2026-10-14) its maker's: a template meme's layers of words (its editor starts from them), and who else is in it (another of
+  // their influencers) in which of its template's roles
+  if (j.mine === true && Array.isArray(j.layers)) Object.assign(v, { layers: j.layers, cast: ID.test(String(j.cast_inf ?? '')) ? j.cast_inf : null, role: j.cast_role || null });
   return v;
 }
 
@@ -307,7 +316,17 @@ export async function rerollLooks(cfg, { wallet, level, id }) {
 // ('agi1_model'); a Standard, Pro or Long video from a photo she's in ('agi1_photo'), Anime from her own pictures; never a
 // trend video ('agi1_trend'). A photo with image and agi1 and no edit is "Add AGI-1": she's put into that photo (its scene,
 // shape, quality and a meme's words its own, at its price, like an edit; 'agi1_has' when she's in it already). An edit of a
-// photo with her, and a video from one, have her too. → { ok: true, job, credits } or { ok: false, field?, why, have? }
+// photo with her, and a video from one, have her too.
+// (2026-10-14, meme templates: src/studio/memes.js; the owner's answers "Save as a new meme", "Other influencers", "5-second
+// video") a photo with layers is a template meme: meme (its template's id), layers (its words: checked like a meme's, and every
+// letter one our fonts draw), scene (its picture's words: a classic's say what it shows, needed; a popular format's say more,
+// else its own); Classic at its template's quality and shape, a photo's price. cast (another of the person's influencers: theirs,
+// ready, never a private one into a public one's memes) or agi1, in one of its template's roles (role: none, its first;
+// 'cast_none' when its template has none; one of them only: 'cast_one'). A photo with image and cast or agi1 and no edit, from a
+// template meme, is "Add someone" (its words, scene and template its own; 'agi1_has' or 'cast_has' when someone's in it
+// already; a plain photo takes AGI-1 only: 'cast'). A video from a template meme is "Animate": its picture comes to life for 5
+// seconds (Standard, 5 s: 'model'; no references; its template's motion unless they say what moves), its words and someone in
+// it its own. → { ok: true, job, credits } or { ok: false, field?, n?, why, have? }
 export async function makeJob(cfg, { wallet, level, id, input }) {
   const kind = input?.kind;
   if (!['photo', 'trend', 'video'].includes(kind) || !ID.test(String(id))) return { ok: false, why: 'bad' };
@@ -315,6 +334,16 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
   if (input.agi1 !== undefined && input.agi1 !== null && typeof input.agi1 !== 'boolean') return { ok: false, why: 'bad' };
   const askedHer = input.agi1 === true;
   if (askedHer && !WITH_AGI1.KINDS.includes(kind)) return { ok: false, why: 'agi1_trend' };
+  // (2026-10-14) a template meme's words, someone else in it (another of the person's influencers) and the role they play: only
+  // a photo's (a template meme's video keeps its own); one other character at most (AGI-1 or another influencer)
+  const hasLayers = input.layers !== undefined && input.layers !== null;
+  const castAsked = given(input.cast), roleAsked = given(input.role);
+  if (hasLayers && (kind !== 'photo' || given(input.image) || given(input.lines))) return { ok: false, why: 'bad' };
+  if ((castAsked || roleAsked) && kind !== 'photo') return { ok: false, why: 'bad' };
+  if (castAsked && (typeof input.cast !== 'string' || !ID.test(input.cast))) return { ok: false, why: 'cast' };
+  if (roleAsked && typeof input.role !== 'string') return { ok: false, why: 'role' };
+  if (castAsked && askedHer) return { ok: false, why: 'cast_one' };
+  if (roleAsked && !castAsked && !askedHer) return { ok: false, why: 'bad' };
   // (round 4, phase 4) its reference pictures: 1 to 4 of the person's own uploads (the database checks they're theirs, passed
   // and fresh); never on a trend video
   let refs = null;
@@ -325,40 +354,127 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
   }
   const i = await rpc(cfg, 'inf_get', { p_id: id }, 'studio');
   if (!i || i.status === 'deleted' || i.hidden === true || takenDown(cfg, id)) return { ok: false, why: 'gone' };
-  if (i.wallet_code !== studioWallet(cfg.passSecret, wallet)) return { ok: false, why: 'not_yours' };
+  const code = studioWallet(cfg.passSecret, wallet);
+  if (i.wallet_code !== code) return { ok: false, why: 'not_yours' };
   if (i.status !== 'ready') return { ok: false, why: 'not_ready' };
   const image = input.image === undefined || input.image === null || input.image === '' ? null : String(input.image);
   // (2026-10-12, the editor) "Edit with words": a photo made from one of its own (image) with a change typed in words (edit);
   // a photo starts from another one only that way
   const editing = input.edit !== undefined && input.edit !== null && input.edit !== '';
-  // (2026-10-13) "Add AGI-1": she's put into one of its own photos (a meme, an X banner), without words
-  const adding = kind === 'photo' && !editing && askedHer && image !== null;
-  if (editing && (kind !== 'photo' || image === null)) return { ok: false, why: 'bad' };
+  // (2026-10-13) "Add AGI-1": she's put into one of its own photos (a meme, an X banner), without words; (2026-10-14) or, into a
+  // template meme, another of the person's influencers ("Add someone")
+  const adding = kind === 'photo' && !editing && (askedHer || castAsked) && image !== null;
+  if (editing && (kind !== 'photo' || image === null || castAsked || roleAsked)) return { ok: false, why: 'bad' };
   if (image !== null && (!ID.test(image) || (kind === 'photo' && !editing && !adding))) return { ok: false, why: 'bad' };
-  let photo = null;
+  let photo = null, tplPhoto = null;
   if (image) {
     photo = await getJob(cfg, image);
     if (!photo || photo.inf_id !== id || photo.kind !== 'photo' || photo.status !== 'done' || photo.hidden === true || photo.deleted_at) return { ok: false, why: 'image' };
+    // (2026-10-14) a template meme (its layers of words): its template still one of ours
+    if (Array.isArray(photo.layers)) {
+      tplPhoto = templateOf(photo.meme);
+      if (!tplPhoto) return { ok: false, why: 'image' };
+    }
     // (an X banner never starts a video or a trend video; edited, or with AGI-1 added, it's an X banner again)
     if (photo.shape === 'banner' && !editing && !adding) return { ok: false, why: 'banner' };
     // (she's in it already: nothing to add; an edit never adds her: "Add AGI-1" does; a trend video never starts from a photo
     // with her: it puts the influencer in place of one person, and the photo is only more views of it)
     if (adding && photo.agi1 === true) return { ok: false, why: 'agi1_has' };
+    // (2026-10-14) someone else is in it already (one at most); only a template meme takes another influencer, and its roles
+    if (adding && ID.test(String(photo.cast_inf ?? ''))) return { ok: false, why: 'cast_has' };
+    if (adding && !tplPhoto && castAsked) return { ok: false, why: 'cast' };
+    if (adding && !tplPhoto && roleAsked) return { ok: false, why: 'role' };
     if (editing && askedHer && photo.agi1 !== true) return { ok: false, why: 'bad' };
     if (kind === 'trend' && photo.agi1 === true) return { ok: false, why: 'agi1_trend' };
+    // (2026-10-14) a trend video never starts from a template meme (its words would be lost)
+    if (kind === 'trend' && tplPhoto) return { ok: false, why: 'image' };
   }
   // (2026-10-13) whether she's in it: asked for; or an edit of a photo with her, or a video from one (she's in its first frame)
   const her = askedHer || (photo?.agi1 === true && (editing || kind === 'video'));
+  // (2026-10-14) a new template meme: its layers of words on a picture made for its template
+  const template = kind === 'photo' && hasLayers && !image;
+  if (kind === 'photo' && !template && !tplPhoto && castAsked) return { ok: false, why: 'cast' };
+  if (kind === 'photo' && !template && !tplPhoto && roleAsked) return { ok: false, why: 'role' };
   let scene = null, shape = null, sound = false, trend = null, clip = null, edit = null;
   let model = null, quality = null, seconds = null, parts = 1, meme = null, caption = null, cost;
-  if ((kind === 'photo' && !editing && !adding) || kind === 'video') {
+  let layers = null, cast = null, role = null, mark = null;
+  if ((kind === 'photo' && !editing && !adding && !template) || (kind === 'video' && !tplPhoto)) {
     // (2026-10-13: with AGI-1 in it, its words may name her)
     const c = checkInfScene({ scene: input.scene, shape: photo ? photo.shape : input.shape, sound: input.sound, kind, agi1: her });
     if (!c.ok) return c;
     ({ scene, shape } = c);
     sound = kind === 'video' && c.sound === true;
   }
-  if (kind === 'photo' && (editing || adding)) {
+  if (template) {
+    // (2026-10-14) a new template meme: its template, its words, its picture's words, Classic at its template's own quality
+    const tpl = templateOf(input.meme);
+    if (!tpl) return { ok: false, field: 'meme', why: 'empty' };
+    const L = checkLayers(input.layers);
+    if (!L.ok) return { ok: false, field: 'layers', n: L.n, why: L.why };
+    const w = checkLayerWords(L.layers, { agi1: her });
+    if (!w.ok) return w;
+    shape = memeShape(tpl);
+    if (given(input.scene)) {
+      const c = checkInfScene({ scene: input.scene, shape, sound: false, kind, agi1: her });
+      if (!c.ok) return c;
+      scene = c.scene;
+    } else if (tpl.ask === 'scene') return { ok: false, field: 'scene', why: 'empty' };
+    else scene = tpl.about;
+    if ((given(input.model) && input.model !== 'classic') || (given(input.quality) && input.quality !== memeQuality(tpl))) return { ok: false, why: 'model' };
+    if (refs && refs.length > refsFor('photo', 'classic', her)) return { ok: false, why: 'refs' };
+    if (castAsked || askedHer) {
+      const r = roleFor(tpl, roleAsked ? input.role : null);
+      if (r.no) return r.no;
+      role = r.role;
+    }
+    if (castAsked) {
+      const no = await castCheck(cfg, { castId: input.cast, main: i, code });
+      if (no) return no;
+      cast = input.cast;
+    }
+    ({ model, quality, meme } = { model: 'classic', quality: memeQuality(tpl), meme: input.meme });
+    layers = L.layers;
+    caption = layersCaption(layers);
+    cost = photoCredits({ model, quality, shape, meme }, level);
+    const R = await import('./meme-render.js');
+    const miss = await R.undrawable(layers);
+    if (miss) return { ok: false, field: 'layers', n: miss.n, why: 'chars', chars: miss.chars.slice(0, 8) };
+    mark = await R.markSpotFor(layers, tpl, 'photo');
+  } else if (kind === 'photo' && tplPhoto) {
+    // (2026-10-14) a template meme edited with words, or someone added to it: a new one from its picture without words, its
+    // words, template, scene and who's in it its own (its share mark's spot too), at its price (Classic at its quality)
+    let e = null;
+    if (editing) {
+      e = checkEdit(input.edit, { agi1: her });
+      if (!e.ok) return e;
+    }
+    if (refs) return { ok: false, why: 'refs' };
+    const L = checkLayers(photo.layers);
+    const spec = editSpec(photo);
+    cost = photoCredits(spec, level);
+    if (!L.ok || !spec || !Number.isFinite(cost) || !photo.scene || !photo.caption) return { ok: false, why: 'image' };
+    ({ model, quality, shape, meme } = spec);
+    if (e) ({ edit } = e);
+    scene = String(photo.scene);
+    caption = String(photo.caption);
+    layers = L.layers;
+    if (adding) {
+      const r = roleFor(tplPhoto, roleAsked ? input.role : null);
+      if (r.no) return r.no;
+      role = r.role;
+      if (castAsked) {
+        const no = await castCheck(cfg, { castId: input.cast, main: i, code });
+        if (no) return no;
+        cast = input.cast;
+      }
+    } else if (ID.test(String(photo.cast_inf ?? ''))) {
+      // (its edit keeps whoever is in it: they must still be there)
+      if (await castCheck(cfg, { castId: photo.cast_inf, main: i, code })) return { ok: false, why: 'cast_gone' };
+      cast = photo.cast_inf;
+      role = roleOf(tplPhoto, photo.cast_role)?.id ?? null;
+    } else if (her) role = roleOf(tplPhoto, photo.cast_role)?.id ?? null;
+    mark = isMarkSpot(photo.mark_spot) ? photo.mark_spot : await (await import('./meme-render.js')).markSpotFor(layers, tplPhoto, 'photo');
+  } else if (kind === 'photo' && (editing || adding)) {
     // an edit: its change, checked like a scene (PG-13, nobody real by name, no links; her name only when she's in it); "Add
     // AGI-1": no words. No reference pictures either way; the rest is the photo's own: its scene (as it says where it is),
     // shape, a meme's format and words, its quality (Classic: editSpec)
@@ -390,6 +506,39 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
     if (refs && refs.length > refsFor('photo', spec.model, her)) return { ok: false, why: 'refs' };
     ({ model, quality } = spec);
     cost = photoCredits({ ...spec, shape, meme }, level);
+  } else if (kind === 'video' && tplPhoto) {
+    // (2026-10-14) "Animate": a template meme's picture comes to life for 5 seconds (Standard, as a Standard 5-second video is
+    // priced: the owner's "5-second video"), its words drawn over it by our clock, where the share mark isn't
+    if (refs) return { ok: false, why: 'refs' };
+    if ((given(input.model) && input.model !== 'standard') || (given(input.seconds) && Number(input.seconds) !== 5) || given(input.quality)) {
+      return { ok: false, why: 'model' };
+    }
+    if (askedHer && photo.agi1 !== true) return { ok: false, why: 'agi1_photo' };
+    const L = checkLayers(photo.layers);
+    if (!L.ok || !photo.caption) return { ok: false, why: 'image' };
+    if (given(input.scene)) {
+      const c = checkInfScene({ scene: input.scene, shape: photo.shape, sound: input.sound, kind, agi1: her });
+      if (!c.ok) return c;
+      scene = c.scene;
+      sound = c.sound === true;
+    } else {
+      scene = motionOf(tplPhoto);
+      sound = input.sound !== false;
+    }
+    const spec = videoSpec({ model: 'standard', seconds: 5, sound });
+    ({ model, seconds, quality, parts } = spec);
+    sound = spec.sound;
+    cost = videoCredits(spec, level);
+    shape = photo.shape === 'tall' ? 'tall' : 'square';
+    layers = L.layers;
+    meme = photo.meme;
+    caption = String(photo.caption);
+    if (ID.test(String(photo.cast_inf ?? ''))) {
+      if (await castCheck(cfg, { castId: photo.cast_inf, main: i, code })) return { ok: false, why: 'cast_gone' };
+      cast = photo.cast_inf;
+    }
+    if (cast || her) role = roleOf(tplPhoto, photo.cast_role)?.id ?? null;
+    mark = await (await import('./meme-render.js')).markSpotFor(layers, tplPhoto, 'video');
   } else if (kind === 'video') {
     // (phase 4) the model menu: one asked for, or (an older page) Standard from a photo, else Anime from its full body
     let asked = input.model ?? null;
@@ -439,11 +588,37 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
       ...(edit ? { p_edit: edit } : {}),
       // (2026-10-13) only when AGI-1 is in it: likewise
       ...(her ? { p_agi1: true } : {}),
+      // (2026-10-14) only for a template meme (its words, its share mark's spot), and only when someone's in it in a role
+      ...(layers ? { p_layers: layers } : {}),
+      ...(cast ? { p_cast: cast } : {}),
+      ...(role ? { p_role: role } : {}),
+      ...(mark ? { p_mark: mark } : {}),
     }, 'studio');
     if (r?.ok === true) return { ok: true, job, cost, credits: { paid: n0(r.paid), free: n0(r.free), bonus: n0(r.bonus) } };
     if (r?.why !== 'taken') return shortOr(r);
   }
   return { ok: false, why: 'busy' };
+}
+// (2026-10-14) a value given (not undefined, null or '')
+function given(v) { return v !== undefined && v !== null && v !== ''; }
+// (2026-10-14) "Other influencers": the role someone else plays in a template meme (src/studio/memes.js castOf): the one asked
+// for, else its template's first → { role } or { no } ('cast_none': nobody else fits its template; 'role': not one of its)
+function roleFor(tpl, asked) {
+  const roles = castOf(tpl);
+  if (!roles.length) return { no: { ok: false, why: 'cast_none' } };
+  const r = asked === null ? roles[0] : roleOf(tpl, asked);
+  return r ? { role: r.id } : { no: { ok: false, why: 'role' } };
+}
+// (2026-10-14) another of the person's influencers to put into a template meme: theirs, never the meme's own, there and shown,
+// ready (its full body made: what the AI is given), and never a private one (made from a real person's photo) into the memes
+// of one that isn't (they may be public) → null (fine) or { ok: false, why: 'cast' | 'cast_ready' | 'cast_private' }
+async function castCheck(cfg, { castId, main, code }) {
+  if (!ID.test(String(castId)) || castId === main.id) return { ok: false, why: 'cast' };
+  const c = await rpc(cfg, 'inf_get', { p_id: castId }, 'studio');
+  if (!c || c.status === 'deleted' || c.hidden === true || takenDown(cfg, castId) || c.wallet_code !== code) return { ok: false, why: 'cast' };
+  if (c.status !== 'ready' || !ID.test(String(c.body_job ?? ''))) return { ok: false, why: 'cast_ready' };
+  if (isPrivate(c) && !isPrivate(main)) return { ok: false, why: 'cast_private' };
+  return null;
 }
 
 // ---------- the editor (2026-10-12) ----------
@@ -452,6 +627,8 @@ export async function makeJob(cfg, { wallet, level, id, input }) {
 // making it now (makeJob's own checks: a photo it started from that's gone, a clip or reference pictures past their day, a
 // trend clip the owner took down, a model no longer on the menu, all say so). → its input for makeJob
 export function againInput(j) {
+  // (2026-10-14) a template meme, or its 5-second video: its own words and settings
+  if (Array.isArray(j.layers)) return againTemplate(j);
   const input = { kind: j.kind };
   if (j.kind === 'photo' || j.kind === 'video') Object.assign(input, { scene: j.scene, shape: j.shape });
   if (j.kind === 'photo') {
@@ -476,6 +653,33 @@ export function againInput(j) {
   if (Array.isArray(j.refs) && j.refs.length) input.refs = j.refs;
   return input;
 }
+// (2026-10-14) a template meme's: an edit (the same change to the same meme), someone added to one (the same one, or AGI-1, in
+// the same role, into the same meme), a new one (its template, words, picture's words unless they were its template's own, who
+// else is in it and its references) or its video (from the same meme, Standard for 5 s, its own words for what moves unless they
+// were its template's motion). One saved from the meme editor is made again as a new one: its words on a new picture (its
+// template, picture's words and who's in it the meme's own)
+function againTemplate(j) {
+  const tpl = templateOf(j.meme);
+  const someone = (input) => {
+    if (j.agi1 === true) input.agi1 = true;
+    if (ID.test(String(j.cast_inf ?? ''))) input.cast = j.cast_inf;
+    if ((input.agi1 || input.cast) && j.cast_role) input.role = j.cast_role;
+    return input;
+  };
+  if (j.kind === 'video') {
+    const input = { kind: 'video', image: j.image, sound: j.sound === true, model: 'standard', seconds: 5 };
+    if (j.scene && (!tpl || j.scene !== motionOf(tpl))) input.scene = j.scene;
+    if (j.agi1 === true) input.agi1 = true;
+    return input;
+  }
+  const editor = j.editor === true;
+  if (!editor && j.image && j.edit) return { kind: 'photo', image: j.image, edit: j.edit, ...(j.agi1 === true ? { agi1: true } : {}) };
+  if (!editor && j.image) return someone({ kind: 'photo', image: j.image });
+  const input = someone({ kind: 'photo', meme: j.meme, layers: j.layers });
+  if (j.scene && (!tpl || j.scene !== tpl.about)) input.scene = j.scene;
+  if (Array.isArray(j.refs) && j.refs.length) input.refs = j.refs;
+  return input;
+}
 // → makeJob's answer (with kind), or { ok: false, why: 'bad' | 'job_gone' | 'not_yours' | 'making' | makeJob's }
 export async function againJob(cfg, { wallet, level, job }) {
   if (!ID.test(String(job))) return { ok: false, why: 'bad' };
@@ -486,8 +690,8 @@ export async function againJob(cfg, { wallet, level, job }) {
   if (j.wallet_code !== studioWallet(cfg.passSecret, wallet)) return { ok: false, why: 'not_yours' };
   if (j.status !== 'done' && j.status !== 'failed') return { ok: false, why: 'making' };
   // (a photo saved from the photo editor, or a video saved from the video editor, has no words and settings to make again: the
-  // one it's from is edited again instead)
-  if (j.editor === true) return { ok: false, why: 'editor' };
+  // one it's from is edited again instead; (2026-10-14) a meme saved from the meme editor has its words: againTemplate)
+  if (j.editor === true && !Array.isArray(j.layers)) return { ok: false, why: 'editor' };
   const r = await makeJob(cfg, { wallet, level, id: j.inf_id, input: againInput(j) });
   return r.ok ? { ...r, kind: j.kind } : r;
 }
@@ -756,6 +960,17 @@ export async function deleteInf(cfg, { wallet, id }) {
   } catch (err) {
     console.warn(`[studio] a deleted influencer's files (they go with the tidy-up): ${err.message}`);
   }
+  // (2026-10-14) everything another of its maker's influencers made with it in it (a template meme it was put into, an edit or
+  // its 5-second video, a cut, a meme saved from one): deleted like a creation its maker deleted (the database hid them), so
+  // their files go too, and a profile picture framed from one of them
+  const cast = (Array.isArray(r.cast_jobs) ? r.cast_jobs : []).filter((x) => ID.test(String(x?.id)) && ID.test(String(x?.inf)));
+  if (cast.length) {
+    const names = cast.flatMap((x) => [...jobFiles({ id: x.id, inf_id: x.inf, kind: x.kind }),
+      ...(ID.test(String(x.pfp)) ? [picPath(x.inf, x.pfp, 0), picPath(x.inf, x.pfp, 0, 'webp')] : [])]);
+    try { files += await F.deleteFiles(cfg, names); } catch (err) {
+      console.warn(`[studio] the files of what a deleted influencer was in (they go with the tidy-up): ${err.message}`);
+    }
+  }
   return { ok: true, files };
 }
 
@@ -864,11 +1079,13 @@ export async function explore(cfg) {
     // (round 4, phase 4) its model, quality and length, sound, a meme's format and words (what its sheet says of it)
     model: j.model || null, quality: j.quality || null, seconds: Number.isFinite(Number(j.seconds)) && j.seconds !== null && j.seconds !== undefined ? Number(j.seconds) : null,
     sound: j.sound === true, meme: j.meme || null, caption: j.caption || null,
-    // (2026-10-13) AGI-1 is in it ("With AGI-1")
-    agi1: j.agi1 === true,
+    // (2026-10-13) AGI-1 is in it ("With AGI-1"); (2026-10-14) another of its maker's influencers in it (a template meme)
+    agi1: j.agi1 === true, cast: ok(j.cast) ? j.cast : null,
     inf: { id: j.inf_id, name: j.inf_name, portrait: face(j), maker: makerOf(j.maker) },
   });
-  const tiles = (list) => (Array.isArray(list) ? list : []).filter((j) => ok(j.id) && ok(j.inf_id) && j.shape !== 'banner').map(tile);
+  // (2026-10-14) never one with someone else in it the owner took down (STUDIO_HIDE: the database leaves out the rest)
+  const tiles = (list) => (Array.isArray(list) ? list : []).filter((j) => ok(j.id) && ok(j.inf_id) && j.shape !== 'banner' && (!j.cast || ok(j.cast)))
+    .map(tile);
   return {
     influencers: (Array.isArray(e?.influencers) ? e.influencers : []).filter((i) => ok(i.id)).map((i) => ({
       id: i.id, name: i.name, style: i.style, portrait: face(i), ready: ms(i.ready_at), maker: makerOf(i.maker),
@@ -884,7 +1101,7 @@ export async function explore(cfg) {
     boosted: (Array.isArray(e?.boosted) ? e.boosted : []).filter((i) => ok(i.id)).map((i) => ({
       id: i.id, name: i.name, style: i.style, portrait: face(i), until: ms(i.until), maker: makerOf(i.maker),
     })),
-    spotlight: sp && ok(sp.id) && ok(sp.inf_id) ? {
+    spotlight: sp && ok(sp.id) && ok(sp.inf_id) && (!sp.cast_inf || ok(sp.cast_inf)) ? {
       week: sp.week, job: sp.id, kind: sp.kind, shape: sp.shape || (sp.kind === 'photo' ? 'square' : 'tall'), poster: sp.poster === true,
       files: n0(sp.files), holderLikes: n0(sp.holder_likes), likes: n0(sp.likes), prize: n0(sp.prize),
       inf: { id: sp.inf_id, name: sp.inf_name, portrait: face(sp), maker: makerOf(sp.maker) },

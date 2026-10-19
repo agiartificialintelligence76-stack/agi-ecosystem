@@ -2,9 +2,11 @@
 // differen color as well like fast , i dont know you know the best". Claude named it Instant: a mint-to-aqua switch with
 // fast-forward chevrons (never a lightning bolt: that's the credits' sign). Off by default, remembered in this browser only.
 // On, an influencer's tools are these ready-made ideas, and one tap makes one at its price: a photo (Classic, Standard), an X
-// banner (Classic, HD), a meme (Classic, Standard, square, its words ready), a video (Standard, 5 seconds, silent, from its
-// newest photo) or its 3D model. A coin is never one tap (launching stays manual). MEME_READY also fills the Meme tool's
-// "Surprise me". (2026-10-13, "With AGI-1") photos of it together with AGI-1 (Classic, Standard), and videos with her (from its
+// banner (Classic, HD), a meme (since 2026-10-19 one of its templates, Classic at its template's own quality and shape: its
+// words ready), a video (Standard, 5 seconds, silent, from its
+// newest photo) or its 3D model. A coin is never one tap (launching stays manual). (MEME_READY filled the Meme tool's
+// "Surprise me" until 2026-10-19: since then it picks any of the 30 templates and one of its samples, views/influencer.js
+// memeFields.) (2026-10-13, "With AGI-1") photos of it together with AGI-1 (Classic, Standard), and videos with her (from its
 // newest photo she's in; the plain videos from its newest photo she isn't in). Pure (tests/influencer.test.js: every idea
 // passes our server's own word checks).
 export const INSTANT_KEY = 'agi_instant';
@@ -14,6 +16,8 @@ export const INSTANT_SEEN_KEY = 'agi_instant_seen';
 export const INSTANT_MAKES = {
   photo: { kind: 'photo', model: 'classic', quality: 'std', shape: 'tall' },
   banner: { kind: 'photo', model: 'classic', quality: 'hd', shape: 'banner' },
+  // (2026-10-19) a meme idea is made as its template says (views/influencer.js memeSpecOf: Classic at memes.js memeQuality and
+  // memeShape: a POV meme tall and HD); this is a template's usual, Standard and square
   meme: { kind: 'photo', model: 'classic', quality: 'std', shape: 'square' },
   video: { kind: 'video', model: 'standard', seconds: 5, sound: false },
   // (2026-10-13) with AGI-1: a photo by Classic (it keeps her exactly as she's drawn), a video from a photo she's in

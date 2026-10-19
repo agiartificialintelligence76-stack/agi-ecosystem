@@ -51,6 +51,8 @@ export async function openSave(cfg, { wallet, from, shape, words, id }) {
   if (!photo || photo.kind !== 'photo' || !ID.test(String(photo.inf_id))) return { ok: false, why: 'image' };
   if (photo.wallet_code !== code) return { ok: false, why: 'not_yours' };
   if (photo.status !== 'done' || photo.hidden === true || photo.deleted_at || takenDown(cfg, photo.id)) return { ok: false, why: 'image' };
+  // (2026-10-14) never a template meme: its words are layers its own editor changes ("Save as a new meme": server/inf-meme-save.js)
+  if (Array.isArray(photo.layers)) return { ok: false, why: 'image' };
   if (photo.inf_status === 'deleted' || photo.inf_hidden === true || takenDown(cfg, photo.inf_id)) return { ok: false, why: 'gone' };
   if (photo.inf_status !== 'ready') return { ok: false, why: 'not_ready' };
   // (an X banner stays one; nothing else becomes one)

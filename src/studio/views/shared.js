@@ -12,6 +12,7 @@ import {
   captionsLeftText, postOnXUrl, removeMarkText, removeMarkErrorText,
 } from '../app-words.js';
 import { readyCaptions } from '../captions.js';
+import { templateOf, roleOf } from '../memes.js';
 import { BURN_ADDRESS, BURN_EXPLORER } from '../../lib/burns.js';
 import { TOKENS } from '../../prices/parse.js';
 
@@ -84,14 +85,18 @@ export function mediaTile(ctx, item, { onopen, can = true, liked = null, showNam
   const her = item.agi1 === true;
   const cover = isPhoto ? infPic(inf, item.id, 0, true) : item.poster ? infPoster(inf, item.id)
     : item.inf?.portrait ? infPic(inf, item.inf.portrait.job, item.inf.portrait.n, true) : null;
-  const what = isPhoto ? (item.shape === 'banner' ? 'an X banner' : 'a photo') : item.kind === 'trend' ? `a trend video${item.trend && trendOf(item.trend) ? ` (${trendOf(item.trend).name})` : ''}` : 'a video';
+  const what = isPhoto ? (item.shape === 'banner' ? 'an X banner' : item.meme ? 'a meme' : 'a photo') : item.kind === 'trend' ? `a trend video${item.trend && trendOf(item.trend) ? ` (${trendOf(item.trend).name})` : ''}` : 'a video';
+  // (2026-10-19) badge.corner: a photo's badge as a small round mark in its top right corner (its words on hover), where a
+  // video's play mark goes: a meme's words start at its top left, under where a tag would go
+  const corner = Boolean(badge?.corner && badge.icon && isPhoto);
   const tags = [
-    badge ? h('span', { class: `sa-tag sa-media-tag ${badge.cls || ''}`.trim() }, badge.icon ? icon(badge.icon) : null, h('span', { text: badge.text })) : null,
+    badge && !corner ? h('span', { class: `sa-tag sa-media-tag ${badge.cls || ''}`.trim() }, badge.icon ? icon(badge.icon) : null, h('span', { text: badge.text })) : null,
     her ? h('span', { class: 'sa-tag sa-media-tag sa-tag-agi1' }, icon('agi1'), h('span', { text: WITH_AGI1.NAME })) : null,
   ].filter(Boolean);
   const open = h('button', { type: 'button', class: 'sa-media-open', 'aria-label': `${item.inf?.name || 'An influencer'}: ${what}${her ? ', with AGI-1' : ''}` },
     cover ? pic(cover, { cls: `sa-media-pic${!isPhoto && !item.poster ? ' is-blur' : ''}` }) : h('span', { class: 'sa-media-pic is-missing' }),
-    isPhoto ? null : h('span', { class: 'sa-media-play', 'aria-hidden': 'true' }, icon('play')),
+    isPhoto ? (corner ? h('span', { class: 'sa-media-corner', title: badge.text, 'aria-hidden': 'true' }, icon(badge.icon)) : null)
+      : h('span', { class: 'sa-media-play', 'aria-hidden': 'true' }, icon('play')),
     tags.length ? h('span', { class: 'sa-media-tags' }, ...tags) : null,
     showName && item.inf?.name ? h('span', { class: 'sa-media-cap' },
       item.inf.portrait ? pic(infPic(inf, item.inf.portrait.job, item.inf.portrait.n, true), { cls: 'sa-avatar sa-avatar-xs' }) : null,
@@ -193,9 +198,12 @@ export function promptBlock(ctx, text, { label = 'Prompt' } = {}) {
 // alone (named for screen readers and on hover), so the four fit on one line on a computer. own: { cost (credits, or null when
 // its model left the menu), onAgain (none for one saved from the photo editor or the video editor), onDelete, onEdit and
 // onEditor (a photo's), onVideoEditor (a video's or a trend video's: "Edit video", the video editor) } (each called once the
-// sheet is closed). (2026-10-13, "With AGI-1") on a photo (a meme, an X banner) she isn't in, "Add AGI-1" (own.onAddHer: she's
+// sheet is closed). (2026-10-14) A template meme's onEditor is the meme editor ("Edit meme": its words, their font, colors,
+// size and place). (2026-10-13, "With AGI-1") on a photo (a meme, an X banner) she isn't in, "Add AGI-1" (own.onAddHer: she's
 // put into it, a new one next to it, at its price), highlighted; the row can wrap onto a second line, so its height is measured
-// (--sa-row-h, through the CSS object model) for the rules that fit the picture under it ----------
+// (--sa-row-h, through the CSS object model) for the rules that fit the picture under it. (2026-10-19, meme templates: the
+// owner's "Other influencers") on a template meme nobody else is in, "Add someone" instead (own.onAddSomeone: AGI-1 or another
+// of its maker's influencers, in one of its template's roles), highlighted the same way ----------
 function editRow(s, j, own) {
   if (!own) return null;
   const go = (label, ic, fn, extra = {}) => {
@@ -204,12 +212,14 @@ function editRow(s, j, own) {
     return b;
   };
   const edit = j.kind === 'photo' && own.onEdit ? go('Edit with words', 'wand', own.onEdit) : null;
-  const editor = j.kind === 'photo' && own.onEditor ? go('Edit photo', 'sliders', own.onEditor)
+  const editor = j.kind === 'photo' && own.onEditor ? (j.template ? go('Edit meme', 'type', own.onEditor) : go('Edit photo', 'sliders', own.onEditor))
     : ['video', 'trend'].includes(j.kind) && own.onVideoEditor ? go('Edit video', 'scissors', own.onVideoEditor) : null;
   const addHer = j.kind === 'photo' && j.agi1 !== true && own.onAddHer ? go('Add AGI-1', 'agi1', own.onAddHer, { class: 'sa-btn sa-btn-ghost sa-btn-sm sa-edit-her' }) : null;
+  const addSomeone = j.kind === 'photo' && j.template === true && j.agi1 !== true && !j.cast && own.onAddSomeone
+    ? go('Add someone', 'invite', own.onAddSomeone, { class: 'sa-btn sa-btn-ghost sa-btn-sm sa-edit-her' }) : null;
   const again = own.onAgain ? go(Number.isFinite(own.cost) ? `Make another · ${num(own.cost)} credits` : 'Make another', 'refresh', own.onAgain) : null;
   const del = go('', 'trash', own.onDelete, { kind: 'quiet', class: 'sa-btn sa-btn-quiet sa-btn-sm sa-edit-delete', 'aria-label': 'Delete', title: 'Delete' });
-  const row = h('div', { class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' }, edit, editor, addHer, again, del);
+  const row = h('div', { class: 'sa-edit-row', role: 'group', 'aria-label': 'Yours' }, edit, editor, addHer, addSomeone, again, del);
   const rowH = () => s.dialog.style.setProperty('--sa-row-h', `${row.offsetHeight}px`);
   const watch = typeof ResizeObserver === 'function' ? new ResizeObserver(rowH) : null;
   watch?.observe(row);
@@ -218,9 +228,27 @@ function editRow(s, j, own) {
 }
 // (2026-10-13) a photo or a video with AGI-1 in it, said under it in its sheet: "With AGI-1", or (one made with "Add AGI-1":
 // from a photo, without words) "AGI-1 added"
-const herLine = (j) => (j?.agi1 === true
-  ? h('p', { class: 'sa-edit-words is-agi1' }, icon('agi1'), h('span', { text: j.kind === 'photo' && j.image && !j.edit && !j.editor ? 'AGI-1 added to it, as her own 2D anime self' : 'With AGI-1, as her own 2D anime self' }))
-  : null);
+// (2026-10-19) …in a template meme, the part she plays: "AGI-1 added to it as “The partner (right)”, her own 2D anime self"
+function herLine(j) {
+  if (j?.agi1 !== true) return null;
+  const base = j.kind === 'photo' && j.image && !j.edit && !j.editor ? 'AGI-1 added to it' : 'With AGI-1';
+  const part = partOf(j);
+  return h('p', { class: 'sa-edit-words is-agi1' }, icon('agi1'), h('span', { text: part ? `${base}${part}, her own 2D anime self` : `${base}, as her own 2D anime self` }));
+}
+// (2026-10-19, meme templates) the role someone else plays in a template meme, as its maker's sheet says it (our server gives its
+// role and who only to its maker): ' as “The partner (right)”', or nothing (someone beside the character: no part of its own)
+function partOf(j) {
+  if (j?.template !== true || !j.role) return '';
+  const r = roleOf(templateOf(j.meme), j.role);
+  return r && r.id !== 'beside' ? ` as “${r.name}”` : '';
+}
+// …and another of its maker's influencers in it ("Add someone"): "With Kai as “The partner (right)”" (its name from My studio's
+// list; one taken down or deleted since is "another of your influencers")
+function castLine(ctx, j) {
+  if (j?.template !== true || !j.cast) return null;
+  const who = (ctx.me?.influencers || []).find((x) => x?.id === j.cast)?.name || 'another of your influencers';
+  return h('p', { class: 'sa-edit-words is-cast' }, icon('invite'), h('span', { text: `With ${who}${partOf(j)}` }));
+}
 
 // (2026-10-13, the owner: "when i open a video and photo, there should be a button that says remove watermark"; the owner's
 // choice: "Everyone, holders use it (Recommended)") "Remove watermark", next to Download on its maker's own photos and videos
@@ -257,17 +285,23 @@ export const ownItem = (ctx, item) => Boolean(item?.inf?.id && Array.isArray(ctx
 export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCaptions = null, own = null }) {
   const s = sheet({ title: name || 'A video', sub: jobMeta(v), size: 'md' });
   const shape = SHAPES[v.shape] ? v.shape : 'tall';
+  // (2026-10-19, meme templates) an animated meme ("Animate", 5 seconds): its words are drawn on it (said here too, for anyone
+  // who can't see it), and its prompt is what moves in it
+  const animated = v.kind === 'video' && v.template === true;
+  const memeWords = animated && v.caption ? String(v.caption).split('\n').join(' / ') : null;
   const video = h('video', {
     class: `sa-player is-${shape}`, src: infVideo(v.id), controls: true, playsinline: true, autoplay: true, preload: 'auto',
-    ...(v.poster ? { poster: infPoster(inf, v.id) } : {}), 'aria-label': `${name}: an AI-made video${v.agi1 === true ? ', with AGI-1' : ''}`,
+    ...(v.poster ? { poster: infPoster(inf, v.id) } : {}),
+    'aria-label': `${name}: ${animated ? `an animated meme${memeWords ? ` that says “${memeWords}”` : ''}` : 'an AI-made video'}${v.agi1 === true ? ', with AGI-1' : ''}`,
   });
   const url = `${location.origin}${ctx.href(`/i/${inf}`)}#v-${v.id}`;
   // (its own: Make another and Delete first, in view as it opens: under it they were below the fold)
   add(s.body, mine ? editRow(s, v, own) : null, h('div', { class: `sa-player-wrap is-${shape}` }, video),
+    memeWords ? h('p', { class: 'sa-meme-words', text: `“${memeWords}”` }) : null,
     // (2026-10-12) one saved from the video editor: cut from one of its videos, with no prompt of its own
     v.kind === 'video' && v.editor === true ? h('p', { class: 'sa-edit-words' }, icon('scissors'), h('span', { text: 'Edited in the video editor' }))
-      : promptOf(v) ? promptBlock(ctx, promptOf(v), { label: v.scene ? 'Prompt' : 'Its trend\'s prompt' }) : null,
-    herLine(v));
+      : promptOf(v) ? promptBlock(ctx, promptOf(v), { label: animated ? 'What moves' : v.scene ? 'Prompt' : 'Its trend\'s prompt' }) : null,
+    herLine(v), mine ? castLine(ctx, v) : null);
   const foot = [];
   if (ctx.route.view !== 'influencer') foot.push(linkBtn(`See ${name}`, ctx.href(`/i/${inf}`), { kind: 'primary', dataset: { saLink: '' } }));
   if (!priv) foot.push(likeButton(ctx, { job: v.id, likes: v.likes, can: !mine, cls: 'sa-heart-lg', fresh: false }));
@@ -290,8 +324,10 @@ export function videoSheet(ctx, v, { name, inf, mine = false, priv = false, onCa
 }
 
 // ---------- a photo seen big: a heart, Download (with the share mark), Share, and (its own) a video or a trend from it ----------
-// kind: 'photo' | 'body' (its full body: its photos, videos and 3D model start from it)
-export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind = 'photo', onVideo = null, onTrend = null, onCaptions = null, own = null }) {
+// kind: 'photo' | 'body' (its full body: its photos, videos and 3D model start from it). (2026-10-19, meme templates: the
+// owner's "5-second video") onAnimate: one of its own template memes comes to life for 5 seconds ("Animate it", first in its
+// foot: a meme never starts a video or a trend video otherwise)
+export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind = 'photo', onVideo = null, onTrend = null, onCaptions = null, onAnimate = null, own = null }) {
   const s = sheet({ title: kind === 'body' ? `${name}: full body` : name || 'Photo', sub: kind === 'body' ? 'Its photos, videos and 3D model start from this.' : jobMeta({ ...j, kind: 'photo' }), size: 'md' });
   const shape = PHOTO_SHAPES[j.shape] ? j.shape : 'tall';
   const banner = kind === 'photo' && shape === 'banner';
@@ -299,19 +335,26 @@ export function photoSheet(ctx, j, { name, inf, mine = false, priv = false, kind
   const memeWords = kind === 'photo' && j.meme && j.caption ? String(j.caption).split('\n').join(' / ') : null;
   // (2026-10-12, the editor) a photo made with "Edit with words": its change, said with it
   const edited = kind === 'photo' && j.edit ? String(j.edit) : null;
-  // (…and one saved from the photo editor: said so)
+  // (…and one saved from the photo editor, or (2026-10-14) a template meme saved from the meme editor: said so)
   const byEditor = kind === 'photo' && j.editor === true;
+  const editorName = j.template === true ? 'meme' : 'photo';
   const her = kind === 'photo' && j.agi1 === true;
-  const big = pic(infPic(inf, j.id, 0), { cls: `sa-big-pic is-${shape}`, alt: `${name}${her ? ' with AGI-1' : ''}: ${kind === 'body' ? 'full body' : banner ? `an X banner${j.scene ? `, ${j.scene}` : ''}` : memeWords ? `a meme that says “${memeWords}”` : j.scene || 'a photo'}${edited ? `, edited: ${edited}` : byEditor ? ', edited in the photo editor' : ''}`, lazy: false });
+  const big = pic(infPic(inf, j.id, 0), { cls: `sa-big-pic is-${shape}`, alt: `${name}${her ? ' with AGI-1' : ''}: ${kind === 'body' ? 'full body' : banner ? `an X banner${j.scene ? `, ${j.scene}` : ''}` : memeWords ? `a meme that says “${memeWords}”` : j.scene || 'a photo'}${edited ? `, edited: ${edited}` : byEditor ? `, edited in the ${editorName} editor` : ''}`, lazy: false });
   add(s.body, mine && kind === 'photo' ? editRow(s, j, own) : null, h('div', { class: `sa-big-wrap${banner ? ' is-banner' : ''}` }, big),
     memeWords ? h('p', { class: 'sa-meme-words', text: `“${memeWords}”` }) : null,
     kind === 'photo' && j.scene ? promptBlock(ctx, String(j.scene)) : null,
     edited ? h('p', { class: 'sa-edit-words' }, icon('wand'), h('span', { text: `Edited with words: “${edited}”` })) : null,
-    byEditor ? h('p', { class: 'sa-edit-words' }, icon('sliders'), h('span', { text: 'Edited in the photo editor' })) : null,
+    byEditor ? h('p', { class: 'sa-edit-words' }, icon(editorName === 'meme' ? 'type' : 'sliders'), h('span', { text: `Edited in the ${editorName} editor` })) : null,
     her ? herLine(j) : null,
+    mine && kind === 'photo' ? castLine(ctx, j) : null,
     // (round 4) an X banner: where it goes on X
     banner && mine ? h('p', { class: 'sa-note', text: 'On X: your profile → Edit profile → tap the header picture, and pick this one. Its lower left is where your profile picture sits.' }) : null);
   const foot = [];
+  if (mine && kind === 'photo' && onAnimate) {
+    const anim = btn('Animate it', { kind: 'primary', icon: 'film' });
+    anim.addEventListener('click', () => { s.close(); onAnimate(j); });
+    foot.push(anim);
+  }
   if (mine && kind === 'photo' && onVideo) {
     const vid = btn('Make a video from it', { kind: 'primary', icon: 'film' });
     vid.addEventListener('click', () => { s.close(); onVideo(j.id); });

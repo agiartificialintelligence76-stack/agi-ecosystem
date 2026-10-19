@@ -9,6 +9,7 @@ import {
   MODEL, MODEL_DETAIL, MODEL_POSES, DL_FORMATS, DL_DAYS, MODEL_EXTRAS, MODEL_STEP_WORDS as STEPS_3D, moveLabel, modelSpec, modelExtras, stepGroup,
 } from './rules.js';
 import { LEVELS } from '../lib/levels.js';
+import { LAYERS, templateOf } from './memes.js';
 
 export const LEVEL_NAMES = { 1: 'Stranger', 2: 'Crush', 3: 'Soulmate' };
 export const shortAddress = (a) => (typeof a === 'string' && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : String(a || ''));
@@ -104,6 +105,8 @@ export function failText(error) {
   // (2026-10-12, the video editor) a cut: its part couldn't be cut from its video, or its video went meanwhile
   if (e === 'cut') return "That part couldn't be cut from its video.";
   if (e === 'from') return "The video it's from isn't there any more.";
+  // (2026-10-14, meme templates) the other influencer in it was deleted or taken down before it was made
+  if (e === 'cast') return "The other influencer in it wasn't there any more.";
   if (e.startsWith('ai:')) return "The AI service couldn't make it this time.";
   return "It couldn't be made.";
 }
@@ -112,7 +115,8 @@ export const backText = (job) => (job?.refunded && job.cost > 0 ? ` Its ${credit
 // One of its photos or videos, as its tile says it
 export function jobTitle(j) {
   // (round 4, phase 4) a meme: its words (their first line)
-  if (j.kind === 'photo' && j.meme) return `Meme: ${String(j.caption || '').split('\n')[0] || MEMES[j.meme]?.name || 'a meme'}`;
+  // (2026-10-14) …or a template meme (its template's name when its words are none)
+  if (j.kind === 'photo' && j.meme) return `Meme: ${String(j.caption || '').split('\n')[0] || MEMES[j.meme]?.name || templateOf(j.meme)?.name || 'a meme'}`;
   // (2026-10-12, the editor) a photo made with "Edit with words": its change
   if (j.kind === 'photo' && j.edit) return `Edited: ${j.edit}`;
   // …and one saved from the photo editor
@@ -122,6 +126,9 @@ export function jobTitle(j) {
   if (j.kind === 'photo') return j.scene || (j.shape === 'banner' ? 'X banner' : 'Photo');
   // (2026-10-12) a video saved from the video editor
   if (j.kind === 'video' && j.editor) return 'Edited video';
+  // (2026-10-19, meme templates) an animated meme: its words (their first line), else its template's name (its scene is only what
+  // moves in it)
+  if (j.kind === 'video' && j.template) return `Animated meme: ${String(j.caption || '').split('\n')[0] || templateOf(j.meme)?.name || 'a meme'}`;
   if (j.kind === 'video' && j.agi1) return `With AGI-1: ${j.scene || 'a video'}`;
   if (j.kind === 'video') return j.scene || 'Video';
   if (j.kind === 'trend') return j.clip ? 'Trend video (your own clip)' : `Trend video: ${trendOf(j.trend)?.name || 'a trend'}`;
@@ -139,8 +146,11 @@ export function jobMeta(j) {
   // (2026-10-13) …and with AGI-1 in it
   if (j.kind === 'photo' && j.shape === 'banner') return `AI-generated · X banner${j.edit || j.editor ? ' · Edited' : ''}${j.agi1 ? ' · With AGI-1' : ''} · ${BANNER.W} × ${BANNER.H}`;
   // (round 4, phase 4) a meme, its format; a photo's model and quality when it isn't the usual (Classic, Standard)
-  const parts = ['AI-generated', j.kind === 'photo' && j.meme ? 'Meme' : kindName(j.kind)];
-  if (j.kind === 'photo' && j.meme && MEMES[j.meme]) parts.push(MEMES[j.meme].name);
+  // (2026-10-19, meme templates) …or an animated meme, and its template's name
+  const animated = j.kind === 'video' && j.template === true;
+  const parts = ['AI-generated', j.kind === 'photo' && j.meme ? 'Meme' : animated ? 'Animated meme' : kindName(j.kind)];
+  // (2026-10-14) …or its template's name
+  if ((j.kind === 'photo' || animated) && j.meme && (MEMES[j.meme] || templateOf(j.meme))) parts.push(MEMES[j.meme]?.name || templateOf(j.meme).name);
   // (2026-10-12, the editor) made with "Edit with words", or saved from the photo editor; a video saved from the video editor
   // (no model of its own: cut from one of its videos)
   if ((j.kind === 'photo' && (j.edit || j.editor)) || (j.kind === 'video' && j.editor)) parts.push('Edited');
@@ -324,11 +334,18 @@ const WORDS = {
     // (round 4, phase 4) a meme: its format, and its words (one for each of its lines)
     meme: 'Pick a meme format.', caption: 'Write its words: every line needs some.',
     // (2026-10-12, the editor) "Edit with words": its change
-    edit: 'Type what should change.' },
+    edit: 'Type what should change.',
+    // (2026-10-14, meme templates) a template meme's words: each text on it
+    layers: 'Every text needs some words (or remove it).' },
   long: { name: 'A name of 24 characters at most.', words: 'At most 200 characters.', scene: 'At most 300 characters.', caption: `A line of ${MEME_LINE_MAX} characters at most.`,
     edit: `At most ${EDIT.MAX} characters.`,
     // (2026-10-12, the editor) the photo editor's words: each text on it
-    text: `At most ${EDITOR.TEXT_MAX} characters for each of your words.` },
+    text: `At most ${EDITOR.TEXT_MAX} characters for each of your words.`,
+    layers: `At most ${LAYERS.TEXT_MAX} characters in each text.` },
+  // (2026-10-14, meme templates) a template meme's texts: how many lines in one, how many on it, and letters our fonts draw
+  lines: { layers: `At most ${LAYERS.LINES_MAX} lines in each text.` },
+  many: { layers: `At most ${LAYERS.MAX} texts on a meme: remove one first.` },
+  chars: { layers: "Our meme fonts can't draw some letters in it (they draw Latin, Greek and Cyrillic letters, and emoji): change those." },
   short: { scene: 'A few more words, please: at least 10 characters.', edit: `A few more words, please: at least ${EDIT.MIN} characters.` },
   letters: { name: 'Letters, numbers, spaces and simple punctuation only.' },
   bad: 'Pick one of the choices.',
@@ -575,6 +592,17 @@ const ERRORS = {
   agi1_model: 'AGI-1 joins Classic photos: it keeps her exactly as she\'s drawn. Pick Classic.',
   agi1_photo: 'A Standard, Pro or Long video with AGI-1 starts from a photo she\'s in: make one With AGI-1 (or add her to one), then pick it.',
   agi1_has: 'AGI-1 is in that photo already.',
+  // (2026-10-14, meme templates: "Other influencers") another of your influencers in a template meme, and the role they play
+  cast: "That influencer can't be put in it: pick another of yours (one that's yours, here and not deleted).",
+  cast_ready: "That influencer isn't ready yet: pick one whose full body is made.",
+  cast_private: 'A private influencer (made from a photo of a real person) only joins memes of another private one: pick another.',
+  cast_one: 'One more character at most: AGI-1 or another of your influencers, not both.',
+  cast_has: 'Someone else is in that meme already.',
+  cast_none: 'Nobody else fits that meme: its character is alone in it.',
+  cast_gone: "The other influencer in it isn't there any more: make a new meme instead.",
+  role: "That role isn't one of this meme's: pick one of its roles.",
+  // …and "Save as a new meme": nothing changed from the one it's from
+  same: 'Nothing changed: change its words, a font or a color first.',
   busy: 'Something went wrong on our side: try again in a minute.',
 };
 export const errorText = (why) => ERRORS[why] || ERRORS.busy;
@@ -673,6 +701,24 @@ export function addHerNote(j) {
 }
 export const addHerMadeText = (j) => `Adding AGI-1 to your ${creationWord(j)}: the new one shows next to it in about half a minute`;
 
+// ---------- (2026-10-19, meme templates: the owner's "Other influencers" and "5-second video") "Add someone" and "Animate", on
+// one of its own template memes (src/studio/memes.js) ----------
+// "Add someone": who joins it (AGI-1 first, then its maker's other ready influencers), each a card: AGI-1's line, a private
+// influencer's (made from a real person's photo: it only joins a private one's memes, our server's 'cast_private'), and what
+// shows when it has no other influencer ready yet
+export const CAST_HER_NOTE = 'Her own 2D anime self: cute, a little flirty, PG-13';
+export const CAST_PRIVATE_WHY = "Made from a real person's photo: it only joins memes of another private influencer.";
+export const CAST_NONE_YET = "Your other influencers show up here once they're ready.";
+// …what stays as it is (its sheet's line), and its toast: "Adding Kai to your meme: the new one shows next to it in about half a
+// minute"
+export const ADD_SOMEONE_NOTE = 'Its words, its template and its framing stay as they are: someone is added in the part you pick.';
+export const addSomeoneMadeText = (j, who) => `Adding ${who} to your ${creationWord(j)}: the new one shows next to it in about half a minute`;
+// "Animate": its sheet's lines, its toast, and AGI-1's name in what moves when she isn't in it (our server says "her": add her
+// first)
+export const ANIMATE_NOTE = 'Its words are drawn on it, where the share mark isn\'t, and whoever is in it stays in it.';
+export const ANIMATE_HER_HINT = "AGI-1 isn't in this meme: Add someone puts her in a new one first, then animate that one.";
+export const animateMadeText = () => 'Animating your meme: the video shows next to it in a few minutes';
+
 // ---------- the photo editor (2026-10-12, the editor: free, in the browser; src/studio/views/photo-editor.js) ----------
 // its sheet's line under its title
 export function editorNote(j) {
@@ -717,6 +763,39 @@ const EDITOR_WHY = {
 export function editorErrorText(d = {}) {
   if (d.error === 'refused') return EDITOR_REFUSED[d.why] || "It can't be saved: try other words or stickers.";
   return EDITOR_WHY[d.error] || errorText(d.error);
+}
+
+// ---------- the meme editor (2026-10-14, meme templates: one of its own template memes' words, in the browser; saved by our
+// server: src/studio/views/meme-editor.js, server/inf-meme-save.js) ----------
+// its sheet's line under its title
+export const memeEditorNote = () => 'Free: change its words, their font, colors, size and place. Save it as a new meme next to it, or download it.';
+// what's wrong with one of its texts (src/studio/memes.js checkLayers' reasons, and our server's: the studio's word rules;
+// chars: letters our fonts can't draw, said as they are)
+export function memeWordsText(why, chars = null) {
+  if (why === 'chars' && Array.isArray(chars) && chars.length) {
+    const list = chars.slice(0, 8);
+    return `Our meme fonts can't draw ${list.join(' ')}: change ${list.length > 1 ? 'those' : 'that'} (they draw Latin, Greek and Cyrillic letters, and emoji).`;
+  }
+  return wordsText('layers', why);
+}
+// …and what stopped it being saved (refused: Gemini's look, its reason as the photo editor's; the rest our server's)
+const MEME_WHY = {
+  too_many: `You've saved ${EDITOR.PER_DAY} edited photos and memes today: more tomorrow. Downloading is always free.`,
+  busy_day: 'Saving edited memes is busy today: download it, or try again tomorrow.',
+  image: "The meme it's from isn't there any more.",
+  source: "This meme's picture isn't there any more: make a new one from its template.",
+  ai: "We couldn't check it just now: try again in a moment.",
+  fonts: "The meme fonts didn't load: check your connection, then open it again.",
+  old: "This meme can't be edited here: make a new one from its template.",
+  picture: "That picture couldn't be made here: try again.",
+  last: 'A meme keeps at least one text: change its words instead.',
+  // (its influencer not ready: our server's 409; a 503 not_ready is the studio itself, said as everywhere)
+  not_ready: "Its influencer isn't ready just now: try again in a moment.",
+};
+export function memeErrorText(d = {}, { status = 0 } = {}) {
+  if (d.error === 'refused') return EDITOR_REFUSED[d.reason ?? d.why] || "It can't be saved: try other words.";
+  if (d.error === 'not_ready' && status === 503) return errorText('not_ready');
+  return MEME_WHY[d.error] || errorText(d.error);
 }
 
 // ---------- the video editor (2026-10-12, the editor: in the browser, made by our clock; src/studio/views/video-editor.js) ----------

@@ -5,6 +5,7 @@ import { tidy, trouble, checkScene, videoPrompt } from './studio-words.js';
 import {
   NAME_MAX, MODES, INF_STYLES, OPTIONS, WORDS_MAX, trendOf, EXAMPLES, MEMES, MEME_LINE_MAX, VIDEO_MODELS, STYLE_AUTO, WAYS, drawnStyle, EDIT,
 } from '../src/studio/rules.js';
+import { CAST_BESIDE, motionOf } from '../src/studio/memes.js';
 
 const NAME_OK = /^[\p{L}\p{N}][\p{L}\p{N} '’.\-!?&]*$/u;
 
@@ -380,6 +381,93 @@ export function checkMemeText({ meme, lines, agi1 = false } = {}) {
   }
   return { ok: true, meme, lines: out, caption: out.join('\n') };
 }
+// ---------- (2026-10-14) meme templates (src/studio/memes.js) ----------
+// The owner: "ready made meme templates already the popular ones … the character on that meme will be replaced by their
+// influencer by default". A template's picture: the influencer (its full body: the first picture) as the main character of a
+// popular meme's situation, restaged in our own words (the template's shows; scene: the person's own words, a classic's, or
+// what they added), everyone else made up. Never any words in it: the meme's words are drawn over it afterwards by our server
+// (server/meme-render.js), so a sign, a screen or a paper in it stays blank. With someone else in one of its roles (memes.js
+// castOf: the owner's "Other influencers"): AGI-1 (her full body: the second picture, herLine) or another of the person's
+// influencers (its full body: the second picture); the references after them.
+const NO_WORDS = 'No words anywhere in the picture: no text, letters, numbers, captions, speech bubbles or logos; any sign, screen, '
+  + 'paper or label in it stays blank.';
+const saysOf = (role) => (role && typeof role.says === 'string' && role.says) || CAST_BESIDE.says;
+export function templatePrompt(inf, tpl, scene, { refs = 0, agi1 = false, cast = false, role = null } = {}) {
+  const two = agi1 === true || cast === true;
+  const shows = (two && role && role.shows) || tpl.shows || '';
+  const what = [sentence(scene), sentence(shows)].filter(Boolean).join(' ');
+  let who = '';
+  if (agi1 === true) who = ` ${herLine('the second picture')} In this picture AGI-1 is ${saysOf(role)} (in that place in the scene, instead of anyone made up).`;
+  else if (cast === true) {
+    who = ' The other character is the one in the second picture: keep their face, hair, body and look exactly as in it. In this '
+      + `picture they are ${saysOf(role)} (in that place in the scene, instead of anyone made up). They are an adult.`;
+  }
+  return `A funny meme picture: ${styleOf(inf).photo} of this exact character (the first picture), keeping the face, hair, body and `
+    + `look exactly the same, the clear main character. ${what}${who} Any other person in it is an original made-up adult, never a real `
+    + `person or an existing character, and every face is easy to see. ${NO_WORDS}${agi1 === true ? ' (Only the AGI on her t-shirt.)' : ''} `
+    + `A scene may change the outfit, never to less covered.${refsLine(refs, two ? 3 : 2)} `
+    + `Family-friendly, ${two ? 'both ' : ''}fully clothed. No watermark.`;
+}
+// A template meme's picture (the first picture: its picture without words, <job>.pic.jpg) edited with words ("Edit with
+// words"), still with no words in it; the second picture is its full body (and the third AGI-1, or another of the person's
+// influencers, when one is in it: cast), only so faces and looks stay their own
+export function templateEditPrompt(inf, edit, { agi1 = false, cast = false } = {}) {
+  const her = agi1
+    ? ' AGI-1, the 2D anime girl in the first picture, stays exactly as she is unless the change is about her; the third picture is her,'
+      + ' only so she stays exactly as drawn: her own flat 2D anime look, never 3D or photorealistic, an adult woman, never a kiss, never'
+      + ' less covered.'
+    : cast
+      ? ' The other character in the first picture stays exactly as they are unless the change is about them; the third picture is them,'
+        + ' only so their face and look stay exactly their own. They are an adult, never less covered.'
+      : '';
+  const two = agi1 === true || cast === true;
+  return `Edit the first picture: ${sentence(edit)} Change only what that asks for, and keep everything else in the first picture exactly `
+    + 'as it is: the character\'s face, hair, body, outfit and pose, anyone else in it, the place, the light, the framing and the art style. '
+    + `The second picture is the same character, only so the face and look stay exactly theirs.${her} ${NO_WORDS}`
+    + `${agi1 ? ' (Only the AGI on her t-shirt.)' : ''} An edit may change the outfit, never to less covered. `
+    + `Family-friendly, ${two ? 'both ' : ''}fully clothed. No watermark.`;
+}
+// "Add someone" to a template meme: its picture without words (the first picture) made again with someone else in one of its
+// template's roles: AGI-1 or another of the person's influencers (the third picture: her, or its full body); the second picture
+// is its own full body, only so its face and look stay its own. Still no words.
+export function castAddPrompt(inf, { role = null, agi1 = false } = {}) {
+  const who = agi1
+    ? `AGI-1 (the third picture) into it as ${saysOf(role)}, as if she had been there all along (she takes the place of whoever was there). ${herLine('the third picture')}`
+    : `the other character (the third picture) into it as ${saysOf(role)}, as if they had been there all along (they take the place of `
+      + 'whoever was there). Keep the other character\'s face, hair, body and look exactly as in the third picture; they are an adult.';
+  return `Edit the first picture: put ${who} Keep everything else in the first picture exactly as it is: the character's face, hair, `
+    + 'body, outfit and pose, the place, the light, the framing and the art style. The second picture is the same character, only so '
+    + `the face and look stay exactly theirs. ${NO_WORDS}${agi1 ? ' (Only the AGI on her t-shirt.)' : ''} `
+    + 'Family-friendly, both fully clothed. No watermark.';
+}
+// "Animate": a template meme's picture without words comes to life for 5 seconds (the image-to-video model: its first frame),
+// what moves its template's motion or the person's own words (scene); the framing as it is (its words go back over it)
+export function memeMotionPrompt(inf, tpl, { scene = '', agi1 = false } = {}) {
+  const panels = Array.isArray(tpl.grid) && tpl.grid[0] * tpl.grid[1] > 1
+    ? ' The picture is made of panels with thin lines between them: they stay exactly where they are, each moving on its own.'
+    : '';
+  const her = agi1
+    ? ' AGI-1, the 2D anime girl in it, stays a 2D anime girl exactly as drawn (never 3D or photorealistic), an adult woman, sweet and'
+      + ' PG-13, never a kiss.'
+    : '';
+  return `${sentence(scene || motionOf(tpl))} Everyone keeps exactly the same look as in the first frame.${her}${panels} `
+    + `${styleOf(inf).clip}, one continuous shot, the camera almost still and the framing as it is. Family-friendly. Anyone else in it `
+    + 'is a made-up extra, never a real person. No text, no captions, no logos.';
+}
+// A meme's layers of words (memes.js checkLayers' tidied ones): each the studio's word rules (PG-13, never a real person by
+// name, someone else's character or anything passing for AGI-1, no links or contacts) and never about money (hard rule 8).
+// → { ok: true } or { ok: false, field: 'layers', n (the layer, from 0), why: the words' trouble | 'money' }. agi1: she's in
+// it, so her own name may be in its words.
+export function checkLayerWords(layers, { agi1 = false } = {}) {
+  for (let n = 0; n < (layers || []).length; n++) {
+    const t = String(layers[n]?.t ?? '');
+    const tr = trouble(t, { herName: agi1 === true });
+    if (tr) return { ok: false, field: 'layers', n, why: tr };
+    if (MONEY.test(t)) return { ok: false, field: 'layers', n, why: 'money' };
+  }
+  return { ok: true };
+}
+
 // A trend video (round 2: the owner, "the trending videos should be real"): the person in a real-looking clip (one of the
 // owner's trend clips, or the person's own) is replaced by the influencer (@Element1: its picked look, with its full body and a
 // photo as more views), keeping everything else of the clip: its moves, its camera, its place, its light (and its sound, for

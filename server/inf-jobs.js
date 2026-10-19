@@ -24,6 +24,7 @@ import { mp4Info } from './mp4.js';
 import { agi1Urls } from './inf-agi1.js';
 import { CLIP, BANNER, FRAME, isFrame, frameBox } from '../src/studio/rules.js';
 import { withAiTag } from '../src/studio/ai-tag.js';
+import { templateOf, checkLayers, isMarkSpot } from '../src/studio/memes.js';
 // (2026-10-12) what's downloaded says inside its file that it's AI-made (src/studio/ai-tag.js): as it is when it can't be read
 export const aiTagged = (bytes) => {
   const t = withAiTag(bytes);
@@ -46,6 +47,10 @@ const IMAGE_MAX = 25_000_000;     // the most read for one picture the AI made
 const HD_IMAGE_MAX = 64_000_000;  // (phase 4) an HD or Ultra one (Crisp's 4K can be a big PNG)
 // (phase 4) a long video's part kept, and its parts joined: the clock's time they need (server/inf-mark.js PART)
 const PART_NEEDS_MS = 14_000, JOIN_NEEDS_MS = 12_000, PART_MAX = 40_000_000;
+// (2026-10-14) a meme's 5-second video put on its canvas with its words and the mark: the clock's time it needs (server/inf-mark.js
+// MEME_VIDEO.NEEDS_MS: the same number, checked by a test) and the most read for it
+export const MEME_NEEDS_MS = 16_000;
+const MEME_SOURCE_MAX = 40_000_000;
 const MAX_PIXELS = 40_000_000;
 const FAL_WAIT = new Set(['key', 'credits', 'busy', 'fal']);
 const ID = /^[A-Za-z0-9_-]{22}$/;
@@ -65,7 +70,13 @@ export const framePath = (inf, job, n) => `inf/${inf}/${job}.f${n}.jpg`;
 // (2026-10-12, the video editor) a cut's words and stickers (the transparent picture its maker's browser drew: server/inf-cut.js),
 // kept until it's made; its pieces are its parts (partPath)
 export const layerPath = (inf, job) => `inf/${inf}/${job}.layer.png`;
+// (2026-10-14) a template meme's picture without its words (src/studio/memes.js): what its editor draws its words over, and what
+// an edit with words, someone added or its 5-second video starts from (src/studio/rules.js infMemePic)
+export const memePicPath = (inf, job) => `inf/${inf}/${job}.pic.jpg`;
 export const isLong = (j) => j?.kind === 'video' && j.model === 'long' && Number(j.parts) > 1;
+// (2026-10-14) a template meme (its layers of words, drawn by our server), and a template meme's 5-second video
+export const isTemplate = (j) => j?.kind === 'photo' && Array.isArray(j.layers);
+export const isMemeVideo = (j) => j?.kind === 'video' && Array.isArray(j.layers);
 const OWNERS = new Set(['preset', 'example']);           // the owner's jobs: no influencer
 // (2026-10-12, the editor) Every file a photo (a meme, an X banner), a video or a trend video may have kept: what its maker's
 // Delete deletes (and the tidy-up again a week later, in case deleting them at once failed). Names it never had are fine
@@ -73,13 +84,20 @@ const OWNERS = new Set(['preset', 'example']);           // the owner's jobs: no
 export function jobFiles(j) {
   const inf = j?.inf_id, id = j?.id;
   if (!ID.test(String(inf)) || !ID.test(String(id))) return [];
-  if (j.kind === 'photo') return [0, 1, 2, 3].flatMap((k) => [picPath(inf, id, k), picPath(inf, id, k, 'webp'), hdPath(inf, id, k)]);
+  if (j.kind === 'photo') return [...[0, 1, 2, 3].flatMap((k) => [picPath(inf, id, k), picPath(inf, id, k, 'webp'), hdPath(inf, id, k)]), memePicPath(inf, id)];
   if (j.kind !== 'trend' && j.kind !== 'video') return [];
   return [videoPath(j), posterPath(j), markedPath(inf, id), layerPath(inf, id), ...[0, 1, 2, 3].flatMap((k) => [partPath(inf, id, k), framePath(inf, id, k)])];
 }
 
 // ---------- the database ----------
-export const getJob = async (cfg, id) => (ID.test(String(id)) ? rpc(cfg, 'inf_job_get', { p_id: id }, 'studio') : null);
+// (2026-10-14) a creation with someone else in it who's taken down by the owner's setting (STUDIO_HIDE) is hidden like one the
+// database hides (inf_cast_shown: deleted, hidden, its maker banned), so nothing serves or starts from it
+export const getJob = async (cfg, id) => {
+  if (!ID.test(String(id))) return null;
+  const j = await rpc(cfg, 'inf_job_get', { p_id: id }, 'studio');
+  if (j && ID.test(String(j.cast_inf ?? '')) && cfg.studioHide?.has(j.cast_inf)) j.hidden = true;
+  return j;
+};
 // (also the video editor's: server/inf-cut.js)
 export const fail = (cfg, id, error, refund = true) => rpc(cfg, 'inf_job_fail', { p_id: id, p_error: error, p_refund: refund }, 'studio');
 export const setStep = (cfg, id, { req = null, statusUrl = null, resultUrl = null, saving = false, tries = 0 }) =>
@@ -95,7 +113,8 @@ function warnOnce(what, message) {
   console.error(`[studio] ${message}`);
 }
 
-// Signed addresses (6 hours) of what a job is made from. → { source, look, body, image, clip, trend } (the ones it needs)
+// Signed addresses (6 hours) of what a job is made from. → { source, look, body, image, clip, trend, refs, frame, agi1, cast }
+// (the ones it needs) · throws { gone: 'cast' } when another influencer in a template meme's role isn't there any more
 async function inputsOf(cfg, F, j) {
   const sign = (name) => F.signedUrl(cfg, name, { expiresIn: 6 * 3600 });
   const urls = {};
@@ -113,8 +132,18 @@ async function inputsOf(cfg, F, j) {
   }
   // (round 2) a trend video: its picked look is its face in the clip
   if (j.kind === 'trend' && j.inf_looks_job && Number.isInteger(j.inf_pick)) urls.look = await sign(picPath(j.inf_id, j.inf_looks_job, j.inf_pick));
-  if (['photo', 'trend', 'video'].includes(j.kind) && j.inf_body_job) urls.body = await sign(picPath(j.inf_id, j.inf_body_job, 0));
-  if (j.image) urls.image = await sign(picPath(j.inf_id, j.image, 0));
+  const memeVideo = isMemeVideo(j);
+  if (['photo', 'trend', 'video'].includes(j.kind) && j.inf_body_job && !memeVideo) urls.body = await sign(picPath(j.inf_id, j.inf_body_job, 0));
+  // (2026-10-14) a template meme's edit, someone added to one or its 5-second video starts from its picture without its words
+  // (it has its layers too); anything else from the photo itself
+  if (j.image) urls.image = await sign(Array.isArray(j.layers) ? memePicPath(j.inf_id, j.image) : picPath(j.inf_id, j.image, 0));
+  // (2026-10-14) another of the person's influencers in one of a template's roles (job.cast_inf): its full body (inf_job_get's
+  // cast_body, only while it's still there and shown); gone meanwhile (deleted, hidden, its maker banned, taken down): the job
+  // can't be made (its credits come back). Its 5-second video needs none: they're in its first frame already
+  if (isTemplate(j) && ID.test(String(j.cast_inf ?? ''))) {
+    if (!ID.test(String(j.cast_body ?? '')) || cfg.studioHide?.has(j.cast_inf)) throw Object.assign(new Error('inf: the other influencer is gone'), { gone: 'cast' });
+    urls.cast = await sign(picPath(j.cast_inf, j.cast_body, 0));
+  }
   if (j.kind === 'trend' && j.clip) urls.clip = await sign(`up/${j.clip}.mp4`);
   if (j.kind === 'trend' && !j.clip && j.trend_job) urls.trend = await sign(`trends/${j.trend_job}.mp4`);
   // (round 4, phase 4) its reference pictures; a video's character as Kling's element (its picked look) when it has
@@ -122,10 +151,11 @@ async function inputsOf(cfg, F, j) {
   const refs = Array.isArray(j.refs) ? j.refs.filter((r) => ID.test(String(r))) : [];
   if (refs.length) urls.refs = await Promise.all(refs.map((r) => sign(`up/${r}.jpg`)));
   // (2026-10-13) "With AGI-1": in a video the character is always Kling's element then (AGI-1 is the next one)
-  if (j.kind === 'video' && (refs.length || isLong(j) || j.agi1 === true) && j.inf_looks_job && Number.isInteger(j.inf_pick)) urls.look = await sign(picPath(j.inf_id, j.inf_looks_job, j.inf_pick));
+  if (j.kind === 'video' && !memeVideo && (refs.length || isLong(j) || j.agi1 === true) && j.inf_looks_job && Number.isInteger(j.inf_pick)) urls.look = await sign(picPath(j.inf_id, j.inf_looks_job, j.inf_pick));
   if (isLong(j) && Number(j.part) > 0) urls.frame = await sign(framePath(j.inf_id, j.id, Number(j.part) - 1));
   // (2026-10-13) her own pictures (server/inf-agi1.js), kept in the bucket the first time: her whole body, and in a video her face
-  if (j.agi1 === true && (j.kind === 'photo' || j.kind === 'video')) urls.agi1 = await agi1Urls(cfg, F, { face: j.kind === 'video' });
+  // (2026-10-14: not for a meme's 5-second video: she's in its first frame already)
+  if (j.agi1 === true && (j.kind === 'photo' || (j.kind === 'video' && !memeVideo))) urls.agi1 = await agi1Urls(cfg, F, { face: j.kind === 'video' });
   return urls;
 }
 
@@ -296,6 +326,12 @@ export async function jobTick(cfg, id, { now = Date.now(), deadline = Date.now()
   const submit = async (tries) => {
     let urls;
     try { urls = await inputsOf(cfg, F, j); } catch (err) {
+      // (2026-10-14) another influencer in its template's role, gone meanwhile: it can't be made (its credits back)
+      if (err.gone === 'cast') {
+        await fail(cfg, id, 'cast', true);
+        console.warn(`[studio] job ${id}: the other influencer in it is gone, so it can't be made (its credits back)`);
+        return { state: 'failed', step: 'queue' };
+      }
       console.warn(`[studio] job ${id}: what it's made from couldn't be signed (${err.message})`);
       await waitTurn(cfg, id);
       return { state: 'waiting', step: 'queue' };
@@ -339,10 +375,15 @@ export async function jobTick(cfg, id, { now = Date.now(), deadline = Date.now()
     await fail(cfg, id, 'expired', true);
     return { state: 'failed', step: stepOf(j) };
   }
-  const needs = long ? PART_NEEDS_MS : SAVE_NEEDS_MS;
+  // (2026-10-14) a meme's 5-second video is put on its canvas with its words by the clock only (ffmpeg is there), like a long
+  // video's parts
+  const memeVid = isMemeVideo(j);
+  const clockOnly = long || memeVid;
+  const needs = long ? PART_NEEDS_MS : memeVid ? MEME_NEEDS_MS : SAVE_NEEDS_MS;
+  const keep = (row) => (long ? savePart(cfg, row, F, { deadline, run }) : memeVid ? saveMemeVideo(cfg, row, F, { deadline, run }) : save(cfg, row, F, { deadline }));
   if (j.saving) {
-    if ((long && !encode) || deadline - Date.now() < needs) { await waitTurn(cfg, id); return { state: 'saving', step: 'save', ...(long ? { part: Number(j.part) } : {}) }; }
-    return long ? savePart(cfg, j, F, { deadline, run }) : save(cfg, j, F, { deadline });
+    if ((clockOnly && !encode) || deadline - Date.now() < needs) { await waitTurn(cfg, id); return { state: 'saving', step: 'save', ...(long ? { part: Number(j.part) } : {}) }; }
+    return keep(j);
   }
   let s;
   try { s = await falStatus(cfg, j.status_url); } catch (err) {
@@ -369,9 +410,9 @@ export async function jobTick(cfg, id, { now = Date.now(), deadline = Date.now()
     return { state: 'failed', step: 'make' };
   }
   await setStep(cfg, id, { req: j.req, statusUrl: j.status_url, resultUrl: j.result_url, saving: true, tries: 0 });
-  if ((long && !encode) || deadline - Date.now() < needs) return { state: 'saving', step: 'save' };
+  if ((clockOnly && !encode) || deadline - Date.now() < needs) return { state: 'saving', step: 'save' };
   if (!await rpc(cfg, 'inf_job_lease', { p_id: id, p_secs: JOBS.SAVE_LEASE_S }, 'studio')) return { state: 'saving', step: 'save' };
-  return long ? savePart(cfg, { ...j, saving: true, tries: 0 }, F, { deadline, run }) : save(cfg, { ...j, saving: true, tries: 0 }, F, { deadline });
+  return keep({ ...j, saving: true, tries: 0 });
 }
 
 // Keeping what it made. Every wait fits in the time left; a save that runs out of time is a try.
@@ -380,6 +421,42 @@ async function save(cfg, j, F, { deadline }) {
   const left = (reserve, most) => Math.max(1500, Math.min(most, deadline - Date.now() - reserve));
   try {
     const out = outputOf(j.kind, await falOutput(cfg, j.result_url, { timeoutMs: left(12_000, 6000) }));
+    if (out.images && isTemplate(j)) {
+      // (2026-10-14) a template meme: the AI's picture cut to its template's picture area (kept as its picture without words:
+      // what its editor draws its words over, and what an edit, someone added or its video starts from), put on its canvas with
+      // its words drawn by us (server/meme-render.js), looked at by Gemini as every meme is (its words were checked as typed; the
+      // AI was asked for none of its own), then kept: no full-size copy (its download is the meme itself, with the mark where
+      // its words aren't)
+      const tpl = templateOf(j.meme);
+      const L = checkLayers(j.layers);
+      if (!tpl || !L.ok) {
+        await fail(cfg, id, 'source', true);
+        console.warn(`[studio] job ${id}: its meme template or its words aren't ones we draw (its credits back)`);
+        return { state: 'failed', step: 'save' };
+      }
+      const bytes = await F.fromFal(out.images[0], { max: IMAGE_MAX, timeoutMs: left(8000, 10_000) });
+      const sharp = await F.loadSharp();
+      const meta = await sharp(bytes, { limitInputPixels: MAX_PIXELS }).metadata().catch(() => null);
+      if (!meta?.width || !meta?.height || !['jpeg', 'png', 'webp'].includes(meta.format)) throw new Error("files: a picture the AI made isn't one");
+      const R = await import('./meme-render.js');
+      const pic = await R.picOf(sharp, bytes, tpl);
+      const meme = await R.renderMeme(sharp, await R.composeBase(sharp, pic, tpl), L.layers, tpl);
+      const v = await checkMeme(cfg, meme.jpg, j.caption);
+      if (!v.ok) {
+        await fail(cfg, id, 'refused', true);
+        console.warn(`[studio] job ${id}'s meme wasn't family-friendly (${v.why}): not shown, its credits back`);
+        return { state: 'failed', step: 'save' };
+      }
+      if (deadline - Date.now() < 2500) throw new Error('no time left to keep them');
+      const t = left(1000, 9000);
+      await Promise.all([
+        F.putFile(cfg, memePicPath(j.inf_id, id), pic, 'image/jpeg', { timeoutMs: t }),
+        F.putFile(cfg, picPath(j.inf_id, id, 0), meme.jpg, 'image/jpeg', { timeoutMs: t }),
+        F.putFile(cfg, picPath(j.inf_id, id, 0, 'webp'), meme.webp, 'image/webp', { timeoutMs: t }),
+      ]);
+      await rpc(cfg, 'inf_job_done', { p_id: id, p_files: 1, p_bytes: meme.jpg.length + pic.length }, 'studio');
+      return { state: 'done', step: 'save' };
+    }
     if (out.images) {
       // (phase 4) an HD or Ultra photo keeps its full-size picture too (with the share mark: its download)
       const hd = j.kind === 'photo' && j.shape !== 'banner' && ['hd', 'ultra'].includes(j.quality);
@@ -536,8 +613,65 @@ async function join(cfg, j, F, { deadline, run }) {
   }
 }
 
-// a part's or a join's keeping that didn't work: fal waiting, or a try (4 at most: then it can't be made, its credits back)
-async function saveFailed(cfg, j, err, { part = null, join: joining = false } = {}) {
+// (2026-10-14) A meme's 5-second video, kept by the clock (ffmpeg is there): Gemini looks at the AI's video (as it was made)
+// while ffmpeg puts it on its template's canvas with its words (drawn by us at the video's size: server/meme-render.js wordsPng)
+// and the share mark where its words aren't (its row's mark_spot; server/inf-mark.js composeMemeVideo); its one copy, played and
+// downloaded, carries the mark (so the share mark's clock leaves it alone: inf_mark_done). One that isn't family-friendly is
+// never shown (its credits back); one ffmpeg can't do is a try (4 at most, like keeping any file); no ffmpeg here: it waits.
+async function saveMemeVideo(cfg, j, F, { deadline, run }) {
+  const id = j.id;
+  const left = (reserve, most) => Math.max(1500, Math.min(most, deadline - Date.now() - reserve));
+  try {
+    const tpl = templateOf(j.meme);
+    const L = checkLayers(j.layers);
+    if (!tpl || !L.ok) {
+      await fail(cfg, id, 'source', true);
+      console.warn(`[studio] job ${id}: its meme template or its words aren't ones we draw (its credits back)`);
+      return { state: 'failed', step: 'save' };
+    }
+    const M = await import('./inf-mark.js');
+    if (!run && !await M.ffmpegBin()) {
+      warnOnce('meme-ffmpeg', "a meme's video waits: ffmpeg isn't here (vercel.json's includeFiles for api/feed.js)");
+      await waitTurn(cfg, id);
+      return { state: 'saving', step: 'save' };
+    }
+    const out = outputOf('video', await falOutput(cfg, j.result_url, { timeoutMs: left(12_000, 5000) }));
+    const raw = await F.fromFal(out.video, { max: MEME_SOURCE_MAX, timeoutMs: left(10_000, 9000) });
+    if (!F.isMp4(raw)) throw new Error("files: its video isn't an MP4");
+    const sharp = await F.loadSharp();
+    const R = await import('./meme-render.js');
+    const plan = M.memeVideoPlan(tpl);
+    const words = await R.wordsPng(sharp, L.layers, tpl, plan.w, plan.h);
+    const [v, made] = await Promise.all([
+      checkVideo(cfg, raw),
+      M.composeMemeVideo(sharp, raw, { plan, words, spot: isMarkSpot(j.mark_spot) ? j.mark_spot : 'tl', timeoutMs: left(3000, 12_000), run }),
+    ]);
+    if (!v.ok) {
+      await fail(cfg, id, 'refused', true);
+      console.warn(`[studio] job ${id}'s video wasn't family-friendly (${v.why}): not shown, its credits back`);
+      return { state: 'failed', step: 'save' };
+    }
+    if (!v.checked) console.warn(`[studio] job ${id}'s video is too big to look at (${(raw.length / 1e6).toFixed(1)} MB): kept as it is`);
+    const video = aiTagged(made);
+    if (deadline - Date.now() < 2000) throw new Error('no time left to keep it');
+    await F.putFile(cfg, videoPath(j), video, 'video/mp4', { timeoutMs: left(500, 9000) });
+    await rpc(cfg, 'inf_job_done', { p_id: id, p_files: 0, p_bytes: video.length }, 'studio');
+    await rpc(cfg, 'inf_mark_done', { p_job: id }, 'studio').catch((err) => console.warn(`[studio] job ${id}: its mark noted: ${err.message}`));
+    console.log(`[studio] job ${id} (a meme's video) is done: ${(video.length / 1e6).toFixed(2)} MB`);
+    return { state: 'done', step: 'save' };
+  } catch (err) {
+    if (err.why === 'no_ffmpeg') {
+      warnOnce('meme-ffmpeg', `a meme's video waits: ${err.message}`);
+      await waitTurn(cfg, id);
+      return { state: 'saving', step: 'save' };
+    }
+    return saveFailed(cfg, j, err, { what: 'video' });
+  }
+}
+
+// a part's, a join's or (2026-10-14) a meme video's keeping that didn't work: fal waiting, or a try (4 at most: then it can't be
+// made, its credits back)
+async function saveFailed(cfg, j, err, { part = null, join: joining = false, what = null } = {}) {
   const id = j.id;
   if (err.why === 'refused' || err.why === 'nothing') {
     await fail(cfg, id, err.why === 'refused' ? 'refused' : 'ai:video', true);
@@ -550,12 +684,13 @@ async function saveFailed(cfg, j, err, { part = null, join: joining = false } = 
     return { state: 'saving', step: joining ? 'join' : 'save' };
   }
   const tries = Number(j.tries) || 0;
+  const name = what || `part ${Number(part) + 1}`;
   if (err.tooBig || err.gone || tries + 1 >= JOBS.SAVE_TRIES) {
     await fail(cfg, id, err.tooBig ? 'too_big' : err.why === 'ai' ? 'check' : 'save', true);
-    console.warn(`[studio] job ${id}'s ${joining ? 'parts couldn\'t be joined' : `part ${Number(part) + 1} couldn't be kept`}: ${err.message}`);
+    console.warn(`[studio] job ${id}'s ${joining ? 'parts couldn\'t be joined' : `${name} couldn't be kept`}: ${err.message}`);
     return { state: 'failed', step: joining ? 'join' : 'save' };
   }
-  console.warn(`[studio] job ${id}'s ${joining ? 'join' : `part ${Number(part) + 1}`}: ${err.message} (trying again)`);
+  console.warn(`[studio] job ${id}'s ${joining ? 'join' : name}: ${err.message} (trying again)`);
   // a try counted (a join keeps no request: its tries are counted the same way, its part as it is)
   await setStep(cfg, id, { req: j.req, statusUrl: j.status_url, resultUrl: j.result_url, saving: !joining, tries: tries + 1 });
   return { state: 'saving', step: joining ? 'join' : 'save' };

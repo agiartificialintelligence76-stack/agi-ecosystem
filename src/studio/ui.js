@@ -294,10 +294,11 @@ function unpickable(row, onchange) {
 }
 
 // ---------- cards to pick one from (round 4, phase 4: the model menu) ----------
-// cardPick({ legend, choices: [{ value, name, note, price, from, off, why }], value, onchange, cls }) → { node, value, set(v),
-// update(choices) }. Radio buttons drawn as small cards: a name, a line about it, its price on the right ("⚡ 15", "from ⚡ 76"
-// with from: true, or a word like "Free"); a choice that's off (Anime for a realistic influencer) is disabled and says why
-// instead of its note
+// cardPick({ legend, choices: [{ value, name, note, price, from, off, why, pic }], value, onchange, cls }) → { node, value,
+// set(v), update(choices) }. Radio buttons drawn as small cards: a name, a line about it, its price on the right ("⚡ 15", "from
+// ⚡ 76" with from: true, or a word like "Free"; price: null hides it); a choice that's off (Anime for a realistic influencer) is
+// disabled and says why instead of its note. (2026-10-19, meme templates: "Add someone") pic: a picture element (a face) on its
+// left, its name and line beside it
 export function cardPick({ legend, choices, value = null, onchange = null, cls = '', showLegend = true }) {
   const set = h('fieldset', { class: `sa-cards ${cls}`.trim() }, h('legend', { class: showLegend ? 'sa-label' : 'sa-sr', text: legend }));
   const row = h('div', { class: 'sa-cards-row' });
@@ -312,7 +313,8 @@ export function cardPick({ legend, choices, value = null, onchange = null, cls =
     const fromW = h('span', { class: 'sa-card-from', text: 'from ' });
     const unit = h('span', { class: 'sa-sr', text: ' credits' });
     const price = h('span', { class: 'sa-card-price' }, fromW, icon('bolt'), priceN, unit);
-    const lab = h('label', { for: id }, h('span', { class: 'sa-card-top' }, h('span', { class: 'sa-card-name', text: c.name }), price), note);
+    const lab = h('label', { for: id, ...(c.pic ? { class: 'has-pic' } : {}) }, c.pic ? h('span', { class: 'sa-card-pic', 'aria-hidden': 'true' }, c.pic) : null,
+      h('span', { class: 'sa-card-top' }, h('span', { class: 'sa-card-name', text: c.name }), price), note);
     parts.set(c.value, { input, note, price, priceN, fromW, unit, c });
     row.append(h('span', { class: `sa-card-opt${c.off ? ' is-off' : ''}` }, input, lab));
   }

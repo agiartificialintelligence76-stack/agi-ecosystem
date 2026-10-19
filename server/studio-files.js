@@ -327,9 +327,11 @@ const headers = (cfg) => ({ Authorization: `Bearer ${cfg.supabaseKey}`, apikey: 
 // names are all checked against this one by tests/influencer.test.js since); and (2026-10-12) a video editor's cut's words and
 // stickers, inf/<influencer>/<job>.layer.png (its pieces are its .p<n>.mp4); and (2026-10-13) a 3D model's extra downloads,
 // dl/<id>.glb|fbx|usdz|stl|zip (src/studio/rules.js dlPath); and (2026-10-13, "With AGI-1") AGI-1's two pictures for the AI
-// services, agi1/with-<16 hex>.jpg and agi1/face-<16 hex>.jpg (server/inf-agi1.js: named by their own bytes)
+// services, agi1/with-<16 hex>.jpg and agi1/face-<16 hex>.jpg (server/inf-agi1.js: named by their own bytes); and (2026-10-14)
+// a template meme's picture without its words, inf/<influencer>/<job>.pic.jpg (src/studio/memes.js: what an edit, someone
+// added, its video and its editor start from)
 const ID = '[A-Za-z0-9_-]{22}';
-export const NAME = new RegExp(`^(?:${ID}\\.(?:glb|webp|png)|dl/${ID}\\.(?:glb|fbx|usdz|stl|zip)|videos/${ID}\\.mp4|inf/${ID}/${ID}(?:-[0-3]\\.(?:jpg|webp|hd\\.jpg)|\\.mp4|\\.dl\\.mp4|\\.poster\\.webp|\\.layer\\.png|\\.[pf][0-3]\\.(?:mp4|jpg))`
+export const NAME = new RegExp(`^(?:${ID}\\.(?:glb|webp|png)|dl/${ID}\\.(?:glb|fbx|usdz|stl|zip)|videos/${ID}\\.mp4|inf/${ID}/${ID}(?:-[0-3]\\.(?:jpg|webp|hd\\.jpg)|\\.mp4|\\.dl\\.mp4|\\.poster\\.webp|\\.layer\\.png|\\.pic\\.jpg|\\.[pf][0-3]\\.(?:mp4|jpg))`
   + `|trends/${ID}(?:\\.mp4|\\.poster\\.webp)|examples/${ID}\\.webp|up/${ID}(?:\\.(?:jpg|mp4)|/(?:[0-9]{1,2}\\.part|f[0-9]\\.jpg))`
   + '|agi1/(?:with|face)-[0-9a-f]{16}\\.jpg)$');
 
