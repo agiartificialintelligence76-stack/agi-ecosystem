@@ -1,0 +1,256 @@
+/* AGI games (2026-10-19, the owner: "the word GAMES on TOP will be written as GAME beta, the word beta is overlapping on the
+   word GAME (it still on beta cause theres no prizes yet) / theres also a rating stars and how many people have played it"):
+   games.html (src/games/page.js). The lab look: a clean hero whose title is "GAME" with "beta" stuck over the top of its E
+   like a sticker, a turning stamp; then the shelf (each game's card: its picture, its stars, players and plays, Play), its
+   ratings and reviews (the average, a row of stars, a bar for each number of stars; rating it with a connected wallet), and
+   what's coming with the fine print. Every rule names a gm- class (tests/page.test.js); Pop mode's look is in pop.css. */
+
+/* ---------- the hero ---------- */
+.gm-hero {
+  position: relative; isolation: isolate; overflow: clip;
+  padding-block: clamp(48px, 7vw, 104px) clamp(48px, 6vw, 88px);
+  border-bottom: 1px solid var(--line);
+}
+.gm-hero::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image: radial-gradient(color-mix(in srgb, var(--fg) 16%, transparent) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 62% 92% at 90% 0%, #000, transparent 72%);
+  mask-image: radial-gradient(ellipse 62% 92% at 90% 0%, #000, transparent 72%);
+}
+.gm-hero-in { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 36px 56px; }
+.gm-hero-text { min-width: 0; }
+/* "GAME beta": one line (a real space between them), "beta" a small sticker pulled back over the top right of the E, a
+   little up and turned (its own em: .3 of the title's) */
+.gm-title {
+  padding-top: .08em; font-size: clamp(60px, 15.2vw, 184px); font-weight: 600; line-height: .9; letter-spacing: -0.055em;
+  white-space: nowrap;
+}
+.gm-word { position: relative; }
+.gm-beta {
+  position: relative; z-index: 1; display: inline-block; vertical-align: top;
+  margin-left: -1.27em; translate: 0 -.25em; rotate: -8deg;
+  padding: .14em .42em .18em; border-radius: .34em;
+  font-family: var(--mono); font-size: .3em; font-weight: 600; line-height: 1; letter-spacing: 0;
+  color: var(--bg); background: var(--accent); box-shadow: 0 .12em .4em -.12em color-mix(in srgb, var(--fg) 45%, transparent);
+}
+.gm-sub { margin-top: 18px; font-size: clamp(21px, 2.6vw, 30px); line-height: 1.2; letter-spacing: -0.025em; color: var(--fg-2); text-wrap: balance; }
+.gm-lede { margin-top: 18px; max-width: 37em; font-size: 17px; color: var(--fg-2); text-wrap: pretty; }
+/* her line, in a small bubble with her face */
+.gm-say {
+  display: inline-flex; align-items: center; gap: 10px; max-width: 100%; margin-top: 26px; padding: 5px 16px 5px 5px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-size: 14.5px; line-height: 1.3;
+}
+.gm-say img { width: 34px; height: 34px; flex: none; border-radius: 50%; }
+.gm-say b { font-weight: 600; }
+/* a turning stamp around the controller */
+.gm-art { position: relative; display: grid; place-items: center; width: clamp(150px, 19vw, 236px); aspect-ratio: 1; }
+.gm-stamp { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.gm-stamp-text { font-family: var(--mono); font-size: 13px; letter-spacing: .1em; fill: var(--fg-2); }   /* its words a little shorter than the ring: textLength only spreads them */
+.gm-art-ic {
+  display: grid; place-items: center; width: 60%; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 50%;
+  background: var(--bg-2); color: var(--fg);
+}
+.gm-art-ic svg { width: 46%; height: 46%; }
+
+/* the hero comes in when the page opens (still with "reduce motion": base.css, and below), "beta" stuck on last */
+@keyframes gm-rise { from { opacity: .01; translate: 0 18px; } }
+@keyframes gm-stick { from { opacity: .01; scale: 2.2; } 70% { scale: .94; } }
+@keyframes gm-turn { to { rotate: 360deg; } }
+.gm-hero-text > *, .gm-art { animation: gm-rise .7s cubic-bezier(.2, .7, .2, 1) both; }
+.gm-hero-text > :nth-child(2) { animation-delay: .06s; }
+.gm-hero-text > :nth-child(3) { animation-delay: .12s; }
+.gm-hero-text > :nth-child(4) { animation-delay: .18s; }
+.gm-hero-text > :nth-child(5) { animation-delay: .3s; }
+.gm-art { animation-delay: .2s; }
+.gm-beta { animation: gm-stick .5s cubic-bezier(.3, 1.4, .5, 1) .5s both; }
+.gm-stamp { animation: gm-turn 30s linear infinite; }
+
+/* ---------- shared bits ---------- */
+.gm-head { max-width: 760px; }
+.gm-head .gm-text { margin-top: 16px; max-width: 40em; font-size: 17px; }
+.gm-text { font-size: 15.5px; color: var(--fg-2); text-wrap: pretty; }
+.gm-note { font-size: 12.5px; color: var(--fg-2); text-wrap: pretty; }
+.gm-links, .gm-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ---------- the shelf: each game's card ---------- */
+.gm-games { display: grid; gap: 24px; margin: 32px 0 0; padding: 0; list-style: none; }
+.gm-game {
+  display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); overflow: clip;
+  border: 1px solid var(--line); border-radius: 22px; background: var(--bg-2);
+}
+.gm-game-art {
+  position: relative; display: grid; place-items: center; min-width: 0; padding: clamp(20px, 3vw, 40px);
+  background-color: var(--bg);
+  background-image: radial-gradient(color-mix(in srgb, var(--fg) 12%, transparent) 1px, transparent 1.5px);
+  background-size: 18px 18px;
+}
+.gm-game-img { width: 100%; max-width: 560px; height: auto; transition: translate .3s cubic-bezier(.2, .7, .2, 1); }
+.gm-game:hover .gm-game-img { translate: 0 -4px; }
+.gm-game-body { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; min-width: 0; padding: clamp(22px, 3vw, 36px); }
+.gm-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.gm-tag {
+  padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg);
+  font-family: var(--mono); font-size: 11.5px; line-height: 16px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-2);
+}
+.gm-tag.is-beta { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.gm-game-name { font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; line-height: 1.05; letter-spacing: -0.035em; }
+.gm-game-link { color: inherit; text-decoration: none; }
+.gm-game-link:hover { text-decoration: underline; text-decoration-thickness: 2px; }
+.gm-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-self: stretch; margin: 4px 0 0; }
+.gm-stat { min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
+.gm-stat dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-3); }
+.gm-stat dd {
+  display: flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: clamp(19px, 2vw, 24px); font-weight: 600;
+  line-height: 1.2; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.gm-stat-star { width: .9em; height: .9em; flex: none; fill: var(--accent); }
+.gm-play-ic { width: 18px; height: 18px; margin-left: -4px; }
+
+/* ---------- its ratings and reviews ---------- */
+.gm-rate { scroll-margin-top: 72px; }
+.gm-rate-grid { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); align-items: start; gap: 28px clamp(28px, 4vw, 56px); margin-top: 32px; }
+.gm-sum { position: sticky; top: 92px; min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg-2); }
+.gm-avg { display: flex; align-items: baseline; gap: 10px; }
+.gm-avg-n { font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.gm-avg-of { font-size: 16px; color: var(--fg-2); }
+.gm-count { margin-top: 8px; font-size: 14.5px; color: var(--fg-2); }
+.gm-played { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14.5px; color: var(--fg); text-wrap: pretty; }
+/* a row of five stars: drawn twice, the top row cut to how much of it is filled (--gm-fill, set through the CSS object model) */
+.gm-stars { --gm-sw: 104px; position: relative; display: inline-block; flex: none; width: var(--gm-sw); aspect-ratio: 5; vertical-align: middle; }
+.gm-stars-lg { --gm-sw: 168px; margin-top: 14px; }
+.gm-stars-sm { --gm-sw: 86px; }
+.gm-stars-svg { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; }
+.gm-stars-base { fill: color-mix(in srgb, var(--fg) 14%, transparent); }
+.gm-stars-fill { fill: var(--accent); clip-path: inset(0 calc(100% - var(--gm-fill, 0%)) 0 0); }
+/* how many of each: a bar for 5★ down to 1★ (--gm-w) */
+.gm-bars { display: grid; gap: 7px; margin: 18px 0 0; padding: 0; list-style: none; }
+.gm-bar { display: grid; grid-template-columns: 30px minmax(0, 1fr) 3.6em; align-items: center; gap: 10px; font-size: 13px; color: var(--fg-2); }
+.gm-bar-label, .gm-bar-n { font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.gm-bar-n { text-align: right; }
+.gm-bar-track { position: relative; height: 8px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--fg) 10%, transparent); }
+.gm-bar-fill {
+  position: absolute; inset: 0 auto 0 0; width: var(--gm-w, 0%); border-radius: inherit; background: var(--accent);
+  transition: width .6s cubic-bezier(.2, .7, .2, 1);
+}
+
+/* rating it: one state at a time */
+.gm-side { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
+.gm-box {
+  display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 24px 24px 26px;
+  border: 1px solid var(--line); border-radius: 20px; background: var(--bg-2); scroll-margin-top: 96px;
+}
+.gm-state { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; min-width: 0; }
+.gm-state[data-gm-state='form'] { align-items: stretch; gap: 18px; }
+.gm-box-title { font-size: 22px; font-weight: 600; line-height: 1.15; letter-spacing: -0.025em; }
+.gm-box-title:focus { outline: none; }
+.gm-say-me { font-size: 14px; color: var(--fg); overflow-wrap: anywhere; }
+.gm-wallets { display: flex; flex-wrap: wrap; gap: 8px; }
+.gm-wallet img { width: 18px; height: 18px; border-radius: 4px; }
+.gm-apps { display: flex; flex-direction: column; gap: 8px; }
+.gm-me {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px;
+  padding: 10px 10px 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg);
+}
+.gm-me-text { min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.gm-me-label { color: var(--fg-2); }
+.gm-me-who { font-family: var(--mono); font-weight: 500; }
+/* your review */
+.gm-mine { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; outline: none; }
+.gm-mine-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.gm-mine-text { font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.gm-mine-name:empty, .gm-mine-text:empty { display: none; }
+.gm-mine-hidden { padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--warn) 14%, transparent); font-size: 13.5px; color: var(--fg); }
+.gm-danger.is-armed { color: var(--down); border-color: var(--down); }
+/* the form: its stars, its words, a name */
+.gm-form { display: flex; flex-direction: column; gap: 16px; }
+.gm-pick { min-width: 0; margin: 0; padding: 0; border: 0; }
+.gm-label { padding: 0; font-size: 13.5px; font-weight: 500; }
+.gm-opt { font-weight: 400; color: var(--fg-2); }
+.gm-pick-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.gm-pick-star {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px; cursor: pointer;
+  color: color-mix(in srgb, var(--fg) 22%, transparent); transition: color .12s ease, scale .12s ease;
+}
+.gm-pick-star svg { width: 34px; height: 34px; fill: currentColor; }
+.gm-pick-star.is-on { color: var(--accent); }
+.gm-pick-star:hover { scale: 1.08; }
+.gm-pick input:focus-visible + .gm-pick-star { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gm-pick-words { min-height: 1.45em; margin-top: 4px; font-size: 14px; color: var(--fg-2); }
+.gm-field { display: flex; flex-direction: column; gap: 6px; }
+.gm-field textarea, .gm-field input {
+  width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg);
+  font: inherit; font-size: 15.5px; color: var(--fg);
+}
+.gm-field textarea { min-height: 92px; resize: vertical; line-height: 1.45; }
+.gm-field input { height: 42px; }
+.gm-error { font-size: 14px; color: var(--down); }
+.gm-error:empty, .gm-done:empty, .gm-human:empty { display: none; }
+.gm-done { font-size: 14.5px; font-weight: 500; color: var(--fg); }
+.gm-form .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* what players say */
+.gm-reviews { min-width: 0; }
+.gm-reviews-title { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
+.gm-reviews > .gm-note { margin-top: 10px; font-size: 14.5px; }
+.gm-list { margin: 14px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.gm-list:empty { display: none; }
+.gm-review { padding: 18px 0; border-bottom: 1px solid var(--line); }
+.gm-review-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.gm-review-who { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 600; overflow-wrap: anywhere; }
+.gm-badge {
+  padding: 2px 8px; border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: 999px;
+  font-size: 12px; font-weight: 500; white-space: nowrap;
+}
+.gm-you { padding: 2px 8px; border-radius: 999px; background: var(--fg); color: var(--bg); font-size: 11.5px; font-weight: 500; }
+.gm-review-at { font-family: var(--mono); font-size: 12px; color: var(--fg-3); }
+.gm-review-text { margin-top: 8px; font-size: 16px; line-height: 1.55; overflow-wrap: anywhere; text-wrap: pretty; }
+.gm-reviews .gm-links { margin-top: 16px; }
+.gm-reviews .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ---------- what's coming, and the fine print ---------- */
+.gm-soon {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 28px 30px 30px;
+  border: 1px dashed color-mix(in srgb, var(--fg) 28%, transparent); border-radius: 22px; background: var(--bg-2);
+}
+.gm-soon .kicker.gm-kick { margin-bottom: 0; }
+.gm-soon-title { font-size: clamp(26px, 3.2vw, 36px); font-weight: 600; line-height: 1.1; letter-spacing: -0.035em; text-wrap: balance; }
+.gm-soon .gm-text { max-width: 60ch; }
+.gm-warn {
+  display: flex; align-items: flex-start; gap: 10px; max-width: 64ch; padding: 12px 14px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--bg); font-size: 14.5px; color: var(--fg); text-wrap: pretty;
+}
+.gm-warn-ic { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--accent); }
+.gm-fine { margin-top: 40px; padding-top: 26px; border-top: 1px solid var(--line); }
+.gm-fine-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.gm-fine ul { display: grid; gap: 8px; margin: 12px 0 0; padding-left: 18px; }
+.gm-fine li { max-width: 74ch; font-size: 14px; color: var(--fg-2); text-wrap: pretty; }
+.gm-fine a { color: var(--fg); }
+
+/* ---------- smaller screens ---------- */
+@media (max-width: 960px) {
+  .gm-game { grid-template-columns: minmax(0, 1fr); }
+  .gm-rate-grid { grid-template-columns: minmax(0, 1fr); }
+  .gm-sum { position: static; }
+}
+@media (max-width: 860px) {
+  .gm-hero-in { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .gm-art { order: -1; width: 132px; }
+}
+@media (max-width: 480px) {
+  .gm-lede { font-size: 16px; }
+  .gm-say { font-size: 13.5px; }
+  .gm-stats { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .gm-stat { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .gm-stat dd { margin: 0; }
+  .gm-sum, .gm-box { padding: 20px 18px 22px; }
+  .gm-soon { padding: 22px 20px 24px; }
+  .gm-pick-star { width: 44px; height: 44px; }
+}
+
+/* "reduce motion": nothing moves by itself (base.css shortens the rest), and the hero is simply there */
+@media (prefers-reduced-motion: reduce) {
+  .gm-hero-text > *, .gm-art, .gm-beta, .gm-stamp { animation: none; }
+  .gm-bar-fill, .gm-game-img, .gm-pick-star { transition: none; }
+  .gm-game:hover .gm-game-img, .gm-pick-star:hover { translate: none; scale: none; }
+}

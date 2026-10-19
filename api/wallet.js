@@ -18,32 +18,165 @@
 // can count it. What a wallet burned for messages counts toward its level, like the $AGI it holds.
 // GET /api/wallet?burns (2026-09-30): the price and the public counter, the same for everyone (the CDN keeps it a minute):
 //   { ready: true, price, perDay, total: { agi, messages, burns } }, or { ready: false }.
+// AGI games (2026-10-19, agi1.app/games: server/arcade.js; Vercel's 12 functions are all used, so they live here):
+//   GET ?game=<game>[&before=<id>]           → { ready: true, game, open, plays, players, ratings, average, stars, reviews,
+//                                               more } (a `before` page: { ready: true, reviews, more }), or { ready: false }
+//                                               until supabase/arcade.sql is run. The same for everyone (the CDN, a minute)
+//   game-play          { game, player, plays }   → { ok }   runs a game started: no sign-in, no wallet (src/games/<game>/site.js)
+//   game-mine          { game, session }         → { review, level }   this wallet's own review of it (null: none yet)
+//   game-review        { game, session, stars, text?, name?, adult, turnstileToken | pass }
+//                                                → { ok, created, review }   rated and reviewed by a connected wallet (a free
+//                                               signature, never a transaction), 18+, after the human check ('review')
+//   game-review-delete { game, session }         → { ok, removed }
 import { getConfig } from '../server/config.js';
-import { clientIp, visitorCode } from '../server/security.js';
+import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass } from '../server/security.js';
+import { verifyHuman } from '../server/turnstile.js';
 import { startSignIn, finishSignIn } from '../server/signin.js';
 import { makeSession, readSession, needsRecheck, walletCode, RECHECK_MS } from '../server/session.js';
 import { checkLevel } from '../server/chain.js';
 import { getFriend, setFriendName, forgetFriend, cleanName } from '../server/friends.js';
 import { txFrom, checkBurns, burnStatus, burnTotal, BURN_PER_DAY } from '../server/burn.js';
-import { burnBurst } from '../server/burst.js';
+import { burnBurst, arcadePlayBurst, reviewBurst } from '../server/burst.js';
+import { countPlays, gamePage, reviewsOpen, reviewWords, reviewName, reviewer, myReview, deleteReview, saveReview } from '../server/arcade.js';
+import { isGame, PLAYER, PLAYS, STARS } from '../src/games/list.js';
 import { levelInfo } from '../src/lib/levels.js';
 
-const MAX_BODY = 4000;
+// (2026-10-19: 6,000, was 4,000: a review comes with its words, a name, a wallet session and a human check's token)
+const MAX_BODY = 6000;
 const RETRY_MS = 5 * 60 * 1000;          // if the balance couldn't be read, try again in about 5 minutes
 const json = (status, body, headers = { 'Cache-Control': 'no-store' }) => Response.json(body, { status, headers });
 
-// The price and the public counter: exactly one address (anything else is 405, so nobody can make the CDN miss on purpose)
+// The price and the public counter, and (2026-10-19) a game's stars, plays and reviews: exactly these addresses (anything
+// else is 405, so nobody can make the CDN miss on purpose). A game's `before` is the id of the last review shown (a page of
+// older ones), at most 15 digits (a whole number JavaScript keeps exactly)
+const GAME_ASK = /^\?game=([a-z0-9]{2,24})(?:&before=([1-9]\d{0,14}))?$/;
+const SHARED = { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120' };
 export async function GET(request) {
-  if (!request || new URL(request.url).search !== '?burns') return json(405, { error: 'method_not_allowed' });
+  const search = request ? new URL(request.url).search : '';
+  const asked = search === '?burns' ? null : GAME_ASK.exec(search);
+  if (search !== '?burns' && !asked) return json(405, { error: 'method_not_allowed' });
   const cfg = getConfig();
-  const shared = { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120' };
-  if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(200, { ready: false }, shared);
+  if (asked) return gameGet(cfg, asked[1], asked[2] ? Number(asked[2]) : null);
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(200, { ready: false }, SHARED);
   try {
-    return json(200, { ready: true, price: cfg.burnPrice, perDay: BURN_PER_DAY, total: await burnTotal(cfg) }, shared);
+    return json(200, { ready: true, price: cfg.burnPrice, perDay: BURN_PER_DAY, total: await burnTotal(cfg) }, SHARED);
   } catch (err) {
-    if (err.code === 'PGRST202') return json(200, { ready: false }, shared);   // burns.sql isn't run yet
+    if (err.code === 'PGRST202') return json(200, { ready: false }, SHARED);   // burns.sql isn't run yet
     console.error('[wallet] the burn counter is unavailable:', err.message);
     return json(503, { error: 'busy' });
+  }
+}
+
+// ---------- AGI games (2026-10-19, server/arcade.js) ----------
+// (a server copy says once that arcade.sql isn't run, instead of every play)
+let toldArcadeMissing = false;
+const arcadeMissing = (err) => {
+  if (!toldArcadeMissing) { toldArcadeMissing = true; console.error('[wallet] the games\' plays and reviews aren\'t kept yet:', err.message); }
+};
+export const _resetArcadeNotes = () => { toldArcadeMissing = false; };      // (for the tests)
+
+async function gameGet(cfg, game, before) {
+  if (!isGame(game)) return json(404, { error: 'not_found' }, SHARED);      // never asks the database
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(200, { ready: false }, SHARED);
+  try {
+    const page = await gamePage(cfg, game, { before });
+    return json(200, before ? { ready: true, ...page } : { ready: true, game, open: reviewsOpen(cfg), ...page }, SHARED);
+  } catch (err) {
+    if (err.code === 'PGRST202') { arcadeMissing(err); return json(200, { ready: false }, SHARED); }
+    console.error('[wallet] a game\'s page is unavailable:', err.message);
+    return json(503, { error: 'busy' });
+  }
+}
+
+// runs a game started (no sign-in): counted under a scrambled code of the browser's random id, and a daily code of the
+// visitor (never their internet address)
+async function gamePlay(cfg, body, { visitor, who, now }) {
+  const plays = body.plays;
+  if (!isGame(body.game) || typeof body.player !== 'string' || !PLAYER.test(body.player)
+    || !Number.isInteger(plays) || plays < 1 || plays > PLAYS.perReport) return json(400, { error: 'bad_request' });
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(503, { error: 'not_ready' });
+  if (!arcadePlayBurst(visitor, now)) return json(429, { error: 'too_fast' });
+  try {
+    const r = await countPlays(cfg, { game: body.game, player: body.player, who: who(), plays });
+    if (r.ok) return json(200, { ok: true });
+    return r.why === 'bad' ? json(400, { error: 'bad_request' }) : json(429, { error: r.why });
+  } catch (err) {
+    if (err.code === 'PGRST202') { arcadeMissing(err); return json(503, { error: 'not_ready' }); }
+    console.error('[wallet] counting a game\'s plays failed:', err.message);
+    return json(503, { error: 'busy' });
+  }
+}
+
+// a review, and a wallet's own one: its wallet session (the site's sign-in) and its level now
+async function gameReviews(cfg, request, body, { visitor, who, now }) {
+  if (!isGame(body.game)) return json(400, { error: 'bad_request' });
+  const game = body.game;
+
+  // a review's words and name, checked before anything else is asked (the live show's rules, and only $AGI)
+  let words = null, name = null;
+  if (body.action === 'game-review') {
+    if (!reviewsOpen(cfg)) {
+      console.error('[wallet] reviews need SUPABASE_URL, SUPABASE_SECRET_KEY, TURNSTILE_SECRET_KEY and GEMINI_API_KEY');
+      return json(503, { error: 'not_configured' });
+    }
+    if (!STARS.includes(body.stars)) return json(400, { error: 'bad_request' });
+    if (body.adult !== true) return json(403, { error: 'age' });
+    if ((body.text ?? '') !== '' && typeof body.text !== 'string') return json(400, { error: 'bad_request' });
+    if ((body.name ?? '') !== '' && typeof body.name !== 'string') return json(400, { error: 'bad_request' });
+    words = await reviewWords(body.text ?? '');
+    if (!words.ok) return json(400, { error: 'words', why: words.why });
+    name = await reviewName(body.name ?? '');
+    if (!name.ok) return json(400, { error: 'name' });
+  }
+
+  if (!reviewBurst(visitor, now)) return json(429, { error: 'too_fast' });
+  // (a session we can't read: the page forgets it, before the human check, so no token is used up for nothing)
+  if (!readSession(cfg.passSecret, body.session, now)) return json(401, { error: 'signed_out' });
+
+  if (body.action === 'game-review-delete') {
+    if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(503, { error: 'not_ready' });
+    try {
+      return json(200, await deleteReview(cfg, game, readSession(cfg.passSecret, body.session, now).wallet));
+    } catch (err) {
+      if (err.code === 'PGRST202') { arcadeMissing(err); return json(503, { error: 'not_ready' }); }
+      console.error('[wallet] deleting a review failed:', err.message);
+      return json(503, { error: 'busy' });
+    }
+  }
+
+  let pass = null;
+  if (body.action === 'game-review' && !checkPass(cfg.passSecret, body.pass, visitor, now)) {
+    if (!(await verifyHuman(cfg, body.turnstileToken, clientIp(request), 'review'))) return json(401, { error: 'human_check' });
+    pass = makePass(cfg.passSecret, visitor, now);
+  }
+  // its level now (re-read on the chain when it's 30 minutes old: a new session comes back with it)
+  const r = await reviewer(cfg, body.session, { now });
+  const extra = { ...(pass ? { pass } : {}), ...(r.session ? { session: r.session } : {}) };
+
+  if (body.action === 'game-mine') {
+    if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(503, { error: 'not_ready', ...extra });
+    try {
+      return json(200, { review: await myReview(cfg, game, r.wallet), level: r.level, ...extra });
+    } catch (err) {
+      if (err.code === 'PGRST202') { arcadeMissing(err); return json(503, { error: 'not_ready', ...extra }); }
+      console.error('[wallet] reading a review failed:', err.message);
+      return json(503, { error: 'busy', ...extra });
+    }
+  }
+
+  try {
+    const s = await saveReview(cfg, { game, wallet: r.wallet, who: who(), stars: body.stars, text: words.text, name: name.name, level: r.level });
+    if (s.ok) return json(200, { ok: true, created: s.created, review: s.review, level: r.level, ...extra });
+    if (s.why === 'rules') return json(422, { error: 'rules', ...extra });
+    return json(429, { error: s.why, ...extra });
+  } catch (err) {
+    if (err.why === 'ai') {
+      console.error('[wallet] a review couldn\'t be looked at (nothing kept):', err.message);
+      return json(503, { error: 'ai', ...extra });
+    }
+    if (err.code === 'PGRST202') { arcadeMissing(err); return json(503, { error: 'not_ready', ...extra }); }
+    console.error('[wallet] saving a review failed:', err.message);
+    return json(503, { error: 'busy', ...extra });
   }
 }
 
@@ -89,8 +222,18 @@ export async function POST(request) {
   const origin = new URL(request.url).origin;
   const visitor = visitorCode(cfg.passSecret, clientIp(request));
   const now = Date.now();
+  // (2026-10-19, the games) the visitor's code for today (UTC), for the database's daily counts: never their address
+  const who = () => visitorCodeForDay(cfg.passSecret, clientIp(request), new Date(now).toISOString().slice(0, 10));
 
   switch (body.action) {
+    case 'game-play':
+      return gamePlay(cfg, body, { visitor, who, now });
+
+    case 'game-mine':
+    case 'game-review':
+    case 'game-review-delete':
+      return gameReviews(cfg, request, body, { visitor, who, now });
+
     case 'start': {
       try {
         return json(200, startSignIn(cfg.passSecret, { address: body.address, origin, visitor, chainId: body.chainId }, now));

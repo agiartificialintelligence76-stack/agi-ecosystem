@@ -292,7 +292,8 @@ test('the renderer: its scenes, its graphics, its link preview, no secrets for t
     i += 2 + len;
   }
   assert.deepEqual(size, [1200, 630]);
-  for (const p of ['roadmap', 'stake', 'games', 'giveaway']) assert.match(read(`${p}.html`), /<meta property="og:image" content="__SITE__\/cards\/roadmap\.jpg" \/>/, p);
+  // (games.html is AGI games' own page since 2026-10-19, with its own picture: cards/games.jpg, tests/page.test.js)
+  for (const p of ['roadmap', 'stake', 'giveaway']) assert.match(read(`${p}.html`), /<meta property="og:image" content="__SITE__\/cards\/roadmap\.jpg" \/>/, p);
   // nothing of the computer's secrets for the browser or ffmpeg
   const env = withoutSecrets({ PATH: '/bin', GEMINI_API_KEY: 'x', PASS_SECRET: 'y', TELEGRAM_BOT_TOKEN: 'z', FAL_KEY: 'w', HOME: '/root' });
   assert.deepEqual(Object.keys(env).sort(), ['HOME', 'PATH']);

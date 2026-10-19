@@ -1,5 +1,6 @@
 /* The roadmap (2026-10-14, the owner: "when they go to agi1.app/roadmap they will see a roadmap … make the roadmap page cool
-   and beautiful"): roadmap.html, and its coming-soon pages stake.html, games.html and giveaway.html (src/roadmap/page.js).
+   and beautiful"): roadmap.html, and its coming-soon pages stake.html and giveaway.html (src/roadmap/page.js; games.html is
+   AGI games' own page since 2026-10-19: src/styles/games.css).
    The lab look: a clean hero with a progress meter; then a timeline down one line (on computers the line in the middle and
    the cards on either side, their numbers across the line; on phones the line at the left), the live part of the line in
    the accent, the coming-soon part dashed and slowly moving, a "We're here" marker between them, and a locked 18+ card.

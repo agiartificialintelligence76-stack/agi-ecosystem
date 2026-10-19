@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- AGI games' link preview (public/cards/games.jpg, 2026-10-19), the words of games.html's top: "GAME beta", its first game
+     and what's free. Render it at 1200 × 630 in Chromium (Claude does: a screenshot of this file, then a JPEG under 160 KB),
+     after changing those words or the game's picture. Pop mode's look (the page's default): violet, speed lines, pink
+     halftone, honey and ink. AGI-1 only as the game's own 2D key art, never the 3D model. -->
+<html><head><meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Anybody'; src: url('../../public/fonts/Anybody-Variable.woff2') format('woff2'); font-weight: 100 900; font-stretch: 50% 150%; }
+  @font-face { font-family: 'Instrument Serif'; src: url('../../public/fonts/InstrumentSerif-Italic.woff2') format('woff2'); font-style: italic; }
+  @font-face { font-family: 'Geist'; src: url('../../public/fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'Geist Mono'; src: url('../../public/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; }
+  :root { --ink: #170a36; --violet: #6b3bff; --lav: #e4d9ff; --lav-2: #cdb8ff; --pink: #ff4da6; --honey: #ffc933; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 630px; background: var(--violet); color: #fff; font-family: 'Geist', sans-serif;
+    -webkit-font-smoothing: antialiased; overflow: hidden; }
+  .card { position: relative; width: 1200px; height: 630px; overflow: hidden; background: var(--violet); isolation: isolate; }
+  /* comic speed lines around the game's picture, fading out toward the words */
+  .card::before { content: ''; position: absolute; inset: 0; z-index: -2;
+    background: repeating-conic-gradient(from 3deg at 77% 58%, rgb(255 255 255 / .13) 0deg 1.4deg, transparent 1.4deg 7deg);
+    -webkit-mask-image: radial-gradient(circle at 77% 58%, transparent 0 14%, #000 58%); }
+  /* pink halftone in the lower left */
+  .card::after { content: ''; position: absolute; left: 0; bottom: 0; z-index: -1; width: 62%; height: 72%;
+    background-image: radial-gradient(circle, var(--pink) 2.2px, transparent 2.6px); background-size: 17px 17px;
+    -webkit-mask-image: radial-gradient(ellipse at 0% 100%, #000 0%, transparent 70%); opacity: .9; }
+  .in { position: absolute; left: 64px; top: 50px; bottom: 46px; width: 560px; display: flex; flex-direction: column; }
+  .pill { align-self: flex-start; display: inline-flex; align-items: center; gap: 12px; padding: 9px 20px 9px 16px; border-radius: 999px;
+    background: var(--honey); color: var(--ink); border: 3px solid var(--ink); box-shadow: 4px 5px 0 var(--ink);
+    font-family: 'Geist Mono', monospace; font-size: 18px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .pill::before { content: ''; width: 11px; height: 11px; border-radius: 50%; background: var(--pink); border: 2px solid var(--ink); }
+  .title { position: relative; align-self: flex-start; margin-top: 22px; }
+  h1 { font-family: 'Anybody', sans-serif; font-weight: 900; font-stretch: 116%; font-size: 150px; line-height: .86;
+    letter-spacing: -0.035em; color: var(--lav); -webkit-text-stroke: 7px var(--ink); paint-order: stroke fill;
+    text-shadow: 11px 11px 0 var(--pink); }
+  .beta { position: absolute; right: -58px; top: -28px; transform: rotate(-8deg); padding: 9px 20px 12px;
+    font-family: 'Anybody', sans-serif; font-weight: 900; font-stretch: 100%; font-size: 46px; line-height: 1; letter-spacing: .01em;
+    color: var(--ink); background: var(--honey); border: 5px solid var(--ink); border-radius: 18px; box-shadow: 7px 8px 0 var(--ink); }
+  .game { margin-top: 50px; font-family: 'Instrument Serif', serif; font-style: italic; font-size: 66px; line-height: 1;
+    letter-spacing: -0.01em; color: #fff; text-shadow: 3px 3px 0 var(--ink); }
+  .line { margin-top: 18px; font-size: 25px; font-weight: 500; line-height: 1.3; color: #fff; max-width: 520px; }
+  .foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; font-family: 'Geist Mono', monospace; }
+  .site { align-self: flex-start; font-size: 25px; font-weight: 700; color: var(--ink); background: var(--honey); padding: 5px 14px 6px;
+    border-radius: 10px; border: 3px solid var(--ink); }
+  .fine { font-size: 16px; letter-spacing: .04em; color: rgb(255 255 255 / .92); }
+  /* the game's own key art: AGI-1 riding her cat, with a pink and honey print echo */
+  .art { position: absolute; right: 0; bottom: 14px; width: 600px; height: auto;
+    filter: drop-shadow(10px 10px 0 var(--pink)) drop-shadow(-7px 7px 0 var(--honey)) drop-shadow(0 0 0 var(--ink)); }
+  .stamp { position: absolute; right: 44px; top: 30px; width: 150px; height: 150px; transform: rotate(10deg); }
+  .stamp circle { fill: var(--ink); }
+  .stamp text { font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 700; letter-spacing: .1em; fill: var(--lav); }
+  .stamp .mid { font-family: 'Anybody', sans-serif; font-weight: 900; font-size: 30px; letter-spacing: 0; fill: var(--honey); }
+</style></head>
+<body><div class="card">
+  <img class="art" src="../../src/games/rideemagi/keyart.webp" alt="">
+  <svg class="stamp" viewBox="0 0 200 200" aria-hidden="true">
+    <defs><path id="ring" d="M100 100m-74 0a74 74 0 1 1 148 0a74 74 0 1 1-148 0"/></defs>
+    <circle cx="100" cy="100" r="96"/>
+    <text><textPath href="#ring" textLength="460" lengthAdjust="spacing">FREE TO PLAY · NO WALLET NEEDED · </textPath></text>
+    <text class="mid" x="100" y="111" text-anchor="middle">PLAY</text>
+  </svg>
+  <div class="in">
+    <span class="pill">AGI games · free to play</span>
+    <div class="title"><h1>GAME</h1><span class="beta">beta</span></div>
+    <p class="game">Ride ’Em, AGI!</p>
+    <p class="line">Play free in your browser. No wallet needed.</p>
+    <div class="foot">
+      <span class="site">agi1.app/games</span>
+      <span class="fine">Free to play · beta · not financial advice</span>
+    </div>
+  </div>
+</div></body></html>

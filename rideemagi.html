@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-page="rideemagi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ride 'Em, AGI! · AGI games</title>
+    <meta name="description" content="AGI-1 and her cat race across sunset rooftops, neon nights, a server farm and the lavender sky. Free to play in your browser, on a computer or a phone. No wallet needed." />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#15102a" />
+    <!-- link previews (X and others). __SITE__ becomes the site's address at build time (scripts/share-pages.js) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AGI" />
+    <meta property="og:title" content="Ride 'Em, AGI! · AGI games" />
+    <meta property="og:description" content="AGI-1 and her cat race across rooftops, neon nights, a server farm and the lavender sky. Free to play, no wallet needed." />
+    <meta property="og:image" content="__SITE__/cards/games.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="AGI-1 riding her cat, next to the words GAME beta and Ride 'Em, AGI!" />
+    <meta property="og:url" content="__SITE__/games/rideemagi" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="__SITE__/games/rideemagi" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/fonts/games/mochiy-v1.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <!-- Ride 'Em, AGI! (2026-10-19, AGI games): the owner's game, brought in by tools/games/import-rideemagi.mjs (its
+         markup below, its code and styles in src/games/rideemagi/). One full screen: its own way back is in its menus. -->
+    <main>
+      <!-- game:start (written by tools/games/import-rideemagi.mjs from the game's own markup: don't edit) -->
+      <div id="stage">
+        <canvas id="game" role="img" aria-label="Ride 'Em, AGI! play area"></canvas>
+        <button id="pauseBtn" class="pausebtn" type="button" aria-label="Pause" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1.6"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.6"/></svg></button>
+        <div id="pad"><button type="button" class="duck" data-act="duck">DUCK</button><button type="button" class="jump" data-act="jump">JUMP</button></div>
+        <div id="hint" hidden></div>
+        <section id="sheet" class="sheet" hidden></section>
+        <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+        <div id="safe" aria-hidden="true"></div>
+      </div>
+      <!-- game:end -->
+    </main>
+    <script type="module" src="/src/games/rideemagi/page.js"></script>
+  </body>
+</html>

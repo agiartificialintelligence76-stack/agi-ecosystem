@@ -8,6 +8,8 @@
     { "source": "/studio/:path+", "destination": "/studio" },
     { "source": "/talk", "destination": "/" },
     { "source": "/talk/", "destination": "/" },
+    { "source": "/games/rideemagi", "destination": "/rideemagi" },
+    { "source": "/games/rideemagi/", "destination": "/rideemagi" },
     { "source": "/:path*", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/studio" }
   ],
   "redirects": [

@@ -1,0 +1,544 @@
+// AGI games (agi1.app/games, games.html, 2026-10-19, the owner: "the word GAMES on TOP will be written as GAME beta … theres
+// also a rating stars and how many people have played it, dont need sign in a wallet to play it its optional", then "if they
+// want to rate it and review and put a comment they need to sign in wallet signature only not transaction. but on how many
+// times played it will still be recorded no need sign in"): each game's numbers (/api/wallet?game=…: its stars, players and
+// plays), its ratings and reviews, and rating it: 18+, the site's own wallet sign-in (src/lib/wallet.js: an address, the
+// network it's on and one free signature, never a transaction) and the human check. Playing needs none of this (each game
+// counts its own runs: src/games/<game>/site.js). Its words are in the page and src/games/words.js; everything here is set
+// with textContent, and its CSS variables through the CSS object model (the CSP allows no style attributes).
+import '../styles/tokens.css';
+import '../styles/base.css';
+import '../styles/layout.css';
+import '../styles/sections.css';
+import '../styles/footer.css';
+import '../styles/diary.css';      // (the short safety paragraph above the bottom bar)
+import '../styles/games.css';
+import '../styles/pop.css';        // Pop mode: the bold look, only while it's switched on
+import { startTheme } from '../theme.js';
+import { startMenu } from '../menu.js';
+import { withHuman, postJson } from '../lib/human.js';
+import { findWallets, signInWithWallet, explainWalletError } from '../lib/wallet.js';
+import { isGame, STARS } from './list.js';
+import {
+  WALLET_STEPS, NO_WALLET, BADGE, STAR_PATH, starsPath, starsLabel, pickText, fillWidth, avgText, ratingsText, countText,
+  barWidth, playedText, cardStats, dateText, adjustStats, placeReview, mergeMine, appendPage, BOX, moreText, meText, savedText,
+  deletedText, reviewError,
+} from './words.js';
+
+// the site's 18+ answer and wallet session (the home page's and her live page's too: a wallet connected there is connected
+// here), { session, wallet, level, name, notes }
+const KEYS = { adult: 'agi1_18plus', wallet: 'agi_wallet' };
+const API = '/api/wallet';
+const RETRY_MS = 20_000;        // our server didn't answer: asked once more after this
+const ARMED_MS = 4_000;         // "Tap again to delete" lasts this long
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode: this visit only */ } },
+  del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
+};
+const $ = (sel, root = document) => root.querySelector(sel);
+const el = (tag, className, text) => {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+};
+const SVG = 'http://www.w3.org/2000/svg';
+const svgOf = (className, viewBox, d) => {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('class', className);
+  svg.setAttribute('viewBox', viewBox);
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  const path = document.createElementNS(SVG, 'path');
+  path.setAttribute('d', d);
+  svg.append(path);
+  return svg;
+};
+
+// what our server says, checked (anything odd counts as nothing)
+const nat = (n) => Number.isSafeInteger(n) && n >= 0;
+const numbersOf = (d) => ({
+  open: d.open === true,
+  plays: nat(d.plays) ? d.plays : null,
+  players: nat(d.players) ? d.players : null,
+  ratings: nat(d.ratings) ? d.ratings : 0,
+  average: typeof d.average === 'number' && Number.isFinite(d.average) ? d.average : null,
+  stars: STARS.map((_, i) => (nat(d.stars?.[i]) ? d.stars[i] : 0)),
+});
+const isReview = (r) => Boolean(r) && typeof r === 'object' && Number.isSafeInteger(r.id) && STARS.includes(r.stars) && typeof r.at === 'string';
+const walletOf = (v) => (v && typeof v.session === 'string' && v.session && /^0x[0-9a-f]{40}$/i.test(String(v.wallet)) ? v : null);
+const sameWallet = (a, b) => Boolean(a && b) && String(a.wallet).toLowerCase() === String(b.wallet).toLowerCase();
+
+// a row of five stars, filled to `value` (two drawings of it: the top one cut to its width, --gm-fill)
+function setStars(node, value, label) {
+  node.style.setProperty('--gm-fill', fillWidth(value));
+  node.setAttribute('aria-label', label);
+}
+function starRow(value, label, size) {
+  const row = el('span', `gm-stars ${size}`);
+  row.setAttribute('role', 'img');
+  row.append(svgOf('gm-stars-svg gm-stars-base', '0 0 120 24', starsPath()), svgOf('gm-stars-svg gm-stars-fill', '0 0 120 24', starsPath()));
+  setStars(row, value, label);
+  return row;
+}
+
+function start() {
+  startTheme();
+  startMenu();
+  const rate = $('[data-gm-rate]');
+  const GAME = rate?.dataset.gmRate;
+  if (!isGame(GAME)) return;
+  const card = $(`[data-gm-game="${GAME}"]`);
+  const ui = {
+    avg: $('[data-gm-avg]', rate), avgStars: $('[data-gm-avg-stars]', rate), count: $('[data-gm-count]', rate),
+    played: $('[data-gm-played]', rate),
+    bar: Object.fromEntries(STARS.map((n) => [n, $(`[data-gm-bar="${n}"]`, rate)])),
+    barN: Object.fromEntries(STARS.map((n) => [n, $(`[data-gm-bar-n="${n}"]`, rate)])),
+    states: [...rate.querySelectorAll('[data-gm-state]')],
+    adult: $('[data-gm-adult]', rate),
+    say: $('[data-gm-say]', rate), connect: $('[data-gm-connect]', rate), wallets: $('[data-gm-wallets]', rate),
+    apps: $('[data-gm-apps]', rate), appsNote: $('[data-gm-apps-note]', rate),
+    me: $('[data-gm-me]', rate), out: $('[data-gm-out]', rate), mineLoading: $('[data-gm-mine-loading]', rate),
+    mine: $('[data-gm-mine]', rate), mineStars: $('[data-gm-mine-stars]', rate), mineName: $('[data-gm-mine-name]', rate),
+    mineText: $('[data-gm-mine-text]', rate), mineHidden: $('[data-gm-mine-hidden]', rate),
+    edit: $('[data-gm-edit]', rate), del: $('[data-gm-delete]', rate),
+    form: $('[data-gm-form]', rate), formTitle: $('[data-gm-form-title]', rate), formNote: $('[data-gm-form-note]', rate),
+    radios: [...rate.querySelectorAll('input[name="gm-stars"]')], pickWords: $('[data-gm-pick-words]', rate),
+    text: $('[data-gm-text]', rate), countText: $('[data-gm-count-text]', rate), name: $('[data-gm-name]', rate),
+    human: $('[data-gm-human]', rate), error: $('[data-gm-error]', rate), send: $('[data-gm-send]', rate),
+    cancel: $('[data-gm-cancel]', rate), done: $('[data-gm-done]', rate),
+    empty: $('[data-gm-empty]', rate), list: $('[data-gm-list]', rate), listSay: $('[data-gm-list-say]', rate),
+    more: $('[data-gm-more]', rate),
+  };
+  const stars = ui.radios.map((r) => r.nextElementSibling);      // each radio's label: its star
+
+  let stats;                       // undefined: loading; null: none (not set up, or our server didn't answer); else its numbers
+  let list = [];                   // the reviews shown, newest first
+  let more = false;                // more to load ("Show more reviews")
+  let me = walletOf(store.get(KEYS.wallet));
+  let mine;                        // this wallet's review: undefined (not known yet), null (none), a review, or 'failed'
+  let mineAskFor = null;           // the wallet its review is being asked for
+  let editing = false, sending = false, removing = false;
+  const adult = () => store.get(KEYS.adult) === true;
+  const myReview = () => (isReview(mine) ? mine : null);
+
+  // ---------- its numbers, and the reviews ----------
+  let retried = false;
+  async function loadStats() {
+    let res = null, data = {};
+    try {
+      res = await fetch(`${API}?game=${GAME}`);
+      data = await res.json().catch(() => ({}));
+    } catch { /* offline */ }
+    if (res?.ok && data.ready === true) {
+      stats = numbersOf(data);
+      list = appendPage([], data.reviews);
+      more = data.more === true;
+      if (myReview()) list = mergeMine(list, myReview(), { more });
+    } else {
+      stats = null;
+      // a hiccup (offline, or our server busy): once more after a while; never for "not set up yet" or a game it doesn't know
+      if (!retried && (!res || res.status >= 500)) { retried = true; setTimeout(loadStats, RETRY_MS); }
+    }
+    renderAll();
+  }
+
+  function renderCard() {
+    if (!card) return;
+    const c = cardStats(stats, { loading: stats === undefined });
+    const rating = $('[data-gm-stat="rating"]', card);
+    if (rating) {
+      rating.replaceChildren();
+      if (c.rating.star) rating.append(svgOf('gm-stat-star', '0 0 24 24', STAR_PATH));
+      rating.append(document.createTextNode(c.rating.value));
+      if (c.rating.star) rating.append(el('span', 'sr-only', ' out of 5'));
+    }
+    const players = $('[data-gm-stat="players"]', card), plays = $('[data-gm-stat="plays"]', card);
+    if (players) players.textContent = c.players;
+    if (plays) plays.textContent = c.plays;
+  }
+
+  function renderSummary() {
+    const s = stats;
+    ui.avg.textContent = s === undefined ? '…' : s && s.ratings > 0 ? avgText(s.average) : '—';
+    setStars(ui.avgStars, s && s.ratings > 0 ? s.average : 0,
+      s === undefined ? 'Loading its rating' : s && s.ratings > 0 ? `Rated ${avgText(s.average)} out of 5` : 'No ratings yet');
+    ui.count.textContent = s === undefined ? 'Loading…' : s ? ratingsText(s.ratings) : BOX.statsSoon;
+    for (const n of STARS) {
+      const k = s ? s.stars[n - 1] : null;
+      ui.bar[n]?.style.setProperty('--gm-w', s ? barWidth(k, s.ratings) : '0%');
+      if (ui.barN[n]) ui.barN[n].textContent = s ? countText(k) : '—';
+    }
+    ui.played.textContent = s === undefined ? '…' : playedText(s?.plays, s?.players);
+  }
+
+  function reviewItem(r) {
+    const li = el('li', 'gm-review');
+    li.tabIndex = -1;
+    const top = el('div', 'gm-review-top');
+    top.append(starRow(r.stars, starsLabel(r.stars), 'gm-stars-sm'));
+    const who = el('span', 'gm-review-who', typeof r.name === 'string' && r.name ? r.name : BOX.anon);
+    if (BADGE[r.level]) who.append(el('span', 'gm-badge', `💜 ${BADGE[r.level]}`));
+    if (myReview()?.id === r.id) who.append(el('span', 'gm-you', 'Yours'));
+    top.append(who);
+    const at = el('time', 'gm-review-at', `${dateText(r.at)}${r.edited ? ' · edited' : ''}`);
+    at.dateTime = r.at;
+    top.append(at);
+    li.append(top);
+    if (r.text) li.append(el('p', 'gm-review-text', r.text));
+    return li;
+  }
+  function renderList() {
+    ui.list.replaceChildren(...list.map(reviewItem));
+    ui.empty.textContent = stats ? BOX.empty : BOX.reviewsSoon;
+    ui.empty.hidden = stats === undefined || list.length > 0;
+    ui.more.hidden = !more || !list.length;
+  }
+
+  // ---------- rating it: one state at a time ----------
+  function boxState() {
+    if (stats === undefined) return 'loading';
+    if (!stats) return 'soon';
+    if (!stats.open) return 'closed';
+    if (!adult()) return 'gate';
+    if (!me) return 'connect';
+    return 'form';
+  }
+  function renderBox() {
+    const state = boxState();
+    for (const node of ui.states) node.hidden = node.dataset.gmState !== state;
+    if (state === 'form') renderForm();
+  }
+  function renderForm() {
+    ensureMine();
+    ui.me.textContent = meText(me);
+    const r = myReview();
+    ui.mineLoading.hidden = mine !== undefined;
+    ui.mine.hidden = !r || editing;
+    if (r) {
+      setStars(ui.mineStars, r.stars, starsLabel(r.stars));
+      ui.mineName.textContent = typeof r.name === 'string' && r.name ? r.name : BOX.anon;
+      ui.mineText.textContent = r.text || '';
+      ui.mineHidden.hidden = !r.hidden;
+    }
+    ui.form.hidden = mine === undefined || (Boolean(r) && !editing);
+    ui.cancel.hidden = !(r && editing);
+    ui.formTitle.textContent = r ? BOX.title.edit : BOX.title.new;
+    const note = mine === 'failed' ? BOX.mineFailed : '';
+    ui.formNote.textContent = note;
+    ui.formNote.hidden = !note;
+    ui.send.disabled = sending;
+    ui.send.textContent = sending ? BOX.send.busy : r ? BOX.send.edit : BOX.send.new;
+  }
+  function renderAll() {
+    renderCard();
+    renderSummary();
+    renderList();
+    renderBox();
+  }
+  const done = (text) => { ui.done.textContent = text || ''; };
+  const showError = (text) => { ui.error.textContent = text || ''; };
+  const connectSay = (text) => { ui.say.textContent = text || ''; ui.say.hidden = !text; };
+
+  // ---------- 18+ ----------
+  ui.adult.addEventListener('click', () => {
+    store.set(KEYS.adult, true);
+    renderAll();
+    (me ? ui.out : ui.connect).focus({ preventScroll: true });
+  });
+
+  // ---------- connecting a wallet (the same sign-in as the home page's and her live page's) ----------
+  let attempt = 0;                // the wallet picked last (an older one that answers late is left behind)
+  function keepWallet(p) {
+    const next = walletOf({ session: p.session, wallet: p.wallet, level: p.level, name: p.name ?? null, notes: p.notes || [] });
+    if (!next) return;
+    if (!sameWallet(next, me)) { mine = undefined; editing = false; }
+    me = next;
+    store.set(KEYS.wallet, me);
+  }
+  function forgetWallet() {
+    me = null;
+    mine = undefined;
+    mineAskFor = null;
+    editing = false;
+    store.del(KEYS.wallet);
+  }
+  // a wallet's session: the one this browser has for that address (its level re-read when due), else a new sign-in
+  async function sessionFor(provider, address) {
+    const saved = walletOf(store.get(KEYS.wallet));
+    if (saved && saved.wallet.toLowerCase() === address) {
+      try {
+        const r = await postJson(API, { action: 'profile', session: saved.session });
+        if (r.ok) return r.data;
+      } catch { /* offline: sign in below */ }
+    }
+    return signInWithWallet(provider, (step) => connectSay(WALLET_STEPS[step]));
+  }
+  async function connect(w) {
+    const mineNow = ++attempt;
+    const slow = setTimeout(() => { if (mineNow === attempt) connectSay(WALLET_STEPS.slow); }, 15_000);
+    connectSay(WALLET_STEPS.connect);
+    try {
+      const accounts = await w.provider.request({ method: 'eth_requestAccounts' });
+      if (mineNow !== attempt) return;
+      const address = Array.isArray(accounts) && typeof accounts[0] === 'string' ? accounts[0].toLowerCase() : '';
+      if (!/^0x[0-9a-f]{40}$/.test(address)) throw new Error('no_account');
+      const profile = await sessionFor(w.provider, address);
+      if (mineNow !== attempt) return;
+      if (String(profile.wallet).toLowerCase() !== address) throw new Error('wrong_signer');
+      keepWallet(profile);
+      connectSay('');
+      done('');
+      ui.wallets.hidden = true;
+      ui.apps.hidden = true;
+      renderAll();
+      ui.out.focus({ preventScroll: true });
+    } catch (err) {
+      if (mineNow === attempt) connectSay(explainWalletError(err));
+    } finally {
+      clearTimeout(slow);
+    }
+  }
+  ui.connect.addEventListener('click', async () => {
+    connectSay('Looking for wallets…');
+    const found = await findWallets();
+    connectSay('');
+    ui.wallets.replaceChildren(...found.map((w) => {
+      const b = el('button', 'btn btn-ghost btn-sm gm-wallet');
+      b.type = 'button';
+      if (w.icon) {
+        const img = el('img');
+        img.src = w.icon; img.alt = ''; img.width = 18; img.height = 18;
+        b.append(img);
+      }
+      b.append(document.createTextNode(w.name));
+      b.addEventListener('click', () => connect(w));
+      return b;
+    }));
+    ui.wallets.hidden = !found.length;
+    ui.apps.hidden = found.length > 0;
+    if (found.length) { ui.wallets.querySelector('button')?.focus(); return; }
+    // no wallet in this browser: open the page in a wallet app's own browser
+    ui.appsNote.textContent = matchMedia('(pointer: coarse)').matches ? NO_WALLET.phone : NO_WALLET.computer;
+    const here = location.href.split('#')[0];
+    $('[data-gm-app="metamask"]', rate).href = `https://metamask.app.link/dapp/${location.host}${location.pathname}`;
+    $('[data-gm-app="phantom"]', rate).href = `https://phantom.app/ul/browse/${encodeURIComponent(here)}?ref=${encodeURIComponent(location.origin)}`;
+    $('[data-gm-app="coinbase"]', rate).href = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(here)}`;
+  });
+  ui.out.addEventListener('click', () => {
+    forgetWallet();
+    resetForm();
+    done('');
+    renderAll();
+    ui.connect.focus({ preventScroll: true });
+  });
+  // the session ended (our server can't read it any more): this browser forgets it, and says so where you connect again
+  function signedOut() {
+    forgetWallet();
+    resetForm();
+    renderAll();
+    connectSay(reviewError('signed_out'));
+    ui.connect.focus({ preventScroll: true });
+  }
+  // connected, disconnected or forgotten in another tab (the home page's too), or 18+ answered there: this page follows
+  addEventListener('storage', (e) => {
+    if (e.key === KEYS.wallet || e.key === null) {
+      const next = walletOf(store.get(KEYS.wallet));
+      if (!sameWallet(next, me)) { mine = undefined; mineAskFor = null; editing = false; resetForm(); }
+      me = next;
+    }
+    if (e.key === KEYS.wallet || e.key === KEYS.adult || e.key === null) renderAll();
+  });
+
+  // ---------- this wallet's own review ----------
+  function ensureMine() {
+    if (!me || mine !== undefined || sameWallet(me, { wallet: mineAskFor })) return;
+    loadMine(me);
+  }
+  async function loadMine(asked) {
+    mineAskFor = asked.wallet;
+    let r;
+    try {
+      r = await postJson(API, { action: 'game-mine', game: GAME, session: asked.session });
+    } catch {
+      r = { ok: false, status: 0, data: {} };
+    }
+    if (!sameWallet(me, asked)) return;           // disconnected, or another wallet, meanwhile
+    mineAskFor = null;
+    const d = r.data || {};
+    if (r.status === 401 && d.error === 'signed_out') { signedOut(); return; }
+    if ([1, 2, 3].includes(d.level)) keepWallet({ ...me, ...(typeof d.session === 'string' ? { session: d.session } : {}), level: d.level });
+    if (r.ok && (d.review === null || isReview(d.review))) {
+      mine = d.review;
+      if (mine) list = mergeMine(list, mine, { more });
+    } else {
+      mine = 'failed';
+    }
+    renderAll();
+  }
+
+  // ---------- the form ----------
+  const picked = () => Number(ui.radios.find((r) => r.checked)?.value) || 0;
+  function paint(n) {
+    stars.forEach((s, i) => s?.classList.toggle('is-on', i < n));
+    ui.pickWords.textContent = pickText(n);
+  }
+  for (const r of ui.radios) r.addEventListener('change', () => { paint(picked()); showError(''); });
+  stars.forEach((s, i) => {
+    s?.addEventListener('pointerenter', () => paint(i + 1));
+    s?.addEventListener('pointerleave', () => paint(picked()));
+  });
+  const countWords = () => { ui.countText.textContent = String([...ui.text.value].length); };
+  ui.text.addEventListener('input', () => { countWords(); showError(''); });
+  ui.name.addEventListener('input', () => showError(''));
+  function fillForm(r) {
+    for (const radio of ui.radios) radio.checked = Number(radio.value) === (r?.stars || 0);
+    ui.text.value = r?.text || '';
+    ui.name.value = typeof r?.name === 'string' ? r.name : '';
+    paint(picked());
+    countWords();
+    showError('');
+  }
+  function resetForm() {
+    editing = false;
+    fillForm(null);
+  }
+  ui.edit.addEventListener('click', () => {
+    const r = myReview();
+    if (!r) return;
+    editing = true;
+    fillForm(r);
+    done('');
+    renderForm();
+    ui.formTitle.focus();
+  });
+  ui.cancel.addEventListener('click', () => {
+    resetForm();
+    renderForm();
+    ui.edit.focus();
+  });
+
+  ui.form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (sending || !me) return;
+    const n = picked();
+    if (!n) { showError(BOX.needStars); ui.radios[0]?.focus(); return; }
+    const text = ui.text.value.trim(), name = ui.name.value.trim();
+    const sent = me, before = myReview();
+    sending = true;
+    showError('');
+    done('');
+    renderForm();
+    let r;
+    try {
+      r = await withHuman(ui.human, 'review', (extra) => postJson(API, { action: 'game-review', game: GAME, session: sent.session, stars: n,
+        ...(text ? { text } : {}), ...(name ? { name } : {}), adult: true, ...extra }));
+    } catch (err) {
+      r = { ok: false, status: 0, data: { error: err.message === 'offline' ? 'offline_net' : err.message === 'not_configured' ? 'not_configured' : 'human_check' } };
+    }
+    sending = false;
+    const d = r.data || {};
+    const still = sameWallet(me, sent);
+    if (still && r.status === 401 && d.error === 'signed_out') { signedOut(); return; }
+    if (still && [1, 2, 3].includes(d.level)) keepWallet({ ...me, ...(typeof d.session === 'string' ? { session: d.session } : {}), level: d.level });
+    if (r.ok && d.ok === true && isReview(d.review)) {
+      // its numbers and the list without asking our server again (its answer is shared for a minute); an earlier review
+      // this page didn't know about leaves the numbers as they are (the list replaces it: an edit keeps its id)
+      if (d.created === true || before) stats = adjustStats(stats, { before, after: d.review });
+      list = placeReview(list, d.review, { remove: before, more });
+      if (still) { mine = d.review; resetForm(); }
+      done(savedText({ created: d.created === true, hidden: d.review.hidden === true }));
+      renderAll();
+      if (still) ui.mine.focus({ preventScroll: true });
+      return;
+    }
+    showError(reviewError(d.error, { why: d.why }));
+    renderAll();
+    (d.error === 'name' ? ui.name : d.error === 'words' ? ui.text : ui.send).focus();
+  });
+
+  // ---------- deleting it: two taps ----------
+  let armed = null;
+  function disarm() {
+    clearTimeout(armed);
+    armed = null;
+    ui.del.classList.remove('is-armed');
+    ui.del.textContent = BOX.remove.idle;
+  }
+  ui.del.addEventListener('click', async () => {
+    if (removing || !me || !myReview()) return;
+    if (!armed) {
+      ui.del.classList.add('is-armed');
+      ui.del.textContent = BOX.remove.armed;
+      armed = setTimeout(disarm, ARMED_MS);
+      return;
+    }
+    disarm();
+    const sent = me, before = myReview();
+    removing = true;
+    ui.del.disabled = true;
+    ui.del.textContent = BOX.remove.busy;
+    done('');
+    let r;
+    try {
+      r = await postJson(API, { action: 'game-review-delete', game: GAME, session: sent.session });
+    } catch {
+      r = { ok: false, status: 0, data: { error: 'offline_net' } };
+    }
+    removing = false;
+    ui.del.disabled = false;
+    ui.del.textContent = BOX.remove.idle;
+    const d = r.data || {};
+    const still = sameWallet(me, sent);
+    if (still && r.status === 401 && d.error === 'signed_out') { signedOut(); return; }
+    if (r.ok && d.ok === true) {
+      if (d.removed === true) {
+        stats = adjustStats(stats, { before });
+        list = placeReview(list, null, { remove: before });
+      }
+      if (still) { mine = null; resetForm(); }
+      done(deletedText(d.removed === true));
+      renderAll();
+      if (still) ui.formTitle.focus({ preventScroll: true });
+      return;
+    }
+    done(reviewError(d.error));
+    ui.del.focus();
+  });
+
+  // ---------- "Show more reviews" ----------
+  ui.more.addEventListener('click', async () => {
+    if (!list.length || ui.more.disabled) return;
+    const last = Math.min(...list.map((r) => r.id));
+    ui.more.disabled = true;
+    ui.more.textContent = BOX.more.busy;
+    let added = -1, firstNew = null;
+    try {
+      const res = await fetch(`${API}?game=${GAME}&before=${last}`);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ready === true && Array.isArray(data.reviews)) {
+        const known = new Set(list.map((r) => r.id));
+        list = appendPage(list, data.reviews);
+        more = data.more === true;
+        if (myReview()) list = mergeMine(list, myReview(), { more });
+        const fresh = list.filter((r) => !known.has(r.id));
+        added = fresh.length;
+        firstNew = fresh[0]?.id ?? null;
+      }
+    } catch { /* offline */ }
+    ui.more.disabled = false;
+    ui.more.textContent = BOX.more.idle;
+    renderList();
+    ui.listSay.textContent = added < 0 ? BOX.more.failed : moreText(added);
+    // the keyboard: on the first new review (the button may be gone), else where it was
+    const index = firstNew === null ? -1 : list.findIndex((r) => r.id === firstNew);
+    if (index >= 0) ui.list.children[index]?.focus();
+    else if (ui.more.hidden) ui.list.lastElementChild?.focus();
+  });
+
+  renderAll();
+  loadStats();
+}
+
+start();

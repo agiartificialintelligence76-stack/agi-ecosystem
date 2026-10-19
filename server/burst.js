@@ -55,3 +55,9 @@ export const liveLineBurst = makeBurstLimit({ max: 12, windowMs: 60_000 });
 // CloakMesh's waitlist (api/cloakmesh.js, 2026-10-03): a person joins once (or fixes a typo), so 10 tries a minute per
 // visitor only stops scripts before the human check and the database; leaving with a link: the same
 export const waitlistBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });
+// AGI games (api/wallet.js, 2026-10-19): a game tells our server its runs at most once a minute (and when its page is
+// closed or hidden), so 30 reports a minute per visitor only stops scripts (the database counts the rest); and its reviews,
+// a few taps a minute at most (the page asks for a wallet's own review once, and saving is the human check and 10 a day
+// per wallet): 20 a minute per visitor
+export const arcadePlayBurst = makeBurstLimit({ max: 30, windowMs: 60_000 });
+export const reviewBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });

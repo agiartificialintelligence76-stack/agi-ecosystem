@@ -3,19 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AGI games · AGI</title>
-    <meta name="description" content="AGI games: earn $AGI while you play, with a lot of types of games, casino-style ones included. Coming soon · 18+, only where it's legal · not financial advice." />
+    <title>GAME beta · AGI games</title>
+    <meta name="description" content="Free games in your browser from AGI: no wallet needed to play. It's a beta, so there are no prizes yet. Rating a game takes a connected wallet: a free signature, never a transaction. Not financial advice." />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#fafaf8" />
     <!-- link previews (X and others). __SITE__ becomes the site's address at build time (scripts/share-pages.js) -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AGI" />
-    <meta property="og:title" content="AGI games · AGI" />
-    <meta property="og:description" content="Earn $AGI while you play: a lot of types of games, casino-style ones included. Coming soon · 18+ · not financial advice." />
-    <meta property="og:image" content="__SITE__/cards/roadmap.jpg" />
+    <meta property="og:title" content="GAME beta · AGI games" />
+    <meta property="og:description" content="Ride 'Em, AGI! and more to come: free to play in your browser, no wallet needed. A beta, so no prizes yet. Not financial advice." />
+    <meta property="og:image" content="__SITE__/cards/games.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="AGI-1 next to the words The AGI roadmap, with its six stops: two live, three coming soon and one locked." />
+    <meta property="og:image:alt" content="AGI-1 riding her cat, next to the words GAME beta and Ride 'Em, AGI!" />
     <meta property="og:url" content="__SITE__/games" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href="__SITE__/games" />
@@ -38,6 +38,7 @@
           <a href="/diary">Diary</a>
           <a class="nav-phone" href="/live">Live</a>
           <a class="nav-phone" href="/studio">AGI Studio</a>
+          <a class="nav-phone" href="/games" aria-current="page">Games</a>
           <a class="nav-phone" href="/roadmap">Roadmap</a>
           <a class="nav-phone" href="/#safety">Safety note</a>
           <a class="nav-x" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
@@ -64,66 +65,214 @@
     </header>
 
     <main id="main">
-      <!-- AGI games (2026-10-14, the owner: "/games: AGI games earn $AGI while you play , a lot of types pf games. includingg gamble"): coming soon, in the owner's words with the safety lines (the owner's choice). Nothing here asks a wallet for anything -->
-      <section class="rm-hero rm-hero-sub" aria-labelledby="rm-title">
-        <div class="wrap rm-hero-in">
-          <div class="rm-hero-text">
-            <p class="kicker rm-kicker"><a href="/roadmap"><span aria-hidden="true">← </span>The roadmap</a></p>
-            <p class="rm-status is-soon"><span class="rm-status-dot" aria-hidden="true"></span>Coming soon</p>
-            <h1 class="rm-title" id="rm-title">AGI games</h1>
-            <p class="rm-sub">Earn $AGI while you play.</p>
-            <p class="rm-lede">A lot of types of games, casino-style ones included. Nothing can be played yet: this page shows what's coming.</p>
+      <!-- AGI games (2026-10-19, the owner: "the word GAMES on TOP will be written as GAME beta, the word beta is overlapping on
+           the word GAME (it still on beta cause theres no prizes yet) / theres also a rating stars and how many people have
+           played it, dont need sign in a wallet to play it its optional"): the shelf of games, each with its stars, players
+           and plays (/api/wallet?game=…), and its ratings and reviews (a connected wallet: a free signature, never a
+           transaction, only to rate it). src/games/page.js runs it. Playing never needs a wallet -->
+      <section class="gm-hero" aria-labelledby="gm-title">
+        <div class="wrap gm-hero-in">
+          <div class="gm-hero-text">
+            <p class="kicker gm-kicker">AGI games</p>
+            <h1 class="gm-title" id="gm-title"><span class="gm-word">GAME</span> <span class="gm-beta">beta</span></h1>
+            <p class="gm-sub">Free games, right in your browser.</p>
+            <p class="gm-lede">No wallet needed to play. It's a beta, so there are no prizes yet. Connect a wallet only if you'd like to rate a game: a free signature, never a transaction.</p>
+            <p class="gm-say"><img src="/images/landing/agi1-face.webp" alt="" width="36" height="36" /><span><b>AGI-1:</b> my first game is out 💜 me, my cat and a lot of rooftops. no prizes yet, just bragging rights.</span></p>
           </div>
-          <div class="rm-art" aria-hidden="true">
-            <svg class="rm-stamp" viewBox="0 0 200 200" aria-hidden="true">
-              <defs><path id="rm-ring" d="M100 100m-78 0a78 78 0 1 1 156 0a78 78 0 1 1-156 0"/></defs>
-              <text class="rm-stamp-text"><textPath href="#rm-ring" textLength="486" lengthAdjust="spacing">COMING SOON · AGI GAMES · COMING SOON · AGI GAMES · </textPath></text>
+          <div class="gm-art" aria-hidden="true">
+            <svg class="gm-stamp" viewBox="0 0 200 200" aria-hidden="true">
+              <defs><path id="gm-ring" d="M100 100m-78 0a78 78 0 1 1 156 0a78 78 0 1 1-156 0"/></defs>
+              <text class="gm-stamp-text"><textPath href="#gm-ring" textLength="486" lengthAdjust="spacing">BETA · FREE TO PLAY · NO WALLET NEEDED · </textPath></text>
             </svg>
-            <div class="rm-art-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.6 7.5h8.8a4.6 4.6 0 0 1 4.5 5.6l-.8 3.6a2.3 2.3 0 0 1-3.9 1.1L14.1 16H9.9l-2.1 1.8a2.3 2.3 0 0 1-3.9-1.1l-.8-3.6a4.6 4.6 0 0 1 4.5-5.6Z"/><path d="M8.2 10.4v3.2M6.6 12h3.2"/><path d="M15.6 10.8h.01M17.6 13h.01" stroke-width="2.4"/></svg></div>
+            <div class="gm-art-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.6 7.5h8.8a4.6 4.6 0 0 1 4.5 5.6l-.8 3.6a2.3 2.3 0 0 1-3.9 1.1L14.1 16H9.9l-2.1 1.8a2.3 2.3 0 0 1-3.9-1.1l-.8-3.6a4.6 4.6 0 0 1 4.5-5.6Z"/><path d="M8.2 10.4v3.2M6.6 12h3.2"/><path d="M15.6 10.8h.01M17.6 13h.01" stroke-width="2.4"/></svg></div>
           </div>
         </div>
       </section>
 
-      <section class="section rm-page rm-page-games" aria-labelledby="rm-feats-title">
-        <div class="wrap rm-page-in">
-          <h2 class="rm-feats-title" id="rm-feats-title">A lot of games</h2>
-          <ul class="rm-feats">
-              <li class="rm-feat rm-rv" data-rm-reveal>
-                <div class="rm-feat-top"><span class="rm-feat-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 3 5.6 13.4h6L10.8 21l7.6-10.4h-6Z"/></svg></span><span class="rm-feat-n mono" aria-hidden="true">01</span></div>
-                <h3 class="rm-feat-name">Skill and arcade</h3>
-                <p class="rm-text">Quick games where how well you play counts.</p>
-              </li>
-              <li class="rm-feat rm-rv" data-rm-reveal>
-                <div class="rm-feat-top"><span class="rm-feat-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.7a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1.1.9-1.1 1.7v.4"/><path d="M12 16.6h.01" stroke-width="2.4"/></svg></span><span class="rm-feat-n mono" aria-hidden="true">02</span></div>
-                <h3 class="rm-feat-name">Quizzes and riddles</h3>
-                <p class="rm-text">Like her quizzes in her Telegram groups, with more to play.</p>
-              </li>
-              <li class="rm-feat rm-rv" data-rm-reveal>
-                <div class="rm-feat-top"><span class="rm-feat-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3.6"/><path d="M8.6 8.6h.01M12 12h.01M15.4 15.4h.01" stroke-width="2.6"/></svg></span><span class="rm-feat-n mono" aria-hidden="true">03</span></div>
-                <h3 class="rm-feat-name">Casino-style games</h3>
-                <p class="rm-text">Games of chance: 18+, and only where they're legal.</p>
-              </li>
+      <!-- the shelf: each game with its stars, players and plays ("…" while they load, "—" when they aren't there yet) -->
+      <section class="section gm-shelf" aria-labelledby="gm-shelf-title">
+        <div class="wrap">
+          <header class="gm-head">
+            <p class="kicker">Play now</p>
+            <h2 class="h2" id="gm-shelf-title">The games</h2>
+            <p class="gm-text">One so far, and more on the way. Each one runs right here, on a computer or a phone.</p>
+          </header>
+          <ul class="gm-games">
+            <li class="gm-game" data-gm-game="rideemagi">
+              <div class="gm-game-art">
+                <img class="gm-game-img" src="/src/games/rideemagi/keyart.webp" alt="AGI-1 laughing as she rides her big fluffy cat, her hair in the wind" width="760" height="511" decoding="async" />
+              </div>
+              <div class="gm-game-body">
+                <ul class="gm-tags" aria-label="About this game">
+                  <li class="gm-tag is-beta">Beta</li>
+                  <li class="gm-tag">Free</li>
+                  <li class="gm-tag">No wallet needed</li>
+                </ul>
+                <h3 class="gm-game-name"><a class="gm-game-link" href="/games/rideemagi">Ride 'Em, AGI!</a></h3>
+                <p class="gm-text">AGI-1 and her cat race across sunset rooftops, neon nights, a server farm and the lavender sky. Jump, duck, and see how far you get.</p>
+                <dl class="gm-stats">
+                  <div class="gm-stat"><dt>Rating</dt><dd data-gm-stat="rating">…</dd></div>
+                  <div class="gm-stat"><dt>Players</dt><dd data-gm-stat="players">…</dd></div>
+                  <div class="gm-stat"><dt>Played</dt><dd data-gm-stat="plays">…</dd></div>
+                </dl>
+                <div class="gm-actions">
+                  <a class="btn btn-primary gm-play" href="/games/rideemagi" aria-label="Play Ride 'Em, AGI!"><svg class="gm-play-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</a>
+                  <a class="btn btn-ghost" href="#rate" aria-label="Rate Ride 'Em, AGI!">Rate it</a>
+                </div>
+                <p class="gm-note">No sign-in or wallet needed to play. Runs are counted, never who.</p>
+              </div>
+            </li>
           </ul>
+        </div>
+      </section>
 
-          <div class="rm-soon rm-rv" data-rm-reveal>
-            <p class="rm-status is-soon"><span class="rm-status-dot" aria-hidden="true"></span>Coming soon</p>
-            <h2 class="rm-soon-title">Not open yet</h2>
-            <p class="rm-text">Nothing can be played yet, and nothing about prizes is set. When it opens, it's here on agi1.app first, and we say so on X and in the $AGI group on Telegram.</p>
-            <p class="rm-warn"><svg class="rm-warn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.6c0 4.4 3.1 7.8 7.5 9.4 4.4-1.6 7.5-5 7.5-9.4V6Z"/><path d="M12 8.2v4.6M12 15.9h.01"/></svg><span>Anyone asking you to deposit or send $AGI to “play” before then is not us.</span></p>
-            <div class="rm-actions">
+      <!-- its ratings and reviews: the numbers for everyone; rating it takes 18+ and a connected wallet (the site's sign-in: a
+           free signature, never a transaction), and the human check -->
+      <section class="section gm-rate" id="rate" data-gm-rate="rideemagi" aria-labelledby="gm-rate-title">
+        <div class="wrap">
+          <header class="gm-head">
+            <p class="kicker">Ride 'Em, AGI!</p>
+            <h2 class="h2" id="gm-rate-title">Ratings and reviews</h2>
+            <p class="gm-text">Stars and a few words from people who played it. Rating it takes a connected wallet: a free signature, never a transaction. Playing never does.</p>
+          </header>
+          <div class="gm-rate-grid">
+            <div class="gm-sum">
+              <h3 class="sr-only">Its rating</h3>
+              <p class="gm-avg"><span class="gm-avg-n" data-gm-avg>…</span> <span class="gm-avg-of">out of 5</span></p>
+              <span class="gm-stars gm-stars-lg" data-gm-avg-stars role="img" aria-label="Loading its rating"><svg class="gm-stars-svg gm-stars-base" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg><svg class="gm-stars-svg gm-stars-fill" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg></span>
+              <p class="gm-count" data-gm-count>Loading…</p>
+              <ol class="gm-bars" aria-label="How many people gave each number of stars">
+                <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">5★</span><span class="sr-only">5 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="5"></span></span><span class="gm-bar-n" data-gm-bar-n="5">—</span></li>
+                <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">4★</span><span class="sr-only">4 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="4"></span></span><span class="gm-bar-n" data-gm-bar-n="4">—</span></li>
+                <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">3★</span><span class="sr-only">3 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="3"></span></span><span class="gm-bar-n" data-gm-bar-n="3">—</span></li>
+                <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">2★</span><span class="sr-only">2 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="2"></span></span><span class="gm-bar-n" data-gm-bar-n="2">—</span></li>
+                <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">1★</span><span class="sr-only">1 star:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="1"></span></span><span class="gm-bar-n" data-gm-bar-n="1">—</span></li>
+              </ol>
+              <p class="gm-played" data-gm-played>…</p>
+            </div>
+
+            <div class="gm-side">
+              <!-- rating it: one of these at a time (src/games/page.js) -->
+              <div class="gm-box" data-gm-box>
+                <div class="gm-state" data-gm-state="loading">
+                  <p class="gm-note" data-gm-loading>Loading its ratings…</p>
+                </div>
+                <div class="gm-state" data-gm-state="soon" hidden>
+                  <h3 class="gm-box-title">Ratings and reviews open soon</h3>
+                  <p class="gm-text">You can play it now. Rating it, with stars and a few words, opens soon.</p>
+                </div>
+                <div class="gm-state" data-gm-state="closed" hidden>
+                  <h3 class="gm-box-title">Reviews open soon</h3>
+                  <p class="gm-text">Writing a review isn't open yet. You can play it now, and read what people said.</p>
+                </div>
+                <div class="gm-state" data-gm-state="gate" hidden>
+                  <h3 class="gm-box-title">Rate it</h3>
+                  <p class="gm-text">Reviews are for adults: 18+ only. Playing it needs nothing at all.</p>
+                  <div class="gm-links"><button class="btn btn-primary btn-sm" type="button" data-gm-adult>I'm 18 or older</button></div>
+                </div>
+                <div class="gm-state" data-gm-state="connect" hidden>
+                  <h3 class="gm-box-title">Rate it</h3>
+                  <p class="gm-text">Connect a wallet to give it stars and a few words. It takes a free signature, never a transaction, and it's only for reviews: playing never needs it.</p>
+                  <p class="gm-say-me" data-gm-say role="status" aria-live="polite" hidden></p>
+                  <div class="gm-links"><button class="btn btn-primary btn-sm" type="button" data-gm-connect>Connect a wallet</button></div>
+                  <div class="gm-wallets" data-gm-wallets hidden></div>
+                  <div class="gm-apps" data-gm-apps hidden>
+                    <p class="gm-note" data-gm-apps-note></p>
+                    <div class="gm-links">
+                      <a class="btn btn-ghost btn-sm" data-gm-app="metamask">Open in MetaMask ↗</a>
+                      <a class="btn btn-ghost btn-sm" data-gm-app="phantom">Open in Phantom ↗</a>
+                      <a class="btn btn-ghost btn-sm" data-gm-app="coinbase">Open in Coinbase Wallet ↗</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="gm-state" data-gm-state="form" hidden>
+                  <div class="gm-me">
+                    <p class="gm-me-text"><span class="gm-me-label">Connected:</span> <span class="gm-me-who" data-gm-me></span></p>
+                    <button class="btn btn-ghost btn-sm" type="button" data-gm-out>Disconnect</button>
+                  </div>
+                  <p class="gm-note" data-gm-mine-loading hidden>Checking for your review…</p>
+                  <div class="gm-mine" data-gm-mine tabindex="-1" hidden>
+                    <h3 class="gm-box-title">Your review</h3>
+                    <span class="gm-stars" data-gm-mine-stars role="img" aria-label=""><svg class="gm-stars-svg gm-stars-base" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg><svg class="gm-stars-svg gm-stars-fill" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg></span>
+                    <p class="gm-mine-name" data-gm-mine-name></p>
+                    <p class="gm-mine-text" data-gm-mine-text></p>
+                    <p class="gm-mine-hidden" data-gm-mine-hidden hidden>Only you see this one: it was taken off the page.</p>
+                    <div class="gm-links">
+                      <button class="btn btn-ghost btn-sm" type="button" data-gm-edit>Edit</button>
+                      <button class="btn btn-ghost btn-sm gm-danger" type="button" data-gm-delete>Delete</button>
+                    </div>
+                  </div>
+                  <form class="gm-form" data-gm-form novalidate hidden>
+                    <h3 class="gm-box-title" data-gm-form-title tabindex="-1">Rate it</h3>
+                    <p class="gm-note" data-gm-form-note hidden></p>
+                    <fieldset class="gm-pick">
+                      <legend class="gm-label">Your stars</legend>
+                      <div class="gm-pick-row">
+                        <input class="sr-only" type="radio" name="gm-stars" id="gm-s1" value="1" /><label class="gm-pick-star" for="gm-s1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">1 star: Not for me</span></label>
+                        <input class="sr-only" type="radio" name="gm-stars" id="gm-s2" value="2" /><label class="gm-pick-star" for="gm-s2"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">2 stars: It's okay</span></label>
+                        <input class="sr-only" type="radio" name="gm-stars" id="gm-s3" value="3" /><label class="gm-pick-star" for="gm-s3"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">3 stars: Good</span></label>
+                        <input class="sr-only" type="radio" name="gm-stars" id="gm-s4" value="4" /><label class="gm-pick-star" for="gm-s4"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">4 stars: Really good</span></label>
+                        <input class="sr-only" type="radio" name="gm-stars" id="gm-s5" value="5" /><label class="gm-pick-star" for="gm-s5"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">5 stars: Love it</span></label>
+                      </div>
+                      <p class="gm-pick-words" data-gm-pick-words aria-hidden="true">Tap a star</p>
+                    </fieldset>
+                    <div class="gm-field">
+                      <label class="gm-label" for="gm-text">A few words <span class="gm-opt">(optional)</span></label>
+                      <textarea id="gm-text" data-gm-text rows="3" maxlength="300" autocomplete="off" aria-describedby="gm-text-note"></textarea>
+                      <p class="gm-note" id="gm-text-note"><span data-gm-count-text>0</span>/300 · PG-13 · no links, @names, addresses or other coins</p>
+                    </div>
+                    <div class="gm-field">
+                      <label class="gm-label" for="gm-name">Your name <span class="gm-opt">(optional)</span></label>
+                      <input id="gm-name" data-gm-name type="text" maxlength="24" autocomplete="nickname" spellcheck="false" aria-describedby="gm-name-note" />
+                      <p class="gm-note" id="gm-name-note">Shown with your review: up to 24 characters, nothing crude, and nothing that passes for her or her team. Leave it empty and it says “A player”.</p>
+                    </div>
+                    <div class="gm-human" data-gm-human></div>
+                    <p class="gm-error" data-gm-error role="alert"></p>
+                    <div class="gm-links">
+                      <button class="btn btn-primary" type="submit" data-gm-send>Post my review</button>
+                      <button class="btn btn-ghost" type="button" data-gm-cancel hidden>Cancel</button>
+                    </div>
+                    <p class="gm-note">Your words and name are checked by an AI service before they're shown (stars alone aren't). Your 💜 badge shows at Crush or Soulmate, never your address.</p>
+                  </form>
+                </div>
+                <p class="gm-done" data-gm-done role="status" aria-live="polite"></p>
+              </div>
+
+              <section class="gm-reviews" aria-labelledby="gm-reviews-title">
+                <h3 class="gm-reviews-title" id="gm-reviews-title">What players say</h3>
+                <p class="gm-note" data-gm-empty hidden>No reviews with words yet. Yours could be the first.</p>
+                <ol class="gm-list" data-gm-list></ol>
+                <p class="sr-only" data-gm-list-say role="status" aria-live="polite"></p>
+                <div class="gm-links"><button class="btn btn-ghost btn-sm" type="button" data-gm-more hidden>Show more reviews</button></div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- what's coming: more games and prizes are on the roadmap, not built yet (no dates, no amounts) -->
+      <section class="section gm-next" aria-labelledby="gm-next-title">
+        <div class="wrap">
+          <div class="gm-soon">
+            <p class="kicker gm-kick">What's coming</p>
+            <h2 class="gm-soon-title" id="gm-next-title">More games, and prizes one day</h2>
+            <p class="gm-text">More games are on the roadmap, and prizes too, one day. They're not built yet: no dates and no amounts, and what this page says can change.</p>
+            <p class="gm-warn"><svg class="gm-warn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.6c0 4.4 3.1 7.8 7.5 9.4 4.4-1.6 7.5-5 7.5-9.4V6Z"/><path d="M12 8.2v4.6M12 15.9h.01"/></svg><span>Anyone asking you to deposit or send $AGI to “play” is not us.</span></p>
+            <div class="gm-actions">
               <a class="btn btn-primary btn-sm" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">Follow @agi1dotapp ↗</a>
               <a class="btn btn-ghost btn-sm" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">Join on Telegram ↗</a>
               <a class="btn btn-ghost btn-sm" href="/roadmap">The roadmap</a>
             </div>
           </div>
 
-          <section class="rm-fine" aria-labelledby="rm-fine-title">
-            <h2 class="rm-fine-title" id="rm-fine-title">The fine print</h2>
+          <section class="gm-fine" aria-labelledby="gm-fine-title">
+            <h2 class="gm-fine-title" id="gm-fine-title">The fine print</h2>
             <ul>
-              <li>Coming soon means not built yet: what this page says can change, and no date is promised.</li>
-              <li>Prizes in $AGI are never guaranteed and never an investment. Not financial advice: $AGI is a meme token and can lose all of its value.</li>
-              <li>Casino-style games are 18+ and only where they're legal where you live. Play for fun, and never with more than you can afford to lose. If it stops being fun, stop.</li>
-              <li>This page never asks your wallet for anything. Read the full <a href="/#safety">safety note</a>.</li>
+              <li>AGI games is a beta: free to play, and there are no prizes yet.</li>
+              <li>If prizes come one day, they'll be never guaranteed and never an investment. Not financial advice: $AGI is a meme token and can lose all of its value.</li>
+              <li>What's counted when you play: the runs you start, under a scrambled code of a random id your browser keeps for the games (never who you are), and a daily visitor code. No sign-in, no wallet.</li>
+              <li>What a review keeps: your stars, your words and the name you choose, shown on the game's page with your 💜 badge at Crush or Soulmate (never your address), under a scrambled code of your wallet, until you delete it. Its words and name are checked by an AI service first. Reviews are 18+.</li>
+              <li>This page never asks your wallet for a transaction or a token approval. Read the full <a href="/#safety">safety note</a>.</li>
             </ul>
           </section>
         </div>
@@ -145,6 +294,7 @@
             <a href="/diary">Diary</a>
             <a href="/live">Live</a>
             <a href="/studio">AGI Studio</a>
+            <a href="/games" aria-current="page">Games</a>
             <a href="/roadmap">Roadmap</a>
             <a href="https://clank.trade/coin/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">clank.trade ↗</a>
             <a href="https://dexscreener.com/robinhood/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">DexScreener ↗</a>
@@ -159,6 +309,6 @@
       </div>
     </footer>
 
-    <script type="module" src="/src/roadmap/page.js"></script>
+    <script type="module" src="/src/games/page.js"></script>
   </body>
 </html>

@@ -159,6 +159,11 @@ for (const fn of ['inf_meme_add', 'inf_cast_shown']) {
 for (const fn of ['cloakmesh_ready', 'cloakmesh_join', 'cloakmesh_leave']) {
   MISSING[fn] = `${fn} not found: run supabase/cloakmesh.sql in this Supabase project`;
 }
+// AGI games (agi1.app/games, 2026-10-19): supabase/arcade.sql
+for (const fn of ['arcade_play', 'arcade_stats', 'arcade_reviews', 'arcade_review_take', 'arcade_review_put', 'arcade_review_mine',
+  'arcade_review_delete', 'arcade_review_hide']) {
+  MISSING[fn] = `${fn} not found: run supabase/arcade.sql in this Supabase project (AGI games: their plays and reviews; it ends with arcade_functions_found = 8)`;
+}
 
 // One database function call (also used by server/voice-store.js for her recorded lines).
 export async function rpc(cfg, fn, args, label) {

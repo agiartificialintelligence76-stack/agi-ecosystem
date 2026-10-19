@@ -5,6 +5,7 @@ import { defineConfig } from 'vite';
 // AGI Studio (2026-10-10): agi1.app/studio/<anything> is its one page (its views at their own addresses), and on its own
 // host (studio.agi1.app; locally studio.localhost) every address that isn't a file is too (Vercel: files first, then the
 // host's catch-all rewrite; here: an address with no file extension, outside /api and Vite's own)
+// AGI games (2026-10-19): agi1.app/games/rideemagi is the game's own page (rideemagi.html), like Vercel's rewrite
 const STUDIO_HOST = /^studio\./i;
 const STUDIO_VIEW = /^\/(?!api\/|@|src\/|node_modules\/)(?:[^.]*)$/;
 const talkPage = () => {
@@ -12,6 +13,7 @@ const talkPage = () => {
     const [path, query] = String(req.url || '').split('?');
     const q = query ? `?${query}` : '';
     if (/^\/talk\/?$/.test(path)) req.url = `/${q}`;
+    else if (/^\/games\/rideemagi\/?$/.test(path)) req.url = `/rideemagi.html${q}`;
     else if (/^\/studio\/.+/.test(path)) req.url = `/studio.html${q}`;
     else if (STUDIO_HOST.test(String(req.headers.host || '')) && STUDIO_VIEW.test(path)) req.url = `/studio.html${q}`;
     next();
@@ -29,13 +31,14 @@ export default defineConfig({
     // three.js alone is about 650 KB (170 KB compressed). It's already in its own file that
     // loads after the page's text, so Vite's default 500 KB warning isn't useful here.
     chunkSizeWarningLimit: 800,
-    // ten pages: the home page (also at /talk since 2026-10-02), AGI-1's diary (/diary, Phase 5), "Launch with AGI-1"
+    // eleven pages: the home page (also at /talk since 2026-10-02), AGI-1's diary (/diary, Phase 5), "Launch with AGI-1"
     // (/launch/<id>, 2026-10-01), her live show (/live, 2026-10-02), CloakMesh (/cloakmesh, 2026-10-03: what
-    // inference.agi1.app shows), AGI Studio (/studio and /studio/<view>, and studio.agi1.app, 2026-10-10), and (2026-10-14)
-    // the roadmap (/roadmap) with its coming-soon pages (/stake, /games, /giveaway)
+    // inference.agi1.app shows), AGI Studio (/studio and /studio/<view>, and studio.agi1.app, 2026-10-10), (2026-10-14)
+    // the roadmap (/roadmap) with its coming-soon pages (/stake, /games: AGI games since 2026-10-19, /giveaway), and
+    // (2026-10-19) the owner's game, Ride 'Em, AGI! (/games/rideemagi)
     rollupOptions: {
       input: { main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html', studio: 'studio.html',
-        roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html' },
+        roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html', rideemagi: 'rideemagi.html' },
     },
   },
 });

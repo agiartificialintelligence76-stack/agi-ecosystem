@@ -3,7 +3,8 @@
 //    shared link. People who open one are sent on to the Playground by /share/go.js (crawlers don't run scripts, so they
 //    read the preview tags). (The Arena's champion pages left with the Arena on 2026-09-28.)
 // 2. puts the site's address into the preview tags of dist/index.html, dist/diary.html, (2026-10-02) dist/live.html,
-//    (2026-10-10) dist/studio.html and (2026-10-14) the roadmap's four pages (__SITE__).
+//    (2026-10-10) dist/studio.html, (2026-10-14) the roadmap's four pages and (2026-10-19) the game's page,
+//    dist/rideemagi.html (__SITE__).
 // Link previews need full addresses. They come from Vercel's VERCEL_PROJECT_PRODUCTION_URL (the production domain), so
 // the next build uses agi1.app (the project's domain) by itself. SITE_URL overrides it (tests, previews).
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
@@ -58,8 +59,10 @@ export function allSharePages(site) {
   return pages;
 }
 
-// the card pictures every share page needs (public/cards/, see "Share cards" in CLAUDE.md)
-export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg', 'roadmap.jpg'];
+// the card pictures every share page needs (public/cards/, see "Share cards" in CLAUDE.md; games.jpg since 2026-10-19, AGI
+// games' own, made from tools/cards/games-card.html)
+export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg', 'roadmap.jpg',
+  'games.jpg'];
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const site = siteUrl();
@@ -71,7 +74,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   mkdirSync('dist/share', { recursive: true });
   for (const [name, html] of Object.entries(allSharePages(site))) writeFileSync(`dist/share/${name}.html`, html);
   for (const page of ['dist/index.html', 'dist/diary.html', 'dist/live.html', 'dist/studio.html', 'dist/roadmap.html', 'dist/stake.html',
-    'dist/games.html', 'dist/giveaway.html']) {
+    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html']) {
     if (existsSync(page)) writeFileSync(page, readFileSync(page, 'utf8').replaceAll('__SITE__', site));
   }
   console.log(`✓ share pages written for ${site}`);

@@ -1,5 +1,6 @@
 // The roadmap (2026-10-14, the owner: "when they go to agi1.app/roadmap they will see a roadmap … make the roadmap page cool
-// and beautiful"): roadmap.html, and its coming-soon pages stake.html, games.html and giveaway.html (the same script). Their
+// and beautiful"): roadmap.html, and its coming-soon pages stake.html and giveaway.html (the same script; games.html is AGI
+// games' own page since 2026-10-19: src/games/page.js). Their
 // words are in the pages; this only brings the theme, the menu, and the cards below the first screen in as they scroll into
 // view. Nothing here asks a wallet for anything, and nothing is sent anywhere.
 import '../styles/tokens.css';
