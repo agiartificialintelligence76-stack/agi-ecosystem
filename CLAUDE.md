@@ -11619,7 +11619,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   no setting; `supabase/arcade.sql` first if AGI games isn't pushed yet), then post the light video by hand. Tests: 895 in
   the whole suite (891 pass, 4 skipped as before in this folder; on Node 20, 22 and 24, with and without Vercel's
   settings, and as if the clock said six later times), the full build, 398 checks in a browser (`rmtest2b.mjs`), the
-  videos measured.
+  videos measured. **Its first push failed on Vercel** (2026-10-20, commit 21f76cd, Error after 3 min 24 s; the site
+  stayed on the last good deployment, AGI games): 1 of its 895 tests, `tests/roadmap-promo.test.js`'s check of her three
+  lines, because `tools/roadmap-promo/media.mjs` in this folder was still its version from before (it made her line about
+  what's next ready too). Claude's comparison of this folder with its workspace had skipped that file (see "Working in
+  this repo"). Saved and checked by checksum the same day, the whole folder compared again (the same as the workspace), and
+  a clean build like Vercel's passed (895 tests, 0 failing). **Owner: push again** (no SQL, no setting; a Redeploy builds
+  the same commit, so it would fail again).
 
 ## Decisions log
 
@@ -11995,6 +12001,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-19 | The attention flywheel explained (the owner: "you the one explain it to the page"): its own section under the timeline (`#flywheel`), a heavy wheel in four turns (people find AGI-1, they make and play, they share it, more people find AGI-1), AGI-1's face at its hub (`agi1-hub.webp`, from the front's 2D cutout), and where $AGI fits (holding opens levels and perks, burning pays for messages and unlocks), "about people, not price". Not picked: charts or numbers (they'd read as a promise), a wheel that moves with "reduce motion" |
 | 2026-10-19 | The roadmap's video made again (the owner: "and update the roadmap video also"): 23.5 s, its ten stops in three holds under the second drop, three of her lines (the one about what's next went: it named an order; no new take while the owner slept), stamps "Under way" or "Coming soon", the scramble without "$", "%" or digits, the whole-road view centered under the meter, its three pictures redrawn for ten steps, the link preview's JPEG at most 154,000 bytes (room for its label in the owner's folder). Not picked: keeping her line about what's next (the roadmap is in no particular order now), 21.5 s with ten stops (too quick to read) |
 | 2026-10-20 | A limiter that reads between the samples (`truePeak` in `tools/studio-promo/voice.js`, 4 times finer): the roadmap's soundtrack had come out at a true peak a little over -1 dBTP (the "t" of her "secret" rose 0.44 dB between two samples), now -1.2 dBTP; off by default, so AGI Studio's launch video keeps its soundtrack exactly. Not picked: turning the whole mix down (the music quieter everywhere for one syllable), the finer limiter for every video (AGI Studio's would change, made and checked already) |
+| 2026-10-20 | The first push of the roadmap's ten steps failed on Vercel (the owner: "whats this", with its Error row, then "i have vercel logged in chrome"; Claude read its build log in the owner's Chrome: 895 tests, 1 failing, `tests/roadmap-promo.test.js`'s check of her three lines): `tools/roadmap-promo/media.mjs` had never reached this folder (its old copy still made her line about what's next ready). Claude's comparison of this folder with its workspace skips `tools/roadmap-promo/media` (her takes' folder, which git ignores) and matched it as the start of a name, so `media.mjs` beside it was never compared (nor `tools/studio-promo/media.mjs` and `tools/live/live.env.example`, the same way: both were the same here). Fixed: the file saved and checked by checksum; the comparison now matches an exact path or the path plus "/", and the whole folder was compared again (753 files, the same as the workspace); then a clean build like Vercel's (a git copy of the workspace, a fresh install, Node 24, Vercel's settings) passed. The owner pushes again (a Redeploy builds the same commit). Not picked: changing the test (it was right: that line named an order) |
 
 ## Open questions
 
@@ -12593,3 +12600,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   `rideemagi.html`'s markup between `<!-- game:start -->` and `<!-- game:end -->` are written by
   `tools/games/import-rideemagi.mjs` (its fonts' `fonts.css` by `tools/games/game-fonts.py`), like AGI Studio's guide
   videos' list: a change goes in the tool (a patch), then the tool is run again.
+- **A skip list matches an exact path or the path plus "/", never a bare start** (2026-10-20): Claude's comparison of
+  this folder with its workspace skipped `tools/roadmap-promo/media` (a folder git ignores) as the start of a name, so
+  `tools/roadmap-promo/media.mjs` beside it was never compared, and its old copy here failed the roadmap's first push on
+  Vercel. Every path check of Claude's is `path === p || path.startsWith(p + '/')`. And before telling the owner to push a
+  change that touched many files, Claude builds a clean copy the way Vercel does: a throwaway git index over its workspace
+  (so `.gitignore` is followed, never git in this folder), a fresh `npm install`, Node 24 and Vercel's settings.

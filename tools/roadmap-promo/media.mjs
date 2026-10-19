@@ -16,11 +16,12 @@ import { readyLine, wav16, LINE } from '../studio-promo/voice.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-// her voice: [her line (words.js VOICE), the file names her take may have]
+// her voice: [her line (words.js VOICE), the file names her take may have]. Three since 2026-10-19: her third take
+// ("Staking, games and giveaways are next.", agi1-rm-03-next.wav) named an order, and the roadmap says "in no particular
+// order", so it isn't used any more (its file stays in the owner's folder)
 export const VOICES = [
   ['title', ['agi1-rm-01-title.wav']],
   ['live', ['agi1-rm-02-live.wav']],
-  ['next', ['agi1-rm-03-next.wav']],
   ['secret', ['agi1-rm-04-secret.wav']],
 ];
 // how her takes are made ready: a change to it makes them again
