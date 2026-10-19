@@ -1,7 +1,7 @@
-// The roadmap's video, its end card (18–21.5 s): the hero's violet again, AGI-1 printed in halftone dots on the left
-// (the front's 2D art), her line from the page ("two live, four on the way. i'm a little excited 💜") in a bubble by
-// her face, and on the right "The AGI roadmap", "Be the first to know.", agi1.app/roadmap, Follow @agi1dotapp and the
-// page's fine print. Hearts on the last two hits.
+// The roadmap's video, its end card (20–23.5 s; 18–21.5 s until 2026-10-19): the hero's violet again, AGI-1 printed in
+// halftone dots on the left (the front's 2D art), her line from the page ("two live, eight on the way. i'm a little
+// excited 💜") in a bubble by her face, and on the right "The AGI roadmap", "Be the first to know.", agi1.app/roadmap,
+// Follow @agi1dotapp and the page's fine print ("Coming soon, in no particular order…"). Hearts on the last two hits.
 import { C, E, prog, clamp, mix, text, pill, popWord, measure, around, slamK, popK } from '../parts.js';
 import { button, bubble, burst } from '../../../promo/page/ui.js';
 import { heroBackground, drawArt } from './title.js';

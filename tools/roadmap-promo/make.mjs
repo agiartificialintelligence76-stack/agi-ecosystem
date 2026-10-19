@@ -3,7 +3,7 @@
 // post image, the roadmap's link preview and a square one): makes them.
 // Everything on screen is drawn in code (tools/roadmap-promo/page/) in the roadmap page's Pop mode look, with its own
 // words (words.js); its music is made in code (music.js), both follow one clock (timeline.js), and AGI-1's voice is over
-// the music: her four takes, made ready by media.mjs, mixed by AGI Studio's video's voice.js where timeline.js puts them
+// the music: her three takes, made ready by media.mjs, mixed by AGI Studio's video's voice.js where timeline.js puts them
 // (VOICE), the music dipping under her. Not part of the website, and nothing here posts anything: the owner posts it by
 // hand.
 //
@@ -38,6 +38,9 @@ import { RATE, readWav, wav16, mixVoice, hitsOf } from '../studio-promo/voice.js
 export const COVER_AT = MOMENTS.lastHits[0] - 0.1;
 // the link preview's JPEG: under this many bytes (the home page's is 73 KB)
 export const OG_MAX = 160_000;
+// room left in it for the Claude app's Content Credentials label (about 5.8 KB in a JPEG saved into the owner's folder:
+// an APP11 segment, see CLAUDE.md's "Working in this repo"), so the copy in the owner's folder fits under OG_MAX too
+export const OG_LABEL = 6_000;
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const HERE = join(ROOT, 'tools/roadmap-promo');
@@ -194,7 +197,9 @@ async function soundtrack(outDir, a) {
   if (!a.voice) return { music, file: music, voiced: false };
   const lines = voiceLines();
   const { channels: [L, R] } = readWav(wav);
-  const mix = mixVoice({ L, R }, lines, { hits: hitsOf(musicPlan()), breaths: BREATHS });
+  // its limiter reads between the samples too (truePeak): the soundtrack's true peak stays under -1 dBTP, as a phone's app
+  // and X's own encoder want it (2026-10-20: the "t" of her "secret" rose 0.44 dB between two samples)
+  const mix = mixVoice({ L, R }, lines, { hits: hitsOf(musicPlan()), breaths: BREATHS, truePeak: true });
   const file = join(outDir, 'soundtrack.wav');
   writeFileSync(file, wav16([mix.L, mix.R]));
   for (const r of mix.report) {
@@ -222,8 +227,8 @@ export async function soundOnly(a, sound) {
   if (!made.length) throw new Error(`no video in ${a.outDir} to give its sound to: make it first (without --sound-only)`);
 }
 
-// the link preview as a JPEG: the best quality that fits under OG_MAX
-export async function ogJpeg(png, max = OG_MAX) {
+// the link preview as a JPEG: the best quality that fits under OG_MAX, with room for its label (OG_LABEL)
+export async function ogJpeg(png, max = OG_MAX - OG_LABEL) {
   const sharp = (await import('sharp')).default;
   for (const quality of [88, 85, 82, 78, 74, 70]) {
     const jpg = await sharp(png).jpeg({ quality, mozjpeg: true }).toBuffer();

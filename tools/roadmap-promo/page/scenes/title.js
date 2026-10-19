@@ -1,6 +1,7 @@
 // The roadmap's video, scene 1 (0–4 s): its title, as the roadmap page's hero is in Pop mode: violet, comic focus lines,
 // pink halftone, AGI-1 (the front's 2D art, revealed in halftone dots), "Roadmap · October 2026", The · AGI · roadmap
-// slammed in one word a beat, "What's live today, and what's coming next.", and the road's six stops along the bottom.
+// slammed in one word a beat, "What's live today, and what's coming next.", and the road's ten stops along the bottom
+// (six until 2026-10-19), each with its number.
 import { C, E, prog, clamp, mix, text, pill, popWord, measure, around, slamK, popK, icon } from '../parts.js';
 import { halftone, focusLines, canvas, riseWords } from '../../../promo/page/kit.js';
 import { createArt } from '../../../promo/page/art.js';
@@ -49,12 +50,13 @@ const WORD = [
 const X0 = 130;
 // her art: its height, its middle and where her feet are (the bottom of its box)
 const ART = { h: 985, cx: 1436, feet: 1052 };
-// the road's six stops along the bottom (the page's timeline, small)
-const ROAD = { y: 962, x0: X0, gap: 182 };
+// the road's ten stops along the bottom (the page's timeline, small; 182 apart for six until 2026-10-19), clear of her art
+const ROAD = { y: 962, x0: X0, gap: 112 };
 
-// a little stop on the violet (the title's road, and the graphics'): live ones honey and checked, coming ones white with
-// a pink dot, the locked one deep violet, dashed, with a lock. `r`: its size (21 for a live one)
-export function stopDot(g, state, x, y, r = 21) {
+// a little stop on the violet (the title's road, and the graphics'): live ones honey and checked, under way ones white
+// with a violet dot and a honey arc turning around them (one turn every 2.6 s, `t`), coming ones white with a pink dot,
+// the locked one deep violet, dashed, with a lock. `r`: its size (21 for a live one)
+export function stopDot(g, state, x, y, r = 21, t = 0) {
   const k = r / 21;
   g.save();
   g.translate(x, y); g.scale(k, k);
@@ -63,6 +65,14 @@ export function stopDot(g, state, x, y, r = 21) {
     g.beginPath(); g.arc(0, 0, 21, 0, Math.PI * 2); g.fillStyle = C.honey; g.fill();
     g.lineWidth = 3.5; g.strokeStyle = C.ink; g.stroke();
     icon(g, 'check', 0, 0, 26, C.ink, { lw: 1.3 });
+  } else if (state === 'going') {
+    const a0 = -Math.PI * 0.75 + (t / 2.6) * Math.PI * 2;
+    g.beginPath(); g.arc(0, 0, 27, a0, a0 + Math.PI);
+    g.lineWidth = 4; g.lineCap = 'round'; g.strokeStyle = C.honey; g.stroke(); g.lineCap = 'butt';
+    g.beginPath(); g.arc(0, 3, 19, 0, Math.PI * 2); g.fillStyle = C.ink; g.fill();
+    g.beginPath(); g.arc(0, 0, 19, 0, Math.PI * 2); g.fillStyle = C.white; g.fill();
+    g.lineWidth = 3.5; g.strokeStyle = C.ink; g.stroke();
+    g.beginPath(); g.arc(0, 0, 7, 0, Math.PI * 2); g.fillStyle = C.violet; g.fill();
   } else if (state === 'soon') {
     g.beginPath(); g.arc(0, 3, 19, 0, Math.PI * 2); g.fillStyle = C.ink; g.fill();
     g.beginPath(); g.arc(0, 0, 19, 0, Math.PI * 2); g.fillStyle = C.white; g.fill();
@@ -116,10 +126,11 @@ export function draw(g, t, c) {
   // "What's live today, and what's coming next." (the page's subtitle, in its serif)
   riseWords(g, TITLE.sub.split(' '), t, M.sub, { x: X0 + 4, y: 884, font: { f: 'serif', w: 400, s: 54, i: true }, color: C.white, stagger: 0.05, dur: 0.5 });
 
-  // the road's six stops: the line draws, then each stop pops on its blip (two live, three coming, one locked)
+  // the road's ten stops: the line draws, then each stop pops on its blip (two live, the rest under way or coming, in the
+  // page's order, one locked), its number under it
   const lp = E.inOutCubic(prog(t, M.road, M.road + 0.55));
   if (lp > 0) {
-    const xEnd = ROAD.x0 + ROAD.gap * 5;
+    const xEnd = ROAD.x0 + ROAD.gap * (STEPS.length - 1);
     const xNow = mix(ROAD.x0, xEnd, lp);
     const xLive = ROAD.x0 + ROAD.gap * 1.5;
     g.save();
@@ -138,9 +149,8 @@ export function draw(g, t, c) {
     const pk = popK(t, t0, 0.42, 2.2);
     if (pk <= 0) return;
     const x = ROAD.x0 + ROAD.gap * k, y = ROAD.y;
-    around(g, x, y, { sc: pk }, () => stopDot(g, s.state, 0, 0));
-    const label = s.state === 'locked' ? `${s.name} ${s.mystery}` : s.name;
-    text(g, label.toUpperCase(), { x, y: y + 48, font: { f: 'mono', w: 600, s: 14 }, color: 'rgba(255,255,255,0.86)', align: 'center', spacing: 1, alpha: clamp(prog(t, t0 + 0.05, t0 + 0.3)) });
+    around(g, x, y, { sc: pk }, () => stopDot(g, s.state, 0, 0, 21, t));
+    text(g, s.n, { x, y: y + 52, font: { f: 'mono', w: 700, s: 17 }, color: 'rgba(255,255,255,0.88)', align: 'center', spacing: 1, alpha: clamp(prog(t, t0 + 0.05, t0 + 0.3)) });
   });
 }
 

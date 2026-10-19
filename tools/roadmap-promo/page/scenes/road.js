@@ -1,20 +1,24 @@
-// The roadmap's video, scenes 2–4 (4–18 s): the road, one world seen by one moving camera (the roadmap page's timeline,
-// laid on its side): "Live now", 01 Talk to AGI-1 and 02 AGI Studio landing and checked, "We're here", "Coming soon" with
-// 03 Stake $AGI (its three ways), 04 AGI games and 05 Giveaways, each stamped COMING SOON; then the lights go down on the
-// locked 06 (18+ ???, its lock rattling), and the camera pulls back to the whole road: 2 of 6 live now.
-// Its words are the page's own (words.js).
-import { C, E, prog, clamp, mix, popK, slamK, around, life, stepCard, layout, node, stepNumber, stampOn, herePin, meter, measure, popWord, CARD } from '../parts.js';
+// The roadmap's video, scenes 2–4 (4–20 s): the road, one world seen by one moving camera (the roadmap page's timeline,
+// laid on its side): "Live now", 01 Talk to AGI-1 and 02 AGI Studio landing and checked; "We're here", then "What's next"
+// with the page's note (in no particular order), 03 to 09 in three holds (03–05, 06–08, 09), each stamped COMING SOON or
+// UNDER WAY as the page marks it; then the lights go down on the locked 10 (18+ ???, its lock rattling), and the camera
+// pulls back to the whole road: 2 of 10 live now.
+// Its words are the page's own (words.js). Ten stops since 2026-10-19 (six before).
+import { C, E, prog, clamp, mix, popK, slamK, around, life, stepCard, layout, node, stepNumber, stampOn, herePin, meter, measure, popWord, pill, CARD } from '../parts.js';
 import { halftone } from '../../../promo/page/kit.js';
 import { burst } from '../../../promo/page/ui.js';
-import { STEPS, LABELS } from '../../words.js';
+import { STEPS, LABELS, NOTE } from '../../words.js';
 
 // ---------- the world (its own units: one is a pixel at the camera's zoom 1) ----------
 export const ROAD_Y = 700;
-const CAP_X = 120, END_X = 3920;
-export const STOPS = { '01': 520, '02': 1080, '03': 1880, '04': 2400, '05': 2920, '06': 3600 };
+const CAP_X = 120, END_X = 6000;
+export const STOPS = { '01': 520, '02': 1080, '03': 1880, '04': 2400, '05': 2920, '06': 3440, '07': 3960, '08': 4480, '09': 5000, '10': 5680 };
 export const HERE_X = 1460;
 const CARD_BOTTOM = 640;           // every card hangs at the same height above the road
 const NUM_Y = 838;
+// what's next: every step after "We're here" but the locked one, in the page's order (03…09); and the locked one
+export const NEXT = STEPS.filter((s) => s.state !== 'live' && s.state !== 'locked').map((s) => s.n);
+const LAST = STEPS.at(-1);
 
 let faceImg = null;
 export async function prepare(ctx) {
@@ -23,16 +27,24 @@ export async function prepare(ctx) {
 }
 
 // ---------- its camera: where it looks (cx, cy) and how close (z), from one key to the next ----------
+// live now (01, 02) · "We're here" · what's next in three holds (03–05 around 2400, 06–08 around 3960, 09 at 5000), each
+// a quick pan from the last · the locked 10, close · the whole road at once
 const CAM = [
   [4.0, 790, 545, 1.15],
   [7.5, 850, 545, 1.15, E.lin],
-  [8.0, 1400, 540, 1.1, E.inOutCubic],
-  [9.5, 2400, 540, 1.0, E.inOutCubic],
-  [13.5, 2440, 540, 1.02, E.lin],
-  [14.0, 3600, 520, 1.34, E.inOutCubic],
-  [16.5, 3600, 516, 1.44, E.lin],
-  [17.4, 1985, 600, 0.462, E.inOutCubic],
-  [18.0, 1985, 600, 0.456, E.lin],
+  [8.0, 1400, 500, 1.1, E.inOutCubic],
+  [9.0, 2400, 480, 1.0, E.inOutCubic],
+  [11.0, 2440, 480, 1.0, E.lin],
+  [11.5, 3960, 480, 1.0, E.inOutCubic],
+  [13.75, 4000, 480, 1.0, E.lin],
+  [14.25, 5000, 480, 1.05, E.inOutCubic],
+  [15.5, 5020, 480, 1.05, E.lin],
+  [16.0, 5680, 520, 1.34, E.inOutCubic],
+  [18.5, 5680, 516, 1.44, E.lin],
+  // the whole road, in the middle of what's left under the meter (cy 300: the road at about y 660 on screen; at cy 600
+  // it sat at y 570, with the lower half of the picture empty)
+  [19.4, 3060, 300, 0.30, E.inOutCubic],
+  [20.0, 3060, 300, 0.296, E.lin],
 ];
 export function camAt(t) {
   if (t <= CAM[0][0]) return { cx: CAM[0][1], cy: CAM[0][2], z: CAM[0][3] };
@@ -76,13 +88,24 @@ export function camWarp(c, t, ts) {
 
 // ---------- when each part comes in ----------
 function times(M) {
+  const [a, b] = STEPS;
+  const node = { [a.n]: M.nodes[0], [b.n]: M.nodes[1] };
+  const card = { [a.n]: M.cards[0], [b.n]: M.cards[1] };
+  const stamp = {};
+  NEXT.forEach((n, k) => { node[n] = M.nextCards[k] - 0.06; card[n] = M.nextCards[k]; stamp[n] = M.stamps[k]; });
+  node[LAST.n] = M.lock; card[LAST.n] = M.lock;
   return {
     line: [M.drop, M.drop + 0.7],
-    dash: [M.drop2, M.drop2 + 2.4, M.pan2, M.lock],
-    node: { '01': M.nodes[0], '02': M.nodes[1], '03': M.soonCards[0] - 0.06, '04': M.soonCards[1] - 0.06, '05': M.soonCards[2] - 0.06, '06': M.lock },
-    card: { '01': M.cards[0], '02': M.cards[1], '03': M.soonCards[0], '04': M.soonCards[1], '05': M.soonCards[2], '06': M.lock },
-    check: { '01': M.checks[0], '02': M.checks[1] },
-    stamp: { '03': M.stamps[0], '04': M.stamps[1], '05': M.stamps[2] },
+    // the coming road draws on in four goes, [from, to, where it reaches]: past the first hold, the second, toward the
+    // locked stop, then to its end as the lock slams in
+    dash: [
+      [M.drop2, M.drop2 + 1.4, STOPS[NEXT[2]] + 380],
+      [M.panB, M.panB + 0.8, STOPS[NEXT[5]] + 380],
+      [M.panC, M.panC + 0.6, STOPS[LAST.n] - 150],
+      [M.pan2, M.lock, END_X],
+    ],
+    node, card, stamp,
+    check: { [a.n]: M.checks[0], [b.n]: M.checks[1] },
     pulse: Object.fromEntries(STEPS.map((s, k) => [s.n, M.pulses[k]])),
     dark: [M.lock, M.lock + 0.3, M.zoomOut, M.zoomOut + 0.55],
   };
@@ -109,10 +132,9 @@ function road(g, t, T) {
     g.beginPath(); g.moveTo(CAP_X, ROAD_Y); g.lineTo(mix(CAP_X, HERE_X, lp), ROAD_Y); g.stroke();
     g.restore();
   }
-  const dp = E.inOutQuad(prog(t, T.dash[0], T.dash[1]));
-  const dp2 = E.inOutQuad(prog(t, T.dash[2], T.dash[3]));
-  const dEnd = mix(HERE_X, 3300, dp) + (END_X - 3300) * dp2;
-  if (dp > 0) {
+  let dEnd = HERE_X;
+  for (const [a, b, x] of T.dash) dEnd = mix(dEnd, x, E.inOutQuad(prog(t, a, b)));
+  if (dEnd > HERE_X + 0.5) {
     g.save();
     g.setLineDash([18, 14]); g.lineDashOffset = -t * 22;
     g.strokeStyle = 'rgba(23,10,54,0.45)'; g.lineWidth = 6; g.lineCap = 'butt';
@@ -129,7 +151,7 @@ function road(g, t, T) {
 }
 
 // the part of the road on screen, as a headline at the top left: "Live now" (violet, like the live road) slammed in on the
-// drop, "Coming soon" (white, like the coming stops) on its blip; a line under it in the road's own style draws on (the
+// drop, "What's next" (white, like the coming stops) on its blip; a line under it in the road's own style draws on (the
 // live road with its honey cap; the coming road's dashes from "We're here"'s pink dot); each slides away as the camera
 // moves on. Screen space: the camera never moves it.
 const HEAD = { x: 88, y: 168, s: 116 };
@@ -166,12 +188,26 @@ function headline(g, t, str, t0, t1, live) {
   g.restore();
 }
 
-// a step's connector, from its card down to its stop
-function connector(g, x, bottom, k, dashed = false) {
+// the page's note under "What's next" ("In no particular order: any of these could come first."), on a white sticker:
+// it pops in after the headline and slides away with it
+export const NOTE_AT = { x: HEAD.x + 10, y: 268, s: 25 };
+function note(g, t, t0, t1) {
+  if (t < t0 || t > t1 + 0.4) return;
+  const out = E.inCubic(prog(t, t1, t1 + 0.35));
+  const k = popK(t, t0, 0.45, 1.8);
+  const a = clamp(k * 3) * (1 - out);
+  if (a <= 0) return;
+  around(g, NOTE_AT.x - out * 180, NOTE_AT.y, { sc: k, rot: -0.012 }, () => {
+    pill(g, NOTE, { x: 0, y: 0, font: { f: 'sans', w: 600, s: NOTE_AT.s }, align: 'left', bg: C.white, color: C.ink, line: C.ink, lw: 3, h: 52, padX: 22, shadow: 5, spacing: 0, alpha: a });
+  });
+}
+
+// a step's connector, from its card down to its stop: ink, violet when it's under way (the page's), dashed for the locked one
+function connector(g, x, bottom, k, state) {
   if (k <= 0) return;
   g.save();
-  g.strokeStyle = C.ink; g.lineWidth = 3.5;
-  if (dashed) g.setLineDash([8, 7]);
+  g.strokeStyle = state === 'going' ? C.violet : C.ink; g.lineWidth = 3.5;
+  if (state === 'locked') g.setLineDash([8, 7]);
   g.beginPath(); g.moveTo(x, bottom + 2); g.lineTo(x, mix(bottom + 2, ROAD_Y - 28, k)); g.stroke();
   g.restore();
 }
@@ -200,7 +236,7 @@ function drawWorld(g, t, c) {
         dy = (1 - E.outCubic(prog(t, tc, tc + 0.5))) * 90;
       }
     }
-    connector(g, x, CARD_BOTTOM, clamp(prog(t, tc + 0.12, tc + 0.4)), locked);
+    connector(g, x, CARD_BOTTOM, clamp(prog(t, tc + 0.12, tc + 0.4)), step.state);
     if (k > 0) {
       stepCard(g, step, x, CARD_BOTTOM + dy, {
         alpha: clamp(k * 1.6), sc: locked ? sc : mix(0.9, 1, clamp(k)), t, img: c.faceImg,
@@ -212,13 +248,13 @@ function drawWorld(g, t, c) {
     const glow = t >= pulse ? prog(t, pulse, pulse + 0.7) : 0;
     const nk = popK(t, tn, 0.45, 2.2);
     const check = T.check[step.n] ? E.outCubic(prog(t, T.check[step.n], T.check[step.n] + 0.32)) : 0;
-    node(g, step.state, x, ROAD_Y, { k: nk, check, glow: glow > 0 && glow < 1 ? glow : 0, r: 27 });
+    node(g, step.state, x, ROAD_Y, { k: nk, check, glow: glow > 0 && glow < 1 ? glow : 0, r: 27, t });
     stepNumber(g, step.n, x, NUM_Y, { state: step.state, sc: nk, alpha: clamp(nk * 2), s: 92 });
     // a little burst of sparks when it's checked
     if (T.check[step.n]) burst(g, x, ROAD_Y, t, T.check[step.n], { n: 12, speed: 420, size: 26, kind: 'spark', colors: [C.honey, C.pink, C.violet, C.mint], life: 0.8, seed: Number(step.n) * 3, gravity: 200, up: 0.4 });
-    // COMING SOON, stamped on
-    const ts = T.stamp?.[step.n];
-    if (ts != null && t >= ts) stampOn(g, x + 70, CARD_BOTTOM - L.h + 30, t, ts, { rot: -0.11 + (Number(step.n) % 2) * 0.05, size: 32 });
+    // COMING SOON or UNDER WAY, stamped on
+    const ts = T.stamp[step.n];
+    if (ts != null && t >= ts) stampOn(g, x + 70, CARD_BOTTOM - L.h + 30, t, ts, { rot: -0.11 + (Number(step.n) % 2) * 0.05, size: 32, kind: step.state });
   }
 
   // "We're here", between the live road and the coming one
@@ -229,8 +265,8 @@ function drawWorld(g, t, c) {
   // the lights go down on the locked card (a spotlight on it), and come back up as the camera pulls back
   const dk = Math.min(E.inOutQuad(prog(t, T.dark[0], T.dark[1])), 1 - E.inOutQuad(prog(t, T.dark[2], T.dark[3])));
   if (dk > 0) {
-    const L6 = layout(g, STEPS[5]);
-    const p = toScreen(c, cam, STOPS['06'], CARD_BOTTOM - L6.h * 0.42);
+    const Ll = layout(g, LAST);
+    const p = toScreen(c, cam, STOPS[LAST.n], CARD_BOTTOM - Ll.h * 0.42);
     const R = 470 * cam.z;
     const gr = g.createRadialGradient(p.x, p.y, R * 0.55, p.x, p.y, R * 1.25);
     gr.addColorStop(0, 'rgba(23,10,54,0)');
@@ -240,13 +276,14 @@ function drawWorld(g, t, c) {
   }
 }
 
-// what stays put on the screen while the camera moves: the headlines and the meter (never motion-blurred)
+// what stays put on the screen while the camera moves: the headlines, the note and the meter (never motion-blurred)
 function drawScreen(g, t, c) {
   const { M, W } = c;
-  // the part of the road on screen: "Live now", then "Coming soon"
+  // the part of the road on screen: "Live now", then "What's next" with its note
   headline(g, t, LABELS.live, M.drop + 0.12, M.pan, true);
-  headline(g, t, LABELS.soon, M.soonHead, M.pan2, false);
-  // the whole road at once: "2 of 6 · live now · 4 coming soon"
+  headline(g, t, LABELS.next, M.nextHead, M.pan2, false);
+  note(g, t, M.note, M.pan2);
+  // the whole road at once: "2 of 10 · live now · 3 under way · 5 coming soon"
   meter(g, W / 2, 168, t, M.meter);
 }
 

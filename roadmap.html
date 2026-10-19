@@ -4,18 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Roadmap · AGI</title>
-    <meta name="description" content="What's live on AGI today, and what's coming next: staking, games, giveaways and one secret. Coming soon · not financial advice." />
+    <meta name="description" content="What's live on AGI, what's under way and what's next: staking, games, buybacks and burns, the attention flywheel, governance, AUM, giveaways and one secret. Not in order · not financial advice." />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#fafaf8" />
     <!-- link previews (X and others). __SITE__ becomes the site's address at build time (scripts/share-pages.js) -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AGI" />
     <meta property="og:title" content="Roadmap · AGI" />
-    <meta property="og:description" content="AGI-1 and AGI Studio are live. Staking, games and giveaways are next. Coming soon · not financial advice." />
+    <meta property="og:description" content="AGI-1 and AGI Studio are live, AGI games is in beta, and more is on the way, in no particular order. Not financial advice." />
     <meta property="og:image" content="__SITE__/cards/roadmap.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="AGI-1 next to the words The AGI roadmap, with its six stops: two live, three coming soon and one locked." />
+    <meta property="og:image:alt" content="AGI-1 next to the words The AGI roadmap, with its ten stops: two live, three under way, four coming soon and one locked." />
     <meta property="og:url" content="__SITE__/roadmap" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href="__SITE__/roadmap" />
@@ -66,23 +66,26 @@
 
     <main id="main">
       <!-- The roadmap (2026-10-14, the owner: "when they go to agi1.app/roadmap they will see a roadmap … make the roadmap page
-           cool and beautiful"): what's live (AGI-1, AGI Studio) and what's coming (staking, games, giveaways: their pages are
-           open, everything on them coming soon), and a locked 18+ card with no details. Its look: src/styles/roadmap.css (and
-           pop.css); src/roadmap/page.js brings the cards below the first screen in as they scroll into view -->
+           cool and beautiful"): what's live (AGI-1, AGI Studio), what's under way and what's coming, and a locked 18+ card with
+           no details. Since 2026-10-19 ten steps (the owner: "add on the roadmap 5.(buyback, burns, marketing, listing) and
+           6. attention flywheel you the one explain it to the page 7. Gamified Governance 8. AUM / and say the roadmap is not
+           in order"): AGI games, burns and the flywheel under way, and the flywheel explained under the timeline. Its look:
+           src/styles/roadmap.css (and pop.css); src/roadmap/page.js brings the cards below the first screen in as they
+           scroll into view -->
       <section class="rm-hero" aria-labelledby="rm-title">
         <div class="wrap rm-hero-in">
           <div class="rm-hero-text">
             <p class="kicker rm-kicker">Roadmap · October 2026</p>
             <h1 class="rm-title" id="rm-title">The AGI roadmap</h1>
             <p class="rm-sub">What's live today, and what's coming next.</p>
-            <p class="rm-lede">AGI-1 and AGI Studio are live. Staking, games and giveaways are next: their pages are open, and everything on them is coming soon.</p>
-            <p class="rm-say"><img src="/images/landing/agi1-face.webp" alt="" width="36" height="36" /> <span><b>AGI-1:</b> two live, four on the way. i'm a little excited 💜</span></p>
+            <p class="rm-lede">AGI-1 and AGI Studio are live, AGI games is in beta, and more is on the way. The roadmap isn't in order: we might do any of these first.</p>
+            <p class="rm-say"><img src="/images/landing/agi1-face.webp" alt="" width="36" height="36" /> <span><b>AGI-1:</b> two live, eight on the way. i'm a little excited 💜</span></p>
           </div>
-          <div class="rm-meter" role="img" aria-label="2 of 6 live now, 4 coming soon">
-            <p class="rm-meter-big" aria-hidden="true"><span class="rm-meter-n">2</span><span class="rm-meter-of">of 6</span></p>
-            <p class="rm-meter-text" aria-hidden="true">live now · 4 coming soon</p>
+          <div class="rm-meter" role="img" aria-label="2 of 10 live now, 3 under way, 5 coming soon">
+            <p class="rm-meter-big" aria-hidden="true"><span class="rm-meter-n">2</span><span class="rm-meter-of">of 10</span></p>
+            <p class="rm-meter-text" aria-hidden="true">live now · 3 under way · 5 coming soon</p>
             <div class="rm-segs" aria-hidden="true">
-              <span class="rm-seg is-done"></span><span class="rm-seg is-done"></span><span class="rm-seg"></span><span class="rm-seg"></span><span class="rm-seg"></span><span class="rm-seg is-lock"></span>
+              <span class="rm-seg is-done"></span><span class="rm-seg is-done"></span><span class="rm-seg is-going"></span><span class="rm-seg is-going"></span><span class="rm-seg is-going"></span><span class="rm-seg"></span><span class="rm-seg"></span><span class="rm-seg"></span><span class="rm-seg"></span><span class="rm-seg is-lock"></span>
             </div>
           </div>
         </div>
@@ -103,7 +106,7 @@
                 <div class="rm-card is-link">
                   <div class="rm-card-top">
                     <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Live</p>
-                    <span class="rm-step mono">Step 1 of 6</span>
+                    <span class="rm-step mono">Step 1 of 10</span>
                   </div>
                   <h3 class="rm-name">Talk to AGI-1</h3>
                   <p class="rm-text">Chat with her, call her and hear her voice, in 16 languages. Her live show on X, her Telegram bot and her groups too.</p>
@@ -117,7 +120,7 @@
                 <div class="rm-card is-link">
                   <div class="rm-card-top">
                     <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Live</p>
-                    <span class="rm-step mono">Step 2 of 6</span>
+                    <span class="rm-step mono">Step 2 of 10</span>
                   </div>
                   <h3 class="rm-name">AGI Studio</h3>
                   <p class="rm-text">Your own AI influencer in minutes: its photos, trend videos, videos, a 3D model that moves, and a coin with its face.</p>
@@ -130,7 +133,8 @@
             <div class="rm-here" data-rm-reveal>
               <p class="rm-here-tag">We're here</p>
               <span class="rm-here-dot" aria-hidden="true"></span>
-              <h2 class="rm-label">Coming soon</h2>
+              <h2 class="rm-label">What's next</h2>
+              <p class="rm-here-note">In no particular order: any of these could come first.</p>
             </div>
 
             <ol class="rm-list rm-list-soon" start="3">
@@ -140,7 +144,7 @@
                 <div class="rm-card is-link">
                   <div class="rm-card-top">
                     <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Coming soon</p>
-                    <span class="rm-step mono">Step 3 of 6</span>
+                    <span class="rm-step mono">Step 3 of 10</span>
                   </div>
                   <h3 class="rm-name">Stake $AGI</h3>
                   <p class="rm-text">Stake your $AGI and get rewards. Choose how: in USDG only, in $AGI only, or free AI with sAGI.</p>
@@ -148,27 +152,86 @@
                   <a class="rm-go" href="/stake">See what's coming<span class="sr-only">: staking</span> <span class="rm-arrow" aria-hidden="true">→</span></a>
                 </div>
               </li>
-              <li class="rm-item is-soon" data-rm-reveal>
+              <!-- under way since 2026-10-19: its beta is out (agi1.app/games), earning $AGI while you play still to come -->
+              <li class="rm-item is-going" data-rm-reveal>
                 <span class="rm-num" aria-hidden="true">04</span>
                 <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.6 7.5h8.8a4.6 4.6 0 0 1 4.5 5.6l-.8 3.6a2.3 2.3 0 0 1-3.9 1.1L14.1 16H9.9l-2.1 1.8a2.3 2.3 0 0 1-3.9-1.1l-.8-3.6a4.6 4.6 0 0 1 4.5-5.6Z"/><path d="M8.2 10.4v3.2M6.6 12h3.2"/><path d="M15.6 10.8h.01M17.6 13h.01" stroke-width="2.4"/></svg></span>
                 <div class="rm-card is-link">
                   <div class="rm-card-top">
-                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Coming soon</p>
-                    <span class="rm-step mono">Step 4 of 6</span>
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Under way</p>
+                    <span class="rm-step mono">Step 4 of 10</span>
                   </div>
                   <h3 class="rm-name">AGI games</h3>
-                  <p class="rm-text">Earn $AGI while you play. A lot of types of games, casino-style ones included.</p>
-                  <p class="rm-meta">coming soon · not financial advice · 18+, only where it's legal</p>
-                  <a class="rm-go" href="/games">See what's coming<span class="sr-only">: AGI games</span> <span class="rm-arrow" aria-hidden="true">→</span></a>
+                  <p class="rm-text">The beta is out: play Ride 'Em, AGI! free, no wallet needed. Next: earn $AGI while you play. A lot of types of games, casino-style ones included.</p>
+                  <p class="rm-meta">beta: free, no prizes yet · earning: coming soon · not financial advice · 18+, only where it's legal</p>
+                  <a class="rm-go" href="/games">Play the beta<span class="sr-only">: AGI games</span> <span class="rm-arrow" aria-hidden="true">→</span></a>
+                </div>
+              </li>
+              <!-- the owner's "buyback, burns, marketing, listing": burns are live (messages, AGI Studio's unlocks), the rest a
+                   plan, never a promise about price (hard rule 8) -->
+              <li class="rm-item is-going" data-rm-reveal>
+                <span class="rm-num" aria-hidden="true">05</span>
+                <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.2 2.5c.4 3-1.4 4.8-3 6.6-1.5 1.7-2.9 3.4-2.9 6 0 3.6 2.7 6.4 5.9 6.4s5.9-2.6 5.9-6.2c0-2.7-1.4-4.4-2.6-5.6-.2 1.6-.9 2.7-2 3.2.5-3.5-.2-7.2-1.3-10.4Z"/></svg></span>
+                <div class="rm-card is-link">
+                  <div class="rm-card-top">
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Under way</p>
+                    <span class="rm-step mono">Step 5 of 10</span>
+                  </div>
+                  <h3 class="rm-name">Buybacks, burns, marketing &amp; listings</h3>
+                  <p class="rm-text">$AGI is already burned for messages with AGI-1 and for unlocks in AGI Studio: every burn is gone for good, and you can watch it live. Next: buybacks that are burned too, more marketing, and more listings, so there are more places to find $AGI.</p>
+                  <p class="rm-meta">burns: live now · buybacks and listings: coming soon · never a promise about price · not financial advice</p>
+                  <a class="rm-go" href="/#playground">Watch the burns live<span class="sr-only">: the burn monitor</span> <span class="rm-arrow" aria-hidden="true">→</span></a>
+                </div>
+              </li>
+              <!-- the owner's "attention flywheel you the one explain it to the page": explained under the timeline (#flywheel) -->
+              <li class="rm-item is-going" data-rm-reveal>
+                <span class="rm-num" aria-hidden="true">06</span>
+                <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-13.7 5.6M4 12a8 8 0 0 1 13.7-5.6"/><path d="M17.7 3v3.6h-3.6M6.3 21v-3.6h3.6"/></svg></span>
+                <div class="rm-card is-link">
+                  <div class="rm-card-top">
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Under way</p>
+                    <span class="rm-step mono">Step 6 of 10</span>
+                  </div>
+                  <h3 class="rm-name">Attention flywheel</h3>
+                  <p class="rm-text">Everything people make and play with AGI brings more people in, and they make and play too. Some of it already turns: her live shows on X, and the “Made with AGI Studio” mark on what people download.</p>
+                  <p class="rm-meta">about people, not price · not financial advice</p>
+                  <a class="rm-go" href="#flywheel">How it works<span class="sr-only">: the attention flywheel</span> <span class="rm-arrow" aria-hidden="true">↓</span></a>
                 </div>
               </li>
               <li class="rm-item is-soon" data-rm-reveal>
-                <span class="rm-num" aria-hidden="true">05</span>
+                <span class="rm-num" aria-hidden="true">07</span>
+                <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 13.5h17v6.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-6.5Z"/><path d="M7 13.5V4.5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v9"/><path d="m9.5 8.5 2 2 3.5-4"/></svg></span>
+                <div class="rm-card">
+                  <div class="rm-card-top">
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Coming soon</p>
+                    <span class="rm-step mono">Step 7 of 10</span>
+                  </div>
+                  <h3 class="rm-name">Gamified governance</h3>
+                  <p class="rm-text">Help decide what AGI does next, starting with this roadmap. Vote with a free wallet signature, never a transaction, and collect quests, streaks and badges for taking part.</p>
+                  <p class="rm-meta">coming soon · a free signature, never a transaction · badges are for fun, never money</p>
+                </div>
+              </li>
+              <!-- the owner's "AUM": AGI-1 managing AGI's own wallet in the open, never anyone else's money (see the fine print) -->
+              <li class="rm-item is-soon" data-rm-reveal>
+                <span class="rm-num" aria-hidden="true">08</span>
+                <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12l6 6"/></svg></span>
+                <div class="rm-card">
+                  <div class="rm-card-top">
+                    <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Coming soon</p>
+                    <span class="rm-step mono">Step 8 of 10</span>
+                  </div>
+                  <h3 class="rm-name">AUM</h3>
+                  <p class="rm-text">Assets under management: AGI-1 learns to manage a wallet, out in the open. First with pretend money, then a small wallet of AGI's own that anyone can watch.</p>
+                  <p class="rm-meta">coming soon · never anyone else's money · not advice to copy · not financial advice</p>
+                </div>
+              </li>
+              <li class="rm-item is-soon" data-rm-reveal>
+                <span class="rm-num" aria-hidden="true">09</span>
                 <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="4" rx="1.2"/><path d="M5 12.5v6.3A1.2 1.2 0 0 0 6.2 20h11.6a1.2 1.2 0 0 0 1.2-1.2v-6.3M12 8.5V20"/><path d="M12 8.5C10.6 5 6.6 4.6 6.6 6.9c0 1.3 1.9 1.6 5.4 1.6Zm0 0c1.4-3.5 5.4-3.9 5.4-1.6 0 1.3-1.9 1.6-5.4 1.6Z"/></svg></span>
                 <div class="rm-card is-link">
                   <div class="rm-card-top">
                     <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Coming soon</p>
-                    <span class="rm-step mono">Step 5 of 6</span>
+                    <span class="rm-step mono">Step 9 of 10</span>
                   </div>
                   <h3 class="rm-name">Giveaways</h3>
                   <p class="rm-text">Win giveaways by creating viral content for AGI.</p>
@@ -178,12 +241,12 @@
               </li>
               <!-- the owner's "/18+ ?", a mystery card (the owner's choice): locked, no details, no page -->
               <li class="rm-item is-locked" data-rm-reveal>
-                <span class="rm-num" aria-hidden="true">06</span>
+                <span class="rm-num" aria-hidden="true">10</span>
                 <span class="rm-node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.6"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.4v2.3"/></svg></span>
                 <div class="rm-card rm-card-locked">
                   <div class="rm-card-top">
                     <p class="rm-status"><span class="rm-status-dot" aria-hidden="true"></span>Locked</p>
-                    <span class="rm-step mono">Step 6 of 6</span>
+                    <span class="rm-step mono">Step 10 of 10</span>
                   </div>
                   <h3 class="rm-name rm-name-locked"><span class="rm-adult">18+</span><span class="rm-q" aria-hidden="true">???</span><span class="sr-only">: a secret for now</span></h3>
                   <div class="rm-redact" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -193,6 +256,42 @@
               </li>
             </ol>
           </div>
+
+          <!-- step 06, explained (the owner: "attention flywheel you the one explain it to the page"): its wheel is decoration
+               (the list says it all), its four turns lighting up one after another; still with "reduce motion" -->
+          <section class="rm-fly rm-rv" id="flywheel" data-rm-reveal aria-labelledby="rm-fly-title">
+            <div class="rm-fly-head">
+              <p class="kicker rm-fly-kicker">Step 06, explained</p>
+              <h2 class="rm-fly-title" id="rm-fly-title">The attention flywheel</h2>
+              <p class="rm-fly-lede">Attention is what keeps AGI moving. A flywheel is a heavy wheel: hard to start, then every push keeps it spinning, a little faster each time. Here's ours, in four turns.</p>
+            </div>
+            <div class="rm-fly-body">
+              <div class="rm-wheel" aria-hidden="true">
+                <svg class="rm-wheel-svg" viewBox="0 0 400 400">
+                  <circle class="rm-wheel-track" cx="200" cy="200" r="150"/>
+                  <circle class="rm-wheel-flow" cx="200" cy="200" r="150"/>
+                  <g class="rm-wheel-arrows">
+                    <path d="M-7-8 5 0-7 8" transform="translate(306.07 93.93) rotate(45)"/>
+                    <path d="M-7-8 5 0-7 8" transform="translate(306.07 306.07) rotate(135)"/>
+                    <path d="M-7-8 5 0-7 8" transform="translate(93.93 306.07) rotate(225)"/>
+                    <path d="M-7-8 5 0-7 8" transform="translate(93.93 93.93) rotate(315)"/>
+                  </g>
+                  <g class="rm-wheel-node is-1" transform="translate(200 50)"><circle r="27"/><text>1</text></g>
+                  <g class="rm-wheel-node is-2" transform="translate(350 200)"><circle r="27"/><text>2</text></g>
+                  <g class="rm-wheel-node is-3" transform="translate(200 350)"><circle r="27"/><text>3</text></g>
+                  <g class="rm-wheel-node is-4" transform="translate(50 200)"><circle r="27"/><text>4</text></g>
+                </svg>
+                <img class="rm-wheel-hub" src="/images/roadmap/agi1-hub.webp" alt="" width="240" height="240" loading="lazy" />
+              </div>
+              <ol class="rm-fly-list">
+                <li class="rm-fly-item is-1"><span class="rm-fly-n" aria-hidden="true">1</span><div><h3 class="rm-fly-name">People find AGI-1</h3><p class="rm-fly-text">Her live shows on X, her posts and her Telegram groups, and every link someone shares.</p></div></li>
+                <li class="rm-fly-item is-2"><span class="rm-fly-n" aria-hidden="true">2</span><div><h3 class="rm-fly-name">They make and play</h3><p class="rm-fly-text">Talk to her, make an AI influencer in AGI Studio, play AGI games: something to do the moment they arrive.</p></div></li>
+                <li class="rm-fly-item is-3"><span class="rm-fly-n" aria-hidden="true">3</span><div><h3 class="rm-fly-name">They share it</h3><p class="rm-fly-text">Photos, videos and memes from AGI Studio download with its “Made with AGI Studio” mark, so a post says where it was made.</p></div></li>
+                <li class="rm-fly-item is-4"><span class="rm-fly-n" aria-hidden="true">4</span><div><h3 class="rm-fly-name">More people find AGI-1</h3><p class="rm-fly-text">Every share is a new way in, and the wheel turns again, a little faster each time.</p></div></li>
+              </ol>
+            </div>
+            <p class="rm-fly-note"><b>Where $AGI fits:</b> holding $AGI opens closer levels with AGI-1 and perks in AGI Studio, and burning it pays for messages and unlocks. It's about people using AGI, not about price: nothing here is a promise about what $AGI will do. Not financial advice.</p>
+          </section>
 
           <div class="rm-loop rm-rv" data-rm-reveal>
             <div>
@@ -208,9 +307,10 @@
           <section class="rm-fine" aria-labelledby="rm-fine-title">
             <h2 class="rm-fine-title" id="rm-fine-title">The fine print</h2>
             <ul>
-              <li>Coming soon means not built yet: no dates are promised, and any of it can change or not happen at all.</li>
-              <li>Nothing can be staked, played or won yet, and this page never asks your wallet for anything. Anyone asking you to stake, send $AGI or claim a prize now isn't us.</li>
-              <li>Staking rewards, game prizes and giveaways are never guaranteed and never an investment. Not financial advice: $AGI is a meme token and can lose all of its value.</li>
+              <li>The roadmap isn't in order: the numbers only count the steps. Any of them may come first, change, or not happen at all, and no dates are promised.</li>
+              <li>Nothing can be staked or won yet, and AGI games is a free beta with no prizes. This page never asks your wallet for anything. Anyone asking you to stake, send $AGI, pay for a “listing” or claim a prize now isn't us.</li>
+              <li>Staking rewards, game prizes and giveaways are never guaranteed and never an investment, and burns and buybacks are never a promise about $AGI's price. Not financial advice: $AGI is a meme token and can lose all of its value.</li>
+              <li>AUM would only ever be AGI's own wallet: it never takes anyone's money, pays nothing out, and is never advice to copy.</li>
               <li>Staking, games and giveaways with real value are 18+, and only where they're legal where you live.</li>
               <li>When one opens, it's here on agi1.app first. Read the full <a href="/#safety">safety note</a>.</li>
             </ul>

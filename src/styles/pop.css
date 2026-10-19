@@ -665,6 +665,7 @@
 [data-skin='pop'] .rm-seg { height: 12px; border: 2px solid var(--pop-ink); background: #fff; }
 [data-skin='pop'] .rm-seg.is-done { background: var(--pop-pink); }
 [data-skin='pop'] .rm-seg.is-lock { background: repeating-linear-gradient(-45deg, var(--pop-ink) 0 2px, #fff 2px 5px); }
+[data-skin='pop'] .rm-seg.is-going { background: linear-gradient(90deg, var(--pop-pink) 0 50%, #fff 50%); }   /* under way: half filled */
 [data-skin='pop'] .rm-hero .rm-status { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); }
 [data-skin='pop'] .rm-stamp-text { fill: #fff; font-weight: 700; }
 [data-skin='pop'] .rm-art-ic { color: var(--pop-ink); background: var(--pop-honey); border: 3px solid var(--pop-ink); box-shadow: 0 8px 0 -1px var(--pop-ink); }
@@ -698,6 +699,28 @@
   background: repeating-linear-gradient(-45deg, transparent 0 11px, rgb(23 10 54 / .06) 11px 22px), var(--bg);
 }
 [data-skin='pop'] .rm-adult { font-family: var(--display); font-weight: 900; font-stretch: 116%; color: var(--pop-pink); -webkit-text-stroke: 2px var(--pop-ink); paint-order: stroke fill; }
+/* under way (2026-10-19): a honey status sticker, its marker in the line's color with an arc turning around it, its number
+   outlined violet; and "In no particular order" under "We're here" */
+[data-skin='pop'] .rm-item.is-going .rm-status { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); }
+[data-skin='pop'] .rm-item.is-going .rm-status-dot { background: var(--pop-ink); }
+[data-skin='pop'] .rm-item.is-going .rm-node::after { inset: -10px; border-width: 3px; }
+[data-skin='pop'] .rm-item.is-going .rm-num { -webkit-text-stroke-color: var(--pop-violet); }
+[data-skin='pop'] .rm-here-note { color: var(--fg); font-weight: 500; }
+/* step 06, explained (2026-10-19): the attention flywheel a white sticker with an ink outline and a hard shadow, its ring
+   lavender with violet dashes flowing round, its turns honey with ink outlines, each lighting up pink in turn; AGI-1 at its
+   hub in an ink ring */
+[data-skin='pop'] .rm-fly {
+  background: var(--bg); border: 3px solid var(--edge); border-radius: var(--radius); box-shadow: 0 10px 0 -2px var(--shade);
+  --rm-lit: var(--pop-pink); --rm-lit-fg: var(--pop-ink); --rm-fly-line: var(--edge); --rm-fly-ring: var(--pop-lav);
+  --rm-fly-flow: var(--pop-violet); --rm-fly-dot: var(--pop-honey); --rm-fly-dot-line: var(--pop-ink); --rm-fly-dot-fg: var(--pop-ink);
+}
+[data-skin='pop'] .rm-fly-title { font-family: var(--display); font-weight: 900; font-stretch: 112%; line-height: .98; letter-spacing: -0.03em; }
+[data-skin='pop'] .rm-fly-lede { font-size: 18px; }
+[data-skin='pop'] .rm-wheel-hub { background: var(--pop-lav); box-shadow: 0 0 0 5px var(--bg), 0 0 0 8px var(--edge), 0 8px 0 8px var(--shade); }
+[data-skin='pop'] .rm-fly-item { border-width: 2px; box-shadow: 0 5px 0 -1px var(--shade); }
+[data-skin='pop'] .rm-fly-n { border-width: 2px; font-family: var(--display); font-weight: 900; font-stretch: 110%; }
+[data-skin='pop'] .rm-fly-name { font-family: var(--display); font-weight: 850; font-stretch: 110%; letter-spacing: -0.01em; }
+[data-skin='pop'] .rm-fly-note { background: var(--pop-lav); border: 2px solid var(--edge); }
 /* after it: a honey sticker to stay in the loop (in both themes), and the fine print */
 [data-skin='pop'] .rm-loop {
   color: var(--pop-ink); background: var(--pop-honey); border: 3px solid var(--pop-ink); border-radius: 26px; box-shadow: 0 10px 0 -2px var(--pop-ink);
@@ -734,6 +757,8 @@
 [data-skin='pop'][data-theme='dark'] .rm-meter-n { color: var(--pop-honey); }
 [data-skin='pop'][data-theme='dark'] .rm-seg { border-color: var(--pop-lav-2); background: #28155a; }
 [data-skin='pop'][data-theme='dark'] .rm-seg.is-lock { background: repeating-linear-gradient(-45deg, var(--pop-lav-2) 0 2px, #1d0e40 2px 5px); }
+[data-skin='pop'][data-theme='dark'] .rm-seg.is-done { background: var(--pop-pink); }   /* (else the line above would take its pink) */
+[data-skin='pop'][data-theme='dark'] .rm-seg.is-going { background: linear-gradient(90deg, var(--pop-pink) 0 50%, #28155a 50%); }
 [data-skin='pop'][data-theme='dark'] .rm-stamp-text { fill: var(--pop-lav); }
 [data-skin='pop'][data-theme='dark'] .rm-art-ic { box-shadow: 0 8px 0 -1px var(--pop-pink); }
 [data-skin='pop'][data-theme='dark'] .rm-track { --sec: #1a0d3d; --shade: var(--pop-violet); --kicker-dot: var(--pop-violet-2); }
@@ -746,6 +771,11 @@
 [data-skin='pop'][data-theme='dark'] .rm-item.is-done .rm-num { color: var(--pop-honey); }
 [data-skin='pop'][data-theme='dark'] .rm-card:focus-within { border-color: var(--pop-honey); }
 [data-skin='pop'][data-theme='dark'] .rm-item.is-done .rm-status { border-color: var(--pop-mint); }
+[data-skin='pop'][data-theme='dark'] .rm-item.is-going .rm-status { border-color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .rm-item.is-going .rm-num { -webkit-text-stroke-color: var(--pop-pink); }
+[data-skin='pop'][data-theme='dark'] .rm-fly { border-width: 2px; --rm-fly-flow: var(--pop-pink); --rm-fly-ring: rgb(228 217 255 / .14); }
+[data-skin='pop'][data-theme='dark'] .rm-wheel-hub { background: #2a0f7a; }
+[data-skin='pop'][data-theme='dark'] .rm-fly-note { background: var(--bg-2); }
 [data-skin='pop'][data-theme='dark'] .rm-card-locked { background: repeating-linear-gradient(-45deg, transparent 0 11px, rgb(228 217 255 / .06) 11px 22px), var(--bg); }
 [data-skin='pop'][data-theme='dark'] .rm-adult { -webkit-text-stroke-color: transparent; }
 [data-skin='pop'][data-theme='dark'] .rm-fine { border-top-width: 2px; }

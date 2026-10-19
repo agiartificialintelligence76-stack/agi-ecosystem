@@ -3,7 +3,9 @@
    AGI games' own page since 2026-10-19: src/styles/games.css).
    The lab look: a clean hero with a progress meter; then a timeline down one line (on computers the line in the middle and
    the cards on either side, their numbers across the line; on phones the line at the left), the live part of the line in
-   the accent, the coming-soon part dashed and slowly moving, a "We're here" marker between them, and a locked 18+ card.
+   the accent, the rest dashed and slowly moving, a "We're here" marker between them, and a locked 18+ card. Since
+   2026-10-19 ten steps, some "under way" (their marker in the accent with a turning arc), and under the timeline the
+   attention flywheel explained (a wheel whose four turns light up one after another).
    The coming-soon pages: a hero with a turning "coming soon" stamp, three cards, and what's open (nothing yet).
    Every rule names an rm- class (tests/page.test.js); Pop mode's look is in pop.css. */
 
@@ -39,7 +41,7 @@
 .rm-hero-sub .rm-title { font-size: clamp(44px, 7.4vw, 96px); }
 .rm-hero-sub .rm-hero-in { align-items: center; }
 
-/* the meter: 2 of 6 live, a bar of six steps (the last one locked) */
+/* the meter: 2 of 10 live, a bar of ten steps (live, under way: half filled, coming, the last one locked) */
 .rm-meter {
   display: flex; flex-direction: column; gap: 8px; width: 300px; max-width: 100%; padding: 20px 22px 22px;
   border: 1px solid var(--line); border-radius: 18px; background: var(--bg-2);
@@ -47,9 +49,10 @@
 .rm-meter-big { display: flex; align-items: baseline; gap: 10px; font-size: 58px; font-weight: 600; line-height: 1; letter-spacing: -0.05em; }
 .rm-meter-of { font-size: 20px; font-weight: 500; letter-spacing: -0.02em; color: var(--fg-2); }
 .rm-meter-text { font-size: 14px; color: var(--fg-2); }
-.rm-segs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.rm-segs { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 5px; margin-top: 6px; }
 .rm-seg { height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--fg) 11%, transparent); transform-origin: left; }
 .rm-seg.is-done { background: var(--accent); }
+.rm-seg.is-going { background: linear-gradient(90deg, var(--accent) 0 50%, color-mix(in srgb, var(--accent) 25%, transparent) 50%); }
 .rm-seg.is-lock { background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--fg) 26%, transparent) 0 2px, transparent 2px 5px); }
 
 /* the coming-soon pages: a turning stamp around the page's icon */
@@ -74,11 +77,15 @@
 .rm-meter, .rm-art { animation-delay: .2s; }
 .rm-seg { animation: rm-grow .55s cubic-bezier(.2, .8, .2, 1) both; }
 .rm-seg:nth-child(1) { animation-delay: .45s; }
-.rm-seg:nth-child(2) { animation-delay: .55s; }
-.rm-seg:nth-child(3) { animation-delay: .65s; }
-.rm-seg:nth-child(4) { animation-delay: .72s; }
-.rm-seg:nth-child(5) { animation-delay: .79s; }
-.rm-seg:nth-child(6) { animation-delay: .86s; }
+.rm-seg:nth-child(2) { animation-delay: .52s; }
+.rm-seg:nth-child(3) { animation-delay: .59s; }
+.rm-seg:nth-child(4) { animation-delay: .66s; }
+.rm-seg:nth-child(5) { animation-delay: .73s; }
+.rm-seg:nth-child(6) { animation-delay: .8s; }
+.rm-seg:nth-child(7) { animation-delay: .87s; }
+.rm-seg:nth-child(8) { animation-delay: .94s; }
+.rm-seg:nth-child(9) { animation-delay: 1.01s; }
+.rm-seg:nth-child(10) { animation-delay: 1.08s; }
 .rm-stamp { animation: rm-turn 30s linear infinite; }
 
 /* ---------- the timeline ---------- */
@@ -116,8 +123,14 @@
   grid-column: 2; grid-row: 1; justify-self: start; font-family: var(--mono); font-size: 13px; font-weight: 500;
   line-height: 1.3; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-2);
 }
-.rm-here { grid-template-columns: var(--rm-node) auto minmax(0, 1fr); }
+.rm-here { grid-template-columns: var(--rm-node) auto minmax(0, 1fr); grid-template-rows: calc(var(--rm-m) * 2) auto; }
 .rm-here > .rm-label { grid-column: 3; }
+/* "In no particular order" under it (2026-10-19, the owner: "say the roadmap is not in order"): its own row, so the first
+   row stays two markers' halves tall and the dot on the line */
+.rm-here-note {
+  grid-column: 2 / -1; grid-row: 2; margin-top: -4px; max-width: 46ch; font-size: 14px; line-height: 1.4; color: var(--fg-2);
+  text-wrap: pretty;
+}
 .rm-here-tag {
   grid-column: 2; grid-row: 1; display: inline-flex; padding: 5px 12px; border-radius: 999px; background: var(--fg);
   color: var(--bg); font-family: var(--mono); font-size: 11.5px; line-height: 16px; letter-spacing: .08em; text-transform: uppercase;
@@ -143,6 +156,12 @@
 .rm-node svg { width: 20px; height: 20px; }
 .rm-item.is-done .rm-node { border-color: var(--rm-done); background: var(--rm-done); color: var(--bg); }
 .rm-item.is-locked .rm-node { border-style: dashed; }
+/* under way (2026-10-19): its marker in the accent with an arc turning around it */
+.rm-item.is-going .rm-node { border-color: var(--rm-done); color: var(--rm-done); }
+.rm-item.is-going .rm-node::after {
+  content: ''; position: absolute; inset: -7px; border: 2px solid transparent; border-top-color: var(--rm-done);
+  border-right-color: var(--rm-done); border-radius: 50%; animation: rm-turn 2.6s linear infinite;
+}
 .rm-num { display: none; grid-row: 1; }
 
 .rm-card {
@@ -157,7 +176,7 @@
   content: ''; position: absolute; top: calc(var(--rm-m) - var(--rm-cb) - var(--rm-w) / 2); right: 100%;
   width: calc(var(--rm-gx) + var(--rm-cb)); height: var(--rm-w); background: var(--rm-soon);
 }
-.rm-item.is-done .rm-card::before { background: var(--rm-done); }
+.rm-item.is-done .rm-card::before, .rm-item.is-going .rm-card::before { background: var(--rm-done); }
 .rm-card.is-link:hover { border-color: color-mix(in srgb, var(--fg) 30%, var(--line)); box-shadow: 0 14px 32px -22px color-mix(in srgb, var(--fg) 55%, transparent); }
 .rm-card:focus-within { border-color: var(--accent); }
 .rm-card-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; min-height: 28px; }
@@ -170,6 +189,8 @@
 .rm-item.is-done .rm-status { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .rm-item.is-done .rm-status-dot { background: var(--accent); }
 .rm-status.is-soon .rm-status-dot, .rm-item.is-soon .rm-status-dot { animation: rm-blink 1.8s ease-in-out infinite; }
+.rm-item.is-going .rm-status { color: var(--fg); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.rm-item.is-going .rm-status-dot { background: var(--accent); animation: rm-blink 1.4s ease-in-out infinite; }
 @keyframes rm-blink { 50% { opacity: .3; } }
 .rm-step { font-size: 12.5px; line-height: 28px; color: var(--fg-3); white-space: nowrap; }   /* one line: on a 320 px phone under its status */
 .rm-name { font-size: clamp(22px, 2.4vw, 27px); font-weight: 600; line-height: 1.12; letter-spacing: -0.03em; text-wrap: balance; }
@@ -233,10 +254,76 @@
     color: transparent; -webkit-text-stroke: 1.5px color-mix(in srgb, var(--fg) 28%, transparent);
   }
   .rm-item:nth-child(even) .rm-num { grid-column: 1; justify-self: end; }
+  .rm-item.is-going .rm-num { -webkit-text-stroke-color: color-mix(in srgb, var(--accent) 75%, transparent); }
+  .rm-here-note { grid-column: 3; justify-self: start; margin-top: calc(12px - var(--rm-m)); }
   .rm-step { display: none; }
   .rm-item.is-pending:nth-child(odd) .rm-card { translate: -34px 0; }
   .rm-item.is-pending:nth-child(even) .rm-card { translate: 34px 0; }
 }
+
+/* ---------- step 06, explained: the attention flywheel (2026-10-19) ----------
+   A wheel (decoration: the list says it all) whose ring flows clockwise, 1 → 2 → 3 → 4, AGI-1 at its hub; its four turns
+   light up one after another, 3 s each (a 12 s loop), the wheel's node and the list's card together. Still with
+   "reduce motion" */
+.rm-fly {
+  --rm-lit: var(--accent); --rm-lit-fg: var(--bg); --rm-fly-line: var(--line); --rm-fly-ring: color-mix(in srgb, var(--fg) 9%, transparent);
+  --rm-fly-flow: var(--accent); --rm-fly-dot: var(--bg); --rm-fly-dot-line: color-mix(in srgb, var(--fg) 30%, transparent); --rm-fly-dot-fg: var(--fg-2);
+  max-width: 1080px; margin: clamp(56px, 7vw, 96px) auto 0; padding: clamp(24px, 4vw, 44px);
+  border: 1px solid var(--line); border-radius: 24px; background: var(--bg-2); scroll-margin-top: 96px;
+}
+.rm-fly-head { max-width: 46em; }
+.rm-fly-kicker { margin-bottom: 10px; }
+.rm-fly-title { font-size: clamp(30px, 4.4vw, 52px); font-weight: 600; line-height: 1.02; letter-spacing: -0.045em; text-wrap: balance; }
+.rm-fly-lede { margin-top: 14px; font-size: 17px; color: var(--fg-2); text-wrap: pretty; }
+.rm-fly-body { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); align-items: center; gap: 28px 56px; margin-top: 32px; }
+.rm-wheel { position: relative; width: 100%; max-width: 400px; aspect-ratio: 1; margin-inline: auto; }
+.rm-wheel-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.rm-wheel-track { fill: none; stroke: var(--rm-fly-ring); stroke-width: 22; }
+.rm-wheel-flow {
+  fill: none; stroke: var(--rm-fly-flow); stroke-width: 3; stroke-linecap: round;
+  stroke-dasharray: 9.42 14.14; animation: rm-flow 1.6s linear infinite;   /* 40 dashes round the ring (2π × 150 = 942.5) */
+}
+@keyframes rm-flow { to { stroke-dashoffset: -23.56; } }
+.rm-wheel-arrows path { fill: none; stroke: var(--rm-fly-flow); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.rm-wheel-node circle { fill: var(--rm-fly-dot); stroke: var(--rm-fly-dot-line); stroke-width: 2; animation: rm-lit-dot 12s linear infinite both; }
+.rm-wheel-node text {
+  fill: var(--rm-fly-dot-fg); font-family: var(--sans); font-size: 22px; font-weight: 600; text-anchor: middle; dominant-baseline: central;
+  animation: rm-lit-num 12s linear infinite both;
+}
+.rm-wheel-hub {
+  position: absolute; left: 50%; top: 50%; width: 36%; height: auto; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg)); box-shadow: 0 0 0 6px var(--bg-2), 0 0 0 7px var(--line);
+}
+.rm-fly-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.rm-fly-item {
+  display: flex; align-items: flex-start; gap: 14px; min-width: 0; padding: 16px 18px; border: 1px solid var(--rm-fly-line);
+  border-radius: 16px; background: var(--bg); animation: rm-lit-card 12s linear infinite both;
+}
+.rm-fly-n {
+  display: grid; place-items: center; flex: none; width: 34px; height: 34px; border: 1px solid var(--rm-fly-dot-line); border-radius: 50%;
+  background: var(--rm-fly-dot); color: var(--rm-fly-dot-fg); font-size: 15px; font-weight: 600; line-height: 1;
+  animation: rm-lit-n 12s linear infinite both;
+}
+.rm-fly-name { font-size: 18px; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; }
+.rm-fly-text { margin-top: 4px; font-size: 15px; color: var(--fg-2); text-wrap: pretty; }
+.rm-wheel-node.is-2 circle, .rm-wheel-node.is-2 text, .rm-fly-item.is-2, .rm-fly-item.is-2 .rm-fly-n { animation-delay: 3s; }
+.rm-wheel-node.is-3 circle, .rm-wheel-node.is-3 text, .rm-fly-item.is-3, .rm-fly-item.is-3 .rm-fly-n { animation-delay: 6s; }
+.rm-wheel-node.is-4 circle, .rm-wheel-node.is-4 text, .rm-fly-item.is-4, .rm-fly-item.is-4 .rm-fly-n { animation-delay: 9s; }
+@keyframes rm-lit-dot {
+  0%, 32%, 100% { fill: var(--rm-fly-dot); stroke: var(--rm-fly-dot-line); }
+  4%, 24% { fill: var(--rm-lit); stroke: var(--rm-lit); }
+}
+@keyframes rm-lit-num { 0%, 32%, 100% { fill: var(--rm-fly-dot-fg); } 4%, 24% { fill: var(--rm-lit-fg); } }
+@keyframes rm-lit-card { 0%, 32%, 100% { border-color: var(--rm-fly-line); } 4%, 24% { border-color: var(--rm-lit); } }
+@keyframes rm-lit-n {
+  0%, 32%, 100% { color: var(--rm-fly-dot-fg); background-color: var(--rm-fly-dot); border-color: var(--rm-fly-dot-line); }
+  4%, 24% { color: var(--rm-lit-fg); background-color: var(--rm-lit); border-color: var(--rm-lit); }
+}
+.rm-fly-note {
+  margin-top: 28px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg);
+  font-size: 15px; color: var(--fg-2); text-wrap: pretty;
+}
+.rm-fly-note b { font-weight: 600; color: var(--fg); }
 
 /* ---------- after the timeline: stay in the loop, and the fine print ---------- */
 .rm-loop {
@@ -286,6 +373,8 @@
 /* phones */
 @media (max-width: 860px) {
   .rm-hero-in { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .rm-fly-body { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .rm-wheel { max-width: 320px; }
   .rm-meter { width: min(100%, 340px); }
   .rm-feats { grid-template-columns: minmax(0, 1fr); }
   .rm-art { order: -1; width: 132px; }
@@ -294,6 +383,8 @@
   .rm-lede { font-size: 16px; }
   .rm-card { padding-inline: 18px; padding-bottom: 20px; }
   .rm-loop, .rm-soon { padding: 22px 20px 24px; }
+  .rm-fly { padding: 24px 18px; }
+  .rm-fly-item { gap: 12px; padding: 14px; }
   .rm-say { font-size: 13.5px; }
 }
 
@@ -302,4 +393,6 @@
   .rm-hero-text > *, .rm-meter, .rm-art, .rm-seg, .rm-stamp, .rm-here-dot::after, .rm-redact span { animation: none; }
   .rm-here::before, .rm-list-soon .rm-item::before { animation: none; }
   .rm-status.is-soon .rm-status-dot, .rm-item.is-soon .rm-status-dot { animation: none; }
+  .rm-item.is-going .rm-status-dot, .rm-item.is-going .rm-node::after { animation: none; }
+  .rm-wheel-flow, .rm-wheel-node circle, .rm-wheel-node text, .rm-fly-item, .rm-fly-n { animation: none; }
 }

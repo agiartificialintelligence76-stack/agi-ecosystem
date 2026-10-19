@@ -49,6 +49,10 @@ export const DUCK = {
   hitGap: 0.06,      // a hit of the music (its impacts and crashes) gets through at full level: never dipped in its first 60 ms
   ceiling: 0.86,     // a limiter where she is, a little under the music's own ceiling (music.js: 0.89): her voice's peaks
                      // between samples rise higher than the music's, and the soundtrack keeps a true peak under -1 dBTP
+  truePeak: false,   // true: the limiter also reads between the samples (as a true-peak meter does: 4× oversampled), so
+                     // where she is the soundtrack's true peak stays under the ceiling too (the roadmap's video, 2026-10-20:
+                     // the "t" at the end of her "secret" rose 0.44 dB between two samples). Off here: AGI Studio's
+                     // launch video is made, and its soundtrack stays exactly as it is
 };
 
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
@@ -315,19 +319,63 @@ export function planDucks(lines, o = {}) {
   });
 }
 
+// between two samples, as a true-peak meter reads a signal (ITU-R BS.1770: oversampled 4×): a windowed sinc (Hann), 8
+// samples on each side, at a quarter, a half and three quarters of the way to the next sample; each one's weights add up
+// to 1 (a steady level stays that level)
+const TP_SIDE = 8;
+export const TP_KERNELS = [0.25, 0.5, 0.75].map((f) => {
+  const w = new Float64Array(2 * TP_SIDE);
+  let sum = 0;
+  for (let k = 0; k < w.length; k++) {
+    const d = f + TP_SIDE - 1 - k;                   // from the point to sample j - TP_SIDE + 1 + k
+    const x = Math.PI * d;
+    w[k] = (Math.abs(d) < 1e-12 ? 1 : Math.sin(x) / x) * 0.5 * (1 + Math.cos((Math.PI * d) / TP_SIDE));
+    sum += w[k];
+  }
+  return w.map((v) => v / sum);
+});
+// the biggest |value| between sample j and the next one, for every j (a channel's own: Float32Array)
+export function betweenPeaks(ch) {
+  const n = ch.length, out = new Float32Array(n);
+  for (let j = 0; j < n; j++) {
+    const i0 = j - TP_SIDE + 1;
+    let m = 0;
+    for (const w of TP_KERNELS) {
+      let s = 0;
+      if (i0 >= 0 && i0 + w.length <= n) for (let k = 0; k < w.length; k++) s += ch[i0 + k] * w[k];
+      else for (let k = 0; k < w.length; k++) { const i = i0 + k; if (i >= 0 && i < n) s += ch[i] * w[k]; }
+      const a = Math.abs(s);
+      if (a > m) m = a;
+    }
+    out[j] = m;
+  }
+  return out;
+}
+
 // a sample's limiter: never over `ceiling` (or over `keep`'s own level at that sample, where that's higher: what's kept as
 // it was is never limited). Down along a straight line over the `look` before a peak (to exactly what it needs), back up
 // with a `release` time constant (reaching exactly 1: it aims a little above and stops at 1), the same gain on every
-// channel. In place.
-function limit(chs, ceiling, { look: lookS = 0.004, release = 0.08, keep = null } = {}) {
+// channel. With `truePeak`, a sample's level is also the signal's between it and its neighbours (betweenPeaks), so its true
+// peak stays under the ceiling too. In place.
+function limit(chs, ceiling, { look: lookS = 0.004, release = 0.08, keep = null, truePeak = false } = {}) {
   const n = chs[0].length, look = Math.max(1, Math.round(lookS * RATE)), rel = Math.exp(-1 / (release * RATE));
   const want = new Float32Array(n).fill(1);
+  const tp = truePeak ? chs.map(betweenPeaks) : null, tk = truePeak && keep ? keep.map(betweenPeaks) : null;
+  // a sample's level: its own, and with truePeak the signal's on either side of it
+  const level = (arr, bt, j) => {
+    let p = 0;
+    for (let c = 0; c < arr.length; c++) {
+      let a = Math.abs(arr[c][j]);
+      if (bt) { if (bt[c][j] > a) a = bt[c][j]; if (j && bt[c][j - 1] > a) a = bt[c][j - 1]; }
+      if (a > p) p = a;
+    }
+    return p;
+  };
   let over = 0;
   for (let j = 0; j < n; j++) {
-    let p = 0;
-    for (const ch of chs) { const a = Math.abs(ch[j]); if (a > p) p = a; }
-    let cap = ceiling;
-    if (keep) for (const ch of keep) { const a = Math.abs(ch[j]); if (a > cap) cap = a; }
+    const p = level(chs, tp, j);
+    if (p <= ceiling) continue;
+    const cap = keep ? Math.max(ceiling, level(keep, tk, j)) : ceiling;
     if (p <= cap) continue;
     over++;
     const need = cap / p;
@@ -404,8 +452,9 @@ export function mixVoice(music, lines, o = {}) {
     L[i] = gm * x + (gl - gm) * lx + (gh - gm) * hx + v[i];
     R[i] = gm * y + (gl - gm) * ly + (gh - gm) * hy + v[i];
   }
-  // a limiter where she is: never over the ceiling, unless the music itself is (it's never touched for that)
-  const limiter = limit([L, R], c.ceiling, { keep: [music.L, music.R] });
+  // a limiter where she is: never over the ceiling, unless the music itself is (it's never touched for that); with
+  // `truePeak`, between the samples too
+  const limiter = limit([L, R], c.ceiling, { keep: [music.L, music.R], truePeak: c.truePeak });
   let changed = 0;
   for (let i = 0; i < N; i++) if (L[i] !== music.L[i] || R[i] !== music.R[i]) changed++;
   return { L, R, report, limiter, changed };

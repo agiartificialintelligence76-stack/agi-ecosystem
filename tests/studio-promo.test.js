@@ -639,6 +639,70 @@ test('her voice, mixed: never over the ceiling where she is, and where the music
   assert.ok(V.DUCK.ceiling < 0.89, 'under the music\'s own ceiling (music.js: 0.89)');
 });
 
+test('her voice, mixed with truePeak (the roadmap\'s video): its true peak under the ceiling where she is, between the samples too; off by default', () => {
+  // a true-peak meter of the test's own (8× oversampled, a windowed sinc 32 samples each side): the biggest |value| on and
+  // between the samples from a to b
+  const truePeak = (x, a, b) => {
+    let m = 0;
+    for (let j = a; j < b; j++) {
+      m = Math.max(m, Math.abs(x[j]));
+      for (let q = 1; q < 8; q++) {
+        let s = 0, sum = 0;
+        for (let k = -31; k <= 32; k++) {
+          const d = q / 8 - k, i = j + k;
+          const w = (Math.sin(Math.PI * d) / (Math.PI * d)) * 0.5 * (1 + Math.cos((Math.PI * d) / 32.5));
+          sum += w;
+          if (i >= 0 && i < x.length) s += x[i] * w;
+        }
+        m = Math.max(m, Math.abs(s / sum));
+      }
+    }
+    return m;
+  };
+  // between the samples (the limiter's look): a tone at a quarter of the rate, an eighth of a turn off its peaks, shows its
+  // samples at 0.707 of its height; between them it reaches its full height. A steady level stays that level
+  for (const w of V.TP_KERNELS) assert.ok(Math.abs(w.reduce((s, v) => s + v, 0) - 1) < 1e-12);
+  const q = Float32Array.from({ length: 4800 }, (_, i) => Math.sin((Math.PI / 2) * i + Math.PI / 4));
+  const bq = V.betweenPeaks(q);
+  assert.ok(Math.max(...q.subarray(100, 4700).map(Math.abs)) < 0.708, 'its samples: 0.707');
+  assert.ok(Math.abs(Math.max(...bq.subarray(100, 4700)) - 1) < 0.01, `between them: ${Math.max(...bq.subarray(100, 4700))}`);
+  assert.ok(V.betweenPeaks(new Float32Array(400).fill(0.5)).subarray(20, 380).every((v) => Math.abs(v - 0.5) < 1e-6));
+  // her line: that tone at 1.15 (its samples at 0.81, under the ceiling; its true peak 1.15, far over it) over quiet music,
+  // for her words' 0.8 s (then her take's quiet), the music's own peak far from her
+  const n = 3 * SR;
+  const L = sine(n, 1000, 0.05), R = sine(n, 1000, 0.05);
+  L[Math.round(0.3 * SR)] = 0.95;
+  const pcm = new Float32Array(Math.round(1.15 * SR));
+  for (let i = Math.round(0.15 * SR); i < Math.round(0.95 * SR); i++) pcm[i] = 1.15 * Math.sin((Math.PI / 2) * i + Math.PI / 4);
+  const line = [{ id: 'x', at: 1.0, len: 0.8, onset: 0.15, pcm }];
+  const her = [Math.round(0.8 * SR), Math.round(2.4 * SR)];
+  // off by default (AGI Studio's launch video stays exactly as it is): its samples under the ceiling, nothing held, its
+  // true peak over it
+  assert.equal(V.DUCK.truePeak, false);
+  const plain = V.mixVoice({ L, R }, line, { hits: [], breaths: [] });
+  assert.equal(plain.limiter.under, 0, 'no sample over the ceiling');
+  assert.ok(truePeak(plain.L, ...her) > V.DUCK.ceiling + 0.1, `its true peak, without: ${truePeak(plain.L, ...her)}`);
+  // with truePeak: held, its true peak under the ceiling (as a true-peak meter reads it), the music exactly as it was
+  // before her dip and after it, and the music's own peak as it was
+  const mix = V.mixVoice({ L, R }, line, { hits: [], breaths: [], truePeak: true });
+  assert.ok(mix.limiter.under > 0, 'the limiter at work');
+  for (const ch of [mix.L, mix.R]) {
+    const tp = truePeak(ch, ...her);
+    assert.ok(tp <= V.DUCK.ceiling * 1.003, `its true peak, with: ${tp} (${V.DUCK.ceiling})`);
+  }
+  const plan = V.planDucks([{ id: 'x', at: 1.0, len: 0.8 }], { hits: [], breaths: [] })[0];
+  const a0 = Math.floor(plan.a0 * SR) - 1, r1 = Math.ceil(plan.r1 * SR) + 1;
+  for (let i = 0; i < n; i++) {
+    if (i >= a0 && i <= r1) continue;
+    assert.equal(mix.L[i], L[i], `${i}: the music as it was`);
+    assert.equal(mix.R[i], R[i]);
+  }
+  assert.equal(mix.L[Math.round(0.3 * SR)], Math.fround(0.95), 'the music\'s own peak as it was');
+  // the same every time
+  const again = V.mixVoice({ L, R }, line, { hits: [], breaths: [], truePeak: true });
+  assert.ok(again.L.every((x, i) => x === mix.L[i]) && again.R.every((x, i) => x === mix.R[i]));
+});
+
 test('her voice, planned: a hit under her words, a breath, a hit too close or two lines too close are said', () => {
   const plan = (lines, hits = [], breaths = []) => V.planDucks(lines, { hits, breaths });
   const one = { id: 'a', at: 2, len: 1 };

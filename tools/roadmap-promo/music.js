@@ -1,11 +1,11 @@
 // The roadmap's video (2026-10-14, the owner: "can you create a graphic and just short promotional video for the
-// roadmap"): its music, composed and played in code by Claude (no samples, no service, nobody else's music), on the
-// video's own clock (tools/roadmap-promo/timeline.js): 120 beats a minute, A major, vi–IV–I–V (F#m7, Dmaj7, A(add9),
-// E(add9)). The title slams in on F#m, a bar on E builds to the first drop (V to vi), the road's two drops start on F#m,
-// the hook is sung in full once her third line is said (on A, under the stamps), the locked card goes dark, a bar on E
-// lifts into the end, and the end chord is A (V to I: home).
-// AGI-1's four lines go over it (tools/studio-promo/voice.js dips the music under her): every hit of the music (its
-// impacts and crashes) is where she isn't (the title's three slams, the two drops, the three stamps, the lock, the end
+// roadmap"; its ten steps "in no particular order" since 2026-10-19): its music, composed and played in code by Claude
+// (no samples, no service, nobody else's music), on the video's own clock (tools/roadmap-promo/timeline.js): 120 beats a
+// minute, A major, vi–IV–I–V (F#m7, Dmaj7, A(add9), E(add9)). The title slams in on F#m, a bar on E builds to the first
+// drop (V to vi), the road's two drops start on F#m, the hook is sung in full under the second hold's stamps (on A), the
+// locked card goes dark, a bar on E lifts into the end, and the end chord is A (V to I: home).
+// AGI-1's three lines go over it (tools/studio-promo/voice.js dips the music under her): every hit of the music (its
+// impacts and crashes) is where she isn't (the title's three slams, the two drops, the seven stamps, the lock, the end
 // and its two last hits), and under her words only soft sounds (pops, blips, whooshes, ticks, glitches, bells).
 // renderMusic() → a WAV file (48 kHz, stereo, 16-bit). musicPlan() → every sound and when (the tests read it). Pure: the
 // same notes always make the same sound.
@@ -398,12 +398,13 @@ const LOCKED = 61;
 // what plays in each bar: [its first bar, the section, the chord it starts on] (the scenes: timeline.js)
 export const SECTIONS = [
   [0, 'intro', 0],      //   0–2 s    the title's three slams (F#m), her first line
-  [1, 'build', 3],      //   2–4 s    the road and its six stops: E, a riser and a snare roll, a breath
+  [1, 'build', 3],      //   2–4 s    the road and its ten stops: E, a riser and a snare roll, a breath
   [2, 'dropA', 0],      //   4–8 s    the drop: live now (F#m, D)
-  [4, 'dropB', 0],      //   8–14 s   the second drop: coming soon (F#m, D), then the hook in full and its stamps (A)
-  [7, 'dark', 0],       //  14–16 s   the locked card (F#m, dark)
-  [8, 'lift', 3],       //  16–18 s   the whole road at once, into the end (E)
-  [9, 'end', 2],        //  18–21.5 s the end chord (A), its two last hits
+  [4, 'dropB', 0],      //   8–16 s   the second drop: what's next, in three holds (F#m, D; the hook in full and the
+                        //            second hold's stamps on A; E for the last stop of the three)
+  [8, 'dark', 0],       //  16–18 s   the locked card (F#m, dark)
+  [9, 'lift', 3],       //  18–20 s   the whole road at once, into the end (E)
+  [10, 'end', 2],       //  20–23.5 s the end chord (A), its two last hits
 ];
 export function sectionAt(bar) {
   let s = SECTIONS[0];
@@ -412,7 +413,7 @@ export function sectionAt(bar) {
   const next = SECTIONS.find((x) => x[0] > from);
   return { name, from, to: next ? next[0] : Infinity, chord: (first + bar - from) % 4 };
 }
-// the bar where the hook is sung in full: her third line is said, the stamps come down (A)
+// the bar where the hook is sung in full: the second hold's three stamps come down on it (A), and nobody talks
 export const HOOK_BAR = 6;
 
 // what plays, when: every note and every hit, into the buses B → the kicks' times (for the side-chain)
@@ -450,17 +451,19 @@ function compose(B, rnd) {
   for (let k = 0; k < 7; k++) supersaw(B.chords, tb(1, k / 2), E9.notes, 0.18, 0.34, rnd, { cutoff: 1300 + 2600 * (k / 7), release: 0.06 });
   riser(B.fx, tb(1), M.breath, 0.36, rnd);
   for (const s of [2, 2.25, 2.5, 2.75, 3, 3.125, 3.25, 3.375]) snare(B.drums, tb(1, s), 0.1 + 0.26 * ((s - 2) / 1.375), rnd, (s * 8) % 2 ? 0.15 : -0.15);
-  // the road draws in, and its six stops: two live (a note and a ding), three soon (each a note higher), one locked
+  // the road draws in, and its ten stops: two live (a note and a ding), seven under way or coming (each a note higher,
+  // up the scale), one locked (low and closed), from left to right
   sweep(B.fx, M.road - 0.1, 0.55, 400, 3600, 0.13, rnd, { pan0: -0.7, pan1: 0.7 });
+  const STOPS = M.dots.length;
   M.dots.forEach((t, k) => {
-    const pan = -0.6 + k * 0.24;
-    if (k < 5) blip(B.fx, t, P(5 + k), k < 2 ? 0.17 : 0.13, { pan });
+    const pan = -0.6 + (k * 1.2) / (STOPS - 1);
+    if (k < STOPS - 1) blip(B.fx, t, P(4 + k), k < 2 ? 0.17 : 0.12, { pan });
     else { blip(B.fx, t, LOCKED, 0.18, { pan, len: 0.1 }); click(B.fx, t, 0.22, { f: 1500, pan }); }
     if (k < 2) bell(B.fx, t + 0.01, P(10 + k), 0.06, { decay: 0.3, len: 0.6, pan });
   });
 
-  // ---- the road (4–18 s), bar by bar ----
-  for (let bar = 2; bar < 9; bar++) {
+  // ---- the road (4–20 s), bar by bar ----
+  for (let bar = 2; bar < 10; bar++) {
     const sec = sectionAt(bar), ch = CHORDS[sec.chord], t0 = tb(bar), name = sec.name;
     const last = bar === sec.to - 1;                     // the section's last bar: a fill into the breath after it
     if (name === 'dropA' || name === 'dropB') {
@@ -476,9 +479,10 @@ function compose(B, rnd) {
       for (const [k, l, o] of [[0, 0.6, 0], [0.75, 0.2, 12], [1.5, 0.45, 0], [2.5, 0.45, 0], [3, 0.2, 12], [3.5, 0.4, 0]]) bass(B.bass, tb(bar, k), ch.root + o, l, 0.62);
       const full = bar === HOOK_BAR;
       supersaw(B.chords, t0, ch.notes, BAR - 0.02, full ? 0.58 : 0.5, rnd, { cutoff: full ? 5000 : 4200 });
-      // the hook: on the lead, softer under her words; in full after them, an octave down too, and bells
+      // the hook: on the lead (softer under her words in the first drop; the second has none of hers), in full on its
+      // bar, an octave down too, and bells
       for (const [k, l, m] of HOOK[sec.chord]) {
-        lead(B.lead, tb(bar, k), m, l, full ? 0.32 : name === 'dropA' ? 0.22 : 0.18);
+        lead(B.lead, tb(bar, k), m, l, full ? 0.32 : name === 'dropA' ? 0.22 : 0.24);
         if (full) {
           lead(B.lead, tb(bar, k), m - 12, l, 0.17, { bright: 0.6 });
           bell(B.keys, tb(bar, k), m + 12, 0.07, { pan: 0.3, decay: 0.4, len: 0.8 });
@@ -522,26 +526,32 @@ function compose(B, rnd) {
   });
   sweep(B.fx, M.pan - 0.05, 0.5, 600, 3400, 0.12, rnd, { pan0: -0.6, pan1: 0.6 });                    // on to "We're here"
 
-  // ---- 3. coming soon (8–14 s) ----
+  // ---- 3. what's next (8–16 s): the pin, "What's next" and its note, seven cards in three holds, each one stamped ----
   reverseCymbal(B.fx, M.drop2, 0.9, 0.3, rnd);
   impact(B.fx, M.drop2, 0.95, rnd); crash(B.drums, M.drop2, 0.3, rnd);
   pop(B.fx, M.drop2 + 0.02, 0.32, { up: 0, pan: 0.1 }); bell(B.fx, M.drop2 + 0.05, 97, 0.12, { decay: 0.5, len: 1.0, pan: 0.1 });   // the pin, its ping
-  blip(B.fx, M.soonHead, 85, 0.14, { pan: 0.2 });                                                     // "Coming soon"
-  M.soonCards.forEach((t, k) => {
+  blip(B.fx, M.nextHead, 85, 0.14, { pan: 0.2 });                                                     // "What's next"
+  pop(B.fx, M.note, 0.24, { pan: -0.3 }); bell(B.fx, M.note + 0.03, 90, 0.05, { decay: 0.4, len: 0.8, pan: -0.3 });   // "In no particular order…"
+  // each card: a whoosh up into it and a pop as it lands, from the right, the middle or the left of its hold
+  M.nextCards.forEach((t, k) => {
     sweep(B.fx, t - 0.2, 0.34, 500, 3600, 0.11, rnd, { shape: 'rise', pan0: 0.5, pan1: 0 });
-    pop(B.fx, t + 0.02, 0.28, { pan: 0.2 - k * 0.2 });
+    pop(B.fx, t + 0.02, 0.28, { pan: 0.3 - (k % 3) * 0.3 });
   });
   pop(B.fx, M.fine, 0.18, { pan: -0.6 });                                                             // the safety pill
   M.chips.forEach((t, k) => { const pan = -0.2 + k * 0.2; pop(B.fx, t, 0.2, { pan }); pluck(B.arp, t, P(8 + k), 0.13, { pan }); });
-  // COMING SOON, stamped on each: a thud and a crack each, the last with a crash
+  // COMING SOON or UNDER WAY, stamped on each as the page marks it: a thud and a crack each, harder along each hold, and
+  // each hold's last with a crash (the third hold is one card)
+  const STAMP_HIT = [0.5, 0.55, 0.65, 0.5, 0.55, 0.65, 0.65];
+  const STAMP_PAN = [-0.3, 0, 0.3, -0.3, 0, 0.3, 0];
   M.stamps.forEach((t, k) => {
-    impact(B.fx, t, [0.5, 0.55, 0.65][k], rnd, { tail: 0.45 });
-    snare(B.drums, t, 0.38 + 0.05 * k, rnd, [-0.3, 0, 0.3][k]);
+    impact(B.fx, t, STAMP_HIT[k] ?? 0.55, rnd, { tail: 0.45 });
+    snare(B.drums, t, 0.38 + 0.05 * (k % 3), rnd, STAMP_PAN[k] ?? 0);
   });
-  crash(B.drums, M.stamps[2], 0.24, rnd, 1.6);
-  sweep(B.fx, M.pan2 - 0.05, 0.5, 600, 3400, 0.12, rnd, { pan0: -0.6, pan1: 0.6 });                   // on to the last stop
+  for (const k of [2, 5, 6]) if (M.stamps[k] != null) crash(B.drums, M.stamps[k], 0.24, rnd, 1.6);
+  // on to the second hold, the third, then the last stop
+  for (const t of [M.panB, M.panC, M.pan2]) sweep(B.fx, t - 0.05, 0.5, 600, 3400, 0.12, rnd, { pan0: -0.6, pan1: 0.6 });
 
-  // ---- 4. the locked one (14–18 s) ----
+  // ---- 4. the locked one (16–20 s) ----
   impact(B.fx, M.lock, 0.85, rnd, { tail: 1.4 }); crash(B.drums, M.lock, 0.2, rnd, 1.8);
   whomp(B.fx, M.lock + 0.02, 0.22, { f0: 700, f1: 70, dur: 0.9 });                                   // the lights go down
   pop(B.fx, M.adult, 0.3, { up: 0, pan: 0.2 }); blip(B.fx, M.adult + 0.01, 64, 0.14, { pan: 0.2 });    // "18+"
@@ -550,25 +560,26 @@ function compose(B, rnd) {
   for (const t of [s0 + 0.05, (s0 + s1) / 2, s1]) glitch(B.fx, t, 0.24, rnd);
   // the lock rattles (in her pause: "and one more… that's a secret")
   [0, 0.045, 0.085, 0.13, 0.19, 0.26].forEach((d, k) => click(B.fx, M.lockShake + d, 0.26 - k * 0.025, { f: [2100, 2700, 1800, 2500, 2000, 2300][k], pan: k % 2 ? 0.3 : 0.1 }));
-  // the whole road at once, each stop lighting up in turn (the locked one low), and the meter
+  // the whole road at once, each of its ten stops lighting up in turn (the locked one low), and the meter
   sweep(B.fx, M.zoomOut - 0.25, 0.75, 300, 4200, 0.15, rnd, { shape: 'rise', pan0: -0.5, pan1: 0.5 });
   M.pulses.forEach((t, k) => {
-    const pan = -0.6 + k * 0.24;
-    if (k < 5) bell(B.fx, t, P(5 + k), 0.1 + 0.01 * k, { decay: 0.45, len: 0.9, pan });
+    const pan = -0.6 + (k * 1.2) / (M.pulses.length - 1);
+    if (k < M.pulses.length - 1) bell(B.fx, t, P(4 + k), 0.1 + 0.007 * k, { decay: 0.45, len: 0.9, pan });
     else { blip(B.fx, t, LOCKED, 0.14, { pan, len: 0.1 }); click(B.fx, t, 0.16, { f: 1500, pan }); }
   });
   pop(B.fx, M.meter, 0.32); bell(B.fx, M.meter + 0.02, 93, 0.12, { decay: 0.6 }); bell(B.fx, M.meter + 0.1, 100, 0.1, { decay: 0.6 });
   riser(B.fx, M.zoomOut, M.breath3, 0.38, rnd);
   sweep(B.fx, M.breath3 - 0.32, 0.32, 400, 5000, 0.14, rnd, { shape: 'rise' });                       // the end card rises over the road
 
-  // ---- 5. the end (18–21.5 s): one big chord (A), ringing out, the hook on bells, her bubble, two last hits ----
+  // ---- 5. the end (20–23.5 s): one big chord (A), ringing out, the hook on bells, her bubble, two last hits ----
   reverseCymbal(B.fx, M.end, 0.9, 0.28, rnd);
   impact(B.fx, M.end, 1.0, rnd, { tail: 2 }); crash(B.drums, M.end, 0.34, rnd, 3);
   supersaw(B.chords, M.end, [45, 52, 57, 61, 64, 69, 71], 2.6, 0.72, rnd, { cutoff: 3600, release: 1.0, voices: 5 });
   bass(B.bass, M.end, A9.root, 2.4, 0.5, { cutoff: 220 });
   [61, 64, 69, 73].forEach((m, k) => epiano(B.keys, M.end + k * 0.04, m, 2.2, 0.26, { pan: k * 0.25 - 0.4 }));
   sparkle(B.fx, M.end + 0.2, 0.12, [93, 97, 100, 105]);
-  for (const [k, , m] of HOOK[2]) bell(B.keys, tb(9, k), m + 12, 0.09, { pan: 0.25, decay: 0.6, len: 1.2 });
+  const endBar = M.end / BAR;                                                                         // the end's bar (10)
+  for (const [k, , m] of HOOK[2]) bell(B.keys, tb(endBar, k), m + 12, 0.09, { pan: 0.25, decay: 0.6, len: 1.2 });
   pop(B.fx, M.url, 0.34, { pan: 0.4 }); blip(B.fx, M.url + 0.04, 93, 0.14, { pan: 0.4 });            // agi1.app/roadmap
   pop(B.fx, M.handle, 0.28, { pan: 0.4 });                                                            // Follow @agi1dotapp
   blip(B.fx, M.fineEnd, 88, 0.08, { pan: 0.3 });                                                      // the fine print

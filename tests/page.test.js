@@ -331,25 +331,50 @@ test('the roadmap: its pages at their own addresses (the roadmap, /stake, /givea
   }
 });
 
-test('the roadmap: AGI-1 and AGI Studio live, staking, games and giveaways coming soon, and the 18+ card locked', () => {
+test('the roadmap: ten steps, not in order: AGI-1 and AGI Studio live, three under way, four coming soon, the 18+ card locked', () => {
+  // since 2026-10-19 (the owner: "add on the roadmap 5.(buyback, burns, marketing, listing) and 6. attention flywheel you the
+  // one explain it to the page 7. Gamified Governance 8. AUM / and say the roadmap is not in order, we could do other things
+  // first"): AGI games (its beta is out), burns and the flywheel under way, governance and AUM coming soon
   const main = mainOf(readPage('roadmap.html'));
   assert.match(main, /<h1 class="rm-title" id="rm-title">The AGI roadmap<\/h1>/);
-  assert.match(main, /<div class="rm-meter" role="img" aria-label="2 of 6 live now, 4 coming soon">/, 'the meter, said in words');
+  assert.match(main, /<div class="rm-meter" role="img" aria-label="2 of 10 live now, 3 under way, 5 coming soon">/, 'the meter, said in words');
+  assert.match(main, /<span class="rm-meter-of">of 10<\/span>/);
+  assert.match(main, /<p class="rm-meter-text" aria-hidden="true">live now · 3 under way · 5 coming soon<\/p>/);
   const segs = between(main, '<div class="rm-segs"', '</div>');
-  assert.deepEqual(segs.match(/class="rm-seg(?: [^"]*)?"/g), ['class="rm-seg is-done"', 'class="rm-seg is-done"', 'class="rm-seg"', 'class="rm-seg"', 'class="rm-seg"', 'class="rm-seg is-lock"']);
-  // the steps in order: the owner's two done ones, the three to come, the mystery card last
-  assert.deepEqual([...main.matchAll(/<li class="rm-item (is-done|is-soon|is-locked)"/g)].map((m) => m[1]), ['is-done', 'is-done', 'is-soon', 'is-soon', 'is-soon', 'is-locked']);
-  assert.deepEqual([...main.matchAll(/<span class="rm-step mono">([^<]+)<\/span>/g)].map((m) => m[1]), [1, 2, 3, 4, 5, 6].map((n) => `Step ${n} of 6`));
-  assert.deepEqual([...main.matchAll(/<h3 class="rm-name">([^<]+)<\/h3>/g)].map((m) => m[1]), ['Talk to AGI-1', 'AGI Studio', 'Stake $AGI', 'AGI games', 'Giveaways'], '"Talk to daria" is AGI-1 here');
-  assert.deepEqual([...main.matchAll(/<a class="rm-go" href="([^"]+)"/g)].map((m) => m[1]), ['/#playground', '/studio', '/stake', '/games', '/giveaway'], 'each live one opens, each coming one its page');
+  assert.deepEqual(segs.match(/class="rm-seg(?: [^"]*)?"/g), ['class="rm-seg is-done"', 'class="rm-seg is-done"', 'class="rm-seg is-going"', 'class="rm-seg is-going"',
+    'class="rm-seg is-going"', 'class="rm-seg"', 'class="rm-seg"', 'class="rm-seg"', 'class="rm-seg"', 'class="rm-seg is-lock"']);
+  // the steps: the owner's two done ones, then the rest, the mystery card last; and as many of each as the meter says
+  const states = [...main.matchAll(/<li class="rm-item (is-done|is-going|is-soon|is-locked)"/g)].map((m) => m[1]);
+  assert.deepEqual(states, ['is-done', 'is-done', 'is-soon', 'is-going', 'is-going', 'is-going', 'is-soon', 'is-soon', 'is-soon', 'is-locked']);
+  assert.deepEqual(['is-done', 'is-going'].map((k) => states.filter((x) => x === k).length), [2, 3], 'the meter: 2 live, 3 under way');
+  assert.equal(states.filter((x) => x === 'is-soon' || x === 'is-locked').length, 5, 'and 5 coming soon (the locked one too)');
+  assert.deepEqual([...main.matchAll(/<span class="rm-num" aria-hidden="true">(\d+)<\/span>/g)].map((m) => m[1]), ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10']);
+  assert.deepEqual([...main.matchAll(/<span class="rm-step mono">([^<]+)<\/span>/g)].map((m) => m[1]), Array.from({ length: 10 }, (_, i) => `Step ${i + 1} of 10`));
+  assert.deepEqual([...main.matchAll(/<h3 class="rm-name">([^<]+)<\/h3>/g)].map((m) => m[1]), ['Talk to AGI-1', 'AGI Studio', 'Stake $AGI', 'AGI games',
+    'Buybacks, burns, marketing &amp; listings', 'Attention flywheel', 'Gamified governance', 'AUM', 'Giveaways'], '"Talk to daria" is AGI-1 here');
+  assert.deepEqual([...main.matchAll(/<a class="rm-go" href="([^"]+)"/g)].map((m) => m[1]), ['/#playground', '/studio', '/stake', '/games', '/#playground', '#flywheel', '/giveaway'],
+    'each live one opens, AGI games its beta, the burns their live monitor, the flywheel its explanation below, each coming one with a page its page');
+  assert.match(main, /<a class="rm-go" href="#flywheel">How it works<span class="sr-only">: the attention flywheel<\/span> <span class="rm-arrow" aria-hidden="true">↓<\/span><\/a>/);
   assert.match(main, /<ol class="rm-list rm-list-soon" start="3">/, 'screen readers count on from 3');
-  assert.deepEqual([...main.matchAll(/<p class="rm-status"><span class="rm-status-dot" aria-hidden="true"><\/span>([^<]+)<\/p>/g)].map((m) => m[1]), ['Live', 'Live', 'Coming soon', 'Coming soon', 'Coming soon', 'Locked']);
-  // the owner's words, and the safety lines under each coming one
+  assert.deepEqual([...main.matchAll(/<p class="rm-status"><span class="rm-status-dot" aria-hidden="true"><\/span>([^<]+)<\/p>/g)].map((m) => m[1]),
+    ['Live', 'Live', 'Coming soon', 'Under way', 'Under way', 'Under way', 'Coming soon', 'Coming soon', 'Coming soon', 'Locked']);
+  // not in order (the owner's): said in the hero, under "We're here" and in the fine print
+  assert.match(main, /<p class="rm-lede">[^<]*The roadmap isn't in order: we might do any of these first\.<\/p>/);
+  assert.match(between(main, '<div class="rm-here"', '</div>'), /<p class="rm-here-note">In no particular order: any of these could come first\.<\/p>/);
+  // the owner's words, and the safety lines under each one that isn't live
   const text = textOf(main);
   for (const words of ['Stake your $AGI and get rewards. Choose how: in USDG only, in $AGI only, or free AI with sAGI.',
-    'Earn $AGI while you play. A lot of types of games, casino-style ones included.', 'Win giveaways by creating viral content for AGI.']) assert.ok(text.includes(words), words);
+    'Next: earn $AGI while you play. A lot of types of games, casino-style ones included.', 'Win giveaways by creating viral content for AGI.',
+    'Next: buybacks that are burned too, more marketing, and more listings', 'Help decide what AGI does next, starting with this roadmap.',
+    'Vote with a free wallet signature, never a transaction', 'Assets under management: AGI-1 learns to manage a wallet, out in the open.']) assert.ok(text.includes(words), words);
   assert.deepEqual([...main.matchAll(/<p class="rm-meta">([^<]+)<\/p>/g)].map((m) => m[1]).slice(2), ['coming soon · not financial advice · 18+, only where it\'s legal',
-    'coming soon · not financial advice · 18+, only where it\'s legal', 'coming soon · not financial advice · 18+', 'coming soon']);
+    'beta: free, no prizes yet · earning: coming soon · not financial advice · 18+, only where it\'s legal',
+    'burns: live now · buybacks and listings: coming soon · never a promise about price · not financial advice',
+    'about people, not price · not financial advice', 'coming soon · a free signature, never a transaction · badges are for fun, never money',
+    'coming soon · never anyone else\'s money · not advice to copy · not financial advice', 'coming soon · not financial advice · 18+', 'coming soon']);
+  // buybacks (the owner's): "price" only ever as what it isn't about (hard rule 8: never "number go up")
+  for (const m of text.matchAll(/price/gi)) assert.match(text.slice(Math.max(0, m.index - 32), m.index), /(never a promise about (\$AGI's )?|not (about )?)$/, `"${text.slice(Math.max(0, m.index - 32), m.index + 5)}": price only as a never`);
+  assert.doesNotMatch(text, /number go up|to the moon|pump|\bmoon\b/i, 'never hype');
   // the mystery card (the owner's choice): 18+, nothing else said, no link and no page
   const locked = between(main, '<li class="rm-item is-locked"', '</li>');
   assert.doesNotMatch(locked, /<a\b/, 'nothing to open');
@@ -358,8 +383,44 @@ test('the roadmap: AGI-1 and AGI Studio live, staking, games and giveaways comin
   assert.doesNotMatch(readPage('vite.config.js'), /adult|18\.html|secret/i, 'no page behind it');
   // what the fine print promises
   const fine = textOf(between(main, '<section class="rm-fine"', '</section>'));
-  for (const words of ['no dates are promised', 'this page never asks your wallet for anything', 'Anyone asking you to stake, send $AGI or claim a prize now isn\'t us.',
-    'never guaranteed and never an investment', 'Not financial advice: $AGI is a meme token and can lose all of its value.', 'are 18+, and only where they\'re legal where you live']) assert.ok(fine.includes(words), words);
+  for (const words of ['The roadmap isn\'t in order: the numbers only count the steps.', 'no dates are promised', 'This page never asks your wallet for anything',
+    'Anyone asking you to stake, send $AGI, pay for a “listing” or claim a prize now isn\'t us.', 'never guaranteed and never an investment',
+    'burns and buybacks are never a promise about $AGI\'s price', 'Not financial advice: $AGI is a meme token and can lose all of its value.',
+    'AUM would only ever be AGI\'s own wallet: it never takes anyone\'s money, pays nothing out, and is never advice to copy.',
+    'are 18+, and only where they\'re legal where you live']) assert.ok(fine.includes(words), words);
+});
+
+test('the roadmap: step 06, the attention flywheel, explained under the timeline (its wheel decoration, its four turns, $AGI never about price)', () => {
+  // the owner: "attention flywheel you the one explain it to the page"
+  const main = mainOf(readPage('roadmap.html'));
+  const fly = between(main, '<section class="rm-fly rm-rv" id="flywheel" data-rm-reveal aria-labelledby="rm-fly-title">', '</section>');
+  assert.ok(main.indexOf(fly) > main.indexOf('<li class="rm-item is-locked"') && main.indexOf(fly) < main.indexOf('<div class="rm-loop'), 'after the timeline, before "Be the first to know"');
+  assert.match(fly, /<h2 class="rm-fly-title" id="rm-fly-title">The attention flywheel<\/h2>/);
+  assert.match(fly, /<p class="kicker rm-fly-kicker">Step 06, explained<\/p>/);
+  assert.match(fly, /<div class="rm-wheel" aria-hidden="true">/, 'the wheel is decoration: the list says it all');
+  assert.match(fly, /<img class="rm-wheel-hub" src="\/images\/roadmap\/agi1-hub\.webp" alt="" width="240" height="240" loading="lazy" \/>/);
+  assert.deepEqual([...fly.matchAll(/<g class="rm-wheel-node is-(\d)" transform="translate\(([\d.]+) ([\d.]+)\)"><circle r="27"\/><text>(\d)<\/text><\/g>/g)].map((m) => m.slice(1).join(' ')),
+    ['1 200 50 1', '2 350 200 2', '3 200 350 3', '4 50 200 4'], 'its four turns round the ring, clockwise from the top');
+  assert.deepEqual([...fly.matchAll(/<li class="rm-fly-item is-(\d)"><span class="rm-fly-n" aria-hidden="true">(\d)<\/span><div><h3 class="rm-fly-name">([^<]+)<\/h3>/g)].map((m) => `${m[1]}${m[2]} ${m[3]}`),
+    ['11 People find AGI-1', '22 They make and play', '33 They share it', '44 More people find AGI-1'], 'and its list, in the same order');
+  const words = textOf(fly);
+  for (const w of ['A flywheel is a heavy wheel: hard to start, then every push keeps it spinning', 'download with its “Made with AGI Studio” mark',
+    'It\'s about people using AGI, not about price: nothing here is a promise about what $AGI will do. Not financial advice.']) assert.ok(words.includes(w), w);
+  assert.doesNotMatch(words, /\bbuy\b|%|\bAPY\b|\bprofits?\b|\bgains?\b/i, 'never a reason to buy');
+  // its hub: AGI-1's 2D art (the front's cutout), never the 3D model; a real 240 × 240 WebP, small
+  const hub = readFileSync(new URL('../public/images/roadmap/agi1-hub.webp', import.meta.url));
+  assert.equal(hub.subarray(0, 4).toString('latin1') + hub.subarray(8, 12).toString('latin1'), 'RIFFWEBP');
+  assert.ok(hub.length < 30_000, `${hub.length} bytes`);
+  // its look: the wheel's ring flows, its turns light up in turn (a 12 s loop), still with "reduce motion"; #flywheel lands below the top bar
+  const css = readPage('src/styles/roadmap.css');
+  const rules = cssRules(css);
+  const body = (h) => rules.find(({ head }) => head === h)?.body || '';
+  assert.match(body('.rm-fly'), /scroll-margin-top: 96px/);
+  assert.match(body('.rm-wheel-flow'), /stroke-dasharray: 9\.42 14\.14; animation: rm-flow 1\.6s linear infinite/);
+  assert.match(css, /@keyframes rm-flow \{ to \{ stroke-dashoffset: -23\.56; \} \}/, 'one dash and its gap a step: no jump as it loops');
+  for (const [n, d] of [[2, 3], [3, 6], [4, 9]]) assert.match(body(`.rm-wheel-node.is-${n} circle, .rm-wheel-node.is-${n} text, .rm-fly-item.is-${n}, .rm-fly-item.is-${n} .rm-fly-n`), new RegExp(`animation-delay: ${d}s`));
+  assert.match(body('.rm-fly-body'), /grid-template-columns: minmax\(0, 400px\) minmax\(0, 1fr\)/);
+  assert.match(rules.find(({ at, head }) => at === '@media (max-width: 860px)' && head === '.rm-fly-body')?.body || '', /grid-template-columns: minmax\(0, 1fr\)/, 'one column on phones');
 });
 
 test('the coming-soon pages: the owner\'s words with the safety lines, no rates or amounts, nothing to stake, play or win yet', () => {
@@ -426,7 +487,8 @@ test('the roadmap\'s look: every rule names an rm- class; Pop mode\'s are scoped
   }
   const still = all.filter(({ at }) => at === '@media (prefers-reduced-motion: reduce)').map(({ head }) => head).join(', ');
   for (const s of ['.rm-hero-text > *', '.rm-meter', '.rm-art', '.rm-seg', '.rm-stamp', '.rm-here-dot::after', '.rm-redact span', '.rm-here::before',
-    '.rm-list-soon .rm-item::before', '.rm-item.is-soon .rm-status-dot']) assert.ok(still.includes(s), `"reduce motion" stops ${s}`);
+    '.rm-list-soon .rm-item::before', '.rm-item.is-soon .rm-status-dot', '.rm-item.is-going .rm-status-dot', '.rm-item.is-going .rm-node::after',
+    '.rm-wheel-flow', '.rm-wheel-node circle', '.rm-wheel-node text', '.rm-fly-item', '.rm-fly-n']) assert.ok(still.includes(s), `"reduce motion" stops ${s}`);
   // Pop mode: every rm- rule under [data-skin='pop'] (tests/pop.test.js checks the whole file), its heroes violet like the
   // phone's browser bar there (/theme.js: these pages aren't the diary's kind, so the violet one)
   const pop = cssRules(readPage('src/styles/pop.css')).filter(({ head }) => head.includes('.rm-'));
@@ -437,7 +499,7 @@ test('the roadmap\'s look: every rule names an rm- class; Pop mode\'s are scoped
   // under Pop mode's floating top bar, and its band once the hero is gone (src/menu.js)
   assert.match(pop.find(({ head }) => head === "[data-skin='pop'] .rm-hero").body, /margin-top: -72px; padding-top: calc\(72px \+/);
   assert.match(readPage('src/menu.js'), /document\.querySelector\('\.lp-hero, \.hero, \.rm-hero, \.gm-hero'\)/);
-  // found by the browser check (2026-10-14): one long word ("Giveaways") fits a 320 px phone in Pop mode; "Step n of 6" stays
+  // found by the browser check (2026-10-14): one long word ("Giveaways") fits a 320 px phone in Pop mode; "Step n of 10" stays
   // on one line (under its status when there's no room beside it); Pop light's live numbers stand out from the lavender
   // (violet, 4.2:1; honey was 1.1:1), honey on Pop dark
   const rule = (h) => all.find(({ head }) => head === h)?.body || '';
@@ -447,6 +509,17 @@ test('the roadmap\'s look: every rule names an rm- class; Pop mode\'s are scoped
   assert.match(rule('.rm-step'), /line-height: 28px;.*white-space: nowrap/);
   assert.match(popRule("[data-skin='pop'] .rm-item.is-done .rm-num"), /color: var\(--pop-violet\)/);
   assert.match(popRule("[data-skin='pop'][data-theme='dark'] .rm-item.is-done .rm-num"), /color: var\(--pop-honey\)/);
+  // under way (2026-10-19): its segment half filled, its status a honey sticker; Pop mode's night keeps the live and under-way
+  // segments pink (its night .rm-seg came after Pop's .rm-seg.is-done, at the same weight, and took their pink)
+  assert.match(rule('.rm-seg.is-going'), /linear-gradient\(90deg, var\(--accent\) 0 50%/);
+  assert.match(popRule("[data-skin='pop'] .rm-seg.is-going"), /linear-gradient\(90deg, var\(--pop-pink\) 0 50%, #fff 50%\)/);
+  assert.match(popRule("[data-skin='pop'][data-theme='dark'] .rm-seg.is-done"), /background: var\(--pop-pink\)/);
+  assert.match(popRule("[data-skin='pop'][data-theme='dark'] .rm-seg.is-going"), /linear-gradient\(90deg, var\(--pop-pink\) 0 50%, #28155a 50%\)/);
+  const at = (h) => pop.findIndex(({ head }) => head === h);
+  assert.ok(at("[data-skin='pop'][data-theme='dark'] .rm-seg.is-done") > at("[data-skin='pop'][data-theme='dark'] .rm-seg"), 'after the night .rm-seg');
+  assert.match(popRule("[data-skin='pop'] .rm-item.is-going .rm-status"), /background: var\(--pop-honey\)/);
+  assert.match(popRule("[data-skin='pop'] .rm-fly"), /--rm-lit: var\(--pop-pink\);.*--rm-fly-flow: var\(--pop-violet\);.*--rm-fly-dot: var\(--pop-honey\)/s);
+  assert.match(popRule("[data-skin='pop'][data-theme='dark'] .rm-fly"), /--rm-fly-flow: var\(--pop-pink\)/);
   // the stamps' words, in Geist Mono (every letter 0.6em wide, plus its letter-spacing), never longer than their textLength,
   // so it only ever spreads them a little (never squeezes them together); and that never past their ring (2π × 78 px)
   assert.match(rule('.rm-stamp-text'), /font-family: var\(--mono\); font-size: 13px; letter-spacing: \.1em/);

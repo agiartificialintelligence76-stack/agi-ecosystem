@@ -5,7 +5,8 @@
 // tools/roadmap-promo/music.js, and her voice over it). 1920 × 1080, 60 frames a second. Every frame is a function of its
 // time: drawing a frame twice gives the same picture. promo.card(kind) draws one of its graphics (cards.js).
 // What it says is the roadmap page's own words (tools/roadmap-promo/words.js). AGI-1 only as her 2D self (the front's
-// art and face), never 3D; never CloakMesh; never an AI service's name; coming soon is never a promise.
+// art and face), never 3D; never CloakMesh; never an AI service's name; coming soon is never a promise. Since 2026-10-19
+// (the roadmap's ten steps, "in no particular order"): 23.5 s, its road's middle scene is what's next (`next`).
 import { SCENES, TOTAL, MOMENTS, BEAT, BAR, at, sceneAt } from '../timeline.js';
 import * as WORDS from '../words.js';
 import { canvas, grain, vignette, prog, E, clamp, noise1, FONTS } from '../../promo/page/kit.js';
@@ -16,7 +17,7 @@ import title from './scenes/title.js';
 import road, { SHUTTER } from './scenes/road.js';
 import end from './scenes/end.js';
 
-const MODULES = { title, live: road, soon: road, secret: road, end };
+const MODULES = { title, live: road, next: road, secret: road, end };
 export const SIZE = { W: 1920, H: 1080 };
 
 let ctx = null, cv = null, g = null, bufA = null, bufB = null, blurBuf = null, scale = 1;
@@ -89,8 +90,8 @@ function drawScene(target, s, t) {
   drawOnce(target, s, tt, 'screen');
 }
 
-// on top of every scene: the roadmap's address (on the road), its safety line (from the coming-soon steps to the whole
-// road), a little depth and grain
+// on top of every scene: the roadmap's address (on the road), its safety line (from what's next to the whole road), a
+// little depth and grain
 let grainCanvas = null;
 function overlays(t) {
   const { W, H } = ctx;
