@@ -368,6 +368,25 @@
 >   **agi1.app/games/rideemagi** with no sign-in (its runs counted under a random id the browser keeps, never who); rating
 >   and reviewing it takes a connected wallet (a free signature, never a transaction), 18+ and the human check, its words
 >   looked at by the AI first. No prizes yet. **Run `supabase/arcade.sql` before pushing it.** See "AGI games".
+> - **The AGI GAMES intro** (2026-10-20, the owner: "can you add a short loading screen for every game like an intro "AGI
+>   GAMES" its gonna an 8bit version of AGI and the loading is like her smashing up the word AGI GAMES and its gonna go
+>   bigger"): every game's page opens with it, over the game while it loads: "AGI GAMES" in bold 8-bit letters drops in,
+>   AGI-1 in 8-bit (made in code from her 2D art, never the 3D model) falls onto it, hops across it letter by letter, spins
+>   up and smashes it, and the word goes bigger with a boing; then a pixel wipe shows the game. About 2.5 s (1.2 s for a
+>   later load in the same tab); a tap or a key skips it (and never reaches the game); one still card with "reduce
+>   motion"; none for a page that came late. No sound. No SQL, no setting. See "The AGI GAMES intro".
+> - **TRENCHING SIMULATOR** (2026-10-20, being built; the owner: "i have another game idea again its gonna be called
+>   TRENCHING SIMULATOR … they gonna choose their preferred terminal like basedbot, gmgn, pumpfun, axiom, fomo … played
+>   with fake crypto money … the coins there are simulated … challenges like for example make 10x your money in 30 mins ,
+>   make 500$ in 10 mins … streamers gonna play this game on clank.trade", then "i want the terminal design to be exact
+>   copies because our players are real trenches … just put a safety note", "the play money there the same coins used on
+>   that terminals", "the link of trenching simulator will be agi1.app/games/trenchingsimulator", and phones too): AGI
+>   games' second game, at agi1.app/games/trenchingsimulator: single player first (multiplayer "coming soon"), five
+>   trading terminals laid out and working the way players know them, under our own names (Trench Chat, Trench Scan,
+>   Trench Board, Trench Pro, Trench Social: never the real terminals' names, logos or art, Claude's answer to "exact
+>   copies"), with the safety note "Play money only. Not affiliated with any real trading terminal. This game never asks
+>   for a wallet."; simulated coins and play money (SOL, at SOL's real price frozen for each run; dollars in Trench
+>   Social), timed challenges, phones and computers. See the roadmap's entry below until it's built.
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -745,8 +764,8 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `roadmap.html`, `stake.html`, `giveaway.html` | The roadmap (2026-10-14, agi1.app/roadmap) and its coming-soon pages (agi1.app/stake, /giveaway; /games too until 2026-10-19, AGI games' own page since: `games.html` below): the site's top bar and footer (the Roadmap link marked on the roadmap), a hero (the roadmap's with its meter, "2 of 10" since 2026-10-19, "2 of 6" before; each coming-soon page's with its stamp), the roadmap's timeline (two live steps, "We're here", "What's next" with its note "In no particular order", three under way and four coming soon, the locked 18+ card: ten steps since 2026-10-19), the attention flywheel explained (`#flywheel`, its wheel with AGI-1's face at its hub: `public/images/roadmap/agi1-hub.webp`), "Be the first to know" and the fine print; each coming-soon page its three cards, "Not open yet" with its scam warning, the fine print. Static: no `/api`, nothing asked of a wallet. One entry for all three (four until 2026-10-19): `src/roadmap/page.js` |
 | `src/roadmap/page.js` | The roadmap's pages (2026-10-14): their styles, the theme (`startTheme`), the phone menu and Pop mode's band (`startMenu`), and the cards coming in as they scroll into view (`reveal()`: only what's below the first screen, one after another when several come at once, never with "reduce motion"). Nothing else: no wallet, no requests, no storage |
 | `games.html` | AGI games (2026-10-19, agi1.app/games; the roadmap's coming-soon page for games until then): the site's top bar and footer (Games marked as the page you're on), its "GAME beta" hero, the games (Ride 'Em, AGI!: its stars, players and plays, Play and Rate it), its ratings and reviews (the average and the bars, rating it, "What players say", Show more reviews), what's coming and the fine print. Its own entry: `src/games/page.js` |
-| `rideemagi.html` | Ride 'Em, AGI! (2026-10-19, agi1.app/games/rideemagi: a rewrite in `vercel.json`): the owner's game, full screen in its own dark look. Its markup between `<!-- game:start -->` and `<!-- game:end -->` is written by `tools/games/import-rideemagi.mjs` (don't edit it by hand). Its own entry: `src/games/rideemagi/page.js` |
-| `src/games/` | AGI games (2026-10-19): `list.js` (its games, `GAMES`, and the rules the page, the games and our server share: a player's random id, `PLAYER`, `PLAYER_KEY`; runs a report, `PLAYS`; a review's limits, `REVIEW`; `STARS`), `page.js` (the page: each game's numbers, its ratings and reviews, and rating it: 18+, the site's wallet sign-in, the human check), `words.js` (everything it says that isn't in the page, our server's answers in plain words, and the sums its numbers need: a row of stars, the bars, a review's place in the list, the numbers after your own review changed: pure, read in Node); `rideemagi/`, the game: `game.js` (its code as one module) and `game.css` (its styles), both written by `tools/games/import-rideemagi.mjs` (don't edit them by hand), `fonts.css` (its fonts' rules, written by `tools/games/game-fonts.py`), its five pictures (`run`, `jump`, `duck`, `dduck`, `keyart`: WebP, about 3 MB), `page.js` (its entry) and `site.js` (its runs told to our server: no sign-in) |
+| `rideemagi.html` | Ride 'Em, AGI! (2026-10-19, agi1.app/games/rideemagi: a rewrite in `vercel.json`): the owner's game, full screen in its own dark look. Its markup between `<!-- game:start -->` and `<!-- game:end -->` is written by `tools/games/import-rideemagi.mjs` (don't edit it by hand). Its own entry: `src/games/rideemagi/page.js`. Since 2026-10-20 the AGI GAMES intro's cover right after `<body>` (`<div class="gi" id="agi-intro">`, outside the tool's markers: see "The AGI GAMES intro") |
+| `src/games/` | AGI games (2026-10-19): `list.js` (its games, `GAMES`, and the rules the page, the games and our server share: a player's random id, `PLAYER`, `PLAYER_KEY`; runs a report, `PLAYS`; a review's limits, `REVIEW`; `STARS`), `page.js` (the page: each game's numbers, its ratings and reviews, and rating it: 18+, the site's wallet sign-in, the human check), `words.js` (everything it says that isn't in the page, our server's answers in plain words, and the sums its numbers need: a row of stars, the bars, a review's place in the list, the numbers after your own review changed: pure, read in Node); `rideemagi/`, the game: `game.js` (its code as one module) and `game.css` (its styles), both written by `tools/games/import-rideemagi.mjs` (don't edit them by hand), `fonts.css` (its fonts' rules, written by `tools/games/game-fonts.py`), its five pictures (`run`, `jump`, `duck`, `dduck`, `keyart`: WebP, about 3 MB), `page.js` (its entry: since 2026-10-20 the AGI GAMES intro first) and `site.js` (its runs told to our server: no sign-in); and since 2026-10-20 the AGI GAMES intro every game opens with: `intro.js` (a game's entry imports it first), `intro-run.js` (on the screen: its canvas, taps and keys, "reduce motion", a late page, `browserEnv()`), `intro-plan.js` (what's on the screen at any moment, as numbers: pure), `intro-sprite.js` (her 8-bit frames, written by `tools/games/agi1-8bit.py`: don't edit it by hand) and `intro.css` (its cover). See "The AGI GAMES intro" |
 | `src/cloakmesh/` | CloakMesh's page (2026-10-03): `page.js` (its light and dark theme, the demo, the five checks lighting up, the waitlist with `/api/cloakmesh` and the human check, leaving with a leave link), `demo.js` (a small version of CloakMesh's privacy filter, only in the visitor's browser: what it finds, its keyed tokens, putting them back, the demo's made-up answer), `words.js` (everything it says that isn't in the page), `email.js` (what counts as an email address: one rule for the page and our server) |
 | `src/live/` | Her live show's page (2026-10-02): `page.js` (her status every 15 s, asking, following your question, the owner's panel; since 2026-10-07 its box for a question from X's chat; since 2026-10-10 connecting a wallet for her 💜 badge, the site's own sign-in and session), `words.js` (everything it says, and `/api/live`'s answers in plain words; `relayText()` for the owner's box; since 2026-10-10 `perkText()`, `badgeNote()`, `BADGE`) |
 | `src/studio/` | AGI Studio (2026-10-10): `app.js` (the app: its router (`/explore`, `/create`, `/i/<id>` an influencer, `/me`, `/3d/<id>` a 3D model and the old agi1.app/studio/<id>, `/owner`), the wallet sheet with the site's sign-in, 18+, its credits and "Buy credits" (USDG, "Check my payment")), `ui.js` (its small building blocks: elements, buttons, sheets (native dialogs), toasts, chips, pictures), `media.js` (pictures made small, a clip read and its 3 frames (since round 2 also its size and frame rate), uploads in parts, a video's poster; the live camera for a selfie until round 2), `app-words.js` (everything it says that isn't in studio.html, and our server's answers in plain words), `views/` (`explore.js`, `create.js`, `influencer.js`, `me.js`, `model3d.js`, `owner.js`, `shared.js`: one file a view, and the sheets more than one view opens; since round 3 `workspace.js`, the pro tool's workspace (its panel of controls with a footer that stays: what it costs, what you have, the button with its price; the page beside it; on phones a drawer) and `gallery.js`, the gallery (Trending · Influencers · My creations, as tabs)); and from the 3D character studio (the same day; its own page, `page.js` and `words.js`, gone since AGI Studio): `viewer.js` (a character in 3D with three.js, loaded only on its page: its clips by move (`clipsFor()`), in place (`inPlace()`), framed for every pose (`movesBox()`, `lookTimes()`, `framing()`), its idle and moves), `words.js` (everything the pages say that isn't in studio.html, and our server's answers in plain words), `rules.js` (what the page and our server share: ids, words' lengths, styles, its 8 moves with Meshy's library ids and clip names, the words for them (`moveIn()`), prices and discounts, the steps, its files' addresses; its videos': their shapes (`SHAPES`), a scene's length, their 5 seconds, their addresses; since AGI Studio also the app's: prices in credits (`PRICES`, `creditPrice()`), the free credits a month (`FREE_CREDITS`), top-ups, the three ways to start (`MODES`), its styles and design choices (`OPTIONS`), the 12 trend moves (`TRENDS`), a clip's and a picture's limits (`CLIP`, `PICTURE`), reasons to report, a 3D model's steps, its files' addresses; since its round 4 (2026-10-11) how long each step usually takes (`TYPICAL`,
@@ -967,6 +986,7 @@ chain, saving a review (counted first, the AI only with words or a name), a wall
 `GET /api/wallet?game=` (the same for everyone, only exact addresses, a game we don't have, not set up), `game-play`,
 `game-review`, `game-mine` and `game-review-delete` with every "no" in its order, the game's own part (`site.js`: its run
 reports), loading light, the log's hint and `arcade.sql`'s promises).
+`intro.test.js` (2026-10-20: the AGI GAMES intro: its letters, her 8-bit frames and her back, its sizes from a small phone to 4K, every frame at every size in whole pixels, her landings, the spin and the smash, the boing, the wipe, the same every time, its flash and shake, its timelines, a tap or a key skipping it and never reaching the game, "reduce motion", a first visit and a later load, blocked storage, held keys, modifiers and shortcuts, a late page, a phone turned sideways, at most 3 canvas pixels a CSS pixel, when things go wrong, drawing a frame, every game's page with its cover and its entry, its code and its styles).
 `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`), `art-cut.mjs` (Claude makes them ready: one of each, cut out of its green, made small) and `art-picks.json` (which one of each), into `page/art/` (her places, rooms, rides, the people she meets and what she wears, WebP, in git), which `page/paint.js` finds when her set is built; and since 2026-10-09 `page/chart.js` ($AGI's live trading chart on her TV, drawn in code), her song's music video (`media.js`: found in her videos folder, made ready once) and all of her song's words (`songs/feel-the-agi.json`). See "Her live show on X", "Her stream, upgraded", "Her trips", "Her painted set" and "Her show, 2026-10-09" |
@@ -975,7 +995,7 @@ reports), loading light, the log's hint and `arcade.sql`'s promises).
 | `tools/promo/` | Her launch video (2026-10-03, not part of the website): `make.mjs` (builds its page, draws every frame in Chromium, ffmpeg → the MP4s, the cover, the post text, a light copy), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen, from the site's own files where it can), `music.js` (its music, composed and played in code), `page/` (the renderer: `promo.js`, `kit.js`, `ui.js`, `transitions.js`, `her.js` (her Live2D model), `art.js` (the front's art and shader), `scenes/` (one file a scene); built into `tools/promo/dist/`, which git ignores). Its videos go to `promo/` (git ignores it). See "Her launch video" |
 | `tools/studio-promo/` | AGI Studio's launch video (2026-10-13, not part of the website): `make.mjs` (builds its page, serves it on this computer only, draws every frame in Chromium, ffmpeg → the MP4, the cover, the post text, a light copy, `README.txt`; since its voice-over the soundtrack (the music with her voice) and the copies with the music alone, and `--sound-only`: a new soundtrack put on the videos already made, their pictures copied), `media.mjs` (the example pictures and clips, and since 2026-10-13 Juno's 3D model and her voice-over takes (`--only voice`), made ready once, into `tools/studio-promo/media/`, which git ignores), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music; since its voice-over where each of her lines goes, `VOICE`), `words.js` (every word on screen and the post, from AGI Studio's own files; her 12 lines, `VOICE`), `music.js` (its music, composed and played in code), `voice.js` (her voice over the music: her takes made ready (`readyLine()`), the music dipping under her (`planDucks()`, `mixVoice()`; since 2026-10-20 its limiter can also read between the samples, `truePeak`, off by default: on for the roadmap's video), loudness (BS.1770), WAV files; pure), `README.txt` (for the owner, copied next to the video), `page/` (the renderer: `main.js`, `look.js` (AGI Studio's look), `parts.js`, `media.js`, `cuts.js`, `model3d.js` (Juno's own 3D model, shown with three.js: never AGI-1's; three.js shapes, labeled "Illustration", until 2026-10-13), `scenes/` (one file a scene); built into `tools/studio-promo/dist/`, which git ignores). Its videos go to `studio-promo/` (git ignores it). See "AGI Studio's launch video" |
 | `tools/roadmap-promo/` | The roadmap's video and its pictures (2026-10-14, not part of the website, but for its link preview): `make.mjs` (builds its page, serves it on this computer only, draws every frame in Chromium, ffmpeg → the MP4, the cover, the post text, a light copy, the soundtrack (the music with her voice, under a limiter that also reads between the samples since 2026-10-20: `truePeak`) and the copies with the music alone, `README.txt`; `--sound-only`: a new soundtrack put on the videos already made, their pictures copied; `--cards`: its three pictures, and the link preview into `public/cards/roadmap.jpg`), `media.mjs` (her takes made ready once (three since 2026-10-19, four before), with `tools/studio-promo/voice.js`, into `tools/roadmap-promo/media/`, which git ignores), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music; where her lines go, `VOICE`), `words.js` (every word on screen and the post: the roadmap page's own, word for word; her lines, `VOICE`), `music.js` (its music, composed and played in code), `README.txt` (for the owner, copied next to the video), `page/` (the renderer: `main.js`, `parts.js`, `cuts.js`, `cards.js` (its three pictures), `scenes/` (`title.js`; `road.js`, the road's three scenes, one world; `end.js`); built into `tools/roadmap-promo/dist/`, which git ignores). Its videos go to `promo/roadmap/` (git ignores `promo/`). See "The roadmap's video and its pictures" |
-| `tools/games/` | AGI games (2026-10-19): `import-rideemagi.mjs` brings the owner's game, Ride 'Em, AGI! (from the owner's `VTuber_Project\18_ride_em_agi`: its code in `backup/p18_code_v1.zip`, its pictures in `game/`), into the site as its own files: `src/games/rideemagi/game.js` (its code as one ES module), `game.css`, its five WebP pictures (as they are, an app's label taken out) and `rideemagi.html`'s markup between `<!-- game:start -->` and `<!-- game:end -->`. Each change a patch that must find its text exactly as many times as it says (a new version of the game that moved it stops the tool instead of doing it wrong): never Cabo ("her cat"), two bars' widths through the CSS object model (`data-w`: the CSP allows no style attributes), a way back to agi1.app/games ("Games") and to rating it ("Rate it"), its runs told to our server (`Site.play()` after `Missions.runStart()`), its publisher's live-reload hooks (`window.claude.hot`) out, its stars' font named (M PLUS Rounded 1c after Mochiy Pop One, which has no stars). Run after a new version of the game: `node tools/games/import-rideemagi.mjs <the game's code folder> <the game's picture folder>` (the code folder: `p18_code_v1.zip` unpacked, with `game/src/` and `sprites/sprites.json`), then `npm test`. And `game-fonts.py`: its two fonts (Mochiy Pop One; M PLUS Rounded 1c 500 and 800), subset to what the game writes, into `public/fonts/games/` with their licenses, and their rules into `src/games/rideemagi/fonts.css`: `python3 tools/games/game-fonts.py <a folder with node_modules/@expo-google-fonts>` (fonttools with brotli; a changed font gets a new file name: its `VERSION`). See "AGI games" |
+| `tools/games/` | AGI games (2026-10-19): `import-rideemagi.mjs` brings the owner's game, Ride 'Em, AGI! (from the owner's `VTuber_Project\18_ride_em_agi`: its code in `backup/p18_code_v1.zip`, its pictures in `game/`), into the site as its own files: `src/games/rideemagi/game.js` (its code as one ES module), `game.css`, its five WebP pictures (as they are, an app's label taken out) and `rideemagi.html`'s markup between `<!-- game:start -->` and `<!-- game:end -->`. Each change a patch that must find its text exactly as many times as it says (a new version of the game that moved it stops the tool instead of doing it wrong): never Cabo ("her cat"), two bars' widths through the CSS object model (`data-w`: the CSP allows no style attributes), a way back to agi1.app/games ("Games") and to rating it ("Rate it"), its runs told to our server (`Site.play()` after `Missions.runStart()`), its publisher's live-reload hooks (`window.claude.hot`) out, its stars' font named (M PLUS Rounded 1c after Mochiy Pop One, which has no stars). Run after a new version of the game: `node tools/games/import-rideemagi.mjs <the game's code folder> <the game's picture folder>` (the code folder: `p18_code_v1.zip` unpacked, with `game/src/` and `sprites/sprites.json`), then `npm test`. And `game-fonts.py`: its two fonts (Mochiy Pop One; M PLUS Rounded 1c 500 and 800), subset to what the game writes, into `public/fonts/games/` with their licenses, and their rules into `src/games/rideemagi/fonts.css`: `python3 tools/games/game-fonts.py <a folder with node_modules/@expo-google-fonts>` (fonttools with brotli; a changed font gets a new file name: its `VERSION`). See "AGI games". And since 2026-10-20 `agi1-8bit.py`: AGI-1 in 8-bit for the AGI GAMES intro, from her 2D art (the front's cutout, never the 3D model), written as `src/games/intro-sprite.js`: `python3 tools/games/agi1-8bit.py` (`--png sheet.png` a preview of every frame; numpy, OpenCV and Pillow). See "The AGI GAMES intro" |
 | `tools/buybot/` | Her buy GIF (2026-10-06, not part of the website): `make.mjs` (builds its page, draws each frame in Chromium, ffmpeg → `server/media/agi1-buy.mp4`, a soundless MP4), `page/` (`gif.js`: her Live2D model through the launch video's renderer, cheering, on Pop mode's violet, with a "$AGI BUY!" sticker; built into `tools/buybot/dist/`, which git ignores). See "Her buy bot" |
 | `tools/studio/` | AGI Studio's share mark (round 2, 2026-10-10, not part of the website): `mark.mjs` draws `server/media/studio-mark.png` (the "Made with AGI Studio · AI-generated · studio.agi1.app" pill, with the site's own Geist, twice its size, on a transparent background) once in Chromium, so our server only scales and places it (sharp, ffmpeg) and needs no fonts. Run again only after changing its words or look: `node tools/studio/mark.mjs` (Chromium and `npm install --no-save playwright-core`, like the other tools). And since 2026-10-11 AGI Studio's guide videos: `guide-record.mjs` (the recorder: the app as Vite builds it in Chromium, at a computer's size and a phone's, our own server's code answering it with `tests/influencer.test.js`'s fake services, a demo studio of made-up people from the live show's 2D paintings, a cursor or taps drawn on top, a camera that follows what happens, frames from Chromium's screencast put together with sharp and encoded with ffmpeg → `src/studio/guide/` and `src/studio/guide-media.js`) and `guide-scripts.mjs` (what happens in each video: one scene a video, a computer's and a phone's). See "AGI Studio's guide"; and since 2026-10-13 `agi1-refs.mjs` (her two pictures for "💜 With AGI-1", `server/media/agi1-with.jpg` and `agi1-face.jpg`, made once from the front's 2D cutout: `node tools/studio/agi1-refs.mjs`); and since 2026-10-19 `meme-fonts.py` (the meme fonts, subset to what a meme's words may use and saved as WOFF into `public/fonts/meme/`: `python3 tools/studio/meme-fonts.py <a folder with node_modules/@expo-google-fonts>`, with fonttools; a changed font gets a new file name: its `VERSION`, and `MEME_FONTS` in `src/studio/memes.js`) |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
@@ -1047,6 +1067,9 @@ reports), loading light, the log's hint and `arcade.sql`'s promises).
   if a patch no longer finds its text), and `python3 tools/games/game-fonts.py <a folder with
   node_modules/@expo-google-fonts>` makes its two fonts again (only after changing a font or what the game writes). Then
   `npm test` (see "AGI games").
+- AGI-1 in 8-bit for the AGI GAMES intro (2026-10-20): `python3 tools/games/agi1-8bit.py` writes
+  `src/games/intro-sprite.js` again from her 2D art (only after her art changes; numpy, OpenCV and Pillow), and `--png
+  sheet.png` a preview of every frame too. Then `npm test` (see "The AGI GAMES intro").
 - Her live show (2026-10-02): `node tools/live/run.mjs --demo --fake-voice --record try.mp4 --minutes 3` makes a short show
   into a file anywhere (made-up questions, a stand-in hum; needs Chromium, ffmpeg, Xvfb and `npm install --no-save
   playwright-core@1.63.0`). On the owner's server everything goes through `sh tools/live/live.sh …` (see "Her live show
@@ -9150,6 +9173,8 @@ before pushing it** (below). No new setting or service.
   browser keeps nothing). A run that can't be sent is simply not counted: the game never waits for it.
 - About 3 MB of pictures (its four WebP sprite sheets and its key art) and its code (about 160 KB, minified), kept by
   browsers a year (Vite's names).
+- **The AGI GAMES intro first** (2026-10-20): its page opens with the intro every game opens with (8-bit "AGI GAMES",
+  AGI-1 smashing it), over the game while it loads; a tap or a key skips it. See "The AGI GAMES intro".
 
 **How it works:**
 - **In `/api/wallet`** (Vercel's 12 functions are all used; `server/arcade.js`):
@@ -9240,6 +9265,84 @@ Show more (23 reviews) and the badges; a review the owner took off the page; a s
 both themes, a computer and phones (390, 360 px); the game's page on a phone and a computer; axe 0 issues, nothing blocked by
 the CSP, clean consoles. **Not tried live:** `arcade.sql` in the real database, real phones' wallets and their keepalive
 reports, and Gemini's real verdicts on reviews: the owner's first review is the check.
+
+### The AGI GAMES intro (2026-10-20)
+
+**The owner's request** (with the trenching simulator): "can you add a short loading screen for every game like an intro
+"AGI GAMES" its gonna an 8bit version of AGI and the loading is like her smashing up the word AGI GAMES and its gonna go
+bigger". Built first, before the trenching simulator: every game's page opens with it.
+
+**What players see** (agi1.app/games/rideemagi, and every game after it):
+- **The first time in a tab** (about 2.5 s): the night (ink, with lavender stars); "AGI GAMES" in bold 8-bit letters (7 ×
+  7, their uprights two pixels wide), banded light to deep honey with a pink shadow, dropping in one after another; AGI-1
+  in 8-bit falls onto the A, hops across the word letter by letter (each letter flashes white as she lands on it, a longer
+  hop over the space), spins up (her back on the far half of the turn) and dives into the G of GAMES; the smash: one white
+  flash (at most 40% white: never a strobe), bits flying off the letters, a small shake, and the word goes bigger with a
+  boing while she floats above it; then a pixel wipe from the smash outward shows the game.
+- **A later load in the same tab** (1.2 s): the letters pop in, she spins down and smashes it, the wipe.
+- **A tap or a key skips it** (the wipe at once, a quarter of a second), and the game never sees that tap or key: not its
+  click, not its press, its repeats or its letting go (a key held for ever is let go of after 5 s). Space, Enter and the
+  arrows don't scroll or press anything under it. Modifier keys alone (Shift, Control, ⌘…) and shortcuts with them pass
+  straight through; Tab and F5 skip it and still do what they do.
+- **"Reduce motion":** one still card (the word gone bigger, her floating above it) for 0.9 s, then a fade; a key ends it.
+- **A page that came late** (more than 3.5 s after it was asked for): no intro, its cover just fades. **Never more than
+  about 6 s**, whatever happens (a tab in the background, a very slow phone); if its script never comes, its cover fades by
+  itself after 4 s (its CSS).
+- Pixel-sharp at any size, from a small phone to a 4K screen (at most 3 canvas pixels a CSS pixel, never smoothed); a phone
+  turned sideways gets a new layout and still ends on time.
+- **No sound** (the game's own sound starts as before). Hidden from screen readers (`aria-hidden`): they get the game.
+- When it's gone, the page hears `agi:intro-done`, once.
+
+**How it works** (`src/games/`):
+- `intro.js`: a game's entry imports it first (its styles, then the runner on the page's own cover). The cover,
+  `<div class="gi" id="agi-intro" aria-hidden="true"></div>`, is in the page's own markup right after `<body>` (outside
+  the import tool's `<!-- game:start -->` / `<!-- game:end -->`, so a new version of the game keeps it), so `intro.css`
+  covers the game from the first paint, before any script.
+- `intro-plan.js`: what's on the screen at any moment, as numbers (the letters, her frame and place, the bits, the flash,
+  the shake, the wipe's holes), for any screen size, every edge a whole pixel: pure (no DOM), the same every time (its
+  seed).
+- `intro-run.js`: draws the plan on a canvas the size of the screen in device pixels, frame by frame (a slow frame moves
+  it on at most a fifteenth of a second, so a stalled tab never jumps ahead), handles taps, keys, "reduce motion", a late
+  page and the 6 s safety, then takes the cover away. Everything it needs from the browser comes through `browserEnv()`,
+  so `tests/intro.test.js` runs it in Node with stand-ins. `sessionStorage` `agi_intro` says this tab has seen the full
+  one (blocked storage, a private window: the full one every time).
+- `intro-sprite.js`: her five frames (standing, crouching, in the air, diving, and her back), 31 × 62 pixels, 56 of them
+  head to soles, written by `tools/games/agi1-8bit.py` (don't edit it by hand) from her 2D art (the front's cutout, the
+  owner's art; never the 3D model): every pixel of the art matched to a small palette as the eye sees it (OKLab), her arms
+  lifted at her shoulders for the jump and the dive, her legs bent for the crouch, then cut into square pixels at her
+  soles; her eyes, blush, mouth and the "AGI" on her tee drawn by hand (her art's are too small to survive as pixels); her
+  back (2026-10-20) with her hair over her head and down her back, for the far half of her spin (mirrored, her front read
+  "AGI" backwards). Her own outfit, PG-13, never childlike.
+- `intro.css`: every rule a `gi` class; the cover over everything, ink, with three small blinking squares (honey, pink,
+  lavender) while it waits; see-through once the intro draws; its fade; still with "reduce motion".
+- About 23 KB of the game's script (7 KB gzipped). Nothing downloaded, nothing sent, nothing from elsewhere; no new CSP
+  entry.
+
+**Every new game's page** needs the cover right after `<body>` and `import '../intro.js'` first in its entry:
+`tests/intro.test.js` fails the build for a game in `GAMES` without them.
+
+**Owner:** push (no SQL, no setting). **Cost:** nothing.
+
+**Her 8-bit self again** (after her 2D art changes): `python3 tools/games/agi1-8bit.py` (`--png sheet.png` also a preview
+of every frame), then `npm test`.
+
+**Tests:** `tests/intro.test.js` (30): its letters; her 8-bit frames (from her 2D art, the same size, on her soles,
+outlined) and her back (her hair where her face was, no "AGI"); its sizes from a small phone to a 4K screen; every frame at
+every size, on both timelines, in whole pixels; her landings, the spin and the smash; the boing (never wider than the
+screen); the wipe; the same intro every time, one flash, the shake only after the smash; its timelines; a tap or a key;
+"reduce motion" (the plan's and the runner's); a first visit and a later load, blocked storage; a key never reaching the
+game, a held key let go of after 5 s; modifiers and shortcuts, Tab and F5; a tap; a late page; a phone turned sideways; at
+most 3 canvas pixels a CSS pixel; when things go wrong (a frame that throws, no 2D canvas, a tab in the background, a
+stalled tab); drawing a frame; her frames as small canvases; every game's page (its cover and its entry); `intro.js`; its
+code (the plan pure, the runner through `browserEnv()` only); its styles; `npm test` runs it. 925 in the whole suite (921
+pass, 4 skipped as before in this folder; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock
+said six later times), the full build, and a clean build like Vercel's. In a browser with the site's real CSP (Claude's
+scratch `intro/browser.mjs`, 67 checks): the cover right after `<body>` before the game's code, the canvas at device pixels
+and on top of every frame, the full run and the short one, `agi:intro-done` once, a key skip (the game saw nothing; the
+next press reaches it), Shift and Control passing, Enter swallowed, a phone's tap (no click reached the game), phones at
+360, 390 and 412 px and sideways, at most 3 canvas pixels a CSS pixel, "reduce motion", a late page, no script at all (its
+cover gone by itself); and AGI games' browser test again with it (276 checks: it waits for the intro before it clicks,
+`introGone()`).
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -10051,6 +10154,11 @@ that stays with the button and its price; the gallery on the right; on phones a 
   honey sticker with an ink outline and a hard shadow; the shelf on lavender, the ratings and reviews on paper, what's
   coming on honey; white cards with ink outlines and hard shadows, honey stars with ink outlines. The game itself
   (agi1.app/games/rideemagi) keeps its own look (the owner's game's, dark).
+- **The AGI GAMES intro** (2026-10-20, see "The AGI GAMES intro"): 8-bit on purpose (a game's own look, like an arcade's
+  boot screen), in the site's colors as pixels: an ink night with lavender stars, honey letters banded light to deep with
+  a pink shadow, white for a landing; AGI-1 as pixel art from her 2D art; crisp at any size (never smoothed); one flash
+  at most 40% white; still with "reduce motion". Before it draws, its cover is ink with three small blinking squares
+  (honey, pink, lavender).
 - **Must-haves:** works on a 360 px phone; both themes pass WCAG AA contrast; visible keyboard focus; respects "reduce motion";
   lighter 3D on phones; the chat works with the keyboard alone; "Not financial advice" visible in the hero and the footer; everything PG-13.
 
@@ -10599,6 +10707,10 @@ that stays with the button and its price; the gallery on the right; on phones a 
   only request is its run report to our `/api`; its progress stays in its player's browser (`ridemagi_…`).
 - **The page** sets everything with `textContent`; `supabase/arcade.sql`: row level security on, no rules, only the
   server's key may call its functions.
+- **The AGI GAMES intro** (2026-10-20): nothing downloaded or sent and nothing from elsewhere (her frames are in its own
+  code), no new CSP entry (its canvas is made by its script; its cover's styles are a CSS file, never inline); one
+  `sessionStorage` flag (`agi_intro`: this tab has seen the full one). A key or a tap that skipped it never reaches the
+  game.
 
 ### Her Live2D model (AGI-1 in 2D, 2026-10-01)
 - Live2D's runtime (`public/models/agi1-live2d/live2dcubismcore.min.js`) is served from our own address and loaded only when
@@ -11626,6 +11738,16 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   this repo"). Saved and checked by checksum the same day, the whole folder compared again (the same as the workspace), and
   a clean build like Vercel's passed (895 tests, 0 failing). **Owner: push again** (no SQL, no setting; a Redeploy builds
   the same commit, so it would fail again).
+- **The AGI GAMES intro: built 2026-10-20, waiting for the owner's push** (the owner: "can you add a short loading screen
+  for every game like an intro "AGI GAMES" its gonna an 8bit version of AGI and the loading is like her smashing up the
+  word AGI GAMES and its gonna go bigger"): every game's page opens with it (8-bit "AGI GAMES", 8-bit AGI-1 hopping across
+  it and smashing it, the word going bigger, a pixel wipe), about 2.5 s; a tap or a key skips it. See "The AGI GAMES
+  intro". **Owner:** push (no SQL, no setting). Tests: 925 in the whole suite (921 pass, 4 skipped as before in this
+  folder; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said six later times), the full
+  build and a clean build like Vercel's, 67 checks in a browser, AGI games' browser test again (276).
+- **TRENCHING SIMULATOR: being built (2026-10-20)** (the owner's request, see the header): its trades' engine first (its
+  coins, their curves and what becomes of them, the other traders, the news), then its game (challenges, results), then
+  its five terminals (phones and computers), then on AGI games at agi1.app/games/trenchingsimulator.
 
 ## Decisions log
 
@@ -12002,6 +12124,11 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-19 | The roadmap's video made again (the owner: "and update the roadmap video also"): 23.5 s, its ten stops in three holds under the second drop, three of her lines (the one about what's next went: it named an order; no new take while the owner slept), stamps "Under way" or "Coming soon", the scramble without "$", "%" or digits, the whole-road view centered under the meter, its three pictures redrawn for ten steps, the link preview's JPEG at most 154,000 bytes (room for its label in the owner's folder). Not picked: keeping her line about what's next (the roadmap is in no particular order now), 21.5 s with ten stops (too quick to read) |
 | 2026-10-20 | A limiter that reads between the samples (`truePeak` in `tools/studio-promo/voice.js`, 4 times finer): the roadmap's soundtrack had come out at a true peak a little over -1 dBTP (the "t" of her "secret" rose 0.44 dB between two samples), now -1.2 dBTP; off by default, so AGI Studio's launch video keeps its soundtrack exactly. Not picked: turning the whole mix down (the music quieter everywhere for one syllable), the finer limiter for every video (AGI Studio's would change, made and checked already) |
 | 2026-10-20 | The first push of the roadmap's ten steps failed on Vercel (the owner: "whats this", with its Error row, then "i have vercel logged in chrome"; Claude read its build log in the owner's Chrome: 895 tests, 1 failing, `tests/roadmap-promo.test.js`'s check of her three lines): `tools/roadmap-promo/media.mjs` had never reached this folder (its old copy still made her line about what's next ready). Claude's comparison of this folder with its workspace skips `tools/roadmap-promo/media` (her takes' folder, which git ignores) and matched it as the start of a name, so `media.mjs` beside it was never compared (nor `tools/studio-promo/media.mjs` and `tools/live/live.env.example`, the same way: both were the same here). Fixed: the file saved and checked by checksum; the comparison now matches an exact path or the path plus "/", and the whole folder was compared again (753 files, the same as the workspace); then a clean build like Vercel's (a git copy of the workspace, a fresh install, Node 24, Vercel's settings) passed. The owner pushes again (a Redeploy builds the same commit). Not picked: changing the test (it was right: that line named an order) |
+| 2026-10-20 | The AGI GAMES intro (the owner's request): drawn in code on a canvas over every game's page while it loads (8-bit "AGI GAMES", AGI-1 in 8-bit made from her 2D art, her smash, the word going bigger, a pixel wipe), about 2.5 s the first time in a tab and 1.2 s after; a tap or a key skips it and never reaches the game; one still card with "reduce motion"; none for a page that came more than 3.5 s late; never more than 6 s; no sound. Not picked: a video or a GIF (a download before the game, blurry when scaled), a loading page of its own (a second address, the game loading after it instead of under it), the 3D model or her Live2D model (the owner's "8bit version", and never the 3D model), music (browsers block sound before a tap) |
+| 2026-10-20 | Its letters bold 7 × 7 (their uprights two pixels wide), banded light to deep honey with a pink shadow: the first ones, thin 5 × 7 letters under a shadow as wide as their strokes, read "A6I GANES" in its first contact sheets. Its flash once and at most 40% white (never a strobe); its shake small and only after the smash |
+| 2026-10-20 | Its cover is in each game's page itself, right after `<body>`, styled by its own CSS from the first paint, so the game never shows before it; its CSS fades it by itself after 4 s if its script never comes; outside the import tool's markers, so a new version of the game keeps it. A key that skipped it is swallowed with its repeats and its letting go (or after 5 s), a tap's click for 1.2 s; modifiers alone and shortcuts pass. Not picked: a cover made by the script (the game would show for a moment first), stopping every key (Tab and F5 keep what they do) |
+| 2026-10-20 | Her back for the far half of her spin (found in its first contact sheets: mirrored, her front read "AGI" backwards): her air frame with her hair over her head and neck and her long hair down her back, no letters (`tools/games/agi1-8bit.py`, its step 6). Not picked: no spin (the owner's "smashing" wanted a jump), her front mirrored without its letters (a blank tee reads as someone else) |
+| 2026-10-20 | TRENCHING SIMULATOR (the owner's request, see the header): AGI games' second game, at agi1.app/games/trenchingsimulator (the owner's address). The owner asked for the five terminals as "exact copies" with a safety note; Claude's answer: their layouts and workflows the way players know them (where things are, what each button does, their hotkeys), under our own names (Trench Chat, Trench Scan, Trench Board, Trench Pro, Trench Social), never the real terminals' names, logos, brand art or pictures, with the safety note "Play money only. Not affiliated with any real trading terminal. This game never asks for a wallet." (an exact copy of a trading site, its name and logo included, is what phishing sites look like). Play money in each terminal's own coin (the owner: "the same coins used on that terminals": SOL, dollars in Trench Social), SOL's real price from DexScreener frozen for each run; challenges like 1 SOL → 10 SOL in 30 minutes and $500 in 10 minutes; a phone layout for each terminal (bottom tabs, a buy and sell panel sliding up, thumb-sized quick buys), computers with the full layout and hotkeys. Words visitors read never name the real terminals |
 
 ## Open questions
 
@@ -12429,13 +12556,17 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
     ever gamed, ask Claude about counting only runs that lasted a few seconds.
   - **No Report button on reviews** (for now): the AI looks at every review with words before it's shown, and the owner
     hides one with `arcade_review_hide` in Supabase. If reviews grow, a Report button (like AGI Studio's) is a small change.
-  - **The roadmap's AGI games step** still says coming soon and "Earn $AGI while you play": earning (prizes, casino-style
-    games) isn't built, and it needs the lawyer's check first (see "The roadmap").
+  - **The roadmap's AGI games step** is under way (its beta), and its "earn $AGI while you play" isn't built: earning
+    (prizes, casino-style games) needs the lawyer's check first (see "The roadmap").
   - **Its numbers are a minute old at most** (the CDN): a reload right after playing or reviewing may show the numbers from
     before (its own review shows at once on the page that saved it).
   - **Not tried live:** `arcade.sql` in the real database, real phones' wallets on the page, the game's keepalive reports
     when a phone closes its page (the test browser didn't always send it: at worst a few runs aren't counted), and
     Gemini's real verdicts on reviews. The owner's first review is the check.
+- **The AGI GAMES intro** (2026-10-20): no sound (browsers block a sound before a tap; one on the smash after a tap could
+  come later: the owner's call). Not tried on real phones (Safari on an iPhone, Android) or with real screen readers: the
+  owner's first game on a phone is the check. It's about 2.5 s the first time in a tab: if players find it long, it can
+  be shorter (`FULL` in `src/games/intro-plan.js`).
 
 ## Working in this repo
 
@@ -12606,3 +12737,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   Vercel. Every path check of Claude's is `path === p || path.startsWith(p + '/')`. And before telling the owner to push a
   change that touched many files, Claude builds a clean copy the way Vercel does: a throwaway git index over its workspace
   (so `.gitignore` is followed, never git in this folder), a fresh `npm install`, Node 24 and Vercel's settings.
+- **Never `pkill -f` with a pattern that appears in its own command** (2026-10-20): `pkill -f "spinpics/serve.mjs"`
+  matched the shell running it and killed it (exit 144). Find the process first (`ps aux | grep "[s]erve.mjs"`: the
+  brackets keep the grep itself out) and `kill` its number.
+- **A browser test on a game's page waits for the AGI GAMES intro first** (2026-10-20): its cover is over the game for
+  about 2.5 s, and a click on it skips it and is swallowed (it never reaches the game). `introGone()` in Claude's scratch
+  `games/gm-lib.mjs` waits for its cover to be gone (at most about 6 s).

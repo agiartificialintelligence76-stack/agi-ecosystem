@@ -1,0 +1,63 @@
+/* AGI GAMES intro (2026-10-20): its overlay over a game's page (see ./intro.js). Until its script takes over
+   (.is-live), the overlay is the intro's night with three blinking squares; if its script never comes, it fades away
+   by itself after 4 s. Every rule names a gi- class. */
+.gi {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  overflow: hidden;
+  background: #170a36;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  animation: gi-bail 0.3s ease 4s forwards;
+}
+.gi.is-live {
+  background: transparent;
+  animation: none;
+}
+.gi.is-fade {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.gi::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -30px;
+  background: #ffc933;
+  box-shadow: 24px 0 #ff5c93, 48px 0 #e4d9ff;
+  animation: gi-blink 0.9s steps(1, end) infinite;
+}
+.gi.is-live::after,
+.gi.is-fade::after {
+  content: none;
+}
+.gi-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+@keyframes gi-bail {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@keyframes gi-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gi::after {
+    animation: none;
+  }
+}
