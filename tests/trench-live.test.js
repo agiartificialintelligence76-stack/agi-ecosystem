@@ -695,6 +695,63 @@ test('the relay whole: new coins and their trades live, pictures over https, eve
   assert.ok(!lines.join('\n').includes(fakes.key), 'the key never in its log');
 });
 
+test("Robinhood Chain: clank.trade's coins and other launchpads' listed on DexScreener; a coin both have is clank.trade's", async () => {
+  // the owner's "Add DexScreener coins" (2026-10-21): coins from any launchpad on Robinhood Chain once their makers list
+  // them on DexScreener, beside clank.trade's, which stays the chain's own source. clank.trade's list read often here, so
+  // its rule for coins it no longer reaches runs during the test.
+  const fakes = await startFakes();
+  const { relay, url } = await relayWith(fakes, { TRENCH_CHAINS: 'robinhood,bnb' },
+    { clank: { newest: 100, older: 150, trending: 60_000, liquidity: 60_000 } });
+  const v = viewer(url);
+  try {
+    await v.opened;
+    v.send({ op: 'sub', chain: 'robinhood' });
+    await until(() => v.of('snap').length, 5000, 'its snapshot');
+    const sent = (address) => v.of('snap').flatMap((m) => m.coins).find((c) => c.m === address) || v.of('c').find((m) => m.c.m === address)?.c;
+    const cl = await fakes.clank({ name: 'Clank Cat', symbol: 'CCAT' });
+    const other = await fakes.listed('robinhood', { name: 'Pool Pup', symbol: 'PUP', dexId: 'uniswap', mu: 80_000 });
+    await until(() => sent(cl.address) && sent(other), 8000, 'both coins');
+    const o = L.parseCoin(sent(other), 'robinhood');
+    assert.equal(o.name, 'Pool Pup');
+    assert.equal(o.ticker, 'PUP');
+    assert.equal(o.src, null, 'no launchpad named: the board says "on Robinhood Chain"');
+    assert.equal(o.tracked, true);
+    assert.deepEqual([o.st.k, o.st.mu, o.st.gr], ['u', 80_000, true]);
+    assert.equal(L.parseCoin(sent(cl.address), 'robinhood').src, 'clank.trade');
+    await until(() => v.of('pic').some((m) => m.id === o.id), 8000, 'its picture, from its DexScreener profile');
+    // a coin both have: one coin, clank.trade's
+    await fakes.listed('robinhood', { address: cl.address, name: 'Clank Cat', symbol: 'CCAT', dexId: 'uniswap' });
+    await new Promise((r) => setTimeout(r, 600));
+    assert.equal(relay.hub.coins('robinhood').filter((c) => c.key === cl.address).length, 1);
+    assert.equal(relay.hub.byKey('robinhood', cl.address).src, 'clank.trade');
+    assert.notEqual(relay.hub.byKey('robinhood', cl.address).extra.dex, true);
+    // a listed coin that clank.trade's list has too, later: clank.trade's from then on
+    const late = await fakes.listed('robinhood', { name: 'Late Lister', symbol: 'LATE', dexId: 'uniswap' });
+    await until(() => relay.hub.byKey('robinhood', late), 8000, 'the listed coin');
+    assert.equal(relay.hub.byKey('robinhood', late).extra.dex, true);
+    await fakes.clank({ name: 'Late Lister', symbol: 'LATE', address: late });
+    await until(() => relay.hub.byKey('robinhood', late).extra.dex === false, 8000, 'clank.trade takes it over');
+    assert.equal(relay.hub.coins('robinhood').filter((c) => c.key === late).length, 1);
+    // more than clank.trade's three pages: its oldest coins let go, never a listed one (DexScreener's side follows those).
+    // (The stand-in's list counts in whole seconds: 37 more a second later are its newest.)
+    await new Promise((r) => setTimeout(r, 1100));
+    for (let i = 0; i < 37; i++) await fakes.clank({ name: `Filler ${i}`, symbol: `FIL${i}` });
+    await until(() => relay.hub.coins('robinhood').some((c) => !c.tracked && c.extra.dex !== true), 10_000, 'clank.trade lets its oldest go');
+    assert.equal(relay.hub.byKey('robinhood', other).tracked, true, 'the listed coin still followed');
+    // the chain's state is still clank.trade's; BNB Chain's listed coins as before
+    assert.equal(relay.hub.state('robinhood').src, 'clank.trade');
+    assert.ok(['live', 'quiet'].includes(relay.hub.state('robinhood').s), JSON.stringify(relay.hub.state('robinhood')));
+    const bird = await fakes.listed('bsc', { name: 'Bnb Bird', symbol: 'BIRD' }); // (DexScreener's name for BNB Chain)
+    await until(() => relay.hub.byKey('bnb', bird), 8000, 'the BNB Chain coin');
+    assert.equal(relay.hub.byKey('bnb', bird).src, 'four.meme');
+    assert.equal(relay.hub.state('bnb').src, 'DexScreener');
+  } finally {
+    v.ws.close();
+    await relay.close();
+    await fakes.close();
+  }
+});
+
 test("the relay's door: only the site's own pages, at most so many viewers (a full relay says so), at most so many from one address", async () => {
   const fakes = await startFakes();
   const { relay, url } = await relayWith(fakes, { TRENCH_CHAINS: 'bnb', TRENCH_MAX_CLIENTS: '2', TRENCH_MAX_PER_IP: '3' });
@@ -864,6 +921,13 @@ test("Live mode's chains, the money each terminal shows in it, and which challen
   assert.equal(L.chainById('robinhood').src, 'clank.trade');
   assert.equal(L.chainById('solana').src, 'pump.fun');
   assert.equal(L.chainById('mars'), null);
+  // a run's line names a launchpad only where every coin comes from it: Solana's pump.fun; Robinhood Chain's coins come
+  // from clank.trade and, since 2026-10-21 (the owner's "Add DexScreener coins"), other launchpads' listed ones
+  assert.deepEqual(L.CHAINS.map((c) => c.allFrom), [true, false, false, false]);
+  assert.equal(L.feedWords('live', 'live', 'robinhood', 'before').text,
+    'Live: every new clank.trade coin as it launches, and others as they get listed on Robinhood Chain, traded with play money.');
+  assert.match(readFileSync('src/games/trenchingsimulator/shell.js', 'utf8'),
+    /`Live · \$\{c\.name\} · real coins\$\{c\.src && c\.allFrom \? ` from \$\{c\.src\}` : ''\} · play money only`/);
   // the owner's: Trench Board SOL on every chain, Trench Scan the chain's own coin, Trench Chat ETH, Trench Social dollars,
   // Trench Pro its counterpart's (SOL)
   for (const ch of L.CHAIN_IDS) {
@@ -1034,6 +1098,37 @@ const mintOf = (i) => `${MINT.slice(0, 40)}${'ABCDEFGHJKLMNPQRSTUVWXYZ'[i % 24]}
 const wireCoin = (i, over = {}) => L.parseCoin(P.encodeCoin({ id: `s${i}`, key: mintOf(i),
   name: `Live Coin ${i}`, symbol: `LIVE${i}`, pic: '/p/abcdefghijklmnopqrstuv.webp', born: Date.now() - 30_000, by: DEV, src: 'pump.fun',
   soc: 1, sup: 1e9, st: curveAt(700_000_000), st0: curveAt(793_100_000), tracked: true, ...over }), 'solana');
+
+test('a quiet chain with enough real coins live plays them alone (no stand-ins); with too few, the stand-ins fill in', () => {
+  // the owner (2026-10-21): "on the live mode on robinhood chain use real coins not fake ones": Robinhood Chain is often
+  // quiet (no new clank.trade coin for 45 minutes) while its newest coins still trade
+  assert.equal(L.REAL_ENOUGH, 8);
+  assert.equal(L.playState('quiet', 8), 'live');
+  assert.equal(L.playState('quiet', 7), 'quiet');
+  assert.equal(L.playState('quiet', NaN), 'quiet');
+  for (const s of ['live', 'down', 'off', null]) assert.equal(L.playState(s, 50), s, String(s));
+  const coins = Array.from({ length: 9 }, (_, i) => wireCoin(i + 1));
+  const feed = fakeFeed({ state: 'quiet', coins });
+  const m = createLiveMarket({ feed, chain: 'solana', seed: 'quiet-test', solUsd: 150, startSol: 1, config: { warmup: 120 } });
+  try {
+    feed.emit({ type: 'snap', coins });
+    assert.deepEqual(m.ext.shown, { sim: false, ext: true, simPaused: true }, 'nine real coins live: the real ones alone');
+    assert.equal(m.liveState().chainState, 'live', 'and its words say live');
+    assert.ok(Object.values(m.lists({ limit: 30 })).flat().filter(Boolean).every((r) => !r.standIn), 'no stand-in in the lists');
+    // the relay lets two go: seven live, too few; the stand-ins fill in (and run)
+    feed.emit({ type: 'off', ids: ['s1', 's2'] });
+    assert.deepEqual(m.ext.shown, { sim: true, ext: true, simPaused: false });
+    assert.equal(m.liveState().chainState, 'quiet');
+    // a new coin: eight again, the real ones alone
+    feed.emit({ type: 'coin', coin: wireCoin(10) });
+    assert.deepEqual(m.ext.shown, { sim: false, ext: true, simPaused: true });
+  } finally {
+    m.destroy();
+  }
+  // the modes screen counts the feed's coins followed live for the same rule
+  const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
+  assert.match(shell, /const liveCoins = f\.chain === S\.save\.chain \? f\.coins\(\)\.filter\(\(c\) => c\.tracked\)\.length : 0;\s*const w = feedWords\(f\.status, playState\(f\.chainState\(S\.save\.chain\), liveCoins\), S\.save\.chain, when\);/);
+});
 
 test('a live market: real coins in its lists with their pictures; the stand-ins paused while live, there while quiet or down', () => {
   const feed = fakeFeed({ coins: [wireCoin(1), wireCoin(2)] });

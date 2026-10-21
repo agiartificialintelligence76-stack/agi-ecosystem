@@ -10,12 +10,16 @@
 export const RELAY_URL = 'wss://live.agi1.app/ws';
 
 const C = (o) => Object.freeze(o);
-// `src`: the launchpad its coins come from (named only as a real coin's source); `coin`: the chain's own money
+// `src`: the launchpad its coins come from (named only as a real coin's source); `allFrom`: every coin on it comes from
+// there (a run's line names it then); `coin`: the chain's own money. Robinhood Chain (since 2026-10-21, the owner's "Add
+// DexScreener coins"): clank.trade's coins, and coins from other launchpads once their makers list them on DexScreener
+// (those name no launchpad: "on Robinhood Chain")
 export const CHAINS = Object.freeze([
-  C({ id: 'solana', name: 'Solana', coin: 'sol', src: 'pump.fun', what: 'every new pump.fun coin as it launches' }),
-  C({ id: 'robinhood', name: 'Robinhood Chain', coin: 'eth', src: 'clank.trade', what: 'every new clank.trade coin as it launches' }),
-  C({ id: 'bnb', name: 'BNB Chain', coin: 'bnb', src: null, what: 'new coins as they get listed' }),
-  C({ id: 'base', name: 'Base', coin: 'eth', src: null, what: 'new coins as they get listed' }),
+  C({ id: 'solana', name: 'Solana', coin: 'sol', src: 'pump.fun', allFrom: true, what: 'every new pump.fun coin as it launches' }),
+  C({ id: 'robinhood', name: 'Robinhood Chain', coin: 'eth', src: 'clank.trade', allFrom: false,
+    what: 'every new clank.trade coin as it launches, and others as they get listed' }),
+  C({ id: 'bnb', name: 'BNB Chain', coin: 'bnb', src: null, allFrom: false, what: 'new coins as they get listed' }),
+  C({ id: 'base', name: 'Base', coin: 'eth', src: null, allFrom: false, what: 'new coins as they get listed' }),
 ]);
 export const CHAIN_IDS = Object.freeze(CHAINS.map((c) => c.id));
 export const DEFAULT_CHAIN = 'solana';
@@ -48,6 +52,15 @@ export function toUnit(solAmount, unit, px) {
   if (unit === 'sol') return solAmount;
   if (unit === 'usd') return solAmount * p.sol;
   return p[unit] > 0 ? (solAmount * p.sol) / p[unit] : NaN;
+}
+
+// A quiet chain (the relay's word: no new coin for a while, 45 minutes on Robinhood Chain) with at least REAL_ENOUGH real
+// coins followed live plays them alone, like a live one (the owner, 2026-10-21: "on the live mode on robinhood chain use
+// real coins not fake ones"); with fewer (BNB Chain's or Base's few listed coins, say), made-up stand-ins still fill in.
+export const REAL_ENOUGH = 8;
+// the chain's state as the game plays it (`liveCoins`: its real coins followed live right now)
+export function playState(chainState, liveCoins) {
+  return chainState === 'quiet' && Number.isFinite(liveCoins) && liveCoins >= REAL_ENOUGH ? 'live' : chainState;
 }
 
 // Live mode and the challenges: the daily market is always made-up (the same coins for everyone that day), and so is a

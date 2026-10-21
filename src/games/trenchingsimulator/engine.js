@@ -1666,6 +1666,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       return id === undefined || !M.coins[id].ext ? null : id;
     },
     ids: () => M.ext.map((c) => c.id),
+    // how many real coins are followed live right now
+    liveCount: () => M.ext.filter((c) => c.ext.live).length,
     keyOf: (id) => {
       const c = coinOf(id);
       return c && c.ext ? c.mint : null;

@@ -2,11 +2,12 @@
 // live feed's coins in it (./live-feed.js). Every coin the feed knows comes in (its name, its picture, its market now and
 // at its launch), every change moves it (on a live curve: somebody's trade), a coin the relay stops following is marked
 // not live (orders on it wait: "stale"), and the feed's state says which coins the lists show: the real ones while the
-// chain is live; real ones and made-up stand-ins while it's quiet; the stand-ins alone (and running) while the feed is
-// down. The player's orders are the engine's own: play money against the live curve, never sent anywhere. The coins a
-// player has open or holds are kept live for them (watch). Pure apart from the feed it's handed: read in Node too.
+// chain is live, or quiet with enough real coins live (./live-chains.js: playState, since 2026-10-21); real ones and
+// made-up stand-ins while it's quiet with fewer; the stand-ins alone (and running) while the feed is down. The player's
+// orders are the engine's own: play money against the live curve, never sent anywhere. The coins a player has open or
+// holds are kept live for them (watch). Pure apart from the feed it's handed: read in Node too.
 import { createMarket } from './engine.js';
-import { toReal, parseDx, socialsOf, chainById, DEFAULT_CHAIN } from './live-chains.js';
+import { toReal, parseDx, socialsOf, chainById, DEFAULT_CHAIN, playState } from './live-chains.js';
 
 export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 150, startSol, config, wallNow = () => Date.now() } = {}) {
   const m = createMarket({ seed, solUsd, startSol, config, live: true });
@@ -48,10 +49,13 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
     return id;
   }
 
+  // the chain's state as the game plays it: quiet with enough real coins live plays as live
+  const playing = () => playState(feed.chainState(chain), ext.liveCount());
   // which coins the lists show: live → the real ones (the stand-ins paused); quiet → both; down → the stand-ins
   function applyView() {
-    const live = feed.status === 'live' && feed.chainState(chain) === 'live';
-    const quiet = feed.status === 'live' && feed.chainState(chain) === 'quiet';
+    const s = feed.status === 'live' ? playing() : null;
+    const live = s === 'live';
+    const quiet = s === 'quiet';
     ext.view({ ext: live || quiet, sim: !live, simPaused: live });
     if (!live && !quiet) for (const id of ext.ids()) ext.track(id, false);
   }
@@ -84,6 +88,7 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
         break;
       case 'coin':
         upsert(ev.coin);
+        applyView(); // (enough real coins now, maybe)
         break;
       case 'u':
         for (const x of ev.u) {
@@ -100,6 +105,7 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
           const id = byRelay.get(rid);
           if (id !== undefined) ext.track(id, false);
         }
+        applyView(); // (too few real coins now, maybe)
         break;
       case 'pic': {
         const id = byRelay.get(ev.id);
@@ -152,8 +158,7 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
     watch(true);
   };
   // how Live mode is going, for the screen: the feed's state, the chain's, and how many real coins came in
-  m.liveState = () => ({ chain: ch.id, feed: feed.status, chainState: feed.chainState(ch.id), seen: L.seen,
-    shown: ext.shown });
+  m.liveState = () => ({ chain: ch.id, feed: feed.status, chainState: playing(), seen: L.seen, shown: ext.shown });
   // the real coins the player traded (for the results' words)
   m.liveTraded = () => m.positions().filter((p) => m.isExt(p.id) && p.buys > 0).length;
   m.destroy = () => {

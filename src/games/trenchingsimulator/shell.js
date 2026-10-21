@@ -7,8 +7,9 @@
 // Live mode (2026-10-21, #404): a Market switch on the modes screen (Simulated, the default, or Live coins) and a chain
 // (Solana, Robinhood Chain, BNB Chain, Base). While it's on, one connection to our relay (./live-feed.js) says how the
 // live feed is doing, in plain words; a run in it trades real coins with play money (./live-market.js) on a clock that
-// never stops, and falls back to simulated stand-ins, saying so, whenever the feed is down or the chain is quiet. The
-// daily market and the challenge that ends on a rug stay simulated.
+// never stops, and falls back to simulated stand-ins, saying so, whenever the feed is down or the chain is quiet with too
+// few real coins (./live-chains.js: playState; a quiet chain with enough plays its real coins alone, since 2026-10-21).
+// The daily market and the challenge that ends on a rug stay simulated.
 import { el, setText, flag, icon, toast, clearToasts, paintTerminal } from './ui.js';
 import { TERMINALS, terminalById, SAFETY_NOTE } from './terminals.js';
 import { CHALLENGES, TIERS, challengeById, FREE_STARTS, SPEEDS, goalText, timeText, startText, dailyKey, dailySeed,
@@ -26,7 +27,7 @@ import { shareText, shareLink, GAME_NAME } from './share.js';
 import { money, moneySigned, clock, share, times, tokens, usd } from './format.js';
 import { resultTitle, resultTone, resultLine, statLines, starsRow, sparkPath, cardText, modeLabel } from './results.js';
 import { CHAINS, chainById, feedWords, liveOk, liveCurrency, UNIT_NAMES, relayUrl, liveOpen, LIVE_NOTE, LIVE_SOON,
-  LIVE_SOON_HOW } from './live-chains.js';
+  LIVE_SOON_HOW, playState } from './live-chains.js';
 import { createLiveFeed } from './live-feed.js';
 import { createLiveMarket } from './live-market.js';
 
@@ -91,7 +92,8 @@ export function startShell(root) {
     const line = el('p', { class: 'ts-live-state', role: 'status', 'aria-live': 'polite' });
     const paint = () => {
       const f = liveFeed();
-      const w = feedWords(f.status, f.chainState(S.save.chain), S.save.chain, when);
+      const liveCoins = f.chain === S.save.chain ? f.coins().filter((c) => c.tracked).length : 0;
+      const w = feedWords(f.status, playState(f.chainState(S.save.chain), liveCoins), S.save.chain, when);
       setText(line, w.text);
       line.dataset.tone = w.tone;
     };
@@ -563,7 +565,7 @@ export function startShell(root) {
       const st = run.market.liveState();
       const w = feedWords(st.feed, st.chainState, st.chain, 'run');
       const c = chainById(run.live);
-      setText(liveWords, w.tone === 'live' ? `Live · ${c.name} · real coins${c.src ? ` from ${c.src}` : ''} · play money only` : w.text);
+      setText(liveWords, w.tone === 'live' ? `Live · ${c.name} · real coins${c.src && c.allFrom ? ` from ${c.src}` : ''} · play money only` : w.text);
       if (liveStrip.dataset.tone !== w.tone) liveStrip.dataset.tone = w.tone;
     }
     function renderHud() {

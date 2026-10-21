@@ -331,10 +331,10 @@ export async function startFakes({ key = 'fake-helius-key-1234567890', host = '1
       const c = pump.get(mint);
       c.pool = { ls: c.pool.ls * factor, lb: c.pool.lb / factor };
     },
-    // a clank.trade coin (Robinhood Chain)
-    async clank({ name = `Clank Coin ${n + 1}`, symbol = `CLK${n + 1}`, marketCap = 2.5, progress = 12, state = 0 } = {}) {
+    // a clank.trade coin (Robinhood Chain; `address`: one that's there already, a listed coin's, say)
+    async clank({ name = `Clank Coin ${n + 1}`, symbol = `CLK${n + 1}`, marketCap = 2.5, progress = 12, state = 0, address: given = null } = {}) {
       n += 1;
-      const address = evmFrom(`clank:${name}:${n}`);
+      const address = given || evmFrom(`clank:${name}:${n}`);
       const imgCid = cidFrom(`clankimg:${address}`);
       files.set(imgCid, { type: 'image/png', body: await picture(sharp, [...symbol][0] || '?', (n * 71) % 360) });
       const c = { address, name, symbol, image: imgCid, state, progress, createdAt: Math.floor(Date.now() / 1000), marketCap,
@@ -346,10 +346,12 @@ export async function startFakes({ key = 'fake-helius-key-1234567890', host = '1
       const c = clankCoins.find((x) => x.address === address);
       if (c) Object.assign(c, patch);
     },
-    // a BNB Chain or Base coin with a DexScreener profile
-    async listed(chain, { name = `Listed ${n + 1}`, symbol = `LST${n + 1}`, mu = 50_000, lu = 12_000, dexId = 'fourmeme', ageMs = 60_000 } = {}) {
+    // a BNB Chain, Base or Robinhood Chain coin with a DexScreener profile (`address`: one that's there already, a
+    // clank.trade coin's, say)
+    async listed(chain, { name = `Listed ${n + 1}`, symbol = `LST${n + 1}`, mu = 50_000, lu = 12_000, dexId = 'fourmeme', ageMs = 60_000,
+      address: given = null } = {}) {
       n += 1;
-      const address = evmFrom(`${chain}:${name}:${n}`);
+      const address = given || evmFrom(`${chain}:${name}:${n}`);
       const imgCid = cidFrom(`listimg:${address}`);
       files.set(imgCid, { type: 'image/png', body: await picture(sharp, [...symbol][0] || '?', (n * 31) % 360) });
       evm[chain].set(address, { name, symbol, mu, lu, dexId, created: Date.now() - ageMs, icon: `ipfs://${imgCid}` });

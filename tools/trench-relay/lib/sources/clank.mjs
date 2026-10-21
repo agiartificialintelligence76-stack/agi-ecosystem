@@ -2,7 +2,8 @@
 // the site's risk check reads: server/checker.js), its first page (the 12 newest) every 12 s with the prices of ETH and
 // SPCX (a coin's market cap is in its pair), its next two pages every 36 s, its trending list every 30 s, and the
 // graduated coins' pool liquidity from DexScreener every minute. Every coin there, live (clank.trade coins in every
-// terminal: the owner's).
+// terminal: the owner's). It's the chain's own source (its state is clank.trade's); since 2026-10-21 Robinhood coins from
+// other launchpads join them when their makers list them on DexScreener (./dex.mjs: the owner's "Add DexScreener coins").
 import { trustedJson } from '../net.mjs';
 import { clankCoin, CLANK_ETH, CLANK_SPCX, bestPair, isEvm } from '../parse.mjs';
 import { CID } from '../pictures.mjs';
@@ -11,6 +12,8 @@ import { errText } from '../log.mjs';
 const CHAIN = 'robinhood';
 const PAGES = 3; // 36 coins followed (and the watched ones)
 const num = (v) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' && v.length < 40 ? Number(v) : NaN);
+// a Robinhood Chain coin from DexScreener's listings (./dex.mjs, since 2026-10-21) that clank.trade's list doesn't have
+const listed = (c) => Boolean(c && c.extra && c.extra.dex);
 
 export function createClank({ cfg, hub, pictures, dex, log, fetchJson = trustedJson, now = Date.now, every = {} }) {
   const E = { newest: 12_000, older: 36_000, trending: 30_000, liquidity: 60_000, ...every };
@@ -38,6 +41,8 @@ export function createClank({ cfg, hub, pictures, dex, log, fetchJson = trustedJ
     fresh.set(c.address, now());
     if (fresh.size > 5000) fresh.delete(fresh.keys().next().value);
     const known = hub.byKey(CHAIN, c.address);
+    // a coin DexScreener's listings brought first (./dex.mjs) that clank.trade lists too: clank.trade's from now on
+    if (known && known.extra && known.extra.dex) known.extra.dex = false;
     if (c.st && lu.has(c.address) && c.st.gr) c.st.lu = lu.get(c.address);
     if (!known) {
       if (!c.st) return; // no price for its pair yet: next time
@@ -77,8 +82,9 @@ export function createClank({ cfg, hub, pictures, dex, log, fetchJson = trustedJ
       for (const raw of page.coins) upsert(raw);
       cur = typeof page.nextCursor === 'string' && page.nextCursor.length < 1000 ? page.nextCursor : null;
     }
-    // coins the list no longer reaches: no longer followed (unless watched)
-    const followed = hub.coins(CHAIN).filter((c) => c.tracked).sort((a, b) => b.born - a.born);
+    // coins the list no longer reaches: no longer followed (unless watched); never DexScreener's listed ones (./dex.mjs
+    // follows those)
+    const followed = hub.coins(CHAIN).filter((c) => c.tracked && !listed(c)).sort((a, b) => b.born - a.born);
     followed.forEach((c, i) => {
       if (i >= PAGES * 12 && c.watchers === 0 && now() - (fresh.get(c.key) || 0) > E.older * 2) hub.setTracked(CHAIN, c.id, false);
     });
@@ -96,7 +102,7 @@ export function createClank({ cfg, hub, pictures, dex, log, fetchJson = trustedJ
   }
 
   async function liquidity() {
-    const grads = hub.coins(CHAIN).filter((c) => c.tracked && c.st && c.st.gr).map((c) => c.key);
+    const grads = hub.coins(CHAIN).filter((c) => c.tracked && c.st && c.st.gr && !listed(c)).map((c) => c.key);
     if (!grads.length || !dex) return;
     const pairs = await dex.pairs('robinhood', grads.slice(0, 60));
     for (const address of grads) {

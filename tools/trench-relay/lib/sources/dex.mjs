@@ -1,16 +1,25 @@
 // DexScreener (2026-10-21, #404; free, commercial use allowed, about 300 requests a minute for pairs and 60 for
 // profiles): the dollar prices of SOL, ETH and BNB (a minute apart), the pools of pump.fun coins after their curve sells
-// out (15 s apart), and the BNB Chain and Base coins: the newest token profiles (coins whose makers listed them there:
-// not every launch), each kept while its pair is at most 3 days old, its market followed 20 s apart. Every request is
-// counted: never more than `perMinute` in a minute (a minute's worth waits for the next).
+// out (15 s apart), and the BNB Chain, Base and Robinhood Chain coins: the newest token profiles (coins whose makers
+// listed them there: not every launch), each kept while its pair is at most 3 days old, its market followed 20 s apart.
+// Every request is counted: never more than `perMinute` in a minute (a minute's worth waits for the next).
+// Robinhood Chain (since 2026-10-21, the owner's "Add DexScreener coins"): its listed coins from any launchpad join
+// clank.trade's (./clank.mjs), which stays the chain's own source: its state (live, quiet, down) is clank.trade's, and a
+// coin both list is clank.trade's (it takes it over: `extra.dex` false). This file only ever follows the coins it added.
 import { trustedJson } from '../net.mjs';
 import { bestPair, wrappedUsd, pairDx, solPoolState, usdPairState, parseProfiles, cleanName, cleanTicker, CURVE_DEXES, WRAPPED,
   isEvm } from '../parse.mjs';
 import { errText } from '../log.mjs';
 
-const EVM_CHAINS = Object.freeze({ bnb: 'bsc', base: 'base' });
+// our chain → DexScreener's, and back
+const EVM_CHAINS = Object.freeze({ bnb: 'bsc', base: 'base', robinhood: 'robinhood' });
+const FROM_DEX = Object.freeze(Object.fromEntries(Object.entries(EVM_CHAINS).map(([ours, theirs]) => [theirs, ours])));
+// the chains whose state DexScreener decides (Robinhood Chain's is clank.trade's)
+const JUDGED = Object.freeze(['bnb', 'base']);
 const NEW_FOR_MS = 3 * 24 * 3600 * 1000;
-const PER_CHAIN = 60; // BNB Chain and Base coins followed at once (each)
+const PER_CHAIN = 60; // listed coins followed at once (each chain)
+// a coin this file added and still looks after (not one clank.trade's list took over)
+const mine = (c) => Boolean(c && c.extra && c.extra.dex);
 
 export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, now = Date.now, every = {}, perMinute = 240 }) {
   const E = { prices: 60_000, pools: 15_000, discover: 30_000, markets: 20_000, ...every };
@@ -19,7 +28,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
   const solPools = new Map(); // id → mint
   const pending = new Map(); // `${chain}:${address}` → { chain, address, icon, at }
   const seen = new Set(); // addresses already looked at (kept or not)
-  const lastOk = { bnb: 0, base: 0 };
+  const lastOk = { bnb: 0, base: 0, robinhood: 0 };
   let okAt = 0;
   let fails = 0;
   const timers = [];
@@ -79,7 +88,8 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
     const data = await get('/token-profiles/latest/v1');
     if (!data) return;
     for (const x of parseProfiles(data, want)) {
-      const chain = x.chain === 'bsc' ? 'bnb' : 'base';
+      const chain = FROM_DEX[x.chain];
+      if (!chain) continue;
       const k = `${chain}:${x.address}`;
       if (seen.has(k) || pending.has(k) || hub.byKey(chain, x.address)) continue;
       pending.set(k, { chain, address: x.address, icon: x.icon, at: now() });
@@ -90,7 +100,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
   async function markets() {
     for (const [chain, dexChain] of Object.entries(EVM_CHAINS)) {
       if (!cfg.chains.includes(chain)) continue;
-      const followed = hub.coins(chain).filter((c) => c.tracked).sort((a, b) => b.born - a.born);
+      const followed = hub.coins(chain).filter((c) => c.tracked && mine(c)).sort((a, b) => b.born - a.born);
       const waiting = [...pending.values()].filter((p) => p.chain === chain).slice(0, 30);
       const addresses = [...new Set([...waiting.map((p) => p.address), ...followed.map((c) => c.key)])];
       let any = false;
@@ -111,7 +121,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
           }
           const c = hub.byKey(chain, address);
           const st = usdPairState(p);
-          if (c && st) hub.setState(chain, c.id, st, pairDx(p));
+          if (mine(c) && st) hub.setState(chain, c.id, st, pairDx(p));
         }
       }
       if (any || !addresses.length) lastOk[chain] = now();
@@ -130,8 +140,9 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
     const name = cleanName(p.baseToken && p.baseToken.name);
     const symbol = cleanTicker(p.baseToken && p.baseToken.symbol);
     if (!st || !name || !symbol) return;
+    if (hub.byKey(chain, address)) return; // another source has it now (clank.trade's list, say)
     const id = hub.addCoin(chain, { key: address, name, symbol, born: Math.min(created, now()), by: null,
-      src: CURVE_DEXES[p.dexId] || null, sup: 0, st, tracked: true, extra: {} });
+      src: CURVE_DEXES[p.dexId] || null, sup: 0, st, tracked: true, extra: { dex: true } });
     if (!id) return;
     hub.setState(chain, id, st, pairDx(p));
     const image = icon || (p.info && typeof p.info.imageUrl === 'string' ? p.info.imageUrl : null);
@@ -153,7 +164,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
   }
 
   function judge() {
-    for (const chain of Object.keys(EVM_CHAINS)) {
+    for (const chain of JUDGED) {
       if (!cfg.chains.includes(chain)) continue;
       hub.judge(chain, { connected: now() - lastOk[chain] < Math.max(90_000, E.markets * 4), src: 'DexScreener',
         why: now() - lastOk[chain] < Math.max(90_000, E.markets * 4) ? null : 'DexScreener not answering' });
@@ -181,7 +192,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
     start() {
       loop(prices, E.prices);
       loop(pools, E.pools);
-      if (cfg.chains.includes('bnb') || cfg.chains.includes('base')) {
+      if (Object.keys(EVM_CHAINS).some((c) => cfg.chains.includes(c))) {
         loop(async () => {
           await discover();
           await markets();

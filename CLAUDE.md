@@ -9603,14 +9603,15 @@ to the last fee, every order refused and why, priorities, sandwich bots (the eng
 completes a curve, two hours in a row, every read), `tests/trench-game.test.js` (29: numbers as players read them, the
 challenges, the daily market, a run's clock, orders, winning, losing on time and to a rug, busted and cashed out, SOL's
 price, AGI-1's lines and her face, the five terminals and their colors' contrast, the save, its posts for X, the chart,
-Trench Board's helpers, the results), `tests/trench-live.test.js` (30: Live mode, below), `tests/page.test.js`
+Trench Board's helpers, the results), `tests/trench-live.test.js` (32: Live mode, below), `tests/page.test.js`
 (agi1.app/games with two games: both cards, the tabs and panels, every id once, the words' rules, the link preview and
 the key art) and `tests/arcade.test.js` (two games counted apart, their own ratings and reviews, TRENCHING SIMULATOR's
-`site.js`, the AI's words per game, `arcade.sql` naming no game). 1008 in the whole suite (1005 pass, 3 skipped in
-Claude's workspace; 1007 before Live mode's "Coming soon"), on Node 20, 22 and 24, with and without Vercel's settings,
-in UTC and the workspace's time zone, and as if the clock said six later times on each (one of those runs crossed 00:00
-UTC in the middle of a day's count: the harmless midnight case, see "Working in this repo"); the full build, and a clean
-build like Vercel's. In a browser with the site's real CSP (Claude's scratch): the game's smoke test
+`site.js`, the AI's words per game, `arcade.sql` naming no game). 1010 in the whole suite since Robinhood Chain's listed
+coins and the quiet rule (2026-10-21: 1007 pass, 3 skipped in Claude's workspace, and the build); before them 1008 (1007
+before Live mode's "Coming soon") on Node 20, 22 and 24, with and without Vercel's settings, in UTC and the workspace's
+time zone, and as if the clock said six later times on each (one of those runs crossed 00:00 UTC in the middle of a
+day's count: the harmless midnight case, see "Working in this repo"); the full build, and a clean build like Vercel's.
+In a browser with the site's real CSP (Claude's scratch): the game's smoke test
 (`trench/smoke.mjs`, 128 checks on every screen), Live mode's "Coming soon" (`trench/livesoon.mjs`, 42 checks), axe on
 17 views (0 issues), Trench Board at 1440, 1024, 800, 390 and 360 px (no sideways scroll at 360, a 2 px focus ring on
 every control), AGI games' browser test with two games (`games/gm-e2e.mjs`, 516 checks: playing, rating, the tabs, both
@@ -9656,10 +9657,12 @@ like the other four terminals. I switch it on when the server's ready (one small
 
 **What players see once it's open:**
 - **The modes screen:** "Market: Simulated · Live coins"; with Live coins picked, the chain (**Solana**, pump.fun's, first;
-  **Robinhood Chain**, clank.trade's; **BNB Chain**; **Base**; never Ethereum), a dot and words for how the feed is doing
-  ("Live: every new pump.fun coin as it launches on Solana, traded with play money." / "Connecting to the live feed…" /
-  "The live feed isn't reachable right now: a run would use simulated coins until it's back." / "Solana is quiet: no new
-  coins for a while. Simulated coins fill in until real ones arrive."), and the live note: "Live mode shows real new
+  **Robinhood Chain**, clank.trade's and, since 2026-10-21, other launchpads' listed ones; **BNB Chain**; **Base**; never
+  Ethereum), a dot and words for how the feed is doing ("Live: every new pump.fun coin as it launches on Solana, traded
+  with play money." / "Connecting to the live feed…" / "The live feed isn't reachable right now: a run would use
+  simulated coins until it's back." / "Solana is quiet: no new coins for a while. Simulated coins fill in until real
+  ones arrive.", only with fewer than 8 real coins live: a quiet chain with more plays them alone and says Live, since
+  2026-10-21), and the live note: "Live mode shows real new
   coins, with the names and pictures their makers gave them. You trade them with play money: nothing is bought or sold
   for real, and nothing leaves this page. Not financial advice."
 - **The daily market stays simulated** (the same coins for everyone that day), and so does Rug dodger, the challenge that
@@ -9670,9 +9673,12 @@ like the other four terminals. I switch it on when the server's ready (one small
   coins from pump.fun · play money only", or the fallback's words. Under 1024 px it sits above the bar, so AGI-1's words
   never cover it.
 - **Real coins on Trench Board:** their real name, ticker and picture (through our relay, made small), "from pump.fun" or
-  "from clank.trade" on a card, "Real coin · play money" on its page, only the first 6 characters of its address, "—" for
-  what isn't known (never made-up holders, a thread, a dev, a rug or a caller). **No link or button anywhere: never a way
-  to buy a real coin.** While the feed is down or the chain is quiet, made-up stand-ins fill in, tagged "Simulated".
+  "from clank.trade" on a card (or the chain, "on Robinhood Chain", for a coin listed on DexScreener), "Real coin · play
+  money" on its page, only the first 6 characters of its address, "—" for what isn't known (never made-up holders, a
+  thread, a dev, a rug or a caller). **No link or button anywhere: never a way to buy a real coin.** While the feed is
+  down, or the chain is quiet with fewer than 8 real coins live (`REAL_ENOUGH` and `playState()` in `live-chains.js`),
+  made-up stand-ins fill in, tagged "Simulated"; a quiet chain with 8 or more plays its real coins alone (the owner,
+  2026-10-21: "on the live mode on robinhood chain use real coins not fake ones": Robinhood Chain is often quiet).
 - **Trades:** quoted and filled against the coin's live curve (pump.fun's own constant product and its 1% fee; a pool's
   0.3% after it graduates); the player's own tokens move the curve in their own view, and a sell comes back along it.
   The buttons say "· play money".
@@ -9690,8 +9696,8 @@ like the other four terminals. I switch it on when the server's ready (one small
 - `live-feed.js`: one WebSocket for the picked chain, only while Live mode is on; its states: connecting, live, down,
   full; it reconnects by itself (2 s, 4 s … 30 s, a little random) and asks the relay to keep the coins a player has open
   or holds live (`watch`, 8 at most). It sends nothing else.
-- `live-market.js`: the engine's market with the feed's coins in it, and which coins the lists show (live: the real ones,
-  the stand-ins paused; quiet: both; down: the stand-ins, running).
+- `live-market.js`: the engine's market with the feed's coins in it, and which coins the lists show (live, or quiet with
+  8 or more real coins live: the real ones, the stand-ins paused; quiet with fewer: both; down: the stand-ins, running).
 
 **How it works, the relay** (`tools/trench-relay/`, on the owner's server):
 - **Its sources, one connection each:** Solana: **PumpPortal**'s free WebSocket (new coins and migrations; one
@@ -9701,9 +9707,12 @@ like the other four terminals. I switch it on when the server's ready (one small
   bonding curve's account, read once more after every reconnect: the newest 150 coins plus up to 150 that players have
   open or hold, at most 950, under Helius's 1,000 a connection), and after its curve sells out, its pool from
   DexScreener. Robinhood Chain: **clank.trade's own coin list** (the API its site uses, the same as the site's risk
-  check), its newest every 12 s. BNB Chain and Base: **DexScreener's newest token profiles** (coins whose makers listed
-  them there: not every launch), their markets every 20 s. SOL, ETH and BNB in dollars every minute. Every DexScreener
-  request is counted (at most 240 a minute, under its free limits).
+  check), its newest every 12 s, and since 2026-10-21 (the owner's "Add DexScreener coins") coins from its other
+  launchpads (pools.trade, Pons, Long…) once their makers list them on DexScreener, as on BNB Chain and Base;
+  clank.trade stays its own source (the chain's state is clank.trade's, and a coin both have is clank.trade's). BNB
+  Chain and Base: **DexScreener's newest token profiles** (coins whose makers listed them there: not every launch),
+  their markets every 20 s. SOL, ETH and BNB in dollars every minute. Every DexScreener request is counted (at most 240
+  a minute, under its free limits).
 - **Pictures through our own server** (`/p/<hash>.webp`): a coin's metadata and picture read once, from public IPFS
   gateways (Filebase, Pinata's public one, then ipfs.io) or, for any other address, with the safe request (https on port
   443 only, public addresses only, looked up first, never a redirect); only real PNG, JPEG, GIF, WebP or AVIF by their
@@ -9857,7 +9866,7 @@ lines; `logs 300`, `logs caddy`).
 | Her live show stutters while the relay runs | Both on the CX23's 2 cores (the relay at most 3/4 of one) | Fewer curves (as above), or `relay.sh stop` during a show and `start` after |
 | The key was shown somewhere by mistake | — | Helius dashboard → make a new key, delete the old one; step 6's key line, `relay.sh start` |
 
-**Tests:** `tests/trench-live.test.js` (30), the relay against stand-ins for PumpPortal, PumpDev, Helius, DexScreener,
+**Tests:** `tests/trench-live.test.js` (32), the relay against stand-ins for PumpPortal, PumpDev, Helius, DexScreener,
 clank.trade and an IPFS gateway (`tools/trench-relay/fakes.mjs`; `node tools/trench-relay/fakes.mjs` runs them for a
 try): reading every source, a curve's price and market cap, names made safe, the settings and the key never logged, the
 safe request (https on 443, public addresses, no redirect, size limits), pictures (real image bytes only, never SVG,
@@ -9878,10 +9887,13 @@ site's real CSP, on a computer and at 390 and 320 px): the Live coins chip disab
 name for screen readers, a click or a tap changing nothing, Tab passing it by, the words under the switch and in How to
 play, a run's brief Simulated, a Live choice a browser kept set back to Simulated, no WebSocket opened; and with a relay
 of its own on this computer, the chip open and the page trying its relay. 11 broken versions of the change, all caught.
-**Not tried live:** nothing ran against the real services (PumpPortal, PumpDev, Helius, DexScreener, clank.trade, the
-IPFS gateways), only stand-ins shaped from their docs: their real messages, real limits and real pictures are the first
-live check (steps 8 and 10). Nor the Docker build, Caddy, the certificate, the DNS record, the server's firewall, real
-phones, or many viewers at once on the CX23 together with her live show.
+Since 2026-10-21's Robinhood Chain changes, two more: its two sources end to end (clank.trade's coins and other
+launchpads' listed ones, a coin both have, clank.trade letting its oldest go but never a listed one, the chain's state
+still clank.trade's) and a quiet chain with enough real coins live playing them alone (with too few, the stand-ins
+back); 6 broken versions, all caught; and the browser test again, 91 of 91. **Tried live (2026-10-21):** the Docker
+build, Caddy, the certificate, the DNS record and the real feeds on the owner's server (`relay.sh check` all ok,
+https://live.agi1.app/health from outside). **Not tried live yet:** real phones, or many viewers at once on the CX23
+together with her live show.
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -12369,7 +12381,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   workspace; on Node 20, 22 and 24, with and without Vercel's settings, in UTC and the workspace's time zone, and as if
   the clock said six later times), the full build and a clean build like Vercel's, the game's smoke test (128 checks)
   and axe (17 views, 0 issues), AGI games' browser test with two games (516 checks), Live mode's browser test (91
-  checks) and its "Coming soon" (42 checks).
+  checks) and its "Coming soon" (42 checks). **Later that day:** Robinhood Chain's coins from other launchpads listed on
+  DexScreener beside clank.trade's, and a quiet chain with 8 or more real coins live playing them alone (both the
+  owner's; 1010 tests, 1007 pass, 3 skipped; Live mode's browser test 91 of 91); the owner pushes, then `relay.sh
+  update` on the server (the relay changed). Next: Trench Board in each chain's own money in Live mode (the owner's).
 
 ## Decisions log
 
@@ -12767,6 +12782,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-21 | The game on the site first, Live mode "Coming soon" (the owner: "can you just finish the first terminal first so i can try it. ill add other terminals later since the game is still on beta and put it on the site also", then "wait why im using heztner? im just creating a game right"; the owner's choices: "Just the game for now (Recommended)" and "Coming soon" (Recommended)): the Live coins chip disabled like the four terminals not built yet, dashed and muted with a small "Soon" tag, its name for screen readers "Live coins, coming soon" (without it, screen readers heard "Live coinsSoon"); its words under the switch and in How to play; a Live choice a browser kept from a try set back to Simulated; no WebSocket opened. One switch, `LIVE_OPEN` in `live-chains.js`, with `liveOpen()` keeping Live mode open on this computer with a relay of its own (the tests and a try). Not picked: hiding Live mode altogether ("Coming soon" says what's coming, like the four terminals), opening it before its relay runs (every try would say the live feed isn't reachable), a Vercel setting for it (a Redeploy either way, and one more thing to set) |
 | 2026-10-21 | The walkthroughs postponed: the owner had asked to be walked through Live mode's setup step by step ("walk me through it step by step", "walk me through this also"), then picked "Just the game for now": Live mode's steps stay written down in "Live mode" for later, and PumpPortal's email step is gone (the owner's OK, "oh im friends with them they its okay"). Resumed that afternoon at the owner's ask ("im donw with this whats next"): see the next row |
 | 2026-10-21 | Live mode opened the same day: the owner went through its steps one at a time, `relay.sh check` all ok (Solana live through PumpPortal and Helius, Robinhood Chain and BNB Chain coming in, the certificate working, https://live.agi1.app/health answering from outside), so `LIVE_OPEN = true` (one small push). With it, agi1.app/games's words for the game: "made-up coins only" and "nothing in it is … a real coin" were false once real coins are in it, so "Play money only, on made-up coins or, in Live mode, real new coins…" (Claude's suggestion from "Open questions"; the owner can reword them). Step 6's key line made safer after the first paste saved something that wasn't the key: it cleans and checks what's pasted, and never shows it |
+| 2026-10-21 | Robinhood Chain's coins from any launchpad listed on DexScreener, beside clank.trade's (the owner: "why on the robinhood chain just clank trade tokens not the whole robinhood coins"). Since its mainnet (July 2026) Robinhood Chain has several launchpads (clank.trade, pools.trade from Uniswap Labs, Pons, Long, Hookr…) and no single free list of every new coin. The owner's pick of three: "Add DexScreener coins (Recommended)"; not "Every new coin on the chain" (thousands a day, many without pictures, a data service's account, more load on the live show's server) nor "Keep clank.trade only". clank.trade stays the chain's own source (its state, and a coin both have: it takes a listed one over). A run's line names a launchpad only where every coin comes from it (`allFrom`): "Live · Robinhood Chain · real coins · play money only" |
+| 2026-10-21 | A quiet chain plays its real coins alone when 8 or more are live (`REAL_ENOUGH`, `playState()`; the owner: "on the live mode on robinhood chain use real coins not fake ones"): Robinhood Chain is often quiet (no new clank.trade coin for 45 minutes) while its newest coins still trade, so the made-up stand-ins that filled in on every quiet chain stay out, and its words say Live. With fewer than 8 (BNB Chain's and Base's few listed coins, often), the stand-ins still fill in: an empty board isn't a game |
 
 ## Open questions
 
