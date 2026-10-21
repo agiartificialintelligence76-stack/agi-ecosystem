@@ -608,6 +608,9 @@ test('AGI games: its page at /games, its head and link preview (its own picture)
   assert.equal(vercel.cleanUrls, true, '/games serves games.html');
   assert.ok(vercel.rewrites.some((r) => r.source === '/games/rideemagi' && r.destination === '/rideemagi'), 'its game at /games/rideemagi');
   assert.ok(readPage('rideemagi.html').includes('<meta property="og:image" content="__SITE__/cards/games.jpg" />'), 'its game shares its picture');
+  // (2026-10-21) its second game at /games/trenchingsimulator, with its own picture (its test below)
+  assert.ok(vercel.rewrites.some((r) => r.source === '/games/trenchingsimulator' && r.destination === '/trenchingsimulator'), 'its second game at /games/trenchingsimulator');
+  assert.match(page.match(/<meta property="og:description" content="([^"]+)"/)[1], /^Ride 'Em, AGI!, TRENCHING SIMULATOR and more to come/, 'its preview names both games');
   // the site's own top bar and footer, Games marked as the page you're on (and nothing else)
   const strip = (s) => s.replace(/ aria-current="page"/g, '');
   const live = readPage('live.html');
@@ -642,34 +645,152 @@ test('AGI games\' link preview: a real 1200 × 630 JPEG under 160 KB, made from 
   assert.doesNotMatch(words, /\bbuy\b|%|\$\s?\d/i, 'no price talk');
 });
 
-test('AGI games: "GAME beta" on top (beta stuck over GAME), the shelf with its stars and plays, rating it, what\'s coming and the fine print', () => {
-  const main = mainOf(GAMES_PAGE());
-  assert.equal((GAMES_PAGE().match(/<h1\b/g) || []).length, 1, 'one h1');
+// (2026-10-21) TRENCHING SIMULATOR, AGI games' second game: its own link preview and its key art on the shelf, both made by
+// tools/games/trench-art.mjs from real screenshots of its own terminal (tools/games/trench-art/), its title, "Play money"
+// and AGI-1 only as her 2D art. Their words are exactly these (so never a real trading terminal's name, nor a price)
+const TS_CARD_WORDS = 'PLAY MONEY MADE-UP COINS AGI games · beta TRENCHING SIMULATOR Trade the trenches. Made-up coins, play money, terminals you know. '
+  + 'No wallet needed. agi1.app/games/trenchingsimulator Free to play · beta · not financial advice';
+const TS_ART_WORDS = 'TRENCHING SIMULATOR PLAY MONEY MADE-UP COINS';
+const jpegSize = (jpg) => {
+  for (let i = 2; i < jpg.length - 9;) {
+    if (jpg[i] !== 0xff) break;
+    const m = jpg[i + 1], len = jpg.readUInt16BE(i + 2);
+    if (m === 0xc0 || m === 0xc2) return [jpg.readUInt16BE(i + 7), jpg.readUInt16BE(i + 5)];
+    i += 2 + len;
+  }
+  return null;
+};
+test('TRENCHING SIMULATOR\'s link preview: a real 1200 × 630 JPEG under 160 KB, made from tools/cards/trenchingsimulator-card.html; its page\'s preview tags', () => {
+  const jpg = readFileSync(new URL('../public/cards/trenchingsimulator.jpg', import.meta.url));
+  assert.ok(jpg.length <= 160_000, `${jpg.length} bytes (the build fails over 160 KB; the owner's copy carries a ~6 KB label)`);
+  assert.deepEqual([...jpg.subarray(0, 3)], [0xff, 0xd8, 0xff], 'a JPEG');
+  assert.deepEqual(jpegSize(jpg), [1200, 630]);
+  const card = readPage('tools/cards/trenchingsimulator-card.html');
+  const words = textOf(card.slice(card.indexOf('<body>'))).trim();
+  assert.equal(words, TS_CARD_WORDS, 'its words: the title, "Play money", no wallet needed, its address, not financial advice');
+  for (const src of ['../games/trench-art/board.webp', '../games/trench-art/coin.webp', '../../public/images/landing/agi1-cutout.webp']) {
+    assert.ok(card.includes(`src="${src}"`), `${src}: the game's own screenshots, AGI-1 as her 2D art`);
+  }
+  assert.doesNotMatch(card, /\.glb\b|https?:\/\//, 'never the 3D model, nothing from another site');
+  assert.doesNotMatch(words, /\bbuy\b|%|\$\s?\d/i, 'no price talk');
+  // the game's page: its own picture, with the site's address filled in at build time
+  const page = readPage('trenchingsimulator.html');
+  assert.ok(page.includes('<meta property="og:image" content="__SITE__/cards/trenchingsimulator.jpg" />'), 'its own link preview');
+  assert.match(page, /<meta property="og:image:width" content="1200" \/>\s*<meta property="og:image:height" content="630" \/>/);
+  assert.match(page, /<meta property="og:image:alt" content="The words TRENCHING SIMULATOR and Play money, next to the game's own trading screens and AGI-1" \/>/);
+  assert.match(page, /<meta name="twitter:card" content="summary_large_image" \/>/);
+  assert.match(page, /<meta property="og:url" content="__SITE__\/games\/trenchingsimulator" \/>/);
+  assert.match(readPage('scripts/share-pages.js'), /'dist\/trenchingsimulator\.html'/, 'its preview gets the site\'s address');
+  assert.ok(readPage('scripts/share-pages.js').includes("'trenchingsimulator.jpg'"), 'the build checks its picture is there');
+});
+
+test('TRENCHING SIMULATOR\'s key art: Ride \'Em, AGI!\'s size, see-through edges, made by tools/games/trench-art.mjs from the game\'s own screenshots', () => {
+  const webpSize = (b) => {
+    assert.equal(b.toString('ascii', 0, 4), 'RIFF');
+    assert.equal(b.toString('ascii', 8, 12), 'WEBP');
+    const kind = b.toString('ascii', 12, 16);
+    assert.equal(kind, 'VP8X', 'an extended WebP (its see-through edges)');
+    return { w: 1 + b.readUIntLE(24, 3), h: 1 + b.readUIntLE(27, 3), alpha: (b[20] & 0x10) !== 0 };
+  };
+  const art = readFileSync(new URL('../src/games/trenchingsimulator/keyart.webp', import.meta.url));
+  const ride = readFileSync(new URL('../src/games/rideemagi/keyart.webp', import.meta.url));
+  const a = webpSize(art), r = webpSize(ride);
+  assert.deepEqual([a.w, a.h], [r.w, r.h], 'the same size as Ride \'Em, AGI!\'s, so the shelf\'s cards match');
+  assert.deepEqual([a.w, a.h], [760, 511]);
+  assert.equal(a.alpha, true, 'see-through around it, like Ride \'Em, AGI!\'s');
+  assert.ok(art.length < 200_000, `${art.length} bytes`);
+  // its page: the title, "Play money", the game's own screenshots and AGI-1's 2D art
+  const page = readPage('tools/games/trench-art/keyart.html');
+  assert.equal(textOf(page.slice(page.indexOf('<body>'))).trim(), TS_ART_WORDS);
+  for (const src of ['board.webp', 'coin.webp', '../../../public/images/landing/agi1-cutout.webp']) assert.ok(page.includes(`src="${src}"`), src);
+  for (const f of ['tools/games/trench-art/board.webp', 'tools/games/trench-art/coin.webp']) assert.ok(existsSync(new URL(`../${f}`, import.meta.url)), `${f}: its screenshot`);
+  assert.doesNotMatch(page, /\.glb\b|https?:\/\//, 'never the 3D model, nothing from another site');
+  // the tool: from the built game, the same market every time, the two pictures at their sizes and the card under its limit
+  const tool = readPage('tools/games/trench-art.mjs');
+  assert.match(tool, /export const KEYART_SIZE = \[760, 511\];/);
+  assert.match(tool, /export const CARD_SIZE = \[1200, 630\];/);
+  assert.match(tool, /export const CARD_MAX = 154_000;/);
+  for (const w of ['clock.install', 'clock.setSystemTime', '__trenchArtSeed', "reducedMotion: 'reduce'", 'omitBackground', "'dist'", 'agi1-cutout']) {
+    assert.ok(tool.includes(w) || page.includes(w), w);
+  }
+  assert.doesNotMatch(tool, /\.glb\b/, 'never the 3D model');
+});
+
+test('AGI games: "GAME beta" on top (beta stuck over GAME), the shelf with each game\'s stars and plays, a tab of ratings for each, what\'s coming and the fine print', async () => {
+  const { GAMES } = await import('../src/games/list.js');
+  const IDS = Object.keys(GAMES);
+  assert.deepEqual(IDS, ['rideemagi', 'trenchingsimulator'], 'two games since 2026-10-21');
+  const page = GAMES_PAGE();
+  const main = mainOf(page);
+  assert.equal((page.match(/<h1\b/g) || []).length, 1, 'one h1');
   assert.match(main, /<h1 class="gm-title" id="gm-title"><span class="gm-word">GAME<\/span> <span class="gm-beta">beta<\/span><\/h1>/, 'screen readers hear "GAME beta"');
-  // the shelf: each game in list.js, linked to its own page, its stars, players and plays waiting for our server
+  assert.match(textOf(between(main, '<p class="gm-say">', '</p>')), /AGI-1: my second game is out 💜 .* no prizes yet, just bragging rights\./, 'her line, for her second game');
+  // the shelf: each game in list.js, in its order, linked to its own page, its stars, players and plays waiting for our server
   const shelf = between(main, '<section class="section gm-shelf"', '</section>');
-  assert.match(shelf, /<li class="gm-game" data-gm-game="rideemagi">/);
-  assert.deepEqual([...shelf.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/games/rideemagi', '/games/rideemagi', '#rate'], 'its name and Play open the game, Rate it its reviews');
-  assert.deepEqual([...shelf.matchAll(/<dd data-gm-stat="(\w+)">…<\/dd>/g)].map((m) => m[1]), ['rating', 'players', 'plays'], '"…" until our server answers');
-  assert.match(textOf(shelf), /No sign-in or wallet needed to play\. Runs are counted, never who\./);
-  // its ratings and reviews: one box, one state at a time, the first "loading" (src/games/page.js picks the next)
+  assert.deepEqual([...shelf.matchAll(/<li class="gm-game" data-gm-game="(\w+)">/g)].map((m) => m[1]), IDS, 'a card for each game');
+  assert.match(textOf(shelf), /Two so far, and more on the way\./);
+  assert.doesNotMatch(textOf(shelf), /one so far/i);
+  const cardOf = (id) => between(shelf, `<li class="gm-game" data-gm-game="${id}">`, '\n            </li>');
+  const rateOf = (id) => (id === 'rideemagi' ? '#rate' : `#rate-${id}`);         // (#rate: Ride 'Em, AGI!'s, from before there were two)
+  for (const id of IDS) {
+    const card = cardOf(id), name = GAMES[id].name;
+    assert.deepEqual([...card.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), [GAMES[id].path, GAMES[id].path, rateOf(id)], `${id}: its name and Play open the game, Rate it its own reviews`);
+    assert.deepEqual([...card.matchAll(/<dd data-gm-stat="(\w+)">…<\/dd>/g)].map((m) => m[1]), ['rating', 'players', 'plays'], `${id}: "…" until our server answers`);
+    assert.match(card, new RegExp(`<img class="gm-game-img" src="/src/games/${id}/keyart\\.webp" alt="[^"]{20,}" width="760" height="511" decoding="async" />`), `${id}: its key art, described`);
+    assert.ok(card.includes(`<a class="gm-game-link" href="${GAMES[id].path}">${name}</a>`), `${id}: its name`);
+    assert.ok(card.includes(`aria-label="Play ${name}"`) && card.includes(`aria-label="Rate ${name}"`), `${id}: Play and Rate it say which game`);
+    assert.match(card, /<li class="gm-tag is-beta">Beta<\/li>\s*<li class="gm-tag">Free<\/li>\s*<li class="gm-tag">No wallet needed<\/li>/);
+    assert.match(textOf(card), /No sign-in or wallet needed to play\. Runs are counted, never who\./);
+  }
+  // TRENCHING SIMULATOR: play money and made-up coins, never a real trading terminal
+  const ts = cardOf('trenchingsimulator');
+  assert.match(ts, /<li class="gm-tag is-play">Play money<\/li>/);
+  for (const w of ['Trade made-up coins with play money', 'timed challenges', 'the daily market', 'free play',
+    'Play money and made-up coins only: nothing in it is real money or advice, and it isn\'t affiliated with any real trading terminal.']) assert.ok(textOf(ts).includes(w), w);
+  // ratings and reviews: a tab for each game (the WAI-ARIA tabs pattern) and its panel, in which one box, one state at a time,
+  // the first "loading" (src/games/page.js picks the next). #rate stays Ride 'Em, AGI!'s, #rate-<game> is each game's panel
   const rate = between(main, '<section class="section gm-rate"', '</section>\n\n      <!-- what');
-  assert.match(rate, /<section class="section gm-rate" id="rate" data-gm-rate="rideemagi" aria-labelledby="gm-rate-title">/);
-  assert.deepEqual([...rate.matchAll(/<div class="gm-state" data-gm-state="(\w+)"( hidden)?>/g)].map((m) => `${m[1]}${m[2] ? ' hidden' : ''}`),
-    ['loading', 'soon hidden', 'closed hidden', 'gate hidden', 'connect hidden', 'form hidden']);
-  assert.deepEqual([...rate.matchAll(/<input class="sr-only" type="radio" name="gm-stars" id="gm-s(\d)" value="(\d)" \/>/g)].map((m) => [Number(m[1]), Number(m[2])]), [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]]);
-  assert.match(rate, /<textarea id="gm-text" data-gm-text rows="3" maxlength="300"/, 'REVIEW.textMax');
-  assert.match(rate, /<input id="gm-name" data-gm-name type="text" maxlength="24"/, 'REVIEW.nameMax');
-  // a wallet only to rate it, and only a free signature: its two buttons, nothing else to press for a wallet
-  assert.deepEqual([...rate.matchAll(/data-gm-(connect|out)\b/g)].map((m) => m[1]), ['connect', 'out']);
-  const said = textOf(rate);
-  assert.match(said, /Rating it takes a connected wallet: a free signature, never a transaction\. Playing never does\./);
-  assert.match(said, /It takes a free signature, never a transaction, and it's only for reviews: playing never needs it\./);
-  assert.match(said, /Reviews are for adults: 18\+ only\./);
-  assert.match(said, /never your address/);
+  assert.match(rate, /<section class="section gm-rate" id="rate" aria-labelledby="gm-rate-title">/);
+  assert.match(rate, /<div class="gm-tabs" role="tablist" aria-label="Pick a game to rate" data-gm-tabs>/);
+  const tabs = [...rate.matchAll(/<button class="gm-tab" type="button" role="tab" id="gm-tab-(\w+)" aria-controls="rate-(\w+)" aria-selected="(true|false)"( tabindex="-1")? data-gm-tab="(\w+)">(.*?)<\/button>/g)];
+  assert.deepEqual(tabs.map((m) => m[1]), IDS, 'a tab for each game, in their order');
+  for (const [i, m] of tabs.entries()) {
+    assert.equal(m[2], m[1], 'its panel');
+    assert.equal(m[5], m[1]);
+    assert.equal(m[3], String(i === 0), 'the first one picked');
+    assert.equal(Boolean(m[4]), i > 0, 'the others left out of the Tab order (the arrow keys move between them)');
+    assert.equal(textOf(m[6]).trim(), GAMES[m[1]].name, 'its name, its picture hidden from screen readers');
+    assert.match(m[6], new RegExp(`<span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/src/games/${m[1]}/keyart\\.webp" alt="" `));
+  }
+  for (const [i, id] of IDS.entries()) {
+    const panel = between(rate, `<div class="gm-panel" role="tabpanel" id="rate-${id}"`, '\n          </div>\n');
+    // (not a Tab stop of its own: a link to it would put the keyboard's ring round all of it; Tab goes from its tab to the
+    // first thing to press in it)
+    assert.ok(panel.startsWith(`<div class="gm-panel" role="tabpanel" id="rate-${id}" aria-labelledby="gm-tab-${id}" data-gm-rate="${id}"${i ? ' hidden' : ''}>`), `${id}: its panel, named by its tab, the first one showing`);
+    assert.deepEqual([...panel.matchAll(/<div class="gm-state" data-gm-state="(\w+)"( hidden)?>/g)].map((m) => `${m[1]}${m[2] ? ' hidden' : ''}`),
+      ['loading', 'soon hidden', 'closed hidden', 'gate hidden', 'connect hidden', 'form hidden'], `${id}: one state at a time`);
+    assert.deepEqual([...panel.matchAll(new RegExp(`<input class="sr-only" type="radio" name="gm-stars" id="gm-${id}-s(\\d)" value="(\\d)" /><label class="gm-pick-star" for="gm-${id}-s(\\d)">`, 'g'))]
+      .map((m) => [Number(m[1]), Number(m[2]), Number(m[3])]), [[1, 1, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4], [5, 5, 5]], `${id}: its five stars, each with its label`);
+    assert.ok(panel.includes(`<textarea id="gm-${id}-text" data-gm-text rows="3" maxlength="300" autocomplete="off" aria-describedby="gm-${id}-text-note">`), `${id}: REVIEW.textMax`);
+    assert.ok(panel.includes(`<input id="gm-${id}-name" data-gm-name type="text" maxlength="24"`), `${id}: REVIEW.nameMax`);
+    assert.ok(panel.includes(`<section class="gm-reviews" aria-labelledby="gm-${id}-reviews">`), `${id}: what players say`);
+    assert.ok(panel.includes(`<h3 class="sr-only">${GAMES[id].name}: its rating</h3>`), `${id}: its rating, named`);
+    // a wallet only to rate it, and only a free signature: its two buttons, nothing else to press for a wallet
+    assert.deepEqual([...panel.matchAll(/data-gm-(connect|out)\b/g)].map((m) => m[1]), ['connect', 'out']);
+    const said = textOf(panel);
+    assert.match(said, /It takes a free signature, never a transaction, and it's only for reviews: playing never needs it\./);
+    assert.match(said, /Reviews are for adults: 18\+ only\./);
+    assert.match(said, /never your address/);
+  }
+  assert.match(textOf(rate), /Rating a game takes a connected wallet: a free signature, never a transaction\. Playing never does\./);
+  // every id once on the page (two games' forms side by side), and every name for a field or a part points at one that's there
+  const ids = [...page.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(ids.filter((x, i) => ids.indexOf(x) !== i), [], 'no id twice');
+  for (const m of page.matchAll(/\s(?:for|aria-describedby|aria-labelledby|aria-controls)="([^"]+)"/g)) assert.ok(ids.includes(m[1]), `${m[1]} is on the page`);
   // what's coming and the fine print: a beta, no prizes yet, never a promise
   const next = textOf(between(main, '<section class="section gm-next"', '</section>\n    </main>'));
   for (const w of ['AGI games is a beta: free to play, and there are no prizes yet.', 'never guaranteed and never an investment', 'Not financial advice: $AGI is a meme token and can lose all of its value.',
+    'TRENCHING SIMULATOR is played with play money and made-up coins: nothing in it is real money, a real coin or advice, and it isn\'t affiliated with any real trading terminal.',
     'Anyone asking you to deposit or send $AGI to “play” is not us.', 'This page never asks your wallet for a transaction or a token approval.', 'No sign-in, no wallet.', 'Reviews are 18+.']) assert.ok(next.includes(w), w);
   // no rates, amounts or yields; "guaranteed" and "investment" only ever as nevers; never "buy"
   const text = textOf(main);
@@ -706,7 +827,12 @@ test('AGI games\' look: every rule names a gm- class; "beta" stuck over GAME; Po
     assert.doesNotMatch(body, /opacity:\s*0\s*[;}]|opacity:\s*0$/, `${head}: never fully see-through`);
   }
   const still = all.filter(({ at }) => at === '@media (prefers-reduced-motion: reduce)').map(({ head }) => head).join(', ');
-  for (const s of ['.gm-hero-text > *', '.gm-art', '.gm-beta', '.gm-stamp', '.gm-bar-fill', '.gm-game-img', '.gm-pick-star']) assert.ok(still.includes(s), `"reduce motion" stops ${s}`);
+  for (const s of ['.gm-hero-text > *', '.gm-art', '.gm-beta', '.gm-stamp', '.gm-bar-fill', '.gm-game-img', '.gm-pick-star', '.gm-tab']) assert.ok(still.includes(s), `"reduce motion" stops ${s}`);
+  // (2026-10-21) a tab for each game's ratings: the picked one stands out; a game's panel lands with the tabs still in view
+  const rule = (h, at = undefined) => all.find((r) => r.head === h && (at === undefined ? !r.at : r.at === at))?.body || '';
+  assert.match(rule(".gm-tab[aria-selected='true']"), /border-color: var\(--fg\)/);
+  assert.match(rule('.gm-panel'), /scroll-margin-top: 150px/);
+  assert.match(rule('.gm-tag.is-play'), /color: var\(--up\)/, 'TRENCHING SIMULATOR\'s "Play money" tag');
   // Lightning CSS keeps only the last of a prefixed pair: the -webkit- one first, so the build keeps both
   const pop = cssRules(readPage('src/styles/pop.css')).filter(({ head }) => head.includes('.gm-'));
   for (const { head, body } of [...all, ...pop]) {
@@ -720,6 +846,8 @@ test('AGI games\' look: every rule names a gm- class; "beta" stuck over GAME; Po
   assert.match(popRule("[data-skin='pop'] .gm-hero"), /background: var\(--pop-violet\)/);
   assert.match(popRule("[data-skin='pop'][data-theme='dark'] .gm-hero"), /background: #2a0f7a/);
   assert.match(popRule("[data-skin='pop'] .gm-beta"), /background: var\(--pop-honey\)/, 'a honey sticker');
+  assert.match(popRule("[data-skin='pop'] .gm-tab[aria-selected='true']"), /background: var\(--pop-honey\)/, 'the picked game\'s tab honey');
+  assert.match(popRule("[data-skin='pop'] .gm-tag.is-play"), /background: var\(--pop-mint\)/, '"Play money" mint');
   assert.doesNotMatch(readPage('src/styles/pop.css'), /rm-page-games/, 'the roadmap\'s old games page rules are gone');
   // Pop mode's band once its hero has scrolled away (src/menu.js)
   assert.match(readPage('src/menu.js'), /document\.querySelector\('\.lp-hero, \.hero, \.rm-hero, \.gm-hero'\)/);
@@ -738,7 +866,7 @@ test('AGI games\' script: its numbers, its reviews and rating it; text only, sty
     "'../styles/sections.css'", "'../styles/footer.css'", "'../styles/diary.css'", "'../styles/games.css'", "'../styles/pop.css'",
     "{ startTheme } from '../theme.js'", "{ startMenu } from '../menu.js'", "{ withHuman, postJson } from '../lib/human.js'",
     "{ findWallets, signInWithWallet, explainWalletError } from '../lib/wallet.js'", "{ isGame, STARS } from './list.js'",
-    "{ WALLET_STEPS, NO_WALLET, BADGE, STAR_PATH, starsPath, starsLabel, pickText, fillWidth, avgText, ratingsText, countText, barWidth, playedText, cardStats, dateText, adjustStats, placeReview, mergeMine, appendPage, BOX, moreText, meText, savedText, deletedText, reviewError, } from './words.js'"]);
+    "{ WALLET_STEPS, NO_WALLET, BADGE, STAR_PATH, starsPath, starsLabel, pickText, fillWidth, avgText, ratingsText, countText, barWidth, playedText, cardStats, dateText, adjustStats, placeReview, mergeMine, appendPage, BOX, moreText, meText, savedText, deletedText, reviewError, gameOfHash, } from './words.js'"]);
   assert.doesNotMatch(code, /innerHTML|outerHTML|insertAdjacentHTML|document\.write|innerText|\beval\(|new Function/, 'text only (textContent), never HTML from strings');
   assert.doesNotMatch(code, /\.style\.(?!setProperty)|setAttribute\('style'/, 'its CSS variables through the CSS object model (the CSP allows no style attributes)');
   // its wallet: only its address here (the sign-in's one signature is src/lib/wallet.js's); tests/wallet.test.js guards the rest
@@ -753,6 +881,23 @@ test('AGI games\' script: its numbers, its reviews and rating it; text only, sty
   assert.doesNotMatch(code, /sessionStorage|indexedDB|document\.cookie/);
   // our server not answering (or not set up): "—" and "open soon", asked once more after a while (never for a game it doesn't know)
   assert.match(code, /if \(!retried && \(!res \|\| res\.status >= 500\)\) \{ retried = true; setTimeout\(loadStats, RETRY_MS\); \}/);
+  // (2026-10-21) a box for each game on the page, each its own (its panel: everything it reads and writes), one wallet session
+  // and 18+ answer for all of them, and another tab followed once
+  assert.match(code, /function mountGame\(rate, session\) \{\n  const GAME = rate\.dataset\.gmRate;/);
+  assert.match(code, /document\.querySelectorAll\('\[data-gm-rate\]'\)\]\s*\.filter\(\(rate\) => isGame\(rate\.dataset\.gmRate\)\)\s*\.map\(\(rate\) => mountGame\(rate, session\)\)/);
+  assert.equal((code.match(/addEventListener\('storage'/g) || []).length, 1, 'another tab: followed once, for every box');
+  assert.equal((code.match(/store\.set\(KEYS\.wallet/g) || []).length, 1, 'the session kept in one place');
+  const box = code.slice(code.indexOf('function mountGame'), code.indexOf('function startTabs'));
+  const lookups = [...box.matchAll(/\$\((['`])\[data-gm-[^'`]*\1(, \w+)?\)/g)];
+  assert.ok(lookups.length > 30, `${lookups.length} lookups`);
+  for (const m of lookups) assert.ok([', rate', ', card'].includes(m[2]) || m[0] === '$(`[data-gm-game="${GAME}"]`)', `a box reads only its own panel and card: ${m[0]}`);
+  assert.doesNotMatch(box, /document\.querySelector/, 'never the whole page');
+  // the tabs (the WAI-ARIA pattern): picked by a click or the arrow keys, Home and End; a link to a game's ratings opens its tab
+  const tabs = code.slice(code.indexOf('function startTabs'), code.indexOf('function start()'));
+  for (const k of ['ArrowRight', 'ArrowLeft', 'Home', 'End']) assert.ok(tabs.includes(k), k);
+  for (const w of ["t.setAttribute('aria-selected', String(on))", 't.tabIndex = on ? 0 : -1', 'panel.hidden = !on', "addEventListener('hashchange'", 'gameOfHash(location.hash)', 'a[href^="#rate"]']) {
+    assert.ok(tabs.includes(w), w);
+  }
 });
 
 test('AGI games\' words (src/games/words.js): a row of stars, its numbers in words, a review\'s place, the box\'s words; never "buy" or a price', async () => {
@@ -769,6 +914,19 @@ test('AGI games\' words (src/games/words.js): a row of stars, its numbers in wor
   assert.equal(w.pickText(1), '1 star: Not for me');
   assert.equal(w.pickText(0), 'Tap a star');
   assert.equal(w.starsLabel(3), '3 out of 5 stars');
+  // (2026-10-21) a game's ratings on the page: #rate-<game>; #rate, from before there were two games, stays Ride 'Em, AGI!'s
+  assert.deepEqual(w.OLD_RATE, { hash: '#rate', game: 'rideemagi' });
+  assert.equal(w.rateHash('trenchingsimulator'), '#rate-trenchingsimulator');
+  assert.deepEqual(['#rate', '#rate-rideemagi', '#rate-trenchingsimulator'].map(w.gameOfHash), ['rideemagi', 'rideemagi', 'trenchingsimulator']);
+  for (const h of ['', '#', '#rate-', '#rate-nope', '#rate-toString', '#rate-__proto__', '#Rate', '#rate-trenchingsimulator?x', 'rate', '#main', null, undefined, 42]) {
+    assert.equal(w.gameOfHash(h), null, String(h));
+  }
+  // every link to a game's ratings: the games page's cards, the games' own "Rate it"
+  const gamesPage = readPage('games.html');
+  assert.deepEqual([...gamesPage.matchAll(/href="(#rate[^"]*)"/g)].map((m) => w.gameOfHash(m[1])), ['rideemagi', 'trenchingsimulator']);
+  assert.equal((readPage('src/games/trenchingsimulator/shell.js').match(/href: '\/games#rate-trenchingsimulator'/g) || []).length, 2, 'TRENCHING SIMULATOR\'s two "Rate it"');
+  assert.doesNotMatch(readPage('src/games/trenchingsimulator/shell.js'), /'\/games#rate'/, 'never Ride \'Em, AGI!\'s');
+  assert.match(readPage('src/games/rideemagi/game.js'), /\/games#rate"/, 'Ride \'Em, AGI!\'s own, as it was');
   // its numbers in words: "…" while they load, "—" when our server has none
   assert.equal(w.countText(1234), '1,234');
   for (const n of [-1, 1.5, null, '3']) assert.equal(w.countText(n), '—');

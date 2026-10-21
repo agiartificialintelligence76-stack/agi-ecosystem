@@ -836,12 +836,25 @@
 }
 [data-skin='pop'] .gm-tag { color: var(--fg); background: var(--bg); border: 2px solid var(--edge); font-weight: 700; }
 [data-skin='pop'] .gm-tag.is-beta { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); }
+[data-skin='pop'] .gm-tag.is-play { color: var(--pop-ink); background: var(--pop-mint); border-color: var(--pop-ink); }
 [data-skin='pop'] .gm-game-name { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
 [data-skin='pop'] .gm-stat { background: var(--bg-2); border: 2px solid var(--edge); border-radius: 16px; }
 [data-skin='pop'] .gm-stat dd { font-family: var(--display); font-weight: 850; font-stretch: 110%; letter-spacing: -0.01em; }
 [data-skin='pop'] .gm-stat-star { fill: var(--pop-honey); stroke: var(--pop-ink); stroke-width: 1.6; stroke-linejoin: round; }
 [data-skin='pop'] .gm-play { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); box-shadow: 0 5px 0 0 var(--pop-ink); }
 [data-skin='pop'] .gm-play:hover { color: var(--pop-ink); background: #ffd766; border-color: var(--pop-ink); }
+/* a tab for each game's ratings (2026-10-21): white pills with ink outlines and hard shadows, the picked one honey, each
+   game's picture on violet like its card's */
+[data-skin='pop'] .gm-tab {
+  color: var(--fg); background: var(--bg); border: 2px solid var(--edge); border-radius: 18px; box-shadow: 0 5px 0 -1px var(--shade);
+  font-family: var(--display); font-weight: 850; font-stretch: 108%; letter-spacing: -0.005em;
+}
+[data-skin='pop'] .gm-tab:hover { color: var(--pop-ink); background: var(--pop-lav); border-color: var(--edge); }
+[data-skin='pop'] .gm-tab[aria-selected='true'] { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); box-shadow: 0 5px 0 0 var(--pop-ink); }
+[data-skin='pop'] .gm-tab-art {
+  background-color: var(--pop-violet); box-shadow: 0 0 0 2px var(--pop-ink);
+  background-image: radial-gradient(circle, rgb(255 77 166 / .5) 1.2px, transparent 1.5px); background-size: 8px 8px;
+}
 /* its ratings: the average violet with a pink echo; stars honey with ink outlines (white where they're empty) */
 [data-skin='pop'] .gm-avg-n { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; color: var(--pop-violet); text-shadow: .05em .05em 0 var(--pop-pink); }
 [data-skin='pop'] .gm-box-title, [data-skin='pop'] .gm-reviews-title, [data-skin='pop'] .gm-soon-title { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
@@ -883,6 +896,8 @@
 [data-skin='pop'][data-theme='dark'] .gm-game-art { background-color: #2a0f7a; border-right-width: 2px; }
 [data-skin='pop'][data-theme='dark'] .gm-play { border-color: var(--pop-ink); box-shadow: 0 5px 0 0 var(--pop-pink); }
 [data-skin='pop'][data-theme='dark'] .gm-play:hover { border-color: var(--pop-ink); }
+[data-skin='pop'][data-theme='dark'] .gm-tab[aria-selected='true'] { box-shadow: 0 5px 0 0 var(--pop-pink); }
+[data-skin='pop'][data-theme='dark'] .gm-tab-art { background-color: #2a0f7a; box-shadow: 0 0 0 2px var(--pop-lav-2); }
 [data-skin='pop'][data-theme='dark'] .gm-avg-n { color: var(--pop-honey); }
 [data-skin='pop'][data-theme='dark'] .gm-stars-base { fill: #28155a; stroke: var(--pop-lav-2); }
 [data-skin='pop'][data-theme='dark'] .gm-bar-track { background: #28155a; }

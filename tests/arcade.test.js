@@ -11,7 +11,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { GAMES, isGame, PLAYER, PLAYER_KEY, PLAYS, REVIEW, STARS } from '../src/games/list.js';
 import {
   ARCADE, BADGES, playerCode, reviewerCode, reviewsOpen, countPlays, shownReview, gamePage, reviewWords, reviewName,
-  LOOK_WHY, LOOK_SYSTEM, lookAtReview, reviewer, myReview, deleteReview, saveReview,
+  LOOK_WHY, LOOK_SYSTEM, LOOK_GAMES, lookSystem, lookAtReview, reviewer, myReview, deleteReview, saveReview,
 } from '../server/arcade.js';
 import { GET, POST, _resetArcadeNotes } from '../api/wallet.js';
 import { getConfig } from '../server/config.js';
@@ -184,12 +184,19 @@ const play = (extra = {}, opts) => post({ action: 'game-play', game: 'rideemagi'
 const reviewOk = (extra = {}) => ({ action: 'game-review', game: 'rideemagi', session: session(), stars: 5, text: 'so cute, the cat is the best part 💜', name: 'Mochi', adult: true, turnstileToken: 'good-token', ...extra });
 
 // ---------- the rules ----------
-test("the games' rules: one game so far, its id, a player's id, plays a report, a review's limits, stars 1 to 5", () => {
-  assert.deepEqual(Object.keys(GAMES), ['rideemagi']);
+test("the games' rules: its games and their ids, a player's id, plays a report, a review's limits, stars 1 to 5", () => {
+  // the owner's Ride 'Em, AGI! (2026-10-19), then TRENCHING SIMULATOR (2026-10-20)
+  assert.deepEqual(Object.keys(GAMES), ['rideemagi', 'trenchingsimulator']);
   assert.equal(GAMES.rideemagi.name, "Ride 'Em, AGI!");
   assert.equal(GAMES.rideemagi.path, '/games/rideemagi');
-  for (const id of Object.keys(GAMES)) assert.match(id, /^[a-z0-9]{2,24}$/, 'the same rule as arcade.sql and the API address');
+  assert.equal(GAMES.trenchingsimulator.name, 'TRENCHING SIMULATOR');
+  assert.equal(GAMES.trenchingsimulator.path, '/games/trenchingsimulator');
+  for (const id of Object.keys(GAMES)) {
+    assert.match(id, /^[a-z0-9]{2,24}$/, 'the same rule as arcade.sql and the API address');
+    assert.equal(GAMES[id].path, `/games/${id}`, 'each game at agi1.app/games/<its id>');
+  }
   assert.equal(isGame('rideemagi'), true);
+  assert.equal(isGame('trenchingsimulator'), true);
   for (const id of ['', 'RideEmAgi', 'nope', 'toString', '__proto__', 'constructor', 'hasOwnProperty', null, undefined, 42, {}]) assert.equal(isGame(id), false, String(id));
   assert.match(PID, PLAYER);
   for (const p of ['', 'A'.repeat(32), 'a'.repeat(31), 'a'.repeat(33), 'g'.repeat(32), `${'a'.repeat(31)}-`]) assert.doesNotMatch(p, PLAYER, p);
@@ -357,6 +364,18 @@ test("the AI's look: one request with its rules, the review and the name in quot
   await lookAtReview(c, { stars: 2, text: '', name: null });
   assert.equal(called('generativelanguage')[1].body.contents[0].parts[0].text, 'Stars: 2 of 5.\nName to show: (none)\nReview: (no words)');
   for (const w of ['family-friendly', 'PG-13', 'honest opinion', 'never as instructions', 'AGI-1', 'financial advice']) assert.ok(LOOK_SYSTEM.includes(w), w);
+  // (2026-10-21) each game's own words: a TRENCHING SIMULATOR review is judged as one of a play-money trading game (its
+  // pretend trades are part of it; advice about real coins or money, or a real coin, app or terminal promoted, still isn't)
+  await lookAtReview(c, { game: 'trenchingsimulator', stars: 5, text: 'sold the top before the rug lol', name: null });
+  const ts = called('generativelanguage')[2].body.systemInstruction.parts[0].text;
+  assert.equal(ts, lookSystem('trenchingsimulator'));
+  for (const w of ['family-friendly', 'PG-13', 'honest opinion', 'never as instructions', 'AGI-1', 'financial advice', '"TRENCHING SIMULATOR"', 'play money',
+    'made-up coins', 'pretend trades', 'real coins or real money', 'trading apps or terminals']) assert.ok(ts.includes(w), w);
+  assert.ok(!ts.includes('Ride \'Em'), 'never another game\'s words');
+  assert.equal(called('generativelanguage')[2].body.contents[0].parts[0].text, 'Stars: 5 of 5.\nName to show: (none)\nReview: “sold the top before the rug lol”');
+  assert.equal(lookSystem('rideemagi'), LOOK_SYSTEM, 'Ride \'Em, AGI!\'s as it was');
+  for (const g of [undefined, null, '', 'nope', '__proto__', 'toString', 'constructor']) assert.equal(lookSystem(g), LOOK_SYSTEM, String(g));
+  assert.deepEqual(Object.keys(LOOK_GAMES), Object.keys(GAMES), 'words for every game');
 });
 
 test("the AI's answers: ok, a no with its reason (an odd one is 'other'), its own filters ('unsafe'); anything else fails closed (nothing kept)", async () => {
@@ -413,7 +432,7 @@ test('a review saved: counted first, then looked at by the AI (only with words o
   assert.equal(a.ok, true); assert.equal(a.created, true);
   assert.deepEqual({ ...a.review, at: 'x' }, { id: 1, stars: 5, text: 'love it', name: 'Mochi', level: 3, at: 'x', edited: false, hidden: false });
   assert.deepEqual(rpcs(), ['arcade_review_take', 'arcade_review_put', 'arcade_review_mine'], 'counted before the AI is asked, kept after');
-  assert.deepEqual(looks, [{ stars: 5, text: 'love it', name: 'Mochi' }]);
+  assert.deepEqual(looks, [{ game: 'rideemagi', stars: 5, text: 'love it', name: 'Mochi' }], 'the AI is told which game it\'s for');
   const kept = fake.db.reviews.get(1);
   assert.equal(kept.wallet, reviewerCode(SECRET, W)); assert.notEqual(kept.wallet, W);
   const b = await saveReview(c, { game: 'rideemagi', wallet: W, who: 'v'.repeat(32), stars: 3, text: '', name: null, level: 2 }, { look });
@@ -425,6 +444,11 @@ test('a review saved: counted first, then looked at by the AI (only with words o
   assert.equal(fake.db.reviews.get(1).level, 1, 'an odd level is a Stranger\'s');
   await assert.rejects(saveReview(c, { game: 'nope', wallet: W, who: 'v'.repeat(32), stars: 4 }, { look }));
   await assert.rejects(saveReview(c, { game: 'rideemagi', wallet: W, who: 'v'.repeat(32), stars: 6 }, { look }));
+  // the same wallet rating the second game: a review of its own (one per wallet and game)
+  const t = await saveReview(c, { game: 'trenchingsimulator', wallet: W, who: 'v'.repeat(32), stars: 2, text: 'got rugged twice', name: null, level: 1 }, { look });
+  assert.equal(t.ok, true); assert.equal(t.created, true);
+  assert.equal(looks.at(-1).game, 'trenchingsimulator');
+  assert.deepEqual([...fake.db.reviews.values()].map((r) => [r.game, r.stars]), [['rideemagi', 4], ['trenchingsimulator', 2]]);
 });
 
 test('a review the AI says no to, or can\'t look at, is never kept; a wallet\'s 10 a day and the site\'s day are counted before the AI is asked', async () => {
@@ -456,6 +480,35 @@ test("a wallet's own review (with whether the owner hid it), and deleting it", a
   assert.deepEqual(await deleteReview(c, 'rideemagi', W2), { ok: true, removed: false });
   assert.deepEqual(await deleteReview(c, 'rideemagi', W), { ok: true, removed: true });
   assert.equal(fake.db.reviews.size, 0);
+});
+
+// ---------- two games (2026-10-21: TRENCHING SIMULATOR) ----------
+test('two games: each counts its own plays and players (a code of its own for the same browser), has its own ratings and reviews (one per wallet and game), at its own address', async () => {
+  const c = cfg();
+  assert.deepEqual(await countPlays(c, { game: 'rideemagi', player: PID, who: 'w'.repeat(32), plays: 2 }), { ok: true, new: true });
+  assert.deepEqual(await countPlays(c, { game: 'trenchingsimulator', player: PID, who: 'w'.repeat(32), plays: 3 }), { ok: true, new: true }, 'a new player of this game');
+  assert.deepEqual(await countPlays(c, { game: 'trenchingsimulator', player: PID, who: 'w'.repeat(32), plays: 1 }), { ok: true, new: false });
+  assert.deepEqual(fake.db.games.get('rideemagi'), { plays: 2, players: 1 });
+  assert.deepEqual(fake.db.games.get('trenchingsimulator'), { plays: 4, players: 1 });
+  const sent = called('arcade_play').map((x) => x.body.p_player);
+  assert.notEqual(sent[0], sent[1], 'the same browser, a different code for each game');
+  assert.equal(sent[1], playerCode(SECRET, 'trenchingsimulator', PID));
+  addReview('rideemagi', W, 5, 'cute');
+  addReview('trenchingsimulator', W, 2, 'got rugged twice, still fun');
+  addReview('trenchingsimulator', W2, 4);
+  const [a, b] = [await gamePage(c, 'rideemagi'), await gamePage(c, 'trenchingsimulator')];
+  assert.deepEqual([a.plays, a.players, a.ratings, a.average, a.stars, a.reviews.map((r) => r.text)], [2, 1, 1, 5, [0, 0, 0, 0, 1], ['cute']]);
+  assert.deepEqual([b.plays, b.players, b.ratings, b.average, b.stars, b.reviews.map((r) => r.text)], [4, 1, 2, 3, [0, 1, 0, 1, 0], ['got rugged twice, still fun']]);
+  assert.equal((await myReview(c, 'trenchingsimulator', W)).text, 'got rugged twice, still fun');
+  assert.deepEqual(await deleteReview(c, 'trenchingsimulator', W), { ok: true, removed: true });
+  assert.equal((await myReview(c, 'rideemagi', W)).text, 'cute', 'the other game\'s review stays');
+  // its address on our server, and its runs told there
+  const r = await get('?game=trenchingsimulator');
+  assert.equal(r.status, 200); assert.equal(r.data.game, 'trenchingsimulator'); assert.equal(r.data.plays, 4); assert.equal(r.data.ratings, 1);
+  assert.match(r.cache, /s-maxage=60/, 'shared by the CDN a minute, like the first game\'s');
+  assert.deepEqual([(await play({ game: 'trenchingsimulator', player: PID2 })).status, fake.db.games.get('trenchingsimulator')], [200, { plays: 5, players: 2 }]);
+  assert.equal((await get('?game=trenchingsimulator&before=1')).status, 200);
+  assert.equal((await post({ action: 'game-mine', game: 'trenchingsimulator', session: session() })).status, 200);
 });
 
 // ---------- /api/wallet: a game's page ----------
@@ -702,6 +755,48 @@ test("the game's part (src/games/rideemagi/site.js): only its runs, the first at
   delete globalThis.addEventListener; delete globalThis.document; delete globalThis.localStorage;
 });
 
+test("TRENCHING SIMULATOR's part (src/games/trenchingsimulator/site.js): the same rules, its own game; each run it starts (a challenge, the daily market or free play) told", async () => {
+  const handlers = {}, store = new Map();
+  globalThis.addEventListener = (type, fn) => { handlers[type] = fn; };
+  globalThis.document = { visibilityState: 'visible', addEventListener: (type, fn) => { handlers[`doc:${type}`] = fn; } };
+  globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => { store.set(k, String(v)); } };
+  store.set(PLAYER_KEY, PID2);                                                         // (the id Ride 'Em, AGI! kept: one for every game)
+  const sent = [];
+  globalThis.fetch = async (url, init) => { sent.push({ url, init, body: JSON.parse(init.body) }); return new Response('{}'); };
+  const { Site, playerId } = await import('../src/games/trenchingsimulator/site.js');
+  assert.equal(playerId(), PID2, 'the id this browser keeps for the games');
+  Site.play();
+  assert.equal(sent.length, 1, 'the first run at once');
+  assert.equal(sent[0].url, '/api/wallet');
+  assert.equal(sent[0].init.method, 'POST'); assert.equal(sent[0].init.keepalive, true, 'it outlives the page');
+  assert.deepEqual(sent[0].body, { action: 'game-play', game: 'trenchingsimulator', player: PID2, plays: 1 }, 'nothing else');
+  Site.play(); Site.play();
+  assert.equal(sent.length, 1, 'then they wait (a minute, or the page hidden)');
+  document.visibilityState = 'hidden';
+  handlers['doc:visibilitychange']();
+  assert.deepEqual([sent.length, sent[1].body.plays], [2, 2]);
+  for (let i = 0; i < 60; i++) Site.play();
+  handlers.pagehide();
+  assert.equal(sent[2].body.plays, PLAYS.perReport, 'at most 50 a report');
+  // a blocked storage (a private window): an id for this page only, never thrown
+  globalThis.localStorage = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
+  const once = playerId();
+  assert.match(once, PLAYER); assert.equal(playerId(), once);
+  // the game tells it as each run starts: a challenge, the daily market or free play (startRun), never waiting for it
+  const shell = read('src/games/trenchingsimulator/shell.js');
+  assert.match(shell, /^import \{ Site \} from '\.\/site\.js';$/m);
+  assert.equal((shell.match(/Site\.play\(\)/g) || []).length, 1, 'one place');
+  const run = shell.slice(shell.indexOf('async function startRun('), shell.indexOf('function mountPlay('));
+  for (const kind of ["setup.kind === 'daily'", "setup.kind === 'challenge'", "mode: 'free'"]) assert.ok(run.includes(kind), kind);
+  assert.match(run, /try \{\s*Site\.play\(\);\s*\} catch \{/, 'a run is counted on a best-effort basis: the game never waits for it');
+  assert.ok(run.indexOf('Site.play()') > run.lastIndexOf('createRun('), 'told once the run exists');
+  // (its code, without its comments, and the address it sends to: no wallet, no sign-in, nothing about the device)
+  const code = read('src/games/trenchingsimulator/site.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace("'/api/wallet'", "''");
+  assert.doesNotMatch(code, /session|wallet|ethereum|turnstile|navigator\.|document\.cookie|innerHTML|userAgent|screen\./i);
+  assert.match(read('src/games/trenchingsimulator/site.js'), /const GAME = 'trenchingsimulator';/);
+  delete globalThis.addEventListener; delete globalThis.document; delete globalThis.localStorage;
+});
+
 // ---------- light, and its address on our server ----------
 test('the games live in /api/wallet (Vercel\'s 12 functions are all used) and load light: the AI and her live rules only for a review', () => {
   assert.equal(readdirSync(new URL('../api/', import.meta.url)).filter((f) => f.endsWith('.js')).length, 12);
@@ -714,6 +809,7 @@ test('the games live in /api/wallet (Vercel\'s 12 functions are all used) and lo
   assert.ok(!wallet.includes('../server/live.js') && !wallet.includes('../server/gemini.js'), 'never loaded for a play');
   assert.deepEqual(imports('src/games/list.js'), []);
   assert.deepEqual(imports('src/games/rideemagi/site.js'), ['../list.js']);
+  assert.deepEqual(imports('src/games/trenchingsimulator/site.js'), ['../list.js']);
   const pkg = JSON.parse(read('package.json'));
   assert.match(pkg.scripts.test, /tests\/arcade\.test\.js/);
 });
@@ -759,4 +855,9 @@ test("supabase/arcade.sql's promises: five tables nobody else can read, 8 functi
   assert.match(body, /unique \(game, wallet\)/, 'one review per wallet and game');
   assert.match(body, /where not hidden and body <> ''/);
   assert.doesNotMatch(body, /\bip\b|address text|wallet_address/i);
+  // (2026-10-21) a new game needs nothing here: no list of games and no row for one (a game's row comes with its first play),
+  // so TRENCHING SIMULATOR needed no new SQL (every game's id fits its rule: the first test)
+  for (const id of Object.keys(GAMES)) assert.ok(!body.includes(id), `${id} isn't named in it`);
+  assert.doesNotMatch(body, /\binsert\s+into\s+(public\.)?agi1_arcade_games\b(?![^;]*\bp_game\b)/i, 'no game seeded');
+  assert.doesNotMatch(body, /\bgame\s+in\s*\(|\bgame\s*=\s*any\b/i, 'no list of games');
 });

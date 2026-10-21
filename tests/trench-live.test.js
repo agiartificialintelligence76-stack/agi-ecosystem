@@ -1,0 +1,1440 @@
+// TRENCHING SIMULATOR's Live mode (2026-10-21, #404): real new coins with their real names and pictures, play money only.
+// Its relay (tools/trench-relay/: what PumpPortal, Helius, DexScreener and clank.trade send, read and checked; a pump.fun
+// curve's price and market cap; the fan-out to every viewer, its caps, its pings, a slow viewer; reconnects and PumpDev
+// taking over; pictures checked to the byte, never SVG, never a redirect, never a private address; the Helius key never
+// in a log or /health) against stand-ins of every service on this computer (tools/trench-relay/fakes.mjs); and the game's
+// side (src/games/trenchingsimulator/live*.js): its chains and the money each terminal shows, the relay's address
+// (another one only on localhost), what it gets checked, a live market (play money against the live curve, the stand-ins
+// when the feed is down or quiet, in plain words), a live run's real clock, its results' words and its bests kept apart,
+// AGI-1 never naming a real coin, and the CSP gaining only the relay's origin. No real network, no settings, any day.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
+import { readFileSync } from 'node:fs';
+import http from 'node:http';
+import { WebSocket } from 'ws';
+import * as P from '../tools/trench-relay/lib/parse.mjs';
+import { readConfig, heliusFrom, DEFAULTS } from '../tools/trench-relay/lib/config.mjs';
+import { createLog, errText } from '../tools/trench-relay/lib/log.mjs';
+import { isPublicIp, safeGet, trustedGet, trustedJson, NetError } from '../tools/trench-relay/lib/net.mjs';
+import { backoffMs } from '../tools/trench-relay/lib/upstream.mjs';
+import { createHub, LIMITS } from '../tools/trench-relay/lib/hub.mjs';
+import { locate, sniff, createPictures, PIC } from '../tools/trench-relay/lib/pictures.mjs';
+import { startRelay } from '../tools/trench-relay/server.mjs';
+import { startFakes, curveAccount } from '../tools/trench-relay/fakes.mjs';
+import * as L from '../src/games/trenchingsimulator/live-chains.js';
+import { createLiveFeed } from '../src/games/trenchingsimulator/live-feed.js';
+import { createLiveMarket } from '../src/games/trenchingsimulator/live-market.js';
+import { createMarket } from '../src/games/trenchingsimulator/engine.js';
+import { buyQuote, curvePrice, curveProgress, START_MC, FLOOR_TOK, CURVE_TOK, K } from '../src/games/trenchingsimulator/curve.js';
+import { createRun, MAX_DT } from '../src/games/trenchingsimulator/run.js';
+import { LINES, LIVE_LINES, liveLineFor, createVoice, lineFor } from '../src/games/trenchingsimulator/lines.js';
+import { cardText, modeLabel } from '../src/games/trenchingsimulator/results.js';
+import { shareText } from '../src/games/trenchingsimulator/share.js';
+import * as SAVE from '../src/games/trenchingsimulator/save.js';
+import { challengeById, CHALLENGES } from '../src/games/trenchingsimulator/challenges.js';
+import { ORDER_ERRORS } from '../src/games/trenchingsimulator/boards/board.js';
+
+const near = (a, b, eps, what) => assert.ok(Math.abs(a - b) <= eps, `${what}: ${a} is not ${b}`);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function until(fn, ms = 8000, what = 'a condition') {
+  const t0 = Date.now();
+  for (;;) {
+    const v = await fn();
+    if (v) return v;
+    if (Date.now() - t0 > ms) assert.fail(`waited ${ms} ms for ${what}`);
+    await sleep(15);
+  }
+}
+const MINT = '7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr';
+const MINT2 = 'Hn8X3dJt6pVnE2QwP5R7sT9uVwXyZaBcDeFgHiJkLmNo';
+const CURVE = '4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf';
+const DEV = 'CRhtqXk98ATqo1R8gs7WQcjoFeLbrkhNKUAbSQwbsE4c';
+const ORIGIN = 'http://localhost:4173';
+
+// a PumpPortal new-coin message (pump.fun's standard curve after a dev buy of `dev` SOL)
+function create(over = {}, dev = 0.5) {
+  const vs = 30 + dev * 0.99;
+  const vt = (30 * 1_073_000_000) / vs;
+  return { signature: 'x', mint: MINT, traderPublicKey: DEV, txType: 'create', initialBuy: 1_073_000_000 - vt, solAmount: dev,
+    bondingCurveKey: CURVE, vTokensInBondingCurve: vt, vSolInBondingCurve: vs, marketCapSol: (vs / vt) * 1e9, name: 'Moon Frog',
+    symbol: 'MFROG', uri: 'https://ipfs.io/ipfs/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG', pool: 'pump', ...over };
+}
+// a standard curve with `left` tokens still for sale (the engine's own numbers)
+function curveAt(left, done = false) {
+  const vt = FLOOR_TOK + left;
+  const vs = K / vt;
+  return { k: 'c', vs, vt, rt: left, rs: vs - 30, sup: 1e9, done };
+}
+
+// ---------- the relay: what the sources send ----------
+
+test("PumpPortal's (and PumpDev's) new coins and migrations: read, checked, and anything odd dropped", () => {
+  const c = P.parseCreate(create());
+  assert.equal(c.mint, MINT);
+  assert.equal(c.curve, CURVE);
+  assert.equal(c.creator, DEV);
+  assert.equal(c.name, 'Moon Frog');
+  assert.equal(c.symbol, 'MFROG');
+  assert.equal(c.uri, create().uri);
+  assert.equal(c.st.k, 'c');
+  near(c.st.vs, 30.495, 1e-9, 'virtual SOL');
+  near(c.st.rt, c.st.vt - 279_900_000, 1e-6, 'its real tokens follow from its virtual ones');
+  near(c.st.rs, 0.495, 1e-9, 'the real SOL in it');
+  assert.equal(c.st.sup, 1e9);
+  assert.equal(c.st.done, false);
+  // a ticker's "$" goes; names as they are (no word filter), only made safe to show
+  assert.equal(P.parseCreate(create({ symbol: '$$WOW' })).symbol, 'WOW');
+  assert.equal(P.parseCreate(create({ name: 'damn \u202egnihtemos\u202c frog' })).name, 'damn gnihtemos frog');
+  // dropped: not a create, another launchpad, another quote asset, bad addresses, no name, a curve that isn't pump.fun's
+  for (const bad of [{ txType: 'buy' }, { pool: 'bonk' }, { quoteMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
+    { mint: 'not-a-mint' }, { bondingCurveKey: '0OIl' }, { name: '   ' }, { symbol: '\u200b\u200e' }, { vSolInBondingCurve: 'NaN' },
+    { vTokensInBondingCurve: 500_000_000, vSolInBondingCurve: 30 }, { vSolInBondingCurve: -1 }]) {
+    assert.equal(P.parseCreate(create(bad)), null, JSON.stringify(bad));
+  }
+  for (const bad of [null, undefined, 'x', 7, [], {}]) assert.equal(P.parseCreate(bad), null);
+  assert.equal(P.parseCreate(create({ quoteMint: P.WSOL })).mint, MINT, 'priced in SOL itself: fine');
+  assert.equal(P.parseCreate(create({ pool: undefined })).mint, MINT, 'no pool said: pump.fun\'s');
+  assert.equal(P.parseCreate(create({ uri: 'x'.repeat(700) })).uri, null, 'a very long address is no address');
+  assert.deepEqual(P.parseMigrate({ txType: 'migrate', mint: MINT, pool: 'pump-amm' }), { mint: MINT });
+  for (const bad of [{ txType: 'create', mint: MINT }, { txType: 'migrate', mint: 'nope' }, null]) assert.equal(P.parseMigrate(bad), null);
+});
+
+test("a pump.fun curve's account, its price (virtual quote ÷ virtual tokens) and market cap (× a billion), as the engine has them", () => {
+  // the account's bytes: its 8-byte kind, then virtual tokens, virtual SOL, real tokens, real SOL, supply, complete
+  const st = curveAt(500_000_000);
+  const b64 = curveAccount(st);
+  const back = P.parseCurveAccount(b64);
+  near(back.vt, st.vt, 1e-6, 'virtual tokens');
+  near(back.vs, st.vs, 1e-9, 'virtual SOL');
+  near(back.rt, st.rt, 1e-6, 'real tokens');
+  near(back.rs, st.rs, 1e-9, 'real SOL');
+  assert.equal(back.sup, 1e9);
+  assert.equal(back.done, false);
+  assert.equal(P.parseCurveAccount(curveAccount({ ...curveAt(0), done: true })).done, true);
+  assert.deepEqual(P.CURVE_DISC, [23, 183, 248, 55, 96, 216, 172, 96], 'sha256("account:BondingCurve")');
+  // not a curve: another kind of account, another program's, too short, not base64
+  const bytes = Buffer.from(b64, 'base64');
+  bytes[0] ^= 1;
+  assert.equal(P.parseCurveAccount(bytes.toString('base64')), null);
+  assert.equal(P.parseCurveAccount(b64, '11111111111111111111111111111111'), null);
+  assert.equal(P.parseCurveAccount(Buffer.alloc(40).toString('base64')), null);
+  assert.equal(P.parseCurveAccount('%%%'), null);
+  // the math: pump.fun's numbers, the same as the game's own curve at every point
+  for (const left of [793_100_000, 600_000_000, 300_000_000, 50_000_000, 0]) {
+    const s = curveAt(left);
+    near(P.curvePrice(s), curvePrice({ left }), 1e-18, `price at ${left}`);
+    near(P.curveMarketCap(s), curvePrice({ left }) * 1e9, 1e-6, `market cap at ${left}`);
+    near(P.curveProgress(s), curveProgress({ left }), 1e-12, `progress at ${left}`);
+  }
+  near(P.curveMarketCap(curveAt(793_100_000)), START_MC, 1e-6, 'a new coin: about 28 SOL');
+  // the browser's side reads the same market, in the engine's units
+  const real = L.toReal(L.parseState(P.encodeState(curveAt(400_000_000))), { sup: 1e9 });
+  near((real.sol / real.tok) * 1e9, P.curveMarketCap(curveAt(400_000_000)), 1e-3, 'the same market cap on both sides');
+  assert.equal(real.phase, 'curve');
+  near(real.cap, 400_000_000, 0.5, 'tokens still for sale');
+  near(real.progress, curveProgress({ left: 400_000_000 }), 1e-9, 'its progress');
+  assert.equal(L.toReal(L.parseState(P.encodeState(curveAt(0, true)))).phase, 'migrating', 'sold out: closed for a moment');
+});
+
+test('DexScreener and clank.trade: dollar prices, pools, pairs, profiles and new coins, never nonsense', () => {
+  const pair = (o) => ({ chainId: 'solana', dexId: 'raydium', baseToken: { address: P.WSOL }, quoteToken: { address: 'usdc' },
+    priceUsd: '150', liquidity: { usd: 1000 }, ...o });
+  assert.equal(P.wrappedUsd([pair({ priceUsd: '149', liquidity: { usd: 10 } }), pair({ priceUsd: '151.5', liquidity: { usd: 9e6 } })], 'sol'), 151.5);
+  assert.equal(P.wrappedUsd([pair({ priceUsd: '0.5' })], 'sol'), null, 'not a sane SOL price');
+  assert.equal(P.wrappedUsd([pair({ chainId: 'bsc' })], 'sol'), null, 'another chain');
+  assert.equal(P.wrappedUsd({ pairs: [pair({})] }, 'sol'), 150, 'the older shape too');
+  assert.equal(P.wrappedUsd([], 'eth'), null);
+  // a pump.fun coin's pool after its curve: the SOL and tokens in it
+  const pool = { chainId: 'solana', dexId: 'pumpswap', baseToken: { address: MINT }, quoteToken: { address: P.WSOL },
+    liquidity: { usd: 25000, base: 206_900_000, quote: 84.9 }, volume: { m5: 1200, h1: 9000, h24: 40000 },
+    txns: { m5: { buys: 12, sells: 7 }, h1: { buys: 80, sells: 60 }, h24: { buys: 400, sells: 300 } }, priceChange: { m5: 4.2, h1: -3.5 } };
+  assert.equal(P.bestPair([pool, { ...pool, baseToken: { address: MINT2 } }], 'solana', MINT), pool);
+  assert.deepEqual(P.solPoolState(pool), { k: 'p', ls: 84.9, lb: 206_900_000 });
+  assert.equal(P.solPoolState({ ...pool, quoteToken: { address: 'usdc' } }), null, 'priced in SOL only');
+  assert.deepEqual(P.pairDx(pool), [1200, 12, 7, 9000, 140, 40000, 700, 4.2, -3.5]);
+  assert.deepEqual(P.pairDx({}), [-1, -1, -1, -1, -1, -1, -1, -1, -1]);
+  // BNB Chain and Base: a pair's dollars; on a launchpad's own curve (four.meme) it hasn't graduated
+  const evm = '0xAbCdEf0123456789abcdef0123456789ABCDEF01';
+  const bsc = { chainId: 'bsc', dexId: 'fourmeme', baseToken: { address: evm.toLowerCase() }, marketCap: 50000, liquidity: { usd: 12000 } };
+  assert.equal(P.bestPair([bsc], 'bsc', evm), bsc, 'EVM addresses in any case');
+  assert.deepEqual(P.usdPairState(bsc), { k: 'u', mu: 50000, lu: 12000, pg: null, gr: false, cl: false });
+  assert.equal(P.usdPairState({ ...bsc, dexId: 'pancakeswap' }).gr, true);
+  assert.equal(P.usdPairState({ ...bsc, marketCap: undefined, fdv: 70000 }).mu, 70000);
+  assert.equal(P.usdPairState({ ...bsc, marketCap: -5, fdv: undefined }), null);
+  assert.deepEqual(P.parseProfiles([{ chainId: 'bsc', tokenAddress: evm, icon: 'https://cdn.dexscreener.com/i.png' },
+    { chainId: 'solana', tokenAddress: MINT }, { chainId: 'base', tokenAddress: 'nope' }, null], ['bsc', 'base']),
+  [{ chain: 'bsc', address: evm.toLowerCase(), icon: 'https://cdn.dexscreener.com/i.png' }]);
+  // clank.trade (Robinhood Chain): its market cap is in its pair (ETH or SPCX): × that pair's price, dollars
+  const rates = new Map([[P.CLANK_ETH, 3000], [P.CLANK_SPCX, 160]]);
+  const raw = { address: evm, name: 'Clank Cat', symbol: 'CCAT', image: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG', state: 0,
+    progress: 42.5, createdAt: 1_792_000_000, marketCap: 2.5, quoteCurrency: P.CLANK_ETH };
+  const cc = P.clankCoin(raw, rates);
+  assert.equal(cc.address, evm.toLowerCase());
+  assert.equal(cc.born, 1_792_000_000_000);
+  assert.deepEqual(cc.st, { k: 'u', mu: 7500, lu: null, pg: 0.425, gr: false, cl: false });
+  assert.equal(P.clankCoin({ ...raw, quoteCurrency: P.CLANK_SPCX }, rates).st.mu, 400, 'an SPCX coin at SPCX\'s price');
+  assert.equal(P.clankCoin({ ...raw, quoteCurrency: '0x1111111111111111111111111111111111111111' }, rates).st, null, 'no price: no state, never a guess');
+  assert.equal(P.clankCoin({ ...raw, state: 3 }, rates).st.gr, true);
+  assert.equal(P.clankCoin({ ...raw, state: 1 }, rates).st.cl, true, 'graduating: closed for a moment');
+  assert.equal(P.clankCoin({ ...raw, address: 'nope' }, rates), null);
+});
+
+test("names and tickers as their makers wrote them (no word filter), made safe to show: on the relay and in the browser alike", () => {
+  const cases = [
+    ['Moon Frog', 'Moon Frog'], ['  spaced   out  ', 'spaced out'], ['rtl\u202etxet\u202c', 'rtltxet'], ['zero\u200bwidth', 'zerowidth'],
+    ['family 👨\u200d👩\u200d👧 coin', 'family 👨\u200d👩\u200d👧 coin'], ['heart ❤\ufe0f', 'heart ❤\ufe0f'], ['tab\tand\nline', 'tab and line'],
+    ['\u3164\u3164', null], ['', null], ['fuck it we ball', 'fuck it we ball'],
+  ];
+  for (const [raw, want] of cases) {
+    assert.equal(P.cleanText(raw, 48), want, JSON.stringify(raw));
+    assert.equal(L.cleanText(raw, 48), want, `browser: ${JSON.stringify(raw)}`);
+  }
+  assert.equal(P.cleanText('a'.repeat(60), 48), `${'a'.repeat(47)}…`);
+  const zalgo = P.cleanText(`Z${'\u0301'.repeat(40)}algo`, 48);
+  assert.equal([...zalgo].filter((ch) => /[\u0300-\u036f]/.test(ch)).length, 3, 'at most 3 accents on a letter (relay)');
+  assert.ok(zalgo.endsWith('algo'));
+  for (const bad of [null, undefined, 7, {}, 'x'.repeat(3000)]) assert.equal(P.cleanText(bad, 48), null);
+});
+
+// ---------- the relay: its settings, its log, its requests ----------
+
+test('the settings: the Helius key bare or inside its address, kept to the Helius connection and the scrubber', () => {
+  const key = 'a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6';
+  assert.deepEqual(heliusFrom(key), { key, ws: `wss://mainnet.helius-rpc.com/?api-key=${key}`, http: `https://mainnet.helius-rpc.com/?api-key=${key}` });
+  assert.deepEqual(heliusFrom(`https://mainnet.helius-rpc.com/?api-key=${key}`).ws, `wss://mainnet.helius-rpc.com/?api-key=${key}`);
+  assert.deepEqual(heliusFrom(`wss://mainnet.helius-rpc.com/?api-key=${key}`).http, `https://mainnet.helius-rpc.com/?api-key=${key}`);
+  assert.equal(heliusFrom(`"${key}"`).key, key, 'quotes around it are fine');
+  assert.equal(heliusFrom(`http://127.0.0.1:9/?api-key=${key}`).ws, `ws://127.0.0.1:9/?api-key=${key}`, 'plain http only on this computer (tests)');
+  assert.match(heliusFrom(`http://example.com/?api-key=${key}`).error, /https/);
+  assert.match(heliusFrom('https://mainnet.helius-rpc.com/').error, /api-key/);
+  assert.match(heliusFrom('not a key!').error, /neither/);
+  assert.equal(heliusFrom(''), null);
+  const { cfg, problems, secrets } = readConfig({ HELIUS_API_KEY: key, TRENCH_PORT: '9000', TRENCH_MAX_CLIENTS: '999999',
+    TRENCH_ORIGINS: 'https://agi1.app, javascript:alert(1), https://www.agi1.app', TRENCH_CHAINS: 'solana,mars', PUMPDEV_WS_URL: 'off' });
+  assert.deepEqual(problems, []);
+  assert.deepEqual(secrets, [key]);
+  assert.equal(cfg.port, 9000);
+  assert.equal(cfg.maxClients, 100000, 'kept inside its limit');
+  assert.deepEqual(cfg.origins, ['https://agi1.app', 'https://www.agi1.app']);
+  assert.deepEqual(cfg.chains, ['solana']);
+  assert.equal(cfg.pumpdev, null);
+  assert.ok(cfg.pumpportal, 'PumpPortal on by default');
+  // PumpPortal off (if PumpPortal ever says no to a public relay): PumpDev alone; both off says so
+  const ppOff = readConfig({ HELIUS_API_KEY: key, PUMPPORTAL_WS_URL: 'off' });
+  assert.equal(ppOff.cfg.pumpportal, null);
+  assert.ok(ppOff.cfg.pumpdev);
+  assert.deepEqual(ppOff.problems, []);
+  assert.match(readConfig({ HELIUS_API_KEY: key, PUMPPORTAL_WS_URL: 'off', PUMPDEV_WS_URL: 'off' }).problems.join(' '), /both off/);
+  assert.deepEqual(readConfig({ PUMPPORTAL_WS_URL: 'off', PUMPDEV_WS_URL: 'off', TRENCH_CHAINS: 'robinhood' }).problems, [],
+    'no Solana: nothing to say');
+  assert.ok(!JSON.stringify({ ...cfg, helius: null }).includes(key), 'the key is only in the Helius addresses');
+  const none = readConfig({});
+  assert.equal(none.cfg.helius, null);
+  assert.match(none.problems.join(' '), /HELIUS_API_KEY is not set/);
+  assert.deepEqual(none.cfg.origins, DEFAULTS.origins);
+  assert.equal(none.cfg.trustProxy, false);
+  assert.ok(none.cfg.solanaTrack + none.cfg.watchMax <= 950, 'within Helius\'s 1,000 a connection');
+});
+
+test("the log never shows the Helius key, whatever carries it; an error in a few words", () => {
+  const key = 'a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6';
+  const lines = [];
+  const log = createLog({ secrets: [key], write: (l) => lines.push(l), now: () => new Date(0) });
+  log.info(`connecting to wss://mainnet.helius-rpc.com/?api-key=${key}`);
+  log.warn(`Helius said: bad key ${key}`);
+  log.error('https://x.example/?api-key=SOMETHINGELSE&a=1 failed');
+  log.debug('not shown at info');
+  assert.equal(lines.length, 3);
+  assert.ok(lines.every((l) => !l.includes(key) && !l.includes('SOMETHINGELSE')), lines.join('\n'));
+  assert.match(lines[0], /^1970-01-01T00:00:00\.000Z connecting to wss:\/\/mainnet\.helius-rpc\.com\/\?api-key=\*\*\*$/);
+  assert.match(lines[1], /^1970-01-01T00:00:00\.000Z WARN /);
+  assert.equal(errText(Object.assign(new Error('getaddrinfo ENOTFOUND host?api-key=zzz'), { code: 'ENOTFOUND' })), 'ENOTFOUND getaddrinfo ENOTFOUND host?…');
+  assert.equal(errText(null), 'unknown error');
+});
+
+test('requests a coin gives: https on 443 only, every address public (looked up first), never a redirect, never too big', async () => {
+  for (const ip of ['8.8.8.8', '1.1.1.1', '172.32.0.1', '2606:4700:4700::1111', '::ffff:8.8.8.8']) assert.equal(isPublicIp(ip), true, ip);
+  for (const ip of ['10.0.0.1', '127.0.0.1', '169.254.169.254', '172.16.5.4', '192.168.1.1', '100.64.0.1', '0.0.0.0', '224.0.0.1',
+    '198.18.0.1', '::1', '::', 'fe80::1', 'fd00::1', '::ffff:127.0.0.1', '::ffff:a9fe:a9fe', '64:ff9b::a9fe:a9fe', '2001:db8::1',
+    'ff02::1', 'localhost', '', 'x']) assert.equal(isPublicIp(ip), false, ip);
+  const refused = async (url, code, resolve = async () => [{ address: '93.184.216.34', family: 4 }]) => {
+    await assert.rejects(safeGet(url, { resolve, timeoutMs: 500 }), (e) => e instanceof NetError && e.code === code, url);
+  };
+  await refused('http://example.com/a.png', 'not_allowed');
+  await refused('https://example.com:8443/a.png', 'not_allowed');
+  await refused('https://user:pw@example.com/a.png', 'not_allowed');
+  await refused('ftp://example.com/a.png', 'not_allowed');
+  await refused('nope', 'bad_url');
+  await refused('https://127.0.0.1/a.png', 'private_address');
+  await refused('https://[::1]/a.png', 'private_address');
+  await refused('https://169.254.169.254/latest/meta-data', 'private_address');
+  await refused('https://rebind.example/a.png', 'private_address', async () => [{ address: '93.184.216.34', family: 4 }, { address: '10.0.0.7', family: 4 }]);
+  await refused('https://metadata.example/a.png', 'private_address', async () => [{ address: '169.254.169.254', family: 4 }]);
+  // the addresses in its settings (trusted): a redirect is refused, so is an answer over its size (said or streamed)
+  const server = http.createServer((req, res) => {
+    if (req.url === '/redirect') {
+      res.writeHead(302, { Location: 'http://169.254.169.254/' });
+      res.end();
+    } else if (req.url === '/big') {
+      res.writeHead(200, { 'Content-Length': 5000 });
+      res.end(Buffer.alloc(5000));
+    } else if (req.url === '/stream') {
+      res.writeHead(200);
+      res.write(Buffer.alloc(3000));
+      res.end(Buffer.alloc(3000));
+    } else if (req.url === '/slow') {
+      setTimeout(() => res.end('late'), 400);
+    } else {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end('{"ok":true}');
+    }
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    await assert.rejects(trustedGet(`${base}/redirect`), (e) => e.code === 'redirect' && e.status === 302);
+    await assert.rejects(trustedGet(`${base}/big`, { maxBytes: 4000 }), (e) => e.code === 'too_big');
+    await assert.rejects(trustedGet(`${base}/stream`, { maxBytes: 4000 }), (e) => e.code === 'too_big');
+    await assert.rejects(trustedGet(`${base}/slow`, { timeoutMs: 100 }), (e) => e.code === 'timeout');
+    assert.deepEqual(await trustedJson(`${base}/ok`), { ok: true });
+  } finally {
+    server.close();
+  }
+});
+
+// ---------- the relay: pictures ----------
+
+// a made-up IPFS id (Qm and 44 base58 characters)
+const fakeCid = (word) => `Qm${word.repeat(44)}`.slice(0, 46);
+
+test('pictures: where they are, real image bytes only (never SVG, never a page dressed as one), made small, served by their hash', async () => {
+  const cid = 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG';
+  assert.deepEqual(locate(`ipfs://${cid}`), { ipfs: cid, path: '' });
+  assert.deepEqual(locate(`ipfs://ipfs/${cid}/a.png`), { ipfs: cid, path: '/a.png' });
+  assert.deepEqual(locate(`https://ipfs.io/ipfs/${cid}`), { ipfs: cid, path: '' });
+  assert.deepEqual(locate(`https://pump.mypinata.cloud/ipfs/${cid}/meta.json`), { ipfs: cid, path: '/meta.json' });
+  assert.deepEqual(locate(cid), { ipfs: cid, path: '' });
+  assert.deepEqual(locate('https://cdn.example.com/a.png'), { url: 'https://cdn.example.com/a.png' });
+  for (const bad of ['http://example.com/a.png', 'javascript:alert(1)', 'data:image/png;base64,AAAA', `ipfs://${cid}/a b`,
+    `ipfs://${cid}/../x`, '', null, 'x'.repeat(1200)]) {
+    assert.equal(locate(bad), null, String(bad).slice(0, 60));
+  }
+  // an address's ".." are resolved first (the URL's own rules): then it's only an ordinary address on that host
+  assert.deepEqual(locate(`https://ipfs.io/ipfs/${cid}/../../etc`), { url: 'https://ipfs.io/etc' });
+  const sharp = (await import('sharp')).default;
+  const png = await sharp({ create: { width: 300, height: 200, channels: 3, background: '#3a7' } }).png().toBuffer();
+  const jpg = await sharp({ create: { width: 64, height: 64, channels: 3, background: '#a37' } }).jpeg().toBuffer();
+  const gif = await sharp({ create: { width: 64, height: 64, channels: 3, background: '#37a' } }).gif().toBuffer();
+  assert.equal(sniff(png), 'png');
+  assert.equal(sniff(jpg), 'jpeg');
+  assert.equal(sniff(gif), 'gif');
+  assert.equal(sniff(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>')), null, 'never SVG');
+  assert.equal(sniff(Buffer.from('<!doctype html><html></html>')), null);
+  assert.equal(sniff(Buffer.alloc(4)), null);
+  // the pipeline, with the services as stand-ins: metadata → picture → a 128 px WebP, by its hash
+  const files = new Map([
+    [`meta-ok`, { type: 'application/json', body: Buffer.from(JSON.stringify({ image: `ipfs://${cid}`, twitter: 'https://x.com/a', website: 'https://a.b' })) }],
+    [cid, { body: png }],
+    ['svgcid', { body: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>') }],
+  ]);
+  let gatewayCalls = 0;
+  const fetchTrusted = async (url) => {
+    gatewayCalls += 1;
+    const id = url.split('/ipfs/')[1].split('/')[0];
+    const f = files.get(id);
+    return f ? { status: 200, type: f.type || 'image/png', bytes: f.body } : { status: 404, type: 'text/plain', bytes: Buffer.alloc(0) };
+  };
+  const safe = new Map([['https://pics.example/page.png', { status: 200, bytes: Buffer.from('<!doctype html>hello') }],
+    ['https://pics.example/redirect.png', new NetError('redirect', 302)], ['https://pics.example/private.png', new NetError('private_address')],
+    ['https://pics.example/ok.jpg', { status: 200, bytes: jpg }]]);
+  const fetchSafe = async (url) => {
+    const v = safe.get(url);
+    if (v instanceof Error) throw v;
+    return v || { status: 404, bytes: Buffer.alloc(0) };
+  };
+  const pics = createPictures({ gateways: ['https://gw.example/ipfs/'], log: createLog({ write: () => {} }), sharp, fetchTrusted, fetchSafe,
+    retryMs: [30], maxBytes: 64 * 1024 * 1024 });
+  const ask = (key, spec) => new Promise((resolve) => pics.request(key, spec, (path, soc) => resolve({ path, soc })));
+  const meta = await ask('solana:s1', { meta: 'ipfs://meta-ok' });
+  assert.equal(meta.path, null, '"meta-ok" isn\'t an IPFS id: nothing fetched');
+  const good = await ask('solana:s2', { image: `https://ipfs.io/ipfs/${cid}` });
+  assert.match(good.path, /^\/p\/[A-Za-z0-9_-]{22}\.webp$/);
+  const out = pics.get(good.path.slice(3, 25));
+  assert.equal(sniff(out), 'webp');
+  const m = await sharp(out).metadata();
+  assert.deepEqual([m.width, m.height, m.format], [PIC.size, PIC.size, 'webp'], '128 × 128 WebP');
+  assert.ok(out.length <= PIC.maxOut);
+  // its metadata says its socials (as yes or no: never the links)
+  const metaCid = fakeCid('Meta');
+  files.set(metaCid, files.get('meta-ok'));
+  const withMeta = await ask('solana:s3', { meta: `ipfs://${metaCid}` });
+  assert.equal(withMeta.path, good.path, 'the same picture: the same hash');
+  assert.equal(withMeta.soc, 1 | 4, 'X and a website, no Telegram');
+  // refused: an SVG on IPFS, a page dressed as a PNG, a redirect, a private address
+  const svgCid = fakeCid('Svg');
+  for (const [key, spec] of [['s4', { image: `ipfs://${svgCid}` }], ['s5', { image: 'https://pics.example/page.png' }],
+    ['s6', { image: 'https://pics.example/redirect.png' }], ['s7', { image: 'https://pics.example/private.png' }]]) {
+    if (key === 's4') files.set(svgCid, files.get('svgcid'));
+    assert.equal((await ask(`solana:${key}`, spec)).path, null, key);
+  }
+  assert.match((await ask('solana:s8', { image: 'https://pics.example/ok.jpg' })).path, /^\/p\//, 'a JPEG from its own https address');
+  // not on the gateways yet (a brand new coin's): tried again a moment later, then there
+  const later = fakeCid('Later');
+  const before = gatewayCalls;
+  const p = ask('solana:s9', { image: `ipfs://${later}` });
+  await until(() => gatewayCalls > before, 2000, 'its first try');
+  files.set(later, { body: gif });
+  assert.match((await p).path, /^\/p\//, 'there on its second try');
+  assert.ok(pics.stats().retried >= 1);
+  assert.equal(pics.get('nope'), null);
+  assert.equal(pics.request('solana:s9', { image: 'x' }, () => {}), true, 'a key done with can ask again');
+  // the newest kept, up to its size: the oldest go first
+  const tiny = createPictures({ gateways: ['https://gw.example/ipfs/'], log: createLog({ write: () => {} }), sharp, fetchTrusted, fetchSafe, maxBytes: 1 });
+  const a = await new Promise((r) => tiny.request('a', { image: `ipfs://${cid}` }, (path) => r(path)));
+  const b = await new Promise((r) => tiny.request('b', { image: 'https://pics.example/ok.jpg' }, (path) => r(path)));
+  assert.equal(tiny.get(a.slice(3, 25)), null, 'the oldest went');
+  assert.ok(tiny.get(b.slice(3, 25)));
+  pics.close();
+  tiny.close();
+});
+
+// ---------- the relay: the fan-out ----------
+
+class FakeWs extends EventEmitter {
+  constructor() {
+    super();
+    this.readyState = 1;
+    this.sent = [];
+    this.bufferedAmount = 0;
+    this.closed = null;
+    this.terminated = false;
+    this.pings = 0;
+  }
+  send(text) {
+    this.sent.push(JSON.parse(text));
+  }
+  ping() {
+    this.pings += 1;
+  }
+  close(code, why) {
+    this.closed = { code, why };
+    this.readyState = 3;
+    this.emit('close');
+  }
+  terminate() {
+    this.terminated = true;
+    this.readyState = 3;
+    this.emit('close');
+  }
+  say(obj) {
+    this.emit('message', Buffer.from(typeof obj === 'string' ? obj : JSON.stringify(obj)), false);
+  }
+  of(t) {
+    return this.sent.filter((m) => m.t === t);
+  }
+}
+const coinIn = (key, over = {}) => ({ key, name: `Coin ${key.slice(0, 4)}`, symbol: 'CN', born: 1_792_000_000_000, by: DEV, src: 'pump.fun',
+  sup: 1e9, st: curveAt(780_000_000), st0: curveAt(793_100_000), tracked: true, ...over });
+
+test('the fan-out: every viewer of a chain gets each new coin and one batch of changes (each coin\'s newest), the others nothing', () => {
+  let t = 1_792_000_100_000;
+  const watched = [];
+  const hub = createHub({ log: createLog({ write: () => {} }), batchMs: 1e9, pingMs: 1e9, now: () => t,
+    onWatch: (chain, c, on) => watched.push([chain, c.id, on]) });
+  try {
+    const a = new FakeWs();
+    const b = new FakeWs();
+    const c = new FakeWs();
+    for (const ws of [a, b, c]) hub.attach(ws);
+    assert.equal(a.of('hi').length, 1, 'hello first');
+    assert.deepEqual(Object.keys(a.of('hi')[0].ch), ['solana', 'robinhood', 'bnb', 'base']);
+    a.say({ op: 'sub', chain: 'solana' });
+    b.say({ op: 'sub', chain: 'solana' });
+    c.say({ op: 'sub', chain: 'robinhood' });
+    assert.deepEqual(a.of('snap')[0], { t: 'snap', chain: 'solana', coins: [] });
+    const id = hub.addCoin('solana', coinIn(MINT));
+    assert.equal(id, 's1');
+    assert.equal(hub.addCoin('solana', coinIn(MINT)), 's1', 'the same coin twice: one');
+    for (const ws of [a, b]) {
+      const msg = ws.of('c')[0];
+      assert.equal(msg.c.id, 's1');
+      assert.equal(msg.c.m, MINT);
+      assert.equal(msg.c.src, 'pump.fun');
+      assert.equal(msg.c.tr, 1);
+      assert.deepEqual(L.parseState(msg.c.st), L.parseState(P.encodeState(curveAt(780_000_000))));
+    }
+    assert.equal(c.of('c').length, 0, 'Robinhood Chain\'s viewer gets no Solana coin');
+    // changes: in one batch, each coin's newest only
+    hub.setState('solana', 's1', curveAt(770_000_000));
+    hub.setState('solana', 's1', curveAt(760_000_000));
+    hub.setState('solana', 's1', curveAt(760_000_000));
+    hub.flush();
+    const u = a.of('u');
+    assert.equal(u.length, 1);
+    assert.deepEqual(u[0].u, [['s1', P.encodeState(curveAt(760_000_000))]]);
+    assert.deepEqual(b.of('u'), u, 'the same batch for every viewer');
+    hub.flush();
+    assert.equal(a.of('u').length, 1, 'nothing changed: nothing sent');
+    // a picture, a coin let go, a chain's state, prices
+    hub.setPic('solana', 's1', '/p/abcdefghijklmnopqrstuv.webp', 5);
+    assert.deepEqual(a.of('pic')[0], { t: 'pic', id: 's1', p: '/p/abcdefghijklmnopqrstuv.webp', soc: 5 });
+    hub.setTracked('solana', 's1', false);
+    hub.flush();
+    assert.deepEqual(a.of('off')[0], { t: 'off', ids: ['s1'] });
+    hub.setStatus('solana', 'live', { src: 'PumpPortal' });
+    assert.deepEqual(c.of('st').at(-1).ch.solana, { s: 'live', n: 1, last: 100 }, 'every viewer hears a chain\'s state, never its source');
+    hub.setPx({ sol: 150 });
+    assert.equal(c.of('px')[0].sol, 150);
+    // watching: kept live for that viewer (the source hears when the first one comes and the last one goes), its history sent
+    t += 2000;
+    hub.setState('solana', 's1', curveAt(750_000_000));
+    a.say({ op: 'watch', ids: ['s1', 'zz', 's999'] });
+    b.say({ op: 'watch', ids: ['s1'] });
+    assert.deepEqual(watched, [['solana', 's1', true]]);
+    assert.equal(a.of('h')[0].id, 's1');
+    assert.ok(a.of('h')[0].h.length >= 2, 'its history');
+    a.say({ op: 'watch', ids: [] });
+    assert.equal(watched.length, 1, 'still watched by another');
+    b.close();
+    assert.deepEqual(watched.at(-1), ['solana', 's1', false], 'the last one gone');
+    // a new snapshot when the chain changes; nothing after unsub
+    a.say({ op: 'sub', chain: 'bnb' });
+    assert.deepEqual(a.of('snap').at(-1), { t: 'snap', chain: 'bnb', coins: [] });
+    hub.addCoin('solana', coinIn(MINT2));
+    assert.equal(a.of('c').length, 1, 'no longer a Solana viewer');
+    assert.equal(hub.stats().clients, 2);
+  } finally {
+    hub.close();
+  }
+});
+
+test('caps: a slow viewer misses batches, then gets everything again; far behind, it\'s dropped; too many or bad messages close it', () => {
+  const hub = createHub({ log: createLog({ write: () => {} }), batchMs: 1e9, pingMs: 1e9, limits: { msgBurst: 5, msgPerSec: 0.0001 } });
+  try {
+    const slow = new FakeWs();
+    hub.attach(slow);
+    slow.say({ op: 'sub', chain: 'solana' });
+    hub.addCoin('solana', coinIn(MINT));
+    slow.bufferedAmount = LIMITS.high + 1;
+    hub.setState('solana', 's1', curveAt(700_000_000));
+    hub.flush();
+    assert.equal(slow.of('u').length, 0, 'a batch skipped');
+    slow.bufferedAmount = 0;
+    hub.flush();
+    const snaps = slow.of('snap');
+    assert.equal(snaps.length, 2, 'caught up: a fresh snapshot');
+    assert.deepEqual(snaps[1].coins[0].st, P.encodeState(curveAt(700_000_000)), 'with the newest state');
+    slow.bufferedAmount = LIMITS.hard + 1;
+    hub.setState('solana', 's1', curveAt(690_000_000));
+    hub.flush();
+    assert.ok(slow.terminated, 'far behind: dropped');
+    // too many messages: closed (1008)
+    const spam = new FakeWs();
+    hub.attach(spam);
+    for (let i = 0; i < 6; i++) spam.say({ op: 'unsub' });
+    assert.equal(spam.closed && spam.closed.code, 1008);
+    // a message too big, or binary: closed
+    const big = new FakeWs();
+    hub.attach(big);
+    big.say('x'.repeat(LIMITS.maxMsgBytes + 1));
+    assert.equal(big.closed && big.closed.code, 1008);
+    const bin = new FakeWs();
+    hub.attach(bin);
+    bin.emit('message', Buffer.from([1, 2, 3]), true);
+    assert.equal(bin.closed && bin.closed.code, 1008);
+    // not JSON, or not ours: ignored
+    const odd = new FakeWs();
+    hub.attach(odd);
+    odd.say('{nope');
+    odd.say({ op: 'sub', chain: 'mars' });
+    odd.say({ op: 'watch', ids: 'all' });
+    assert.equal(odd.closed, null);
+    assert.equal(odd.of('snap').length, 0);
+    // at most 8 watched
+    const w = new FakeWs();
+    hub.attach(w);
+    w.say({ op: 'sub', chain: 'solana' });
+    for (let i = 0; i < 10; i++) hub.addCoin('solana', coinIn(`${MINT.slice(0, 40)}${String(i).padStart(4, '0')}`));
+    w.say({ op: 'watch', ids: hub.coins('solana').map((c) => c.id) });
+    assert.equal(hub.watched, 8);
+    // the newest LIMITS.keep a chain (never one somebody watches)
+    for (let i = 0; i < LIMITS.keep + 20; i++) hub.addCoin('solana', coinIn(`k${i}`.padEnd(44, 'x')));
+    assert.equal(hub.coins('solana').length, LIMITS.keep);
+    assert.equal(hub.coins('solana').filter((c) => c.watchers > 0).length, 8);
+  } finally {
+    hub.close();
+  }
+});
+
+test('pings: a viewer that never answers is dropped; one that does stays', async () => {
+  const hub = createHub({ log: createLog({ write: () => {} }), batchMs: 1e9, pingMs: 40 });
+  try {
+    const quiet = new FakeWs();
+    const lively = new FakeWs();
+    hub.attach(quiet);
+    hub.attach(lively);
+    lively.ping = function ping() {
+      this.pings += 1;
+      setImmediate(() => this.emit('pong'));
+    };
+    await until(() => quiet.terminated, 2000, 'the quiet one dropped');
+    assert.ok(lively.pings >= 1);
+    assert.equal(lively.terminated, false);
+    assert.equal(hub.clients, 1);
+  } finally {
+    hub.close();
+  }
+});
+
+test('backoff: 1 s, 2 s, 4 s… at most a minute, a little random', () => {
+  const fixed = { rand: () => 0.5 };
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8, 30].map((n) => backoffMs(n, fixed)), [1000, 2000, 4000, 8000, 16000, 32000, 60000, 60000, 60000]);
+  assert.equal(backoffMs(1, { rand: () => 0 }), 800);
+  assert.equal(backoffMs(1, { rand: () => 1 }), 1200);
+  assert.equal(backoffMs(0, fixed), 1000);
+  assert.equal(backoffMs(3, { base: 10, max: 25, rand: () => 0.5 }), 25);
+});
+
+// ---------- the relay, whole: against the stand-in services ----------
+
+const QUICK = { batchMs: 30, pingMs: 60_000, upstreamPingMs: 60_000, backoff: { base: 25, max: 150 }, picRetryMs: [50, 100], resyncMs: 20,
+  checkMs: 40, takeoverMs: 600, dex: { prices: 60_000, pools: 80, discover: 120, markets: 120 },
+  clank: { newest: 120, older: 60_000, trending: 60_000, liquidity: 60_000 } };
+async function relayWith(fakes, env = {}, timing = {}) {
+  const { cfg, problems, secrets } = readConfig(fakes.env({ TRENCH_PORT: '0', TRENCH_HOST: '127.0.0.1', TRENCH_ORIGINS: ORIGIN, ...env }));
+  const lines = [];
+  const log = createLog({ secrets, write: (l) => lines.push(l) });
+  const relay = await startRelay(cfg, { log, problems, timing: { ...QUICK, ...timing } });
+  return { relay, lines, url: `ws://127.0.0.1:${relay.port}/ws`, http: `http://127.0.0.1:${relay.port}` };
+}
+// a viewer: its messages as they come
+function viewer(url, { origin = ORIGIN } = {}) {
+  const ws = new WebSocket(url, { origin });
+  const got = [];
+  ws.on('message', (d) => got.push(JSON.parse(String(d))));
+  const opened = new Promise((resolve, reject) => {
+    ws.on('open', resolve);
+    ws.on('error', reject);
+  });
+  return { ws, got, opened, of: (t) => got.filter((m) => m.t === t), send: (o) => ws.send(JSON.stringify(o)) };
+}
+
+test('the relay whole: new coins and their trades live, pictures over https, every viewer the same, /health without a key', async () => {
+  const fakes = await startFakes();
+  const { relay, lines, url, http: base } = await relayWith(fakes, { TRENCH_CHAINS: 'solana,robinhood' });
+  const v1 = viewer(url);
+  const v2 = viewer(url);
+  try {
+    await Promise.all([v1.opened, v2.opened]);
+    v1.send({ op: 'sub', chain: 'solana' });
+    v2.send({ op: 'sub', chain: 'solana' });
+    await until(() => v1.of('snap').length && v2.of('snap').length, 5000, 'snapshots');
+    await until(async () => relay.helius && relay.helius.connected && relay.pump.primary.connected, 5000, 'its upstreams');
+    const a = await fakes.launch({ name: 'Moon Frog', symbol: 'MFROG' });
+    await until(() => v1.of('c').some((m) => m.c.m === a.mint) && v2.of('c').some((m) => m.c.m === a.mint), 5000, 'the new coin');
+    const coin = L.parseCoin(v1.of('c').find((m) => m.c.m === a.mint).c, 'solana');
+    assert.equal(coin.name, 'Moon Frog');
+    assert.equal(coin.src, 'pump.fun');
+    assert.equal(coin.tracked, true);
+    // somebody buys: its new state, from Helius, to every viewer
+    await until(() => fakes.seen.helius.some((m) => m.method === 'accountSubscribe' && m.params[0] === a.curveKey), 5000, 'its curve followed');
+    const after = fakes.trade(a.mint, 2);
+    const changed = (v) => v.of('u').some((m) => m.u.some(([id, st]) => id === coin.id && Math.abs(st[1] - after.vs) < 1e-5));
+    await until(() => changed(v1) && changed(v2), 5000, 'the trade');
+    // its picture, made small, from the relay's own address
+    await until(() => v1.of('pic').some((m) => m.id === coin.id), 8000, 'its picture');
+    const pic = v1.of('pic').find((m) => m.id === coin.id);
+    assert.equal(pic.soc, 5, 'X and a website');
+    const res = await fetch(`${base}${pic.p}`);
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('content-type'), 'image/webp');
+    assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+    assert.match(res.headers.get('cache-control'), /immutable/);
+    assert.equal(sniff(Buffer.from(await res.arrayBuffer())), 'webp');
+    assert.equal((await fetch(`${base}/p/AAAAAAAAAAAAAAAAAAAAAA.webp`)).status, 404);
+    assert.equal((await fetch(`${base}/p/../../etc/passwd`)).status, 404);
+    assert.equal((await fetch(`${base}/`)).status, 404);
+    assert.equal((await fetch(`${base}/health`, { method: 'POST' })).status, 405);
+    // an SVG for a picture: never served
+    const s = await fakes.launch({ name: 'Bad Pic', symbol: 'BAD', picture: 'svg' });
+    const badId = await until(() => v1.of('c').find((m) => m.c.m === s.mint)?.c.id, 5000, 'the SVG coin');
+    await until(() => relay.pictures.stats().failed >= 1, 8000, 'its picture refused');
+    assert.equal(v1.of('pic').some((m) => m.id === badId), false);
+    // migration: closed, then its pool from DexScreener
+    fakes.migrate(a.mint);
+    await until(() => v1.of('u').some((m) => m.u.some(([id, st]) => id === coin.id && st[0] === 'p')), 8000, 'its pool');
+    // clank.trade's coins to Robinhood Chain's viewers only
+    const cl = await fakes.clank({ name: 'Clank Cat', symbol: 'CCAT', marketCap: 2.5 });
+    const v3 = viewer(url);
+    await v3.opened;
+    v3.send({ op: 'sub', chain: 'robinhood' });
+    await until(() => v3.of('snap').some((m) => m.coins.some((c) => c.m === cl.address)) || v3.of('c').some((m) => m.c.m === cl.address), 8000, 'the clank.trade coin');
+    assert.equal(v1.got.some((m) => m.t === 'c' && m.c.m === cl.address), false);
+    const clCoin = L.parseCoin((v3.of('snap').flatMap((m) => m.coins).find((c) => c.m === cl.address)) || v3.of('c').find((m) => m.c.m === cl.address).c, 'robinhood');
+    assert.equal(clCoin.src, 'clank.trade');
+    assert.deepEqual(clCoin.st, { k: 'u', mu: 7500, lu: null, pg: 0.12, gr: false, cl: false });
+    v3.ws.close();
+    // /health: its chains, its sources, its pictures; never the key, never a viewer
+    const h = await (await fetch(`${base}/health`)).json();
+    assert.equal(h.ok, true);
+    assert.equal(h.chains.solana.s, 'live');
+    assert.ok(h.chains.solana.coins >= 2 && h.clients >= 2);
+    assert.equal(h.solana.helius.connected, true);
+    assert.equal(h.solana.pumpportal.connected, true);
+    assert.ok(h.pictures.made >= 1);
+    assert.deepEqual(h.prices && h.prices.sol, 150);
+    const text = JSON.stringify(h);
+    assert.ok(!text.includes(fakes.key) && !text.includes('127.0.0.1'), 'no key and no address in /health');
+  } finally {
+    v1.ws.close();
+    v2.ws.close();
+    await relay.close();
+    await fakes.close();
+  }
+  assert.ok(!lines.join('\n').includes(fakes.key), 'the key never in its log');
+});
+
+test("the relay's door: only the site's own pages, at most so many viewers (a full relay says so), at most so many from one address", async () => {
+  const fakes = await startFakes();
+  const { relay, url } = await relayWith(fakes, { TRENCH_CHAINS: 'bnb', TRENCH_MAX_CLIENTS: '2', TRENCH_MAX_PER_IP: '3' });
+  const open = [];
+  try {
+    // another site's page: refused before it's a WebSocket
+    const other = viewer(url, { origin: 'https://evil.example' });
+    await assert.rejects(other.opened, /403/);
+    const noOrigin = new WebSocket(url);
+    await assert.rejects(new Promise((res, rej) => {
+      noOrigin.on('open', res);
+      noOrigin.on('error', rej);
+    }), /403/);
+    // two viewers fit; a third hears "try again later" (1013) and is closed
+    for (let i = 0; i < 2; i++) {
+      const v = viewer(url);
+      await v.opened;
+      open.push(v);
+    }
+    const third = new WebSocket(url, { origin: ORIGIN });
+    const code = await new Promise((r) => third.on('close', (c) => r(c)));
+    assert.equal(code, 1013);
+    await until(() => relay.hub.clients === 2, 2000, 'still two');
+    // one address: at most TRENCH_MAX_PER_IP
+    open.forEach((v) => v.ws.close());
+    await until(() => relay.hub.clients === 0, 2000, 'none');
+    const mine = [];
+    for (let i = 0; i < 2; i++) {
+      const v = viewer(url);
+      await v.opened;
+      mine.push(v);
+    }
+    open.push(...mine);
+    assert.equal(relay.hub.clients, 2);
+  } finally {
+    open.forEach((v) => v.ws.close());
+    await relay.close();
+    await fakes.close();
+  }
+  // per address, with a smaller cap
+  const f2 = await startFakes();
+  const { relay: r2, url: u2 } = await relayWith(f2, { TRENCH_CHAINS: 'bnb', TRENCH_MAX_PER_IP: '1' });
+  const first = viewer(u2);
+  try {
+    await first.opened;
+    const second = viewer(u2);
+    await assert.rejects(second.opened, /429/);
+  } finally {
+    first.ws.close();
+    await r2.close();
+    await f2.close();
+  }
+});
+
+test('reconnects: PumpPortal drops and PumpDev takes over, then hands back; Helius drops and every curve is followed again', async () => {
+  const fakes = await startFakes();
+  const { relay, lines, url } = await relayWith(fakes, { TRENCH_CHAINS: 'solana' });
+  const v = viewer(url);
+  try {
+    await v.opened;
+    v.send({ op: 'sub', chain: 'solana' });
+    const subscribed = () => fakes.seen.pumpportal.filter((m) => m.method === 'subscribeNewToken').length;
+    await until(() => relay.pump.primary.connected && relay.helius.connected && subscribed() === 1, 5000, 'connected');
+    await until(() => fakes.seen.pumpportal.some((m) => m.method === 'subscribeMigration'), 3000, 'migrations too');
+    assert.equal(subscribed(), 1, 'one connection, both subscriptions on it');
+    assert.equal(fakes.seen.pumpportal.filter((m) => m.method === 'subscribeMigration').length, 1);
+    const a = await fakes.launch({ name: 'First', symbol: 'ONE' });
+    await until(() => v.of('c').some((m) => m.c.m === a.mint), 5000, 'the first coin');
+    // PumpPortal goes away: nothing new from it; after a while PumpDev takes over
+    fakes.setDown('pumpportal');
+    // (connected comes as its socket opens; its subscription reaches the stand-in a moment later: waited for, never assumed)
+    const devSubscribed = () => fakes.seen.pumpdev.filter((m) => m.method === 'subscribeNewToken').length;
+    await until(() => relay.pump.backup.running && relay.pump.backup.connected && devSubscribed() >= 1, 6000, 'PumpDev taking over');
+    assert.equal(devSubscribed(), 1);
+    const b = await fakes.launch({ name: 'Second', symbol: 'TWO', via: 'pumpdev' });
+    await until(() => v.of('c').some((m) => m.c.m === b.mint), 5000, 'a coin through PumpDev');
+    // PumpPortal is back: it reconnects by itself (and subscribes again); its first new coin hands back
+    fakes.setDown('pumpportal', false);
+    await until(() => relay.pump.primary.connected && subscribed() >= 2, 5000, 'PumpPortal again, subscribed again');
+    assert.equal(subscribed(), 2);
+    const c = await fakes.launch({ name: 'Third', symbol: 'THREE' });
+    await until(() => v.of('c').some((m) => m.c.m === c.mint), 5000, 'a coin through PumpPortal again');
+    await until(() => !relay.pump.backup.running, 5000, 'PumpDev stopped');
+    // Helius goes away and comes back: every followed curve subscribed again, and read again at once
+    const subs = () => fakes.seen.helius.filter((m) => m.method === 'accountSubscribe' && m.params[0] === a.curveKey).length;
+    await until(() => subs() === 1, 3000, 'one subscription');
+    fakes.setDown('helius');
+    await until(() => !relay.helius.connected, 3000, 'Helius down');
+    await until(() => relay.hub.state('solana').s === 'down', 3000, 'Solana down');
+    fakes.setDown('helius', false);
+    await until(() => relay.helius.connected && subs() === 2, 6000, 'subscribed again');
+    const after = fakes.trade(a.mint, 1.5);
+    await until(() => v.of('u').some((m) => m.u.some(([, st]) => Math.abs(st[1] - after.vs) < 1e-5)), 5000, 'a trade after the reconnect');
+    await until(() => relay.hub.state('solana').s === 'live', 3000, 'Solana live again');
+  } finally {
+    v.ws.close();
+    await relay.close();
+    await fakes.close();
+  }
+  assert.ok(lines.some((l) => /PumpDev takes over/.test(l)) && lines.some((l) => /PumpDev stops/.test(l)), 'its log says so');
+});
+
+test('PumpPortal off in the settings: PumpDev sends the new coins from the start, and PumpPortal is never asked', async () => {
+  const fakes = await startFakes();
+  const { relay, lines, url } = await relayWith(fakes, { TRENCH_CHAINS: 'solana', PUMPPORTAL_WS_URL: 'off' });
+  const v = viewer(url);
+  try {
+    await v.opened;
+    v.send({ op: 'sub', chain: 'solana' });
+    assert.equal(relay.pump.primary, null);
+    await until(() => relay.pump.backup.running && relay.pump.backup.connected && relay.helius.connected, 5000, 'PumpDev at once');
+    await until(() => fakes.seen.pumpdev.some((m) => m.method === 'subscribeNewToken'), 3000, 'subscribed to new coins');
+    const a = await fakes.launch({ name: 'Only Dev', symbol: 'ODEV', via: 'pumpdev' });
+    await until(() => v.of('c').some((m) => m.c.m === a.mint), 5000, 'a coin through PumpDev');
+    await until(() => relay.hub.state('solana').s === 'live', 3000, 'Solana live');
+    const h = relay.health();
+    assert.equal(h.solana.pumpportal, null, '/health says it\'s off');
+    assert.equal(h.solana.pumpdev.running, true);
+  } finally {
+    v.ws.close();
+    await relay.close();
+    await fakes.close();
+  }
+  assert.equal(fakes.seen.pumpportal.length, 0, 'nothing ever sent to PumpPortal');
+  assert.ok(lines.some((l) => /PumpPortal is off in the settings: PumpDev sends the new coins/.test(l)), 'its log says so');
+  assert.ok(!lines.some((l) => /PumpDev takes over|PumpDev stops/.test(l)), 'never the takeover dance');
+});
+
+test('a Helius key Helius refuses: Solana is down, and the key is in no log line and no answer', async () => {
+  const fakes = await startFakes({ key: 'the-right-key-0000000000' });
+  const wrong = 'wrong-key-9f8e7d6c5b4a3210fedcba';
+  const { relay, lines, http: base } = await relayWith(fakes, { TRENCH_CHAINS: 'solana', HELIUS_API_KEY: `http://127.0.0.1:${fakes.port}/?api-key=${wrong}` });
+  try {
+    await until(() => lines.some((l) => /Helius: .*401/.test(l)), 5000, 'Helius refusing');
+    await fakes.launch({});
+    await until(() => relay.hub.coins('solana').length === 1, 5000, 'a coin anyway');
+    await until(() => relay.hub.state('solana').s === 'down', 3000, 'Solana down without Helius');
+    const h = await (await fetch(`${base}/health`)).text();
+    assert.ok(!h.includes(wrong));
+  } finally {
+    await relay.close();
+    await fakes.close();
+  }
+  const all = lines.join('\n');
+  assert.ok(!all.includes(wrong), 'never in the log');
+  assert.ok(lines.length > 2, 'it did log');
+  // no key at all: Solana says it's off, why, and nothing tries Helius
+  const f2 = await startFakes();
+  const { cfg } = readConfig({ ...f2.env({ TRENCH_PORT: '0', TRENCH_HOST: '127.0.0.1', TRENCH_CHAINS: 'solana' }), HELIUS_API_KEY: '' });
+  const r2 = await startRelay(cfg, { log: createLog({ write: () => {} }), timing: QUICK });
+  try {
+    assert.equal(r2.helius, null);
+    await until(() => r2.hub.state('solana').s === 'off', 3000, 'Solana off');
+    assert.equal(r2.hub.state('solana').why, 'no Helius key');
+  } finally {
+    await r2.close();
+    await f2.close();
+  }
+});
+
+// ---------- the game's side: Live mode's own rules ----------
+
+test("Live mode's chains, the money each terminal shows in it, and which challenges it plays", () => {
+  assert.deepEqual(L.CHAINS.map((c) => c.id), ['solana', 'robinhood', 'bnb', 'base']);
+  assert.deepEqual(L.CHAINS.map((c) => c.name), ['Solana', 'Robinhood Chain', 'BNB Chain', 'Base']);
+  assert.equal(L.DEFAULT_CHAIN, 'solana');
+  assert.equal(L.chainById('robinhood').src, 'clank.trade');
+  assert.equal(L.chainById('solana').src, 'pump.fun');
+  assert.equal(L.chainById('mars'), null);
+  // the owner's: Trench Board SOL on every chain, Trench Scan the chain's own coin, Trench Chat ETH, Trench Social dollars,
+  // Trench Pro its counterpart's (SOL)
+  for (const ch of L.CHAIN_IDS) {
+    assert.equal(L.liveCurrency('board', ch), 'sol');
+    assert.equal(L.liveCurrency('chat', ch), 'eth');
+    assert.equal(L.liveCurrency('social', ch), 'usd');
+    assert.equal(L.liveCurrency('pro', ch), 'sol');
+  }
+  assert.deepEqual(L.CHAIN_IDS.map((ch) => L.liveCurrency('scan', ch)), ['sol', 'eth', 'bnb', 'eth']);
+  assert.equal(L.liveCurrency('nope', 'nope'), 'sol');
+  const px = { sol: 150, eth: 3000, bnb: 600 };
+  assert.equal(L.toUnit(2, 'sol', px), 2);
+  assert.equal(L.toUnit(2, 'usd', px), 300);
+  assert.equal(L.toUnit(2, 'eth', px), 0.1);
+  assert.equal(L.toUnit(2, 'bnb', px), 0.5);
+  assert.ok(Number.isNaN(L.toUnit(2, 'eth', { sol: 150 })));
+  // the daily market is never live; nor is the challenge that ends on a rug (a real coin is never called one)
+  assert.deepEqual(CHALLENGES.filter((c) => !L.liveOk(c)).map((c) => c.id), ['rug-dodger']);
+  assert.equal(L.liveOk({ ...challengeById('double-up'), daily: '2026-10-21' }), false);
+  assert.equal(L.liveOk(null), false);
+});
+
+test("the relay's address: the site's own; another only on this computer, and only one on this computer too", () => {
+  const at = (hostname, search = '') => L.relayUrl({ hostname, search });
+  assert.equal(L.RELAY_URL, 'wss://live.agi1.app/ws');
+  assert.equal(at('agi1.app'), L.RELAY_URL);
+  assert.equal(at('www.agi1.app', '?relay=wss%3A%2F%2Fevil.example%2Fws'), L.RELAY_URL, 'never from a link on the site');
+  assert.equal(at('agi1.app', '?relay=ws%3A%2F%2F127.0.0.1%3A8787%2Fws'), L.RELAY_URL, 'not even a local one from the site');
+  assert.equal(at('preview.vercel.app', '?relay=ws%3A%2F%2F127.0.0.1%3A8787%2Fws'), L.RELAY_URL);
+  assert.equal(at('localhost', '?relay=ws%3A%2F%2F127.0.0.1%3A8787%2Fws'), 'ws://127.0.0.1:8787/ws');
+  assert.equal(at('127.0.0.1', '?relay=ws://localhost:9999/ws'), 'ws://localhost:9999/ws');
+  assert.equal(at('localhost', '?relay=wss%3A%2F%2Fevil.example%2Fws'), L.RELAY_URL, 'this computer only');
+  assert.equal(at('localhost', '?relay=https%3A%2F%2F127.0.0.1%2F'), L.RELAY_URL, 'a WebSocket only');
+  assert.equal(at('localhost', '?relay=ws%3A%2F%2Fa%3Ab%40127.0.0.1%2Fws'), L.RELAY_URL);
+  assert.equal(at('localhost', '?relay=%%%'), L.RELAY_URL);
+  assert.equal(L.relayUrl(null), L.RELAY_URL);
+  assert.equal(L.picUrl(L.RELAY_URL, '/p/abcdefghijklmnopqrstuv.webp'), 'https://live.agi1.app/p/abcdefghijklmnopqrstuv.webp');
+  assert.equal(L.picUrl('ws://127.0.0.1:8787/ws', '/p/abcdefghijklmnopqrstuv.webp'), 'http://127.0.0.1:8787/p/abcdefghijklmnopqrstuv.webp');
+  for (const bad of ['/p/../x.webp', 'https://evil.example/p/abcdefghijklmnopqrstuv.webp', '/p/short.webp', null]) {
+    assert.equal(L.picUrl(L.RELAY_URL, bad), null, String(bad));
+  }
+});
+
+test('Live mode says "coming soon" on the site until its relay runs (LIVE_OPEN); this computer with a relay of its own still has it', () => {
+  // the owner's choice (2026-10-21): "Coming soon" until the relay runs on the owner's server, then one small push,
+  // LIVE_OPEN = true (and this line with it: CLAUDE.md, Live mode's steps)
+  assert.equal(L.LIVE_OPEN, false, 'closed on the site until the relay runs');
+  const at = (hostname, search = '') => ({ hostname, search });
+  for (const [loc, why] of [[at('agi1.app'), 'the site'], [at('www.agi1.app'), 'the site'],
+    [at('www.agi1.app', '?relay=ws%3A%2F%2F127.0.0.1%3A8787%2Fws'), 'never opened by a link on the site'],
+    [at('preview.vercel.app', '?relay=ws://127.0.0.1:8787/ws'), 'a preview'],
+    [at('localhost'), 'this computer without a relay of its own'],
+    [at('localhost', '?relay=wss%3A%2F%2Fevil.example%2Fws'), 'a relay that isn\'t on this computer'],
+    [at('localhost', '?relay=%%%'), 'a broken address'], [null, 'no address at all']]) {
+    assert.equal(L.liveOpen(loc), L.LIVE_OPEN, why);
+  }
+  // the tests and a try before the relay runs: this computer, with a relay of its own on it
+  assert.equal(L.liveOpen(at('localhost', '?relay=ws%3A%2F%2F127.0.0.1%3A8787%2Fws')), true);
+  assert.equal(L.liveOpen(at('127.0.0.1', '?relay=ws://localhost:9999/ws')), true);
+  // its words: coming soon, play money only, never a tip, a price or a promise
+  for (const w of [L.LIVE_SOON, L.LIVE_SOON_HOW]) {
+    assert.match(w, /coming soon/, w);
+    assert.match(w, /play money only/, w);
+    assert.doesNotMatch(w, /\bbuy\b|\bsell\b|guarantee|advice|invest|\$\d|%/i, w);
+    assert.ok(w.length > 80 && w.length < 220, w);
+  }
+  assert.match(L.LIVE_SOON, /Until then, every coin here is made up\.$/, 'true of what plays meanwhile');
+  for (const c of L.CHAINS) assert.ok(L.LIVE_SOON_HOW.includes(c.name), `How to play names ${c.name}`);
+  // the screens: nothing of Live mode can be picked, or kept from a try, while it's closed; its choice says Soon and can't
+  // be pressed (like the terminals not built yet), and How to play and the Market switch say it's coming
+  const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
+  assert.match(shell, /const LIVE = liveOpen\(location\);\s*if \(!LIVE\) S\.save\.live = false;/);
+  assert.match(shell, /\['live', 'Live coins', !LIVE\]/);
+  assert.match(shell, /if \(on === S\.save\.live \|\| \(on && !LIVE\)\) return;/);
+  assert.match(shell, /'aria-label': soon \? `\$\{words\}, coming soon` : null, disabled: Boolean\(soon\)/);
+  assert.match(shell, /el\('span', \{ class: 'ts-chip-soon', text: 'Soon', 'aria-hidden': 'true' \}\)/);
+  assert.match(shell, /\] : LIVE \? null : el\('p', \{ class: 'ts-live-about', text: LIVE_SOON \}\)/);
+  assert.match(shell, /text: LIVE \? 'Live mode \(on the modes screen\)[^']*'\s*: LIVE_SOON_HOW \}/);
+  assert.equal((shell.match(/S\.save\.live = /g) || []).length, 2, 'only the closed switch and the Market switch set it');
+  const css = readFileSync('src/games/trenchingsimulator/trench.css', 'utf8');
+  assert.match(css, /\.ts-chip:disabled \{[^}]*border-style: dashed;[^}]*color: var\(--t-muted\);[^}]*cursor: not-allowed;/);
+  assert.match(css, /\.ts-chip:disabled:hover \{\s*border-color: var\(--t-line\);/, 'no hover on a choice that can\'t be picked');
+  assert.match(css, /\.ts-chip-soon \{[^}]*text-transform: uppercase;/);
+  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /(^|[\s,}])\.is-soon\b/m, 'is-soon is never styled on its own');
+});
+
+test('what the relay sends, checked before anything sees it', () => {
+  const wire = P.encodeCoin({ id: 's7', key: MINT, name: 'Moon Frog', symbol: 'MFROG', pic: '/p/abcdefghijklmnopqrstuv.webp', born: 1_792_000_000_000,
+    by: DEV, src: 'pump.fun', soc: 3, sup: 1e9, st: curveAt(700_000_000), st0: curveAt(793_100_000), tracked: true });
+  const c = L.parseCoin(wire, 'solana');
+  assert.equal(c.id, 's7');
+  assert.equal(c.key, MINT);
+  assert.equal(c.pic, '/p/abcdefghijklmnopqrstuv.webp');
+  assert.equal(c.src, 'pump.fun');
+  assert.equal(c.soc, 3);
+  assert.equal(c.tracked, true);
+  assert.equal(c.st0.k, 'c');
+  assert.deepEqual(L.socialsOf(3), { x: true, tg: true, web: false });
+  // never what the wire says beyond its rules
+  assert.equal(L.parseCoin({ ...wire, src: 'evil.example' }, 'solana').src, null, 'a source: only the chain\'s own');
+  assert.equal(L.parseCoin({ ...wire, p: 'https://evil.example/x.png' }, 'solana').pic, null);
+  assert.equal(L.parseCoin({ ...wire, by: '<b>x</b>' }, 'solana').by, null);
+  assert.equal(L.parseCoin({ ...wire, m: '0xAbCdEf0123456789abcdef0123456789ABCDEF01' }, 'solana'), null, 'a Solana coin has a Solana address');
+  assert.equal(L.parseCoin({ ...wire, m: '0xAbCdEf0123456789abcdef0123456789ABCDEF01' }, 'base').key, '0xabcdef0123456789abcdef0123456789abcdef01');
+  for (const bad of [{ id: 'x1' }, { id: '<s1>' }, { n: '' }, { st: ['c', -1, 1, 1, 1, 0] }, { st: ['z'] }, { s: null }]) {
+    assert.equal(L.parseCoin({ ...wire, ...bad }, 'solana'), null, JSON.stringify(bad));
+  }
+  assert.deepEqual(L.parseState(['u', 7500, -1, -1, 1, 0]), { k: 'u', mu: 7500, lu: null, pg: null, gr: true, cl: false });
+  assert.deepEqual(L.parseState(['p', 84.9, 206_900_000]), { k: 'p', ls: 84.9, lb: 206_900_000 });
+  assert.equal(L.parseState(['p', 0, 1]), null);
+  assert.equal(L.parseState(['c', 30, 100, 200, 0, 0]), null, 'more real tokens than virtual: nonsense');
+  const dx = L.parseDx([1500, 12, 7, 9000, 140, 30000, 700, 4.2, -3.5], 150);
+  assert.deepEqual(dx, { v5: 10, b5: 12, s5: 7, v1h: 60, t1h: 140, v24: 200, t24: 700, c5: 0.042, c1h: -0.035 });
+  assert.equal(L.parseDx([1, 2], 150), null);
+  assert.equal(L.parseDx([-1, -1, -1, -1, -1, -1, -1, -1, -1], 150).v5, null);
+  // messages
+  const msg = (o) => L.parseMessage(JSON.stringify(o), 'solana');
+  assert.deepEqual(msg({ t: 'hi', ch: { solana: { s: 'live', n: 30 }, mars: { s: 'live' }, bnb: { s: 'weird' } }, px: { sol: 150, eth: -1 } }),
+    { t: 'hi', ch: { solana: { s: 'live', n: 30 } }, px: { sol: 150 } });
+  assert.equal(msg({ t: 'snap', chain: 'bnb', coins: [] }), null, 'another chain\'s snapshot');
+  assert.equal(msg({ t: 'snap', chain: 'solana', coins: [wire, { id: 'bad' }] }).coins.length, 1);
+  assert.deepEqual(msg({ t: 'u', u: [['s7', ['c', 31, 1_000_000_000, 720_100_000, 1, 0], [1, 2, 3, 4, 5, 6, 7, 8, 9]], ['nope', []], ['s8', ['?']]] }).u,
+    [{ id: 's7', st: { k: 'c', vs: 31, vt: 1_000_000_000, rt: 720_100_000, rs: 1, done: false }, dx: [1, 2, 3, 4, 5, 6, 7, 8, 9] }]);
+  assert.deepEqual(msg({ t: 'off', ids: ['s1', 'x', 7] }), { t: 'off', ids: ['s1'] });
+  assert.deepEqual(msg({ t: 'pic', id: 's1', p: '/p/abcdefghijklmnopqrstuv.webp', soc: 9 }), { t: 'pic', id: 's1', p: '/p/abcdefghijklmnopqrstuv.webp', soc: 1 });
+  assert.equal(msg({ t: 'pic', id: 's1', p: 'javascript:alert(1)' }), null);
+  assert.equal(msg({ t: 'h', id: 's1', h: [[1, ['c', 31, 1_000_000_000, 720_100_000, 1, 0]], ['x']] }).h.length, 1);
+  for (const bad of ['', '{', '[]', 'null', '{"t":"nope"}', 'x'.repeat(2_000_001)]) assert.equal(L.parseMessage(bad, 'solana'), null);
+});
+
+// a stand-in live feed for a market: its state, its chain's, its coins, what it's asked to watch
+function fakeFeed({ status = 'live', state = 'live', chain = 'solana', coins = [] } = {}) {
+  const listeners = new Set();
+  const f = {
+    status, ch: { [chain]: state }, list: coins.slice(), watched: [],
+    on(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    emit(ev) {
+      for (const fn of [...listeners]) fn(ev);
+    },
+    chainState(id = chain) {
+      return f.ch[id] ?? null;
+    },
+    coins: () => f.list.slice(),
+    picUrl: (p) => L.picUrl(L.RELAY_URL, p),
+    watch(ids) {
+      f.watched = ids;
+    },
+    setStatus(s) {
+      f.status = s;
+      f.emit({ type: 'status', status: s });
+    },
+    setChain(s) {
+      f.ch[chain] = s;
+      f.emit({ type: 'chains' });
+    },
+    get listeners() {
+      return listeners.size;
+    },
+  };
+  return f;
+}
+// a made-up Solana address for coin i (base58: never a 0)
+const mintOf = (i) => `${MINT.slice(0, 40)}${'ABCDEFGHJKLMNPQRSTUVWXYZ'[i % 24]}${'abcdefghijk'[Math.floor(i / 24) % 11]}pp`;
+const wireCoin = (i, over = {}) => L.parseCoin(P.encodeCoin({ id: `s${i}`, key: mintOf(i),
+  name: `Live Coin ${i}`, symbol: `LIVE${i}`, pic: '/p/abcdefghijklmnopqrstuv.webp', born: Date.now() - 30_000, by: DEV, src: 'pump.fun',
+  soc: 1, sup: 1e9, st: curveAt(700_000_000), st0: curveAt(793_100_000), tracked: true, ...over }), 'solana');
+
+test('a live market: real coins in its lists with their pictures; the stand-ins paused while live, there while quiet or down', () => {
+  const feed = fakeFeed({ coins: [wireCoin(1), wireCoin(2)] });
+  const m = createLiveMarket({ feed, chain: 'solana', seed: 'live-test', solUsd: 150, startSol: 1, config: { warmup: 120 } });
+  try {
+    let L1 = m.lists({ limit: 30 });
+    const fresh = L1.new;
+    assert.deepEqual(fresh.map((r) => r.ticker), ['LIVE2', 'LIVE1'], 'its real coins, newest first');
+    assert.ok(fresh.every((r) => r.live && r.tracked && r.src === 'pump.fun' && r.pic === 'https://live.agi1.app/p/abcdefghijklmnopqrstuv.webp'));
+    assert.ok(Object.values(L1).flat().filter(Boolean).every((r) => !r.standIn), 'no stand-ins while live');
+    assert.deepEqual(m.ext.shown, { sim: false, ext: true, simPaused: true });
+    near(fresh[0].mc, P.curveMarketCap(curveAt(700_000_000)), 1e-6, 'its market cap, the real one');
+    // a new coin comes in; a change moves it (somebody's trade)
+    feed.emit({ type: 'coin', coin: wireCoin(3) });
+    assert.equal(m.lists().new[0].ticker, 'LIVE3');
+    const id = m.ext.byKey(wireCoin(1).key);
+    feed.emit({ type: 'u', u: [{ id: 's1', st: L.parseState(P.encodeState(curveAt(650_000_000))), dx: null }] });
+    const tr = m.trades(id, 5);
+    assert.equal(tr[0].side, 'buy');
+    assert.equal(tr[0].label, 'trader');
+    assert.equal(tr[0].addr, null, 'never an address for somebody out there');
+    near(tr[0].tok, 50_000_000, 1, 'the tokens it took');
+    near(tr[0].sol, curveAt(650_000_000).vs - curveAt(700_000_000).vs, 1e-5, 'the SOL it put in (six decimals on the wire)');
+    // quiet: the stand-ins fill in (and run), the real coins stay
+    feed.setChain('quiet');
+    assert.deepEqual(m.ext.shown, { sim: true, ext: true, simPaused: false });
+    L1 = m.lists({ limit: 30 });
+    assert.ok(L1.new.some((r) => r.standIn) && L1.new.some((r) => r.live));
+    // down: the stand-ins only; the real coins aren't live (an order on one waits)
+    feed.setStatus('down');
+    assert.deepEqual(m.ext.shown, { sim: true, ext: false, simPaused: false });
+    L1 = m.lists({ limit: 30 });
+    assert.ok(Object.values(L1).flat().filter(Boolean).every((r) => !r.live));
+    assert.equal(m.row(id).tracked, false);
+    assert.deepEqual(m.order({ coin: id, side: 'buy', sol: 0.1 }), { ok: false, error: 'stale' });
+    assert.ok(ORDER_ERRORS.stale.includes('live feed'), 'the board says why');
+    // back: its next snapshot makes them live again; a stand-in held meanwhile stays tradeable
+    feed.setStatus('live');
+    feed.ch.solana = 'live';
+    feed.emit({ type: 'snap', coins: [wireCoin(1), wireCoin(2), wireCoin(3)] });
+    assert.equal(m.row(id).tracked, true);
+    assert.equal(m.order({ coin: id, side: 'buy', sol: 0.1 }).ok, true);
+    // the coin open and the ones held are watched (by the relay's ids)
+    m.advanceTo(m.t + 2);
+    m.focus(m.ext.byKey(wireCoin(2).key));
+    assert.deepEqual(feed.watched.slice().sort(), ['s1', 's2']);
+    m.focus(null);
+    assert.deepEqual(feed.watched, ['s1']);
+    // let go of the feed
+    m.destroy();
+    assert.equal(feed.listeners, 0);
+    assert.deepEqual(feed.watched, []);
+  } finally {
+    m.destroy();
+  }
+});
+
+test("play money against the live curve: the curve's own tokens for a buy, the player's tokens move it in their view, a sell comes back along it", () => {
+  const m = createMarket({ seed: 'ext-math', startSol: 100, config: { warmup: 0 }, live: true });
+  m.ext.view({ sim: false, ext: true, simPaused: true });
+  const real = L.toReal(L.parseState(P.encodeState(curveAt(700_000_000))));
+  const id = m.ext.add({ key: MINT, chain: 'solana', src: 'pump.fun', name: 'Moon Frog', ticker: 'MFROG', born: m.t - 10, real, live: true });
+  // a quote on a live pump.fun curve is the game's own curve's at the same point
+  for (const sol of [0.1, 1, 10]) {
+    const q = m.quote({ coin: id, side: 'buy', sol });
+    const net = sol * 0.99;
+    const own = buyQuote({ phase: 'curve', curve: { left: 700_000_000 } }, net);
+    assert.ok(Math.abs(q.tokens - own.out) <= 1, `${sol} SOL: ${q.tokens} vs ${own.out}`);
+  }
+  // a buy lands (play money): its tokens out of the curve in the player's view
+  assert.equal(m.order({ coin: id, side: 'buy', sol: 5, priority: 'ultra', slippage: 1 }).ok, true);
+  m.advance(1);
+  const pos = m.positions().find((p) => p.id === id);
+  assert.ok(pos && pos.tokens > 0, 'bought');
+  const mcAfterBuy = m.row(id).mc;
+  assert.ok(mcAfterBuy > P.curveMarketCap(curveAt(700_000_000)), 'their buy moved it in their view');
+  near(m.row(id).progress, curveProgress({ left: 700_000_000 }), 1e-9, 'its progress is still the real one');
+  // somebody else buys out there: the real curve moves, the player's tokens still out of it
+  m.ext.state(id, L.toReal(L.parseState(P.encodeState(curveAt(650_000_000)))));
+  const k = curveAt(650_000_000).vs * curveAt(650_000_000).vt;
+  const tok = curveAt(650_000_000).vt - pos.tokens;
+  near(m.row(id).mc, (k / tok / tok) * 1e9, 1e-3, 'the real curve with the player\'s tokens taken out along it');
+  // a sell comes back along it: with the real curve moved up, a profit
+  assert.equal(m.order({ coin: id, side: 'sell', frac: 1, priority: 'ultra', slippage: 1 }).ok, true);
+  m.advance(1);
+  const sold = m.positions().find((p) => p.id === id);
+  assert.equal(sold.tokens, 0);
+  assert.ok(sold.total > 0, 'a profit from the real buyers');
+  near(m.row(id).mc, P.curveMarketCap(curveAt(650_000_000)), 1e-3, 'all sold: the real market again');
+  // a live curve never sells more than it has left: the rest comes back
+  m.ext.state(id, L.toReal(L.parseState(P.encodeState(curveAt(1_000_000)))));
+  const before = m.player.sol;
+  assert.equal(m.order({ coin: id, side: 'buy', sol: 50, priority: 'ultra', slippage: 1 }).ok, true);
+  m.advance(1);
+  const all = m.positions().find((p) => p.id === id);
+  assert.ok(Math.abs(all.tokens - 1_000_000) <= 1, `at most what it had left: ${all.tokens}`);
+  assert.ok(before - m.player.sol < 50 * 0.5, 'and only that paid for');
+  assert.equal(m.row(id).phase, 'curve', 'the real coin hasn\'t migrated because of a play-money buy');
+  // sold out for real: closed for a moment (nothing trades), then its pool
+  m.ext.state(id, L.toReal(L.parseState(P.encodeState(curveAt(0, true)))));
+  assert.equal(m.row(id).phase, 'migrating');
+  assert.deepEqual(m.order({ coin: id, side: 'sell', frac: 1 }), { ok: false, error: 'migrating' });
+  assert.ok(m.positions().find((p) => p.id === id).value > 0, 'still worth its last price meanwhile');
+  m.ext.state(id, L.toReal(L.parseState(['p', 84.9, 206_900_000])));
+  assert.equal(m.row(id).phase, 'pool');
+  assert.ok(m.feed(0).some((e) => e.kind === 'migrate' && e.c === id) && m.feed(0).some((e) => e.kind === 'migrated' && e.c === id));
+  assert.equal(m.order({ coin: id, side: 'sell', frac: 1, slippage: 1 }).ok, true, 'trading in its pool');
+});
+
+test('real coins never get made-up things: no holders, thread, dev, rug or caller; their history comes in older than what they have', () => {
+  const m = createMarket({ seed: 'ext-reads', config: { warmup: 30 }, live: true });
+  const real = L.toReal(L.parseState(P.encodeState(curveAt(700_000_000))));
+  const id = m.ext.add({ key: MINT, chain: 'solana', src: 'pump.fun', name: 'Moon Frog', ticker: 'mFrog', by: DEV, born: m.t - 60,
+    socials: { x: true }, real, real0: L.toReal(L.parseState(P.encodeState(curveAt(793_100_000)))), live: true, pic: 'https://live.agi1.app/p/a.webp' });
+  const s = m.stats(id);
+  for (const k of ['holders', 'top10', 'dev', 'devSold', 'snipers', 'bundlers', 'insiders', 'replies', 'devCoins', 'smart', 'whales']) {
+    assert.equal(s[k], null, k);
+  }
+  assert.deepEqual([s.rugged, s.dexPaid, s.cto, s.kols.length], [false, false, false, 0]);
+  assert.equal(s.live, true);
+  assert.equal(s.src, 'pump.fun');
+  assert.equal(s.pair, 'SOL');
+  const f = m.info(id);
+  assert.equal(f.line, null);
+  assert.equal(f.dev, `${DEV.slice(0, 4)}…${DEV.slice(-4)}`, 'its creator: the address, shortened');
+  assert.equal(f.devCoins, null);
+  assert.deepEqual(m.comments(id), []);
+  const h = m.holders(id);
+  assert.deepEqual(h.list, [], 'nobody known holds it');
+  assert.equal(h.pool.kind, 'curve');
+  near(h.pool.tok, 700_000_000 + 206_900_000, 1, 'its curve: for sale and kept for its pool');
+  assert.deepEqual(m.find('MFROG'), [id], 'its ticker in any case');
+  assert.deepEqual(m.find(MINT), [id], 'its address');
+  assert.equal(m.isExt(id), true);
+  const made = [...Array(m.size.coins).keys()].find((i) => i !== id);
+  if (made !== undefined) assert.equal(m.isExt(made), false, 'a made-up coin');
+  assert.equal(m.isExt(99999), false);
+  // its history: older than anything it has, candles first and trades in it, never an address
+  const before = m.candles(id).length;
+  const t0 = m.t - 50;
+  m.ext.history(id, [0, 1, 2, 3].map((i) => ({ t: t0 + i * 3, real: L.toReal(L.parseState(P.encodeState(curveAt(790_000_000 - i * 20_000_000)))) })));
+  const cd = m.candles(id);
+  assert.equal(cd.length, before + 4);
+  assert.ok(cd.every((c, i) => i === 0 || c.t >= cd[i - 1].t), 'in order');
+  const tr = m.trades(id, 10);
+  assert.equal(tr.length, 3);
+  assert.ok(tr.every((x) => x.addr === null && x.label === 'trader' && x.side === 'buy'));
+  assert.equal(m.stats(id).cdv, 1, 'the board knows to draw it again');
+  // a made-up market has no such doors
+  assert.equal(createMarket({ seed: 'plain', config: { warmup: 0 } }).ext, null);
+});
+
+test("a live run: the real clock (never paused, one speed), its results say Live, its bests kept apart from the simulated ones", () => {
+  const feed = fakeFeed({ coins: [wireCoin(1)] });
+  const run = createRun({ seed: 'live-run', mode: 'challenge', challenge: challengeById('double-up'), solUsd: 150, live: 'solana', realTime: true,
+    makeMarket: (o) => createLiveMarket({ ...o, feed, chain: 'solana', config: { ...o.config, warmup: 60 } }) });
+  assert.equal(run.realTime, true);
+  assert.equal(run.live, 'solana');
+  run.pause();
+  assert.equal(run.paused, false, 'the menu never stops a live run');
+  assert.equal(run.setSpeed(4), 1, 'one speed');
+  run.tick(5);
+  near(run.clock, 5, 1e-9, 'the real time that passed, more than a tick\'s usual most');
+  assert.ok(5 > MAX_DT);
+  const id = run.market.ext.byKey(wireCoin(1).key);
+  assert.equal(run.order({ coin: id, side: 'buy', sol: 0.2, priority: 'ultra' }).ok, true);
+  run.tick(1);
+  assert.equal(run.market.liveTraded(), 1);
+  run.end('quit');
+  const res = run.result();
+  assert.equal(res.live, 'solana');
+  assert.equal(res.liveTraded, 1);
+  assert.equal(modeLabel(res), 'Double up · Live · Solana');
+  assert.equal(cardText(res).foot, 'Play money on live coins · agi1.app/games/trenchingsimulator');
+  const post = shareText(res);
+  assert.match(post, /play money on live coins/);
+  assert.ok(post.length + 24 <= 280 && !/\bbuy\b|pump\.?fun|MFROG|LIVE1/i.test(post), post);
+  // a live run with no real coin traded keeps the old words
+  assert.equal(cardText({ ...res, liveTraded: 0 }).foot, 'Play money, made-up coins · agi1.app/games/trenchingsimulator');
+  // its best: Live mode's own book, never the simulated stars
+  let s = SAVE.blank();
+  assert.deepEqual([s.live, s.chain, s.liveBest], [false, 'solana', {}]);
+  s = SAVE.recordResult(s, { ...res, outcome: 'won', stars: 3, timeUsed: 100, multiple: 2.1, placed: 1 });
+  assert.equal(s.liveBest['double-up'].stars, 3);
+  assert.equal(s.best['double-up'], undefined);
+  assert.equal(SAVE.starsTotal(s), 0);
+  assert.equal(SAVE.starsTotal(s, { live: true }), 3);
+  const clean = SAVE.cleanSave({ ...s, live: true, chain: 'bnb', liveBest: { 'double-up': { stars: 9 }, '<x>': { stars: 1 } } });
+  assert.deepEqual([clean.live, clean.chain, clean.liveBest['double-up'].stars, Object.keys(clean.liveBest)], [true, 'bnb', 3, ['double-up']]);
+  assert.equal(SAVE.cleanSave({ ...s, chain: 'mars' }).chain, 'solana');
+  run.market.destroy();
+  // a made-up run as before: paused by the menu, at most MAX_DT a tick
+  const sim = createRun({ seed: 'sim-run', mode: 'free', speed: 2 });
+  assert.equal(sim.realTime, false);
+  sim.pause();
+  assert.equal(sim.paused, true);
+  sim.resume();
+  sim.tick(5);
+  near(sim.clock, MAX_DT * 2, 1e-9);
+});
+
+test("AGI-1 never names a real coin: her Live lines have no ticker; a real coin's rug or dev sell is never something she says", () => {
+  for (const [key, lines] of Object.entries(LIVE_LINES)) {
+    assert.ok(Object.hasOwn(LINES, key) || key === 'start', key);
+    for (const l of lines) {
+      assert.ok(l.length >= 5 && l.length <= 80, `${key}: "${l}"`);
+      assert.doesNotMatch(l.replace(/\{pnl\}/g, ''), /\{|\$|@|https?:|[A-Z]/, `no ticker, caller, link or capital: "${l}"`);
+      assert.doesNotMatch(l, /\b(you should|go buy|buy (it|this|now|more|the dip)|sell (it|now|this)|ape|send it|to the moon|guarantee|100x|financial advice|wagmi|lfg)\b/i, l);
+      assert.doesNotMatch(l, /pump\.?fun|clank|robinhood|solana|four\.?meme/i, `never a real name: "${l}"`);
+    }
+  }
+  assert.ok(LIVE_LINES.start.some((l) => l.includes('play money')));
+  const order = (coin, side = 'buy') => ({ id: 1, coin, ticker: 'REALCOIN', side, status: 'filled' });
+  const isReal = (id) => id === 7;
+  // about a real coin: the Live line, never the ticker; a stand-in's: as before
+  assert.deepEqual(liveLineFor(lineFor({ type: 'fill', order: order(7), first: true }), { type: 'fill', order: order(7) }, { isReal }),
+    { key: 'firstBuy', vars: {}, live: true });
+  assert.equal(liveLineFor(lineFor({ type: 'fill', order: order(3), first: true }), { type: 'fill', order: order(3) }, { isReal }).vars.ticker, '$REALCOIN');
+  assert.equal(liveLineFor(lineFor({ type: 'rug', coin: 7, ticker: 'REALCOIN' }), { type: 'rug', coin: 7 }, { isReal }), null);
+  assert.equal(liveLineFor(lineFor({ type: 'dev_sell', coin: 7, ticker: 'REALCOIN' }), { type: 'dev_sell', coin: 7 }, { isReal }), null);
+  assert.equal(liveLineFor(lineFor({ type: 'kol_buy', coin: 7, ticker: 'R', kol: 'x' }), { type: 'kol_buy', coin: 7 }, { isReal }), null);
+  assert.equal(liveLineFor(lineFor({ type: 'fail', order: order(7), reason: 'slippage' }), { type: 'fail', order: order(7) }, { isReal }).key, 'failSlip');
+  assert.deepEqual(liveLineFor(lineFor({ type: 'start', mode: 'free' }), { type: 'start' }, { live: true }), { key: 'start', vars: {}, live: true });
+  // her voice in a live run: every line about a real coin without its name
+  const v = createVoice({ rng: () => 0.3, gap: 0, breath: 0, live: true, isReal });
+  const said = [];
+  for (let i = 0; i < 60; i++) {
+    const e = [{ type: 'fill', order: order(7, i % 2 ? 'buy' : 'sell'), first: i === 0, pnl: i % 3 ? 0.2 : -0.1 },
+      { type: 'migrating', coin: 7, ticker: 'REALCOIN' }, { type: 'migrated', coin: 7, ticker: 'REALCOIN' },
+      { type: 'fail', order: order(7), reason: 'migrating' }][i % 4];
+    const out = v.hear([e], i);
+    if (out) said.push(out.text);
+  }
+  assert.ok(said.length >= 40);
+  assert.ok(said.every((t) => !/REALCOIN|\{|\$R/.test(t)), said.find((t) => /REALCOIN/.test(t)));
+  assert.equal(v.hear([{ type: 'start', mode: 'free' }], 100).live, true);
+});
+
+test('the feed in the browser: connecting, live, down and back by itself, full; its words plain, never a tip', async () => {
+  const made = [];
+  class FakeSocket {
+    constructor(url) {
+      this.url = url;
+      this.readyState = 0;
+      this.sent = [];
+      made.push(this);
+    }
+    send(t) {
+      this.sent.push(JSON.parse(t));
+    }
+    close() {
+      this.readyState = 3;
+    }
+    open() {
+      this.readyState = 1;
+      this.onopen();
+    }
+    msg(o) {
+      this.onmessage({ data: JSON.stringify(o) });
+    }
+    drop(code = 1006) {
+      this.readyState = 3;
+      this.onclose({ code });
+    }
+  }
+  const timers = [];
+  const feed = createLiveFeed({ url: 'ws://127.0.0.1:1/ws', WebSocket: FakeSocket, random: () => 0.5,
+    timers: { set: (fn, ms) => timers.push({ fn, ms }) && timers.length, clear: () => {} } });
+  const statuses = [];
+  feed.on((ev) => ev.type === 'status' && statuses.push(ev.status));
+  assert.equal(feed.status, 'idle');
+  feed.start('solana');
+  assert.equal(feed.status, 'connecting');
+  made[0].open();
+  assert.deepEqual(made[0].sent, [{ op: 'sub', chain: 'solana' }]);
+  made[0].msg({ t: 'hi', ch: { solana: { s: 'live', n: 40 } }, px: { sol: 150 } });
+  assert.equal(feed.status, 'live');
+  assert.equal(feed.chainState(), 'live');
+  assert.equal(feed.px.sol, 150);
+  made[0].msg({ t: 'snap', chain: 'solana', coins: [P.encodeCoin({ id: 's1', key: MINT, name: 'A', symbol: 'A', born: 1_792_000_000_000,
+    st: curveAt(700_000_000), tracked: true })] });
+  assert.equal(feed.coins().length, 1);
+  feed.watch(['s1', 9, 's2']);
+  assert.deepEqual(made[0].sent.at(-1), { op: 'watch', ids: ['s1', 's2'] });
+  // dropped: down, and again after a wait (2 s, a little random), by itself
+  made[0].drop();
+  assert.equal(feed.status, 'down');
+  assert.equal(timers.at(-1).ms, 2000);
+  timers.at(-1).fn();
+  assert.equal(made.length, 2);
+  made[1].open();
+  made[1].msg({ t: 'hi', ch: { solana: { s: 'down', n: 0 } }, px: {} });
+  assert.equal(feed.status, 'live');
+  assert.equal(feed.chainState(), 'down');
+  // the chain is back: everything asked again (quiet → live needs nothing: its coins were live all along)
+  made[1].msg({ t: 'st', ch: { solana: { s: 'quiet', n: 0 } } });
+  assert.equal(made[1].sent.filter((m) => m.op === 'sub').length, 2);
+  made[1].msg({ t: 'st', ch: { solana: { s: 'live', n: 3 } } });
+  assert.equal(made[1].sent.filter((m) => m.op === 'sub').length, 2);
+  assert.equal(feed.chainState(), 'live');
+  // full: said so, and the next try a while later
+  made[1].drop(1013);
+  assert.equal(feed.status, 'full');
+  assert.equal(timers.at(-1).ms, 30000);
+  feed.stop();
+  assert.equal(feed.status, 'idle');
+  assert.deepEqual(statuses, ['connecting', 'live', 'down', 'live', 'full', 'idle']);
+  // no WebSocket at all: down, never a crash
+  const none = createLiveFeed({ url: 'ws://x/ws', WebSocket: null, timers: { set: () => 0, clear: () => {} } });
+  none.start('solana');
+  assert.equal(none.status, 'down');
+  none.stop();
+  // its words, before a run and in one
+  const words = [];
+  for (const when of ['before', 'run']) {
+    for (const [feedState, chainState] of [['connecting', null], ['live', 'live'], ['live', 'quiet'], ['live', 'down'], ['live', 'off'],
+      ['down', null], ['full', null]]) {
+      for (const ch of L.CHAIN_IDS) words.push([feedState, chainState, ch, when, L.feedWords(feedState, chainState, ch, when)]);
+    }
+  }
+  for (const [fs, cs, ch, when, w] of words) {
+    assert.ok(['live', 'wait', 'off'].includes(w.tone));
+    assert.ok(w.text.length > 10 && w.text.length < 140, w.text);
+    assert.doesNotMatch(w.text, /\bbuy\b|\bsell\b|guarantee|advice/i, w.text);
+    if (fs === 'live' && cs === 'live') assert.match(w.text, /play money/, w.text);
+    if (fs === 'down' || fs === 'full' || (fs === 'live' && ['down', 'off'].includes(cs))) {
+      assert.equal(w.tone, 'off');
+      assert.match(w.text, /simulated coins/, `${ch} ${when}: ${w.text}`);
+    }
+  }
+  assert.equal(L.feedWords('down', null, 'solana', 'run').text, 'The live feed isn\'t reachable right now. You\'re trading simulated coins until it\'s back.');
+  assert.equal(L.feedWords('live', 'quiet', 'robinhood').text, 'Robinhood Chain is quiet: no new coins for a while. Simulated coins fill in until real ones arrive.');
+  assert.match(L.LIVE_NOTE, /play money/);
+  assert.match(L.LIVE_NOTE, /Not financial advice/);
+});
+
+// ---------- the site: its CSP, its files ----------
+
+test("the site's CSP gains only the relay's origin: its feed and its pictures", () => {
+  const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+  const csp = vercel.headers[0].headers.find((h) => h.key === 'Content-Security-Policy').value;
+  const dir = (name) => csp.split(';').map((s) => s.trim()).find((s) => s.startsWith(`${name} `)).split(/\s+/).slice(1);
+  assert.deepEqual(dir('connect-src'), ["'self'", 'blob:', 'https://api.dexscreener.com', 'wss://live.agi1.app']);
+  assert.deepEqual(dir('img-src'), ["'self'", 'data:', 'blob:', 'https://live.agi1.app']);
+  assert.deepEqual(dir('script-src'), ["'self'", 'https://challenges.cloudflare.com'], 'no script from the relay, ever');
+  assert.deepEqual(dir('style-src'), ["'self'"]);
+  assert.ok(!csp.includes('pump.fun') && !csp.includes('ipfs') && !csp.includes('helius'), 'never a coin\'s own host');
+  assert.equal(new URL(L.RELAY_URL).host, 'live.agi1.app');
+});
+
+test("the game's Live files: no HTML from strings, no link anywhere (never a way to buy a real coin), styles scoped like their neighbours", () => {
+  const dir = 'src/games/trenchingsimulator/';
+  const files = ['live-chains.js', 'live-feed.js', 'live-market.js', 'shell.js', 'boards/board.js'].map((f) => [f, readFileSync(dir + f, 'utf8')]);
+  for (const [f, src] of files) {
+    assert.doesNotMatch(src, /innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|new Function/, f);
+    assert.doesNotMatch(src, /window\.open|location\.(href|assign|replace)\s*=|\.click\(\)\s*;?\s*\/\/\s*buy/, f);
+    assert.doesNotMatch(src, /https?:\/\/(www\.)?(pump\.fun|clank\.trade|dexscreener\.com|four\.meme|axiom|photon|gmgn)/i, `${f}: no link to a real coin's page`);
+  }
+  const board = files.find(([f]) => f === 'boards/board.js')[1];
+  assert.doesNotMatch(board, /el\('a'/, 'the terminal has no links at all');
+  assert.match(board, /play money/);
+  // a real coin's address only ever its first 6 characters
+  assert.match(board, /`CA \$\{f\.mint\.slice\(0, 6\)\}…`/);
+  const css = readFileSync(dir + 'trench.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const live = [...css.matchAll(/([^{}]+)\{[^{}]*\}/g)].map((m) => m[1].trim()).filter((sel) => /live|market|is-real|is-sim|is-stale|is-img|tsb-img/.test(sel));
+  assert.ok(live.length >= 15, `its rules were read: ${live.length}`);
+  for (const sel of live) {
+    if (sel.startsWith('@') || /^\d+%$|^(from|to)$/.test(sel)) continue;
+    for (const one of sel.split(',')) assert.match(one.trim(), /^\.tsb?-|^html\[data-page='trenchingsimulator'\]/, `"${one.trim()}" scoped like its neighbours`);
+  }
+  // the run's live line: a status line (read out when it changes), always on the page; on a phone or a tablet it goes over
+  // the HUD, since AGI-1's words sit under her face there and would cover it (a computer has them in the HUD's goal cell)
+  const shell = files.find(([f]) => f === 'shell.js')[1];
+  assert.match(shell, /el\('p', \{ class: 'ts-live-strip', role: 'status', 'aria-live': 'polite'/);
+  assert.match(shell, /matchMedia\('\(min-width: 1024px\)'\)/, 'her words move into the goal cell from 1024 px');
+  const narrow = css.match(/@media \(max-width: 1023px\) \{\s*\.ts-play\.is-live \{[^}]*\}\s*\.ts-play\.is-live > \.ts-live-strip \{([^}]*)\}/);
+  assert.ok(narrow && /order: -1;/.test(narrow[1]), 'under 1024 px the live line comes before the HUD');
+  assert.match(css, /\.ts-play\.is-live \{\s*display: flex;\s*flex-direction: column;/);
+});
+
+test("the relay's own files: its image runs as a user (never root) without any key in it, its settings file has no values for secrets, Caddy in front", () => {
+  const d = 'tools/trench-relay/';
+  const docker = readFileSync(`${d}Dockerfile`, 'utf8');
+  assert.match(docker, /^FROM node:22/m);
+  assert.match(docker, /^USER node$/m);
+  assert.match(docker, /npm ci --omit=dev/);
+  assert.doesNotMatch(docker, /HELIUS_API_KEY|api-key=|^ENV .*KEY/m);
+  const env = readFileSync(`${d}trench.env.example`, 'utf8');
+  assert.match(env, /^HELIUS_API_KEY=$/m, 'empty in the example');
+  assert.match(env, /^TRENCH_TRUST_PROXY=1$/m);
+  assert.doesNotMatch(env, /api-key=[A-Za-z0-9]/);
+  const caddy = readFileSync(`${d}Caddyfile`, 'utf8');
+  assert.match(caddy, /^live\.agi1\.app \{/m);
+  assert.match(caddy, /reverse_proxy agi1-trench:8787/);
+  const sh = readFileSync(`${d}relay.sh`, 'utf8');
+  for (const cmd of ['update', 'start', 'stop', 'check', 'logs', 'status']) assert.match(sh, new RegExp(`\\b${cmd}\\)`), cmd);
+  assert.match(sh, /\/opt\/agi1-trench/);
+  assert.match(sh, /--env-file "\$DIR\/trench\.env"/);
+  assert.doesNotMatch(sh, /set -x/, 'never echoes its commands (and so a key)');
+  const pkg = JSON.parse(readFileSync(`${d}package.json`, 'utf8'));
+  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['sharp', 'ws']);
+  assert.ok(Object.values(pkg.dependencies).every((v) => /^\d+\.\d+\.\d+$/.test(v)), 'exact versions');
+  const lock = JSON.parse(readFileSync(`${d}package-lock.json`, 'utf8'));
+  assert.equal(lock.packages[''].dependencies.ws, pkg.dependencies.ws);
+});

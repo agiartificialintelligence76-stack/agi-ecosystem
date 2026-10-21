@@ -1,0 +1,1517 @@
+// TRENCHING SIMULATOR's game (2026-10-20): its numbers as players read them, its challenges (their goals, stars, the
+// daily market and their words), a run from start to result (its clock, speeds and pauses, orders filled and failed, a
+// sell's P&L, milestones, the last minute and its countdown, a challenge won, lost by time or by a rug, busted, cashed out
+// or quit, its labels, the same run from the same seed), SOL's price (read, kept, or the default), AGI-1's lines and her
+// voice, and the five terminals. Pure: no network, no clock, no settings.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import * as F from '../src/games/trenchingsimulator/format.js';
+import {
+  CHALLENGES, TIERS, FREE_STARTS, SPEEDS, challengeById, startSolFor, goalState, atEnd, starsFor, dailyKey, isDailyKey,
+  dailySeed, dailyChallenge, goalText, timeText, startText,
+} from '../src/games/trenchingsimulator/challenges.js';
+import { createRun, BUST_SOL, MILESTONES, DOWN_AT, MAX_DT } from '../src/games/trenchingsimulator/run.js';
+import { MIN_BUY, PRIORITY, BASE_FEE } from '../src/games/trenchingsimulator/engine.js';
+import {
+  WSOL, SOL_URL, FALLBACK_USD, SANE, SAVE_KEY, SAVED_FOR_MS, saneUsd, parseSolPrice, readSaved, getSolPrice,
+} from '../src/games/trenchingsimulator/solprice.js';
+import {
+  LINES, MOODS, moodOf, priorityOf, lineFor, fill, createVoice, VOICE_GAP, VOICE_BREATH,
+} from '../src/games/trenchingsimulator/lines.js';
+import {
+  SAFETY_NOTE, TERMINALS, TERMINAL_IDS, DEFAULT_TERMINAL, terminalById,
+} from '../src/games/trenchingsimulator/terminals.js';
+import { makeRng, seedOf } from '../src/games/trenchingsimulator/rng.js';
+import {
+  SORTS, ORDER_ERRORS, whoText, holderTag, buyPresets, parseAmount,
+} from '../src/games/trenchingsimulator/boards/board.js';
+import {
+  TITLES, resultTitle, resultTone, modeLabel, resultLine, statLines, starsRow, downsample, sparkPath, cardText,
+} from '../src/games/trenchingsimulator/results.js';
+import { readFileSync } from 'node:fs';
+
+const near = (a, b, eps, what) => assert.ok(Math.abs(a - b) <= eps, `${what}: ${a} is not ${b}`);
+const types = (events) => events.map((e) => e.type);
+
+// ---------- format.js ----------
+
+test("its numbers as players read them: dollars, SOL, percents, ages, clocks, prices with small zeros", () => {
+  // short and whole
+  assert.equal(F.compact(1234), '1.23K');
+  assert.equal(F.compact(12345678), '12.3M');
+  assert.equal(F.compact(999600), '1M'); // never "1000K"
+  assert.equal(F.compact(999400), '999K');
+  assert.equal(F.compact(-1500), '−1.5K');
+  assert.equal(F.compact(12.5), '12.5');
+  assert.equal(F.compact(0), '0');
+  assert.equal(F.grouped(1234567.891), '1,234,567.89');
+  assert.equal(F.grouped(1000, 0), '1,000');
+  assert.equal(F.grouped(999.999), '1,000.00');
+  // dollars
+  assert.equal(F.usd(1000), '$1K');
+  assert.equal(F.usd(1234.5), '$1.23K');
+  assert.equal(F.usd(185.1), '$185.1');
+  assert.equal(F.usd(5), '$5');
+  assert.equal(F.usd(0.52), '$0.52');
+  assert.equal(F.usd(0), '$0');
+  assert.equal(F.usd(0.0034), '$0.0034');
+  assert.equal(F.usd(0.000001234), '$0.0₅12');
+  assert.equal(F.usd(-15), '−$15');
+  assert.equal(F.usdFull(1234.5), '$1,234.50');
+  assert.equal(F.usdFull(-3), '−$3.00');
+  // SOL, as many decimals as it needs
+  assert.equal(F.sol(1), '1');
+  assert.equal(F.sol(6.6667), '6.667');
+  assert.equal(F.sol(0.5), '0.5');
+  assert.equal(F.sol(0.0001234), '0.000123');
+  assert.equal(F.sol(123.456), '123.5');
+  assert.equal(F.sol(12.3456), '12.35');
+  assert.equal(F.sol(1234.5), '1,234.5');
+  assert.equal(F.sol(150000), '150K');
+  assert.equal(F.sol(0), '0');
+  assert.equal(F.sol(-0.25), '−0.25');
+  // signed amounts (a real minus, and never "+0")
+  assert.equal(F.signed(0.123), '+0.123');
+  assert.equal(F.signed(-0.045), '−0.045');
+  assert.equal(F.signed(0), '0');
+  assert.equal(F.signed(0.0000001), '0');
+  assert.equal(F.signed(18.45, 'usd'), '+$18.45');
+  assert.equal(F.signed(-15, 'usd'), '−$15');
+  assert.equal(F.signed(0, 'usd'), '$0');
+  // percents and multiples
+  assert.equal(F.pct(0.123), '+12.3%');
+  assert.equal(F.pct(-0.045), '−4.5%');
+  assert.equal(F.pct(0), '0%');
+  assert.equal(F.pct(0.0001), '0%');
+  assert.equal(F.pct(9), '+900%');
+  assert.equal(F.pct(12), '+1200%');
+  assert.equal(F.pct(150), '+15K%');
+  assert.equal(F.share(0.123), '12.3%');
+  assert.equal(F.share(0.5), '50%');
+  assert.equal(F.times(2), '2x');
+  assert.equal(F.times(2.5), '2.5x');
+  assert.equal(F.times(12.34), '12.3x');
+  assert.equal(F.times(150.4), '150x');
+  // next to 1x, as many decimals as it takes to say which side of it a run ended (a small loss never reads "1x")
+  assert.equal(F.times(1), '1x');
+  assert.equal(F.times(0.9978), '0.998x');
+  assert.equal(F.times(1.004), '1.004x');
+  assert.equal(F.times(0.9996), '0.9996x');
+  assert.equal(F.times(1.0002), '1.0002x');
+  assert.equal(F.times(0.99999), '1x', 'at most 4 decimals');
+  assert.equal(F.times(0.97), '0.97x');
+  assert.equal(F.times(0.5), '0.5x');
+  assert.equal(F.times(0), '0x');
+  assert.equal(F.times(NaN), '—');
+  // ages and clocks
+  assert.equal(F.age(0.5), 'now');
+  assert.equal(F.age(-5), 'now');
+  assert.equal(F.age(12.9), '12s');
+  assert.equal(F.age(240), '4m');
+  assert.equal(F.age(3 * 3600 + 5), '3h');
+  assert.equal(F.age(2 * 86400), '2d');
+  assert.equal(F.clock(305), '05:05');
+  assert.equal(F.clock(59.9), '00:59');
+  assert.equal(F.clock(3725), '1:02:05');
+  assert.equal(F.clock(-3), '00:00');
+  assert.equal(F.tokens(12345678), '12.3M');
+  assert.equal(F.tokens(-5), '0');
+  // prices: four or more zeros after the point are written small, as trading terminals do
+  assert.equal(F.price(0.0000012345), '0.0₅1235');
+  assert.equal(F.price(-0.0000012345), '−0.0₅1235');
+  assert.equal(F.price(0.00012345), '0.0001235');
+  assert.equal(F.price(0.000099999), '0.0001'); // rounds up to one zero fewer
+  assert.equal(F.price(0.99999), '1'); // rounds up to a whole 1
+  assert.equal(F.price(0.001), '0.001');
+  assert.equal(F.price(0.5), '0.5');
+  assert.equal(F.price(2.5), '2.5');
+  assert.equal(F.price(1234.5678), '1,234.57');
+  assert.equal(F.price(0), '0');
+  // in a terminal's own money
+  assert.equal(F.mcUsd(100, 150), '$15K');
+  assert.equal(F.money(1.5, 'sol', 150), '1.5 SOL');
+  assert.equal(F.money(1.5, 'sol', 150, { unit: false }), '1.5');
+  assert.equal(F.money(1.5, 'usd', 150), '$225');
+  assert.equal(F.money(1, 'usd', NaN), '—');
+  assert.equal(F.moneySigned(0.123, 'sol', 150), '+0.123 SOL');
+  assert.equal(F.moneySigned(-0.1, 'usd', 150), '−$15');
+  // every function takes anything and gives a string: "—" for what isn't a number, never a throw
+  for (const [name, fn] of Object.entries(F)) {
+    if (typeof fn !== 'function') continue;
+    for (const x of [NaN, Infinity, -Infinity, undefined, null, '12', {}, [], true]) {
+      assert.equal(fn(x, x), '—', `${name}(${String(x)})`);
+    }
+  }
+});
+
+// ---------- challenges.js ----------
+
+test("its challenges: the owner's two and seven more, each with a goal, a start, a time and words", () => {
+  assert.equal(CHALLENGES.length, 9);
+  assert.equal(new Set(CHALLENGES.map((c) => c.id)).size, 9);
+  assert.ok(Object.isFrozen(CHALLENGES));
+  const kinds = new Set(['worth', 'profitUsd', 'takeProfit', 'migration', 'survive']);
+  for (const c of CHALLENGES) {
+    assert.ok(Object.isFrozen(c) && Object.isFrozen(c.goal) && Object.isFrozen(c.start), `${c.id} frozen`);
+    assert.ok(TIERS.includes(c.tier), `${c.id}'s tier`);
+    assert.ok(kinds.has(c.goal.kind), `${c.id}'s goal`);
+    assert.ok(c.seconds > 0 && Number.isInteger(c.seconds), `${c.id}'s time`);
+    assert.ok((c.start.sol > 0) !== (c.start.usd > 0), `${c.id}: one start`);
+    assert.ok(c.name.length >= 3 && c.name.length <= 24, `${c.id}'s name`);
+    assert.ok(c.blurb.length >= 10 && c.blurb.length <= 80, `${c.id}'s blurb`);
+    assert.doesNotMatch(c.blurb, /\b(buy|guarantee|financial|\$AGI)\b/i, `${c.id}'s blurb`);
+    assert.equal(challengeById(c.id), c);
+  }
+  assert.equal(challengeById('nope'), null);
+  assert.equal(challengeById(undefined), null);
+  // the owner's: "make 10x your money in 30 mins", "make 500$ in 10 mins"
+  const ten = challengeById('ten-bagger');
+  assert.deepEqual([ten.tier, ten.start.sol, ten.seconds, ten.goal.kind, ten.goal.x], ['legendary', 1, 1800, 'worth', 10]);
+  const five = challengeById('five-hundred');
+  assert.deepEqual([five.start.usd, five.seconds, five.goal.kind, five.goal.usd], [1000, 600, 'profitUsd', 500]);
+  assert.deepEqual([...FREE_STARTS], [1, 5, 10, 50]);
+  assert.deepEqual([...SPEEDS], [1, 2, 4]);
+  assert.deepEqual([...TIERS], ['easy', 'medium', 'hard', 'legendary']);
+
+  // what a challenge starts with, in SOL
+  assert.equal(startSolFor(ten, 150), 1);
+  near(startSolFor(five, 150), 1000 / 150, 1e-12, 'a dollar start at the run\'s price');
+  near(startSolFor(five, 200), 5, 1e-12, 'another price');
+  near(startSolFor(five, NaN), 1000 / 150, 1e-12, 'no price: $150');
+  near(startSolFor(five, -3), 1000 / 150, 1e-12, 'a bad price: $150');
+  assert.equal(startSolFor(null, 150), 1);
+  assert.equal(startSolFor({ start: {} }, 150), 1);
+});
+
+test('how far along a goal is, for each kind; and its stars', () => {
+  const worth = { kind: 'worth', x: 2 };
+  assert.deepEqual(goalState(worth, { worth: 1.5, start: 1 }), { done: false, frac: 0.5, failed: false });
+  assert.deepEqual(goalState(worth, { worth: 2, start: 1 }), { done: true, frac: 1, failed: false });
+  assert.equal(goalState(worth, { worth: 2 - 1e-13, start: 1 }).done, true);
+  assert.deepEqual(goalState(worth, { worth: 0.4, start: 1 }), { done: false, frac: 0, failed: false });
+  assert.deepEqual(goalState(worth, { worth: 9, start: 1 }).frac, 1);
+  assert.deepEqual(goalState(worth, undefined), { done: false, frac: 0, failed: false });
+  assert.deepEqual(goalState(worth, { worth: NaN, start: 2 }), { done: false, frac: 0, failed: false });
+
+  const usd = { kind: 'profitUsd', usd: 500 };
+  const start = 1000 / 150;
+  assert.equal(goalState(usd, { worth: start + 500 / 150, start, solUsd: 150 }).done, true);
+  near(goalState(usd, { worth: start + 250 / 150, start, solUsd: 150 }).frac, 0.5, 1e-9, 'half the profit');
+  near(goalState(usd, { worth: 1 + 250 / 150, start: 1 }).frac, 0.5, 1e-9, 'no price: $150');
+  assert.equal(goalState(usd, { worth: start - 1, start, solUsd: 150 }).frac, 0);
+
+  const tp = { kind: 'takeProfit', x: 3 };
+  assert.equal(goalState(tp, { positions: [{ invested: 1, sold: 3 }] }).done, true);
+  near(goalState(tp, { positions: [{ invested: 1, sold: 1.5 }, { invested: 0, sold: 9 }] }).frac, 0.5, 1e-12, 'best sold');
+  assert.equal(goalState(tp, { positions: [] }).frac, 0);
+
+  const mig = { kind: 'migration' };
+  assert.deepEqual(goalState(mig, { flags: { migrationWin: true } }), { done: true, frac: 1, failed: false });
+  near(goalState(mig, { positions: [{ open: true, progress: 0.5 }] }).frac, 0.425, 1e-12, 'along its curve');
+  assert.equal(goalState(mig, { positions: [{ open: true, progress: 0.5, heldThrough: true }] }).frac, 0.9);
+  assert.equal(goalState(mig, { positions: [{ open: false, progress: 1, heldThrough: true }] }).frac, 0);
+  assert.equal(goalState(mig, { positions: [{ open: true }] }).frac, 0);
+
+  const sv = { kind: 'survive', coins: 5 };
+  const flags = (n, rugHit = false) => ({ coinsTraded: n, rugHit });
+  assert.deepEqual(goalState(sv, { worth: 2.2, start: 2, timeUp: true, flags: flags(5) }), { done: true, frac: 1, failed: false });
+  assert.equal(goalState(sv, { worth: 2.2, start: 2, timeUp: false, flags: flags(5) }).done, false); // only when time is up
+  assert.equal(goalState(sv, { worth: 2, start: 2, timeUp: true, flags: flags(5) }).done, false); // above its start
+  assert.equal(goalState(sv, { worth: 3, start: 2, timeUp: true, flags: flags(4) }).done, false);
+  near(goalState(sv, { worth: 3, start: 2, flags: flags(2) }).frac, 0.4, 1e-12, 'coins traded');
+  assert.deepEqual(goalState(sv, { worth: 3, start: 2, timeUp: true, flags: flags(5, true) }), { done: false, frac: 1, failed: true });
+
+  assert.deepEqual(goalState({ kind: 'nope' }, {}), { done: false, frac: 0, failed: false });
+  assert.deepEqual(goalState(null, {}), { done: false, frac: 0, failed: false });
+  assert.equal(atEnd(sv), true);
+  for (const g of [worth, usd, tp, mig, null]) assert.equal(atEnd(g), false);
+
+  // stars: a third of its time or less 3, two thirds 2, else 1; surviving by how far above its start
+  const dbl = challengeById('double-up');
+  assert.equal(starsFor(dbl, { timeUsed: 0 }), 3);
+  assert.equal(starsFor(dbl, { timeUsed: 200 }), 3);
+  assert.equal(starsFor(dbl, { timeUsed: 201 }), 2);
+  assert.equal(starsFor(dbl, { timeUsed: 400 }), 2);
+  assert.equal(starsFor(dbl, { timeUsed: 401 }), 1);
+  assert.equal(starsFor(dbl, { timeUsed: 600 }), 1);
+  const rd = challengeById('rug-dodger');
+  assert.equal(starsFor(rd, { multiple: 1.5, timeUsed: 600 }), 3);
+  assert.equal(starsFor(rd, { multiple: 1.2, timeUsed: 600 }), 2);
+  assert.equal(starsFor(rd, { multiple: 1.19, timeUsed: 600 }), 1);
+  assert.equal(starsFor(null, { timeUsed: 1 }), 0);
+});
+
+test('the daily market: the same challenge and seed for everyone on a UTC day', () => {
+  assert.equal(dailyKey(new Date('2026-10-20T23:59:59.999Z')), '2026-10-20');
+  assert.equal(dailyKey(new Date('2026-10-21T00:00:00.000Z')), '2026-10-21');
+  assert.equal(dailyKey(new Date('2026-10-21T00:30:00+08:00')), '2026-10-20'); // its UTC day, wherever the player is
+  assert.equal(dailyKey(Date.UTC(2027, 0, 1)), '2027-01-01');
+  assert.equal(dailyKey(Date.UTC(2028, 1, 29, 12)), '2028-02-29');
+  assert.equal(dailyKey(NaN), '1970-01-01');
+  assert.equal(dailyKey('soon'), '1970-01-01');
+  assert.equal(isDailyKey('2026-10-20'), true);
+  for (const k of ['2026-1-2', '20261020', 20261020, null, '2026-10-20T00']) assert.equal(isDailyKey(k), false, String(k));
+  assert.equal(dailySeed('2026-10-20'), 'daily-2026-10-20');
+
+  const pool = new Set(['double-up', 'five-hundred', 'speedrun', 'rug-dodger', 'runner', 'migration', 'whale']);
+  const seen = new Map();
+  for (let d = 0; d < 366; d++) {
+    const key = dailyKey(Date.UTC(2026, 9, 20 + d));
+    const ch = dailyChallenge(key);
+    assert.ok(pool.has(ch.id), `${key}: ${ch.id}`);
+    assert.equal(ch.daily, key);
+    assert.deepEqual(dailyChallenge(key), ch, 'the same for everyone');
+    seen.set(ch.id, (seen.get(ch.id) || 0) + 1);
+  }
+  assert.equal(seen.size, pool.size, 'every one of the pool comes up in a year');
+  for (const n of seen.values()) assert.ok(n >= 20, `each about once a week (${n})`);
+  assert.equal(challengeById(dailyChallenge('2026-10-20').id).daily, undefined, 'a copy: the challenge itself is unchanged');
+});
+
+test("a goal's words and its time, in the terminal's own money", () => {
+  const c = (id) => challengeById(id);
+  assert.equal(goalText(c('first-blood'), 'sol', 150), 'Finish above 1 SOL: any profit counts');
+  assert.equal(goalText(c('first-blood'), 'usd', 150), 'Finish above $150: any profit counts');
+  assert.equal(goalText(c('double-up'), 'sol', 150), 'Turn 1 SOL into 2 SOL (2x)');
+  assert.equal(goalText(c('double-up'), 'usd', 150), 'Turn $150 into $300 (2x)');
+  assert.equal(goalText(c('speedrun'), 'sol', 150), 'Turn 1 SOL into 1.5 SOL (1.5x)');
+  assert.equal(goalText(c('ten-bagger'), 'sol', 150), 'Turn 1 SOL into 10 SOL (10x)');
+  assert.equal(goalText(c('ten-bagger'), 'usd', 200), 'Turn $200 into $2K (10x)');
+  assert.equal(goalText(c('whale'), 'sol', 150), 'Turn 100 SOL into 150 SOL (1.5x)');
+  assert.equal(goalText(c('five-hundred'), 'usd', 150), 'Make $500 profit');
+  assert.equal(goalText(c('five-hundred'), 'sol', 150), 'Make $500 profit (about 3.333 SOL)');
+  assert.equal(goalText(c('five-hundred'), 'sol', 250), 'Make $500 profit (about 2 SOL)');
+  assert.equal(goalText(c('runner'), 'sol', 150), 'Sell one coin for 3x what you put into it');
+  assert.equal(goalText(c('migration'), 'sol', 150), 'Hold a coin while it migrates, then sell it in profit');
+  assert.equal(goalText(c('rug-dodger'), 'sol', 150),
+    'Trade 5 different coins and finish above your start. A rug on a coin you hold ends it');
+  assert.equal(goalText(null, 'sol', 150), '');
+  for (const ch of CHALLENGES) {
+    for (const cur of ['sol', 'usd']) assert.doesNotMatch(goalText(ch, cur, 150), /—|NaN|undefined/, `${ch.id} ${cur}`);
+  }
+
+  assert.equal(timeText(0), 'No timer');
+  assert.equal(timeText(null), 'No timer');
+  assert.equal(timeText(60), '1 minute');
+  assert.equal(timeText(180), '3 minutes');
+  assert.equal(timeText(1800), '30 minutes');
+  assert.equal(timeText(3600), '1 hour');
+  assert.equal(timeText(5400), '1:30:00');
+
+  assert.equal(startText(c('five-hundred'), 'usd', 150), '$1,000'); // its own dollars, whole
+  assert.equal(startText(c('five-hundred'), 'usd', 999), '$1,000');
+  assert.equal(startText(c('five-hundred'), 'sol', 150), '6.667 SOL');
+  assert.equal(startText(c('double-up'), 'sol', 150), '1 SOL');
+  assert.equal(startText(c('double-up'), 'usd', 150), '$150');
+  assert.equal(startText(c('whale'), 'usd', 150), '$15K');
+});
+
+// ---------- run.js ----------
+
+// a fresh coin (at most maxAge seconds old, at least minAge) with one of the fates, the run ticking until there's one
+function fresh(run, fates, { minAge = 0, maxAge = 4, limit = 2400, when = () => true } = {}) {
+  for (let s = 0; s < limit && !run.over; s++) {
+    const m = run.market;
+    for (let id = m.size.coins - 1; id >= 0; id--) {
+      const c = m.debug.coin(id);
+      const age = m.t - c.born;
+      if (age > maxAge) break;
+      if (age >= minAge && fates.includes(c.fate) && when(c)) return id;
+    }
+    run.tick(0.25);
+  }
+  return null;
+}
+
+// a coin on its curve from the run's lists
+function curveCoin(run, skip = new Set()) {
+  const L = run.market.lists({ limit: 30 });
+  for (const r of [...L.new, ...L.stretch]) if (!skip.has(r.id) && r.phase === 'curve') return r.id;
+  return null;
+}
+
+const ticks = (run, n, dt = 0.25) => {
+  for (let i = 0; i < n && !run.over; i++) run.tick(dt);
+};
+
+test("a run's clock: its speeds, its longest step, a pause, and every way a tick can be wrong", () => {
+  const run = createRun({ seed: 'clock-1', mode: 'free' });
+  assert.equal(run.clock, 0);
+  assert.equal(run.speed, 1);
+  assert.equal(run.market.t, 0, 'the market starts at 0 after its warm-up');
+  assert.deepEqual(types(run.drain()), ['start']);
+  assert.deepEqual(run.drain(), [], 'drained');
+
+  run.tick(10); // a slow frame never jumps the market ahead
+  assert.equal(run.clock, MAX_DT);
+  for (const bad of [-1, 0, NaN, 'soon', null, undefined, {}]) {
+    assert.equal(run.tick(bad), 0, String(bad));
+    assert.equal(run.clock, MAX_DT, String(bad));
+  }
+  for (let i = 0; i < 39; i++) run.tick(0.25);
+  assert.equal(run.clock, 10, 'kept in whole microseconds: 40 steps of 0.25 s are exactly 10 s');
+  near(run.market.t, 10, 1e-9, "the market's clock follows");
+
+  // free play's speeds: only its own, and an unknown one changes nothing
+  assert.equal(run.setSpeed(2), 2);
+  run.tick(0.25);
+  assert.equal(run.clock, 10.5);
+  assert.equal(run.setSpeed(3), 2);
+  assert.equal(run.setSpeed('x'), 2);
+  assert.equal(run.setSpeed('4'), 4);
+  run.tick(0.25);
+  assert.equal(run.clock, 11.5);
+  assert.equal(run.setSpeed(1), 1);
+
+  // a pause stops its clock and its market
+  run.pause();
+  assert.equal(run.paused, true);
+  const t = run.market.t;
+  assert.equal(run.tick(0.25), 0);
+  assert.equal(run.clock, 11.5);
+  assert.equal(run.market.t, t);
+  run.resume();
+  assert.equal(run.paused, false);
+  assert.ok(run.tick(0.25) > 0, 'its market moves on again');
+  assert.equal(run.clock, 11.75);
+
+  // a speed it doesn't have starts at 1; a challenge is always at 1
+  assert.equal(createRun({ seed: 'clock-2', mode: 'free', speed: 7 }).speed, 1);
+  assert.equal(createRun({ seed: 'clock-2', mode: 'free', speed: 4 }).speed, 4);
+  const ch = createRun({ seed: 'clock-3', mode: 'challenge', challenge: challengeById('double-up'), speed: 4 });
+  assert.equal(ch.speed, 1);
+  assert.equal(ch.setSpeed(4), 1);
+  assert.equal(ch.setSpeed(2), 1);
+});
+
+test("orders: the first fill, a sell's P&L, a fill that failed on slippage, and the HUD's numbers", () => {
+  const run = createRun({ seed: 'fills-1', mode: 'free', startSol: 5 });
+  ticks(run, 8);
+  const a = curveCoin(run);
+  assert.notEqual(a, null);
+  const r1 = run.order({ coin: a, side: 'buy', sol: 0.5, slippage: 0.5, priority: 'turbo' });
+  assert.equal(r1.ok, true);
+  assert.equal(run.hud().pending, 1);
+  ticks(run, 8);
+  const b = curveCoin(run, new Set([a]));
+  assert.equal(run.order({ coin: b, side: 'buy', sol: 0.3, slippage: 0.5, priority: 'turbo' }).ok, true);
+  ticks(run, 8);
+  const buys = run.drain().filter((e) => e.type === 'fill');
+  assert.deepEqual(buys.map((e) => [e.order.side, e.first]), [['buy', true], ['buy', false]]);
+  assert.equal(buys[0].order.coin, a);
+  assert.equal(buys[0].order.status, 'filled');
+  let hud = run.hud();
+  assert.equal(hud.open, 2);
+  assert.equal(hud.pending, 0);
+  assert.equal(hud.held, 0);
+  const fee = PRIORITY.turbo.fee + BASE_FEE;
+  near(hud.sol, 5 - 0.8 - 2 * fee, 1e-9, 'its SOL after two buys and their fees');
+  near(hud.worth, run.market.player.worth, 1e-12, 'worth');
+  near(hud.multiple, hud.worth / 5, 1e-12, 'multiple');
+  near(hud.pnlUsd, (hud.worth - 5) * 150, 1e-9, 'P&L in dollars');
+  assert.equal(hud.left, null, 'free play has no timer');
+
+  // a sell: what it made or lost, whether it closed its position, and that position's whole result
+  assert.equal(run.order({ coin: a, side: 'sell', frac: 1, slippage: 0.5, priority: 'turbo' }).ok, true);
+  ticks(run, 8);
+  const [sold] = run.drain().filter((e) => e.type === 'fill');
+  assert.equal(sold.order.side, 'sell');
+  assert.equal(sold.first, false);
+  assert.equal(sold.closed, true);
+  const pos = run.market.positions().find((p) => p.id === a);
+  assert.equal(pos.open, false);
+  near(sold.pnl, pos.realized, 1e-12, "the sell's P&L is its position's realized");
+  near(sold.total, pos.total, 1e-12, 'its total');
+  hud = run.hud();
+  assert.equal(hud.open, 1);
+  const res = run.result();
+  assert.deepEqual([res.placed, res.filled, res.failed, res.coins], [3, 3, 0, 2]);
+  assert.equal(res.outcome, 'playing');
+  assert.equal(res.stars, 0);
+  assert.equal(res.reason, null);
+  assert.deepEqual(res.equity[0], { t: 0, v: 5 }, 'its worth from the start, every second');
+  // its fees as one number (what the results show), its parts beside it, and what bots took never counted as a fee
+  assert.ok(res.feeParts.priority > 0 && res.feeParts.terminal > 0, 'its fees, by kind');
+  const fp = run.market.player.fees;
+  near(res.fees, fp.terminal + fp.market + fp.priority + fp.failed, 1e-12, 'its fees, in all');
+  assert.ok(Number.isFinite(res.fees) && res.fees > 0, 'a number, never an object');
+  assert.equal(res.mev, 0, 'no sandwich bots unless a run asks for them');
+  assert.notEqual(res.feeParts, fp, 'a copy of its parts');
+  // with sandwich bots on (the engine's option; the game itself leaves them off): what they took has its own number
+  let bots = null;
+  for (let s = 0; s < 6 && !bots; s++) {
+    const r = createRun({ seed: `bots-${s}`, mode: 'free', startSol: 50, config: { mev: true } });
+    for (let k = 0; k < 6; k++) {
+      const pick = r.market.lists().new[k];
+      if (pick) r.order({ coin: pick.id, side: 'buy', sol: 2, slippage: 0.6 });
+    }
+    ticks(r, 6);
+    if (r.market.player.fees.mev > 0) bots = r;
+  }
+  assert.ok(bots, 'bots sandwich a buy at 60% slippage within 6 seeds');
+  const bf = bots.market.player.fees;
+  const bres = bots.result();
+  near(bres.mev, bf.mev, 1e-12, 'what bots took');
+  near(bres.fees, bf.terminal + bf.market + bf.priority + bf.failed, 1e-12, 'never counted as a fee');
+  assert.ok(bres.fees > 0 && bres.mev > 0);
+
+  // a buy that fails on slippage (a coin just launched, at the least slippage there is): its fee is still paid
+  let failed = null;
+  for (let k = 0; k < 20 && !failed; k++) {
+    const r = createRun({ seed: `slip-${k}`, mode: 'free', startSol: 2 });
+    const id = fresh(r, ['dud', 'rug', 'pumpdump', 'slow', 'runner', 'moon'], { maxAge: 0.3 });
+    if (id === null || !r.order({ coin: id, side: 'buy', sol: 0.5, slippage: 0, priority: 'fast' }).ok) continue;
+    ticks(r, 12);
+    const ev = r.drain().filter((e) => e.type === 'fill' || e.type === 'fail');
+    if (ev[0] && ev[0].type === 'fail') failed = { r, e: ev[0] };
+  }
+  assert.ok(failed, 'a buy at no slippage on a coin just launched fails within 20 seeds');
+  assert.equal(failed.e.reason, 'slippage');
+  assert.equal(failed.e.order.status, 'failed');
+  near(failed.r.hud().sol, 2 - PRIORITY.fast.fee - BASE_FEE, 1e-9, 'only its fee is gone');
+  assert.deepEqual([failed.r.result().failed, failed.r.result().filled, failed.r.result().coins], [1, 0, 0]);
+  assert.equal(failed.r.hud().open, 0);
+});
+
+test('a challenge lost by time: its last minute, its countdown, its end at exactly its time', () => {
+  const run = createRun({ seed: 'time-1', mode: 'challenge', challenge: challengeById('speedrun') });
+  assert.equal(run.left, 180);
+  assert.equal(run.seconds, 180);
+  const all = [];
+  let n = 0;
+  while (!run.over && n < 20000) {
+    run.tick(1 / 60); // a 60 Hz screen
+    n++;
+    all.push(...run.drain());
+  }
+  assert.equal(run.outcome, 'lost');
+  assert.equal(run.clock, 180, 'never past its time');
+  assert.equal(run.left, 0);
+  assert.deepEqual(types(all), ['start', 'idle', 'last_minute', 'idle', ...Array(10).fill('countdown'), 'end']);
+  // a 60 Hz tick is 16,667 µs on the run's clock, so a moment lands within one tick after its whole second
+  const TICK = 1 / 60 + 1e-9;
+  const onTime = (at, want, what) => assert.ok(at >= want && at < want + TICK, `${what}: at ${at}, not within a tick of ${want}`);
+  const cd = all.filter((e) => e.type === 'countdown');
+  assert.deepEqual(cd.map((e) => e.s), [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+  for (const e of cd) onTime(e.at, 180 - e.s, `countdown ${e.s}`);
+  onTime(all.find((e) => e.type === 'last_minute').at, 120, 'the last minute');
+  const idles = all.filter((e) => e.type === 'idle').map((e) => e.at);
+  onTime(idles[0], 40, 'idle after 40 s');
+  onTime(idles[1], 130, 'then every 90 s');
+  const end = all[all.length - 1];
+  assert.deepEqual([end.outcome, end.reason, end.at], ['lost', 'time', 180]);
+  for (let i = 1; i < all.length; i++) assert.ok(all[i].at >= all[i - 1].at, 'in order');
+  const res = run.result();
+  assert.deepEqual([res.outcome, res.reason, res.timeUsed, res.stars, res.seconds], ['lost', 'time', 180, 0, 180]);
+  assert.deepEqual(run.progress(), { frac: 0, done: false, failed: false, label: '1 SOL / 1.5 SOL' });
+  // over: nothing moves, nothing is placed
+  assert.equal(run.tick(0.25), 0);
+  assert.equal(run.clock, 180);
+  assert.deepEqual(run.order({ coin: 0, side: 'buy', sol: 0.1 }), { ok: false, error: 'over' });
+  run.end();
+  assert.deepEqual(run.drain(), [], 'ended once');
+
+  // a challenge of two minutes or less has no "last minute"
+  const short = createRun({ seed: 'time-2', mode: 'challenge',
+    challenge: { id: 'short', seconds: 90, start: { sol: 1 }, goal: { kind: 'worth', x: 2 } } });
+  const ev = [];
+  while (!short.over) {
+    short.tick(0.25);
+    ev.push(...short.drain());
+  }
+  assert.equal(ev.some((e) => e.type === 'last_minute'), false);
+  assert.equal(ev.filter((e) => e.type === 'countdown').length, 10);
+});
+
+test('a challenge won: double up with its milestones and stars; the migration ridden and sold in profit', () => {
+  const dbl = challengeById('double-up');
+  let won = null;
+  for (let k = 0; k < 8 && !won; k++) {
+    const run = createRun({ seed: `dbl-${k}`, mode: 'challenge', challenge: dbl });
+    const id = fresh(run, ['runner', 'moon'], { minAge: 0.1 });
+    if (id === null || !run.order({ coin: id, side: 'buy', sol: 0.95, slippage: 0.4, priority: 'fast' }).ok) continue;
+    while (!run.over) run.tick(0.25);
+    if (run.outcome === 'won') won = run;
+  }
+  assert.ok(won, 'a runner bought early doubles the money within 8 seeds');
+  const ev = won.drain().filter((e) => e.type !== 'idle');
+  const t = types(ev);
+  assert.equal(t[0], 'start');
+  assert.equal(t[t.length - 1], 'end');
+  assert.equal(ev[ev.length - 1].outcome, 'won');
+  assert.deepEqual(ev.filter((e) => e.type === 'milestone').map((e) => e.x).slice(0, 2), [1.5, 2]);
+  assert.ok(t.indexOf('close') > -1 && t.indexOf('close') < t.lastIndexOf('end'), 'close to its goal first');
+  assert.equal(t.filter((x) => x === 'close').length, 1);
+  const res = won.result();
+  assert.equal(res.outcome, 'won');
+  assert.ok(res.multiple >= 2 - 1e-9, `${res.multiple}`);
+  assert.equal(res.stars, starsFor(dbl, res));
+  assert.ok(res.stars >= 1 && res.stars <= 3);
+  assert.equal(res.timeUsed, won.clock);
+  assert.deepEqual(won.progress().done, true);
+  for (const m of MILESTONES) if (res.peak / res.start >= m) assert.ok(ev.some((e) => e.type === 'milestone' && e.x === m), `${m}x`);
+
+  // the migration: a coin held while it migrates, then sold after it, in profit
+  const mig = challengeById('migration');
+  let ok = null;
+  for (let k = 0; k < 6 && !ok; k++) {
+    const run = createRun({ seed: `mig-${k}`, mode: 'challenge', challenge: mig });
+    const id = fresh(run, ['runner', 'moon'], { minAge: 0.1 });
+    if (id === null || !run.order({ coin: id, side: 'buy', sol: 1.5, slippage: 0.4, priority: 'fast' }).ok) continue;
+    assert.equal(run.progress().label, 'hold a coin through its migration');
+    while (!run.over && run.market.row(id).phase !== 'pool') run.tick(0.25);
+    if (run.over) continue;
+    ticks(run, 12);
+    const before = run.progress();
+    if (!run.order({ coin: id, side: 'sell', frac: 1, slippage: 0.4, priority: 'fast' }).ok) continue;
+    ticks(run, 12);
+    if (run.outcome === 'won') ok = { run, id, before };
+  }
+  assert.ok(ok, 'a runner ridden through its migration and sold wins within 6 seeds');
+  assert.equal(ok.before.label, 'migrated: sell in profit');
+  assert.equal(ok.before.frac, 0.9);
+  assert.equal(ok.run.progress().label, 'done');
+  const evm = ok.run.drain();
+  const tm = types(evm);
+  assert.ok(tm.indexOf('migrating') < tm.indexOf('migrated'), 'it migrates, then it has migrated');
+  assert.equal(evm.find((e) => e.type === 'migrated').coin, ok.id);
+  assert.deepEqual(ok.run.flags.heldThrough, [ok.id]);
+  assert.equal(ok.run.flags.migrationWin.coin, ok.id);
+  const sell = evm.filter((e) => e.type === 'fill').pop();
+  assert.equal(sell.order.side, 'sell');
+  assert.ok(sell.total > 0, 'in profit');
+  assert.equal(tm[tm.length - 1], 'end');
+});
+
+test("a challenge lost to a rug: the dev's sell, the rug, the end; and down by half in free play", () => {
+  const rd = challengeById('rug-dodger');
+  let lost = null;
+  for (let k = 0; k < 8 && !lost; k++) {
+    const run = createRun({ seed: `rug-${k}`, mode: 'challenge', challenge: rd });
+    const id = fresh(run, ['rug'], { minAge: 0.5, when: (c) => c.plan.events.some((e) => e.what === 'rug' && e.t > 15) });
+    if (id === null || !run.order({ coin: id, side: 'buy', sol: 0.2, slippage: 0.5, priority: 'fast' }).ok) continue;
+    while (!run.over) run.tick(0.25);
+    if (run.outcome === 'lost') lost = { run, id };
+  }
+  assert.ok(lost, 'a rug held loses the rug dodger within 8 seeds');
+  const ev = lost.run.drain().filter((e) => e.type !== 'idle');
+  const t = types(ev);
+  assert.ok(t.includes('rug'));
+  assert.equal(t[t.length - 1], 'end');
+  const rug = ev.find((e) => e.type === 'rug');
+  assert.equal(rug.coin, lost.id);
+  assert.equal(typeof rug.ticker, 'string');
+  for (const d of ev.filter((e) => e.type === 'dev_sell')) {
+    assert.equal(d.coin, lost.id);
+    assert.ok(d.frac >= 0.5, 'only a dev selling half or more is news');
+  }
+  const end = ev[ev.length - 1];
+  assert.deepEqual([end.outcome, end.reason], ['lost', 'rug']);
+  const res = lost.run.result();
+  assert.deepEqual([res.outcome, res.reason, res.stars], ['lost', 'rug', 0]);
+  assert.equal(lost.run.flags.rugHit.coin, lost.id);
+  assert.ok(lost.run.clock < rd.seconds, 'before its time was up');
+  assert.equal(lost.run.progress().failed, true);
+
+  // free play, nearly everything on a rug bought at its top (a moment before its rug): down by half, said once; never
+  // busted while a coin is held. (Bought at its launch instead, a curve's rug takes only about 40%: everyone else's exit
+  // can't take back more than what the early buyers made from it.)
+  let down = null;
+  for (let k = 0; k < 8 && !down; k++) {
+    const run = createRun({ seed: `down-${k}`, mode: 'free', startSol: 1 });
+    const id = fresh(run, ['rug'], { minAge: 0.5, when: (c) => c.plan.events.some((e) => e.what === 'rug' && e.t > 15) });
+    if (id === null) continue;
+    const c = run.market.debug.coin(id);
+    const rugAt = c.born + c.plan.events.find((e) => e.what === 'rug').t;
+    while (!run.over && run.market.t < rugAt - 2) run.tick(0.25);
+    if (!run.order({ coin: id, side: 'buy', sol: 0.9, slippage: 0.5, priority: 'fast' }).ok) continue;
+    const ev2 = [];
+    for (let i = 0; i < 2400 && !ev2.some((e) => e.type === 'rug'); i++) {
+      run.tick(0.25);
+      ev2.push(...run.drain());
+    }
+    ticks(run, 40);
+    ev2.push(...run.drain());
+    if (ev2.some((e) => e.type === 'down')) down = { run, ev: ev2 };
+  }
+  assert.ok(down, 'nearly everything on a rug, bought at its top, halves the money within 8 seeds');
+  assert.equal(DOWN_AT, 0.5, 'down by half');
+  assert.equal(down.ev.filter((e) => e.type === 'down').length, 1, 'said once');
+  assert.equal(down.ev.find((e) => e.type === 'down').x, DOWN_AT);
+  const lowRes = down.run.result();
+  assert.ok(lowRes.low <= DOWN_AT * lowRes.start + 1e-12, `its low ${lowRes.low}`);
+  assert.ok(lowRes.low <= down.run.hud().worth + 1e-12, 'its low is never above its worth');
+  assert.equal(down.run.over, false, 'still holding its coin: not busted');
+  ticks(down.run, 40);
+  assert.equal(down.run.drain().filter((e) => e.type === 'down').length, 0, 'never said again');
+});
+
+test('busted, cashed out or quit; the labels, HUD and result of every challenge; the daily market', () => {
+  // nothing left to trade with
+  assert.equal(BUST_SOL, MIN_BUY + 2 * (PRIORITY.fast.fee + BASE_FEE));
+  const b = createRun({ seed: 'bust', mode: 'free', startSol: 0.003 });
+  b.tick(0.1);
+  assert.equal(b.outcome, 'busted');
+  assert.deepEqual(b.drain().map((e) => e.type + (e.outcome ? `:${e.outcome}` : '')), ['start', 'end:busted']);
+  assert.equal(b.result().outcome, 'busted');
+  const nb = createRun({ seed: 'bust', mode: 'free', startSol: 0.0031 });
+  ticks(nb, 8);
+  assert.equal(nb.over, false, 'enough for the smallest buy and its fees');
+
+  // free play: Cash out; leaving is quitting; a challenge is never cashed out
+  const f = createRun({ seed: 'cash', mode: 'free', startSol: 10 });
+  assert.deepEqual(f.progress(), { frac: null, label: '0% so far' });
+  ticks(f, 4);
+  f.end();
+  assert.equal(f.outcome, 'cashed');
+  f.end('quit');
+  assert.equal(f.outcome, 'cashed', 'the first end stays');
+  assert.equal(f.drain().filter((e) => e.type === 'end').length, 1);
+  const q = createRun({ seed: 'quit', mode: 'free' });
+  q.end('quit');
+  assert.equal(q.outcome, 'quit');
+  const cq = createRun({ seed: 'quit', mode: 'challenge', challenge: challengeById('first-blood') });
+  cq.end('cashed');
+  assert.equal(cq.outcome, 'quit');
+  assert.deepEqual([cq.result().outcome, cq.result().stars], ['quit', 0]);
+
+  // every challenge's label at its start, in SOL and in dollars
+  const want = {
+    'first-blood': ['1 SOL / 1.05 SOL', '$150 / $157.5'],
+    'double-up': ['1 SOL / 2 SOL', '$150 / $300'],
+    'five-hundred': ['+$0 / +$500', '+$0 / +$500'],
+    speedrun: ['1 SOL / 1.5 SOL', '$150 / $225'],
+    'rug-dodger': ['0/5 coins · 0%', '0/5 coins · 0%'],
+    runner: ['best sold 0.00x / 3x', 'best sold 0.00x / 3x'],
+    migration: ['hold a coin through its migration', 'hold a coin through its migration'],
+    whale: ['100 SOL / 150 SOL', '$15K / $22.5K'],
+    'ten-bagger': ['1 SOL / 10 SOL', '$150 / $1.5K'],
+  };
+  for (const ch of CHALLENGES) {
+    const sol = createRun({ seed: `lbl-${ch.id}`, mode: 'challenge', challenge: ch, currency: 'sol', speed: 4 });
+    const usd = createRun({ seed: `lbl-${ch.id}`, mode: 'challenge', challenge: ch, currency: 'usd', solUsd: 150 });
+    assert.deepEqual([sol.progress().label, usd.progress().label], want[ch.id], ch.id);
+    assert.equal(sol.progress().frac, 0, ch.id);
+    near(sol.start, startSolFor(ch, 150), 1e-12, `${ch.id}'s start`);
+    assert.equal(sol.seconds, ch.seconds);
+    assert.equal(sol.speed, 1);
+    const hud = sol.hud();
+    assert.deepEqual([hud.clock, hud.left, hud.open, hud.pending, hud.multiple, hud.pnl, hud.over, hud.outcome],
+      [0, ch.seconds, 0, 0, 1, 0, false, null], ch.id);
+    near(hud.worth, sol.start, 1e-12, `${ch.id}'s worth`);
+    const res = sol.result();
+    assert.deepEqual([res.mode, res.challenge, res.daily, res.outcome, res.currency, res.terminal],
+      ['challenge', ch.id, null, 'playing', 'sol', 'board'], ch.id);
+  }
+  // its dollars when the price moves: a dollar challenge's start, and a loss in its label
+  const r5 = createRun({ seed: 'usd-5', mode: 'challenge', challenge: challengeById('five-hundred'), solUsd: 250 });
+  near(r5.start, 4, 1e-12, '$1,000 at $250 a SOL');
+  assert.equal(r5.solUsd, 250);
+  const lossy = createRun({ seed: 'usd-6', mode: 'challenge', challenge: challengeById('five-hundred'), solUsd: 150 });
+  const id = curveCoin(lossy);
+  lossy.order({ coin: id, side: 'buy', sol: 1, slippage: 0.5, priority: 'ultra' });
+  ticks(lossy, 4);
+  assert.match(lossy.progress().label, /^(−\$\d+(\.\d+)? \/ \+\$500|\+\$\d+(\.\d+)? \/ \+\$500)$/);
+
+  // the daily market: its seed and its challenge, the same for everyone, its key in the result
+  const key = '2026-10-20';
+  const d = createRun({ seed: dailySeed(key), mode: 'daily', challenge: dailyChallenge(key), terminal: 'pro', speed: 4 });
+  assert.equal(d.challenge.id, dailyChallenge(key).id);
+  assert.equal(d.speed, 1);
+  assert.deepEqual([d.result().mode, d.result().daily, d.result().terminal], ['daily', key, 'pro']);
+  assert.equal(d.seed, dailySeed(key));
+  const d2 = createRun({ seed: dailySeed(key), mode: 'daily', challenge: dailyChallenge(key) });
+  assert.deepEqual(d2.market.lists(), d.market.lists(), 'the same coins for everyone');
+});
+
+// one run played the same way: the same seed and the same orders
+function play(seed) {
+  const run = createRun({ seed, mode: 'challenge', challenge: challengeById('double-up') });
+  const out = [];
+  const held = [];
+  for (let k = 0; k < 6; k++) {
+    ticks(run, 30);
+    out.push(...run.drain());
+    const id = curveCoin(run, new Set(held));
+    if (id !== null) {
+      run.order({ coin: id, side: 'buy', sol: 0.1, slippage: 0.3, priority: k % 2 ? 'turbo' : 'fast' });
+      held.push(id);
+    }
+    if (k >= 2) run.order({ coin: held[k - 2], side: 'sell', frac: 0.5, slippage: 0.3, priority: 'fast' });
+  }
+  ticks(run, 40);
+  out.push(...run.drain());
+  return JSON.stringify([out, run.result(), run.hud(), run.progress()]);
+}
+
+test('the same seed and the same orders make the same run; another seed makes another', () => {
+  const a = play('same-1');
+  assert.equal(play('same-1'), a);
+  assert.notEqual(play('same-2'), a);
+  const ev = JSON.parse(a)[0];
+  assert.ok(ev.filter((e) => e.type === 'fill').length >= 6, 'its orders filled');
+});
+
+// ---------- solprice.js ----------
+
+const base = (usd, liq, chainId = 'solana') => ({
+  chainId, baseToken: { address: WSOL }, quoteToken: { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
+  priceUsd: String(usd), liquidity: { usd: liq },
+});
+const quote = (usd, native, liq) => ({
+  chainId: 'solana', baseToken: { address: 'Coin1111111111111111111111111111111111111111' }, quoteToken: { address: WSOL },
+  priceUsd: String(usd), priceNative: String(native), liquidity: { usd: liq },
+});
+
+test("SOL's price from DexScreener's answer: the most liquid SOL pair, else a pair priced in SOL, never nonsense", () => {
+  assert.equal(SOL_URL, `https://api.dexscreener.com/tokens/v1/solana/${WSOL}`);
+  assert.equal(parseSolPrice([base(187.12, 5e6), base(190, 9e7), base(150, 1e3)]), 190);
+  assert.equal(parseSolPrice({ pairs: [base(187.12, 5e6)] }), 187.12);
+  assert.equal(parseSolPrice([base(187, 1e6, 'ethereum'), base(180, 10)]), 180, 'only Solana');
+  assert.equal(parseSolPrice([base(0.5, 9e9), base(250000, 9e9), base('abc', 9e9), base(201, 1)]), 201, 'only sane');
+  assert.equal(parseSolPrice([base(202, undefined), base(203, -5)]), 202, 'no liquidity counts as none');
+  // priced in SOL: its token's dollars ÷ its SOL
+  assert.equal(parseSolPrice([quote(0.002, 0.00001, 1e6)]), 200);
+  near(parseSolPrice([quote(0.003, 0.00002, 1e5), quote(0.0019, 0.00001, 2e6)]), 190, 1e-9, 'the most liquid');
+  assert.equal(parseSolPrice([quote(0.002, 0, 1e6), quote(0.002, 'x', 1e6)]), null, 'no price in SOL');
+  assert.equal(parseSolPrice([quote(5, 0.00001, 1e6)]), null, 'never $500,000 a SOL');
+  assert.equal(parseSolPrice([quote(0.002, 0.00001, 9e9), base(180, 1)]), 180, 'a SOL pair wins over one priced in SOL');
+  for (const x of [null, undefined, 'x', 42, {}, { pairs: 'x' }, [], [null, 3, 'a', {}]]) assert.equal(parseSolPrice(x), null);
+  assert.equal(saneUsd(SANE.min), true);
+  assert.equal(saneUsd(SANE.max), true);
+  assert.equal(saneUsd(SANE.min - 0.01), false);
+  assert.equal(saneUsd(SANE.max + 1), false);
+  assert.equal(saneUsd(NaN), false);
+});
+
+// a stand-in for localStorage
+function store(init = {}) {
+  const m = new Map(Object.entries(init));
+  return {
+    m,
+    getItem: (k) => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(k, String(v)),
+  };
+}
+const answer = (data, ok = true) => async () => ({ ok, json: async () => data });
+
+test("SOL's price for a run: live, else the one this browser kept, else $150; never throws, never waits long", async () => {
+  const now = 1_800_000_000_000;
+  // live: rounded to cents, kept for next time
+  let asked = null;
+  const s = store();
+  const live = await getSolPrice({
+    fetch: async (url, init) => {
+      asked = { url, init };
+      return { ok: true, json: async () => [base(187.1234, 1e6)] };
+    },
+    storage: s, now: () => now,
+  });
+  assert.deepEqual(live, { usd: 187.12, source: 'live', at: now });
+  assert.equal(asked.url, SOL_URL);
+  assert.equal(asked.init.headers.Accept, 'application/json');
+  assert.ok(asked.init.signal, 'it can be given up');
+  assert.deepEqual(JSON.parse(s.m.get(SAVE_KEY)), { usd: 187.12, at: now });
+
+  // DexScreener down, refusing, odd or slow: what this browser kept
+  const kept = store({ [SAVE_KEY]: JSON.stringify({ usd: 171.5, at: now - 3600e3 }) });
+  for (const f of [answer([], true), answer([base(190, 1)], false), answer('nope'), async () => { throw new Error('down'); },
+    async () => ({ ok: true, json: async () => { throw new Error('not json'); } })]) {
+    assert.deepEqual(await getSolPrice({ fetch: f, storage: kept, now: () => now }),
+      { usd: 171.5, source: 'saved', at: now - 3600e3 });
+  }
+  let signal = null;
+  const t0 = Date.now();
+  const slow = await getSolPrice({
+    fetch: (url, init) => {
+      signal = init.signal;
+      return new Promise(() => {});
+    },
+    storage: kept, now: () => now, timeoutMs: 30,
+  });
+  assert.equal(slow.source, 'saved');
+  assert.ok(Date.now() - t0 < 2000, 'given up on time');
+  assert.equal(signal.aborted, true, 'and its request stopped');
+
+  // nothing kept, or too old, from the future, broken, or storage that throws: $150
+  const old = store({ [SAVE_KEY]: JSON.stringify({ usd: 171.5, at: now - SAVED_FOR_MS - 1 }) });
+  const edge = store({ [SAVE_KEY]: JSON.stringify({ usd: 171.5, at: now - SAVED_FOR_MS }) });
+  const future = store({ [SAVE_KEY]: JSON.stringify({ usd: 171.5, at: now + 61000 }) });
+  const broken = store({ [SAVE_KEY]: '{nope' });
+  const silly = store({ [SAVE_KEY]: JSON.stringify({ usd: 0.2, at: now }) });
+  const throws = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
+  assert.equal(SAVED_FOR_MS, 30 * 24 * 3600 * 1000, 'kept 30 days');
+  assert.deepEqual(readSaved(edge, now), { usd: 171.5, at: now - SAVED_FOR_MS }, '30 days to the millisecond');
+  for (const st of [old, future, broken, silly, throws, null, store()]) {
+    assert.equal(readSaved(st, now), null);
+    assert.deepEqual(await getSolPrice({ fetch: answer([]), storage: st, now: () => now }),
+      { usd: FALLBACK_USD, source: 'default', at: now });
+  }
+  assert.deepEqual(await getSolPrice({ fetch: null, storage: null, now: () => now }), { usd: 150, source: 'default', at: now });
+  // a live price even where the browser keeps nothing
+  assert.deepEqual(await getSolPrice({ fetch: answer([base(160, 1)]), storage: throws, now: () => now }),
+    { usd: 160, source: 'live', at: now });
+});
+
+// ---------- lines.js ----------
+
+// one of every event a run makes, as the run makes it
+const order = (side, ticker = 'TKR') => ({ id: 1, coin: 3, ticker, side, status: 'filled' });
+const EVENTS = [
+  { type: 'start', mode: 'challenge' }, { type: 'start', mode: 'free' }, { type: 'start', mode: 'daily' },
+  { type: 'fill', order: order('buy'), first: true }, { type: 'fill', order: order('buy'), first: false },
+  { type: 'fill', order: order('sell'), pnl: 0.1, closed: true, total: 0.1 },
+  { type: 'fill', order: order('sell'), pnl: -0.1, closed: true, total: -0.1 },
+  { type: 'fill', order: order('sell'), pnl: 0, closed: false, total: 0 },
+  { type: 'fail', order: order('buy'), reason: 'slippage' }, { type: 'fail', order: order('sell'), reason: 'migrating' },
+  { type: 'fail', order: order('sell'), reason: 'no_liquidity' }, { type: 'fail', order: order('sell'), reason: 'no_tokens' },
+  { type: 'rug', coin: 3, ticker: 'TKR' }, { type: 'migrating', coin: 3, ticker: 'TKR' },
+  { type: 'migrated', coin: 3, ticker: 'TKR' }, { type: 'dev_sell', coin: 3, ticker: 'TKR', frac: 0.8 },
+  { type: 'kol_buy', coin: 3, ticker: 'TKR', kol: 'degenqueen' }, { type: 'cto', coin: 3, ticker: 'TKR' },
+  { type: 'dex_paid', coin: 3, ticker: 'TKR' },
+  ...MILESTONES.map((x) => ({ type: 'milestone', x })), { type: 'down', x: 0.5 }, { type: 'close' },
+  { type: 'last_minute' }, { type: 'countdown', s: 10 }, { type: 'idle' },
+  { type: 'end', outcome: 'won' }, { type: 'end', outcome: 'lost', reason: 'time' }, { type: 'end', outcome: 'lost', reason: 'rug' },
+  { type: 'end', outcome: 'busted' }, { type: 'end', outcome: 'cashed' }, { type: 'end', outcome: 'quit' },
+];
+
+test("AGI-1's lines: lowercase, PG-13, never a tip, play money now and then, and a line for everything a run says", () => {
+  const keys = Object.keys(LINES);
+  assert.ok(keys.length >= 30);
+  for (const [key, lines] of Object.entries(LINES)) {
+    assert.ok(Array.isArray(lines) && lines.length >= 1, key);
+    assert.equal(new Set(lines).size, lines.length, `${key}: no line twice`);
+    assert.ok(MOODS.includes(moodOf(key)), `${key}'s mood`);
+    assert.ok(priorityOf(key) > 0, `${key}'s priority`);
+    for (const l of lines) {
+      assert.ok(l.length >= 5 && l.length <= 80, `${key}: "${l}"`);
+      assert.doesNotMatch(l.replace(/\bSOL\b/g, '').replace(/\{\w+\}/g, ''), /[A-Z]/, `lowercase: "${l}"`);
+      for (const [, name] of l.matchAll(/\{(\w+)\}/g)) assert.ok(['ticker', 'pnl', 'kol'].includes(name), `{${name}} in "${l}"`);
+      assert.doesNotMatch(l, /https?:|www\.|\.com\b|@|\$/, `no links, handles or tickers of its own: "${l}"`);
+      assert.doesNotMatch(l, /\b(you should|go buy|buy (it|this|now|more|the dip)|sell (it|now|this)|ape|send it|to the moon|guarantee|100x|financial advice|wagmi|lfg)\b/i,
+        `never a tip: "${l}"`);
+      assert.doesNotMatch(l, /\b(fuck|shit|bitch|sex|sexy|nsfw|ass|damn)\b/i, `PG-13: "${l}"`);
+    }
+  }
+  assert.ok(keys.filter((k) => LINES[k].some((l) => l.includes('play money'))).length >= 3, 'play money, now and then');
+  assert.equal(moodOf('nope'), 'neutral');
+  assert.equal(priorityOf('nope'), 0);
+  // the end of a run beats everything; a rug beats a sell; a sell beats a buy
+  for (const k of ['won', 'lostTime', 'lostRug', 'busted', 'cashed', 'quit']) assert.equal(priorityOf(k), 100);
+  assert.ok(priorityOf('rug') > priorityOf('sellWin') && priorityOf('sellWin') > priorityOf('buy'));
+  assert.ok(priorityOf('x10') > priorityOf('x5') && priorityOf('x5') > priorityOf('x2') && priorityOf('x2') > priorityOf('x1_5'));
+
+  // every event a run makes has its line (or nothing to say), with every word it needs filled in
+  const said = new Set();
+  for (const e of EVENTS) {
+    const l = lineFor(e);
+    assert.ok(l, JSON.stringify(e));
+    assert.ok(LINES[l.key], `${e.type}: ${l.key}`);
+    said.add(l.key);
+    for (const line of LINES[l.key]) assert.doesNotMatch(fill(line, l.vars), /\{\w+\}/, `${l.key}: "${line}"`);
+  }
+  assert.deepEqual([...said].sort(), keys.slice().sort(), 'every one of her lines is for something a run says');
+  assert.deepEqual(lineFor({ type: 'fill', order: order('buy', 'PEPE2'), first: true }), { key: 'firstBuy', vars: { ticker: '$PEPE2' } });
+  assert.deepEqual(lineFor({ type: 'fill', order: order('sell'), pnl: 0.1 }).vars, { ticker: '$TKR', pnl: '+0.1 SOL' });
+  assert.deepEqual(lineFor({ type: 'fill', order: order('sell'), pnl: 0.1 }, { currency: 'usd', solUsd: 150 }).vars.pnl, '+$15');
+  assert.equal(lineFor({ type: 'fill', order: order('sell'), pnl: 0 }).key, 'sellLoss');
+  assert.equal(lineFor({ type: 'rug' }).vars.ticker, 'that coin');
+  assert.equal(lineFor({ type: 'fail', reason: 'migrating' }).vars.ticker, 'that coin');
+  assert.deepEqual(lineFor({ type: 'kol_buy', ticker: 'X', kol: 'cryptobae' }).vars, { ticker: '$X', kol: '@cryptobae' });
+  // nothing to say
+  for (const e of [null, undefined, {}, { type: 7 }, { type: 'nope' }, { type: 'fill' }, { type: 'kol_buy', ticker: 'X' },
+    { type: 'milestone', x: 4 }, { type: 'countdown', s: 9 }, { type: 'end', outcome: 'nope' }]) {
+    assert.equal(lineFor(e), null, JSON.stringify(e));
+  }
+  assert.equal(fill('{ticker} and {who}', { ticker: '$A' }), '$A and {who}');
+  assert.equal(fill('{ticker}', null), '{ticker}');
+  assert.equal(fill('{ticker}', { ticker: 0 }), '0');
+});
+
+test('her voice: the event that matters most, one line at a time, never the same line twice in a row', () => {
+  const rng = makeRng(seedOf('voice')).f;
+  const v = createVoice({ rng, gap: 3.5, breath: 1.2 });
+  assert.equal(v.hear([], 0), null);
+  assert.equal(v.hear(null, 0), null);
+  assert.equal(v.hear([{ type: 'nope' }, { type: 'countdown', s: 4 }], 0), null);
+  // the one that matters most
+  const buy = { type: 'fill', order: order('buy'), first: false };
+  const rug = { type: 'rug', coin: 3, ticker: 'TKR' };
+  const first = v.hear([buy, rug, { type: 'idle' }], 0);
+  assert.equal(first.key, 'rug');
+  assert.equal(first.mood, moodOf('rug'));
+  assert.match(first.text, /\$TKR/);
+  // a short breath for what matters (a sell: 1.2 s), her whole gap for the rest, none for the end of a run
+  assert.equal(v.hear([buy], 1), null);
+  assert.equal(v.hear([{ type: 'fill', order: order('sell'), pnl: 0.1 }], 1.1), null);
+  assert.equal(v.hear([{ type: 'fill', order: order('sell'), pnl: 0.1 }], 1.2).key, 'sellWin');
+  assert.equal(v.hear([buy], 4.6), null, 'not quite 3.5 s');
+  assert.equal(v.hear([buy], 4.7).key, 'buy');
+  assert.equal(v.hear([{ type: 'end', outcome: 'won' }], 4.7).key, 'won', 'the end always speaks');
+
+  // each key's lines in a shuffled round, every line once a round, never the same line twice in a row
+  const w = createVoice({ rng: makeRng(seedOf('rounds')).f, gap: 0 });
+  const said = [];
+  for (let i = 0; i < 400; i++) said.push(w.hear([buy], i).text);
+  const all = LINES.buy.map((l) => fill(l, { ticker: '$TKR' }));
+  for (let r = 0; r + all.length <= said.length; r += all.length) {
+    assert.deepEqual(said.slice(r, r + all.length).sort(), all.slice().sort(), `round ${r / all.length}`);
+  }
+  for (let i = 1; i < said.length; i++) assert.notEqual(said[i], said[i - 1], `${i}`);
+  // in dollars, in Trench Social
+  const usd = createVoice({ rng, currency: 'usd', solUsd: 200 });
+  const won = usd.hear([{ type: 'fill', order: order('sell'), pnl: 0.25 }], 0);
+  if (LINES.sellWin.some((l) => l.includes('{pnl}'))) {
+    const again = [won.text];
+    for (let i = 1; i < LINES.sellWin.length; i++) again.push(usd.hear([{ type: 'fill', order: order('sell'), pnl: 0.25 }], i * 10).text);
+    assert.ok(again.some((t) => t.includes('+$50')), 'its P&L in dollars');
+    assert.ok(again.every((t) => !t.includes('SOL')));
+  }
+  // any rng: a broken one is Math.random's
+  assert.equal(createVoice({ rng: 5 }).hear([rug], 0).key, 'rug');
+
+  // by default she's quieter: 7 s between everyday lines, 2.5 s before what matters, never a wait for the end of a run
+  // (the game gives her real seconds, so a run at 4× never makes her talk more)
+  assert.equal(VOICE_GAP, 7);
+  assert.equal(VOICE_BREATH, 2.5);
+  const q = createVoice({ rng: makeRng(seedOf('quiet')).f });
+  const sell = { type: 'fill', order: order('sell'), pnl: 0.1 };
+  assert.equal(q.hear([buy], 100).key, 'buy');
+  assert.equal(q.hear([sell], 102.4), null, 'a sell 2.4 s later waits');
+  assert.equal(q.hear([sell], 102.5).key, 'sellWin');
+  assert.equal(q.hear([buy], 109.4), null, 'an everyday line 6.9 s later waits');
+  assert.equal(q.hear([buy], 109.5).key, 'buy');
+  assert.equal(q.hear([{ type: 'end', outcome: 'busted' }], 109.5).key, 'busted');
+  // a breath is never longer than the gap
+  const fast = createVoice({ rng, gap: 1, breath: 5 });
+  assert.equal(fast.hear([buy], 0).key, 'buy');
+  assert.equal(fast.hear([sell], 1).key, 'sellWin');
+});
+
+// ---------- terminals.js ----------
+
+// WCAG's contrast between two colors
+const lum = (hex) => {
+  const n = parseInt(hex.slice(1), 16);
+  const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => {
+    const x = v / 255;
+    return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+};
+const contrast = (a, b) => {
+  const [x, y] = [lum(a), lum(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+};
+
+test("the five terminals: the owner's order, our own names, the safety note, their money and readable colors", () => {
+  assert.equal(SAFETY_NOTE, 'Play money only. Not affiliated with any real trading terminal. This game never asks for a wallet.');
+  assert.deepEqual(TERMINALS.map((t) => t.id), ['chat', 'scan', 'board', 'pro', 'social']);
+  assert.deepEqual([...TERMINAL_IDS], ['chat', 'scan', 'board', 'pro', 'social']);
+  assert.deepEqual(TERMINALS.map((t) => t.name), ['Trench Chat', 'Trench Scan', 'Trench Board', 'Trench Pro', 'Trench Social']);
+  assert.deepEqual(TERMINALS.map((t) => t.currency), ['sol', 'sol', 'sol', 'sol', 'usd']);
+  assert.equal(DEFAULT_TERMINAL, 'board');
+  assert.equal(terminalById('board').ready, true, 'Trench Board first');
+  assert.equal(terminalById('nope'), null);
+  assert.ok(Object.isFrozen(TERMINALS));
+  for (const t of TERMINALS) {
+    assert.equal(terminalById(t.id), t);
+    assert.ok(Object.isFrozen(t) && Object.isFrozen(t.colors) && Object.isFrozen(t.features), `${t.id} frozen`);
+    assert.equal(t.name, `Trench ${t.short}`);
+    assert.equal(typeof t.ready, 'boolean');
+    assert.ok(t.tagline.length >= 10 && t.tagline.length <= 80, `${t.id}'s tagline`);
+    assert.equal(t.features.length, 4);
+    for (const k of ['bg', 'panel', 'line', 'text', 'muted', 'accent', 'up', 'down']) {
+      assert.match(t.colors[k], /^#[0-9a-f]{6}$/, `${t.id}.${k}`);
+    }
+    for (const on of ['bg', 'panel']) {
+      const c = t.colors;
+      assert.ok(contrast(c.text, c[on]) >= 7, `${t.id}: text on ${on}`);
+      for (const k of ['muted', 'accent', 'up', 'down']) assert.ok(contrast(c[k], c[on]) >= 4.5, `${t.id}: ${k} on ${on}`);
+    }
+    assert.notEqual(t.colors.up, t.colors.down);
+  }
+  // never a real terminal's (or another site's) name
+  const words = JSON.stringify(TERMINALS) + SAFETY_NOTE + JSON.stringify(CHALLENGES) + JSON.stringify(LINES);
+  assert.doesNotMatch(words,
+    /based\s*bot|gmgn|pump\.?fun|axiom|fomo|photon|bullx|trojan|maestro|banana\s*gun|bloom|padre|dexscreener|birdeye|phantom|raydium|jupiter|moonshot|bonk\.?fun|robinhood/i);
+});
+
+test('the save: settings, bests, the daily market and totals, kept in this browser only and never broken', async () => {
+  const S = await import('../src/games/trenchingsimulator/save.js');
+  const mem = new Map();
+  const st = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)) };
+  assert.deepEqual(S.loadSave(st), S.blank());
+  assert.deepEqual(S.loadSave({ getItem() { throw new Error('blocked'); } }), S.blank());
+  assert.equal(S.writeSave({ setItem() { throw new Error('full'); } }, S.blank()), false);
+  mem.set(S.SAVE_KEY, '{not json');
+  assert.deepEqual(S.loadSave(st), S.blank());
+  const odd = S.cleanSave({ v: 1, terminal: 'evil', speed: 9, freeStart: 3, slippage: 0.33, priority: 'warp', muted: 'yes',
+    best: { 'double-up': { stars: 9, time: -1 }, '<b>': { stars: 3 } }, daily: { nope: {}, '2026-10-20': { won: true, stars: 2 } } });
+  assert.equal(odd.terminal, 'board');
+  assert.equal(odd.speed, 1);
+  assert.equal(odd.freeStart, 1);
+  assert.equal(odd.slippage, 0.2);
+  assert.equal(odd.priority, 'fast');
+  assert.equal(odd.muted, false);
+  assert.deepEqual(Object.keys(odd.best), ['double-up']);
+  assert.equal(odd.best['double-up'].stars, 3);
+  assert.equal(odd.best['double-up'].time, null);
+  assert.deepEqual(Object.keys(odd.daily), ['2026-10-20']);
+  assert.deepEqual(S.cleanSave({ v: 2, terminal: 'scan' }), S.blank());
+  let s = S.blank();
+  assert.equal(S.recordResult(s, { mode: 'free', outcome: 'quit', timeUsed: 0, placed: 0 }).stats.runs, 0);
+  s = S.recordResult(s, { mode: 'challenge', challenge: 'double-up', outcome: 'won', stars: 2, timeUsed: 312, multiple: 2.04,
+    filled: 7, coins: 3, placed: 7 });
+  s = S.recordResult(s, { mode: 'challenge', challenge: 'double-up', outcome: 'won', stars: 1, timeUsed: 290, multiple: 2.5,
+    placed: 4 });
+  s = S.recordResult(s, { mode: 'challenge', challenge: 'double-up', outcome: 'lost', reason: 'time', stars: 0, timeUsed: 600,
+    multiple: 0.9, placed: 2 });
+  assert.deepEqual(s.best['double-up'], { stars: 2, time: 290, multiple: 2.5, runs: 3, wins: 2 });
+  assert.deepEqual(s.stats, { runs: 3, wins: 2, trades: 7, coins: 3, bestX: 2.5 });
+  assert.equal(S.starsTotal(s), 2);
+  for (let d = 1; d <= S.DAILY_KEEP + 5; d++) {
+    const key = `2026-11-${String(d).padStart(2, '0')}`;
+    s = S.recordResult(s, { mode: 'daily', outcome: d === 3 ? 'won' : 'lost', stars: 1, timeUsed: 60, multiple: 1.1 },
+      { dailyKey: d > 30 ? `2026-12-${String(d - 30).padStart(2, '0')}` : key });
+  }
+  assert.equal(Object.keys(s.daily).length, S.DAILY_KEEP);
+  assert.ok(!('2026-11-01' in s.daily) && '2026-12-05' in s.daily);
+  assert.ok(S.writeSave(st, s));
+  assert.deepEqual(S.loadSave(st), S.cleanSave(s));
+});
+
+test('its posts for X: play money and made-up coins every time, never buy, never a real name, inside a post', async () => {
+  const { shareText, shareLink, GAME_URL } = await import('../src/games/trenchingsimulator/share.js');
+  const bad = /based\s*bot|gmgn|pump\.?fun|axiom|fomo|photon|bullx|trojan|maestro|banana\s*gun|bloom|padre|dexscreener|birdeye|phantom|raydium|jupiter|moonshot|bonk\.?fun|robinhood|\bbuy\b|guarantee|financial/i;
+  const runs = [
+    { mode: 'challenge', challenge: 'double-up', outcome: 'won', stars: 3, start: 1, worth: 2.04, timeUsed: 192, multiple: 2.04 },
+    { mode: 'challenge', challenge: 'ten-bagger', outcome: 'lost', reason: 'rug', start: 1, worth: 0.3, multiple: 0.3 },
+    { mode: 'challenge', challenge: 'five-hundred', outcome: 'busted', start: 6.6, worth: 0, currency: 'usd', solUsd: 150 },
+    { mode: 'daily', challenge: 'runner', daily: '2026-10-20', outcome: 'won', stars: 1, start: 2, worth: 3, timeUsed: 900 },
+    { mode: 'free', outcome: 'cashed', start: 5, worth: 7.2, multiple: 1.44 },
+    { mode: 'free', outcome: 'quit', start: 5, worth: 2.5, multiple: 0.5 },
+    {},
+  ];
+  for (const r of runs) {
+    const t = shareText(r);
+    assert.match(t, /TRENCHING SIMULATOR/);
+    assert.match(t, /play money, made-up coins/);
+    assert.ok(!bad.test(t), t);
+    assert.ok(t.length + 24 <= 280, t);
+  }
+  assert.match(shareText(runs[0]), /⭐⭐⭐/);
+  assert.match(shareText(runs[4]), /\+44%/);
+  assert.match(shareText(runs[5]), /−50%/);
+  assert.equal(shareLink('a b'), `https://x.com/intent/tweet?text=a%20b&url=${encodeURIComponent(GAME_URL)}`);
+  assert.equal(GAME_URL, 'https://agi1.app/games/trenchingsimulator');
+});
+
+test('the chart\'s sums: candles of any timeframe and round ticks', async () => {
+  const { aggregate, niceTicks, TIMEFRAMES } = await import('../src/games/trenchingsimulator/chart.js');
+  assert.deepEqual(TIMEFRAMES.map((t) => t.s), [1, 15, 60, 300]);
+  const one = [{ t: 0, o: 1, h: 2, l: 1, c: 2, v: 1 }, { t: 7, o: 2, h: 5, l: 0.5, c: 3, v: 2 }, { t: 15, o: 3, h: 3, l: 3, c: 3, v: 4 }];
+  assert.deepEqual(aggregate(one, 15), [{ t: 0, o: 1, h: 5, l: 0.5, c: 3, v: 3 }, { t: 15, o: 3, h: 3, l: 3, c: 3, v: 4 }]);
+  assert.equal(aggregate(one, 1).length, 3);
+  assert.deepEqual(aggregate([], 60), []);
+  assert.deepEqual(niceTicks(0, 10, 5), [0, 2, 4, 6, 8, 10]);
+  assert.deepEqual(niceTicks(4300, 9100, 4), [5000, 6000, 7000, 8000, 9000]);
+  assert.deepEqual(niceTicks(5, 5), []);
+  assert.deepEqual(niceTicks(NaN, 3), []);
+});
+
+test("the chart's clock: the time of day a candle stands for, HH:MM:SS under a minute and HH:MM from one", async () => {
+  const { timeLabel, timeTicks } = await import('../src/games/trenchingsimulator/chart.js');
+  const two = (n) => String(n).padStart(2, '0');
+  // the page's own clock: read with the same Date methods, so this holds in any time zone
+  const base = Date.UTC(2026, 9, 20, 12, 0, 0);
+  const at = (t) => new Date(base + t * 1000);
+  const hms = (d) => `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
+  const hm = (d) => `${two(d.getHours())}:${two(d.getMinutes())}`;
+  for (const t of [0, 1, 59, 95, 3600, 86399]) {
+    assert.equal(timeLabel(t, base, 1), hms(at(t)), `1s ${t}`);
+    assert.equal(timeLabel(t, base, 15), hms(at(t)), `15s ${t}`);
+    assert.equal(timeLabel(t, base, 60), hm(at(t)), `1m ${t}`);
+    assert.equal(timeLabel(t, base, 300), hm(at(t)), `5m ${t}`);
+  }
+  // a candle from before the player arrived (the market's warm-up): still the time of day it was
+  assert.equal(timeLabel(-600, base, 15), hms(at(-600)));
+  assert.match(timeLabel(95, base, 15), /^\d\d:\d\d:\d\d$/);
+  assert.match(timeLabel(95, base, 60), /^\d\d:\d\d$/);
+  // without the page's clock: minutes and seconds from the run's start, a minus before it
+  assert.equal(timeLabel(-90), '−1:30');
+  assert.equal(timeLabel(-90, null, 60), '−1:30');
+  assert.equal(timeLabel(0), '0:00');
+  assert.equal(timeLabel(75), '1:15');
+  assert.equal(timeLabel(-0.2), '0:00', 'never "−0:00"');
+  assert.equal(timeLabel(5, NaN), '0:05');
+  for (const bad of [NaN, Infinity, -Infinity, undefined, null, 'x']) assert.equal(timeLabel(bad, base), '', String(bad));
+  assert.equal(timeLabel(1e20, base), '', 'past the last date there is');
+
+  // which candles get one: the first past each round step, the steps far enough apart for their labels
+  assert.deepEqual(timeTicks([], 15, 10, 60), []);
+  assert.deepEqual(timeTicks([0, 15], 15, 0, 60), []);
+  assert.deepEqual(timeTicks([0, 15], 0, 10, 60), []);
+  assert.deepEqual(timeTicks(null, 15, 10, 60), []);
+  const every15 = Array.from({ length: 80 }, (_, i) => i * 15);
+  // 7 px a candle, 60 px a label: at least 128.6 s a label, so every 300 s (20 candles)
+  assert.deepEqual(timeTicks(every15, 15, 7, 60), [0, 20, 40, 60]);
+  // 30 px a candle: every 30 s (2 candles)
+  assert.deepEqual(timeTicks(every15.slice(0, 8), 15, 30, 60), [0, 2, 4, 6]);
+  // a gap in trading: the first candle after it starts the next label
+  assert.deepEqual(timeTicks([0, 15, 30, 45, 60, 75, 90, 105, 240, 255], 15, 10, 50), [0, 8]);
+  // a first candle that isn't on a step gets none
+  assert.deepEqual(timeTicks([5, 20, 35, 125, 140], 15, 10, 50), [3]);
+  // never two labels closer than their gap, whatever the candles
+  const r = makeRng(seedOf('ticks')).f;
+  for (let k = 0; k < 200; k++) {
+    const span = [1, 15, 60, 300][k % 4];
+    const ts = [];
+    let t = Math.floor(r() * 5000) * span;
+    for (let i = 0; i < 20 + Math.floor(r() * 200); i++) {
+      ts.push(t);
+      t += span * (r() < 0.1 ? 2 + Math.floor(r() * 30) : 1);
+    }
+    const cw = 2 + r() * 30;
+    const gap = 40 + r() * 60;
+    const out = timeTicks(ts, span, cw, gap);
+    for (let i = 1; i < out.length; i++) assert.ok((out[i] - out[i - 1]) * cw >= gap, `${k}`);
+  }
+});
+
+test('the chart on a stand-in canvas: dollars from market caps in SOL ($4.5K, never trillions), its clock times', async () => {
+  const { createChart, timeLabel } = await import('../src/games/trenchingsimulator/chart.js');
+  const saved = { window: globalThis.window, raf: globalThis.requestAnimationFrame, caf: globalThis.cancelAnimationFrame };
+  const queue = [];
+  globalThis.window = { devicePixelRatio: 2 };
+  globalThis.requestAnimationFrame = (f) => queue.push(f);
+  globalThis.cancelAnimationFrame = (id) => {
+    if (queue[id - 1]) queue[id - 1] = null;
+  };
+  const flush = () => {
+    while (queue.some(Boolean)) {
+      const fs = queue.splice(0);
+      for (const f of fs) if (f) f(0);
+    }
+  };
+  let texts = [];
+  const ctx = {
+    setTransform() {}, fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, arc() {}, fill() {},
+    setLineDash() {}, clearRect() {},
+    fillText(t) {
+      texts.push(String(t));
+    },
+    measureText: (t) => ({ width: String(t).length * 6.6 }),
+  };
+  const listeners = new Map();
+  const canvas = {
+    width: 0, height: 0,
+    getContext: () => ctx,
+    getBoundingClientRect: () => ({ width: 600, height: 300, left: 0, top: 0 }),
+    addEventListener: (k, f) => listeners.set(k, f),
+    removeEventListener: (k) => listeners.delete(k),
+  };
+  try {
+    const chart = createChart(canvas, { tf: 15 });
+    // sharp on a 2× screen
+    assert.equal(canvas.width, 1200);
+    assert.equal(canvas.height, 600);
+    flush();
+    assert.deepEqual(texts, ['waiting for the first trade…']);
+    // a market cap of 30 SOL, a candle a second from the warm-up on (negative t), at $150 a SOL: $4.5K
+    const base = Date.UTC(2026, 9, 20, 12, 0, 0);
+    const candles = [];
+    for (let t = -60; t < 120; t++) candles.push({ t, o: 30, h: 30.2, l: 29.8, c: 30, v: 1 + (t % 3) });
+    const draw = (d) => {
+      texts = [];
+      chart.set(d);
+      flush();
+      return texts;
+    };
+    let tx = draw({ candles, solUsd: 150, tf: 15, base });
+    assert.ok(tx.includes('$4.5K'), `its last price: ${tx.join(' | ')}`);
+    const money = tx.filter((t) => t.startsWith('$'));
+    assert.ok(money.length >= 3, money.join(' '));
+    for (const t of money) {
+      assert.match(t, /^\$4\.\d+K$/, `every price on its axis is about $4.5K: ${t}`);
+      assert.ok(!/[TB]$/.test(t), t);
+    }
+    // its clock: the time of day of a candle that's there
+    const want = new Set();
+    for (let t = -60; t < 120; t += 15) want.add(timeLabel(t, base, 15));
+    const clock = tx.filter((t) => /^\d\d:\d\d:\d\d$/.test(t));
+    assert.ok(clock.length >= 2, tx.join(' | '));
+    for (const t of clock) assert.ok(want.has(t), t);
+    // a minute a candle: HH:MM
+    tx = draw({ tf: 60 });
+    assert.ok(tx.some((t) => /^\d\d:\d\d$/.test(t)), tx.join(' | '));
+    assert.ok(!tx.some((t) => /^\d\d:\d\d:\d\d$/.test(t)));
+    // no page clock: minutes and seconds from the start
+    tx = draw({ tf: 15, base: null });
+    assert.ok(tx.some((t) => /^−?\d+:\d\d$/.test(t)), tx.join(' | '));
+    // SOL at $200: $6K; no price (or a broken one): $150's
+    assert.ok(draw({ solUsd: 200, base }).includes('$6K'));
+    for (const bad of [0, -5, NaN, null]) assert.ok(draw({ solUsd: bad }).includes('$4.5K'), String(bad));
+    // the player's own buys and sells on their candles
+    tx = draw({ solUsd: 150, marks: [{ t: 30, side: 'buy' }, { t: 60, side: 'sell' }, { t: 9999, side: 'buy' }] });
+    assert.equal(tx.filter((t) => t === 'B').length, 1);
+    assert.equal(tx.filter((t) => t === 'S').length, 1);
+    // a crosshair under the pointer: its O/H/L/C in dollars
+    listeners.get('pointermove')({ clientX: 100, clientY: 50 });
+    texts = [];
+    flush();
+    assert.ok(texts.some((t) => /^O \$4\.5K {2}H \$4\.53K {2}L \$4\.47K {2}C \$4\.5K$/.test(t)), texts.join(' | '));
+    listeners.get('pointerleave')();
+    texts = [];
+    flush();
+    assert.ok(!texts.some((t) => t.startsWith('O ')));
+    // nothing drawn when nothing changed
+    texts = [];
+    chart.redraw();
+    chart.destroy();
+    flush();
+    assert.deepEqual(texts, []);
+    assert.equal(listeners.size, 0);
+  } finally {
+    globalThis.window = saved.window;
+    globalThis.requestAnimationFrame = saved.raf;
+    globalThis.cancelAnimationFrame = saved.caf;
+  }
+});
+
+test('her face in the corner: her 8-bit frame, her eyes for each mood, a mark, a blink, all inside its 25 pixels', async () => {
+  const { facePixels, FACE } = await import('../src/games/trenchingsimulator/agi.js');
+  const { PALETTE } = await import('../src/games/intro-sprite.js');
+  const at = (px, x, y) => px.filter((p) => p[0] === x && p[1] === y).map((p) => p[2]).pop();
+  const [[ex, ey]] = FACE.eyes;
+  const x = ex - FACE.x;
+  const y = ey - FACE.y;
+  for (const mood of ['neutral', 'happy', 'love', 'celebrate', 'shy', 'hmm', 'worried', 'sad', 'wave', 'odd']) {
+    const px = facePixels(mood);
+    assert.ok(px.length > 300, mood);
+    for (const [a, b, c] of px) assert.ok(a >= 0 && a < 25 && b >= 0 && b < 25 && /^#[0-9a-f]{6}$/.test(c), mood);
+  }
+  assert.equal(at(facePixels('neutral'), x, y), PALETTE.e);
+  assert.notEqual(at(facePixels('happy'), x, y), PALETTE.e);
+  assert.equal(at(facePixels('happy'), x, y - 1), PALETTE.e);
+  assert.equal(at(facePixels('neutral', { blink: true }), x, y), PALETTE['6']);
+  assert.equal(at(facePixels('love'), 20, 1), '#ff5c8a');
+  assert.equal(at(facePixels('neutral'), 20, 1), undefined);
+});
+
+test('her words stay up as long as they take to read: about a second, 60 ms a character, 2.4 s to 5.2 s', async () => {
+  const { talkMs, TALK } = await import('../src/games/trenchingsimulator/agi.js');
+  assert.deepEqual({ ...TALK }, { min: 2400, max: 5200, base: 1000, perChar: 60 });
+  assert.equal(talkMs('gm'), 2400, 'a short line: never under 2.4 s');
+  assert.equal(talkMs('x'.repeat(30)), 2800);
+  assert.equal(talkMs('x'.repeat(50)), 4000);
+  assert.equal(talkMs('x'.repeat(400)), 5200, 'never over 5.2 s');
+  // an emoji is one character to read, not two
+  assert.equal(talkMs('💜'.repeat(30)), talkMs('x'.repeat(30)));
+  for (const bad of ['', null, undefined]) assert.equal(talkMs(bad), 2400);
+  // every one of her lines: between the two
+  for (const lines of Object.values(LINES)) {
+    for (const l of lines) {
+      const ms = talkMs(fill(l, { ticker: '$TADPOL', pnl: '+0.25 SOL', kol: '@cryptobae', x: '3x' }));
+      assert.ok(ms >= 2400 && ms <= 5200, l);
+    }
+  }
+});
+
+// ---------- boards/board.js: Trench Board's own helpers ----------
+
+test("Trench Board's helpers: its sorts, quick buys by the run's start, amounts as typed, who traded, holders' tags", () => {
+  // its five sorts, the way a launchpad board has them
+  assert.deepEqual(SORTS.map(([id]) => id), ['bump', 'trending', 'new', 'stretch', 'migrated']);
+  for (const [, label] of SORTS) assert.ok(typeof label === 'string' && label.length > 2);
+  assert.ok(Object.isFrozen(SORTS));
+  // quick buys: four, growing, never more than the run started with, never under the smallest buy
+  const cases = [[1, [0.05, 0.1, 0.25, 0.5]], [1.5, [0.05, 0.1, 0.25, 0.5]], [5, [0.1, 0.25, 0.5, 1]], [6, [0.1, 0.25, 0.5, 1]],
+    [10, [0.5, 1, 2, 5]], [20, [0.5, 1, 2, 5]], [100, [1, 5, 10, 25]]];
+  for (const [start, want] of cases) {
+    const got = buyPresets(start);
+    assert.deepEqual(got, want, `start ${start}`);
+    assert.ok(got.every((v, i) => v >= MIN_BUY && (i === 0 || v > got[i - 1]) && v <= start), `start ${start}`);
+  }
+  for (const bad of [0, -1, NaN, undefined, null, 'x']) assert.deepEqual(buyPresets(bad), [0.05, 0.1, 0.25, 0.5]);
+  // an amount as typed: a dot or a comma, a leading or trailing dot; nothing else (no signs, exponents or hex)
+  const amounts = [['1.5', 1.5], ['0,25', 0.25], ['.5', 0.5], ['2.', 2], [' 3 ', 3], ['10', 10]];
+  for (const [t, v] of amounts) assert.equal(parseAmount(t), v, t);
+  for (const t of ['', '  ', 'abc', '1.2.3', '-1', '+1', '1e3', '0x10', '1,5,0', 'Infinity', null, undefined]) {
+    assert.ok(Number.isNaN(parseAmount(t)), String(t));
+  }
+  // who made a trade: words for every label the engine gives a trader, "someone" for the rest (never a raw label)
+  const engineLabels = [...readFileSync('src/games/trenchingsimulator/engine.js', 'utf8')
+    .match(/const LABEL = \{([^}]*)\}/)[1].matchAll(/: '([a-z]+)'/g)].map((m) => m[1]);
+  assert.ok(engineLabels.includes('dev') && engineLabels.includes('regular'), 'the engine\'s labels were read');
+  for (const l of [...engineLabels, 'me', 'mev']) {
+    const w = whoText(l);
+    assert.ok(typeof w === 'string' && w.length > 1, l);
+    if (l === 'regular') assert.equal(w, 'someone');
+    else assert.notEqual(w, 'someone', l);
+  }
+  assert.equal(whoText('me'), 'you');
+  for (const bad of ['', 'toString', '__proto__', 'constructor', undefined, null, 7]) assert.equal(whoText(bad), 'someone');
+  // a holder's tag: only the ones a trencher looks for (a caller shows by its name, you as "you")
+  assert.equal(holderTag('dev'), 'dev');
+  assert.equal(holderTag('smart'), 'smart wallet');
+  for (const l of ['bundler', 'sniper', 'insider', 'whale']) assert.equal(holderTag(l), l);
+  for (const l of ['kol', 'regular', 'me', 'mev', '', 'toString', '__proto__', undefined, null]) assert.equal(holderTag(l), '', String(l));
+});
+
+test("Trench Board's order errors: words for every reason the engine or the run can refuse an order", () => {
+  const src = readFileSync('src/games/trenchingsimulator/engine.js', 'utf8') + readFileSync('src/games/trenchingsimulator/run.js', 'utf8');
+  const codes = [...new Set([...src.matchAll(/error: '([a-z_]+)'/g)].map((m) => m[1]))].sort();
+  assert.ok(codes.length >= 9, `the codes were read: ${codes}`);
+  assert.deepEqual(Object.keys(ORDER_ERRORS).sort(), codes);
+  for (const [k, words] of Object.entries(ORDER_ERRORS)) {
+    assert.match(words, /^[A-Z].*[.:]?\S$/, k);
+    assert.ok(!/\bbuy (more|now)\b|\bnot financial\b/i.test(words), k);
+  }
+  assert.ok(Object.isFrozen(ORDER_ERRORS));
+});
+
+// ---------- results.js ----------
+
+const WON = Object.freeze({
+  outcome: 'won', challenge: 'first-blood', mode: 'challenge', start: 1, worth: 2.31, multiple: 2.31, timeUsed: 522,
+  seconds: 1800, pnl: 1.31, peak: 2.5, filled: 12, failed: 2, coins: 5, wins: 3, losses: 2,
+  best: { ticker: 'FROG', emoji: '🐸', total: 0.42 }, worst: { ticker: 'RUG', emoji: '💀', total: -0.2 }, fees: 0.031,
+  solUsd: 150, currency: 'sol', stars: 2,
+});
+
+test("a run's results: its title and color for every ending, what it was, and its line in the terminal's money", () => {
+  assert.equal(resultTitle(WON), TITLES.won);
+  assert.equal(resultTitle({ outcome: 'lost', reason: 'rug' }), TITLES.rug);
+  assert.equal(resultTitle({ outcome: 'lost', reason: 'time' }), TITLES.time);
+  assert.equal(resultTitle({ outcome: 'busted' }), TITLES.busted);
+  assert.equal(resultTitle({ outcome: 'cashed' }), TITLES.cashed);
+  for (const r of [{ outcome: 'quit' }, {}, null, undefined, 'won']) assert.equal(resultTitle(r), TITLES.quit);
+  assert.ok(Object.isFrozen(TITLES));
+  // its color: a win up, a loss down, else by where it ended
+  assert.equal(resultTone(WON), 'up');
+  assert.equal(resultTone({ outcome: 'lost', multiple: 3 }), 'down');
+  assert.equal(resultTone({ outcome: 'busted' }), 'down');
+  assert.equal(resultTone({ outcome: 'cashed', multiple: 1.2 }), 'up');
+  assert.equal(resultTone({ outcome: 'cashed', multiple: 1 }), 'up');
+  assert.equal(resultTone({ outcome: 'cashed', multiple: 0.8 }), 'down');
+  assert.equal(resultTone({ outcome: 'quit' }), 'down');
+  assert.equal(resultTone(null), 'down');
+  // what it was
+  assert.equal(modeLabel(WON), 'First blood');
+  assert.equal(modeLabel({ mode: 'daily', daily: '2026-10-20', challenge: 'double-up' }), 'Daily market · 2026-10-20 · Double up');
+  assert.equal(modeLabel({ mode: 'daily', daily: '2026-10-20' }), 'Daily market · 2026-10-20');
+  for (const r of [{ challenge: 'nope' }, { mode: 'free' }, {}, null]) assert.equal(modeLabel(r), 'Free play');
+  // its line: SOL, or dollars at the run's own SOL price (the engine counts in SOL)
+  assert.equal(resultLine(WON), '1 SOL → 2.31 SOL (2.31x) in 08:42');
+  assert.equal(resultLine({ start: 100, worth: 600, currency: 'usd', solUsd: 200, multiple: 6, timeUsed: 61 }), '$20K → $120K (6x) in 01:01');
+  assert.equal(resultLine({ start: 1, worth: 0.5 }), '1 SOL → 0.5 SOL');
+});
+
+test("a run's numbers, stars, card and line drawn small", () => {
+  const rows = statLines(WON);
+  assert.deepEqual(rows.map((r) => r.label), ['Profit', 'Peak', 'Time', 'Orders', 'Coins traded', 'Wins / losses', 'Best trade',
+    'Worst trade', 'Fees paid', 'SOL price']);
+  const by = Object.fromEntries(rows.map((r) => [r.label, r]));
+  assert.deepEqual(by.Profit, { label: 'Profit', value: '+1.31 SOL', tone: 'up' });
+  assert.equal(by.Time.value, '08:42 of 30:00');
+  assert.equal(by.Orders.value, '12 filled · 2 failed');
+  assert.equal(by['Best trade'].value, '🐸 $FROG +0.42 SOL');
+  assert.equal(by['Best trade'].tone, 'up');
+  assert.equal(by['Worst trade'].tone, 'down');
+  assert.equal(by['SOL price'].value, '$150 (frozen for this run)');
+  // its fees: the one number run.result() gives, and what sandwich bots took beside it (never added to the fees)
+  assert.equal(by['Fees paid'].value, '0.031 SOL');
+  const bots = Object.fromEntries(statLines({ ...WON, mev: 0.012 }).map((r) => [r.label, r.value]));
+  assert.equal(bots['Fees paid'], '0.031 SOL · 0.012 SOL lost to bots');
+  const botsUsd = Object.fromEntries(statLines({ ...WON, mev: 0.012, currency: 'usd' }).map((r) => [r.label, r.value]));
+  assert.equal(botsUsd['Fees paid'], '$4.65 · $1.8 lost to bots', "in dollars at the run's own SOL price");
+  for (const mev of [0, -1, NaN, '0.5', null]) {
+    assert.equal(Object.fromEntries(statLines({ ...WON, mev }).map((r) => [r.label, r.value]))['Fees paid'], '0.031 SOL', String(mev));
+  }
+  // one trade is both best and worst: shown once, on its own side (a loss is never "best", a win never "worst")
+  const lone = (total) => Object.fromEntries(statLines({ ...WON, best: { id: 7, ticker: 'CLOO', emoji: '👾', total },
+    worst: { id: 7, ticker: 'CLOO', emoji: '👾', total } }).map((r) => [r.label, r.value]));
+  assert.deepEqual([lone(-0.0061)['Best trade'], lone(-0.0061)['Worst trade']], ['—', '👾 $CLOO −0.0061 SOL']);
+  assert.deepEqual([lone(0.42)['Best trade'], lone(0.42)['Worst trade']], ['👾 $CLOO +0.42 SOL', '—']);
+  assert.deepEqual([lone(0)['Best trade'], lone(0)['Worst trade']], ['👾 $CLOO 0 SOL', '—']);
+  const two = Object.fromEntries(statLines({ ...WON, best: { id: 1, ticker: 'A', total: -0.1 }, worst: { id: 2, ticker: 'B', total: -0.3 } })
+    .map((r) => [r.label, r.value]));
+  assert.deepEqual([two['Best trade'], two['Worst trade']], ['🪙 $A −0.1 SOL', '🪙 $B −0.3 SOL'], 'two losses: the smaller is best');
+  // an older result whose fees were the engine's object: never "[object Object]" or NaN
+  assert.equal(Object.fromEntries(statLines({ ...WON, fees: { terminal: 0.01 } }).map((r) => [r.label, r.value]))['Fees paid'], '0 SOL');
+  // free play (no time limit), nothing failed, no trades, no price: still all ten, never NaN or undefined
+  const empty = statLines({ timeUsed: 75 });
+  assert.equal(empty.length, 10);
+  assert.ok(empty.every((r) => typeof r.value === 'string' && !/NaN|undefined/.test(r.value)), JSON.stringify(empty));
+  assert.equal(empty.find((r) => r.label === 'Orders').value, '0 filled');
+  assert.equal(empty.find((r) => r.label === 'Time').value, '01:15');
+  assert.equal(empty.find((r) => r.label === 'Best trade').value, '—');
+  assert.equal(statLines(null).length, 10);
+  // stars out of three
+  assert.deepEqual([0, 1, 2, 3, 5, -1, NaN, 2.9, undefined].map(starsRow), ['☆☆☆', '★☆☆', '★★☆', '★★★', '★★★', '☆☆☆', '☆☆☆', '★★☆', '☆☆☆']);
+  // the share card's words: play money, never "buy"; stars only for a win
+  const card = cardText(WON);
+  assert.deepEqual(card, {
+    kicker: 'TRENCHING SIMULATOR · First blood', title: 'Challenge complete', big: '2.31x', line: '1 SOL → 2.31 SOL',
+    sub: '+1.31 SOL · 08:42', stars: '★★☆', foot: 'Play money, made-up coins · agi1.app/games/trenchingsimulator', tone: 'up',
+  });
+  assert.equal(cardText({ ...WON, outcome: 'cashed' }).stars, '');
+  assert.equal(cardText({ outcome: 'busted' }).big, '—');
+  for (const c of [card, cardText({}), cardText({ outcome: 'lost', reason: 'rug' })]) {
+    assert.ok(!/\bbuy\b/i.test(Object.values(c).join(' ')), JSON.stringify(c));
+  }
+});
+
+test("a run's worth drawn as a line: at most 200 points, its spikes and dips kept, inside its box", () => {
+  // few enough: the same points (a copy), bad ones dropped
+  const few = [{ t: 0, v: 1 }, { t: 1, v: 2 }, { t: 2, v: NaN }, null, { t: 3, v: 1.5 }];
+  const kept = downsample(few);
+  assert.deepEqual(kept, [{ t: 0, v: 1 }, { t: 1, v: 2 }, { t: 3, v: 1.5 }]);
+  assert.notEqual(downsample(kept), kept);
+  assert.deepEqual(downsample('x'), []);
+  // many: at most the cap, the first and the last, the highest and the lowest, in time order
+  const many = Array.from({ length: 10000 }, (_, i) => ({ t: i, v: 1 + Math.sin(i / 300) * 0.1 }));
+  many[5000] = { t: 5000, v: 9 };
+  many[7000] = { t: 7000, v: 0.01 };
+  for (const cap of [200, 50, 4, 1]) {
+    const d = downsample(many, cap);
+    assert.ok(d.length <= Math.max(4, cap), `cap ${cap}: ${d.length}`);
+    assert.equal(d[0], many[0]);
+    assert.equal(d[d.length - 1], many[many.length - 1]);
+    assert.ok(d.some((q) => q.v === 9) && d.some((q) => q.v === 0.01), `cap ${cap}: its spike and its dip`);
+    for (let i = 1; i < d.length; i++) assert.ok(d[i].t > d[i - 1].t, `cap ${cap}: in time order`);
+  }
+  // the path: nothing for nothing; one point a flat line; two points exactly; inside its box; the start's level in range
+  assert.equal(sparkPath([]), null);
+  const one = sparkPath([{ t: 5, v: 2 }], { w: 100, h: 50, pad: 5 });
+  assert.equal(one.n, 2);
+  assert.equal(one.d, 'M5 25 L95 25');
+  assert.deepEqual(sparkPath([{ t: 0, v: 1 }, { t: 1, v: 2 }], { w: 100, h: 50, pad: 5 }),
+    { d: 'M5 45 L95 5', area: 'M5 45 L95 5 L95 45 L5 45 Z', baseY: 45, up: true, lo: 1, hi: 2, n: 2 });
+  const down = sparkPath([{ t: 0, v: 3 }, { t: 1, v: 2 }], { w: 100, h: 50, pad: 5, base: 4 });
+  assert.equal(down.up, false);
+  assert.equal(down.hi, 4);
+  assert.equal(down.baseY, 5);
+  // a small move draws as a small move: the range is at least 5% of where it started (a 0.4% dip, not a crash);
+  // minSpan 0 draws it edge to edge, as before; a big move is never squeezed
+  const small = [{ t: 0, v: 1 }, { t: 1, v: 0.996 }];
+  const dip = sparkPath(small, { w: 100, h: 50, pad: 5 });
+  near(dip.lo, 0.973, 1e-9, 'its range, centered on the move');
+  near(dip.hi, 1.023, 1e-9);
+  assert.equal(dip.d, 'M5 23.4 L95 26.6');
+  assert.equal(dip.baseY, 23.4);
+  assert.equal(dip.up, false);
+  assert.equal(sparkPath(small, { w: 100, h: 50, pad: 5, minSpan: 0 }).d, 'M5 5 L95 45');
+  const wide = sparkPath(small, { w: 100, h: 50, pad: 5, minSpan: 0.5 });
+  near(wide.hi - wide.lo, 0.5, 1e-9, 'a wider minimum, asked for');
+  const flat = sparkPath([{ t: 0, v: 3 }, { t: 9, v: 3 }], { w: 100, h: 50, pad: 5 });
+  assert.equal(flat.d, 'M5 25 L95 25', 'a flat run in the middle');
+  const moved = sparkPath([{ t: 0, v: 1 }, { t: 1, v: 1.2 }], { w: 100, h: 50, pad: 5 });
+  assert.deepEqual([moved.lo, moved.hi, moved.d], [1, 1.2, 'M5 45 L95 5'], 'a 20% move fills its box');
+  const big = sparkPath(many, { w: 600, h: 160, pad: 6 });
+  assert.ok(big.n <= 200);
+  for (const [, x, y] of big.d.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)) {
+    assert.ok(Number(x) >= 6 && Number(x) <= 594 && Number(y) >= 6 && Number(y) <= 154, `${x} ${y}`);
+  }
+});

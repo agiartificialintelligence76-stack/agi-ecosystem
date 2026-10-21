@@ -6,7 +6,7 @@
 // No browser, no network. Run: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import * as I from '../src/games/intro-plan.js';
 import { PALETTE, SIZE, FEET, FRAMES } from '../src/games/intro-sprite.js';
 import {
@@ -15,6 +15,10 @@ import {
 import { GAMES } from '../src/games/list.js';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+// every .css file in a game's folder, its subfolders too (Ride 'Em, AGI!'s game.css and fonts.css; TRENCHING SIMULATOR's
+// trench.css, 2026-10-20)
+const cssOf = (dir) => readdirSync(new URL(`../${dir}/`, import.meta.url), { withFileTypes: true }).flatMap((e) =>
+  (e.isDirectory() ? cssOf(`${dir}/${e.name}`) : e.name.endsWith('.css') ? [`${dir}/${e.name}`] : []));
 const HEX = /^#[0-9a-f]{6}$/;
 const { FULL, SHORT, COLORS, BANDS, BITS, GLYPHS, WORD, LANDS, MID } = I;
 const landedAt = (tl) => (tl.enter ? tl.enter.to : tl.dive.from);   // from then on she's on the screen, whole
@@ -891,7 +895,7 @@ test('every game\'s page: its overlay right after <body>, once, before the game;
     const html = read(`${id}.html`);
     assert.equal(html.split('id="agi-intro"').length - 1, 1, `${id}: one overlay`);
     assert.equal(html.split(tag).length - 1, 1, `${id}: the overlay exactly as intro.css and intro.js expect it`);
-    const body = html.indexOf('<body>'), at = html.indexOf(tag), main = html.indexOf('<main>');
+    const body = html.indexOf('<body>'), at = html.indexOf(tag), main = html.search(/<main[\s>]/);
     assert.ok(body > 0 && at > body && main > at, `${id}: after <body>, before <main>`);
     assert.match(html.slice(body + '<body>'.length, at), /^(?:\s|<!--[\s\S]*?-->)*$/, `${id}: nothing but comments before it`);
     const start = html.indexOf('<!-- game:start');
@@ -907,6 +911,8 @@ test('every game\'s page: its overlay right after <body>, once, before the game;
   }
   // Ride 'Em, AGI!'s, exactly: the intro, the game's fonts' rules, its styles, its code
   assert.deepEqual(importsOf(read('src/games/rideemagi/page.js')), ['../intro.js', './fonts.css', './game.css', './game.js']);
+  // TRENCHING SIMULATOR's (2026-10-20): the intro, its styles, its screens
+  assert.deepEqual(importsOf(read('src/games/trenchingsimulator/page.js')), ['../intro.js', './trench.css', './shell.js']);
   // AGI games' own page lists the games: it isn't one
   assert.doesNotMatch(read('games.html'), /agi-intro|class="gi"/);
 });
@@ -986,7 +992,11 @@ test('its styles: every rule a gi- class, over the game from the first paint, go
   assert.equal(gi['touch-action'], 'none');
   const z = Number(gi['z-index']);
   for (const id of Object.keys(GAMES)) {
-    for (const m of read(`src/games/${id}/game.css`).matchAll(/z-index:\s*(-?\d+)/g)) assert.ok(z > Number(m[1]), `over ${id}'s z-index ${m[1]}`);
+    const files = cssOf(`src/games/${id}`);
+    assert.ok(files.length >= 1, `${id}: its styles`);
+    for (const f of files) {
+      for (const m of read(f).matchAll(/z-index:\s*(-?\d+)/g)) assert.ok(z > Number(m[1]), `over ${f}'s z-index ${m[1]}`);
+    }
   }
   // its own way out: if its script never comes, it fades by itself after 4 s, later than any script that comes in time
   const bail = gi.animation.match(/^gi-bail ([\d.]+)s ease ([\d.]+)s forwards$/);

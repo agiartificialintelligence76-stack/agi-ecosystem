@@ -6,6 +6,9 @@
 // network it's on and one free signature, never a transaction) and the human check. Playing needs none of this (each game
 // counts its own runs: src/games/<game>/site.js). Its words are in the page and src/games/words.js; everything here is set
 // with textContent, and its CSS variables through the CSS object model (the CSP allows no style attributes).
+// Since 2026-10-21 two games (Ride 'Em, AGI! and TRENCHING SIMULATOR): a card on the shelf and a tab of ratings for each
+// (mountGame: one game's numbers, reviews and box), one wallet session and 18+ answer for all of them (createSession:
+// connecting a wallet in one game's box connects them all), and a link to a game's ratings opens its tab (startTabs).
 import '../styles/tokens.css';
 import '../styles/base.css';
 import '../styles/layout.css';
@@ -22,7 +25,7 @@ import { isGame, STARS } from './list.js';
 import {
   WALLET_STEPS, NO_WALLET, BADGE, STAR_PATH, starsPath, starsLabel, pickText, fillWidth, avgText, ratingsText, countText,
   barWidth, playedText, cardStats, dateText, adjustStats, placeReview, mergeMine, appendPage, BOX, moreText, meText, savedText,
-  deletedText, reviewError,
+  deletedText, reviewError, gameOfHash,
 } from './words.js';
 
 // the site's 18+ answer and wallet session (the home page's and her live page's too: a wallet connected there is connected
@@ -83,12 +86,48 @@ function starRow(value, label, size) {
   return row;
 }
 
-function start() {
-  startTheme();
-  startMenu();
-  const rate = $('[data-gm-rate]');
-  const GAME = rate?.dataset.gmRate;
-  if (!isGame(GAME)) return;
+// ---------- the wallet session and the 18+ answer: the site's own, one for every game's box ----------
+// A box that connects a wallet, renews its session, finds it ended or disconnects it tells the session, and every box
+// follows (each asks our server for its own game's review once it shows); so does another tab doing the same
+function createSession() {
+  const boxes = [];
+  const s = {
+    me: walletOf(store.get(KEYS.wallet)),
+    adult: () => store.get(KEYS.adult) === true,
+    add(box) { boxes.push(box); },
+    each(fn) { for (const box of boxes) fn(box); },
+    // a wallet signed in, or its session renewed (its level read again on the chain): kept for the whole site
+    keep(p) {
+      const next = walletOf({ session: p.session, wallet: p.wallet, level: p.level, name: p.name ?? null, notes: p.notes || [] });
+      if (!next) return;
+      const changed = !sameWallet(next, s.me);
+      s.me = next;
+      store.set(KEYS.wallet, next);
+      s.each((box) => box.walletChanged(changed));
+    },
+    // disconnected here, or a session our server can't read any more: this browser forgets it (everywhere on the site)
+    forget() {
+      s.me = null;
+      store.del(KEYS.wallet);
+      s.each((box) => box.walletChanged(true));
+    },
+    // connected, disconnected or forgotten in another tab (the home page's too), or 18+ answered there: this page follows
+    follow(e) {
+      if (e.key === KEYS.wallet || e.key === null) {
+        const next = walletOf(store.get(KEYS.wallet));
+        const changed = !sameWallet(next, s.me);
+        s.me = next;
+        s.each((box) => box.walletChanged(changed));
+      } else if (e.key === KEYS.adult) s.each((box) => box.render());
+    },
+  };
+  return s;
+}
+
+// ---------- one game: its card on the shelf, its numbers, its reviews and rating it ----------
+// `rate`: its ratings' panel ([data-gm-rate="<game>"]), where everything it reads and writes is
+function mountGame(rate, session) {
+  const GAME = rate.dataset.gmRate;
   const card = $(`[data-gm-game="${GAME}"]`);
   const ui = {
     avg: $('[data-gm-avg]', rate), avgStars: $('[data-gm-avg-stars]', rate), count: $('[data-gm-count]', rate),
@@ -116,12 +155,11 @@ function start() {
   let stats;                       // undefined: loading; null: none (not set up, or our server didn't answer); else its numbers
   let list = [];                   // the reviews shown, newest first
   let more = false;                // more to load ("Show more reviews")
-  let me = walletOf(store.get(KEYS.wallet));
   let mine;                        // this wallet's review: undefined (not known yet), null (none), a review, or 'failed'
   let mineAskFor = null;           // the wallet its review is being asked for
   let editing = false, sending = false, removing = false;
-  const adult = () => store.get(KEYS.adult) === true;
   const myReview = () => (isReview(mine) ? mine : null);
+  const shown = () => !rate.closest('[hidden]');    // its tab picked (a hidden box asks our server nothing about the wallet)
 
   // ---------- its numbers, and the reviews ----------
   let retried = false;
@@ -201,8 +239,8 @@ function start() {
     if (stats === undefined) return 'loading';
     if (!stats) return 'soon';
     if (!stats.open) return 'closed';
-    if (!adult()) return 'gate';
-    if (!me) return 'connect';
+    if (!session.adult()) return 'gate';
+    if (!session.me) return 'connect';
     return 'form';
   }
   function renderBox() {
@@ -212,7 +250,7 @@ function start() {
   }
   function renderForm() {
     ensureMine();
-    ui.me.textContent = meText(me);
+    ui.me.textContent = meText(session.me);
     const r = myReview();
     ui.mineLoading.hidden = mine !== undefined;
     ui.mine.hidden = !r || editing;
@@ -241,29 +279,15 @@ function start() {
   const showError = (text) => { ui.error.textContent = text || ''; };
   const connectSay = (text) => { ui.say.textContent = text || ''; ui.say.hidden = !text; };
 
-  // ---------- 18+ ----------
+  // ---------- 18+ (the site's own answer: every game's box follows) ----------
   ui.adult.addEventListener('click', () => {
     store.set(KEYS.adult, true);
-    renderAll();
-    (me ? ui.out : ui.connect).focus({ preventScroll: true });
+    session.each((box) => box.render());
+    (session.me ? ui.out : ui.connect).focus({ preventScroll: true });
   });
 
   // ---------- connecting a wallet (the same sign-in as the home page's and her live page's) ----------
   let attempt = 0;                // the wallet picked last (an older one that answers late is left behind)
-  function keepWallet(p) {
-    const next = walletOf({ session: p.session, wallet: p.wallet, level: p.level, name: p.name ?? null, notes: p.notes || [] });
-    if (!next) return;
-    if (!sameWallet(next, me)) { mine = undefined; editing = false; }
-    me = next;
-    store.set(KEYS.wallet, me);
-  }
-  function forgetWallet() {
-    me = null;
-    mine = undefined;
-    mineAskFor = null;
-    editing = false;
-    store.del(KEYS.wallet);
-  }
   // a wallet's session: the one this browser has for that address (its level re-read when due), else a new sign-in
   async function sessionFor(provider, address) {
     const saved = walletOf(store.get(KEYS.wallet));
@@ -287,11 +311,11 @@ function start() {
       const profile = await sessionFor(w.provider, address);
       if (mineNow !== attempt) return;
       if (String(profile.wallet).toLowerCase() !== address) throw new Error('wrong_signer');
-      keepWallet(profile);
       connectSay('');
       done('');
       ui.wallets.hidden = true;
       ui.apps.hidden = true;
+      session.keep(profile);
       renderAll();
       ui.out.focus({ preventScroll: true });
     } catch (err) {
@@ -327,33 +351,21 @@ function start() {
     $('[data-gm-app="coinbase"]', rate).href = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(here)}`;
   });
   ui.out.addEventListener('click', () => {
-    forgetWallet();
-    resetForm();
     done('');
-    renderAll();
+    session.forget();
     ui.connect.focus({ preventScroll: true });
   });
   // the session ended (our server can't read it any more): this browser forgets it, and says so where you connect again
   function signedOut() {
-    forgetWallet();
-    resetForm();
-    renderAll();
+    session.forget();
     connectSay(reviewError('signed_out'));
     ui.connect.focus({ preventScroll: true });
   }
-  // connected, disconnected or forgotten in another tab (the home page's too), or 18+ answered there: this page follows
-  addEventListener('storage', (e) => {
-    if (e.key === KEYS.wallet || e.key === null) {
-      const next = walletOf(store.get(KEYS.wallet));
-      if (!sameWallet(next, me)) { mine = undefined; mineAskFor = null; editing = false; resetForm(); }
-      me = next;
-    }
-    if (e.key === KEYS.wallet || e.key === KEYS.adult || e.key === null) renderAll();
-  });
 
   // ---------- this wallet's own review ----------
   function ensureMine() {
-    if (!me || mine !== undefined || sameWallet(me, { wallet: mineAskFor })) return;
+    const me = session.me;
+    if (!me || mine !== undefined || sameWallet(me, { wallet: mineAskFor }) || !shown()) return;
     loadMine(me);
   }
   async function loadMine(asked) {
@@ -364,17 +376,18 @@ function start() {
     } catch {
       r = { ok: false, status: 0, data: {} };
     }
-    if (!sameWallet(me, asked)) return;           // disconnected, or another wallet, meanwhile
+    if (!sameWallet(session.me, asked)) return;           // disconnected, or another wallet, meanwhile
     mineAskFor = null;
     const d = r.data || {};
     if (r.status === 401 && d.error === 'signed_out') { signedOut(); return; }
-    if ([1, 2, 3].includes(d.level)) keepWallet({ ...me, ...(typeof d.session === 'string' ? { session: d.session } : {}), level: d.level });
     if (r.ok && (d.review === null || isReview(d.review))) {
       mine = d.review;
       if (mine) list = mergeMine(list, mine, { more });
     } else {
       mine = 'failed';
     }
+    // (its level read again on the chain comes back with a new session: kept for every box, after this one knows its review)
+    if ([1, 2, 3].includes(d.level)) session.keep({ ...session.me, ...(typeof d.session === 'string' ? { session: d.session } : {}), level: d.level });
     renderAll();
   }
 
@@ -421,11 +434,11 @@ function start() {
 
   ui.form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (sending || !me) return;
+    if (sending || !session.me) return;
     const n = picked();
     if (!n) { showError(BOX.needStars); ui.radios[0]?.focus(); return; }
     const text = ui.text.value.trim(), name = ui.name.value.trim();
-    const sent = me, before = myReview();
+    const sent = session.me, before = myReview();
     sending = true;
     showError('');
     done('');
@@ -439,20 +452,21 @@ function start() {
     }
     sending = false;
     const d = r.data || {};
-    const still = sameWallet(me, sent);
+    const still = sameWallet(session.me, sent);
     if (still && r.status === 401 && d.error === 'signed_out') { signedOut(); return; }
-    if (still && [1, 2, 3].includes(d.level)) keepWallet({ ...me, ...(typeof d.session === 'string' ? { session: d.session } : {}), level: d.level });
     if (r.ok && d.ok === true && isReview(d.review)) {
       // its numbers and the list without asking our server again (its answer is shared for a minute); an earlier review
       // this page didn't know about leaves the numbers as they are (the list replaces it: an edit keeps its id)
       if (d.created === true || before) stats = adjustStats(stats, { before, after: d.review });
       list = placeReview(list, d.review, { remove: before, more });
       if (still) { mine = d.review; resetForm(); }
+      if (still && [1, 2, 3].includes(d.level)) session.keep({ ...session.me, ...(typeof d.session === 'string' ? { session: d.session } : {}), level: d.level });
       done(savedText({ created: d.created === true, hidden: d.review.hidden === true }));
       renderAll();
       if (still) ui.mine.focus({ preventScroll: true });
       return;
     }
+    if (still && [1, 2, 3].includes(d.level)) session.keep({ ...session.me, ...(typeof d.session === 'string' ? { session: d.session } : {}), level: d.level });
     showError(reviewError(d.error, { why: d.why }));
     renderAll();
     (d.error === 'name' ? ui.name : d.error === 'words' ? ui.text : ui.send).focus();
@@ -467,7 +481,7 @@ function start() {
     ui.del.textContent = BOX.remove.idle;
   }
   ui.del.addEventListener('click', async () => {
-    if (removing || !me || !myReview()) return;
+    if (removing || !session.me || !myReview()) return;
     if (!armed) {
       ui.del.classList.add('is-armed');
       ui.del.textContent = BOX.remove.armed;
@@ -475,7 +489,7 @@ function start() {
       return;
     }
     disarm();
-    const sent = me, before = myReview();
+    const sent = session.me, before = myReview();
     removing = true;
     ui.del.disabled = true;
     ui.del.textContent = BOX.remove.busy;
@@ -490,7 +504,7 @@ function start() {
     ui.del.disabled = false;
     ui.del.textContent = BOX.remove.idle;
     const d = r.data || {};
-    const still = sameWallet(me, sent);
+    const still = sameWallet(session.me, sent);
     if (still && r.status === 401 && d.error === 'signed_out') { signedOut(); return; }
     if (r.ok && d.ok === true) {
       if (d.removed === true) {
@@ -537,8 +551,92 @@ function start() {
     else if (ui.more.hidden) ui.list.lastElementChild?.focus();
   });
 
-  renderAll();
-  loadStats();
+  const box = {
+    game: GAME,
+    render: renderAll,
+    // the wallet changed (another one, or none): its review forgotten, the form emptied; else only its level or session
+    walletChanged(changed) {
+      if (changed) { mine = undefined; mineAskFor = null; editing = false; resetForm(); }
+      renderAll();
+    },
+    start() {
+      renderAll();
+      loadStats();
+    },
+  };
+  session.add(box);
+  return box;
+}
+
+// ---------- a tab for each game's ratings ----------
+// The WAI-ARIA tabs pattern: ← and → (Home, End) move between the games and show each one's panel as they go; Tab goes
+// on into it. A link to a game's ratings (#rate-<game>, or #rate: Ride 'Em, AGI!'s, from before there were two) opens its
+// tab before the browser scrolls there, on this page or when it opens with one.
+function startTabs(boxes) {
+  const list = $('[data-gm-tabs]');
+  const tabs = list ? [...list.querySelectorAll('[role="tab"]')] : [];
+  if (!tabs.length) return;
+  const panelOf = (tab) => document.getElementById(tab.getAttribute('aria-controls'));
+  const tabOf = (game) => tabs.find((t) => t.dataset.gmTab === game) || null;
+  function pick(tab, { focus = false } = {}) {
+    for (const t of tabs) {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      const panel = panelOf(t);
+      if (panel) panel.hidden = !on;
+    }
+    if (focus) tab.focus();
+    boxes.find((b) => b.game === tab.dataset.gmTab)?.render();     // its box drawn as it shows (and asks for your review)
+  }
+  const picked = (tab) => tab.getAttribute('aria-selected') === 'true';
+  list.addEventListener('click', (e) => {
+    const tab = e.target.closest('[role="tab"]');
+    if (tab && tabs.includes(tab) && !picked(tab)) pick(tab);
+  });
+  list.addEventListener('keydown', (e) => {
+    const i = tabs.indexOf(e.target.closest('[role="tab"]'));
+    if (i < 0 || e.altKey || e.ctrlKey || e.metaKey) return;
+    const n = tabs.length;
+    const to = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    pick(tabs[to], { focus: true });
+  });
+  // a link to a game's ratings on this page (a card's "Rate it"): its tab first, so the browser finds its panel showing
+  const follow = (hash) => {
+    const tab = tabOf(gameOfHash(hash));
+    if (tab && !picked(tab)) pick(tab);
+    return tab;
+  };
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest?.('a[href^="#rate"]');
+    if (a) follow(a.getAttribute('href'));
+  });
+  addEventListener('hashchange', () => follow(location.hash));
+  // the page opened at a game's ratings: its tab, then its panel in view (it was hidden when the browser looked for it)
+  const tab = tabOf(gameOfHash(location.hash));
+  if (tab && !picked(tab)) {
+    pick(tab);
+    const target = document.getElementById(location.hash.slice(1));
+    if (target) {
+      try { target.scrollIntoView({ block: 'start', behavior: 'instant' }); } catch { target.scrollIntoView(true); }
+    }
+  }
+}
+
+function start() {
+  startTheme();
+  startMenu();
+  const session = createSession();
+  const boxes = [...document.querySelectorAll('[data-gm-rate]')]
+    .filter((rate) => isGame(rate.dataset.gmRate))
+    .map((rate) => mountGame(rate, session));
+  if (!boxes.length) return;
+  startTabs(boxes);
+  addEventListener('storage', (e) => session.follow(e));
+  // each game's numbers at once (the shelf shows them all)
+  for (const box of boxes) box.start();
 }
 
 start();

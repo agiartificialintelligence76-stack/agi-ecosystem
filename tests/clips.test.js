@@ -151,7 +151,7 @@ test('the GitHub job: once a day and by hand, read-only, the key only where her 
 
 // ---------- not part of the website ----------
 test('the clips aren\'t part of the website: not in its build, no new packages, their files never in git', () => {
-  assert.match(read('vite.config.js'), /input: \{ main: 'index\.html', diary: 'diary\.html', launch: 'launch\.html', live: 'live\.html', cloakmesh: 'cloakmesh\.html', studio: 'studio\.html',\s+roadmap: 'roadmap\.html', stake: 'stake\.html', games: 'games\.html', giveaway: 'giveaway\.html', rideemagi: 'rideemagi\.html' \}/, 'the site builds its own pages only (never the clips\' page, nor her live show\'s scene; CloakMesh\'s page since 2026-10-03, the studio\'s since 2026-10-10, the roadmap\'s four since 2026-10-14, AGI games\' first game since 2026-10-19)');
+  assert.match(read('vite.config.js'), /input: \{ main: 'index\.html', diary: 'diary\.html', launch: 'launch\.html', live: 'live\.html', cloakmesh: 'cloakmesh\.html', studio: 'studio\.html',\s+roadmap: 'roadmap\.html', stake: 'stake\.html', games: 'games\.html', giveaway: 'giveaway\.html', rideemagi: 'rideemagi\.html',\s+trenchingsimulator: 'trenchingsimulator\.html' \}/, 'the site builds its own pages only (never the clips\' page, nor her live show\'s scene; CloakMesh\'s page since 2026-10-03, the studio\'s since 2026-10-10, the roadmap\'s four since 2026-10-14, AGI games\' first game since 2026-10-19, TRENCHING SIMULATOR since 2026-10-20)');
   const pkg = JSON.parse(read('package.json'));
   // (sharp since 2026-10-05: the risk check's coin pictures, made small on our server; @scure/bip39 since 2026-10-09: the
   // wallet word list her secret check reads, server/secrets.js, the same package viem uses; @gltf-transform/* since
@@ -160,7 +160,10 @@ test('the clips aren\'t part of the website: not in its build, no new packages, 
   // server; opentype.js since 2026-10-14: AGI Studio's meme templates, whose words our server draws with the same fonts as the
   // page, server/meme-render.js; the clips never add a package: they bring their own ffmpeg)
   assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@ffmpeg-installer/ffmpeg', '@gltf-transform/core', '@gltf-transform/extensions', '@gltf-transform/functions', '@scure/bip39', 'opentype.js', 'sharp', 'three', 'viem']);
-  assert.deepEqual(Object.keys(pkg.devDependencies), ['vite']);
+  // (ws since 2026-10-21, a dev dependency only: TRENCHING SIMULATOR's Live mode relay, tools/trench-relay/, runs on the
+  // owner's server with its own package.json, and tests/trench-live.test.js runs it here against fake upstream servers;
+  // the site's pages never load it)
+  assert.deepEqual(Object.keys(pkg.devDependencies).sort(), ['vite', 'ws']);
   assert.match(pkg.scripts.test, /tests\/clips\.test\.js/);
   const ignore = read('.gitignore');
   assert.match(ignore, /^dist\/$/m, 'tools/clips/dist (the renderer page, built on demand)');

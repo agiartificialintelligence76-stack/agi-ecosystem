@@ -1,9 +1,10 @@
 /* AGI games (2026-10-19, the owner: "the word GAMES on TOP will be written as GAME beta, the word beta is overlapping on the
    word GAME (it still on beta cause theres no prizes yet) / theres also a rating stars and how many people have played it"):
    games.html (src/games/page.js). The lab look: a clean hero whose title is "GAME" with "beta" stuck over the top of its E
-   like a sticker, a turning stamp; then the shelf (each game's card: its picture, its stars, players and plays, Play), its
-   ratings and reviews (the average, a row of stars, a bar for each number of stars; rating it with a connected wallet), and
-   what's coming with the fine print. Every rule names a gm- class (tests/page.test.js); Pop mode's look is in pop.css. */
+   like a sticker, a turning stamp; then the shelf (each game's card: its picture, its stars, players and plays, Play), the
+   ratings and reviews (since 2026-10-21 a tab for each game; in each, the average, a row of stars, a bar for each number of
+   stars; rating it with a connected wallet), and what's coming with the fine print. Every rule names a gm- class
+   (tests/page.test.js); Pop mode's look is in pop.css. */
 
 /* ---------- the hero ---------- */
 .gm-hero {
@@ -94,6 +95,7 @@
   font-family: var(--mono); font-size: 11.5px; line-height: 16px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-2);
 }
 .gm-tag.is-beta { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.gm-tag.is-play { color: var(--up); border-color: color-mix(in srgb, var(--up) 45%, var(--line)); }   /* TRENCHING SIMULATOR's "Play money" */
 .gm-game-name { font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; line-height: 1.05; letter-spacing: -0.035em; }
 .gm-game-link { color: inherit; text-decoration: none; }
 .gm-game-link:hover { text-decoration: underline; text-decoration-thickness: 2px; }
@@ -109,6 +111,25 @@
 
 /* ---------- its ratings and reviews ---------- */
 .gm-rate { scroll-margin-top: 72px; }
+/* a tab for each game (2026-10-21): its picture and its name, the picked one outlined; its panel below (a link to a game's
+   ratings lands with the tabs still in view under the top bar) */
+.gm-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+.gm-tab {
+  display: inline-flex; align-items: center; gap: 12px; min-width: 0; min-height: 58px; padding: 7px 20px 7px 7px;
+  border: 1px solid var(--line); border-radius: 16px; background: var(--bg); color: var(--fg-2); cursor: pointer;
+  font-size: 15px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; text-align: left;
+  transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.gm-tab:hover { color: var(--fg); border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+.gm-tab[aria-selected='true'] { color: var(--fg); background: var(--bg-2); border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+.gm-tab-art {
+  display: grid; place-items: center; flex: none; width: 66px; aspect-ratio: 760 / 511; overflow: hidden; border-radius: 10px;
+  background-color: var(--bg-2);
+  background-image: radial-gradient(color-mix(in srgb, var(--fg) 12%, transparent) 1px, transparent 1.5px); background-size: 8px 8px;
+}
+.gm-tab-img { width: 100%; height: auto; }
+.gm-tab-name { min-width: 0; overflow-wrap: anywhere; }
+.gm-panel { display: flow-root; scroll-margin-top: 150px; }
 .gm-rate-grid { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); align-items: start; gap: 28px clamp(28px, 4vw, 56px); margin-top: 32px; }
 .gm-sum { position: sticky; top: 92px; min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg-2); }
 .gm-avg { display: flex; align-items: baseline; gap: 10px; }
@@ -240,6 +261,11 @@
 @media (max-width: 480px) {
   .gm-lede { font-size: 16px; }
   .gm-say { font-size: 13.5px; }
+  /* (on a phone each tab a tile: its picture over its name, which keeps the whole width, so a long one never breaks) */
+  .gm-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .gm-tab { flex-direction: column; justify-content: center; gap: 7px; min-height: 0; padding: 8px 8px 10px; font-size: 14px; text-align: center; }
+  .gm-tab-art { width: 58px; border-radius: 8px; }
+  .gm-panel { scroll-margin-top: 172px; }
   .gm-stats { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .gm-stat { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
   .gm-stat dd { margin: 0; }
@@ -251,6 +277,6 @@
 /* "reduce motion": nothing moves by itself (base.css shortens the rest), and the hero is simply there */
 @media (prefers-reduced-motion: reduce) {
   .gm-hero-text > *, .gm-art, .gm-beta, .gm-stamp { animation: none; }
-  .gm-bar-fill, .gm-game-img, .gm-pick-star { transition: none; }
+  .gm-bar-fill, .gm-game-img, .gm-pick-star, .gm-tab { transition: none; }
   .gm-game:hover .gm-game-img, .gm-pick-star:hover { translate: none; scale: none; }
 }

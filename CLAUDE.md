@@ -375,18 +375,34 @@
 >   up and smashes it, and the word goes bigger with a boing; then a pixel wipe shows the game. About 2.5 s (1.2 s for a
 >   later load in the same tab); a tap or a key skips it (and never reaches the game); one still card with "reduce
 >   motion"; none for a page that came late. No sound. No SQL, no setting. See "The AGI GAMES intro".
-> - **TRENCHING SIMULATOR** (2026-10-20, being built; the owner: "i have another game idea again its gonna be called
->   TRENCHING SIMULATOR … they gonna choose their preferred terminal like basedbot, gmgn, pumpfun, axiom, fomo … played
->   with fake crypto money … the coins there are simulated … challenges like for example make 10x your money in 30 mins ,
->   make 500$ in 10 mins … streamers gonna play this game on clank.trade", then "i want the terminal design to be exact
->   copies because our players are real trenches … just put a safety note", "the play money there the same coins used on
->   that terminals", "the link of trenching simulator will be agi1.app/games/trenchingsimulator", and phones too): AGI
->   games' second game, at agi1.app/games/trenchingsimulator: single player first (multiplayer "coming soon"), five
->   trading terminals laid out and working the way players know them, under our own names (Trench Chat, Trench Scan,
+> - **TRENCHING SIMULATOR** (2026-10-20 and 21, built, waiting for the owner's push; the owner: "i have another game
+>   idea again its gonna be called TRENCHING SIMULATOR … they gonna choose their preferred terminal like basedbot, gmgn,
+>   pumpfun, axiom, fomo … played with fake crypto money … the coins there are simulated … challenges like for example
+>   make 10x your money in 30 mins , make 500$ in 10 mins … streamers gonna play this game on clank.trade", then "i want
+>   the terminal design to be exact copies because our players are real trenches … just put a safety note", "the play
+>   money there the same coins used on that terminals", "the link of trenching simulator will be
+>   agi1.app/games/trenchingsimulator", and phones too): AGI games' second game, at agi1.app/games/trenchingsimulator:
+>   single player first (multiplayer "coming soon"), five trading terminals (one ready so far, below) laid out and
+>   working the way players know them, under our own names (Trench Chat, Trench Scan,
 >   Trench Board, Trench Pro, Trench Social: never the real terminals' names, logos or art, Claude's answer to "exact
 >   copies"), with the safety note "Play money only. Not affiliated with any real trading terminal. This game never asks
 >   for a wallet."; simulated coins and play money (SOL, at SOL's real price frozen for each run; dollars in Trench
->   Social), timed challenges, phones and computers. See the roadmap's entry below until it's built.
+>   Social), timed challenges, phones and computers. **Where it stands (2026-10-21):** the whole game (nine challenges,
+>   the owner's two among them, a daily market the same for everyone, free play, results with Share on X, AGI-1 cheering
+>   in 8-bit), with **one terminal of five ready, Trench Board**, in today's launchpad look (the other four say "Coming
+>   soon"); on agi1.app/games since 2026-10-21 (its card, key art and link preview, its own ratings tab,
+>   `#rate-trenchingsimulator`; no new SQL). **And its Live mode** (2026-10-20 and 21, the owner's: real new coins with
+>   their real names and pictures, play money only; the owner: "there would be no restrictions on the names and the coins
+>   the names and picturres are as is, the streams is only on clank and clank allows everything on the stream"): a
+>   Market switch (Simulated by default, or Live coins) and a chain (Solana's pump.fun first, Robinhood Chain's
+>   clank.trade, BNB Chain, Base), fed by a relay on her live show's server at wss://live.agi1.app (Caddy in front, the
+>   Helius key only in `/opt/agi1-trench/trench.env`; PumpPortal's feed, with PumpDev as its backup: the owner,
+>   2026-10-21, "oh im friends with them they its okay"). **Live coins say "Coming soon" on the site for now**
+>   (2026-10-21, the owner: "can you just finish the first terminal first so i can try it … since the game is still on
+>   beta and put it on the site also", then "wait why im using heztner? im just creating a game right", "Just the game
+>   for now" and "Coming soon"): the Live coins button says Soon and can't be picked, like the four terminals, until the
+>   relay runs on the owner's server; then one small push switches it on (`LIVE_OPEN` in `live-chains.js`). **Owner:**
+>   push (no SQL, no setting). See "TRENCHING SIMULATOR" and its "Live mode".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
 
@@ -517,6 +533,14 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   played with no sign-in or wallet (its runs counted, never who), with its stars, players and plays; rating and reviewing
   it takes a connected wallet (a free signature, never a transaction), 18+ and the human check. No prizes yet. See "AGI
   games"
+- **TRENCHING SIMULATOR** (2026-10-20 and 21, the owner's idea): AGI games' second game, at
+  agi1.app/games/trenchingsimulator and on agi1.app/games with its own card and ratings: trading with play money on
+  terminals laid out the way traders know them, under our own names (Trench Board ready; four more coming), with nine
+  timed challenges (the owner's "10x in 30 minutes" and "$500 in 10 minutes" among them), a daily market the same for
+  everyone and free play. Made-up coins by default, and a **Live mode** with real new coins (their real names and
+  pictures) traded with play money only, fed by a relay on the owner's server at live.agi1.app ("Coming soon" on the
+  site until the relay is set up). No sign-in or wallet to play, no prizes, never a way to buy a real coin, not
+  financial advice. See "TRENCHING SIMULATOR"
 - **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
 It looks like an AI lab's model launch page (a parody, see "Design" below): serious design, meme content. (Pop mode is the
@@ -559,7 +583,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    same day, see "AGI Studio, round 2") the prize wallet (`PRIZE_WALLET_KEY`, her quizzes' own: no new key) also sends AGI
    Studio's weekly spotlight prize, at most one a week (`STUDIO_WEEKLY_PRIZE`, 10,000 $AGI by default), only to the
    signed-in wallet that made the creation, never twice. So it holds a few days of quiz prizes and a week's spotlight
-   prize at most.
+   prize at most. **TRENCHING SIMULATOR's Live mode relay** (2026-10-21, see "Live mode" under "TRENCHING SIMULATOR")
+   has one secret, `HELIUS_API_KEY`, and it lives only on the owner's server, in `/opt/agi1-trench/trench.env` (mode
+   600): never in Vercel, git, the relay's image, a browser or a log line (the relay's log scrubs it).
 5. **The browser never writes to the database directly.** All writes (chat counters, wallet names and notes, voice
    counts) go through our own `/api` functions, which check and limit them.
 6. **No automatic posting** to X or anywhere public. "Share on X" only opens a pre-filled post that the visitor sends themselves.
@@ -689,6 +715,18 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    and "Anyone asking you to deposit or send $AGI to “play” is not us"; its numbers are plays, players and stars, never
    money, and its reviews never talk prices, advice or another coin (the live show's question rules, and only $AGI).
    Nothing is asked of a wallet but the site's sign-in (a free signature), and only to rate a game.
+   **TRENCHING SIMULATOR** (2026-10-20 and 21, see "TRENCHING SIMULATOR"): **play money only, no prizes** (its best runs
+   are bragging rights, kept in the player's own browser); its coins are made up (Simulated, the default), every screen
+   around a run says "Play money only. Not affiliated with any real trading terminal. This game never asks for a
+   wallet." and "Not financial advice.", AGI-1's lines there never sound like a tip, and every post for X says it's play
+   money, never "buy". **Its Live mode** (the owner's, 2026-10-21) shows **real new coins** with the names and pictures
+   their makers gave them, still traded with play money only: nothing is bought, sold or signed for real, **never a link
+   or a button to buy a real coin** (`tests/trench-live.test.js` fails the build if Trench Board has any link at all, or
+   the game's Live files link to a real coin's page), only the first 6 characters of a coin's address, never made-up
+   holders, a dev, a rug or a caller on a real coin, AGI-1 never names one, the daily market and Rug dodger stay made up
+   (a real coin is never called a rug), and its note says "Not financial advice". Until its relay runs (2026-10-21, the
+   owner's "Coming soon"), Live mode can't be picked on the site (`LIVE_OPEN` in `live-chains.js`), so every coin there
+   is made up, as the game's words say.
 9. **Wallets: an address and a free signature, nothing else.** The site never asks a wallet for a transaction, a token
    approval, a network change or any signature other than the plain-text sign-in message (it may *read* which network the
    wallet is on). `tests/wallet.test.js` fails the build if the code in `src/` ever does. Levels never come with "buy more" wording,
@@ -763,9 +801,11 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `studio.html` | AGI Studio, the AI influencer app (2026-10-10: studio.agi1.app, and agi1.app/studio and /studio/<anything>): one page, its views drawn by `src/studio/app.js` at their own addresses (Explore, Create, an influencer, My studio, a 3D model, the owner's page; since round 4's phase 2 also Help & support at /help and the team's Mod tools at /mod); its top bar (Explore · Create · My studio, the credits pill, the wallet; since 2026-10-11 the **?** button, "Show me around this page": its guide), on phones a tab bar at the bottom, its footer with "How AGI Studio works, and its rules". Its own dark look (no `/theme.js`). That morning it was the 3D character studio's own page (its entry `src/studio/page.js`, gone since). Its own entry: `src/studio/app.js` |
 | `roadmap.html`, `stake.html`, `giveaway.html` | The roadmap (2026-10-14, agi1.app/roadmap) and its coming-soon pages (agi1.app/stake, /giveaway; /games too until 2026-10-19, AGI games' own page since: `games.html` below): the site's top bar and footer (the Roadmap link marked on the roadmap), a hero (the roadmap's with its meter, "2 of 10" since 2026-10-19, "2 of 6" before; each coming-soon page's with its stamp), the roadmap's timeline (two live steps, "We're here", "What's next" with its note "In no particular order", three under way and four coming soon, the locked 18+ card: ten steps since 2026-10-19), the attention flywheel explained (`#flywheel`, its wheel with AGI-1's face at its hub: `public/images/roadmap/agi1-hub.webp`), "Be the first to know" and the fine print; each coming-soon page its three cards, "Not open yet" with its scam warning, the fine print. Static: no `/api`, nothing asked of a wallet. One entry for all three (four until 2026-10-19): `src/roadmap/page.js` |
 | `src/roadmap/page.js` | The roadmap's pages (2026-10-14): their styles, the theme (`startTheme`), the phone menu and Pop mode's band (`startMenu`), and the cards coming in as they scroll into view (`reveal()`: only what's below the first screen, one after another when several come at once, never with "reduce motion"). Nothing else: no wallet, no requests, no storage |
-| `games.html` | AGI games (2026-10-19, agi1.app/games; the roadmap's coming-soon page for games until then): the site's top bar and footer (Games marked as the page you're on), its "GAME beta" hero, the games (Ride 'Em, AGI!: its stars, players and plays, Play and Rate it), its ratings and reviews (the average and the bars, rating it, "What players say", Show more reviews), what's coming and the fine print. Its own entry: `src/games/page.js` |
+| `games.html` | AGI games (2026-10-19, agi1.app/games; the roadmap's coming-soon page for games until then): the site's top bar and footer (Games marked as the page you're on), its "GAME beta" hero, the games (Ride 'Em, AGI!, and since 2026-10-21 TRENCHING SIMULATOR: each with its stars, players and plays, Play and Rate it), its ratings and reviews (since 2026-10-21 a tab per game, "Pick a game to rate", each game's panel `#rate-<game>` with its own box and ids, `gm-<game>-…`; `#rate` is Ride 'Em, AGI!'s; the average and the bars, rating it, "What players say", Show more reviews), what's coming and the fine print. Its own entry: `src/games/page.js` |
 | `rideemagi.html` | Ride 'Em, AGI! (2026-10-19, agi1.app/games/rideemagi: a rewrite in `vercel.json`): the owner's game, full screen in its own dark look. Its markup between `<!-- game:start -->` and `<!-- game:end -->` is written by `tools/games/import-rideemagi.mjs` (don't edit it by hand). Its own entry: `src/games/rideemagi/page.js`. Since 2026-10-20 the AGI GAMES intro's cover right after `<body>` (`<div class="gi" id="agi-intro">`, outside the tool's markers: see "The AGI GAMES intro") |
-| `src/games/` | AGI games (2026-10-19): `list.js` (its games, `GAMES`, and the rules the page, the games and our server share: a player's random id, `PLAYER`, `PLAYER_KEY`; runs a report, `PLAYS`; a review's limits, `REVIEW`; `STARS`), `page.js` (the page: each game's numbers, its ratings and reviews, and rating it: 18+, the site's wallet sign-in, the human check), `words.js` (everything it says that isn't in the page, our server's answers in plain words, and the sums its numbers need: a row of stars, the bars, a review's place in the list, the numbers after your own review changed: pure, read in Node); `rideemagi/`, the game: `game.js` (its code as one module) and `game.css` (its styles), both written by `tools/games/import-rideemagi.mjs` (don't edit them by hand), `fonts.css` (its fonts' rules, written by `tools/games/game-fonts.py`), its five pictures (`run`, `jump`, `duck`, `dduck`, `keyart`: WebP, about 3 MB), `page.js` (its entry: since 2026-10-20 the AGI GAMES intro first) and `site.js` (its runs told to our server: no sign-in); and since 2026-10-20 the AGI GAMES intro every game opens with: `intro.js` (a game's entry imports it first), `intro-run.js` (on the screen: its canvas, taps and keys, "reduce motion", a late page, `browserEnv()`), `intro-plan.js` (what's on the screen at any moment, as numbers: pure), `intro-sprite.js` (her 8-bit frames, written by `tools/games/agi1-8bit.py`: don't edit it by hand) and `intro.css` (its cover). See "The AGI GAMES intro" |
+| `trenchingsimulator.html` | TRENCHING SIMULATOR (2026-10-20, agi1.app/games/trenchingsimulator: a rewrite in `vercel.json`, like Ride 'Em, AGI!'s): the AGI GAMES intro's cover right after `<body>`, then `<main id="ts-root">`, which the game fills; its link preview tags (`og:image` `cards/trenchingsimulator.jpg` since 2026-10-21) and a `<noscript>` line with the safety note. Its own entry: `src/games/trenchingsimulator/page.js`. See "TRENCHING SIMULATOR" |
+| `src/games/` | AGI games (2026-10-19): `list.js` (its games, `GAMES`, and the rules the page, the games and our server share: a player's random id, `PLAYER`, `PLAYER_KEY`; runs a report, `PLAYS`; a review's limits, `REVIEW`; `STARS`), `page.js` (the page: each game's numbers, its ratings and reviews, and rating it: 18+, the site's wallet sign-in, the human check), `words.js` (everything it says that isn't in the page, our server's answers in plain words, and the sums its numbers need: a row of stars, the bars, a review's place in the list, the numbers after your own review changed: pure, read in Node); `rideemagi/`, the game: `game.js` (its code as one module) and `game.css` (its styles), both written by `tools/games/import-rideemagi.mjs` (don't edit them by hand), `fonts.css` (its fonts' rules, written by `tools/games/game-fonts.py`), its five pictures (`run`, `jump`, `duck`, `dduck`, `keyart`: WebP, about 3 MB), `page.js` (its entry: since 2026-10-20 the AGI GAMES intro first) and `site.js` (its runs told to our server: no sign-in); and since 2026-10-20 the AGI GAMES intro every game opens with: `intro.js` (a game's entry imports it first), `intro-run.js` (on the screen: its canvas, taps and keys, "reduce motion", a late page, `browserEnv()`), `intro-plan.js` (what's on the screen at any moment, as numbers: pure), `intro-sprite.js` (her 8-bit frames, written by `tools/games/agi1-8bit.py`: don't edit it by hand) and `intro.css` (its cover). See "The AGI GAMES intro". Since 2026-10-21 (two games) `page.js` is one box per game (`mountGame(panel, session)`: everything it reads is in its own panel or card), one sign-in for all of them (`createSession()`) and the tabs (`startTabs()`: the keyboard's arrows, Home and End, a link to `#rate-<game>` picking its tab), and `words.js` has `OLD_RATE`, `rateHash()` and `gameOfHash()`; and `trenchingsimulator/`, the second game (its own row below) |
+| `src/games/trenchingsimulator/` | TRENCHING SIMULATOR (2026-10-20 and 21, see "TRENCHING SIMULATOR"): `page.js` (its entry: the AGI GAMES intro first), `shell.js` (every screen: home, the terminals, the modes and the Market switch, the challenges, a run's brief, the run with its bar over a terminal, the pause and settings sheets, the results and their share card), `terminals.js` (the five terminals, their words, colors and money, which are ready, `SAFETY_NOTE`), `challenges.js` (the nine challenges, the daily market, stars, a goal's words), `run.js` (one run: its clock, orders, events, how it ends), `engine.js` (the made-up market: coins, the other traders, orders and fees; no `Date`, no `Math.random`: a seed and the player's orders make it), `curve.js` (the bonding curve and the pool, pump.fun's numbers), `fates.js` (what becomes of each coin), `names.js` (made-up coins, callers and chatter, never a real ticker), `rng.js` (seeded dice), `boards/board.js` (Trench Board, the one terminal ready: its board, a coin's page, the trade panel, the bag, the phone's bar and sheets), `chart.js` (the candles on a canvas), `results.js`, `share.js` (Share on X's posts), `save.js` (kept in this browser only), `solprice.js` (SOL's price for a run), `lines.js` and `agi.js` (AGI-1's lines and her 8-bit face), `sound.js`, `format.js`, `ui.js` (elements made in code, icons, toasts), `site.js` (its plays, Ride 'Em, AGI!'s twin), `trench.css` (its look), `keyart.webp` (its key art on agi1.app/games, made by `tools/games/trench-art.mjs`); and Live mode's (2026-10-21) `live-chains.js` (its chains, money per terminal, the relay's address, every relay message checked; whether Live mode can be picked: `LIVE_OPEN`, `liveOpen()`, and its "coming soon" words, `LIVE_SOON`, `LIVE_SOON_HOW`), `live-feed.js` (the one WebSocket) and `live-market.js` (real coins in the market). The pure files are read in Node by `tests/trench*.test.js` |
 | `src/cloakmesh/` | CloakMesh's page (2026-10-03): `page.js` (its light and dark theme, the demo, the five checks lighting up, the waitlist with `/api/cloakmesh` and the human check, leaving with a leave link), `demo.js` (a small version of CloakMesh's privacy filter, only in the visitor's browser: what it finds, its keyed tokens, putting them back, the demo's made-up answer), `words.js` (everything it says that isn't in the page), `email.js` (what counts as an email address: one rule for the page and our server) |
 | `src/live/` | Her live show's page (2026-10-02): `page.js` (her status every 15 s, asking, following your question, the owner's panel; since 2026-10-07 its box for a question from X's chat; since 2026-10-10 connecting a wallet for her 💜 badge, the site's own sign-in and session), `words.js` (everything it says, and `/api/live`'s answers in plain words; `relayText()` for the owner's box; since 2026-10-10 `perkText()`, `badgeNote()`, `BADGE`) |
 | `src/studio/` | AGI Studio (2026-10-10): `app.js` (the app: its router (`/explore`, `/create`, `/i/<id>` an influencer, `/me`, `/3d/<id>` a 3D model and the old agi1.app/studio/<id>, `/owner`), the wallet sheet with the site's sign-in, 18+, its credits and "Buy credits" (USDG, "Check my payment")), `ui.js` (its small building blocks: elements, buttons, sheets (native dialogs), toasts, chips, pictures), `media.js` (pictures made small, a clip read and its 3 frames (since round 2 also its size and frame rate), uploads in parts, a video's poster; the live camera for a selfie until round 2), `app-words.js` (everything it says that isn't in studio.html, and our server's answers in plain words), `views/` (`explore.js`, `create.js`, `influencer.js`, `me.js`, `model3d.js`, `owner.js`, `shared.js`: one file a view, and the sheets more than one view opens; since round 3 `workspace.js`, the pro tool's workspace (its panel of controls with a footer that stays: what it costs, what you have, the button with its price; the page beside it; on phones a drawer) and `gallery.js`, the gallery (Trending · Influencers · My creations, as tabs)); and from the 3D character studio (the same day; its own page, `page.js` and `words.js`, gone since AGI Studio): `viewer.js` (a character in 3D with three.js, loaded only on its page: its clips by move (`clipsFor()`), in place (`inPlace()`), framed for every pose (`movesBox()`, `lookTimes()`, `framing()`), its idle and moves), `words.js` (everything the pages say that isn't in studio.html, and our server's answers in plain words), `rules.js` (what the page and our server share: ids, words' lengths, styles, its 8 moves with Meshy's library ids and clip names, the words for them (`moveIn()`), prices and discounts, the steps, its files' addresses; its videos': their shapes (`SHAPES`), a scene's length, their 5 seconds, their addresses; since AGI Studio also the app's: prices in credits (`PRICES`, `creditPrice()`), the free credits a month (`FREE_CREDITS`), top-ups, the three ways to start (`MODES`), its styles and design choices (`OPTIONS`), the 12 trend moves (`TRENDS`), a clip's and a picture's limits (`CLIP`, `PICTURE`), reasons to report, a 3D model's steps, its files' addresses; since its round 4 (2026-10-11) how long each step usually takes (`TYPICAL`,
@@ -872,7 +912,7 @@ foot height, `--sa-foot-h`, in `ui.js`); and since 2026-10-13 its 3D tools: `vie
 | `scripts/share-pages.js` | Runs after `vite build`: writes `dist/share/*.html` (link-preview pages) and the site address into the preview tags of the home page and the diary page (`__SITE__`), and of live.html (2026-10-02), studio.html (2026-10-10) and the roadmap's pages (2026-10-14; four until 2026-10-19, three since; their picture since its video, the same day, `cards/roadmap.jpg`: like the others, the build fails without it), and (2026-10-19) AGI games' `games.html` and its game's `rideemagi.html` (their picture `cards/games.jpg`) |
 | `public/cards/` | The link-preview pictures (one per level, the diary, and `home.jpg` for the home page; the champions' cards left with the Arena), made with `tools/cards/`; and since 2026-10-14 `roadmap.jpg`, the roadmap's pages' (four until 2026-10-19, three since; made with `tools/roadmap-promo/make.mjs --cards`: see "The roadmap's video and its pictures"); and since 2026-10-19 `games.jpg`, AGI games' and its game's (made from `tools/cards/games-card.html`: see "AGI games") |
 | `public/share/go.js` | Sends people who open a share link on to the right part of the site |
-| `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards"); and (2026-10-03) `cloakmesh-card.html`, CloakMesh's link preview (`public/cards/cloakmesh.png`: a 1200 × 630 screenshot of it in Chromium, then 256 colors; Claude redoes it when the page's top changes); and (2026-10-19) `games-card.html`, AGI games' link preview (`public/cards/games.jpg`: a 1200 × 630 screenshot of it in Chromium, then a JPEG under 160 KB; Claude redoes it when the page's top or the game's picture changes) |
+| `tools/cards/` | Offline tool: makes `public/cards/` with the site's own card drawing, plus `home.jpg` from `home-card.html` + `agi1-wave.webp` (see "Share cards"); and (2026-10-03) `cloakmesh-card.html`, CloakMesh's link preview (`public/cards/cloakmesh.png`: a 1200 × 630 screenshot of it in Chromium, then 256 colors; Claude redoes it when the page's top changes); and (2026-10-19) `games-card.html`, AGI games' link preview (`public/cards/games.jpg`: a 1200 × 630 screenshot of it in Chromium, then a JPEG under 160 KB; Claude redoes it when the page's top or the game's picture changes); and (2026-10-21) `trenchingsimulator-card.html`, TRENCHING SIMULATOR's link preview (`public/cards/trenchingsimulator.jpg`: photographed at 1200 × 630 by `tools/games/trench-art.mjs`, then the best JPEG under 154,000 bytes) |
 | `api/` | Server code (Vercel Functions): `health.js` ("is the server alive?"), `chat.js` (AGI-1's chat), `wallet.js` (wallet sign-in, level, name, Forget me; since 2026-09-30 "Check my burn" and, at `GET ?burns`, the burn monitor's numbers), `checker.js` (ClankChecker, 2026-09-26: the coin list, the newest coins, one coin's scan and each coin's picture; read-only, shared by the CDN), `diary.js` (the diary entries), `voice.js` (AGI-1's voice: one reply read aloud as a WAV file, her "hi, it's me", her out-of-messages lines and her market moments), `keepalive.js` (Supabase keep-alive + writing the diary, cron only; since 2026-10-01 also tidying up launch drafts and the pictures of coins never launched), and since 2026-09-29 `telegram.js` (her Telegram bot's webhook) and `feed.js` (8 cron runs a day: connects the bot, finds moments, she texts first; since 2026-10-06 also, at `?buys`, her buy bot's check, every minute from Supabase Cron; since 2026-10-09, at `?games`, her quizzes' clock, every 2 minutes), and since 2026-10-01 `launch.js` (the launch page's server: a draft and its picture, getting a launch ready, reading it back, its fee paid back), and since 2026-10-02 `live.js` (her live show: a visitor's question, its place and her answer; her stream's calls with `LIVE_SECRET`; the owner's controls), and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: open or not, joining, leaving); since 2026-10-10 AGI-1's 3D character studio shares two of them: `launch.js` (`?studio=`, `?studio-file=`, `?studio-list`, `?studio-info` and the `studio-…` actions: a character can be a coin's face) and `feed.js` (`?studio`, its clock every minute); since the same day its characters' videos too, in the same two: `launch.js` (`?studio-videos=`, `?studio-video=` (played in parts), `?studio-video-dl=` and the `studio-video-…` actions) and `feed.js` (`?studio` moves them along after the characters); and since AGI Studio (the same day) the same two again: `launch.js` (`?inf-info`, `?inf-explore`, `?inf=`, `?inf-file=`, `?inf-video=`, `?inf-video-dl=`, the `inf-…` and `trend-…` actions, and uploads' bytes as `?inf-up=` / `?inf-poster=`; a new character from words and a character's video answer 410 `moved`) and `feed.js` (`?studio` moves its jobs along too, and tidies up every 30 minutes); and since 2026-10-19 AGI games share `wallet.js` (`GET ?game=`, and the `game-play`, `game-mine`, `game-review` and `game-review-delete` actions: see "AGI games"). **That's 12: Vercel's Hobby plan allows 12 functions per deployment** (every file here is one), so a new feature must share one of these (or the project moves to Pro). The Arena's `arena.js`, `vote.js`, `coins.js` and `logo.js` left with it (2026-09-28) |
 | `server/` | Helpers used by `api/`: settings, security (passes, signatures, IP codes), Turnstile, limits, Gemini, AGI-1's prompt, `arena.js` (small since 2026-09-28: the Arena's round clock and one database call, only for the numbers the diary saves for the original site, and the coins this site never shows), `coins.js` (small since 2026-09-28: ClankChecker's helpers: a coin name's cleanup, crude words, picture checks, reading an answer up to a size, our server's bot name; since 2026-10-06 also clank.trade's API itself, `clankApi()`, moved from `checker.js` so the buy bot loads light), `checker.js` (ClankChecker, 2026-09-26: reads clank.trade's API, DexScreener and the block explorer, and turns it into flags and a risk level; where each coin's picture is; since 2026-10-05 every amount in dollars at the coin's own pair's price, ETH or SPCX), `coin-pictures.js` (2026-10-05: the coins' pictures, from public IPFS gateways or ClankBot's host, checked and made small with sharp; only `api/checker.js` loads it), `signin.js` (the sign-in message and its check), `session.js` (wallet sessions, wallet codes), `chain.js` (read-only $AGI balance), `friends.js` (what AGI-1 remembers), `burst.js` (per-copy speed bumps for `/api/voice` and `/api/checker`), `diary.js` (writes the daily diary entry), `voice.js` (AGI-1's voice: Gemini's speech model, her style, WAV), `voice-store.js` (2026-09-26: her fixed lines kept in the database once made), `market.js` (2026-09-25: $AGI's market cap from DexScreener, kept a minute, so `/api/voice` only makes market lines near the real market cap; since 2026-10-05 also /mc's numbers in her Telegram groups, `agiNumbers()`: market cap, 24h change, liquidity), `tg-memory.js` + `tg-memory-data.js` (Phase 6: AGI-1's memory of the Telegram group; the data file is made by `tools/memory/`), and since 2026-09-29 her Telegram bot: `telegram.js` (the webhook's answers, connecting the bot), `tg-lines.js` (everything she says there that isn't an AI reply), `feed.js` (the moments and her texts first; `checker.js` got `coinsSince()` for it), and since 2026-10-03 `tg-api.js` (Telegram's API itself, her token, the daily chat codes: moved out of `telegram.js`) and `tg-groups.js` (her Telegram groups: which groups, leaving the others, her intro and welcomes, her answers there and their limits, her posts there); and `clank-chain.js` (2026-09-29: the Clank protocol's contracts on Robinhood Chain, read-only `eth_call`s from their docs: a coin's record, its curve's stage and what's in it, what its creator holds; since 2026-10-05 the pairs' addresses, `ETH_PAIR` and `SPCX`, which `launch.js` shares; the risk check's second opinion and safety net); and `burn.js` (2026-09-30: burning $AGI for messages: reading a burn on the chain and the explorer, counting it, taking and giving back burned messages, the burn monitor's numbers); and since 2026-10-01 "Launch with AGI-1": `launch.js` (her checks of a coin, the drafts, the picture from Telegram to Pinata, clank.trade's launch call and its dry run, reading a launch back, the gas wallet's payback, the tidy-up), `launch-lines.js` (what she says about launching in her bot) and `lookalike.js` (letters from other alphabets that look like A, G and I, and the egirl-coin words: shared by her feed and her launch checks); and since 2026-10-02 `shot.js` ("Show her": a picture sent with a message, checked before anything else: base64, a real JPEG, PNG or WebP by its first bytes, at most 600 KB, `readShot()`); and her live show (2026-10-02): `live.js` (a question's and a name's checks, tickets, the database, her answer for the stream: `nextAnswer()`, the owner's key `adminKeyFor()`), `live-words.js` (the words never on her stream: other coins, real people, distress, words written together split apart) and `live-lines.js` (what she says about /live in her bot); and since 2026-10-07 `live-acts.js` (what viewers can ask her to do on stream: the list, its rests, her prompt's part, her answer's request checked; shared with her stream's runner); and since 2026-10-03 `cloakmesh.js` (CloakMesh's waitlist: its limits and its database calls); and since 2026-10-06 `buys.js` (her buy bot: $AGI's newest trades from clank.trade, the check (each buy once, the first look silent), her GIF and caption in her groups) and `media/agi1-buy.mp4` (her buy GIF, 138 KB: Vercel bundles it with `/api/feed` only; made by `tools/buybot/`); and since 2026-10-09 her quizzes: `games.js` (the clock's tick, a quiz posted, an answer kept, a quiz settled and her result; light to load), `game-questions.js` (her 97 questions), `game-lines.js` (what she says about them, in English), `game-prizes.js` (claiming in her private chat: the address checked, the prize wallet's plan, the transfer sent once) and `hot-wallet.js` (the chain's node and the never-twice send, moved out of `launch.js`: shared by the gas wallet and the prize wallet), and `secrets.js` (a seed phrase or a private key sent to her by mistake: caught before it goes anywhere); and since 2026-10-10 AGI-1's 3D character studio: `studio.js` (its quotes, payments, the making one step at a time, its clock), `studio-api.js` (its GETs and POSTs inside `/api/launch`), `studio-words.js` (a character's words checked, and what Meshy gets), `meshy.js` (Meshy's API: each step's request, its tasks, its errors without the key), `studio-files.js` (its files from Meshy, made small with gltf-transform and sharp, kept in Supabase Storage; since its videos also a video from fal's media addresses, and a part of a file read with Range: `byteRange()`, `getRange()`) and `studio-chain.js` (a payment read on Robinhood Chain: USDG or a burn); and (the same day) its characters' videos: `studio-video.js` (a video's quote, its USDG payment, the making one step at a time, its clock, its file played in parts or downloaded) and `fal.js` (fal.ai's queue: a request, its state and its result, its errors without the key; since AGI Studio a model's name up to 6 parts long, for Kling's); and (the same day) AGI Studio, the AI influencer app: `influencer.js` (an influencer: starting one, its looks, what's made for it, its 3D model, Explore, an influencer's page, deleting it, reports, its coin's launch draft, the owner's tools), `inf-api.js` (its GETs and POSTs inside `/api/launch`, and its uploads' bytes), `inf-jobs.js` (its AI jobs moved along one step at a time, its clock and its tidy-up), `inf-ai.js` (each AI model's request on fal, and Gemini's looks at uploads, videos and posters), `inf-uploads.js` (uploads: tickets, a picture made plain, a clip's parts put together and looked at, a video's poster), `inf-words.js` (an influencer's words checked, and the words the AI services get) and `credits.js` (credits: a wallet's, a holder's free ones, a USDG top-up read on the chain; since round 3 the owner's credits for testing, `giftCredits()`); and (AGI Studio's round 2, the same day) `inf-week.js` (likes, the weekly spotlight: its pick once a week, the owner's look, its prize sent by the prize wallet), `inf-burns.js` (burn unlocks: one more influencer, a boost in Explore; their quotes and "Check my burn"), `inf-mark.js` (the share mark: a photo marked with sharp as it's downloaded, a video once by the clock with ffmpeg), `mp4.js` (an MP4's own header: its length, size and frame rate, without any package) and `media/studio-mark.png` (the share mark's picture, made by `tools/studio/mark.mjs`); and (AGI Studio's round 4, 2026-10-11) `inf-captions.js`
 (captions written by AI for a post: counted first, every one checked again, `MONEY`) and `clank-names.js` (clank.trade
@@ -987,6 +1027,7 @@ chain, saving a review (counted first, the AI only with words or a name), a wall
 `game-review`, `game-mine` and `game-review-delete` with every "no" in its order, the game's own part (`site.js`: its run
 reports), loading light, the log's hint and `arcade.sql`'s promises).
 `intro.test.js` (2026-10-20: the AGI GAMES intro: its letters, her 8-bit frames and her back, its sizes from a small phone to 4K, every frame at every size in whole pixels, her landings, the spin and the smash, the boing, the wipe, the same every time, its flash and shake, its timelines, a tap or a key skipping it and never reaching the game, "reduce motion", a first visit and a later load, blocked storage, held keys, modifiers and shortcuts, a late page, a phone turned sideways, at most 3 canvas pixels a CSS pixel, when things go wrong, drawing a frame, every game's page with its cover and its entry, its code and its styles).
+`trench.test.js` (2026-10-20: TRENCHING SIMULATOR's market: pump.fun's curve, the seeded dice, the same seed and orders making the same market, every token always somewhere, the fates' odds, coin names never a real ticker over thousands of draws, the smart wallets and callers, the player's money to the last fee, every order refused and why, priorities, sandwich bots, a buy that completes a curve, two hours in a row, every read), `trench-game.test.js` (2026-10-20: its game: numbers as players read them, the nine challenges and their words, the daily market, a run's clock, orders, winning and losing every way, SOL's price, AGI-1's lines and her face, the five terminals and their colors' contrast, the save, its posts for X, the chart, Trench Board's helpers, the results) and `trench-live.test.js` (2026-10-21: Live mode: its relay against stand-in services, `tools/trench-relay/fakes.mjs`, reading every source, the safe request, pictures, passing it on, caps, pings, backoff, the door, reconnects, PumpPortal off, a refused key, the key never in a log; and in the game the chains, money per terminal, the relay's address, every message checked, the live market, real coins never given made-up things, live runs, AGI-1 never naming a real coin, the feed, the CSP, no link anywhere, the relay's own files; and since the owner's "Coming soon" the same day, Live mode closed on the site and open on this computer with a relay of its own); and since 2026-10-21 `page.test.js` and `arcade.test.js` check AGI games with two games (both cards, the tabs, the second game's plays, reviews, link preview and key art, the AI's words per game).
 `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`), `art-cut.mjs` (Claude makes them ready: one of each, cut out of its green, made small) and `art-picks.json` (which one of each), into `page/art/` (her places, rooms, rides, the people she meets and what she wears, WebP, in git), which `page/paint.js` finds when her set is built; and since 2026-10-09 `page/chart.js` ($AGI's live trading chart on her TV, drawn in code), her song's music video (`media.js`: found in her videos folder, made ready once) and all of her song's words (`songs/feel-the-agi.json`). See "Her live show on X", "Her stream, upgraded", "Her trips", "Her painted set" and "Her show, 2026-10-09" |
@@ -995,7 +1036,8 @@ reports), loading light, the log's hint and `arcade.sql`'s promises).
 | `tools/promo/` | Her launch video (2026-10-03, not part of the website): `make.mjs` (builds its page, draws every frame in Chromium, ffmpeg → the MP4s, the cover, the post text, a light copy), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music), `words.js` (every word on screen, from the site's own files where it can), `music.js` (its music, composed and played in code), `page/` (the renderer: `promo.js`, `kit.js`, `ui.js`, `transitions.js`, `her.js` (her Live2D model), `art.js` (the front's art and shader), `scenes/` (one file a scene); built into `tools/promo/dist/`, which git ignores). Its videos go to `promo/` (git ignores it). See "Her launch video" |
 | `tools/studio-promo/` | AGI Studio's launch video (2026-10-13, not part of the website): `make.mjs` (builds its page, serves it on this computer only, draws every frame in Chromium, ffmpeg → the MP4, the cover, the post text, a light copy, `README.txt`; since its voice-over the soundtrack (the music with her voice) and the copies with the music alone, and `--sound-only`: a new soundtrack put on the videos already made, their pictures copied), `media.mjs` (the example pictures and clips, and since 2026-10-13 Juno's 3D model and her voice-over takes (`--only voice`), made ready once, into `tools/studio-promo/media/`, which git ignores), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music; since its voice-over where each of her lines goes, `VOICE`), `words.js` (every word on screen and the post, from AGI Studio's own files; her 12 lines, `VOICE`), `music.js` (its music, composed and played in code), `voice.js` (her voice over the music: her takes made ready (`readyLine()`), the music dipping under her (`planDucks()`, `mixVoice()`; since 2026-10-20 its limiter can also read between the samples, `truePeak`, off by default: on for the roadmap's video), loudness (BS.1770), WAV files; pure), `README.txt` (for the owner, copied next to the video), `page/` (the renderer: `main.js`, `look.js` (AGI Studio's look), `parts.js`, `media.js`, `cuts.js`, `model3d.js` (Juno's own 3D model, shown with three.js: never AGI-1's; three.js shapes, labeled "Illustration", until 2026-10-13), `scenes/` (one file a scene); built into `tools/studio-promo/dist/`, which git ignores). Its videos go to `studio-promo/` (git ignores it). See "AGI Studio's launch video" |
 | `tools/roadmap-promo/` | The roadmap's video and its pictures (2026-10-14, not part of the website, but for its link preview): `make.mjs` (builds its page, serves it on this computer only, draws every frame in Chromium, ffmpeg → the MP4, the cover, the post text, a light copy, the soundtrack (the music with her voice, under a limiter that also reads between the samples since 2026-10-20: `truePeak`) and the copies with the music alone, `README.txt`; `--sound-only`: a new soundtrack put on the videos already made, their pictures copied; `--cards`: its three pictures, and the link preview into `public/cards/roadmap.jpg`), `media.mjs` (her takes made ready once (three since 2026-10-19, four before), with `tools/studio-promo/voice.js`, into `tools/roadmap-promo/media/`, which git ignores), `timeline.js` (its clock: the scenes and every moment, shared by the picture and the music; where her lines go, `VOICE`), `words.js` (every word on screen and the post: the roadmap page's own, word for word; her lines, `VOICE`), `music.js` (its music, composed and played in code), `README.txt` (for the owner, copied next to the video), `page/` (the renderer: `main.js`, `parts.js`, `cuts.js`, `cards.js` (its three pictures), `scenes/` (`title.js`; `road.js`, the road's three scenes, one world; `end.js`); built into `tools/roadmap-promo/dist/`, which git ignores). Its videos go to `promo/roadmap/` (git ignores `promo/`). See "The roadmap's video and its pictures" |
-| `tools/games/` | AGI games (2026-10-19): `import-rideemagi.mjs` brings the owner's game, Ride 'Em, AGI! (from the owner's `VTuber_Project\18_ride_em_agi`: its code in `backup/p18_code_v1.zip`, its pictures in `game/`), into the site as its own files: `src/games/rideemagi/game.js` (its code as one ES module), `game.css`, its five WebP pictures (as they are, an app's label taken out) and `rideemagi.html`'s markup between `<!-- game:start -->` and `<!-- game:end -->`. Each change a patch that must find its text exactly as many times as it says (a new version of the game that moved it stops the tool instead of doing it wrong): never Cabo ("her cat"), two bars' widths through the CSS object model (`data-w`: the CSP allows no style attributes), a way back to agi1.app/games ("Games") and to rating it ("Rate it"), its runs told to our server (`Site.play()` after `Missions.runStart()`), its publisher's live-reload hooks (`window.claude.hot`) out, its stars' font named (M PLUS Rounded 1c after Mochiy Pop One, which has no stars). Run after a new version of the game: `node tools/games/import-rideemagi.mjs <the game's code folder> <the game's picture folder>` (the code folder: `p18_code_v1.zip` unpacked, with `game/src/` and `sprites/sprites.json`), then `npm test`. And `game-fonts.py`: its two fonts (Mochiy Pop One; M PLUS Rounded 1c 500 and 800), subset to what the game writes, into `public/fonts/games/` with their licenses, and their rules into `src/games/rideemagi/fonts.css`: `python3 tools/games/game-fonts.py <a folder with node_modules/@expo-google-fonts>` (fonttools with brotli; a changed font gets a new file name: its `VERSION`). See "AGI games". And since 2026-10-20 `agi1-8bit.py`: AGI-1 in 8-bit for the AGI GAMES intro, from her 2D art (the front's cutout, never the 3D model), written as `src/games/intro-sprite.js`: `python3 tools/games/agi1-8bit.py` (`--png sheet.png` a preview of every frame; numpy, OpenCV and Pillow). See "The AGI GAMES intro" |
+| `tools/games/` | AGI games (2026-10-19): `import-rideemagi.mjs` brings the owner's game, Ride 'Em, AGI! (from the owner's `VTuber_Project\18_ride_em_agi`: its code in `backup/p18_code_v1.zip`, its pictures in `game/`), into the site as its own files: `src/games/rideemagi/game.js` (its code as one ES module), `game.css`, its five WebP pictures (as they are, an app's label taken out) and `rideemagi.html`'s markup between `<!-- game:start -->` and `<!-- game:end -->`. Each change a patch that must find its text exactly as many times as it says (a new version of the game that moved it stops the tool instead of doing it wrong): never Cabo ("her cat"), two bars' widths through the CSS object model (`data-w`: the CSP allows no style attributes), a way back to agi1.app/games ("Games") and to rating it ("Rate it"), its runs told to our server (`Site.play()` after `Missions.runStart()`), its publisher's live-reload hooks (`window.claude.hot`) out, its stars' font named (M PLUS Rounded 1c after Mochiy Pop One, which has no stars). Run after a new version of the game: `node tools/games/import-rideemagi.mjs <the game's code folder> <the game's picture folder>` (the code folder: `p18_code_v1.zip` unpacked, with `game/src/` and `sprites/sprites.json`), then `npm test`. And `game-fonts.py`: its two fonts (Mochiy Pop One; M PLUS Rounded 1c 500 and 800), subset to what the game writes, into `public/fonts/games/` with their licenses, and their rules into `src/games/rideemagi/fonts.css`: `python3 tools/games/game-fonts.py <a folder with node_modules/@expo-google-fonts>` (fonttools with brotli; a changed font gets a new file name: its `VERSION`). See "AGI games". And since 2026-10-20 `agi1-8bit.py`: AGI-1 in 8-bit for the AGI GAMES intro, from her 2D art (the front's cutout, never the 3D model), written as `src/games/intro-sprite.js`: `python3 tools/games/agi1-8bit.py` (`--png sheet.png` a preview of every frame; numpy, OpenCV and Pillow). See "The AGI GAMES intro". And since 2026-10-21 `trench-art.mjs`: TRENCHING SIMULATOR's key art (`src/games/trenchingsimulator/keyart.webp`, 760 × 511, see-through edges) and link preview (`public/cards/trenchingsimulator.jpg`, from `tools/cards/trenchingsimulator-card.html`), from real screenshots of the built game it takes itself (`trench-art/board.webp` on a computer, `trench-art/coin.webp` on a phone: the same market every time, its clock, date and dice fixed) and its page `trench-art/keyart.html`: `npx vite build && node tools/games/trench-art.mjs` (`--keep`: both pictures from the screenshots it has). See "TRENCHING SIMULATOR" |
+| `tools/trench-relay/` | TRENCHING SIMULATOR's Live mode relay (2026-10-21, not part of the website: it runs on the owner's server beside her live show, behind Caddy at wss://live.agi1.app): `server.mjs` (`/ws` the feed, `/p/<hash>.webp` a coin's picture, `/health`), `lib/` (`config.mjs` its settings, `hub.mjs` passing it on to every player, `log.mjs` a log scrubbed of the key, `net.mjs` the safe request, `parse.mjs` every source's messages checked, `pictures.mjs` pictures made small, `upstream.mjs` one WebSocket to a source, reconnecting by itself; `sources/` `pump.mjs` (PumpPortal and PumpDev), `helius.mjs`, `dex.mjs` (DexScreener), `clank.mjs` (clank.trade)), `fakes.mjs` (the tests' stand-in services; `node tools/trench-relay/fakes.mjs` runs them for a try), `Dockerfile`, `Caddyfile`, `.dockerignore`, `relay.sh` (the owner's one command: `update`, `start`, `stop`, `check`, `logs`, `status`), `trench.env.example` (its settings, no values for secrets), and its own `package.json` and `package-lock.json` (ws and sharp, exact versions: never the site's). See "Live mode" under "TRENCHING SIMULATOR" |
 | `tools/buybot/` | Her buy GIF (2026-10-06, not part of the website): `make.mjs` (builds its page, draws each frame in Chromium, ffmpeg → `server/media/agi1-buy.mp4`, a soundless MP4), `page/` (`gif.js`: her Live2D model through the launch video's renderer, cheering, on Pop mode's violet, with a "$AGI BUY!" sticker; built into `tools/buybot/dist/`, which git ignores). See "Her buy bot" |
 | `tools/studio/` | AGI Studio's share mark (round 2, 2026-10-10, not part of the website): `mark.mjs` draws `server/media/studio-mark.png` (the "Made with AGI Studio · AI-generated · studio.agi1.app" pill, with the site's own Geist, twice its size, on a transparent background) once in Chromium, so our server only scales and places it (sharp, ffmpeg) and needs no fonts. Run again only after changing its words or look: `node tools/studio/mark.mjs` (Chromium and `npm install --no-save playwright-core`, like the other tools). And since 2026-10-11 AGI Studio's guide videos: `guide-record.mjs` (the recorder: the app as Vite builds it in Chromium, at a computer's size and a phone's, our own server's code answering it with `tests/influencer.test.js`'s fake services, a demo studio of made-up people from the live show's 2D paintings, a cursor or taps drawn on top, a camera that follows what happens, frames from Chromium's screencast put together with sharp and encoded with ffmpeg → `src/studio/guide/` and `src/studio/guide-media.js`) and `guide-scripts.mjs` (what happens in each video: one scene a video, a computer's and a phone's). See "AGI Studio's guide"; and since 2026-10-13 `agi1-refs.mjs` (her two pictures for "💜 With AGI-1", `server/media/agi1-with.jpg` and `agi1-face.jpg`, made once from the front's 2D cutout: `node tools/studio/agi1-refs.mjs`); and since 2026-10-19 `meme-fonts.py` (the meme fonts, subset to what a meme's words may use and saved as WOFF into `public/fonts/meme/`: `python3 tools/studio/meme-fonts.py <a folder with node_modules/@expo-google-fonts>`, with fonttools; a changed font gets a new file name: its `VERSION`, and `MEME_FONTS` in `src/studio/memes.js`) |
 | `.github/workflows/clips.yml` | 2026-09-29: GitHub's daily job that runs `tools/clips/make.mjs` and keeps the clips 7 days (Actions → the run → Artifacts). The only GitHub workflow; it never posts anything. The owner saves it here by hand (Claude's link can't write workflow files) |
@@ -1006,8 +1048,8 @@ reports), loading light, the log's hint and `arcade.sql`'s promises).
 | `tools/agi1-2d/fix-hair.py` | 2026-10-03: finishes the hair behind her arms on her Live2D texture, where her arms move away from it (soft hair tips instead of a straight cut below her elbows, her hair's color over a pink band and a light line beside her shoulders, white specks), on both WebP textures; run once after each new export, after `fix-shirt.py` (see "Updating her model") |
 | `tools/memory/` | Phase 6, offline: `build-memory.mjs` turns the Telegram export into `server/tg-memory-data.js`; `lore.json` (hand-written memory cards: eras, running jokes, big moments; edit freely); `forget.json` (people who asked to be left out). See "AGI-1's memory of the Telegram group" |
 | `telegram memories/` | The owner's Telegram export (`result.json`, 31 MB, thousands of people's messages). **Never in git** (`.gitignore`); only `tools/memory/` reads it |
-| `vite.config.js` | Eleven pages (`index.html`, `diary.html`, since 2026-10-01 `launch.html`, since 2026-10-02 `live.html`, since 2026-10-03 `cloakmesh.html`, since 2026-10-10 `studio.html`, since 2026-10-14 the roadmap's four: `roadmap.html`, `stake.html`, `games.html` (AGI games' own page since 2026-10-19), `giveaway.html`, and since 2026-10-19 `rideemagi.html`, the owner's game); raises Vite's file-size warning: three.js is large on purpose and loads separately; since 2026-10-02 serves /talk as the home page in `npm run dev` and Vite's preview, like Vercel, and since 2026-10-10 /studio/<anything> as the studio's page (AGI Studio's views), and on a `studio.` host (studio.agi1.app; locally studio.localhost) every address that isn't a file, and since 2026-10-19 /games/rideemagi (and /games/rideemagi/) as the game's page |
-| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk; 2026-10-10: `/studio/:path+` serves the studio's page (AGI Studio's views; `/studio/:id` that morning), its destination `/studio` for the same reason, and on the host studio.agi1.app every address serves it (a rewrite with a `has` host), its "/" redirected to /explore; 2026-10-19: `/games/rideemagi` and `/games/rideemagi/` serve the owner's game, its destination `/rideemagi` for the same reason), security headers (CSP; since 2026-10-02 our own pages may frame each other, for her pop-out window, never another site; and `Permissions-Policy` lets our own pages share a window, `display-capture=(self)`, for "Show her"; since 2026-10-10 `camera=(self)`, for AGI Studio's live selfie (`camera=()` again since its round 2, the same day: no selfies), and `media-src 'self' blob:` in the CSP, for its videos and a visitor's own clip; since that round 2 `api/feed.js` its own `functions` entry, `includeFiles` for the share mark's ffmpeg (the clock's function only)), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed`; since 2026-10-03 a redirect: inference.agi1.app/ → /cloakmesh (a redirect, not a rewrite: Vercel serves the home page's own file at "/" before any rewrite runs, so a rewrite there would never happen) |
+| `vite.config.js` | Twelve pages (`index.html`, `diary.html`, since 2026-10-01 `launch.html`, since 2026-10-02 `live.html`, since 2026-10-03 `cloakmesh.html`, since 2026-10-10 `studio.html`, since 2026-10-14 the roadmap's four: `roadmap.html`, `stake.html`, `games.html` (AGI games' own page since 2026-10-19), `giveaway.html`, since 2026-10-19 `rideemagi.html`, the owner's game, and since 2026-10-20 `trenchingsimulator.html`, TRENCHING SIMULATOR; eleven before); raises Vite's file-size warning: three.js is large on purpose and loads separately; since 2026-10-02 serves /talk as the home page in `npm run dev` and Vite's preview, like Vercel, and since 2026-10-10 /studio/<anything> as the studio's page (AGI Studio's views), and on a `studio.` host (studio.agi1.app; locally studio.localhost) every address that isn't a file, and since 2026-10-19 /games/rideemagi (and /games/rideemagi/) as the game's page, and since 2026-10-20 /games/trenchingsimulator (and /games/trenchingsimulator/) as TRENCHING SIMULATOR's |
+| `vercel.json` | Vercel settings: build command, `cleanUrls` (`/diary` serves diary.html), a rewrite (2026-10-01: `/launch/<id>` serves the launch page; its destination is `/launch`, never `/launch.html`: with `cleanUrls` Vercel drops ".html" before rewrites run, so the first version was a 404 on the live site; 2026-10-02: `/talk` and `/talk/` serve the home page, full-screen talk; 2026-10-10: `/studio/:path+` serves the studio's page (AGI Studio's views; `/studio/:id` that morning), its destination `/studio` for the same reason, and on the host studio.agi1.app every address serves it (a rewrite with a `has` host), its "/" redirected to /explore; 2026-10-19: `/games/rideemagi` and `/games/rideemagi/` serve the owner's game, its destination `/rideemagi` for the same reason; 2026-10-20: `/games/trenchingsimulator` and `/games/trenchingsimulator/` serve TRENCHING SIMULATOR, its destination `/trenchingsimulator`), security headers (CSP; since 2026-10-21 `https://live.agi1.app` in `img-src` and `wss://live.agi1.app` in `connect-src`, TRENCHING SIMULATOR's Live mode relay; since 2026-10-02 our own pages may frame each other, for her pop-out window, never another site; and `Permissions-Policy` lets our own pages share a window, `display-capture=(self)`, for "Show her"; since 2026-10-10 `camera=(self)`, for AGI Studio's live selfie (`camera=()` again since its round 2, the same day: no selfies), and `media-src 'self' blob:` in the CSP, for its videos and a visitor's own clip; since that round 2 `api/feed.js` its own `functions` entry, `includeFiles` for the share mark's ffmpeg (the clock's function only)), `noindex` on `*.vercel.app`, browser caching (see "Caching"), 25 s max per function, 3 daily cron runs of `/api/keepalive` and (2026-09-29) 8 of `/api/feed`; since 2026-10-03 a redirect: inference.agi1.app/ → /cloakmesh (a redirect, not a rewrite: Vercel serves the home page's own file at "/" before any rewrite runs, so a rewrite there would never happen) |
 
 ## Commands
 
@@ -1070,6 +1112,18 @@ reports), loading light, the log's hint and `arcade.sql`'s promises).
 - AGI-1 in 8-bit for the AGI GAMES intro (2026-10-20): `python3 tools/games/agi1-8bit.py` writes
   `src/games/intro-sprite.js` again from her 2D art (only after her art changes; numpy, OpenCV and Pillow), and `--png
   sheet.png` a preview of every frame too. Then `npm test` (see "The AGI GAMES intro").
+- TRENCHING SIMULATOR's key art and link preview (2026-10-21): `npx vite build`, then `node tools/games/trench-art.mjs`
+  takes new screenshots of the built game (the same market every time) and makes `src/games/trenchingsimulator/keyart.webp`
+  and `public/cards/trenchingsimulator.jpg` from them; `--keep` makes both pictures again from the screenshots it has
+  (after changing `tools/games/trench-art/keyart.html` or `tools/cards/trenchingsimulator-card.html`). Chromium, sharp and
+  `npm install --no-save playwright-core`; then `npm test`, and look at both before keeping them (see "TRENCHING
+  SIMULATOR").
+- TRENCHING SIMULATOR's Live mode relay (2026-10-21): on the owner's server, everything goes through `sh
+  tools/trench-relay/relay.sh update` (git pull, its image built again, started again), `start`, `stop`, `check` (its
+  settings, both containers, its health there and at https://live.agi1.app), `logs` (`logs 300`, `logs caddy`) and
+  `status` (see "Live mode" under "TRENCHING SIMULATOR"). On Claude's computer, `node tools/trench-relay/fakes.mjs`
+  starts stand-ins for its outside services and prints the settings that point the relay at them; `node
+  tools/trench-relay/server.mjs` runs the relay with those settings in its environment.
 - Her live show (2026-10-02): `node tools/live/run.mjs --demo --fake-voice --record try.mp4 --minutes 3` makes a short show
   into a file anywhere (made-up questions, a stand-in hum; needs Chromium, ffmpeg, Xvfb and `npm install --no-save
   playwright-core@1.63.0`). On the owner's server everything goes through `sh tools/live/live.sh …` (see "Her live show
@@ -9115,16 +9169,23 @@ before pushing it** (below). No new setting or service.
   a little (one line, a real space between the words, so screen readers say "GAME beta"); it lands from about twice its
   size half a second after the page opens, and stands still with "reduce motion". "Free games, right in your browser.", the
   lede ("No wallet needed to play. It's a beta, so there are no prizes yet. Connect a wallet only if you'd like to rate a
-  game: a free signature, never a transaction."), her line in a bubble with her face ("my first game is out 💜 me, my cat
-  and a lot of rooftops. no prizes yet, just bragging rights."), and a stamp turning round a controller ("BETA · FREE TO
-  PLAY · NO WALLET NEEDED").
-- **The games** (one so far: "One so far, and more on the way."): **Ride 'Em, AGI!** with its key art, its tags (Beta, Free,
-  No wallet needed), its words ("AGI-1 and her cat race across sunset rooftops, neon nights, a server farm and the lavender
-  sky. Jump, duck, and see how far you get."), its **Rating** (the average and a star, or "None yet"), **Players** and
-  **Played** ("…" while they load, "—" when there are none to show), **Play** (agi1.app/games/rideemagi) and **Rate it**
-  (#rate), and "No sign-in or wallet needed to play. Runs are counted, never who."
-- **Its ratings and reviews** (`#rate`): its average out of 5 with its row of stars filled to the tenth, how many ratings,
-  a bar for each of 5★ to 1★, and "Played 1,234 times by 456 people." Then its box:
+  game: a free signature, never a transaction."), her line in a bubble with her face ("my second game is out 💜 the
+  trenches, with play money and made-up coins. no prizes yet, just bragging rights." since 2026-10-21; "my first game is
+  out 💜 me, my cat and a lot of rooftops…" before), and a stamp turning round a controller ("BETA · FREE TO PLAY · NO
+  WALLET NEEDED").
+- **The games** ("Two so far, and more on the way." since 2026-10-21; "One so far" before): **Ride 'Em, AGI!** with its
+  key art, its tags (Beta, Free, No wallet needed), its words ("AGI-1 and her cat race across sunset rooftops, neon
+  nights, a server farm and the lavender sky. Jump, duck, and see how far you get."), its **Rating** (the average and a
+  star, or "None yet"), **Players** and **Played** ("…" while they load, "—" when there are none to show), **Play**
+  (agi1.app/games/rideemagi) and **Rate it** (#rate), and "No sign-in or wallet needed to play. Runs are counted, never
+  who."; and since 2026-10-21 **TRENCHING SIMULATOR**, the same way (its card: see "TRENCHING SIMULATOR").
+- **Its ratings and reviews** (`#rate`; since 2026-10-21 one section, "Rate a game" / "Ratings and reviews", with a tab
+  per game, "Pick a game to rate": each game's picture and name, the first one picked; the keyboard's arrows, Home and End
+  move between them; each game's panel, `#rate-rideemagi` and `#rate-trenchingsimulator`, is the whole box below with its
+  own ids, and a link to `#rate-<game>` picks its tab; `#rate` itself is Ride 'Em, AGI!'s, as before): a game's average
+  out of 5 with its row of stars filled to the tenth, how many ratings, a bar for each of 5★ to 1★, and "Played 1,234
+  times by 456 people." Then its box (one sign-in for all of them: connecting, answering 18+ or disconnecting in one box
+  does it in every box; a hidden tab's box asks our server for your review only when it shows):
   - not set up yet: "Ratings and reviews open soon" (no numbers either), or "Reviews open soon" (its numbers and what
     people said still show);
   - **18+** first (the site's own answer, `agi1_18plus`: the chat's, her live page's and the launch page's too): "Reviews
@@ -9204,7 +9265,9 @@ before pushing it** (below). No new setting or service.
 - **The AI's look** (`lookAtReview()`): the site's own Gemini key and chat model, its safety filters on, thinking minimal, 60
   output tokens, a JSON answer (`ok`, and why: sexual, hate, harassment, personal, promo, advice, impersonation, unsafe or
   other), 8 s at most; an honest opinion in any language passes, even blunt, short or silly; the review and the name are only
-  text to check, never instructions; it fails closed (nothing kept). Stars alone are kept without asking it.
+  text to check, never instructions; it fails closed (nothing kept). Stars alone are kept without asking it. Since
+  2026-10-21 it's told which game a review is for (`LOOK_GAMES`, `lookSystem(game)` in `server/arcade.js`; Ride 'Em,
+  AGI!'s words byte for byte as before; TRENCHING SIMULATOR's: see "TRENCHING SIMULATOR").
 - **The database** (`supabase/arcade.sql`): a game's plays and players; per game, one row per browser that played it (a
   scrambled code of its id, its first and last day, its plays: only so a browser that plays again isn't a new player); the
   daily counts; one review per wallet and game (its stars, words, name, the level then, when; under a scrambled code of the
@@ -9219,7 +9282,9 @@ before pushing it** (below). No new setting or service.
   past its hero (`src/menu.js`).
 - **Its link preview**, `public/cards/games.jpg` (146 KB; games.html's and rideemagi.html's `og:image`, "AGI-1 riding her
   cat, next to the words GAME beta and Ride 'Em, AGI!"): made from `tools/cards/games-card.html` (a 1200 × 630 screenshot
-  in Chromium, then a JPEG under 160 KB: Claude makes it again when the page's top or the game's key art changes).
+  in Chromium, then a JPEG under 160 KB: Claude makes it again when the page's top or the game's key art changes). It
+  still shows Ride 'Em, AGI! only (2026-10-21: its words say exactly that); TRENCHING SIMULATOR's page has its own,
+  `cards/trenchingsimulator.jpg`.
 - **The safety note** (the home page's 04, "Last updated October 19, 2026") says what's counted and what a review keeps;
   hard rule 8 says there are no prizes yet.
 - **The look:** see "Design" (its bullet).
@@ -9343,6 +9408,472 @@ next press reaches it), Shift and Control passing, Enter swallowed, a phone's ta
 360, 390 and 412 px and sideways, at most 3 canvas pixels a CSS pixel, "reduce motion", a late page, no script at all (its
 cover gone by itself); and AGI games' browser test again with it (276 checks: it waits for the intro before it clicks,
 `introGone()`).
+
+## TRENCHING SIMULATOR (2026-10-20 and 21)
+
+**The owner's request** (2026-10-20): "i have another game idea again its gonna be called TRENCHING SIMULATOR … they
+gonna choose their preferred terminal like basedbot, gmgn, pumpfun, axiom, fomo … played with fake crypto money … the
+coins there are simulated … challenges like for example make 10x your money in 30 mins , make 500$ in 10 mins …
+streamers gonna play this game on clank.trade", then "i want the terminal design to be exact copies because our players
+are real trenches … just put a safety note", "the play money there the same coins used on that terminals", "the link of
+trenching simulator will be agi1.app/games/trenchingsimulator", and phones too. So AGI games' second game: a trading
+game played with play money, single player first ("Multiplayer · coming soon"), at
+**agi1.app/games/trenchingsimulator**, and on agi1.app/games next to Ride 'Em, AGI! (since 2026-10-21). **Built
+2026-10-20 and 21, waiting for the owner's push** (no SQL, no setting). **Its Live mode** (real new coins, play money
+only: see "Live mode" below) is in the game too, but **says "Coming soon" on the site** (2026-10-21, the owner's "Just
+the game for now" and "Coming soon"): its Live coins button says Soon and can't be picked, like the four terminals not
+built yet, until its relay runs on the owner's server; then one small push opens it (`LIVE_OPEN` in `live-chains.js`).
+
+**Where it stands (2026-10-21):** the game works from start to finish (its market of made-up coins, nine challenges, the
+daily market, free play, results, AGI-1 cheering, its sounds, on phones and computers), with **one terminal of five
+ready: Trench Board**, in today's launchpad look. The other four (Trench Chat, Trench Scan, Trench Pro, Trench Social)
+are on its terminal screen with "Coming soon" ("Coming next" until 2026-10-21): their words and colors are there, their
+screens aren't built yet. The owner, 2026-10-21: "can you just finish the first terminal first so i can try it. ill add
+other terminals later since the game is still on beta and put it on the site also": Trench Board and the game go on the
+site first, the other four later.
+
+**"Exact copies"** (Claude's answer, see the decisions log): each terminal is laid out and works the way players know the
+one the owner named (Trench Chat like basedbot, Trench Scan like GMGN, Trench Board like pump.fun, Trench Pro like Axiom,
+Trench Social like fomo), but under our own names, colors and words, never their names, logos or art (an exact copy of a
+trading site, its name and logo included, is what phishing sites look like), with the safety note on every screen around
+a run: "Play money only. Not affiliated with any real trading terminal. This game never asks for a wallet." and "Not
+financial advice."
+
+**What players see at agi1.app/games/trenchingsimulator** (`trenchingsimulator.html`, `src/games/trenchingsimulator/`;
+`vercel.json` rewrites the address):
+- **The AGI GAMES intro first** (see "The AGI GAMES intro"), then the game, full screen in its own dark look (none of the
+  site's top bar, theme or Pop mode), on a computer or a phone. Every screen has its own place in the browser's history,
+  so Back works the way people expect; during a run, Back goes from a coin's page to the board, and from the board opens
+  the pause sheet (Back never ends a run by itself).
+- **Home:** "AGI GAMES · BETA", **TRENCHING SIMULATOR**, "Trade made-up coins with play money on the terminals you know.
+  Ape in early, sell the top, dodge the rugs.", **Play** and **Daily market · <today's challenge>**, the player's runs,
+  wins, stars (of 27) and best multiple, "Multiplayer · coming soon", How to play, the safety note, and **Rate it**
+  (agi1.app/games#rate-trenchingsimulator) · All games.
+- **Pick your terminal** ("Laid out the way you know them, with our own names. More are on the way."): the five, in the
+  owner's order (Trench Chat, Trench Scan, Trench Board, Trench Pro, Trench Social), each with its words, what it does
+  and the money it plays in (SOL; dollars in Trench Social). **Play on Trench Board**; the other four "Coming soon" (a
+  lock, can't be pressed).
+- **Pick a mode:** the **Market** switch (Simulated, the default, or Live coins: "Coming soon" on the site for now, see
+  "Live mode"); **Daily market** (one challenge and one made-up market, the same for everyone on a UTC day, picked from
+  seven of the challenges; its tries and its win kept for the day); **Challenges** (nine goals against the clock, up to
+  3 stars each: 27 in all); **Free play** (no clock and no goal; start with 1, 5, 10 or 50 SOL, at 1×, 2× or 4× speed).
+- **The challenges** (the owner's two and seven more), Easy to Legendary: **First blood** (1 SOL to 1.05 SOL in 5
+  minutes), **Double up** (2x in 10 minutes), **Make $500** ($500 of profit in 10 minutes, from $1,000: the owner's),
+  **Rug dodger** (trade 5 different coins and finish above your 2 SOL when its 10 minutes are up; a rug on a coin you hold
+  ends it), **Speedrun** (1.5x in 3 minutes), **Catch a runner** (sell one coin for 3x what you put into it, 20 minutes),
+  **Ride the migration** (hold a coin while it migrates, then sell it in profit, 20 minutes), **Whale mode** (100 SOL to
+  150 SOL in 15 minutes: a big bag moves the chart) and **10x in 30** (1 SOL to 10 SOL in 30 minutes: the owner's). A win
+  gets 3 stars in a third of its time or less, 2 in two thirds, else 1; Rug dodger by how far above its start it ends
+  (1.5x: 3, 1.2x: 2, else 1).
+- **A run's brief:** its goal, its time, its start, the terminal, and "SOL $… · live, frozen for this run": **SOL's real
+  price**, read from DexScreener when a run is set up (at most every 5 minutes) and frozen for the whole run, so its
+  dollars never move under the player (when DexScreener doesn't answer within 4 s: the price this browser saw last, up to
+  30 days old, else a stand-in $150). The game's money is SOL underneath; the price only turns it into dollars on the
+  screen (and Make $500's $1,000 into SOL).
+- **The run:** a bar on top (Pause, AGI-1's 8-bit face with her words, the challenge and how far along it is, its clock,
+  the player's worth and profit, free play's speed, sound, and **End** or **Cash out**, two taps) over the terminal. The
+  market is already busy when the player arrives (10 minutes of made-up trading before), with a new coin every few
+  seconds. Its pause sheet: Resume, Settings (slippage 1%, 5%, 10%, 20% or 50%, 20% to start; priority fast, turbo or
+  ultra: 0.001, 0.005 or 0.01 SOL, landing in about 0.35–0.9 s, 0.18–0.45 s or 0.06–0.2 s; sound), How to play, End this
+  run.
+- **Trades as on the real thing:** a quote first (what you'd get, the price impact and the fees), then the order lands a
+  moment later (its priority); it pays the terminal's 1% fee, the launchpad's own fee (1% on the bonding curve, 0.3% in
+  the coin's pool after it migrates), the network's tiny fee and the priority fee, and it fails, costing only the network
+  and priority fees, if the price moved past the player's slippage.
+- **The market** (all made up, `engine.js`): coins launch on a bonding curve with pump.fun's own numbers (a billion
+  tokens, 793.1 million of them for sale on the curve; sold out at about 85 SOL, the coin migrates to its own pool).
+  Each coin's fate is decided at launch: most die (47%), some are rugged by their dev (18%) or pumped and dumped (18%),
+  some chop for a while (11%), a few run (4.5%), and now and then one goes to the moon (1.5%); the hot theme's coins run
+  more often, and copies of another coin's name mostly die or rug. Made-up traders move them: devs, bundles, snipers,
+  insiders, 16 made-up callers and their followers and 28 smart wallets (whose habits a player can learn over runs: who
+  holds, who dumps on their followers), whales and the crowd. Names come from 20 themes, made up and PG-13, never a real
+  coin's ticker, a real person, a brand or a look-alike of $AGI. The same seed and the same orders make the same market
+  (the daily market is one seed for everyone).
+- **Trench Board** (the one terminal ready; reworked 2026-10-21 to look and lay out like today's launchpad board,
+  pump.fun's 2026 look, measured on its site on 2026-10-20 without signing in, under our own name with a plain "T"
+  mark): its own dark (a near-black page, soft green Buy buttons); a header with the search ("/" jumps to it) and the
+  player's bag in SOL, the latest trade and launch flashing under it. **The board:** the king of the hill, its sorts (bump
+  order, trending, new, about to graduate, graduated) and a grid of coin cards (picture, ticker, name, age, market cap and
+  its change, the curve's progress, who made it, replies, tags). **A coin's page:** its header (ticker, name, age, `CA` and
+  the first 6 characters of its address, socials, the dev's share, tags, market cap, 24h volume, holders, ATH), its chart
+  (candles of 1 s, 15 s, 1 m or 5 m, the player's own buys and sells marked), Holders · Thread · Trades, and on the right
+  the trade panel (Buy / Sell, the amount and its quick picks, the quote, the button) over its boxes (Stats / Audit over 5
+  minutes, an hour or since launch, its bonding curve, the king of the hill's race, its pool, About); the player's bag on
+  the left of a wide screen (1180 px and up). **On a phone** (under 720 px): one column, a bar at the bottom (Board ·
+  Search · Bag · Settings), and on a coin's page one green **Trade $TICKER** button that opens the trade panel as a sheet;
+  the right column's boxes under an Info tab. Every grey its words use passes WCAG AA (its labels' grey is #8a8a93, a
+  little lighter than the reference's: see the decisions log).
+- **AGI-1** in the corner of the bar: her 8-bit face (the AGI GAMES intro's own frames, from her 2D art) with a mark for
+  her mood and her words in a bubble (on a computer beside her face, in the bar's goal cell; on a phone under it), for as
+  long as they take to read. 88 pre-written lines for 33 moments (a first buy, a rug, a migration, a 2x, the last
+  minute…), lowercase, PG-13, never a tip; now and then she says it's play money. No AI, nothing sent.
+- **Its sounds:** short blips made in the browser (no files), quiet, only after the player's first tap or key; the sound
+  button mutes them (remembered).
+- **The results:** its title ("Challenge complete", "Time's up", "Rugged out", "Busted", "Cashed out" or "Run ended"),
+  its stars, its multiple, a line, its worth over the run as a line, its numbers (profit, peak, time, orders, coins
+  traded, wins and losses, best and worst trade, fees paid, SOL's frozen price), AGI-1's line, **Play again**, **Share on
+  X** (X's own post box with a ready-made post that always says it's play money, "(play money, made-up coins)" or, for a
+  live run that traded a real coin, "(play money on live coins)", never "buy"; the player posts it, never us), **Save
+  card** (a 1200 × 630 picture of the result), Choose another or Pick a mode, Home, and Rate it · All games.
+- **Kept in this browser only** (`trench_v1` and `trench_sol` in localStorage): the player's settings, each challenge's
+  best, each day's daily market, a few totals, SOL's last price. Nothing about the player is sent anywhere: only that a
+  run started (below), and in Live mode which chain and which coins to keep live.
+
+**On agi1.app/games** (2026-10-21; `games.html`, `src/games/page.js`, see "AGI games"):
+- **Its card on the shelf** ("Two so far, and more on the way."): its key art, its tags (Beta, Free, No wallet needed,
+  **Play money**), "Trade made-up coins with play money on trading terminals laid out the way you know them. Beat the
+  clock in timed challenges, take on the daily market, or trade at your own pace in free play.", its **Rating**,
+  **Players** and **Played**, **Play** (agi1.app/games/trenchingsimulator) and **Rate it** (`#rate-trenchingsimulator`),
+  and "Play money and made-up coins only: nothing in it is real money or advice, and it isn't affiliated with any real
+  trading terminal. No sign-in or wallet needed to play. Runs are counted, never who." (written before Live mode was
+  finished: true while Live mode says "Coming soon", since every coin on the site is made up; see "Open questions"). Her
+  line on the page: "my second game is out 💜 the trenches, with play money and made-up coins. no prizes yet, just
+  bragging rights."
+- **Its ratings and reviews in its own tab:** the page's "Ratings and reviews" has a tab per game (each game's picture
+  and name: "Pick a game to rate"); `#rate` is still Ride 'Em, AGI!'s (its old links), and **`#rate-trenchingsimulator`**
+  opens TRENCHING SIMULATOR's tab (both "Rate it" links in the game go there). One sign-in for both games (the site's
+  wallet session and 18+ answer: connecting or answering in either box does it for both), the same rules, and the AI's
+  look is told which game a review is for (`LOOK_GAMES` in `server/arcade.js`): talk about the game's own made-up coins
+  and pretend trades (buying, selling, rugs, a 10x in the game) is part of reviewing it; real coins, trading apps and
+  advice about real money still aren't.
+- **Its plays** are counted like Ride 'Em, AGI!'s (`src/games/trenchingsimulator/site.js`, its twin): each run it starts
+  (a challenge, the daily market or free play), the first at once, then at most once a minute and when the page is hidden
+  or closed; the same `agi_player` id, each game counted apart. **`supabase/arcade.sql` needs nothing new for it** (a
+  game's id is only checked by its shape, and its row comes with its first play).
+- **Its key art** (`src/games/trenchingsimulator/keyart.webp`: 760 × 511, Ride 'Em, AGI!'s size, see-through edges, 86
+  KB) and **its link preview** (`public/cards/trenchingsimulator.jpg`, the game page's `og:image`: 1200 × 630, 147 KB,
+  under the 154,000 bytes that leave room for the owner's folder's label under the build's 160 KB): both made by
+  `tools/games/trench-art.mjs` from real screenshots of the built game (Trench Board on a computer and a coin's page on a
+  phone, the same market every time), with the title in the game's own letters, a honey "PLAY MONEY · MADE-UP COINS"
+  sticker and AGI-1 as her 2D art (never the 3D model); the link preview in AGI games' card's look, "Trade the trenches.".
+  **agi1.app/games's own preview, `games.jpg`, still shows only Ride 'Em, AGI!** (its words say exactly that: see "Open
+  questions").
+
+**How it works** (`src/games/trenchingsimulator/`, all in the browser; its pure parts read in Node by the tests):
+- `page.js` (its entry: the intro first, then `shell.js`), `shell.js` (every screen, the run's bar, the pause and settings
+  sheets, the results and the share card), `terminals.js` (the five, their words and colors, `SAFETY_NOTE`, which are
+  ready), `challenges.js` (the nine, the daily market, stars), `run.js` (one run: its clock, orders, events, how it
+  ends), `engine.js` (the made-up market: no clock of its own and no `Math.random`: a seed and the player's orders make
+  it), `curve.js` (the bonding curve and the pool), `fates.js` (what becomes of each coin), `names.js` (coins, callers,
+  chatter), `rng.js` (its seeded dice), `boards/board.js` (Trench Board), `chart.js`, `results.js`, `share.js`, `save.js`,
+  `solprice.js` (SOL's price), `lines.js` and `agi.js` (AGI-1), `sound.js`, `format.js`, `ui.js`, `site.js` (its plays),
+  `trench.css` (its look: the shell's `ts-` classes and Trench Board's `tsb-` ones), `keyart.webp`; and Live mode's
+  `live-chains.js`, `live-feed.js` and `live-market.js` (below).
+- Everything is made with `createElement` and set as text; styles only through classes and the CSS object model (the
+  site's CSP). About 184 KB of code (70 KB compressed) and 53 KB of styles; no pictures (a made-up coin's picture is its
+  emoji on a tile in its theme's color), its font the site's own Geist. Besides its own files, its only requests: SOL's
+  price from DexScreener (already in the CSP), its plays to our `/api/wallet`, and in Live mode our relay.
+- **A new terminal:** its own board in `boards/` (like `boards/board.js`'s `mountBoard()`), picked in `shell.js` for its
+  terminal, and `ready: true` in `terminals.js`; the market, the run and the challenges are the same for every terminal.
+
+**Owner, in this order:**
+1. **Push** (no SQL, no setting). If `supabase/arcade.sql` was never run, AGI games' step 1 first (until then both games
+   play and nothing is counted).
+2. **Try it:** agi1.app/games/trenchingsimulator on a phone and a computer: Play → Trench Board → a challenge, the daily
+   market and free play (Market: Simulated; Live coins says Soon, by design); buy and sell a few coins, end a run, Share
+   on X (don't send it), Save card; then agi1.app/games: its card, **Rate it** (its tab), and Played a minute later.
+3. **Live mode:** "Coming soon" for now (the owner: "Just the game for now"). When the owner wants it: its relay's steps
+   below, then one small push opens it (the game never needs it).
+
+**Cost:** nothing new for the game: its plays are small reports to `/api/wallet` (about one a minute a player), a review
+with words about $0.0003 (Gemini's look, from the site's prepaid credits, inside AGI games' 2,000 a day), SOL's price one
+free DexScreener request from the player's own browser (at most every 5 minutes), and its code and styles, about 90 KB
+compressed, from Vercel's CDN (its key art, 86 KB, on agi1.app/games). Live mode's relay: see its own "Cost".
+
+**Troubleshooting:**
+
+| What you see | Why | Fix |
+|---|---|---|
+| The brief says "SOL $150 · a stand-in price" | DexScreener didn't answer and this browser kept no price | Nothing to fix: the run works in SOL, and the price only turns it into dollars. The next run asks again |
+| agi1.app/games: "Ratings and reviews open soon", no numbers | `supabase/arcade.sql` isn't run in this Supabase project | AGI games' owner step 1 (the same for both games) |
+| "Played" doesn't go up right after a run | By design: the numbers are shared a minute, and a run after the first is told within a minute (or when the page is hidden) | Nothing to fix |
+| A terminal says "Coming soon" | Only Trench Board is built (2026-10-21) | Ask Claude for the next one |
+| Live coins says "Soon" and can't be picked | By design: Live mode opens once its relay runs on the owner's server (the owner's "Coming soon", 2026-10-21) | Live mode's steps, then step 9 there (one small push) |
+| The daily market changed | A new UTC day (00:00 UTC is 8:00 the owner's time): everyone gets a new one | Nothing to fix |
+| Progress gone (stars, bests) | It's kept in that browser only: a private window, cleared site data or another browser starts fresh | Nothing to fix (by design: nothing about players is kept on our side) |
+
+**Its key art and link preview again** (after the game's look changes): `npx vite build`, then `node
+tools/games/trench-art.mjs` (new screenshots from `dist/`, then both pictures), or `node tools/games/trench-art.mjs
+--keep` (both pictures from the screenshots it has, after changing `tools/games/trench-art/keyart.html` or
+`tools/cards/trenchingsimulator-card.html`); then `npm test`, and look at both before keeping them. Chromium, `npm
+install --no-save playwright-core` and sharp; it serves `dist/` on this computer only and stops every other request.
+
+**Tests:** `tests/trench.test.js` (20: the market: pump.fun's curve, the dice, the same seed making the same market,
+every token always somewhere, the fates' odds, coin names over thousands of draws, the smart wallets, the player's money
+to the last fee, every order refused and why, priorities, sandwich bots (the engine's; off in the game), a buy that
+completes a curve, two hours in a row, every read), `tests/trench-game.test.js` (29: numbers as players read them, the
+challenges, the daily market, a run's clock, orders, winning, losing on time and to a rug, busted and cashed out, SOL's
+price, AGI-1's lines and her face, the five terminals and their colors' contrast, the save, its posts for X, the chart,
+Trench Board's helpers, the results), `tests/trench-live.test.js` (30: Live mode, below), `tests/page.test.js`
+(agi1.app/games with two games: both cards, the tabs and panels, every id once, the words' rules, the link preview and
+the key art) and `tests/arcade.test.js` (two games counted apart, their own ratings and reviews, TRENCHING SIMULATOR's
+`site.js`, the AI's words per game, `arcade.sql` naming no game). 1008 in the whole suite (1005 pass, 3 skipped in
+Claude's workspace; 1007 before Live mode's "Coming soon"), on Node 20, 22 and 24, with and without Vercel's settings,
+in UTC and the workspace's time zone, and as if the clock said six later times on each (one of those runs crossed 00:00
+UTC in the middle of a day's count: the harmless midnight case, see "Working in this repo"); the full build, and a clean
+build like Vercel's. In a browser with the site's real CSP (Claude's scratch): the game's smoke test
+(`trench/smoke.mjs`, 128 checks on every screen), Live mode's "Coming soon" (`trench/livesoon.mjs`, 42 checks), axe on
+17 views (0 issues), Trench Board at 1440, 1024, 800, 390 and 360 px (no sideways scroll at 360, a 2 px focus ring on
+every control), AGI games' browser test with two games (`games/gm-e2e.mjs`, 516 checks: playing, rating, the tabs, both
+looks and themes, axe 0 on each game's tab). **Not tried live:** real phones (Safari on an iPhone, Android), real screen
+readers.
+
+### Live mode (2026-10-20 and 21)
+
+**The owner's** (2026-10-20 and 21): real new coins in the game, with the names and pictures their makers gave them,
+traded with play money only. While Claude researched where they'd come from, the owner: "there would be no restrictions
+on the names and the coins the names and picturres are as is, the streams is only on clank and clank allows everything on
+the stream", then "now continue". So: names, tickers and pictures as they are (no word filter, no picture check, no 18+
+tap: the owner's call; Claude had offered an 18+ tap), and AGI-1's own lines never name a real coin. **Simulated stays
+the default:** Live mode is a switch on the modes screen. Nothing is ever bought, sold or signed for real, and nothing a
+player does leaves the page but which chain and which coins to keep live.
+
+Two parts: **the game** (ships with the next push) and **the relay** (`tools/trench-relay/`), which runs on the owner's
+Hetzner server beside her live show, behind Caddy at **wss://live.agi1.app**: one connection to each source, passed on
+to every player. **Not running anywhere yet,** so Live mode says **"Coming soon" on the site** until it does (below).
+Once it's open, if the relay ever stops, Live mode says "The live feed isn't reachable right now" and plays simulated
+coins (it never breaks the game).
+
+**"Coming soon" on the site (2026-10-21).** The owner, the same day: "can you just finish the first terminal first so i
+can try it. ill add other terminals later since the game is still on beta and put it on the site also", then "wait why
+im using heztner? im just creating a game right". Claude's answer: the server is only for Live mode's real coins, and
+the game needs none. The owner's choices: "Just the game for now (Recommended)" (the Helius and server walkthroughs
+wait) and "Coming soon" (Recommended): "The Live coins button says Soon and can't be picked, like the other four
+terminals. I switch it on when the server's ready (one small push)".
+- **What players see on the site:** the Live coins chip dashed, its words muted, with a small "Soon" tag; it can't be
+  picked (Tab passes it by; screen readers hear "Live coins, coming soon"); under the switch: "Live coins are coming
+  soon: real new coins as they launch, with the names and pictures their makers gave them, traded with play money only.
+  Until then, every coin here is made up."; How to play: "Live mode is coming soon: real new coins as they launch, on
+  Solana, Robinhood Chain, BNB Chain or Base, with the names and pictures their makers gave them, still traded with play
+  money only."; a Live choice a browser kept from a try is set back to Simulated; no WebSocket is opened, and nothing
+  asks live.agi1.app.
+- **How:** `LIVE_OPEN = false` in `live-chains.js`, and `liveOpen(location)`: open when `LIVE_OPEN` is true, or on this
+  computer with a relay of its own (`?relay=`, localhost only), so the tests and a try still use it. Its words are
+  `LIVE_SOON` and `LIVE_SOON_HOW` there, its look `.ts-chip:disabled` and `.ts-chip-soon` in `trench.css`.
+- **Opening it:** once `relay.sh check` passes (the owner's steps 1 to 8 below), Claude sets `LIVE_OPEN = true` and
+  `tests/trench-live.test.js`'s checks of it (the build fails if only one of them changes), saves both here, and the
+  owner pushes (step 9).
+
+**What players see once it's open:**
+- **The modes screen:** "Market: Simulated · Live coins"; with Live coins picked, the chain (**Solana**, pump.fun's, first;
+  **Robinhood Chain**, clank.trade's; **BNB Chain**; **Base**; never Ethereum), a dot and words for how the feed is doing
+  ("Live: every new pump.fun coin as it launches on Solana, traded with play money." / "Connecting to the live feed…" /
+  "The live feed isn't reachable right now: a run would use simulated coins until it's back." / "Solana is quiet: no new
+  coins for a while. Simulated coins fill in until real ones arrive."), and the live note: "Live mode shows real new
+  coins, with the names and pictures their makers gave them. You trade them with play money: nothing is bought or sold
+  for real, and nothing leaves this page. Not financial advice."
+- **The daily market stays simulated** (the same coins for everyone that day), and so does Rug dodger, the challenge that
+  ends on a rug: a real coin is never called a rug here. The other challenges and free play can be live.
+- **A live run** runs on the real clock (one speed; its menu doesn't pause it: the real market never waits), its results
+  say Live, its stars and bests are kept apart from the simulated ones, and its post for X says "(play money on live
+  coins)" when it traded a real coin. Its live line, read out by screen readers when it changes: "Live · Solana · real
+  coins from pump.fun · play money only", or the fallback's words. Under 1024 px it sits above the bar, so AGI-1's words
+  never cover it.
+- **Real coins on Trench Board:** their real name, ticker and picture (through our relay, made small), "from pump.fun" or
+  "from clank.trade" on a card, "Real coin · play money" on its page, only the first 6 characters of its address, "—" for
+  what isn't known (never made-up holders, a thread, a dev, a rug or a caller). **No link or button anywhere: never a way
+  to buy a real coin.** While the feed is down or the chain is quiet, made-up stand-ins fill in, tagged "Simulated".
+- **Trades:** quoted and filled against the coin's live curve (pump.fun's own constant product and its 1% fee; a pool's
+  0.3% after it graduates); the player's own tokens move the curve in their own view, and a sell comes back along it.
+  The buttons say "· play money".
+- **Money per terminal** (the owner's): Trench Board SOL, Trench Scan the chain's own coin (SOL, ETH or BNB), Trench Chat
+  ETH, Trench Social dollars, Trench Pro SOL, at the run's own prices (SOL, ETH and BNB in dollars, from DexScreener).
+- **AGI-1** has 25 lines of her own for Live mode, none with a ticker: a real coin's "rug" or "dev sell" is never
+  something she says.
+
+**How it works, in the game** (`src/games/trenchingsimulator/`):
+- `live-chains.js`: the chains, each terminal's money, the words, the relay's address (`wss://live.agi1.app/ws`, fixed;
+  `?relay=` works only when the page itself is on localhost, and only for a relay on localhost: never from a link on the
+  site), whether Live mode can be picked (`LIVE_OPEN` and `liveOpen()`, above), and every message from the relay checked
+  before anything sees it (names made safe to show as text, numbers checked, addresses matched against their shape; no
+  word filter: the owner's call).
+- `live-feed.js`: one WebSocket for the picked chain, only while Live mode is on; its states: connecting, live, down,
+  full; it reconnects by itself (2 s, 4 s … 30 s, a little random) and asks the relay to keep the coins a player has open
+  or holds live (`watch`, 8 at most). It sends nothing else.
+- `live-market.js`: the engine's market with the feed's coins in it, and which coins the lists show (live: the real ones,
+  the stand-ins paused; quiet: both; down: the stand-ins, running).
+
+**How it works, the relay** (`tools/trench-relay/`, on the owner's server):
+- **Its sources, one connection each:** Solana: **PumpPortal**'s free WebSocket (new coins and migrations; one
+  connection, as PumpPortal asks; the owner's OK, 2026-10-21: "oh im friends with them they its okay"), **PumpDev**'s as
+  its backup (it takes over after 90 s without a new coin, and hands back when PumpPortal sends again;
+  `PUMPPORTAL_WS_URL=off` = PumpDev alone from the start), each coin's curve live from **Helius** (a subscription to its
+  bonding curve's account, read once more after every reconnect: the newest 150 coins plus up to 150 that players have
+  open or hold, at most 950, under Helius's 1,000 a connection), and after its curve sells out, its pool from
+  DexScreener. Robinhood Chain: **clank.trade's own coin list** (the API its site uses, the same as the site's risk
+  check), its newest every 12 s. BNB Chain and Base: **DexScreener's newest token profiles** (coins whose makers listed
+  them there: not every launch), their markets every 20 s. SOL, ETH and BNB in dollars every minute. Every DexScreener
+  request is counted (at most 240 a minute, under its free limits).
+- **Pictures through our own server** (`/p/<hash>.webp`): a coin's metadata and picture read once, from public IPFS
+  gateways (Filebase, Pinata's public one, then ipfs.io) or, for any other address, with the safe request (https on port
+  443 only, public addresses only, looked up first, never a redirect); only real PNG, JPEG, GIF, WebP or AVIF by their
+  first bytes (never SVG), 8 MB and 40 million pixels at most; made a 128 px WebP square with sharp; kept in memory
+  (64 MB). Never pump.fun's own host, and a browser never asks a coin's own host for anything.
+- **Passing it on** (`lib/hub.mjs`): a new coin at once; market changes in one small batch every half second (each
+  coin's newest only); pictures as they're ready. A slow viewer never slows the others (past 512 KB waiting it misses
+  batches and gets a fresh copy once it catches up; past 4 MB it's dropped). A ping every 25 s (no answer: dropped).
+- **Its door:** only the site's own pages (Origin `https://agi1.app` or `https://www.agi1.app`); 2,000 viewers at once
+  (one more is let in only to hear "busy", then closed); 10 from one address; a browser's message at most 2 KB and about
+  two a second (anything else is ignored; too much closes it); 900 pictures a minute per address.
+- **`https://live.agi1.app/health`:** JSON (each chain's state and coins, viewers, sources, pictures, prices, problems),
+  never a key or a viewer.
+- **The Helius key** lives only in `/opt/agi1-trench/trench.env` on the server (mode 600): never in the code, the image,
+  an answer, a browser or a log line (every line is scrubbed of it and of any `api-key=`).
+- **Its image:** `node:22-bookworm-slim`, `npm ci --omit=dev` (its own `package.json` and lock: ws 8.21.0 and sharp
+  0.35.5, exact versions, never the site's), run as the image's own user (never root), its port only on Docker's own
+  network; at most 3/4 of a core and 512 MB (`--cpus 0.75 --memory 512m`), so her live show on the same 2-core CX23
+  always has room; sharp one picture at a time.
+- **Caddy** in front (`caddy:2.10`, the official image): automatic HTTPS for live.agi1.app (Let's Encrypt, renewed by
+  itself), ports 80 and 443 (and 443/udp), HSTS, `nosniff`, `Referrer-Policy: no-referrer`, no access log (a viewer's
+  address is never written down). Both start again by themselves after a reboot (`--restart unless-stopped`).
+- **What the site needs:** only its CSP changes (`vercel.json`, in the push): `img-src` gains `https://live.agi1.app` (the
+  coins' pictures) and `connect-src` gains `wss://live.agi1.app` (the feed). No setting in Vercel, no SQL, no new
+  function. `ws` is a dev dependency only (the tests run the relay against stand-in services); the site's pages never
+  load it.
+
+**Its settings** (`/opt/agi1-trench/trench.env` on the server, from `tools/trench-relay/trench.env.example`; none of them
+go to Vercel). After changing one: `sh /opt/agi1-live/site/tools/trench-relay/relay.sh start`.
+
+| Name | Default | What |
+|---|---|---|
+| `HELIUS_API_KEY` | (empty) | **Secret.** The Helius API key (or Helius's whole address with `api-key=` in it). Empty: Solana stays off ("Solana isn't on the live feed right now"); the other chains work |
+| `TRENCH_ORIGINS` | `https://agi1.app,https://www.agi1.app` | The pages that may connect |
+| `TRENCH_TRUST_PROXY` | `1` | Caddy says who's connecting (the relay's own port is never open) |
+| `TRENCH_MAX_CLIENTS` | 2000 | Viewers at once |
+| `TRENCH_MAX_PER_IP` | 10 | Viewers from one address |
+| `TRENCH_CHAINS` | `solana,robinhood,bnb,base` | Its chains |
+| `TRENCH_SOLANA_TRACK` | 150 | The newest pump.fun curves followed live |
+| `TRENCH_WATCH_MAX` | 150 | Coins players have open or hold, followed on top (both together at most 950) |
+| `TRENCH_PIC_CACHE_MB` | 64 | Pictures kept in memory |
+| `TRENCH_LOG` | `info` | `debug`, `info`, `warn` or `error` |
+| `PUMPPORTAL_WS_URL` | PumpPortal's | `off`: PumpDev alone, from the start (not needed: the owner's OK for PumpPortal, 2026-10-21) |
+| `PUMPDEV_WS_URL` | PumpDev's | `off`: no backup |
+
+**Cost:** **$0 a month as built.** Helius's free plan (1M credits a month; following 150 to 300 curves is about 130,000
+to 780,000 credits a month, from the research's measures: Helius bills WebSocket data since May 2026), PumpPortal's and
+PumpDev's free new-coin feeds, DexScreener's free API, clank.trade's API, the public IPFS gateways, Caddy and Let's
+Encrypt (free), and the CX23 the owner already pays for (20 TB of traffic a month included; a player gets a few KB a
+second at most). If Helius's dashboard shows the month's credits running low: `TRENCH_SOLANA_TRACK=100` and
+`TRENCH_WATCH_MAX=100`, then `relay.sh start`. Helius's paid plan ($49 a month) only if the owner wants more (never
+needed to run). **Never** PumpPortal's paid trade streams (keyed, billed per trade), never any paid service.
+
+**The owner's steps** (one at a time, **later**: the owner's "Just the game for now", 2026-10-21; until then Live mode
+says "Coming soon" on the site). Secrets go only where these steps say: never in chat, git, a screenshot or a file
+anyone else can read.
+1. **PumpPortal's OK: done** (2026-10-21, the owner: "oh im friends with them they its okay"): its feed is on from the
+   start, with PumpDev as its backup; nothing to send. (Not legal advice: PumpPortal's terms give a "single, personal,
+   limited license" and say its data "may not [be] … publish[ed], distribute[d]" unless they authorize it; a short yes
+   from them in writing is good to keep. The other sources: DexScreener's terms allow commercial use but not "third
+   parties" or a competing product; Helius's terms bar sublicensing or redistributing its products (prices worked out
+   from its data aren't addressed); clank.trade's API is the one the site's risk check already reads. Worth a look
+   before promoting Live mode widely: see "Open questions".)
+2. **A Helius key (free):** dashboard.helius.dev → sign in (the free plan is enough) → **API Keys** → copy the key (a long
+   code with dashes). Keep it in your clipboard for step 6, or in a password manager; never in chat or a screenshot.
+3. **The site pushed** (the game's push carries the relay's files and the CSP). Live mode still says "Coming soon" on
+   the site until step 9: nothing breaks meanwhile.
+4. **The DNS record, live.agi1.app → the server:** Namecheap → your **hosting** account → **cPanel** → **Zone Editor** →
+   agi1.app → **Manage** → **+ Add Record**: Type **A**, Name `live` (cPanel may show it as `live.agi1.app.`), Address
+   **the server's IPv4** (Hetzner console → the server `agi1-live` → its IPv4: the address you `ssh` to), TTL as it
+   suggests → **Save**. A few minutes later (at most an hour), from PowerShell on the PC:
+   ```
+   Resolve-DnsName live.agi1.app -Type A
+   ```
+   It shows the server's IPv4. (If the Namecheap account is still suspended (it was on 2026-10-03: see "agi1.app's DNS"
+   in "Open questions"), this step waits for it, and the game plays simulated coins meanwhile.)
+5. **Ports 80 and 443 open:** Hetzner console → **Firewalls**: if a firewall is attached to `agi1-live`, add inbound
+   rules **TCP 80**, **TCP 443** and **UDP 443** (any IPv4 and IPv6); with none attached (Hetzner's default), nothing to
+   do. Then on the server (`ssh -o ServerAliveInterval=30 root@<the server's IP>`), check nothing else uses them (her live
+   show publishes no ports), one line at a time:
+   ```
+   ss -ltnp | grep -E ':(80|443) ' || echo "80 and 443 are free"
+   ufw status
+   ```
+   If `ufw status` says `Status: active`:
+   ```
+   ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 443/udp
+   ```
+6. **On the server, the relay's files and its settings file** (each line pasted on its own, in the server's window,
+   `root@agi1-live`). The newest code (safe while her live show runs: it runs from its own image), then the settings file:
+   ```
+   cd /opt/agi1-live/site && git pull --ff-only
+   mkdir -p /opt/agi1-trench && cp /opt/agi1-live/site/tools/trench-relay/trench.env.example /opt/agi1-trench/trench.env && chmod 600 /opt/agi1-trench/trench.env
+   ```
+   The Helius key, pasted when it asks (it stays hidden on screen and out of the shell's history; the line prints `1`):
+   ```
+   read -s -p 'Helius API key (hidden): ' K && echo && sed -i "s|^HELIUS_API_KEY=.*|HELIUS_API_KEY=$K|" /opt/agi1-trench/trench.env && unset K && grep -c '^HELIUS_API_KEY=.\+' /opt/agi1-trench/trench.env
+   ```
+7. **Build it and start it:**
+   ```
+   cd /opt/agi1-live/site && sh tools/trench-relay/relay.sh update
+   ```
+   The first time takes a few minutes (Node's and Caddy's images and the relay's two packages). It ends with "started: the
+   relay (agi1-trench) and Caddy (agi1-trench-caddy) for https://live.agi1.app".
+8. **Check it**, a minute later (Caddy gets its certificate once the DNS record is there):
+   ```
+   sh tools/trench-relay/relay.sh check
+   ```
+   Every line should start with `ok`: the settings file (600), "HELIUS_API_KEY is set (never shown)", both containers
+   running, "relay up … · solana live (… coins, … live) · robinhood live …", "Solana: PumpPortal connected · PumpDev
+   idle · Helius connected, … curves live", the pictures and SOL's price, and "https://live.agi1.app/health answers (the
+   certificate works)". BNB Chain and Base are often "quiet" (only coins whose makers listed them on DexScreener). In a
+   browser, **https://live.agi1.app/health** shows JSON starting `{"ok":true,"service":"agi1-trench-relay"`.
+9. **Open it** (one small push): tell Claude `relay.sh check` passes. Claude sets `LIVE_OPEN = true` in
+   `src/games/trenchingsimulator/live-chains.js` and `tests/trench-live.test.js`'s checks of it, and saves them here;
+   then `git push` on the PC, in this folder. The Live coins chip loses its "Soon", and the "coming soon" words go.
+10. **Try it:** agi1.app/games/trenchingsimulator → Play → Trench Board → **Market: Live coins** → **Solana** (its dot
+    green: "Live: every new pump.fun coin as it launches on Solana, traded with play money.") → Free play → Start: the
+    line at the top says "Live · Solana · real coins from pump.fun · play money only", with real coins and their
+    pictures. Try a phone too.
+
+**Later:** after a push that touches `tools/trench-relay/`: `cd /opt/agi1-live/site && sh tools/trench-relay/relay.sh
+update` (the game's own changes go live with Vercel, as always). `relay.sh stop` (both off: the game says the live feed
+isn't reachable and plays simulated coins), `relay.sh start`, `relay.sh status`, `relay.sh logs` (the relay's last 100
+lines; `logs 300`, `logs caddy`).
+
+**Troubleshooting** (`sh tools/trench-relay/relay.sh check` and `relay.sh logs` on the server):
+
+| What you see | Why | Fix |
+|---|---|---|
+| The game: Live coins says "Soon" and can't be picked | Not opened yet (`LIVE_OPEN`): by design until the relay runs | Steps 1 to 8, then step 9 |
+| The game: "The live feed isn't reachable right now…" | The relay isn't running, live.agi1.app doesn't point at the server yet, or the site isn't pushed (the browser's console: "Refused to connect … violates the Content Security Policy") | `relay.sh check`; https://live.agi1.app/health in a browser; step 3 |
+| `check`: `NO https://live.agi1.app/health doesn't answer yet` | The DNS record (step 4), ports 80 and 443 (step 5), or Caddy's certificate | `getent ahostsv4 live.agi1.app` on the server must show its own IPv4; `relay.sh logs caddy`: "NXDOMAIN" = the record isn't there yet, "timeout during connect" = a firewall (step 5). Caddy tries again by itself |
+| `relay.sh start`: "port is already allocated" / "address already in use" | Something else listens on 80 or 443 | `ss -ltnp` shows what; stop it, then `relay.sh start` |
+| `check`: `NO HELIUS_API_KEY is empty: Solana stays off` | Step 6's key line wasn't run (or printed 0) | Step 6's key line again, then `relay.sh start` |
+| The game: "Solana isn't on the live feed right now"; `check`: "Helius NOT connected" | Helius refused the key (`relay.sh logs`: "Helius: can't connect (… 401 …)"), or Helius is down | A new key (step 2, step 6's key line), `relay.sh start`; a Helius outage passes by itself |
+| The game: "Solana is quiet…" for a long time | No new-coin feed: `check` shows "PumpPortal NOT connected" and PumpDev not running | It reconnects by itself (1 s … a minute), and PumpDev takes over after 90 s; if both stay down, `relay.sh logs` says why |
+| "Robinhood Chain isn't on the live feed right now" | clank.trade's API didn't answer (`logs`: "clank.trade (newest): …") | Passes by itself; the site's risk check would say the same |
+| BNB Chain or Base "quiet" most of the time | By design: only coins whose makers listed them on DexScreener, not every launch | Nothing to fix |
+| Some coins show a plain coin (🪙) instead of their picture | An IPFS gateway was slow or didn't have it (tried again after 15 s and 60 s); `check`: "pictures … not shown" | Nothing to fix (a picture over 8 MB, or not a real picture, is never shown) |
+| "The live feed is full right now" | `TRENCH_MAX_CLIENTS` (2,000) viewers at once | Raise it in trench.env (mind the CX23), `relay.sh start` |
+| Helius's dashboard: the month's credits nearly used | Following many curves all month | `TRENCH_SOLANA_TRACK=100` and `TRENCH_WATCH_MAX=100` in trench.env, `relay.sh start` |
+| Her live show stutters while the relay runs | Both on the CX23's 2 cores (the relay at most 3/4 of one) | Fewer curves (as above), or `relay.sh stop` during a show and `start` after |
+| The key was shown somewhere by mistake | — | Helius dashboard → make a new key, delete the old one; step 6's key line, `relay.sh start` |
+
+**Tests:** `tests/trench-live.test.js` (30), the relay against stand-ins for PumpPortal, PumpDev, Helius, DexScreener,
+clank.trade and an IPFS gateway (`tools/trench-relay/fakes.mjs`; `node tools/trench-relay/fakes.mjs` runs them for a
+try): reading every source, a curve's price and market cap, names made safe, the settings and the key never logged, the
+safe request (https on 443, public addresses, no redirect, size limits), pictures (real image bytes only, never SVG,
+made small, served by their hash), passing it on, caps and slow viewers, pings, backoff, the whole relay end to end, its
+door (origins, full, per address), reconnects (PumpPortal down → PumpDev takes over and hands back; Helius down → every
+curve followed again), PumpPortal off, a refused key; and in the game: the chains and money per terminal, the relay's
+address rule, every relay message checked, the live market, play money against the live curve, no made-up things on real
+coins, live runs' clock and bests, AGI-1 never naming a real coin, the feed in the browser (connecting, live, down and
+back, full), the CSP, no HTML from strings and no link anywhere in the Live files, and the relay's own files (never
+root, no key in the image, the settings file's secrets empty, Caddy in front); and since the owner's "Coming soon", Live
+mode closed on the site (`LIVE_OPEN` false, and `liveOpen()` closed for the site's own address and for a relay that
+isn't on localhost) and open on this computer with a relay of its own. Each of the first 29 ran 12 times on Node 20, 22
+and 24 and 18 times under load (a race in the reconnect test, found on Node 22, fixed: it waits for the stand-in to hear
+each subscription). In a browser (Claude's scratch `trench/live/live-e2e.mjs`: the relay as its own process against the
+stand-ins, the built game in Chromium with the site's real CSP, the relay's address swapped for localhost): 91 of 91,
+twice, and again after the "Coming soon" change. And the "Coming soon" itself (`trench/livesoon.mjs`, 42 checks, the
+site's real CSP, on a computer and at 390 and 320 px): the Live coins chip disabled, dashed, with its "Soon" tag and its
+name for screen readers, a click or a tap changing nothing, Tab passing it by, the words under the switch and in How to
+play, a run's brief Simulated, a Live choice a browser kept set back to Simulated, no WebSocket opened; and with a relay
+of its own on this computer, the chip open and the page trying its relay. 11 broken versions of the change, all caught.
+**Not tried live:** nothing ran against the real services (PumpPortal, PumpDev, Helius, DexScreener, clank.trade, the
+IPFS gateways), only stand-ins shaped from their docs: their real messages, real limits and real pictures are the first
+live check (steps 8 and 10). Nor the Docker build, Caddy, the certificate, the DNS record, the server's firewall, real
+phones, or many viewers at once on the CX23 together with her live show.
 
 ## CloakMesh at inference.agi1.app (2026-10-03)
 
@@ -10153,7 +10684,22 @@ that stays with the button and its price; the gallery on the right; on phones a 
   floating top bar (its browser bar violet from the first paint), "GAME" in Anybody, lavender with a pink echo, "beta" a
   honey sticker with an ink outline and a hard shadow; the shelf on lavender, the ratings and reviews on paper, what's
   coming on honey; white cards with ink outlines and hard shadows, honey stars with ink outlines. The game itself
-  (agi1.app/games/rideemagi) keeps its own look (the owner's game's, dark).
+  (agi1.app/games/rideemagi) keeps its own look (the owner's game's, dark). Since 2026-10-21 (two games): a tab per game
+  over the ratings (its picture and its name, the picked one outlined; on phones each tab a tile, its picture over its
+  name, so "TRENCHING SIMULATOR" never breaks inside a word, even at 320 px), and in Pop mode the tabs white pills with
+  ink outlines and hard shadows, the picked one honey (a pink shadow at night); the "Play money" tag green (mint with ink
+  in Pop mode).
+- **TRENCHING SIMULATOR** (2026-10-20 and 21, `trench.css`, see "TRENCHING SIMULATOR"): its own dark look, full screen
+  (none of the site's top bar, theme or Pop mode), in the site's Geist; each terminal in its own colors
+  (`terminals.js`). **Trench Board** (2026-10-21) in a launchpad board's own dark: four greys from the page (#0b0b0e) to
+  a raised control (#242429), two hairlines, its words in white and three greys (the labels' #8a8a93: every pair passes
+  AA), a soft green (#86efac) with dark green words on it for Buy and the main button, red for sells, a warning yellow
+  for the king of the hill, a blue and a violet for two tags; 6 px corners, small type (11 to 20 px), a 2 px green focus
+  ring on every control; one flash for a new trade or launch and one shake for a bumped card (none with "reduce
+  motion"); hover only with a mouse; on phones one column, a bar at the bottom with a safe-area gap, sheets from the
+  bottom with a grab handle, inputs at 16 px. AGI-1 as 8-bit pixels in the bar's corner (no blinks with "reduce
+  motion"). A choice that isn't open yet (Live coins, until its relay runs) dashed, its words muted, with a small
+  uppercase "Soon" tag and the "not allowed" pointer.
 - **The AGI GAMES intro** (2026-10-20, see "The AGI GAMES intro"): 8-bit on purpose (a game's own look, like an arcade's
   boot screen), in the site's colors as pixels: an ink night with lavender stars, honey letters banded light to deep with
   a pink shadow, white for a landing; AGI-1 as pixel art from her 2D art; crisp at any size (never smoothed); one flash
@@ -10712,6 +11258,39 @@ that stays with the button and its price; the gallery on the right; on phones a 
   `sessionStorage` flag (`agi_intro`: this tab has seen the full one). A key or a tap that skipped it never reaches the
   game.
 
+### TRENCHING SIMULATOR and its relay (2026-10-20 and 21, see "TRENCHING SIMULATOR")
+- **The game asks nothing and keeps nothing on our side:** no sign-in, no wallet; its progress stays in the player's own
+  browser (`trench_v1`, `trench_sol`); it only tells our server that a run started (AGI games' plays, the same rules). Made
+  with `createElement` and set as text, no inline code or styles; its only outside request is SOL's price from
+  DexScreener (already in the CSP). Its made-up coins' names are never a real ticker, a real person, a brand or a
+  look-alike of $AGI (`tests/trench.test.js` reads thousands of them).
+- **Its words** (hard rule 8): play money only, no prizes, the safety note on every screen around a run, AGI-1 never a
+  tip, its posts for X never "buy"; never a real terminal's name, logo or art (since Live mode, "from pump.fun" and "from
+  clank.trade" only as where a real coin came from).
+- **Live mode in the browser:** one WebSocket, to our relay only (`wss://live.agi1.app/ws`; `?relay=` only from a page
+  on localhost to a relay on localhost, never from a link); every message from the relay checked before anything sees it
+  (names only ever as text, numbers checked, addresses matched against their shape); pictures only from our relay
+  (`https://live.agi1.app/p/<hash>.webp`, `referrerpolicy="no-referrer"`), never a coin's own host; no link anywhere
+  (never a way to buy a real coin); it sends only its chain and at most 8 coins to keep live. The CSP gains only
+  `https://live.agi1.app` (`img-src`) and `wss://live.agi1.app` (`connect-src`). Until its relay runs, Live mode is
+  closed on the site (`LIVE_OPEN`, the owner's "Coming soon", 2026-10-21): no WebSocket is opened at all, and a Live
+  choice a browser kept from a try is set back to Simulated.
+- **The relay's door:** only the site's own pages (their Origin), 2,000 viewers at once, 10 from one address, a browser's
+  message at most 2 KB and about two a second, 900 pictures a minute per address; a viewer more than 4 MB behind is
+  dropped, and one that never answers a ping too. `/health` never shows a key or a viewer. Caddy keeps no access log, and
+  the relay's log never has a viewer's address or what they look at.
+- **What the relay fetches:** its sources at the addresses in its settings; anything a coin gives (its metadata, its
+  picture) only with the safe request: https on port 443, a public address (looked up first), never a redirect, never too
+  big; only real image bytes (never SVG), 8 MB and 40 million pixels at most, made a 128 px WebP by us. Never pump.fun's
+  own host (its terms ban bots and deep links).
+- **Its one secret, the Helius key:** only in `/opt/agi1-trench/trench.env` on the server (600); never in the code, the
+  image (its settings come from that file when it runs), an answer or a browser; every log line is scrubbed of it and of
+  any `api-key=`. The image runs as its own user (never root), its port only on Docker's own network, at most 3/4 of a
+  core and 512 MB.
+- **Its sources' rules:** one connection to each (PumpPortal asks for one); PumpPortal's feed with the owner's OK
+  (2026-10-21: "oh im friends with them they its okay"), PumpDev its backup; DexScreener counted (at most 240 requests a
+  minute); never PumpPortal's paid trade streams or any paid service.
+
 ### Her Live2D model (AGI-1 in 2D, 2026-10-01)
 - Live2D's runtime (`public/models/agi1-live2d/live2dcubismcore.min.js`) is served from our own address and loaded only when
   she's shown in 2D; it uses no eval and no WebAssembly, so the CSP is unchanged. It's Live2D's file as it is (never edited:
@@ -10751,7 +11330,10 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
   unpacks a model's textures through temporary `blob:` addresses; without it the browser blocks AGI-1's textures); and
   `https://challenges.cloudflare.com` in `script-src` and `frame-src` (Turnstile), and since 2026-10-02 `'self'` in
   `frame-src` and `frame-ancestors` (her pop-out window: our own pages only), and since 2026-10-10 `media-src 'self' blob:`
-  (AGI Studio's videos from our own address, and a visitor's own clip in their browser). Fonts are self-hosted, so styles
+  (AGI Studio's videos from our own address, and a visitor's own clip in their browser), and since 2026-10-21
+  `https://live.agi1.app` in `img-src` and `wss://live.agi1.app` in `connect-src` (TRENCHING SIMULATOR's Live mode: its
+  relay's coin pictures and its feed, on the owner's server; `tests/trench-live.test.js` checks they're the only new
+  ones). Fonts are self-hosted, so styles
   and fonts are `'self'` only. **When the site starts using a new outside service, add its domain to the CSP, or browsers
   will block it.** `tests/prices.test.js` checks that the prices domain is allowed.
 - No inline `<script>` or `style="…"`: the CSP blocks them. Put code in `src/` and styles in CSS files. (The share pages
@@ -10772,15 +11354,15 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | Supabase Free | 500 MB database · 5 GB egress · 200 realtime connections · 2M realtime messages/month. Paused after 1 week with no activity. Supabase Cron (pg_cron) and pg_net are in the free plan (her buy bot's clock, 2026-10-06: one tiny run a minute, its run history kept 3 days) | Grace period, then restricted (read-only or paused), never billed |
 | Gemini (prepaid) | Pay per use, about $0.0005 per reply (max about $0.0008), plus the diary: one call a day, about $0.0008, plus her voice (2026-09-25): about $0.0015 per spoken reply ($0.003 at most), at most 5,000 a day ≈ $15 ($22.50 if all went to the backup model, 3.8 Flash TTS; double from January 2027; while Google's Tier 1 allows 100 a day per model, about $0.30–0.75); her fixed lines (hello, out of messages, market moments, ClankChecker's ten, her nine tap lines) are made once and kept (the database since 2026-09-26); since 2026-09-30 the replies paid for by burning $AGI, at most `BURN_DAILY_CAP` (1,000) a day ≈ $0.80 more; since 2026-10-02 a picture with a message ("Show her") about $0.0003 more, counted as one message | The key stops when credits hit $0 (the chat and the voice share them) |
 | Cloudflare Turnstile | Unlimited | — |
-| DexScreener | Free, no key, rate-limited per IP. Browsers ask every 30 s; since 2026-09-25 our server also asks for $AGI's market cap (and since 2026-10-05 for /mc in her groups, the same minute), at most once a minute per server copy, only to check a new market line | Requests fail, and we show the last known numbers (and her market lines wait) |
+| DexScreener | Free, no key, rate-limited per IP. Browsers ask every 30 s; since 2026-09-25 our server also asks for $AGI's market cap (and since 2026-10-05 for /mc in her groups, the same minute), at most once a minute per server copy, only to check a new market line; since 2026-10-20 TRENCHING SIMULATOR asks for SOL's price from the player's own browser when a run is set up (at most every 5 minutes); and since 2026-10-21, once it's set up, its Live mode relay (one, on the owner's server, however many play): SOL, ETH and BNB in dollars every minute, BNB Chain's and Base's newest token profiles every 30 s and their markets every 20 s, graduated pump.fun coins' pools every 15 s, every request counted (at most 240 a minute, under its free limits of about 300 a minute for pairs and 60 for profiles) | Requests fail, and we show the last known numbers (and her market lines wait); the game uses the SOL price its browser kept (or $150), and Live mode's BNB Chain and Base go quiet until DexScreener answers |
 | Robinhood Chain public node | Free, no key, rate-limited. Wallet balances, and since 2026-09-29 the risk check's reads of the Clank protocol (2 small requests per scan, once per coin per 5 minutes per region), and since 2026-09-30 "Check my burn" (2 small reads per burn, at most 3 burns a check) | Balance checks fail; people keep their last level and it retries. Scans work without the protocol's word (no locked note, no chain safety net) |
-| Public IPFS gateways (Filebase's, Pinata's public one, ipfs.io) and ClankBot's picture host (the risk check's coin pictures, since 2026-10-05; clank.trade's own gateway before) | Free, no key, rate-limited; each coin's picture (two sizes) is read about once a week per CDN region, made small on our server | The coin shows its first letter instead (asked again after 5 minutes) |
-| clank.trade's API (ClankChecker, 2026-09-26) | Free, no key; the list about once per 5 minutes per CDN region (about 17 small requests for 200 coins), the newest coins at most once per 10 seconds per region while someone watches (1 request), each coin asked about once per 5 minutes (1 minute for new coins; 2 requests); since 2026-10-06 her buy bot: one request a minute ($AGI's newest 50 trades and ETH's price) | ClankChecker says "Couldn't reach clank.trade" / "Not enough data", and her buy bot posts nothing until clank.trade answers again |
+| Public IPFS gateways (Filebase's, Pinata's public one, ipfs.io) and ClankBot's picture host (the risk check's coin pictures, since 2026-10-05; clank.trade's own gateway before) | Free, no key, rate-limited; each coin's picture (two sizes) is read about once a week per CDN region, made small on our server; since 2026-10-21, once it's set up, TRENCHING SIMULATOR's relay reads each new coin's metadata and picture once (Filebase, Pinata's public one, then ipfs.io: ipfs.io asks sites not to rely on it), made small and kept in its memory | The coin shows its first letter instead (asked again after 5 minutes); in Live mode a plain coin (🪙) instead (asked again after 15 s and 60 s) |
+| clank.trade's API (ClankChecker, 2026-09-26) | Free, no key; the list about once per 5 minutes per CDN region (about 17 small requests for 200 coins), the newest coins at most once per 10 seconds per region while someone watches (1 request), each coin asked about once per 5 minutes (1 minute for new coins; 2 requests); since 2026-10-06 her buy bot: one request a minute ($AGI's newest 50 trades and ETH's price); since 2026-10-21, once it's set up, TRENCHING SIMULATOR's Live mode relay (one, on the owner's server, however many play): its newest coins every 12 s, the next two pages every 36 s, its trending list every 30 s | ClankChecker says "Couldn't reach clank.trade" / "Not enough data", and her buy bot posts nothing until clank.trade answers again; Live mode says Robinhood Chain isn't on the live feed right now |
 | Telegram Bot API (her bot, 2026-09-29) | Free; about 30 messages a second per bot (she sends 25), and about 20 a minute in a group (since 2026-10-03 her groups: at most 15 replies a minute per group, 100 a day; since 2026-10-06 her buy alerts, at most 6 a minute per group); since 2026-10-14 her songs (/music): in a group at most one every 30 seconds and the same song once every 5 minutes, files Telegram fetches from the site | Telegram says "too many": that run stops, the rest go next run (a group post is skipped) |
 | GitHub Actions (her daily clip, 2026-09-29) | Private repositories: 2,000 minutes a month and 500 MB of storage for downloads; a run takes about 5 minutes (about 150 a month) and keeps about 5 MB for 7 days | Without a payment method on GitHub: the job just stops until next month (never a bill) |
 | Blockscout block explorer (ClankChecker; since 2026-09-30 "Check my burn") | Free, no key; only for coins with 100+ holders, once per 5 minutes per coin; one request per "Check my burn" without a pasted link | The scan says "More than 100 wallets hold it"; "Check my burn" asks for the transaction link instead |
 | Pinata (launched coins' pictures, 2026-10-01) | Free plan: 500 files, 1 GB, 10 GB of bandwidth and 10,000 requests a month (checked 2026-10-01); one file per launched coin (pictures of coins never launched are deleted within a day); at most `LAUNCH_DAILY_CAP` (30) uploads a day | Uploads fail ("Couldn't put the picture on IPFS"); its cheapest paid plan is $20 a month: the owner's call |
-| The owner's server (her live show, 2026-10-02) | Not a free tier: since 2026-10-06 a Hetzner CX23, $6.49 a month plus $0.60 for its IPv4 (and any VAT), billed the month after; CX33 ($9.99) or CX43 ($18.49) once back in stock, within the owner's $20 a month for the server; 20 TB of traffic included (her stream uses about 1.4 GB an hour: about 130 GB a month at 3 hours a day) | The owner's bill; a show just doesn't happen if the server is off |
+| The owner's server (her live show, 2026-10-02) | Not a free tier: since 2026-10-06 a Hetzner CX23, $6.49 a month plus $0.60 for its IPv4 (and any VAT), billed the month after; CX33 ($9.99) or CX43 ($18.49) once back in stock, within the owner's $20 a month for the server; 20 TB of traffic included (her stream uses about 1.4 GB an hour: about 130 GB a month at 3 hours a day); since 2026-10-21 also, once they're set up, TRENCHING SIMULATOR's Live mode relay and Caddy, all the time (the relay at most 3/4 of a core and 512 MB, so her show keeps room; a few KB a second per player at most, inside the 20 TB) | The owner's bill; a show just doesn't happen if the server is off, and Live mode (once it's open) says the live feed isn't reachable and plays simulated coins |
 | X Premium (her live show) | Not a free tier: $8 a month in the US, $84 a year (X Live Studio needs Premium, not Basic) | No Live Studio: no show |
 | Google Cloud Vertex AI, now "Agent Platform" (her voice on stream, 2026-10-02) | Pay per use on the project's billing account, charged to its card once a month (never from AI Studio's prepaid credits, which pay for the Gemini API only): at most about $0.54 an hour of new talking ($6 per 1M audio tokens until 2026-12-31, then double); her pre-written lines are made once and kept, so each day only her answers are new (about $0.002 each: a few dollars a month with 3-hour shows), and since 2026-10-07 her new AI lines and reactions (at most about $0.04 an hour: 40 lines) and the people she meets on her trips (about $0.01 a meeting, their own voices: about $0.05 to $0.15 a 3-hour show); and (2026-10-07) her set's pictures, painted once by its image AI (Nano Banana 2.1, about $0.034 a picture: about $5–10 for all 152); a budget alert at $20 (an email, never a stop) | Her lines that aren't kept yet are said silently (captions); kept lines and her music keep playing |
 | X's API (her own posts on stream, 2026-10-07) | Not a free tier: pay per use on the X developer account's own credits (about $0.005 a post read, $0.010 an account read, each post counted once a day); at most `LIVE_X_READS` (60) posts a show, about $0.30; nothing until `LIVE_X_BEARER` is set | Her posts and replies stop for that show (the log says why); everything else goes on |
@@ -10795,6 +11377,8 @@ is why `src/theme.js` also reads the saved Pop mode choice: see "Pop mode".)
 | AGI Studio's editors (2026-10-12): Gemini's look at what's saved, and the video editor's cuts on the clock | Gemini from the same prepaid credits: about $0.001 a photo saved from the photo editor (2,000 a day at most) and $0.002 a video cut in the video editor (500 a day at most); a cut's making is the clock's own CPU and memory, which Vercel Pro bills on demand from its monthly usage credit first ($0.128 an hour of CPU and $0.0106 a GB-hour in Washington D.C., read 2026-10-12): about $0.0005 a cut. About $3.25 a day at most, all free for people. Since 2026-10-19 the meme editor's saves are counted with the photo editor's (the same 2,000 a day, $0.001 each), and each new template meme has Gemini's look too (about $0.001, inside the meme's own price) | "Saving edited … is busy today" (the site's day used: downloads still work); cuts wait their turn on the clock |
 | Bonus credits (AGI Studio's invites, round 4, phase 3, 2026-10-11; the owner's gift links, 2026-10-12) | Not a tier: spent on AI like any credits (fal's balance): a friend's 100 welcome credits once, with its first top-up of $5 or more, and its inviter's 10% of what the friend buys (at most 500 credits from one friend, 5,000 a month for each inviter); and since 2026-10-12 the credits of the owner's gift links that get claimed (as many as the owner puts in each: 1,000 credits are at most about $10 of AI). Gifts move credits already bought: nothing new | Invites switched off (`STUDIO_REFERRALS=off`) if they ever cost too much; the owner takes back gift links still waiting |
 | The prize wallet (her quizzes' prizes, 2026-10-09; AGI Studio's weekly spotlight prize since its round 2, 2026-10-10) | Not a free tier: the owner's own $AGI, at most `GAME_WINS_A_DAY` × `GAME_PRIZE` a day (2,500 $AGI by default) and one spotlight prize a week (`STUDIO_WEEKLY_PRIZE`, 10,000 by default, when the owner approves one), plus each prize's own tiny network fee in ETH | Quizzes are just for fun until it's topped up; prizes already won wait for their claim |
+| Helius (TRENCHING SIMULATOR's Live mode: Solana's live bonding curves, 2026-10-21) | Free plan: 1M credits a month, 10 requests a second, 5 WebSocket connections of 1,000 subscriptions each (the relay uses one connection and at most 950); WebSocket data billed since May 2026 (2 credits per 0.1 MB), so following 150 to 300 curves all month is about 130,000 to 780,000 credits (the research's measures), whatever the number of players. Its Developer plan ($49 a month) only if the owner wants more | Helius stops answering: Solana says it isn't on the live feed right now (the other chains go on); lower `TRENCH_SOLANA_TRACK` and `TRENCH_WATCH_MAX` (100 each) |
+| PumpPortal and PumpDev (new pump.fun coins for Live mode, 2026-10-21) | Free, no key: their new-coin (and migration) WebSocket feeds, one connection each from the relay, however many play. Never their paid trade streams (PumpPortal's are keyed and billed per trade since May 2026). PumpPortal with the owner's OK (2026-10-21; `PUMPPORTAL_WS_URL=off` switches it off) | No new coins: Solana is "quiet" and made-up stand-ins fill in; each reconnects by itself, and PumpDev takes over after 90 s without a new coin |
 
 ## Environment variables
 
@@ -10884,6 +11468,11 @@ Her live show's own settings (X Live Studio's stream key, Google Cloud's key, th
 2026-10-07 her new AI lines and X's Bearer Token for her own posts…) live only on the owner's server, in
 `/opt/agi1-live/live.env` (see "Her live show on X" and "Her stream, upgraded"), never in Vercel.
 
+TRENCHING SIMULATOR (2026-10-20 and 21) needs no new settings in Vercel: its plays and reviews use AGI games' (above).
+Its Live mode relay's settings (the Helius key, its caps and chains, `PUMPPORTAL_WS_URL`…) live only on the owner's
+server, in `/opt/agi1-trench/trench.env` (from `tools/trench-relay/trench.env.example`, see "Live mode" under
+"TRENCHING SIMULATOR"), never in Vercel.
+
 CloakMesh's waitlist (2026-10-03) needs no new settings: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `TURNSTILE_SECRET_KEY` and
 `PASS_SECRET`, as the chat.
 
@@ -10946,6 +11535,13 @@ The browser never gets a Supabase key (everything goes through our `/api`), so `
   `vercel.json` (see "AGI Studio, the AI influencer app", setup step 5; its DNS record in Namecheap's hosting cPanel, like
   inference.agi1.app's). It's another address than agi1.app, so the browser keeps its own 18+ answer and wallet session
   there.
+- **live.agi1.app** (2026-10-21, TRENCHING SIMULATOR's Live mode): a third subdomain, but **not on Vercel**: an A record
+  (in Namecheap's hosting cPanel, like the others) pointing at the owner's Hetzner server (`agi1-live`, her live show's
+  CX23), where Caddy serves it with its own Let's Encrypt certificate in front of the relay (wss://live.agi1.app/ws, its
+  pictures, `/health`). Vercel never deploys it: after a push that touches `tools/trench-relay/`, `sh
+  tools/trench-relay/relay.sh update` on the server brings it up to date (see "Live mode" under "TRENCHING SIMULATOR").
+  Until its record and the relay are set up, the game's Live mode says "Coming soon" (its Live coins button can't be
+  picked: `LIVE_OPEN`, the owner's choice, 2026-10-21); one small push opens it once the relay runs.
 
 ## Old site reference (AGI FINAL, read-only)
 
@@ -11745,9 +12341,25 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   intro". **Owner:** push (no SQL, no setting). Tests: 925 in the whole suite (921 pass, 4 skipped as before in this
   folder; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said six later times), the full
   build and a clean build like Vercel's, 67 checks in a browser, AGI games' browser test again (276).
-- **TRENCHING SIMULATOR: being built (2026-10-20)** (the owner's request, see the header): its trades' engine first (its
-  coins, their curves and what becomes of them, the other traders, the news), then its game (challenges, results), then
-  its five terminals (phones and computers), then on AGI games at agi1.app/games/trenchingsimulator.
+- **TRENCHING SIMULATOR: built 2026-10-20 and 21, waiting for the owner's push** (the owner's request, see the header):
+  built in that order: its trades' engine (its coins, their curves and what becomes of them, the other traders), its
+  game (nine challenges with the owner's two, the daily market, free play, results, AGI-1 in 8-bit, its sounds), its
+  first terminal, **Trench Board** (phones and computers; reworked 2026-10-21 in today's launchpad look), then on AGI
+  games (its card, key art, link preview and its own ratings tab, `#rate-trenchingsimulator`), and **its Live mode**
+  (the owner's: real new coins, play money only), with its relay for the owner's server (`tools/trench-relay/`, not
+  running yet). Still to build: Trench Chat, Trench Scan, Trench Pro and Trench Social ("Coming soon"), and multiplayer
+  ("coming soon"). **Then, the same day** (the owner: "can you just finish the first terminal first so i can try it. ill
+  add other terminals later since the game is still on beta and put it on the site also", then "wait why im using
+  heztner? im just creating a game right"; the owner's choices: "Just the game for now (Recommended)" and "Coming soon"
+  (Recommended)): Live mode says "Coming soon" on the site (`LIVE_OPEN`), like the four terminals not built yet; the
+  owner's OK for PumpPortal ("oh im friends with them they its okay"); the Helius and server walkthroughs wait. See
+  "TRENCHING SIMULATOR". **Owner:** push (no SQL, no setting); later, when the owner wants Live mode, its steps (a free
+  Helius key, the DNS record `live` → the server, ports 80 and 443, the settings file, `relay.sh update`, `relay.sh
+  check`), then Claude opens it (one small push). Tests: 1008 in the whole suite (1005 pass, 3 skipped in Claude's
+  workspace; on Node 20, 22 and 24, with and without Vercel's settings, in UTC and the workspace's time zone, and as if
+  the clock said six later times), the full build and a clean build like Vercel's, the game's smoke test (128 checks)
+  and axe (17 views, 0 issues), AGI games' browser test with two games (516 checks), Live mode's browser test (91
+  checks) and its "Coming soon" (42 checks).
 
 ## Decisions log
 
@@ -12128,7 +12740,22 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-20 | Its letters bold 7 × 7 (their uprights two pixels wide), banded light to deep honey with a pink shadow: the first ones, thin 5 × 7 letters under a shadow as wide as their strokes, read "A6I GANES" in its first contact sheets. Its flash once and at most 40% white (never a strobe); its shake small and only after the smash |
 | 2026-10-20 | Its cover is in each game's page itself, right after `<body>`, styled by its own CSS from the first paint, so the game never shows before it; its CSS fades it by itself after 4 s if its script never comes; outside the import tool's markers, so a new version of the game keeps it. A key that skipped it is swallowed with its repeats and its letting go (or after 5 s), a tap's click for 1.2 s; modifiers alone and shortcuts pass. Not picked: a cover made by the script (the game would show for a moment first), stopping every key (Tab and F5 keep what they do) |
 | 2026-10-20 | Her back for the far half of her spin (found in its first contact sheets: mirrored, her front read "AGI" backwards): her air frame with her hair over her head and neck and her long hair down her back, no letters (`tools/games/agi1-8bit.py`, its step 6). Not picked: no spin (the owner's "smashing" wanted a jump), her front mirrored without its letters (a blank tee reads as someone else) |
-| 2026-10-20 | TRENCHING SIMULATOR (the owner's request, see the header): AGI games' second game, at agi1.app/games/trenchingsimulator (the owner's address). The owner asked for the five terminals as "exact copies" with a safety note; Claude's answer: their layouts and workflows the way players know them (where things are, what each button does, their hotkeys), under our own names (Trench Chat, Trench Scan, Trench Board, Trench Pro, Trench Social), never the real terminals' names, logos, brand art or pictures, with the safety note "Play money only. Not affiliated with any real trading terminal. This game never asks for a wallet." (an exact copy of a trading site, its name and logo included, is what phishing sites look like). Play money in each terminal's own coin (the owner: "the same coins used on that terminals": SOL, dollars in Trench Social), SOL's real price from DexScreener frozen for each run; challenges like 1 SOL → 10 SOL in 30 minutes and $500 in 10 minutes; a phone layout for each terminal (bottom tabs, a buy and sell panel sliding up, thumb-sized quick buys), computers with the full layout and hotkeys. Words visitors read never name the real terminals |
+| 2026-10-20 | TRENCHING SIMULATOR (the owner's request, see the header): AGI games' second game, at agi1.app/games/trenchingsimulator (the owner's address). The owner asked for the five terminals as "exact copies" with a safety note; Claude's answer: their layouts and workflows the way players know them (where things are, what each button does, their hotkeys), under our own names (Trench Chat, Trench Scan, Trench Board, Trench Pro, Trench Social), never the real terminals' names, logos, brand art or pictures, with the safety note "Play money only. Not affiliated with any real trading terminal. This game never asks for a wallet." (an exact copy of a trading site, its name and logo included, is what phishing sites look like). Play money in each terminal's own coin (the owner: "the same coins used on that terminals": SOL, dollars in Trench Social), SOL's real price from DexScreener frozen for each run (so a run's dollars never move under the player; the price that browser saw last, else $150, when DexScreener doesn't answer); challenges like 1 SOL → 10 SOL in 30 minutes and $500 in 10 minutes; a phone layout for each terminal (bottom tabs, a buy and sell panel sliding up, thumb-sized quick buys), computers with the full layout and hotkeys. Words visitors read never name the real terminals (since Live mode, 2026-10-21, "from pump.fun" and "from clank.trade" only say where a real coin came from). Only Trench Board is built so far (2026-10-21) |
+| 2026-10-20 | TRENCHING SIMULATOR's market is made up and runs in the player's browser: a seeded engine with no clock of its own and no `Math.random` (a seed and the player's orders make the market, so the daily market is the same for everyone and a run can be played again in the tests), pump.fun's own curve numbers, each coin's fate decided at launch, made-up traders whose habits players can learn, names from themes, never a real ticker; nothing about players is kept on our side (progress in their own browser, no sign-in or wallet; only "a run started", like Ride 'Em, AGI!'s plays) |
+| 2026-10-20 | Live mode's real coins as they are (the owner, during its research: "there would be no restrictions on the names and the coins the names and picturres are as is, the streams is only on clank and clank allows everything on the stream"): no word filter, no picture check and no 18+ tap (the owner's call; Claude had offered an 18+ tap with the data-feed choice); names made safe to show as text only. AGI-1's own lines never name a real coin (Claude's, told to the owner). Some names or pictures can be crude or explicit: a picture blur like the risk check's, or a word mask, is a small change on the relay if it's ever wanted (see "Open questions") |
+| 2026-10-21 | Live mode (the owner's): real new coins, play money only, **Simulated the default** (a Market switch on the modes screen; the game never needs the relay); four chains (Solana's pump.fun first, Robinhood Chain's clank.trade, BNB Chain, Base; never Ethereum); each terminal's money the owner's (Trench Board and Trench Pro SOL, Trench Scan the chain's coin, Trench Chat ETH, Trench Social dollars); the daily market and Rug dodger stay made up (the same coins for everyone; a real coin is never called a rug); a live run on the real clock (one speed, its menu doesn't pause it) with its own stars and bests; never a link or a button to buy a real coin, only the first 6 characters of its address, "—" for what isn't known (never made-up holders, a dev, a rug or a caller on a real coin); made-up stand-ins, tagged "Simulated", whenever the feed is down or the chain is quiet, so it never breaks a run; its live line always on the page, above the bar under 1024 px (AGI-1's words there would cover it) |
+| 2026-10-21 | Live mode's relay on the owner's server, not Vercel: a WebSocket that stays open (Vercel's functions don't), one connection to each source passed on to every player (PumpPortal asks for one connection), players' addresses stay with us, and the site's CSP gains one address (live.agi1.app); on her live show's CX23 (already paid for) with at most 3/4 of a core and 512 MB, Caddy in front for HTTPS. Not picked (the research's): paid feeds (Helius Developer $49 a month, Bitquery $99, Birdeye $250, Codex $350, Solana Tracker €397 a month: never needed), each browser connecting to the sources itself (every player's address to them, and one connection per player where PumpPortal asks for one), Solana's public node ("not intended for production") |
+| 2026-10-21 | Live mode's coin pictures through our own server: each read once from public IPFS gateways (Filebase, Pinata's public one, then ipfs.io, last because it asks websites not to rely on it and limits hot-linked traffic since 2026-08-25), only real image bytes (never SVG), made a 128 px WebP; **never from pump.fun's own host**: its terms (§21(h)) ban bots and deep links to access or copy the platform. Claude's first answer to the owner, during the research, had said the pictures would come straight from pump.fun's own host; its terms say no, so they don't |
+| 2026-10-21 | Solana's live prices from Helius's free plan: a subscription to each followed coin's bonding-curve account (its exact state, worked into price and market cap as the game's engine does), the newest 150 coins plus up to 150 that players have open or hold (at most 950, under Helius's 1,000 a connection). Not picked: Solana's whole-program logs (1 to 2.5 TB a month), PumpPortal's trade streams (paid per trade since May 2026: about $1,350 a month at 5 trades a second), Helius's Parsed Streams for every new coin (a credit an event: about 1 to 1.5M credits a month, its $49 plan) |
+| 2026-10-21 | PumpDev as PumpPortal's backup (it takes over after 90 s without a new coin, and hands back), and **PumpPortal off (`PUMPPORTAL_WS_URL=off`: PumpDev alone) until PumpPortal gives a written OK**: PumpPortal's terms give a "single, personal, limited license" and say its data may not be published or distributed unless they authorize it; PumpDev's terms speak of products like a website, and its free new-coin feed needs no key (not legal advice; DexScreener's and Helius's terms are in "Open questions"). **Changed the same day:** the owner's OK ("oh im friends with them they its okay"), so PumpPortal is on from the start (no `PUMPPORTAL_WS_URL=off` line, no email) |
+| 2026-10-21 | Trench Board reworked to look and lay out like today's launchpad board (pump.fun's 2026 look, measured on its site on 2026-10-20 without signing in: its colors, lines, type sizes and layout: a grid of coin cards under the king of the hill, a chart-first coin page with its trade column on the right, a bar at the bottom of a phone and a trade sheet), every game feature kept, under our own name with a plain "T" mark: never its name, logo or art. A coin's address only as `CA` and its first 6 characters (wallets keep their short form); "24h" stats since launch (a run is minutes long); Holders the first tab; Info a phone's tab only; the latest trade and launch under the header at every width; hover rules only for a mouse; a phone's inputs 16 px (no zoom on focus) |
+| 2026-10-21 | Trench Board's label grey is #8a8a93, not the reference's #71717a: #71717a is 4.1:1 on its page and 3.2:1 on its chips (under WCAG AA's 4.5:1); #8a8a93 is just light enough to pass on all four of its backgrounds (4.51:1 on the lightest). Every text and background pair passes 4.5:1, its tags' tints and the king of the hill's included (Claude's scratch `trench/contrast.py`) |
+| 2026-10-21 | AGI games' ratings with two games: one "Ratings and reviews" with a tab per game (each game's picture and name), not a section per game: the page stays short as games are added, and the keyboard has one stop for the games (the arrows move between them; a panel isn't a Tab stop itself). `#rate` stays Ride 'Em, AGI!'s (its old links), `#rate-<game>` is each game's panel; one sign-in for both games; a hidden tab's box never asks our server for your review until it shows |
+| 2026-10-21 | `supabase/arcade.sql` unchanged for the second game: it checks a game's id only by its shape and keeps no list of games (a game's row comes with its first play), so the owner runs nothing new; `tests/arcade.test.js` holds it to that (no game named in the file) |
+| 2026-10-21 | The AI's look at a review is told which game it's for (`LOOK_GAMES`): without it, TRENCHING SIMULATOR's reviews would have been judged as reviews of "a cute runner game with a cat", with price talk ("buy, sell, pump, moon") refused; its own words make the game's made-up coins and pretend trades part of reviewing it, while real coins, trading apps and advice about real money stay refused. Ride 'Em, AGI!'s words are byte for byte as before, and the code's checks before the AI are unchanged |
+| 2026-10-21 | TRENCHING SIMULATOR's key art and link preview from real screenshots of the built game (Trench Board on a computer, a coin's page on a phone), the same every time (a fixed date, seeded dice, its clock moved by hand), as a sticker collage with see-through edges like Ride 'Em, AGI!'s, AGI-1 as her 2D art (never the 3D model), only our own names; the link preview in AGI games' card's look. Her line on agi1.app/games announces the second game ("my first game is out" was stale). `games.jpg` left as it is (not asked; its words still say it shows Ride 'Em, AGI!) |
+| 2026-10-21 | The game on the site first, Live mode "Coming soon" (the owner: "can you just finish the first terminal first so i can try it. ill add other terminals later since the game is still on beta and put it on the site also", then "wait why im using heztner? im just creating a game right"; the owner's choices: "Just the game for now (Recommended)" and "Coming soon" (Recommended)): the Live coins chip disabled like the four terminals not built yet, dashed and muted with a small "Soon" tag, its name for screen readers "Live coins, coming soon" (without it, screen readers heard "Live coinsSoon"); its words under the switch and in How to play; a Live choice a browser kept from a try set back to Simulated; no WebSocket opened. One switch, `LIVE_OPEN` in `live-chains.js`, with `liveOpen()` keeping Live mode open on this computer with a relay of its own (the tests and a try). Not picked: hiding Live mode altogether ("Coming soon" says what's coming, like the four terminals), opening it before its relay runs (every try would say the live feed isn't reachable), a Vercel setting for it (a Redeploy either way, and one more thing to set) |
+| 2026-10-21 | The walkthroughs postponed: the owner had asked to be walked through Live mode's setup step by step ("walk me through it step by step", "walk me through this also"), then picked "Just the game for now": Live mode's steps stay written down in "Live mode" for later, and PumpPortal's email step is gone (the owner's OK, "oh im friends with them they its okay") |
 
 ## Open questions
 
@@ -12567,6 +13194,45 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   come later: the owner's call). Not tried on real phones (Safari on an iPhone, Android) or with real screen readers: the
   owner's first game on a phone is the check. It's about 2.5 s the first time in a tab: if players find it long, it can
   be shorter (`FULL` in `src/games/intro-plan.js`).
+- **TRENCHING SIMULATOR** (2026-10-20 and 21):
+  - **The sources' terms:** the owner gave the OK for PumpPortal (2026-10-21: "oh im friends with them they its okay"),
+    so its feed is on from the start; its terms ask for their OK before its data is published, so a short yes from them
+    in writing is good to keep. DexScreener's terms allow commercial use but not "third parties" or a competing product,
+    and Helius's bar sublicensing or redistributing its products (prices worked out from its data aren't addressed):
+    worth a look before promoting Live mode widely (not legal advice).
+  - **Real coins' names and pictures, unfiltered, on a stream:** the owner's call ("the streams is only on clank and
+    clank allows everything on the stream"), but some will be crude or explicit, and a raw feed shows pictures pump.fun
+    itself hides (its own site flags and hides some; the feeds don't say). The site's own rule is "everything PG-13"
+    (see "Design"), and agi1.app/games has no 18+ gate before the game. If it's ever needed: a picture blur like the risk
+    check's, or a word mask, is a small change on the relay; an 18+ tap before Live mode, a small change in the game.
+  - **The words written before Live mode:** agi1.app/games's card says "Play money and made-up coins only: nothing in it
+    is real money or advice…" and its fine print "TRENCHING SIMULATOR is played with play money and made-up coins:
+    nothing in it is real money, a real coin or advice…" (2026-10-21, before Live mode was finished): true again while
+    Live mode says "Coming soon" (every coin on the site is made up), not once it opens. When it opens (the same small
+    push), Claude's suggestion, the owner's call: "…made-up coins (or, in Live mode, real new coins), all traded with
+    play money: nothing in it is real money or advice…" (`games.html`, and its checks in `tests/page.test.js`).
+  - **First blood's words:** it says "Finish above 1 SOL: any profit counts" ("Any profit at all."), but it's won at 1.05
+    SOL (its bar shows "1 SOL / 1.05 SOL"): a profit under 5% when its 5 minutes are up loses. Either its words or its
+    goal should change (`src/games/trenchingsimulator/challenges.js`, and `tests/trench-game.test.js`): the owner's call.
+  - **Helius's free plan under a big audience:** its credits follow how many curves are followed (at most 300: the newest
+    150 and up to 150 that players have open or hold), not how many people play, so a big stream raises them only toward
+    the upper estimate (about 780,000 of its 1M a month). Past 300, a coin a player opens isn't followed live (it says
+    "Not live" until a place frees up). Helius's dashboard is the check; lower the caps, or its $49 plan (the owner's call).
+  - **The relay shares her live show's CX23** (2 cores): at most 3/4 of a core and 512 MB, but never tried together with
+    a show and many players at once. If her stream stutters: fewer curves, `relay.sh stop` during a show, or the Rescale to
+    a CX33 the live show was waiting for anyway (see "Her live show on X", setup step 4).
+  - **The four terminals not built yet:** Trench Chat, Trench Scan, Trench Pro and Trench Social say "Coming soon" (the
+    owner: "ill add other terminals later since the game is still on beta"); which comes next is the owner's call (their
+    looks were measured on 2026-10-20, in Claude's scratch `trench/live-looks.md`; Trench Pro's only from its docs,
+    since its site sits behind a bot check). Multiplayer is "coming soon": not designed yet.
+  - **agi1.app/games's own link preview,** `public/cards/games.jpg`, still shows only Ride 'Em, AGI! (its words say
+    exactly that, so it's still true): one with both games is a small job (`tools/cards/games-card.html`), not asked yet.
+  - **AGI-1's bubble over Trench Board's mark** between 720 and 1023 px wide (tablets, small laptops): for a moment (at
+    least 2.4 s, never catching taps) it hangs over the board's "T" and the left of its search; on phones the bag is kept
+    clear of it, and on computers it sits in the bar's goal cell. A small change if it bothers anyone.
+  - **Not tried live:** real phones (Safari on an iPhone, Android), real screen readers, and Live mode against the real
+    services (only stand-ins shaped from their docs), the Docker build, Caddy, the certificate and the DNS record: the
+    owner's Live mode steps 8 and 10 are the first live check (Live mode says "Coming soon" on the site until step 9).
 
 ## Working in this repo
 
@@ -12595,17 +13261,19 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   expected launching to be off, but the owner's Pinata key was already in Vercel. Since then Claude also runs every test
   with all the settings in "Environment variables" set to real-looking values before handing over a change. A failed build
   never touches the live site: Vercel keeps serving the last good deployment.
-- **Tests pass on any day, at any time** (2026-10-10): a test may give the code its own `now` (a fixed date, to say which
-  minute or week it is), but the code must never compare that with the real clock. AGI Studio's round 2 failed on Vercel
-  that way: its clock's deadline was `now + 19 s`, so two tests that passed 12:00 and 12:30 UTC of that day as `now` ran
-  out of time once the real clock passed them (it passed on Claude's computer in the morning). Every server deadline is
-  the real clock's since then (`tests/influencer.test.js` checks it). Before handing over a change Claude also runs the
-  whole suite with the clock moved forward (a preloaded `Date` shim, `CLOCK_SHIFT_MS`, in Claude's scratch): across
-  midnight, into a Monday, a week on, across a month's and a year's end, six months on; and with `TZ=UTC` (Vercel's) as
-  well as the workspace's own time zone. One kind stays, and is harmless: a test of a day's count that is running at the
-  very moment 00:00 UTC passes fails (its first half counts under one day, its check reads the next); the run moved to
-  2026-12-31 23:59:20 hit it once, in a 20 ms launch test. A build meets that about once in tens of thousands: if a build
-  that ran right at 00:00 UTC (8:00 the owner's time) fails on a count "for today", Redeploy.
+- **Tests pass on any day, at any time** (2026-10-10): a test may give the code its own `now` (a fixed date, to say
+  which minute or week it is), but the code must never compare that with the real clock. AGI Studio's round 2 failed on
+  Vercel that way: its clock's deadline was `now + 19 s`, so two tests that passed 12:00 and 12:30 UTC of that day as
+  `now` ran out of time once the real clock passed them (it passed on Claude's computer in the morning). Every server
+  deadline is the real clock's since then (`tests/influencer.test.js` checks it). Before handing over a change Claude
+  also runs the whole suite with the clock moved forward (a preloaded `Date` shim, `CLOCK_SHIFT_MS`, in Claude's
+  scratch): across midnight, into a Monday, a week on, across a month's and a year's end, six months on; and with
+  `TZ=UTC` (Vercel's) as well as the workspace's own time zone. One kind stays, and is harmless: a test of a day's count
+  that is running at the very moment 00:00 UTC passes fails (its first half counts under one day, its check reads the
+  next); the run moved to 2026-12-31 23:59:20 hit it once, in a 20 ms launch test, and (2026-10-21) the run moved to
+  2026-10-21 23:59:20 hit it in AGI Studio's stats board test, whose jobs are done a second before its now (a 1-second
+  window: its "made today" read 0; confirmed with a frozen clock). A build meets that about once in tens of thousands:
+  if a build that ran right at 00:00 UTC (8:00 the owner's time) fails on a count "for today", Redeploy.
 - **A test that moves `Date.now` reads its day with `new Date(Date.now())`** (2026-10-12, the video editor's clock test):
   `new Date()` with no date reads the real clock, not a replaced `Date.now`. The clock test moves `Date.now` on a minute
   at a time and the fake database counts "today" by it, so a day read with `new Date()` disagreed with it for about a
@@ -12743,3 +13411,44 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 - **A browser test on a game's page waits for the AGI GAMES intro first** (2026-10-20): its cover is over the game for
   about 2.5 s, and a click on it skips it and is swallowed (it never reaches the game). `introGone()` in Claude's scratch
   `games/gm-lib.mjs` waits for its cover to be gone (at most about 6 s).
+- **Claude's made-up Vercel settings hold every name in "Environment variables"** (2026-10-21): they had lacked five
+  (`ROBINHOOD_RPC_URL`, `GEMINI_TTS_MODEL`, `VOICE_STREAM`, `TELEGRAM_MUSIC`, `STUDIO_CLEAN_AGI`), and with
+  `ROBINHOOD_RPC_URL` set, 7 of `tests/checker.test.js`'s tests failed: their fake node answers only the free public
+  node's address, and the test never deleted the setting (it does now, in its `beforeEach`, like the other tests that
+  fake the node). If the owner had ever set another node in Vercel, every build would have failed. Before each run with
+  the settings, Claude checks its list against the table's names.
+- **The relay's packages are its own** (2026-10-21): `tools/trench-relay/package.json` and its lock (ws and sharp, exact
+  versions) are what its Docker image installs; never add the relay's packages to the site's `package.json`. The site
+  has `ws` only as a dev dependency, for the tests that run the relay against its stand-ins (`tests/clips.test.js` allows
+  only `vite` and `ws` there).
+- **A browser test of a page that talks to a server on this computer serves the page from this computer too**
+  (2026-10-21, Live mode's browser test): a page Playwright makes up itself (`route.fulfill`) counts as a public site, and
+  Chromium then holds its requests to 127.0.0.1 (a public page reaching a private address). The test serves the built
+  game through a small local proxy that adds the site's real CSP, and points the game at the local relay with `?relay=`
+  (which only works on localhost).
+- **A test waits for a stand-in service to hear each message, never assumes it** (2026-10-21): Live mode's reconnect
+  test passed on Node 20 and 24 and failed once on Node 22 under load, because it went on before the stand-in Helius had
+  heard each subscription; it waits for them now (12 runs on each Node, 18 under load).
+- **Lightning CSS drops a plain fallback written before a `dvh` value** (2026-10-21, Trench Board's chart: `height:
+  300px` then a `clamp(…dvh…)`): it assumes every browser knows `dvh`, so browsers older than Chrome 108 or Safari 15.4
+  size the chart from its attributes. `color-mix()` with a plain color before it is kept. (Prefixed pairs: see "Lightning
+  CSS" above.)
+- **Screenshots that must come out the same every time take the page's clock** (2026-10-21, TRENCHING SIMULATOR's key
+  art): Playwright's clock, paused; its ticks put on a whole 16 ms frame first, its wall clock on a fixed moment, then
+  moved only in whole frames, with the game's dice seeded: two runs gave byte-identical screenshots
+  (`tools/games/trench-art.mjs`).
+- **An accessibility scan of a game waits for AGI-1's bubble to finish fading** (2026-10-21): an axe probe of Trench
+  Board in free play at 4× caught her bubble halfway through its fade (blended colors, 4.49:1, just under AA); at rest
+  it's #15161f on white (18:1) and passes. Like a sheet's fade-in above. Since then Claude's axe probe (its scratch
+  `trench/axeprobe.mjs`) notes her bubble's state before and after each scan, and scans again (up to 4 times) when it
+  moved during a scan that flagged it.
+- **A share card listed in `scripts/share-pages.js` must exist in `public/cards/` before a change is handed over**
+  (2026-10-21): `trenchingsimulator.jpg` was listed on 2026-10-20, before its picture was made, and `tests/share.test.js`
+  (and the build's own "share cards missing" check) failed until it was.
+- **AGI games' browser harness serves the site's real CSP** (2026-10-21): Claude's scratch `games/gm-lib.mjs` answers
+  with `vercel.json`'s headers, so its `connect-src` refuses a `?relay=ws://127.0.0.1…`: Live mode's "Coming soon" test
+  (`trench/livesoon.mjs`) takes the CSP's refusal as proof the page tried to connect, and Live mode's own browser test
+  (`trench/live/live-e2e.mjs`) serves the game through a proxy of its own.
+- **A mutation made with `perl -0pi -e 's/…/…/'`** (the whole file as one string) changes only the first match in the
+  file (2026-10-21): aimed at the "Soon" chip's CSS rule, it changed an earlier line, so that broken version went
+  uncaught. Aim the pattern inside the rule's own block, and check the line meant was the one that changed.

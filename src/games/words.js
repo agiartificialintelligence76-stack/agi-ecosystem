@@ -2,11 +2,24 @@
 // (api/wallet.js: GET ?game=…, game-mine, game-review, game-review-delete) in plain words, and the small sums its numbers
 // need (a row of stars, the bars, a review's place in the list, the numbers after your own review changed). Pure (no page
 // needed: tests/page.test.js reads it in Node). Never "buy", never a price: a game's numbers are plays, players and stars.
-import { REVIEW, STARS } from './list.js';
+import { REVIEW, STARS, isGame } from './list.js';
 import { WALLET_STEPS, NO_WALLET, short } from '../live/words.js';
 
 // connecting a wallet: the same steps and words as her live page's (src/live/words.js)
 export { WALLET_STEPS, NO_WALLET, short };
+
+// ---------- a game's ratings on the page (2026-10-21: two games, a tab each) ----------
+// Each game's ratings have their own address, #rate-<game> (its tab opens first: src/games/page.js). #rate, the address
+// from before there were two (Ride 'Em, AGI!'s own "Rate it", and links people shared), stays Ride 'Em, AGI!'s.
+export const OLD_RATE = Object.freeze({ hash: '#rate', game: 'rideemagi' });
+export const rateHash = (game) => `#rate-${game}`;
+// → the game a link to the page is for, or null (an address that isn't a game's ratings)
+export function gameOfHash(hash) {
+  const h = typeof hash === 'string' ? hash : '';
+  if (h === OLD_RATE.hash) return OLD_RATE.game;
+  const m = /^#rate-([a-z0-9]{2,24})$/.exec(h);
+  return m && isGame(m[1]) ? m[1] : null;
+}
 
 // her badge's names on a review: the site's own levels (src/lib/levels.js), never the wallet or an amount
 export const BADGE = { 2: 'Crush', 3: 'Soulmate' };

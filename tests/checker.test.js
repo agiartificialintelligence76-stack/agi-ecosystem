@@ -126,6 +126,9 @@ beforeEach(() => {
   forgetPictures();
   process.env.PASS_SECRET = 'test-pass-secret-that-is-long-enough-1234';
   delete process.env.CHECKER_HIDE_PICTURES;
+  // the fake node below is the free public one (server/chain.js's default): another node in the build's own settings
+  // (Vercel's ROBINHOOD_RPC_URL, if the owner ever sets one) must not send the scans elsewhere (2026-10-21)
+  delete process.env.ROBINHOOD_RPC_URL;
   console.error = () => {}; console.warn = () => {}; console.log = () => {};
   calls = [];
   inits = [];

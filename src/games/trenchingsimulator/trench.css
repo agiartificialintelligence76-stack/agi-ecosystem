@@ -1,0 +1,3570 @@
+/* TRENCHING SIMULATOR's styles (2026-10-20): its screens (ts-) and its Trench Board terminal (tsb-), in the colors of
+   the terminal being played (--t-*, set by paintTerminal() through the CSS object model: the site's CSP allows no style
+   attributes). Only this file and the AGI GAMES intro's are on the page, so the fonts and the page's base are here too.
+   Phones first: one column, bars at the bottom; the full layout from 720 px, the bag beside the board from 1180 px.
+   Everything moving stops with "reduce motion". */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Anybody';
+  src: url('/fonts/Anybody-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-stretch: 50% 150%;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- the page ---------- */
+html[data-page='trenchingsimulator'] {
+  --t-bg: #0b0b0e;
+  --t-panel: #131316;
+  --t-panel2: #1b1b1f;
+  --t-panel3: #242429;
+  --t-line: #232327;
+  --t-line2: #303036;
+  --t-text: #e4e4e7;
+  --t-soft: #d4d4d8;
+  --t-muted: #a1a1aa;
+  --t-dim: #8a8a93;
+  --t-hero: #fafafa;
+  --t-accent: #86efac;
+  --t-on-accent: #052e16;
+  --t-up: #4ade80;
+  --t-down: #f87171;
+  --t-on-down: #450a0a;
+  --t-warn: #eab308;
+  --t-info: #60a5fa;
+  --t-violet: #c084fc;
+  --ts-ink: #111218;
+  --ts-hud-h: 104px;
+  --ts-bottom: 0px;
+  color-scheme: dark;
+  background: var(--t-bg);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html[data-page='trenchingsimulator'] body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--t-bg);
+  color: var(--t-text);
+  font: 400 15px/1.45 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-page='trenchingsimulator'] *,
+html[data-page='trenchingsimulator'] *::before,
+html[data-page='trenchingsimulator'] *::after {
+  box-sizing: border-box;
+}
+html[data-page='trenchingsimulator'] [hidden] {
+  display: none !important;
+}
+.ts-root {
+  display: block;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--t-bg);
+  color: var(--t-text);
+}
+/* buttons and inputs start from their box's font and color; :where() keeps this reset at no weight, so a button's own
+   class (.tsb-place, .tsb-flash…) always wins over it (at .ts-root button's weight it beat every one-class rule) */
+:where(.ts-root button, .ts-root input, .ts-sheet button, .tsb-sheet button, .tsb-sheet input) {
+  font: inherit;
+  color: inherit;
+}
+.ts-root button,
+.ts-sheet button,
+.tsb-sheet button {
+  cursor: pointer;
+}
+.ts-root :focus-visible,
+.ts-sheet :focus-visible,
+.tsb-sheet :focus-visible {
+  outline: 2px solid var(--t-accent);
+  outline-offset: 2px;
+}
+.ts-root a,
+.ts-sheet a {
+  color: var(--t-accent);
+}
+.ts-noscript {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--t-muted);
+}
+.ts-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- the screens ---------- */
+.ts-screen {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+.ts-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin-bottom: 18px;
+}
+.ts-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px 0 10px;
+  border: 1px solid var(--t-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t-text);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+}
+.ts-root a.ts-back {
+  color: var(--t-text);
+}
+.ts-back:hover {
+  border-color: var(--t-muted);
+}
+.ts-brand {
+  font: 600 12px/1 'Geist Mono', ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  color: var(--t-muted);
+  text-align: right;
+}
+.ts-kicker {
+  margin: 0 0 6px;
+  font: 600 12px/1.3 'Geist Mono', ui-monospace, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t-accent);
+}
+.ts-title {
+  margin: 0;
+  font-family: 'Anybody', 'Geist', sans-serif;
+  font-weight: 900;
+  font-stretch: 70%;
+  font-size: clamp(44px, 13vw, 112px);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  color: var(--t-text);
+  text-shadow: 0.05em 0.05em 0 var(--t-accent);
+}
+.ts-h {
+  margin: 0 0 8px;
+  font-family: 'Anybody', 'Geist', sans-serif;
+  font-weight: 850;
+  font-stretch: 85%;
+  font-size: clamp(30px, 7vw, 50px);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+.ts-h:focus,
+.ts-title:focus,
+.ts-res-title:focus {
+  outline: none;
+}
+.ts-lede {
+  max-width: 58ch;
+  margin: 12px 0 0;
+  color: var(--t-muted);
+  font-size: 17px;
+  line-height: 1.5;
+}
+.ts-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 22px 0 0;
+}
+
+/* buttons */
+.ts-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--t-line);
+  border-radius: 12px;
+  background: var(--t-panel);
+  color: var(--t-text);
+  font-weight: 650;
+  font-size: 15px;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+.ts-root a.ts-btn {
+  color: var(--t-text);
+}
+.ts-btn:hover {
+  border-color: var(--t-muted);
+}
+.ts-btn:active {
+  transform: translateY(1px);
+}
+.ts-btn.is-primary {
+  border-color: var(--t-accent);
+  background: var(--t-accent);
+  color: var(--ts-ink);
+}
+.ts-btn.is-primary:hover {
+  filter: brightness(1.06);
+}
+.ts-btn.is-ghost {
+  background: transparent;
+}
+.ts-btn.is-danger {
+  border-color: var(--t-down);
+  background: transparent;
+  color: var(--t-down);
+}
+.ts-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.ts-ibtn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--t-line);
+  border-radius: 10px;
+  background: var(--t-panel);
+  color: var(--t-text);
+}
+.ts-ibtn:hover {
+  border-color: var(--t-muted);
+}
+
+/* home */
+.ts-home .ts-title {
+  margin-top: 6px;
+}
+.ts-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 26px 0 0;
+}
+.ts-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--t-line);
+  border-radius: 12px;
+  background: var(--t-panel);
+}
+.ts-stat b {
+  font: 650 22px/1.1 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.ts-stat span {
+  color: var(--t-muted);
+  font-size: 13px;
+}
+.ts-soon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 6px 12px;
+  border: 1px dashed var(--t-line);
+  border-radius: 999px;
+  color: var(--t-muted);
+  font-size: 13px;
+}
+.ts-how {
+  margin: 18px 0 0;
+  border: 1px solid var(--t-line);
+  border-radius: 12px;
+  background: var(--t-panel);
+}
+.ts-how summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 46px;
+  padding: 0 16px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+.ts-how summary::-webkit-details-marker {
+  display: none;
+}
+.ts-how summary::after {
+  content: '+';
+  color: var(--t-muted);
+  font: 500 20px/1 'Geist Mono', ui-monospace, monospace;
+}
+.ts-how[open] summary::after {
+  content: '−';
+}
+.ts-how p {
+  margin: 0;
+  padding: 0 16px 14px;
+  color: var(--t-muted);
+}
+.ts-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 28px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--t-line);
+  color: var(--t-muted);
+  font-size: 13px;
+}
+.ts-note .ts-icon {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+.ts-links {
+  margin: 12px 0 0;
+  color: var(--t-muted);
+  font-size: 13px;
+}
+
+/* the terminals */
+.ts-terms {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 12px;
+  margin: 22px 0 0;
+}
+.ts-term {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--t-line);
+  border-top: 3px solid var(--t-accent);
+  border-radius: 16px;
+  background: var(--t-panel);
+  color: var(--t-text);
+}
+.ts-term.is-on {
+  border-color: var(--t-accent);
+  box-shadow: 0 0 0 1px var(--t-accent);
+}
+.ts-term.is-soon {
+  background: var(--t-bg);
+}
+.ts-term-name {
+  margin: 0;
+  font-family: 'Anybody', 'Geist', sans-serif;
+  font-weight: 850;
+  font-stretch: 90%;
+  font-size: 24px;
+  line-height: 1.05;
+}
+.ts-term-tag {
+  margin: 0;
+  color: var(--t-muted);
+  font-size: 14px;
+}
+.ts-term-feats {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.ts-term-feats li {
+  display: flex;
+  gap: 8px;
+}
+.ts-term-feats li::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 0.55em;
+  border-radius: 2px;
+  background: var(--t-accent);
+}
+.ts-term-cur {
+  margin: 4px 0 0;
+  color: var(--t-accent);
+  font: 600 12px/1.3 'Geist Mono', ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+.ts-term .ts-btn {
+  margin-top: auto;
+  width: 100%;
+}
+
+/* the modes */
+.ts-mode-list {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 0;
+}
+.ts-mode {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-areas: 'icon title' 'icon line' 'icon sub';
+  column-gap: 14px;
+  row-gap: 2px;
+  align-items: center;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--t-line);
+  border-radius: 14px;
+  background: var(--t-panel);
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+.ts-mode:hover {
+  border-color: var(--t-accent);
+}
+.ts-mode .ts-icon {
+  grid-area: icon;
+  width: 44px;
+  height: 44px;
+  padding: 11px;
+  border-radius: 12px;
+  background: var(--t-bg);
+  color: var(--t-accent);
+  align-self: start;
+}
+.ts-mode b {
+  grid-area: title;
+  font-family: 'Anybody', 'Geist', sans-serif;
+  font-weight: 800;
+  font-stretch: 90%;
+  font-size: 20px;
+  line-height: 1.1;
+}
+.ts-mode span {
+  grid-area: line;
+  color: var(--t-text);
+  font-size: 14px;
+}
+.ts-mode small {
+  grid-area: sub;
+  color: var(--t-muted);
+  font: 500 12px/1.3 'Geist Mono', ui-monospace, monospace;
+}
+
+/* the challenges */
+.ts-tier {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 10px;
+  margin: 24px 0 0;
+}
+.ts-tier-h {
+  grid-column: 1 / -1;
+  margin: 0;
+  font: 650 12px/1.3 'Geist Mono', ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--t-muted);
+}
+.ts-ch {
+  --tier: var(--t-up);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--t-line);
+  border-left: 3px solid var(--tier);
+  border-radius: 12px;
+  background: var(--t-panel);
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+.ts-ch[data-tier='medium'] {
+  --tier: var(--t-accent);
+}
+.ts-ch[data-tier='hard'] {
+  --tier: #fb923c;
+}
+.ts-ch[data-tier='legendary'] {
+  --tier: #c4a8ff;
+}
+.ts-ch:hover {
+  border-color: var(--tier);
+}
+.ts-ch-name {
+  font-weight: 700;
+  font-size: 16px;
+}
+.ts-ch-goal {
+  font-size: 14px;
+}
+.ts-ch-meta {
+  color: var(--t-muted);
+  font: 500 12px/1.4 'Geist Mono', ui-monospace, monospace;
+}
+.ts-ch-best {
+  color: var(--t-muted);
+  font: 600 13px/1.3 'Geist Mono', ui-monospace, monospace;
+}
+.ts-ch.is-done .ts-ch-best {
+  color: var(--t-accent);
+}
+
+/* the brief */
+.ts-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 22px 0 0;
+  padding: 16px;
+  border: 1px solid var(--t-line);
+  border-radius: 14px;
+  background: var(--t-panel);
+}
+.ts-facts dt {
+  color: var(--t-muted);
+  font: 600 12px/1.6 'Geist Mono', ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ts-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+.ts-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+}
+.ts-chips-l {
+  flex: 0 0 100%;
+  color: var(--t-muted);
+  font: 600 12px/1.3 'Geist Mono', ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ts-chip {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--t-line);
+  border-radius: 999px;
+  background: var(--t-panel);
+  font: 600 13px/1.2 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.ts-chip:hover {
+  border-color: var(--t-muted);
+}
+.ts-chip[aria-checked='true'] {
+  border-color: var(--t-accent);
+  background: var(--t-accent);
+  color: var(--ts-ink);
+}
+/* a choice that isn't open yet (Live coins until its relay runs, 2026-10-21): dashed, its words muted, a "Soon" tag */
+.ts-chip:disabled {
+  border-style: dashed;
+  background: transparent;
+  color: var(--t-muted);
+  cursor: not-allowed;
+}
+.ts-chip:disabled:hover {
+  border-color: var(--t-line);
+}
+.ts-chip-soon {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border: 1px solid var(--t-line);
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ts-best {
+  margin: 14px 0 0;
+  color: var(--t-accent);
+  font: 600 14px/1.4 'Geist Mono', ui-monospace, monospace;
+}
+.ts-price {
+  margin: 14px 0 0;
+  color: var(--t-muted);
+  font: 500 12px/1.4 'Geist Mono', ui-monospace, monospace;
+}
+
+/* Live mode (2026-10-21): the Market switch, the chain, how the live feed is doing (its dot: live, waiting, off) */
+.ts-market {
+  margin: 18px 0 0;
+  padding: 2px 16px 16px;
+  border: 1px solid var(--t-line);
+  border-radius: 14px;
+  background: var(--t-panel);
+}
+.ts-market.is-live {
+  border-color: var(--t-up);
+  border-color: color-mix(in srgb, var(--t-up) 45%, var(--t-line));
+}
+.ts-market .ts-chips {
+  margin-top: 12px;
+}
+.ts-live-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 62ch;
+  margin: 14px 0 0;
+  color: var(--t-text);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.ts-live-state::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 0.42em;
+  border-radius: 50%;
+  background: var(--t-warn);
+}
+.ts-live-state[data-tone='live']::before {
+  background: var(--t-up);
+}
+.ts-live-state[data-tone='off']::before {
+  background: var(--t-down);
+}
+.ts-live-about {
+  max-width: 62ch;
+  margin: 10px 0 0;
+  color: var(--t-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* loading */
+.ts-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  min-height: 70dvh;
+  text-align: center;
+}
+.ts-loading .ts-lede {
+  margin-top: 4px;
+}
+.ts-spin {
+  width: 44px;
+  height: 44px;
+  margin: 0 0 18px;
+  border: 4px solid var(--t-line);
+  border-top-color: var(--t-accent);
+  border-radius: 50%;
+  animation: ts-spin 0.8s linear infinite;
+}
+@keyframes ts-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- a run: the HUD over the terminal ---------- */
+.ts-play {
+  max-width: none;
+  padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.ts-hud {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'pause goal tools'
+    'agi money time';
+  align-items: center;
+  gap: 8px 10px;
+  min-height: var(--ts-hud-h);
+  padding: 8px 12px;
+  padding-top: max(8px, env(safe-area-inset-top));
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+  border-bottom: 1px solid var(--t-line);
+  background: var(--t-panel);
+}
+.ts-hud > .ts-ibtn {
+  grid-area: pause;
+}
+.ts-hud-agi {
+  grid-area: agi;
+  position: relative;
+}
+.ts-hud-goal {
+  grid-area: goal;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.ts-hud-name {
+  overflow: hidden;
+  margin: 0;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ts-hud-label {
+  overflow: hidden;
+  color: var(--t-muted);
+  font: 500 12px/1.2 'Geist Mono', ui-monospace, monospace;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ts-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--t-line);
+}
+.ts-bar > i {
+  display: block;
+  width: calc(var(--p, 0) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--t-accent);
+  transition: width 0.25s ease;
+}
+.ts-hud-time {
+  grid-area: time;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  color: var(--t-muted);
+}
+.ts-hud-clock {
+  color: var(--t-text);
+  font: 650 18px/1 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.ts-hud-clock.is-low {
+  color: var(--t-down);
+  animation: ts-blink 1s steps(2, start) infinite;
+}
+@keyframes ts-blink {
+  to {
+    opacity: 0.45;
+  }
+}
+.ts-hud-money {
+  grid-area: money;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ts-hud-worth {
+  font: 700 18px/1.1 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ts-hud-pnl {
+  overflow: hidden;
+  color: var(--t-muted);
+  font: 600 12px/1.3 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ts-hud-pnl.is-up {
+  color: var(--t-up);
+}
+.ts-hud-pnl.is-down {
+  color: var(--t-down);
+}
+.ts-hud-tools {
+  grid-area: tools;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.ts-speed {
+  width: auto;
+  min-width: 40px;
+  padding: 0 8px;
+  font: 650 13px/1 'Geist Mono', ui-monospace, monospace;
+}
+.ts-end {
+  min-height: 40px;
+  max-width: 108px;
+  padding: 0 12px;
+  font-size: 13px;
+  white-space: normal;
+}
+.ts-board-host {
+  min-width: 0;
+}
+/* a live run's line under the HUD: live on which chain (a beating green dot), or why it's simulated right now */
+.ts-live-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 12px;
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+  border-bottom: 1px solid var(--t-line);
+  background: var(--t-bg);
+  color: var(--t-text);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.ts-live-strip > i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--t-warn);
+}
+.ts-live-strip[data-tone='live'] > i {
+  background: var(--t-up);
+  animation: ts-live-dot 1.6s ease-in-out infinite;
+}
+.ts-live-strip[data-tone='off'] > i {
+  background: var(--t-down);
+}
+.ts-live-strip[data-tone='off'] {
+  border-bottom-color: var(--t-down);
+  border-bottom-color: color-mix(in srgb, var(--t-down) 45%, var(--t-line));
+}
+.ts-live-words {
+  min-width: 0;
+}
+@keyframes ts-live-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* AGI-1: her 8-bit face, and her words */
+.ts-agi {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ts-agi-face {
+  display: block;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--t-bg);
+  background: color-mix(in srgb, var(--t-accent) 16%, var(--t-bg));
+  image-rendering: pixelated;
+}
+.ts-agi-bubble {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 40;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 120px));
+  padding: 9px 13px;
+  border-radius: 14px;
+  background: #fff;
+  color: #15161f;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.35;
+  text-wrap: balance;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+.ts-agi-bubble::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 15px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+.ts-agi-bubble:empty {
+  padding: 0;
+}
+.ts-agi-bubble.is-on {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- the results ---------- */
+.ts-res-title {
+  margin: 0;
+  font-family: 'Anybody', 'Geist', sans-serif;
+  font-weight: 900;
+  font-stretch: 80%;
+  font-size: clamp(34px, 9vw, 64px);
+  line-height: 0.95;
+}
+.ts-results.is-up .ts-res-title {
+  color: var(--t-up);
+}
+.ts-results.is-down .ts-res-title {
+  color: var(--t-down);
+}
+.ts-res-stars {
+  margin: 8px 0 0;
+  color: var(--t-accent);
+  font-size: 30px;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+.ts-res-big {
+  margin: 14px 0 0;
+  font-family: 'Anybody', 'Geist', sans-serif;
+  font-weight: 900;
+  font-stretch: 75%;
+  font-size: clamp(64px, 20vw, 140px);
+  font-variant-numeric: tabular-nums;
+  line-height: 0.9;
+}
+.ts-res-line {
+  margin: 8px 0 0;
+  font: 600 15px/1.4 'Geist Mono', ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+.ts-spark {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 18px 0 0;
+  border: 1px solid var(--t-line);
+  border-radius: 12px;
+  background: var(--t-panel);
+}
+.ts-spark-area {
+  fill: var(--t-up);
+  opacity: 0.14;
+}
+.ts-spark-line {
+  fill: none;
+  stroke: var(--t-up);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.ts-spark.is-down .ts-spark-area {
+  fill: var(--t-down);
+}
+.ts-spark.is-down .ts-spark-line {
+  stroke: var(--t-down);
+}
+.ts-spark-base {
+  stroke: var(--t-muted);
+  stroke-width: 1;
+  stroke-dasharray: 6 6;
+  opacity: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+.ts-res-stats {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 18px 0 0;
+  padding: 16px;
+  border: 1px solid var(--t-line);
+  border-radius: 14px;
+  background: var(--t-panel);
+}
+.ts-res-stats dt {
+  color: var(--t-muted);
+  font-size: 13px;
+}
+.ts-res-stats dd {
+  margin: 0;
+  font: 600 14px/1.4 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.ts-res-stats dd.is-up {
+  color: var(--t-up);
+}
+.ts-res-stats dd.is-down {
+  color: var(--t-down);
+}
+.ts-res-agi {
+  margin: 20px 0 0;
+}
+.ts-res-agi .ts-agi {
+  align-items: flex-start;
+  gap: 14px;
+}
+.ts-res-agi .ts-agi-face {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+}
+.ts-res-agi .ts-agi-bubble {
+  position: relative;
+  top: auto;
+  left: auto;
+  margin-top: 10px;
+  max-width: min(420px, calc(100vw - 120px));
+  opacity: 1;
+  transform: none;
+}
+.ts-res-agi .ts-agi-bubble::before {
+  top: 14px;
+  left: -5px;
+}
+
+/* ---------- toasts ---------- */
+.ts-toasts {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + var(--ts-bottom) + env(safe-area-inset-bottom));
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.ts-toast {
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border: 1px solid var(--t-line);
+  border-left: 4px solid var(--t-accent);
+  border-radius: 12px;
+  background: var(--t-panel);
+  color: var(--t-text);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.35;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.4);
+  animation: ts-toast-in 0.2s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.ts-toast.is-up {
+  border-left-color: var(--t-up);
+}
+.ts-toast.is-down {
+  border-left-color: var(--t-down);
+}
+.ts-toast.is-out {
+  opacity: 0;
+  transform: translateY(6px);
+}
+@keyframes ts-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ---------- sheets (native dialogs) ---------- */
+.ts-sheet,
+.tsb-sheet {
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--t-line);
+  border-radius: 18px;
+  background: var(--t-panel);
+  color: var(--t-text);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.5);
+  overscroll-behavior: contain;
+}
+.ts-sheet::backdrop,
+.tsb-sheet::backdrop {
+  background: rgb(5 6 10 / 0.6);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.ts-sheet[open],
+.tsb-sheet[open] {
+  animation: ts-sheet-in 0.2s ease;
+}
+@keyframes ts-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.ts-sheet-head,
+.tsb-sheet-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 10px 18px;
+  background: var(--t-panel);
+}
+.ts-sheet-head h2 {
+  margin: 0;
+  font-family: 'Anybody', 'Geist', sans-serif;
+  font-weight: 850;
+  font-stretch: 90%;
+  font-size: 24px;
+  line-height: 1.1;
+}
+.ts-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 18px 20px;
+}
+.ts-sheet-body > .ts-btn {
+  width: 100%;
+}
+.ts-sheet-body p {
+  margin: 0;
+  color: var(--t-muted);
+}
+.ts-sheet-line {
+  font: 500 13px/1.4 'Geist Mono', ui-monospace, monospace;
+}
+.ts-sheet .ts-sheet-line {
+  color: var(--t-text);
+}
+.ts-sheet-note {
+  margin-top: -4px;
+  font-size: 13px;
+}
+.ts-sheet .ts-chips {
+  margin: 6px 0 0;
+}
+
+/* ---------- the Trench Board terminal ---------- */
+/* Today's launchpad boards (2026-10-21, #406): a near-black page with panels a step lighter, hairlines instead of
+   shadows, Geist at 11 to 13 px with tabular figures, three greys for words and a brighter one for what matters, a soft
+   green for what to press (dark words on it), radius 6 (4 inside segmented controls). Phones first: a list of coins; a
+   coin's page with its stats row, its chart and its tabs, and a green Trade button over a tab bar. From 720 px a grid of
+   cards and the coin's page with its trade column; from 1180 px the bag on the left. */
+.tsb {
+  --tsb-nav-h: 0px;
+  --tsb-buy-h: 0px;
+  display: block;
+  min-height: calc(100dvh - var(--ts-hud-h));
+  background: var(--t-bg);
+  color: var(--t-text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.tsb-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.tsb .is-up {
+  color: var(--t-up);
+}
+.tsb .is-down {
+  color: var(--t-down);
+}
+
+/* the header: the brand, the latest trade and launch, the search, the wallet */
+.tsb-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'brand search wallet'
+    'flash flash flash';
+  align-items: center;
+  gap: 0 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--t-line);
+  background: var(--t-bg);
+}
+.tsb-brand {
+  grid-area: brand;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.tsb-logo {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--t-accent);
+}
+.tsb-logo::after {
+  content: 'T';
+  color: var(--t-on-accent);
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1;
+}
+.tsb-brand-t {
+  color: var(--t-hero);
+  font-weight: 650;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.tsb-flashes {
+  grid-area: flash;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 8px;
+}
+/* nothing to show yet: no empty row under the search */
+.tsb-flashes:not(:has(> :not([hidden]))) {
+  display: none;
+}
+.tsb-flash {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 28px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: var(--t-panel2);
+  color: var(--t-soft);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.tsb-flash-t {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tsb-verb {
+  font-weight: 650;
+}
+.tsb-verb.is-made {
+  color: var(--t-accent);
+}
+/* a new trade or launch: one shake and a glow (the board takes its class off when it ends) */
+.tsb-flash.is-new {
+  animation: tsb-flash 0.9s ease;
+}
+@keyframes tsb-flash {
+  0% {
+    transform: none;
+    border-color: var(--t-accent);
+    background-color: var(--t-panel3);
+  }
+  10% {
+    transform: translateX(-3px);
+  }
+  20% {
+    transform: translateX(3px);
+  }
+  30% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  50% {
+    transform: none;
+  }
+  100% {
+    transform: none;
+    border-color: var(--t-line2);
+    background-color: var(--t-panel2);
+  }
+}
+.tsb-search {
+  grid-area: search;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 36px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: var(--t-panel);
+  color: var(--t-dim);
+  cursor: text;
+}
+.tsb-search:focus-within {
+  border-color: var(--t-accent);
+  box-shadow: 0 0 0 1px var(--t-accent);
+}
+.tsb-search-ic {
+  width: 16px;
+  height: 16px;
+}
+.tsb-search-in {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--t-text);
+  font-size: 13px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* its box shows the focus (the ring round the whole search) */
+.tsb-search .tsb-search-in:focus-visible {
+  outline: none;
+}
+.tsb-search-in::placeholder {
+  color: var(--t-dim);
+  opacity: 1;
+}
+.tsb-search-in::-webkit-search-decoration,
+.tsb-search-in::-webkit-search-cancel-button {
+  display: none;
+}
+.tsb-kbd {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--t-line2);
+  border-radius: 4px;
+  color: var(--t-dim);
+  font: 500 11px/1 'Geist Mono', ui-monospace, monospace;
+}
+.tsb-wallet {
+  grid-area: wallet;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  height: 36px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: var(--t-panel);
+  color: var(--t-text);
+  white-space: nowrap;
+}
+.tsb-wallet-ic {
+  width: 16px;
+  height: 16px;
+  color: var(--t-accent);
+}
+.tsb-wallet-n {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--t-hero);
+  font: 600 13px/1 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-wallet-u {
+  color: var(--t-dim);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* the page under it (phones: room at the bottom for the tab bar and the Trade button) */
+.tsb-body {
+  display: block;
+}
+.tsb-main {
+  min-width: 0;
+  padding-bottom: calc(var(--tsb-nav-h) + var(--tsb-buy-h) + env(safe-area-inset-bottom));
+}
+.tsb-aside {
+  display: none;
+}
+
+/* the board: the king of the hill, its sorts, the coins */
+.tsb-boardview {
+  padding: 12px 12px 24px;
+}
+.tsb-koth {
+  margin: 0 0 16px;
+}
+.tsb-koth-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--t-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.tsb-koth-ic {
+  width: 16px;
+  height: 16px;
+  color: var(--t-warn);
+}
+.tsb-koth-card {
+  max-width: 760px;
+}
+.tsb-kothbtn {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--t-line2);
+  border-color: color-mix(in srgb, var(--t-warn) 40%, var(--t-line2));
+  border-radius: 6px;
+  background: var(--t-panel);
+  background: color-mix(in srgb, var(--t-warn) 6%, var(--t-panel));
+  color: var(--t-text);
+  text-align: left;
+}
+.tsb-koth-picslot {
+  display: flex;
+}
+.tsb-ktxt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.tsb-ktop {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.tsb-koth-tk {
+  flex: none;
+  color: var(--t-hero);
+  font-size: 16px;
+  font-weight: 600;
+}
+.tsb-koth-nm {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--t-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tsb-koth-by {
+  color: var(--t-dim);
+  font-size: 11px;
+}
+.tsb-kmc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+}
+.tsb-klabel {
+  color: var(--t-dim);
+  font-size: 11px;
+}
+.tsb-koth-mcv {
+  color: var(--t-accent);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-koth-ch {
+  color: var(--t-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-kprog {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.tsb-kprog .tsb-bar {
+  flex: 1 1 auto;
+  max-width: 280px;
+}
+.tsb-koth-pv {
+  flex: none;
+  color: var(--t-dim);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.tsb-koth-line {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--t-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.tsb-koth-line:empty {
+  display: none;
+}
+.tsb-kfoot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--t-dim);
+  font-size: 11px;
+}
+.tsb-rep-ic {
+  width: 12px;
+  height: 12px;
+}
+.tsb-koth-empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed var(--t-line2);
+  border-radius: 6px;
+  color: var(--t-muted);
+  font-size: 13px;
+}
+.tsb-sortbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+.tsb-sort {
+  height: 28px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--t-muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.tsb-sort[aria-pressed='true'] {
+  border-color: var(--t-panel3);
+  background: var(--t-panel3);
+  color: var(--t-hero);
+}
+/* always in the page: its note is a live region */
+.tsb-gridhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 8px;
+}
+.tsb-gridnote {
+  margin: 0;
+  color: var(--t-muted);
+  font-size: 13px;
+}
+.tsb-gridnote:not(:empty) {
+  margin-bottom: 10px;
+}
+.tsb-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  margin: 0 0 10px;
+  padding: 0 10px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--t-soft);
+  font-size: 12px;
+  font-weight: 500;
+}
+.tsb-clear-ic {
+  width: 14px;
+  height: 14px;
+}
+.tsb-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+.tsb-card {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--t-line);
+  border-radius: 6px;
+  background: var(--t-panel);
+  color: var(--t-text);
+  text-align: left;
+}
+.tsb-card.is-koth {
+  border-color: var(--t-warn);
+  border-color: color-mix(in srgb, var(--t-warn) 45%, var(--t-line));
+}
+.tsb-card.is-rugged .tsb-pic {
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+/* the coin that just went to the top: one shake and a glow (the board takes its class off when it ends) */
+.tsb-card.is-bump {
+  animation: tsb-shake 0.45s ease;
+}
+@keyframes tsb-shake {
+  0% {
+    transform: none;
+    box-shadow: 0 0 0 1px var(--t-accent);
+  }
+  20% {
+    transform: translateX(-4px) rotate(-1deg);
+  }
+  40% {
+    transform: translateX(4px) rotate(1deg);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: none;
+    box-shadow: 0 0 0 1px transparent;
+  }
+}
+.tsb-card-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.tsb-c-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.tsb-tk {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  color: var(--t-hero);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tsb-nm {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--t-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tsb-age {
+  flex: none;
+  margin-left: auto;
+  color: var(--t-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-c-cap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.tsb-c-l {
+  color: var(--t-dim);
+  font-size: 11px;
+}
+.tsb-c-mcv {
+  color: var(--t-accent);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-c-ch {
+  color: var(--t-muted);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-c-prog {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tsb-c-prog .tsb-bar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tsb-c-pv {
+  flex: none;
+  color: var(--t-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tsb-c-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+.tsb-c-by {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--t-dim);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tsb-c-rep {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--t-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-c-line {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--t-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.tsb-c-line:empty {
+  display: none;
+}
+
+/* a coin's tags: a tint of their color, the word in it */
+.tsb-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tsb-tags:empty {
+  display: none;
+}
+.tsb-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--t-panel3);
+  color: var(--t-soft);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.tsb-tag.is-koth,
+.tsb-tag.is-mig {
+  background: var(--t-panel3);
+  background: color-mix(in srgb, var(--t-warn) 14%, transparent);
+  color: var(--t-warn);
+}
+.tsb-tag.is-pool,
+.tsb-tag.is-dev {
+  background: var(--t-panel3);
+  background: color-mix(in srgb, var(--t-accent) 14%, transparent);
+  color: var(--t-accent);
+}
+.tsb-tag.is-rug {
+  background: var(--t-panel3);
+  background: color-mix(in srgb, var(--t-down) 14%, transparent);
+  color: var(--t-down);
+}
+.tsb-tag.is-cto {
+  background: var(--t-panel3);
+  background: color-mix(in srgb, var(--t-info) 14%, transparent);
+  color: var(--t-info);
+}
+.tsb-tag.is-dex {
+  background: var(--t-panel3);
+  background: color-mix(in srgb, var(--t-violet) 14%, transparent);
+  color: var(--t-violet);
+}
+.tsb-tag-ic {
+  width: 11px;
+  height: 11px;
+}
+/* Live mode: a made-up stand-in among real coins, and a real coin whose market isn't live right now */
+.tsb-tag.is-sim {
+  background: var(--t-panel3);
+  background: color-mix(in srgb, var(--t-info) 14%, transparent);
+  color: var(--t-info);
+}
+.tsb-tag.is-stale {
+  background: var(--t-panel3);
+  background: color-mix(in srgb, var(--t-warn) 14%, transparent);
+  color: var(--t-warn);
+}
+
+/* bars: a bonding curve, the king of the hill's race (their fill from --p, set on the bar) */
+.tsb-bar {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--t-panel3);
+}
+.tsb-bar > i {
+  display: block;
+  width: calc(var(--p, 0) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--t-accent);
+  transition: width 0.25s ease;
+}
+.tsb-bar.is-big {
+  height: 6px;
+}
+.tsb-bar.is-gold > i,
+.tsb-bar.is-mig > i {
+  background: var(--t-warn);
+}
+
+/* a coin's picture: its emoji on a tile of its theme's color */
+.tsb-pic {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: hsl(var(--h, 262) 40% 24%);
+  background: radial-gradient(circle at 30% 25%, hsl(var(--h, 262) 70% 50% / 0.6), transparent 62%), hsl(var(--h, 262) 40% 20%);
+  font-size: 22px;
+  line-height: 1;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.tsb-pic.is-xs {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.tsb-pic.is-card {
+  width: 56px;
+  height: 56px;
+  font-size: 30px;
+}
+.tsb-pic.is-koth {
+  width: 56px;
+  height: 56px;
+  font-size: 32px;
+  box-shadow: 0 0 0 2px var(--t-warn);
+}
+.tsb-pic.is-ch {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 24px;
+}
+.tsb-pic.is-pos {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+}
+.tsb-pic.is-about {
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+}
+/* a real coin's own picture (Live mode, from our relay) over its tile; gone if it doesn't load (the emoji again) */
+.tsb-pic.is-img {
+  position: relative;
+  font-size: 0;
+}
+.tsb-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  background: var(--t-panel2);
+}
+
+/* a coin's page: its header, its numbers, its chart and its tabs */
+.tsb-coin {
+  display: block;
+}
+.tsb-coin-l {
+  min-width: 0;
+  padding: 10px 12px 24px;
+}
+.tsb-coinbar {
+  display: flex;
+  align-items: center;
+  margin: 0 0 10px;
+}
+.tsb-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  margin: 0;
+  padding: 0 10px 0 6px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--t-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.tsb-back-ic {
+  width: 16px;
+  height: 16px;
+}
+.tsb-ch {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+.tsb-ch-pic {
+  display: flex;
+}
+.tsb-ch-t {
+  min-width: 0;
+}
+.tsb-ch-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+  margin: 0;
+  line-height: 1.2;
+}
+.tsb-ch-tk {
+  color: var(--t-hero);
+  font-size: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.tsb-ch-full {
+  min-width: 0;
+  color: var(--t-muted);
+  font-size: 13px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.tsb-ch-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.tsb-ch-socs {
+  display: contents;
+}
+.tsb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--t-line2);
+  border-radius: 4px;
+  background: var(--t-panel2);
+  color: var(--t-soft);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.tsb-chip.is-mono {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+}
+.tsb-chip.is-warn {
+  color: var(--t-warn);
+}
+.tsb-chip.is-off {
+  color: var(--t-dim);
+}
+.tsb-chip.is-real {
+  border-color: var(--t-accent);
+  border-color: color-mix(in srgb, var(--t-accent) 40%, var(--t-line2));
+  color: var(--t-accent);
+}
+.tsb-chip-ic {
+  width: 12px;
+  height: 12px;
+  color: var(--t-dim);
+}
+.tsb-ch-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 20px;
+  margin-top: 14px;
+}
+.tsb-ch-mc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tsb-ch-l {
+  color: var(--t-dim);
+  font-size: 11px;
+}
+.tsb-ch-mcv {
+  color: var(--t-hero);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-ch-mcch {
+  color: var(--t-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-ch-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+}
+.tsb-ch-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tsb-ch-stat dt {
+  color: var(--t-dim);
+  font-size: 11px;
+}
+.tsb-ch-stat dd {
+  margin: 0;
+  color: var(--t-text);
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-ch-stat.is-wide {
+  display: none;
+}
+.tsb-ch-curve {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+.tsb-ch-curve-t {
+  color: var(--t-muted);
+  font-size: 12px;
+}
+.tsb-chartbox {
+  margin-top: 14px;
+}
+.tsb-chart-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.tsb-tfs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: var(--t-panel);
+}
+.tsb-tf {
+  min-width: 36px;
+  height: 26px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--t-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-tf[aria-pressed='true'] {
+  background: var(--t-panel3);
+  color: var(--t-accent);
+}
+.tsb-tf:focus-visible {
+  outline-offset: -2px;
+}
+.tsb-chart-lbl {
+  color: var(--t-dim);
+  font-size: 11px;
+  white-space: nowrap;
+}
+/* its edge is a shadow, never a border: the chart sizes itself from the canvas's box */
+.tsb-canvas {
+  display: block;
+  width: 100%;
+  height: 300px;
+  height: clamp(260px, 44dvh, 370px);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--t-line);
+}
+.tsb-tabs {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--t-line);
+  scrollbar-width: none;
+}
+.tsb-tabs::-webkit-scrollbar {
+  display: none;
+}
+.tsb-tab {
+  flex: none;
+  height: 38px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-muted);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: inset 0 -2px 0 transparent;
+}
+.tsb-tab[aria-pressed='true'] {
+  color: var(--t-text);
+  box-shadow: inset 0 -2px 0 var(--t-text);
+}
+.tsb-tab:focus-visible {
+  outline-offset: -2px;
+}
+.tsb-tab-n {
+  color: var(--t-dim);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-tab-n:empty {
+  display: none;
+}
+.tsb-panes {
+  margin-top: 2px;
+}
+.tsb-tablewrap {
+  overflow-x: auto;
+}
+.tsb-tablewrap:focus-visible {
+  outline-offset: -2px;
+}
+.tsb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-table th {
+  height: 32px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--t-line);
+  color: var(--t-dim);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.tsb-table td {
+  height: 36px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--t-line);
+  color: var(--t-text);
+  white-space: nowrap;
+}
+.tsb-table th:first-child,
+.tsb-table td:first-child {
+  padding-left: 0;
+}
+.tsb-table th:last-child,
+.tsb-table td:last-child {
+  padding-right: 0;
+}
+.tsb-table .tsb-num {
+  text-align: right;
+}
+.tsb-acct {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+}
+.tsb-htag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--t-panel3);
+  color: var(--t-soft);
+  font: 500 10px/1.4 'Geist', system-ui, sans-serif;
+  vertical-align: 1px;
+}
+.tsb-htag:empty {
+  display: none;
+}
+.tsb-table tr.is-me td {
+  background: var(--t-panel);
+  background: color-mix(in srgb, var(--t-accent) 7%, transparent);
+}
+.tsb-table tr.is-me .tsb-acct {
+  color: var(--t-accent);
+}
+.tsb-table tr.is-pool td {
+  color: var(--t-muted);
+}
+.tsb-table tr.is-pool .tsb-acct {
+  font-family: inherit;
+}
+.tsb-table tr.tsb-empty td {
+  height: 72px;
+  color: var(--t-dim);
+  text-align: center;
+  white-space: normal;
+}
+.tsb-table tr.is-buy .tsb-type {
+  color: var(--t-up);
+  font-weight: 500;
+}
+.tsb-table tr.is-sell .tsb-type {
+  color: var(--t-down);
+  font-weight: 500;
+}
+.tsb-table .tsb-when,
+.tsb-table .tsb-c-when {
+  color: var(--t-dim);
+}
+.tsb-thread {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tsb-post {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--t-line);
+}
+.tsb-post.is-op {
+  margin: 10px 0 4px;
+  padding: 12px;
+  border: 1px solid var(--t-line);
+  border-radius: 6px;
+  background: var(--t-panel);
+}
+.tsb-av {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: hsl(var(--h, 262) 45% 28%);
+  color: var(--t-hero);
+  font-size: 13px;
+  font-weight: 600;
+}
+.tsb-post-b {
+  min-width: 0;
+}
+.tsb-post-h {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  margin: 0;
+  font-size: 12px;
+}
+.tsb-post-h b {
+  color: var(--t-text);
+  font-weight: 600;
+}
+.tsb-post-h .tsb-when {
+  color: var(--t-dim);
+  font-size: 11px;
+}
+.tsb-post-x {
+  margin: 3px 0 0;
+  color: var(--t-soft);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* the trade column (phones: its boxes under Info, the trade panel in its sheet) */
+.tsb-coin-r {
+  display: none;
+  min-width: 0;
+}
+.tsb[data-tab='info'] .tsb-coin-r {
+  display: block;
+  padding: 0 12px 16px;
+}
+.tsb-tradeslot {
+  display: none;
+}
+.tsb-trade {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tsb-trade-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tsb-sides {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: var(--t-panel);
+}
+.tsb-side {
+  min-width: 0;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--t-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.tsb-side.is-buy[aria-pressed='true'] {
+  background: var(--t-accent);
+  color: var(--t-on-accent);
+}
+.tsb-side.is-sell[aria-pressed='true'] {
+  background: var(--t-down);
+  color: var(--t-on-down);
+}
+.tsb-side:focus-visible {
+  outline-offset: -2px;
+}
+.tsb-side.is-buy[aria-pressed='true']:focus-visible {
+  outline-color: var(--t-on-accent);
+}
+.tsb-side.is-sell[aria-pressed='true']:focus-visible {
+  outline-color: var(--t-on-down);
+}
+.tsb-slip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  height: 32px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: var(--t-panel);
+  color: var(--t-soft);
+  font: 500 11px/1 'Geist Mono', ui-monospace, monospace;
+  white-space: nowrap;
+}
+.tsb-slip-ic {
+  width: 14px;
+  height: 14px;
+  color: var(--t-muted);
+}
+.tsb-hold {
+  margin: 0;
+  color: var(--t-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.tsb-amtbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: var(--t-panel2);
+  cursor: text;
+}
+.tsb-amtbox:focus-within {
+  border-color: var(--t-accent);
+  box-shadow: 0 0 0 1px var(--t-accent);
+}
+.tsb-amt {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--t-hero);
+  font: 500 16px/1 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+/* its box shows the focus */
+.tsb-amtbox .tsb-amt:focus-visible {
+  outline: none;
+}
+.tsb-amt::placeholder {
+  color: var(--t-dim);
+  opacity: 1;
+}
+.tsb-amt-x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t-panel3);
+  color: var(--t-muted);
+}
+.tsb-amt-x-ic {
+  width: 12px;
+  height: 12px;
+}
+.tsb-unit {
+  flex: none;
+  color: var(--t-dim);
+  font: 500 12px/1 'Geist Mono', ui-monospace, monospace;
+  cursor: text;
+}
+.tsb-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tsb-presets button {
+  flex: 1 1 0;
+  min-width: 44px;
+  height: 28px;
+  margin: 0;
+  padding: 0 6px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--t-soft);
+  font: 500 12px/1 'Geist Mono', ui-monospace, monospace;
+  white-space: nowrap;
+}
+.tsb-presets .is-max {
+  color: var(--t-accent);
+}
+.tsb-quote {
+  margin: 0;
+  color: var(--t-dim);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.tsb-quote:empty {
+  display: none;
+}
+.tsb-place {
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--t-accent);
+  color: var(--t-on-accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+.tsb-trade[data-side='sell'] .tsb-place {
+  background: var(--t-down);
+  color: var(--t-on-down);
+}
+/* a migrating coin can't be traded: its button says so (and still explains why when pressed) */
+.tsb-place.is-off,
+.tsb-trade[data-side='sell'] .tsb-place.is-off {
+  background: var(--t-panel3);
+  color: var(--t-muted);
+  cursor: not-allowed;
+}
+/* always in the page, empty or not: it's a live region (role=alert) */
+.tsb-err {
+  margin: 0;
+  color: var(--t-down);
+  font-size: 12px;
+  font-weight: 500;
+}
+.tsb-err:empty {
+  margin-top: -10px;
+}
+.tsb-box {
+  min-width: 0;
+}
+.tsb-box-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--t-line);
+}
+.tsb-box-t {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--t-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.tsb-box-ic {
+  width: 14px;
+  height: 14px;
+  color: var(--t-warn);
+}
+.tsb-box-v {
+  color: var(--t-hero);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-box-b {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+.tsb-note {
+  margin: 0;
+  color: var(--t-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.tsb-utabs {
+  display: flex;
+  align-self: stretch;
+  gap: 14px;
+}
+.tsb-utab {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-muted);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: inset 0 -2px 0 transparent;
+}
+.tsb-utab[aria-pressed='true'] {
+  color: var(--t-text);
+  box-shadow: inset 0 -2px 0 var(--t-text);
+}
+.tsb-utab:focus-visible {
+  outline-offset: -2px;
+}
+.tsb-seg {
+  display: inline-flex;
+  gap: 2px;
+  height: 26px;
+  padding: 2px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: var(--t-panel);
+}
+.tsb-seg-b {
+  min-width: 34px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--t-muted);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-seg-b[aria-pressed='true'] {
+  background: var(--t-panel3);
+  color: var(--t-hero);
+}
+.tsb-seg-b:focus-visible {
+  outline-offset: -2px;
+}
+.tsb-stats-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tsb-rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.tsb-rows > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+.tsb-rows dt {
+  flex: none;
+  color: var(--t-dim);
+  font-size: 11px;
+}
+.tsb-rows dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--t-text);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-rows > div.is-warn dd {
+  color: var(--t-warn);
+}
+.tsb-split {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+}
+.tsb-split-dl {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+}
+.tsb-split-dl > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.tsb-split-dl > .is-sell {
+  align-items: flex-end;
+  text-align: right;
+}
+.tsb-split-dl dt {
+  color: var(--t-dim);
+  font-size: 11px;
+}
+.tsb-split-dl dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.tsb-split-dl .is-buy dd {
+  color: var(--t-up);
+}
+.tsb-split-dl .is-sell dd {
+  color: var(--t-down);
+}
+.tsb-split-bar {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--t-down);
+}
+.tsb-split-bar > i {
+  display: block;
+  width: calc(var(--p, 0) * 100%);
+  height: 100%;
+  background: var(--t-up);
+  transition: width 0.25s ease;
+}
+.tsb-split-bar.is-none {
+  background: var(--t-panel3);
+}
+.tsb-split-bar.is-none > i {
+  width: 0;
+}
+.tsb-about {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tsb-about-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.tsb-about-t {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.tsb-about-t b {
+  overflow: hidden;
+  color: var(--t-hero);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tsb-about-t span {
+  color: var(--t-dim);
+  font: 500 12px/1.3 'Geist Mono', ui-monospace, monospace;
+}
+.tsb-about-line {
+  margin: 0;
+  color: var(--t-soft);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.tsb-socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* phones: the green Trade button over the tab bar (in its own fixed strip), and the tab bar */
+.tsb-buybar {
+  position: fixed;
+  right: 0;
+  bottom: calc(var(--tsb-nav-h) + env(safe-area-inset-bottom));
+  left: 0;
+  z-index: 25;
+  padding: 10px 16px;
+  border-top: 1px solid var(--t-line);
+  background: var(--t-bg);
+}
+.tsb-tradebtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--t-accent);
+  color: var(--t-on-accent);
+  font-size: 15px;
+  font-weight: 600;
+}
+.tsb-tradebtn > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tsb-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 26;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  height: calc(64px + env(safe-area-inset-bottom));
+  padding: 0 4px env(safe-area-inset-bottom);
+  border-top: 1px solid rgb(248 250 252 / 0.1);
+  background: var(--t-panel);
+}
+.tsb-nav-b {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+.tsb-nav-b.is-on {
+  color: var(--t-accent);
+}
+.tsb-nav-ic {
+  width: 22px;
+  height: 22px;
+}
+.tsb-nav-b:focus-visible {
+  outline-offset: -4px;
+}
+.tsb-navn {
+  position: absolute;
+  top: 8px;
+  left: calc(50% + 6px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--t-accent);
+  color: var(--t-on-accent);
+  font: 700 10px/16px 'Geist', system-ui, sans-serif;
+  font-style: normal;
+  text-align: center;
+}
+.tsb-navn:empty {
+  display: none;
+}
+
+/* the sheets: the trade panel and the bag (native dialogs; bottom sheets on phones) */
+.tsb-sheet {
+  width: min(420px, calc(100vw - 32px));
+  border-color: var(--t-line2);
+  border-radius: 10px;
+}
+.tsb-sheet-head {
+  padding: 12px 12px 10px 16px;
+  border-bottom: 1px solid var(--t-line);
+}
+.tsb-sheet-t {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--t-hero);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tsb-x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: var(--t-panel2);
+  color: var(--t-muted);
+}
+.tsb-x .ts-icon {
+  width: 16px;
+  height: 16px;
+}
+.tsb-sheet .tsb-trade,
+.tsb-sheet .tsb-bag {
+  padding: 14px 16px 18px;
+}
+/* in the sheet: thumb-sized */
+.tsb-sheet .tsb-sides,
+.tsb-sheet .tsb-slip {
+  height: 40px;
+}
+.tsb-sheet .tsb-side {
+  font-size: 14px;
+}
+.tsb-sheet .tsb-amtbox,
+.tsb-sheet .tsb-place {
+  height: 48px;
+}
+.tsb-sheet .tsb-place {
+  font-size: 15px;
+}
+.tsb-sheet .tsb-presets button {
+  height: 36px;
+  font-size: 13px;
+}
+.tsb-sheet .tsb-bag-h {
+  display: none;
+}
+.tsb-sheet .tsb-bag-sum,
+.tsb-sheet .tsb-posrow {
+  background: var(--t-panel2);
+}
+.tsb-sheet .tsb-pos-sell {
+  background: var(--t-panel3);
+}
+
+/* the bag: its money, the orders on their way, its coins with their quick sells */
+.tsb-bag {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tsb-bag-h {
+  margin: 0;
+  color: var(--t-hero);
+  font-size: 15px;
+  font-weight: 600;
+}
+.tsb-bag-sum {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--t-line);
+  border-radius: 6px;
+  background: var(--t-panel);
+}
+.tsb-bag-sum > div {
+  min-width: 0;
+  padding: 8px 10px;
+}
+.tsb-bag-sum > div + div {
+  border-left: 1px solid var(--t-line);
+}
+.tsb-bag-sum dt {
+  color: var(--t-dim);
+  font-size: 11px;
+}
+.tsb-bag-sum dd {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--t-hero);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tsb-pend,
+.tsb-pos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tsb-pend:empty,
+.tsb-pos:empty {
+  display: none;
+}
+.tsb-pend-i {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--t-line2);
+  border-radius: 6px;
+  color: var(--t-muted);
+  font-size: 12px;
+}
+.tsb-spin {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--t-line2);
+  border-top-color: var(--t-accent);
+  border-radius: 50%;
+  animation: ts-spin 0.8s linear infinite;
+}
+.tsb-posrow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--t-line);
+  border-radius: 6px;
+  background: var(--t-panel);
+}
+.tsb-posopen {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--t-text);
+  text-align: left;
+}
+.tsb-pos-t {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.tsb-pos-t b {
+  overflow: hidden;
+  color: var(--t-hero);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tsb-pos-v {
+  overflow: hidden;
+  color: var(--t-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tsb-pos-p {
+  color: var(--t-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tsb-pos-sells {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.tsb-pos-sell {
+  height: 28px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid var(--t-line2);
+  border-radius: 6px;
+  background: var(--t-panel2);
+  color: var(--t-soft);
+  font-size: 12px;
+  font-weight: 500;
+}
+.tsb-bag-empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--t-line2);
+  border-radius: 6px;
+  color: var(--t-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* a mouse over things (never on touch screens, where a hover sticks) */
+@media (hover: hover) {
+  .tsb-card:hover {
+    border-color: var(--t-line2);
+    background: var(--t-panel2);
+  }
+  .tsb-card.is-koth:hover {
+    border-color: var(--t-warn);
+  }
+  .tsb-kothbtn:hover {
+    border-color: var(--t-warn);
+  }
+  .tsb-sort:not([aria-pressed='true']):hover {
+    background: var(--t-panel);
+    color: var(--t-text);
+  }
+  .tsb-flash:hover,
+  .tsb-back:hover,
+  .tsb-clear:hover,
+  .tsb-slip:hover,
+  .tsb-wallet:hover,
+  .tsb-x:hover {
+    border-color: var(--t-dim);
+    color: var(--t-text);
+  }
+  .tsb-presets button:hover {
+    border-color: var(--t-dim);
+    background: var(--t-panel2);
+  }
+  .tsb-tf:not([aria-pressed='true']):hover,
+  .tsb-seg-b:not([aria-pressed='true']):hover,
+  .tsb-side:not([aria-pressed='true']):hover,
+  .tsb-tab:not([aria-pressed='true']):hover,
+  .tsb-utab:not([aria-pressed='true']):hover {
+    color: var(--t-text);
+  }
+  .tsb-place:not(.is-off):hover,
+  .tsb-tradebtn:hover {
+    filter: brightness(1.08);
+  }
+  .tsb-pos-sell:hover {
+    border-color: var(--t-down);
+    color: var(--t-down);
+  }
+  .tsb-posopen:hover .tsb-pos-t b {
+    color: var(--t-accent);
+  }
+}
+
+@media (max-width: 719px) {
+  .tsb {
+    --tsb-nav-h: 64px;
+  }
+  .tsb[data-view='coin'] {
+    --tsb-buy-h: 61px;
+  }
+  html[data-page='trenchingsimulator']:has(.tsb) {
+    --ts-bottom: 64px;
+  }
+  html[data-page='trenchingsimulator']:has(.tsb[data-view='coin']) {
+    --ts-bottom: 125px;
+  }
+  .ts-sheet,
+  .tsb-sheet {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 40px);
+    margin: auto 0 0;
+    border-bottom: 0;
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .ts-sheet[open],
+  .tsb-sheet[open] {
+    animation: ts-sheet-up 0.22s ease;
+  }
+  @keyframes ts-sheet-up {
+    from {
+      transform: translateY(40px);
+      opacity: 0.4;
+    }
+  }
+  /* the board's sheets: a bottom sheet with a grab handle */
+  .tsb-sheet {
+    border-radius: 12px 12px 0 0;
+  }
+  .tsb-sheet-head {
+    padding-top: 20px;
+  }
+  .tsb-sheet-head::before {
+    content: '';
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 999px;
+    background: var(--t-line2);
+  }
+  /* the header: its mark, the search and the wallet (its name and the wallet's "SOL" for screen readers) */
+  .tsb-brand-t,
+  .tsb-wallet-u {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+  .tsb-kbd {
+    display: none;
+  }
+  /* small enough that AGI-1's words under the HUD never reach it */
+  .tsb-wallet {
+    max-width: 88px;
+    gap: 5px;
+    padding: 0 8px;
+  }
+  .tsb-wallet-n {
+    font-size: 12px;
+  }
+  /* 16 px: a phone zooms into a smaller box */
+  .tsb-search-in {
+    font-size: 16px;
+  }
+  /* the sorts in one row that scrolls sideways (room for the focus ring above and below) */
+  .tsb-sortbar {
+    flex-wrap: nowrap;
+    margin: -4px -12px 8px;
+    padding: 4px 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tsb-sortbar::-webkit-scrollbar {
+    display: none;
+  }
+  .tsb-sort {
+    flex: none;
+  }
+  /* a coin's page: the trade column's boxes under Info, each a card */
+  .tsb[data-tab='info'] .tsb-coin-l {
+    padding-bottom: 12px;
+  }
+  .tsb-coin-r .tsb-box {
+    margin-bottom: 10px;
+    border: 1px solid var(--t-line);
+    border-radius: 6px;
+    background: var(--t-panel);
+  }
+  .tsb-table .tsb-c-amt,
+  .tsb-table .tsb-c-when {
+    display: none;
+  }
+  .tsb-table.is-holders td {
+    height: 44px;
+  }
+  /* the HUD's goal on a phone is narrow: its words get two lines (the longest, "hold a coin through its migration", needs them) */
+  .ts-hud-label {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+/* the smallest phones: the tables keep three columns */
+@media (max-width: 419px) {
+  .tsb-table .tsb-c-val,
+  .tsb-table .tsb-c-mc {
+    display: none;
+  }
+}
+
+@media (min-width: 400px) {
+  .ts-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 720px) {
+  html[data-page='trenchingsimulator'] {
+    --ts-hud-h: 64px;
+  }
+  .ts-screen {
+    padding: 24px 24px 56px;
+  }
+  .ts-play {
+    padding: 0;
+  }
+  .ts-hud {
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+    grid-template-areas: 'pause agi goal time money tools';
+    gap: 14px;
+    padding: 10px 18px;
+  }
+  .ts-hud-money {
+    align-items: flex-end;
+    min-width: 132px;
+  }
+  .ts-agi-face {
+    width: 44px;
+    height: 44px;
+  }
+  .ts-end {
+    max-width: 140px;
+  }
+  .ts-facts {
+    padding: 18px 20px;
+  }
+  .ts-res-stats {
+    grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr);
+    gap: 10px 18px;
+    padding: 18px 20px;
+  }
+  .ts-toasts {
+    bottom: calc(28px + env(safe-area-inset-bottom));
+  }
+  /* the header: the search in the middle, the latest trade and launch under it like a ticker */
+  .tsb-head {
+    gap: 0 14px;
+    padding: 10px 18px;
+  }
+  .tsb-search {
+    justify-self: center;
+    width: 100%;
+    max-width: 440px;
+  }
+  .tsb-flash {
+    flex: 0 1 auto;
+    max-width: 340px;
+    font-size: 12px;
+  }
+  /* the board: a grid of cards */
+  .tsb-boardview {
+    padding: 16px 18px 32px;
+  }
+  .tsb-koth {
+    margin-bottom: 18px;
+  }
+  .tsb-kothbtn {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+  }
+  .tsb-pic.is-koth {
+    width: 72px;
+    height: 72px;
+    font-size: 40px;
+  }
+  .tsb-koth-tk {
+    font-size: 18px;
+  }
+  .tsb-koth-mcv {
+    font-size: 16px;
+  }
+  .tsb-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 8px;
+  }
+  .tsb-card {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+  }
+  .tsb-pic.is-card {
+    width: 72px;
+    height: 72px;
+    font-size: 38px;
+  }
+  /* a coin's page: the chart in the middle, the trade column on its right (it stays while the page scrolls) */
+  .tsb-coin {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    align-items: start;
+  }
+  .tsb-coin-l {
+    align-self: stretch;
+    padding: 12px 18px 32px;
+    border-right: 1px solid var(--t-line);
+  }
+  .tsb-coin-r,
+  .tsb[data-tab='info'] .tsb-coin-r {
+    position: sticky;
+    top: var(--ts-hud-h);
+    display: block;
+    max-height: calc(100dvh - var(--ts-hud-h));
+    padding: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: var(--t-line2) transparent;
+    scrollbar-width: thin;
+  }
+  .tsb-tradeslot {
+    display: block;
+    padding: 12px;
+    border-bottom: 1px solid var(--t-line);
+  }
+  .tsb-coin-r .tsb-box {
+    border-bottom: 1px solid var(--t-line);
+  }
+  .tsb-coin-r .tsb-box:last-child {
+    border-bottom: 0;
+  }
+  .tsb-ch-curve {
+    display: none;
+  }
+  .tsb-ch-stat.is-wide {
+    display: flex;
+  }
+  .tsb-ch-row {
+    gap: 10px 24px;
+  }
+  .tsb-canvas {
+    height: 370px;
+  }
+  .tsb-tab.is-phone {
+    display: none;
+  }
+  .tsb-amt {
+    font-size: 14px;
+  }
+  .tsb-buybar,
+  .tsb-nav {
+    display: none;
+  }
+}
+
+/* tablets: the tables leave out their amounts and times */
+@media (min-width: 720px) and (max-width: 1023px) {
+  .tsb-table .tsb-c-amt,
+  .tsb-table .tsb-c-when {
+    display: none;
+  }
+}
+
+/* a live run on a phone or a tablet: its line goes over the HUD, so AGI-1's words (under her face there) never cover it,
+   whatever it says (the live feed down, a quiet chain) */
+@media (max-width: 1023px) {
+  .ts-play.is-live {
+    display: flex;
+    flex-direction: column;
+  }
+  .ts-play.is-live > .ts-live-strip {
+    order: -1;
+    padding-top: max(7px, env(safe-area-inset-top));
+  }
+}
+
+/* on a computer her words sit in the HUD's goal cell, beside her face (the game moves her bubble there), and the goal's
+   own words step aside while she talks: nothing of the terminal is ever under them */
+@media (min-width: 1024px) {
+  .ts-hud-goal {
+    position: relative;
+  }
+  .ts-hud-goal > .ts-agi-bubble {
+    top: 50%;
+    left: 0;
+    max-width: 100%;
+    padding: 7px 12px;
+    font-size: 13px;
+    line-height: 1.3;
+    transform: translate(-6px, -50%);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.3);
+  }
+  .ts-hud-goal > .ts-agi-bubble.is-on {
+    transform: translateY(-50%);
+  }
+  .ts-hud-goal > .ts-agi-bubble::before {
+    top: 50%;
+    left: -4px;
+    margin-top: -5px;
+  }
+  .ts-hud-goal > :not(.ts-agi-bubble) {
+    transition: opacity 0.2s ease;
+  }
+  .ts-hud-goal:has(> .ts-agi-bubble.is-on) > :not(.ts-agi-bubble) {
+    opacity: 0;
+  }
+  .tsb-coin {
+    grid-template-columns: minmax(0, 1fr) 310px;
+  }
+  .tsb-coin-l {
+    padding: 14px 20px 36px;
+  }
+}
+
+/* a wide screen: the bag on the left, the board or the coin beside it */
+@media (min-width: 1180px) {
+  .tsb-body {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-areas: 'side main';
+    align-items: start;
+  }
+  .tsb-main {
+    grid-area: main;
+  }
+  .tsb-aside {
+    grid-area: side;
+    position: sticky;
+    top: var(--ts-hud-h);
+    display: block;
+    height: calc(100dvh - var(--ts-hud-h));
+    padding: 16px;
+    overflow-y: auto;
+    border-right: 1px solid var(--t-line2);
+    overscroll-behavior: contain;
+    scrollbar-color: var(--t-line2) transparent;
+    scrollbar-width: thin;
+  }
+}
+
+@media (min-width: 1400px) {
+  .tsb-body {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-root *,
+  .ts-root *::before,
+  .ts-root *::after,
+  .ts-sheet,
+  .tsb-sheet,
+  .ts-toast {
+    animation: none !important;
+    transition: none !important;
+  }
+  .ts-spin,
+  .tsb-spin {
+    border-top-color: var(--t-accent);
+  }
+}

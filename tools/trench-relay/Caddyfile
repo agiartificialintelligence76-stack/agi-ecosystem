@@ -1,0 +1,14 @@
+# TRENCHING SIMULATOR's Live mode (2026-10-21, #404): live.agi1.app in front of the relay, with automatic HTTPS (Caddy
+# gets its certificate and renews it by itself, once the DNS record live → this server is there and ports 80 and 443 are
+# open). WebSockets (/ws) pass straight through. relay.sh start runs it (the official Caddy image). No access log: a
+# viewer's address is never written down.
+live.agi1.app {
+	encode zstd gzip
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+	reverse_proxy agi1-trench:8787
+}

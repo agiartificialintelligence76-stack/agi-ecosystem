@@ -1,0 +1,75 @@
+<!doctype html>
+<!-- TRENCHING SIMULATOR's link preview (public/cards/trenchingsimulator.jpg, 2026-10-21): trenchingsimulator.html's og:image.
+     Photographed at 1200 × 630 in Chromium by tools/games/trench-art.mjs, then a JPEG under 154,000 bytes (the owner's
+     folder adds a ~6 KB content-credentials label; the build fails over 160 KB). AGI games' card's look (games-card.html,
+     Pop mode: violet, speed lines, pink halftone, honey and ink), its words, and the game's key art's parts: real
+     screenshots of its own terminal, Trench Board (../games/trench-art/, taken by the same tool), the "Play money" sticker
+     and AGI-1 only as her 2D art (never the 3D model). -->
+<html><head><meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Anybody'; src: url('../../public/fonts/Anybody-Variable.woff2') format('woff2'); font-weight: 100 900; font-stretch: 50% 150%; }
+  @font-face { font-family: 'Instrument Serif'; src: url('../../public/fonts/InstrumentSerif-Italic.woff2') format('woff2'); font-style: italic; }
+  @font-face { font-family: 'Geist'; src: url('../../public/fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'Geist Mono'; src: url('../../public/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; }
+  :root { --ink: #170a36; --term: #0b0b0e; --violet: #6b3bff; --lav: #e4d9ff; --pink: #ff4da6; --honey: #ffc933; --green: #86efac; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 630px; background: var(--violet); color: #fff; font-family: 'Geist', sans-serif;
+    -webkit-font-smoothing: antialiased; overflow: hidden; }
+  .card { position: relative; width: 1200px; height: 630px; overflow: hidden; background: var(--violet); isolation: isolate; }
+  /* comic speed lines around the screens, fading out toward the words */
+  .card::before { content: ''; position: absolute; inset: 0; z-index: -2;
+    background: repeating-conic-gradient(from 3deg at 74% 56%, rgb(255 255 255 / .13) 0deg 1.4deg, transparent 1.4deg 7deg);
+    -webkit-mask-image: radial-gradient(circle at 74% 56%, transparent 0 12%, #000 58%); }
+  /* pink halftone in the lower left */
+  .card::after { content: ''; position: absolute; left: 0; bottom: 0; z-index: -1; width: 62%; height: 72%;
+    background-image: radial-gradient(circle, var(--pink) 2.2px, transparent 2.6px); background-size: 17px 17px;
+    -webkit-mask-image: radial-gradient(ellipse at 0% 100%, #000 0%, transparent 70%); opacity: .9; }
+  .in { position: absolute; left: 60px; top: 46px; bottom: 44px; width: 560px; display: flex; flex-direction: column; }
+  .pill { align-self: flex-start; display: inline-flex; align-items: center; gap: 12px; padding: 9px 20px 9px 16px; border-radius: 999px;
+    background: var(--honey); color: var(--ink); border: 3px solid var(--ink); box-shadow: 4px 5px 0 var(--ink);
+    font-family: 'Geist Mono', monospace; font-size: 18px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .pill::before { content: ''; width: 11px; height: 11px; border-radius: 50%; background: var(--pink); border: 2px solid var(--ink); }
+  /* the game's own heavy narrow letters (its title's), lavender with an ink edge and the board's green echo */
+  h1 { margin-top: 24px; font-family: 'Anybody', sans-serif; font-weight: 900; font-stretch: 70%; font-size: 118px; line-height: .86;
+    letter-spacing: -0.005em; color: var(--lav); -webkit-text-stroke: 8px var(--ink); paint-order: stroke fill;
+    text-shadow: 9px 10px 0 var(--green); }
+  h1 span { display: block; }
+  .tag { margin-top: 30px; font-family: 'Instrument Serif', serif; font-style: italic; font-size: 52px; line-height: 1;
+    letter-spacing: -0.01em; color: #fff; text-shadow: 3px 3px 0 var(--ink); }
+  .line { margin-top: 14px; font-size: 24px; font-weight: 500; line-height: 1.3; color: #fff; max-width: 540px; }
+  .foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; font-family: 'Geist Mono', monospace; }
+  .site { align-self: flex-start; font-size: 23px; font-weight: 700; color: var(--ink); background: var(--honey); padding: 5px 14px 6px;
+    border-radius: 10px; border: 3px solid var(--ink); }
+  .fine { font-size: 16px; letter-spacing: .04em; color: rgb(255 255 255 / .92); }
+
+  /* the screens: the computer's board and the phone's coin, as in the key art */
+  .win { position: absolute; overflow: hidden; background: var(--term); }
+  .win img { display: block; }
+  .board { left: 600px; top: 304px; width: 440px; height: 275px; border: 4px solid var(--term); border-radius: 14px; rotate: -4deg;
+    box-shadow: 10px 11px 0 var(--green); }
+  .board img { width: 130.91%; height: auto; max-width: none; }
+  .phone { left: 752px; top: 222px; width: 166px; height: 336px; border: 7px solid var(--term); border-radius: 28px; rotate: 7deg;
+    box-shadow: -9px 10px 0 var(--pink); }
+  .phone img { width: 100%; height: auto; }
+  .agi { position: absolute; right: 16px; bottom: 8px; height: 572px; width: auto; }
+  .sticker { position: absolute; left: 626px; top: 104px; padding: 9px 16px 10px; rotate: -6deg; border: 4px solid var(--ink);
+    border-radius: 16px; background: var(--honey); box-shadow: 6px 7px 0 var(--ink); color: var(--ink); text-align: center;
+    font-family: 'Anybody', sans-serif; font-weight: 900; font-stretch: 88%; font-size: 30px; line-height: 1; letter-spacing: .01em; }
+  .sticker small { display: block; margin-top: 5px; font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 700; letter-spacing: .06em; }
+</style></head>
+<body><div class="card">
+  <div class="win board"><img src="../games/trench-art/board.webp" alt=""></div>
+  <div class="win phone"><img src="../games/trench-art/coin.webp" alt=""></div>
+  <img class="agi" src="../../public/images/landing/agi1-cutout.webp" alt="">
+  <p class="sticker">PLAY MONEY<small>MADE-UP COINS</small></p>
+  <div class="in">
+    <span class="pill">AGI games · beta</span>
+    <h1><span>TRENCHING</span><span>SIMULATOR</span></h1>
+    <p class="tag">Trade the trenches.</p>
+    <p class="line">Made-up coins, play money, terminals you know. No wallet needed.</p>
+    <div class="foot">
+      <span class="site">agi1.app/games/trenchingsimulator</span>
+      <span class="fine">Free to play · beta · not financial advice</span>
+    </div>
+  </div>
+</div></body></html>

@@ -3,6 +3,8 @@
 
 export const GAMES = {
   rideemagi: { name: "Ride 'Em, AGI!", path: '/games/rideemagi' },
+  // since 2026-10-20: the second game, a trading game played with play money (see CLAUDE.md, "TRENCHING SIMULATOR")
+  trenchingsimulator: { name: 'TRENCHING SIMULATOR', path: '/games/trenchingsimulator' },
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);
