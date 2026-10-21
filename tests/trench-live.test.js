@@ -907,23 +907,24 @@ test("the relay's address: the site's own; another only on this computer, and on
   }
 });
 
-test('Live mode says "coming soon" on the site until its relay runs (LIVE_OPEN); this computer with a relay of its own still has it', () => {
-  // the owner's choice (2026-10-21): "Coming soon" until the relay runs on the owner's server, then one small push,
-  // LIVE_OPEN = true (and this line with it: CLAUDE.md, Live mode's steps)
-  assert.equal(L.LIVE_OPEN, false, 'closed on the site until the relay runs');
+test('Live mode is open on the site since its relay runs (LIVE_OPEN), always with our relay; closed again, it says "coming soon"', () => {
+  // the owner's choice (2026-10-21): "Coming soon" until the relay ran on the owner's server, then one small push,
+  // LIVE_OPEN = true (and this line with it: CLAUDE.md, Live mode's steps). LIVE_OPEN = false closes it again.
+  assert.equal(L.LIVE_OPEN, true, 'open on the site: its relay runs (relay.sh check all ok, 2026-10-21)');
   const at = (hostname, search = '') => ({ hostname, search });
   for (const [loc, why] of [[at('agi1.app'), 'the site'], [at('www.agi1.app'), 'the site'],
-    [at('www.agi1.app', '?relay=ws%3A%2F%2F127.0.0.1%3A8787%2Fws'), 'never opened by a link on the site'],
+    [at('www.agi1.app', '?relay=ws%3A%2F%2F127.0.0.1%3A8787%2Fws'), 'a link on the site'],
     [at('preview.vercel.app', '?relay=ws://127.0.0.1:8787/ws'), 'a preview'],
     [at('localhost'), 'this computer without a relay of its own'],
     [at('localhost', '?relay=wss%3A%2F%2Fevil.example%2Fws'), 'a relay that isn\'t on this computer'],
     [at('localhost', '?relay=%%%'), 'a broken address'], [null, 'no address at all']]) {
     assert.equal(L.liveOpen(loc), L.LIVE_OPEN, why);
+    assert.equal(L.relayUrl(loc), L.RELAY_URL, `${why}: only ever our relay`);
   }
-  // the tests and a try before the relay runs: this computer, with a relay of its own on it
+  // the tests: this computer, with a relay of its own on it (open whatever LIVE_OPEN says)
   assert.equal(L.liveOpen(at('localhost', '?relay=ws%3A%2F%2F127.0.0.1%3A8787%2Fws')), true);
   assert.equal(L.liveOpen(at('127.0.0.1', '?relay=ws://localhost:9999/ws')), true);
-  // its words: coming soon, play money only, never a tip, a price or a promise
+  // its words while closed: coming soon, play money only, never a tip, a price or a promise
   for (const w of [L.LIVE_SOON, L.LIVE_SOON_HOW]) {
     assert.match(w, /coming soon/, w);
     assert.match(w, /play money only/, w);

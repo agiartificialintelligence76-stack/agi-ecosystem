@@ -397,11 +397,11 @@
 >   Market switch (Simulated by default, or Live coins) and a chain (Solana's pump.fun first, Robinhood Chain's
 >   clank.trade, BNB Chain, Base), fed by a relay on her live show's server at wss://live.agi1.app (Caddy in front, the
 >   Helius key only in `/opt/agi1-trench/trench.env`; PumpPortal's feed, with PumpDev as its backup: the owner,
->   2026-10-21, "oh im friends with them they its okay"). **Live coins say "Coming soon" on the site for now**
->   (2026-10-21, the owner: "can you just finish the first terminal first so i can try it … since the game is still on
->   beta and put it on the site also", then "wait why im using heztner? im just creating a game right", "Just the game
->   for now" and "Coming soon"): the Live coins button says Soon and can't be picked, like the four terminals, until the
->   relay runs on the owner's server; then one small push switches it on (`LIVE_OPEN` in `live-chains.js`). **Owner:**
+>   2026-10-21, "oh im friends with them they its okay"). **Live coins are on since 2026-10-21:** they said "Coming
+>   soon" at first (the owner: "can you just finish the first terminal first so i can try it … since the game is still
+>   on beta and put it on the site also", then "wait why im using heztner? im just creating a game right", "Just the
+>   game for now" and "Coming soon"); the same day the owner set up the relay on the server (Live mode's steps 1 to 8,
+>   `relay.sh check` all ok), and one small push switched it on (`LIVE_OPEN = true` in `live-chains.js`). **Owner:**
 >   push (no SQL, no setting). See "TRENCHING SIMULATOR" and its "Live mode".
 
 $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The site has these parts:
@@ -538,8 +538,8 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   terminals laid out the way traders know them, under our own names (Trench Board ready; four more coming), with nine
   timed challenges (the owner's "10x in 30 minutes" and "$500 in 10 minutes" among them), a daily market the same for
   everyone and free play. Made-up coins by default, and a **Live mode** with real new coins (their real names and
-  pictures) traded with play money only, fed by a relay on the owner's server at live.agi1.app ("Coming soon" on the
-  site until the relay is set up). No sign-in or wallet to play, no prizes, never a way to buy a real coin, not
+  pictures) traded with play money only, fed by a relay on the owner's server at live.agi1.app (on since 2026-10-21,
+  "Coming soon" until its relay ran). No sign-in or wallet to play, no prizes, never a way to buy a real coin, not
   financial advice. See "TRENCHING SIMULATOR"
 - **Gone since 2026-09-28:** the Arena (voting, champions, nominations; see "The Arena: removed"), $CABO and ClankCap
 
@@ -724,9 +724,9 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
    or a button to buy a real coin** (`tests/trench-live.test.js` fails the build if Trench Board has any link at all, or
    the game's Live files link to a real coin's page), only the first 6 characters of a coin's address, never made-up
    holders, a dev, a rug or a caller on a real coin, AGI-1 never names one, the daily market and Rug dodger stay made up
-   (a real coin is never called a rug), and its note says "Not financial advice". Until its relay runs (2026-10-21, the
-   owner's "Coming soon"), Live mode can't be picked on the site (`LIVE_OPEN` in `live-chains.js`), so every coin there
-   is made up, as the game's words say.
+   (a real coin is never called a rug), and its note says "Not financial advice". Live mode is open on the site since
+   its relay first ran (2026-10-21, `LIVE_OPEN` in `live-chains.js`); closed again (`LIVE_OPEN = false`), it can't be
+   picked, and every coin there is made up, as the game's words then say.
 9. **Wallets: an address and a free signature, nothing else.** The site never asks a wallet for a transaction, a token
    approval, a network change or any signature other than the plain-text sign-in message (it may *read* which network the
    wallet is on). `tests/wallet.test.js` fails the build if the code in `src/` ever does. Levels never come with "buy more" wording,
@@ -805,7 +805,7 @@ The owner works alone and is learning. **Explain what you're doing and why, in s
 | `rideemagi.html` | Ride 'Em, AGI! (2026-10-19, agi1.app/games/rideemagi: a rewrite in `vercel.json`): the owner's game, full screen in its own dark look. Its markup between `<!-- game:start -->` and `<!-- game:end -->` is written by `tools/games/import-rideemagi.mjs` (don't edit it by hand). Its own entry: `src/games/rideemagi/page.js`. Since 2026-10-20 the AGI GAMES intro's cover right after `<body>` (`<div class="gi" id="agi-intro">`, outside the tool's markers: see "The AGI GAMES intro") |
 | `trenchingsimulator.html` | TRENCHING SIMULATOR (2026-10-20, agi1.app/games/trenchingsimulator: a rewrite in `vercel.json`, like Ride 'Em, AGI!'s): the AGI GAMES intro's cover right after `<body>`, then `<main id="ts-root">`, which the game fills; its link preview tags (`og:image` `cards/trenchingsimulator.jpg` since 2026-10-21) and a `<noscript>` line with the safety note. Its own entry: `src/games/trenchingsimulator/page.js`. See "TRENCHING SIMULATOR" |
 | `src/games/` | AGI games (2026-10-19): `list.js` (its games, `GAMES`, and the rules the page, the games and our server share: a player's random id, `PLAYER`, `PLAYER_KEY`; runs a report, `PLAYS`; a review's limits, `REVIEW`; `STARS`), `page.js` (the page: each game's numbers, its ratings and reviews, and rating it: 18+, the site's wallet sign-in, the human check), `words.js` (everything it says that isn't in the page, our server's answers in plain words, and the sums its numbers need: a row of stars, the bars, a review's place in the list, the numbers after your own review changed: pure, read in Node); `rideemagi/`, the game: `game.js` (its code as one module) and `game.css` (its styles), both written by `tools/games/import-rideemagi.mjs` (don't edit them by hand), `fonts.css` (its fonts' rules, written by `tools/games/game-fonts.py`), its five pictures (`run`, `jump`, `duck`, `dduck`, `keyart`: WebP, about 3 MB), `page.js` (its entry: since 2026-10-20 the AGI GAMES intro first) and `site.js` (its runs told to our server: no sign-in); and since 2026-10-20 the AGI GAMES intro every game opens with: `intro.js` (a game's entry imports it first), `intro-run.js` (on the screen: its canvas, taps and keys, "reduce motion", a late page, `browserEnv()`), `intro-plan.js` (what's on the screen at any moment, as numbers: pure), `intro-sprite.js` (her 8-bit frames, written by `tools/games/agi1-8bit.py`: don't edit it by hand) and `intro.css` (its cover). See "The AGI GAMES intro". Since 2026-10-21 (two games) `page.js` is one box per game (`mountGame(panel, session)`: everything it reads is in its own panel or card), one sign-in for all of them (`createSession()`) and the tabs (`startTabs()`: the keyboard's arrows, Home and End, a link to `#rate-<game>` picking its tab), and `words.js` has `OLD_RATE`, `rateHash()` and `gameOfHash()`; and `trenchingsimulator/`, the second game (its own row below) |
-| `src/games/trenchingsimulator/` | TRENCHING SIMULATOR (2026-10-20 and 21, see "TRENCHING SIMULATOR"): `page.js` (its entry: the AGI GAMES intro first), `shell.js` (every screen: home, the terminals, the modes and the Market switch, the challenges, a run's brief, the run with its bar over a terminal, the pause and settings sheets, the results and their share card), `terminals.js` (the five terminals, their words, colors and money, which are ready, `SAFETY_NOTE`), `challenges.js` (the nine challenges, the daily market, stars, a goal's words), `run.js` (one run: its clock, orders, events, how it ends), `engine.js` (the made-up market: coins, the other traders, orders and fees; no `Date`, no `Math.random`: a seed and the player's orders make it), `curve.js` (the bonding curve and the pool, pump.fun's numbers), `fates.js` (what becomes of each coin), `names.js` (made-up coins, callers and chatter, never a real ticker), `rng.js` (seeded dice), `boards/board.js` (Trench Board, the one terminal ready: its board, a coin's page, the trade panel, the bag, the phone's bar and sheets), `chart.js` (the candles on a canvas), `results.js`, `share.js` (Share on X's posts), `save.js` (kept in this browser only), `solprice.js` (SOL's price for a run), `lines.js` and `agi.js` (AGI-1's lines and her 8-bit face), `sound.js`, `format.js`, `ui.js` (elements made in code, icons, toasts), `site.js` (its plays, Ride 'Em, AGI!'s twin), `trench.css` (its look), `keyart.webp` (its key art on agi1.app/games, made by `tools/games/trench-art.mjs`); and Live mode's (2026-10-21) `live-chains.js` (its chains, money per terminal, the relay's address, every relay message checked; whether Live mode can be picked: `LIVE_OPEN`, `liveOpen()`, and its "coming soon" words, `LIVE_SOON`, `LIVE_SOON_HOW`), `live-feed.js` (the one WebSocket) and `live-market.js` (real coins in the market). The pure files are read in Node by `tests/trench*.test.js` |
+| `src/games/trenchingsimulator/` | TRENCHING SIMULATOR (2026-10-20 and 21, see "TRENCHING SIMULATOR"): `page.js` (its entry: the AGI GAMES intro first), `shell.js` (every screen: home, the terminals, the modes and the Market switch, the challenges, a run's brief, the run with its bar over a terminal, the pause and settings sheets, the results and their share card), `terminals.js` (the five terminals, their words, colors and money, which are ready, `SAFETY_NOTE`), `challenges.js` (the nine challenges, the daily market, stars, a goal's words), `run.js` (one run: its clock, orders, events, how it ends), `engine.js` (the made-up market: coins, the other traders, orders and fees; no `Date`, no `Math.random`: a seed and the player's orders make it), `curve.js` (the bonding curve and the pool, pump.fun's numbers), `fates.js` (what becomes of each coin), `names.js` (made-up coins, callers and chatter, never a real ticker), `rng.js` (seeded dice), `boards/board.js` (Trench Board, the one terminal ready: its board, a coin's page, the trade panel, the bag, the phone's bar and sheets), `chart.js` (the candles on a canvas), `results.js`, `share.js` (Share on X's posts), `save.js` (kept in this browser only), `solprice.js` (SOL's price for a run), `lines.js` and `agi.js` (AGI-1's lines and her 8-bit face), `sound.js`, `format.js`, `ui.js` (elements made in code, icons, toasts), `site.js` (its plays, Ride 'Em, AGI!'s twin), `trench.css` (its look), `keyart.webp` (its key art on agi1.app/games, made by `tools/games/trench-art.mjs`); and Live mode's (2026-10-21) `live-chains.js` (its chains, money per terminal, the relay's address, every relay message checked; whether Live mode can be picked: `LIVE_OPEN`, true since 2026-10-21, `liveOpen()`, and its words while it's closed, `LIVE_SOON`, `LIVE_SOON_HOW`), `live-feed.js` (the one WebSocket) and `live-market.js` (real coins in the market). The pure files are read in Node by `tests/trench*.test.js` |
 | `src/cloakmesh/` | CloakMesh's page (2026-10-03): `page.js` (its light and dark theme, the demo, the five checks lighting up, the waitlist with `/api/cloakmesh` and the human check, leaving with a leave link), `demo.js` (a small version of CloakMesh's privacy filter, only in the visitor's browser: what it finds, its keyed tokens, putting them back, the demo's made-up answer), `words.js` (everything it says that isn't in the page), `email.js` (what counts as an email address: one rule for the page and our server) |
 | `src/live/` | Her live show's page (2026-10-02): `page.js` (her status every 15 s, asking, following your question, the owner's panel; since 2026-10-07 its box for a question from X's chat; since 2026-10-10 connecting a wallet for her 💜 badge, the site's own sign-in and session), `words.js` (everything it says, and `/api/live`'s answers in plain words; `relayText()` for the owner's box; since 2026-10-10 `perkText()`, `badgeNote()`, `BADGE`) |
 | `src/studio/` | AGI Studio (2026-10-10): `app.js` (the app: its router (`/explore`, `/create`, `/i/<id>` an influencer, `/me`, `/3d/<id>` a 3D model and the old agi1.app/studio/<id>, `/owner`), the wallet sheet with the site's sign-in, 18+, its credits and "Buy credits" (USDG, "Check my payment")), `ui.js` (its small building blocks: elements, buttons, sheets (native dialogs), toasts, chips, pictures), `media.js` (pictures made small, a clip read and its 3 frames (since round 2 also its size and frame rate), uploads in parts, a video's poster; the live camera for a selfie until round 2), `app-words.js` (everything it says that isn't in studio.html, and our server's answers in plain words), `views/` (`explore.js`, `create.js`, `influencer.js`, `me.js`, `model3d.js`, `owner.js`, `shared.js`: one file a view, and the sheets more than one view opens; since round 3 `workspace.js`, the pro tool's workspace (its panel of controls with a footer that stays: what it costs, what you have, the button with its price; the page beside it; on phones a drawer) and `gallery.js`, the gallery (Trending · Influencers · My creations, as tabs)); and from the 3D character studio (the same day; its own page, `page.js` and `words.js`, gone since AGI Studio): `viewer.js` (a character in 3D with three.js, loaded only on its page: its clips by move (`clipsFor()`), in place (`inPlace()`), framed for every pose (`movesBox()`, `lookTimes()`, `framing()`), its idle and moves), `words.js` (everything the pages say that isn't in studio.html, and our server's answers in plain words), `rules.js` (what the page and our server share: ids, words' lengths, styles, its 8 moves with Meshy's library ids and clip names, the words for them (`moveIn()`), prices and discounts, the steps, its files' addresses; its videos': their shapes (`SHAPES`), a scene's length, their 5 seconds, their addresses; since AGI Studio also the app's: prices in credits (`PRICES`, `creditPrice()`), the free credits a month (`FREE_CREDITS`), top-ups, the three ways to start (`MODES`), its styles and design choices (`OPTIONS`), the 12 trend moves (`TRENDS`), a clip's and a picture's limits (`CLIP`, `PICTURE`), reasons to report, a 3D model's steps, its files' addresses; since its round 4 (2026-10-11) how long each step usually takes (`TYPICAL`,
@@ -1027,7 +1027,7 @@ chain, saving a review (counted first, the AI only with words or a name), a wall
 `game-review`, `game-mine` and `game-review-delete` with every "no" in its order, the game's own part (`site.js`: its run
 reports), loading light, the log's hint and `arcade.sql`'s promises).
 `intro.test.js` (2026-10-20: the AGI GAMES intro: its letters, her 8-bit frames and her back, its sizes from a small phone to 4K, every frame at every size in whole pixels, her landings, the spin and the smash, the boing, the wipe, the same every time, its flash and shake, its timelines, a tap or a key skipping it and never reaching the game, "reduce motion", a first visit and a later load, blocked storage, held keys, modifiers and shortcuts, a late page, a phone turned sideways, at most 3 canvas pixels a CSS pixel, when things go wrong, drawing a frame, every game's page with its cover and its entry, its code and its styles).
-`trench.test.js` (2026-10-20: TRENCHING SIMULATOR's market: pump.fun's curve, the seeded dice, the same seed and orders making the same market, every token always somewhere, the fates' odds, coin names never a real ticker over thousands of draws, the smart wallets and callers, the player's money to the last fee, every order refused and why, priorities, sandwich bots, a buy that completes a curve, two hours in a row, every read), `trench-game.test.js` (2026-10-20: its game: numbers as players read them, the nine challenges and their words, the daily market, a run's clock, orders, winning and losing every way, SOL's price, AGI-1's lines and her face, the five terminals and their colors' contrast, the save, its posts for X, the chart, Trench Board's helpers, the results) and `trench-live.test.js` (2026-10-21: Live mode: its relay against stand-in services, `tools/trench-relay/fakes.mjs`, reading every source, the safe request, pictures, passing it on, caps, pings, backoff, the door, reconnects, PumpPortal off, a refused key, the key never in a log; and in the game the chains, money per terminal, the relay's address, every message checked, the live market, real coins never given made-up things, live runs, AGI-1 never naming a real coin, the feed, the CSP, no link anywhere, the relay's own files; and since the owner's "Coming soon" the same day, Live mode closed on the site and open on this computer with a relay of its own); and since 2026-10-21 `page.test.js` and `arcade.test.js` check AGI games with two games (both cards, the tabs, the second game's plays, reviews, link preview and key art, the AI's words per game).
+`trench.test.js` (2026-10-20: TRENCHING SIMULATOR's market: pump.fun's curve, the seeded dice, the same seed and orders making the same market, every token always somewhere, the fates' odds, coin names never a real ticker over thousands of draws, the smart wallets and callers, the player's money to the last fee, every order refused and why, priorities, sandwich bots, a buy that completes a curve, two hours in a row, every read), `trench-game.test.js` (2026-10-20: its game: numbers as players read them, the nine challenges and their words, the daily market, a run's clock, orders, winning and losing every way, SOL's price, AGI-1's lines and her face, the five terminals and their colors' contrast, the save, its posts for X, the chart, Trench Board's helpers, the results) and `trench-live.test.js` (2026-10-21: Live mode: its relay against stand-in services, `tools/trench-relay/fakes.mjs`, reading every source, the safe request, pictures, passing it on, caps, pings, backoff, the door, reconnects, PumpPortal off, a refused key, the key never in a log; and in the game the chains, money per terminal, the relay's address, every message checked, the live market, real coins never given made-up things, live runs, AGI-1 never naming a real coin, the feed, the CSP, no link anywhere, the relay's own files; and since the owner's "Coming soon" the same day, whether Live mode is open on the site (`LIVE_OPEN`: closed until its relay ran, open since; only ever our relay there) and open on this computer with a relay of its own); and since 2026-10-21 `page.test.js` and `arcade.test.js` check AGI games with two games (both cards, the tabs, the second game's plays, reviews, link preview and key art, the AI's words per game).
 `arena.test.js`, `champion.test.js` and `coins.test.js` left with the Arena (2026-09-28) |
 | `tools/i18n/check.mjs` | 2026-09-29: checks a translation of her lines against her rules while it's being written: `node tools/i18n/check.mjs es pt` (no codes = all) |
 | `tools/live/` | Her live show's stream (2026-10-02, not part of the website: it runs on the owner's own server, in Docker): `run.mjs` (the runner: her set in Chromium on a virtual screen, ffmpeg to X Live Studio or a file, her voice's clock, the show's loop, `--check`, `--warm`, `--sync-check`, `--owner-link`, `--announce`, `--start-in`), `show.js` (what she does next, pure), `lines.js` (everything she says that isn't an answer), `voice.js` (her voice: Vertex AI, kept lines), `music.js` (her songs, made in code, and how they play under her voice), `site.js` (the runner's side of `/api/live`, and `--demo`'s made-up questions), `page/` (her set, 1280 × 720, built into `tools/live/dist/`, which git ignores; since 2026-10-07 also `rooms.js` (her rooms, drawn in code), `outfits.js` (her outfits, made in code on her model), `moves.js` (her actions, gestures and dances) and `fx.js` (emojis, stickers, confetti, alerts, her TV, karaoke, the wipe)), `Dockerfile`, `live.sh` (the owner's one command on the server), `live.env.example` (her settings there); and since 2026-10-07 (her stream, upgraded) `acts.js` (viewers' requests on her set: what rests, what each does), `song.js` (her song: its parts, her mouth, its sound), `songs/` (`feel-the-agi.mp3`, the owner's song, and `feel-the-agi.json`, its timing), `media.js` (her videos and her posts' pictures, made ready for her TV) and `x.js` (her own X posts and the replies under them, read-only); and since 2026-10-07 (her trips) `trips.js` (what she says on her trips, with the people she meets, about her snacks and the weather, at the start of her show; her trips' choices; the sounds for each place), `ambience.js` (the sounds around her, made in code) and in `page/`: `places.js` (her 20 places and the scenes on the way, drawn in code), `vehicles.js` (her 12 vehicles), `people.js` (the people she meets), `food.js` (her 34 snacks) and `weather.js` (10 kinds of weather); and since 2026-10-07 (her painted set) `art.mjs` (her set's pictures, painted once by Google's image AI on the server: `--art`), `art-cut.mjs` (Claude makes them ready: one of each, cut out of its green, made small) and `art-picks.json` (which one of each), into `page/art/` (her places, rooms, rides, the people she meets and what she wears, WebP, in git), which `page/paint.js` finds when her set is built; and since 2026-10-09 `page/chart.js` ($AGI's live trading chart on her TV, drawn in code), her song's music video (`media.js`: found in her videos folder, made ready once) and all of her song's words (`songs/feel-the-agi.json`). See "Her live show on X", "Her stream, upgraded", "Her trips", "Her painted set" and "Her show, 2026-10-09" |
@@ -9419,10 +9419,10 @@ are real trenches … just put a safety note", "the play money there the same co
 trenching simulator will be agi1.app/games/trenchingsimulator", and phones too. So AGI games' second game: a trading
 game played with play money, single player first ("Multiplayer · coming soon"), at
 **agi1.app/games/trenchingsimulator**, and on agi1.app/games next to Ride 'Em, AGI! (since 2026-10-21). **Built
-2026-10-20 and 21, waiting for the owner's push** (no SQL, no setting). **Its Live mode** (real new coins, play money
-only: see "Live mode" below) is in the game too, but **says "Coming soon" on the site** (2026-10-21, the owner's "Just
-the game for now" and "Coming soon"): its Live coins button says Soon and can't be picked, like the four terminals not
-built yet, until its relay runs on the owner's server; then one small push opens it (`LIVE_OPEN` in `live-chains.js`).
+2026-10-20 and 21, on the site since the owner's push of 2026-10-21** (no SQL, no setting). **Its Live mode** (real new
+coins, play money only: see "Live mode" below) is **on** too: it said "Coming soon" at first (the owner's "Just the game
+for now" and "Coming soon"), until the owner set up its relay on the server the same day; then one small push opened it
+(`LIVE_OPEN` in `live-chains.js`).
 
 **Where it stands (2026-10-21):** the game works from start to finish (its market of made-up coins, nine challenges, the
 daily market, free play, results, AGI-1 cheering, its sounds, on phones and computers), with **one terminal of five
@@ -9453,8 +9453,8 @@ financial advice."
   owner's order (Trench Chat, Trench Scan, Trench Board, Trench Pro, Trench Social), each with its words, what it does
   and the money it plays in (SOL; dollars in Trench Social). **Play on Trench Board**; the other four "Coming soon" (a
   lock, can't be pressed).
-- **Pick a mode:** the **Market** switch (Simulated, the default, or Live coins: "Coming soon" on the site for now, see
-  "Live mode"); **Daily market** (one challenge and one made-up market, the same for everyone on a UTC day, picked from
+- **Pick a mode:** the **Market** switch (Simulated, the default, or Live coins: real new coins, see "Live mode");
+  **Daily market** (one challenge and one made-up market, the same for everyone on a UTC day, picked from
   seven of the challenges; its tries and its win kept for the day); **Challenges** (nine goals against the clock, up to
   3 stars each: 27 in all); **Free play** (no clock and no goal; start with 1, 5, 10 or 50 SOL, at 1×, 2× or 4× speed).
 - **The challenges** (the owner's two and seven more), Easy to Legendary: **First blood** (1 SOL to 1.05 SOL in 5
@@ -9524,9 +9524,9 @@ financial advice."
   **Play money**), "Trade made-up coins with play money on trading terminals laid out the way you know them. Beat the
   clock in timed challenges, take on the daily market, or trade at your own pace in free play.", its **Rating**,
   **Players** and **Played**, **Play** (agi1.app/games/trenchingsimulator) and **Rate it** (`#rate-trenchingsimulator`),
-  and "Play money and made-up coins only: nothing in it is real money or advice, and it isn't affiliated with any real
-  trading terminal. No sign-in or wallet needed to play. Runs are counted, never who." (written before Live mode was
-  finished: true while Live mode says "Coming soon", since every coin on the site is made up; see "Open questions"). Her
+  and "Play money only, on made-up coins or, in Live mode, real new coins: nothing in it is real money or advice, and it
+  isn't affiliated with any real trading terminal. No sign-in or wallet needed to play. Runs are counted, never who."
+  (since Live mode opened, 2026-10-21; "Play money and made-up coins only…" until then: see "Open questions"). Her
   line on the page: "my second game is out 💜 the trenches, with play money and made-up coins. no prizes yet, just
   bragging rights."
 - **Its ratings and reviews in its own tab:** the page's "Ratings and reviews" has a tab per game (each game's picture
@@ -9567,13 +9567,12 @@ financial advice."
   terminal, and `ready: true` in `terminals.js`; the market, the run and the challenges are the same for every terminal.
 
 **Owner, in this order:**
-1. **Push** (no SQL, no setting). If `supabase/arcade.sql` was never run, AGI games' step 1 first (until then both games
-   play and nothing is counted).
+1. **Push** (no SQL, no setting): done, 2026-10-21. If `supabase/arcade.sql` was never run, AGI games' step 1 first
+   (until then both games play and nothing is counted).
 2. **Try it:** agi1.app/games/trenchingsimulator on a phone and a computer: Play → Trench Board → a challenge, the daily
-   market and free play (Market: Simulated; Live coins says Soon, by design); buy and sell a few coins, end a run, Share
-   on X (don't send it), Save card; then agi1.app/games: its card, **Rate it** (its tab), and Played a minute later.
-3. **Live mode:** "Coming soon" for now (the owner: "Just the game for now"). When the owner wants it: its relay's steps
-   below, then one small push opens it (the game never needs it).
+   market and free play (Market: Simulated, then Live coins); buy and sell a few coins, end a run, Share on X (don't
+   send it), Save card; then agi1.app/games: its card, **Rate it** (its tab), and Played a minute later.
+3. **Live mode:** on since 2026-10-21 (its relay's steps below, done that day, then one small push opened it).
 
 **Cost:** nothing new for the game: its plays are small reports to `/api/wallet` (about one a minute a player), a review
 with words about $0.0003 (Gemini's look, from the site's prepaid credits, inside AGI games' 2,000 a day), SOL's price one
@@ -9588,7 +9587,7 @@ compressed, from Vercel's CDN (its key art, 86 KB, on agi1.app/games). Live mode
 | agi1.app/games: "Ratings and reviews open soon", no numbers | `supabase/arcade.sql` isn't run in this Supabase project | AGI games' owner step 1 (the same for both games) |
 | "Played" doesn't go up right after a run | By design: the numbers are shared a minute, and a run after the first is told within a minute (or when the page is hidden) | Nothing to fix |
 | A terminal says "Coming soon" | Only Trench Board is built (2026-10-21) | Ask Claude for the next one |
-| Live coins says "Soon" and can't be picked | By design: Live mode opens once its relay runs on the owner's server (the owner's "Coming soon", 2026-10-21) | Live mode's steps, then step 9 there (one small push) |
+| Live coins says "Soon" and can't be picked | A page from before Live mode opened (2026-10-21), or `LIVE_OPEN` set back to false | Reload the page (Ctrl+F5); else see "Live mode", step 9 |
 | The daily market changed | A new UTC day (00:00 UTC is 8:00 the owner's time): everyone gets a new one | Nothing to fix |
 | Progress gone (stars, bests) | It's kept in that browser only: a private window, cleared site data or another browser starts fresh | Nothing to fix (by design: nothing about players is kept on our side) |
 
@@ -9628,31 +9627,32 @@ tap: the owner's call; Claude had offered an 18+ tap), and AGI-1's own lines nev
 the default:** Live mode is a switch on the modes screen. Nothing is ever bought, sold or signed for real, and nothing a
 player does leaves the page but which chain and which coins to keep live.
 
-Two parts: **the game** (ships with the next push) and **the relay** (`tools/trench-relay/`), which runs on the owner's
-Hetzner server beside her live show, behind Caddy at **wss://live.agi1.app**: one connection to each source, passed on
-to every player. **Not running anywhere yet,** so Live mode says **"Coming soon" on the site** until it does (below).
-Once it's open, if the relay ever stops, Live mode says "The live feed isn't reachable right now" and plays simulated
-coins (it never breaks the game).
+Two parts: **the game** (on the site since the owner's push of 2026-10-21) and **the relay** (`tools/trench-relay/`),
+which runs on the owner's Hetzner server beside her live show, behind Caddy at **wss://live.agi1.app**: one connection
+to each source, passed on to every player. **Running since 2026-10-21** (the owner's steps 1 to 8 below, `relay.sh
+check` all ok), and **Live mode open on the site** since the push after it (step 9). If the relay ever stops, Live
+mode says "The live feed isn't reachable right now" and plays simulated coins (it never breaks the game).
 
-**"Coming soon" on the site (2026-10-21).** The owner, the same day: "can you just finish the first terminal first so i
-can try it. ill add other terminals later since the game is still on beta and put it on the site also", then "wait why
-im using heztner? im just creating a game right". Claude's answer: the server is only for Live mode's real coins, and
-the game needs none. The owner's choices: "Just the game for now (Recommended)" (the Helius and server walkthroughs
-wait) and "Coming soon" (Recommended): "The Live coins button says Soon and can't be picked, like the other four
-terminals. I switch it on when the server's ready (one small push)".
-- **What players see on the site:** the Live coins chip dashed, its words muted, with a small "Soon" tag; it can't be
-  picked (Tab passes it by; screen readers hear "Live coins, coming soon"); under the switch: "Live coins are coming
-  soon: real new coins as they launch, with the names and pictures their makers gave them, traded with play money only.
-  Until then, every coin here is made up."; How to play: "Live mode is coming soon: real new coins as they launch, on
-  Solana, Robinhood Chain, BNB Chain or Base, with the names and pictures their makers gave them, still traded with play
-  money only."; a Live choice a browser kept from a try is set back to Simulated; no WebSocket is opened, and nothing
-  asks live.agi1.app.
-- **How:** `LIVE_OPEN = false` in `live-chains.js`, and `liveOpen(location)`: open when `LIVE_OPEN` is true, or on this
-  computer with a relay of its own (`?relay=`, localhost only), so the tests and a try still use it. Its words are
-  `LIVE_SOON` and `LIVE_SOON_HOW` there, its look `.ts-chip:disabled` and `.ts-chip-soon` in `trench.css`.
-- **Opening it:** once `relay.sh check` passes (the owner's steps 1 to 8 below), Claude sets `LIVE_OPEN = true` and
-  `tests/trench-live.test.js`'s checks of it (the build fails if only one of them changes), saves both here, and the
-  owner pushes (step 9).
+**"Coming soon" on the site (2026-10-21, until it opened that day).** The owner, the same day: "can you just finish the
+first terminal first so i can try it. ill add other terminals later since the game is still on beta and put it on the
+site also", then "wait why im using heztner? im just creating a game right". Claude's answer: the server is only for
+Live mode's real coins, and the game needs none. The owner's choices: "Just the game for now (Recommended)" (the Helius
+and server walkthroughs wait) and "Coming soon" (Recommended): "The Live coins button says Soon and can't be picked,
+like the other four terminals. I switch it on when the server's ready (one small push)".
+- **What players see while it's closed:** the Live coins chip dashed, its words muted, with a small "Soon" tag; it
+  can't be picked (Tab passes it by; screen readers hear "Live coins, coming soon"); under the switch: "Live coins are
+  coming soon: real new coins as they launch, with the names and pictures their makers gave them, traded with play money
+  only. Until then, every coin here is made up."; How to play: "Live mode is coming soon: real new coins as they launch,
+  on Solana, Robinhood Chain, BNB Chain or Base, with the names and pictures their makers gave them, still traded with
+  play money only."; a Live choice a browser kept from a try is set back to Simulated; no WebSocket is opened, and
+  nothing asks live.agi1.app.
+- **How:** `LIVE_OPEN` in `live-chains.js` (false then, **true since 2026-10-21**), and `liveOpen(location)`: open when
+  `LIVE_OPEN` is true, or on this computer with a relay of its own (`?relay=`, localhost only), so the tests can use it.
+  Its words are `LIVE_SOON` and `LIVE_SOON_HOW` there, its look `.ts-chip:disabled` and `.ts-chip-soon` in `trench.css`.
+- **Opened** (2026-10-21): `relay.sh check` all ok, then Claude set `LIVE_OPEN = true` and `tests/trench-live.test.js`'s
+  check of it (the tests fail if only one of them changes), with agi1.app/games's words for the game made true for it
+  (see "Open questions"), saved them here, and the owner pushed (step 9). **To close it again** (if the relay has to
+  stay off for long): `LIVE_OPEN = false` and that check, one small push; the words and the look above come back.
 
 **What players see once it's open:**
 - **The modes screen:** "Market: Simulated · Live coins"; with Live coins picked, the chain (**Solana**, pump.fun's, first;
@@ -9757,9 +9757,9 @@ second at most). If Helius's dashboard shows the month's credits running low: `T
 `TRENCH_WATCH_MAX=100`, then `relay.sh start`. Helius's paid plan ($49 a month) only if the owner wants more (never
 needed to run). **Never** PumpPortal's paid trade streams (keyed, billed per trade), never any paid service.
 
-**The owner's steps** (one at a time, **later**: the owner's "Just the game for now", 2026-10-21; until then Live mode
-says "Coming soon" on the site). Secrets go only where these steps say: never in chat, git, a screenshot or a file
-anyone else can read.
+**The owner's steps** (one at a time; **all done 2026-10-21**, the day of the owner's "Just the game for now": the
+owner asked to go on that afternoon, and Claude walked them through it). Kept for a new server or a new key. Secrets go
+only where these steps say: never in chat, git, a screenshot or a file anyone else can read.
 1. **PumpPortal's OK: done** (2026-10-21, the owner: "oh im friends with them they its okay"): its feed is on from the
    start, with PumpDev as its backup; nothing to send. (Not legal advice: PumpPortal's terms give a "single, personal,
    limited license" and say its data "may not [be] … publish[ed], distribute[d]" unless they authorize it; a short yes
@@ -9798,10 +9798,16 @@ anyone else can read.
    cd /opt/agi1-live/site && git pull --ff-only
    mkdir -p /opt/agi1-trench && cp /opt/agi1-live/site/tools/trench-relay/trench.env.example /opt/agi1-trench/trench.env && chmod 600 /opt/agi1-trench/trench.env
    ```
-   The Helius key, pasted when it asks (it stays hidden on screen and out of the shell's history; the line prints `1`):
+   The Helius key: paste this line first, **then** copy the key in Helius's dashboard (so the clipboard holds the key,
+   not the line), paste it once when it asks and press Enter. It stays hidden on screen and out of the shell's history.
+   The line drops what a paste can add around a key (a terminal's paste markers, spaces, a line break, invisible
+   characters; a whole Helius address is cut down to its `api-key=`) and saves it only if what's left looks like a key:
+   "saved: N characters", or "NOT saved" with the characters that don't belong (never the key itself):
    ```
-   read -s -p 'Helius API key (hidden): ' K && echo && sed -i "s|^HELIUS_API_KEY=.*|HELIUS_API_KEY=$K|" /opt/agi1-trench/trench.env && unset K && grep -c '^HELIUS_API_KEY=.\+' /opt/agi1-trench/trench.env
+   read -rs -p 'Helius API key (hidden): ' K; echo; V=$(printf %s "$K" | sed 's/\x1b\[20[01]~//g; s/.*api-key=//; s/&.*//' | LC_ALL=C tr -d '[:space:]\200-\377'); unset K; if printf %s "$V" | grep -Eq '^[A-Za-z0-9-]{16,100}$'; then sed -i "s|^HELIUS_API_KEY=.*|HELIUS_API_KEY=$V|" /opt/agi1-trench/trench.env && echo "saved: ${#V} characters"; else echo "NOT saved: ${#V} characters, these don't belong in a key:"; printf %s "$V" | LC_ALL=C tr -d 'A-Za-z0-9-' | od -An -c; fi; unset V
    ```
+   (2026-10-21: the first try, with a plainer line, saved something that wasn't the key: `relay.sh check` said "NO
+   HELIUS_API_KEY is neither a Helius key nor a Helius address". This line, then `relay.sh start`, fixed it.)
 7. **Build it and start it:**
    ```
    cd /opt/agi1-live/site && sh tools/trench-relay/relay.sh update
@@ -9820,6 +9826,7 @@ anyone else can read.
 9. **Open it** (one small push): tell Claude `relay.sh check` passes. Claude sets `LIVE_OPEN = true` in
    `src/games/trenchingsimulator/live-chains.js` and `tests/trench-live.test.js`'s checks of it, and saves them here;
    then `git push` on the PC, in this folder. The Live coins chip loses its "Soon", and the "coming soon" words go.
+   (Done 2026-10-21, with agi1.app/games's words for the game made true for Live mode: see "Open questions".)
 10. **Try it:** agi1.app/games/trenchingsimulator → Play → Trench Board → **Market: Live coins** → **Solana** (its dot
     green: "Live: every new pump.fun coin as it launches on Solana, traded with play money.") → Free play → Start: the
     line at the top says "Live · Solana · real coins from pump.fun · play money only", with real coins and their
@@ -9834,11 +9841,12 @@ lines; `logs 300`, `logs caddy`).
 
 | What you see | Why | Fix |
 |---|---|---|
-| The game: Live coins says "Soon" and can't be picked | Not opened yet (`LIVE_OPEN`): by design until the relay runs | Steps 1 to 8, then step 9 |
+| The game: Live coins says "Soon" and can't be picked | A page from before Live mode opened (2026-10-21), or `LIVE_OPEN` set back to false | Reload the page (Ctrl+F5); else step 9 |
 | The game: "The live feed isn't reachable right now…" | The relay isn't running, live.agi1.app doesn't point at the server yet, or the site isn't pushed (the browser's console: "Refused to connect … violates the Content Security Policy") | `relay.sh check`; https://live.agi1.app/health in a browser; step 3 |
 | `check`: `NO https://live.agi1.app/health doesn't answer yet` | The DNS record (step 4), ports 80 and 443 (step 5), or Caddy's certificate | `getent ahostsv4 live.agi1.app` on the server must show its own IPv4; `relay.sh logs caddy`: "NXDOMAIN" = the record isn't there yet, "timeout during connect" = a firewall (step 5). Caddy tries again by itself |
 | `relay.sh start`: "port is already allocated" / "address already in use" | Something else listens on 80 or 443 | `ss -ltnp` shows what; stop it, then `relay.sh start` |
 | `check`: `NO HELIUS_API_KEY is empty: Solana stays off` | Step 6's key line wasn't run (or printed 0) | Step 6's key line again, then `relay.sh start` |
+| `check`: `NO HELIUS_API_KEY is neither a Helius key nor a Helius address` | What was saved isn't the key: the clipboard held something else, or the paste added characters (2026-10-21, the first try) | Step 6's key line (it cleans and checks what's pasted, never shows it), then `relay.sh start` |
 | The game: "Solana isn't on the live feed right now"; `check`: "Helius NOT connected" | Helius refused the key (`relay.sh logs`: "Helius: can't connect (… 401 …)"), or Helius is down | A new key (step 2, step 6's key line), `relay.sh start`; a Helius outage passes by itself |
 | The game: "Solana is quiet…" for a long time | No new-coin feed: `check` shows "PumpPortal NOT connected" and PumpDev not running | It reconnects by itself (1 s … a minute), and PumpDev takes over after 90 s; if both stay down, `relay.sh logs` says why |
 | "Robinhood Chain isn't on the live feed right now" | clank.trade's API didn't answer (`logs`: "clank.trade (newest): …") | Passes by itself; the site's risk check would say the same |
@@ -9859,9 +9867,9 @@ curve followed again), PumpPortal off, a refused key; and in the game: the chain
 address rule, every relay message checked, the live market, play money against the live curve, no made-up things on real
 coins, live runs' clock and bests, AGI-1 never naming a real coin, the feed in the browser (connecting, live, down and
 back, full), the CSP, no HTML from strings and no link anywhere in the Live files, and the relay's own files (never
-root, no key in the image, the settings file's secrets empty, Caddy in front); and since the owner's "Coming soon", Live
-mode closed on the site (`LIVE_OPEN` false, and `liveOpen()` closed for the site's own address and for a relay that
-isn't on localhost) and open on this computer with a relay of its own. Each of the first 29 ran 12 times on Node 20, 22
+root, no key in the image, the settings file's secrets empty, Caddy in front); and whether Live mode is open on the
+site (`LIVE_OPEN`: false while it said "Coming soon", true since 2026-10-21; on the site and from any link, only our
+relay) and open on this computer with a relay of its own. Each of the first 29 ran 12 times on Node 20, 22
 and 24 and 18 times under load (a race in the reconnect test, found on Node 22, fixed: it waits for the stand-in to hear
 each subscription). In a browser (Claude's scratch `trench/live/live-e2e.mjs`: the relay as its own process against the
 stand-ins, the built game in Chromium with the site's real CSP, the relay's address swapped for localhost): 91 of 91,
@@ -10698,8 +10706,8 @@ that stays with the button and its price; the gallery on the right; on phones a 
   ring on every control; one flash for a new trade or launch and one shake for a bumped card (none with "reduce
   motion"); hover only with a mouse; on phones one column, a bar at the bottom with a safe-area gap, sheets from the
   bottom with a grab handle, inputs at 16 px. AGI-1 as 8-bit pixels in the bar's corner (no blinks with "reduce
-  motion"). A choice that isn't open yet (Live coins, until its relay runs) dashed, its words muted, with a small
-  uppercase "Soon" tag and the "not allowed" pointer.
+  motion"). A choice that isn't open (Live coins while `LIVE_OPEN` is false, as until 2026-10-21) dashed, its words
+  muted, with a small uppercase "Soon" tag and the "not allowed" pointer.
 - **The AGI GAMES intro** (2026-10-20, see "The AGI GAMES intro"): 8-bit on purpose (a game's own look, like an arcade's
   boot screen), in the site's colors as pixels: an ink night with lavender stars, honey letters banded light to deep with
   a pink shadow, white for a landing; AGI-1 as pixel art from her 2D art; crisp at any size (never smoothed); one flash
@@ -11272,9 +11280,9 @@ that stays with the button and its price; the gallery on the right; on phones a 
   (names only ever as text, numbers checked, addresses matched against their shape); pictures only from our relay
   (`https://live.agi1.app/p/<hash>.webp`, `referrerpolicy="no-referrer"`), never a coin's own host; no link anywhere
   (never a way to buy a real coin); it sends only its chain and at most 8 coins to keep live. The CSP gains only
-  `https://live.agi1.app` (`img-src`) and `wss://live.agi1.app` (`connect-src`). Until its relay runs, Live mode is
-  closed on the site (`LIVE_OPEN`, the owner's "Coming soon", 2026-10-21): no WebSocket is opened at all, and a Live
-  choice a browser kept from a try is set back to Simulated.
+  `https://live.agi1.app` (`img-src`) and `wss://live.agi1.app` (`connect-src`). Open on the site since its relay
+  first ran (2026-10-21); while it's closed (`LIVE_OPEN` false, as it was until then: the owner's "Coming soon"), no
+  WebSocket is opened at all, and a Live choice a browser kept from a try is set back to Simulated.
 - **The relay's door:** only the site's own pages (their Origin), 2,000 viewers at once, 10 from one address, a browser's
   message at most 2 KB and about two a second, 900 pictures a minute per address; a viewer more than 4 MB behind is
   dropped, and one that never answers a ping too. `/health` never shows a key or a viewer. Caddy keeps no access log, and
@@ -11540,8 +11548,8 @@ The browser never gets a Supabase key (everything goes through our `/api`), so `
   CX23), where Caddy serves it with its own Let's Encrypt certificate in front of the relay (wss://live.agi1.app/ws, its
   pictures, `/health`). Vercel never deploys it: after a push that touches `tools/trench-relay/`, `sh
   tools/trench-relay/relay.sh update` on the server brings it up to date (see "Live mode" under "TRENCHING SIMULATOR").
-  Until its record and the relay are set up, the game's Live mode says "Coming soon" (its Live coins button can't be
-  picked: `LIVE_OPEN`, the owner's choice, 2026-10-21); one small push opens it once the relay runs.
+  Its record and the relay were set up on 2026-10-21 (the owner, step by step with Claude), and the game's Live mode
+  opened the same day (`LIVE_OPEN`; "Coming soon" until then).
 
 ## Old site reference (AGI FINAL, read-only)
 
@@ -12341,21 +12349,23 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   intro". **Owner:** push (no SQL, no setting). Tests: 925 in the whole suite (921 pass, 4 skipped as before in this
   folder; on Node 20, 22 and 24, with and without Vercel's settings, and as if the clock said six later times), the full
   build and a clean build like Vercel's, 67 checks in a browser, AGI games' browser test again (276).
-- **TRENCHING SIMULATOR: built 2026-10-20 and 21, waiting for the owner's push** (the owner's request, see the header):
+- **TRENCHING SIMULATOR: built 2026-10-20 and 21, on the site since 2026-10-21** (the owner's request, see the header):
   built in that order: its trades' engine (its coins, their curves and what becomes of them, the other traders), its
   game (nine challenges with the owner's two, the daily market, free play, results, AGI-1 in 8-bit, its sounds), its
   first terminal, **Trench Board** (phones and computers; reworked 2026-10-21 in today's launchpad look), then on AGI
   games (its card, key art, link preview and its own ratings tab, `#rate-trenchingsimulator`), and **its Live mode**
-  (the owner's: real new coins, play money only), with its relay for the owner's server (`tools/trench-relay/`, not
-  running yet). Still to build: Trench Chat, Trench Scan, Trench Pro and Trench Social ("Coming soon"), and multiplayer
+  (the owner's: real new coins, play money only), with its relay for the owner's server (`tools/trench-relay/`,
+  running there since 2026-10-21). Still to build: Trench Chat, Trench Scan, Trench Pro and Trench Social ("Coming
+  soon"), and multiplayer
   ("coming soon"). **Then, the same day** (the owner: "can you just finish the first terminal first so i can try it. ill
   add other terminals later since the game is still on beta and put it on the site also", then "wait why im using
   heztner? im just creating a game right"; the owner's choices: "Just the game for now (Recommended)" and "Coming soon"
   (Recommended)): Live mode says "Coming soon" on the site (`LIVE_OPEN`), like the four terminals not built yet; the
   owner's OK for PumpPortal ("oh im friends with them they its okay"); the Helius and server walkthroughs wait. See
-  "TRENCHING SIMULATOR". **Owner:** push (no SQL, no setting); later, when the owner wants Live mode, its steps (a free
-  Helius key, the DNS record `live` → the server, ports 80 and 443, the settings file, `relay.sh update`, `relay.sh
-  check`), then Claude opens it (one small push). Tests: 1008 in the whole suite (1005 pass, 3 skipped in Claude's
+  "TRENCHING SIMULATOR". **And still that day:** the owner pushed, asked for Live mode after all, and went through its
+  steps with Claude (a free Helius key, the DNS record `live` → the server, ports 80 and 443, the settings file,
+  `relay.sh update`, `relay.sh check` all ok); Claude opened it (`LIVE_OPEN = true`, and agi1.app/games's words for the
+  game made true for it), one small push. Tests: 1008 in the whole suite (1005 pass, 3 skipped in Claude's
   workspace; on Node 20, 22 and 24, with and without Vercel's settings, in UTC and the workspace's time zone, and as if
   the clock said six later times), the full build and a clean build like Vercel's, the game's smoke test (128 checks)
   and axe (17 views, 0 issues), AGI games' browser test with two games (516 checks), Live mode's browser test (91
@@ -12755,7 +12765,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-21 | The AI's look at a review is told which game it's for (`LOOK_GAMES`): without it, TRENCHING SIMULATOR's reviews would have been judged as reviews of "a cute runner game with a cat", with price talk ("buy, sell, pump, moon") refused; its own words make the game's made-up coins and pretend trades part of reviewing it, while real coins, trading apps and advice about real money stay refused. Ride 'Em, AGI!'s words are byte for byte as before, and the code's checks before the AI are unchanged |
 | 2026-10-21 | TRENCHING SIMULATOR's key art and link preview from real screenshots of the built game (Trench Board on a computer, a coin's page on a phone), the same every time (a fixed date, seeded dice, its clock moved by hand), as a sticker collage with see-through edges like Ride 'Em, AGI!'s, AGI-1 as her 2D art (never the 3D model), only our own names; the link preview in AGI games' card's look. Her line on agi1.app/games announces the second game ("my first game is out" was stale). `games.jpg` left as it is (not asked; its words still say it shows Ride 'Em, AGI!) |
 | 2026-10-21 | The game on the site first, Live mode "Coming soon" (the owner: "can you just finish the first terminal first so i can try it. ill add other terminals later since the game is still on beta and put it on the site also", then "wait why im using heztner? im just creating a game right"; the owner's choices: "Just the game for now (Recommended)" and "Coming soon" (Recommended)): the Live coins chip disabled like the four terminals not built yet, dashed and muted with a small "Soon" tag, its name for screen readers "Live coins, coming soon" (without it, screen readers heard "Live coinsSoon"); its words under the switch and in How to play; a Live choice a browser kept from a try set back to Simulated; no WebSocket opened. One switch, `LIVE_OPEN` in `live-chains.js`, with `liveOpen()` keeping Live mode open on this computer with a relay of its own (the tests and a try). Not picked: hiding Live mode altogether ("Coming soon" says what's coming, like the four terminals), opening it before its relay runs (every try would say the live feed isn't reachable), a Vercel setting for it (a Redeploy either way, and one more thing to set) |
-| 2026-10-21 | The walkthroughs postponed: the owner had asked to be walked through Live mode's setup step by step ("walk me through it step by step", "walk me through this also"), then picked "Just the game for now": Live mode's steps stay written down in "Live mode" for later, and PumpPortal's email step is gone (the owner's OK, "oh im friends with them they its okay") |
+| 2026-10-21 | The walkthroughs postponed: the owner had asked to be walked through Live mode's setup step by step ("walk me through it step by step", "walk me through this also"), then picked "Just the game for now": Live mode's steps stay written down in "Live mode" for later, and PumpPortal's email step is gone (the owner's OK, "oh im friends with them they its okay"). Resumed that afternoon at the owner's ask ("im donw with this whats next"): see the next row |
+| 2026-10-21 | Live mode opened the same day: the owner went through its steps one at a time, `relay.sh check` all ok (Solana live through PumpPortal and Helius, Robinhood Chain and BNB Chain coming in, the certificate working, https://live.agi1.app/health answering from outside), so `LIVE_OPEN = true` (one small push). With it, agi1.app/games's words for the game: "made-up coins only" and "nothing in it is … a real coin" were false once real coins are in it, so "Play money only, on made-up coins or, in Live mode, real new coins…" (Claude's suggestion from "Open questions"; the owner can reword them). Step 6's key line made safer after the first paste saved something that wasn't the key: it cleans and checks what's pasted, and never shows it |
 
 ## Open questions
 
@@ -13205,12 +13216,13 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
     itself hides (its own site flags and hides some; the feeds don't say). The site's own rule is "everything PG-13"
     (see "Design"), and agi1.app/games has no 18+ gate before the game. If it's ever needed: a picture blur like the risk
     check's, or a word mask, is a small change on the relay; an 18+ tap before Live mode, a small change in the game.
-  - **The words written before Live mode:** agi1.app/games's card says "Play money and made-up coins only: nothing in it
-    is real money or advice…" and its fine print "TRENCHING SIMULATOR is played with play money and made-up coins:
-    nothing in it is real money, a real coin or advice…" (2026-10-21, before Live mode was finished): true again while
-    Live mode says "Coming soon" (every coin on the site is made up), not once it opens. When it opens (the same small
-    push), Claude's suggestion, the owner's call: "…made-up coins (or, in Live mode, real new coins), all traded with
-    play money: nothing in it is real money or advice…" (`games.html`, and its checks in `tests/page.test.js`).
+  - **The words written before Live mode:** agi1.app/games's card said "Play money and made-up coins only…" and its fine
+    print "…nothing in it is real money, a real coin or advice…": false once Live mode opened (2026-10-21), so with it
+    they became "Play money only, on made-up coins or, in Live mode, real new coins: nothing in it is real money or
+    advice…" and "…nothing in it is real money or advice, nothing is ever traded for real…" (`games.html`, checked in
+    `tests/page.test.js`): Claude's wording, the owner can change it. AGI-1's line there ("with play money and made-up
+    coins"), the card's "Trade made-up coins…" and the game page's preview text still name only the made-up coins:
+    true of its default mode, left as they were (the owner's call).
   - **First blood's words:** it says "Finish above 1 SOL: any profit counts" ("Any profit at all."), but it's won at 1.05
     SOL (its bar shows "1 SOL / 1.05 SOL"): a profit under 5% when its 5 minutes are up loses. Either its words or its
     goal should change (`src/games/trenchingsimulator/challenges.js`, and `tests/trench-game.test.js`): the owner's call.
@@ -13230,9 +13242,11 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   - **AGI-1's bubble over Trench Board's mark** between 720 and 1023 px wide (tablets, small laptops): for a moment (at
     least 2.4 s, never catching taps) it hangs over the board's "T" and the left of its search; on phones the bag is kept
     clear of it, and on computers it sits in the bar's goal cell. A small change if it bothers anyone.
-  - **Not tried live:** real phones (Safari on an iPhone, Android), real screen readers, and Live mode against the real
-    services (only stand-ins shaped from their docs), the Docker build, Caddy, the certificate and the DNS record: the
-    owner's Live mode steps 8 and 10 are the first live check (Live mode says "Coming soon" on the site until step 9).
+  - **Tried live (2026-10-21):** the Docker build, Caddy, the certificate, the DNS record and the real feeds on the
+    owner's server (`relay.sh check` all ok: PumpPortal and Helius for Solana, clank.trade, DexScreener), and
+    https://live.agi1.app/health from outside. **Not tried live yet:** real phones (Safari on an iPhone, Android), real
+    screen readers, a Live run on the site in a real browser (the owner's step 10 is the check), and many players at
+    once.
 
 ## Working in this repo
 

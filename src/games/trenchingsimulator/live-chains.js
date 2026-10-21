@@ -74,10 +74,11 @@ export function relayUrl(loc) {
   }
 }
 
-// Live mode opens on the site once its relay runs on the owner's server (2026-10-21, the owner's: "Coming soon" until
-// then, like the four terminals not built yet): one small push, LIVE_OPEN = true. On this computer, with a relay of its
-// own (`?relay=` above), it's always open, so the tests and a try before then can use it.
-export const LIVE_OPEN = false;
+// Live mode on the site: open since 2026-10-21, when its relay first ran on the owner's server (`relay.sh check` all ok).
+// Until then it said "Coming soon" (the owner's choice, like the four terminals not built yet). LIVE_OPEN = false closes
+// it again in one small push: the Live coins choice says Soon and can't be picked, and no WebSocket is opened. On this
+// computer, with a relay of its own (`?relay=` above), it's always open, so the tests can use it.
+export const LIVE_OPEN = true;
 export function liveOpen(loc) {
   return LIVE_OPEN || relayUrl(loc) !== RELAY_URL;
 }
@@ -98,7 +99,7 @@ export function picUrl(relay, path) {
 
 export const LIVE_NOTE = 'Live mode shows real new coins, with the names and pictures their makers gave them. You trade them with play money: nothing is bought or sold for real, and nothing leaves this page. Not financial advice.';
 export const LIVE_SHORT = 'Real coins · play money only';
-// while Live mode isn't open yet (LIVE_OPEN): its Market switch's line, and How to play's
+// while Live mode is closed (LIVE_OPEN false, as it was until 2026-10-21): its Market switch's line, and How to play's
 export const LIVE_SOON = 'Live coins are coming soon: real new coins as they launch, with the names and pictures their makers gave them, traded with play money only. Until then, every coin here is made up.';
 export const LIVE_SOON_HOW = 'Live mode is coming soon: real new coins as they launch, on Solana, Robinhood Chain, BNB Chain or Base, with the names and pictures their makers gave them, still traded with play money only.';
 

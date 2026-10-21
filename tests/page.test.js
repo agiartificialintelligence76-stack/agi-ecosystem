@@ -742,11 +742,13 @@ test('AGI games: "GAME beta" on top (beta stuck over GAME), the shelf with each 
     assert.match(card, /<li class="gm-tag is-beta">Beta<\/li>\s*<li class="gm-tag">Free<\/li>\s*<li class="gm-tag">No wallet needed<\/li>/);
     assert.match(textOf(card), /No sign-in or wallet needed to play\. Runs are counted, never who\./);
   }
-  // TRENCHING SIMULATOR: play money and made-up coins, never a real trading terminal
+  // TRENCHING SIMULATOR: play money, on made-up coins or (Live mode, open since 2026-10-21) real new coins, never a real
+  // trading terminal; "made-up coins only" was true only while Live mode said "Coming soon"
   const ts = cardOf('trenchingsimulator');
   assert.match(ts, /<li class="gm-tag is-play">Play money<\/li>/);
   for (const w of ['Trade made-up coins with play money', 'timed challenges', 'the daily market', 'free play',
-    'Play money and made-up coins only: nothing in it is real money or advice, and it isn\'t affiliated with any real trading terminal.']) assert.ok(textOf(ts).includes(w), w);
+    'Play money only, on made-up coins or, in Live mode, real new coins: nothing in it is real money or advice, and it isn\'t affiliated with any real trading terminal.']) assert.ok(textOf(ts).includes(w), w);
+  assert.doesNotMatch(textOf(ts), /made-up coins only/, 'not since Live mode is open');
   // ratings and reviews: a tab for each game (the WAI-ARIA tabs pattern) and its panel, in which one box, one state at a time,
   // the first "loading" (src/games/page.js picks the next). #rate stays Ride 'Em, AGI!'s, #rate-<game> is each game's panel
   const rate = between(main, '<section class="section gm-rate"', '</section>\n\n      <!-- what');
@@ -790,7 +792,7 @@ test('AGI games: "GAME beta" on top (beta stuck over GAME), the shelf with each 
   // what's coming and the fine print: a beta, no prizes yet, never a promise
   const next = textOf(between(main, '<section class="section gm-next"', '</section>\n    </main>'));
   for (const w of ['AGI games is a beta: free to play, and there are no prizes yet.', 'never guaranteed and never an investment', 'Not financial advice: $AGI is a meme token and can lose all of its value.',
-    'TRENCHING SIMULATOR is played with play money and made-up coins: nothing in it is real money, a real coin or advice, and it isn\'t affiliated with any real trading terminal.',
+    'TRENCHING SIMULATOR is played with play money, on made-up coins or, in Live mode, real new coins: nothing in it is real money or advice, nothing is ever traded for real, and it isn\'t affiliated with any real trading terminal.',
     'Anyone asking you to deposit or send $AGI to “play” is not us.', 'This page never asks your wallet for a transaction or a token approval.', 'No sign-in, no wallet.', 'Reviews are 18+.']) assert.ok(next.includes(w), w);
   // no rates, amounts or yields; "guaranteed" and "investment" only ever as nevers; never "buy"
   const text = textOf(main);

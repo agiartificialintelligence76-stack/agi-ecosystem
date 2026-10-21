@@ -66,8 +66,8 @@ export function startShell(root) {
   })();
   const S = { save: loadSave(store), price: null, priceAt: 0, priceP: null, play: null, last: null, expectPop: 0,
     token: 0, resAgi: null, feed: null, offFeed: null };
-  // Live mode, "coming soon" until its relay runs (./live-chains.js: LIVE_OPEN): until then every run is simulated,
-  // whatever this browser kept from a try
+  // Live mode: open on the site since its relay runs (2026-10-21; ./live-chains.js: LIVE_OPEN). Closed ("coming soon",
+  // as it was until then), every run is simulated, whatever this browser kept from a try
   const LIVE = liveOpen(location);
   if (!LIVE) S.save.live = false;
   const sound = createSound({ muted: S.save.muted });
