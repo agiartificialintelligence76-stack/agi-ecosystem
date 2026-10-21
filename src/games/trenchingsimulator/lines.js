@@ -46,7 +46,7 @@ export const LINES = Object.freeze({
   won: ['you did it 🎉💜 challenge complete', 'goal hit! i knew you had it 💜', 'winner 🏆 play money, real skills'],
   lostTime: ['time\'s up 🙈 so close. one more?', 'the clock won this one. rematch? 💜', 'out of time. the trenches will be here 💜'],
   lostRug: ['that rug ended the run 💔 it happens to everyone', 'rugged out. next one\'s yours 💜'],
-  busted: ['out of SOL 🙈 it\'s only play money. run it back?', 'busted. the trenches were cruel today 💜'],
+  busted: ['out of play money 🙈 good thing it\'s not real. run it back?', 'busted. the trenches were cruel today 💜'],
   cashed: ['cashed out 💜 nice session', 'and that\'s the session 💜 see you in the trenches'],
   quit: ['see you next time 💜', 'leaving already? i\'ll keep the charts warm 🙈'],
 });

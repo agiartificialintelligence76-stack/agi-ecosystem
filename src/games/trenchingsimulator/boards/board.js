@@ -18,7 +18,8 @@
 // now, "Not live". Never a link anywhere, and a real coin's address only ever as its first 6 characters.
 import { el, setText, flag, keyed, icon } from '../ui.js';
 import { createChart, TIMEFRAMES } from '../chart.js';
-import { usd, money, signed, pct, share, age, tokens, sol } from '../format.js';
+import { usd, money, signed, pct, share, age, tokens, currencyOf, unitOf, nice } from '../format.js';
+import { MIN_BUY } from '../engine.js';
 import { CURVE_TOK, GRAD_MC, START_MC } from '../curve.js';
 
 const HUES = { cats: 32, dogs: 24, frogs: 118, critters: 36, birds: 48, ocean: 198, food: 14, space: 262, ai: 188,
@@ -150,12 +151,19 @@ const WIN_S = Object.freeze({ '5m': 300, '1h': 3600, '24h': Infinity });
 
 export function mountBoard(host, ctx) {
   const { market } = ctx;
-  const cur = ctx.currency === 'usd' ? 'usd' : 'sol';
+  // the board's money (./format.js): SOL, dollars, or (Live mode, since 2026-10-21) the chain's own coin, ETH or BNB; the
+  // market counts in SOL, and every amount shown or typed is in U at the run's prices
+  const cur = currencyOf(ctx.currency);
   const px = ctx.solUsd;
+  const U = unitOf(cur, px);
+  const isUsd = U.id === 'usd';
   const M = (x) => money(x, cur, px);
   const MN = (x) => money(x, cur, px, { unit: false });
-  const MS = (x) => signed(cur === 'usd' ? x * px : x, cur);
-  const unitName = cur === 'usd' ? 'USD' : 'SOL';
+  const MS = (x) => signed(x * U.per, isUsd ? 'usd' : 'sol');
+  const unitName = U.name;
+  // an order's error in the board's money (ORDER_ERRORS: SOL's words)
+  const orderError = (code) => (code === 'min_buy' ? `The smallest buy is ${M(MIN_BUY)}.`
+    : typeof ORDER_ERRORS[code] === 'string' ? ORDER_ERRORS[code].replace(/\bSOL\b/g, U.name) : '');
   const mc = (x) => usd(x * px);
   // the time of day the market's clock reads 0 (when the player arrived): the chart's times under its candles
   const clockBase = Date.now() - (Number.isFinite(market.t) ? market.t : 0) * 1000;
@@ -253,7 +261,7 @@ export function mountBoard(host, ctx) {
   const walletAmt = el('b', { class: 'tsb-wallet-n' }, '—');
   const walletBtn = el('button', { class: 'tsb-wallet', type: 'button', on: { click: () => openBag() } },
     icon('bag', 'ts-icon tsb-wallet-ic'), el('span', { class: 'tsb-sr' }, 'Your bag, balance '), walletAmt,
-    cur === 'usd' ? null : el('span', { class: 'tsb-wallet-u' }, ' SOL'));
+    isUsd ? null : el('span', { class: 'tsb-wallet-u' }, ` ${U.name}`));
   const head = el('header', { class: 'tsb-head' },
     el('div', { class: 'tsb-brand' }, el('span', { class: 'tsb-logo', 'aria-hidden': 'true' }),
       el('span', { class: 'tsb-brand-t' }, 'Trench Board')),
@@ -655,11 +663,11 @@ export function mountBoard(host, ctx) {
     const tk = r ? `$${r.ticker}` : '';
     if (B.side === 'buy') {
       setText(unit, unitName);
-      amountIn.setAttribute('aria-label', cur === 'usd' ? 'Amount in dollars' : 'Amount in SOL');
-      const vals = buyPresets(ctx.start).map((v) => (cur === 'usd' ? Math.round(v * px) : v));
+      amountIn.setAttribute('aria-label', isUsd ? 'Amount in dollars' : `Amount in ${U.name}`);
+      const vals = buyPresets(ctx.start).map((v) => (isUsd ? Math.round(v * px) : U.id === 'sol' ? v : nice(v * U.per)));
       presets.replaceChildren(
-        ...vals.map((v) => el('button', { type: 'button', 'aria-label': cur === 'usd' ? `$${v}` : `${v} SOL`,
-          on: { click: () => setAmount(String(v)) } }, cur === 'usd' ? `$${v}` : String(v))),
+        ...vals.map((v) => el('button', { type: 'button', 'aria-label': isUsd ? `$${v}` : `${v} ${U.name}`,
+          on: { click: () => setAmount(String(v)) } }, isUsd ? `$${v}` : String(v))),
         el('button', { type: 'button', class: 'is-max', 'aria-label': 'Max: the most you can buy',
           on: { click: () => setAmount(maxBuyText()) } }, 'Max'));
     } else {
@@ -671,8 +679,9 @@ export function mountBoard(host, ctx) {
   }
   function maxBuyText() {
     const m = market.maxBuy(ctx.settings().priority);
-    const v = Math.floor(m * 1000) / 1000;
-    return v > 0 ? String(cur === 'usd' ? Math.floor(v * px) : v) : '0';
+    // (SOL to the thousandth, dollars whole, ETH or BNB to the hundred-thousandth: always at most what's there)
+    const v = isUsd ? Math.floor(m * px) : U.id === 'sol' ? Math.floor(m * 1000) / 1000 : Math.floor(m * U.per * 1e5) / 1e5;
+    return v > 0 ? String(v) : '0';
   }
   function setAmount(v) {
     amountIn.value = v;
@@ -685,7 +694,7 @@ export function mountBoard(host, ctx) {
     const v = parseAmount(amountIn.value);
     if (B.coin === null || !(v > 0)) return null;
     const s = ctx.settings();
-    if (B.side === 'buy') return { coin: B.coin, side: 'buy', sol: cur === 'usd' ? v / px : v, slippage: s.slippage, priority: s.priority };
+    if (B.side === 'buy') return { coin: B.coin, side: 'buy', sol: v / U.per, slippage: s.slippage, priority: s.priority };
     if (v > 100) return { bad: true };
     return { coin: B.coin, side: 'sell', frac: v / 100, slippage: s.slippage, priority: s.priority };
   }
@@ -696,10 +705,10 @@ export function mountBoard(host, ctx) {
     if (!a) return setText(quoteBox, '');
     if (a.bad) return setText(quoteBox, 'At most 100%.');
     const q = market.quote(a);
-    if (!q.ok) return setText(quoteBox, ORDER_ERRORS[q.error] || '');
+    if (!q.ok) return setText(quoteBox, orderError(q.error));
     const fees = q.fees.terminal + q.fees.market + q.fees.network;
     if (a.side === 'buy') {
-      return setText(quoteBox, `you receive ≈ ${tokens(q.tokens)} ${tk} · price impact ${share(Math.max(0, q.impact))} · fees ${M(fees)}${q.enough ? '' : ' · not enough SOL'}`);
+      return setText(quoteBox, `you receive ≈ ${tokens(q.tokens)} ${tk} · price impact ${share(Math.max(0, q.impact))} · fees ${M(fees)}${q.enough ? '' : ` · not enough ${U.name}`}`);
     }
     return setText(quoteBox, `you receive ≈ ${M(q.got)} · price impact ${share(Math.max(0, -q.impact))} · fees ${M(fees)}`);
   }
@@ -708,7 +717,7 @@ export function mountBoard(host, ctx) {
     if (!a) return setText(errBox, B.side === 'buy' ? 'Type how much to buy.' : 'Pick how much to sell.');
     if (a.bad) return setText(errBox, 'At most 100%.');
     const r = ctx.order({ coin: a.coin, side: a.side, sol: a.sol, frac: a.frac });
-    if (!r || !r.ok) return setText(errBox, ORDER_ERRORS[r && r.error] || 'That didn\'t go through.');
+    if (!r || !r.ok) return setText(errBox, orderError(r && r.error) || 'That didn\'t go through.');
     setText(errBox, '');
     if (tradeSheet.open) tradeSheet.close();
     return undefined;
@@ -1045,7 +1054,7 @@ export function mountBoard(host, ctx) {
     } else {
       setText(curveV, share(s.progress, 0));
       setP(curveBar, s.progress);
-      setText(curveTxt, `When the market cap reaches ${usd(GRAD_MC * px)}, all of the curve's liquidity moves into a trading pool. There are ${tokens(CURVE_TOK * (1 - s.progress))} tokens still for sale on the curve, and ${sol(s.curveSol)} SOL in it.`);
+      setText(curveTxt, `When the market cap reaches ${usd(GRAD_MC * px)}, all of the curve's liquidity moves into a trading pool. There are ${tokens(CURVE_TOK * (1 - s.progress))} tokens still for sale on the curve, and ${isUsd ? usd(s.curveSol * px) : `${MN(s.curveSol)} ${U.name}`} in it.`);
     }
     // the king of the hill's race
     const king = market.lists({ limit: 30 }).koth;
@@ -1069,9 +1078,9 @@ export function mountBoard(host, ctx) {
       setText(kingTxt, 'No king yet: the first coin halfway up its curve takes the crown.');
     }
     // its pool
-    setText(pool.dd.pair, s.pair || 'SOL');
+    setText(pool.dd.pair, s.pair || (U.id === 'eth' || U.id === 'bnb' ? U.name : 'SOL'));
     setText(pool.dt.liq, s.phase === 'pool' ? 'Liquidity' : 'In the curve');
-    setText(pool.dd.liq, `${usd(s.liq * px)} (${sol(s.liq)} SOL)`);
+    setText(pool.dd.liq, isUsd ? usd(s.liq * px) : `${usd(s.liq * px)} (${MN(s.liq)} ${U.name})`);
     setText(pool.dd.mc, mc(s.mc));
     setText(pool.dd.ath, mc(s.ath));
     setText(pool.dd.born, ago(s.age));
@@ -1290,7 +1299,7 @@ export function mountBoard(host, ctx) {
 
   function fast(force) {
     const p = market.player;
-    setText(walletAmt, cur === 'usd' ? usd(p.sol * px) : sol(p.sol));
+    setText(walletAmt, isUsd ? usd(p.sol * px) : MN(p.sol));
     if (B.view === 'coin') renderCoinFast(force);
     if (wide.matches || bagSheet.open || phone.matches) renderBag();
   }

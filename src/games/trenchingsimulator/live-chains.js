@@ -26,24 +26,34 @@ export const DEFAULT_CHAIN = 'solana';
 const BY_ID = new Map(CHAINS.map((c) => [c.id, c]));
 export const chainById = (id) => BY_ID.get(id) || null;
 
-// The money each terminal shows its play money in, in Live mode (the owner's, 2026-10-21): Trench Board SOL on every
-// chain, Trench Scan the chain's own coin, Trench Chat ETH, Trench Social dollars, Trench Pro SOL (the money its real
-// counterpart trades in). The game counts in SOL underneath (./engine.js); a terminal shows it in its own.
+// The money each terminal shows its play money in, in Live mode (the owner's, 2026-10-21): Trench Board and Trench Scan
+// the chain's own coin (SOL on Solana, ETH on Robinhood Chain and Base, BNB on BNB Chain: Trench Board's since the
+// owner's "Each chain's money", the same day; SOL on every chain before), Trench Chat ETH, Trench Social dollars, Trench
+// Pro SOL (the money its real counterpart trades in). The game counts in SOL underneath (./engine.js); a terminal shows
+// it in its own, at the run's prices.
 export const UNIT_NAMES = Object.freeze({ sol: 'SOL', eth: 'ETH', bnb: 'BNB', usd: 'dollars' });
 export function liveCurrency(terminalId, chainId) {
   const ch = chainById(chainId) || chainById(DEFAULT_CHAIN);
   switch (terminalId) {
+    case 'board':
     case 'scan':
       return ch.coin;
     case 'chat':
       return 'eth';
     case 'social':
       return 'usd';
-    case 'board':
     case 'pro':
     default:
       return 'sol';
   }
+}
+// The money a live run shows, for ./format.js (`px`: the relay's dollar prices, { sol, eth, bnb }): 'sol', 'usd', or a
+// chain's coin with its price frozen for the run ({ coin: 'eth', usd: 2612.5 }); SOL while that price isn't known yet
+export function liveMoney(terminalId, chainId, px) {
+  const unit = liveCurrency(terminalId, chainId);
+  if (unit === 'sol' || unit === 'usd') return unit;
+  const p = px && typeof px === 'object' ? Number(px[unit]) : NaN;
+  return Number.isFinite(p) && p > 0 ? { coin: unit, usd: Math.round(p * 100) / 100 } : 'sol';
 }
 // an amount of SOL in another unit at the run's own prices ({ sol, eth, bnb }: dollars), or NaN
 export function toUnit(solAmount, unit, px) {

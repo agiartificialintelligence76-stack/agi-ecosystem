@@ -146,16 +146,40 @@ export function price(p, sig = 4) {
 // a market cap in SOL as dollars: "$12.3K"
 export const mcUsd = (mcSol, solUsd) => (fin(mcSol) && fin(solUsd) ? usd(mcSol * solUsd) : '—');
 
-// an amount in the terminal's own money: SOL ("1.234 SOL" or "1.234") or dollars ("$185.10")
+// ---------- a terminal's money ----------
+// `currency`: 'sol', 'usd', or (Live mode, since 2026-10-21: the owner's "Each chain's money") a chain's own coin with its
+// dollar price frozen for the run, { coin: 'eth' | 'bnb', usd }. The game counts in SOL underneath; amounts are shown in
+// the terminal's money at the run's prices.
+const COIN_NAMES = Object.freeze({ eth: 'ETH', bnb: 'BNB' });
+export const isCoinCurrency = (c) => Boolean(c) && typeof c === 'object' && Object.hasOwn(COIN_NAMES, c.coin) && fin(c.usd) && c.usd > 0;
+// a currency as given (a result's, say), checked: 'usd', a chain's coin, or else 'sol'
+export const currencyOf = (c) => (c === 'usd' || isCoinCurrency(c) ? c : 'sol');
+// → { id: 'sol' | 'usd' | 'eth' | 'bnb', name: 'SOL' | 'USD' | 'ETH' | 'BNB', per: how many of it one SOL is }
+export function unitOf(currency, solUsd) {
+  const px = fin(solUsd) && solUsd > 0 ? solUsd : 150;
+  if (currency === 'usd') return { id: 'usd', name: 'USD', per: px };
+  if (isCoinCurrency(currency)) return { id: currency.coin, name: COIN_NAMES[currency.coin], per: px / currency.usd };
+  return { id: 'sol', name: 'SOL', per: 1 };
+}
+// an amount rounded to one people pick: two significant figures (0.0404 → 0.04, 0.202 → 0.2, 4.04 → 4)
+export function nice(x) {
+  if (!fin(x) || x <= 0) return x;
+  return Number(x.toPrecision(2));
+}
+
+// an amount in the terminal's own money: SOL ("1.234 SOL" or "1.234"), dollars ("$185.10") or a chain's coin ("0.04 ETH")
 export function money(solAmount, currency, solUsd, { unit = true } = {}) {
   if (!fin(solAmount)) return '—';
   if (currency === 'usd') return fin(solUsd) ? usd(solAmount * solUsd) : '—';
-  return unit ? `${sol(solAmount)} SOL` : sol(solAmount);
+  const u = unitOf(currency, solUsd);
+  const v = sol(solAmount * u.per);
+  return unit ? `${v} ${u.name}` : v;
 }
 
 // a signed amount in the terminal's own money
 export function moneySigned(solAmount, currency, solUsd) {
   if (!fin(solAmount)) return '—';
   if (currency === 'usd') return fin(solUsd) ? signed(solAmount * solUsd, 'usd') : '—';
-  return `${signed(solAmount, 'sol')} SOL`;
+  const u = unitOf(currency, solUsd);
+  return `${signed(solAmount * u.per, 'sol')} ${u.name}`;
 }

@@ -928,17 +928,27 @@ test("Live mode's chains, the money each terminal shows in it, and which challen
     'Live: every new clank.trade coin as it launches, and others as they get listed on Robinhood Chain, traded with play money.');
   assert.match(readFileSync('src/games/trenchingsimulator/shell.js', 'utf8'),
     /`Live · \$\{c\.name\} · real coins\$\{c\.src && c\.allFrom \? ` from \$\{c\.src\}` : ''\} · play money only`/);
-  // the owner's: Trench Board SOL on every chain, Trench Scan the chain's own coin, Trench Chat ETH, Trench Social dollars,
-  // Trench Pro its counterpart's (SOL)
+  // the owner's: Trench Board and Trench Scan the chain's own coin (Trench Board's since the owner's "Each chain's money",
+  // 2026-10-21: SOL on every chain before), Trench Chat ETH, Trench Social dollars, Trench Pro its counterpart's (SOL)
   for (const ch of L.CHAIN_IDS) {
-    assert.equal(L.liveCurrency('board', ch), 'sol');
     assert.equal(L.liveCurrency('chat', ch), 'eth');
     assert.equal(L.liveCurrency('social', ch), 'usd');
     assert.equal(L.liveCurrency('pro', ch), 'sol');
   }
+  assert.deepEqual(L.CHAIN_IDS.map((ch) => L.liveCurrency('board', ch)), ['sol', 'eth', 'bnb', 'eth']);
   assert.deepEqual(L.CHAIN_IDS.map((ch) => L.liveCurrency('scan', ch)), ['sol', 'eth', 'bnb', 'eth']);
   assert.equal(L.liveCurrency('nope', 'nope'), 'sol');
   const px = { sol: 150, eth: 3000, bnb: 600 };
+  // a live run's money for ./format.js: the chain's coin with its price frozen for the run (to the cent); SOL until the
+  // relay's price for it is in
+  assert.deepEqual(L.CHAIN_IDS.map((ch) => L.liveMoney('board', ch, px)),
+    ['sol', { coin: 'eth', usd: 3000 }, { coin: 'bnb', usd: 600 }, { coin: 'eth', usd: 3000 }]);
+  assert.deepEqual(L.liveMoney('board', 'robinhood', { sol: 150, eth: 2612.4567 }), { coin: 'eth', usd: 2612.46 });
+  for (const bad of [{ sol: 150 }, { eth: 0 }, { eth: -1 }, { eth: 'x' }, null, undefined]) {
+    assert.equal(L.liveMoney('board', 'robinhood', bad), 'sol', JSON.stringify(bad));
+  }
+  assert.equal(L.liveMoney('social', 'robinhood', px), 'usd');
+  assert.equal(L.liveMoney('pro', 'robinhood', px), 'sol');
   assert.equal(L.toUnit(2, 'sol', px), 2);
   assert.equal(L.toUnit(2, 'usd', px), 300);
   assert.equal(L.toUnit(2, 'eth', px), 0.1);

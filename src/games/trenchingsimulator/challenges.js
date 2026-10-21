@@ -9,7 +9,7 @@
 //   migration   a coin held while it migrates, then sold after it, in profit
 //   survive     trade `coins` different coins and finish above the start when time is up; a rug on a coin held ends it
 import { hash32 } from './rng.js';
-import { money, usd as fmtUsd, sol as fmtSol, clock, grouped } from './format.js';
+import { money, usd as fmtUsd, clock, grouped, unitOf, isCoinCurrency, nice } from './format.js';
 
 export const TIERS = Object.freeze(['easy', 'medium', 'hard', 'legendary']);
 
@@ -43,13 +43,23 @@ export const challengeById = (id) => BY_ID.get(id) || null;
 export const FREE_STARTS = Object.freeze([1, 5, 10, 50]);
 export const SPEEDS = Object.freeze([1, 2, 4]);
 
-// what a challenge starts with, in SOL (a dollar start at the run's SOL price)
-export function startSolFor(ch, solUsd) {
+// what a challenge starts with, in SOL (a dollar start at the run's SOL price). In a chain's own coin (`currency`: Live
+// mode's ETH or BNB, since 2026-10-21), a SOL start becomes a round amount of that coin (1 SOL at $150 and ETH at $3,000:
+// 0.05 ETH), and the run starts with what that is in SOL.
+export function startSolFor(ch, solUsd, currency = 'sol') {
   const s = ch && ch.start;
-  if (s && Number.isFinite(s.sol) && s.sol > 0) return s.sol;
+  if (s && Number.isFinite(s.sol) && s.sol > 0) return inCoin(s.sol, currency, solUsd);
   const px = Number.isFinite(solUsd) && solUsd > 0 ? solUsd : 150;
   if (s && Number.isFinite(s.usd) && s.usd > 0) return s.usd / px;
-  return 1;
+  return inCoin(1, currency, solUsd);
+}
+// Free play's start (`v`: one of FREE_STARTS, in SOL), the same way
+export const freeStartSol = (v, currency = 'sol', solUsd = 150) => inCoin(v, currency, solUsd);
+// an amount of SOL as a round amount of a chain's coin, back in SOL (SOL and dollars: as it is)
+function inCoin(solAmount, currency, solUsd) {
+  if (!isCoinCurrency(currency)) return solAmount;
+  const u = unitOf(currency, solUsd);
+  return nice(solAmount * u.per) / u.per;
 }
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : Number.isFinite(x) ? x : 0);
@@ -141,7 +151,7 @@ const times = (x) => `${x}x`;
 // "Turn 1 SOL into 2 SOL", "Make $500 profit (about 3.33 SOL)"…: what to do; and the time it gives
 export function goalText(ch, currency, solUsd) {
   if (!ch) return '';
-  const start = startSolFor(ch, solUsd);
+  const start = startSolFor(ch, solUsd, currency);
   const g = ch.goal;
   switch (g.kind) {
     case 'worth': {
@@ -151,7 +161,7 @@ export function goalText(ch, currency, solUsd) {
     }
     case 'profitUsd': {
       const inSol = g.usd / (solUsd > 0 ? solUsd : 150);
-      return currency === 'usd' ? `Make ${fmtUsd(g.usd)} profit` : `Make ${fmtUsd(g.usd)} profit (about ${fmtSol(inSol)} SOL)`;
+      return currency === 'usd' ? `Make ${fmtUsd(g.usd)} profit` : `Make ${fmtUsd(g.usd)} profit (about ${money(inSol, currency, solUsd)})`;
     }
     case 'takeProfit':
       return `Sell one coin for ${times(g.x)} what you put into it`;
@@ -176,5 +186,5 @@ export function timeText(seconds) {
 // what a challenge starts with, as the terminal shows money: "1 SOL", "$1,000"
 export function startText(ch, currency, solUsd) {
   if (ch && ch.start && Number.isFinite(ch.start.usd) && currency === 'usd') return `$${grouped(ch.start.usd, 0)}`;
-  return money(startSolFor(ch, solUsd), currency, solUsd);
+  return money(startSolFor(ch, solUsd, currency), currency, solUsd);
 }

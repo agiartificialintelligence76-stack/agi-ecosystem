@@ -2,7 +2,7 @@
 // posts it, never us: hard rule 6). Every one says it's play money with made-up coins (since Live mode, 2026-10-21: or
 // play money on live coins, for a run that traded real ones), never "buy", never a real terminal's or coin's name, never
 // a promise. Pure: read in Node too (tests/trench-game.test.js).
-import { money, clock } from './format.js';
+import { money, clock, currencyOf } from './format.js';
 import { challengeById } from './challenges.js';
 
 export const GAME_URL = 'https://agi1.app/games/trenchingsimulator';
@@ -17,7 +17,7 @@ const change = (m) => (fin(m) && m > 0 ? `${m >= 1 ? '+' : '−'}${Math.round(Ma
 export function shareText(result) {
   const r = result && typeof result === 'object' ? result : {};
   const PLAY = typeof r.live === 'string' && Number.isFinite(r.liveTraded) && r.liveTraded > 0 ? PLAY_LIVE : PLAY_MADE;
-  const cur = r.currency === 'usd' ? 'usd' : 'sol';
+  const cur = currencyOf(r.currency);
   const px = fin(r.solUsd) && r.solUsd > 0 ? r.solUsd : 150;
   const from = money(r.start, cur, px);
   const to = money(r.worth, cur, px);

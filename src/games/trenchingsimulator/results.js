@@ -1,7 +1,7 @@
 // TRENCHING SIMULATOR's results (2026-10-20): a finished run in words and numbers (its title, its line, its stats), its
 // worth over time as a line (an SVG path, at most 200 points), and its share card's words. Pure: the shell draws them,
 // and tests read them in Node (tests/trench-game.test.js).
-import { money, moneySigned, times, clock, usd } from './format.js';
+import { money, moneySigned, times, clock, usd, currencyOf, isCoinCurrency, unitOf } from './format.js';
 import { challengeById } from './challenges.js';
 import { GAME_NAME } from './share.js';
 import { chainById } from './live-chains.js';
@@ -43,7 +43,8 @@ export function modeLabel(res) {
 // a run that traded real coins (Live mode): its words say so
 export const tradedLive = (r) => Boolean(r && typeof r.live === 'string' && Number.isFinite(r.liveTraded) && r.liveTraded > 0);
 
-const cur = (r) => (r.currency === 'usd' ? 'usd' : 'sol');
+// its money: SOL, dollars, or (Live mode, since 2026-10-21) the chain's own coin with its price for the run
+const cur = (r) => currencyOf(r.currency);
 const px = (r) => (fin(r.solUsd) && r.solUsd > 0 ? r.solUsd : 150);
 
 // "1 SOL → 2.31 SOL (2.31x) in 08:42"
@@ -86,6 +87,7 @@ export function statLines(res) {
     { label: 'Fees paid', value: `${money(fin(r.fees) ? r.fees : 0, c, p)}${fin(r.mev) && r.mev > 0 ? ` · ${money(r.mev, c, p)} lost to bots` : ''}`, tone: '' },
     { label: 'SOL price', value: `${usd(p)} (frozen for this run)`, tone: '' },
   ];
+  if (isCoinCurrency(c)) out.push({ label: `${unitOf(c, p).name} price`, value: `${usd(c.usd)} (frozen for this run)`, tone: '' });
   return out;
 }
 

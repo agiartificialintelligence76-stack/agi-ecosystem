@@ -9600,14 +9600,16 @@ install --no-save playwright-core` and sharp; it serves `dist/` on this computer
 **Tests:** `tests/trench.test.js` (20: the market: pump.fun's curve, the dice, the same seed making the same market,
 every token always somewhere, the fates' odds, coin names over thousands of draws, the smart wallets, the player's money
 to the last fee, every order refused and why, priorities, sandwich bots (the engine's; off in the game), a buy that
-completes a curve, two hours in a row, every read), `tests/trench-game.test.js` (29: numbers as players read them, the
+completes a curve, two hours in a row, every read), `tests/trench-game.test.js` (30: numbers as players read them, the
 challenges, the daily market, a run's clock, orders, winning, losing on time and to a rug, busted and cashed out, SOL's
 price, AGI-1's lines and her face, the five terminals and their colors' contrast, the save, its posts for X, the chart,
-Trench Board's helpers, the results), `tests/trench-live.test.js` (32: Live mode, below), `tests/page.test.js`
+Trench Board's helpers, the results, and since 2026-10-21 a chain's own coin as the money, ETH and BNB at a run's
+prices), `tests/trench-live.test.js` (32: Live mode, below), `tests/page.test.js`
 (agi1.app/games with two games: both cards, the tabs and panels, every id once, the words' rules, the link preview and
 the key art) and `tests/arcade.test.js` (two games counted apart, their own ratings and reviews, TRENCHING SIMULATOR's
-`site.js`, the AI's words per game, `arcade.sql` naming no game). 1010 in the whole suite since Robinhood Chain's listed
-coins and the quiet rule (2026-10-21: 1007 pass, 3 skipped in Claude's workspace, and the build); before them 1008 (1007
+`site.js`, the AI's words per game, `arcade.sql` naming no game). 1011 in the whole suite since Trench Board's ETH and
+BNB (2026-10-21: 1008 pass, 3 skipped in Claude's workspace, and the build; 1010 with Robinhood Chain's listed coins
+and the quiet rule, just before); before them 1008 (1007
 before Live mode's "Coming soon") on Node 20, 22 and 24, with and without Vercel's settings, in UTC and the workspace's
 time zone, and as if the clock said six later times on each (one of those runs crossed 00:00 UTC in the middle of a
 day's count: the harmless midnight case, see "Working in this repo"); the full build, and a clean build like Vercel's.
@@ -9682,8 +9684,16 @@ like the other four terminals. I switch it on when the server's ready (one small
 - **Trades:** quoted and filled against the coin's live curve (pump.fun's own constant product and its 1% fee; a pool's
   0.3% after it graduates); the player's own tokens move the curve in their own view, and a sell comes back along it.
   The buttons say "· play money".
-- **Money per terminal** (the owner's): Trench Board SOL, Trench Scan the chain's own coin (SOL, ETH or BNB), Trench Chat
-  ETH, Trench Social dollars, Trench Pro SOL, at the run's own prices (SOL, ETH and BNB in dollars, from DexScreener).
+- **Money per terminal** (the owner's): Trench Board the chain's own coin since 2026-10-21 (the owner: "why im using sol
+  on robinhood chain when it uses ethereum", then "Each chain's money (Recommended)"; SOL on every chain before): ETH on
+  Robinhood Chain and Base, BNB on BNB Chain, SOL on Solana, in every amount it shows or takes (the balance, quick buys
+  as round amounts, fees, profits, the results and the post, priority fees). A challenge's SOL start and Free play's
+  1, 5, 10 or 50 SOL become a round amount of the coin (two significant figures: at SOL $150 and ETH $3,000, 0.05 ETH),
+  and the run starts with that in SOL: the game counts in SOL underneath (`format.js`: `unitOf()`, `money()`;
+  `challenges.js`: `startSolFor()`, `freeStartSol()`; `live-chains.js`: `liveMoney()`). The coin's price is the relay's
+  (DexScreener), frozen for the run like SOL's ("ETH $2.61K · SOL $105.73 … frozen for this run"); SOL until it's in.
+  The daily market and Rug dodger stay simulated, in SOL. Trench Scan the chain's own coin, Trench Chat ETH, Trench
+  Social dollars, Trench Pro SOL (none built yet).
 - **AGI-1** has 25 lines of her own for Live mode, none with a ticker: a real coin's "rug" or "dev sell" is never
   something she says.
 
@@ -12384,7 +12394,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   checks) and its "Coming soon" (42 checks). **Later that day:** Robinhood Chain's coins from other launchpads listed on
   DexScreener beside clank.trade's, and a quiet chain with 8 or more real coins live playing them alone (both the
   owner's; 1010 tests, 1007 pass, 3 skipped; Live mode's browser test 91 of 91); the owner pushes, then `relay.sh
-  update` on the server (the relay changed). Next: Trench Board in each chain's own money in Live mode (the owner's).
+  update` on the server (the relay changed). Then Trench Board in each chain's own money in Live mode (the owner's: ETH
+  on Robinhood Chain and Base, BNB on BNB Chain; 1011 tests, 1008 pass, 3 skipped; the game's smoke test 128 of 128,
+  Live mode's browser test 91 of 91, and a Robinhood Chain run in ETH in a browser, 28 checks, in Claude's scratch
+  `trench/live/live-eth.mjs`).
 
 ## Decisions log
 
@@ -12784,6 +12797,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-21 | Live mode opened the same day: the owner went through its steps one at a time, `relay.sh check` all ok (Solana live through PumpPortal and Helius, Robinhood Chain and BNB Chain coming in, the certificate working, https://live.agi1.app/health answering from outside), so `LIVE_OPEN = true` (one small push). With it, agi1.app/games's words for the game: "made-up coins only" and "nothing in it is … a real coin" were false once real coins are in it, so "Play money only, on made-up coins or, in Live mode, real new coins…" (Claude's suggestion from "Open questions"; the owner can reword them). Step 6's key line made safer after the first paste saved something that wasn't the key: it cleans and checks what's pasted, and never shows it |
 | 2026-10-21 | Robinhood Chain's coins from any launchpad listed on DexScreener, beside clank.trade's (the owner: "why on the robinhood chain just clank trade tokens not the whole robinhood coins"). Since its mainnet (July 2026) Robinhood Chain has several launchpads (clank.trade, pools.trade from Uniswap Labs, Pons, Long, Hookr…) and no single free list of every new coin. The owner's pick of three: "Add DexScreener coins (Recommended)"; not "Every new coin on the chain" (thousands a day, many without pictures, a data service's account, more load on the live show's server) nor "Keep clank.trade only". clank.trade stays the chain's own source (its state, and a coin both have: it takes a listed one over). A run's line names a launchpad only where every coin comes from it (`allFrom`): "Live · Robinhood Chain · real coins · play money only" |
 | 2026-10-21 | A quiet chain plays its real coins alone when 8 or more are live (`REAL_ENOUGH`, `playState()`; the owner: "on the live mode on robinhood chain use real coins not fake ones"): Robinhood Chain is often quiet (no new clank.trade coin for 45 minutes) while its newest coins still trade, so the made-up stand-ins that filled in on every quiet chain stay out, and its words say Live. With fewer than 8 (BNB Chain's and Base's few listed coins, often), the stand-ins still fill in: an empty board isn't a game |
+| 2026-10-21 | Trench Board in each chain's own money in Live mode (the owner: "why im using sol on robinhood chain when it uses ethereum"; the owner's pick: "Each chain's money (Recommended)" over "Keep SOL for now"): ETH on Robinhood Chain and Base, BNB on BNB Chain, SOL on Solana. The engine still counts in SOL (one market for every terminal), and every amount is shown and typed in the coin at the run's frozen prices. Starts are round amounts of the coin (two significant figures: 1 SOL at that day's prices was 0.04 ETH), the engine's start that in SOL, so a goal's words stay round ("Turn 0.04 ETH into 0.4 ETH (10x)"). AGI-1's busted line says "out of play money" (it said "out of SOL") |
 
 ## Open questions
 

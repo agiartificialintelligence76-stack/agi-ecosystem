@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import * as F from '../src/games/trenchingsimulator/format.js';
 import {
   CHALLENGES, TIERS, FREE_STARTS, SPEEDS, challengeById, startSolFor, goalState, atEnd, starsFor, dailyKey, isDailyKey,
-  dailySeed, dailyChallenge, goalText, timeText, startText,
+  dailySeed, dailyChallenge, goalText, timeText, startText, freeStartSol,
 } from '../src/games/trenchingsimulator/challenges.js';
 import { createRun, BUST_SOL, MILESTONES, DOWN_AT, MAX_DT } from '../src/games/trenchingsimulator/run.js';
 import { MIN_BUY, PRIORITY, BASE_FEE } from '../src/games/trenchingsimulator/engine.js';
@@ -135,12 +135,21 @@ test("its numbers as players read them: dollars, SOL, percents, ages, clocks, pr
   assert.equal(F.money(1, 'usd', NaN), '—');
   assert.equal(F.moneySigned(0.123, 'sol', 150), '+0.123 SOL');
   assert.equal(F.moneySigned(-0.1, 'usd', 150), '−$15');
-  // every function takes anything and gives a string: "—" for what isn't a number, never a throw
+  // every function takes anything and gives a string: "—" for what isn't a number, never a throw (the money's helpers,
+  // since 2026-10-21, aren't formatters: anything odd is SOL, or comes back as it is)
+  const HELPERS = new Set(['isCoinCurrency', 'currencyOf', 'unitOf', 'nice']);
   for (const [name, fn] of Object.entries(F)) {
-    if (typeof fn !== 'function') continue;
+    if (typeof fn !== 'function' || HELPERS.has(name)) continue;
     for (const x of [NaN, Infinity, -Infinity, undefined, null, '12', {}, [], true]) {
       assert.equal(fn(x, x), '—', `${name}(${String(x)})`);
     }
+  }
+  for (const x of [NaN, Infinity, -Infinity, undefined, null, '12', {}, [], true]) {
+    assert.equal(F.isCoinCurrency(x), false);
+    assert.equal(F.currencyOf(x), 'sol');
+    assert.deepEqual(F.unitOf(x, x), { id: 'sol', name: 'SOL', per: 1 });
+    assert.equal(F.money(1, x, 150), '1 SOL', String(x));
+    assert.ok(Object.is(F.nice(x), x) || (typeof x === 'number' && !Number.isFinite(x)), String(x));
   }
 });
 
@@ -1378,6 +1387,68 @@ const WON = Object.freeze({
   seconds: 1800, pnl: 1.31, peak: 2.5, filled: 12, failed: 2, coins: 5, wins: 3, losses: 2,
   best: { ticker: 'FROG', emoji: '🐸', total: 0.42 }, worst: { ticker: 'RUG', emoji: '💀', total: -0.2 }, fees: 0.031,
   solUsd: 150, currency: 'sol', stars: 2,
+});
+
+test("a chain's own coin as a terminal's money (Live mode, the owner's \"Each chain's money\"): ETH and BNB at the run's prices", async () => {
+  // 2026-10-21: Trench Board shows ETH on Robinhood Chain and Base, BNB on BNB Chain; the game counts in SOL underneath
+  const ETH = { coin: 'eth', usd: 3000 };
+  const BNB = { coin: 'bnb', usd: 600 };
+  assert.deepEqual(F.unitOf('sol', 150), { id: 'sol', name: 'SOL', per: 1 });
+  assert.deepEqual(F.unitOf('usd', 150), { id: 'usd', name: 'USD', per: 150 });
+  assert.deepEqual(F.unitOf(ETH, 150), { id: 'eth', name: 'ETH', per: 0.05 });
+  assert.deepEqual(F.unitOf(BNB, 150), { id: 'bnb', name: 'BNB', per: 0.25 });
+  for (const bad of [{ coin: 'eth' }, { coin: 'eth', usd: 0 }, { coin: 'doge', usd: 1 }, 'eth', null, undefined, 7]) {
+    assert.equal(F.isCoinCurrency(bad), false, JSON.stringify(bad));
+    assert.equal(F.unitOf(bad, 150).id, 'sol', JSON.stringify(bad));
+    assert.equal(F.currencyOf(bad), 'sol');
+  }
+  assert.equal(F.currencyOf('usd'), 'usd');
+  assert.equal(F.currencyOf(ETH), ETH);
+  // amounts in it
+  assert.equal(F.money(1, ETH, 150), '0.05 ETH');
+  assert.equal(F.money(2, BNB, 150), '0.5 BNB');
+  assert.equal(F.money(1, ETH, 150, { unit: false }), '0.05');
+  assert.equal(F.moneySigned(-0.1, ETH, 150), '−0.005 ETH');
+  assert.equal(F.moneySigned(0.4, BNB, 150), '+0.1 BNB');
+  assert.equal(F.money(NaN, ETH, 150), '—');
+  // SOL and dollars exactly as before
+  assert.equal(F.money(1.5, 'sol', 150), '1.5 SOL');
+  assert.equal(F.moneySigned(0.123, 'sol', 150), '+0.123 SOL');
+  // round amounts, two significant figures
+  assert.deepEqual([0.0404, 0.202, 4.04, 0.176, 2.5, 0.0123].map(F.nice), [0.04, 0.2, 4, 0.18, 2.5, 0.012]);
+  // a challenge's SOL start: a round amount of the coin (here 1 SOL is exactly 0.05 ETH); a dollar start as it is
+  const c = (id) => challengeById(id);
+  assert.equal(startSolFor(c('double-up'), 150, ETH), 1);
+  assert.equal(startText(c('double-up'), ETH, 150), '0.05 ETH');
+  assert.equal(goalText(c('double-up'), ETH, 150), 'Turn 0.05 ETH into 0.1 ETH (2x)');
+  assert.equal(goalText(c('first-blood'), BNB, 150), 'Finish above 0.25 BNB: any profit counts');
+  assert.equal(goalText(c('five-hundred'), ETH, 150), 'Make $500 profit (about 0.1667 ETH)');
+  near(startSolFor(c('five-hundred'), 150, ETH), 1000 / 150, 1e-12, 'a dollar start: the same in any money');
+  // at today's kind of prices: 1 SOL is 0.0405 ETH, so 0.04 ETH; the run starts with that in SOL
+  const eth = { coin: 'eth', usd: 2612.46 };
+  near(startSolFor(c('double-up'), 105.73, eth), 0.04 * 2612.46 / 105.73, 1e-12);
+  assert.equal(startText(c('double-up'), eth, 105.73), '0.04 ETH');
+  assert.equal(goalText(c('ten-bagger'), eth, 105.73), 'Turn 0.04 ETH into 0.4 ETH (10x)');
+  assert.equal(startText(c('whale'), eth, 105.73), '4 ETH');
+  // Free play's starts the same way
+  assert.deepEqual(FREE_STARTS.map((v) => F.money(freeStartSol(v, eth, 105.73), eth, 105.73)), ['0.04 ETH', '0.2 ETH', '0.4 ETH', '2 ETH']);
+  assert.deepEqual(FREE_STARTS.map((v) => freeStartSol(v, 'sol', 105.73)), [1, 5, 10, 50]);
+  assert.deepEqual(FREE_STARTS.map((v) => freeStartSol(v, 'usd', 105.73)), [1, 5, 10, 50]);
+  // a run in ETH: its start in SOL for the engine, its goal's words, its result's money
+  const run = createRun({ seed: 'eth-run', challenge: c('double-up'), mode: 'challenge', solUsd: 105.73, currency: eth });
+  near(run.start, 0.04 * 2612.46 / 105.73, 1e-9);
+  assert.deepEqual(run.currency, eth);
+  assert.match(run.progress().label, / ETH \/ 0\.08 ETH$/);
+  const res = { ...WON, start: run.start, worth: run.start * 2, multiple: 2, currency: eth, solUsd: 105.73 };
+  assert.equal(resultLine(res), '0.04 ETH → 0.08 ETH (2x) in 08:42');
+  const rows = Object.fromEntries(statLines(res).map((r) => [r.label, r.value]));
+  assert.equal(rows['ETH price'], `${F.usd(2612.46)} (frozen for this run)`);
+  assert.equal(rows['SOL price'], `${F.usd(105.73)} (frozen for this run)`);
+  assert.match(rows.Profit, / ETH$/);
+  const { shareText } = await import('../src/games/trenchingsimulator/share.js');
+  assert.match(shareText(res), /0\.04 ETH → 0\.08 ETH/);
+  // a result's currency as saved: nonsense is SOL
+  assert.equal(resultLine({ start: 1, worth: 2, currency: { coin: 'doge', usd: 1 } }), '1 SOL → 2 SOL');
 });
 
 test("a run's results: its title and color for every ending, what it was, and its line in the terminal's money", () => {
