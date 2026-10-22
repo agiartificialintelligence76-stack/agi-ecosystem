@@ -65,10 +65,15 @@ The owner subsequently requested a terminal closely matching Fomo's web layout a
 Phomo parody branding, plus run replay. The playable Phomo terminal, local social controls, view-only perps and
 recorded replay are implemented and browser-checked locally. The final full build passed **1,081 tests,
 0 failed, 6 skipped**, including the final follow-ups. The owner explicitly requested **"publish it"**;
-publication of this increment is authorized and underway. No database changes are required.
-Local preview runs on port **4173**, using the local relay on **8790**.
+**publication succeeded** at commit `9238eb19ff0095155817729bc314a9724cfb90b4`, pushed to `main` and the working branch.
+Vercel production deployment `Go5q1dKMTZCqZoFUY8mvwC7Ps6tx` completed successfully at **2026-10-22 11:07:04 UTC**.
+Hetzner runs the same commit; the spot feed, all nine chains, perps, exact AGI contract lookup and a temporary
+two-client room/cleanup check passed. **Production UI smoke verification passed** on `www.agi1.app`: Phomo opens,
+the exact AGI contract resolves, a $10 practice buy fills, live perps quotes and 180 BTC candles load, and the
+completed run replays at 4× with the recorded fill and portfolio values. Browser warnings/errors: none.
+No database changes were required. The published game is https://www.agi1.app/games/trenchingsimulator.
 See [the Phomo and replay handoff](handoff/phomo-2026-10-22.md) for implemented features, data limits, test evidence,
-reference pages and the requirement to deploy the new perps relay module, route and Docker packaging together.
+reference pages and coordinated frontend/relay deployment evidence.
 The earlier production release described above remains historical release evidence.
 
 ---
