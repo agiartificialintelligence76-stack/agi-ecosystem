@@ -40,8 +40,9 @@ const TRON = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
 export const isB58 = (s) => typeof s === 'string' && B58.test(s);
 export const isEvm = (s) => typeof s === 'string' && EVM.test(s);
 export const isTron = (s) => typeof s === 'string' && TRON.test(s);
-// a coin's address on `chain` (our id) in the shape we keep it: EVM lower-cased, Tron's as it is (case-sensitive), or null
-export const addressOn = (chain, s) => (chain === 'tron' ? (isTron(s) ? s : null) : isEvm(s) ? s.toLowerCase() : null);
+// EVM addresses are lower-cased; Solana and Tron addresses retain their case.
+export const addressOn = (chain, s) => (chain === 'solana' ? (isB58(s) ? s : null)
+  : chain === 'tron' ? (isTron(s) ? s : null) : isEvm(s) ? s.toLowerCase() : null);
 const fin = (v) => typeof v === 'number' && Number.isFinite(v);
 const num = (v) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' && v.length < 40 ? Number(v) : NaN);
 const r6 = (x) => Math.round(x * 1e6) / 1e6;
@@ -184,15 +185,30 @@ export function bestPair(pairs, chain, token, { dexes = null } = {}) {
   return best;
 }
 
-// a chain's own coin in dollars from DexScreener's pairs for its wrapped coin (the most liquid pair that has it as its
-// base), or null when nothing sane is there
+// A chain's own coin in dollars from its most liquid valid pair. The wrapped coin may be the base or the quote:
+// priceNative is base tokens priced in quote tokens, so quote USD = base USD / priceNative.
 export function wrappedUsd(pairs, which) {
   const w = WRAPPED[which];
   if (!w) return null;
-  const p = bestPair(pairs, w.chain, w.address);
-  const v = p ? num(p.priceUsd) : NaN;
+  const list = Array.isArray(pairs) ? pairs : pairs && Array.isArray(pairs.pairs) ? pairs.pairs : [];
+  const matches = (token) => isEvm(w.address) ? lower(token?.address) === lower(w.address) : token?.address === w.address;
   const [lo, hi] = PRICE_RANGE[which];
-  return fin(v) && v >= lo && v <= hi ? v : null;
+  let value = null;
+  let liquidity = -1;
+  for (const p of list) {
+    if (!p || p.chainId !== w.chain) continue;
+    const baseUsd = num(p.priceUsd);
+    const native = num(p.priceNative);
+    const v = matches(p.baseToken) ? baseUsd
+      : matches(p.quoteToken) && fin(native) && native > 0 ? baseUsd / native : NaN;
+    if (!fin(v) || v < lo || v > hi) continue;
+    const depth = liqUsd(p);
+    if (depth > liquidity) {
+      value = v;
+      liquidity = depth;
+    }
+  }
+  return value;
 }
 
 // a pair's own numbers over 5 minutes, an hour and a day: [vol5m $, buys5m, sells5m, vol1h $, txns1h, vol24h $, txns24h,
@@ -293,6 +309,7 @@ export function encodeCoin(c) {
   const out = { id: c.id, m: c.key, n: c.name, s: c.symbol, p: c.pic || null, b: c.born, by: c.by || null, src: c.src || null,
     soc: c.soc || 0, sup: c.sup || PUMP.supply, st: encodeState(c.st), tr: c.tracked ? 1 : 0 };
   if (c.st0) out.st0 = encodeState(c.st0);
+  if (c.dx) out.dx = c.dx;
   return out;
 }
 

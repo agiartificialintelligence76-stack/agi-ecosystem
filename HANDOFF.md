@@ -31,7 +31,9 @@ See [the validation report](handoff/validation-2026-10-22.md) for scope, limitat
 **Release authorized (2026-10-22):** the owner requested “publish everything now.” This supersedes the earlier
 pause and release-approval checklist. The reviewed changes are being committed and published to `main` for agi1.app,
 with `supabase/arcade.sql`, the hosted relay update and live checks included in that release.
-See `handoff/release-2026-10-22.md` for the final verified release status when available.
+The initial release and encoded-leaderboard fix are live (`cb42c28`, then `081d21f`); the database and Hetzner
+updates passed their live checks. Additional owner-reported native-currency and live-search fixes are included in
+this follow-up. See `handoff/release-2026-10-22.md` for the verification checkpoint and remaining release checks.
 
 The earlier checklist below is retained as historical context; items 1 and 2 have now been completed locally:
 

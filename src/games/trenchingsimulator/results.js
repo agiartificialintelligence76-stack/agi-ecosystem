@@ -85,9 +85,9 @@ export function statLines(res) {
     { label: 'Best trade', value: trade(best, c, p), tone: best ? tone(best.total) : '' },
     { label: 'Worst trade', value: trade(worst, c, p), tone: worst ? tone(worst.total) : '' },
     { label: 'Fees paid', value: `${money(fin(r.fees) ? r.fees : 0, c, p)}${fin(r.mev) && r.mev > 0 ? ` · ${money(r.mev, c, p)} lost to bots` : ''}`, tone: '' },
-    { label: 'SOL price', value: `${usd(p)} (frozen for this run)`, tone: '' },
+    { label: `${unitOf(c, p).id === 'usd' ? 'SOL' : unitOf(c, p).name} price`,
+      value: `${usd(isCoinCurrency(c) ? c.usd : p)} (frozen for this run)`, tone: '' },
   ];
-  if (isCoinCurrency(c)) out.push({ label: `${unitOf(c, p).name} price`, value: `${usd(c.usd)} (frozen for this run)`, tone: '' });
   return out;
 }
 

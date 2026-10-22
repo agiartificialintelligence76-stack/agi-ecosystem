@@ -13,6 +13,19 @@ export function createLiveFeed({ url, WebSocket: WS = globalThis.WebSocket, rand
   const S = { status: 'idle', chain: DEFAULT_CHAIN, ch: {}, px: {}, coins: new Map(), ws: null, tries: 0, retryT: null,
     openT: null, wanted: false, watch: [], watchSent: '', full: false };
   const listeners = new Set();
+  const lookups = new Map();
+  function finishLookup(key, status) {
+    const p = lookups.get(key);
+    if (!p) return;
+    lookups.delete(key);
+    timers.clear(p.timer);
+    if (status === 'found') p.resolve([...S.coins.values()].find((c) => c.key === key) || null);
+    else if (status === 'missing') p.resolve(null);
+    else p.reject(new Error(status));
+  }
+  function cancelLookups() {
+    for (const key of lookups.keys()) finishLookup(key, 'unavailable');
+  }
   const emit = (ev) => {
     for (const fn of [...listeners]) {
       try {
@@ -88,6 +101,7 @@ export function createLiveFeed({ url, WebSocket: WS = globalThis.WebSocket, rand
   }
 
   function fail(code) {
+    cancelLookups();
     timers.clear(S.openT);
     S.openT = null;
     S.tries += 1;
@@ -141,7 +155,10 @@ export function createLiveFeed({ url, WebSocket: WS = globalThis.WebSocket, rand
       case 'u':
         for (const x of m.u) {
           const c = S.coins.get(x.id);
-          if (c) c.st = x.st;
+          if (c) {
+            c.st = x.st;
+            if (x.dx) c.dx = x.dx;
+          }
         }
         emit({ type: 'u', u: m.u });
         break;
@@ -164,6 +181,9 @@ export function createLiveFeed({ url, WebSocket: WS = globalThis.WebSocket, rand
       case 'h':
         emit({ type: 'h', id: m.id, h: m.h });
         break;
+      case 'lookup':
+        finishLookup(m.key, m.status);
+        break;
       default:
         break;
     }
@@ -179,6 +199,7 @@ export function createLiveFeed({ url, WebSocket: WS = globalThis.WebSocket, rand
     },
     // Live mode off: no connection at all
     stop() {
+      cancelLookups();
       S.wanted = false;
       timers.clear(S.retryT);
       timers.clear(S.openT);
@@ -201,6 +222,7 @@ export function createLiveFeed({ url, WebSocket: WS = globalThis.WebSocket, rand
     },
     setChain(chain) {
       if (!CHAIN_IDS.includes(chain) || chain === S.chain) return;
+      cancelLookups();
       S.chain = chain;
       S.coins.clear();
       S.watch = [];
@@ -212,6 +234,21 @@ export function createLiveFeed({ url, WebSocket: WS = globalThis.WebSocket, rand
     watch(ids) {
       S.watch = (Array.isArray(ids) ? ids : []).filter((x) => typeof x === 'string').slice(0, 8);
       sendWatch();
+    },
+    lookup(address) {
+      // Reuse the response validator for chain-specific address normalization on the request too.
+      const valid = parseMessage(JSON.stringify({ t: 'lookup', chain: S.chain, key: address, status: 'found' }), S.chain);
+      if (!valid) return Promise.resolve(null);
+      if (lookups.has(valid.key)) return lookups.get(valid.key).promise;
+      if (S.status !== 'live') return Promise.reject(new Error('unavailable'));
+      if (lookups.size >= 1) return Promise.reject(new Error('busy'));
+      let resolve;
+      let reject;
+      const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+      const timer = timers.set(() => finishLookup(valid.key, 'unavailable'), 20_000);
+      lookups.set(valid.key, { promise, resolve, reject, timer });
+      if (!send({ op: 'lookup', address: valid.key })) finishLookup(valid.key, 'unavailable');
+      return promise;
     },
     on(fn) {
       listeners.add(fn);

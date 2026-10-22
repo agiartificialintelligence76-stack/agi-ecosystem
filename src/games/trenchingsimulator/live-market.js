@@ -29,12 +29,14 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
     if (!c) return null;
     const real = realOf(c.st, c.sup);
     if (!real) return null;
+    if (c.dx) real.dx = parseDx(c.dx, px);
     let id = ext.byKey(c.key);
     const live = c.tracked && feedLive();
     if (id === null) {
       id = ext.add({ key: c.key, chain: ch.id, src: c.src, name: c.name, ticker: c.ticker, pic: c.pic ? feed.picUrl(c.pic) : null,
         by: c.by, born: at(c.born), socials: socialsOf(c.soc), pair, live, real, real0: c.st0 ? realOf(c.st0, c.sup) : null });
       if (id === null) return null;
+      if (real.dx) ext.state(id, real);
       L.seen += 1;
     } else {
       ext.track(id, live);
@@ -80,6 +82,7 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
         applyView();
         break;
       case 'snap':
+        for (const id of ext.ids()) ext.track(id, false);
         byRelay.clear();
         relayOf.clear();
         for (const c of ev.coins) upsert(c);
@@ -96,7 +99,7 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
           if (id === undefined) continue;
           const real = realOf(x.st, sups.get(id));
           if (!real) continue;
-          real.dx = x.dx ? parseDx(x.dx, px) : null;
+          if (x.dx) real.dx = parseDx(x.dx, px);
           ext.state(id, real);
         }
         break;
@@ -156,6 +159,14 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
   m.focus = (id) => {
     L.focus = Number.isInteger(id) && m.isExt(id) ? id : null;
     watch(true);
+  };
+  m.lookup = async (address) => {
+    if (L.dead || typeof feed.lookup !== 'function') return null;
+    const c = await feed.lookup(address);
+    if (L.dead || !c) return null;
+    const id = upsert(c);
+    applyView();
+    return id;
   };
   // how Live mode is going, for the screen: the feed's state, the chain's, and how many real coins came in
   m.liveState = () => ({ chain: ch.id, feed: feed.status, chainState: playing(), seen: L.seen, shown: ext.shown });

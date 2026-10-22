@@ -116,6 +116,9 @@ export async function startFakes({ key = 'fake-helius-key-1234567890', host = '1
         const start = arg.cursor ? Number(String(arg.cursor).replace('c', '')) : 0;
         const page = all.slice(start, start + 12);
         out.push({ result: { data: { coins: page, nextCursor: start + 12 < all.length ? `c${start + 12}` : null } } });
+      } else if (name === 'coins.detail') {
+        const c = clankCoins.find((x) => x.address.toLowerCase() === String(arg.address).toLowerCase());
+        out.push(c ? { result: { data: c } } : { error: { data: { httpStatus: 404 } } });
       } else if (name === 'exchangeRates.tokenUsdg') {
         out.push({ result: { data: { price: arg.token === '0x0000000000000000000000000000000000000000' ? prices.eth : 160 } } });
       } else if (name === 'coins.trending') {

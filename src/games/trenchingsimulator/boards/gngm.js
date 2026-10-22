@@ -34,6 +34,7 @@ import { cardMetrics, passes, riskOf, FILTERS, trackItems, TRACK_FILTERS, smartP
 import { positionCardWords } from './gngm-card.js';
 import { tradeShareText } from '../share.js';
 import { mountCoin } from './gngm-coin.js';
+import { createAddressSearch } from '../live-search.js';
 
 const FAST_MS = 250;
 const SLOW_MS = 650;
@@ -125,6 +126,7 @@ export function mountGngm(host, ctx) {
     'aria-label': 'Search coins by name, ticker or address', autocomplete: 'off', spellcheck: 'false', enterKeyHint: 'search' });
   const found = el('div', { class: 'tsg-found', hidden: true, role: 'list', 'aria-label': 'Search results' });
   let searchTimer = 0;
+  const addressSearch = createAddressSearch(market, () => { if (!G.dead && G.query) runSearch(); });
   const searchForm = el('form', { class: 'tsg-search', role: 'search', on: {
     submit: (e) => {
       e.preventDefault();
@@ -172,10 +174,11 @@ export function mountGngm(host, ctx) {
     G.query = searchIn.value.trim();
     const ids = G.query ? market.find(G.query).slice(0, 8) : [];
     const rows = ids.map((id) => market.row(id)).filter(Boolean);
+    const lookupNote = addressSearch(G.query, rows.length > 0);
     found.hidden = !G.query;
-    const items = rows.length ? rows : G.query ? [{ id: 'none', none: true }] : [];
+    const items = rows.length ? rows : G.query ? [{ id: 'none', none: true, note: lookupNote || 'Nothing found.' }] : [];
     keyed(found, items, (r) => r.id, (r) => {
-      if (r.none) return el('p', { class: 'tsg-found-none' }, 'Nothing found.');
+      if (r.none) return el('p', { class: 'tsg-found-none' }, r.note);
       const b = el('button', { class: 'tsg-found-b', type: 'button', on: { click: () => {
         searchIn.value = '';
         runSearch();
@@ -185,7 +188,7 @@ export function mountGngm(host, ctx) {
       b.append(b.$.pic, b.$.tk, b.$.nm, b.$.mc);
       return b;
     }, (b, r) => {
-      if (r.none) return;
+      if (r.none) { setText(b, r.note); return; }
       setText(b.$.tk, `$${r.ticker}`);
       setText(b.$.nm, r.name);
       setText(b.$.mc, `${mc(r.mc)} · ${age(r.age)}`);

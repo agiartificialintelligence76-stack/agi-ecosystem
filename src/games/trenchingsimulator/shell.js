@@ -355,7 +355,10 @@ export function startShell(root) {
     const card = (title, line, sub, onClick, ic) => el('button', { type: 'button', class: 'ts-mode', on: { click: onClick } },
       icon(ic), el('b', { text: title }), el('span', { text: line }), sub ? el('small', { text: sub }) : null);
     // Free play's starts in the run's money (a live run's coin once the relay's price for it is in)
-    const freeSub = () => `Start with ${startsText(live ? runCur(t, true) : t.currency)}`;
+    const freeSub = () => {
+      const c = live ? runCur(t, true) : t.currency;
+      return c === null ? `Start in ${liveUnit(t)} · waiting for price` : `Start with ${startsText(c, live)}`;
+    };
     let freeCard = null;
     const onNews = () => {
       const sm = freeCard && freeCard.querySelector('small');
@@ -367,7 +370,7 @@ export function startShell(root) {
       marketPicker(onNews),
       el('div', { class: 'ts-mode-list' },
         card('Daily market', `${dch.name}: ${goalText(dch, t.currency, priceUsd())}`,
-          live ? 'Always simulated: the same coins for everyone today'
+          live ? `Always simulated in ${unitOf(t.currency, priceUsd()).name}: the same coins for everyone today`
             : dd ? (dd.won ? `Won today ${starsRow(dd.stars)}` : `${dd.tries} ${dd.tries === 1 ? 'try' : 'tries'} today`)
               : 'The same market for everyone today', () => go('brief', { kind: 'daily' }), 'flame'),
         card('Challenges', live ? `${CHALLENGES.length} goals against a clock that never stops` : `${CHALLENGES.length} goals against the clock`,
@@ -381,8 +384,17 @@ export function startShell(root) {
   function challengesScreen() {
     const t = terminal();
     const live = S.save.live;
+    if (live) liveFeed().start(S.save.chain);
     // a challenge's money: in Live mode the chain's own coin, where it plays live
     const chCur = (c) => (live && liveOk(c) ? runCur(t, true) : t.currency);
+    const descriptions = [];
+    const describe = (c, goal, meta) => {
+      const cLive = live && liveOk(c);
+      const cur = chCur(c);
+      const px = priceUsd(cLive);
+      setText(goal, cur === null ? `Play money in ${liveUnit(t)} · waiting for price` : goalText(c, cur, px));
+      setText(meta, `${timeText(c.seconds)} · ${cur === null ? `waiting for ${liveUnit(t)} price` : `start ${startText(c, cur, px)}`}${live && !liveOk(c) ? ' · simulated in Live mode' : ''}`);
+    };
     const groups = TIERS.map((tier) => {
       const list = CHALLENGES.filter((c) => c.tier === tier);
       if (!list.length) return null;
@@ -390,11 +402,14 @@ export function startShell(root) {
         el('h2', { class: 'ts-tier-h', text: TIER_NAMES[tier] || tier }),
         list.map((c) => {
           const b = live && liveOk(c) ? S.save.liveBest[c.id] : S.save.best[c.id];
+          const goal = el('span', { class: 'ts-ch-goal' });
+          const meta = el('span', { class: 'ts-ch-meta' });
+          describe(c, goal, meta);
+          descriptions.push([c, goal, meta]);
           return el('button', { type: 'button', class: ['ts-ch', b && b.stars > 0 && 'is-done'], data: { tier: c.tier },
             on: { click: () => go('brief', { kind: 'challenge', id: c.id }) } },
           el('b', { class: 'ts-ch-name', text: c.name }),
-          el('span', { class: 'ts-ch-goal', text: goalText(c, chCur(c), priceUsd()) }),
-          el('span', { class: 'ts-ch-meta', text: `${timeText(c.seconds)} · start ${startText(c, chCur(c), priceUsd())}${live && !liveOk(c) ? ' · simulated in Live mode' : ''}` }),
+          goal, meta,
           el('span', { class: 'ts-ch-best', text: b && b.stars > 0
             ? `${starsRow(b.stars)}${b.time != null ? ` · best ${clock(b.time)}` : ''}` : starsRow(0) }));
         }));
@@ -404,15 +419,18 @@ export function startShell(root) {
       el('p', { class: 'ts-lede', text: live
         ? `Live mode: real ${chainNow().name} coins on a clock that never stops, not even for the menu. Its stars are kept apart from the simulated ones. Rug dodger stays simulated: a real coin is never called a rug here.`
         : 'Win to earn up to 3 stars: faster wins and bigger multiples earn more.' }),
+      live ? feedLine('before', () => descriptions.forEach(([c, goal, meta]) => describe(c, goal, meta))) : null,
       groups, note());
   }
-  const priceUsd = () => (S.price && S.price.usd > 0 ? S.price.usd : 150);
+  const priceUsd = (live = false) => (live && S.feed && S.feed.px.sol > 0 ? Math.round(S.feed.px.sol * 100) / 100
+    : S.price && S.price.usd > 0 ? S.price.usd : 150);
   // a live run's money (Pomp.fun's: the chain's own coin since 2026-10-21, ./live-chains.js liveMoney) at the relay's
   // prices; a simulated run's, the terminal's own
   const runCur = (t, live) => (live ? liveMoney(t.id, S.save.chain, liveFeed().px) : t.currency);
+  const liveUnit = (t) => UNIT_NAMES[liveCurrency(t.id, S.save.chain)];
   // Free play's starts in a run's money: "1, 5, 10, 50 SOL", "0.04, 0.2, 0.4, 2 ETH"
-  const startsText = (cur) => {
-    const px = priceUsd();
+  const startsText = (cur, live = false) => {
+    const px = priceUsd(live);
     const list = FREE_STARTS.map((v) => money(freeStartSol(v, cur, px), cur, px, { unit: false })).join(', ');
     return cur === 'usd' ? list : `${list} ${unitOf(cur, px).name}`;
   };
@@ -429,32 +447,39 @@ export function startShell(root) {
     const live = liveRun(setup);
     if (live) liveFeed().start(S.save.chain);
     const facts = el('dl', { class: 'ts-facts' });
-    const priceLine = el('p', { class: 'ts-price', text: 'SOL price: checking…' });
+    const priceLine = el('p', { class: 'ts-price' });
     // the run's money (a live run's: the chain's own coin once the relay's price for it is in)
     const cur = () => (live ? runCur(t, true) : t.currency);
     const chipTexts = [];
+    let startButton = null;
     const fill = () => {
-      const px = priceUsd();
+      const px = priceUsd(live);
       const c = cur();
+      const waiting = c === null;
       const rows = ch
-        ? [['Goal', goalText(ch, c, px)], ['Time', timeText(ch.seconds)], ['Start', startText(ch, c, px)]]
+        ? [['Goal', waiting ? ch.blurb : goalText(ch, c, px)], ['Time', timeText(ch.seconds)], ['Start', waiting ? `Waiting for ${liveUnit(t)} price` : startText(ch, c, px)]]
         : [['Goal', 'None: trade as long as you like'], ['Time', 'No clock'],
-          ['Start', money(freeStartSol(S.save.freeStart, c, px), c, px)]];
+          ['Start', waiting ? `Waiting for ${liveUnit(t)} price` : money(freeStartSol(S.save.freeStart, c, px), c, px)]];
       rows.push(['On', t.name]);
       if (S.save.live) {
-        rows.push(['Market', live ? `Live coins · ${chainNow().name}` : setup.kind === 'daily' ? 'Simulated: the same coins for everyone today'
+        rows.push(['Market', live ? `Live coins · ${chainNow().name}` : setup.kind === 'daily' ? `Simulated in ${unitOf(t.currency, px).name}: the same coins for everyone today`
           : 'Simulated: a real coin is never called a rug here']);
       }
       facts.replaceChildren(...rows.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]));
-      const src = S.price ? S.price.source : '';
-      const coin = isCoinCurrency(c) ? `${unitOf(c, px).name} ${usd(c.usd)} · ` : '';
-      setText(priceLine, `${coin}SOL ${usd(px)} ${src === 'live' ? '· live' : src === 'saved' ? '· last known' : '· a stand-in price'}, frozen for this run`);
-      for (const [b, v, text] of chipTexts) setText(b, text(v));
+      const src = live && S.feed && S.feed.px.sol > 0 ? 'live' : S.price ? S.price.source : '';
+      setText(priceLine, waiting ? `${liveUnit(t)} price is not available yet. Start unlocks when it arrives.`
+        : isCoinCurrency(c) ? `${unitOf(c, px).name} ${usd(c.usd)} · live, frozen for this run`
+          : `SOL ${usd(px)} ${src === 'live' ? '· live' : src === 'saved' ? '· last known' : '· a stand-in price'}, frozen for this run`);
+      if (startButton) startButton.disabled = waiting;
+      for (const [b, v, text] of chipTexts) {
+        setText(b, text(v));
+        b.disabled = waiting;
+      }
     };
     // (the coin's price comes with the feed: once it's in, or it moves, the words follow)
-    let curKey = JSON.stringify(cur());
+    let curKey = JSON.stringify([cur(), priceUsd(live)]);
     const onFeedNews = () => {
-      const k = JSON.stringify(cur());
+      const k = JSON.stringify([cur(), priceUsd(live)]);
       if (k === curKey) return;
       curKey = k;
       fill();
@@ -466,7 +491,7 @@ export function startShell(root) {
     const chips = (label, list, value, text, pick) => el('div', { class: 'ts-chips', role: 'radiogroup', 'aria-label': label },
       el('span', { class: 'ts-chips-l', text: label }),
       list.map((v) => {
-        const b = el('button', { type: 'button', role: 'radio', class: 'ts-chip', 'aria-checked': String(v === value),
+        const b = el('button', { type: 'button', role: 'radio', class: 'ts-chip', 'aria-checked': String(v === value), disabled: cur() === null,
           on: { click: (e) => {
             pick(v);
             for (const x of e.currentTarget.parentNode.querySelectorAll('.ts-chip')) x.setAttribute('aria-checked', String(x === e.currentTarget));
@@ -485,7 +510,8 @@ export function startShell(root) {
         : 'Your own market, no clock and no goal. Cash out whenever you like.' }),
       facts,
       setup.kind === 'free' ? [
-        chips('Start with', FREE_STARTS, S.save.freeStart, (v) => money(freeStartSol(v, cur(), priceUsd()), cur(), priceUsd()), (v) => {
+        chips('Start with', FREE_STARTS, S.save.freeStart, (v) => cur() === null ? `— ${liveUnit(t)}`
+          : money(freeStartSol(v, cur(), priceUsd(live)), cur(), priceUsd(live)), (v) => {
           S.save.freeStart = v;
           save();
         }),
@@ -503,7 +529,7 @@ export function startShell(root) {
       nameField(),
       priceLine,
       el('div', { class: 'ts-actions' },
-        btn('Start', { kind: 'primary', ic: 'play', on: () => startRun(setup) }),
+        startButton = btn('Start', { kind: 'primary', ic: 'play', disabled: cur() === null, on: () => startRun(setup) }),
         btn('Back', { kind: 'ghost', on: () => back(setup.kind === 'challenge' ? 'challenges' : 'modes') })),
       note());
   }
@@ -766,6 +792,11 @@ export function startShell(root) {
     const px = tk ? tk.solUsd : feed && feed.px.sol > 0 ? Math.round(feed.px.sol * 100) / 100 : price && price.usd > 0 ? price.usd : 150;
     // its money: a live run's the chain's own coin (Pomp.fun's since 2026-10-21) at the relay's price, frozen for it
     const cur = live ? liveMoney(t.id, live, feed.px) : t.currency;
+    if (cur === null) {
+      go('brief', setup, { replace: true });
+      toast(`${liveUnit(t)} price is not available yet. Please wait for the live feed.`, 'down', 4000);
+      return;
+    }
     // a live run: real coins, play money, the real clock
     const liveOpts = live ? { live, realTime: true, makeMarket: (o) => createLiveMarket({ ...o, feed, chain: live }) } : {};
     let run;

@@ -46,6 +46,23 @@ export async function startRelay(cfg, { log, problems = [], WS = WebSocket, shar
   const hub = createHub({ log, chains: cfg.chains, batchMs: T.batchMs, pingMs: T.pingMs, now,
     onWatch: (chain, coin, on) => {
       if (chain === 'solana' && pump) pump.onWatch(coin, on);
+      if (chain === 'robinhood' && clank) clank.onWatch(coin, on);
+      if (on && coin.extra.dex) hub.setTracked(chain, coin.id, true);
+    },
+    onLookup: async (chain, address) => {
+      // A pump curve may already be retained here but be older than the browser's recent snapshot; it has no DEX
+      // pool yet. Opening the returned coin watches its actual curve source again.
+      const known = hub.byKey(chain, address);
+      if (chain === 'solana' && known && !known.extra.dex) return known;
+      if (chain === 'robinhood' && clank) {
+        try {
+          const c = await clank.lookup(address);
+          if (c) return c;
+        } catch (err) {
+          log.warn(`clank.trade (lookup): ${errText(err)}`);
+        }
+      }
+      return dex.lookup(chain, address);
     } });
   const pictures = createPictures({ gateways: cfg.gateways, log, sharp: sh, fetchSafe, fetchTrusted,
     maxBytes: cfg.picCacheMb * 1024 * 1024, retryMs: T.picRetryMs, now });

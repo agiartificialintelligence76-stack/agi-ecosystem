@@ -23,6 +23,7 @@ import { markEl, wordEl } from '../brands.js';
 import { createChart, TIMEFRAMES } from '../chart.js';
 import { usd, money, signed, pct, share, age, tokens, currencyOf, unitOf, nice } from '../format.js';
 import { MIN_BUY } from '../engine.js';
+import { createAddressSearch } from '../live-search.js';
 import { CURVE_TOK, GRAD_MC, START_MC } from '../curve.js';
 // (the helpers GNGM's board shares, in ./common.js since 2026-10-22; still exported from here as they always were)
 import { SORTS, ORDER_ERRORS, whoText, holderTag, buyPresets, parseAmount, num, ago, short, hueOf, initial, setP, tone, pic,
@@ -255,9 +256,11 @@ export function mountBoard(host, ctx) {
     B.top = null;
     renderBoard();
   }
+  const addressSearch = createAddressSearch(market, () => { if (!B.dead && B.query) runSearch(); });
   function runSearch() {
     B.query = searchIn.value.trim();
     B.found = B.query ? market.find(B.query) : null;
+    B.lookupNote = addressSearch(B.query, Boolean(B.found && B.found.length));
     clearBtn.hidden = !B.query;
     if (B.view !== 'board') closeCoin();
     renderBoard();
@@ -352,7 +355,7 @@ export function mountBoard(host, ctx) {
     let note;
     if (B.query) {
       rows = (B.found || []).slice(0, CARDS).map((id) => market.row(id)).filter(Boolean);
-      note = rows.length ? `${rows.length} found for “${B.query}”` : `Nothing found for “${B.query}”.`;
+      note = rows.length ? `${rows.length} found for “${B.query}”` : B.lookupNote || `Nothing found for “${B.query}”.`;
     } else {
       rows = (L[B.sort] || []).slice(0, CARDS);
       note = rows.length ? '' : B.sort === 'migrated' ? 'Nothing has graduated yet.' : 'Nothing here yet.';

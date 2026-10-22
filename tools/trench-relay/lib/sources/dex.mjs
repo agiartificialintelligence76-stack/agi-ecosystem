@@ -16,7 +16,7 @@ import { bestPair, wrappedUsd, pairDx, solPoolState, usdPairState, parseProfiles
 import { errText } from '../log.mjs';
 
 // our chain → DexScreener's, and back
-const DEX_CHAINS = Object.freeze({ bnb: 'bsc', base: 'base', robinhood: 'robinhood', ethereum: 'ethereum', monad: 'monad',
+const DEX_CHAINS = Object.freeze({ solana: 'solana', bnb: 'bsc', base: 'base', robinhood: 'robinhood', ethereum: 'ethereum', monad: 'monad',
   hyperevm: 'hyperevm', arbitrum: 'arbitrum', tron: 'tron' });
 const FROM_DEX = Object.freeze(Object.fromEntries(Object.entries(DEX_CHAINS).map(([ours, theirs]) => [theirs, ours])));
 // the chains whose state DexScreener decides (Robinhood Chain's is clank.trade's)
@@ -102,7 +102,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
     }
   }
   async function discover() {
-    const want = Object.entries(DEX_CHAINS).filter(([c]) => cfg.chains.includes(c)).map(([, d]) => d);
+    const want = Object.entries(DEX_CHAINS).filter(([c]) => c !== 'solana' && cfg.chains.includes(c)).map(([, d]) => d);
     if (!want.length) return;
     const data = await get('/token-profiles/latest/v1');
     if (!data) return;
@@ -147,22 +147,30 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
       if (any || !addresses.length) lastOk[chain] = now();
       // the newest PER_CHAIN followed (and the watched ones); older ones let go
       followed.forEach((c, i) => {
-        if (i >= PER_CHAIN && c.watchers === 0) hub.setTracked(chain, c.id, false);
+        if (i >= PER_CHAIN && c.watchers === 0 && !(c.extra.lookupUntil > now())) hub.setTracked(chain, c.id, false);
       });
     }
   }
 
-  function addNew(chain, address, p, icon) {
+  function addNew(chain, address, p, icon, requested = false) {
     if (!p || addressOn(chain, address) !== address) return;
     const created = Number(p.pairCreatedAt);
-    if (!Number.isFinite(created) || now() - created > NEW_FOR_MS) return; // an older coin with a new profile: not new
+    if (!Number.isFinite(created) || (!requested && now() - created > NEW_FOR_MS)) return; // older coins need an explicit search
     const st = usdPairState(p);
     const name = cleanName(p.baseToken && p.baseToken.name);
     const symbol = cleanTicker(p.baseToken && p.baseToken.symbol);
     if (!st || !name || !symbol) return;
-    if (hub.byKey(chain, address)) return; // another source has it now (clank.trade's list, say)
+    const known = hub.byKey(chain, address);
+    if (known) {
+      if (mine(known)) hub.setState(chain, known.id, st, pairDx(p));
+      if (requested) {
+        known.extra.lookupUntil = now() + 5 * 60_000;
+        hub.setTracked(chain, known.id, true);
+      }
+      return known;
+    }
     const id = hub.addCoin(chain, { key: address, name, symbol, born: Math.min(created, now()), by: null,
-      src: CURVE_DEXES[p.dexId] || null, sup: 0, st, tracked: true, extra: { dex: true } });
+      src: CURVE_DEXES[p.dexId] || null, sup: 0, st, tracked: true, extra: { dex: true, lookupUntil: requested ? now() + 5 * 60_000 : 0 } });
     if (!id) return;
     hub.setState(chain, id, st, pairDx(p));
     const image = icon || (p.info && typeof p.info.imageUrl === 'string' ? p.info.imageUrl : null);
@@ -171,6 +179,17 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
         if (path) hub.setPic(chain, id, path);
       });
     }
+    return hub.coin(chain, id);
+  }
+
+  async function lookup(chain, raw) {
+    const address = addressOn(chain, raw);
+    const dexChain = DEX_CHAINS[chain];
+    if (!address || !dexChain || !cfg.chains.includes(chain)) return null;
+    const data = await get(`/tokens/v1/${dexChain}/${address}`);
+    if (!Array.isArray(data)) throw new Error('Coin lookup is unavailable');
+    const p = bestPair(data, dexChain, address);
+    return addNew(chain, address, p, null, true) || null;
   }
 
   // another source's coins' pairs (clank.trade's graduated coins, say): DexScreener's answer, or null
@@ -231,6 +250,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
       solPools.delete(id);
     },
     pairs,
+    lookup,
     stats() {
       return { lastOkS: okAt ? Math.round((now() - okAt) / 1000) : -1, callsLastMinute: calls.length, solPools: solPools.size,
         waiting: pending.size, profiles: { sinceS: Math.round((now() - tally.since) / 1000), byChain: { ...tally.byChain } } };

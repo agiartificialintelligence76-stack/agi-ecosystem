@@ -1503,12 +1503,37 @@ test("a chain's own coin as a terminal's money (Live mode, the owner's \"Each ch
   assert.equal(resultLine(res), '0.04 ETH → 0.08 ETH (2x) in 08:42');
   const rows = Object.fromEntries(statLines(res).map((r) => [r.label, r.value]));
   assert.equal(rows['ETH price'], `${F.usd(2612.46)} (frozen for this run)`);
-  assert.equal(rows['SOL price'], `${F.usd(105.73)} (frozen for this run)`);
+  assert.equal(Object.hasOwn(rows, 'SOL price'), false, 'native results show the native quote, not the engine conversion unit');
   assert.match(rows.Profit, / ETH$/);
   const { shareText } = await import('../src/games/trenchingsimulator/share.js');
   assert.match(shareText(res), /0\.04 ETH → 0\.08 ETH/);
   // a result's currency as saved: nonsense is SOL
   assert.equal(resultLine({ start: 1, worth: 2, currency: { coin: 'doge', usd: 1 } }), '1 SOL → 2 SOL');
+});
+
+test('all nine live chains keep their native denomination through challenge goals, run progress and results', async () => {
+  const { liveMoney } = await import('../src/games/trenchingsimulator/live-chains.js');
+  const px = { sol: 150, eth: 3000, bnb: 600, mon: 0.02, hype: 25, trx: 0.3 };
+  const cases = [
+    ['solana', '1 SOL', '2 SOL'], ['robinhood', '0.05 ETH', '0.1 ETH'], ['bnb', '0.25 BNB', '0.5 BNB'],
+    ['base', '0.05 ETH', '0.1 ETH'], ['ethereum', '0.05 ETH', '0.1 ETH'], ['monad', '7,500 MON', '15,000 MON'],
+    ['hyperevm', '6 HYPE', '12 HYPE'], ['arbitrum', '0.05 ETH', '0.1 ETH'], ['tron', '500 TRX', '1,000 TRX'],
+  ];
+  for (const terminal of ['board', 'scan']) {
+    for (const [chain, start, goal] of cases) {
+      const currency = liveMoney(terminal, chain, px);
+      const ch = challengeById('double-up');
+      assert.equal(startText(ch, currency, px.sol), start, `${terminal}/${chain} start`);
+      assert.equal(goalText(ch, currency, px.sol), `Turn ${start} into ${goal} (2x)`, `${terminal}/${chain} goal`);
+      const run = createRun({ seed: `native-${terminal}-${chain}`, challenge: ch, mode: 'challenge',
+        currency, solUsd: px.sol, terminal, live: chain });
+      near(run.start, 1, 1e-12, `${chain}: native money retains the same dollar value`);
+      assert.equal(run.progress().label, `${start} / ${goal}`, `${terminal}/${chain} progress`);
+      const result = { ...run.result(), worth: 2, pnl: 1, multiple: 2, timeUsed: 60 };
+      assert.equal(resultLine(result), `${start} → ${goal} (2x) in 01:00`, `${terminal}/${chain} result`);
+      assert.equal(statLines(result).find((row) => row.label === 'Profit').value, `+${start}`, `${terminal}/${chain} profit`);
+    }
+  }
 });
 
 test("a run's results: its title and color for every ending, what it was, and its line in the terminal's money", () => {

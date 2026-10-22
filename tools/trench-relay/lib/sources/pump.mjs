@@ -84,7 +84,7 @@ export function createPumpSource({ cfg, hub, helius, dex, pictures, log, WS, now
     const list = hub.coins(CHAIN).sort((a, b) => b.born - a.born);
     let kept = 0;
     for (const c of list) {
-      if (!c.tracked || c.extra.migrating) continue;
+      if (!c.tracked || c.extra.migrating || c.extra.dex) continue;
       kept += 1;
       if (kept > cfg.solanaTrack && c.watchers === 0) {
         helius.untrack(c.extra.curve);
@@ -105,7 +105,7 @@ export function createPumpSource({ cfg, hub, helius, dex, pictures, log, WS, now
   // its curve sold out: closed (its last state, done) while its pool opens, then followed on DexScreener
   function migrating(mint) {
     const c = hub.byKey(CHAIN, mint);
-    if (!c || c.extra.migrating) return;
+    if (!c || c.extra.migrating || c.extra.dex) return;
     c.extra.migrating = true;
     migrations += 1;
     if (c.st && c.st.k === 'c' && !c.st.done) hub.setState(CHAIN, c.id, { ...c.st, done: true });
@@ -115,7 +115,7 @@ export function createPumpSource({ cfg, hub, helius, dex, pictures, log, WS, now
 
   // a viewer opened (or let go of) a coin: followed while anyone watches it
   function onWatch(c, on) {
-    if (c.extra.migrating) return;
+    if (c.extra.migrating || c.extra.dex) return;
     if (on) {
       if (!c.tracked && helius) helius.track(c.key, c.extra.curve); // live again with its next state (read at once)
       return;

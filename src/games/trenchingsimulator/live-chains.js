@@ -57,12 +57,13 @@ export function liveCurrency(terminalId, chainId) {
 }
 // The money a live run shows, for ./format.js (`px`: the relay's dollar prices, { sol, eth, bnb, mon, hype, trx }): 'sol', 'usd', or a
 // chain's coin with its price frozen for the run ({ coin: 'eth', usd: 2612.5 }: to the cent; a coin under a dollar, MON's
-// two cents say, to 4 significant figures); SOL while that price isn't known yet
+// two cents say, to 4 significant figures); null while that price isn't known yet, so a live run never silently
+// starts in another chain's money
 export function liveMoney(terminalId, chainId, px) {
   const unit = liveCurrency(terminalId, chainId);
   if (unit === 'sol' || unit === 'usd') return unit;
   const p = px && typeof px === 'object' ? Number(px[unit]) : NaN;
-  if (!Number.isFinite(p) || !(p > 0)) return 'sol';
+  if (!Number.isFinite(p) || !(p > 0)) return null;
   return { coin: unit, usd: p >= 1 ? Math.round(p * 100) / 100 : Number(p.toPrecision(4)) };
 }
 // an amount of SOL in another unit at the run's own prices ({ sol, eth, bnb }: dollars), or NaN
@@ -235,6 +236,7 @@ export function parseCoin(o, chainId) {
     src: o.src === (ch && ch.src) || (chainId === 'bnb' && o.src === 'four.meme') ? o.src : null,
     soc: fin(o.soc) ? o.soc & 7 : 0, sup: fin(o.sup) && o.sup > 0 && o.sup < 1e15 ? o.sup : 1e9, st,
     st0: o.st0 ? parseState(o.st0) : null, tracked: o.tr === 1,
+    ...(Array.isArray(o.dx) && o.dx.length === 9 ? { dx: o.dx } : {}),
   };
 }
 export const socialsOf = (soc) => ({ x: Boolean(soc & 1), tg: Boolean(soc & 2), web: Boolean(soc & 4) });
@@ -292,6 +294,12 @@ export function parseMessage(text, chainId) {
       if (typeof m.id !== 'string' || !ID.test(m.id) || !Array.isArray(m.h)) return null;
       return { t: 'h', id: m.id, h: m.h.slice(-400).map((x) => (Array.isArray(x) && fin(x[0]) ? { at: x[0], st: parseState(x[1]) } : null))
         .filter((x) => x && x.st) };
+    case 'lookup': {
+      if (m.chain !== chainId || !chainById(chainId) || !['found', 'missing', 'busy', 'unavailable'].includes(m.status)) return null;
+      const key = typeof m.key !== 'string' ? null : chainId === 'solana' ? (B58.test(m.key) ? m.key : null)
+        : chainId === 'tron' ? (TRON.test(m.key) ? m.key : null) : (EVM.test(m.key.toLowerCase()) ? m.key.toLowerCase() : null);
+      return key ? { t: 'lookup', key, status: m.status } : null;
+    }
     default:
       return null;
   }

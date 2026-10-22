@@ -19,6 +19,7 @@ import { createLog, errText } from '../tools/trench-relay/lib/log.mjs';
 import { isPublicIp, safeGet, trustedGet, trustedJson, NetError } from '../tools/trench-relay/lib/net.mjs';
 import { backoffMs } from '../tools/trench-relay/lib/upstream.mjs';
 import { createHub, LIMITS } from '../tools/trench-relay/lib/hub.mjs';
+import { createClank } from '../tools/trench-relay/lib/sources/clank.mjs';
 import { locate, sniff, createPictures, PIC } from '../tools/trench-relay/lib/pictures.mjs';
 import { startRelay } from '../tools/trench-relay/server.mjs';
 import { startFakes, curveAccount } from '../tools/trench-relay/fakes.mjs';
@@ -53,6 +54,7 @@ const MINT = '7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr';
 const MINT2 = 'Hn8X3dJt6pVnE2QwP5R7sT9uVwXyZaBcDeFgHiJkLmNo';
 const CURVE = '4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf';
 const DEV = 'CRhtqXk98ATqo1R8gs7WQcjoFeLbrkhNKUAbSQwbsE4c';
+const AGI_CA = '0xFa31d04462746aAA24bC7E5626403E09E4B106ec';
 const ORIGIN = 'http://localhost:4173';
 
 // a PumpPortal new-coin message (pump.fun's standard curve after a dev buy of `dev` SOL)
@@ -138,6 +140,38 @@ test("a pump.fun curve's account, its price (virtual quote ÷ virtual tokens) an
   near(real.cap, 400_000_000, 0.5, 'tokens still for sale');
   near(real.progress, curveProgress({ left: 400_000_000 }), 1e-9, 'its progress');
   assert.equal(L.toReal(L.parseState(P.encodeState(curveAt(0, true)))).phase, 'migrating', 'sold out: closed for a moment');
+});
+
+test('wrapped native prices can come from either side of a pair and choose the most liquid valid quote', () => {
+  const quote = (coin, value, liquidity = 1000) => ({ chainId: P.WRAPPED[coin].chain,
+    baseToken: { address: MINT }, quoteToken: { address: P.WRAPPED[coin].address },
+    priceUsd: String(value * 0.002), priceNative: '0.002', liquidity: { usd: liquidity } });
+  for (const [coin, value] of [['sol', 150], ['eth', 3000], ['bnb', 600], ['mon', 0.02], ['hype', 25], ['trx', 0.3]]) {
+    near(P.wrappedUsd([quote(coin, value)], coin), value, 1e-10, `${coin} as quote token`);
+    near(P.wrappedUsd({ pairs: [quote(coin, value)] }, coin), value, 1e-10, `${coin} in the older API shape`);
+  }
+  const hype = quote('hype', 25);
+  for (const priceNative of [undefined, null, '', '0', 0, '-1', 'NaN', 'Infinity']) {
+    assert.equal(P.wrappedUsd([{ ...hype, priceNative }], 'hype'), null, `bad native denominator: ${priceNative}`);
+  }
+  assert.equal(P.wrappedUsd([{ ...hype, priceUsd: '0' }], 'hype'), null);
+  assert.equal(P.wrappedUsd([quote('hype', 100001)], 'hype'), null, 'derived value outside its sane range');
+  assert.equal(P.wrappedUsd([{ ...hype, chainId: 'base' }], 'hype'), null, 'same address on another chain');
+  assert.equal(P.wrappedUsd([{ ...hype, quoteToken: { address: P.WRAPPED.mon.address } }], 'hype'), null, 'another quote token');
+  const mon = quote('mon', 0.02);
+  mon.quoteToken.address = mon.quoteToken.address.toUpperCase().replace('0X', '0x');
+  near(P.wrappedUsd([mon], 'mon'), 0.02, 1e-12, 'EVM quote addresses ignore letter case');
+  const trx = quote('trx', 0.3);
+  trx.quoteToken.address = trx.quoteToken.address.toLowerCase();
+  assert.equal(P.wrappedUsd([trx], 'trx'), null, 'Tron quote addresses retain their case');
+  const base = { ...hype, baseToken: { address: P.WRAPPED.hype.address }, quoteToken: { address: 'usd' },
+    priceUsd: '24', priceNative: '0', liquidity: { usd: 500 } };
+  assert.equal(P.wrappedUsd([base], 'hype'), 24, 'wrapped base token uses its USD price without a denominator');
+  const invalid = { ...quote('hype', 100001, 1000000) };
+  const broken = { ...quote('hype', 25, 2000000), priceNative: '0' };
+  assert.equal(P.wrappedUsd([invalid, base, hype, broken], 'hype'), 25, 'highest liquidity among valid prices');
+  assert.equal(P.wrappedUsd([hype, { ...base, priceUsd: '26', liquidity: { usd: 2000 } }], 'hype'), 26,
+    'a more liquid base-token price still wins');
 });
 
 test('DexScreener and clank.trade: dollar prices, pools, pairs, profiles and new coins, never nonsense', () => {
@@ -439,6 +473,71 @@ class FakeWs extends EventEmitter {
 }
 const coinIn = (key, over = {}) => ({ key, name: `Coin ${key.slice(0, 4)}`, symbol: 'CN', born: 1_792_000_000_000, by: DEV, src: 'pump.fun',
   sup: 1e9, st: curveAt(780_000_000), st0: curveAt(793_100_000), tracked: true, ...over });
+
+test('contract lookups normalize the requested chain address, cache results and throttle repeated upstream work', async () => {
+  let t = 1_792_000_100_000;
+  const calls = [];
+  const hub = createHub({ chains: ['robinhood', 'bnb'], now: () => t, batchMs: 60_000, pingMs: 60_000,
+    onLookup: async (chain, key) => {
+      calls.push([chain, key]);
+      if (key !== AGI_CA.toLowerCase()) return null;
+      hub.addCoin(chain, coinIn(key, { src: 'clank.trade', born: t - 100000 }));
+      return hub.byKey(chain, key);
+    } });
+  const v = new FakeWs();
+  try {
+    hub.attach(v);
+    v.say({ op: 'lookup', address: AGI_CA });
+    assert.equal(calls.length, 0, 'a chain subscription is required');
+    v.say({ op: 'sub', chain: 'robinhood' });
+    for (const address of ['https://example.com/coin', MINT, '0x1234', 7, null]) v.say({ op: 'lookup', address });
+    assert.equal(calls.length, 0, 'only a complete address for the selected chain reaches an upstream');
+    v.say({ op: 'lookup', address: AGI_CA });
+    await until(() => v.of('lookup').some((m) => m.status === 'found'), 1000, 'the mixed-case address result');
+    assert.deepEqual(calls, [['robinhood', AGI_CA.toLowerCase()]]);
+    assert.equal(v.of('c').at(-1).c.m, AGI_CA.toLowerCase());
+    assert.equal(v.of('lookup').at(-1).key, AGI_CA.toLowerCase());
+    v.say({ op: 'lookup', address: AGI_CA.toLowerCase() });
+    assert.equal(calls.length, 1, 'equivalent address casing shares the cache');
+    v.say({ op: 'lookup', address: '0x' + '2'.repeat(40) });
+    assert.equal(v.of('lookup').at(-1).status, 'busy');
+    assert.equal(calls.length, 1, 'the cooldown bounds upstream work');
+    t += 2000;
+    v.say({ op: 'lookup', address: '0x' + '2'.repeat(40) });
+    await until(() => v.of('lookup').at(-1).status === 'missing', 1000, 'an unknown address result');
+    assert.equal(calls.length, 2);
+    t += 30_001;
+    v.say({ op: 'lookup', address: AGI_CA });
+    await until(() => calls.length === 3, 1000, 'a fresh lookup after cache expiry');
+  } finally {
+    hub.close();
+  }
+});
+
+test('contract lookups cap shared concurrency and discard a result after the viewer changes chain', async () => {
+  const pending = [];
+  const hub = createHub({ chains: ['robinhood', 'bnb'], batchMs: 60_000, pingMs: 60_000,
+    onLookup: (chain, key) => new Promise((resolve) => pending.push({ chain, key, resolve })) });
+  const clients = [];
+  try {
+    for (let i = 0; i < 9; i++) {
+      const v = new FakeWs();
+      clients.push(v);
+      hub.attach(v);
+      v.say({ op: 'sub', chain: 'robinhood' });
+      v.say({ op: 'lookup', address: `0x${String(i + 1).padStart(40, '0')}` });
+    }
+    assert.equal(pending.length, 8, 'at most eight external lookups may run at once');
+    assert.equal(clients[8].of('lookup').at(-1).status, 'busy');
+    clients[0].say({ op: 'sub', chain: 'bnb' });
+    for (const p of pending) p.resolve(null);
+    await until(() => clients[1].of('lookup').length, 1000, 'pending lookups finish');
+    assert.equal(clients[0].of('lookup').length, 0, 'a previous chain cannot send a late result into the current one');
+  } finally {
+    for (const p of pending) p.resolve(null);
+    hub.close();
+  }
+});
 
 test('the fan-out: every viewer of a chain gets each new coin and one batch of changes (each coin\'s newest), the others nothing', () => {
   let t = 1_792_000_100_000;
@@ -756,6 +855,179 @@ test("Robinhood Chain: clank.trade's coins and other launchpads' listed on DexSc
   }
 });
 
+test('older Clank and other-launchpad contracts can be found on demand and keep streaming while watched', async () => {
+  const fakes = await startFakes();
+  let relay, v, otherViewer;
+  try {
+    const old = Math.floor(Date.now() / 1000) - 7 * 86400;
+    const hot = [];
+    for (let i = 0; i < 3; i++) {
+      const c = await fakes.clank({ name: `Old trending ${i}`, symbol: `HOT${i}` });
+      fakes.clankSet(c.address, { createdAt: old });
+      hot.push(c.address);
+    }
+    await fakes.clank({ name: 'AGI lookup fixture', symbol: 'AGI', address: AGI_CA.toLowerCase() });
+    fakes.clankSet(AGI_CA.toLowerCase(), { createdAt: old });
+    for (let i = 0; i < 36; i++) await fakes.clank({ name: `New launch ${i}`, symbol: `NEW${i}` });
+    const listed = await fakes.listed('robinhood', { name: 'Older external coin', symbol: 'OLDER', dexId: 'uniswap', ageMs: 7 * 86400_000 });
+    const started = await relayWith(fakes, { TRENCH_CHAINS: 'robinhood' },
+      { clank: { newest: 100, older: 120, trending: 100, detail: 100, liquidity: 100 } });
+    relay = started.relay;
+    v = viewer(started.url);
+    otherViewer = viewer(started.url);
+    await Promise.all([v.opened, otherViewer.opened]);
+    v.send({ op: 'sub', chain: 'robinhood' });
+    otherViewer.send({ op: 'sub', chain: 'robinhood' });
+    await until(() => hot.every((address) => relay.hub.byKey('robinhood', address)) && relay.hub.coins('robinhood').length >= 39,
+      8000, 'older trending coins join the newest 36');
+    assert.ok(hot.every((address) => relay.hub.byKey('robinhood', address).tracked), 'unknown trending contracts are discovered and followed');
+    assert.equal(relay.hub.byKey('robinhood', AGI_CA.toLowerCase()), null, 'the searched coin is outside the newest and trending sets');
+    assert.equal(relay.hub.byKey('robinhood', listed), null, 'an old external pair is absent from recent discovery');
+    v.send({ op: 'lookup', address: AGI_CA });
+    await until(() => v.of('lookup').some((m) => m.key === AGI_CA.toLowerCase() && m.status === 'found'), 8000, 'the exact mixed-case AGI contract');
+    const agi = relay.hub.byKey('robinhood', AGI_CA.toLowerCase());
+    assert.equal(agi.src, 'clank.trade');
+    assert.equal(agi.tracked, true);
+    v.send({ op: 'watch', ids: [agi.id] });
+    await until(() => agi.watchers === 1, 1000, 'the opened coin is watched');
+    fakes.clankSet(AGI_CA.toLowerCase(), { marketCap: 5, progress: 40 });
+    await until(() => v.of('u').some((m) => m.u.some(([id, st]) => id === agi.id && st[1] === 15000 && st[3] === 0.4)),
+      8000, 'an old watched Clank coin keeps receiving market updates');
+    otherViewer.send({ op: 'lookup', address: listed.toUpperCase().replace('0X', '0x') });
+    await until(() => otherViewer.of('lookup').some((m) => m.key === listed && m.status === 'found'), 8000, 'an older external contract');
+    const external = relay.hub.byKey('robinhood', listed);
+    assert.equal(external.src, null);
+    assert.equal(external.extra.dex, true);
+    assert.equal(external.tracked, true);
+    otherViewer.send({ op: 'watch', ids: [external.id] });
+    await fakes.listed('robinhood', { address: listed, name: 'Older external coin', symbol: 'OLDER', dexId: 'uniswap',
+      ageMs: 7 * 86400_000, mu: 90000 });
+    await until(() => otherViewer.of('u').some((m) => m.u.some(([id, st]) => id === external.id && st[1] === 90000)),
+      8000, 'the external pair keeps receiving price updates');
+  } finally {
+    v?.ws.close();
+    otherViewer?.ws.close();
+    await relay?.close();
+    await fakes.close();
+  }
+});
+
+test('graduated Clank coins keep a fresh pool quote across list, detail and trending updates, with a stale-price fallback', async () => {
+  let now = 1_792_000_100_000;
+  let clankCap = 10000;
+  let dexCap = 20000;
+  let dexAvailable = true;
+  const key = AGI_CA.toLowerCase();
+  const calls = new Map();
+  const writes = [];
+  const raw = () => ({ address: key, name: 'Artificial Girlfriend Intelligence', symbol: 'AGI', state: 3, progress: 100,
+    createdAt: (now - 86400_000) / 1000, marketCap: clankCap / 2000, quoteCurrency: P.CLANK_ETH });
+  const hub = createHub({ chains: ['robinhood'], now: () => now, batchMs: 60000, pingMs: 60000 });
+  const setState = hub.setState;
+  hub.setState = (chain, id, state, dx) => {
+    writes.push(state.mu);
+    return setState(chain, id, state, dx);
+  };
+  const source = createClank({ cfg: { clank: 'https://clank.example/' }, hub, now: () => now,
+    pictures: { request() {} }, log: createLog({ write: () => {} }),
+    every: { newest: 20, older: 30, trending: 25, liquidity: 20, detail: 25 },
+    fetchJson: async (url) => new URL(url).pathname.slice(1).split(',').map((name) => {
+      calls.set(name, (calls.get(name) || 0) + 1);
+      const data = name === 'coins.list' ? { coins: [raw()], nextCursor: null }
+        : name === 'coins.detail' ? raw()
+          : name === 'coins.trending' ? [{ address: key, marketCapUsdg: clankCap, isLive: true }]
+            : { price: 2000 };
+      return { result: { data } };
+    }),
+    dex: { pairs: async () => dexAvailable ? [{ chainId: 'robinhood', dexId: 'uniswap', baseToken: { address: key },
+      marketCap: dexCap, liquidity: { usd: 5000 } }] : [] } });
+  const count = (name) => calls.get(name) || 0;
+  const allRefreshes = async () => {
+    const names = ['coins.list', 'coins.detail', 'coins.trending'];
+    const before = names.map(count);
+    await until(() => names.every((name, i) => count(name) >= before[i] + 3), 1000, 'all competing Clank refreshes');
+  };
+  try {
+    source.start();
+    await until(() => hub.byKey('robinhood', key)?.st.mu === dexCap, 1000, 'the first pool quote');
+    writes.length = 0;
+    clankCap = 12000;
+    await allRefreshes();
+    assert.ok(writes.length > 3);
+    assert.ok(writes.every((mu) => mu === 20000), `fresh Dex quote must not oscillate with Clank: ${writes}`);
+    dexCap = 25000;
+    await until(() => hub.byKey('robinhood', key).st.mu === dexCap, 1000, 'the newer pool quote');
+    writes.length = 0;
+    await allRefreshes();
+    assert.ok(writes.every((mu) => mu === 25000), `the updated pool quote stays canonical: ${writes}`);
+
+    dexAvailable = false;
+    now += 59999;
+    writes.length = 0;
+    await allRefreshes();
+    assert.ok(writes.every((mu) => mu === 25000), 'a brief Dex gap keeps its still-fresh price');
+    now += 2;
+    await until(() => hub.byKey('robinhood', key).st.mu === clankCap, 1000, 'Clank takes over when the pool quote is stale');
+    writes.length = 0;
+    await allRefreshes();
+    assert.ok(writes.every((mu) => mu === 12000), 'stale pool data no longer overrides fresh Clank data');
+    dexAvailable = true;
+    dexCap = 30000;
+    await until(() => hub.byKey('robinhood', key).st.mu === dexCap, 1000, 'fresh Dex data recovers');
+    writes.length = 0;
+    await allRefreshes();
+    assert.ok(writes.every((mu) => mu === 30000));
+  } finally {
+    source.stop();
+    hub.close();
+  }
+});
+
+test('Solana lookup finds an older pool with its exact case and retains a known pump curve source', async () => {
+  const fakes = await startFakes();
+  let relay, v, curveViewer;
+  try {
+    const old = await fakes.launch({ name: 'Old Solana pool', symbol: 'OLDPOOL' });
+    fakes.migrate(old.mint);
+    fakes.pump.get(old.mint).poolAt = Date.now() - 7 * 86400_000;
+    const started = await relayWith(fakes, { TRENCH_CHAINS: 'solana' });
+    relay = started.relay;
+    v = viewer(started.url);
+    curveViewer = viewer(started.url);
+    await Promise.all([v.opened, curveViewer.opened]);
+    v.send({ op: 'sub', chain: 'solana' });
+    curveViewer.send({ op: 'sub', chain: 'solana' });
+    assert.equal(relay.hub.byKey('solana', old.mint), null, 'the launch occurred before the relay connected');
+    v.send({ op: 'lookup', address: old.mint });
+    await until(() => v.of('lookup').some((m) => m.key === old.mint && m.status === 'found'), 8000, 'the old Solana pair');
+    const pool = relay.hub.byKey('solana', old.mint);
+    assert.equal(pool.key, old.mint);
+    assert.equal(pool.extra.dex, true);
+    assert.equal(pool.tracked, true);
+    v.send({ op: 'watch', ids: [pool.id] });
+    const before = pool.st.mu;
+    fakes.poolTrade(old.mint, 1.5);
+    await until(() => pool.st.mu > before * 2, 8000, 'the searched Solana pool keeps updating');
+    assert.equal(pool.tracked, true, 'the pump source does not stop following a DEX-owned coin');
+    assert.ok(v.of('c').some((m) => m.c.m === old.mint), 'the full coin keeps the original base58 spelling');
+
+    await until(() => fakes.seen.pumpportal.some((m) => m.method === 'subscribeNewToken'), 3000, 'pump discovery connected');
+    const current = await fakes.launch({ name: 'Known curve', symbol: 'CURVE' });
+    await until(() => relay.hub.byKey('solana', current.mint), 3000, 'the current pump curve');
+    const curve = relay.hub.byKey('solana', current.mint);
+    curveViewer.send({ op: 'lookup', address: current.mint });
+    await until(() => curveViewer.of('lookup').some((m) => m.key === current.mint && m.status === 'found'), 3000, 'the retained pump curve');
+    assert.equal(curve.st.k, 'c');
+    assert.equal(curve.src, 'pump.fun');
+    assert.notEqual(curve.extra.dex, true, 'search does not replace an exact pump curve with a DEX estimate');
+  } finally {
+    v?.ws.close();
+    curveViewer?.ws.close();
+    await relay?.close();
+    await fakes.close();
+  }
+});
+
 // (2026-10-22, the owner: "i just checked there are other chains on gmgn right add that also if i have to add api key again
 // on each chain like the helius api so it tells live coins tell me that also"): no new key, DexScreener's listed coins
 test("GMGN's other chains: Ethereum, Monad, HyperEVM, Arbitrum and Tron's listed coins (Tron's addresses as they are), each in its own money, no new key; a day's count of every chain listed", async () => {
@@ -764,6 +1036,10 @@ test("GMGN's other chains: Ethereum, Monad, HyperEVM, Arbitrum and Tron's listed
   // the relay's checks: a Tron address as it is (case-sensitive), an EVM one lower-cased, nothing else
   assert.equal(P.addressOn('tron', TRON_ADDR), TRON_ADDR);
   assert.equal(P.addressOn('tron', TRON_ADDR.toLowerCase()), null);
+  assert.equal(P.addressOn('solana', MINT), MINT, 'Solana lookup addresses retain their case');
+  assert.equal(P.addressOn('solana', MINT.toLowerCase()), MINT.toLowerCase(), 'another base58 spelling is a different address');
+  assert.equal(P.addressOn('solana', EVM_ADDR), null);
+  assert.equal(P.addressOn('solana', '0' + MINT.slice(1)), null);
   assert.equal(P.addressOn('ethereum', EVM_ADDR), EVM_ADDR.toLowerCase());
   assert.equal(P.addressOn('monad', TRON_ADDR), null);
   assert.equal(P.addressOn('tron', EVM_ADDR), null);
@@ -1019,8 +1295,7 @@ test("Live mode's chains, the money each terminal shows in it, and which challen
   assert.deepEqual(L.CHAIN_IDS.map((ch) => L.liveCurrency('scan', ch)), ['sol', 'eth', 'bnb', 'eth', 'eth', 'mon', 'hype', 'eth', 'trx']);
   assert.equal(L.liveCurrency('nope', 'nope'), 'sol');
   const px = { sol: 150, eth: 3000, bnb: 600, mon: 0.0213, hype: 24.5, trx: 0.31 };
-  // a live run's money for ./format.js: the chain's coin with its price frozen for the run (to the cent); SOL until the
-  // relay's price for it is in
+  // a live run's money for ./format.js: the chain's coin with its price frozen for the run; wait until its quote is known
   assert.deepEqual(L.CHAIN_IDS.slice(0, 4).map((ch) => L.liveMoney('board', ch, px)),
     ['sol', { coin: 'eth', usd: 3000 }, { coin: 'bnb', usd: 600 }, { coin: 'eth', usd: 3000 }]);
   assert.deepEqual(['ethereum', 'monad', 'hyperevm', 'arbitrum', 'tron'].map((ch) => L.liveMoney('board', ch, px)),
@@ -1029,7 +1304,7 @@ test("Live mode's chains, the money each terminal shows in it, and which challen
   assert.deepEqual(L.UNIT_NAMES, { sol: 'SOL', eth: 'ETH', bnb: 'BNB', mon: 'MON', hype: 'HYPE', trx: 'TRX', usd: 'dollars' });
   assert.deepEqual(L.liveMoney('board', 'robinhood', { sol: 150, eth: 2612.4567 }), { coin: 'eth', usd: 2612.46 });
   for (const bad of [{ sol: 150 }, { eth: 0 }, { eth: -1 }, { eth: 'x' }, null, undefined]) {
-    assert.equal(L.liveMoney('board', 'robinhood', bad), 'sol', JSON.stringify(bad));
+    assert.equal(L.liveMoney('board', 'robinhood', bad), null, JSON.stringify(bad));
   }
   assert.equal(L.liveMoney('social', 'robinhood', px), 'usd');
   assert.equal(L.liveMoney('pro', 'robinhood', px), 'sol');
@@ -1042,6 +1317,46 @@ test("Live mode's chains, the money each terminal shows in it, and which challen
   assert.deepEqual(CHALLENGES.filter((c) => !L.liveOk(c)).map((c) => c.id), ['rug-dodger']);
   assert.equal(L.liveOk({ ...challengeById('double-up'), daily: '2026-10-21' }), false);
   assert.equal(L.liveOk(null), false);
+});
+
+test('lookup replies validate the chain, full contract address and result status before reaching the page', () => {
+  for (const chain of L.CHAIN_IDS) {
+    const key = chain === 'solana' ? MINT : chain === 'tron' ? P.WRAPPED.trx.address : AGI_CA;
+    const normalized = ['solana', 'tron'].includes(chain) ? key : key.toLowerCase();
+    for (const status of ['found', 'missing', 'busy', 'unavailable']) {
+      const raw = { t: 'lookup', chain, key, status, extra: 'ignored' };
+      assert.deepEqual(L.parseMessage(JSON.stringify(raw), chain), { t: 'lookup', key: normalized, status });
+      assert.equal(L.parseMessage(JSON.stringify({ ...raw, chain: 'wrong' }), chain), null);
+      for (const bad of ['', '0x1234', 'https://example.com', 42, null]) {
+        assert.equal(L.parseMessage(JSON.stringify({ ...raw, key: bad }), chain), null);
+      }
+      for (const bad of ['ready', '', 1, null]) assert.equal(L.parseMessage(JSON.stringify({ ...raw, status: bad }), chain), null);
+    }
+  }
+  assert.equal(L.parseMessage(JSON.stringify({ t: 'lookup', chain: 'tron', key: P.WRAPPED.trx.address.toLowerCase(), status: 'found' }), 'tron'), null);
+});
+
+test('native live money waits for its own quote instead of silently showing SOL, then freezes the received price', () => {
+  const expected = { solana: 'sol', robinhood: 'eth', bnb: 'bnb', base: 'eth', ethereum: 'eth', monad: 'mon',
+    hyperevm: 'hype', arbitrum: 'eth', tron: 'trx' };
+  const prices = { sol: 150, eth: 3000, bnb: 600, mon: 0.02, hype: 25, trx: 0.3 };
+  for (const terminal of ['board', 'scan']) {
+    for (const [chain, coin] of Object.entries(expected)) {
+      if (coin === 'sol') {
+        assert.equal(L.liveMoney(terminal, chain, {}), 'sol');
+        continue;
+      }
+      for (const bad of [undefined, null, 0, -1, NaN, Infinity]) {
+        assert.equal(L.liveMoney(terminal, chain, { sol: 150, [coin]: bad }), null,
+          `${terminal}/${chain}: no ${coin} quote must not fall back to SOL`);
+      }
+      const px = { ...prices };
+      const currency = L.liveMoney(terminal, chain, px);
+      assert.deepEqual(currency, { coin, usd: prices[coin] }, `${terminal}/${chain}: quote received`);
+      px[coin] *= 2;
+      assert.equal(currency.usd, prices[coin], `${terminal}/${chain}: an active run keeps its original conversion`);
+    }
+  }
 });
 
 test("the relay's address: the site's own; another only on this computer, and only one on this computer too", () => {
@@ -1224,6 +1539,36 @@ test('a quiet chain with enough real coins live plays them alone (no stand-ins);
   assert.match(shell, /const liveCoins = f\.chain === S\.save\.chain \? f\.coins\(\)\.filter\(\(c\) => c\.tracked\)\.length : 0;\s*const w = feedWords\(f\.status, playState\(f\.chainState\(S\.save\.chain\), liveCoins\), S\.save\.chain, when\);/);
 });
 
+test('newest-first live snapshots stay newest-first before the display limit and update without animation frames', () => {
+  let now = 1_792_000_100_000;
+  const coin = (id, key, born, mu) => L.parseCoin(P.encodeCoin({ id, key, name: id, symbol: id.toUpperCase(), born,
+    src: 'clank.trade', sup: 1e9, st: { k: 'u', mu, lu: 12000, pg: 0.12, gr: false, cl: false }, tracked: true }), 'robinhood');
+  const newest = coin('r1', AGI_CA.toLowerCase(), now - 1000, 15000);
+  const middle = coin('r2', '0x' + '2'.repeat(40), now - 2000, 12000);
+  const oldest = coin('r3', '0x' + '3'.repeat(40), now - 3000, 9000);
+  const feed = fakeFeed({ chain: 'robinhood', coins: [newest, middle, oldest] });
+  const m = createLiveMarket({ feed, chain: 'robinhood', seed: 'newest-snapshot', solUsd: 150, startSol: 1,
+    config: { warmup: 0 }, wallNow: () => now });
+  try {
+    assert.deepEqual(m.lists({ limit: 2 }).new.map((row) => row.ticker), ['R1', 'R2'], 'order by launch time, not insertion ID');
+    const id = m.ext.byKey(AGI_CA.toLowerCase());
+    assert.deepEqual(m.find(AGI_CA), [id], 'the exact mixed-case contract finds its normalized coin');
+    m.focus(id);
+    assert.deepEqual(feed.watched, ['r1']);
+    const before = m.t;
+    now += 10_000;
+    feed.emit({ type: 'u', u: [{ id: 'r1', st: { ...newest.st, mu: 30000 }, dx: null }] });
+    near(m.row(id).mc, 200, 1e-9, 'market cap updates from $15K to $30K without a game frame');
+    assert.ok(m.t > before, 'the live clock catches up with feed events');
+    assert.equal(m.row(id).tracked, true);
+    assert.deepEqual(m.lists({ limit: 2 }).new.map((row) => row.ticker), ['R1', 'R2']);
+    feed.emit({ type: 'coin', coin: coin('r4', '0x' + '4'.repeat(40), now - 60_000, 6000) });
+    assert.deepEqual(m.lists({ limit: 2 }).new.map((row) => row.ticker), ['R1', 'R2'], 'an older search result cannot displace new launches');
+  } finally {
+    m.destroy();
+  }
+});
+
 test('a live market: real coins in its lists with their pictures; the stand-ins paused while live, there while quiet or down', () => {
   const feed = fakeFeed({ coins: [wireCoin(1), wireCoin(2)] });
   const m = createLiveMarket({ feed, chain: 'solana', seed: 'live-test', solUsd: 150, startSol: 1, config: { warmup: 120 } });
@@ -1330,6 +1675,35 @@ test("play money against the live curve: the curve's own tokens for a buy, the p
   assert.equal(m.row(id).phase, 'pool');
   assert.ok(m.feed(0).some((e) => e.kind === 'migrate' && e.c === id) && m.feed(0).some((e) => e.kind === 'migrated' && e.c === id));
   assert.equal(m.order({ coin: id, side: 'sell', frac: 1, slippage: 1 }).ok, true, 'trading in its pool');
+});
+
+test('an older live coin keeps its true age but its chart never backdates an unknown launch price', () => {
+  const m = createMarket({ seed: 'old-coin-first-quote', config: { warmup: 30 }, live: true });
+  const firstSeen = m.t;
+  const born = firstSeen - 7 * 86400;
+  const real = L.toReal({ k: 'u', mu: 30000, lu: 12000, pg: 1, gr: true, cl: false }, { solUsd: 150 });
+  const add = (key, extra = {}) => m.ext.add({ key, chain: 'robinhood', src: 'clank.trade', name: 'Older coin', ticker: 'OLDER',
+    born, real, live: true, ...extra });
+  const id = add(AGI_CA.toLowerCase());
+  const invalid = add('0x' + '2'.repeat(40), { real0: { sol: 0, tok: 1 } });
+  for (const coinId of [id, invalid]) {
+    assert.equal(m.row(coinId).age, 7 * 86400, 'launch age remains independent of the observed price history');
+    const candles = m.candles(coinId);
+    assert.equal(candles.length, 1);
+    assert.equal(candles[0].t, Math.floor(firstSeen), 'the first known quote belongs to the time it was received');
+    near(candles[0].c, 200, 1e-9, 'the observed market cap is $30K in SOL units');
+  }
+  const real0 = L.toReal({ k: 'u', mu: 7500, lu: 3000, pg: 0.1, gr: false, cl: false }, { solUsd: 150 });
+  const known = add('0x' + '3'.repeat(40), { real0 });
+  const history = m.candles(known);
+  assert.deepEqual(history.map((c) => c.t), [Math.floor(born), Math.floor(firstSeen)], 'a known launch quote retains its real timestamp');
+  near(history[0].c, 50, 1e-9, 'known launch cap');
+  near(history[1].c, 200, 1e-9, 'current cap');
+  m.advanceTo(firstSeen + 10);
+  m.ext.state(id, L.toReal({ k: 'u', mu: 45000, lu: 12000, pg: 1, gr: true, cl: false }, { solUsd: 150 }));
+  assert.equal(m.candles(id)[0].t, Math.floor(firstSeen));
+  assert.equal(m.candles(id).at(-1).t, Math.floor(m.t));
+  assert.equal(m.row(id).age, 7 * 86400 + 10);
 });
 
 test('real coins never get made-up things: no holders, thread, dev, rug or caller; their history comes in older than what they have', () => {
@@ -1460,6 +1834,126 @@ test("AGI-1 never names a real coin: her Live lines have no ticker; a real coin'
   assert.ok(said.length >= 40);
   assert.ok(said.every((t) => !/REALCOIN|\{|\$R/.test(t)), said.find((t) => /REALCOIN/.test(t)));
   assert.equal(v.hear([{ type: 'start', mode: 'free' }], 100).live, true);
+});
+
+function browserFeedHarness(chain = 'robinhood') {
+  const made = [];
+  const scheduled = new Set();
+  class Socket {
+    constructor() { this.readyState = 0; this.sent = []; made.push(this); }
+    send(text) { this.sent.push(JSON.parse(text)); }
+    close() { this.readyState = 3; }
+    open() { this.readyState = 1; this.onopen(); }
+    msg(obj) { this.onmessage({ data: JSON.stringify(obj) }); }
+    drop() { this.readyState = 3; this.onclose({ code: 1006 }); }
+  }
+  const feed = createLiveFeed({ url: 'ws://127.0.0.1:1/ws', WebSocket: Socket,
+    timers: { set: (fn, ms) => { const timer = { fn, ms }; scheduled.add(timer); return timer; },
+      clear: (timer) => scheduled.delete(timer) } });
+  feed.start(chain);
+  const socket = made[0];
+  socket.open();
+  socket.msg({ t: 'hi', ch: { [chain]: { s: 'live', n: 40 } }, px: { sol: 150 } });
+  return { feed, socket, scheduled };
+}
+
+test('browser contract lookup resolves into the live market, deduplicates and cancels every unfinished request', async () => {
+  const { feed, socket, scheduled } = browserFeedHarness();
+  const m = createLiveMarket({ feed, chain: 'robinhood', seed: 'lookup-client', solUsd: 150, startSol: 1, config: { warmup: 0 } });
+  const key = AGI_CA.toLowerCase();
+  const reply = (status, chain = 'robinhood', address = key) => socket.msg({ t: 'lookup', chain, key: address, status });
+  try {
+    assert.equal(await feed.lookup('0x1234'), null);
+    assert.equal(socket.sent.filter((x) => x.op === 'lookup').length, 0, 'an incomplete address never leaves the browser');
+    const pending = feed.lookup(AGI_CA);
+    assert.equal(feed.lookup(key), pending, 'equivalent EVM casing shares one pending request');
+    assert.deepEqual(socket.sent.at(-1), { op: 'lookup', address: key });
+    await assert.rejects(feed.lookup('0x' + '2'.repeat(40)), /busy/);
+    const marketPending = m.lookup(AGI_CA);
+    assert.equal(socket.sent.filter((x) => x.op === 'lookup').length, 1);
+    let resolved = false;
+    pending.then(() => { resolved = true; });
+    reply('found', 'bnb');
+    await Promise.resolve();
+    assert.equal(resolved, false, 'a response from the previous or another chain cannot resolve the lookup');
+    socket.msg({ t: 'c', c: P.encodeCoin(coinIn(key, { id: 'r1', src: 'clank.trade',
+      st: { k: 'u', mu: 15000, lu: 12000, pg: 0.2, gr: false, cl: false } })) });
+    reply('found');
+    assert.equal((await pending).key, key);
+    const id = await marketPending;
+    assert.ok(Number.isInteger(id));
+    assert.deepEqual(m.find(AGI_CA), [id]);
+    assert.equal(m.row(id).tracked, true);
+    assert.equal(scheduled.size, 0, 'successful lookup clears its deadline');
+
+    const missing = feed.lookup(key);
+    reply('missing');
+    assert.equal(await missing, null);
+    for (const status of ['busy', 'unavailable']) {
+      const rejected = assert.rejects(feed.lookup(key), new RegExp(status));
+      reply(status);
+      await rejected;
+    }
+    const timeout = assert.rejects(feed.lookup(key), /unavailable/);
+    const deadline = [...scheduled].find((t) => t.ms === 20000);
+    assert.ok(deadline, 'lookup has a bounded deadline');
+    deadline.fn();
+    await timeout;
+    assert.equal(scheduled.size, 0);
+    const changed = assert.rejects(feed.lookup(key), /unavailable/);
+    feed.setChain('solana');
+    await changed;
+    const solPending = feed.lookup(MINT);
+    assert.deepEqual(socket.sent.at(-1), { op: 'lookup', address: MINT }, 'Solana is sent with its original case');
+    const stopped = assert.rejects(solPending, /unavailable/);
+    feed.stop();
+    await stopped;
+    await assert.rejects(feed.lookup(MINT), /unavailable/);
+  } finally {
+    m.destroy();
+    feed.stop();
+  }
+  const dropped = browserFeedHarness();
+  const disconnected = assert.rejects(dropped.feed.lookup(key), /unavailable/);
+  dropped.socket.drop();
+  await disconnected;
+  dropped.feed.stop();
+});
+
+test('snapshots and state-only updates preserve real volume and transaction metrics through feed and market', () => {
+  const { feed, socket } = browserFeedHarness();
+  const metrics = [1500, 12, 7, 9000, 140, 30000, 700, 4.2, -3.5];
+  const state = { k: 'u', mu: 15000, lu: 12000, pg: 0.2, gr: false, cl: false };
+  const wire = P.encodeCoin(coinIn(AGI_CA.toLowerCase(), { id: 'r1', src: 'clank.trade', st: state, dx: metrics }));
+  assert.deepEqual(wire.dx, metrics, 'the relay includes its latest metrics in a full coin');
+  assert.deepEqual(L.parseCoin(wire, 'robinhood').dx, metrics);
+  assert.equal(Object.hasOwn(L.parseCoin({ ...wire, dx: [1, 2] }, 'robinhood'), 'dx'), false);
+  socket.msg({ t: 'snap', chain: 'robinhood', coins: [wire] });
+  const m = createLiveMarket({ feed, chain: 'robinhood', seed: 'retained-metrics', solUsd: 150, startSol: 1, config: { warmup: 0 } });
+  const id = m.ext.byKey(AGI_CA.toLowerCase());
+  try {
+    const check = (vol5m, vol, txns) => {
+      const row = m.row(id);
+      near(row.vol5m, vol5m, 1e-9, 'five-minute volume retains its real quote');
+      near(row.vol, vol, 1e-9, 'daily volume retains its real quote');
+      assert.equal(row.txns, txns);
+    };
+    check(10, 200, 700);
+    socket.msg({ t: 'u', u: [['r1', P.encodeState({ ...state, mu: 30000 })]] });
+    assert.deepEqual(feed.coins()[0].dx, metrics, 'the browser retains metrics while the launchpad changes only price or progress');
+    near(m.row(id).mc, 200, 1e-9, 'the price still updates');
+    check(10, 200, 700);
+    const newer = [3000, 18, 9, 12000, 150, 45000, 900, 5, 2];
+    socket.msg({ t: 'u', u: [['r1', P.encodeState({ ...state, mu: 45000 }), newer]] });
+    check(20, 300, 900);
+    socket.msg({ t: 'u', u: [['r1', P.encodeState({ ...state, mu: 60000 })]] });
+    check(20, 300, 900);
+    socket.msg({ t: 'snap', chain: 'robinhood', coins: [P.encodeCoin({ ...coinIn(AGI_CA.toLowerCase()), id: 'r1', src: 'clank.trade', st: state, dx: newer })] });
+    check(20, 300, 900);
+  } finally {
+    m.destroy();
+    feed.stop();
+  }
 });
 
 test('the feed in the browser: connecting, live, down and back by itself, full; its words plain, never a tip', async () => {

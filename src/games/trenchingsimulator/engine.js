@@ -1129,9 +1129,10 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       const ph = phaseOf(c);
       if (ph === 'pool') migrated.push(c);
       else if (ph === 'migrating' || progressOf(c) >= 0.5) stretch.push(c);
-      else if (fresh.length < L) fresh.push(c);
+      else fresh.push(c);
       if (c.lastTrade !== null && c.lastTrade >= t - 300) live.push(c);
     }
+    fresh.sort((a, b) => b.born - a.born || b.id - a.id);
     stretch.sort((a, b) => progressOf(b) - progressOf(a) || b.id - a.id);
     migrated.sort((a, b) => b.poolAt - a.poolAt || b.id - a.id);
     // bump order: the same live coins by their last trade (sorted before `live` is sorted by volume)
@@ -1139,7 +1140,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     const vols = new Map(live.map((c) => [c.id, vol5Of(c, t)]));
     live.sort((a, b) => vols.get(b.id) - vols.get(a.id) || b.id - a.id);
     const v = {
-      new: fresh.map(rowM), stretch: stretch.slice(0, L).map(rowM), migrated: migrated.slice(0, L).map(rowM),
+      new: fresh.slice(0, L).map(rowM), stretch: stretch.slice(0, L).map(rowM), migrated: migrated.slice(0, L).map(rowM),
       trending: live.slice(0, L).map(rowM), bump: bumped.slice(0, L).map(rowM),
       koth: M.koth !== null && shownKind(M.coins[M.koth]) ? rowM(M.coins[M.koth]) : null,
     };
@@ -1505,7 +1506,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     const t = tOf(M.n);
     const born = Number.isFinite(o.born) ? Math.min(t, o.born) : t;
     const by = typeof o.by === 'string' && o.by ? o.by : null;
-    const r0 = o.real0 && o.real0.tok > 0 && o.real0.sol > 0 ? o.real0 : o.real;
+    const hasReal0 = Boolean(o.real0 && o.real0.tok > 0 && o.real0.sol > 0);
+    const r0 = hasReal0 ? o.real0 : o.real;
     const c = {
       id, born, fate: null, plan: null, theme: 'live', name: String(o.name), ticker: String(o.ticker),
       tk: String(o.ticker).toUpperCase(), emoji: '🪙', copyOf: null, line: null, mint: o.key,
@@ -1527,7 +1529,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     extSet(c, r0);
     const mc0 = mcOf(c.mk);
     c.mc0 = mc0;
-    tickExt(c, born, mc0);
+    // A current quote is only known now. Keep its actual launch age without backdating that price into history.
+    tickExt(c, hasReal0 ? born : t, mc0);
     c.lastTrade = null;
     if (c.ext.phase === 'pool') c.poolAt = born;
     pushFeed('launch', c, born);

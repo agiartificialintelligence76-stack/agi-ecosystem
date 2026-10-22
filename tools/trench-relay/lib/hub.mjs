@@ -10,7 +10,7 @@
 //
 // A slow viewer never slows the others: past `high` bytes waiting for it, it misses batches (and gets a fresh snapshot
 // once it has caught up); past `hard` it's dropped. Pings every `pingMs`; no pong by the next one, it's dropped.
-import { encodeCoin, encodeState } from './parse.mjs';
+import { encodeCoin, encodeState, addressOn, isB58 } from './parse.mjs';
 import { CHAIN_IDS } from './config.mjs';
 
 export const PREFIX = Object.freeze({ solana: 's', robinhood: 'r', bnb: 'b', base: 'a', ethereum: 'e', monad: 'm', hyperevm: 'h',
@@ -23,7 +23,7 @@ export const QUIET_MS = Object.freeze({ solana: 3 * 60_000, robinhood: 45 * 60_0
   ethereum: 30 * 60_000, monad: 30 * 60_000, hyperevm: 30 * 60_000, arbitrum: 30 * 60_000, tron: 30 * 60_000 });
 
 export function createHub({ log, chains = CHAIN_IDS, batchMs = 500, pingMs = 25000, now = Date.now, onWatch = () => {},
-  limits = {} } = {}) {
+  onLookup = async () => null, limits = {} } = {}) {
   const L = { ...LIMITS, ...limits };
   const C = new Map();
   for (const id of chains) {
@@ -31,6 +31,9 @@ export function createHub({ log, chains = CHAIN_IDS, batchMs = 500, pingMs = 250
       state: 'off', src: null, lastCoinAt: 0, born: [], why: null });
   }
   const clients = new Set();
+  const lookups = new Map();
+  const lookupCalls = [];
+  let lookupBusy = 0;
   let px = null;
   let pxAt = 0;
   let watched = 0;
@@ -95,7 +98,7 @@ export function createHub({ log, chains = CHAIN_IDS, batchMs = 500, pingMs = 250
     const t = now();
     const coin = { id, chain: chainId, key: c.key, name: c.name, symbol: c.symbol, born: Number.isFinite(c.born) ? Math.min(c.born, t) : t,
       by: c.by || null, src: c.src || null, sup: c.sup || 0, st: c.st || null, st0: c.st0 || null, pic: c.pic || null,
-      soc: c.soc || 0, tracked: Boolean(c.tracked), at: t, hist: [], watchers: 0, extra: c.extra || {} };
+      soc: c.soc || 0, tracked: Boolean(c.tracked), at: t, hist: [], watchers: 0, extra: c.extra || {}, dx: c.dx || null };
     if (coin.st) coin.hist.push([t, encodeState(coin.st)]);
     ch.coins.set(id, coin);
     ch.byKey.set(c.key, id);
@@ -138,6 +141,7 @@ export function createHub({ log, chains = CHAIN_IDS, batchMs = 500, pingMs = 250
     const wire = encodeState(st);
     const same = c.st && JSON.stringify(encodeState(c.st)) === JSON.stringify(wire);
     c.st = st;
+    if (dx) c.dx = dx;
     c.at = now();
     // the same market again (a re-read): nothing to send, unless its own numbers came with it
     if (same && !dx) return true;
@@ -145,7 +149,7 @@ export function createHub({ log, chains = CHAIN_IDS, batchMs = 500, pingMs = 250
     if (last && c.at - last[0] < 1000) last[1] = wire;
     else c.hist.push([c.at, wire]);
     if (c.hist.length > L.hist) c.hist.splice(0, c.hist.length - L.hist);
-    ch.dirty.set(id, dx ? [id, wire, dx] : [id, wire]);
+    ch.dirty.set(id, c.dx ? [id, wire, c.dx] : [id, wire]);
     return true;
   }
 
@@ -258,7 +262,7 @@ export function createHub({ log, chains = CHAIN_IDS, batchMs = 500, pingMs = 250
 
   function attach(ws) {
     const cl = { ws, chain: null, watch: new Set(), alive: true, lagging: false, tokens: L.msgBurst, refillAt: now(),
-      hist: [] };
+      hist: [], lookupBusy: false, lookupAt: -Infinity };
     clients.add(cl);
     ws.on('pong', () => {
       cl.alive = true;
@@ -320,7 +324,46 @@ export function createHub({ log, chains = CHAIN_IDS, batchMs = 500, pingMs = 250
     if (m.op === 'sub' && typeof m.chain === 'string' && C.has(m.chain)) return subscribe(cl, m.chain);
     if (m.op === 'unsub') return unsubscribe(cl);
     if (m.op === 'watch' && Array.isArray(m.ids)) return watch(cl, m.ids);
+    if (m.op === 'lookup') return lookup(cl, m.address);
     return undefined;
+  }
+
+  // Only a contract on the subscribed chain can be looked up. No URL or upstream method comes from a browser.
+  // Shared short-lived results, concurrency and request caps keep searches from multiplying upstream work.
+  async function lookup(cl, raw) {
+    const chain = cl.chain;
+    const key = chain && (chain === 'solana' ? (isB58(raw) ? raw : null) : addressOn(chain, raw));
+    if (!key) return;
+    const reply = (status, c = null) => {
+      if (!clients.has(cl) || cl.chain !== chain) return;
+      if (c) send(cl, JSON.stringify({ t: 'c', c: encodeCoin(c) }), { essential: true });
+      send(cl, JSON.stringify({ t: 'lookup', chain, key, status }), { essential: true });
+    };
+    const t = now();
+    const cacheKey = `${chain}:${key}`;
+    const cached = lookups.get(cacheKey);
+    if (cached && t - cached.at < 30_000) {
+      const c = cached.id && coin(chain, cached.id);
+      if (c || !cached.id) return reply(c ? 'found' : 'missing', c);
+    }
+    while (lookupCalls.length && lookupCalls[0] <= t - 60_000) lookupCalls.shift();
+    if (cl.lookupBusy || t - cl.lookupAt < 2000 || lookupBusy >= 8 || lookupCalls.length >= 60) return reply('busy');
+    cl.lookupAt = t;
+    cl.lookupBusy = true;
+    lookupBusy += 1;
+    lookupCalls.push(t);
+    try {
+      const found = await onLookup(chain, key);
+      const c = found && found.chain === chain && found.key === key ? coin(chain, found.id) : null;
+      lookups.set(cacheKey, { at: now(), id: c ? c.id : null });
+      while (lookups.size > 200) lookups.delete(lookups.keys().next().value);
+      reply(c ? 'found' : 'missing', c);
+    } catch {
+      reply('unavailable');
+    } finally {
+      cl.lookupBusy = false;
+      lookupBusy -= 1;
+    }
   }
 
   function subscribe(cl, chainId) {
