@@ -1,7 +1,7 @@
 // Phomo's local preferences and interactions. No account, wallet, external social message or automatic order.
 // The board calls tick(); copying only happens after an explicit copyTrade() call through the supplied run callback.
 import { PHOMO_CATEGORIES, PHOMO_WINDOWS, PHOMO_LIMITS, PHOMO_SORTS, PHOMO_NETWORKS, coinKey, marketTokenRows, selectTokens,
-  tokenMetrics, traderProfiles, selectTraders, socialFeed, copyOrderFor } from './phomo-data.js';
+  tokenMetrics, traderProfiles, selectTraders, socialFeed, copyOrderFor, closedPositionStats } from './phomo-data.js';
 
 export const PHOMO_SAVE_KEY = 'trench_phomo_v1';
 export const PHOMO_BOUNDS = Object.freeze({ watchlist: 200, hidden: 300, followed: 80, muted: 80, likes: 300,
@@ -25,7 +25,10 @@ export function blankPhomoPrefs() {
     network: 'all', launchpad: 'all',
     buyPresets: [10, 100, 500, 1000], sellPresets: [10, 25, 50, 100], slippageMode: 'auto', slippage: 0.2,
     ui: { panels: [{ kind: 'tokens', category: 'trending', window: '1h' }],
-      layout: 'columns', quickBuy: 10, rail: false },
+      layout: 'columns', quickBuy: 10, rail: false, discoveryWidth: 280, positionsWidth: 320,
+      positionsCollapsed: false, panelSizes: [] },
+    profile: { displayName: '', handle: '', bio: '', avatar: '🍜', banner: 'violet' },
+    traderAlerts: { disabled: [], minTradeUsd: 0, minPortfolioUsd: 0, minMarketCapUsd: 0, maxMarketCapUsd: null },
     watchlist: [], hidden: [], followed: [], muted: [], likes: [], notes: [], alerts: [], notifications: [], seen: [] };
 }
 
@@ -50,12 +53,30 @@ export function cleanPhomoPrefs(raw) {
     if (u.layout === 'rows') d.ui.layout = 'rows';
     if (fin(u.quickBuy) && u.quickBuy > 0 && u.quickBuy <= 1_000_000) d.ui.quickBuy = u.quickBuy;
     if (typeof u.rail === 'boolean') d.ui.rail = u.rail;
+    if (fin(u.discoveryWidth)) d.ui.discoveryWidth = Math.max(220, Math.min(420, u.discoveryWidth));
+    if (fin(u.positionsWidth)) d.ui.positionsWidth = Math.max(240, Math.min(480, u.positionsWidth));
+    if (typeof u.positionsCollapsed === 'boolean') d.ui.positionsCollapsed = u.positionsCollapsed;
+    if (Array.isArray(u.panelSizes)) d.ui.panelSizes = u.panelSizes.slice(0, 4).filter(fin).map((n) => n === 0 ? 0 : Math.max(220, Math.min(1800, n)));
     if (Array.isArray(u.panels)) {
-      const panels = u.panels.slice(0, PHOMO_BOUNDS.panels).filter((p) => p && ['tokens', 'watchlist', 'perps', 'feed', 'leaderboard', 'alerts'].includes(p.kind));
+      const panels = u.panels.slice(0, PHOMO_BOUNDS.panels).filter((p) => p && ['tokens', 'watchlist', 'perps', 'feed', 'leaderboard', 'alerts', 'clans'].includes(p.kind));
       if (panels.length) d.ui.panels = panels.map((p) => ({ kind: p.kind, category: category(p.category), window: windowOf(p.window),
         sort: PHOMO_SORTS.includes(p.sort) ? p.sort : 'volume', direction: p.direction === 'asc' ? 'asc' : 'desc',
         limit: PHOMO_LIMITS.includes(p.limit) ? p.limit : 25, query: text(p.query, 100), filters: filtersOf(p.filters),
-        network: networkOf(p.network), launchpad: launchpadOf(p.launchpad) }));
+        network: networkOf(p.network), launchpad: launchpadOf(p.launchpad),
+        tokenNameWidth: fin(p.tokenNameWidth) ? Math.max(160, Math.min(420, p.tokenNameWidth)) : 210 }));
+    }
+  }
+  if (raw.profile && typeof raw.profile === 'object') {
+    d.profile.displayName = text(raw.profile.displayName, 40);
+    d.profile.handle = text(raw.profile.handle, 30).replace(/[^a-zA-Z0-9_]/g, '');
+    d.profile.bio = text(raw.profile.bio, 160);
+    if (['🍜', '🐱', '🐸', '🦊', '🪙', '🚀', '🌙', '🐋'].includes(raw.profile.avatar)) d.profile.avatar = raw.profile.avatar;
+    if (['violet', 'ocean', 'forest', 'sunset', 'midnight'].includes(raw.profile.banner)) d.profile.banner = raw.profile.banner;
+  }
+  if (raw.traderAlerts && typeof raw.traderAlerts === 'object') {
+    d.traderAlerts.disabled = strings(raw.traderAlerts.disabled, PHOMO_BOUNDS.followed);
+    for (const k of ['minTradeUsd', 'minPortfolioUsd', 'minMarketCapUsd', 'maxMarketCapUsd']) {
+      const n = raw.traderAlerts[k]; if (fin(n) && n >= 0 && n <= 1e15) d.traderAlerts[k] = n;
     }
   }
   for (const k of ['watchlist', 'hidden', 'followed', 'muted', 'likes', 'seen']) d[k] = strings(raw[k], PHOMO_BOUNDS[k]);
@@ -63,7 +84,7 @@ export function cleanPhomoPrefs(raw) {
     if (!n || !text(n.id) || !text(n.text, PHOMO_BOUNDS.text)) return [];
     return [{ id: text(n.id), text: text(n.text, PHOMO_BOUNDS.text), coinKey: text(n.coinKey) || null,
       seed: seedOf(n.seed), traderKey: text(n.traderKey) || null, parentKey: text(n.parentKey) || null,
-      at: fin(n.at) ? n.at : 0, t: fin(n.t) ? n.t : 0 }];
+      at: fin(n.at) ? n.at : 0, t: fin(n.t) ? n.t : 0, editedAt: fin(n.editedAt) ? n.editedAt : null }];
   });
   d.alerts = (Array.isArray(raw.alerts) ? raw.alerts : []).slice(-PHOMO_BOUNDS.alerts).flatMap((a) => {
     if (!a || !text(a.id) || !text(a.coinKey) || !['price', 'marketCap'].includes(a.metric)
@@ -90,7 +111,7 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
   let lastFeed = market && market.feedSeq || 0;
   let profiles = null;
   let profilesAt = -Infinity;
-  const username = () => text(typeof playerName === 'function' ? playerName() : playerName, 40) || 'You';
+  const username = () => prefs.profile.displayName || text(typeof playerName === 'function' ? playerName() : playerName, 40) || 'You';
   const nextId = (kind) => {
     let id;
     do { id = `${kind}:${now()}:${++sequence}`; }
@@ -135,16 +156,20 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
     const p = market.player;
     const positions = market.positions();
     const filled = market.orders(300).filter((o) => o.status === 'filled');
-    return { key: 'you', kind: 'you', id: 'you', name: username(), handle: username(), address: p.address,
+    const closed = closedPositionStats(positions, solUsd);
+    return { key: 'you', kind: 'you', id: 'you', name: username(), handle: prefs.profile.handle || username(), address: p.address,
+      bio: prefs.profile.bio, avatar: prefs.profile.avatar, banner: prefs.profile.banner,
       simulated: true, paper: true, followers: null, pnlUsd: (p.worth - market.startSol) * solUsd,
       unrealizedUsd: positions.reduce((sum, x) => sum + x.pnl, 0) * solUsd, weekPnlUsd: null,
-      winRate: null, weekWinRate: null, volumeUsd: filled.reduce((sum, o) => sum + (o.side === 'buy' ? o.spent : o.got), 0) * solUsd,
+      winRate: closed.winRate, closed, weekWinRate: null, volumeUsd: filled.reduce((sum, o) => sum + (o.side === 'buy' ? o.spent : o.got), 0) * solUsd,
       trades: filled.length, holdings: positions.filter((p0) => p0.open).map((p0) => ({ coin: p0.id, tok: p0.tokens,
         valueUsd: p0.value * solUsd, pnlUsd: p0.pnl * solUsd })), week: null, run: null, followed: false, muted: false };
   };
 
   const api = {
     get prefs() { return clone(prefs); },
+    setProfile(patch = {}) { if (dead || !patch || typeof patch !== 'object') return; prefs.profile = { ...prefs.profile, ...patch }; save(); },
+    setTraderAlerts(patch = {}) { if (dead || !patch || typeof patch !== 'object') return; prefs.traderAlerts = { ...prefs.traderAlerts, ...patch }; save(); },
     setPrefs(patch = {}) {
       if (dead || !patch || typeof patch !== 'object') return clone(prefs);
       // UI callers can update preferences, never replace notification/history books through this entry point.
@@ -182,7 +207,7 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
     isFollowing(key) { return prefs.followed.includes(key); },
     toggleMute(key) { return validTrader(key) ? toggle('muted', key) : false; },
     isMuted(key) { return prefs.muted.includes(key); },
-    feed({ following = false, limit = 60, traderKey = null } = {}) {
+    feed({ following = false, limit = 60, traderKey = null, types = null, replies = true } = {}) {
       const rows = socialFeed(market, { solUsd, limit: 300 });
       for (const o of market.orders(120)) {
         if (o.status !== 'filled') continue;
@@ -197,7 +222,13 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
           name: username(), ticker: r ? r.ticker : null, text: n.text, parentKey: n.parentKey, simulated: false,
           paper: true, source: 'note', kind: 'note' });
       }
+      for (const p of market.positions()) {
+        if (p.open || !p.buys || !fin(p.total)) continue;
+        rows.push({ key: `${market.seed}:closed:${p.id}:${p.last}`, t: p.last, coin: p.id, traderKey: 'you', name: username(),
+          ticker: p.ticker, pnlUsd: p.total * solUsd, simulated: !market.isExt(p.id), paper: true, source: 'you', kind: 'closed' });
+      }
       return rows.filter((e) => (!e.traderKey || !prefs.muted.includes(e.traderKey))
+        && (replies || !e.parentKey) && (!Array.isArray(types) || types.includes(e.kind))
         && (!following || e.traderKey === 'you' || prefs.followed.includes(e.traderKey))
         && (!traderKey || e.traderKey === traderKey))
         .sort((a, b) => b.t - a.t || b.key.localeCompare(a.key)).slice(0, Math.max(1, Math.min(100, limit)))
@@ -217,6 +248,11 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
       return { ok: true, note: { ...note, coin } };
     },
     removeNote(id) { prefs.notes = prefs.notes.filter((n) => n.id !== id); save(); },
+    editNote(id, raw) {
+      const n = prefs.notes.find((x) => x.id === id), body = text(raw, PHOMO_BOUNDS.text);
+      if (dead || !n || !body) return { ok: false, error: 'bad' };
+      n.text = body; n.editedAt = now(); save(); return { ok: true };
+    },
     notes({ coin = null, traderKey = null, parentKey = null } = {}) {
       const key = coin === null ? null : keyOf(coin);
       return prefs.notes.filter((n) => (!key || n.coinKey === key) && (!traderKey || n.traderKey === traderKey)
@@ -233,6 +269,22 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
       return { ok: true, alert: { ...alert, coin } };
     },
     removeAlert(id) { prefs.alerts = prefs.alerts.filter((a) => a.id !== id); save(); },
+    updateAlert(id, patch = {}) {
+      const a = prefs.alerts.find((x) => x.id === id);
+      if (dead || !a || !patch || typeof patch !== 'object') return { ok: false, error: 'bad' };
+      const next = { ...a };
+      for (const k of ['metric', 'direction', 'valueUsd']) if (Object.hasOwn(patch, k)) next[k] = patch[k];
+      if (Object.hasOwn(patch, 'coin')) next.coinKey = keyOf(patch.coin);
+      if (!next.coinKey || !['price', 'marketCap'].includes(next.metric) || !['above', 'below'].includes(next.direction)
+        || !fin(next.valueUsd) || next.valueUsd <= 0 || next.valueUsd > 1e15) return { ok: false, error: 'bad' };
+      if (typeof patch.active === 'boolean') next.active = patch.active;
+      if (patch.rearm === true) {
+        next.active = true; next.firedAt = null;
+        // A deliberately rearmed rule can notify again, without duplicating any past notification.
+        prefs.seen = prefs.seen.filter((key) => key !== a.id);
+      }
+      Object.assign(a, next); save(); return { ok: true };
+    },
     alerts() { return prefs.alerts.map((a) => ({ ...a, coin: resolve(a.coinKey) })); },
     tick() {
       if (dead) return;
@@ -241,6 +293,16 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
       lastFeed = Math.max(lastFeed, market.feedSeq || 0);
       for (const e of events.reverse()) {
         if (!e.traderKey || !prefs.followed.includes(e.traderKey) || prefs.muted.includes(e.traderKey)) continue;
+        const f = prefs.traderAlerts;
+        if (f.disabled.includes(e.traderKey) || (f.minTradeUsd > 0 && !(e.amountUsd >= f.minTradeUsd))) continue;
+        if (f.minPortfolioUsd > 0) {
+          const p = getProfiles().find((p0) => p0.key === e.traderKey);
+          if (!p || !p.holdings.every((h) => fin(h.valueUsd)) || p.holdings.reduce((s, h) => s + h.valueUsd, 0) < f.minPortfolioUsd) continue;
+        }
+        if (f.minMarketCapUsd > 0 || f.maxMarketCapUsd !== null) {
+          const r = tokenMetrics(market, e.coin, { solUsd });
+          if (!r || !fin(r.marketCapUsd) || r.marketCapUsd < f.minMarketCapUsd || (f.maxMarketCapUsd !== null && r.marketCapUsd > f.maxMarketCapUsd)) continue;
+        }
         changed = notify({ text: `${e.name} ${e.side === 'buy' ? 'bought' : 'sold'} $${e.ticker} · simulated trader`,
           kind: 'trader', coinKey: keyOf(e.coin), traderKey: e.traderKey, simulated: true }, e.key) || changed;
       }

@@ -69,6 +69,19 @@ export const chartURL = 'data:text/javascript;base64,' + Buffer.from(`
   export function chartCredit() { return document.createElement('p'); }
 `).toString('base64');
 
+export const phomoChartURL = 'data:text/javascript;base64,' + Buffer.from(`
+  export function createPhomoChart(host, options = {}) {
+    const state = {sets:[],views:[],indicators:[],destroyed:false,visible:true,scale:'normal',auto:true,style:'candles',tool:'cursor',drawings:[],selected:null,canUndo:false,canRedo:false};
+    globalThis.__phomoChart = state;
+    const update = (patch) => { Object.assign(state, patch); options.onChange?.(state); };
+    return {state, set(d){state.sets.push(d)},view(d){state.views.push(d)},indicators(d){state.indicators=d},
+      style(style){update({style})},settings(settings){update(settings)},scale(scale){update({scale})},auto(auto){update({auto})},
+      range(range){update({range})},drawTool(tool){update({tool})},showDrawings(visible){update({visible})},
+      zoom(){},fit(){},toNow(){},redraw(){},undo(){},redo(){},lockSelected(){},removeSelected(){},clearDrawings(){},
+      screenshot(){return null},destroy(){state.destroyed=true}};
+  }
+`).toString('base64');
+
 export function viewModule(file, replacements = {}) {
   const source = readFileSync(file, 'utf8').replace(/import '[^']+\.css';/g, '')
     .replace(/from '([^']+)'/g, (_, p) => `from '${replacements[p] || new URL(p, file).href}'`)
@@ -76,7 +89,8 @@ export function viewModule(file, replacements = {}) {
   return 'data:text/javascript;base64,' + Buffer.from(source).toString('base64');
 }
 
-export const coinModuleURL = viewModule(new URL('../../src/games/trenchingsimulator/boards/phomo-coin.js', import.meta.url), { './gchart.js': chartURL });
+export const coinModuleURL = viewModule(new URL('../../src/games/trenchingsimulator/boards/phomo-coin.js', import.meta.url), { './gchart.js': chartURL, './phomo-chart.js': phomoChartURL });
+export const socialModuleURL = viewModule(new URL('../../src/games/trenchingsimulator/boards/phomo-social.js', import.meta.url), { './gchart.js': chartURL, './phomo-chart.js': phomoChartURL });
 export const nodes = (n) => [n, ...n.childNodes.flatMap((x) => nodes(x))];
 export const byClass = (host, s) => nodes(host).find((n) => n.classList.contains(s));
 export const byLabel = (host, s) => nodes(host).find((n) => n.getAttribute('aria-label') === s);

@@ -23,6 +23,7 @@ import { CHALLENGES, TIERS, challengeById, FREE_STARTS, SPEEDS, goalText, timeTe
   dailyChallenge } from './challenges.js';
 import { createRun } from './run.js';
 import { captureRunReplay } from './replay-data.js';
+import { createReplayArchive } from './replay-archive.js';
 import { loadSave, writeSave, recordResult, starsTotal, SLIPPAGES, PRIORITIES } from './save.js';
 import { getSolPrice } from './solprice.js';
 import { createSound } from './sound.js';
@@ -87,6 +88,7 @@ export function startShell(root) {
   const S = { save: loadSave(store), price: null, priceAt: 0, priceP: null, play: null, last: null, expectPop: 0,
     token: 0, resAgi: null, feed: null, offFeed: null, name: loadName(store), race: null, raceView: null, raceBoard: null,
     raceStarted: '', raceCh: 'speedrun' };
+  const recordings = createReplayArchive(store);
   // Live mode: open on the site since its relay runs (2026-10-21; ./live-chains.js: LIVE_OPEN). Closed ("coming soon",
   // as it was until then), every run is simulated, whatever this browser kept from a try
   const LIVE = liveOpen(location);
@@ -268,7 +270,8 @@ export function startShell(root) {
       el('div', { class: 'ts-stats' }, stat(String(st.runs), 'runs'), stat(String(st.wins), 'wins'),
         stat(`${starsTotal(S.save)}/${STARS_MAX}`, 'stars'), stat(st.bestX > 0 ? times(st.bestX) : '—', 'best')),
       el('div', { class: 'ts-actions' },
-        btn('Race a friend', { ic: 'users', on: () => go('race') })),
+        btn('Race a friend', { ic: 'users', on: () => go('race') }),
+        btn('Saved replays', { ic: 'replay', on: openReplayLibrary })),
       el('details', { class: 'ts-how' }, el('summary', { text: 'How to play' }), ...howTo()),
       note(),
       el('p', { class: 'ts-links' }, el('a', { href: '/games#rate-trenchingsimulator', text: 'Rate it' }), ' · ',
@@ -884,9 +887,11 @@ export function startShell(root) {
       el('div', { class: 'ts-hud-time' }, icon('clock'), time),
       el('div', { class: 'ts-hud-money' }, worth, pnl),
       el('div', { class: 'ts-hud-tools' }, speedBtn, soundBtn, endBtn));
+    if (t.id === 'social') hud.append(liveStrip || el('p', { class: 'ts-live-strip', role: 'status' },
+      el('span', {}, 'Simulated market · Play money only')));
     const boardHost = el('div', { class: 'ts-board-host' });
     const screen = el('section', { class: ['ts-screen', 'ts-play', run.live && 'is-live'], data: setup.race ? { terminal: t.id, race: '1' } : { terminal: t.id } },
-      hud, liveStrip, raceStrip, boardHost);
+      hud, t.id === 'social' ? null : liveStrip, raceStrip, boardHost);
     show(screen, run.challenge ? run.challenge.name : 'Free play');
     paintTerminal(screen, t);
     P.agi = createAgi(agiHost, { reduceMotion: reduceMotion() });
@@ -909,6 +914,10 @@ export function startShell(root) {
       settings: () => ({ slippage: S.save.slippage, priority: S.save.priority }),
       order: (p) => run.order({ slippage: S.save.slippage, priority: S.save.priority, ...defined(p) }),
       openSettings: () => openSettings({ pause: false }),
+      openReplays: openReplayLibrary,
+      // Display actual public quotes already received by the shared feed, without starting a new connection.
+      spotPrices: () => S.feed?.px || {},
+      spotPricesStatus: () => S.feed?.status || 'idle',
       // Live mode: polled chains start on their newest coins; the coin open is kept live for this player
       sort: run.live && run.live !== 'solana' ? 'new' : 'bump',
       onCoin: (id) => {
@@ -1070,6 +1079,7 @@ export function startShell(root) {
     S.save = recordResult(S.save, res, { dailyKey: res.mode === 'daily' ? res.daily : null });
     save();
     S.last = { res, setup: P.setup, line: P.endLine, t: P.t, rank: null, replay: captureRunReplay(P.run) };
+    S.last.replaySaved = S.last.replay ? recordings.save(S.last.replay, `${P.t.name} · ${modeLabel(res)}`) : null;
     // a race: how it ended, to the room (once); never ranked (`ranked`: { why: 'race' })
     if (P.setup.race && S.race) {
       S.race.finish({ worth: res.worth, multiple: res.multiple, clock: res.timeUsed, outcome: res.outcome, timeUsed: res.timeUsed });
@@ -1206,15 +1216,16 @@ export function startShell(root) {
   }
 
   // ---- results ----
-  function openReplay() {
-    const record = S.last?.replay;
+  function openReplay(record = S.last?.replay) {
+    // Event listeners pass an event; only an explicit recording replaces the last run.
+    if (record && record.v !== 1) record = S.last?.replay;
     if (!record) return;
     const body = el('div', {}, el('p', { class: 'ts-sheet-note' }, 'Opening your recorded run…'));
     let view = null;
     const dialog = sheet('Replay your run', [body], { onClose: () => view?.destroy() });
     if (!dialog) return;
     dialog.classList.add('ts-replay-sheet');
-    paintTerminal(dialog,S.last.t);
+    paintTerminal(dialog, terminalById(record.terminal));
     import('./replay.js').then(({ mountReplay }) => {
       if (!dialog.isConnected) return;
       body.replaceChildren();
@@ -1222,6 +1233,39 @@ export function startShell(root) {
     }, () => {
       if (dialog.isConnected) body.replaceChildren(el('p', { class: 'ts-sheet-note' }, 'Replay could not load. Close this window and try again.'));
     });
+  }
+  function exportReplay(record, name = 'current-run') {
+    if (!record) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ format: 'phomo-recorded-run', v: 1, record })], { type: 'application/json' }));
+    const safeName = String(name).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 99) || 'recorded-run';
+    const link = el('a', { href: url, download: `phomo-replay-${safeName}.json` });
+    try { document.body.append(link); link.click(); }
+    finally { link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+  }
+  function openReplayLibrary() {
+    const body = el('div', { class: 'ts-replay-library' });
+    const dialog = sheet('Saved replays', [el('p', { class: 'ts-sheet-note' },
+      'Recent recordings stay in this browser. Up to eight runs are kept within the storage limit. Export a recording to keep a copy.'), body]);
+    if (!dialog) return;
+    function renderLibrary() {
+      const rows = recordings.list();
+      body.replaceChildren(...rows.map((row) => {
+        const remove = btn('Remove', { kind: 'ghost', on: () => {
+          if (remove.dataset.armed !== '1') { remove.dataset.armed = '1'; setText(remove, 'Confirm removal'); return; }
+          if (recordings.remove(row.id)) renderLibrary(); else toast('This recording could not be removed.', 'down');
+        } });
+        return el('article', { class: 'ts-replay-library-row' },
+          el('h3', {}, row.label), el('p', { class: 'ts-sheet-note' },
+            `${new Date(row.at).toLocaleString()} · ${clock(row.duration)} · ${row.trades} filled trades · ${row.live ? 'Live recording' : 'Simulated'}`),
+          el('div', { class: 'ts-actions' }, btn('Watch replay', { ic: 'play', on: () => { const r = recordings.get(row.id); dialog.close(); openReplay(r); } }),
+            btn('Export recording', { ic: 'download', on: () => {
+              const record = recordings.get(row.id); if (!record) return;
+              exportReplay(record, row.id);
+            } }), remove));
+      }));
+      if (!rows.length) body.append(el('p', { class: 'ts-sheet-note' }, 'Finish a run to save its replay here.'));
+    }
+    renderLibrary();
   }
   function resultsScreen() {
     const { res, setup, line, t } = S.last;
@@ -1271,12 +1315,16 @@ export function startShell(root) {
         setup.race ? btn('Back to the room', { kind: 'primary', ic: 'users', on: () => go('race') })
           : btn('Play again', { kind: 'primary', ic: 'replay', on: again }),
         S.last.replay ? btn('Replay this run', { ic: 'play', on: openReplay }) : null,
+        S.last.replay ? btn('Export this replay', { ic: 'download', on: () => exportReplay(S.last.replay, S.last.replaySaved?.id) }) : null,
+        btn('Saved replays', { ic: 'replay', on: openReplayLibrary }),
         el('a', { class: 'ts-btn', href: shareLink(text), target: '_blank', rel: 'noopener noreferrer' }, icon('share'), el('span', { text: 'Share on X' })),
         btn('Save card', { ic: 'download', on: (e) => saveCard(res, t, e.currentTarget) }),
         setup.race ? btn('Leave the room', { kind: 'ghost', on: () => go('home') })
           : btn(setup.kind === 'challenge' ? 'Choose another' : 'Pick a mode', { kind: 'ghost', on: () => go(setup.kind === 'challenge' ? 'challenges' : 'modes') }),
         btn('Home', { kind: 'ghost', on: () => go('home') })),
       el('p', { class: 'ts-links' }, el('a', { href: '/games#rate-trenchingsimulator', text: 'Rate it' }), ' · ', el('a', { href: '/games', text: 'All games' })),
+      S.last.replaySaved && !S.last.replaySaved.ok ? el('p', { class: 'ts-sheet-note' },
+        'This replay is available until you leave this page. Browser storage could not keep this recording.') : null,
       note());
     queueMicrotask(() => {
       if (!root.contains(agiHost)) return;

@@ -52,7 +52,7 @@ export const TERMINALS = Object.freeze([
   T({
     id: 'social', name: 'Phomo', short: 'Social', currency: 'usd', ready: true,
     tagline: 'Fear of missing out, served hot. Follow traders, all in dollars.',
-    features: ['Everything in dollars', 'Traders\' live feeds', 'Copy a trade in one tap', 'Leaderboards'],
+    features: ['Everything in dollars', 'Simulated trader feeds', 'Copy a practice trade', 'Profiles & replay'],
     colors: { bg: '#0d0d10', panel: '#17171c', panel2: '#1b1b22', panel3: '#25252d', line: '#25252d', line2: '#33333e',
       text: '#f3f3f6', soft: '#d3d3dc', muted: '#a5a5b5', dim: '#9696a5', hero: '#ffffff', accent: '#ff967e',
       onAccent: '#33120a', up: '#55dda0', down: '#ff7b8b', onDown: '#330a13', warn: '#f7c764', info: '#83bfff', violet: '#b8a7ff' },

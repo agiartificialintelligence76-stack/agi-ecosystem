@@ -841,6 +841,55 @@ html[data-page='trenchingsimulator'] [hidden] {
   justify-content: flex-end;
   gap: 6px;
 }
+/* Phomo keeps the game's controls in a compact strip above its terminal. */
+.ts-replay-library { display: grid; gap: 12px; }
+.ts-replay-library-row { padding: 14px; border: 1px solid var(--ts-line, #30323b); border-radius: 10px; }
+.ts-replay-library-row h3 { margin: 0 0 6px; font-size: 15px; }
+.ts-replay-library-row .ts-actions { flex-wrap: wrap; margin-top: 12px; }
+.ts-play[data-terminal='social'] { --ts-hud-h: 36px; }
+.ts-play[data-terminal='social'] > .ts-hud {
+  min-height: 36px;
+  height: 36px;
+  padding: 2px 12px;
+  gap: 8px;
+  grid-template-columns: 26px 26px auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas: 'pause agi goal live time money tools';
+  background: #101018;
+  font-family: Inter, Arial, sans-serif;
+}
+.ts-play[data-terminal='social'] .ts-hud .ts-ibtn {
+  width: 26px; min-width: 26px; height: 26px; min-height: 26px; border-radius: 5px;
+}
+.ts-play[data-terminal='social'] .ts-hud .ts-icon { width: 14px; height: 14px; }
+.ts-play[data-terminal='social'] .ts-hud .ts-agi-face { width: 26px; height: 26px; }
+.ts-play[data-terminal='social'] .ts-hud-name { font-size: 11px; }
+.ts-play[data-terminal='social'] .ts-hud-label,
+.ts-play[data-terminal='social'] .ts-hud .ts-agi-bubble { display: none; }
+.ts-play[data-terminal='social'] .ts-hud-goal:has(> .ts-agi-bubble.is-on) > :not(.ts-agi-bubble) { opacity: 1; }
+.ts-play[data-terminal='social'] .ts-hud-goal { gap: 2px; }
+.ts-play[data-terminal='social'] .ts-hud .ts-bar { height: 3px; }
+.ts-play[data-terminal='social'] .ts-hud .ts-live-strip {
+  grid-area: live; border: 0; min-width: 0; padding: 0 8px; margin: 0;
+  background: transparent; font-size: 11px; line-height: 1.2; color: #a6a4b2;
+}
+.ts-play[data-terminal='social'] .ts-hud .ts-live-strip > i { width: 6px; height: 6px; }
+.ts-play[data-terminal='social'] .ts-hud-clock { font-size: 12px; }
+.ts-play[data-terminal='social'] .ts-hud-money { flex-direction: row; align-items: center; gap: 8px; min-width: 0; }
+.ts-play[data-terminal='social'] .ts-hud-worth { font-size: 12px; }
+.ts-play[data-terminal='social'] .ts-hud-pnl { font-size: 10px; }
+.ts-play[data-terminal='social'] .ts-hud .ts-end { min-height: 26px; padding: 3px 8px; font-size: 11px; }
+@media (max-width: 719px) {
+  .ts-play[data-terminal='social'] { --ts-hud-h: 54px; }
+  .ts-play[data-terminal='social'] > .ts-hud {
+    height: 54px; min-height: 54px; padding: 3px 8px;
+    grid-template-columns: 26px minmax(0, 1fr) auto auto;
+    grid-template-areas: 'pause goal time tools' 'live live live live';
+    gap: 2px 6px;
+  }
+  .ts-play[data-terminal='social'] .ts-hud-agi,
+  .ts-play[data-terminal='social'] .ts-hud-money { display: none; }
+  .ts-play[data-terminal='social'] .ts-hud .ts-live-strip { padding: 0; font-size: 10px; }
+}
 .ts-speed {
   width: auto;
   min-width: 40px;

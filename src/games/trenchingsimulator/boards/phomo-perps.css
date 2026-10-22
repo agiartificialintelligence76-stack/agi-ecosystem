@@ -1,51 +1,69 @@
-.php { color: var(--t-text, #f3f3f6); padding: 24px; min-width: 0; container: phomo-perps / inline-size; }
-.php-heading, .php-state, .php-detail-head, .php-toolbar, .php-intervals { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.php-title { margin: 0; font-size: 26px; letter-spacing: -.04em; }
-.php-badge { border: 1px solid var(--t-line, #292b33); border-radius: 20px; padding: 5px 10px; font-size: 11px; color: var(--t-muted, #a5a6b2); }
-.php-note, .php-status, .php-chart-state, .php-source { color: var(--t-muted, #a5a6b2); font-size: 12px; line-height: 1.55; }
-.php-note { margin: 9px 0 22px; }
-.php-toolbar { margin-bottom: 12px; }
-.php-search, .php-select { background: var(--t-panel, #17171c); border: 1px solid var(--t-line, #292b33); color: inherit; border-radius: 9px; padding: 11px 12px; font: inherit; font-size: 13px; min-height: 42px; }
-.php-search { flex: 1; min-width: 180px; }
-.php-search:focus-visible, .php-select:focus-visible, .php-row:focus-visible, .php-interval:focus-visible, .php-retry:focus-visible { outline: 2px solid var(--t-accent, #ff7a59); outline-offset: 2px; }
-.php-state { min-height: 38px; margin-bottom: 8px; }
-.php-status { margin: 0; }
-.php-retry { border: 0; background: none; color: var(--t-accent, #ff7a59); cursor: pointer; font: inherit; font-size: 12px; text-decoration: underline; }
-.php-retry[hidden] { display: none; }
-.php-layout { display: grid; grid-template-columns: minmax(290px, .8fr) minmax(380px, 1.4fr); border: 1px solid var(--t-line, #292b33); border-radius: 14px; overflow: hidden; }
-.php-market-panel { border-right: 1px solid var(--t-line, #292b33); min-width: 0; }
-.php-columns, .php-row { display: grid; grid-template-columns: 1fr 1.15fr .8fr; align-items: center; gap: 10px; padding: 13px 16px; }
-.php-columns { color: var(--t-muted, #a5a6b2); font-size: 10px; border-bottom: 1px solid var(--t-line, #292b33); }
-.php-columns span:not(:first-child), .php-row-price, .php-row-vol { text-align: right; }
-.php-list { max-height: 590px; overflow: auto; scrollbar-width: thin; }
-.php-row { width: 100%; color: inherit; background: none; border: 0; border-bottom: 1px solid var(--t-line, #292b33); font: inherit; cursor: pointer; text-align: left; min-height: 70px; }
-.php-row:hover, .php-row[aria-pressed="true"] { background: var(--t-panel, #17171c); }
-.php-row[aria-pressed="true"] { box-shadow: inset 3px 0 var(--t-accent, #ff7a59); }
-.php-row b { display: block; font-size: 13px; overflow-wrap: anywhere; }
-.php-row small { display: block; margin-top: 5px; font-size: 10px; color: var(--t-muted, #a5a6b2); }
-.php-row-vol { font-size: 12px; }
-.php-empty { padding: 30px 18px; color: var(--t-muted, #a5a6b2); font-size: 13px; }
-.php-detail { padding: 22px; min-width: 0; }
-.php-detail-head { gap: 8px 14px; }
-.php-asset { margin: 0; font-size: 20px; flex-basis: 100%; }
-.php-price { font-size: 25px; letter-spacing: -.035em; }
-.php-change { font-size: 13px; }
-.php [data-tone="up"] { color: var(--t-up, #3ad68a); }
-.php [data-tone="down"] { color: var(--t-down, #ff5c6c); }
-.php-intervals { gap: 5px; margin: 20px 0 12px; }
-.php-interval { padding: 7px 10px; border: 0; border-radius: 7px; color: var(--t-muted, #a5a6b2); background: transparent; cursor: pointer; font: inherit; font-size: 11px; }
-.php-interval[aria-pressed="true"] { background: var(--t-panel, #17171c); color: var(--t-text, #f3f3f6); }
-.php-chart { display: block; width: 100%; height: 300px; touch-action: pan-y; cursor: crosshair; }
-.php-chart:focus-visible { outline: 2px solid var(--t-accent, #ff7a59); outline-offset: 2px; }
-.php-chart-controls { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 6px; }
-.php-chart-controls span { margin-right: auto; color: var(--t-muted, #a5a6b2); font-size: 10px; }
-.php-chart-controls button { min-width: 30px; min-height: 30px; border: 1px solid var(--t-line, #292b33); border-radius: 6px; background: transparent; color: inherit; font: inherit; font-size: 11px; cursor: pointer; }
-.php-chart-controls button:focus-visible { outline: 2px solid var(--t-accent, #ff7a59); outline-offset: 2px; }
-.php-chart-state { min-height: 19px; margin: 8px 0 16px; }
-.php-stats { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; }
-.php-stats dt { color: var(--t-muted, #a5a6b2); font-size: 10px; margin-bottom: 6px; }
-.php-stats dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
-.php-source { font-size: 10px; margin: 22px 0 0; }
-@container phomo-perps (max-width: 700px) { .php-layout { grid-template-columns: 1fr; } .php-market-panel { border-right: 0; border-bottom: 1px solid var(--t-line, #292b33); } .php-list { max-height: 280px; } .php-detail { padding: 18px 12px; } }
-@media (max-width: 1050px) { .php-layout { grid-template-columns: 1fr; } .php-market-panel { border-right: 0; border-bottom: 1px solid var(--t-line, #292b33); } .php-list { max-height: 280px; } }
-@media (max-width: 600px) { .php { padding: 16px 12px 90px; } .php-title { font-size: 23px; } .php-select { flex: 1; min-width: 0; } .php-search { flex-basis: 100%; } .php-detail { padding: 18px 12px; } .php-row, .php-columns { padding-left: 12px; padding-right: 12px; } }
+/* Phomo-only public perpetual market preview; the optional market rail can live in the main navigator. */
+.php { color: var(--t-text,#f3f3f6); padding: 10px; min-width: 0; container: phomo-perps / inline-size; }
+.php *, .php-market-panel * { box-sizing: border-box; }
+.php [hidden], .php-market-panel [hidden] { display:none!important; }
+.php-workspace { display:grid; grid-template-columns:230px minmax(0,1fr); gap:12px; align-items:start; }
+.php.is-docked .php-workspace { display:block; }
+.php-layout { display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:12px; align-items:start; min-width:0; }
+.php-nav-slot { min-width:0; }
+.php-market-panel { min-width:0; color:var(--t-text,#f3f3f6); height:100%; display:flex; flex-direction:column; background:var(--t-bg,#08070f); border:1px solid var(--t-line,#292b33); border-radius:9px; overflow:hidden; }
+.php-heading,.php-state,.php-detail-head,.php-toolbar,.php-intervals { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.php-heading { padding:11px 9px 7px; }
+.php-title { margin:0; font-size:14px; font-weight:650; letter-spacing:-.2px; }
+.php-badge { border:1px solid var(--t-line,#292b33); border-radius:20px; padding:3px 6px; font-size:9px; color:var(--t-muted,#a5a6b2); white-space:nowrap; }
+.php-note,.php-status,.php-chart-state,.php-source { color:var(--t-muted,#a5a6b2); font-size:10px; line-height:1.55; }
+.php-toolbar { padding:5px 8px 10px; gap:5px; }
+.php-search,.php-select { background:var(--t-panel,#17171c); border:1px solid var(--t-line,#292b33); color:inherit; border-radius:6px; padding:6px; font:inherit; font-size:10px; min-height:29px; min-width:0; }
+.php-search { width:100%; flex-basis:100%; }
+.php-select { flex:1; max-width:100%; }
+.php-search:focus-visible,.php-select:focus-visible,.php-row:focus-visible,.php-interval:focus-visible,.php-retry:focus-visible { outline:2px solid var(--t-accent,#ff7a59); outline-offset:2px; }
+.php-state { min-height:27px; margin:8px 0; }
+.php-status { margin:0; }
+.php-retry { border:0; background:none; color:var(--t-accent,#ff7a59); cursor:pointer; font:inherit; font-size:10px; text-decoration:underline; }
+.php-columns,.php-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 56px; align-items:center; gap:5px; padding:10px 8px; }
+.php-columns { color:var(--t-muted,#a5a6b2); font-size:8px; border-top:1px solid var(--t-line,#292b33); border-bottom:1px solid var(--t-line,#292b33); }
+.php-columns span:not(:first-child),.php-row-price,.php-row-vol { text-align:right; }
+.php-list { max-height:calc(100dvh - 260px); flex:1; min-height:0; overflow:auto; scrollbar-width:thin; }
+.php-row { width:100%; color:inherit; background:none; border:0; border-bottom:1px solid var(--t-line,#292b33); font:inherit; cursor:pointer; text-align:left; min-height:53px; }
+.php-row:hover,.php-row[aria-pressed=true] { background:var(--t-panel,#17171c); }
+.php-row[aria-pressed=true] { box-shadow:inset 2px 0 var(--t-accent,#ff7a59); }
+.php-row b { display:block; font-size:11px; overflow-wrap:anywhere; font-weight:600; }
+.php-row small { display:block; margin-top:4px; font-size:9px; color:var(--t-muted,#a5a6b2); }
+.php-row-vol { font-size:10px; }
+.php-empty { padding:25px 10px; color:var(--t-muted,#a5a6b2); font-size:11px; }
+.php-detail { padding:0; min-width:0; }
+.php-detail-head { gap:8px 12px; min-height:67px; padding:9px 3px; border-bottom:1px solid var(--t-line,#292b33); }
+.php-asset { margin:0; font-size:15px; flex-basis:100%; }
+.php-price { font-size:19px; letter-spacing:-.5px; }
+.php-change { font-size:12px; }
+.php [data-tone=up],.php-market-panel [data-tone=up] { color:var(--t-up,#3ad68a); }
+.php [data-tone=down],.php-market-panel [data-tone=down] { color:var(--t-down,#ff5c6c); }
+.php-intervals { gap:3px; margin:0; padding:8px 0; border-bottom:1px solid var(--t-line,#292b33); flex-wrap:nowrap; }
+.php-interval { padding:5px 7px; border:0; border-radius:5px; color:var(--t-muted,#a5a6b2); background:transparent; cursor:pointer; font:inherit; font-size:10px; }
+.php-interval[aria-pressed=true] { background:var(--t-panel,#17171c); color:var(--t-text,#f3f3f6); }
+.php-chart-style { margin-left:auto; background:var(--t-bg,#08070f); color:var(--t-muted,#a5a6b2); border:0; padding:4px; font:inherit; font-size:10px; }
+.php-chart { display:block; width:100%; height:clamp(280px,42vh,460px); touch-action:pan-y; cursor:crosshair; }
+.php-chart:focus-visible { outline:2px solid var(--t-accent,#ff7a59); outline-offset:2px; }
+.php-chart-controls { display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-top:6px; }
+.php-chart-controls span { margin-right:auto; color:var(--t-muted,#a5a6b2); font-size:9px; }
+.php-chart-controls button { min-width:26px; min-height:26px; border:1px solid var(--t-line,#292b33); border-radius:5px; background:transparent; color:inherit; font:inherit; font-size:10px; cursor:pointer; }
+.php-chart-controls button:focus-visible { outline:2px solid var(--t-accent,#ff7a59); outline-offset:2px; }
+.php-chart-state { margin:8px 0; }
+.php-chart-state:empty { display:none; }
+.php-side-rail { display:flex; flex-direction:column; gap:13px; min-width:0; }
+.php-about-card,.php-preview-card,.php-position-note { border:1px solid var(--t-line,#292b33); border-radius:12px; background:var(--t-panel,#12111a); padding:16px; }
+.php-side-rail h3 { margin:0 0 12px; font-size:13px; }
+.php-about-description,.php-preview-card p,.php-position-note p,.php-activity-note p { color:var(--t-muted,#a5a6b2); font-size:11px; line-height:1.7; margin:0 0 13px; }
+.php-stats { margin:0; display:grid; gap:13px; }
+.php-stats > div { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.php-stats dt { color:var(--t-muted,#a5a6b2); font-size:10px; }
+.php-stats dd { margin:0; font-size:11px; overflow-wrap:anywhere; text-align:right; }
+.php-source { font-size:9px; margin:18px 0 0; }
+.php-positions-slot > .ph-positions { width:100%; margin:0; min-width:0; border:1px solid var(--t-line,#292b33); border-radius:12px; }
+.php-activity-note { margin-top:15px; border-top:1px solid var(--t-line,#292b33); padding-top:14px; }
+.php-activity-note h3 { font-size:12px; margin:0 0 10px; }
+@container phomo-perps (max-width:1100px) { .php-workspace { grid-template-columns:210px minmax(0,1fr); } .php-layout { grid-template-columns:minmax(0,1fr) 250px; } }
+@container phomo-perps (max-width:850px) { .php:not(.is-docked) .php-layout { grid-template-columns:minmax(0,1fr); } .php:not(.is-docked) .php-side-rail { display:grid; grid-template-columns:1fr 1fr; } }
+@container phomo-perps (max-width:700px) { .php.is-docked .php-layout { grid-template-columns:minmax(0,1fr); } .php-workspace { grid-template-columns:180px minmax(0,1fr); } }
+@container phomo-perps (max-width:530px) { .php-workspace { grid-template-columns:minmax(0,1fr); } .php:not(.is-docked) .php-list { max-height:200px; } .php:not(.is-docked) .php-side-rail { display:flex; } }
+@media(max-width:600px) { .php { padding:8px; } .php-layout { grid-template-columns:minmax(0,1fr); } .php-chart-controls span { font-size:8px; } .php-interval { padding:4px 5px; } }

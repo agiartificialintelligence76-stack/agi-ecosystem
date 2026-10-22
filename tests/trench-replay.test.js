@@ -4,8 +4,12 @@ import { createRun } from '../src/games/trenchingsimulator/run.js';
 import { replay } from '../src/games/trenchingsimulator/engine.js';
 import { captureRunReplay, replayFrame, replayTradeAt, createReplayClock, sampleReplayPoints,
   REPLAY_LIMITS } from '../src/games/trenchingsimulator/replay-data.js';
+import { createReplayArchive, validArchivedReplay, REPLAY_ARCHIVE_KEY, REPLAY_ARCHIVE_LIMITS }
+  from '../src/games/trenchingsimulator/replay-archive.js';
 
 const candle = (t, price) => ({ t, o: price, h: price * 1.1, l: price * 0.9, c: price, v: 2 });
+const replayStorage = () => { const entries = new Map(); return { getItem: (k) => entries.get(k) ?? null,
+  setItem: (k, v) => entries.set(k, v) }; };
 function liveFixture() {
   const bars = [candle(0, 100), candle(10, 200), candle(20, 300)];
   const equity = [{ t: 0, v: 10 }, { t: 10, v: 12 }, { t: 20, v: 11 }];
@@ -29,6 +33,7 @@ test('a recorded simulated run retains the exact seed, configuration and order s
   for (let i = 0; i < 20; i++) run.tick(0.25);
   run.end();
   const record = captureRunReplay(run);
+  assert.equal(validArchivedReplay(record), true, 'a finished simulated run must pass the archive validator');
   assert.equal(record.live, false);
   assert.equal(record.replayable, true);
   assert.equal(record.orders.length, 2);
@@ -90,6 +95,106 @@ test('missing live chart and portfolio history stay unknown even when the curren
   assert.equal(frame.worth, null);
   assert.equal(frame.pnl, null);
   assert.equal(record.coverage.equityFrom, null);
+});
+
+test('recorded runs survive reopening, stay independent of returned records, and can be removed', () => {
+  const store = replayStorage(), archive = createReplayArchive(store, { now: () => 1720000000000 });
+  const record = captureRunReplay(liveFixture().run);
+  assert.equal(validArchivedReplay(record), true);
+  const saved = archive.save(record, 'Phomo · Free play');
+  assert.equal(saved.ok, true);
+  const reopened = createReplayArchive(store);
+  assert.equal(reopened.list()[0].trades, 2);
+  assert.deepEqual(reopened.get(saved.id), record);
+  const detached = reopened.get(saved.id); detached.orders[0].spent = 99;
+  assert.equal(reopened.get(saved.id).orders[0].spent, record.orders[0].spent);
+  assert.equal(reopened.remove(saved.id), true);
+  assert.deepEqual(createReplayArchive(store).list(), []);
+  assert.equal(reopened.remove('absent'), false);
+});
+
+test('replay archive caps saved runs and storage while keeping the newest recordings', () => {
+  const store = replayStorage(); let at = 1;
+  const archive = createReplayArchive(store, { now: () => at++ });
+  const record = captureRunReplay(liveFixture().run);
+  for (let i = 0; i < 12; i++) assert.equal(archive.save(record, `Run ${i}`).ok, true);
+  assert.equal(archive.list().length, REPLAY_ARCHIVE_LIMITS.runs);
+  assert.equal(archive.list()[0].label, 'Run 11');
+  assert.equal(archive.list().at(-1).label, 'Run 4');
+  assert.ok(store.getItem(REPLAY_ARCHIVE_KEY).length < REPLAY_ARCHIVE_LIMITS.characters);
+});
+
+test('damaged or unavailable replay storage fails safely without accepting invalid history', () => {
+  const store = replayStorage(), record = captureRunReplay(liveFixture().run);
+  store.setItem(REPLAY_ARCHIVE_KEY, '{broken');
+  assert.deepEqual(createReplayArchive(store).list(), []);
+  const bad = JSON.parse(JSON.stringify(record)); bad.coins[0].candles[0].availableAt = -1;
+  assert.equal(validArchivedReplay(bad), false);
+  store.setItem(REPLAY_ARCHIVE_KEY, JSON.stringify({ v: 1, runs: [{ id: 'bad', at: 1, record: bad }] }));
+  assert.deepEqual(createReplayArchive(store).list(), []);
+  const failed = createReplayArchive({ getItem() { throw Error('blocked'); }, setItem() { throw Error('quota'); } });
+  assert.equal(failed.save(record).reason, 'storage');
+  assert.deepEqual(failed.list(), []);
+  assert.equal(createReplayArchive(null).save(record).ok, false);
+  assert.equal(createReplayArchive(store).save(bad).reason, 'invalid');
+});
+
+test('saved replay validation rejects ambiguous or malformed chronology while preserving a real pre-run candle', () => {
+  const record = captureRunReplay(liveFixture().run);
+  const invalid = (mutate) => { const r = JSON.parse(JSON.stringify(record)); mutate(r); assert.equal(validArchivedReplay(r), false); };
+  invalid((r) => r.equity.reverse());
+  invalid((r) => r.coins[0].candles.reverse());
+  invalid((r) => { r.coins[0].candles[1].t = r.coins[0].candles[0].t; });
+  invalid((r) => { r.coins[0].candles[0].availableAt = 15; r.coins[0].candles[1].availableAt = 12; });
+  invalid((r) => { r.orders[1].id = r.orders[0].id; });
+  invalid((r) => r.orders.reverse());
+  invalid((r) => r.coins.push(JSON.parse(JSON.stringify(r.coins[0]))));
+  invalid((r) => { r.orders[0].doneAt = null; });
+  invalid((r) => { r.orders[0].spent = -1; });
+  invalid((r) => { r.coins[0].candles[0].h = 1; });
+  invalid((r) => { r.coins[0].candles[0].v = -1; });
+  invalid((r) => { r.coverage = []; });
+  invalid((r) => { r.config.untrusted = { nested: { payload: 'unexpected' } }; });
+  invalid((r) => { r.orders[0].unexpected = { payload: true }; });
+  invalid((r) => { r.solUsd = Number.MAX_VALUE; });
+  const before = JSON.parse(JSON.stringify(record));
+  before.coins[0].candles[0].t = -600;
+  assert.equal(validArchivedReplay(before), true, 'a retained candle before run start is legitimate');
+});
+
+test('replay archive quota failures keep old recordings and failed removals intact', () => {
+  let blocked = false;
+  const data = replayStorage(), store = { getItem: data.getItem, setItem: (k, v) => { if (blocked) throw Error('quota'); data.setItem(k, v); } };
+  const archive = createReplayArchive(store), record = captureRunReplay(liveFixture().run);
+  const first = archive.save(record, 'Keep this'); assert.equal(first.ok, true);
+  const before = data.getItem(REPLAY_ARCHIVE_KEY); blocked = true;
+  assert.equal(archive.save(record, 'Cannot fit').reason, 'storage');
+  assert.equal(archive.list().length, 1); assert.equal(archive.list()[0].id, first.id);
+  assert.equal(archive.remove(first.id), false); assert.equal(archive.list().length, 1);
+  assert.equal(data.getItem(REPLAY_ARCHIVE_KEY), before);
+  assert.deepEqual(archive.get(first.id), record, 'the previous recording remains exportable after quota errors');
+});
+
+test('archive reload ignores duplicate IDs, unsafe filenames and oversized records', () => {
+  const store = replayStorage(), record = captureRunReplay(liveFixture().run);
+  store.setItem(REPLAY_ARCHIVE_KEY, JSON.stringify({ v: 1, runs: [
+    { id: 'one', at: 1, label: 'First', record }, { id: 'one', at: 2, label: 'Duplicate', record },
+    { id: '../bad', at: 3, label: 'Unsafe name', record }, { id: 'bad-date', at: 1e100, label: 'Invalid date', record },
+  ] }));
+  const archive = createReplayArchive(store);
+  assert.deepEqual(archive.list().map((x) => x.label), ['First']); assert.deepEqual(archive.get('one'), record);
+  const deeplyNested = JSON.parse(JSON.stringify(record)); deeplyNested.extra = { child: { child: { child: true } } };
+  assert.equal(archive.save(deeplyNested).reason, 'invalid');
+  const large = JSON.parse(JSON.stringify(record)); large.duration = 2000; large.coins = [];
+  for (let id = 0; id < REPLAY_LIMITS.coins && JSON.stringify(large).length <= REPLAY_ARCHIVE_LIMITS.record; id++) {
+    large.coins.push({ id, name: 'Large history', ticker: 'BIG', live: true, born: 0, from: 1, trimmed: false,
+      candles: Array.from({ length: 2000 }, (_, t) => ({ t, o: 1500000000000, h: 2000000000000, l: 1000000000000, c: 1500000000000, v: 1, availableAt: t + 1 })) });
+  }
+  assert.equal(validArchivedReplay(large), true);
+  assert.equal(archive.save(large).reason, 'large');
+  const payload = JSON.stringify({ v: 1, runs: [{ id: 'large', at: 1, label: 'Too large', record: large }] });
+  assert.ok(payload.length <= REPLAY_ARCHIVE_LIMITS.characters, 'exercise the per-record limit, not only the whole archive limit');
+  store.setItem(REPLAY_ARCHIVE_KEY, payload); assert.deepEqual(createReplayArchive(store).list(), []);
 });
 
 test('replay capture is bounded across orders, tokens, candles, equity and simulation logs', () => {

@@ -240,3 +240,49 @@ export function copyOrderFor(event, usdAmount, solUsd, market) {
   }
   return { ok: false, error: 'bad' };
 }
+
+// A completed token position may contain several buys/sells. Do not call these individual winning trades.
+export function closedPositionStats(positions, solUsd) {
+  const closed = (positions || []).filter((p) => !p.open && p.buys > 0 && fin(p.total));
+  const wins = closed.filter((p) => p.total > 0).length, losses = closed.filter((p) => p.total < 0).length;
+  return { count: closed.length, wins, losses, breakeven: closed.length - wins - losses,
+    winRate: closed.length ? wins / closed.length : null,
+    pnlUsd: toUsd(closed.reduce((sum, p) => sum + p.total, 0), solUsd),
+    averageHold: closed.length && closed.every((p) => fin(p.first) && fin(p.last))
+      ? closed.reduce((sum, p) => sum + Math.max(0, p.last - p.first), 0) / closed.length : null };
+}
+
+// Position dialog data. A missing history stays unknown; never infer a real trader from a live token.
+export function positionDetail(market, coin, traderKey = 'you', { solUsd = market?.solUsd } = {}) {
+  const row = market?.row(coin);
+  if (!row) return null;
+  const own = traderKey === 'you';
+  if (!own && row.live) return null;
+  const trader = own ? null : traderProfiles(market, { solUsd }).find((p) => p.key === traderKey);
+  if (!own && !trader) return null;
+  const p = own ? market.positions().find((x) => x.id === coin) : null;
+  const held = trader?.holdings.find((h) => h.coin === coin);
+  const history = own ? market.orders(300).filter((o) => o.coin === coin && o.status === 'filled').map((o) => ({
+    key: `order:${o.id}`, t: o.doneAt, side: o.side, tok: o.tok,
+    amountUsd: toUsd(o.side === 'buy' ? o.spent : o.got, solUsd), mcUsd: toUsd(o.mc, solUsd) }))
+    : (typeof market.trades === 'function' ? market.trades(coin, 120) : []).filter((t) => t.addr === trader.address).map((t, i) => ({
+      key: `swap:${t.t}:${i}`, t: t.t, side: t.side, tok: t.tok, amountUsd: toUsd(t.sol, solUsd), mcUsd: toUsd(t.mc, solUsd) }));
+  const quantity = p ? p.tokens : held ? held.tok : null;
+  return { coin, traderKey, row, own, simulated: !own, paper: own, history: history.sort((a, b) => b.t - a.t),
+    quantity, valueUsd: p ? toUsd(p.value, solUsd) : held?.valueUsd ?? null,
+    pnlUsd: p ? toUsd(p.total, solUsd) : held?.pnlUsd ?? null,
+    realizedUsd: p ? toUsd(p.realized, solUsd) : null,
+    investedUsd: p ? toUsd(p.invested, solUsd) : toUsd(held?.in, solUsd),
+    soldUsd: p ? toUsd(p.sold, solUsd) : toUsd(held?.out, solUsd),
+    averageEntryUsd: p && p.tokens > 0 ? toUsd(p.cost / p.tokens, solUsd) : null,
+    open: p ? p.open : held ? held.tok > 0 : null, position: p || null };
+}
+
+// Profile charts show only the equity samples retained by this run, even for a longer selected window.
+export function profileEquity(market, seconds = Infinity, solUsd = market?.solUsd) {
+  const values = typeof market?.equity === 'function' ? market.equity(0) : [];
+  const points = values.filter((x) => fin(x.t) && fin(x.v) && x.t >= market.t - seconds)
+    .map((x) => ({ t: x.t, v: toUsd(x.v, solUsd) })).filter((x) => fin(x.v));
+  return { points, observed: points.length ? Math.max(0, market.t - points[0].t) : 0,
+    changeUsd: points.length > 1 ? points.at(-1).v - points[0].v : null };
+}

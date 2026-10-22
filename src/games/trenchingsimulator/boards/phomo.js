@@ -2,20 +2,21 @@
 // Panels share one market and order path; switching or splitting them never creates a second game clock.
 import { el, setText, flag, keyed as reconcile, icon, toast } from '../ui.js';
 import { markEl, wordEl } from '../brands.js';
-import { usd, usdFull, signed, pct, age, compact } from '../format.js';
+import { usd, usdFull, signed, pct, age, compact, price as priceWords } from '../format.js';
 import { SAFETY_NOTE } from '../terminals.js';
 import { chainById, feedWords } from '../live-chains.js';
 import { createAddressSearch } from '../live-search.js';
 import { pic, samePic, parseAmount, ORDER_ERRORS, short } from './common.js';
 import { createPhomoState } from './phomo-state.js';
-import { PHOMO_CATEGORIES, PHOMO_WINDOWS } from './phomo-data.js';
+import { PHOMO_CATEGORIES, PHOMO_WINDOWS, tokenMetrics } from './phomo-data.js';
 import { mountPhomoCoin } from './phomo-coin.js';
+import { mountPhomoSocial, mountPhomoProfile, mountPhomoPosition } from './phomo-social.js';
 import { positionCardWords } from './gngm-card.js';
 import './phomo.css';
 import './phomo-perps.css';
 
 const TYPES = [['tokens', 'Tokens', 'chart'], ['watchlist', 'Watchlist', 'star'], ['perps', 'Perps', 'arrows'],
-  ['leaderboard', 'Leaderboard', 'trophy'], ['feed', 'Feed', 'users'], ['alerts', 'Alerts', 'bolt']];
+  ['leaderboard', 'Leaderboard', 'trophy'], ['feed', 'Feed', 'users'], ['alerts', 'Alerts', 'bolt'], ['clans', 'Clans', 'users']];
 const fin = Number.isFinite;
 const button = (text, click, cls = '', label = typeof text === 'string' ? text : undefined) => el('button', { type: 'button', class: `ph-btn ${cls}`,
   'aria-label': label, on: { click } }, text);
@@ -39,19 +40,35 @@ export function mountPhomo(host, ctx) {
   try { storage = globalThis.localStorage; } catch { /* storage can be blocked */ }
   const state = createPhomoState(market, { storage, solUsd: ctx.solUsd, order: ctx.order, playerName: ctx.playerName });
   const chain = ctx.chain ? chainById(ctx.chain).name : 'Simulated market';
-  let dead = false, last = -Infinity, subView = null, dialog = null, sequence = 0, active = 0, searchTimer;
+  let dead = false, last = -Infinity, subView = null, dialog = null, popover = null, sequence = 0, active = 0, searchTimer;
   let layout = state.prefs.ui?.layout || 'columns';
-  let railOpen = state.prefs.ui?.rail === true;
+  let railOpen = state.prefs.ui?.rail === true, detailNavOpen = !narrowScreen(), navCategory = 'trending', navigationKind = 'tokens', selectedCoin = null, searchTab = 'tokens';
+  let discoveryWidth = state.prefs.ui?.discoveryWidth || 280, positionsWidth = state.prefs.ui?.positionsWidth || 320;
+  let positionsCollapsed = state.prefs.ui?.positionsCollapsed === true;
+  const dragCleanups = new Set();
   let quick = String(state.prefs.ui?.quickBuy || Math.min(100, Math.max(1, Math.round(ctx.start * ctx.solUsd / 10))));
   const panels = [];
   const root = el('div', { class: 'ph-root', 'aria-label': 'Phomo terminal' });
   const content = el('div', { class: 'ph-workspace', data: { layout } });
   const subHost = el('div', { class: 'ph-sub', hidden: true });
   const rail = el('nav', { class: 'ph-rail', 'aria-label': 'Discovery' });
-  const railToggle = button(railOpen ? '«' : '»', () => { railOpen = !railOpen; flag(root,'is-rail-collapsed',!railOpen);
-    setText(railToggle,railOpen ? '«' : '»'); railToggle.setAttribute('aria-label',railOpen ? 'Collapse discovery panel' : 'Expand discovery panel');
-    railToggle.setAttribute('aria-expanded',String(railOpen)); saveUI(); },'ph-rail-toggle',railOpen ? 'Collapse discovery panel' : 'Expand discovery panel');
-  railToggle.setAttribute('aria-expanded',String(railOpen)); rail.append(railToggle); flag(root,'is-rail-collapsed',!railOpen);
+  const railToggle = button('»', () => { if (subView || singlePerps()) detailNavOpen = !detailNavOpen; else railOpen = !railOpen; updateGeometry(); saveUI(); },'ph-rail-toggle','Expand discovery panel');
+  const navTabs = el('div',{class:'ph-nav-tabs'});
+  for (const kind of ['alerts','watchlist','tokens','perps','leaderboard','feed']) {
+    const [,label,ic] = TYPES.find(([k]) => k === kind);
+    navTabs.append(button(['alerts','watchlist'].includes(kind) ? icon(ic) : label,() => {
+      navigationKind = kind;
+      if (subView && ['tokens','watchlist'].includes(kind)) refreshNavigator(); else setMain(kind);
+    },'ph-rail-button',label));
+  }
+  const navCategories = el('div',{class:'ph-nav-categories'});
+  for (const [key,label] of [['trending','Trending'],['mostheld','Most held'],['graduated','Graduated'],['bonding','Bonding'],['bluechips','Blue chips']]) {
+    navCategories.append(button(label,() => { navCategory = key; refreshNavigator(); },'',`${label} in discovery list`));
+  }
+  const navRows = el('div',{class:'ph-nav-rows','aria-label':'Discovery token list'});
+  const navExternal = el('div',{class:'ph-nav-external',hidden:true,'aria-label':'Perpetual market discovery'});
+  const navFooter = el('div',{class:'ph-nav-footer'},button('Split bottom',() => { const p = panels[active] || panels[0]; if (p) split(p,'rows'); },'','Split discovery bottom'),button('Split right',() => { const p = panels[active] || panels[0]; if (p) split(p,'columns'); },'','Split discovery right'));
+  rail.append(el('div',{class:'ph-nav-heading'},navTabs,railToggle),navCategories,navRows,navExternal,navFooter);
   const watchstrip = el('div', { class: 'ph-watchstrip', 'aria-label': 'Watched tokens' });
   const balance = el('span');
   const worth = el('span');
@@ -59,34 +76,77 @@ export function mountPhomo(host, ctx) {
   const searchIn = input('Search tokens, traders or contract address'); searchIn.type = 'search';
   const found = el('div', { class: 'ph-search-results', hidden: true });
   const addressSearch = createAddressSearch(market, () => { if (!dead) search(); });
-  const searchBox = el('form', { class: 'ph-search', role: 'search', on: { submit(e) { e.preventDefault(); search(); found.querySelector('button')?.click(); } } },
+  const searchBox = el('form', { class: 'ph-search', role: 'search', on: { submit(e) { e.preventDefault(); search(); found.querySelector('.ph-search-row')?.click(); } } },
     icon('search'), searchIn, button('Paste', async () => { try { searchIn.value = (await navigator.clipboard.readText()).slice(0,160); search(); } catch { toast('Paste into the search field with your keyboard.'); searchIn.focus(); } }), el('kbd', {}, '/'), found);
   searchIn.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(search, 160); });
-  searchIn.addEventListener('keydown', (e) => { if (e.key === 'Escape') { searchIn.value = ''; found.hidden = true; } if (e.key === 'ArrowDown') { e.preventDefault(); found.querySelector('button')?.focus(); } });
+  searchIn.addEventListener('keydown', (e) => { if (e.key === 'Escape') { searchIn.value = ''; found.hidden = true; e.stopPropagation(); } if (e.key === 'ArrowDown') { e.preventDefault(); found.querySelector('.ph-search-row')?.focus(); } });
   const head = el('header', { class: 'ph-topbar' }, button([markEl('social', 'ph-logo'), wordEl('social', 'ph-word')], () => setMain('tokens'), 'ph-brand', 'Phomo home'),
-    button('Discover', () => setMain('tokens'), 'ph-discover'), searchBox,
-    button([icon('bag'), balance, el('small', {}, 'cash')], showCash, 'ph-cash', 'Play cash balance'),
-    button([icon('users'), worth], () => showProfile('you'), 'ph-account', 'Your profile'),
-    button([icon('bolt'), notices], () => setMain('alerts'), 'ph-icon', 'Notifications'),
-    button(icon('sliders'), ctx.openSettings, 'ph-icon', 'Game settings'));
-  for (const [kind, label, ic] of TYPES) rail.append(button([icon(ic), el('span', {}, label)], () => setMain(kind), 'ph-rail-button', label));
+    button('Discover', (e) => showPopover(e.currentTarget || e.target,'Discover',el('div',{class:'ph-menu-list'},TYPES.map(([kind,label,ic]) => button([icon(ic),label],() => { closePopover(); setMain(kind); })))), 'ph-discover'), searchBox,
+    button([el('span',{class:'ph-cash-value'},balance,el('small',{},'cash')),el('small',{class:'ph-cash-note'},'Play balance')], showCash, 'ph-cash', 'Play cash balance'),
+    button([el('span',{class:'ph-account-value'},worth,el('small',{},'Your portfolio')),el('span',{class:'ph-avatar'},(ctx.playerName?.() || 'P')[0])], () => showProfile('you'), 'ph-account', 'Your profile'),
+    button([icon('bolt'), notices], () => setMain('alerts'), 'ph-icon ph-notifications', 'Notifications'),
+    button(icon('sliders'), ctx.openSettings, 'ph-icon ph-settings', 'Game settings'));
   const positionList = el('div', { class: 'ph-position-list' });
   let closed = false, positionType = 'all';
   const positionTabs = el('div', { class: 'ph-tabs' });
   for (const [id, label] of [['all', 'All'], ['tokens', 'Tokens'], ['perps', 'Perps']]) positionTabs.append(button(label, () => { positionType = id; refreshPositions(); }, '', `${label} positions`));
   const openButton = button('Open', () => { closed = false; refreshPositions(); });
   const closedButton = button('Closed', () => { closed = true; refreshPositions(); });
-  const positions = el('aside', { class: 'ph-positions', 'aria-label': 'Your positions' }, el('div', { class: 'ph-panel-heading' }, el('h2', {}, 'Your positions'),
-    button(icon('chart'), () => showProfile('you'), 'ph-icon', 'Portfolio performance')), el('div', { class: 'ph-segment' }, openButton, closedButton), positionTabs, positionList);
-  const body = el('div', { class: 'ph-body' }, rail, el('div', { class: 'ph-center' }, watchstrip, content, subHost), positions);
+  const positionsToggle = button('»',() => { positionsCollapsed = !positionsCollapsed; updateGeometry(); saveUI(); },'ph-icon','Collapse positions');
+  const positions = el('aside', { class: 'ph-positions', 'aria-label': 'Your positions' }, el('div', { class: 'ph-panel-heading' }, el('h2', {}, 'Your positions'),positionsToggle),
+    el('div',{class:'ph-position-toolbar'},el('div', { class: 'ph-segment' }, openButton, closedButton),positionTabs),positionList);
+  const navSplitter = makeSplitter('Resize discovery panel','vertical',() => discoveryWidth,(n) => { discoveryWidth = Math.max(220,Math.min(420,n)); updateGeometry(); });
+  navSplitter.classList.add('ph-nav-splitter');
+  const positionsSplitter = makeSplitter('Resize positions panel','vertical',() => positionsWidth,(n) => { positionsWidth = Math.max(240,Math.min(480,n)); updateGeometry(); },-1);
+  positionsSplitter.classList.add('ph-positions-splitter');
+  const center = el('div', { class: 'ph-center' }, watchstrip, content, subHost);
+  const body = el('div', { class: 'ph-body' }, rail,navSplitter,center,positionsSplitter,positions);
   const ticker = el('div', { class: 'ph-ticker' });
   const status = el('span', { class: 'ph-status' });
   const footer = el('footer', { class: 'ph-footer' }, ticker, status, button('Help', showHelp), button('Layouts', showLayouts));
   root.append(head, body, footer); host.append(root);
+  updateGeometry();
 
   function saveUI() {
-    state.setPrefs({ ui: { layout, quickBuy: parseAmount(quick) || 100, rail: railOpen,
+    state.setPrefs({ ui: { layout, quickBuy: parseAmount(quick) || 100, rail: railOpen, discoveryWidth, positionsWidth, positionsCollapsed, panelSizes: panels.map((p) => p.size || 0),
       panels: panels.map((p) => ({ ...p.options, kind: p.kind })) } });
+  }
+  function singlePerps() { return !subView && panels.length === 1 && panels[0].kind === 'perps' ? panels[0] : null; }
+  function narrowScreen() { return globalThis.matchMedia?.('(max-width: 820px)')?.matches || (globalThis.innerWidth > 0 && globalThis.innerWidth <= 820); }
+  function updateGeometry() {
+    const perps = singlePerps(), expanded = subView || perps ? detailNavOpen : railOpen;
+    for (const p of panels) p.setHosts?.(p === perps ? {discoveryHost:navExternal,positionsHost:positions} : {});
+    if (!subView && !perps && positions.parentNode !== body) body.append(positions);
+    flag(root,'is-rail-collapsed',!expanded); flag(root,'is-detail',Boolean(subView || perps)); flag(root,'is-perps',Boolean(perps)); flag(root,'is-positions-collapsed',positionsCollapsed);
+    positions.hidden = subView?.kind === 'profile'; positionsSplitter.hidden = Boolean(subView || perps);
+    watchstrip.hidden = Boolean(subView || perps); navRows.hidden = navCategories.hidden = Boolean(perps); navExternal.hidden = !perps;
+    flag(positions,'is-collapsed',positionsCollapsed);
+    root.style.setProperty('--ph-discovery-width',`${discoveryWidth}px`); root.style.setProperty('--ph-positions-width',`${positionsWidth}px`);
+    setText(railToggle,expanded ? '«' : '»'); railToggle.setAttribute('aria-expanded',String(expanded)); railToggle.setAttribute('aria-label',`${expanded ? 'Collapse' : 'Expand'} discovery panel`);
+    setText(positionsToggle,positionsCollapsed ? '«' : '»'); positionsToggle.setAttribute('aria-expanded',String(!positionsCollapsed)); positionsToggle.setAttribute('aria-label',`${positionsCollapsed ? 'Expand' : 'Collapse'} positions`);
+  }
+  function makeSplitter(label,orientation,read,write,sign = 1) {
+    const handle = el('div',{class:'ph-splitter',role:'separator',tabIndex:0,'aria-label':label,'aria-orientation':orientation});
+    handle.addEventListener('keydown',(e) => { const delta = {ArrowLeft:-12,ArrowRight:12,ArrowUp:-12,ArrowDown:12}[e.key]; if (!delta) return; e.preventDefault(); write(read()+delta*sign); saveUI(); });
+    handle.addEventListener('pointerdown',(e) => {
+      if (e.button !== undefined && e.button !== 0) return; e.preventDefault();
+      const start = orientation === 'vertical' ? e.clientX : e.clientY, before = read();
+      const move = (v) => write(before+((orientation === 'vertical' ? v.clientX : v.clientY)-start)*sign);
+      const stop = () => { globalThis.removeEventListener?.('pointermove',move); globalThis.removeEventListener?.('pointerup',stop); globalThis.removeEventListener?.('pointercancel',stop); dragCleanups.delete(stop); saveUI(); };
+      dragCleanups.add(stop); globalThis.addEventListener?.('pointermove',move); globalThis.addEventListener?.('pointerup',stop); globalThis.addEventListener?.('pointercancel',stop);
+    });
+    return handle;
+  }
+  function refreshNavigator() {
+    const rows = state.tokens({category:navigationKind === 'watchlist' ? 'watchlist' : navCategory,window:'5m',limit:100,filters:{}}).rows;
+    keyed(navRows,rows,(r) => r.id,(r) => {
+      const name = el('b'),price = el('small'),cap = el('b'),change = el('small');
+      const n = button([pic(r,'','ph'),el('span',{class:'ph-nav-identity'},name,price),el('span',{class:'ph-nav-values'},cap,change)],() => openCoin(r.id),'ph-nav-token',`Open discovery ${r.ticker}`);
+      n._ph = {name,price,cap,change}; return n;
+    },(n,r) => { setText(n._ph.name,r.ticker); setText(n._ph.price,fin(r.priceUsd) ? `$${priceWords(r.priceUsd,4)}` : '—'); n._ph.price.title = r.practicePrice ? 'Price per practice unit' : 'Practice token price'; setText(n._ph.cap,usd(r.marketCapUsd)); setText(n._ph.change,pct(r.change)); tint(n._ph.change,r.change); flag(n,'is-active',r.id === selectedCoin); n.setAttribute('aria-pressed',String(r.id === selectedCoin)); });
+    if (!rows.length) navRows.replaceChildren(empty('No tokens here','Change category or star a token to add it to your watchlist.'));
+    [...navCategories.children].forEach((n,i) => flag(n,'is-active',['trending','mostheld','graduated','bonding','bluechips'][i] === navCategory));
+    [...navTabs.children].forEach((n,i) => { const on = ['alerts','watchlist','tokens','perps','leaderboard','feed'][i] === navigationKind; flag(n,'is-active',on); n.setAttribute('aria-pressed',String(on)); });
   }
   function error(res) { toast(res?.error === 'min_buy' ? `Minimum buy: ${usd(0.001 * ctx.solUsd)}.`
     : (ORDER_ERRORS[res?.error] || 'The order could not be placed.').replaceAll('SOL', 'play cash'), 'down'); }
@@ -99,42 +159,71 @@ export function mountPhomo(host, ctx) {
   }
   function search() {
     const q = searchIn.value.trim().slice(0,160); found.replaceChildren(); found.hidden = !q; if (!q) return;
-    const ids = market.find(q).slice(0,12); const people = state.traders({ query: q }).slice(0,5);
-    if (ids.length) found.append(el('small', {}, 'Tokens'));
-    for (const id of ids) { const r = market.row(id); if (r) found.append(button([pic(r,'','ph'), el('span', {}, el('b', {}, r.ticker), el('small', {}, r.name)), el('span', {}, usd(r.mc * ctx.solUsd))], () => { openCoin(id); searchIn.value = ''; found.hidden = true; }, 'ph-search-row', `Open ${r.ticker}`)); }
-    if (people.length) found.append(el('small', {}, 'Simulated traders'));
-    for (const p of people) found.append(button([el('span', { class: 'ph-avatar' }, p.name[0]), p.name, el('small', {}, signed(p.pnlUsd,'usd'))], () => { showProfile(p.key); searchIn.value = ''; found.hidden = true; }, 'ph-search-row'));
+    const ids = market.find(q).slice(0,20); const people = state.traders({ query: q }).slice(0,20);
+    const tabs = el('div',{class:'ph-search-tabs'},...['tokens','traders'].map((k) => button(k === 'tokens' ? `Tokens (${ids.length})` : `Traders (${people.length})`,() => { searchTab = k; search(); },searchTab === k ? 'is-active' : '',`Search ${k}`)));
+    found.append(tabs);
+    if (searchTab === 'tokens') {
+      found.append(el('div',{class:'ph-search-columns'},el('span',{},'Token'),el('span',{},'Market cap'),el('span',{},'5m change')));
+      for (const id of ids) {
+        const r = tokenMetrics(market,id,{solUsd:ctx.solUsd,window:'5m'}); if (!r) continue;
+        const change = el('span',{class:'ph-search-change'},pct(r.change)); tint(change,r.change);
+        const n = button([el('span',{class:'ph-search-identity'},pic(r,'','ph'),el('span',{},el('b',{},r.ticker),el('small',{},`${r.name} · ${r.live ? chainById(r.chain)?.name || chain : 'Simulated'}`))),el('span',{},usd(r.marketCapUsd)),change],() => { openCoin(id); searchIn.value = ''; found.hidden = true; },'ph-search-row',`Open ${r.ticker}`);
+        found.append(n);
+      }
+    } else {
+      found.append(el('div',{class:'ph-search-columns'},el('span',{},'Simulated trader'),el('span',{},'Profit'),el('span',{},'Win rate')));
+      for (const p of people) found.append(button([el('span',{class:'ph-search-identity'},el('span',{class:'ph-avatar'},p.name[0]),el('span',{},el('b',{},p.name),el('small',{},'Simulated trader'))),el('span',{},signed(p.pnlUsd,'usd')),el('span',{},pct(p.winRate))],() => { showProfile(p.key); searchIn.value = ''; found.hidden = true; },'ph-search-row',`Open trader ${p.name}`));
+    }
     const note = addressSearch(q, ids.length > 0);
-    if (!ids.length && !people.length) found.append(el('p', {}, note || 'No matching tokens or traders in this market.'));
+    if (searchTab === 'tokens' ? !ids.length : !people.length) found.append(el('p', {}, searchTab === 'tokens' ? note || 'No matching tokens in this market.' : 'No matching simulated traders.'));
+    found.append(el('div',{class:'ph-search-foot'},'↑ ↓ Browse results',el('span',{},'Enter to open · Esc to close')));
+    const resultRows = [...found.querySelectorAll('.ph-search-row')];
+    resultRows.forEach((n,i) => n.addEventListener('keydown',(e) => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); resultRows[(i+(e.key === 'ArrowDown' ? 1 : resultRows.length-1))%resultRows.length]?.focus(); } if (e.key === 'Escape') { e.stopPropagation(); found.hidden = true; searchIn.focus(); } }));
   }
   function makePanel(kind = 'tokens', options = {}) {
     const p = { id: ++sequence, kind, options: { category: 'trending', window: '5m', limit: 25, direction: 'desc', filters: {}, ...options }, update: null, dispose: null };
     p.el = el('section', { class: 'ph-panel', 'aria-label': `${TYPES.find(([k]) => k === kind)?.[1] || 'Tokens'} panel`, on: { pointerdown: () => { active = panels.indexOf(p); } } });
     p.toolbar = el('div', { class: 'ph-panel-tools' });
-    p.select = select('Panel content', TYPES.map(([k,l]) => [k,l]), kind, (v) => { p.kind = v; renderPanel(p); saveUI(); });
-    p.toolbar.append(p.select, button('⊞', () => split(p, 'columns'), 'ph-icon', 'Split right'), button('⊟', () => split(p, 'rows'), 'ph-icon', 'Split bottom'),
-      button('×', () => removePanel(p), 'ph-icon', 'Close panel'));
-    p.host = el('div', { class: 'ph-panel-content' }); p.el.append(p.toolbar, p.host); panels.push(p); content.append(p.el); renderPanel(p); return p;
+    p.select = button(TYPES.find(([k]) => k === kind)?.[1] || 'Tokens',() => {
+      showPopover(p.select,'Panel content',el('div',{class:'ph-menu-list'},TYPES.map(([k,label,ic]) => button([icon(ic),label],() => { p.kind = k; closePopover(); renderPanel(p); saveUI(); },p.kind === k ? 'is-active' : ''))));
+    },'ph-panel-title','Panel content');
+    const menu = button('⋯',() => showPopover(menu,'Panel options',el('div',{class:'ph-menu-list'},button('Split right',() => { closePopover(); split(p,'columns'); }),button('Split bottom',() => { closePopover(); split(p,'rows'); }),button('Close panel',() => { closePopover(); removePanel(p); }))), 'ph-icon','Panel options');
+    p.toolbar.append(p.select,menu,button('⊞', () => split(p, 'columns'), 'ph-icon', 'Split right'), button('⊟', () => split(p, 'rows'), 'ph-icon', 'Split bottom'),button('×', () => removePanel(p), 'ph-icon ph-close-panel', 'Close panel'));
+    p.host = el('div', { class: 'ph-panel-content' }); p.el.append(p.toolbar, p.host); panels.push(p); content.append(p.el); renderPanel(p); rebuildSplitters(); return p;
   }
   function split(p, direction) {
     if (panels.length >= 4) return toast('Four panels are open. Close a panel to make room.');
-    closeSub(); layout = direction; content.dataset.layout = layout; makePanel(p.kind, { ...p.options, filters: { ...p.options.filters } }); saveUI();
+    closeSub(); layout = direction; content.dataset.layout = layout; panels.forEach((n) => { n.size = 0; n.el.style.setProperty('flex-basis',''); n.el.style.setProperty('flex-grow','1'); }); makePanel(p.kind, { ...p.options, filters: { ...p.options.filters } }); saveUI();
   }
-  function removePanel(p) { if (panels.length === 1) return toast('Keep at least one discovery panel open.'); p.dispose?.(); p.el.remove(); panels.splice(panels.indexOf(p),1); active = 0; saveUI(); }
-  function setMain(kind) { closeSub(); const p = panels[Math.min(active,panels.length - 1)]; if (p) { p.kind = kind; renderPanel(p); saveUI(); } }
+  function rebuildSplitters() {
+    for (const n of [...content.children]) if (n.classList.contains('ph-splitter')) n.remove();
+    panels.forEach((p,i) => { if (!i) return; const before = panels[i-1]; const orientation = layout === 'rows' ? 'horizontal' : 'vertical';
+      const handle = makeSplitter('Resize workspace panels',orientation,() => before.size || (layout === 'rows' ? before.el.getBoundingClientRect?.().height : before.el.getBoundingClientRect?.().width) || 300,(n) => { before.size = Math.max(220,Math.min(1800,n)); before.el.style.setProperty('flex-basis',`${before.size}px`); before.el.style.setProperty('flex-grow','0'); });
+      handle.classList.add('ph-panel-splitter'); content.insertBefore(handle,p.el);
+    });
+    updateGeometry();
+  }
+  function removePanel(p) { if (panels.length === 1) return toast('Keep at least one discovery panel open.'); p.dispose?.(); p.el.remove(); panels.splice(panels.indexOf(p),1); active = 0; rebuildSplitters(); saveUI(); }
+  function setMain(kind) { closeSub(); navigationKind = kind; if (kind === 'perps' && narrowScreen()) detailNavOpen = false; const p = panels[Math.min(active,panels.length - 1)]; if (p) { p.kind = kind; renderPanel(p); updateGeometry(); saveUI(); refreshNavigator(); } }
   function renderPanel(p) {
-    p.dispose?.(); p.dispose = null; p.update = null; p.setActive = null; p.host.replaceChildren(); p.host.classList.remove('ph-token-panel'); p.select.value = p.kind;
+    p.dispose?.(); p.dispose = null; p.update = null; p.setActive = null; p.setHosts = null; p.host.replaceChildren(); p.host.classList.remove('ph-token-panel'); setText(p.select,TYPES.find(([k]) => k === p.kind)?.[1] || 'Tokens');
     p.el.setAttribute('aria-label', `${TYPES.find(([k]) => k === p.kind)?.[1] || 'Tokens'} panel`);
     if (p.kind === 'tokens' || p.kind === 'watchlist') renderTokens(p);
-    else if (p.kind === 'feed') renderFeed(p);
-    else if (p.kind === 'leaderboard') renderLeaderboard(p);
-    else if (p.kind === 'alerts') renderAlerts(p);
+    else if (['feed','leaderboard','alerts'].includes(p.kind)) {
+      const v = mountPhomoSocial(p.host,ctx,{state,kind:p.kind,onTrader:showProfile,onCoin:openCoin,onPosition:showPosition,quickAmount:() => parseAmount(quick)});
+      p.update = v.update; p.dispose = v.destroy;
+    }
     else if (p.kind === 'perps') {
       const loading = empty('Loading markets', 'Connecting to the read-only market feed…'); p.host.append(loading);
       let cancelled = false; p.dispose = () => { cancelled = true; };
-      import('./phomo-perps.js').then(({ mountPhomoPerps }) => { if (dead || cancelled) return; p.host.replaceChildren(); const v = mountPhomoPerps(p.host,ctx); p.update = v.update; p.setActive = v.setActive; if (subView) v.setActive(false); p.dispose = () => { cancelled = true; v.destroy(); }; }, () => { if (!cancelled) loading.replaceWith(empty('Markets unavailable', 'Reopen Perps to try again.')); });
+      import('./phomo-perps.js').then(({ mountPhomoPerps }) => { if (dead || cancelled) return; p.host.replaceChildren(); const v = mountPhomoPerps(p.host,ctx); p.update = v.update; p.setActive = v.setActive; p.setHosts = v.setHosts; if (subView) v.setActive(false); p.dispose = () => { cancelled = true; v.destroy(); }; updateGeometry(); }, () => { if (!cancelled) loading.replaceWith(empty('Markets unavailable', 'Reopen Perps to try again.')); });
     }
-    p.update?.(performance.now());
+    else if (p.kind === 'clans') {
+      const loading = empty('Loading clans','Opening the game’s simulated communities…'); p.host.append(loading);
+      let cancelled = false; p.dispose = () => { cancelled = true; };
+      import('./phomo-clans.js').then(({ mountPhomoClans }) => { if (dead || cancelled) return; p.host.replaceChildren(); const v = mountPhomoClans(p.host,ctx,{state,onTrader:showProfile,onCoin:openCoin,onClose:() => setMain('tokens')}); p.update = v.update; p.dispose = () => { cancelled = true; v.destroy(); }; }, () => { if (!cancelled) loading.replaceWith(empty('Clans unavailable','Reopen Clans to try again.')); });
+    }
+    p.update?.(performance.now()); updateGeometry();
   }
   function renderTokens(p) {
     p.host.classList.add('ph-token-panel');
@@ -144,7 +233,9 @@ export function mountPhomo(host, ctx) {
     const qb = input('Quick-buy dollars', quick, 'number'); qb.min = '0.01'; qb.step = 'any';
     qb.addEventListener('change', () => { quick = qb.value; saveUI(); });
     const filters = button([icon('sliders'), 'Filters'], () => tokenFilters(p), 'ph-all-filters');
-    const filterShortcuts = [['Market cap','minMarketCap'],['Liquidity','minLiquidity'],['Age','maxAge'],['Volume','minVolume']].map(([label,key]) => button(`${label} ⌄`,() => tokenFilters(p,key),'ph-filter-short'));
+    const filterShortcuts = [['Market cap','minMarketCap','maxMarketCap'],['Liquidity','minLiquidity',null],['Age',null,'maxAge'],['Volume','minVolume',null]].map(([label,min,max]) => {
+      const b = button(`${label} ⌄`,() => tokenFilterPopover(p,b,label,min,max),'ph-filter-short'); return b;
+    });
     const networks = [['all','All networks'],['simulated','Simulated'],...(ctx.chain ? [[ctx.chain,chain]] : [])];
     function sourceOptions() {
       const found = new Set(), size = market.size?.coins, shown = market.ext?.shown;
@@ -174,10 +265,21 @@ export function mountPhomo(host, ctx) {
     const win = select('Market time window',PHOMO_WINDOWS,p.options.window,(v) => { p.options.window = v; p.update(); saveUI(); });
     win.classList.add('ph-window-select');
     const windows = el('div',{class:'ph-window-buttons','aria-label':'Change and volume period'},PHOMO_WINDOWS.map((w) => button(w,() => { p.options.window = w; win.value = w; p.update(); saveUI(); },'',`${w} market window`)));
-    const controls = el('div', { class: 'ph-controls' }, count,rowCount,win,windows,filterShortcuts,filters,network,launchpad);
+    const filterSelect = (n,title) => {
+      n.hidden = true;
+      const b = button(`${title} ⌄`,() => showPopover(b,title,el('div',{class:'ph-menu-list'},[...n.children].map((o) => {
+        const value = o.getAttribute('value'); return button(o.textContent,() => { n.value = value; n.dispatchEvent?.(new Event('change',{bubbles:true})); closePopover(); },n.value === value ? 'is-active' : '');
+      }))),'ph-filter-short',`Filter by ${title.toLowerCase()}`);
+      n._phButton = b;
+      return el('span',{class:'ph-filter-select'},n,b);
+    };
+    const controls = el('div', { class: 'ph-controls' }, count,rowCount,win,windows,filterShortcuts,filters,filterSelect(network,'Network'),filterSelect(launchpad,'Launchpad'));
     const list = el('tbody');
-    const headers = [['Token',null],['Quick buy',null],['Market cap','marketCap'],['Age','age'],['Change','change'],['Volume','volume'],['Holders','holders'],['Latest thesis',null]];
+    const headers = [['Token name',null],['Quick buy',null],['Market cap','marketCap'],['Change','change'],['Volume','volume'],['Holders','holders'],['Latest thesis',null]];
     const table = el('table', { class: 'ph-table ph-token-table' }, el('thead', {}, el('tr', {}, headers.map(([label,key]) => el('th', {}, key ? button(label, () => { p.options.direction = p.options.sort === key && p.options.direction === 'desc' ? 'asc' : 'desc'; p.options.sort = key; p.update(); saveUI(); }) : label)))),list);
+    table.style.setProperty('--ph-token-name-width',`${p.options.tokenNameWidth || 210}px`);
+    const nameResize = makeSplitter('Resize token name column','vertical',() => p.options.tokenNameWidth || 210,(n) => { p.options.tokenNameWidth = Math.max(160,Math.min(420,n)); table.style.setProperty('--ph-token-name-width',`${p.options.tokenNameWidth}px`); });
+    nameResize.classList.add('ph-name-splitter'); table.querySelectorAll('th')[0].append(nameResize);
     table.querySelectorAll('th')[1].replaceChildren(el('label',{class:'ph-quick'},'Quick buy',el('span',{},'$'),qb));
     const blank = empty('No matching tokens', 'Try another category or reset the filters.');
     p.host.append(tabs,controls,el('div',{class:'ph-table-scroll'},table,blank));
@@ -192,30 +294,69 @@ export function mountPhomo(host, ctx) {
       }
       const result = state.tokens({ ...p.options,category:p.kind === 'watchlist' ? 'watchlist' : p.options.category });
       setText(count,`${result.total} tokens`); blank.hidden = result.rows.length > 0; table.hidden = !result.rows.length;
+      for (const n of [network,launchpad]) flag(n._phButton,'is-active',n.value !== 'all');
       [...windows.children].forEach((b,i) => { flag(b,'is-active',PHOMO_WINDOWS[i] === p.options.window); b.setAttribute('aria-pressed',String(PHOMO_WINDOWS[i] === p.options.window)); });
-      const heads = table.querySelectorAll('th'); setText(heads[4].firstChild,`${p.options.window} change`); setText(heads[5].firstChild,`${p.options.window} volume`);
+      const heads = table.querySelectorAll('th'); setText(heads[3].firstChild,`${p.options.window} change`); setText(heads[4].firstChild,`${p.options.window} volume`);
       heads.forEach((h,i) => { if (headers[i][1]) h.setAttribute('aria-sort',headers[i][1] === p.options.sort ? (p.options.direction === 'asc' ? 'ascending' : 'descending') : 'none'); });
       filters.classList.toggle('is-active',Object.keys(p.options.filters).length > 0);
       const notes = state.notes();
       keyed(list,result.rows,(r) => r.id,(r) => {
         const star = button('☆',() => { state.toggleWatch(r.id); refresh(); },'ph-star',`Watch ${r.ticker}`);
-        const name = button([pic(r,'','ph'),el('span',{},el('b',{},r.ticker),el('small',{},r.name))],() => openCoin(r.id),'ph-token-name',`Open ${r.ticker}`);
-        const mobileAge = el('span',{class:'ph-token-mobile-age'}), context = el('span');
-        const meta = el('small',{class:'ph-token-meta'},mobileAge,context);
+        const source = el('span',{class:'ph-chain-tag'},r.live ? chainById(r.chain)?.name?.[0] || 'L' : 'S');
+        source.title = r.live ? chainById(r.chain)?.name || chain : 'Simulated token';
+        const name = button([pic(r,'','ph'),el('span',{},el('b',{},r.ticker,source),el('small',{},r.name))],() => openCoin(r.id),'ph-token-name',`Open ${r.ticker}`);
+        const copy = button('▣',() => copyContract(r.id),'ph-row-action',`Copy ${r.ticker} contract`);
+        const searchCoin = button(icon('search'),() => { searchIn.value = r.ticker; searchTab = 'tokens'; search(); searchIn.focus(); },'ph-row-action',`Search ${r.ticker}`);
+        const more = button('⋯',() => showPopover(more,r.ticker,el('div',{class:'ph-menu-list'},button('Open token',() => { closePopover(); openCoin(r.id); }),button('Copy contract',() => { closePopover(); copyContract(r.id); }),button('Hide token',() => { state.toggleHide(r.id); closePopover(); refresh(); }),button('Token details',() => { closePopover(); tokenDetails(r.id); }))), 'ph-row-action',`More actions for ${r.ticker}`);
+        const meta = el('span',{class:'ph-token-actions'},copy,searchCoin,more);
         const buy = button('',() => quickBuy(r.id),'ph-quickbuy',`Quick buy ${r.ticker}`);
-        const cells = Array.from({length:5},() => el('td'));
+        const cells = Array.from({length:4},() => el('td'));
         const thesis = el('td',{class:'ph-thesis-cell'});
-        const tr = el('tr',{},el('td',{},el('div',{class:'ph-token-cell'},star,name,button('×',() => { state.toggleHide(r.id); p.update(); },'ph-hide',`Hide ${r.ticker}`)),meta),el('td',{},buy),cells,thesis);
-        tr._ph = {star,name,meta,mobileAge,context,buy,cells,thesis}; return tr;
+        const tr = el('tr',{},el('td',{},el('div',{class:'ph-token-cell'},star,el('div',{class:'ph-token-main'},name,meta))),el('td',{},buy),cells,thesis);
+        tr._ph = {star,name,meta,buy,cells,thesis,noteId:null}; return tr;
       },(tr,r) => {
         const n = tr._ph; setText(n.star,state.isWatched(r.id) ? '★' : '☆'); n.star.setAttribute('aria-pressed',String(state.isWatched(r.id)));
-        setText(n.mobileAge,`${fin(r.age) ? age(r.age) : '—'} · `); setText(n.context,`${r.live ? chain : 'Simulated'}${r.phase === 'pool' ? ' · Graduated' : ''}`);
+        n.name.title = `${r.name} · ${fin(r.age) ? age(r.age) : 'Age unavailable'} · ${r.live ? chain : 'Simulated'}${r.phase === 'pool' ? ' · Graduated' : ''}`;
         const old = n.name.querySelector('.ph-pic'); if (!samePic(old,r)) old?.replaceWith(pic(r,'','ph'));
-        setText(n.buy,`↗ ${usd(parseAmount(quick))}`); setText(n.cells[0],usd(r.marketCapUsd)); setText(n.cells[1],fin(r.age) ? age(r.age) : '—');
-        setText(n.cells[2],pct(r.change)); tint(n.cells[2],r.change); setText(n.cells[3],usd(r.volumeUsd)); setText(n.cells[4],fin(r.holders) ? compact(r.holders,0) : '—');
-        const note = notes.find((v) => v.coin === r.id); setText(n.thesis,note ? note.text : '—');
+        setText(n.buy,`↗ ${usd(parseAmount(quick))}`); setText(n.cells[0],usd(r.marketCapUsd)); setText(n.cells[1],pct(r.change)); tint(n.cells[1],r.change); setText(n.cells[2],usd(r.volumeUsd));
+        n.cells[3].replaceChildren(el('b',{},fin(r.holders) ? compact(r.holders,0) : '—'),el('small',{class:'ph-cell-secondary'},fin(r.holders) ? 'total holders' : 'not available'));
+        const note = notes.find((v) => v.coin === r.id);
+        if ((note?.id || null) !== n.noteId || !n.thesis.firstChild) {
+          n.noteId = note?.id || null;
+          n.thesis.replaceChildren(note ? el('div',{class:'ph-thesis-preview'},el('span',{class:'ph-avatar'},(ctx.playerName?.() || 'P')[0]),el('span',{},el('b',{},ctx.playerName?.() || 'You'),el('small',{},note.text))) : el('span',{},'—'));
+        }
       });
     };
+  }
+  async function copyContract(id) {
+    const address = market.info?.(id)?.mint;
+    if (!address) return toast('No contract address is available.');
+    try { await navigator.clipboard.writeText(address); toast('Contract copied.'); }
+    catch { const field = input('Contract address',address); field.readOnly = true; showDialog('Contract address',el('div',{class:'ph-form'},field)); field.focus(); field.select?.(); }
+  }
+  function tokenDetails(id) {
+    const r = tokenMetrics(market,id,{solUsd:ctx.solUsd,window:'5m'}); if (!r) return;
+    showDialog(`${r.ticker} details`,el('div',{class:'ph-form'},stat('Name',r.name),stat('Network',r.live ? chainById(r.chain)?.name || chain : 'Simulated'),stat('Source',r.src || 'Not available'),stat('Age',fin(r.age) ? age(r.age) : 'Not available'),stat('Liquidity',usd(r.liquidityUsd)),button('Copy contract',() => copyContract(id)),button('Open token',() => { closeDialog(); openCoin(id); })));
+  }
+  function tokenFilterPopover(p,anchor,title,minKey,maxKey) {
+    const fields = [];
+    const body = el('form',{class:'ph-filter-form'});
+    const presets = title === 'Market cap' ? [['All',null,null],['< $100K',null,100000],['< $500K',null,500000],['< $1M',null,1000000]]
+      : title === 'Age' ? [['All',null,null],['< 1 hour',null,3600],['< 1 day',null,86400],['< 1 week',null,604800]]
+        : [['All',null,null],['> $10K',10000,null],['> $100K',100000,null],['> $1M',1000000,null]];
+    const apply = () => { for (const [k,n] of fields) { if (n.value.trim() && fin(Number(n.value)) && Number(n.value) >= 0) p.options.filters[k] = Number(n.value); else delete p.options.filters[k]; } p.update(); saveUI(); flag(anchor,'is-active',fields.some(([k]) => fin(p.options.filters[k]))); };
+    body.append(el('div',{class:'ph-filter-presets'},presets.map(([label,min,max]) => button(label,() => {
+      for (const [k,n] of fields) n.value = k === minKey && min !== null ? String(min) : k === maxKey && max !== null ? String(max) : '';
+      apply();
+    }))));
+    for (const [label,key] of [['Minimum',minKey],['Maximum',maxKey]]) if (key) {
+      const n = input(`${label} ${title.toLowerCase()}`,fin(p.options.filters[key]) ? p.options.filters[key] : '','number'); n.min = '0'; n.step = 'any';
+      n.addEventListener('input',apply);
+      fields.push([key,n]); body.append(el('label',{},`${label}${title === 'Age' ? ' (seconds)' : ' ($)'}`,n));
+    }
+    body.append(el('div',{class:'ph-actions'},button('Reset',() => { for (const [,n] of fields) n.value = ''; apply(); }),button('Done',closePopover)));
+    body.addEventListener('submit',(e) => { e.preventDefault(); apply(); closePopover(); });
+    showPopover(anchor,title,body);
   }
   function tokenFilters(p,focusKey = null) {
     const fields = [['minMarketCap','Minimum market cap ($)'],['maxMarketCap','Maximum market cap ($)'],['minLiquidity','Minimum liquidity ($)'],['minVolume','Minimum volume ($)'],['minHolders','Minimum holders'],['maxAge','Maximum age (seconds)'],['minChange','Minimum change (%)'],['maxChange','Maximum change (%)']];
@@ -226,66 +367,11 @@ export function mountPhomo(host, ctx) {
     showDialog('Token filters',form);
     if (focusKey) nodes.get(focusKey)?.focus();
   }
-  function feedRow(e) {
-    const title = e.traderKey ? button(e.name || 'You',() => showProfile(e.traderKey),'ph-trader-link') : el('strong',{},e.name || 'Simulated trader');
-    const text = el('p'); const like = button('♡',() => { state.toggleLike(e.key); refresh(); },'','Like this local activity');
-    const copy = button(e.side === 'sell' ? 'Copy sell' : `Copy ${usd(parseAmount(quick))}`,() => { const result = state.copyTrade(e,parseAmount(quick)); if (!result?.ok) error(result); else toast('Copy order placed with play money.'); },'ph-copy');
-    const row = el('article',{class:'ph-feed-card'},el('div',{class:'ph-feed-top'},el('span',{class:'ph-avatar'},(e.name || 'Y')[0]),title,el('small',{},e.source === 'you' ? 'You' : e.source === 'note' ? 'Local thesis' : 'Simulated trader')),
-      text,el('div',{class:'ph-feed-bottom'},Number.isInteger(e.coin) ? button(e.ticker || 'Open token',() => openCoin(e.coin),'ph-token-link') : null,el('small',{class:'ph-event-age'}),like,e.kind === 'trade' ? copy : null));
-    row._ph = {text,like,copy}; return row;
-  }
-  function updateFeedRow(row,e) {
-    setText(row._ph.text,e.kind === 'note' ? e.text : `${e.side === 'sell' ? 'Sold' : 'Bought'} ${fin(e.amountUsd) ? usd(e.amountUsd) : e.frac ? pct(e.frac) : ''} ${e.ticker || 'a token'}`);
-    setText(row.querySelector('.ph-event-age'),`${age(Math.max(0,market.t - e.t))} ago`); setText(row._ph.like,`${e.liked ? '♥' : '♡'} ${e.likes || 0}`);
-    row._ph.like.setAttribute('aria-pressed',String(Boolean(e.liked)));
-    setText(row._ph.copy,e.side === 'sell' ? 'Copy sell' : `Copy ${usd(parseAmount(quick))}`);
-  }
-  function renderFeed(p) {
-    let following = false; const rows = el('div',{class:'ph-feed'}); const all = button('All activity',() => { following = false; p.update(); }); const friends = button('Following',() => { following = true; p.update(); });
-    const note = el('textarea',{class:'ph-input',placeholder:'Write a private thesis for this run…','aria-label':'Your local thesis',maxLength:280,rows:2});
-    const composer = el('form',{class:'ph-composer',on:{submit(e) { e.preventDefault(); const result = state.addNote({text:note.value}); if (result.ok) { note.value = ''; p.update(); } else toast('Write a thesis before saving.'); }}},note,el('button',{type:'submit',class:'ph-btn'},'Save thesis'));
-    const blank = empty('Your feed is quiet','Follow a simulated trader from the leaderboard, or make your first practice trade.');
-    p.host.append(el('div',{class:'ph-tabs'},all,friends),el('p',{class:'ph-caption'},'Practice activity and simulated traders. Theses and likes stay on this device.'),composer,rows,blank);
-    p.update = () => { flag(all,'is-active',!following); flag(friends,'is-active',following); const events = state.feed({following,limit:60}); blank.hidden = events.length > 0; keyed(rows,events,(e) => e.key,feedRow,updateFeedRow); };
-  }
-  function renderLeaderboard(p) {
-    let only = false; const rows = el('tbody');
-    const period = select('Trader ranking period',[['pnl','This run'],['week','7 days']],'week',() => p.update());
-    const metric = select('Rank traders by',[['pnl','Profit'],['winRate','Win rate'],['volume','Volume'],['followers','Followers (current)']], 'pnl',() => p.update());
-    const follow = button('Following only',() => { only = !only; p.update(); });
-    const headings = ['#','Trader','Profit','Win rate','Volume',''].map((s) => el('th',{},s));
-    const table = el('table',{class:'ph-table ph-trader-table'},el('thead',{},el('tr',{},headings)),rows);
-    const blank = empty('No followed traders','Open a trader and follow them to build your feed.');
-    p.host.append(el('h2',{class:'ph-title'},'Trader leaderboard'),el('p',{class:'ph-caption'},'Simulated traders · Practice rankings, no prizes. The seven-day history belongs to each fictional character.'),el('div',{class:'ph-controls'},period,metric,follow),el('div',{class:'ph-table-scroll'},table,blank));
-    p.update = () => {
-      period.disabled = metric.value === 'followers';
-      const week = !period.disabled && period.value === 'week';
-      const sort = week ? ({pnl:'week',winRate:'weekWinRate',volume:'weekVolume'})[metric.value] : metric.value;
-      const people = state.traders({sort,following:only}); blank.hidden = !!people.length; flag(follow,'is-active',only);
-      for (const [i,label] of [[2,'Profit'],[3,'Win rate'],[4,'Volume']]) setText(headings[i],`${label} · ${week ? '7d' : 'run'}`);
-      keyed(rows,people,(p) => p.key,(r) => { const rank = el('td'); const name = button([el('span',{class:'ph-avatar'},r.name[0]),r.name],() => showProfile(r.key),'ph-trader-link'); const profit = el('td'), win = el('td'), vol = el('td'); const f = button('',() => { state.toggleFollow(r.key); p.update(); }); const tr = el('tr',{},rank,el('td',{},name),profit,win,vol,el('td',{},f)); tr._ph = {rank,profit,win,vol,f}; return tr; },(tr,r) => { const n = tr._ph; const profit = week ? r.weekPnlUsd : r.pnlUsd; setText(n.rank,r.rank); setText(n.profit,signed(profit,'usd')); tint(n.profit,profit); setText(n.win,pct(week ? r.weekWinRate : r.winRate)); setText(n.vol,usd(week ? r.weekVolumeUsd : r.volumeUsd)); setText(n.f,state.isFollowing(r.key) ? 'Following' : 'Follow'); n.f.setAttribute('aria-pressed',String(state.isFollowing(r.key))); });
-    };
-  }
-  function renderAlerts(p) {
-    const rules = el('div',{class:'ph-alert-list'}), notices = el('div',{class:'ph-alert-list'});
-    const coin = select('Alert token',[['','Choose a token'],...state.tokens({category:'trending',limit:100,filters:{}}).rows.map((r) => [r.id,r.ticker])],'',() => {});
-    coin.required = true;
-    const metric = select('Alert metric',[['marketCap','Market cap'],['price','Price per practice unit']],'marketCap',() => {});
-    const direction = select('Alert direction',[['above','Above'],['below','Below']],'above',() => {}); const amount = input('Alert threshold in dollars','','number'); amount.min = '0'; amount.step = 'any'; amount.required = true;
-    const form = el('form',{class:'ph-alert-form',on:{submit(e) { e.preventDefault(); if (coin.value === '') return toast('Choose a token and a positive dollar threshold.','down'); const result = state.addAlert({coin:Number(coin.value),metric:metric.value,direction:direction.value,valueUsd:Number(amount.value)}); if (!result.ok) return toast(result.error === 'full' ? 'Remove an alert before creating another.' : 'Choose a token and a positive dollar threshold.','down'); amount.value = ''; p.update(); }}},coin,metric,direction,amount,el('button',{type:'submit',class:'ph-btn ph-primary'},'Create alert'));
-    p.host.append(el('h2',{class:'ph-title'},'Alerts'),el('p',{class:'ph-caption'},'Alerts run while this game is open. Price alerts fire once; follow a trader to see their new practice trades.'),form,el('h3',{class:'ph-title'},'Price alerts'),rules,el('div',{class:'ph-panel-heading'},el('h3',{},'Notifications'),button('Mark all read',() => { state.markRead(); p.update(); })),notices);
-    p.update = () => {
-      const alerts = state.alerts(); keyed(rules,alerts,(a) => a.id,(a) => { const words = el('span'); const row = el('div',{class:'ph-alert'},words,button('Remove',() => { state.removeAlert(a.id); p.update(); })); row._words = words; return row; },(row,a) => setText(row._words,`${market.row(a.coin)?.ticker || 'Token'} · ${a.metric === 'price' ? 'Practice price' : 'Market cap'} ${a.direction} ${usd(a.valueUsd)}${a.firedAt !== null ? ' · Triggered' : ''}`));
-      if (!alerts.length) rules.replaceChildren(el('p',{class:'ph-muted'},'No price alerts yet.'));
-      const items = state.notifications({}); keyed(notices,items,(a) => a.id,(a) => button('',() => { state.markRead(a.id); if (Number.isInteger(a.coin)) openCoin(a.coin); else if (a.traderKey) showProfile(a.traderKey); },'ph-alert'),(row,a) => { setText(row,a.text || a.message || 'New activity'); flag(row,'is-unread',!a.read); });
-      if (!items.length) notices.replaceChildren(el('p',{class:'ph-muted'},'New alerts will appear here.'));
-    };
-  }
   function refreshPositions() {
     flag(openButton,'is-active',!closed); flag(closedButton,'is-active',closed);
     [...positionTabs.children].forEach((b,i) => flag(b,'is-active',['all','tokens','perps'][i] === positionType));
     const rows = positionType === 'perps' ? [] : market.positions().filter((p) => closed ? !p.open : p.open);
-    keyed(positionList,rows,(p) => p.id,(p) => { const title = button([pic(p,'','ph'),el('b',{},p.ticker)],() => openCoin(p.id),'ph-position-name'); const value = el('strong'); const profit = el('span'); const share = button(icon('share'),() => sharePosition(p.id),'ph-icon','Share position card'); const tr = el('article',{class:'ph-position'},title,el('div',{class:'ph-position-values'},value,profit),el('div',{class:'ph-actions'},button('View',() => openCoin(p.id)),share)); tr._ph = {value,profit}; return tr; },(tr,p) => { setText(tr._ph.value,usdFull((p.open ? p.value : p.sold) * ctx.solUsd)); setText(tr._ph.profit,`${signed(p.total * ctx.solUsd,'usd')} (${pct(p.pnlPct)})`); tint(tr._ph.profit,p.total); });
+    keyed(positionList,rows,(p) => p.id,(p) => { const title = button([pic(p,'','ph'),el('b',{},p.ticker)],() => openCoin(p.id),'ph-position-name'); const value = el('strong'); const profit = el('span'); const share = button(icon('share'),() => sharePosition(p.id),'ph-icon','Share position card'); const tr = el('article',{class:'ph-position'},title,el('div',{class:'ph-position-values'},value,profit),el('div',{class:'ph-actions'},button('View',() => showPosition({coin:p.id,traderKey:'you'})),share)); tr._ph = {value,profit}; return tr; },(tr,p) => { setText(tr._ph.value,usdFull((p.open ? p.value : p.sold) * ctx.solUsd)); setText(tr._ph.profit,`${signed(p.total * ctx.solUsd,'usd')} (${pct(p.pnlPct)})`); tint(tr._ph.profit,p.total); });
     if (!rows.length) positionList.replaceChildren(empty(positionType === 'perps' ? 'Perps are view-only' : `No ${closed ? 'closed' : 'open'} positions`,positionType === 'perps' ? 'Explore live markets from the Perps panel.' : closed ? 'Finished practice trades appear here.' : 'Open a token or use quick buy to begin.'));
   }
   function sharePosition(id) {
@@ -293,49 +379,64 @@ export function mountPhomo(host, ctx) {
     const words = positionCardWords(p,{live:Boolean(market.row(id)?.live),currency:'usd',solUsd:ctx.solUsd,name:ctx.playerName?.(),terminal:'social'});
     ctx.saveCard?.(words,`${words.title} · ${words.big} · Phomo practice trading. ${SAFETY_NOTE}`);
   }
-  function beginSub(kind) { if (!subView) ctx.pushSub?.(); else subView.view?.destroy(); ctx.onCoin?.(null); subView = {kind,view:null}; panels.forEach((p) => p.setActive?.(false)); content.hidden = true; subHost.hidden = false; subHost.replaceChildren(); }
-  function closeSub(pop = true) { if (!subView) return; subView.view?.destroy(); subView = null; ctx.onCoin?.(null); subHost.replaceChildren(); subHost.hidden = true; content.hidden = false; panels.forEach((p) => p.setActive?.(true)); if (pop) ctx.popSub?.(); }
-  function openCoin(id) { if (!market.row(id)) return; beginSub('coin'); ctx.onCoin?.(id); subView.view = mountPhomoCoin(subHost,ctx,id,{state,onTrader:showProfile,onClose:() => closeSub()}); }
-  function showProfile(key) {
-    const p = state.profile(key); if (!p) return toast('That trader is unavailable.');
-    beginSub('profile'); let tab = 'holdings';
-    const name = el('h1',{},p.name || ctx.playerName?.() || 'You');
-    const controls = key === 'you' ? button('Edit name',() => { const n = input('Player name',ctx.playerName?.() || ''); n.maxLength = 24; const form = el('form',{class:'ph-form',on:{submit(e) { e.preventDefault(); const r = ctx.setPlayerName(n.value); if (r?.ok) { setText(name,r.name || 'You'); closeDialog(); } else toast('Use a name with 24 characters or fewer.'); }}},n,el('button',{type:'submit',class:'ph-btn ph-primary'},'Save name')); showDialog('Your name',form); }) : button(state.isFollowing(key) ? 'Following' : 'Follow',() => { state.toggleFollow(key); showProfile(key); },'ph-primary');
-    const values = el('div',{class:'ph-profile-stats'}); const chart = el('canvas',{class:'ph-equity',width:900,height:200,'aria-label':'Your practice portfolio value over time',role:'img'});
-    const list = el('div',{class:'ph-profile-list'}); const holdingTab = button('Holdings',() => { tab = 'holdings'; update(); }); const activityTab = button('Activity',() => { tab = 'activity'; update(); });
-    const view = el('div',{class:'ph-profile'},button('← Back',() => closeSub()),el('div',{class:'ph-profile-hero'},el('span',{class:'ph-avatar ph-avatar-large'},(p.name || 'Y')[0]),el('div',{},name,el('p',{class:'ph-muted'},key === 'you' ? 'Your practice portfolio' : 'Simulated trader · Fictional history')),controls,key !== 'you' ? button(state.isMuted(key) ? 'Unmute' : 'Mute',() => { state.toggleMute(key); showProfile(key); }) : null),values,key === 'you' ? chart : null,el('div',{class:'ph-tabs'},holdingTab,activityTab),list);
-    subHost.append(view);
-    function update() {
-      const profile = state.profile(key); if (!profile) return;
-      values.replaceChildren(stat(key === 'you' ? 'Profit' : 'Realized profit',signed(profile.pnlUsd,'usd')),stat('Unrealized',signed(profile.unrealizedUsd,'usd')),stat('Volume',usd(profile.volumeUsd)),stat('Win rate',pct(profile.winRate)),stat('Trades',profile.trades ?? '—'));
-      flag(holdingTab,'is-active',tab === 'holdings'); flag(activityTab,'is-active',tab === 'activity');
-      if (tab === 'holdings') {
-        const held = key === 'you' ? market.positions().filter((p) => p.open).map((p) => ({coin:p.id,valueUsd:p.value * ctx.solUsd,pnlUsd:p.total * ctx.solUsd})) : profile.holdings || [];
-        keyed(list,held,(h) => h.coin,(h) => button('',() => openCoin(h.coin),'ph-holding'),(row,h) => setText(row,`${market.row(h.coin)?.ticker || 'Token'}    ${usd(h.valueUsd)}    ${signed(h.pnlUsd,'usd')}`));
-        if (!held.length) list.replaceChildren(empty('No current holdings','Positions appear here after a practice buy.'));
-      } else {
-        const events = state.feed({traderKey:key,limit:100});
-        keyed(list,events,(e) => e.key,feedRow,updateFeedRow); if (!events.length) list.replaceChildren(empty('No recent activity','This trader has not traded during the observed period.'));
-      }
-      if (key === 'you') drawEquity(chart,market.equity());
-    }
-    subView.view = {update,destroy() {}}; update();
+  function beginSub(kind) {
+    closePopover(); found.hidden = true;
+    if (narrowScreen()) detailNavOpen = false;
+    if (!subView) ctx.pushSub?.(); else subView.view?.destroy();
+    if (positions.parentNode !== body) body.append(positions);
+    ctx.onCoin?.(null); subView = {kind,view:null}; panels.forEach((p) => p.setActive?.(false));
+    content.hidden = true; watchstrip.hidden = true; subHost.hidden = false; subHost.replaceChildren(); positionsSplitter.hidden = kind === 'coin';
+    updateGeometry(); refreshNavigator();
   }
-  function drawEquity(canvas,points) {
-    const g = canvas.getContext('2d'); if (!g) return; const w = canvas.width,h = canvas.height; g.clearRect(0,0,w,h); if (points.length < 2) return;
-    const values = points.map((p) => p.v); const lo = Math.min(...values), hi = Math.max(...values), range = hi - lo || 1;
-    g.strokeStyle = ctx.colors.accent; g.lineWidth = 2; g.beginPath(); points.forEach((p,i) => { const x = 12 + i/(points.length - 1)*(w - 24); const y = h - 14 - (p.v - lo)/range*(h - 28); if (i) g.lineTo(x,y); else g.moveTo(x,y); }); g.stroke();
+  function closeSub(pop = true) {
+    if (!subView) return;
+    subView.view?.destroy(); subView = null; selectedCoin = null; ctx.onCoin?.(null);
+    if (positions.parentNode !== body) body.append(positions);
+    subHost.replaceChildren(); subHost.hidden = true; watchstrip.hidden = false; content.hidden = false; positionsSplitter.hidden = false;
+    panels.forEach((p) => p.setActive?.(true)); updateGeometry(); refreshNavigator(); if (pop) ctx.popSub?.();
+  }
+  function openCoin(id,options = {}) {
+    if (!market.row(id)) return;
+    selectedCoin = id; beginSub('coin'); ctx.onCoin?.(id);
+    subView.view = mountPhomoCoin(subHost,ctx,id,{state,onTrader:showProfile,onClose:() => closeSub(),positionsHost:positions,initialSide:options.side});
+    refreshNavigator();
+  }
+  function showProfile(key) {
+    if (!state.profile(key)) return toast('That trader is unavailable.');
+    selectedCoin = null; beginSub('profile');
+    subView.view = mountPhomoProfile(subHost,ctx,key,{state,onTrader:showProfile,onCoin:openCoin,onPosition:showPosition,onClose:() => closeSub(),onShare:(p) => sharePosition(p.id)});
+  }
+  function showPosition(selection) {
+    if (!Number.isInteger(selection?.coin)) return;
+    closePopover(); closeDialog();
+    const previous = document.activeElement, box = el('section',{class:'ph-position-modal',role:'dialog','aria-modal':'true','aria-label':'Practice position',tabIndex:-1});
+    const cover = el('div',{class:'ph-dialog',on:{click(e) { if (e.target === cover) closeDialog(); },keydown(e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeDialog(); } if (e.key === 'Tab') { const items = [...box.querySelectorAll('button,input,select,textarea')].filter((n) => !n.disabled && !n.hidden); const first = items[0],last = items.at(-1); if (e.shiftKey && (document.activeElement === first || document.activeElement === box)) { e.preventDefault(); last?.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); } } }}},box);
+    dialog = {node:cover,previous,view:null}; root.append(cover);
+    dialog.view = mountPhomoPosition(box,ctx,selection,{state,onTrader:(key) => { closeDialog(); showProfile(key); },onCoin:(id,options) => { closeDialog(); openCoin(id,options); },onClose:closeDialog,onShare:(p) => sharePosition(p.id)});
+    box.focus();
   }
   function showCash() { showDialog('Your play cash',el('div',{class:'ph-form'},stat('Available',usdFull(market.player.sol * ctx.solUsd)),stat('Portfolio',usdFull(market.netWorth() * ctx.solUsd)),el('p',{},'Your balance belongs to this run. Sell a practice position to free cash, or cash out and start another run with a new starting balance.'),el('p',{class:'ph-muted'},SAFETY_NOTE))); }
-  function showLayouts() { showDialog('Workspace layout',el('div',{class:'ph-form'},el('p',{},'Open up to four panels. Each keeps its own category and filters. Resize panels using their bottom corner.'),button('Columns',() => { layout = 'columns'; content.dataset.layout = layout; saveUI(); closeDialog(); }),button('Rows',() => { layout = 'rows'; content.dataset.layout = layout; saveUI(); closeDialog(); }),button('Reset workspace',() => { panels.forEach((p) => { p.dispose?.(); p.el.remove(); }); panels.length = 0; layout = 'columns'; content.dataset.layout = layout; makePanel(); saveUI(); closeDialog(); })) ); }
+  function showLayouts() { showDialog('Workspace layout',el('div',{class:'ph-form'},el('p',{},'Open up to four panels. Each keeps its own category and filters. Drag the dividers between panels to resize them.'),button('Columns',() => { layout = 'columns'; content.dataset.layout = layout; rebuildSplitters(); saveUI(); closeDialog(); }),button('Rows',() => { layout = 'rows'; content.dataset.layout = layout; rebuildSplitters(); saveUI(); closeDialog(); }),button('Reset workspace',() => { panels.forEach((p) => { p.dispose?.(); p.el.remove(); }); panels.length = 0; layout = 'columns'; content.dataset.layout = layout; makePanel(); saveUI(); closeDialog(); })) ); }
   function showHelp() { showDialog('Phomo guide',el('div',{class:'ph-form'},el('p',{},'Search by token name, ticker or contract address. In Live mode, address search can find supported markets beyond the discovery list.'),el('p',{},'Use stars to build a watchlist, filters to narrow the table and split buttons to compare panels. Copy buttons place a single practice trade using your quick-buy amount.'),el('p',{},'Trader characters are simulated. Theses, follows and likes stay on this device. Price alerts run while the game is open. Unknown live metrics are shown as —.'),el('p',{},'Perpetual markets show live quotes and charts only. Spot positions use the game’s fees, slippage and available play balance.'),el('p',{},SAFETY_NOTE))); }
   function showDialog(title,node) {
-    closeDialog(); const previous = document.activeElement; const close = button('×',closeDialog,'ph-icon','Close dialog');
+    closePopover(); closeDialog(); const previous = document.activeElement; const close = button('×',closeDialog,'ph-icon','Close dialog');
     const box = el('section',{class:'ph-dialog-box',role:'dialog','aria-modal':'true','aria-label':title},el('div',{class:'ph-panel-heading'},el('h2',{},title),close),node);
     const cover = el('div',{class:'ph-dialog',on:{click(e) { if (e.target === cover) closeDialog(); },keydown(e) { if (e.key === 'Escape') { e.stopPropagation(); closeDialog(); } if (e.key === 'Tab') { const items = [...box.querySelectorAll('button,input,select,textarea')].filter((n) => !n.disabled); const first = items[0],last = items.at(-1); if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); } } }}},box);
     dialog = {node:cover,previous}; root.append(cover); close.focus();
   }
-  function closeDialog() { if (!dialog) return; const old = dialog; dialog = null; old.node.remove(); if (old.previous?.isConnected) old.previous.focus(); }
+  function closeDialog() { if (!dialog) return; const old = dialog; dialog = null; old.view?.destroy(); old.node.remove(); if (old.previous?.isConnected) old.previous.focus(); }
+  function showPopover(anchor,title,node) {
+    closePopover();
+    const box = el('section',{class:'ph-popover',role:'dialog','aria-label':title},el('div',{class:'ph-popover-heading'},el('b',{},title),button('×',closePopover,'ph-icon','Close menu')),node);
+    const layer = el('div',{class:'ph-popover-layer',on:{pointerdown(e) { if (e.target === layer) closePopover(); },keydown(e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closePopover(); } }}},box);
+    const r = anchor.getBoundingClientRect?.() || {left:12,bottom:100};
+    const viewport = globalThis.innerWidth || 1280, height = globalThis.innerHeight || 720;
+    box.style.setProperty('left',`${Math.max(8,Math.min(viewport-288,r.left))}px`);
+    box.style.setProperty('top',`${Math.min(height-120,r.bottom+6)}px`);
+    box.style.setProperty('max-height',`${Math.max(100,height-r.bottom-18)}px`);
+    popover = {node:layer,previous:anchor}; root.append(layer); box.querySelector('input,button')?.focus();
+  }
+  function closePopover() { if (!popover) return; const old = popover; popover = null; old.node.remove(); if (old.previous?.isConnected) old.previous.focus(); }
   function refresh() {
     setText(balance,usdFull(market.player.sol * ctx.solUsd)); setText(worth,usd(market.netWorth() * ctx.solUsd));
     const news = state.notifications({unreadOnly:true}); setText(notices,news.length ? String(news.length) : '');
@@ -347,8 +448,13 @@ export function mountPhomo(host, ctx) {
       b._ph = {cap,change}; return b;
     },(b,r) => { setText(b._ph.cap,`${usd(r.marketCapUsd)} MC`); setText(b._ph.change,pct(r.change)); tint(b._ph.change,r.change); });
     if (!watched.length) watchstrip.replaceChildren(el('span',{class:'ph-muted'},'☆ Star tokens to pin them here'));
-    const hot = state.tokens({category:'trending',window:'5m',limit:25,filters:{}}).rows.slice(0,5);
-    keyed(ticker,hot,(r) => r.id,(r) => button('',() => openCoin(r.id)),(b,r) => { setText(b,`${r.ticker} ${usd(r.marketCapUsd)} ${pct(r.change)}`); tint(b,r.change); });
+    const quotes = ctx.spotPrices?.() || {};
+    const assets = [['btc','BTC'],['eth','ETH'],['sol','SOL'],['hype','HYPE']];
+    keyed(ticker,assets,([key]) => key,() => el('span',{class:'ph-spot-quote'}),(n,[key,symbol]) => {
+      const quote = quotes[key], known = fin(quote) && quote > 0;
+      setText(n,`${symbol} ${known ? usdFull(quote) : '—'}`);
+      n.title = known ? `${symbol} public spot quote in US dollars${ctx.spotPricesStatus?.() === 'live' ? '' : ' · last available quote'}` : `${symbol} spot quote is not available from the current public feed`;
+    });
     const liveState = market.liveState?.();
     if (ctx.chain) {
       const words = feedWords(liveState?.feed,liveState?.chainState,ctx.chain,'run');
@@ -358,20 +464,24 @@ export function mountPhomo(host, ctx) {
       setText(status,`● ${label} · ${chain}`); status.title = words.text;
       flag(status,'is-down',words.tone !== 'live');
     } else { setText(status,'● Simulated · play money'); status.title = 'Simulated market · practice money'; flag(status,'is-down',false); }
-    [...rail.querySelectorAll('.ph-rail-button')].forEach((b,i) => { const selected = TYPES[i][0] === panels[Math.min(active,panels.length - 1)]?.kind; flag(b,'is-active',selected); b.setAttribute('aria-pressed',String(selected)); });
-    for (const p of panels) p.update?.(performance.now()); subView?.view?.update?.(performance.now());
+    refreshNavigator();
+    for (const p of panels) p.update?.(performance.now()); subView?.view?.update?.(performance.now()); dialog?.view?.update?.(performance.now());
   }
   function keydown(e) {
     if (e.target.closest?.('input,textarea,select,[contenteditable="true"]')) return;
     if (e.key === '/') { e.preventDefault(); searchIn.focus(); }
+    if (e.key === 'Escape' && popover) { e.preventDefault(); closePopover(); return; }
     if (e.key === 'Escape' && !dialog) { found.hidden = true; if (subView) { e.preventDefault(); e.stopPropagation(); closeSub(); } }
   }
   root.addEventListener('keydown',keydown);
   const saved = state.prefs.ui?.panels;
   if (saved?.length) for (const p of saved) makePanel(TYPES.some(([k]) => k === p.kind) ? p.kind : 'tokens',p);
   else makePanel();
+  navigationKind = panels[0]?.kind || 'tokens';
+  const sizes = state.prefs.ui?.panelSizes || [];
+  panels.forEach((p,i) => { if (sizes[i] > 0) { p.size = sizes[i]; p.el.style.setProperty('flex-basis',`${p.size}px`); p.el.style.setProperty('flex-grow','0'); } });
   refresh();
   return { el: root, update(now) { if (dead || now - last < 650) return; last = now; state.tick(); refresh(); },
     sub: () => Boolean(subView), closeSub: () => closeSub(false), openCoin,
-    destroy() { dead = true; clearTimeout(searchTimer); closeDialog(); subView?.view?.destroy(); panels.forEach((p) => p.dispose?.()); state.destroy(); root.removeEventListener('keydown',keydown); root.remove(); } };
+    destroy() { dead = true; clearTimeout(searchTimer); closePopover(); closeDialog(); for (const done of [...dragCleanups]) done(); subView?.view?.destroy(); if (subView) ctx.onCoin?.(null); panels.forEach((p) => p.dispose?.()); state.destroy(); root.removeEventListener('keydown',keydown); root.remove(); } };
 }

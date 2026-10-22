@@ -78,6 +78,20 @@ The earlier production release described above remains historical release eviden
 
 ---
 
+### 0.3 Phomo fidelity correction (2026-10-22)
+
+The owner rejected the first Phomo release as visually incomplete and requested the whole Fomo web experience.
+The signed-in browser was audited screen by screen; the corrected implementation preserves original Phomo
+branding and practice-money rules. It adds persistent compact discovery, richer chart controls and original
+drawings, full-width profiles, position details, local social controls, simulated clans, docked view-only perps,
+and saved replay access. See [the fidelity audit](handoff/phomo-fidelity-audit-2026-10-22.md) for evidence and
+explicit service/data limits. Do not claim a complete clone of Fomo's private services.
+
+The final local build passed **1,111 tests, 0 failures, 6 skipped** on Node 24.21.0. Node 20/22 were not installed
+for this follow-up and were not rechecked. The built UI was checked under the unchanged production CSP; chart
+styles, whitespace drawings, undo/redo and the corrected profile layout worked without console warnings/errors.
+Publication is authorized by the owner's existing "publish it" instruction and is in progress.
+
 ## 1. The owner and how to work with them
 
 - The owner works alone, is learning, and writes quickly with typos. Explain what you're doing and why, in simple words.

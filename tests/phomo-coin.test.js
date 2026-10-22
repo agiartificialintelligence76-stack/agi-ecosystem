@@ -92,7 +92,7 @@ test('Phomo coin keeps unknown live holders/liquidity/supply blank and removes e
 
 test('Phomo coin thesis, watch, filtering and chart controls retain functional state without inserting markup', () => {
   const f = fixture();
-  f.byText('☆ Watch').fire('click');
+  f.label('Watch token').fire('click');
   assert.equal(f.state.isWatched(f.id), true);
   f.byText('Thesis').fire('click');
   f.label('Your thesis for this coin').value = 'Practice note <script> stays text';
@@ -100,7 +100,8 @@ test('Phomo coin thesis, watch, filtering and chart controls retain functional s
   assert.equal(f.state.notes({ coin: f.id })[0].text, 'Practice note <script> stays text');
   assert.ok(f.cls('tspc-thesis-list').textContent.includes('<script> stays text'));
   assert.ok(!f.nodes().some((n) => n.tagName === 'script'));
-  f.byText('5m').fire('click');
+  f.label('Candle interval').value = '300';
+  f.label('Candle interval').fire('change');
   assert.equal(globalThis.__phomoChart.sets.at(-1).tf, 300);
   f.byText('Price').fire('click');
   assert.equal(globalThis.__phomoChart.views.at(-1).mode, 'price');

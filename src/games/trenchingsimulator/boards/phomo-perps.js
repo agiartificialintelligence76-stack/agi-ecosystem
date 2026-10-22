@@ -133,13 +133,13 @@ export function perpChartWindow(length, bars = 90, offset = 0) {
 }
 
 function marketChart(canvas, colors = {}) {
-  let data = [], pointer = null, dead = false, bars = 90, offset = 0, drag = null;
+  let data = [], pointer = null, dead = false, bars = 90, offset = 0, drag = null, style = 'candles';
   const g = canvas.getContext('2d');
   const up = colors.up || '#3ad68a', down = colors.down || '#ff5c6c', muted = colors.muted || '#9a9eaa';
   function draw() {
     if (dead || !g) return;
     const box = canvas.getBoundingClientRect();
-    const w = Math.max(280, box.width || 600), h = 300, dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+    const w = Math.max(240, box.width || 600), h = Math.max(220, box.height || 300), dpr = Math.min(2, globalThis.devicePixelRatio || 1);
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
     if (!data.length) return;
@@ -155,7 +155,11 @@ function marketChart(canvas, colors = {}) {
       const yy = top + (bottom - top) * i / 4, price = max - (max - min) * i / 4;
       g.beginPath(); g.moveTo(left, yy); g.lineTo(right, yy); g.stroke(); g.fillText(quote(price), right + 8, yy + 4);
     }
-    for (const [i, c] of shown.entries()) {
+    if (style === 'line') {
+      g.strokeStyle = up; g.lineWidth = 1.5; g.beginPath();
+      for (const [i, c] of shown.entries()) { const x = left + step * (i + .5); if (i) g.lineTo(x, y(c.c)); else g.moveTo(x, y(c.c)); }
+      g.stroke(); g.lineWidth = 1;
+    } else for (const [i, c] of shown.entries()) {
       const x = left + step * (i + 0.5);
       g.strokeStyle = c.c >= c.o ? up : down; g.fillStyle = g.strokeStyle;
       g.beginPath(); g.moveTo(x, y(c.h)); g.lineTo(x, y(c.l)); g.stroke();
@@ -201,6 +205,7 @@ function marketChart(canvas, colors = {}) {
   const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(draw) : null;
   ro?.observe(canvas);
   return { set(rows) { data = rows; if (!rows.length) { bars = 90; offset = 0; } draw(); }, draw,
+    style(next) { if (['candles', 'line'].includes(next)) { style = next; draw(); } },
     zoomIn: () => zoom(0.8), zoomOut: () => zoom(1.25), reset: () => { bars = 90; offset = 0; draw(); },
     destroy() {
       dead = true; ro?.disconnect(); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerleave', leave);
@@ -209,7 +214,7 @@ function marketChart(canvas, colors = {}) {
     } };
 }
 
-export function mountPhomoPerps(host, ctx = {}) {
+export function mountPhomoPerps(host, ctx = {}, hooks = {}) {
   const client = ctx.perpsClient || createPerpsClient();
   const S = { active: true, dead: false, dex: '', rows: [], coin: null, interval: '15m', query: '', sort: 'volume',
     marketAt: 0, candleAt: 0, marketBusy: false, candleBusy: false, version: 0, chartVersion: 0 };
@@ -231,6 +236,7 @@ export function mountPhomoPerps(host, ctx = {}) {
   const assetPrice = el('strong', { class: 'php-price' }, '—');
   const assetChange = el('span', { class: 'php-change' }, '—');
   const stats = el('dl', { class: 'php-stats' });
+  const aboutName = el('p', { class: 'php-about-description' });
   const canvas = el('canvas', { class: 'php-chart', role: 'img', tabindex: '0',
     'aria-label': 'Price history. Use plus and minus to zoom, arrow keys to pan, and End to return to latest.' });
   const chartState = el('p', { class: 'php-chart-state', role: 'status' }, 'Select a market to load its price history.');
@@ -241,23 +247,48 @@ export function mountPhomoPerps(host, ctx = {}) {
       loadCandles();
     } } }, interval));
   const chart = marketChart(canvas, ctx.colors);
+  const chartStyle = el('select', { class: 'php-chart-style', 'aria-label': 'Perpetual chart style', on: { change: () => chart.style(chartStyle.value) } },
+    el('option', { value: 'candles' }, 'Candles'), el('option', { value: 'line' }, 'Line'));
   const chartControls = el('div', { class: 'php-chart-controls', role: 'group', 'aria-label': 'Chart view' },
     el('span', {}, 'Scroll to zoom · drag to pan'),
     el('button', { type: 'button', 'aria-label': 'Zoom in', on: { click: chart.zoomIn } }, '+'),
     el('button', { type: 'button', 'aria-label': 'Zoom out', on: { click: chart.zoomOut } }, '−'),
     el('button', { type: 'button', on: { click: chart.reset } }, 'Latest'));
+  const marketPanel = el('div', { class: 'php-market-panel' },
+    el('div', { class: 'php-heading' }, title, el('span', { class: 'php-badge' }, 'View only')),
+    el('div', { class: 'php-toolbar' }, search, venue, sort),
+    el('div', { class: 'php-columns', 'aria-hidden': 'true' }, el('span', {}, 'Market'), el('span', {}, 'Price / 24h'), el('span', {}, '24h volume')), list);
+  const navSlot = el('aside', { class: 'php-nav-slot', 'aria-label': 'Perpetual market discovery' }, marketPanel);
+  const positionsSlot = el('div', { class: 'php-positions-slot' });
+  const blankPositions = el('section', { class: 'php-position-note' }, el('h3', {}, 'Positions'),
+    el('p', {}, 'No perpetual positions. This screen shows public market data and does not place derivatives orders.'));
+  const sideRail = el('aside', { class: 'php-side-rail' },
+    el('section', { class: 'php-preview-card' }, el('h3', {}, 'Live perpetual markets'),
+      el('p', {}, 'Explore public prices and charts. Trading is not available in this web preview.'), el('span', { class: 'php-badge' }, 'View only · no wallet connection')),
+    el('section', { class: 'php-about-card' }, el('h3', {}, 'About'), aboutName, stats,
+      el('p', { class: 'php-source' }, 'Market data: Hyperliquid. Maximum leverage is the venue’s limit, not an active position.')),
+    positionsSlot, blankPositions);
   const root = el('section', { class: 'php', 'aria-label': 'Perpetual markets preview' },
-    el('div', { class: 'php-heading' }, title, el('span', { class: 'php-badge' }, 'Live markets · View only')),
-    el('p', { class: 'php-note' }, 'Explore perpetual markets. Trading is not available in this web preview.'),
-    el('div', { class: 'php-toolbar' }, search, venue, sort), el('div', { class: 'php-state' }, status, retry),
-    el('div', { class: 'php-layout' },
-      el('div', { class: 'php-market-panel' }, el('div', { class: 'php-columns', 'aria-hidden': 'true' },
-        el('span', {}, 'Market'), el('span', {}, 'Price / 24h'), el('span', {}, '24h volume')), list),
+    el('div', { class: 'php-workspace' }, navSlot, el('div', { class: 'php-layout' },
       el('section', { class: 'php-detail', 'aria-label': 'Selected perpetual market' },
         el('div', { class: 'php-detail-head' }, assetName, assetPrice, assetChange),
-        el('div', { class: 'php-intervals', role: 'group', 'aria-label': 'Chart interval' }, intervalButtons), canvas, chartControls, chartState, stats,
-        el('p', { class: 'php-source' }, 'Market data: Hyperliquid. Maximum leverage is the venue’s limit, not an active position.'))));
+        el('div', { class: 'php-intervals', role: 'group', 'aria-label': 'Chart interval' }, intervalButtons, chartStyle), canvas, chartControls, chartState,
+        el('div', { class: 'php-state' }, status, retry),
+        el('section', { class: 'php-activity-note' }, el('h3', {}, 'Market activity'),
+          el('p', {}, 'Candles and current quotes are available. Trader identities, holders and account activity are not supplied by this public feed.'))), sideRail)));
   host.append(root);
+  let externalPositions = null;
+  function setHosts({ discoveryHost = null, positionsHost = null } = {}) {
+    if (S.dead) return;
+    (discoveryHost || navSlot).append(marketPanel);
+    navSlot.hidden = Boolean(discoveryHost); root.classList.toggle('is-docked', Boolean(discoveryHost));
+    if (externalPositions && externalPositions !== positionsHost && externalPositions.parentNode === positionsSlot) externalPositions.remove();
+    externalPositions = positionsHost;
+    if (positionsHost) positionsSlot.append(positionsHost);
+    blankPositions.hidden = Boolean(positionsHost);
+    chart.draw();
+  }
+  setHosts(hooks);
 
   function renderList() {
     const rows = selectPerpMarkets(S.rows, S);
@@ -284,6 +315,7 @@ export function mountPhomoPerps(host, ctx = {}) {
     setText(assetName, a ? `${a.symbol} Perpetual` : 'Choose a market');
     setText(assetPrice, quote(a?.price)); setText(assetChange, a ? pct(a.change) : '—');
     assetChange.dataset.tone = a?.change > 0 ? 'up' : a?.change < 0 ? 'down' : '';
+    setText(aboutName, a ? `${a.symbol} perpetual market · ${a.dex || 'Hyperliquid'}. Figures below are the latest observed public market values.` : 'Choose a market from the discovery list.');
     const fields = [['Mark price', quote(a?.mark)], ['Mid price', quote(a?.mid)], ['Oracle price', quote(a?.oracle)],
       ['Funding rate', a && a.funding !== null ? pct(a.funding, 4) : '—'], ['24h volume', usd(a?.volume)],
       ['Open interest', a && a.openInterest !== null ? `${compact(a.openInterest)} ${a.symbol}` : '—'],
@@ -342,7 +374,7 @@ export function mountPhomoPerps(host, ctx = {}) {
     } else { setText(status, state === 'connecting' ? 'Connecting to live markets…' : 'The market feed is unavailable. Reconnecting…'); retry.hidden = state !== 'down'; }
   });
   client.start();
-  return { el: root,
+  return { el: root, setHosts,
     update() {
       if (!S.active || S.dead) return;
       if (Date.now() - S.marketAt >= 10000) loadMarkets();
@@ -353,6 +385,7 @@ export function mountPhomoPerps(host, ctx = {}) {
       S.active = Boolean(active); S.version++; S.chartVersion++; S.marketBusy = false; S.candleBusy = false;
       if (S.active) { client.start(); chart.draw(); } else client.stop();
     },
-    destroy() { if (S.dead) return; S.dead = true; off(); client.stop(); chart.destroy(); root.remove(); },
+    destroy() { if (S.dead) return; S.dead = true; off(); client.stop(); chart.destroy();
+      if (externalPositions?.parentNode === positionsSlot) externalPositions.remove(); marketPanel.remove(); root.remove(); },
   };
 }
