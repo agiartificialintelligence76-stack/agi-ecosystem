@@ -75,4 +75,21 @@ The browser build, share-page generation and secret check passed. The existing m
 translation import warning remains. No Node 20/22 executables were available locally for this follow-up.
 The final built output also ran with the unchanged production CSP: chart styles, a drawing in blank chart space,
 undo/redo and full-width profile layout worked, with no browser warnings or errors. The hosted relay correctly
-rejects the temporary localhost origin, so live integration must be verified on the production origin after release.
+rejects the temporary localhost origin; live integration was subsequently verified on the production origin.
+
+## Published result
+
+Published commit: `4c214cbed78b7d6030746075ec74004b9fc1e3c8`, on main and the working branch.
+Vercel production `GzKNs5dWeUaEmxAz5hz66H2diXjG` is Ready, completed 2026-10-22 11:57:23 UTC,
+assigned to `www.agi1.app`. Candidate URL: `https://agi-ecosystem-n6m652g0c-agi25.vercel.app`.
+
+Production browser verification: exact contract `0xFa31d04462746aAA24bC7E5626403E09E4B106ec` resolves to
+Artificial Girlfriend Intelligence, $10 practice buy filled, observed live chart loaded with the buy marker,
+public Perps returned 178 markets and 180 BTC candles in the new docked layout. ETH/SOL/HYPE footer spot quotes
+appeared from the existing public feed; unsupported BTC spot remained unavailable. No browser warnings/errors.
+Screenshots: `phomo-fidelity-published.png` and `phomo-fidelity-published-perps.png` in the session visualization folder.
+
+Hetzner `/opt/agi1-live/site` clean checkout fast-forwarded to the release. `tools/trench-relay` was unchanged;
+running relay and Caddy start times were preserved, with no restart. Public health 200/no problems, all nine
+chains configured, exact AGI lookup/watched update and public perps/candles passed. Evidence:
+`phomo-fidelity-relay.log`. No database migration was required.

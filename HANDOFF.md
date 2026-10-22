@@ -90,7 +90,11 @@ explicit service/data limits. Do not claim a complete clone of Fomo's private se
 The final local build passed **1,111 tests, 0 failures, 6 skipped** on Node 24.21.0. Node 20/22 were not installed
 for this follow-up and were not rechecked. The built UI was checked under the unchanged production CSP; chart
 styles, whitespace drawings, undo/redo and the corrected profile layout worked without console warnings/errors.
-Publication is authorized by the owner's existing "publish it" instruction and is in progress.
+Publication succeeded at `4c214cbed78b7d6030746075ec74004b9fc1e3c8`. Vercel production deployment
+`GzKNs5dWeUaEmxAz5hz66H2diXjG` became Ready at 2026-10-22 11:57:23 UTC, assigned to `www.agi1.app`.
+The live browser check resolved the owner's exact AGI contract, filled a $10 practice buy, and loaded 178 public
+perpetual markets with 180 BTC candles in the corrected layout. Browser warnings/errors: none. Hetzner's clean
+checkout was fast-forwarded to the same commit; relay code was unchanged and running services were not restarted.
 
 ## 1. The owner and how to work with them
 
