@@ -1706,6 +1706,43 @@ test('an older live coin keeps its true age but its chart never backdates an unk
   assert.equal(m.row(id).age, 7 * 86400 + 10);
 });
 
+test('live percentage changes need a real earlier quote or source statistic for the requested window', () => {
+  const m = createMarket({ seed: 'real-change-baseline', config: { warmup: 0 }, live: true });
+  m.ext.view({ sim: false, ext: true, simPaused: true });
+  const firstSeen = m.t;
+  const real = (mu) => L.toReal({ k: 'u', mu, lu: 12000, pg: 1, gr: true, cl: false }, { solUsd: 150 });
+  const add = (key) => m.ext.add({ key, chain: 'robinhood', src: 'clank.trade', name: 'Older coin', ticker: 'OLDER',
+    born: firstSeen - 7 * 86400, real: real(33000), live: true });
+  const id = add(AGI_CA.toLowerCase());
+  const changes = (coinId) => {
+    const s = m.stats(coinId);
+    return [s.change1m, s.change5m, s.change1h, m.row(coinId).ch5m];
+  };
+  assert.deepEqual(changes(id), [null, null, null, null], 'an older launch date cannot supply an unobserved price baseline');
+
+  const sourced = add('0x' + '2'.repeat(40));
+  m.ext.state(sourced, { ...real(33000), dx: { c5: 0.04, c1h: -0.02 } });
+  assert.deepEqual(changes(sourced), [null, 0.04, -0.02, 0.04], 'reported changes do not require local candle history');
+  m.ext.state(sourced, real(34000));
+  assert.deepEqual(changes(sourced), [null, 0.04, -0.02, 0.04], 'a state-only update retains the source statistics');
+
+  const historical = add('0x' + '3'.repeat(40));
+  assert.equal(m.ext.history(historical, [
+    { t: firstSeen - 3600, real: real(16500) },
+    { t: firstSeen - 300, real: real(26400) },
+    { t: firstSeen - 60, real: real(30000) },
+  ]), true);
+  for (const [actual, expected] of changes(historical).map((value, i) => [value, [0.1, 0.25, 1, 0.25][i]])) {
+    near(actual, expected, 1e-9, 'captured history supplies the real percentage baseline');
+  }
+  m.advanceTo(firstSeen + 59);
+  m.ext.state(id, real(49500));
+  assert.deepEqual(changes(id), [null, null, null, null], 'less than one minute is still insufficient for one-minute change');
+  m.advanceTo(firstSeen + 60);
+  near(m.stats(id).change1m, 0.5, 1e-9, 'one minute of observed prices gives the actual fifty-percent change');
+  assert.deepEqual(changes(id).slice(1), [null, null, null], 'longer windows wait for their own comparison history');
+});
+
 test('real coins never get made-up things: no holders, thread, dev, rug or caller; their history comes in older than what they have', () => {
   const m = createMarket({ seed: 'ext-reads', config: { warmup: 30 }, live: true });
   const real = L.toReal(L.parseState(P.encodeState(curveAt(700_000_000))));

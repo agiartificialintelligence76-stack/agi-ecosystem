@@ -5,9 +5,9 @@
 > clean build with fake deployment settings passed. Desktop/phone chart review, unchanged production CSP, and a
 > two-player local race were checked. See `handoff/validation-2026-10-22.md` and `HANDOFF.md` section 0.1 before
 > following older blockers below. The owner authorized publishing everything on 2026-10-22; site, Supabase SQL and
-> hosted relay release passed their initial live checks (`cb42c28`, then the leaderboard fix `081d21f`). Additional
-> owner-reported native-currency and contract-search repairs follow. Read `handoff/release-2026-10-22.md` for their
-> verification checkpoint before following any older deployment checklist.
+> hosted relay release passed their live checks (`cb42c28`, `081d21f`, then native-currency/search fixes `818fdd5`).
+> A final percentage fix preserves unknown history for older live coins. Read `handoff/release-2026-10-22.md` and
+> local `release-final-verification.log` for release evidence before following any older deployment checklist.
 
 > **This folder is `AGI 3 ECOSYSTEM`** (since 2026-09-28): a copy of the whole `AGI NEW WEBSITE` site, made at the owner's
 > request to replace the small ecosystem page that used to live here ("put it all here exact same so its the same

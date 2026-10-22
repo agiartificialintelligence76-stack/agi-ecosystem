@@ -967,7 +967,11 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   // its market cap (SOL) at time ts: the close of its last candle at or before it
   function mcAt(c, ts) {
     const cd = c.cd;
-    if (!cd.length || ts < cd[0].t) return c.cdTrim && cd.length ? cd[0].o : START_MC;
+    if (!cd.length || ts < cd[0].t) {
+      // Real coins have no simulated launch floor. A window before the first observed quote is unknown.
+      if (c.ext) return null;
+      return c.cdTrim && cd.length ? cd[0].o : START_MC;
+    }
     let lo = 0;
     let hi = cd.length - 1;
     while (lo < hi) {
@@ -976,6 +980,11 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       else hi = mid - 1;
     }
     return cd[lo].c;
+  }
+
+  function changeSince(c, ts, mc) {
+    const before = mcAt(c, ts);
+    return before > 0 ? mc / before - 1 : null;
   }
 
   function volSince(c, since) {
@@ -1091,7 +1100,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       snipers: null, snipersN: null, bundlers: null, bundlersN: null, insiders: null, replies: null,
       txns: pick(d && d.t24, c.nTx), vol: pick(d && d.v24, c.vol), vol5m: pick(d && d.v5, v5.v),
       txns5m: d && Number.isFinite(d.b5) && Number.isFinite(d.s5) ? d.b5 + d.s5 : v5.b + v5.s,
-      ch5m: pick(d && d.c5, mc / mcAt(c, t - 300) - 1), rugged: false, dexPaid: false, cto: false, calls: 0,
+      ch5m: pick(d && d.c5, changeSince(c, t - 300, mc)), rugged: false, dexPaid: false, cto: false, calls: 0,
       socials: { ...c.socials }, migratedAt: c.poolAt, lastTrade: c.lastTrade, copyOf: null, koth: M.koth === c.id,
       live: true, pic: x.pic, src: x.src, chain: x.chain, tracked: x.live, pair: x.pair,
     };
@@ -1202,8 +1211,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       id: c.id, ticker: c.ticker, name: c.name, emoji: c.emoji, phase: x.phase, born: c.born, age: t - c.born,
       mc, mcUsd: mc * usd, price, priceUsd: price * usd, liq, liqUsd: liq * usd, progress: progressOf(c),
       curveSol: x.phase === 'curve' && Number.isFinite(x.realSol) ? x.realSol : null, ath: c.ath, athUsd: c.ath * usd,
-      athAt: c.athAt, change1m: mc / mcAt(c, t - 60) - 1, change5m: pick(d && d.c5, mc / mcAt(c, t - 300) - 1),
-      change1h: pick(d && d.c1h, mc / mcAt(c, t - 3600) - 1), changeAll: c.mc0 > 0 ? mc / c.mc0 - 1 : null,
+      athAt: c.athAt, change1m: changeSince(c, t - 60, mc), change5m: pick(d && d.c5, changeSince(c, t - 300, mc)),
+      change1h: pick(d && d.c1h, changeSince(c, t - 3600, mc)), changeAll: c.mc0 > 0 ? mc / c.mc0 - 1 : null,
       vol1m: v1m.v, vol5m: pick(d && d.v5, v5m.v), vol1h: pick(d && d.v1h, v1h.v), buys5m: b5, sells5m: s5,
       txns5m: b5 + s5, txns1h: pick(d && d.t1h, v1h.b + v1h.s), txns: pick(d && d.t24, c.nTx), vol: pick(d && d.v24, c.vol),
       holders: null, top10: null, dev: null, devSold: null, snipers: null, snipersN: null, bundlers: null, bundlersN: null,
