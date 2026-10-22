@@ -928,8 +928,8 @@ test("Live mode's chains, the money each terminal shows in it, and which challen
     'Live: every new clank.trade coin as it launches, and others as they get listed on Robinhood Chain, traded with play money.');
   assert.match(readFileSync('src/games/trenchingsimulator/shell.js', 'utf8'),
     /`Live · \$\{c\.name\} · real coins\$\{c\.src && c\.allFrom \? ` from \$\{c\.src\}` : ''\} · play money only`/);
-  // the owner's: Trench Board and Trench Scan the chain's own coin (Trench Board's since the owner's "Each chain's money",
-  // 2026-10-21: SOL on every chain before), Trench Chat ETH, Trench Social dollars, Trench Pro its counterpart's (SOL)
+  // the owner's: Pomp.fun and GNGM the chain's own coin (Pomp.fun's since the owner's "Each chain's money", 2026-10-21:
+  // SOL on every chain before), BasedBott ETH, Phomo dollars, Axium its counterpart's (SOL)
   for (const ch of L.CHAIN_IDS) {
     assert.equal(L.liveCurrency('chat', ch), 'eth');
     assert.equal(L.liveCurrency('social', ch), 'usd');

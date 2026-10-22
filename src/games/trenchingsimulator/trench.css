@@ -1,6 +1,7 @@
-/* TRENCHING SIMULATOR's styles (2026-10-20): its screens (ts-) and its Trench Board terminal (tsb-), in the colors of
-   the terminal being played (--t-*, set by paintTerminal() through the CSS object model: the site's CSP allows no style
-   attributes). Only this file and the AGI GAMES intro's are on the page, so the fonts and the page's base are here too.
+/* TRENCHING SIMULATOR's styles (2026-10-20): its screens (ts-) and its Pomp.fun terminal (tsb-; "Trench Board" until
+   2026-10-21), in the colors of the terminal being played (--t-*, set by paintTerminal() through the CSS object model:
+   the site's CSP allows no style attributes). Only this file and the AGI GAMES intro's are on the page, so the fonts
+   and the page's base are here too.
    Phones first: one column, bars at the bottom; the full layout from 720 px, the bag beside the board from 1180 px.
    Everything moving stops with "reduce motion". */
 
@@ -389,12 +390,23 @@ html[data-page='trenchingsimulator'] [hidden] {
   background: var(--t-bg);
 }
 .ts-term-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
   font-family: 'Anybody', 'Geist', sans-serif;
   font-weight: 850;
   font-stretch: 90%;
   font-size: 24px;
   line-height: 1.05;
+}
+.ts-term-name .ts-mark {
+  flex: none;
+  width: 34px;
+  height: 34px;
+}
+.ts-word-accent {
+  color: var(--t-accent);
 }
 .ts-term-tag {
   margin: 0;
@@ -1191,7 +1203,7 @@ html[data-page='trenchingsimulator'] [hidden] {
   margin: 6px 0 0;
 }
 
-/* ---------- the Trench Board terminal ---------- */
+/* ---------- the Pomp.fun terminal (Trench Board until 2026-10-21) ---------- */
 /* Today's launchpad boards (2026-10-21, #406): a near-black page with panels a step lighter, hairlines instead of
    shadows, Geist at 11 to 13 px with tabular figures, three greys for words and a brighter one for what matters, a soft
    green for what to press (dark words on it), radius 6 (4 inside segmented controls). Phones first: a list of coins; a
@@ -1247,20 +1259,10 @@ html[data-page='trenchingsimulator'] [hidden] {
   min-width: 0;
 }
 .tsb-logo {
-  display: inline-grid;
-  place-items: center;
+  display: block;
   flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: var(--t-accent);
-}
-.tsb-logo::after {
-  content: 'T';
-  color: var(--t-on-accent);
-  font-weight: 800;
-  font-size: 16px;
-  line-height: 1;
+  width: 30px;
+  height: 30px;
 }
 .tsb-brand-t {
   color: var(--t-hero);

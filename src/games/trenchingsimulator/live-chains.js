@@ -26,10 +26,10 @@ export const DEFAULT_CHAIN = 'solana';
 const BY_ID = new Map(CHAINS.map((c) => [c.id, c]));
 export const chainById = (id) => BY_ID.get(id) || null;
 
-// The money each terminal shows its play money in, in Live mode (the owner's, 2026-10-21): Trench Board and Trench Scan
-// the chain's own coin (SOL on Solana, ETH on Robinhood Chain and Base, BNB on BNB Chain: Trench Board's since the
-// owner's "Each chain's money", the same day; SOL on every chain before), Trench Chat ETH, Trench Social dollars, Trench
-// Pro SOL (the money its real counterpart trades in). The game counts in SOL underneath (./engine.js); a terminal shows
+// The money each terminal shows its play money in, in Live mode (the owner's, 2026-10-21): Pomp.fun and GNGM the
+// chain's own coin (SOL on Solana, ETH on Robinhood Chain and Base, BNB on BNB Chain: Pomp.fun's since the owner's
+// "Each chain's money", the same day; SOL on every chain before), BasedBott ETH, Phomo dollars, Axium SOL (the money
+// its real counterpart trades in). The game counts in SOL underneath (./engine.js); a terminal shows
 // it in its own, at the run's prices.
 export const UNIT_NAMES = Object.freeze({ sol: 'SOL', eth: 'ETH', bnb: 'BNB', usd: 'dollars' });
 export function liveCurrency(terminalId, chainId) {

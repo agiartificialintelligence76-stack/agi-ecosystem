@@ -12,6 +12,7 @@
 // The daily market and the challenge that ends on a rug stay simulated.
 import { el, setText, flag, icon, toast, clearToasts, paintTerminal } from './ui.js';
 import { TERMINALS, terminalById, SAFETY_NOTE } from './terminals.js';
+import { markEl, wordEl } from './brands.js';
 import { CHALLENGES, TIERS, challengeById, FREE_STARTS, SPEEDS, goalText, timeText, startText, freeStartSol, dailyKey, dailySeed,
   dailyChallenge } from './challenges.js';
 import { createRun } from './run.js';
@@ -211,7 +212,7 @@ export function startShell(root) {
     const cur = terminal();
     const cards = TERMINALS.map((t) => {
       const card = el('article', { class: ['ts-term', t.ready ? '' : 'is-soon', t.id === cur.id && 'is-on'] },
-        el('h2', { class: 'ts-term-name', text: t.name }),
+        el('h2', { class: 'ts-term-name' }, markEl(t.id), wordEl(t.id)),
         el('p', { class: 'ts-term-tag', text: t.tagline }),
         el('ul', { class: 'ts-term-feats' }, t.features.map((f) => el('li', { text: f }))),
         el('p', { class: 'ts-term-cur', text: S.save.live ? `Live: play money in ${UNIT_NAMES[liveCurrency(t.id, S.save.chain)]}`
@@ -228,7 +229,7 @@ export function startShell(root) {
     });
     return el('section', { class: 'ts-screen ts-terminals' }, header('home'),
       el('h1', { class: 'ts-h', text: 'Pick your terminal' }),
-      el('p', { class: 'ts-lede', text: 'Laid out the way you know them, with our own names. More are on the way.' }),
+      el('p', { class: 'ts-lede', text: 'Laid out the way you know them, under parody names of our own. More are on the way.' }),
       el('div', { class: 'ts-terms' }, cards), note());
   }
 
@@ -331,7 +332,7 @@ export function startShell(root) {
       groups, note());
   }
   const priceUsd = () => (S.price && S.price.usd > 0 ? S.price.usd : 150);
-  // a live run's money (Trench Board's: the chain's own coin since 2026-10-21, ./live-chains.js liveMoney) at the relay's
+  // a live run's money (Pomp.fun's: the chain's own coin since 2026-10-21, ./live-chains.js liveMoney) at the relay's
   // prices; a simulated run's, the terminal's own
   const runCur = (t, live) => (live ? liveMoney(t.id, S.save.chain, liveFeed().px) : t.currency);
   // Free play's starts in a run's money: "1, 5, 10, 50 SOL", "0.04, 0.2, 0.4, 2 ETH"
@@ -473,7 +474,7 @@ export function startShell(root) {
     if (tok !== S.token) return;
     // SOL's price: the relay's when it has it (the same source, just now), else the game's own
     const px = feed && feed.px.sol > 0 ? Math.round(feed.px.sol * 100) / 100 : price && price.usd > 0 ? price.usd : 150;
-    // its money: a live run's the chain's own coin (Trench Board's since 2026-10-21) at the relay's price, frozen for it
+    // its money: a live run's the chain's own coin (Pomp.fun's since 2026-10-21) at the relay's price, frozen for it
     const cur = live ? liveMoney(t.id, live, feed.px) : t.currency;
     // a live run: real coins, play money, the real clock
     const liveOpts = live ? { live, realTime: true, makeMarket: (o) => createLiveMarket({ ...o, feed, chain: live }) } : {};

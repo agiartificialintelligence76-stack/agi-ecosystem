@@ -967,7 +967,7 @@ test('her voice: the event that matters most, one line at a time, never the same
     assert.deepEqual(said.slice(r, r + all.length).sort(), all.slice().sort(), `round ${r / all.length}`);
   }
   for (let i = 1; i < said.length; i++) assert.notEqual(said[i], said[i - 1], `${i}`);
-  // in dollars, in Trench Social
+  // in dollars, in Phomo
   const usd = createVoice({ rng, currency: 'usd', solUsd: 200 });
   const won = usd.hear([{ type: 'fill', order: order('sell'), pnl: 0.25 }], 0);
   if (LINES.sellWin.some((l) => l.includes('{pnl}'))) {
@@ -1017,16 +1017,18 @@ test("the five terminals: the owner's order, our own names, the safety note, the
   assert.equal(SAFETY_NOTE, 'Play money only. Not affiliated with any real trading terminal. This game never asks for a wallet.');
   assert.deepEqual(TERMINALS.map((t) => t.id), ['chat', 'scan', 'board', 'pro', 'social']);
   assert.deepEqual([...TERMINAL_IDS], ['chat', 'scan', 'board', 'pro', 'social']);
-  assert.deepEqual(TERMINALS.map((t) => t.name), ['Trench Chat', 'Trench Scan', 'Trench Board', 'Trench Pro', 'Trench Social']);
+  // 2026-10-21: parody names (the owner's "use a parody names … instead of their current names like trench board"; the
+  // owner's pick: sound-alikes), never a real terminal's own name (the check below)
+  assert.deepEqual(TERMINALS.map((t) => t.name), ['BasedBott', 'GNGM', 'Pomp.fun', 'Axium', 'Phomo']);
   assert.deepEqual(TERMINALS.map((t) => t.currency), ['sol', 'sol', 'sol', 'sol', 'usd']);
   assert.equal(DEFAULT_TERMINAL, 'board');
-  assert.equal(terminalById('board').ready, true, 'Trench Board first');
+  assert.equal(terminalById('board').ready, true, 'Pomp.fun first');
   assert.equal(terminalById('nope'), null);
   assert.ok(Object.isFrozen(TERMINALS));
   for (const t of TERMINALS) {
     assert.equal(terminalById(t.id), t);
     assert.ok(Object.isFrozen(t) && Object.isFrozen(t.colors) && Object.isFrozen(t.features), `${t.id} frozen`);
-    assert.equal(t.name, `Trench ${t.short}`);
+    assert.ok(t.short.length >= 3 && t.short.length <= 12, `${t.id}'s short name`);
     assert.equal(typeof t.ready, 'boolean');
     assert.ok(t.tagline.length >= 10 && t.tagline.length <= 80, `${t.id}'s tagline`);
     assert.equal(t.features.length, 4);
@@ -1043,7 +1045,65 @@ test("the five terminals: the owner's order, our own names, the safety note, the
   // never a real terminal's (or another site's) name
   const words = JSON.stringify(TERMINALS) + SAFETY_NOTE + JSON.stringify(CHALLENGES) + JSON.stringify(LINES);
   assert.doesNotMatch(words,
-    /based\s*bot|gmgn|pump\.?fun|axiom|fomo|photon|bullx|trojan|maestro|banana\s*gun|bloom|padre|dexscreener|birdeye|phantom|raydium|jupiter|moonshot|bonk\.?fun|robinhood/i);
+    /based\s*bot(?!t)|gmgn|pump\.?fun|axiom|fomo|photon|bullx|trojan|maestro|banana\s*gun|bloom|padre|dexscreener|birdeye|phantom|raydium|jupiter|moonshot|bonk\.?fun|robinhood/i);
+});
+
+test("the parody brands: a mark and a wordmark for every terminal, shapes only, never a link, a picture or a real logo", async () => {
+  const { BRANDS, brandOf, MARK_TAGS, markEl, wordEl } = await import('../src/games/trenchingsimulator/brands.js');
+  assert.deepEqual(Object.keys(BRANDS).sort(), [...TERMINAL_IDS].sort());
+  assert.equal(brandOf('nope'), null);
+  const walk = (shape, seen) => {
+    const [tag, attrs, kids] = shape;
+    assert.ok(MARK_TAGS.includes(tag), `only shapes: ${tag}`);
+    for (const [k, v] of Object.entries(attrs)) {
+      assert.doesNotMatch(k, /^on|href|src|style/i, `no event, link, picture or style attribute: ${k}`);
+      assert.doesNotMatch(String(v), /url\(|javascript:|https?:|data:/i, `${k}`);
+    }
+    seen.push(tag);
+    if (kids) for (const kid of kids) walk(kid, seen);
+  };
+  for (const t of TERMINALS) {
+    const b = brandOf(t.id);
+    assert.equal(b.name, t.name, `${t.id}'s brand name`);
+    assert.equal(b.word.map((w) => w.t).join('').toLowerCase(), t.name.toLowerCase(), `${t.id}'s wordmark spells its name`);
+    for (const w of b.word) assert.ok(['main', 'accent'].includes(w.k));
+    assert.match(b.view, /^0 0 \d+ \d+$/);
+    const seen = [];
+    for (const shape of b.shapes) walk(shape, seen);
+    assert.ok(seen.length >= 3, `${t.id} has a mark`);
+  }
+  // in the page: a stand-in document
+  const mk = (tag) => {
+    const n = { tag, attrs: {}, kids: [], className: '', textContent: '' };
+    n.setAttribute = (k, v) => { n.attrs[k] = v; };
+    n.append = (...k) => n.kids.push(...k);
+    return n;
+  };
+  const doc = { createElementNS: (ns, tag) => (assert.equal(ns, 'http://www.w3.org/2000/svg'), mk(tag)), createElement: mk };
+  const had = globalThis.document;
+  globalThis.document = doc;
+  try {
+    const m = markEl('scan');
+    assert.equal(m.tag, 'svg');
+    assert.equal(m.attrs['aria-hidden'], 'true');
+    assert.equal(m.attrs.focusable, 'false');
+    assert.equal(m.attrs['shape-rendering'], 'crispEdges', "GNGM's pixel toad stays crisp");
+    assert.equal(markEl('board').attrs['shape-rendering'], undefined);
+    assert.equal(markEl('board', 'tsb-logo').attrs.class, 'tsb-logo');
+    const w = wordEl('board', 'tsb-brand-t');
+    assert.equal(w.className, 'tsb-brand-t');
+    assert.deepEqual(w.kids.map((k) => [k.className, k.textContent]), [['ts-word-main', 'pomp'], ['ts-word-accent', '.fun']]);
+    assert.equal(wordEl('nope').kids.length, 0);
+  } finally {
+    if (had === undefined) delete globalThis.document;
+    else globalThis.document = had;
+  }
+  // where they're used: the terminal cards and Pomp.fun's header; the name stays text, never a link
+  const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
+  const board = readFileSync('src/games/trenchingsimulator/boards/board.js', 'utf8');
+  assert.match(shell, /el\('h2', \{ class: 'ts-term-name' \}, markEl\(t\.id\), wordEl\(t\.id\)\)/);
+  assert.match(board, /markEl\('board', 'tsb-logo'\), wordEl\('board', 'tsb-brand-t'\)/);
+  assert.doesNotMatch(shell + board, /Trench (Board|Chat|Scan|Pro|Social)'/, 'the old names are gone from the page');
 });
 
 test('the save: settings, bests, the daily market and totals, kept in this browser only and never broken', async () => {
@@ -1092,7 +1152,7 @@ test('the save: settings, bests, the daily market and totals, kept in this brows
 
 test('its posts for X: play money and made-up coins every time, never buy, never a real name, inside a post', async () => {
   const { shareText, shareLink, GAME_URL } = await import('../src/games/trenchingsimulator/share.js');
-  const bad = /based\s*bot|gmgn|pump\.?fun|axiom|fomo|photon|bullx|trojan|maestro|banana\s*gun|bloom|padre|dexscreener|birdeye|phantom|raydium|jupiter|moonshot|bonk\.?fun|robinhood|\bbuy\b|guarantee|financial/i;
+  const bad = /based\s*bot(?!t)|gmgn|pump\.?fun|axiom|fomo|photon|bullx|trojan|maestro|banana\s*gun|bloom|padre|dexscreener|birdeye|phantom|raydium|jupiter|moonshot|bonk\.?fun|robinhood|\bbuy\b|guarantee|financial/i;
   const runs = [
     { mode: 'challenge', challenge: 'double-up', outcome: 'won', stars: 3, start: 1, worth: 2.04, timeUsed: 192, multiple: 2.04 },
     { mode: 'challenge', challenge: 'ten-bagger', outcome: 'lost', reason: 'rug', start: 1, worth: 0.3, multiple: 0.3 },
@@ -1327,9 +1387,9 @@ test('her words stay up as long as they take to read: about a second, 60 ms a ch
   }
 });
 
-// ---------- boards/board.js: Trench Board's own helpers ----------
+// ---------- boards/board.js: Pomp.fun's own helpers ----------
 
-test("Trench Board's helpers: its sorts, quick buys by the run's start, amounts as typed, who traded, holders' tags", () => {
+test("Pomp.fun's helpers: its sorts, quick buys by the run's start, amounts as typed, who traded, holders' tags", () => {
   // its five sorts, the way a launchpad board has them
   assert.deepEqual(SORTS.map(([id]) => id), ['bump', 'trending', 'new', 'stretch', 'migrated']);
   for (const [, label] of SORTS) assert.ok(typeof label === 'string' && label.length > 2);
@@ -1368,7 +1428,7 @@ test("Trench Board's helpers: its sorts, quick buys by the run's start, amounts 
   for (const l of ['kol', 'regular', 'me', 'mev', '', 'toString', '__proto__', undefined, null]) assert.equal(holderTag(l), '', String(l));
 });
 
-test("Trench Board's order errors: words for every reason the engine or the run can refuse an order", () => {
+test("Pomp.fun's order errors: words for every reason the engine or the run can refuse an order", () => {
   const src = readFileSync('src/games/trenchingsimulator/engine.js', 'utf8') + readFileSync('src/games/trenchingsimulator/run.js', 'utf8');
   const codes = [...new Set([...src.matchAll(/error: '([a-z_]+)'/g)].map((m) => m[1]))].sort();
   assert.ok(codes.length >= 9, `the codes were read: ${codes}`);
@@ -1390,7 +1450,7 @@ const WON = Object.freeze({
 });
 
 test("a chain's own coin as a terminal's money (Live mode, the owner's \"Each chain's money\"): ETH and BNB at the run's prices", async () => {
-  // 2026-10-21: Trench Board shows ETH on Robinhood Chain and Base, BNB on BNB Chain; the game counts in SOL underneath
+  // 2026-10-21: Pomp.fun shows ETH on Robinhood Chain and Base, BNB on BNB Chain; the game counts in SOL underneath
   const ETH = { coin: 'eth', usd: 3000 };
   const BNB = { coin: 'bnb', usd: 600 };
   assert.deepEqual(F.unitOf('sol', 150), { id: 'sol', name: 'SOL', per: 1 });

@@ -3,7 +3,7 @@
 // (public/cards/trenchingsimulator.jpg: 1200 × 630, a JPEG under 154,000 bytes, because the owner's folder adds a ~6 KB
 // content-credentials label and the build fails over 160 KB).
 //
-// Both are made from real screenshots of the game's own terminal, Trench Board, taken here from the built game
+// Both are made from real screenshots of the game's own terminal, Pomp.fun, taken here from the built game
 // (tools/games/trench-art/board.webp on a computer, coin.webp on a phone): the same market every time (its clock, its date
 // and its dice fixed, its time run forward by hand, a buy of the king of the hill on the way), the title, a "Play money"
 // sticker, and AGI-1 only as her 2D art (public/images/landing/agi1-cutout.webp: never the 3D model or anything rendered
@@ -35,7 +35,7 @@ export const CARD_SIZE = [1200, 630];
 export const CARD_MAX = 154_000;
 
 // ---------- the market, the same every time ----------
-// A free play on Trench Board started at T0 + 2 minutes (UTC), its dice seeded; at 30 s the player opens the king of the
+// A free play on Pomp.fun started at T0 + 2 minutes (UTC), its dice seeded; at 30 s the player opens the king of the
 // hill's coin and puts 0.25 SOL of play money in it, then watches until 100 s. Its time only moves when this tool moves
 // it, always by a multiple of 16 ms (the browser's frames: so the run starts at the same moment, and its market is the
 // same, however fast this computer is)
@@ -99,7 +99,7 @@ export async function shoot(browser, base, { phone }) {
   await until(() => !document.getElementById('agi-intro'), 'its page (the AGI GAMES intro never ended)');
   await press(button('Play'));
   await until(() => Boolean(document.querySelector('.ts-terminals')), 'its terminals');
-  await press(button('Play on Trench Board'));
+  await press(button('Play on Pomp.fun'));
   await until(() => Boolean(document.querySelector('.ts-modes')), 'its modes');
   await press(p.locator('.ts-mode', { hasText: 'Free play' }));
   await until(() => Boolean(document.querySelector('.ts-brief')) && !/checking/.test(document.querySelector('.ts-price')?.textContent || ''), 'free play');

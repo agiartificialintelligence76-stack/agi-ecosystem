@@ -1,8 +1,11 @@
 // TRENCHING SIMULATOR's five terminals (2026-10-20): each laid out and working the way trenchers know the real ones
-// (the owner: "our players are real trenches"), under our own names, colors and words: never a real terminal's name,
-// logo or art (Claude's answer to "exact copies", with the safety note). The order is the owner's list. `currency` is
-// the money its play money is shown in (SOL, or dollars in Trench Social: the owner's "the same coins used on that
-// terminals"). Pure: read in Node too (tests/trench-game.test.js).
+// (the owner: "our players are real trenches"). Since 2026-10-21 under parody names (the owner: "use a parody names,
+// parody logo, parody branding of that terminal … for each terminal", then "Sound-alikes"): GNGM, Pomp.fun, Axium,
+// BasedBott and Phomo, each with its own mark drawn in code (brands.js: never a real terminal's logo or art), its own
+// colors and words; never a real terminal's name ("Fomoo" is a known drainer site and a live coin: so Phomo). Names are
+// text only, never a link. The order is the owner's list. `currency` is the money its play money is shown in (SOL, or
+// dollars in Phomo: the owner's "the same coins used on that terminals"). Pure: read in Node too
+// (tests/trench-game.test.js).
 
 export const SAFETY_NOTE = 'Play money only. Not affiliated with any real trading terminal. This game never asks for a wallet.';
 
@@ -10,22 +13,26 @@ const T = (o) => Object.freeze({ ...o, colors: Object.freeze(o.colors), features
 
 export const TERMINALS = Object.freeze([
   T({
-    id: 'chat', name: 'Trench Chat', short: 'Chat', currency: 'sol', ready: false,
-    tagline: 'Trade by tapping buttons in a chat, like a trading bot.',
+    id: 'chat', name: 'BasedBott', short: 'Chat bot', currency: 'sol', ready: false,
+    tagline: 'Paste a coin, tap a button, touch grass never.',
     features: ['Paste a coin, get its card', 'Buy and sell buttons', 'Positions in one message', 'Limit-style quick sells'],
-    colors: { bg: '#101a24', panel: '#182531', line: '#24323f', text: '#f2f5f8', muted: '#8597a8', accent: '#5aa9ff',
+    colors: { bg: '#0f1823', panel: '#172331', line: '#24334a', text: '#f2f5f8', muted: '#8a9db2', accent: '#5b9dff',
       up: '#5fd38d', down: '#f2726f' },
   }),
   T({
-    id: 'scan', name: 'Trench Scan', short: 'Scan', currency: 'sol', ready: false,
-    tagline: 'Scan new coins, smart money and every wallet.',
-    features: ['New, almost bonded, migrated', 'Smart money and callers', 'Holders, devs and snipers', 'Wallet records'],
-    colors: { bg: '#0f1012', panel: '#17191c', line: '#25282d', text: '#e9eaec', muted: '#8b9097', accent: '#2dd4bf',
-      up: '#3ddc97', down: '#ff6b6b' },
+    id: 'scan', name: 'GNGM', short: 'Scanner', currency: 'sol', ready: false,
+    tagline: 'Good night, good morning, good luck. Scan every coin and wallet.',
+    features: ['New, almost bonded, migrated', 'Smart money and KOLs', 'Holders, devs and snipers', 'Wallet PnL cards'],
+    // a scanner's near-black (2026-10-21): the same keys as Pomp.fun's (the page keeps one set of color names), its
+    // toad's lime as the accent (never a real terminal's purple or green), a buy green and a sell red of its own
+    colors: { bg: '#0d0d0f', panel: '#17181a', panel2: '#1e1f22', panel3: '#26282c', line: '#222326', line2: '#2e3034',
+      text: '#eaecef', soft: '#c9ccd1', muted: '#9a9ea5', dim: '#8d9198', hero: '#ffffff', accent: '#9fdc55',
+      onAccent: '#10200a', up: '#2ad48a', down: '#f65d71', onDown: '#2a0a10', warn: '#f5b83d', info: '#5fb0ff',
+      violet: '#a99bff' },
   }),
   T({
-    id: 'board', name: 'Trench Board', short: 'Board', currency: 'sol', ready: true,
-    tagline: 'The launchpad board: new coins, bonding curves and the king of the hill.',
+    id: 'board', name: 'Pomp.fun', short: 'Launchpad', currency: 'sol', ready: true,
+    tagline: 'Launch with pomp, exit with circumstance: the launchpad board.',
     features: ['Every new launch', 'Bonding curve progress', 'King of the hill', 'Threads and trades'],
     // a launchpad board's own dark (2026-10-20, #406): four greys from the page to a raised control, two lines, its
     // words in three greys (dim is the lightest grey that still reads on all four), a soft green with dark words on it
@@ -36,15 +43,15 @@ export const TERMINALS = Object.freeze([
       violet: '#c084fc' },
   }),
   T({
-    id: 'pro', name: 'Trench Pro', short: 'Pro', currency: 'sol', ready: false,
-    tagline: 'Three live columns, one-click buys, everything at once.',
+    id: 'pro', name: 'Axium', short: 'Pro', currency: 'sol', ready: false,
+    tagline: 'Three live columns, one-click buys, zero chill.',
     features: ['New, final stretch, migrated', 'One-click buys', 'Live candles and trades', 'Positions and P&L'],
-    colors: { bg: '#0b0b0e', panel: '#131318', line: '#20202a', text: '#ececf1', muted: '#8a8a99', accent: '#4c7dff',
-      up: '#2fd18e', down: '#f0616d' },
+    colors: { bg: '#07080c', panel: '#101116', line: '#22242d', text: '#f4f4f7', muted: '#8b8ea1', accent: '#7088ff',
+      up: '#2fe3ac', down: '#f2587f' },
   }),
   T({
-    id: 'social', name: 'Trench Social', short: 'Social', currency: 'usd', ready: false,
-    tagline: 'Follow traders, copy their moves, all in dollars.',
+    id: 'social', name: 'Phomo', short: 'Social', currency: 'usd', ready: false,
+    tagline: 'Fear of missing out, served hot. Follow traders, all in dollars.',
     features: ['Everything in dollars', 'Traders\' live feeds', 'Copy a trade in one tap', 'Leaderboards'],
     colors: { bg: '#0d0d10', panel: '#17171c', line: '#25252d', text: '#f3f3f6', muted: '#8e8e9c', accent: '#ff7a59',
       up: '#3ad68a', down: '#ff5c6c' },

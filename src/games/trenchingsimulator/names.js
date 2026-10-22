@@ -193,7 +193,7 @@ export const smartAddress = (n) => {
 
 // ---------- chatter ----------
 
-// What people say on a coin's thread (Trench Board's comments): PG-13, about the coin, never a real person or another coin
+// What people say on a coin's thread (Pomp.fun's comments): PG-13, about the coin, never a real person or another coin
 export const COMMENTS = {
   any: ['gm', 'lfg', 'comfy', 'who is still here', 'chart looks clean', 'love the name', 'art is cute', 'early', 'not early lol',
     'just vibing', 'the vibes are immaculate', 'zoom out', 'patience', 'hold the line', 'who sold lol', 'fren', 'wagmi', 'ngmi',

@@ -1,10 +1,12 @@
-// TRENCHING SIMULATOR's Trench Board (2026-10-21, #406): our own launchpad board, laid out the way today's launchpad
-// boards are: a clean grid of coin cards under the king of the hill and its sorts, the latest trade and launch flashing
-// in its header; a coin's page built around its chart (its header with the market cap and its numbers, the chart with
-// its candle sizes, then its holders, thread and trades) with the trade column on its right (Buy / Sell, the amount and
-// its quick picks, the coin's stats over 5 minutes, an hour or since launch, its bonding curve, the king of the hill's
-// race, its pool and its creator); the player's bag on the left of a wide screen. Phones: one column, a tab bar at the
-// bottom and a green trade button above it that opens the trade panel as a sheet. All under our own name, colors and words.
+// TRENCHING SIMULATOR's Pomp.fun ("Trench Board" until the owner's parody names, 2026-10-21, #406): our own launchpad
+// board, laid out the way today's launchpad boards are: a clean grid of coin cards under the king of the hill and its
+// sorts, the latest trade and launch flashing in its header; a coin's page built around its chart (its header with the
+// market cap and its numbers, the chart with its candle sizes, then its holders, thread and trades) with the trade
+// column on its right (Buy / Sell, the amount and its quick picks, the coin's stats over 5 minutes, an hour or since
+// launch, its bonding curve, the king of the hill's race, its pool and its creator); the player's bag on the left of a
+// wide screen. Phones: one column, a tab bar at the bottom and a green trade button above it that opens the trade panel
+// as a sheet. All under our own parody name and mark (brands.js: a pill in a gold crown, "pomp and circumstance"),
+// colors and words.
 //
 // mountBoard(host, ctx) → { el, update(now), sub(), closeSub(), openCoin(id), destroy() }. ctx (from shell.js): { run,
 // market, currency, solUsd, start, settings() → { slippage, priority }, order(params) → run.order's answer,
@@ -17,6 +19,7 @@
 // thread, its dev); a made-up stand-in among real coins is tagged "Simulated"; a real coin whose market isn't live right
 // now, "Not live". Never a link anywhere, and a real coin's address only ever as its first 6 characters.
 import { el, setText, flag, keyed, icon } from '../ui.js';
+import { markEl, wordEl } from '../brands.js';
 import { createChart, TIMEFRAMES } from '../chart.js';
 import { usd, money, signed, pct, share, age, tokens, currencyOf, unitOf, nice } from '../format.js';
 import { MIN_BUY } from '../engine.js';
@@ -263,8 +266,7 @@ export function mountBoard(host, ctx) {
     icon('bag', 'ts-icon tsb-wallet-ic'), el('span', { class: 'tsb-sr' }, 'Your bag, balance '), walletAmt,
     isUsd ? null : el('span', { class: 'tsb-wallet-u' }, ` ${U.name}`));
   const head = el('header', { class: 'tsb-head' },
-    el('div', { class: 'tsb-brand' }, el('span', { class: 'tsb-logo', 'aria-hidden': 'true' }),
-      el('span', { class: 'tsb-brand-t' }, 'Trench Board')),
+    el('div', { class: 'tsb-brand' }, markEl('board', 'tsb-logo'), wordEl('board', 'tsb-brand-t')),
     flashes, searchForm, walletBtn);
   // "/" jumps to the search (unless something is being typed or a sheet is open)
   const onSlash = (e) => {
@@ -1249,7 +1251,7 @@ export function mountBoard(host, ctx) {
     if (bagSheet.open) bagSheet.close();
     ctx.openSettings();
   });
-  const nav = el('nav', { class: 'tsb-nav', 'aria-label': 'Trench Board' }, navBoard, navSearch, navBag, navSet);
+  const nav = el('nav', { class: 'tsb-nav', 'aria-label': 'Pomp.fun' }, navBoard, navSearch, navBag, navSet);
   function syncNav() {
     flag(navBag, 'is-on', bagSheet.open);
     const onBoard = B.view === 'board' && !bagSheet.open;
