@@ -1,4 +1,4 @@
-# HANDOFF: AGI games and TRENCHING SIMULATOR (2026-10-22)
+# HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
 The owner paused the work here so another agent can continue the same project. Read this file first, then `CLAUDE.md`
 (the project's own notes, about 13,000 lines: its hard rules, every feature, setup steps, the decisions log). Where this
@@ -95,6 +95,34 @@ Publication succeeded at `4c214cbed78b7d6030746075ec74004b9fc1e3c8`. Vercel prod
 The live browser check resolved the owner's exact AGI contract, filled a $10 practice buy, and loaded 178 public
 perpetual markets with 180 BTC candles in the corrected layout. Browser warnings/errors: none. Hetzner's clean
 checkout was fast-forwarded to the same commit; relay code was unchanged and running services were not restarted.
+
+### 0.4 VLAD RUNNER 2049 — ready for publication (2026-10-23)
+
+The owner requested a new original arcade beat 'em up starring Vlad and AGI-1, and explicitly authorized building
+and publishing it at **`/games/vladrunner2049`**. Publication is authorized for this frontend release; **the production
+commit/deployment is still pending**. Earlier pause instructions are historical and do not block this requested release.
+See [the game handoff](handoff/vlad-runner-2049.md) for controls, artwork direction, implementation, limits, and evidence.
+
+The game includes three districts with four encounters and a boss in each, Story/Endless/UTC Daily modes, solo hero
+switching, local co-op, story assist, combos, heavy/aerial attacks, shield breaks, dodges, energy specials, a duo attack,
+pickups, between-district upgrades, local personal records/achievements, and downloadable score cards. Keyboard, touch,
+and standard gamepad controls are implemented. Nine original optimized artwork files total **3,436,438 bytes**;
+AGI-1's separate left-facing atlas preserves readable shirt lettering. The games shelf and clean game URL are wired.
+
+**Frontend only:** no backend, database, SQL, relay, or hosting-service changes are needed. There are no wallet requests,
+deposits, prizes, real-money mechanics, or automatic social posts. The shelf card deliberately has no server-backed
+ratings, player counts, or leaderboard hook. Personal scores stay on the device. The existing CSP is unchanged.
+
+The final full build passed on **Node 24.21.0: 1,144 passed, 0 failed, 6 skipped** (1,150 total), including the final
+left-facing artwork correction. Build, share-origin replacement, secret scan, and diff checks passed. Built HTML,
+entry bundle, and all nine images were verified. Fake deployment settings and three shifted UTC dates also passed
+the full suite; Node 20/22 were unavailable locally and were not downloaded. Evidence is in the git-ignored
+`vlad-build.log`, `vlad-fake-env-test.log`, and `vlad-clock-2026-10-*.log` files.
+
+Local browser checks confirmed keyboard combat, solo Tag switching, defeating the first boss and choosing an upgrade
+to enter Orange Expanse. Local co-op, a 20-hit combo, and phone joystick movement were checked under the production
+CSP without console errors. This is local evidence, not a deployed-site check. After publication, record the actual
+release commit and Ready deployment, then verify the public game URL and games shelf.
 
 ## 1. The owner and how to work with them
 

@@ -12,6 +12,8 @@
     { "source": "/games/rideemagi/", "destination": "/rideemagi" },
     { "source": "/games/trenchingsimulator", "destination": "/trenchingsimulator" },
     { "source": "/games/trenchingsimulator/", "destination": "/trenchingsimulator" },
+    { "source": "/games/vladrunner2049", "destination": "/vladrunner2049" },
+    { "source": "/games/vladrunner2049/", "destination": "/vladrunner2049" },
     { "source": "/:path*", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/studio" }
   ],
   "redirects": [

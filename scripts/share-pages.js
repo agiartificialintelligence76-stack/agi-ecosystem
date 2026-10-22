@@ -64,18 +64,19 @@ export function allSharePages(site) {
 // tools/cards/trenchingsimulator-card.html)
 export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg', 'roadmap.jpg',
   'games.jpg', 'trenchingsimulator.jpg'];
+export const neededGameArt = () => ['images/vladrunner2049/keyart.webp'];
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const site = siteUrl();
-  const missing = neededCards().filter((f) => !existsSync(`dist/cards/${f}`));
+  const missing = [...neededCards().map((f) => `cards/${f}`), ...neededGameArt()].filter((f) => !existsSync(`dist/${f}`));
   if (missing.length) {
-    console.error(`✗ share cards missing in public/cards/: ${missing.join(', ')}`);
+    console.error(`✗ share preview images missing in public/: ${missing.join(', ')}`);
     process.exit(1);
   }
   mkdirSync('dist/share', { recursive: true });
   for (const [name, html] of Object.entries(allSharePages(site))) writeFileSync(`dist/share/${name}.html`, html);
   for (const page of ['dist/index.html', 'dist/diary.html', 'dist/live.html', 'dist/studio.html', 'dist/roadmap.html', 'dist/stake.html',
-    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html']) {
+    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html']) {
     if (existsSync(page)) writeFileSync(page, readFileSync(page, 'utf8').replaceAll('__SITE__', site));
   }
   console.log(`✓ share pages written for ${site}`);

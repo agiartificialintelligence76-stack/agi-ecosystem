@@ -610,7 +610,7 @@ test('AGI games: its page at /games, its head and link preview (its own picture)
   assert.ok(readPage('rideemagi.html').includes('<meta property="og:image" content="__SITE__/cards/games.jpg" />'), 'its game shares its picture');
   // (2026-10-21) its second game at /games/trenchingsimulator, with its own picture (its test below)
   assert.ok(vercel.rewrites.some((r) => r.source === '/games/trenchingsimulator' && r.destination === '/trenchingsimulator'), 'its second game at /games/trenchingsimulator');
-  assert.match(page.match(/<meta property="og:description" content="([^"]+)"/)[1], /^Ride 'Em, AGI!, TRENCHING SIMULATOR and more to come/, 'its preview names both games');
+  assert.match(page.match(/<meta property="og:description" content="([^"]+)"/)[1], /^Ride 'Em, AGI!, TRENCHING SIMULATOR and VLAD RUNNER 2049/, 'its preview names all three games');
   // the site's own top bar and footer, Games marked as the page you're on (and nothing else)
   const strip = (s) => s.replace(/ aria-current="page"/g, '');
   const live = readPage('live.html');
@@ -716,7 +716,46 @@ test('TRENCHING SIMULATOR\'s key art: Ride \'Em, AGI!\'s size, see-through edges
   assert.doesNotMatch(tool, /\.glb\b/, 'never the 3D model');
 });
 
-test('AGI games: "GAME beta" on top (beta stuck over GAME), the shelf with each game\'s stars and plays, a tab of ratings for each, what\'s coming and the fine print', async () => {
+test('VLAD RUNNER 2049 is a standalone game card and direct page, without unconfigured ratings or score requests', async () => {
+  const page = GAMES_PAGE();
+  const card = between(page, '<li class="gm-game" id="gm-vladrunner2049">', '\n            </li>');
+  assert.match(card, /src="\/images\/vladrunner2049\/keyart\.webp"/);
+  assert.deepEqual([...card.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/games/vladrunner2049', '/games/vladrunner2049']);
+  assert.doesNotMatch(card, /data-gm-(?:game|stat|rate|lb)|#rate|api\/wallet/, 'the card cannot trigger unavailable server features');
+  const { isGame } = await import('../src/games/list.js');
+  assert.equal(isGame('vladrunner2049'), false, 'the server allowlist stays limited to configured games');
+  const game = readPage('vladrunner2049.html');
+  assert.match(game, /<main id="vr-root">/);
+  assert.match(game, /src="\/src\/games\/vladrunner2049\/page\.js"/);
+  assert.match(game, /rel="canonical" href="__SITE__\/games\/vladrunner2049"/);
+  assert.match(game, /property="og:image" content="__SITE__\/images\/vladrunner2049\/keyart\.webp"/);
+  assert.doesNotMatch(game, /<script>|<style|\sstyle=|\son\w+=/, 'works with the existing strict CSP');
+  assert.match(readPage('scripts/share-pages.js'), /'dist\/vladrunner2049\.html'/);
+  const { neededGameArt } = await import('../scripts/share-pages.js');
+  assert.ok(neededGameArt().includes('images/vladrunner2049/keyart.webp'), 'build requires the public preview image');
+  const vercel = JSON.parse(readPage('vercel.json'));
+  for (const path of ['/games/vladrunner2049', '/games/vladrunner2049/']) {
+    assert.ok(vercel.rewrites.some((r) => r.source === path && r.destination === '/vladrunner2049'));
+  }
+  const { default: config } = await import('../vite.config.js');
+  assert.equal(config.build.rollupOptions.input.vladrunner2049, 'vladrunner2049.html');
+  for (const hook of ['configureServer', 'configurePreviewServer']) {
+    let rewrite;
+    config.plugins[0][hook]({ middlewares: { use(fn) { rewrite = fn; } } });
+    for (const [url, expected] of [
+      ['/games/vladrunner2049', '/vladrunner2049.html'],
+      ['/games/vladrunner2049/?hero=agi&sound=off', '/vladrunner2049.html?hero=agi&sound=off'],
+      ['/games/vladrunner2049-extra', '/games/vladrunner2049-extra'],
+    ]) {
+      const req = { url, headers: {} }; let called = 0;
+      rewrite(req, {}, () => { called++; });
+      assert.equal(req.url, expected, `${hook}: ${url}`);
+      assert.equal(called, 1);
+    }
+  }
+});
+
+test('AGI games: "GAME beta" on top (beta stuck over GAME), the shelf with configured games\' stars and plays, their ratings tabs, what\'s coming and the fine print', async () => {
   const { GAMES } = await import('../src/games/list.js');
   const IDS = Object.keys(GAMES);
   assert.deepEqual(IDS, ['rideemagi', 'trenchingsimulator'], 'two games since 2026-10-21');
@@ -724,11 +763,11 @@ test('AGI games: "GAME beta" on top (beta stuck over GAME), the shelf with each 
   const main = mainOf(page);
   assert.equal((page.match(/<h1\b/g) || []).length, 1, 'one h1');
   assert.match(main, /<h1 class="gm-title" id="gm-title"><span class="gm-word">GAME<\/span> <span class="gm-beta">beta<\/span><\/h1>/, 'screen readers hear "GAME beta"');
-  assert.match(textOf(between(main, '<p class="gm-say">', '</p>')), /AGI-1: my second game is out 💜 .* no prizes yet, just bragging rights\./, 'her line, for her second game');
+  assert.match(textOf(between(main, '<p class="gm-say">', '</p>')), /AGI-1: three games, three adventures 💜 .* no prizes yet, just bragging rights\./, 'her line, for all three games');
   // the shelf: each game in list.js, in its order, linked to its own page, its stars, players and plays waiting for our server
   const shelf = between(main, '<section class="section gm-shelf"', '</section>');
   assert.deepEqual([...shelf.matchAll(/<li class="gm-game" data-gm-game="(\w+)">/g)].map((m) => m[1]), IDS, 'a card for each game');
-  assert.match(textOf(shelf), /Two so far, and more on the way\./);
+  assert.match(textOf(shelf), /Three so far, and more on the way\./);
   assert.doesNotMatch(textOf(shelf), /one so far/i);
   const cardOf = (id) => between(shelf, `<li class="gm-game" data-gm-game="${id}">`, '\n            </li>');
   const rateOf = (id) => (id === 'rideemagi' ? '#rate' : `#rate-${id}`);         // (#rate: Ride 'Em, AGI!'s, from before there were two)

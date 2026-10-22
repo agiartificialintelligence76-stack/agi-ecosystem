@@ -16,6 +16,7 @@ const talkPage = () => {
     if (/^\/talk\/?$/.test(path)) req.url = `/${q}`;
     else if (/^\/games\/rideemagi\/?$/.test(path)) req.url = `/rideemagi.html${q}`;
     else if (/^\/games\/trenchingsimulator\/?$/.test(path)) req.url = `/trenchingsimulator.html${q}`;
+    else if (/^\/games\/vladrunner2049\/?$/.test(path)) req.url = `/vladrunner2049.html${q}`;
     else if (/^\/studio\/.+/.test(path)) req.url = `/studio.html${q}`;
     else if (STUDIO_HOST.test(String(req.headers.host || '')) && STUDIO_VIEW.test(path)) req.url = `/studio.html${q}`;
     next();
@@ -36,16 +37,16 @@ export default defineConfig({
     // (2026-10-22) the licenses of the packages bundled into the site's files, in dist/.vite/license.md: TradingView
     // Lightweight Charts™ (GNGM's chart, Apache-2.0) asks for its license to go with it, and the minified file drops its header
     license: true,
-    // twelve pages: the home page (also at /talk since 2026-10-02), AGI-1's diary (/diary, Phase 5), "Launch with AGI-1"
+    // thirteen pages: the home page (also at /talk since 2026-10-02), AGI-1's diary (/diary, Phase 5), "Launch with AGI-1"
     // (/launch/<id>, 2026-10-01), her live show (/live, 2026-10-02), CloakMesh (/cloakmesh, 2026-10-03: what
     // inference.agi1.app shows), AGI Studio (/studio and /studio/<view>, and studio.agi1.app, 2026-10-10), (2026-10-14)
     // the roadmap (/roadmap) with its coming-soon pages (/stake, /games: AGI games since 2026-10-19, /giveaway), and
     // (2026-10-19) the owner's game, Ride 'Em, AGI! (/games/rideemagi), and (2026-10-20) TRENCHING SIMULATOR
-    // (/games/trenchingsimulator)
+    // (/games/trenchingsimulator), and VLAD RUNNER 2049 (/games/vladrunner2049)
     rollupOptions: {
       input: { main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html', studio: 'studio.html',
         roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html', rideemagi: 'rideemagi.html',
-        trenchingsimulator: 'trenchingsimulator.html' },
+        trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html' },
     },
   },
 });
