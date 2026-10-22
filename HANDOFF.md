@@ -96,11 +96,13 @@ The live browser check resolved the owner's exact AGI contract, filled a $10 pra
 perpetual markets with 180 BTC candles in the corrected layout. Browser warnings/errors: none. Hetzner's clean
 checkout was fast-forwarded to the same commit; relay code was unchanged and running services were not restarted.
 
-### 0.4 VLAD RUNNER 2049 — ready for publication (2026-10-23)
+### 0.4 VLAD RUNNER 2049 — published (2026-10-23)
 
 The owner requested a new original arcade beat 'em up starring Vlad and AGI-1, and explicitly authorized building
-and publishing it at **`/games/vladrunner2049`**. Publication is authorized for this frontend release; **the production
-commit/deployment is still pending**. Earlier pause instructions are historical and do not block this requested release.
+and publishing it at **`/games/vladrunner2049`**. **Publication succeeded** at commit
+`6f2f5a25fe15850832be40218128bed3eff0913e`, pushed to `main` and the working branch. Vercel production deployment
+`2h12HJDm6QUZpNmEYPwepKEh28M7` became **Ready at 2026-10-23 00:21:52 GMT+8 (2026-10-22 16:21:52 UTC)**,
+after 3 minutes 16 seconds. The game is live at [www.agi1.app/games/vladrunner2049](https://www.agi1.app/games/vladrunner2049).
 See [the game handoff](handoff/vlad-runner-2049.md) for controls, artwork direction, implementation, limits, and evidence.
 
 The game includes three districts with four encounters and a boss in each, Story/Endless/UTC Daily modes, solo hero
@@ -109,7 +111,7 @@ pickups, between-district upgrades, local personal records/achievements, and dow
 and standard gamepad controls are implemented. Nine original optimized artwork files total **3,436,438 bytes**;
 AGI-1's separate left-facing atlas preserves readable shirt lettering. The games shelf and clean game URL are wired.
 
-**Frontend only:** no backend, database, SQL, relay, or hosting-service changes are needed. There are no wallet requests,
+**Frontend only:** no backend, database, SQL, relay, or SSH changes were needed. There are no wallet requests,
 deposits, prizes, real-money mechanics, or automatic social posts. The shelf card deliberately has no server-backed
 ratings, player counts, or leaderboard hook. Personal scores stay on the device. The existing CSP is unchanged.
 
@@ -119,10 +121,15 @@ entry bundle, and all nine images were verified. Fake deployment settings and th
 the full suite; Node 20/22 were unavailable locally and were not downloaded. Evidence is in the git-ignored
 `vlad-build.log`, `vlad-fake-env-test.log`, and `vlad-clock-2026-10-*.log` files.
 
-Local browser checks confirmed keyboard combat, solo Tag switching, defeating the first boss and choosing an upgrade
-to enter Orange Expanse. Local co-op, a 20-hit combo, and phone joystick movement were checked under the production
-CSP without console errors. This is local evidence, not a deployed-site check. After publication, record the actual
-release commit and Ready deployment, then verify the public game URL and games shelf.
+Local browser QA completed a full Story-assist playthrough with both heroes, all three bosses and both upgrades:
+**28,888 score, 47 enforcers, 10-hit combo, 3:49**. Victory, achievements and the downloaded PNG score card were verified.
+Local co-op, a 20-hit combo, and phone joystick movement were checked under the production CSP without console errors.
+Production checks confirmed the title, all artwork, keyboard combat, Tag, pause, settings, Daily restrictions and
+correct left-facing AGI lettering; browser warnings/errors were absent. Physical-controller play remains unverified;
+automated mapping/disconnection tests passed. The live trailing-slash URL loaded the final entry bundle
+`/assets/vladrunner2049-_pN7lU01.js`. The live `/games` page displayed the standalone third card and artwork;
+clicking **Play VLAD RUNNER 2049** returned to the correct playable title. All final routing and shelf checks passed.
+See the game handoff for screenshot paths and the distinction between local and production QA.
 
 ## 1. The owner and how to work with them
 
