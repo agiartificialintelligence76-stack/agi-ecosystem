@@ -594,6 +594,33 @@ test('GET /api/wallet?game=<game>: the same for everyone (the CDN keeps it a min
   assert.equal((await get('?game=rideemagi')).data.open, false, 'no AI: the page can say reviews open soon');
 });
 
+test('GET leaderboards: literal and URL-encoded separators reach the same board and retain shared caching', async () => {
+  fake.db.arcade_board = () => [];
+  for (const [game, board] of [['rideemagi', 'e:all'], ['trenchingsimulator', 'daily:2026-10-22']]) {
+    const value = `${game}:${board}`;
+    for (const query of [`?board=${value}`, `?${new URLSearchParams({ board: value })}`, `?board=${value.replaceAll(':', '%3a')}`]) {
+      const r = await get(query);
+      assert.equal(r.status, 200, query);
+      assert.deepEqual(r.data, { ready: true, game, board, rows: [] });
+      assert.match(r.cache, /public, max-age=30, s-maxage=60/);
+      assert.deepEqual(called('arcade_board').at(-1).body, { p_game: game, p_board: board, p_limit: 20 });
+    }
+  }
+  fake.sqlMissing = true;
+  assert.deepEqual((await get('?board=rideemagi%3Ae%3Aall')).data, { ready: false });
+});
+
+test('GET leaderboards: encoding cannot admit extra parameters, malformed escapes, or unsupported boards', async () => {
+  for (const query of ['?board=rideemagi%3Ae%3Aall&x=1', '?board=rideemagi%3Ae%3Aall&board=rideemagi%3Ae%3Aall',
+    '?board=rideemagi%3Ae%3Aall%26x%3D1', '?board=rideemagi%253Ae%253Aall', '?board=rideemagi%3Ge%3Aall',
+    '?board=rideemagi%3Ae%3Aall%', '?board=rideemagi%3Ae%3Aall+', '?%62oard=rideemagi%3Ae%3Aall']) {
+    assert.equal((await get(query)).status, 405, query);
+  }
+  assert.equal((await get('?board=othergame%3Ae%3Aall')).status, 404);
+  assert.equal((await get('?board=rideemagi%3Ac%3Adouble-up%3Aall')).status, 404);
+  assert.equal(calls.length, 0, 'invalid requests never reach the database');
+});
+
 test("GET: only exactly these addresses (anything else 405); a game we don't have is 404 without asking the database; ?burns as before", async () => {
   for (const q of ['', '?', '?game=', '?game=RideEmAgi', '?game=ride-em', '?game=rideemagi&x=1', '?game=rideemagi&before=0', '?game=rideemagi&before=-1',
     '?game=rideemagi&before=1234567890123456', '?before=1&game=rideemagi', '?game=rideemagi&before=', '?Game=rideemagi', '?burns&game=rideemagi']) {

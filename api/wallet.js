@@ -63,8 +63,9 @@ const SHARED = { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-
 export async function GET(request) {
   const search = request ? new URL(request.url).search : '';
   const asked = search === '?burns' ? null : GAME_ASK.exec(search);
-  // (2026-10-22) a game's leaderboard: ?board=<game>:<board>
-  const board = search === '?burns' || asked ? null : BOARD_ASK.exec(search);
+  // A host may encode the leaderboard's ':' separators as %3A. Normalize only those separators so the strict
+  // address check still rejects extra parameters, other escapes and double encoding.
+  const board = search === '?burns' || asked ? null : BOARD_ASK.exec(search.replace(/%3a/gi, ':'));
   if (search !== '?burns' && !asked && !board) return json(405, { error: 'method_not_allowed' });
   const cfg = getConfig();
   if (asked) return gameGet(cfg, asked[1], asked[2] ? Number(asked[2]) : null);
