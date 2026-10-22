@@ -130,13 +130,15 @@ test('only completed valid runs save and achievement thresholds unlock once acro
   assert.equal(endless.achievements.includes('friends'), false);
 });
 
-test('asset metadata matches share art, backgrounds cover the arena, and the full art download stays under 4 MB', async () => {
+test('asset metadata matches share art, backgrounds cover the arena, and the full art download stays under 8 MB', async () => {
   const directory = new URL('../public/images/vladrunner2049/', import.meta.url);
   const names = (await readdir(directory)).filter(name => /\.(webp|png|jpe?g)$/i.test(name));
-  for (const name of ['keyart.webp', 'vlad.webp', 'agi.webp', 'agi-left.webp', 'neon.webp', 'orange.webp', 'spire.webp', 'enemies.webp', 'bosses.webp']) assert.ok(names.includes(name), `${name} ships with the game`);
+  for (const name of ['keyart.webp', 'vlad.webp', 'agi.webp', 'agi-left.webp', 'neon.webp', 'orange.webp', 'spire.webp', 'enemies.webp', 'bosses.webp',
+    'vlad-run.webp', 'agi-run.webp', 'agi-run-left.webp', 'vlad-combo.webp', 'agi-combo.webp', 'agi-combo-left.webp', 'enforcer-motion.webp'])
+    assert.ok(names.includes(name), `${name} ships with the game`);
   let total = 0;
   for (const name of names) total += (await stat(new URL(name, directory))).size;
-  assert.ok(total < 4 * 1024 * 1024, `all art is ${total} bytes`);
+  assert.ok(total < 8 * 1024 * 1024, `all art is ${total} bytes`);
   const html = await readFile(new URL('../vladrunner2049.html', import.meta.url), 'utf8');
   const meta = key => html.match(new RegExp(`<meta\\s+property="${key}"\\s+content="([^"]+)"`))?.[1];
   const image = meta('og:image');
@@ -197,5 +199,35 @@ test('enemy and boss atlases contain three distinct character rows and four visi
       assert.ok(cell.transparent > cw * ch * .25, `${name} frame ${i} has transparent surroundings`);
     }
     assert.equal(new Set(cells.map(cell => cell.hash)).size, 12, `${name} has distinct character/pose cells, not repeated placeholder frames`);
+  }
+});
+
+test('revised run, combo and enforcer atlases contain complete, distinct transparent animation cells', async () => {
+  const layouts = [
+    ['vlad-run', 2], ['agi-run', 2], ['agi-run-left', 2],
+    ['vlad-combo', 3], ['agi-combo', 3], ['agi-combo-left', 3], ['enforcer-motion', 3],
+  ];
+  for (const [name, rows] of layouts) {
+    const file = await readFile(new URL(`../public/images/vladrunner2049/${name}.webp`, import.meta.url));
+    const metadata = await sharp(file).metadata();
+    assert.equal(metadata.format, 'webp'); assert.equal(metadata.hasAlpha, true, `${name} has a real alpha channel`);
+    const cw = metadata.width / 4, ch = metadata.height / rows;
+    assert.ok(cw >= 350 && ch >= (rows === 2 ? 400 : 330), `${name} keeps readable per-frame detail`);
+    const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const cells = Array.from({ length: 4 * rows }, () => ({ visible: 0, transparent: 0, hash: 2166136261 }));
+    // Generated atlases can have fractional cell boundaries, including the 1774px
+    // run sheet. Match the renderer's normalized grid rather than rounding a cell size.
+    for (let y = 0; y < info.height; y++) for (let x = 0; x < info.width; x++) {
+      const cell = cells[Math.min(rows - 1, Math.floor(y / ch)) * 4 + Math.min(3, Math.floor(x / cw))];
+      const start = (y * info.width + x) * info.channels, alpha = data[start + 3];
+      if (alpha > 28) cell.visible++;
+      if (alpha === 0) cell.transparent++;
+      for (let channel = 0; channel < 4; channel++) cell.hash = Math.imul(cell.hash ^ data[start + channel], 16777619) >>> 0;
+    }
+    for (const [index, cell] of cells.entries()) {
+      assert.ok(cell.visible > cw * ch * .15, `${name} frame ${index} contains a substantial drawing`);
+      assert.ok(cell.transparent > cw * ch * .30, `${name} frame ${index} has transparent surroundings`);
+    }
+    assert.equal(new Set(cells.map(cell => cell.hash)).size, cells.length, `${name} supplies ${cells.length} distinct frame cells`);
   }
 });

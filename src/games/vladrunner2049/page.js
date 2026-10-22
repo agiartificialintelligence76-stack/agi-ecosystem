@@ -80,21 +80,22 @@ function updateBest() {
   $('#vr-best').textContent = `${mode === 'daily' ? 'Today’s' : 'Personal'} best · ${r ? fmt(r.score) : '—'}`;
 }
 async function loadAssets() {
-  const names = ['vlad','agi','agiLeft','neon','orange','spire','enemies','bosses']; let count = 0;
+  const names = ['vlad','agi','agiLeft','vladRun','vladCombo','agiRun','agiCombo','agiRunLeft','agiComboLeft','enforcerMotion','neon','orange','spire','enemies','bosses']; let count = 0;
   const failed = [];
   await Promise.all(names.map(name => new Promise(resolve => {
     const img = new Image(); let finished = false;
     const done = ok => { if (finished) return; finished = true; clearTimeout(timer); if(ok) assets[name] = img; else failed.push(name); count++; $('.vr-load-status').textContent = `Preparing the city · ${count}/${names.length}`; resolve(); };
     const timer = setTimeout(() => done(false),20000);
-    img.onload = () => done(true); img.onerror = () => done(false); img.src = `/images/vladrunner2049/${name === 'agiLeft' ? 'agi-left' : name}.webp`;
+    img.onload = () => done(true); img.onerror = () => done(false); img.src = `/images/vladrunner2049/${name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}.webp`;
   })));
+  await renderer.prepareAssets((done,total) => { $('.vr-load-status').textContent = `Preparing animation · ${done}/${total}`; });
   assetsReady = failed.length === 0;
   const start = $('[data-do="start"]'); start.disabled = !assetsReady;
   start.querySelector('span').textContent = assetsReady ? 'ENTER THE CITY' : 'RELOAD ART';
   if (!assetsReady) { start.disabled = false; $('.vr-load-status').textContent = 'Some art could not load. Tap Reload art to try again.'; }
   else $('.vr-load-status').textContent = 'Keyboard · touch · gamepad    /    Headphones recommended';
 }
-loadAssets(); updateBest();
+loadAssets(); audio.preload(); updateBest();
 
 function setMode(next) {
   mode = next;
@@ -114,7 +115,7 @@ function banner(kicker,headline,description = '',seconds = 3) {
 function banter(who,line) { const n=$('.vr-banter'); n.querySelector('b').textContent=who; n.querySelector('span').textContent=line; n.hidden=false; banterUntil=(state?.elapsed||0)+4.5; }
 function startRun(sameSeed = false) {
   if (!assetsReady) { loadAssets(); return; }
-  closeDialog(false); audio.start();
+  closeDialog(false); audio.setPaused(false); audio.start();
   currentSeed = mode === 'daily' ? dailySeed() : sameSeed && currentSeed ? currentSeed : `${Date.now()}-${crypto.getRandomValues(new Uint32Array(1))[0]}`;
   state = createGame({mode,seed:currentSeed,character,coop,difficulty:$('#vr-assist').checked ? 'story' : 'normal'});
   lastEvent=0; endRecorded=false; lastResult=null; paused=false; hudAt=0; lastTime=0;
@@ -126,17 +127,17 @@ function startRun(sameSeed = false) {
 }
 function toTitle() {
   closeDialog(false); state=null; paused=false; input.setEnabled(false); input.clear(); title.hidden=false; play.hidden=true;
-  root.classList.remove('vr-in-game'); audio.setOptions({music:0,sfx:save.settings.sfx}); updateBest(); $('[data-do="start"]').focus();
+  root.classList.remove('vr-in-game'); audio.update(null); audio.setOptions({music:0,sfx:save.settings.sfx}); audio.setPaused(false); updateBest(); $('[data-do="start"]').focus();
 }
 function openDialog(kind,heading,kicker='VLAD RUNNER 2049') {
   if (!dialogKind) { focusBeforeModal = document.activeElement; dialogWasPaused=paused; }
-  dialogKind=kind; paused=true; input.setEnabled(false); input.clear(); modal.replaceChildren();
+  dialogKind=kind; paused=true; audio.setPaused(state?.status==='playing'); input.setEnabled(false); input.clear(); modal.replaceChildren();
   modal.append(el('p','vr-eyebrow',kicker)); const h=el('h2','',heading); h.id='vr-modal-title'; modal.append(h);
   title.inert=true; play.inert=true; canvas.inert=true; modalWrap.hidden=false; modal.focus(); return modal;
 }
 function closeDialog(resume=true) {
   const wasOpen=Boolean(dialogKind); dialogKind=''; modalWrap.hidden=true; title.inert=false; play.inert=false; canvas.inert=false;
-  if(resume) { paused=dialogWasPaused; if(state?.status==='playing') { paused=false; input.setEnabled(true); } }
+  if(resume) { paused=dialogWasPaused; if(state?.status==='playing') { paused=false; input.setEnabled(true); } audio.setPaused(paused && state?.status==='playing'); }
   input.clear(); resetTouchVisuals(); lastTime=0;
   if(resume && state?.status==='playing')canvas.focus({preventScroll:true});
   else if(wasOpen && focusBeforeModal?.isConnected) focusBeforeModal.focus({preventScroll:true});
@@ -159,7 +160,7 @@ function settings() {
   for(const [id,label] of [['shake','Screen shake'],['reducedMotion','Reduced motion'],['touch','Always show touch controls']]) {
     const row=el('label','vr-setting'); const box=el('input'); box.type='checkbox';box.checked=save.settings[id];box.addEventListener('change',()=>{save.settings[id]=box.checked;applySettings();persist();});row.append(el('span','',label),box);modal.append(row);
   }
-  modal.append(el('p','vr-dialog-copy','Original synth music and arcade effects. Audio begins only after you interact. Your choices are saved on this device.')); dialogClose();
+  modal.append(el('p','vr-dialog-copy','Ambient score, recorded impacts and movement sounds. Audio begins only after you interact. Your choices are saved on this device.')); dialogClose();
 }
 function records() {
   openDialog('records','LEAVE A MARK.','PERSONAL RECORDS / THIS DEVICE');
@@ -222,9 +223,11 @@ function onKey(e) {
   if(e.code==='Escape'||e.code==='KeyP'){if(dialogKind && !['upgrade','result'].includes(dialogKind)){e.preventDefault();closeDialog();}else if(state?.status==='playing'&&!dialogKind){e.preventDefault();pauseGame();}}
 }
 window.addEventListener('keydown',onKey);
-function lostFocus() {input.clear();resetTouchVisuals();if(state?.status==='playing'&&!dialogKind)pauseGame();}
+function lostFocus() {input.clear();resetTouchVisuals();if(state?.status==='playing'&&!dialogKind)pauseGame();audio.setPaused(true);}
 window.addEventListener('blur',lostFocus);
-function visibility(){if(document.hidden)lostFocus();else if(!state&&titleDay!==dailySeed()){titleDay=dailySeed();updateBest();updateTeam();}}
+function audioFocus(){audio.setPaused(document.hidden || (paused && state?.status==='playing'));}
+window.addEventListener('focus',audioFocus);
+function visibility(){if(document.hidden)lostFocus();else{audioFocus();if(!state&&titleDay!==dailySeed()){titleDay=dailySeed();updateBest();updateTeam();}}}
 document.addEventListener('visibilitychange',visibility);
 const touchSets=[];
 for(const b of $$('[data-action]')) {
@@ -275,6 +278,6 @@ frameId=requestAnimationFrame(frame);
 function fullscreenState(){const label=document.fullscreenElement?'Exit fullscreen':'Enter fullscreen';$$('[data-do="fullscreen"]').forEach(n=>n.setAttribute('aria-label',label));renderer.resize();}
 document.addEventListener('fullscreenchange',fullscreenState);
 function onPageHide(e){if(e.persisted){lostFocus();return;}dispose();}
-function dispose(){if(destroyed)return;destroyed=true;cancelAnimationFrame(frameId);clearTimeout(toastTimer);input.destroy();renderer.destroy();audio.destroy();root.removeEventListener('click',onRootClick);window.removeEventListener('keydown',onKey);window.removeEventListener('blur',lostFocus);window.removeEventListener('pagehide',onPageHide);document.removeEventListener('visibilitychange',visibility);document.removeEventListener('fullscreenchange',fullscreenState);}
+function dispose(){if(destroyed)return;destroyed=true;cancelAnimationFrame(frameId);clearTimeout(toastTimer);input.destroy();renderer.destroy();audio.destroy();root.removeEventListener('click',onRootClick);window.removeEventListener('keydown',onKey);window.removeEventListener('blur',lostFocus);window.removeEventListener('focus',audioFocus);window.removeEventListener('pagehide',onPageHide);document.removeEventListener('visibilitychange',visibility);document.removeEventListener('fullscreenchange',fullscreenState);}
 window.addEventListener('pagehide',onPageHide);
 if(import.meta.hot)import.meta.hot.dispose(dispose);

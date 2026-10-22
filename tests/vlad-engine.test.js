@@ -215,3 +215,95 @@ test('a competent deterministic player can finish all three districts with comba
   assert.ok(s.stats.kills >= 40 && s.maxCombo > 3 && s.stats.specials > 0 && s.score > 5000);
   assert.ok(s.elapsed > 60 && s.elapsed < 300, `full campaign took ${s.elapsed}s`);
 });
+
+test('running accelerates promptly, brakes without skating, and advances animation with distance', () => {
+  const s = createGame(), p = s.players[0], start = p.x;
+  stepGame(s, [{ x: 1 }], FIXED_DT);
+  assert.ok(p.moveX > 0 && p.moveX < 265, 'first movement frame eases into the run');
+  run(s, .1, { x: 1 }); assert.equal(p.moveX, 265); assert.ok(p.runCycle > 0);
+  const movingX = p.x, cycle = p.runCycle;
+  run(s, .15, {});
+  assert.equal(p.moveX, 0); assert.equal(p.moveSpeed, 0); assert.equal(p.pose, 'idle');
+  assert.ok(p.x - movingX < 12, 'releasing movement stops within a short, readable distance');
+  const stoppedCycle = p.runCycle; run(s, .25, {}); assert.equal(p.runCycle, stoppedCycle);
+  assert.ok(p.x > start && stoppedCycle > cycle);
+});
+
+test('a strike has active frames, hits a late entrant once, and exposes synchronized animation phases', () => {
+  const { s, p, e } = target(); e.x = p.x + 230;
+  stepGame(s, [{ attack: true }], FIXED_DT);
+  assert.equal(p.attack.phase, 'windup'); assert.equal(p.attack.stage, 1);
+  run(s, .075); assert.equal(e.hp, 1000); assert.equal(p.attack.phase, 'active');
+  e.x = p.x + 75; stepGame(s, [{}], FIXED_DT);
+  assert.equal(e.hp, 984); assert.deepEqual(p.attack.hitIds, [e.id]); assert.equal(p.attack.connected, true);
+  assert.ok(p.actionPhase > 0 && p.actionPhase < 1);
+  for (let i = 0; i < 9; i++) { e.x = p.x + 75; e.vx = 0; stepGame(s, [{}], FIXED_DT); }
+  assert.equal(e.hp, 984, 'active frames cannot repeat damage on the same enemy');
+  assert.equal(p.attack.phase, 'recovery');
+});
+
+test('contact hitstop freezes simulation and animation while preserving a quick buffered next attack', () => {
+  const { s, p, e } = target(); run(s, .1, { attack: true });
+  assert.ok(s.hitStop > 0);
+  const age = p.attack.age, simTime = s.simulationTime, elapsed = s.elapsed, x = e.x;
+  stepGame(s, [{ heavy: true }], FIXED_DT);
+  assert.equal(p.attack.age, age); assert.equal(e.x, x); assert.equal(s.simulationTime, simTime);
+  assert.ok(s.elapsed > elapsed); assert.equal(p.pending.heavy, true);
+  run(s, .5, {});
+  assert.ok(s.events.some(event => event.type === 'attack' && event.attackKind === 'heavy'), 'short tap survives the contact pause');
+  assert.ok(s.events.some(event => event.type === 'hit' && event.strength === 'light' && event.comboStep === 1));
+});
+
+test('a light tap buffers through recovery and movement turns only the next combo attack', () => {
+  const s = createGame(), p = s.players[0];
+  stepGame(s, [{ attack: true, x: 1 }], FIXED_DT);
+  run(s, .13, { x: -1 }); assert.equal(p.face, 1, 'committed strike retains its facing');
+  stepGame(s, [{ attack: true, x: -1 }], FIXED_DT);
+  run(s, .16, { x: -1 });
+  assert.equal(p.attack.stage, 2); assert.equal(p.face, -1);
+  assert.deepEqual(s.events.filter(event => event.type === 'attack').map(event => event.text), ['combo1', 'combo2']);
+});
+
+test('dodge and jump cancel attack recovery without cancelling its anticipation or granting free damage', () => {
+  for (const action of ['dodge', 'jump']) {
+    const s = createGame(), p = s.players[0];
+    stepGame(s, [{ heavy: true }], FIXED_DT);
+    stepGame(s, [{ [action]: true }], FIXED_DT);
+    assert.equal(p.attack.kind, 'heavy'); assert.equal(p.dodgeTime, 0); assert.equal(p.z, 0);
+    run(s, .3, {}); assert.equal(p.attack.phase, 'recovery');
+    stepGame(s, [{ [action]: true }], FIXED_DT);
+    assert.equal(p.attack, null); assert.equal(p.cooldown, 0);
+    assert.ok(action === 'jump' ? p.z > 0 : p.dodgeTime > 0);
+  }
+});
+
+test('nearby lane assistance catches visual overlap without turning or snapping distant targets', () => {
+  const near = target(); near.e.y = near.p.y + 65;
+  run(near.s, .19, { attack: true }); assert.ok(near.e.hp < 1000);
+  assert.ok(near.p.y > 560 && near.p.y <= 578.01, 'lane assist is capped at 18 pixels');
+  const far = target(); far.e.y = far.p.y + 100; run(far.s, .2, { attack: true });
+  assert.equal(far.e.hp, 1000); assert.equal(far.p.y, 560);
+  const rear = target(); rear.e.x = rear.p.x - 85; run(rear.s, .2, { attack: true });
+  assert.equal(rear.e.hp, 1000); assert.equal(rear.p.face, 1);
+});
+
+test('ranged enemies do not kite forever when a hero approaches, and landing emits one timed impact', () => {
+  const { s, p, e } = target('ranger'); e.x = p.x + 115; e.speed = 112; e.cooldown = .3; e.baseCooldown = 2.4;
+  const enemyX = e.x; run(s, .15); assert.equal(e.x, enemyX, 'ranged enemy holds ground during its recovery');
+  const jump = createGame(); stepGame(jump, [{ jump: true }], FIXED_DT); run(jump, 1.1);
+  const landings = jump.events.filter(event => event.type === 'land');
+  assert.equal(landings.length, 1); assert.ok(landings[0].amount > 300); assert.equal(jump.players[0].z, 0);
+});
+
+test('a boss resumes its visible windup after a non-staggering light hit', () => {
+  const s = startBoss(0), e = s.boss, p = s.players[0];
+  s.enemies = [e]; Object.assign(e, { spawnTime: 0, cooldown: 0 });
+  p.x = e.x - 75; p.y = e.y; p.face = 1;
+  stepGame(s, [{}], FIXED_DT); assert.equal(e.telegraph, true);
+  run(s, .1, { attack: true }); assert.equal(e.pose, 'hurt'); assert.equal(e.telegraph, true);
+  run(s, .11, {});
+  assert.equal(e.hurtTime, 0); assert.equal(e.telegraph, true); assert.equal(e.pose, 'idle');
+  assert.ok(e.windup > 0 && e.windup < e.totalWindup);
+  const contact = s.events.find(event => event.type === 'hit');
+  assert.ok(Number.isFinite(contact.simulationTime) && contact.simulationTime <= contact.time + 1e-10);
+});

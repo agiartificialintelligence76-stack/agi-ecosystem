@@ -1,0 +1,32 @@
+VLAD RUNNER 2049 sound sources
+
+Kenney (CC0):
+https://kenney.nl/assets/impact-sounds
+https://kenney.nl/assets/rpg-audio
+License: https://creativecommons.org/publicdomain/zero/1.0/
+
+Only the following excerpts ship. Ogg originals were converted to mono 44.1kHz PCM WAV, trimmed and peak matched. Playback applies pitch, envelope, filtering and spatial variation.
+
+punch-1.wav ← Impact Sounds / impactPunch_medium_000.ogg (0.30s)
+heavy-1.wav ← Impact Sounds / impactPunch_heavy_000.ogg (0.52s)
+step-1.wav ← Impact Sounds / footstep_concrete_000.ogg (0.10s)
+punch-2.wav ← Impact Sounds / impactPunch_medium_001.ogg (0.28s)
+heavy-2.wav ← Impact Sounds / impactPunch_heavy_001.ogg (0.44s)
+step-2.wav ← Impact Sounds / footstep_concrete_001.ogg (0.10s)
+punch-3.wav ← Impact Sounds / impactPunch_medium_002.ogg (0.37s)
+heavy-3.wav ← Impact Sounds / impactPunch_heavy_002.ogg (0.38s)
+step-3.wav ← Impact Sounds / footstep_concrete_002.ogg (0.11s)
+shield-1.wav ← Impact Sounds / impactMetal_medium_000.ogg (0.27s)
+sand-1.wav ← Impact Sounds / footstep_grass_000.ogg (0.17s)
+cloth-1.wav ← RPG Audio / cloth1.ogg (0.61s)
+swing-1.wav ← RPG Audio / knifeSlice.ogg (0.39s)
+shield-2.wav ← Impact Sounds / impactMetal_medium_001.ogg (0.14s)
+sand-2.wav ← Impact Sounds / footstep_grass_001.ogg (0.16s)
+cloth-2.wav ← RPG Audio / cloth2.ogg (0.37s)
+swing-2.wav ← RPG Audio / knifeSlice2.ogg (0.46s)
+body.wav ← Impact Sounds / impactSoft_heavy_000.ogg (0.52s)
+land.wav ← Impact Sounds / impactSoft_medium_002.ogg (0.13s)
+click.wav ← RPG Audio / metalClick.ogg (0.39s)
+spark.wav ← Impact Sounds / impactGlass_light_001.ogg (0.18s)
+
+The ambient score is an original composition synthesized at runtime. No melodies or recordings from another game or film are used.

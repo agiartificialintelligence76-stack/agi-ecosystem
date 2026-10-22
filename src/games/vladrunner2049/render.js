@@ -1,3 +1,6 @@
+import { heroAnimation, enemyAnimation, animationSheet } from './animation.js';
+import { ANIMATION_META } from './animation-meta.js';
+
 // Original canvas staging for VLAD RUNNER 2049. Coordinates are world pixels; y is the feet's ground lane.
 // Heroes: four columns / two rows: idle, run A/B, punch, kick, jump, hurt, special.
 // Default hero art faces right; optional agiLeft faces left with readable shirt lettering.
@@ -32,7 +35,7 @@ export function createRenderer(canvas, assets = {}, options = {}) {
   const g = canvas.getContext('2d', { alpha: false });
   let settings = { reducedMotion: false, shake: true, ...options }, dead = false, time = 0, aspect = W/H;
   let pixelW = 0, pixelH = 0, scale = 1, offsetX = 0, offsetY = 0, shakeTime = 0, shakePower = 0;
-  let lastEvent = 0, lastElapsed = -1;
+  let lastEvent = 0, lastElapsed = -1, shakeClock = 0;
   const sprites = new WeakMap();
   function resize() {
     if (dead) return;
@@ -45,13 +48,15 @@ export function createRenderer(canvas, assets = {}, options = {}) {
   }
   const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
   observer?.observe(canvas); resize();
-  function spriteInfo(img, rows = 2) {
+  function spriteInfo(img, rows = 2, cols = 4, metadata = null) {
     if (!img || !(img.naturalWidth || img.width) || img.complete === false) return null;
-    if (sprites.get(img)?.rows === rows) return sprites.get(img);
+    rows = Math.max(1, Math.floor(finite(metadata?.rows, rows)));
+    cols = Math.max(1, Math.floor(finite(metadata?.cols, cols)));
+    if (sprites.get(img)?.rows === rows && sprites.get(img)?.cols === cols && sprites.get(img)?.metadata === metadata) return sprites.get(img);
     const width = img.naturalWidth || img.width, height = img.naturalHeight || img.height;
-    const count=4*rows,cw = width/4, ch = height/rows;
+    const count=cols*rows,cw = width/cols, ch = height/rows;
     const frames = Array.from({length:count},(_,i) => {
-      const col=i%4,row=Math.floor(i/4),x=Math.round(col*cw),y=Math.round(row*ch);
+      const col=i%cols,row=Math.floor(i/cols),x=Math.round(col*cw),y=Math.round(row*ch);
       return {x,y,w:Math.round((col+1)*cw)-x,h:Math.round((row+1)*ch)-y,left:x-col*cw,top:y-row*ch};
     });
     let top = ch*.08, baseline = ch*.94;
@@ -80,7 +85,7 @@ export function createRenderer(canvas, assets = {}, options = {}) {
           if(x>0)visit(n-1);if(x<width-1)visit(n+1);if(y>0)visit(n-width);if(y<height-1)visit(n+width);
         }
         if(tail<cw*ch*.05||maxY-minY<ch*.3)continue;
-        const col=clamp(Math.floor((minX+maxX)/2/cw),0,3),row=clamp(Math.floor((minY+maxY)/2/ch),0,rows-1),slot=row*4+col;
+        const col=clamp(Math.floor((minX+maxX)/2/cw),0,cols-1),row=clamp(Math.floor((minY+maxY)/2/ch),0,rows-1),slot=row*cols+col;
         if(regions[slot]&&regions[slot].pixels>tail)continue;
         regions[slot]={minX,minY,maxX,maxY,label,pixels:tail};
       }
@@ -93,11 +98,13 @@ export function createRenderer(canvas, assets = {}, options = {}) {
         while(head<tail){
           const n=queue[head++],owner=owners[n],x=n%width,y=Math.floor(n/width),region=regions[owner-1];
           region.minX=Math.min(region.minX,x);region.maxX=Math.max(region.maxX,x);region.minY=Math.min(region.minY,y);region.maxY=Math.max(region.maxY,y);
-          const visit=(k)=>{if(!owners[k]&&pixels[k*4+3]>0){owners[k]=owner;queue[tail++]=k;}};
+          // Extremely faint matte pixels can connect otherwise separate drawings.
+          // Keep antialiased edges, while excluding the almost-transparent sheet matte.
+          const visit=(k)=>{if(!owners[k]&&pixels[k*4+3]>8){owners[k]=owner;queue[tail++]=k;}};
           if(x>0)visit(n-1);if(x<width-1)visit(n+1);if(y>0)visit(n-width);if(y<height-1)visit(n+width);
         }
         const isolated=regions.map((region,i)=>{
-          const col=i%4,row=Math.floor(i/4),x=Math.max(0,region.minX-1),y=Math.max(0,region.minY-1);
+          const col=i%cols,row=Math.floor(i/cols),x=Math.max(0,region.minX-1),y=Math.max(0,region.minY-1);
           const w=Math.min(width,region.maxX+2)-x,h=Math.min(height,region.maxY+2)-y;
           const image=typeof OffscreenCanvas==='function'?new OffscreenCanvas(w,h):document.createElement('canvas');
           image.width=w;image.height=h;
@@ -115,10 +122,29 @@ export function createRenderer(canvas, assets = {}, options = {}) {
       if (baseline <= top) { top=ch*.08; baseline=ch*.94; }
     } catch { /* Cross-origin or unreadable canvas: retain the supplied aligned cells. */ }
     const rowMetrics=Array.from({length:rows},(_,row)=>{
-      const poses=frames.slice(row*4,row*4+4),rowTop=Math.min(...poses.map(f=>f.top)),rowBaseline=Math.max(...poses.map(f=>f.top+f.h));
+      const poses=frames.slice(row*cols,row*cols+cols),rowTop=Math.min(...poses.map(f=>f.top)),rowBaseline=Math.max(...poses.map(f=>f.top+f.h));
       return {top:rowTop,baseline:rowBaseline,span:Math.max(1,rowBaseline-rowTop)};
     });
-    const info={frames,cw,ch,rows,rowMetrics,baseline,scale:190/Math.max(1,baseline-top)}; sprites.set(img,info); return info;
+    // A prepared atlas can provide a single anatomical anchor for all its poses. Never
+    // scale a punch to its own bounds: an extended hand must not shrink the character.
+    const anchorX = finite(metadata?.anchorX, cw / 2), anchorY = finite(metadata?.baseline, baseline);
+    const visibleHeight = Math.max(1, finite(metadata?.sourceHeight, baseline - top));
+    const info={frames,cw,ch,rows,cols,rowMetrics,baseline:anchorY,anchorX,metadata,
+      scale:finite(metadata?.height,214)/visibleHeight}; sprites.set(img,info); return info;
+  }
+  async function prepareAssets(onProgress) {
+    const keys=[...Object.keys(ANIMATION_META),'enemies','bosses'].filter(key=>assets[key]);
+    let prepared=0;
+    for(const key of keys){
+      if(dead)break;
+      const metadata=assets.animationMeta?.[key]||ANIMATION_META[key]||null;
+      if(spriteInfo(assets[key],metadata?.rows||3,metadata?.cols||4,metadata))prepared++;
+      onProgress?.(prepared,keys.length);
+      // Decode and isolate actors during loading, yielding a paint between sheets.
+      // Starting the first combo must not trigger a million-pixel alpha scan.
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    return {prepared,total:keys.length};
   }
   function backdrop(stage, camera, clock) {
     const p=PALETTES[stage], bg=assets[['neon','orange','spire'][stage]];
@@ -185,44 +211,52 @@ export function createRenderer(canvas, assets = {}, options = {}) {
   function groundMark(e, camera, clock) {
     const x=e.x-camera,y=e.y, boss=e.boss;
     g.save(); g.globalAlpha=e.dead?.25:.5;
-    ellipse(g,x,y+4,boss?57:36,boss?15:10,'#030714');
+    const groundScale=clamp(1-finite(e.z)/380,.52,1);
+    ellipse(g,x,y+4,(boss?57:36)*groundScale,(boss?15:9)*groundScale,'#030714');
     if(e.telegraph) {
       const radius=boss?100:e.kind==='ranger'?48:66, pulse=.5+Math.sin(clock*16)*.2;
       g.globalAlpha=pulse; ellipse(g,finite(e.targetX,e.x)-camera,finite(e.targetY,e.y),radius,radius*.36,'#ff435e25','#ff6077',2);
       g.setLineDash([8,7]); ellipse(g,x,y,radius*.72,radius*.25,'#ff50601a','#ff93a2',2); g.setLineDash([]);
     }
-    if(e.kind==='vlad'||e.kind==='agi'){g.globalAlpha=.65;ellipse(g,x,y+5,31,8,'#00000000',e.kind==='vlad'?'#6febff':'#d08bff',2);}
+    if(e.index>0){g.globalAlpha=.42;ellipse(g,x,y+5,31,8,'#00000000','#d08bff',1.5);}
     g.restore();
-  }
-  function poseFrame(e) {
-    if(e.dead||e.hurtTime>0||e.pose==='hurt')return 6;
-    if(e.pose==='special')return 7;
-    if(e.pose==='kick')return 4;
-    if(e.pose==='punch')return 3;
-    if(e.z>8||e.pose==='jump')return 5;
-    return e.pose==='run' ? 1+(Math.floor(finite(e.animTime,time)*9)%2) : 0;
   }
   function hero(e, camera) {
-    let img=assets[e.kind],sheet=spriteInfo(img),face=e.face<0?-1:1;
-    const frame=poseFrame(e),leftSheet=e.kind==='agi'&&face<0?spriteInfo(assets.agiLeft):null;
-    if(leftSheet){img=assets.agiLeft;sheet=leftSheet;face=1;}
-    g.save();g.translate(e.x-camera,e.y-finite(e.z));g.scale(face,1);
-    if(e.dead){g.globalAlpha=.45;g.translate(0,-15);g.rotate(-1.25);}
-    else if(e.invuln>0&&!settings.reducedMotion)g.globalAlpha=.65+.35*Math.sin(time*42)**2;
+    const action=heroAnimation(e),selection=animationSheet(assets,e,action),img=assets[selection.key];
+    const sheet=spriteInfo(img,selection.rows,selection.cols,assets.animationMeta?.[selection.key]||ANIMATION_META[selection.key]);
+    const face=selection.mirror?-1:1,anatomicalFace=e.face<0?-1:1;
+    g.save();g.translate(e.x-camera,e.y-finite(e.z));
+    if(e.dead){
+      const fall=clamp(finite(e.deadTime)/.28,0,1);g.globalAlpha=.9*(1-clamp((finite(e.deadTime)-.4)/.5,0,.72));
+      g.translate(0,-58);g.rotate(-anatomicalFace*fall*1.48);g.translate(0,58);
+    } else if(e.invuln>0&&!settings.reducedMotion&&e.hurtTime<=0)g.globalAlpha=.78+.22*Math.sin(time*30)**2;
+    g.scale(face,1);
+    // Small grounded deformations join the drawn keys; locomotion itself uses eight
+    // distinct drawings. Feet remain fixed instead of the whole sprite bobbing.
+    const landing=clamp(finite(e.landingTime)/.12,0,1);
+    const recoil=action.recoil||0;
+    const lean=action.pose==='dodge'?13:action.pose==='hurt'?-7*recoil:finite(action.lean);
+    const orient=selection.mirror?1:anatomicalFace;
+    g.transform(1,0,-lean*orient/214,1,0,0);
+    if(!settings.reducedMotion){
+      const breath=action.pose==='idle'?Math.sin(time*2.2+finite(e.id))*.003:0;
+      g.scale(1+landing*.065+recoil*.025,1-landing*.06-recoil*.025+breath);
+    }
     if(sheet){
-      const f=sheet.frames[frame],s=sheet.scale;
-      const bounce=frame===0&&!settings.reducedMotion?Math.sin(time*3+finite(e.id))*1.6:0;
-      g.drawImage(f.image||img,f.image?0:f.x,f.image?0:f.y,f.w,f.h,(f.left-sheet.cw/2)*s,(f.top-sheet.baseline)*s+bounce,f.w*s,f.h*s);
+      const f=sheet.frames[clamp(selection.frame,0,sheet.frames.length-1)],s=sheet.scale;
+      const frameMeta=sheet.metadata?.frames?.[selection.frame];
+      const anchorX=finite(frameMeta?.anchorX,sheet.anchorX),baseline=finite(frameMeta?.baseline,sheet.baseline);
+      g.drawImage(f.image||img,f.image?0:f.x,f.image?0:f.y,f.w,f.h,(f.left-anchorX)*s,(f.top-baseline)*s,f.w*s,f.h*s);
     }else humanoid(e,true);
     g.restore();
-    if(e.hurtTime>0){g.save();g.globalCompositeOperation='screen';g.globalAlpha=.26;ellipse(g,e.x-camera,e.y-e.z-96,46,70,'#ff8da83b');g.restore();}
   }
   function duoPartner(state,camera) {
     if(!state||state.coop||state.players?.length!==1)return null;
     const player=state.players[0];if(player.dead)return null;
     let event=null;
     for(let i=(state.events?.length||0)-1;i>=0;i--)if(state.events[i].type==='duo'){event=state.events[i];break;}
-    const age=event?state.elapsed-event.time:-1;
+    const age=event?(Number.isFinite(state.simulationTime)&&Number.isFinite(event.simulationTime)
+      ?state.simulationTime-event.simulationTime:state.elapsed-event.time):-1;
     if(age<0||age>=.85)return null;
     const fade=clamp(age/.12,0,1)*clamp((.85-age)/.25,0,1),face=player.face<0?-1:1;
     let x=player.x-face*94;
@@ -295,62 +329,93 @@ export function createRenderer(canvas, assets = {}, options = {}) {
   }
   function enemy(e,camera) {
     const bossKinds=['warden','juggernaut','archon'],normalKinds=['grunt','shield','ranger'];
-    const boss=bossKinds.includes(e.kind),row=(boss?bossKinds:normalKinds).indexOf(e.kind),img=assets[boss?'bosses':'enemies'];
-    const sheet=row>=0?spriteInfo(img,3):null;
+    const boss=bossKinds.includes(e.kind),row=(boss?bossKinds:normalKinds).indexOf(e.kind);
+    const motion=e.kind==='grunt'&&assets.enforcerMotion;
+    const img=motion||assets[boss?'bosses':'enemies'];
+    const sheet=row>=0?spriteInfo(img,3,4,motion?(assets.animationMeta?.enforcerMotion||ANIMATION_META.enforcerMotion):null):null;
+    const action=enemyAnimation(e);
     g.save();g.translate(e.x-camera,e.y-finite(e.z));
-    if(e.dead){g.globalAlpha=.32;g.translate(0,-17);g.rotate((e.face<0?-1:1)*1.2);}
+    if(e.dead){
+      g.globalAlpha=.9*(1-clamp((finite(e.deadTime)-.25)/.55,0,1));
+      // The enforcer has drawn airborne/grounded knockdowns; rotating those again
+      // would turn a grounded landing into a floating sideways cutout.
+      if(!motion){const fall=clamp(finite(e.deadTime)/.26,0,1);g.translate(0,-65);g.rotate((e.face<0?-1:1)*fall*1.5);g.translate(0,65);}
+    }
     else if(e.spawnTime>0)g.globalAlpha=clamp(1-e.spawnTime/.45,.08,1);
     if(sheet){
       // Enemy artwork faces left; heroes face right. Mirror only for a right-facing enemy.
       g.scale(e.face<0?1:-1,1);
-      const hurt=e.dead||e.hurtTime>0||e.pose==='hurt';
-      const attacking=!e.telegraph&&(e.attackTime>0||e.chargeTime>0||['punch','kick','special'].includes(e.pose));
-      const walking=!e.telegraph&&!attacking&&e.pose==='run';
-      const col=hurt?3:attacking?2:walking?(Math.floor(finite(e.animTime)*8)%2?1:0):0;
-      const f=sheet.frames[row*4+col],metric=sheet.rowMetrics[row],size=(boss?240:e.kind==='shield'?205:195)/metric.span;
-      const bob=settings.reducedMotion?0:walking?Math.abs(Math.sin(finite(e.animTime)*11))*3:Math.sin(time*2.8+finite(e.id))*.9;
-      g.drawImage(f.image||img,f.image?0:f.x,f.image?0:f.y,f.w,f.h,(f.left-sheet.cw/2)*size,(f.top-metric.baseline)*size-bob,f.w*size,f.h*size);
+      const index=motion?action.frame:row*4+action.column,f=sheet.frames[index],metric=sheet.rowMetrics[row];
+      const size=motion?sheet.scale:(boss?260:e.kind==='shield'?220:210)/metric.span;
+      const frameMeta=sheet.metadata?.frames?.[index];
+      const anchorX=motion?finite(frameMeta?.anchorX,sheet.anchorX):sheet.cw/2,baseline=motion?finite(frameMeta?.baseline,sheet.baseline):metric.baseline;
+      const recoil=action.recoil||0,landing=clamp(finite(e.landingTime)/.12,0,1);
+      g.transform(1,0,(finite(action.lean)+recoil*-8)/(boss?260:214),1,0,0);
+      if(!settings.reducedMotion)g.scale(1+recoil*.055+landing*.05,1-recoil*.045-landing*.05);
+      g.drawImage(f.image||img,f.image?0:f.x,f.image?0:f.y,f.w,f.h,(f.left-anchorX)*size,(f.top-baseline)*size,f.w*size,f.h*size);
     }else{g.scale(e.face<0?-1:1,1);humanoid(e);}
     g.restore();
   }
   function trails(e,camera) {
-    if(!['punch','kick','special'].includes(e.pose)||e.dead)return;
+    if(e.dead)return;
+    const player=e.kind==='agi'||e.kind==='vlad',action=player?heroAnimation(e):enemyAnimation(e);
+    const special=e.pose==='special',a=e.attack;
+    const specialAge=finite(a?.age,finite(e.animTime));
+    const strength=special?clamp(1-Math.abs(specialAge-.16)/.17,0,1):finite(action.trail);
+    if(strength<=0)return;
     const face=e.face<0?-1:1,x=e.x-camera,y=e.y-finite(e.z)-95, color=e.kind==='agi'?'#e0a2ff':e.kind==='vlad'?'#92f4ff':'#ff839f';
     g.save();g.translate(x,y);g.scale(face,1);g.globalCompositeOperation='screen';
-    if(e.pose==='special') {g.globalAlpha=.28;ellipse(g,0,-6,92,75,color);g.globalAlpha=.8;g.strokeStyle=color;g.lineWidth=5;g.beginPath();g.arc(0,-6,77,time*8,time*8+4.5);g.stroke();}
-    else{g.globalAlpha=.75;g.strokeStyle=color;g.lineWidth=7;g.lineCap='round';g.beginPath();g.arc(18,e.pose==='kick'?22:-11,70,-.8,.65);g.stroke();g.globalAlpha=.3;g.lineWidth=17;g.stroke();}
+    if(special) {
+      g.globalAlpha=strength*.14;ellipse(g,5,-8,100,62,color);
+      g.globalAlpha=strength*.75;g.strokeStyle=color;g.lineWidth=3;g.beginPath();g.arc(0,-6,77,-.7+specialAge*11,2.2+specialAge*11);g.stroke();
+    }else{
+      const heavy=action.stage===3||e.attackKind==='charge';
+      g.globalAlpha=strength*(settings.reducedMotion?.2:.7);
+      shape(g,heavy?[[16,26],[77,-42],[118,-37],[63,22]]:[[30,-10],[100,-23],[127,-15],[65,-4]],'#fff2d5',null);
+      g.globalAlpha=strength*.42;g.strokeStyle=color;g.lineWidth=heavy?6:3;g.lineCap='round';g.beginPath();
+      g.moveTo(9,heavy?36:-5);g.quadraticCurveTo(62,heavy?-35:-21,118,heavy?-38:-14);g.stroke();
+    }
     g.restore();
   }
   function particle(e,camera) {
-    const ratio=clamp(finite(e.life)/Math.max(.01,finite(e.maxLife,.5)),0,1), progress=1-ratio, x=e.x-camera, y=e.y-finite(e.z), color=e.color||'#ffe993';
+    const ratio=clamp(finite(e.life)/Math.max(.01,finite(e.maxLife,.5)),0,1), progress=1-ratio, x=e.x-camera;
+    const y=e.y-finite(e.z)-(['hit','slash'].includes(e.kind)?60:0),color=e.color||'#ffe993';
     g.save();g.translate(x,y);g.globalAlpha=ratio;
     if(e.kind==='ring'||e.kind==='burst'||e.kind==='spawn'){g.globalCompositeOperation='screen';ellipse(g,0,0,20+progress*130,(20+progress*130)*.45,'#00000000',color,Math.max(1,ratio*9));}
     else if(e.kind==='heal'){text(g,'+',0,-progress*42,32,'#9cffbf');}
+    else if(e.kind==='dust'){
+      g.globalAlpha=ratio*.35;g.strokeStyle='#c8e1e9';g.lineWidth=1.5;
+      for(const direction of [-1,1]){g.beginPath();g.moveTo(direction*(8+progress*12),0);g.quadraticCurveTo(direction*(20+progress*20),-8*ratio,direction*(30+progress*27),-2);g.stroke();}
+    }
     else if(e.kind==='dodge'){for(let i=0;i<4;i++){g.strokeStyle='#8af3ff';g.lineWidth=3;g.beginPath();g.moveTo(-20-i*17,0+i*6);g.lineTo(-65-i*17,0+i*6);g.stroke();}}
     else {
-      const rays=e.kind==='slash'?5:9;
-      for(let i=0;i<rays;i++){const a=i*TAU/rays+noise(finite(e.id)+i)*.6,r=8+progress*65;g.strokeStyle=i%2?'#fff5cf':color;g.lineWidth=2+ratio*4;g.beginPath();g.moveTo(Math.cos(a)*r*.5,Math.sin(a)*r*.5);g.lineTo(Math.cos(a)*r,Math.sin(a)*r);g.stroke();}
-      if(progress<.45)shape(g,[[-13,-20],[-3,-6],[16,-12],[8,2],[20,13],[3,10],[-5,24],[-9,7],[-23,4],[-11,-4]],'#ffefb8',null);
+      const heavy=e.strength==='heavy',rays=e.kind==='slash'?4:heavy?8:5,reach=heavy?70:43;
+      for(let i=0;i<rays;i++){const a=i*TAU/rays+noise(finite(e.id)+i)*.6,r=8+progress*reach;g.strokeStyle=i%2?'#fff5cf':color;g.lineWidth=(heavy?2:1)+ratio*3;g.beginPath();g.moveTo(Math.cos(a)*r*.6,Math.sin(a)*r*.6);g.lineTo(Math.cos(a)*r,Math.sin(a)*r);g.stroke();}
+      if(progress<.23){g.scale(heavy?1.35:1,heavy?1.35:1);shape(g,[[-16,-23],[-3,-8],[18,-15],[10,1],[24,13],[5,10],[-6,25],[-9,8],[-25,4],[-12,-4]],'#fff8d9','#1c1435',2);}
     }
     g.restore();
   }
   function pickup(e,camera) {const bob=settings.reducedMotion?0:Math.sin(time*4+finite(e.id))*5,color=e.kind==='health'?'#8effb2':e.kind==='energy'?'#8cddff':'#ffd98b';g.save();g.translate(e.x-camera,e.y-finite(e.z)-18+bob);g.rotate(Math.sin(time*2)*.08);g.shadowColor=color;g.shadowBlur=15;shape(g,[[-14,-14],[14,-14],[17,12],[-17,12]],'#17263f',color,3);g.shadowBlur=0;text(g,e.kind==='health'?'+':e.kind==='energy'?'ϟ':'◆',0,0,23,color);g.restore();}
   function bars(e,camera) {
     if(e.dead||e.hp>=e.maxHp||e.boss)return;
-    const x=e.x-camera,w=46,y=e.y-finite(e.z)-(e.kind==='vlad'||e.kind==='agi'?211:220);
+    const x=e.x-camera,w=46,y=e.y-finite(e.z)-(e.kind==='vlad'||e.kind==='agi'?235:237);
     g.fillStyle='#07101f';g.fillRect(x-w/2-2,y-2,w+4,7);g.fillStyle=e.kind==='vlad'?'#76edff':e.kind==='agi'?'#c99aff':'#ff708f';g.fillRect(x-w/2,y,w*clamp(e.hp/e.maxHp,0,1),3);
   }
   function readEvents(state) {
     if(!state)return;
     if(state.elapsed<lastElapsed){lastEvent=0;shakeTime=0;}lastElapsed=state.elapsed;
-    for(const ev of state.events||[])if(ev.id>lastEvent){lastEvent=ev.id;if(['hit','special','duo','boss'].includes(ev.type)){shakeTime=ev.type==='duo'?.25:.12;shakePower=ev.type==='duo'?10:ev.type==='special'?7:3;}}
+    for(const ev of state.events||[])if(ev.id>lastEvent){lastEvent=ev.id;if(['hit','special','duo','boss'].includes(ev.type)){
+      const heavy=ev.strength==='heavy';shakeTime=ev.type==='duo'?.22:ev.type==='special'?.16:heavy?.13:.075;
+      shakePower=ev.type==='duo'?7:ev.type==='special'?5:heavy?3.5:1.5;shakeClock=0;
+    }}
   }
   function draw(state=null,dt=1/60) {
     if(dead||!g)return;
-    const delta=clamp(finite(dt,1/60),0,.08);time+=delta;readEvents(state);shakeTime=Math.max(0,shakeTime-delta);
+    const delta=clamp(finite(dt,1/60),0,.08);time=state?finite(state.simulationTime,state.elapsed):time+delta;
+    readEvents(state);shakeTime=Math.max(0,shakeTime-delta);shakeClock+=delta;
     g.setTransform(1,0,0,1,0,0);g.fillStyle='#050914';g.fillRect(0,0,canvas.width,canvas.height);
     g.setTransform(scale,0,0,scale,offsetX,offsetY);g.save();g.beginPath();g.rect(0,0,W,H);g.clip();
-    if(settings.shake&&!settings.reducedMotion&&shakeTime>0)g.translate(Math.sin(time*109)*shakePower*shakeTime*5,Math.cos(time*137)*shakePower*shakeTime*3);
+    if(settings.shake&&!settings.reducedMotion&&shakeTime>0){const decay=clamp(shakeTime/.12,0,1);g.translate(Math.sin(shakeClock*125)*shakePower*decay,Math.cos(shakeClock*94)*shakePower*decay*.42);}
     const stage=clamp(Math.floor(finite(state?.stage)),0,2),camera=finite(state?.cameraX),clock=settings.reducedMotion?0:time;
     backdrop(stage,camera,clock);
     const actors=[...(state?.enemies||[]),...(state?.players||[])].filter(e=>finite(e.x)-camera>-220&&finite(e.x)-camera<W+220);
@@ -368,7 +433,7 @@ export function createRenderer(canvas, assets = {}, options = {}) {
     const shade=g.createLinearGradient(0,0,0,H);shade.addColorStop(0,'#05091770');shade.addColorStop(.17,'#05091700');shade.addColorStop(.84,'#05091700');shade.addColorStop(1,'#05091760');g.fillStyle=shade;g.fillRect(0,0,W,H);
     g.restore();
   }
-  return {draw,resize,setOptions(next={}){settings={...settings,...next};},destroy(){dead=true;observer?.disconnect();},
+  return {draw,resize,prepareAssets,setOptions(next={}){settings={...settings,...next};},destroy(){dead=true;observer?.disconnect();},
     // Useful for consistent mouse/touch interactions if the shell ever needs world-space targeting.
     toLogical(clientX,clientY){const r=canvas.getBoundingClientRect(),sx=canvas.width/Math.max(1,r.width),sy=canvas.height/Math.max(1,r.height);return{x:((clientX-r.left)*sx-offsetX)/scale,y:((clientY-r.top)*sy-offsetY)/scale};}};
 }
