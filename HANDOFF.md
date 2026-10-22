@@ -59,6 +59,18 @@ The earlier checklist below is retained as historical context; items 1 and 2 hav
 6. **After the deploy:** agi1.app/games/trenchingsimulator on a phone and a computer (GNGM's chart, a race, a ranked
    daily market), agi1.app/games's Leaderboards; Vercel → Deployments says Ready.
 
+### 0.2 Phomo and replay release (2026-10-22)
+
+The owner subsequently requested a terminal closely matching Fomo's web layout and workflows, with the established
+Phomo parody branding, plus run replay. The playable Phomo terminal, local social controls, view-only perps and
+recorded replay are implemented and browser-checked locally. The final full build passed **1,081 tests,
+0 failed, 6 skipped**, including the final follow-ups. The owner explicitly requested **"publish it"**;
+publication of this increment is authorized and underway. No database changes are required.
+Local preview runs on port **4173**, using the local relay on **8790**.
+See [the Phomo and replay handoff](handoff/phomo-2026-10-22.md) for implemented features, data limits, test evidence,
+reference pages and the requirement to deploy the new perps relay module, route and Docker packaging together.
+The earlier production release described above remains historical release evidence.
+
 ---
 
 ## 1. The owner and how to work with them

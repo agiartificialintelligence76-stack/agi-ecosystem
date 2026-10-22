@@ -2109,8 +2109,9 @@ test("the game's Live files: no HTML from strings, no link anywhere (never a way
   const dir = 'src/games/trenchingsimulator/';
   // (GNGM's files since 2026-10-22: its board, its coin page, its chart, its PnL card, its numbers)
   const GNGM = ['boards/gngm.js', 'boards/gngm-coin.js', 'boards/gchart.js', 'boards/gngm-card.js', 'boards/gngm-data.js'];
+  const PHOMO = ['boards/phomo.js', 'boards/phomo-coin.js', 'boards/phomo-data.js', 'boards/phomo-state.js', 'boards/phomo-perps.js'];
   // (race rooms' client since 2026-10-22: race.js)
-  const files = ['live-chains.js', 'live-feed.js', 'live-market.js', 'shell.js', 'race.js', 'boards/board.js', 'boards/common.js', ...GNGM]
+  const files = ['live-chains.js', 'live-feed.js', 'live-market.js', 'shell.js', 'race.js', 'boards/board.js', 'boards/common.js', ...GNGM, ...PHOMO]
     .map((f) => [f, readFileSync(dir + f, 'utf8')]);
   for (const [f, src] of files) {
     assert.doesNotMatch(src, /innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|new Function/, f);

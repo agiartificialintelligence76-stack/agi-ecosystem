@@ -39,14 +39,15 @@ export function runCardWords(res, { name = null } = {}) {
 }
 
 // one coin's trade (a position, as positions() gives it): a made-up coin by its ticker, a real one never by name
-export function positionCardWords(pos, { live = false, currency = 'sol', solUsd = 150, name = null } = {}) {
+export function positionCardWords(pos, { live = false, currency = 'sol', solUsd = 150, name = null, terminal = 'scan' } = {}) {
   const p = pnlOf(pos);
   const c = currencyOf(currency);
   const px = fin(solUsd) && solUsd > 0 ? solUsd : 150;
   const ticker = pos && typeof pos.ticker === 'string' ? pos.ticker : '?';
   const open = Boolean(pos && pos.tokens > 0);
   return {
-    kicker: `${GAME_NAME} · GNGM`,
+    brand: terminal === 'social' ? 'social' : 'scan',
+    kicker: `${GAME_NAME} · ${terminal === 'social' ? 'Phomo' : 'GNGM'}`,
     title: live ? 'a live coin' : `$${ticker}`,
     big: p ? pct(p.pct) : '—',
     small: open ? 'still holding' : 'sold',
@@ -77,14 +78,18 @@ export function drawPnlCard(g, w, col) {
   g.lineWidth = 2;
   g.strokeRect(32, 32, W - 64, H - 64);
   // the mark (a 12 × 12 pixel toad, 6 px a pixel) and the wordmark
-  const b = BRANDS.scan;
+  const b = w.brand === 'social' ? BRANDS.social : BRANDS.scan;
   if (typeof Path2D === 'function' && typeof g.fill === 'function') {
     g.save();
     g.translate(72, 64);
-    g.scale(6, 6);
+    g.scale(w.brand === 'social' ? 2.25 : 6, w.brand === 'social' ? 2.25 : 6);
     for (const [, attrs] of b.shapes) {
-      g.fillStyle = attrs.fill;
-      g.fill(new Path2D(attrs.d));
+      const path = new Path2D(attrs.d);
+      if (attrs.fill && attrs.fill !== 'none') { g.fillStyle = attrs.fill; g.fill(path); }
+      if (attrs.stroke && typeof g.stroke === 'function') {
+        g.strokeStyle = attrs.stroke; g.lineWidth = attrs['stroke-width'] || 1;
+        g.lineCap = attrs['stroke-linecap'] || 'butt'; g.lineJoin = attrs['stroke-linejoin'] || 'miter'; g.stroke(path);
+      }
     }
     g.restore();
   }

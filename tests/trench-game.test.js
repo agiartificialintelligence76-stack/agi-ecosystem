@@ -2591,18 +2591,24 @@ test('the leaderboards on agi1.app/games: each game\'s boards to pick, its top r
   }
 });
 
-test('GNGM is ready: picked like Pomp.fun, its board its own file loaded when it\'s played, the same doors as Pomp.fun\'s', () => {
+test('GNGM and Phomo are ready: each board loads when played, with the same doors as Pomp.fun', () => {
   assert.equal(terminalById('scan').ready, true);
-  assert.deepEqual(TERMINALS.filter((t) => t.ready).map((t) => t.id), ['scan', 'board']);
+  assert.equal(terminalById('social').ready, true);
+  assert.deepEqual(TERMINALS.filter((t) => t.ready).map((t) => t.id), ['scan', 'board', 'social']);
   const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
   assert.match(shell, /t\.id === 'scan' \? import\('\.\/boards\/gngm\.js'\)\.then\(\(m\) => m\.mountGngm, \(\) => null\) : Promise\.resolve\(mountBoard\)/);
+  assert.match(shell, /t\.id === 'social' \? import\('\.\/boards\/phomo\.js'\)\.then\(\(m\) => m\.mountPhomo, \(\) => null\)/);
   assert.doesNotMatch(shell, /^import .*gngm/m, 'never in the page until it\'s played');
+  assert.doesNotMatch(shell, /^import .*phomo/m, 'Phomo loads only when played');
   assert.match(shell, /P\.board = mount\(boardHost, \{/);
   // its own words in its header, and the doors the shell calls
   const g = readFileSync('src/games/trenchingsimulator/boards/gngm.js', 'utf8');
   assert.match(g, /markEl\('scan', 'tsg-logo'\), wordEl\('scan', 'tsg-brand-t'\)/);
   assert.match(g, /^export function mountGngm\(host, ctx\)/m);
   for (const door of ['el: root', 'update(now)', 'sub: () =>', 'closeSub: () =>', 'openCoin,', 'destroy()']) assert.ok(g.includes(door), door);
+  const phomo = readFileSync('src/games/trenchingsimulator/boards/phomo.js', 'utf8');
+  assert.match(phomo, /^export function mountPhomo\(host, ctx\)/m);
+  for (const door of ['el: root', 'update(now)', 'sub: () =>', 'closeSub: () =>', 'openCoin,', 'destroy()']) assert.ok(phomo.includes(door), `Phomo: ${door}`);
   // its colors: every one GNGM's own, every word readable on its page and panels
   const c = terminalById('scan').colors;
   for (const on of ['bg', 'panel', 'panel2']) {

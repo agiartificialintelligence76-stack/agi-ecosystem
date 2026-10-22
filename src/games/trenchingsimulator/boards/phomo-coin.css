@@ -1,0 +1,191 @@
+.tspc-coin {
+  --pc-bg: var(--t-bg, #121010);
+  --pc-panel: var(--t-panel, #1c1715);
+  --pc-line: var(--t-line, #392d29);
+  --pc-text: var(--t-text, #fff3ed);
+  --pc-muted: var(--t-muted, #b9a59a);
+  --pc-accent: var(--t-accent, #ff7a59);
+  --pc-up: var(--t-up, #64dda6);
+  --pc-down: var(--t-down, #ff8d9b);
+  color: var(--pc-text);
+  background: var(--pc-bg);
+  min-width: 0;
+  font-size: 13px;
+}
+.tspc-coin *, .tspc-settings * { box-sizing: border-box; }
+.tspc-coin [hidden], .tspc-settings [hidden] { display: none !important; }
+.tspc-coin button, .tspc-coin input, .tspc-coin textarea, .tspc-settings button,
+.tspc-settings input, .tspc-settings select { font: inherit; }
+.tspc-coin button, .tspc-settings button { cursor: pointer; }
+.tspc-coin button:disabled { cursor: not-allowed; opacity: .5; }
+.tspc-coin :focus-visible, .tspc-settings :focus-visible { outline: 2px solid var(--t-accent, #ff7a59); outline-offset: 3px; }
+.tspc-coin .is-up { color: var(--pc-up); }
+.tspc-coin .is-down { color: var(--pc-down); }
+.tspc-muted { color: var(--pc-muted, var(--t-muted, #b9a59a)); font-size: 11px; }
+.tspc-button, .tspc-back, .tspc-contract, .tspc-settings-button, .tspc-settings button {
+  display: inline-flex; justify-content: center; align-items: center; gap: 5px;
+  min-height: 30px; padding: 5px 9px; color: inherit; border: 1px solid var(--pc-line, var(--t-line, #392d29));
+  border-radius: 7px; background: transparent; white-space: nowrap;
+}
+.tspc-button:hover, .tspc-back:hover, .tspc-contract:hover, .tspc-settings-button:hover { background: var(--pc-panel); }
+.tspc-button[aria-pressed="true"] { color: var(--pc-accent); background: color-mix(in srgb, var(--pc-accent) 11%, transparent); }
+.tspc-header { padding: 16px 18px 0; border-bottom: 1px solid var(--pc-line); }
+.tspc-heading, .tspc-title, .tspc-meta, .tspc-actions, .tspc-trade-top { display: flex; align-items: center; }
+.tspc-heading { gap: 11px; }
+.tspc-back { padding: 5px; border: 0; color: var(--pc-muted); font-size: 11px; }
+.tspc-back .ts-icon { width: 16px; height: 16px; }
+.tspc-picture { display: block; width: 44px; height: 44px; flex: 0 0 44px; }
+.tspc-pic { display: grid; place-items: center; position: relative; overflow: hidden; width: 100%; height: 100%; border-radius: 50%;
+  background: hsl(var(--h, 18) 35% 22%); font-size: 28px; }
+.tspc-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.tspc-identity { min-width: 0; }
+.tspc-title { gap: 10px; flex-wrap: wrap; }
+.tspc-ticker { margin: 0; font-size: 21px; letter-spacing: -.6px; }
+.tspc-name { color: var(--pc-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; max-width: 240px; white-space: nowrap; }
+.tspc-meta { gap: 9px; margin-top: 4px; color: var(--pc-muted); font-size: 10px; flex-wrap: wrap; }
+.tspc-contract { border: 0; min-height: 20px; padding: 0; font-family: ui-monospace, monospace; }
+.tspc-kind { color: var(--pc-accent); }
+.tspc-actions { gap: 6px; margin-left: auto; }
+.tspc-stat-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; margin: 19px 0 14px; }
+.tspc-stat-grid dt, .tspc-changes dt { color: var(--pc-muted); font-size: 10px; margin-bottom: 6px; }
+.tspc-stat-grid dd, .tspc-changes dd { margin: 0; font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 650; }
+.tspc-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(235px, 29%); align-items: start; }
+.tspc-main { min-width: 0; border-right: 1px solid var(--pc-line); }
+.tspc-sidebar { min-width: 0; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.tspc-chart-card { min-width: 0; }
+.tspc-chart-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding: 10px 12px; border-bottom: 1px solid var(--pc-line); }
+.tspc-chart-tools .tspc-button { font-size: 10px; min-height: 27px; padding: 4px 6px; border-color: transparent; }
+.tspc-segments { display: flex; gap: 1px; }
+.tspc-segments + .tspc-segments { border-left: 1px solid var(--pc-line); padding-left: 7px; }
+.tspc-legend { min-height: 30px; margin: 0; padding: 8px 13px 0; font: 10px/1.5 ui-monospace, monospace; color: var(--pc-muted); }
+.tspc-plot { width: 100%; height: 400px; position: relative; }
+.tspc-plot .tsg-chart-wait { position: absolute; inset: 40% 20px auto; text-align: center; color: var(--pc-muted); }
+.tspc-chart-card .tsg-credit { margin: 0; padding: 5px 12px; font-size: 9px; color: var(--pc-muted); }
+.tspc-chart-card .tsg-credit-a { color: inherit; text-decoration: underline; }
+.tspc-indicators { position: relative; }
+.tspc-indicators summary { cursor: pointer; font-size: 10px; color: var(--pc-muted); padding: 6px; }
+.tspc-indicator-menu { position: absolute; z-index: 10; top: 29px; right: 0; width: 135px; display: grid; gap: 5px;
+  padding: 9px; background: var(--pc-panel); border: 1px solid var(--pc-line); border-radius: 9px; box-shadow: 0 10px 28px #0006; }
+.tspc-overlays { display: flex; flex-wrap: wrap; align-items: center; gap: 13px; padding: 11px 14px; border-top: 1px solid var(--pc-line); }
+.tspc-check { display: flex; align-items: center; gap: 5px; font-size: 10px; cursor: pointer; }
+.tspc-check input { accent-color: var(--pc-accent); width: 13px; height: 13px; margin: 0; }
+.tspc-min-label { display: flex; align-items: center; gap: 5px; color: var(--pc-muted); font-size: 10px; }
+.tspc-minimum { width: 54px; border: 1px solid var(--pc-line); background: var(--pc-panel); color: inherit; border-radius: 5px; padding: 4px; }
+.tspc-chart-note { margin: 0; padding: 0 14px 12px; line-height: 1.55; }
+.tspc-chart-theses { display: flex; gap: 7px; padding: 0 14px 10px; }
+.tspc-chart-thesis { min-width: 0; flex: 1; padding: 6px 9px; border: 1px solid var(--pc-line); border-radius: 6px; color: var(--pc-muted);
+  background: var(--pc-panel); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 10px; }
+.tspc-details { border-top: 1px solid var(--pc-line); }
+.tspc-tabs { display: flex; gap: 22px; padding: 0 15px; border-bottom: 1px solid var(--pc-line); }
+.tspc-tab { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--pc-muted); padding: 14px 2px; font-weight: 650; }
+.tspc-tab[aria-pressed="true"] { color: var(--pc-text); border-bottom-color: var(--pc-accent); }
+.tspc-rows-note { padding: 0 15px; line-height: 1.5; }
+.tspc-table-wrap { overflow-x: auto; }
+.tspc-table { width: 100%; border-collapse: collapse; min-width: 530px; font-size: 11px; text-align: left; }
+.tspc-table th { padding: 9px 12px; color: var(--pc-muted); background: var(--pc-panel); font-size: 10px; font-weight: 500; }
+.tspc-table td { padding: 12px; border-bottom: 1px solid var(--pc-line); font-variant-numeric: tabular-nums; }
+.tspc-table th:not(:first-child), .tspc-table td:not(:first-child) { text-align: right; }
+.tspc-trader { display: flex; flex-direction: column; align-items: start; gap: 4px; }
+.tspc-trader-link { padding: 0; border: 0; background: transparent; color: var(--pc-text); text-align: left; }
+.tspc-trader-link:hover { color: var(--pc-accent); }
+.tspc-trader small { font-size: 9px; white-space: nowrap; }
+.tspc-token-count { display: block; margin-top: 4px; font-size: 9px; white-space: nowrap; }
+.tspc-thesis-cell { max-width: 160px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tspc-empty { padding: 28px 15px !important; color: var(--pc-muted); text-align: center !important; line-height: 1.6; }
+.tspc-thesis-pane { padding: 15px; }
+.tspc-note-input { width: 100%; resize: vertical; min-height: 80px; padding: 12px; border: 1px solid var(--pc-line);
+  border-radius: 9px; background: var(--pc-panel); color: var(--pc-text); }
+.tspc-note-actions { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 8px; }
+.tspc-thesis { padding: 15px 0; border-bottom: 1px solid var(--pc-line); }
+.tspc-thesis p { line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: 0; }
+.tspc-order-card, .tspc-about, .tspc-position-card { border: 1px solid var(--pc-line); border-radius: 12px; background: var(--pc-panel); padding: 15px; }
+.tspc-trade-top { gap: 10px; justify-content: space-between; margin-bottom: 18px; }
+.tspc-sides { display: flex; gap: 20px; }
+.tspc-side { padding: 3px 0 8px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--pc-muted); font-weight: 700; }
+.tspc-side[aria-pressed="true"] { color: var(--pc-text); border-color: var(--pc-accent); }
+.tspc-settings-button { border: 0; padding: 5px; color: var(--pc-muted); }
+.tspc-settings-button .ts-icon { width: 18px; height: 18px; }
+.tspc-amount-box { display: flex; align-items: center; gap: 8px; padding: 14px 12px; background: var(--pc-bg); border: 1px solid var(--pc-line); border-radius: 10px; }
+.tspc-amount { width: 100%; min-width: 0; background: transparent; border: 0; outline: none; color: var(--pc-text); font-size: 26px !important; font-weight: 650; }
+.tspc-amount-box span { font-size: 11px; color: var(--pc-muted); }
+.tspc-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 8px; }
+.tspc-presets .tspc-button { font-size: 10px; padding: 6px 2px; min-width: 0; }
+.tspc-balance { text-align: right; font-size: 10px; color: var(--pc-muted); line-height: 1.5; margin: 11px 0 16px; }
+.tspc-quote { font-size: 11px; line-height: 1.6; margin-bottom: 3px; }
+.tspc-fees { font-size: 9px; line-height: 1.7; margin: 0 0 14px; }
+.tspc-submit, .tspc-settings .tspc-submit { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px;
+  border: 0; border-radius: 10px; background: var(--t-accent, #ff7a59); color: #21110c; font-weight: 750; }
+.tspc-order-card[data-side="sell"] .tspc-submit { background: var(--pc-down); color: #210c13; }
+.tspc-status { color: var(--pc-accent); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; margin: 10px 0 0; }
+.tspc-status:empty, .tspc-pending:empty { display: none; }
+.tspc-practice { color: var(--pc-muted); font-size: 9px; text-align: center; margin: 14px 0 0; line-height: 1.5; }
+.tspc-about h3, .tspc-position-card h3 { margin: 0 0 16px; font-size: 13px; }
+.tspc-position-card > strong { display: block; font-size: 20px; margin-bottom: 17px; font-variant-numeric: tabular-nums; }
+.tspc-changes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding-bottom: 15px; border-bottom: 1px solid var(--pc-line); }
+.tspc-changes dd { font-size: 11px; }
+.tspc-about-rows { display: grid; gap: 13px; margin: 16px 0 0; }
+.tspc-about-rows > div, .tspc-contract-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.tspc-about-rows dt { font-size: 10px; color: var(--pc-muted); flex-shrink: 0; }
+.tspc-about-rows dd { margin: 0; text-align: right; font-size: 10px; font-variant-numeric: tabular-nums; }
+.tspc-contract-row { margin-top: 16px; }
+.tspc-address { background: transparent; border: 0; padding: 0; color: var(--pc-text); font: 10px ui-monospace, monospace !important; }
+.tspc-settings { width: min(440px, calc(100vw - 28px)); max-height: calc(100dvh - 40px); overflow: auto; padding: 22px;
+  border: 1px solid var(--t-line, #392d29); border-radius: 16px; color: var(--t-text, #fff3ed); background: var(--t-panel, #1c1715); }
+.tspc-settings::backdrop { background: #050404b8; backdrop-filter: blur(4px); }
+.tspc-settings-heading, .tspc-settings-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tspc-settings-heading { margin-bottom: 22px; }
+.tspc-settings-heading h2 { margin: 0; font-size: 20px; }
+.tspc-settings-label h3 { margin: 0; font-size: 12px; }
+.tspc-settings-section { margin: 0 0 23px; }
+.tspc-settings-inputs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin-top: 10px; }
+.tspc-settings input, .tspc-settings select { min-width: 0; width: 100%; background: var(--t-bg, #121010); border: 1px solid var(--t-line, #392d29);
+  color: inherit; padding: 9px; border-radius: 7px; }
+.tspc-settings select { width: auto; margin-left: 12px; }
+.tspc-custom-slip { display: flex; align-items: center; gap: 12px; margin-top: 12px; font-size: 12px; }
+.tspc-custom-slip input { width: 85px; }
+.tspc-settings-error { color: var(--t-down, #ff8d9b); font-size: 12px; line-height: 1.5; }
+@media (min-width: 1500px) { .tspc-plot { height: 460px; } }
+@media (max-width: 1100px) {
+  .tspc-stat-grid { gap: 9px; }
+  .tspc-layout { grid-template-columns: minmax(0, 1fr) 245px; }
+  .tspc-sidebar { padding: 10px; }
+  .tspc-order-card, .tspc-about, .tspc-position-card { padding: 12px; }
+  .tspc-name { max-width: 155px; }
+  .tspc-back { font-size: 0; }
+}
+@media (max-width: 760px) {
+  .tspc-header { padding: 14px 12px 0; }
+  .tspc-heading { flex-wrap: wrap; gap: 8px; }
+  .tspc-identity { flex: 1; }
+  .tspc-title { gap: 6px; }
+  .tspc-name { max-width: 170px; }
+  .tspc-actions { width: 100%; justify-content: flex-end; }
+  .tspc-actions .tspc-button { min-height: 28px; font-size: 10px; }
+  .tspc-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 15px; }
+  .tspc-stat-grid dd { font-size: 12px; }
+  .tspc-layout { display: flex; flex-direction: column; }
+  .tspc-main, .tspc-sidebar { display: contents; }
+  .tspc-chart-card { order: 0; width: 100%; }
+  .tspc-order-card { order: 1; margin: 12px; }
+  .tspc-position-card { order: 2; margin: 0 12px 12px; }
+  .tspc-details { order: 3; width: 100%; }
+  .tspc-about { order: 4; margin: 12px; }
+  .tspc-table-wrap { max-height: 380px; overflow: auto; }
+  .tspc-order-card form { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .tspc-amount-box, .tspc-presets, .tspc-balance { grid-column: 1; }
+  .tspc-quote { grid-column: 2; grid-row: 1; align-self: center; }
+  .tspc-fees { grid-column: 2; grid-row: 2; }
+  .tspc-submit { grid-column: 2; grid-row: 3; }
+  .tspc-status, .tspc-pending { grid-column: 1 / -1; }
+  .tspc-plot { height: 340px; }
+  .tspc-about:only-child { grid-column: 1 / -1; }
+  .tspc-note-actions { flex-wrap: wrap; }
+}
+@media (max-width: 420px) {
+  .tspc-sidebar { display: contents; }
+  .tspc-order-card form { display: block; }
+  .tspc-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tspc-plot { height: 300px; }
+  .tspc-overlays { gap: 10px; }
+  .tspc-settings { padding: 16px; }
+}

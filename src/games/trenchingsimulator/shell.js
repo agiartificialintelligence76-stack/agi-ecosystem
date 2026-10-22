@@ -22,6 +22,7 @@ import { markEl, wordEl } from './brands.js';
 import { CHALLENGES, TIERS, challengeById, FREE_STARTS, SPEEDS, goalText, timeText, startText, freeStartSol, dailyKey, dailySeed,
   dailyChallenge } from './challenges.js';
 import { createRun } from './run.js';
+import { captureRunReplay } from './replay-data.js';
 import { loadSave, writeSave, recordResult, starsTotal, SLIPPAGES, PRIORITIES } from './save.js';
 import { getSolPrice } from './solprice.js';
 import { createSound } from './sound.js';
@@ -45,7 +46,8 @@ import { createRace, raceUrl, roomOfHash, inviteLink, cleanCode, raceWords, stan
 const NS = 'http://www.w3.org/2000/svg';
 // a ready terminal's board, the same doors for each (boards/board.js's): Pomp.fun's is in the page; GNGM's (2026-10-22)
 // and its PnL card come as their own file the first time they're needed (null: it couldn't be fetched)
-const boardFor = (t) => (t.id === 'scan' ? import('./boards/gngm.js').then((m) => m.mountGngm, () => null) : Promise.resolve(mountBoard));
+const boardFor = (t) => (t.id === 'social' ? import('./boards/phomo.js').then((m) => m.mountPhomo, () => null)
+  : t.id === 'scan' ? import('./boards/gngm.js').then((m) => m.mountGngm, () => null) : Promise.resolve(mountBoard));
 const gngmCard = () => import('./boards/gngm-card.js');
 const CARD_W = 1200;
 const CARD_H = 630;
@@ -1067,7 +1069,7 @@ export function startShell(root) {
     const res = P.run.result();
     S.save = recordResult(S.save, res, { dailyKey: res.mode === 'daily' ? res.daily : null });
     save();
-    S.last = { res, setup: P.setup, line: P.endLine, t: P.t, rank: null };
+    S.last = { res, setup: P.setup, line: P.endLine, t: P.t, rank: null, replay: captureRunReplay(P.run) };
     // a race: how it ended, to the room (once); never ranked (`ranked`: { why: 'race' })
     if (P.setup.race && S.race) {
       S.race.finish({ worth: res.worth, multiple: res.multiple, clock: res.timeUsed, outcome: res.outcome, timeUsed: res.timeUsed });
@@ -1204,6 +1206,23 @@ export function startShell(root) {
   }
 
   // ---- results ----
+  function openReplay() {
+    const record = S.last?.replay;
+    if (!record) return;
+    const body = el('div', {}, el('p', { class: 'ts-sheet-note' }, 'Opening your recorded run…'));
+    let view = null;
+    const dialog = sheet('Replay your run', [body], { onClose: () => view?.destroy() });
+    if (!dialog) return;
+    dialog.classList.add('ts-replay-sheet');
+    paintTerminal(dialog,S.last.t);
+    import('./replay.js').then(({ mountReplay }) => {
+      if (!dialog.isConnected) return;
+      body.replaceChildren();
+      view = mountReplay(body,record);
+    }, () => {
+      if (dialog.isConnected) body.replaceChildren(el('p', { class: 'ts-sheet-note' }, 'Replay could not load. Close this window and try again.'));
+    });
+  }
   function resultsScreen() {
     const { res, setup, line, t } = S.last;
     const tone = resultTone(res);
@@ -1251,6 +1270,7 @@ export function startShell(root) {
       el('div', { class: 'ts-actions' },
         setup.race ? btn('Back to the room', { kind: 'primary', ic: 'users', on: () => go('race') })
           : btn('Play again', { kind: 'primary', ic: 'replay', on: again }),
+        S.last.replay ? btn('Replay this run', { ic: 'play', on: openReplay }) : null,
         el('a', { class: 'ts-btn', href: shareLink(text), target: '_blank', rel: 'noopener noreferrer' }, icon('share'), el('span', { text: 'Share on X' })),
         btn('Save card', { ic: 'download', on: (e) => saveCard(res, t, e.currentTarget) }),
         setup.race ? btn('Leave the room', { kind: 'ghost', on: () => go('home') })

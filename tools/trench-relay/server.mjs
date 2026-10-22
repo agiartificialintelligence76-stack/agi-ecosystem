@@ -25,6 +25,7 @@ import { createPumpSource } from './lib/sources/pump.mjs';
 import { createDex } from './lib/sources/dex.mjs';
 import { createClank } from './lib/sources/clank.mjs';
 import { trustedJson, trustedGet, safeGet } from './lib/net.mjs';
+import { createPerps, PERPS_LIMITS } from './perps.mjs';
 
 const SEC = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY' };
 
@@ -41,6 +42,7 @@ export async function startRelay(cfg, { log, problems = [], WS = WebSocket, shar
     // a stand-in sharp
   }
   const started = now();
+  const perps = createPerps({ fetchJson, now });
   let pump = null;
   let clank = null;
   const hub = createHub({ log, chains: cfg.chains, batchMs: T.batchMs, pingMs: T.pingMs, now,
@@ -118,6 +120,7 @@ export async function startRelay(cfg, { log, problems = [], WS = WebSocket, shar
       prices: px ? { ...px, ageS: Math.round((now() - hub.pxAt) / 1000) } : null,
       sent: { messages: st.sent, lagged: st.lagged, resnapshots: st.resnaps, droppedSlow: st.closedSlow, droppedSpam: st.closedSpam },
       rooms: rooms ? rooms.stats() : null,
+      perps: perps.stats(),
       problems,
     };
   }
@@ -171,6 +174,8 @@ export async function startRelay(cfg, { log, problems = [], WS = WebSocket, shar
   // race rooms' own door (1 KB a message) and their own count per address
   const rwss = new WebSocketServer({ noServer: true, maxPayload: ROOMS.maxMsgBytes, perMessageDeflate: false, clientTracking: false });
   const roomIp = new Map();
+  const pwss = new WebSocketServer({ noServer: true, maxPayload: 512, perMessageDeflate: false, clientTracking: false });
+  const perpIp = new Map();
   let busyNow = 0;
   server.on('upgrade', (req, socket, head) => {
     const no = (code, text) => {
@@ -188,6 +193,23 @@ export async function startRelay(cfg, { log, problems = [], WS = WebSocket, shar
       path = '/';
     }
     if (path === '/room') return roomDoor(req, socket, head, no);
+    if (path === '/perps') {
+      if (!cfg.origins.includes(String(req.headers.origin || ''))) return no(403, 'Forbidden');
+      const ip = ipOf(req);
+      if (perps.stats().clients >= PERPS_LIMITS.clients || (perpIp.get(ip) || 0) >= PERPS_LIMITS.perIp) return no(429, 'Too Many');
+      perpIp.set(ip, (perpIp.get(ip) || 0) + 1);
+      let counted = true;
+      const release = () => {
+        if (!counted) return;
+        counted = false;
+        const n = (perpIp.get(ip) || 1) - 1;
+        if (n > 0) perpIp.set(ip, n); else perpIp.delete(ip);
+      };
+      socket.on('close', release);
+      try { pwss.handleUpgrade(req, socket, head, (ws) => { ws.on('close', release); perps.attach(ws); }); }
+      catch { release(); socket.destroy(); }
+      return undefined;
+    }
     if (path !== '/ws') return no(404, 'Not Found');
     if (!cfg.origins.includes(String(req.headers.origin || ''))) return no(403, 'Forbidden');
     // full: let it in only to say so (1013, "try again later": a browser can't read an HTTP status here), then close
@@ -301,6 +323,7 @@ export async function startRelay(cfg, { log, problems = [], WS = WebSocket, shar
       pictures.close();
       hub.close();
       if (rooms) rooms.close();
+      perps.close();
       await new Promise((r) => server.close(() => r()));
       server.closeAllConnections?.();
     },
