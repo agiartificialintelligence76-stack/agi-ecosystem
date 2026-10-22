@@ -28,6 +28,13 @@
 //                                                → { ok, created, review }   rated and reviewed by a connected wallet (a free
 //                                               signature, never a transaction), 18+, after the human check ('review')
 //   game-review-delete { game, session }         → { ok, removed }
+// Their leaderboards (2026-10-22: server/scores.js; bragging rights only, no prizes):
+//   GET ?board=<game>:<board>                   → { ready: true, game, board, rows: [{ rank, name, detail, at }] }, or
+//                                               { ready: false } until arcade.sql's scores are there. The CDN, a minute
+//   game-ticket     { game, player, kind, challenge? }  → { ok, ticket, kind, challenge, day, seed, solUsd }  a ranked run
+//   game-score      { game, player, ticket, name?, claim + log (TRENCHING SIMULATOR) | run (Ride 'Em, AGI!) }
+//                                               → { ok, ranked, ranks?, why? }   checked here first (up to 48 KB)
+//   game-score-mine { game, player, boards }    → { ok, rows: [{ board, rank, detail, hidden }] }   this browser's places
 import { getConfig } from '../server/config.js';
 import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass } from '../server/security.js';
 import { verifyHuman } from '../server/turnstile.js';
@@ -36,9 +43,11 @@ import { makeSession, readSession, needsRecheck, walletCode, RECHECK_MS } from '
 import { checkLevel } from '../server/chain.js';
 import { getFriend, setFriendName, forgetFriend, cleanName } from '../server/friends.js';
 import { txFrom, checkBurns, burnStatus, burnTotal, BURN_PER_DAY } from '../server/burn.js';
-import { burnBurst, arcadePlayBurst, reviewBurst } from '../server/burst.js';
+import { burnBurst, arcadePlayBurst, reviewBurst, scoreBurst } from '../server/burst.js';
 import { countPlays, gamePage, reviewsOpen, reviewWords, reviewName, reviewer, myReview, deleteReview, saveReview } from '../server/arcade.js';
+import { gameTicket, gameScore, gameBoard, myScores } from '../server/scores.js';
 import { isGame, PLAYER, PLAYS, STARS } from '../src/games/list.js';
+import { BOARD, BOARD_ASK, isBoard } from '../src/games/boards.js';
 import { levelInfo } from '../src/lib/levels.js';
 
 // (2026-10-19: 6,000, was 4,000: a review comes with its words, a name, a wallet session and a human check's token)
@@ -54,9 +63,12 @@ const SHARED = { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-
 export async function GET(request) {
   const search = request ? new URL(request.url).search : '';
   const asked = search === '?burns' ? null : GAME_ASK.exec(search);
-  if (search !== '?burns' && !asked) return json(405, { error: 'method_not_allowed' });
+  // (2026-10-22) a game's leaderboard: ?board=<game>:<board>
+  const board = search === '?burns' || asked ? null : BOARD_ASK.exec(search);
+  if (search !== '?burns' && !asked && !board) return json(405, { error: 'method_not_allowed' });
   const cfg = getConfig();
   if (asked) return gameGet(cfg, asked[1], asked[2] ? Number(asked[2]) : null);
+  if (board) return boardGet(cfg, board[1], board[2]);
   if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(200, { ready: false }, SHARED);
   try {
     return json(200, { ready: true, price: cfg.burnPrice, perDay: BURN_PER_DAY, total: await burnTotal(cfg) }, SHARED);
@@ -84,6 +96,45 @@ async function gameGet(cfg, game, before) {
   } catch (err) {
     if (err.code === 'PGRST202') { arcadeMissing(err); return json(200, { ready: false }, SHARED); }
     console.error('[wallet] a game\'s page is unavailable:', err.message);
+    return json(503, { error: 'busy' });
+  }
+}
+
+// a game's leaderboard (2026-10-22: server/scores.js): the same for everyone, never who
+async function boardGet(cfg, game, board) {
+  if (!isGame(game) || !isBoard(game, board)) return json(404, { error: 'not_found' }, SHARED);   // never asks the database
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(200, { ready: false }, SHARED);
+  try {
+    return json(200, { ready: true, game, board, rows: await gameBoard(cfg, game, board) }, SHARED);
+  } catch (err) {
+    if (err.code === 'PGRST202') { arcadeMissing(err); return json(200, { ready: false }, SHARED); }
+    console.error('[wallet] a leaderboard is unavailable:', err.message);
+    return json(503, { error: 'busy' });
+  }
+}
+
+// a ranked run's ticket, its score, and a browser's own places (no sign-in: its random id for the games, never who)
+async function gameScores(cfg, body, { visitor, who, now }) {
+  if (!isGame(body.game) || typeof body.player !== 'string' || !PLAYER.test(body.player)) return json(400, { error: 'bad_request' });
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(503, { error: 'not_ready' });
+  if (!scoreBurst(visitor, now)) return json(429, { error: 'too_fast' });
+  try {
+    if (body.action === 'game-ticket') {
+      const r = await gameTicket(cfg, { game: body.game, player: body.player, kind: body.kind, challenge: body.challenge ?? null, who: who(), now });
+      if (r.ok) return json(200, r);
+      return r.why === 'bad' ? json(400, { error: 'bad_request' }) : json(429, { error: r.why });
+    }
+    if (body.action === 'game-score-mine') {
+      const rows = await myScores(cfg, { game: body.game, player: body.player, boards: body.boards });
+      return rows ? json(200, { ok: true, rows }) : json(400, { error: 'bad_request' });
+    }
+    const r = await gameScore(cfg, body, { who: who(), now });
+    if (r.ok) return json(200, r);
+    if (r.why === 'person_cap' || r.why === 'site_cap') return json(429, { error: r.why });
+    return json(r.why === 'bad' ? 400 : 422, { error: r.why });
+  } catch (err) {
+    if (err.code === 'PGRST202') { arcadeMissing(err); return json(503, { error: 'not_ready' }); }
+    console.error('[wallet] a leaderboard request failed:', err.message);
     return json(503, { error: 'busy' });
   }
 }
@@ -214,7 +265,8 @@ export async function POST(request) {
   }
   if (!(request.headers.get('content-type') || '').includes('application/json')) return json(415, { error: 'bad_request' });
   const raw = await request.text();
-  if (raw.length > MAX_BODY) return json(413, { error: 'bad_request' });
+  // (2026-10-22) a leaderboard's score may carry a run's orders: up to 48 KB, only when it says so first
+  if (raw.length > (raw.startsWith('{"action":"game-score"') ? BOARD.bodyMax : MAX_BODY)) return json(413, { error: 'bad_request' });
   let body;
   try { body = JSON.parse(raw); } catch { return json(400, { error: 'bad_request' }); }
   if (!body || typeof body !== 'object') return json(400, { error: 'bad_request' });
@@ -233,6 +285,11 @@ export async function POST(request) {
     case 'game-review':
     case 'game-review-delete':
       return gameReviews(cfg, request, body, { visitor, who, now });
+
+    case 'game-ticket':
+    case 'game-score':
+    case 'game-score-mine':
+      return gameScores(cfg, body, { visitor, who, now });
 
     case 'start': {
       try {

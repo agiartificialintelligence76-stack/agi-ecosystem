@@ -20,6 +20,42 @@ disagrees with either, the research note is older (it was written before some de
 | This handoff's commit | On the working branch only: `HANDOFF.md` and `handoff/` (research notes and a chart sketch). **Not on `main`, not deployed** (the owner: "Do not force-push, merge, or deploy") |
 | Live site | https://agi1.app (Vercel project `agi-ecosystem`). The game: https://agi1.app/games/trenchingsimulator |
 
+### 0.1 Current status and owner checklist (updated 2026-10-22)
+
+**The local blockers are resolved.** The ten reported failures are fixed; the complete suite has **1,028 passed,
+0 failed, 6 skipped**. Vite is now 8.3.3 and source-map-js 1.2.2; `npm audit` reports zero vulnerabilities. Node 20,
+22 and 24, the three clock-shift cases, and a clean Windows build with made-up deployment settings passed. Desktop,
+360 px phone, the built chart under the unchanged production CSP, and a two-player local race were checked.
+See [the validation report](handoff/validation-2026-10-22.md) for scope, limitations and changed files.
+
+**Release authorized (2026-10-22):** the owner requested “publish everything now.” This supersedes the earlier
+pause and release-approval checklist. The reviewed changes are being committed and published to `main` for agi1.app,
+with `supabase/arcade.sql`, the hosted relay update and live checks included in that release.
+See `handoff/release-2026-10-22.md` for the final verified release status when available.
+
+The earlier checklist below is retained as historical context; items 1 and 2 have now been completed locally:
+
+1. **The full test log** (Command Prompt in the project folder: cleaner than Windows PowerShell 5.1, which wraps a
+   program's error lines and may save the file as UTF-16): `npm test > npm-test.log 2>&1`, then let the next session read
+   `npm-test.log` (blocker 2 in 3.5; `*.log` is git-ignored). Optional: `npm audit` shows the "2 high severity
+   vulnerabilities" npm mentioned after the chart install.
+2. **Browser review** on this PC: `npm run dev`, then
+   - http://localhost:5173/games/trenchingsimulator → Play → GNGM → open a coin: the TradingView chart (candle sizes,
+     MCap/Price, USD/coin, fx, B/S, zoom, "back to now"), its credit and link under it, a phone width (360 px);
+   - race rooms: in a second terminal (PowerShell) `$env:TRENCH_ORIGINS='http://localhost:5173'; $env:TRENCH_CHAINS='base';
+     node tools/trench-relay/server.mjs` (one chain keeps its outside requests few; rooms need none), then the game at
+     `http://localhost:5173/games/trenchingsimulator?relay=ws://localhost:8787/ws` in two windows → Race a friend;
+   - http://localhost:5173/games → the Leaderboards section (it says "open soon" without the site's `/api`).
+3. **GitHub Desktop:** review the changed files (3.2), commit on `claude/blissful-davinci-bnr01m`, push; pushing to
+   `main` deploys to agi1.app (section 1: ask yourself before that one).
+4. **Supabase** (before or right after the deploy): SQL Editor → paste all of `supabase/arcade.sql` → Run →
+   `arcade_functions_found = 14`.
+5. **The relay** (after the push, since `relay.sh update` does `git pull --ff-only` on the server's copy): in
+   `/opt/agi1-trench/trench.env` add `ethereum,monad,hyperevm,arbitrum,tron` to `TRENCH_CHAINS`, then
+   `sh /opt/agi1-live/site/tools/trench-relay/relay.sh update` and `relay.sh check` (race rooms and the new chains).
+6. **After the deploy:** agi1.app/games/trenchingsimulator on a phone and a computer (GNGM's chart, a race, a ranked
+   daily market), agi1.app/games's Leaderboards; Vercel → Deployments says Ready.
+
 ---
 
 ## 1. The owner and how to work with them
@@ -91,12 +127,19 @@ Verbatim, from the chat (2026-10-21):
    - smooth updates with no lag;
    - its phone layout.
 
-   **Only two playable terminals for now:** Pomp.fun (built before) and GNGM. **Not built yet.**
+   **Only two playable terminals for now:** Pomp.fun (built before) and GNGM. **Built 2026-10-22 on the owner's PC, not
+   committed (3.2)**. Its chart is TradingView Lightweight Charts™ 5.2.1 since the second Windows session (3.2).
 3. **GMGN's other chains in Live mode.** Tell the owner whether a chain needs an API key like Helius. The research
-   answer: **no new key is needed** (section 5.5). **Not built yet.** The owner hasn't been told this answer yet: tell them.
-4. **An optional player name**, entered before playing, like a real terminal's username. **Not built yet.**
-5. **Leaderboards with names**, for TRENCHING SIMULATOR and for Ride 'Em, AGI!. **Not built yet.**
-6. **Multiplayer for TRENCHING SIMULATOR only:** invite players by a link, no wallet needed. **Not built yet.**
+   answer: **no new key is needed** (section 5.5). **Built 2026-10-22 (3.2), not committed:** Ethereum, Monad, HyperEVM,
+   Arbitrum and Tron. X Layer and MegaETH wait for `/health`'s count. The owner must add the new ids to `TRENCH_CHAINS`
+   in their `trench.env` and run `relay.sh update`. Tell them the key answer.
+4. **An optional player name**, entered before playing, like a real terminal's username. **Built for TRENCHING
+   SIMULATOR (3.2).** Ride 'Em, AGI! asks for it with its leaderboard.
+5. **Leaderboards with names**, for TRENCHING SIMULATOR and for Ride 'Em, AGI!. **Built 2026-10-22 (3.2), not
+   committed:** server, SQL, both games' sides and the agi1.app/games section. They say "open soon" until the owner runs
+   `supabase/arcade.sql`.
+6. **Multiplayer for TRENCHING SIMULATOR only:** invite players by a link, no wallet needed. **Built 2026-10-22 (3.2),
+   not committed.** Rooms open once the owner runs `relay.sh update`; until then the game says rooms aren't open.
 7. **AGI Games and Roadmap in the front page's "Her world" list.** **Done.**
 8. **Push it yourself.** Milestone 1 was pushed to `main`. This handoff is on the working branch only.
 
@@ -113,7 +156,7 @@ Verbatim, from the chat (2026-10-21):
 
 - **Terminal ids never change.** Only the names did: `chat` = BasedBott, `scan` = GNGM, `board` = Pomp.fun, `pro` = Axium,
   `social` = Phomo. The ids are in saves, URLs, CSS and tests. (A research note suggests new ids: ignore that.)
-- **GNGM's chart uses TradingView Lightweight Charts™** (`lightweight-charts`, exact version `5.2.1`, Apache-2.0),
+- **GNGM's chart uses TradingView Lightweight Charts™** (**done**, 3.2; `lightweight-charts`, exact version `5.2.1`, Apache-2.0),
   loaded as a lazy chunk only on GNGM's coin page:
   - `layout.attributionLogo: false`. Its default (`true`) puts an image link to tradingview.com in the chart, which
     the CSP and the game's "no link" tests refuse.
@@ -127,9 +170,9 @@ Verbatim, from the chat (2026-10-21):
   colors), our own mark (a sleepy pixel toad in a nightcap) and our own words.
   - No "Sandwich shield" or MEV toggle: the game's sandwich bots are off, and a toggle that does nothing would be a lie.
   - The PnL card never has a QR code or a referral link.
-- **The Ethereum question:** `CLAUDE.md` says Live mode is "never Ethereum" (twice), with no reason recorded. The owner
-  asked to add GMGN's chains, and GMGN has Ethereum. So add Ethereum and change both of those lines in the same push.
-  Mention it to the owner.
+- **The Ethereum question:** `CLAUDE.md` said Live mode is "never Ethereum" (twice), with no reason recorded. The owner
+  asked to add GMGN's chains, and GMGN has Ethereum. **Done 2026-10-22:** Ethereum added and both lines changed. Mention
+  it to the owner.
 - **Ride 'Em, AGI!'s code is written by a tool.** Its leaderboard hook goes into `tools/games/import-rideemagi.mjs`'s
   PATCHES, and is applied to `src/games/rideemagi/game.js` too. Never hand-edit `game.js` alone.
 
@@ -164,24 +207,149 @@ Verbatim, from the chat (2026-10-21):
 - **`CLAUDE.md`:** the names everywhere, a "Parody names and marks" part under "TRENCHING SIMULATOR", "Her world (08)",
   and two rows in the decisions log dated 2026-10-22.
 
-### 3.2 Partly done: GNGM (task 3)
+### 3.2 Done on the owner's Windows PC (2026-10-22; **not committed**: the owner commits with GitHub Desktop)
 
-The design is complete; **no GNGM code exists yet**. Where the design lives:
-
-| What | Where |
-|---|---|
-| How it should look | section 5 of this file, and `handoff/research/gmgn-web.md` and `gmgn-live.md` |
-| How it plugs into the game | `handoff/research/code-game.md`: the board contract, module APIs, file plan, gotchas |
-| The chart | `handoff/research/tv-charts.md`, and `handoff/gchart.sketch.js`: a tested sketch of the chart wrapper, written for a scratch test app (its `import ... from './format.js'` must point at the game's `format.js` once it moves into `src/games/trenchingsimulator/boards/`) |
+- **Milestone 2a:** `boards/common.js` holds the helpers both terminals share (sorts, order errors, who traded, holder tags,
+  quick buys, amounts, `num`, `ago`, `short`, the picture tile `pic(r, cls, prefix)`, `fromWords`, `SOCIALS`…).
+  `board.js` imports them and still exports `SORTS, ORDER_ERRORS, whoText, holderTag, buyPresets, parseAmount`. A re-export
+  alone would not have been enough: `board.js` uses some of them itself.
+- **GNGM, playable** (`terminals.js` 'scan' `ready: true`). Its files:
+  - `boards/gngm-data.js` (pure, tested): the chart's sums, candles of 1 s to 15 m with buys and sells, price or market cap
+    in USD or the run's coin, MA/EMA/RSI/MACD, card metrics, the filters (safe, smart money, strict), Activity labels (New
+    Holder, Buy More, Sell Part, Sell All), top traders, the security checklist, the first-buyers summary, the Track feed,
+    the wallet pages (smart wallet 7D and this run, KOL calls), "Take my initial", limit and auto (TP/SL), PnL numbers;
+  - `boards/gchart.js`: **GNGM's chart on TradingView Lightweight Charts™ 5.2.1** (since the second Windows session; it
+    replaced the canvas chart built first, keeping its doors: `createGChart(host, opts)` → `set`, `view`, `indicators`,
+    `fit`, `toNow`, `zoom`, `redraw`, `state`, `destroy`, and the legend through `onHover`). `chart.addSeries` with
+    `CandlestickSeries`, `HistogramSeries` (volume, its own overlay scale) and `LineSeries` (MA 20, EMA 9), RSI and MACD
+    in panes of their own (`chart.addPane()`), B/S bubbles as a series primitive, the migration with
+    `createSeriesMarkers`, the crosshair legend from `subscribeCrosshairMove`, `autoSize` (the host's own size), local
+    time on the axis, the zoom buttons through `barSpacing`, "back to now" with `scrollToRealTime()`, `chart.remove()` on
+    destroy. Loaded with `import('lightweight-charts')` the first time a coin's chart has candles (its own 62 KB gz file),
+    never on our server. `attributionLogo: false` and our own credit under the chart (`chartCredit()`: "Charts:
+    TradingView Lightweight Charts™ · Copyright (c) 2025 TradingView, Inc.", one link to https://www.tradingview.com/)
+    and in How to play; `vite.config.js` `build.license: true` writes `dist/.vite/license.md` with its Apache-2.0 text.
+    The coin page draws it in a `div.tsg-canvas`; the legend adds the indicators' values (`fxText()` in
+    `gngm-data.js`);
+  - `boards/gngm.js`: the top bar (Trenches · Trending · Track · Holding, search "/", the chain, the balance, settings);
+    Trenches (three columns, each with a quick-buy amount, a filter and a "Paused" chip; hotkeys Z + row, or Space +
+    column + row, off until "Hotkeys" is pressed); Trending 1m/5m/1h; Track; Holding with PnL cards; wallet pages; settings
+    (the name, P1–P3, the chart view, hotkeys, pause on hover); the phone tab bar;
+  - `boards/gngm-coin.js`: the coin page. Header, stats and changes, the chart toolbar, the tabs Activity (maker chips) ·
+    Traders · Holders · Dev token · Position / Orders · Info (phones), the trade module (Buy/Sell; Market/Limit/Auto; four
+    amounts; 25–100 %; Take my initial; P1–P3), the position box, security, the pool, the first 70 buyers grid, the phone
+    Buy/Sell bar and sheet;
+  - `boards/gngm-card.js`: GNGM's PnL card (1200 × 630: the toad mark, the return, invested / sold / profit, "by <name>",
+    the safety foot). Never a QR code, a referral or a real coin's name ("a live coin");
+  - CSS: the `tsg-` section at the end of `trench.css`.
+- **The engine:** `firstBuyers(id)` (a coin's first 70 buyers and what each holds now; `null` for a real coin). The smart
+  wallets' 7-day records gained `dist` (how their trades ended), counted from the same dice, so markets are unchanged.
+- **The shell:**
+  - GNGM loads as its own file (`import('./boards/gngm.js')`) on the "Opening…" screen;
+  - its PnL card on the results screen;
+  - `ctx` extras: `presets`, `pickPreset`, `setPreset`, `chartView`, `setChartView`, `playerName`, `setPlayerName`,
+    `saveCard`, `chain`;
+  - the save: `preset`, `presets`, `chart`. The picked preset is the game's slippage and priority.
+- **The optional player name:** `src/games/player-name.js` (both games, `agi_player_name`), a short form of
+  `reviewName()`'s rules. Asked on a run's brief, in the settings and in GNGM's settings. Shown on cards. Ride 'Em, AGI!
+  doesn't ask yet (leaderboards will).
+- **`share.js`:** `tradeShareText()`, the words shared with one coin's PnL card.
+- **Tests:**
+  - 10 new tests in `tests/trench-game.test.js` (GNGM's numbers, its chart on a stand-in canvas, first buyers, Track and
+    wallets, the trade module, presets and the name, the PnL card, GNGM ready);
+  - `tests/trench-live.test.js`: GNGM's files in the Live files check (no links, `CA` first 6, "play money"); the CSS rule
+    allows `tsg-`; a real coin's first buyers are `null`;
+  - **two Windows path fixes** (`fileURLToPath` instead of a URL's `.pathname`, assertions unchanged):
+    `tests/wallet.test.js:289-290` and `tests/launch.test.js:1914`.
+- **Leaderboards (both games), "Checked runs only":**
+  - `run.js`: the tick steps exactly like `replay()` (5.3's fix), so a played run's orders make the same run again;
+  - `src/games/boards.js` (shared, pure): `BOARD` limits, board ids, `trenchKeys`/`rideKeys` (how runs rank), `rowText`,
+    `rowName`, `rankWords` (a run's line on its results), `boardTitle`;
+  - `src/games/trenchingsimulator/verify.js`: the order log packed (`n36,coin36,b|s,amount,slippage,prio`, ≤ 1000) and
+    read back, `replayRun` (the run made again from its ticket's seed and price), `sameResult`;
+  - `server/scores.js` (new; `server/arcade.js` is pinned by its tests): HMAC tickets (`PASS_SECRET`, tied to a code of
+    the browser's id), `gameTicket`, `gameScore` (TS: late, too fast, would-place check, then the replay; Ride: 5.3's
+    sanity checks and the daily mod), `gameBoard`, `myScores`. Caps: 60 tickets and 30 scores a visitor a day; for the
+    site 50,000 tickets, 20,000 scores and **2,000 replays** a day (`'p'`, counted only for a run that would place);
+  - `api/wallet.js`: `GET ?board=<game>:<board>` (CDN a minute) and the actions `game-ticket`, `game-score` (up to 48 KB
+    when `action` comes first), `game-score-mine`; `scoreBurst` 12 a minute; `{ ready: false }` / 503 `not_ready` until
+    the SQL is run;
+  - `supabase/arcade.sql`: three tables (`agi1_arcade_scores`, `agi1_arcade_tickets_used`, `agi1_arcade_score_days`) and
+    six functions (`arcade_take`, `arcade_board_cut`, `arcade_score_put`, `arcade_board`, `arcade_score_mine`,
+    `arcade_score_hide`); it now ends with `arcade_functions_found = 14`. **Not run anywhere** (no Postgres here);
+  - TRENCHING SIMULATOR: `ranked.js` (`askTicket`, `sendScore`); `shell.js` asks a ticket for a daily market or challenge
+    in SOL (never free play or Live mode), plays its seed and price, sends wins (and the daily market's losses), and the
+    results screen says "Ranked #N · …" or why not; the brief says how ranking works;
+  - Ride 'Em, AGI!: `src/games/rideemagi/ranked.js` (`Ranked.start(cfg)`, `Ranked.result(r, st)`: endless runs and the
+    daily mod; a few seconds of "Ranked #N" at the top), hooked through `tools/games/import-rideemagi.mjs`'s PATCHES and
+    the same lines in `game.js`; names from `agi_player_name`;
+  - agi1.app/games: a "Leaderboards" section between the shelf and the ratings (`games.html`, `id="leaderboards"`), a
+    box per game (board picker from `pickerBoards()`, top 20, "Your best" via `game-score-mine` only for a browser that
+    already has the games' random id, never made there), the shared optional name with Save, the fine print, and a
+    "What a leaderboard keeps" line in "The fine print". Code: `src/games/leaderboard.js` (`startBoards()`, started by
+    `page.js`; asked once the section is near the screen; one retry); CSS `gm-lead`/`gm-lb-*` in `games.css`, Pop
+    mode mint in `pop.css`. `index.html`'s safety note gained one sentence (it must never say "leaderboard");
+  - the name notes in TRENCHING SIMULATOR (brief, settings, GNGM settings) now say ranked runs show the name;
+  - tests: `tests/trench-game.test.js` (replay parity with uneven frames, the server path with a fake database, the
+    boards' rules, `pickerBoards`/`mineText`, the page module on a stand-in page); `tests/arcade.test.js` (Ride 'Em's
+    server checks and hooks, 14 SQL functions and their signatures); `tests/page.test.js` (the section, its module's
+    imports/fetches/actions, its CSS; `page.js`'s pinned import list gained exactly `{ startBoards } from
+    './leaderboard.js'`). The `page.test.js` changes were checked by reading only (blocker 2).
+  - Caveat: a run played in Safari or Firefox may not check (their maths can differ in the last digit from the server's
+    V8): it just isn't ranked.
+- **Race rooms ("Same-market race"):**
+  - the relay: `tools/trench-relay/lib/rooms.mjs` (new; in memory only): 6-character codes, 8 seats, the host picks a
+    challenge and starts it (and rematches), `go` gives everyone the same seed (`race-<code>-<n>`), SOL price (the hub's,
+    else 150) and start time (5 s countdown); reports `p` (about once a second) and `done` make the standings (a win
+    first by time, then multiples, busted last), sent every 2 s; a race ends when everyone's done or at its time + 15 s;
+    names made safe (16 characters, no posing, links, addresses or crude words; else "Trader N"); resume within a
+    minute of a drop; caps (200 rooms, 1,600 racers, 8 a room and an address, 3 new rooms an address per 10 minutes,
+    10 wrong codes a minute, 1 KB a message, about 2 a second); a lobby expires after 15 minutes, an empty room after
+    a minute, an ended one after 5. `server.mjs` routes `/room` (its own origin check, caps and 1 KB limit; `/health`
+    counts rooms); `config.mjs` `rooms` (`TRENCH_ROOMS=off`, `TRENCH_ROOM_SEATS`, `TRENCH_ROOMS_MAX`,
+    `TRENCH_ROOM_PLAYERS`, `TRENCH_ROOMS_PER_IP`; also in `trench.env.example`). No Caddy, Dockerfile or CSP change;
+  - the game: `src/games/trenchingsimulator/race.js` (new: `createRace`, `parseRaceMessage`, `raceUrl`, `roomOfHash`,
+    `inviteLink`, `cleanCode`, `raceWords`, `standingText`); `shell.js`: "Race a friend" on the home screen (instead of
+    "Multiplayer · coming soon"), a room screen (join by code or make a room for a challenge; then the invite link with
+    Copy, the players, ready, the host's Start/Remove, leave), the countdown, a race run through `startRun` (simulated,
+    `realTime`, the room's seed and price, never ranked, counted by the one `Site.play()`), the standings strip under the
+    HUD, the room's standings on the results with "Back to the room". An invite link `#room=<code>` opens its room's
+    screen with the code filled in and takes the code out of the address. Leaving the race screens leaves the room;
+  - CSS `ts-race-*` in `trench.css`; `boards.js` WHY gained `race`;
+  - tests (in `tests/trench-live.test.js`, so the focused command runs them): rooms with a fake clock (the whole race,
+    names, resume, expiry, caps), the real relay's `/room` (origin 403, per-address 429, a race over real sockets,
+    `/health`, 1 KB → 1009, `TRENCH_ROOMS=off` → 404), the browser client on a stand-in socket, the shell's hooks; the
+    Live files check now includes `race.js`.
+- **GMGN's other chains in Live mode** (no new key; DexScreener's listed coins, like BNB Chain and Base):
+  - the relay: `config.mjs` `CHAIN_IDS` + `ethereum, monad, hyperevm, arbitrum, tron`; `hub.mjs` letters `e m h f t`
+    (`ID = /^[srbaemhft]…/`), quiet after 30 minutes; `parse.mjs` `WRAPPED` + HYPE (WHYPE), MON (WMON), TRX (WTRX, its
+    base58 address as it is), `PRICE_RANGE`, `isTron`, `addressOn` (EVM lower-cased, Tron case-sensitive), Tron profiles;
+    `sources/dex.mjs` `DEX_CHAINS`, all five judged by DexScreener, HYPE/MON/TRX priced only while their chain is on,
+    prices under $1 kept to 4 significant figures (not rounded to the cent), and `/health` `dexscreener.profiles` (a
+    day's count of every chain id DexScreener lists: the check for X Layer and MegaETH); `fakes.mjs`;
+    `trench.env.example` `TRENCH_CHAINS` names them all;
+  - the game: `live-chains.js` `CHAINS` (Ethereum ETH, Monad MON, HyperEVM HYPE, Arbitrum ETH, Tron TRX), `UNIT_NAMES`,
+    the id letters, Tron addresses kept as they are, the new prices read, `liveMoney` keeps sub-dollar prices;
+    `format.js` coin names; the pair label in `board.js`/`gngm-coin.js` for any chain's coin; `boards/common.js`
+    `CHAIN_NAMES`; How to play's chain list. Terminal ids unchanged;
+  - `CLAUDE.md`: both "never Ethereum" lines changed (Live mode notes, decisions-log row 2026-10-21);
+  - tests: the chain lists (9), each terminal's money on each, a new end-to-end test (Tron and Ethereum coins through
+    the relay with the stand-ins, their own letters, TRX/MON priced, HYPE not asked while HyperEVM is off, the count in
+    `/health`, Tron addresses case-sensitive, MON's money "7,500 MON" for 1 SOL).
+- **`CLAUDE.md` notes for all of it:** the summary at the top (with the owner's steps), "AGI games" → "Leaderboards"
+  (new), "TRENCHING SIMULATOR" → "GNGM, names, leaderboards, race rooms and more chains" (new; three outdated lines fixed:
+  one terminal ready, "Multiplayer · coming soon", four "Coming soon"), AGI games' owner steps and troubleshooting
+  (`arcade_functions_found = 14`), Project structure (`src/games/`, `src/games/trenchingsimulator/`, `server/`,
+  `supabase/arcade.sql`, `tools/trench-relay/`), the relay's settings table (`TRENCH_CHAINS`, `TRENCH_ROOMS…`), Security &
+  cost rules (leaderboards, race rooms, the new chains), the Free-tier budgets (the replays' CPU, about $2 a month at most;
+  the rooms on the CX23), the decisions log (five rows, 2026-10-22) and Open questions (Lightweight Charts, the
+  leaderboards' limits, X Layer and MegaETH, race rooms' limits, what wasn't tried).
 
 ### 3.3 Missing (not started)
 
-- the optional player name;
-- leaderboards (both games: server, SQL and UI);
-- multiplayer race rooms;
-- GMGN's other chains in Live mode;
-- `CLAUDE.md` notes for all of these;
-- telling the owner the API-key answer.
+- nothing that can be done on this PC with the approved commands: what's left needs the owner (3.5's blockers, 4.1);
+- telling the owner the API-key answer. The first report of 2026-10-22 said it, with the Ethereum change; the owner
+  hasn't confirmed it yet.
 
 ### 3.4 Known open items (not this handoff's work, but true now)
 
@@ -193,79 +361,79 @@ The design is complete; **no GNGM code exists yet**. Where the design lives:
 
 ---
 
+## 3.5 Checks on the owner's Windows PC (2026-10-22), and blockers
+
+**Environment:**
+- Node v24.21.0.
+- `npm ci` installed 53 packages from the lockfile. It was used instead of `npm install` because it never rewrites the
+  lockfile.
+- No git was run (section 1: agents never run git in the owner's folder).
+
+**Results:**
+
+| Check | Before any change | Now |
+|---|---|---|
+| `node --test --test-timeout=30000 tests/trench-game.test.js tests/trench-live.test.js tests/intro.test.js` | 93 pass, 0 fail | **113 pass, 0 fail** (after the Lightweight Charts swap) |
+| `npx vite build` | built | **built** (after the Lightweight Charts swap). `lightweight-charts.production-*.js` its own file (194 KB, 62.3 KB gz), loaded only by GNGM's coin chart; GNGM's chunk 25.5 KB gz plus its PnL card 5.3 KB gz; the game's main chunk 77.3 KB gz (unchanged by the swap); the games page's script 9.6 KB gz; `dist/.vite/license.md` lists `lightweight-charts - 5.2.1 (Apache-2.0)` |
+| `npm install --save-exact lightweight-charts@5.2.1` | — | added 2 packages (`lightweight-charts` 5.2.1, `fancy-canvas` 2.1.0); `package.json` `"lightweight-charts": "5.2.1"`; npm's audit then said "2 high severity vulnerabilities" (not looked into: `npm audit` isn't an approved command) |
+| `npm test` (the whole suite) | **exit code 1** | **exit code 1** (last run on the final files, after the CLAUDE.md notes; output cut in the middle and at its end, so which tests fail is unknown; every result that could be seen passed, among them `tests/arcade.test.js`'s leaderboard test) |
+
+**Final run on the final files (second Windows session, after the Lightweight Charts swap):** the focused command 113
+pass / 0 fail; `npx vite build` built (license file and the library's own chunk as above); `npm test` exit code 1, its
+output cut in the middle and at its end again, so its counts and failing tests are unknown (an unchanged exit code
+proves nothing either way). Denied and left undone: `npm test > npm-test.log 2>&1` (the tool's write guard, 3.5
+blocker 2); earlier, piping `npx vite build` or `node --test` through `Select-String`/`Select-Object`, saving `npm test`'s
+output another way, and one Bash `grep`.
+
+- **Why `npm test`'s failures aren't known:** the tool keeps only about 50,000 characters of output, and the summary and
+  the "✖ failing tests" list at the end never reach it. Saving the output to a file was refused (no approval surface).
+- **Pre-existing Windows failures found by reading:** `tests/wallet.test.js` and `tests/launch.test.js` built file paths
+  from a URL's `.pathname` (`/C:/…/AGI%203%20ECOSYSTEM/…`). Both are fixed with `fileURLToPath`; `npm test` still exits 1,
+  so at least one other failure remains.
+- **Regression review:** the full-suite files these changes can touch were checked by reading: `tests/trench.test.js`
+  (engine), `tests/arcade.test.js` (shell's `Site` import and `startRun`), `tests/page.test.js` (shell's "Rate it" links).
+  Nothing in them conflicts. Not proven by a run.
+
+**Blockers (each needs the owner):**
+1. ~~Lightweight Charts~~: **done** in the second Windows session (3.2, the checks above).
+2. **The full suite's failures:** the approved capture `npm test > npm-test.log 2>&1` was **refused by the PowerShell
+   tool's write guard** ("Output redirection to '…\AGI 3 ECOSYSTEM\npm-test.log' was blocked … may only write to files in
+   the allowed working directories: 'C:\Users\User\Desktop\AGI 3 ECOSYSTEM'": the path is inside it, so it looks like the
+   guard's own path check; not retried, not run another way). So run it in a terminal in the project folder (cmd or
+   PowerShell): `npm test > npm-test.log 2>&1`, then a later session reads `npm-test.log` (its `not ok` lines and the
+   `# pass` / `# fail` counts at the end: TAP, since it's not a terminal). It matters: `tests/page.test.js`,
+   `tests/arcade.test.js` and `tests/clips.test.js` were changed, and only `npm test` runs them. Quick check of just
+   those: `node --test tests/page.test.js tests/arcade.test.js tests/clips.test.js`.
+3. **Looking at the new screens in a browser** (nothing was looked at in a browser on this PC):
+   - `npm run dev`, then http://localhost:5173/games/trenchingsimulator → Play → GNGM; and → Race a friend;
+   - race rooms locally: run the relay (`node tools/trench-relay/server.mjs` with `TRENCH_ORIGINS=http://localhost:5173`)
+     and open the game with `?relay=ws://localhost:8787/ws`, in two windows;
+   - http://localhost:5173/games → the Leaderboards section ("open soon" without the API);
+   - check a phone width (360 px) and a computer.
+4. **Other Node versions, the clock-shift runs and a clean Vercel-like build** (section 7): they need commands that weren't
+   approved, or Linux.
+
 ## 4. The exact next small milestone
 
-**Milestone 2a: extract `src/games/trenchingsimulator/boards/common.js` from `boards/board.js`, with no change in
-behaviour.** Move the helpers both terminals need into it, and have `board.js` re-export them:
+**Updated 2026-10-22:** local repair and validation are complete; see section 0.1 and
+[the validation report](handoff/validation-2026-10-22.md). The next milestone is an owner-approved release and the
+owner-run database/relay updates. The paragraph below records the previous stopping point.
 
-- `SORTS`, `ORDER_ERRORS`, `whoText`, `holderTag`, `buyPresets`, `parseAmount`;
-- the quick-buy and amount parsing, the order-error words, the age and number helpers it uses.
-
-Tests import these from `board.js`, so they must stay exported there. Then:
-
-1. Add `boards/common.js` to the Live files list in `tests/trench-live.test.js` (around lines 1492–1520). That list
-   forbids `innerHTML`, `window.open` and real links in those files.
-2. Run `npm test`: expect 1008 pass, 0 fail, 4 skipped, as before.
-3. Commit on the working branch.
+**Read `npm test`'s failures** once the owner has run `npm test > npm-test.log 2>&1` (3.5, blocker 2): fix any this work
+caused, tell apart old Windows ones by their causes (never by the exit code alone). Everything else that can be done on
+this PC is done; the rest needs the owner (4.1): the SQL, the relay's update, a browser look, other Node versions and a
+clean Vercel-like build, and the push.
 
 ### 4.1 Prioritized checklist after that
 
-1. **`boards/gngm-data.js`**: pure and tested in Node (a new `tests/trench-gngm.test.js`, added to `package.json`'s test
-   list). It holds:
-   - card metrics and the filter presets (safe, smart-money, strict);
-   - activity labels (New Holder, Buy More, Sell Part, Sell All);
-   - traders' PnL from holders' in and out;
-   - the security checklist from `info(id)`;
-   - the first 70 buyers from holders' `at`;
-   - a wallet profile from `smartWallets()` and the KOLs (7D/30D PnL, win rate, distribution buckets >5x, 2–5x, 0–2x,
-     −50–0%, <−50%);
-   - P1–P3 settings presets;
-   - indicators (MA, EMA, RSI, MACD);
-   - `aggregate`, `valueOf`, `formatterFor` (from the sketch).
-
-   **Live coins have no holders, dev or KOL data** (null, `[]`): show "—", never made-up numbers (hard rule 8).
-2. **Add `lightweight-charts`:**
-   - `npm install --save-exact lightweight-charts@5.2.1`;
-   - allow it in `tests/clips.test.js`'s package check;
-   - `boards/gchart.js` from `handoff/gchart.sketch.js`, loaded with `import('./gchart.js')` only on GNGM's coin page,
-     with `attributionLogo: false`;
-   - the text credit and the narrow test exception;
-   - `build: { license: true }`.
-3. **`boards/gngm.js`**, with `mountGngm(host, ctx)` returning `{ update, sub, closeSub, destroy, el }`, the same
-   contract as `mountBoard` (section 5.1). Views:
-   - Trenches: three columns, New / Almost bonded / Migrated, each with its quick-buy amount, filters and pause-on-hover;
-   - Trending; Track (the KOL and smart feed); Holding;
-   - the token page: header stats; the chart with its toolbar (1s 15s 30s 1m 5m 15m, Price/MCap, USD/SOL, B/S
-     bubbles, the migration marker); bottom tabs Activity · Traders · Holders · Dev Token · Position / Orders; the right
-     column with the trade module (Buy/Sell; Market / Limit / Auto; 4 preset amounts; 25/50/75/100%; "Take my initial";
-     P1–P3), the security checklist, pool info and the first-70-buyers grid;
-   - the wallet profile;
-   - settings, the player name among them;
-   - hotkeys: "/" for search, hold Z + a row number, Space + column + row;
-   - the phone layout: tabs and a bottom sheet.
-
-   Rules for it:
-   - Updates through `keyed()`, `setText` and `flag` from `ui.js`, never rebuilding rows in `update()`.
-   - CSS in `trench.css` with a `.tsg-` prefix. `tests/intro.test.js` pins `page.js`'s imports to `['../intro.js',
-     './trench.css', './shell.js']`, so there's no new CSS file.
-   - `tests/trench-live.test.js`'s selector rule `/^\.tsb?-|^html\[data-page='trenchingsimulator'\]/` must allow
-     `tsg-`.
-   - It must contain `` `CA ${f.mint.slice(0, 6)}…` ``, must match /play money/, and must have no `el('a'`.
-   - Add `boards/gngm.js` and `boards/common.js` to the Live files list.
-   - `paintTerminal` sets only the color keys it's given: GNGM defines the full set already in `terminals.js`.
-4. **Wire it in `shell.js`** (around line 578, `mountPlay`):
-   - `const BOARDS = Object.freeze({ board: mountBoard, scan: mountGngm })`;
-   - mount `BOARDS[t.id] || mountBoard` with the same ctx plus `terminal: t`;
-   - `ready: true` for 'scan' in `terminals.js`;
-   - a per-terminal PnL card drawer in `saveCard`: 1200×630, the parody mark, ticker, big PnL %, invested / sold /
-     profit, the player's name, the safety foot, never a QR code.
-5. **The optional player name:** localStorage `agi_player_name`, shared by both games, checked like a review name
-   (`reviewName()` in `server/arcade.js`; the same rules in the page). Asked on the run's brief and in settings, never
-   required.
-6. **Leaderboards** (design in `handoff/research/code-leaderboard.md`, section 5.3 below).
-7. **Multiplayer race rooms** (design in `handoff/research/code-relay-chains.md` B, section 5.4 below).
-8. **Live chains** (`handoff/research/code-relay-chains.md` C, section 5.5 below).
-9. **Finish up:**
+1. **Leaderboards:** done (3.2). Left for the owner: run `supabase/arcade.sql`.
+2. **Multiplayer race rooms:** done (3.2). Left for the owner: `sh tools/trench-relay/relay.sh update` on the server.
+3. **Live chains:** done (3.2). Left for the owner: the new ids in `TRENCH_CHAINS` (their `trench.env`), then
+   `relay.sh update`; later, X Layer and MegaETH once `/health`'s `dexscreener.profiles.byChain` shows `xlayer` /
+   `megaeth` listings.
+4. **GNGM's chart:** done (TradingView Lightweight Charts™ 5.2.1). Left: a look in a real browser (the CSP, the credit,
+   phones).
+5. **Finish up:**
    - update `CLAUDE.md` (TRENCHING SIMULATOR, AGI games, Project structure, Security & cost rules, the Free-tier budgets
      table, Open questions, the decisions log);
    - run the full test matrix and a clean Vercel-like build (section 7);
@@ -416,9 +584,11 @@ Tests import these from `board.js`, so they must stay exported there. Then:
   - Boards: `e:all`, `e:w<Monday>`, `e:d<date>`, `m:<date>`.
 - **SQL, added to `supabase/arcade.sql`.** Keep it generic: no game names, nothing dropped.
   - New tables: `agi1_arcade_scores`, `agi1_arcade_tickets_used`, `agi1_arcade_score_days`.
-  - Functions go from 8 to 13: `arcade_ticket_take`, `arcade_board_cut`, `arcade_score_put`, `arcade_board`,
-    `arcade_score_mine`, `arcade_score_hide`.
-  - It ends with `arcade_functions_found = 13`. `tests/arcade.test.js` checks the file names no game.
+  - As built: functions go from 8 to 14 (`arcade_take`, `arcade_board_cut`, `arcade_score_put`, `arcade_board`,
+    `arcade_score_mine`, `arcade_score_hide`), and it ends with `arcade_functions_found = 14`. `tests/arcade.test.js`
+    checks the file names no game.
+  - As built, Ride 'Em's hook is `Ranked.result(r, st)` from `src/games/rideemagi/ranked.js` (its `site.js` imports are
+    pinned by tests), not `Site.result`.
   - The owner runs it in Supabase; until then the boards say "opens soon".
 - **Reading a board:** `GET /api/wallet?board=<game>:<board>`, cached 60 s by the CDN.
 - **Limits:**
@@ -439,6 +609,9 @@ Tests import these from `board.js`, so they must stay exported there. Then:
   `v:1`.
 - The game side: a new `src/games/trenchingsimulator/race.js`, mirroring `createLiveFeed`, and a new
   `tests/trench-race.test.js`.
+- **As built (3.2):** races are challenge races only (free play has no clock to race against); the tests went into
+  `tests/trench-live.test.js` (the focused command runs it; `npm test` lists its files one by one); a seat's resume token
+  is kept in memory only (a dropped connection comes back; a reload rejoins by the code).
 - **The owner must run `sh tools/trench-relay/relay.sh update` on their server** after it's pushed. Until then the game
   says rooms aren't available, and the single-player game works as before.
 - Its CPU and memory budget against the CX23 (the relay is capped at `--cpus 0.75 --memory 512m`) is in B.6 of the note.

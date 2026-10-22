@@ -153,6 +153,56 @@
         </div>
       </section>
 
+      <!-- the leaderboards (2026-10-22, the owner: "add a leaderboard (also add leaderboards with names , optional to the game
+           ride em agi also)"; the owner's pick: "Checked runs only"): each game's best checked runs, under the names their
+           players chose (or "A player"), never who. Bragging rights only, no prizes. src/games/leaderboard.js reads them
+           (/api/wallet?board=…) and keeps the optional name, both games' -->
+      <section class="section gm-lead" id="leaderboards" aria-labelledby="gm-lead-title" data-gm-lead>
+        <div class="wrap">
+          <header class="gm-head">
+            <p class="kicker">Leaderboards</p>
+            <h2 class="h2" id="gm-lead-title">The best runs</h2>
+            <p class="gm-text">Checked runs only, under the names their players chose. Bragging rights only: there are no prizes.</p>
+          </header>
+          <div class="gm-lead-grid">
+            <section class="gm-lb" data-gm-lb="rideemagi" aria-labelledby="gm-lb-rideemagi">
+              <h3 class="gm-lb-title" id="gm-lb-rideemagi">Ride 'Em, AGI!</h3>
+              <p class="gm-note">Endless runs and the daily mod, their numbers checked against what the game can do. Levels aren't ranked.</p>
+              <div class="gm-field">
+                <label class="gm-label" for="gm-lb-rideemagi-pick">Board</label>
+                <select class="gm-lb-pick" id="gm-lb-rideemagi-pick" data-gm-lb-pick></select>
+              </div>
+              <p class="gm-note gm-lb-state" data-gm-lb-state role="status" aria-live="polite">Loading the leaderboard…</p>
+              <ol class="gm-lb-list" data-gm-lb-list aria-label="Ride 'Em, AGI!: the best runs on this board"></ol>
+              <p class="gm-lb-me" data-gm-lb-me hidden></p>
+            </section>
+            <section class="gm-lb" data-gm-lb="trenchingsimulator" aria-labelledby="gm-lb-trenchingsimulator">
+              <h3 class="gm-lb-title" id="gm-lb-trenchingsimulator">TRENCHING SIMULATOR</h3>
+              <p class="gm-note">The daily market and each challenge, every run made again on our server from its trades before it counts. Free play and Live mode aren't ranked.</p>
+              <div class="gm-field">
+                <label class="gm-label" for="gm-lb-trenchingsimulator-pick">Board</label>
+                <select class="gm-lb-pick" id="gm-lb-trenchingsimulator-pick" data-gm-lb-pick></select>
+              </div>
+              <p class="gm-note gm-lb-state" data-gm-lb-state role="status" aria-live="polite">Loading the leaderboard…</p>
+              <ol class="gm-lb-list" data-gm-lb-list aria-label="TRENCHING SIMULATOR: the best runs on this board"></ol>
+              <p class="gm-lb-me" data-gm-lb-me hidden></p>
+            </section>
+          </div>
+          <div class="gm-lb-name">
+            <div class="gm-field">
+              <label class="gm-label" for="gm-lb-name">Your name on the leaderboards <span class="gm-opt">(optional)</span></label>
+              <div class="gm-lb-name-row">
+                <input id="gm-lb-name" data-gm-lb-name type="text" maxlength="40" autocomplete="nickname" spellcheck="false" aria-describedby="gm-lb-name-note" />
+                <button class="btn btn-ghost btn-sm" type="button" data-gm-lb-save>Save</button>
+              </div>
+              <p class="gm-note" id="gm-lb-name-note">Both games use it for your next ranked runs: up to 24 characters, nothing crude, and nothing that passes for her or her team. It's kept in this browser. Leave it empty and your rows say “A player”.</p>
+              <p class="gm-done" data-gm-lb-name-say role="status" aria-live="polite"></p>
+            </div>
+          </div>
+          <p class="gm-note gm-lb-fine">Checked, but not cheat-proof: a row can be taken off. Names are shown publicly, and a row never shows who you are.</p>
+        </div>
+      </section>
+
       <!-- ratings and reviews, a tab for each game (2026-10-21: TRENCHING SIMULATOR, the second game): each game's numbers
            for everyone; rating one takes 18+ and a connected wallet (the site's sign-in: a free signature, never a
            transaction), and the human check. #rate is Ride 'Em, AGI!'s (links from before there were two games), #rate-<game>
@@ -421,6 +471,7 @@
               <li>If prizes come one day, they'll be never guaranteed and never an investment. Not financial advice: $AGI is a meme token and can lose all of its value.</li>
               <li>TRENCHING SIMULATOR is played with play money, on made-up coins or, in Live mode, real new coins: nothing in it is real money or advice, nothing is ever traded for real, and it isn't affiliated with any real trading terminal. It never asks for a wallet.</li>
               <li>What's counted when you play: the runs you start, under a scrambled code of a random id your browser keeps for the games (never who you are), and a daily visitor code. No sign-in, no wallet.</li>
+              <li>What a leaderboard keeps: a ranked run's numbers and the name you chose (or “A player”), shown publicly, under a scrambled code of that same random id (never who you are). A day's and a week's rows are deleted after 35 days.</li>
               <li>What a review keeps: your stars, your words and the name you choose, shown on the game's page with your 💜 badge at Crush or Soulmate (never your address), under a scrambled code of your wallet, until you delete it. Its words and name are checked by an AI service first. Reviews are 18+.</li>
               <li>This page never asks your wallet for a transaction or a token approval. Read the full <a href="/#safety">safety note</a>.</li>
             </ul>

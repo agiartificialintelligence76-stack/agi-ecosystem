@@ -158,8 +158,10 @@ test('the clips aren\'t part of the website: not in its build, no new packages, 
   // 2026-10-10: the 3D character studio makes its characters' files small on our server; @ffmpeg-installer/ffmpeg since round
   // 2 of AGI Studio, the same day: its clock puts the small "Made with AGI Studio" mark on a video's download copy, on our
   // server; opentype.js since 2026-10-14: AGI Studio's meme templates, whose words our server draws with the same fonts as the
-  // page, server/meme-render.js; the clips never add a package: they bring their own ffmpeg)
-  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@ffmpeg-installer/ffmpeg', '@gltf-transform/core', '@gltf-transform/extensions', '@gltf-transform/functions', '@scure/bip39', 'opentype.js', 'sharp', 'three', 'viem']);
+  // page, server/meme-render.js; lightweight-charts since 2026-10-22: TRENCHING SIMULATOR's GNGM chart, TradingView
+  // Lightweight Charts™, in the browser only, its exact version; the clips never add a package: they bring their own ffmpeg)
+  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@ffmpeg-installer/ffmpeg', '@gltf-transform/core', '@gltf-transform/extensions', '@gltf-transform/functions', '@scure/bip39', 'lightweight-charts', 'opentype.js', 'sharp', 'three', 'viem']);
+  assert.equal(pkg.dependencies['lightweight-charts'], '5.2.1', 'pinned exactly (its CSP-checked behaviour and its credit are 5.2.1\'s)');
   // (ws since 2026-10-21, a dev dependency only: TRENCHING SIMULATOR's Live mode relay, tools/trench-relay/, runs on the
   // owner's server with its own package.json, and tests/trench-live.test.js runs it here against fake upstream servers;
   // the site's pages never load it)

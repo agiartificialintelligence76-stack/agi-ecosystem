@@ -123,7 +123,7 @@ const agiPair = (mcap, h24 = 1) => ({ chainId: 'robinhood', dexId: 'uniswap', ba
 beforeEach(() => {
   // (the build's own settings never decide a test: on Vercel the real ones are there while the tests run, e.g. the owner's
   // Pinata key, which opens launching; these tests start with launching not set up, and turn it on themselves)
-  for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'LAUNCH_GAS_KEY', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP', 'LIVE_SECRET',
+  for (const k of ['GEMINI_MODEL', 'CHAT_DAILY_CAP', 'SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'LAUNCH_GAS_KEY', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP', 'LIVE_SECRET',
     'TELEGRAM_DAILY_CAP', 'TELEGRAM_GROUPS', 'TELEGRAM_GROUP_DAILY_CAP', 'TELEGRAM_GROUP_POSTS', 'TELEGRAM_GROUP_WELCOME', 'VITE_TELEGRAM_BOT',
     'TELEGRAM_GAMES', 'GAMES_A_DAY', 'GAME_PRIZE', 'GAME_WINS_A_DAY', 'PRIZE_WALLET_KEY', 'TELEGRAM_MUSIC']) delete process.env[k];
   Object.assign(process.env, ENV);

@@ -20,7 +20,7 @@ export const TERMINALS = Object.freeze([
       up: '#5fd38d', down: '#f2726f' },
   }),
   T({
-    id: 'scan', name: 'GNGM', short: 'Scanner', currency: 'sol', ready: false,
+    id: 'scan', name: 'GNGM', short: 'Scanner', currency: 'sol', ready: true,
     tagline: 'Good night, good morning, good luck. Scan every coin and wallet.',
     features: ['New, almost bonded, migrated', 'Smart money and KOLs', 'Holders, devs and snipers', 'Wallet PnL cards'],
     // a scanner's near-black (2026-10-21): the same keys as Pomp.fun's (the page keeps one set of color names), its

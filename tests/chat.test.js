@@ -17,6 +17,9 @@ const CA = '0xfa31d04462746aaa24bc7e5626403e09e4b106ec';
 
 let calls, fake;
 beforeEach(() => {
+  // Exercise the default model and site limit even when the build inherits deployment overrides.
+  delete process.env.GEMINI_MODEL;
+  delete process.env.CHAT_DAILY_CAP;
   Object.assign(process.env, ENV);
   calls = [];
   fake = { limit: 'ok', limitStatus: 200, geminiStatus: 200, gemini: { reply: 'hi love 💜', mood: 'wave' }, geminiRaw: null };

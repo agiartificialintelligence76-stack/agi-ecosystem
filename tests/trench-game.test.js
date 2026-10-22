@@ -28,7 +28,7 @@ import {
 import {
   TITLES, resultTitle, resultTone, modeLabel, resultLine, statLines, starsRow, downsample, sparkPath, cardText,
 } from '../src/games/trenchingsimulator/results.js';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const near = (a, b, eps, what) => assert.ok(Math.abs(a - b) <= eps, `${what}: ${a} is not ${b}`);
 const types = (events) => events.map((e) => e.type);
@@ -1645,4 +1645,945 @@ test("a run's worth drawn as a line: at most 200 points, its spikes and dips kep
   for (const [, x, y] of big.d.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)) {
     assert.ok(Number(x) >= 6 && Number(x) <= 594 && Number(y) >= 6 && Number(y) <= 154, `${x} ${y}`);
   }
+});
+
+// ---------- boards/gngm-data.js: GNGM's numbers (2026-10-22) ----------
+
+test("GNGM's chart sums: candles with their buys and sells, a price or a market cap in dollars or the run's coin, its labels", async () => {
+  const G = await import('../src/games/trenchingsimulator/boards/gngm-data.js');
+  assert.deepEqual(G.GTF.map((x) => x.s), [1, 15, 30, 60, 300, 900]);
+  assert.deepEqual(G.GTF.map((x) => x.id), ['1s', '15s', '30s', '1m', '5m', '15m']);
+  const c1 = [
+    { t: 0, o: 30, h: 31, l: 29, c: 30.5, v: 1, b: 1, s: 0 },
+    { t: 1, o: 30.5, h: 33, l: 30, c: 32, v: 2, b: 2, s: 1 },
+    { t: 15, o: 32, h: 32, l: 28, c: 28, v: 0.5, b: 0, s: 1 },
+  ];
+  assert.deepEqual(G.aggregate(c1, 15), [
+    { t: 0, o: 30, h: 33, l: 29, c: 32, v: 3, b: 3, s: 1 },
+    { t: 15, o: 32, h: 32, l: 28, c: 28, v: 0.5, b: 0, s: 1 },
+  ]);
+  assert.equal(G.aggregate(c1, 1).length, 3);
+  assert.deepEqual(G.aggregate(null, 15), []);
+  assert.equal(c1[0].h, 31, 'its candles are never changed');
+  // a market cap of 30 SOL at $150: $4,500, a token $0.0000045; in SOL 30; in ETH at 0.05 ETH a SOL, 1.5
+  assert.equal(G.valueOf(30, { mode: 'mcap', unit: 'usd', solUsd: 150 }), 4500);
+  near(G.valueOf(30, { mode: 'price', unit: 'usd', solUsd: 150 }), 4.5e-6, 1e-15, 'a token in dollars');
+  assert.equal(G.valueOf(30, { mode: 'mcap', unit: 'coin', solUsd: 150 }), 30);
+  assert.equal(G.valueOf(30, { mode: 'mcap', unit: 'coin', solUsd: 150, per: 0.05 }), 1.5);
+  assert.equal(G.formatterFor('mcap', 'usd')(4500), '$4.5K');
+  assert.equal(G.formatterFor('price', 'usd')(4.5e-6), '$0.0₅45');
+  assert.equal(G.formatterFor('mcap', 'coin')(1234), '1.23K');
+  assert.equal(G.formatterFor('price', 'coin')(3e-8), '0.0₇3');
+  // its indicators: moving averages, RSI (Wilder's) and MACD, null until they're there
+  const xs = [1, 2, 3, 4, 5, 6];
+  assert.deepEqual(G.sma(xs, 3), [null, null, 2, 3, 4, 5]);
+  assert.deepEqual(G.ema(xs, 3), [null, null, 2, 3, 4, 5]);
+  assert.deepEqual(G.ema([1, 2], 3), [null, null]);
+  assert.deepEqual(G.sma(xs, 0), [null, null, null, null, null, null]);
+  const r2 = G.rsi([1, 2, 1, 2, 1], 2);
+  assert.deepEqual(r2.slice(0, 2), [null, null]);
+  for (const [i, want] of [[2, 50], [3, 75], [4, 37.5]]) near(r2[i], want, 1e-9, `RSI at ${i}`);
+  const up = G.rsi(Array.from({ length: 16 }, (_, i) => i + 1), 14);
+  assert.deepEqual([up[13], up[14], up[15]], [null, 100, 100]);
+  assert.equal(G.rsi(Array.from({ length: 16 }, (_, i) => 20 - i), 14)[15], 0);
+  assert.equal(G.rsi(Array(16).fill(3), 14)[15], 50);
+  const md = G.macd(xs, 2, 3, 2);
+  assert.deepEqual(md.line.slice(0, 2), [null, null]);
+  for (let i = 2; i < 6; i++) near(md.line[i], 0.5, 1e-9, `MACD at ${i}`);
+  assert.deepEqual(md.signal.slice(0, 3), [null, null, null]);
+  for (let i = 3; i < 6; i++) {
+    near(md.signal[i], 0.5, 1e-9, `its signal at ${i}`);
+    near(md.hist[i], 0, 1e-9, `its histogram at ${i}`);
+  }
+  assert.deepEqual(G.INDICATORS.map(([k]) => k), ['ma', 'ema', 'rsi', 'macd']);
+});
+
+// (2026-10-22: GNGM's chart is TradingView Lightweight Charts™ 5.2.1. It needs a page, so here it runs on a stand-in of
+// the library that keeps what the chart asks of it: its options, its series and their data, its panes, its markers and
+// primitive, its crosshair, its time scale)
+function standInCharts() {
+  const charts = [];
+  const def = (type) => Object.freeze({ type });
+  function createChart(host, options) {
+    const c = { host, options, series: [], panes: [{ stretch: 1 }], handlers: new Set(), removed: false, ts: { barSpacing: options.timeScale.barSpacing, toNow: 0 } };
+    const paneOf = (s) => c.panes.indexOf(s.paneRef);
+    const add = (d, o = {}, pane = 0) => {
+      while (c.panes.length <= pane) c.panes.push({ stretch: 1 });
+      const s = { type: d.type, opts: { ...o }, paneRef: c.panes[pane], sets: 0, data: null, updates: [], applied: [], scale: [], prims: [], lines: [] };
+      s.setData = (x) => {
+        s.sets += 1;
+        s.data = x;
+      };
+      s.update = (p) => s.updates.push(p);
+      s.applyOptions = (o2) => s.applied.push(o2);
+      s.priceScale = () => ({ applyOptions: (o2) => s.scale.push(o2) });
+      s.createPriceLine = (o2) => s.lines.push(o2);
+      s.priceToCoordinate = () => 100;
+      s.attachPrimitive = (p) => {
+        s.prims.push(p);
+        p.attached({ chart: api, series: s, requestUpdate: () => {} });
+      };
+      s.detachPrimitive = (p) => {
+        s.prims = s.prims.filter((x) => x !== p);
+        p.detached();
+      };
+      c.series.push(s);
+      return s;
+    };
+    const paneApi = (p) => ({ addSeries: (d, o) => add(d, o, c.panes.indexOf(p)), setStretchFactor: (f) => { p.stretch = f; } });
+    const api = {
+      addSeries: (d, o, pane = 0) => add(d, o, pane),
+      addPane: () => {
+        const p = { stretch: 1 };
+        c.panes.push(p);
+        return paneApi(p);
+      },
+      panes: () => c.panes.map(paneApi),
+      // (like the library: a pane goes with its last series)
+      removeSeries: (s) => {
+        s.removed = true;
+        c.series = c.series.filter((x) => x !== s);
+        c.panes = c.panes.filter((p, i) => i === 0 || c.series.some((x) => x.paneRef === p));
+      },
+      subscribeCrosshairMove: (h) => c.handlers.add(h),
+      unsubscribeCrosshairMove: (h) => c.handlers.delete(h),
+      timeScale: () => ({ applyOptions: (o) => Object.assign(c.ts, o), options: () => ({ barSpacing: c.ts.barSpacing }),
+        scrollToRealTime: () => { c.ts.toNow += 1; }, timeToCoordinate: (t) => t % 1000 }),
+      remove: () => { c.removed = true; },
+    };
+    c.paneOf = paneOf;
+    charts.push(c);
+    return api;
+  }
+  const markers = [];
+  const lib = {
+    createChart, CandlestickSeries: def('Candlestick'), HistogramSeries: def('Histogram'), LineSeries: def('Line'),
+    createSeriesMarkers: (series, list) => {
+      const m = { series, sets: [list], detached: false, setMarkers(x) { m.sets.push(x); }, detach() { m.detached = true; } };
+      markers.push(m);
+      return m;
+    },
+    ColorType: { Solid: 'solid' }, CrosshairMode: { Normal: 0 }, LineStyle: { Dashed: 2 }, LastPriceAnimationMode: { Disabled: 0 },
+    TickMarkType: { Year: 0, Month: 1, DayOfMonth: 2, Time: 3, TimeWithSeconds: 4 },
+  };
+  return { lib, charts, markers };
+}
+
+test("GNGM's chart on TradingView Lightweight Charts™ (a stand-in): market cap or price, dollars or the coin, its indicators, crosshair, zoom, back to now", async () => {
+  const { createGChart, PALETTE, CREDIT } = await import('../src/games/trenchingsimulator/boards/gchart.js');
+  const { fxText } = await import('../src/games/trenchingsimulator/boards/gngm-data.js');
+  const { lib, charts, markers } = standInCharts();
+  const kids = [];
+  const host = { ownerDocument: { createElement: () => ({ className: '', textContent: '', hidden: false, removed: false, remove() { this.removed = true; } }) },
+    append: (n) => kids.push(n) };
+  const heard = [];
+  const chart = createGChart(host, { tf: 15, onHover: (b) => heard.push(b), lib });
+  const c = charts[0];
+  // the library's options: its logo off (its inline style: refused by the CSP; the credit is ours), its size the host's,
+  // a vertical swipe still scrolls the page, the page's local time on its axis
+  assert.equal(c.options.layout.attributionLogo, false);
+  assert.equal(c.options.autoSize, true);
+  assert.equal(c.options.handleScroll.vertTouchDrag, false);
+  const base = Date.UTC(2026, 9, 22, 12, 0, 0);
+  const s0 = base / 1000;
+  assert.match(c.options.timeScale.tickMarkFormatter(s0 + 30, lib.TickMarkType.TimeWithSeconds), /^\d\d:\d\d:\d\d$/);
+  assert.match(c.options.timeScale.tickMarkFormatter(s0 + 30, lib.TickMarkType.Time), /^\d\d:\d\d$/);
+  assert.deepEqual([CREDIT.name, CREDIT.url, CREDIT.tail], ['TradingView Lightweight Charts™', 'https://www.tradingview.com/', ' · Copyright (c) 2025 TradingView, Inc.']);
+  const [candleS, volS] = c.series;
+  assert.deepEqual([candleS.type, volS.type, volS.opts.priceScaleId], ['Candlestick', 'Histogram', '']);
+  // nothing yet: its words over it, the legend told so
+  const wait = kids[0];
+  assert.equal(wait.textContent, 'waiting for the first trade…');
+  assert.equal(wait.hidden, false);
+  assert.deepEqual(heard, [null]);
+  const candles = [];
+  for (let t = -60; t < 120; t++) candles.push({ t, o: 30, h: 30.2, l: 29.8, c: 30, v: 1 + (t % 3), b: 1, s: 1 });
+  chart.set({ candles, solUsd: 150, tf: 15, base });
+  assert.equal(wait.hidden, true);
+  // 15-second candles of market caps in dollars, at the page's clock; their volume, green or red
+  assert.equal(candleS.data.length, 12);
+  assert.deepEqual([candleS.data[0].time, candleS.data[11].time, candleS.data[11].open, candleS.data[11].close], [s0 - 60, s0 + 105, 4500, 4500]);
+  assert.deepEqual(volS.data[11], { time: s0 + 105, value: 30, color: 'rgba(22,196,127,0.35)' });
+  assert.equal(candleS.opts.priceFormat.formatter(4500), '$4.5K', 'its axis and crosshair labels');
+  const last = heard[heard.length - 1];
+  // (the newest 15-second candle: t 105 to 119, a volume of 1 + t mod 3 each, 30 in all)
+  assert.deepEqual([last.c, last.hovering, last.vol, last.t], [4500, false, 30, 105], 'the newest candle for the legend');
+  // a token's price: its zeros small, a step small enough for them; the run's own coin: the market cap in it
+  chart.view({ mode: 'price' });
+  const pf = candleS.applied.at(-1).priceFormat;
+  assert.deepEqual([pf.type, pf.minMove, pf.formatter(0.0000045)], ['custom', 1e-13, '$0.0₅45']);
+  assert.ok(Math.abs(candleS.data[11].close - 4.5e-6) < 1e-15);
+  chart.view({ mode: 'mcap', unit: 'coin' });
+  assert.equal(candleS.data[11].close, 30);
+  assert.equal(candleS.applied.at(-1).priceFormat.formatter(30), '30');
+  chart.view({ unit: 'coin', per: 0.05 });
+  assert.ok(Math.abs(candleS.data[11].close - 1.5) < 1e-12);
+  chart.view({ unit: 'usd' });
+  assert.equal(candleS.data[11].close, 4500);
+  // the player's trades (B / S bubbles, drawn by a primitive) and the migration (a marker), on their candles
+  chart.set({ marks: [{ t: 30, side: 'buy' }, { t: 60, side: 'sell' }, { t: 9999, side: 'buy' }], migratedAt: 45 });
+  const bub = candleS.prims[0];
+  assert.deepEqual(bub.items.map((m) => [m.time, m.buy]), [[s0 + 30, true], [s0 + 60, false]]);
+  assert.deepEqual(markers[0].sets.at(-1), [{ time: s0 + 45, position: 'aboveBar', shape: 'arrowDown', color: PALETTE.mig, text: 'Migrated' }]);
+  bub.updateAllViews();
+  const drawn = [];
+  const g = { beginPath() {}, arc() {}, fill() {}, fillText: (t) => drawn.push(t) };
+  bub.paneViews()[0].renderer().draw({ useBitmapCoordinateSpace: (f) => f({ context: g, horizontalPixelRatio: 2, verticalPixelRatio: 2 }) });
+  assert.deepEqual(drawn, ['B', 'S']);
+  // its indicators: MA 20 and EMA 9 over the candles, RSI 14 (its 70 and 30) and MACD in panes of their own; a flat
+  // market's RSI is 50 and its MACD 0, "—" until there are enough candles (12 candles of 15 s: too few for RSI 14)
+  chart.indicators(['ma', 'ema', 'rsi', 'macd']);
+  assert.deepEqual(c.series.filter((s) => c.paneOf(s) === 0).map((s) => s.type), ['Candlestick', 'Histogram', 'Line', 'Line']);
+  assert.deepEqual(c.series.filter((s) => c.paneOf(s) > 0).map((s) => [c.paneOf(s), s.type]), [[1, 'Line'], [2, 'Histogram'], [2, 'Line'], [2, 'Line']]);
+  assert.deepEqual(c.panes.map((p) => p.stretch), [3, 1, 1], 'the candles three times an indicator\'s pane');
+  assert.deepEqual(c.series.find((s) => c.paneOf(s) === 1).lines.map((l) => l.price), [70, 30]);
+  let h = heard[heard.length - 1];
+  assert.equal(fxText(h.fx, h.ind, h.fmt), 'MA 20 —  EMA 9 $4.5K  RSI 14 —  MACD 12 26 9 — —');
+  chart.set({ tf: 1 });
+  h = heard[heard.length - 1];
+  assert.equal(fxText(h.fx, h.ind, h.fmt), 'MA 20 $4.5K  EMA 9 $4.5K  RSI 14 50.0  MACD 12 26 9 $0 $0');
+  assert.deepEqual(chart.state.indicators, ['ma', 'ema', 'rsi', 'macd']);
+  chart.indicators([]);
+  assert.deepEqual(c.series.map((s) => s.type), ['Candlestick', 'Histogram'], 'gone again');
+  assert.equal(c.panes.length, 1, 'their panes with them');
+  // the crosshair: the candle under it for the legend, else the newest
+  const cross = [...c.handlers][0];
+  cross({ point: { x: 40, y: 60 }, time: s0 + 30 });
+  assert.deepEqual([heard.at(-1).hovering, heard.at(-1).t], [true, 30]);
+  cross({ point: undefined });
+  assert.deepEqual([heard.at(-1).hovering, heard.at(-1).t], [false, 119]);
+  // the market moves on: only the newest candle again and the new one, never all of them
+  const sets = candleS.sets;
+  candles.push({ t: 120, o: 30, h: 31, l: 30, c: 31, v: 2, b: 1, s: 0 });
+  chart.set({});
+  assert.equal(candleS.sets, sets);
+  assert.deepEqual(candleS.updates.slice(-2).map((p) => p.time), [s0 + 119, s0 + 120]);
+  // another coin (another array): all of them again
+  chart.set({ candles: candles.slice() });
+  assert.equal(candleS.sets, sets + 1);
+  // zoom (within 2 to 32 pixels a candle), back to now at its first zoom, to now
+  chart.zoom(1);
+  assert.equal(chart.state.barW, 8.75);
+  for (let i = 0; i < 30; i++) chart.zoom(1);
+  assert.equal(chart.state.barW, 32);
+  for (let i = 0; i < 30; i++) chart.zoom(-1);
+  assert.equal(chart.state.barW, 2);
+  chart.fit();
+  assert.deepEqual([chart.state.barW, c.ts.toNow], [7, 1]);
+  chart.toNow();
+  assert.equal(c.ts.toNow, 2);
+  // gone without a trace: its crosshair, primitive and markers let go, the chart removed, its words too
+  chart.destroy();
+  assert.deepEqual([c.handlers.size, candleS.prims.length, markers[0].detached, c.removed, wait.removed], [0, 0, true, true, true]);
+  // the library comes only when there's a chart to draw (its own file: never in the game's first one, never on our server)
+  const later = createGChart(host, {});
+  later.set({ candles: [] });
+  assert.equal(later.state.ready, false);
+  later.destroy();
+  const src = readFileSync('src/games/trenchingsimulator/boards/gchart.js', 'utf8');
+  assert.match(src, /import\('lightweight-charts'\)/);
+  assert.doesNotMatch(src, /^import .*lightweight-charts/m, 'never a static import');
+  for (const dir of ['server', 'api']) {
+    for (const f of readdirSync(dir).filter((x) => x.endsWith('.js'))) assert.doesNotMatch(readFileSync(`${dir}/${f}`, 'utf8'), /lightweight-charts/, `${dir}/${f}`);
+  }
+  assert.match(readFileSync('vite.config.js', 'utf8'), /license: true,/, 'its license goes with the build (dist/.vite/license.md)');
+});
+
+test("GNGM's Trenches: a card's metrics (a real coin's unknowns stay unknown), how worrying they are, its column filters", async () => {
+  const G = await import('../src/games/trenchingsimulator/boards/gngm-data.js');
+  const row = { id: 1, mc: 40, vol: 12, vol5m: 3, txns: 50, txns5m: 9, holders: 30, top10: 0.25, dev: 0.04, devSold: 0,
+    snipers: 0.12, insiders: 0.02, bundlers: 0.08, progress: 0.3, age: 90, rugged: false };
+  const m = G.cardMetrics(row, { smart: 2, kols: [{ id: 'gmgrandma' }] });
+  assert.deepEqual([m.smart, m.kols, m.holders, m.live, m.mc], [2, 1, 30, false, 40]);
+  assert.equal(G.cardMetrics(row).smart, null, 'without its stats: not known');
+  const real = G.cardMetrics({ ...row, live: true, holders: null, top10: null }, { smart: null, kols: [] });
+  for (const k of ['holders', 'top10', 'dev', 'devSold', 'snipers', 'insiders', 'bundlers', 'smart', 'kols']) {
+    assert.equal(real[k], null, `a real coin's ${k}`);
+  }
+  assert.equal(real.mc, 40);
+  assert.equal(G.cardMetrics(null), null);
+  assert.equal(G.riskOf('top10', 0.25), 'warn');
+  assert.equal(G.riskOf('top10', 0.31), 'bad');
+  assert.equal(G.riskOf('dev', 0.01), 'ok');
+  assert.equal(G.riskOf('dev', null), 'na');
+  assert.equal(G.riskOf('toString', 0.5), 'na');
+  assert.deepEqual(G.FILTERS.map(([id]) => id), ['all', 'safe', 'smart', 'strict']);
+  assert.equal(G.passes(m, 'all'), true);
+  assert.equal(G.passes(m, 'safe'), true);
+  assert.equal(G.passes(m, 'smart'), true);
+  assert.equal(G.passes(m, 'strict', 150), true, '12 SOL traded at $150: $1,800');
+  assert.equal(G.passes(m, 'strict', 50), false, '$600');
+  assert.equal(G.passes({ ...m, rugged: true }, 'safe'), false);
+  assert.equal(G.passes({ ...m, insiders: 0.4 }, 'safe'), false);
+  assert.equal(G.passes({ ...m, smart: 0 }, 'smart'), false);
+  for (const f of ['safe', 'smart', 'strict']) assert.equal(G.passes(real, f), false, `a real coin's unknowns never pass ${f}`);
+  assert.equal(G.passes(real, 'all'), true);
+  assert.equal(G.passes(null, 'all'), false);
+});
+
+test("GNGM's coin page: what each trade was to its maker, its top traders, its security checks", async () => {
+  const G = await import('../src/games/trenchingsimulator/boards/gngm-data.js');
+  // oldest first: A buys 100, B buys 10, A buys 50, A sells 30, C sells 5, A sells its last 120 (B still holds 10)
+  const trades = [{ addr: 'A', side: 'sell', tok: 120 }, { addr: 'C', side: 'sell', tok: 5 }, { addr: 'A', side: 'sell', tok: 30 },
+    { addr: 'A', side: 'buy', tok: 50 }, { addr: 'B', side: 'buy', tok: 10 }, { addr: 'A', side: 'buy', tok: 100 }];
+  const holders = [{ addr: 'B', tok: 10 }];
+  assert.deepEqual(G.activityLabels(trades, holders, true), ['Sell All', 'Sell All', 'Sell Part', 'Buy More', 'New Holder', 'New Holder']);
+  // not every holder listed: a wallet that isn't listed holds an unknown little
+  assert.deepEqual(G.activityLabels(trades, holders, false), ['Sell Part', 'Sell Part', 'Sell Part', 'Buy More', 'New Holder', 'New Holder']);
+  // a real coin's trades: nobody we know
+  assert.deepEqual(G.activityLabels([{ addr: null, side: 'buy', tok: 5 }], [], true), ['']);
+  assert.deepEqual(G.activityLabels(null, null, true), []);
+  assert.equal(G.makerTag('dev'), 'DEV');
+  assert.equal(G.makerTag('regular'), '');
+  assert.equal(G.makerTag('__proto__'), '');
+  assert.equal(G.makerOk({ label: 'smart' }, 'smart'), true);
+  assert.equal(G.makerOk({ label: 'regular', kol: 'gmgrandma' }, 'kol'), true);
+  assert.equal(G.makerOk({ label: 'regular', me: true }, 'me'), true);
+  assert.equal(G.makerOk({ label: 'regular' }, 'whale'), false);
+  assert.equal(G.makerOk({ label: 'regular' }, 'all'), true);
+  // its top traders: by profit, from what each put in and took out and what it holds is worth (0.01 SOL a token)
+  const top = G.topTraders([{ addr: 'a', label: 'regular', tok: 100, in: 1, out: 0.5 },
+    { addr: 'b', label: 'smart', tok: 10, in: 2, out: 0 }, { addr: 'c', label: 'kol', kol: 'gmgrandma', tok: 50, in: 0.1, out: 1 }], 0.01);
+  assert.deepEqual(top.map((x) => x.addr), ['c', 'a', 'b']);
+  near(top[0].pnl, 1.4, 1e-9, "c's profit");
+  near(top[0].pct, 14, 1e-9, "c's return");
+  near(top[2].pnl, -1.9, 1e-9, "b's loss");
+  assert.equal(top[0].kol, 'gmgrandma');
+  assert.deepEqual(G.topTraders(null, 0.01), []);
+  // its security checks: a made-up coin's from its holders; a real coin's all "—"
+  const st = { phase: 'curve', top10: 0.35, dev: 0.02, devSold: 0, insiders: 0.07, snipers: 0.01, bundlers: 0.2, rugged: false };
+  const checks = G.securityChecks(st);
+  assert.deepEqual(checks.map((c) => c.k), G.CHECKS.map(([k]) => k));
+  assert.deepEqual(checks.map((c) => c.state), ['ok', 'ok', 'na', 'bad', 'ok', 'ok', 'warn', 'ok', 'bad', 'ok']);
+  assert.equal(checks.find((c) => c.k === 'top10').value, '35%');
+  assert.equal(checks.find((c) => c.k === 'lp').value, 'On the curve');
+  const pool = G.securityChecks({ ...st, phase: 'pool', rugged: true });
+  assert.deepEqual([pool[2].value, pool[2].state], ['Burnt 100%', 'ok']);
+  assert.deepEqual([pool[9].value, pool[9].state], ['Yes', 'bad']);
+  for (const c of G.securityChecks({ ...st, live: true })) assert.deepEqual([c.value, c.state], ['—', 'na'], c.k);
+  assert.deepEqual(G.securityChecks(null), []);
+});
+
+test("GNGM's first 70 buyers: kept by the market as they first buy, what each holds now, a real coin's never made up", async () => {
+  const { createMarket, FIRST_BUYERS } = await import('../src/games/trenchingsimulator/engine.js');
+  const G = await import('../src/games/trenchingsimulator/boards/gngm-data.js');
+  assert.equal(FIRST_BUYERS, 70);
+  const m = createMarket({ seed: 'gngm-first' });
+  m.advance(240);
+  assert.equal(m.firstBuyers(-1), null);
+  assert.equal(m.firstBuyers(1e9), null);
+  let checked = 0;
+  for (let id = 0; id < m.size.coins; id++) {
+    const fb = m.firstBuyers(id);
+    assert.ok(fb && Array.isArray(fb.list), `coin ${id}`);
+    assert.ok(fb.list.length <= 70, `coin ${id}: at most 70`);
+    const coin = m.debug.coin(id);
+    let got = 0;
+    let hold = 0;
+    fb.list.forEach((x, i) => {
+      assert.equal(x.n, i + 1);
+      if (i > 0) assert.ok(x.at >= fb.list[i - 1].at, `coin ${id}: in the order they first bought`);
+      // what it holds now is its wallet's own (gone from the holders: sold out)
+      const h = coin.holders.get(coin.first[i].key);
+      assert.equal(x.tok, h ? h.tok : 0, `coin ${id}, buyer ${i + 1}`);
+      assert.ok(x.tok0 > 0);
+      const want = x.tok <= 0 ? 'all' : x.tok > x.tok0 * 1.02 ? 'more' : x.tok < x.tok0 * 0.98 ? 'part' : 'hold';
+      assert.equal(x.status, want, `coin ${id}, buyer ${i + 1}`);
+      got += x.tok0;
+      hold += x.tok;
+    });
+    near(fb.got, got / 1e9, 1e-12, `coin ${id}: the share they first got`);
+    near(fb.hold, hold / 1e9, 1e-12, `coin ${id}: the share they hold now`);
+    if (fb.list.length >= 20) checked++;
+  }
+  assert.ok(checked >= 5, `coins with 20 first buyers or more: ${checked}`);
+  // the summary: each state counted, the snipers and insiders among them
+  const busy = [...Array(m.size.coins).keys()].map((id) => m.firstBuyers(id)).find((fb) => fb.list.length >= 20);
+  const sum = G.firstSummary(busy);
+  assert.equal(sum.count, busy.list.length);
+  assert.equal(Object.values(sum.states).reduce((a, b) => a + b, 0), busy.list.length);
+  assert.equal(sum.snipers, busy.list.filter((x) => x.label === 'sniper').length);
+  assert.equal(G.firstSummary(null), null);
+  // the same seed, the same first buyers (keeping them draws no number: the market is the same as before)
+  const again = createMarket({ seed: 'gngm-first' });
+  again.advance(240);
+  assert.deepEqual(again.firstBuyers(3), m.firstBuyers(3));
+  assert.deepEqual(again.lists(), m.lists());
+  // the smart wallets' weeks: how their trades ended, counted from the same trades, a copy each time
+  const w = m.smartWallets()[0];
+  assert.equal(w.d7.dist.length, 5);
+  assert.equal(w.d7.dist.reduce((a, b) => a + b, 0), w.d7.trades);
+  assert.equal(w.d7.dist[0] + w.d7.dist[1] + w.d7.dist[2], w.d7.won, 'every win returned something, every loss lost something');
+  w.d7.dist[0] = -1;
+  assert.notEqual(m.smartWallets()[0].d7.dist[0], -1);
+});
+
+test("GNGM's Track feed and wallet pages: KOL and smart money trades, a smart wallet's week and run, a caller's calls", async () => {
+  const G = await import('../src/games/trenchingsimulator/boards/gngm-data.js');
+  const { createMarket } = await import('../src/games/trenchingsimulator/engine.js');
+  const { smartAddress, KOLS } = await import('../src/games/trenchingsimulator/names.js');
+  const events = [
+    { q: 1, t: 5, kind: 'kol_buy', c: 3, kol: 'gmgrandma', sol: 2, ticker: 'FROG' },
+    { q: 2, t: 6, kind: 'launch', c: 4, ticker: 'NEW' },
+    { q: 3, t: 7, kind: 'smart_sell', c: 3, smart: 5, frac: 0.5, sol: 1, ticker: 'FROG' },
+    { q: 4, t: 8, kind: 'whale_buy', c: 9, sol: 12, l: 'whale', ticker: 'CAT' },
+    { q: 5, t: 9, kind: 'kol_sell', c: 3, kol: 'gmgrandma', frac: 1, sol: 3, ticker: 'FROG' },
+  ];
+  assert.deepEqual(G.trackItems(events).map((x) => x.q), [5, 4, 3, 1]);
+  assert.deepEqual(G.trackItems(events, { filter: 'kol' }).map((x) => x.q), [5, 1]);
+  assert.deepEqual(G.trackItems(events, { max: 2 }).map((x) => x.q), [5, 4]);
+  const first = G.trackItems(events)[0];
+  assert.deepEqual([first.who, first.side, first.kol, first.coin, first.frac], ['kol', 'sell', 'gmgrandma', 3, 1]);
+  assert.equal(G.trackItems(events)[2].smart, 5);
+  assert.deepEqual(G.trackItems(null), []);
+  // a caller's page: its calls this run, never how honest or good it is
+  const k = G.kolProfile('gmgrandma', events);
+  const ki = KOLS.findIndex((x) => x.id === 'gmgrandma');
+  assert.deepEqual([k.name, k.calls, k.sells, k.followers, k.addr], ['@gmgrandma', 1, 1, KOLS[ki].followers, smartAddress(1000 + ki)]);
+  assert.deepEqual(k.coins, [3]);
+  assert.ok(!('honest' in k) && !('skill' in k));
+  assert.equal(G.kolProfile('nobody', events), null);
+  assert.equal(G.kolAddress('nobody'), null);
+  // a smart wallet's page from the market's board
+  const m = createMarket({ seed: 'gngm-wallet' });
+  m.advance(300);
+  const W = m.smartWallets();
+  for (const w of W) {
+    const p = G.smartProfile(w);
+    assert.equal(p.name, `Smart wallet ${w.n + 1}`);
+    assert.equal(p.addr, w.addr);
+    assert.equal(p.week.trades, w.d7.trades);
+    near(p.week.winRate, w.d7.won / w.d7.trades, 1e-12, 'its week\'s win rate');
+    assert.deepEqual(p.week.dist, w.d7.dist);
+    assert.equal(p.run.open, w.open.length);
+    assert.equal(p.run.dist.reduce((a, b) => a + b, 0), w.open.filter((o) => o.in > 0).length);
+    if (w.won + w.lost === 0) assert.equal(p.run.winRate, null);
+  }
+  assert.equal(G.smartProfile(null), null);
+  assert.deepEqual([G.distOf(6), G.distOf(3), G.distOf(0.5), G.distOf(-0.2), G.distOf(-0.9)], [0, 1, 2, 3, 4]);
+  assert.equal(G.DIST_LABELS.length, 5);
+});
+
+test("GNGM's trade module: take my initial, limit orders, take profit and stop loss, a PnL card's numbers", async () => {
+  const G = await import('../src/games/trenchingsimulator/boards/gngm-data.js');
+  // take my initial: what's still in it (1 in, 0.5 out already) from a quote that pays 3 SOL for all of it
+  assert.equal(G.initialFrac({ tokens: 100, invested: 1, sold: 0.5 }, (f) => f * 3), 0.167);
+  assert.equal(G.initialFrac({ tokens: 100, invested: 1, sold: 1.2 }, (f) => f * 3), null, 'already got it back');
+  assert.equal(G.initialFrac({ tokens: 100, invested: 1, sold: 0.5 }, (f) => f * 0.4), null, 'selling all of it would not');
+  assert.equal(G.initialFrac({ tokens: 0, invested: 1, sold: 0 }, (f) => f * 3), null);
+  assert.equal(G.initialFrac(null, (f) => f), null);
+  // limit orders: their direction from where the market cap was
+  const dip = G.makeLimit({ coin: 3, side: 'buy', mc: 30, sol: 0.1, mcNow: 40 });
+  assert.deepEqual([dip.dir, G.limitName(dip), G.limitHit(dip, 35), G.limitHit(dip, 30), G.limitHit(dip, 12)], ['down', 'Buy the dip', false, true, true]);
+  const brk = G.makeLimit({ coin: 3, side: 'buy', mc: 60, sol: 0.1, mcNow: 40 });
+  assert.deepEqual([brk.dir, G.limitName(brk), G.limitHit(brk, 59), G.limitHit(brk, 61)], ['up', 'Buy the breakout', false, true]);
+  assert.equal(G.limitName(G.makeLimit({ coin: 3, side: 'sell', mc: 80, frac: 0.5, mcNow: 40 })), 'Take profit');
+  assert.equal(G.limitName(G.makeLimit({ coin: 3, side: 'sell', mc: 20, frac: 1, mcNow: 40 })), 'Stop loss');
+  for (const bad of [{ coin: 3, side: 'x', mc: 30, sol: 1, mcNow: 40 }, { coin: 3, side: 'buy', mc: 30, mcNow: 40 },
+    { coin: 3, side: 'sell', mc: 30, frac: 1.5, mcNow: 40 }, { coin: 'a', side: 'buy', mc: 30, sol: 1, mcNow: 40 },
+    { coin: 3, side: 'buy', mc: 0, sol: 1, mcNow: 40 }]) assert.equal(G.makeLimit(bad), null, JSON.stringify(bad));
+  assert.equal(G.limitHit(null, 10), false);
+  // auto: take profit at +100%, stop loss at −50%, on an entry of 40 SOL of market cap
+  const a = { tp: { at: 1, frac: 0.5 }, sl: { at: -0.5, frac: 1 } };
+  assert.deepEqual([G.autoHit(a, 80, 40), G.autoHit(a, 79, 40), G.autoHit(a, 20, 40), G.autoHit(a, 50, 40)], ['tp', null, 'sl', null]);
+  assert.equal(G.autoHit({ ...a, tp: { at: 1, frac: 0.5, done: true } }, 90, 40), null, 'each once');
+  assert.equal(G.autoHit(a, 80, 0), null);
+  near(G.entryMcOf({ tokens: 1e6, cost: 0.04 }), 40, 1e-9, 'its entry as a market cap');
+  assert.equal(G.entryMcOf({ tokens: 0, cost: 1 }), null);
+  // a PnL card's numbers: invested, what came back (sold and still held), profit, return
+  const p = G.pnlOf({ invested: 2, sold: 1, value: 2, total: 0.9 });
+  assert.deepEqual([p.invested, p.sold, p.profit, p.pct], [2, 3, 0.9, 0.45]);
+  assert.equal(G.pnlOf(null), null);
+});
+
+test("GNGM's presets (P1 to P3) and chart view in the save; the player's optional name, both games' and never required", async () => {
+  const S = await import('../src/games/trenchingsimulator/save.js');
+  const b = S.blank();
+  assert.equal(b.preset, 0);
+  assert.deepEqual(b.presets, [{ slippage: 0.2, priority: 'fast' }, { slippage: 0.1, priority: 'turbo' }, { slippage: 0.5, priority: 'ultra' }]);
+  assert.deepEqual(b.chart, { mode: 'mcap', unit: 'usd' });
+  const c = S.cleanSave({ v: 1, preset: 2, presets: [{ slippage: 0.05, priority: 'ultra' }, { slippage: 0.33, priority: 'warp' }],
+    chart: { mode: 'price', unit: 'eth' } });
+  assert.equal(c.preset, 2);
+  assert.deepEqual(c.presets, [{ slippage: 0.05, priority: 'ultra' }, { slippage: 0.1, priority: 'turbo' }, { slippage: 0.5, priority: 'ultra' }]);
+  assert.deepEqual(c.chart, { mode: 'price', unit: 'usd' });
+  for (const bad of [3, -1, 1.5, '1', null]) assert.equal(S.cleanSave({ v: 1, preset: bad }).preset, 0, String(bad));
+  b.presets[0].slippage = 0.5;
+  assert.equal(S.blank().presets[0].slippage, 0.2, "the defaults are copies");
+  assert.ok(Object.isFrozen(S.PRESETS) && S.PRESETS.every((p) => Object.isFrozen(p)));
+  // the name: optional, tidied, the site's rules for a name in short (our server checks it again before anyone sees it)
+  const N = await import('../src/games/player-name.js');
+  assert.equal(N.NAME_KEY, 'agi_player_name');
+  assert.equal(N.NAME_MAX, 24);
+  assert.deepEqual(N.cleanName(''), { ok: true, name: null });
+  assert.deepEqual(N.cleanName('   '), { ok: true, name: null });
+  assert.deepEqual(N.cleanName(undefined), { ok: true, name: null });
+  assert.deepEqual(N.cleanName('  degen   dan '), { ok: true, name: 'degen dan' });
+  for (const ok of ['Trenchlord', 'María José', '鈴木', 'ape_42', 'gm 🐸', "O'Neil", 'Dev', 'x'.repeat(24)]) assert.equal(N.cleanName(ok).ok, true, ok);
+  for (const bad of ['x'.repeat(25), 'AGI-1', 'agi1official', 'AGI Team', 'the team', 'admin', 'Mod', 'support', 'official_dan',
+    'real_agi_1', 'http://x.co', 'www.site', 'buy.fun', 'pump.xyz/ok', 'me@mail.com', '0xabcdef12', '1234567', '<b>', '???', '...']) {
+    assert.equal(N.cleanName(bad).ok, false, bad);
+  }
+  const mem = new Map();
+  const st = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  assert.equal(N.loadName(st), null);
+  assert.deepEqual(N.saveName(st, ' Ape Lord '), { ok: true, name: 'Ape Lord', saved: true });
+  assert.equal(mem.get('agi_player_name'), 'Ape Lord');
+  assert.equal(N.loadName(st), 'Ape Lord');
+  assert.deepEqual(N.saveName(st, 'admin'), { ok: false });
+  assert.equal(N.loadName(st), 'Ape Lord', 'a name that is refused changes nothing');
+  assert.deepEqual(N.saveName(st, ''), { ok: true, name: null, saved: true });
+  assert.equal(mem.has('agi_player_name'), false, 'an empty name forgets it');
+  mem.set('agi_player_name', 'AGI team');
+  assert.equal(N.loadName(st), null, 'a kept name that no longer passes');
+  assert.equal(N.loadName({ getItem() { throw new Error('blocked'); } }), null);
+  assert.deepEqual(N.saveName({ setItem() { throw new Error('full'); } }, 'Ape'), { ok: true, name: 'Ape', saved: false });
+  assert.deepEqual(N.saveName(null, 'Ape'), { ok: true, name: 'Ape', saved: false });
+});
+
+test("GNGM's PnL card: its return big, in, out and profit, the player's name, the safety foot; never a real coin's name, a QR code or a link", async () => {
+  const K = await import('../src/games/trenchingsimulator/boards/gngm-card.js');
+  const { tradeShareText } = await import('../src/games/trenchingsimulator/share.js');
+  assert.deepEqual([K.CARD_W, K.CARD_H], [1200, 630]);
+  // a run's card
+  const won = K.runCardWords(WON, { name: 'Ape Lord' });
+  assert.match(won.kicker, /^TRENCHING SIMULATOR · /);
+  assert.equal(won.big, '+131%');
+  assert.equal(won.small, '2.31x');
+  assert.deepEqual(won.rows.map((r) => r[0]), ['Start', 'Worth', 'Profit', 'Time']);
+  assert.equal(won.rows[2][2], 'up');
+  assert.equal(won.name, 'Ape Lord');
+  assert.match(won.foot, /^Play money, made-up coins · agi1\.app\/games\/trenchingsimulator · Not financial advice\.$/);
+  assert.equal(K.runCardWords({ ...WON, live: 'solana', liveTraded: 2 }).foot,
+    'Play money on live coins · agi1.app/games/trenchingsimulator · Not financial advice.');
+  assert.equal(K.runCardWords(WON).name, null, 'no name, none on the card');
+  // one coin's card: a made-up coin by its ticker, a real one never by name
+  const pos = { id: 4, ticker: 'FROG', name: 'Frog Coin', tokens: 0, invested: 1, sold: 2.5, value: 0, total: 1.5 };
+  const made = K.positionCardWords(pos, { currency: 'sol', solUsd: 150, name: 'Ape Lord' });
+  assert.deepEqual([made.title, made.big, made.small, made.tone], ['$FROG', '+150%', 'sold', 'up']);
+  assert.deepEqual(made.rows.map((r) => r[0]), ['Invested', 'Sold', 'Profit']);
+  assert.equal(made.rows[2][1], '+1.5 SOL');
+  const real = K.positionCardWords({ ...pos, ticker: 'REALTKR', tokens: 10, value: 1, total: -0.2 }, { live: true, currency: { coin: 'eth', usd: 3000 }, solUsd: 150 });
+  assert.equal(real.title, 'a live coin');
+  assert.equal(real.tone, 'down');
+  assert.match(real.rows[0][1], /ETH$/);
+  assert.match(real.foot, /^Play money on live coins/);
+  // drawn on a stand-in canvas: the words above, nothing else (no link, no QR code, never the real coin's ticker)
+  const draw = (w) => {
+    const texts = [];
+    const g = { fillRect() {}, strokeRect() {}, save() {}, restore() {}, translate() {}, scale() {},
+      fillText: (t) => texts.push(String(t)), measureText: (t) => ({ width: String(t).length * 20 }) };
+    K.drawPnlCard(g, w, { bg: '#0d0d0f' });
+    return texts;
+  };
+  const tx = draw(real);
+  assert.ok(tx.includes('a live coin') && tx.includes('GN') && tx.includes('GM'), tx.join(' | '));
+  assert.ok(!tx.some((t) => /REALTKR|https?:|www\.|qr|ref=/i.test(t)), tx.join(' | '));
+  assert.ok(tx.some((t) => t.startsWith('Play money on live coins')), 'the safety foot');
+  const tx2 = draw(made);
+  assert.ok(tx2.includes('$FROG') && tx2.includes('+150%') && tx2.includes('by Ape Lord'), tx2.join(' | '));
+  assert.ok(tx2.some((t) => /Not financial advice/.test(t)));
+  // the words shared with it: play money every time, never "buy", never a real coin or terminal by name
+  const bad = /based\s*bot(?!t)|gmgn|pump\.?fun|axiom|fomo|photon|bullx|dexscreener|robinhood|\bbuy\b|guarantee|financial|REALTKR/i;
+  for (const o of [{ ticker: 'FROG', change: 1.5 }, { ticker: 'FROG', change: -0.4 }, { ticker: 'REALTKR', live: true, change: 3 },
+    { ticker: '<b>', change: 0.1 }, { ticker: 'FROG' }, {}]) {
+    const t = tradeShareText(o);
+    assert.match(t, /TRENCHING SIMULATOR/);
+    assert.match(t, /\(play money, made-up coins\)|\(play money on live coins\)/);
+    assert.ok(!bad.test(t), t);
+    assert.ok(t.length + 24 <= 280, t);
+  }
+  assert.equal(tradeShareText({ ticker: 'FROG', change: 1.5 }), '+150% on $FROG in TRENCHING SIMULATOR (play money, made-up coins) 💜');
+  assert.match(tradeShareText({ ticker: 'REALTKR', live: true, change: 3 }), /^\+300% on a live coin in /);
+  assert.match(tradeShareText({ ticker: '<b>', change: 0.1 }), / on a coin in /);
+});
+
+// ---------- verify.js and ../boards.js: checked runs and the leaderboards (2026-10-22) ----------
+
+test("checked runs: a run's orders packed and read back, and the same run made again from them, whatever its frames were", async () => {
+  const V = await import('../src/games/trenchingsimulator/verify.js');
+  const { dailySeed: dSeed, dailyChallenge: dCh } = await import('../src/games/trenchingsimulator/challenges.js');
+  // a challenge played with uneven frames (a slow phone): a new coin bought now and then, half of a coin held sold later
+  const play = (run) => {
+    const frames = [0.016, 0.25, 0.033, 0.18, 0.016, 0.016, 0.21, 0.05];
+    for (let i = 0; !run.over && i < 40000; i++) {
+      run.tick(frames[i % frames.length]);
+      if (i % 37 === 5) {
+        const r = run.market.lists({ limit: 5 }).new[0];
+        if (r) run.order({ coin: r.id, side: 'buy', sol: 0.05, slippage: 0.2, priority: 'fast' });
+      }
+      if (i % 53 === 20) {
+        const p = run.market.positions().find((x) => x.open);
+        if (p) run.order({ coin: p.id, side: 'sell', frac: 0.5, slippage: 0.5, priority: 'turbo' });
+      }
+    }
+    return run.result();
+  };
+  const run = createRun({ seed: 'checked-1', solUsd: 150, mode: 'challenge', challenge: challengeById('speedrun'), currency: 'sol' });
+  const res = play(run);
+  assert.ok(run.over, 'it ended by itself');
+  const log = run.market.log();
+  assert.ok(log.length >= 5, `its orders: ${log.length}`);
+  const packed = V.packLog(log);
+  assert.ok(packed.every((s) => typeof s === 'string' && s.length < 60), packed[0]);
+  const back = V.unpackLog(packed);
+  assert.deepEqual(back, log.map((e) => (e.side === 'buy' ? { n: e.n, coin: e.coin, side: 'buy', sol: e.sol, slippage: e.slippage, priority: e.priority }
+    : { n: e.n, coin: e.coin, side: 'sell', frac: e.frac, slippage: e.slippage, priority: e.priority })));
+  // made again on single steps: the same ending, at the same step, with the same worth
+  const rep = V.replayRun({ kind: 'challenge', challenge: 'speedrun', seed: 'checked-1', solUsd: 150, log: back });
+  assert.equal(rep.ok, true);
+  assert.deepEqual([rep.result.outcome, rep.result.reason, rep.result.timeUsed, rep.result.worth, rep.result.filled],
+    [res.outcome, res.reason, res.timeUsed, res.worth, res.filled]);
+  assert.equal(V.sameResult({ outcome: res.outcome, timeUsed: res.timeUsed, worth: res.worth }, rep.result), true);
+  // the daily market: its seed is the day's
+  const day = '2026-10-20';
+  const daily = createRun({ seed: dSeed(day), challenge: dCh(day), mode: 'daily', solUsd: 150, currency: 'sol' });
+  const dres = play(daily);
+  const drep = V.replayRun({ kind: 'daily', day, seed: 'ignored', solUsd: 150, log: V.unpackLog(V.packLog(daily.market.log())) });
+  assert.equal(drep.ok, true);
+  assert.deepEqual([drep.result.outcome, drep.result.timeUsed, drep.result.worth], [dres.outcome, dres.timeUsed, dres.worth]);
+  // what a page could change: an order's amount (another run), an order out of its place, a claim that isn't what happened
+  const changed = back.map((o, i) => (i === 0 ? { ...o, sol: o.sol * 3 } : o));
+  const crep = V.replayRun({ kind: 'challenge', challenge: 'speedrun', seed: 'checked-1', solUsd: 150, log: changed });
+  assert.ok(!crep.ok || !V.sameResult({ outcome: res.outcome, timeUsed: res.timeUsed, worth: res.worth }, crep.result), 'another run');
+  assert.equal(V.replayRun({ kind: 'challenge', challenge: 'speedrun', seed: 'another', solUsd: 150, log: back }).ok
+    && V.sameResult(res, V.replayRun({ kind: 'challenge', challenge: 'speedrun', seed: 'another', solUsd: 150, log: back }).result), false, 'another seed');
+  assert.deepEqual(V.replayRun({ kind: 'challenge', challenge: 'speedrun', seed: 'checked-1', solUsd: 150,
+    log: [{ ...back[0], n: back[0].n - 99999 }] }), { ok: false, why: 'order' });
+  assert.deepEqual(V.replayRun({ kind: 'free', seed: 'x', solUsd: 150, log: [] }), { ok: false, why: 'bad' });
+  assert.deepEqual(V.replayRun({ kind: 'challenge', challenge: 'nope', seed: 'x', solUsd: 150, log: [] }), { ok: false, why: 'bad' });
+  assert.equal(V.sameResult({ ...res, worth: res.worth * 1.001 }, rep.result), false);
+  assert.equal(V.sameResult({ ...res, timeUsed: res.timeUsed - 0.1 }, rep.result), false);
+  assert.equal(V.sameResult({ ...res, outcome: 'won' }, { ...rep.result, outcome: 'lost' }), false);
+  // a log read back only when everything in it is right
+  const ok = packed[0];
+  for (const bad of [[ok, ok.replace(/^[0-9a-z]+/, '0')], [ok.replace(/,[0-2]$/, ',7')], [ok.replace(/^([^,]+,[^,]+,)b/, '$1x')],
+    [`${ok},1`], ['a,b,s,1.5,0.2,0'], ['1,1,s,0.5,0.33,0'], ['1,1,b,-1,0.2,0'], ['1,1,b,1e3,0.2,0'], [7], 'x', null]) {
+    assert.equal(V.unpackLog(bad), null, JSON.stringify(bad));
+  }
+  assert.equal(V.unpackLog(Array(V.LOG_MAX + 1).fill(ok)), null, 'at most 1,000 orders');
+  assert.deepEqual(V.unpackLog([]), []);
+  assert.equal(V.rankedChallenge({ kind: 'daily', day: 'nope' }), null);
+  assert.equal(V.rankedSeed({ kind: 'daily', day, seed: 'x' }), dSeed(day));
+});
+
+test("checked runs on our server: a ticket (its seed ours, its price frozen), the run made again, the boards; every way a score is refused", async () => {
+  const S = await import('../server/scores.js');
+  const V = await import('../src/games/trenchingsimulator/verify.js');
+  const B = await import('../src/games/boards.js');
+  const { dailyChallenge: dCh } = await import('../src/games/trenchingsimulator/challenges.js');
+  const cfg = { passSecret: 'a-pass-secret-for-the-checked-runs-0123456789', supabaseUrl: 'https://db.example', supabaseKey: 'k' };
+  const PID = 'c'.repeat(32);
+  const WHO = 'v'.repeat(24);
+  const calls = [];
+  const db = { take: 'ok', cut: true, put: null };
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    if (u.startsWith('https://api.dexscreener.com/')) return new Response('{}', { status: 503 });
+    const fn = u.slice(u.lastIndexOf('/') + 1);
+    const args = JSON.parse(init.body);
+    calls.push({ fn, args });
+    const out = fn === 'arcade_take' ? db.take : fn === 'arcade_board_cut' ? db.cut
+      : fn === 'arcade_score_put' ? (db.put || { ok: true, ranks: Object.fromEntries(args.p_boards.map((b, i) => [b, i + 1])) }) : null;
+    return new Response(JSON.stringify(out), { status: 200 });
+  };
+  S._resetScores();
+  try {
+    const T0 = Date.UTC(2026, 9, 22, 12, 0, 0);
+    const day = B.dayKeyOf(T0);
+    // a ticket for today's daily market: its day's seed, SOL at $150 (DexScreener away), tied to this browser
+    const tk = await S.gameTicket(cfg, { game: 'trenchingsimulator', player: PID, kind: 'daily', who: WHO, now: T0 });
+    assert.equal(tk.ok, true);
+    assert.deepEqual([tk.kind, tk.day, tk.solUsd, tk.seed], ['daily', day, 150, V.rankedSeed({ kind: 'daily', day })]);
+    assert.deepEqual(calls.at(-1), { fn: 'arcade_take', args: { p_kind: 't', p_who: WHO, p_per_day: 60, p_site_daily: 50000 } });
+    // a challenge's: a seed of its own, picked here, never the same twice
+    const c1 = await S.gameTicket(cfg, { game: 'trenchingsimulator', player: PID, kind: 'challenge', challenge: 'speedrun', who: WHO, now: T0 });
+    const c2 = await S.gameTicket(cfg, { game: 'trenchingsimulator', player: PID, kind: 'challenge', challenge: 'speedrun', who: WHO, now: T0 });
+    assert.match(c1.seed, /^speedrun-[0-9a-f]{32}$/);
+    assert.notEqual(c1.seed, c2.seed);
+    for (const bad of [{ kind: 'free' }, { kind: 'challenge', challenge: 'nope' }, { kind: 'daily', player: 'x' }]) {
+      assert.deepEqual(await S.gameTicket(cfg, { game: 'trenchingsimulator', player: PID, who: WHO, now: T0, ...bad }), { ok: false, why: 'bad' });
+    }
+    db.take = 'person_cap';
+    assert.deepEqual(await S.gameTicket(cfg, { game: 'trenchingsimulator', player: PID, kind: 'daily', who: WHO, now: T0 }), { ok: false, why: 'person_cap' });
+    db.take = 'ok';
+    // the run played in the page with the ticket's seed and price, its orders sent with what it says happened
+    const run = createRun({ seed: tk.seed, challenge: dCh(day), mode: 'daily', solUsd: tk.solUsd, currency: 'sol' });
+    const frames = [0.016, 0.2, 0.05];
+    for (let i = 0; !run.over && i < 80000; i++) {
+      run.tick(frames[i % 3]);
+      if (i % 41 === 3) {
+        const r = run.market.lists({ limit: 3 }).new[0];
+        if (r) run.order({ coin: r.id, side: 'buy', sol: 0.05, slippage: 0.2, priority: 'fast' });
+      }
+      if (i % 67 === 30) {
+        const p = run.market.positions().find((x) => x.open);
+        if (p) run.order({ coin: p.id, side: 'sell', frac: 1, slippage: 0.5, priority: 'fast' });
+      }
+    }
+    const res = run.result();
+    const claim = { outcome: res.outcome, timeUsed: res.timeUsed, worth: res.worth, multiple: res.multiple };
+    const body = { game: 'trenchingsimulator', player: PID, ticket: tk.ticket, name: ' Ape Lord ', claim, log: V.packLog(run.market.log()) };
+    const after = T0 + (res.timeUsed + 2) * 1000;
+    const keys = B.trenchKeys('daily', res);
+    assert.ok(keys, `a daily market's ${res.outcome} ranks`);
+    calls.length = 0;
+    const ok = await S.gameScore(cfg, body, { who: WHO, now: after });
+    assert.deepEqual(ok, { ok: true, ranked: true, ranks: { [`daily:${day}`]: 1 }, name: 'Ape Lord', nameRefused: false });
+    assert.deepEqual(calls.map((x) => x.fn), ['arcade_take', 'arcade_board_cut', 'arcade_take', 'arcade_score_put']);
+    assert.deepEqual(calls[0].args, { p_kind: 's', p_who: WHO, p_per_day: 30, p_site_daily: 20000 }, 'a score, counted');
+    assert.deepEqual(calls[2].args, { p_kind: 'p', p_who: WHO, p_per_day: 30, p_site_daily: 2000 }, 'made again: 2,000 a day for the site');
+    const put = calls[3].args;
+    assert.deepEqual([put.p_boards, put.p_k1, put.p_k2, put.p_detail, put.p_max_uses, put.p_name],
+      [[`daily:${day}`], keys.k1, keys.k2, keys.detail, 1, 'Ape Lord']);
+    assert.match(put.p_player, /^[A-Za-z0-9_-]{32}$/, 'a code of the browser\'s id, never the id');
+    assert.ok(!JSON.stringify(calls).includes(PID));
+    // what's refused: a claim that isn't what its orders make, another browser's ticket, a changed ticket, too soon, too late
+    const no = async (b, now = after) => S.gameScore(cfg, { ...body, ...b }, { who: WHO, now });
+    assert.deepEqual(await no({ claim: { ...claim, worth: claim.worth * 1.01 } }), { ok: false, why: 'replay' });
+    assert.deepEqual(await no({ player: 'd'.repeat(32) }), { ok: false, why: 'ticket' });
+    const [pl, mac] = tk.ticket.split('.');
+    const forged = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(pl, 'base64url').toString()), s: 'mine' })).toString('base64url');
+    assert.deepEqual(await no({ ticket: `${forged}.${mac}` }), { ok: false, why: 'ticket' });
+    assert.deepEqual(await no({ ticket: 'nope' }), { ok: false, why: 'ticket' });
+    assert.ok(res.timeUsed > 6, `a run of ${res.timeUsed} s`);
+    assert.deepEqual(await no({}, T0 + 1000), { ok: false, why: 'fast' }, 'it took less real time than it says');
+    assert.deepEqual(await no({}, T0 + (dCh(day).seconds + 1000) * 1000), { ok: false, why: 'late' });
+    assert.deepEqual(await no({ log: ['nope'] }), { ok: false, why: 'bad' });
+    assert.deepEqual(await no({ claim: { ...claim, outcome: 'quit' } }), { ok: true, ranked: false, why: 'not_ranked' });
+    // not better than what it has (or not in the top 100): nothing made again, nothing kept
+    db.cut = false;
+    calls.length = 0;
+    assert.deepEqual(await no({}), { ok: true, ranked: false, why: 'not_better' });
+    assert.ok(!calls.some((x) => x.fn === 'arcade_score_put'));
+    assert.ok(!calls.some((x) => x.fn === 'arcade_take' && x.args.p_kind === 'p'), 'nothing made again');
+    db.cut = true;
+    // the site's replays used up for today: not ranked, nothing made again
+    let takes = 0;
+    db.take = 'ok';
+    const realTake = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      if (String(url).endsWith('/arcade_take') && JSON.parse(init.body).p_kind === 'p') { takes++; return new Response('"site_cap"', { status: 200 }); }
+      return realTake(url, init);
+    };
+    calls.length = 0;
+    assert.deepEqual(await no({}), { ok: false, why: 'site_cap' });
+    assert.equal(takes, 1);
+    assert.ok(!calls.some((x) => x.fn === 'arcade_score_put'));
+    globalThis.fetch = realTake;
+    db.put = { ok: false, why: 'used' };
+    assert.deepEqual(await no({}), { ok: false, why: 'used' });
+    db.put = null;
+    // a name that can't be shown: "A player", and the page is told why
+    const named = await no({ name: 'admin' });
+    assert.deepEqual([named.ok, named.name, named.nameRefused], [true, null, true]);
+    // a board as the page reads it: never who
+    globalThis.fetch = async () => new Response(JSON.stringify([{ name: 'Ape Lord', k1: 5, k2: -2, detail: { w: 1, t: 5, m: 2 }, created: '2026-10-22T12:00:00Z', player: 'x' }]), { status: 200 });
+    assert.deepEqual(await S.gameBoard(cfg, 'trenchingsimulator', `daily:${day}`), [{ rank: 1, name: 'Ape Lord', detail: { w: 1, t: 5, m: 2 }, at: '2026-10-22T12:00:00Z' }]);
+    assert.equal(await S.gameBoard(cfg, 'trenchingsimulator', 'e:all'), null, 'another game\'s board');
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('the leaderboards: each game\'s boards, the order they rank in, what a row says', async () => {
+  const B = await import('../src/games/boards.js');
+  for (const b of ['daily:2026-10-22', 'c:double-up:all', 'c:double-up:w2026-10-19']) assert.ok(B.isBoard('trenchingsimulator', b), b);
+  for (const b of ['e:all', 'e:w2026-10-19', 'e:d2026-10-22', 'm:2026-10-22']) assert.ok(B.isBoard('rideemagi', b), b);
+  for (const [g, b] of [['trenchingsimulator', 'e:all'], ['rideemagi', 'daily:2026-10-22'], ['trenchingsimulator', 'daily:x'],
+    ['trenchingsimulator', 'c:Double:all'], ['trenchingsimulator', 'c:double-up:week'], ['nope', 'e:all'], ['rideemagi', 7]]) {
+    assert.equal(B.isBoard(g, b), false, `${g} ${b}`);
+  }
+  assert.deepEqual([...B.BOARD_ASK.exec('?board=trenchingsimulator:c:double-up:w2026-10-19')].slice(1), ['trenchingsimulator', 'c:double-up:w2026-10-19']);
+  assert.equal(B.BOARD_ASK.exec('?board=trenchingsimulator:daily:2026-10-22&x=1'), null);
+  // a week starts on Monday (UTC)
+  assert.deepEqual(['2026-10-19', '2026-10-22', '2026-10-25', '2026-10-26'].map(B.mondayOf), ['2026-10-19', '2026-10-19', '2026-10-19', '2026-10-26']);
+  assert.equal(B.mondayOf('nope'), null);
+  assert.equal(B.dayShift('2026-10-31', 1), '2026-11-01');
+  assert.equal(B.dayKeyOf(Date.UTC(2026, 9, 22, 23, 59)), '2026-10-22');
+  assert.deepEqual(B.trenchBoards({ kind: 'daily', day: '2026-10-22' }), ['daily:2026-10-22']);
+  assert.deepEqual(B.trenchBoards({ kind: 'challenge', challenge: 'double-up', day: '2026-10-22' }), ['c:double-up:all', 'c:double-up:w2026-10-19']);
+  // a win by its time then its multiple; the daily market's other runs after every win, by their multiple; a challenge's
+  // loss and a run its player ended never rank
+  const win = B.trenchKeys('challenge', { outcome: 'won', timeUsed: 161.23, multiple: 2.045678 });
+  assert.deepEqual(win, { k1: 161.2, k2: -2.0457, detail: { w: 1, t: 161.2, m: 2.0457 } });
+  assert.equal(B.trenchKeys('challenge', { outcome: 'lost', timeUsed: 600, multiple: 3 }), null);
+  assert.equal(B.trenchKeys('daily', { outcome: 'quit', timeUsed: 60, multiple: 3 }), null);
+  const lost = B.trenchKeys('daily', { outcome: 'lost', timeUsed: 600, multiple: 1.8 });
+  assert.deepEqual(lost, { k1: 99998.2, k2: 0, detail: { w: 0, t: 600, m: 1.8 } });
+  assert.ok(B.trenchKeys('daily', { outcome: 'won', timeUsed: 1799.9, multiple: 1.01 }).k1 < lost.k1, 'every win first');
+  assert.ok(B.trenchKeys('daily', { outcome: 'busted', timeUsed: 9, multiple: 0.001 }));
+  assert.equal(B.trenchKeys('daily', null), null);
+  assert.deepEqual(B.rideBoards({ mode: 'endless', day: '2026-10-22' }), ['e:all', 'e:w2026-10-19', 'e:d2026-10-22']);
+  assert.deepEqual(B.rideBoards({ mode: 'daily', day: '2026-10-22', date: '2026-10-21' }), ['m:2026-10-21']);
+  assert.deepEqual(B.rideKeys({ dist: 6151, score: 119189 }), { k1: -6151, k2: -119189, detail: { d: 6151, s: 119189 } });
+  // what a row says
+  assert.equal(B.rowText('trenchingsimulator', { w: 1, t: 161.2, m: 10.2 }), '2:41 · 10.2x');
+  assert.equal(B.rowText('trenchingsimulator', { w: 0, t: 600, m: 0.85 }), '0.85x');
+  assert.equal(B.rowText('trenchingsimulator', { w: 1, t: 59.5, m: 3 }), '0:59 · 3x');
+  assert.equal(B.rowText('trenchingsimulator', { w: 1, t: 600, m: 100.4 }), '10:00 · 100x');
+  assert.equal(B.rowText('rideemagi', { d: 6151, s: 119189 }), '6,151 m · 119,189');
+  assert.equal(B.rowText('rideemagi', {}), '—');
+  assert.equal(B.rowText('trenchingsimulator', null), '—');
+  assert.equal(B.rowName(null), 'A player');
+  assert.equal(B.rowName('Ape Lord'), 'Ape Lord');
+  assert.equal(B.boardTitle('trenchingsimulator', 'c:double-up:w2026-10-19', 'Double up'), 'Double up · This week');
+  assert.equal(B.boardTitle('trenchingsimulator', 'daily:2026-10-22'), 'Daily market · 2026-10-22');
+  assert.equal(B.boardTitle('rideemagi', 'e:d2026-10-22'), 'Endless · Today');
+  assert.equal(B.BOARD.top, 20);
+  assert.ok(B.BOARD.bodyMax <= 48000 && B.BOARD.logMax === 1000);
+  assert.equal(B.BOARD.site.replays, 2000, 'the runs our server makes again: 2,000 a day for the site (code-leaderboard.md)');
+  // agi1.app/games's pickers: TRENCHING SIMULATOR's daily market (a UTC day), then each challenge's week and all time;
+  // Ride 'Em, AGI!'s endless runs (UTC) and the daily mod of the player's own day; every one a board our server reads
+  const { CHALLENGES } = await import('../src/games/trenchingsimulator/challenges.js');
+  const now = Date.UTC(2026, 9, 22, 23, 30);            // a Thursday, late (UTC)
+  const ts = B.pickerBoards('trenchingsimulator', { now, challenges: CHALLENGES });
+  assert.equal(ts.length, 1 + 2 * CHALLENGES.length);
+  assert.deepEqual(ts[0], { board: 'daily:2026-10-22', title: 'Daily market · 2026-10-22' });
+  assert.deepEqual(ts[1], { board: 'c:first-blood:w2026-10-19', title: 'First blood · This week' });
+  assert.deepEqual(ts.at(-1), { board: 'c:ten-bagger:all', title: '10x in 30 · All time' });
+  assert.equal(new Set(ts.map((x) => x.board)).size, ts.length, 'each once');
+  for (const { board } of ts) assert.ok(B.isBoard('trenchingsimulator', board), board);
+  const ride = B.pickerBoards('rideemagi', { now, localDay: '2026-10-23' });
+  assert.deepEqual(ride, [{ board: 'e:d2026-10-22', title: 'Endless · Today' }, { board: 'e:w2026-10-19', title: 'Endless · This week' },
+    { board: 'e:all', title: 'Endless · All time' }, { board: 'm:2026-10-23', title: 'Daily mod · 2026-10-23' }]);
+  assert.equal(B.pickerBoards('rideemagi', { now, localDay: 'nope' }).at(-1).board, 'm:2026-10-22', 'an odd local day: ours');
+  assert.deepEqual(B.pickerBoards('nope', { now }), []);
+  assert.deepEqual(B.pickerBoards('trenchingsimulator', { now }), [{ board: 'daily:2026-10-22', title: 'Daily market · 2026-10-22' }]);
+  // this browser's own place on the board it shows
+  assert.equal(B.mineText('trenchingsimulator', { board: 'daily:2026-10-22', rank: 37, detail: { w: 1, t: 161.2, m: 10.2 }, hidden: false }), 'Your best here: #37 · 2:41 · 10.2x');
+  assert.equal(B.mineText('rideemagi', { rank: 1200, detail: { d: 6151, s: 119189 } }), 'Your best here: #1,200 · 6,151 m · 119,189');
+  assert.equal(B.mineText('rideemagi', { rank: 3, detail: { d: 10, s: 10 }, hidden: true }), 'Your run on this board was taken off it.');
+  assert.equal(B.mineText('rideemagi', null), 'You\'re not on this board yet.');
+});
+
+// (agi1.app/games's leaderboards, src/games/leaderboard.js: its page is tests/page.test.js's; run here on a stand-in page)
+test('the leaderboards on agi1.app/games: each game\'s boards to pick, its top rows, your own place only once you\'ve played, the optional name', async () => {
+  class Node {
+    constructor(tag, attrs = {}) {
+      this.tagName = tag.toUpperCase(); this.attrs = attrs; this.kids = []; this.textContent = ''; this.className = '';
+      this.hidden = 'hidden' in attrs; this.on = {}; this.val = '';
+      this.dataset = Object.fromEntries(Object.entries(attrs).filter(([k]) => k.startsWith('data-'))
+        .map(([k, v]) => [k.slice(5).replace(/-(\w)/g, (_, c) => c.toUpperCase()), v]));
+    }
+    get value() { return this.tagName === 'SELECT' ? (this.val || this.kids[0]?.value || '') : this.val; }
+    set value(v) { this.val = v; }
+    append(...n) { this.kids.push(...n); }
+    replaceChildren(...n) { this.kids = n; }
+    addEventListener(type, fn) { (this.on[type] ||= []).push(fn); }
+    fire(type, e = {}) { for (const fn of this.on[type] || []) fn({ preventDefault() {}, ...e }); }
+    all() { return this.kids.flatMap((k) => [k, ...k.all()]); }
+    querySelectorAll(sel) { const a = /^\[([a-z-]+)\]$/.exec(sel)[1]; return this.all().filter((k) => a in k.attrs); }
+    querySelector(sel) { return this.querySelectorAll(sel)[0] || null; }
+  }
+  const box = (id) => {
+    const b = new Node('section', { 'data-gm-lb': id });
+    b.append(new Node('select', { 'data-gm-lb-pick': '' }), new Node('p', { 'data-gm-lb-state': '' }), new Node('ol', { 'data-gm-lb-list': '' }),
+      new Node('p', { 'data-gm-lb-me': '', hidden: '' }));
+    return b;
+  };
+  const root = new Node('section', { 'data-gm-lead': '' });
+  const nameIn = new Node('input', { 'data-gm-lb-name': '' });
+  const save = new Node('button', { 'data-gm-lb-save': '' });
+  const say = new Node('p', { 'data-gm-lb-name-say': '' });
+  root.append(box('rideemagi'), box('trenchingsimulator'), nameIn, save, say);
+  const kept = new Map([['agi_player_name', 'Neo']]);
+  const storage = { getItem: (k) => (kept.has(k) ? kept.get(k) : null), setItem: (k, v) => kept.set(k, String(v)), removeItem: (k) => kept.delete(k) };
+  const asked = [];
+  let board = { ready: true, rows: [{ rank: 1, name: 'Ape Lord', detail: { d: 6151, s: 119189 } }, { rank: 2, name: null, detail: { d: 900, s: 20000 } }] };
+  const had = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch, addEventListener: globalThis.addEventListener };
+  globalThis.document = { createElement: (tag) => new Node(tag), querySelector: (sel) => (sel === '[data-gm-lead]' ? root : null) };
+  globalThis.window = { localStorage: storage };
+  globalThis.addEventListener = () => {};
+  globalThis.fetch = async (url, init) => {
+    if (!init) { asked.push({ url }); return new Response(JSON.stringify(board), { status: 200 }); }
+    const body = JSON.parse(init.body);
+    asked.push({ url, body });
+    return new Response(JSON.stringify({ ok: true, rows: [{ board: body.boards[0], rank: 37, detail: { d: 800, s: 9000 }, hidden: false }] }), { status: 200 });
+  };
+  const settle = async () => { for (let i = 0; i < 30; i++) await new Promise((r) => setImmediate(r)); };
+  const [ride, ts] = root.kids;
+  const part = (b, a) => b.querySelector(`[${a}]`);
+  try {
+    const { startBoards } = await import('../src/games/leaderboard.js');
+    startBoards();
+    await settle();
+    // each game's boards to pick (Ride 'Em, AGI!: 4; TRENCHING SIMULATOR: its daily market and each challenge's week and all time)
+    assert.deepEqual(part(ride, 'data-gm-lb-pick').kids.map((o) => o.textContent), ['Endless · Today', 'Endless · This week', 'Endless · All time', part(ride, 'data-gm-lb-pick').kids[3].textContent]);
+    assert.match(part(ride, 'data-gm-lb-pick').kids[3].textContent, /^Daily mod · \d{4}-\d{2}-\d{2}$/);
+    assert.equal(part(ts, 'data-gm-lb-pick').kids.length, 19);
+    assert.match(part(ts, 'data-gm-lb-pick').kids[0].value, /^daily:\d{4}-\d{2}-\d{2}$/);
+    // the first board of each, read from our server (shared by the CDN), and nothing else asked: this browser hasn't played
+    assert.deepEqual(asked.map((x) => x.url).sort(), [`/api/wallet?board=rideemagi:${part(ride, 'data-gm-lb-pick').value}`,
+      `/api/wallet?board=trenchingsimulator:${part(ts, 'data-gm-lb-pick').value}`].sort());
+    const rows = part(ride, 'data-gm-lb-list').kids.map((li) => li.kids.map((s) => s.textContent));
+    assert.deepEqual(rows, [['1', 'Ape Lord', '6,151 m · 119,189'], ['2', 'A player', '900 m · 20,000']]);
+    assert.equal(part(ride, 'data-gm-lb-state').textContent, '');
+    assert.equal(part(ride, 'data-gm-lb-me').hidden, true, 'no place to show: never played here');
+    // once it has played (its random id for the games): its own place on the board it shows, asked for that board only
+    kept.set('agi_player', 'a'.repeat(32));
+    asked.length = 0;
+    part(ride, 'data-gm-lb-pick').value = 'e:all';
+    part(ride, 'data-gm-lb-pick').fire('change');
+    await settle();
+    assert.deepEqual(asked.map((x) => x.body || x.url), ['/api/wallet?board=rideemagi:e:all',
+      { action: 'game-score-mine', game: 'rideemagi', player: 'a'.repeat(32), boards: ['e:all'] }]);
+    assert.equal(part(ride, 'data-gm-lb-me').hidden, false);
+    assert.equal(part(ride, 'data-gm-lb-me').textContent, 'Your best here: #37 · 800 m · 9,000');
+    // a board shown again within the CDN's minute: the one we have, nothing asked
+    asked.length = 0;
+    part(ride, 'data-gm-lb-pick').value = 'e:all';
+    part(ride, 'data-gm-lb-pick').fire('change');
+    await settle();
+    assert.deepEqual(asked, []);
+    // the leaderboards not set up yet (arcade.sql not run): "open soon", and no place asked
+    board = { ready: false };
+    asked.length = 0;
+    part(ts, 'data-gm-lb-pick').value = part(ts, 'data-gm-lb-pick').kids[18].value;
+    part(ts, 'data-gm-lb-pick').fire('change');
+    await settle();
+    assert.equal(part(ts, 'data-gm-lb-state').textContent, 'Leaderboards open soon. You can play now.');
+    assert.deepEqual(part(ts, 'data-gm-lb-list').kids, []);
+    assert.equal(asked.length, 1, 'no place asked while they aren\'t open');
+    // the optional name, both games': what this browser keeps, saved when it's fine, refused when it isn't
+    assert.equal(nameIn.value, 'Neo');
+    nameIn.value = '  Ape   Lord ';
+    save.fire('click');
+    assert.equal(kept.get('agi_player_name'), 'Ape Lord');
+    assert.equal(nameIn.value, 'Ape Lord');
+    assert.equal(say.textContent, 'Saved. Your next ranked runs say “Ape Lord”.');
+    nameIn.value = 'the real admin';
+    nameIn.fire('keydown', { key: 'Enter' });
+    assert.match(say.textContent, /^That name can't be used/);
+    assert.equal(kept.get('agi_player_name'), 'Ape Lord', 'nothing changed');
+    nameIn.value = '';
+    save.fire('click');
+    assert.equal(kept.has('agi_player_name'), false);
+    assert.equal(say.textContent, 'No name: your rows say “A player”.');
+  } finally {
+    for (const [k, v] of Object.entries(had)) { if (v === undefined) delete globalThis[k]; else globalThis[k] = v; }
+  }
+});
+
+test('GNGM is ready: picked like Pomp.fun, its board its own file loaded when it\'s played, the same doors as Pomp.fun\'s', () => {
+  assert.equal(terminalById('scan').ready, true);
+  assert.deepEqual(TERMINALS.filter((t) => t.ready).map((t) => t.id), ['scan', 'board']);
+  const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
+  assert.match(shell, /t\.id === 'scan' \? import\('\.\/boards\/gngm\.js'\)\.then\(\(m\) => m\.mountGngm, \(\) => null\) : Promise\.resolve\(mountBoard\)/);
+  assert.doesNotMatch(shell, /^import .*gngm/m, 'never in the page until it\'s played');
+  assert.match(shell, /P\.board = mount\(boardHost, \{/);
+  // its own words in its header, and the doors the shell calls
+  const g = readFileSync('src/games/trenchingsimulator/boards/gngm.js', 'utf8');
+  assert.match(g, /markEl\('scan', 'tsg-logo'\), wordEl\('scan', 'tsg-brand-t'\)/);
+  assert.match(g, /^export function mountGngm\(host, ctx\)/m);
+  for (const door of ['el: root', 'update(now)', 'sub: () =>', 'closeSub: () =>', 'openCoin,', 'destroy()']) assert.ok(g.includes(door), door);
+  // its colors: every one GNGM's own, every word readable on its page and panels
+  const c = terminalById('scan').colors;
+  for (const on of ['bg', 'panel', 'panel2']) {
+    for (const k of ['text', 'soft', 'muted', 'dim', 'accent', 'up', 'down', 'warn', 'info', 'violet']) {
+      assert.ok(contrast(c[k], c[on]) >= 4.5, `GNGM ${k} on ${on}: ${contrast(c[k], c[on]).toFixed(2)}`);
+    }
+  }
+  assert.ok(contrast('#062013', c.up) >= 4.5 && contrast(c.onDown, c.down) >= 4.5 && contrast(c.onAccent, c.accent) >= 4.5, 'words on its buttons');
 });

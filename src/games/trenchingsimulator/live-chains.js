@@ -14,12 +14,20 @@ const C = (o) => Object.freeze(o);
 // there (a run's line names it then); `coin`: the chain's own money. Robinhood Chain (since 2026-10-21, the owner's "Add
 // DexScreener coins"): clank.trade's coins, and coins from other launchpads once their makers list them on DexScreener
 // (those name no launchpad: "on Robinhood Chain")
+// (2026-10-22, the owner: "i just checked there are other chains on gmgn right add that also"): GMGN's Ethereum, Monad,
+// HyperEVM, Arbitrum and Tron, their listed coins like BNB Chain's and Base's (the relay's DexScreener, no new key), each
+// in its own money (ETH, MON, HYPE, TRX)
 export const CHAINS = Object.freeze([
   C({ id: 'solana', name: 'Solana', coin: 'sol', src: 'pump.fun', allFrom: true, what: 'every new pump.fun coin as it launches' }),
   C({ id: 'robinhood', name: 'Robinhood Chain', coin: 'eth', src: 'clank.trade', allFrom: false,
     what: 'every new clank.trade coin as it launches, and others as they get listed' }),
   C({ id: 'bnb', name: 'BNB Chain', coin: 'bnb', src: null, allFrom: false, what: 'new coins as they get listed' }),
   C({ id: 'base', name: 'Base', coin: 'eth', src: null, allFrom: false, what: 'new coins as they get listed' }),
+  C({ id: 'ethereum', name: 'Ethereum', coin: 'eth', src: null, allFrom: false, what: 'new coins as they get listed' }),
+  C({ id: 'monad', name: 'Monad', coin: 'mon', src: null, allFrom: false, what: 'new coins as they get listed' }),
+  C({ id: 'hyperevm', name: 'HyperEVM', coin: 'hype', src: null, allFrom: false, what: 'new coins as they get listed' }),
+  C({ id: 'arbitrum', name: 'Arbitrum', coin: 'eth', src: null, allFrom: false, what: 'new coins as they get listed' }),
+  C({ id: 'tron', name: 'Tron', coin: 'trx', src: null, allFrom: false, what: 'new coins as they get listed' }),
 ]);
 export const CHAIN_IDS = Object.freeze(CHAINS.map((c) => c.id));
 export const DEFAULT_CHAIN = 'solana';
@@ -27,11 +35,11 @@ const BY_ID = new Map(CHAINS.map((c) => [c.id, c]));
 export const chainById = (id) => BY_ID.get(id) || null;
 
 // The money each terminal shows its play money in, in Live mode (the owner's, 2026-10-21): Pomp.fun and GNGM the
-// chain's own coin (SOL on Solana, ETH on Robinhood Chain and Base, BNB on BNB Chain: Pomp.fun's since the owner's
-// "Each chain's money", the same day; SOL on every chain before), BasedBott ETH, Phomo dollars, Axium SOL (the money
-// its real counterpart trades in). The game counts in SOL underneath (./engine.js); a terminal shows
-// it in its own, at the run's prices.
-export const UNIT_NAMES = Object.freeze({ sol: 'SOL', eth: 'ETH', bnb: 'BNB', usd: 'dollars' });
+// chain's own coin (SOL on Solana, ETH on Robinhood Chain, Base, Ethereum and Arbitrum, BNB on BNB Chain, MON on Monad,
+// HYPE on HyperEVM, TRX on Tron: Pomp.fun's since the owner's "Each chain's money", the same day; SOL on every chain
+// before), BasedBott ETH, Phomo dollars, Axium SOL (the money its real counterpart trades in). The game counts in SOL
+// underneath (./engine.js); a terminal shows it in its own, at the run's prices.
+export const UNIT_NAMES = Object.freeze({ sol: 'SOL', eth: 'ETH', bnb: 'BNB', mon: 'MON', hype: 'HYPE', trx: 'TRX', usd: 'dollars' });
 export function liveCurrency(terminalId, chainId) {
   const ch = chainById(chainId) || chainById(DEFAULT_CHAIN);
   switch (terminalId) {
@@ -47,13 +55,15 @@ export function liveCurrency(terminalId, chainId) {
       return 'sol';
   }
 }
-// The money a live run shows, for ./format.js (`px`: the relay's dollar prices, { sol, eth, bnb }): 'sol', 'usd', or a
-// chain's coin with its price frozen for the run ({ coin: 'eth', usd: 2612.5 }); SOL while that price isn't known yet
+// The money a live run shows, for ./format.js (`px`: the relay's dollar prices, { sol, eth, bnb, mon, hype, trx }): 'sol', 'usd', or a
+// chain's coin with its price frozen for the run ({ coin: 'eth', usd: 2612.5 }: to the cent; a coin under a dollar, MON's
+// two cents say, to 4 significant figures); SOL while that price isn't known yet
 export function liveMoney(terminalId, chainId, px) {
   const unit = liveCurrency(terminalId, chainId);
   if (unit === 'sol' || unit === 'usd') return unit;
   const p = px && typeof px === 'object' ? Number(px[unit]) : NaN;
-  return Number.isFinite(p) && p > 0 ? { coin: unit, usd: Math.round(p * 100) / 100 } : 'sol';
+  if (!Number.isFinite(p) || !(p > 0)) return 'sol';
+  return { coin: unit, usd: p >= 1 ? Math.round(p * 100) / 100 : Number(p.toPrecision(4)) };
 }
 // an amount of SOL in another unit at the run's own prices ({ sol, eth, bnb }: dollars), or NaN
 export function toUnit(solAmount, unit, px) {
@@ -124,7 +134,7 @@ export const LIVE_NOTE = 'Live mode shows real new coins, with the names and pic
 export const LIVE_SHORT = 'Real coins · play money only';
 // while Live mode is closed (LIVE_OPEN false, as it was until 2026-10-21): its Market switch's line, and How to play's
 export const LIVE_SOON = 'Live coins are coming soon: real new coins as they launch, with the names and pictures their makers gave them, traded with play money only. Until then, every coin here is made up.';
-export const LIVE_SOON_HOW = 'Live mode is coming soon: real new coins as they launch, on Solana, Robinhood Chain, BNB Chain or Base, with the names and pictures their makers gave them, still traded with play money only.';
+export const LIVE_SOON_HOW = 'Live mode is coming soon: real new coins on Solana, Robinhood Chain, BNB Chain, Base, Ethereum, Monad, HyperEVM, Arbitrum or Tron, with their makers\' names and pictures, traded with play money only.';
 
 // What the feed's state means, in plain words: { tone: 'live' | 'wait' | 'off', text }. `feed`: the connection
 // ('connecting' | 'live' | 'down' | 'full'); `chain`: the relay's word for the chain ('live' | 'quiet' | 'down' | 'off');
@@ -153,9 +163,12 @@ export function feedWords(feed, chainState, chainId, when = 'run') {
 
 // ---------- what the relay sends, checked ----------
 
-const ID = /^[srba][0-9]{1,9}$/;
+// (the relay's own letters for each chain: its hub.mjs ID, since 2026-10-22 with Ethereum's e, Monad's m, HyperEVM's h,
+// Arbitrum's f and Tron's t)
+const ID = /^[srbaemhft][0-9]{1,9}$/;
 const B58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const EVM = /^0x[0-9a-f]{40}$/;
+const TRON = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
 const fin = (v) => typeof v === 'number' && Number.isFinite(v);
 // control characters, direction changers and invisible fillers out (joiners and variation selectors stay: emoji)
 const INVISIBLE = /[\u0000-\u001f\u007f-\u009f\u061c\u115f\u1160\u180e\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u3164\ufeff\uffa0\ufff9-\ufffb]/g;
@@ -206,8 +219,9 @@ export function parseDx(a, solUsd) {
 // or null (anything odd)
 export function parseCoin(o, chainId) {
   if (!o || typeof o !== 'object' || typeof o.id !== 'string' || !ID.test(o.id)) return null;
-  const key = chainId === 'solana' ? (typeof o.m === 'string' && B58.test(o.m) ? o.m : null)
-    : (typeof o.m === 'string' && EVM.test(o.m.toLowerCase()) ? o.m.toLowerCase() : null);
+  // (Solana's and Tron's addresses as they are: case-sensitive; the EVM chains' lower-cased)
+  const key = typeof o.m !== 'string' ? null : chainId === 'solana' ? (B58.test(o.m) ? o.m : null)
+    : chainId === 'tron' ? (TRON.test(o.m) ? o.m : null) : (EVM.test(o.m.toLowerCase()) ? o.m.toLowerCase() : null);
   const name = cleanText(o.n, 48);
   const ticker = cleanText(typeof o.s === 'string' ? o.s.replace(/^\$+/, '') : o.s, 16);
   const st = parseState(o.st);
@@ -247,7 +261,7 @@ export function parseMessage(text, chainId) {
   };
   const px = (x) => {
     const out = {};
-    for (const k of ['sol', 'eth', 'bnb']) if (x && fin(x[k]) && x[k] > 0 && x[k] < 1e7) out[k] = x[k];
+    for (const k of ['sol', 'eth', 'bnb', 'mon', 'hype', 'trx']) if (x && fin(x[k]) && x[k] > 0 && x[k] < 1e7) out[k] = x[k];
     return out;
   };
   switch (m.t) {

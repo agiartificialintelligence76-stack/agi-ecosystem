@@ -208,6 +208,72 @@ test("the games' rules: its games and their ids, a player's id, plays a report, 
   assert.equal(ARCADE.PAGE, REVIEW.pageSize);
 });
 
+// (2026-10-22) the leaderboards: TRENCHING SIMULATOR's checked runs are tests/trench-game.test.js's; here Ride 'Em, AGI!'s
+test("Ride 'Em, AGI!'s leaderboard: a ticket, its numbers checked against what the game can do, its daily mod the game's own, its hooks in the game", async () => {
+  const S = await import('../server/scores.js');
+  const { PATCHES } = await import('../tools/games/import-rideemagi.mjs');
+  const game = read('src/games/rideemagi/game.js');
+  // every patch's text is in the game as the tool writes it (the tool needs the owner's source folder: game.js changes with it)
+  for (const [, , now] of PATCHES) assert.ok(game.includes(now.trimEnd()), now.slice(0, 70));
+  assert.match(game, /^import \{ Ranked \} from '\.\/ranked\.js';$/m);
+  assert.ok(read('tools/games/import-rideemagi.mjs').includes(`"import { Ranked } from './ranked.js';\\n"`), 'the tool writes the same import');
+  assert.equal((game.match(/Ranked\.start\(cfg\);/g) || []).length, 1, 'a ticket as a run begins');
+  assert.equal((game.match(/Ranked\.result\(r, st\);/g) || []).length, 1, 'its numbers as it ends');
+  assert.ok(game.indexOf('Ranked.result(r, st);') > game.indexOf('const out = Prog.apply(r);'));
+  assert.deepEqual([...read('src/games/rideemagi/ranked.js').matchAll(/^import .* from '([^']+)';$/gm)].map((m) => m[1]), ['./site.js', '../player-name.js', '../boards.js']);
+  // its daily mod: our port of the game's own (the same hash, the same five, in the same order)
+  assert.ok(game.includes("function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }"));
+  assert.match(game, /const h = hashStr\('ride-em-agi:' \+ date\);\n\s*return \{ date, seed: h, mod: DAILY_MODS\[h % DAILY_MODS\.length\]/);
+  const mods = game.slice(game.indexOf('const DAILY_MODS = ['), game.indexOf('];', game.indexOf('const DAILY_MODS = [')));
+  assert.deepEqual([...mods.matchAll(/\{ key: '([a-z]+)'/g)].map((m) => m[1]), ['treats', 'lowgrav', 'powers', 'turbo', 'springs']);
+  // our server's checks (a stand-in database behind fetch)
+  const realFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    const fn = String(url).split('/').pop();
+    const a = JSON.parse(init.body);
+    calls.push({ fn, a });
+    const out = fn === 'arcade_take' ? 'ok' : fn === 'arcade_board_cut' ? true : { ok: true, ranks: Object.fromEntries(a.p_boards.map((b) => [b, 3])) };
+    return new Response(JSON.stringify(out), { status: 200 });
+  };
+  try {
+    const c = { passSecret: SECRET, supabaseUrl: 'https://fake.supabase.co', supabaseKey: 'k' };
+    const WHO = 'w'.repeat(20);
+    const T0 = Date.UTC(2026, 9, 22, 10, 0, 0);
+    const tk = await S.gameTicket(c, { game: 'rideemagi', player: PID, kind: 'endless', who: WHO, now: T0 });
+    assert.equal(tk.ok, true);
+    assert.deepEqual([tk.seed, tk.solUsd, tk.day], [null, null, '2026-10-22']);
+    assert.deepEqual(await S.gameTicket(c, { game: 'rideemagi', player: PID, kind: 'level', who: WHO, now: T0 }), { ok: false, why: 'bad' }, 'levels never rank');
+    const run = { mode: 'endless', dist: 3000, score: 60000, bestMult: 3, revives: 0, ms: 150000 };
+    const send = (r, now = T0 + 160000) => S.gameScore(c, { game: 'rideemagi', player: PID, ticket: tk.ticket, run: r }, { who: WHO, now });
+    calls.length = 0;
+    assert.deepEqual(await send(run), { ok: true, ranked: true, ranks: { 'e:all': 3, 'e:w2026-10-19': 3, 'e:d2026-10-22': 3 }, name: null, nameRefused: false });
+    const put = calls.find((x) => x.fn === 'arcade_score_put').a;
+    assert.deepEqual([put.p_k1, put.p_k2, put.p_max_uses, put.p_last, put.p_detail], [-3000, -60000, 3, 3000, { d: 3000, s: 60000 }],
+      'farther first, then the higher score; its ticket good for its end and two revives, each farther');
+    // outside what the game can do
+    for (const bad of [{ score: 40 * 3000 + 5001 }, { score: 2999 }, { ms: 50000 }, { bestMult: 6 }, { revives: 3 }, { dist: 60001, ms: 2e6, score: 2e6 }]) {
+      assert.deepEqual(await send({ ...run, ...bad }, T0 + 3e6), { ok: false, why: 'checks' }, JSON.stringify(bad));
+    }
+    assert.deepEqual(await send(run, T0 + 20000), { ok: false, why: 'checks' }, 'farther than its top speed in the real time that passed');
+    assert.deepEqual(await send(run, T0 + 3 * 3600 * 1000), { ok: false, why: 'late' });
+    assert.deepEqual(await send({ ...run, mode: 'daily' }), { ok: false, why: 'bad' }, 'another kind of run than its ticket');
+    assert.deepEqual(await send({ ...run, dist: 1.5 }), { ok: false, why: 'bad' });
+    // the daily mod: its day (one either side of ours: a player's local date) and the game's own mod for it
+    const dt = await S.gameTicket(c, { game: 'rideemagi', player: PID, kind: 'daily', who: WHO, now: T0 });
+    const daily = { ...run, mode: 'daily', date: '2026-10-21', mod: S.rideMod('2026-10-21') };
+    const sendD = (r) => S.gameScore(c, { game: 'rideemagi', player: PID, ticket: dt.ticket, run: r }, { who: WHO, now: T0 + 160000 });
+    assert.deepEqual(Object.keys((await sendD(daily)).ranks), ['m:2026-10-21']);
+    assert.deepEqual(await sendD({ ...daily, mod: S.rideMod('2026-10-21') === 'turbo' ? 'treats' : 'turbo' }), { ok: false, why: 'checks' });
+    assert.deepEqual(await sendD({ ...daily, date: '2026-10-19', mod: S.rideMod('2026-10-19') }), { ok: false, why: 'checks' });
+    // one game's ticket is never another's, nor another browser's
+    assert.deepEqual(await S.gameScore(c, { game: 'trenchingsimulator', player: PID, ticket: tk.ticket, claim: {}, log: [] }, { who: WHO, now: T0 }), { ok: false, why: 'ticket' });
+    assert.deepEqual(await S.gameScore(c, { game: 'rideemagi', player: PID2, ticket: tk.ticket, run }, { who: WHO, now: T0 + 160000 }), { ok: false, why: 'ticket' });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 test('codes: a player\'s is per game and never the id; a reviewer\'s is never the address, nor her chat\'s or her live show\'s code', () => {
   const a = playerCode(SECRET, 'rideemagi', PID), b = playerCode(SECRET, 'othergame', PID);
   assert.match(a, /^[A-Za-z0-9_-]{32}$/, 'what arcade.sql takes');
@@ -548,7 +614,7 @@ test('GET: not set up (no database, or arcade.sql not run: said once in the log)
   assert.deepEqual((await get('?game=rideemagi')).data, { ready: false });
   assert.deepEqual((await get('?game=rideemagi')).data, { ready: false });
   assert.equal(logs.filter((l) => l.includes('run supabase/arcade.sql')).length, 1, 'once per server copy');
-  assert.match(logs[0], /arcade_functions_found = 8/);
+  assert.match(logs[0], /arcade_functions_found = 14/);
   fake.sqlMissing = false; fake.dbDown = true;
   const down = await get('?game=rideemagi');
   assert.equal(down.status, 503); assert.equal(down.data.error, 'busy');
@@ -814,18 +880,20 @@ test('the games live in /api/wallet (Vercel\'s 12 functions are all used) and lo
   assert.match(pkg.scripts.test, /tests\/arcade\.test\.js/);
 });
 
-test("the server log names the fix: arcade.sql's 8 functions", () => {
+test("the server log names the fix: arcade.sql's 14 functions (the leaderboards' six since 2026-10-22)", () => {
   const limits = read('server/limits.js');
-  for (const fn of ['arcade_play', 'arcade_stats', 'arcade_reviews', 'arcade_review_take', 'arcade_review_put', 'arcade_review_mine', 'arcade_review_delete', 'arcade_review_hide']) {
+  for (const fn of ['arcade_play', 'arcade_stats', 'arcade_reviews', 'arcade_review_take', 'arcade_review_put', 'arcade_review_mine', 'arcade_review_delete', 'arcade_review_hide',
+    'arcade_take', 'arcade_board_cut', 'arcade_score_put', 'arcade_board', 'arcade_score_mine', 'arcade_score_hide']) {
     assert.ok(limits.includes(`'${fn}'`), fn);
   }
-  assert.match(limits, /run supabase\/arcade\.sql in this Supabase project \(AGI games: their plays and reviews; it ends with arcade_functions_found = 8\)/);
+  assert.match(limits, /run supabase\/arcade\.sql in this Supabase project \(AGI games: their plays, reviews and leaderboards; it ends with arcade_functions_found = 14\)/);
 });
 
 // ---------- supabase/arcade.sql ----------
-test("supabase/arcade.sql's promises: five tables nobody else can read, 8 functions for the server only, the same rules as our code, never an address", () => {
+test("supabase/arcade.sql's promises: eight tables nobody else can read, 14 functions for the server only, the same rules as our code, never an address", () => {
   const body = read('supabase/arcade.sql').replace(/--.*$/gm, '');
-  const tables = ['agi1_arcade_games', 'agi1_arcade_players', 'agi1_arcade_days', 'agi1_arcade_reviews', 'agi1_arcade_review_days'];
+  const tables = ['agi1_arcade_games', 'agi1_arcade_players', 'agi1_arcade_days', 'agi1_arcade_reviews', 'agi1_arcade_review_days',
+    'agi1_arcade_scores', 'agi1_arcade_tickets_used', 'agi1_arcade_score_days'];
   for (const t of tables) {
     assert.match(body, new RegExp(`create table if not exists public\\.${t}`), t);
     assert.match(body, new RegExp(`alter table public\\.${t} enable row level security`), t);
@@ -833,14 +901,25 @@ test("supabase/arcade.sql's promises: five tables nobody else can read, 8 functi
   }
   const fns = ['arcade_play(text, text, text, integer, integer, integer, integer, integer)', 'arcade_stats(text)', 'arcade_reviews(text, bigint, integer)',
     'arcade_review_take(text, text, integer, integer)', 'arcade_review_put(text, text, integer, text, text, integer)', 'arcade_review_mine(text, text)',
-    'arcade_review_delete(text, text)', 'arcade_review_hide(bigint, boolean)'];
+    'arcade_review_delete(text, text)', 'arcade_review_hide(bigint, boolean)',
+    // (2026-10-22) the leaderboards'
+    'arcade_take(text, text, integer, integer)', 'arcade_board_cut(text, text[], text, double precision, double precision)',
+    'arcade_score_put(text, text, integer, double precision, text, text, text[], double precision, double precision, jsonb)',
+    'arcade_board(text, text, integer)', 'arcade_score_mine(text, text, text[])', 'arcade_score_hide(bigint, boolean)'];
   for (const f of fns) {
     const e = f.replace(/[()[\]]/g, (c) => `\\${c}`);
     assert.match(body, new RegExp(`revoke all on function public\\.${e} from public, anon, authenticated`), f);
     assert.match(body, new RegExp(`grant execute on function public\\.${e} to service_role`), f);
   }
   assert.match(body, /as arcade_functions_found/);
+  assert.equal((body.match(/^create or replace function public\.arcade_/gm) || []).length, 14, 'fourteen, each counted at the end');
+  for (const f of fns) assert.ok(body.slice(body.lastIndexOf('as arcade_functions_found')).includes(`'${f.slice(0, f.indexOf('('))}'`), f);
   assert.match(body, /notify pgrst, 'reload schema'/);
+  // the leaderboards: a browser's best only, a board's id like our code's, a ticket used once, only a few numbers kept
+  assert.match(body, /unique \(game, board, player\)/);
+  assert.ok(body.includes("'^[a-z0-9:-]{3,48}$'"), 'a board\'s id');
+  assert.match(body, /where t\.uses < p_max_uses and excluded\.last >= t\.last/);
+  assert.match(body, /char_length\(p_detail::text\) > 400/);
   assert.doesNotMatch(body, /\bdrop\s+(table|function)\b/i, 'it only adds');
   assert.doesNotMatch(body, /agi1_game_/, 'never her Telegram quizzes\' tables');
   // the same rules as our code

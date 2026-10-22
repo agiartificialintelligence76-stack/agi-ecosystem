@@ -48,12 +48,16 @@ async function picture(sharp, letter, hue) {
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-export async function startFakes({ key = 'fake-helius-key-1234567890', host = '127.0.0.1', port = 0, prices = { sol: 150, eth: 3000, bnb: 600 } } = {}) {
+export async function startFakes({ key = 'fake-helius-key-1234567890', host = '127.0.0.1', port = 0,
+  prices = { sol: 150, eth: 3000, bnb: 600, hype: 25, mon: 0.02, trx: 0.3 } } = {}) {
   const sharp = (await import('sharp')).default;
   const files = new Map(); // ipfs id → { type, body, status }
   const pump = new Map(); // mint → { curveKey, st, name, symbol, migrated, pool }
   const accounts = new Map(); // curve key → mint
-  const evm = { bsc: new Map(), base: new Map(), robinhood: new Map() };
+  // listed coins by DexScreener's chain id (Tron's addresses kept as they are: case-sensitive)
+  const evm = { bsc: new Map(), base: new Map(), robinhood: new Map(), ethereum: new Map(), monad: new Map(), hyperevm: new Map(),
+    arbitrum: new Map(), tron: new Map() };
+  const QUOTE = { bsc: 'WBNB', monad: 'WMON', hyperevm: 'WHYPE', tron: 'WTRX' };
   const profiles = [];
   const clankCoins = [];
   const seen = { http: [], pumpportal: [], pumpdev: [], helius: [] };
@@ -88,7 +92,7 @@ export async function startFakes({ key = 'fake-helius-key-1234567890', host = '1
         volume: { m5: 1200, h1: 9000, h24: 40000 }, txns: { m5: { buys: 12, sells: 7 }, h1: { buys: 80, sells: 60 },
           h24: { buys: 400, sells: 300 } }, priceChange: { m5: 4.2, h1: -3.5 }, pairCreatedAt: c.poolAt };
     }
-    const lowerAddr = address.toLowerCase();
+    const lowerAddr = chain === 'tron' ? address : address.toLowerCase();
     for (const [w, v] of Object.entries(WRAPPED)) {
       if (v.chain === chain && v.address === lowerAddr) {
         return { chainId: chain, dexId: 'uniswap', baseToken: { address: v.address, symbol: w.toUpperCase() },
@@ -98,7 +102,7 @@ export async function startFakes({ key = 'fake-helius-key-1234567890', host = '1
     const c = evm[chain] && evm[chain].get(lowerAddr);
     if (!c) return null;
     return { chainId: chain, dexId: c.dexId, baseToken: { address: lowerAddr, name: c.name, symbol: c.symbol },
-      quoteToken: { address: '0xquote', symbol: chain === 'bsc' ? 'WBNB' : 'WETH' }, priceUsd: String(c.mu / 1e9),
+      quoteToken: { address: '0xquote', symbol: QUOTE[chain] || 'WETH' }, priceUsd: String(c.mu / 1e9),
       marketCap: c.mu, fdv: c.mu, liquidity: { usd: c.lu }, pairCreatedAt: c.created, info: c.icon ? { imageUrl: c.icon } : {},
       volume: { m5: 500, h1: 4000, h24: 20000 }, txns: { m5: { buys: 5, sells: 3 } }, priceChange: { m5: 1.5, h1: 10 } };
   };
@@ -346,12 +350,12 @@ export async function startFakes({ key = 'fake-helius-key-1234567890', host = '1
       const c = clankCoins.find((x) => x.address === address);
       if (c) Object.assign(c, patch);
     },
-    // a BNB Chain, Base or Robinhood Chain coin with a DexScreener profile (`address`: one that's there already, a
-    // clank.trade coin's, say)
+    // a coin with a DexScreener profile on one of its chains (`chain`: its id there, bsc, base, robinhood, ethereum, monad,
+    // hyperevm, arbitrum or tron; `address`: one that's there already, a clank.trade coin's, say)
     async listed(chain, { name = `Listed ${n + 1}`, symbol = `LST${n + 1}`, mu = 50_000, lu = 12_000, dexId = 'fourmeme', ageMs = 60_000,
       address: given = null } = {}) {
       n += 1;
-      const address = given || evmFrom(`${chain}:${name}:${n}`);
+      const address = given || (chain === 'tron' ? `T${b58From(`tron:${name}:${n}`, 33)}` : evmFrom(`${chain}:${name}:${n}`));
       const imgCid = cidFrom(`listimg:${address}`);
       files.set(imgCid, { type: 'image/png', body: await picture(sharp, [...symbol][0] || '?', (n * 31) % 360) });
       evm[chain].set(address, { name, symbol, mu, lu, dexId, created: Date.now() - ageMs, icon: `ipfs://${imgCid}` });

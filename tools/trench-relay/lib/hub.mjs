@@ -13,12 +13,14 @@
 import { encodeCoin, encodeState } from './parse.mjs';
 import { CHAIN_IDS } from './config.mjs';
 
-export const PREFIX = Object.freeze({ solana: 's', robinhood: 'r', bnb: 'b', base: 'a' });
-export const ID = /^[srba][0-9]{1,9}$/;
+export const PREFIX = Object.freeze({ solana: 's', robinhood: 'r', bnb: 'b', base: 'a', ethereum: 'e', monad: 'm', hyperevm: 'h',
+  arbitrum: 'f', tron: 't' });
+export const ID = /^[srbaemhft][0-9]{1,9}$/;
 export const LIMITS = Object.freeze({ keep: 400, snap: 60, hist: 300, watchPer: 8, msgBurst: 20, msgPerSec: 2,
   maxMsgBytes: 2048, high: 512 * 1024, low: 128 * 1024, hard: 4 * 1024 * 1024, histPer10s: 6 });
 // how long without a new coin before a chain is "quiet" (stand-ins fill in), by chain
-export const QUIET_MS = Object.freeze({ solana: 3 * 60_000, robinhood: 45 * 60_000, bnb: 30 * 60_000, base: 30 * 60_000 });
+export const QUIET_MS = Object.freeze({ solana: 3 * 60_000, robinhood: 45 * 60_000, bnb: 30 * 60_000, base: 30 * 60_000,
+  ethereum: 30 * 60_000, monad: 30 * 60_000, hyperevm: 30 * 60_000, arbitrum: 30 * 60_000, tron: 30 * 60_000 });
 
 export function createHub({ log, chains = CHAIN_IDS, batchMs = 500, pingMs = 25000, now = Date.now, onWatch = () => {},
   limits = {} } = {}) {

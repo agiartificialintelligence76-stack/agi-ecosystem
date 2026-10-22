@@ -1,5 +1,6 @@
 // TRENCHING SIMULATOR's progress, kept in this browser only (2026-10-20): the player's settings (terminal, sound, free
-// play's start and speed, slippage and priority), each challenge's best, each day's daily market and a few totals.
+// play's start and speed, slippage and priority; since 2026-10-22 GNGM's presets P1 to P3 and its chart's view), each
+// challenge's best, each day's daily market and a few totals. (The player's optional name is both games': ../player-name.js.)
 // Nothing is sent anywhere. Storage can be blocked or full: every read and write is wrapped, and a broken or older save
 // is read as a new one. Pure apart from the storage it's handed: read in Node too (tests/trench-game.test.js).
 import { FREE_STARTS, SPEEDS, isDailyKey } from './challenges.js';
@@ -10,6 +11,13 @@ export const SAVE_KEY = 'trench_v1';
 export const SLIPPAGES = Object.freeze([0.01, 0.05, 0.1, 0.2, 0.5]);
 export const PRIORITIES = Object.freeze(['fast', 'turbo', 'ultra']);
 export const DAILY_KEEP = 30; // the daily markets remembered (the newest)
+// GNGM's three settings presets (2026-10-22, P1 to P3): a slippage and a priority each; the one picked is the game's
+// slippage and priority, and changing those changes it
+export const PRESETS = Object.freeze([Object.freeze({ slippage: 0.2, priority: 'fast' }),
+  Object.freeze({ slippage: 0.1, priority: 'turbo' }), Object.freeze({ slippage: 0.5, priority: 'ultra' })]);
+// GNGM's chart: a market cap or a token's price, in dollars or the run's own coin
+export const CHART_MODES = Object.freeze(['mcap', 'price']);
+export const CHART_UNITS = Object.freeze(['usd', 'coin']);
 
 const fin = (x) => typeof x === 'number' && Number.isFinite(x);
 const nat = (x) => (fin(x) && x >= 0 ? Math.floor(x) : 0);
@@ -20,7 +28,7 @@ export function blank() {
   return {
     v: 1, terminal: DEFAULT_TERMINAL, muted: false, speed: 1, freeStart: 1, slippage: 0.2, priority: 'fast',
     best: {}, daily: {}, stats: { runs: 0, wins: 0, trades: 0, coins: 0, bestX: 0 }, live: false, chain: DEFAULT_CHAIN,
-    liveBest: {},
+    liveBest: {}, preset: 0, presets: PRESETS.map((p) => ({ ...p })), chart: { mode: 'mcap', unit: 'usd' },
   };
 }
 
@@ -52,6 +60,20 @@ export function cleanSave(raw) {
   }
   s.live = raw.live === true;
   if (CHAIN_IDS.includes(raw.chain)) s.chain = raw.chain;
+  if (Number.isInteger(raw.preset) && raw.preset >= 0 && raw.preset < PRESETS.length) s.preset = raw.preset;
+  if (Array.isArray(raw.presets)) {
+    s.presets = PRESETS.map((d, i) => {
+      const p = raw.presets[i];
+      return {
+        slippage: p && SLIPPAGES.includes(p.slippage) ? p.slippage : d.slippage,
+        priority: p && PRIORITIES.includes(p.priority) ? p.priority : d.priority,
+      };
+    });
+  }
+  if (raw.chart && typeof raw.chart === 'object') {
+    if (CHART_MODES.includes(raw.chart.mode)) s.chart.mode = raw.chart.mode;
+    if (CHART_UNITS.includes(raw.chart.unit)) s.chart.unit = raw.chart.unit;
+  }
   if (raw.daily && typeof raw.daily === 'object') {
     for (const [k, d] of Object.entries(raw.daily)) {
       if (!isDailyKey(k) || !d || typeof d !== 'object') continue;

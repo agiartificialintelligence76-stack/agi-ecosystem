@@ -2,7 +2,9 @@
 // trench.env.example), each checked and kept inside its limits. HELIUS_API_KEY may be the bare key or a whole Helius
 // address with "api-key=" in it; the key itself is only ever handed to the Helius connection and the log's scrubber.
 
-export const CHAIN_IDS = Object.freeze(['solana', 'robinhood', 'bnb', 'base']);
+// (2026-10-22, the owner: "i just checked there are other chains on gmgn right add that also": Ethereum, Monad, HyperEVM,
+// Arbitrum and Tron, DexScreener's listed coins like BNB Chain's and Base's, no new key)
+export const CHAIN_IDS = Object.freeze(['solana', 'robinhood', 'bnb', 'base', 'ethereum', 'monad', 'hyperevm', 'arbitrum', 'tron']);
 export const DEFAULTS = Object.freeze({
   port: 8787,
   host: '0.0.0.0',
@@ -95,6 +97,13 @@ export function readConfig(env = process.env) {
     clank: url(env.CLANK_API_URL, DEFAULTS.clank, ['https:', 'http:']),
     gateways: gateways.length ? gateways : DEFAULTS.gateways.slice(),
     logLevel: ['debug', 'info', 'warn', 'error'].includes(env.TRENCH_LOG) ? env.TRENCH_LOG : DEFAULTS.logLevel,
+    // race rooms (2026-10-22, rooms.mjs): on unless TRENCH_ROOMS=off; seats a room, rooms, sockets on /room, per address
+    rooms: env.TRENCH_ROOMS === 'off' ? null : {
+      perRoom: int(env.TRENCH_ROOM_SEATS, 8, 2, 16),
+      max: int(env.TRENCH_ROOMS_MAX, 200, 1, 10000),
+      maxPlayers: int(env.TRENCH_ROOM_PLAYERS, 1600, 2, 100000),
+      perIp: int(env.TRENCH_ROOMS_PER_IP, 8, 1, 1000),
+    },
   };
   if (cfg.chains.includes('solana') && !cfg.helius && !(helius && helius.error)) {
     problems.push('HELIUS_API_KEY is not set: Solana stays off (its coins need Helius for their live prices: set it in trench.env)');

@@ -36,6 +36,17 @@ export function shareText(result) {
   return `${from} → ${to} (${change(m)}) in free play on ${GAME_NAME}. The trenches are hard ${PLAY} 😭`;
 }
 
+// the words shared with one coin's PnL card (GNGM's, 2026-10-22): a made-up coin by its ticker, a real one never by name
+// ("a live coin"), its return, and that it's play money
+export function tradeShareText({ ticker = null, live = false, change = null } = {}) {
+  const PLAY = live ? PLAY_LIVE : PLAY_MADE;
+  const what = live ? 'a live coin' : typeof ticker === 'string' && /^[A-Za-z0-9]{1,12}$/.test(ticker) ? `$${ticker}` : 'a coin';
+  if (!fin(change)) return `My trade on ${what} in ${GAME_NAME} ${PLAY} 💜`;
+  const ch = `${change >= 0 ? '+' : '−'}${Math.round(Math.abs(change) * 100)}%`;
+  if (change < 0) return `${ch} on ${what} in ${GAME_NAME}. The trenches are hard ${PLAY} 😭`;
+  return `${ch} on ${what} in ${GAME_NAME} ${PLAY} 💜`;
+}
+
 // X's new-post box with the post and the game's address
 export const shareLink = (text, url = GAME_URL) =>
   `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;

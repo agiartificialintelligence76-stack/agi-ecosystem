@@ -2,11 +2,12 @@
 -- have played it, dont need sign in a wallet to play it", "if they want to rate it and review and put a comment they need to
 -- sign in wallet signature only not transaction. but on how many times played it will still be recorded no need sign in on
 -- that one"). Run this once in the Supabase project that SUPABASE_URL points to, any time, **before pushing the games**:
--- SQL Editor → New query → paste all of it → Run. It ends by showing arcade_functions_found = 8. Until it's run, the games
--- still play, nothing is counted, and agi1.app/games shows no numbers and no reviews.
--- It only ADDS five new tables and eight functions (all named agi1_arcade… / arcade_…). It doesn't touch any table the
+-- SQL Editor → New query → paste all of it → Run. It ends by showing arcade_functions_found = 14. Until it's run, the games
+-- still play, nothing is counted, and agi1.app/games shows no numbers, no reviews and no leaderboards.
+-- It only ADDS eight new tables and fourteen functions (all named agi1_arcade… / arcade_…). It doesn't touch any table the
 -- original site uses (and not her Telegram quizzes' agi1_game… tables), so it's safe in the database both sites share.
--- Running it again changes nothing that's saved.
+-- Running it again changes nothing that's saved. (2026-10-22: the leaderboards' three tables and six functions came in;
+-- run it again for them: the rest stays as it was.)
 --
 -- What's kept, and why:
 --   agi1_arcade_games        per game: how many runs were started (plays) and by how many browsers (players)
@@ -23,7 +24,16 @@
 --                            chat's memory or her burns use), never the address. Saving again changes it; they can delete it
 --   agi1_arcade_review_days  today's and yesterday's review saves, for the daily limits: per wallet code, per visitor code
 --                            and for the whole site. Older rows are deleted as new saves come in
--- Only the server (the secret key) can use these tables. The owner hides a review with arcade_review_hide (at the end).
+--   agi1_arcade_scores       (2026-10-22) the leaderboards: per game and board, one row per browser (the same scrambled
+--                            code as its plays: never the id, never who), its best only: the name its player chose (if
+--                            any), two numbers it ranks by (lower first), a few numbers to show, when. A day's and a
+--                            week's boards are deleted 35 days on
+--   agi1_arcade_tickets_used (2026-10-22) each ranked run's ticket, used once (a game may allow a few uses, each farther):
+--                            a random id, how often, when. Deleted after two days
+--   agi1_arcade_score_days   (2026-10-22) today's and yesterday's tickets and scores, for the daily limits: per visitor code
+--                            and for the whole site
+-- Only the server (the secret key) can use these tables. The owner hides a review with arcade_review_hide, and a
+-- leaderboard row with arcade_score_hide (at the end).
 
 create table if not exists public.agi1_arcade_games (
   game     text        primary key check (game ~ '^[a-z0-9]{2,24}$'),
@@ -308,11 +318,231 @@ grant execute on function public.arcade_review_mine(text, text) to service_role;
 grant execute on function public.arcade_review_delete(text, text) to service_role;
 grant execute on function public.arcade_review_hide(bigint, boolean) to service_role;
 
+-- ---------- the leaderboards (2026-10-22) ----------
+-- Our server checks every score before it comes here (TRENCHING SIMULATOR's runs made again from their orders, Ride 'Em,
+-- AGI!'s numbers against what the game can do); these keep each browser's best on each board, count the day's tickets and
+-- scores, and use each run's ticket once. Bragging rights only: no prizes.
+create table if not exists public.agi1_arcade_scores (
+  id      bigint           generated always as identity primary key,
+  game    text             not null check (game ~ '^[a-z0-9]{2,24}$'),
+  board   text             not null check (board ~ '^[a-z0-9:-]{3,48}$'),
+  player  text             not null check (player ~ '^[A-Za-z0-9_-]{16,64}$'),
+  name    text             check (name is null or (char_length(name) between 1 and 24 and name !~ '[[:cntrl:]]')),
+  k1      double precision not null,
+  k2      double precision not null,
+  detail  jsonb            not null default '{}'::jsonb check (jsonb_typeof(detail) = 'object' and char_length(detail::text) <= 400),
+  created timestamptz      not null default now(),
+  hidden  boolean          not null default false,
+  unique (game, board, player)
+);
+-- (a board's shown rows, best first)
+create index if not exists agi1_arcade_scores_rank on public.agi1_arcade_scores (game, board, k1, k2) where not hidden;
+
+create table if not exists public.agi1_arcade_tickets_used (
+  j    text             primary key check (j ~ '^[A-Za-z0-9_-]{16,64}$'),
+  uses integer          not null default 0 check (uses >= 0),
+  last double precision not null default 0,
+  at   timestamptz      not null default now()
+);
+
+create table if not exists public.agi1_arcade_score_days (
+  day date    not null,
+  who text    not null check (char_length(who) between 4 and 70),       -- 't:' tickets, 's:' or 'r:' scores, 'p:' runs made again, then a visitor's code or 'site'
+  n   integer not null default 0 check (n >= 0),
+  primary key (day, who)
+);
+
+alter table public.agi1_arcade_scores enable row level security;
+alter table public.agi1_arcade_tickets_used enable row level security;
+alter table public.agi1_arcade_score_days enable row level security;
+revoke all on table public.agi1_arcade_scores from anon, authenticated;
+revoke all on table public.agi1_arcade_tickets_used from anon, authenticated;
+revoke all on table public.agi1_arcade_score_days from anon, authenticated;
+
+-- A ticket or a score, counted for today's limits (the site's first, then the visitor's). p_kind: 't' a ticket, 's' or 'r'
+-- a score (each game's own count), 'p' a run our server makes again to check it · p_who: the visitor's code for today ·
+-- p_per_day: a day for one visitor · p_site_daily: for the whole site. Every try counts. → 'ok' | 'person_cap' |
+-- 'site_cap' | 'bad'
+create or replace function public.arcade_take(p_kind text, p_who text, p_per_day integer, p_site_daily integer)
+returns text
+language plpgsql
+set search_path = public
+as $$
+declare
+  d date := (now() at time zone 'utc')::date;
+  n integer;
+begin
+  if p_kind is null or p_kind not in ('t', 's', 'r', 'p')
+     or p_who is null or char_length(p_who) not between 16 and 64 or p_who = 'site'
+     or p_per_day is null or p_per_day not between 1 and 100000
+     or p_site_daily is null or p_site_daily not between 1 and 10000000 then
+    return 'bad';
+  end if;
+  delete from agi1_arcade_score_days where day < d - 1;
+  insert into agi1_arcade_score_days as c (day, who, n) values (d, p_kind || ':site', 1)
+  on conflict (day, who) do update set n = c.n + 1
+  returning c.n into n;
+  if n > p_site_daily then return 'site_cap'; end if;
+  insert into agi1_arcade_score_days as c (day, who, n) values (d, p_kind || ':' || p_who, 1)
+  on conflict (day, who) do update set n = c.n + 1
+  returning c.n into n;
+  if n > p_per_day then return 'person_cap'; end if;
+  return 'ok';
+end;
+$$;
+
+-- Would a score make any of these boards? (our server asks before it makes a run again, which takes a second): true when,
+-- on at least one, this browser has nothing as good yet and fewer than 100 shown rows are as good. Lower k1, then lower
+-- k2, ranks higher.
+create or replace function public.arcade_board_cut(p_game text, p_boards text[], p_player text, p_k1 double precision, p_k2 double precision)
+returns boolean
+language plpgsql
+stable
+set search_path = public
+as $$
+declare
+  b text;
+begin
+  if p_game is null or p_game !~ '^[a-z0-9]{2,24}$'
+     or p_player is null or p_player !~ '^[A-Za-z0-9_-]{16,64}$'
+     or p_boards is null or cardinality(p_boards) not between 1 and 6
+     or p_k1 is null or p_k2 is null or p_k1 = 'NaN'::double precision or p_k2 = 'NaN'::double precision then
+    return false;
+  end if;
+  foreach b in array p_boards loop
+    if b is null or b !~ '^[a-z0-9:-]{3,48}$' then return false; end if;
+    if not exists (select 1 from agi1_arcade_scores s where s.game = p_game and s.board = b and s.player = p_player
+                     and (s.k1 < p_k1 or (s.k1 = p_k1 and s.k2 <= p_k2)))
+       and (select count(*) from agi1_arcade_scores s where s.game = p_game and s.board = b and not s.hidden
+              and (s.k1 < p_k1 or (s.k1 = p_k1 and s.k2 <= p_k2))) < 100 then
+      return true;
+    end if;
+  end loop;
+  return false;
+end;
+$$;
+
+-- A checked score, kept (our server checked everything first): its ticket used (once, or up to p_max_uses times, each with
+-- p_last at least the one before), then each board's row for this browser, kept only when it's better than its best.
+-- p_name: null to show "A player" · p_detail: a few numbers to show. → {"ok": true, "ranks": {"<board>": <its place now>}}
+-- or {"ok": false, "why": "bad" | "used"}
+create or replace function public.arcade_score_put(p_game text, p_j text, p_max_uses integer, p_last double precision,
+  p_player text, p_name text, p_boards text[], p_k1 double precision, p_k2 double precision, p_detail jsonb)
+returns json
+language plpgsql
+set search_path = public
+as $$
+declare
+  b     text;
+  n     integer;
+  ranks jsonb := '{}'::jsonb;
+  mk1   double precision;
+  mk2   double precision;
+begin
+  if p_game is null or p_game !~ '^[a-z0-9]{2,24}$'
+     or p_j is null or p_j !~ '^[A-Za-z0-9_-]{16,64}$'
+     or p_max_uses is null or p_max_uses not between 1 and 10
+     or p_last is null or p_last = 'NaN'::double precision
+     or p_player is null or p_player !~ '^[A-Za-z0-9_-]{16,64}$'
+     or (p_name is not null and (char_length(p_name) not between 1 and 24 or p_name ~ '[[:cntrl:]]' or p_name <> btrim(p_name)))
+     or p_boards is null or cardinality(p_boards) not between 1 and 6
+     or p_k1 is null or p_k2 is null or p_k1 = 'NaN'::double precision or p_k2 = 'NaN'::double precision
+     or p_detail is null or jsonb_typeof(p_detail) <> 'object' or char_length(p_detail::text) > 400 then
+    return json_build_object('ok', false, 'why', 'bad');
+  end if;
+  foreach b in array p_boards loop
+    if b is null or b !~ '^[a-z0-9:-]{3,48}$' then return json_build_object('ok', false, 'why', 'bad'); end if;
+  end loop;
+  -- its ticket (tickets older than two days aren't needed any more)
+  delete from agi1_arcade_tickets_used where at < now() - interval '2 days';
+  insert into agi1_arcade_tickets_used as t (j, uses, last) values (p_j, 1, p_last)
+  on conflict (j) do update set uses = t.uses + 1, last = excluded.last, at = now()
+    where t.uses < p_max_uses and excluded.last >= t.last
+  returning t.uses into n;
+  if n is null then return json_build_object('ok', false, 'why', 'used'); end if;
+  -- a day's and a week's boards older than 35 days aren't needed any more
+  delete from agi1_arcade_scores where created < now() - interval '35 days' and board ~ '^(daily|m):|:(w|d)[0-9]{4}-';
+  foreach b in array p_boards loop
+    insert into agi1_arcade_scores as s (game, board, player, name, k1, k2, detail)
+    values (p_game, b, p_player, p_name, p_k1, p_k2, p_detail)
+    on conflict (game, board, player) do update
+      set name = excluded.name, k1 = excluded.k1, k2 = excluded.k2, detail = excluded.detail, created = now()
+      where excluded.k1 < s.k1 or (excluded.k1 = s.k1 and excluded.k2 < s.k2);
+    select s.k1, s.k2 into mk1, mk2 from agi1_arcade_scores s where s.game = p_game and s.board = b and s.player = p_player;
+    select 1 + count(*) into n from agi1_arcade_scores s where s.game = p_game and s.board = b and not s.hidden
+      and (s.k1 < mk1 or (s.k1 = mk1 and s.k2 < mk2));
+    ranks := ranks || jsonb_build_object(b, n);
+  end loop;
+  return json_build_object('ok', true, 'ranks', ranks);
+end;
+$$;
+
+-- A board's shown rows, best first (at most p_limit, 1 to 100). → [{"name", "k1", "k2", "detail", "created"}] (never the
+-- browser's code)
+create or replace function public.arcade_board(p_game text, p_board text, p_limit integer)
+returns json
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(json_agg(json_build_object('name', x.name, 'k1', x.k1, 'k2', x.k2, 'detail', x.detail, 'created', x.created)
+    order by x.k1, x.k2, x.created), '[]'::json)
+  from (
+    select s.name, s.k1, s.k2, s.detail, s.created from agi1_arcade_scores s
+    where s.game = p_game and s.board = p_board and not s.hidden
+    order by s.k1, s.k2, s.created
+    limit least(greatest(coalesce(p_limit, 20), 1), 100)
+  ) x;
+$$;
+
+-- A browser's own rows on some boards, and its place on each among the shown rows. → [{"board", "rank", "detail",
+-- "hidden"}]
+create or replace function public.arcade_score_mine(p_game text, p_player text, p_boards text[])
+returns json
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(json_agg(json_build_object('board', s.board, 'detail', s.detail, 'hidden', s.hidden,
+    'rank', 1 + (select count(*) from agi1_arcade_scores o where o.game = s.game and o.board = s.board and not o.hidden
+                   and (o.k1 < s.k1 or (o.k1 = s.k1 and o.k2 < s.k2))))), '[]'::json)
+  from agi1_arcade_scores s
+  where s.game = p_game and s.player = p_player and s.board = any(p_boards);
+$$;
+
+-- The owner's tool (run it here, in the SQL Editor): hide a leaderboard row (true), or show it again (false). Its id is in
+-- Table Editor → agi1_arcade_scores. → true when there was such a row
+--   select arcade_score_hide(123, true);
+create or replace function public.arcade_score_hide(p_id bigint, p_hidden boolean)
+returns boolean
+language plpgsql
+set search_path = public
+as $$
+begin
+  update agi1_arcade_scores set hidden = coalesce(p_hidden, true) where id = p_id;
+  return found;
+end;
+$$;
+
+revoke all on function public.arcade_take(text, text, integer, integer) from public, anon, authenticated;
+revoke all on function public.arcade_board_cut(text, text[], text, double precision, double precision) from public, anon, authenticated;
+revoke all on function public.arcade_score_put(text, text, integer, double precision, text, text, text[], double precision, double precision, jsonb) from public, anon, authenticated;
+revoke all on function public.arcade_board(text, text, integer) from public, anon, authenticated;
+revoke all on function public.arcade_score_mine(text, text, text[]) from public, anon, authenticated;
+revoke all on function public.arcade_score_hide(bigint, boolean) from public, anon, authenticated;
+grant execute on function public.arcade_take(text, text, integer, integer) to service_role;
+grant execute on function public.arcade_board_cut(text, text[], text, double precision, double precision) to service_role;
+grant execute on function public.arcade_score_put(text, text, integer, double precision, text, text, text[], double precision, double precision, jsonb) to service_role;
+grant execute on function public.arcade_board(text, text, integer) to service_role;
+grant execute on function public.arcade_score_mine(text, text, text[]) to service_role;
+grant execute on function public.arcade_score_hide(bigint, boolean) to service_role;
+
 -- Tell Supabase's web API to notice the new functions right away.
 notify pgrst, 'reload schema';
 
--- Check: this should show arcade_functions_found = 8.
+-- Check: this should show arcade_functions_found = 14.
 select count(*) as arcade_functions_found from pg_proc
 where pronamespace = 'public'::regnamespace
   and proname in ('arcade_play', 'arcade_stats', 'arcade_reviews', 'arcade_review_take', 'arcade_review_put',
-                  'arcade_review_mine', 'arcade_review_delete', 'arcade_review_hide');
+                  'arcade_review_mine', 'arcade_review_delete', 'arcade_review_hide', 'arcade_take', 'arcade_board_cut',
+                  'arcade_score_put', 'arcade_board', 'arcade_score_mine', 'arcade_score_hide');

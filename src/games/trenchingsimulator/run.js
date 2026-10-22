@@ -8,7 +8,7 @@
 // Live mode (2026-10-21, #404): `makeMarket` makes its market instead (./live-market.js: real coins, play money), and
 // `realTime` makes its clock the real one: one speed, never paused (a pause sheet doesn't stop it, nor does a hidden
 // tab: the real market never waits), so a challenge's time is always the time that passed. `live` is its chain.
-import { createMarket, MIN_BUY, PRIORITY, BASE_FEE } from './engine.js';
+import { createMarket, MIN_BUY, PRIORITY, BASE_FEE, STEPS_PER_S } from './engine.js';
 import { goalState, starsFor, startSolFor, atEnd, SPEEDS } from './challenges.js';
 import { money, pct } from './format.js';
 
@@ -268,7 +268,31 @@ export function createRun({ seed, solUsd = 150, mode = 'free', challenge = null,
       // kept in whole microseconds: a clock made of 1/60 s steps adds up exactly (10 minutes end at 600 s, not 599.99…)
       R.us += Math.round(d * 1e6);
       if (seconds !== null && R.us > seconds * 1e6) R.us = seconds * 1e6;
-      R.clock = R.us / 1e6;
+      const target = R.us / 1e6;
+      // (2026-10-22, the leaderboards) a made-up market moves one step at a time with the checks after each step, so a run
+      // ends on the very step a replay of its orders ends on (./verify.js), whatever its frames were
+      if (!real && !makeMarket && typeof market.step === 'function') {
+        const goalN = market.n0 + Math.floor(target * STEPS_PER_S + 1e-9);
+        let steps = 0;
+        while (!R.over && market.n < goalN) {
+          market.step();
+          steps++;
+          R.clock = (market.n - market.n0) / STEPS_PER_S;
+          checkOrders();
+          checkFeed();
+          checkWorth();
+          checkGoal();
+          if (!R.over) checkTime();
+          if (!R.over) checkBust();
+        }
+        if (!R.over) {
+          R.clock = target;
+          checkTime();
+          if (!R.over) checkIdle();
+        }
+        return steps;
+      }
+      R.clock = target;
       const steps = market.advanceTo(R.clock);
       checkOrders();
       checkFeed();

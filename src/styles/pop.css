@@ -874,6 +874,14 @@
 [data-skin='pop'] .gm-review + .gm-review { margin-top: 14px; }
 [data-skin='pop'] .gm-badge { color: var(--pop-ink); background: var(--pop-lav); border: 2px solid var(--pop-ink); font-weight: 700; }
 [data-skin='pop'] .gm-you { color: var(--pop-ink); background: var(--pop-honey); border: 2px solid var(--pop-ink); font-weight: 700; }
+/* the leaderboards (2026-10-22): mint like the front page's risk check, each game's box a white card, your place honey */
+[data-skin='pop'] .gm-lead { --sec: var(--pop-mint); --fg-2: #2d1f52; --fg-3: #3d3064; }
+[data-skin='pop'] .gm-lead :focus-visible { outline-color: var(--pop-ink); }
+[data-skin='pop'] .gm-lb { background: var(--bg); border: 3px solid var(--edge); border-radius: var(--radius); box-shadow: 0 9px 0 -2px var(--shade); }
+[data-skin='pop'] .gm-lb-title { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
+[data-skin='pop'] .gm-lb-pick { border: 2px solid var(--edge); border-radius: 12px; }
+[data-skin='pop'] .gm-lb-list { border-top: 2px solid var(--edge); }
+[data-skin='pop'] .gm-lb-me { color: var(--pop-ink); background: var(--pop-honey); border: 2px solid var(--pop-ink); font-weight: 700; }
 /* what's coming: a dashed card on honey, and the fine print */
 [data-skin='pop'] .gm-soon { background: var(--bg); border: 3px dashed var(--edge); border-radius: var(--radius); }
 [data-skin='pop'] .gm-warn { background: var(--bg-2); border: 2px solid var(--edge); }
@@ -891,6 +899,9 @@
 [data-skin='pop'][data-theme='dark'] .gm-rate { --sec: #120828; --shade: var(--pop-blue); --kicker-dot: #8aa2ff; }
 [data-skin='pop'][data-theme='dark'] .gm-next { --sec: #1c1036; --shade: var(--pop-honey); --kicker-dot: var(--pop-honey); --fg-2: #cbbff0; --fg-3: #ad9fdb; }
 [data-skin='pop'][data-theme='dark'] .gm-next :focus-visible { outline-color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .gm-lead { --sec: #0b2126; --shade: var(--pop-mint); --kicker-dot: var(--pop-mint); --fg-2: #cbbff0; --fg-3: #ad9fdb; }
+[data-skin='pop'][data-theme='dark'] .gm-lead :focus-visible { outline-color: var(--pop-mint); }
+[data-skin='pop'][data-theme='dark'] .gm-lb { border-width: 2px; }
 [data-skin='pop'][data-theme='dark'] .gm-game, [data-skin='pop'][data-theme='dark'] .gm-sum, [data-skin='pop'][data-theme='dark'] .gm-box,
 [data-skin='pop'][data-theme='dark'] .gm-soon { border-width: 2px; }
 [data-skin='pop'][data-theme='dark'] .gm-game-art { background-color: #2a0f7a; border-right-width: 2px; }

@@ -33,6 +33,9 @@ export default defineConfig({
     // three.js alone is about 650 KB (170 KB compressed). It's already in its own file that
     // loads after the page's text, so Vite's default 500 KB warning isn't useful here.
     chunkSizeWarningLimit: 800,
+    // (2026-10-22) the licenses of the packages bundled into the site's files, in dist/.vite/license.md: TradingView
+    // Lightweight Charts™ (GNGM's chart, Apache-2.0) asks for its license to go with it, and the minified file drops its header
+    license: true,
     // twelve pages: the home page (also at /talk since 2026-10-02), AGI-1's diary (/diary, Phase 5), "Launch with AGI-1"
     // (/launch/<id>, 2026-10-01), her live show (/live, 2026-10-02), CloakMesh (/cloakmesh, 2026-10-03: what
     // inference.agi1.app shows), AGI Studio (/studio and /studio/<view>, and studio.agi1.app, 2026-10-10), (2026-10-14)

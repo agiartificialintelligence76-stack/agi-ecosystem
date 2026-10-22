@@ -4,6 +4,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { privateKeyToAccount } from 'viem/accounts';
 import { POST as wallet } from '../api/wallet.js';
 import { POST as chat } from '../api/chat.js';
@@ -286,11 +287,20 @@ test('chat: a stale session re-reads the balance and hands back an updated sessi
 test('the website code never asks a wallet for a transaction, an approval or a network change (except the launch page\'s one file)', () => {
   const files = [];
   const walk = (dir) => { for (const n of readdirSync(dir)) { const p = join(dir, n); statSync(p).isDirectory() ? walk(p) : files.push(p); } };
-  walk(new URL('../src', import.meta.url).pathname);
-  const LAUNCH = new URL('../src/launch/send.js', import.meta.url).pathname;
+  // (fileURLToPath, 2026-10-22: a URL's pathname isn't a file's path on Windows, "/C:/…/AGI%203%20ECOSYSTEM/src")
+  walk(fileURLToPath(new URL('../src', import.meta.url)));
+  const LAUNCH = fileURLToPath(new URL('../src/launch/send.js', import.meta.url));
   // (2026-09-30, with burning $AGI for messages: also no "one-tap" payment links, EIP-681 ethereum: links or MetaMask's
   // send links: a burn is always sent by the visitor from their own wallet app)
-  const NEVER = /eth_signTransaction|eth_sendRawTransaction|eth_sign\b|eth_signTypedData|wallet_sendCalls|wallet_watchAsset|wallet_requestPermissions|setApprovalForAll|increaseAllowance|\bapprove\(|\bpermit\(|ethereum:|metamask\.app\.link\/send|link\.metamask\.io\/send/;
+  const NEVER = /eth_signTransaction|eth_sendRawTransaction|eth_sign\b|eth_signTypedData|wallet_sendCalls|wallet_watchAsset|wallet_requestPermissions|setApprovalForAll|increaseAllowance|\bapprove\(|\bpermit\(|metamask\.app\.link\/send|link\.metamask\.io\/send/;
+  // A chain-name object key is data, not an EIP-681 link. Keep the exception confined to that literal label;
+  // complete payment URIs and a scheme assembled with an address must still fail.
+  const PAYMENT_URI = /ethereum:(?!\s*(['"])Ethereum\1\s*[,}])/i;
+  assert.doesNotMatch("{ ethereum: 'Ethereum', base: 'Base' }", PAYMENT_URI);
+  for (const unsafe of [
+    '"ethereum:0x123@1?value=1"', '"ethereum:pay-example.eth@1"',
+    '"ETHEREUM:0x123/transfer?address=0x456"', "'ethereum:' + address", '`ethereum:${address}`',
+  ]) assert.match(unsafe, PAYMENT_URI, 'payment links remain forbidden');
   const LAUNCH_ONLY = /eth_sendTransaction|wallet_switchEthereumChain|wallet_addEthereumChain/;
   const allowed = new Set(['eth_requestAccounts', 'eth_accounts', 'eth_chainId', 'personal_sign']);   // eth_chainId only reads
   const used = new Set(), launchUsed = new Set();
@@ -298,6 +308,7 @@ test('the website code never asks a wallet for a transaction, an approval or a n
   for (const f of files.filter((f) => f.endsWith('.js'))) {
     const code = readFileSync(f, 'utf8');
     assert.doesNotMatch(code, NEVER, f);
+    assert.doesNotMatch(code, PAYMENT_URI, f);
     if (f !== LAUNCH) assert.doesNotMatch(code, LAUNCH_ONLY, `${f}: only src/launch/send.js may send a transaction or switch networks`);
     for (const m of code.matchAll(/request\(\s*\{\s*method:\s*['"`]([a-zA-Z_]+)['"`]/g)) (f === LAUNCH ? launchUsed : used).add(m[1]);   // wallet.request({ method })
   }

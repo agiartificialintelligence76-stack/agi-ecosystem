@@ -61,3 +61,7 @@ export const waitlistBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });
 // per wallet): 20 a minute per visitor
 export const arcadePlayBurst = makeBurstLimit({ max: 30, windowMs: 60_000 });
 export const reviewBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });
+// (2026-10-22) their leaderboards: a ranked run asks for a ticket as it starts and sends its score as it ends (a
+// TRENCHING SIMULATOR score is the run made again here, about a second), and the page asks for a player's places now and
+// then: 12 a minute per visitor
+export const scoreBurst = makeBurstLimit({ max: 12, windowMs: 60_000 });

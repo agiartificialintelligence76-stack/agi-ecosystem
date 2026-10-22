@@ -53,6 +53,9 @@ export function smartHistory(rng, q) {
   let won = 0;
   let vol = 0;
   let pnl = 0;
+  // (2026-10-22, GNGM's wallet page) how many of its trades returned over 500%, 200–500%, 0–200%, 0 to −50% and under
+  // −50%: counted from the same trades (no extra dice, so its week is the same as before)
+  const dist = [0, 0, 0, 0, 0];
   for (let i = 0; i < trades; i++) {
     const size = clamp(rng.logn(1.2, 0.6), 0.05, 20);
     const run = rng.chance(pRun);
@@ -62,8 +65,9 @@ export function smartHistory(rng, q) {
     if (win) won++;
     vol += size;
     pnl += size * (mult - 1);
+    dist[mult > 6 ? 0 : mult > 3 ? 1 : mult > 1 ? 2 : mult >= 0.5 ? 3 : 4]++;
   }
-  return { trades, won, lost: trades - won, vol, pnl };
+  return { trades, won, lost: trades - won, vol, pnl, dist };
 }
 
 // A plan for a coin of `fate`. `rng` is the coin's own stream; `ctx.smart` is each smart wallet's quality on this run

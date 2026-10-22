@@ -7,10 +7,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateKeyPairSync } from 'node:crypto';
 import sharp from 'sharp';
+// These fixtures are removed in the same process. Cached image operations can keep their files open on Windows.
+sharp.cache(false);
 // (2026-10-09) WebP's encoder at its lightest in these tests: at its hardest (her set's own pictures) it took about 8 s a
 // picture on a 2-core computer, and a test over 30 s fails the build
 const FAST = 0;
@@ -81,7 +83,7 @@ test('the request to Vertex AI: its model, an image in its answer, the picture\'
   // the settings
   const st = artSettings({ LIVE_OUT_DIR: '/out', LIVE_ART_MODEL: 'x-image', GOOGLE_APPLICATION_CREDENTIALS: '/secrets/k.json' });
   assert.deepEqual(st.models, ['x-image', ...ART_MODELS]);
-  assert.equal(st.outDir, '/out/art');
+  assert.equal(st.outDir, join('/out', 'art'));
   assert.equal(st.max, 220);
 });
 
@@ -111,12 +113,12 @@ test('a run carries on where it stopped; --art-only makes one more of each named
   const list = artList();
   const all = toMake(list, '/out/art', { exists: () => false });
   assert.equal(all.length, 152);
-  const some = toMake(list, '/out/art', { exists: (f) => f.includes('/places/') });
+  const some = toMake(list, '/out/art', { exists: (f) => dirname(f) === join('/out/art', 'places') });
   assert.equal(some.length, 152 - 40);
   const omar = toMake(list, '/out/art', { only: ['omar'], files: () => ['omar-1.webp', 'omar-2.webp', 'paris-1.jpg'] });
   assert.equal(omar.length, 1);
-  assert.equal(omar[0].file, '/out/art/people/omar-3.webp');
-  assert.equal(toMake(list, '/out/art', { only: ['paris'], files: () => [] })[0].file, '/out/art/places/paris-1.jpg');
+  assert.equal(omar[0].file, join('/out/art', 'people', 'omar-3.webp'));
+  assert.equal(toMake(list, '/out/art', { only: ['paris'], files: () => [] })[0].file, join('/out/art', 'places', 'paris-1.jpg'));
   // the runner's options
   assert.equal(parseArgs(['--art']).art, true);
   assert.deepEqual(parseArgs(['--art-only', 'paris, omar']).artOnly, ['paris', 'omar']);

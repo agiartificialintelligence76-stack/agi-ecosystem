@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import {
   decodeFunctionData, encodeFunctionData, encodeFunctionResult, encodeErrorResult, parseAbi, parseTransaction, recoverTransactionAddress,
@@ -1911,7 +1912,8 @@ test('the safety note says what launching changes, and the build never ships Pin
       mkdirSync(join(dir, 'dist', 'assets'), { recursive: true });
       writeFileSync(join(dir, 'dist', 'assets', 'page.js'), content);
       const base = Object.fromEntries(Object.entries(process.env).filter(([k]) => !['PINATA_JWT', 'LAUNCH_GAS_KEY', 'PASS_SECRET', 'TELEGRAM_BOT_TOKEN', 'SUPABASE_SECRET_KEY', 'GEMINI_API_KEY', 'TURNSTILE_SECRET_KEY'].includes(k)));
-      return spawnSync(process.execPath, [new URL('../scripts/check-secrets.js', import.meta.url).pathname], { cwd: dir, env: { ...base, ...env }, encoding: 'utf8' }).status;
+      // (fileURLToPath, 2026-10-22: a URL's pathname isn't a file's path on Windows)
+      return spawnSync(process.execPath, [fileURLToPath(new URL('../scripts/check-secrets.js', import.meta.url))], { cwd: dir, env: { ...base, ...env }, encoding: 'utf8' }).status;
     };
     assert.equal(run('console.log("hello")', { LAUNCH_GAS_KEY: GAS_KEY, PINATA_JWT: JWT }), 0);
     assert.equal(run(`const k = "${GAS_KEY.slice(2)}"`, { LAUNCH_GAS_KEY: GAS_KEY }), 1, 'the key without its 0x');

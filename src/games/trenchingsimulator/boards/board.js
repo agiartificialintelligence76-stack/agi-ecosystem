@@ -24,76 +24,15 @@ import { createChart, TIMEFRAMES } from '../chart.js';
 import { usd, money, signed, pct, share, age, tokens, currencyOf, unitOf, nice } from '../format.js';
 import { MIN_BUY } from '../engine.js';
 import { CURVE_TOK, GRAD_MC, START_MC } from '../curve.js';
+// (the helpers GNGM's board shares, in ./common.js since 2026-10-22; still exported from here as they always were)
+import { SORTS, ORDER_ERRORS, whoText, holderTag, buyPresets, parseAmount, num, ago, short, hueOf, initial, setP, tone, pic,
+  samePic, fromWords, SOCIALS } from './common.js';
 
-const HUES = { cats: 32, dogs: 24, frogs: 118, critters: 36, birds: 48, ocean: 198, food: 14, space: 262, ai: 188,
-  internet: 300, gaming: 282, fantasy: 270, office: 214, weather: 222, music: 322, gym: 2, retro: 332, trench: 44,
-  nature: 96, sweets: 340 };
-export const SORTS = Object.freeze([['bump', 'bump order'], ['trending', 'trending'], ['new', 'new'],
-  ['stretch', 'about to graduate'], ['migrated', 'graduated']]);
-export const ORDER_ERRORS = Object.freeze({
-  min_buy: 'The smallest buy is 0.001 SOL.', not_enough_sol: 'Not enough SOL for that (fees included).',
-  no_tokens: 'You don\'t hold any of it.', migrating: 'It\'s migrating to its pool: try again in a moment.',
-  no_liquidity: 'There\'s no liquidity for that right now.', no_sol_for_fee: 'Not enough SOL left for the fee.',
-  bad: 'Check the amount.', no_coin: 'That coin isn\'t on the board.', over: 'The run is over.',
-  stale: 'This coin\'s price isn\'t live right now: try again when the live feed is back.',
-});
+export { SORTS, ORDER_ERRORS, whoText, holderTag, buyPresets, parseAmount };
+
 const FAST_MS = 250;
 const SLOW_MS = 650;
 const CARDS = 24;
-
-const short = (a) => (typeof a === 'string' && a.length > 12 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a || '—');
-
-// who made a trade, in the latest-trade box's words (the engine's labels: never an address there)
-const WHO = Object.freeze({ dev: 'the dev', bundler: 'a bundler', sniper: 'a sniper', insider: 'an insider',
-  kol: 'a caller', smart: 'a smart wallet', whale: 'a whale', me: 'you', mev: 'a bot' });
-export function whoText(label) {
-  return (typeof label === 'string' && Object.hasOwn(WHO, label)) ? WHO[label] : 'someone';
-}
-
-// what a holder's row says about it after its address (the ones a trencher looks for; never "regular", you, a caller or
-// a bot: a caller shows by its @name, you as "you")
-const HOLDER_TAGS = Object.freeze({ dev: 'dev', bundler: 'bundler', sniper: 'sniper', insider: 'insider', whale: 'whale',
-  smart: 'smart wallet' });
-export function holderTag(label) {
-  return (typeof label === 'string' && Object.hasOwn(HOLDER_TAGS, label)) ? HOLDER_TAGS[label] : '';
-}
-
-// a coin's picture: its emoji on a tile in its theme's color; a real coin's own picture over it (Live mode: from our
-// relay; its emoji stays if the picture doesn't load)
-function pic(r, cls = '') {
-  const tile = el('span', { class: ['tsb-pic', cls], vars: { '--h': HUES[r && r.theme] ?? 262 }, 'aria-hidden': 'true' },
-    (r && r.emoji) || '🪙');
-  tile.dataset.pic = (r && r.pic) || '';
-  if (r && r.pic) {
-    // (never loading="lazy": a board shows at most 24, small, and under request interception lazy pictures never came)
-    const img = el('img', { class: 'tsb-img', src: r.pic, alt: '', decoding: 'async', referrerpolicy: 'no-referrer',
-      draggable: 'false', width: 64, height: 64, on: { error: () => {
-        img.remove();
-        tile.classList.remove('is-img');
-      } } });
-    tile.classList.add('is-img');
-    tile.append(img);
-  }
-  return tile;
-}
-// a picture node made again only when its picture changed (a real coin's arrives a moment after the coin)
-function samePic(node, r) {
-  return Boolean(node) && node.dataset.pic === ((r && r.pic) || '');
-}
-
-// the quick buy amounts, by how much the run started with
-export function buyPresets(start) {
-  if (!(start > 0) || start <= 1.5) return [0.05, 0.1, 0.25, 0.5];
-  if (start <= 6) return [0.1, 0.25, 0.5, 1];
-  if (start <= 20) return [0.5, 1, 2, 5];
-  return [1, 5, 10, 25];
-}
-
-// "1.5", "0,25", ".5" → a number; anything else → NaN
-export function parseAmount(s) {
-  const t = String(s || '').trim().replace(',', '.');
-  return /^\d*\.?\d+$|^\d+\.$/.test(t) ? Number(t) : NaN;
-}
 
 // ---------- small helpers ----------
 // two line icons ui.js doesn't have (24 × 24, stroke = currentColor, like its own)
@@ -111,23 +50,6 @@ function glyph(name, cls = 'ts-icon') {
   return s;
 }
 const sortLabel = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-// a name's own hue, for its avatar in the thread
-const hueOf = (s) => {
-  let h = 0;
-  for (const ch of String(s)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
-  return h % 360;
-};
-const setP = (b, x) => b.style.setProperty('--p', String(Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0))));
-const tone = (n, x, eps) => {
-  flag(n, 'is-up', x > eps);
-  flag(n, 'is-down', x < -eps);
-};
-const initial = (u) => ([...String(u || '?')][0] || '?').toUpperCase();
-const num = (n) => (Number.isFinite(n) ? n.toLocaleString('en-US') : '—');
-const ago = (s) => {
-  const a = age(s);
-  return a === 'now' ? 'just now' : a === '—' ? '—' : `${a} ago`;
-};
 const replies = (n) => `${num(n)} ${n === 1 ? 'reply' : 'replies'}`;
 // a coin's tags: [what the chip says, its class, its icon, what a screen reader hears]
 const TAGS = Object.freeze({
@@ -144,10 +66,6 @@ function tagEl(k) {
 const tagsOf = (r, phases) => [r.koth && 'koth', phases && r.phase === 'pool' && 'pool',
   phases && r.phase === 'migrating' && 'mig', r.rugged && 'rug', r.cto && 'cto', r.dexPaid && 'dex', r.standIn && 'sim',
   r.live && r.tracked === false && 'stale'].filter(Boolean);
-// where a real coin came from, in a few words: "from pump.fun", or its chain
-const CHAIN_NAMES = Object.freeze({ solana: 'Solana', robinhood: 'Robinhood Chain', bnb: 'BNB Chain', base: 'Base' });
-const fromWords = (x) => (x && x.src ? `from ${x.src}` : x && Object.hasOwn(CHAIN_NAMES, x.chain) ? `on ${CHAIN_NAMES[x.chain]}` : '');
-const SOCIALS = Object.freeze([['x', 'X'], ['tg', 'Telegram'], ['web', 'Website']]);
 // the stats' windows: the last 5 minutes, the last hour, and "24h" = since its launch (a run's coins are all younger)
 const WINS = Object.freeze(['5m', '1h', '24h']);
 const WIN_S = Object.freeze({ '5m': 300, '1h': 3600, '24h': Infinity });
@@ -1080,7 +998,7 @@ export function mountBoard(host, ctx) {
       setText(kingTxt, 'No king yet: the first coin halfway up its curve takes the crown.');
     }
     // its pool
-    setText(pool.dd.pair, s.pair || (U.id === 'eth' || U.id === 'bnb' ? U.name : 'SOL'));
+    setText(pool.dd.pair, s.pair || (U.id !== 'sol' && U.id !== 'usd' ? U.name : 'SOL'));
     setText(pool.dt.liq, s.phase === 'pool' ? 'Liquidity' : 'In the curve');
     setText(pool.dd.liq, isUsd ? usd(s.liq * px) : `${usd(s.liq * px)} (${MN(s.liq)} ${U.name})`);
     setText(pool.dd.mc, mc(s.mc));

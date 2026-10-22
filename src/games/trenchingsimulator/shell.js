@@ -5,11 +5,17 @@
 // through classes and the CSS object model (the site's CSP allows no style attributes).
 //
 // Live mode (2026-10-21, #404): a Market switch on the modes screen (Simulated, the default, or Live coins) and a chain
-// (Solana, Robinhood Chain, BNB Chain, Base). While it's on, one connection to our relay (./live-feed.js) says how the
+// (Solana, Robinhood Chain, BNB Chain, Base; since 2026-10-22 also Ethereum, Monad, HyperEVM, Arbitrum and Tron). While
+// it's on, one connection to our relay (./live-feed.js) says how the
 // live feed is doing, in plain words; a run in it trades real coins with play money (./live-market.js) on a clock that
 // never stops, and falls back to simulated stand-ins, saying so, whenever the feed is down or the chain is quiet with too
 // few real coins (./live-chains.js: playState; a quiet chain with enough plays its real coins alone, since 2026-10-21).
 // The daily market and the challenge that ends on a rug stay simulated.
+//
+// Race rooms (2026-10-22, ./race.js): "Race a friend" on the home screen makes or joins a room (an invite link is the
+// page's own address with #room=<code>); its host picks a challenge and starts it; everyone plays it on the same
+// simulated market from the same moment, on a clock that never stops, with the room's standings under the HUD and on
+// the results. Leaving its screens leaves the room.
 import { el, setText, flag, icon, toast, clearToasts, paintTerminal } from './ui.js';
 import { TERMINALS, terminalById, SAFETY_NOTE } from './terminals.js';
 import { markEl, wordEl } from './brands.js';
@@ -23,7 +29,10 @@ import { createVoice } from './lines.js';
 import { createAgi, facePixels } from './agi.js';
 import { PRIORITY } from './engine.js';
 import { mountBoard } from './boards/board.js';
+import { loadName, saveName } from '../player-name.js';
 import { Site } from './site.js';
+import { askTicket, sendScore } from './ranked.js';
+import { rankWords, boardTitle } from '../boards.js';
 import { shareText, shareLink, GAME_NAME } from './share.js';
 import { money, moneySigned, clock, share, times, tokens, usd, unitOf, isCoinCurrency } from './format.js';
 import { resultTitle, resultTone, resultLine, statLines, starsRow, sparkPath, cardText, modeLabel } from './results.js';
@@ -31,9 +40,16 @@ import { CHAINS, chainById, feedWords, liveOk, liveCurrency, UNIT_NAMES, relayUr
   LIVE_SOON_HOW, playState, liveMoney } from './live-chains.js';
 import { createLiveFeed } from './live-feed.js';
 import { createLiveMarket } from './live-market.js';
+import { createRace, raceUrl, roomOfHash, inviteLink, cleanCode, raceWords, standingText } from './race.js';
 
 const NS = 'http://www.w3.org/2000/svg';
-const KNOWN = new Set(['home', 'terminals', 'modes', 'challenges', 'brief']);
+// a ready terminal's board, the same doors for each (boards/board.js's): Pomp.fun's is in the page; GNGM's (2026-10-22)
+// and its PnL card come as their own file the first time they're needed (null: it couldn't be fetched)
+const boardFor = (t) => (t.id === 'scan' ? import('./boards/gngm.js').then((m) => m.mountGngm, () => null) : Promise.resolve(mountBoard));
+const gngmCard = () => import('./boards/gngm-card.js');
+const CARD_W = 1200;
+const CARD_H = 630;
+const KNOWN = new Set(['home', 'terminals', 'modes', 'challenges', 'brief', 'race']);
 const TIER_NAMES = { easy: 'Easy', medium: 'Medium', hard: 'Hard', legendary: 'Legendary' };
 const END_KEYS = new Set(['won', 'lostTime', 'lostRug', 'busted', 'cashed', 'quit']);
 const STARS_MAX = CHALLENGES.length * 3;
@@ -67,7 +83,8 @@ export function startShell(root) {
     }
   })();
   const S = { save: loadSave(store), price: null, priceAt: 0, priceP: null, play: null, last: null, expectPop: 0,
-    token: 0, resAgi: null, feed: null, offFeed: null };
+    token: 0, resAgi: null, feed: null, offFeed: null, name: loadName(store), race: null, raceView: null, raceBoard: null,
+    raceStarted: '', raceCh: 'speedrun' };
   // Live mode: open on the site since its relay runs (2026-10-21; ./live-chains.js: LIVE_OPEN). Closed ("coming soon",
   // as it was until then), every run is simulated, whatever this browser kept from a try
   const LIVE = liveOpen(location);
@@ -78,6 +95,33 @@ export function startShell(root) {
   addEventListener('keydown', unlock, { once: true, capture: true });
 
   const save = () => writeSave(store, S.save);
+  // GNGM's presets P1 to P3 (2026-10-22): the one picked is the game's slippage and priority (an older save's settings
+  // become the picked one's), and changing those (anywhere) changes it
+  S.save.presets[S.save.preset] = { slippage: S.save.slippage, priority: S.save.priority };
+  function pickPreset(i) {
+    if (!Number.isInteger(i) || !S.save.presets[i]) return;
+    S.save.preset = i;
+    S.save.slippage = S.save.presets[i].slippage;
+    S.save.priority = S.save.presets[i].priority;
+    save();
+  }
+  function setPreset(i, patch) {
+    const p = S.save.presets[i];
+    if (!p || !patch) return;
+    if (SLIPPAGES.includes(patch.slippage)) p.slippage = patch.slippage;
+    if (PRIORITIES.includes(patch.priority)) p.priority = patch.priority;
+    if (i === S.save.preset) {
+      S.save.slippage = p.slippage;
+      S.save.priority = p.priority;
+    }
+    save();
+  }
+  // the player's optional name (both games': ../player-name.js) → { ok, name }
+  function setPlayerName(raw) {
+    const r = saveName(store, raw);
+    if (r.ok) S.name = r.name;
+    return r;
+  }
   // ---- Live mode ----
   // the one connection to the relay, made the first time Live mode is used, open only while it's on
   const liveFeed = () => {
@@ -130,6 +174,8 @@ export function startShell(root) {
       S.resAgi.destroy();
       S.resAgi = null;
     }
+    // a race room is left with its screens (its room, its countdown, its run, its results)
+    if (S.race && S.race.status !== 'idle' && node.dataset.race !== '1') leaveRoom();
     if (S.offFeed && !node.querySelector('.ts-live-state')) {
       S.offFeed();
       S.offFeed = null;
@@ -155,6 +201,7 @@ export function startShell(root) {
     if (s.ts === 'modes') return show(modesScreen(), 'Pick a mode');
     if (s.ts === 'challenges') return show(challengesScreen(), 'Challenges');
     if (s.ts === 'brief') return show(briefScreen(s), 'Get ready');
+    if (s.ts === 'race') return show(raceScreen(s), 'Race a friend');
     if (s.ts === 'results' && S.last) return show(resultsScreen(), resultTitle(S.last.res));
     return show(homeScreen(), '');
   }
@@ -174,6 +221,32 @@ export function startShell(root) {
       el('span', { class: 'ts-brand', text: GAME_NAME }));
   }
   const note = () => el('p', { class: 'ts-note' }, icon('info'), el('span', { text: `${SAFETY_NOTE} Not financial advice.` }));
+  // the player's optional name (2026-10-22, the owner: "they can enter their custom name before playing just like in the
+  // real terminal (just optional)"): a field that keeps it when it changes, on a run's brief and in the settings
+  function nameField() {
+    const input = el('input', { class: 'ts-name-in', type: 'text', maxLength: 40, autocomplete: 'nickname', spellcheck: 'false',
+      placeholder: 'Your name (optional)', value: S.name || '', 'aria-label': 'Your name, optional' });
+    const msg = el('p', { class: 'ts-name-msg', role: 'status' });
+    const keep = () => {
+      const r = setPlayerName(input.value);
+      if (!r.ok) {
+        msg.dataset.tone = 'bad';
+        setText(msg, 'That name can\'t be used: 1 to 24 letters, numbers, spaces or emoji; no links, addresses, or names that pass for AGI-1, her team or a moderator.');
+        return;
+      }
+      input.value = r.name || '';
+      msg.dataset.tone = '';
+      setText(msg, r.name ? `Your cards say “by ${r.name}”.` : '');
+    };
+    input.addEventListener('change', keep);
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      keep();
+    });
+    return el('div', { class: 'ts-name' }, el('span', { class: 'ts-chips-l', text: 'Your name' }), input, msg,
+      el('p', { class: 'ts-name-note', text: 'Optional, like a username on a terminal: it goes on your cards, and on the leaderboards with your ranked runs. Kept in this browser.' }));
+  }
 
   function homeScreen() {
     const st = S.save.stats;
@@ -192,7 +265,8 @@ export function startShell(root) {
           { ic: 'flame', on: () => go('brief', { kind: 'daily' }) })),
       el('div', { class: 'ts-stats' }, stat(String(st.runs), 'runs'), stat(String(st.wins), 'wins'),
         stat(`${starsTotal(S.save)}/${STARS_MAX}`, 'stars'), stat(st.bestX > 0 ? times(st.bestX) : '—', 'best')),
-      el('p', { class: 'ts-soon' }, icon('users'), el('span', { text: 'Multiplayer · coming soon' })),
+      el('div', { class: 'ts-actions' },
+        btn('Race a friend', { ic: 'users', on: () => go('race') })),
       el('details', { class: 'ts-how' }, el('summary', { text: 'How to play' }), ...howTo()),
       note(),
       el('p', { class: 'ts-links' }, el('a', { href: '/games#rate-trenchingsimulator', text: 'Rate it' }), ' · ',
@@ -203,8 +277,9 @@ export function startShell(root) {
       el('p', { text: 'Pick a terminal, then a challenge, the daily market or free play. You get play money, and a market full of made-up coins: new ones launch every few seconds, most of them die, a few run.' }),
       el('p', { text: 'Buy a coin, watch its chart and its holders, and sell before it dumps. Every trade pays a small fee and lands a moment later (faster with a higher priority); if the price moves past your slippage, it fails.' }),
       el('p', { text: 'Rugs, dev sells and migrations happen. Challenges have a goal and a clock; free play has neither. Nothing here is real money, and nothing here is advice.' }),
-      el('p', { text: LIVE ? 'Live mode (on the modes screen): real new coins as they launch, on Solana, Robinhood Chain, BNB Chain or Base, with the names and pictures their makers gave them. You still trade them with play money only: nothing is ever bought or sold for real.'
+      el('p', { text: LIVE ? 'Live mode (on the modes screen): real new coins as they launch, on Solana, Robinhood Chain, BNB Chain, Base, Ethereum, Monad, HyperEVM, Arbitrum or Tron, with the names and pictures their makers gave them. You still trade them with play money only: nothing is ever bought or sold for real.'
         : LIVE_SOON_HOW }),
+      el('p', { class: 'ts-how-credit', text: 'GNGM\'s charts: TradingView Lightweight Charts™ · Copyright (c) 2025 TradingView, Inc. (tradingview.com).' }),
     ];
   }
 
@@ -422,11 +497,204 @@ export function startShell(root) {
       live ? [feedLine('before', onFeedNews), el('p', { class: 'ts-live-about', text: `${LIVE_NOTE} The clock never stops in Live mode, not even for the menu.` })] : null,
       best && best.stars > 0 ? el('p', { class: 'ts-best', text: `Your best: ${starsRow(best.stars)}${best.time != null ? ` · ${clock(best.time)}` : ''}` }) : null,
       dd ? el('p', { class: 'ts-best', text: dd.won ? `Won today ${starsRow(dd.stars)}` : `${dd.tries} ${dd.tries === 1 ? 'try' : 'tries'} today` }) : null,
+      !live && setup.kind !== 'free' && t.currency === 'sol'
+        ? el('p', { class: 'ts-rank-note', text: 'Leaderboard: this run is checked on our server and ranked on agi1.app/games, under your name if you give one. Bragging rights only, no prizes.' })
+        : null,
+      nameField(),
       priceLine,
       el('div', { class: 'ts-actions' },
         btn('Start', { kind: 'primary', ic: 'play', on: () => startRun(setup) }),
         btn('Back', { kind: 'ghost', on: () => back(setup.kind === 'challenge' ? 'challenges' : 'modes') })),
       note());
+  }
+
+  // ---- race rooms (2026-10-22: ./race.js) ----
+  // one connection to the relay's rooms, made the first time a room is made or joined
+  const raceRoom = () => {
+    if (!S.race) {
+      S.race = createRace({ url: raceUrl(location) });
+      S.race.on(onRace);
+    }
+    return S.race;
+  };
+  const inRoom = () => Boolean(S.race && S.race.room && S.race.status !== 'idle' && S.race.status !== 'closed');
+  function leaveRoom() {
+    if (S.race && S.race.status !== 'idle') S.race.leave();
+  }
+  // the room's news: a race starts (its countdown, then the run), the standings under the HUD or on the results, the room
+  // screen's players and buttons
+  function onRace(ev) {
+    if (ev.type === 'go') {
+      if (!S.play || S.play.dead) startRaceRun(ev.go);
+      return;
+    }
+    if (S.play && !S.play.dead && S.play.setup.race) {
+      if (S.play.paintRace) S.play.paintRace();
+      return;
+    }
+    if (S.raceView && root.contains(S.raceView.el)) S.raceView.update();
+    if (S.raceBoard && root.contains(S.raceBoard.el)) S.raceBoard.paint();
+  }
+  // the standings as a list (the room screen between races, the results)
+  function boardList(rows, meId) {
+    return el('ol', { class: 'ts-race-board' }, rows.map((row, i) => el('li', { class: row.id === meId ? 'is-me' : '' },
+      standingText(row, i, { you: row.id === meId }))));
+  }
+  function raceScreen(st) {
+    const r = raceRoom();
+    const t = terminal();
+    const h = el('h1', { class: 'ts-h', text: 'Race a friend' });
+    const line = el('p', { class: 'ts-race-state', role: 'status', 'aria-live': 'polite' });
+    const body = el('div', { class: 'ts-race-body' });
+    const node = el('section', { class: 'ts-screen ts-race', data: { race: '1' } }, header('home'),
+      el('p', { class: 'ts-kicker', text: 'Race a friend · play money' }), h,
+      el('p', { class: 'ts-lede', text: 'Everyone in a room trades the same made-up market from the same moment, each with their own play money. Invite friends with a link: no wallet, no sign-in. The standings are just for fun.' }),
+      body, line, note());
+    const invited = st && cleanCode(st.code);
+    let shown = '';
+    // not in a room: join one (an invite link's code filled in), or make one for a challenge
+    function formParts() {
+      const codeIn = el('input', { class: 'ts-race-code', type: 'text', maxLength: 7, autocomplete: 'off', spellcheck: 'false',
+        autocapitalize: 'characters', placeholder: 'K7QX2M', 'aria-label': 'Room code', value: invited || '' });
+      const pick = el('select', { class: 'ts-race-pick', 'aria-label': 'Challenge' },
+        CHALLENGES.map((c) => el('option', { value: c.id, text: `${c.name} · ${timeText(c.seconds)}` })));
+      pick.value = challengeById(S.raceCh) ? S.raceCh : 'speedrun';
+      const join = () => {
+        const code = cleanCode(codeIn.value);
+        if (!code) {
+          setText(line, 'A room code is 6 letters and numbers, like K7QX2M.');
+          codeIn.focus();
+          return;
+        }
+        raceRoom().join(code, { name: S.name || '' });
+        update();
+      };
+      const make = () => {
+        const ch = challengeById(pick.value);
+        if (!ch) return;
+        S.raceCh = ch.id;
+        raceRoom().create({ name: S.name || '', set: { challenge: ch.id, seconds: ch.seconds } });
+        update();
+      };
+      codeIn.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        join();
+      });
+      return [
+        nameField(),
+        el('div', { class: 'ts-race-box' }, el('h2', { class: 'ts-race-h', text: 'Join a room' }),
+          el('div', { class: 'ts-race-row' }, codeIn, btn(invited ? `Join room ${invited}` : 'Join', { kind: invited ? 'primary' : '', ic: 'users', on: join }))),
+        el('div', { class: 'ts-race-box' }, el('h2', { class: 'ts-race-h', text: 'Make a room' }),
+          el('p', { class: 'ts-race-note', text: 'Pick a challenge: everyone races it on the same market. You start the race once your friends are in.' }),
+          el('div', { class: 'ts-race-row' }, pick, btn('Make a room', { kind: invited ? '' : 'primary', ic: 'flame', on: make }))),
+      ];
+    }
+    // in a room: its invite link, its challenge, its players, ready and (the host) start, leave; between races, the last
+    // race's standings
+    const linkIn = el('input', { class: 'ts-race-link', type: 'text', readOnly: true, 'aria-label': 'Invite link' });
+    const facts = el('dl', { class: 'ts-facts' });
+    const players = el('ol', { class: 'ts-race-players', 'aria-label': 'Players' });
+    const last = el('div', { class: 'ts-race-last' });
+    const readyBtn = btn("I'm ready", { ic: 'check', on: () => {
+      const me = S.race && S.race.room && S.race.room.players.find((p) => p.id === S.race.me.id);
+      S.race.ready(!(me && me.ready));
+    } });
+    const startBtn = btn('Start the race', { kind: 'primary', ic: 'play', on: () => S.race.start() });
+    const copy = () => navigator.clipboard.writeText(linkIn.value).then(() => toast('Invite link copied', 'up'),
+      () => toast('Couldn\'t copy it: select the link and copy it', 'down'));
+    function roomParts() {
+      linkIn.addEventListener('focus', () => linkIn.select());
+      return [
+        el('div', { class: 'ts-race-box' }, el('h2', { class: 'ts-race-h', text: 'Invite friends' }),
+          el('p', { class: 'ts-race-note', text: 'Send them this link. They need no wallet and no sign-in: they open it, and they\'re in.' }),
+          el('div', { class: 'ts-race-row' }, linkIn, btn('Copy link', { ic: 'share', on: copy }))),
+        facts,
+        el('h2', { class: 'ts-race-h', text: 'Players' }), players, last,
+        el('div', { class: 'ts-actions' }, readyBtn, startBtn, btn('Leave room', { kind: 'ghost', on: () => {
+          leaveRoom();
+          update();
+        } })),
+      ];
+    }
+    function paintRoom() {
+      const rm = r.room;
+      if (!rm) return;
+      const me = r.me;
+      const ch = challengeById(rm.set.challenge);
+      const px = priceUsd();
+      linkIn.value = inviteLink(rm.code, location.origin);
+      facts.replaceChildren(...[['Challenge', ch ? ch.name : 'A challenge this page doesn\'t know yet: reload it'],
+        ['Goal', ch ? goalText(ch, t.currency, px) : '—'], ['Time', timeText(rm.set.seconds)], ['Start', ch ? startText(ch, t.currency, px) : '—'],
+        ['Market', 'Simulated: the same made-up coins for everyone in the room'], ['Clock', 'Never stops, not even for the menu']]
+        .flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]));
+      const between = rm.state === 'lobby' || rm.state === 'ended';
+      players.replaceChildren(...rm.players.map((p) => el('li', { class: [p.id === me.id && 'is-me', p.gone && 'is-gone'] },
+        el('span', { class: 'ts-race-name', text: p.id === me.id ? `${p.name} (you)` : p.name }),
+        p.host ? el('span', { class: 'ts-race-tag', text: 'Host' }) : null,
+        p.ready ? el('span', { class: 'ts-race-tag is-ready', text: 'Ready' }) : null,
+        p.gone ? el('span', { class: 'ts-race-tag', text: 'Away' }) : null,
+        r.isHost && between && p.id !== me.id ? btn('Remove', { kind: 'ghost', cls: 'ts-race-kick', on: () => S.race.kick(p.id) }) : null)));
+      const mine = rm.players.find((p) => p.id === me.id);
+      readyBtn.hidden = !between;
+      setText(readyBtn.querySelector('span'), mine && mine.ready ? 'Not ready' : "I'm ready");
+      startBtn.hidden = !(r.isHost && between);
+      setText(startBtn.querySelector('span'), rm.state === 'ended' ? 'Start a rematch' : 'Start the race');
+      last.replaceChildren(...(rm.state === 'ended' && r.board.length ? [el('h2', { class: 'ts-race-h', text: 'Last race' }), boardList(r.board, me.id)] : []));
+    }
+    function update() {
+      const want = inRoom() ? 'room' : 'form';
+      if (want !== shown) {
+        shown = want;
+        body.replaceChildren(...(want === 'room' ? roomParts() : formParts()));
+      }
+      if (want === 'room') paintRoom();
+      setText(h, want === 'room' && r.room ? `Room ${r.room.code}` : 'Race a friend');
+      const words = raceWords(r.status, r.error);
+      setText(line, r.status === 'lobby' && !r.isHost ? 'In the room. The host starts the race when everyone\'s in.'
+        : r.status === 'lobby' ? 'You\'re the host: start the race when everyone\'s in (a race of one works too).' : words);
+      line.dataset.tone = r.status === 'down' || r.status === 'closed' ? 'down' : '';
+    }
+    S.raceView = { el: node, update };
+    update();
+    return node;
+  }
+  // a race starts (once each): a run of its challenge (startRun: its countdown, then the run)
+  function startRaceRun(g) {
+    const r = S.race;
+    const ch = challengeById(g.set.challenge);
+    const key = `${r && r.room ? r.room.code : ''}:${g.race}`;
+    if (!ch || S.raceStarted === key) {
+      if (!ch) toast('This race is a challenge this page doesn\'t know yet: reload the page for the newest game.', 'down', 5000);
+      return;
+    }
+    S.raceStarted = key;
+    startRun({ kind: 'challenge', id: ch.id, race: g });
+  }
+  // its countdown screen, and the wait (on the relay's clock) until the race starts
+  function raceGoScreen(g, t) {
+    const ch = challengeById(g.set.challenge);
+    return el('section', { class: 'ts-screen ts-loading ts-race-go', 'aria-busy': 'true', data: { race: '1' } },
+      el('p', { class: 'ts-kicker', text: `Race · ${ch.name}` }),
+      el('h1', { class: 'ts-h', text: 'Get ready' }),
+      el('p', { class: 'ts-race-count', text: '…' }),
+      el('p', { class: 'ts-lede', text: `${goalText(ch, t.currency, g.solUsd)} · ${timeText(ch.seconds)}. Everyone starts at the same moment, on the same market.` }),
+      note());
+  }
+  function raceCountdown(tok) {
+    return new Promise((resolve) => {
+      const step = () => {
+        const ms = tok === S.token && S.race ? S.race.startsIn() : 0;
+        if (ms == null || ms <= 0) {
+          resolve();
+          return;
+        }
+        const n = root.querySelector('.ts-race-count');
+        if (n) setText(n, String(Math.ceil(ms / 1000)));
+        setTimeout(step, Math.min(200, ms));
+      };
+      step();
+    });
   }
 
   // ---- a run ----
@@ -462,29 +730,54 @@ export function startShell(root) {
     else history.pushState(st, '');
     const tok = ++S.token;
     const t = terminal();
-    const live = liveRun(setup) ? S.save.chain : null;
-    show(loadingScreen(t, live), `Opening ${t.name}`);
+    // (2026-10-22) a race room's race (./race.js `go`): its seed and SOL's price are the room's, simulated, never ranked
+    const race = setup.race || null;
+    const live = !race && liveRun(setup) ? S.save.chain : null;
+    // (2026-10-22, the leaderboards) the daily market and the challenges, simulated, in SOL: ranked, with our server's
+    // ticket (its seed and SOL's price); free play, Live mode and races never are
+    const rankable = !race && !live && t.currency === 'sol' && (setup.kind === 'daily' || setup.kind === 'challenge');
+    if (race) show(raceGoScreen(race, t), 'Get ready');
+    else show(loadingScreen(t, live), `Opening ${t.name}`);
     let feed = null;
     if (live) {
       feed = liveFeed();
       feed.start(live);
     }
-    const [price] = await Promise.all([ensurePrice(), feed ? feedReady(feed, 5000) : null]);
+    const [price, , mount, got] = await Promise.all([race ? null : ensurePrice(), feed ? feedReady(feed, 5000) : null, boardFor(t),
+      rankable ? askTicket({ kind: setup.kind, challenge: setup.kind === 'challenge' ? setup.id : null }) : null]);
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
     if (tok !== S.token) return;
-    // SOL's price: the relay's when it has it (the same source, just now), else the game's own
-    const px = feed && feed.px.sol > 0 ? Math.round(feed.px.sol * 100) / 100 : price && price.usd > 0 ? price.usd : 150;
+    if (!mount) {
+      toast(`${t.name} didn't load: check your connection and try again.`, 'down', 4000);
+      go(race ? 'race' : 'modes', {}, { replace: true });
+      return;
+    }
+    // a race: everyone starts at the same moment
+    if (race) await raceCountdown(tok);
+    if (tok !== S.token) return;
+    // ranked: its ticket (a daily market's for the same UTC day as the page's), else why not
+    let ranked = race ? { why: 'race' } : setup.kind === 'free' ? { why: 'free' } : live ? { why: 'live' } : { why: 'off' };
+    if (rankable && got) {
+      if (!got.ticket) ranked = { why: got.why };
+      else ranked = setup.kind === 'daily' && got.day !== setup.day ? { why: 'day' } : { ticket: got };
+    }
+    const tk = ranked.ticket || null;
+    // SOL's price: a ranked run's ticket's; else the relay's when it has it (the same source, just now), else the game's own
+    const px = tk ? tk.solUsd : feed && feed.px.sol > 0 ? Math.round(feed.px.sol * 100) / 100 : price && price.usd > 0 ? price.usd : 150;
     // its money: a live run's the chain's own coin (Pomp.fun's since 2026-10-21) at the relay's price, frozen for it
     const cur = live ? liveMoney(t.id, live, feed.px) : t.currency;
     // a live run: real coins, play money, the real clock
     const liveOpts = live ? { live, realTime: true, makeMarket: (o) => createLiveMarket({ ...o, feed, chain: live }) } : {};
     let run;
     if (setup.kind === 'daily') {
-      run = createRun({ seed: dailySeed(setup.day), challenge: dailyChallenge(setup.day), mode: 'daily', solUsd: px,
+      run = createRun({ seed: tk ? tk.seed : dailySeed(setup.day), challenge: dailyChallenge(setup.day), mode: 'daily', solUsd: px,
         currency: t.currency, terminal: t.id });
+    } else if (setup.kind === 'challenge' && race) {
+      run = createRun({ seed: race.seed, challenge: challengeById(setup.id), mode: 'challenge', solUsd: race.solUsd, currency: t.currency,
+        terminal: t.id, realTime: true });
     } else if (setup.kind === 'challenge') {
       const ch = challengeById(setup.id);
-      run = createRun({ seed: `${ch.id}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`,
+      run = createRun({ seed: tk ? tk.seed : `${ch.id}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`,
         challenge: ch, mode: 'challenge', solUsd: px, currency: cur, terminal: t.id, ...liveOpts });
     } else {
       run = createRun({ seed: `free-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`, mode: 'free',
@@ -495,15 +788,15 @@ export function startShell(root) {
     } catch {
       // a run is counted on a best-effort basis: the game never waits for it
     }
-    mountPlay(run, setup, t);
+    mountPlay(run, setup, t, mount, ranked);
   }
 
-  function mountPlay(run, setup, t) {
+  function mountPlay(run, setup, t, mount = mountBoard, ranked = null) {
     const cur = run.currency;
     const px = run.solUsd;
     const M = (x) => money(x, cur, px);
     const P = { run, setup, t, dead: false, raf: 0, lastTs: null, hudAt: 0, overAt: null, quick: false, userPaused: false,
-      autoPaused: false, endLine: null };
+      autoPaused: false, endLine: null, ranked };
     S.play = P;
     const voice = createVoice({ currency: cur, solUsd: px, live: Boolean(run.live),
       isReal: run.live ? (id) => run.market.isExt(id) : null });
@@ -548,6 +841,8 @@ export function startShell(root) {
     const liveWords = run.live ? el('span', { class: 'ts-live-words' }) : null;
     const liveStrip = run.live ? el('p', { class: 'ts-live-strip', role: 'status', 'aria-live': 'polite', data: { tone: 'wait' } },
       el('i', { 'aria-hidden': 'true' }), liveWords) : null;
+    // a race (2026-10-22): the room's standings under the HUD, the top three and the player
+    const raceStrip = setup.race ? el('p', { class: 'ts-race-strip', 'aria-label': 'The race' }) : null;
     const goal = el('div', { class: 'ts-hud-goal' }, name, run.mode === 'free' ? null : bar, label);
     const hud = el('header', { class: 'ts-hud' },
       el('button', { type: 'button', class: 'ts-ibtn', 'aria-label': 'Pause', on: { click: () => openPause() } }, icon('pause')),
@@ -557,7 +852,8 @@ export function startShell(root) {
       el('div', { class: 'ts-hud-money' }, worth, pnl),
       el('div', { class: 'ts-hud-tools' }, speedBtn, soundBtn, endBtn));
     const boardHost = el('div', { class: 'ts-board-host' });
-    const screen = el('section', { class: ['ts-screen', 'ts-play', run.live && 'is-live'], data: { terminal: t.id } }, hud, liveStrip, boardHost);
+    const screen = el('section', { class: ['ts-screen', 'ts-play', run.live && 'is-live'], data: setup.race ? { terminal: t.id, race: '1' } : { terminal: t.id } },
+      hud, liveStrip, raceStrip, boardHost);
     show(screen, run.challenge ? run.challenge.name : 'Free play');
     paintTerminal(screen, t);
     P.agi = createAgi(agiHost, { reduceMotion: reduceMotion() });
@@ -575,7 +871,7 @@ export function startShell(root) {
       P.unwide = () => wide.removeEventListener('change', placeBubble);
     }
     const defined = (p) => Object.fromEntries(Object.entries(p || {}).filter(([, v]) => v !== undefined));
-    P.board = mountBoard(boardHost, {
+    P.board = mount(boardHost, {
       run, market: run.market, currency: cur, solUsd: px, start: run.start, colors: t.colors, reduceMotion: reduceMotion(),
       settings: () => ({ slippage: S.save.slippage, priority: S.save.priority }),
       order: (p) => run.order({ slippage: S.save.slippage, priority: S.save.priority, ...defined(p) }),
@@ -590,6 +886,22 @@ export function startShell(root) {
         S.expectPop++;
         history.back();
       },
+      // GNGM's own (2026-10-22): its presets, its chart's view, the player's name and its PnL cards
+      terminal: t,
+      chain: run.live || null,
+      presets: () => ({ preset: S.save.preset, list: S.save.presets.map((p) => ({ ...p })) }),
+      pickPreset,
+      setPreset,
+      chartView: () => ({ ...S.save.chart }),
+      setChartView: (v) => {
+        if (v && (v.mode === 'mcap' || v.mode === 'price')) S.save.chart.mode = v.mode;
+        if (v && (v.unit === 'usd' || v.unit === 'coin')) S.save.chart.unit = v.unit;
+        save();
+      },
+      playerName: () => S.name,
+      setPlayerName,
+      saveCard: (words, text) => gngmCard().then((card) => saveCanvas((g) => card.drawPnlCard(g, words, t.colors), { text }),
+        () => toast("Couldn't make the card just now", 'down')),
     });
 
     function endNow() {
@@ -607,10 +919,31 @@ export function startShell(root) {
       setText(liveWords, w.tone === 'live' ? `Live · ${c.name} · real coins${c.src && c.allFrom ? ` from ${c.src}` : ''} · play money only` : w.text);
       if (liveStrip.dataset.tone !== w.tone) liveStrip.dataset.tone = w.tone;
     }
+    function paintRace() {
+      if (!raceStrip) return;
+      const r = S.race;
+      if (!r || r.status === 'down' || r.status === 'closed' || r.status === 'idle') {
+        setText(raceStrip, r ? raceWords(r.status, r.error) : 'The race room closed: your run goes on.');
+        raceStrip.dataset.tone = 'down';
+        return;
+      }
+      raceStrip.dataset.tone = '';
+      const rows = r.board;
+      const meId = r.me ? r.me.id : null;
+      if (!rows.length) {
+        setText(raceStrip, 'Race on: the standings come in a moment');
+        return;
+      }
+      raceStrip.replaceChildren(...rows.map((row, i) => [row, i]).filter(([row, i]) => i < 3 || row.id === meId)
+        .map(([row, i]) => el('span', { class: row.id === meId ? 'is-me' : '', text: standingText(row, i, { you: row.id === meId }) })));
+    }
+    P.paintRace = paintRace;
     function renderHud() {
       const h = run.hud();
       const p = run.progress();
       renderLive();
+      // a race: how the run is going, to the room (at most once a second: ./race.js)
+      if (setup.race && S.race && !run.over) S.race.report({ worth: h.worth, multiple: h.multiple, clock: h.clock });
       setText(worth, M(h.worth));
       setText(pnl, `${moneySigned(h.pnl, cur, px)} · ${times(h.multiple)}`);
       flag(pnl, 'is-up', h.pnl > 0);
@@ -677,6 +1010,7 @@ export function startShell(root) {
       }
     }
     renderHud();
+    paintRace();
     P.raf = requestAnimationFrame(loop);
   }
 
@@ -702,14 +1036,41 @@ export function startShell(root) {
     const res = P.run.result();
     S.save = recordResult(S.save, res, { dailyKey: res.mode === 'daily' ? res.daily : null });
     save();
-    S.last = { res, setup: P.setup, line: P.endLine, t: P.t };
+    S.last = { res, setup: P.setup, line: P.endLine, t: P.t, rank: null };
+    // a race: how it ended, to the room (once); never ranked (`ranked`: { why: 'race' })
+    if (P.setup.race && S.race) {
+      S.race.finish({ worth: res.worth, multiple: res.multiple, clock: res.timeUsed, outcome: res.outcome, timeUsed: res.timeUsed });
+    }
+    // (2026-10-22) a ranked run: its orders to our server, which makes it again and ranks it; its line follows the answer
+    const rk = P.ranked;
+    // (a win ranks; on the daily market a run that didn't win too, unless its player ended it)
+    const ranks = res.outcome === 'won' || (res.mode === 'daily' && (res.outcome === 'lost' || res.outcome === 'busted'));
+    if (rk && rk.ticket && !ranks) S.last.rank = { why: 'not_ranked' };
+    else if (rk && rk.ticket) {
+      const last = S.last;
+      last.rank = { state: 'pending' };
+      sendScore(rk.ticket, res, P.run.market.log()).then((r) => {
+        last.rank = r;
+        if (S.last === last) paintRank();
+      });
+    } else if (rk && rk.why) S.last.rank = { why: rk.why };
     stopPlay();
     go('results', {}, { replace: true });
+  }
+  // the results' line about the leaderboards
+  const boardName = (b) => {
+    const m = /^c:([a-z0-9-]+):/.exec(b);
+    const ch = m ? challengeById(m[1]) : null;
+    return boardTitle('trenchingsimulator', b, ch ? ch.name : null);
+  };
+  function paintRank() {
+    const n = root.querySelector('.ts-rank');
+    if (n && S.last) setText(n, rankWords(S.last.rank, boardName));
   }
 
   // ---- sheets ----
   function closeSheets() {
-    for (const d of document.querySelectorAll('dialog.ts-sheet[open], dialog.tsb-sheet[open]')) d.close();
+    for (const d of document.querySelectorAll('dialog.ts-sheet[open], dialog.tsb-sheet[open], dialog.tsg-sheet[open]')) d.close();
   }
   function sheet(title, kids, { onClose } = {}) {
     if (introUp()) return null;
@@ -785,12 +1146,15 @@ export function startShell(root) {
           for (const b of e.currentTarget.parentNode.querySelectorAll('.ts-chip')) b.setAttribute('aria-checked', String(b === e.currentTarget));
         } } }, text(v))));
     const d = sheet('Settings', [
+      nameField(),
       group('Slippage', SLIPPAGES, S.save.slippage, (v) => share(v, 0), (v) => {
         S.save.slippage = v;
+        S.save.presets[S.save.preset].slippage = v;
       }),
       el('p', { class: 'ts-sheet-note', text: 'How far the price may move before your trade lands. Higher fills more often, at a worse price.' }),
       group('Priority', PRIORITIES, S.save.priority, (k) => `${k} · ${feeText(PRIORITY[k].fee)} · ${PRIORITY[k].lo}–${PRIORITY[k].hi} s`, (k) => {
         S.save.priority = k;
+        S.save.presets[S.save.preset].priority = k;
       }),
       el('p', { class: 'ts-sheet-note', text: 'A higher priority fee lands your trades sooner.' }),
       group('Sound', [false, true], S.save.muted, (m) => (m ? 'Off' : 'On'), (m) => {
@@ -824,22 +1188,42 @@ export function startShell(root) {
     const agiHost = el('div', { class: 'ts-res-agi' });
     const text = shareText(res);
     const again = () => startRun(setup, { replace: true });
-    const node = el('section', { class: ['ts-screen', 'ts-results', `is-${tone}`] },
-      header(setup.kind === 'challenge' ? 'challenges' : 'modes'),
+    // a race's results (2026-10-22): the room's standings, as the others finish too
+    let raceRes = null;
+    if (setup.race) {
+      const state = el('p', { class: 'ts-race-state', role: 'status', 'aria-live': 'polite' });
+      const list = el('div');
+      raceRes = el('section', { class: 'ts-race-res', 'aria-label': 'The race' }, el('h2', { class: 'ts-race-h', text: 'The race' }), list, state);
+      const paint = () => {
+        const r = S.race;
+        const rows = r ? r.board : [];
+        list.replaceChildren(rows.length ? boardList(rows, r.me ? r.me.id : null) : el('p', { class: 'ts-race-note', text: 'The standings come in a moment.' }));
+        setText(state, !r || r.status === 'idle' ? 'You left the room.' : r.status === 'ended' ? 'Everyone\'s done: the race is over.'
+          : r.status === 'down' || r.status === 'closed' ? raceWords(r.status, r.error) : 'Waiting for the others to finish…');
+      };
+      S.raceBoard = { el: raceRes, paint };
+      paint();
+    }
+    const node = el('section', { class: ['ts-screen', 'ts-results', `is-${tone}`], data: setup.race ? { race: '1' } : null },
+      header(setup.race ? 'race' : setup.kind === 'challenge' ? 'challenges' : 'modes'),
       el('p', { class: 'ts-kicker', text: modeLabel(res) }),
       el('h1', { class: 'ts-res-title', text: resultTitle(res) }),
       res.outcome === 'won' && res.stars > 0 ? el('p', { class: 'ts-res-stars', 'aria-label': `${res.stars} of 3 stars`, text: starsRow(res.stars) }) : null,
       el('p', { class: 'ts-res-big', text: times(res.multiple) }),
       el('p', { class: 'ts-res-line', text: resultLine(res) }),
+      el('p', { class: 'ts-rank', role: 'status', 'aria-live': 'polite', text: rankWords(S.last.rank, boardName) }),
+      raceRes,
       chart,
       el('dl', { class: 'ts-res-stats' }, statLines(res).flatMap((s) => [el('dt', { text: s.label }),
         el('dd', { class: s.tone ? `is-${s.tone}` : '', text: s.value })])),
       agiHost,
       el('div', { class: 'ts-actions' },
-        btn('Play again', { kind: 'primary', ic: 'replay', on: again }),
+        setup.race ? btn('Back to the room', { kind: 'primary', ic: 'users', on: () => go('race') })
+          : btn('Play again', { kind: 'primary', ic: 'replay', on: again }),
         el('a', { class: 'ts-btn', href: shareLink(text), target: '_blank', rel: 'noopener noreferrer' }, icon('share'), el('span', { text: 'Share on X' })),
         btn('Save card', { ic: 'download', on: (e) => saveCard(res, t, e.currentTarget) }),
-        btn(setup.kind === 'challenge' ? 'Choose another' : 'Pick a mode', { kind: 'ghost', on: () => go(setup.kind === 'challenge' ? 'challenges' : 'modes') }),
+        setup.race ? btn('Leave the room', { kind: 'ghost', on: () => go('home') })
+          : btn(setup.kind === 'challenge' ? 'Choose another' : 'Pick a mode', { kind: 'ghost', on: () => go(setup.kind === 'challenge' ? 'challenges' : 'modes') }),
         btn('Home', { kind: 'ghost', on: () => go('home') })),
       el('p', { class: 'ts-links' }, el('a', { href: '/games#rate-trenchingsimulator', text: 'Rate it' }), ' · ', el('a', { href: '/games', text: 'All games' })),
       note());
@@ -853,7 +1237,14 @@ export function startShell(root) {
     return node;
   }
 
+  // a run's card: GNGM's PnL card for a GNGM run (2026-10-22: ./boards/gngm-card.js), else the game's own
   async function saveCard(res, t, button) {
+    const card = t.id === 'scan' ? await gngmCard().catch(() => null) : null;
+    if (card) return saveCanvas((g) => card.drawPnlCard(g, card.runCardWords(res, { name: S.name }), t.colors), { text: shareText(res), button });
+    return saveCanvas((g) => drawCard(g, res, t), { text: shareText(res), button });
+  }
+  // a 1200 × 630 picture: drawn by `draw`, then shared (a phone's share sheet) or downloaded
+  async function saveCanvas(draw, { text = '', button = null } = {}) {
     if (button) button.disabled = true;
     try {
       try {
@@ -861,73 +1252,16 @@ export function startShell(root) {
       } catch {
         // the fonts' fallbacks draw it
       }
-      const W = 1200;
-      const H = 630;
       const c = document.createElement('canvas');
-      c.width = W;
-      c.height = H;
-      const g = c.getContext('2d');
-      const col = t.colors;
-      const words = cardText(res);
-      g.fillStyle = col.bg;
-      g.fillRect(0, 0, W, H);
-      g.fillStyle = col.panel;
-      g.fillRect(40, 40, W - 80, H - 80);
-      g.strokeStyle = col.line;
-      g.lineWidth = 2;
-      g.strokeRect(40, 40, W - 80, H - 80);
-      const tone = words.tone === 'up' ? col.up : col.down;
-      g.textBaseline = 'alphabetic';
-      g.fillStyle = col.muted;
-      g.font = '500 26px "Geist Mono", monospace';
-      g.fillText(words.kicker.toUpperCase().slice(0, 64), 90, 120);
-      g.fillStyle = tone;
-      g.font = '700 54px Geist, sans-serif';
-      g.fillText(words.title, 90, 190);
-      g.fillStyle = col.text;
-      g.font = '800 150px Anybody, Geist, sans-serif';
-      g.fillText(words.big, 86, 345);
-      g.font = '600 38px Geist, sans-serif';
-      g.fillText(words.line, 90, 405);
-      g.fillStyle = col.muted;
-      g.font = '500 30px "Geist Mono", monospace';
-      g.fillText(words.sub, 90, 450);
-      if (words.stars) {
-        g.fillStyle = col.accent;
-        g.font = '700 46px Geist, sans-serif';
-        g.fillText(words.stars, 90, 512);
-      }
-      const sp = sparkPath(res.equity, { w: 520, h: 150, pad: 6, base: res.start });
-      if (sp) {
-        g.save();
-        g.translate(600, 300);
-        g.strokeStyle = col.line;
-        g.setLineDash([6, 6]);
-        g.beginPath();
-        g.moveTo(6, sp.baseY);
-        g.lineTo(514, sp.baseY);
-        g.stroke();
-        g.setLineDash([]);
-        g.strokeStyle = sp.up ? col.up : col.down;
-        g.lineWidth = 4;
-        g.lineJoin = 'round';
-        g.stroke(new Path2D(sp.d));
-        g.restore();
-      }
-      const px = 8;
-      for (const [x, y, colr] of facePixels(res.outcome === 'won' ? 'celebrate' : 'neutral')) {
-        g.fillStyle = colr;
-        g.fillRect(W - 90 - 25 * px + x * px, 70 + y * px, px, px);
-      }
-      g.fillStyle = col.muted;
-      g.font = '500 24px "Geist Mono", monospace';
-      g.fillText(words.foot, 90, H - 70);
+      c.width = CARD_W;
+      c.height = CARD_H;
+      draw(c.getContext('2d'));
       const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
       if (!blob) throw new Error('no picture');
       const file = new File([blob], `trenching-simulator-${Date.now()}.png`, { type: 'image/png' });
       if (matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], text: shareText(res) });
+          await navigator.share({ files: [file], text });
           return;
         } catch (err) {
           if (err && err.name === 'AbortError') return;
@@ -945,6 +1279,66 @@ export function startShell(root) {
     } finally {
       if (button) button.disabled = false;
     }
+  }
+  // the game's own card (Pomp.fun's): its title, its multiple, its line, its stars, its worth as a line, AGI-1's face
+  function drawCard(g, res, t) {
+    const W = CARD_W;
+    const H = CARD_H;
+    const col = t.colors;
+    const words = cardText(res);
+    g.fillStyle = col.bg;
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = col.panel;
+    g.fillRect(40, 40, W - 80, H - 80);
+    g.strokeStyle = col.line;
+    g.lineWidth = 2;
+    g.strokeRect(40, 40, W - 80, H - 80);
+    const tone = words.tone === 'up' ? col.up : col.down;
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = col.muted;
+    g.font = '500 26px "Geist Mono", monospace';
+    g.fillText(words.kicker.toUpperCase().slice(0, 64), 90, 120);
+    g.fillStyle = tone;
+    g.font = '700 54px Geist, sans-serif';
+    g.fillText(words.title, 90, 190);
+    g.fillStyle = col.text;
+    g.font = '800 150px Anybody, Geist, sans-serif';
+    g.fillText(words.big, 86, 345);
+    g.font = '600 38px Geist, sans-serif';
+    g.fillText(words.line, 90, 405);
+    g.fillStyle = col.muted;
+    g.font = '500 30px "Geist Mono", monospace';
+    g.fillText(words.sub, 90, 450);
+    if (words.stars) {
+      g.fillStyle = col.accent;
+      g.font = '700 46px Geist, sans-serif';
+      g.fillText(words.stars, 90, 512);
+    }
+    const sp = sparkPath(res.equity, { w: 520, h: 150, pad: 6, base: res.start });
+    if (sp) {
+      g.save();
+      g.translate(600, 300);
+      g.strokeStyle = col.line;
+      g.setLineDash([6, 6]);
+      g.beginPath();
+      g.moveTo(6, sp.baseY);
+      g.lineTo(514, sp.baseY);
+      g.stroke();
+      g.setLineDash([]);
+      g.strokeStyle = sp.up ? col.up : col.down;
+      g.lineWidth = 4;
+      g.lineJoin = 'round';
+      g.stroke(new Path2D(sp.d));
+      g.restore();
+    }
+    const px = 8;
+    for (const [x, y, colr] of facePixels(res.outcome === 'won' ? 'celebrate' : 'neutral')) {
+      g.fillStyle = colr;
+      g.fillRect(W - 90 - 25 * px + x * px, 70 + y * px, px, px);
+    }
+    g.fillStyle = col.muted;
+    g.font = '500 24px "Geist Mono", monospace';
+    g.fillText(words.foot, 90, H - 70);
   }
 
   // ---- the page around it ----
@@ -966,7 +1360,8 @@ export function startShell(root) {
       return;
     }
     if (st.ts === 'play' || (st.ts === 'results' && !S.last)) {
-      if (S.last) go('brief', S.last.setup.kind === 'challenge' ? { kind: 'challenge', id: S.last.setup.id } : { kind: S.last.setup.kind }, { replace: true });
+      if (S.last && S.last.setup.race) go('race', {}, { replace: true });
+      else if (S.last) go('brief', S.last.setup.kind === 'challenge' ? { kind: 'challenge', id: S.last.setup.id } : { kind: S.last.setup.kind }, { replace: true });
       else go('modes', {}, { replace: true });
       return;
     }
@@ -995,8 +1390,21 @@ export function startShell(root) {
     else openPause();
   });
 
+  // an invite link (#room=<code>): its room's screen, the code filled in; the code taken out of the address (it's the
+  // page's own, never sent anywhere but to our relay, once the player joins)
+  const invite = () => {
+    const code = roomOfHash(location.hash);
+    if (!code) return false;
+    history.replaceState(history.state, '', `${location.pathname}${location.search}`);
+    if (S.play && !S.play.dead) return true;
+    go('race', { code }, { replace: true });
+    return true;
+  };
+  addEventListener('hashchange', invite);
   const st0 = history.state;
-  if (st0 && typeof st0 === 'object' && KNOWN.has(st0.ts)) render(st0);
+  if (invite()) {
+    // its room's screen is up
+  } else if (st0 && typeof st0 === 'object' && KNOWN.has(st0.ts)) render(st0);
   else go('home', {}, { replace: true });
   ensurePrice();
 }

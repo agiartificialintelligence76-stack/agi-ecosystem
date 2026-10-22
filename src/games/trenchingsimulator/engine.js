@@ -45,6 +45,7 @@ export const DEFAULTS = Object.freeze({ launchesPerMin: 7, warmup: 600, terminal
 // How much of each list is kept (they're trimmed when they grow 64 past it)
 export const KEEP = Object.freeze({ trades: 120, tape: 400, feed: 300, candles: 4000, chat: 30, orders: 300, equity: 7200 });
 export const MAX_STEPS = 36000; // the most steps one advance() takes (an hour)
+export const FIRST_BUYERS = 70; // a coin's first buyers kept (GNGM's grid of them)
 
 // a plan's tags → the label its wallet shows
 const LABEL = { dev: 'dev', bundle: 'bundler', sniper: 'sniper', insider: 'insider', kol: 'kol', smart: 'smart',
@@ -202,6 +203,9 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       tags: { sniper: 0, bundler: 0, insider: 0, kol: 0, smart: 0, whale: 0 }, nNpc: 0, nF: 0, nBot: 0,
       tr: makeRng(seedOf(seedStr, 'trade', id)), cr: makeRng(seedOf(seedStr, 'chat', id)),
       asleep: false, addr: new Map(), hs: null, compacted: false,
+      // its first buyers (2026-10-22, GNGM's "first 70 buyers"): who, when and how much they first got (a made-up coin's
+      // only: a real coin's buyers are nobody we know)
+      first: [], firstKeys: new Set(),
     };
     M.coins.push(c);
     M.awake.push(c);
@@ -354,6 +358,11 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     h.tok += r.out;
     h.in += r.used;
     if (kol) h.kol = kol;
+    if (isNew && c.first && c.first.length < FIRST_BUYERS && !c.firstKeys.has(key)) {
+      c.firstKeys.add(key);
+      c.first.push({ key, label, kol: kol || null, at: t, tok0: r.out });
+      if (c.first.length >= FIRST_BUYERS) c.firstKeys = null;
+    }
     if (key === 'dev' && h.tok > c.devMax) c.devMax = h.tok;
     if (label === 'smart') {
       const S = M.smart[Number(key.slice(1))];
@@ -1275,9 +1284,29 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
         open.push({ coin: id, tok: h.tok, in: h.in, out: h.out, value: v });
       }
       open.sort((a, b) => a.coin - b.coin);
-      return { n: k, addr: smartAddress(k), d7: { ...smartD7[k] }, buys: S.buys, sells: S.sells, in: S.in, out: S.out,
-        won: S.won, lost: S.lost, pnl: S.pnl, upnl, value, open, last: S.last };
+      return { n: k, addr: smartAddress(k), d7: { ...smartD7[k], dist: smartD7[k].dist.slice() }, buys: S.buys,
+        sells: S.sells, in: S.in, out: S.out, won: S.won, lost: S.lost, pnl: S.pnl, upnl, value, open, last: S.last };
     });
+  }
+
+  // A coin's first buyers (up to FIRST_BUYERS, in the order they first bought) and what each holds now: 'hold' (about
+  // what it first got), 'more' (bought more), 'part' (sold some) or 'all' (sold out); with the share of the supply they
+  // first got and hold now. null for a real coin (its buyers are nobody we know) or an unknown id.
+  function firstBuyers(id) {
+    const c = coinOf(id);
+    if (!c || c.ext || !c.first) return null;
+    let got = 0;
+    let hold = 0;
+    const list = c.first.map((f, i) => {
+      const h = c.holders.get(f.key);
+      const tok = h ? h.tok : 0;
+      got += f.tok0;
+      hold += tok;
+      const status = tok <= 0 ? 'all' : tok > f.tok0 * 1.02 ? 'more' : tok < f.tok0 * 0.98 ? 'part' : 'hold';
+      return { n: i + 1, addr: addrOf(c, f.key, f.kol), label: f.label, kol: f.kol, me: f.key === 'me', at: f.at,
+        tok0: f.tok0, tok, status };
+    });
+    return { list, got: got / SUPPLY, hold: hold / SUPPLY };
   }
 
   function trades(id, n = 50) {
@@ -1750,6 +1779,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     trades,
     holders,
     smartWallets,
+    firstBuyers,
     comments,
     tape,
     feed: readFeed,

@@ -18,20 +18,30 @@ export const CURVE_DISC = Object.freeze([23, 183, 248, 55, 96, 216, 172, 96]);
 export const PUMP = Object.freeze({ vSol0: 30, vTok0: 1_073_000_000, realTok0: 793_100_000, floor: 279_900_000,
   supply: 1_000_000_000, decimals: 6 });
 export const WSOL = 'So11111111111111111111111111111111111111112';
-// each chain's wrapped coin, for its dollar price (DexScreener's chain ids)
+// each chain's wrapped coin, for its dollar price (DexScreener's chain ids). Ethereum and Arbitrum are priced in ETH too
+// (Base's WETH: one price); since 2026-10-22 HyperEVM's HYPE (WHYPE), Monad's MON (WMON) and Tron's TRX (WTRX, its
+// base58 address as it is: Tron's addresses are case-sensitive)
 export const WRAPPED = Object.freeze({
   sol: Object.freeze({ chain: 'solana', address: WSOL }),
   eth: Object.freeze({ chain: 'base', address: '0x4200000000000000000000000000000000000006' }),
   bnb: Object.freeze({ chain: 'bsc', address: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c' }),
+  hype: Object.freeze({ chain: 'hyperevm', address: '0x5555555555555555555555555555555555555555' }),
+  mon: Object.freeze({ chain: 'monad', address: '0x3bd359c1119da7da1d913d1c4d2b7c461115433a' }),
+  trx: Object.freeze({ chain: 'tron', address: 'TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR' }),
 });
-export const PRICE_RANGE = Object.freeze({ sol: [1, 100000], eth: [10, 1000000], bnb: [1, 100000] });
+export const PRICE_RANGE = Object.freeze({ sol: [1, 100000], eth: [10, 1000000], bnb: [1, 100000], hype: [0.1, 100000], mon: [0.0001, 1000],
+  trx: [0.001, 100] });
 // DexScreener's dex ids of launchpads' own curves (the coin hasn't graduated yet), and the launchpad they mean
 export const CURVE_DEXES = Object.freeze({ fourmeme: 'four.meme', 'four-meme': 'four.meme', pumpfun: 'pump.fun' });
 
 const B58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const EVM = /^0x[0-9a-fA-F]{40}$/;
+const TRON = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
 export const isB58 = (s) => typeof s === 'string' && B58.test(s);
 export const isEvm = (s) => typeof s === 'string' && EVM.test(s);
+export const isTron = (s) => typeof s === 'string' && TRON.test(s);
+// a coin's address on `chain` (our id) in the shape we keep it: EVM lower-cased, Tron's as it is (case-sensitive), or null
+export const addressOn = (chain, s) => (chain === 'tron' ? (isTron(s) ? s : null) : isEvm(s) ? s.toLowerCase() : null);
 const fin = (v) => typeof v === 'number' && Number.isFinite(v);
 const num = (v) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' && v.length < 40 ? Number(v) : NaN);
 const r6 = (x) => Math.round(x * 1e6) / 1e6;
@@ -222,13 +232,15 @@ export function usdPairState(p) {
   return { k: 'u', mu, lu: lu > 0 ? lu : null, pg: null, gr: !onCurve, cl: false };
 }
 
-// DexScreener's newest token profiles → [{ chain, address, icon }] for the chains asked (`chains`: DexScreener's ids)
+// DexScreener's newest token profiles → [{ chain, address, icon }] for the chains asked (`chains`: DexScreener's ids; an
+// EVM address lower-cased, a Tron one as it is)
 export function parseProfiles(data, chains) {
   const out = [];
   for (const x of Array.isArray(data) ? data : []) {
     if (!x || typeof x !== 'object' || !chains.includes(x.chainId)) continue;
-    if (!isEvm(x.tokenAddress)) continue;
-    out.push({ chain: x.chainId, address: lower(x.tokenAddress), icon: typeof x.icon === 'string' ? x.icon : null });
+    const address = x.chainId === 'tron' ? (isTron(x.tokenAddress) ? x.tokenAddress : null) : isEvm(x.tokenAddress) ? lower(x.tokenAddress) : null;
+    if (!address) continue;
+    out.push({ chain: x.chainId, address, icon: typeof x.icon === 'string' ? x.icon : null });
   }
   return out;
 }

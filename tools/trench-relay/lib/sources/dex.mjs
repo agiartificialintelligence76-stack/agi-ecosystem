@@ -6,16 +6,25 @@
 // Robinhood Chain (since 2026-10-21, the owner's "Add DexScreener coins"): its listed coins from any launchpad join
 // clank.trade's (./clank.mjs), which stays the chain's own source: its state (live, quiet, down) is clank.trade's, and a
 // coin both list is clank.trade's (it takes it over: `extra.dex` false). This file only ever follows the coins it added.
+// GMGN's other chains (2026-10-22, the owner's "i just checked there are other chains on gmgn right add that also"):
+// Ethereum, Monad, HyperEVM, Arbitrum and Tron the same way as BNB Chain and Base (listed coins, no key); HYPE, MON and
+// TRX priced only while their chain is on. /health counts the profiles' chains (a day at a time), so the owner can see
+// which other chains (X Layer, MegaETH) DexScreener lists coins on before they're added.
 import { trustedJson } from '../net.mjs';
 import { bestPair, wrappedUsd, pairDx, solPoolState, usdPairState, parseProfiles, cleanName, cleanTicker, CURVE_DEXES, WRAPPED,
-  isEvm } from '../parse.mjs';
+  isEvm, addressOn } from '../parse.mjs';
 import { errText } from '../log.mjs';
 
 // our chain → DexScreener's, and back
-const EVM_CHAINS = Object.freeze({ bnb: 'bsc', base: 'base', robinhood: 'robinhood' });
-const FROM_DEX = Object.freeze(Object.fromEntries(Object.entries(EVM_CHAINS).map(([ours, theirs]) => [theirs, ours])));
+const DEX_CHAINS = Object.freeze({ bnb: 'bsc', base: 'base', robinhood: 'robinhood', ethereum: 'ethereum', monad: 'monad',
+  hyperevm: 'hyperevm', arbitrum: 'arbitrum', tron: 'tron' });
+const FROM_DEX = Object.freeze(Object.fromEntries(Object.entries(DEX_CHAINS).map(([ours, theirs]) => [theirs, ours])));
 // the chains whose state DexScreener decides (Robinhood Chain's is clank.trade's)
-const JUDGED = Object.freeze(['bnb', 'base']);
+const JUDGED = Object.freeze(['bnb', 'base', 'ethereum', 'monad', 'hyperevm', 'arbitrum', 'tron']);
+// the coins priced always (SOL, and ETH and BNB: Base's, Robinhood Chain's and BNB Chain's money), and the others only
+// while their chain is on
+const ALWAYS_PRICED = Object.freeze(['sol', 'eth', 'bnb']);
+const DAY_MS = 24 * 3600 * 1000;
 const NEW_FOR_MS = 3 * 24 * 3600 * 1000;
 const PER_CHAIN = 60; // listed coins followed at once (each chain)
 // a coin this file added and still looks after (not one clank.trade's list took over)
@@ -28,7 +37,9 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
   const solPools = new Map(); // id → mint
   const pending = new Map(); // `${chain}:${address}` → { chain, address, icon, at }
   const seen = new Set(); // addresses already looked at (kept or not)
-  const lastOk = { bnb: 0, base: 0, robinhood: 0 };
+  const lastOk = Object.fromEntries(Object.keys(DEX_CHAINS).map((c) => [c, 0]));
+  // the profiles' chains, counted a day at a time (DexScreener's ids, whatever they are)
+  let tally = { since: now(), byChain: {} };
   let okAt = 0;
   let fails = 0;
   const timers = [];
@@ -55,12 +66,13 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
   };
 
   async function prices() {
-    const want = ['sol', 'eth', 'bnb'];
+    const want = Object.keys(WRAPPED).filter((w) => ALWAYS_PRICED.includes(w) || cfg.chains.includes(FROM_DEX[WRAPPED[w].chain]));
     const got = await Promise.all(want.map((w) => get(`/tokens/v1/${WRAPPED[w].chain}/${WRAPPED[w].address}`)));
     const px = {};
     want.forEach((w, i) => {
       const v = got[i] ? wrappedUsd(got[i], w) : null;
-      if (v) px[w] = Math.round(v * 100) / 100;
+      // (to the cent; a coin under a dollar, MON's two cents say, to 4 significant figures)
+      if (v) px[w] = v >= 1 ? Math.round(v * 100) / 100 : Number(v.toPrecision(4));
     });
     if (Object.keys(px).length) hub.setPx(px);
   }
@@ -82,11 +94,19 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
     }
   }
 
+  function count(data) {
+    if (now() - tally.since > DAY_MS) tally = { since: now(), byChain: {} };
+    for (const x of Array.isArray(data) ? data : []) {
+      const id = x && typeof x.chainId === 'string' && /^[a-z0-9-]{2,24}$/.test(x.chainId) ? x.chainId : null;
+      if (id && (Object.hasOwn(tally.byChain, id) || Object.keys(tally.byChain).length < 60)) tally.byChain[id] = (tally.byChain[id] || 0) + 1;
+    }
+  }
   async function discover() {
-    const want = Object.entries(EVM_CHAINS).filter(([c]) => cfg.chains.includes(c)).map(([, d]) => d);
+    const want = Object.entries(DEX_CHAINS).filter(([c]) => cfg.chains.includes(c)).map(([, d]) => d);
     if (!want.length) return;
     const data = await get('/token-profiles/latest/v1');
     if (!data) return;
+    count(data);
     for (const x of parseProfiles(data, want)) {
       const chain = FROM_DEX[x.chain];
       if (!chain) continue;
@@ -98,7 +118,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
   }
 
   async function markets() {
-    for (const [chain, dexChain] of Object.entries(EVM_CHAINS)) {
+    for (const [chain, dexChain] of Object.entries(DEX_CHAINS)) {
       if (!cfg.chains.includes(chain)) continue;
       const followed = hub.coins(chain).filter((c) => c.tracked && mine(c)).sort((a, b) => b.born - a.born);
       const waiting = [...pending.values()].filter((p) => p.chain === chain).slice(0, 30);
@@ -133,7 +153,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
   }
 
   function addNew(chain, address, p, icon) {
-    if (!p || !isEvm(address)) return;
+    if (!p || addressOn(chain, address) !== address) return;
     const created = Number(p.pairCreatedAt);
     if (!Number.isFinite(created) || now() - created > NEW_FOR_MS) return; // an older coin with a new profile: not new
     const st = usdPairState(p);
@@ -192,7 +212,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
     start() {
       loop(prices, E.prices);
       loop(pools, E.pools);
-      if (Object.keys(EVM_CHAINS).some((c) => cfg.chains.includes(c))) {
+      if (Object.keys(DEX_CHAINS).some((c) => cfg.chains.includes(c))) {
         loop(async () => {
           await discover();
           await markets();
@@ -213,7 +233,7 @@ export function createDex({ cfg, hub, pictures, log, fetchJson = trustedJson, no
     pairs,
     stats() {
       return { lastOkS: okAt ? Math.round((now() - okAt) / 1000) : -1, callsLastMinute: calls.length, solPools: solPools.size,
-        waiting: pending.size };
+        waiting: pending.size, profiles: { sinceS: Math.round((now() - tally.since) / 1000), byChain: { ...tally.byChain } } };
     },
   };
 }

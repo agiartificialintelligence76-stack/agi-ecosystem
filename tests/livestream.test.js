@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { EventEmitter } from 'node:events';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { generateKeyPairSync, createVerify } from 'node:crypto';
 import * as L from '../tools/live/lines.js';
 import { createShow, nextStep, didStep, PACE, chatLine, pickupLine, tipsFor, pairsFor, poolFor, seeded } from '../tools/live/show.js';
@@ -575,9 +575,12 @@ test('the runner\'s options, her show\'s time, X\'s address (its stream key neve
   assert.equal(avShift({ LIVE_AV_MS: '0' }), 0);
   assert.equal(avShift({ LIVE_AV_MS: '-40' }), -40);
   // files the owner opens: the mounted folder in Docker (LIVE_OUT_DIR), else where it's run; a full path stays as it is
-  assert.equal(outPath('live-check.wav', { LIVE_OUT_DIR: '/out' }), '/out/live-check.wav');
-  assert.equal(outPath('try.mp4', { LIVE_OUT_DIR: '/out' }), '/out/try.mp4');
+  const outputDir = resolve('/out');
+  assert.equal(outPath('live-check.wav', { LIVE_OUT_DIR: outputDir }), join(outputDir, 'live-check.wav'));
+  assert.equal(outPath('try.mp4', { LIVE_OUT_DIR: outputDir }), join(outputDir, 'try.mp4'));
   assert.equal(outPath('/srv/x.mp4', { LIVE_OUT_DIR: '/out' }), '/srv/x.mp4');
+  const absoluteFile = join(tmpdir(), 'live recordings', 'try.mp4');
+  assert.equal(outPath(absoluteFile, { LIVE_OUT_DIR: outputDir }), absoluteFile);
   assert.equal(outPath('try.mp4', {}), join(process.cwd(), 'try.mp4'));
 });
 

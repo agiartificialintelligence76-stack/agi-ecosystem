@@ -148,13 +148,15 @@ export const mcUsd = (mcSol, solUsd) => (fin(mcSol) && fin(solUsd) ? usd(mcSol *
 
 // ---------- a terminal's money ----------
 // `currency`: 'sol', 'usd', or (Live mode, since 2026-10-21: the owner's "Each chain's money") a chain's own coin with its
-// dollar price frozen for the run, { coin: 'eth' | 'bnb', usd }. The game counts in SOL underneath; amounts are shown in
-// the terminal's money at the run's prices.
-const COIN_NAMES = Object.freeze({ eth: 'ETH', bnb: 'BNB' });
+// dollar price frozen for the run, { coin: 'eth' | 'bnb' | 'mon' | 'hype' | 'trx', usd } (MON, HYPE and TRX since
+// 2026-10-22: Monad's, HyperEVM's and Tron's). The game counts in SOL underneath; amounts are shown in the terminal's
+// money at the run's prices.
+const COIN_NAMES = Object.freeze({ eth: 'ETH', bnb: 'BNB', mon: 'MON', hype: 'HYPE', trx: 'TRX' });
 export const isCoinCurrency = (c) => Boolean(c) && typeof c === 'object' && Object.hasOwn(COIN_NAMES, c.coin) && fin(c.usd) && c.usd > 0;
 // a currency as given (a result's, say), checked: 'usd', a chain's coin, or else 'sol'
 export const currencyOf = (c) => (c === 'usd' || isCoinCurrency(c) ? c : 'sol');
-// → { id: 'sol' | 'usd' | 'eth' | 'bnb', name: 'SOL' | 'USD' | 'ETH' | 'BNB', per: how many of it one SOL is }
+// → { id: 'sol' | 'usd' | a chain's coin, name: 'SOL' | 'USD' | 'ETH' | 'BNB' | 'MON' | 'HYPE' | 'TRX', per: how many of it
+// one SOL is }
 export function unitOf(currency, solUsd) {
   const px = fin(solUsd) && solUsd > 0 ? solUsd : 150;
   if (currency === 'usd') return { id: 'usd', name: 'USD', per: px };

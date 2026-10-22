@@ -868,7 +868,8 @@ test('AGI games\' script: its numbers, its reviews and rating it; text only, sty
     "'../styles/sections.css'", "'../styles/footer.css'", "'../styles/diary.css'", "'../styles/games.css'", "'../styles/pop.css'",
     "{ startTheme } from '../theme.js'", "{ startMenu } from '../menu.js'", "{ withHuman, postJson } from '../lib/human.js'",
     "{ findWallets, signInWithWallet, explainWalletError } from '../lib/wallet.js'", "{ isGame, STARS } from './list.js'",
-    "{ WALLET_STEPS, NO_WALLET, BADGE, STAR_PATH, starsPath, starsLabel, pickText, fillWidth, avgText, ratingsText, countText, barWidth, playedText, cardStats, dateText, adjustStats, placeReview, mergeMine, appendPage, BOX, moreText, meText, savedText, deletedText, reviewError, gameOfHash, } from './words.js'"]);
+    "{ WALLET_STEPS, NO_WALLET, BADGE, STAR_PATH, starsPath, starsLabel, pickText, fillWidth, avgText, ratingsText, countText, barWidth, playedText, cardStats, dateText, adjustStats, placeReview, mergeMine, appendPage, BOX, moreText, meText, savedText, deletedText, reviewError, gameOfHash, } from './words.js'",
+    "{ startBoards } from './leaderboard.js'"]);     // (2026-10-22: the leaderboards' section, its test below)
   assert.doesNotMatch(code, /innerHTML|outerHTML|insertAdjacentHTML|document\.write|innerText|\beval\(|new Function/, 'text only (textContent), never HTML from strings');
   assert.doesNotMatch(code, /\.style\.(?!setProperty)|setAttribute\('style'/, 'its CSS variables through the CSS object model (the CSP allows no style attributes)');
   // its wallet: only its address here (the sign-in's one signature is src/lib/wallet.js's); tests/wallet.test.js guards the rest
@@ -900,6 +901,63 @@ test('AGI games\' script: its numbers, its reviews and rating it; text only, sty
   for (const w of ["t.setAttribute('aria-selected', String(on))", 't.tabIndex = on ? 0 : -1', 'panel.hidden = !on', "addEventListener('hashchange'", 'gameOfHash(location.hash)', 'a[href^="#rate"]']) {
     assert.ok(tabs.includes(w), w);
   }
+});
+
+// (2026-10-22) the leaderboards (the owner: "add a leaderboard (also add leaderboards with names , optional to the game ride
+// em agi also)"): a section of their own between the shelf and the ratings, a box for each game (its board picked, its top
+// 20, this browser's own place), the optional name both games use, the fine print. src/games/leaderboard.js reads them;
+// their rules and words are src/games/boards.js's (tests/trench-game.test.js), our server's server/scores.js's
+test('AGI games\' leaderboards: a box for each game, its boards from our server, your own place, the optional name; never who', async () => {
+  const { GAMES } = await import('../src/games/list.js');
+  const IDS = Object.keys(GAMES);
+  const page = GAMES_PAGE();
+  const main = mainOf(page);
+  const at = (s) => main.indexOf(s);
+  assert.ok(at('<section class="section gm-shelf"') < at('<section class="section gm-lead"') && at('<section class="section gm-lead"') < at('<section class="section gm-rate"'),
+    'between the shelf and the ratings');
+  const lead = between(main, '<section class="section gm-lead"', '\n      </section>\n');
+  assert.ok(lead.startsWith('<section class="section gm-lead" id="leaderboards" aria-labelledby="gm-lead-title" data-gm-lead>'));
+  assert.deepEqual([...lead.matchAll(/<section class="gm-lb" data-gm-lb="(\w+)" aria-labelledby="gm-lb-\1">/g)].map((m) => m[1]), IDS, 'a box for each game, in their order');
+  for (const id of IDS) {
+    const box = between(lead, `<section class="gm-lb" data-gm-lb="${id}"`, '</section>');
+    assert.ok(box.includes(`<h3 class="gm-lb-title" id="gm-lb-${id}">${GAMES[id].name}</h3>`), `${id}: its name`);
+    assert.ok(box.includes(`<label class="gm-label" for="gm-lb-${id}-pick">Board</label>`) && box.includes(`id="gm-lb-${id}-pick" data-gm-lb-pick>`), `${id}: its boards to pick from`);
+    for (const part of ['data-gm-lb-state role="status" aria-live="polite"', '<ol class="gm-lb-list" data-gm-lb-list', '<p class="gm-lb-me" data-gm-lb-me hidden>']) {
+      assert.ok(box.includes(part), `${id}: ${part}`);
+    }
+  }
+  const said = textOf(lead);
+  for (const w of ['Checked runs only, under the names their players chose. Bragging rights only: there are no prizes.', 'Levels aren\'t ranked.',
+    'Free play and Live mode aren\'t ranked.', 'Checked, but not cheat-proof', 'Names are shown publicly, and a row never shows who you are.',
+    'Leave it empty and your rows say “A player”.']) assert.ok(said.includes(w), w);
+  // the optional name, both games' (src/games/player-name.js: 24 characters, the field a little longer for emoji)
+  assert.ok(lead.includes('<input id="gm-lb-name" data-gm-lb-name type="text" maxlength="40" autocomplete="nickname" spellcheck="false" aria-describedby="gm-lb-name-note" />'));
+  assert.ok(lead.includes('<p class="gm-done" data-gm-lb-name-say role="status" aria-live="polite"></p>'));
+  // the fine print: what a leaderboard keeps
+  const next = textOf(between(main, '<section class="section gm-next"', '</section>\n    </main>'));
+  assert.ok(next.includes('What a leaderboard keeps: a ranked run\'s numbers and the name you chose (or “A player”), shown publicly, under a scrambled code of that same random id (never who you are). A day\'s and a week\'s rows are deleted after 35 days.'));
+  // its script: text only and no styles; it reads the boards (shared by the CDN) and asks only for this browser's own place,
+  // with the games' random id when it has one (never made here: looking isn't playing)
+  const code = readPage('src/games/leaderboard.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+  assert.deepEqual([...code.matchAll(/^import ([^;]+);/gm)].map((m) => m[1].replace(/\s+/g, ' ')), ["{ isGame, PLAYER, PLAYER_KEY } from './list.js'",
+    "{ pickerBoards, rowText, rowName, mineText } from './boards.js'", "{ NAME_KEY, loadName, saveName } from './player-name.js'",
+    "{ CHALLENGES } from './trenchingsimulator/challenges.js'"]);
+  assert.doesNotMatch(code, /innerHTML|outerHTML|insertAdjacentHTML|document\.write|innerText|\beval\(|new Function/, 'text only');
+  assert.doesNotMatch(code, /\.style\b|setAttribute\('style'/, 'styled by its classes only');
+  assert.deepEqual([...code.matchAll(/fetch\(([^,)]+)/g)].map((m) => m[1]), ['`${API}?board=${game}:${board}`', 'API']);
+  assert.deepEqual([...new Set([...code.matchAll(/action: '([^']+)'/g)].map((m) => m[1]))], ['game-score-mine']);
+  assert.doesNotMatch(code, /setItem\(PLAYER_KEY|randomUUID|getRandomValues|site\.js/, 'the games\' id only read here');
+  assert.doesNotMatch(code, /sessionStorage|indexedDB|document\.cookie/);
+  assert.match(readPage('src/games/page.js'), /\n {2}startBoards\(\);/, 'the page starts it');
+  // its look: in games.css with the page's other gm- rules (checked above), one column on a phone; Pop mode's mint
+  const all = cssRules(readPage('src/styles/games.css'));
+  const rule = (h, at2 = undefined) => all.find((r) => r.head === h && (at2 === undefined ? !r.at : r.at === at2))?.body || '';
+  assert.match(rule('.gm-lead-grid'), /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(rule('.gm-lead-grid', '@media (max-width: 960px)'), /grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(rule('.gm-lb-who'), /overflow-wrap: anywhere/, 'a long name never pushes the box wider');
+  const pop = cssRules(readPage('src/styles/pop.css'));
+  assert.match(pop.find((r) => !r.at && r.head === "[data-skin='pop'] .gm-lead")?.body || '', /--sec: var\(--pop-mint\)/);
+  assert.match(pop.find((r) => !r.at && r.head === "[data-skin='pop'][data-theme='dark'] .gm-lead")?.body || '', /--sec: #0b2126/);
 });
 
 test('AGI games\' words (src/games/words.js): a row of stars, its numbers in words, a review\'s place, the box\'s words; never "buy" or a price', async () => {

@@ -22,6 +22,8 @@ import { createHub, LIMITS } from '../tools/trench-relay/lib/hub.mjs';
 import { locate, sniff, createPictures, PIC } from '../tools/trench-relay/lib/pictures.mjs';
 import { startRelay } from '../tools/trench-relay/server.mjs';
 import { startFakes, curveAccount } from '../tools/trench-relay/fakes.mjs';
+import { createRooms, roomName, ROOMS, CODE as ROOM_CODE } from '../tools/trench-relay/lib/rooms.mjs';
+import * as RACE from '../src/games/trenchingsimulator/race.js';
 import * as L from '../src/games/trenchingsimulator/live-chains.js';
 import { createLiveFeed } from '../src/games/trenchingsimulator/live-feed.js';
 import { createLiveMarket } from '../src/games/trenchingsimulator/live-market.js';
@@ -32,7 +34,8 @@ import { LINES, LIVE_LINES, liveLineFor, createVoice, lineFor } from '../src/gam
 import { cardText, modeLabel } from '../src/games/trenchingsimulator/results.js';
 import { shareText } from '../src/games/trenchingsimulator/share.js';
 import * as SAVE from '../src/games/trenchingsimulator/save.js';
-import { challengeById, CHALLENGES } from '../src/games/trenchingsimulator/challenges.js';
+import { challengeById, CHALLENGES, freeStartSol } from '../src/games/trenchingsimulator/challenges.js';
+import { money, isCoinCurrency } from '../src/games/trenchingsimulator/format.js';
 import { ORDER_ERRORS } from '../src/games/trenchingsimulator/boards/board.js';
 
 const near = (a, b, eps, what) => assert.ok(Math.abs(a - b) <= eps, `${what}: ${a} is not ${b}`);
@@ -448,7 +451,8 @@ test('the fan-out: every viewer of a chain gets each new coin and one batch of c
     const c = new FakeWs();
     for (const ws of [a, b, c]) hub.attach(ws);
     assert.equal(a.of('hi').length, 1, 'hello first');
-    assert.deepEqual(Object.keys(a.of('hi')[0].ch), ['solana', 'robinhood', 'bnb', 'base']);
+    // (GMGN's other chains since 2026-10-22: Ethereum, Monad, HyperEVM, Arbitrum, Tron)
+    assert.deepEqual(Object.keys(a.of('hi')[0].ch), ['solana', 'robinhood', 'bnb', 'base', 'ethereum', 'monad', 'hyperevm', 'arbitrum', 'tron']);
     a.say({ op: 'sub', chain: 'solana' });
     b.say({ op: 'sub', chain: 'solana' });
     c.say({ op: 'sub', chain: 'robinhood' });
@@ -752,6 +756,81 @@ test("Robinhood Chain: clank.trade's coins and other launchpads' listed on DexSc
   }
 });
 
+// (2026-10-22, the owner: "i just checked there are other chains on gmgn right add that also if i have to add api key again
+// on each chain like the helius api so it tells live coins tell me that also"): no new key, DexScreener's listed coins
+test("GMGN's other chains: Ethereum, Monad, HyperEVM, Arbitrum and Tron's listed coins (Tron's addresses as they are), each in its own money, no new key; a day's count of every chain listed", async () => {
+  const TRON_ADDR = 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf';
+  const EVM_ADDR = '0xABCDEF0123456789ABCDEF0123456789ABCDEF01';
+  // the relay's checks: a Tron address as it is (case-sensitive), an EVM one lower-cased, nothing else
+  assert.equal(P.addressOn('tron', TRON_ADDR), TRON_ADDR);
+  assert.equal(P.addressOn('tron', TRON_ADDR.toLowerCase()), null);
+  assert.equal(P.addressOn('ethereum', EVM_ADDR), EVM_ADDR.toLowerCase());
+  assert.equal(P.addressOn('monad', TRON_ADDR), null);
+  assert.equal(P.addressOn('tron', EVM_ADDR), null);
+  assert.deepEqual(P.parseProfiles([{ chainId: 'tron', tokenAddress: TRON_ADDR, icon: 'https://cdn.example/t.png' },
+    { chainId: 'tron', tokenAddress: TRON_ADDR.toLowerCase() }, { chainId: 'ethereum', tokenAddress: EVM_ADDR }, { chainId: 'tron', tokenAddress: EVM_ADDR },
+    { chainId: 'xlayer', tokenAddress: EVM_ADDR }], ['tron', 'ethereum']),
+  [{ chain: 'tron', address: TRON_ADDR, icon: 'https://cdn.example/t.png' }, { chain: 'ethereum', address: EVM_ADDR.toLowerCase(), icon: null }]);
+  // their own coins' prices: WHYPE, WMON and WTRX (Tron's address exactly), each inside what it can be
+  assert.deepEqual(Object.fromEntries(['hype', 'mon', 'trx'].map((w) => [w, P.WRAPPED[w].chain])), { hype: 'hyperevm', mon: 'monad', trx: 'tron' });
+  const pairOf = (chainId, address, priceUsd) => [{ chainId, baseToken: { address }, priceUsd, liquidity: { usd: 1e6 } }];
+  assert.equal(P.wrappedUsd(pairOf('tron', P.WRAPPED.trx.address, '0.31'), 'trx'), 0.31);
+  assert.equal(P.wrappedUsd(pairOf('tron', P.WRAPPED.trx.address.toLowerCase(), '0.31'), 'trx'), null, 'Tron\'s address is case-sensitive');
+  assert.equal(P.wrappedUsd(pairOf('monad', P.WRAPPED.mon.address.toUpperCase().replace('0X', '0x'), '0.0213'), 'mon'), 0.0213);
+  assert.equal(P.wrappedUsd(pairOf('hyperevm', P.WRAPPED.hype.address, '999999'), 'hype'), null, 'never nonsense');
+  // the game's side: their coins read (Tron's address kept as it is), their money (MON's two cents too)
+  const wire = (m, id) => ({ id, m, n: 'Tron Toad', s: 'TOAD', b: 1_792_000_000_000, st: ['u', 50000, 12000, -1, 1, 0], tr: 1 });
+  assert.equal(L.parseCoin(wire(TRON_ADDR, 't1'), 'tron').key, TRON_ADDR);
+  assert.equal(L.parseCoin(wire(TRON_ADDR.toLowerCase(), 't1'), 'tron'), null);
+  assert.equal(L.parseCoin(wire(EVM_ADDR, 'e1'), 'ethereum').key, EVM_ADDR.toLowerCase());
+  assert.equal(L.parseCoin(wire(TRON_ADDR, 'x1'), 'tron'), null, 'a letter no chain has');
+  assert.deepEqual(L.parseMessage(JSON.stringify({ t: 'off', ids: ['e7', 'm7', 'h7', 'f7', 't7', 'x7'] }), 'tron').ids, ['e7', 'm7', 'h7', 'f7', 't7']);
+  assert.deepEqual(L.parseMessage(JSON.stringify({ t: 'px', sol: 150, mon: 0.0213, hype: 24.5, trx: 0.31, doge: 1 }), 'monad').px,
+    { sol: 150, mon: 0.0213, hype: 24.5, trx: 0.31 });
+  for (const [coin, usdPx, words] of [['mon', 0.02, '7,500 MON'], ['hype', 25, '6 HYPE'], ['trx', 0.3, '500 TRX']]) {
+    const cur = { coin, usd: usdPx };
+    assert.ok(isCoinCurrency(cur), coin);
+    assert.equal(money(1, cur, 150), words, `1 SOL in ${coin}`);
+    assert.ok(Math.abs(freeStartSol(1, cur, 150) - 1) < 1e-9, `${coin}: free play's start a round amount of it`);
+  }
+  // the relay, whole, with three of them on: listed coins come in, each chain's own letter, its money priced only while it's on
+  const fakes = await startFakes();
+  const { relay, url, http: base } = await relayWith(fakes, { TRENCH_CHAINS: 'ethereum,monad,tron' });
+  const v = viewer(url);
+  try {
+    await v.opened;
+    v.send({ op: 'sub', chain: 'tron' });
+    await until(() => v.of('snap').length, 5000, 'its snapshot');
+    assert.deepEqual(Object.keys(v.of('hi')[0].ch), ['ethereum', 'monad', 'tron']);
+    const toad = await fakes.listed('tron', { name: 'Tron Toad', symbol: 'TOAD', dexId: 'sunpump' });
+    assert.match(toad, /^T[1-9A-HJ-NP-Za-km-z]{33}$/);
+    await until(() => relay.hub.byKey('tron', toad), 8000, 'the Tron coin');
+    assert.match(relay.hub.byKey('tron', toad).id, /^t\d+$/);
+    const got = await until(() => v.of('c').find((m) => m.c.m === toad)?.c, 5000, 'its coin, to the Tron viewer');
+    const coin = L.parseCoin(got, 'tron');
+    assert.deepEqual([coin.key, coin.name, coin.ticker, coin.src, coin.st.k], [toad, 'Tron Toad', 'TOAD', null, 'u']);
+    const elk = await fakes.listed('ethereum', { name: 'Eth Elk', symbol: 'ELK', dexId: 'uniswap' });
+    await until(() => relay.hub.byKey('ethereum', elk), 8000, 'the Ethereum coin');
+    assert.match(relay.hub.byKey('ethereum', elk).id, /^e\d+$/);
+    assert.equal(v.of('c').some((m) => m.c.m === elk), false, 'an Ethereum coin never goes to a Tron viewer');
+    await until(() => relay.hub.px && relay.hub.px.trx === 0.3 && relay.hub.px.mon === 0.02, 5000, 'TRX\'s and MON\'s prices');
+    assert.equal(relay.hub.px.hype, undefined, 'HyperEVM is off here: HYPE is never asked for');
+    assert.equal(relay.hub.state('tron').src, 'DexScreener');
+    // a day's count of the chains DexScreener lists coins on (the owner adds X Layer or MegaETH once they show up there)
+    const health = await (await fetch(`${base}/health`)).json();
+    assert.ok(health.dexscreener.profiles.byChain.tron >= 1 && health.dexscreener.profiles.byChain.ethereum >= 1, JSON.stringify(health.dexscreener.profiles));
+    assert.ok(health.dexscreener.profiles.sinceS >= 0);
+  } finally {
+    v.ws.close();
+    await relay.close();
+    await fakes.close();
+  }
+  // the owner's settings file names them, and the relay's only key is still Helius's
+  const example = readFileSync('tools/trench-relay/trench.env.example', 'utf8');
+  assert.match(example, /^TRENCH_CHAINS=solana,robinhood,bnb,base,ethereum,monad,hyperevm,arbitrum,tron$/m);
+  assert.deepEqual(example.match(/^[A-Z_]*KEY[A-Z_]*=/gm), ['HELIUS_API_KEY=']);
+});
+
 test("the relay's door: only the site's own pages, at most so many viewers (a full relay says so), at most so many from one address", async () => {
   const fakes = await startFakes();
   const { relay, url } = await relayWith(fakes, { TRENCH_CHAINS: 'bnb', TRENCH_MAX_CLIENTS: '2', TRENCH_MAX_PER_IP: '3' });
@@ -915,15 +994,16 @@ test('a Helius key Helius refuses: Solana is down, and the key is in no log line
 // ---------- the game's side: Live mode's own rules ----------
 
 test("Live mode's chains, the money each terminal shows in it, and which challenges it plays", () => {
-  assert.deepEqual(L.CHAINS.map((c) => c.id), ['solana', 'robinhood', 'bnb', 'base']);
-  assert.deepEqual(L.CHAINS.map((c) => c.name), ['Solana', 'Robinhood Chain', 'BNB Chain', 'Base']);
+  // (GMGN's other chains since 2026-10-22, the owner's "i just checked there are other chains on gmgn right add that also")
+  assert.deepEqual(L.CHAINS.map((c) => c.id), ['solana', 'robinhood', 'bnb', 'base', 'ethereum', 'monad', 'hyperevm', 'arbitrum', 'tron']);
+  assert.deepEqual(L.CHAINS.map((c) => c.name), ['Solana', 'Robinhood Chain', 'BNB Chain', 'Base', 'Ethereum', 'Monad', 'HyperEVM', 'Arbitrum', 'Tron']);
   assert.equal(L.DEFAULT_CHAIN, 'solana');
   assert.equal(L.chainById('robinhood').src, 'clank.trade');
   assert.equal(L.chainById('solana').src, 'pump.fun');
   assert.equal(L.chainById('mars'), null);
   // a run's line names a launchpad only where every coin comes from it: Solana's pump.fun; Robinhood Chain's coins come
   // from clank.trade and, since 2026-10-21 (the owner's "Add DexScreener coins"), other launchpads' listed ones
-  assert.deepEqual(L.CHAINS.map((c) => c.allFrom), [true, false, false, false]);
+  assert.deepEqual(L.CHAINS.map((c) => c.allFrom), [true, false, false, false, false, false, false, false, false]);
   assert.equal(L.feedWords('live', 'live', 'robinhood', 'before').text,
     'Live: every new clank.trade coin as it launches, and others as they get listed on Robinhood Chain, traded with play money.');
   assert.match(readFileSync('src/games/trenchingsimulator/shell.js', 'utf8'),
@@ -935,14 +1015,18 @@ test("Live mode's chains, the money each terminal shows in it, and which challen
     assert.equal(L.liveCurrency('social', ch), 'usd');
     assert.equal(L.liveCurrency('pro', ch), 'sol');
   }
-  assert.deepEqual(L.CHAIN_IDS.map((ch) => L.liveCurrency('board', ch)), ['sol', 'eth', 'bnb', 'eth']);
-  assert.deepEqual(L.CHAIN_IDS.map((ch) => L.liveCurrency('scan', ch)), ['sol', 'eth', 'bnb', 'eth']);
+  assert.deepEqual(L.CHAIN_IDS.map((ch) => L.liveCurrency('board', ch)), ['sol', 'eth', 'bnb', 'eth', 'eth', 'mon', 'hype', 'eth', 'trx']);
+  assert.deepEqual(L.CHAIN_IDS.map((ch) => L.liveCurrency('scan', ch)), ['sol', 'eth', 'bnb', 'eth', 'eth', 'mon', 'hype', 'eth', 'trx']);
   assert.equal(L.liveCurrency('nope', 'nope'), 'sol');
-  const px = { sol: 150, eth: 3000, bnb: 600 };
+  const px = { sol: 150, eth: 3000, bnb: 600, mon: 0.0213, hype: 24.5, trx: 0.31 };
   // a live run's money for ./format.js: the chain's coin with its price frozen for the run (to the cent); SOL until the
   // relay's price for it is in
-  assert.deepEqual(L.CHAIN_IDS.map((ch) => L.liveMoney('board', ch, px)),
+  assert.deepEqual(L.CHAIN_IDS.slice(0, 4).map((ch) => L.liveMoney('board', ch, px)),
     ['sol', { coin: 'eth', usd: 3000 }, { coin: 'bnb', usd: 600 }, { coin: 'eth', usd: 3000 }]);
+  assert.deepEqual(['ethereum', 'monad', 'hyperevm', 'arbitrum', 'tron'].map((ch) => L.liveMoney('board', ch, px)),
+    [{ coin: 'eth', usd: 3000 }, { coin: 'mon', usd: 0.0213 }, { coin: 'hype', usd: 24.5 }, { coin: 'eth', usd: 3000 }, { coin: 'trx', usd: 0.31 }]);
+  assert.deepEqual(L.liveMoney('board', 'monad', { sol: 150, mon: 0.0041237 }), { coin: 'mon', usd: 0.004124 }, 'under a dollar: never rounded to nothing');
+  assert.deepEqual(L.UNIT_NAMES, { sol: 'SOL', eth: 'ETH', bnb: 'BNB', mon: 'MON', hype: 'HYPE', trx: 'TRX', usd: 'dollars' });
   assert.deepEqual(L.liveMoney('board', 'robinhood', { sol: 150, eth: 2612.4567 }), { coin: 'eth', usd: 2612.46 });
   for (const bad of [{ sol: 150 }, { eth: 0 }, { eth: -1 }, { eth: 'x' }, null, undefined]) {
     assert.equal(L.liveMoney('board', 'robinhood', bad), 'sol', JSON.stringify(bad));
@@ -1268,6 +1352,7 @@ test('real coins never get made-up things: no holders, thread, dev, rug or calle
   assert.deepEqual(m.comments(id), []);
   const h = m.holders(id);
   assert.deepEqual(h.list, [], 'nobody known holds it');
+  assert.equal(m.firstBuyers(id), null, "its first buyers (GNGM's grid, 2026-10-22): nobody we know, never made up");
   assert.equal(h.pool.kind, 'curve');
   near(h.pool.tok, 700_000_000 + 206_900_000, 1, 'its curve: for sale and kept for its pool');
   assert.deepEqual(m.find('MFROG'), [id], 'its ticker in any case');
@@ -1491,7 +1576,11 @@ test("the site's CSP gains only the relay's origin: its feed and its pictures", 
 
 test("the game's Live files: no HTML from strings, no link anywhere (never a way to buy a real coin), styles scoped like their neighbours", () => {
   const dir = 'src/games/trenchingsimulator/';
-  const files = ['live-chains.js', 'live-feed.js', 'live-market.js', 'shell.js', 'boards/board.js'].map((f) => [f, readFileSync(dir + f, 'utf8')]);
+  // (GNGM's files since 2026-10-22: its board, its coin page, its chart, its PnL card, its numbers)
+  const GNGM = ['boards/gngm.js', 'boards/gngm-coin.js', 'boards/gchart.js', 'boards/gngm-card.js', 'boards/gngm-data.js'];
+  // (race rooms' client since 2026-10-22: race.js)
+  const files = ['live-chains.js', 'live-feed.js', 'live-market.js', 'shell.js', 'race.js', 'boards/board.js', 'boards/common.js', ...GNGM]
+    .map((f) => [f, readFileSync(dir + f, 'utf8')]);
   for (const [f, src] of files) {
     assert.doesNotMatch(src, /innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|new Function/, f);
     assert.doesNotMatch(src, /window\.open|location\.(href|assign|replace)\s*=|\.click\(\)\s*;?\s*\/\/\s*buy/, f);
@@ -1502,12 +1591,35 @@ test("the game's Live files: no HTML from strings, no link anywhere (never a way
   assert.match(board, /play money/);
   // a real coin's address only ever its first 6 characters
   assert.match(board, /`CA \$\{f\.mint\.slice\(0, 6\)\}…`/);
+  // GNGM the same: no link at all (its PnL card is saved by the shell), "play money" on a real coin, its address's first 6.
+  // One exception since 2026-10-22: its chart library's credit (TradingView Lightweight Charts™: its license asks for a
+  // link to tradingview.com on the page with the chart), once, in gchart.js, to exactly that address
+  const CREDIT_LINK = "el('a', { class: 'tsg-credit-a', href: CREDIT.url, target: '_blank', rel: 'noopener noreferrer' }, CREDIT.name)";
+  const gngm = files.filter(([f]) => GNGM.includes(f));
+  for (const [f, src] of gngm) {
+    const credits = src.split(CREDIT_LINK).length - 1;
+    assert.equal(credits, f === 'boards/gchart.js' ? 1 : 0, `${f}: the chart's credit link, once, in gchart.js only`);
+    assert.doesNotMatch(src.replace(CREDIT_LINK, ''), /el\('a'|createElement\('a'\)|href/, `${f}: GNGM has no other link`);
+    assert.doesNotMatch(src, /mint\.slice\(-/, `${f}: never a coin's address's end`);
+  }
+  const chartSrc = files.find(([f]) => f === 'boards/gchart.js')[1];
+  assert.match(chartSrc, /url: 'https:\/\/www\.tradingview\.com\/'/, 'that one link: tradingview.com, nothing else');
+  assert.match(chartSrc, /attributionLogo: false/, 'the library\'s own logo off (its inline style is refused by the CSP): the credit is ours');
+  assert.match(chartSrc, /name: 'TradingView Lightweight Charts™'/);
+  assert.match(chartSrc, /tail: ' · Copyright \(c\) 2025 TradingView, Inc\.'/, 'its notice');
+  assert.match(files.find(([f]) => f === 'boards/gngm-coin.js')[1], /el\('div', \{ class: 'tsg-chart-host' \}, plot\), chartCredit\(\)\)/, 'the credit under the chart');
+  assert.match(files.find(([f]) => f === 'shell.js')[1], /GNGM\\'s charts: TradingView Lightweight Charts™ · Copyright \(c\) 2025 TradingView, Inc\. \(tradingview\.com\)\./, 'and in How to play');
+  const coinPage = files.find(([f]) => f === 'boards/gngm-coin.js')[1];
+  assert.match(coinPage, /`CA \$\{f\.mint\.slice\(0, 6\)\}…`/);
+  assert.match(coinPage, /'Real coin · play money'/);
+  assert.match(coinPage, /' · play money'/);
+  assert.match(files.find(([f]) => f === 'boards/gngm.js')[1], /play money/);
   const css = readFileSync(dir + 'trench.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const live = [...css.matchAll(/([^{}]+)\{[^{}]*\}/g)].map((m) => m[1].trim()).filter((sel) => /live|market|is-real|is-sim|is-stale|is-img|tsb-img/.test(sel));
   assert.ok(live.length >= 15, `its rules were read: ${live.length}`);
   for (const sel of live) {
     if (sel.startsWith('@') || /^\d+%$|^(from|to)$/.test(sel)) continue;
-    for (const one of sel.split(',')) assert.match(one.trim(), /^\.tsb?-|^html\[data-page='trenchingsimulator'\]/, `"${one.trim()}" scoped like its neighbours`);
+    for (const one of sel.split(',')) assert.match(one.trim(), /^\.ts[bg]?-|^html\[data-page='trenchingsimulator'\]/, `"${one.trim()}" scoped like its neighbours`);
   }
   // the run's live line: a status line (read out when it changes), always on the page; on a phone or a tablet it goes over
   // the HUD, since AGI-1's words sit under her face there and would cover it (a computer has them in the HUD's goal cell)
@@ -1543,4 +1655,379 @@ test("the relay's own files: its image runs as a user (never root) without any k
   assert.ok(Object.values(pkg.dependencies).every((v) => /^\d+\.\d+\.\d+$/.test(v)), 'exact versions');
   const lock = JSON.parse(readFileSync(`${d}package-lock.json`, 'utf8'));
   assert.equal(lock.packages[''].dependencies.ws, pkg.dependencies.ws);
+});
+
+// ---------- race rooms (2026-10-22: the relay's /room, tools/trench-relay/lib/rooms.mjs; the game's race.js) ----------
+// The owner: "add the mutiplayer too only on trenching simulator, they can invite players via link idk whats better (no
+// wallet needed when they invite)"; their pick: "Same-market race"
+
+// a racer on a stand-in socket: what it says, and what it got last of each kind
+const racer = (rooms, ip) => {
+  const ws = new FakeWs();
+  rooms.attach(ws, ip);
+  return {
+    ws,
+    say: (o) => ws.emit('message', Buffer.from(JSON.stringify({ v: 1, ...o })), false),
+    last: (t) => ws.sent.filter((m) => m.t === t).at(-1),
+  };
+};
+
+test('race rooms on the relay: a code, a room of friends, the same race for everyone, its standings, its end, a rematch', () => {
+  let t = 1_800_000_000_000;
+  let k = 0;
+  const rooms = createRooms({ now: () => t, tickMs: 1e9, pingMs: 1e9, random: (n) => (k++ * 7) % n, token: () => `tok-${String(++k).padStart(10, '0')}`,
+    price: () => 151.234 });
+  try {
+    const host = racer(rooms, '1.1.1.1');
+    host.say({ op: 'create', name: 'Ape Lord', set: { challenge: 'speedrun', seconds: 180 } });
+    const r1 = host.last('room');
+    assert.match(r1.code, ROOM_CODE);
+    assert.deepEqual([r1.v, r1.state, r1.race, r1.max, r1.you.host, r1.players.map((p) => p.name)], [1, 'lobby', 0, 8, true, ['Ape Lord']]);
+    assert.deepEqual(r1.set, { challenge: 'speedrun', seconds: 180 });
+    // a friend joins with the code (as typed: lower case is fine); a name that passes for a moderator says "Trader 2"
+    const friend = racer(rooms, '2.2.2.2');
+    friend.say({ op: 'join', code: r1.code.toLowerCase(), name: 'admin' });
+    assert.deepEqual(friend.last('room').players.map((p) => [p.name, p.host]), [['Ape Lord', true], ['Trader 2', false]]);
+    assert.equal(host.last('room').players.length, 2, 'the host sees them come in');
+    assert.notEqual(friend.last('room').you.token, host.last('room').you.token, 'each its own seat');
+    // what's refused: a wrong code, settings that aren't a challenge's, a start by someone who isn't the host, nonsense
+    const stranger = racer(rooms, '3.3.3.3');
+    stranger.say({ op: 'join', code: 'ZZZZZZ' });
+    assert.equal(stranger.last('err').code, 'no_room');
+    stranger.say({ op: 'create', set: { challenge: 'speedrun', seconds: 5 } });
+    assert.equal(stranger.last('err').code, 'bad');
+    stranger.say({ op: 'toString' });
+    assert.equal(stranger.ws.sent.filter((m) => m.t === 'err').length, 3);
+    friend.say({ op: 'start' });
+    assert.equal(friend.last('err').code, 'not_host');
+    // ready, then the host starts it: the same race for everyone (its seed, SOL's price, when it starts)
+    friend.say({ op: 'ready', on: true });
+    assert.equal(host.last('room').players[1].ready, true);
+    host.say({ op: 'start' });
+    const go = host.last('go');
+    assert.deepEqual(friend.last('go'), go);
+    assert.deepEqual([go.race, go.seed, go.solUsd, go.seconds, go.startAt - t, go.now], [1, `race-${r1.code}-1`, 151.23, 180, ROOMS.countdownMs, t]);
+    stranger.say({ op: 'join', code: r1.code });
+    assert.equal(stranger.last('err').code, 'started', 'a latecomer waits for the next one');
+    // the race: each says how it's going; the standings every 2 s (the bigger multiple first)
+    t += ROOMS.countdownMs;
+    rooms.tick();
+    assert.equal(host.last('room').state, 'racing');
+    t += 1000;
+    host.say({ op: 'p', w: 1.2, x: 1.2, c: 1 });
+    friend.say({ op: 'p', w: 0.5, x: 0.5, c: 1 });
+    t += ROOMS.boardMs;
+    rooms.tick();
+    assert.deepEqual(host.last('board').rows.map((r) => [r.name, r.x, r.done]), [['Ape Lord', 1.2, false], ['Trader 2', 0.5, false]]);
+    friend.say({ op: 'p', w: 'lots', x: 2, c: 1 });
+    assert.equal(friend.last('err').code, 'bad');
+    friend.say({ op: 'p', w: 5e9, x: 2, c: 999999 });
+    assert.deepEqual(rooms.room(r1.code).seats[1].rep, { w: 1e7, x: 2, c: 185 }, 'kept inside what a run can be');
+    // the end: a win first (fewer seconds), then the others by their multiple; once everyone's done, it's over
+    t += 500;
+    friend.say({ op: 'done', w: 0.75, x: 1.5, c: 60, outcome: 'won', timeUsed: 60.04 });
+    friend.say({ op: 'done', w: 9, x: 9, c: 61, outcome: 'won', timeUsed: 61 });
+    assert.equal(rooms.room(r1.code).seats[1].done.x, 1.5, 'its result once');
+    host.say({ op: 'done', w: 1.4, x: 1.4, c: 180, outcome: 'lost' });
+    const end = host.last('end');
+    assert.equal(end.why, 'all_done');
+    assert.deepEqual(end.rows.map((r) => [r.name, r.o, r.t, r.x]), [['Trader 2', 'won', 60, 1.5], ['Ape Lord', 'lost', null, 1.4]]);
+    assert.equal(friend.last('room').state, 'ended');
+    // between races someone new may come in, and the host can start a rematch: a new market
+    stranger.say({ op: 'join', code: r1.code });
+    assert.equal(stranger.last('room').players.length, 3);
+    t += 2000;
+    host.say({ op: 'start' });
+    assert.equal(friend.last('go').seed, `race-${r1.code}-2`);
+    assert.equal(stranger.last('go').race, 2);
+    assert.deepEqual(rooms.stats(), { rooms: 1, players: 3, racing: 1, created: 1, races: 2, droppedSpam: 0 });
+  } finally {
+    rooms.close();
+  }
+});
+
+test('race rooms: names made safe, back within a minute of a drop, rooms that end on their own, the caps', () => {
+  // names: as typed, nothing invisible, single spaces, at most 16; never a moderator, a link, an address or crude
+  assert.equal(roomName('  Neo​  the   One '), 'Neo the One');
+  assert.equal(roomName('A'.repeat(30)), `${'A'.repeat(15)}…`);
+  assert.equal(roomName('Ape 🐸'), 'Ape 🐸');
+  for (const bad of ['AGI-1', 'agi team', 'TheAdmin', 'support', 'fuck off', 'visit x.com', 'me@mail', '0x1234abcd', 42, '', '   ']) {
+    assert.equal(roomName(bad), null, String(bad));
+  }
+  let t = 1_800_000_000_000;
+  let k = 0;
+  const rooms = createRooms({ now: () => t, tickMs: 1e9, pingMs: 1e9, random: (n) => (k++ * 5) % n, token: () => `tok-${String(++k).padStart(10, '0')}` });
+  try {
+    // a dropped connection: its seat (and host) kept a minute; back with its token, it's the same seat
+    const host = racer(rooms, '1.1.1.1');
+    host.say({ op: 'create', set: { challenge: 'double-up', seconds: 600 } });
+    const { code, you } = host.last('room');
+    assert.equal(host.last('room').players[0].name, 'Trader 1', 'no name: "Trader 1"');
+    const friend = racer(rooms, '2.2.2.2');
+    friend.say({ op: 'join', code });
+    host.ws.close();
+    assert.equal(friend.last('room').players[0].gone, true);
+    t += 30_000;
+    const back = racer(rooms, '1.1.1.1');
+    back.say({ op: 'resume', code, token: you.token });
+    assert.deepEqual([back.last('room').you.id, back.last('room').you.host, back.last('room').players[0].gone], [you.id, true, false]);
+    // too late: the seat is gone (and the host passes on)
+    back.ws.close();
+    t += ROOMS.resumeMs + 1;
+    rooms.tick();
+    assert.deepEqual(friend.last('room').players.map((p) => [p.id, p.host]), [[2, true]]);
+    const late = racer(rooms, '1.1.1.1');
+    late.say({ op: 'resume', code, token: you.token });
+    assert.equal(late.last('err').code, 'no_room');
+    // a room is 8 seats
+    const more = [];
+    for (let i = 0; i < 8; i++) {
+      const p = racer(rooms, `9.9.9.${i}`);
+      p.say({ op: 'join', code });
+      more.push(p);
+    }
+    assert.equal(more[6].last('room').players.length, 8);
+    assert.equal(more[7].last('err').code, 'room_full');
+    assert.equal(friend.last('room').players.length, 8);
+    // the host takes someone out between races
+    friend.say({ op: 'kick', id: more[0].last('room').you.id });
+    assert.equal(more[0].last('bye').why, 'kicked');
+    assert.equal(friend.last('room').players.length, 7);
+    // a lobby that never races closes after 15 minutes
+    t += ROOMS.lobbyMs;
+    rooms.tick();
+    assert.equal(friend.last('bye').why, 'expired');
+    assert.equal(rooms.room(code), null);
+    // one address makes at most 3 rooms in 10 minutes
+    const maker = racer(rooms, '4.4.4.4');
+    for (let i = 0; i < 3; i++) {
+      maker.say({ op: 'create', set: { challenge: 'speedrun', seconds: 180 } });
+      maker.say({ op: 'leave' });
+      t += 1000;
+    }
+    maker.say({ op: 'create', set: { challenge: 'speedrun', seconds: 180 } });
+    assert.equal(maker.last('err').code, 'too_many');
+    // an empty room is gone a minute later
+    t += ROOMS.emptyMs;
+    rooms.tick();
+    assert.equal(rooms.stats().rooms, 0);
+    // wrong codes: 10 a minute from one address, then it's closed
+    const guesser = racer(rooms, '5.5.5.5');
+    for (let i = 0; i < 11; i++) {
+      t += 600; // (inside its message allowance: about two a second)
+      guesser.say({ op: 'join', code: 'ZZZZZZ' });
+    }
+    assert.deepEqual(guesser.ws.closed, { code: 1008, why: 'too many tries' });
+    // too much at once, or a message over 1 KB: closed
+    const spam = racer(rooms, '6.6.6.6');
+    for (let i = 0; i < ROOMS.msgBurst + 1; i++) spam.say({ op: 'ready', on: true });
+    assert.deepEqual(spam.ws.closed, { code: 1008, why: 'too many messages' });
+    const big = racer(rooms, '7.7.7.7');
+    big.ws.emit('message', Buffer.alloc(ROOMS.maxMsgBytes + 1, 32), false);
+    assert.deepEqual(big.ws.closed, { code: 1008, why: 'bad message' });
+    // a race nobody finishes ends at its time (plus a little grace), and an ended room closes 5 minutes later
+    const h2 = racer(rooms, '8.8.8.8');
+    h2.say({ op: 'create', set: { challenge: 'speedrun', seconds: 180 } });
+    t += 1000;
+    h2.say({ op: 'start' });
+    t += ROOMS.countdownMs + 180_000 + ROOMS.graceMs;
+    rooms.tick();
+    assert.equal(h2.last('end').why, 'time');
+    t += ROOMS.endedMs;
+    rooms.tick();
+    assert.equal(h2.last('bye').why, 'expired');
+  } finally {
+    rooms.close();
+  }
+});
+
+test('race rooms on the real relay: /room only from the site\'s pages, its own caps, a race over real sockets, /health, off when switched off', async () => {
+  const fakes = await startFakes();
+  const timing = { roomTickMs: 20, rooms: { countdownMs: 60, boardMs: 30 } };
+  const { relay, http: base } = await relayWith(fakes, { TRENCH_CHAINS: 'bnb', TRENCH_ROOMS_PER_IP: '2' }, timing);
+  const url = base.replace('http://', 'ws://') + '/room';
+  const open = [];
+  try {
+    await assert.rejects(viewer(url, { origin: 'https://evil.example' }).opened, /403/);
+    const a = viewer(url);
+    const b = viewer(url);
+    open.push(a, b);
+    await Promise.all([a.opened, b.opened]);
+    await assert.rejects(viewer(url).opened, /429/, 'two from one address (TRENCH_ROOMS_PER_IP)');
+    a.send({ op: 'create', v: 1, name: 'Ape', set: { challenge: 'speedrun', seconds: 180 } });
+    const code = (await until(() => a.of('room')[0], 3000, 'its room')).code;
+    b.send({ op: 'join', v: 1, code, name: 'Frog' });
+    await until(() => a.of('room').some((m) => m.players.length === 2), 3000, 'the friend in');
+    a.send({ op: 'start', v: 1 });
+    const [ga, gb] = await until(() => (a.of('go')[0] && b.of('go')[0] ? [a.of('go')[0], b.of('go')[0]] : null), 3000, 'the race');
+    assert.equal(ga.seed, gb.seed);
+    assert.equal(ga.solUsd, 150, 'no price from DexScreener yet: 150, the same for everyone');
+    await until(() => a.of('room').some((m) => m.state === 'racing'), 3000, 'racing');
+    a.send({ op: 'p', v: 1, w: 1.1, x: 1.1, c: 1 });
+    await until(() => b.of('board').some((m) => m.rows.length === 2), 3000, 'the standings');
+    const health = await (await fetch(`${base}/health`)).json();
+    assert.deepEqual([health.rooms.rooms, health.rooms.players, health.rooms.racing], [1, 2, 1]);
+    // a message over 1 KB: the socket's closed
+    const closed = new Promise((r) => b.ws.on('close', (c) => r(c)));
+    b.ws.send('x'.repeat(2000));
+    assert.equal(await closed, 1009);
+  } finally {
+    open.forEach((v) => v.ws.close());
+    await relay.close();
+    await fakes.close();
+  }
+  // switched off (TRENCH_ROOMS=off): /room isn't there, the Live feed is
+  const f2 = await startFakes();
+  const { relay: r2, http: b2 } = await relayWith(f2, { TRENCH_CHAINS: 'bnb', TRENCH_ROOMS: 'off' });
+  try {
+    await assert.rejects(viewer(b2.replace('http://', 'ws://') + '/room').opened, /404/);
+    assert.equal((await (await fetch(`${b2}/health`)).json()).rooms, null);
+  } finally {
+    await r2.close();
+    await f2.close();
+  }
+});
+
+test('race rooms in the browser: an invite link, what the relay sends checked, a room from making it to its end, dropped and back, closed', () => {
+  // the address: the Live feed's relay, its /room door; an invite link's code; a code as typed
+  assert.equal(RACE.raceUrl({ hostname: 'agi1.app', search: '' }), 'wss://live.agi1.app/room');
+  assert.equal(RACE.raceUrl({ hostname: 'localhost', search: '?relay=ws://localhost:8787/ws' }), 'ws://localhost:8787/room');
+  assert.equal(RACE.roomOfHash('#room=k7qx2m'), 'K7QX2M');
+  for (const h of ['', '#room=', '#room=K7QX2', '#room=K7QX2MM', '#room=K7QX0M', '#rate', null, 42]) assert.equal(RACE.roomOfHash(h), null, String(h));
+  assert.equal(RACE.inviteLink('K7QX2M'), 'https://agi1.app/games/trenchingsimulator#room=K7QX2M');
+  assert.equal(RACE.cleanCode(' k7qx-2m '), 'K7QX2M');
+  assert.equal(RACE.cleanCode('IL1O00'), null, 'never the letters that look alike');
+  // what the relay sends: checked, anything odd dropped
+  const room = { t: 'room', v: 1, code: 'K7QX2M', you: { id: 1, token: 'tok-0000000001', host: true }, set: { challenge: 'speedrun', seconds: 180 },
+    players: [{ id: 1, name: 'Ape Lord', ready: false, host: true, gone: false }], state: 'lobby', race: 0, max: 8 };
+  const { v: _v, ...roomRead } = room;
+  assert.deepEqual(RACE.parseRaceMessage(JSON.stringify(room)), roomRead);
+  for (const bad of [{ ...room, v: 2 }, { ...room, code: 'nope' }, { ...room, state: 'flying' }, { ...room, set: { challenge: 'X', seconds: 180 } },
+    { ...room, you: { id: 1, token: '<b>', host: true } }, { ...room, players: 'all' }, { t: 'go', v: 1 }, { t: 'board', v: 1, rows: [{ id: 'x' }] },
+    { t: 'err', v: 1, code: 'whatever' }, { t: 'hello', v: 1 }]) assert.equal(RACE.parseRaceMessage(JSON.stringify(bad)), null, JSON.stringify(bad));
+  assert.equal(RACE.parseRaceMessage('{not json'), null);
+  assert.equal(RACE.parseRaceMessage(JSON.stringify({ t: 'bye', v: 1, why: 'weird' })).why, 'expired');
+  const named = RACE.parseRaceMessage(JSON.stringify({ ...room, players: [{ id: 3, name: '‮evil​', ready: true }] }));
+  assert.deepEqual(named.players, [{ id: 3, name: 'evil', ready: true, host: false, gone: false }]);
+  // a room, start to end, on a stand-in socket
+  const made = [];
+  class FakeSocket {
+    constructor(u) {
+      this.url = u;
+      this.readyState = 0;
+      this.sent = [];
+      made.push(this);
+    }
+    send(x) {
+      this.sent.push(JSON.parse(x));
+    }
+    close() {
+      this.readyState = 3;
+      if (this.onclose) this.onclose({ code: 1000 });
+    }
+    open() {
+      this.readyState = 1;
+      this.onopen();
+    }
+    msg(o) {
+      this.onmessage({ data: JSON.stringify({ v: 1, ...o }) });
+    }
+    drop() {
+      this.readyState = 3;
+      this.onclose({ code: 1006 });
+    }
+  }
+  let t = 1_000_000;
+  const timers = [];
+  const race = RACE.createRace({ url: 'ws://127.0.0.1:1/room', WebSocket: FakeSocket, now: () => t, random: () => 0.5,
+    timers: { set: (fn, ms) => timers.push({ fn, ms }) && timers.length, clear: () => {} } });
+  const seen = [];
+  race.on((ev) => seen.push(ev.type === 'status' ? ev.status : ev.type));
+  race.create({ name: 'Ape Lord', set: { challenge: 'speedrun', seconds: 180 } });
+  assert.equal(race.status, 'connecting');
+  made[0].open();
+  assert.deepEqual(made[0].sent, [{ op: 'create', v: 1, name: 'Ape Lord', set: { challenge: 'speedrun', seconds: 180 } }]);
+  made[0].msg(room);
+  assert.deepEqual([race.status, race.isHost, race.room.code], ['lobby', true, 'K7QX2M']);
+  race.ready(true);
+  race.start();
+  assert.deepEqual(made[0].sent.slice(1).map((m) => m.op), ['ready', 'start']);
+  // the race: its clock is the relay's (this one is 2 s behind it)
+  made[0].msg({ t: 'go', race: 1, seed: 'race-K7QX2M-1', solUsd: 151.23, set: room.set, startAt: t + 2000 + 5000, now: t + 2000, seconds: 180 });
+  assert.deepEqual([race.status, race.offset, race.startsIn()], ['countdown', 2000, 5000]);
+  t += 5000;
+  made[0].msg({ ...room, state: 'racing' });
+  // how it's going: at most once a second
+  assert.equal(race.report({ worth: 1.1, multiple: 1.1, clock: 0.1 }), true);
+  assert.equal(race.report({ worth: 1.2, multiple: 1.2, clock: 0.5 }), false);
+  t += 1000;
+  assert.equal(race.report({ worth: 1.3, multiple: 1.3, clock: 1.1 }), true);
+  assert.deepEqual(made[0].sent.filter((m) => m.op === 'p').map((m) => m.x), [1.1, 1.3]);
+  made[0].msg({ t: 'board', rows: [{ id: 1, name: 'Ape Lord', w: 1.3, x: 1.3, c: 1.1, o: null, t: null, done: false, gone: false }] });
+  assert.equal(race.board[0].x, 1.3);
+  // dropped: down, and back on the same seat (its token) by itself
+  made[0].drop();
+  assert.equal(race.status, 'down');
+  timers.at(-1).fn();
+  made[1].open();
+  assert.deepEqual(made[1].sent, [{ op: 'resume', v: 1, code: 'K7QX2M', token: 'tok-0000000001' }]);
+  made[1].msg({ ...room, state: 'racing' });
+  assert.equal(race.status, 'racing');
+  // its end: once
+  assert.equal(race.finish({ worth: 1.6, multiple: 1.6, clock: 70, outcome: 'won', timeUsed: 70 }), true);
+  assert.equal(race.finish({ worth: 9, multiple: 9, clock: 71, outcome: 'won', timeUsed: 71 }), false);
+  assert.equal(race.report({ worth: 2, multiple: 2, clock: 72 }), false, 'nothing after its end');
+  made[1].msg({ t: 'end', why: 'all_done', rows: [{ id: 1, name: 'Ape Lord', w: 1.6, x: 1.6, c: 70, o: 'won', t: 70, done: true, gone: false }] });
+  assert.equal(race.status, 'ended');
+  assert.equal(RACE.standingText(race.board[0], 0), '1. Ape Lord · 1.60x · won in 1:10');
+  assert.equal(RACE.standingText(race.board[0], 0, { you: true }), '1. You · 1.60x · won in 1:10');
+  race.leave();
+  assert.equal(race.status, 'idle');
+  assert.equal(made[1].sent.at(-1).op, 'leave');
+  assert.deepEqual(seen.filter((s) => typeof s === 'string' && ['connecting', 'lobby', 'countdown', 'racing', 'down', 'ended', 'idle'].includes(s)),
+    ['connecting', 'lobby', 'countdown', 'racing', 'down', 'racing', 'ended', 'idle']);
+  // a code that doesn't exist: closed, with words to say so
+  const r2 = RACE.createRace({ url: 'ws://x/room', WebSocket: FakeSocket, timers: { set: () => 0, clear: () => {} } });
+  r2.join('ZZZZZZ');
+  made.at(-1).open();
+  made.at(-1).msg({ t: 'err', code: 'no_room' });
+  assert.deepEqual([r2.status, r2.error], ['closed', 'no_room']);
+  assert.match(RACE.raceWords(r2.status, r2.error), /no room with that code/);
+  // the relay without race rooms yet (before relay.sh update): "aren't open right now", never a crash
+  const r3 = RACE.createRace({ url: 'ws://x/room', WebSocket: FakeSocket, timers: { set: () => 0, clear: () => {} } });
+  r3.join('K7QX2M');
+  made.at(-1).drop();
+  assert.deepEqual([r3.status, r3.error], ['down', 'unreachable']);
+  assert.equal(RACE.raceWords(r3.status, r3.error), 'Race rooms aren\'t open right now. You can still play on your own.');
+  const none = RACE.createRace({ url: 'ws://x/room', WebSocket: null });
+  none.create({ set: { challenge: 'speedrun', seconds: 180 } });
+  assert.equal(none.status, 'down');
+  // its words: never "buy", a price or advice
+  for (const s of ['connecting', 'down', 'closed', 'lobby', 'countdown', 'racing', 'ended']) {
+    for (const e of [null, 'unreachable', 'no_room', 'room_full', 'started', 'too_many', 'rooms_full', 'kicked', 'expired', 'restart', 'lost']) {
+      assert.doesNotMatch(RACE.raceWords(s, e), /\bbuy\b|\$\d|advice|guarantee/i);
+    }
+  }
+});
+
+test('race rooms in the game: Race a friend on the home screen, an invite link opens its room, a race is simulated, never ranked, counted once', () => {
+  const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
+  assert.match(shell, /btn\('Race a friend', \{ ic: 'users', on: \(\) => go\('race'\) \}\)/);
+  assert.doesNotMatch(shell, /Multiplayer · coming soon/, 'not "coming soon" any more');
+  // an invite link: its room's screen, the code out of the address (never a reload), the room left with its screens
+  assert.match(shell, /const code = roomOfHash\(location\.hash\);/);
+  assert.match(shell, /history\.replaceState\(history\.state, '', `\$\{location\.pathname\}\$\{location\.search\}`\)/);
+  assert.match(shell, /addEventListener\('hashchange', invite\)/);
+  assert.match(shell, /if \(S\.race && S\.race\.status !== 'idle' && node\.dataset\.race !== '1'\) leaveRoom\(\);/);
+  // a race: the room's seed and SOL price, simulated (never Live mode), on a clock that never stops, never ranked
+  assert.match(shell, /const live = !race && liveRun\(setup\) \? S\.save\.chain : null;/);
+  assert.match(shell, /const rankable = !race && !live &&/);
+  assert.match(shell, /run = createRun\(\{ seed: race\.seed, challenge: challengeById\(setup\.id\), mode: 'challenge', solUsd: race\.solUsd, currency: t\.currency,\s*terminal: t\.id, realTime: true \}\);/);
+  assert.match(shell, /let ranked = race \? \{ why: 'race' \}/);
+  assert.equal((shell.match(/Site\.play\(\)/g) || []).length, 1, 'a race is counted like any run, in the same one place');
+  // how it's going, to the room (at most once a second: race.js), its end once
+  assert.match(shell, /if \(setup\.race && S\.race && !run\.over\) S\.race\.report\(\{ worth: h\.worth, multiple: h\.multiple, clock: h\.clock \}\);/);
+  assert.match(shell, /S\.race\.finish\(\{ worth: res\.worth, multiple: res\.multiple, clock: res\.timeUsed, outcome: res\.outcome, timeUsed: res\.timeUsed \}\);/);
+  // the results' line: never ranked, and why
+  assert.match(readFileSync('src/games/boards.js', 'utf8'), /race: 'Races aren\\'t ranked: the room\\'s standings are just for fun\.'/);
 });

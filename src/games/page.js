@@ -9,6 +9,7 @@
 // Since 2026-10-21 two games (Ride 'Em, AGI! and TRENCHING SIMULATOR): a card on the shelf and a tab of ratings for each
 // (mountGame: one game's numbers, reviews and box), one wallet session and 18+ answer for all of them (createSession:
 // connecting a wallet in one game's box connects them all), and a link to a game's ratings opens its tab (startTabs).
+// Since 2026-10-22 the leaderboards' section too (./leaderboard.js: each game's boards and the optional name).
 import '../styles/tokens.css';
 import '../styles/base.css';
 import '../styles/layout.css';
@@ -27,6 +28,7 @@ import {
   barWidth, playedText, cardStats, dateText, adjustStats, placeReview, mergeMine, appendPage, BOX, moreText, meText, savedText,
   deletedText, reviewError, gameOfHash,
 } from './words.js';
+import { startBoards } from './leaderboard.js';
 
 // the site's 18+ answer and wallet session (the home page's and her live page's too: a wallet connected there is connected
 // here), { session, wallet, level, name, notes }
@@ -628,6 +630,7 @@ function startTabs(boxes) {
 function start() {
   startTheme();
   startMenu();
+  startBoards();          // the leaderboards: asked once their section is near the screen
   const session = createSession();
   const boxes = [...document.querySelectorAll('[data-gm-rate]')]
     .filter((rate) => isGame(rate.dataset.gmRate))

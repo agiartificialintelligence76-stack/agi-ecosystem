@@ -16,11 +16,12 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { SONG_PARTS } from '../../server/live-acts.js';
 import { withoutSecrets } from '../clips/make.mjs';
 
-export const SONG_DIR = new URL('./songs/', import.meta.url).pathname;
+export const SONG_DIR = fileURLToPath(new URL('./songs/', import.meta.url));
 export const SONG_RATE = 48000;          // her song is played as it is: 48 kHz stereo (the stream's own sound: run.mjs Mixer)
 export const SONG_LEVEL = 0.11;          // how loud (RMS, 0..1): about her voice's own level, above her quiet music
 // (2026-10-09) her music video's picture against the song: the video's own sound starts this many seconds after the song's
