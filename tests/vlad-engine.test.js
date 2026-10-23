@@ -10,6 +10,7 @@ function encounter(options = {}) {
 }
 function target(kind = 'grunt', options = {}) {
   const s = encounter(options), p = s.players[0], e = s.enemies[0];
+  s.platforms = []; s.props = []; // Isolate combat timing from authored obstacle placement.
   s.enemies = [e]; p.x = 500; p.y = 560; p.face = 1;
   Object.assign(e, { kind, x: 580, y: 560, z: 0, vz: 0, face: -1, hp: 1000, maxHp: 1000, cooldown: 100,
     spawnTime: 0, speed: 0, boss: false, value: 100 });
@@ -197,7 +198,8 @@ test('endless mode loops after the third boss; death ends a run and effects/even
 });
 
 test('a competent deterministic player can finish all three districts with combat, pickups and upgrades', () => {
-  const s = createGame({ seed: 'complete-campaign', difficulty: 'normal' });
+  for (const character of ['vlad','agi']) {
+  const s = createGame({ seed: 'complete-campaign', difficulty: 'normal', character });
   for (let tick = 0; tick < 60 * 360 && !['victory', 'gameover'].includes(s.status); tick++) {
     if (s.status === 'upgrade') { chooseUpgrade(s, s.upgradeChoices[0].id); continue; }
     const p = s.players[0], e = s.enemies.filter((e) => !e.dead).sort((a, b) => Math.abs(a.x - p.x) + Math.abs(a.y - p.y) * 2 - Math.abs(b.x - p.x) - Math.abs(b.y - p.y) * 2)[0];
@@ -209,11 +211,15 @@ test('a competent deterministic player can finish all three districts with comba
         duo: s.duo >= 100, dodge: e.telegraph && e.windup < .12 && tick % 5 === 0, jump: tick % 110 === 0 };
       if (Math.abs(dx) < 75) p.face = Math.sign(dx) || p.face;
     }
+    const obstacle = [...s.platforms,...s.props.filter(o => !o.broken)].some(o => o.height > p.z+2
+      && Math.abs(o.x-(p.x+(input.x || p.face)*50)) < o.width/2+10 && Math.abs(o.y-p.y) < o.depth/2+10);
+    if (obstacle) input.jump = tick % 2 === 0;
     stepGame(s, [input], FIXED_DT);
   }
   assert.equal(s.status, 'victory'); assert.equal(s.totalWaves, 12); assert.equal(s.stats.stagesCleared, 3);
   assert.ok(s.stats.kills >= 40 && s.maxCombo > 3 && s.stats.specials > 0 && s.score > 5000);
-  assert.ok(s.elapsed > 60 && s.elapsed < 300, `full campaign took ${s.elapsed}s`);
+  assert.ok(s.elapsed > 60 && s.elapsed < 300, `${character} full campaign took ${s.elapsed}s`);
+  }
 });
 
 test('running accelerates promptly, brakes without skating, and advances animation with distance', () => {
@@ -306,4 +312,176 @@ test('a boss resumes its visible windup after a non-staggering light hit', () =>
   assert.ok(e.windup > 0 && e.windup < e.totalWindup);
   const contact = s.events.find(event => event.type === 'hit');
   assert.ok(Number.isFinite(contact.simulationTime) && contact.simulationTime <= contact.time + 1e-10);
+});
+
+function traversalWorld() {
+  const s = createGame({seed:'platform-test'});
+  s.nextGate = Infinity; s.platforms = []; s.props = []; s.hazards = []; s.pickups = [];
+  return s;
+}
+const deck = (id = 9000, more = {}) => ({id,kind:'service-deck',x:350,y:560,width:200,depth:84,height:56,broken:false,...more});
+
+test('all districts have distinct authored jumpable routes and fresh breakable props', () => {
+  const s = createGame(), arrangements = [];
+  for (let stage = 0; stage < 3; stage++) {
+    assert.equal(s.platforms.length,9); assert.equal(s.props.length,6); assert.equal(s.hazards.length,4);
+    assert.ok(s.worldWidth>=5000 && s.worldWidth<=5400);
+    assert.ok(s.pickups.some(item=>item.groundZ>0 && item.life>300),'raised routes reward optional exploration');
+    assert.ok(s.platforms.every(o => o.height > 0 && o.height <= 72 && o.depth < s.floor.maxY-s.floor.minY));
+    arrangements.push(s.platforms.map(o => [o.x,o.y,o.kind]));
+    const oldIds = new Set([...s.platforms,...s.props].map(o => o.id));
+    s.props[0].broken = true;
+    if (stage < 2) {
+      s.status = 'upgrade'; s.upgradeChoices = [UPGRADES[0]]; assert.equal(chooseUpgrade(s,UPGRADES[0].id),true);
+      assert.ok(s.props.every(o => !o.broken && o.hp === o.maxHp));
+      assert.ok([...s.platforms,...s.props].every(o => !oldIds.has(o.id)));
+    }
+  }
+  assert.notDeepEqual(arrangements[0],arrangements[1]); assert.notDeepEqual(arrangements[1],arrangements[2]);
+});
+
+test('solid objects stop walking, but a jump lands on their top and permits another jump', () => {
+  const s = traversalWorld(), p = s.players[0], platform = deck(); s.platforms = [platform]; p.y = 560;
+  run(s,.5,{x:1}); assert.equal(p.x,241,'a solid face cannot be walked through'); assert.equal(p.z,0);
+  stepGame(s,[{x:1,jump:true}],FIXED_DT); run(s,.45,{x:1}); run(s,.3,{});
+  assert.equal(p.platformId,platform.id); assert.equal(p.groundZ,56); assert.equal(p.z,56); assert.equal(p.vz,0);
+  run(s,.2,{}); assert.equal(p.pose,'idle','standing on a platform is not an airborne pose');
+  stepGame(s,[{jump:true}],FIXED_DT); assert.ok(p.z > 56 && p.vz > 0,'a supported runner can jump again');
+  run(s,1,{}); assert.equal(p.z,56); assert.equal(p.platformId,platform.id);
+  run(s,1,{x:1}); assert.equal(p.platformId,null); assert.equal(p.groundZ,0); assert.equal(p.z,0,'walking off the edge falls to the floor');
+});
+
+test('landing and ledge physics remain deterministic across render frame partitions', () => {
+  const a = traversalWorld(), b = traversalWorld(); a.platforms = [deck()]; b.platforms = [deck()];
+  for (const s of [a,b]) { s.players[0].x = 235; s.players[0].y = 560; }
+  for(let i=0;i<90;i++) {
+    const input = {x:i<18 || i>45 ? 1 : 0,jump:i===0};
+    stepGame(a,[input],1/30); stepGame(b,[input],1/60); stepGame(b,[input],1/60);
+  }
+  assert.deepEqual(a,b);
+});
+
+test('breakable props reward one pickup and a runner falls when their support breaks', () => {
+  const {s,p,e} = target('grunt',{coop:true}); e.x = 950;
+  const prop = {id:9990,kind:'crate',x:580,y:560,width:60,depth:50,height:38,hp:28,maxHp:28,broken:false,breakTime:0};
+  s.props = [prop];
+  const partner = s.players[1]; Object.assign(partner,{x:580,y:560,z:38,groundZ:38,platformId:prop.id});
+  run(s,.8,[{heavy:true},{}]);
+  assert.equal(prop.broken,true); assert.equal(s.stats.propsBroken,1); assert.ok(prop.breakTime>0);
+  assert.equal(s.events.filter(ev=>ev.type==='prop-break').length,1);
+  assert.equal(partner.platformId,null); assert.equal(partner.z,0);
+  assert.ok(s.events.some(ev=>ev.type==='pickup') || s.pickups.some(item=>item.kind==='health'));
+  run(s,1,[{attack:true},{}]); assert.equal(s.stats.propsBroken,1,'debris cannot be harvested repeatedly');
+});
+
+test('ground strikes cannot hit a high supported target, while same-height combat still works', () => {
+  const {s,p,e} = target(); const platform = deck(9991,{x:650,width:180,height:72}); s.platforms = [platform];
+  Object.assign(e,{x:610,z:72,groundZ:72,platformId:platform.id});
+  run(s,.2,{attack:true}); assert.equal(e.hp,1000,'a ground jab cannot strike through the raised platform');
+  run(s,.4,{}); Object.assign(p,{x:590,y:560,z:72,groundZ:72,platformId:platform.id,vx:0,moveX:0});
+  e.x = 665; run(s,.2,{attack:true}); assert.ok(e.hp<1000,'standing at positive elevation does not disable normal punches');
+});
+
+test('bolts obey absolute elevation and solid cover, including elevated enemy shots', () => {
+  const {s,p,e} = target('ranger'); const platform = deck(9992,{x:p.x,width:100,height:72}); s.platforms = [platform];
+  Object.assign(p,{z:72,groundZ:72,platformId:platform.id});
+  const bolt = z => ({id:9993,x:p.x,y:p.y,z,vx:0,vy:0,damage:20,life:1});
+  s.projectiles = [bolt(38)]; stepGame(s,[{}],FIXED_DT); assert.equal(p.hp,p.maxHp); assert.equal(s.projectiles.length,0,'platform face blocks a low shot');
+  s.projectiles = [bolt(110)]; stepGame(s,[{}],FIXED_DT); assert.equal(p.hp,p.maxHp-20,'a bolt at the supported torso elevation hits');
+  s.hitStop = 0; s.projectiles = []; Object.assign(e,{x:820,z:0,vz:0,groundZ:0,platformId:null,cooldown:0,baseWindup:.2,damage:8});
+  run(s,.3,{}); assert.ok(s.projectiles.some(b=>b.vz>0),'rangers aim their shot toward the locked target elevation');
+});
+
+test('enemies can hop onto a player platform and attack there without inaccessible encounters', () => {
+  const {s,p,e} = target(); const platform = deck(9994,{x:650,width:160,height:64}); s.platforms = [platform];
+  Object.assign(p,{x:650,y:560,z:64,groundZ:64,platformId:platform.id,invuln:100});
+  Object.assign(e,{x:475,y:560,speed:132,cooldown:0,damage:8});
+  let reached = false;
+  for(let i=0;i<360;i++) { stepGame(s,[{}],FIXED_DT); if(e.platformId===platform.id) reached=true; }
+  assert.ok(reached,'melee enemies traverse the obstacle rather than getting trapped below it');
+  assert.ok(s.events.some(ev=>ev.type==='enemyAttack'),'they can fight after landing at the player elevation');
+});
+
+test('heavy launch has distinct airborne, down and protected get-up states before an enemy resumes', () => {
+  const {s,e} = target(); stepGame(s,[{heavy:true}],FIXED_DT);
+  const seen = new Set(); let downHeight = null, airProgress = 0;
+  for(let i=0;i<140;i++) {
+    stepGame(s,[{}],FIXED_DT); if(e.knockdown) seen.add(e.knockdown);
+    if(e.knockdown==='air') airProgress=Math.max(airProgress,e.knockdownProgress);
+    if(e.knockdown==='down') { downHeight=e.z; assert.equal(e.vz,0); }
+    if(e.knockdown==='getup') assert.ok(e.invuln>0 && e.knockdownProgress>=0 && e.knockdownProgress<=1);
+  }
+  assert.deepEqual([...seen],['air','down','getup']); assert.equal(downHeight,0); assert.equal(e.knockdown,null);
+  assert.ok(airProgress>.4,'the drawn tumble progresses through its airborne phase');
+  assert.ok(s.events.some(ev=>ev.type==='knockdown')); assert.ok(s.events.some(ev=>ev.type==='getup'));
+});
+
+const vent = (more = {}) => ({id:9900,kind:'steam',x:220,y:550,width:120,depth:62,height:24,period:4.2,
+  offset:0,warningDuration:.85,activeDuration:.65,damage:11,phase:'idle',phaseProgress:0,telegraph:false,active:false,...more});
+
+test('ground hazards give a warning before damage and are deterministic across frame partitions', () => {
+  const a = traversalWorld(), b = traversalWorld(); a.hazards=[vent({offset:2.72})]; b.hazards=[vent({offset:2.72})];
+  const hp=a.players[0].hp;
+  for(let i=0;i<20;i++) { stepGame(a,[{}],1/30); stepGame(b,[{}],1/60); stepGame(b,[{}],1/60); }
+  assert.deepEqual(a,b); assert.equal(a.hazards[0].phase,'telegraph'); assert.equal(a.players[0].hp,hp);
+  for(let i=0;i<10;i++) { stepGame(a,[{}],1/30); stepGame(b,[{}],1/60); stepGame(b,[{}],1/60); }
+  assert.deepEqual(a,b); assert.equal(a.hazards[0].phase,'active'); assert.equal(a.players[0].hp,hp-11);
+  assert.ok(a.events.findIndex(e=>e.type==='hazardWarning')<a.events.findIndex(e=>e.type==='hazardActive'));
+});
+
+test('jump height and raised platforms evade a ground pulse, with no damage outside its footprint', () => {
+  for(const position of ['ground','air','platform','outside']) {
+    const s=traversalWorld(), p=s.players[0]; s.hazards=[vent({offset:3.7})];
+    if(position==='air') { p.z=40; p.vz=100; }
+    if(position==='platform') { const platform=deck(9901,{x:220,y:550,height:56}); s.platforms=[platform]; Object.assign(p,{z:56,groundZ:56,platformId:platform.id}); }
+    if(position==='outside') p.y=630;
+    stepGame(s,[{}],FIXED_DT);
+    assert.equal(p.hp,p.maxHp-(position==='ground'?11:0),position);
+  }
+});
+
+test('a perfect early dodge awards one counter, and the next connected strike deals fifty percent more damage', () => {
+  const {s,p,e}=target(); p.energy=20;
+  const bolt=()=>({id:9902,x:p.x,y:p.y,z:p.z+38,vx:0,vy:0,damage:10,life:1});
+  s.projectiles=[bolt()]; stepGame(s,[{dodge:true}],FIXED_DT);
+  assert.equal(p.hp,p.maxHp); assert.equal(s.stats.perfectDodges,1); assert.ok(p.energy>=38 && p.energy<39);
+  assert.ok(p.counterReady && p.counterTime>3.4);
+  s.projectiles=[bolt()]; stepGame(s,[{}],FIXED_DT);
+  assert.equal(s.stats.perfectDodges,1,'overlapping threats cannot farm the same dodge');
+  s.projectiles=[]; run(s,.35,{}); Object.assign(e,{x:p.x+70,y:p.y,vx:0,invuln:0});
+  run(s,.12,{attack:true}); assert.equal(e.hp,976); assert.equal(p.counterReady,false); assert.equal(p.counterTime,0);
+  assert.equal(s.events.filter(ev=>ev.type==='counterHit').length,1);
+});
+
+test('late dodge invulnerability grants no counter, and a charged platform jump keeps its next-attack bonus', () => {
+  const late=target(); late.p.dodgeTime=.1; late.p.invuln=.2;
+  late.s.projectiles=[{id:9903,x:late.p.x,y:late.p.y,z:38,vx:0,vy:0,damage:10,life:1}];
+  stepGame(late.s,[{}],FIXED_DT); assert.equal(late.p.hp,late.p.maxHp); assert.equal(late.p.counterReady,false);
+  const {s,p,e}=target(); const platform=deck(9904,{x:600,width:320,height:56}); s.platforms=[platform];
+  Object.assign(p,{z:56,groundZ:56,platformId:platform.id,counterReady:true,counterTime:3.5});
+  Object.assign(e,{x:575,z:56,groundZ:56,platformId:platform.id});
+  stepGame(s,[{jump:true}],FIXED_DT); run(s,.1,{}); run(s,.12,{attack:true});
+  assert.equal(e.hp,970,'a charged airborne kick includes its normal air bonus and counter multiplier');
+  assert.equal(p.counterReady,false);
+  const expired=target(); expired.p.counterReady=true; expired.p.counterTime=.01; run(expired.s,.12,{attack:true});
+  assert.equal(expired.e.hp,984,'expired counters cannot power a later attack');
+});
+
+test('normal enemies attack more frequently with modest damage, while story assistance keeps long tells', () => {
+  const normal=encounter({difficulty:'normal'}).enemies[0], story=encounter({difficulty:'story'}).enemies[0];
+  assert.equal(normal.maxHp,48,'normal difficulty does not inflate basic enemy health');
+  assert.ok(Math.abs(normal.damage-8*1.16)<1e-9); assert.ok(Math.abs(normal.baseCooldown-1.7*.85)<1e-9);
+  assert.ok(story.damage<normal.damage); assert.equal(story.baseCooldown,1.7); assert.equal(story.baseWindup,.52);
+});
+
+test('a subset of normal grunts flank an engaged runner once, with a bounded route and no endless orbit', () => {
+  for(const difficulty of ['normal','story']) {
+    const {s,p,e}=target('grunt',{difficulty}); Object.assign(p,{invuln:100});
+    Object.assign(e,{id:300,x:p.x+180,y:p.y,speed:132,cooldown:0});
+    s.enemies.push({...e,id:301,x:p.x+65,speed:0,cooldown:100});
+    let crossed=false;
+    for(let i=0;i<300;i++) { stepGame(s,[{}],FIXED_DT); if(e.x<p.x-60) crossed=true; }
+    if(difficulty==='normal') { assert.ok(e.flankUsed); assert.ok(crossed,'the grunt reaches the opposite side while its teammate engages'); assert.equal(e.flankTime,0); }
+    else { assert.equal(e.flankUsed,false); assert.equal(crossed,false,'story keeps the direct, more forgiving approach'); }
+  }
 });

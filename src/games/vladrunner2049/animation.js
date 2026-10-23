@@ -41,7 +41,7 @@ export function heroAnimation(entity = {}) {
     const action = attackAnimation(entity.attack.kind === 'air' ? { ...entity.attack, stage: 3 } : entity.attack);
     return { ...action, suffix: 'Combo', fallback: action.column === 0 || action.column === 3 ? 0 : action.stage === 3 ? 4 : 3, pose: 'attack' };
   }
-  if (finite(entity.z) > 6 || entity.pose === 'jump')
+  if (finite(entity.z) - finite(entity.groundZ) > 6 || entity.pose === 'jump')
     return { suffix: '', frame: 5, fallback: 5, pose: 'jump', trail: 0 };
   if (finite(entity.dodgeTime) > 0)
     return { suffix: 'Run', frame: 2, fallback: 1, pose: 'dodge', trail: 0 };
@@ -54,17 +54,29 @@ export function heroAnimation(entity = {}) {
 }
 
 export function enemyAnimation(entity = {}) {
-  if (entity.dead || finite(entity.hurtTime) > 0 || entity.pose === 'hurt' || finite(entity.z) > 6 || finite(entity.landingTime) > 0) {
+  const airborne = finite(entity.z) - finite(entity.groundZ) > 6;
+  const knockdown = entity.knockdown;
+  const progress = clamp(finite(entity.knockdownProgress,
+    1 - finite(entity.knockdownTime) / Math.max(.01, finite(entity.knockdownDuration, .34))), 0, 1);
+  if (knockdown === 'air') return { column: 3, frame: 10, pose: 'launched', progress,
+    tumble: .2 + smooth(progress) * .72, recoil: 0, lean: 0, trail: 0 };
+  if (knockdown === 'down') return { column: 3, frame: 11, pose: 'down', progress,
+    tumble: 1, recoil: 0, lean: 0, trail: 0 };
+  if (knockdown === 'getup') return { column: progress < .52 ? 3 : 0,
+    frame: progress < .38 ? 11 : progress < .75 ? 4 : 7,
+    pose: 'getup', progress, tumble: 1 - smooth(progress), recoil: 0, lean: 0, trail: 0 };
+  if (entity.dead || finite(entity.hurtTime) > 0 || entity.pose === 'hurt' || finite(entity.landingTime) > 0 || (airborne && entity.pose === 'hurt')) {
     const duration = Math.max(.01, finite(entity.hurtDuration, .25));
     const recoil = clamp(finite(entity.hurtTime) / duration, 0, 1);
-    const frame = finite(entity.z) > 6 ? 10 : finite(entity.landingTime) > 0 ? 11
+    const frame = airborne ? 10 : finite(entity.landingTime) > 0 ? 11
       : entity.dead ? finite(entity.deadTime) < .12 ? 9 : 11 : recoil > .74 ? 8 : recoil > .3 ? 9 : 7;
-    return { column: 3, frame, pose: 'hurt', recoil, lean: 0, trail: 0 };
+    return { column: 3, frame, pose: entity.dead ? 'defeat' : 'hurt', recoil, lean: 0, trail: 0 };
   }
+  if (airborne) return { column: 1, frame: 2, pose: 'jump', lean: 0, trail: 0 };
   if (entity.telegraph) {
     const duration = Math.max(.01, finite(entity.totalWindup, finite(entity.baseWindup, .7)));
     const progress = 1 - clamp(finite(entity.windup) / duration, 0, 1);
-    return { column: 0, frame: 4, pose: 'windup', progress, lean: -8 * smooth(progress), trail: 0 };
+    return { column: 0, frame: 4, pose: 'windup', progress, lean: -14 * smooth(progress), trail: 0 };
   }
   if (finite(entity.attackTime) > 0 || finite(entity.chargeTime) > 0) {
     const duration = Math.max(.01, finite(entity.attackDuration, .36));

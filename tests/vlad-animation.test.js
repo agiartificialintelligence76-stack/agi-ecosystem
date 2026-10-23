@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { attackAnimation, heroAnimation, enemyAnimation, animationSheet } from '../src/games/vladrunner2049/animation.js';
-import { createRenderer } from '../src/games/vladrunner2049/render.js';
+import { createRenderer, worldDrawOrder } from '../src/games/vladrunner2049/render.js';
 import sharp from 'sharp';
 
 test('a running hero uses every drawn phase, driven by traveled distance and stable during hitstop', () => {
@@ -65,6 +65,31 @@ test('enemy windup is visibly distinct from the damaging attack and recoil', () 
   assert.equal(enemyAnimation({ hurtTime: .15, hurtDuration: .25, z: 30 }).frame, 10);
   assert.equal(enemyAnimation({ hurtTime: .05, hurtDuration: .25, landingTime: .1 }).frame, 11);
   assert.equal(enemyAnimation({ dead: true, deadTime: .4 }).frame, 11);
+});
+
+test('elevated support preserves grounded poses and knockdowns have a readable recovery sequence', () => {
+  assert.equal(heroAnimation({ pose: 'run', moveSpeed: 200, z: 72, groundZ: 72 }).pose, 'run');
+  assert.equal(enemyAnimation({ pose: 'idle', z: 72, groundZ: 72 }).pose, 'idle');
+  assert.equal(enemyAnimation({ pose: 'jump', z: 100, groundZ: 42 }).pose, 'jump', 'a navigation hop is not a damage reaction');
+  const air = enemyAnimation({ knockdown: 'air', knockdownProgress: .3, z: 64 });
+  const down = enemyAnimation({ knockdown: 'down', knockdownProgress: .6, z: 0 });
+  const early = enemyAnimation({ knockdown: 'getup', knockdownProgress: .2 });
+  const late = enemyAnimation({ knockdown: 'getup', knockdownProgress: .9 });
+  assert.deepEqual([air.pose,down.pose,early.pose,late.pose], ['launched','down','getup','getup']);
+  assert.deepEqual([air.frame,down.frame,early.frame,late.frame], [10,11,11,7]);
+  assert.ok(early.tumble > late.tumble, 'recovery returns the grounded body to standing');
+});
+
+test('world depth hides actors behind obstacles while preserving actors on top and airborne crossings', () => {
+  const platform = { id: 10, x: 500, y: 550, width: 200, depth: 60, height: 72 };
+  const behind = { id: 1, x: 500, y: 515, z: 0 };
+  const supported = { id: 2, x: 500, y: 530, z: 72, groundZ: 72, platformId: 10 };
+  const crossing = { id: 3, x: 500, y: 540, z: 88 };
+  const front = { id: 4, x: 500, y: 610, z: 0 };
+  const result = worldDrawOrder([front,supported,crossing,behind], [platform]);
+  assert.deepEqual(result.map(item => item.entity.id), [1,10,2,3,4]);
+  const broken = { ...platform, broken: true };
+  assert.equal(worldDrawOrder([crossing], [], [broken]).find(item => item.type === 'actor').depth, 540, 'rubble no longer supports depth');
 });
 
 function drawingContext() {

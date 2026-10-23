@@ -29,4 +29,4 @@ land.wav ← Impact Sounds / impactSoft_medium_002.ogg (0.13s)
 click.wav ← RPG Audio / metalClick.ogg (0.39s)
 spark.wav ← Impact Sounds / impactGlass_light_001.ogg (0.18s)
 
-The ambient score is an original composition synthesized at runtime. No melodies or recordings from another game or film are used.
+"Good Memories, Bad Company" is an original 32-bar score composed for this game and synthesized at runtime: a main theme, keys-led variation, contrasting bridge, and returning theme over voiced chords, bass, and a swung drum groove. District, story, exploration, encounter, and boss arrangements use the same original composition. No melodies or recordings from another game or film are used.

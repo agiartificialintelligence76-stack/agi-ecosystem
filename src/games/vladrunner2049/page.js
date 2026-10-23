@@ -4,6 +4,7 @@ import { createRenderer } from './render.js';
 import { createAudio } from './audio.js';
 import { createInput } from './input.js';
 import { readSave, writeSave, recordRun, bestRecord, dailySeed, ACHIEVEMENTS } from './save.js';
+import { OPENING, CHAPTERS, CONFRONTATIONS, ENDING } from './story.js';
 
 const root = document.getElementById('vr-root');
 root.innerHTML = `
@@ -39,7 +40,7 @@ root.innerHTML = `
     <section class="vr-play" hidden aria-label="Game controls and status">
       <header class="vr-hud">
         <div class="vr-player-huds"><div class="vr-player-hud" data-player="0"><span class="vr-face vr-vlad"></span><div><b class="vr-player-name">VLAD</b><progress class="vr-health" aria-label="Player one health" max="150" value="150"></progress><progress class="vr-energy" aria-label="Player one energy" max="100" value="60"></progress><small class="vr-health-text">150 / 150</small></div></div><div class="vr-player-hud" data-player="1" hidden><span class="vr-face vr-agi"></span><div><b class="vr-player-name">AGI-1</b><progress class="vr-health" aria-label="Player two health" max="150" value="150"></progress><progress class="vr-energy" aria-label="Player two energy" max="100" value="60"></progress><small class="vr-health-text">150 / 150</small></div></div></div>
-        <div class="vr-hud-center"><span class="vr-district">NEON DOWNPOUR</span><strong class="vr-score">000000</strong><small class="vr-objective">Move right · clear the lockdown</small></div>
+        <div class="vr-hud-center"><span class="vr-district">NEON DOWNPOUR</span><strong class="vr-score">000000</strong><small class="vr-objective">Move right · clear the lockdown</small><progress class="vr-route" aria-label="District progress" max="100" value="0"></progress></div>
         <div class="vr-hud-actions"><button data-do="pause" aria-label="Pause game">Ⅱ</button><button data-do="fullscreen" aria-label="Enter fullscreen">⛶</button></div>
       </header>
       <div class="vr-boss" hidden><span></span><progress aria-label="Boss health" max="100" value="100"></progress></div>
@@ -51,6 +52,11 @@ root.innerHTML = `
       <div class="vr-touch"><div class="vr-stick" role="group" aria-label="Movement joystick"><div class="vr-stick-knob"></div></div><div class="vr-touch-actions"><button data-action="tag" aria-label="Switch character">TAG</button><button data-action="duo" aria-label="Duo attack">DUO</button><button data-action="special" aria-label="Special attack">SPECIAL</button><button data-action="dodge" aria-label="Dodge">DODGE</button><button data-action="jump" aria-label="Jump">JUMP</button><button data-action="heavy" aria-label="Heavy attack">HEAVY</button><button data-action="attack" class="vr-touch-hit" aria-label="Attack">HIT</button></div></div>
       <p class="vr-phone-note">Landscape gives you more room to fight.</p>
       <p class="vr-sr" id="vr-live" aria-live="polite"></p>
+    </section>
+    <section class="vr-story" hidden role="dialog" aria-modal="true" aria-labelledby="vr-story-title" tabindex="-1">
+      <div class="vr-story-scene" aria-hidden="true"><div class="vr-story-backdrop"></div><div class="vr-story-rain"></div><div class="vr-story-beam"></div><div class="vr-story-key">◇</div><img class="vr-story-vlad" src="/images/vladrunner2049/vlad-portrait.webp" alt=""><img class="vr-story-agi" src="/images/vladrunner2049/agi-portrait.webp" alt=""></div>
+      <header class="vr-story-top"><span class="vr-story-caption"></span><button class="vr-button" data-do="story-skip">SKIP SCENE</button></header>
+      <div class="vr-story-dialogue"><p class="vr-story-speaker"></p><h2 id="vr-story-title"></h2><p class="vr-story-text" aria-live="polite"></p><footer><span class="vr-story-count"></span><button class="vr-button vr-button-bright" data-do="story-next">NEXT →</button></footer></div>
     </section>
     <div class="vr-modal-wrap" hidden><section class="vr-modal" role="dialog" aria-modal="true" aria-labelledby="vr-modal-title" tabindex="-1"></section></div>
     <div class="vr-toast" role="status" hidden></div>
@@ -69,9 +75,11 @@ const renderer = createRenderer(canvas, assets, save.settings);
 let state = null, mode = 'story', character = 'vlad', coop = false, paused = false, dialogKind = '', assetsReady = false, assetsLoading = false;
 let lastTime = 0, hudAt = 0, liveAt = 0, frameId = 0, lastEvent = 0, endRecorded = false, bannerUntil = 0, banterUntil = 0, toastTimer = 0, focusBeforeModal = null;
 let destroyed = false, dialogWasPaused = false, currentSeed = '', lastResult = null, titleDay = dailySeed();
+let storySequence = null, storyIndex = 0, storyComplete = null, endingShown = false;
 const fmt = value => Math.round(value).toLocaleString('en-US');
 const timeText = seconds => `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
 const el = (tag, cls, value) => { const n = document.createElement(tag); if (cls) n.className = cls; if (value !== undefined) n.textContent = value; return n; };
+for(const panel of $$('[data-player]')){const cue=el('span','vr-counter','COUNTER READY');cue.hidden=true;panel.querySelector('div').append(cue);}
 const button = (label, action, cls = 'vr-button') => { const n = el('button',cls,label); n.type = 'button'; n.addEventListener('click',action); return n; };
 function persist() { return writeSave(storage,save); }
 function toast(message) { clearTimeout(toastTimer); $('.vr-toast').textContent = message; $('.vr-toast').hidden = false; toastTimer = setTimeout(() => { $('.vr-toast').hidden = true; },3500); }
@@ -92,8 +100,8 @@ async function loadAssets() {
   $('[data-do="start"]').disabled=true;
   $('[data-do="start"] span').textContent='LOADING…';
   $('.vr-load-status').classList.remove('is-ready');
-  const names = ['vlad','agi','agiLeft','vladRun','vladCombo','agiRun','agiCombo','agiRunLeft','agiComboLeft','enforcerMotion','neon','orange','spire','enemies','bosses','menuBackdrop','titleLogo','vladPortrait','agiPortrait']; let count = 0;
-  const optional = new Set(['menuBackdrop','titleLogo','vladPortrait','agiPortrait']);
+  const names = ['vlad','agi','agiLeft','vladRun','vladCombo','agiRun','agiCombo','agiRunLeft','agiComboLeft','enforcerMotion','neon','orange','spire','enemies','bosses','menuBackdrop','titleLogo','vladPortrait','agiPortrait','storyDiner']; let count = 0;
+  const optional = new Set(['menuBackdrop','titleLogo','vladPortrait','agiPortrait','storyDiner']);
   const failed = [];
   await Promise.all(names.map(name => new Promise(resolve => {
     const img = new Image(); let finished = false;
@@ -136,21 +144,42 @@ function banner(kicker,headline,description = '',seconds = 3) {
   const n=$('.vr-banner'); n.querySelector('small').textContent=kicker; n.querySelector('b').textContent=headline; n.querySelector('p').textContent=description; n.hidden=false; bannerUntil=(state?.elapsed||0)+seconds;
 }
 function banter(who,line) { const n=$('.vr-banter'); n.querySelector('b').textContent=who; n.querySelector('span').textContent=line; n.hidden=false; banterUntil=(state?.elapsed||0)+4.5; }
-function startRun(sameSeed = false) {
+function showStoryFrame() {
+  const frame = storySequence[storyIndex], panel = $('.vr-story');
+  panel.dataset.scene = frame.scene; panel.dataset.focus = frame.focus;
+  $('.vr-story-caption').textContent=frame.caption; $('.vr-story-speaker').textContent=frame.speaker;
+  $('#vr-story-title').textContent=frame.title; $('.vr-story-text').textContent=frame.text;
+  $('.vr-story-count').textContent=`${storyIndex+1} / ${storySequence.length} · SPACE / ENTER TO CONTINUE`;
+  $('[data-do="story-next"]').textContent=storyIndex===storySequence.length-1?'LET’S GO! →':'NEXT →';
+}
+function beginStory(sequence, complete) {
+  storySequence=sequence;storyIndex=0;storyComplete=complete;paused=true;input.setEnabled(false);input.clear();
+  title.inert=true;play.inert=true;canvas.inert=true;$('.vr-story').hidden=false;$('.vr-story').classList.remove('is-paused');
+  audio.setScene?.('story');audio.setPaused(false);audio.start();showStoryFrame();$('[data-do="story-next"]').focus({preventScroll:true});
+}
+function finishStory() {
+  if(!storySequence)return;
+  const complete=storyComplete;storySequence=null;storyComplete=null;$('.vr-story').hidden=true;
+  title.inert=false;play.inert=false;canvas.inert=false;input.clear();lastTime=0;complete?.();
+}
+function nextStory() {if(!storySequence)return;if(++storyIndex>=storySequence.length)finishStory();else showStoryFrame();}
+function startRun(sameSeed = false, skipStory = false) {
   if (!assetsReady) { loadAssets(); return; }
+  if(mode==='story'&&!sameSeed&&!skipStory){beginStory(OPENING,()=>startRun(false,true));return;}
   closeDialog(false); audio.setPaused(false); audio.start();
+  audio.setScene?.('game');
   currentSeed = mode === 'daily' ? dailySeed() : sameSeed && currentSeed ? currentSeed : `${Date.now()}-${crypto.getRandomValues(new Uint32Array(1))[0]}`;
   state = createGame({mode,seed:currentSeed,character,coop,difficulty:$('#vr-assist').checked ? 'story' : 'normal'});
-  lastEvent=0; endRecorded=false; lastResult=null; paused=false; hudAt=0; lastTime=0;
+  lastEvent=0; endRecorded=false; lastResult=null; endingShown=false; paused=false; hudAt=0; lastTime=0;
   title.hidden=true; play.hidden=false; root.classList.add('vr-in-game'); root.classList.toggle('vr-coop',coop);
   $('.vr-tag-key').hidden=coop; $('[data-action="tag"]').hidden=coop;
   input.clear(); input.setEnabled(true); canvas.tabIndex=0; canvas.focus({preventScroll:true}); renderer.resize(); updateHUD();
   banner('CASE FILE 01 / 03','NEON DOWNPOUR','Recover the memory key. Make an entrance.',3.5);
-  banter('AGI-1','They backed up the whole city. Except the good parts.');
+  banter('AGI-1','Jump onto the street furniture. Smash the supply crates. Keep moving!');
 }
 function toTitle() {
   closeDialog(false); state=null; paused=false; input.setEnabled(false); input.clear(); title.hidden=false; play.hidden=true;
-  root.classList.remove('vr-in-game'); audio.update(null); audio.setOptions({music:0,sfx:save.settings.sfx}); audio.setPaused(false); updateBest(); showHome();
+  root.classList.remove('vr-in-game'); audio.update(null); audio.setScene?.('menu'); audio.setOptions({music:save.settings.music,sfx:save.settings.sfx}); audio.setPaused(false); updateBest(); showHome();
 }
 function openDialog(kind,heading,kicker='VLAD RUNNER 2049') {
   if (!dialogKind) { focusBeforeModal = document.activeElement; dialogWasPaused=paused; }
@@ -173,11 +202,11 @@ function help() {
     const card=el('div','vr-move-card'),drawing=el('span','vr-move-drawing');drawing.setAttribute('aria-hidden','true');card.append(el('b','',heading),drawing,el('p','',copy));guide.append(card);
   }
   modal.append(guide);
-  modal.append(el('p','vr-dialog-copy','Move up and down the street to line up your hits. Hold Combo for a three-hit chain. Heavy and aerial attacks break shields. Dodge the red warnings, then punish the opening.'));
+  modal.append(el('p','vr-dialog-copy','Move up and down the street to line up your hits. Jump onto tables, cargo and platforms, then attack from above. Smash supply crates for pickups. Watch floor vents: jump or leave the marked area before they fire. Hold Combo for a three-hit chain. Heavy and aerial attacks break shields and knock enemies down.'));
   const table=el('table','vr-key-table');
   table.innerHTML='<thead><tr><th>Move</th><th>Player 1</th><th>Player 2</th></tr></thead><tbody><tr><td>Walk</td><td>W A S D</td><td>Arrow keys</td></tr><tr><td>Combo / Heavy</td><td>J / K</td><td>N / M</td></tr><tr><td>Jump / Dodge</td><td>Space / Shift</td><td>. / /</td></tr><tr><td>Special / Duo</td><td>L / E</td><td>, / Enter</td></tr><tr><td>Switch hero</td><td>Q · solo only</td><td>—</td></tr><tr><td>Pause</td><td>Escape / P</td><td>Escape / P</td></tr></tbody>';
   const controls=el('details','vr-all-controls');controls.append(el('summary','','ALL CONTROLS · KEYBOARD & GAMEPAD'),table,el('p','vr-dialog-copy','Solo also supports arrow keys. On a standard gamepad: left stick moves, A jumps, X attacks, Y hits heavy, B dodges, RB uses a special, LB switches, RT unleashes the duo.'));modal.append(controls);
-  const tips=el('div','vr-tips'); for(const [a,b] of [['SPECIAL · 35 ENERGY','A crowd-clearing strike. Energy recovers and fills when you land hits.'],['DUO · 100 SYNC','Build combos to charge a devastating attack from both heroes.'],['CO-OP · STAY TOGETHER','Share the screen. A downed partner returns when you clear the encounter.'],['DAILY · SAME CITY','One UTC seed each day, arcade difficulty and solo play. Records stay on your device.']]) { const n=el('p'); n.append(el('b','',a),el('span','',b)); tips.append(n); } modal.append(tips); dialogClose();
+  const tips=el('div','vr-tips'); for(const [a,b] of [['PERFECT DODGE · COUNTER','Dodge just before an attack connects. Gain energy and charge your next attack for 3.5 seconds.'],['TAKE THE HIGH GROUND','Jump onto raised surfaces. Explore the upper route for memory shards; drop into an aerial attack.'],['SPECIAL · 35 ENERGY','A crowd-clearing strike. Energy recovers and fills when you land hits.'],['DUO · 100 SYNC','Build combos to charge a devastating attack from both heroes.'],['CO-OP · STAY TOGETHER','Share the screen. A downed partner returns when you clear the encounter.'],['DAILY · SAME CITY','One UTC seed each day, arcade difficulty and solo play. Records stay on your device.']]) { const n=el('p'); n.append(el('b','',a),el('span','',b)); tips.append(n); } modal.append(tips); dialogClose();
 }
 function settings() {
   openDialog('settings','YOUR KIND OF CHAOS.','OPTIONS');
@@ -188,7 +217,7 @@ function settings() {
   for(const [id,label] of [['shake','Screen shake'],['reducedMotion','Reduced motion'],['touch','Always show touch controls']]) {
     const row=el('label','vr-setting'); const box=el('input'); box.type='checkbox';box.checked=save.settings[id];box.addEventListener('change',()=>{save.settings[id]=box.checked;applySettings();persist();});row.append(el('span','',label),box);modal.append(row);
   }
-  modal.append(el('p','vr-dialog-copy','Ambient score, recorded impacts and movement sounds. Audio begins only after you interact. Your choices are saved on this device.')); dialogClose();
+  modal.append(el('p','vr-dialog-copy','An original district score, recorded impacts and movement sounds. Audio begins only after you interact. Your choices are saved on this device.')); dialogClose();
 }
 function records() {
   openDialog('records','LEAVE A MARK.','PERSONAL RECORDS / THIS DEVICE');
@@ -208,7 +237,11 @@ function pauseGame() {
 function upgradeScreen() {
   openDialog('upgrade','UPGRADE. THEN HIT HARDER.',`DISTRICT ${state.stage+1} CLEARED`);
   modal.append(el('p','vr-dialog-copy','Choose one upgrade. It lasts for this run and powers up both heroes.'));
-  const cards=el('div','vr-upgrades'); for(const u of state.upgradeChoices) {const n=button('',()=>{if(!chooseUpgrade(state,u.id))return;closeDialog();banner(`CASE FILE 0${state.stage+1} / 03`,state.district.name.toUpperCase(),state.district.subtitle,3.5);banter(state.stage===1?'VLAD':'AGI-1',state.stage===1?'All this orange. Not one decent sunset.':'The city remembers us. Let’s return the favor.');},'vr-upgrade');n.append(el('span','','✦'),el('b','',u.name),el('p','',u.description));cards.append(n);}modal.append(cards);
+  const cards=el('div','vr-upgrades'); for(const u of state.upgradeChoices) {const n=button('',()=>{
+    if(!chooseUpgrade(state,u.id))return;closeDialog();
+    const resume=()=>{paused=false;input.clear();input.setEnabled(true);audio.setScene?.('game');audio.setPaused(false);lastTime=0;canvas.focus({preventScroll:true});banner(`CASE FILE 0${state.stage+1} / 03`,state.district.name.toUpperCase(),state.district.subtitle,3.5);};
+    if(state.mode==='story'&&CHAPTERS[state.stage])beginStory(CHAPTERS[state.stage],resume);else resume();
+  },'vr-upgrade');n.append(el('span','','✦'),el('b','',u.name),el('p','',u.description));cards.append(n);}modal.append(cards);
 }
 function endScreen() {
   if(endRecorded)return;endRecorded=true;
@@ -240,21 +273,27 @@ function onRootClick(e){
   const b=e.target.closest('button');if(!b)return;
   if(b.dataset.mode){setMode(b.dataset.mode);return;}
   if(b.dataset.character){character=b.dataset.character;coop=false;updateTeam();updateBest();return;}
-  const actions={play:showSetup,home:showHome,start:()=>{applySettings();startRun();},help,settings,records,pause:pauseGame,fullscreen,coop:()=>{coop=true;updateTeam();updateBest();}};actions[b.dataset.do]?.();
+  const actions={play:showSetup,home:showHome,start:()=>{applySettings();startRun();},'story-next':nextStory,'story-skip':finishStory,help,settings,records,pause:pauseGame,fullscreen,coop:()=>{coop=true;updateTeam();updateBest();}};actions[b.dataset.do]?.();
 }
 root.addEventListener('click',onRootClick);
 $('#vr-assist').addEventListener('change',updateBest);
 function onKey(e) {
   if(e.altKey||e.ctrlKey||e.metaKey)return;
+  if(storySequence){
+    if(e.code==='Tab'){const first=$('[data-do="story-skip"]'),last=$('[data-do="story-next"]');if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}return;}
+    if(e.repeat&&['Space','Enter','ArrowRight','Escape'].includes(e.code)){e.preventDefault();return;}
+    if(['Space','Enter'].includes(e.code)&&e.target.closest?.('button'))return;
+    if(!e.repeat&&['Space','Enter','ArrowRight','Escape'].includes(e.code)){e.preventDefault();if(e.code==='Escape')finishStory();else nextStory();}return;
+  }
   if(dialogKind && e.code==='Tab') {const nodes=[...modal.querySelectorAll('button,input,a,summary')].filter(n=>!n.disabled&&n.getClientRects().length);if(!nodes.length){e.preventDefault();return;}if(e.shiftKey&&(document.activeElement===nodes[0]||document.activeElement===modal)){e.preventDefault();nodes.at(-1).focus();}else if(!e.shiftKey&&document.activeElement===nodes.at(-1)){e.preventDefault();nodes[0].focus();}return;}
   if(e.repeat)return;
   const editing=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
   if(e.code==='Escape'||(!editing&&e.code==='KeyP')){if(dialogKind && !['upgrade','result'].includes(dialogKind)){e.preventDefault();closeDialog();}else if(state?.status==='playing'&&!dialogKind){e.preventDefault();pauseGame();}else if(!state&&!dialogKind&&title.dataset.screen==='setup'){e.preventDefault();showHome();}}
 }
 window.addEventListener('keydown',onKey);
-function lostFocus() {input.clear();resetTouchVisuals();if(state?.status==='playing'&&!dialogKind)pauseGame();audio.setPaused(true);}
+function lostFocus() {input.clear();resetTouchVisuals();if(storySequence)$('.vr-story').classList.add('is-paused');else if(state?.status==='playing'&&!dialogKind)pauseGame();audio.setPaused(true);}
 window.addEventListener('blur',lostFocus);
-function audioFocus(){audio.setPaused(document.hidden || (paused && state?.status==='playing'));}
+function audioFocus(){if(storySequence&&!document.hidden)$('.vr-story').classList.remove('is-paused');audio.setPaused(document.hidden || (!storySequence&&paused&&state?.status==='playing'));}
 window.addEventListener('focus',audioFocus);
 function visibility(){if(document.hidden)lostFocus();else{audioFocus();if(!state&&titleDay!==dailySeed()){titleDay=dailySeed();updateBest();updateTeam();}}}
 document.addEventListener('visibilitychange',visibility);
@@ -273,8 +312,10 @@ stick.addEventListener('pointerup',stopStick);stick.addEventListener('pointercan
 
 function updateHUD() {
   if(!state)return;
+  $$('[data-player]').forEach((n,i)=>{const p=state.players[i],cue=n.querySelector('.vr-counter');cue.hidden=!p?.counterReady;if(p?.counterReady)cue.textContent=`COUNTER · ${Math.ceil(p.counterTime)}s`;});
   $$('[data-player]').forEach((n,i)=>{const p=state.players[i];n.hidden=!p;if(!p)return;n.querySelector('.vr-player-name').textContent=p.dead?'DOWN · CLEAR TO REVIVE':p.kind==='agi'?'AGI-1':'VLAD';n.querySelector('.vr-face').className=`vr-face vr-${p.kind}`;const hp=n.querySelector('.vr-health'),en=n.querySelector('.vr-energy');hp.max=p.maxHp;hp.value=p.hp;en.max=p.maxEnergy;en.value=p.energy;n.querySelector('.vr-health-text').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;});
   $('.vr-district').textContent=state.district.name;$('.vr-score').textContent=String(Math.floor(state.score)).padStart(6,'0');$('.vr-objective').textContent=state.objective;
+  $('.vr-route').value=['upgrade','victory'].includes(state.status)?100:Math.min(100,Math.max(...state.players.map(p=>p.x))/(state.district.encounters.at(-1)+160)*100);
   const combo=$('.vr-combo');combo.hidden=state.combo<2;combo.querySelector('b').textContent=state.combo;combo.querySelector('strong').textContent=state.style;
   const duo=$('.vr-duo');duo.querySelector('progress').value=state.duo;duo.classList.toggle('is-ready',state.duo>=100);duo.querySelector('b').textContent=state.duo>=100?'E · UNLEASH DUO':`${Math.floor(state.duo)}% · BUILD YOUR COMBO`;
   const boss=$('.vr-boss');boss.hidden=!state.boss||state.boss.dead;if(!boss.hidden){boss.querySelector('span').textContent=state.boss.name;boss.querySelector('progress').max=state.boss.maxHp;boss.querySelector('progress').value=state.boss.hp;}
@@ -282,7 +323,10 @@ function updateHUD() {
 }
 function readEvents() {
   for(const e of state.events) if(e.id>lastEvent){lastEvent=e.id;
-    if(e.type==='boss'){banner('PRIORITY TARGET',e.text.toUpperCase(),'Watch the warning. Dodge. Hit back.',2.5);banter('VLAD','You look expensive to repair.');}
+    if(e.type==='boss'){
+      const reveal=()=>{paused=false;input.clear();input.setEnabled(true);audio.setScene?.('game');audio.setPaused(false);lastTime=0;canvas.focus({preventScroll:true});banner('PRIORITY TARGET',e.text.toUpperCase(),'Watch the warning. Dodge. Hit back.',2.5);};
+      if(state.mode==='story'&&CONFRONTATIONS[state.stage])beginStory(CONFRONTATIONS[state.stage],reveal);else reveal();
+    }
     if(e.type==='waveClear')banner(e.noHit?'FLAWLESS ENCOUNTER':'ENCOUNTER COMPLETE','SECTOR CLEAR',`+${fmt(e.amount)} · Move right →`,1.7);
     if(e.type==='duo'){banner('VLAD × AGI-1','DOUBLE EXPOSURE','Some memories hit harder together.',1.6);banter('AGI-1','That one’s going in the highlight reel.');}
     if(e.type==='tag')banter(e.kind==='agi'?'AGI-1':'VLAD',e.kind==='agi'?'My turn. Try to keep up.':'I’ve got a very strong counterargument.');
@@ -298,8 +342,10 @@ function frame(now) {
     if(now-hudAt>90){hudAt=now;updateHUD();}
     if(now-liveAt>3000&&!paused){liveAt=now;$('#vr-live').textContent=`${state.district.name}. ${state.objective}. ${Math.ceil(state.players[0].hp)} health. Score ${state.score}.`;}
     if(state.elapsed>=bannerUntil)$('.vr-banner').hidden=true;if(state.elapsed>=banterUntil)$('.vr-banter').hidden=true;
-    if(state.status==='upgrade'&&dialogKind!=='upgrade')upgradeScreen();
-    if(['victory','gameover'].includes(state.status)&&!endRecorded)endScreen();
+    if(!storySequence&&state.status==='upgrade'&&dialogKind!=='upgrade')upgradeScreen();
+    if(!storySequence&&['victory','gameover'].includes(state.status)&&!endRecorded){
+      if(state.status==='victory'&&state.mode==='story'&&!endingShown){endingShown=true;beginStory(ENDING,endScreen);}else endScreen();
+    }
   }else if(now-liveAt>3000){liveAt=now;if(titleDay!==dailySeed()){titleDay=dailySeed();updateBest();updateTeam();}}
   frameId=requestAnimationFrame(frame);
 }

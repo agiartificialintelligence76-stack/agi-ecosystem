@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
-import { AUDIO_FILES, createAudio } from '../src/games/vladrunner2049/audio.js';
+import { AUDIO_FILES, createAudio, scoreStep } from '../src/games/vladrunner2049/audio.js';
 
 function harness(t, fail = false) {
   const contexts = [], requests = [], intervals = new Map(); let intervalId = 0;
@@ -19,9 +19,11 @@ function harness(t, fail = false) {
     createStereoPanner() { return Object.assign(this.node('pan'), { pan: param() }); }
     createDynamicsCompressor() { return Object.assign(this.node('compressor'), Object.fromEntries(['threshold', 'knee', 'ratio', 'attack', 'release'].map(k => [k, param()]))); }
     createConvolver() { return this.node('convolver'); }
+    createWaveShaper() { return this.node('limiter'); }
+    createPeriodicWave(real, imaginary) { return { real, imaginary }; }
     createBuffer(channels, length, rate) { const arrays = Array.from({ length: channels }, () => new Float32Array(length)); return { duration: length / rate, getChannelData: index => arrays[index] }; }
     createBufferSource() { const source = Object.assign(this.node('sample'), { playbackRate: param() }); return this.playable(source); }
-    createOscillator() { return this.playable(Object.assign(this.node('oscillator'), { frequency: param() })); }
+    createOscillator() { return this.playable(Object.assign(this.node('oscillator'), { frequency: param(), setPeriodicWave(wave) { this.wave=wave;this.type='custom'; } })); }
     playable(source) { source.start = (at, offset) => { source.startedAt = at; source.offset = offset; this.played.push(source); };
       source.stop = at => { source.stoppedAt = at ?? this.currentTime; if (at === undefined) { source.stopped = true; source.onended?.(); } }; return source; }
     async decodeAudioData(bytes) { return { name: new TextDecoder().decode(bytes), duration: .35 }; }
@@ -82,14 +84,33 @@ test('pause kills scheduled swing tails and blocks scheduling without replay on 
   audio.update(state([hit(3)], 2.1)); assert.ok(c.played.length > count);
 });
 
+test('new combat rewards layer once, props use foley, and distant hazards stay silent', async t => {
+  const h=harness(t),audio=createAudio({music:0});t.after(()=>audio.destroy());await audio.start();await flush();
+  const c=h.contexts[0];audio.update(state([{id:1,type:'perfectDodge',player:0,x:640}]));
+  const reward=c.played.length;assert.ok(c.played.some(n=>/^swing-/.test(n.buffer?.name || '')));
+  assert.equal(c.played.filter(n=>n.frequency).length,2,'brief two-note reward');
+  audio.update(state([{id:1,type:'perfectDodge',player:0,x:640},{id:2,type:'perfectDodge',player:0,x:640}],1.01));
+  assert.equal(c.played.length,reward,'duplicate and immediate repeated rewards cannot stack');
+  h.advance(.2);audio.update(state([hit(3),{id:4,type:'counterHit',x:640}],2));
+  assert.equal(c.played.filter(n=>/^punch-/.test(n.buffer?.name || '')).length,1,'counter accents the contact without a second punch');
+  const beforeProp=c.played.length;h.advance(.2);audio.update(state([{id:5,type:'prop-break',propKind:'terminal',x:640}],3));
+  const prop=c.played.slice(beforeProp);assert.equal(prop.length,3);assert.ok(prop.every(n=>n.type==='sample'));
+  assert.ok(prop.some(n=>/^shield-/.test(n.buffer?.name || ''))&&prop.some(n=>n.buffer?.name==='spark.wav'));
+  const beforeHazard=c.played.length;h.advance(1);audio.update(state([{id:6,type:'hazardActive',hazardKind:'electric',x:4000}],4));
+  assert.equal(c.played.length,beforeHazard,'off-camera hazard cycles make no audio');
+  audio.update(state([{id:7,type:'hazardActive',hazardKind:'electric',x:800}],4.01));
+  assert.equal(c.played.length,beforeHazard+1);audio.update(state([{id:8,type:'hazardActive',hazardKind:'steam',x:800}],4.02));
+  assert.equal(c.played.length,beforeHazard+1,'nearby simultaneous hazards are rate-limited');
+});
+
 test('muting effects consumes event IDs, clears tails, and leaves music independent', async t => {
   const h = harness(t), audio = createAudio(); t.after(() => audio.destroy()); await audio.start(); await flush();
-  const c = h.contexts[0]; audio.update(state([hit(1)]));
+  const c = h.contexts[0]; audio.update(state([hit(1)])); h.tick();
   audio.setOptions({ sfx: 0 }); const count = c.played.length;
   h.advance(.2); audio.update(state([hit(2)], 2)); assert.equal(c.played.length, count);
   audio.setOptions({ sfx: .65 }); audio.update(state([hit(2)], 2)); assert.equal(c.played.length, count);
-  assert.ok(c.played.some(s => s.type === 'triangle' && !s.stopped), 'sfx control does not stop the score');
-  audio.setOptions({ music: 0 }); assert.ok(c.played.filter(s => s.type === 'triangle').every(s => s.stopped));
+  assert.ok(c.played.some(s => s.wave && !s.stopped), 'sfx control does not stop the score');
+  audio.setOptions({ music: 0 }); assert.ok(c.played.filter(s => s.wave).every(s => s.stopped));
 });
 
 test('missing sample requests fail quietly and retain a restrained impact fallback', async t => {
@@ -102,14 +123,14 @@ test('missing sample requests fail quietly and retain a restrained impact fallba
 test('all dry and room-tail paths respect their music/effects volume controls', async t => {
   const h = harness(t), audio = createAudio({ music: .31, sfx: .57 }); t.after(() => audio.destroy());
   await audio.start(); await flush(); audio.update(state([hit(1)]));
-  const c = h.contexts[0], music = c.nodes.find(n => n.gain?.value === .31 * .9), effects = c.nodes.find(n => n.gain?.value === .57);
+  const c = h.contexts[0], music = c.nodes.find(n => n.gain?.value === .31 * 1.6), effects = c.nodes.find(n => n.gain?.value === .57);
   function reachesOutputWithout(node, control, seen = new Set()) {
     if (node === control || seen.has(node)) return false;
     if (node === c.destination) return true;
     seen.add(node); return (node.connections || []).some(next => reachesOutputWithout(next, control, seen));
   }
   const punch = c.played.find(n => /^punch-/.test(n.buffer?.name || ''));
-  const pad = c.played.find(n => n.type === 'triangle');
+  const pad = c.played.find(n => n.wave);
   assert.ok(music && effects && punch && pad);
   assert.equal(reachesOutputWithout(punch, effects), false, 'effect reverb cannot bypass its slider');
   assert.equal(reachesOutputWithout(pad, music), false, 'score reverb cannot bypass its slider');
@@ -137,4 +158,75 @@ test('the shipped sound bank is compact, non-clipping PCM with its original sour
   const credits = await readFile(new URL('../public/audio/vladrunner2049/CREDITS.txt', import.meta.url), 'utf8');
   assert.match(credits, /https:\/\/kenney.nl\/assets\/impact-sounds/); assert.match(credits, /https:\/\/kenney.nl\/assets\/rpg-audio/);
   assert.match(credits, /CC0/); for (const name of AUDIO_FILES) assert.ok(credits.includes(`${name}.wav`));
+});
+
+test('the score has complete musical phrases, a contrasting bridge, and a seamless 32-bar form', () => {
+  const song=Array.from({length:256},(_,index)=>scoreStep(index));
+  const phrases=[];
+  for(let bar=0;bar<32;bar++) {
+    const events=song.slice(bar*8,bar*8+8);
+    assert.ok(events[0].notes.some(n=>n.instrument==='pad'), 'every bar has harmonic support');
+    phrases.push(events.flatMap((beat,i)=>beat.notes.filter(n=>['keys','lead'].includes(n.instrument)&&n.velocity>.1).map(n=>[i,n.pitch,n.duration])));
+  }
+  assert.ok(new Set(phrases.map(JSON.stringify)).size>=8,'melody develops across distinct phrases');
+  assert.notDeepEqual(phrases.slice(0,8),phrases.slice(16,24),'bridge supplies a different musical idea');
+  assert.deepEqual(scoreStep(256),scoreStep(0),'the entire form returns to its opening');
+  for(const beat of song) for(const n of beat.notes) {
+    assert.ok(Number.isFinite(n.velocity)&&n.velocity>0&&n.velocity<=.2);
+    assert.ok(Number.isFinite(n.duration)&&n.duration>0&&n.duration<=8);
+    assert.ok(n.pitch===null||Number.isInteger(n.pitch)&&n.pitch>=24&&n.pitch<=84);
+    assert.ok(n.offset>=0&&n.offset<1,'an event remains within its scheduled subdivision');
+  }
+});
+
+test('scenes and encounters change the arrangement rather than the saved music volume', () => {
+  const arrange=options=>Array.from({length:256},(_,i)=>scoreStep(i,options)).flatMap(beat=>beat.notes);
+  const drums=n=>['kick','snare','hat','shaker','tom'].includes(n.instrument);
+  assert.equal(arrange({scene:'story'}).filter(drums).length,0,'dialogue gets a melodic instrumental bed without drums');
+  assert.equal(arrange({scene:'menu'}).filter(drums).length,0);
+  assert.ok(arrange({combat:true,boss:true}).filter(drums).length>arrange({}).filter(drums).length,'bosses add rhythm and fills');
+  assert.notDeepEqual(arrange({stage:0}),arrange({stage:1}),'districts change harmony and percussion');
+  assert.ok(arrange({stage:1}).some(n=>n.instrument==='shaker'));
+});
+
+test('scene selection stays gesture-gated and never overrides a saved zero music setting', async t => {
+  const h=harness(t),audio=createAudio({music:0});t.after(()=>audio.destroy());
+  assert.equal(audio.setScene('story'),true);audio.update(null);assert.equal(h.contexts.length,0);
+  await audio.start();await flush();h.tick();assert.equal(h.contexts[0].played.length,0);
+  audio.setScene('game');audio.update(state());h.advance(2);h.tick();assert.equal(h.contexts[0].played.length,0);
+  audio.setScene('menu');h.tick();assert.equal(h.contexts[0].played.length,0);
+  audio.setOptions({music:.35});h.tick();assert.ok(h.contexts[0].played.some(n=>n.wave));
+  assert.equal(audio.setScene('unknown'),false);
+});
+
+test('a story without game state keeps its score, and gameplay enters with its rhythmic arrangement', async t => {
+  const h=harness(t),audio=createAudio();t.after(()=>audio.destroy());audio.setScene('story');audio.update(null);
+  await audio.start();await flush();const c=h.contexts[0];h.advance(.4);audio.update(null);h.tick();
+  assert.ok(c.played.some(n=>n.wave),'story scene plays after a gesture even without a game state');
+  assert.equal(c.played.some(n=>n.buffer),false,'story scene remains free of percussion');
+  const before=c.played.length;audio.setScene('game');audio.update(state());h.tick();
+  assert.ok(c.played.slice(before).some(n=>n.buffer),'game arrangement starts its drum groove');
+  audio.setScene('menu');const menuStart=c.played.length;audio.update(null);h.tick();
+  assert.ok(c.played.slice(menuStart).some(n=>n.wave));assert.equal(c.played.slice(menuStart).some(n=>n.buffer),false);
+});
+
+test('paused or muted score restarts on a complete bar without stale notes or a catch-up burst', async t => {
+  const h=harness(t),audio=createAudio();t.after(()=>audio.destroy());audio.setScene('game');await audio.start();await flush();
+  h.advance(.4);h.tick();const c=h.contexts[0];audio.setPaused(true);const count=c.played.length;
+  assert.ok(c.played.every(n=>n.stopped),'all sustained music and scheduled percussion stop');
+  h.advance(30);h.tick();assert.equal(c.played.length,count);
+  audio.setPaused(false);h.tick();const resumed=c.played.slice(count);
+  assert.ok(resumed.length>0&&resumed.length<=16,'resume schedules one supported musical downbeat');
+  assert.ok(resumed.every(n=>n.startedAt>=c.currentTime),'nothing is scheduled in the past');
+  audio.setOptions({muted:true});assert.ok(c.played.every(n=>n.stopped));
+  const mutedCount=c.played.length;h.advance(30);h.tick();assert.equal(c.played.length,mutedCount);
+  audio.setOptions({muted:false});h.tick();assert.ok(c.played.length>mutedCount);
+});
+
+test('the output safety curve preserves ordinary dynamics with a bounded soft ceiling', async t => {
+  const h=harness(t),audio=createAudio();t.after(()=>audio.destroy());await audio.start();
+  const limiter=h.contexts[0].nodes.find(n=>n.type==='limiter');assert.ok(limiter);
+  assert.ok(Math.max(...limiter.curve)<.95&&Math.min(...limiter.curve)>-.95);
+  for(let i=0;i<limiter.curve.length;i++){const x=i/(limiter.curve.length-1)*2-1;
+    assert.ok(Number.isFinite(limiter.curve[i]));if(Math.abs(x)<.75)assert.ok(Math.abs(limiter.curve[i]-x)<1e-6);}
 });

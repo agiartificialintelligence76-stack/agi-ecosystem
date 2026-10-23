@@ -1,4 +1,4 @@
-// Recorded impact/foley layers and an original ambient score.
+// Recorded impact/foley layers and an original 32-bar cartoon/cyberpunk score.
 // Kenney CC0 source information ships in /audio/vladrunner2049/CREDITS.txt.
 // Only start(), called by a player gesture, creates an audio context.
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
@@ -13,9 +13,89 @@ const GROUPS = { punch: ['punch-1', 'punch-2', 'punch-3'], heavy: ['heavy-1', 'h
   step: ['step-1', 'step-2', 'step-3'], sand: ['sand-1', 'sand-2'],
   shield: ['shield-1', 'shield-2'], cloth: ['cloth-1', 'cloth-2'], swing: ['swing-1', 'swing-2'] };
 
+// "Good Memories, Bad Company": D-minor theme, two eight-bar statements,
+// a contrasting bridge, and an embellished return. Entries are eighth-note
+// position, MIDI pitch, and length. The rests and held answers are intentional.
+const THEME = [
+  [[0,62,1.7],[2,65,.8],[3,69,.8],[4,67,1.7],[6,65,1.7]],
+  [[0,65,1.7],[2,62,.8],[3,60,.8],[4,58,2.7],[7,60,.8]],
+  [[0,60,1.7],[2,65,.8],[3,67,.8],[4,69,1.7],[6,67,1.7]],
+  [[0,64,1.7],[2,67,.8],[3,64,.8],[4,62,2.7],[7,64,.8]],
+  [[0,69,1.7],[2,72,.8],[3,74,1.7],[5,72,.8],[6,69,1.7]],
+  [[0,65,.8],[1,67,.8],[2,69,1.7],[4,65,1.7],[6,62,1.7]],
+  [[0,64,1.7],[2,67,1.7],[4,72,.8],[5,67,.8],[6,64,1.7]],
+  [[0,64,1.7],[2,61,1.7],[4,57,2.7],[7,61,.8]],
+];
+const BRIDGE = [
+  [[0,67,1.7],[2,70,.8],[3,74,.8],[4,72,1.7],[6,70,.8],[7,69,.8]],
+  [[0,70,1.7],[2,74,1.7],[4,77,1.7],[6,74,1.7]],
+  [[0,74,2.7],[3,72,.8],[4,69,1.7],[6,65,1.7]],
+  [[0,73,1.7],[2,71,.8],[3,69,.8],[4,67,1.7],[6,64,1.7]],
+  [[0,67,.8],[1,69,.8],[2,70,1.7],[4,74,2.7],[7,72,.8]],
+  [[0,70,2.7],[3,69,.8],[4,65,1.7],[6,62,1.7]],
+  [[0,69,1.7],[2,65,.8],[3,62,.8],[4,64,1.7],[6,65,1.7]],
+  [[0,64,1.7],[2,61,1.7],[4,57,1.7],[6,60,.8],[7,61,.8]],
+];
+const HARMONY = [
+  { bass:38, notes:[50,57,60,65] }, // Dm7
+  { bass:34, notes:[50,53,57,60] }, // Bbmaj9
+  { bass:41, notes:[53,57,60,67] }, // Fadd9
+  { bass:36, notes:[52,55,60,62] }, // Cadd9
+  { bass:43, notes:[53,58,62,65] }, // Gm7
+  { bass:33, notes:[49,55,57,64] }, // A7, resolves back to the hook
+];
+const VERSE_CHORDS = [0,1,2,3,0,1,3,5], BRIDGE_CHORDS = [4,1,0,5,4,1,0,5];
+
+// A pure musical timeline also lets tests inspect complete phrases and scene
+// transitions without pretending a fake AudioContext can judge the sound.
+export function scoreStep(index, { stage = 0, scene = 'game', combat = false, boss = false } = {}) {
+  const position = ((Math.floor(index) % 256) + 256) % 256;
+  const bar = Math.floor(position / 8), eighth = position % 8, phrase = bar % 8;
+  const bridge = bar >= 16 && bar < 24, reprise = bar >= 24, district = clamp(Math.floor(stage),0,2);
+  const transpose = [0,-2,3][district], harmony = HARMONY[(bridge ? BRIDGE_CHORDS : VERSE_CHORDS)[phrase]];
+  const quiet = scene !== 'game', sceneGain = scene === 'story' ? .72 : scene === 'menu' ? .55 : 1;
+  const intensity = boss ? 1 : combat ? .8 : .56, notes = [];
+  const add = (instrument, pitch, duration, velocity, pan = 0, offset = 0) => notes.push({ instrument,
+    pitch: pitch === null ? null : pitch + transpose, duration, velocity: velocity * sceneGain, pan, offset });
+  const tempo = scene === 'story' ? 86 : scene === 'menu' ? 94 : [104,98,110][district] + (boss ? 8 : 0);
+  if (eighth === 0) for (const [i,pitch] of harmony.notes.entries()) {
+    add('pad',pitch,7.8,.035, i % 2 ? .48 : -.48, i * .018);
+    add('keys',pitch+12,quiet ? 4.4 : 2.8,.045, i % 2 ? -.32 : .32, i * .025);
+  }
+  if (!quiet && eighth === 4) for (const [i,pitch] of harmony.notes.slice(1).entries())
+    add('keys',pitch+12,2.5,.036, i % 2 ? .3 : -.3, i * .018);
+  if (eighth === 0 || !quiet && [3,4,6].includes(eighth)) {
+    const bassOffset = eighth === 3 ? 7 : eighth === 4 ? 12 : eighth === 6 && phrase % 2 ? 7 : 0;
+    add('bass',harmony.bass+bassOffset,eighth === 0 ? 2.4 : 1.2, .15 * (quiet ? .62 : 1));
+  }
+  const melody = (bridge ? BRIDGE : THEME)[phrase].find(([beat]) => beat === eighth);
+  if (melody) {
+    const [,pitch,length] = melody;
+    // The second statement uses keys; the final statement brings the reed lead
+    // back with a quiet octave answer instead of looping one unchanged bar.
+    const instrument = scene === 'story' || bar >= 8 && bar < 16 ? 'keys' : 'lead';
+    add(instrument,pitch,length,.17 * (bridge ? .92 : 1),district === 1 ? -.12 : .10);
+    if ((reprise || boss) && !quiet && eighth === 0) add('keys',pitch+12,length*.8,.033,-.3,.04);
+  }
+  if (!quiet) {
+    const kick = eighth === 0 || eighth === 4 || (combat || boss) && eighth === 3 && bar % 2;
+    if (kick) add('kick',null,1,.14 * intensity);
+    if (eighth === 2 || eighth === 6) add('snare',null,1,.11 * intensity, -.06);
+    if (eighth % 2 === 0 || combat || boss) add(district === 1 ? 'shaker' : 'hat',null,
+      eighth === 7 && bar % 4 === 3 ? .65 : .22, (eighth % 2 ? .021 : .030) * intensity,.27);
+    if ((boss || combat && reprise) && phrase === 7 && eighth >= 6) {
+      add('tom',50-(eighth-6)*5,.7,.065,-.25+(eighth-6)*.5,.5);
+      if (eighth === 7) add('snare',null,.5,.035,-.06,.5);
+    }
+  }
+  return { bar, eighth, tempo, notes };
+}
+
 export function createAudio(initial = {}) {
   let ctx = null, master = null, musicBus = null, sfxBus = null, duckBus = null, reverbBus = null;
   let timer = null, dead = false, paused = false, nextStep = 0, step = 0, stage = 0, tension = false, active = false;
+  let scene = 'menu', combat = false, musicContext = null, musicInterval = 60 / 94 / 2, drumNoise = null;
+  const waves = new Map();
   let lastEvent = 0, lastElapsed = -1, lastState = null, noiseBuffer = null, loadPromise = null, decoding = null, lastMix = '';
   let settings = { music: .35, sfx: .65, muted: false, ...initial };
   const encoded = new Map(), buffers = new Map(), voices = new Set(), choices = new Map(), rateLimits = new Map();
@@ -54,8 +134,8 @@ export function createAudio(initial = {}) {
     const voice = { source, nodes, category }; voices.add(voice);
     source.onended = () => release(voice);
     // Crowd hits cannot create an unbounded wall of sound.
-    if (voices.size > 80) {
-      const oldest = [...voices].find(item => item.category === 'sfx');
+    if (voices.size > 96) {
+      const oldest = [...voices].find(item => item.category === 'sfx') || voices.values().next().value;
       if (oldest && oldest !== voice) { try { oldest.source.stop(); } catch { /* Ended. */ } release(oldest); }
     }
   }
@@ -128,38 +208,73 @@ export function createAudio(initial = {}) {
     tone(heavy ? 84 : 114, t, heavy ? .19 : .105, heavy ? .24 : .10, { end: heavy ? 32 : 48, cutoff: 180, pan, wet: 0 });
     duck(heavy ? .43 : .23);
   }
-  function chord(root, at, duration, bright = false) {
-    // A slowly blooming, widely voiced chord; no repeated arcade lead or arpeggio.
-    const intervals = bright ? [0, 7, 12, 16, 23] : [0, 7, 12, 15, 22];
-    for (const [i, interval] of intervals.entries()) {
-      tone(note(root + interval), at + i * .035, duration, i === 0 ? .085 : .034, {
-        type: 'triangle', attack: Math.min(1.3, duration * .25), cutoff: 650 + i * 120,
-        pan: (i % 2 ? -.5 : .5), bus: musicBus, wet: .4,
-      });
-      if (i > 1) tone(note(root + interval) * 1.003, at, duration * .93, .012, {
-        type: 'sine', attack: 1.2, cutoff: 900, pan: i % 2 ? .6 : -.6, bus: musicBus, wet: .5,
-      });
+  function musicalVoice(event, at, interval) {
+    const { instrument, pitch, velocity, pan } = event, duration = Math.max(.06,event.duration*interval);
+    const source = ctx.createOscillator(), gain = ctx.createGain();
+    const shapes = { lead:[0,1,.24,.14,.035], keys:[0,1,.14,.22,.035,.02], bass:[0,1,.22,.08], pad:[0,1,0,.045] };
+    const partials = shapes[instrument] || shapes.keys;
+    if (ctx.createPeriodicWave && source.setPeriodicWave) {
+      if (!waves.has(instrument)) waves.set(instrument,ctx.createPeriodicWave(new Float32Array(partials.length),Float32Array.from(partials)));
+      source.setPeriodicWave(waves.get(instrument));
+    } else source.type = instrument === 'bass' ? 'sine' : 'triangle';
+    source.frequency.setValueAtTime(note(pitch),at);
+    const attack = instrument === 'pad' ? .18 : instrument === 'lead' ? .025 : .008;
+    const release = Math.min(duration*.4,instrument === 'pad' ? .32 : .12);
+    gain.gain.setValueAtTime(.0001,at);
+    gain.gain.linearRampToValueAtTime(velocity,at+Math.min(attack,duration*.25));
+    gain.gain.exponentialRampToValueAtTime(Math.max(.0001,velocity*(instrument === 'keys' ? .28 : .70)),at+duration-release);
+    gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
+    const cutoff = instrument === 'bass' ? 650 : instrument === 'pad' ? 1100 : instrument === 'keys' ? 2200 : 2600;
+    track(source,route(source,gain,{cutoff,pan,bus:musicBus,wet:instrument === 'bass' ? .015 : instrument === 'pad' ? .24 : .17}),'music');
+    source.start(at);source.stop(at+duration+.025);
+  }
+  function percussion(event, at, interval) {
+    const { instrument, velocity, pan } = event;
+    if (instrument === 'kick') {
+      tone(118,at,.16,velocity,{end:46,cutoff:260,bus:musicBus,wet:0,attack:.003});return;
     }
+    if (instrument === 'tom') {
+      tone(note(event.pitch),at,.19,velocity,{end:note(event.pitch)*.65,cutoff:700,bus:musicBus,wet:.10,attack:.004,pan});return;
+    }
+    const snare = instrument === 'snare', shaker = instrument === 'shaker';
+    const duration = snare ? .13 : clamp(event.duration*interval,.035,.22);
+    const source = ctx.createBufferSource(), gain = ctx.createGain(), highpass = ctx.createBiquadFilter();
+    source.buffer=drumNoise;highpass.type='highpass';highpass.frequency.value=snare ? 1050 : shaker ? 2700 : 5200;highpass.Q.value=.55;
+    source.connect(highpass);
+    gain.gain.setValueAtTime(.0001,at);gain.gain.linearRampToValueAtTime(velocity,at+.003);gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
+    track(source,[highpass,...route(highpass,gain,{cutoff:snare ? 5800 : 7900,pan,bus:musicBus,wet:snare ? .09 : .025})],'music');
+    source.start(at,(step%7)*.091);source.stop(at+duration+.015);
+    if (snare) tone(175,at,.085,velocity*.30,{end:125,cutoff:800,bus:musicBus,wet:.03,pan});
+  }
+  function resetMusic() {
+    stopVoices('music');step=0;musicContext=null;nextStep=ctx ? ctx.currentTime+.035 : 0;
+  }
+  function resumeMusic() {
+    // Resume at a complete bar so a pause/mute cannot leave melody without its
+    // chord or squeeze missed drum hits into the next frame.
+    step=Math.ceil(step/8)*8;musicContext=null;nextStep=ctx ? ctx.currentTime+.035 : 0;
+  }
+  function setScene(value) {
+    if (!['story','game','menu'].includes(value) || dead) return false;
+    if (scene !== value) { scene=value;resetMusic();if(value !== 'game') {stage=0;active=false;combat=false;tension=false;stopVoices('sfx');} }
+    return true;
   }
   function schedule() {
     if (!ctx || ctx.state !== 'running' || dead || paused || settings.muted || level(settings.music, .35) === 0) return;
     const now = ctx.currentTime;
     if (nextStep < now - .12) nextStep = now + .025;
-    const interval = 60 / (tension ? 92 : 84) / 2;
     let guard = 0;
     while (nextStep < now + .14 && guard++ < 4) {
-      const beat = step % 16, bar = Math.floor(step / 16) % 4;
-      const root = [38, 34, 41, 36][bar] + (stage === 1 ? -2 : stage === 2 ? 2 : 0);
-      if (beat === 0) chord(root, nextStep, interval * 19, bar === 1 || bar === 2);
-      if (active) {
-        // Space between percussion leaves the player's punches in front of the score.
-        if (beat === 0 || beat === 8 || tension && beat === 11) {
-          tone(note(root - 12), nextStep, .42, tension ? .15 : .10, { end: note(root - 12) * .99, bus: musicBus, cutoff: 180, wet: .02 });
-          sample('body', tension ? .12 : .065, { at: nextStep, rate: .62, cutoff: 400, bus: musicBus, wet: .1 });
-        }
-        if (tension && (beat === 4 || beat === 12)) sample('cloth', .08, { at: nextStep, rate: 1.3, duration: .16, cutoff: 2200, bus: musicBus, wet: .18 });
+      // District/intensity changes enter on bar boundaries, preserving the pulse.
+      if (!musicContext || step%8===0) musicContext={stage,scene,combat:active&&combat,boss:active&&tension};
+      const score=scoreStep(step,musicContext);musicInterval=60/score.tempo/2;
+      const swing=score.eighth%2 ? musicInterval*.055 : 0;
+      for (const event of score.notes) {
+        const at=nextStep+swing+event.offset*musicInterval;
+        if (['kick','snare','hat','shaker','tom'].includes(event.instrument)) percussion(event,at,musicInterval);
+        else musicalVoice(event,at,musicInterval);
       }
-      step++; nextStep += interval;
+      step++; nextStep += musicInterval;
     }
   }
   function volumes() {
@@ -167,7 +282,7 @@ export function createAudio(initial = {}) {
     const key = [paused, settings.muted, settings.music, settings.sfx].join(':'); if (key === lastMix) return; lastMix = key;
     const t = ctx.currentTime;
     master.gain.setTargetAtTime(paused || settings.muted ? 0 : .86, t, .025);
-    musicBus.gain.setTargetAtTime(level(settings.music, .35) * .9, t, .12);
+    musicBus.gain.setTargetAtTime(level(settings.music, .35) * 1.6, t, .12);
     sfxBus.gain.setTargetAtTime(level(settings.sfx, .65), t, .025);
   }
   async function start() {
@@ -176,12 +291,24 @@ export function createAudio(initial = {}) {
       const AC = globalThis.AudioContext || globalThis.webkitAudioContext; if (!AC) return false;
       try {
         ctx = new AC(); master = ctx.createGain(); musicBus = ctx.createGain(); sfxBus = ctx.createGain(); duckBus = ctx.createGain();
+        // Nodes default to unity: initialize the selected balance before the
+        // opening phrase so a quiet saved setting never starts with a loud note.
+        master.gain.value=0;musicBus.gain.value=level(settings.music,.35)*1.6;sfxBus.gain.value=level(settings.sfx,.65);
         const compressor = ctx.createDynamicsCompressor(); compressor.threshold.value = -10; compressor.knee.value = 14;
         compressor.ratio.value = 3; compressor.attack.value = .003; compressor.release.value = .15;
-        musicBus.connect(duckBus); duckBus.connect(master); sfxBus.connect(master); master.connect(compressor); compressor.connect(ctx.destination);
+        musicBus.connect(duckBus); duckBus.connect(master); sfxBus.connect(master); master.connect(compressor);
+        if (ctx.createWaveShaper) {
+          // Transparent below -2 dBFS, soft ceiling for exceptional simultaneous
+          // crowd impacts. The ordinary music/foley dynamics stay untouched.
+          const safety=ctx.createWaveShaper(),curve=new Float32Array(4097);
+          for(let i=0;i<curve.length;i++){const x=i/(curve.length-1)*2-1,a=Math.abs(x);curve[i]=Math.sign(x)*(a<=.78?a:.78+.16*Math.tanh((a-.78)/.16));}
+          safety.curve=curve;safety.oversample='2x';compressor.connect(safety);safety.connect(ctx.destination);
+        } else compressor.connect(ctx.destination);
         noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 3), ctx.sampleRate);
         const data = noiseBuffer.getChannelData(0); let soft = 0;
         for (let i = 0; i < data.length; i++) { soft = soft * .75 + (Math.random() * 2 - 1) * .25; data[i] = soft; }
+        drumNoise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
+        const drumData=drumNoise.getChannelData(0);for(let i=0;i<drumData.length;i++)drumData[i]=Math.random()*2-1;
         const impulse = ctx.createBuffer(2, Math.floor(ctx.sampleRate * 1.25), ctx.sampleRate);
         for (let channel = 0; channel < 2; channel++) { const a = impulse.getChannelData(channel); let smooth = 0;
           for (let i = 0; i < a.length; i++) { smooth = smooth * .64 + (Math.random() * 2 - 1) * .36; a[i] = smooth * (1 - i / a.length) ** 3 * .45; } }
@@ -218,6 +345,25 @@ export function createAudio(initial = {}) {
         sample('body', .56, { at: t, rate: .68, cutoff: 1300, pan }); sample('cloth', .18, { at: t + .06, rate: .8, cutoff: 2000, pan }); break;
       case 'dodge':
         sample('swing', .17, { at: t, rate: .76, cutoff: 2500, duration: .23, pan }); sample('cloth', .13, { at: t, rate: 1.05, cutoff: 2000, pan }); break;
+      case 'perfectDodge':
+        if (!allow(`perfect:${ev.player ?? 0}`, .3)) break;
+        sample('swing', .12, { at: t, rate: .64, duration: .22, cutoff: 2400, pan });
+        // A soft rising third is a short reward, not another alarm over combat.
+        for (const [i,n] of [62,65].entries()) tone(note(n),t+i*.055,.24,.052,{attack:.025,cutoff:1300,pan,wet:.18}); break;
+      case 'counterHit':
+        if (!allow('counter', .15)) break;
+        // The ordinary hit already supplies the punch. Only accent its contact.
+        sample('shield', .16, {at:t,rate:.70,cutoff:2500,pan,wet:.12});
+        tone(76,t,.22,.10,{end:34,cutoff:220,pan,wet:0});duck(.35);break;
+      case 'prop-break':
+        if (!allow('prop', .065)) break;
+        sample(ev.propKind === 'terminal' ? 'shield' : 'heavy', .37, {at:t,rate:.82*jitter(.07),cutoff:3600,pan,wet:.1});
+        sample('body',.20,{at:t+.025,rate:.72,cutoff:1600,pan});
+        sample(ev.propKind === 'terminal' ? 'spark' : 'step',.13,{at:t+.075,rate:.78,cutoff:3100,pan,wet:.08});break;
+      case 'hazardActive':
+        if (Math.abs((ev.x ?? 0)-(lastState?.cameraX || 0)-640)>750 || !allow('hazard',.8)) break;
+        if (ev.hazardKind === 'electric') sample('spark',.10,{at:t,rate:.65,cutoff:2300,pan,wet:.08});
+        else air(t,.35,.08,2100,pan);break;
       case 'jump': sample('cloth', .12, { at: t, rate: 1.2, duration: .17, cutoff: 2800, pan, wet: 0 }); break;
       case 'footstep':
         if (allow(`step:${ev.player ?? ev.kind}`, .15)) sample(stage === 1 ? 'sand' : 'step', .095, { at: t, rate: jitter(.08) * (ev.kind === 'agi' ? 1.13 : .94), cutoff: stage === 1 ? 2300 : 3400, pan, wet: stage === 2 ? .12 : .02 }); break;
@@ -247,34 +393,36 @@ export function createAudio(initial = {}) {
     }
   }
   return {
-    preload, start,
+    preload, start, setScene,
     update(state) {
       if (dead) return;
-      if (state && (state.elapsed < lastElapsed || state !== lastState && state.elapsed === 0)) { lastEvent = 0; step = 0; nextStep = ctx ? ctx.currentTime + .035 : 0; rateLimits.clear(); stopVoices(); }
+      if(state)setScene('game');
+      if (state && (state.elapsed < lastElapsed || state !== lastState && state.elapsed === 0)) { lastEvent = 0; resetMusic(); rateLimits.clear(); stopVoices('sfx'); }
       lastState = state;
-      if (state) { lastElapsed = state.elapsed; stage = clamp(state.stage || 0, 0, 2); tension = Boolean(state.boss && !state.boss.dead && state.boss.hp > 0); active = state.status === 'playing'; }
-      else active = false;
+      if (state) { lastElapsed = state.elapsed; stage = clamp(state.stage || 0, 0, 2); tension = Boolean(state.boss && !state.boss.dead && state.boss.hp > 0); active = state.status === 'playing'; combat=Boolean(state.arena?.active || state.enemies?.some(enemy=>!enemy.dead&&enemy.hp>0)); }
+      else {active=false;combat=false;tension=false;}
       // Even locked, paused, or muted clients consume IDs; resuming never replays an old fight.
       for (const ev of state?.events || []) if (ev.id > lastEvent) { lastEvent = ev.id; effect(ev); }
       volumes();
     },
     setPaused(value) {
       const next = Boolean(value); if (next === paused) return; paused = next;
-      if (paused) stopVoices('sfx'); else nextStep = ctx ? ctx.currentTime + .03 : 0;
+      if (paused) stopVoices(); else resumeMusic();
       volumes();
     },
     setOptions(next = {}) {
       const wasMuted = settings.muted, previousSfx = level(settings.sfx, .65), previousMusic = level(settings.music, .35);
       settings = { ...settings, ...next };
       if ((!wasMuted && settings.muted) || previousSfx > 0 && level(settings.sfx, .65) === 0) stopVoices('sfx');
-      if (previousMusic > 0 && level(settings.music, .35) === 0) stopVoices('music');
+      if (settings.muted || previousMusic > 0 && level(settings.music, .35) === 0) stopVoices('music');
+      if (wasMuted && !settings.muted || previousMusic === 0 && level(settings.music,.35)>0) resumeMusic();
       volumes();
     },
     get started() { return Boolean(ctx && ctx.state === 'running'); },
     get ready() { return buffers.size === AUDIO_FILES.length; },
     destroy() {
       if (dead) return; dead = true; lifetime?.abort(); clearInterval(timer); timer = null; stopVoices();
-      encoded.clear(); buffers.clear(); choices.clear(); rateLimits.clear();
+      encoded.clear(); buffers.clear(); choices.clear(); rateLimits.clear();waves.clear();drumNoise=null;
       const old = ctx; ctx = null; if (old) old.close().catch(() => {});
     },
   };
