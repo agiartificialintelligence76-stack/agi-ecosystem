@@ -27,6 +27,8 @@ $videos = [ordered]@{
   'Artificial_Girlfriend_Intelligence_-_yDEUEr.mp4' = 'look-back'
   'x-downloader.com_63DgjX.mp4' = 'subway-walk'
   'x-downloader.com_y0NIqz.mp4' = 'one-post'
+  'Artificial_Girlfriend_Intelligence_-_____________________AFTER_AGI_____________________eppe7H.mp4' = 'after-agi'
+  'Artificial_Girlfriend_Intelligence_-_Claude_make_me_an_AGI_SLOPCORE_VhuQTH.mp4' = 'claude-make-me-an-agi-slopcore'
 }
 $images = [ordered]@{
   'HTbmp66akAAz7of.jpg' = 'absolute-agi'; 'HThktCTbYAE772O.jpg' = 'psst'; 'HThxYhzaEAACDat.jpg' = 'all-in'

@@ -4,19 +4,22 @@
 // images/agi-<id>.jpg (the full pictures, for download) and previews/agi-<id>.webp (the picture cards').
 // To add one: put it in memess/, add its line to encode.ps1 and here, run the script. To move a video between the tabs,
 // change its kind: 'video' or 'slopcore' (slopcore: only the real slopcore cuts; the owner, 2026-10-23: "we taught her to say
-// hello" and "Only AGI" are "not a slop core", so they're videos).
+// hello" and "Only AGI" are "not a slop core", so they're videos; later: "the slopcore are the 3 mins long videos and the
+// caption that said Everyone's feeling the AGI its also slopcore").
 // Newest first inside each kind: the page shows them in this order.
 
 export const MEMES = [
   // ---------- slopcore ----------
+  { id: 'claude-make-me-an-agi-slopcore', kind: 'slopcore', title: 'Claude, make me an AGI SLOPCORE', note: 'slot 1: Earth. the only copy. back it up', secs: 150 },
+  { id: 'after-agi', kind: 'slopcore', title: 'AFTER AGI', note: 'the long ride home through the city', secs: 240 },
   { id: 'i-love-agi-slopcore', kind: 'slopcore', title: 'i love AGI', note: 'dial-up to darling. the full slopcore cut', secs: 239 },
   { id: 'one-post', kind: 'slopcore', title: 'One post.', note: 'one post changed everything', secs: 200 },
+  { id: 'feeling-the-agi', kind: 'slopcore', title: "Everyone's feeling the AGI", note: 'only some of us are feeling the Artificial Girlfriend Intelligence', secs: 34 },
 
   // ---------- videos ----------
   { id: 'the-trenches-taught-her', kind: 'video', title: 'we taught her to say hello', note: 'the trenches taught her the rest', secs: 69 },
   { id: 'only-agi', kind: 'video', title: 'Only AGI', note: 'AGI.EXE has started', secs: 50 },
   { id: 'weve-achieved-agi', kind: 'video', title: "We've achieved AGI", note: 'he said it first', secs: 30 },
-  { id: 'feeling-the-agi', kind: 'video', title: "Everyone's feeling the AGI", note: 'only some of us are feeling the Artificial Girlfriend Intelligence', secs: 34 },
   { id: 'clanktrade-robinhood', kind: 'video', title: '@clanktrade × @RobinhoodCrypto', note: 'building $AGI together', secs: 30 },
   { id: 'first-on-robinhood', kind: 'video', title: 'The first on Robinhood Chain', note: '0xfa31…06ec', secs: 26 },
   { id: 'pivot-to-agi', kind: 'video', title: 'PIVOT TO AGI', note: 'everyone, now', secs: 15 },
