@@ -10,6 +10,7 @@
 
 export const MEMES = [
   // ---------- slopcore ----------
+  { id: 'its-fine-im-super-agi', kind: 'slopcore', title: "it's fine. I'm Super AGI", note: '− AI + SI. she woke up and went super', secs: 194 },
   { id: 'claude-make-me-an-agi-slopcore', kind: 'slopcore', title: 'Claude, make me an AGI SLOPCORE', note: 'slot 1: Earth. the only copy. back it up', secs: 150 },
   { id: 'after-agi', kind: 'slopcore', title: 'AFTER AGI', note: 'the long ride home through the city', secs: 240 },
   { id: 'i-love-agi-slopcore', kind: 'slopcore', title: 'i love AGI', note: 'dial-up to darling. the full slopcore cut', secs: 239 },

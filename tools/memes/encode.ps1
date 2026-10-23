@@ -29,7 +29,10 @@ $videos = [ordered]@{
   'x-downloader.com_y0NIqz.mp4' = 'one-post'
   'Artificial_Girlfriend_Intelligence_-_____________________AFTER_AGI_____________________eppe7H.mp4' = 'after-agi'
   'Artificial_Girlfriend_Intelligence_-_Claude_make_me_an_AGI_SLOPCORE_VhuQTH.mp4' = 'claude-make-me-an-agi-slopcore'
+  'Artificial_Girlfriend_Intelligence_-_it_s_fine._I_m_Super_AGI_21O1AY.mp4' = 'its-fine-im-super-agi'
 }
+# where the poster (the card's picture) is taken from, in seconds; 2 unless the start is too dark
+$posterAt = @{ 'its-fine-im-super-agi' = 80 }
 $images = [ordered]@{
   'HTbmp66akAAz7of.jpg' = 'absolute-agi'; 'HThktCTbYAE772O.jpg' = 'psst'; 'HThxYhzaEAACDat.jpg' = 'all-in'
   'HTi8cgxagAARpfI.jpg' = 'the-plan'; 'HTix4BNbIAA3D44.jpg' = 'online'; 'HTjL7PPaYAA_O01.jpg' = 'approved'
@@ -43,7 +46,8 @@ foreach ($k in $videos.Keys) {
   $mp4 = Join-Path $out "videos\agi-$name.mp4"; $poster = Join-Path $out "posters\agi-$name.webp"
   if (-not (Test-Path $in)) { "missing $k"; continue }
   if (-not (Test-Path $poster)) {
-    & $ff -v error -y -ss 2 -i $in -frames:v 1 -vf "scale='min(720,iw)':-2" -c:v libwebp -quality 78 $poster
+    $at = if ($posterAt.ContainsKey($name)) { $posterAt[$name] } else { 2 }
+    & $ff -v error -y -ss $at -i $in -frames:v 1 -vf "scale='min(720,iw)':-2" -c:v libwebp -quality 78 $poster
     if (-not (Test-Path $poster) -or (Get-Item $poster).Length -eq 0) { & $ff -v error -y -i $in -frames:v 1 -vf "scale='min(720,iw)':-2" -c:v libwebp -quality 78 $poster }
   }
   if (Test-Path $mp4) { "skip $name"; continue }
