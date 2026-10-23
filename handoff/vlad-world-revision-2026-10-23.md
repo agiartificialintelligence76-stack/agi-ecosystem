@@ -20,6 +20,14 @@ The owner requested larger, interactive stages, a continuing story featuring bot
 - Actual renderer proof for all three districts and enemy reactions: ignored `node_modules/.cache/vlad-world-proof/` (three district PNGs, enemy-states.png, scroll-reactions.mp4).
 - Audio rendered with Chrome OfflineAudioContext: full 80-second theme, story and maximum-volume mixes. No clipping; extreme crowd peak -0.75 dBFS. This verifies technical levels, not subjective listening quality. Audition files are in ignored `node_modules/.cache/vlad-audio/`.
 
+## Publication
+
+Published feature commit `c86353113183fc0eb5c2a92a5f2691b2074ff265`, followed by final copy correction `ac926732df1dd68f24ff1720f548675cfd31822a`. The opening objective now agrees with AGI-1 already holding the key. That one-line correction passed 10 UI tests and the production bundle build.
+
+Final Vercel production deployment `BkY5xMqPzqShorAeN6YMFacL1Ls2` is Ready (3m 23s), assigned to `www.agi1.app`, immutable URL `https://agi-ecosystem-eozb9qimp-agi25.vercel.app`. Public URL: https://www.agi1.app/games/vladrunner2049 . The public opening, scene skip, final objective, run clock, platform jump, scrolling, combat (139 points), pause and return to title were checked. No browser warnings/errors. Screenshot: ignored `node_modules/.cache/vlad-production-story.png`.
+
+The public browser's saved Music and Sound effects values are both 0%; preserved rather than overridden. A request to cancel a redundant queued preview was rejected by automatic approval review because cancellation was not specifically authorized. No alternate cancellation was attempted; the release queue completed normally.
+
 ## Limits
 
 Legacy shield/ranger/boss art still has only two locomotion drawings, supplemented by articulation and distinct attack/recovery poses. This is not a claim of frame-for-frame animation parity with the reference game. Browser testing exercised the opening and first encounter; automated deterministic tests, rather than a complete manual playthrough, cover campaign completion. No backend, database, SSH, paid service or deployment-security changes are needed.

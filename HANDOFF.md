@@ -156,6 +156,20 @@ This release includes the combat, animation, audio and illustrated-interface rev
 SSH, environment, or deployment-configuration changes were required. The quality limits in the preview notes
 remain accurate; do not claim the full reference-game quality gap is closed.
 
+### 0.7 VLAD RUNNER story, world and challenge — published (2026-10-23)
+
+The owner requested larger interactive stages, story featuring both heroes at every stage, stronger music,
+enemy reactions and more challenging mechanics. These are published at `ac926732df1dd68f24ff1720f548675cfd31822a`
+(feature commit `c863531`, then an opening-objective wording correction). Production deployment
+`BkY5xMqPzqShorAeN6YMFacL1Ls2` is **Ready** after 3m 23s and assigned to `www.agi1.app`.
+The public game is https://www.agi1.app/games/vladrunner2049 . Full checks: **1,192 passed, 0 failed, 6 skipped**;
+the final one-line copy correction also passed all ten UI tests and a production bundle build.
+Public checks loaded the new diner story and final objective, then exercised scrolling, platform jumping,
+combat (139 points), pause and title return. No browser warnings/errors. Screenshot:
+`node_modules/.cache/vlad-production-story.png`. The user's public browser has Music and Sound effects at 0%;
+these choices were preserved. No SSH, database, service or deployment-security changes.
+See [world revision notes](handoff/vlad-world-revision-2026-10-23.md) for mechanics, test scope and animation/audio limits.
+
 ## 1. The owner and how to work with them
 
 - The owner works alone, is learning, and writes quickly with typos. Explain what you're doing and why, in simple words.
