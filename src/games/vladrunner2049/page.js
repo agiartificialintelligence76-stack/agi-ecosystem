@@ -174,7 +174,7 @@ function startRun(sameSeed = false, skipStory = false) {
   title.hidden=true; play.hidden=false; root.classList.add('vr-in-game'); root.classList.toggle('vr-coop',coop);
   $('.vr-tag-key').hidden=coop; $('[data-action="tag"]').hidden=coop;
   input.clear(); input.setEnabled(true); canvas.tabIndex=0; canvas.focus({preventScroll:true}); renderer.resize(); updateHUD();
-  banner('CASE FILE 01 / 03','NEON DOWNPOUR','Recover the memory key. Make an entrance.',3.5);
+  banner('CASE FILE 01 / 03','NEON DOWNPOUR','Break the checkpoint. Keep the key safe.',3.5);
   banter('AGI-1','Jump onto the street furniture. Smash the supply crates. Keep moving!');
 }
 function toTitle() {
