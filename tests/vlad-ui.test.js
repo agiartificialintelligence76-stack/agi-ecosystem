@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import sharp from 'sharp';
+import { createHash } from 'node:crypto';
+import { OPENING, CHAPTERS, CONFRONTATIONS, ENDING } from '../src/games/vladrunner2049/story.js';
 import { createGame } from '../src/games/vladrunner2049/engine.js';
 import { SAVE_KEY, DEFAULT_SETTINGS, ACHIEVEMENTS, readSave, writeSave, recordRun, bestRecord, dailySeed } from '../src/games/vladrunner2049/save.js';
 
@@ -130,7 +132,7 @@ test('only completed valid runs save and achievement thresholds unlock once acro
   assert.equal(endless.achievements.includes('friends'), false);
 });
 
-test('asset metadata matches share art, backgrounds cover the arena, and the full art download stays under 8 MB', async () => {
+test('asset metadata matches share art, backgrounds cover the arena, and core art stays under 8 MB', async () => {
   const directory = new URL('../public/images/vladrunner2049/', import.meta.url);
   const names = (await readdir(directory)).filter(name => /\.(webp|png|jpe?g)$/i.test(name));
   for (const name of ['keyart.webp', 'vlad.webp', 'agi.webp', 'agi-left.webp', 'neon.webp', 'orange.webp', 'spire.webp', 'enemies.webp', 'bosses.webp',
@@ -151,6 +153,31 @@ test('asset metadata matches share art, backgrounds cover the arena, and the ful
     assert.equal(info.format, 'webp');
     assert.ok(info.width >= 1280 && info.height >= 720, `${name} covers the logical game arena`);
     assert.ok(Math.abs(info.width / info.height - 16 / 9) < .01, `${name} is widescreen`);
+  }
+});
+
+test('every campaign story beat ships a distinct readable illustration within the separate story budget', async () => {
+  const sequences = [OPENING, CHAPTERS[1], CHAPTERS[2], CONFRONTATIONS[0], CONFRONTATIONS[1], CONFRONTATIONS[2], ENDING];
+  const frames = sequences.flat(), files = new Set(), hashes = new Set();
+  let total = 0;
+  for (const frame of frames) {
+    assert.match(frame.art, /^story\/[a-z0-9-]+\.webp$/);
+    assert.ok(!files.has(frame.art), `${frame.title} has its own illustration`); files.add(frame.art);
+    assert.ok(frame.alt.length > 30, `${frame.title} describes the illustrated action`);
+    assert.ok(frame.text.length <= 240, `${frame.title} keeps its caption readable on a small screen`);
+    const data = await readFile(new URL(`../public/images/vladrunner2049/${frame.art}`, import.meta.url));
+    const metadata = await sharp(data).metadata();
+    assert.equal(metadata.format, 'webp');
+    assert.ok(metadata.width >= 1440 && metadata.height >= 960, `${frame.art} retains scene detail`);
+    assert.ok(Math.abs(metadata.width / metadata.height - 1.5) < .01, `${frame.art} fits the story page without cropping`);
+    assert.ok(data.length < 300 * 1024, `${frame.art} is compressed for sequential loading`);
+    hashes.add(createHash('sha256').update(data).digest('hex')); total += data.length;
+  }
+  assert.equal(hashes.size, frames.length, 'renamed copies cannot substitute for separate illustrated scenes');
+  assert.ok(total < 4 * 1024 * 1024, `all optional story scenes total ${total} bytes`);
+  for (const [index, sequence] of [OPENING, CHAPTERS[1], CHAPTERS[2]].entries()) {
+    assert.equal(sequence.at(-1).level, `LEVEL ${index + 1}`);
+    assert.equal(sequence.at(-1).button, 'PLAY');
   }
 });
 

@@ -53,10 +53,14 @@ root.innerHTML = `
       <p class="vr-phone-note">Landscape gives you more room to fight.</p>
       <p class="vr-sr" id="vr-live" aria-live="polite"></p>
     </section>
-    <section class="vr-story" hidden role="dialog" aria-modal="true" aria-labelledby="vr-story-title" tabindex="-1">
-      <div class="vr-story-scene" aria-hidden="true"><div class="vr-story-backdrop"></div><div class="vr-story-rain"></div><div class="vr-story-beam"></div><div class="vr-story-key">◇</div><img class="vr-story-vlad" src="/images/vladrunner2049/vlad-portrait.webp" alt=""><img class="vr-story-agi" src="/images/vladrunner2049/agi-portrait.webp" alt=""></div>
-      <header class="vr-story-top"><span class="vr-story-caption"></span><button class="vr-button" data-do="story-skip">SKIP SCENE</button></header>
-      <div class="vr-story-dialogue"><p class="vr-story-speaker"></p><h2 id="vr-story-title"></h2><p class="vr-story-text" aria-live="polite"></p><footer><span class="vr-story-count"></span><button class="vr-button vr-button-bright" data-do="story-next">NEXT →</button></footer></div>
+    <section class="vr-story" hidden role="dialog" aria-modal="true" aria-labelledby="vr-story-title" aria-describedby="vr-story-text" tabindex="-1">
+      <div class="vr-story-page">
+        <header class="vr-story-top"><span class="vr-story-count"></span><button class="vr-story-skip" data-do="story-skip">SKIP SCENE</button></header>
+        <div class="vr-story-heading"><p class="vr-story-level"></p><h2 id="vr-story-title"></h2></div>
+        <div class="vr-story-scene" aria-busy="false"><img class="vr-story-art" alt="" width="1536" height="1024" decoding="async"><p class="vr-story-loading" role="status" hidden>Loading illustration…</p></div>
+        <div class="vr-story-dialogue"><span class="vr-story-speaker vr-sr"></span><p class="vr-story-text" id="vr-story-text" aria-live="polite"></p><p class="vr-story-caption"></p></div>
+        <footer class="vr-story-footer"><span class="vr-story-key-hint">SPACE / ENTER TO CONTINUE</span><button class="vr-story-next" data-do="story-next">NEXT <span aria-hidden="true">→</span></button></footer>
+      </div>
     </section>
     <div class="vr-modal-wrap" hidden><section class="vr-modal" role="dialog" aria-modal="true" aria-labelledby="vr-modal-title" tabindex="-1"></section></div>
     <div class="vr-toast" role="status" hidden></div>
@@ -76,6 +80,8 @@ let state = null, mode = 'story', character = 'vlad', coop = false, paused = fal
 let lastTime = 0, hudAt = 0, liveAt = 0, frameId = 0, lastEvent = 0, endRecorded = false, bannerUntil = 0, banterUntil = 0, toastTimer = 0, focusBeforeModal = null;
 let destroyed = false, dialogWasPaused = false, currentSeed = '', lastResult = null, titleDay = dailySeed();
 let storySequence = null, storyIndex = 0, storyComplete = null, endingShown = false;
+let storyArtRequest = 0;
+const storyArtCache = new Map();
 const fmt = value => Math.round(value).toLocaleString('en-US');
 const timeText = seconds => `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
 const el = (tag, cls, value) => { const n = document.createElement(tag); if (cls) n.className = cls; if (value !== undefined) n.textContent = value; return n; };
@@ -100,8 +106,8 @@ async function loadAssets() {
   $('[data-do="start"]').disabled=true;
   $('[data-do="start"] span').textContent='LOADING…';
   $('.vr-load-status').classList.remove('is-ready');
-  const names = ['vlad','agi','agiLeft','vladRun','vladCombo','agiRun','agiCombo','agiRunLeft','agiComboLeft','enforcerMotion','neon','orange','spire','enemies','bosses','menuBackdrop','titleLogo','vladPortrait','agiPortrait','storyDiner']; let count = 0;
-  const optional = new Set(['menuBackdrop','titleLogo','vladPortrait','agiPortrait','storyDiner']);
+  const names = ['vlad','agi','agiLeft','vladRun','vladCombo','agiRun','agiCombo','agiRunLeft','agiComboLeft','enforcerMotion','neon','orange','spire','enemies','bosses','menuBackdrop','titleLogo','vladPortrait','agiPortrait']; let count = 0;
+  const optional = new Set(['menuBackdrop','titleLogo','vladPortrait','agiPortrait']);
   const failed = [];
   await Promise.all(names.map(name => new Promise(resolve => {
     const img = new Image(); let finished = false;
@@ -118,7 +124,7 @@ async function loadAssets() {
   else $('.vr-load-status').textContent = 'Ready when you are.';
   $('.vr-load-status').classList.toggle('is-ready',assetsReady);
 }
-loadAssets(); audio.preload(); updateBest();
+loadAssets(); audio.preload(); updateBest(); preloadStoryArt(OPENING[0]);
 
 function setMode(next) {
   mode = next;
@@ -144,13 +150,38 @@ function banner(kicker,headline,description = '',seconds = 3) {
   const n=$('.vr-banner'); n.querySelector('small').textContent=kicker; n.querySelector('b').textContent=headline; n.querySelector('p').textContent=description; n.hidden=false; bannerUntil=(state?.elapsed||0)+seconds;
 }
 function banter(who,line) { const n=$('.vr-banter'); n.querySelector('b').textContent=who; n.querySelector('span').textContent=line; n.hidden=false; banterUntil=(state?.elapsed||0)+4.5; }
+function preloadStoryArt(frame) {
+  if(!frame?.art)return Promise.resolve(null);
+  const src=`/images/vladrunner2049/${frame.art}`;
+  if(storyArtCache.has(src))return storyArtCache.get(src);
+  const promise=new Promise(resolve=>{
+    const image=new Image();image.decoding='async';image.fetchPriority='low';
+    image.onload=async()=>{try{await image.decode?.();}catch{/* A complete image remains usable if explicit decoding is unavailable. */}resolve(src);};
+    image.onerror=()=>{storyArtCache.delete(src);resolve(null);};image.src=src;
+  });
+  storyArtCache.set(src,promise);
+  // Retain only a small look-ahead; visited art stays in the browser HTTP cache.
+  while(storyArtCache.size>3)storyArtCache.delete(storyArtCache.keys().next().value);
+  return promise;
+}
 function showStoryFrame() {
   const frame = storySequence[storyIndex], panel = $('.vr-story');
-  panel.dataset.scene = frame.scene; panel.dataset.focus = frame.focus;
-  $('.vr-story-caption').textContent=frame.caption; $('.vr-story-speaker').textContent=frame.speaker;
-  $('#vr-story-title').textContent=frame.title; $('.vr-story-text').textContent=frame.text;
-  $('.vr-story-count').textContent=`${storyIndex+1} / ${storySequence.length} · SPACE / ENTER TO CONTINUE`;
-  $('[data-do="story-next"]').textContent=storyIndex===storySequence.length-1?'LET’S GO! →':'NEXT →';
+  const request=++storyArtRequest,scene=$('.vr-story-scene'),image=$('.vr-story-art'),loading=$('.vr-story-loading');
+  panel.dataset.scene=frame.scene;panel.classList.toggle('is-level',Boolean(frame.level));
+  $('.vr-story-level').textContent=frame.level||'';
+  $('.vr-story-caption').textContent=frame.caption||'';$('.vr-story-speaker').textContent=frame.speaker||'';
+  $('#vr-story-title').textContent=frame.title;$('.vr-story-text').textContent=frame.text;
+  $('.vr-story-count').textContent=`${storyIndex+1} / ${storySequence.length}`;
+  $('[data-do="story-next"]').textContent=frame.button||(storyIndex===storySequence.length-1?'LET’S GO! →':'NEXT →');
+  scene.classList.remove('is-ready');scene.setAttribute('aria-busy','true');image.alt=frame.alt||frame.title;
+  loading.textContent='Loading illustration…';loading.hidden=false;
+  preloadStoryArt(frame).then(src=>{
+    if(destroyed||!storySequence||request!==storyArtRequest)return;
+    scene.setAttribute('aria-busy','false');
+    if(src){image.src=src;scene.classList.add('is-ready');loading.hidden=true;}
+    else{image.removeAttribute('src');loading.textContent='Illustration unavailable';}
+  });
+  preloadStoryArt(storySequence[storyIndex+1]);
 }
 function beginStory(sequence, complete) {
   storySequence=sequence;storyIndex=0;storyComplete=complete;paused=true;input.setEnabled(false);input.clear();
@@ -159,7 +190,7 @@ function beginStory(sequence, complete) {
 }
 function finishStory() {
   if(!storySequence)return;
-  const complete=storyComplete;storySequence=null;storyComplete=null;$('.vr-story').hidden=true;
+  const complete=storyComplete;storySequence=null;storyComplete=null;storyArtRequest++;$('.vr-story').hidden=true;
   title.inert=false;play.inert=false;canvas.inert=false;input.clear();lastTime=0;complete?.();
 }
 function nextStory() {if(!storySequence)return;if(++storyIndex>=storySequence.length)finishStory();else showStoryFrame();}

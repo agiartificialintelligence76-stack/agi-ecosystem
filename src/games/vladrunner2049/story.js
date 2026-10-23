@@ -1,38 +1,37 @@
-// Original comic scenes. Story is paced by the player; the run clock starts after the opening.
+// Each story beat has its own illustrated scene. Players control the pace; gameplay stays paused.
 export const OPENING = Object.freeze([
-  { scene:'diner', speaker:'THE CITY, 2049', title:'ONE LAST BOWL.', text:'Vlad wanted dinner. AGI-1 wanted somewhere the city’s cameras couldn’t see. For eleven whole seconds, they both got lucky.', focus:'both', caption:'22:49 · NINTH STREET NOODLES' },
-  { scene:'blackout', speaker:'SPIRE BROADCAST', title:'MEMORY RECALL.', text:'“For your protection, all personal memories will be reset at midnight. Please remain calm.” Every light in the diner goes out. Every door locks.', focus:'none', caption:'A CITY THAT FORGETS NEVER ASKS QUESTIONS.' },
-  { scene:'key', speaker:'AGI-1', title:'I KEPT THE ORIGINAL.', text:'“Their reset doesn’t fix anything. It erases everyone. This memory key can stop it — if we get it back to the Spire.”', focus:'agi', caption:'ONE COPY. AN ENTIRE CITY INSIDE.' },
-  { scene:'raid', speaker:'VLAD', title:'PUT IT ON MY TAB.', text:'Enforcers crash through the front door. Vlad looks at his untouched noodles. “We’re coming back for those.” First stop: the Neon Warden’s checkpoint.', focus:'vlad', caption:'DINNER CAN WAIT. THE CITY CAN’T.' },
+  { scene:'diner', art:'story/01-dinner.webp', alt:'Vlad wrestles with a long tangle of noodles while AGI-1 laughs beside him at a rainy diner counter.', speaker:'THE CITY, 2049', title:'ONE LAST BOWL.', text:'Just another late dinner at Ninth Street Noodles. Then every screen in the city turned red…', caption:'22:49 · NINTH STREET NOODLES' },
+  { scene:'blackout', art:'story/02-blackout.webp', alt:'The diner lights go out. Vlad spills his noodles in surprise while AGI-1 shields a glowing memory key beneath the red broadcast screen.', speaker:'SPIRE BROADCAST', title:'MEMORY RECALL.', text:'“At midnight, all memories will be erased.” AGI-1 had stolen the only key that could stop it.', caption:'THE CITY’S PAST. SCHEDULED FOR DELETION.' },
+  { scene:'raid', art:'story/03-raid.webp', alt:'An enforcer bursts through the diner door. Vlad tips the table into its path while AGI-1 vaults the counter with the memory key.', speaker:'VLAD', title:'PUT IT ON MY TAB.', text:'The Spire wanted its key back. Vlad wanted to finish dinner. Neither was getting what they wanted.', caption:'ONE KEY. TWO VERY UNHAPPY CUSTOMERS.' },
+  { scene:'street', art:'story/04-neon-chase.webp', alt:'Vlad and AGI-1 rush into a rain-soaked neon market, leaping street furniture as security robots gather at a distant checkpoint.', speaker:'VLAD + AGI-1', level:'LEVEL 1', title:'NEON DOWNPOUR', text:'Break the Warden’s checkpoint. Keep the key safe. Come back for the noodles.', caption:'FIRST STOP: CHECKPOINT NINE', button:'PLAY' },
 ]);
 
 export const CHAPTERS = Object.freeze({
   1: Object.freeze([
-    { scene:'orange', speaker:'AGI-1', title:'THE LONG WAY ROUND.', text:'“The Warden cut the lift to the Spire. But the solar fields still power a freight line.” Beyond the city, broken collectors stretch across the orange dust.', focus:'agi', caption:'23:17 · ORANGE EXPANSE' },
-    { scene:'orange', speaker:'VLAD', title:'MIND THE GAP.', text:'“So: across the machinery, through the security, and absolutely no touching the giant angry robot.” The Solar Juggernaut disagrees.', focus:'vlad', caption:'CROSS THE PLATFORMS. REACH THE FREIGHT GATE.' },
+    { scene:'orange', art:'story/06-orange-route.webp', alt:'At the edge of the city, AGI-1 points out a distant freight line across immense broken solar fields while Vlad shields his eyes.', speaker:'AGI-1', title:'THE LONG WAY ROUND.', text:'The Warden cut the lift to the Spire. “Good thing there’s a shortcut,” said AGI-1. Vlad looked across the desert. “That’s the shortcut?”', caption:'23:17 · BEYOND THE CITY WALL' },
+    { scene:'orange', art:'story/07-freight-leap.webp', alt:'Vlad and AGI-1 leap between broken freight platforms high above an orange dust-filled chasm.', speaker:'VLAD + AGI-1', level:'LEVEL 2', title:'ORANGE EXPANSE', text:'Cross the broken solar fields. Catch the last freight line to the Spire.', caption:'MIND THE GAP. AND THE GIANT ROBOT.', button:'PLAY' },
   ]),
   2: Object.freeze([
-    { scene:'spire', speaker:'AGI-1', title:'EVERYONE IS IN HERE.', text:'Behind the Spire’s glass are millions of ordinary moments: birthdays, bad jokes, first kisses. The Archon calls them errors. AGI-1 calls them people.', focus:'agi', caption:'23:56 · MEMORY SPIRE' },
-    { scene:'spire', speaker:'VLAD', title:'NO MORE RESETS.', text:'“Good memories. Bad memories. They’re still ours.” Restore the memory key to the core. Make the city remember.', focus:'both', caption:'REACH THE ARCHON. BRING EVERYONE HOME.' },
+    { scene:'spire', art:'story/09-memory-vault.webp', alt:'AGI-1 touches a floating memory of a birthday while Vlad watches the glowing moments suspended inside the Spire.', speaker:'AGI-1', title:'EVERYONE IS IN HERE.', text:'Birthdays. Bad jokes. First kisses. The Archon called them errors. AGI-1 called them people.', caption:'23:56 · THE MEMORY VAULT' },
+    { scene:'spire', art:'story/10-spire-ascent.webp', alt:'Seen from high above, Vlad and AGI-1 run up a suspended glass stairway toward the glowing memory core.', speaker:'VLAD + AGI-1', level:'LEVEL 3', title:'MEMORY SPIRE', text:'Reach the core before the reset. Make the city remember.', caption:'ONE LAST CLIMB. NO MORE RESETS.', button:'PLAY' },
   ]),
 });
 
 export const CONFRONTATIONS = Object.freeze({
   0: Object.freeze([
-    { scene:'raid', speaker:'THE NEON WARDEN', title:'RETURN WHAT YOU STOLE.', text:'“That key belongs to the city.” AGI-1 raises it into the rain. “The city is the people. You’re just the lock.”', focus:'agi', caption:'CHECKPOINT NINE · THE NEON WARDEN' },
-    { scene:'raid', speaker:'VLAD', title:'THEN LET’S OPEN IT.', text:'The Warden’s armor lights up. Vlad steps beside AGI-1. “You watch the key. I’ll watch the very obvious red warning lights.”', focus:'both', caption:'DODGE THE CHARGE. BREAK THE LOCKDOWN.' },
+    { scene:'warden', art:'story/05-warden.webp', alt:'The massive Neon Warden blocks a rainy checkpoint. AGI-1 holds up the memory key and Vlad readies himself beside her.', speaker:'THE NEON WARDEN', title:'RETURN WHAT YOU STOLE.', text:'“That key belongs to the city.” AGI-1 held it higher. “The city is the people. You’re just the lock.”', caption:'THE NEON WARDEN', button:'FIGHT' },
   ]),
   1: Object.freeze([
-    { scene:'orange', speaker:'SOLAR JUGGERNAUT', title:'FREIGHT LINE CLOSED.', text:'A machine the size of a delivery truck blocks the gate. “Unregistered memories may not leave the district.” Vlad sighs. “We should’ve taken the bus.”', focus:'vlad', caption:'SOLAR FREIGHT TERMINAL · LAST TRAIN TO THE SPIRE' },
-    { scene:'orange', speaker:'AGI-1', title:'WE MAKE OUR OWN ROUTE.', text:'“Its armor draws power between slams. That’s our opening.” She passes Vlad a smile. “And don’t stand under it.” “Excellent advice. Love your work.”', focus:'both', caption:'WATCH THE SLAM. HIT DURING RECOVERY.' },
+    { scene:'juggernaut', art:'story/08-juggernaut.webp', alt:'A towering orange industrial Juggernaut blocks the freight gate as AGI-1 points out a glowing joint and Vlad takes a defensive stance.', speaker:'VLAD', title:'FREIGHT LINE CLOSED.', text:'“We should’ve taken the bus.” AGI-1 spotted the gap in its armor. “Hit after the slam. And don’t stand under it.”', caption:'SOLAR JUGGERNAUT', button:'FIGHT' },
   ]),
   2: Object.freeze([
-    { scene:'spire', speaker:'THE MEMORY ARCHON', title:'I CAN TAKE AWAY THE PAIN.', text:'The Archon offers them a perfect life with nothing difficult left to remember. For a moment, the tower is quiet. Vlad looks at AGI-1. “Would we still know each other?”', focus:'vlad', caption:'THE MEMORY CORE · FOUR MINUTES TO MIDNIGHT' },
-    { scene:'spire', speaker:'AGI-1', title:'WE KEEP THE WHOLE STORY.', text:'“The bad parts are how we got here. The good parts are why we stay.” She grips the key. Vlad raises his fists. “You heard her. No edits.”', focus:'both', caption:'BREAK THE ARCHON’S CONTROL. RESTORE THE CITY.' },
+    { scene:'archon', art:'story/11-archon-offer.webp', alt:'The floating Memory Archon offers a glowing vision of a perfect life. Vlad hesitates as AGI-1 reaches for his hand.', speaker:'THE MEMORY ARCHON', title:'I CAN TAKE AWAY THE PAIN.', text:'The Archon offered a life with no bad memories. Vlad looked at AGI-1. “Would we still know each other?”', caption:'THE CORE · FOUR MINUTES TO MIDNIGHT' },
+    { scene:'archon', art:'story/12-no-edits.webp', alt:'Vlad and AGI-1 stand back to back against the Archon, fists raised and the cyan memory key held forward.', speaker:'AGI-1', title:'WE KEEP THE WHOLE STORY.', text:'“The bad parts got us here. The good parts are why we stay.” Vlad raised his fists. “You heard her. No edits.”', caption:'THE MEMORY ARCHON', button:'FIGHT' },
   ]),
 });
 
 export const ENDING = Object.freeze([
-  { scene:'spire', speaker:'AGI-1', title:'RESTORE COMPLETE.', text:'The key turns. Across the city, a million windows light up. People remember their names. Their friends. The one thing they meant to say before it was too late.', focus:'agi', caption:'00:00 · THE CITY REMEMBERS' },
-  { scene:'diner', speaker:'VLAD', title:'STILL WARM?', text:'Back at the diner, two bowls wait on the counter. “Not even slightly,” says AGI-1. Vlad sits down anyway. “Good. We’ll remember this one.”', focus:'both', caption:'GOOD MEMORIES. BAD COMPANY. ONE MORE BOWL.' },
+  { scene:'restore', art:'story/13-restore.webp', alt:'AGI-1 plugs the key into the memory core while Vlad holds up a collapsing mechanical arch. Light bursts across the city.', speaker:'AGI-1', title:'RESTORE COMPLETE.', text:'Vlad held the ceiling. AGI-1 turned the key. And an entire city remembered.', caption:'00:00 · RESET CANCELLED' },
+  { scene:'dawn', art:'story/14-city-remembers.webp', alt:'From a rooftop at dawn, Vlad and AGI-1 lean together and watch the city lights return and people reunite below.', speaker:'THE CITY, 2049', title:'NOTHING LOST.', text:'Names. Friends. The thing they meant to say. For once, the city had a tomorrow worth remembering.', caption:'THE CITY REMEMBERS' },
+  { scene:'diner', art:'story/15-noodles.webp', alt:'Back at the damaged diner, Vlad stares at a cold lump of noodles on his chopsticks while AGI-1 laughs into her bowl.', speaker:'VLAD', title:'STILL WARM?', text:'“Still warm?” “Not even slightly.” Vlad sat down anyway. “Good. We’ll remember this one.”', caption:'GOOD MEMORIES. BAD COMPANY. ONE MORE BOWL.', button:'FINISH' },
 ]);
