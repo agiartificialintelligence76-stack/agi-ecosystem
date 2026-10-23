@@ -2,6 +2,9 @@
 // from src/memes/list.js, and the viewer: a <dialog> that plays the video with its controls or shows the whole picture,
 // with Download, Copy link (agi1.app/memes?m=<id> opens that meme) and the previous and next ones (arrow keys, swipe).
 // No inline code or styles anywhere (the site's CSP): everything is made here with the DOM. The look: src/styles/memes.css.
+// Load more (the owner, 2026-10-23: "so they dont have to scroll down really long and add load more"): each group shows a
+// few full rows (2 on All, 3 on its own tab; the row length is read from the grid, so no half-empty rows), and its
+// "Load more" button shows 3 more rows. Switching tabs starts over.
 import '../styles/tokens.css';
 import '../styles/base.css';
 import '../styles/layout.css';
@@ -45,6 +48,11 @@ const canPeek = () => matchMedia('(hover: hover) and (pointer: fine)').matches &
 let current = 'all';          // the open tab
 let open = [];                // the memes the viewer steps through (the open tab's, in the page's order)
 let at = -1;                  // which of them the viewer shows
+const rows = {};              // how many rows each group shows now
+const FIRST_ROWS = { all: 2, tab: 3 };
+const MORE_ROWS = 3;
+// the viewer's parts (declared up here: start() below makes them, and a `let` further down isn't usable yet)
+let dlg, stage, kindEl, titleEl, noteEl, countEl, dlBtn, prevBtn, nextBtn;
 
 startTheme();
 startMenu();
@@ -60,6 +68,10 @@ function start() {
   viewer();
   pick(TAB_OF[location.hash.slice(1)] || 'all', false);
   addEventListener('hashchange', () => { const t = TAB_OF[location.hash.slice(1)]; if (t) pick(t, false); });
+  // a wider or narrower window changes how many cards fit in a row
+  let frame = 0;
+  const relayout = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => { for (const g of GROUPS) layout(g.kind); }); };
+  if ('ResizeObserver' in window) new ResizeObserver(relayout).observe(root); else addEventListener('resize', relayout);
   const linked = new URLSearchParams(location.search).get('m');
   const meme = MEMES.find((m) => m.id === linked);
   if (meme) show(meme);
@@ -74,9 +86,8 @@ function counts() {
 function makeTabs(list) {
   for (const t of TABS) {
     const n = t.key === 'all' ? MEMES.length : MEMES.filter((m) => m.kind === t.key).length;
-    const b = el('button', 'mm-tab', { type: 'button', role: 'tab', id: `mm-tab-${t.key}`, 'data-tab': t.key, 'aria-selected': 'false', tabindex: '-1' });
-    b.append(t.label, ' ');
-    const c = el('span', 'mm-tab-n'); c.textContent = String(n); b.append(c);
+    const b = el('button', 'mm-tab', { type: 'button', role: 'tab', id: `mm-tab-${t.key}`, 'data-tab': t.key, 'aria-selected': 'false', tabindex: '-1', title: `${n} ${t.label.toLowerCase()}` });
+    b.textContent = t.label;
     b.addEventListener('click', () => pick(t.key, true));
     list.append(b);
   }
@@ -101,6 +112,7 @@ function pick(key, fromClick) {
     b.tabIndex = on ? 0 : -1;
   }
   for (const g of document.querySelectorAll('.mm-group')) g.hidden = key !== 'all' && g.dataset.group !== key;
+  for (const g of GROUPS) { rows[g.kind] = key === 'all' ? FIRST_ROWS.all : FIRST_ROWS.tab; layout(g.kind); }
   const panel = document.querySelector('[data-mm-groups]');
   panel?.setAttribute('aria-labelledby', `mm-tab-${key}`);
   if (fromClick) {
@@ -119,11 +131,45 @@ function makeGroup(g) {
   const n = el('span', 'mm-group-n'); n.textContent = `(${String(items.length).padStart(2, '0')})`; h.append(n);
   const p = el('p', 'mm-group-note'); p.textContent = g.note;
   head.append(h, p);
-  const grid = el('ul', `mm-grid ${g.grid}`, { role: 'list' });
+  const grid = el('ul', `mm-grid ${g.grid}`, { role: 'list', id: `mm-grid-${g.kind}` });
   for (const m of items) grid.append(makeCard(m, g));
   if (!items.length) { const e = el('p', 'mm-empty'); e.textContent = 'Nothing here yet.'; sec.append(head, e); return sec; }
-  sec.append(head, grid);
+  const more = el('div', 'mm-more', { hidden: true });
+  const btn = el('button', 'mm-more-btn', { type: 'button', 'aria-controls': grid.id });
+  btn.addEventListener('click', () => {
+    const first = [...grid.children].findIndex((c) => c.hidden);
+    rows[g.kind] += MORE_ROWS;
+    layout(g.kind);
+    // keyboard users carry on from the first new card; the page doesn't jump
+    grid.children[first]?.querySelector('.mm-open')?.focus({ preventScroll: true });
+  });
+  more.append(btn);
+  sec.append(head, grid, more);
   return sec;
+}
+
+// show the group's first rows[kind] full rows and say how many are left
+function layout(kind) {
+  const sec = document.querySelector(`.mm-group[data-group="${kind}"]`);
+  const grid = sec?.querySelector('.mm-grid');
+  if (!grid || sec.hidden) return;   // a hidden grid has no row length; it's laid out when its tab opens
+  const cards = [...grid.children];
+  const limit = columns(grid) * (rows[kind] || FIRST_ROWS.all);
+  cards.forEach((c, i) => { c.hidden = i >= limit; });
+  const left = Math.max(0, cards.length - limit);
+  const more = sec.querySelector('.mm-more');
+  const btn = more?.querySelector('.mm-more-btn');
+  if (!more || !btn) return;
+  more.hidden = left === 0;
+  btn.textContent = 'Load more ';
+  const n = el('span', 'mm-more-n'); n.textContent = `${left} more`; btn.append(n);
+  btn.setAttribute('aria-label', `Load more ${KIND_WORD[kind].toLowerCase()}s (${left} more)`);
+}
+
+function columns(grid) {
+  const t = getComputedStyle(grid).gridTemplateColumns;
+  const n = t && t !== 'none' && !t.includes('repeat') ? t.trim().split(/\s+/).length : 1;
+  return Math.max(1, n);
 }
 
 function makeCard(m, g) {
@@ -182,7 +228,6 @@ function peek(li, btn, m) {
 }
 
 // ---------- the viewer ----------
-let dlg, stage, kindEl, titleEl, noteEl, countEl, dlBtn, prevBtn, nextBtn;
 
 function viewer() {
   dlg = el('dialog', 'mm-viewer', { 'aria-labelledby': 'mm-v-title' });

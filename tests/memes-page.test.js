@@ -52,6 +52,11 @@ test('memes: the page script and its look follow the site\'s rules', () => {
   assert.match(js, /startTheme\(\);\s*startMenu\(\);/, 'the theme and the phone menu, like every page');
   assert.match(js, /showModal\(\)/, 'the viewer is a real dialog (focus stays inside, Esc closes it)');
   assert.match(js, /removeAttribute\('src'\)/, 'a closed video stops downloading');
+  // the owner, 2026-10-23: "so they dont have to scroll down really long and add load more"
+  assert.match(js, /'mm-more-btn'/, 'each group has a Load more button');
+  assert.match(js, /FIRST_ROWS = \{ all: 2, tab: 3 \}/, 'a few full rows first');
+  assert.match(css, /\.mm-tab\[aria-selected='true'\] \{ background: #c6f24e;/, 'the open tab is the lime pill from the owner\'s picture');
+  assert.match(css, /\.mm-card\[hidden\]/, 'the cards not loaded yet stay hidden');
   assert.ok(!/\.style\.cssText|setAttribute\('style'/.test(js), 'no style attributes (the CSP)');
   for (const rule of css.replace(/\/\*[\s\S]*?\*\//g, '').match(/[^{}@]+(?=\{)/g) || []) {
     const sel = rule.trim();

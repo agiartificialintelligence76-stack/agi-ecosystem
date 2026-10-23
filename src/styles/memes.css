@@ -52,16 +52,20 @@
   border-bottom: 1px solid var(--line);
 }
 .mm-bar-in { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
-.mm-tabs { display: flex; flex: 0 1 auto; gap: 8px; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; padding: 3px 3px 6px; margin: -3px -3px -6px; }
+/* the owner's picture (2026-10-23): a black bar of outlined pills, the open one lime with black words. Same in every theme */
+.mm-tabs {
+  display: flex; flex: 0 1 auto; gap: 10px; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none;
+  padding: 8px; border-radius: 999px; background: #0b0b0b; box-shadow: 0 0 0 1px rgb(255 255 255 / .06);
+}
 .mm-tabs::-webkit-scrollbar { display: none; }
 .mm-tab {
-  display: inline-flex; align-items: center; gap: 8px; flex: none; padding: 9px 16px; border: 1px solid var(--line);
-  border-radius: 999px; background: var(--bg); color: var(--fg); font: inherit; font-size: 14.5px; font-weight: 600;
-  letter-spacing: .02em; text-transform: uppercase; cursor: pointer; transition: background .15s, color .15s, transform .15s;
+  display: inline-flex; align-items: center; flex: none; padding: 11px 26px; border: 2px solid #3a3a3a; border-radius: 999px;
+  background: #0b0b0b; color: #f4f4f4; font: inherit; font-family: var(--display, inherit); font-size: 17px; font-weight: 800;
+  letter-spacing: -0.01em; line-height: 1.1; cursor: pointer; transition: background .15s, color .15s, border-color .15s, transform .15s;
 }
-.mm-tab:hover { transform: translateY(-1px); }
-.mm-tab[aria-selected='true'] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-.mm-tab-n { font-family: var(--mono); font-size: 12px; font-weight: 500; opacity: .7; }
+.mm-tab:hover { border-color: #6d6d6d; transform: translateY(-1px); }
+.mm-tab[aria-selected='true'] { background: #c6f24e; border-color: #c6f24e; color: #0b0b0b; }
+.mm-tab:focus-visible { outline: 2px solid #c6f24e; outline-offset: 2px; }
 .mm-hint { font-size: 13.5px; color: var(--fg-2); }
 
 /* ---------- the groups ---------- */
@@ -118,10 +122,24 @@
 .mm-dl svg { width: 18px; height: 18px; }
 .mm-dl:hover { background: var(--accent); border-color: var(--accent); color: #fff; transform: translateY(-1px); }
 .mm-empty { padding: 40px 0; color: var(--fg-2); text-align: center; }
+.mm-card[hidden], .mm-more[hidden] { display: none; }
+
+/* ---------- Load more: under each group, in the tabs' look ---------- */
+.mm-more { display: flex; justify-content: center; margin-top: clamp(20px, 2.6vw, 30px); }
+.mm-more-btn {
+  display: inline-flex; align-items: center; gap: 10px; padding: 13px 30px; border: 2px solid #3a3a3a; border-radius: 999px;
+  background: #0b0b0b; color: #f4f4f4; font: inherit; font-family: var(--display, inherit); font-size: 16px; font-weight: 800;
+  cursor: pointer; transition: background .15s, color .15s, border-color .15s, transform .15s;
+}
+.mm-more-btn:hover { background: #c6f24e; border-color: #c6f24e; color: #0b0b0b; transform: translateY(-1px); }
+.mm-more-btn:focus-visible { outline: 2px solid #c6f24e; outline-offset: 3px; }
+.mm-more-n { font-family: var(--mono); font-size: 12.5px; font-weight: 500; opacity: .7; }
 
 /* ---------- the viewer ---------- */
+/* margin: auto puts it back in the middle of the screen: base.css's `* { margin: 0 }` takes away the browser's own centring
+   of a <dialog>, which left the viewer stuck in the top-left corner (the owner, 2026-10-23: "not even aligned properly") */
 .mm-viewer {
-  width: min(1180px, 100vw - 24px); max-width: none; max-height: calc(100dvh - 24px); padding: 0; overflow: visible;
+  margin: auto; width: min(1180px, 100vw - 24px); max-width: none; max-height: calc(100dvh - 24px); padding: 0; overflow: visible;
   border: 0; border-radius: 22px; background: transparent; color: #fff;
 }
 .mm-viewer::backdrop { background: rgb(9 4 24 / .86); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
@@ -174,6 +192,8 @@ video.mm-v-media { width: 100%; }
   .mm-stats { justify-self: start; }
   .mm-hint { display: none; }
   .mm-bar { top: 56px; }
+  .mm-tabs { gap: 6px; padding: 6px; }
+  .mm-tab { padding: 9px 17px; font-size: 15px; }
 }
 @media (max-width: 640px) {
   .mm-grid-image { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -187,7 +207,8 @@ video.mm-v-media { width: 100%; }
   .mm-v-btn { width: 42px; padding: 0; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mm-card, .mm-thumb, .mm-play, .mm-tab { transition: none; }
+  .mm-card, .mm-thumb, .mm-play, .mm-tab, .mm-more-btn { transition: none; }
+  .mm-tab:hover, .mm-more-btn:hover { transform: none; }
   .mm-card:hover, .mm-card:hover .mm-thumb { transform: none; }
 }
 
@@ -218,10 +239,7 @@ video.mm-v-media { width: 100%; }
 [data-skin='pop'] .mm-stats { color: var(--pop-ink); background: #fff; border: 2px solid var(--pop-ink); border-radius: 22px; box-shadow: 0 9px 0 -2px var(--pop-ink); --fg: var(--pop-ink); --fg-2: var(--pop-ink-2); --line: rgb(23 10 54 / .2); }
 [data-skin='pop'] .mm-stat-n { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; color: var(--pop-violet); text-shadow: .05em .05em 0 var(--pop-pink); }
 [data-skin='pop'] .mm-bar { background: color-mix(in srgb, var(--page) 90%, transparent); border-bottom: 2px solid var(--edge); }
-[data-skin='pop'] .mm-tab { border: 2px solid var(--edge); background: var(--bg); box-shadow: 2px 3px 0 var(--shade); font-family: var(--display); font-weight: 800; font-stretch: 108%; }
-[data-skin='pop'] .mm-tab:hover { box-shadow: 3px 5px 0 var(--shade); }
-[data-skin='pop'] .mm-tab[aria-selected='true'] { background: var(--pop-violet); color: #fff; border-color: var(--edge); }
-[data-skin='pop'] .mm-tab[data-tab='slopcore'][aria-selected='true'] { background: var(--pop-pink); }
+[data-skin='pop'] .mm-tab, [data-skin='pop'] .mm-more-btn { font-weight: 900; font-stretch: 112%; }
 [data-skin='pop'] .mm-group-title { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; text-transform: uppercase; }
 [data-skin='pop'] .mm-group-slop .mm-group-title { color: var(--pop-pink); text-shadow: .04em .05em 0 var(--pop-ink); }
 [data-skin='pop'] .mm-card { border: 2px solid var(--edge); border-radius: var(--radius); box-shadow: 0 9px 0 -2px var(--shade); }
@@ -240,4 +258,3 @@ video.mm-v-media { width: 100%; }
 [data-skin='pop'][data-theme='dark'] .mm-stats { color: #f4efff; background: #1d0e40; border-color: var(--pop-lav-2); box-shadow: 0 9px 0 -2px var(--pop-pink); --fg: #f4efff; --fg-2: #cbbff0; }
 [data-skin='pop'][data-theme='dark'] .mm-stat-n { color: var(--pop-lav-2); }
 [data-skin='pop'][data-theme='dark'] .mm-card { border-color: var(--pop-lav-2); box-shadow: 0 9px 0 -2px var(--pop-pink); }
-[data-skin='pop'][data-theme='dark'] .mm-tab { border-color: var(--pop-lav-2); box-shadow: 2px 3px 0 var(--pop-pink); }

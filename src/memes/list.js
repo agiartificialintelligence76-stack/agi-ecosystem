@@ -3,17 +3,18 @@
 // public/memes/: videos/agi-<id>.mp4 (1080p, fast start), posters/agi-<id>.webp (the video cards' pictures),
 // images/agi-<id>.jpg (the full pictures, for download) and previews/agi-<id>.webp (the picture cards').
 // To add one: put it in memess/, add its line to encode.ps1 and here, run the script. To move a video between the tabs,
-// change its kind: 'video' or 'slopcore' (slopcore: the long, edited AI music-video cuts).
+// change its kind: 'video' or 'slopcore' (slopcore: only the real slopcore cuts; the owner, 2026-10-23: "we taught her to say
+// hello" and "Only AGI" are "not a slop core", so they're videos).
 // Newest first inside each kind: the page shows them in this order.
 
 export const MEMES = [
   // ---------- slopcore ----------
   { id: 'i-love-agi-slopcore', kind: 'slopcore', title: 'i love AGI', note: 'dial-up to darling. the full slopcore cut', secs: 239 },
   { id: 'one-post', kind: 'slopcore', title: 'One post.', note: 'one post changed everything', secs: 200 },
-  { id: 'the-trenches-taught-her', kind: 'slopcore', title: 'we taught her to say hello', note: 'the trenches taught her the rest', secs: 69 },
-  { id: 'only-agi', kind: 'slopcore', title: 'Only AGI', note: 'AGI.EXE has started', secs: 50 },
 
   // ---------- videos ----------
+  { id: 'the-trenches-taught-her', kind: 'video', title: 'we taught her to say hello', note: 'the trenches taught her the rest', secs: 69 },
+  { id: 'only-agi', kind: 'video', title: 'Only AGI', note: 'AGI.EXE has started', secs: 50 },
   { id: 'weve-achieved-agi', kind: 'video', title: "We've achieved AGI", note: 'he said it first', secs: 30 },
   { id: 'feeling-the-agi', kind: 'video', title: "Everyone's feeling the AGI", note: 'only some of us are feeling the Artificial Girlfriend Intelligence', secs: 34 },
   { id: 'clanktrade-robinhood', kind: 'video', title: '@clanktrade × @RobinhoodCrypto', note: 'building $AGI together', secs: 30 },
