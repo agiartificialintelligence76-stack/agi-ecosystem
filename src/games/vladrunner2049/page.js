@@ -1,3 +1,6 @@
+// The AGI GAMES intro first (2026-10-23, like every AGI game): its overlay's styles before the game's, and its key and
+// tap listeners before the game's own, so a key or a tap that skips the intro never reaches the game.
+import '../intro.js';
 import './style.css';
 import { createGame, stepGame, chooseUpgrade, DISTRICTS } from './engine.js';
 import { createRenderer } from './render.js';

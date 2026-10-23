@@ -889,10 +889,9 @@ function cssRules(css) {
 
 test('every game\'s page: its overlay right after <body>, once, before the game; its entry starts the intro first', () => {
   const tag = '<div class="gi" id="agi-intro" aria-hidden="true"></div>';
-  // (VLAD RUNNER 2049 opens on its own illustrated title screen, without the AGI GAMES intro)
-  const ids = Object.keys(GAMES).filter((id) => id !== 'vladrunner2049');
-  assert.ok(ids.length >= 1);
-  assert.doesNotMatch(read('vladrunner2049.html'), /agi-intro|class="gi"/);
+  // (VLAD RUNNER 2049 too, since 2026-10-23: the intro, then its own illustrated title screen)
+  const ids = Object.keys(GAMES);
+  assert.ok(ids.includes('vladrunner2049'));
   for (const id of ids) {
     const html = read(`${id}.html`);
     assert.equal(html.split('id="agi-intro"').length - 1, 1, `${id}: one overlay`);
@@ -915,6 +914,8 @@ test('every game\'s page: its overlay right after <body>, once, before the game;
   assert.deepEqual(importsOf(read('src/games/rideemagi/page.js')), ['../intro.js', './fonts.css', './game.css', './game.js']);
   // TRENCHING SIMULATOR's (2026-10-20): the intro, its styles, its screens
   assert.deepEqual(importsOf(read('src/games/trenchingsimulator/page.js')), ['../intro.js', './trench.css', './shell.js']);
+  // VLAD RUNNER 2049's (2026-10-23): the intro, then its styles before anything of the game
+  assert.deepEqual(importsOf(read('src/games/vladrunner2049/page.js')).slice(0, 2), ['../intro.js', './style.css']);
   // AGI games' own page lists the games: it isn't one
   assert.doesNotMatch(read('games.html'), /agi-intro|class="gi"/);
 });
