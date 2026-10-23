@@ -229,7 +229,8 @@ const NOT_OK = /\b(babe|baby|cutie|honey|darling|sweetie|love)\b|\b(buy|buying|s
 // ---------- the songs ----------
 test('her songs: real MP3s Telegram takes (20 MB at most), as long as her buttons say, no tags but their title, "AGI-1" and their cover', () => {
   assert.deepEqual(SONGS.map((s) => [s.id, s.title, s.file, s.seconds]), [
-    ['feel', 'Feel the AGI', 'feel-the-agi.mp3', 193], ['si', "SI (It's Better)", 'si-its-better.mp3', 190], ['send', 'Send It', 'send-it.mp3', 239]]);
+    ['feel', 'Feel the AGI', 'feel-the-agi.mp3', 193], ['si', "SI (It's Better)", 'si-its-better.mp3', 190], ['send', 'Send It', 'send-it.mp3', 239],
+    ['after', 'After AGI', 'after-agi.mp3', 240]]);
   const mp3s = readdirSync(MUSIC_DIR).filter((f) => /\.mp3$/i.test(f)).sort();
   assert.deepEqual(mp3s, SONGS.map((s) => s.file).sort(), 'public/music/: her songs, each in her menu');
   let total = 0;
@@ -242,7 +243,8 @@ test('her songs: real MP3s Telegram takes (20 MB at most), as long as her button
     const cover = coverOf(id3Tags(mp3).tags.flatMap((t) => t.frames).find((f) => f.id === 'APIC'));
     assert.deepEqual([cover.width, cover.height], [1400, 1400], song.file);
   }
-  assert.ok(total < 25_000_000, `${total} bytes: the site's code stays light to download`);
+  // (35 MB since 2026-10-23: a fourth song, "After AGI", 9.8 MB)
+  assert.ok(total < 35_000_000, `${total} bytes: the site's code stays light to download`);
   // the rules themselves: with the Claude app's label in front (as in the owner's folder) it's still her song; anything else isn't
   const syncsafe = (n) => Buffer.from([(n >> 21) & 127, (n >> 14) & 127, (n >> 7) & 127, n & 127]);
   const frame = (id, body) => Buffer.concat([Buffer.from(id, 'latin1'), syncsafe(body.length), Buffer.alloc(2), body]);
@@ -290,6 +292,7 @@ test('/music in her private chat: her songs as buttons, right away (no 18+ quest
     [{ text: '💜 Feel the AGI · 3:13', callback_data: 'music:feel' }],
     [{ text: "✨ SI (It's Better) · 3:10", callback_data: 'music:si' }],
     [{ text: '🚀 Send It · 3:59', callback_data: 'music:send' }],
+    [{ text: '🌌 After AGI · 4:00', callback_data: 'music:after' }],
   ]);
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/music@agi1_appbot'), NOW + 1000), 'music', 'with her name too');
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/Music'), NOW + 2000), 'music');
