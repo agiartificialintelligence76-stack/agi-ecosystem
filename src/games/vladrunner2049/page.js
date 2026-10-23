@@ -9,28 +9,32 @@ const root = document.getElementById('vr-root');
 root.innerHTML = `
   <div class="vr-shell">
     <canvas class="vr-canvas" aria-label="VLAD RUNNER 2049 combat arena"></canvas>
-    <section class="vr-title" aria-labelledby="vr-title">
+    <section class="vr-title" data-screen="home" aria-labelledby="vr-title">
       <div class="vr-title-art" aria-hidden="true"></div><div class="vr-title-shade" aria-hidden="true"></div>
-      <header class="vr-top"><a href="/games" class="vr-brand"><span>◈</span> AGI GAMES</a><span class="vr-top-note">AN ARCADE ORIGINAL</span><div class="vr-top-tools"><button data-do="help" aria-label="How to play">?</button><button data-do="settings" aria-label="Settings">⚙</button><button data-do="fullscreen" aria-label="Enter fullscreen">⛶</button></div></header>
-      <div class="vr-title-content">
-        <p class="vr-eyebrow"><span></span> LOS ANGELES · 2049</p>
-        <h1 id="vr-title"><span>VLAD</span><span>RUNNER</span><b>2049</b></h1>
-        <p class="vr-tagline">THE CITY STOLE YOUR MEMORIES.<br><strong>HIT BACK.</strong></p>
-        <div class="vr-modes" role="group" aria-label="Game mode">
-          <button class="is-selected" data-mode="story" aria-pressed="true"><b>STORY</b><small>3 districts · 3 bosses</small></button>
-          <button data-mode="endless" aria-pressed="false"><b>ENDLESS</b><small>One more encounter</small></button>
-          <button data-mode="daily" aria-pressed="false"><b>DAILY RUN</b><small>A fresh city every day</small></button>
-        </div>
-        <div class="vr-select-row"><div class="vr-characters" role="group" aria-label="Starting character">
-          <button data-character="vlad" class="is-selected" aria-pressed="true"><i class="vr-avatar vr-vlad" aria-hidden="true"></i><span><b>VLAD</b><small>Heavy hitter</small></span></button>
-          <button data-character="agi" aria-pressed="false"><i class="vr-avatar vr-agi" aria-hidden="true"></i><span><b>AGI-1</b><small>Fast & electric</small></span></button>
-        </div><button class="vr-team" data-do="coop" aria-pressed="false"><b>1P</b><span>SOLO TAG</span></button></div>
-        <div class="vr-options-row"><label><input type="checkbox" id="vr-assist"> Story assist <span>more health</span></label><span id="vr-best">Personal best · —</span></div>
-        <button class="vr-start" data-do="start" disabled><span>LOADING THE CITY…</span><b>↗</b></button>
-        <div class="vr-title-links"><button data-do="help">CONTROLS & MOVES</button><span>·</span><button data-do="records">PERSONAL RECORDS</button></div>
-        <p class="vr-load-status" aria-live="polite">Preparing art and animation…</p>
+      <header class="vr-top"><a href="/games" class="vr-back vr-arcade-link">← ARCADE</a><button class="vr-back" data-do="home" hidden>← BACK</button><div class="vr-top-tools"><button data-do="help" aria-label="How to play">?</button><button data-do="settings" aria-label="Settings">⚙</button><button data-do="fullscreen" aria-label="Enter fullscreen">⛶</button></div></header>
+      <div class="vr-home">
+        <div class="vr-home-heroes" aria-hidden="true"><img src="/images/vladrunner2049/vlad-portrait.webp" alt=""><img src="/images/vladrunner2049/agi-portrait.webp" alt=""></div>
+        <h1 id="vr-title" class="vr-logo"><img src="/images/vladrunner2049/title-logo.webp" alt="VLAD RUNNER 2049"><span class="vr-logo-fallback" aria-hidden="true"><b>VLAD</b><b>RUNNER</b><strong>2049</strong></span></h1>
+        <p class="vr-tagline">GOOD MEMORIES. BAD COMPANY.</p>
+        <button class="vr-main-play" data-do="play"><span>PLAY</span><i aria-hidden="true">▶</i></button>
+        <nav class="vr-menu-links" aria-label="Game menu"><button data-do="help">HOW TO PLAY</button><button data-do="records">YOUR RECORDS</button></nav>
       </div>
-      <div class="vr-title-footer"><span>TWO HEROES. ONE LAST GOOD MEMORY.</span><span>FREE TO PLAY · NO WALLET · LOCAL SAVES</span></div>
+      <section class="vr-setup" hidden aria-labelledby="vr-setup-title">
+        <h2 id="vr-setup-title">CHOOSE YOUR FIGHT!</h2>
+        <div class="vr-characters" role="group" aria-label="Choose your hero or local co-op">
+          <button data-character="vlad" class="vr-hero-card vr-card-vlad is-selected" aria-pressed="true"><span class="vr-card-label"><b>VLAD</b><small>HEAVY HITTER</small></span><span class="vr-card-art"><img src="/images/vladrunner2049/vlad-portrait.webp" alt=""></span><span class="vr-card-ability">BIG HITS. BIGGER ATTITUDE.</span><span class="vr-card-check" aria-hidden="true">✓</span></button>
+          <button data-character="agi" class="vr-hero-card vr-card-agi" aria-pressed="false"><span class="vr-card-label"><b>AGI-1</b><small>FAST & ELECTRIC</small></span><span class="vr-card-art"><img src="/images/vladrunner2049/agi-portrait.webp" alt=""></span><span class="vr-card-ability">QUICK HANDS. ZERO CHILL.</span><span class="vr-card-check" aria-hidden="true">✓</span></button>
+          <button class="vr-hero-card vr-card-duo" data-do="coop" aria-pressed="false"><span class="vr-card-label"><b>LOCAL DUO</b><small>2 PLAYER CHAOS</small></span><span class="vr-card-art"><img src="/images/vladrunner2049/vlad-portrait.webp" alt=""><img src="/images/vladrunner2049/agi-portrait.webp" alt=""></span><span class="vr-card-ability">BRING YOUR PARTNER IN CRIME.</span><span class="vr-card-check" aria-hidden="true">✓</span></button>
+        </div>
+        <p class="vr-selection-note">Solo play · switch between both heroes with Q.</p>
+        <div class="vr-modes" role="group" aria-label="Game mode">
+          <button class="is-selected" data-mode="story" aria-pressed="true"><b>STORY</b><small>3 districts. Take the city back.</small></button>
+          <button data-mode="endless" aria-pressed="false"><b>ENDLESS</b><small>How long can you last?</small></button>
+          <button data-mode="daily" aria-pressed="false"><b>DAILY RUN</b><small>One city. A fresh challenge.</small></button>
+        </div>
+        <div class="vr-setup-bottom"><details class="vr-run-options"><summary>ASSIST & BEST SCORE</summary><label><input type="checkbox" id="vr-assist"> Story assist <small>Extra health</small></label><span id="vr-best">Personal best · —</span></details><button class="vr-start" data-do="start" disabled><span>LOADING…</span><b aria-hidden="true">➜</b></button></div>
+      </section>
+      <p class="vr-load-status" aria-live="polite">Preparing art and animation…</p>
     </section>
     <section class="vr-play" hidden aria-label="Game controls and status">
       <header class="vr-hud">
@@ -54,12 +58,15 @@ root.innerHTML = `
 
 const $ = sel => root.querySelector(sel), $$ = sel => [...root.querySelectorAll(sel)];
 const title = $('.vr-title'), play = $('.vr-play'), canvas = $('.vr-canvas'), modalWrap = $('.vr-modal-wrap'), modal = $('.vr-modal');
+const logo = $('.vr-logo img');
+logo.addEventListener('load', () => $('.vr-logo').classList.add('has-art'));
+if (logo.complete && logo.naturalWidth) $('.vr-logo').classList.add('has-art');
 let storage; try { storage = window.localStorage; } catch { storage = null; }
 const save = readSave(storage);
 if (!save.runs && window.matchMedia('(prefers-reduced-motion: reduce)').matches) save.settings.reducedMotion = true;
 const input = createInput(window), audio = createAudio(), assets = {};
 const renderer = createRenderer(canvas, assets, save.settings);
-let state = null, mode = 'story', character = 'vlad', coop = false, paused = false, dialogKind = '', assetsReady = false;
+let state = null, mode = 'story', character = 'vlad', coop = false, paused = false, dialogKind = '', assetsReady = false, assetsLoading = false;
 let lastTime = 0, hudAt = 0, liveAt = 0, frameId = 0, lastEvent = 0, endRecorded = false, bannerUntil = 0, banterUntil = 0, toastTimer = 0, focusBeforeModal = null;
 let destroyed = false, dialogWasPaused = false, currentSeed = '', lastResult = null, titleDay = dailySeed();
 const fmt = value => Math.round(value).toLocaleString('en-US');
@@ -80,20 +87,28 @@ function updateBest() {
   $('#vr-best').textContent = `${mode === 'daily' ? 'Today’s' : 'Personal'} best · ${r ? fmt(r.score) : '—'}`;
 }
 async function loadAssets() {
-  const names = ['vlad','agi','agiLeft','vladRun','vladCombo','agiRun','agiCombo','agiRunLeft','agiComboLeft','enforcerMotion','neon','orange','spire','enemies','bosses']; let count = 0;
+  if(assetsLoading)return;
+  assetsLoading=true;
+  $('[data-do="start"]').disabled=true;
+  $('[data-do="start"] span').textContent='LOADING…';
+  $('.vr-load-status').classList.remove('is-ready');
+  const names = ['vlad','agi','agiLeft','vladRun','vladCombo','agiRun','agiCombo','agiRunLeft','agiComboLeft','enforcerMotion','neon','orange','spire','enemies','bosses','menuBackdrop','titleLogo','vladPortrait','agiPortrait']; let count = 0;
+  const optional = new Set(['menuBackdrop','titleLogo','vladPortrait','agiPortrait']);
   const failed = [];
   await Promise.all(names.map(name => new Promise(resolve => {
     const img = new Image(); let finished = false;
-    const done = ok => { if (finished) return; finished = true; clearTimeout(timer); if(ok) assets[name] = img; else failed.push(name); count++; $('.vr-load-status').textContent = `Preparing the city · ${count}/${names.length}`; resolve(); };
+    const done = ok => { if (finished) return; finished = true; clearTimeout(timer); if(ok) assets[name] = img; else if(!optional.has(name)) failed.push(name); count++; $('.vr-load-status').textContent = `Preparing the city · ${count}/${names.length}`; resolve(); };
     const timer = setTimeout(() => done(false),20000);
     img.onload = () => done(true); img.onerror = () => done(false); img.src = `/images/vladrunner2049/${name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}.webp`;
   })));
   await renderer.prepareAssets((done,total) => { $('.vr-load-status').textContent = `Preparing animation · ${done}/${total}`; });
   assetsReady = failed.length === 0;
+  assetsLoading = false;
   const start = $('[data-do="start"]'); start.disabled = !assetsReady;
-  start.querySelector('span').textContent = assetsReady ? 'ENTER THE CITY' : 'RELOAD ART';
+  start.querySelector('span').textContent = assetsReady ? 'LET’S GO!' : 'RELOAD ART';
   if (!assetsReady) { start.disabled = false; $('.vr-load-status').textContent = 'Some art could not load. Tap Reload art to try again.'; }
-  else $('.vr-load-status').textContent = 'Keyboard · touch · gamepad    /    Headphones recommended';
+  else $('.vr-load-status').textContent = 'Ready when you are.';
+  $('.vr-load-status').classList.toggle('is-ready',assetsReady);
 }
 loadAssets(); audio.preload(); updateBest();
 
@@ -106,8 +121,16 @@ function setMode(next) {
 }
 function updateTeam() {
   const n = $('[data-do="coop"]'); n.setAttribute('aria-pressed',String(coop)); n.classList.toggle('is-selected',coop);
-  n.querySelector('b').textContent = coop ? '2P' : '1P'; n.querySelector('span').textContent = coop ? 'LOCAL CO-OP' : 'SOLO TAG';
-  $('.vr-load-status').textContent = coop ? 'Two players · one keyboard or two gamepads · controls in ?' : mode === 'daily' ? `${dailySeed().slice(6)} · same seed · arcade rules · solo` : 'Keyboard · touch · gamepad    /    Headphones recommended';
+  $$('[data-character]').forEach(n=>{const on=!coop&&n.dataset.character===character;n.classList.toggle('is-selected',on);n.setAttribute('aria-pressed',String(on));});
+  $('.vr-selection-note').textContent = coop ? 'Two players. One keyboard or two gamepads. Bring a friend!' : mode === 'daily' ? `${dailySeed().slice(6)} · Same city, solo rules. Make it count.` : 'Solo play · switch between both heroes with Q.';
+}
+function showSetup(){
+  $('.vr-home').hidden=true;$('.vr-setup').hidden=false;title.dataset.screen='setup';$('.vr-arcade-link').hidden=true;$('[data-do="home"]').hidden=false;
+  updateTeam();updateBest();$('.vr-hero-card.is-selected')?.focus({preventScroll:true});
+}
+function showHome(){
+  $('.vr-home').hidden=false;$('.vr-setup').hidden=true;title.dataset.screen='home';$('.vr-arcade-link').hidden=false;$('[data-do="home"]').hidden=true;
+  title.scrollTop=0;$('[data-do="play"]').focus({preventScroll:true});
 }
 function banner(kicker,headline,description = '',seconds = 3) {
   const n=$('.vr-banner'); n.querySelector('small').textContent=kicker; n.querySelector('b').textContent=headline; n.querySelector('p').textContent=description; n.hidden=false; bannerUntil=(state?.elapsed||0)+seconds;
@@ -127,7 +150,7 @@ function startRun(sameSeed = false) {
 }
 function toTitle() {
   closeDialog(false); state=null; paused=false; input.setEnabled(false); input.clear(); title.hidden=false; play.hidden=true;
-  root.classList.remove('vr-in-game'); audio.update(null); audio.setOptions({music:0,sfx:save.settings.sfx}); audio.setPaused(false); updateBest(); $('[data-do="start"]').focus();
+  root.classList.remove('vr-in-game'); audio.update(null); audio.setOptions({music:0,sfx:save.settings.sfx}); audio.setPaused(false); updateBest(); showHome();
 }
 function openDialog(kind,heading,kicker='VLAD RUNNER 2049') {
   if (!dialogKind) { focusBeforeModal = document.activeElement; dialogWasPaused=paused; }
@@ -145,10 +168,15 @@ function closeDialog(resume=true) {
 function dialogClose(label = state ? 'BACK TO THE CITY' : 'BACK') { modal.append(button(label,()=>closeDialog(),'vr-button vr-button-bright')); }
 function help() {
   openDialog('help','MAKE SOME NOISE.','FIELD MANUAL / CONTROLS');
+  const guide=el('div','vr-move-guide');
+  for(const [heading,copy] of [['MOVE','WASD · Line up in the same street lane.'],['COMBO','Hold J · Three hits, one nasty finish.'],['DODGE + JUMP','Shift / Space · Get out, then hit back.']]){
+    const card=el('div','vr-move-card'),drawing=el('span','vr-move-drawing');drawing.setAttribute('aria-hidden','true');card.append(el('b','',heading),drawing,el('p','',copy));guide.append(card);
+  }
+  modal.append(guide);
   modal.append(el('p','vr-dialog-copy','Move up and down the street to line up your hits. Hold Combo for a three-hit chain. Heavy and aerial attacks break shields. Dodge the red warnings, then punish the opening.'));
   const table=el('table','vr-key-table');
   table.innerHTML='<thead><tr><th>Move</th><th>Player 1</th><th>Player 2</th></tr></thead><tbody><tr><td>Walk</td><td>W A S D</td><td>Arrow keys</td></tr><tr><td>Combo / Heavy</td><td>J / K</td><td>N / M</td></tr><tr><td>Jump / Dodge</td><td>Space / Shift</td><td>. / /</td></tr><tr><td>Special / Duo</td><td>L / E</td><td>, / Enter</td></tr><tr><td>Switch hero</td><td>Q · solo only</td><td>—</td></tr><tr><td>Pause</td><td>Escape / P</td><td>Escape / P</td></tr></tbody>';
-  modal.append(table,el('p','vr-dialog-copy','Solo also supports arrow keys. On a standard gamepad: left stick moves, A jumps, X attacks, Y hits heavy, B dodges, RB uses a special, LB switches, RT unleashes the duo.'));
+  const controls=el('details','vr-all-controls');controls.append(el('summary','','ALL CONTROLS · KEYBOARD & GAMEPAD'),table,el('p','vr-dialog-copy','Solo also supports arrow keys. On a standard gamepad: left stick moves, A jumps, X attacks, Y hits heavy, B dodges, RB uses a special, LB switches, RT unleashes the duo.'));modal.append(controls);
   const tips=el('div','vr-tips'); for(const [a,b] of [['SPECIAL · 35 ENERGY','A crowd-clearing strike. Energy recovers and fills when you land hits.'],['DUO · 100 SYNC','Build combos to charge a devastating attack from both heroes.'],['CO-OP · STAY TOGETHER','Share the screen. A downed partner returns when you clear the encounter.'],['DAILY · SAME CITY','One UTC seed each day, arcade difficulty and solo play. Records stay on your device.']]) { const n=el('p'); n.append(el('b','',a),el('span','',b)); tips.append(n); } modal.append(tips); dialogClose();
 }
 function settings() {
@@ -211,16 +239,17 @@ async function fullscreen() {try{if(document.fullscreenElement)await document.ex
 function onRootClick(e){
   const b=e.target.closest('button');if(!b)return;
   if(b.dataset.mode){setMode(b.dataset.mode);return;}
-  if(b.dataset.character){character=b.dataset.character;$$('[data-character]').forEach(n=>{const on=n.dataset.character===character;n.classList.toggle('is-selected',on);n.setAttribute('aria-pressed',String(on));});return;}
-  const actions={start:()=>{applySettings();startRun();},help,settings,records,pause:pauseGame,fullscreen,coop:()=>{coop=!coop;updateTeam();updateBest();}};actions[b.dataset.do]?.();
+  if(b.dataset.character){character=b.dataset.character;coop=false;updateTeam();updateBest();return;}
+  const actions={play:showSetup,home:showHome,start:()=>{applySettings();startRun();},help,settings,records,pause:pauseGame,fullscreen,coop:()=>{coop=true;updateTeam();updateBest();}};actions[b.dataset.do]?.();
 }
 root.addEventListener('click',onRootClick);
 $('#vr-assist').addEventListener('change',updateBest);
 function onKey(e) {
   if(e.altKey||e.ctrlKey||e.metaKey)return;
-  if(dialogKind && e.code==='Tab') {const nodes=[...modal.querySelectorAll('button,input,a')].filter(n=>!n.disabled);if(!nodes.length){e.preventDefault();return;}if(e.shiftKey&&(document.activeElement===nodes[0]||document.activeElement===modal)){e.preventDefault();nodes.at(-1).focus();}else if(!e.shiftKey&&document.activeElement===nodes.at(-1)){e.preventDefault();nodes[0].focus();}return;}
-  if(e.repeat||e.altKey||e.ctrlKey||e.metaKey||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
-  if(e.code==='Escape'||e.code==='KeyP'){if(dialogKind && !['upgrade','result'].includes(dialogKind)){e.preventDefault();closeDialog();}else if(state?.status==='playing'&&!dialogKind){e.preventDefault();pauseGame();}}
+  if(dialogKind && e.code==='Tab') {const nodes=[...modal.querySelectorAll('button,input,a,summary')].filter(n=>!n.disabled&&n.getClientRects().length);if(!nodes.length){e.preventDefault();return;}if(e.shiftKey&&(document.activeElement===nodes[0]||document.activeElement===modal)){e.preventDefault();nodes.at(-1).focus();}else if(!e.shiftKey&&document.activeElement===nodes.at(-1)){e.preventDefault();nodes[0].focus();}return;}
+  if(e.repeat)return;
+  const editing=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
+  if(e.code==='Escape'||(!editing&&e.code==='KeyP')){if(dialogKind && !['upgrade','result'].includes(dialogKind)){e.preventDefault();closeDialog();}else if(state?.status==='playing'&&!dialogKind){e.preventDefault();pauseGame();}else if(!state&&!dialogKind&&title.dataset.screen==='setup'){e.preventDefault();showHome();}}
 }
 window.addEventListener('keydown',onKey);
 function lostFocus() {input.clear();resetTouchVisuals();if(state?.status==='playing'&&!dialogKind)pauseGame();audio.setPaused(true);}

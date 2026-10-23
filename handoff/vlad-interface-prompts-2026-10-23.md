@@ -1,0 +1,19 @@
+# VLAD RUNNER 2049 illustrated interface artwork
+
+Original menu art directions for the interface revision. All exports live in public/images/vladrunner2049/.
+
+## menu-backdrop.webp
+
+Create an original illustrated background for a 2D cartoon arcade game's title menu, wide 16:9 landscape. Nighttime futuristic Los Angeles in 2049, a cinematic polluted orange sunset glow fading to deep plum above neon purple cyan streets. Strong clean thick ink outlines, simple flat cel shaded painted TV cartoon shapes, playful confident geometry, NOT realistic or highly rendered, not pixel art. Rooftops, monorail bridges, small noodle shop at left, monumental towers at edges, wet street foreground. Composition specifically for menu: quiet pale warm cream/amber light in the UPPER CENTER for a large black title logo, quieter dark purple lower centre for a menu; keep architecture framing edges. No people, no characters, no title, no letters, no text or recognizable existing movie/game logos. Rich memorable painterly orange/purple silhouette staging like an animated action comedy. No UI elements.
+
+## title-logo.webp
+
+Create an ORIGINAL transparent title logo for a polished cartoon arcade beat-em-up named VLAD RUNNER 2049. Text must read exactly VLAD on first line, RUNNER on second line, 2049 on a small third line. Huge expressive hand-painted black ink capitals, tall condensed irregular marker/brush lettering with confident rough edges, tight impactful silhouette, slightly tilted energetic baseline but highly readable. A warm cream/offwhite irregular painted backing outlines the lettering subtly, a muted amber small accent behind 2049. Inspired by old Saturday morning cartoon game title cards, original lettering not imitation of any existing branded logo. No futuristic spaced techno font. No glow, no extruded 3D bevel, no metallic texture, no extra subtitle, no additional words, no characters. Transparent alpha beyond the compact logo. Compose on wide 4:3 sheet with logo centred and sufficient transparent padding.
+
+## vlad-portrait.webp
+
+Based on the supplied VLAD character reference sprite sheet, create ONE original game character-selection portrait of VLAD, from head to thighs, full shoulders and hands within image, transparent alpha background. Same lanky adult man, messy dark brown hair, moustache and short goatee, expressive large cartoon eyes, long black shearling-collar coat and black clothes. Strong expressive confident pose with fists raised, slight lean toward RIGHT, friendly stubborn crooked smirk. Front three-quarter view, large readable silhouette, simple flat cel-shaded cartoon, bold irregular clean black ink outlines, original Saturday morning action-comedy game art. Not anime, not realistic, not 3D, no painted gradients. Portrait fills tall canvas, leave transparent padding all around. No words, no labels, no logo, no panel, no swatch or shadow or background. Just one character.
+
+## agi-portrait.webp
+
+Based on the supplied AGI-1 character reference sprite sheet, create ONE original game character-selection portrait of AGI-1, from head to thighs, full shoulders and hands within image, transparent alpha background. Same adult young woman, long flowing wavy golden blonde hair, large expressive cartoon eyes, purple athletic t-shirt reading exactly AGI in white left-to-right, purple shorts with white trim. Dynamic confident playful pose, one fist forward at waist and other raised near shoulder, facing a little LEFT toward the centre of game menu; joyful determined grin. Front three-quarter view, large readable silhouette, simple flat cel-shaded cartoon, bold irregular clean black ink outlines, original Saturday morning action-comedy game art. Not anime, not realistic, not 3D, no painted gradients. Portrait fills tall canvas, leave transparent padding all around. No other words, no labels, no logo, no panel, no swatch or shadow or background. Just one character.
