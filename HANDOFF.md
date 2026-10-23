@@ -131,6 +131,19 @@ automated mapping/disconnection tests passed. The live trailing-slash URL loaded
 clicking **Play VLAD RUNNER 2049** returned to the correct playable title. All final routing and shelf checks passed.
 See the game handoff for screenshot paths and the distinction between local and production QA.
 
+### 0.5 VLAD RUNNER quality revision — preview only (2026-10-23)
+
+The owner rejected the sound, stiffness, animation, interface and fonts. Combat/audio revision `9a28439` and
+illustrated-interface revision `5ad6f8c` are pushed on the working branch only. The latest checked preview is
+https://agi-ecosystem-oq5il0kwx-agi25.vercel.app/games/vladrunner2049 ; deployment
+`4r4bLg2xvUxnRN57PWEewH6Q3vT4` is Ready. Production remains the earlier `6f2f5a2` game.
+The current turn promised a separate preview before replacing production. Vercel protection stays enabled;
+the owner's signed-in Chrome can open it. Read [the interface handoff](handoff/vlad-interface-preview-2026-10-23.md)
+and [the combat handoff](handoff/vlad-combat-preview-2026-10-23.md) before continuing.
+Full build: 1,169 passed, 0 failed, 6 skipped on Node 24.21.0. Browser desktop/phone/landscape layout and hosted
+game start/HUD checks passed. Arenas remain flat and some enemy/boss animation is still sparse; do not claim
+the entire Fist Punch quality gap is closed.
+
 ## 1. The owner and how to work with them
 
 - The owner works alone, is learning, and writes quickly with typos. Explain what you're doing and why, in simple words.

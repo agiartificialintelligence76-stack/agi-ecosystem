@@ -5,6 +5,13 @@ animation and audio preview at `9a284394664a1a86491a7396e1666ee99ead00d2`. It re
 `claude/blissful-davinci-bnr01m`; production is still `6f2f5a25fe15850832be40218128bed3eff0913e`.
 Do not describe this preview as a production release or as matching the whole reference game's quality.
 
+**Verified hosted preview:** commit `5ad6f8cd797b281ff687e8ee3d370b78402c4271`, deployment
+`4r4bLg2xvUxnRN57PWEewH6Q3vT4`, status **Ready** after 3m 24s.
+https://agi-ecosystem-oq5il0kwx-agi25.vercel.app/games/vladrunner2049
+Vercel protection remains enabled; the owner's signed-in Chrome can open it. Hosted title/selection/artwork,
+font, game start, movement, HUD and pause were checked. No game console errors; existing wallet-extension
+warnings are unrelated. Screenshot: local ignored `node_modules/.cache/vlad-interface-preview.png`.
+
 ## Changes
 
 - Separate illustrated title screen and fighter selection; three large cards for VLAD, AGI-1 and local duo.
@@ -40,7 +47,7 @@ The bundled font license is `public/fonts/games/AmaticSC-OFL.txt`.
   Earlier checks covered solo/duo exclusivity, daily solo restrictions, two-player HUD and paused game clock.
 - Local browser warnings/errors: none. Separate final source review found no significant new regression.
 - The earlier combat preview is Ready at https://agi-ecosystem-9y69grrgd-agi25.vercel.app/games/vladrunner2049
-  (deployment `CN1JqHi1kbjg62n1iUyXi5MnpU53`). The new UI preview supersedes it once Ready.
+  (deployment `CN1JqHi1kbjg62n1iUyXi5MnpU53`). The verified UI preview above supersedes it.
 
 ## Remaining quality limits
 
