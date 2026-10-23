@@ -53,3 +53,7 @@ tools/studio-promo/media/
 # The roadmap's video (tools/roadmap-promo/make.mjs, 2026-10-14): AGI-1's voice takes made ready once by
 # tools/roadmap-promo/media.mjs (made from the owner's downloads: never in git). Its videos go to /promo/ (above).
 tools/roadmap-promo/media/
+
+# The memes' originals (2026-10-23): some are over GitHub's 100 MB limit. Their web copies are in public/memes/
+# (tools/memes/encode.ps1); the originals stay on this computer only.
+memess/

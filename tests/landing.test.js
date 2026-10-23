@@ -50,9 +50,12 @@ test("the front has the page's one h1 (the lab hero's title is an h2 now); its d
 test('its links: the Playground, AGI Studio, AGI Games, "Risk check your coins on clank", her diary, $AGI, the roadmap and AGI on X; "Talk to AGI-1" opens the chat', () => {
   const nav = front.slice(front.indexOf('<nav class="lp-eco"'), front.indexOf('</nav>', front.indexOf('<nav class="lp-eco"')));
   assert.match(nav, /<nav class="lp-eco" aria-labelledby="lp-eco-label">/);
-  assert.match(nav, /<p class="lp-eco-label" id="lp-eco-label">Her world <span>\(08\)<\/span><\/p>/, 'the list is "Her world" (the owner, 2026-09-28: no "ecosystem")');
-  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#playground', '/studio', '/games', '#checker', '/diary', '#model-card', '/roadmap', 'https://x.com/agi1dotapp']);
-  assert.equal((nav.match(/<li>/g) || []).length, 8, 'its count says how many rows it has');
+  assert.match(nav, /<p class="lp-eco-label" id="lp-eco-label">Her world <span>\(09\)<\/span><\/p>/, 'the list is "Her world" (the owner, 2026-09-28: no "ecosystem")');
+  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#playground', '/studio', '/games', '/memes', '#checker', '/diary', '#model-card', '/roadmap', 'https://x.com/agi1dotapp']);
+  assert.equal((nav.match(/<li>/g) || []).length, 9, 'its count says how many rows it has');
+  // (2026-10-23, the owner: "create a MEMES tab … on her world, put it in another page")
+  assert.match(nav, /<a class="lp-c-memes" href="\/memes" [^>]*><span class="lp-dot"><\/span>Memes <small>videos, images, slopcore<\/small><i aria-hidden="true">→<\/i><\/a>/);
+  assert.match(css, /\.lp-c-memes \{ --c: [^}]+\}/, 'its own color');
   // (2026-10-13, the owner: "make it live for everyone now") AGI Studio, on this site's own address: the same 18+ answer
   // and wallet session as the rest of agi1.app
   assert.match(nav, /<a class="lp-c-studio" href="\/studio" [^>]*><span class="lp-dot"><\/span>AGI Studio <small>your own AI influencer<\/small><i aria-hidden="true">→<\/i><\/a>/);
@@ -62,7 +65,7 @@ test('its links: the Playground, AGI Studio, AGI Games, "Risk check your coins o
   assert.match(nav, /<a class="lp-c-road" href="\/roadmap" [^>]*><span class="lp-dot"><\/span>Roadmap <small>what's next<\/small><i aria-hidden="true">→<\/i><\/a>/);
   assert.match(css, /\.lp-c-games \{ --c: [^}]+\}/, 'its own color');
   assert.match(css, /\.lp-c-road \{ --c: [^}]+\}/, 'its own color');
-  for (const [n, d] of [[6, '1.21'], [7, '1.27'], [8, '1.33']]) {
+  for (const [n, d] of [[6, '1.21'], [7, '1.27'], [8, '1.33'], [9, '1.39']]) {
     assert.match(css, new RegExp(`\\.lp-intro\\.lp-go \\.lp-eco li:nth-child\\(${n}\\) \\{ animation-delay: ${d.replace('.', '\\.')}s; \\}`), `row ${n} comes in in turn`);
   }
   assert.match(nav, /<span class="lp-dot"><\/span>Risk check your coins on clank<i aria-hidden="true">↓<\/i>/, 'the risk check under its name (the owner, 2026-09-28), in the Arena\'s old place');

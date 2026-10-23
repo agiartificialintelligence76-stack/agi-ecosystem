@@ -42,11 +42,12 @@ export default defineConfig({
     // inference.agi1.app shows), AGI Studio (/studio and /studio/<view>, and studio.agi1.app, 2026-10-10), (2026-10-14)
     // the roadmap (/roadmap) with its coming-soon pages (/stake, /games: AGI games since 2026-10-19, /giveaway), and
     // (2026-10-19) the owner's game, Ride 'Em, AGI! (/games/rideemagi), and (2026-10-20) TRENCHING SIMULATOR
-    // (/games/trenchingsimulator), and VLAD RUNNER 2049 (/games/vladrunner2049)
+    // (/games/trenchingsimulator), and VLAD RUNNER 2049 (/games/vladrunner2049), and (2026-10-23) the memes (/memes)
     rollupOptions: {
       input: { main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html', studio: 'studio.html',
         roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html', rideemagi: 'rideemagi.html',
-        trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html' },
+        trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html',
+        memes: 'memes.html' },
     },
   },
 });

@@ -92,6 +92,7 @@
     { "source": "/cards/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
     { "source": "/icons/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
     { "source": "/music/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
+    { "source": "/memes/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
     { "source": "/theme.js", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
   ]
 }
