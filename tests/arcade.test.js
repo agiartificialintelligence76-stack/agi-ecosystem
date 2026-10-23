@@ -186,7 +186,10 @@ const reviewOk = (extra = {}) => ({ action: 'game-review', game: 'rideemagi', se
 // ---------- the rules ----------
 test("the games' rules: its games and their ids, a player's id, plays a report, a review's limits, stars 1 to 5", () => {
   // the owner's Ride 'Em, AGI! (2026-10-19), then TRENCHING SIMULATOR (2026-10-20)
-  assert.deepEqual(Object.keys(GAMES), ['rideemagi', 'trenchingsimulator']);
+  // and VLAD RUNNER 2049 (2026-10-23: its stars, players and plays; no leaderboards)
+  assert.deepEqual(Object.keys(GAMES), ['rideemagi', 'trenchingsimulator', 'vladrunner2049']);
+  assert.equal(GAMES.vladrunner2049.name, 'VLAD RUNNER 2049');
+  assert.equal(GAMES.vladrunner2049.path, '/games/vladrunner2049');
   assert.equal(GAMES.rideemagi.name, "Ride 'Em, AGI!");
   assert.equal(GAMES.rideemagi.path, '/games/rideemagi');
   assert.equal(GAMES.trenchingsimulator.name, 'TRENCHING SIMULATOR');

@@ -5,6 +5,7 @@ import { createAudio } from './audio.js';
 import { createInput } from './input.js';
 import { readSave, writeSave, recordRun, bestRecord, dailySeed, ACHIEVEMENTS } from './save.js';
 import { OPENING, CHAPTERS, CONFRONTATIONS, ENDING } from './story.js';
+import { Site } from './site.js';
 
 const root = document.getElementById('vr-root');
 root.innerHTML = `
@@ -201,6 +202,7 @@ function startRun(sameSeed = false, skipStory = false) {
   audio.setScene?.('game');
   currentSeed = mode === 'daily' ? dailySeed() : sameSeed && currentSeed ? currentSeed : `${Date.now()}-${crypto.getRandomValues(new Uint32Array(1))[0]}`;
   state = createGame({mode,seed:currentSeed,character,coop,difficulty:$('#vr-assist').checked ? 'story' : 'normal'});
+  Site.play(); // counts the run for agi1.app/games (players and plays, never who)
   lastEvent=0; endRecorded=false; lastResult=null; endingShown=false; paused=false; hudAt=0; lastTime=0;
   title.hidden=true; play.hidden=false; root.classList.add('vr-in-game'); root.classList.toggle('vr-coop',coop);
   $('.vr-tag-key').hidden=coop; $('[data-action="tag"]').hidden=coop;

@@ -889,8 +889,10 @@ function cssRules(css) {
 
 test('every game\'s page: its overlay right after <body>, once, before the game; its entry starts the intro first', () => {
   const tag = '<div class="gi" id="agi-intro" aria-hidden="true"></div>';
-  const ids = Object.keys(GAMES);
+  // (VLAD RUNNER 2049 opens on its own illustrated title screen, without the AGI GAMES intro)
+  const ids = Object.keys(GAMES).filter((id) => id !== 'vladrunner2049');
   assert.ok(ids.length >= 1);
+  assert.doesNotMatch(read('vladrunner2049.html'), /agi-intro|class="gi"/);
   for (const id of ids) {
     const html = read(`${id}.html`);
     assert.equal(html.split('id="agi-intro"').length - 1, 1, `${id}: one overlay`);

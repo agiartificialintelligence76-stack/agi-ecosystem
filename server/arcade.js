@@ -133,6 +133,13 @@ export const LOOK_GAMES = Object.freeze({
     advice: 'financial advice about real coins or real money (telling people to buy or sell something real, price targets, sure '
       + 'gains)',
   }),
+  vladrunner2049: Object.freeze({
+    what: '"VLAD RUNNER 2049", a colorful cartoon arcade beat \'em up where two heroes, Vlad and an anime girl, AGI-1, fight '
+      + 'cartoon enemies through a neon city: talk about the game\'s own fights, punches, combos, bosses and enemies is part of '
+      + 'reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
 });
 export function lookSystem(game) {
   const g = LOOK_GAMES[isGame(game) && Object.hasOwn(LOOK_GAMES, game) ? game : 'rideemagi'];
