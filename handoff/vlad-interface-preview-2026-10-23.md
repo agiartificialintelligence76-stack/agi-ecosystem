@@ -1,5 +1,11 @@
 # VLAD RUNNER 2049 interface preview — 2026-10-23
 
+**Publication update:** The owner subsequently requested "publish the new one now". Commit
+`37a3a698db952dfcceff8885df4f4c4d3dcedba5` is now on `main`; production deployment
+`4j5c1j4DzLiJMCWF7BEtFazDkyQw` is Ready after 3m 34s at
+https://www.agi1.app/games/vladrunner2049 . Public selection, artwork, game start, movement/combo and pause
+passed without browser warnings/errors. The preview-only statements below are historical.
+
 The owner rejected the interface and typography as far below Fist Punch. This revision follows the combat,
 animation and audio preview at `9a284394664a1a86491a7396e1666ee99ead00d2`. It remains on the working branch,
 `claude/blissful-davinci-bnr01m`; production is still `6f2f5a25fe15850832be40218128bed3eff0913e`.

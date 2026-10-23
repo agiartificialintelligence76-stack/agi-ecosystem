@@ -144,6 +144,18 @@ Full build: 1,169 passed, 0 failed, 6 skipped on Node 24.21.0. Browser desktop/p
 game start/HUD checks passed. Arenas remain flat and some enemy/boss animation is still sparse; do not claim
 the entire Fist Punch quality gap is closed.
 
+### 0.6 VLAD RUNNER revised version — published (2026-10-23)
+
+The owner explicitly requested **"publish the new one now"**. This supersedes the preview-only status above.
+Commit `37a3a698db952dfcceff8885df4f4c4d3dcedba5` was fast-forwarded to `main`; production deployment
+`4j5c1j4DzLiJMCWF7BEtFazDkyQw` became **Ready** after 3m 34s and is assigned to `www.agi1.app`.
+The live game is https://www.agi1.app/games/vladrunner2049 . Public browser verification loaded all new art,
+the title and character selection, started a run, exercised movement/combo (418 points), and paused successfully.
+There were no browser warnings/errors. Local proof: `node_modules/.cache/vlad-production-interface.png`.
+This release includes the combat, animation, audio and illustrated-interface revisions. No backend, database,
+SSH, environment, or deployment-configuration changes were required. The quality limits in the preview notes
+remain accurate; do not claim the full reference-game quality gap is closed.
+
 ## 1. The owner and how to work with them
 
 - The owner works alone, is learning, and writes quickly with typos. Explain what you're doing and why, in simple words.
