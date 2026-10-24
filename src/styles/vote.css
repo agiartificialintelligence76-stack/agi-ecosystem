@@ -1,0 +1,133 @@
+/* Community votes (agi1.app/vote, 2026-10-24): vote.html (src/vote/page.js). The hero and the fine print are the roadmap's
+   coming-soon pages' (roadmap.css); this is the wallet box, the polls and their choices. Every rule names a vt- class.
+   A choice's bar is as wide as its share of the $AGI that voted (--vt-share, set through the CSS object model: the CSP
+   allows no style attributes). */
+
+.vt-in { max-width: 1080px; margin-inline: auto; }
+.vt-h { margin: 44px 0 16px; font-size: clamp(22px, 2.6vw, 28px); font-weight: 600; letter-spacing: -0.025em; }
+
+/* ---------- the wallet box ---------- */
+.vt-me {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 20px;
+  padding: 20px 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--bg-2);
+}
+.vt-me-title { font-weight: 600; letter-spacing: -0.01em; }
+.vt-me-note { margin-top: 4px; font-size: 14px; color: var(--fg-2); text-wrap: pretty; }
+.vt-me-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.vt-wallets { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.vt-wallets[hidden], .vt-me-actions [hidden] { display: none; }
+.vt-wallet { display: inline-flex; align-items: center; gap: 8px; }
+.vt-wallet-ic { width: 20px; height: 20px; border-radius: 5px; }
+.vt-say { grid-column: 1 / -1; font-size: 14px; color: var(--fg-2); }
+.vt-say:empty { display: none; }
+
+/* ---------- the polls ---------- */
+.vt-polls { display: grid; gap: 22px; }
+.vt-empty { padding: 28px 22px; border: 1px dashed var(--line); border-radius: 18px; color: var(--fg-2); text-align: center; }
+.vt-poll { padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--bg-2); scroll-margin-top: 88px; }
+.vt-poll.is-open { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.vt-poll-top { display: grid; gap: 8px; margin-bottom: 18px; }
+.vt-state {
+  justify-self: start; padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg);
+  font-family: var(--mono); font-size: 11.5px; line-height: 16px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-2);
+}
+.vt-state.is-open { border-color: var(--accent); color: var(--accent); }
+.vt-q { font-size: clamp(21px, 2.4vw, 27px); font-weight: 600; line-height: 1.15; letter-spacing: -0.025em; text-wrap: balance; }
+.vt-about { max-width: 70ch; color: var(--fg-2); text-wrap: pretty; }
+
+.vt-choices { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.vt-choice {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 16px;
+  padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
+}
+.vt-choice:has(.vt-pic) { grid-template-columns: 72px minmax(0, 1fr) auto; }
+.vt-choice.is-mine { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.vt-pic { width: 72px; height: 72px; border-radius: 12px; object-fit: contain; background: var(--bg-2); border: 1px solid var(--line); }
+.vt-choice-body { display: grid; gap: 4px; min-width: 0; }
+.vt-label { font-weight: 600; letter-spacing: -0.01em; }
+.vt-choice.is-lead .vt-label::after { content: '  ★ leading'; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .04em; color: var(--accent); }
+.vt-poll.is-final .vt-choice.is-lead .vt-label::after { content: '  ★ winner'; }
+.vt-note { font-size: 14px; color: var(--fg-2); }
+.vt-bar { height: 8px; margin-top: 6px; border-radius: 999px; background: color-mix(in srgb, var(--fg) 8%, transparent); overflow: hidden; }
+.vt-bar-fill {
+  display: block; width: var(--vt-share, 0%); height: 100%; border-radius: inherit; background: var(--series-base);
+  transition: width .5s cubic-bezier(.2, .8, .2, 1);
+}
+.vt-choice.is-lead .vt-bar-fill, .vt-choice.is-mine .vt-bar-fill { background: var(--accent); }
+.vt-nums { font-size: 12.5px; color: var(--fg-3); }
+.vt-pick { min-width: 118px; justify-content: center; }
+.vt-mine-tag { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.vt-foot { margin-top: 14px; font-size: 12.5px; color: var(--fg-3); }
+
+/* ---------- how it works ---------- */
+.vt-rule-list { display: grid; gap: 10px; margin: 0; padding-left: 22px; }
+.vt-rule-list li { max-width: 78ch; color: var(--fg-2); text-wrap: pretty; }
+.vt-rule-list b { color: var(--fg); }
+
+/* ---------- the owner's page (agi1.app/vote/owner: src/vote/owner.js) ---------- */
+.vt-owner[hidden], .vt-public[hidden] { display: none; }
+.vt-o-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 44px 0 16px; }
+.vt-o-top .vt-h { margin: 0; }
+.vt-oc { display: grid; gap: 10px; padding: 20px 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--bg-2); }
+.vt-oc.is-open { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.vt-oc.is-hidden { border-style: dashed; }
+.vt-oc-q { font-size: 20px; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; }
+.vt-oc-choices { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.vt-oc-choice { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.vt-oc-choice.is-lead { border-color: var(--accent); }
+.vt-oc-pic { width: 40px; height: 40px; border-radius: 8px; object-fit: contain; background: var(--bg-2); flex: none; }
+.vt-oc-label { flex: 1; min-width: 0; font-weight: 500; }
+.vt-oc-nums { font-size: 12px; color: var(--fg-3); white-space: nowrap; }
+.vt-oc-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.vt-danger { color: #d43c3c; }
+.vt-danger:disabled { color: inherit; }
+
+.vt-ed { display: grid; gap: 14px; padding: 22px; border: 1px solid var(--accent); border-radius: 18px; background: var(--bg-2); }
+.vt-ed-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.vt-ed-lock { padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 12%, transparent); font-size: 14px; }
+.vt-f { display: grid; gap: 6px; }
+.vt-f-label { font-size: 13px; font-weight: 600; letter-spacing: .01em; }
+.vt-f-hint { font-size: 12.5px; color: var(--fg-3); }
+.vt-in {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg);
+  color: var(--fg); font: inherit; font-size: 15px;
+}
+.vt-in:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.vt-ta { resize: vertical; min-height: 64px; }
+.vt-ed-choices { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.vt-ed-choice {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px;
+  padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg);
+}
+.vt-ed-side { display: grid; justify-items: center; gap: 6px; width: 120px; }
+.vt-ed-pic { display: grid; place-items: center; width: 64px; height: 64px; border: 1px dashed var(--line); border-radius: 10px; overflow: hidden; }
+.vt-ed-pic img { width: 100%; height: 100%; object-fit: contain; }
+.vt-ed-nopic { font-size: 10.5px; color: var(--fg-3); text-align: center; }
+.vt-ed-picbtns { display: grid; gap: 4px; width: 100%; }
+.vt-ed-picbtns .btn { justify-content: center; font-size: 12px; }
+.vt-ed-body { display: grid; gap: 8px; }
+.vt-ed-moves { display: grid; gap: 4px; }
+.vt-ed-add { justify-self: start; }
+.vt-ed-when { display: grid; gap: 10px; margin: 0; padding: 14px; border: 1px solid var(--line); border-radius: 14px; }
+.vt-ed-row { display: flex; flex-wrap: wrap; gap: 18px; }
+.vt-radio, .vt-check { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; cursor: pointer; }
+.vt-check { align-items: flex-start; }
+.vt-check input { margin-top: 4px; }
+.vt-ed-error { padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, #d43c3c 14%, transparent); color: var(--fg); font-size: 14px; }
+
+/* ---------- phones ---------- */
+@media (max-width: 640px) {
+  .vt-me { grid-template-columns: 1fr; }
+  .vt-ed { padding: 16px; }
+  .vt-ed-choice { grid-template-columns: minmax(0, 1fr); }
+  .vt-ed-side { grid-template-columns: 64px 1fr; justify-items: start; align-items: center; width: 100%; }
+  .vt-ed-moves { grid-auto-flow: column; justify-content: start; }
+  .vt-oc-choice { flex-wrap: wrap; }
+  .vt-poll { padding: 18px 16px; }
+  .vt-choice, .vt-choice:has(.vt-pic) { grid-template-columns: minmax(0, 1fr); }
+  .vt-choice:has(.vt-pic) .vt-pic { width: 96px; height: 96px; }
+  .vt-pick { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vt-bar-fill { transition: none; }
+}

@@ -65,3 +65,6 @@ export const reviewBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });
 // TRENCHING SIMULATOR score is the run made again here, about a second), and the page asks for a player's places now and
 // then: 12 a minute per visitor
 export const scoreBurst = makeBurstLimit({ max: 12, windowMs: 60_000 });
+// Community votes (api/wallet.js, 2026-10-24): each vote and each "my votes" reads the chain once, and a person taps a few
+// times a minute at most: 20 a minute per visitor
+export const voteBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });

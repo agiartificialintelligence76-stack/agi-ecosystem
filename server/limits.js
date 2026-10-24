@@ -166,6 +166,11 @@ for (const fn of ['arcade_play', 'arcade_stats', 'arcade_reviews', 'arcade_revie
   MISSING[fn] = `${fn} not found: run supabase/arcade.sql in this Supabase project (AGI games: their plays, reviews and leaderboards; it ends with arcade_functions_found = 14)`;
 }
 
+// Community votes (agi1.app/vote, 2026-10-24): supabase/votes.sql (and the owner's polls, agi1.app/vote/owner)
+for (const fn of ['vote_put', 'vote_mine', 'vote_tally', 'vote_uncounted', 'vote_count', 'poll_list', 'poll_put', 'poll_drop']) {
+  MISSING[fn] = `${fn} not found: run supabase/votes.sql in this Supabase project (community votes and the owner's polls; it ends with vote_functions_found = 8)`;
+}
+
 // One database function call (also used by server/voice-store.js for her recorded lines).
 export async function rpc(cfg, fn, args, label) {
   const res = await fetch(`${cfg.supabaseUrl}/rest/v1/rpc/${fn}`, {

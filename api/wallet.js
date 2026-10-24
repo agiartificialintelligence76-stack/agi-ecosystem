@@ -35,6 +35,15 @@
 //   game-score      { game, player, ticket, name?, claim + log (TRENCHING SIMULATOR) | run (Ride 'Em, AGI!) }
 //                                               → { ok, ranked, ranks?, why? }   checked here first (up to 48 KB)
 //   game-score-mine { game, player, boards }    → { ok, rows: [{ board, rank, detail, hidden }] }   this browser's places
+// Community votes (2026-10-24, agi1.app/vote: server/vote.js, src/vote/polls.js; here for the same reason):
+//   GET ?votes                     → { ready: true, polls: [{ id, question, about, opens, closes, choices, state, rows: [{ choice,
+//                                    agi, wallets, share }], total, wallets, left }] }, or { ready: false } until
+//                                    supabase/votes.sql is run. The same for everyone (the CDN, 15 seconds); a closed poll's
+//                                    final count moves along here
+//   vote-mine { session }          → { ok, votes: { [poll]: { choice, agi, final } }, agi, min }   this wallet's votes, its $AGI now
+//   vote      { session, poll, choice } → { ok, choice, agi, poll }   at least `min` $AGI held (403 too_few); voting again
+//                                    changes it until the close (409 closed)
+//   vote-owner / vote-save / vote-drop   the owner's page (agi1.app/vote/owner): see voteOwner() below
 import { getConfig } from '../server/config.js';
 import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass } from '../server/security.js';
 import { verifyHuman } from '../server/turnstile.js';
@@ -43,12 +52,14 @@ import { makeSession, readSession, needsRecheck, walletCode, RECHECK_MS } from '
 import { checkLevel } from '../server/chain.js';
 import { getFriend, setFriendName, forgetFriend, cleanName } from '../server/friends.js';
 import { txFrom, checkBurns, burnStatus, burnTotal, BURN_PER_DAY } from '../server/burn.js';
-import { burnBurst, arcadePlayBurst, reviewBurst, scoreBurst } from '../server/burst.js';
+import { burnBurst, arcadePlayBurst, reviewBurst, scoreBurst, voteBurst } from '../server/burst.js';
 import { countPlays, gamePage, reviewsOpen, reviewWords, reviewName, reviewer, myReview, deleteReview, saveReview } from '../server/arcade.js';
 import { gameTicket, gameScore, gameBoard, myScores } from '../server/scores.js';
 import { isGame, PLAYER, PLAYS, STARS } from '../src/games/list.js';
 import { BOARD, BOARD_ASK, isBoard } from '../src/games/boards.js';
 import { levelInfo } from '../src/lib/levels.js';
+import { pollsNow, castVote, myVotes, isVoteOwner, savePoll, dropPoll, MAX_POLLS } from '../server/vote.js';
+import { VOTE } from '../src/vote/polls.js';
 
 // (2026-10-19: 6,000, was 4,000: a review comes with its words, a name, a wallet session and a human check's token)
 const MAX_BODY = 6000;
@@ -62,6 +73,7 @@ const GAME_ASK = /^\?game=([a-z0-9]{2,24})(?:&before=([1-9]\d{0,14}))?$/;
 const SHARED = { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120' };
 export async function GET(request) {
   const search = request ? new URL(request.url).search : '';
+  if (search === '?votes') return votesGet(getConfig());
   const asked = search === '?burns' ? null : GAME_ASK.exec(search);
   // A host may encode the leaderboard's ':' separators as %3A. Normalize only those separators so the strict
   // address check still rejects extra parameters, other escapes and double encoding.
@@ -76,6 +88,69 @@ export async function GET(request) {
   } catch (err) {
     if (err.code === 'PGRST202') return json(200, { ready: false }, SHARED);   // burns.sql isn't run yet
     console.error('[wallet] the burn counter is unavailable:', err.message);
+    return json(503, { error: 'busy' });
+  }
+}
+
+// ---------- community votes (2026-10-24, server/vote.js) ----------
+let toldVotesMissing = false;
+const votesMissing = (err) => {
+  if (!toldVotesMissing) { toldVotesMissing = true; console.error('[wallet] community votes aren\'t kept yet:', err.message); }
+};
+export const _resetVoteNotes = () => { toldVotesMissing = false; };       // (for the tests)
+
+// (the CDN shares the votes 15 seconds, so the owner's changes show soon)
+const VOTES_SHARED = { 'Cache-Control': 'public, max-age=10, s-maxage=15, stale-while-revalidate=30' };
+async function votesGet(cfg) {
+  if (!cfg.supabaseUrl || !cfg.supabaseKey || cfg.passSecret.length < 32) return json(200, { ready: false }, VOTES_SHARED);
+  try {
+    return json(200, { ready: true, polls: await pollsNow(cfg) }, VOTES_SHARED);
+  } catch (err) {
+    if (err.code === 'PGRST202') { votesMissing(err); return json(200, { ready: false }, VOTES_SHARED); }
+    console.error('[wallet] the votes are unavailable:', err.message);
+    return json(503, { error: 'busy' });
+  }
+}
+
+// a wallet's votes, and voting (its wallet session: the site's sign-in; its $AGI read on the chain each time)
+const VOTE_STATUS = { bad: 400, too_few: 403, soon: 409, closed: 409, counted: 409, chain: 503 };
+async function votes(cfg, body, { visitor, now }) {
+  if (body.action === 'vote' && (typeof body.poll !== 'string' || typeof body.choice !== 'string')) return json(400, { error: 'bad_request' });
+  if (!voteBurst(visitor, now)) return json(429, { error: 'too_fast' });
+  const s = readSession(cfg.passSecret, body.session, now);
+  if (!s) return json(401, { error: 'signed_out' });
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(503, { error: 'not_ready' });
+  try {
+    if (body.action === 'vote-mine') return json(200, { ok: true, ...(await myVotes(cfg, s.wallet)), min: VOTE.minAgi });
+    const r = await castVote(cfg, { wallet: s.wallet, poll: body.poll, choice: body.choice, now });
+    if (r.ok) return json(200, r);
+    return json(VOTE_STATUS[r.why] || 400, { error: r.why === 'bad' ? 'bad_request' : r.why, ...(r.why === 'too_few' ? { agi: r.agi, min: VOTE.minAgi } : {}) });
+  } catch (err) {
+    if (err.code === 'PGRST202') { votesMissing(err); return json(503, { error: 'not_ready' }); }
+    console.error('[wallet] a vote failed:', err.message);
+    return json(503, { error: 'busy' });
+  }
+}
+
+// The owner's page (agi1.app/vote/owner): only the AGI Studio owner's wallet (STUDIO_OWNER, else the first of
+// STUDIO_ONLY_FOR), signed in with the site's own sign-in. Its words for anything refused come from server/vote.js.
+//   vote-owner { session }            → { ok, polls: [every poll, hidden ones too, with draft and voters] }
+//   vote-save  { session, poll }      → { ok, poll } · 400 { error: 'refused', why }   a new poll (no id) or a changed one
+//   vote-drop  { session, id }        → { ok } · 400 { error: 'refused', why }          only a poll nobody voted on
+async function voteOwner(cfg, body, { visitor, now }) {
+  if (!voteBurst(visitor, now)) return json(429, { error: 'too_fast' });
+  const s = readSession(cfg.passSecret, body.session, now);
+  if (!s) return json(401, { error: 'signed_out' });
+  if (!isVoteOwner(cfg, s.wallet)) return json(403, { error: 'not_owner', ...(cfg.studioOwner ? {} : { unset: true }) });
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) return json(503, { error: 'not_ready' });
+  try {
+    if (body.action === 'vote-owner') return json(200, { ok: true, polls: await pollsNow(cfg, now, { owner: true }), max: MAX_POLLS });
+    const r = body.action === 'vote-save' ? await savePoll(cfg, body.poll, now) : await dropPoll(cfg, body.id);
+    if (r.ok) return json(200, r);
+    return json(400, { error: 'refused', why: r.why });
+  } catch (err) {
+    if (err.code === 'PGRST202') { votesMissing(err); return json(503, { error: 'not_ready' }); }
+    console.error('[wallet] the owner\'s vote change failed:', err.message);
     return json(503, { error: 'busy' });
   }
 }
@@ -266,8 +341,10 @@ export async function POST(request) {
   }
   if (!(request.headers.get('content-type') || '').includes('application/json')) return json(415, { error: 'bad_request' });
   const raw = await request.text();
-  // (2026-10-22) a leaderboard's score may carry a run's orders: up to 48 KB, only when it says so first
-  if (raw.length > (raw.startsWith('{"action":"game-score"') ? BOARD.bodyMax : MAX_BODY)) return json(413, { error: 'bad_request' });
+  // (2026-10-22) a leaderboard's score may carry a run's orders: up to 48 KB, only when it says so first; (2026-10-24) the
+  // owner's vote with its choices' pictures: up to 1.1 MB, the same way (its wallet session checked right after)
+  const bodyMax = raw.startsWith('{"action":"game-score"') ? BOARD.bodyMax : raw.startsWith('{"action":"vote-save"') ? VOTE.bodyMax : MAX_BODY;
+  if (raw.length > bodyMax) return json(413, { error: 'bad_request' });
   let body;
   try { body = JSON.parse(raw); } catch { return json(400, { error: 'bad_request' }); }
   if (!body || typeof body !== 'object') return json(400, { error: 'bad_request' });
@@ -291,6 +368,15 @@ export async function POST(request) {
     case 'game-score':
     case 'game-score-mine':
       return gameScores(cfg, body, { visitor, who, now });
+
+    case 'vote':
+    case 'vote-mine':
+      return votes(cfg, body, { visitor, now });
+
+    case 'vote-owner':
+    case 'vote-save':
+    case 'vote-drop':
+      return voteOwner(cfg, body, { visitor, now });
 
     case 'start': {
       try {

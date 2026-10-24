@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en" data-page="vote">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vote · AGI</title>
+    <meta name="description" content="Community votes on what AGI does next. 1 $AGI = 1 vote, with a free wallet signature, never a transaction. Not financial advice · 18+." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fafaf8" />
+    <!-- link previews (X and others). __SITE__ becomes the site's address at build time (scripts/share-pages.js) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AGI" />
+    <meta property="og:title" content="Vote · AGI" />
+    <meta property="og:description" content="Help decide what AGI does next. 1 $AGI = 1 vote, a free signature, never a transaction. Not financial advice · 18+." />
+    <meta property="og:image" content="__SITE__/cards/roadmap.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="AGI-1 next to the words The AGI roadmap, with its ten stops: two live, three under way, four coming soon and one locked." />
+    <meta property="og:url" content="__SITE__/vote" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="__SITE__/vote" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/theme.js?v=7"></script>
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="wordmark" href="/">AGI</a>
+        <!-- On phones this list becomes the drop-down menu (src/menu.js) -->
+        <nav class="nav" id="site-nav" aria-label="Sections">
+          <a href="/#evaluations">Evaluations</a>
+          <a href="/#model-card">Model card</a>
+          <a href="/#playground">Playground</a>
+          <a href="/#checker">Risk check your coins on clank</a>
+          <a href="/diary">Diary</a>
+          <a href="/memes">Memes</a>
+          <a class="nav-phone" href="/live">Live</a>
+          <a class="nav-phone" href="/studio">AGI Studio</a>
+          <a class="nav-phone" href="/games">Games</a>
+          <a class="nav-phone" href="/roadmap">Roadmap</a>
+          <a class="nav-phone" href="/#safety">Safety note</a>
+          <a class="nav-x" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
+          <a class="nav-tg" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">AGI on Telegram ↗</a>
+          <button class="nav-pop" type="button" data-skin-toggle aria-pressed="true">Pop mode <span class="nav-pop-state mono" aria-hidden="true">On</span></button>
+        </nav>
+        <div class="topbar-actions">
+          <a class="icon-btn x-btn" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on X (@agi1dotapp)" title="@agi1dotapp on X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a class="icon-btn tg-btn" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on Telegram (@agi2dotapp)" title="@agi2dotapp: the $AGI community group on Telegram"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21.4 2.6 2.8 10.2l7.7 3.3 3.3 7.7 7.6-18.6ZM21.4 2.6 10.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></a>
+          <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
+            <svg class="i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the bold AGI look">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <a class="btn btn-primary btn-sm" href="/#playground">Try AGI-1</a>
+          <button class="icon-btn menu-btn" type="button" data-menu aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+            <svg class="i-menu" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <svg class="i-close" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Community votes (2026-10-24, the roadmap's "Gamified governance", the owner: "you decide whats recommended"): the polls are in the database (made at agi1.app/vote/owner, their rules in src/vote/polls.js), and src/vote/page.js shows them from /api/wallet?votes. Voting is the site's wallet sign-in (a free signature, never a transaction) -->
+      <section class="rm-hero rm-hero-sub" aria-labelledby="rm-title">
+        <div class="wrap rm-hero-in">
+          <div class="rm-hero-text">
+            <p class="kicker rm-kicker"><a href="/roadmap"><span aria-hidden="true">← </span>The roadmap</a></p>
+            <p class="rm-status is-soon"><span class="rm-status-dot" aria-hidden="true"></span>Community vote</p>
+            <h1 class="rm-title" id="rm-title">Vote</h1>
+            <p class="rm-sub">Help decide what AGI does next.</p>
+            <p class="rm-lede">1 $AGI = 1 vote. Connect a wallet holding at least 10,000 $AGI and sign a free message: never a transaction, no gas.</p>
+          </div>
+          <div class="rm-art" aria-hidden="true">
+            <svg class="rm-stamp" viewBox="0 0 200 200" aria-hidden="true">
+              <defs><path id="rm-ring" d="M100 100m-78 0a78 78 0 1 1 156 0a78 78 0 1 1-156 0"/></defs>
+              <text class="rm-stamp-text"><textPath href="#rm-ring" textLength="486" lengthAdjust="spacing">COMMUNITY VOTE · 1 $AGI = 1 VOTE · COMMUNITY VOTE · </textPath></text>
+            </svg>
+            <div class="rm-art-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 13.5h17v6.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-6.5Z"/><path d="M7 13.5V4.5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v9"/><path d="m9.5 8.5 2 2 3.5-4"/></svg></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section vt-page" aria-labelledby="vt-polls-title">
+        <div class="wrap vt-in">
+          <div class="vt-me" data-vt-me>
+            <div class="vt-me-text">
+              <p class="vt-me-title" data-vt-me-title>Connect your wallet to vote</p>
+              <p class="vt-me-note" data-vt-me-note>Anyone can see the results. Voting needs 10,000 $AGI or more in the wallet.</p>
+            </div>
+            <div class="vt-me-actions">
+              <button class="btn btn-primary btn-sm" type="button" data-vt-connect>Connect wallet</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-vt-disconnect hidden>Disconnect</button>
+            </div>
+            <ul class="vt-wallets" data-vt-wallets hidden></ul>
+            <p class="vt-say" data-vt-say role="status" aria-live="polite"></p>
+          </div>
+
+          <!-- agi1.app/vote/owner only (src/vote/owner.js): the owner's wallet makes and changes the votes here -->
+          <section class="vt-owner" data-vt-owner aria-label="Manage the votes" hidden></section>
+
+          <div class="vt-public" data-vt-public>
+          <h2 class="vt-h" id="vt-polls-title">The votes</h2>
+          <div class="vt-polls" data-vt-polls>
+            <p class="vt-empty" data-vt-empty>Loading the votes…</p>
+          </div>
+          </div>
+
+          <section class="vt-rules" aria-labelledby="vt-rules-title">
+            <h2 class="vt-h" id="vt-rules-title">How it works</h2>
+            <ol class="vt-rule-list">
+              <li><b>1 $AGI = 1 vote.</b> No cap per wallet: a cap is undone by splitting $AGI over more wallets, so instead each choice also shows how many wallets picked it.</li>
+              <li><b>Checked twice.</b> Your $AGI is read when you vote and again when the vote closes, and the lower amount counts. Moving $AGI to a second wallet to vote twice doesn't work.</li>
+              <li><b>10,000 $AGI to vote</b> (the Crush level). Anyone can see the results.</li>
+              <li><b>A few days a vote</b> (3 unless it says). Change your choice as often as you like until it closes.</li>
+              <li><b>The result counts.</b> The team follows it unless it's unsafe, illegal or not possible, and says why if it doesn't.</li>
+            </ol>
+          </section>
+
+          <section class="rm-fine" aria-labelledby="rm-fine-title">
+            <h2 class="rm-fine-title" id="rm-fine-title">The fine print</h2>
+            <ul>
+              <li>Voting is a free signature that proves the wallet is yours. It is never a transaction, costs no gas and gives no access to your tokens. Anyone asking you to send $AGI or approve anything “to vote” is not us.</li>
+              <li>Results show each choice's $AGI and number of wallets, never who voted for what. Your wallet is kept as a scrambled code; its address is kept encrypted only until the final count, then deleted.</li>
+              <li>Votes give the community a say. They aren't shares, rights or a promise of anything. Not financial advice: $AGI is a meme token and can lose all of its value. 18+.</li>
+              <li>Read the full <a href="/#safety">safety note</a>.</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap diary-foot">
+        <p><b>The only serious part of this page.</b> AGI-1 is a fictional character voiced by an AI language model; she can be wrong. $AGI is a meme token on Robinhood Chain, made for entertainment, and meme tokens can lose all of their value. Nothing here is financial advice or a promise of profit. Read the full <a href="/#safety">safety note</a>.</p>
+      </div>
+      <div class="foot-bar">
+        <div class="wrap foot-bar-in">
+          <p class="foot-brand">AGI</p>
+          <nav class="foot-nav" aria-label="Footer">
+            <a href="/#evaluations">Evaluations</a>
+            <a href="/#model-card">Model card</a>
+            <a href="/#playground">Playground</a>
+            <a href="/#checker">Risk check your coins on clank</a>
+            <a href="/diary">Diary</a>
+            <a href="/live">Live</a>
+            <a href="/studio">AGI Studio</a>
+            <a href="/games">Games</a>
+            <a href="/roadmap">Roadmap</a>
+            <a href="/memes">Memes</a>
+            <a href="https://clank.trade/coin/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">clank.trade ↗</a>
+            <a href="https://dexscreener.com/robinhood/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">DexScreener ↗</a>
+            <a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">X @agi1dotapp ↗</a>
+            <a href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">Telegram @agi2dotapp ↗</a>
+          </nav>
+          <p class="foot-legal">
+            <span>© 2026 AGI. No labs were harmed.</span>
+            <span>$AGI is a token made by the AGI team, launched on clank.trade. Entertainment only · Not financial advice.</span>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/vote/page.js"></script>
+  </body>
+</html>

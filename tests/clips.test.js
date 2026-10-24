@@ -151,7 +151,7 @@ test('the GitHub job: once a day and by hand, read-only, the key only where her 
 
 // ---------- not part of the website ----------
 test('the clips aren\'t part of the website: not in its build, no new packages, their files never in git', () => {
-  assert.match(read('vite.config.js'), /input: \{ main: 'index\.html', diary: 'diary\.html', launch: 'launch\.html', live: 'live\.html', cloakmesh: 'cloakmesh\.html', studio: 'studio\.html',\s+roadmap: 'roadmap\.html', stake: 'stake\.html', games: 'games\.html', giveaway: 'giveaway\.html', rideemagi: 'rideemagi\.html',\s+trenchingsimulator: 'trenchingsimulator\.html', vladrunner2049: 'vladrunner2049\.html',\s+memes: 'memes\.html' \}/, 'the site builds its own pages only, including the three browser games and the memes, never the clips page or live-show scene');
+  assert.match(read('vite.config.js'), /input: \{ main: 'index\.html', diary: 'diary\.html', launch: 'launch\.html', live: 'live\.html', cloakmesh: 'cloakmesh\.html', studio: 'studio\.html',\s+roadmap: 'roadmap\.html', stake: 'stake\.html', games: 'games\.html', giveaway: 'giveaway\.html', rideemagi: 'rideemagi\.html',\s+trenchingsimulator: 'trenchingsimulator\.html', vladrunner2049: 'vladrunner2049\.html',\s+memes: 'memes\.html', vote: 'vote\.html' \}/, 'the site builds its own pages only, including the three browser games, the memes and the votes, never the clips page or live-show scene');
   const pkg = JSON.parse(read('package.json'));
   // (sharp since 2026-10-05: the risk check's coin pictures, made small on our server; @scure/bip39 since 2026-10-09: the
   // wallet word list her secret check reads, server/secrets.js, the same package viem uses; @gltf-transform/* since
