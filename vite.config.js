@@ -49,7 +49,9 @@ export default defineConfig({
       input: { main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html', studio: 'studio.html',
         roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html', rideemagi: 'rideemagi.html',
         trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html',
-        memes: 'memes.html', vote: 'vote.html' },
+        memes: 'memes.html', vote: 'vote.html',
+        // (2026-10-24) the 404 NOT_FOUND page: Vercel serves dist/404.html for any address with no page
+        notfound: '404.html' },
     },
   },
 });

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en" data-page="notfound">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 NOT_FOUND · AGI</title>
+    <meta name="description" content="This page doesn't exist. Go back to AGI-1, the Artificial Girlfriend Intelligence." />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fafaf8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/theme.js?v=7"></script>
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="wordmark" href="/">AGI</a>
+        <!-- On phones this list becomes the drop-down menu (src/menu.js) -->
+        <nav class="nav" id="site-nav" aria-label="Sections">
+          <a href="/#evaluations">Evaluations</a>
+          <a href="/#model-card">Model card</a>
+          <a href="/#playground">Playground</a>
+          <a href="/#checker">Risk check your coins on clank</a>
+          <a href="/diary">Diary</a>
+          <a href="/memes">Memes</a>
+          <a class="nav-phone" href="/live">Live</a>
+          <a class="nav-phone" href="/studio">AGI Studio</a>
+          <a class="nav-phone" href="/games">Games</a>
+          <a class="nav-phone" href="/roadmap">Roadmap</a>
+          <a class="nav-phone" href="/#safety">Safety note</a>
+          <a class="nav-x" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
+          <a class="nav-tg" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">AGI on Telegram ↗</a>
+          <button class="nav-pop" type="button" data-skin-toggle aria-pressed="true">Pop mode <span class="nav-pop-state mono" aria-hidden="true">On</span></button>
+        </nav>
+        <div class="topbar-actions">
+          <a class="icon-btn x-btn" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on X (@agi1dotapp)" title="@agi1dotapp on X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a class="icon-btn tg-btn" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on Telegram (@agi2dotapp)" title="@agi2dotapp: the $AGI community group on Telegram"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21.4 2.6 2.8 10.2l7.7 3.3 3.3 7.7 7.6-18.6ZM21.4 2.6 10.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></a>
+          <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
+            <svg class="i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the bold AGI look">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <a class="btn btn-primary btn-sm" href="/#playground">Try AGI-1</a>
+          <button class="icon-btn menu-btn" type="button" data-menu aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+            <svg class="i-menu" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <svg class="i-close" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- 404 NOT_FOUND (2026-10-24): Vercel serves dist/404.html for every address with no page. The look is
+           src/styles/notfound.css, the address the visitor tried is shown by src/notfound/page.js (textContent only) -->
+      <section class="nf-hero" aria-labelledby="nf-title">
+        <div class="wrap nf-hero-in">
+          <div class="nf-text">
+            <p class="kicker">Error · page not found</p>
+            <h1 class="nf-title" id="nf-title"><span class="nf-big">404</span> <span class="nf-code mono">NOT_FOUND</span></h1>
+            <p class="nf-sub">This page doesn't exist. Not yet, anyway.</p>
+            <p class="nf-path mono" data-nf-path hidden><span class="nf-path-l">requested:</span> <span data-nf-path-v></span></p>
+            <p class="nf-say"><img src="/images/landing/agi1-face.webp" alt="" width="36" height="36" /> <span><b>AGI-1:</b> i looked everywhere for this page. it's not here. come back to me instead? 💜</span></p>
+            <div class="nf-actions">
+              <a class="btn btn-primary" href="/">Back home <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="btn btn-ghost" href="/#playground">Talk to AGI-1</a>
+              <a class="btn btn-ghost" href="/memes">Memes</a>
+              <a class="btn btn-ghost" href="/games">Games</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap diary-foot">
+        <p><b>The only serious part of this page.</b> AGI-1 is a fictional character voiced by an AI language model; she can be wrong. $AGI is a meme token on Robinhood Chain, made for entertainment, and meme tokens can lose all of their value. Nothing here is financial advice or a promise of profit. Read the full <a href="/#safety">safety note</a>.</p>
+      </div>
+      <div class="foot-bar">
+        <div class="wrap foot-bar-in">
+          <p class="foot-brand">AGI</p>
+          <nav class="foot-nav" aria-label="Footer">
+            <a href="/#evaluations">Evaluations</a>
+            <a href="/#model-card">Model card</a>
+            <a href="/#playground">Playground</a>
+            <a href="/#checker">Risk check your coins on clank</a>
+            <a href="/diary">Diary</a>
+            <a href="/live">Live</a>
+            <a href="/studio">AGI Studio</a>
+            <a href="/games">Games</a>
+            <a href="/roadmap">Roadmap</a>
+            <a href="/memes">Memes</a>
+            <a href="https://clank.trade/coin/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">clank.trade ↗</a>
+            <a href="https://dexscreener.com/robinhood/0xfa31d04462746aaa24bc7e5626403e09e4b106ec" target="_blank" rel="noopener noreferrer">DexScreener ↗</a>
+            <a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">X @agi1dotapp ↗</a>
+            <a href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">Telegram @agi2dotapp ↗</a>
+          </nav>
+          <p class="foot-legal">
+            <span>© 2026 AGI. No labs were harmed.</span>
+            <span>$AGI is a token made by the AGI team, launched on clank.trade. Entertainment only · Not financial advice.</span>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/notfound/page.js"></script>
+  </body>
+</html>
