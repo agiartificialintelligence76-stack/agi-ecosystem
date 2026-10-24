@@ -28,6 +28,20 @@ test('the safety note covers every serious topic', () => {
   }
 });
 
+test('(2026-10-24) the safety note\'s "Load more": folded only by the script, every word still in the page, printed in full', () => {
+  const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
+  const js = read('../src/sections/safety.js');
+  const css = read('../src/styles/footer.css');
+  assert.match(read('../src/main.js'), /startSafety\(document\.getElementById\('safety'\)\)/, 'started on the home page');
+  assert.ok(js.includes('Load more') && js.includes('Show less'), 'its two labels');
+  assert.match(js, /aria-expanded/, 'tells screen readers whether it is open');
+  assert.match(js, /aria-controls/, 'and which note it opens');
+  assert.match(js, /scrollHeight - text\.clientHeight/, 'a note that is already short gets no button');
+  assert.match(css, /\.safety-item\.is-folded p \{[^}]*max-height/, 'the fold is a class the script adds');
+  assert.match(css, /@media print \{[^}]*\.safety-item\.is-folded p \{[^}]*max-height: none/, 'printing shows every note in full');
+  assert.ok(!html.includes('is-folded'), 'nothing is folded in the HTML itself');
+});
+
 test('the footer names the contract by its real start and end', () => {
   // the full address appears once in the Model card; the safety note points there
   const ca = part('data-ca>', '</code>').slice('data-ca>'.length);

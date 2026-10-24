@@ -558,6 +558,9 @@
 [data-skin='pop'] .safety-item h3 { font-family: var(--display); font-size: 19px; font-weight: 800; font-stretch: 110%; letter-spacing: -0.01em; }
 [data-skin='pop'] .safety-item h3::before { color: var(--pop-honey); font-weight: 600; }
 [data-skin='pop'] .safety-meta { color: #b9aee0; }
+/* the safety note's "Load more" (src/sections/safety.js): a white pill like the bottom bar's links, honey on hover */
+[data-skin='pop'] .safety-more { padding: 7px 16px; color: #fff; border: 2px solid rgb(255 255 255 / .85); font-weight: 600; }
+[data-skin='pop'] .safety-more:hover { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-honey); }
 [data-skin='pop'] .foot-bar { position: relative; isolation: isolate; overflow: clip; background: var(--pop-violet); border-top: 3px solid var(--pop-ink); }
 [data-skin='pop'] .foot-bar::before {
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;

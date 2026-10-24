@@ -21,6 +21,25 @@
 .safety-item a { color: var(--fg); }
 .safety-item .mono { font-size: .94em; color: var(--fg); }
 
+/* "Load more" (2026-10-24, src/sections/safety.js): a long note shows its first six lines, fading out, until it's opened.
+   Without the script nothing is folded; printing always shows every note in full. */
+.safety-item.is-folded p {
+  max-height: calc(1.55em * 6); overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent);
+  mask-image: linear-gradient(to bottom, #000 45%, transparent);
+}
+.safety-more {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 7px 14px;
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--fg); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px; cursor: pointer; transition: border-color .15s ease, background .15s ease;
+}
+.safety-more:hover { border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+.safety-more[hidden] { display: none; }
+@media print {
+  .safety-item.is-folded p { max-height: none; overflow: visible; -webkit-mask-image: none; mask-image: none; }
+  .safety-more { display: none; }
+}
+
 /* ---------- bottom bar ---------- */
 .foot-bar { border-top: 1px solid var(--line); }
 .foot-bar-in {

@@ -28,6 +28,7 @@ import { startTicker } from './prices/ticker.js';
 import { startEvals } from './sections/evals.js';
 import { startModelCard } from './sections/modelcard.js';
 import { startChecker } from './sections/checker.js';
+import { startSafety } from './sections/safety.js';
 import { startTelegramLink } from './chat/telegram-link.js';
 import { startLang } from './i18n/lang.js';
 import * as cards from './share/card.js';
@@ -71,6 +72,7 @@ startBurns(document);            // (2026-09-30) burn $AGI for more messages, on
 startTelegramLink(document, import.meta.env.VITE_TELEGRAM_BOT);   // "She texts first" (2026-09-29): her Telegram bot, if set
 startChecker(document.querySelector('[data-checker]'));   // ClankChecker (2026-09-26): loads its list when you get close
 startPrices();                    // live $AGI numbers from DexScreener, every 30 s while the tab is open
+startSafety(document.getElementById('safety'));   // (2026-10-24) the safety note's "Load more": long notes folded to a few lines
 
 // ?dev: test hooks. window.__agiCards draws the share cards (tools/cards/ uses it to make public/cards/).
 if (new URLSearchParams(location.search).has('dev')) window.__agiCards = cards;
