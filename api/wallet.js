@@ -61,6 +61,7 @@ import { levelInfo } from '../src/lib/levels.js';
 import { pollsNow, castVote, myVotes, isVoteOwner, savePoll, dropPoll, MAX_POLLS } from '../server/vote.js';
 import { VOTE } from '../src/vote/polls.js';
 import { siteContentGet, siteOwner } from '../server/site-content.js';
+import { memeShare } from '../server/meme-share.js';
 import { SITE_CONTENT_MAX } from '../src/owner/model.js';
 
 // (2026-10-19: 6,000, was 4,000: a review comes with its words, a name, a wallet session and a human check's token)
@@ -75,6 +76,11 @@ const GAME_ASK = /^\?game=([a-z0-9]{2,24})(?:&before=([1-9]\d{0,14}))?$/;
 const SHARED = { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120' };
 export async function GET(request) {
   const search = request ? new URL(request.url).search : '';
+  if (search.startsWith('?meme-share=')) {
+    const params = new URLSearchParams(search);
+    if ([...params].length !== 1) return json(400, { error: 'bad_request' });
+    return memeShare(getConfig(), params.get('meme-share'));
+  }
   if (search === '?site-content') return siteContentGet(getConfig());
   if (search === '?votes') return votesGet(getConfig());
   const asked = search === '?burns' ? null : GAME_ASK.exec(search);

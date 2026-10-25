@@ -4,9 +4,53 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { MEMES, TABS, fileOf, thumbOf, downloadName, clock } from '../src/memes/list.js';
+import { MEDIA_PUBLIC_ROOT } from '../src/owner/media-model.js';
+import { memeShare } from '../server/meme-share.js';
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 const pub = (p) => new URL(`../public${p}`, import.meta.url);
+const shareContent = (memes = []) => ({ getContent: async () => Response.json({ document: { memes } }) });
+
+test('meme share previews identify the selected video and image before JavaScript runs', async () => {
+  const video = await memeShare({}, 'vlad', shareContent());
+  assert.equal(video.status, 200);
+  assert.match(video.headers.get('content-type'), /text\/html/);
+  const html = await video.text();
+  assert.match(html, /property="og:title" content="AGI × Vlad/);
+  assert.match(html, /property="og:image" content="https:\/\/agi1\.app\/memes\/share\/agi-vlad\.jpg"/);
+  assert.match(html, /name="twitter:image" content="https:\/\/agi1\.app\/memes\/share\/agi-vlad\.jpg"/);
+  assert.match(html, /property="og:url" content="https:\/\/agi1\.app\/share\/meme\/vlad"/);
+  assert.match(html, /rel="canonical" href="https:\/\/agi1\.app\/share\/meme\/vlad"/);
+  assert.match(html, /data-go="\/memes\?m=vlad"/);
+  const picture = MEMES.find(m => m.kind === 'image');
+  const pictureHtml = await (await memeShare({}, picture.id, shareContent())).text();
+  assert.ok(pictureHtml.includes(`content="https://agi1.app${fileOf(picture)}"`));
+});
+
+test('meme share previews support owner uploads and escape saved titles', async () => {
+  const uuid = '12345678-1234-4234-8234-123456789abc';
+  const id = `upload-${uuid}`;
+  const thumb = `${MEDIA_PUBLIC_ROOT}12345678-1234-4234-8234-123456789abd.jpg`;
+  const entry = { id, custom: true, kind: 'video', title: 'A "title" <script>alert(1)</script> & more', note: '', src: `${MEDIA_PUBLIC_ROOT}${uuid}.mp4`, thumb, secs: 12 };
+  const response = await memeShare({}, id, shareContent([entry]));
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.ok(html.includes(`content="${thumb}"`));
+  assert.ok(html.includes('&quot;title&quot; &lt;script&gt;alert(1)&lt;/script&gt; &amp; more'));
+  assert.ok(!html.includes('<script>alert(1)</script>'));
+  const image = { ...entry, kind: 'image', src: `${MEDIA_PUBLIC_ROOT}${uuid}.png`, thumb: '', secs: 0 };
+  const imageHtml = await (await memeShare({}, id, shareContent([image]))).text();
+  assert.ok(imageHtml.includes(`content="${image.src}"`));
+});
+
+test('meme share previews do not expose hidden or unknown items or cache storage failures', async () => {
+  assert.equal((await memeShare({}, 'vlad', shareContent([{ id: 'vlad', hidden: true }]))).status, 404);
+  assert.equal((await memeShare({}, 'missing-meme', shareContent())).status, 404);
+  assert.equal((await memeShare({}, '../vlad', shareContent())).status, 400);
+  const unavailable = await memeShare({}, 'vlad', { getContent: async () => Response.json({ error: 'busy' }, { status: 503 }) });
+  assert.equal(unavailable.status, 503);
+  assert.match(unavailable.headers.get('cache-control'), /no-store/);
+});
 
 test('memes: its own page, built, previewed and in the top bar and footer of every page', () => {
   const page = read('memes.html');

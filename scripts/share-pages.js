@@ -10,6 +10,8 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { LEVELS } from '../src/lib/levels.js';
+import { MEMES, thumbOf } from '../src/memes/list.js';
+import sharp from 'sharp';
 
 export function siteUrl(env = process.env) {
   const raw = env.SITE_URL || (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : 'https://agi1.app');
@@ -74,6 +76,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exit(1);
   }
   mkdirSync('dist/share', { recursive: true });
+  // JPEG copies of each video's actual poster work across social preview crawlers.
+  mkdirSync('dist/memes/share', { recursive: true });
+  for (const meme of MEMES.filter(m => m.kind !== 'image')) {
+    await sharp(`public${thumbOf(meme)}`).jpeg({ quality: 88 }).toFile(`dist/memes/share/agi-${meme.id}.jpg`);
+  }
   for (const [name, html] of Object.entries(allSharePages(site))) writeFileSync(`dist/share/${name}.html`, html);
   for (const page of ['dist/index.html', 'dist/diary.html', 'dist/live.html', 'dist/studio.html', 'dist/roadmap.html', 'dist/stake.html',
     'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html', 'dist/memes.html',

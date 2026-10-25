@@ -1,5 +1,7 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Meme link previews (2026-10-26):** Copy link uses `/share/meme/<id>`, served through the existing wallet API. Preview HTML includes the selected visible meme's title and actual image/poster, including published owner uploads; people continue to `/memes?m=<id>`. Built-in video posters get JPEG copies during the build. Unknown/hidden items return 404, and unavailable content returns 503 without caching. Existing gallery query links still open normally.
+
 > **Meme addition (2026-10-25):** the owner supplied `memess/AGI_Vlad_REVISED_1080p.mp4` and requested immediate publication. Added as **AGI × Vlad** at the top of Videos, with a 1:32 runtime and a poster from 12 seconds. The 1080p H.264/AAC web copy retains the original streams, with fast-start metadata; it uses the built-in gallery route.
 
 > **Latest local validation (2026-10-22):** the Windows test failures and dependency audit findings from the chart

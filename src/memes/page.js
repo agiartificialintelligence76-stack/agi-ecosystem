@@ -385,7 +385,7 @@ function clear() {
 
 async function copyLink(m) {
   if (!m) return;
-  const url = `${location.origin}/memes?m=${encodeURIComponent(m.id)}`;
+  const url = `${location.origin}/share/meme/${encodeURIComponent(m.id)}`;
   let ok = false;
   try { await navigator.clipboard.writeText(url); ok = true; } catch { ok = false; }
   toast(ok ? 'Link copied' : url);
