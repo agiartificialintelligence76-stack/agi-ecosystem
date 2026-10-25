@@ -20,6 +20,8 @@ const talkPage = () => {
     else if (/^\/vote\/owner\/?$/.test(path)) req.url = `/vote.html${q}`;   // (2026-10-24) the owner's votes page
     else if (/^\/studio\/.+/.test(path)) req.url = `/studio.html${q}`;
     else if (STUDIO_HOST.test(String(req.headers.host || '')) && STUDIO_VIEW.test(path)) req.url = `/studio.html${q}`;
+    else if (/^\/owner\/?$/.test(path)) req.url = `/owner-command.html${q}`;
+    else if (/^\/p\/[a-z0-9][a-z0-9-]*\/?$/.test(path)) req.url = `/content.html${q}`;
     next();
   };
   return {
@@ -29,8 +31,20 @@ const talkPage = () => {
   };
 };
 
+// One content runtime on every public HTML entry, including future pages. The owner's editor is isolated.
+const ownerContent = () => ({
+  name: 'agi-site-content',
+  transformIndexHtml: {
+    order: 'pre',
+    handler(html, context) {
+      if (context.filename?.replace(/\\/g, '/').endsWith('/owner-command.html')) return html;
+      return [{ tag: 'script', attrs: { type: 'module', src: '/src/owner/runtime.js' }, injectTo: 'body' }];
+    },
+  },
+});
+
 export default defineConfig({
-  plugins: [talkPage()],
+  plugins: [talkPage(), ownerContent()],
   build: {
     // three.js alone is about 650 KB (170 KB compressed). It's already in its own file that
     // loads after the page's text, so Vite's default 500 KB warning isn't useful here.
@@ -49,7 +63,7 @@ export default defineConfig({
       input: { main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html', studio: 'studio.html',
         roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html', rideemagi: 'rideemagi.html',
         trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html',
-        memes: 'memes.html', vote: 'vote.html',
+        memes: 'memes.html', vote: 'vote.html', owner: 'owner-command.html', content: 'content.html',
         // (2026-10-24) the 404 NOT_FOUND page: Vercel serves dist/404.html for any address with no page
         notfound: '404.html' },
     },

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" data-page="owner">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="description" content="The AGI website owner's command page." />
+  <title>Owner command · AGI</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <script src="/theme.js?v=7"></script>
+</head>
+<body>
+  <a class="oc-skip" href="#main">Skip to controls</a>
+  <header class="oc-header">
+    <a class="oc-brand" href="/" aria-label="AGI home">AGI<span>OWNER COMMAND</span></a>
+    <div class="oc-header-links"><a href="/vote/owner">Manage votes ↗</a><a href="/studio/owner">Studio ↗</a><a href="/" target="_blank" rel="noopener">View website ↗</a></div>
+  </header>
+  <main id="main">
+    <section class="oc-intro">
+      <div><p class="oc-eyebrow">YOUR WEBSITE, IN YOUR HANDS</p><h1>Your world.<br /><span>Your controls.</span></h1><p class="oc-sub">Edit pages, change sections, and decide what belongs in her world.</p></div>
+      <div class="oc-session"><span class="oc-dot"></span><span data-owner-account>Owner access only</span><button type="button" data-owner-connect>Connect wallet</button><button type="button" class="oc-quiet" data-owner-disconnect hidden>Disconnect</button></div>
+    </section>
+    <p class="oc-notice" data-owner-message role="status" aria-live="polite">Use the same owner wallet as /vote/owner. Sign a free message to unlock your controls.</p>
+    <div class="oc-wallets" data-owner-wallets></div>
+    <section class="oc-gate" data-owner-gate>
+      <div class="oc-gate-mark" aria-hidden="true">✳</div><h2>One place to manage it all.</h2><p>Open any page, select something in its preview, then edit or remove it. Add new pages and sections, preview your changes, and publish when ready.</p>
+      <div class="oc-gate-grid"><div><b>01</b><h3>Pages & sections</h3><p>Show, hide, edit, and add.</p></div><div><b>02</b><h3>Her world</h3><p>Manage every entry and link.</p></div><div><b>03</b><h3>A way back</h3><p>Restore a saved version.</p></div></div>
+    </section>
+    <section class="oc-workspace" data-owner-workspace hidden>
+      <aside class="oc-sidebar" aria-label="Website pages">
+        <div class="oc-side-head"><h2>Pages</h2><button type="button" data-owner-new-page aria-label="Add a page">+</button></div>
+        <label class="oc-search"><span class="oc-sr">Find a page</span><input type="search" data-owner-search placeholder="Find a page…" /></label>
+        <nav class="oc-pages" data-owner-pages aria-label="Select a page"></nav>
+        <div class="oc-sidebar-note">Changes stay in this draft until you press <strong>Publish changes</strong>.</div>
+      </aside>
+      <div class="oc-main">
+        <div class="oc-toolbar"><div><p class="oc-eyebrow" data-owner-revision>LIVE VERSION</p><h2 data-owner-title>Home</h2><span class="oc-path" data-owner-path>/</span></div><div class="oc-toolbar-actions"><span class="oc-draft" data-owner-dirty>Up to date</span><button type="button" class="oc-quiet" data-owner-discard disabled>Discard draft</button><button type="button" class="oc-primary" data-owner-publish disabled>Publish changes</button></div></div>
+        <div class="oc-tabs" role="tablist" aria-label="Editor views"><button role="tab" aria-selected="true" data-owner-tab="content">Content</button><button role="tab" aria-selected="false" data-owner-tab="page">Page settings</button><button role="tab" aria-selected="false" data-owner-tab="added">Added sections</button><button role="tab" aria-selected="false" data-owner-tab="history">History</button></div>
+        <div class="oc-editor-grid"><div class="oc-controls" data-owner-controls></div><div class="oc-preview-wrap"><div class="oc-preview-bar"><span>PAGE PREVIEW · DRAFT</span><div><button type="button" class="oc-quiet" data-owner-pick aria-pressed="true">Select to edit: on</button><button type="button" class="oc-quiet" data-owner-reload aria-label="Reload preview">↻</button></div></div><iframe title="Preview of the selected page" data-owner-preview referrerpolicy="same-origin"></iframe><p class="oc-preview-help">Select text, an image, or a section in the preview to edit it. Your preview is visible only here.</p></div></div>
+      </div>
+    </section>
+  </main>
+  <footer class="oc-footer"><span>AGI / OWNER COMMAND</span><span>Same wallet. The whole website.</span></footer>
+  <script type="module" src="/src/owner/page.js"></script>
+</body>
+</html>

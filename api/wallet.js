@@ -60,6 +60,8 @@ import { BOARD, BOARD_ASK, isBoard } from '../src/games/boards.js';
 import { levelInfo } from '../src/lib/levels.js';
 import { pollsNow, castVote, myVotes, isVoteOwner, savePoll, dropPoll, MAX_POLLS } from '../server/vote.js';
 import { VOTE } from '../src/vote/polls.js';
+import { siteContentGet, siteOwner } from '../server/site-content.js';
+import { SITE_CONTENT_MAX } from '../src/owner/model.js';
 
 // (2026-10-19: 6,000, was 4,000: a review comes with its words, a name, a wallet session and a human check's token)
 const MAX_BODY = 6000;
@@ -73,6 +75,7 @@ const GAME_ASK = /^\?game=([a-z0-9]{2,24})(?:&before=([1-9]\d{0,14}))?$/;
 const SHARED = { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120' };
 export async function GET(request) {
   const search = request ? new URL(request.url).search : '';
+  if (search === '?site-content') return siteContentGet(getConfig());
   if (search === '?votes') return votesGet(getConfig());
   const asked = search === '?burns' ? null : GAME_ASK.exec(search);
   // A host may encode the leaderboard's ':' separators as %3A. Normalize only those separators so the strict
@@ -343,7 +346,7 @@ export async function POST(request) {
   const raw = await request.text();
   // (2026-10-22) a leaderboard's score may carry a run's orders: up to 48 KB, only when it says so first; (2026-10-24) the
   // owner's vote with its choices' pictures: up to 1.1 MB, the same way (its wallet session checked right after)
-  const bodyMax = raw.startsWith('{"action":"game-score"') ? BOARD.bodyMax : raw.startsWith('{"action":"vote-save"') ? VOTE.bodyMax : MAX_BODY;
+  const bodyMax = raw.startsWith('{"action":"game-score"') ? BOARD.bodyMax : raw.startsWith('{"action":"vote-save"') ? VOTE.bodyMax : /^\{\s*"action"\s*:\s*"site-save"/.test(raw) ? SITE_CONTENT_MAX + 2000 : MAX_BODY;
   if (raw.length > bodyMax) return json(413, { error: 'bad_request' });
   let body;
   try { body = JSON.parse(raw); } catch { return json(400, { error: 'bad_request' }); }
@@ -356,6 +359,12 @@ export async function POST(request) {
   const who = () => visitorCodeForDay(cfg.passSecret, clientIp(request), new Date(now).toISOString().slice(0, 10));
 
   switch (body.action) {
+    case 'site-owner':
+    case 'site-save':
+    case 'site-history':
+    case 'site-restore':
+      return siteOwner(cfg, body, { visitor, now });
+
     case 'game-play':
       return gamePlay(cfg, body, { visitor, who, now });
 

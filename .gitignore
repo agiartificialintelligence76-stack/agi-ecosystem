@@ -20,6 +20,7 @@ _source-assets/
 Thumbs.db
 desktop.ini
 *.log
+/tools/owner-qa/
 
 # ── Copies of files Claude sent in chat (the Claude desktop app
 #    saves them here). Not part of the site; may be out of date.
