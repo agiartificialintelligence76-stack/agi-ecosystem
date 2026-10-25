@@ -182,6 +182,24 @@ test('a query flag or third-party embed alone never enables draft controls', () 
   const g=frameFixture('https://agi1.app/diary');assert.equal(startSiteContent(g.doc).preview,false);
 });
 
+test('picking any part of a Her world entry opens its complete editable name, description and link', () => {
+  const f = frameFixture();
+  const nav = f.el('nav', { class:'lp-eco' }), list = f.el('ul'), row = f.el('li');
+  const link = f.el('a', { href:'/studio' }, 'AGI Studio '), dot = f.el('span', { class:'lp-dot' });
+  const description = f.el('small', {}, 'your own AI influencer'), arrow = f.el('i', { 'aria-hidden':'true' }, '→');
+  link.prepend(dot); link.append(description,arrow); row.append(link); list.append(row); nav.append(list); f.main.append(nav);
+  startSiteContent(f.doc); f.send({type:'agi-owner-pick',enabled:true});
+  for (const target of [row,link,dot,description,arrow,link.childNodes.find(n=>n.nodeType===3)]) {
+    for (const handler of f.events.get('click') || []) handler({type:'click',target,preventDefault(){},stopImmediatePropagation(){}});
+    const selected = f.messages.at(-1).message.item;
+    assert.equal(selected.kind,'world'); assert.equal(selected.selector,selectorFor(row)); assert.equal(selected.label,'AGI Studio');
+    assert.equal(selected.linkText,'AGI Studio'); assert.equal(selected.href,'/studio');
+    assert.equal(selected.noteText,'your own AI influencer'); assert.equal(selected.noteSelector,selectorFor(description));
+  }
+  f.send({type:'agi-owner-preview',document:{pages:[],edits:[edit(selectorFor(link),{text:'Creator studio'}),edit(selectorFor(description),{text:'Make something new'})]}});
+  assert.match(link.textContent,/Creator studio/); assert.equal(description.textContent,'Make something new'); assert.equal(arrow.textContent,'→');
+});
+
 test('content-driven galleries receive one change event before overrides and can read the latest snapshot', () => {
   const {doc,el,main}=fixture('/memes');let events=0;
   doc.defaultView.CustomEvent=class {constructor(type,options){this.type=type;this.detail=options.detail;}};

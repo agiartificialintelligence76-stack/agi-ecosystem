@@ -16,6 +16,50 @@ const el = (tag, cls, value) => { const n = document.createElement(tag); if (cls
 const button = (label, fn, cls = '') => { const n = el('button', cls, label); n.type = 'button'; n.addEventListener('click', fn); return n; };
 const state = { me: null, authorized: false, base: emptyDocument(), draft: emptyDocument(), revision: 0, path: '/', tab: 'content', filter: 'sections', items: [], selected: null, block: null, busy: false, pick: true, epoch: 0, previewReady: false };
 let mediaManager = null;
+const previewWindow = $('[data-owner-preview-window]'), previewCanvas = $('[data-owner-preview-canvas]');
+const previewSizeButton = $('[data-owner-preview-size]'), previewStatus = $('[data-owner-preview-status]'), previewHelp = $('[data-owner-preview-help]');
+const previewView = { mode: 'desktop', fit: true, lastSize: '' };
+const PREVIEW_DEVICES = { desktop: { width: 1440, height: 900, name: 'Desktop' }, phone: { width: 390, height: 844, name: 'Phone' } };
+
+// Keep the embedded page's viewport independent of the editor's narrow columns. Scaling its canvas changes only
+// its display size: media queries still see a real desktop/phone, and switching modes keeps the same loaded draft.
+function sizePreview() {
+  const device = PREVIEW_DEVICES[previewView.mode];
+  ui.preview.style.width = `${device.width}px`;
+  ui.preview.style.height = `${device.height}px`;
+  document.querySelectorAll('[data-owner-preview-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ownerPreviewMode === previewView.mode)));
+  previewSizeButton.setAttribute('aria-pressed', String(!previewView.fit));
+  previewSizeButton.title = previewView.fit ? 'Show at 100% and scroll inside the preview' : 'Scale the page to fit the preview panel';
+  previewHelp.textContent = `${device.name} preview shows the full page, ${previewView.fit ? 'scaled to fit' : 'at actual size; scroll inside to see more'}. Select a Her world row to edit its name, description and link.`;
+  const available = previewWindow.clientWidth;
+  if (available <= 0) { previewView.lastSize = ''; previewStatus.textContent = `${device.name} · ${device.width} × ${device.height}`; return; }
+  const key = `${previewView.mode}:${previewView.fit}:${available}`;
+  if (key === previewView.lastSize) return;
+  previewView.lastSize = key;
+  const scale = previewView.fit ? Math.min(1, available / device.width) : 1;
+  const width = device.width * scale, height = device.height * scale;
+  previewCanvas.style.width = `${width}px`;
+  previewCanvas.style.height = `${height}px`;
+  ui.preview.style.transform = `scale(${scale})`;
+  previewWindow.style.height = `${Math.min(650, height) + 2}px`;
+  previewWindow.dataset.actualSize = String(!previewView.fit);
+  previewStatus.textContent = `${device.name} · ${device.width} × ${device.height} · ${Math.round(scale * 100)}%`;
+}
+let previewSizeFrame = 0;
+function schedulePreviewSize() {
+  if (previewSizeFrame) return;
+  previewSizeFrame = requestAnimationFrame(() => { previewSizeFrame = 0; sizePreview(); });
+}
+if ('ResizeObserver' in window) new ResizeObserver(schedulePreviewSize).observe(previewWindow);
+addEventListener('resize', schedulePreviewSize);
+ui.preview.addEventListener('load', schedulePreviewSize);
+document.querySelectorAll('[data-owner-preview-mode]').forEach(b => b.addEventListener('click', () => {
+  previewView.mode = b.dataset.ownerPreviewMode;
+  previewWindow.scrollTo(0, 0);
+  sizePreview();
+}));
+previewSizeButton.addEventListener('click', () => { previewView.fit = !previewView.fit; previewWindow.scrollTo(0, 0); sizePreview(); });
+sizePreview();
 function storedWallet() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v?.session && /^0x[\da-f]{40}$/i.test(v.wallet) ? v : null; } catch { return null; } }
 function say(message, error = false) { ui.message.textContent = message; ui.message.dataset.error = String(error); }
 function dirty() { return JSON.stringify(state.base) !== JSON.stringify(state.draft); }
@@ -25,6 +69,8 @@ function toolbar() {
   ui.publish.disabled = !changed || state.busy || !state.authorized; ui.discard.disabled = !changed || state.busy;
   ui.publish.textContent = state.busy ? 'Working…' : 'Publish changes'; ui.revision.textContent = `LIVE VERSION ${state.revision}`;
   const page = pageList().find(p => p.path === state.path); ui.title.textContent = page?.title || state.path; ui.path.textContent = state.path;
+  const reset = $('[data-owner-reset-selection]');
+  if (reset) { const selectors = selectedSelectors(); reset.disabled = !state.draft.edits.some(e => e.page === state.path && selectors.has(e.selector)); }
 }
 function pageList() {
   const map = new Map(BUILTIN_PAGES.map(p => [p.path, { ...p }]));
@@ -54,6 +100,7 @@ function renderPages() {
 function loadPreview() {
   state.previewReady = false; state.items = []; state.selected = null;
   ui.preview.src = `${state.path}?ownerPreview=1`;
+  schedulePreviewSize();
 }
 function selectPage(path) { state.path = path; state.block = null; state.tab = 'content'; state.filter = 'sections'; loadPreview(); render(); }
 function render() {
@@ -81,6 +128,7 @@ function renderControls() {
   renderContent();
 }
 function matchingEdit(item = state.selected) { return item && state.draft.edits.find(e => e.page === state.path && e.selector === item.selector); }
+function selectedSelectors(item = state.selected) { return new Set(item ? [item.selector, item.linkSelector, item.textSelector, item.noteSelector].filter(Boolean) : []); }
 function edit(change) {
   if (!state.selected) return; editTarget(state.selected.selector, change);
 }
@@ -132,7 +180,13 @@ function renderContent() {
   ui.controls.append(check('Visible to visitors', record.hidden !== true, v => { edit({hidden:!v}); renderControls(); }));
   const row = el('div','oc-inline');
   row.append(button(record.hidden ? 'Restore item' : 'Remove item', () => { edit({hidden:!record.hidden}); renderControls(); },record.hidden ? '' : 'oc-danger'));
-  if (matchingEdit()) row.append(button('Reset to original', () => { state.draft.edits = state.draft.edits.filter(e => e !== matchingEdit()); changed(); renderControls(); }));
+  const itemSelectors = selectedSelectors(item);
+  const reset = button('Reset to original', () => {
+    state.draft.edits = state.draft.edits.filter(e => e.page !== state.path || !itemSelectors.has(e.selector)); changed(); renderControls();
+  });
+  reset.dataset.ownerResetSelection = '';
+  reset.disabled = !state.draft.edits.some(e => e.page === state.path && itemSelectors.has(e.selector));
+  row.append(reset);
   ui.controls.append(row, help('Changes apply to this page. Existing wallet, voting, and game actions keep their original behavior.'));
 }
 function renderPageSettings() {
@@ -230,8 +284,10 @@ addEventListener('message',event=>{
     // Navigating the preview may report a different managed page; never accept system/owner routes.
     const path=normalizePath(data.path||state.path);if(path!==state.path){if(!pageList().some(p=>p.path===path))return;state.path=path;state.selected=null;}
     state.items=(Array.isArray(data.items)?data.items:[]).filter(i=>i&&safeSelector(i.selector)).slice(0,3000);
+    if(state.selected){const currentItem=state.items.find(i=>i.selector===state.selected.selector);if(currentItem)state.selected=currentItem;}
     const first=!state.previewReady;state.previewReady=true;if(first)sendPreview();
-    if(state.tab==='content'&&!ui.controls.contains(document.activeElement))renderControls();toolbar();renderPages();
+    const typing=ui.controls.contains(document.activeElement)&&document.activeElement.matches('input,textarea,select');
+    if(state.tab==='content'&&!typing)renderControls();toolbar();renderPages();
   }else if(data.type==='agi-owner-selected'&&data.item&&safeSelector(data.item.selector)){state.selected=data.item;state.tab='content';render();}
 });
 addEventListener('beforeunload',event=>{if(dirty()){event.preventDefault();event.returnValue='';}});

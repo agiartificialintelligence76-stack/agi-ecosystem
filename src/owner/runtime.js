@@ -124,10 +124,10 @@ export function itemFor(node) {
   const kind = node.matches('.lp-eco li') ? 'world' : node.matches('.lp-planets li') ? 'orbit'
     : node.matches(CONTAINER) ? 'section' : tag === 'img' ? 'image' : tag === 'a' ? 'link' : 'text';
   const heading = node.matches(CONTAINER) ? node.querySelector('h1,h2,h3,h4')?.textContent : '';
-  const label = flat(heading || node.getAttribute('aria-label') || (tag === 'img' ? node.getAttribute('alt') : node.textContent), 100) || `${tag} · ${selector}`;
   const worldLink = ['world', 'orbit'].includes(kind) ? node.querySelector('a') : null;
   const worldName = worldLink?.querySelector('.lp-planet-name') || worldLink;
   const worldNote = worldLink?.querySelector('small,.lp-planet-url');
+  const label = flat((worldName && directText(worldName)) || heading || node.getAttribute('aria-label') || (tag === 'img' ? node.getAttribute('alt') : node.textContent), 100) || `${tag} · ${selector}`;
   return {
     selector, label, tag, kind,
     text: node.matches(CONTAINER) || kind === 'world' || tag === 'img' ? '' : directText(node).trim().slice(0, 10000),
@@ -447,6 +447,10 @@ export function startSiteContent(root = document) {
   }
   const picked = (target) => {
     let node = target?.nodeType === 1 ? target : target?.parentElement;
+    // Her world is one editable entry: picking its name, description, dot or arrow
+    // must expose the same name/link/description fields as selecting its list row.
+    const entry = node?.closest('.lp-eco li,.lp-planets li');
+    if (entry && selectable(entry) && !node.closest(SKIP)) return entry;
     while (node && node !== root.body) { if (selectable(node)) return node; node = node.parentElement; }
     return null;
   };
