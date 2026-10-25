@@ -76,9 +76,11 @@ const GAME_ASK = /^\?game=([a-z0-9]{2,24})(?:&before=([1-9]\d{0,14}))?$/;
 const SHARED = { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120' };
 export async function GET(request) {
   const search = request ? new URL(request.url).search : '';
-  if (search.startsWith('?meme-share=')) {
-    const params = new URLSearchParams(search);
-    if ([...params].length !== 1) return json(400, { error: 'bad_request' });
+  const params = new URLSearchParams(search);
+  if (params.has('meme-share')) {
+    // Hosting rewrites can append their named path parameters (for example id).
+    // Only the validated meme-share value selects content; unrelated parameters do not.
+    if (params.getAll('meme-share').length !== 1) return json(400, { error: 'bad_request' });
     return memeShare(getConfig(), params.get('meme-share'));
   }
   if (search === '?site-content') return siteContentGet(getConfig());

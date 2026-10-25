@@ -6,10 +6,26 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { MEMES, TABS, fileOf, thumbOf, downloadName, clock } from '../src/memes/list.js';
 import { MEDIA_PUBLIC_ROOT } from '../src/owner/media-model.js';
 import { memeShare } from '../server/meme-share.js';
+import { GET } from '../api/wallet.js';
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 const pub = (p) => new URL(`../public${p}`, import.meta.url);
 const shareContent = (memes = []) => ({ getContent: async () => Response.json({ document: { memes } }) });
+
+test('meme previews accept hosting rewrite path parameters in either order and reject duplicate selections', async () => {
+  const saved = process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_URL;
+  try {
+    for (const query of ['meme-share=vlad&id=vlad', 'id=vlad&meme-share=vlad']) {
+      const response = await GET(new Request(`https://agi1.app/api/wallet?${query}`));
+      assert.equal(response.status, 200);
+      assert.match(await response.text(), /memes\/share\/agi-vlad\.jpg/);
+    }
+    assert.equal((await GET(new Request('https://agi1.app/api/wallet?meme-share=vlad&meme-share=other'))).status, 400);
+  } finally {
+    if (saved === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved;
+  }
+});
 
 test('meme share previews identify the selected video and image before JavaScript runs', async () => {
   const video = await memeShare({}, 'vlad', shareContent());
