@@ -160,6 +160,8 @@ function stateFor(root) {
   }
   return state;
 }
+// Other public features can reuse the single content fetch, including a module loaded after its first response.
+export function getSiteContent(root = document) { return states.get(root)?.document || null; }
 function record(state, node) {
   let row = state.records.get(node);
   if (!row) { row = { attrs: new Map(), texts: new Map() }; state.records.set(node, row); }
@@ -365,6 +367,12 @@ export function applySiteContent(data, root = document) {
       if (state.lastTitle === root.title) root.title = state.title;
       state.lastTitle = null;
       return;
+    }
+    const contentKey = JSON.stringify(state.document);
+    if (state.contentKey !== contentKey) {
+      state.contentKey = contentKey;
+      const win = root.defaultView;
+      if (win?.CustomEvent) win.dispatchEvent(new win.CustomEvent('agi-site-content', { detail: { document: state.document } }));
     }
     const page = pageForPath(state.document.pages, path);
     const exactPage = page && normalizePath(page.path) === path ? page : null;

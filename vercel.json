@@ -54,7 +54,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://live.agi1.app; media-src 'self' blob:; connect-src 'self' blob: https://api.dexscreener.com wss://live.agi1.app; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://live.agi1.app https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/public/agi1-owner-media/; media-src 'self' blob: https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/public/agi1-owner-media/; connect-src 'self' blob: https://api.dexscreener.com wss://live.agi1.app https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/upload/sign/agi1-owner-media/; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
         },
         {
           "key": "X-Content-Type-Options",

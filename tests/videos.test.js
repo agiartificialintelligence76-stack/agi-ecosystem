@@ -1246,13 +1246,15 @@ test('POST studio-video-check, studio-video-look and studio-video-redo: paying f
 // ---------- the rest of what it promises ----------
 // (2026-10-10) the old studio page, and its videos section, became AGI Studio the same day: an influencer's videos, paid in
 // credits (tests/influencer.test.js). A character's videos made before still play from our own address (the GETs above).
-test("videos play only from our own address (and, since AGI Studio, a clip or a selfie the visitor picks, from the browser's own blob: address); never another site's media; the safety note", () => {
+test("videos play from our address, local picks or the exact owner media bucket; no other media host; the safety note", () => {
   const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
   const csp = vercel.headers[0].headers.find((h) => h.key === 'Content-Security-Policy').value;
   assert.match(csp, /^default-src 'self';/);
   const media = csp.split(';').map((d) => d.trim()).filter((d) => d.startsWith('media-src'));
-  assert.deepEqual(media, ["media-src 'self' blob:"], 'our own address and the visitor\'s own picks, nothing else');
-  assert.doesNotMatch(csp, /supabase|fal|\*/, "no other site's media, no wildcard");
+  const publicMedia = 'https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/public/agi1-owner-media/';
+  const signedUpload = 'https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/upload/sign/agi1-owner-media/';
+  assert.deepEqual(media, [`media-src 'self' blob: ${publicMedia}`], 'our address, local picks and the dedicated owner bucket, nothing else');
+  assert.doesNotMatch(csp.replaceAll(publicMedia, '').replaceAll(signedUpload, ''), /supabase|fal|\*/, 'no other Supabase path, FAL host or wildcard');
   // the safety note says what AGI Studio's videos do with money and data
   const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   for (const must of [/the words and choices you give go to AI services that make your influencer's pictures, videos and 3D model/,

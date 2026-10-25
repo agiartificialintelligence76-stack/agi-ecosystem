@@ -4,6 +4,7 @@ import { readSession } from './session.js';
 import { isVoteOwner } from './vote.js';
 import { makeBurstLimit } from './burst.js';
 import { emptyDocument, validateDocument, publicDocument } from '../src/owner/model.js';
+import { startMediaUpload, finishMediaUpload, verifyMediaProofs } from './site-media.js';
 
 export const siteOwnerBurst = makeBurstLimit({ max: 40, windowMs: 60_000 });
 const json = (status, body, headers = { 'Cache-Control': 'no-store' }) => Response.json(body, { status, headers });
@@ -38,6 +39,8 @@ export async function siteOwner(cfg, body, { visitor, now }) {
   if (!isVoteOwner(cfg, session.wallet)) return json(403, { error: 'not_owner', ...(cfg.studioOwner ? {} : { unset: true }) });
   if (!ready(cfg)) return json(503, { error: 'not_ready' });
   try {
+    if (body.action === 'site-media-start') return json(200, await startMediaUpload(cfg, body, session.wallet, now));
+    if (body.action === 'site-media-finish') return json(200, await finishMediaUpload(cfg, body, session.wallet, now));
     if (body.action === 'site-owner') return json(200, { ok: true, ...(await load(cfg)) });
     if (body.action === 'site-history') {
       const rows = await rpc(cfg, 'site_content_history', {}, 'site content');
@@ -49,6 +52,9 @@ export async function siteOwner(cfg, body, { visitor, now }) {
     if (body.action === 'site-save') {
       const checked = validateDocument(body.document);
       if (!checked.ok) return json(400, { error: 'refused', why: checked.why });
+      const previous = checked.document.memes?.some((m) => m.custom) ? (await load(cfg)).document.memes : [];
+      const media = verifyMediaProofs(cfg, checked.document.memes, previous);
+      if (!media.ok) return json(400, { error: 'refused', why: media.why });
       result = await rpc(cfg, 'site_content_put', { p_revision: body.revision, p_document: checked.document }, 'site content');
     } else if (body.action === 'site-restore') {
       if (!revision(body.targetRevision)) return json(400, { error: 'refused', why: 'Choose a saved version to restore.' });
@@ -59,6 +65,7 @@ export async function siteOwner(cfg, body, { visitor, now }) {
     if (result?.why === 'gone') return json(404, { error: 'gone', why: 'That saved version is no longer available.' });
     throw new Error('The database did not confirm the content change');
   } catch (err) {
+    if (err.media) return json(err.status, { error: err.error, why: err.why });
     if (missing(err)) return json(503, { error: 'not_ready' });
     console.error('[owner] site content request failed:', err.message);
     return json(503, { error: 'busy' });

@@ -15,7 +15,8 @@ import '../styles/pop.css';        // Pop mode: the bold look, only while it's s
 import '../styles/memes.css';
 import { startTheme } from '../theme.js';
 import { startMenu } from '../menu.js';
-import { MEMES, TABS, fileOf, thumbOf, downloadName, clock } from './list.js';
+import { TABS, mergeMemes, fileOf, thumbOf, downloadName, downloadUrl, clock } from './list.js';
+import { getSiteContent } from '../owner/runtime.js';
 
 const GROUPS = [
   { kind: 'slopcore', title: 'Slopcore', note: 'the long cuts. headphones on.', grid: 'mm-grid-slop', tag: 'Slopcore' },
@@ -48,6 +49,11 @@ const canPeek = () => matchMedia('(hover: hover) and (pointer: fine)').matches &
 let current = 'all';          // the open tab
 let open = [];                // the memes the viewer steps through (the open tab's, in the page's order)
 let at = -1;                  // which of them the viewer shows
+let memes = mergeMemes(getSiteContent()?.memes);
+let libraryKey = JSON.stringify(memes);
+let linkedOpened = false;
+const linkedId = new URLSearchParams(location.search).get('m');
+let cardCleanups = [];
 const rows = {};              // how many rows each group shows now
 const FIRST_ROWS = { all: 2, tab: 3 };
 const MORE_ROWS = 3;
@@ -57,6 +63,7 @@ let dlg, stage, kindEl, titleEl, noteEl, countEl, dlBtn, prevBtn, nextBtn;
 startTheme();
 startMenu();
 start();
+addEventListener('agi-site-content', (event) => updateLibrary(event.detail?.document));
 
 function start() {
   const root = document.querySelector('[data-mm-groups]');
@@ -72,20 +79,54 @@ function start() {
   let frame = 0;
   const relayout = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => { for (const g of GROUPS) layout(g.kind); }); };
   if ('ResizeObserver' in window) new ResizeObserver(relayout).observe(root); else addEventListener('resize', relayout);
-  const linked = new URLSearchParams(location.search).get('m');
-  const meme = MEMES.find((m) => m.id === linked);
-  if (meme) show(meme);
+  openLinked();
+}
+
+function openLinked() {
+  if (linkedOpened || !linkedId) return;
+  const meme = memes.find((m) => m.id === linkedId);
+  if (meme) { linkedOpened = true; show(meme); }
+}
+
+function updateLibrary(document) {
+  const next = mergeMemes(document?.memes);
+  const key = JSON.stringify(next);
+  if (key === libraryKey) return;
+  libraryKey = key;
+  const viewed = dlg?.open ? open[at] : null;
+  const root = window.document.querySelector('[data-mm-groups]');
+  if (!root) return;
+  for (const stop of cardCleanups.splice(0)) stop();
+  memes = next;
+  root.replaceChildren(...GROUPS.map(makeGroup));
+  for (const group of root.querySelectorAll('.mm-group')) group.hidden = current !== 'all' && group.dataset.group !== current;
+  for (const group of GROUPS) layout(group.kind);
+  counts();
+  for (const tab of window.document.querySelectorAll('.mm-tab')) {
+    const n = tab.dataset.tab === 'all' ? memes.length : memes.filter((m) => m.kind === tab.dataset.tab).length;
+    tab.title = `${n} ${tab.textContent.toLowerCase()}`;
+  }
+  if (viewed) {
+    const replacement = memes.find((m) => m.id === viewed.id);
+    if (!replacement) dlg.close();
+    else {
+      setPlaylist(replacement);
+      if (fileOf(viewed) !== fileOf(replacement) || isVideo(viewed) !== isVideo(replacement)) render();
+      else renderInfo(); // A title/category change must not restart a video someone is watching.
+    }
+  }
+  openLinked();
 }
 
 function counts() {
-  const n = { all: MEMES.length, image: 0, video: 0, slopcore: 0 };
-  for (const m of MEMES) n[m.kind] += 1;
+  const n = { all: memes.length, image: 0, video: 0, slopcore: 0 };
+  for (const m of memes) n[m.kind] += 1;
   for (const node of document.querySelectorAll('[data-mm-count]')) node.textContent = String(n[node.dataset.mmCount] ?? '');
 }
 
 function makeTabs(list) {
   for (const t of TABS) {
-    const n = t.key === 'all' ? MEMES.length : MEMES.filter((m) => m.kind === t.key).length;
+    const n = t.key === 'all' ? memes.length : memes.filter((m) => m.kind === t.key).length;
     const b = el('button', 'mm-tab', { type: 'button', role: 'tab', id: `mm-tab-${t.key}`, 'data-tab': t.key, 'aria-selected': 'false', tabindex: '-1', title: `${n} ${t.label.toLowerCase()}` });
     b.textContent = t.label;
     b.addEventListener('click', () => pick(t.key, true));
@@ -123,7 +164,7 @@ function pick(key, fromClick) {
 }
 
 function makeGroup(g) {
-  const items = MEMES.filter((m) => m.kind === g.kind);
+  const items = memes.filter((m) => m.kind === g.kind);
   const sec = el('section', `mm-group mm-group-${g.kind === 'slopcore' ? 'slop' : g.kind}`, { 'data-group': g.kind, 'aria-labelledby': `mm-h-${g.kind}` });
   const head = el('div', 'mm-group-head');
   const h = el('h2', 'mm-group-title', { id: `mm-h-${g.kind}` });
@@ -175,13 +216,21 @@ function columns(grid) {
 function makeCard(m, g) {
   const li = el('li', 'mm-card', { 'data-id': m.id });
   const btn = el('button', 'mm-open', { type: 'button', 'aria-label': `${isVideo(m) ? 'Play' : 'Open'}: ${m.title}` });
-  const img = el('img', 'mm-thumb', { src: thumbOf(m), alt: '', loading: 'lazy', decoding: 'async', width: 720, height: m.kind === 'image' ? 720 : 405 });
-  btn.append(img);
+  const thumb = thumbOf(m);
+  if (thumb) {
+    const img = el('img', 'mm-thumb', { src: thumb, alt: '', loading: 'lazy', decoding: 'async', width: 720, height: m.kind === 'image' ? 720 : 405 });
+    btn.append(img);
+  } else {
+    // A confirmed video remains usable when the browser could not generate a cover frame.
+    const fallback = el('video', 'mm-thumb', { src: fileOf(m), preload: 'metadata', muted: true, playsinline: true, 'aria-hidden': 'true' });
+    fallback.muted = true; btn.append(fallback);
+    cardCleanups.push(() => { fallback.pause(); fallback.removeAttribute('src'); fallback.load(); });
+  }
   if (isVideo(m)) {
     const play = el('span', 'mm-play', { 'aria-hidden': 'true' }); play.innerHTML = ICON.play; btn.append(play);
-    const t = el('span', 'mm-time'); t.textContent = m.loop ? 'LOOP' : clock(m.secs); btn.append(t);
+    const t = el('span', 'mm-time'); t.textContent = m.loop ? 'LOOP' : m.secs > 0 ? clock(m.secs) : 'VIDEO'; btn.append(t);
     if (g.tag) { const tag = el('span', 'mm-tag'); tag.textContent = g.tag; btn.append(tag); }
-    peek(li, btn, m);
+    cardCleanups.push(peek(li, btn, m));
   }
   btn.addEventListener('click', () => show(m));
   const body = el('div', 'mm-body');
@@ -189,7 +238,7 @@ function makeCard(m, g) {
   const name = el('p', 'mm-name'); name.textContent = m.title; name.title = m.title;
   const note = el('p', 'mm-note'); note.textContent = m.note || '';
   words.append(name, note);
-  const dl = el('a', 'mm-dl', { href: fileOf(m), download: downloadName(m), 'aria-label': `Download ${m.title}`, title: 'Download' });
+  const dl = el('a', 'mm-dl', { href: downloadUrl(m), download: downloadName(m), 'aria-label': `Download ${m.title}`, title: 'Download' });
   dl.innerHTML = ICON.down;
   body.append(words, dl);
   li.append(btn, body);
@@ -201,6 +250,7 @@ function makeCard(m, g) {
 function peek(li, btn, m) {
   let timer = 0;
   let vid = null;
+  let observer = null;
   const startPeek = () => {
     if (vid) return;
     vid = el('video', 'mm-peek', { muted: true, playsinline: true, loop: true, preload: 'auto', 'aria-hidden': 'true', tabindex: '-1' });
@@ -209,22 +259,24 @@ function peek(li, btn, m) {
     btn.append(vid);
     vid.play().then(() => li.classList.add('is-peeking')).catch(() => {});
   };
-  const stopPeek = () => {
+  const stopPeek = (force = false) => {
     clearTimeout(timer);
-    if (!vid || m.loop) return;
+    if (!vid || (m.loop && !force)) return;
     vid.pause(); vid.removeAttribute('src'); vid.load(); vid.remove(); vid = null;
     li.classList.remove('is-peeking');
   };
   if (m.loop) {
-    if (reducedMotion()) return;
+    if (reducedMotion()) return () => {};
     const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => {
       for (const e of es) { if (e.isIntersecting) { startPeek(); vid?.play().catch(() => {}); } else vid?.pause(); }
     }) : null;
+    observer = io;
     if (io) io.observe(li); else startPeek();
-    return;
+    return () => { observer?.disconnect(); stopPeek(true); };
   }
   li.addEventListener('mouseenter', () => { if (canPeek()) timer = setTimeout(startPeek, 280); });
-  li.addEventListener('mouseleave', stopPeek);
+  li.addEventListener('mouseleave', () => stopPeek());
+  return () => { observer?.disconnect(); stopPeek(true); };
 }
 
 // ---------- the viewer ----------
@@ -273,11 +325,15 @@ function viewer() {
 }
 
 function show(m) {
-  open = current === 'all' ? GROUPS.flatMap((g) => MEMES.filter((x) => x.kind === g.kind)) : MEMES.filter((x) => x.kind === current);
-  if (!open.includes(m)) open = MEMES.filter((x) => x.kind === m.kind);
-  at = open.indexOf(m);
+  setPlaylist(m);
   render();
   if (!dlg.open) dlg.showModal();
+}
+
+function setPlaylist(m) {
+  open = current === 'all' ? GROUPS.flatMap((g) => memes.filter((x) => x.kind === g.kind)) : memes.filter((x) => x.kind === current);
+  if (!open.includes(m)) open = memes.filter((x) => x.kind === m.kind);
+  at = open.indexOf(m);
 }
 
 function step(d) {
@@ -300,17 +356,25 @@ function render() {
     media = el('img', 'mm-v-media', { src: fileOf(m), alt: `${m.title}${m.note ? `: ${m.note}` : ''}`, width: m.w, height: m.h, decoding: 'async' });
   }
   stage.append(prevBtn, media, nextBtn);
-  prevBtn.hidden = nextBtn.hidden = open.length < 2;
-  kindEl.textContent = `${KIND_WORD[m.kind]}${isVideo(m) && !m.loop ? ` · ${clock(m.secs)}` : ''}`;
-  titleEl.textContent = m.title;
-  noteEl.textContent = m.note || '';
-  countEl.textContent = `${at + 1} / ${open.length}`;
-  dlBtn.href = fileOf(m);
-  dlBtn.setAttribute('download', downloadName(m));
-  dlBtn.setAttribute('aria-label', `Download ${m.title}`);
+  renderInfo();
   // the next picture is fetched ahead, so stepping through pictures is instant
   const nx = open[(at + 1) % open.length];
   if (nx && !isVideo(nx)) { const pre = new Image(); pre.src = fileOf(nx); }
+}
+
+function renderInfo() {
+  const m = open[at];
+  if (!m) return;
+  prevBtn.hidden = nextBtn.hidden = open.length < 2;
+  kindEl.textContent = `${KIND_WORD[m.kind]}${isVideo(m) && !m.loop && m.secs > 0 ? ` · ${clock(m.secs)}` : ''}`;
+  titleEl.textContent = m.title;
+  noteEl.textContent = m.note || '';
+  const picture = stage.querySelector('img.mm-v-media'); if (picture) picture.alt = `${m.title}${m.note ? `: ${m.note}` : ''}`;
+  const video = stage.querySelector('video.mm-v-media'); if (video) { const poster = thumbOf(m); if (poster) video.setAttribute('poster', poster); else video.removeAttribute('poster'); }
+  countEl.textContent = `${at + 1} / ${open.length}`;
+  dlBtn.href = downloadUrl(m);
+  dlBtn.setAttribute('download', downloadName(m));
+  dlBtn.setAttribute('aria-label', `Download ${m.title}`);
 }
 
 // stop the video and its download when the viewer closes or moves on

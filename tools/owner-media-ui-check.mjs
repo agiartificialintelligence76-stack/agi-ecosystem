@@ -1,0 +1,130 @@
+// Loopback-only acceptance checks. Remote storage requests are fulfilled by the local fake storage.
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+import { MEMES } from '../src/memes/list.js';
+import { MEDIA_ORIGIN, MEDIA_BUCKET } from '../src/owner/media-model.js';
+const { chromium } = await import(process.env.OWNER_PLAYWRIGHT_MODULE || 'playwright');
+const base = 'http://127.0.0.1:5179';
+await mkdir('tools/owner-qa', { recursive: true });
+const browser = await chromium.launch({ ...(process.env.OWNER_BROWSER_PATH ? { executablePath: process.env.OWNER_BROWSER_PATH } : {}), headless: true });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+context.setDefaultTimeout(30000);
+const cors = { 'access-control-allow-origin': base, 'access-control-allow-methods': 'GET,HEAD,PUT,OPTIONS', 'access-control-allow-headers': 'content-type,x-upsert,range' };
+const uploads = [];
+// Chromium's request inspection can convert binary upload bodies to text. Retain the
+// original Blob bytes locally so the fake Storage receives exactly what the browser sends.
+await context.addInitScript(() => {
+  const open = XMLHttpRequest.prototype.open, send = XMLHttpRequest.prototype.send;
+  window.__qaUploadBytes = {};
+  XMLHttpRequest.prototype.open = function(method, url, ...args) { this.__qaUrl = String(url); return open.call(this, method, url, ...args); };
+  XMLHttpRequest.prototype.send = function(body) {
+    if (!(body instanceof Blob)) return send.call(this, body);
+    body.arrayBuffer().then(buffer => {
+      let text = ''; for (const byte of new Uint8Array(buffer)) text += String.fromCharCode(byte);
+      window.__qaUploadBytes[this.__qaUrl] = btoa(text); send.call(this, body);
+    });
+  };
+});
+await context.route('**/*', async route => {
+  const request = route.request(), u = new URL(request.url());
+  if (u.origin === base || ['data:', 'blob:'].includes(u.protocol)) return route.continue();
+  if (u.origin !== MEDIA_ORIGIN) return route.abort();
+  const sign = `/storage/v1/object/upload/sign/${MEDIA_BUCKET}/`, pub = `/storage/v1/object/public/${MEDIA_BUCKET}/`;
+  if (!u.pathname.startsWith(sign) && !u.pathname.startsWith(pub)) return route.abort();
+  if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+  const path = u.pathname.split('/').pop();
+  if (u.pathname.startsWith(sign)) {
+    assert.equal(request.method(), 'PUT');
+    const raw = await request.frame().evaluate(url => window.__qaUploadBytes[url], request.url());
+    assert(raw, 'Original upload bytes captured');
+    const response = await context.request.put(`${base}/__owner-test/upload?path=${encodeURIComponent(path)}&token=${encodeURIComponent(u.searchParams.get('token'))}`, { data: Buffer.from(raw, 'base64'), headers: { 'Content-Type': request.headers()['content-type'] } });
+    uploads.push({ path, status: response.status() });
+    return route.fulfill({ response, headers: { ...response.headers(), ...cors } });
+  }
+  const response = await context.request.get(`${base}/__owner-test/file?path=${encodeURIComponent(path)}`, { headers: request.headers().range ? { range: request.headers().range } : {} });
+  return route.fulfill({ response, headers: { ...response.headers(), ...cors } });
+});
+const page = await context.newPage(), errors = [];
+page.on('pageerror', error => errors.push(error.message));
+const publish = async () => { await page.getByRole('button', { name: 'Publish changes', exact: true }).click(); await page.getByText('Published. Visitors will see').waitFor(); };
+try {
+  const fake = await (await context.request.get(`${base}/__owner-test/session`)).json();
+  const current = await (await context.request.post(`${base}/api/wallet`, { data: { action: 'site-owner', session: fake.session } })).json();
+  if (current.revision) await context.request.post(`${base}/api/wallet`, { data: { action: 'site-restore', session: fake.session, revision: current.revision, targetRevision: 0 } });
+  await page.goto(`${base}/__owner-test`);
+  await page.getByRole('button', { name: 'Open as the owner', exact: true }).click();
+  await page.getByRole('button', { name: 'Memes', exact: true }).click();
+  await page.getByRole('tab', { name: 'Meme library', exact: true }).click();
+  const form = page.locator('.om-upload');
+  const png = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 160; c.height = 120; const ctx = c.getContext('2d'); ctx.fillStyle = '#ff5c93'; ctx.fillRect(0, 0, 160, 120); return c.toDataURL('image/png').split(',')[1]; });
+  await form.getByLabel('Image or video to upload').setInputFiles({ name: 'owner-test.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+  await form.getByLabel('Title', { exact: true }).fill('Owner QA image');
+  await form.getByLabel('Caption', { exact: true }).fill('Uploaded using the meme library');
+  await form.getByRole('button', { name: 'Upload to draft' }).click();
+  await page.getByText('Upload verified and added to your draft. Publish changes to show it in Memes.', { exact: true }).waitFor();
+  let live = await (await context.request.get(`${base}/api/wallet?site-content`)).json();
+  assert.equal(live.document.memes?.length || 0, 0, 'Upload stays draft until Publish');
+  await publish();
+  live = await (await context.request.get(`${base}/api/wallet?site-content`)).json();
+  const image = live.document.memes.find(m => m.title === 'Owner QA image');
+  assert(image && !image.proof && !image.thumbProof);
+  const visitor = await context.newPage();
+  visitor.on('pageerror', error => errors.push(error.message));
+  await visitor.goto(`${base}/memes?m=${image.id}`);
+  await visitor.locator('.mm-viewer[open]').waitFor();
+  await visitor.getByRole('heading', { name: 'Owner QA image', exact: true }).waitFor();
+  await visitor.locator('.mm-viewer img').evaluate(img => img.decode());
+  assert.match(await visitor.locator('.mm-v-main').getAttribute('href'), /\?download=.+\.png$/);
+  await visitor.close();
+  console.log('Image upload, publish, public view, and download passed.');
+  await form.getByLabel('Image or video to upload').setInputFiles('public/memes/videos/agi-subway-walk.mp4');
+  console.log('Video file selected.');
+  await form.getByLabel('Title', { exact: true }).fill('Owner QA video');
+  await form.getByLabel('Caption', { exact: true }).fill('Video with an automatic cover');
+  await form.getByLabel('Video category', { exact: true }).selectOption('slopcore');
+  await form.getByRole('button', { name: 'Upload to draft' }).click();
+  console.log('Video upload requested.');
+  await page.getByText('Upload verified and added to your draft. Publish changes to show it in Memes.', { exact: true }).waitFor({ timeout: 60000 });
+  console.log('Video verified.');
+  await page.locator('.om-editor').getByLabel('Category', { exact: true }).selectOption('video');
+  console.log('Video category changed.');
+  await page.locator('.om-editor').getByLabel('Caption', { exact: true }).fill('Updated caption');
+  await publish();
+  live = await (await context.request.get(`${base}/api/wallet?site-content`)).json();
+  const video = live.document.memes.find(m => m.title === 'Owner QA video');
+  console.log('Video upload published:', { kind: video?.kind, cover: Boolean(video?.thumb), secs: video?.secs });
+  assert(video.thumb && video.secs > 0 && video.kind === 'video' && video.note === 'Updated caption');
+  const watch = await context.newPage();
+  await watch.goto(`${base}/memes?m=${video.id}`);
+  await watch.locator('.mm-viewer[open] video').waitFor();
+  await watch.waitForFunction(() => document.querySelector('.mm-viewer video')?.readyState >= 2);
+  assert(await watch.locator('.mm-viewer video').evaluate(v => v.videoWidth > 0));
+  await watch.close();
+  console.log('Published video playback passed.');
+  await page.getByLabel('Search the meme library').fill(MEMES[0].title);
+  await page.locator('.om-item').first().click();
+  await page.locator('.om-editor').getByRole('button', { name: 'Hide from gallery', exact: true }).click();
+  await publish();
+  live = await (await context.request.get(`${base}/api/wallet?site-content`)).json();
+  assert.deepEqual(live.document.memes.find(m => m.id === MEMES[0].id), { id: MEMES[0].id, custom: false, hidden: true });
+  await page.getByLabel('Search the meme library').fill(MEMES[0].title);
+  await page.locator('.om-item').first().click();
+  await page.locator('.om-editor').getByRole('button', { name: 'Restore to gallery', exact: true }).click();
+  await publish();
+  await page.getByLabel('Search the meme library').fill('');
+  await page.locator('[data-owner-controls]').evaluate(n => { n.scrollTop = 0; });
+  await page.screenshot({ path: 'tools/owner-qa/media-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: 'tools/owner-qa/media-mobile.png', fullPage: true });
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No mobile horizontal overflow');
+  assert.equal(uploads.length, 3, 'Image, video, and automatic poster uploaded');
+  assert(uploads.every(u => u.status === 200));
+  assert.deepEqual(errors, []);
+  console.log('PASS: verified image/video/poster uploads, draft isolation, publish, real gallery image/video/deep links/downloads, caption/category edit, builtin hide/restore, mobile layout, and no page errors. All uploads remained on loopback.');
+} catch (error) {
+  console.error(error.message);
+  console.log('STATUS', await page.locator('[data-owner-message]').innerText());
+  console.log('ERRORS', errors);
+  await page.screenshot({ path: 'tools/owner-qa/media-failure.png', fullPage: true });
+  throw error;
+} finally { await browser.close(); }

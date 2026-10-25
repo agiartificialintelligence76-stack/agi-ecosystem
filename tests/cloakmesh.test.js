@@ -452,10 +452,10 @@ test('inference.agi1.app opens the page (a redirect: Vercel serves the home page
   assert.deepEqual(r, { source: '/', has: [{ type: 'host', value: 'inference.agi1.app' }], destination: '/cloakmesh', permanent: false });
   assert.doesNotMatch(r.destination, /\.html$/, 'cleanUrls: never .html');
   assert.match(read('vite.config.js'), /cloakmesh: 'cloakmesh\.html'/);
-  // nothing new in the CSP: the page talks only to our own /api (and the human check, which was already allowed); the
-  // relay of TRENCHING SIMULATOR's Live mode (2026-10-21) is the only address added since: tests/trench-live.test.js
+  // This page adds no CSP sources: it talks to our /api. Shared sources also cover the live relay
+  // and the owner's exact media upload bucket (tests/trench-live.test.js and owner-media-security.test.js).
   const csp = v.headers[0].headers.find((h) => h.key === 'Content-Security-Policy').value;
-  assert.match(csp, /connect-src 'self' blob: https:\/\/api\.dexscreener\.com wss:\/\/live\.agi1\.app;/);
+  assert.match(csp, /connect-src 'self' blob: https:\/\/api\.dexscreener\.com wss:\/\/live\.agi1\.app https:\/\/vujaxukucukjxzhcxlea\.supabase\.co\/storage\/v1\/object\/upload\/sign\/agi1-owner-media\/;/);
   // the 12-function limit of Vercel's Hobby plan: every api/*.js file is one Vercel Function
   const fns = readdirSync(new URL('../api/', import.meta.url)).filter((f) => f.endsWith('.js'));
   assert.ok(fns.includes('cloakmesh.js'));

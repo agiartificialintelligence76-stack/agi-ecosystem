@@ -363,6 +363,8 @@ export async function POST(request) {
     case 'site-save':
     case 'site-history':
     case 'site-restore':
+    case 'site-media-start':
+    case 'site-media-finish':
       return siteOwner(cfg, body, { visitor, now });
 
     case 'game-play':

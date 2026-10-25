@@ -7,7 +7,7 @@ import { normalizePath, protectedPath, pageForPath } from '../src/owner/catalog.
 const source = readFileSync(new URL('../src/owner/runtime.js', import.meta.url), 'utf8')
   .replace(/^import '[^']+\.css';$/gm, '')
   .replace(/from '(\.\/[^']+)'/g, (_, p) => `from '${new URL(p, new URL('../src/owner/runtime.js', import.meta.url)).href}'`);
-const { applySiteContent, startSiteContent, collectItems, selectorFor, safeContentLink, safeContentImage } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const { applySiteContent, startSiteContent, getSiteContent, collectItems, selectorFor, safeContentLink, safeContentImage } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 
 class Node {
   constructor(doc, tag, value = '') { this.ownerDocument = doc; this.nodeType = tag === '#text' ? 3 : 1; this.tagName = tag.toUpperCase(); this.value = value; this.attrs = new Map(); this.childNodes = []; this.parentElement = null; }
@@ -180,4 +180,13 @@ test('only a same-origin owner frame can drive a draft preview or intercept a pi
 test('a query flag or third-party embed alone never enables draft controls', () => {
   const f=frameFixture('https://evil.test/owner');assert.equal(startSiteContent(f.doc).preview,false);assert.equal(f.events.has('message'),false);assert.equal(f.events.has('click'),false);assert.equal(f.messages.length,0);
   const g=frameFixture('https://agi1.app/diary');assert.equal(startSiteContent(g.doc).preview,false);
+});
+
+test('content-driven galleries receive one change event before overrides and can read the latest snapshot', () => {
+  const {doc,el,main}=fixture('/memes');let events=0;
+  doc.defaultView.CustomEvent=class {constructor(type,options){this.type=type;this.detail=options.detail;}};
+  doc.defaultView.dispatchEvent=event=>{assert.equal(event.type,'agi-site-content');events++;if(!doc.querySelector('#dynamic-title'))main.append(el('p',{id:'dynamic-title'},'Loaded by gallery'));};
+  const data={pages:[],edits:[edit('#dynamic-title',{text:'Owner title'},'/memes')],memes:[]};
+  applySiteContent(data,doc);assert.equal(events,1);assert.equal(doc.querySelector('#dynamic-title').textContent,'Owner title');assert.equal(getSiteContent(doc),data);
+  applySiteContent(data,doc);assert.equal(events,1,'DOM observer reapplication must not rebuild the gallery or restart videos');
 });

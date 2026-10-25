@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import config from '../vite.config.js';
 import { makeSession, readSession } from '../server/session.js';
 import { emptyDocument } from '../src/owner/model.js';
+import { MEDIA_ORIGIN, MEDIA_BUCKET, MEDIA_PATH, MEDIA_MIME_TYPES } from '../src/owner/media-model.js';
 
 const HOST = '127.0.0.1';
 const PORT = 5179;
@@ -15,7 +16,7 @@ const OWNER = '0x1111111111111111111111111111111111111111';
 const OTHER = '0x2222222222222222222222222222222222222222';
 Object.assign(process.env, {
   PASS_SECRET: SECRET,
-  SUPABASE_URL: 'https://owner-preview.fake.supabase.co',
+  SUPABASE_URL: MEDIA_ORIGIN,
   SUPABASE_SECRET_KEY: 'sb_secret_local_fixture_only',
   STUDIO_OWNER: OWNER,
   STUDIO_ONLY_FOR: OWNER,
@@ -23,10 +24,25 @@ Object.assign(process.env, {
 
 const initialTime = new Date().toISOString();
 const db = { document: emptyDocument(), revision: 0, updatedAt: initialTime, history: [{ document: emptyDocument(), revision: 0, updatedAt: initialTime, summary: 'Original site' }] };
+const mediaFiles = new Map(), uploadTokens = new Map();
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
   const address = String(url);
-  if (!/^https:\/\/owner-preview\.fake\.supabase\.co\/rest\/v1\/rpc\/site_content_(?:get|history|put|restore)$/.test(address)) {
+  const parsed = new URL(address);
+  if (parsed.origin !== MEDIA_ORIGIN) throw new Error('The local owner QA fixture blocks all upstream API requests.');
+  const filePath = parsed.pathname.split('/').pop();
+  if (parsed.pathname === `/storage/v1/object/upload/sign/${MEDIA_BUCKET}/${filePath}` && MEDIA_PATH.test(filePath) && init.method === 'POST') {
+    const token = `local-qa.${filePath.slice(0, 36)}.upload`;
+    uploadTokens.set(filePath, token);
+    return Response.json({ url: `/object/upload/sign/${MEDIA_BUCKET}/${filePath}?token=${token}` });
+  }
+  if ([`/storage/v1/object/info/${MEDIA_BUCKET}/${filePath}`, `/storage/v1/object/${MEDIA_BUCKET}/${filePath}`].includes(parsed.pathname) && MEDIA_PATH.test(filePath)) {
+    const file = mediaFiles.get(filePath);
+    if (!file) return Response.json({ error: 'not found' }, { status: 404 });
+    if (parsed.pathname.includes('/object/info/')) return Response.json({ name: filePath, bucket_id: MEDIA_BUCKET, size: file.bytes.length, content_type: file.mime });
+    return new Response(file.bytes.subarray(0, 4096), { status: 206, headers: { 'Content-Type': file.mime, 'Content-Range': `bytes 0-${Math.min(file.bytes.length, 4096) - 1}/${file.bytes.length}` } });
+  }
+  if (!/^\/rest\/v1\/rpc\/site_content_(?:get|history|put|restore)$/.test(parsed.pathname)) {
     throw new Error('The local owner QA fixture blocks all upstream API requests.');
   }
   const name = address.split('/').pop(), args = JSON.parse(init.body || '{}');
@@ -66,6 +82,32 @@ const fixture = {
       if (!parsed.pathname.startsWith('/__owner-test') && !parsed.pathname.startsWith('/api/')) return next();
       if (!localRequest(req)) return json(res, 403, { error: 'loopback_only' });
       try {
+        if (parsed.pathname === '/__owner-test/upload') {
+          const path = parsed.searchParams.get('path');
+          if (req.method !== 'PUT' || !MEDIA_PATH.test(path || '') || uploadTokens.get(path) !== parsed.searchParams.get('token')) return json(res, 403, { error: 'invalid_local_upload' });
+          if (mediaFiles.has(path)) return json(res, 409, { error: 'already_uploaded' });
+          const mime = String(req.headers['content-type'] || '').split(';')[0];
+          if (!Object.hasOwn(MEDIA_MIME_TYPES, mime)) return json(res, 415, { error: 'unsupported_type' });
+          const chunks = []; let total = 0;
+          for await (const chunk of req) { total += chunk.length; if (total > 50_000_000) return json(res, 413, { error: 'too_large' }); chunks.push(chunk); }
+          mediaFiles.set(path, { bytes: Buffer.concat(chunks, total), mime });
+          return json(res, 200, { Key: `${MEDIA_BUCKET}/${path}` });
+        }
+        if (parsed.pathname === '/__owner-test/file') {
+          const path = parsed.searchParams.get('path');
+          const file = MEDIA_PATH.test(path || '') ? mediaFiles.get(path) : null;
+          if (!file || !['GET', 'HEAD'].includes(req.method)) return json(res, 404, { error: 'not_found' });
+          let start = 0, end = file.bytes.length - 1, status = 200;
+          if (req.headers.range) {
+            const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range);
+            if (!range || Number(range[1]) >= file.bytes.length) { res.writeHead(416, { 'Content-Range': `bytes */${file.bytes.length}` }); return res.end(); }
+            start = Number(range[1]); end = range[2] ? Math.min(Number(range[2]), end) : end;
+            if (end < start) { res.writeHead(416); return res.end(); }
+            status = 206;
+          }
+          res.writeHead(status, { 'Content-Type': file.mime, 'Content-Length': end - start + 1, 'Cache-Control': 'no-store', 'Accept-Ranges': 'bytes', ...(status === 206 ? { 'Content-Range': `bytes ${start}-${end}/${file.bytes.length}` } : {}) });
+          return res.end(req.method === 'HEAD' ? undefined : file.bytes.subarray(start, end + 1));
+        }
         if (parsed.pathname === '/__owner-test/session') {
           if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' });
           return json(res, 200, sessionFor(parsed.searchParams.get('wallet') === 'other' ? OTHER : OWNER));
@@ -93,7 +135,7 @@ const fixture = {
             if (!signed || ![OWNER, OTHER].includes(signed.wallet)) return json(res, 401, { error: 'signed_out' });
             return json(res, 200, { ...sessionFor(signed.wallet), session: body.session, levelName: 'Stranger', daily: 5, checked: true, burn: { ready: false } });
           }
-          if (!['site-owner', 'site-save', 'site-history', 'site-restore'].includes(body?.action)) return json(res, 401, { error: 'signed_out' });
+          if (!['site-owner', 'site-save', 'site-history', 'site-restore', 'site-media-start', 'site-media-finish'].includes(body?.action)) return json(res, 401, { error: 'signed_out' });
         }
         const headers = new Headers();
         for (const [name, value] of Object.entries(req.headers)) if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value);

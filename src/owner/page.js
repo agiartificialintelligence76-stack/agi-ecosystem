@@ -4,6 +4,7 @@ import { findWallets, signInWithWallet, explainWalletError } from '../lib/wallet
 import { postJson } from '../lib/human.js';
 import { emptyDocument, validateDocument, safeSelector } from './model.js';
 import { BUILTIN_PAGES, normalizePath } from './catalog.js';
+import { startMediaManager } from './media.js';
 
 const $ = (s) => document.querySelector(s);
 const ui = Object.fromEntries(['account','connect','disconnect','message','wallets','gate','workspace','pages','search','title','path','revision','dirty','discard','publish','controls','preview','pick','reload'].map(k => [k, $(`[data-owner-${k}]`)]));
@@ -14,6 +15,7 @@ const id = () => `c-${crypto.randomUUID()}`;
 const el = (tag, cls, value) => { const n = document.createElement(tag); if (cls) n.className = cls; if (value !== undefined) n.textContent = value; return n; };
 const button = (label, fn, cls = '') => { const n = el('button', cls, label); n.type = 'button'; n.addEventListener('click', fn); return n; };
 const state = { me: null, authorized: false, base: emptyDocument(), draft: emptyDocument(), revision: 0, path: '/', tab: 'content', filter: 'sections', items: [], selected: null, block: null, busy: false, pick: true, epoch: 0, previewReady: false };
+let mediaManager = null;
 function storedWallet() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v?.session && /^0x[\da-f]{40}$/i.test(v.wallet) ? v : null; } catch { return null; } }
 function say(message, error = false) { ui.message.textContent = message; ui.message.dataset.error = String(error); }
 function dirty() { return JSON.stringify(state.base) !== JSON.stringify(state.draft); }
@@ -56,6 +58,7 @@ function loadPreview() {
 function selectPage(path) { state.path = path; state.block = null; state.tab = 'content'; state.filter = 'sections'; loadPreview(); render(); }
 function render() {
   toolbar(); renderPages();
+  $('[data-owner-tab="media"]').hidden = state.path !== '/memes';
   document.querySelectorAll('[data-owner-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.ownerTab === state.tab)));
   renderControls();
 }
@@ -69,7 +72,9 @@ function choose(label, value, options, onChange) { const wrap = el('label', 'oc-
 function help(text) { return el('p', 'oc-help', text); }
 function divider() { return el('div', 'oc-divider'); }
 function renderControls() {
+  if (mediaManager) { mediaManager.destroy?.(); mediaManager = null; }
   ui.controls.replaceChildren();
+  if (state.tab === 'media' && state.path === '/memes') { mediaManager = startMediaManager({ root:ui.controls, getDocument:()=>state.draft, onChange:()=>changed(), api, say, setBusy, getEpoch:()=>state.epoch }); return; }
   if (state.tab === 'page') return renderPageSettings();
   if (state.tab === 'added') return renderAdded();
   if (state.tab === 'history') return renderHistory();

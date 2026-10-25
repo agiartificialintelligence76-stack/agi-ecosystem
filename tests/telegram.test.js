@@ -901,8 +901,8 @@ test('the build never ships the bot token, and the cron runs 8 times a day', () 
   const feed = vercel.crons.filter((c) => c.path === '/api/feed');
   assert.equal(feed.length, 8);
   assert.ok(feed.every((c) => /^30 \d{1,2} \* \* \*$/.test(c.schedule)), 'once a day each (Vercel Hobby), half past the hour');
-  // (the relay of TRENCHING SIMULATOR's Live mode, 2026-10-21, is the one address added since: tests/trench-live.test.js)
-  assert.match(vercel.headers[0].headers[0].value, /connect-src 'self' blob: https:\/\/api\.dexscreener\.com wss:\/\/live\.agi1\.app;/, 'the CSP doesn\'t change: Telegram is only called from our server');
+  // Shared connections include the live relay and the exact owner media signing path; Telegram stays server-only.
+  assert.match(vercel.headers[0].headers[0].value, /connect-src 'self' blob: https:\/\/api\.dexscreener\.com wss:\/\/live\.agi1\.app https:\/\/vujaxukucukjxzhcxlea\.supabase\.co\/storage\/v1\/object\/upload\/sign\/agi1-owner-media\/;/, 'Telegram adds no browser connection source');
 });
 
 // ---------- her languages (2026-09-29, the owner's request) ----------

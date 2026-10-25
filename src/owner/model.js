@@ -1,4 +1,6 @@
 // Shared, deliberately small content format. It carries text and safe URLs, never HTML or code.
+import { MEMES } from '../memes/list.js';
+import { validateMemes, publicMemes, safeMemeUrl } from './media-model.js';
 export const SITE_CONTENT_MAX = 300_000;
 export const emptyDocument = () => ({ pages: [], edits: [] });
 const own = (o, key) => Object.prototype.hasOwnProperty.call(o, key);
@@ -12,6 +14,7 @@ export function validPagePath(value) {
 export function safeUrl(value, { image = false } = {}) {
   if (typeof value !== 'string') return false;
   if (value === '') return true;
+  if (image && safeMemeUrl(value, { imageOnly: true })) return true;
   if (image && /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value)) return value.length <= 150_000;
   if (value.length > 2048 || /[\s\x00-\x1f\x7f<>"`\\]/.test(value)) return false;
   if (value.startsWith('#')) return !image && value.length > 1;
@@ -85,7 +88,7 @@ export function validateDocument(input) {
       if (Object.keys(result).length === 3) throw new Error('Choose something to change for this element.');
       return result;
     });
-    const document = { pages, edits };
+    const document = { pages, edits, ...(input.memes !== undefined ? { memes: validateMemes(input.memes, MEMES) } : {}) };
     if (new TextEncoder().encode(JSON.stringify(document)).length > SITE_CONTENT_MAX) throw new Error('The site content is too large. Use smaller images or remove unused changes.');
     return { ok: true, document };
   } catch (err) { return { ok: false, why: err.message || 'The site content could not be checked.' }; }
@@ -96,5 +99,6 @@ export function publicDocument(document) {
   return {
     pages: document.pages.map((p) => p.hidden ? { path: p.path, title: '', hidden: true, custom: p.custom, description: '', blocks: [] } : { ...p, blocks: p.blocks.filter((b) => !b.hidden) }),
     edits: document.edits.filter((e) => !hidden.has(e.page)).map((e) => e.hidden ? { id: e.id, page: e.page, selector: e.selector, hidden: true } : e),
+    ...(document.memes !== undefined ? { memes: publicMemes(document.memes) } : {}),
   };
 }

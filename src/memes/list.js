@@ -7,6 +7,7 @@
 // hello" and "Only AGI" are "not a slop core", so they're videos; later: "the slopcore are the 3 mins long videos and the
 // caption that said Everyone's feeling the AGI its also slopcore").
 // Newest first inside each kind: the page shows them in this order.
+import { safeMemeUrl, MEDIA_ID, validateMemes } from '../owner/media-model.js';
 
 export const MEMES = [
   // ---------- slopcore ----------
@@ -57,9 +58,33 @@ export const TABS = [
 ];
 
 // where each file is (public/memes/, served from the site's root)
-export const fileOf = (m) => (m.kind === 'image' ? `/memes/images/agi-${m.id}.jpg` : `/memes/videos/agi-${m.id}.mp4`);
-export const thumbOf = (m) => (m.kind === 'image' ? `/memes/previews/agi-${m.id}.webp` : `/memes/posters/agi-${m.id}.webp`);
-export const downloadName = (m) => fileOf(m).split('/').pop();
+export const fileOf = (m) => m.custom === true ? (safeMemeUrl(m.src) ? m.src : '')
+  : (m.kind === 'image' ? `/memes/images/agi-${m.id}.jpg` : `/memes/videos/agi-${m.id}.mp4`);
+export const thumbOf = (m) => m.custom === true ? (safeMemeUrl(m.thumb, { imageOnly: true }) ? m.thumb : m.kind === 'image' ? fileOf(m) : '')
+  : (m.kind === 'image' ? `/memes/previews/agi-${m.id}.webp` : `/memes/posters/agi-${m.id}.webp`);
+export const downloadName = (m) => m.custom === true
+  ? `agi-${String(m.title || 'meme').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70) || 'meme'}.${fileOf(m).split('.').pop() || 'bin'}`
+  : fileOf(m).split('/').pop();
+// Supabase's documented download parameter supplies Content-Disposition for cross-origin downloads.
+export const downloadUrl = (m) => m.custom === true ? `${fileOf(m)}?download=${encodeURIComponent(downloadName(m))}` : fileOf(m);
+
+// Never mutate the shipped library. Invalid public records are ignored individually, and hiding a built-in retains
+// its tombstone so a subsequent page load cannot accidentally bring that item back.
+export function mergeMemes(overrides, { includeHidden = false } = {}) {
+  const originals = new Map(MEMES.map((m) => [m.id, m]));
+  const changes = new Map(), custom = [];
+  for (const input of Array.isArray(overrides) ? overrides : []) {
+    if (!input || typeof input !== 'object' || changes.has(input.id)) continue;
+    const original = originals.get(input.id);
+    try {
+      const row = validateMemes([input], MEMES)[0];
+      if (row.custom && MEDIA_ID.test(row.id)) { custom.push(row); changes.set(row.id, row); }
+      else if (original) changes.set(row.id, { ...original, ...row });
+    } catch { /* A malformed override never replaces a valid shipped item. */ }
+  }
+  const result = [...custom, ...MEMES.map((m) => changes.get(m.id) || { ...m, custom: false, hidden: false })];
+  return includeHidden ? result : result.filter((m) => !m.hidden);
+}
 
 export const clock = (secs) => {
   const s = Math.max(0, Math.round(Number(secs) || 0));
