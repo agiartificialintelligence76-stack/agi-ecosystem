@@ -1,7 +1,7 @@
 // The same soft target-following and irregular drift as AGI-1's 2D model,
 // expressed through this character's own skeleton. Coordinates are model-space:
 // +X is forward, +Y up, and Z runs across the shoulders. Feet stay planted.
-import { Quat } from 'playcanvas';
+import { Quat, Vec3 } from 'playcanvas';
 import { Follow, makeDrift, clamp } from './agi1-2d-motion.js';
 
 export function createSplatMotion(arm, { reducedMotion = false } = {}) {
@@ -38,10 +38,11 @@ export function createSplatMotion(arm, { reducedMotion = false } = {}) {
     roll: new Follow(0, 1.7, 1, 0), torso: new Follow(0, 1.05, 1, 0),
   };
   let clock = 0, breathPhase = 0, speaking = 0, slowLevel = 0, speechTime = 0;
-  let waving = false, closeUp = false, dance = -1, dancePhase = 0, danceAmount = 0;
+  let waving = false, authored = null, closeUp = false, dance = -1, dancePhase = 0, danceAmount = 0;
   const bodyIndices = arm.rigBoneNames.flatMap((name, i) => /^facial_/i.test(name) ? [] : [i]);
   const previousBody = bodyIndices.map(i => localRest[i].clone());
-  let wasWaving = false, exitFrom = null, exitElapsed = 0;
+  const previousPositions = bodyIndices.map(i => new Vec3(bindT[i * 3], bindT[i * 3 + 1], bindT[i * 3 + 2]));
+  let wasAuthored = false, exitFrom = null, exitPositions = null, exitElapsed = 0;
   const state = { yaw: 0, pitch: 0, roll: 0, torso: 0, breath: 0, shoulderL: 0, shoulderR: 0,
     elbowL: 0, elbowR: 0, wristL: 0, wristR: 0, speaking: 0 };
 
@@ -51,13 +52,14 @@ export function createSplatMotion(arm, { reducedMotion = false } = {}) {
     clock += dt;
     if (exitFrom) exitElapsed += dt;
     waving = !!input.waving;
+    authored = input.authored || (waving ? 'hello' : null);
     closeUp = !!input.closeUp;
     dance = Number.isFinite(input.dance) ? input.dance : -1;
     if (dance >= 0) dancePhase = dance;
     else if (danceAmount > 0) dancePhase += dt;
     // Fade both a scheduled finish and an interruption (e.g. entering a close
     // view). The breathing pose stays underneath so shoulders never snap.
-    const danceTarget = !reducedMotion && !closeUp && !waving && dance >= 0
+    const danceTarget = !reducedMotion && !closeUp && !authored && dance >= 0
       ? clamp((4 - dance) / 0.45, 0, 1) : 0;
     danceAmount += (danceTarget - danceAmount) * (1 - Math.exp(-dt * (danceTarget > danceAmount ? 9 : 11)));
     if (danceTarget === 0 && danceAmount < 0.001) danceAmount = 0;
@@ -111,11 +113,13 @@ export function createSplatMotion(arm, { reducedMotion = false } = {}) {
 
   function apply(pose, options = {}) {
     const wave = options.waving ?? waving;
-    if (wasWaving && !wave) {
+    const clip = options.authored !== undefined ? options.authored : (wave ? 'hello' : authored);
+    if (wasAuthored && !clip) {
       exitFrom = previousBody.map(q => q.clone());
+      exitPositions = previousPositions.map(p => p.clone());
       exitElapsed = 0;
-    } else if (wave) exitFrom = null;
-    if (!wave) {
+    } else if (clip) { exitFrom = null; exitPositions = null; }
+    if (!clip) {
       pose.setToBind(bindT, bindR);
       // Separate chest, shoulder and arm phases keep her from swaying as one
       // rigid piece. Root, pelvis and every leg/foot transform stay unchanged.
@@ -124,12 +128,14 @@ export function createSplatMotion(arm, { reducedMotion = false } = {}) {
       bend(pose, 'spine_05', -state.torso * 0.2, 0, -state.breath * 0.15);
       bend(pose, 'clavicle_l', -state.shoulderL * 0.4, 0, state.shoulderL * 0.25);
       bend(pose, 'clavicle_r', state.shoulderR * 0.4, 0, state.shoulderR * 0.25);
-      bend(pose, 'upperarm_l', -27 - state.shoulderL * 0.7, 0, 8 + state.elbowL * 0.6);
-      bend(pose, 'upperarm_r', 27 + state.shoulderR * 0.7, 0, 8 + state.elbowR * 0.6);
-      bend(pose, 'lowerarm_l', 0, 0, 10 + state.elbowL);
-      bend(pose, 'lowerarm_r', 0, 0, 10 + state.elbowR);
-      bend(pose, 'hand_l', state.wristL, 0, state.wristL * 0.3);
-      bend(pose, 'hand_r', -state.wristR, 0, state.wristR * 0.3);
+      // The source elbows already bend forwards. Adding positive pitch here
+      // held both hands out in front of her hips; gently unfold them instead.
+      bend(pose, 'upperarm_l', -26 - state.shoulderL * 0.7, 0, -1 + state.elbowL * 0.6);
+      bend(pose, 'upperarm_r', 29 + state.shoulderR * 0.7, 0, 2 + state.elbowR * 0.6);
+      bend(pose, 'lowerarm_l', 0, 0, -13 + state.elbowL);
+      bend(pose, 'lowerarm_r', 0, 0, -17 + state.elbowR);
+      bend(pose, 'hand_l', state.wristL, 0, -4 + state.wristL * 0.3);
+      bend(pose, 'hand_r', -state.wristR, 0, 2 + state.wristR * 0.3);
       if (danceAmount > 0) {
         const beat = Math.sin(dancePhase * 7);
         bend(pose, 'spine_03', beat * 4 * danceAmount, 0, 0, true);
@@ -141,7 +147,7 @@ export function createSplatMotion(arm, { reducedMotion = false } = {}) {
     }
     // Leave the authored wave's arms and torso intact. The small overlay keeps
     // eye contact without pulling her head away from the original greeting.
-    const amount = wave ? 0.25 : 1;
+    const amount = clip === 'nod' ? 0.12 : clip ? 0.25 : 1;
     bend(pose, 'neck_01', state.roll * 0.25 * amount, state.yaw * 0.3 * amount, state.pitch * 0.3 * amount, true);
     bend(pose, 'head', state.roll * 0.75 * amount, state.yaw * 0.7 * amount, state.pitch * 0.7 * amount, true);
     // The player's stop fade is replaced by our procedural idle, so explicitly
@@ -152,11 +158,14 @@ export function createSplatMotion(arm, { reducedMotion = false } = {}) {
     const blend = fraction * fraction * (3 - 2 * fraction);
     for (let slot = 0; slot < bodyIndices.length; slot++) {
       const q = pose.rotations[bodyIndices[slot]];
+      const p = pose.positions[bodyIndices[slot]];
       if (exitFrom) q.slerp(exitFrom[slot], q, blend).normalize();
+      if (exitPositions) p.lerp(exitPositions[slot], p, blend);
       previousBody[slot].copy(q);
+      previousPositions[slot].copy(p);
     }
-    if (exitFrom && fraction >= 1) exitFrom = null;
-    wasWaving = wave;
+    if (exitFrom && fraction >= 1) { exitFrom = null; exitPositions = null; }
+    wasAuthored = !!clip;
   }
 
   return { update, apply, get diagnostics() { return { ...state, clock, waving }; } };

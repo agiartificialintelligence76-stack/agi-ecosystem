@@ -2,14 +2,17 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { NodeIO } from '@gltf-transform/core';
-import { loadSkeletonLibrary, Pose } from '@viggle/splat-engine';
-import { AGI1_SPLAT_ASSETS, createGreetingPlayback } from '../src/stage/agi1-splat.js';
+import { Animation, Armature, loadSkeletonLibrary, Pose } from '@viggle/splat-engine';
+import { Entity } from 'playcanvas';
+import { Group } from 'three';
+import { AGI1_SPLAT_ASSETS, createSplatPlayback, createController } from '../src/stage/agi1-splat.js';
 import { createSplatMotion } from '../src/stage/agi1-splat-motion.js';
 import { createAgi1SplatFace, createFaceSignals } from '../src/stage/agi1-splat-face.js';
 import { setMeter, stopTalk, pretendTalk, talkLevel } from '../src/lib/talk.js';
 
 const modelUrl = new URL(`../public${AGI1_SPLAT_ASSETS.character}`, import.meta.url);
 const motionUrl = new URL(`../public${AGI1_SPLAT_ASSETS.hello}`, import.meta.url);
+const nodUrl = new URL(`../public${AGI1_SPLAT_ASSETS.nod}`, import.meta.url);
 const library = await loadSkeletonLibrary();
 
 test('the shipped AGI-1 splat contains a complete, compatible skinned character', () => {
@@ -52,6 +55,7 @@ test('the shipped AGI-1 splat contains a complete, compatible skinned character'
 const motion = await new NodeIO().readBinary(readFileSync(motionUrl));
 const root = motion.getRoot();
 const clip = root.listAnimations()[0];
+const nodDocument = await new NodeIO().readBinary(readFileSync(nodUrl));
 
 test('the hello clip targets the new character rig and ships without mesh or texture dependencies', () => {
   assert.equal(root.listAnimations().length, 1);
@@ -103,54 +107,130 @@ test('the retargeted hello has valid rotations, a moving waving arm, and no drif
   for (const name of ['root', 'pelvis', 'thigh_l', 'thigh_r', 'calf_l', 'calf_r']) assert.ok(!moving.has(name), `${name} keeps the standing pose`);
 });
 
-function greetingFixture(canPlay = true) {
+test('the supplied nod drives the native full body while preserving fingers, face and root', () => {
+  const root = nodDocument.getRoot(), animations = root.listAnimations();
+  assert.equal(animations.length, 1);
+  assert.equal(root.listMeshes().length + root.listTextures().length, 0);
+  assert.deepEqual(root.listNodes().map(node => node.getName()), library.boneNames441);
+  const moving = new Set();
+  for (const channel of animations[0].listChannels()) {
+    const name = channel.getTargetNode().getName(), index = library.boneNames441.indexOf(name);
+    const times = channel.getSampler().getInput().getArray(), values = channel.getSampler().getOutput().getArray();
+    assert.equal(times.length, 112);
+    assert.equal(times[0], 0);
+    assert.ok(Math.abs(times.at(-1) - 3.7) < 0.001, 'the supplied nod keeps its complete 3.7-second performance');
+    for (let i = 1; i < times.length; i++) assert.ok(times[i] > times[i - 1]);
+    for (const value of values) assert.ok(Number.isFinite(value));
+    if (channel.getTargetPath() === 'rotation') {
+      const keepRest = name === 'root' || name.startsWith('FACIAL_') || /^(thumb|index|middle|ring|pinky)_/.test(name);
+      const rest = library.restRotations441.subarray(index * 4, index * 4 + 4);
+      for (let i = 0; i < values.length; i += 4) {
+        const q = values.subarray(i, i + 4), length = Math.hypot(...q);
+        assert.ok(Math.abs(length - 1) < 0.002, `${name} has valid rotations`);
+        const dot = Math.abs(q.reduce((sum, value, c) => sum + value * values[c], 0));
+        if (dot < 0.99999) moving.add(name);
+        if (keepRest) {
+          const restDot = Math.abs(q.reduce((sum, value, c) => sum + value * rest[c], 0));
+          assert.ok(restDot / (length * Math.hypot(...rest)) > 0.999999, `${name} preserves the native neutral shape`);
+        }
+      }
+    } else {
+      assert.equal(channel.getTargetPath(), 'translation');
+      assert.equal(name, 'pelvis', 'only pelvis height changes to keep her feet grounded');
+      for (let i = 0; i < values.length; i += 3) {
+        assert.ok(Math.abs(values[i] - values[0]) < 1e-7 && Math.abs(values[i + 2] - values[2]) < 1e-7,
+          'the nod stays in place instead of sliding across the stage');
+      }
+    }
+  }
+  assert.ok(moving.has('head') || moving.has('neck_01'), 'the supplied nod actually moves her head');
+  assert.ok(moving.has('pelvis') && moving.has('thigh_l') && moving.has('thigh_r'), 'the authored natural stance is retained');
+});
+
+function playbackFixture({ canPlay = true, reducedMotion = false } = {}) {
   const played = [], stopped = [];
   const character = {
     crossfadeTo(name, options) { played.push({ name, ...options }); return canPlay; },
     armature: { stop(duration) { stopped.push(duration); } },
   };
-  return { playback: createGreetingPlayback(character), played, stopped };
+  return { playback: createSplatPlayback(character, {
+    hello: { name: 'agi1-hello', duration: 1.7 }, nod: { name: 'agi1-nod', duration: 3.7 },
+    random: () => 0.5, reducedMotion,
+  }), played, stopped };
 }
 
-test('hello plays once, returns to idle, and can be requested again', () => {
-  const { playback, played, stopped } = greetingFixture();
-  playback.update(30);
-  assert.equal(playback.active, false, 'no surprise animation before hello');
+function advancePlayback(playback, seconds, input = {}) {
+  for (let frame = 0; frame < Math.round(seconds * 60); frame++) playback.update(1 / 60, input);
+}
+
+test('authored gestures play once, ignore duplicates, and give hello priority over nods', () => {
+  const { playback, played, stopped } = playbackFixture();
+  assert.equal(playback.active, null, 'no surprise animation before the first request');
   assert.equal(played.length, 0);
-  assert.equal(playback.start(), true);
-  assert.equal(playback.active, true);
-  assert.deepEqual(played, [{ name: 'agi1-hello', duration: 0.2, loop: false, rootMotion: false }]);
-  playback.update(0.8);
-  assert.equal(playback.start(), false, 'another wave request does not restart the current wave');
+  assert.equal(playback.start('nod'), true);
+  advancePlayback(playback, 0.8);
+  assert.equal(playback.start('nod'), false, 'another okay request does not restart the current nod');
   assert.equal(played.length, 1);
-  assert.equal(playback.active, true);
-  playback.update(0.91);
-  assert.equal(playback.active, false);
-  assert.deepEqual(stopped, [0.3], 'the armature blends back to procedural idle');
-  playback.update(60);
-  assert.equal(played.length, 1, 'hello does not automatically repeat');
+  assert.equal(playback.active, 'nod');
+  assert.equal(playback.start('hello'), true, 'a requested hello can take over an ambient nod');
+  assert.equal(playback.start('nod'), false, 'a nod never interrupts the supplied hello');
+  assert.equal(playback.start('hello'), false, 'duplicate hellos do not restart the player');
+  assert.deepEqual(played, [
+    { name: 'agi1-nod', duration: 0.32, loop: false, rootMotion: false },
+    { name: 'agi1-hello', duration: 0.2, loop: false, rootMotion: false },
+  ]);
+  advancePlayback(playback, 1.3);
+  assert.equal(playback.active, 'hello', 'the interrupted nod timer cannot end the new greeting');
+  advancePlayback(playback, 0.5);
+  assert.equal(playback.active, null);
+  assert.deepEqual(stopped, [0.32], 'completion blends back to idle once');
+  advancePlayback(playback, 2);
+  assert.equal(played.length, 2, 'completed gestures do not restart themselves');
   assert.equal(stopped.length, 1, 'idle is not restarted every frame');
-  assert.equal(playback.start(), true);
-  assert.equal(played.length, 2, 'a later hello replays the supplied animation');
-  playback.update(1.71);
-  assert.equal(playback.active, false);
+  assert.equal(playback.start('hello'), true);
+  advancePlayback(playback, 1.8);
+  assert.equal(playback.active, null);
   assert.equal(stopped.length, 2);
 });
 
-test('a missing clip or invalid frame delta cannot leave the greeting stuck', () => {
-  const missing = greetingFixture(false);
-  assert.equal(missing.playback.start(), false);
-  assert.equal(missing.playback.active, false);
+test('a missing clip or invalid frame delta cannot leave an authored gesture stuck', () => {
+  const missing = playbackFixture({ canPlay: false });
+  assert.equal(missing.playback.start('nod'), false);
+  assert.equal(missing.playback.active, null);
   missing.playback.update(10);
   assert.equal(missing.stopped.length, 0);
-  const { playback, stopped } = greetingFixture();
-  playback.start();
+  const { playback, stopped } = playbackFixture();
+  playback.start('hello');
   for (const dt of [NaN, Infinity, -Infinity, 0, -1]) playback.update(dt);
-  assert.equal(playback.active, true);
+  assert.equal(playback.active, 'hello');
   assert.equal(stopped.length, 0);
-  playback.update(1.71);
-  assert.equal(playback.active, false);
+  advancePlayback(playback, 1.8);
+  assert.equal(playback.active, null);
   assert.equal(stopped.length, 1);
+});
+
+test('ambient nods are occasional and wait for uninterrupted quiet idle', () => {
+  const { playback, played } = playbackFixture();
+  const starts = [];
+  for (let frame = 0; frame < 75 * 60; frame++) {
+    const before = played.length;
+    playback.update(1 / 60, { level: 0, attention: 'idle', dancing: false, mood: 'neutral' });
+    if (played.length > before) starts.push((frame + 1) / 60);
+  }
+  assert.ok(starts.length >= 2 && starts.length <= 4, 'the nod is a sparse gesture, not a looping idle animation');
+  assert.ok(starts[0] >= 8 && starts[0] < 8.1, 'she settles before the first ambient gesture');
+  for (let i = 1; i < starts.length; i++) assert.ok(starts[i] - starts[i - 1] >= 18, 'gestures have a long quiet gap');
+  assert.ok(played.every(entry => entry.name === 'agi1-nod' && entry.loop === false));
+  for (const input of [{ level: 0.7 }, { attention: 'listening' }, { attention: 'thinking' }, { dancing: true }, { mood: 'love' }]) {
+    const busy = playbackFixture();
+    advancePlayback(busy.playback, 30, input);
+    assert.equal(busy.played.length, 0, 'voice, attention, emotion and dancing postpone ambient nods');
+    advancePlayback(busy.playback, 2);
+    assert.equal(busy.played.length, 0, 'becoming quiet does not immediately trigger an overdue gesture');
+  }
+  const reduced = playbackFixture({ reducedMotion: true });
+  advancePlayback(reduced.playback, 60);
+  assert.equal(reduced.played.length, 0, 'reduced motion disables unsolicited nods');
 });
 
 function motionFixture(reducedMotion = false) {
@@ -165,6 +245,99 @@ function motionFixture(reducedMotion = false) {
 const rotationOf = (pose, name) => pose.rotations[library.boneNames441.indexOf(name)];
 const quaternionGap = (a, b) => 1 - Math.min(1, Math.abs(a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w)
   / (Math.hypot(a.x, a.y, a.z, a.w) * Math.hypot(b.x, b.y, b.z, b.w)));
+
+// Exercise the same player and pose-modifier path used by the browser. Driving
+// scene-graph nodes keeps the real engine active without a GPU or fake sampler.
+function engineFixture(t) {
+  const scene = { contentRoot: new Entity('test scene'), skeletonLibrary: library,
+    skeletalAnimationLibrary: new Map(), app: { frame: 0 } };
+  const load = (url, name) => {
+    const bytes = readFileSync(url);
+    const clip = Animation.fromGlb(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+    clip.register(scene, name); return clip;
+  };
+  const clip = load(motionUrl, 'agi1-hello'), nodClip = load(nodUrl, 'agi1-nod');
+  const arm = new Armature('test AGI-1', { numBones: library.boneNames441.length,
+    boneNames: library.boneNames441, restIsPerCharacter: true,
+    stdMaleRestTranslations: library.restTranslations441, stdMaleRestRotations: library.restRotations441,
+    stdMaleParents: library.parents441 });
+  arm.addToScene(scene);
+  const nodes = library.boneNames441.map(name => new Entity(name));
+  arm.driveNodes(nodes);
+  scene.app.update = dt => { scene.app.frame++; arm.update(dt); };
+  t.after(() => { arm.destroy(); nodes.forEach(node => node.destroy()); scene.contentRoot.destroy(); });
+  return { arm, scene, clip, nodClip };
+}
+
+test('the full-body nod keeps both feet grounded throughout real engine sampling', t => {
+  const { arm, nodClip } = engineFixture(t);
+  assert.equal(arm.playAnimation('agi1-nod', false, false), true);
+  const feet = ['ball_l', 'ball_r'].map(name => library.boneNames441.indexOf(name));
+  assert.ok(feet.every(index => index >= 0));
+  const first = new Float32Array(6), current = new Float32Array(6);
+  assert.equal(arm.probeBoneWorldPositions(0, feet, first), true);
+  const floor = Math.min(first[1], first[4]);
+  for (let frame = 0; frame < nodClip.numFrames; frame++) {
+    assert.equal(arm.probeBoneWorldPositions(frame, feet, current), true);
+    assert.ok(Math.abs(Math.min(current[1], current[4]) - floor) < 0.002, 'a supporting foot stays on the floor');
+    for (let side = 0; side < 2; side++) {
+      const i = side * 3;
+      assert.ok(Math.hypot(current[i] - first[i], current[i + 1] - first[i + 1], current[i + 2] - first[i + 2]) < 0.01,
+        'the natural stance does not make her feet skate');
+    }
+  }
+});
+
+test('the actual controller advances the nod smoothly while blinking and speaking independently', t => {
+  const { arm, scene, clip, nodClip } = engineFixture(t), played = [];
+  const character = { armature: arm, crossfadeTo(name, options) { played.push(name); return arm.crossfadeTo(name, options); } };
+  const controller = createController({ character, scene, clip, nodClip, fx: new Group(),
+    marks: { head: new Group(), chest: new Group() }, sync() {}, updateMarks() {}, random: () => 0.5 });
+  const authored = new Pose(arm.numBones), shown = new Pose(arm.numBones), previous = new Pose(arm.numBones);
+  const modify = arm.poseModifier;
+  arm.poseModifier = pose => { authored.copyFrom(pose); modify(pose); shown.copyFrom(pose); };
+  controller.update(1 / 60); previous.copyFrom(shown);
+  const initialHead = rotationOf(shown, 'head').clone();
+  const body = ['pelvis', 'spine_03', 'clavicle_l', 'upperarm_r', 'thigh_l', 'calf_r'];
+  const eye = library.boneNames441.indexOf('FACIAL_L_EyeParallel');
+  let headMotion = 0, eyeClosure = 0, jawMotion = 0, ended = false;
+  controller.react('okay');
+  for (let frame = 0; frame < 270; frame++) {
+    if (frame === 12) controller.react('okay');
+    if (frame === 40 || frame === 220) controller.blink();
+    controller.setTalk(frame >= 30 && frame < 150 ? 0.7 : 0);
+    const wasNodding = controller.nodding;
+    controller.update(1 / 60);
+    if (controller.nodding) {
+      assert.equal(arm.currentAnimationName, 'agi1-nod');
+      assert.ok(Math.abs(arm.animationTime - (frame + 1) / 2) < 1e-4, 'the clip clock advances instead of restarting on each pose update');
+      for (const name of body) assert.ok(quaternionGap(rotationOf(authored, name), rotationOf(shown, name)) < 1e-10,
+        `${name} retains its authored nod instead of being reset to the idle pose`);
+    }
+    for (const name of body.concat('head')) {
+      const index = library.boneNames441.indexOf(name);
+      assert.ok(quaternionGap(previous.rotations[index], shown.rotations[index]) < 0.01, `${name} enters and leaves the nod without snapping`);
+      assert.ok(previous.positions[index].distance(shown.positions[index]) < 0.02, `${name} does not jump vertically on return to idle`);
+      if (wasNodding && !controller.nodding) {
+        assert.ok(quaternionGap(previous.rotations[index], shown.rotations[index]) < 1e-10, 'the first idle frame retains the last authored body pose');
+        assert.ok(previous.positions[index].distance(shown.positions[index]) < 1e-8, 'the return blend preserves the last pelvis height');
+        ended = true;
+      }
+    }
+    headMotion = Math.max(headMotion, quaternionGap(initialHead, rotationOf(shown, 'head')));
+    eyeClosure = Math.max(eyeClosure, shown.positions[eye].distance(authored.positions[eye]));
+    jawMotion = Math.max(jawMotion, quaternionGap(rotationOf(authored, 'FACIAL_C_LowerLipRotation'), rotationOf(shown, 'FACIAL_C_LowerLipRotation')));
+    previous.copyFrom(shown);
+  }
+  assert.deepEqual(played, ['agi1-nod'], 'repeated okay input and pose evaluation do not replay the clip');
+  assert.equal(ended, true, 'the authored gesture completes and returns to idle');
+  assert.ok(headMotion > 0.001, 'the supplied head movement is visible');
+  assert.ok(eyeClosure > 0.049, 'a complete blink survives the body animation and return blend');
+  assert.ok(jawMotion > 0.001, 'speech moves her native lips during the nod');
+  assert.equal(controller.mouthOpen, 0);
+  assert.equal(controller.blinking, 0);
+  assert.ok(shown.positions[eye].distance(authored.positions[eye]) < 1e-8, 'the eyes reopen without accumulating facial offsets');
+});
 
 test('her idle has gentle movement while the feet and hips stay planted', () => {
   const { motion, pose, arm } = motionFixture();

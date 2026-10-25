@@ -54,7 +54,7 @@ function segmentFrame(direction, secondary) {
   return new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(x, y, z));
 }
 
-export function retargetHello(inputBytes, library = loadSkeletonLibrary()) {
+export function retargetMotion(inputBytes, library = loadSkeletonLibrary(), { name = 'Wave Hello', fullBody = false } = {}) {
   const { json: source, accessor } = readGlb(inputBytes);
   const sourceParents = source.nodes.map(() => -1);
   source.nodes.forEach((n, i) => n.children?.forEach(child => { sourceParents[child] = i; }));
@@ -69,6 +69,17 @@ export function retargetHello(inputBytes, library = loadSkeletonLibrary()) {
   const duration = Math.max(...channels.map(c => c.times.at(-1)));
   const frameCount = Math.round(duration * 30) + 1;
   const times = Array.from({ length: frameCount }, (_, i) => i / 30);
+  const motionAlignment = ALIGN.clone();
+  if (fullBody) {
+    // Presets can face another direction (Nod Yes faces ~114° to the right).
+    // Remove only that initial heading, preserving the actual nod and posture.
+    const firstLocal = source.nodes.map(n => new Quaternion(...(n.rotation || [0, 0, 0, 1])));
+    channels.forEach(channel => firstLocal[channel.node].fromArray(channel.values, 0).normalize());
+    const first = worldPose(source.nodes, sourceParents, firstLocal);
+    const forward = SOURCE_FORWARD.clone().applyQuaternion(first.quaternions[sourceIndex.Hips]);
+    const yaw = Math.atan2(forward.x, forward.z);
+    motionAlignment.multiply(new Quaternion().setFromAxisAngle(UP, -yaw));
+  }
   const names = library.boneNames441, parents = Array.from(library.parents441);
   const nodes = names.map((name, i) => ({ name,
     translation: Array.from(library.restTranslations441.subarray(i * 3, i * 3 + 3)),
@@ -87,6 +98,7 @@ export function retargetHello(inputBytes, library = loadSkeletonLibrary()) {
     ['neck_01', 'Neck'], ['head', 'Head']]) {
     mapping.set(targetIndex[target], { source: sourceIndex[sourceName], calibration: targetRest.quaternions[targetIndex[target]].clone() });
   }
+  if (fullBody) mapping.set(targetIndex.pelvis, { source: sourceIndex.Hips, calibration: targetRest.quaternions[targetIndex.pelvis].clone() });
   const addSegment = (target, sourceName, targetChild, sourceChild, targetSecondary = TARGET_FORWARD, sourceSecondary = SOURCE_FORWARD) => {
     const ti = targetIndex[target], si = sourceIndex[sourceName];
     // Distal finger joints have no target end marker; continue the last phalanx.
@@ -110,9 +122,19 @@ export function retargetHello(inputBytes, library = loadSkeletonLibrary()) {
     // dummy has much longer fingers and a very wide animated spread; applying
     // those digit frames to the splat's hand makes its thin fingertips spike.
     // Its authored palm/wrist/arm wave still transfers in full above.
+    if (fullBody) {
+      addSegment(`thigh_${side}`, `${prefix}UpLeg`, `calf_${side}`, `${prefix}Leg`);
+      addSegment(`calf_${side}`, `${prefix}Leg`, `foot_${side}`, `${prefix}Foot`);
+      addSegment(`foot_${side}`, `${prefix}Foot`, `ball_${side}`, `${prefix}ToeBase`, UP, UP);
+      // Keep the character's own toe spread while transferring the toe hinge.
+      mapping.set(targetIndex[`ball_${side}`], { source: sourceIndex[`${prefix}ToeBase`], calibration: targetRest.quaternions[targetIndex[`ball_${side}`]].clone() });
+    }
   }
 
   const rotations = nodes.map(() => []);
+  const pelvisPositions = [];
+  const footIndices = ['foot_l', 'foot_r', 'ball_l', 'ball_r', 'bigtoe_02_l', 'bigtoe_02_r'].map(n => targetIndex[n]);
+  const groundHeight = Math.min(...footIndices.map(i => targetRest.positions[i].y));
   for (const time of times) {
     const sourceLocal = source.nodes.map(n => new Quaternion(...(n.rotation || [0, 0, 0, 1])));
     for (const channel of channels) {
@@ -124,21 +146,31 @@ export function retargetHello(inputBytes, library = loadSkeletonLibrary()) {
       sourceLocal[channel.node].fromArray(channel.values, low * 4).slerp(new Quaternion().fromArray(channel.values, high * 4), amount).normalize();
     }
     const animated = worldPose(source.nodes, sourceParents, sourceLocal);
-    const targetWorld = [];
+    const targetWorld = [], targetLocal = [];
     for (let i = 0; i < nodes.length; i++) {
       const parent = parents[i], mapped = mapping.get(i);
       const parentWorld = parent < 0 ? IDENTITY : targetWorld[parent];
       let local = new Quaternion(...nodes[i].rotation).normalize();
       if (mapped) {
-        const desired = ALIGN.clone().multiply(animated.quaternions[mapped.source])
+        const desired = motionAlignment.clone().multiply(animated.quaternions[mapped.source])
           .multiply(sourceRest.quaternions[mapped.source].clone().invert())
           .multiply(ALIGN.clone().invert()).multiply(mapped.calibration).normalize();
         local = parentWorld.clone().invert().multiply(desired).normalize();
       }
       targetWorld[i] = parentWorld.clone().multiply(local).normalize();
+      targetLocal[i] = local;
       const previous = rotations[i];
       if (previous.length && local.dot(new Quaternion().fromArray(previous, previous.length - 4)) < 0) local.set(-local.x, -local.y, -local.z, -local.w);
       rotations[i].push(...local.toArray());
+    }
+    if (fullBody) {
+      // Match the target's own sole height after retargeting different leg
+      // proportions. Correct vertical placement only: no accumulated root
+      // displacement, no changing character scale, and no sliding whole body.
+      const posed = worldPose(nodes, parents, targetLocal);
+      const floorOffset = groundHeight - Math.min(...footIndices.map(i => posed.positions[i].y));
+      const pelvis = nodes[targetIndex.pelvis].translation;
+      pelvisPositions.push(pelvis[0], pelvis[1] + floorOffset, pelvis[2]);
     }
   }
 
@@ -149,7 +181,7 @@ export function retargetHello(inputBytes, library = loadSkeletonLibrary()) {
     values.forEach((v, i) => bytes.writeFloatLE(v, i * 4));
     const view = bufferViews.push({ buffer: 0, byteOffset, byteLength: bytes.length }) - 1;
     parts.push(bytes); byteOffset += bytes.length;
-    return accessors.push({ bufferView: view, componentType: 5126, count: values.length / ({ SCALAR: 1, VEC4: 4 }[type]), type, ...extra }) - 1;
+    return accessors.push({ bufferView: view, componentType: 5126, count: values.length / ({ SCALAR: 1, VEC3: 3, VEC4: 4 }[type]), type, ...extra }) - 1;
   };
   const timeAccessor = addAccessor(times, 'SCALAR', { min: [0], max: [times.at(-1)] });
   const samplers = [], outputChannels = [];
@@ -158,9 +190,14 @@ export function retargetHello(inputBytes, library = loadSkeletonLibrary()) {
     outputChannels.push({ sampler: samplers.length, target: { node: i, path: 'rotation' } });
     samplers.push({ input: timeAccessor, output, interpolation: 'LINEAR' });
   });
+  if (fullBody) {
+    const output = addAccessor(pelvisPositions, 'VEC3');
+    outputChannels.push({ sampler: samplers.length, target: { node: targetIndex.pelvis, path: 'translation' } });
+    samplers.push({ input: timeAccessor, output, interpolation: 'LINEAR' });
+  }
   const json = { asset: { version: '2.0', generator: 'AGI-1 Mixamo-to-MetaHuman greeting retargeter' },
     scene: 0, scenes: [{ nodes: parents.flatMap((p, i) => p < 0 ? [i] : []) }], nodes,
-    animations: [{ name: 'Wave Hello', samplers, channels: outputChannels }],
+    animations: [{ name, samplers, channels: outputChannels }],
     buffers: [{ byteLength: byteOffset }], bufferViews, accessors };
   const rawJson = Buffer.from(JSON.stringify(json));
   const jsonBytes = Buffer.alloc(Math.ceil(rawJson.length / 4) * 4, 0x20); rawJson.copy(jsonBytes);
@@ -171,6 +208,26 @@ export function retargetHello(inputBytes, library = loadSkeletonLibrary()) {
   const binHeader = 20 + jsonBytes.length;
   output.writeUInt32LE(binary.length, binHeader); output.writeUInt32LE(0x004e4942, binHeader + 4); binary.copy(output, binHeader + 8);
   return output;
+}
+
+export function retargetHello(inputBytes, library = loadSkeletonLibrary()) {
+  return retargetMotion(inputBytes, library);
+}
+
+// Offline pose inspection helper. The website uses its relaxed procedural idle;
+// the nod's first frame leans forward in preparation for the gesture.
+export function standingPoseFromGlb(inputBytes) {
+  const { json, accessor } = readGlb(inputBytes);
+  const bones = {};
+  for (const channel of json.animations[0].channels) {
+    const node = json.nodes[channel.target.node];
+    if (/^FACIAL_/i.test(node.name)) continue;
+    const values = accessor(json.animations[0].samplers[channel.sampler].output);
+    bones[node.name] ??= {};
+    if (channel.target.path === 'rotation') bones[node.name].rotation = values.slice(0, 4);
+    if (channel.target.path === 'translation') bones[node.name].translation = values.slice(0, 3);
+  }
+  return { source: 'Nod-Yes.glb, first frame; retargeted and grounded', bones };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

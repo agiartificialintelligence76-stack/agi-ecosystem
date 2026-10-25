@@ -1,5 +1,5 @@
 // The owner's new character is a skinned Gaussian splat, with a separately
-// retargeted hello clip. Keep the existing stage camera, controls and effects.
+// retargeted hello and nod clips. Keep the existing stage camera, controls and effects.
 import * as THREE from 'three';
 import * as pc from 'playcanvas';
 import { Scene, Character, Animation } from '@viggle/splat-engine';
@@ -9,34 +9,53 @@ import { createAgi1SplatFace } from './agi1-splat-face.js';
 export const AGI1_SPLAT_ASSETS = {
   character: '/models/agi1-splat.vsplat?v=20261025-logo2',
   hello: '/models/agi1-wave-hello.glb?v=20261025-hand',
+  nod: '/models/agi1-nod-yes.glb?v=20261025-nod',
 };
 const HEIGHT = 1.62;
 const SOURCE_HEIGHT = 1.8667856454849243;
 const HELLO_NAME = 'agi1-hello';
+const NOD_NAME = 'agi1-nod';
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-// Separate from the renderer so a greeting's once-only/replay behavior can be
-// checked without a GPU. Repeated requests while waving do not restart it.
-export function createGreetingPlayback(character, { name = HELLO_NAME, duration = 1.7 } = {}) {
-  let elapsed = 0, active = false;
-  return {
-    start() {
-      if (active) return false;
-      if (character.crossfadeTo(name, { duration: 0.2, loop: false, rootMotion: false }) === false) return false;
-      elapsed = 0;
-      active = true;
+// One owner for authored motions: a reaction cannot reset the playing clip
+// every frame or leave a previous clip's stop timer running over the next one.
+export function createSplatPlayback(character, {
+  hello = { name: HELLO_NAME, duration: 1.7 },
+  nod, reducedMotion = false, random = Math.random,
+} = {}) {
+  const clips = { hello, nod };
+  let elapsed = 0, active = null, quiet = 0, nextNod = 8, hasNodded = false;
+  const postpone = () => { quiet = 0; nextNod = hasNodded ? 18 + clamp(random(), 0, 1) * 10 : 8; };
+  const playback = {
+    start(kind) {
+      const clip = clips[kind];
+      if (!clip || active === kind || (active === 'hello' && kind === 'nod')) return false;
+      if (character.crossfadeTo(clip.name, { duration: kind === 'hello' ? 0.2 : 0.32, loop: false, rootMotion: false }) === false) return false;
+      elapsed = 0; active = kind;
+      if (kind === 'nod') hasNodded = true;
+      postpone();
       return true;
     },
-    update(dt) {
-      if (!active || !Number.isFinite(dt) || dt <= 0) return;
-      elapsed += dt;
-      if (elapsed >= duration) {
-        active = false;
-        character.armature.stop(0.3);
+    update(dt, { level = 0, attention = 'idle', dancing = false, mood = 'neutral' } = {}) {
+      if (!Number.isFinite(dt) || dt <= 0) return;
+      if (active) {
+        elapsed += dt;
+        if (elapsed >= clips[active].duration) {
+          active = null; quiet = 0;
+          character.armature.stop(0.32);
+        }
+        return;
+      }
+      if (reducedMotion || level > 0.05 || attention !== 'idle' || dancing || mood !== 'neutral') { quiet = 0; return; }
+      quiet += dt;
+      if (quiet >= nextNod) {
+        if (!playback.start('nod')) postpone();
       }
     },
+    postpone,
     get active() { return active; },
   };
+  return playback;
 }
 
 export async function loadAgi1Splat({ canvas, camera, mobile = false, reducedMotion = false, onProgress = () => {} }) {
@@ -61,7 +80,10 @@ export async function loadAgi1Splat({ canvas, camera, mobile = false, reducedMot
       name: 'AGI-1', position: { x: 0, y: 0, z: 0 },
     });
     onProgress(0.7);
-    const clip = await Animation.loadGlb(scene, AGI1_SPLAT_ASSETS.hello, HELLO_NAME);
+    const [clip, nodClip] = await Promise.all([
+      Animation.loadGlb(scene, AGI1_SPLAT_ASSETS.hello, HELLO_NAME),
+      Animation.loadGlb(scene, AGI1_SPLAT_ASSETS.nod, NOD_NAME),
+    ]);
     onProgress(0.95);
 
     const holder = new THREE.Group(), fx = new THREE.Group(), root = new THREE.Group();
@@ -141,7 +163,7 @@ export async function loadAgi1Splat({ canvas, camera, mobile = false, reducedMot
       kind: 'agi1', root, holder, fx, hitBox, marks,
       mixer: null, focusBones: [marks.head, marks.headTop],
       create(opts) {
-        controller ??= createController({ character, clip, fx, marks, sync, updateMarks, scene, reducedMotion, ...opts });
+        controller ??= createController({ character, clip, nodClip, fx, marks, sync, updateMarks, scene, reducedMotion, ...opts });
         return controller;
       },
       setVisible(on) { overlay.style.visibility = on && holder.parent ? 'visible' : 'hidden'; },
@@ -177,16 +199,20 @@ export async function loadAgi1Splat({ canvas, camera, mobile = false, reducedMot
   }
 }
 
-function createController({ character, clip, fx, marks, sync, updateMarks, scene, effects, onGlow = () => {}, reducedMotion }) {
+export function createController({ character, clip, nodClip, fx, marks, sync, updateMarks, scene, effects, onGlow = () => {}, reducedMotion, random }) {
   const arm = character.armature;
   const motion = createSplatMotion(arm, { reducedMotion });
   const face = createAgi1SplatFace(arm);
-  const greeting = createGreetingPlayback(character, { duration: Math.max(0.1, (clip.numFrames - 1) / 30) });
+  const playback = createSplatPlayback(character, {
+    hello: { name: HELLO_NAME, duration: Math.max(0.1, (clip.numFrames - 1) / 30) },
+    nod: { name: NOD_NAME, duration: Math.max(0.1, (nodClip.numFrames - 1) / 30) },
+    reducedMotion, random,
+  });
   let clock = 0, level = 0, attention = 'idle', mood = 'neutral';
-  let pointer = null, closeUp = false, hop = -1, spin = -1, nod = -1, shake = -1, dance = -1;
+  let pointer = null, closeUp = false, hop = -1, spin = -1, shake = -1, dance = -1;
   let moodUntil = 0;
   arm.poseModifier = (pose) => {
-    motion.apply(pose, { waving: greeting.active });
+    motion.apply(pose, { authored: playback.active, waving: playback.active === 'hello' });
     face.apply(pose);
   };
   // Prepare the relaxed pose before the holder becomes visible. The first
@@ -198,40 +224,42 @@ function createController({ character, clip, fx, marks, sync, updateMarks, scene
   function react(type) {
     mood = type === 'tap' ? 'happy' : type;
     moodUntil = clock + 4.5;
-    if (type === 'wave') greeting.start();
+    playback.postpone();
+    if (type === 'wave') playback.start('hello');
     if (type === 'happy' || type === 'tap' || type === 'celebrate') {
       if (!reducedMotion) hop = 0;
       hearts(marks.chest, type === 'celebrate' ? 18 : 8);
     }
     if (type === 'love') { if (!reducedMotion) spin = 0; hearts(marks.head, 18); onGlow(0xff5c8a, 1); }
     if (type === 'shy') { hearts(marks.head, 4); onGlow(0xff5c8a, 0.5); }
-    if (type === 'nod' || type === 'okay') nod = 0;
+    if (type === 'nod' || type === 'okay') { dance = -1; playback.start('nod'); }
     if (type === 'worried') shake = 0;
-    if (type === 'dance' && !closeUp && !reducedMotion && !greeting.active) dance = 0;
+    if (type === 'dance' && !closeUp && !reducedMotion && !playback.active) dance = 0;
   }
   return {
     beforeMixer() {},
     update(dt) {
       dt = Number.isFinite(dt) ? clamp(dt, 0, 0.1) : 0;
-      clock += dt; greeting.update(dt);
+      clock += dt;
       if (clock >= moodUntil) mood = 'neutral';
+      playback.update(dt, { level, attention, dancing: dance >= 0 || hop >= 0 || spin >= 0, mood });
       fx.position.y = 0; fx.rotation.y = 0;
       if (hop >= 0) { hop += dt; if (hop >= 0.62) hop = -1; else fx.position.y = Math.sin(hop / 0.62 * Math.PI) * 0.1; }
       if (spin >= 0) { spin += dt; if (spin >= 0.9) spin = -1; else { const t = spin / 0.9; fx.rotation.y = (t * t * (3 - 2 * t)) * Math.PI * 2; } }
-      if (nod >= 0 && (nod += dt) >= 0.6) nod = -1;
       if (shake >= 0 && (shake += dt) >= 1.3) shake = -1;
       if (dance >= 0 && (dance += dt) >= 4) dance = -1;
-      motion.update(dt, { pointer, level, attention, closeUp, waving: greeting.active, dance, nod, shake, mood });
+      motion.update(dt, { pointer, level, attention, closeUp, waving: playback.active === 'hello', authored: playback.active, dance, shake, mood });
       face.update(dt, { level, mood, attention });
       sync(); scene.app.update(dt); updateMarks();
     },
     react,
-    hello() { mood = 'wave'; moodUntil = clock + 3; dance = -1; greeting.start(); },
+    hello() { mood = 'wave'; moodUntil = clock + 3; dance = -1; playback.start('hello'); },
     setPointer(value) { pointer = value; },
     setTalk(value) { level = Number.isFinite(value) ? clamp(value, 0, 1) : 0; },
     setAttention(value) { attention = value === 'thinking' || value === 'listening' ? value : 'idle'; },
     setCloseUp(value) { closeUp = !!value; if (closeUp) dance = -1; },
-    get dancing() { return dance >= 0; }, get waving() { return greeting.active; },
+    get dancing() { return dance >= 0; }, get waving() { return playback.active === 'hello'; },
+    get nodding() { return playback.active === 'nod'; },
     blink() { face.blinkNow(); },
     get mouthOpen() { return face.mouthOpen; }, get blinking() { return face.blink; },
     get attention() { return attention; }, get mood() { return mood; },
