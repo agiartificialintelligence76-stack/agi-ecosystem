@@ -87,7 +87,7 @@ html.is-talk .pg-models { max-height: calc(100cqh - 84px); overflow-y: auto; ove
    here from a little above her hair to her waist, like a video call or a VTuber's stream (her waving hand can widen it a
    little, never past her waist) */
 html.is-talk .pg-cam {
-  --cam-frame: .74; --cam-frame-3d: .54; --cam-headroom: .1;   /* (her 3D model: head and shoulders, as in her live view on the page) */
+  --cam-frame: .74; --cam-frame-3d: .74; --cam-headroom: .1;   /* (both models: include the shirt and greeting hand) */
   container: pgcam / size;
   grid-area: 1 / 2 / -1 / 3; position: relative; top: auto; z-index: auto; align-self: stretch;
   width: auto; height: auto; aspect-ratio: auto; margin: 14px; border-radius: 22px; box-shadow: none;
@@ -130,7 +130,7 @@ html.is-talk .pg-cam .agi-say.is-caption {
     grid-template-rows: minmax(132px, 40%) auto auto auto minmax(0, 1fr) auto auto auto auto;
   }
   html.is-talk .pg::before { grid-area: 2 / 1 / -1 / 2; border-right: 0; border-top: 1px solid var(--line); }
-  html.is-talk .pg-cam { --cam-frame: .64; --cam-frame-3d: .5; --cam-headroom: .09; grid-area: 1 / 1; margin: 8px; border-radius: 18px; }
+  html.is-talk .pg-cam { --cam-frame: .64; --cam-frame-3d: .64; --cam-headroom: .09; grid-area: 1 / 1; margin: 8px; border-radius: 18px; }
   html.is-talk .pg-bar { grid-area: 2 / 1; }
   html.is-talk .pg-gate { grid-area: 3 / 1 / 6 / 2; padding: 24px 20px; }
   html.is-talk .pg-levelup { grid-area: 4 / 1; }
@@ -212,7 +212,7 @@ html.is-pip .pg-shot-text { font-size: 11.5px; line-height: 1.4; }
     grid-template-rows: minmax(120px, 46%) auto auto auto minmax(0, 1fr) auto auto auto auto;
   }
   html.is-pip .pg::before { grid-area: 2 / 1 / -1 / 2; border-right: 0; border-top: 1px solid var(--line); }
-  html.is-pip .pg-cam { --cam-frame: .64; --cam-frame-3d: .5; --cam-headroom: .09; grid-area: 1 / 1; margin: 8px; border-radius: 18px; }
+  html.is-pip .pg-cam { --cam-frame: .64; --cam-frame-3d: .64; --cam-headroom: .09; grid-area: 1 / 1; margin: 8px; border-radius: 18px; }
   html.is-pip .pg-bar { grid-area: 2 / 1; }
   html.is-pip .pg-gate { grid-area: 3 / 1 / 6 / 2; padding: 20px 16px; }
   html.is-pip .pg-levelup { grid-area: 4 / 1; }

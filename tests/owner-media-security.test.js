@@ -95,6 +95,7 @@ test('CSP adds only the exact media bucket and signing path while preserving eve
   assert.deepEqual(directives, {
     'default-src': ["'self'"],
     'script-src': ["'self'", 'https://challenges.cloudflare.com'],
+    'worker-src': ["'self'", 'blob:'],
     'style-src': ["'self'"],
     'font-src': ["'self'"],
     'img-src': ["'self'", 'data:', 'blob:', 'https://live.agi1.app', MEDIA_PUBLIC_ROOT],

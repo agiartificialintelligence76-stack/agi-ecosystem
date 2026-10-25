@@ -493,7 +493,7 @@ test('the looks: the card on the page, her window\'s own layout (no full-screen 
   assert.match(css, /\.appdlg-pop\[hidden\] \{ display: none; \}/);
   assert.match(css, /html\.is-pip \.pg-talk-ctl, html\.is-pip \.pg-foot \{ display: none; \}/, 'her window has its own buttons (back to the tab, close): no ✕, full screen or app there, and no keyboard hints');
   assert.match(css, /@media \(max-width: 639px\), \(max-aspect-ratio: 4\/5\), \(max-width: 760px\) and \(orientation: portrait\) \{\n  html\.is-pip \.pg \{\n    grid-template-columns: minmax\(0, 1fr\);\n    grid-template-rows: minmax\(120px, 46%\)/, 'a narrow or tall window: her on top, her chat under her (wide: side by side)');
-  assert.match(css, /html\.is-pip \.pg-cam \{ --cam-frame: \.64; --cam-frame-3d: \.5; --cam-headroom: \.09;/, 'framed a little closer');
+  assert.match(css, /html\.is-pip \.pg-cam \{ --cam-frame: \.64; --cam-frame-3d: \.64; --cam-headroom: \.09;/, 'framed a little closer');
   assert.match(css, /@container talk \(max-height: 400px\) \{\n    html\.is-pip \.pg \{ grid-template-rows: minmax\(0, 1fr\); \}/, 'a very small window: her alone, never the chat without her');
   const pop = read('src/styles/pop.css');
   assert.match(pop, /\[data-skin='pop'\]\.is-pip \.pg-cam \{ margin: 10px 10px 14px;/);

@@ -55,7 +55,7 @@ else startFront();
 // match the AGI-1 this visitor picked, before they download (the stage switches them afterwards; src/stage/stage.js)
 try {
   if (readStyle(localStorage.getItem(STYLE_KEY)) === '3d') {
-    for (const img of document.querySelectorAll('.pg-cam-still, .chk-cam-still')) img.setAttribute('src', '/images/agi1-live.webp');
+    for (const img of document.querySelectorAll('.pg-cam-still, .chk-cam-still')) img.setAttribute('src', '/images/agi1-live-splat.webp');
   }
 } catch { /* private mode: the 2D picture */ }
 startMenu();                      // the phone menu

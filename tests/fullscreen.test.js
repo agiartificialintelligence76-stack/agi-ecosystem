@@ -31,7 +31,8 @@ test('its address: agi1.app/talk (and /talk/), the home page at another address,
   for (const r of vercel.rewrites) assert.doesNotMatch(r.destination, /\.html$/);
   // the same security headers as every page (no new domain: the app is the site), and the icons cached a day
   assert.equal(vercel.headers[0].source, '/(.*)');
-  assert.doesNotMatch(vercel.headers[0].headers[0].value, /manifest-src|worker-src/, 'nothing new in the CSP (all of it is our own address)');
+  assert.doesNotMatch(vercel.headers[0].headers[0].value, /manifest-src/, 'the manifest uses the site’s default source');
+  assert.match(vercel.headers[0].headers[0].value, /worker-src 'self' blob:;/, 'the 3D renderer only uses local workers');
   assert.ok(vercel.headers.some((h) => h.source === '/icons/(.*)' && /max-age=86400/.test(h.headers[0].value)));
   // and `npm run dev` / `vite preview` serve it too
   assert.match(read('vite.config.js'), /if \(\/\^\\\/talk\\\/\?\$\/\.test\(path\)\) req\.url = /);
@@ -224,7 +225,7 @@ test('the layout: everything for it names .is-talk (the page itself only gets th
   assert.match(src, /html\.is-talk \.pg-bar \{[^}]*container: pgbar \/ inline-size;/, 'the chat bar is a container only in full-screen talk');
   assert.match(src, /html\.is-talk body > :not\(main\):not\(dialog\), html\.is-talk main > :not\(#playground\) \{ display: none; \}/, 'only the chat, and the dialogs it opens');
   assert.match(src, /top: var\(--talk-top, 0px\); height: var\(--talk-h, 100%\);/, 'phones: the part of the screen you can see');
-  assert.match(src, /--cam-frame: \.74; --cam-frame-3d: \.54; --cam-headroom: \.1;/, 'her waist up (her 3D model: head and shoulders), a little room above her hair');
+  assert.match(src, /--cam-frame: \.74; --cam-frame-3d: \.74; --cam-headroom: \.1;/, 'her waist up in 2D and 3D, with room above her hair');
   for (const name of ['pgbar / inline-size', 'talk / size', 'pgcam / size']) assert.ok(new RegExp(`html\\.is-talk [^{]*\\{[^}]*container: ${name.replace('/', '\\/')}`).test(src), `the ${name} container only in full-screen talk`);
   assert.match(src, /@container talk \(max-height: 560px\) \{\n  \.pg-examples \{ display: none; \}/, 'a short screen (a phone\'s keyboard): the chat keeps its room');
   assert.match(src, /@media \(max-aspect-ratio: 4\/5\), \(max-width: 760px\) and \(orientation: portrait\) \{\n  html\.is-talk \.pg \{\n    grid-template-columns: minmax\(0, 1fr\);/, 'phones standing up and tall windows: her on top (a phone on its side: side by side)');

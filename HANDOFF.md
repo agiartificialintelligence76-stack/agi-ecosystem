@@ -1,5 +1,20 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## AGI-1 3D model update — 2026-10-25 (release authorized)
+
+The owner requested "publish it" after reviewing the model and motion improvements. Release through this repository's `main` branch to the existing `agi-ecosystem` Vercel project; verify the production assets and 3D view at agi1.app after the deployment finishes. Unrelated local media/game work is excluded from this release.
+
+Final motion/facial-polish build: **1,285 passed, 0 failed, 6 skipped** (`agi1-motion-build.log`). The 12 focused splat checks also pass after verifying the actual model-space eyelid/eye translations. Built preview at `http://127.0.0.1:5194/talk` loads under the production CSP with no application console errors.
+
+The 3D option now loads the owner's character from `new agi 3d model/Blonde Anime Girl_high.vsplat` and its supplied `Wave-Hello.glb` motion. The original files remain unchanged. `src/stage/agi1-splat.js` lazily loads Viggle Splat Engine 0.3.2 / PlayCanvas 2.23.3, mirrors the existing stage camera, and moves its transparent canvas with the home/chat/Risk Check views. The established 2D default remains.
+
+`tools/model/retarget-hello.mjs` converts the supplied Mixamo wave into the 441-bone rig at `public/models/agi1-wave-hello.glb`, keeping the lower body planted and the model's native finger shape. Arrival and wave requests play it once, then return to a relaxed idle. `tools/model/fix-shirt-logo.mjs` rebuilds `public/models/agi1-splat.vsplat` with clean white AGI lettering fitted to the shirt and smoothly weighted to the torso. Both public asset URLs are versioned to avoid old cached copies. Full-screen 3D portraits include the shirt.
+
+Production CSP now explicitly permits same-origin and blob workers; other sources are unchanged. Vite excludes the splat engine from dependency prebundling so its decoder worker resolves. Initial integration passed 1,278 tests (6 skipped). Browser checks cover 3D loading under production headers, hello/idle, 2D switching, home/chat docking and phone framing.
+
+The owner's follow-up requested the 2D version's animation polish. `src/stage/agi1-splat-motion.js` now reuses its spring following and irregular drift for breathing, independent shoulders/arms/wrists, gaze, speaking nods and soft wave/dance transitions, with planted feet and reduced-motion support. `src/stage/agi1-splat-face.js` adds recurring/attention blinks, mouth movement on both the separate native jaw and lower-lip branches, and subtle mood smiles. The shared voice meter and silent speech fallback already feed the controller. Facial movement is applied after the body pose, without blanket smoothing that would erase quick blinks. Eye splats recede behind the converging eyelids: ordinary bone scaling is stripped by the renderer and must not be relied on for visible closure. Actual browser checks verified fully closed/reopened eyes and open/closed speech poses. Desktop 2D/3D frame cadence matched at ~13.3 ms in the same visible browser. The new model still uses its own baked hair geometry rather than the 2D model's Cubism hair physics. All updates remain local and unpublished.
+
+
 The owner paused the work here so another agent can continue the same project. Read this file first, then `CLAUDE.md`
 (the project's own notes, about 13,000 lines: its hard rules, every feature, setup steps, the decisions log). Where this
 file and `CLAUDE.md` disagree about the work below, this file is newer. Where a research note in `handoff/research/`

@@ -690,7 +690,7 @@ test('the page: "3D · 2D" on the stage and in both live views, 2D pressed at fi
   assert.match(live2d, /s\.src = src;/);
   assert.doesNotMatch(live2d + read('src/stage/agi1-2d.js'), /https?:\/\//, 'nothing from other sites');
   const main = read('src/main.js');
-  assert.match(main, /readStyle\(localStorage\.getItem\(STYLE_KEY\)\) === '3d'\) \{\n\s+for \(const img of document\.querySelectorAll\('\.pg-cam-still, \.chk-cam-still'\)\) img\.setAttribute\('src', '\/images\/agi1-live\.webp'\)/,
+  assert.match(main, /readStyle\(localStorage\.getItem\(STYLE_KEY\)\) === '3d'\) \{\n\s+for \(const img of document\.querySelectorAll\('\.pg-cam-still, \.chk-cam-still'\)\) img\.setAttribute\('src', '\/images\/agi1-live-splat\.webp'\)/,
     'her live views\' still picture is the 3D one only for visitors who picked 3D');
   const css = read('src/styles/hero.css');
   assert.match(css, /\.dstyle-stage \{ position: absolute; left: 16px; bottom: 14px;/);

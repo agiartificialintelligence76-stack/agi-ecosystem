@@ -4,21 +4,16 @@
 // main.js loads this file only after the page's text is showing, because three.js is large.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createEffects, POP_HEART_COLORS } from './effects.js';
-import { createAgi1, buildIdleClip, addFace } from './agi1.js';
 import { talkLevel, pretendTalk } from '../lib/talk.js';
 import { sharedVoice } from '../chat/voice.js';
 import { currentLang, currentLines } from '../i18n/lang.js';
 import { tapLinesIn, tapCounter } from './tap-lines.js';
 import { STYLE_KEY, DEFAULT_STYLE, readStyle } from './agi1-2d-motion.js';   // (AGI-1 in 2D itself, src/stage/agi1-2d.js, loads only when needed)
 
-// Phones get a lighter copy of AGI-1 (1024 px textures instead of 2048: 1.7 MB instead of 2.2 MB, and about a
-// quarter of the graphics memory). It looks the same at phone size (checked side by side, 2026-09-24).
-const MODELS = {
-  agi1: { url: '/models/agi1.glb', phoneUrl: '/models/agi1-phone.glb', label: 'AGI-1', height: 1.62, clip: 'Dont_You_Dare', idle: true },
-};
+// The supplied splat character and its hello motion load only when 3D is selected.
+const MODELS = { agi1: { label: 'AGI-1', height: 1.62 } };
 
 // Colors of the 3D bits for each theme (the page behind the transparent canvas does the rest). Pop mode (2026-09-27): her
 // stage is a pink comic panel (light) or a deep violet one (dark), so the floor dial is ink or lavender, and hearts violet or
@@ -39,7 +34,7 @@ const HOME_DIST = HOME.distanceTo(TARGET);      // the camera's distance at 1× 
 // `top`: frame her like a portrait photographer would, with the top of her head near the top of the picture, so each step
 // in crops from the bottom up (knees up, waist up, face) instead of centering on her middle.
 const ZOOM = {
-  agi1: { max: 8, bones: ['mixamorigHead', 'mixamorigHeadTop_End'], at: 0.42, lift: 0, top: true },
+  agi1: { max: 8, at: 0.42, lift: 0, top: true },
   // AGI-1 in 2D (2026-09-27): up to 3× (head and shoulders); closer than that, a flat picture only gets blurrier
   agi1_2d: { max: 3, at: 0.42, lift: 0, top: true },
 };
@@ -56,65 +51,6 @@ function tween(ms, ease, onUpdate, onDone) {
 }
 const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3);
 const easeInCubic = (x) => x * x * x;
-
-// Scale a model to `targetHeight` and stand it in the middle of the floor.
-// Its size is measured at several moments of its main animation, following the skeleton.
-function fitToFloor(root, mixer, clip, targetHeight) {
-  const times = clip ? [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((k) => clip.duration * k) : [0];
-  const box = new THREE.Box3();
-  for (const t of times) {
-    if (mixer) mixer.setTime(t);
-    root.updateMatrixWorld(true);
-    box.union(new THREE.Box3().setFromObject(root, true));
-  }
-  const size = box.getSize(new THREE.Vector3());
-  if (!(size.y > 0) || !Number.isFinite(size.y)) return null;
-  const s = targetHeight / size.y;
-  root.scale.multiplyScalar(s);
-  box.min.multiplyScalar(s); box.max.multiplyScalar(s);          // the root sits at the origin, so scaling is exact
-  const center = box.getCenter(new THREE.Vector3());
-  root.position.set(-center.x, -box.min.y, -center.z);
-  box.translate(root.position);
-  if (mixer) mixer.setTime(0);
-  return box;                                                      // her space on the floor, used for tap detection
-}
-
-// AGI-1's dance was made for a slightly different standing height than her idle, so her feet would hover above
-// the floor while she dances. This measures her feet during the dance and during the idle, and moves the dance's
-// hips by the difference. It uses a separate mixer and puts every bone back afterwards: the main mixer only rewrites
-// bones whose animated value changes, so a bone left in a dance pose would otherwise stay that way.
-function groundDance(root, idleClip, danceClip) {
-  const hips = root.getObjectByName('mixamorigHips');
-  const track = danceClip.tracks.find((t) => t.name === `${hips?.name}.position`);
-  const feet = ['LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase'].map((n) => root.getObjectByName('mixamorig' + n)).filter(Boolean);
-  if (!hips || !track || !feet.length) return 0;
-  const bones = [];
-  root.traverse((o) => { if (o.isBone) bones.push([o, o.position.clone(), o.quaternion.clone(), o.scale.clone()]); });
-  const mixer = new THREE.AnimationMixer(root);
-  const v = new THREE.Vector3();
-  const lowestFoot = (clip, samples) => {
-    const action = mixer.clipAction(clip).play();
-    let min = Infinity;
-    for (let k = 0; k < samples; k++) {
-      mixer.setTime((clip.duration * k) / samples);
-      root.updateMatrixWorld(true);
-      for (const f of feet) min = Math.min(min, f.getWorldPosition(v).y);
-    }
-    action.stop();
-    return min;
-  };
-  const lift = lowestFoot(danceClip, 60) - lowestFoot(idleClip, 8);   // how much higher her feet are in the dance
-  mixer.uncacheRoot(root);
-  for (const [b, p, q, sc] of bones) { b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc); }
-  root.updateMatrixWorld(true);
-  if (!Number.isFinite(lift) || Math.abs(lift) < 0.003) return 0;
-  const from = hips.parent.worldToLocal(new THREE.Vector3(0, 0, 0));
-  const d = hips.parent.worldToLocal(new THREE.Vector3(0, -lift, 0)).sub(from);   // straight down, in the hips' space
-  for (let i = 0; i < track.values.length; i += 3) {
-    track.values[i] += d.x; track.values[i + 1] += d.y; track.values[i + 2] += d.z;
-  }
-  return lift;
-}
 
 // A soft round shadow, drawn once on a small canvas.
 function makeShadowTexture() {
@@ -283,7 +219,6 @@ export function startStage(wrap) {
   addEventListener('agi:skin', tintHearts);
 
   // ---------- models ----------
-  const loader = new GLTFLoader();
   const models = {};                                       // loaded models, by name
   const pending = {};
   let current = null;
@@ -320,47 +255,9 @@ export function startStage(wrap) {
 
   async function loadModel(kind) {
     if (kind === 'agi1_2d') return loadAgi1_2D();
-    const def = MODELS[kind];
-    const gltf = await loader.loadAsync(mobile && def.phoneUrl ? def.phoneUrl : def.url, (ev) => {
-      if (ev.total) setStatus(`Loading weights… ${Math.min(99, Math.round((ev.loaded / ev.total) * 100))}%`);
-    });
-    const root = gltf.scene;
-    root.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
-    const mixer = new THREE.AnimationMixer(root);
-    const clip = gltf.animations.find((a) => a.name === def.clip)
-      || gltf.animations.filter((a) => a.duration > 0.5)[0] || gltf.animations[0] || null;
-    // AGI-1 stands in a calm idle (built in code) and dances now and then. (A model without an idle just plays its loop.)
-    const idleClip = def.idle ? buildIdleClip(root) : null;
-    const main = idleClip || clip;
-    const action = main ? mixer.clipAction(main) : null;
-    const dance = idleClip && clip ? mixer.clipAction(clip) : null;
-    action?.play();
-    const box = fitToFloor(root, mixer, main, def.height);
-    if (idleClip && clip) groundDance(root, idleClip, clip);   // her feet stay on the floor while she dances
-
-    // holder: moved by the stage (swap in/out). fx: moved by reactions (hop, spin). root: the model itself.
-    const holder = new THREE.Group();
-    const fx = new THREE.Group();
-    holder.add(fx);
-    fx.add(root);
-    // An invisible box around the model, for detecting taps (much cheaper than testing every triangle).
-    const hitBox = new THREE.Mesh(
-      new THREE.BoxGeometry(...(box ? box.getSize(new THREE.Vector3()).toArray() : [0.6, def.height, 0.6])),
-      new THREE.MeshBasicMaterial(),
-    );
-    hitBox.visible = false;
-    if (box) box.getCenter(hitBox.position); else hitBox.position.y = def.height / 2;
-    fx.add(hitBox);
-    // AGI-1's mouth and eyelids (2026-09-25): a small addition to her shader, so it's added before the next step
-    const face = kind === 'agi1' ? addFace(root) : null;
-    // Prepare the model's shaders before she appears, so her first frame doesn't freeze for a moment (most noticeable
-    // on phones). Browsers that can do it in the background do; the others do it now, while "Loading" still shows.
-    try {
-      if (renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(holder, camera, scene);
-      else renderer.compile(holder, camera, scene);
-    } catch { /* then her first frame does it */ }
-    const focusBones = (ZOOM[kind]?.bones || []).map((n) => root.getObjectByName(n)).filter(Boolean);
-    return { kind, root, holder, fx, mixer, action, clip, hitBox, idle: idleClip ? action : null, dance, danceClip: dance ? clip : null, focusBones, face };
+    const { loadAgi1Splat } = await import('./agi1-splat.js');
+    return loadAgi1Splat({ canvas, camera, mobile, reducedMotion,
+      onProgress: (p) => setStatus(`Loading 3D… ${Math.round(p * 100)}%`) });
   }
 
   function getModel(kind) {
@@ -369,20 +266,11 @@ export function startStage(wrap) {
       models[kind] = m;
       if (kind === 'agi1' || kind === 'agi1_2d') {
         const opts = { camera, effects, reducedMotion, onGlow: (_color, strength) => { glowLevel = Math.max(glowLevel, strength); } };
-        const c = kind === 'agi1' ? createAgi1(m, opts) : m.create(opts);
+        const c = m.create(opts);
         c.setAttention(attention.state);
         c.setCloseUp(dock.on);
         agi1s[kind] = c;
-        if (kind === 'agi1') {
-          const bone = (n) => m.root.getObjectByName(n);
-          const parts = { headTop: bone('mixamorigHeadTop_End'), head: bone('mixamorigHead'), chest: bone('mixamorigSpine2'),
-            hands: ['Right', 'Left'].map((side) => [bone(`mixamorig${side}Hand`), bone(`mixamorig${side}HandMiddle4`), bone(`mixamorig${side}ForeArm`)])
-              .filter(([hand]) => hand) };                // [wrist, fingertips, elbow]
-          if (parts.headTop && parts.head && parts.chest) partsOf.agi1 = parts;
-        } else {
-          // her 2D rig has markers in the same places: the middle of her face, the top of her hair, her chest, her hands
-          partsOf.agi1_2d = { head: m.marks.head, headTop: m.marks.headTop, chest: m.marks.chest, hands: m.marks.hands };
-        }
+        partsOf[kind] = { head: m.marks.head, headTop: m.marks.headTop, chest: m.marks.chest, hands: m.marks.hands };
         activate();
       }
       return m;
@@ -414,7 +302,7 @@ export function startStage(wrap) {
     let incoming;
     const want = slot(kind);
     try {
-      if (!models[want]) setStatus(want === 'agi1_2d' ? 'Loading 2D…' : 'Loading weights…');
+      if (!models[want]) setStatus(want === 'agi1_2d' ? 'Loading 2D…' : 'Loading 3D…');
       incoming = await getModel(want);
     } catch (err) {
       console.error('[stage] could not load', kind, err);
@@ -442,9 +330,9 @@ export function startStage(wrap) {
       tween(420, easeOutCubic, (p) => incoming.holder.scale.setScalar(0.9 + 0.1 * p), () => { switching = false; });
     };
     if (!outgoing) { bringIn(); reveal(); return; }
-    if (reducedMotion) { stageRoot.remove(outgoing.holder); bringIn(); return; }
+    if (reducedMotion) { stageRoot.remove(outgoing.holder); outgoing.setVisible?.(false); bringIn(); return; }
     tween(160, easeInCubic, (p) => outgoing.holder.scale.setScalar(Math.max(0.001, 1 - 0.1 * p)), () => {
-      stageRoot.remove(outgoing.holder);
+      stageRoot.remove(outgoing.holder); outgoing.setVisible?.(false);
       outgoing.holder.scale.setScalar(1);
       bringIn();
     });
@@ -686,35 +574,8 @@ export function startStage(wrap) {
     vOffset.setLength(dist);
     controls.target.copy(view.focus);
     camera.position.copy(view.focus).add(vOffset);
-    if (current === 'agi1' && agi1Slot === 'agi1' && view.zoom > 3) sharpenAgi1();
     // AGI-1 in 2D: her 4096 px texture for close-ups, on computers only (phones' graphics memory is kept for the page)
     if (current === 'agi1' && agi1Slot === 'agi1_2d' && view.zoom > 1.9 && !mobile) models.agi1_2d?.sharpen?.();
-  }
-
-  // Phones start with the lighter copy of AGI-1 (1024 px textures): sharp enough at normal size, soft up close. The first
-  // time someone zooms in past 3×, the computer copy's 2048 px textures are downloaded once (about 2.2 MB) and swapped in.
-  let sharpening = false;
-  async function sharpenAgi1() {
-    if (sharpening || !mobile || !MODELS.agi1.phoneUrl || !models.agi1) return;
-    sharpening = true;
-    try {
-      const gltf = await loader.loadAsync(MODELS.agi1.url);
-      const meshes = (root) => { const list = []; root.traverse((o) => { if (o.isMesh) list.push(o); }); return list; };
-      const sharp = meshes(gltf.scene), mine = meshes(models.agi1.root);
-      const old = new Set();
-      mine.forEach((mesh, i) => {
-        const from = sharp[i]?.material, to = mesh.material;
-        if (!from || !to || sharp[i].name !== mesh.name) return;
-        for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap']) {
-          if (from[key] && to[key]) { old.add(to[key]); to[key] = from[key]; }
-        }
-      });
-      for (const t of old) t.dispose();                   // the blurry ones leave the graphics memory
-      for (const m of sharp) m.geometry.dispose();       // only the textures were needed
-      view.sharp = true;
-    } catch (err) {
-      console.warn('[stage] sharper textures for the close-up could not load', err);
-    }
   }
 
   // Other parts of the site (the chat) can ask AGI-1 to react, or bring someone on stage.
@@ -779,7 +640,7 @@ export function startStage(wrap) {
     eachAgi1((c) => c.setCloseUp(true));
     // she waves when you arrive at the chat (not again within a minute)
     if (cam.hello && current === 'agi1' && agi1 && performance.now() - dock.helloAt > 60_000) { dock.helloAt = performance.now(); agi1.hello(); }
-    if (current) { frameDock(0); renderer.render(scene, camera); }
+    if (current) { frameDock(0); renderer.render(scene, camera); models.agi1?.render(camera); }
     requestAnimationFrame(() => cam.box.classList.toggle('is-live', dock.on && dock.cam === cam && revealed));
   }
   function dockOut() {
@@ -802,7 +663,7 @@ export function startStage(wrap) {
     const back = dock.heroKind;                           // another model was on stage before: back it comes
     dock.heroKind = null;
     if (back && back !== current && !switching) show(back);
-    if (current) renderer.render(scene, camera);
+    if (current) { renderer.render(scene, camera); models.agi1?.render(camera); }
   }
   // The stage wins whenever it's near the screen; otherwise a live view gets her once it's (a fifth) on screen. She stays in
   // the one she's in while it's still on screen; else the one most on screen gets her.
@@ -864,7 +725,7 @@ export function startStage(wrap) {
         }
       }
     } else {                                              // the card for a moment, while AGI-1 is on her way
-      top = (MODELS[current]?.height || CARD_Y + 0.3) + 0.1; x0 = -0.45; x1 = 0.45;
+      top = (MODELS[current]?.height || 1.62) + 0.1; x0 = -0.45; x1 = 0.45;
     }
     // never wider than her waist up (0.78 m tall; more where the live view asks for more): then her waving hand stays in
     // and her hair on the other side may touch the edge, so the view stays a portrait
@@ -921,7 +782,7 @@ export function startStage(wrap) {
   const hintEl = wrap.querySelector('.stage-hint');
   const HINT = { '2d': 'tap to say hi', '3d': 'drag to rotate · tap to say hi' };
   const stills = [...document.querySelectorAll('.pg-cam-still, .chk-cam-still')];
-  const STILL = { '3d': '/images/agi1-live.webp', '2d': '/images/agi1-live-2d.webp' };
+  const STILL = { '3d': '/images/agi1-live-splat.webp', '2d': '/images/agi1-live-2d.webp' };
   // her labels say which one she is ("AGI-1, in 2D. Tap to say hi.": a flat picture doesn't turn; "AGI-1, in 3D. Drag to
   // rotate, tap to say hi."). Before she's on stage, the one she's going to be.
   function styled(text) {
@@ -968,7 +829,7 @@ export function startStage(wrap) {
     if (!from || from === to || current !== 'agi1') return;
     let incoming;
     try {
-      if (!models[to]) setStatus(to === 'agi1_2d' ? 'Loading 2D…' : 'Loading weights…');
+      if (!models[to]) setStatus(to === 'agi1_2d' ? 'Loading 2D…' : 'Loading 3D…');
       incoming = await getModel(to);
     } catch (err) {
       console.error('[stage] could not load', to, err);
@@ -997,9 +858,9 @@ export function startStage(wrap) {
       tween(380, easeOutCubic, (p) => incoming.holder.scale.setScalar(0.9 + 0.1 * p), () => { switching = false; });
     };
     if (!outgoing || !outgoing.holder.parent) { bringIn(); return; }
-    if (reducedMotion) { stageRoot.remove(outgoing.holder); bringIn(); return; }
+    if (reducedMotion) { stageRoot.remove(outgoing.holder); outgoing.setVisible?.(false); bringIn(); return; }
     tween(150, easeInCubic, (p) => outgoing.holder.scale.setScalar(Math.max(0.001, 1 - 0.1 * p)), () => {
-      stageRoot.remove(outgoing.holder);
+      stageRoot.remove(outgoing.holder); outgoing.setVisible?.(false);
       outgoing.holder.scale.setScalar(1);
       bringIn();
     });
@@ -1099,6 +960,7 @@ export function startStage(wrap) {
     last = now;
     step(dt);
     renderer.render(scene, camera);
+    models.agi1?.render(camera);
     placeBubble();
   });
 
@@ -1139,10 +1001,11 @@ export function startStage(wrap) {
       advance(seconds) {
         for (let i = 0, n = Math.round(seconds * 30); i < n; i++) step(1 / 30);
         renderer.render(scene, camera);
+        models.agi1?.render(camera);
       },
     };
   }
 
-  setStatus(slot('agi1') === 'agi1_2d' ? 'Loading 2D…' : 'Loading weights…');
+  setStatus(slot('agi1') === 'agi1_2d' ? 'Loading 2D…' : 'Loading 3D…');
   show('agi1');
 }

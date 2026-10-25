@@ -45,6 +45,8 @@ const ownerContent = () => ({
 
 export default defineConfig({
   plugins: [talkPage(), ownerContent()],
+  // Preserve the splat decoder's relative worker URLs during local development.
+  optimizeDeps: { exclude: ['@viggle/splat-engine'] },
   build: {
     // three.js alone is about 650 KB (170 KB compressed). It's already in its own file that
     // loads after the page's text, so Vite's default 500 KB warning isn't useful here.
