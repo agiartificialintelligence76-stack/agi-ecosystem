@@ -12,6 +12,7 @@ foreach ($d in 'videos', 'posters', 'images', 'previews') { New-Item -ItemType D
 
 # original file -> web name (same names as src/memes/list.js)
 $videos = [ordered]@{
+  'AGI_Vlad_REVISED_1080p.mp4' = 'vlad'
   'Artificial_Girlfriend_Intelligence_-____clanktrade_RobinhoodCrypto_tcNdny.mp4' = 'clanktrade-robinhood'
   'Artificial_Girlfriend_Intelligence_-_1_000_Darlings_nusIf0.mp4' = '1000-darlings'
   'Artificial_Girlfriend_Intelligence_-_Everyone_s_feeling_the_AGI._Only_some_of_us_are_feeling_the_Artificia_rYdVhV.mp4' = 'feeling-the-agi'
@@ -32,7 +33,7 @@ $videos = [ordered]@{
   'Artificial_Girlfriend_Intelligence_-_it_s_fine._I_m_Super_AGI_21O1AY.mp4' = 'its-fine-im-super-agi'
 }
 # where the poster (the card's picture) is taken from, in seconds; 2 unless the start is too dark
-$posterAt = @{ 'its-fine-im-super-agi' = 80 }
+$posterAt = @{ 'its-fine-im-super-agi' = 80; 'vlad' = 12 }
 $images = [ordered]@{
   'HTbmp66akAAz7of.jpg' = 'absolute-agi'; 'HThktCTbYAE772O.jpg' = 'psst'; 'HThxYhzaEAACDat.jpg' = 'all-in'
   'HTi8cgxagAARpfI.jpg' = 'the-plan'; 'HTix4BNbIAA3D44.jpg' = 'online'; 'HTjL7PPaYAA_O01.jpg' = 'approved'

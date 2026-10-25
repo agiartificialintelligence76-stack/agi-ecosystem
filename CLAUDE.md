@@ -1,5 +1,7 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Meme addition (2026-10-25):** the owner supplied `memess/AGI_Vlad_REVISED_1080p.mp4` and requested immediate publication. Added as **AGI × Vlad** at the top of Videos, with a 1:32 runtime and a poster from 12 seconds. The 1080p H.264/AAC web copy retains the original streams, with fast-start metadata; it uses the built-in gallery route.
+
 > **Latest local validation (2026-10-22):** the Windows test failures and dependency audit findings from the chart
 > handoff are resolved. The full suite is **1,028 passed, 0 failed, 6 skipped**; Node 20/22/24, shifted dates, and a
 > clean build with fake deployment settings passed. Desktop/phone chart review, unchanged production CSP, and a
