@@ -2,6 +2,8 @@
 
 ## AGI-1 3D model update — 2026-10-25 (release authorized)
 
+**Production retry (2026-10-25):** nod/relaxed-pose commit `0fcb3a7` reached `origin/main`, but Vercel initially blocked deployment because team `agi25` exceeded its Hobby Fluid Active CPU limit. The owner has now upgraded to Pro and explicitly requested publishing again; the authenticated dashboard confirms **agi Pro** and the pause notice is gone. This documentation-only push retries the same tested runtime and model assets. Verify Vercel Ready and the live nod asset before reporting success. Local deployment evidence is in `agi1-nod-release-status.log`.
+
 The owner requested "publish it" after reviewing the model and motion improvements. Release through this repository's `main` branch to the existing `agi-ecosystem` Vercel project; verify the production assets and 3D view at agi1.app after the deployment finishes. Unrelated local media/game work is excluded from this release.
 
 The model/logo/facial-polish release is live in production as `eedf762` (Vercel deployment `DYbKtdDNf5yYZgCLbBNptud6XMQy`). The owner then supplied `new agi 3d model/Nod-Yes.glb`, clarified that the screenshot concern is **stiff pose and movement**, and explicitly requested another production release. Clothes and model geometry are outside that follow-up.
