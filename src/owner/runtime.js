@@ -109,10 +109,14 @@ export function selectorFor(node) {
   return s && s.length <= 600 && unique(s, node) ? keep(s) : '';
 }
 
+function worldDescription(node) {
+  return tagOf(node) === 'small' && tagOf(node?.parentElement) === 'a' && Boolean(node?.closest('.lp-eco li'));
+}
+
 function selectable(node) {
   if (!node || node.nodeType !== 1 || node.closest(SKIP)) return false;
   const tag = tagOf(node);
-  if (node.matches(CONTAINER) || node.matches('.lp-eco li,.lp-planets li') || tag === 'img' || tag === 'a') return true;
+  if (node.matches(CONTAINER) || node.matches('.lp-eco li,.lp-planets li') || tag === 'img' || tag === 'a' || worldDescription(node)) return true;
   return node.matches(CANDIDATE) && Boolean(flat(directText(node)));
 }
 
@@ -176,6 +180,10 @@ function setAttr(state, node, name, value) {
 function setText(state, node, value) {
   if (!node || node.matches(CONTAINER) || node.matches('.lp-eco li,.lp-planets li')) return;
   const texts = directTexts(node);
+  if (!texts.length && worldDescription(node)) {
+    const blank = node.ownerDocument.createTextNode('');
+    node.append(blank); texts.push(blank);
+  }
   if (!texts.length) return;
   const row = record(state, node);
   texts.forEach((text, i) => {

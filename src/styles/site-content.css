@@ -20,6 +20,8 @@ body[data-owner-page-hidden="true"] > :not([data-owner-page-notice]):not(script)
 .site-content-page-head h1 { font: 650 clamp(2.4rem, 7vw, 5rem)/1.06 var(--sans, system-ui, sans-serif); letter-spacing: -.045em; margin: 0 0 24px; }
 .site-content-page-head p { max-width: 65ch; white-space: pre-wrap; font: 400 1.1rem/1.7 var(--sans, system-ui, sans-serif); color: var(--fg-2, #b5b5c2); }
 .owner-world-image { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.lp-eco a > small:empty { display: none; }
+.lp-eco a:has(> small:empty) > i { margin-left: auto; }
 html[data-owner-picking="true"] [data-owner-pick-hover="true"] { outline: 3px solid #dcff4f !important; outline-offset: 3px; cursor: crosshair !important; }
 html[data-owner-picking="true"] { cursor: crosshair; }
 .site-content-preview-note { position: fixed; z-index: 2147483000; bottom: 10px; left: 50%; transform: translateX(-50%); padding: 8px 14px; border-radius: 99px; background: #dcff4f; color: #172008; font: 600 12px/1.4 system-ui, sans-serif; box-shadow: 0 4px 20px #0004; pointer-events: none; }

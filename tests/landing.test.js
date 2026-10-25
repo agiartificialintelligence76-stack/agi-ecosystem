@@ -53,6 +53,9 @@ test('its links: the Playground, AGI Studio, AGI Games, "Risk check your coins o
   assert.match(nav, /<p class="lp-eco-label" id="lp-eco-label">Her world <span>\(09\)<\/span><\/p>/, 'the list is "Her world" (the owner, 2026-09-28: no "ecosystem")');
   assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#playground', '/studio', '/games', '/memes', '#checker', '/diary', '#model-card', '/roadmap', 'https://x.com/agi1dotapp']);
   assert.equal((nav.match(/<li>/g) || []).length, 9, 'its count says how many rows it has');
+  for (const [index, row] of [...nav.matchAll(/<li>([\s\S]*?)<\/li>/g)].entries()) {
+    assert.equal((row[1].match(/<small(?:\s[^>]*)?>/g) || []).length, 1, `Her world row ${index + 1} has an editable description, including an empty one`);
+  }
   // (2026-10-23, the owner: "create a MEMES tab … on her world, put it in another page")
   assert.match(nav, /<a class="lp-c-memes" href="\/memes" [^>]*><span class="lp-dot"><\/span>Memes <small>videos, images, slopcore<\/small><i aria-hidden="true">→<\/i><\/a>/);
   assert.match(css, /\.lp-c-memes \{ --c: [^}]+\}/, 'its own color');
@@ -68,7 +71,7 @@ test('its links: the Playground, AGI Studio, AGI Games, "Risk check your coins o
   for (const [n, d] of [[6, '1.21'], [7, '1.27'], [8, '1.33'], [9, '1.39']]) {
     assert.match(css, new RegExp(`\\.lp-intro\\.lp-go \\.lp-eco li:nth-child\\(${n}\\) \\{ animation-delay: ${d.replace('.', '\\.')}s; \\}`), `row ${n} comes in in turn`);
   }
-  assert.match(nav, /<span class="lp-dot"><\/span>Risk check your coins on clank<i aria-hidden="true">↓<\/i>/, 'the risk check under its name (the owner, 2026-09-28), in the Arena\'s old place');
+  assert.match(nav, /<span class="lp-dot"><\/span>Risk check your coins on clank<small id="lp-checker-description"><\/small><i aria-hidden="true">↓<\/i>/, 'the risk check keeps its original name and arrow with an editable empty description');
   const planets = [...front.matchAll(/<a class="lp-planet [^>]*href="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(planets, ['#playground', '#checker', '#model-card', 'https://x.com/agi1dotapp'], 'the planets: the same places');
   for (const id of new Set([...main.matchAll(/<a [^>]*href="#([^"]+)"/g)].map((m) => m[1]))) assert.match(html, new RegExp(`id="${id}"`), `#${id} is on the page`);

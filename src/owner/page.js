@@ -172,7 +172,7 @@ function renderContent() {
     ui.controls.append(field('Entry name',textEdit.text??item.linkText,v=>editTarget(textSelector,{text:v}),{maxLength:240}),field('Link address',linkEdit.href??item.href,v=>editTarget(item.linkSelector,{href:v}),{maxLength:2048}));
     if(item.noteSelector){const noteEdit=state.draft.edits.find(e=>e.page===state.path&&e.selector===item.noteSelector)||{};ui.controls.append(field('Entry description',noteEdit.text??item.noteText,v=>editTarget(item.noteSelector,{text:v}),{maxLength:500}));}
   }
-  if (typeof item.text === 'string' && item.text.trim()) ui.controls.append(field('Text', record.text ?? item.text, v => edit({ text:v }), { multiline:true }));
+  if (typeof item.text === 'string' && (item.text.trim() || item.tag === 'small')) ui.controls.append(field('Text', record.text ?? item.text, v => edit({ text:v }), { multiline:true }));
   if (item.href !== undefined && !item.linkSelector) ui.controls.append(field('Link address', record.href ?? item.href, v => edit({ href:v }), { placeholder:'/p/my-page or https://…', maxLength:2048 }));
   if (item.src !== undefined) {
     ui.controls.append(field('Image address', record.src ?? item.src, v => edit({ src:v }), { placeholder:'/images/example.webp', maxLength:150000 }), field('Image description',record.alt ?? item.alt, v => edit({alt:v}), {maxLength:500}), uploadButton(v => { edit({src:v}); renderControls(); }));

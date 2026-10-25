@@ -106,6 +106,31 @@ test('clearing link or image fields takes effect and reset restores source attri
   applySiteContent(empty(),doc);assert.equal(a.getAttribute('href'),'/games');assert.equal(img.getAttribute('src'),'/images/original.webp');
 });
 
+test('a blank Her world description can be added, cleared, reset and applied on a fresh page', () => {
+  const make = () => {
+    const f=fixture(), nav=f.el('nav',{class:'lp-eco'}), list=f.el('ul'), row=f.el('li');
+    const link=f.el('a',{href:'#checker'},'Risk check your coins on clank'), arrow=f.el('i',{},'↓');
+    link.append(arrow);row.append(link);list.append(row);nav.append(list);f.main.append(nav);
+    const previousLinkSelector=selectorFor(link), previousArrowSelector=selectorFor(arrow);
+    const note=f.el('small',{id:'lp-checker-description'});arrow.before(note);
+    assert.equal(selectorFor(link),previousLinkSelector);assert.equal(selectorFor(arrow),previousArrowSelector);
+    return {...f,row,link,arrow,note,linkSelector:previousLinkSelector};
+  };
+  const f=make();
+  const item=collectItems(f.doc).find(i=>i.kind==='world');
+  assert.equal(item.noteSelector,'#lp-checker-description');assert.equal(item.noteText,'');
+  const saved={pages:[],edits:[edit(f.linkSelector,{text:'ClankChecker'}),{...edit(item.noteSelector,{text:'Check a coin before you trade'}),id:'description'}]};
+  applySiteContent(saved,f.doc);assert.equal(f.note.textContent,'Check a coin before you trade');
+  assert.match(f.link.textContent,/^ClankChecker/);assert.equal(f.link.getAttribute('href'),'#checker');assert.equal(f.arrow.textContent,'↓');
+  const cleared={...saved,edits:[saved.edits[0],{...saved.edits[1],text:''}]};
+  applySiteContent(cleared,f.doc);assert.equal(f.note.textContent,'');
+  applySiteContent(saved,f.doc);assert.equal(f.note.textContent,'Check a coin before you trade');
+  applySiteContent(empty(),f.doc);assert.equal(f.note.textContent,'');assert.match(f.link.textContent,/^Risk check your coins on clank/);
+  const fresh=make();applySiteContent(saved,fresh.doc);assert.equal(fresh.note.textContent,'Check a coin before you trade');
+  const unrelated=f.el('small',{id:'unrelated-blank'});f.main.append(unrelated);
+  applySiteContent({pages:[],edits:[edit('#unrelated-blank',{text:'Must stay blank'})]},f.doc);assert.equal(unrelated.textContent,'');
+});
+
 test('a malicious selector cannot turn a script, base or form control into editable content', () => {
   const { doc, el, main } = fixture();const script=el('script',{id:'danger',src:'/app.js'},'safe()'), input=el('input',{id:'secret',value:'private'}), base=el('base',{id:'base',href:'/'});main.append(script,input,base);
   applySiteContent({pages:[],edits:[edit('#danger',{src:'/evil.js',text:'evil()'}),{...edit('#secret',{text:'leak'}),id:'input'},{...edit('#base',{href:'https://evil.test'}),id:'base'}]},doc);
