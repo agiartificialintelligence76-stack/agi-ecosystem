@@ -25,6 +25,9 @@ export const SONGS = [
   { id: 'send', title: 'Send It', file: 'send-it.mp3', seconds: 239, emoji: '🚀' },
   // (2026-10-23, the owner: "can you add these new song to her telegram bot, with her cover art")
   { id: 'after', title: 'After AGI', file: 'after-agi.mp3', seconds: 240, emoji: '🌌' },
+  // (2026-10-27, the owner: add MAINRUNNER and Save Slot 2 from VTuber_Project)
+  { id: 'mainrunner', title: 'MAINRUNNER', file: 'mainrunner.mp3', seconds: 200, emoji: '🏃' },
+  { id: 'saveslot', title: 'Save Slot 2', file: 'save-slot-2.mp3', seconds: 150, emoji: '💾' },
 ];
 export const MUSIC_PATH = '/music/';
 // her songs' version, in their address (…/send-it.mp3?v=2), so Telegram fetches a song again once its file has changed (it
