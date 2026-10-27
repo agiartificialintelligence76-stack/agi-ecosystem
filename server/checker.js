@@ -180,7 +180,8 @@ function listed(raw, prices, trending) {
 const bySize = { size: (c) => c.mcUsd ?? 0 };
 
 // Every coin, page by page (clank.trade only gives 12 at a time), newest first. Stops after MAX_PAGES or `budgetMs`
-// (a function may run 25 s): then `complete` is false and the oldest coins are missing (still checkable by address).
+// (a function may run 25 s): then `complete` is false. Keep the separately fetched trending coins even when their older
+// list pages were not reached, so important older coins do not disappear from Trending or Graduated on a slow fetch.
 export async function scanClank({ budgetMs = 18_000, now = Date.now() } = {}) {
   const t0 = Date.now();
   const [first, trending, ...rates] = await clankApi(FIRST);
@@ -195,7 +196,19 @@ export async function scanClank({ budgetMs = 18_000, now = Date.now() } = {}) {
     pages += 1;
   }
   const prices = await pricesFor(raw.map(pairOf), pricesFrom(KNOWN_PAIRS, rates));
-  const all = listed(raw, prices, trendingList(trending.data));
+  const top = trendingList(trending.data);
+  const all = listed(raw, prices, top);
+  const present = new Set(all.map(c => c.address));
+  for (const [index, coin] of top.entries()) {
+    if (present.has(lc(coin.address))) continue;
+    // Trending has dollar market caps and isLive, unlike coins.list's pair-denominated caps and state.
+    const extra = listCoin({ ...coin, state: coin.isLive === true ? STAGE.POOL : undefined }, new Map(), index + 1);
+    if (!extra) continue;
+    const usd = num(coin.marketCapUsdg);
+    extra.mcUsd = usd !== null && usd >= 0 ? usd : null;
+    extra.marketCap = extra.mcUsd === null ? null : Math.round(extra.mcUsd);
+    all.push(extra); present.add(extra.address);
+  }
   markCopycats(all, bySize);
   remember(all);
   return {

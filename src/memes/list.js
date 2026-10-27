@@ -11,6 +11,7 @@ import { safeMemeUrl, MEDIA_ID, validateMemes } from '../owner/media-model.js';
 
 export const MEMES = [
   // ---------- slopcore ----------
+  { id: 'mainrunner-mv', kind: 'slopcore', title: 'MAINRUNNER', note: '', secs: 207 },
   { id: 'its-fine-im-super-agi', kind: 'slopcore', title: "it's fine. I'm Super AGI", note: '− AI + SI. she woke up and went super', secs: 194 },
   { id: 'claude-make-me-an-agi-slopcore', kind: 'slopcore', title: 'Claude, make me an AGI SLOPCORE', note: 'slot 1: Earth. the only copy. back it up', secs: 150 },
   { id: 'after-agi', kind: 'slopcore', title: 'AFTER AGI', note: 'the long ride home through the city', secs: 240 },
@@ -20,6 +21,7 @@ export const MEMES = [
 
   // ---------- videos ----------
   { id: 'vlad', kind: 'video', title: 'AGI × Vlad', note: '', secs: 92 },
+  { id: 'starlight', kind: 'video', title: 'Lip gloss', note: '', secs: 30 },
   { id: 'the-trenches-taught-her', kind: 'video', title: 'we taught her to say hello', note: 'the trenches taught her the rest', secs: 69 },
   { id: 'only-agi', kind: 'video', title: 'Only AGI', note: 'AGI.EXE has started', secs: 50 },
   { id: 'weve-achieved-agi', kind: 'video', title: "We've achieved AGI", note: 'he said it first', secs: 30 },
@@ -34,6 +36,7 @@ export const MEMES = [
   { id: 'subway-walk', kind: 'video', title: 'Next stop: AGI', note: 'a loop', secs: 1, loop: true },
 
   // ---------- images ----------
+  { id: 'at-the-desk', kind: 'image', title: 'At the desk', note: '', w: 2048, h: 2994 },
   { id: 'main-runner', kind: 'image', title: "I'm the main runner now.", note: 'look at me.', w: 1254, h: 1254 },
   { id: 'absolute-agi', kind: 'image', title: 'Absolute AGI', note: 'hands up', w: 1086, h: 1448 },
   { id: 'he-sees-her', kind: 'image', title: 'He sees her', note: 'the neon version', w: 2048, h: 2048 },

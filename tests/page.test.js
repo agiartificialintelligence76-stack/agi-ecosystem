@@ -234,7 +234,7 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   const chk = part('<section class="section" id="checker"', '</section>\n    </main>');
   assert.match(chk, /<p class="kicker chk-kicker"><span>Risk check your coins on clank<\/span><\/p>/, 'its name, the owner\'s words (2026-09-28; the $CLANKCAP credit line is gone)');
   assert.ok(html.indexOf('id="playground"') < html.indexOf('id="checker"') && html.indexOf('id="checker"') < html.indexOf('id="safety"'), 'right after the Playground: the Arena\'s old place');
-  assert.doesNotMatch(html, />ClankChecker</, 'the old name is gone from what visitors read');
+  assert.match(html, /<a href="#checker">ClankChecker<\/a>/, 'navigation starts with the owner-saved compact label, without shifting after content loads');
   assert.doesNotMatch(html, /clankcap/i, 'nothing about $CLANKCAP anywhere on the page (the owner, 2026-09-28)');
   assert.match(chk, /Rough automated checks of public data, not an audit, and never financial advice\./, 'the lede says what it is');
   assert.match(chk, /A scan is not an endorsement or financial advice: check any coin yourself\./);
@@ -259,9 +259,9 @@ test('ClankChecker (2026-09-26; "Risk check your coins on clank" since 2026-09-2
   assert.match(chk, /Every coin, name and picture comes from clank\.trade, as its creator made it, not from us \(slurs are masked, and pictures of coins with crude names stay blurred until you confirm you're 18 or older\)\./);
   assert.doesNotMatch(chk, /left out of the list|not PG-13/, 'every coin is listed now');
   assert.ok(!/<script>|style="/.test(chk), 'no inline scripts or styles');
-  assert.equal((html.match(/<a href="#checker">Risk check your coins on clank<\/a>/g) || []).length, 2, 'the menu and the footer');
+  assert.equal((html.match(/<a href="#checker">ClankChecker<\/a>/g) || []).length, 2, 'the menu and the footer');
   const diary = readFileSync(new URL('../diary.html', import.meta.url), 'utf8');
-  assert.equal((diary.match(/<a href="\/#checker">Risk check your coins on clank<\/a>/g) || []).length, 2, 'the diary page\'s menu and footer');
+  assert.equal((diary.match(/<a href="\/#checker">ClankChecker<\/a>/g) || []).length, 2, 'the diary page\'s menu and footer');
   const foot = part('<footer class="foot"', '</footer>');
   assert.ok(foot.includes("The risk levels in “Risk check your coins on clank” are rough automated checks of public data, not an audit: lower risk isn't no risk, and no level is a reason to buy or sell."));
   // (2026-10-05: the coins' pictures come from public IPFS gateways, clank.trade's own gateway only answers its own pages)

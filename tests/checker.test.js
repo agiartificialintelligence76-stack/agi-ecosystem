@@ -29,7 +29,7 @@ const SPCX_USD = '160.479619942851745065';
 const CURVE = '0x3e73c6bc1dd85e5037080be44403fff0f160a3fa';
 const HOOKS = '0x18bff70216af1b93f3552016dec742c5d78ee000';
 const CREATOR = '0x001ac0ffeec0ffeec0ffeec0ffeec0ffeec0ffee';
-const CABO = '0xcf5b720f33febdc1c9d4880b8317203b63fdf368';   // on clank.trade, but never shown on this site (2026-09-28)
+const CABO = '0xcf5b720f33febdc1c9d4880b8317203b63fdf368';   // restored in ClankChecker at the owner's request (2026-10-27)
 const MEOW = '0x4444444444444444444444444444444444444444';
 const ABC = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';
 const COIN = '0x8d45402124cc47687075b911af28bd2f246eb212';
@@ -759,10 +759,10 @@ test('the list: every page, trending ranks, dollars, copycats marked, every coin
       listRow({ address: wallet(9), symbol: 'CUM', name: 'Clank Uwu Model', state: 3, progress: 100, marketCap: 31 })],
     [listRow({ address: MEOW, symbol: 'MEOW', name: 'Meow', state: 3, progress: 100, marketCap: 49.29 }),
       listRow({ address: wallet(10), symbol: 'MEOW', name: 'Meow Mascot', progress: 0.02, marketCap: 1.55 }),
-      // $CABO is still on clank.trade, but this site never shows it (2026-09-28): it leaves the list and the counts
+      // CABO belongs in the list, trending ranks and graduated count like every other upstream coin.
       listRow({ address: CABO, symbol: 'CABO', name: 'Cabo', state: 3, progress: 100, marketCap: 60 })],
   ];
-  fake.trending = [OFFICIAL, COIN];
+  fake.trending = [OFFICIAL, CABO, COIN];
   const r = await get();
   assert.equal(r.status, 200);
   assert.equal(r.headers.get('cache-control'), 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
@@ -770,12 +770,11 @@ test('the list: every page, trending ranks, dollars, copycats marked, every coin
   assert.equal(calls.length, 3, 'three pages (the first one with the trending list and the ETH price)');
   assert.match(calls[0], /\/v1\/trpc\/coins\.list,coins\.trending,exchangeRates\.tokenUsdg,exchangeRates\.tokenUsdg\?batch=1/);
   assert.deepEqual(JSON.parse(new URL(calls[1]).searchParams.get('input')), { 0: { cursor: 'p1' } });
-  assert.equal(list.total, 6, '7 on clank.trade, without $CABO');
+  assert.equal(list.total, 7, 'all seven upstream coins, including CABO');
   assert.equal('hidden' in list, false);
-  assert.equal(list.graduated, 3);
+  assert.equal(list.graduated, 4);
   assert.equal(list.complete, true);
-  assert.equal(list.coins.length, 6);
-  assert.ok(!JSON.stringify(list).includes('CABO') && !JSON.stringify(list).includes(CABO), 'nothing about $CABO in the list');
+  assert.equal(list.coins.length, 7);
   const by = Object.fromEntries(list.coins.map((c) => [c.address, c]));
   assert.equal(by[wallet(9)].symbol, 'CUM', 'every coin clank.trade has (the owner: "they are part of clank trade")');
   assert.equal(by[wallet(9)].adult, true, '…its picture waits for the 18+ check');
@@ -784,7 +783,11 @@ test('the list: every page, trending ranks, dollars, copycats marked, every coin
   assert.equal(by[COIN].image, false, 'no real picture id');
   assert.equal(by[OFFICIAL].official, true);
   assert.equal(by[OFFICIAL].trending, 1);
-  assert.equal(by[COIN].trending, 2);
+  assert.equal(by[CABO].trending, 2);
+  assert.equal(by[COIN].trending, 3);
+  assert.deepEqual(pick(list.coins, { filter: 'trending' }).map(c => [c.address, c.trending]), [[OFFICIAL, 1], [CABO, 2], [COIN, 3]], 'upstream ranks remain intact, including number two');
+  assert.ok(pick(list.coins, { filter: 'graduated' }).some(c => c.address === CABO), 'CABO appears in Graduated');
+  assert.deepEqual(pick(list.coins, { query: 'CABO' }).map(c => c.address), [CABO]);
   assert.equal(by[OFFICIAL].marketCap, Math.round(543 * Number(ETH_USD)));
   assert.equal(by[DEAD].copyOfficial, true);
   assert.equal(by[DEAD].copyOf, OFFICIAL);
@@ -799,22 +802,66 @@ test('the list: every page, trending ranks, dollars, copycats marked, every coin
   assert.equal(calls.length, 0);
 });
 
-test('$CABO (2026-09-28): no scan, no picture and no place in the newest coins on this site', async () => {
+test('CABO has normal risk scans, pictures and live updates without a ticker exclusion', async () => {
   fake.coins[CABO] = { detail: detail({ address: CABO, symbol: 'CABO', name: 'Cabo', image: `ipfs://${CID1}` }), holders: [], trades: [] };
-  fake.pictures[CID1] = { type: 'image/png', bytes: PNG };
+  fake.pictures[CID1] = { type: 'image/png', bytes: SQUARE };
   const scan = await get(`?a=${CABO}`);
   assert.equal(scan.status, 200);
-  assert.deepEqual(await scan.json(), { address: CABO, error: 'removed' });
-  assert.equal((await get(`?logo=${CABO}&s=96`)).status, 404);
-  assert.equal(calls.length, 0, 'clank.trade is never asked about it');
-  // a copycat with the same ticker at another address: its scan is refused too
+  const result = await scan.json();
+  assert.equal(result.address, CABO);
+  assert.equal(result.symbol, 'CABO');
+  assert.equal(result.error, undefined);
+  assert.equal(result.level, 'high', 'the normal risk checks still flag its empty holder/trade data');
+  assert.ok(result.flags.length > 0);
+  const picture = await get(`?logo=${CABO}&s=96`);
+  assert.equal(picture.status, 200);
+  assert.equal(picture.headers.get('content-type'), 'image/webp');
+  // Another address sharing that ticker receives a normal scan too.
   fake.coins[MEOW] = { detail: detail({ address: MEOW, symbol: 'CABO', name: 'Cabo Again' }), holders: [], trades: [] };
-  assert.deepEqual(await (await get(`?a=${MEOW}`)).json(), { address: MEOW, error: 'removed' });
-  fake.pages = [[listRow({ address: CABO, symbol: 'CABO', name: 'Cabo' }), listRow({ address: COIN, symbol: 'E/ACC', name: 'x' })]];
+  const other = await (await get(`?a=${MEOW}`)).json();
+  assert.equal(other.symbol, 'CABO');
+  assert.equal(other.error, undefined);
+  fake.pages = [[listRow({ address: CABO, symbol: 'CABO', name: 'Cabo', state: 3, progress: 100 }), listRow({ address: COIN, symbol: 'E/ACC', name: 'x' })]];
   fake.trending = [CABO, COIN];
   const latest = await (await get('?latest')).json();
-  assert.deepEqual(latest.coins.map((c) => c.symbol), ['E/ACC']);
-  assert.deepEqual(latest.trending.map((c) => c.address), [COIN], "clank.trade's trending list without it");
+  assert.deepEqual(latest.coins.map((c) => c.symbol), ['CABO', 'E/ACC']);
+  assert.deepEqual(latest.trending.map((c) => [c.address, c.rank]), [[CABO, 1], [COIN, 2]]);
+  const merged = [];
+  mergeLatest(merged, latest);
+  assert.equal(merged.find(c => c.address === CABO).graduated, true);
+  assert.deepEqual(pick(merged, { filter: 'trending' }).map(c => c.address), [CABO, COIN]);
+});
+
+test('a time-limited list still includes older trending coins and keeps listed data authoritative', async () => {
+  const newest = wallet(777);
+  fake.pages = [
+    [listRow({ address: newest, symbol: 'NEW', name: 'Newest', createdAt: S - 60 }),
+      listRow({ address: COIN, symbol: 'E/ACC', name: 'Listed name', state: 0, progress: 22, marketCap: 7, createdAt: S - H })],
+    [listRow({ address: OFFICIAL, symbol: 'AGI', state: 3 }), listRow({ address: CABO, symbol: 'CABO', state: 3 })],
+  ];
+  fake.trending = [
+    { address: OFFICIAL, symbol: 'AGI', name: 'Artificial Girlfriend Intelligence', marketCapUsdg: 1234567.4, progress: 100, isLive: true, image: `ipfs://${CID1}` },
+    { address: CABO, symbol: 'CABO', name: 'Cabo', marketCapUsdg: 23456.7, progress: 100, isLive: true, image: `ipfs://${CID2}` },
+    { address: COIN, symbol: 'STALE', name: 'Older trending name', marketCapUsdg: 10, progress: 100, isLive: true },
+  ];
+  const list = await scanClank({ budgetMs: 0, now: NOW });
+  assert.equal(calls.length, 1, 'the time budget stops further pagination');
+  assert.equal(list.complete, false, 'adding trending entries does not claim the whole catalog is complete');
+  assert.equal(list.total, 4);
+  assert.equal(list.graduated, 2);
+  assert.deepEqual(list.coins.map(c => c.address), [newest, COIN, OFFICIAL, CABO], 'newest page order is preserved and missing trending coins appended once');
+  assert.deepEqual(pick(list.coins, { filter: 'trending' }).map(c => [c.address, c.trending]), [[OFFICIAL, 1], [CABO, 2], [COIN, 3]]);
+  assert.deepEqual(pick(list.coins, { filter: 'graduated' }).map(c => c.address), [OFFICIAL, CABO]);
+  const by = Object.fromEntries(list.coins.map(c => [c.address, c]));
+  assert.equal(by[OFFICIAL].marketCap, 1234567);
+  assert.equal(by[CABO].marketCap, 23457, 'trending dollar amounts are not multiplied by ETH again');
+  assert.equal(by[CABO].image, true);
+  assert.equal(by[CABO].progress, 100);
+  assert.equal(by[COIN].symbol, 'E/ACC');
+  assert.equal(by[COIN].name, 'Listed name');
+  assert.equal(by[COIN].marketCap, Math.round(7 * Number(ETH_USD)));
+  assert.equal(by[COIN].graduated, false);
+  assert.equal(by[COIN].progress, 22);
 });
 
 test('the list: at most MAX_PAGES pages, and clank.trade down → 503 (nothing guessed, nothing cached)', async () => {

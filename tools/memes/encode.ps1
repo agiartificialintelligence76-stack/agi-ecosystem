@@ -12,6 +12,8 @@ foreach ($d in 'videos', 'posters', 'images', 'previews') { New-Item -ItemType D
 
 # original file -> web name (same names as src/memes/list.js)
 $videos = [ordered]@{
+  'MAINRUNNER_MV_1080p.mp4' = 'mainrunner-mv'
+  'dreamina-2026-10-27-5465-Edit . Replace the dark-haired woman wit...-precise-upscale-model-starlight.mp4' = 'starlight'
   'AGI_Vlad_REVISED_1080p.mp4' = 'vlad'
   'Artificial_Girlfriend_Intelligence_-____clanktrade_RobinhoodCrypto_tcNdny.mp4' = 'clanktrade-robinhood'
   'Artificial_Girlfriend_Intelligence_-_1_000_Darlings_nusIf0.mp4' = '1000-darlings'
@@ -33,8 +35,9 @@ $videos = [ordered]@{
   'Artificial_Girlfriend_Intelligence_-_it_s_fine._I_m_Super_AGI_21O1AY.mp4' = 'its-fine-im-super-agi'
 }
 # where the poster (the card's picture) is taken from, in seconds; 2 unless the start is too dark
-$posterAt = @{ 'its-fine-im-super-agi' = 80; 'vlad' = 12 }
+$posterAt = @{ 'its-fine-im-super-agi' = 80; 'vlad' = 12; 'mainrunner-mv' = 12; 'starlight' = 8 }
 $images = [ordered]@{
+  'Images 1 (9).png' = 'at-the-desk'
   'HTbmp66akAAz7of.jpg' = 'absolute-agi'; 'HThktCTbYAE772O.jpg' = 'psst'; 'HThxYhzaEAACDat.jpg' = 'all-in'
   'HTi8cgxagAARpfI.jpg' = 'the-plan'; 'HTix4BNbIAA3D44.jpg' = 'online'; 'HTjL7PPaYAA_O01.jpg' = 'approved'
   'HTnU2biacAES1pe.jpg' = 'off-on-a-trip'; 'HTtBlPMbwAA4Jtq.jpg' = 'the-agi-signal'; 'HTx15ZlbgAA7UlB.jpg' = 'one-more-message'
