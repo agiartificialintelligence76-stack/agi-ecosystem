@@ -104,7 +104,9 @@ beforeEach(() => {
   console.error = (...a) => logs.push(a.join(' '));
   calls = [];
   fake = { db: votesDb(), sqlMissing: false, dbDown: false, balances: new Map(), chainDown: false };
-  fake.db.poll_put({ p_id: DRAFT_POLL.id, p_body: structuredClone(DRAFT_POLL) });
+  // The owner-list fixture must stay scheduled ahead of the actual API clock.
+  const draftOpens = Date.now() + HOUR;
+  fake.db.poll_put({ p_id: DRAFT_POLL.id, p_body: { ...structuredClone(DRAFT_POLL), opens: new Date(draftOpens).toISOString(), closes: new Date(draftOpens + VOTE.days * 864e5).toISOString() } });
   fake.db.poll_put({ p_id: TEST_POLL.id, p_body: structuredClone(TEST_POLL) });
   openNow();
   globalThis.fetch = async (url, init = {}) => {

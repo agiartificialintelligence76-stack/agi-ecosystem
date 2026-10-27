@@ -28,6 +28,7 @@ export const SONGS = [
   // (2026-10-27, the owner: add MAINRUNNER and Save Slot 2 from VTuber_Project)
   { id: 'mainrunner', title: 'MAINRUNNER', file: 'mainrunner.mp3', seconds: 200, emoji: '🏃' },
   { id: 'saveslot', title: 'Save Slot 2', file: 'save-slot-2.mp3', seconds: 150, emoji: '💾' },
+  { id: 'agi', title: 'AGI.', file: 'agi.mp3', seconds: 169, emoji: '🎤' },
 ];
 export const MUSIC_PATH = '/music/';
 // her songs' version, in their address (…/send-it.mp3?v=2), so Telegram fetches a song again once its file has changed (it

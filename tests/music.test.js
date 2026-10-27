@@ -231,7 +231,7 @@ test('her songs: real MP3s Telegram takes (20 MB at most), as long as her button
   assert.deepEqual(SONGS.map((s) => [s.id, s.title, s.file, s.seconds]), [
     ['feel', 'Feel the AGI', 'feel-the-agi.mp3', 193], ['si', "SI (It's Better)", 'si-its-better.mp3', 190], ['send', 'Send It', 'send-it.mp3', 239],
     ['after', 'After AGI', 'after-agi.mp3', 240], ['mainrunner', 'MAINRUNNER', 'mainrunner.mp3', 200],
-    ['saveslot', 'Save Slot 2', 'save-slot-2.mp3', 150]]);
+    ['saveslot', 'Save Slot 2', 'save-slot-2.mp3', 150], ['agi', 'AGI.', 'agi.mp3', 169]]);
   const mp3s = readdirSync(MUSIC_DIR).filter((f) => /\.mp3$/i.test(f)).sort();
   assert.deepEqual(mp3s, SONGS.map((s) => s.file).sort(), 'public/music/: her songs, each in her menu');
   let total = 0;
@@ -245,8 +245,8 @@ test('her songs: real MP3s Telegram takes (20 MB at most), as long as her button
     const size = song.id === 'saveslot' ? 1024 : 1400;
     assert.deepEqual([cover.width, cover.height], [size, size], song.file);
   }
-  // (2026-10-27) Six songs, including MAINRUNNER and Save Slot 2, stay below 50 MB together.
-  assert.ok(total < 50_000_000, `${total} bytes: the site's code stays light to download`);
+  // (2026-10-27) Seven songs, including MAINRUNNER, Save Slot 2 and AGI., stay below 60 MB together.
+  assert.ok(total < 60_000_000, `${total} bytes: the site's code stays light to download`);
   // the rules themselves: with the Claude app's label in front (as in the owner's folder) it's still her song; anything else isn't
   const syncsafe = (n) => Buffer.from([(n >> 21) & 127, (n >> 14) & 127, (n >> 7) & 127, n & 127]);
   const frame = (id, body) => Buffer.concat([Buffer.from(id, 'latin1'), syncsafe(body.length), Buffer.alloc(2), body]);
@@ -297,6 +297,7 @@ test('/music in her private chat: her songs as buttons, right away (no 18+ quest
     [{ text: '🌌 After AGI · 4:00', callback_data: 'music:after' }],
     [{ text: '🏃 MAINRUNNER · 3:20', callback_data: 'music:mainrunner' }],
     [{ text: '💾 Save Slot 2 · 2:30', callback_data: 'music:saveslot' }],
+    [{ text: '🎤 AGI. · 2:49', callback_data: 'music:agi' }],
   ]);
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/music@agi1_appbot'), NOW + 1000), 'music', 'with her name too');
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/Music'), NOW + 2000), 'music');
@@ -411,11 +412,12 @@ test('when Telegram can\'t fetch it from our address: our server uploads it itse
   assert.deepEqual(notTelegram(), []);
 });
 
-test('MAINRUNNER and Save Slot 2 send their own files in private chats and group topics without a database', async () => {
+test('MAINRUNNER, Save Slot 2 and AGI. send their own files in private chats and group topics without a database', async () => {
   inGroup();
   const additions = [
     { id: 'mainrunner', title: 'MAINRUNNER', file: 'mainrunner.mp3', seconds: 200 },
     { id: 'saveslot', title: 'Save Slot 2', file: 'save-slot-2.mp3', seconds: 150 },
+    { id: 'agi', title: 'AGI.', file: 'agi.mp3', seconds: 169 },
   ];
   for (const group of [false, true]) {
     forgetMusic();
@@ -432,7 +434,7 @@ test('MAINRUNNER and Save Slot 2 send their own files in private chats and group
       assert.deepEqual(audio.reply_parameters, group ? { message_id: 60, allow_sending_without_reply: true } : undefined);
       assert.equal(audio.message_thread_id, group ? 7 : undefined);
     }
-    assert.equal(sent().length, 2);
+    assert.equal(sent().length, 3);
     assert.deepEqual(notTelegram(), [], 'no database or other service');
   }
 });
