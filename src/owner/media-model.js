@@ -42,6 +42,7 @@ export function validateMemes(input, builtins) {
     ids.add(value.id);
     if (value.custom !== undefined && typeof value.custom !== 'boolean') throw new Error('A gallery item has an invalid source.');
     if (value.hidden !== undefined && typeof value.hidden !== 'boolean') throw new Error('Choose whether the gallery item is shown.');
+    if (value.addedAt !== undefined && (!Number.isSafeInteger(value.addedAt) || value.addedAt < 0 || value.addedAt > 8_640_000_000_000_000)) throw new Error('A gallery upload date is invalid.');
     const custom = value.custom === true, original = originals.get(value.id);
     if (custom ? !MEDIA_ID.test(value.id) : !original) throw new Error('This gallery item is not a built-in meme or a confirmed upload.');
     const kind = value.kind ?? original?.kind;
@@ -61,6 +62,8 @@ export function validateMemes(input, builtins) {
     const secs = value.secs ?? original?.secs ?? 0;
     if (typeof secs !== 'number' || !Number.isFinite(secs) || secs < 0 || secs > 86400) throw new Error('The video length must be between 0 and 24 hours.');
     const result = { id: value.id, custom, kind, title: plainText(value.title, 240, original?.title || 'Untitled', 'Gallery title'), note: plainText(value.note, 1200, original?.note || '', 'Gallery note'), src, thumb, secs: family === 'image' ? 0 : secs, hidden: value.hidden === true };
+    const addedAt = custom ? value.addedAt : original?.addedAt;
+    if (addedAt !== undefined) result.addedAt = addedAt;
     if (custom) {
       const savedProof = proof(value.proof), thumbProof = proof(value.thumbProof);
       if (savedProof) result.proof = savedProof;

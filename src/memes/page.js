@@ -214,7 +214,7 @@ function columns(grid) {
 }
 
 function makeCard(m, g) {
-  const li = el('li', 'mm-card', { 'data-id': m.id });
+  const li = el('li', 'mm-card', { id: `meme-${m.id}`, 'data-id': m.id });
   const btn = el('button', 'mm-open', { type: 'button', 'aria-label': `${isVideo(m) ? 'Play' : 'Open'}: ${m.title}` });
   const thumb = thumbOf(m);
   if (thumb) {

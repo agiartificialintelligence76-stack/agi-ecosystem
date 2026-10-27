@@ -76,7 +76,8 @@
 .mm-group-title { display: flex; align-items: baseline; gap: 12px; font-size: clamp(28px, 3.6vw, 42px); font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
 .mm-group-n { font-family: var(--mono); font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--fg-2); }
 .mm-group-note { font-size: 14.5px; color: var(--fg-2); }
-.mm-grid { display: grid; gap: clamp(14px, 1.8vw, 22px); grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+/* Gallery lists align with their headings instead of inheriting the browser's list indent. */
+.mm-grid { display: grid; margin: 0; padding: 0; list-style: none; gap: clamp(14px, 1.8vw, 22px); grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
 .mm-grid-slop { grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); }
 .mm-grid-image { grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
 
@@ -199,7 +200,7 @@ video.mm-v-media { width: 100%; }
   .mm-grid-image { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .mm-grid-image .mm-body { padding: 8px 8px 8px 10px; }
   .mm-grid-image .mm-name { font-size: 14px; }
-  .mm-grid-image .mm-note { display: none; }
+  .mm-grid-image .mm-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; font-size: 12px; line-height: 1.35; }
   .mm-grid-image .mm-dl { width: 34px; height: 34px; }
   .mm-v-close { translate: 0 0; top: 8px; right: 8px; }
   .mm-v-nav { width: 38px; height: 38px; }

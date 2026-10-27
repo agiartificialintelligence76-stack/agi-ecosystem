@@ -101,13 +101,13 @@ export async function finishMediaUpload(cfg, body, wallet, now = Date.now()) {
   if (response.headers.get('content-encoding') && response.headers.get('content-encoding') !== 'identity') { await response.body?.cancel(); throw refused('The uploaded file uses an unsupported encoding. Upload the original image or video.', 400, 'upload_mismatch'); }
   const bytes = await readHeader(response);
   if (!matchesMediaHeader(data.m, bytes)) throw refused('This file does not match its image or video format. Export a JPEG, PNG, WebP, GIF, MP4 or WebM and upload it again.', 400, 'upload_mismatch');
-  const verified = sign(cfg.passSecret, 'verified', { v: 1, p: data.p, m: data.m, b: data.b });
+  const verified = sign(cfg.passSecret, 'verified', { v: 1, p: data.p, m: data.m, b: data.b, a: now });
   const image = MEDIA_MIME_TYPES[data.m].family === 'image';
-  return { ok: true, media: { id: `upload-${data.p.slice(0, 36)}`, custom: true, kind: image ? 'image' : 'video', title: data.n.replace(/\.[^.]+$/, '') || 'New upload', note: '', src: `${MEDIA_PUBLIC_ROOT}${data.p}`, thumb: '', secs: 0, hidden: false, proof: verified } };
+  return { ok: true, media: { id: `upload-${data.p.slice(0, 36)}`, custom: true, kind: image ? 'image' : 'video', title: data.n.replace(/\.[^.]+$/, '') || 'New upload', note: '', src: `${MEDIA_PUBLIC_ROOT}${data.p}`, thumb: '', secs: 0, hidden: false, addedAt: now, proof: verified } };
 }
 
 // A confirmation persists with private content/history. Public copies never contain it.
-// Its signature binds immutable UUID path, family and exact size; direct uploads cannot overwrite.
+// Its signature binds immutable UUID path, family, exact size and upload date; direct uploads cannot overwrite.
 export function verifyMediaProofs(cfg, memes = [], previous = []) {
   const prior = new Map(previous.filter((m) => m.custom).map((m) => [m.id, m]));
   for (const media of memes) {
@@ -116,6 +116,7 @@ export function verifyMediaProofs(cfg, memes = [], previous = []) {
     const data = readSigned(cfg.passSecret, 'verified', media.proof);
     const unchanged = existing?.src === media.src && (existing.kind === 'image') === (media.kind === 'image');
     if (!unchanged && (!uploadShape(data) || data.p !== mediaPath(media.src) || `upload-${data.p.slice(0, 36)}` !== media.id || (MEDIA_MIME_TYPES[data.m].family === 'image') !== (media.kind === 'image'))) return { ok: false, why: 'Finish uploading each new gallery file before publishing.' };
+    if (media.addedAt !== (unchanged ? existing.addedAt : data?.a)) return { ok: false, why: 'A gallery upload date cannot be changed. Reload the gallery and try again.' };
     if (media.thumb) {
       const poster = readSigned(cfg.passSecret, 'verified', media.thumb === media.src ? media.proof : media.thumbProof);
       const sameCover = existing?.thumb === media.thumb || (unchanged && media.kind === 'image' && media.thumb === media.src);

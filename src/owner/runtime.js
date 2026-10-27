@@ -3,6 +3,7 @@
 import '../styles/site-content.css';
 import { normalizePath, pageForPath, protectedPath } from './catalog.js';
 import { safeUrl, safeSelector } from './model.js';
+import { memeEditSelector } from './media-target.js';
 
 const API = '/api/wallet?site-content';
 const MAX_ITEMS = 1800;
@@ -396,7 +397,7 @@ export function applySiteContent(data, root = document) {
     state.watch = Boolean(edits.length || exactPage?.blocks?.length || one(root, '[data-owner-custom-page]') || state.document.pages?.some((p) => p.hidden) || allEdits.some((e) => e.hidden));
     for (const edit of edits) {
       if (typeof edit.selector !== 'string' || edit.selector.length > 600) continue;
-      const node = targetFor(state, edit.selector);
+      const node = targetFor(state, path === '/memes' ? memeEditSelector(edit, state.document) : edit.selector);
       if (!selectable(node)) continue;
       if (edit.hidden) {
         hide(state, node);

@@ -2,6 +2,22 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizePath, protectedPath, pageForPath } from '../src/owner/catalog.js';
+import { memeEditSelector } from '../src/owner/media-target.js';
+import { MEDIA_PUBLIC_ROOT } from '../src/owner/media-model.js';
+
+test('old positional card edits stay on the original meme after newest-first sorting', () => {
+  const title = ' > div:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1)';
+  const note = title.replace('p:nth-of-type(1)', 'p:nth-of-type(2)');
+  const upload = (id, extra = {}) => ({ id: `upload-${id}`, custom: true, kind: 'image', title: 'Image', note: 'Saved caption', src: `${MEDIA_PUBLIC_ROOT}${id}.png`, ...extra });
+  const first = upload('a1111111-2222-4333-8444-555555555555');
+  const newer = upload('b1111111-2222-4333-8444-555555555555', { addedAt: Date.parse('2026-10-28T00:00:00Z'), note: 'New caption' });
+  const document = { memes: [newer, first, { id: 'vlad', title: 'Saved Vlad title' }] };
+  assert.equal(memeEditSelector({ selector: `#mm-grid-video > li:nth-of-type(1)${title}`, text: 'Saved Vlad title' }, document), `#meme-vlad${title}`);
+  assert.equal(memeEditSelector({ selector: `#mm-grid-image > li:nth-of-type(1)${note}`, text: 'Saved caption' }, document), `#meme-${first.id}${note}`);
+  assert.equal(memeEditSelector({ selector: '#mm-grid-image > li:nth-of-type(1)', hidden: true }, document), `#meme-${first.id}`);
+  assert.equal(memeEditSelector({ selector: `#meme-starlight${title}`, text: 'New title' }, document), `#meme-starlight${title}`);
+  assert.equal(memeEditSelector({ selector: '#site-nav > a:nth-of-type(4)' }, document), '#site-nav > a:nth-of-type(4)');
+});
 
 // Exercise the actual runtime with a small DOM, without a wallet, database, browser installation or network.
 const source = readFileSync(new URL('../src/owner/runtime.js', import.meta.url), 'utf8')

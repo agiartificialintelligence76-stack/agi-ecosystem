@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { MEMES, mergeMemes, fileOf, thumbOf, downloadName, downloadUrl } from '../src/memes/list.js';
-import { MEDIA_ORIGIN, MEDIA_BUCKET, MEDIA_PUBLIC_ROOT } from '../src/owner/media-model.js';
+import { MEDIA_ORIGIN, MEDIA_BUCKET, MEDIA_PUBLIC_ROOT, validateMemes } from '../src/owner/media-model.js';
 
 const moduleUrl = new URL('../src/owner/media.js', import.meta.url);
 const source = readFileSync(moduleUrl, 'utf8').replace(/^import '[^']+\.css';$/gm, '')
@@ -13,13 +13,40 @@ const OTHER = 'b1111111-2222-4333-8444-555555555555';
 const image = (id = UUID) => ({ id: `upload-${id}`, custom: true, kind: 'image', title: 'New image', note: '', src: `${MEDIA_PUBLIC_ROOT}${id}.png`, thumb: '', secs: 0, hidden: false, proof: 'payload.signature' });
 const video = () => ({ ...image(), kind: 'video', src: `${MEDIA_PUBLIC_ROOT}${UUID}.mp4`, secs: 42 });
 
-test('gallery merges uploaded items first, keeps originals unchanged and respects built-in tombstones', () => {
+test('legacy gallery order keeps uploads first, originals unchanged and built-in tombstones respected', () => {
   const original = structuredClone(MEMES);
   const hiddenId = MEMES[0].id, changedId = MEMES.find(m=>m.kind==='image').id;
-  const merged = mergeMemes([image(), {id:hiddenId,custom:false,hidden:true}, {id:changedId,title:'Edited title',note:'Edited caption'}]);
+  const merged = mergeMemes([image(), {id:hiddenId,custom:false,hidden:true}, {id:changedId,title:'Edited title',note:'Edited caption'}], {sort:false});
   assert.equal(merged[0].id, `upload-${UUID}`);assert.equal(merged.some(m=>m.id===hiddenId),false);assert.equal(merged.find(m=>m.id===changedId).title,'Edited title');
   assert.deepEqual(MEMES,original);assert.equal(mergeMemes([]).some(m=>m.id===hiddenId),true);
   const hidden = mergeMemes([{id:changedId,title:'Saved title',hidden:true}],{includeHidden:true}).find(m=>m.id===changedId);assert.equal(hidden.title,'Saved title');assert.equal(hidden.hidden,true);
+});
+
+test('gallery sorts new releases and uploads newest first without moving edited or hidden items', () => {
+  const freshIds = ['mainrunner-mv', 'starlight', 'at-the-desk'];
+  const release = MEMES.find(m => m.id === 'mainrunner-mv').addedAt;
+  const older = image(), newer = { ...image(OTHER), addedAt: release + 1000 };
+  assert.deepEqual(mergeMemes([older]).slice(0, 4).map(m => m.id), [...freshIds, older.id], 'new folder media precedes undated older uploads');
+  const merged = mergeMemes([older, newer, { id: 'starlight', title: 'Edited title', addedAt: release + 9000 }]);
+  assert.deepEqual(merged.slice(0, 5).map(m => m.id), [newer.id, ...freshIds, older.id]);
+  assert.equal(merged.find(m => m.id === 'starlight').addedAt, release, 'built-in dates cannot be changed by overrides');
+  assert.equal(merged.find(m => m.id === 'starlight').title, 'Edited title');
+  const edited = mergeMemes([{ ...newer, title: 'A changed title' }, older]);
+  assert.equal(edited[0].addedAt, newer.addedAt);
+  assert.equal(edited[0].title, 'A changed title');
+  assert.deepEqual(mergeMemes([older, image(OTHER)]).filter(m => m.custom).map(m => m.id), [older.id, newer.id], 'undated ties keep the existing order');
+  assert.equal(mergeMemes([older, newer], { sort: false })[0].id, older.id, 'legacy selector resolution can use unsorted positions');
+  const hidden = [{ ...newer, hidden: true }, { id: 'mainrunner-mv', hidden: true }];
+  assert.equal(mergeMemes(hidden).some(m => hidden.some(h => h.id === m.id)), false);
+  assert.equal(mergeMemes(hidden, { includeHidden: true })[0].hidden, true);
+});
+
+test('gallery upload dates are optional valid numeric timestamps', () => {
+  assert.equal('addedAt' in validateMemes([image()], MEMES)[0], false);
+  assert.equal(validateMemes([{ ...image(), addedAt: 1793094780000 }], MEMES)[0].addedAt, 1793094780000);
+  for (const addedAt of [-1, 1.5, NaN, Infinity, '1793094780000', null, {}, 8_640_000_000_000_001]) {
+    assert.throws(() => validateMemes([{ ...image(), addedAt }], MEMES), /upload date/);
+  }
 });
 
 test('gallery ignores foreign URLs, invalid media families and duplicate uploads', () => {

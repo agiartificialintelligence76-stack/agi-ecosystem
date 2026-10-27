@@ -136,8 +136,26 @@ test('uploaded image and video/poster records save through normal history API; p
   const publicData = await publicResponse.json();
   assert.equal(publicData.document.memes[1].kind, 'slopcore');
   assert.equal(publicData.document.memes[1].thumb, image.media.src);
+  assert.ok(Number.isSafeInteger(image.media.addedAt));
+  assert.equal(publicData.document.memes[0].addedAt, image.media.addedAt);
   assert.doesNotMatch(JSON.stringify(publicData), /proof|ticket|sb_secret|Bearer/);
   assert.equal(validateDocument(publicData.document).ok, true, 'public documents need no private proof');
+});
+
+test('server-issued upload dates survive edits and cannot be changed or removed on save', async () => {
+  const file = await upload();
+  const media = file.media;
+  assert.ok(Number.isSafeInteger(media.addedAt) && Math.abs(Date.now() - media.addedAt) < 10_000);
+  const document = item => ({ ...emptyDocument(), memes: [item] });
+  assert.equal((await post('site-save', { revision: 0, document: document({ ...media, addedAt: media.addedAt + 1 }) })).status, 400, 'new upload date is bound to its proof');
+  assert.equal((await post('site-save', { revision: 0, document: document(media) })).status, 200);
+  assert.equal((await post('site-save', { revision: 1, document: document({ ...media, title: 'Edited title' }) })).status, 200);
+  assert.equal(doc.memes[0].addedAt, media.addedAt);
+  const noDate = { ...media }; delete noDate.addedAt;
+  for (const altered of [{ ...media, addedAt: media.addedAt + 1 }, noDate]) {
+    assert.equal((await post('site-save', { revision: 2, document: document(altered) })).status, 400, 'saved dates are immutable');
+  }
+  assert.equal(doc.memes[0].addedAt, media.addedAt);
 });
 test('site-save rejects unconfirmed, changed-path and forged poster sources', async () => {
   const file = await upload();
