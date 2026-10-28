@@ -8,7 +8,8 @@
 //                                         smaller scan from the chain alone when clank.trade doesn't answer or know the coin)
 //   GET /api/checker?logo=0x…&s=96|512   a coin's picture (a row's circle / the big view): since 2026-10-05 its IPFS file from
 //                                         public IPFS gateways (or ClankBot's host), made small by our server
-// Read-only and the same for everyone, so Vercel's CDN shares every answer: the whole list 5 minutes, the newest coins 10
+// Read-only and the same for everyone, so Vercel's CDN shares every answer: the whole list 5 minutes (a minute when
+// clank.trade cut it short; the last one for up to a day while a new one can't be read: 2026-10-28), the newest coins 10
 // seconds, a scan 5 minutes (1 minute for a coin less than a day old), a picture a week. However many visitors look,
 // clank.trade is asked about that often per CDN region. No database, no human check, no keys.
 // Only these addresses exist (anything else is 400, before anything is fetched), so nobody can make the CDN miss on purpose;
@@ -23,11 +24,15 @@ import { fetchCoinPicture } from '../server/coin-pictures.js';
 
 const DAY = 86_400_000;
 const noStore = { 'Cache-Control': 'no-store' };
-const cache = (browser, cdn, stale = 0) => ({
-  'Cache-Control': `public, max-age=${browser}, s-maxage=${cdn}${stale ? `, stale-while-revalidate=${stale}` : ''}`,
+const cache = (browser, cdn, stale = 0, ifError = 0) => ({
+  'Cache-Control': `public, max-age=${browser}, s-maxage=${cdn}${stale ? `, stale-while-revalidate=${stale}` : ''}${ifError ? `, stale-if-error=${ifError}` : ''}`,
 });
-// the whole list: browsers keep it a minute, the CDN 5 minutes (then it serves the old one while it reads a new one)
-const LIST = cache(60, 300, 600);
+// the whole list: browsers keep it a minute, the CDN 5 minutes (then it serves the old one while it reads a new one).
+// Since 2026-10-28 (the owner: "the clankchecker is not working"): when reading a new one fails, the CDN keeps serving the
+// last list for up to a day (stale-if-error, which Vercel's CDN supports since February 2026) instead of the error; and a
+// list that clank.trade cut short (a page it still didn't answer, asked twice) is kept a minute, so the whole one is back soon.
+const LIST = cache(60, 300, 600, DAY / 1000);
+const LIST_SHORT = cache(30, 60, 240, DAY / 1000);
 // the newest coins: 10 seconds, no stale copies (the point is to be fresh)
 const LATEST = cache(5, 10);
 // a scan: a coin under a day old changes fast (1 minute), an older one less (5 minutes)
@@ -43,7 +48,7 @@ export function resetForTests() {
 }
 
 async function coinList() {
-  if (memo.list && Date.now() - memo.at < 120_000) return memo.list;
+  if (memo.list && Date.now() - memo.at < (memo.list.cutShort ? 30_000 : 120_000)) return memo.list;
   running ??= scanClank().then((list) => { memo = { at: Date.now(), list }; return list; }).finally(() => { running = null; });
   return running;
 }
@@ -70,7 +75,7 @@ export async function GET(request) {
   if (search === '' || search === '?') {
     try {
       const list = await coinList();
-      return Response.json(forThisSite(cfg, list), { headers: LIST });
+      return Response.json(forThisSite(cfg, list), { headers: list.cutShort ? LIST_SHORT : LIST });
     } catch (err) {
       console.error(`[checker] couldn't read clank.trade's coin list: ${err.message}`);
       return Response.json({ error: 'unverified' }, { status: 503, headers: noStore });

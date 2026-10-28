@@ -192,9 +192,23 @@ export function startChecker(root) {
     if (retry) {
       const b = el('button', 'chk-retry', 'Try again');
       b.type = 'button';
-      b.addEventListener('click', () => { loading = null; load(); });
+      b.addEventListener('click', () => { loading = null; load({ manual: true }); });
       statusEl.append(' ', b);
     }
+  }
+  // the list couldn't be read (2026-10-28): it's asked again by itself, 20 s, 40 s, then every minute, like the live
+  // updates (a hidden tab waits until it's shown again), so a hiccup at clank.trade never needs a click; after 10 tries
+  // in a row (about 9 minutes) only Try again asks, so a forgotten tab doesn't ask all day
+  let listFails = 0, listRetry = 0;
+  function retryList() {
+    clearTimeout(listRetry);
+    if (listFails >= 10) return;
+    listRetry = setTimeout(function again() {
+      listRetry = 0;
+      if (coins || loading) return;
+      if (document.visibilityState === 'visible') load();
+      else document.addEventListener('visibilitychange', again, { once: true });
+    }, Math.min(60_000, LIVE_EVERY * 2 ** listFails));
   }
   function setList(data) {
     const next = data.coins.map(tidyCoin).filter(Boolean);
@@ -214,12 +228,15 @@ export function startChecker(root) {
     if (!res.ok || data?.error) throw new Error(data?.error || `HTTP ${res.status}`);
     return data;
   }
-  function load() {
+  function load({ manual = false } = {}) {
     loading ??= (async () => {
+      clearTimeout(listRetry);
+      if (manual) listFails = 0;                   // (someone's there: the tries by itself start over)
       status('Scanning clank.trade…');
       try {
         const data = await getJson('/api/checker');
         if (!Array.isArray(data.coins)) throw new Error('no coins');
+        listFails = 0;
         setList(data);
         render();
         live.on = true;
@@ -228,8 +245,10 @@ export function startChecker(root) {
         wake();                                    // the newest coins at once (the list may be a few minutes old)
       } catch {
         loading = null;
-        status("Couldn't reach clank.trade right now.", true);
-        announce("Couldn't reach clank.trade right now.");
+        listFails += 1;
+        status("Couldn't reach clank.trade right now · retrying", true);
+        if (manual || listFails === 1) announce("Couldn't reach clank.trade right now.");
+        retryList();
       }
     })();
     return loading;

@@ -24,6 +24,8 @@
 //     requested through the gateway you are using", HTTP 401), so the same IPFS files come from public IPFS gateways
 //     (anyone may read IPFS), and our server shrinks them itself (sharp): server/coin-pictures.js. A few coins use
 //     ClankBot's own picture host.
+// Since 2026-10-28 (the owner: "the clankchecker is not working"): one slow answer from clank.trade no longer loses the
+// whole list (see scanClank), and the CDN keeps showing the last list while clank.trade is away (api/checker.js).
 // api/checker.js serves all of it (Vercel's CDN shares each answer); src/sections/checker.js shows it.
 import { TOKENS, bestPair } from '../src/prices/parse.js';
 import { tickerKey, markCopycats } from '../src/checker/copycat.js';
@@ -93,7 +95,7 @@ function pricesFrom(pairs, answers, into = new Map()) {
 }
 async function pricesFor(pairs, prices, { timeoutMs = 6000 } = {}) {
   const missing = [...new Set(pairs)].filter((p) => isAddress(p) && !prices.has(p) && !KNOWN_PAIRS.includes(p)).slice(0, 5);
-  if (!missing.length) return prices;
+  if (!missing.length || timeoutMs < 500) return prices;       // (no time left: their dollars stay unknown)
   try { pricesFrom(missing, await clankApi(priceCalls(missing), { timeoutMs }), prices); } catch { /* their dollars stay unknown */ }
   return prices;
 }
@@ -179,23 +181,46 @@ function listed(raw, prices, trending) {
 // copycats are told apart by size: their market caps in dollars (an SPCX coin and an ETH coin, compared fairly)
 const bySize = { size: (c) => c.mcUsd ?? 0 };
 
+// How long clank.trade gets (2026-10-28): most of its answers take about 0.4 s, but now and then one takes 2 to 12 s, and
+// the same request asked again answers at once. So a request still unanswered after HEDGE_MS is asked a second time
+// (clankApi's hedgeMs: the first answer wins), and a page gets PAGE_MS at most.
+export const HEDGE_MS = 1500;
+const PAGE_MS = 8000;
+
 // Every coin, page by page (clank.trade only gives 12 at a time), newest first. Stops after MAX_PAGES or `budgetMs`
 // (a function may run 25 s): then `complete` is false. Keep the separately fetched trending coins even when their older
 // list pages were not reached, so important older coins do not disappear from Trending or Graduated on a slow fetch.
-export async function scanClank({ budgetMs = 18_000, now = Date.now() } = {}) {
+// Since 2026-10-28 (the owner: "the clankchecker is not working"): 466 coins are 39 pages asked one after another, and a
+// single page that didn't answer within 8 s used to lose the whole list ("Couldn't reach clank.trade right now"), or a
+// page started near the end of the budget could run past Vercel's 25 s. Now a slow page is asked twice, no request runs
+// past `limitMs` (so the budget could grow from 18 s to 20 s: 39 pages take about 16 s, a few more when some are slow),
+// and a page that still can't be read ends the list there: what was read is kept (`complete: false`, and `cutShort: true`
+// when that was before the budget's end: api/checker.js keeps that one a minute instead of five). Only the first request
+// failing means no list.
+export async function scanClank({ budgetMs = 20_000, limitMs = 21_000, now = Date.now() } = {}) {
   const t0 = Date.now();
-  const [first, trending, ...rates] = await clankApi(FIRST);
+  const left = () => t0 + limitMs - Date.now();
+  const [first, trending, ...rates] = await clankApi(FIRST, { timeoutMs: PAGE_MS, hedgeMs: HEDGE_MS });
   if (!Array.isArray(first.data?.coins)) throw new Error('clank.trade sent no coin list');
   const raw = [...first.data.coins];
-  let cursor = first.data.nextCursor, pages = 1;
+  let cursor = first.data.nextCursor, pages = 1, cutShort = false;
   while (typeof cursor === 'string' && cursor && cursor.length < 1000 && pages < MAX_PAGES && Date.now() - t0 < budgetMs) {
-    const [page] = await clankApi([['coins.list', { cursor }]]);
-    if (!Array.isArray(page.data?.coins)) throw new Error('clank.trade sent no coin list');
-    raw.push(...page.data.coins);
-    cursor = page.data.nextCursor;
-    pages += 1;
+    const timeoutMs = Math.min(PAGE_MS, left());
+    if (timeoutMs < 1000) break;                                 // (no time for another page: the list ends here)
+    try {
+      const [page] = await clankApi([['coins.list', { cursor }]], { timeoutMs, hedgeMs: HEDGE_MS });
+      if (!Array.isArray(page.data?.coins)) throw new Error('clank.trade sent no coin list');
+      raw.push(...page.data.coins);
+      cursor = page.data.nextCursor;
+      pages += 1;
+    } catch (err) {
+      console.warn(`[checker] clank.trade's coin list stopped after ${pages} pages (${raw.length} coins): ${err.message}`);
+      // (a page that only ran out of the time left at the end is the budget's stop, as before; earlier, it's cut short)
+      cutShort = Date.now() - t0 < budgetMs;
+      break;
+    }
   }
-  const prices = await pricesFor(raw.map(pairOf), pricesFrom(KNOWN_PAIRS, rates));
+  const prices = await pricesFor(raw.map(pairOf), pricesFrom(KNOWN_PAIRS, rates), { timeoutMs: Math.min(6000, left()) });
   const top = trendingList(trending.data);
   const all = listed(raw, prices, top);
   const present = new Set(all.map(c => c.address));
@@ -216,6 +241,7 @@ export async function scanClank({ budgetMs = 18_000, now = Date.now() } = {}) {
     total: all.length,
     graduated: all.filter((c) => c.graduated).length,
     complete: !cursor,
+    ...(cutShort ? { cutShort: true } : {}),
     ethUsd: prices.get(ETH) ?? null,
     spcxUsd: prices.get(SPCX) ?? null,
     updatedAt: now,
@@ -227,7 +253,7 @@ export async function scanClank({ budgetMs = 18_000, now = Date.now() } = {}) {
 // dollars) and the price of ETH. The page asks for it every 10 s while ClankChecker is on screen and merges it into the
 // whole list, so a coin launched a moment ago appears without a reload, and trending coins' numbers stay current.
 export async function latestClank({ now = Date.now() } = {}) {
-  const [first, trending, ...rates] = await clankApi(FIRST, { timeoutMs: 6000 });
+  const [first, trending, ...rates] = await clankApi(FIRST, { timeoutMs: 6000, hedgeMs: HEDGE_MS });
   if (!Array.isArray(first.data?.coins)) throw new Error('clank.trade sent no coin list');
   const prices = await pricesFor(first.data.coins.map(pairOf), pricesFrom(KNOWN_PAIRS, rates), { timeoutMs: 4000 });
   const top = trendingList(trending.data);

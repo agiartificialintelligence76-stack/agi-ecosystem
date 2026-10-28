@@ -63,20 +63,63 @@ export async function readLimited(res, max, { cut = false } = {}) {
 const CLANK_API = 'https://clank.trade/v1/trpc/';
 // One request to clank.trade's API with several questions at once ("batch"): [[name, input], …] → for each question
 // { data } or { error: 'not_found' | 'bad' }. Throws when clank.trade doesn't answer properly (down, a bot wall, a change).
-export async function clankApi(calls, { timeoutMs = 8000 } = {}) {
+// `hedgeMs` (2026-10-28, ClankChecker's list): clank.trade usually answers in about 0.4 s, but now and then one request
+// takes 2 to 12 s, and the very same request asked again answers at once (timed from the owner's browser that day). With
+// hedgeMs, a request still unanswered after that long is asked a second time and whichever answer comes first is used
+// (the other is stopped); a first try that fails is asked again at once. Two tries at most, both over by `timeoutMs`.
+export async function clankApi(calls, { timeoutMs = 8000, hedgeMs = 0 } = {}) {
   const names = calls.map(([name]) => name).join(',');
   const input = Object.fromEntries(calls.map(([, value], i) => [i, value ?? {}]));
-  const res = await fetch(`${CLANK_API}${names}?batch=1&input=${encodeURIComponent(JSON.stringify(input))}`, {
-    headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(timeoutMs),
-  });
+  const url = `${CLANK_API}${names}?batch=1&input=${encodeURIComponent(JSON.stringify(input))}`;
+  const body = hedgeMs > 0
+    ? await hedged((signal) => askClank(url, calls.length, signal), timeoutMs, hedgeMs)
+    : await askClank(url, calls.length, AbortSignal.timeout(timeoutMs));
+  return body.map((item) => (item && typeof item === 'object' && 'result' in item
+    ? { data: item.result?.data ?? null }
+    : { error: item?.error?.data?.httpStatus === 404 ? 'not_found' : 'bad' }));
+}
+// One try: clank.trade's answer (one item per question), or an error
+async function askClank(url, count, signal) {
+  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal });
   // 200 = all answered, 207 = some did, 404 = all "not found"; anything else is an outage or a wall
   if (![200, 207, 404].includes(res.status)) throw new Error(`clank.trade HTTP ${res.status}`);
   const bytes = await readLimited(res, 3_000_000);
   if (!bytes) throw new Error('clank.trade answer too big');
   let body;
   try { body = JSON.parse(bytes.toString('utf8')); } catch { throw new Error('clank.trade answer is not JSON'); }
-  if (!Array.isArray(body) || body.length !== calls.length) throw new Error('clank.trade answer has an unexpected shape');
-  return body.map((item) => (item && typeof item === 'object' && 'result' in item
-    ? { data: item.result?.data ?? null }
-    : { error: item?.error?.data?.httpStatus === 404 ? 'not_found' : 'bad' }));
+  if (!Array.isArray(body) || body.length !== count) throw new Error('clank.trade answer has an unexpected shape');
+  return body;
+}
+// try(signal) once; a second try after `hedgeMs` without an answer, or at once if the first fails; the first answer wins.
+// Every try ends `timeoutMs` after the start. → the answer, or the last error when every try failed
+const SECOND_TRY_MS = 500;                                         // (less time left than this: no second try)
+export function hedged(attempt, timeoutMs, hedgeMs) {
+  const end = Date.now() + timeoutMs;
+  return new Promise((resolve, reject) => {
+    const stops = [];
+    let failed = 0, timer = 0, done = false;
+    const finish = (settle, value) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      for (const stop of stops) stop.abort();                       // (the slower try, if one is still on its way)
+      settle(value);
+    };
+    const start = () => {
+      clearTimeout(timer);
+      const stop = new AbortController();
+      stops.push(stop);
+      // (its own timer, not AbortSignal.any with AbortSignal.timeout: on Node 20 that pair can fail to ever fire)
+      const expire = setTimeout(() => stop.abort(new DOMException('The operation was aborted due to timeout', 'TimeoutError')),
+        Math.max(1, end - Date.now()));
+      Promise.resolve().then(() => attempt(stop.signal)).finally(() => clearTimeout(expire)).then((value) => finish(resolve, value), (err) => {
+        if (done) return;
+        failed += 1;
+        if (stops.length === 1 && end - Date.now() >= SECOND_TRY_MS) start();   // the first try failed: the second one now
+        else if (failed === stops.length) finish(reject, err);                   // every try failed
+      });
+    };
+    start();
+    if (timeoutMs - hedgeMs >= SECOND_TRY_MS) timer = setTimeout(() => { if (!done && stops.length === 1) start(); }, hedgeMs);
+  });
 }

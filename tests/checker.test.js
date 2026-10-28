@@ -10,7 +10,8 @@ import sharp from 'sharp';
 import zlib from 'node:zlib';
 import { GET, POST, resetForTests } from '../api/checker.js';
 import { analyze, checkCoin, scanClank, latestClank, markCopycats, showTicker, tickerKey, usd, percent, timeText, maskSlurs, cidOf,
-  coinPictureId, forgetPictures, POOL_MANAGER, OFFICIAL, MAX_PAGES, pictureOf } from '../server/checker.js';
+  coinPictureId, forgetPictures, POOL_MANAGER, OFFICIAL, MAX_PAGES, pictureOf, HEDGE_MS } from '../server/checker.js';
+import { hedged } from '../server/coins.js';
 import { fetchCoinPicture, PICTURE_SIZES, GATEWAYS, ORIGINAL_MAX_BYTES, pictureType, setSharpForTests } from '../server/coin-pictures.js';
 import { CHECK_LINES, LEVELS, checkLine, spokenOf } from '../src/checker/lines.js';
 import { LINES, LINE_MOODS, MOOD_STYLES } from '../server/voice.js';
@@ -117,6 +118,14 @@ const onChain = (coin, { state = 0, reserve = 950957059954408513n, creator = 0n,
     curves: { [CURVE]: { state, reserve } },
   };
 };
+// a request clank.trade never answers: it ends only when our side stops it (its number is noted in fake.stopped). Like a
+// real open connection, it keeps Node running meanwhile (AbortSignal.timeout's own timer doesn't)
+const stalled = (signal, n) => new Promise((_, reject) => {
+  const open = setInterval(() => {}, 1000);
+  const stop = () => { clearInterval(open); fake.stopped.push(n); reject(signal.reason ?? new DOMException('This operation was aborted', 'AbortError')); };
+  if (signal?.aborted) stop();
+  else signal?.addEventListener('abort', stop, { once: true });
+});
 function listRow(c) {
   return { id: `market:4663:${c.address}`, address: c.address, name: c.name, symbol: c.symbol, image: c.image ?? 'ipfs://x', creator: CREATOR, website: null, twitter: null,
     createdAt: String(c.createdAt ?? S - D), marketCap: c.marketCap ?? 1.55, quoteSymbol: 'ETH', quoteCurrency: '0x0000000000000000000000000000000000000000', state: c.state ?? 0, progress: c.progress ?? 0 };
@@ -137,6 +146,9 @@ beforeEach(() => {
     chain: null,                            // Robinhood Chain: null = the node doesn't answer (as before 2026-09-29)
     chainFail: new Set(), chainDelay: 0, chainStringIds: false,
     down: false, wall: false,
+    // clank.trade's slow and failed answers (2026-10-28), by each request's number (1 = the first one asked):
+    // stall = never answers until our side stops it (its number then goes in `stopped`), fail = HTTP 500
+    clankAsks: 0, stall: new Set(), fail: new Set(), stopped: [],
     coins: {},                              // address → { detail, holders, trades }
     pages: [[]],                            // coins.list pages (rows)
     trending: [],
@@ -175,6 +187,9 @@ beforeEach(() => {
     }
     const u = new URL(url);
     if (u.origin === 'https://clank.trade' && u.pathname.startsWith('/v1/trpc/')) {
+      const n = ++fake.clankAsks;
+      if (fake.stall.has(n)) await stalled(init.signal, n);
+      if (fake.fail.has(n)) return new Response('busy', { status: 500 });
       if (fake.down) throw new Error('connect ECONNREFUSED');
       if (fake.wall) return new Response('<html>Just a moment...</html>', { status: 403, headers: { 'content-type': 'text/html' } });
       const names = u.pathname.slice('/v1/trpc/'.length).split(',');
@@ -765,9 +780,11 @@ test('the list: every page, trending ranks, dollars, copycats marked, every coin
   fake.trending = [OFFICIAL, CABO, COIN];
   const r = await get();
   assert.equal(r.status, 200);
-  assert.equal(r.headers.get('cache-control'), 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+  // (2026-10-28) the CDN keeps serving this list for up to a day while a new one can't be read
+  assert.equal(r.headers.get('cache-control'), 'public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=86400');
   const list = await r.json();
   assert.equal(calls.length, 3, 'three pages (the first one with the trending list and the ETH price)');
+  assert.equal('cutShort' in list, false, 'every page was read');
   assert.match(calls[0], /\/v1\/trpc\/coins\.list,coins\.trending,exchangeRates\.tokenUsdg,exchangeRates\.tokenUsdg\?batch=1/);
   assert.deepEqual(JSON.parse(new URL(calls[1]).searchParams.get('input')), { 0: { cursor: 'p1' } });
   assert.equal(list.total, 7, 'all seven upstream coins, including CABO');
@@ -872,10 +889,123 @@ test('the list: at most MAX_PAGES pages, and clank.trade down → 503 (nothing g
   assert.equal(list.coins.length, MAX_PAGES);
   resetForTests();
   fake.down = true;
+  calls = [];
   const r = await get();
   assert.equal(r.status, 503);
   assert.equal(r.headers.get('cache-control'), 'no-store');
   assert.deepEqual(await r.json(), { error: 'unverified' });
+  assert.equal(calls.length, 2, 'the first request is asked twice before giving up');
+});
+
+// ---------- clank.trade's slow answers (2026-10-28, the owner: "the clankchecker is not working") ----------
+// Timed from the owner's browser that day: 39 pages for 466 coins, most answered in about 0.4 s, but a few took 2 to 12 s,
+// and the same page asked again answered at once. One page over 8 s used to lose the whole list.
+const threePages = () => [
+  [listRow({ address: COIN, symbol: 'E/ACC', name: 'Egirl Acceleration', createdAt: S - H })],
+  [listRow({ address: MEOW, symbol: 'MEOW', name: 'Meow', createdAt: S - D })],
+  [listRow({ address: ABC, symbol: 'ABC', name: 'Abc', createdAt: S - 3 * D })],
+];
+test('a slow page is asked again after 1.5 s and the first answer is used; the slow try is stopped', { timeout: 20_000 }, async () => {
+  fake.pages = threePages();
+  fake.stall = new Set([2]);                       // the second page's first try never answers
+  const t0 = Date.now();
+  const list = await scanClank({ now: NOW });
+  const took = Date.now() - t0;
+  assert.equal(HEDGE_MS, 1500);
+  assert.equal(list.complete, true);
+  assert.equal('cutShort' in list, false);
+  assert.deepEqual(list.coins.map((c) => c.address), [COIN, MEOW, ABC]);
+  assert.equal(calls.length, 4, 'the first request, the second page twice, the third page');
+  assert.equal(calls[1], calls[2], 'the same page, asked again');
+  assert.deepEqual(fake.stopped, [2], 'the slow try was stopped once the other answered');
+  assert.ok(took >= HEDGE_MS - 50 && took < HEDGE_MS + 1500, `${took} ms`);
+});
+
+test('a page that fails is asked again at once, without waiting', async () => {
+  fake.pages = threePages();
+  fake.fail = new Set([3]);                        // the third page's first try: HTTP 500
+  const t0 = Date.now();
+  const list = await scanClank({ now: NOW });
+  assert.ok(Date.now() - t0 < 1000);
+  assert.equal(list.complete, true);
+  assert.deepEqual(list.coins.map((c) => c.address), [COIN, MEOW, ABC]);
+  assert.equal(calls.length, 4);
+});
+
+test('a page clank.trade still doesn\'t answer ends the list there: what was read is kept, shared a minute', async () => {
+  fake.pages = threePages();
+  fake.trending = [{ address: OFFICIAL, symbol: 'AGI', name: 'Artificial Girlfriend Intelligence', marketCapUsdg: 1234, progress: 100, isLive: true }];
+  fake.fail = new Set([2, 3]);                     // the second page, both tries
+  const r = await get();
+  assert.equal(r.status, 200, 'a list, not "Couldn\'t reach clank.trade"');
+  assert.equal(r.headers.get('cache-control'), 'public, max-age=30, s-maxage=60, stale-while-revalidate=240, stale-if-error=86400');
+  const list = await r.json();
+  assert.equal(calls.length, 3, 'the first request and the second page twice; nothing after it');
+  assert.equal(list.complete, false);
+  assert.equal(list.cutShort, true);
+  assert.deepEqual(list.coins.map((c) => c.address), [COIN, OFFICIAL], 'the first page, and the trending coin it didn\'t reach');
+  assert.equal(list.total, 2);
+  assert.equal(list.graduated, 1);
+});
+
+test('nothing runs past the time limit: a page that never answers ends the list when the time is up', { timeout: 20_000 }, async () => {
+  fake.pages = threePages();
+  fake.stall = new Set([2, 3]);                    // the second page: neither try answers
+  const t0 = Date.now();
+  const list = await scanClank({ budgetMs: 1000, limitMs: 2500, now: NOW });
+  const took = Date.now() - t0;
+  assert.ok(took >= 2400 && took < 3500, `${took} ms`);
+  assert.equal(list.complete, false);
+  assert.equal('cutShort' in list, false, 'it ran out of time after the budget: the budget\'s stop, kept 5 minutes as before');
+  assert.deepEqual(list.coins.map((c) => c.address), [COIN]);
+  assert.deepEqual(fake.stopped.sort(), [2, 3], 'both tries stopped');
+  // the same page timing out well before the budget's end: cut short
+  resetForTests(); calls = []; fake.clankAsks = 0; fake.stopped = [];
+  const early = await scanClank({ budgetMs: 10_000, limitMs: 2500, now: NOW });
+  assert.equal(early.cutShort, true);
+  assert.deepEqual(early.coins.map((c) => c.address), [COIN]);
+  // a budget too short for another page: the list just ends (not cut short)
+  resetForTests(); calls = []; fake.clankAsks = 0; fake.stall = new Set(); fake.stopped = [];
+  const quick = await scanClank({ budgetMs: 5000, limitMs: 900, now: NOW });
+  assert.equal(calls.length, 1);
+  assert.equal(quick.complete, false);
+  assert.equal('cutShort' in quick, false);
+});
+
+test('?latest: a slow answer is asked again too', { timeout: 20_000 }, async () => {
+  fake.pages = threePages();
+  fake.stall = new Set([1]);
+  const r = await get('?latest');
+  assert.equal(r.status, 200);
+  assert.equal(calls.length, 2);
+  assert.deepEqual((await r.json()).coins.map((c) => c.address), [COIN]);
+  assert.deepEqual(fake.stopped, [1]);
+});
+
+test('hedged: the first answer wins and the other try is stopped; every try failing gives the last error, within timeoutMs', { timeout: 20_000 }, async () => {
+  const wait = (ms, signal, value, fail) => new Promise((resolve, reject) => {
+    const t = setTimeout(() => (fail ? reject(new Error(value)) : resolve(value)), ms);
+    signal.addEventListener('abort', () => { clearTimeout(t); reject(new Error('stopped')); }, { once: true });
+  });
+  // the first try takes 600 ms, the second (asked at 100 ms) 50 ms: the second wins at about 150 ms
+  const tries = [];
+  let t0 = Date.now();
+  const won = await hedged((signal) => { tries.push(signal); return wait(tries.length === 1 ? 600 : 50, signal, `try ${tries.length}`); }, 2000, 100);
+  assert.equal(won, 'try 2');
+  assert.ok(Date.now() - t0 < 500);
+  assert.equal(tries[0].aborted, true, 'the slow try was stopped');
+  // both fail: the last error
+  let n = 0;
+  await assert.rejects(hedged((signal) => wait(10, signal, `fail ${++n}`, true), 2000, 100), /fail 2/);
+  assert.equal(n, 2, 'two tries, never more');
+  // neither answers: over by timeoutMs
+  t0 = Date.now();
+  await assert.rejects(hedged((signal) => wait(60_000, signal, 'never'), 800, 200));
+  assert.ok(Date.now() - t0 < 1300, 'stopped at timeoutMs');
+  // timeoutMs too short for a second try: one try only
+  n = 0;
+  await assert.rejects(hedged((signal) => wait(10, signal, `fail ${++n}`, true), 300, 100), /fail 1/);
+  assert.equal(n, 1);
 });
 
 test('markCopycats: the site\'s own coin, then a graduated one, then the biggest is the real one', () => {

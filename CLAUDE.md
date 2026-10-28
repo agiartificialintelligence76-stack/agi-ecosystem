@@ -1,5 +1,7 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **ClankChecker's list survives clank.trade's slow answers (2026-10-28):** the owner: "the clankchecker is not working" (a screenshot of "Couldn't reach clank.trade right now. Try again"). The list was fine a moment later: clank.trade only gives 12 coins a page, so 466 coins are 39 requests one after another, and timed from the owner's browser most took about 0.4 s but a few took 2 to 12 s (the same page asked again answered at once). One page over 8 s threw the whole list away, and a page started late could run past Vercel's 25 s. Now a request still unanswered after 1.5 s is asked a second time and the first answer wins (`hedgeMs` in `clankApi`, `server/coins.js`; the list and `?latest`), a failed page is asked again at once, nothing runs past 21 s (paging may go on until 20 s, 18 before), and a page that still can't be read ends the list there with what was read (`complete: false`; `cutShort: true` and kept a minute instead of five when that was before the 20 s were up). Vercel's CDN keeps serving the last good list for up to a day while a new one can't be read (`stale-if-error`), and the page asks again by itself (20 s, 40 s, then every minute, 10 times). See "ClankChecker" and its Troubleshooting.
+
 > **AGI-1 in 3D: taller, on the floor, print and hair clean-up (2026-10-28):** the owner found her 3D hair "awful", the design "scuffed" and her "so short". She now stands on the floor (the splat engine lowered her about 10 cm: `standOnFloor()`), with longer legs and a little more neck and arm through the engine's bone stretch (`AGI1_PROPORTIONS` in `src/stage/agi1-splat.js`; overall height still 1.62 m). The AGI print hugs the shirt instead of floating beside her from the side, a dark streak that flashed over her hair (the renderer misdraws stored splat 0) is gone, muddy hair patches are lifted and long hair no longer follows her arms. Later the same day the print also moves with the shirt: it takes the shirt's own skin weights (it followed only her spine, so in the nod it stood up to 6 mm off the shirt, a white edge above her outline from the side, and in the wave it broke up), and it tucks up to 3 mm into the shirt's soft outline seen from the side (model URL `?v=20261028-print`). Model rebuild: `node tools/model/fix-shirt-logo.mjs` then `node tools/model/polish-splat.mjs`. Details in `HANDOFF.md`. **Published to agi1.app the same day** (the owner: "YES").
 
 > **AGI. in Telegram music (2026-10-27):** added the owner's selected B2 track from `Downloads/VTuber_Project/21_agi/song/AGI. (Suno B2 original).mp3` to `/music` as **AGI.**, with the period and no quotation marks, 2:49. `public/music/agi.mp3` keeps the original MP3 audio bytes and the selected official 1400 px cover from `21_agi/cover/`; tags follow the existing bot format (title, AGI-1, front cover). The originals and six existing songs remain unchanged. Both private and group menus read the seven-song catalog after deployment.
@@ -2233,7 +2235,9 @@ credit with an 𝕏 link, removed with everything about ClankCap.) The scans' da
   place, so the keyboard focus, the pictures and an open answer never jump. **Refresh** asks at once. Live updates rest when
   the section is off screen, the tab is hidden, or nobody has touched the page for 10 minutes ("Paused"; any mouse move, key
   or scroll starts them again at once), so a forgotten tab doesn't ask our server all night. clank.trade not answering: "Can't
-  reach clank.trade · retrying" (20 s, 40 s, then every minute), the list stays.
+  reach clank.trade · retrying" (20 s, 40 s, then every minute), the list stays. The list itself not loading (since
+  2026-10-28): "Couldn't reach clank.trade right now · retrying" with **Try again**, and it asks again by itself the same
+  way (at most 10 times in a row; a hidden tab waits until it's shown).
 - **Pictures** (round 2): tap a coin's picture (in the list or in her answer) for the **big view**, a native dialog: the
   picture up to 512 px (the whole picture, never cropped or enlarged), the ticker, name, stage, age and market cap, **Ask
   AGI-1**, **View on clank.trade ↗**, and "The picture its creator uploaded to clank.trade". ✕, Escape or a tap outside
@@ -2333,9 +2337,19 @@ credit with an 𝕏 link, removed with everything about ClankCap.) The scans' da
   $CBOT: `exists: true`, the same curve as clank.trade's; $SI gets the locked note), but $AGI is `{"exists":false}`: it was
   launched before that factory, so $AGI gets no locked note (true either way: the note is only said when the protocol
   confirms it).
-- `GET /api/checker`: every coin (up to 80 pages = 960 coins, at most ~18 s of reading; 202 on 2026-09-26), crude names too
+- `GET /api/checker`: every coin (up to 80 pages = 960 coins, at most ~18 s of reading, ~20 s since 2026-10-28; 202 on
+  2026-09-26, 466 in 39 pages on 2026-10-28), crude names too
   (slurs masked; `adult: true` marks a crude name), `image: true` when it has a picture, copycats marked. Shared by Vercel's
-  CDN for 5 minutes (browsers 1 minute; then the old copy is served while a new one is read).
+  CDN for 5 minutes (browsers 1 minute; then the old copy is served while a new one is read). **Since 2026-10-28** (the
+  owner: "the clankchecker is not working"): a page clank.trade hasn't answered after 1.5 s is asked a second time and the
+  first answer wins (it answers in about 0.4 s, but now and then one request takes 2 to 12 s, and asked again answers at
+  once), a failed page is asked again at once, no request runs past 21 s (Vercel stops a function at 25 s), and a page that
+  still can't be read ends the list there: what was read is kept, with the trending coins it didn't reach (`complete:
+  false`; and `cutShort: true` when that happened before the 20 s were up: shared a minute, and each server copy reads it
+  again after 30 s; at the very end it's the budget's usual stop, shared 5 minutes). Only the first request
+  failing twice means no list (503); then the CDN keeps serving its last list for up to a day (`stale-if-error=86400`,
+  supported by Vercel's CDN since February 2026), and the page asks again by itself (20 s, 40 s, then every minute, at
+  most 10 times in a row; Try again starts it over).
 - `GET /api/checker?latest` (round 2): clank.trade's newest 12 coins + its trending list (with the trending coins' market
   caps in dollars), one request to clank.trade; shared by the CDN for 10 seconds (browsers 5), and each server copy reads it
   at most every 4 seconds.
@@ -2382,7 +2396,7 @@ clank.trade coins have 1B supply; its bonding curve graduates at about 4.28 ETH;
 explorer): "How the scan works" says so.
 
 **Cost:** nothing new to pay. Vercel: about one list refresh per 5 minutes per region (17 small requests to clank.trade
-each), one run per coin asked about per 5 minutes, and (round 2) the newest coins at most once per 10 seconds per region
+each on 2026-09-26; 39, and a few more asked twice, for 466 coins on 2026-10-28), one run per coin asked about per 5 minutes, and (round 2) the newest coins at most once per 10 seconds per region
 while someone is watching (360 small runs an hour; a forgotten tab rests after 10 minutes) and each picture about once a
 week per region and size; well inside the free tier (1M function runs a month). Each watching visitor also makes one tiny
 request every 10 s, and each row picture is one request (Vercel counts both as "edge requests", 1M a month free). The pictures' bytes: about 5 KB per row
@@ -2401,14 +2415,15 @@ coin shows its letter instead, everywhere (the redeploy also empties the CDN's c
 
 | What you see | Log line | Fix |
 |---|---|---|
-| "Couldn't reach clank.trade right now." under the search box | `[checker] couldn't read clank.trade's coin list: clank.trade HTTP 403` (or `answer is not JSON`) | clank.trade is down, put up a bot wall, or changed its API. Try later; if it lasts, tell Claude with the log line |
+| "Couldn't reach clank.trade right now · retrying" under the search box | `[checker] couldn't read clank.trade's coin list: clank.trade HTTP 403` (or `answer is not JSON`, or `The operation was aborted due to timeout`) | clank.trade's first page didn't answer twice in a row, and our CDN had no earlier list to show (right after a push, it has none). The page asks again by itself; if it lasts, clank.trade is down, put up a bot wall, or changed its API: tell Claude with the log line. (Until 2026-10-28 any one slow page out of 39 did this: see "Since 2026-10-28" above) |
+| "312+ coins on clank.trade" (fewer than usual, with a +) | `[checker] clank.trade's coin list stopped after 26 pages (312 coins): …` | Working as planned: a page clank.trade didn't answer (asked twice) ended the list there; the oldest coins are back within a minute or two. A pasted contract still works. If it shows every time, tell Claude with the log line |
 | A coin's answer says "Not enough data" | `[checker] couldn't read 0x… from clank.trade: …` or `…'s answer … was incomplete` | Same as above, for one coin, and the chain couldn't say either. Passes by itself if it was a hiccup |
 | A coin's answer starts "clank.trade couldn't be read just now, so this comes straight from Robinhood Chain" | `[checker] couldn't read 0x… from clank.trade: …` | Working as planned: the chain's smaller scan while clank.trade is away (shared a minute, then the full scan is tried again) |
 | (nothing wrong to see) | `[checker] couldn't read 0x… from the chain: …` | Robinhood Chain's public node didn't answer: the scan works without the protocol's word (no locked note). Passes by itself; if it lasts, ask about a free node key (`ROBINHOOD_RPC_URL`, see "Relationship levels") |
 | Graduated coins never get the "locked for good" note | (none) | The protocol doesn't know them (`"onchain":{"exists":false}` in `/api/checker?a=…`), or the node never answers. Tell Claude with what `?a=` shows |
 | "Not a clank.trade coin, or too new to be listed yet." | (none) | Working as planned: clank.trade doesn't know that address (yet) |
 | "Couldn't read its DEX pool right now." on graduated coins | (none) | DexScreener didn't answer: the coin stays at "Some risk" at best until it does |
-| Old coins missing from the list | (none) | More than 960 coins (80 pages) or 18 s of reading: the oldest are left out of the list, but a pasted contract still works. Tell Claude if clank.trade grows that big |
+| Old coins missing from the list | (none) | More than 960 coins (80 pages) or 18 s of reading (20 s since 2026-10-28): the oldest are left out of the list, but a pasted contract still works. Tell Claude if clank.trade grows that big. (2026-10-28: Vercel read all 39 pages in 7.5 to 15.4 s, the owner's browser in about 16 s or more, so 20 s fit about 50 to 100 pages, depending on how fast clank.trade answers) |
 | "Can't reach clank.trade · retrying" next to the list | `[checker] couldn't read clank.trade's newest coins: …` | Live updates couldn't read clank.trade (the list stays). A hiccup passes by itself; if it lasts, the same as the first row |
 | "Paused · updated 12 min ago" | (none) | Working as planned: nobody touched the page for 10 minutes (or the tab was hidden). Any mouse move, key or scroll starts it again |
 | A new coin on clank.trade isn't there yet | (none) | It takes up to about 20 s (our CDN copy is at most 10 s old, then the page's next ask). Refresh asks at once |
