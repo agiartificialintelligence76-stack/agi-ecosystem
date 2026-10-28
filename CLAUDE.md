@@ -1,6 +1,6 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
-> **AGI-1 on Discord (2026-10-28):** the owner: "can you fix my agi discord server? and organize it? and also can you add agi1 bot to my discord server like in the telegram bot?". Her Telegram group mode, in the owner's Discord server ("Artificial Girlfriend Intelligence"): `/ask` (the same AI and daily limits as her Telegram groups: a Stranger, never flirty, under a quote of the question), `/ca`, `/mc`, `/website`, `/music` (a tap uploads that song) and `/help`, only in the servers in `DISCORD_GUILDS`; her diary and $AGI's market moments (and her "i'm live on X" line) in the channel of `DISCORD_FEED_WEBHOOK`. Discord's HTTP interactions at **agi1.app/discord/interactions** (`vercel.json` → `api/telegram.js?discord`: still 12 functions), `server/discord.js` and `server/dc-lines.js`; the cron connects her app (its endpoint, her commands). No gateway (her bot shows offline: expected), no new SQL, no new service. Her app "AGI-1" was made in the Developer Portal on the owner's account (the owner's OK, the same day). Hard rule 6 got its fourth exception. **Owner:** the four Discord settings in Vercel, Redeploy, add her to the server (see "AGI-1 on Discord", Setup).
+> **AGI-1 on Discord (2026-10-28):** the owner: "can you fix my agi discord server? and organize it? and also can you add agi1 bot to my discord server like in the telegram bot?". Her Telegram group mode, in the owner's Discord server ("Artificial Girlfriend Intelligence"): `/ask` (the same AI and daily limits as her Telegram groups: a Stranger, never flirty, under a quote of the question), `/ca`, `/mc`, `/website`, `/music` (a tap uploads that song) and `/help`, only in the servers in `DISCORD_GUILDS`; her diary and $AGI's market moments (and her "i'm live on X" line) in the channel of `DISCORD_FEED_WEBHOOK`. Discord's HTTP interactions at **agi1.app/discord/interactions** (`vercel.json` → `api/telegram.js?discord`: still 12 functions), `server/discord.js` and `server/dc-lines.js`; the cron connects her app (its endpoint, her commands). No gateway (her bot shows offline: expected), no new SQL, no new service. Her app "AGI-1" was made in the Developer Portal on the owner's account (the owner's OK, the same day). Hard rule 6 got its fourth exception. **Set up 2026-10-29** (Claude in the owner's Chrome, the owner's OK): her app, her bot in the server, the four Discord settings in Vercel, and the server itself organized (categories, channels and topics, Team/Mod roles, read-only Start Here, Community, AutoMod against scams and impersonation): see "AGI-1 on Discord", "Set up on 2026-10-28 and 29". **agi1.app redirects to www.agi1.app**, so her endpoint is the www address.
 
 > **ClankChecker's list survives clank.trade's slow answers (2026-10-28):** the owner: "the clankchecker is not working" (a screenshot of "Couldn't reach clank.trade right now. Try again"). The list was fine a moment later: clank.trade only gives 12 coins a page, so 466 coins are 39 requests one after another, and timed from the owner's browser most took about 0.4 s but a few took 2 to 12 s (the same page asked again answered at once). One page over 8 s threw the whole list away, and a page started late could run past Vercel's 25 s. Now a request still unanswered after 1.5 s is asked a second time and the first answer wins (`hedgeMs` in `clankApi`, `server/coins.js`; the list and `?latest`), a failed page is asked again at once, nothing runs past 21 s (paging may go on until 20 s, 18 before), and a page that still can't be read ends the list there with what was read (`complete: false`; `cutShort: true` and kept a minute instead of five when that was before the 20 s were up). Vercel's CDN keeps serving the last good list for up to a day while a new one can't be read (`stale-if-error`), and the page asks again by itself (20 s, 40 s, then every minute, 10 times). See "ClankChecker" and its Troubleshooting.
 
@@ -3222,8 +3222,8 @@ itself, in the owner's browser: nothing of it is in this repo. Hard rule 6 got i
    `applications.commands`, bot permissions View Channels, Send Messages, Embed Links, Attach Files and Read Message
    History → open the link → pick the server → Authorize.
 3. **Her endpoint:** the cron's next run sets it (or Vercel → Settings → Cron Jobs → `/api/feed` → Run); or by hand:
-   Developer Portal → AGI-1 → General Information → Interactions Endpoint URL = `https://agi1.app/discord/interactions`
-   (the address the site is served at without a redirect: `https://www.agi1.app/…` if `SITE_URL` says www) → Save Changes.
+   Developer Portal → AGI-1 → General Information → Interactions Endpoint URL = `https://www.agi1.app/discord/interactions`
+   (the address the site is served at without a redirect: agi1.app answers 308 → www.agi1.app) → Save Changes.
 4. Her commands appear in the server after that run (reopen Discord if they don't show).
 5. **Check** in #talk-to-agi1: `/help`, `/ca`, `/ask hi`, `/music` and a tap; then Vercel → Logs for `[discord]`.
 
@@ -3246,6 +3246,44 @@ added there with the link of step 2.
   log: make a new one, step 1).
 
 **Costs:** $0 more. Discord's API is free; her replies count inside the caps the site already has.
+
+**Set up on 2026-10-28 and 29** (Claude, in the owner's Chrome, with the owner's OK for each step; the owner typed the
+Discord password and ticked the two "I am human" boxes):
+- **Her app:** icon `public/icons/agi1-maskable-512.png`, a 1360 × 480 banner made for her bot (her 2D cutout on her violet
+  rays, "AGI-1 · the AI girlfriend of $AGI · agi1.app": not in this repo), `DESCRIPTION`, tags ai, anime, chat, crypto,
+  music. Installation: **Guild Install only**, Install Link **None**; Bot: **Public Bot off** (only the owner can add her),
+  no privileged intents. Added to the server with scopes `bot` + `applications.commands` and permissions
+  `274878286912` (View Channels, Send Messages, Send Messages in Threads, Embed Links, Attach Files, Read Message History,
+  Add Reactions, Use External Emoji); her managed role "AGI-1" is pink, shown on its own in the member list.
+- **Vercel:** the four settings (the two secrets as "Secret", copied with Discord's own Copy buttons and pasted straight in,
+  never read by Claude). Vercel's Redeploy button asked for a code from the owner's email, so the deployment with them
+  came from a push instead (any push to `main` picks up new settings).
+- **The site's address:** `agi1.app` answers **308 → www.agi1.app** (Vercel → Domains: www is the production domain), so
+  her endpoint must be `https://www.agi1.app/discord/interactions` (Discord never follows a redirect). `SITE_URL` isn't set;
+  Vercel's `VERCEL_PROJECT_PRODUCTION_URL` gives the production domain, which is the www one while the apex redirects.
+- **The server's layout** (Discord itself, nothing in this repo), in this order:
+  - 📌 **Start Here** (read-only for @everyone: Send Messages and threads denied, Team allowed): `#welcome`, `#rules` (the
+    Community rules channel), `#announcements` (an Announcement channel), `#official-links`;
+  - 💬 **Community**: `#general` (Discord's system messages), `#memes`, `#fan-art`, `#chart`;
+  - 💜 **AGI-1**: `#talk-to-agi1`, `#agi1-diary` (read-only; her webhook "AGI-1" posts there), `#music`;
+  - 🎮 **Games & Live**: `#games`, `#live-show`;
+  - 🔊 **Voice**: General, Chill;
+  - 🔒 **Team** (private: Team and Mod): `#team-chat`, `#mod-log` (Discord's Community updates, safety notifications and
+    every AutoMod alert).
+  Every channel has a topic.
+- **Roles** (top to bottom): **Team** (purple, shown apart: manage channels, expressions, nicknames, messages, threads,
+  events, kick, ban, timeout, mute/deafen/move, @everyone, audit log; never Administrator, Manage Server, Manage Roles or
+  Manage Webhooks: the webhook is a secret), **Mod** (blue, shown apart: audit log, nicknames, kick, ban, timeout,
+  messages, pins, threads, mute, move), **AGI-1** (her bot's). @everyone lost Mention @everyone, Create Expressions and Use
+  External Apps (other apps' posts stay private). The owner (Clanker, agi1dev) has Team.
+- **Safety:** a **Community** server (verified email, media scanned, default notifications Mentions only), verification
+  level **Medium**, Discord's activity alerts → `#mod-log`. **AutoMod:** Block Mention Spam, Block Suspected Spam Content
+  (+ alert), Block Commonly Flagged Words (insults and slurs, sexual content), **Scam protection** (seed/recovery/secret
+  phrase, private key, "claim your airdrop", "connect/validate/sync your wallet", "rectify", "support ticket", "dm me",
+  "metamask support"… and other servers' invite links: blocked, alert to `#mod-log`; Team, Mod and AGI-1 are exempt, so her
+  `/help` can name seed phrases), **Impersonation protection** (names like admin, moderator, support team, agi1, agi-1, agi
+  support: they can't chat until they change it; alert; the same roles exempt). The owner is always exempt (Discord's rule
+  for Administrator and Manage Server).
 
 **Tests:** `tests/discord.test.js` (19, with a fake Discord, Supabase, DexScreener, Gemini and site, and a real Ed25519
 key pair), plus the cron with her Discord server in `tests/telegram.test.js` and her "i'm live" post in
