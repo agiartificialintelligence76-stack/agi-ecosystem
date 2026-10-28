@@ -125,7 +125,9 @@ beforeEach(() => {
   // Pinata key, which opens launching; these tests start with launching not set up, and turn it on themselves)
   for (const k of ['GEMINI_MODEL', 'CHAT_DAILY_CAP', 'SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'LAUNCH_GAS_KEY', 'LAUNCH_GAS_MAX', 'LAUNCH_GAS_DAILY', 'LAUNCH_DAILY_CAP', 'LIVE_SECRET',
     'TELEGRAM_DAILY_CAP', 'TELEGRAM_GROUPS', 'TELEGRAM_GROUP_DAILY_CAP', 'TELEGRAM_GROUP_POSTS', 'TELEGRAM_GROUP_WELCOME', 'VITE_TELEGRAM_BOT',
-    'TELEGRAM_GAMES', 'GAMES_A_DAY', 'GAME_PRIZE', 'GAME_WINS_A_DAY', 'PRIZE_WALLET_KEY', 'TELEGRAM_MUSIC']) delete process.env[k];
+    'TELEGRAM_GAMES', 'GAMES_A_DAY', 'GAME_PRIZE', 'GAME_WINS_A_DAY', 'PRIZE_WALLET_KEY', 'TELEGRAM_MUSIC',
+    // (2026-10-28) her Discord server's settings: the feed runs it only when they're set (tests/discord.test.js)
+    'DISCORD_BOT_TOKEN', 'DISCORD_FEED_WEBHOOK', 'DISCORD_PUBLIC_KEY', 'DISCORD_GUILDS', 'DISCORD_POSTS', 'DISCORD_GUILD_DAILY_CAP']) delete process.env[k];
   Object.assign(process.env, ENV);
   forgetMarket();
   telegramBurst.reset();
@@ -1508,6 +1510,50 @@ test('/api/feed with her group: the new market moment goes to the group once, th
   assert.deepEqual(again.moments, []);
   assert.deepEqual(again.groups, { posted: 0, failed: 0, skipped: 0 });
   assert.equal(tg('sendMessage').length, 0);
+});
+
+// (2026-10-28) her Discord server (server/discord.js): the same run connects her app and posts the same moments in her channel
+test('/api/feed with her Discord server: her app connected, the new market moment in her channel once, Telegram as before', async () => {
+  const APP = '1565016537683984464';
+  const BOT = `${Buffer.from(APP).toString('base64url')}.GxAbCd.${'x'.repeat(38)}`;
+  const HOOK = `https://discord.com/api/webhooks/1565999999999999999/${'w'.repeat(68)}`;
+  Object.assign(process.env, { DISCORD_BOT_TOKEN: BOT, DISCORD_FEED_WEBHOOK: HOOK, DISCORD_PUBLIC_KEY: 'ab'.repeat(32), DISCORD_GUILDS: '1563093500021710850' });
+  const app = { id: APP, verify_key: 'ab'.repeat(32), description: 'x', interactions_endpoint_url: null };
+  const discord = [];
+  let commands = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    url = String(url);
+    if (!url.startsWith('https://discord.com/')) return realFetch(url, init);
+    const body = init.body ? JSON.parse(init.body) : null;
+    discord.push({ url, method: init.method || 'GET', body });
+    if (url.startsWith(HOOK)) return Response.json({ id: '1' });
+    if (url.endsWith('/applications/@me')) { if (body) Object.assign(app, body); return Response.json(app); }
+    if (init.method === 'PUT') commands = body;
+    return Response.json(commands);
+  };
+  fake.db.state = { since: Date.now() - 3 * 3600_000, diary: '2026-09-28', market: { top: 1_000_000, sadAt: 0, sadArmed: true } };
+  fake.dex = [agiPair(1_230_000, 4)];
+  fake.dbNow = Date.now();
+  const { escapeMd } = await import('../server/discord.js');
+  const r = await (await run()).json();
+  assert.deepEqual(r.moments, ['mcap:1200000']);
+  assert.equal(r.bot.url, 'https://agi1.app/api/telegram', 'her Telegram bot as before');
+  assert.deepEqual(r.discord, { app: { app: APP, description: true, endpoint: true, commands: 1 }, posts: { posted: 1, failed: 0, skipped: 0 } });
+  assert.equal(app.interactions_endpoint_url, 'https://agi1.app/discord/interactions');
+  assert.deepEqual(discord.filter((c) => c.url.startsWith(HOOK)).map((c) => c.body.content), [escapeMd(milestoneLine(1_200_000).text)]);
+  // the next run: nothing new, nothing posted again, nothing of her app written again
+  forgetMarket();
+  discord.length = 0;
+  const again = await (await run()).json();
+  assert.deepEqual(again.discord.posts, { posted: 0, failed: 0, skipped: 0 });
+  assert.deepEqual(discord.map((c) => c.method), ['GET', 'GET']);
+  // a wrong token: said, her posts still go (they need only the channel's webhook)
+  globalThis.fetch = async (url, init = {}) => (String(url).endsWith('/applications/@me')
+    ? Response.json({ message: '401: Unauthorized', code: 0 }, { status: 401 }) : realFetch(url, init));
+  const bad = await (await run()).json();
+  assert.deepEqual(bad.discord.app, { error: 'token' });
+  globalThis.fetch = realFetch;
 });
 
 test('a listed group that becomes a supergroup: the log says its new id, and she doesn\'t leave on that message', async () => {

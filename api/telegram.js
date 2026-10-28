@@ -3,14 +3,17 @@
 // server/telegram.js connectBot). Anything without it is refused, so nobody else can make her talk.
 // She answers right here (server/telegram.js, handleUpdate). The answer to Telegram is always 200 once the secret matched,
 // even if something failed (she says so in the chat when she can), so Telegram doesn't send the same update again.
+// (2026-10-28) …and AGI-1's Discord server (server/discord.js): agi1.app/discord/interactions, which vercel.json sends here
+// as ?discord (Vercel's 12 functions are all used); Discord signs every request itself (no secret of ours). Each part loads only its own code, so
+// Discord's first answer (wanted within 3 s) never waits for the Telegram bot's modules, and Telegram's path is as before.
 import { getConfig } from '../server/config.js';
-import { tgToken, webhookSecret, sameSecret, handleUpdate, say } from '../server/telegram.js';
-import { BUSY } from '../server/tg-lines.js';
 
 const MAX_BODY = 65_536;
 const json = (status, body = {}) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
 export async function POST(request) {
+  if (new URL(request.url).searchParams.has('discord')) return (await import('../server/discord.js')).discordPost(request);
+  const [{ tgToken, webhookSecret, sameSecret, handleUpdate, say }, { BUSY }] = await Promise.all([import('../server/telegram.js'), import('../server/tg-lines.js')]);
   const cfg = getConfig();
   const token = tgToken();
   if (!token || cfg.passSecret.length < 32 || !cfg.supabaseUrl || !cfg.supabaseKey) {

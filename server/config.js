@@ -56,6 +56,30 @@ export function telegramGroups(text) {
 // "off" (or false, no, 0) switches a part off; anything else, or nothing, leaves it on
 const isOff = (v) => /^(?:off|false|no|0)$/i.test(String(v ?? '').trim());
 
+// Her Discord server (2026-10-28, the owner: "add agi1 bot to my discord server … like in the telegram bot"; server/discord.js):
+// DISCORD_GUILDS, the servers she answers in: their ids (the long number Discord's "Copy Server ID" gives), separated by commas
+// or spaces. → null (not set: she answers in no server) · a Set of ids as text (a Discord id is too big for a JS number; a
+// setting with nothing usable in it lets her answer in none, so a typo never makes her talk in someone else's server)
+export function discordGuilds(text) {
+  const raw = String(text ?? '').trim();
+  if (!raw) return null;
+  return new Set(raw.split(/[\s,]+/).filter((p) => /^\d{17,20}$/.test(p)));
+}
+// DISCORD_PUBLIC_KEY: her app's public key (Developer Portal → General Information → Public Key: 64 hex characters, not a
+// secret), which checks that a request really comes from Discord → lowercase, or '' (not one: her endpoint is off)
+export function discordKey(text) {
+  const t = String(text ?? '').trim().toLowerCase();
+  return /^[0-9a-f]{64}$/.test(t) ? t : '';
+}
+// DISCORD_FEED_WEBHOOK (secret: whoever has it can post in that channel): the webhook of the channel her diary and $AGI's
+// market moments go to (the channel's settings → Integrations → Webhooks → Copy Webhook URL) → its plain address
+// (https://discord.com/api/webhooks/<id>/<token>), or '' (not one: she posts nothing)
+export function discordWebhook(text) {
+  const m = /^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/api\/(?:v\d{1,2}\/)?webhooks\/(\d{17,20})\/([A-Za-z0-9_-]{50,100})\/?$/
+    .exec(String(text ?? '').trim());
+  return m ? `https://discord.com/api/webhooks/${m[1]}/${m[2]}` : '';
+}
+
 // A wallet's private key, as a setting: 64 hex characters, with or without "0x" → "0x…" (lowercase), or '' (not one)
 export function gasKey(text) {
   const m = /^(?:0x)?([0-9a-fA-F]{64})$/.exec(String(text ?? '').trim());
@@ -83,6 +107,7 @@ export function getConfig(env = process.env) {
   };
   const models = voiceModels(env);
   const studioOnlyFor = new Set(String(env.STUDIO_ONLY_FOR || '').toLowerCase().split(/[\s,]+/).filter((a) => /^0x[0-9a-f]{40}$/.test(a)));
+  const tgGroupDailyCap = Math.min(2000, Math.floor(number('TELEGRAM_GROUP_DAILY_CAP', 100)) || 100);
   return {
     geminiKey: env.GEMINI_API_KEY || '',
     geminiModel: env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
@@ -110,7 +135,7 @@ export function getConfig(env = process.env) {
     // set = group mode off), her replies a day in each (inside Telegram's share), and whether she posts her diary and
     // $AGI's market moments there and welcomes people who join ("off" = no)
     tgGroups: telegramGroups(env.TELEGRAM_GROUPS),
-    tgGroupDailyCap: Math.min(2000, Math.floor(number('TELEGRAM_GROUP_DAILY_CAP', 100)) || 100),
+    tgGroupDailyCap,
     tgGroupPosts: !isOff(env.TELEGRAM_GROUP_POSTS),
     tgGroupWelcome: !isOff(env.TELEGRAM_GROUP_WELCOME),
     // …and the $AGI buy bot there (2026-10-06, server/buys.js): on unless "off", and the smallest buy it posts, in
@@ -127,8 +152,19 @@ export function getConfig(env = process.env) {
     gamePrize: Math.min(1_000_000, Math.floor(number('GAME_PRIZE', 250)) || 250),
     gameWinsADay: Math.min(1000, Math.floor(number('GAME_WINS_A_DAY', 10)) || 10),
     prizeKey: gasKey(env.PRIZE_WALLET_KEY),
-    // …and her songs there and in her private chat (2026-10-14, server/tg-music.js: /music): on unless "off"
+    // …and her songs there and in her private chat (2026-10-14, server/tg-music.js: /music): on unless "off" (since
+    // 2026-10-28 in her Discord server too)
     tgMusic: !isOff(env.TELEGRAM_MUSIC),
+    // Her Discord server (2026-10-28, server/discord.js): the servers she answers in (discordGuilds() above; not set = none),
+    // her app's public key (not set = her endpoint is off), the webhook of the channel her diary and $AGI's market moments
+    // go to (secret; not set = no posts), whether she posts there ("off" = no), and her replies a day in each server (inside
+    // her chat apps' share, TELEGRAM_DAILY_CAP; TELEGRAM_GROUP_DAILY_CAP's number unless set). DISCORD_BOT_TOKEN (secret) is
+    // read by server/discord.js itself (dcToken), like Telegram's token, so it's never in this object.
+    dcGuilds: discordGuilds(env.DISCORD_GUILDS),
+    dcPublicKey: discordKey(env.DISCORD_PUBLIC_KEY),
+    dcFeedWebhook: discordWebhook(env.DISCORD_FEED_WEBHOOK),
+    dcPosts: !isOff(env.DISCORD_POSTS),
+    dcGuildDailyCap: Math.min(2000, Math.floor(number('DISCORD_GUILD_DAILY_CAP', tgGroupDailyCap)) || tgGroupDailyCap),
     // Messages paid for by burning $AGI (2026-09-30, server/burn.js): whole $AGI a message (10 by default: 1,000 $AGI =
     // 100 messages), and the burned messages the whole site may use a day, on top of the free ones (1,000: about $0.80 of
     // AI replies at most)

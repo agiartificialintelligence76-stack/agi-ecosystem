@@ -148,7 +148,7 @@ let fake, calls, logs;
 beforeEach(() => {
   // (the settings Vercel's build has, which these tests take as unset: their defaults are what's checked)
   for (const k of ['SITE_URL', 'PINATA_JWT', 'LAUNCH_ONLY_FOR', 'TELEGRAM_GROUPS', 'TELEGRAM_GROUP_POSTS', 'TELEGRAM_BUY_MIN', 'TELEGRAM_BUYS',
-    'TELEGRAM_GAMES', 'PRIZE_WALLET_KEY', 'TELEGRAM_MUSIC']) delete process.env[k];
+    'TELEGRAM_GAMES', 'PRIZE_WALLET_KEY', 'TELEGRAM_MUSIC', 'DISCORD_FEED_WEBHOOK', 'DISCORD_POSTS']) delete process.env[k];
   Object.assign(process.env, ENV);
   for (const b of [liveBurst, liveLookupBurst, liveAuthBurst, telegramBurst, liveLineBurst]) b.reset();
   logs = [];
@@ -782,6 +782,31 @@ test("she's streaming on X: her Telegram groups hear it once a day (the database
   r = await post({ action: 'on_x', show: again }, { auth: RUNNER() });
   assert.deepEqual([r.status, r.data.told], [200, false]);
   assert.ok(logs.some(([k, l]) => k === 'warn' && /run supabase\/live\.sql again \(it ends with live_functions_found = 13\)/.test(l)));
+});
+
+// (2026-10-28) …and her Discord channel (server/discord.js), the same once a day, when its webhook is set
+test("she's streaming on X: her Discord channel hears it too, once a day; DISCORD_POSTS=off: not there", async () => {
+  const HOOK = `https://discord.com/api/webhooks/1565999999999999999/${'w'.repeat(68)}`;
+  process.env.DISCORD_FEED_WEBHOOK = HOOK;
+  const show = await goLive();
+  const realFetch = globalThis.fetch;
+  const hooks = [];
+  globalThis.fetch = async (url, init) => {
+    if (!String(url).startsWith('https://discord.com/')) return realFetch(url, init);
+    hooks.push({ url: String(url), body: JSON.parse(init.body) });
+    return Response.json({ id: '1' });
+  };
+  let r = await post({ action: 'on_x', show }, { auth: RUNNER() });
+  assert.deepEqual([r.status, r.data.told, r.data.discord], [200, true, { posted: 1, failed: 0 }]);
+  assert.deepEqual(hooks.map((h) => h.url), [`${HOOK}?wait=true`]);
+  assert.match(hooks[0].body.content, /https:\/\/agi1\.app\/live/);
+  r = await post({ action: 'on_x', show }, { auth: RUNNER() });
+  assert.deepEqual([r.data.told, hooks.length], [false, 1], 'once a day');
+  fake.db.s.toldOn = null;
+  process.env.DISCORD_POSTS = 'off';
+  r = await post({ action: 'on_x', show }, { auth: RUNNER() });
+  assert.deepEqual([r.data.told, r.data.discord, hooks.length], [true, undefined, 1]);
+  globalThis.fetch = realFetch;
 });
 
 test('not set up (no LIVE_SECRET): every action says so, nothing is asked', async () => {

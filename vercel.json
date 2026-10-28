@@ -20,6 +20,7 @@
     { "source": "/owner", "destination": "/owner-command" },
     { "source": "/owner/", "destination": "/owner-command" },
     { "source": "/share/meme/:id", "destination": "/api/wallet?meme-share=:id" },
+    { "source": "/discord/interactions", "destination": "/api/telegram?discord" },
     { "source": "/p/:slug", "destination": "/content" },
     { "source": "/p/:slug/", "destination": "/content" }
   ],

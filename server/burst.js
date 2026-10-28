@@ -36,6 +36,12 @@ export const telegramBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });
 // person can't fill the group with her answers) and 15 a minute per group (Telegram lets a bot send about 20 a minute there)
 export const groupPersonBurst = makeBurstLimit({ max: 4, windowMs: 60_000 });
 export const groupBurst = makeBurstLimit({ max: 15, windowMs: 60_000 });
+// …and in her Discord server (2026-10-28, server/discord.js): every command counts, 4 a minute per person (a daily code of
+// their account, never its id) and 15 a minute per server, like her Telegram groups; and her songs' buttons, 6 taps a
+// minute per person, like server/tg-music.js's
+export const dcPersonBurst = makeBurstLimit({ max: 4, windowMs: 60_000 });
+export const dcGuildBurst = makeBurstLimit({ max: 15, windowMs: 60_000 });
+export const dcMusicBurst = makeBurstLimit({ max: 6, windowMs: 60_000 });
 // "Check my burn" (api/wallet.js, 2026-09-30): each asks the block explorer and the chain, so 10 a minute per visitor
 export const burnBurst = makeBurstLimit({ max: 10, windowMs: 60_000 });
 // "Launch with AGI-1" (api/launch.js, 2026-10-01): getting a coin ready asks clank.trade, the chain and maybe Pinata, and

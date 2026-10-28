@@ -5,6 +5,7 @@
 //   3. (2026-10-03) posts her diary and $AGI's market moments in her Telegram groups, the ones found this run (server/
 //      tg-groups.js, postToGroups: only the groups in TELEGRAM_GROUPS; TELEGRAM_GROUP_POSTS=off: none);
 //   4. texts them to the people who asked for it on Telegram (textFirst: at most 2 a day each, never at night their time).
+//   (2026-10-28, between 3 and 4) her Discord server: her app connected and the same moments in her channel (server/discord.js).
 // Only Vercel may call it: when CRON_SECRET is set, Vercel sends "Authorization: Bearer <CRON_SECRET>" (like /api/keepalive).
 // To run it by hand (e.g. right after setting the bot up): Vercel → the project → Settings → Cron Jobs → /api/feed → Run.
 //
@@ -215,6 +216,23 @@ export async function GET(request) {
   if (token && !out.bot?.error && cfg.tgGroups) {
     out.groups = await postToGroups(cfg, token, added, { deadline: deadline - 4_000 });
     if (out.groups.posted) console.log(`[feed] posted ${out.groups.posted} in her Telegram groups`);
+  }
+
+  // (2026-10-28) her Discord server (server/discord.js, loaded only when it's set up): her app connected (its endpoint, her
+  // commands in each server), then the same moments in her channel (DISCORD_FEED_WEBHOOK), so never twice
+  if (process.env.DISCORD_BOT_TOKEN || cfg.dcFeedWebhook) {
+    const { connectDiscord, postToDiscord } = await import('../server/discord.js');
+    out.discord = {};
+    if (process.env.DISCORD_BOT_TOKEN) {
+      try { out.discord.app = await connectDiscord(cfg, process.env, { deadline: deadline - 6_000 }); } catch (err) {
+        console.error(`[feed] couldn't connect her Discord app: ${err.message}${err.status === 401 ? ' (DISCORD_BOT_TOKEN is wrong: Developer Portal → Bot → Reset Token, put it in Vercel, then Redeploy)' : ''}`);
+        out.discord.app = { error: err.status === 401 ? 'token' : 'discord' };
+      }
+    }
+    if (cfg.dcFeedWebhook) {
+      out.discord.posts = await postToDiscord(cfg, added, { deadline: deadline - 4_000 });
+      if (out.discord.posts.posted) console.log(`[feed] posted ${out.discord.posts.posted} in her Discord channel`);
+    }
   }
 
   if (token && !out.bot?.error) {

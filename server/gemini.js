@@ -1,5 +1,5 @@
 // Asks Google Gemini for AGI-1's reply. Only the server calls this; the API key never reaches the browser.
-import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt, languagePrompt, shotPrompt, livePrompt, scenePrompt, LIVE_SKIPS } from './agi1-prompt.js';
+import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt, discordPrompt, languagePrompt, shotPrompt, livePrompt, scenePrompt, LIVE_SKIPS } from './agi1-prompt.js';
 import { linesOf } from '../src/i18n/all.js';
 import { isLang, LANGS } from '../src/i18n/langs.js';
 import { canList, PART_IDS, FEEL_IDS } from './live-acts.js';
@@ -116,6 +116,7 @@ export function cleanReply(text) {
 // AGI-1 learned about them, which api/chat.js checks and saves. Asking for it costs a few output tokens, so only they do.
 // visitor.memory: her Telegram group notes, when the visitor asked about the group.
 // visitor.telegram (2026-09-29): she's texting on her Telegram bot ({ repliedTo: her text they replied to, if any }).
+// visitor.discord (2026-10-28): she's answering a /ask in her Discord server ({}: server/discord.js; discordPrompt).
 // visitor.lang (2026-09-29): the language the visitor picked (or their Telegram app's), src/i18n/langs.js; English if not.
 // visitor.langSource: where that came from ('menu', 'telegram', 'default': see languagePrompt).
 // visitor.shot (2026-10-02, "Show her"): one picture of a window they picked, { mimeType, data } from server/shot.js: it goes
@@ -157,7 +158,7 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
     method: 'POST',
     headers: { 'x-goog-api-key': cfg.geminiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(visitor.level, visitor) + groupMemoryPrompt(visitor.memory) + telegramPrompt(visitor.telegram)
+      systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(visitor.level, visitor) + groupMemoryPrompt(visitor.memory) + telegramPrompt(visitor.telegram) + discordPrompt(visitor.discord)
         + languagePrompt(lang, { source: visitor.langSource || (visitor.telegram ? 'telegram' : 'menu') }) + shotPrompt(shot) + livePrompt(live) }] },
       contents,
       safetySettings: SAFETY_SETTINGS,

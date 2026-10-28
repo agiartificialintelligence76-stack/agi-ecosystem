@@ -247,7 +247,8 @@ async function runner(cfg, body) {
       return json(200, await liveDb.schedule(cfg, next));
     }
     case 'on_x': {
-      // (2026-10-07) she's streaming on X now (never sent for a recording): her Telegram groups hear it, once a day at most
+      // (2026-10-07) she's streaming on X now (never sent for a recording): her Telegram groups (and since 2026-10-28 her
+      // Discord channel) hear it, once a day at most
       // (live_tell decides, whatever restarts). Never a failure for the show: anything wrong here is only logged.
       if (!show) return json(400, { error: 'bad_request' });
       let told = false;
@@ -259,6 +260,11 @@ async function runner(cfg, body) {
       const { postLiveNow } = await import('../server/tg-groups.js');
       const out = await postLiveNow(cfg, tgToken(), { deadline: Date.now() + 15_000 });
       if (out.posted || out.failed) console.log(`[live] told her Telegram groups she's live: ${out.posted} posted, ${out.failed} failed`);
+      // (2026-10-28) and her Discord server's channel (server/discord.js, only when it's set up: the same once a day)
+      if (cfg.dcFeedWebhook && cfg.dcPosts) {
+        const { postDiscordLive } = await import('../server/discord.js');
+        out.discord = await postDiscordLive(cfg);
+      }
       return json(200, { ok: true, told: true, ...out });
     }
     default:
