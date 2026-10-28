@@ -1,5 +1,15 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## AGI-1 on Discord — 2026-10-28
+
+The owner: "can you fix my agi discord server? and organize it? and also can you add agi1 bot to my discord server like in the telegram bot?". The server's own organizing happened in Discord, in the owner's browser. In code: her Telegram group mode on Discord, through Discord's HTTP interactions (no gateway, no new server, SQL or function):
+
+- **What she does:** `/ask` (the same AI and daily limits as her Telegram groups), `/ca`, `/mc`, `/website`, `/music` (a tap uploads the song) and `/help`, only in the servers in `DISCORD_GUILDS`; her diary, $AGI's market moments and her "i'm live on X" line in the channel of `DISCORD_FEED_WEBHOOK`. Never a DM, a name or a ping.
+- **Where:** `server/discord.js`, `server/dc-lines.js`; agi1.app/discord/interactions → `api/telegram.js?discord` (`vercel.json`); the cron (`api/feed.js`) connects her app (`connectDiscord()`) and posts (`postToDiscord()`); `api/live.js` posts her live line (`postDiscordLive()`). Her prompt: `discordPrompt()` in `server/agi1-prompt.js`. The footer's safety note has three Discord sentences.
+- **Her app:** "AGI-1", application id `1565016537683984464`, public key `048ca45efef0d02b41a963c2a3905ed8925c3babff0e7f99bafcca5b78be0554`, made in the Developer Portal on the owner's account.
+- **Owner:** set `DISCORD_PUBLIC_KEY`, `DISCORD_GUILDS`, `DISCORD_BOT_TOKEN` (secret) and `DISCORD_FEED_WEBHOOK` (secret) in Vercel, Redeploy, add her with the OAuth2 link (`bot` + `applications.commands`), then run the cron once (or paste the endpoint in the portal). Steps and troubleshooting: CLAUDE.md, "AGI-1 on Discord".
+- **Tests:** `tests/discord.test.js` (19), plus one each in `tests/telegram.test.js` and `tests/live.test.js`; the whole suite passes, also with real-looking values for every setting, the Discord ones included. Not tried live: Discord's own calls (the workspace can't reach Discord).
+
 ## ClankChecker: the list survives clank.trade's slow answers — 2026-10-28
 
 The owner: "the clankchecker is not working", with a screenshot of "Couldn't reach clank.trade right now. Try again" under the search box. It loaded fine a minute later (466 coins, 7 graduated), so it was intermittent:
