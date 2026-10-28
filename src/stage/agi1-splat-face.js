@@ -72,9 +72,10 @@ export function createAgi1SplatFace(arm, options = {}) {
       for (const side of ['L', 'R']) {
         const eye = indices.get(`FACIAL_${side}_EyeParallel`);
         if (eye !== undefined) {
-          // The renderer uses rigid bone palettes, so scale alone cannot
-          // hide the iris. Recede it into the head while the lids meet.
-          pose.scales[eye].x *= 1 - 0.97 * blink;
+          // Recede the iris into the head while the lids meet. Bone scale is
+          // not used: the rigid palette used to strip it, and with her
+          // proportions stretch on (2026-10-28) the engine keeps pose scale,
+          // which squashed the iris into a sliver mid-blink.
           move(pose, `FACIAL_${side}_EyeParallel`, -0.05 * blink, 0, 0);
         }
         move(pose, `FACIAL_${side}_EyelidUpperA`, 0.003 * blink, -0.019 * blink, 0);

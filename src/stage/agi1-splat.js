@@ -2,20 +2,58 @@
 // retargeted hello and nod clips. Keep the existing stage camera, controls and effects.
 import * as THREE from 'three';
 import * as pc from 'playcanvas';
-import { Scene, Character, Animation } from '@viggle/splat-engine';
+import { Scene, Character, Animation, Pose, buildStretch } from '@viggle/splat-engine';
 import { createSplatMotion } from './agi1-splat-motion.js';
 import { createAgi1SplatFace } from './agi1-splat-face.js';
 
 export const AGI1_SPLAT_ASSETS = {
-  character: '/models/agi1-splat.vsplat?v=20261025-logo2',
+  character: '/models/agi1-splat.vsplat?v=20261028-print',
   hello: '/models/agi1-wave-hello.glb?v=20261025-hand',
   nod: '/models/agi1-nod-yes.glb?v=20261025-nod',
 };
-const HEIGHT = 1.62;
+// Her overall height on the stage, the same as AGI-1 in 2D: hair top to soles.
+export const AGI1_SPLAT_HEIGHT = 1.62;
 const SOURCE_HEIGHT = 1.8667856454849243;
+// Taller proportions (2026-10-28, the owner: "she looks so short"): longer legs,
+// a little more neck and arm. The engine lengthens each bone segment and
+// stretches its Gaussians along the bone, so animations keep working. Her
+// overall height stays AGI1_SPLAT_HEIGHT; her head and torso become a smaller
+// share of it. 1 everywhere would be the supplied model's own proportions.
+export const AGI1_PROPORTIONS = Object.freeze({
+  head: 1, torsoAlong: 1, limbAlong: 1, legAlong: 1.12, armAlong: 1.03, neckAlong: 1.08,
+});
 const HELLO_NAME = 'agi1-hello';
 const NOD_NAME = 'agi1-nod';
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// Bind-pose heights (model space) of her lowest foot joint and her head joint,
+// with whatever bone stretch the armature currently has.
+function restHeights(arm) {
+  const names = arm.rigBoneNames, pose = new Pose(arm.numBones), world = [];
+  pose.setToBind(arm.skeleton.bindT, arm.skeleton.bindR);
+  arm.skeleton.applyLocal(pose, pc.Mat4.IDENTITY, world);
+  const y = (name) => world[names.indexOf(name)].getTranslation(new pc.Vec3()).y;
+  return { feet: Math.min(y('ball_l'), y('ball_r'), y('foot_l'), y('foot_r')), head: y('head') };
+}
+
+// Apply AGI1_PROPORTIONS. Longer legs push her feet below the floor, so return
+// `lift` (how far to raise her to stand on it again) and `rise` (how much her
+// hair top rises once lifted), both in the supplied model's metres.
+export function applyAgi1Proportions(arm, spec = AGI1_PROPORTIONS) {
+  const before = restHeights(arm);
+  arm.setBoneStretch(spec ? buildStretch(arm.rigBoneNames, spec) : null);
+  const after = restHeights(arm);
+  const lift = before.feet - after.feet;
+  return { lift, rise: after.head - before.head + lift };
+}
+
+// Soles on the floor. Splat-engine 0.3.2 deliberately lowers VIGGCHAR
+// characters by their baked ground shift (its legacy-convention shim, see
+// Character.bakedGroundShiftY), which left her standing about 10 cm into the
+// floor until 2026-10-28; `lift` adds the longer legs.
+export function standOnFloor(character, lift = 0) {
+  character.setPosition(0, (character.bakedGroundShiftY || 0) + lift, 0);
+}
 
 // One owner for authored motions: a reaction cannot reset the playing clip
 // every frame or leave a previous clip's stop timer running over the next one.
@@ -79,6 +117,7 @@ export async function loadAgi1Splat({ canvas, camera, mobile = false, reducedMot
     const character = await Character.load(scene, AGI1_SPLAT_ASSETS.character, {
       name: 'AGI-1', position: { x: 0, y: 0, z: 0 },
     });
+    const { lift, rise } = applyAgi1Proportions(character.armature);
     onProgress(0.7);
     const [clip, nodClip] = await Promise.all([
       Animation.loadGlb(scene, AGI1_SPLAT_ASSETS.hello, HELLO_NAME),
@@ -89,19 +128,19 @@ export async function loadAgi1Splat({ canvas, camera, mobile = false, reducedMot
     const holder = new THREE.Group(), fx = new THREE.Group(), root = new THREE.Group();
     holder.add(fx); fx.add(root);
     root.name = 'AGI-1 splat';
-    root.scale.setScalar(HEIGHT / SOURCE_HEIGHT);
+    root.scale.setScalar(AGI1_SPLAT_HEIGHT / (SOURCE_HEIGHT + rise));
     // The supplied character faces +X; the website's front camera faces +Z.
     root.rotation.y = -Math.PI / 2;
-    const hitBox = new THREE.Mesh(new THREE.BoxGeometry(0.72, HEIGHT, 0.48), new THREE.MeshBasicMaterial());
+    const hitBox = new THREE.Mesh(new THREE.BoxGeometry(0.72, AGI1_SPLAT_HEIGHT, 0.48), new THREE.MeshBasicMaterial());
     hitBox.visible = false;
-    hitBox.position.y = HEIGHT / 2;
+    hitBox.position.y = AGI1_SPLAT_HEIGHT / 2;
     fx.add(hitBox);
     const mark = (name, x, y, z) => {
       const point = new THREE.Object3D(); point.name = name;
       point.position.set(x, y, z); root.add(point); return point;
     };
     const marks = {
-      head: mark('head', 0, 1.63, 0), headTop: mark('headTop', 0, SOURCE_HEIGHT, 0),
+      head: mark('head', 0, 1.63, 0), headTop: mark('headTop', 0, SOURCE_HEIGHT + rise, 0),
       chest: mark('chest', 0, 1.3, 0),
       hands: ['r', 'l'].map((side) => [
         mark(`hand_${side}`, 0, 0.9, side === 'l' ? 0.3 : -0.3),
@@ -112,7 +151,7 @@ export async function loadAgi1Splat({ canvas, camera, mobile = false, reducedMot
     const mount = new pc.Entity('AGI-1 stage transform');
     scene.contentRoot.addChild(mount);
     character.armature.entity.reparent(mount);
-    character.setPosition(0, 0, 0);
+    standOnFloor(character, lift);
     const arm = character.armature;
     const boneIds = Object.fromEntries(arm.rigBoneNames.map((name, i) => [name.toLowerCase(), i]));
     const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();

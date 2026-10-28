@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { NodeIO } from '@gltf-transform/core';
 import { Animation, Armature, loadSkeletonLibrary, Pose } from '@viggle/splat-engine';
-import { Entity } from 'playcanvas';
+import { Entity, Mat4, Vec3 } from 'playcanvas';
 import { Group } from 'three';
-import { AGI1_SPLAT_ASSETS, createSplatPlayback, createController } from '../src/stage/agi1-splat.js';
+import { AGI1_SPLAT_ASSETS, AGI1_PROPORTIONS, applyAgi1Proportions, standOnFloor, createSplatPlayback, createController } from '../src/stage/agi1-splat.js';
+import { readVsplat, sigmoid, hsv } from '../tools/model/vsplat-io.mjs';
 import { createSplatMotion } from '../src/stage/agi1-splat-motion.js';
 import { createAgi1SplatFace, createFaceSignals } from '../src/stage/agi1-splat-face.js';
 import { setMeter, stopTalk, pretendTalk, talkLevel } from '../src/lib/talk.js';
@@ -513,4 +514,192 @@ test('facial motion uses the native lids and both mouth branches, leaving body p
     assert.ok(pose.scales[i].distance(baseline.scales[i]) < 1e-10);
     assert.ok(quaternionGap(pose.rotations[i], baseline.rotations[i]) < 1e-10, 'the next fresh frame returns fully to rest');
   }
+});
+
+// ---- 2026-10-28: taller proportions, standing on the floor, and the model clean-up
+function shippedArmature() {
+  const model = readVsplat(modelUrl);
+  return new Armature('shipped AGI-1', { numBones: library.boneNames441.length, boneNames: library.boneNames441,
+    restIsPerCharacter: true, stdMaleRestTranslations: Float32Array.from(model.joints),
+    stdMaleRestRotations: library.restRotations441, stdMaleParents: library.parents441 });
+}
+function restWorld(arm) {
+  const pose = new Pose(arm.numBones), world = [];
+  pose.setToBind(arm.skeleton.bindT, arm.skeleton.bindR);
+  arm.skeleton.applyLocal(pose, Mat4.IDENTITY, world);
+  return name => world[library.boneNames441.indexOf(name)].getTranslation(new Vec3());
+}
+
+test('her taller proportions lengthen the legs, keep her feet on the floor and leave her head as it is', () => {
+  const arm = shippedArmature(), before = restWorld(arm);
+  const { lift, rise } = applyAgi1Proportions(arm);
+  const after = restWorld(arm);
+  const length = (at, a, b) => at(a).distance(at(b));
+  for (const side of ['l', 'r']) {
+    const thigh = length(after, `thigh_${side}`, `calf_${side}`) / length(before, `thigh_${side}`, `calf_${side}`);
+    const shin = length(after, `calf_${side}`, `foot_${side}`) / length(before, `calf_${side}`, `foot_${side}`);
+    assert.ok(Math.abs(thigh - AGI1_PROPORTIONS.legAlong) < 1e-4 && Math.abs(shin - AGI1_PROPORTIONS.legAlong) < 1e-4, 'both leg segments grow');
+    assert.ok(Math.abs(length(after, `foot_${side}`, `ball_${side}`) - length(before, `foot_${side}`, `ball_${side}`)) < 1e-6, 'her feet keep their size');
+    // Her right foot rests 1 cm higher and its leg is a little less upright, so it ends within a millimetre.
+    assert.ok(Math.abs(after(`ball_${side}`).y + lift - before(`ball_${side}`).y) < 0.002, 'the lift puts each foot back on the floor');
+  }
+  assert.ok(lift > 0.09 && lift < 0.14, `the legs add about 11 cm in the model's metres (${lift.toFixed(3)})`);
+  assert.ok(rise > lift && rise < lift + 0.02, 'a slightly longer neck lifts her head a little more');
+  const headSize = (at) => at('head').distance(at('FACIAL_C_FacialRoot'));
+  assert.ok(Math.abs(headSize(after) - headSize(before)) < 1e-6, 'her head and face keep their size');
+  assert.ok(Math.abs(length(after, 'spine_01', 'spine_05') - length(before, 'spine_01', 'spine_05')) < 1e-6, 'her torso keeps its length');
+  applyAgi1Proportions(arm, null);
+  const reset = restWorld(arm);
+  assert.ok(reset('ball_l').distance(before('ball_l')) < 1e-6, 'proportions can be switched off again');
+});
+
+test('she stands on the floor despite the engine lowering VIGGCHAR characters by their bake shift', () => {
+  const calls = [];
+  const character = { bakedGroundShiftY: 0.1119, setPosition: (...xyz) => calls.push(xyz) };
+  standOnFloor(character, 0.05);
+  assert.deepEqual(calls[0].map(v => +v.toFixed(6)), [0, 0.1619, 0], 'the entity rises by the shift plus the longer legs');
+  standOnFloor({ setPosition: (...xyz) => calls.push(xyz) });
+  assert.deepEqual(calls[1], [0, 0, 0], 'a character without a bake shift stays at the origin');
+  const source = readFileSync(new URL('../src/stage/agi1-splat.js', import.meta.url), 'utf8');
+  assert.match(source, /applyAgi1Proportions\(character\.armature\)/, 'the website applies her proportions');
+  assert.match(source, /standOnFloor\(character, lift\)/, 'the website stands her on the floor');
+  assert.match(source, /AGI1_SPLAT_HEIGHT \/ \(SOURCE_HEIGHT \+ rise\)/, 'her overall height stays the 2D model\'s');
+});
+
+test('blinks never scale bones, which the proportions stretch would otherwise show', () => {
+  const { arm, pose } = motionFixture();
+  const face = createAgi1SplatFace(arm, { random: () => 0.5 });
+  face.apply(pose, { blink: 1, mouth: 0.8, smile: 0.5 });
+  for (let i = 0; i < pose.numBones; i++) {
+    const s = pose.scales[i];
+    assert.ok(Math.abs(s.x - 1) + Math.abs(s.y - 1) + Math.abs(s.z - 1) < 1e-9, `${library.boneNames441[i]} keeps unit scale`);
+  }
+});
+
+test('the shipped model has an invisible first splat and no other invisible splats', () => {
+  const model = readVsplat(modelUrl);
+  const invisible = 1 / 255;
+  assert.ok(sigmoid(model.opacity[0]) < invisible, 'slot 0 is a placeholder: the renderer misdraws whatever is stored first');
+  let hidden = 0;
+  for (let i = 1; i < model.n; i++) if (sigmoid(model.opacity[i]) < invisible) hidden++;
+  assert.equal(hidden, 0, 'splats nobody can see are dropped');
+});
+
+test('the AGI print sits on the shirt instead of floating in front of it', () => {
+  const model = readVsplat(modelUrl), ink = [], cloth = [];
+  for (let i = 0; i < model.n; i++) {
+    const rgb = [model.color[i * 3], model.color[i * 3 + 1], model.color[i * 3 + 2]];
+    if (rgb[0] === 249 && rgb[1] === 247 && rgb[2] === 253) { ink.push(i); continue; }
+    const [h, s] = hsv(...rgb), y = model.pos[i * 3 + 1];
+    if (model.pos[i * 3] > 0.05 && y > 1.36 && y < 1.5 && h >= 230 && h <= 300 && s > 0.1 && sigmoid(model.opacity[i]) > 0.3) cloth.push(i);
+  }
+  assert.ok(ink.length > 5000, 'the print is present');
+  const gaps = [];
+  for (const i of ink) {
+    let front = -Infinity;
+    for (const j of cloth) {
+      const dy = model.pos[j * 3 + 1] - model.pos[i * 3 + 1], dz = model.pos[j * 3 + 2] - model.pos[i * 3 + 2];
+      if (dy * dy + dz * dz < 0.0001) front = Math.max(front, model.pos[j * 3]);
+    }
+    if (front > -Infinity) gaps.push(model.pos[i * 3] - front);
+  }
+  gaps.sort((a, b) => a - b);
+  const at = p => gaps[Math.floor(p * (gaps.length - 1))];
+  // The first version stood 20 mm (median) to 26 mm (95%) off the cloth.
+  assert.ok(at(0.5) < 0.01, `the print hugs the shirt (median gap ${(at(0.5) * 1000).toFixed(1)} mm)`);
+  assert.ok(at(0.95) < 0.02, `even where her chest curves away (95% gap ${(at(0.95) * 1000).toFixed(1)} mm)`);
+});
+
+test('the AGI print moves with the shirt through the nod and the wave', () => {
+  // The shirt's own motion at each print splat: its shirt splats within 8 mm,
+  // skinned together (skinning is linear, so their mean weights). The print's
+  // first weights followed only her spine: in the nod the top of the word stood
+  // up to 4 mm off the shirt (p99), a white fin above her outline from the side.
+  const model = readVsplat(modelUrl), ink = [], cloth = [];
+  for (let i = 0; i < model.n; i++) {
+    const rgb = [model.color[i * 3], model.color[i * 3 + 1], model.color[i * 3 + 2]];
+    if (rgb[0] === 249 && rgb[1] === 247 && rgb[2] === 253) { ink.push(i); continue; }
+    const [h, s] = hsv(...rgb), y = model.pos[i * 3 + 1];
+    if (model.pos[i * 3] > 0.05 && y > 1.36 && y < 1.5 && h >= 230 && h <= 300 && s > 0.1 && sigmoid(model.opacity[i]) > 0.3) cloth.push(i);
+  }
+  const weightsOf = (i) => {
+    const w = [0, 1, 2].map(k => model.boneWeight[i * 3 + k]);
+    w.push(255 - w[0] - w[1] - w[2]);
+    return w.map((v, k) => [model.palette[model.boneIndex[i * 4 + k]], v / 255]).filter(([, v]) => v > 0);
+  };
+  const at = (i) => new Vec3(model.pos[i * 3], model.pos[i * 3 + 1], model.pos[i * 3 + 2]);
+  const pairs = [];
+  for (const i of ink) {
+    const p = at(i), shirt = new Map();
+    let n = 0;
+    for (const j of cloth) {
+      const q = at(j);
+      if ((q.y - p.y) ** 2 + (q.z - p.z) ** 2 >= 0.008 ** 2 || q.x < p.x - 0.02) continue;
+      n++;
+      for (const [bone, w] of weightsOf(j)) shirt.set(bone, (shirt.get(bone) || 0) + w);
+    }
+    if (n) pairs.push({ p, own: weightsOf(i), shirt: [...shirt].map(([bone, w]) => [bone, w / n]) });
+  }
+  assert.ok(pairs.length > 5000, 'the print lies on the shirt');
+  const scene = { contentRoot: new Entity('print test'), skeletonLibrary: library, skeletalAnimationLibrary: new Map(), app: { frame: 0 } };
+  const arm = shippedArmature();
+  arm.addToScene(scene);
+  const world = [], skin = library.boneNames441.map(() => new Mat4()), scratch = new Vec3();
+  const skinned = (weights, p) => {
+    const out = new Vec3();
+    for (const [bone, w] of weights) out.add(skin[bone].transformPoint(p, scratch).mulScalar(w));
+    return out;
+  };
+  for (const [name, url] of [['agi1-hello', motionUrl], ['agi1-nod', nodUrl]]) {
+    const bytes = readFileSync(url);
+    const clip = Animation.fromGlb(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+    clip.register(scene, name);
+    assert.equal(arm.playAnimation(name, false, false), true);
+    const pose = new Pose(arm.numBones), offsets = [];
+    for (let frame = 0; frame < clip.numFrames; frame += 3) {
+      arm.probePose(frame, pose);
+      arm.skeleton.applyLocal(pose, Mat4.IDENTITY, world);
+      for (let b = 0; b < skin.length; b++) skin[b].mul2(world[b], arm.inverseBindPose[b]);
+      for (const { p, own, shirt } of pairs) {
+        const base = skinned(shirt, p), normal = skinned(shirt, new Vec3(p.x + 0.01, p.y, p.z)).sub(base).normalize();
+        offsets.push(skinned(own, p).sub(base).dot(normal));
+      }
+    }
+    offsets.sort((a, b) => a - b);
+    const out = offsets[Math.floor(0.99 * (offsets.length - 1))], inward = -offsets[Math.floor(0.01 * (offsets.length - 1))];
+    assert.ok(out < 0.0015, `${name}: the print stays on the shirt (99% within ${(out * 1000).toFixed(2)} mm in front of it)`);
+    assert.ok(inward < 0.0015, `${name}: and does not sink into it (99% within ${(inward * 1000).toFixed(2)} mm)`);
+  }
+  arm.destroy();
+  scene.contentRoot.destroy();
+});
+
+test('hair hanging far from her arms follows her upper body, not her arms', () => {
+  const model = readVsplat(modelUrl), at = restWorld(shippedArmature());
+  const armBones = new Set();
+  for (const side of ['l', 'r']) {
+    const root = library.boneNames441.indexOf(`clavicle_${side}`);
+    for (let i = 0; i < library.boneNames441.length; i++) {
+      for (let b = i; b >= 0; b = library.parents441[b]) if (b === root) { armBones.add(i); break; }
+    }
+  }
+  const segments = ['l', 'r'].flatMap(side => [[`clavicle_${side}`, `upperarm_${side}`], [`upperarm_${side}`, `lowerarm_${side}`],
+    [`lowerarm_${side}`, `hand_${side}`], [`hand_${side}`, `middle_03_${side}`]].map(([a, b]) => [at(a), at(b)]));
+  const distance = (p) => Math.min(...segments.map(([a, b]) => {
+    const ab = b.clone().sub(a), t = Math.max(0, Math.min(1, p.clone().sub(a).dot(ab) / ab.lengthSq()));
+    return p.distance(a.clone().add(ab.mulScalar(t)));
+  }));
+  let farHair = 0, onArms = 0;
+  for (let i = 1; i < model.n; i++) {
+    const [h, s, v] = hsv(model.color[i * 3], model.color[i * 3 + 1], model.color[i * 3 + 2]);
+    if (!(h >= 24 && h <= 60 && s >= 0.18 && v >= 0.3)) continue;
+    const p = new Vec3(model.pos[i * 3], model.pos[i * 3 + 1], model.pos[i * 3 + 2]);
+    if (p.y < 1.0 || distance(p) < 0.16) continue;
+    farHair++;
+    const weights = [model.boneWeight[i * 3], model.boneWeight[i * 3 + 1], model.boneWeight[i * 3 + 2]];
+    weights.push(255 - weights[0] - weights[1] - weights[2]);
+    if (weights.some((w, k) => w > 2 && armBones.has(model.palette[model.boneIndex[i * 4 + k]]))) onArms++;
+  }
+  assert.ok(farHair > 1000, 'her long hair is found');
+  assert.equal(onArms, 0, 'no long hair is dragged by a wave');
 });
