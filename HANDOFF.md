@@ -23,7 +23,11 @@ Two asks of the owner's (a chat cut off before anything was pushed; picked up in
   now takes up to **50 MB**, and a still image over the server's limit is made smaller first (`shrinkToFit()` with sharp: a
   JPEG, or a WebP with see-through parts, at its full size when that's enough); she says she did. A GIF over it is said at
   once. Boosting to Level 2 is the only way to post a file over 10 MB as it is (the owner's call).
-- **Tests:** 11 more (`tests/discord.test.js`, `tests/holders.test.js`).
+- **Tests:** 11 more (`tests/discord.test.js`, `tests/holders.test.js`); the suite: 1,376 tests, 1,372 pass, 4 skipped.
+- **Live (pushed `bf649f3` and `05b7f78`, both Ready):** the 5-minute clock gave Prince Loki 👤 Stranger and took it off the
+  owner's account (a holder); after the cron run by hand (Vercel → Cron Jobs → Run: click the visible Run button, the page
+  has a hidden copy of each), `/post` lists all 19 channels with their notes, and "nsfw" finds 🔞┃agi1-nsfw. **Left for the
+  owner:** try /post with the image over 10 MB again.
 - Details, troubleshooting: CLAUDE.md, "AGI-1 on Discord" → "Round 4".
 
 ## AGI-1 on Discord, round 3: holder roles — 2026-10-29

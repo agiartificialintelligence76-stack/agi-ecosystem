@@ -3583,6 +3583,19 @@ is. Now (`server/dc-tickets.js`):
 **Server Members Intent** on for her app (Developer Portal → AGI-1 → Bot: "Bot successfully updated!"; Presence and Message
 Content stay off, Public Bot off).
 
+**Tried live 2026-10-29** (the owner's server; Claude in the owner's Chrome): pushed (`bf649f3`, then `05b7f78` for the
+bigger images), both deployments Ready, and the `*/5 * * * *` job listed in Vercel → Cron Jobs. **👤 Stranger:** the clock's
+first runs gave it to Prince Loki (Mod: AGI-1 in the audit log at 1:50 PM, "updated roles for godprinceloki"; his roles now
+Mod and 👤 Stranger), never to AGI-1's bot; the owner's own roles were changed at 2:13 PM, and at 2:15 PM the clock took 👤
+Stranger off the owner's account ("[feed] 👤 Stranger: given to 0, taken off 1": the owner has 💘 Crush and 💞 Soulmate, and
+a holder never keeps it). **/post's list:** after the cron run by hand (Vercel → Cron Jobs → the first `/api/feed` → Run, at
+14:37: "[discord] set her commands in the server …"; **the page has a hidden copy of every Run button** for small screens: a
+click on that one does nothing, the visible one sends `POST /api/v1/projects/…/crons/run`), `/post` → channel showed all 19
+channels in the sidebar's order with their notes (the four of 📌 Start Here but 🎫┃support and ✅┃verify, 📔┃agi1-diary, 🛡┃team-chat
+and 📋┃mod-log "AGI-1 can't post here yet"; 🔞┃agi1-nsfw "not age-restricted yet"), and typing "nsfw" left only 🔞┃agi1-nsfw.
+Nothing was posted. **Not tried live yet:** an image over 10 MB (the owner's to try: the same /post that said "that image is
+over 10 MB"); the new member who joins (the clock's next run gives it, as it did Prince Loki).
+
 **Troubleshooting:** Vercel → Logs `[discord] 👤 Stranger`: "Server Members Intent → on" (the intent is off: above), "must
 be above 👤 Stranger" (Server Settings → Roles: drag AGI-1's role above it; it needs Manage Roles), "no 👤 Stranger role" (a
 role with Stranger in its name). Vercel → Settings → Cron Jobs: the `*/5 * * * *` job's runs (`{"ok":true,"strangers":…}`).
