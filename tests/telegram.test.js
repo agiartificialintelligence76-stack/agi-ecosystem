@@ -900,9 +900,11 @@ test('the build never ships the bot token, and the cron runs 8 times a day', () 
   const pattern = /\b\d{6,12}:AA[0-9A-Za-z_-]{33}\b/;
   assert.ok(pattern.test(TOKEN) && check.includes(String(pattern).slice(1, -1)), 'the token\'s shape is checked too');
   const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
-  const feed = vercel.crons.filter((c) => c.path === '/api/feed');
+  // (2026-10-29, round 4) and one more on the same path every 5 minutes: only her Discord server's 👤 Stranger role
+  const feed = vercel.crons.filter((c) => c.path === '/api/feed' && c.schedule !== '*/5 * * * *');
   assert.equal(feed.length, 8);
-  assert.ok(feed.every((c) => /^30 \d{1,2} \* \* \*$/.test(c.schedule)), 'once a day each (Vercel Hobby), half past the hour');
+  assert.ok(feed.every((c) => /^30 \d{1,2} \* \* \*$/.test(c.schedule)), 'once a day each, half past the hour');
+  assert.equal(vercel.crons.filter((c) => c.path === '/api/feed' && c.schedule === '*/5 * * * *').length, 1);
   // Shared connections include the live relay and the exact owner media signing path; Telegram stays server-only.
   assert.match(vercel.headers[0].headers[0].value, /connect-src 'self' blob: https:\/\/api\.dexscreener\.com wss:\/\/live\.agi1\.app https:\/\/vujaxukucukjxzhcxlea\.supabase\.co\/storage\/v1\/object\/upload\/sign\/agi1-owner-media\/;/, 'Telegram adds no browser connection source');
 });
@@ -1545,6 +1547,8 @@ test('/api/feed with her Discord server: her app connected, the new market momen
   assert.deepEqual(r.discord, {
     app: { app: APP, description: true, endpoint: true, commands: 1 }, posts: { posted: 1, failed: 0, skipped: 0 },
     holders: { checked: 0, changed: 0, removed: 0, gone: 0, failed: 0 },
+    // (round 4) 👤 Stranger too (this fake server has no holder roles, so none to give: tests/holders.test.js has the rest)
+    strangers: { members: 0, given: 0, taken: 0, waiting: 0, failed: 0, noRole: true },
   });
   assert.deepEqual(holderDue, [{ p_limit: 25, p_minutes: 150 }], 'the oldest 25, not read in 2.5 hours');
   assert.equal(app.interactions_endpoint_url, 'https://agi1.app/discord/interactions');

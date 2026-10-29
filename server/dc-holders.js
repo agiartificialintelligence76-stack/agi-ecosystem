@@ -10,10 +10,15 @@
 //     (supabase/discord.sql) so it can be read again. One wallet gives a role to one Discord account in a server.
 //   • api/feed.js (the cron, 8 times a day): holdersClock() reads the oldest ones' $AGI again and gives, swaps or takes back
 //     the role; someone under 10,000 or who left the server is forgotten.
+//   • (Round 4, the same day, the owner: everyone who hasn't verified, and every new member, gets 👤 Stranger by themselves)
+//     strangersClock(): every 5 minutes (api/feed.js), the server's member list read whole, and 👤 Stranger given to every
+//     member without 💘 Crush or 💞 Soulmate and taken off a holder (verifying swaps it at once too; Remove my role or going
+//     under 10,000 gives it back). Never a bot, never someone still on the rules screen. Her app needs Discord's Server
+//     Members Intent for the list; nothing of it is kept.
 // Kept: scrambled codes of the account and of the wallet, and (encrypted with PASS_SECRET) the server's id, the account's id
 // and the wallet's address, only to read it again and change the role. Never a name or a message.
-// Her bot needs Manage Roles, and her role above 💘 Crush and 💞 Soulmate (Discord's rule: a bot only gives roles under its own
-// highest one). The roles are found by their names ("crush", "soulmate"), like her tickets' category.
+// Her bot needs Manage Roles, and her role above 💘 Crush, 💞 Soulmate and 👤 Stranger (Discord's rule: a bot only gives roles
+// under its own highest one). The roles are found by their names ("crush", "soulmate", "stranger"), like her tickets' category.
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { discordCall, dcToken, dcCode, edit, message, onlyYou, later, update, NO_PINGS, FLAG } from './discord.js';
 import { botCall, isOwner } from './dc-tickets.js';
@@ -28,12 +33,14 @@ export const VERIFY_PATH = '/discord/verify';           // the page (vercel.json
 export const RECHECK_MINUTES = 150;                     // a wallet's $AGI is read again at most every 2.5 hours (the cron: every 3)
 export const RECHECK_BATCH = 25;                        // read again in one cron run, at most
 export const ROLE_OF_LEVEL = Object.freeze({ 2: 'crush', 3: 'soulmate' });
-export const ROLE_NAMES = Object.freeze({ crush: '💘 Crush', soulmate: '💞 Soulmate' });
+export const ROLE_NAMES = Object.freeze({ crush: '💘 Crush', soulmate: '💞 Soulmate', stranger: '👤 Stranger' });
 export const MIN_AGI = Object.freeze({ crush: LEVELS[1].min, soulmate: LEVELS[2].min });   // 10,000 and 1,000,000
 const ID = /^\d{17,20}$/;
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 const ROLES_MS = 10 * 60_000, NO_ROLES_MS = 60_000;     // her server's roles, remembered (none found: a minute)
 const HINT = " (AGI-1's role needs Manage Roles and must be above 💘 Crush and 💞 Soulmate in Server Settings → Roles)";
+const STRANGER_HINT = " (AGI-1's role needs Manage Roles and must be above 👤 Stranger in Server Settings → Roles)";
+const INTENT_HINT = " (her 👤 Stranger role needs to read the server's member list: Developer Portal → AGI-1 → Bot → Privileged Gateway Intents → Server Members Intent → on → Save Changes)";
 
 // ---------- what this server copy remembers (her servers' two role ids; nothing about anyone) ----------
 const rolesCache = new Map();                           // guild → { until, roles }
@@ -43,16 +50,18 @@ const warnOnce = (key, line) => { if (!warned.has(key)) { warned.add(key); conso
 export function forgetHolders() { rolesCache.clear(); warned.clear(); }
 const noAccess = (err) => err?.status === 403 || err?.code === 50001 || err?.code === 50013;
 
-// ---------- her server's two roles ----------
-// By their names: the highest role with "crush" in it and the highest with "soulmate", never a bot's own role or @everyone.
-// → { crush, soulmate } (their ids) · null (not both there)
+// ---------- her server's roles ----------
+// By their names: the highest role with "crush" in it and the highest with "soulmate", never a bot's own role or @everyone;
+// (round 4) and the highest with "stranger", everyone else's, when the server has one.
+// → { crush, soulmate, stranger } (their ids; stranger: null when there's none) · null (not both holder roles there)
 export function holderRoles(roles, guild) {
   const list = Array.isArray(roles) ? roles : [];
   const pick = (re) => list
     .filter((r) => ID.test(String(r?.id ?? '')) && String(r.id) !== String(guild) && r.managed !== true && re.test(String(r.name ?? '')))
     .sort((a, b) => (Number(b.position) || 0) - (Number(a.position) || 0))[0]?.id;
-  const crush = pick(/crush/i), soulmate = pick(/soulmate/i);
-  return crush && soulmate && crush !== soulmate ? { crush: String(crush), soulmate: String(soulmate) } : null;
+  const crush = pick(/crush/i), soulmate = pick(/soulmate/i), stranger = pick(/stranger/i);
+  if (!crush || !soulmate || crush === soulmate) return null;
+  return { crush: String(crush), soulmate: String(soulmate), stranger: stranger && stranger !== crush && stranger !== soulmate ? String(stranger) : null };
 }
 export async function rolesOf(token, guild, now = Date.now(), { timeoutMs = 4000 } = {}) {
   const hit = rolesCache.get(guild);
@@ -132,9 +141,12 @@ async function memberRoles(token, guild, user) {
     throw err;
   }
 }
-// The one role their level gives (none under Crush: level 1), the other one taken off.
-// → 'same' · 'changed' · 'gone' (not in the server). Throws when Discord refuses (no Manage Roles, a role above hers…).
-export async function syncRoles(token, guild, user, level, roles, { reason } = {}) {
+// The one holder role their level gives (none under Crush: level 1), the other one taken off; (round 4) and 👤 Stranger, when
+// the server has it and strangers isn't false (DISCORD_STRANGERS=off): on under Crush, off from a Crush or a Soulmate.
+// → 'same' · 'changed' (a holder role given or taken: 👤 Stranger alone doesn't count) · 'gone' (not in the server).
+// Throws when Discord refuses a holder role (no Manage Roles, a role above hers…); 👤 Stranger refused is only said (the
+// 5-minute clock tries it again), so it never stops a holder role.
+export async function syncRoles(token, guild, user, level, roles, { reason, strangers = true } = {}) {
   const have = await memberRoles(token, guild, user);
   if (!have) return 'gone';
   const want = level >= 3 ? roles.soulmate : level === 2 ? roles.crush : null;
@@ -145,6 +157,15 @@ export async function syncRoles(token, guild, user, level, roles, { reason } = {
   ];
   for (const [method, id] of calls) {
     await discordCall(`/guilds/${guild}/members/${user}/roles/${id}`, { method, token, what: 'a holder role', reason, timeoutMs: 4000 });
+  }
+  const stranger = strangers !== false ? roles.stranger : null;
+  const strangerCall = !stranger ? null : !want && !have.has(stranger) ? 'PUT' : want && have.has(stranger) ? 'DELETE' : null;
+  if (strangerCall) {
+    try {
+      await discordCall(`/guilds/${guild}/members/${user}/roles/${stranger}`, { method: strangerCall, token, what: 'the Stranger role', reason, timeoutMs: 4000 });
+    } catch (err) {
+      console.warn(`[discord] couldn't ${strangerCall === 'PUT' ? 'give' : 'take off'} 👤 Stranger: ${err.message}${noAccess(err) ? STRANGER_HINT : ' (the 5-minute clock tries again)'}`);
+    }
   }
   return calls.length ? 'changed' : 'same';
 }
@@ -190,7 +211,7 @@ export async function verifyHolder(cfg, { wallet, link, env = process.env, now =
     // under 10,000: nothing kept. A role this very wallet gave goes now; one an earlier wallet gave stays (re-checked as usual)
     const dropped = await db(cfg, 'dc_holder_drop', { p_who: who, p_wallet: wcode });
     if (dropped) {
-      try { await syncRoles(token, l.guild, l.user, 1, roles, { reason: 'AGI-1: under 10,000 $AGI' }); } catch (err) { console.warn(`[discord] couldn't take a holder role back: ${err.message}${noAccess(err) ? HINT : ''}`); }
+      try { await syncRoles(token, l.guild, l.user, 1, roles, { reason: 'AGI-1: under 10,000 $AGI', strangers: cfg.dcStrangers }); } catch (err) { console.warn(`[discord] couldn't take a holder role back: ${err.message}${noAccess(err) ? HINT : ''}`); }
       return { ok: true, level: 1, agi: h.agi, role: null };
     }
     const mine = await db(cfg, 'dc_holder_get', { p_who: who });
@@ -204,11 +225,11 @@ export async function verifyHolder(cfg, { wallet, link, env = process.env, now =
   // this is the only time it's taken back, whatever happens next
   const was = r.moved ? unsealHolder(cfg.passSecret, r.moved) : null;
   if (was && was.user !== l.user) {
-    try { await syncRoles(token, was.guild, was.user, 1, roles, { reason: 'AGI-1: its wallet was verified by another account' }); } catch (err) { console.warn(`[discord] couldn't take a holder role back: ${err.message}${noAccess(err) ? HINT : ''}`); }
+    try { await syncRoles(token, was.guild, was.user, 1, roles, { reason: 'AGI-1: its wallet was verified by another account', strangers: cfg.dcStrangers }); } catch (err) { console.warn(`[discord] couldn't take a holder role back: ${err.message}${noAccess(err) ? HINT : ''}`); }
   }
   let sync;
   try {
-    sync = await syncRoles(token, l.guild, l.user, h.level, roles, { reason: 'AGI-1: $AGI verified on agi1.app' });
+    sync = await syncRoles(token, l.guild, l.user, h.level, roles, { reason: 'AGI-1: $AGI verified on agi1.app', strangers: cfg.dcStrangers });
   } catch (err) {
     // kept: the cron gives the role once Discord lets her (it says what to change)
     console.warn(`[discord] couldn't give a holder role: ${err.message}${noAccess(err) ? HINT : ''}`);
@@ -289,7 +310,7 @@ async function removeRole(cfg, it, ctx) {
     try {
       const dropped = await db(cfg, 'dc_holder_drop', { p_who: holderCode(cfg.passSecret, guild, user) });
       const roles = await rolesOf(token, guild, Date.now());
-      const sync = roles ? await syncRoles(token, guild, user, 1, roles, { reason: 'AGI-1: Remove my role' }) : 'same';
+      const sync = roles ? await syncRoles(token, guild, user, 1, roles, { reason: 'AGI-1: Remove my role', strangers: cfg.dcStrangers }) : 'same';
       const had = Boolean(dropped) || sync === 'changed';
       await edit(it, { content: had ? D.HOLDERS_REMOVED : D.HOLDERS_NONE, components: [] });
       return had ? 'holder_removed' : 'holder_none';
@@ -327,7 +348,7 @@ export async function holdersClock(cfg, { env = process.env, deadline = Date.now
     const roles = await rolesOf(token, s.guild);
     if (!roles) { out.failed += 1; return; }
     const level = h.level >= 2 ? h.level : 1;
-    const sync = await syncRoles(token, s.guild, s.user, level, roles, { reason: 'AGI-1: $AGI checked again' });
+    const sync = await syncRoles(token, s.guild, s.user, level, roles, { reason: 'AGI-1: $AGI checked again', strangers: cfg.dcStrangers });
     const who = holderCode(cfg.passSecret, s.guild, s.user);
     if (sync === 'gone') { await db(cfg, 'dc_holder_drop', { p_who: who }); out.gone += 1; return; }
     if (level < 2) { await db(cfg, 'dc_holder_drop', { p_who: who }); out.removed += 1; return; }
@@ -341,6 +362,101 @@ export async function holdersClock(cfg, { env = process.env, deadline = Date.now
       out.failed += 1;
       console.warn(`[discord] re-checking a holder: ${err.message}${noAccess(err) ? HINT : ''}`);
     })));
+  }
+  return out;
+}
+
+// ---------- (round 4) 👤 Stranger: everyone else's role, given by her bot by itself ----------
+// The owner (2026-10-29): everyone who hasn't verified, and every new member, gets 👤 Stranger by themselves. Discord tells a
+// bot about new members only over its gateway, which she never keeps open, so every 5 minutes (api/feed.js: its own Vercel
+// cron, and the cron's runs too) the server's member list is read whole (Discord's List Guild Members: her app needs the
+// Server Members Intent for it) and 👤 Stranger is given to every member without 💘 Crush or 💞 Soulmate (Team and Mod too:
+// they haven't verified either) and taken off a holder. Never a bot, and never someone still on the server's rules screen
+// (pending: a role would let them skip it; they get it once they're through). At most STRANGER_CHANGES role changes a run
+// (Discord's rate limits), the rest the next run. Nothing is kept: the list is read and forgotten.
+// → { members, given, taken, waiting, failed, stopped?, noRole?, off? }
+export const STRANGER_CHANGES = 25;                     // role changes in one run, at most
+export const MEMBER_PAGE = 1000;                        // Discord's largest page of members
+export const MEMBER_PAGES = 10;                         // so 10,000 members read in one run, at most
+const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+async function listMembers(token, guild, deadline) {
+  const all = [];
+  let after = 0n;
+  for (let page = 0; page < MEMBER_PAGES; page += 1) {
+    const list = await discordCall(`/guilds/${guild}/members?limit=${MEMBER_PAGE}&after=${after}`, { token, what: "the server's members", timeoutMs: 5000 });
+    if (!Array.isArray(list)) break;
+    all.push(...list);
+    if (list.length < MEMBER_PAGE || Date.now() > deadline) break;
+    for (const m of list) { try { const id = BigInt(m?.user?.id ?? 0); if (id > after) after = id; } catch { /* not an id */ } }
+  }
+  return all;
+}
+// one role call; Discord saying "too many" (429): once more after the wait it asks for, when there's time for it
+async function strangerCall(token, guild, user, role, method, deadline) {
+  const path = `/guilds/${guild}/members/${user}/roles/${role}`;
+  const opts = { method, token, what: 'the Stranger role', reason: method === 'PUT' ? 'AGI-1: 👤 Stranger, not verified yet' : 'AGI-1: a verified holder', timeoutMs: 4000 };
+  try {
+    return await discordCall(path, opts);
+  } catch (err) {
+    const wait = err.status === 429 ? Math.ceil((err.retryAfter ?? 1) * 1000) + 50 : 0;
+    if (!wait || Date.now() + wait + 1000 > deadline) throw err;
+    await sleep(wait);
+    return discordCall(path, opts);
+  }
+}
+export async function strangersClock(cfg, { env = process.env, deadline = Date.now() + 8000, now = Date.now() } = {}) {
+  const out = { members: 0, given: 0, taken: 0, waiting: 0, failed: 0 };
+  const token = dcToken(env);
+  if (!cfg.dcStrangers || !token || !cfg.dcGuilds?.size) return { ...out, off: true };
+  for (const guild of cfg.dcGuilds) {
+    if (Date.now() > deadline) { out.stopped = 'time'; break; }
+    let roles;
+    try {
+      roles = await rolesOf(token, guild, now);
+    } catch (err) {
+      out.failed += 1;
+      console.warn(`[discord] 👤 Stranger: ${err.message}`);
+      continue;
+    }
+    if (!roles?.stranger) {
+      out.noRole = true;
+      if (roles) warnOnce(`stranger:${guild}`, `[discord] no 👤 Stranger role in her server ${guild}: make a role with "Stranger" in its name, under AGI-1's role (nothing is given until then)`);
+      continue;
+    }
+    let members;
+    try {
+      members = await listMembers(token, guild, deadline);
+    } catch (err) {
+      out.failed += 1;
+      if (noAccess(err)) warnOnce(`intent:${guild}`, `[discord] 👤 Stranger: ${err.message}${INTENT_HINT}`);
+      else console.warn(`[discord] 👤 Stranger: ${err.message}`);
+      continue;
+    }
+    const todo = [];
+    for (const m of members) {
+      const id = String(m?.user?.id ?? '');
+      if (!ID.test(id) || m.user.bot === true) continue;
+      if (m.pending === true) { out.waiting += 1; continue; }
+      out.members += 1;
+      const have = new Set((Array.isArray(m.roles) ? m.roles : []).map(String));
+      const holder = have.has(roles.crush) || have.has(roles.soulmate);
+      if (!holder && !have.has(roles.stranger)) todo.push(['PUT', id]);
+      else if (holder && have.has(roles.stranger)) todo.push(['DELETE', id]);
+    }
+    for (const [method, id] of todo) {
+      if (out.given + out.taken >= STRANGER_CHANGES) { out.stopped = 'enough'; break; }
+      if (Date.now() > deadline) { out.stopped = 'time'; break; }
+      try {
+        await strangerCall(token, guild, id, roles.stranger, method, deadline);
+        if (method === 'PUT') out.given += 1; else out.taken += 1;
+      } catch (err) {
+        if (err.status === 404 || err.code === 10007) continue;          // they left just now
+        out.failed += 1;
+        if (noAccess(err)) { warnOnce(`stranger-role:${guild}`, `[discord] 👤 Stranger: ${err.message}${STRANGER_HINT}`); break; }
+        if (err.status === 429) { out.stopped = 'rate'; break; }        // the rest next run
+        console.warn(`[discord] 👤 Stranger: ${err.message}`);
+      }
+    }
   }
   return out;
 }

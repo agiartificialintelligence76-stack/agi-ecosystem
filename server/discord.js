@@ -153,7 +153,7 @@ export async function discordPost(request, env = process.env) {
 // the tests }. Never throws for what someone sent.
 export async function onInteraction(cfg, it, { env = process.env, now = Date.now(), started = Date.now(), quickMs = QUICK_MS } = {}) {
   if (it?.type === KIND.PING) return { response: { type: ANSWER.PONG } };
-  if (it?.type === KIND.AUTOCOMPLETE) return { response: { type: ANSWER.CHOICES, data: { choices: [] } } };
+  if (it?.type === KIND.AUTOCOMPLETE) return suggest(cfg, it, { env, now, started });
   const guild = typeof it?.guild_id === 'string' ? it.guild_id : null;
   const who = it?.member?.user?.id;
   // a server that isn't hers, her DMs (no member there), or something we couldn't answer later: one line, only to them
@@ -165,6 +165,16 @@ export async function onInteraction(cfg, it, { env = process.env, now = Date.now
 }
 // an interaction's own webhook (our app's id and its token, as Discord sent them): what edits her answer afterwards
 const hookable = (it) => /^\d{17,20}$/.test(String(it?.application_id ?? '')) && /^[\w.-]{20,1000}$/.test(String(it?.token ?? ''));
+// (2026-10-29, round 4) what someone is typing in an option with her own list (Discord asks as they type and wants the list
+// within 3 s): /post's channel, the owner's (server/dc-tickets.js, loaded only then). Anything else, another server or her
+// DMs: nothing to suggest. Never a speed bump: each letter typed is one of these.
+export const NO_CHOICES = Object.freeze({ type: ANSWER.CHOICES, data: { choices: [] } });
+async function suggest(cfg, it, ctx) {
+  const guild = typeof it?.guild_id === 'string' ? it.guild_id : null;
+  if (!guild || !ours(cfg, guild) || !/^\d{17,20}$/.test(String(it?.member?.user?.id ?? ''))) return { response: NO_CHOICES };
+  if (it.data?.name === 'post') return (await import('./dc-tickets.js')).postChoices(cfg, it, ctx);
+  return { response: NO_CHOICES };
+}
 
 // a message (public, or only for whoever asked), never a ping, no link previews unless asked for
 export const message = (content, { onlyYou: mine = false, embeds = false, components } = {}) => ({
@@ -429,11 +439,13 @@ async function sendSong(it, song, { deadline, env }) {
 // Her commands as Discord takes them (a server's own: COMMANDS in server/dc-lines.js; /music while her songs are on)
 export const commandsFor = (cfg) => D.COMMANDS.filter((c) => c.name !== 'music' || musicOn(cfg)).map((c) => ({ type: 1, ...c }));
 // what makes two lists of commands the same for us (Discord's answer has more in it: ids, versions…); since 2026-10-29 who
-// sees a command (default_member_permissions: the owner's are '8') and which channels an option takes count too
+// sees a command (default_member_permissions: the owner's are '8') and which channels an option takes count too, and (round
+// 4, the same day) whether an option has her own list (autocomplete)
 const optionKey = (o) => ({
   type: Number(o?.type), name: String(o?.name ?? ''), description: String(o?.description ?? ''), required: o?.required === true,
   min_length: o?.min_length ?? null, max_length: o?.max_length ?? null,
   channel_types: Array.isArray(o?.channel_types) ? [...o.channel_types].map(Number).sort((a, b) => a - b) : null,
+  autocomplete: o?.autocomplete === true,
 });
 export const commandsKey = (list) => JSON.stringify((Array.isArray(list) ? list : [])
   .map((c) => ({

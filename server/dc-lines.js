@@ -32,7 +32,9 @@ export const COMMANDS = [
     default_member_permissions: OWNER_ONLY_PERMISSIONS,
     options: [
       { type: 11, name: 'image', description: 'The image she posts (png, jpg, gif or webp, 10 MB at most)', required: true },
-      { type: 7, name: 'channel', description: 'Where she posts it', required: true, channel_types: [0, 5] },
+      // (2026-10-29, round 4) her own list of the server's channels (autocomplete: server/dc-tickets.js, postChoices), not
+      // Discord's channel picker, which only ever shows 10 channels until a name is typed (so 🔞┃agi1-nsfw never showed)
+      { type: 3, name: 'channel', description: 'Where she posts it: every channel is in the list (type to find one)', required: true, autocomplete: true, max_length: 100 },
       { type: 3, name: 'caption', description: 'Words under it (optional)', required: false, max_length: 1500 },
     ],
   },
@@ -101,6 +103,12 @@ export const POST_TOO_BIG = 'that image is over 10 MB 🙈 try a smaller one';
 export const postNoAccess = (channel) => `i can't post in <#${channel}> yet 🙈 let AGI-1 view it, send messages and attach files there`;
 export const postNotAgeRestricted = (channel) => `<#${channel}> isn't marked age-restricted yet 🙈 turn on Age-Restricted in its settings first, then post again`;
 export const POST_FAILED = "it didn't go out 🙈 try again in a minute";
+// (2026-10-29, round 4) /post's channel list: what a channel's line says after its name and category, and a channel typed
+// without picking it from the list that isn't one channel's name
+export const CHOICE_CANT_POST = "AGI-1 can't post here yet";
+export const CHOICE_AGE_RESTRICTED = 'age-restricted';
+export const CHOICE_NOT_RESTRICTED = 'not age-restricted yet';
+export const POST_PICK = "i couldn't tell which channel that is 🙈 type part of its name in channel, then tap it in my list";
 
 // ---------- her holder roles (2026-10-29, round 3: server/dc-holders.js) ----------
 // Her button's message (/holders), in the verify channel: what the roles are, where verifying happens, the rules scammers

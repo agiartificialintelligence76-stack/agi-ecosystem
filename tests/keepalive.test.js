@@ -58,11 +58,17 @@ test('a database problem is logged with the fix', async () => {
   assert.ok(!logs.join('\n').includes('sb_secret_fake_key_123'), 'the key never appears in logs');
 });
 
-test('the Vercel schedule is valid on the free plan (each job once a day) and points at real functions', () => {
+test('the Vercel schedule: each job once a day but her Discord roles clock, and real functions', async () => {
   const { crons } = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
   assert.ok(crons.filter((c) => c.path === '/api/keepalive').length >= 2, 'a few reads a day, in case one run is skipped');
   assert.ok(crons.length <= 100, 'Vercel allows 100 cron jobs a project');
-  for (const { path, schedule } of crons) {
+  // (2026-10-29, round 4) the one job more often than daily: /api/feed every 5 minutes for her Discord server's 👤 Stranger
+  // role (api/feed.js tells it apart by its schedule). It needs Vercel Pro (the owner's plan since 2026-10-25): on Hobby a
+  // deploy with it fails, so it must be the only one
+  const { ROLES_SCHEDULE } = await import('../api/feed.js');
+  assert.equal(ROLES_SCHEDULE, '*/5 * * * *');
+  assert.deepEqual(crons.filter((c) => c.schedule === ROLES_SCHEDULE).map((c) => c.path), ['/api/feed']);
+  for (const { path, schedule } of crons.filter((c) => c.schedule !== ROLES_SCHEDULE)) {
     assert.ok(['/api/keepalive', '/api/feed'].includes(path), path);        // (her Telegram feed since 2026-09-29)
     assert.ok(existsSync(new URL(`..${path}.js`, import.meta.url)));
     const [minute, hour, ...rest] = schedule.split(' ');

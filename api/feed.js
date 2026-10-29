@@ -9,6 +9,10 @@
 //   and (2026-10-29) her holder roles re-checked (server/dc-holders.js).
 // Only Vercel may call it: when CRON_SECRET is set, Vercel sends "Authorization: Bearer <CRON_SECRET>" (like /api/keepalive).
 // To run it by hand (e.g. right after setting the bot up): Vercel → the project → Settings → Cron Jobs → /api/feed → Run.
+// (2026-10-29, round 4) and every 5 minutes, its own cron (ROLES_SCHEDULE: Vercel sends each run's schedule as
+// x-vercel-cron-schedule, so one path serves both): only her Discord server's 👤 Stranger role (server/dc-holders.js,
+// strangersClock), nothing of the feed. A cron more often than daily needs Vercel Pro (the owner's plan since 2026-10-25):
+// on Hobby, that line in vercel.json must go, or every deploy fails (the 8 runs a day still give 👤 Stranger).
 //
 // GET /api/feed?buys (2026-10-06): the $AGI buy bot's check (server/buys.js), every minute, from Supabase Cron
 // (supabase/buys.sql): only with the key that file made ("Authorization: Bearer <key>", read from the database). Here and
@@ -31,6 +35,7 @@ import { buyKey, checkBuys } from '../server/buys.js';
 import { gameKey, gamesTick, gamesOn } from '../server/games.js';
 
 const feedParts = () => Promise.all([import('../server/telegram.js'), import('../server/feed.js'), import('../server/tg-groups.js')]);
+export const ROLES_SCHEDULE = '*/5 * * * *';
 
 const fingerprint = (text) => createHash('sha256').update(String(text)).digest();
 const sameSecret = (a, b) => timingSafeEqual(fingerprint(a), fingerprint(b));
@@ -171,6 +176,22 @@ async function studioCheck(request) {
 }
 let warnedApps = false, warnedAlerts = false;
 
+// (round 4) the 5-minute clock: her Discord server's 👤 Stranger role, and nothing else (no Supabase, no Telegram)
+async function strangersCheck() {
+  const cfg = getConfig();
+  if (!process.env.DISCORD_BOT_TOKEN || !cfg.dcGuilds?.size || !cfg.dcStrangers) return answer({ ok: true, off: true });
+  const { strangersClock } = await import('../server/dc-holders.js');
+  const now = Date.now();
+  try {
+    const s = await strangersClock(cfg, { env: process.env, now, deadline: now + 18_000 });
+    if (s.given || s.taken) console.log(`[feed] 👤 Stranger: given to ${s.given}, taken off ${s.taken}`);
+    return answer({ ok: true, strangers: s });
+  } catch (err) {
+    console.warn(`[feed] 👤 Stranger wasn't checked: ${err.message}`);
+    return answer({ error: 'discord' }, 502);
+  }
+}
+
 export async function GET(request) {
   const search = new URL(request.url).search;
   if (search === '?buys') return buysCheck(request);
@@ -182,6 +203,7 @@ export async function GET(request) {
     return answer({ error: 'not_configured' }, 503);
   }
   if (!sameSecret(request.headers.get('authorization') || '', `Bearer ${secret}`)) return answer({ error: 'unauthorized' }, 401);
+  if (request.headers.get('x-vercel-cron-schedule') === ROLES_SCHEDULE) return strangersCheck();
 
   const cfg = getConfig();
   if (!cfg.supabaseUrl || !cfg.supabaseKey || cfg.passSecret.length < 32) {
@@ -245,6 +267,18 @@ export async function GET(request) {
       } catch (err) {
         console.warn(`[feed] her holder roles weren't checked: ${err.message}`);
         out.discord.holders = { error: err.code === 'PGRST202' ? 'not_set_up' : 'database' };
+      }
+    }
+    // (round 4) and 👤 Stranger for everyone else, in at most 4 seconds (the 5-minute clock's job; here too, in case it's off)
+    if (process.env.DISCORD_BOT_TOKEN && cfg.dcStrangers) {
+      try {
+        const { strangersClock } = await import('../server/dc-holders.js');
+        const s = await strangersClock(cfg, { env: process.env, deadline: Math.min(deadline - 4_000, Date.now() + 4_000) });
+        out.discord.strangers = s;
+        if (s.given || s.taken) console.log(`[feed] 👤 Stranger: given to ${s.given}, taken off ${s.taken}`);
+      } catch (err) {
+        console.warn(`[feed] 👤 Stranger wasn't checked: ${err.message}`);
+        out.discord.strangers = { error: 'discord' };
       }
     }
   }

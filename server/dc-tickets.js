@@ -10,12 +10,13 @@
 //     the channel is deleted, its messages too (Discord keeps no copy, and neither do we).
 //   • /post (the owner only): an image, and words under it if any, that she posts herself in the channel picked, as AGI-1. A
 //     channel whose name says it's 18+ (nsfw, 18+, 🔞) only once it's marked age-restricted in Discord (Discord's rule for
-//     anything sexually explicit).
+//     anything sexually explicit). (Round 4, the same day) the channel comes from her own list (postChoices: every text and
+//     announcement channel, as the sidebar has them), since Discord's channel picker shows only 10 until a name is typed.
 // Her bot posts with its own token here (DISCORD_BOT_TOKEN). Discord lets a bot post only once it has connected to its
 // gateway one time in its life, so a post refused for that (40001) connects once (identifyOnce: hello, identify, READY,
 // closed) and goes again. Still nothing kept running (her bot shows as offline), no new function, no new SQL, nothing kept
 // by us: who opened a ticket is in its channel's topic, in Discord.
-import { discordCall, dcToken, edit, message, onlyYou, later, update, NO_PINGS, FLAG, MAX_UPLOAD } from './discord.js';
+import { discordCall, dcToken, edit, message, onlyYou, later, update, NO_PINGS, NO_CHOICES, ANSWER, FLAG, MAX_UPLOAD } from './discord.js';
 import * as D from './dc-lines.js';
 
 // ---------- who may ----------
@@ -84,7 +85,7 @@ function busyOpening(key, now, ttl = 20_000) {
   return false;
 }
 // (for the tests: a fresh server copy)
-export function forgetTickets() { opening.clear(); warned.clear(); identifying = null; }
+export function forgetTickets() { opening.clear(); warned.clear(); views.clear(); identifying = null; }
 
 // ---------- her bot, posting ----------
 // Discord asks a bot to connect to its gateway once in its life before it may post: hello → identify (no events asked for)
@@ -275,19 +276,164 @@ const DISCORD_CDN = /^https:\/\/(?:cdn\.discordapp\.com|media\.discordapp\.net)\
 export const adultName = (name) => /nsfw|18\+|🔞/iu.test(String(name ?? ''));
 export const MAX_CAPTION = 1500;
 
+// ---------- /post's channel list (2026-10-29, round 4: the owner's "missing" channels) ----------
+// Discord's own picker for a channel option only ever lists 10 channels (the server's oldest) until a name is typed, so
+// 🔞┃agi1-nsfw and every newer channel never showed in it. /post's channel is her own list instead (an autocomplete option):
+// every text and announcement channel of the server in its sidebar's order, each with its category, whether it's
+// age-restricted (an 18+ one that isn't yet: said) and whether her bot can post there; what's typed narrows it. Discord shows
+// 25 at most (channels she can't post in are the first left out). The server's channels and roles are remembered a minute.
+export const MAX_CHOICES = 25;
+const POST_KINDS = new Set([0, 5]);                      // text and announcement channels
+export const POST_NEEDS = P.VIEW_CHANNEL | P.SEND_MESSAGES | P.ATTACH_FILES;
+const ALL = (1n << 64n) - 1n;
+const VIEW_MS = 60_000;
+const views = new Map();                                 // server → { until, view }
+const big = (v) => { try { return BigInt(v ?? 0); } catch { return 0n; } };
+// What a member may do in a channel, Discord's own sum: the @everyone role's permissions and their roles', then the channel's
+// overwrites (@everyone's, their roles' together, then their own). roles: the server's · member: { id, roles: [ids] }
+export function channelPerms(channel, guild, roles, member) {
+  const byId = new Map((Array.isArray(roles) ? roles : []).map((r) => [String(r?.id), r]));
+  const mine = (Array.isArray(member?.roles) ? member.roles : []).map(String).filter((id) => id !== String(guild));
+  let perms = big(byId.get(String(guild))?.permissions);
+  for (const id of mine) perms |= big(byId.get(id)?.permissions);
+  if ((perms & P.ADMINISTRATOR) !== 0n) return ALL;
+  const ows = Array.isArray(channel?.permission_overwrites) ? channel.permission_overwrites : [];
+  const ow = (id, type) => ows.find((o) => String(o?.id) === id && Number(o?.type) === type);
+  const everyone = ow(String(guild), 0);
+  if (everyone) perms = (perms & ~big(everyone.deny)) | big(everyone.allow);
+  let allow = 0n, deny = 0n;
+  for (const id of mine) {
+    const o = ow(id, 0);
+    if (o) { allow |= big(o.allow); deny |= big(o.deny); }
+  }
+  perms = (perms & ~deny) | allow;
+  const own = ow(String(member?.id ?? ''), 1);
+  if (own) perms = (perms & ~big(own.deny)) | big(own.allow);
+  return perms;
+}
+// The server's text and announcement channels in its sidebar's order: those outside a category first, then each category's
+// (the categories by their place), each by its place and then its id (as Discord breaks ties). Each with its category's name.
+export function postableChannels(channels) {
+  const list = Array.isArray(channels) ? channels : [];
+  const cats = new Map(list.filter((c) => c?.type === 4).map((c) => [String(c.id), c]));
+  const idOf = (c) => big(c?.id);
+  const keyOf = (c) => {
+    const cat = c.parent_id ? cats.get(String(c.parent_id)) : null;
+    return [cat ? 0 : -1, cat ? Number(cat.position ?? 0) : 0, cat ? idOf(cat) : 0n, Number(c.position ?? 0), idOf(c)];
+  };
+  const before = (a, b) => {
+    for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
+    return 0;
+  };
+  return list.filter((c) => POST_KINDS.has(c?.type) && ID.test(String(c?.id ?? '')))
+    .map((c) => ({ c, key: keyOf(c) })).sort((a, b) => before(a.key, b.key))
+    .map(({ c }) => ({ id: String(c.id), name: String(c.name ?? ''), category: cats.get(String(c.parent_id ?? ''))?.name ?? null, nsfw: c.nsfw === true, permission_overwrites: c.permission_overwrites }));
+}
+// A channel's line in the list: its name and category, then what the owner should know (Discord's limit: 100 characters)
+const clip = (s, n) => { const chars = [...s]; return chars.length > n ? `${chars.slice(0, n - 1).join('')}…` : s; };
+export function choiceName(c) {
+  const notes = [
+    ...(c.canPost === false ? [D.CHOICE_CANT_POST] : []),
+    ...(c.nsfw ? [D.CHOICE_AGE_RESTRICTED] : adultName(c.name) ? [D.CHOICE_NOT_RESTRICTED] : []),
+  ];
+  const full = [c.name, c.category, ...notes].filter(Boolean).join(' · ');
+  return [...full].length <= 100 ? full : clip([c.name, ...notes].join(' · '), 100);
+}
+// letters and digits only (an emoji, ┃, a dash, a space or # never matter: "agi1-nsfw" is "agi1nsfw"), and "18+"
+const plain = (s) => String(s ?? '').toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}+]+/gu, '');
+// What's typed → the list: a name that starts with it first, then one with it in it, then its category or "18+"/"nsfw" for
+// an 18+ one, each in the sidebar's order. An id (or a pasted #channel) too. More than Discord's 25: those she can't post in
+// are left out first.
+export function channelChoices(view, typed = '') {
+  const q = plain(typed), id = /\d{17,20}/.exec(String(typed ?? ''))?.[0] ?? null;
+  const found = (view?.channels ?? []).map((c, i) => {
+    const name = plain(c.name);
+    const hay = `${name} ${plain(c.category)}${adultName(c.name) || c.nsfw ? ' 18+ nsfw' : ''}`;
+    const rank = id && c.id === id ? 0 : !q ? 0 : name.startsWith(q) ? 0 : name.includes(q) ? 1 : hay.includes(q) ? 2 : -1;
+    return { c, i, rank };
+  }).filter((r) => r.rank >= 0);
+  const order = (a, b) => a.rank - b.rank || a.i - b.i;
+  const kept = found.length <= MAX_CHOICES ? found
+    : [...found.filter((r) => r.c.canPost !== false).sort(order), ...found.filter((r) => r.c.canPost === false).sort(order)].slice(0, MAX_CHOICES);
+  return kept.sort(order).map(({ c }) => ({ name: choiceName(c), value: c.id }));
+}
+// The channel the owner typed without tapping it in the list: its id (or a pasted #channel), its name exactly, or the one
+// channel whose name has it. → the channel's id · null
+export function channelNamed(view, typed) {
+  const list = view?.channels ?? [];
+  const id = /\d{17,20}/.exec(String(typed ?? ''))?.[0];
+  if (id && list.some((c) => c.id === id)) return id;
+  const q = plain(typed);
+  if (!q) return null;
+  const exact = list.filter((c) => c.name === String(typed).trim() || plain(c.name) === q);
+  if (exact.length === 1) return exact[0].id;
+  const some = list.filter((c) => plain(c.name).includes(q));
+  return some.length === 1 ? some[0].id : null;
+}
+// The server's channels (with whether her bot can post in each: its roles and the channels' permissions) → { channels }
+async function postView(token, guild, botId, now = Date.now()) {
+  const hit = views.get(guild);
+  if (hit && hit.until > now) return hit.view;
+  // (at once, and quick: Discord wants her list within 3 s of the owner's typing)
+  const [channels, roles, bot] = await Promise.all([
+    discordCall(`/guilds/${guild}/channels`, { token, what: "the server's channels", timeoutMs: 1500 }),
+    discordCall(`/guilds/${guild}/roles`, { token, what: "the server's roles", timeoutMs: 1500 }).catch(() => null),
+    ID.test(botId) ? discordCall(`/guilds/${guild}/members/${botId}`, { token, what: 'her own roles', timeoutMs: 1500 }).catch(() => null) : null,
+  ]);
+  const me = Array.isArray(roles) && Array.isArray(bot?.roles) ? { id: botId, roles: bot.roles } : null;
+  const view = {
+    channels: postableChannels(channels).map(({ permission_overwrites, ...c }) => ({
+      ...c, canPost: me ? (channelPerms({ permission_overwrites }, guild, roles, me) & POST_NEEDS) === POST_NEEDS : null,
+    })),
+  };
+  if (views.size >= 50) views.delete(views.keys().next().value);
+  views.set(guild, { until: now + VIEW_MS, view });
+  return view;
+}
+// Discord asks as the owner types in /post's channel (an autocomplete interaction): her list, at once. Only for the owner;
+// anything going wrong: an empty list (Discord then shows nothing to pick, and typing a name still works).
+export async function postChoices(cfg, it, ctx) {
+  const token = dcToken(ctx.env);
+  const focused = (Array.isArray(it.data?.options) ? it.data.options : []).find((o) => o?.focused === true);
+  if (!isOwner(it.member) || !token || focused?.name !== 'channel') return { response: NO_CHOICES };
+  try {
+    const view = await postView(token, it.guild_id, String(it.application_id ?? ''), ctx.now);
+    return { response: { type: ANSWER.CHOICES, data: { choices: channelChoices(view, String(focused.value ?? '')) } } };
+  } catch (err) {
+    console.warn(`[discord] /post's channel list: ${err.message}`);
+    return { response: NO_CHOICES };
+  }
+}
+
 export async function postCommand(cfg, it, ctx) {
   if (!isOwner(it.member)) return { response: onlyYou(D.OWNER_ONLY) };
   const token = dcToken(ctx.env);
   if (!token) return { response: onlyYou(D.NO_TOKEN) };
   const opt = optionsOf(it);
   const attachment = it.data?.resolved?.attachments?.[String(opt.image ?? '')];
-  const channel = String(opt.channel ?? '');
+  // (round 4) her list's id, or what the owner typed without tapping it (a name, found below)
+  const picked = String(opt.channel ?? '').trim().slice(0, 100);
   const caption = typeof opt.caption === 'string' ? opt.caption.trim().slice(0, MAX_CAPTION) : '';
-  if (!attachment || !ID.test(channel)) return { response: onlyYou(D.POST_FAILED) };
+  if (!attachment || !picked) return { response: onlyYou(D.POST_FAILED) };
   if (!(IMAGE_TYPE.test(String(attachment.content_type ?? '')) || IMAGE_NAME.test(String(attachment.filename ?? '')))) return { response: onlyYou(D.POST_NOT_IMAGE) };
   if (Number(attachment.size) > MAX_UPLOAD) return { response: onlyYou(D.POST_TOO_BIG) };
   if (!DISCORD_CDN.test(String(attachment.url ?? ''))) return { response: onlyYou(D.POST_FAILED) };
   const after = (async () => {
+    // which channel: her list's id, or the one channel whose name was typed
+    let channel = ID.test(picked) ? picked : null;
+    if (!channel) {
+      try {
+        channel = channelNamed(await postView(token, it.guild_id, String(it.application_id ?? ''), Date.now()), picked);
+      } catch (err) {
+        console.warn(`[discord] couldn't read the server's channels for /post: ${err.message}`);
+        await edit(it, { content: D.POST_FAILED });
+        return 'post_failed';
+      }
+      if (!channel) {
+        await edit(it, { content: D.POST_PICK });
+        return 'post_pick';
+      }
+    }
     // the channel: one she can see, in this server, and (for an 18+ one) marked age-restricted
     let where;
     try {

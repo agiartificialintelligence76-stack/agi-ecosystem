@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
 import { POST as walletPost } from '../api/wallet.js';
+import { GET as feedGet, ROLES_SCHEDULE } from '../api/feed.js';
 import * as DC from '../server/discord.js';
 import * as D from '../server/dc-lines.js';
 import * as HV from '../server/dc-holders.js';
@@ -21,6 +22,7 @@ const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const SECRET = 'test-pass-secret-that-is-long-enough-1234';
 const GUILD = '1563093500021710850', OTHER_GUILD = '1111111111111111111', APP = '1565016537683984464';
 const CRUSH = '1565200000000000101', SOULMATE = '1565200000000000102', TEAM = '1565200000000000011', BOT_ROLE = '1565200000000000013';
+const STRANGER = '1565200000000000103', MOD = '1565200000000000012';     // (round 4) 👤 Stranger, and the Mod role
 const VERIFY = '1565200000000000501';
 const PERSON = '987654321098765432', FRIEND = '987654321098765433', OWNER = '1563090000000000001';
 const WAL = '0x00000000000000000000000000000000000000a1', WAL2 = '0x00000000000000000000000000000000000000b2';
@@ -33,7 +35,7 @@ const ENV = {
   PASS_SECRET: SECRET, SUPABASE_URL: 'https://fake.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_fake_key_123',
   DISCORD_GUILDS: GUILD, DISCORD_BOT_TOKEN: BOT, VERCEL_PROJECT_PRODUCTION_URL: 'www.agi1.app',
 };
-const CLEAR = ['SITE_URL', 'DISCORD_HOLDERS', 'ROBINHOOD_RPC_URL', 'DISCORD_PUBLIC_KEY', 'DISCORD_FEED_WEBHOOK'];
+const CLEAR = ['SITE_URL', 'DISCORD_HOLDERS', 'DISCORD_STRANGERS', 'ROBINHOOD_RPC_URL', 'DISCORD_PUBLIC_KEY', 'DISCORD_FEED_WEBHOOK', 'CRON_SECRET'];
 
 // ---------- a small stand-in for supabase/discord.sql ----------
 function holdersDb() {
@@ -98,6 +100,9 @@ beforeEach(() => {
       { id: SOULMATE, name: '💞 Soulmate', position: 3 }, { id: CRUSH, name: '💘 Crush', position: 2 },
     ],
     members: new Map([[PERSON, []], [FRIEND, []], [OWNER, [TEAM]]]), refuse: false, rolesDown: false, posted: [],
+    // (round 4) the member list: who's a bot, who's still on the rules screen, the list refused (no Server Members Intent),
+    // Discord's "too many" for the next role calls, and a refusal for 👤 Stranger only
+    bots: new Set(), pending: new Set(), listRefused: false, tooMany: 0, refuseStranger: false,
   };
   globalThis.fetch = async (url, init = {}) => {
     url = String(url);
@@ -132,6 +137,15 @@ beforeEach(() => {
       if (path === `/guilds/${GUILD}/roles` && method === 'GET') {
         return fake.rolesDown ? Response.json({ message: 'Service Unavailable' }, { status: 503 }) : Response.json(fake.roles);
       }
+      const list = /^\/guilds\/(\d+)\/members\?limit=(\d+)&after=(\d+)$/.exec(path);
+      if (list && method === 'GET') {
+        if (fake.listRefused) return Response.json({ message: 'Missing Access', code: 50001 }, { status: 403 });
+        const after = BigInt(list[3]), limit = Number(list[2]);
+        const page = [...fake.members.keys()].filter((id) => BigInt(id) > after).sort((a, b) => (BigInt(a) < BigInt(b) ? -1 : 1)).slice(0, limit);
+        return Response.json(page.map((id) => ({
+          user: { id, username: `u${id.slice(-4)}`, ...(fake.bots.has(id) ? { bot: true } : {}) }, roles: [...fake.members.get(id)], pending: fake.pending.has(id),
+        })));
+      }
       const member = /^\/guilds\/(\d+)\/members\/(\d+)$/.exec(path);
       if (member && method === 'GET') {
         const roles = member[1] === GUILD ? fake.members.get(member[2]) : undefined;
@@ -139,6 +153,8 @@ beforeEach(() => {
       }
       const role = /^\/guilds\/(\d+)\/members\/(\d+)\/roles\/(\d+)$/.exec(path);
       if (role) {
+        if (fake.tooMany > 0) { fake.tooMany -= 1; return Response.json({ message: 'You are being rate limited.', retry_after: 0.05, global: false }, { status: 429 }); }
+        if (fake.refuseStranger && role[3] === STRANGER) return Response.json({ message: 'Missing Permissions', code: 50013 }, { status: 403 });
         if (fake.refuse || fake.refuseFor?.has(role[2])) return Response.json({ message: 'Missing Permissions', code: 50013 }, { status: 403 });
         const have = fake.members.get(role[2]);
         if (!have) return Response.json({ message: 'Unknown Member', code: 10007 }, { status: 404 });
@@ -156,7 +172,8 @@ beforeEach(() => {
 const cfg = () => getConfig();
 const db = (fn) => calls.filter((c) => c.to === 'db' && c.fn === fn);
 const discord = (method, rest = '') => calls.filter((c) => c.to === 'discord' && c.method === method && c.path.endsWith(rest));
-const roleCalls = () => calls.filter((c) => c.to === 'discord' && /\/roles\/\d+$/.test(c.path)).map((c) => `${c.method} ${c.path.split('/')[4]} ${c.path.split('/').pop() === CRUSH ? 'crush' : 'soulmate'}`);
+const roleName = (id) => ({ [CRUSH]: 'crush', [SOULMATE]: 'soulmate', [STRANGER]: 'stranger' })[id] ?? id;
+const roleCalls = () => calls.filter((c) => c.to === 'discord' && /\/roles\/\d+$/.test(c.path)).map((c) => `${c.method} ${c.path.split('/')[4]} ${roleName(c.path.split('/').pop())}`);
 const rolesOfMember = (who) => [...(fake.members.get(who) ?? [])].filter((r) => r === CRUSH || r === SOULMATE).map((r) => (r === CRUSH ? 'crush' : 'soulmate'));
 
 let seq = 0;
@@ -224,7 +241,7 @@ test("what's kept: scrambled codes, and the ids and the address only sealed (AES
 });
 
 test("her server's two roles, found by their names; a member's own one", () => {
-  assert.deepEqual(HV.holderRoles(fake.roles, GUILD), { crush: CRUSH, soulmate: SOULMATE });
+  assert.deepEqual(HV.holderRoles(fake.roles, GUILD), { crush: CRUSH, soulmate: SOULMATE, stranger: null }, 'no 👤 Stranger role: none');
   assert.equal(HV.holderRoles(fake.roles.filter((r) => r.id !== CRUSH), GUILD), null, 'both are needed');
   assert.equal(HV.holderRoles([{ id: CRUSH, name: 'crush soulmate', position: 1 }], GUILD), null, 'never one role for both');
   assert.equal(HV.holderRoles([{ id: GUILD, name: 'crush' }, { id: SOULMATE, name: 'Soulmate' }], GUILD), null, 'never @everyone');
@@ -528,6 +545,176 @@ test("the cron: their $AGI read again; the role follows it (swapped, taken back)
   assert.equal((await HV.holdersClock(cfg())).off, true);
 });
 
+// ---------- (round 4) 👤 Stranger: everyone else's role, given by her bot by itself ----------
+const withStranger = () => {
+  fake.roles.push({ id: STRANGER, name: '👤 Stranger', position: 1 }, { id: MOD, name: 'Mod', position: 5 });
+  HV.forgetHolders();
+};
+const has = (who) => [...(fake.members.get(who) ?? [])].map(roleName).filter((r) => ['crush', 'soulmate', 'stranger'].includes(r)).sort();
+
+test('👤 Stranger: found by its name like the holder roles; never a bot\'s role, @everyone, or one of the holder roles', () => {
+  withStranger();
+  assert.deepEqual(HV.holderRoles(fake.roles, GUILD), { crush: CRUSH, soulmate: SOULMATE, stranger: STRANGER });
+  assert.equal(HV.holderRoles([...fake.roles, { id: '1565200000000000777', name: 'old stranger', position: 0 }], GUILD).stranger, STRANGER, 'the highest');
+  assert.equal(HV.holderRoles(fake.roles.map((r) => (r.id === STRANGER ? { ...r, managed: true } : r)), GUILD).stranger, null);
+  assert.equal(HV.holderRoles([{ id: CRUSH, name: 'Crush', position: 2 }, { id: SOULMATE, name: 'Soulmate stranger', position: 3 }], GUILD).stranger, null, 'never a holder role');
+  assert.equal(HV.holderRoles([{ id: STRANGER, name: 'Stranger' }], GUILD), null, 'not without the holder roles');
+  assert.equal(HV.ROLE_NAMES.stranger, '👤 Stranger');
+});
+
+test('👤 Stranger and verifying: swapped for 💘 Crush at once, given back by Remove my role and under 10,000; DISCORD_STRANGERS=off leaves it', async () => {
+  withStranger();
+  fake.members.set(PERSON, [STRANGER]);
+  fake.balances.set(WAL, 25_000n);
+  assert.equal((await verify({ session: session(), link: link() })).data.role, 'crush');
+  assert.deepEqual(roleCalls(), [`PUT ${PERSON} crush`, `DELETE ${PERSON} stranger`], 'the holder role first, then 👤 Stranger off');
+  assert.deepEqual(has(PERSON), ['crush']);
+  // Remove my role: a 👤 Stranger again
+  calls.length = 0;
+  assert.equal(await (await run(tap('hv:off', { roles: [CRUSH] }))).after, 'holder_removed');
+  assert.deepEqual(roleCalls(), [`DELETE ${PERSON} crush`, `PUT ${PERSON} stranger`]);
+  assert.deepEqual(has(PERSON), ['stranger']);
+  // with nothing to remove, 👤 Stranger alone isn't "a holder role removed"
+  fake.members.set(FRIEND, []);
+  assert.equal(await (await run(tap('hv:off', { who: FRIEND }), { now: T0 + 60_000 })).after, 'holder_none');
+  assert.deepEqual(has(FRIEND), ['stranger'], 'given all the same');
+  // a Crush who sold: verifying again takes the role back, and 👤 Stranger comes back
+  fake.balances.set(WAL, 30_000n);
+  await verify({ session: session(), link: link() });
+  fake.balances.set(WAL, 100n);
+  await verify({ session: session(), link: link() });
+  assert.deepEqual(has(PERSON), ['stranger']);
+  // the account a wallet moved away from: a 👤 Stranger again too
+  fake.balances.set(WAL, 50_000n);
+  await verify({ session: session(), link: link(PERSON) });
+  await verify({ session: session(), link: link(FRIEND) });
+  assert.deepEqual([has(PERSON), has(FRIEND)], [['stranger'], ['crush']]);
+  // the cron finding a holder under 10,000: taken back, a 👤 Stranger again
+  fake.balances.set(WAL, 9_000n);
+  fake.db.rows.forEach((r) => { r.due = true; });
+  assert.equal((await HV.holdersClock(cfg())).removed, 1);
+  assert.deepEqual(has(FRIEND), ['stranger']);
+  // switched off: her bot neither gives nor takes it
+  process.env.DISCORD_STRANGERS = 'off';
+  fake.members.set(person(7), [STRANGER]);
+  fake.balances.set(WAL2, 2_000_000n);
+  await verify({ session: session(WAL2), link: link(person(7)) });
+  assert.deepEqual(has(person(7)), ['soulmate', 'stranger'], 'left as it was');
+  assert.deepEqual(await HV.strangersClock(cfg()), { members: 0, given: 0, taken: 0, waiting: 0, failed: 0, off: true });
+});
+
+test("👤 Stranger refused by Discord: the holder role still goes, and the log says what to change", async () => {
+  withStranger();
+  fake.refuseStranger = true;
+  fake.members.set(PERSON, [STRANGER]);
+  fake.balances.set(WAL, 25_000n);
+  assert.deepEqual((await verify({ session: session(), link: link() })).data, { ok: true, level: 2, agi: 25_000, role: 'crush' });
+  assert.deepEqual(has(PERSON), ['crush', 'stranger'], 'the 5-minute clock takes it off once it may');
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /couldn't take off 👤 Stranger/.test(l) && /must be above 👤 Stranger/.test(l)));
+  assert.equal(await (await run(tap('hv:off', { roles: [CRUSH] }))).after, 'holder_removed', 'Remove my role still works');
+  assert.deepEqual(has(PERSON), ['stranger']);
+});
+
+test('the 5-minute clock: 👤 Stranger for every member without a holder role (Team and Mod too), off a holder; never a bot or someone on the rules screen', async () => {
+  withStranger();
+  const MODP = person(20), BOTP = person(21), NEWP = person(22), BOTH = person(23);
+  fake.members = new Map([
+    [PERSON, []], [FRIEND, [STRANGER]], [OWNER, [TEAM, SOULMATE, CRUSH]], [MODP, [MOD]], [BOTP, [BOT_ROLE]], [NEWP, []], [BOTH, [CRUSH, STRANGER]],
+  ]);
+  fake.bots.add(BOTP);
+  fake.pending.add(NEWP);
+  const out = await HV.strangersClock(cfg());
+  assert.deepEqual(out, { members: 5, given: 2, taken: 1, waiting: 1, failed: 0 });
+  assert.deepEqual(has(PERSON), ['stranger']);
+  assert.deepEqual(has(MODP), ['stranger'], "a Mod who hasn't verified: a 👤 Stranger too");
+  assert.deepEqual(has(OWNER), ['crush', 'soulmate'], 'holders: never');
+  assert.deepEqual(has(BOTH), ['crush'], 'a holder: taken off');
+  assert.deepEqual(fake.members.get(BOTP), [BOT_ROLE], 'a bot: never');
+  assert.deepEqual(has(NEWP), [], 'still on the rules screen: later (a role would let them skip it)');
+  const [given] = discord('PUT', `/members/${PERSON}/roles/${STRANGER}`);
+  assert.equal(given.headers['X-Audit-Log-Reason'], encodeURIComponent('AGI-1: 👤 Stranger, not verified yet'));
+  assert.equal(discord('DELETE', `/members/${BOTH}/roles/${STRANGER}`)[0].headers['X-Audit-Log-Reason'], encodeURIComponent('AGI-1: a verified holder'));
+  assert.deepEqual(discord('GET', '').filter((c) => c.path.includes('/members?')).map((c) => c.path), [`/guilds/${GUILD}/members?limit=1000&after=0`], 'the list, one page');
+  assert.equal(calls.filter((c) => c.to === 'db').length, 0, 'nothing kept, no database');
+  // through the rules screen: theirs the next run; nothing else to do
+  fake.pending.clear();
+  calls.length = 0;
+  assert.deepEqual(await HV.strangersClock(cfg()), { members: 6, given: 1, taken: 0, waiting: 0, failed: 0 });
+  assert.deepEqual(has(NEWP), ['stranger']);
+  calls.length = 0;
+  assert.deepEqual(await HV.strangersClock(cfg()), { members: 6, given: 0, taken: 0, waiting: 0, failed: 0 });
+  assert.equal(roleCalls().length, 0, 'nothing to change: no role calls');
+});
+
+test('the 5-minute clock: pages of 1,000, at most 25 changes a run, a wait when Discord asks for one, and every way it can stop', async () => {
+  withStranger();
+  fake.members = new Map(Array.from({ length: 1003 }, (_, i) => [person(1000 + i), []]));
+  const first = await HV.strangersClock(cfg());
+  assert.deepEqual(first, { members: 1003, given: 25, taken: 0, waiting: 0, failed: 0, stopped: 'enough' });
+  assert.deepEqual(discord('GET', '').filter((c) => c.path.includes('/members?')).map((c) => c.path.split('after=')[1]), ['0', person(1999)], 'the second page after the first one\'s last');
+  assert.equal((await HV.strangersClock(cfg())).given, 25, 'the next run: the next 25');
+  // Discord says "too many": waits as long as it asks, once, then goes on
+  fake.members = new Map([[PERSON, []], [FRIEND, []]]);
+  fake.tooMany = 1;
+  assert.deepEqual(await HV.strangersClock(cfg()), { members: 2, given: 2, taken: 0, waiting: 0, failed: 0 });
+  fake.members = new Map([[person(30), []], [person(31), []]]);
+  fake.tooMany = 2;
+  assert.deepEqual(await HV.strangersClock(cfg()), { members: 2, given: 0, taken: 0, waiting: 0, failed: 1, stopped: 'rate' }, 'twice: the rest next run');
+  // its role above hers: said once, and the run stops (every call would be refused)
+  fake.refuseStranger = true;
+  assert.deepEqual(await HV.strangersClock(cfg()), { members: 2, given: 0, taken: 0, waiting: 0, failed: 1 });
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /👤 Stranger: .*Missing Permissions/.test(l) && /must be above 👤 Stranger/.test(l)));
+  fake.refuseStranger = false;
+  // the member list refused (her app's Server Members Intent is off): said once, with where to switch it on
+  fake.listRefused = true;
+  assert.deepEqual(await HV.strangersClock(cfg()), { members: 0, given: 0, taken: 0, waiting: 0, failed: 1 });
+  await HV.strangersClock(cfg());
+  const intent = logs.filter(([k, l]) => k === 'warn' && /Server Members Intent → on → Save Changes/.test(l));
+  assert.equal(intent.length, 1, 'said once');
+  fake.listRefused = false;
+  // no 👤 Stranger role in the server: nothing given, said once
+  HV.forgetHolders();
+  fake.roles = fake.roles.filter((r) => r.id !== STRANGER);
+  assert.deepEqual(await HV.strangersClock(cfg()), { members: 0, given: 0, taken: 0, waiting: 0, failed: 0, noRole: true });
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /no 👤 Stranger role in her server/.test(l)));
+  // the time's up, no token, no server
+  withStranger();
+  assert.equal((await HV.strangersClock(cfg(), { deadline: Date.now() - 1 })).stopped, 'time');
+  delete process.env.DISCORD_BOT_TOKEN;
+  assert.equal((await HV.strangersClock(cfg())).off, true);
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  delete process.env.DISCORD_GUILDS;
+  assert.equal((await HV.strangersClock(cfg())).off, true);
+  for (const [, line] of logs) assert.ok(!line.includes(BOT), 'her token is never in a log line');
+});
+
+test("/api/feed every 5 minutes (its own schedule): only 👤 Stranger, nothing of the feed; only Vercel may call it", async () => {
+  withStranger();
+  process.env.CRON_SECRET = 'a-cron-secret-that-is-long-enough';
+  const cron = (headers) => feedGet(new Request('https://www.agi1.app/api/feed', { headers }));
+  assert.equal((await cron({ 'x-vercel-cron-schedule': ROLES_SCHEDULE })).status, 401, 'never without the secret');
+  assert.equal((await cron({ authorization: 'Bearer nope', 'x-vercel-cron-schedule': ROLES_SCHEDULE })).status, 401);
+  assert.equal(calls.length, 0);
+  const res = await cron({ authorization: `Bearer ${process.env.CRON_SECRET}`, 'x-vercel-cron-schedule': ROLES_SCHEDULE });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { ok: true, strangers: { members: 3, given: 3, taken: 0, waiting: 0, failed: 0 } });
+  assert.deepEqual([has(PERSON), has(FRIEND), has(OWNER)], [['stranger'], ['stranger'], ['stranger']]);
+  assert.deepEqual([...new Set(calls.map((c) => c.to))], ['discord'], 'no database, no chain, no Telegram');
+  assert.ok(logs.some(([k, l]) => k === 'log' && l === '[feed] 👤 Stranger: given to 3, taken off 0'));
+  // switched off, or her bot not set up: nothing asked of Discord
+  calls.length = 0;
+  process.env.DISCORD_STRANGERS = 'off';
+  assert.deepEqual(await (await cron({ authorization: `Bearer ${process.env.CRON_SECRET}`, 'x-vercel-cron-schedule': ROLES_SCHEDULE })).json(), { ok: true, off: true });
+  delete process.env.DISCORD_STRANGERS;
+  delete process.env.DISCORD_BOT_TOKEN;
+  assert.deepEqual(await (await cron({ authorization: `Bearer ${process.env.CRON_SECRET}`, 'x-vercel-cron-schedule': ROLES_SCHEDULE })).json(), { ok: true, off: true });
+  assert.equal(calls.length, 0);
+  assert.equal(getConfig({}).dcStrangers, true, 'on unless switched off');
+  assert.equal(getConfig({ DISCORD_STRANGERS: 'off' }).dcStrangers, false);
+  const vercel = JSON.parse(read('vercel.json'));
+  assert.deepEqual(vercel.crons.filter((c) => c.schedule === ROLES_SCHEDULE), [{ path: '/api/feed', schedule: '*/5 * * * *' }]);
+});
+
 // ---------- her lines, the page's words ----------
 const NOT_OK = /\b(babe|baby|cutie|honey|darling|sweetie|love)\b|\b(buy|buying|sell|selling|hold|hodl|invest\w*|moon\w*|pump\w*|dump\w*|profit\w*|gains?|lambo|scam\w*|rug\w*|fraud\w*|safe|guarantee\w*)\b|\b\d+x\b|sex|nude|naked|horny/i;
 const ok = (line) => line.replace(/not an investment/g, '');      // a thank-you, never an investment: the one place it's said
@@ -641,4 +828,8 @@ test("wiring: her button's taps and /holders loaded only when used, still 12 fun
   const foot = read('index.html');
   assert.ok(foot.includes('Her holder roles there (💘 Crush and 💞 Soulmate, with a private channel, for a wallet verified with 10,000 or 1,000,000 $AGI) are a thank-you for holding, not an investment.'));
   assert.ok(foot.includes("If you verify your $AGI there for a holder role (at agi1.app/discord/verify, with a free wallet signature, never a transaction), our database keeps a scrambled code of your Discord account and of your wallet, your role, and, encrypted, your Discord account's id and your wallet's address, so AGI-1 can read your $AGI on Robinhood Chain again a few times a day and change your role; Remove my role, leaving the server or going under 10,000 $AGI deletes them."));
+  // (round 4) 👤 Stranger: her bot reads the member list, and nothing of it is kept
+  assert.ok(foot.includes("Everyone else there gets the 👤 Stranger role from her bot by itself: every few minutes it reads the server's member list (who's in it and their roles) to give it or take it off, and keeps none of it."));
+  assert.match(feed, /if \(request\.headers\.get\('x-vercel-cron-schedule'\) === ROLES_SCHEDULE\) return strangersCheck\(\);/, 'after the cron secret');
+  assert.ok(feed.indexOf("=== ROLES_SCHEDULE) return strangersCheck();") > feed.indexOf("if (!sameSecret(request.headers.get('authorization') || '', `Bearer ${secret}`))"), 'only after the secret is checked');
 });

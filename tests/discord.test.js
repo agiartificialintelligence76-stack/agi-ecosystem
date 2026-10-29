@@ -90,6 +90,8 @@ beforeEach(() => {
     endpointRefused: false, hookStatus: 200, uploadStatus: 200, song: { status: 200, bytes: mp3(50_000) },
     // (2026-10-29) her tickets and /post: the server's channels, what her bot posted, whether it ever connected
     channels: [], posted: [], identified: false, gatewayDown: false, noAccess: new Set(), createStatus: 200, image: png(4000),
+    // (round 4) /post's channel list: the server's roles and her bot's own (to know where she can post)
+    roles: null, botRoles: null, channelsDown: false,
   };
   globalThis.fetch = async (url, init = {}) => {
     url = String(url);
@@ -154,8 +156,12 @@ beforeEach(() => {
         if (method === 'GET') return Response.json(fake.commands.get(m[2]) ?? []);
         if (method === 'PUT') { fake.commands.set(m[2], body.map((c, i) => ({ id: String(i + 1), application_id: APP, version: '1', guild_id: m[2], default_member_permissions: null, ...c }))); return Response.json(fake.commands.get(m[2])); }
       }
+      // (round 4) the server's roles and her bot's own roles, for /post's channel list
+      if (path === `/guilds/${GUILD}/roles` && method === 'GET' && fake.roles) return Response.json(fake.roles);
+      if (path === `/guilds/${GUILD}/members/${APP}` && method === 'GET' && fake.botRoles) return Response.json({ user: { id: APP, bot: true }, roles: fake.botRoles });
       // (2026-10-29) the server's channels, a channel, its messages
       if (path === `/guilds/${GUILD}/channels`) {
+        if (method === 'GET' && fake.channelsDown) return Response.json({ message: 'Service Unavailable' }, { status: 503 });
         if (method === 'GET') return Response.json(fake.channels);
         if (method === 'POST') {
           if (fake.createStatus !== 200) return Response.json({ message: 'Missing Permissions', code: 50013 }, { status: fake.createStatus });
@@ -604,11 +610,15 @@ test('connecting her app: its description, its endpoint and her commands, only w
   // the same commands from Discord (with its ids and versions) count as the same
   assert.equal(DC.commandsKey(fake.commands.get(GUILD)), DC.commandsKey(DC.commandsFor(cfg())));
   assert.notEqual(DC.commandsKey([{ ...DC.commandsFor(cfg())[0], description: 'x' }]), DC.commandsKey([DC.commandsFor(cfg())[0]]));
-  // (2026-10-29) who sees a command, and the channels an option takes, count too
+  // (2026-10-29) who sees a command, and the channels an option takes, count too; (round 4) and an option with her own list
   const post = DC.commandsFor(cfg()).find((c) => c.name === 'post');
   assert.notEqual(DC.commandsKey([{ ...post, default_member_permissions: null }]), DC.commandsKey([post]));
-  assert.notEqual(DC.commandsKey([{ ...post, options: post.options.map((o) => (o.channel_types ? { ...o, channel_types: [0] } : o)) }]), DC.commandsKey([post]));
-  assert.equal(DC.commandsKey([{ ...post, options: post.options.map((o) => (o.channel_types ? { ...o, channel_types: [5, 0] } : o)) }]), DC.commandsKey([post]), 'in any order');
+  const picker = { ...post, options: post.options.map((o) => (o.name === 'channel' ? { type: 7, name: 'channel', description: o.description, required: true, channel_types: [0, 5] } : o)) };
+  assert.notEqual(DC.commandsKey([picker]), DC.commandsKey([post]), "Discord's channel picker before round 4: changed");
+  assert.notEqual(DC.commandsKey([{ ...picker, options: picker.options.map((o) => (o.channel_types ? { ...o, channel_types: [0] } : o)) }]), DC.commandsKey([picker]));
+  assert.equal(DC.commandsKey([{ ...picker, options: picker.options.map((o) => (o.channel_types ? { ...o, channel_types: [5, 0] } : o)) }]), DC.commandsKey([picker]), 'in any order');
+  assert.notEqual(DC.commandsKey([{ ...post, options: post.options.map((o) => ({ ...o, autocomplete: false })) }]), DC.commandsKey([post]), 'her list on or off');
+  assert.equal(DC.commandsKey([{ ...post, options: post.options.map((o) => (o.autocomplete ? o : { ...o, autocomplete: false })) }]), DC.commandsKey([post]), "Discord's false is no list");
 });
 
 // ---------- her posts in her channel ----------
@@ -680,7 +690,9 @@ test("her Discord lines and commands: PG-13, no pet names, never money advice, D
     D.TICKET_PANEL, D.TICKET_BUTTON, D.ticketWelcome('0001'), D.TICKET_CLOSE, D.ticketOpened(C), D.ticketAlready(C), D.TICKET_WAIT, D.TICKET_NOT_SET,
     D.TICKET_FULL, D.TICKET_FAILED, D.TICKET_CLOSE_ASK, D.TICKET_CLOSE_YES, D.TICKET_CLOSE_NO, D.TICKET_CLOSING, D.TICKET_KEPT, D.TICKET_NOT_YOURS,
     D.NOT_A_TICKET, D.TICKET_OLD, D.OWNER_ONLY, D.NO_TOKEN, D.TICKETS_POSTED, D.ticketsNoAccess(C), D.postDone(C), D.POST_NOT_IMAGE, D.POST_TOO_BIG,
-    D.postNoAccess(C), D.postNotAgeRestricted(C), D.POST_FAILED];
+    D.postNoAccess(C), D.postNotAgeRestricted(C), D.POST_FAILED,
+    // (round 4) /post's channel list
+    D.CHOICE_CANT_POST, D.CHOICE_AGE_RESTRICTED, D.CHOICE_NOT_RESTRICTED, D.POST_PICK];
   for (const label of [D.TICKET_BUTTON, D.TICKET_CLOSE, D.TICKET_CLOSE_YES, D.TICKET_CLOSE_NO]) assert.ok(label.length <= 80, "a button's label: 80 at most");
   for (const line of lines) {
     assert.doesNotMatch(line, NOT_OK, line);
@@ -696,9 +708,11 @@ test("her Discord lines and commands: PG-13, no pet names, never money advice, D
     for (const o of c.options || []) assert.ok(o.description.length <= 100 && /^[a-z]{1,32}$/.test(o.name));
   }
   assert.deepEqual(D.COMMANDS.find((c) => c.name === 'ask').options, [{ type: 3, name: 'question', description: 'What you want to ask her', required: true, min_length: 1, max_length: 500 }]);
-  // (2026-10-29) /post: an image, a text or announcement channel, words (optional, last: Discord's rule)
-  assert.deepEqual(D.COMMANDS.find((c) => c.name === 'post').options.map((o) => [o.type, o.name, o.required]), [[11, 'image', true], [7, 'channel', true], [3, 'caption', false]]);
-  assert.deepEqual(D.COMMANDS.find((c) => c.name === 'post').options[1].channel_types, [0, 5]);
+  // (2026-10-29) /post: an image, a channel, words (optional, last: Discord's rule); (round 4) the channel from her own list
+  // (an autocomplete string: Discord's channel picker showed only 10), never Discord's picker again
+  assert.deepEqual(D.COMMANDS.find((c) => c.name === 'post').options.map((o) => [o.type, o.name, o.required]), [[11, 'image', true], [3, 'channel', true], [3, 'caption', false]]);
+  assert.deepEqual(D.COMMANDS.find((c) => c.name === 'post').options[1], { type: 3, name: 'channel', description: 'Where she posts it: every channel is in the list (type to find one)', required: true, autocomplete: true, max_length: 100 });
+  assert.ok(!D.COMMANDS.some((c) => (c.options || []).some((o) => o.type === 7)), "no option uses Discord's channel picker");
   assert.deepEqual(D.COMMANDS.filter((c) => c.default_member_permissions).map((c) => c.name), ['post', 'tickets', 'holders'], "only the owner's are hidden");
   assert.match(D.helpFor(), /Open a ticket/);
   assert.equal(discordPrompt(null), '');
@@ -933,8 +947,8 @@ const postCmd = ({ channel = TEAM_CHAT, caption, att = attachment(), member = ow
   member, channel_id: SUPPORT,
   data: {
     id: '1', name: 'post', type: 1,
-    options: [{ name: 'image', type: 11, value: IMG }, { name: 'channel', type: 7, value: channel }, ...(caption !== undefined ? [{ name: 'caption', type: 3, value: caption }] : [])],
-    resolved: { attachments: { [IMG]: att }, channels: { [channel]: { id: channel, name: 'x', type: 0 } } },
+    options: [{ name: 'image', type: 11, value: IMG }, { name: 'channel', type: 3, value: channel }, ...(caption !== undefined ? [{ name: 'caption', type: 3, value: caption }] : [])],
+    resolved: { attachments: { [IMG]: att } },
   },
 });
 
@@ -973,7 +987,7 @@ test("/post: what isn't an image, too big, a channel she can't see or in another
   assert.equal(await at(postCmd({ att: attachment({ content_type: 'application/pdf', filename: 'x.pdf' }) })), D.POST_NOT_IMAGE);
   assert.equal(await at(postCmd({ att: attachment({ size: 10 * 1024 * 1024 + 1 }) })), D.POST_TOO_BIG);
   assert.equal(await at(postCmd({ att: attachment({ url: 'https://evil.example/agi.png' }) })), D.POST_FAILED, "only Discord's own file address");
-  assert.equal(await at(postCmd({ channel: 'general' })), D.POST_FAILED);
+  assert.equal(await at(postCmd({ channel: '   ' })), D.POST_FAILED, 'no channel');
   assert.equal(calls.length, 0);
   const after = async (o, word, line) => {
     const r = await run(postCmd(o), tick());
@@ -1007,6 +1021,177 @@ test("/post: what isn't an image, too big, a channel she can't see or in another
   assert.deepEqual(TK.imageKind(new TextEncoder().encode('GIF89a......')), { ext: 'gif', type: 'image/gif' });
   assert.deepEqual(TK.imageKind(new TextEncoder().encode('RIFF\0\0\0\0WEBPVP8 ')), { ext: 'webp', type: 'image/webp' });
   assert.equal(TK.imageKind(new Uint8Array([1, 2, 3])), null);
+  for (const [, line] of logs) noToken(line);
+});
+
+// ---------- /post's channel list (2026-10-29, round 4: Discord's own picker showed only 10 channels) ----------
+const V = 1n << 10n, S = 1n << 11n, A = 1n << 15n;
+const BOT_ROLE = '1565000000000000013', R18 = '1565000000000000014', CRUSH = '1565000000000000015';
+const cat = (id, name, position, ow = []) => ({ id, type: 4, name, position, guild_id: GUILD, permission_overwrites: ow });
+const deny = (id, bits) => ({ id, type: 0, allow: '0', deny: String(bits) });
+const allow = (id, bits) => ({ id, type: 0, allow: String(bits), deny: '0' });
+let chId = 0n;
+const ch = (name, parent, position, o = {}) => ({ id: String(1565026000000000000n + (chId += 1n)), type: 0, name, parent_id: parent, position, guild_id: GUILD, nsfw: false, permission_overwrites: [], ...o });
+// the owner's server as it is (2026-10-29): read-only Start Here (her bot let in where she posts her buttons), private 18+,
+// holders and team channels, two voice channels, an empty tickets category
+function ownersServer() {
+  const ro = [deny(GUILD, S), allow(TEAM_ROLE, S)];
+  const hers = [deny(GUILD, S), allow(TEAM_ROLE, S), allow(BOT_ROLE, V | S | (1n << 14n))];
+  return [
+    cat('1565024285389496450', '📌 Start Here', 0, ro), cat('1565024285389496451', '💬 Community', 1), cat('1565024285389496452', '💜 AGI-1', 2),
+    cat('1565024285389496453', '🎮 Games & Live', 3), cat('1565024285389496454', '🔊 Voice', 4), cat('1565024683903025172', '🔒 Team', 5, [deny(GUILD, V), allow(TEAM_ROLE, V), allow(MOD_ROLE, V)]),
+    category(),
+    // (out of order on purpose: the list follows each one's place)
+    ch('💬┃general', '1565024285389496451', 0), ch('👋┃welcome', '1565024285389496450', 0, { permission_overwrites: ro }),
+    ch('📜┃rules', '1565024285389496450', 1, { permission_overwrites: ro }), { ...ch('📢┃announcements', '1565024285389496450', 2, { permission_overwrites: ro }), type: 5 },
+    ch('🔗┃official-links', '1565024285389496450', 3, { permission_overwrites: ro }), { ...ch('🎫┃support', '1565024285389496450', 4, { permission_overwrites: hers }), id: SUPPORT },
+    ch('✅┃verify', '1565024285389496450', 5, { permission_overwrites: hers }),
+    ch('😂┃memes', '1565024285389496451', 1), ch('🎨┃fan-art', '1565024285389496451', 2), ch('📈┃chart', '1565024285389496451', 3),
+    ch('💎┃holders', '1565024285389496451', 4, { permission_overwrites: [deny(GUILD, V), allow(CRUSH, V), allow(BOT_ROLE, V)] }),
+    ch('💌┃talk-to-agi1', '1565024285389496452', 0), ch('📔┃agi1-diary', '1565024285389496452', 1, { permission_overwrites: [deny(GUILD, S)] }),
+    ch('🎶┃music', '1565024285389496452', 2),
+    { ...ch('🔞┃agi1-nsfw', '1565024285389496452', 3, { permission_overwrites: [deny(GUILD, V), allow(R18, V), allow(BOT_ROLE, V)] }), id: NSFW },
+    ch('🕹️┃games', '1565024285389496453', 0), ch('🔴┃live-show', '1565024285389496453', 1),
+    { ...ch('🎙┃General', '1565024285389496454', 0), type: 2 }, { ...ch('🎧┃Chill', '1565024285389496454', 1), type: 2 },
+    { ...ch('🛡┃team-chat', '1565024683903025172', 0, { permission_overwrites: [deny(GUILD, V), allow(TEAM_ROLE, V), allow(MOD_ROLE, V)] }), id: TEAM_CHAT },
+    ch('📋┃mod-log', '1565024683903025172', 1, { permission_overwrites: [deny(GUILD, V), allow(TEAM_ROLE, V), allow(MOD_ROLE, V)] }),
+  ];
+}
+const serverRoles = () => [
+  { id: GUILD, name: '@everyone', position: 0, permissions: BASIC }, { id: TEAM_ROLE, name: 'Team', position: 6, permissions: String(1n << 4n) },
+  { id: MOD_ROLE, name: 'Mod', position: 5, permissions: String(1n << 13n) }, { id: R18, name: '🔞 18+', position: 4, permissions: '0' },
+  { id: BOT_ROLE, name: 'AGI-1', position: 3, managed: true, permissions: String(BigInt(BASIC) | (1n << 4n) | (1n << 28n)) },
+  { id: CRUSH, name: '💘 Crush', position: 1, permissions: '0' },
+];
+const typing = (value, { member = owner(), focus = 'channel', guild = GUILD } = {}) => ({
+  type: 4, id: '1', application_id: APP, token: IT_TOKEN, version: 1, guild_id: guild, channel_id: SUPPORT, member,
+  data: { id: '1', name: 'post', type: 1, options: [{ name: 'image', type: 11, value: IMG }, { name: 'channel', type: 3, value: focus === 'channel' ? value : '', focused: focus === 'channel' }, ...(focus === 'caption' ? [{ name: 'caption', type: 3, value, focused: true }] : [])] },
+});
+const listed = async (value, o) => {
+  const r = await run(typing(value, o));
+  assert.equal(r.after, undefined, 'answered at once (Discord wants it within 3 s)');
+  assert.equal(r.response.type, 8);
+  return r.response.data.choices;
+};
+const names = (choices) => choices.map((c) => c.name);
+
+test("/post's channel list: every channel, in the sidebar's order, with its category and what the owner should know", async () => {
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  fake.channels = ownersServer();
+  fake.roles = serverRoles();
+  fake.botRoles = [BOT_ROLE];
+  const all = await listed('');
+  assert.deepEqual(names(all), [
+    "👋┃welcome · 📌 Start Here · AGI-1 can't post here yet", "📜┃rules · 📌 Start Here · AGI-1 can't post here yet",
+    "📢┃announcements · 📌 Start Here · AGI-1 can't post here yet", "🔗┃official-links · 📌 Start Here · AGI-1 can't post here yet",
+    '🎫┃support · 📌 Start Here', '✅┃verify · 📌 Start Here',
+    '💬┃general · 💬 Community', '😂┃memes · 💬 Community', '🎨┃fan-art · 💬 Community', '📈┃chart · 💬 Community', '💎┃holders · 💬 Community',
+    '💌┃talk-to-agi1 · 💜 AGI-1', "📔┃agi1-diary · 💜 AGI-1 · AGI-1 can't post here yet", '🎶┃music · 💜 AGI-1',
+    '🔞┃agi1-nsfw · 💜 AGI-1 · not age-restricted yet',
+    '🕹️┃games · 🎮 Games & Live', '🔴┃live-show · 🎮 Games & Live',
+    "🛡┃team-chat · 🔒 Team · AGI-1 can't post here yet", "📋┃mod-log · 🔒 Team · AGI-1 can't post here yet",
+  ], 'all 19 text and announcement channels (no voice channel, no category), 🔞┃agi1-nsfw among them');
+  assert.equal(all.find((c) => c.name.startsWith('🔞')).value, NSFW, "its value: the channel's id");
+  assert.equal(all.find((c) => c.name.startsWith('🎫')).value, SUPPORT);
+  assert.ok(all.every((c) => [...c.name].length <= 100 && /^\d{17,20}$/.test(c.value)), "Discord's limits");
+  // what's asked of Discord: the channels, the roles and her own roles, once a minute at most
+  assert.deepEqual(calls.filter((c) => c.to === 'discord').map((c) => `${c.method} ${c.path}`).sort(), [`GET /guilds/${GUILD}/channels`, `GET /guilds/${GUILD}/members/${APP}`, `GET /guilds/${GUILD}/roles`]);
+  calls.length = 0;
+  await listed('ns');
+  assert.equal(calls.length, 0, 'remembered: each letter typed asks nothing more');
+  // typing narrows it: the start of a name first, then a name with it in it, then the category's
+  assert.deepEqual(names(await listed('nsfw')), ['🔞┃agi1-nsfw · 💜 AGI-1 · not age-restricted yet']);
+  assert.deepEqual(names(await listed('18+')), ['🔞┃agi1-nsfw · 💜 AGI-1 · not age-restricted yet'], '"18+" finds an 18+ one');
+  assert.deepEqual(names(await listed('#🔞┃agi1-ns')), ['🔞┃agi1-nsfw · 💜 AGI-1 · not age-restricted yet'], 'its emoji, ┃ and # never matter');
+  assert.deepEqual(names(await listed('agi')).map((n) => n.split(' · ')[0]), ['📔┃agi1-diary', '🔞┃agi1-nsfw', '💌┃talk-to-agi1', '🎶┃music']);
+  assert.deepEqual(names(await listed('GEN')), ['💬┃general · 💬 Community'], 'never a voice channel');
+  assert.deepEqual(await listed('zzz'), []);
+  assert.deepEqual(names(await listed(`<#${TEAM_CHAT}>`)), ["🛡┃team-chat · 🔒 Team · AGI-1 can't post here yet"], 'a pasted #channel');
+  // once Discord marks it age-restricted (a minute later: the list is read again)
+  fake.channels.find((c) => c.id === NSFW).nsfw = true;
+  const marked = await run(typing('nsfw'), { now: T0 + 61_000 });
+  assert.deepEqual(names(marked.response.data.choices), ['🔞┃agi1-nsfw · 💜 AGI-1 · age-restricted']);
+});
+
+test("/post's channel list: only for the owner, 25 at most, and an empty list when Discord can't be read", async () => {
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  fake.channels = ownersServer();
+  fake.roles = serverRoles();
+  fake.botRoles = [BOT_ROLE];
+  assert.deepEqual(await listed('', { member: mod() }), [], 'a Mod: nothing');
+  assert.deepEqual(await listed('', { guild: OTHER_GUILD }), [], 'another server: nothing');
+  assert.deepEqual(await listed('x', { focus: 'caption' }), [], 'another option: nothing');
+  const dm = typing('');
+  delete dm.guild_id; delete dm.member; dm.user = { id: OWNER };
+  assert.deepEqual((await run(dm)).response, { type: 8, data: { choices: [] } }, 'her DMs: nothing');
+  assert.equal(calls.length, 0);
+  delete process.env.DISCORD_BOT_TOKEN;
+  assert.deepEqual(await listed(''), [], 'no token: nothing (and /post says so)');
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  // more channels than Discord shows (25): those she can't post in are left out first, the rest in the sidebar's order
+  TK.forgetTickets();
+  fake.channels = [...ownersServer(), ...Array.from({ length: 14 }, (_, i) => ch(`extra-${String(i + 1).padStart(2, '0')}`, '1565024285389496453', 10 + i))];
+  const many = await listed('');
+  assert.equal(many.length, 25);
+  assert.ok(!many.some((c) => c.name.includes("can't post")), JSON.stringify(names(many)));
+  assert.ok(names(many).includes('🔞┃agi1-nsfw · 💜 AGI-1 · not age-restricted yet'));
+  assert.deepEqual(names(many).slice(0, 3), ['🎫┃support · 📌 Start Here', '✅┃verify · 📌 Start Here', '💬┃general · 💬 Community']);
+  assert.equal(many.at(-1).name, 'extra-13 · 🎮 Games & Live', 'the last one past 25 left out');
+  // her own roles can't be read: the list without what she can't post in (it can't be told)
+  TK.forgetTickets();
+  fake.channels = ownersServer();
+  fake.botRoles = null;
+  const unsure = await listed('');
+  assert.equal(unsure.length, 19);
+  assert.equal(unsure[0].name, '👋┃welcome · 📌 Start Here');
+  // Discord down: an empty list, said in the log
+  TK.forgetTickets();
+  fake.channelsDown = true;
+  assert.deepEqual(await listed(''), []);
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /\/post's channel list: discord the server's channels: HTTP 503/.test(l)));
+  for (const [, line] of logs) noToken(line);
+});
+
+test('/post with a channel typed but not tapped in her list: its name, a pasted #channel, or which one is asked', async () => {
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  fake.identified = true;
+  fake.channels = ownersServer();
+  fake.roles = serverRoles();
+  fake.botRoles = [BOT_ROLE];
+  const general = fake.channels.find((c) => c.name === '💬┃general').id;
+  let t = T0;
+  const posts = async (typed, word, line) => {
+    const r = await run(postCmd({ channel: typed }), { now: (t += 61_000) });
+    assert.deepEqual(r.response, { type: 5, data: { flags: 64 } });
+    assert.equal(await r.after, word, typed);
+    assert.equal(lastEdit().content, line, typed);
+  };
+  await posts('general', 'posted', D.postDone(general));
+  assert.equal(fake.posted.at(-1).channel, general);
+  await posts('#💬┃general', 'posted', D.postDone(general));
+  await posts(`<#${general}>`, 'posted', D.postDone(general));
+  await posts('🔞┃agi1-nsfw', 'post_not_age_restricted', D.postNotAgeRestricted(NSFW));
+  await posts('a', 'post_pick', D.POST_PICK);
+  await posts('nothing like it', 'post_pick', D.POST_PICK);
+  assert.equal(fake.posted.length, 3);
+  TK.forgetTickets();
+  fake.channelsDown = true;
+  await posts('general', 'post_failed', D.POST_FAILED);
+  // what a member may do in a channel: Discord's own sum
+  const roles = serverRoles(), me = { id: APP, roles: [BOT_ROLE] };
+  const can = (c) => (TK.channelPerms(c, GUILD, roles, me) & TK.POST_NEEDS) === TK.POST_NEEDS;
+  assert.equal(can({ permission_overwrites: [] }), true, "@everyone's and her role's");
+  assert.equal(can({ permission_overwrites: [deny(GUILD, V)] }), false, '@everyone kept out');
+  assert.equal(can({ permission_overwrites: [deny(GUILD, V), allow(BOT_ROLE, V)] }), true, 'her role let in');
+  assert.equal(can({ permission_overwrites: [deny(GUILD, V), allow(BOT_ROLE, V), { id: APP, type: 1, allow: '0', deny: String(A) }] }), false, 'her own overwrite last');
+  assert.equal(can({ permission_overwrites: [allow(GUILD, V), deny(BOT_ROLE, S)] }), false, 'a role denies after @everyone allows');
+  assert.equal(can({ permission_overwrites: [{ id: BOT_ROLE, type: 1, allow: '0', deny: String(V) }] }), true, "a member's overwrite with a role's id isn't the role's");
+  assert.equal(TK.channelPerms({ permission_overwrites: [deny(GUILD, V)] }, GUILD, [...roles, { id: '1565000000000000099', permissions: '8' }], { id: APP, roles: ['1565000000000000099'] }) & V, V, 'an Administrator sees everything');
+  assert.equal(TK.channelPerms({}, GUILD, null, null), 0n);
+  // a very long name: its line still fits Discord's 100 characters, the note kept
+  const long = TK.choiceName({ name: `🔞┃${'x'.repeat(98)}`, category: '💜 AGI-1', nsfw: false, canPost: false });
+  assert.ok([...long].length <= 100);
+  assert.match(long, /^🔞┃x+…$|can't post|not age-restricted/);
   for (const [, line] of logs) noToken(line);
 });
 

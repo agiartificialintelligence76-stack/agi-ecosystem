@@ -1,5 +1,26 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## AGI-1 on Discord, round 4: /post's channel list and 👤 Stranger — 2026-10-29
+
+Two asks of the owner's (a chat cut off before anything was pushed; picked up in a new session from its last screen, then
+"continue, finish and publish"):
+
+- **/post's channel list missed channels** (🔞┃agi1-nsfw among them): Discord's own picker for a channel option lists only
+  10 channels (the oldest) until a name is typed. /post's channel is now **her own list** (autocomplete, `postChoices()` in
+  `server/dc-tickets.js`): all 19 text and announcement channels in the sidebar's order, "name · category", with "AGI-1
+  can't post here yet" where she can't and "not age-restricted yet" / "age-restricted" for an 18+ one; typing narrows it; a
+  name typed without tapping it still works. Only for the owner.
+- **👤 Stranger** for everyone who hasn't verified and every new member, by itself: a **Vercel cron every 5 minutes**
+  (`/api/feed`, told apart by its schedule, `ROLES_SCHEDULE`; needs Vercel Pro) reads the member list and gives it to every
+  member without 💘 Crush or 💞 Soulmate (Team and Mod too; never a bot or someone on the rules screen), and takes it off a
+  holder; verifying, Remove my role and going under 10,000 swap it at once (`strangersClock()`, `syncRoles()` in
+  `server/dc-holders.js`). Nothing kept. `DISCORD_STRANGERS=off` pauses it.
+- **Done in Discord:** the 👤 Stranger role (grey, shown apart, no permissions, under 💘 Crush), and her app's **Server
+  Members Intent** (Developer Portal → AGI-1 → Bot → Privileged Gateway Intents, the owner's OK), so her bot can read the
+  member list.
+- **Tests:** 9 more (`tests/discord.test.js`, `tests/holders.test.js`); the suite: 1,374 tests, 1,370 pass, 4 skipped.
+- Details, troubleshooting: CLAUDE.md, "AGI-1 on Discord" → "Round 4".
+
 ## AGI-1 on Discord, round 3: holder roles — 2026-10-29
 
 The owner's OK to the plan ("Yes, do all of it (Recommended)"): holder roles live, its database file run, and the Discord
