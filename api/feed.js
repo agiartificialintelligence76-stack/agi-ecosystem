@@ -5,7 +5,8 @@
 //   3. (2026-10-03) posts her diary and $AGI's market moments in her Telegram groups, the ones found this run (server/
 //      tg-groups.js, postToGroups: only the groups in TELEGRAM_GROUPS; TELEGRAM_GROUP_POSTS=off: none);
 //   4. texts them to the people who asked for it on Telegram (textFirst: at most 2 a day each, never at night their time).
-//   (2026-10-28, between 3 and 4) her Discord server: her app connected and the same moments in her channel (server/discord.js).
+//   (2026-10-28, between 3 and 4) her Discord server: her app connected and the same moments in her channel (server/discord.js),
+//   and (2026-10-29) her holder roles re-checked (server/dc-holders.js).
 // Only Vercel may call it: when CRON_SECRET is set, Vercel sends "Authorization: Bearer <CRON_SECRET>" (like /api/keepalive).
 // To run it by hand (e.g. right after setting the bot up): Vercel → the project → Settings → Cron Jobs → /api/feed → Run.
 //
@@ -232,6 +233,19 @@ export async function GET(request) {
     if (cfg.dcFeedWebhook) {
       out.discord.posts = await postToDiscord(cfg, added, { deadline: deadline - 4_000 });
       if (out.discord.posts.posted) console.log(`[feed] posted ${out.discord.posts.posted} in her Discord channel`);
+    }
+    // (2026-10-29, round 3) her holder roles: the oldest few read again on the chain, their role given, swapped or taken back
+    // (server/dc-holders.js, supabase/discord.sql), in at most 6 seconds
+    if (process.env.DISCORD_BOT_TOKEN && cfg.dcHolders) {
+      try {
+        const { holdersClock } = await import('../server/dc-holders.js');
+        const h = await holdersClock(cfg, { env: process.env, deadline: Math.min(deadline - 4_000, Date.now() + 6_000) });
+        out.discord.holders = h;
+        if (h.changed || h.removed || h.gone) console.log(`[feed] her holder roles: ${h.changed} changed, ${h.removed} taken back, ${h.gone} left the server`);
+      } catch (err) {
+        console.warn(`[feed] her holder roles weren't checked: ${err.message}`);
+        out.discord.holders = { error: err.code === 'PGRST202' ? 'not_set_up' : 'database' };
+      }
     }
   }
 

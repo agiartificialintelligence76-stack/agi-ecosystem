@@ -1535,11 +1535,18 @@ test('/api/feed with her Discord server: her app connected, the new market momen
   fake.db.state = { since: Date.now() - 3 * 3600_000, diary: '2026-09-28', market: { top: 1_000_000, sadAt: 0, sadArmed: true } };
   fake.dex = [agiPair(1_230_000, 4)];
   fake.dbNow = Date.now();
+  // (2026-10-29, round 3) her holder roles: nobody verified yet, so nothing to read again (server/dc-holders.js)
+  const holderDue = [];
+  fake.db.dc_holder_due = (b) => { holderDue.push(b); return []; };
   const { escapeMd } = await import('../server/discord.js');
   const r = await (await run()).json();
   assert.deepEqual(r.moments, ['mcap:1200000']);
   assert.equal(r.bot.url, 'https://agi1.app/api/telegram', 'her Telegram bot as before');
-  assert.deepEqual(r.discord, { app: { app: APP, description: true, endpoint: true, commands: 1 }, posts: { posted: 1, failed: 0, skipped: 0 } });
+  assert.deepEqual(r.discord, {
+    app: { app: APP, description: true, endpoint: true, commands: 1 }, posts: { posted: 1, failed: 0, skipped: 0 },
+    holders: { checked: 0, changed: 0, removed: 0, gone: 0, failed: 0 },
+  });
+  assert.deepEqual(holderDue, [{ p_limit: 25, p_minutes: 150 }], 'the oldest 25, not read in 2.5 hours');
   assert.equal(app.interactions_endpoint_url, 'https://agi1.app/discord/interactions');
   assert.deepEqual(discord.filter((c) => c.url.startsWith(HOOK)).map((c) => c.body.content), [escapeMd(milestoneLine(1_200_000).text)]);
   // the next run: nothing new, nothing posted again, nothing of her app written again

@@ -171,6 +171,11 @@ for (const fn of ['vote_put', 'vote_mine', 'vote_tally', 'vote_uncounted', 'vote
   MISSING[fn] = `${fn} not found: run supabase/votes.sql in this Supabase project (community votes and the owner's polls; it ends with vote_functions_found = 8)`;
 }
 
+// AGI-1's holder roles in her Discord server (2026-10-29, server/dc-holders.js): supabase/discord.sql
+for (const fn of ['dc_holder_link', 'dc_holder_get', 'dc_holder_due', 'dc_holder_set', 'dc_holder_drop']) {
+  MISSING[fn] = `${fn} not found: run supabase/discord.sql in this Supabase project (her Discord holder roles; it ends with discord_functions_found = 5)`;
+}
+
 // One database function call (also used by server/voice-store.js for her recorded lines).
 export async function rpc(cfg, fn, args, label) {
   const res = await fetch(`${cfg.supabaseUrl}/rest/v1/rpc/${fn}`, {

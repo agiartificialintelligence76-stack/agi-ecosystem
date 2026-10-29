@@ -156,7 +156,7 @@ test('the clips aren\'t part of the website: not in its build, no new packages, 
     main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html', studio: 'studio.html',
     roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html', rideemagi: 'rideemagi.html',
     trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html', memes: 'memes.html', vote: 'vote.html',
-    owner: 'owner-command.html', content: 'content.html', notfound: '404.html',
+    owner: 'owner-command.html', content: 'content.html', notfound: '404.html', verify: 'verify.html',
   }, 'only website entries, including the owner editor and its custom-page shell; never the clips page or live-show scene');
   const pkg = JSON.parse(read('package.json'));
   // (sharp since 2026-10-05: the risk check's coin pictures, made small on our server; @scure/bip39 since 2026-10-09: the

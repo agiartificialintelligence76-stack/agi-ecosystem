@@ -37,6 +37,8 @@ export const COMMANDS = [
     ],
   },
   { name: 'tickets', description: 'Owner only: AGI-1 posts her "Open a ticket" button in this channel', default_member_permissions: OWNER_ONLY_PERMISSIONS },
+  // (2026-10-29, round 3) her holder roles (server/dc-holders.js)
+  { name: 'holders', description: 'Owner only: AGI-1 posts her "Verify my $AGI" button in this channel', default_member_permissions: OWNER_ONLY_PERMISSIONS },
 ];
 
 // /help: how to talk to her, her other commands, and the one rule scammers break (in Discord they DM people pretending to be
@@ -47,7 +49,9 @@ export const HELP_MUSIC = "/music: my songs 🎧 tap one and i'll send it in her
 export const HELP_SAFETY = "i never DM anyone first, and i'll never ask for your seed phrase, keys or money. anyone who does, even with my name and picture, isn't me.";
 // (2026-10-29) her tickets: where to find the team
 export const HELP_TICKETS = "need the team? tap Open a ticket in the support channel 🎫 only you and the team can see it.";
-export const helpFor = ({ music = false } = {}) => [HELP, [HELP_COMMANDS, music ? HELP_MUSIC : null].filter(Boolean).join('\n'), HELP_TICKETS, HELP_SAFETY].join('\n\n');
+// (2026-10-29, round 3) her holder roles: where to get one
+export const HELP_HOLDERS = 'got $AGI? tap Verify my $AGI in the verify channel ✅ for the 💘 Crush or 💞 Soulmate role.';
+export const helpFor = ({ music = false } = {}) => [HELP, [HELP_COMMANDS, music ? HELP_MUSIC : null].filter(Boolean).join('\n'), HELP_TICKETS, HELP_HOLDERS, HELP_SAFETY].join('\n\n');
 
 // A server that isn't hers (DISCORD_GUILDS), or her DMs: only this, only to them
 export const NOT_HERE = `i only hang out in my official server 💜 its link is on ${SITE}`;
@@ -97,3 +101,28 @@ export const POST_TOO_BIG = 'that image is over 10 MB 🙈 try a smaller one';
 export const postNoAccess = (channel) => `i can't post in <#${channel}> yet 🙈 let AGI-1 view it, send messages and attach files there`;
 export const postNotAgeRestricted = (channel) => `<#${channel}> isn't marked age-restricted yet 🙈 turn on Age-Restricted in its settings first, then post again`;
 export const POST_FAILED = "it didn't go out 🙈 try again in a minute";
+
+// ---------- her holder roles (2026-10-29, round 3: server/dc-holders.js) ----------
+// Her button's message (/holders), in the verify channel: what the roles are, where verifying happens, the rules scammers
+// break (a "verify your wallet" DM or site is the oldest crypto scam on Discord), and that a role is a thank-you
+export const HOLDERS_PANEL = "💎 got $AGI? verify it and i'll give you a holder role 💜\n"
+  + '💘 Crush: 10,000+ $AGI · 💞 Soulmate: 1,000,000+ $AGI (in your wallet, or burned for messages on agi1.app). both open the holders channel.\n\n'
+  + "tap the button for a private link to agi1.app: connect your wallet there and sign a free message. never a transaction, no gas, no approvals, and nobody will ever ask for your seed phrase or keys.\n\n"
+  + "agi1.app is the only place to verify, and the team never DMs you a verify link. a role is a thank-you for holding, not an investment. not financial advice.";
+export const HOLDERS_BUTTON = 'Verify my $AGI';
+// a tap: their private link (only to them), and Remove my role when they have one
+export const holdersLink = (minutes) => `here's your private link 💜 it works for ${minutes} minutes, only for you. on agi1.app, connect your wallet and sign a free message: never a transaction. don't share the link.`;
+export const holdersYours = (role, minutes) => `you're a ${role} 💜 i check your $AGI a few times a day and the role follows it. `
+  + `to check now or use another wallet, open your private link (${minutes} minutes, only for you). to drop the role, tap Remove my role.`;
+export const HOLDERS_OPEN = 'Verify on agi1.app';
+export const HOLDERS_REMOVE = 'Remove my role';
+export const HOLDERS_REMOVING = 'removing it…';
+export const HOLDERS_REMOVED = 'done 💜 your holder role is gone and i forgot your wallet. tap Verify my $AGI any time to get it back.';
+export const HOLDERS_NONE = "you don't have a holder role right now 💜 tap Verify my $AGI to get one.";
+export const HOLDERS_OFF = 'holder roles are taking a little break 🙈 try again later';
+export const HOLDERS_FAILED = "i couldn't do that just now 🙈 try again in a minute";
+export const HOLDERS_OLD = "that button's from an older me 🙈 tap Verify my $AGI again";
+// /holders: only to the owner
+export const HOLDERS_POSTED = 'my verify button is up 💜';
+export const HOLDERS_NO_ROLES = "but i can't find the roles yet 🙈 make two roles with Crush and Soulmate in their names, under AGI-1's role (AGI-1 needs Manage Roles)";
+export const holdersNoAccess = (channel) => `i can't post in <#${channel}> 🙈 let AGI-1 view it, send messages and embed links there`;

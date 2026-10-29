@@ -74,3 +74,6 @@ export const scoreBurst = makeBurstLimit({ max: 12, windowMs: 60_000 });
 // Community votes (api/wallet.js, 2026-10-24): each vote and each "my votes" reads the chain once, and a person taps a few
 // times a minute at most: 20 a minute per visitor
 export const voteBurst = makeBurstLimit({ max: 20, windowMs: 60_000 });
+// (2026-10-29) AGI-1's holder roles in her Discord server: agi1.app/discord/verify's checks, per visitor (each one reads the
+// chain and asks Discord)
+export const holdersBurst = makeBurstLimit({ max: 8, windowMs: 60_000 });

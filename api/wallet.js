@@ -44,6 +44,10 @@
 //   vote      { session, poll, choice } → { ok, choice, agi, poll }   at least `min` $AGI held (403 too_few); voting again
 //                                    changes it until the close (409 closed)
 //   vote-owner / vote-save / vote-drop   the owner's page (agi1.app/vote/owner): see voteOwner() below
+// AGI-1's holder roles in her Discord server (2026-10-29: server/dc-holders.js; here for the same reason):
+//   dc-verify { session, link }    → { ok, level, agi, role: 'crush' | 'soulmate' | null, kept? }   agi1.app/discord/verify,
+//                                    after the site's sign-in: the private link's code (from her "Verify my $AGI" button),
+//                                    the wallet's $AGI read on the chain now, and her role given in the server
 import { getConfig } from '../server/config.js';
 import { clientIp, visitorCode, visitorCodeForDay, makePass, checkPass } from '../server/security.js';
 import { verifyHuman } from '../server/turnstile.js';
@@ -52,7 +56,7 @@ import { makeSession, readSession, needsRecheck, walletCode, RECHECK_MS } from '
 import { checkLevel } from '../server/chain.js';
 import { getFriend, setFriendName, forgetFriend, cleanName } from '../server/friends.js';
 import { txFrom, checkBurns, burnStatus, burnTotal, BURN_PER_DAY } from '../server/burn.js';
-import { burnBurst, arcadePlayBurst, reviewBurst, scoreBurst, voteBurst } from '../server/burst.js';
+import { burnBurst, arcadePlayBurst, reviewBurst, scoreBurst, voteBurst, holdersBurst } from '../server/burst.js';
 import { countPlays, gamePage, reviewsOpen, reviewWords, reviewName, reviewer, myReview, deleteReview, saveReview } from '../server/arcade.js';
 import { gameTicket, gameScore, gameBoard, myScores } from '../server/scores.js';
 import { isGame, PLAYER, PLAYS, STARS } from '../src/games/list.js';
@@ -163,6 +167,25 @@ async function voteOwner(cfg, body, { visitor, now }) {
     if (err.code === 'PGRST202') { votesMissing(err); return json(503, { error: 'not_ready' }); }
     console.error('[wallet] the owner\'s vote change failed:', err.message);
     return json(503, { error: 'busy' });
+  }
+}
+
+// ---------- AGI-1's holder roles in her Discord server (2026-10-29, server/dc-holders.js) ----------
+// agi1.app/discord/verify (verify.html): a signed-in wallet (the site's sign-in) and the private link's code from her button
+const HOLDER_STATUS = { bad: 400, expired: 410, not_member: 404, off: 503, not_set_up: 503, chain: 503, discord: 502, busy: 503 };
+async function discordVerify(cfg, body, { visitor, now }) {
+  if (typeof body.link !== 'string' || !body.link || body.link.length > 300) return json(400, { error: 'bad_request' });
+  if (!holdersBurst(visitor, now)) return json(429, { error: 'too_fast' });
+  const s = readSession(cfg.passSecret, body.session, now);
+  if (!s) return json(401, { error: 'signed_out' });
+  const { verifyHolder } = await import('../server/dc-holders.js');
+  try {
+    const r = await verifyHolder(cfg, { wallet: s.wallet, link: body.link, now });
+    if (r.ok) return json(200, r);
+    return json(HOLDER_STATUS[r.why] || 400, { error: r.why });
+  } catch (err) {
+    console.error('[wallet] a Discord holder check failed:', err.message);
+    return json(503, { error: err.code === 'PGRST202' ? 'not_set_up' : 'busy' });
   }
 }
 
@@ -396,6 +419,9 @@ export async function POST(request) {
     case 'vote-save':
     case 'vote-drop':
       return voteOwner(cfg, body, { visitor, now });
+
+    case 'dc-verify':
+      return discordVerify(cfg, body, { visitor, now });
 
     case 'start': {
       try {

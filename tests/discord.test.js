@@ -556,9 +556,9 @@ test('connecting her app: its description, its endpoint and her commands, only w
   const put = discord('PUT', `/applications/${APP}/guilds/${GUILD}/commands`);
   assert.equal(put.length, 1);
   assert.deepEqual(put[0].body, DC.commandsFor(cfg()));
-  assert.deepEqual(put[0].body.map((c) => c.name), ['ask', 'ca', 'mc', 'website', 'music', 'help', 'post', 'tickets']);
+  assert.deepEqual(put[0].body.map((c) => c.name), ['ask', 'ca', 'mc', 'website', 'music', 'help', 'post', 'tickets', 'holders']);
   // (2026-10-29) the owner's two: shown only to Administrators
-  assert.deepEqual(put[0].body.filter((c) => c.default_member_permissions).map((c) => [c.name, c.default_member_permissions]), [['post', '8'], ['tickets', '8']]);
+  assert.deepEqual(put[0].body.filter((c) => c.default_member_permissions).map((c) => [c.name, c.default_member_permissions]), [['post', '8'], ['tickets', '8'], ['holders', '8']]);
   for (const c of calls) {
     assert.equal(c.headers.Authorization, `Bot ${BOT}`);
     assert.equal(c.headers['User-Agent'], 'DiscordBot (https://agi1.app, 1.0)');
@@ -698,7 +698,7 @@ test("her Discord lines and commands: PG-13, no pet names, never money advice, D
   // (2026-10-29) /post: an image, a text or announcement channel, words (optional, last: Discord's rule)
   assert.deepEqual(D.COMMANDS.find((c) => c.name === 'post').options.map((o) => [o.type, o.name, o.required]), [[11, 'image', true], [7, 'channel', true], [3, 'caption', false]]);
   assert.deepEqual(D.COMMANDS.find((c) => c.name === 'post').options[1].channel_types, [0, 5]);
-  assert.deepEqual(D.COMMANDS.filter((c) => c.default_member_permissions).map((c) => c.name), ['post', 'tickets'], "only the owner's are hidden");
+  assert.deepEqual(D.COMMANDS.filter((c) => c.default_member_permissions).map((c) => c.name), ['post', 'tickets', 'holders'], "only the owner's are hidden");
   assert.match(D.helpFor(), /Open a ticket/);
   assert.equal(discordPrompt(null), '');
   const p = discordPrompt({});

@@ -1,0 +1,17 @@
+/* AGI-1's holder roles in her Discord server (2026-10-29): agi1.app/discord/verify (verify.html, src/discord/verify.js). The
+   hero and the fine print are the roadmap's coming-soon pages' (roadmap.css), the wallet box and "How it works" the votes
+   page's (vote.css); this is the answer under the wallet box. Every rule names a dv- class. */
+
+.dv-done {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px 18px; margin-top: 16px;
+  padding: 18px 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--bg-2);
+}
+.dv-done[hidden] { display: none; }
+.dv-done.is-role { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.dv-done-role { font-size: 40px; line-height: 1; }
+.dv-done-title { font-size: clamp(19px, 2.2vw, 23px); font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; text-wrap: balance; }
+.dv-done-note { margin-top: 6px; font-size: 14.5px; color: var(--fg-2); text-wrap: pretty; }
+
+@media (max-width: 560px) {
+  .dv-done { grid-template-columns: minmax(0, 1fr); }
+}

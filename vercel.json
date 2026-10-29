@@ -21,6 +21,8 @@
     { "source": "/owner/", "destination": "/owner-command" },
     { "source": "/share/meme/:id", "destination": "/api/wallet?meme-share=:id" },
     { "source": "/discord/interactions", "destination": "/api/telegram?discord" },
+    { "source": "/discord/verify", "destination": "/verify" },
+    { "source": "/discord/verify/", "destination": "/verify" },
     { "source": "/p/:slug", "destination": "/content" },
     { "source": "/p/:slug/", "destination": "/content" }
   ],

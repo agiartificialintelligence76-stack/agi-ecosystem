@@ -193,6 +193,8 @@ async function onCommand(cfg, it, ctx) {
     // (2026-10-29) the owner's: an image she posts herself, and her ticket button (loaded only when used)
     case 'post': return (await import('./dc-tickets.js')).postCommand(cfg, it, ctx);
     case 'tickets': return (await import('./dc-tickets.js')).ticketsCommand(cfg, it, ctx);
+    // (2026-10-29, round 3) the owner's: her "Verify my $AGI" button, for her holder roles (loaded only when used)
+    case 'holders': return (await import('./dc-holders.js')).holdersCommand(cfg, it, ctx);
     case 'ca': return fixed(guild, 'ca', now, { content: caLine() });
     case 'website': return fixed(guild, 'website', now, { content: GROUP_WEBSITE, embeds: true });
     case 'help': return fixed(guild, 'help', now, { content: D.helpFor({ music: musicOn(cfg) }) });
@@ -360,6 +362,8 @@ async function onButton(cfg, it, ctx) {
   const id = String(it.data?.custom_id ?? '');
   // (2026-10-29) her tickets' buttons: Open a ticket, Close ticket (server/dc-tickets.js, loaded only when used)
   if (/^tk:[a-z:]{1,20}$/.test(id)) return (await import('./dc-tickets.js')).ticketButton(cfg, it, ctx);
+  // (2026-10-29, round 3) her holder roles' buttons: Verify my $AGI, Remove my role (server/dc-holders.js)
+  if (/^hv:[a-z:]{1,20}$/.test(id)) return (await import('./dc-holders.js')).holderButton(cfg, it, ctx);
   const song = /^music:[a-z]{1,12}$/.test(id) ? songOf(id.slice(6)) : null;
   if (!song) return { response: onlyYou(D.OLD_BUTTON) };
   if (!musicOn(cfg)) return { response: onlyYou(D.MUSIC_OFF) };

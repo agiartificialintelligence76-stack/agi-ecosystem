@@ -165,6 +165,9 @@ export function getConfig(env = process.env) {
     dcFeedWebhook: discordWebhook(env.DISCORD_FEED_WEBHOOK),
     dcPosts: !isOff(env.DISCORD_POSTS),
     dcGuildDailyCap: Math.min(2000, Math.floor(number('DISCORD_GUILD_DAILY_CAP', tgGroupDailyCap)) || tgGroupDailyCap),
+    // (2026-10-29, round 3) her holder roles (server/dc-holders.js): on unless "off" (then her verify button says they're
+    // taking a break, agi1.app/discord/verify gives none, and the cron re-checks nobody; roles already given stay)
+    dcHolders: !isOff(env.DISCORD_HOLDERS),
     // Messages paid for by burning $AGI (2026-09-30, server/burn.js): whole $AGI a message (10 by default: 1,000 $AGI =
     // 100 messages), and the burned messages the whole site may use a day, on top of the free ones (1,000: about $0.80 of
     // AI replies at most)
