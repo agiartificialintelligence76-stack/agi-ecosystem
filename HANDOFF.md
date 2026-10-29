@@ -18,8 +18,11 @@ step); a new session built it again the same day and saved each step to the bran
   twice in a real Postgres (PGlite).
 - **Database:** `supabase/discord.sql` run in Supabase (agi2) on 2026-10-29 (`discord_functions_found = 5`; checked: only
   our server may use its functions and table, RLS on), after the owner's OK again in the new chat ("Yes, do all of it").
-- **Then:** pushed to `main`; the cron run once so `/holders` appears; `/holders` typed in ✅┃verify; the line about it added
-  to the welcome message. Details: CLAUDE.md, "AGI-1 on Discord" → "Round 3".
+- **Then (all done the same day):** pushed to `main` (`0af7c6d`); the cron run once by hand (it set `/holders`, and posted her
+  diary entry in `#📔┃agi1-diary`: the webhook's first live post); `/holders` in ✅┃verify posted her button (both roles
+  found); a line about it added to the welcome message. A tap gave the owner their private link, and the page took it.
+- **Left for the owner:** verify with a real wallet once (tap Verify my $AGI, open the link in a browser with the wallet,
+  sign), to see the role arrive. Details: CLAUDE.md, "AGI-1 on Discord" → "Round 3".
 
 ## AGI-1 on Discord, round 2 — 2026-10-29
 

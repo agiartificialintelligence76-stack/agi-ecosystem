@@ -3321,7 +3321,8 @@ key pair), plus the cron with her Discord server in `tests/telegram.test.js` and
 ("[discord] her app now sends her commands to https://www.agi1.app/discord/interactions") and her commands in the server,
 and `/help`, `/ask` (its answer after "thinking…": Vercel's `waitUntil` works), `/mc` and `/music` with a tap (AGI.,
 4.32 MB, uploaded) all answered. **Not tried live yet:** her posts through the webhook (her next diary entry or market
-moment is the check), her biggest songs' uploads (a server without boosts takes 10 MB a file: her biggest is 9.6 MB),
+moment is the check; **tried on 2026-10-29**: the cron run by hand at 12:10 the owner's time posted her diary entry of
+2026-10-28 in `#📔┃agi1-diary`, "[feed] posted 1 in her Discord channel"), her biggest songs' uploads (a server without boosts takes 10 MB a file: her biggest is 9.6 MB),
 and a line only for whoever asked after "thinking…" was deleted (Discord's own behaviour).
 
 ### Round 2: her support tickets, the owner's /post, the 18+ channel (2026-10-29)
@@ -3481,7 +3482,19 @@ Soulmate, 💘 Crush); **✅┃verify** at the end of 📌 Start Here (its topic
 (10,000+) or 💞 Soulmate (1,000,000+) · only ever on agi1.app · a free signature, never a transaction · the team never DMs
 you a verify link"); **💎┃holders** at the end of 💬 Community, private (Team, Mod, AGI-1, 💞 Soulmate, 💘 Crush; its topic:
 "💎 for verified $AGI holders: 💘 Crush and 💞 Soulmate · get your role in ✅┃verify · a thank-you for holding, not an
-investment · not financial advice").
+investment · not financial advice"). Then, in the new session, after the owner's OK there ("Yes, do all of it"):
+`supabase/discord.sql` run in agi2 (`discord_functions_found = 5`; checked: only `service_role` may run its functions, RLS
+on); pushed to `main` (`0af7c6d`); the cron run by hand (Vercel → Cron Jobs → Run) set her commands with `/holders`; the
+owner's `/holders` in ✅┃verify posted her button ("my verify button is up 💜": both roles found); and the welcome message's
+"Start here" list got one more line (the owner's message, edited): "Got $AGI? Verify it in #✅┃verify for 💘 Crush or 💞
+Soulmate and the private holders channel".
+
+**Tried live 2026-10-29** (the owner's account, 12:10 their time): a tap on Verify my $AGI gave the private link only to the
+owner (no Remove my role: no holder role), Discord's "Leaving Discord" showed `https://www.agi1.app/discord/verify#t=…`, and
+the page took it ("works for 15 more minutes", Connect wallet). `/api/wallet` `dc-verify` answers (a made-up session: 401
+`signed_out`). Vercel → Logs: no warning or error. **Not tried live yet:** verifying with a real wallet (the owner's to try:
+tap Verify my $AGI, open the link in a browser with the wallet, sign), Remove my role, and the cron's re-checks (nothing to
+re-check until someone verifies).
 
 ## Her languages (2026-09-29)
 
