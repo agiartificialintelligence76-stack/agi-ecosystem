@@ -16,11 +16,10 @@ step); a new session built it again the same day and saved each step to the bran
   Manage Roles), ✅┃verify and 💎┃holders with their topics.
 - **Tests:** `tests/holders.test.js` (17); the suite: 1,364 tests, 1,360 pass, 4 skipped. `supabase/discord.sql` also ran
   twice in a real Postgres (PGlite).
-- **Left to do** (each needs the owner's OK in the new chat: an automatic safety check stopped the database step, since the
-  first OK was given in the old chat): run `supabase/discord.sql` in Supabase (agi2: it's loaded in the SQL editor in the
-  owner's Chrome, one click on Run), push to `main`, run the cron once (Vercel → Cron Jobs → `/api/feed` → Run) so
-  `/holders` appears, type `/holders` in ✅┃verify, add the line about it to the welcome message. Details: CLAUDE.md, "AGI-1
-  on Discord" → "Round 3".
+- **Database:** `supabase/discord.sql` run in Supabase (agi2) on 2026-10-29 (`discord_functions_found = 5`; checked: only
+  our server may use its functions and table, RLS on), after the owner's OK again in the new chat ("Yes, do all of it").
+- **Then:** pushed to `main`; the cron run once so `/holders` appears; `/holders` typed in ✅┃verify; the line about it added
+  to the welcome message. Details: CLAUDE.md, "AGI-1 on Discord" → "Round 3".
 
 ## AGI-1 on Discord, round 2 — 2026-10-29
 
