@@ -57,7 +57,7 @@ addEventListener('storage', (e) => {
   render();
 });
 
-const expired = () => ends !== null && ends <= Date.now();
+function expired() { return ends !== null && ends <= Date.now(); }
 function show(button, on) { button.hidden = !on; }
 
 function render() {
