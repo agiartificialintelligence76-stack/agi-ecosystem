@@ -36,9 +36,9 @@ import * as D from './dc-lines.js';
 export const API = 'https://discord.com/api/v10';
 const UA = 'DiscordBot (https://agi1.app, 1.0)';         // the User-Agent Discord asks every app for
 export const KIND = { PING: 1, COMMAND: 2, BUTTON: 3, AUTOCOMPLETE: 4, MODAL: 5 };   // what Discord sends (interaction types)
-export const ANSWER = { PONG: 1, MESSAGE: 4, LATER: 5, CHOICES: 8 };                    // how we answer (response types)
+export const ANSWER = { PONG: 1, MESSAGE: 4, LATER: 5, UPDATE: 7, CHOICES: 8 };         // how we answer (response types)
 export const FLAG = { NO_EMBEDS: 4, ONLY_YOU: 64 };                                     // a message's flags
-const NO_PINGS = Object.freeze({ parse: [] });           // nothing she writes ever pings anyone (@everyone, a role, a person)
+export const NO_PINGS = Object.freeze({ parse: [] });    // nothing she writes ever pings anyone (@everyone, a role, a person)
 export const MAX_BODY = 65_536;                          // an interaction is a few KB
 export const MAX_SKEW_S = 300;                           // a signed request older (or newer) than 5 minutes is refused
 export const MAX_TEXT = 500;                             // characters she reads (the same as the site's chat and Telegram's)
@@ -167,13 +167,15 @@ export async function onInteraction(cfg, it, { env = process.env, now = Date.now
 const hookable = (it) => /^\d{17,20}$/.test(String(it?.application_id ?? '')) && /^[\w.-]{20,1000}$/.test(String(it?.token ?? ''));
 
 // a message (public, or only for whoever asked), never a ping, no link previews unless asked for
-const message = (content, { onlyYou: mine = false, embeds = false, components } = {}) => ({
+export const message = (content, { onlyYou: mine = false, embeds = false, components } = {}) => ({
   type: ANSWER.MESSAGE,
   data: { content, allowed_mentions: NO_PINGS, flags: (mine ? FLAG.ONLY_YOU : 0) | (embeds ? 0 : FLAG.NO_EMBEDS), ...(components ? { components } : {}) },
 });
-const onlyYou = (content) => message(content, { onlyYou: true });
+export const onlyYou = (content) => message(content, { onlyYou: true });
 // "AGI-1 is thinking…": the answer comes in an edit
-const later = (mine = false) => ({ type: ANSWER.LATER, data: { flags: mine ? FLAG.ONLY_YOU : 0 } });
+export const later = (mine = false) => ({ type: ANSWER.LATER, data: { flags: mine ? FLAG.ONLY_YOU : 0 } });
+// (2026-10-29) the message a button was on, changed (its buttons gone)
+export const update = (content) => ({ type: ANSWER.UPDATE, data: { content, components: [], allowed_mentions: NO_PINGS } });
 // a promise's value if it settles within ms, else undefined (the promise goes on)
 function within(promise, ms) {
   if (!(ms > 0)) return Promise.resolve(undefined);
@@ -188,6 +190,9 @@ async function onCommand(cfg, it, ctx) {
   if (!dcPersonBurst(dcCode(cfg.passSecret, it.member.user.id, 'burst'), now) || !dcGuildBurst(`g:${guild}`, now)) return { response: onlyYou(D.SLOW_DOWN) };
   switch (name) {
     case 'ask': return ask(cfg, it, ctx);
+    // (2026-10-29) the owner's: an image she posts herself, and her ticket button (loaded only when used)
+    case 'post': return (await import('./dc-tickets.js')).postCommand(cfg, it, ctx);
+    case 'tickets': return (await import('./dc-tickets.js')).ticketsCommand(cfg, it, ctx);
     case 'ca': return fixed(guild, 'ca', now, { content: caLine() });
     case 'website': return fixed(guild, 'website', now, { content: GROUP_WEBSITE, embeds: true });
     case 'help': return fixed(guild, 'help', now, { content: D.helpFor({ music: musicOn(cfg) }) });
@@ -309,9 +314,11 @@ export function quoteOf(text, max = 200) {
 // ---------- calling Discord ----------
 // One call. → its answer (null for "204 No Content") · throws an error with .status, .code (Discord's own) and .retryAfter.
 // Its message never has the address in it (an interaction's token and a webhook's are in theirs): `what` says what it was.
-export async function discordCall(path, { method = 'GET', body, form, token, what = 'a call', timeoutMs = 5000 } = {}) {
+// reason: what the server's audit log says about it (2026-10-29: her tickets)
+export async function discordCall(path, { method = 'GET', body, form, token, what = 'a call', timeoutMs = 5000, reason } = {}) {
   const headers = { 'User-Agent': UA };
   if (token) headers.Authorization = `Bot ${token}`;
+  if (reason) headers['X-Audit-Log-Reason'] = encodeURIComponent(reason);
   let payload;
   if (form) payload = form;
   else if (body !== undefined) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
@@ -328,10 +335,10 @@ export async function discordCall(path, { method = 'GET', body, form, token, wha
   err.retryAfter = Number(data?.retry_after) > 0 ? Number(data.retry_after) : null;
   throw err;
 }
-const hookPath = (it, rest = '') => `/webhooks/${it.application_id}/${encodeURIComponent(it.token)}${rest}`;
-// her first answer, edited (a link preview only when asked for)
-const edit = (it, { content, embeds = false }) => discordCall(hookPath(it, '/messages/@original'), {
-  method: 'PATCH', body: { content, allowed_mentions: NO_PINGS, flags: embeds ? 0 : FLAG.NO_EMBEDS }, what: 'her answer',
+export const hookPath = (it, rest = '') => `/webhooks/${it.application_id}/${encodeURIComponent(it.token)}${rest}`;
+// her first answer, edited (a link preview only when asked for; components: [] takes its buttons away)
+export const edit = (it, { content, embeds = false, components }) => discordCall(hookPath(it, '/messages/@original'), {
+  method: 'PATCH', body: { content, allowed_mentions: NO_PINGS, flags: embeds ? 0 : FLAG.NO_EMBEDS, ...(components ? { components } : {}) }, what: 'her answer',
 });
 const remove = (it) => discordCall(hookPath(it, '/messages/@original'), { method: 'DELETE', what: 'her "thinking…"' });
 const followUp = (it, content) => discordCall(hookPath(it), {
@@ -351,6 +358,8 @@ export function musicRows() {
 // every 30 s, 6 taps a minute per person), then the song as an audio file, uploaded by our server
 async function onButton(cfg, it, ctx) {
   const id = String(it.data?.custom_id ?? '');
+  // (2026-10-29) her tickets' buttons: Open a ticket, Close ticket (server/dc-tickets.js, loaded only when used)
+  if (/^tk:[a-z:]{1,20}$/.test(id)) return (await import('./dc-tickets.js')).ticketButton(cfg, it, ctx);
   const song = /^music:[a-z]{1,12}$/.test(id) ? songOf(id.slice(6)) : null;
   if (!song) return { response: onlyYou(D.OLD_BUTTON) };
   if (!musicOn(cfg)) return { response: onlyYou(D.MUSIC_OFF) };
@@ -415,13 +424,19 @@ async function sendSong(it, song, { deadline, env }) {
 // ---------- connecting her app (api/feed.js, each run) ----------
 // Her commands as Discord takes them (a server's own: COMMANDS in server/dc-lines.js; /music while her songs are on)
 export const commandsFor = (cfg) => D.COMMANDS.filter((c) => c.name !== 'music' || musicOn(cfg)).map((c) => ({ type: 1, ...c }));
-// what makes two lists of commands the same for us (Discord's answer has more in it: ids, versions…)
+// what makes two lists of commands the same for us (Discord's answer has more in it: ids, versions…); since 2026-10-29 who
+// sees a command (default_member_permissions: the owner's are '8') and which channels an option takes count too
 const optionKey = (o) => ({
   type: Number(o?.type), name: String(o?.name ?? ''), description: String(o?.description ?? ''), required: o?.required === true,
   min_length: o?.min_length ?? null, max_length: o?.max_length ?? null,
+  channel_types: Array.isArray(o?.channel_types) ? [...o.channel_types].map(Number).sort((a, b) => a - b) : null,
 });
 export const commandsKey = (list) => JSON.stringify((Array.isArray(list) ? list : [])
-  .map((c) => ({ type: Number(c?.type ?? 1), name: String(c?.name ?? ''), description: String(c?.description ?? ''), options: (Array.isArray(c?.options) ? c.options : []).map(optionKey) }))
+  .map((c) => ({
+    type: Number(c?.type ?? 1), name: String(c?.name ?? ''), description: String(c?.description ?? ''),
+    default_member_permissions: c?.default_member_permissions == null ? null : String(c.default_member_permissions),
+    options: (Array.isArray(c?.options) ? c.options : []).map(optionKey),
+  }))
   .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)));
 // Her app: its description (D.DESCRIPTION) and its endpoint (<the site>/discord/interactions) when they aren't those, and her
 // commands in each server of DISCORD_GUILDS when they aren't hers. Every run, so a change fixes itself (like her Telegram

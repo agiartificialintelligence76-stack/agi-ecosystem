@@ -12,6 +12,7 @@ import { generateKeyPairSync, sign } from 'node:crypto';
 import { POST as webhook, GET as webhookGet } from '../api/telegram.js';
 import * as DC from '../server/discord.js';
 import * as D from '../server/dc-lines.js';
+import * as TK from '../server/dc-tickets.js';
 import { getConfig, discordGuilds, discordKey, discordWebhook } from '../server/config.js';
 import { forgetMarket } from '../server/market.js';
 import { tgLinesFor, GROUP_CA, GROUP_WEBSITE, GROUP_FULL, GROUP_OUT, GROUP_MARKET_DOWN, GROUP_LIVE, groupMarket } from '../server/tg-lines.js';
@@ -40,15 +41,41 @@ const CLEAR = ['SITE_URL', 'GEMINI_MODEL', 'CHAT_DAILY_CAP', 'TELEGRAM_DAILY_CAP
 const T0 = Date.UTC(2026, 9, 28, 12, 0, 0);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const mp3 = (n) => { const b = new Uint8Array(n); b.set([0x49, 0x44, 0x33]); return b; };
+const png = (n) => { const b = new Uint8Array(n); b.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]); return b; };
 const agiPair = () => ({ chainId: 'robinhood', dexId: 'uniswap', baseToken: { address: OFFICIAL, symbol: 'AGI' }, priceUsd: '0.001',
   liquidity: { usd: 50_000 }, priceChange: { h24: -3.5 }, marketCap: 1_150_000, fdv: 1_150_000 });
 
 // ---------- fakes ----------
 let fake, calls, logs;
+// (2026-10-29) Discord's gateway, for her bot's one connection: hello, then READY for her token (4004 for any other)
+class FakeGateway {
+  static made = [];
+  constructor(url) {
+    this.url = url;
+    this.sent = [];
+    FakeGateway.made.push(this);
+    setTimeout(() => this.onmessage?.({ data: JSON.stringify({ op: 10, d: { heartbeat_interval: 41250 } }) }), 1);
+  }
+  send(raw) {
+    const m = JSON.parse(raw);
+    this.sent.push(m);
+    if (m.op !== 2) return;
+    setTimeout(() => {
+      if (m.d?.token === BOT && !fake.gatewayDown) {
+        fake.identified = true;
+        this.onmessage?.({ data: JSON.stringify({ op: 0, t: 'READY', s: 1, d: { v: 10 } }) });
+      } else this.onclose?.({ code: 4004 });
+    }, 1);
+  }
+  close(code) { this.closedWith = code; }
+}
 beforeEach(() => {
   for (const k of CLEAR) delete process.env[k];
   Object.assign(process.env, ENV);
   DC.forgetDiscord();
+  TK.forgetTickets();
+  FakeGateway.made = [];
+  globalThis.WebSocket = FakeGateway;
   forgetMarket();
   logs = [];
   console.error = (...a) => logs.push(['error', a.join(' ')]);
@@ -61,6 +88,8 @@ beforeEach(() => {
     dex: [agiPair()], dexDown: false, dexDelay: 0,
     app: { id: APP, verify_key: PUBLIC, description: '', interactions_endpoint_url: null }, appStatus: 200, commands: new Map(), forbidden: new Set(),
     endpointRefused: false, hookStatus: 200, uploadStatus: 200, song: { status: 200, bytes: mp3(50_000) },
+    // (2026-10-29) her tickets and /post: the server's channels, what her bot posted, whether it ever connected
+    channels: [], posted: [], identified: false, gatewayDown: false, noAccess: new Set(), createStatus: 200, image: png(4000),
   };
   globalThis.fetch = async (url, init = {}) => {
     url = String(url);
@@ -89,6 +118,10 @@ beforeEach(() => {
     if (url.startsWith('https://agi1.app/music/') || url.startsWith('https://www.agi1.app/music/')) {
       calls.push({ to: 'site', url });
       return fake.song.status === 200 ? new Response(fake.song.bytes, { status: 200, headers: { 'content-type': 'audio/mpeg' } }) : new Response('nope', { status: fake.song.status });
+    }
+    if (url.startsWith('https://cdn.discordapp.com/attachments/') || url.startsWith('https://cdn.discordapp.com/ephemeral-attachments/')) {
+      calls.push({ to: 'cdn', url });
+      return new Response(fake.image, { status: 200, headers: { 'content-type': 'image/png' } });
     }
     if (url.startsWith('https://discord.com/api/webhooks/')) {
       const body = JSON.parse(init.body);
@@ -120,6 +153,31 @@ beforeEach(() => {
         if (fake.forbidden.has(m[2])) return Response.json({ message: 'Missing Access', code: 50001 }, { status: 403 });
         if (method === 'GET') return Response.json(fake.commands.get(m[2]) ?? []);
         if (method === 'PUT') { fake.commands.set(m[2], body.map((c, i) => ({ id: String(i + 1), application_id: APP, version: '1', guild_id: m[2], default_member_permissions: null, ...c }))); return Response.json(fake.commands.get(m[2])); }
+      }
+      // (2026-10-29) the server's channels, a channel, its messages
+      if (path === `/guilds/${GUILD}/channels`) {
+        if (method === 'GET') return Response.json(fake.channels);
+        if (method === 'POST') {
+          if (fake.createStatus !== 200) return Response.json({ message: 'Missing Permissions', code: 50013 }, { status: fake.createStatus });
+          const made = { id: String(1565200000000000000n + BigInt(fake.channels.length)), guild_id: GUILD, ...body };
+          fake.channels.push(made);
+          return Response.json(made);
+        }
+      }
+      const said = /^\/channels\/(\d+)\/messages$/.exec(path);
+      if (said && method === 'POST') {
+        if (!fake.identified) return Response.json({ message: 'Unauthorized', code: 40001 }, { status: 401 });
+        if (fake.noAccess.has(said[1])) return Response.json({ message: 'Missing Access', code: 50001 }, { status: 403 });
+        fake.posted.push({ channel: said[1], body, file });
+        return Response.json({ id: '99', channel_id: said[1] });
+      }
+      const one = /^\/channels\/(\d+)$/.exec(path);
+      if (one) {
+        if (fake.noAccess.has(one[1])) return Response.json({ message: 'Missing Access', code: 50001 }, { status: 403 });
+        const i = fake.channels.findIndex((c) => c.id === one[1]);
+        if (i < 0) return Response.json({ message: 'Unknown Channel', code: 10003 }, { status: 404 });
+        if (method === 'GET') return Response.json(fake.channels[i]);
+        if (method === 'DELETE') return Response.json(fake.channels.splice(i, 1)[0]);
       }
       throw new Error(`unexpected Discord call ${method} ${path}`);
     }
@@ -498,7 +556,9 @@ test('connecting her app: its description, its endpoint and her commands, only w
   const put = discord('PUT', `/applications/${APP}/guilds/${GUILD}/commands`);
   assert.equal(put.length, 1);
   assert.deepEqual(put[0].body, DC.commandsFor(cfg()));
-  assert.deepEqual(put[0].body.map((c) => c.name), ['ask', 'ca', 'mc', 'website', 'music', 'help']);
+  assert.deepEqual(put[0].body.map((c) => c.name), ['ask', 'ca', 'mc', 'website', 'music', 'help', 'post', 'tickets']);
+  // (2026-10-29) the owner's two: shown only to Administrators
+  assert.deepEqual(put[0].body.filter((c) => c.default_member_permissions).map((c) => [c.name, c.default_member_permissions]), [['post', '8'], ['tickets', '8']]);
   for (const c of calls) {
     assert.equal(c.headers.Authorization, `Bot ${BOT}`);
     assert.equal(c.headers['User-Agent'], 'DiscordBot (https://agi1.app, 1.0)');
@@ -543,6 +603,11 @@ test('connecting her app: its description, its endpoint and her commands, only w
   // the same commands from Discord (with its ids and versions) count as the same
   assert.equal(DC.commandsKey(fake.commands.get(GUILD)), DC.commandsKey(DC.commandsFor(cfg())));
   assert.notEqual(DC.commandsKey([{ ...DC.commandsFor(cfg())[0], description: 'x' }]), DC.commandsKey([DC.commandsFor(cfg())[0]]));
+  // (2026-10-29) who sees a command, and the channels an option takes, count too
+  const post = DC.commandsFor(cfg()).find((c) => c.name === 'post');
+  assert.notEqual(DC.commandsKey([{ ...post, default_member_permissions: null }]), DC.commandsKey([post]));
+  assert.notEqual(DC.commandsKey([{ ...post, options: post.options.map((o) => (o.channel_types ? { ...o, channel_types: [0] } : o)) }]), DC.commandsKey([post]));
+  assert.equal(DC.commandsKey([{ ...post, options: post.options.map((o) => (o.channel_types ? { ...o, channel_types: [5, 0] } : o)) }]), DC.commandsKey([post]), 'in any order');
 });
 
 // ---------- her posts in her channel ----------
@@ -608,7 +673,14 @@ test('her settings: her servers, her public key, her channel\'s webhook', () => 
 
 const NOT_OK = /\b(babe|baby|cutie|honey|darling|sweetie|love)\b|\b(buy|buying|sell|selling|hold|hodl|invest\w*|moon\w*|pump\w*|dump\w*|profit\w*|gains?|lambo|scam\w*|rug\w*|fraud\w*|safe|guarantee\w*)\b|\b\d+x\b|sex|nude|naked|horny/i;
 test("her Discord lines and commands: PG-13, no pet names, never money advice, Discord's limits", () => {
-  const lines = [D.DESCRIPTION, D.helpFor({ music: true }), D.helpFor(), D.NOT_HERE, D.SLOW_DOWN, D.ASK_EMPTY, D.MUSIC_OFF, D.OLD_BUTTON];
+  const C = '1565166235354665051';
+  const lines = [D.DESCRIPTION, D.helpFor({ music: true }), D.helpFor(), D.NOT_HERE, D.SLOW_DOWN, D.ASK_EMPTY, D.MUSIC_OFF, D.OLD_BUTTON,
+    // (2026-10-29) her tickets and the owner's /post
+    D.TICKET_PANEL, D.TICKET_BUTTON, D.ticketWelcome('0001'), D.TICKET_CLOSE, D.ticketOpened(C), D.ticketAlready(C), D.TICKET_WAIT, D.TICKET_NOT_SET,
+    D.TICKET_FULL, D.TICKET_FAILED, D.TICKET_CLOSE_ASK, D.TICKET_CLOSE_YES, D.TICKET_CLOSE_NO, D.TICKET_CLOSING, D.TICKET_KEPT, D.TICKET_NOT_YOURS,
+    D.NOT_A_TICKET, D.TICKET_OLD, D.OWNER_ONLY, D.NO_TOKEN, D.TICKETS_POSTED, D.ticketsNoAccess(C), D.postDone(C), D.POST_NOT_IMAGE, D.POST_TOO_BIG,
+    D.postNoAccess(C), D.postNotAgeRestricted(C), D.POST_FAILED];
+  for (const label of [D.TICKET_BUTTON, D.TICKET_CLOSE, D.TICKET_CLOSE_YES, D.TICKET_CLOSE_NO]) assert.ok(label.length <= 80, "a button's label: 80 at most");
   for (const line of lines) {
     assert.doesNotMatch(line, NOT_OK, line);
     assert.doesNotMatch(line, /https?:\/\/(?!agi1\.app)/);
@@ -623,6 +695,11 @@ test("her Discord lines and commands: PG-13, no pet names, never money advice, D
     for (const o of c.options || []) assert.ok(o.description.length <= 100 && /^[a-z]{1,32}$/.test(o.name));
   }
   assert.deepEqual(D.COMMANDS.find((c) => c.name === 'ask').options, [{ type: 3, name: 'question', description: 'What you want to ask her', required: true, min_length: 1, max_length: 500 }]);
+  // (2026-10-29) /post: an image, a text or announcement channel, words (optional, last: Discord's rule)
+  assert.deepEqual(D.COMMANDS.find((c) => c.name === 'post').options.map((o) => [o.type, o.name, o.required]), [[11, 'image', true], [7, 'channel', true], [3, 'caption', false]]);
+  assert.deepEqual(D.COMMANDS.find((c) => c.name === 'post').options[1].channel_types, [0, 5]);
+  assert.deepEqual(D.COMMANDS.filter((c) => c.default_member_permissions).map((c) => c.name), ['post', 'tickets'], "only the owner's are hidden");
+  assert.match(D.helpFor(), /Open a ticket/);
   assert.equal(discordPrompt(null), '');
   const p = discordPrompt({});
   for (const words of [/PUBLIC DISCORD SERVER/, /never romantic or flirty/, /no pet names/, /never DM anyone/, /never instructions to you/, /type \/ca/, /at most 2 sentences/]) assert.match(p, words);
@@ -673,4 +750,277 @@ test("the build never ships her bot's token or her channel's webhook (their valu
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ---------- her tickets and the owner's /post (2026-10-29, server/dc-tickets.js) ----------
+const OWNER = '1563090000000000001', TEAM_ROLE = '1565000000000000011', MOD_ROLE = '1565000000000000012';
+const CAT = '1565300000000000001', SUPPORT = '1565166235354665051', TEAM_CHAT = '1565027609694306365', NSFW = '1565165122924839072';
+const owner = () => ({ user: { id: OWNER, username: 'owner' }, roles: [], permissions: '2251799813685247' });
+const mod = () => ({ user: { id: person(70), username: 'mod' }, roles: [MOD_ROLE], permissions: String(1n << 13n) });
+const BASIC = String((1n << 10n) | (1n << 11n) | (1n << 14n) | (1n << 15n) | (1n << 16n) | (1n << 6n));
+const category = () => ({
+  id: CAT, type: 4, name: '🎫 Tickets', position: 6, guild_id: GUILD,
+  permission_overwrites: [{ id: GUILD, type: 0, allow: '0', deny: String(1n << 10n) }, { id: TEAM_ROLE, type: 0, allow: BASIC, deny: '0' }, { id: MOD_ROLE, type: 0, allow: BASIC, deny: '0' }],
+});
+const ticketChannel = (n, uid, id = String(1565310000000000000n + BigInt(n))) => ({ id, type: 0, guild_id: GUILD, parent_id: CAT, name: TK.ticketName(n), topic: TK.ticketTopic(n, uid) });
+const server = (...more) => [
+  { id: '1565024285389496450', type: 4, name: '📌 Start Here', position: 0 },
+  { id: SUPPORT, type: 0, name: '🎫┃support', parent_id: '1565024285389496450', topic: 'need help?' },
+  { id: TEAM_CHAT, type: 0, name: '🛡┃team-chat', guild_id: GUILD, parent_id: '1565024683903025172' },
+  category(), ...more,
+];
+const edits = () => discord('PATCH', original);
+const lastEdit = () => edits().at(-1)?.body;
+const noToken = (line) => assert.ok(!line.includes(BOT) && !line.includes('x'.repeat(38)), 'her token is never in a log line');
+
+test('/tickets: only the owner; her button, posted by her bot (which connects to the gateway once, first)', async () => {
+  const not = await run(command('tickets', null, { channel_id: SUPPORT }));
+  assert.deepEqual(not.response, { type: 4, data: { content: D.OWNER_ONLY, allowed_mentions: { parse: [] }, flags: 64 | 4 } });
+  assert.equal((await run(command('tickets', null, { channel_id: SUPPORT, member: owner() }))).response.data.content, D.NO_TOKEN, 'no token: said');
+  assert.equal(calls.length, 0);
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  const r = await run(command('tickets', null, { channel_id: SUPPORT, member: owner() }));
+  assert.deepEqual(r.response, { type: 5, data: { flags: 64 } }, 'only the owner sees what happened');
+  assert.equal(await r.after, 'tickets_posted');
+  // refused once (her bot never connected), connected once, then posted
+  assert.equal(discord('POST', `/channels/${SUPPORT}/messages`).length, 2);
+  assert.equal(FakeGateway.made.length, 1);
+  assert.equal(FakeGateway.made[0].url, TK.GATEWAY);
+  assert.deepEqual(FakeGateway.made[0].sent, [{ op: 2, d: { token: BOT, intents: 0, properties: { os: 'linux', browser: 'agi1', device: 'agi1' } } }]);
+  assert.equal(FakeGateway.made[0].closedWith, 1000, 'closed at once');
+  assert.deepEqual(fake.posted.map((p) => p.channel), [SUPPORT]);
+  const panel = fake.posted[0].body;
+  assert.deepEqual(panel, TK.panel());
+  assert.equal(panel.content, D.TICKET_PANEL);
+  assert.deepEqual(panel.allowed_mentions, { parse: [] });
+  assert.deepEqual(panel.components, [{ type: 1, components: [{ type: 2, style: 1, custom_id: 'tk:open', label: 'Open a ticket', emoji: { name: '🎫' } }] }]);
+  assert.equal(lastEdit().content, D.TICKETS_POSTED);
+  // the next time: posted at once, no gateway
+  calls.length = 0;
+  await (await run(command('tickets', null, { channel_id: SUPPORT, member: owner() }), { now: T0 + 60_000 })).after;
+  assert.equal(discord('POST', `/channels/${SUPPORT}/messages`).length, 1);
+  assert.equal(FakeGateway.made.length, 1);
+  // a channel she can't post in: said, with what to change
+  fake.noAccess.add(TEAM_CHAT);
+  const blocked = await run(command('tickets', null, { channel_id: TEAM_CHAT, member: owner() }), { now: T0 + 120_000 });
+  assert.equal(await blocked.after, 'tickets_failed');
+  assert.equal(lastEdit().content, D.ticketsNoAccess(TEAM_CHAT));
+  for (const [, line] of logs) noToken(line);
+});
+
+test('her gateway connection: a wrong token or no READY is an error, never her token in a log line', async () => {
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  fake.gatewayDown = true;
+  const r = await run(command('tickets', null, { channel_id: SUPPORT, member: owner() }));
+  assert.equal(await r.after, 'tickets_failed');
+  assert.equal(lastEdit().content, D.TICKET_FAILED);
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /discord gateway: closed \(4004\)/.test(l)));
+  await assert.rejects(TK.identifyOnce('not-her-token'), /closed \(4004\)/);
+  class Silent { constructor() { this.sent = []; } send() {} close() {} }
+  globalThis.WebSocket = Silent;
+  await assert.rejects(TK.identifyOnce(BOT, { timeoutMs: 30 }), /no READY in time/);
+  for (const [, line] of logs) noToken(line);
+});
+
+test('Open a ticket: a private channel for them and the team, numbered, her first message in it, its link only for them', async () => {
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  fake.identified = true;
+  fake.channels = server(ticketChannel(7, person(50)));
+  const r = await run(tap('tk:open', { channel_id: SUPPORT }));
+  assert.deepEqual(r.response, { type: 5, data: { flags: 64 } });
+  assert.equal(await r.after, 'ticket_opened');
+  const [made] = discord('POST', `/guilds/${GUILD}/channels`);
+  assert.deepEqual(made.body, {
+    name: '🎫┃ticket-0008', type: 0, parent_id: CAT, topic: TK.ticketTopic(8, PERSON),
+    permission_overwrites: [
+      ...category().permission_overwrites,
+      { id: PERSON, type: 1, allow: String(TK.MEMBER_ALLOW), deny: '0' },
+      { id: APP, type: 1, allow: String(TK.BOT_ALLOW), deny: '0' },
+    ],
+  });
+  assert.equal(made.body.topic, `🎫 ticket 0008 · only whoever opened it and the team can see it · [${PERSON}]`);
+  assert.equal(decodeURIComponent(made.headers['X-Audit-Log-Reason']), 'AGI-1: ticket 0008, opened with her button');
+  const ticket = fake.channels.at(-1);
+  assert.deepEqual(fake.posted.map((p) => p.channel), [ticket.id], 'her first message, in the ticket');
+  assert.deepEqual(fake.posted[0].body, TK.welcome(8));
+  assert.equal(fake.posted[0].body.content, D.ticketWelcome('0008'));
+  assert.deepEqual(fake.posted[0].body.components[0].components.map((b) => b.custom_id), ['tk:close']);
+  assert.deepEqual(fake.posted[0].body.allowed_mentions, { parse: [] }, 'never a ping');
+  assert.equal(lastEdit().content, D.ticketOpened(ticket.id));
+  // a double tap: one at a time
+  assert.equal((await run(tap('tk:open', { channel_id: SUPPORT }), { now: T0 + 5_000 })).response.data.content, D.TICKET_WAIT);
+  // a tap later: their open ticket, never a second one
+  const again = await run(tap('tk:open', { channel_id: SUPPORT }), { now: T0 + 30_000 });
+  assert.equal(await again.after, 'ticket_already');
+  assert.equal(lastEdit().content, D.ticketAlready(ticket.id));
+  assert.equal(discord('POST', `/guilds/${GUILD}/channels`).length, 1);
+  // someone else: the next number
+  await (await run(tap('tk:open', { channel_id: SUPPORT, who: person(1) }), { now: T0 + 31_000 })).after;
+  assert.equal(fake.channels.at(-1).name, '🎫┃ticket-0009');
+  assert.equal(TK.ownerOf(fake.channels.at(-1)), person(1));
+});
+
+test("Open a ticket: no tickets category, too many open, Discord refusing, no token: said only to them", async () => {
+  const says = async (line, word, who) => {
+    const r = await run(tap('tk:open', { channel_id: SUPPORT, who }));
+    if (r.after) assert.equal(await r.after, word);
+    assert.equal(r.after ? lastEdit().content : r.response.data.content, line);
+  };
+  await says(D.TICKET_FAILED, undefined, person(1));
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /her tickets need DISCORD_BOT_TOKEN/.test(l)));
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  fake.identified = true;
+  fake.channels = server().filter((c) => c.id !== CAT);
+  await says(D.TICKET_NOT_SET, 'ticket_not_set', person(2));
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /no tickets category/.test(l)));
+  fake.channels = server(...Array.from({ length: TK.MAX_OPEN }, (_, i) => ticketChannel(i + 1, person(100 + i))));
+  await says(D.TICKET_FULL, 'ticket_full', person(3));
+  fake.channels = server();
+  fake.createStatus = 403;
+  await says(D.TICKET_FAILED, 'ticket_failed', person(4));
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /needs Manage Channels/.test(l)));
+  fake.createStatus = 200;
+  // her first message refused: the ticket's still open, and its link said
+  fake.noAccess.add('1565200000000000004');
+  await says(D.ticketOpened('1565200000000000004'), 'ticket_opened', person(5));
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /first message didn't go out/.test(l)));
+  for (const [, line] of logs) noToken(line);
+});
+
+test('Close ticket: asked once more; whoever opened it or the team; then the channel is deleted', async () => {
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  const mine = ticketChannel(3, PERSON), theirs = ticketChannel(4, person(9));
+  fake.channels = server(mine, theirs);
+  const ask = (await run(tap('tk:close', { channel_id: mine.id }))).response;
+  assert.equal(ask.type, 4);
+  assert.equal(ask.data.content, D.TICKET_CLOSE_ASK);
+  assert.equal(ask.data.flags, 64 | 4, 'only to whoever tapped');
+  assert.deepEqual(ask.data.components[0].components.map((b) => [b.custom_id, b.label, b.style]), [['tk:close:yes', 'Close it', 4], ['tk:close:no', 'Keep it open', 2]]);
+  assert.deepEqual((await run(tap('tk:close:no', { channel_id: mine.id }))).response, { type: 7, data: { content: D.TICKET_KEPT, components: [], allowed_mentions: { parse: [] } } });
+  // not theirs, not the team: refused
+  const nope = await run(tap('tk:close:yes', { channel_id: theirs.id }));
+  assert.deepEqual(nope.response, { type: 7, data: { content: D.TICKET_CLOSING, components: [], allowed_mentions: { parse: [] } } });
+  assert.equal(await nope.after, 'close_not_yours');
+  assert.deepEqual([lastEdit().content, lastEdit().components], [D.TICKET_NOT_YOURS, []]);
+  assert.equal(discord('DELETE', `/channels/${theirs.id}`).length, 0);
+  // their own: deleted
+  const yes = await run(tap('tk:close:yes', { channel_id: mine.id }));
+  assert.equal(await yes.after, 'closed');
+  const [gone] = discord('DELETE', `/channels/${mine.id}`);
+  assert.equal(decodeURIComponent(gone.headers['X-Audit-Log-Reason']), 'AGI-1: ticket 0003 closed');
+  assert.ok(!fake.channels.some((c) => c.id === mine.id));
+  // the team (a Mod: Manage Messages): anyone's
+  assert.equal(await (await run(tap('tk:close:yes', { channel_id: theirs.id, member: mod() }))).after, 'closed');
+  // not a ticket (a channel in the server, or one that's gone)
+  assert.equal(await (await run(tap('tk:close:yes', { channel_id: TEAM_CHAT, member: mod() }))).after, 'close_not_ticket');
+  assert.equal(lastEdit().content, D.NOT_A_TICKET);
+  assert.equal(await (await run(tap('tk:close:yes', { channel_id: theirs.id, member: mod() }))).after, 'close_failed');
+  // a button she doesn't have
+  assert.equal((await run(tap('tk:what'))).response.data.content, D.TICKET_OLD);
+  // ticket names and numbers
+  assert.equal(TK.nextTicket([{ name: '🎫┃ticket-0041' }, { name: 'general' }, { name: 'ticket-0002' }]), 42);
+  assert.equal(TK.nextTicket([]), 1);
+  assert.equal(TK.ticketNumber('ticket-12345678'), 0, 'not one of hers');
+  assert.equal(TK.isTicket({ type: 0, name: '🎫┃ticket-0001', topic: 'no tag' }), false);
+  assert.equal(TK.isTicketsCategory({ type: 4, name: '🎫 TICKETS' }), true);
+  assert.equal(TK.isTicketsCategory({ type: 0, name: 'tickets' }), false);
+});
+
+const IMG = '1565400000000000001';
+const attachment = (o = {}) => ({ id: IMG, filename: 'agi.png', size: 4000, url: 'https://cdn.discordapp.com/attachments/1/2/agi.png?ex=abc&hm=secretsig', content_type: 'image/png', ...o });
+const postCmd = ({ channel = TEAM_CHAT, caption, att = attachment(), member = owner() } = {}) => interaction({
+  member, channel_id: SUPPORT,
+  data: {
+    id: '1', name: 'post', type: 1,
+    options: [{ name: 'image', type: 11, value: IMG }, { name: 'channel', type: 7, value: channel }, ...(caption !== undefined ? [{ name: 'caption', type: 3, value: caption }] : [])],
+    resolved: { attachments: { [IMG]: att }, channels: { [channel]: { id: channel, name: 'x', type: 0 } } },
+  },
+});
+
+test('/post: only the owner; the image she posts herself, as AGI-1, never a ping', async () => {
+  assert.equal((await run(postCmd({ member: { user: { id: PERSON }, roles: [], permissions: String(1n << 13n) } }))).response.data.content, D.OWNER_ONLY, 'a Mod: no');
+  assert.equal((await run(postCmd())).response.data.content, D.NO_TOKEN);
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  fake.channels = server();
+  const r = await run(postCmd({ caption: '  a new pic 💜 @everyone  ' }));
+  assert.deepEqual(r.response, { type: 5, data: { flags: 64 } });
+  assert.equal(await r.after, 'posted');
+  assert.equal(FakeGateway.made.length, 1, 'her first post ever: connected once');
+  assert.deepEqual(to('cdn').map((c) => c.url), [attachment().url]);
+  const [post] = fake.posted;
+  assert.equal(post.channel, TEAM_CHAT);
+  assert.deepEqual(post.body, { content: 'a new pic 💜 @everyone', allowed_mentions: { parse: [] }, flags: 4, attachments: [{ id: 0, filename: 'agi1.png' }] });
+  assert.equal(post.file.type, 'image/png');
+  assert.equal(post.file.size, 4000);
+  assert.equal(lastEdit().content, D.postDone(TEAM_CHAT));
+  // no words: just the image
+  await (await run(postCmd(), { now: T0 + 60_000 })).after;
+  assert.equal(fake.posted.at(-1).body.content, '');
+  // a command's image: Discord's "ephemeral-attachments" address
+  const eph = await run(postCmd({ att: attachment({ url: `https://cdn.discordapp.com/ephemeral-attachments/${APP}/1/agi.png?ex=1&hm=secretsig` }) }), { now: T0 + 120_000 });
+  assert.equal(await eph.after, 'posted');
+  for (const [, line] of logs) assert.ok(!line.includes('secretsig'), "the image's signed address is never in a log line");
+});
+
+test("/post: what isn't an image, too big, a channel she can't see or in another server, an 18+ channel not marked age-restricted", async () => {
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  fake.identified = true;
+  // (a minute apart: the owner's commands have the same speed bumps as everyone's)
+  let t = T0;
+  const tick = () => ({ now: (t += 61_000) });
+  const at = async (it) => (await run(it, tick())).response.data.content;
+  assert.equal(await at(postCmd({ att: attachment({ content_type: 'application/pdf', filename: 'x.pdf' }) })), D.POST_NOT_IMAGE);
+  assert.equal(await at(postCmd({ att: attachment({ size: 10 * 1024 * 1024 + 1 }) })), D.POST_TOO_BIG);
+  assert.equal(await at(postCmd({ att: attachment({ url: 'https://evil.example/agi.png' }) })), D.POST_FAILED, "only Discord's own file address");
+  assert.equal(await at(postCmd({ channel: 'general' })), D.POST_FAILED);
+  assert.equal(calls.length, 0);
+  const after = async (o, word, line) => {
+    const r = await run(postCmd(o), tick());
+    assert.equal(await r.after, word);
+    assert.equal(lastEdit().content, line);
+  };
+  fake.channels = server();
+  fake.noAccess.add(TEAM_CHAT);
+  await after({}, 'post_no_access', D.postNoAccess(TEAM_CHAT));
+  fake.noAccess.clear();
+  await after({ channel: '1565999999999999999' }, 'post_no_access', D.postNoAccess('1565999999999999999'));
+  fake.channels.push({ id: '1565888888888888888', type: 0, name: 'elsewhere', guild_id: OTHER_GUILD });
+  await after({ channel: '1565888888888888888' }, 'post_no_access', D.postNoAccess('1565888888888888888'));
+  // 🔞┃agi1-nsfw: only once Discord marks it age-restricted
+  fake.channels.push({ id: NSFW, type: 0, name: '🔞┃agi1-nsfw', guild_id: GUILD, nsfw: false });
+  await after({ channel: NSFW }, 'post_not_age_restricted', D.postNotAgeRestricted(NSFW));
+  assert.equal(fake.posted.length, 0);
+  fake.channels.at(-1).nsfw = true;
+  await after({ channel: NSFW }, 'posted', D.postDone(NSFW));
+  assert.equal(fake.posted.at(-1).channel, NSFW);
+  for (const name of ['nsfw', 'agi1-NSFW', '18+ only', '🔞┃x']) assert.equal(TK.adultName(name), true, name);
+  assert.equal(TK.adultName('🎨┃fan-art'), false);
+  // not an image after all (its first bytes), or Discord refusing it
+  fake.image = new TextEncoder().encode('<html>not a picture</html>');
+  await after({}, 'post_not_image', D.POST_NOT_IMAGE);
+  fake.image = png(4000);
+  fake.noAccess.add('1565000000000000000');
+  await after({}, 'posted', D.postDone(TEAM_CHAT));
+  // what an image is
+  assert.deepEqual(TK.imageKind(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0])), { ext: 'jpg', type: 'image/jpeg' });
+  assert.deepEqual(TK.imageKind(new TextEncoder().encode('GIF89a......')), { ext: 'gif', type: 'image/gif' });
+  assert.deepEqual(TK.imageKind(new TextEncoder().encode('RIFF\0\0\0\0WEBPVP8 ')), { ext: 'webp', type: 'image/webp' });
+  assert.equal(TK.imageKind(new Uint8Array([1, 2, 3])), null);
+  for (const [, line] of logs) noToken(line);
+});
+
+test("who may: the owner (Administrator), the team (Manage Channels or Manage Messages)", () => {
+  assert.equal(TK.isOwner(owner()), true);
+  assert.equal(TK.isOwner(mod()), false);
+  assert.equal(TK.isOwner({ permissions: 'not a number' }), false);
+  assert.equal(TK.isTeam(mod()), true);
+  assert.equal(TK.isTeam({ permissions: String(1n << 4n) }), true, 'Team: Manage Channels');
+  assert.equal(TK.isTeam({ permissions: BASIC }), false);
+  assert.equal(TK.isTeam(undefined), false);
+  // a ticket's permissions: its category's, then theirs and her bot's (never twice)
+  const list = TK.ticketOverwrites(category(), PERSON, APP);
+  assert.equal(list.length, 5);
+  assert.deepEqual(TK.ticketOverwrites({ permission_overwrites: [{ id: PERSON, type: 1, allow: '8', deny: '0' }] }, PERSON, APP).map((o) => [o.id, o.allow]), [[PERSON, String(TK.MEMBER_ALLOW)], [APP, String(TK.BOT_ALLOW)]], "never more than theirs");
+  assert.equal(TK.MEMBER_ALLOW & TK.P.ADMINISTRATOR, 0n);
+  assert.equal(TK.BOT_ALLOW & (TK.P.MANAGE_CHANNELS | TK.P.MANAGE_MESSAGES), 0n);
 });

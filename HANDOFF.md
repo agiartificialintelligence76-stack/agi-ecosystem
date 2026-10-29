@@ -1,5 +1,22 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## AGI-1 on Discord, round 2 — 2026-10-29
+
+The owner, after the server's setup: emojis in the channels' names, a banner, Prince Loki a Mod, "can you add nsfw channel to
+the discord but its still private" ("nsfw agi-1 specifically"), a support ticket channel ("like a real one … support ticket no.
+1") and "i send an image to agi-1 and she send it herself to channel i said". Done in Discord (Claude in the owner's Chrome) and
+in code (`server/dc-tickets.js`, pushed to `main`):
+
+- **Her tickets:** the owner's `/tickets` posts her **Open a ticket** button (in `🎫┃support`); a tap opens a private
+  **🎫┃ticket-0001** for that person and the team in **🎫 Tickets**, with her first message and **Close ticket** (deletes it).
+- **`/post`** (the owner only): an image she posts herself as AGI-1, in the channel picked; an 18+ channel only once Discord
+  marks it age-restricted. Her bot connects to Discord's gateway once (Discord asks it before a bot may post).
+- **🔞┃agi1-nsfw:** private (the new **🔞 18+** role, Team, Mod, AGI-1), rule 2 allows it, AutoMod's flagged words skip it.
+  **Not age-restricted yet:** the owner first confirms their age in Discord (User Settings → Account Status → Confirm Age),
+  then Edit Channel → Overview → Age-Restricted Channel. Nothing sexually explicit there until then.
+- **Waiting for the owner:** that age confirmation; deleting the first welcome message in `#👋┃welcome` (above the banner); who
+  gets the 🔞 18+ role. Details, setup and troubleshooting: CLAUDE.md, "AGI-1 on Discord" → "Round 2".
+
 ## AGI-1 on Discord — 2026-10-28
 
 The owner: "can you fix my agi discord server? and organize it? and also can you add agi1 bot to my discord server like in the telegram bot?". The server's own organizing happened in Discord, in the owner's browser. In code: her Telegram group mode on Discord, through Discord's HTTP interactions (no gateway, no new server, SQL or function):
@@ -9,6 +26,10 @@ The owner: "can you fix my agi discord server? and organize it? and also can you
 - **Her app:** "AGI-1", application id `1565016537683984464`, public key `048ca45efef0d02b41a963c2a3905ed8925c3babff0e7f99bafcca5b78be0554`, made in the Developer Portal on the owner's account.
 - **Done on 2026-10-29** (Claude in the owner's Chrome, the owner's OK): her app (icon, banner, private, guild install only), her bot added to the server, the four settings in Vercel (`DISCORD_PUBLIC_KEY`, `DISCORD_GUILDS`, and the secrets `DISCORD_BOT_TOKEN` and `DISCORD_FEED_WEBHOOK`, pasted from Discord's Copy buttons), and the server organized (categories, channels with topics, Team/Mod roles, read-only Start Here and #agi1-diary, Community, verification Medium, AutoMod: spam, flagged words, scam phrases and invite links, impersonating names). **agi1.app redirects (308) to www.agi1.app**, so her endpoint is `https://www.agi1.app/discord/interactions`. Steps, the layout and troubleshooting: CLAUDE.md, "AGI-1 on Discord".
 - **Tests:** `tests/discord.test.js` (19), plus one each in `tests/telegram.test.js` and `tests/live.test.js`; the whole suite passes, also with real-looking values for every setting, the Discord ones included. **Tried live 2026-10-29** in `#team-chat`: the cron set her endpoint and commands, and `/help`, `/ask`, `/mc` and `/music` (a tap uploaded AGI., 4.32 MB) all answered. Not tried live yet: her posts through the webhook (her next diary entry or market moment) and her biggest songs' uploads. `#official-links` has no Roadmap link (the owner: "dont include the roadmap"). "Require 2FA for moderator actions" waits for 2FA on the owner's own Discord account.
+- **Later on 2026-10-29** (the owner: "can you add emojis to each channel"): an emoji and ┃ at the start of every channel's
+  name (only the names changed), the server's banner (`Claude outputs/agi-discord-banner.png`) at the top of `#welcome`
+  with the welcome text again under it (0 boosts: Discord's banner slot needs Level 2; the earlier welcome copy is the
+  owner's to delete), and Prince Loki is a Mod. See CLAUDE.md, "The server's layout".
 
 ## ClankChecker: the list survives clank.trade's slow answers — 2026-10-28
 
