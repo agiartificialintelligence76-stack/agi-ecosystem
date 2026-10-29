@@ -3364,12 +3364,19 @@ owner's OK, "her bot needs Manage Channels"), never Manage Roles or Manage Webho
   owner's own; since March 2026 only confirmed adults open age-restricted channels too). Until it's marked, nothing sexually
   explicit goes there (`/post` refuses; the server's sensitive-media filter also covers channels that aren't age-restricted).
 - **🎫┃support** at the end of 📌 Start Here (read-only for @everyone, like the category), its topic how to open a ticket,
-  her button posted there with `/tickets`; **🎫 Tickets** (private: Team, Mod and AGI-1 let in, its permissions only View
-  Channel, Send Messages, Embed Links, Attach Files, Read Message History and Add Reactions, what her bot may give); AGI-1's
-  role with **Manage Channels**; AutoMod's **Scam protection** skipping 🎫┃support and 🎫 Tickets, so a ticket can say "seed
+  her button posted there with `/tickets` (AGI-1's role may post there: View Channel, Send Messages, Embed Links);
+  **🎫 Tickets** at the bottom (a private category: Team, Mod and AGI-1 let in with View Channel, @everyone kept out; keep its
+  permissions to what her bot may give: View Channel, Send Messages, Embed Links, Attach Files, Read Message History, Add
+  Reactions); AGI-1's role with **Manage Channels**; AutoMod's **Scam protection** skipping 🎫┃support and 🎫 Tickets, so a ticket can say "seed
   phrase", "connect wallet" or "support ticket" (only that person and the team see a ticket; spam, flagged words and invite
   links still apply). An hour before, 🎫┃support had private threads as tickets (members could open one): turned off again
   for her button.
+
+**Tried live 2026-10-29** (the owner's account): `/tickets` posted her button in `🎫┃support`; a tap opened
+`🎫┃ticket-0001` (private: the owner, Team, Mod, AGI-1; her first message with Close ticket) and its link only for the owner;
+Close ticket → Close it deleted it. `/post` put the server banner in a second test ticket ("posted it in …"), refused
+`#🛡┃team-chat` (her bot can't see it: "i can't post in … yet") and `🔞┃agi1-nsfw` ("isn't marked age-restricted yet");
+that ticket was closed too. Nothing of the tests is left in the server.
 
 **Troubleshooting:** "tickets aren't set up in this server yet": no category with "ticket" in its name (make 🎫 Tickets as
 above). "i couldn't do that just now" on a tap: Vercel → Logs `[discord]` (no Manage Channels: "needs Manage Channels"; a
