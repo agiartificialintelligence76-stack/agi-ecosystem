@@ -23,22 +23,25 @@ test('legacy gallery order keeps uploads first, originals unchanged and built-in
 });
 
 test('gallery sorts new releases and uploads newest first without moving edited or hidden items', () => {
-  const freshIds = ['mainrunner-mv', 'starlight', 'at-the-desk'];
+  // symphony (2026-10-29) is newer than the 2026-10-27 release, so an upload dated just after that release sorts between them
+  const freshIds = ['symphony', 'mainrunner-mv', 'starlight', 'at-the-desk'];
   const release = MEMES.find(m => m.id === 'mainrunner-mv').addedAt;
+  assert.ok(MEMES.find(m => m.id === 'symphony').addedAt > release + 9000, 'symphony is the newest release');
   const older = image(), newer = { ...image(OTHER), addedAt: release + 1000 };
-  assert.deepEqual(mergeMemes([older]).slice(0, 4).map(m => m.id), [...freshIds, older.id], 'new folder media precedes undated older uploads');
+  assert.deepEqual(mergeMemes([older]).slice(0, 5).map(m => m.id), [...freshIds, older.id], 'new folder media precedes undated older uploads');
   const merged = mergeMemes([older, newer, { id: 'starlight', title: 'Edited title', addedAt: release + 9000 }]);
-  assert.deepEqual(merged.slice(0, 5).map(m => m.id), [newer.id, ...freshIds, older.id]);
+  assert.deepEqual(merged.slice(0, 6).map(m => m.id), ['symphony', newer.id, ...freshIds.slice(1), older.id], 'an upload sorts by its own date between the releases');
   assert.equal(merged.find(m => m.id === 'starlight').addedAt, release, 'built-in dates cannot be changed by overrides');
   assert.equal(merged.find(m => m.id === 'starlight').title, 'Edited title');
-  const edited = mergeMemes([{ ...newer, title: 'A changed title' }, older]);
-  assert.equal(edited[0].addedAt, newer.addedAt);
-  assert.equal(edited[0].title, 'A changed title');
+  const edited = mergeMemes([{ ...newer, title: 'A changed title' }, older]).find(m => m.id === newer.id);
+  assert.equal(edited.addedAt, newer.addedAt);
+  assert.equal(edited.title, 'A changed title');
   assert.deepEqual(mergeMemes([older, image(OTHER)]).filter(m => m.custom).map(m => m.id), [older.id, newer.id], 'undated ties keep the existing order');
   assert.equal(mergeMemes([older, newer], { sort: false })[0].id, older.id, 'legacy selector resolution can use unsorted positions');
   const hidden = [{ ...newer, hidden: true }, { id: 'mainrunner-mv', hidden: true }];
   assert.equal(mergeMemes(hidden).some(m => hidden.some(h => h.id === m.id)), false);
-  assert.equal(mergeMemes(hidden, { includeHidden: true })[0].hidden, true);
+  assert.deepEqual(mergeMemes(hidden, { includeHidden: true }).slice(0, 3).map(m => [m.id, m.hidden]),
+    [['symphony', false], [newer.id, true], ['mainrunner-mv', true]], 'hidden items keep their sorted places');
 });
 
 test('gallery upload dates are optional valid numeric timestamps', () => {

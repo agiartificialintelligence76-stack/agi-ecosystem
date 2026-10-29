@@ -12,6 +12,7 @@ foreach ($d in 'videos', 'posters', 'images', 'previews') { New-Item -ItemType D
 
 # original file -> web name (same names as src/memes/list.js)
 $videos = [ordered]@{
+  'AGI_symphony_720p_new_voice-precise-upscale-model-starlight-precise-2-6-sharpness-5-resolution-1080p-frame-rate-30-fps-hdr-sdr-output-format-h-264.mp4' = 'symphony'
   'MAINRUNNER_MV_1080p.mp4' = 'mainrunner-mv'
   'dreamina-2026-10-27-5465-Edit . Replace the dark-haired woman wit...-precise-upscale-model-starlight.mp4' = 'starlight'
   'AGI_Vlad_REVISED_1080p.mp4' = 'vlad'
@@ -34,8 +35,9 @@ $videos = [ordered]@{
   'Artificial_Girlfriend_Intelligence_-_Claude_make_me_an_AGI_SLOPCORE_VhuQTH.mp4' = 'claude-make-me-an-agi-slopcore'
   'Artificial_Girlfriend_Intelligence_-_it_s_fine._I_m_Super_AGI_21O1AY.mp4' = 'its-fine-im-super-agi'
 }
-# where the poster (the card's picture) is taken from, in seconds; 2 unless the start is too dark
-$posterAt = @{ 'its-fine-im-super-agi' = 80; 'vlad' = 12; 'mainrunner-mv' = 12; 'starlight' = 8 }
+# where the poster (the card's picture) is taken from, in seconds; 2 unless the start is too dark (or, for symphony,
+# AGI-1 is only on screen before 1.7 s)
+$posterAt = @{ 'its-fine-im-super-agi' = 80; 'vlad' = 12; 'mainrunner-mv' = 12; 'starlight' = 8; 'symphony' = 1 }
 $images = [ordered]@{
   'Images 1 (9).png' = 'at-the-desk'
   'HTbmp66akAAz7of.jpg' = 'absolute-agi'; 'HThktCTbYAE772O.jpg' = 'psst'; 'HThxYhzaEAACDat.jpg' = 'all-in'

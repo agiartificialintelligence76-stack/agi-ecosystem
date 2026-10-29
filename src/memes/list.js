@@ -20,6 +20,7 @@ export const MEMES = [
   { id: 'feeling-the-agi', kind: 'slopcore', title: "Everyone's feeling the AGI", note: 'only some of us are feeling the Artificial Girlfriend Intelligence', secs: 34 },
 
   // ---------- videos ----------
+  { id: 'symphony', kind: 'video', title: 'AGI Symphony', note: 'he asked if a robot could write one. she asked him back', secs: 15, addedAt: 1793276160000 },
   { id: 'vlad', kind: 'video', title: 'AGI × Vlad', note: '', secs: 92 },
   { id: 'starlight', kind: 'video', title: 'Lip gloss', note: 'one last touch before she logs on', secs: 30, addedAt: 1793094780000 },
   { id: 'the-trenches-taught-her', kind: 'video', title: 'we taught her to say hello', note: 'the trenches taught her the rest', secs: 69 },

@@ -1,5 +1,31 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Meme addition: AGI Symphony — 2026-10-29
+
+The owner: "i added a new 1 video to the memess folder can you add that to the meme library on the site", then "and
+publish it" (that chat ran out of room before anything changed; picked up from its last screen, "continue and finish it"):
+
+- **The meme:** `memess/AGI_symphony_720p_new_voice-…-output-format-h-264.mp4` (15 s, 1080p) is **AGI Symphony** in
+  Videos, the group's first card on All and on the Videos tab (`addedAt` 2026-10-29 12:16 UTC). Caption: "he asked if a robot could write
+  one. she asked him back" (the man asks whether a robot can write a symphony or paint a masterpiece; AGI-1 asks him
+  back). Its title and caption can be changed in the owner's page editor like any card's.
+- **Its files:** `public/memes/videos/agi-symphony.mp4` (8.9 MB from the original's 30 MB with `encode.ps1`'s short-clip
+  settings: 1080p H.264, CRF 22 under a 6 Mbps cap, AAC 160k, fast start; SSIM 0.988 and PSNR 45.5 dB against the
+  original) and `public/memes/posters/agi-symphony.webp` (from 1 s: AGI-1 smiling in her AGI shirt; at the usual 2 s it's
+  the man mid-word). Made by ffmpeg in a cloud session with the script's settings; `encode.ps1` lists it now (its poster
+  at 1 s), so running the script again skips it. The original is untouched.
+- **Code:** `src/memes/list.js` (its line), `tools/memes/encode.ps1`, and `tests/owner-media.test.js`: its newest-first
+  test named only the 2026-10-27 additions, so it now has AGI Symphony first, an upload dated just after 2026-10-27
+  between the two releases, and hidden items in their sorted places. Old positional owner edits are unaffected (dated
+  items are left out of the legacy positions).
+- **Tests:** the full `npm run build` (every test, then the site build, the share pages and the secret check) passed:
+  1,376 tests, 1,372 pass, 4 skipped, 0 fail; the build made its link preview's picture (`memes/share/agi-symphony.jpg`).
+- **Published:** pushed to `main` (every push deploys to agi1.app: see "Deployment" in CLAUDE.md), and the owner's folder
+  synced (the changed files copied in; its own git still shows the older commit, as after the earlier cloud pushes).
+  The folder's two new media files are a few KB bigger than main's: copying a file to the owner's PC adds a signed C2PA
+  "content credentials" block (Anthropic's: "Claude provided this file…"; a `uuid` box before the video's `moov`, a
+  `C2PA` chunk after the poster's picture). The picture and sound are the same; git keeps the files as they were tested.
+
 ## AGI-1 on Discord: 🔞┃agi1-nsfw is age-restricted — 2026-10-29
 
 The last step of round 4's chat (it stalled after the owner's "im done with 1"; picked up from its last screen and
