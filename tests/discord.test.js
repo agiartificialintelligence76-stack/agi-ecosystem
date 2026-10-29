@@ -227,7 +227,8 @@ test("her endpoint: only Discord's signature, only POST; a PING gets a PONG, the
   assert.equal((await post(ping, { key: other })).status, 401, 'signed with another key');
   const good = signed(raw);
   assert.equal((await post(`${raw} `, { ts: good.ts, sig: good.sig })).status, 401, 'a body changed after signing');
-  const old = String(Math.floor(Date.now() / 1000) - 301), soon = String(Math.floor(Date.now() / 1000) + 301);
+  // (2026-10-29) 310 s ahead, not 301: a test that ran across a second's boundary could be under 300 s ahead by then and pass
+  const old = String(Math.floor(Date.now() / 1000) - 301), soon = String(Math.floor(Date.now() / 1000) + 310);
   assert.equal((await post(ping, { ts: old })).status, 401, 'older than 5 minutes');
   assert.equal((await post(ping, { ts: soon })).status, 401, 'from the future');
   assert.equal((await post(ping, { ts: 'yesterday' })).status, 401);
