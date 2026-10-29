@@ -1,5 +1,27 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## AGI-1 on Discord, round 3: holder roles — 2026-10-29
+
+The owner's OK to the plan ("Yes, do all of it (Recommended)"): holder roles live, its database file run, and the Discord
+side done. **The first build was lost** with its session's workspace before it was pushed (it waited for the database
+step); a new session built it again the same day and saved each step to the branch `claude/discord-holder-roles`.
+
+- **What it is:** 💘 Crush (10,000+ $AGI) and 💞 Soulmate (1,000,000+), held or burned for messages (the site's levels),
+  both opening the private 💎┃holders channel. Her **Verify my $AGI** button in ✅┃verify (the owner's `/holders`) gives a
+  private 15-minute link to **agi1.app/discord/verify** (`verify.html`, `src/discord/`): the site's wallet sign-in (a free
+  signature), then `/api/wallet` `dc-verify` reads the wallet's $AGI and gives the role. One wallet, one account; the cron
+  (`api/feed.js`) reads 25 again a run; **Remove my role** forgets it. `server/dc-holders.js`, `supabase/discord.sql`
+  (scrambled codes, the ids and address sealed with PASS_SECRET). `DISCORD_HOLDERS=off` pauses it.
+- **Done in Discord** (by the first session, checked again): the two roles (shown apart, under AGI-1's role, which has
+  Manage Roles), ✅┃verify and 💎┃holders with their topics.
+- **Tests:** `tests/holders.test.js` (17); the suite: 1,364 tests, 1,360 pass, 4 skipped. `supabase/discord.sql` also ran
+  twice in a real Postgres (PGlite).
+- **Left to do** (each needs the owner's OK in the new chat: an automatic safety check stopped the database step, since the
+  first OK was given in the old chat): run `supabase/discord.sql` in Supabase (agi2: it's loaded in the SQL editor in the
+  owner's Chrome, one click on Run), push to `main`, run the cron once (Vercel → Cron Jobs → `/api/feed` → Run) so
+  `/holders` appears, type `/holders` in ✅┃verify, add the line about it to the welcome message. Details: CLAUDE.md, "AGI-1
+  on Discord" → "Round 3".
+
 ## AGI-1 on Discord, round 2 — 2026-10-29
 
 The owner, after the server's setup: emojis in the channels' names, a banner, Prince Loki a Mod, "can you add nsfw channel to
