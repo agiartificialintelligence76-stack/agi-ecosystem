@@ -18,7 +18,12 @@ Two asks of the owner's (a chat cut off before anything was pushed; picked up in
 - **Done in Discord:** the 👤 Stranger role (grey, shown apart, no permissions, under 💘 Crush), and her app's **Server
   Members Intent** (Developer Portal → AGI-1 → Bot → Privileged Gateway Intents, the owner's OK), so her bot can read the
   member list.
-- **Tests:** 9 more (`tests/discord.test.js`, `tests/holders.test.js`); the suite: 1,374 tests, 1,370 pass, 4 skipped.
+- **/post's bigger images** (the owner, after "that image is over 10 MB": "can you increase the max size of this"):
+  Discord itself takes 10 MB a file in a server without boosts (her bot too; 50 MB at Level 2, 100 MB at Level 3). /post
+  now takes up to **50 MB**, and a still image over the server's limit is made smaller first (`shrinkToFit()` with sharp: a
+  JPEG, or a WebP with see-through parts, at its full size when that's enough); she says she did. A GIF over it is said at
+  once. Boosting to Level 2 is the only way to post a file over 10 MB as it is (the owner's call).
+- **Tests:** 11 more (`tests/discord.test.js`, `tests/holders.test.js`).
 - Details, troubleshooting: CLAUDE.md, "AGI-1 on Discord" → "Round 4".
 
 ## AGI-1 on Discord, round 3: holder roles — 2026-10-29

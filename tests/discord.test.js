@@ -92,6 +92,8 @@ beforeEach(() => {
     channels: [], posted: [], identified: false, gatewayDown: false, noAccess: new Set(), createStatus: 200, image: png(4000),
     // (round 4) /post's channel list: the server's roles and her bot's own (to know where she can post)
     roles: null, botRoles: null, channelsDown: false,
+    // (round 4) the server's boost level (/post's upload limit: 0 → 10 MB, 2 → 50 MB, 3 → 100 MB)
+    tier: 0, guildDown: false,
   };
   globalThis.fetch = async (url, init = {}) => {
     url = String(url);
@@ -158,6 +160,9 @@ beforeEach(() => {
       }
       // (round 4) the server's roles and her bot's own roles, for /post's channel list
       if (path === `/guilds/${GUILD}/roles` && method === 'GET' && fake.roles) return Response.json(fake.roles);
+      if (path === `/guilds/${GUILD}` && method === 'GET') {
+        return fake.guildDown ? Response.json({ message: 'Service Unavailable' }, { status: 503 }) : Response.json({ id: GUILD, name: 'AGI', premium_tier: fake.tier });
+      }
       if (path === `/guilds/${GUILD}/members/${APP}` && method === 'GET' && fake.botRoles) return Response.json({ user: { id: APP, bot: true }, roles: fake.botRoles });
       // (2026-10-29) the server's channels, a channel, its messages
       if (path === `/guilds/${GUILD}/channels`) {
@@ -174,6 +179,8 @@ beforeEach(() => {
       if (said && method === 'POST') {
         if (!fake.identified) return Response.json({ message: 'Unauthorized', code: 40001 }, { status: 401 });
         if (fake.noAccess.has(said[1])) return Response.json({ message: 'Missing Access', code: 50001 }, { status: 403 });
+        // (round 4) Discord's own limit for a file in the server (its boost level), or a lower one a test sets
+        if (file && file.size > (fake.postLimit ?? TK.uploadLimit(fake.tier))) return Response.json({ message: 'Request entity too large', code: 40005 }, { status: 413 });
         fake.posted.push({ channel: said[1], body, file });
         return Response.json({ id: '99', channel_id: said[1] });
       }
@@ -692,7 +699,9 @@ test("her Discord lines and commands: PG-13, no pet names, never money advice, D
     D.NOT_A_TICKET, D.TICKET_OLD, D.OWNER_ONLY, D.NO_TOKEN, D.TICKETS_POSTED, D.ticketsNoAccess(C), D.postDone(C), D.POST_NOT_IMAGE, D.POST_TOO_BIG,
     D.postNoAccess(C), D.postNotAgeRestricted(C), D.POST_FAILED,
     // (round 4) /post's channel list
-    D.CHOICE_CANT_POST, D.CHOICE_AGE_RESTRICTED, D.CHOICE_NOT_RESTRICTED, D.POST_PICK];
+    D.CHOICE_CANT_POST, D.CHOICE_AGE_RESTRICTED, D.CHOICE_NOT_RESTRICTED, D.POST_PICK,
+    // (round 4) /post's bigger images
+    D.postDoneSmaller(C, 10), D.postGifTooBig(10), D.POST_CANT_SHRINK, D.POST_DISCORD_TOO_BIG];
   for (const label of [D.TICKET_BUTTON, D.TICKET_CLOSE, D.TICKET_CLOSE_YES, D.TICKET_CLOSE_NO]) assert.ok(label.length <= 80, "a button's label: 80 at most");
   for (const line of lines) {
     assert.doesNotMatch(line, NOT_OK, line);
@@ -985,7 +994,7 @@ test("/post: what isn't an image, too big, a channel she can't see or in another
   const tick = () => ({ now: (t += 61_000) });
   const at = async (it) => (await run(it, tick())).response.data.content;
   assert.equal(await at(postCmd({ att: attachment({ content_type: 'application/pdf', filename: 'x.pdf' }) })), D.POST_NOT_IMAGE);
-  assert.equal(await at(postCmd({ att: attachment({ size: 10 * 1024 * 1024 + 1 }) })), D.POST_TOO_BIG);
+  assert.equal(await at(postCmd({ att: attachment({ size: 50 * 1024 * 1024 + 1 }) })), D.POST_TOO_BIG, 'over 50 MB (round 4: 10 MB before)');
   assert.equal(await at(postCmd({ att: attachment({ url: 'https://evil.example/agi.png' }) })), D.POST_FAILED, "only Discord's own file address");
   assert.equal(await at(postCmd({ channel: '   ' })), D.POST_FAILED, 'no channel');
   assert.equal(calls.length, 0);
@@ -1022,6 +1031,136 @@ test("/post: what isn't an image, too big, a channel she can't see or in another
   assert.deepEqual(TK.imageKind(new TextEncoder().encode('RIFF\0\0\0\0WEBPVP8 ')), { ext: 'webp', type: 'image/webp' });
   assert.equal(TK.imageKind(new Uint8Array([1, 2, 3])), null);
   for (const [, line] of logs) noToken(line);
+});
+
+// ---------- /post's bigger images (2026-10-29, round 4: the owner's "can you increase the max size of this") ----------
+const MB = 1024 * 1024;
+const sharpOf = async () => (await import('sharp')).default;
+// a picture of noise (it never gets smaller as a PNG: its file is about its raw size), with see-through parts or not
+async function noisePng(width, height, { alpha = false, opaque = false } = {}) {
+  const channels = alpha ? 4 : 3;
+  const raw = Buffer.alloc(width * height * channels);
+  for (let i = 0; i < raw.length; i += 1) raw[i] = (Math.random() * 256) | 0;
+  if (alpha) for (let i = 3; i < raw.length; i += 4) raw[i] = opaque ? 255 : 128 + (raw[i] >> 1);
+  return (await sharpOf())(raw, { raw: { width, height, channels } }).png({ compressionLevel: 1 }).toBuffer();
+}
+const fileMeta = async (file) => (await sharpOf())(Buffer.from(await file.arrayBuffer())).metadata();
+
+test("/post: an image over the 10 MB Discord takes here is made smaller first and posted; a boosted server's own limit; a GIF over it", async () => {
+  process.env.DISCORD_BOT_TOKEN = BOT;
+  fake.identified = true;
+  fake.channels = server();
+  let t = T0;
+  const send = (att) => run(postCmd({ att }), { now: (t += 61_000) });
+  // an 18 MB PNG (the owner's kind of picture): read, made a JPEG at its full size, posted
+  const big = await noisePng(2400, 2400);
+  assert.ok(big.length > 15 * MB, String(big.length));
+  fake.image = big;
+  const r = await send(attachment({ size: big.length }));
+  assert.deepEqual(r.response, { type: 5, data: { flags: 64 } }, 'taken: "AGI-1 is thinking…", only for the owner');
+  assert.equal(await r.after, 'posted_smaller');
+  const [post] = fake.posted;
+  assert.equal(post.channel, TEAM_CHAT);
+  assert.equal(post.file.type, 'image/jpeg');
+  assert.ok(post.file.size <= Math.floor(10 * MB * 0.95), String(post.file.size));
+  assert.deepEqual(post.body.attachments, [{ id: 0, filename: 'agi1.jpg' }]);
+  const meta = await fileMeta(post.file);
+  assert.deepEqual([meta.format, meta.width, meta.height], ['jpeg', 2400, 2400], 'its full size: only its file is smaller');
+  assert.equal(lastEdit().content, D.postDoneSmaller(TEAM_CHAT, 10));
+  assert.equal(discord('GET', `/guilds/${GUILD}`).length, 1, "the server's boost level, read for an image over 10 MB");
+  // with see-through parts: a WebP that keeps them
+  const clear = await noisePng(1800, 1800, { alpha: true });
+  assert.ok(clear.length > 10 * MB, String(clear.length));
+  fake.image = clear;
+  assert.equal(await (await send(attachment({ size: clear.length }))).after, 'posted_smaller');
+  const seeThrough = fake.posted.at(-1);
+  assert.equal(seeThrough.file.type, 'image/webp');
+  assert.deepEqual(seeThrough.body.attachments, [{ id: 0, filename: 'agi1.webp' }]);
+  assert.ok(seeThrough.file.size <= Math.floor(10 * MB * 0.95));
+  const m2 = await fileMeta(seeThrough.file);
+  assert.deepEqual([m2.format, m2.hasAlpha], ['webp', true]);
+  // a boosted server (Level 2: 50 MB): the same PNG as it is
+  fake.tier = 2;
+  fake.image = big;
+  assert.equal(await (await send(attachment({ size: big.length }))).after, 'posted');
+  assert.equal(fake.posted.at(-1).file.type, 'image/png');
+  assert.equal(fake.posted.at(-1).file.size, big.length);
+  assert.equal(lastEdit().content, D.postDone(TEAM_CHAT));
+  fake.tier = 0;
+  // an image under 9.5 MB: as it is, and the server's level never asked
+  calls.length = 0;
+  fake.image = png(4000);
+  assert.equal(await (await send(attachment())).after, 'posted');
+  assert.equal(discord('GET', `/guilds/${GUILD}`).length, 0);
+  // a GIF over it: said at once, never read (only a still image is made smaller)
+  calls.length = 0;
+  const gif = await send(attachment({ size: 12 * MB, content_type: 'image/gif', filename: 'agi.gif' }));
+  assert.equal(await gif.after, 'post_gif_too_big');
+  assert.equal(lastEdit().content, D.postGifTooBig(10));
+  assert.equal(to('cdn').length, 0, 'never read');
+  // and one that said it was smaller than it is: its first bytes say GIF, so the same
+  fake.image = Buffer.concat([Buffer.from('GIF89a'), Buffer.alloc(11 * MB)]);
+  assert.equal(await (await send(attachment({ size: 4000, content_type: 'image/png', filename: 'agi.png' }))).after, 'post_gif_too_big');
+  // the server's boost level can't be read: 10 MB it is
+  fake.guildDown = true;
+  fake.image = big;
+  assert.equal(await (await send(attachment({ size: big.length }))).after, 'posted_smaller');
+  assert.ok(logs.some(([k, l]) => k === 'warn' && /couldn't read the server's boost level for \/post \(10 MB it is\)/.test(l)));
+  fake.guildDown = false;
+  // Discord refusing it all the same (a lower limit than its level says): said
+  fake.postLimit = 1000;
+  fake.image = png(4000);
+  assert.equal(await (await send(attachment())).after, 'post_failed');
+  assert.equal(lastEdit().content, D.POST_DISCORD_TOO_BIG);
+  delete fake.postLimit;
+  // over 50 MB once read (it said less): said
+  fake.image = Buffer.concat([png(4000), Buffer.alloc(50 * MB)]);
+  assert.equal(await (await send(attachment())).after, 'post_too_big');
+  assert.equal(lastEdit().content, D.POST_TOO_BIG);
+  for (const [, line] of logs) noToken(line);
+});
+
+test('shrinkToFit: its full size first, then smaller in steps until it fits; never an animated image; its time and its pixels', async () => {
+  const sharp = await sharpOf();
+  const pic = await noisePng(1600, 1200);
+  const out = await TK.shrinkToFit(pic, MB);
+  assert.ok(out.bytes, JSON.stringify(out));
+  assert.ok(out.bytes.length <= Math.floor(MB * 0.95), String(out.bytes.length));
+  assert.equal(out.kind, TK.JPEG);
+  assert.ok(out.width < 1600 && out.height < 1200, "a little smaller in pixels when its quality alone isn't enough");
+  assert.ok(Math.abs(out.width / out.height - 1600 / 1200) < 0.01, 'its shape kept');
+  const m = await sharp(out.bytes).metadata();
+  assert.deepEqual([m.format, m.width, m.height], ['jpeg', out.width, out.height]);
+  // see-through parts that are all solid: a JPEG
+  assert.equal((await TK.shrinkToFit(await noisePng(400, 400, { alpha: true, opaque: true }), 100_000)).kind, TK.JPEG);
+  // an animated one is never made smaller
+  const frame = (v) => sharp({ create: { width: 64, height: 64, channels: 4, background: { r: v, g: 0, b: 0, alpha: 1 } } }).png().toBuffer();
+  const anim = await sharp([await frame(255), await frame(0), await frame(128)], { join: { animated: true } }).webp().toBuffer();
+  assert.deepEqual(await TK.shrinkToFit(anim, 100), { why: 'animated' });
+  // not a picture, out of time, more than 100 million pixels (its header alone says so)
+  assert.deepEqual(await TK.shrinkToFit(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]), MB), { why: 'unreadable' });
+  assert.deepEqual(await TK.shrinkToFit(pic, MB, { deadline: Date.now() - 1 }), { why: 'time' });
+  const crc = (b) => { let c = 0xffffffff; for (const x of b) { c ^= x; for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; } return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => {
+    const td = Buffer.concat([Buffer.from(type), data]);
+    const head = Buffer.alloc(4), tail = Buffer.alloc(4);
+    head.writeUInt32BE(data.length);
+    tail.writeUInt32BE(crc(td));
+    return Buffer.concat([head, td, tail]);
+  };
+  const ihdr = Buffer.from([0, 0, 0x4e, 0x20, 0, 0, 0x4e, 0x20, 8, 2, 0, 0, 0]);       // 20,000 × 20,000
+  const { deflateSync } = await import('node:zlib');
+  const huge = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(Buffer.alloc(10))), chunk('IEND', Buffer.alloc(0))]);
+  assert.deepEqual(await TK.shrinkToFit(huge, MB), { why: 'pixels' });
+  // Discord's limits by the server's boost level, and what fits
+  assert.deepEqual([0, 1, 2, 3, undefined].map((tier) => TK.uploadLimit(tier) / MB), [10, 10, 50, 100, 10]);
+  assert.equal(TK.limitMb(TK.uploadLimit(2)), 50);
+  assert.equal(TK.fitsIn(Math.floor(10 * MB * 0.95), 10 * MB), true);
+  assert.equal(TK.fitsIn(Math.floor(10 * MB * 0.95) + 1, 10 * MB), false);
+  assert.ok(Math.floor(10 * MB * 0.95) < 10_000_000, 'under 10 MB whether Discord counts MB or MiB');
+  assert.equal(TK.MAX_SOURCE, 50 * MB);
+  assert.match(D.POST_TOO_BIG, /over 50 MB/);
+  assert.match(D.COMMANDS.find((c) => c.name === 'post').options[0].description, /up to 50 MB/);
 });
 
 // ---------- /post's channel list (2026-10-29, round 4: Discord's own picker showed only 10 channels) ----------

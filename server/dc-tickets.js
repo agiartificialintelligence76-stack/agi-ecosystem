@@ -16,7 +16,7 @@
 // gateway one time in its life, so a post refused for that (40001) connects once (identifyOnce: hello, identify, READY,
 // closed) and goes again. Still nothing kept running (her bot shows as offline), no new function, no new SQL, nothing kept
 // by us: who opened a ticket is in its channel's topic, in Discord.
-import { discordCall, dcToken, edit, message, onlyYou, later, update, NO_PINGS, NO_CHOICES, ANSWER, FLAG, MAX_UPLOAD } from './discord.js';
+import { discordCall, dcToken, edit, message, onlyYou, later, update, NO_PINGS, NO_CHOICES, ANSWER, FLAG } from './discord.js';
 import * as D from './dc-lines.js';
 
 // ---------- who may ----------
@@ -276,6 +276,78 @@ const DISCORD_CDN = /^https:\/\/(?:cdn\.discordapp\.com|media\.discordapp\.net)\
 export const adultName = (name) => /nsfw|18\+|🔞/iu.test(String(name ?? ''));
 export const MAX_CAPTION = 1500;
 
+// ---------- /post's image size (2026-10-29, round 4: the owner's "can you increase the max size of this") ----------
+// Discord takes a file in a server up to its upload limit, her bot's posts too: 10 MB without boosts (Level 1 the same),
+// 50 MB at Level 2, 100 MB at Level 3 (Discord's "Discord Account Caps, Server Caps, and More"). /post takes an image up to
+// 50 MB, and one over the server's limit is made smaller to fit first: a still one (sharp: JPEG, or WebP when it has
+// see-through parts; its full size in pixels when that's enough, else a little smaller), never a GIF or an animated WebP.
+// All of it inside Vercel's 25 s; nothing kept.
+export const MAX_SOURCE = 50 * 1024 * 1024;              // what /post takes from the owner, at most
+export const MAX_PIXELS = 100_000_000;                   // an image with more pixels than this (10,000 × 10,000) isn't read
+export const uploadLimit = (tier) => (Number(tier) >= 3 ? 100 : Number(tier) === 2 ? 50 : 10) * 1024 * 1024;
+const FIT = 0.95;                                        // what's posted stays under 95% of it (fine whether Discord counts MB or MiB)
+export const fitsIn = (n, limit) => Number(n) <= Math.floor(limit * FIT);
+export const limitMb = (limit) => Math.round(limit / 1048576);
+export const JPEG = Object.freeze({ ext: 'jpg', type: 'image/jpeg' });
+export const WEBP = Object.freeze({ ext: 'webp', type: 'image/webp' });
+// sharp (pictures), loaded only when an image has to be made smaller
+let sharpLoaded = null;
+const loadSharp = async () => (sharpLoaded ??= (await import('sharp')).default);
+// A still image made to fit `limit`: read once (its orientation applied, its metadata dropped), then its full size first
+// (JPEG at 90, or WebP at 90 when it has see-through parts), then smaller in steps worked out from how far over it was,
+// until it fits or the time's up.
+// → { bytes, kind, width, height } · { why: 'animated' | 'pixels' | 'unreadable' | 'time' | 'size' }
+export async function shrinkToFit(bytes, limit, { deadline = Infinity } = {}) {
+  const target = Math.floor(limit * FIT);
+  let sharp;
+  try { sharp = await loadSharp(); } catch (err) {
+    console.warn(`[discord] sharp isn't available (${err.message}): /post can't make an image smaller`);
+    return { why: 'unreadable' };
+  }
+  const input = { limitInputPixels: MAX_PIXELS, failOn: 'error' };
+  let data, info;
+  try {
+    const meta = await sharp(bytes, input).metadata();
+    if ((meta.pages ?? 1) > 1) return { why: 'animated' };
+    if ((meta.width ?? 0) * (meta.height ?? 0) > MAX_PIXELS) return { why: 'pixels' };
+    ({ data, info } = await sharp(bytes, input).rotate().raw().toBuffer({ resolveWithObject: true }));
+  } catch (err) {
+    return { why: /pixel limit/i.test(String(err?.message)) ? 'pixels' : 'unreadable' };
+  }
+  try {
+    const raw = { raw: { width: info.width, height: info.height, channels: info.channels } };
+    const alpha = info.channels === 2 || info.channels === 4;
+    const see = alpha && !(await sharp(data, raw).stats()).isOpaque;
+    const kind = see ? WEBP : JPEG;
+    let scale = Math.min(1, (see ? 16_383 : 65_500) / Math.max(info.width, info.height)), quality = 90;
+    for (let step = 0; step < 6; step += 1) {
+      if (Date.now() > deadline) return { why: 'time' };
+      const width = Math.max(1, Math.round(info.width * scale)), height = Math.max(1, Math.round(info.height * scale));
+      let img = sharp(data, raw);
+      if (width !== info.width || height !== info.height) img = img.resize(width, height, { fit: 'fill' });
+      const out = see
+        ? await img.webp({ quality, alphaQuality: 100, effort: 3 }).toBuffer()
+        : await (alpha ? img.removeAlpha() : img).jpeg({ quality }).toBuffer();
+      if (out.length <= target) return { bytes: out, kind, width, height };
+      scale *= Math.min(0.9, Math.sqrt(target / out.length) * 0.95);
+      quality = Math.max(80, quality - 3);
+    }
+    return { why: 'size' };
+  } catch {
+    return { why: 'unreadable' };
+  }
+}
+// The server's upload limit, from its boost level (one call, only when an image is over the smallest one; 10 MB if it fails)
+async function serverLimit(token, guild) {
+  try {
+    return uploadLimit((await discordCall(`/guilds/${guild}`, { token, what: 'the server', timeoutMs: 3000 }))?.premium_tier);
+  } catch (err) {
+    console.warn(`[discord] couldn't read the server's boost level for /post (10 MB it is): ${err.message}`);
+    return uploadLimit(0);
+  }
+}
+const isGif = (a) => /gif/i.test(String(a?.content_type ?? '')) || /\.gif$/i.test(String(a?.filename ?? ''));
+
 // ---------- /post's channel list (2026-10-29, round 4: the owner's "missing" channels) ----------
 // Discord's own picker for a channel option only ever lists 10 channels (the server's oldest) until a name is typed, so
 // 🔞┃agi1-nsfw and every newer channel never showed in it. /post's channel is her own list instead (an autocomplete option):
@@ -416,8 +488,10 @@ export async function postCommand(cfg, it, ctx) {
   const caption = typeof opt.caption === 'string' ? opt.caption.trim().slice(0, MAX_CAPTION) : '';
   if (!attachment || !picked) return { response: onlyYou(D.POST_FAILED) };
   if (!(IMAGE_TYPE.test(String(attachment.content_type ?? '')) || IMAGE_NAME.test(String(attachment.filename ?? '')))) return { response: onlyYou(D.POST_NOT_IMAGE) };
-  if (Number(attachment.size) > MAX_UPLOAD) return { response: onlyYou(D.POST_TOO_BIG) };
+  if (Number(attachment.size) > MAX_SOURCE) return { response: onlyYou(D.POST_TOO_BIG) };
   if (!DISCORD_CDN.test(String(attachment.url ?? ''))) return { response: onlyYou(D.POST_FAILED) };
+  // (round 4) everything after the first answer inside Vercel's 25 s: reading it, making it smaller, posting it
+  const deadline = (Number(ctx.started) || Date.now()) + 22_000;
   const after = (async () => {
     // which channel: her list's id, or the one channel whose name was typed
     let channel = ID.test(picked) ? picked : null;
@@ -451,10 +525,19 @@ export async function postCommand(cfg, it, ctx) {
       await edit(it, { content: D.postNotAgeRestricted(channel) });
       return 'post_not_age_restricted';
     }
+    // (round 4) what Discord takes in this server (its boost level, read only for an image over the smallest limit); a GIF
+    // over it is said at once (only a still image is made smaller)
+    const told = Number(attachment.size) || 0;
+    let limit = uploadLimit(0);
+    if (!fitsIn(told, limit)) limit = await serverLimit(token, it.guild_id);
+    if (isGif(attachment) && !fitsIn(told, limit)) {
+      await edit(it, { content: D.postGifTooBig(limitMb(limit)) });
+      return 'post_gif_too_big';
+    }
     // the image, from Discord's own address (the owner just sent it), checked by its first bytes
     let bytes, kind;
     try {
-      const res = await fetch(attachment.url, { signal: AbortSignal.timeout(8000) });
+      const res = await fetch(attachment.url, { signal: AbortSignal.timeout(Math.max(2000, Math.min(12_000, deadline - Date.now() - 6000))) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       bytes = new Uint8Array(await res.arrayBuffer());
       kind = imageKind(bytes);
@@ -464,20 +547,33 @@ export async function postCommand(cfg, it, ctx) {
       return 'post_failed';
     }
     if (!kind) { await edit(it, { content: D.POST_NOT_IMAGE }); return 'post_not_image'; }
-    if (bytes.length > MAX_UPLOAD) { await edit(it, { content: D.POST_TOO_BIG }); return 'post_too_big'; }
+    if (bytes.length > MAX_SOURCE) { await edit(it, { content: D.POST_TOO_BIG }); return 'post_too_big'; }
+    // (round 4) over what Discord takes here: made smaller first (a still image), else said
+    let smaller = false;
+    if (!fitsIn(bytes.length, limit)) {
+      const out = kind.ext === 'gif' ? { why: 'animated' } : await shrinkToFit(bytes, limit, { deadline: deadline - 5000 });
+      if (!out.bytes) {
+        if (out.why !== 'animated') console.warn(`[discord] /post couldn't make an image of ${bytes.length} bytes fit ${limitMb(limit)} MB (${out.why})`);
+        await edit(it, { content: out.why === 'animated' ? D.postGifTooBig(limitMb(limit)) : D.POST_CANT_SHRINK });
+        return out.why === 'animated' ? 'post_gif_too_big' : 'post_cant_shrink';
+      }
+      bytes = out.bytes;
+      kind = out.kind;
+      smaller = true;
+    }
     const filename = `agi1.${kind.ext}`;
     const form = new FormData();
     form.append('payload_json', JSON.stringify({ content: caption, allowed_mentions: NO_PINGS, flags: FLAG.NO_EMBEDS, attachments: [{ id: 0, filename }] }));
     form.append('files[0]', new Blob([bytes], { type: kind.type }), filename);
     try {
-      await botCall(token, `/channels/${channel}/messages`, { method: 'POST', form, what: 'her post', timeoutMs: 15_000 });
+      await botCall(token, `/channels/${channel}/messages`, { method: 'POST', form, what: 'her post', timeoutMs: Math.max(3000, Math.min(15_000, deadline - Date.now())) });
     } catch (err) {
       console.warn(`[discord] her post didn't go out: ${err.message}`);
-      await edit(it, { content: noAccess(err) ? D.postNoAccess(channel) : err.status === 413 || err.code === 40005 ? D.POST_TOO_BIG : D.POST_FAILED });
+      await edit(it, { content: noAccess(err) ? D.postNoAccess(channel) : err.status === 413 || err.code === 40005 ? D.POST_DISCORD_TOO_BIG : D.POST_FAILED });
       return noAccess(err) ? 'post_no_access' : 'post_failed';
     }
-    await edit(it, { content: D.postDone(channel) });
-    return 'posted';
+    await edit(it, { content: smaller ? D.postDoneSmaller(channel, limitMb(limit)) : D.postDone(channel) });
+    return smaller ? 'posted_smaller' : 'posted';
   })();
   return { response: later(true), after };
 }

@@ -31,7 +31,8 @@ export const COMMANDS = [
     name: 'post', description: 'Owner only: AGI-1 posts an image herself, in the channel you pick',
     default_member_permissions: OWNER_ONLY_PERMISSIONS,
     options: [
-      { type: 11, name: 'image', description: 'The image she posts (png, jpg, gif or webp, 10 MB at most)', required: true },
+      // (round 4) up to 50 MB: one over what Discord takes in the server (10 MB without boosts) is made smaller first
+      { type: 11, name: 'image', description: 'The image she posts: png, jpg, gif or webp, up to 50 MB (a big one is made smaller to fit)', required: true },
       // (2026-10-29, round 4) her own list of the server's channels (autocomplete: server/dc-tickets.js, postChoices), not
       // Discord's channel picker, which only ever shows 10 channels until a name is typed (so 🔞┃agi1-nsfw never showed)
       { type: 3, name: 'channel', description: 'Where she posts it: every channel is in the list (type to find one)', required: true, autocomplete: true, max_length: 100 },
@@ -99,7 +100,7 @@ export const TICKETS_POSTED = 'my ticket button is up 💜';
 export const ticketsNoAccess = (channel) => `i can't post in <#${channel}> 🙈 let AGI-1 view it, send messages and embed links there`;
 export const postDone = (channel) => `posted it in <#${channel}> 💜`;
 export const POST_NOT_IMAGE = "that one isn't an image 🙈 attach a png, jpg, gif or webp";
-export const POST_TOO_BIG = 'that image is over 10 MB 🙈 try a smaller one';
+export const POST_TOO_BIG = 'that image is over 50 MB 🙈 try a smaller one';
 export const postNoAccess = (channel) => `i can't post in <#${channel}> yet 🙈 let AGI-1 view it, send messages and attach files there`;
 export const postNotAgeRestricted = (channel) => `<#${channel}> isn't marked age-restricted yet 🙈 turn on Age-Restricted in its settings first, then post again`;
 export const POST_FAILED = "it didn't go out 🙈 try again in a minute";
@@ -109,6 +110,12 @@ export const CHOICE_CANT_POST = "AGI-1 can't post here yet";
 export const CHOICE_AGE_RESTRICTED = 'age-restricted';
 export const CHOICE_NOT_RESTRICTED = 'not age-restricted yet';
 export const POST_PICK = "i couldn't tell which channel that is 🙈 type part of its name in channel, then tap it in my list";
+// (round 4, the owner: "can you increase the max size of this") an image over what Discord takes in the server (10 MB without
+// boosts) is made smaller first; a GIF can't be
+export const postDoneSmaller = (channel, mb) => `posted it in <#${channel}> 💜 it was over the ${mb} MB Discord takes in here, so i made it smaller first`;
+export const postGifTooBig = (mb) => `that GIF is over the ${mb} MB Discord takes in this server 🙈 i can only make still images smaller, so try a smaller GIF`;
+export const POST_CANT_SHRINK = "i couldn't make that image small enough for Discord in time 🙈 try a smaller one";
+export const POST_DISCORD_TOO_BIG = 'Discord said that image is too big for this server 🙈 try a smaller one';
 
 // ---------- her holder roles (2026-10-29, round 3: server/dc-holders.js) ----------
 // Her button's message (/holders), in the verify channel: what the roles are, where verifying happens, the rules scammers

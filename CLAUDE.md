@@ -1,6 +1,6 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
-> **AGI-1 on Discord, round 4: /post's channel list and 👤 Stranger (2026-10-29):** two asks of the owner's, then "continue, finish and publish". **/post's channel list was missing channels** (🔞┃agi1-nsfw among them): Discord's own picker for a channel option only ever lists 10 channels, the server's oldest, until a name is typed. /post's channel is now **her own list** (an autocomplete option, `postChoices()` in `server/dc-tickets.js`): all 19 text and announcement channels in the sidebar's order, each with its category, "AGI-1 can't post here yet" where her role can't, and "not age-restricted yet" or "age-restricted" for an 18+ one; typing narrows it, and a name typed without tapping it still works. **👤 Stranger** (the owner: everyone who hasn't verified, and every new member, gets it by themselves): a grey role shown as its own group, no permissions, under 💘 Crush; her bot gives it to every member without 💘 Crush or 💞 Soulmate (Team and Mod too, never a bot or someone still on the rules screen) and takes it off a holder. A **Vercel cron every 5 minutes** (`/api/feed`, told apart by its schedule: `ROLES_SCHEDULE`; needs Vercel Pro, the owner's plan) reads the member list (`strangersClock()` in `server/dc-holders.js`; her app needs Discord's **Server Members Intent**), and verifying, Remove my role and going under 10,000 swap it at once. Nothing kept. `DISCORD_STRANGERS=off` pauses it. See "AGI-1 on Discord", "Round 4".
+> **AGI-1 on Discord, round 4: /post's channel list and 👤 Stranger (2026-10-29):** two asks of the owner's, then "continue, finish and publish". **/post's channel list was missing channels** (🔞┃agi1-nsfw among them): Discord's own picker for a channel option only ever lists 10 channels, the server's oldest, until a name is typed. /post's channel is now **her own list** (an autocomplete option, `postChoices()` in `server/dc-tickets.js`): all 19 text and announcement channels in the sidebar's order, each with its category, "AGI-1 can't post here yet" where her role can't, and "not age-restricted yet" or "age-restricted" for an 18+ one; typing narrows it, and a name typed without tapping it still works. **👤 Stranger** (the owner: everyone who hasn't verified, and every new member, gets it by themselves): a grey role shown as its own group, no permissions, under 💘 Crush; her bot gives it to every member without 💘 Crush or 💞 Soulmate (Team and Mod too, never a bot or someone still on the rules screen) and takes it off a holder. A **Vercel cron every 5 minutes** (`/api/feed`, told apart by its schedule: `ROLES_SCHEDULE`; needs Vercel Pro, the owner's plan) reads the member list (`strangersClock()` in `server/dc-holders.js`; her app needs Discord's **Server Members Intent**), and verifying, Remove my role and going under 10,000 swap it at once. Nothing kept. `DISCORD_STRANGERS=off` pauses it. **And /post's bigger images** (the owner, the same day: "can you increase the max size of this", after "that image is over 10 MB"): Discord itself takes 10 MB a file in a server without boosts (her bot too; 50 MB at Level 2, 100 MB at Level 3), so /post now takes an image up to **50 MB** and AGI-1 makes a still one that's over the server's limit smaller first (`shrinkToFit()` with sharp: a JPEG, or a WebP when it has see-through parts, at its full size when that's enough), then says she did; a GIF over it is said at once. See "AGI-1 on Discord", "Round 4".
 
 > **AGI-1 on Discord, round 3: her holder roles (2026-10-29):** the owner's OK, "Yes, do all of it (Recommended)": **💘 Crush** (10,000+ $AGI) and **💞 Soulmate** (1,000,000+), held or burned for messages (the site's own levels), each shown as its own group, both opening the private **💎┃holders** channel. Her **Verify my $AGI** button in **✅┃verify** (the owner's `/holders`) gives whoever taps it a private 15-minute link to **agi1.app/discord/verify** (`verify.html`): the site's own wallet sign-in (a free signature, never a transaction), then her role, the other one taken off. One wallet gives a role to one account; the cron reads it again a few times a day and the role follows the $AGI; **Remove my role** forgets it. `server/dc-holders.js`, `supabase/discord.sql` (scrambled codes; the server's id, the account's id and the wallet's address sealed with PASS_SECRET, only to re-check). AGI-1's role needs **Manage Roles** and sits above both roles. The first build of this was lost with its session's workspace before it was pushed; it was built again the same day in a new session. See "AGI-1 on Discord", "Round 3".
 
@@ -3531,6 +3531,27 @@ in `server/discord.js`):
 - Her commands are written to Discord by the cron (`connectDiscord()`): `commandsKey()` now tells autocomplete apart, so
   the first run after the push sets /post's new option.
 
+**/post's bigger images** (later the same day: the owner tried /post with an image over 10 MB, got "that image is over 10
+MB 🙈 try a smaller one", and asked "can you increase the max size of this"): **Discord itself** takes a file in a server up
+to **10 MB without boosts** (Level 1 the same), **50 MB at Level 2** and **100 MB at Level 3**, for everyone and her bot's
+posts too (Discord's support article "Discord Account Caps, Server Caps, and More"), so a bigger file can't be posted as it
+is. Now (`server/dc-tickets.js`):
+- /post takes an image **up to 50 MB** (`MAX_SOURCE`; its option says "up to 50 MB (a big one is made smaller to fit)").
+- One over what Discord takes in the server is **made smaller first**, a still one only (`shrinkToFit()`, with sharp,
+  loaded only then): read once (its orientation applied, its metadata dropped), then its **full size in pixels** as a JPEG at
+  quality 90 (or a **WebP** at 90 when it has see-through parts, so they stay), then, only if that's still too big, a little
+  smaller in steps worked out from how far over it was (at most 6 tries), until it's under 95% of the limit (so it fits
+  whether Discord counts MB or MiB). A typical AI picture (a 4K PNG of 15 to 30 MB) comes out a 2 to 6 MB JPEG at its full
+  size. She says so: "posted it in #… 💜 it was over the 10 MB Discord takes in here, so i made it smaller first".
+- The server's limit is read from its **boost level** (`premium_tier`: one call, only for an image over 9.5 MB; 10 MB if it
+  can't be read), so a boosted server gets its own (at Level 2 an image up to 47.5 MB goes as it is).
+- **A GIF** (or an animated WebP) over the limit is said at once, never shrunk: "that GIF is over the 10 MB Discord takes
+  in this server 🙈 i can only make still images smaller, so try a smaller GIF". An image of more than 100 million pixels, one
+  that can't be read, or one not small enough in time: "i couldn't make that image small enough for Discord in time 🙈 try
+  a smaller one". Discord refusing it anyway: "Discord said that image is too big for this server 🙈 try a smaller one".
+- All of it inside Vercel's 25 s (reading it 12 s at most, making it smaller until 17 s, posting it); nothing kept.
+  Boosting the server (Level 2) is the only way to post a file over 10 MB as it is: the owner's call (it costs money).
+
 **👤 Stranger** (`server/dc-holders.js`):
 - **Who:** every member without 💘 Crush or 💞 Soulmate (Team and Mod too: they haven't verified either; the owner has both
   holder roles by hand, so not the owner), **never a bot**, and never someone still on the server's rules screen (Discord's
@@ -3566,16 +3587,20 @@ Content stay off, Public Bot off).
 be above 👤 Stranger" (Server Settings → Roles: drag AGI-1's role above it; it needs Manage Roles), "no 👤 Stranger role" (a
 role with Stranger in its name). Vercel → Settings → Cron Jobs: the `*/5 * * * *` job's runs (`{"ok":true,"strangers":…}`).
 /post's list empty: `[discord] /post's channel list: …`; its old picker still showing: the cron hasn't run since the push
-(Vercel → Cron Jobs → `/api/feed` → Run), or reopen Discord.
+(Vercel → Cron Jobs → `/api/feed` → Run), or reopen Discord. An image she couldn't make small enough: `[discord] /post
+couldn't make an image of … bytes fit 10 MB (time | pixels | size | unreadable)`.
 
-**Costs:** $0 more: a Discord call or two every 5 minutes, inside Vercel Pro's included use.
+**Costs:** $0 more: a Discord call or two every 5 minutes, inside Vercel Pro's included use; a big image made smaller is a
+second or two of the function's CPU.
 
-**Tests:** `tests/discord.test.js` (3 more: her list, in the owner's server as it is, its notes, typing, 25 at most, only the
-owner, Discord down; a name typed; `channelPerms()`), `tests/holders.test.js` (6 more: the role by its name; swapped when
+**Tests:** `tests/discord.test.js` (5 more: her list, in the owner's server as it is, its notes, typing, 25 at most, only the
+owner, Discord down; a name typed; `channelPerms()`; bigger images with the real sharp: an 18 MB PNG posted as a JPEG at its
+full size, a see-through one as a WebP, a Level 2 server's 50 MB, a GIF said at once, the boost level unread, Discord
+refusing, over 50 MB; `shrinkToFit()`'s steps, an animated image, out of time, 20,000 × 20,000 pixels), `tests/holders.test.js` (6 more: the role by its name; swapped when
 verifying, back with Remove my role, under 10,000 and a wallet moving on, off; refused; the clock: who gets it, bots, the
 rules screen, holders, pages, 25 a run, Discord's "too many", the intent, no role; `/api/feed` on its schedule), and the
-cron's schedules in `tests/keepalive.test.js` and `tests/telegram.test.js`. The whole suite: 1,374 tests, 1,370 pass, 4
-skipped.
+cron's schedules in `tests/keepalive.test.js` and `tests/telegram.test.js`. The whole suite: 1,376 tests, 1,372 pass, 4
+skipped, and `npm run build` passes.
 
 ## Her languages (2026-09-29)
 
