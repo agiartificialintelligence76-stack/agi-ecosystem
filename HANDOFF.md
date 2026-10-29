@@ -1,5 +1,21 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## AGI-1 on Discord: 🔞┃agi1-nsfw is age-restricted — 2026-10-29
+
+The last step of round 4's chat (it stalled after the owner's "im done with 1"; picked up from its last screen and
+"continue and finish"):
+
+- **The owner's age:** confirmed in Discord (User Settings → Account → Account Status → Age Group: **Adult**).
+- **The channel:** at 15:34 (the owner's time) Claude in the owner's Chrome turned on **Age-Restricted Channel** for
+  🔞┃agi1-nsfw (Edit Channel → Overview → Content Visibility → Save Changes). Nothing else changed: still private (🔞 18+,
+  Team, Mod, AGI-1's role); its topic, rule 2 and AutoMod as they were.
+- **/post:** its channel list now says "🔞┃agi1-nsfw · 💜 AGI-1 · **age-restricted**" (typed "nsfw" in 🛡┃team-chat; nothing
+  posted, the box cleared), so /post can post an image there now.
+- **No code changed:** the notes only (this file and CLAUDE.md), pushed to `main`, and the owner's folder synced.
+- **Left for the owner:** a /post there when you want one, and the image over 10 MB from round 4. Discord lets only
+  confirmed adults open an age-restricted channel: Prince Loki and anyone given 🔞 18+ confirm their own age first.
+- Details: CLAUDE.md, "AGI-1 on Discord" → "Round 4".
+
 ## AGI-1 on Discord, round 4: /post's channel list and 👤 Stranger — 2026-10-29
 
 Two asks of the owner's (a chat cut off before anything was pushed; picked up in a new session from its last screen, then
@@ -66,9 +82,9 @@ in code (`server/dc-tickets.js`, pushed to `main`):
 - **`/post`** (the owner only): an image she posts herself as AGI-1, in the channel picked; an 18+ channel only once Discord
   marks it age-restricted. Her bot connects to Discord's gateway once (Discord asks it before a bot may post).
 - **🔞┃agi1-nsfw:** private (the new **🔞 18+** role, Team, Mod, AGI-1), rule 2 allows it, AutoMod's flagged words skip it.
-  **Not age-restricted yet:** the owner first confirms their age in Discord (User Settings → Account Status → Confirm Age),
-  then Edit Channel → Overview → Age-Restricted Channel. Nothing sexually explicit there until then.
-- **Waiting for the owner:** that age confirmation; deleting the first welcome message in `#👋┃welcome` (above the banner); who
+  **Age-restricted since later that day:** the owner confirmed their age in Discord (User Settings → Account Status →
+  Confirm Age), then Edit Channel → Overview → Age-Restricted Channel (see the top). Nothing sexually explicit there before.
+- **Waiting for the owner:** deleting the first welcome message in `#👋┃welcome` (above the banner); who
   gets the 🔞 18+ role. Details, setup and troubleshooting: CLAUDE.md, "AGI-1 on Discord" → "Round 2".
 
 ## AGI-1 on Discord — 2026-10-28
