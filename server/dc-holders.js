@@ -200,6 +200,12 @@ export async function verifyHolder(cfg, { wallet, link, env = process.env, now =
 
   const r = await db(cfg, 'dc_holder_link', { p_who: who, p_wallet: wcode, p_sealed: sealHolder(cfg.passSecret, { guild: l.guild, user: l.user, wallet }), p_level: h.level });
   if (!r?.ok) return { ok: false, why: 'busy' };
+  // first, the account that had this wallet before loses its role (one wallet, one account): its row is gone already, so
+  // this is the only time it's taken back, whatever happens next
+  const was = r.moved ? unsealHolder(cfg.passSecret, r.moved) : null;
+  if (was && was.user !== l.user) {
+    try { await syncRoles(token, was.guild, was.user, 1, roles, { reason: 'AGI-1: its wallet was verified by another account' }); } catch (err) { console.warn(`[discord] couldn't take a holder role back: ${err.message}${noAccess(err) ? HINT : ''}`); }
+  }
   let sync;
   try {
     sync = await syncRoles(token, l.guild, l.user, h.level, roles, { reason: 'AGI-1: $AGI verified on agi1.app' });
@@ -211,11 +217,6 @@ export async function verifyHolder(cfg, { wallet, link, env = process.env, now =
   if (sync === 'gone') {
     await db(cfg, 'dc_holder_drop', { p_who: who });
     return { ok: false, why: 'not_member' };
-  }
-  // the account that had this wallet before loses its role (one wallet, one account)
-  const was = r.moved ? unsealHolder(cfg.passSecret, r.moved) : null;
-  if (was && was.user !== l.user) {
-    try { await syncRoles(token, was.guild, was.user, 1, roles, { reason: 'AGI-1: its wallet was verified by another account' }); } catch (err) { console.warn(`[discord] couldn't take a holder role back: ${err.message}`); }
   }
   return { ok: true, level: h.level, agi: h.agi, role: ROLE_OF_LEVEL[h.level] };
 }

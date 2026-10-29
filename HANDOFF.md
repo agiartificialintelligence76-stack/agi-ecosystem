@@ -14,7 +14,7 @@ step); a new session built it again the same day and saved each step to the bran
   (scrambled codes, the ids and address sealed with PASS_SECRET). `DISCORD_HOLDERS=off` pauses it.
 - **Done in Discord** (by the first session, checked again): the two roles (shown apart, under AGI-1's role, which has
   Manage Roles), ✅┃verify and 💎┃holders with their topics.
-- **Tests:** `tests/holders.test.js` (17); the suite: 1,364 tests, 1,360 pass, 4 skipped. `supabase/discord.sql` also ran
+- **Tests:** `tests/holders.test.js` (18); the suite: 1,365 tests, 1,361 pass, 4 skipped. `supabase/discord.sql` also ran
   twice in a real Postgres (PGlite).
 - **Database:** `supabase/discord.sql` run in Supabase (agi2) on 2026-10-29 (`discord_functions_found = 5`; checked: only
   our server may use its functions and table, RLS on), after the owner's OK again in the new chat ("Yes, do all of it").

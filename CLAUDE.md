@@ -3470,11 +3470,11 @@ Administrators see it. "i can't find the roles yet" after `/holders`: their name
 **Costs:** $0. A verification is a few reads (the chain's free public node, Supabase, Discord); the cron reads at most 25
 wallets a run.
 
-**Tests:** `tests/holders.test.js` (17: the link, what's kept, the roles by name, `/holders`, a tap, verifying up, down,
-burned, moved to another account, refused and broken, Remove my role, the cron, the words, the page, the database file,
+**Tests:** `tests/holders.test.js` (18: the link, what's kept, the roles by name, `/holders`, a tap, verifying up, down,
+burned, moved to another account (the account before always loses its role first, even when the next one fails), refused and broken, Remove my role, the cron, the words, the page, the database file,
 the wiring), with a small stand-in for `discord.sql`; `supabase/discord.sql` itself was also run twice in a real Postgres
 (PGlite) with every function tried. `tests/discord.test.js` and `tests/telegram.test.js` know `/holders` and the cron's
-re-check. The whole suite: 1,364 tests, 1,360 pass, 4 skipped.
+re-check. The whole suite: 1,365 tests, 1,361 pass, 4 skipped.
 
 **Set up on 2026-10-29** (Discord, Claude in the owner's Chrome, the owner's OK above): **💞 Soulmate** and **💘 Crush**
 (each shown as its own group), under **AGI-1**'s role, which has **Manage Roles** (order: Team, Mod, 🔞 18+, AGI-1, 💞

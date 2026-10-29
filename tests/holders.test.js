@@ -139,7 +139,7 @@ beforeEach(() => {
       }
       const role = /^\/guilds\/(\d+)\/members\/(\d+)\/roles\/(\d+)$/.exec(path);
       if (role) {
-        if (fake.refuse) return Response.json({ message: 'Missing Permissions', code: 50013 }, { status: 403 });
+        if (fake.refuse || fake.refuseFor?.has(role[2])) return Response.json({ message: 'Missing Permissions', code: 50013 }, { status: 403 });
         const have = fake.members.get(role[2]);
         if (!have) return Response.json({ message: 'Unknown Member', code: 10007 }, { status: 404 });
         if (method === 'PUT' && !have.includes(role[3])) have.push(role[3]);
@@ -378,6 +378,27 @@ test('one wallet gives a role to one account: verified by another account, the f
   assert.ok(fake.db.rows.has(HV.holderCode(SECRET, GUILD, FRIEND)));
   const back = discord('DELETE', `/members/${PERSON}/roles/${CRUSH}`)[0];
   assert.equal(back.headers['X-Audit-Log-Reason'], encodeURIComponent('AGI-1: its wallet was verified by another account'));
+});
+
+test('the wallet moving on: the account before always loses its role, even when the next one fails', async () => {
+  fake.balances.set(WAL, 50_000n);
+  await verify({ session: session(), link: link(PERSON) });
+  assert.deepEqual(rolesOfMember(PERSON), ['crush']);
+  // an account that isn't in the server verifies the same wallet: nothing kept for it, and the one before still loses it
+  assert.deepEqual(await verify({ session: session(), link: link(person(40)) }), { status: 404, data: { error: 'not_member' } });
+  assert.deepEqual(rolesOfMember(PERSON), []);
+  assert.equal(fake.db.rows.size, 0);
+  // Discord refuses the next account's role: the one before loses it all the same, and the cron finishes the rest
+  await verify({ session: session(), link: link(PERSON) });
+  assert.deepEqual(rolesOfMember(PERSON), ['crush']);
+  fake.refuseFor = new Set([FRIEND]);
+  assert.deepEqual(await verify({ session: session(), link: link(FRIEND) }), { status: 502, data: { error: 'discord' } });
+  assert.deepEqual(rolesOfMember(PERSON), []);
+  assert.ok(fake.db.rows.has(HV.holderCode(SECRET, GUILD, FRIEND)), 'kept for the cron');
+  fake.refuseFor.clear();
+  fake.db.rows.forEach((r) => { r.due = true; });
+  assert.equal((await HV.holdersClock(cfg())).changed, 1);
+  assert.deepEqual(rolesOfMember(FRIEND), ['crush']);
 });
 
 test("verifying: a link that's old, changed or another server's, a wallet that isn't signed in, too fast: refused, nothing read", async () => {
