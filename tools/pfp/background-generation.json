@@ -1,0 +1,134 @@
+{
+  "mode": "built-in image_gen",
+  "reference_image": "C:/Users/User/.codex/generated_images/01a18cea-e57d-7750-b985-a5551f3f3737/exec-20b5d9e0-7c86-4bb6-b716-56d96448ba87.png",
+  "transparent_background": false,
+  "output_directory": "public/pfp/v1",
+  "processing": "Exact grid crop, nearest-neighbor resize to 768x768, WebP quality85.",
+  "atlases": [
+    {
+      "group": "earth",
+      "slugs": [
+        "london",
+        "new-york",
+        "santorini",
+        "rome",
+        "venice",
+        "alps",
+        "seoul",
+        "marrakech",
+        "amazon"
+      ],
+      "prompt": "Use input image only as pixel-art STYLE reference. Create a precise square 3x3 atlas of NINE equal independent square backgrounds with no borders, gutters, labels, words, people or foreground subjects. Every tile fills its square edge to edge. Premium richly shaded dithered pixel art, dense crisp pixel clusters, beautiful cinematic light, same detail as reference, NOT smooth vector or photoreal. These will be backgrounds for waist-up anime avatars, so recognizable scenery at edges/upper corners and central area with space for a character overlay. Exactly these nine distinct places in reading order: TOP ROW LEFT London rainy twilight street with Big Ben in upper left, warm lamps and purple wet pavement; MIDDLE New York rooftop with Manhattan skyline, dusk sky, water tower at edge; RIGHT Santorini white houses and blue domes in vivid blue Mediterranean afternoon. MIDDLE ROW LEFT ancient Roman forum ruins and Colosseum in warm dawn light; MIDDLE Venice quiet canal with gondola moored at side and colorful historic buildings; RIGHT Swiss Alps turquoise lake, distant snow mountains, flowered meadow. BOTTOM ROW LEFT Seoul futuristic neon street and distant N Seoul Tower, cyan pink night; MIDDLE Marrakech riad courtyard with intricate tile fountain, archways and lush potted palms, amber lanterns; RIGHT Amazon rainforest canopy and luminous river, exotic leaves framing the scene, misty green sunbeams. Make every landmark and mood legible, no text.",
+      "source_path": "C:/Users/User/.codex/generated_images/01a18d01-deae-7393-a0ec-21c870b687c5/exec-b3c31b4d-4d12-4fe2-b7f9-fad5da51f7e8.png",
+      "outputs": [
+        "public/pfp/v1/london.webp",
+        "public/pfp/v1/new-york.webp",
+        "public/pfp/v1/santorini.webp",
+        "public/pfp/v1/rome.webp",
+        "public/pfp/v1/venice.webp",
+        "public/pfp/v1/alps.webp",
+        "public/pfp/v1/seoul.webp",
+        "public/pfp/v1/marrakech.webp",
+        "public/pfp/v1/amazon.webp"
+      ]
+    },
+    {
+      "group": "space",
+      "slugs": [
+        "saturn",
+        "mars",
+        "asteroid",
+        "black-hole",
+        "alien-ocean",
+        "crimson-nebula",
+        "comet",
+        "star-desert",
+        "galactic-library"
+      ],
+      "prompt": "Use input image only as pixel-art STYLE reference. Create a precise square 3x3 atlas of NINE equal independent square backgrounds with no borders, gutters, labels, words, people or foreground subjects. Every tile fills its square edge to edge. Premium richly shaded dithered pixel art, dense crisp pixel clusters, beautiful cinematic light, same detail as reference, NOT smooth vector or photoreal. These will be backgrounds for waist-up anime avatars, so recognizable scenery at edges/upper corners and central area with space for a character overlay. Exactly these nine distinct places in reading order: TOP ROW LEFT Saturn rings dominate sky viewed from an icy moon, sci-fi observation platform at edge; MIDDLE rusty Mars canyon frontier and small research habitat at side, pale blue sun; RIGHT asteroid outpost hanging over glowing asteroid belt, space mining architecture at edges. MIDDLE ROW LEFT black hole observatory with immense luminous orange accretion disk visible through large curved window; MIDDLE alien ocean planet shore with cyan water, twin moons and violet coral; RIGHT crimson red nebula with glittering stars viewed from sleek sci-fi balcony. BOTTOM ROW LEFT sweeping comet trails above dark mountains of a distant world, blue purple glow; MIDDLE silver starlit desert dunes with immense Milky Way and abandoned small monolith at side; RIGHT galactic library with towering luminous bookshelves and window onto stars, indigo and gold. No text.",
+      "source_path": "C:/Users/User/.codex/generated_images/01a18d01-deae-7393-a0ec-21c870b687c5/exec-89ac8dc1-5aa6-43c2-822c-98d1e1b19e1e.png",
+      "outputs": [
+        "public/pfp/v1/saturn.webp",
+        "public/pfp/v1/mars.webp",
+        "public/pfp/v1/asteroid.webp",
+        "public/pfp/v1/black-hole.webp",
+        "public/pfp/v1/alien-ocean.webp",
+        "public/pfp/v1/crimson-nebula.webp",
+        "public/pfp/v1/comet.webp",
+        "public/pfp/v1/star-desert.webp",
+        "public/pfp/v1/galactic-library.webp"
+      ]
+    },
+    {
+      "group": "fantasy",
+      "slugs": [
+        "ember",
+        "ice-palace",
+        "thunder",
+        "water-temple",
+        "mushroom",
+        "enchanted",
+        "clockwork",
+        "dream-train",
+        "atlantis"
+      ],
+      "prompt": "Use input image only as pixel-art STYLE reference. Create a precise square 3x3 atlas of NINE equal independent square backgrounds with no borders, gutters, labels, words, people or foreground subjects. Every tile fills its square edge to edge. Premium richly shaded dithered pixel art, dense crisp pixel clusters, beautiful cinematic light, same detail as reference, NOT smooth vector or photoreal. These will be backgrounds for waist-up anime avatars, so recognizable scenery at edges/upper corners and central area with space for a character overlay. Exactly these nine distinct places in reading order: TOP ROW LEFT Ember World: molten lava river, ancient black stone bridge, floating embers and volcanic sky; MIDDLE Ice Palace: grand crystalline ice hall, arched windows and cyan blue reflections; RIGHT Thunder World: storm clouds with violet lightning, floating broken stone islands and windswept cliffs. MIDDLE ROW LEFT Water Temple: serene turquoise pool and ancient stone columns with magical water ribbons, luminous moon; MIDDLE Mushroom Forest: enormous glowing violet mushrooms, turquoise fireflies and small magical river; RIGHT Enchanted Woods: huge twisting tree trunks, lantern blossoms and shafts of emerald sunlight, fairy-tale atmosphere. BOTTOM ROW LEFT Clockwork World: bronze gear towers, giant visible clock mechanisms, suspended bridges and warm sepia sky; MIDDLE Dream Train: empty magical train platform above clouds, luminous locomotive on far side, moonlit violet sky; RIGHT Atlantis: underwater ancient city with arches, coral gardens, sunbeams from above and schools of fish. Distinct visual worlds, no people.",
+      "source_path": "C:/Users/User/.codex/generated_images/01a18d01-deae-7393-a0ec-21c870b687c5/exec-422c87d6-a565-4f36-8d82-7df1fb98ff10.png",
+      "outputs": [
+        "public/pfp/v1/ember.webp",
+        "public/pfp/v1/ice-palace.webp",
+        "public/pfp/v1/thunder.webp",
+        "public/pfp/v1/water-temple.webp",
+        "public/pfp/v1/mushroom.webp",
+        "public/pfp/v1/enchanted.webp",
+        "public/pfp/v1/clockwork.webp",
+        "public/pfp/v1/dream-train.webp",
+        "public/pfp/v1/atlantis.webp"
+      ]
+    },
+    {
+      "group": "future",
+      "slugs": [
+        "solarpunk",
+        "orbital-elevator",
+        "robot-garden",
+        "cyber-circuit",
+        "future-station",
+        "neon-laundry",
+        "hologram",
+        "undersea-lab",
+        "retro-starship"
+      ],
+      "prompt": "Use input image only as pixel-art STYLE reference. Create a precise square 3x3 atlas of NINE equal independent square backgrounds with no borders, gutters, labels, words, people or foreground subjects. Every tile fills its square edge to edge. Premium richly shaded dithered pixel art, dense crisp pixel clusters, beautiful cinematic light, same detail as reference, NOT smooth vector or photoreal. These will be backgrounds for waist-up anime avatars, so recognizable scenery at edges/upper corners and central area with space for a character overlay. Exactly these nine distinct places in reading order: TOP ROW LEFT Solarpunk City: lush white terraced towers, hanging gardens and solar sails, optimistic warm daylight; MIDDLE Orbital Elevator: futuristic terminal at edge with enormous glowing cable reaching beyond clouds into starry sky; RIGHT Robot Greenhouse: empty automated botanical greenhouse, small robotic arms tending glowing exotic plants, mint glass dome. MIDDLE ROW LEFT Cyber Circuit: neon night racing street, sweeping turquoise and magenta road markings, futuristic architecture, no vehicles in central area; MIDDLE Future Station: empty futuristic elevated train station, transparent platforms and sleek train at side, lavender sunset; RIGHT Neon Laundromat: cozy retro-future empty laundromat, round glowing washing machines framing both sides, purple cyan tiled floor. BOTTOM ROW LEFT Hologram Gallery: empty futuristic art museum with translucent holographic abstract sculptures along edges, reflective floor; MIDDLE Undersea Laboratory: research lab interior with huge window onto bioluminescent ocean and distant whale silhouette; RIGHT Retro Starship: empty 1980s-inspired space ship cockpit, chunky colorful control panels at edges, star field and planet through window. All no text, no humans, genuinely different environments.",
+      "source_path": "C:/Users/User/.codex/generated_images/01a18d01-deae-7393-a0ec-21c870b687c5/exec-35c622d3-51f6-48cb-bc4d-dce9e8a7c888.png",
+      "outputs": [
+        "public/pfp/v1/solarpunk.webp",
+        "public/pfp/v1/orbital-elevator.webp",
+        "public/pfp/v1/robot-garden.webp",
+        "public/pfp/v1/cyber-circuit.webp",
+        "public/pfp/v1/future-station.webp",
+        "public/pfp/v1/neon-laundry.webp",
+        "public/pfp/v1/hologram.webp",
+        "public/pfp/v1/undersea-lab.webp",
+        "public/pfp/v1/retro-starship.webp"
+      ]
+    },
+    {
+      "group": "surreal",
+      "slugs": [
+        "origami",
+        "glass",
+        "candy-sky",
+        "mirror"
+      ],
+      "prompt": "Create a precise square 2x2 atlas of FOUR equal square independently usable background worlds, no borders/gutters/labels/words/people/foreground characters. Use image only as pixel-art STYLE reference: richly dithered detailed premium pixel clusters with cinematic light, not vector, not smooth painting, not photo. Backgrounds for waist-up anime avatar composition, so landmark details at edges and upper corners, central space visually quieter. TOP LEFT ORIGAMI WORLD: entire landscape built from colorful folded paper, cream paper mountains and lavender origami trees, tiny paper cranes in upper sky, paper river, sunrise. TOP RIGHT GLASS WORLD: translucent iridescent glass palace and glass trees, prisms casting rainbow beams, crystal clear pools, cool pale blue setting. BOTTOM LEFT CANDY SKY: clouds resembling spun sugar, floating candy-colored islands, pink mint and lavender sky, gigantic pastel moons, luminous candy trees and ribbon pathways, tasteful surreal dream. BOTTOM RIGHT MIRROR REALM: impossible reflective black and silver architecture, giant suspended mirror frames reflecting purple galaxies, glossy shallow water floor and hanging stairs, mysterious violet and silver mood. Every scene distinct, exquisite pixel detail, no text, no humans. Four exact square quadrants fill whole canvas.",
+      "source_path": "C:/Users/User/.codex/generated_images/01a18d01-deae-7393-a0ec-21c870b687c5/exec-3c173a9b-4578-4e88-bd33-314d16ee9d1b.png",
+      "outputs": [
+        "public/pfp/v1/origami.webp",
+        "public/pfp/v1/glass.webp",
+        "public/pfp/v1/candy-sky.webp",
+        "public/pfp/v1/mirror.webp"
+      ]
+    }
+  ]
+}

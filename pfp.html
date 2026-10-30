@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en" data-page="pfp">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PFP Lab · AGI</title>
+    <meta name="description" content="Find your AGI alter ego. Create a pixel-art profile picture, remix its colors and character, and download a free square PNG. Unlimited rerolls." />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#111015" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AGI" />
+    <meta property="og:title" content="Your AGI. Your energy. · PFP Lab" />
+    <meta property="og:description" content="A little pixel personality. Unlimited remixes. Make your AGI profile picture and take it everywhere." />
+    <meta property="og:url" content="__SITE__/pfp" />
+    <meta property="og:image" content="__SITE__/pfp/preview.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="__SITE__/pfp" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body class="pfp-page">
+    <a class="pfp-skip" href="#main">Skip to generator</a>
+    <header class="pfp-header">
+      <div class="pfp-header-inner">
+        <a class="pfp-brand" href="/" aria-label="AGI home">AGI<span class="pfp-brand-divider" aria-hidden="true"></span><span class="pfp-brand-sub">PFP LAB</span></a>
+        <nav class="pfp-nav" aria-label="Main navigation">
+          <a href="/studio">Studio <span aria-hidden="true">↗</span></a>
+          <a href="/memes">Memes <span aria-hidden="true">↗</span></a>
+          <a class="pfp-home-link" href="/">Back to AGI <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="pfp-main">
+      <section class="pfp-intro" aria-labelledby="pfp-title">
+        <div>
+          <p class="pfp-eyebrow"><span class="pfp-pixel-star" aria-hidden="true">✦</span> A NEW FACE FOR YOUR INTERNET LIFE</p>
+          <h1 id="pfp-title">Your AGI.<br /><span>Your energy.</span></h1>
+        </div>
+        <div class="pfp-intro-aside">
+          <p>Same pixel universe. A personality of your own.<br />Roll it, remix it, make it your profile picture.</p>
+          <span class="pfp-free"><span aria-hidden="true"></span> Free to create. Yours to download.</span>
+          <p class="pfp-library-count" id="pfp-library-count"></p>
+        </div>
+      </section>
+
+      <section class="pfp-workspace" aria-label="Profile picture generator">
+        <div class="pfp-art-panel">
+          <div class="pfp-panel-top">
+            <span class="pfp-panel-label"><span class="pfp-live-dot" aria-hidden="true"></span> YOUR ALTER EGO</span>
+            <span class="pfp-art-size">1:1 / 1024 PX</span>
+          </div>
+          <div class="pfp-art-wrap" id="pfp-art-wrap" aria-busy="true">
+            <canvas id="pfp-preview" width="1024" height="1024" role="img" aria-label="Your generated AGI profile picture" hidden></canvas>
+            <div class="pfp-loading" id="pfp-loading"><span class="pfp-loader" aria-hidden="true"></span><span id="pfp-loading-text">Finding your pixel personality…</span><button id="pfp-retry" class="pfp-button pfp-button-small" type="button" hidden>Try again</button></div>
+            <span class="pfp-art-corner pfp-art-corner-tl" aria-hidden="true"></span>
+            <span class="pfp-art-corner pfp-art-corner-br" aria-hidden="true"></span>
+          </div>
+          <div class="pfp-art-footer">
+            <div><span class="pfp-id-label">PORTRAIT</span><span class="pfp-portrait-code" id="pfp-code">—</span></div>
+            <button class="pfp-icon-button pfp-save-button" type="button" id="pfp-save" aria-label="Save this portrait to your picks" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4V4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg><span>Save pick</span></button>
+          </div>
+        </div>
+
+        <div class="pfp-controls-panel">
+          <div class="pfp-controls-heading"><span class="pfp-step">01 / MAKE IT YOURS</span><span class="pfp-infinity" aria-label="Unlimited rerolls">∞</span></div>
+          <h2>A little more you.</h2>
+          <p class="pfp-controls-intro">Let chance pick your look, or fine-tune the details. Lock a trait to keep it on the next roll.</p>
+          <div id="pfp-traits" class="pfp-traits"></div>
+          <p class="pfp-lock-hint" id="pfp-lock-hint">Every look wears AGI. Every roll is a fresh mix.</p>
+
+          <div class="pfp-actions">
+            <button class="pfp-button pfp-button-primary" type="button" id="pfp-randomize" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m17 3 4 4-4 4M3 7h3c5 0 7 10 12 10h3M17 13l4 4-4 4M3 17h3c2.1 0 3.7-1.8 5-4M13 9c1.4-1.3 2.9-2 5-2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg><span>Randomize</span><span class="pfp-key-hint" aria-hidden="true">R</span></button>
+            <div class="pfp-export-row">
+              <button class="pfp-button pfp-button-download" type="button" id="pfp-download" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg><span>Download PNG</span></button>
+              <button class="pfp-icon-button pfp-share-button" type="button" id="pfp-share" aria-label="Copy link to this portrait" title="Copy portrait link" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 15 6-6m-7 9-1 1a4.2 4.2 0 0 1-6-6l5-5a4.2 4.2 0 0 1 6 0m0 8a4.2 4.2 0 0 0 6 0l5-5a4.2 4.2 0 0 0-6-6l-1 1" transform="translate(1 0) scale(.92)" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg></button>
+            </div>
+          </div>
+          <div class="pfp-share-fallback" id="pfp-share-fallback" hidden><label for="pfp-share-url">Copy your portrait link</label><input id="pfp-share-url" type="url" readonly /></div>
+          <p class="pfp-export-note">1024 × 1024 PNG · No watermark · No sign-in</p>
+          <p class="pfp-status" id="pfp-status" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="pfp-collection" aria-labelledby="pfp-recent-title">
+        <div class="pfp-section-heading"><h2 id="pfp-recent-title">The ones along the way<span>RECENT ROLLS</span></h2><p>Good looks deserve a second look.</p></div>
+        <div class="pfp-picks" id="pfp-recent"><p class="pfp-empty">Your recent portraits will appear here.</p></div>
+      </section>
+
+      <section class="pfp-collection pfp-saved-section" aria-labelledby="pfp-saved-title">
+        <div class="pfp-section-heading"><h2 id="pfp-saved-title">Your keepers<span id="pfp-saved-count">0 / 12 SAVED</span></h2><p>Saved on this browser. Download to keep forever.</p></div>
+        <div class="pfp-picks" id="pfp-saved"><p class="pfp-empty">Found your favorite? Tap <strong>Save pick</strong> to keep it here.</p></div>
+      </section>
+
+      <div class="pfp-bottom-note"><span class="pfp-pixel-star" aria-hidden="true">✦</span><p>One shared universe. Your own little corner of it.</p><a href="/">Explore AGI <span aria-hidden="true">↗</span></a></div>
+    </main>
+    <footer class="pfp-footer"><span>AGI / PFP LAB</span><p>Made for the people behind the profile pictures.</p><a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">Find us on X ↗</a></footer>
+    <noscript><p class="pfp-noscript">Turn on JavaScript to create and download your profile picture.</p></noscript>
+    <script type="module" src="/src/pfp/page.js"></script>
+  </body>
+</html>

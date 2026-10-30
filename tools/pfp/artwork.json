@@ -1,0 +1,30 @@
+{
+  "project": "AGI PFP Lab",
+  "mode": "Built-in image_gen; browser canvas composition and palette swapping",
+  "asset_directory": "public/pfp/v1",
+  "characters": 48,
+  "backgrounds": 60,
+  "character_source_size": "512x512 RGBA PNG",
+  "background_size": "768x768 WebP",
+  "download_size": "1024x1024 PNG",
+  "references": [
+    "User's original purple-cap pixel-art AGI portrait",
+    "User's silver long-hair track-jacket and neck-headphones character",
+    "User's lavender shag-hair backward-cap varsity character",
+    "User's burgundy high-ponytail and white-bow character"
+  ],
+  "prompt_briefs": {
+    "character_style": "Premium detailed dithered pixel-art anime waist-up portraits matching the original reference, oversized glossy brown eyes, peach skin, streetwear, fully visible heads, consistent square framing, isolated on true transparent backgrounds. Source sprites use gold hair and violet fabric so the runtime can recolor them independently. Preserve neutral white details. Every character has AGI centered on the chest.",
+    "original_nine": "Long waves and cap; bob and headphones; twin tails and beanie; waves and bucket hat; braid and cap; shag and headphones; long hair and clips; space buns and beanie; curly hair and bucket hat.",
+    "reference_three": "Long center-part hair, white headphones around neck and purple track jacket; shag with black underside, backward cap and varsity jacket; long high ponytail, white bow and athletic jacket. Runtime Signature hair colors are silver, lavender and burgundy respectively.",
+    "looks_30_to_38": "Space cadet and rounded headset; side ponytail and star clips; braided updo and beret; curly puff and sports visor; long hair and winter earmuffs; pixie and sideways cap; half-up hair with bow and sailor sweatshirt; waves and wide-brim sunhat; bob and knitted animal-ear beanie.",
+    "looks_39_to_47": "Space explorer and helmet collar; long hair and sunflower clips; wolf cut and silver ear cuff; thick sports braids; asymmetric hair and tech headphones; messy bun and scrunchie; lace headband and collared blouse; painter beret and utility apron; ringlet curls and star hairband.",
+    "room": "Empty detailed pixel-art midnight gaming bedroom, purple screens, plants and figurines, AGI poster, desk, keyboard, AGI mug and sleeping black cat. No person, dark uncluttered center for portrait composition.",
+    "first_four_scenes": "Midnight city rooftop; sakura courtyard at twilight; neon arcade; cozy sunny bedroom. Rich shaded pixel clusters, no people, no labels or borders, empty center for a character.",
+    "worlds_nine": "Tokyo neon street; Paris rooftop; Bali sunset; Egyptian ruins; northern lights; futuristic megacity; moon base with Earth; nebula observation deck; floating garden city. Independent square empty scenes in consistent detailed pixel art.",
+    "fantasy_six": "Cosmic nebula and planets; monochrome ink mountains; wind-swept floating islands; glowing crystal cave; ocean suspended above clouds; pastel dream garden. Same pixel-art world, no people, borders or labels."
+  },
+  "additional_exact_prompt_records": ["characters-12-29-prompts.json", "background-generation.json"],
+  "composition": "Versioned recipes combine a character, independent hair and outfit palettes, a background, and seeded pixel glints. A measured high-contrast fabric AGI patch is drawn last over each chest print to prevent hair or hoodie strings from obscuring the lettering. Preview and PNG export use the same composition.",
+  "identity": "Cryptographically sampled recipes; guaranteed change from the current unlocked choices. This is an avatar generator, not an NFT mint or global exclusivity registry."
+}

@@ -1,0 +1,345 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
+import sharp from 'sharp';
+import {
+  TRAITS, validatePortrait, randomPortrait, encodePortrait, decodePortrait,
+  portraitCode, recolorPixels, rgbToHsl, brandPatchBounds, paintBrandPatch, renderPortrait,
+} from '../src/pfp/engine.js';
+import { BUILTIN_PAGES } from '../src/owner/catalog.js';
+
+const keys = Object.keys(TRAITS);
+const base = () => ({ version: 1, seed: '0123456789abcdef0123456789abcdef', character: 0, hair: 0, outfit: 0, backdrop: 0 });
+const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+const gold = [233, 189, 102, 255];
+const paintedHair = (config) => [...recolorPixels(new Uint8ClampedArray(gold), config)];
+
+test('PFP recipes validate every index and reject malformed untrusted configurations', () => {
+  assert.equal(validatePortrait(base()), true);
+  const invalid = [null, undefined, false, 1, '', [], {},
+    { ...base(), version: '1' }, { ...base(), version: 2 },
+    { ...base(), seed: '' }, { ...base(), seed: 'a'.repeat(31) },
+    { ...base(), seed: 'a'.repeat(33) }, { ...base(), seed: 'A'.repeat(32) },
+    { ...base(), seed: 'g'.repeat(32) }, { ...base(), seed: 123 },
+  ];
+  for (const key of keys) {
+    for (const value of [-1, 0.5, NaN, Infinity, '0', null, undefined, TRAITS[key].length]) {
+      invalid.push({ ...base(), [key]: value });
+    }
+    const missing = base();
+    delete missing[key];
+    invalid.push(missing);
+  }
+  for (const value of invalid) {
+    assert.equal(validatePortrait(value), false);
+    assert.throws(() => encodePortrait(value), /Invalid portrait/);
+  }
+});
+
+test('PFP share recipes round-trip every selectable value, including the final choices', () => {
+  for (const key of keys) {
+    for (let index = 0; index < TRAITS[key].length; index++) {
+      const config = { ...base(), [key]: index };
+      assert.deepEqual(decodePortrait(encodePortrait(config)), config, `${key} ${index}`);
+    }
+  }
+  const last = { ...base(), ...Object.fromEntries(keys.map((key) => [key, TRAITS[key].length - 1])) };
+  assert.deepEqual(decodePortrait(encodePortrait(last)), last);
+});
+
+test('PFP share decoder rejects oversized, incomplete, invalid-version and out-of-range hashes', () => {
+  const recipe = encodePortrait(base());
+  const bad = [null, undefined, {}, [], 123, '', 'a'.repeat(100_000),
+    `#p=${recipe}`, `${recipe}.0`, recipe.split('.').slice(0, -1).join('.'),
+    recipe.replace(/^1\./, '2.'), recipe.replace(/^1\./, '01.'),
+    recipe.replace(base().seed, 'g'.repeat(32)),
+    recipe.replace(base().seed, base().seed.toUpperCase()),
+    recipe.replace(base().seed, '0'.repeat(31)),
+    `${recipe}<script>`, `${recipe}\n`,
+  ];
+  for (let i = 0; i < keys.length; i++) {
+    for (const value of ['-1', '0.5', '!', 'zz', TRAITS[keys[i]].length.toString(36)]) {
+      const parts = recipe.split('.');
+      parts[i + 2] = value;
+      bad.push(parts.join('.'));
+    }
+  }
+  for (const value of bad) assert.equal(decodePortrait(value), null, String(value).slice(0, 90));
+});
+
+test('PFP randomization preserves locked traits and changes an unlocked visible choice', () => {
+  for (let mask = 0; mask < (1 << keys.length) - 1; mask++) {
+    const locks = keys.filter((_, index) => mask & (1 << index));
+    let previous = base();
+    for (let roll = 0; roll < 30; roll++) {
+      const snapshot = { ...previous };
+      const next = randomPortrait(previous, locks);
+      assert.ok(validatePortrait(next));
+      assert.deepEqual(previous, snapshot, 'the existing pick is never mutated');
+      for (const key of locks) {
+        if (key === 'hair') assert.deepEqual(paintedHair(next), paintedHair(previous), 'the visible hair color remains locked');
+        else assert.equal(next[key], previous[key], `${key} remains locked`);
+      }
+      assert.ok(keys.some((key) => !locks.includes(key) && next[key] !== previous[key]), 'the reroll changes a selectable trait');
+      if (locks.includes('backdrop')) assert.equal(next.seed, previous.seed, 'the locked scene keeps its decoration');
+      else assert.notEqual(next.seed, previous.seed);
+      if (locks.length === 3 && !locks.includes('hair')) {
+        assert.notDeepEqual(paintedHair(next), paintedHair(previous), 'a hair-only reroll visibly changes the hair');
+      }
+      previous = next;
+    }
+  }
+});
+
+test('PFP all-locked rerolls preserve the complete recipe and independent new rolls have unique seeds', () => {
+  const original = base();
+  const locked = randomPortrait(original, keys);
+  assert.deepEqual(locked, original);
+  assert.notEqual(locked, original, 'the returned recipe is a separate object');
+  const seeds = new Set();
+  for (let i = 0; i < 1000; i++) {
+    const next = randomPortrait();
+    assert.ok(validatePortrait(next));
+    assert.ok(!seeds.has(next.seed), 'a fresh seed has not been used in this sample');
+    seeds.add(next.seed);
+  }
+  assert.ok(validatePortrait(randomPortrait({ version: 99 }, keys)), 'an invalid restored recipe recovers to a valid portrait');
+});
+
+test('PFP signature hair matches each character reference and cannot cause a visually identical hair-only reroll', (t) => {
+  const signatures = Array.from({ length: TRAITS.character.length }, (_, character) => character === 9 ? 2 : character === 10 ? 3 : character === 11 ? 4 : 1);
+  for (let character = 0; character < signatures.length; character++) {
+    const signature = { ...base(), character, hair: 0 };
+    const explicit = { ...signature, hair: signatures[character] };
+    assert.deepEqual(paintedHair(signature), paintedHair(explicit), `character ${character}'s reference color`);
+  }
+  let forcedChoice = 0;
+  t.mock.method(globalThis.crypto, 'getRandomValues', (array) => {
+    array.fill(array instanceof Uint32Array ? forcedChoice : 0xa5);
+    return array;
+  });
+  for (const [character, hair, choice] of [[0, 1, 0], [9, 0, 1], [10, 0, 2], [11, 0, 3]]) {
+    forcedChoice = choice;
+    const previous = { ...base(), character, hair };
+    const next = randomPortrait(previous, ['character', 'outfit', 'backdrop']);
+    assert.notDeepEqual(paintedHair(next), paintedHair(previous), 'signature and its named color are not a false change');
+    assert.equal(next.seed, previous.seed);
+  }
+});
+
+test('PFP locking signature hair keeps its visible color when a different character is rolled', (t) => {
+  let forcedChoice = 0;
+  t.mock.method(globalThis.crypto, 'getRandomValues', (array) => {
+    array.fill(array instanceof Uint32Array ? forcedChoice : 0xa5);
+    return array;
+  });
+  for (const [character, choice] of [[0, 8], [9, 0], [10, 0], [11, 0]]) {
+    forcedChoice = choice;
+    const previous = { ...base(), character, hair: 0 };
+    const next = randomPortrait(previous, ['hair', 'outfit', 'backdrop']);
+    assert.notEqual(next.character, previous.character);
+    assert.deepEqual(paintedHair(next), paintedHair(previous), 'changing the character cannot change locked hair color');
+    assert.equal(next.outfit, previous.outfit);
+    assert.equal(next.backdrop, previous.backdrop);
+    assert.equal(next.seed, previous.seed);
+  }
+  const previous = { ...base(), character: 9, hair: 0 };
+  const next = randomPortrait(previous, ['character', 'hair', 'backdrop']);
+  assert.equal(next.hair, 0, 'the signature selection stays when the character stays');
+  assert.deepEqual(paintedHair(next), paintedHair(previous));
+});
+
+test('PFP display IDs survive sharing and change when a recipe is edited', () => {
+  const original = base();
+  const code = portraitCode(original);
+  assert.match(code, /^AGI-[0-9A-F]{8}$/);
+  assert.equal(portraitCode(decodePortrait(encodePortrait(original))), code);
+  for (const key of keys) assert.notEqual(portraitCode({ ...original, [key]: TRAITS[key].length - 1 }), code);
+  assert.notEqual(portraitCode({ ...original, seed: 'f'.repeat(32) }), code);
+  assert.throws(() => portraitCode({}), /Invalid portrait/);
+});
+
+test('PFP recoloring keeps transparency, white AGI lettering, skin and neutral outlines intact', () => {
+  const pixels = [
+    [233, 189, 102, 0], [145, 94, 205, 0], // hidden RGB must not bleed into edges
+    [255, 255, 255, 255], [245, 245, 245, 255], [250, 249, 247, 190], // white and warm antialiasing
+    [244, 204, 166, 255], [231, 169, 148, 255], [201, 145, 122, 128], // peach skin and shadow
+    [28, 25, 30, 255], [194, 194, 194, 255], // outlines and neutral hardware
+  ];
+  const source = new Uint8ClampedArray(pixels.flat());
+  const result = recolorPixels(source.slice(), { ...base(), hair: 8, outfit: 3 });
+  assert.deepEqual(result, source);
+});
+
+test('PFP gold hair and purple fabric recolor independently without flattening their shading or alpha', () => {
+  const pixels = [gold, [166, 128, 49, 160], [249, 223, 155, 255], [145, 94, 205, 255], [70, 42, 108, 128]];
+  const source = new Uint8ClampedArray(pixels.flat());
+  assert.deepEqual(recolorPixels(source.slice(), base()), source, 'the original palette remains exact');
+  const hairOnly = recolorPixels(source.slice(), { ...base(), hair: 8 });
+  const outfitOnly = recolorPixels(source.slice(), { ...base(), outfit: 3 });
+  const combined = recolorPixels(source.slice(), { ...base(), hair: 8, outfit: 3 });
+  for (let index = 0; index < pixels.length; index++) {
+    const offset = index * 4;
+    const before = source.slice(offset, offset + 3);
+    const changed = combined.slice(offset, offset + 3);
+    assert.notDeepEqual(changed, before);
+    assert.equal(combined[offset + 3], pixels[index][3], 'semi-transparent edges retain their alpha');
+    const hue = rgbToHsl(...changed)[0];
+    assert.ok(Math.abs(hue - (index < 3 ? TRAITS.hair[8].h : TRAITS.outfit[3].h)) < 2, 'the selected palette determines the hue');
+    assert.deepEqual((index < 3 ? outfitOnly : hairOnly).slice(offset, offset + 4), source.slice(offset, offset + 4), 'changing one trait leaves the other untouched');
+  }
+  const lightness = (index) => rgbToHsl(...combined.slice(index * 4, index * 4 + 3))[2];
+  assert.ok(lightness(1) < lightness(0) && lightness(0) < lightness(2), 'hair shadow, midtone and highlight retain their order');
+  assert.ok(lightness(4) < lightness(3), 'fabric shadow remains darker');
+});
+
+test('PFP expanded-character palette masks preserve exposed arms and necks', async () => {
+  for (const [character, points] of [[35, [[125, 505], [303, 313]]], [47, [[282, 314]]]]) {
+    const { data } = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const before = Buffer.from(data);
+    recolorPixels(data, { ...base(), character, hair: 2 });
+    for (const [x, y] of points) {
+      const offset = (y * 512 + x) * 4;
+      assert.ok(before[offset + 3] > 200, 'the versioned sample lies on visible skin');
+      assert.deepEqual(data.subarray(offset, offset + 4), before.subarray(offset, offset + 4), `character ${character}: exposed skin at ${x},${y} retains its color`);
+    }
+  }
+});
+
+test('PFP warm hair beside the jaw and outer curls follows the selected palette', async () => {
+  for (const [character, x, y, hair] of [[47, 292, 299, 2], [8, 151, 306, 4]]) {
+    const { data } = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const offset = (y * 512 + x) * 4;
+    const before = Buffer.from(data.subarray(offset, offset + 4));
+    recolorPixels(data, { ...base(), character, hair });
+    assert.ok(before[3] > 200, 'the versioned sample lies on an opaque strand');
+    assert.notDeepEqual(data.subarray(offset, offset + 3), before.subarray(0, 3), `character ${character}: the warm hair edge recolors`);
+    assert.equal(data[offset + 3], before[3], 'recoloring retains strand transparency');
+    const hue = rgbToHsl(...data.subarray(offset, offset + 3))[0];
+    assert.ok(Math.abs(hue - TRAITS.hair[hair].h) < 3, 'the strand uses the selected hair hue');
+  }
+});
+
+test('PFP every character has a complete high-contrast AGI patch inside its square canvas', () => {
+  assert.equal(TRAITS.character.length, 48, 'all released character looks have branding coverage');
+  for (let character = 0; character < TRAITS.character.length; character++) {
+    const bounds = brandPatchBounds(character);
+    const { x, y, width, height } = bounds;
+    assert.ok(Object.values(bounds).every(Number.isInteger), 'pixel-art placement uses whole pixels');
+    assert.ok(x >= 0 && y >= 0 && x + width <= 512 && y + height <= 512, `character ${character}: the patch is not clipped`);
+    const calls = [];
+    const ctx = { fillStyle: '', fillRect(left, top, w, h) { calls.push({ color: this.fillStyle, left, top, w, h }); } };
+    paintBrandPatch(ctx, character);
+    for (const call of calls) {
+      assert.ok(call.w > 0 && call.h > 0);
+      assert.ok(call.left >= x && call.top >= y && call.left + call.w <= x + width && call.top + call.h <= y + height, 'all stitching and lettering stays inside the patch');
+    }
+    const text = calls.filter((call) => call.color === '#fff1da');
+    assert.ok(text.length > 0, 'light lettering is present');
+    const firstText = calls.findIndex((call) => call.color === '#fff1da');
+    assert.ok(firstText > 0, 'the contrasting fabric is painted first');
+    assert.ok(calls.slice(firstText).every((call) => call.color === '#fff1da'), 'no fabric or stitches obscure the lettering afterward');
+
+    // Inspect the rendered letter shapes, not an implementation-owned glyph table.
+    const minX = Math.min(...text.map((call) => call.left));
+    const maxX = Math.max(...text.map((call) => call.left + call.w));
+    const minY = Math.min(...text.map((call) => call.top));
+    const maxY = Math.max(...text.map((call) => call.top + call.h));
+    const occupied = (px, py) => text.some((call) => px >= call.left && px < call.left + call.w && py >= call.top && py < call.top + call.h);
+    const columns = Array.from({ length: maxX - minX }, (_, offset) => text.some((call) => minX + offset >= call.left && minX + offset < call.left + call.w));
+    const letters = [];
+    for (let col = 0; col < columns.length; col++) {
+      if (!columns[col]) continue;
+      const start = col;
+      while (col + 1 < columns.length && columns[col + 1]) col++;
+      letters.push({ left: minX + start, width: col - start + 1 });
+    }
+    assert.equal(letters.length, 3, 'A, G and I remain separated and readable');
+    const at = (letter, col, row) => occupied(letters[letter].left + (col + 0.5) * letters[letter].width / 5, minY + (row + 0.5) * (maxY - minY) / 7);
+    assert.ok(at(0, 0, 5) && at(0, 4, 5) && !at(0, 2, 5) && at(0, 2, 3), 'A has two stems, an opening and crossbar');
+    assert.ok(at(1, 0, 2) && !at(1, 4, 2) && at(1, 4, 4) && at(1, 3, 3), 'G has an open right edge and inward bar');
+    assert.ok(at(2, 0, 0) && at(2, 4, 6) && at(2, 2, 3) && !at(2, 0, 3), 'I has broad caps and a central stem');
+  }
+});
+
+test('PFP composition paints AGI over the character before the final export-size copy', async (t) => {
+  const oldImage = Object.getOwnPropertyDescriptor(globalThis, 'Image');
+  const oldDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  t.after(() => {
+    if (oldImage) Object.defineProperty(globalThis, 'Image', oldImage); else delete globalThis.Image;
+    if (oldDocument) Object.defineProperty(globalThis, 'document', oldDocument); else delete globalThis.document;
+  });
+  class Canvas {
+    constructor() {
+      const events = [];
+      this.context = {
+        events, fillStyle: '',
+        drawImage(image, ...args) { events.push({ kind: 'image', image, args }); },
+        fillRect(...args) { events.push({ kind: 'fill', color: this.fillStyle, args }); },
+        getImageData() { return { data: new Uint8ClampedArray(512 * 512 * 4) }; },
+        putImageData() {},
+      };
+    }
+    getContext() { return this.context; }
+  }
+  class LocalImage {
+    set src(value) { this.url = value; queueMicrotask(() => this.onload?.()); }
+  }
+  Object.defineProperty(globalThis, 'Image', { configurable: true, value: LocalImage });
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: () => new Canvas() } });
+  const target = new Canvas();
+  assert.equal(await renderPortrait(target, { ...base(), character: 47 }), target);
+  assert.equal(target.width, 1024);
+  assert.equal(target.height, 1024);
+  const exported = target.context.events.at(-1);
+  assert.equal(exported.kind, 'image');
+  const composition = exported.image.context.events;
+  const patchStart = composition.findIndex((event) => event.kind === 'fill' && event.color === '#180f25');
+  assert.ok(patchStart > 0);
+  assert.equal(composition[patchStart - 1].kind, 'image', 'the character is drawn immediately before its branding');
+  assert.ok(composition.slice(patchStart).every((event) => event.kind === 'fill'), 'the character cannot cover the completed AGI patch');
+  assert.equal(composition.at(-1).color, '#fff1da', 'cream lettering is the last layer of the portrait');
+});
+
+test('PFP every declared character and scene has a decodable square local asset', async () => {
+  const files = [
+    ...TRAITS.character.map((_, index) => ({ file: `character-${index}.png`, character: true })),
+    ...TRAITS.backdrop.map(({ file }) => ({ file: `${file}.webp`, character: false })),
+  ];
+  assert.equal(new Set(files.map(({ file }) => file)).size, files.length);
+  for (const { file, character } of files) {
+    assert.match(file, /^[a-z0-9-]+\.(png|webp)$/);
+    const url = new URL(`../public/pfp/v1/${file}`, import.meta.url);
+    assert.ok(existsSync(url), `${file} exists`);
+    const metadata = await sharp(readFileSync(url)).metadata();
+    assert.equal(metadata.width, metadata.height, `${file} is square`);
+    assert.ok(metadata.width >= 512, `${file} has enough source detail`);
+    if (character) assert.equal(metadata.hasAlpha, true, `${file} can layer over its scene`);
+  }
+});
+
+test('PFP is built, reachable in local preview, linked from home and included in share metadata', async () => {
+  const { default: config } = await import('../vite.config.js');
+  assert.equal(config.build.rollupOptions.input.pfp, 'pfp.html');
+  for (const hook of ['configureServer', 'configurePreviewServer']) {
+    const middleware = [];
+    for (const plugin of config.plugins) plugin[hook]?.({ middlewares: { use: (handler) => middleware.push(handler) } });
+    for (const [url, expected] of [['/pfp', '/pfp.html'], ['/pfp/?keep=1', '/pfp.html?keep=1']]) {
+      const request = { url, headers: { host: 'localhost' } };
+      for (const handler of middleware) handler(request, {}, () => {});
+      assert.equal(request.url, expected, `${hook}: ${url}`);
+    }
+  }
+  const html = read('pfp.html');
+  assert.match(html, /<script type="module" src="\/src\/pfp\/page\.js"><\/script>/);
+  assert.match(html, /rel="canonical" href="__SITE__\/pfp"/);
+  assert.doesNotMatch(html, /<script\s*>|\sstyle=/i, 'production CSP does not need an inline-script or style exception');
+  assert.match(read('scripts/share-pages.js'), /'dist\/pfp\.html'/);
+  assert.ok(BUILTIN_PAGES.some((page) => page.path === '/pfp'));
+  const home = read('index.html');
+  for (const marker of ['id="site-nav"', 'class="foot-nav"']) {
+    const start = home.indexOf(marker);
+    assert.ok(start >= 0);
+    assert.match(home.slice(start, home.indexOf('</nav>', start)), /href="\/pfp"/, 'home navigation and footer link to the generator');
+  }
+});

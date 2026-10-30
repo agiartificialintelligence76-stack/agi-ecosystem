@@ -84,7 +84,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   for (const [name, html] of Object.entries(allSharePages(site))) writeFileSync(`dist/share/${name}.html`, html);
   for (const page of ['dist/index.html', 'dist/diary.html', 'dist/live.html', 'dist/studio.html', 'dist/roadmap.html', 'dist/stake.html',
     'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html', 'dist/memes.html',
-    'dist/vote.html', 'dist/verify.html']) {
+    'dist/pfp.html', 'dist/vote.html', 'dist/verify.html']) {
     if (existsSync(page)) writeFileSync(page, readFileSync(page, 'utf8').replaceAll('__SITE__', site));
   }
   console.log(`✓ share pages written for ${site}`);

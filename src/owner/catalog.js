@@ -6,6 +6,7 @@ export const BUILTIN_PAGES = Object.freeze([
   { path: '/live', title: 'Live' },
   { path: '/launch', title: 'Launch with AGI-1' },
   { path: '/memes', title: 'Memes' },
+  { path: '/pfp', title: 'AGI Profile Pictures' },
   { path: '/vote', title: 'Community votes' },
   { path: '/roadmap', title: 'Roadmap' },
   { path: '/stake', title: 'Stake' },
