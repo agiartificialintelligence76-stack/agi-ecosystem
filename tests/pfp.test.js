@@ -536,3 +536,208 @@ test('PFP stays available in every built page with the shared header and footer 
   for (const file of ['diary.html', 'memes.html', 'pfp.html']) assert.ok(checked.includes(file), `${file} uses the shared navigation under test`);
   assert.deepEqual(failures, [], failures.join('\n'));
 });
+
+
+test('PFP pale fabric highlights recolor smoothly across every outfit palette', async () => {
+  const samples = [
+    { character: 37, points: [[146, 447, [227, 185, 246, 253]], [147, 447, [237, 202, 249, 252]]] },
+    { character: 33, points: [[195, 352, [230, 189, 242, 252]], [196, 352, [239, 202, 247, 252]]] },
+    { character: 30, points: [[83, 449, [232, 189, 245, 253]], [84, 449, [236, 205, 245, 253]]] },
+  ];
+  const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  for (const { character, points } of samples) {
+    const source = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer();
+    const offsets = points.map(([x, y, rgba]) => {
+      const offset = (y * 512 + x) * 4;
+      assert.deepEqual([...source.subarray(offset, offset + 4)], rgba, 'the regression uses the original measured garment pixels');
+      return offset;
+    });
+    const originalGap = distance(points[0][2], points[1][2]);
+    for (let outfit = 1; outfit < TRAITS.outfit.length; outfit++) {
+      const result = recolorPixels(Buffer.from(source), { ...base(), character, hair: 1, outfit });
+      const colors = offsets.map((offset, index) => {
+        const color = [...result.subarray(offset, offset + 3)];
+        assert.notDeepEqual(color, points[index][2].slice(0, 3), `character ${character}: both sides of the pale fabric edge follow ${TRAITS.outfit[outfit].label}`);
+        assert.equal(result[offset + 3], points[index][2][3], 'recoloring never changes the fabric alpha');
+        const [h, s] = rgbToHsl(...color);
+        if (TRAITS.outfit[outfit].s > 0.15) {
+          const hueGap = Math.abs(h - TRAITS.outfit[outfit].h);
+          assert.ok(Math.min(hueGap, 360 - hueGap) < 8, 'a highlight cannot remain source-purple inside another outfit color');
+        } else assert.ok(s < 0.15, 'Graphite highlights remain neutral');
+        return color;
+      });
+      assert.ok(rgbToHsl(...colors[0])[2] < rgbToHsl(...colors[1])[2], 'the original shadow-to-highlight order is preserved');
+      assert.ok(distance(...colors) < Math.max(45, originalGap * 2.5), 'nearby source shades cannot turn into contrasting paint speckles');
+    }
+  }
+});
+
+test('PFP every character has its own bounded anatomy mask', async () => {
+  const { SKIN_REGIONS, skinMask } = await import('../src/pfp/skin-mask.js');
+  assert.equal(SKIN_REGIONS.length, TRAITS.character.length, 'new characters cannot silently use an unrelated face outline');
+  const buffers = new Set();
+  for (let character = 0; character < TRAITS.character.length; character++) {
+    const regions = SKIN_REGIONS[character];
+    assert.ok(Array.isArray(regions) && regions.length >= 2, `character ${character} has measured face and neck regions`);
+    for (const polygon of regions) {
+      assert.ok(polygon.length >= 3);
+      for (const [x, y] of polygon) assert.ok(Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= 512 && y >= 0 && y <= 512, 'anatomy coordinates stay inside the source sprite');
+    }
+    const mask = skinMask(character);
+    assert.equal(mask.length, 512 * 512);
+    assert.equal(buffers.has(mask), false, 'characters do not share a fallback mask');
+    buffers.add(mask);
+    let protectedPixels = 0;
+    for (const material of mask) {
+      assert.ok(material === 0 || material === 1 || material === 2 || material === 3, 'only empty, immutable face/accessory, lens, and anatomy-edge materials are present');
+      if (material) protectedPixels++;
+    }
+    assert.ok(protectedPixels > 2000 && protectedPixels < 70000, 'the mask protects anatomy without freezing the whole portrait');
+  }
+});
+
+test('PFP translucent visor recolors as one material while keeping hair changes independent', async () => {
+  const source = await sharp(readFileSync(new URL('../public/pfp/v1/character-23.png', import.meta.url))).ensureAlpha().raw().toBuffer();
+  const samples = [[240, 135, [120, 60, 187, 253]], [255, 131, [186, 109, 184, 253]], [210, 160, [249, 233, 212, 254]]];
+  const hairOnly = recolorPixels(Buffer.from(source), { ...base(), character: 23, hair: 5 });
+  const teal = recolorPixels(Buffer.from(source), { ...base(), character: 23, hair: 5, outfit: 8 });
+  for (const [x, y, rgba] of samples) {
+    const offset = (y * 512 + x) * 4;
+    assert.deepEqual([...source.subarray(offset, offset + 4)], rgba, 'samples retain the source glass and its differently colored reflections');
+    assert.deepEqual(hairOnly.subarray(offset, offset + 4), source.subarray(offset, offset + 4), 'changing hair does not paint over the visor');
+    assert.notDeepEqual(teal.subarray(offset, offset + 3), source.subarray(offset, offset + 3), 'purple, pink, and warm lens reflections all follow the outfit');
+    const hue = rgbToHsl(...teal.subarray(offset, offset + 3))[0];
+    assert.ok(Math.abs(hue - TRAITS.outfit[8].h) < 5);
+    assert.equal(teal[offset + 3], source[offset + 3]);
+  }
+});
+
+test('PFP all 48 measured anatomy and hair samples behave correctly in every color', async () => {
+  // Source coordinates and RGBA were independently inspected on the final artwork.
+  // Each point records [name, x, y, protected, original RGBA]; these are not derived from the mask under test.
+  const samples = [
+    [0,[["face",275,255,1,[247,202,142,253]],["neck",268,350,1,[231,179,120,252]],["hair/bang",195,218,0,[255,212,103,253]],["lip",285,275,1,[77,38,21,253]],["arm",165,506,1,[231,170,120,252]]]],
+    [1,[["face",282,253,1,[249,205,147,252]],["neck",275,332,1,[237,184,126,252]],["hair/bang",270,177,0,[227,162,88,252]]]],
+    [2,[["face",285,255,1,[249,203,144,253]],["neck",275,341,1,[232,181,124,253]],["hair/bang",270,190,0,[251,210,106,252]]]],
+    [3,[["face",288,254,1,[248,204,146,253]],["neck",255,327,1,[234,181,123,253]],["hair/bang",308,170,0,[251,200,96,253]]]],
+    [4,[["face",275,239,1,[248,205,145,252]],["neck",265,322,1,[237,187,128,253]],["hair/bang",299,180,0,[249,200,97,252]]]],
+    [5,[["face",270,250,1,[250,206,146,252]],["neck",262,331,1,[237,185,129,252]],["hair/bang",262,180,0,[251,201,96,253]]]],
+    [6,[["face",280,231,1,[247,202,141,253]],["neck",275,304,1,[234,184,125,253]],["hair/bang",280,163,0,[250,200,97,253]]]],
+    [7,[["face",273,251,1,[250,206,148,253]],["neck",273,328,1,[235,184,128,253]],["hair/bang",273,181,0,[228,165,69,252]],["arm",130,495,1,[249,203,144,253]]]],
+    [8,[["face",270,235,1,[249,203,147,253]],["neck",268,315,1,[235,185,126,253]],["hair/bang",277,178,0,[250,198,88,253]]]],
+    [9,[["face",260,238,1,[250,199,139,252]],["neck",267,352,1,[245,184,125,252]],["hair/bang",239,100,0,[241,182,72,253]],["neck edge",293,297,1,[234,176,117,252]],["clavicle",244,374,1,[221,148,99,253]],["ear",337,195,1,[226,147,97,252]],["iris",289,197,1,[4,2,1,252]]]],
+    [10,[["face",260,250,1,[251,201,144,252]],["neck",264,345,1,[242,183,123,252]],["hair/bang",258,181,0,[254,210,100,252]]]],
+    [11,[["face",320,258,1,[251,201,142,252]],["neck",329,362,1,[242,183,124,253]],["hair/bang",329,183,0,[250,200,81,252]]]],
+    [12,[["face",285,263,1,[252,205,149,253]],["neck",275,366,1,[241,186,131,253]],["hair/bang",287,190,0,[251,199,75,253]]]],
+    [13,[["face",280,248,1,[252,208,152,253]],["neck",270,369,1,[239,182,124,253]],["hair/bang",270,183,0,[252,205,78,253]]]],
+    [14,[["face",260,255,1,[252,209,158,251]],["neck",268,350,1,[241,185,130,253]],["hair/bang",255,191,0,[233,164,55,253]]]],
+    [15,[["face",291,246,1,[252,208,156,251]],["neck",270,344,1,[246,187,130,250]],["hair/bang",290,180,0,[252,205,76,253]],["ear",175,253,1,[233,145,85,253]]]],
+    [16,[["face",275,245,1,[252,211,160,253]],["neck",275,345,1,[241,187,131,253]],["hair/bang",275,165,0,[229,159,51,253]]]],
+    [17,[["face",284,263,1,[252,209,158,253]],["neck",286,365,1,[241,187,131,253]],["hair/bang",280,184,0,[252,204,79,253]]]],
+    [18,[["face",282,278,1,[136,83,43,253]],["neck",275,365,1,[240,186,129,253]],["hair/bang",275,189,0,[251,205,79,253]],["ear",158,270,1,[245,163,100,253]]]],
+    [19,[["face",270,255,1,[251,205,150,253]],["neck",263,350,1,[240,184,125,253]],["hair/bang",280,184,0,[252,208,81,253]],["ear",160,252,1,[234,155,92,253]]]],
+    [20,[["face",269,260,1,[250,205,156,253]],["neck",265,329,1,[242,186,128,253]],["hair/bang",261,185,0,[252,205,79,253]],["ear",145,245,1,[231,149,73,253]]]],
+    [21,[["face",276,275,1,[252,203,144,253]],["neck",270,359,1,[244,183,118,253]],["hair/bang",278,211,0,[251,208,74,253]]]],
+    [22,[["face",263,263,1,[252,200,140,253]],["neck",265,345,1,[243,181,116,253]],["hair/bang",270,185,0,[251,207,76,253]]]],
+    [23,[["face",306,272,1,[251,204,145,253]],["neck",301,368,1,[251,197,136,253]],["hair/bang",302,212,0,[251,212,85,253]]]],
+    [24,[["face",290,270,1,[252,207,149,253]],["neck",258,353,1,[244,185,121,253]],["hair",314,174,0,[250,207,75,253]]]],
+    [25,[["face",265,270,1,[229,112,72,253]],["neck",256,350,1,[243,183,118,253]],["hair",270,170,0,[251,205,73,253]]]],
+    [26,[["forehead",235,200,1,[251,198,146,253]],["face",280,267,1,[252,206,144,253]],["neck",280,350,1,[243,182,118,253]],["hair",278,170,0,[252,213,81,253]]]],
+    [27,[["face",280,250,1,[255,207,148,253]],["neck",275,335,1,[244,183,119,253]],["hair",289,162,0,[251,210,82,253]]]],
+    [28,[["face",265,260,1,[251,198,138,253]],["neck",235,296,1,[242,181,120,253]],["hair",280,159,0,[251,209,79,253]]]],
+    [29,[["face",288,265,1,[247,207,147,253]],["neck",280,340,1,[244,184,119,253]],["hair",295,170,0,[251,212,80,253]]]],
+    [30,[["face",285,280,1,[251,204,142,252]],["neck",273,317,1,[208,131,85,252]],["hair",294,177,0,[250,198,91,253]],["eye",265,240,1,[41,33,54,253]]]],
+    [31,[["hairCurl",265,375,0,[250,204,95,253]],["face",285,283,1,[248,204,138,252]],["neck",281,349,1,[240,184,120,253]],["hair",289,181,0,[250,205,90,253]],["ear",180,280,1,[244,189,124,252]]]],
+    [32,[["face",281,289,1,[250,207,148,252]],["neck",272,333,1,[226,161,101,253]],["hair",283,194,0,[255,208,96,253]],["ear",173,286,1,[254,208,136,252]]]],
+    [33,[["iris",369,239,1,[32,8,3,253]],["face",319,282,1,[101,42,26,253]],["neck",285,346,1,[240,184,120,253]],["hair",341,191,0,[251,203,92,253]],["ear",212,256,1,[241,185,126,253]]]],
+    [34,[["face",302,257,1,[248,205,139,252]],["neck",286,302,1,[238,177,116,253]],["hair",298,154,0,[250,201,88,253]],["eyelash",216,221,1,[15,0,39,253]]]],
+    [35,[["face",282,269,1,[250,206,145,252]],["neck",277,339,1,[238,183,120,252]],["hair",296,171,0,[252,215,99,253]],["ear",181,254,1,[248,198,136,253]],["arm",124,505,1,[220,147,102,252]]]],
+    [36,[["hairShadow",250,320,0,[207,146,61,252]],["forehead",265,190,1,[62,19,0,252]],["iris",340,230,1,[235,128,43,253]],["face",296,275,1,[248,202,143,252]],["neck",288,345,1,[241,184,122,253]],["hair",297,167,0,[251,203,91,253]],["ear",187,263,1,[246,184,123,253]]]],
+    [37,[["face",301,270,1,[49,20,8,252]],["neck",287,340,1,[240,184,123,252]],["hair",306,175,0,[250,206,97,252]]]],
+    [38,[["face",316,282,1,[193,103,64,253]],["neck",299,320,1,[235,171,115,253]],["hair",315,183,0,[252,204,89,253]]]],
+    [39,[["face",278,280,1,[242,184,129,252]],["neck",254,324,1,[232,172,117,252]],["hair",294,181,0,[252,215,106,253]]]],
+    [40,[["face",280,277,1,[251,208,149,253]],["neck",271,340,1,[237,183,127,252]],["hair",284,180,0,[249,198,88,253]],["ear",165,255,1,[228,157,93,252]],["flower",142,143,1,[140,69,33,252]],["flowerPetal",385,105,1,[241,186,22,248]]]],
+    [41,[["face",263,284,1,[153,84,49,253]],["neck",286,354,1,[238,181,124,253]],["hair",253,185,0,[237,182,77,253]],["ear",372,235,1,[234,162,106,252]]]],
+    [42,[["face",287,271,1,[233,131,88,253]],["neck",256,328,1,[233,178,123,253]],["hair",304,164,0,[251,209,97,253]],["ear",174,217,1,[235,148,94,252]]]],
+    [43,[["face",282,280,1,[252,210,150,252]],["neck",260,350,1,[236,181,124,253]],["hair",303,181,0,[254,216,102,252]]]],
+    [44,[["face",280,294,1,[219,107,75,253]],["neck",260,343,1,[231,177,122,253]],["hair",279,195,0,[251,200,88,252]],["ear",169,280,1,[223,152,97,252]]]],
+    [45,[["face",285,257,1,[251,209,148,252]],["neck",277,307,1,[237,178,122,253]],["hair",287,163,0,[252,211,100,253]]]],
+    [46,[["face",283,266,1,[250,205,149,253]],["neck",281,332,1,[237,182,128,253]],["hair",288,174,0,[251,199,87,252]],["ear",175,254,1,[204,128,83,253]],["arm",135,503,1,[247,190,130,252]]]],
+    [47,[["face",267,270,1,[251,211,159,252]],["neck",260,331,1,[239,183,128,253]],["hair",277,172,0,[252,207,97,253]],["ear",151,251,1,[215,126,74,252]]]],
+  ];
+  const { skinMask } = await import('../src/pfp/skin-mask.js');
+  assert.deepEqual(samples.map(([character]) => character), TRAITS.character.map((_, index) => index), 'every selectable design has measured anatomy and hair coverage');
+  const palettes = [
+    ...TRAITS.hair.map((_, hair) => ({ hair, outfit: 0 })),
+    ...TRAITS.outfit.map((_, outfit) => ({ hair: 1, outfit })),
+  ];
+  for (const [character, points] of samples) {
+    const source = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer();
+    // Retain the full source coordinate space, but exercise only the measured
+    // pixels so every palette remains inexpensive in the parallel build suite.
+    const probe = Buffer.alloc(source.length);
+    const mask = skinMask(character);
+    assert.ok(points.some(([, , , protect]) => protect) && points.some(([, , , protect]) => !protect), 'each design tests protection and recoloring');
+    for (const [name, x, y, protect, rgba] of points) {
+      const offset = (y * 512 + x) * 4;
+      assert.deepEqual([...source.subarray(offset, offset + 4)], rgba, `character ${character}: ${name} is the measured original pixel`);
+      source.copy(probe, offset, offset, offset + 4);
+      assert.ok(rgba[3] > 200, 'the measured point lies on visible artwork');
+      const material = mask[y * 512 + x];
+      assert.equal(Number(material === 1 || material === 3), protect, `character ${character}: ${name} has the correct protection`);
+      if (['face', 'forehead', 'lip', 'eye', 'eyelash', 'iris', 'flower', 'flowerPetal'].includes(name)) {
+        assert.equal(material, 1, 'faces, eyes and fixed accessories cannot inherit the fabric exception');
+      }
+    }
+    for (const palette of palettes) {
+      const result = recolorPixels(Buffer.from(probe), { ...base(), character, ...palette });
+      for (const [name, x, y, protect] of points) {
+        const offset = (y * 512 + x) * 4;
+        const original = source.subarray(offset, offset + 4), actual = result.subarray(offset, offset + 4);
+        const message = `character ${character}, ${name}: hair ${palette.hair}, outfit ${palette.outfit}`;
+        assert.equal(actual[3], original[3], message + ' keeps alpha');
+        if (protect || palette.hair === 1) assert.deepEqual(actual, original, message + ' preserves source color');
+        else if (palette.hair > 1) assert.notDeepEqual(actual, original, message + ' recolors hair instead of freezing it as skin');
+      }
+    }
+  }
+});
+
+test('PFP scanline anatomy masks match independent point-in-polygon coverage', async () => {
+  const { SKIN_REGIONS, skinMask } = await import('../src/pfp/skin-mask.js');
+  const { ACCESSORY_REGIONS_B } = await import('../src/pfp/skin-regions-b.js');
+  function contains(x, y, polygon) {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const [xi, yi] = polygon[i], [xj, yj] = polygon[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  function coverage(regions) {
+    const covered = new Uint8Array(512 * 512);
+    for (const polygon of regions) {
+      const xs = polygon.map(([x]) => x), ys = polygon.map(([, y]) => y);
+      const left = Math.max(0, Math.floor(Math.min(...xs))), right = Math.min(511, Math.ceil(Math.max(...xs)));
+      const top = Math.max(0, Math.floor(Math.min(...ys))), bottom = Math.min(511, Math.ceil(Math.max(...ys)));
+      for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
+        if (contains(x + 0.5, y + 0.5, polygon)) covered[y * 512 + x] = 1;
+      }
+    }
+    return covered;
+  }
+  let overlappingFaceAndEdgePixels = 0;
+  for (const character of [0, 9, 31, 33, 36, 47]) {
+    const [face, ...edges] = SKIN_REGIONS[character];
+    const immutable = coverage([face, ...(ACCESSORY_REGIONS_B[character] || [])]);
+    const anatomyEdges = coverage(edges);
+    const expected = Uint8Array.from(immutable, (fixed, index) => {
+      if (fixed && anatomyEdges[index]) overlappingFaceAndEdgePixels++;
+      return fixed ? 1 : anatomyEdges[index] ? 3 : 0;
+    });
+    const actual = skinMask(character);
+    const mismatch = actual.findIndex((material, index) => material !== expected[index]);
+    assert.equal(mismatch, -1, `character ${character}: optimized contour fill differs from point coverage at ${mismatch % 512},${Math.floor(mismatch / 512)}`);
+  }
+  assert.ok(overlappingFaceAndEdgePixels > 0, 'the differential check includes overlapping regions where immutable face protection must win');
+});

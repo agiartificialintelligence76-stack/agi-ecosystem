@@ -1,3 +1,4 @@
+import { skinMask } from './skin-mask.js';
 import { normalizeCapText, supportsCapText, paintCapText, MAX_CAP_TEXT_LENGTH } from './cap-text.js';
 export { normalizeCapText, supportsCapText, MAX_CAP_TEXT_LENGTH } from './cap-text.js';
 // Versioned artwork + portable recipes: shared links never rely on a server or account.
@@ -146,94 +147,42 @@ export function hslToRgb(h, s, l) {
   return [r, g, b].map((v) => Math.round((v + m) * 255));
 }
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-// Warm hair shadows overlap the peach skin palette. These source-coordinate
-// outlines protect faces, necks and exposed arms while recoloring the entire
-// golden strand, rather than leaving orange outlines on silver or dark hair.
-const SKIN_REGIONS = [
-  [ [[157,246],[183,232],[216,198],[269,190],[312,180],[339,179],[359,211],[353,265],[332,289],[297,308],[264,308],[222,292],[189,276],[166,269],[154,257]], [[242,297],[287,305],[291,331],[313,343],[318,365],[299,380],[267,381],[235,370],[216,349],[240,334]], [[141,482],[195,498],[198,512],[144,512]], [[376,502],[414,483],[421,512],[375,512]] ],
-  [ [[193,229],[215,203],[246,189],[250,156],[256,204],[279,187],[297,169],[310,132],[316,160],[341,180],[357,200],[352,250],[333,274],[296,297],[255,297],[225,287],[205,266]], [[243,290],[295,296],[297,324],[319,341],[283,378],[246,349],[223,336],[241,321]] ],
-  [ [[194,248],[215,221],[243,209],[246,168],[254,220],[281,208],[300,182],[303,155],[325,183],[353,208],[350,262],[332,288],[301,308],[265,309],[232,295],[211,279]], [[252,302],[297,306],[301,329],[325,345],[320,363],[292,370],[254,367],[222,354],[246,333]] ],
-  [ [[208,212],[230,176],[266,155],[284,140],[289,170],[286,204],[309,197],[328,179],[346,144],[356,177],[368,217],[360,253],[336,276],[297,293],[265,286],[236,272],[218,250]], [[231,273],[272,286],[274,318],[300,337],[297,353],[268,357],[234,351],[216,339],[229,315]], [[119,500],[158,506],[160,512],[119,512]], [[424,505],[444,500],[446,512],[422,512]] ],
-  [ [[181,221],[207,191],[231,173],[269,168],[280,158],[279,193],[300,187],[321,150],[335,141],[342,174],[355,202],[349,245],[329,267],[294,283],[261,283],[226,270],[198,250]], [[229,269],[280,280],[283,301],[307,321],[305,340],[282,350],[247,345],[218,327],[227,306]] ],
-  [ [[181,239],[207,210],[242,201],[250,161],[255,204],[280,191],[295,167],[299,139],[323,161],[339,180],[345,217],[335,252],[310,279],[277,293],[244,290],[212,274],[190,258]], [[231,280],[279,289],[283,317],[308,335],[278,370],[243,348],[213,332],[229,313]] ],
-  [ [[186,221],[210,195],[242,180],[267,163],[282,136],[285,169],[308,155],[321,128],[345,149],[360,177],[352,218],[333,245],[301,268],[270,270],[238,261],[210,248],[191,231]], [[244,259],[296,270],[299,292],[320,310],[314,320],[286,325],[251,318],[229,306],[242,289]] ],
-  [ [[189,239],[211,210],[245,191],[252,151],[254,202],[277,186],[298,160],[305,142],[322,168],[344,180],[350,214],[342,250],[320,276],[289,288],[255,285],[225,277],[204,261]], [[243,279],[294,287],[297,312],[327,331],[319,350],[289,357],[253,350],[218,331],[241,312]], [[116,448],[173,474],[160,512],[95,512]], [[384,491],[431,472],[442,512],[383,512]] ],
-  [ [[181,236],[210,201],[240,186],[248,162],[253,200],[279,187],[306,162],[317,132],[326,163],[345,185],[350,222],[340,255],[321,276],[291,288],[258,285],[224,273],[198,256]], [[235,277],[283,287],[284,313],[299,327],[284,347],[260,335],[235,323]] ],
-  [ [[171,215],[188,177],[207,163],[210,132],[231,112],[250,119],[280,154],[315,176],[342,179],[346,213],[326,229],[319,244],[300,262],[278,278],[241,274],[206,258],[182,235]], [[238,268],[283,274],[294,303],[299,328],[312,348],[298,378],[278,388],[251,382],[236,356]] ],
-  [ [[166,226],[189,203],[210,196],[223,165],[232,198],[249,181],[264,153],[273,173],[301,164],[317,150],[329,178],[342,201],[335,238],[313,268],[285,285],[251,286],[217,274],[189,255]], [[227,276],[279,286],[283,315],[311,337],[325,358],[315,375],[285,380],[250,373],[228,356],[232,330]] ],
-  [ [[244,231],[268,207],[291,193],[303,169],[307,205],[330,190],[350,161],[368,171],[390,197],[403,219],[396,253],[375,279],[345,298],[310,294],[280,278],[257,255]], [[313,300],[345,298],[348,324],[370,345],[384,369],[378,387],[354,392],[327,384],[310,365],[316,333]] ],
-];
-function inPolygon(x, y, points) {
-  let inside = false;
-  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-    const [xi, yi] = points[i], [xj, yj] = points[j];
-    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-const skinMasks = new Map();
-const SKIN_OVERRIDES = {
-  8: [
-    SKIN_REGIONS[8][0],
-    [[236,279],[283,287],[284,313],[299,327],[284,347],[260,335],[246,325],[245,307]],
-  ],
-  35: [
-    [[171,237],[188,241],[210,214],[243,190],[254,168],[268,154],[273,195],[292,191],[316,152],[334,142],[349,172],[367,195],[365,236],[347,267],[311,291],[277,294],[244,286],[216,271],[192,255],[177,247]],
-    [[248,281],[306,292],[306,325],[323,336],[342,340],[345,357],[334,371],[310,378],[276,373],[246,360],[224,342],[243,330],[249,310]],
-    [[104,487],[146,497],[186,512],[100,512]], [[450,503],[478,493],[484,512],[447,512]],
-  ],
-  47: [
-    [[171,239],[194,214],[221,197],[244,184],[252,145],[260,201],[280,187],[297,164],[302,138],[321,165],[342,190],[344,230],[333,258],[310,278],[282,293],[247,291],[215,278],[189,260]],
-    [[228,282],[282,293],[284,320],[291,330],[308,338],[281,373],[257,356],[225,337]],
-  ],
-};
-function skinMask(character) {
-  if (skinMasks.has(character)) return skinMasks.get(character);
-  const regions = SKIN_OVERRIDES[character] || SKIN_REGIONS[character] || [
-    [[166,215],[197,166],[251,143],[315,151],[358,192],[363,243],[330,285],[282,307],[229,294],[183,260]],
-    [[229,283],[292,295],[302,326],[330,352],[316,383],[260,388],[222,354]],
-  ];
-  const result = new Uint8Array(512 * 512);
-  for (const polygon of regions) {
-    const xs = polygon.map(([x]) => x), ys = polygon.map(([, y]) => y);
-    const minX = Math.max(0, Math.min(...xs)), maxX = Math.min(511, Math.max(...xs));
-    const minY = Math.max(0, Math.min(...ys)), maxY = Math.min(511, Math.max(...ys));
-    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) if (inPolygon(x, y, polygon)) result[y * 512 + x] = 1;
-  }
-  // The curly bucket-hat fringe crosses in front of the forehead. Keep these
-  // measured strands out of the skin region, including their warm edge pixels.
-  if (character === 8) {
-    const strands = [
-      [[250,174],[267,163],[285,151],[300,144],[292,175],[279,195],[265,206],[252,201]],
-      [[190,204],[228,177],[249,169],[248,185],[235,194],[212,205]],
-    ];
-    for (let y = 144; y <= 206; y++) for (let x = 190; x <= 300; x++) {
-      if (strands.some((polygon) => inPolygon(x, y, polygon))) result[y * 512 + x] = 0;
-    }
-  }
-  skinMasks.set(character, result);
-  return result;
-}
 export function recolorPixels(data, config) {
   const hair = TRAITS.hair[effectiveHair(config)];
   const outfit = TRAITS.outfit[config.outfit];
   const skin = data.length === 512 * 512 * 4 ? skinMask(config.character) : null;
   for (let i = 0; i < data.length; i += 4) {
-    if (!data[i + 3]) continue;
-    // Cream-white fabric print can have a warm hue at very high luminance.
-    // Preserve those letter pixels rather than treating them as blonde hair.
-    if (Math.min(data[i], data[i + 1], data[i + 2]) >= 200) continue;
+    if (!data[i + 3] || skin?.[i / 4] === 1) continue;
+    const lens = skin?.[i / 4] === 2;
     const [h, s, l] = rgbToHsl(data[i], data[i + 1], data[i + 2]);
+    const fabricPixel = h > 238 && h < 301 && s > .24;
+    // A traced neck/arm edge can overlap a pixel of its violet collar or hem.
+    // Violet is keyed fabric in this artwork; protecting it would leave a
+    // purple seam on a differently coloured outfit. Warm anatomy stays exact.
+    if (skin?.[i / 4] === 3 && !fabricPixel) continue;
+    // Warm cream print is not blonde hair. Pale violet fabric, however, must
+    // follow its darker neighbours instead of leaving unrecoloured speckles.
+    if (!lens && h < 100 && Math.min(data[i], data[i + 1], data[i + 2]) >= 200) continue;
     let target, base;
     // Source art is keyed: gold hair, violet fabric, neutral peach skin and white logos.
     const warmEdge = skin && !skin[i / 4] && h >= 12 && h < 36 && s > .16 && l > .10 && l < .73;
-    const warmHairShadow = warmEdge || (h >= 24 && h < 36 && s > .26 && l > .23 && l < .73
-      && (!skin?.[i / 4] || (h >= 31 && s < .76 && l < .63)));
-    const goldenHair = h >= 36 && h < 72 && s > .30 && (!skin?.[i / 4] || h >= 38 || (l < .67 && s < .87));
-    if ((goldenHair || warmHairShadow) && effectiveHair(config) !== 1) { target = hair; base = .66; }
-    else if (h > 238 && h < 301 && s > .24 && config.outfit !== 0) { target = outfit; base = .60; }
+    const warmHairShadow = warmEdge || (h >= 24 && h < 36 && s > .26 && l > .23 && l < .73);
+    const goldenHair = h >= 36 && h < 72 && s > .30;
+    if (lens) {
+      // The translucent visor contains baked reflections of several hues;
+      // tint the glass as one material rather than selecting purple islands.
+      if (config.outfit !== 0 && s > .12) { target = outfit; base = .60; }
+    } else if ((goldenHair || warmHairShadow) && effectiveHair(config) !== 1) { target = hair; base = .66; }
+    else if (fabricPixel && config.outfit !== 0) { target = outfit; base = .60; }
     if (!target) continue;
-    const rgb = hslToRgb(target.h, target.s * clamp(s / .60, .70, 1.1), clamp(target.l + (l - base) * .82, .06, .94));
+    // Anchor fabric shading at black, its midtone and white. This keeps bright
+    // stitching/highlights bright even on dark outfits, without clipping folds.
+    const fabric = target === outfit;
+    const lightness = fabric
+      ? l < base ? target.l * l / base : target.l + (1 - target.l) * (l - base) / (1 - base)
+      : clamp(target.l + (l - base) * .82, .06, .94);
+    const saturation = target.s * (fabric ? clamp(s / .72, 0, 1.1) : clamp(s / .60, .70, 1.1));
+    const rgb = hslToRgb(target.h, saturation, lightness);
     data[i] = rgb[0]; data[i + 1] = rgb[1]; data[i + 2] = rgb[2];
   }
   return data;
@@ -261,7 +210,7 @@ const sprites = new Map();
 async function sprite(config) {
   const key = `${config.character}.${effectiveHair(config)}.${config.outfit}`;
   if (sprites.has(key)) return sprites.get(key);
-  const img = await loadImage(`${ROOT}character-${config.character}.png?v=20261030-natural2`);
+  const img = await loadImage(`${ROOT}character-${config.character}.png?v=20261031-paint1`);
   const layer = canvas(512), context = layer.getContext('2d', { willReadFrequently: true });
   context.drawImage(img, 0, 0, 512, 512);
   const pixels = context.getImageData(0, 0, 512, 512);

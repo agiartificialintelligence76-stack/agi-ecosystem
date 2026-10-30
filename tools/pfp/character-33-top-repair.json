@@ -1,0 +1,10 @@
+{
+  "mode": "built-in image_gen edit",
+  "source": "public/pfp/v1/character-33.png",
+  "generated": "C:/Users/User/.codex/generated_images/01a18ceb-7ecf-7351-a6f0-f4b71ca8d252/exec-a4699412-636b-4f05-a0a5-53d6fad06ea7.png",
+  "prompt": "Use case: precise-object-edit. Asset type: transparent square pixel-art profile sprite. Image 1 is the EDIT TARGET, a 512x512 RGBA portrait. Make one very small repair only: the top of the gold curly ponytail/puff at the upper left is cut flat horizontally at source y=24. Restore a naturally rounded, scalloped silhouette of the same gold curls in the existing empty top margin. The highest curl must remain at least 8 pixels below the top edge in the original 512x512 coordinate system. Change only the uppermost golden curls around source x=125..285, y=8..40, seamlessly joining the original curl texture below. Keep the exact same detailed dithered pixel-art style and original gold color. All existing pixels below y=40 should be visually identical. Do not move, recenter, enlarge, shrink, rescale, crop, or redesign the character. Preserve EXACT face, brown glossy eyes, expression, hairstyle below the repaired tiny top edge, purple visor with white stripes, pose, body, purple sweatshirt, and original white AGI chest text. Keep exact character coordinates and proportions. No new objects, text, decorative marks, borders, shadows, or background. Preserve true transparent alpha around the character; ignore any RGB colors stored under fully transparent pixels. Return the complete original square portrait with only the repaired top curl silhouette.",
+  "normalization": "512x512 nearest resize, no trimming/recentering; two optional top-only candidates retain rows40..511 byte-identical",
+  "candidateFull": "output/pfp-paint-audit/character-33-candidate-full.png",
+  "candidateTopOnly": "output/pfp-paint-audit/character-33-candidate-top-only.png",
+  "candidateTopBlend": "output/pfp-paint-audit/character-33-candidate-top-blend.png"
+}
