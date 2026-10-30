@@ -1,3 +1,5 @@
+import { normalizeCapText, supportsCapText, paintCapText, MAX_CAP_TEXT_LENGTH } from './cap-text.js';
+export { normalizeCapText, supportsCapText, MAX_CAP_TEXT_LENGTH } from './cap-text.js';
 // Versioned artwork + portable recipes: shared links never rely on a server or account.
 const ROOT = '/pfp/v1/';
 const characterNames = ['The Original · cap & waves', 'Lo-fi · bob & headphones', 'Double Trouble · twin tails', 'Daydream · bucket hat', 'Side Quest · braid & jacket', 'Offbeat · shag & headphones', 'Soft Signal · long hair & clips', 'Orbit · space buns', 'Cloud Nine · curls', 'Silver Frequency · track jacket', 'After Hours · backward cap', 'Cherry Rush · ponytail & bow'];
@@ -47,7 +49,8 @@ const KEYS = Object.keys(TRAITS);
 const SEED = /^[0-9a-f]{32}$/;
 export function validatePortrait(value) {
   return Boolean(value && typeof value === 'object' && value.version === 1 && typeof value.seed === 'string' && SEED.test(value.seed)
-    && KEYS.every((key) => Number.isInteger(value[key]) && value[key] >= 0 && value[key] < TRAITS[key].length));
+    && KEYS.every((key) => Number.isInteger(value[key]) && value[key] >= 0 && value[key] < TRAITS[key].length)
+    && (value.capText === undefined || (typeof value.capText === 'string' && value.capText === normalizeCapText(value.capText))));
 }
 function newSeed() {
   const bytes = new Uint8Array(16);
@@ -66,6 +69,7 @@ export function randomPortrait(previous, locks = []) {
   const held = new Set(locks);
   if (valid && KEYS.every((key) => held.has(key))) return { ...previous };
   const next = { version: 1, seed: newSeed() };
+  if (valid && previous.capText) next.capText = previous.capText;
   for (const key of KEYS) {
     if (valid && held.has(key)) next[key] = previous[key];
     else if (valid) {
@@ -90,13 +94,28 @@ export function randomPortrait(previous, locks = []) {
 }
 export function encodePortrait(value) {
   if (!validatePortrait(value)) throw new Error('Invalid portrait.');
-  return ['1', value.seed, ...KEYS.map((key) => value[key].toString(36))].join('.');
+  const parts = [value.capText ? '2' : '1', value.seed, ...KEYS.map((key) => value[key].toString(36))];
+  if (value.capText) parts.push(encodeCapText(value.capText));
+  return parts.join('.');
+}
+function encodeCapText(text) {
+  return btoa(String.fromCharCode(...new TextEncoder().encode(text))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 }
 export function decodePortrait(text) {
-  if (typeof text !== 'string' || text.length > 80 || !/^1\.[0-9a-f]{32}(?:\.[0-9a-z]{1,2}){4}$/.test(text)) return null;
-  const [version, seed, ...indices] = text.split('.');
-  const value = { version: Number(version), seed };
+  if (typeof text !== 'string' || text.length > 3000) return null;
+  const legacy = /^1\.[0-9a-f]{32}(?:\.[0-9a-z]{1,2}){4}$/.test(text);
+  if (!legacy && !/^2\.[0-9a-f]{32}(?:\.[0-9a-z]{1,2}){4}\.[A-Za-z0-9_-]+$/.test(text)) return null;
+  const [, seed, ...indices] = text.split('.');
+  const value = { version: 1, seed };
   KEYS.forEach((key, i) => { value[key] = parseInt(indices[i], 36); });
+  if (!legacy) {
+    try {
+      const encoded = indices[4];
+      const bytes = Uint8Array.from(atob(encoded.replaceAll('-', '+').replaceAll('_', '/')), (char) => char.charCodeAt(0));
+      value.capText = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      if (!value.capText || encodeCapText(value.capText) !== encoded) return null;
+    } catch { return null; }
+  }
   return validatePortrait(value) ? value : null;
 }
 export function portraitCode(value) {
@@ -283,6 +302,7 @@ export async function renderPortrait(target, config, { size = 1024 } = {}) {
     if (i % 7 === 0) { ctx.fillRect(x - 2, y, 6, 2); ctx.fillRect(x, y - 2, 2, 6); }
   }
   ctx.drawImage(character, 0, 0, 512, 512);
+  await paintCapText(ctx, config);
   target.width = target.height = size;
   const out = target.getContext('2d');
   if (!out) throw new Error('Canvas is unavailable.');

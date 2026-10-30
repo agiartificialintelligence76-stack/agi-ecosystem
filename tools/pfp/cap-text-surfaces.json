@@ -1,0 +1,466 @@
+{
+  "version": 1,
+  "coordinate_system": "512×512 original RGBA character sprite pixels",
+  "corner_order": [
+    "top-left",
+    "top-right",
+    "bottom-right",
+    "bottom-left"
+  ],
+  "purpose": "Natural custom text printed directly on existing hat fabric. No label box, patch, background rectangle, or clothing-text replacement.",
+  "audit_method": "Visual inspection of all 48 original sprites, followed by semi-transparent quadrilateral overlays on all 19 supported hats.",
+  "audit_proof": "output/pfp-hats/placement-audit.png",
+  "surfaces": {
+    "0": {
+      "quad": [
+        [
+          242,
+          65
+        ],
+        [
+          358,
+          71
+        ],
+        [
+          367,
+          135
+        ],
+        [
+          252,
+          132
+        ]
+      ],
+      "notes": "Front baseball-cap panel, refined against the supplied reference for taller lettering, a slight left lean and a gently down-right baseline. Clear of the mesh, hair and brim.",
+      "initial_conservative_quad": [
+        [
+          226,
+          78
+        ],
+        [
+          354,
+          76
+        ],
+        [
+          363,
+          126
+        ],
+        [
+          220,
+          134
+        ]
+      ]
+    },
+    "2": {
+      "quad": [
+        [
+          178,
+          109
+        ],
+        [
+          279,
+          87
+        ],
+        [
+          286,
+          128
+        ],
+        [
+          162,
+          164
+        ]
+      ],
+      "notes": "Left beanie cuff; keep clear of the white cat badge on the right."
+    },
+    "3": {
+      "quad": [
+        [
+          232,
+          47
+        ],
+        [
+          337,
+          47
+        ],
+        [
+          355,
+          84
+        ],
+        [
+          221,
+          88
+        ]
+      ],
+      "notes": "Upper front bucket-hat crown; keep clear of left ventilation eyelets and lower brim seam."
+    },
+    "4": {
+      "quad": [
+        [
+          227,
+          59
+        ],
+        [
+          337,
+          57
+        ],
+        [
+          350,
+          100
+        ],
+        [
+          221,
+          111
+        ]
+      ],
+      "notes": "Front baseball-cap panel; stay above the curved brim."
+    },
+    "7": {
+      "quad": [
+        [
+          171,
+          118
+        ],
+        [
+          294,
+          90
+        ],
+        [
+          299,
+          127
+        ],
+        [
+          156,
+          169
+        ]
+      ],
+      "notes": "Left beanie cuff between the buns; keep clear of the right cat badge."
+    },
+    "8": {
+      "quad": [
+        [
+          222,
+          56
+        ],
+        [
+          329,
+          47
+        ],
+        [
+          354,
+          83
+        ],
+        [
+          211,
+          101
+        ]
+      ],
+      "notes": "Front-right bucket-hat crown; keep clear of left ventilation eyelets and lower brim."
+    },
+    "10": {
+      "quad": [
+        [
+          132,
+          83
+        ],
+        [
+          173,
+          65
+        ],
+        [
+          186,
+          106
+        ],
+        [
+          124,
+          132
+        ]
+      ],
+      "notes": "Small left side panel of a backward cap; do not print across the rear opening or adjustable strap. Low text capacity."
+    },
+    "12": {
+      "quad": [
+        [
+          173,
+          93
+        ],
+        [
+          307,
+          53
+        ],
+        [
+          330,
+          89
+        ],
+        [
+          150,
+          144
+        ]
+      ],
+      "notes": "Broad diagonal beret fabric; avoid the top stem and lower hairline."
+    },
+    "13": {
+      "quad": [
+        [
+          197,
+          49
+        ],
+        [
+          317,
+          46
+        ],
+        [
+          345,
+          82
+        ],
+        [
+          185,
+          105
+        ]
+      ],
+      "notes": "Newsboy-cap crown above the band; avoid the lower-left button and brim."
+    },
+    "17": {
+      "quad": [
+        [
+          107,
+          124
+        ],
+        [
+          161,
+          93
+        ],
+        [
+          157,
+          136
+        ],
+        [
+          99,
+          168
+        ]
+      ],
+      "notes": "Small purple left side panel of the winter hat; the front is white fur. Low text capacity."
+    },
+    "19": {
+      "quad": [
+        [
+          136,
+          89
+        ],
+        [
+          208,
+          67
+        ],
+        [
+          218,
+          112
+        ],
+        [
+          121,
+          145
+        ]
+      ],
+      "notes": "Left side panel of a backward cap; avoid the opening, strap and side brim."
+    },
+    "22": {
+      "quad": [
+        [
+          174,
+          111
+        ],
+        [
+          296,
+          78
+        ],
+        [
+          301,
+          113
+        ],
+        [
+          159,
+          153
+        ]
+      ],
+      "notes": "Left beanie cuff; avoid the rectangular badge on the right."
+    },
+    "25": {
+      "quad": [
+        [
+          196,
+          55
+        ],
+        [
+          315,
+          49
+        ],
+        [
+          340,
+          84
+        ],
+        [
+          180,
+          109
+        ]
+      ],
+      "notes": "Newsboy-cap crown; avoid the left button and lower band/brim."
+    },
+    "32": {
+      "quad": [
+        [
+          172,
+          82
+        ],
+        [
+          285,
+          48
+        ],
+        [
+          311,
+          74
+        ],
+        [
+          157,
+          119
+        ]
+      ],
+      "notes": "Diagonal beret fabric; keep clear of the lower-left brooch and ribbon."
+    },
+    "33": {
+      "quad": [
+        [
+          290,
+          103
+        ],
+        [
+          386,
+          98
+        ],
+        [
+          404,
+          128
+        ],
+        [
+          278,
+          147
+        ]
+      ],
+      "notes": "Sports-visor front band; avoid the two white diagonal stripes on the left and the white brim edge."
+    },
+    "35": {
+      "quad": [
+        [
+          162,
+          82
+        ],
+        [
+          262,
+          59
+        ],
+        [
+          271,
+          113
+        ],
+        [
+          145,
+          145
+        ]
+      ],
+      "notes": "Large left panel of the sideways/backward cap; avoid the opening and adjustable strap on the right."
+    },
+    "37": {
+      "quad": [
+        [
+          213,
+          43
+        ],
+        [
+          296,
+          36
+        ],
+        [
+          318,
+          51
+        ],
+        [
+          194,
+          79
+        ]
+      ],
+      "notes": "Narrow sunhat crown above the white band; avoid the large left bow, band and brim. Low text height."
+    },
+    "38": {
+      "quad": [
+        [
+          192,
+          116
+        ],
+        [
+          318,
+          91
+        ],
+        [
+          323,
+          130
+        ],
+        [
+          172,
+          171
+        ]
+      ],
+      "notes": "Left knitted beanie cuff; avoid the cat badge and decorative ears."
+    },
+    "46": {
+      "quad": [
+        [
+          222,
+          54
+        ],
+        [
+          295,
+          36
+        ],
+        [
+          324,
+          55
+        ],
+        [
+          211,
+          94
+        ]
+      ],
+      "notes": "Upper-right painter-beret panel; avoid the white paint motif on the lower-left."
+    }
+  },
+  "rendering_refinements": {
+    "0": {
+      "quad": [
+        [
+          242,
+          65
+        ],
+        [
+          358,
+          71
+        ],
+        [
+          367,
+          135
+        ],
+        [
+          252,
+          132
+        ]
+      ],
+      "reason": "Final reference-matched front panel: taller text area and natural cap perspective."
+    }
+  },
+  "excluded": "Hoods 15 and 24, transparent cyber visor 23, headphones, hair ornaments and non-fabric accessories are not editable cap surfaces.",
+  "lettering_reference": {
+    "asset": "output/pfp/reference-lettering-detail.png",
+    "characteristics": "Bold sans lettering with a double-storey a, straight l stem, tight spacing, slight left lean and a baseline descending gently to the right. The supplied clank word is approximately 110×39–40 pixels when normalized to a 512px portrait.",
+    "recommendation": "Bundled Geist Variable at weight 750 with horizontal condensation 0.80, autofitted into each hat surface. Preserve cap shading and texture through the ink. Rounded MPlus was too rounded; Archivo Black was heavier and wider than the reference.",
+    "final_font": {
+      "file": "public/fonts/Geist-Variable.woff2",
+      "weight": 750,
+      "horizontal_condense": 0.8
+    }
+  }
+}

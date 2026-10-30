@@ -102,6 +102,14 @@
           <h2>A little more you.</h2>
           <p class="pfp-controls-intro">Let chance pick your look, or fine-tune the details. Lock a trait to keep it on the next roll.</p>
           <div id="pfp-traits" class="pfp-traits"></div>
+          <div class="pfp-cap-customization" id="pfp-cap-customization">
+            <div class="pfp-cap-heading"><label class="pfp-trait-label" for="pfp-cap-text">Cap text <span>Optional</span></label><button id="pfp-cap-clear" class="pfp-cap-clear" type="button" hidden>Clear</button></div>
+            <div id="pfp-cap-editor" hidden>
+              <textarea id="pfp-cap-text" rows="2" placeholder="e.g. YOUR NAME" autocomplete="off" spellcheck="false" aria-describedby="pfp-cap-help"></textarea>
+              <p class="pfp-cap-help" id="pfp-cap-help">Text wraps and sizes itself to fit your cap.</p>
+            </div>
+            <div class="pfp-cap-invite" id="pfp-cap-invite"><p>A name, a phrase, your own signature.</p><button id="pfp-cap-add" type="button">Add cap text <span aria-hidden="true">↗</span></button></div>
+          </div>
           <p class="pfp-lock-hint" id="pfp-lock-hint">Every look wears AGI. Every roll is a fresh mix.</p>
 
           <div class="pfp-actions">

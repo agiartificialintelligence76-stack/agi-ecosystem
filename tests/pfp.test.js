@@ -5,9 +5,11 @@ import sharp from 'sharp';
 import {
   TRAITS, validatePortrait, randomPortrait, encodePortrait, decodePortrait,
   portraitCode, recolorPixels, rgbToHsl, renderPortrait,
+  MAX_CAP_TEXT_LENGTH, normalizeCapText,
 } from '../src/pfp/engine.js';
 import { BUILTIN_PAGES } from '../src/owner/catalog.js';
 import { finishCharacterEdge } from '../tools/pfp/finish-character-edges.mjs';
+import { CAP_SURFACES, supportsCapText, layoutCapText, paintCapText } from '../src/pfp/cap-text.js';
 
 const keys = Object.keys(TRAITS);
 const base = () => ({ version: 1, seed: '0123456789abcdef0123456789abcdef', character: 0, hair: 0, outfit: 0, backdrop: 0 });
@@ -46,6 +48,169 @@ test('PFP share recipes round-trip every selectable value, including the final c
   }
   const last = { ...base(), ...Object.fromEntries(keys.map((key) => [key, TRAITS[key].length - 1])) };
   assert.deepEqual(decodePortrait(encodePortrait(last)), last);
+});
+
+test('PFP existing version-one links and display IDs remain unchanged', () => {
+  const releasedRecipe = '1.0123456789abcdef0123456789abcdef.0.0.0.0';
+  assert.deepEqual(decodePortrait(releasedRecipe), base());
+  assert.equal(encodePortrait(base()), releasedRecipe);
+  assert.equal(portraitCode(base()), 'AGI-9B876E26');
+});
+
+test('PFP cap text normalizes Unicode and whitespace within the supported character limit', () => {
+  assert.equal(MAX_CAP_TEXT_LENGTH, 500);
+  assert.equal(normalizeCapText('  Cafe\u0301\t\n AGI\u00a0  club  '), 'Café AGI club');
+  assert.equal(normalizeCapText('A\u200bB\u0000C\u202eD'), 'ABCD', 'invisible formatting and control characters do not survive into the print');
+  assert.equal(normalizeCapText('👩‍💻 می\u200cروم'), '👩‍💻 می\u200cروم', 'emoji and international text keep meaningful joiners');
+  assert.equal(normalizeCapText('A\ud800B\udc00C😀'), 'ABC😀', 'isolated UTF-16 surrogates are removed while valid pairs remain');
+  assert.equal(normalizeCapText(' <AGI> & + / #1. '), '<AGI> & + / #1.', 'ordinary punctuation remains usable as literal text');
+  for (const input of [undefined, null, 123, true, {}, []]) assert.equal(normalizeCapText(input), '');
+  assert.equal(normalizeCapText('😀'.repeat(501)), '😀'.repeat(500), 'the limit counts Unicode code points without cutting a surrogate pair');
+  assert.equal(normalizeCapText('a'.repeat(501)), 'a'.repeat(500));
+  assert.equal(normalizeCapText(` ${'a'.repeat(500)} `), 'a'.repeat(500), 'surrounding whitespace does not consume the text limit');
+  assert.equal(normalizeCapText('A\u200b\u0301'), 'Á', 'removing an invisible separator still leaves NFC text');
+  const normalized = normalizeCapText('  Cafe\u0301\n猫 😀  ');
+  assert.equal(normalizeCapText(normalized), normalized, 'normalization is stable');
+});
+
+test('PFP recipes accept canonical cap text and reject malformed or oversized stored text', () => {
+  for (const capText of ['', 'Café 猫 😀', 'a'.repeat(500), '😀'.repeat(500)]) {
+    assert.equal(validatePortrait({ ...base(), capText }), true);
+  }
+  for (const capText of [null, 42, false, [], {}, 'a'.repeat(501), '😀'.repeat(501), ' padded ', 'two  spaces', 'Cafe\u0301', 'A\u200bB', 'line\nbreak', '\ud800', '\udc00']) {
+    const config = { ...base(), capText };
+    assert.equal(validatePortrait(config), false, 'stored recipes must already contain bounded canonical text');
+    assert.throws(() => encodePortrait(config), /Invalid portrait/);
+  }
+});
+
+test('PFP cap text links round-trip Unicode and punctuation without changing old recipes', () => {
+  for (const capText of ['AGI', 'A&B + #1/2? 100%', 'Café · AGI', '猫 / 🦄', '👩‍💻 می\u200cروم', '<svg>.AGI', 'a'.repeat(500), '😀'.repeat(500)]) {
+    const config = { ...base(), capText };
+    const encoded = encodePortrait(config);
+    assert.match(encoded, /^2\./);
+    assert.equal(encoded.split('.').length, 7, 'punctuation cannot add recipe fields');
+    assert.deepEqual(decodePortrait(encoded), config);
+    const shared = new URL(`https://www.agi1.app/pfp#p=${encoded}`);
+    assert.deepEqual(decodePortrait(new URLSearchParams(shared.hash.slice(1)).get('p')), config, 'the real share URL preserves literal percent signs and punctuation');
+    assert.notEqual(portraitCode(config), portraitCode(base()));
+    assert.equal(portraitCode(decodePortrait(encoded)), portraitCode(config));
+  }
+  assert.notEqual(portraitCode({ ...base(), capText: 'ALICE' }), portraitCode({ ...base(), capText: 'BOB' }));
+  assert.equal(encodePortrait({ ...base(), capText: '' }), encodePortrait(base()), 'empty text uses the existing version-one link');
+});
+
+test('PFP cap text share decoder rejects invalid encoding and noncanonical text', () => {
+  const prefix = '2.0123456789abcdef0123456789abcdef.0.0.0.0.';
+  const payload = (value) => Buffer.from(value).toString('base64url');
+  const invalid = [
+    `${prefix}%`, `${prefix}QQ==`, `${prefix}QR`, `${prefix}A.B`,
+    `${prefix}${payload(Buffer.from([0xed, 0xa0, 0x80]))}`, `${prefix}${payload(Buffer.from([0xc0, 0xaf]))}`,
+    ...[' AGI', 'AGI ', 'two  spaces', 'Cafe\u0301', 'A\u200bB', 'a'.repeat(501)].map((value) => prefix + payload(value)),
+    `${prefix}${'a'.repeat(3000)}`,
+  ];
+  for (const recipe of invalid) assert.equal(decodePortrait(recipe), null, recipe.slice(0, 100));
+});
+
+test('PFP rerolls retain personal cap text even while another character is selected', () => {
+  for (const locks of [[], ['character'], ['hair', 'outfit', 'backdrop'], keys]) {
+    let current = { ...base(), capText: 'Café / AGI ♥' };
+    for (let roll = 0; roll < 20; roll++) {
+      const snapshot = { ...current };
+      current = randomPortrait(current, locks);
+      assert.equal(current.capText, snapshot.capText);
+      assert.equal(validatePortrait(current), true);
+      if (locks === keys) assert.deepEqual(current, snapshot);
+    }
+  }
+});
+
+test('PFP cap lettering is supported only on measured hat surfaces above the clothing', async () => {
+  assert.equal(supportsCapText(0), true, 'the original cap supports custom lettering');
+  assert.equal(supportsCapText(1), false, 'headphones are not treated as cap fabric');
+  for (const value of [-1, TRAITS.character.length, 0.5, '0', null, undefined]) assert.equal(supportsCapText(value), false);
+  for (const [character, quad] of Object.entries(CAP_SURFACES)) {
+    assert.equal(supportsCapText(Number(character)), true);
+    assert.equal(quad.length, 4);
+    for (const [x, y] of quad) assert.ok(x >= 0 && x < 512 && y >= 0 && y < 200, 'the editable surface stays on the hat, clear of face and shirt');
+  }
+  const untouched = new Proxy({}, { get() { assert.fail('an unsupported hat or empty text must not touch the canvas'); } });
+  await paintCapText(untouched, { ...base(), character: 1, capText: 'HELLO' });
+  await paintCapText(untouched, { ...base(), capText: '' });
+  await paintCapText(untouched, base());
+});
+
+test('PFP long cap text fits at most three lines without dropping Unicode or punctuation', () => {
+  const context = {
+    font: '',
+    measureText(text) { return { width: Array.from(text).length * Number(/([\d.]+)px/.exec(this.font)[1]) * 0.6 }; },
+  };
+  for (const text of ['HELLO', 'My AGI & friends + 100%', '猫😀'.repeat(250), 'A'.repeat(500)]) {
+    for (const [width, height] of [[140, 60], [64, 18]]) {
+      const layout = layoutCapText(context, text, width, height);
+      assert.ok(layout.size > 0 && Number.isFinite(layout.size));
+      assert.ok(layout.lines.length > 0 && layout.lines.length <= 3);
+      assert.equal(layout.lines.join('').replaceAll(' ', ''), text.replaceAll(' ', ''), 'fitting retains the entire requested text');
+      context.font = `800 ${layout.size}px sans-serif`;
+      for (const line of layout.lines) assert.ok(context.measureText(line).width <= width);
+      assert.ok(layout.lines.length * layout.lineHeight <= height);
+    }
+  }
+});
+
+test('PFP cap ink changes only letter-mask pixels and preserves the original white shirt print', async (t) => {
+  const oldDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const oldFontFace = Object.getOwnPropertyDescriptor(globalThis, 'FontFace');
+  t.after(() => {
+    if (oldDocument) Object.defineProperty(globalThis, 'document', oldDocument); else delete globalThis.document;
+    if (oldFontFace) Object.defineProperty(globalThis, 'FontFace', oldFontFace); else delete globalThis.FontFace;
+  });
+  const printed = [];
+  const ink = {
+    font: '', scale() {},
+    measureText(text) { return { width: Array.from(text).length * Number(/([\d.]+)px/.exec(this.font)[1]) * 0.6 }; },
+    fillText(text) { printed.push(text); },
+    getImageData(x, y, width, height) {
+      const data = new Uint8ClampedArray(width * height * 4);
+      // A deterministic ink mask separates painted glyph samples from untouched fabric.
+      for (let py = Math.floor(height / 3); py < height * 2 / 3; py++) {
+        for (let px = Math.floor(width / 3); px < width * 2 / 3; px++) data[(py * width + px) * 4 + 3] = 255;
+      }
+      return { data, width, height };
+    },
+  };
+  Object.defineProperty(globalThis, 'FontFace', { configurable: true, value: undefined });
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: () => ({ getContext: () => ink }) } });
+  for (const character of Object.keys(CAP_SURFACES).map(Number)) {
+    const source = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer();
+    const result = Buffer.from(source);
+    const context = {
+      getImageData(x, y, width, height) {
+        const data = new Uint8ClampedArray(width * height * 4);
+        for (let row = 0; row < height; row++) data.set(result.subarray(((y + row) * 512 + x) * 4, ((y + row) * 512 + x + width) * 4), row * width * 4);
+        return { data, width, height };
+      },
+      putImageData(image, x, y) {
+        for (let row = 0; row < image.height; row++) result.set(image.data.subarray(row * image.width * 4, (row + 1) * image.width * 4), ((y + row) * 512 + x) * 4);
+      },
+    };
+    await paintCapText(context, { ...base(), character, capText: '<AGI> 100%' });
+    assert.notDeepEqual(result, source, `character ${character}: ink is visible on the supported cap`);
+    assert.deepEqual(result.subarray(200 * 512 * 4), source.subarray(200 * 512 * 4), 'the face, clothing and original white AGI print stay byte-identical');
+    const quad = CAP_SURFACES[character];
+    const minX = Math.min(...quad.map(([x]) => x)), maxX = Math.max(...quad.map(([x]) => x));
+    const minY = Math.min(...quad.map(([, y]) => y)), maxY = Math.max(...quad.map(([, y]) => y));
+    let changed = 0;
+    for (let offset = 0; offset < result.length; offset += 4) {
+      assert.equal(result[offset + 3], source[offset + 3], 'lettering preserves source alpha');
+      if (result[offset] === source[offset] && result[offset + 1] === source[offset + 1] && result[offset + 2] === source[offset + 2]) continue;
+      changed++;
+      const x = (offset / 4) % 512, y = Math.floor(offset / 4 / 512);
+      assert.ok(x >= minX && x <= maxX && y >= minY && y <= maxY, 'ink cannot reach outside the measured cap');
+    }
+    assert.ok(changed < (maxX - minX) * (maxY - minY) / 2, 'unprinted cap fabric remains visible around the ink');
+  }
+  assert.ok(printed.some((line) => line.includes('<AGI>')), 'input reaches the text renderer as literal text');
 });
 
 test('PFP share decoder rejects oversized, incomplete, invalid-version and out-of-range hashes', () => {

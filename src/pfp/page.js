@@ -6,7 +6,7 @@ import '../styles/pop.css';
 import '../styles/pfp.css';
 import { startTheme } from '../theme.js';
 import { startMenu } from '../menu.js';
-import { TRAITS, randomPortrait, validatePortrait, portraitCode, renderPortrait, exportPortrait, encodePortrait, decodePortrait } from './engine.js';
+import { TRAITS, randomPortrait, validatePortrait, portraitCode, renderPortrait, exportPortrait, encodePortrait, decodePortrait, MAX_CAP_TEXT_LENGTH, normalizeCapText, supportsCapText } from './engine.js';
 
 startTheme();
 startMenu();
@@ -25,12 +25,17 @@ const randomize = $('#pfp-randomize');
 const download = $('#pfp-download');
 const save = $('#pfp-save');
 const share = $('#pfp-share');
+const capInput = $('#pfp-cap-text');
+const capClear = $('#pfp-cap-clear');
 const controls = new Map();
 const thumbnails = new Map();
 let revision = 0;
 let ready = false;
 let exporting = false;
 let storageAvailable = true;
+let capEditTimer = 0;
+let capComposing = false;
+let capEditDirty = false;
 
 function readState() {
   try {
@@ -53,6 +58,7 @@ let locks = new Set(Array.isArray(restored.locks) ? restored.locks.filter((key) 
 let shared = null;
 try { shared = decodePortrait(new URLSearchParams(location.hash.slice(1)).get('p') || ''); } catch { /* Invalid links get a fresh portrait. */ }
 let current = valid(shared) ? shared : valid(restored.current) ? restored.current : randomPortrait();
+capInput.value = current.capText || '';
 
 function persist() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ current, favorites, recent, locks: [...locks] })); storageAvailable = true; }
@@ -79,6 +85,11 @@ function syncButtons() {
     lock.title = `${locks.has(key) ? 'Unlock' : 'Lock'} ${labels[key].toLowerCase()}`;
     lock.querySelector('.pfp-lock-shackle').setAttribute('d', locks.has(key) ? 'M7 11V7a5 5 0 0 1 10 0v4' : 'M7 11V7a5 5 0 0 1 9-3');
   }
+  const hasCap = supportsCapText(current.character);
+  $('#pfp-cap-editor').hidden = !hasCap;
+  $('#pfp-cap-invite').hidden = hasCap;
+  capClear.hidden = !hasCap || !capInput.value;
+  // Keep this editable during a preview update: disabling it would interrupt typing/IME.
 }
 
 function buildControls() {
@@ -134,13 +145,13 @@ function buildControls() {
   }
 }
 
-async function paint() {
+async function paint({ quiet = false } = {}) {
   const ownRevision = ++revision;
   const config = { ...current };
   ready = false;
   syncButtons();
   $('#pfp-art-wrap').setAttribute('aria-busy', 'true');
-  loading.hidden = false;
+  loading.hidden = quiet && !preview.hidden;
   loading.classList.remove('is-error');
   loadingText.textContent = 'Finding your pixel personality…';
   $('#pfp-retry').hidden = true;
@@ -152,7 +163,8 @@ async function paint() {
     preview.width = buffer.width;
     preview.height = buffer.height;
     preview.getContext('2d').drawImage(buffer, 0, 0);
-    preview.setAttribute('aria-label', `AGI portrait: ${keys.map((key) => TRAITS[key][config[key]].label).join(', ')}`);
+    const printedText = supportsCapText(config.character) && config.capText ? `, cap text: ${config.capText}` : '';
+    preview.setAttribute('aria-label', `AGI portrait: ${keys.map((key) => TRAITS[key][config[key]].label).join(', ')}${printedText}`);
     preview.hidden = false;
     loading.hidden = true;
     $('#pfp-code').textContent = portraitCode(config);
@@ -162,6 +174,7 @@ async function paint() {
   } catch {
     if (ownRevision !== revision) return;
     preview.hidden = true;
+    loading.hidden = false;
     loading.classList.add('is-error');
     loadingText.textContent = 'The artwork couldn’t load. Check your connection and try again.';
     $('#pfp-retry').hidden = false;
@@ -176,7 +189,12 @@ function remember(config) {
 }
 function choose(config) {
   if (!valid(config)) return;
+  clearTimeout(capEditTimer);
+  capEditTimer = 0;
+  capEditDirty = false;
+  capComposing = false;
   current = { ...config };
+  capInput.value = current.capText || '';
   remember(current);
   persist();
   announce('');
@@ -186,6 +204,85 @@ function choose(config) {
   renderCollection($('#pfp-recent'), recent, false);
   void paint();
 }
+
+function capRecipe(text) {
+  const config = { ...current };
+  if (text) config.capText = text; else delete config.capText;
+  return config;
+}
+function updateCapDraft() {
+  if (capComposing || !supportsCapText(current.character)) return;
+  // Bound by code points rather than UTF-16 units, and leave spaces/newlines in
+  // the editor until commit so the caret and IME are never rewritten mid-word.
+  const limited = Array.from(capInput.value).slice(0, MAX_CAP_TEXT_LENGTH).join('');
+  if (limited !== capInput.value) {
+    const start = capInput.selectionStart, end = capInput.selectionEnd;
+    capInput.value = limited;
+    capInput.setSelectionRange(Math.min(start, limited.length), Math.min(end, limited.length));
+  }
+  const normalized = normalizeCapText(limited);
+  capClear.hidden = !limited;
+  if ((current.capText || '') === normalized) return;
+  current = capRecipe(normalized);
+  capEditDirty = true;
+  persist();
+  announce('');
+  $('#pfp-share-fallback').hidden = true;
+  // Invalidate any older paint immediately. The timer reads the current recipe,
+  // and choose() cancels it, so a late draft can never restore an older look.
+  revision++;
+  ready = false;
+  syncButtons();
+  clearTimeout(capEditTimer);
+  capEditTimer = setTimeout(() => {
+    capEditTimer = 0;
+    void paint({ quiet: true });
+  }, 120);
+}
+function commitCapDraft() {
+  if (capComposing) return;
+  updateCapDraft();
+  capInput.value = current.capText || '';
+  if (capEditTimer) {
+    clearTimeout(capEditTimer);
+    capEditTimer = 0;
+    void paint({ quiet: true });
+  }
+  if (!capEditDirty) return;
+  capEditDirty = false;
+  remember(current);
+  persist();
+  if (location.hash) history.replaceState(null, '', `${location.pathname}${location.search}#p=${encodePortrait(current)}`);
+  renderCollection($('#pfp-recent'), recent, false);
+}
+capInput.addEventListener('compositionstart', () => {
+  capComposing = true;
+  clearTimeout(capEditTimer);
+  capEditTimer = 0;
+  revision++;
+  ready = false;
+  syncButtons();
+});
+capInput.addEventListener('compositionend', () => {
+  capComposing = false;
+  updateCapDraft();
+  // A cancelled composition may leave the recipe unchanged but the actions paused.
+  if (!capEditTimer) void paint({ quiet: true });
+});
+capInput.addEventListener('input', updateCapDraft);
+capInput.addEventListener('change', commitCapDraft);
+capInput.addEventListener('blur', commitCapDraft);
+capClear.addEventListener('click', () => {
+  capComposing = false;
+  capInput.value = '';
+  updateCapDraft();
+  commitCapDraft();
+  capInput.focus();
+});
+$('#pfp-cap-add').addEventListener('click', () => {
+  choose({ ...current, character: 0 });
+  capInput.focus();
+});
 
 function markSelected() {
   document.querySelectorAll('.pfp-pick').forEach((button) => {
