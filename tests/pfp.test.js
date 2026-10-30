@@ -4,9 +4,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import sharp from 'sharp';
 import {
   TRAITS, validatePortrait, randomPortrait, encodePortrait, decodePortrait,
-  portraitCode, recolorPixels, rgbToHsl, brandPatchBounds, paintBrandPatch, renderPortrait,
+  portraitCode, recolorPixels, rgbToHsl, renderPortrait,
 } from '../src/pfp/engine.js';
 import { BUILTIN_PAGES } from '../src/owner/catalog.js';
+import { finishCharacterEdge } from '../tools/pfp/finish-character-edges.mjs';
 
 const keys = Object.keys(TRAITS);
 const base = () => ({ version: 1, seed: '0123456789abcdef0123456789abcdef', character: 0, hair: 0, outfit: 0, backdrop: 0 });
@@ -171,6 +172,30 @@ test('PFP recoloring keeps transparency, white AGI lettering, skin and neutral o
   assert.deepEqual(result, source);
 });
 
+test('PFP natural cream AGI lettering stays white while the surrounding gold hair recolors', async () => {
+  const source = await sharp(readFileSync(new URL('../public/pfp/v1/character-14.png', import.meta.url))).ensureAlpha().raw().toBuffer();
+  const lettering = [];
+  for (let y = 430; y <= 483; y++) {
+    for (let x = 230; x <= 344; x++) {
+      const offset = (y * 512 + x) * 4;
+      const rgb = source.subarray(offset, offset + 3);
+      const [h, s] = rgbToHsl(...rgb);
+      if (source[offset + 3] > 200 && Math.min(...rgb) >= 200 && h >= 36 && h <= 72 && s > 0.3) lettering.push(offset);
+    }
+  }
+  assert.ok(lettering.length > 100, 'the original print contains warm cream pixels that could be mistaken for blonde hair');
+  const hairOffset = (100 * 512 + 180) * 4;
+  for (const hair of [2, 4, 5]) {
+    const result = recolorPixels(Buffer.from(source), { ...base(), character: 14, hair, outfit: 2 });
+    for (const offset of lettering) {
+      assert.deepEqual(result.subarray(offset, offset + 4), source.subarray(offset, offset + 4), 'the natural AGI print keeps its original color and alpha');
+    }
+    assert.notDeepEqual(result.subarray(hairOffset, hairOffset + 3), source.subarray(hairOffset, hairOffset + 3), 'the selected hair color still changes actual gold strands');
+    assert.equal(result[hairOffset + 3], source[hairOffset + 3]);
+    assert.ok(Math.abs(rgbToHsl(...result.subarray(hairOffset, hairOffset + 3))[0] - TRAITS.hair[hair].h) < 3);
+  }
+});
+
 test('PFP gold hair and purple fabric recolor independently without flattening their shading or alpha', () => {
   const pixels = [gold, [166, 128, 49, 160], [249, 223, 155, 255], [145, 94, 205, 255], [70, 42, 108, 128]];
   const source = new Uint8ClampedArray(pixels.flat());
@@ -220,49 +245,7 @@ test('PFP warm hair beside the jaw and outer curls follows the selected palette'
   }
 });
 
-test('PFP every character has a complete high-contrast AGI patch inside its square canvas', () => {
-  assert.equal(TRAITS.character.length, 48, 'all released character looks have branding coverage');
-  for (let character = 0; character < TRAITS.character.length; character++) {
-    const bounds = brandPatchBounds(character);
-    const { x, y, width, height } = bounds;
-    assert.ok(Object.values(bounds).every(Number.isInteger), 'pixel-art placement uses whole pixels');
-    assert.ok(x >= 0 && y >= 0 && x + width <= 512 && y + height <= 512, `character ${character}: the patch is not clipped`);
-    const calls = [];
-    const ctx = { fillStyle: '', fillRect(left, top, w, h) { calls.push({ color: this.fillStyle, left, top, w, h }); } };
-    paintBrandPatch(ctx, character);
-    for (const call of calls) {
-      assert.ok(call.w > 0 && call.h > 0);
-      assert.ok(call.left >= x && call.top >= y && call.left + call.w <= x + width && call.top + call.h <= y + height, 'all stitching and lettering stays inside the patch');
-    }
-    const text = calls.filter((call) => call.color === '#fff1da');
-    assert.ok(text.length > 0, 'light lettering is present');
-    const firstText = calls.findIndex((call) => call.color === '#fff1da');
-    assert.ok(firstText > 0, 'the contrasting fabric is painted first');
-    assert.ok(calls.slice(firstText).every((call) => call.color === '#fff1da'), 'no fabric or stitches obscure the lettering afterward');
-
-    // Inspect the rendered letter shapes, not an implementation-owned glyph table.
-    const minX = Math.min(...text.map((call) => call.left));
-    const maxX = Math.max(...text.map((call) => call.left + call.w));
-    const minY = Math.min(...text.map((call) => call.top));
-    const maxY = Math.max(...text.map((call) => call.top + call.h));
-    const occupied = (px, py) => text.some((call) => px >= call.left && px < call.left + call.w && py >= call.top && py < call.top + call.h);
-    const columns = Array.from({ length: maxX - minX }, (_, offset) => text.some((call) => minX + offset >= call.left && minX + offset < call.left + call.w));
-    const letters = [];
-    for (let col = 0; col < columns.length; col++) {
-      if (!columns[col]) continue;
-      const start = col;
-      while (col + 1 < columns.length && columns[col + 1]) col++;
-      letters.push({ left: minX + start, width: col - start + 1 });
-    }
-    assert.equal(letters.length, 3, 'A, G and I remain separated and readable');
-    const at = (letter, col, row) => occupied(letters[letter].left + (col + 0.5) * letters[letter].width / 5, minY + (row + 0.5) * (maxY - minY) / 7);
-    assert.ok(at(0, 0, 5) && at(0, 4, 5) && !at(0, 2, 5) && at(0, 2, 3), 'A has two stems, an opening and crossbar');
-    assert.ok(at(1, 0, 2) && !at(1, 4, 2) && at(1, 4, 4) && at(1, 3, 3), 'G has an open right edge and inward bar');
-    assert.ok(at(2, 0, 0) && at(2, 4, 6) && at(2, 2, 3) && !at(2, 0, 3), 'I has broad caps and a central stem');
-  }
-});
-
-test('PFP composition paints AGI over the character before the final export-size copy', async (t) => {
+test('PFP composition keeps the original clothing print visible without painting a badge over it', async (t) => {
   const oldImage = Object.getOwnPropertyDescriptor(globalThis, 'Image');
   const oldDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
   t.after(() => {
@@ -294,14 +277,24 @@ test('PFP composition paints AGI over the character before the final export-size
   const exported = target.context.events.at(-1);
   assert.equal(exported.kind, 'image');
   const composition = exported.image.context.events;
-  const patchStart = composition.findIndex((event) => event.kind === 'fill' && event.color === '#180f25');
-  assert.ok(patchStart > 0);
-  assert.equal(composition[patchStart - 1].kind, 'image', 'the character is drawn immediately before its branding');
-  assert.ok(composition.slice(patchStart).every((event) => event.kind === 'fill'), 'the character cannot cover the completed AGI patch');
-  assert.equal(composition.at(-1).color, '#fff1da', 'cream lettering is the last layer of the portrait');
+  assert.equal(composition.filter((event) => event.kind === 'image').length, 2, 'the scene and character are composited once each');
+  const last = composition.at(-1);
+  assert.equal(last.kind, 'image', 'no badge or paint is drawn over the character');
+  assert.match(new URL(last.image.context.events[0].image.url, 'https://www.agi1.app').pathname, /character-47\.png$/, 'the final layer uses the source sprite with its original AGI lettering');
+
 });
 
-test('PFP every declared character and scene has a decodable square local asset', async () => {
+test('PFP bottom-edge finishing preserves the artwork and lettering through row 500 exactly', async () => {
+  const original = new Uint8Array(512 * 512 * 4);
+  for (let index = 0; index < original.length; index++) original[index] = (index * 17 + Math.floor(index / 2048) * 23) % 256;
+  const png = await sharp(original, { raw: { width: 512, height: 512, channels: 4 } }).png().toBuffer();
+  const result = await sharp(await finishCharacterEdge(png)).ensureAlpha().raw().toBuffer();
+  assert.deepEqual(result.subarray(0, 501 * 512 * 4), Buffer.from(original.subarray(0, 501 * 512 * 4)), 'existing visible art never moves or changes');
+  const clean = result.subarray(500 * 512 * 4, 501 * 512 * 4);
+  for (let y = 501; y < 512; y++) assert.deepEqual(result.subarray(y * 512 * 4, (y + 1) * 512 * 4), clean);
+});
+
+test('PFP every declared character and scene has a decodable square local asset with clean character edges', async () => {
   const files = [
     ...TRAITS.character.map((_, index) => ({ file: `character-${index}.png`, character: true })),
     ...TRAITS.backdrop.map(({ file }) => ({ file: `${file}.webp`, character: false })),
@@ -314,7 +307,13 @@ test('PFP every declared character and scene has a decodable square local asset'
     const metadata = await sharp(readFileSync(url)).metadata();
     assert.equal(metadata.width, metadata.height, `${file} is square`);
     assert.ok(metadata.width >= 512, `${file} has enough source detail`);
-    if (character) assert.equal(metadata.hasAlpha, true, `${file} can layer over its scene`);
+    if (character) {
+      assert.equal(metadata.hasAlpha, true, `${file} can layer over its scene`);
+      assert.equal(metadata.width, 512, 'source-coordinate palette masks remain aligned');
+      const data = await sharp(readFileSync(url)).ensureAlpha().raw().toBuffer();
+      const clean = data.subarray(500 * 512 * 4, 501 * 512 * 4);
+      for (let y = 501; y < 512; y++) assert.deepEqual(data.subarray(y * 512 * 4, (y + 1) * 512 * 4), clean, `${file}: no stray strip or transparent gap in the clothing edge`);
+    }
   }
 });
 

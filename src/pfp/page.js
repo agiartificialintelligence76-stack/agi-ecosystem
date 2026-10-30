@@ -1,5 +1,15 @@
+import '../styles/tokens.css';
+import '../styles/base.css';
+import '../styles/layout.css';
+import '../styles/footer.css';
+import '../styles/pop.css';
 import '../styles/pfp.css';
+import { startTheme } from '../theme.js';
+import { startMenu } from '../menu.js';
 import { TRAITS, randomPortrait, validatePortrait, portraitCode, renderPortrait, exportPortrait, encodePortrait, decodePortrait } from './engine.js';
+
+startTheme();
+startMenu();
 
 const STORAGE_KEY = 'agi-pfp-studio-v1';
 const MAX_SAVED = 12;

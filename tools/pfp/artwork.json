@@ -25,6 +25,6 @@
     "fantasy_six": "Cosmic nebula and planets; monochrome ink mountains; wind-swept floating islands; glowing crystal cave; ocean suspended above clouds; pastel dream garden. Same pixel-art world, no people, borders or labels."
   },
   "additional_exact_prompt_records": ["characters-12-29-prompts.json", "background-generation.json"],
-  "composition": "Versioned recipes combine a character, independent hair and outfit palettes, a background, and seeded pixel glints. A measured high-contrast fabric AGI patch is drawn last over each chest print to prevent hair or hoodie strings from obscuring the lettering. Preview and PNG export use the same composition.",
+  "composition": "Versioned recipes combine a character, independent hair and outfit palettes, a background, and seeded pixel glints. AGI remains the original natural lettering printed directly on each character's clothing, matching the reference art. No boxed badge or replacement text is added by the compositor. Preview and PNG export use the same composition.",
   "identity": "Cryptographically sampled recipes; guaranteed change from the current unlocked choices. This is an avatar generator, not an NFT mint or global exclusivity registry."
 }

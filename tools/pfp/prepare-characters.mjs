@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { cleanCharacter } from './clean-character.mjs';
+import { finishCharacterEdge } from './finish-character-edges.mjs';
 
 // Crop a generated 3x3 atlas at the quietest alpha seams and normalize portraits.
 // Usage: node tools/pfp/prepare-characters.mjs <atlas.png> <first-character-index>
@@ -36,7 +37,7 @@ for(let row=0;row<3;row++) {
     const file=path.join(out,`character-${first+row*3+col}.png`);
     const framed=await sharp(sprite).extend({top:24,bottom:0,left:0,right:0,background:transparent}).png().toBuffer();
     const cleaned=await cleanCharacter(framed);
-    await sharp(cleaned.png).toFile(file);
+    await sharp(await finishCharacterEdge(cleaned.png)).toFile(file);
     console.log(file,JSON.stringify(bounds));
   }
 }

@@ -1,0 +1,26 @@
+{
+  "mode": "Built-in image_gen precise source edits",
+  "prompt": "Edit the supplied existing transparent 512x512 pixel-art character sprite with a single precise garment correction. Shorten BOTH hoodie drawstrings: each drawstring must end just below its collar eyelet, entirely ABOVE the large chest word AGI, with a small matching capped end. Remove their old lower portions and restore the purple hoodie fabric texture where the long strings used to run. The original cream-white uppercase word 'AGI' must remain complete and unobstructed, printed directly on the fabric with the SAME original lettering, size, tilt and position. Absolutely no badge, box, label, border, patch, new font, or overlaid replacement lettering. Do not redraw or redesign the person. Preserve the exact character identity, face, eyes, mouth expression, golden blonde hair silhouette and strands, purple accessories, purple clothing, peach skin, original pose, body proportions, camera, position, scale and all unchanged pixel-art shading. Match the input's square framing exactly: transparent margin above the head unchanged and torso reaches the bottom edge unchanged. Keep all original neutral white detail. No background. True RGBA transparency, not a checkerboard drawn into the image. No extra pixels, characters, outlines or text. The only visible change should be the two shortened hoodie strings and repaired fabric under their removed lower sections. Return the same square pixel-art sprite, 512x512 if supported.",
+  "changes": "Shortened hoodie drawstrings above the original natural AGI print; no badge or replacement typography.",
+  "normalization": "Direct nearest-neighbor resize to 512×512; no trimming, recentering, or pose changes. Existing bottom-edge helper applied after QA.",
+  "edits": [
+    {
+      "character": 14,
+      "input": "output/pfp-logo-fixes/before/character-14.png",
+      "generated_source": "C:/Users/User/.codex/generated_images/01a18cee-ecc4-7392-8be4-7ea777e7c071/exec-fe077763-0d17-4dd2-9ee0-207d7f769d70.png",
+      "output": "public/pfp/v1/character-14.png"
+    },
+    {
+      "character": 15,
+      "input": "output/pfp-logo-fixes/before/character-15.png",
+      "generated_source": "C:/Users/User/.codex/generated_images/01a18cee-ecc4-7392-8be4-7ea777e7c071/exec-db7c563b-9505-4f08-be96-ce1fe1462b4a.png",
+      "output": "public/pfp/v1/character-15.png"
+    },
+    {
+      "character": 47,
+      "input": "output/pfp-logo-fixes/before/character-47.png",
+      "generated_source": "C:/Users/User/.codex/generated_images/01a18cee-ecc4-7392-8be4-7ea777e7c071/exec-c133ce6c-3e93-41b1-994a-338afab4c2b2.png",
+      "output": "public/pfp/v1/character-47.png"
+    }
+  ]
+}

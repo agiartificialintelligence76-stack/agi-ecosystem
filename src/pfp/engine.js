@@ -201,6 +201,9 @@ export function recolorPixels(data, config) {
   const skin = data.length === 512 * 512 * 4 ? skinMask(config.character) : null;
   for (let i = 0; i < data.length; i += 4) {
     if (!data[i + 3]) continue;
+    // Cream-white fabric print can have a warm hue at very high luminance.
+    // Preserve those letter pixels rather than treating them as blonde hair.
+    if (Math.min(data[i], data[i + 1], data[i + 2]) >= 200) continue;
     const [h, s, l] = rgbToHsl(data[i], data[i + 1], data[i + 2]);
     let target, base;
     // Source art is keyed: gold hair, violet fabric, neutral peach skin and white logos.
@@ -239,7 +242,7 @@ const sprites = new Map();
 async function sprite(config) {
   const key = `${config.character}.${effectiveHair(config)}.${config.outfit}`;
   if (sprites.has(key)) return sprites.get(key);
-  const img = await loadImage(`${ROOT}character-${config.character}.png`);
+  const img = await loadImage(`${ROOT}character-${config.character}.png?v=20261030-natural2`);
   const layer = canvas(512), context = layer.getContext('2d', { willReadFrequently: true });
   context.drawImage(img, 0, 0, 512, 512);
   const pixels = context.getImageData(0, 0, 512, 512);
@@ -257,60 +260,6 @@ function seedRandom(seed) {
     v ^= v + Math.imul(v ^ v >>> 7, 61 | v);
     return ((v ^ v >>> 14) >>> 0) / 4294967296;
   };
-}
-// Bounds of the original chest lettering in each versioned 512px sprite. The
-// embroidered patch covers that print and drawstrings in one final pass, so AGI
-// is complete and legible on every preview, shared recipe and downloaded PNG.
-const CHEST_PRINTS = [
-  [237,412,348,466], [240,416,344,470], [238,416,350,465], [218,401,342,459],
-  [243,392,349,448], [232,410,340,466], [271,377,377,432], [238,391,352,441],
-  [257,398,355,452], [210,419,329,467], [229,417,344,468], [303,423,415,473],
-  [223,432,363,487], [249,436,359,483], [233,436,339,483], [225,430,348,483],
-  [221,434,357,491], [251,432,368,486], [229,436,356,490], [243,426,367,482],
-  [241,430,361,487], [252,419,360,471], [226,415,358,476], [287,436,401,491],
-  [240,423,368,481], [235,426,353,484], [262,422,383,478], [249,405,373,460],
-  [233,404,366,461], [236,420,374,480], [252,431,363,486], [270,436,381,492],
-  [251,435,365,488], [260,415,385,478], [288,406,397,463], [268,411,390,474],
-  [294,445,404,498], [270,411,385,469], [275,418,393,474], [233,430,364,486],
-  [266,442,370,493], [236,437,351,487], [220,416,344,472], [245,429,356,482],
-  [236,446,349,497], [280,412,386,463], [262,425,374,478], [247,422,357,471],
-];
-const AGI_GLYPHS = [
-  ['01110','11011','11011','11111','11011','11011','11011'],
-  ['01111','11000','11000','11011','11011','11011','01111'],
-  ['11111','00100','00100','00100','00100','00100','11111'],
-];
-export function brandPatchBounds(character) {
-  const [left, top, right, bottom] = CHEST_PRINTS[character] || CHEST_PRINTS[0];
-  const width = Math.max(132, right - left + 21);
-  const height = Math.max(70, bottom - top + 17);
-  return { x: Math.round((left + right - width) / 2), y: Math.min(510 - height, Math.round((top + bottom - height) / 2)), width, height };
-}
-export function paintBrandPatch(ctx, character) {
-  const { x, y, width, height } = brandPatchBounds(character);
-  ctx.fillStyle = '#180f25';
-  ctx.fillRect(x + 3, y, width - 6, height);
-  ctx.fillRect(x, y + 3, width, height - 6);
-  ctx.fillStyle = '#322142';
-  ctx.fillRect(x + 3, y + 3, width - 6, height - 6);
-  ctx.fillStyle = '#3b294d';
-  ctx.fillRect(x + 5, y + 5, width - 10, 3);
-  ctx.fillStyle = '#8d739e';
-  for (let stitch = 8; stitch < width - 8; stitch += 8) {
-    ctx.fillRect(x + stitch, y + 5, 3, 1);
-    ctx.fillRect(x + stitch, y + height - 6, 3, 1);
-  }
-  for (let stitch = 12; stitch < height - 9; stitch += 8) {
-    ctx.fillRect(x + 5, y + stitch, 1, 3);
-    ctx.fillRect(x + width - 6, y + stitch, 1, 3);
-  }
-  const scale = 6, textWidth = 17 * scale;
-  const textX = x + Math.floor((width - textWidth) / 2);
-  const textY = y + Math.floor((height - 7 * scale) / 2);
-  ctx.fillStyle = '#fff1da';
-  AGI_GLYPHS.forEach((glyph, letter) => glyph.forEach((row, rowIndex) => {
-    for (let col = 0; col < row.length; col++) if (row[col] === '1') ctx.fillRect(textX + (letter * 6 + col) * scale, textY + rowIndex * scale, scale, scale);
-  }));
 }
 export async function renderPortrait(target, config, { size = 1024 } = {}) {
   if (!validatePortrait(config)) throw new Error('Invalid portrait.');
@@ -334,7 +283,6 @@ export async function renderPortrait(target, config, { size = 1024 } = {}) {
     if (i % 7 === 0) { ctx.fillRect(x - 2, y, 6, 2); ctx.fillRect(x, y - 2, 2, 6); }
   }
   ctx.drawImage(character, 0, 0, 512, 512);
-  paintBrandPatch(ctx, config.character);
   target.width = target.height = size;
   const out = target.getContext('2d');
   if (!out) throw new Error('Canvas is unavailable.');

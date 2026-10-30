@@ -1,10 +1,5 @@
 import sharp from 'sharp';
-import { paintBrandPatch } from '../../src/pfp/engine.js';
-const rectangles=[];
-const context={fillStyle:'#000',fillRect(x,y,width,height){rectangles.push(`<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${this.fillStyle}"/>`);}};
-paintBrandPatch(context,0);
-const patch=Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">${rectangles.join('')}</svg>`);
-const portrait=await sharp('public/pfp/v1/room.webp').resize(512,512,{kernel:'nearest'}).composite([{input:'public/pfp/v1/character-0.png'},{input:patch}]).png().toBuffer();
+const portrait=await sharp('public/pfp/v1/room.webp').resize(512,512,{kernel:'nearest'}).composite([{input:'public/pfp/v1/character-0.png'}]).png().toBuffer();
 const hero=await sharp(portrait).resize(600,600,{kernel:'nearest'}).png().toBuffer();
 const type=Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
   <g font-family="Arial,sans-serif"><text x="650" y="92" fill="#bba0f7" font-size="20" font-weight="700" letter-spacing="5">AGI / PFP LAB</text>

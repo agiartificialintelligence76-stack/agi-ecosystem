@@ -1,0 +1,10 @@
+{
+  "mode": "Built-in image_gen edit",
+  "character": 8,
+  "original": "output/pfp-logo-fixes/before/character-8.png",
+  "source": "C:/Users/User/.codex/generated_images/01a18cea-e57d-7750-b985-a5551f3f3737/exec-ab065f4f-af8b-4ae0-8e63-3e6a91eca104.png",
+  "output": "public/pfp/v1/character-8.png",
+  "prompt": "Edit target: the attached transparent pixel-art character, not a style reference. Make one precise correction only: shorten BOTH hoodie drawstrings so they finish above the chest lettering, with no string crossing or touching any letter. Restore the full original simple white sans-serif uppercase print 'AGI' directly on the purple hoodie fabric. It must read A-G-I, fully unobstructed. NO rectangular label, NO badge, NO patch, NO border, NO pixel-block replacement font. Keep the original natural white clothing print appearance, tilt and position. Preserve this exact girl, bucket hat, golden curly hair, peach skin, eyes, face expression, pose, purple hoodie, silhouette, detailed pixel art, shading, transparent background, square composition and all pixel positions as closely as possible. Do not enlarge, zoom, shift or recrop the character. Clothing continues cleanly to the bottom edge with no horizontal strip. Output square transparent PNG. Only change the strings and recover the lettering under them.",
+  "postprocess": "Direct square nearest-neighbor resize to 512×512, no trim or recenter; preserve alpha; finish-character-edges.mjs retains rows 0–500 and extends row 500 through 511.",
+  "qa": "Verified natural AGI is unobstructed, hair recolors to Burgundy and Lavender with original skin tone, transparent silhouette and clean bottom edge."
+}

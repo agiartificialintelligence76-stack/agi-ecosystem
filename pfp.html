@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PFP Lab · AGI</title>
     <meta name="description" content="Find your AGI alter ego. Create a pixel-art profile picture, remix its colors and character, and download a free square PNG. Unlimited rerolls." />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#111015" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#2a0f7a" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AGI" />
     <meta property="og:title" content="Your AGI. Your energy. · PFP Lab" />
@@ -18,34 +18,67 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href="__SITE__/pfp" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/theme.js?v=7"></script>
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body class="pfp-page">
     <a class="pfp-skip" href="#main">Skip to generator</a>
-    <header class="pfp-header">
-      <div class="pfp-header-inner">
-        <a class="pfp-brand" href="/" aria-label="AGI home">AGI<span class="pfp-brand-divider" aria-hidden="true"></span><span class="pfp-brand-sub">PFP LAB</span></a>
-        <nav class="pfp-nav" aria-label="Main navigation">
-          <a href="/studio">Studio <span aria-hidden="true">↗</span></a>
-          <a href="/memes">Memes <span aria-hidden="true">↗</span></a>
-          <a class="pfp-home-link" href="/">Back to AGI <span aria-hidden="true">↗</span></a>
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="wordmark" href="/">AGI</a>
+        <!-- On phones this list becomes the drop-down menu (src/menu.js) -->
+        <nav class="nav" id="site-nav" aria-label="Sections">
+          <a href="/#evaluations">Evaluations</a>
+          <a href="/#model-card">Model card</a>
+          <a href="/#playground">Playground</a>
+          <a href="/#checker">ClankChecker</a>
+          <a href="/diary">Diary</a>
+          <a href="/memes">Memes</a>
+          <a href="/pfp" aria-current="page">PFP</a>
+          <a class="nav-phone" href="/live">Live</a>
+          <a class="nav-phone" href="/studio">AGI Studio</a>
+          <a class="nav-phone" href="/games">Games</a>
+          <a class="nav-phone" href="/roadmap">Roadmap</a>
+          <a class="nav-phone" href="/#safety">Safety note</a>
+          <a class="nav-x" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
+          <a class="nav-tg" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">AGI on Telegram ↗</a>
+          <button class="nav-pop" type="button" data-skin-toggle aria-pressed="true">Pop mode <span class="nav-pop-state mono" aria-hidden="true">On</span></button>
         </nav>
+        <div class="topbar-actions">
+          <a class="icon-btn x-btn" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on X (@agi1dotapp)" title="@agi1dotapp on X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a class="icon-btn tg-btn" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on Telegram (@agi2dotapp)" title="@agi2dotapp: the $AGI community group on Telegram"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21.4 2.6 2.8 10.2l7.7 3.3 3.3 7.7 7.6-18.6ZM21.4 2.6 10.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></a>
+          <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
+            <svg class="i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the bold AGI look">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <a class="btn btn-primary btn-sm" href="/#playground">Try AGI-1</a>
+          <button class="icon-btn menu-btn" type="button" data-menu aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+            <svg class="i-menu" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <svg class="i-close" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </div>
       </div>
     </header>
 
-    <main id="main" class="pfp-main">
+    <main id="main">
       <section class="pfp-intro" aria-labelledby="pfp-title">
+        <div class="wrap pfp-intro-inner">
         <div>
-          <p class="pfp-eyebrow"><span class="pfp-pixel-star" aria-hidden="true">✦</span> A NEW FACE FOR YOUR INTERNET LIFE</p>
+          <p class="pfp-eyebrow"><span class="pfp-pixel-star" aria-hidden="true">✦</span> PFP LAB · THE AGI UNIVERSE</p>
           <h1 id="pfp-title">Your AGI.<br /><span>Your energy.</span></h1>
         </div>
         <div class="pfp-intro-aside">
-          <p>Same pixel universe. A personality of your own.<br />Roll it, remix it, make it your profile picture.</p>
+          <p>Same pixel universe. A personality of your own. <br />Roll it, remix it, make it your profile picture.</p>
           <span class="pfp-free"><span aria-hidden="true"></span> Free to create. Yours to download.</span>
           <p class="pfp-library-count" id="pfp-library-count"></p>
         </div>
+        </div>
       </section>
 
+      <div class="wrap pfp-main">
       <section class="pfp-workspace" aria-label="Profile picture generator">
         <div class="pfp-art-panel">
           <div class="pfp-panel-top">
@@ -95,8 +128,22 @@
       </section>
 
       <div class="pfp-bottom-note"><span class="pfp-pixel-star" aria-hidden="true">✦</span><p>One shared universe. Your own little corner of it.</p><a href="/">Explore AGI <span aria-hidden="true">↗</span></a></div>
+      </div>
     </main>
-    <footer class="pfp-footer"><span>AGI / PFP LAB</span><p>Made for the people behind the profile pictures.</p><a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">Find us on X ↗</a></footer>
+    <footer class="foot">
+      <div class="foot-bar">
+        <div class="wrap foot-bar-in">
+          <p class="foot-brand">AGI</p>
+          <nav class="foot-nav" aria-label="Footer">
+            <a href="/">Home</a><a href="/#playground">Playground</a><a href="/studio">AGI Studio</a>
+            <a href="/games">Games</a><a href="/memes">Memes</a><a href="/pfp" aria-current="page">PFP</a>
+            <a href="/roadmap">Roadmap</a><a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">X @agi1dotapp ↗</a>
+            <a href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">Telegram ↗</a>
+          </nav>
+          <p class="foot-legal"><span>© 2026 AGI. No labs were harmed.</span><span>Made for the people behind the profile pictures.</span></p>
+        </div>
+      </div>
+    </footer>
     <noscript><p class="pfp-noscript">Turn on JavaScript to create and download your profile picture.</p></noscript>
     <script type="module" src="/src/pfp/page.js"></script>
   </body>

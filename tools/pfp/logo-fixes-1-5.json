@@ -1,0 +1,22 @@
+{
+  "mode": "Built-in image_gen edit",
+  "changes": "Shortened both hoodie drawstrings above original natural white AGI shirt print; no box, badge or replacement lettering style.",
+  "postprocess": "Direct1254×1254→512×512 nearest-neighbor resize, no trim or recenter; preserve alpha; finish-character-edges.mjs retains rows0–500 and extends cleanrow500 through511.",
+  "files": [
+    {
+      "character": 1,
+      "original": "output/pfp-logo-fixes/before/character-1.png",
+      "source": "C:/Users/User/.codex/generated_images/01a18ceb-7ecf-7351-a6f0-f4b71ca8d252/exec-1554ede4-b326-44cb-afa1-58f0d7cfd0dd.png",
+      "output": "public/pfp/v1/character-1.png",
+      "prompt": "Precise local clothing edit to the supplied transparent512×512 pixel-art portrait. The ONLY requested change is to shorten BOTH hoodie drawstrings so their two tips end ABOVE the white AGI chest print, leaving ALL THREE letters A G I fully visible and unobstructed. Keep the drawstring roots at their exact present neckline positions. They should hang only a short distance down from the neck and stop before any part of the letters. Remove the old long lower string segments and naturally restore the purple hoodie fabric and folds underneath.\nPreserve EVERYTHING ELSE as exactly as possible: this exact character identity, face, expression, eye shapes, golden-yellow hair and every hair outline, purple headphones and their small white icon, original warm peach skin, violet hoodie, pose, shoulder shape, body placement, original natural white sans-serif shirt lettering spelling \"AGI\", its size and slight perspective/tilt, precise pixel-art grain/shading and outline style. Keep the original composition and the same512×512 canvas. Do not crop, zoom, recenter, move or resize the character. Preserve transparent background and the existing alpha silhouette. Hoodie body continues to bottomedge.\nThe AGI must remain the ORIGINAL NATURAL WHITE SHIRT PRINT, not a sticker, badge, box, patch or label. NO dark rectangle or rectangular border behind AGI. NO pixel-block/arcade font. NO extra text. NO changes to hair color, skin color, clothing color, facial anatomy, hair shape, lighting, proportions or art style. Make only the small drawstring correction."
+    },
+    {
+      "character": 5,
+      "original": "output/pfp-logo-fixes/before/character-5.png",
+      "source": "C:/Users/User/.codex/generated_images/01a18ceb-7ecf-7351-a6f0-f4b71ca8d252/exec-7360fb80-491e-4900-8182-f57d6e237f7c.png",
+      "output": "public/pfp/v1/character-5.png",
+      "prompt": "Precise local clothing edit to the supplied transparent512×512 pixel-art portrait. The ONLY requested change is to shorten BOTH hoodie drawstrings so their two tips end ABOVE the white AGI chest print, leaving ALL THREE letters A G I fully visible and unobstructed. Keep the drawstring roots at their exact present neckline positions. They should hang only a short distance down from the neck and stop before any part of the letters. Remove the old long lower string segments and naturally restore the purple hoodie fabric and folds underneath.\nPreserve EVERYTHING ELSE as exactly as possible: this exact character identity, face, expression, eye shapes, golden-yellow hair and every hair outline, purple headphones and their small white icon, original warm peach skin, violet hoodie, pose, shoulder shape, body placement, original natural white sans-serif shirt lettering spelling \"AGI\", its size and slight perspective/tilt, precise pixel-art grain/shading and outline style. Keep the original composition and the same512×512 canvas. Do not crop, zoom, recenter, move or resize the character. Preserve transparent background and the existing alpha silhouette. Hoodie body continues to bottomedge.\nThe AGI must remain the ORIGINAL NATURAL WHITE SHIRT PRINT, not a sticker, badge, box, patch or label. NO dark rectangle or rectangular border behind AGI. NO pixel-block/arcade font. NO extra text. NO changes to hair color, skin color, clothing color, facial anatomy, hair shape, lighting, proportions or art style. Make only the small drawstring correction."
+    }
+  ],
+  "qa": "Before/after and Silver,Burgundy,Midnight hair +Cherry outfit contact sheets in output/pfp-logo-fixes; originalface placement and skin tone visually reviewed. These are imagegen edits, not pixel-identical copies."
+}

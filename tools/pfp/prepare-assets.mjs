@@ -1,10 +1,11 @@
 import sharp from 'sharp';
 import { mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { finishCharacterEdge } from './finish-character-edges.mjs';
 
 // Reproduce the browser assets from the generated source images. Originals
-// stay outside public/. This only crops, resizes and encodes; it does not repaint
-// the artwork or change its alpha, colors, lettering, or character details.
+// stay outside public/. Crop, resize and encode the artwork, then extend the
+// checked clean clothing edge through the final 11 rows without moving its print.
 // node tools/pfp/prepare-assets.mjs <nine-character-atlas> <extra-character-atlas> <room> <four-scenes> [world-scenes] [fantasy-scenes] [output-directory]
 const [atlas, extra, room, scenes, world, fantasy, output = 'public/pfp/v1'] = process.argv.slice(2);
 if (![atlas, extra, room, scenes].every(Boolean)) {
@@ -50,8 +51,8 @@ for (const [index, { file, box }] of cells.entries()) {
   const fitted = await sharp(file).extract(tight)
     .resize(512, 488, { fit: 'contain', position: 'south', kernel: sharp.kernel.nearest, background: alpha })
     .png().toBuffer();
-  await sharp(fitted).extend({ top: 24, bottom: 0, left: 0, right: 0, background: alpha })
-    .png({ compressionLevel: 9, adaptiveFiltering: true, palette: false }).toFile(path.join(output, name));
+  const framed = await sharp(fitted).extend({ top: 24, bottom: 0, left: 0, right: 0, background: alpha }).png().toBuffer();
+  await sharp(await finishCharacterEdge(framed)).png({ compressionLevel: 9, adaptiveFiltering: true, palette: false }).toFile(path.join(output, name));
   report.push({ name, crop: tight, bytes: (await stat(path.join(output, name))).size });
 }
 
