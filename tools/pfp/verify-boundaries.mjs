@@ -11,7 +11,10 @@ import { skinMask } from '../../src/pfp/skin-mask.js';
 const destination = path.resolve(process.argv[2] || 'output/pfp-boundary-fix/verified');
 await fs.mkdir(destination, { recursive: true });
 const report = { looks: TRAITS.character.length, hairColors: TRAITS.hair.length, outfitColors: TRAITS.outfit.length,
-  combinations: 0, alphaFailures: 0, protectedColorFailures: 0, sourceHashes: {}, reviewSheets: [] };
+  combinations: 0, alphaFailures: 0, protectedColorFailures: 0, pipelineHashes: {}, sourceHashes: {}, reviewSheets: [] };
+for (const name of ['engine.js','material-edges.js','skin-mask.js','skin-corrections-a.js','skin-corrections-b.js','skin-corrections-c.js']) {
+  report.pipelineHashes[name] = createHash('sha256').update(await fs.readFile(`src/pfp/${name}`)).digest('hex');
+}
 const cases = [[1,0], [4,4], [11,6], [9,2]];
 let sheets = [];
 for (let character = 0; character < TRAITS.character.length; character++) {
@@ -23,7 +26,7 @@ for (let character = 0; character < TRAITS.character.length; character++) {
   for (let p = 0; p < mask.length; p++) {
     if (!source[p * 4 + 3]) continue;
     const [h,s] = rgbToHsl(source[p*4],source[p*4+1],source[p*4+2]);
-    if (mask[p] === 1 || (mask[p] === 3 && !(h > 238 && h < 301 && s > .24))) protectedOffsets.push(p*4);
+    if (mask[p] === 1 || (mask[p] === 3 && !(h > 238 && h < 301 && s > .24) && !(h >= 295 && h < 350))) protectedOffsets.push(p*4);
   }
   for (let hair = 0; hair < TRAITS.hair.length; hair++) for (let outfit = 0; outfit < TRAITS.outfit.length; outfit++) {
     const actual = recolorPixels(Buffer.from(source), { character, hair, outfit });
@@ -51,5 +54,6 @@ for (let character = 0; character < TRAITS.character.length; character++) {
   }
   console.log(`Verified look ${character+1}/48: all ${TRAITS.hair.length*TRAITS.outfit.length} palettes; skin and alpha unchanged.`);
 }
+report.verifiedAt = new Date().toISOString();
 await fs.writeFile(path.join(destination,'verification.json'), JSON.stringify(report,null,2)+'\n');
 console.log(`PASS: ${report.combinations} complete portraits; ${report.reviewSheets.length} native-size review sheets.`);

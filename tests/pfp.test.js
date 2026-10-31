@@ -427,22 +427,58 @@ test('PFP mixed curl edges follow both materials and render identically in brows
   for (const actual of [hairOnly, combined, browser]) assert.equal(actual[offset + 3], 253);
 });
 
+test('PFP shaded and tapered hair tips leave no mauve source-color rings on green fabric', async () => {
+  // The first three transitions border brown hair shadows; the fourth is a
+  // tapered tip more than six pixels from an unmixed hair sample. The braid
+  // samples catch source-colored residuals even when both materials are found.
+  const cases = [
+    [44, [[320,325,171,127,139,232],[329,334,184,114,139,245],[342,337,170,110,148,177],[340,349,179,118,145,251]]],
+    [4, [[238,389,195,109,113,252],[238,393,187,103,128,252]]],
+    [37, [[225,342,157,99,136,253],[226,342,137,96,144,252]]],
+  ];
+  for (const [character,points] of cases) {
+    const source = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer();
+    for (const hair of [5,11]) {
+      const result = recolorPixels(Buffer.from(source),{...base(),character,hair,outfit:4});
+      for (const [x,y,...rgba] of points) {
+        const offset = (y*512+x)*4;
+        assert.deepEqual([...source.subarray(offset,offset+4)],rgba);
+        const hue = rgbToHsl(...result.subarray(offset,offset+3))[0];
+        assert.ok(hue>90 && hue<250,'green fabric blended with dark or pale hair cannot retain a pink rim');
+        assert.equal(result[offset+3],rgba[3],'edge transparency remains exact');
+      }
+    }
+  }
+});
+
 test('PFP reported neckline and jaw defects recolor hair while preserving adjacent actual skin', async () => {
   // Visually inspected source pixels from the reported defects and the wider
   // native-size audit. Each pair straddles a real hair/skin boundary.
   const cases = [
+    [1, [334,270,153,95,49,252], [332,270,67,26,11,252]],
+    [4, [333,260,179,120,66,252], [331,260,122,62,21,251]],
+    [8, [323,265,160,97,46,253], [321,265,97,50,27,252]],
     [11, [295,351,250,203,88,252], [308,351,242,182,119,252]],
     [12, [249,334,241,180,73,253], [265,341,240,183,124,253]],
     [13, [234,347,237,178,79,253], [255,350,239,183,123,253]],
+    [13, [241,339,230,163,69,253], [255,350,239,183,123,253]],
     [16, [249,334,230,160,49,253], [252,354,250,209,163,253]],
+    [16, [211,260,141,73,12,253], [215,260,74,16,0,253]],
+    [16, [226,270,178,108,31,253], [233,270,80,20,6,253]],
     [22, [229,347,199,131,38,253], [236,347,242,181,113,253]],
     [25, [219,359,238,171,52,253], [225,359,242,181,102,253]],
     [28, [280,282,172,113,39,253], [280,279,57,17,3,253]],
     [28, [265,287,169,109,38,253], [262,287,227,151,86,253]],
     [29, [245,330,242,186,56,253], [249,330,242,178,95,253]],
+    [31, [235,300,173,109,46,252], [241,300,56,16,5,252]],
+    [31, [331,300,187,137,76,247], [328,300,97,47,8,251]],
+    [33, [392,255,200,138,71,252], [382,255,245,179,122,253]],
+    [33, [389,260,198,132,66,252], [380,260,245,179,120,253]],
     [37, [263,335,249,200,89,252], [280,350,240,185,119,252]],
     [42, [330,284,185,121,48,252], [330,272,248,212,159,253]],
     [42, [230,290,234,177,88,253], [245,300,237,184,126,252]],
+    [42, [234,306,225,158,69,252], [245,315,236,183,126,252]],
+    [43, [330,288,180,119,53,253], [330,277,247,197,140,253]],
   ];
   for (const [character, strand, skin] of cases) {
     const source = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer();
@@ -457,13 +493,36 @@ test('PFP reported neckline and jaw defects recolor hair while preserving adjace
       assert.deepEqual(result.subarray(offsets[1],offsets[1]+4), source.subarray(offsets[1],offsets[1]+4), `look ${character}: adjacent skin and jaw line stay exact`);
     }
   }
-  for (const [character,x,y] of [[4,245,345],[4,258,350],[36,291,371]]) {
+  for (const [character,x,y] of [[4,245,345],[4,258,350],[4,250,280],[6,348,224],[16,252,372],[21,273,390],[22,250,298],[23,241,283],[26,207,268],[26,314,383],[28,182,333],[28,186,336],[28,201,346],[31,244,300],[31,325,300],[36,291,371],[43,270,392],[46,323,327]]) {
     const source = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer();
     const offset = (y*512+x)*4;
     for (const hair of [4,9,11]) {
       const result = recolorPixels(Buffer.from(source),{...base(),character,hair,outfit:4});
       assert.deepEqual(result.subarray(offset,offset+4),source.subarray(offset,offset+4),'warm neckline highlights are skin, not blonde strands');
     }
+  }
+  for (const [character,x,y] of [[34,312,292],[35,306,300],[40,295,315],[41,317,318]]) {
+    const source = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer();
+    const offset = (y*512+x)*4;
+    for (const hair of [2,4,9,11]) {
+      const result = recolorPixels(Buffer.from(source),{...base(),character,hair,outfit:4});
+      assert.notDeepEqual(result.subarray(offset,offset+3),source.subarray(offset,offset+3),'the narrow hair beside the neck follows its selected color');
+      assert.equal(result[offset+3],source[offset+3]);
+    }
+  }
+});
+
+test('PFP pink skin-fabric antialiasing follows the outfit without following hair', async () => {
+  const source = await sharp(readFileSync(new URL('../public/pfp/v1/character-28.png', import.meta.url))).ensureAlpha().raw().toBuffer();
+  const points = [[177,331],[182,334],[187,338],[205,350]].map(([x,y])=>(y*512+x)*4);
+  const original = recolorPixels(Buffer.from(source),{...base(),character:28,hair:1,outfit:0});
+  const forest = recolorPixels(Buffer.from(source),{...base(),character:28,hair:1,outfit:4});
+  const burgundy = recolorPixels(Buffer.from(source),{...base(),character:28,hair:4,outfit:4});
+  for (const p of points) {
+    assert.deepEqual(original.subarray(p,p+4),source.subarray(p,p+4));
+    assert.notDeepEqual(forest.subarray(p,p+3),source.subarray(p,p+3),'the pink source-fabric fringe must not remain on Forest');
+    assert.deepEqual(burgundy.subarray(p,p+4),forest.subarray(p,p+4),'no hair paint reaches the skin and scarf border');
+    assert.equal(forest[p+3],source[p+3]);
   }
 });
 

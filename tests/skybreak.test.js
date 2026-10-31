@@ -6,8 +6,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const read = (name) => readFileSync(join(ROOT, name), 'utf8');
 const GAME = 'src/games/skybreak';
 const walk = (dir) => readdirSync(join(ROOT, dir)).flatMap((f) => (statSync(join(ROOT, dir, f)).isDirectory() ? walk(`${dir}/${f}`) : [`${dir}/${f}`]));
@@ -117,9 +118,10 @@ test('its CSP: the site\'s own, plus WebAssembly for its page and its 3D city\'s
   const files = v.headers.find((h) => h.source === '/games/skybreak/(characters|environment|motions)/(.*)');
   assert.deepEqual(files.headers, [{ key: 'Cache-Control', value: 'public, max-age=86400' }]);
   // the address the engine names its decoder by, as the build writes it (Vite: <name>-<hash>.js)
-  const engine = readFileSync(join(ROOT, 'node_modules/@viggle/splat-engine/package.json'), 'utf8');
+  const engineManifest = new URL(import.meta.resolve('@viggle/splat-engine/package.json'));
+  const engine = readFileSync(engineManifest, 'utf8');
   assert.equal(JSON.parse(engine).version, '0.3.2', 'the engine the worker rule was checked with');
-  const dist = join(ROOT, 'node_modules/@viggle/splat-engine/dist');
+  const dist = fileURLToPath(new URL('./dist/', engineManifest));
   const workerFiles = readdirSync(dist, { recursive: true }).filter((f) => /spz-worker\.(m?js)$/.test(String(f)));
   assert.ok(workerFiles.length >= 1, 'its decoder is its own file, spz-worker');
 });

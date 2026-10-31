@@ -58,6 +58,45 @@ function trace(mask) {
   return loops;
 }
 const corrections = {}, report = [];
+const jawStarts = [255,253,265,245,240,255,232,253,252,245,255,260,270,260,265,268];
+function refinedJaw(source, face, startY, anatomy) {
+  const kept = Uint8Array.from(face);
+  const handledRows = new Uint8Array(512);
+  const bright = (p) => source[p * 4] >= 225 && source[p * 4 + 1] >= 150 && source[p * 4 + 2] >= 105;
+  const light = (p) => (Math.max(...source.subarray(p * 4, p * 4 + 3)) + Math.min(...source.subarray(p * 4, p * 4 + 3))) / 510;
+  const valley = (points) => {
+    let chosen = points[0], value = light(chosen);
+    for (const p of points.slice(1)) { const l = light(p); if (l < value) { value = l; chosen = p; } }
+    return chosen;
+  };
+  for (let y = startY; y < 340; y++) {
+    const points = [];
+    for (let x = 130; x < 420; x++) if (face[y * 512 + x] && bright(y * 512 + x)) points.push(x);
+    if (!points.length) continue;
+    handledRows[y] = 1;
+    const left = points[0], right = points.at(-1);
+    const l = valley(Array.from({ length: 7 }, (_, k) => y * 512 + left - k)) % 512;
+    const r = valley(Array.from({ length: 7 }, (_, k) => y * 512 + right + k)) % 512;
+    for (let x = 130; x < 420; x++) kept[y * 512 + x] = Number(x >= l && x <= r);
+  }
+  for (let x = 130; x < 420; x++) {
+    const points = [];
+    for (let y = startY; y < 340; y++) if (face[y * 512 + x] && bright(y * 512 + x)) points.push(y);
+    if (!points.length) continue;
+    const bottom = points.at(-1), end = Math.floor(valley(Array.from({ length: 7 }, (_, k) => (bottom + k) * 512 + x)) / 512);
+    for (let y = end + 1; y < 340; y++) if (!handledRows[y]) kept[y * 512 + x] = 0;
+  }
+  // The old face contour also covered the upper neck shadow, above the coarse
+  // neck polygon's diagonal top edge. Keep that actual anatomy between its
+  // source-traced vertical neck sides; only the surrounding back hair changes.
+  const neck = anatomy.slice(1).filter((p) => Math.min(...p.map((v) => v[1])) > 250 && Math.max(...p.map((v) => v[1])) < 430)
+    .sort((a, b) => (Math.max(...b.map((v) => v[0])) - Math.min(...b.map((v) => v[0]))) * (Math.max(...b.map((v) => v[1])) - Math.min(...b.map((v) => v[1]))) - (Math.max(...a.map((v) => v[0])) - Math.min(...a.map((v) => v[0]))) * (Math.max(...a.map((v) => v[1])) - Math.min(...a.map((v) => v[1]))))[0];
+  if (neck) {
+    const top = neck.slice(0, 3), left = Math.min(...top.map((v) => v[0])), right = Math.max(...top.map((v) => v[0])), y0 = Math.min(...top.map((v) => v[1])) - 12;
+    for (let y = y0; y < 340; y++) for (let x = left; x <= right; x++) if (face[y * 512 + x]) kept[y * 512 + x] = 1;
+  }
+  return kept;
+}
 for (let character = 0; character < 16; character++) {
   const source = await sharp(`public/pfp/v1/character-${character}.png`).ensureAlpha().raw().toBuffer();
   const original = SKIN_REGIONS_A[character];
@@ -93,7 +132,24 @@ for (let character = 0; character < 16; character++) {
       if (oldMask[p] === 3) hair[p] = 1;
     }
   }
-  const newRegions = [original[0]];
+  if (character === 13) {
+    // Individually checked amber curl tip on the left of the neck. Its blue
+    // channel is below100; the peach neck immediately to its right is above110.
+    for (let y = 333; y <= 352; y++) for (let x = 232; x <= 247; x++) {
+      const p = y * 512 + x, [h] = hsl[p];
+      if (oldMask[p] === 3 && source[p * 4] > 150 && source[p * 4 + 2] < 100 && h > 20 && h < 45) hair[p] = 1;
+    }
+  }
+  const correctedFace = refinedJaw(source, originalFace, jawStarts[character], original);
+  if (character === 6) {
+    // Bright peach cheek highlights directly below the right eye were outside
+    // the old golden-fringe trace. Restore these independently inspected nicks.
+    for (let y = 219; y <= 231; y++) for (let x = 340; x <= 352; x++) {
+      const p = y * 512 + x;
+      if (source[p * 4] > 200 && source[p * 4 + 1] > 165 && source[p * 4 + 2] > 100) correctedFace[p] = 1;
+    }
+  }
+  const newRegions = [trace(correctedFace).sort((a, b) => b.length - a.length)[0]];
   let removed = 0, added = 0;
   for (const poly of original.slice(1)) {
     const mask = raster(poly);
@@ -131,7 +187,7 @@ for (let character = 0; character < 16; character++) {
   }
   skinMask(character).set(oldMask);
   await sharp({ create: { width: 2048, height: 540, channels: 3, background: '#191c24' } }).composite(tiles).png().toFile(`${destination}/character-${character}-proof.png`);
-  report.push({ character, removedHairPixels: removed, addedSkinEdgePixels: added });
+  report.push({ character, removedHairPixels: removed, addedSkinEdgePixels: added, releasedJawHairPixels: originalFace.reduce((sum, v, p) => sum + Number(v && !correctedFace[p]), 0) });
 }
 await fs.writeFile('src/pfp/skin-corrections-a.js', '// Pixel-aligned anatomy boundary corrections for looks 0–15.\n// These override the original contours without modifying the source artwork.\nexport const SKIN_CORRECTIONS_A = ' + JSON.stringify(corrections) + ';\n');
 await fs.writeFile(`${destination}/report.json`, JSON.stringify(report, null, 2));
