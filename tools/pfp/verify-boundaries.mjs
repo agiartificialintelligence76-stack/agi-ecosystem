@@ -26,7 +26,10 @@ for (let character = 0; character < TRAITS.character.length; character++) {
   for (let p = 0; p < mask.length; p++) {
     if (!source[p * 4 + 3]) continue;
     const [h,s] = rgbToHsl(source[p*4],source[p*4+1],source[p*4+2]);
-    if (mask[p] === 1 || (mask[p] === 3 && !(h > 238 && h < 301 && s > .24) && !(h >= 295 && h < 350))) protectedOffsets.push(p*4);
+    const rgb = [source[p*4],source[p*4+1],source[p*4+2]];
+    const neutralWhite = !mask[p] && Math.min(...rgb) >= 165 && Math.max(...rgb)-Math.min(...rgb) <= 45
+      && h >= 100 && !(h > 238 && h < 301 && s > .24);
+    if (neutralWhite || mask[p] === 1 || (mask[p] === 3 && !(h > 238 && h < 301 && s > .24) && !(h >= 295 && h < 350))) protectedOffsets.push(p*4);
   }
   for (let hair = 0; hair < TRAITS.hair.length; hair++) for (let outfit = 0; outfit < TRAITS.outfit.length; outfit++) {
     const actual = recolorPixels(Buffer.from(source), { character, hair, outfit });

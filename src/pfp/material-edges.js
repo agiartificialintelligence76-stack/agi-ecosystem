@@ -43,7 +43,15 @@ export function materialEdgePlan(source, skin, character, toHsl) {
     // Fabric seen through a small curl can be muted by shadow. Its violet hue
     // remains unambiguous below the saturation of the broad garment panels.
     else if (h > 245 && h < 295 && s > .30) material[p] = 2;
-    else if (l > .10 && !(l > .78 && s < .24)) candidates.push([p, 1]);
+    else {
+      // Pale shirt, lace and print shading can mathematically resemble a
+      // distant hair/fabric mixture. Keep the main recolorer's treatment of
+      // these neutral details instead of pulling nearby hair color into them.
+      const minimum = Math.min(source[i], source[i + 1], source[i + 2]);
+      const chroma = Math.max(source[i], source[i + 1], source[i + 2]) - minimum;
+      if (minimum >= 165 && chroma <= 45) continue;
+      if (l > .10 && !(l > .78 && s < .24)) candidates.push([p, 1]);
+    }
   }
   const plan = [];
   for (const [p, foreground] of candidates) {

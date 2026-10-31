@@ -451,6 +451,19 @@ test('PFP shaded and tapered hair tips leave no mauve source-color rings on gree
   }
 });
 
+test('PFP white shirt and neutral seam shadows do not pick up nearby hair or zipper color', async () => {
+  const source = await sharp(readFileSync(new URL('../public/pfp/v1/character-11.png', import.meta.url))).ensureAlpha().raw().toBuffer();
+  const points = [[270,400,241,222,224,252],[290,400,204,174,185,252],[298,400,232,211,216,252],[300,400,230,212,217,252],[295,410,231,213,216,252],[294,400,206,183,199,252],[302,403,244,230,231,252]];
+  for (const hair of [4,5,11]) for (let outfit=0;outfit<TRAITS.outfit.length;outfit++) {
+    const result = recolorPixels(Buffer.from(source),{...base(),character:11,hair,outfit});
+    for (const [x,y,...rgba] of points) {
+      const offset=(y*512+x)*4;
+      assert.deepEqual([...source.subarray(offset,offset+4)],rgba);
+      assert.deepEqual([...result.subarray(offset,offset+4)],rgba,'white shirt remains white beside the curl and zipper');
+    }
+  }
+});
+
 test('PFP reported neckline and jaw defects recolor hair while preserving adjacent actual skin', async () => {
   // Visually inspected source pixels from the reported defects and the wider
   // native-size audit. Each pair straddles a real hair/skin boundary.
