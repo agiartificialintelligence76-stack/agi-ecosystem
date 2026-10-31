@@ -155,7 +155,7 @@ test('the clips aren\'t part of the website: not in its build, no new packages, 
   assert.deepEqual(config.build.rollupOptions.input, {
     main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html', studio: 'studio.html',
     roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html', rideemagi: 'rideemagi.html',
-    trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html', memes: 'memes.html', pfp: 'pfp.html', vote: 'vote.html',
+    trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html', skybreak: 'skybreak.html', memes: 'memes.html', pfp: 'pfp.html', vote: 'vote.html',
     owner: 'owner-command.html', content: 'content.html', notfound: '404.html', verify: 'verify.html',
   }, 'only website entries, including the owner editor and its custom-page shell; never the clips page or live-show scene');
   const pkg = JSON.parse(read('package.json'));
@@ -165,8 +165,10 @@ test('the clips aren\'t part of the website: not in its build, no new packages, 
   // 2 of AGI Studio, the same day: its clock puts the small "Made with AGI Studio" mark on a video's download copy, on our
   // server; opentype.js since 2026-10-14: AGI Studio's meme templates, whose words our server draws with the same fonts as the
   // page, server/meme-render.js; lightweight-charts since 2026-10-22: TRENCHING SIMULATOR's GNGM chart, TradingView
-  // Lightweight Charts™, in the browser only, its exact version; the clips never add a package: they bring their own ffmpeg)
-  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@ffmpeg-installer/ffmpeg', '@gltf-transform/core', '@gltf-transform/extensions', '@gltf-transform/functions', '@scure/bip39', '@viggle/splat-engine', 'lightweight-charts', 'opentype.js', 'playcanvas', 'sharp', 'three', 'viem']);
+  // Lightweight Charts™, in the browser only, its exact version; @dimforge/rapier3d-compat since 2026-10-31: SKYBREAK's
+  // physics, in the browser only, the exact version the game was made and tested with; the clips never add a package: they
+  // bring their own ffmpeg)
+  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@dimforge/rapier3d-compat', '@ffmpeg-installer/ffmpeg', '@gltf-transform/core', '@gltf-transform/extensions', '@gltf-transform/functions', '@scure/bip39', '@viggle/splat-engine', 'lightweight-charts', 'opentype.js', 'playcanvas', 'sharp', 'three', 'viem']);
   assert.equal(pkg.dependencies['lightweight-charts'], '5.2.1', 'pinned exactly (its CSP-checked behaviour and its credit are 5.2.1\'s)');
   // (ws since 2026-10-21, a dev dependency only: TRENCHING SIMULATOR's Live mode relay, tools/trench-relay/, runs on the
   // owner's server with its own package.json, and tests/trench-live.test.js runs it here against fake upstream servers;

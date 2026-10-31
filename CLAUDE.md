@@ -10020,6 +10020,64 @@ then in the SQL Editor `select arcade_score_hide(<id>, true);` (false shows it a
 **Tests:** `tests/arcade.test.js` (Ride 'Em, AGI!'s server checks, its hooks, the 14 SQL functions), `tests/page.test.js`
 (the section, its module, its look), `tests/trench-game.test.js` (the rest: see TRENCHING SIMULATOR's).
 
+### SKYBREAK (2026-10-31)
+
+**The owner's request:** "publish it on the site", then "can i play it also in a phone or other devices?". The fourth game,
+at **agi1.app/games/skybreak**: AGI-1's 3D chart climb, 600 metres through eight zones from the Launchpad rooftops to a
+landing pad on the Moon. Green candles pump her up, red ones dump, rugs get pulled, rails fling her, pads throw her up; Rift
+run saves checkpoints on side paths, Pure ascent never does. Her character and the launch city are real Gaussian-splat
+exports (Viggle JST-2, made in the owner's PINOC account), drawn with `@viggle/splat-engine` and PlayCanvas; Rapier is the
+physics; everything above the city is drawn in code.
+
+- **Its own project** is `skybreak/` in the owner's folder (not in git): its source, its 38 tests (a movement bot climbs all
+  ~460 steps to the Moon), a local launcher (`Play Skybreak.bat`), an optional asset pipeline and its README. Its 3D files
+  live in `public/games/skybreak/` (its Vite `publicDir`), which is also where the site serves them from.
+- **Brought in by `tools/games/import-skybreak.mjs`** (like Ride 'Em, AGI!'s tool: each change a patch that must find its
+  text exactly; never edit its output by hand): its modules and styles into `src/games/skybreak/` (its 3D files read from
+  `/games/skybreak/`; its fonts, Geist and Geist Mono with their OFL license, in `fonts/`), its markup into `skybreak.html`
+  between `<!-- game:start -->` and `<!-- game:end -->` (its header's mark links back to /games; "AGI GAMES · BETA" on its
+  title screen instead of "personal prototype"), and only the five files it loads into `public/games/skybreak/` (`RUNTIME`:
+  her character, the city at 120,000 and 40,000 splats, the motions' list and her idle; about 4.5 MB). **Never shipped:**
+  the original 17.9 MB city export and the provenance records, which stay in the owner's folder (`.gitignore`).
+  **Hard rule 8 in the game too:** on the site its sky's chart billboards chart the game's own made-up `$SKY` (its altitude,
+  like its HUD's ticker), never `$AGI`'s price ("$AGI / USD ▲ 857%" in its own project), and the flag on the Moon says
+  AGI-1, not $AGI. Its collectible coins keep their name; the card says they're just for fun.
+  Run (after a new version of the game, then `npm test`): `node tools/games/import-skybreak.mjs skybreak`.
+- **Its page** (`skybreak.html`, `src/games/skybreak/page.js`): the AGI GAMES intro first, then the run counter, then the
+  game by a dynamic `import()`, so the intro plays while its engine (about 7 MB of JavaScript, PlayCanvas, Rapier and the
+  splat engine; a separate file, Vite's size warning expected) arrives. Plays: the game fires `skybreak:run` as each run
+  begins (`main.js`'s `start()`), `site.js` counts it like VLAD RUNNER 2049's (`game-play`, no sign-in, never who, how high
+  or how fast). Stars, players and plays on agi1.app/games, a ratings tab of its own; **no leaderboards** (its best times
+  and best bag stay on the device). Its reviews judged as a review of this game (`LOOK_GAMES.skybreak`: pumps, dumps, rugs
+  and the Moon are the game's words; advice about real coins still isn't shown).
+- **Its own CSP** (`vercel.json`): its physics, Rapier, is WebAssembly, so its page's addresses
+  (`/(games/skybreak/?|skybreak)`) get the site's policy with `'wasm-unsafe-eval'` added; and the splat engine's SPZ decoder
+  worker (`/assets/spz-worker-(.*)`, a worker's CSP is its own script's response's) gets that plus `data:` in `connect-src`
+  (its decoder is WebAssembly it fetches from a `data:` address). Both rules come after the site's own (`headers[0]`),
+  and Vercel uses the last rule's value for the same header. Every other page and file keeps the policy as it was. Without
+  the worker's rule the city fails ("the positions stream does not decompress: Failed to fetch") and Begin Ascent never
+  comes. Its 3D files are cached a day (`/games/skybreak/(characters|environment|motions)/(.*)`).
+- **Phones and tablets** (the same day, in its own project, so in both): any touchscreen gets the stick (move), ↑ (jump),
+  E (hold to swing), ↺ (recover, new) and the HUD's Ⅱ, and dragging anywhere else on the world looks around, also while
+  the stick is held (before: the touch controls only showed below 700 px wide, so a phone held sideways or a tablet had
+  none, and on a phone held sideways Begin Ascent was below the screen); a short screen gets a compact title and HUD; the
+  first hint says "Stick to move" on a touchscreen; slow frames step the picture down to low (the 40,000-splat city), not
+  only to medium. Gamepads: sticks, A jumps, RB swings, LB sprints, B rolls. Checked in Claude's software-drawn Chromium as a
+  phone held up and sideways (390 × 844, 844 × 390, 360 × 780) and a tablet (1024 × 768): the stick moves her, ↑ jumps,
+  a second finger looks around while the stick is held and after it's let go, ↺ brings her back. A real phone's frame rate
+  wasn't measured.
+- **The owner's asset scope:** the game's own README called it a personal prototype until the PINOC exports' rights for a
+  public site were checked; the owner was told before publishing (2026-10-31) and chose to publish.
+- `src/games/list.js` (`skybreak`), `src/owner/catalog.js` (its page and `/skybreak`), `vite.config.js` (its entry and
+  /games/skybreak in `npm run dev`), `scripts/share-pages.js` (its link preview, `images/skybreak/keyart.webp`: 1600 × 900,
+  a frame of the game itself with its title in its own type), `package.json` (`@dimforge/rapier3d-compat` 0.21.0, exact,
+  the version the game was made and tested with).
+
+**Tests:** `tests/skybreak.test.js` (what the import wrote, every id its code looks for is in its markup, its touch
+controls, only its `RUNTIME` files shipped, its key art, its two CSP rules and nowhere else), `tests/page.test.js` (its card,
+stars and plays, its page, its addresses; the games page with four games), `tests/intro.test.js` (its cover and entry, as
+every game's), `tests/arcade.test.js`, `tests/clips.test.js`.
+
 ## TRENCHING SIMULATOR (2026-10-20 and 21)
 
 **The owner's request** (2026-10-20): "i have another game idea again its gonna be called TRENCHING SIMULATOR … they
@@ -13576,6 +13634,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-28 | Her Discord endpoint at /discord/interactions, not /api/discord (the first idea): `tests/influencer.test.js` holds that no rewrite's source is under /api |
 | 2026-10-28 | Her Discord posts through the channel's webhook (`DISCORD_FEED_WEBHOOK`), not her bot's token: a bot that never connects to the gateway can't post with it, and a webhook posts only in its own channel |
 | 2026-10-28 | Her songs on Discord uploaded as files from agi1.app/music/ on each tap (Discord has no file ids to reuse); a file too big for the server's uploads goes as its link |
+| 2026-10-31 | SKYBREAK, the fourth game (agi1.app/games/skybreak), brought in from its own project by `tools/games/import-skybreak.mjs` like Ride 'Em, AGI!: one copy of its code in the site, its project stays the place to change it |
+| 2026-10-31 | SKYBREAK's WebAssembly allowed only where it runs: its page's addresses and the splat engine's SPZ decoder worker get the site's CSP plus `'wasm-unsafe-eval'` (the worker also `data:`), as later rules in `vercel.json`; every other page keeps the policy as it was |
+| 2026-10-31 | On the site SKYBREAK's billboards chart a made-up `$SKY`, never `$AGI`'s price, and the Moon's flag is AGI-1's (hard rule 8); its own project keeps its originals |
+| 2026-10-31 | SKYBREAK's touch controls on any touchscreen (`pointer: coarse`), not only below 700 px wide, and a compact title on a short screen: a phone held sideways had no controls and couldn't reach Begin Ascent |
 
 ## Open questions
 
@@ -14248,7 +14310,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
   those; a test filters by what each request is.
 - **Never edit a tool's output by hand** (2026-10-19): the game's `src/games/rideemagi/game.js`, `game.css` and
   `rideemagi.html`'s markup between `<!-- game:start -->` and `<!-- game:end -->` are written by
-  `tools/games/import-rideemagi.mjs` (its fonts' `fonts.css` by `tools/games/game-fonts.py`), like AGI Studio's guide
+  `tools/games/import-rideemagi.mjs` (and, since 2026-10-31, SKYBREAK's `src/games/skybreak/` and `skybreak.html`'s markup by
+  `tools/games/import-skybreak.mjs`; its `page.js` and `site.js` are the site's own) (its fonts' `fonts.css` by `tools/games/game-fonts.py`), like AGI Studio's guide
   videos' list: a change goes in the tool (a patch), then the tool is run again.
 - **A skip list matches an exact path or the path plus "/", never a bare start** (2026-10-20): Claude's comparison of
   this folder with its workspace skipped `tools/roadmap-promo/media` (a folder git ignores) as the start of a name, so

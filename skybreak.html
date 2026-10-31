@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>SKYBREAK · AGI games</title>
+    <meta name="description" content="Climb 600 metres of chart with AGI-1, from the city rooftops to the Moon. Green candles lift you, red ones drop away. A free 3D climbing game in your browser, on a computer or a phone. No wallet needed." />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0b0d14" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AGI" />
+    <meta property="og:title" content="SKYBREAK · AGI games" />
+    <meta property="og:description" content="Climb 600 metres of chart with AGI-1, from the city rooftops to the Moon. A free 3D climbing game in your browser, no wallet needed." />
+    <meta property="og:image" content="__SITE__/images/skybreak/keyart.webp" />
+    <meta property="og:image:width" content="1600" />
+    <meta property="og:image:height" content="900" />
+    <meta property="og:image:alt" content="AGI-1 standing on a giant green candle among chart billboards in the clouds, the word SKYBREAK beside her" />
+    <meta property="og:url" content="__SITE__/games/skybreak" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SKYBREAK · AGI games" />
+    <meta name="twitter:description" content="Climb 600 metres of chart with AGI-1, from the city rooftops to the Moon. A free 3D climbing game in your browser." />
+    <meta name="twitter:image" content="__SITE__/images/skybreak/keyart.webp" />
+    <meta name="twitter:image:alt" content="AGI-1 standing on a giant green candle among chart billboards in the clouds, the word SKYBREAK beside her" />
+    <link rel="canonical" href="__SITE__/games/skybreak" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <!-- the AGI GAMES intro's cover, over the game from the first paint (src/games/intro.js) -->
+    <div class="gi" id="agi-intro" aria-hidden="true"></div>
+    <main id="sb-root">
+      <!-- game:start (written by tools/games/import-skybreak.mjs from the game's own markup: don't edit) -->
+      <canvas id="game" aria-label="Skybreak 3D game"></canvas>
+      <div id="vignette"></div><div id="speedlines"></div><div id="flash"></div>
+      <header class="brand"><a href="/games" aria-label="Back to AGI games"><span class="brand-mark">A1</span><span>AGI<span class="brand-divider"> / </span>FIELD SYSTEMS</span></a><span class="edition">SKYBREAK / V.02 · THE CHART CLIMB</span></header>
+      <section id="intro" class="screen intro">
+        <div class="intro-content"><div class="eyebrow"><span class="live-dot"></span> ONLY UP / NUMBER GO UP</div><h1>SKY<span>BREAK</span></h1><div class="title-meta">AN AGI-1 CHART CLIMB</div>
+        <p class="intro-copy">Green candles <b class="up">pump</b>. Red candles <b class="down">dump</b>.<br>Climb 600 metres of chart to the Moon. Never hold the bag.</p>
+        <div class="mode-tabs" role="group" aria-label="Run mode"><button class="active" data-mode="rift">Rift run<span>Earn checkpoints on side routes</span></button><button data-mode="pure">Pure ascent<span>No checkpoints. One climb.</span></button></div>
+        <button id="start" class="primary" disabled><span id="start-label">OPENING THE MARKET</span><span>↗</span></button><div class="load-track"><div id="load-fill"></div></div><p id="load-status" class="loading" role="status">Establishing the route…</p>
+        <button id="how" class="text-button">Field manual <span>↗</span></button><span class="prototype-label" id="best-bag">AGI GAMES · BETA / BUILD 02</span>
+        </div>
+        <div class="intro-side"><div class="legend"><span class="tiny">READ THE CHART</span><p><i class="candle up"></i>Green candle. Stand on it and it pumps you up.</p><p><i class="candle down"></i>Red candle. It dumps a beat after you land.</p><p><i class="rug"></i>Rug. It gets pulled. Keep moving.</p></div>
+        <div class="map-note"><span class="tiny">FINAL COORDINATE</span><strong>The Moon</strong><span>ELEVATION +600 M</span></div></div>
+        <footer class="intro-footer"><span>AGI-1 / ASCENT DIVISION</span><span>08 ZONES <i>/</i> 600 METRES <i>/</i> <span id="route-steps">460</span> STEPS</span><span>GRAVITY DOES NOT NEGOTIATE.</span></footer>
+      </section>
+      <section id="hud" class="hidden" aria-label="Game information">
+        <div class="run-time"><span class="tiny" id="run-mode">RIFT RUN</span><strong id="timer">00:00.000</strong><span class="best">BEST <b id="best">—</b></span></div>
+        <div id="bag" class="bag"><i class="coin-icon">AGI</i><strong id="coin-count">0</strong><small>/ <span id="coin-total">0</span> $AGI</small></div>
+        <div class="hud-top-right"><button id="sound" class="icon-button" aria-label="Toggle sound">♪</button><button id="quality" class="icon-button" aria-label="Change visual quality">HQ</button><button id="pause" class="icon-button" aria-label="Pause game">Ⅱ</button></div>
+        <div class="ticker">
+          <div class="ticker-head"><span class="tiny">$SKY · ALTITUDE</span><span id="change" class="up">▲ 0.0%</span></div>
+          <strong class="ticker-price"><span id="altitude">0</span><small>M</small></strong>
+          <canvas id="price-chart" aria-label="Your altitude as a candlestick chart"></canvas>
+          <div class="ticker-foot"><span>ATH <b id="ath">0</b> M</span><span id="progress-pct">0% TO THE MOON</span></div>
+        </div>
+        <div class="altimeter"><span class="tiny">MOON</span><div class="height-track"><div id="height-fill"></div><span id="height-marker"></span><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="tiny">0 M</span></div>
+        <div id="crosshair">+</div><div id="grapple-hint" class="hidden"><kbd>E</kbd> HOLD TO SWING</div>
+        <div class="district"><span id="district-no" class="district-no">01</span><div><span class="tiny">CURRENT ZONE</span><strong id="district-name">Launchpad</strong></div></div>
+        <div class="speed-readout"><span id="speed">0.0</span><small>M/S</small><div class="speed-track"><i id="speed-fill"></i></div><b id="movement-state">GROUNDED</b></div>
+        <div id="zone-banner"><span id="zone-banner-no">ZONE 01</span><strong id="zone-banner-name">Launchpad</strong><em id="zone-banner-title">The city falls away</em></div>
+        <div id="hint" class="hint">WASD to move · Space to jump · Drag to look</div><div id="toast" class="toast" role="status"></div>
+        <div class="controls-strip"><span><kbd>W A S D</kbd> MOVE</span><span><kbd>SPACE</kbd> JUMP / MANTLE</span><span><kbd>SHIFT</kbd> SPRINT</span><span><kbd>Q</kbd> ROLL</span><span><kbd>E</kbd> GRAPPLE</span><span><kbd>R</kbd> RECOVER</span></div>
+      </section>
+      <section id="pause-screen" class="screen dialog-screen hidden"><div class="dialog"><span class="eyebrow">TRADING HALTED</span><h2>Hold<br>position.</h2><p>Your ascent is paused. The chart will wait.</p><button id="resume" class="primary">RESUME ASCENT <span>↗</span></button><button id="restart" class="secondary">Restart from the ground</button><button id="menu" class="text-button">Return to title</button></div></section>
+      <section id="win-screen" class="screen dialog-screen hidden"><div class="dialog win"><span class="eyebrow">FINAL COORDINATE REACHED</span><h2>To the<br>Moon.</h2><p>600 metres of chart, climbed by hand.</p><canvas id="finish-chart" aria-label="Your whole climb as a candlestick chart"></canvas><strong id="finish-time" class="finish-time">00:00.000</strong><span id="finish-note" class="finish-note"></span><p id="finish-bag" class="finish-bag"></p><p id="finish-detail"></p><button id="again" class="primary">RUN IT AGAIN <span>↗</span></button><button id="win-menu" class="text-button">Return to title</button></div></section>
+      <section id="help-screen" class="screen dialog-screen hidden"><div class="dialog help"><span class="eyebrow">FIELD MANUAL / 02</span><h2>Read the chart.</h2><dl><dt>WASD · Space</dt><dd>Move and jump. Hold Space for height. Jump toward a nearby ledge to mantle up.</dd><dt>Green candle</dt><dd>Stand on it and it pumps. The glowing wick and frame show exactly how high it goes.</dd><dt>Red candle</dt><dd>It dumps a moment after you land. Jump before it drops away.</dd><dt>Rug · rails · pads</dt><dd>Rugs get pulled out from under you. Green rails fling you long. Gold pads throw you up.</dd><dt>Lasers · diamonds</dt><dd>Red lasers sweep the outer edge, so stay inside. Hold E near a diamond to swing.</dd><dt>Moon gravity</dt><dd>The last zone is low gravity: bigger gaps, floatier jumps.</dd><dt>R · Escape</dt><dd>Recover to your rift or the start. Pause the run.</dd><dt>Touch</dt><dd>Left stick to move, drag anywhere to look. ↑ jumps (hold for height), hold E to swing, ↺ recovers, Ⅱ pauses.</dd><dt>Gamepad</dt><dd>Sticks move and look. A jumps, RB swings, LB sprints, B rolls.</dd></dl><p class="help-note">Falls stay in the world: miss a jump and you land on the loop below. Rift runs save on side paths; Pure ascent never saves. Coins and best times stay on this device.</p><button id="help-close" class="primary">UNDERSTOOD <span>↗</span></button></div></section>
+      <div id="touch-controls"><div id="touch-stick"><i></i></div><div class="touch-actions"><button id="touch-recover" aria-label="Recover to your rift or the start">↺</button><button id="touch-grapple" aria-label="Hold to grapple">E</button><button id="touch-jump" aria-label="Jump">↑</button></div></div>
+      <div id="error" class="hidden" role="alert"></div>
+      <!-- game:end -->
+      <noscript>Turn on JavaScript to play SKYBREAK. <a href="/games">Back to AGI games</a>.</noscript>
+    </main>
+    <script type="module" src="/src/games/skybreak/page.js"></script>
+  </body>
+</html>

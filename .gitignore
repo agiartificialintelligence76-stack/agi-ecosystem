@@ -58,3 +58,10 @@ tools/roadmap-promo/media/
 # The memes' originals (2026-10-23): some are over GitHub's 100 MB limit. Their web copies are in public/memes/
 # (tools/memes/encode.ps1); the originals stay on this computer only.
 memess/
+
+# SKYBREAK (2026-10-31): its own project (skybreak/, the owner's folder) reads its 3D files from public/games/skybreak/,
+# which is also where the site serves them from. Only the files the game loads go in git and on the site
+# (tools/games/import-skybreak.mjs: RUNTIME); the original 17.9 MB city export and the provenance records stay here.
+public/games/skybreak/environment/launch-plaza.spz
+public/games/skybreak/environment/launch-plaza-lods.json
+public/games/skybreak/motions/provenance.json
