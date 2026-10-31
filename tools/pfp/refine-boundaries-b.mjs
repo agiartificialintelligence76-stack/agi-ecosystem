@@ -3,12 +3,20 @@ import sharp from 'sharp';
 import { SKIN_REGIONS_A } from '../../src/pfp/skin-regions-a.js';
 import { SKIN_REGIONS_B } from '../../src/pfp/skin-regions-b.js';
 import { rgbToHsl } from '../../src/pfp/engine.js';
+import { refineFullFace } from './refine-full-boundaries-b.mjs';
+import { restoreRightForeheadB } from './right-forehead-restorations-b.mjs';
 const SKIN_REGIONS=[...SKIN_REGIONS_A,...SKIN_REGIONS_B];
 const W=512,N=W*W;
+await fs.mkdir('output/pfp-boundary-fix/b', {recursive:true});
 function fill(poly){const m=new Uint8Array(N);for(let y=0;y<W;y++){const xs=[];for(let i=0,j=poly.length-1;i<poly.length;j=i++){const[a,b]=poly[i],[c,d]=poly[j];if((b>y+.5)!=(d>y+.5))xs.push(a+(y+.5-b)*(c-a)/(d-b));}xs.sort((a,b)=>a-b);for(let k=0;k+1<xs.length;k+=2)m.fill(1,y*W+Math.max(0,Math.ceil(xs[k]-.5)),y*W+Math.min(W,Math.ceil(xs[k+1]-.5)));}return m;}
 function dilate(m,n){let a=m;for(let k=0;k<n;k++){const b=Uint8Array.from(a);for(let i=W+1;i<N-W-1;i++)if(a[i])for(const j of[i-1,i+1,i-W,i+W])b[j]=1;a=b;}return a;}
 function contours(mask){const edges=new Map();function add(a,b){const k=a.join(',');if(!edges.has(k))edges.set(k,[]);edges.get(k).push(b);}for(let y=0;y<W;y++)for(let x=0;x<W;x++){const i=y*W+x;if(!mask[i])continue;if(y===0||!mask[i-W])add([x,y],[x+1,y]);if(x===W-1||!mask[i+1])add([x+1,y],[x+1,y+1]);if(y===W-1||!mask[i+W])add([x+1,y+1],[x,y+1]);if(x===0||!mask[i-1])add([x,y+1],[x,y]);}const loops=[];while(edges.size){let cur=edges.keys().next().value.split(',').map(Number);const start=cur,loop=[cur];for(let k=0;k<N;k++){const key=cur.join(','),n=edges.get(key)?.pop();if(!n)break;if(!edges.get(key).length)edges.delete(key);if(n[0]===start[0]&&n[1]===start[1])break;loop.push(n);cur=n;}if(loop.length>2){const clean=loop.filter((p,i)=>{const a=loop[(i+loop.length-1)%loop.length],b=loop[(i+1)%loop.length];return !((a[0]===p[0]&&p[0]===b[0])||(a[1]===p[1]&&p[1]===b[1]));});loops.push(clean);}}loops.sort((a,b)=>area(b)-area(a));return loops;}
 function area(p){return Math.abs(p.reduce((s,[x,y],i)=>{const[a,b]=p[(i+1)%p.length];return s+x*b-a*y;},0));}
+function exactContour(mask){
+ const loops=contours(mask);let polygon=loops.shift();
+ for(const loop of loops){let a=0,b=0,distance=Infinity;for(let i=0;i<polygon.length;i++)for(let j=0;j<loop.length;j++){const d=(polygon[i][0]-loop[j][0])**2+(polygon[i][1]-loop[j][1])**2;if(d<distance){distance=d;a=i;b=j;}}const rotated=[...loop.slice(b),...loop.slice(0,b)];polygon=[...polygon.slice(0,a+1),...rotated,rotated[0],polygon[a],...polygon.slice(a+1)];}
+ const actual=fill(polygon),bad=actual.findIndex((v,p)=>v!==mask[p]);if(bad>=0)throw Error(`Contour differs at ${bad%W},${Math.floor(bad/W)}`);return polygon;
+}
 // The jaw ink, not a skin hue cutoff, is the boundary of the face. These
 // start rows are individually below each look's lower eye edge.
 const jawStarts=[238,262,272,257,260,274,260,273,260,254,258,242,239,249,264,274];
@@ -56,7 +64,7 @@ for(let c=16;c<32;c++){
  const anatomy=SKIN_REGIONS[c],out=[];
  for(let r=0;r<anatomy.length;r++){
   const old=fill(anatomy[r]);let mask=Uint8Array.from(old);
-  if(r===0){mask=refineJaw(d,old,c,anatomy);out.push(contours(mask)[0]);log.push({character:c,region:r,before:old.reduce((a,b)=>a+b,0),after:mask.reduce((a,b)=>a+b,0),note:'Measured jaw ink boundary'});continue;}
+  if(r===0){mask=refineJaw(d,old,c,anatomy);const full=refineFullFace(d,mask,c);mask=restoreRightForeheadB(d,full.mask,c);out.push(exactContour(mask));log.push({character:c,region:r,before:old.reduce((a,b)=>a+b,0),after:mask.reduce((a,b)=>a+b,0),note:'Measured jaw and temple ink boundary',temple:full.profile,fringe:full.fringe});continue;}
   // Below Warm Front's scarf the narrow golden-lit strip is skin, not hair.
   // There is no hair in this region; include its blended seam pixels too.
   if(c===28&&r===2){mask=dilate(old,3);out.push(contours(mask)[0]);log.push({character:c,region:r,before:old.reduce((a,b)=>a+b,0),after:mask.reduce((a,b)=>a+b,0),note:'Scarf skin strip; no hair overlaps'});continue;}
@@ -75,6 +83,26 @@ for(let c=16;c<32;c++){
    // It must not be mistaken for a gold hair strand merely by its hue.
    const collarWindows={16:[240,365,326,384],21:[250,378,308,397],26:[265,370,337,392]};
    if(r&&!ear&&collarWindows[c]){const [x0,y0,x1,y1]=collarWindows[c],reach=dilate(old,2);for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)if(reach[y*W+x])mask[y*W+x]=1;}
+  }
+  if([25,27].includes(c)&&r>0&&Math.max(...anatomy[r].map(p=>p[1]))<310){
+   const [x0,x1,y0,y1]=c===25?[164,182,247,284]:[169,182,216,252];
+   const light=(x,y)=>{const o=(y*W+x)*4;return Math.max(d[o],d[o+1],d[o+2])+Math.min(d[o],d[o+1],d[o+2]);};
+   for(let x=x0;x<=x1;x++){
+    let last=-1;for(let y=y0;y<=y1;y++){const p=y*W+x,o=p*4;if(mask[p]&&d[o]>=210&&d[o+1]>=140&&d[o+2]>=75&&hsl[p][0]<35.5)last=y;}
+    if(last<0)continue;let end=last,best=Infinity;
+    for(let y=last;y<=last+6;y++){const v=light(x,y);if(v<best){best=v;end=y;}}
+    for(let k=0;k<2&&light(x,end+1)<best+50;k++)end++;
+    for(let y=last;y<=end;y++)mask[y*W+x]=1;
+    for(let y=end+1;y<=y1;y++)mask[y*W+x]=0;
+   }
+  }
+  if(c===31&&Math.max(...anatomy[r].map(p=>p[1]))<310){
+   for(let x=168;x<198;x++){
+    let last=-1;for(let y=260;y<302;y++){const o=(y*W+x)*4;if(mask[y*W+x]&&d[o]>=210&&d[o+1]>=145&&d[o+2]>=85)last=y;}
+    if(last<0)continue;let end=last,best=Infinity;
+    for(let y=last;y<=last+6;y++){const o=(y*W+x)*4,v=Math.max(d[o],d[o+1],d[o+2])+Math.min(d[o],d[o+1],d[o+2]);if(v<best){best=v;end=y;}}
+    for(let y=end+1;y<310;y++)mask[y*W+x]=0;
+   }
   }
   const loops=contours(mask);
   if(!loops.length)throw Error(`Empty region ${c}/${r}`);

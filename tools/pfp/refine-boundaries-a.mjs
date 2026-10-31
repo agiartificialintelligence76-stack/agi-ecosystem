@@ -3,6 +3,8 @@ import sharp from 'sharp';
 import { SKIN_REGIONS_A } from '../../src/pfp/skin-regions-a.js';
 import { skinMask } from '../../src/pfp/skin-mask.js';
 import { recolorPixels, rgbToHsl } from '../../src/pfp/engine.js';
+import { refineFullFaceA } from './contour-refinements-a.mjs';
+import { refineForeheadA } from './forehead-restorations-a.mjs';
 
 const destination = 'output/pfp-boundary-fix/a';
 await fs.mkdir(destination, { recursive: true });
@@ -25,7 +27,7 @@ function neighbors(p) {
   if (x) r.push(p - 1); if (x < 511) r.push(p + 1); if (y) r.push(p - 512); if (y < 511) r.push(p + 512);
   return r;
 }
-function trace(mask) {
+function trace(mask, includeHoles = false) {
   const edges = new Map();
   const add = (a, b) => { const k = a.join(','); (edges.get(k) || edges.set(k, []).get(k)).push(b); };
   for (let y = 0; y < 512; y++) for (let x = 0; x < 512; x++) {
@@ -48,7 +50,7 @@ function trace(mask) {
       loop.push(next); at = next;
     }
     const area = loop.reduce((sum, [x, y], i) => { const [a, b] = loop[(i + 1) % loop.length]; return sum + x * b - a * y; }, 0);
-    if (area <= 0) continue;
+    if (area <= 0 && !includeHoles) continue;
     // Remove only exactly collinear vertices; preserve source-pixel coverage.
     loops.push(loop.filter((p, i) => {
       const a = loop[(i + loop.length - 1) % loop.length], b = loop[(i + 1) % loop.length];
@@ -56,6 +58,26 @@ function trace(mask) {
     }));
   }
   return loops;
+}
+function traceFace(mask) {
+  const loops = trace(mask, true).sort((a, b) => b.length - a.length);
+  let polygon = loops.shift();
+  // The runtime fills an even-odd polygon. Connect separate boundary loops by
+  // traversing the same bridge in both directions: it contributes no area,
+  // and preserves interior hair holes without eroding a path through skin.
+  for (const loop of loops) {
+    let a = 0, b = 0, distance = Infinity;
+    for (let i = 0; i < polygon.length; i++) for (let j = 0; j < loop.length; j++) {
+      const d = (polygon[i][0] - loop[j][0]) ** 2 + (polygon[i][1] - loop[j][1]) ** 2;
+      if (d < distance) { distance = d; a = i; b = j; }
+    }
+    const rotated = [...loop.slice(b), ...loop.slice(0, b)];
+    polygon = [...polygon.slice(0, a + 1), ...rotated, rotated[0], polygon[a], ...polygon.slice(a + 1)];
+  }
+  const actual = raster(polygon);
+  const mismatch = actual.findIndex((v, p) => v !== mask[p]);
+  if (mismatch >= 0) throw new Error(`Face contour coverage differs at ${mismatch % 512},${Math.floor(mismatch / 512)}`);
+  return polygon;
 }
 const corrections = {}, report = [];
 const jawStarts = [255,253,265,245,240,255,232,253,252,245,255,260,270,260,265,268];
@@ -140,7 +162,9 @@ for (let character = 0; character < 16; character++) {
       if (oldMask[p] === 3 && source[p * 4] > 150 && source[p * 4 + 2] < 100 && h > 20 && h < 45) hair[p] = 1;
     }
   }
-  const correctedFace = refinedJaw(source, originalFace, jawStarts[character], original);
+  let correctedFace = refinedJaw(source, originalFace, jawStarts[character], original);
+  correctedFace = refineFullFaceA(character, source, correctedFace, hsl);
+  correctedFace = refineForeheadA(character, source, correctedFace);
   if (character === 6) {
     // Bright peach cheek highlights directly below the right eye were outside
     // the old golden-fringe trace. Restore these independently inspected nicks.
@@ -149,7 +173,7 @@ for (let character = 0; character < 16; character++) {
       if (source[p * 4] > 200 && source[p * 4 + 1] > 165 && source[p * 4 + 2] > 100) correctedFace[p] = 1;
     }
   }
-  const newRegions = [trace(correctedFace).sort((a, b) => b.length - a.length)[0]];
+  const newRegions = [traceFace(correctedFace)];
   let removed = 0, added = 0;
   for (const poly of original.slice(1)) {
     const mask = raster(poly);

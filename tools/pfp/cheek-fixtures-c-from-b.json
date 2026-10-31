@@ -1,0 +1,524 @@
+{
+  "32": [
+    {
+      "x": 164,
+      "y": 289,
+      "rgba": [
+        118,
+        57,
+        20,
+        252
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 170,
+      "y": 299,
+      "rgba": [
+        102,
+        51,
+        24,
+        252
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 164,
+      "y": 292,
+      "rgba": [
+        192,
+        124,
+        50,
+        252
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    },
+    {
+      "x": 170,
+      "y": 303,
+      "rgba": [
+        181,
+        122,
+        58,
+        252
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    }
+  ],
+  "35": [
+    {
+      "x": 224,
+      "y": 264,
+      "rgba": [
+        239,
+        165,
+        84,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 225,
+      "y": 267,
+      "rgba": [
+        101,
+        40,
+        17,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 171,
+      "y": 252,
+      "rgba": [
+        136,
+        72,
+        38,
+        252
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 221,
+      "y": 264,
+      "rgba": [
+        250,
+        203,
+        91,
+        253
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    },
+    {
+      "x": 171,
+      "y": 254,
+      "rgba": [
+        204,
+        142,
+        71,
+        252
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    },
+    {
+      "x": 181,
+      "y": 268,
+      "rgba": [
+        199,
+        131,
+        52,
+        252
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    }
+  ],
+  "36": [
+    {
+      "x": 224,
+      "y": 274,
+      "rgba": [
+        238,
+        175,
+        95,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 226,
+      "y": 276,
+      "rgba": [
+        219,
+        152,
+        81,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 228,
+      "y": 277,
+      "rgba": [
+        224,
+        154,
+        90,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 217,
+      "y": 275,
+      "rgba": [
+        250,
+        197,
+        77,
+        253
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    }
+  ],
+  "38": [
+    {
+      "x": 238,
+      "y": 277,
+      "rgba": [
+        224,
+        157,
+        76,
+        252
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 240,
+      "y": 278,
+      "rgba": [
+        226,
+        162,
+        96,
+        252
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 234,
+      "y": 276,
+      "rgba": [
+        242,
+        187,
+        77,
+        252
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    }
+  ],
+  "39": [
+    {
+      "x": 336,
+      "y": 281,
+      "rgba": [
+        204,
+        160,
+        109,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 340,
+      "y": 283,
+      "rgba": [
+        188,
+        124,
+        55,
+        253
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    }
+  ],
+  "40": [
+    {
+      "x": 210,
+      "y": 270,
+      "rgba": [
+        247,
+        187,
+        124,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 209,
+      "y": 272,
+      "rgba": [
+        242,
+        176,
+        109,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 226,
+      "y": 284,
+      "rgba": [
+        255,
+        221,
+        162,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 226,
+      "y": 285,
+      "rgba": [
+        255,
+        221,
+        162,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 203,
+      "y": 284,
+      "rgba": [
+        239,
+        182,
+        71,
+        252
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    }
+  ],
+  "44": [
+    {
+      "x": 206,
+      "y": 293,
+      "rgba": [
+        241,
+        185,
+        114,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 207,
+      "y": 294,
+      "rgba": [
+        241,
+        185,
+        111,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 158,
+      "y": 281,
+      "rgba": [
+        125,
+        71,
+        32,
+        252
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 201,
+      "y": 293,
+      "rgba": [
+        236,
+        181,
+        90,
+        253
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    },
+    {
+      "x": 158,
+      "y": 283,
+      "rgba": [
+        173,
+        109,
+        52,
+        252
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    },
+    {
+      "x": 171,
+      "y": 296,
+      "rgba": [
+        185,
+        120,
+        51,
+        252
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    }
+  ],
+  "46": [
+    {
+      "x": 217,
+      "y": 266,
+      "rgba": [
+        240,
+        178,
+        106,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 218,
+      "y": 267,
+      "rgba": [
+        240,
+        179,
+        110,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 168,
+      "y": 261,
+      "rgba": [
+        128,
+        68,
+        31,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 210,
+      "y": 267,
+      "rgba": [
+        250,
+        197,
+        89,
+        253
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    },
+    {
+      "x": 168,
+      "y": 262,
+      "rgba": [
+        161,
+        102,
+        48,
+        253
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    },
+    {
+      "x": 176,
+      "y": 269,
+      "rgba": [
+        188,
+        125,
+        60,
+        253
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    }
+  ],
+  "47": [
+    {
+      "x": 196,
+      "y": 267,
+      "rgba": [
+        236,
+        171,
+        115,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 198,
+      "y": 267,
+      "rgba": [
+        233,
+        167,
+        113,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 142,
+      "y": 253,
+      "rgba": [
+        124,
+        57,
+        27,
+        253
+      ],
+      "material": "skin",
+      "note": "Source cheek/ink or lower-ear AA retained"
+    },
+    {
+      "x": 190,
+      "y": 267,
+      "rgba": [
+        248,
+        194,
+        88,
+        253
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    },
+    {
+      "x": 142,
+      "y": 254,
+      "rgba": [
+        172,
+        103,
+        47,
+        253
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    },
+    {
+      "x": 153,
+      "y": 266,
+      "rgba": [
+        169,
+        99,
+        42,
+        253
+      ],
+      "material": "hair",
+      "note": "Adjacent hair beyond source cheek/ear contour recolors"
+    }
+  ]
+}

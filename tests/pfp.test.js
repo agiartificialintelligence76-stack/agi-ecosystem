@@ -464,6 +464,28 @@ test('PFP white shirt and neutral seam shadows do not pick up nearby hair or zip
   }
 });
 
+test('PFP all 48 complete face contours match independently inspected source landmarks', async () => {
+  const fixtures = Object.assign({}, ...['a','b','c'].map(group => JSON.parse(read(`tools/pfp/contour-fixtures-${group}.json`))));
+  assert.deepEqual(Object.keys(fixtures).map(Number).sort((a,b)=>a-b),Array.from({length:48},(_,n)=>n));
+  for (let character=0;character<48;character++) {
+    const {reviewed,pixels}=fixtures[character];
+    for (const boundary of ['forehead','leftTemple','rightTemple','ears','jaw','neck']) assert.ok(reviewed.includes(boundary),`look ${character}: ${boundary} reviewed against source`);
+    assert.ok(pixels.filter(p=>p.material==='hair').length>=2);
+    assert.ok(pixels.filter(p=>p.material==='skin').length>=2);
+    const source=await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`,import.meta.url))).ensureAlpha().raw().toBuffer();
+    for (const hair of [12,11,6]) {
+      const result=recolorPixels(Buffer.from(source),{...base(),character,hair,outfit:4});
+      for (const {x,y,rgba,material,note} of pixels) {
+        const offset=(y*512+x)*4;
+        assert.deepEqual([...source.subarray(offset,offset+4)],rgba,`look ${character}: original ${note}`);
+        if(material==='skin') assert.deepEqual([...result.subarray(offset,offset+4)],rgba,`look ${character}: preserve ${note}`);
+        else assert.notDeepEqual([...result.subarray(offset,offset+3)],rgba.slice(0,3),`look ${character}: recolor ${note}`);
+        assert.equal(result[offset+3],rgba[3]);
+      }
+    }
+  }
+});
+
 test('PFP reported neckline and jaw defects recolor hair while preserving adjacent actual skin', async () => {
   // Visually inspected source pixels from the reported defects and the wider
   // native-size audit. Each pair straddles a real hair/skin boundary.

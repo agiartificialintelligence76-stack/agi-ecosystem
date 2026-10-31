@@ -1,0 +1,2198 @@
+{
+  "16": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 356,
+        "y": 218,
+        "rgba": [
+          195,
+          126,
+          44,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 359,
+        "y": 208,
+        "rgba": [
+          196,
+          129,
+          42,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 353,
+        "y": 218,
+        "rgba": [
+          83,
+          31,
+          6,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 350,
+        "y": 218,
+        "rgba": [
+          236,
+          173,
+          111,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 315,
+        "y": 115,
+        "rgba": [
+          195,
+          117,
+          52,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 338,
+        "y": 151,
+        "rgba": [
+          73,
+          24,
+          1,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 322,
+        "y": 115,
+        "rgba": [
+          244,
+          189,
+          70,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 230,
+        "y": 215,
+        "rgba": [
+          1,
+          0,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 275,
+        "y": 340,
+        "rgba": [
+          240,
+          185,
+          130,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      }
+    ]
+  },
+  "17": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 358,
+        "y": 242,
+        "rgba": [
+          211,
+          138,
+          42,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 359,
+        "y": 232,
+        "rgba": [
+          187,
+          117,
+          29,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 355,
+        "y": 242,
+        "rgba": [
+          99,
+          37,
+          6,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 352,
+        "y": 242,
+        "rgba": [
+          255,
+          223,
+          168,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 315,
+        "y": 150,
+        "rgba": [
+          188,
+          109,
+          56,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 338,
+        "y": 172,
+        "rgba": [
+          109,
+          53,
+          20,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 322,
+        "y": 149,
+        "rgba": [
+          186,
+          103,
+          47,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 238,
+        "y": 238,
+        "rgba": [
+          0,
+          0,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 285,
+        "y": 345,
+        "rgba": [
+          239,
+          183,
+          126,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      }
+    ]
+  },
+  "18": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 356,
+        "y": 251,
+        "rgba": [
+          211,
+          144,
+          47,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 360,
+        "y": 241,
+        "rgba": [
+          203,
+          144,
+          51,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 353,
+        "y": 251,
+        "rgba": [
+          169,
+          100,
+          29,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 350,
+        "y": 251,
+        "rgba": [
+          203,
+          163,
+          115,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 309,
+        "y": 142,
+        "rgba": [
+          174,
+          99,
+          38,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 335,
+        "y": 177,
+        "rgba": [
+          141,
+          81,
+          33,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 315,
+        "y": 142,
+        "rgba": [
+          240,
+          180,
+          60,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 229,
+        "y": 255,
+        "rgba": [
+          249,
+          216,
+          130,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 275,
+        "y": 345,
+        "rgba": [
+          240,
+          183,
+          125,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 240,
+        "y": 180,
+        "rgba": [
+          245,
+          187,
+          123,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored forehead outside old diagonal contour"
+      },
+      {
+        "x": 235,
+        "y": 195,
+        "rgba": [
+          97,
+          47,
+          14,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored eyebrow ink"
+      },
+      {
+        "x": 155,
+        "y": 274,
+        "rgba": [
+          250,
+          177,
+          112,
+          253
+        ],
+        "material": "skin",
+        "note": "Ear shading"
+      }
+    ]
+  },
+  "19": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 348,
+        "y": 237,
+        "rgba": [
+          180,
+          109,
+          35,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 351,
+        "y": 227,
+        "rgba": [
+          198,
+          125,
+          40,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 345,
+        "y": 237,
+        "rgba": [
+          102,
+          44,
+          7,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 342,
+        "y": 237,
+        "rgba": [
+          255,
+          191,
+          130,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 316,
+        "y": 151,
+        "rgba": [
+          202,
+          128,
+          47,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 328,
+        "y": 173,
+        "rgba": [
+          26,
+          4,
+          2,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 322,
+        "y": 151,
+        "rgba": [
+          249,
+          193,
+          70,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 220,
+        "y": 235,
+        "rgba": [
+          50,
+          5,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 260,
+        "y": 340,
+        "rgba": [
+          240,
+          183,
+          124,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 256,
+        "y": 220,
+        "rgba": [
+          252,
+          208,
+          153,
+          253
+        ],
+        "material": "skin",
+        "note": "Peach opening between the two fringe tips"
+      }
+    ]
+  },
+  "20": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 345,
+        "y": 240,
+        "rgba": [
+          201,
+          132,
+          45,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 347,
+        "y": 230,
+        "rgba": [
+          204,
+          135,
+          46,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 342,
+        "y": 240,
+        "rgba": [
+          76,
+          21,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 339,
+        "y": 240,
+        "rgba": [
+          250,
+          199,
+          138,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 295,
+        "y": 125,
+        "rgba": [
+          203,
+          131,
+          62,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 324,
+        "y": 163,
+        "rgba": [
+          205,
+          131,
+          82,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 301,
+        "y": 125,
+        "rgba": [
+          251,
+          202,
+          79,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 218,
+        "y": 237,
+        "rgba": [
+          5,
+          1,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 260,
+        "y": 330,
+        "rgba": [
+          241,
+          185,
+          126,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 190,
+        "y": 270,
+        "rgba": [
+          245,
+          175,
+          111,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored left cheek/ear triangle"
+      },
+      {
+        "x": 145,
+        "y": 246,
+        "rgba": [
+          231,
+          149,
+          76,
+          253
+        ],
+        "material": "skin",
+        "note": "Ear shading"
+      }
+    ]
+  },
+  "21": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 344,
+        "y": 254,
+        "rgba": [
+          217,
+          149,
+          47,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 345,
+        "y": 244,
+        "rgba": [
+          208,
+          139,
+          48,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 341,
+        "y": 254,
+        "rgba": [
+          100,
+          36,
+          4,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 338,
+        "y": 254,
+        "rgba": [
+          250,
+          184,
+          117,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 312,
+        "y": 170,
+        "rgba": [
+          208,
+          128,
+          52,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 333,
+        "y": 201,
+        "rgba": [
+          238,
+          165,
+          88,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 319,
+        "y": 170,
+        "rgba": [
+          250,
+          200,
+          68,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 236,
+        "y": 253,
+        "rgba": [
+          0,
+          0,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 280,
+        "y": 355,
+        "rgba": [
+          243,
+          184,
+          119,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 196,
+        "y": 281,
+        "rgba": [
+          251,
+          203,
+          147,
+          253
+        ],
+        "material": "skin",
+        "note": "Ear lobe"
+      }
+    ]
+  },
+  "22": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 338,
+        "y": 240,
+        "rgba": [
+          177,
+          114,
+          27,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 338,
+        "y": 230,
+        "rgba": [
+          196,
+          125,
+          34,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 335,
+        "y": 240,
+        "rgba": [
+          139,
+          89,
+          37,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 332,
+        "y": 230,
+        "rgba": [
+          255,
+          185,
+          118,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 301,
+        "y": 146,
+        "rgba": [
+          189,
+          116,
+          33,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 325,
+        "y": 177,
+        "rgba": [
+          111,
+          50,
+          12,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 308,
+        "y": 146,
+        "rgba": [
+          251,
+          206,
+          76,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 221,
+        "y": 246,
+        "rgba": [
+          245,
+          201,
+          128,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 268,
+        "y": 340,
+        "rgba": [
+          242,
+          181,
+          116,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 200,
+        "y": 274,
+        "rgba": [
+          248,
+          189,
+          97,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored lower-left cheek triangle"
+      }
+    ]
+  },
+  "23": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 367,
+        "y": 253,
+        "rgba": [
+          189,
+          125,
+          32,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 367,
+        "y": 243,
+        "rgba": [
+          223,
+          153,
+          53,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 364,
+        "y": 253,
+        "rgba": [
+          147,
+          93,
+          41,
+          252
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 361,
+        "y": 243,
+        "rgba": [
+          255,
+          195,
+          122,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 332,
+        "y": 177,
+        "rgba": [
+          234,
+          154,
+          95,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 349,
+        "y": 194,
+        "rgba": [
+          25,
+          3,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 339,
+        "y": 177,
+        "rgba": [
+          242,
+          173,
+          59,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 268,
+        "y": 253,
+        "rgba": [
+          4,
+          1,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 300,
+        "y": 350,
+        "rgba": [
+          245,
+          184,
+          121,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 241,
+        "y": 283,
+        "rgba": [
+          246,
+          179,
+          104,
+          253
+        ],
+        "material": "skin",
+        "note": "Soft cheek edge above jaw ink"
+      },
+      {
+        "x": 211,
+        "y": 275,
+        "rgba": [
+          237,
+          160,
+          96,
+          253
+        ],
+        "material": "skin",
+        "note": "Ear shading"
+      }
+    ]
+  },
+  "24": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 372,
+        "y": 240,
+        "rgba": [
+          192,
+          130,
+          39,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 368,
+        "y": 250,
+        "rgba": [
+          212,
+          147,
+          46,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 369,
+        "y": 240,
+        "rgba": [
+          126,
+          52,
+          12,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 366,
+        "y": 240,
+        "rgba": [
+          190,
+          87,
+          33,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 354,
+        "y": 160,
+        "rgba": [
+          216,
+          137,
+          64,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 366,
+        "y": 194,
+        "rgba": [
+          107,
+          60,
+          23,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 360,
+        "y": 160,
+        "rgba": [
+          230,
+          169,
+          51,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 270,
+        "y": 220,
+        "rgba": [
+          6,
+          7,
+          6,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 275,
+        "y": 350,
+        "rgba": [
+          244,
+          184,
+          120,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      }
+    ]
+  },
+  "25": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 335,
+        "y": 234,
+        "rgba": [
+          205,
+          131,
+          30,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 336,
+        "y": 224,
+        "rgba": [
+          206,
+          144,
+          45,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 332,
+        "y": 234,
+        "rgba": [
+          103,
+          50,
+          9,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 329,
+        "y": 234,
+        "rgba": [
+          255,
+          201,
+          134,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 296,
+        "y": 133,
+        "rgba": [
+          188,
+          113,
+          42,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 319,
+        "y": 164,
+        "rgba": [
+          25,
+          0,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 302,
+        "y": 133,
+        "rgba": [
+          217,
+          149,
+          45,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 208,
+        "y": 230,
+        "rgba": [
+          46,
+          10,
+          2,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 270,
+        "y": 340,
+        "rgba": [
+          244,
+          183,
+          120,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 172,
+        "y": 270,
+        "rgba": [
+          242,
+          164,
+          94,
+          253
+        ],
+        "material": "skin",
+        "note": "Ear lobe"
+      },
+      {
+        "x": 178,
+        "y": 279,
+        "rgba": [
+          132,
+          66,
+          15,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored bottom ear ink"
+      },
+      {
+        "x": 178,
+        "y": 280,
+        "rgba": [
+          193,
+          125,
+          37,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair below ear outline"
+      }
+    ]
+  },
+  "26": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 351,
+        "y": 238,
+        "rgba": [
+          202,
+          137,
+          37,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 350,
+        "y": 228,
+        "rgba": [
+          213,
+          152,
+          42,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 348,
+        "y": 238,
+        "rgba": [
+          159,
+          96,
+          29,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 344,
+        "y": 228,
+        "rgba": [
+          255,
+          201,
+          133,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 298,
+        "y": 134,
+        "rgba": [
+          223,
+          144,
+          74,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 323,
+        "y": 163,
+        "rgba": [
+          0,
+          0,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 305,
+        "y": 134,
+        "rgba": [
+          251,
+          209,
+          79,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 235,
+        "y": 239,
+        "rgba": [
+          7,
+          2,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 290,
+        "y": 350,
+        "rgba": [
+          243,
+          183,
+          118,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 207,
+        "y": 269,
+        "rgba": [
+          225,
+          146,
+          83,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored ear/cheek shadow"
+      }
+    ]
+  },
+  "27": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 358,
+        "y": 222,
+        "rgba": [
+          190,
+          123,
+          30,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 358,
+        "y": 212,
+        "rgba": [
+          211,
+          136,
+          38,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 355,
+        "y": 222,
+        "rgba": [
+          161,
+          96,
+          30,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 352,
+        "y": 212,
+        "rgba": [
+          255,
+          197,
+          134,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 317,
+        "y": 123,
+        "rgba": [
+          210,
+          128,
+          62,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 339,
+        "y": 159,
+        "rgba": [
+          165,
+          105,
+          60,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 324,
+        "y": 123,
+        "rgba": [
+          244,
+          191,
+          61,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 244,
+        "y": 223,
+        "rgba": [
+          0,
+          0,
+          0,
+          254
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 280,
+        "y": 330,
+        "rgba": [
+          243,
+          184,
+          120,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 214,
+        "y": 255,
+        "rgba": [
+          252,
+          204,
+          145,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored cheek triangle"
+      },
+      {
+        "x": 175,
+        "y": 235,
+        "rgba": [
+          240,
+          164,
+          85,
+          253
+        ],
+        "material": "skin",
+        "note": "Ear lobe"
+      },
+      {
+        "x": 177,
+        "y": 244,
+        "rgba": [
+          124,
+          63,
+          19,
+          253
+        ],
+        "material": "skin",
+        "note": "Lower earlobe ink"
+      },
+      {
+        "x": 177,
+        "y": 247,
+        "rgba": [
+          218,
+          151,
+          44,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair below earlobe ink"
+      },
+      {
+        "x": 175,
+        "y": 242,
+        "rgba": [
+          129,
+          64,
+          18,
+          253
+        ],
+        "material": "skin",
+        "note": "Lower ear ink"
+      },
+      {
+        "x": 175,
+        "y": 245,
+        "rgba": [
+          215,
+          145,
+          49,
+          253
+        ],
+        "material": "hair",
+        "note": "Warm hair below ear"
+      }
+    ]
+  },
+  "28": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 344,
+        "y": 219,
+        "rgba": [
+          212,
+          150,
+          54,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 340,
+        "y": 220,
+        "rgba": [
+          187,
+          122,
+          41,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 338,
+        "y": 220,
+        "rgba": [
+          91,
+          35,
+          10,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 334,
+        "y": 220,
+        "rgba": [
+          246,
+          158,
+          94,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 317,
+        "y": 129,
+        "rgba": [
+          180,
+          93,
+          25,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 330,
+        "y": 169,
+        "rgba": [
+          11,
+          0,
+          1,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 323,
+        "y": 129,
+        "rgba": [
+          250,
+          206,
+          80,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 213,
+        "y": 213,
+        "rgba": [
+          255,
+          211,
+          126,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 240,
+        "y": 295,
+        "rgba": [
+          242,
+          177,
+          113,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      }
+    ]
+  },
+  "29": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 363,
+        "y": 229,
+        "rgba": [
+          211,
+          143,
+          39,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 364,
+        "y": 219,
+        "rgba": [
+          217,
+          150,
+          46,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 360,
+        "y": 229,
+        "rgba": [
+          160,
+          97,
+          32,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 357,
+        "y": 229,
+        "rgba": [
+          200,
+          144,
+          93,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 326,
+        "y": 132,
+        "rgba": [
+          225,
+          151,
+          80,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 340,
+        "y": 160,
+        "rgba": [
+          12,
+          1,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 334,
+        "y": 132,
+        "rgba": [
+          251,
+          213,
+          84,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 243,
+        "y": 228,
+        "rgba": [
+          0,
+          0,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 290,
+        "y": 330,
+        "rgba": [
+          243,
+          183,
+          119,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      }
+    ]
+  },
+  "30": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 366,
+        "y": 244,
+        "rgba": [
+          200,
+          133,
+          54,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 367,
+        "y": 234,
+        "rgba": [
+          193,
+          130,
+          59,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 363,
+        "y": 244,
+        "rgba": [
+          152,
+          85,
+          46,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 361,
+        "y": 234,
+        "rgba": [
+          207,
+          149,
+          100,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 323,
+        "y": 140,
+        "rgba": [
+          209,
+          143,
+          83,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 351,
+        "y": 180,
+        "rgba": [
+          59,
+          28,
+          16,
+          252
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 330,
+        "y": 140,
+        "rgba": [
+          243,
+          189,
+          87,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 243,
+        "y": 245,
+        "rgba": [
+          20,
+          4,
+          7,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 275,
+        "y": 320,
+        "rgba": [
+          217,
+          142,
+          93,
+          252
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      }
+    ]
+  },
+  "31": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 363,
+        "y": 254,
+        "rgba": [
+          208,
+          146,
+          62,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 365,
+        "y": 244,
+        "rgba": [
+          196,
+          124,
+          44,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair outside right temple ink"
+      },
+      {
+        "x": 360,
+        "y": 254,
+        "rgba": [
+          91,
+          45,
+          14,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 357,
+        "y": 254,
+        "rgba": [
+          255,
+          202,
+          134,
+          253
+        ],
+        "material": "skin",
+        "note": "Right temple ink / adjacent face"
+      },
+      {
+        "x": 319,
+        "y": 145,
+        "rgba": [
+          201,
+          133,
+          63,
+          252
+        ],
+        "material": "skin",
+        "note": "Dark peach apex of right forehead valley"
+      },
+      {
+        "x": 345,
+        "y": 189,
+        "rgba": [
+          202,
+          135,
+          76,
+          253
+        ],
+        "material": "skin",
+        "note": "Right eyebrow tip / adjacent forehead shading"
+      },
+      {
+        "x": 326,
+        "y": 145,
+        "rgba": [
+          244,
+          194,
+          93,
+          252
+        ],
+        "material": "hair",
+        "note": "Hair alongside the separate right forehead valley"
+      },
+      {
+        "x": 247,
+        "y": 250,
+        "rgba": [
+          2,
+          0,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Iris and eye color remain original"
+      },
+      {
+        "x": 290,
+        "y": 360,
+        "rgba": [
+          241,
+          185,
+          120,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 182,
+        "y": 293,
+        "rgba": [
+          174,
+          109,
+          49,
+          252
+        ],
+        "material": "hair",
+        "note": "Back hair below earlobe ink"
+      },
+      {
+        "x": 182,
+        "y": 288,
+        "rgba": [
+          131,
+          79,
+          35,
+          252
+        ],
+        "material": "skin",
+        "note": "Earlobe outline"
+      },
+      {
+        "x": 274,
+        "y": 215,
+        "rgba": [
+          238,
+          177,
+          94,
+          253
+        ],
+        "material": "skin",
+        "note": "Peach antialias gap inside fringe opening"
+      }
+    ]
+  }
+}

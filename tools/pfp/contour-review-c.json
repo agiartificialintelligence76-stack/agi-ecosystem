@@ -1,0 +1,29 @@
+{
+  "range": [32, 47],
+  "palettes": [12, 11, 6],
+  "outfit": 4,
+  "source": "public/pfp/v1/character-{look}.png",
+  "proof": "output/pfp-full-boundary-review/c/face-{look}.png",
+  "method": "Source beside actual renderer output; full head and neck at 2x, with measured boundary crops at 6x to 16x. Every generated contour is rasterized and checked for pixel-exact agreement with its reviewed mask.",
+  "runtimeSha256": "D8FBD2868B6B1424CED2C02A79B71CD8E47FA87EC7143D7DA4B0AE83D8D90669",
+  "sourceFixtureCount": 323,
+  "regeneration": "Byte-identical after a second complete generator run.",
+  "looks": {
+    "32": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored shaded right forehead. Removed warm hair below ear ink while preserving outer ink AA. Ambiguous fold below left cheek crease remains hair after independent source review."},
+    "33": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored source left eyebrow and surrounding shaded skin. Right cheek gold strip follows hair outside the true dark outline."},
+    "34": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Reported sideburn block recolors with hair; full projecting eyelash remains unchanged. Restored shaded right forehead and continuous upper eyelid slope through outer lash AA."},
+    "35": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored forehead wedge and small left cheek triangle; removed hair below ear and outside left neck line, retaining source outlines."},
+    "36": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored upper forehead shadow and lower-left cheek shading. Golden light on lower neckline remains skin."},
+    "37": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Reported pale jaw bites repaired by preserving the entire source stroke and skin AA. Restored right forehead shadow; crossing neck curl remains hair."},
+    "38": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored left brow and cheek plus bounded upper-right forehead. Source gold shadow beneath knit hat remains hair."},
+    "39": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored both forehead wedges, right jaw AA, and continuous right upper eyelid skin. Short bob tip above helmet rim remains hair."},
+    "40": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored source brows, forehead skin and small left cheek triangle. Thin golden bang crossing upper lash is excluded from skin protection."},
+    "41": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored forehead shadow and brow. Measured front lock crossing right cheek tapers to its source tip; cheek and dark ink return below it. Ear and jewelry preserved."},
+    "42": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Reported ear gold rim removed along measured source ink, including lower tip; ear skin and outer ink retained. Restored forehead shadow, reviewed jaw and short crossing neck curl."},
+    "43": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored right forehead shadow; lower jaw follows source ink. Short wisp across left neck remains hair after independent source review. Lower collar skin highlights preserved."},
+    "44": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored brows, shaded forehead and cheek triangle; source thin curling bang remains hair. Lower ear gold band removed without clipping dark AA."},
+    "45": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored bounded upper-right forehead shadow to source diagonal. Reviewed forehead openings, cheek outline and lower collar in all three palettes."},
+    "46": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Restored source brow and shaded forehead plus lower-left cheek. Ear rim follows source ink; golden shoulder highlight remains skin."},
+    "47": {"reviewed": ["forehead", "leftTemple", "rightTemple", "ears", "jaw", "neck"], "notes": "Reported gold temple band removed outside full source ink. Restored upper forehead shadow and cheek triangle; lower ear rim follows source outline."}
+  }
+}

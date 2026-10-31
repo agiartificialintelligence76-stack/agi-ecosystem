@@ -1,0 +1,552 @@
+{
+  "33": [
+    {
+      "x": 280,
+      "y": 194,
+      "rgba": [
+        38,
+        3,
+        5,
+        252
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 282,
+      "y": 196,
+      "rgba": [
+        125,
+        74,
+        45,
+        252
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 283,
+      "y": 198,
+      "rgba": [
+        222,
+        158,
+        95,
+        252
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 310,
+      "y": 181,
+      "rgba": [
+        213,
+        149,
+        100,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 277,
+      "y": 188,
+      "rgba": [
+        224,
+        161,
+        66,
+        253
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 322,
+      "y": 190,
+      "rgba": [
+        248,
+        195,
+        86,
+        253
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    }
+  ],
+  "39": [
+    {
+      "x": 330,
+      "y": 150,
+      "rgba": [
+        218,
+        145,
+        87,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 332,
+      "y": 155,
+      "rgba": [
+        231,
+        168,
+        118,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 335,
+      "y": 160,
+      "rgba": [
+        226,
+        162,
+        109,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 346,
+      "y": 188,
+      "rgba": [
+        33,
+        11,
+        2,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 265,
+      "y": 150,
+      "rgba": [
+        209,
+        139,
+        81,
+        252
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 235,
+      "y": 190,
+      "rgba": [
+        237,
+        181,
+        110,
+        252
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 323,
+      "y": 150,
+      "rgba": [
+        250,
+        213,
+        102,
+        253
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 340,
+      "y": 150,
+      "rgba": [
+        242,
+        184,
+        83,
+        253
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 260,
+      "y": 150,
+      "rgba": [
+        249,
+        200,
+        95,
+        252
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 274,
+      "y": 150,
+      "rgba": [
+        252,
+        211,
+        102,
+        252
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    }
+  ],
+  "40": [
+    {
+      "x": 230,
+      "y": 191,
+      "rgba": [
+        104,
+        55,
+        25,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 232,
+      "y": 190,
+      "rgba": [
+        59,
+        33,
+        12,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 242,
+      "y": 184,
+      "rgba": [
+        245,
+        215,
+        162,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 245,
+      "y": 184,
+      "rgba": [
+        250,
+        224,
+        170,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 316,
+      "y": 145,
+      "rgba": [
+        225,
+        161,
+        99,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 320,
+      "y": 150,
+      "rgba": [
+        233,
+        169,
+        111,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 249,
+      "y": 150,
+      "rgba": [
+        252,
+        217,
+        110,
+        253
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 262,
+      "y": 150,
+      "rgba": [
+        251,
+        203,
+        93,
+        253
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 307,
+      "y": 145,
+      "rgba": [
+        255,
+        215,
+        106,
+        253
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 328,
+      "y": 145,
+      "rgba": [
+        247,
+        197,
+        95,
+        253
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    }
+  ],
+  "44": [
+    {
+      "x": 228,
+      "y": 214,
+      "rgba": [
+        82,
+        47,
+        17,
+        252
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 232,
+      "y": 212,
+      "rgba": [
+        63,
+        41,
+        22,
+        252
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 236,
+      "y": 214,
+      "rgba": [
+        193,
+        149,
+        92,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 248,
+      "y": 180,
+      "rgba": [
+        223,
+        162,
+        102,
+        252
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 307,
+      "y": 165,
+      "rgba": [
+        212,
+        143,
+        90,
+        252
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 243,
+      "y": 180,
+      "rgba": [
+        248,
+        202,
+        105,
+        252
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 256,
+      "y": 180,
+      "rgba": [
+        251,
+        205,
+        100,
+        252
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 300,
+      "y": 165,
+      "rgba": [
+        250,
+        212,
+        104,
+        252
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 316,
+      "y": 165,
+      "rgba": [
+        249,
+        197,
+        87,
+        252
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    }
+  ],
+  "46": [
+    {
+      "x": 230,
+      "y": 186,
+      "rgba": [
+        98,
+        55,
+        25,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 233,
+      "y": 186,
+      "rgba": [
+        103,
+        65,
+        32,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 240,
+      "y": 187,
+      "rgba": [
+        255,
+        219,
+        151,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 247,
+      "y": 185,
+      "rgba": [
+        255,
+        221,
+        160,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 252,
+      "y": 145,
+      "rgba": [
+        227,
+        162,
+        91,
+        252
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 317,
+      "y": 135,
+      "rgba": [
+        231,
+        167,
+        105,
+        253
+      ],
+      "material": "skin",
+      "note": "Source shaded forehead or eyebrow ink between the hair strands"
+    },
+    {
+      "x": 245,
+      "y": 145,
+      "rgba": [
+        252,
+        207,
+        99,
+        252
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 259,
+      "y": 145,
+      "rgba": [
+        251,
+        206,
+        99,
+        252
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 307,
+      "y": 135,
+      "rgba": [
+        251,
+        207,
+        97,
+        253
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    },
+    {
+      "x": 327,
+      "y": 135,
+      "rgba": [
+        255,
+        207,
+        99,
+        253
+      ],
+      "material": "hair",
+      "note": "Source hair immediately outside the shaded forehead wedge"
+    }
+  ]
+}

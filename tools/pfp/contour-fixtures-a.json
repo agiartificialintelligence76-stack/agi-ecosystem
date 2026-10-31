@@ -1,0 +1,2126 @@
+{
+  "0": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 356,
+        "y": 245,
+        "rgba": [
+          208,
+          147,
+          70,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 357,
+        "y": 245,
+        "rgba": [
+          204,
+          141,
+          62,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 354,
+        "y": 245,
+        "rgba": [
+          126,
+          71,
+          28,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 352,
+        "y": 245,
+        "rgba": [
+          241,
+          189,
+          134,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 202,
+        "y": 221,
+        "rgba": [
+          207,
+          157,
+          75,
+          253
+        ],
+        "material": "hair",
+        "note": "Gold end of the left sweep beside the outer eye"
+      }
+    ]
+  },
+  "1": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 354,
+        "y": 241,
+        "rgba": [
+          186,
+          122,
+          54,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 355,
+        "y": 241,
+        "rgba": [
+          182,
+          119,
+          52,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 352,
+        "y": 241,
+        "rgba": [
+          118,
+          59,
+          28,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 350,
+        "y": 241,
+        "rgba": [
+          238,
+          187,
+          142,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 313,
+        "y": 127,
+        "rgba": [
+          210,
+          139,
+          80,
+          252
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 232,
+        "y": 178,
+        "rgba": [
+          38,
+          12,
+          5,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 308,
+        "y": 127,
+        "rgba": [
+          251,
+          211,
+          107,
+          252
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 324,
+        "y": 127,
+        "rgba": [
+          238,
+          186,
+          77,
+          252
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "2": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 352,
+        "y": 248,
+        "rgba": [
+          205,
+          144,
+          77,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 353,
+        "y": 248,
+        "rgba": [
+          201,
+          136,
+          62,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 350,
+        "y": 248,
+        "rgba": [
+          126,
+          65,
+          30,
+          252
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 348,
+        "y": 248,
+        "rgba": [
+          254,
+          221,
+          162,
+          252
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 169,
+        "y": 269,
+        "rgba": [
+          207,
+          132,
+          80,
+          252
+        ],
+        "material": "skin",
+        "note": "Shaded triangular ear previously omitted"
+      },
+      {
+        "x": 171,
+        "y": 263,
+        "rgba": [
+          152,
+          89,
+          34,
+          252
+        ],
+        "material": "skin",
+        "note": "Ear inner crease"
+      },
+      {
+        "x": 177,
+        "y": 274,
+        "rgba": [
+          251,
+          210,
+          110,
+          252
+        ],
+        "material": "hair",
+        "note": "Front curl immediately outside the ear"
+      },
+      {
+        "x": 306,
+        "y": 154,
+        "rgba": [
+          218,
+          150,
+          94,
+          252
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 222,
+        "y": 205,
+        "rgba": [
+          225,
+          162,
+          80,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 297,
+        "y": 154,
+        "rgba": [
+          252,
+          210,
+          108,
+          252
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 315,
+        "y": 154,
+        "rgba": [
+          243,
+          194,
+          90,
+          252
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "3": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 363,
+        "y": 236,
+        "rgba": [
+          183,
+          119,
+          58,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 362,
+        "y": 236,
+        "rgba": [
+          180,
+          113,
+          56,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 357,
+        "y": 236,
+        "rgba": [
+          147,
+          87,
+          46,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 355,
+        "y": 236,
+        "rgba": [
+          255,
+          217,
+          163,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 361,
+        "y": 230,
+        "rgba": [
+          86,
+          31,
+          7,
+          253
+        ],
+        "material": "skin",
+        "note": "Outer cheek ink beyond the darker eyelash"
+      },
+      {
+        "x": 363,
+        "y": 230,
+        "rgba": [
+          185,
+          124,
+          60,
+          253
+        ],
+        "material": "hair",
+        "note": "Back hair beyond the outer cheek ink"
+      },
+      {
+        "x": 346,
+        "y": 156,
+        "rgba": [
+          209,
+          138,
+          79,
+          253
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 253,
+        "y": 164,
+        "rgba": [
+          201,
+          131,
+          69,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 339,
+        "y": 156,
+        "rgba": [
+          219,
+          160,
+          68,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 360,
+        "y": 156,
+        "rgba": [
+          218,
+          157,
+          72,
+          252
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "4": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 353,
+        "y": 225,
+        "rgba": [
+          214,
+          150,
+          69,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 355,
+        "y": 225,
+        "rgba": [
+          215,
+          152,
+          69,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 349,
+        "y": 225,
+        "rgba": [
+          109,
+          44,
+          25,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 347,
+        "y": 225,
+        "rgba": [
+          248,
+          185,
+          121,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 356,
+        "y": 217,
+        "rgba": [
+          195,
+          133,
+          69,
+          253
+        ],
+        "material": "hair",
+        "note": "Reported warm temple block beyond actual cheek stroke"
+      },
+      {
+        "x": 350,
+        "y": 217,
+        "rgba": [
+          235,
+          182,
+          138,
+          253
+        ],
+        "material": "skin",
+        "note": "Peach strip between eyelash and outer cheek stroke"
+      },
+      {
+        "x": 349,
+        "y": 225,
+        "rgba": [
+          109,
+          44,
+          25,
+          253
+        ],
+        "material": "skin",
+        "note": "Reported temple outer ink"
+      },
+      {
+        "x": 305,
+        "y": 192,
+        "rgba": [
+          249,
+          208,
+          124,
+          252
+        ],
+        "material": "hair",
+        "note": "Central bang fringe"
+      },
+      {
+        "x": 333,
+        "y": 151,
+        "rgba": [
+          222,
+          152,
+          97,
+          253
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 230,
+        "y": 173,
+        "rgba": [
+          207,
+          148,
+          85,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 310,
+        "y": 151,
+        "rgba": [
+          219,
+          159,
+          71,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 350,
+        "y": 151,
+        "rgba": [
+          222,
+          164,
+          72,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "5": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 339,
+        "y": 237,
+        "rgba": [
+          213,
+          145,
+          63,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 340,
+        "y": 237,
+        "rgba": [
+          218,
+          150,
+          66,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 337,
+        "y": 237,
+        "rgba": [
+          134,
+          70,
+          33,
+          252
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 335,
+        "y": 237,
+        "rgba": [
+          247,
+          205,
+          158,
+          252
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 209,
+        "y": 191,
+        "rgba": [
+          252,
+          209,
+          106,
+          253
+        ],
+        "material": "hair",
+        "note": "Left sweep outside forehead wedge"
+      },
+      {
+        "x": 247,
+        "y": 193,
+        "rgba": [
+          252,
+          207,
+          101,
+          253
+        ],
+        "material": "hair",
+        "note": "Central bang outside forehead wedge"
+      },
+      {
+        "x": 215,
+        "y": 191,
+        "rgba": [
+          209,
+          140,
+          85,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored forehead beneath eyebrow"
+      },
+      {
+        "x": 243,
+        "y": 193,
+        "rgba": [
+          225,
+          158,
+          104,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored forehead beside central bang"
+      },
+      {
+        "x": 218,
+        "y": 185,
+        "rgba": [
+          62,
+          25,
+          8,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored eyebrow ink"
+      },
+      {
+        "x": 298,
+        "y": 134,
+        "rgba": [
+          217,
+          148,
+          97,
+          253
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 240,
+        "y": 163,
+        "rgba": [
+          233,
+          168,
+          113,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 290,
+        "y": 134,
+        "rgba": [
+          250,
+          216,
+          123,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 307,
+        "y": 134,
+        "rgba": [
+          238,
+          179,
+          82,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "6": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 353,
+        "y": 225,
+        "rgba": [
+          180,
+          115,
+          56,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 354,
+        "y": 225,
+        "rgba": [
+          180,
+          115,
+          56,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 350,
+        "y": 225,
+        "rgba": [
+          124,
+          65,
+          22,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 348,
+        "y": 225,
+        "rgba": [
+          255,
+          232,
+          176,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 348,
+        "y": 224,
+        "rgba": [
+          255,
+          232,
+          176,
+          253
+        ],
+        "material": "skin",
+        "note": "Source warm cheek highlight preserved as a full patch"
+      },
+      {
+        "x": 328,
+        "y": 250,
+        "rgba": [
+          118,
+          60,
+          22,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair beyond lower jaw"
+      },
+      {
+        "x": 326,
+        "y": 250,
+        "rgba": [
+          90,
+          33,
+          8,
+          253
+        ],
+        "material": "skin",
+        "note": "Lower jaw ink"
+      },
+      {
+        "x": 322,
+        "y": 121,
+        "rgba": [
+          233,
+          168,
+          109,
+          253
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 232,
+        "y": 163,
+        "rgba": [
+          70,
+          28,
+          14,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 313,
+        "y": 121,
+        "rgba": [
+          255,
+          214,
+          115,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 334,
+        "y": 121,
+        "rgba": [
+          249,
+          195,
+          94,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "7": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 346,
+        "y": 239,
+        "rgba": [
+          216,
+          156,
+          72,
+          251
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 345,
+        "y": 239,
+        "rgba": [
+          210,
+          146,
+          74,
+          251
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 343,
+        "y": 239,
+        "rgba": [
+          109,
+          53,
+          20,
+          251
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 341,
+        "y": 239,
+        "rgba": [
+          218,
+          161,
+          110,
+          252
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 278,
+        "y": 207,
+        "rgba": [
+          254,
+          211,
+          141,
+          252
+        ],
+        "material": "hair",
+        "note": "Central bang end"
+      },
+      {
+        "x": 306,
+        "y": 145,
+        "rgba": [
+          232,
+          163,
+          108,
+          253
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 230,
+        "y": 182,
+        "rgba": [
+          212,
+          150,
+          73,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 297,
+        "y": 145,
+        "rgba": [
+          250,
+          209,
+          99,
+          252
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 318,
+        "y": 145,
+        "rgba": [
+          255,
+          208,
+          112,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "8": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 343,
+        "y": 238,
+        "rgba": [
+          187,
+          122,
+          56,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 344,
+        "y": 238,
+        "rgba": [
+          206,
+          143,
+          64,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 341,
+        "y": 238,
+        "rgba": [
+          137,
+          77,
+          34,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 340,
+        "y": 238,
+        "rgba": [
+          248,
+          217,
+          180,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 213,
+        "y": 258,
+        "rgba": [
+          234,
+          170,
+          64,
+          253
+        ],
+        "material": "hair",
+        "note": "Amber cheek curl edge"
+      },
+      {
+        "x": 214,
+        "y": 260,
+        "rgba": [
+          251,
+          206,
+          126,
+          252
+        ],
+        "material": "hair",
+        "note": "Pale golden end of cheek curl"
+      },
+      {
+        "x": 220,
+        "y": 260,
+        "rgba": [
+          251,
+          205,
+          146,
+          253
+        ],
+        "material": "skin",
+        "note": "Cheek adjacent to curl end"
+      },
+      {
+        "x": 319,
+        "y": 145,
+        "rgba": [
+          216,
+          141,
+          90,
+          252
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 238,
+        "y": 155,
+        "rgba": [
+          202,
+          132,
+          76,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 310,
+        "y": 145,
+        "rgba": [
+          251,
+          202,
+          93,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 335,
+        "y": 145,
+        "rgba": [
+          240,
+          184,
+          80,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "9": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 312,
+        "y": 237,
+        "rgba": [
+          155,
+          98,
+          39,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 313,
+        "y": 237,
+        "rgba": [
+          157,
+          100,
+          40,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 308,
+        "y": 237,
+        "rgba": [
+          49,
+          15,
+          2,
+          252
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 307,
+        "y": 237,
+        "rgba": [
+          224,
+          177,
+          117,
+          252
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 201,
+        "y": 186,
+        "rgba": [
+          235,
+          172,
+          72,
+          252
+        ],
+        "material": "hair",
+        "note": "Thin strand crossing forehead"
+      },
+      {
+        "x": 202,
+        "y": 187,
+        "rgba": [
+          245,
+          185,
+          89,
+          252
+        ],
+        "material": "hair",
+        "note": "Previously frozen interruption in thin strand"
+      },
+      {
+        "x": 212,
+        "y": 187,
+        "rgba": [
+          251,
+          186,
+          133,
+          252
+        ],
+        "material": "skin",
+        "note": "Peach forehead immediately beside the thin golden strand"
+      },
+      {
+        "x": 201,
+        "y": 140,
+        "rgba": [
+          220,
+          145,
+          93,
+          252
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 266,
+        "y": 135,
+        "rgba": [
+          243,
+          182,
+          126,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 206,
+        "y": 140,
+        "rgba": [
+          251,
+          208,
+          99,
+          252
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 282,
+        "y": 135,
+        "rgba": [
+          251,
+          201,
+          84,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "10": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 326,
+        "y": 239,
+        "rgba": [
+          65,
+          41,
+          26,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 327,
+        "y": 239,
+        "rgba": [
+          70,
+          39,
+          16,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 323,
+        "y": 239,
+        "rgba": [
+          48,
+          22,
+          7,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 322,
+        "y": 239,
+        "rgba": [
+          254,
+          206,
+          155,
+          252
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 284,
+        "y": 136,
+        "rgba": [
+          212,
+          142,
+          93,
+          252
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 190,
+        "y": 190,
+        "rgba": [
+          183,
+          129,
+          75,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 275,
+        "y": 136,
+        "rgba": [
+          249,
+          200,
+          87,
+          252
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 292,
+        "y": 136,
+        "rgba": [
+          249,
+          200,
+          93,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "11": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 391,
+        "y": 243,
+        "rgba": [
+          161,
+          95,
+          55,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 392,
+        "y": 243,
+        "rgba": [
+          196,
+          129,
+          71,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 389,
+        "y": 243,
+        "rgba": [
+          101,
+          54,
+          29,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 387,
+        "y": 243,
+        "rgba": [
+          250,
+          201,
+          150,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 277,
+        "y": 273,
+        "rgba": [
+          241,
+          183,
+          72,
+          252
+        ],
+        "material": "hair",
+        "note": "Cheek-crossing curl edge"
+      },
+      {
+        "x": 282,
+        "y": 274,
+        "rgba": [
+          236,
+          178,
+          79,
+          252
+        ],
+        "material": "hair",
+        "note": "Extreme pale gold curl tip"
+      },
+      {
+        "x": 286,
+        "y": 275,
+        "rgba": [
+          235,
+          179,
+          96,
+          252
+        ],
+        "material": "skin",
+        "note": "Cheek beside curl tip"
+      },
+      {
+        "x": 295,
+        "y": 351,
+        "rgba": [
+          250,
+          203,
+          88,
+          252
+        ],
+        "material": "hair",
+        "note": "Previously reported neck strand"
+      },
+      {
+        "x": 308,
+        "y": 351,
+        "rgba": [
+          242,
+          182,
+          119,
+          252
+        ],
+        "material": "skin",
+        "note": "True neck beside reported strand"
+      },
+      {
+        "x": 354,
+        "y": 147,
+        "rgba": [
+          217,
+          152,
+          90,
+          253
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 280,
+        "y": 196,
+        "rgba": [
+          151,
+          107,
+          47,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 346,
+        "y": 147,
+        "rgba": [
+          252,
+          213,
+          96,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 363,
+        "y": 147,
+        "rgba": [
+          251,
+          208,
+          88,
+          252
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "12": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 363,
+        "y": 246,
+        "rgba": [
+          107,
+          52,
+          20,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 364,
+        "y": 246,
+        "rgba": [
+          180,
+          115,
+          43,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 361,
+        "y": 246,
+        "rgba": [
+          81,
+          27,
+          4,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 358,
+        "y": 246,
+        "rgba": [
+          255,
+          199,
+          135,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 264,
+        "y": 215,
+        "rgba": [
+          250,
+          211,
+          142,
+          253
+        ],
+        "material": "hair",
+        "note": "Central bang end"
+      },
+      {
+        "x": 326,
+        "y": 150,
+        "rgba": [
+          214,
+          141,
+          74,
+          253
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 256,
+        "y": 194,
+        "rgba": [
+          80,
+          39,
+          15,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 317,
+        "y": 150,
+        "rgba": [
+          251,
+          212,
+          97,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 336,
+        "y": 150,
+        "rgba": [
+          244,
+          193,
+          75,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "13": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 349,
+        "y": 241,
+        "rgba": [
+          156,
+          95,
+          37,
+          254
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 350,
+        "y": 241,
+        "rgba": [
+          196,
+          131,
+          45,
+          254
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 348,
+        "y": 241,
+        "rgba": [
+          59,
+          8,
+          0,
+          254
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 345,
+        "y": 241,
+        "rgba": [
+          255,
+          194,
+          134,
+          254
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 218,
+        "y": 195,
+        "rgba": [
+          250,
+          191,
+          63,
+          253
+        ],
+        "material": "hair",
+        "note": "Left sweep outside restored skin wedge"
+      },
+      {
+        "x": 254,
+        "y": 199,
+        "rgba": [
+          255,
+          204,
+          90,
+          253
+        ],
+        "material": "hair",
+        "note": "Central bang outside restored forehead"
+      },
+      {
+        "x": 225,
+        "y": 195,
+        "rgba": [
+          246,
+          183,
+          107,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored forehead beneath eyebrow"
+      },
+      {
+        "x": 250,
+        "y": 199,
+        "rgba": [
+          242,
+          185,
+          118,
+          253
+        ],
+        "material": "skin",
+        "note": "Yellow-lit forehead still actual skin"
+      },
+      {
+        "x": 241,
+        "y": 339,
+        "rgba": [
+          230,
+          163,
+          69,
+          253
+        ],
+        "material": "hair",
+        "note": "Previously reported neck curl tip"
+      },
+      {
+        "x": 255,
+        "y": 350,
+        "rgba": [
+          239,
+          183,
+          123,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck beside curl tip"
+      },
+      {
+        "x": 309,
+        "y": 150,
+        "rgba": [
+          222,
+          145,
+          75,
+          253
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 244,
+        "y": 170,
+        "rgba": [
+          217,
+          140,
+          65,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 301,
+        "y": 150,
+        "rgba": [
+          232,
+          168,
+          53,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 322,
+        "y": 150,
+        "rgba": [
+          243,
+          178,
+          53,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "14": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 341,
+        "y": 246,
+        "rgba": [
+          168,
+          99,
+          35,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 342,
+        "y": 246,
+        "rgba": [
+          193,
+          125,
+          41,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 339,
+        "y": 246,
+        "rgba": [
+          88,
+          35,
+          10,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 337,
+        "y": 246,
+        "rgba": [
+          251,
+          199,
+          150,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 299,
+        "y": 147,
+        "rgba": [
+          226,
+          153,
+          97,
+          253
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 217,
+        "y": 192,
+        "rgba": [
+          255,
+          188,
+          121,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 290,
+        "y": 147,
+        "rgba": [
+          251,
+          214,
+          95,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 308,
+        "y": 147,
+        "rgba": [
+          250,
+          201,
+          77,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  },
+  "15": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 359,
+        "y": 249,
+        "rgba": [
+          200,
+          123,
+          33,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 360,
+        "y": 249,
+        "rgba": [
+          205,
+          130,
+          37,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair beyond the right temple/cheek contour"
+      },
+      {
+        "x": 358,
+        "y": 249,
+        "rgba": [
+          109,
+          51,
+          11,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 355,
+        "y": 249,
+        "rgba": [
+          250,
+          206,
+          156,
+          253
+        ],
+        "material": "skin",
+        "note": "Actual right cheek skin or source outline"
+      },
+      {
+        "x": 328,
+        "y": 145,
+        "rgba": [
+          235,
+          159,
+          100,
+          253
+        ],
+        "material": "skin",
+        "note": "Source dark peach forehead apex restored beneath the hair"
+      },
+      {
+        "x": 241,
+        "y": 189,
+        "rgba": [
+          205,
+          125,
+          68,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow retained intact"
+      },
+      {
+        "x": 318,
+        "y": 145,
+        "rgba": [
+          252,
+          203,
+          74,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      },
+      {
+        "x": 339,
+        "y": 145,
+        "rgba": [
+          252,
+          204,
+          75,
+          253
+        ],
+        "material": "hair",
+        "note": "Source golden strand outside the restored forehead opening"
+      }
+    ]
+  }
+}

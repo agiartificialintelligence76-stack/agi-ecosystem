@@ -2,6 +2,10 @@ import fs from 'node:fs/promises';
 import sharp from 'sharp';
 import {SKIN_REGIONS_B} from '../../src/pfp/skin-regions-b.js';
 import {rgbToHsl} from '../../src/pfp/engine.js';
+import {refineFullFaceC} from './refine-full-boundaries-c.mjs';
+import {refineCheekC} from './cheek-restorations-c.mjs';
+import {refineForeheadC} from './forehead-restorations-c.mjs';
+import {refineRightWedgeC} from './right-wedge-restorations-c.mjs';
 const out='output/pfp-boundary-fix/c'; await fs.mkdir(out,{recursive:true});
 const inside=(x,y,p)=>{let r=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const[a,b]=p[i],[c,d]=p[j];if((b>y)!=(d>y)&&x<(c-a)*(y-b)/(d-b)+a)r=!r;}return r;};
 function raster(p){const mask=new Uint8Array(512*512);for(let y=0;y<512;y++){const xs=[];for(let i=0,j=p.length-1;i<p.length;j=i++){const[a,b]=p[i],[c,d]=p[j];if((b>y+.5)!=(d>y+.5))xs.push(a+(y+.5-b)*(c-a)/(d-b));}xs.sort((a,b)=>a-b);for(let i=0;i+1<xs.length;i+=2)mask.fill(1,y*512+Math.max(0,Math.ceil(xs[i]-.5)),y*512+Math.min(512,Math.ceil(xs[i+1]-.5)));}return mask;}
@@ -12,6 +16,90 @@ function contours(mask){
   return loops.sort((a,b)=>area(b)-area(a));
 }
 function area(p){return Math.abs(p.reduce((s,[x,y],i)=>{const[a,b]=p[(i+1)%p.length];return s+x*b-a*y;},0));}
+function exactContour(mask){
+  const loops=contours(mask);let polygon=loops.shift();
+  for(const loop of loops){let a=0,b=0,distance=Infinity;for(let i=0;i<polygon.length;i++)for(let j=0;j<loop.length;j++){const d=(polygon[i][0]-loop[j][0])**2+(polygon[i][1]-loop[j][1])**2;if(d<distance){distance=d;a=i;b=j;}}const rotated=[...loop.slice(b),...loop.slice(0,b)];polygon=[...polygon.slice(0,a+1),...rotated,rotated[0],polygon[a],...polygon.slice(a+1)];}
+  const actual=raster(polygon),bad=actual.findIndex((v,p)=>v!==mask[p]);if(bad>=0)throw Error(`Face contour differs at ${bad%512},${Math.floor(bad/512)}`);return polygon;
+}
+const interpolate=(points,y)=>{const k=points.findIndex(v=>v[0]>=y),a=points[Math.max(0,k-1)],b=points[k];return k===0?a[1]:a[1]+(b[1]-a[1])*(y-a[0])/(b[0]-a[0]);};
+function reviewedFaceEdges(source,regions,n){
+  if(![34,35,37,39,41,42,47].includes(n))return regions;
+  const mask=raster(regions[0]);
+  if(n===34){
+    const original=Uint8Array.from(mask);
+    // The sideburn below the outer lash is hair. The bright cheek begins
+    // farther right; these anchors retain the source lash and skin gradient.
+    const edge=[[220,218],[225,222],[230,227],[235,229],[240,230],[245,231],[250,233],[255,235],[260,237]];
+    for(let y=220;y<=260;y++){const x=Math.round(interpolate(edge,y));for(let q=205;q<x;q++)mask[y*512+q]=0;}
+    // The outer lash projects left of the cheek. Preserve its full dark
+    // stroke and source AA; it must not inherit the sideburn's color.
+    for(let y=212;y<=233;y++)for(let x=210;x<240;x++){const p=y*512+x,i=p*4;if(original[p]&&Math.max(...source.subarray(i,i+3))<170)mask[p]=1;}
+    // The skin slope continues below the restored right forehead through
+    // the upper eyelid. Retain the measured source crease and outer lash AA.
+    for(const[y,right]of[[166,364],[167,365],[168,365],[169,365],[170,365],[171,364],[172,368],[173,368],[174,367],[175,370]]){
+      for(let x=350;x<=right;x++)mask[y*512+x]=1;
+    }
+  }
+  if(n===37||n===47){
+    const edge=n===37?[[225,369],[235,368],[245,367],[255,364],[265,356],[275,347],[285,335],[295,323],[301,313]]:[[205,342],[215,341],[225,339],[235,338],[245,336],[255,332],[265,323]];
+    for(let y=edge[0][0];y<=edge.at(-1)[0];y++){
+      const expected=interpolate(edge,y),lum=x=>{const i=(y*512+x)*4;return .3*source[i]+.6*source[i+1]+.1*source[i+2];};
+      let x=Math.round(expected),lowest=Infinity;
+      for(let q=Math.floor(expected)-2;q<=Math.ceil(expected)+2;q++){const l=lum(q);if(l<lowest){lowest=l;x=q;}}
+      // Retain the full dark stroke and its outer antialiasing. Filling the
+      // interior also repairs the old mask's missing bright jaw half-pixels.
+      while(x<expected+3&&lum(x+1)<lowest+40)x++;
+      for(let q=300;q<400;q++)mask[y*512+q]=q<=x?1:0;
+    }
+  }
+  if(n===47){
+    for(let y=200;y<205;y++)for(let x=344;x<360;x++)mask[y*512+x]=0;
+    for(let y=190;y<205;y++)for(let x=337;x<346;x++){const i=(y*512+x)*4;if(Math.max(...source.subarray(i,i+3))<125)mask[y*512+x]=1;}
+  }
+  if(n===41){
+    // A bright front lock crosses the cheek without a dark ink border. Its
+    // tapered gold tip ends at row266; the true cheek returns beneath it.
+    const edge=[[240,330],[245,329],[250,328],[255,325],[260,323],[265,321],[266,323],[267,330],[269,330]];
+    for(let y=240;y<=269;y++)for(let x=318;x<345;x++)mask[y*512+x]=x<=Math.round(interpolate(edge,y))?1:0;
+  }
+  if(n===39){
+    // The source upper eyelid slopes continuously into the outer lash.
+    // Its shaded peach pixels were cut away by the former rectangular edge.
+    for(const[y,right]of[[196,355],[197,356],[198,358],[199,359],[200,359],[201,359],[202,360],[203,360],[204,361],[205,361],[206,361]]){
+      for(let x=347;x<=right;x++)mask[y*512+x]=1;
+    }
+  }
+  if(n===42){
+    const ear=raster(regions[2]);
+    const left=[[210,161],[212,161],[214,161],[216,162],[218,162],[220,164],[222,164],[224,167],[226,168],[228,169],[230,171],[232,173],[234,174],[235,175]];
+    const right=[[202,179],[204,179],[206,179],[208,179],[210,178],[212,178],[214,176],[216,176],[218,176],[220,176],[222,176],[224,176],[226,176],[228,176],[230,176],[232,176],[234,175],[235,175]];
+    for(let y=202;y<245;y++)for(let x=150;x<190;x++){
+      if(y>235){ear[y*512+x]=0;continue;}
+      const r=Math.round(interpolate(right,y));
+      if(y<210){if(x>r)ear[y*512+x]=0;continue;}
+      const l=Math.round(interpolate(left,y));ear[y*512+x]=x>=l&&x<=r?1:0;
+    }regions[2]=contours(ear)[0];
+  }
+  if(n===35||n===39){
+    for(let region=0;region<2;region++){
+      const material=region===0?mask:raster(regions[region]);
+      if(n===35){
+        // Source dark neck outline, left side: the old face and neck both
+        // overlapped the shaded lock by four to six pixels.
+        const left=[[280,249],[305,249],[310,248],[315,248],[320,246]];
+        for(let y=280;y<=320;y++)for(let x=235;x<Math.round(interpolate(left,y));x++)material[y*512+x]=0;
+      }else{
+        // Short bob tip crosses the neck immediately above the helmet rim.
+        for(let y=321;y<=333;y++)for(let x=218;x<=234;x++){
+          const p=y*512+x,i=p*4,[h,s]=rgbToHsl(...source.subarray(i,i+3));
+          if(h>35.5&&h<60&&s>.3&&source[i+2]<115)material[p]=0;
+        }
+      }
+      if(region)regions[region]=exactContour(material);
+    }
+  }
+  regions[0]=exactContour(mask);return regions;
+}
 const jawStarts=[280,275,252,262,263,262,273,274,270,275,255,270,285,252,260,263];
 function refinedJaw(source,polygon,startY,neck){
   const face=raster(polygon);
@@ -126,7 +214,14 @@ for(let n=32;n<48;n++){
     }
     fixed[region]=contours(mask)[0]||fixed[region];
   }
-  result[n]=fixed;report.push({character:n,removed,added});
+  const full=refineFullFaceC(d,raster(fixed[0]),n);fixed[0]=exactContour(full.mask);
+  result[n]=reviewedFaceEdges(d,fixed,n).map((p,index)=>{
+    let mask=refineCheekC(n,d,raster(p),index);
+    if(index===0){mask=refineForeheadC(n,d,mask);mask=refineRightWedgeC(n,d,mask);}
+    return exactContour(mask);
+  });
+  report.push({character:n,removed,added,temple:full.profile,fringe:full.fringe,fringeBox:full.box});
 }
 await fs.writeFile('src/pfp/skin-corrections-c.js',`// Pixel contours for faces, necks, ears and arms, reviewed against each source sprite.\n// Preserve dark jaw ink and skin highlights while excluding overlapping hair.\nexport const SKIN_CORRECTIONS_C = ${JSON.stringify(result)};\n`);
-await fs.writeFile(`${out}/correction-metrics.json`,JSON.stringify(report,null,2));console.log(report);
+await fs.writeFile(`${out}/correction-metrics.json`,JSON.stringify(report,null,2));
+console.log(report.map(({character,removed,added,fringe})=>({character,removed,added,fringe:fringe.length})));

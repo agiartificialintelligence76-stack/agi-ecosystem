@@ -1,0 +1,4070 @@
+{
+  "32": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 356,
+        "y": 246,
+        "rgba": [
+          215,
+          150,
+          68,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 269,
+        "y": 224,
+        "rgba": [
+          236,
+          177,
+          93,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 353,
+        "y": 246,
+        "rgba": [
+          133,
+          80,
+          30,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 349,
+        "y": 246,
+        "rgba": [
+          255,
+          193,
+          120,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 243,
+        "y": 219,
+        "rgba": [
+          236,
+          179,
+          115,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 240,
+        "y": 255,
+        "rgba": [
+          8,
+          2,
+          3,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 272,
+        "y": 333,
+        "rgba": [
+          226,
+          161,
+          101,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 173,
+        "y": 286,
+        "rgba": [
+          254,
+          208,
+          136,
+          252
+        ],
+        "material": "skin",
+        "note": "Visible ear shading"
+      },
+      {
+        "x": 164,
+        "y": 289,
+        "rgba": [
+          118,
+          57,
+          20,
+          252
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 170,
+        "y": 299,
+        "rgba": [
+          102,
+          51,
+          24,
+          252
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 164,
+        "y": 292,
+        "rgba": [
+          192,
+          124,
+          50,
+          252
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 170,
+        "y": 303,
+        "rgba": [
+          181,
+          122,
+          58,
+          252
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 306,
+        "y": 150,
+        "rgba": [
+          161,
+          88,
+          32,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 307,
+        "y": 150,
+        "rgba": [
+          147,
+          80,
+          34,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 310,
+        "y": 150,
+        "rgba": [
+          211,
+          146,
+          63,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      },
+      {
+        "x": 308,
+        "y": 169,
+        "rgba": [
+          205,
+          130,
+          63,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 323,
+        "y": 169,
+        "rgba": [
+          207,
+          142,
+          69,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 326,
+        "y": 169,
+        "rgba": [
+          250,
+          206,
+          103,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      },
+      {
+        "x": 307,
+        "y": 188,
+        "rgba": [
+          233,
+          166,
+          80,
+          252
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 336,
+        "y": 188,
+        "rgba": [
+          44,
+          10,
+          5,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 339,
+        "y": 188,
+        "rgba": [
+          206,
+          160,
+          79,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      }
+    ]
+  },
+  "33": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 392,
+        "y": 248,
+        "rgba": [
+          204,
+          138,
+          69,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 328,
+        "y": 222,
+        "rgba": [
+          236,
+          176,
+          92,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 388,
+        "y": 248,
+        "rgba": [
+          134,
+          67,
+          36,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 384,
+        "y": 248,
+        "rgba": [
+          237,
+          177,
+          123,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 287,
+        "y": 198,
+        "rgba": [
+          241,
+          189,
+          130,
+          252
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 285,
+        "y": 235,
+        "rgba": [
+          2,
+          2,
+          2,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 285,
+        "y": 346,
+        "rgba": [
+          240,
+          184,
+          120,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 212,
+        "y": 256,
+        "rgba": [
+          241,
+          185,
+          126,
+          253
+        ],
+        "material": "skin",
+        "note": "Visible ear shading"
+      },
+      {
+        "x": 392,
+        "y": 255,
+        "rgba": [
+          200,
+          138,
+          71,
+          252
+        ],
+        "material": "hair",
+        "note": "Removed gold strip outside right cheek ink"
+      },
+      {
+        "x": 382,
+        "y": 255,
+        "rgba": [
+          245,
+          179,
+          122,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to removed cheek strip"
+      },
+      {
+        "x": 280,
+        "y": 194,
+        "rgba": [
+          38,
+          3,
+          5,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 282,
+        "y": 196,
+        "rgba": [
+          125,
+          74,
+          45,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 283,
+        "y": 198,
+        "rgba": [
+          222,
+          158,
+          95,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 310,
+        "y": 181,
+        "rgba": [
+          213,
+          149,
+          100,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 277,
+        "y": 188,
+        "rgba": [
+          224,
+          161,
+          66,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 322,
+        "y": 190,
+        "rgba": [
+          248,
+          195,
+          86,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      }
+    ]
+  },
+  "34": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 372,
+        "y": 212,
+        "rgba": [
+          195,
+          135,
+          54,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 283,
+        "y": 194,
+        "rgba": [
+          234,
+          171,
+          81,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 368,
+        "y": 212,
+        "rgba": [
+          118,
+          67,
+          27,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 364,
+        "y": 212,
+        "rgba": [
+          246,
+          185,
+          128,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 265,
+        "y": 162,
+        "rgba": [
+          243,
+          186,
+          130,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 260,
+        "y": 220,
+        "rgba": [
+          2,
+          1,
+          1,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 286,
+        "y": 302,
+        "rgba": [
+          238,
+          177,
+          116,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 220,
+        "y": 230,
+        "rgba": [
+          205,
+          137,
+          63,
+          253
+        ],
+        "material": "hair",
+        "note": "Reported sideburn block below outer lash"
+      },
+      {
+        "x": 230,
+        "y": 235,
+        "rgba": [
+          246,
+          187,
+          113,
+          253
+        ],
+        "material": "skin",
+        "note": "Cheek beside corrected sideburn"
+      },
+      {
+        "x": 216,
+        "y": 221,
+        "rgba": [
+          15,
+          0,
+          39,
+          253
+        ],
+        "material": "skin",
+        "note": "Full outer eyelash preserved after sideburn correction"
+      },
+      {
+        "x": 360,
+        "y": 166,
+        "rgba": [
+          218,
+          148,
+          101,
+          253
+        ],
+        "material": "skin",
+        "note": "Right upper eyelid slope below forehead"
+      },
+      {
+        "x": 362,
+        "y": 169,
+        "rgba": [
+          33,
+          9,
+          7,
+          253
+        ],
+        "material": "skin",
+        "note": "Right upper eyelid dark crease"
+      },
+      {
+        "x": 364,
+        "y": 172,
+        "rgba": [
+          203,
+          145,
+          77,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin between source outer lash strokes"
+      },
+      {
+        "x": 366,
+        "y": 166,
+        "rgba": [
+          255,
+          205,
+          92,
+          253
+        ],
+        "material": "hair",
+        "note": "Gold bang outside upper eyelid slope"
+      },
+      {
+        "x": 321,
+        "y": 110,
+        "rgba": [
+          139,
+          74,
+          32,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 322,
+        "y": 110,
+        "rgba": [
+          177,
+          115,
+          55,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 325,
+        "y": 110,
+        "rgba": [
+          218,
+          155,
+          71,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      },
+      {
+        "x": 322,
+        "y": 137,
+        "rgba": [
+          227,
+          161,
+          79,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 344,
+        "y": 137,
+        "rgba": [
+          228,
+          162,
+          92,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 347,
+        "y": 137,
+        "rgba": [
+          250,
+          201,
+          99,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      },
+      {
+        "x": 320,
+        "y": 164,
+        "rgba": [
+          243,
+          187,
+          94,
+          252
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 362,
+        "y": 164,
+        "rgba": [
+          225,
+          163,
+          88,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 365,
+        "y": 164,
+        "rgba": [
+          255,
+          214,
+          100,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      }
+    ]
+  },
+  "35": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 368,
+        "y": 222,
+        "rgba": [
+          220,
+          155,
+          62,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 312,
+        "y": 196,
+        "rgba": [
+          243,
+          190,
+          106,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 365,
+        "y": 222,
+        "rgba": [
+          138,
+          78,
+          33,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 361,
+        "y": 222,
+        "rgba": [
+          249,
+          188,
+          126,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 260,
+        "y": 163,
+        "rgba": [
+          241,
+          178,
+          111,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 250,
+        "y": 225,
+        "rgba": [
+          9,
+          2,
+          1,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 277,
+        "y": 339,
+        "rgba": [
+          238,
+          183,
+          120,
+          252
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 181,
+        "y": 254,
+        "rgba": [
+          248,
+          198,
+          136,
+          253
+        ],
+        "material": "skin",
+        "note": "Visible ear shading"
+      },
+      {
+        "x": 246,
+        "y": 295,
+        "rgba": [
+          184,
+          123,
+          56,
+          252
+        ],
+        "material": "hair",
+        "note": "Removed shaded hair outside left neck outline"
+      },
+      {
+        "x": 251,
+        "y": 295,
+        "rgba": [
+          211,
+          149,
+          89,
+          252
+        ],
+        "material": "skin",
+        "note": "Skin beside left neck outline"
+      },
+      {
+        "x": 250,
+        "y": 300,
+        "rgba": [
+          121,
+          57,
+          20,
+          252
+        ],
+        "material": "skin",
+        "note": "Full dark neck ink"
+      },
+      {
+        "x": 224,
+        "y": 264,
+        "rgba": [
+          239,
+          165,
+          84,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 225,
+        "y": 267,
+        "rgba": [
+          101,
+          40,
+          17,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 171,
+        "y": 252,
+        "rgba": [
+          136,
+          72,
+          38,
+          252
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 221,
+        "y": 264,
+        "rgba": [
+          250,
+          203,
+          91,
+          253
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 171,
+        "y": 254,
+        "rgba": [
+          204,
+          142,
+          71,
+          252
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 181,
+        "y": 268,
+        "rgba": [
+          199,
+          131,
+          52,
+          252
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 325,
+        "y": 128,
+        "rgba": [
+          190,
+          124,
+          53,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 327,
+        "y": 128,
+        "rgba": [
+          141,
+          71,
+          22,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 330,
+        "y": 128,
+        "rgba": [
+          227,
+          165,
+          71,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      },
+      {
+        "x": 326,
+        "y": 148,
+        "rgba": [
+          214,
+          137,
+          64,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 343,
+        "y": 148,
+        "rgba": [
+          218,
+          155,
+          78,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 346,
+        "y": 148,
+        "rgba": [
+          246,
+          191,
+          81,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      },
+      {
+        "x": 323,
+        "y": 167,
+        "rgba": [
+          224,
+          164,
+          85,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 355,
+        "y": 167,
+        "rgba": [
+          216,
+          155,
+          80,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 358,
+        "y": 167,
+        "rgba": [
+          246,
+          196,
+          89,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      }
+    ]
+  },
+  "36": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 373,
+        "y": 222,
+        "rgba": [
+          210,
+          145,
+          62,
+          252
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 306,
+        "y": 201,
+        "rgba": [
+          243,
+          182,
+          99,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 369,
+        "y": 222,
+        "rgba": [
+          90,
+          38,
+          11,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 366,
+        "y": 222,
+        "rgba": [
+          255,
+          196,
+          137,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 271,
+        "y": 182,
+        "rgba": [
+          223,
+          157,
+          89,
+          252
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 255,
+        "y": 240,
+        "rgba": [
+          20,
+          5,
+          7,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 288,
+        "y": 345,
+        "rgba": [
+          241,
+          184,
+          122,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 187,
+        "y": 263,
+        "rgba": [
+          246,
+          184,
+          123,
+          253
+        ],
+        "material": "skin",
+        "note": "Visible ear shading"
+      },
+      {
+        "x": 291,
+        "y": 371,
+        "rgba": [
+          246,
+          206,
+          130,
+          253
+        ],
+        "material": "skin",
+        "note": "Golden light on true lower neckline"
+      },
+      {
+        "x": 224,
+        "y": 274,
+        "rgba": [
+          238,
+          175,
+          95,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 226,
+        "y": 276,
+        "rgba": [
+          219,
+          152,
+          81,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 228,
+        "y": 277,
+        "rgba": [
+          224,
+          154,
+          90,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 217,
+        "y": 275,
+        "rgba": [
+          250,
+          197,
+          77,
+          253
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 320,
+        "y": 130,
+        "rgba": [
+          153,
+          82,
+          35,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 321,
+        "y": 130,
+        "rgba": [
+          178,
+          116,
+          55,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 324,
+        "y": 130,
+        "rgba": [
+          221,
+          156,
+          66,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      },
+      {
+        "x": 323,
+        "y": 149,
+        "rgba": [
+          201,
+          134,
+          69,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 339,
+        "y": 149,
+        "rgba": [
+          219,
+          152,
+          68,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 342,
+        "y": 149,
+        "rgba": [
+          249,
+          200,
+          89,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      },
+      {
+        "x": 322,
+        "y": 168,
+        "rgba": [
+          230,
+          164,
+          74,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 351,
+        "y": 168,
+        "rgba": [
+          201,
+          135,
+          57,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 354,
+        "y": 168,
+        "rgba": [
+          239,
+          182,
+          75,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      }
+    ]
+  },
+  "37": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 372,
+        "y": 226,
+        "rgba": [
+          224,
+          160,
+          79,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 293,
+        "y": 211,
+        "rgba": [
+          235,
+          177,
+          91,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 369,
+        "y": 226,
+        "rgba": [
+          138,
+          74,
+          31,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 365,
+        "y": 226,
+        "rgba": [
+          250,
+          192,
+          141,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 271,
+        "y": 179,
+        "rgba": [
+          229,
+          169,
+          108,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 255,
+        "y": 235,
+        "rgba": [
+          18,
+          7,
+          7,
+          252
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 287,
+        "y": 340,
+        "rgba": [
+          240,
+          184,
+          123,
+          252
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 361,
+        "y": 255,
+        "rgba": [
+          252,
+          215,
+          154,
+          253
+        ],
+        "material": "skin",
+        "note": "Reported missing bright jaw antialias pixel"
+      },
+      {
+        "x": 343,
+        "y": 275,
+        "rgba": [
+          255,
+          225,
+          164,
+          253
+        ],
+        "material": "skin",
+        "note": "Reported missing bright jaw antialias pixel"
+      },
+      {
+        "x": 368,
+        "y": 235,
+        "rgba": [
+          92,
+          43,
+          12,
+          253
+        ],
+        "material": "skin",
+        "note": "Reported full jaw ink restored"
+      },
+      {
+        "x": 266,
+        "y": 340,
+        "rgba": [
+          249,
+          196,
+          89,
+          252
+        ],
+        "material": "hair",
+        "note": "Golden curl crossing left neck"
+      },
+      {
+        "x": 328,
+        "y": 132,
+        "rgba": [
+          165,
+          94,
+          37,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 332,
+        "y": 132,
+        "rgba": [
+          182,
+          114,
+          49,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 335,
+        "y": 132,
+        "rgba": [
+          216,
+          152,
+          64,
+          252
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      },
+      {
+        "x": 330,
+        "y": 149,
+        "rgba": [
+          197,
+          126,
+          58,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 346,
+        "y": 149,
+        "rgba": [
+          186,
+          117,
+          58,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 349,
+        "y": 149,
+        "rgba": [
+          249,
+          199,
+          106,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      },
+      {
+        "x": 328,
+        "y": 166,
+        "rgba": [
+          236,
+          178,
+          108,
+          252
+        ],
+        "material": "skin",
+        "note": "Shaded left edge of right forehead wedge"
+      },
+      {
+        "x": 356,
+        "y": 166,
+        "rgba": [
+          194,
+          132,
+          68,
+          253
+        ],
+        "material": "skin",
+        "note": "Source diagonal forehead ink"
+      },
+      {
+        "x": 359,
+        "y": 166,
+        "rgba": [
+          251,
+          199,
+          105,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair outside diagonal forehead ink"
+      }
+    ]
+  },
+  "38": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 389,
+        "y": 235,
+        "rgba": [
+          220,
+          159,
+          66,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 307,
+        "y": 218,
+        "rgba": [
+          235,
+          177,
+          94,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 385,
+        "y": 235,
+        "rgba": [
+          148,
+          85,
+          40,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 381,
+        "y": 235,
+        "rgba": [
+          249,
+          186,
+          128,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 280,
+        "y": 172,
+        "rgba": [
+          244,
+          183,
+          122,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 265,
+        "y": 245,
+        "rgba": [
+          15,
+          6,
+          4,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 299,
+        "y": 320,
+        "rgba": [
+          235,
+          171,
+          115,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 277,
+        "y": 194,
+        "rgba": [
+          66,
+          40,
+          14,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored left eyebrow ink"
+      },
+      {
+        "x": 290,
+        "y": 147,
+        "rgba": [
+          194,
+          125,
+          53,
+          253
+        ],
+        "material": "hair",
+        "note": "Warm hair shadow under knit hat remains hair"
+      },
+      {
+        "x": 343,
+        "y": 150,
+        "rgba": [
+          209,
+          140,
+          76,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead upper shadow restored"
+      },
+      {
+        "x": 350,
+        "y": 155,
+        "rgba": [
+          215,
+          144,
+          89,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead middle shadow restored"
+      },
+      {
+        "x": 355,
+        "y": 170,
+        "rgba": [
+          246,
+          193,
+          131,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead lower shadow restored"
+      },
+      {
+        "x": 352,
+        "y": 150,
+        "rgba": [
+          225,
+          166,
+          75,
+          253
+        ],
+        "material": "hair",
+        "note": "Gold hair outside right forehead valley"
+      },
+      {
+        "x": 238,
+        "y": 277,
+        "rgba": [
+          224,
+          157,
+          76,
+          252
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 240,
+        "y": 278,
+        "rgba": [
+          226,
+          162,
+          96,
+          252
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 234,
+        "y": 276,
+        "rgba": [
+          242,
+          187,
+          77,
+          252
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      }
+    ]
+  },
+  "39": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 364,
+        "y": 232,
+        "rgba": [
+          208,
+          150,
+          64,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 303,
+        "y": 208,
+        "rgba": [
+          249,
+          198,
+          109,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 359,
+        "y": 232,
+        "rgba": [
+          107,
+          55,
+          21,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 356,
+        "y": 232,
+        "rgba": [
+          173,
+          113,
+          82,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 257,
+        "y": 162,
+        "rgba": [
+          205,
+          139,
+          80,
+          252
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 235,
+        "y": 232,
+        "rgba": [
+          0,
+          0,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 254,
+        "y": 324,
+        "rgba": [
+          232,
+          172,
+          117,
+          252
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 230,
+        "y": 327,
+        "rgba": [
+          223,
+          156,
+          55,
+          253
+        ],
+        "material": "hair",
+        "note": "Hair tip crossing neck above helmet rim"
+      },
+      {
+        "x": 237,
+        "y": 328,
+        "rgba": [
+          237,
+          179,
+          120,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck beside crossing hair tip"
+      },
+      {
+        "x": 354,
+        "y": 201,
+        "rgba": [
+          229,
+          166,
+          106,
+          253
+        ],
+        "material": "skin",
+        "note": "Continuous source upper eyelid skin slope"
+      },
+      {
+        "x": 358,
+        "y": 203,
+        "rgba": [
+          227,
+          160,
+          97,
+          253
+        ],
+        "material": "skin",
+        "note": "Shaded outer eyelid above lash"
+      },
+      {
+        "x": 360,
+        "y": 204,
+        "rgba": [
+          217,
+          149,
+          84,
+          253
+        ],
+        "material": "skin",
+        "note": "Outer eyelid skin antialiasing"
+      },
+      {
+        "x": 361,
+        "y": 201,
+        "rgba": [
+          250,
+          206,
+          108,
+          253
+        ],
+        "material": "hair",
+        "note": "Gold bang beyond upper eyelid slope"
+      },
+      {
+        "x": 336,
+        "y": 281,
+        "rgba": [
+          204,
+          160,
+          109,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 340,
+        "y": 283,
+        "rgba": [
+          188,
+          124,
+          55,
+          253
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 330,
+        "y": 150,
+        "rgba": [
+          218,
+          145,
+          87,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 332,
+        "y": 155,
+        "rgba": [
+          231,
+          168,
+          118,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 335,
+        "y": 160,
+        "rgba": [
+          226,
+          162,
+          109,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 346,
+        "y": 188,
+        "rgba": [
+          33,
+          11,
+          2,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 265,
+        "y": 150,
+        "rgba": [
+          209,
+          139,
+          81,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 235,
+        "y": 190,
+        "rgba": [
+          237,
+          181,
+          110,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 323,
+        "y": 150,
+        "rgba": [
+          250,
+          213,
+          102,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 340,
+        "y": 150,
+        "rgba": [
+          242,
+          184,
+          83,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 260,
+        "y": 150,
+        "rgba": [
+          249,
+          200,
+          95,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 274,
+        "y": 150,
+        "rgba": [
+          252,
+          211,
+          102,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      }
+    ]
+  },
+  "40": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 355,
+        "y": 230,
+        "rgba": [
+          196,
+          132,
+          66,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 253,
+        "y": 206,
+        "rgba": [
+          238,
+          177,
+          89,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 352,
+        "y": 230,
+        "rgba": [
+          101,
+          45,
+          8,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 348,
+        "y": 230,
+        "rgba": [
+          246,
+          195,
+          147,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 255,
+        "y": 153,
+        "rgba": [
+          214,
+          150,
+          91,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 235,
+        "y": 235,
+        "rgba": [
+          0,
+          0,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 271,
+        "y": 340,
+        "rgba": [
+          237,
+          183,
+          127,
+          252
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 165,
+        "y": 255,
+        "rgba": [
+          228,
+          157,
+          93,
+          252
+        ],
+        "material": "skin",
+        "note": "Visible ear shading"
+      },
+      {
+        "x": 210,
+        "y": 270,
+        "rgba": [
+          247,
+          187,
+          124,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 209,
+        "y": 272,
+        "rgba": [
+          242,
+          176,
+          109,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 226,
+        "y": 284,
+        "rgba": [
+          255,
+          221,
+          162,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 226,
+        "y": 285,
+        "rgba": [
+          255,
+          221,
+          162,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 203,
+        "y": 284,
+        "rgba": [
+          239,
+          182,
+          71,
+          252
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 230,
+        "y": 191,
+        "rgba": [
+          104,
+          55,
+          25,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 232,
+        "y": 190,
+        "rgba": [
+          59,
+          33,
+          12,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 242,
+        "y": 184,
+        "rgba": [
+          245,
+          215,
+          162,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 245,
+        "y": 184,
+        "rgba": [
+          250,
+          224,
+          170,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 316,
+        "y": 145,
+        "rgba": [
+          225,
+          161,
+          99,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 320,
+        "y": 150,
+        "rgba": [
+          233,
+          169,
+          111,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 249,
+        "y": 150,
+        "rgba": [
+          252,
+          217,
+          110,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 262,
+        "y": 150,
+        "rgba": [
+          251,
+          203,
+          93,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 307,
+        "y": 145,
+        "rgba": [
+          255,
+          215,
+          106,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 328,
+        "y": 145,
+        "rgba": [
+          247,
+          197,
+          95,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      }
+    ]
+  },
+  "41": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 335,
+        "y": 237,
+        "rgba": [
+          251,
+          206,
+          96,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 217,
+        "y": 223,
+        "rgba": [
+          235,
+          182,
+          101,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 330,
+        "y": 237,
+        "rgba": [
+          217,
+          162,
+          97,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 327,
+        "y": 237,
+        "rgba": [
+          251,
+          202,
+          152,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 208,
+        "y": 194,
+        "rgba": [
+          228,
+          163,
+          102,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 207,
+        "y": 252,
+        "rgba": [
+          121,
+          41,
+          10,
+          252
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 286,
+        "y": 354,
+        "rgba": [
+          238,
+          181,
+          124,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 372,
+        "y": 235,
+        "rgba": [
+          234,
+          162,
+          106,
+          252
+        ],
+        "material": "skin",
+        "note": "Visible ear shading"
+      },
+      {
+        "x": 200,
+        "y": 211,
+        "rgba": [
+          48,
+          19,
+          6,
+          252
+        ],
+        "material": "skin",
+        "note": "Restored eyebrow ink"
+      },
+      {
+        "x": 276,
+        "y": 145,
+        "rgba": [
+          207,
+          140,
+          79,
+          252
+        ],
+        "material": "skin",
+        "note": "Right forehead upper shadow restored"
+      },
+      {
+        "x": 280,
+        "y": 155,
+        "rgba": [
+          220,
+          150,
+          96,
+          252
+        ],
+        "material": "skin",
+        "note": "Right forehead middle shadow restored"
+      },
+      {
+        "x": 290,
+        "y": 170,
+        "rgba": [
+          231,
+          168,
+          112,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead lower shadow restored"
+      },
+      {
+        "x": 283,
+        "y": 145,
+        "rgba": [
+          244,
+          191,
+          86,
+          252
+        ],
+        "material": "hair",
+        "note": "Gold hair immediately outside restored right wedge"
+      },
+      {
+        "x": 328,
+        "y": 260,
+        "rgba": [
+          250,
+          201,
+          100,
+          253
+        ],
+        "material": "hair",
+        "note": "Front lock crossing right cheek"
+      },
+      {
+        "x": 321,
+        "y": 260,
+        "rgba": [
+          251,
+          201,
+          139,
+          253
+        ],
+        "material": "skin",
+        "note": "Cheek beside crossing front lock"
+      },
+      {
+        "x": 323,
+        "y": 268,
+        "rgba": [
+          241,
+          191,
+          118,
+          253
+        ],
+        "material": "skin",
+        "note": "Cheek returns below tapered hair tip"
+      },
+      {
+        "x": 330,
+        "y": 268,
+        "rgba": [
+          147,
+          82,
+          29,
+          253
+        ],
+        "material": "skin",
+        "note": "Dark jaw ink beneath crossing lock"
+      }
+    ]
+  },
+  "42": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 367,
+        "y": 235,
+        "rgba": [
+          188,
+          126,
+          59,
+          252
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 319,
+        "y": 182,
+        "rgba": [
+          231,
+          173,
+          92,
+          252
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 362,
+        "y": 235,
+        "rgba": [
+          160,
+          105,
+          64,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 359,
+        "y": 235,
+        "rgba": [
+          242,
+          180,
+          117,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 280,
+        "y": 198,
+        "rgba": [
+          244,
+          198,
+          136,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 250,
+        "y": 230,
+        "rgba": [
+          246,
+          200,
+          143,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 256,
+        "y": 328,
+        "rgba": [
+          233,
+          178,
+          123,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 174,
+        "y": 230,
+        "rgba": [
+          251,
+          189,
+          113,
+          252
+        ],
+        "material": "skin",
+        "note": "Reported ear interior retained"
+      },
+      {
+        "x": 174,
+        "y": 232,
+        "rgba": [
+          136,
+          82,
+          47,
+          252
+        ],
+        "material": "skin",
+        "note": "Reported lower ear ink retained"
+      },
+      {
+        "x": 166,
+        "y": 228,
+        "rgba": [
+          186,
+          121,
+          50,
+          252
+        ],
+        "material": "hair",
+        "note": "Removed gold hair outside lower-left ear"
+      },
+      {
+        "x": 182,
+        "y": 205,
+        "rgba": [
+          218,
+          156,
+          70,
+          252
+        ],
+        "material": "hair",
+        "note": "Removed gold hair outside upper-right ear"
+      },
+      {
+        "x": 180,
+        "y": 220,
+        "rgba": [
+          245,
+          191,
+          83,
+          253
+        ],
+        "material": "hair",
+        "note": "Removed gold band outside right ear"
+      },
+      {
+        "x": 161,
+        "y": 212,
+        "rgba": [
+          133,
+          72,
+          36,
+          252
+        ],
+        "material": "skin",
+        "note": "Ear outer ink restored"
+      },
+      {
+        "x": 234,
+        "y": 306,
+        "rgba": [
+          225,
+          158,
+          69,
+          252
+        ],
+        "material": "hair",
+        "note": "Short curl crossing left neck"
+      },
+      {
+        "x": 245,
+        "y": 306,
+        "rgba": [
+          238,
+          185,
+          127,
+          252
+        ],
+        "material": "skin",
+        "note": "Neck next to crossing curl"
+      },
+      {
+        "x": 346,
+        "y": 145,
+        "rgba": [
+          196,
+          130,
+          79,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead upper shadow restored"
+      },
+      {
+        "x": 346,
+        "y": 155,
+        "rgba": [
+          232,
+          166,
+          111,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead middle shadow restored"
+      },
+      {
+        "x": 352,
+        "y": 165,
+        "rgba": [
+          229,
+          166,
+          109,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead lower shadow restored"
+      },
+      {
+        "x": 354,
+        "y": 145,
+        "rgba": [
+          249,
+          209,
+          93,
+          253
+        ],
+        "material": "hair",
+        "note": "Gold hair outside right forehead shadow"
+      }
+    ]
+  },
+  "43": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 359,
+        "y": 240,
+        "rgba": [
+          190,
+          129,
+          59,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 270,
+        "y": 195,
+        "rgba": [
+          244,
+          185,
+          98,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 354,
+        "y": 240,
+        "rgba": [
+          89,
+          46,
+          19,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 351,
+        "y": 240,
+        "rgba": [
+          234,
+          170,
+          111,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 276,
+        "y": 155,
+        "rgba": [
+          205,
+          139,
+          71,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 240,
+        "y": 228,
+        "rgba": [
+          20,
+          5,
+          1,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 260,
+        "y": 350,
+        "rgba": [
+          236,
+          181,
+          124,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 330,
+        "y": 288,
+        "rgba": [
+          180,
+          119,
+          53,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside right jaw"
+      },
+      {
+        "x": 330,
+        "y": 277,
+        "rgba": [
+          247,
+          197,
+          140,
+          253
+        ],
+        "material": "skin",
+        "note": "True face above jaw ink"
+      },
+      {
+        "x": 228,
+        "y": 290,
+        "rgba": [
+          219,
+          151,
+          68,
+          253
+        ],
+        "material": "hair",
+        "note": "Short wisp crossing left upper-neck shadow"
+      },
+      {
+        "x": 270,
+        "y": 392,
+        "rgba": [
+          255,
+          213,
+          138,
+          253
+        ],
+        "material": "skin",
+        "note": "Gold-lit lower neckline skin"
+      },
+      {
+        "x": 344,
+        "y": 145,
+        "rgba": [
+          209,
+          151,
+          82,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead upper shadow restored"
+      },
+      {
+        "x": 345,
+        "y": 155,
+        "rgba": [
+          225,
+          159,
+          104,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead middle shadow restored"
+      },
+      {
+        "x": 350,
+        "y": 170,
+        "rgba": [
+          236,
+          169,
+          114,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead lower shadow restored"
+      },
+      {
+        "x": 350,
+        "y": 145,
+        "rgba": [
+          234,
+          173,
+          74,
+          253
+        ],
+        "material": "hair",
+        "note": "Gold hair outside right forehead valley"
+      }
+    ]
+  },
+  "44": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 350,
+        "y": 247,
+        "rgba": [
+          194,
+          129,
+          56,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 249,
+        "y": 222,
+        "rgba": [
+          234,
+          179,
+          101,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 346,
+        "y": 247,
+        "rgba": [
+          113,
+          58,
+          21,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 343,
+        "y": 247,
+        "rgba": [
+          247,
+          185,
+          123,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 245,
+        "y": 195,
+        "rgba": [
+          230,
+          170,
+          116,
+          252
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 240,
+        "y": 255,
+        "rgba": [
+          101,
+          39,
+          11,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 260,
+        "y": 343,
+        "rgba": [
+          231,
+          177,
+          122,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 169,
+        "y": 280,
+        "rgba": [
+          223,
+          152,
+          97,
+          252
+        ],
+        "material": "skin",
+        "note": "Visible ear shading"
+      },
+      {
+        "x": 206,
+        "y": 293,
+        "rgba": [
+          241,
+          185,
+          114,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 207,
+        "y": 294,
+        "rgba": [
+          241,
+          185,
+          111,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 158,
+        "y": 281,
+        "rgba": [
+          125,
+          71,
+          32,
+          252
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 201,
+        "y": 293,
+        "rgba": [
+          236,
+          181,
+          90,
+          253
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 158,
+        "y": 283,
+        "rgba": [
+          173,
+          109,
+          52,
+          252
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 171,
+        "y": 296,
+        "rgba": [
+          185,
+          120,
+          51,
+          252
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 228,
+        "y": 214,
+        "rgba": [
+          82,
+          47,
+          17,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 232,
+        "y": 212,
+        "rgba": [
+          63,
+          41,
+          22,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 236,
+        "y": 214,
+        "rgba": [
+          193,
+          149,
+          92,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 248,
+        "y": 180,
+        "rgba": [
+          223,
+          162,
+          102,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 307,
+        "y": 165,
+        "rgba": [
+          212,
+          143,
+          90,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 243,
+        "y": 180,
+        "rgba": [
+          248,
+          202,
+          105,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 256,
+        "y": 180,
+        "rgba": [
+          251,
+          205,
+          100,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 300,
+        "y": 165,
+        "rgba": [
+          250,
+          212,
+          104,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 316,
+        "y": 165,
+        "rgba": [
+          249,
+          197,
+          87,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      }
+    ]
+  },
+  "45": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 360,
+        "y": 212,
+        "rgba": [
+          188,
+          124,
+          55,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 258,
+        "y": 184,
+        "rgba": [
+          245,
+          186,
+          97,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 354,
+        "y": 212,
+        "rgba": [
+          168,
+          104,
+          50,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 350,
+        "y": 212,
+        "rgba": [
+          248,
+          190,
+          140,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 259,
+        "y": 148,
+        "rgba": [
+          224,
+          156,
+          101,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 232,
+        "y": 215,
+        "rgba": [
+          19,
+          3,
+          1,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 277,
+        "y": 307,
+        "rgba": [
+          237,
+          178,
+          122,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 318,
+        "y": 120,
+        "rgba": [
+          210,
+          138,
+          80,
+          252
+        ],
+        "material": "skin",
+        "note": "Right forehead upper shadow restored"
+      },
+      {
+        "x": 321,
+        "y": 130,
+        "rgba": [
+          234,
+          175,
+          121,
+          252
+        ],
+        "material": "skin",
+        "note": "Right forehead middle shadow restored"
+      },
+      {
+        "x": 330,
+        "y": 140,
+        "rgba": [
+          230,
+          164,
+          108,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead lower shadow restored"
+      },
+      {
+        "x": 325,
+        "y": 120,
+        "rgba": [
+          245,
+          189,
+          81,
+          253
+        ],
+        "material": "hair",
+        "note": "Gold hair outside right forehead shadow"
+      }
+    ]
+  },
+  "46": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 361,
+        "y": 223,
+        "rgba": [
+          192,
+          136,
+          64,
+          253
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 271,
+        "y": 207,
+        "rgba": [
+          243,
+          188,
+          104,
+          252
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 358,
+        "y": 223,
+        "rgba": [
+          64,
+          15,
+          0,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 354,
+        "y": 223,
+        "rgba": [
+          243,
+          196,
+          141,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 236,
+        "y": 191,
+        "rgba": [
+          250,
+          209,
+          147,
+          253
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 245,
+        "y": 230,
+        "rgba": [
+          7,
+          4,
+          2,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 281,
+        "y": 332,
+        "rgba": [
+          237,
+          182,
+          128,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 175,
+        "y": 254,
+        "rgba": [
+          204,
+          128,
+          83,
+          253
+        ],
+        "material": "skin",
+        "note": "Visible ear shading"
+      },
+      {
+        "x": 323,
+        "y": 327,
+        "rgba": [
+          206,
+          139,
+          95,
+          251
+        ],
+        "material": "skin",
+        "note": "Right shoulder golden light remains skin"
+      },
+      {
+        "x": 217,
+        "y": 266,
+        "rgba": [
+          240,
+          178,
+          106,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 218,
+        "y": 267,
+        "rgba": [
+          240,
+          179,
+          110,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 168,
+        "y": 261,
+        "rgba": [
+          128,
+          68,
+          31,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 210,
+        "y": 267,
+        "rgba": [
+          250,
+          197,
+          89,
+          253
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 168,
+        "y": 262,
+        "rgba": [
+          161,
+          102,
+          48,
+          253
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 176,
+        "y": 269,
+        "rgba": [
+          188,
+          125,
+          60,
+          253
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 230,
+        "y": 186,
+        "rgba": [
+          98,
+          55,
+          25,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 233,
+        "y": 186,
+        "rgba": [
+          103,
+          65,
+          32,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 240,
+        "y": 187,
+        "rgba": [
+          255,
+          219,
+          151,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 247,
+        "y": 185,
+        "rgba": [
+          255,
+          221,
+          160,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 252,
+        "y": 145,
+        "rgba": [
+          227,
+          162,
+          91,
+          252
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 317,
+        "y": 135,
+        "rgba": [
+          231,
+          167,
+          105,
+          253
+        ],
+        "material": "skin",
+        "note": "Source shaded forehead or eyebrow ink between the hair strands"
+      },
+      {
+        "x": 245,
+        "y": 145,
+        "rgba": [
+          252,
+          207,
+          99,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 259,
+        "y": 145,
+        "rgba": [
+          251,
+          206,
+          99,
+          252
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 307,
+        "y": 135,
+        "rgba": [
+          251,
+          207,
+          97,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      },
+      {
+        "x": 327,
+        "y": 135,
+        "rgba": [
+          255,
+          207,
+          99,
+          253
+        ],
+        "material": "hair",
+        "note": "Source hair immediately outside the shaded forehead wedge"
+      }
+    ]
+  },
+  "47": {
+    "reviewed": [
+      "forehead",
+      "leftTemple",
+      "rightTemple",
+      "ears",
+      "jaw",
+      "neck"
+    ],
+    "pixels": [
+      {
+        "x": 342,
+        "y": 225,
+        "rgba": [
+          182,
+          116,
+          47,
+          252
+        ],
+        "material": "hair",
+        "note": "Shaded hair outside source right temple ink"
+      },
+      {
+        "x": 281,
+        "y": 198,
+        "rgba": [
+          243,
+          187,
+          109,
+          253
+        ],
+        "material": "hair",
+        "note": "Golden bang tip beyond skin opening"
+      },
+      {
+        "x": 339,
+        "y": 225,
+        "rgba": [
+          111,
+          57,
+          24,
+          253
+        ],
+        "material": "skin",
+        "note": "Source right temple ink"
+      },
+      {
+        "x": 336,
+        "y": 225,
+        "rgba": [
+          249,
+          194,
+          143,
+          253
+        ],
+        "material": "skin",
+        "note": "Skin adjacent to right temple"
+      },
+      {
+        "x": 237,
+        "y": 171,
+        "rgba": [
+          248,
+          197,
+          141,
+          252
+        ],
+        "material": "skin",
+        "note": "Restored source forehead opening"
+      },
+      {
+        "x": 215,
+        "y": 240,
+        "rgba": [
+          236,
+          195,
+          167,
+          253
+        ],
+        "material": "skin",
+        "note": "Eye region remains original"
+      },
+      {
+        "x": 260,
+        "y": 331,
+        "rgba": [
+          239,
+          183,
+          128,
+          253
+        ],
+        "material": "skin",
+        "note": "Neck anatomy remains original"
+      },
+      {
+        "x": 151,
+        "y": 251,
+        "rgba": [
+          215,
+          126,
+          74,
+          252
+        ],
+        "material": "skin",
+        "note": "Visible ear shading"
+      },
+      {
+        "x": 342,
+        "y": 235,
+        "rgba": [
+          192,
+          124,
+          48,
+          253
+        ],
+        "material": "hair",
+        "note": "Reported golden band outside right temple"
+      },
+      {
+        "x": 337,
+        "y": 235,
+        "rgba": [
+          248,
+          212,
+          169,
+          253
+        ],
+        "material": "skin",
+        "note": "Cheek next to reported temple band"
+      },
+      {
+        "x": 339,
+        "y": 235,
+        "rgba": [
+          71,
+          29,
+          12,
+          252
+        ],
+        "material": "skin",
+        "note": "Full dark source temple ink"
+      },
+      {
+        "x": 298,
+        "y": 130,
+        "rgba": [
+          197,
+          126,
+          79,
+          253
+        ],
+        "material": "skin",
+        "note": "Right forehead upper shadow restored"
+      },
+      {
+        "x": 302,
+        "y": 140,
+        "rgba": [
+          235,
+          172,
+          120,
+          252
+        ],
+        "material": "skin",
+        "note": "Right forehead middle shadow restored"
+      },
+      {
+        "x": 310,
+        "y": 150,
+        "rgba": [
+          243,
+          185,
+          130,
+          252
+        ],
+        "material": "skin",
+        "note": "Right forehead lower shadow restored"
+      },
+      {
+        "x": 306,
+        "y": 130,
+        "rgba": [
+          247,
+          193,
+          79,
+          253
+        ],
+        "material": "hair",
+        "note": "Gold hair outside right forehead shadow"
+      },
+      {
+        "x": 196,
+        "y": 267,
+        "rgba": [
+          236,
+          171,
+          115,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 198,
+        "y": 267,
+        "rgba": [
+          233,
+          167,
+          113,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 142,
+        "y": 253,
+        "rgba": [
+          124,
+          57,
+          27,
+          253
+        ],
+        "material": "skin",
+        "note": "Source cheek/ink or lower-ear AA retained"
+      },
+      {
+        "x": 190,
+        "y": 267,
+        "rgba": [
+          248,
+          194,
+          88,
+          253
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 142,
+        "y": 254,
+        "rgba": [
+          172,
+          103,
+          47,
+          253
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      },
+      {
+        "x": 153,
+        "y": 266,
+        "rgba": [
+          169,
+          99,
+          42,
+          253
+        ],
+        "material": "hair",
+        "note": "Adjacent hair beyond source cheek/ear contour recolors"
+      }
+    ]
+  }
+}

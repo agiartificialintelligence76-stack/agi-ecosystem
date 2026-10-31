@@ -1,0 +1,552 @@
+{
+  "32": [
+    {
+      "x": 306,
+      "y": 150,
+      "rgba": [
+        161,
+        88,
+        32,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 307,
+      "y": 150,
+      "rgba": [
+        147,
+        80,
+        34,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 310,
+      "y": 150,
+      "rgba": [
+        211,
+        146,
+        63,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    },
+    {
+      "x": 308,
+      "y": 169,
+      "rgba": [
+        205,
+        130,
+        63,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 323,
+      "y": 169,
+      "rgba": [
+        207,
+        142,
+        69,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 326,
+      "y": 169,
+      "rgba": [
+        250,
+        206,
+        103,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    },
+    {
+      "x": 307,
+      "y": 188,
+      "rgba": [
+        233,
+        166,
+        80,
+        252
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 336,
+      "y": 188,
+      "rgba": [
+        44,
+        10,
+        5,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 339,
+      "y": 188,
+      "rgba": [
+        206,
+        160,
+        79,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    }
+  ],
+  "34": [
+    {
+      "x": 321,
+      "y": 110,
+      "rgba": [
+        139,
+        74,
+        32,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 322,
+      "y": 110,
+      "rgba": [
+        177,
+        115,
+        55,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 325,
+      "y": 110,
+      "rgba": [
+        218,
+        155,
+        71,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    },
+    {
+      "x": 322,
+      "y": 137,
+      "rgba": [
+        227,
+        161,
+        79,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 344,
+      "y": 137,
+      "rgba": [
+        228,
+        162,
+        92,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 347,
+      "y": 137,
+      "rgba": [
+        250,
+        201,
+        99,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    },
+    {
+      "x": 320,
+      "y": 164,
+      "rgba": [
+        243,
+        187,
+        94,
+        252
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 362,
+      "y": 164,
+      "rgba": [
+        225,
+        163,
+        88,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 365,
+      "y": 164,
+      "rgba": [
+        255,
+        214,
+        100,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    }
+  ],
+  "35": [
+    {
+      "x": 325,
+      "y": 128,
+      "rgba": [
+        190,
+        124,
+        53,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 327,
+      "y": 128,
+      "rgba": [
+        141,
+        71,
+        22,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 330,
+      "y": 128,
+      "rgba": [
+        227,
+        165,
+        71,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    },
+    {
+      "x": 326,
+      "y": 148,
+      "rgba": [
+        214,
+        137,
+        64,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 343,
+      "y": 148,
+      "rgba": [
+        218,
+        155,
+        78,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 346,
+      "y": 148,
+      "rgba": [
+        246,
+        191,
+        81,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    },
+    {
+      "x": 323,
+      "y": 167,
+      "rgba": [
+        224,
+        164,
+        85,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 355,
+      "y": 167,
+      "rgba": [
+        216,
+        155,
+        80,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 358,
+      "y": 167,
+      "rgba": [
+        246,
+        196,
+        89,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    }
+  ],
+  "36": [
+    {
+      "x": 320,
+      "y": 130,
+      "rgba": [
+        153,
+        82,
+        35,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 321,
+      "y": 130,
+      "rgba": [
+        178,
+        116,
+        55,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 324,
+      "y": 130,
+      "rgba": [
+        221,
+        156,
+        66,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    },
+    {
+      "x": 323,
+      "y": 149,
+      "rgba": [
+        201,
+        134,
+        69,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 339,
+      "y": 149,
+      "rgba": [
+        219,
+        152,
+        68,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 342,
+      "y": 149,
+      "rgba": [
+        249,
+        200,
+        89,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    },
+    {
+      "x": 322,
+      "y": 168,
+      "rgba": [
+        230,
+        164,
+        74,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 351,
+      "y": 168,
+      "rgba": [
+        201,
+        135,
+        57,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 354,
+      "y": 168,
+      "rgba": [
+        239,
+        182,
+        75,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    }
+  ],
+  "37": [
+    {
+      "x": 328,
+      "y": 132,
+      "rgba": [
+        165,
+        94,
+        37,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 332,
+      "y": 132,
+      "rgba": [
+        182,
+        114,
+        49,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 335,
+      "y": 132,
+      "rgba": [
+        216,
+        152,
+        64,
+        252
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    },
+    {
+      "x": 330,
+      "y": 149,
+      "rgba": [
+        197,
+        126,
+        58,
+        253
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 346,
+      "y": 149,
+      "rgba": [
+        186,
+        117,
+        58,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 349,
+      "y": 149,
+      "rgba": [
+        249,
+        199,
+        106,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    },
+    {
+      "x": 328,
+      "y": 166,
+      "rgba": [
+        236,
+        178,
+        108,
+        252
+      ],
+      "material": "skin",
+      "note": "Shaded left edge of right forehead wedge"
+    },
+    {
+      "x": 356,
+      "y": 166,
+      "rgba": [
+        194,
+        132,
+        68,
+        253
+      ],
+      "material": "skin",
+      "note": "Source diagonal forehead ink"
+    },
+    {
+      "x": 359,
+      "y": 166,
+      "rgba": [
+        251,
+        199,
+        105,
+        253
+      ],
+      "material": "hair",
+      "note": "Hair outside diagonal forehead ink"
+    }
+  ]
+}
