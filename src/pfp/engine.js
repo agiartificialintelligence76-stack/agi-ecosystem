@@ -1,4 +1,5 @@
 import { skinMask } from './skin-mask.js';
+import { materialEdgePlan, recolorMaterialEdges } from './material-edges.js';
 import { normalizeCapText, supportsCapText, paintCapText, MAX_CAP_TEXT_LENGTH } from './cap-text.js';
 export { normalizeCapText, supportsCapText, MAX_CAP_TEXT_LENGTH } from './cap-text.js';
 // Versioned artwork + portable recipes: shared links never rely on a server or account.
@@ -151,6 +152,8 @@ export function recolorPixels(data, config) {
   const hair = TRAITS.hair[effectiveHair(config)];
   const outfit = TRAITS.outfit[config.outfit];
   const skin = data.length === 512 * 512 * 4 ? skinMask(config.character) : null;
+  const source = skin && (effectiveHair(config) !== 1 || config.outfit !== 0) ? Uint8ClampedArray.from(data) : null;
+  const edges = source ? materialEdgePlan(source, skin, config.character, rgbToHsl) : [];
   for (let i = 0; i < data.length; i += 4) {
     if (!data[i + 3] || skin?.[i / 4] === 1) continue;
     const lens = skin?.[i / 4] === 2;
@@ -165,7 +168,7 @@ export function recolorPixels(data, config) {
     if (!lens && h < 100 && Math.min(data[i], data[i + 1], data[i + 2]) >= 200) continue;
     let target, base;
     // Source art is keyed: gold hair, violet fabric, neutral peach skin and white logos.
-    const warmEdge = skin && !skin[i / 4] && h >= 12 && h < 36 && s > .16 && l > .10 && l < .73;
+    const warmEdge = skin && !skin[i / 4] && h >= 0 && h < 36 && s > .12 && l > .02 && l < .73;
     const warmHairShadow = warmEdge || (h >= 24 && h < 36 && s > .26 && l > .23 && l < .73);
     const goldenHair = h >= 36 && h < 72 && s > .30;
     if (lens) {
@@ -175,16 +178,18 @@ export function recolorPixels(data, config) {
     } else if ((goldenHair || warmHairShadow) && effectiveHair(config) !== 1) { target = hair; base = .66; }
     else if (fabricPixel && config.outfit !== 0) { target = outfit; base = .60; }
     if (!target) continue;
-    // Anchor fabric shading at black, its midtone and white. This keeps bright
-    // stitching/highlights bright even on dark outfits, without clipping folds.
+    // Anchor both materials at black. Adding a fixed lightness to pale hair
+    // turns almost-black strand shadows into bright speckles beside outlines.
+    // Fabric also reaches white so stitching keeps its original contrast.
     const fabric = target === outfit;
     const lightness = fabric
       ? l < base ? target.l * l / base : target.l + (1 - target.l) * (l - base) / (1 - base)
-      : clamp(target.l + (l - base) * .82, .06, .94);
+      : l < base ? target.l * l / base : clamp(target.l + (l - base) * .82, .06, .94);
     const saturation = target.s * (fabric ? clamp(s / .72, 0, 1.1) : clamp(s / .60, .70, 1.1));
     const rgb = hslToRgb(target.h, saturation, lightness);
     data[i] = rgb[0]; data[i + 1] = rgb[1]; data[i + 2] = rgb[2];
   }
+  if (source) recolorMaterialEdges(source, data, edges);
   return data;
 }
 const assets = new Map();

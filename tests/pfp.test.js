@@ -397,7 +397,7 @@ test('PFP expanded-character palette masks preserve exposed arms and necks', asy
 });
 
 test('PFP warm hair beside the jaw and outer curls follows the selected palette', async () => {
-  for (const [character, x, y, hair] of [[47, 292, 299, 2], [8, 151, 306, 4]]) {
+  for (const [character, x, y, hair] of [[47, 292, 299, 2], [8, 148, 303, 4]]) {
     const { data } = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const offset = (y * 512 + x) * 4;
     const before = Buffer.from(data.subarray(offset, offset + 4));
@@ -408,6 +408,74 @@ test('PFP warm hair beside the jaw and outer curls follows the selected palette'
     const hue = rgbToHsl(...data.subarray(offset, offset + 3))[0];
     assert.ok(Math.abs(hue - TRAITS.hair[hair].h) < 3, 'the strand uses the selected hair hue');
   }
+});
+
+test('PFP mixed curl edges follow both materials and render identically in browser and Node buffers', async () => {
+  const source = await sharp(readFileSync(new URL('../public/pfp/v1/character-8.png', import.meta.url))).ensureAlpha().raw().toBuffer();
+  // This is the original antialiased curl/fabric transition, not a pure strand.
+  const offset = (306 * 512 + 151) * 4;
+  assert.deepEqual([...source.subarray(offset, offset + 4)], [158, 92, 63, 253]);
+  const config = { ...base(), character: 8, hair: 4, outfit: 0 };
+  const hairOnly = recolorPixels(Buffer.from(source), config);
+  const combined = recolorPixels(Buffer.from(source), { ...config, outfit: 4 });
+  const browser = recolorPixels(Uint8ClampedArray.from(source), config);
+  assert.deepEqual(Buffer.from(browser), hairOnly, 'QA buffers and browser canvases must use the same immutable source pixels');
+  assert.notDeepEqual(hairOnly.subarray(offset, offset + 3), source.subarray(offset, offset + 3), 'the hair contribution changes');
+  assert.notDeepEqual(combined.subarray(offset, offset + 3), hairOnly.subarray(offset, offset + 3), 'the fabric contribution also changes');
+  const hue = rgbToHsl(...hairOnly.subarray(offset, offset + 3))[0];
+  assert.ok(hue > 260 && hue < 335, 'the mixed edge has no leftover golden or peach fringe');
+  for (const actual of [hairOnly, combined, browser]) assert.equal(actual[offset + 3], 253);
+});
+
+test('PFP reported neckline and jaw defects recolor hair while preserving adjacent actual skin', async () => {
+  // Visually inspected source pixels from the reported defects and the wider
+  // native-size audit. Each pair straddles a real hair/skin boundary.
+  const cases = [
+    [11, [295,351,250,203,88,252], [308,351,242,182,119,252]],
+    [12, [249,334,241,180,73,253], [265,341,240,183,124,253]],
+    [13, [234,347,237,178,79,253], [255,350,239,183,123,253]],
+    [16, [249,334,230,160,49,253], [252,354,250,209,163,253]],
+    [22, [229,347,199,131,38,253], [236,347,242,181,113,253]],
+    [25, [219,359,238,171,52,253], [225,359,242,181,102,253]],
+    [28, [280,282,172,113,39,253], [280,279,57,17,3,253]],
+    [28, [265,287,169,109,38,253], [262,287,227,151,86,253]],
+    [29, [245,330,242,186,56,253], [249,330,242,178,95,253]],
+    [37, [263,335,249,200,89,252], [280,350,240,185,119,252]],
+    [42, [330,284,185,121,48,252], [330,272,248,212,159,253]],
+    [42, [230,290,234,177,88,253], [245,300,237,184,126,252]],
+  ];
+  for (const [character, strand, skin] of cases) {
+    const source = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer();
+    const offsets = [strand,skin].map(([x,y,...rgba]) => {
+      const offset = (y*512+x)*4;
+      assert.deepEqual([...source.subarray(offset,offset+4)],rgba,`look ${character}: original boundary fixture`);
+      return offset;
+    });
+    for (const hair of [2,4,9,11]) {
+      const result = recolorPixels(Buffer.from(source),{...base(),character,hair,outfit:6});
+      assert.notDeepEqual(result.subarray(offsets[0],offsets[0]+3), source.subarray(offsets[0],offsets[0]+3), `look ${character}: the strand cannot remain golden`);
+      assert.deepEqual(result.subarray(offsets[1],offsets[1]+4), source.subarray(offsets[1],offsets[1]+4), `look ${character}: adjacent skin and jaw line stay exact`);
+    }
+  }
+  for (const [character,x,y] of [[4,245,345],[4,258,350],[36,291,371]]) {
+    const source = await sharp(readFileSync(new URL(`../public/pfp/v1/character-${character}.png`, import.meta.url))).ensureAlpha().raw().toBuffer();
+    const offset = (y*512+x)*4;
+    for (const hair of [4,9,11]) {
+      const result = recolorPixels(Buffer.from(source),{...base(),character,hair,outfit:4});
+      assert.deepEqual(result.subarray(offset,offset+4),source.subarray(offset,offset+4),'warm neckline highlights are skin, not blonde strands');
+    }
+  }
+});
+
+test('PFP pale hair keeps near-black underhair shadows continuous without bright speckles', async () => {
+  const source = await sharp(readFileSync(new URL('../public/pfp/v1/character-10.png', import.meta.url))).ensureAlpha().raw().toBuffer();
+  const result = recolorPixels(Buffer.from(source),{...base(),character:10,hair:11,outfit:6});
+  const values = [[211,295],[215,295]].map(([x,y]) => {
+    const p=(y*512+x)*4;
+    return rgbToHsl(...result.subarray(p,p+3))[2];
+  });
+  assert.ok(Math.max(...values)<.3,'deep shadows remain dark on the lightest hair palette');
+  assert.ok(Math.abs(values[0]-values[1])<.08,'adjacent similar shadow colors do not split into black and bright flecks');
 });
 
 test('PFP composition keeps the original clothing print visible without painting a badge over it', async (t) => {

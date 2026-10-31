@@ -1,9 +1,12 @@
-import { SKIN_REGIONS_A } from './skin-regions-a.js';
-import { SKIN_REGIONS_B, ACCESSORY_REGIONS_B } from './skin-regions-b.js';
+import { ACCESSORY_REGIONS_B } from './skin-regions-b.js';
+import { SKIN_CORRECTIONS_A } from './skin-corrections-a.js';
+import { SKIN_CORRECTIONS_B } from './skin-corrections-b.js';
+import { SKIN_CORRECTIONS_C } from './skin-corrections-c.js';
 
 // Coordinates are traced on each original 512px sprite. Similar skin and hair
 // colors must be separated by anatomy, never by a shared face-shaped fallback.
-export const SKIN_REGIONS = [...SKIN_REGIONS_A, ...SKIN_REGIONS_B];
+export const SKIN_REGIONS = Object.entries({ ...SKIN_CORRECTIONS_A, ...SKIN_CORRECTIONS_B, ...SKIN_CORRECTIONS_C })
+  .sort(([a], [b]) => Number(a) - Number(b)).map(([, regions]) => regions);
 const masks = new Map();
 const LENSES = {
   23: [[[209,156],[228,140],[255,130],[290,123],[326,119],[352,125],[372,137],[384,151],[386,171],[370,170],[350,167],[326,166],[299,171],[272,181],[248,187],[226,186],[212,178]]],
