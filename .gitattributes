@@ -18,3 +18,5 @@
 *.ogg   binary
 *.woff  binary
 *.woff2 binary
+*.spz   binary
+*.vsplat binary

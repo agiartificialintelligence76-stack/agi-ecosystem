@@ -14,6 +14,8 @@
     { "source": "/games/trenchingsimulator/", "destination": "/trenchingsimulator" },
     { "source": "/games/vladrunner2049", "destination": "/vladrunner2049" },
     { "source": "/games/vladrunner2049/", "destination": "/vladrunner2049" },
+    { "source": "/games/skybreak", "destination": "/skybreak" },
+    { "source": "/games/skybreak/", "destination": "/skybreak" },
     { "source": "/vote/owner", "destination": "/vote" },
     { "source": "/vote/owner/", "destination": "/vote" },
     { "source": "/:path*", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/studio" },
@@ -104,6 +106,25 @@
     { "source": "/icons/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
     { "source": "/music/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
     { "source": "/memes/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
-    { "source": "/theme.js", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
+    { "source": "/theme.js", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
+    { "source": "/games/skybreak/(characters|environment|motions)/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
+    {
+      "source": "/assets/spz-worker-(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://live.agi1.app https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/public/agi1-owner-media/; media-src 'self' blob: https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/public/agi1-owner-media/; connect-src 'self' blob: data: https://api.dexscreener.com wss://live.agi1.app https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/upload/sign/agi1-owner-media/; frame-src 'self' https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/(games/skybreak/?|skybreak)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://challenges.cloudflare.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://live.agi1.app https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/public/agi1-owner-media/; media-src 'self' blob: https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/public/agi1-owner-media/; connect-src 'self' blob: https://api.dexscreener.com wss://live.agi1.app https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/upload/sign/agi1-owner-media/; frame-src 'self' https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+        }
+      ]
+    }
   ]
 }

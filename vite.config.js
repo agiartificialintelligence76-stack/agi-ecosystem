@@ -18,6 +18,7 @@ const talkPage = () => {
     else if (/^\/games\/rideemagi\/?$/.test(path)) req.url = `/rideemagi.html${q}`;
     else if (/^\/games\/trenchingsimulator\/?$/.test(path)) req.url = `/trenchingsimulator.html${q}`;
     else if (/^\/games\/vladrunner2049\/?$/.test(path)) req.url = `/vladrunner2049.html${q}`;
+    else if (/^\/games\/skybreak\/?$/.test(path)) req.url = `/skybreak.html${q}`;   // (2026-10-31) SKYBREAK
     else if (/^\/vote\/owner\/?$/.test(path)) req.url = `/vote.html${q}`;   // (2026-10-24) the owner's votes page
     else if (/^\/discord\/verify\/?$/.test(path)) req.url = `/verify.html${q}`;   // (2026-10-29) her Discord holder roles' page
     else if (/^\/studio\/.+/.test(path)) req.url = `/studio.html${q}`;
@@ -62,11 +63,12 @@ export default defineConfig({
     // the roadmap (/roadmap) with its coming-soon pages (/stake, /games: AGI games since 2026-10-19, /giveaway), and
     // (2026-10-19) the owner's game, Ride 'Em, AGI! (/games/rideemagi), and (2026-10-20) TRENCHING SIMULATOR
     // (/games/trenchingsimulator), and VLAD RUNNER 2049 (/games/vladrunner2049), and (2026-10-23) the memes (/memes), and
-    // (2026-10-24) the community votes (/vote), and (2026-10-29) AGI-1's Discord holder roles (/discord/verify)
+    // (2026-10-24) the community votes (/vote), and (2026-10-29) AGI-1's Discord holder roles (/discord/verify), and
+    // (2026-10-31) SKYBREAK, AGI-1's 3D chart climb (/games/skybreak)
     rollupOptions: {
       input: { main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html', studio: 'studio.html',
         roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html', rideemagi: 'rideemagi.html',
-        trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html',
+        trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html', skybreak: 'skybreak.html',
         memes: 'memes.html', pfp: 'pfp.html', vote: 'vote.html', owner: 'owner-command.html', content: 'content.html',
         // (2026-10-29) her Discord holder roles' page (agi1.app/discord/verify)
         verify: 'verify.html',

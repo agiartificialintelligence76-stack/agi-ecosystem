@@ -7,6 +7,9 @@ export const GAMES = {
   trenchingsimulator: { name: 'TRENCHING SIMULATOR', path: '/games/trenchingsimulator' },
   // since 2026-10-23: the third game, an arcade beat 'em up with Vlad and AGI-1 (stars, players and plays; no leaderboards)
   vladrunner2049: { name: 'VLAD RUNNER 2049', path: '/games/vladrunner2049' },
+  // since 2026-10-31: the fourth game, AGI-1's 3D chart climb to the Moon (see CLAUDE.md, "SKYBREAK"; stars, players and
+  // plays; no leaderboards: its best times stay on the device)
+  skybreak: { name: 'SKYBREAK', path: '/games/skybreak' },
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);

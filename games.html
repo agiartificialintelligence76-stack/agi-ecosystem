@@ -11,7 +11,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AGI" />
     <meta property="og:title" content="GAME beta · AGI games" />
-    <meta property="og:description" content="Ride 'Em, AGI!, TRENCHING SIMULATOR and VLAD RUNNER 2049: three free browser games, no wallet needed. A beta, so no prizes yet. Not financial advice." />
+    <meta property="og:description" content="Ride 'Em, AGI!, TRENCHING SIMULATOR, VLAD RUNNER 2049 and SKYBREAK: four free browser games, no wallet needed. A beta, so no prizes yet. Not financial advice." />
     <meta property="og:image" content="__SITE__/cards/games.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -79,7 +79,7 @@
             <h1 class="gm-title" id="gm-title"><span class="gm-word">GAME</span> <span class="gm-beta">beta</span></h1>
             <p class="gm-sub">Free games, right in your browser.</p>
             <p class="gm-lede">No wallet needed to play. It's a beta, so there are no prizes yet. Connect a wallet only if you'd like to rate a game: a free signature, never a transaction.</p>
-            <p class="gm-say"><img src="/images/landing/agi1-face.webp" alt="" width="36" height="36" /><span><b>AGI-1:</b> three games, three adventures 💜 rooftops, the trenches, and a neon city with Vlad. no prizes yet, just bragging rights.</span></p>
+            <p class="gm-say"><img src="/images/landing/agi1-face.webp" alt="" width="36" height="36" /><span><b>AGI-1:</b> four games, four adventures 💜 rooftops, the trenches, a neon city with Vlad, and a climb to the moon. no prizes yet, just bragging rights.</span></p>
           </div>
           <div class="gm-art" aria-hidden="true">
             <svg class="gm-stamp" viewBox="0 0 200 200" aria-hidden="true">
@@ -97,7 +97,7 @@
           <header class="gm-head">
             <p class="kicker">Play now</p>
             <h2 class="h2" id="gm-shelf-title">The games</h2>
-            <p class="gm-text">Three so far, and more on the way. Each one runs right here, on a computer or a phone.</p>
+            <p class="gm-text">Four so far, and more on the way. Each one runs right here, on a computer or a phone.</p>
           </header>
           <ul class="gm-games">
             <li class="gm-game" data-gm-game="rideemagi">
@@ -176,6 +176,32 @@
                 <p class="gm-note">Free to play in your browser, no prizes. No sign-in or wallet needed to play. Runs are counted, never who.</p>
               </div>
             </li>
+            <!-- (2026-10-31) the fourth game: AGI-1's 3D chart climb (its own project, brought in by tools/games/import-skybreak.mjs) -->
+            <li class="gm-game" data-gm-game="skybreak">
+              <div class="gm-game-art">
+                <img class="gm-game-img" src="/images/skybreak/keyart.webp" alt="AGI-1 standing on a giant green candle among chart billboards in the clouds, the word SKYBREAK beside her" width="1600" height="900" loading="lazy" decoding="async" />
+              </div>
+              <div class="gm-game-body">
+                <ul class="gm-tags" aria-label="About this game">
+                  <li class="gm-tag is-beta">Beta</li>
+                  <li class="gm-tag">Free</li>
+                  <li class="gm-tag">No wallet needed</li>
+                  <li class="gm-tag">3D climb</li>
+                </ul>
+                <h3 class="gm-game-name"><a class="gm-game-link" href="/games/skybreak">SKYBREAK</a></h3>
+                <p class="gm-text">Climb 600 metres of chart with AGI-1, from the city rooftops to the Moon. Green candles lift you up, red ones drop away, and rugs get pulled. Play with a keyboard, a gamepad, or touch on a phone or tablet.</p>
+                <dl class="gm-stats">
+                  <div class="gm-stat"><dt>Rating</dt><dd data-gm-stat="rating">…</dd></div>
+                  <div class="gm-stat"><dt>Players</dt><dd data-gm-stat="players">…</dd></div>
+                  <div class="gm-stat"><dt>Played</dt><dd data-gm-stat="plays">…</dd></div>
+                </dl>
+                <div class="gm-actions">
+                  <a class="btn btn-primary gm-play" href="/games/skybreak" aria-label="Play SKYBREAK"><svg class="gm-play-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</a>
+                  <a class="btn btn-ghost" href="#rate-skybreak" aria-label="Rate SKYBREAK">Rate it</a>
+                </div>
+                <p class="gm-note">Free to play in your browser, no prizes: the coins you collect in it are just for fun. No sign-in or wallet needed to play. Runs are counted, never who.</p>
+              </div>
+            </li>
           </ul>
         </div>
       </section>
@@ -245,6 +271,7 @@
             <button class="gm-tab" type="button" role="tab" id="gm-tab-rideemagi" aria-controls="rate-rideemagi" aria-selected="true" data-gm-tab="rideemagi"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/src/games/rideemagi/keyart.webp" alt="" width="760" height="511" decoding="async" /></span><span class="gm-tab-name">Ride 'Em, AGI!</span></button>
             <button class="gm-tab" type="button" role="tab" id="gm-tab-trenchingsimulator" aria-controls="rate-trenchingsimulator" aria-selected="false" tabindex="-1" data-gm-tab="trenchingsimulator"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/src/games/trenchingsimulator/keyart.webp" alt="" width="760" height="511" decoding="async" /></span><span class="gm-tab-name">TRENCHING SIMULATOR</span></button>
             <button class="gm-tab" type="button" role="tab" id="gm-tab-vladrunner2049" aria-controls="rate-vladrunner2049" aria-selected="false" tabindex="-1" data-gm-tab="vladrunner2049"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/vladrunner2049/keyart.webp" alt="" width="1672" height="941" decoding="async" /></span><span class="gm-tab-name">VLAD RUNNER 2049</span></button>
+            <button class="gm-tab" type="button" role="tab" id="gm-tab-skybreak" aria-controls="rate-skybreak" aria-selected="false" tabindex="-1" data-gm-tab="skybreak"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/skybreak/keyart.webp" alt="" width="1600" height="900" decoding="async" /></span><span class="gm-tab-name">SKYBREAK</span></button>
           </div>
           <div class="gm-panel" role="tabpanel" id="rate-rideemagi" aria-labelledby="gm-tab-rideemagi" data-gm-rate="rideemagi">
             <div class="gm-rate-grid">
@@ -580,6 +607,120 @@
 
                 <section class="gm-reviews" aria-labelledby="gm-vladrunner2049-reviews">
                   <h3 class="gm-reviews-title" id="gm-vladrunner2049-reviews">What players say</h3>
+                  <p class="gm-note" data-gm-empty hidden>No reviews with words yet. Yours could be the first.</p>
+                  <ol class="gm-list" data-gm-list></ol>
+                  <p class="sr-only" data-gm-list-say role="status" aria-live="polite"></p>
+                  <div class="gm-links"><button class="btn btn-ghost btn-sm" type="button" data-gm-more hidden>Show more reviews</button></div>
+                </section>
+              </div>
+            </div>
+          </div>
+          <div class="gm-panel" role="tabpanel" id="rate-skybreak" aria-labelledby="gm-tab-skybreak" data-gm-rate="skybreak" hidden>
+            <div class="gm-rate-grid">
+              <div class="gm-sum">
+                <h3 class="sr-only">SKYBREAK: its rating</h3>
+                <p class="gm-avg"><span class="gm-avg-n" data-gm-avg>…</span> <span class="gm-avg-of">out of 5</span></p>
+                <span class="gm-stars gm-stars-lg" data-gm-avg-stars role="img" aria-label="Loading its rating"><svg class="gm-stars-svg gm-stars-base" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg><svg class="gm-stars-svg gm-stars-fill" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg></span>
+                <p class="gm-count" data-gm-count>Loading…</p>
+                <ol class="gm-bars" aria-label="How many people gave each number of stars">
+                  <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">5★</span><span class="sr-only">5 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="5"></span></span><span class="gm-bar-n" data-gm-bar-n="5">—</span></li>
+                  <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">4★</span><span class="sr-only">4 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="4"></span></span><span class="gm-bar-n" data-gm-bar-n="4">—</span></li>
+                  <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">3★</span><span class="sr-only">3 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="3"></span></span><span class="gm-bar-n" data-gm-bar-n="3">—</span></li>
+                  <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">2★</span><span class="sr-only">2 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="2"></span></span><span class="gm-bar-n" data-gm-bar-n="2">—</span></li>
+                  <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">1★</span><span class="sr-only">1 star:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="1"></span></span><span class="gm-bar-n" data-gm-bar-n="1">—</span></li>
+                </ol>
+                <p class="gm-played" data-gm-played>…</p>
+              </div>
+
+              <div class="gm-side">
+                <!-- rating it: one of these at a time (src/games/page.js) -->
+                <div class="gm-box" data-gm-box>
+                  <div class="gm-state" data-gm-state="loading">
+                    <p class="gm-note" data-gm-loading>Loading its ratings…</p>
+                  </div>
+                  <div class="gm-state" data-gm-state="soon" hidden>
+                    <h3 class="gm-box-title">Ratings and reviews open soon</h3>
+                    <p class="gm-text">You can play it now. Rating it, with stars and a few words, opens soon.</p>
+                  </div>
+                  <div class="gm-state" data-gm-state="closed" hidden>
+                    <h3 class="gm-box-title">Reviews open soon</h3>
+                    <p class="gm-text">Writing a review isn't open yet. You can play it now, and read what people said.</p>
+                  </div>
+                  <div class="gm-state" data-gm-state="gate" hidden>
+                    <h3 class="gm-box-title">Rate it</h3>
+                    <p class="gm-text">Reviews are for adults: 18+ only. Playing it needs nothing at all.</p>
+                    <div class="gm-links"><button class="btn btn-primary btn-sm" type="button" data-gm-adult>I'm 18 or older</button></div>
+                  </div>
+                  <div class="gm-state" data-gm-state="connect" hidden>
+                    <h3 class="gm-box-title">Rate it</h3>
+                    <p class="gm-text">Connect a wallet to give it stars and a few words. It takes a free signature, never a transaction, and it's only for reviews: playing never needs it.</p>
+                    <p class="gm-say-me" data-gm-say role="status" aria-live="polite" hidden></p>
+                    <div class="gm-links"><button class="btn btn-primary btn-sm" type="button" data-gm-connect>Connect a wallet</button></div>
+                    <div class="gm-wallets" data-gm-wallets hidden></div>
+                    <div class="gm-apps" data-gm-apps hidden>
+                      <p class="gm-note" data-gm-apps-note></p>
+                      <div class="gm-links">
+                        <a class="btn btn-ghost btn-sm" data-gm-app="metamask">Open in MetaMask ↗</a>
+                        <a class="btn btn-ghost btn-sm" data-gm-app="phantom">Open in Phantom ↗</a>
+                        <a class="btn btn-ghost btn-sm" data-gm-app="coinbase">Open in Coinbase Wallet ↗</a>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="gm-state" data-gm-state="form" hidden>
+                    <div class="gm-me">
+                      <p class="gm-me-text"><span class="gm-me-label">Connected:</span> <span class="gm-me-who" data-gm-me></span></p>
+                      <button class="btn btn-ghost btn-sm" type="button" data-gm-out>Disconnect</button>
+                    </div>
+                    <p class="gm-note" data-gm-mine-loading hidden>Checking for your review…</p>
+                    <div class="gm-mine" data-gm-mine tabindex="-1" hidden>
+                      <h3 class="gm-box-title">Your review</h3>
+                      <span class="gm-stars" data-gm-mine-stars role="img" aria-label=""><svg class="gm-stars-svg gm-stars-base" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg><svg class="gm-stars-svg gm-stars-fill" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg></span>
+                      <p class="gm-mine-name" data-gm-mine-name></p>
+                      <p class="gm-mine-text" data-gm-mine-text></p>
+                      <p class="gm-mine-hidden" data-gm-mine-hidden hidden>Only you see this one: it was taken off the page.</p>
+                      <div class="gm-links">
+                        <button class="btn btn-ghost btn-sm" type="button" data-gm-edit>Edit</button>
+                        <button class="btn btn-ghost btn-sm gm-danger" type="button" data-gm-delete>Delete</button>
+                      </div>
+                    </div>
+                    <form class="gm-form" data-gm-form novalidate hidden>
+                      <h3 class="gm-box-title" data-gm-form-title tabindex="-1">Rate it</h3>
+                      <p class="gm-note" data-gm-form-note hidden></p>
+                      <fieldset class="gm-pick">
+                        <legend class="gm-label">Your stars</legend>
+                        <div class="gm-pick-row">
+                          <input class="sr-only" type="radio" name="gm-stars" id="gm-skybreak-s1" value="1" /><label class="gm-pick-star" for="gm-skybreak-s1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">1 star: Not for me</span></label>
+                          <input class="sr-only" type="radio" name="gm-stars" id="gm-skybreak-s2" value="2" /><label class="gm-pick-star" for="gm-skybreak-s2"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">2 stars: It's okay</span></label>
+                          <input class="sr-only" type="radio" name="gm-stars" id="gm-skybreak-s3" value="3" /><label class="gm-pick-star" for="gm-skybreak-s3"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">3 stars: Good</span></label>
+                          <input class="sr-only" type="radio" name="gm-stars" id="gm-skybreak-s4" value="4" /><label class="gm-pick-star" for="gm-skybreak-s4"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">4 stars: Really good</span></label>
+                          <input class="sr-only" type="radio" name="gm-stars" id="gm-skybreak-s5" value="5" /><label class="gm-pick-star" for="gm-skybreak-s5"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">5 stars: Love it</span></label>
+                        </div>
+                        <p class="gm-pick-words" data-gm-pick-words aria-hidden="true">Tap a star</p>
+                      </fieldset>
+                      <div class="gm-field">
+                        <label class="gm-label" for="gm-skybreak-text">A few words <span class="gm-opt">(optional)</span></label>
+                        <textarea id="gm-skybreak-text" data-gm-text rows="3" maxlength="300" autocomplete="off" aria-describedby="gm-skybreak-text-note"></textarea>
+                        <p class="gm-note" id="gm-skybreak-text-note"><span data-gm-count-text>0</span>/300 · PG-13 · no links, @names, addresses or other coins</p>
+                      </div>
+                      <div class="gm-field">
+                        <label class="gm-label" for="gm-skybreak-name">Your name <span class="gm-opt">(optional)</span></label>
+                        <input id="gm-skybreak-name" data-gm-name type="text" maxlength="24" autocomplete="nickname" spellcheck="false" aria-describedby="gm-skybreak-name-note" />
+                        <p class="gm-note" id="gm-skybreak-name-note">Shown with your review: up to 24 characters, nothing crude, and nothing that passes for her or her team. Leave it empty and it says “A player”.</p>
+                      </div>
+                      <div class="gm-human" data-gm-human></div>
+                      <p class="gm-error" data-gm-error role="alert"></p>
+                      <div class="gm-links">
+                        <button class="btn btn-primary" type="submit" data-gm-send>Post my review</button>
+                        <button class="btn btn-ghost" type="button" data-gm-cancel hidden>Cancel</button>
+                      </div>
+                      <p class="gm-note">Your words and name are checked by an AI service before they're shown (stars alone aren't). Your 💜 badge shows at Crush or Soulmate, never your address.</p>
+                    </form>
+                  </div>
+                  <p class="gm-done" data-gm-done role="status" aria-live="polite"></p>
+                </div>
+
+                <section class="gm-reviews" aria-labelledby="gm-skybreak-reviews">
+                  <h3 class="gm-reviews-title" id="gm-skybreak-reviews">What players say</h3>
                   <p class="gm-note" data-gm-empty hidden>No reviews with words yet. Yours could be the first.</p>
                   <ol class="gm-list" data-gm-list></ol>
                   <p class="sr-only" data-gm-list-say role="status" aria-live="polite"></p>

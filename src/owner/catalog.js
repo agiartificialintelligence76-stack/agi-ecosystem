@@ -15,6 +15,7 @@ export const BUILTIN_PAGES = Object.freeze([
   { path: '/games/rideemagi', title: "Ride 'Em, AGI!" },
   { path: '/games/trenchingsimulator', title: 'TRENCHING SIMULATOR' },
   { path: '/games/vladrunner2049', title: 'VLAD RUNNER 2049' },
+  { path: '/games/skybreak', title: 'SKYBREAK' },
   { path: '/cloakmesh', title: 'CloakMesh' },
   { path: '/studio', title: 'AGI Studio' },
   { path: '/studio/explore', title: 'Studio · Explore' },
@@ -28,6 +29,7 @@ export const BUILTIN_PAGES = Object.freeze([
 const ALIASES = Object.freeze({
   '/index': '/', '/rideemagi': '/games/rideemagi',
   '/trenchingsimulator': '/games/trenchingsimulator', '/vladrunner2049': '/games/vladrunner2049',
+  '/skybreak': '/games/skybreak',
 });
 
 export function normalizePath(value = '/') {

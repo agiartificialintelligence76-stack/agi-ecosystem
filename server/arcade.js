@@ -140,6 +140,16 @@ export const LOOK_GAMES = Object.freeze({
     promo: 'other games, coins, tokens, channels, groups, services',
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
   }),
+  // (2026-10-31) its platforms are a stock chart's candles: green ones pump her up, red ones dump, rugs get pulled, and the
+  // top is the Moon, so a review that talks about pumps, dumps, rugs or the Moon is talking about the game
+  skybreak: Object.freeze({
+    what: '"SKYBREAK", a 3D climbing game where an anime girl, AGI-1, jumps up a tower of floating platforms shaped like a '
+      + 'stock chart\'s candles, from a city to the Moon: talk about the game\'s own green candles that pump her up, red '
+      + 'candles that dump, rug pulls, jumps, falls, checkpoints, coins to collect and reaching the Moon is part of reviewing it',
+    promo: 'other games, real coins, tokens, channels, groups, services',
+    advice: 'financial advice about real coins or real money (telling people to buy or sell something real, price targets, sure '
+      + 'gains)',
+  }),
 });
 export function lookSystem(game) {
   const g = LOOK_GAMES[isGame(game) && Object.hasOwn(LOOK_GAMES, game) ? game : 'rideemagi'];

@@ -624,7 +624,7 @@ test('AGI games: its page at /games, its head and link preview (its own picture)
   assert.ok(readPage('rideemagi.html').includes('<meta property="og:image" content="__SITE__/cards/games.jpg" />'), 'its game shares its picture');
   // (2026-10-21) its second game at /games/trenchingsimulator, with its own picture (its test below)
   assert.ok(vercel.rewrites.some((r) => r.source === '/games/trenchingsimulator' && r.destination === '/trenchingsimulator'), 'its second game at /games/trenchingsimulator');
-  assert.match(page.match(/<meta property="og:description" content="([^"]+)"/)[1], /^Ride 'Em, AGI!, TRENCHING SIMULATOR and VLAD RUNNER 2049/, 'its preview names all three games');
+  assert.match(page.match(/<meta property="og:description" content="([^"]+)"/)[1], /^Ride 'Em, AGI!, TRENCHING SIMULATOR, VLAD RUNNER 2049 and SKYBREAK/, 'its preview names all four games');
   // the site's own top bar and footer, Games marked as the page you're on (and nothing else)
   const strip = (s) => s.replace(/ aria-current="page"/g, '');
   const live = readPage('live.html');
@@ -785,23 +785,83 @@ test('VLAD RUNNER 2049: its card, stars, players and plays, its direct page; nev
   }
 });
 
+test('SKYBREAK: its card, stars, players and plays, its direct page under its own CSP; never leaderboards or score requests', async () => {
+  const page = GAMES_PAGE();
+  const card = between(page, '<li class="gm-game" data-gm-game="skybreak">', '\n            </li>');
+  assert.match(card, /src="\/images\/skybreak\/keyart\.webp"/);
+  assert.deepEqual([...card.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/games/skybreak', '/games/skybreak', '#rate-skybreak']);
+  assert.doesNotMatch(card, /data-gm-lb|api\/wallet/, 'no leaderboard on its card');
+  assert.match(textOf(card), /the coins you collect in it are just for fun/, 'its coins are only the game\'s');
+  const { isGame } = await import('../src/games/list.js');
+  assert.equal(isGame('skybreak'), true, 'counted and rated by our server');
+  const { isBoard, BOARD_IDS } = await import('../src/games/boards.js');
+  assert.equal(Object.hasOwn(BOARD_IDS, 'skybreak'), false, 'no leaderboards: its best times stay on the device');
+  assert.equal(isBoard('skybreak', 'e:all'), false);
+  assert.doesNotMatch(page, /data-gm-lb="skybreak"/);
+  const { LOOK_GAMES, lookSystem } = await import('../server/arcade.js');
+  assert.ok(Object.hasOwn(LOOK_GAMES, 'skybreak'), 'its reviews judged as reviews of this game');
+  assert.match(lookSystem('skybreak'), /SKYBREAK/);
+  assert.match(lookSystem('skybreak'), /financial advice about real coins or real money/, 'pumps, dumps and the Moon are the game\'s own words');
+  // the game tells our server only how many runs were started (its own site.js), as each run begins; nothing about scores
+  const site = readPage('src/games/skybreak/site.js');
+  assert.match(site, /const GAME = 'skybreak';/);
+  assert.match(site, /action: 'game-play', game: GAME, player: playerId\(\), plays/);
+  const entry = readPage('src/games/skybreak/page.js');
+  assert.match(entry, /import \{ Site \} from '\.\/site\.js';/);
+  assert.equal((entry.match(/Site\.play\(\)/g) || []).length, 1, 'one count a run');
+  assert.match(entry, /document\.addEventListener\('skybreak:run', \(\) => Site\.play\(\)\);/, 'the game\'s run event');
+  assert.equal((readPage('src/games/skybreak/main.js').match(/new CustomEvent\('skybreak:run'/g) || []).length, 1, 'the game says when a run begins');
+  for (const f of [entry, readPage('src/games/skybreak/main.js')]) assert.doesNotMatch(f, /\/api\/|fetch\(|game-score|game-ticket/, 'no score requests');
+  const game = readPage('skybreak.html');
+  assert.match(game, /<main id="sb-root">/);
+  assert.match(game, /src="\/src\/games\/skybreak\/page\.js"/);
+  assert.match(game, /rel="canonical" href="__SITE__\/games\/skybreak"/);
+  assert.match(game, /property="og:image" content="__SITE__\/images\/skybreak\/keyart\.webp"/);
+  assert.doesNotMatch(game, /<script>|<style|\sstyle=|\son\w+=/, 'works with the strict CSP');
+  assert.match(readPage('scripts/share-pages.js'), /'dist\/skybreak\.html'/);
+  const { neededGameArt } = await import('../scripts/share-pages.js');
+  assert.ok(neededGameArt().includes('images/skybreak/keyart.webp'), 'build requires the public preview image');
+  const vercel = JSON.parse(readPage('vercel.json'));
+  for (const path of ['/games/skybreak', '/games/skybreak/']) {
+    assert.ok(vercel.rewrites.some((r) => r.source === path && r.destination === '/skybreak'));
+  }
+  const { default: config } = await import('../vite.config.js');
+  assert.equal(config.build.rollupOptions.input.skybreak, 'skybreak.html');
+  for (const hook of ['configureServer', 'configurePreviewServer']) {
+    let rewrite;
+    config.plugins[0][hook]({ middlewares: { use(fn) { rewrite = fn; } } });
+    for (const [url, expected] of [
+      ['/games/skybreak', '/skybreak.html'],
+      ['/games/skybreak/?qa', '/skybreak.html?qa'],
+      ['/games/skybreak/characters/agi1-high.vsplat', '/games/skybreak/characters/agi1-high.vsplat'],
+      ['/games/skybreak-extra', '/games/skybreak-extra'],
+    ]) {
+      const req = { url, headers: {} }; let called = 0;
+      rewrite(req, {}, () => { called++; });
+      assert.equal(req.url, expected, `${hook}: ${url}`);
+      assert.equal(called, 1);
+    }
+  }
+});
+
 test('AGI games: "GAME beta" on top (beta stuck over GAME), the shelf with configured games\' stars and plays, their ratings tabs, what\'s coming and the fine print', async () => {
   const { GAMES } = await import('../src/games/list.js');
   const IDS = Object.keys(GAMES);
-  assert.deepEqual(IDS, ['rideemagi', 'trenchingsimulator', 'vladrunner2049'], 'three games since 2026-10-23');
-  // each game's key art: VLAD RUNNER 2049's is in public/images (also its share picture)
-  const artOf = (id) => (id === 'vladrunner2049' ? '/images/vladrunner2049/keyart\\.webp" alt="[^"]{20,}" width="1672" height="941" loading="lazy"'
+  assert.deepEqual(IDS, ['rideemagi', 'trenchingsimulator', 'vladrunner2049', 'skybreak'], 'four games since 2026-10-31');
+  // each game's key art: VLAD RUNNER 2049's and SKYBREAK's are in public/images (also their share pictures)
+  const PUBLIC_ART = { vladrunner2049: [1672, 941], skybreak: [1600, 900] };
+  const artOf = (id) => (PUBLIC_ART[id] ? `/images/${id}/keyart\\.webp" alt="[^"]{20,}" width="${PUBLIC_ART[id][0]}" height="${PUBLIC_ART[id][1]}" loading="lazy"`
     : `/src/games/${id}/keyart\\.webp" alt="[^"]{20,}" width="760" height="511"`);
-  const tabArtOf = (id) => (id === 'vladrunner2049' ? '/images/vladrunner2049/keyart\\.webp' : `/src/games/${id}/keyart\\.webp`);
+  const tabArtOf = (id) => (PUBLIC_ART[id] ? `/images/${id}/keyart\\.webp` : `/src/games/${id}/keyart\\.webp`);
   const page = GAMES_PAGE();
   const main = mainOf(page);
   assert.equal((page.match(/<h1\b/g) || []).length, 1, 'one h1');
   assert.match(main, /<h1 class="gm-title" id="gm-title"><span class="gm-word">GAME<\/span> <span class="gm-beta">beta<\/span><\/h1>/, 'screen readers hear "GAME beta"');
-  assert.match(textOf(between(main, '<p class="gm-say">', '</p>')), /AGI-1: three games, three adventures 💜 .* no prizes yet, just bragging rights\./, 'her line, for all three games');
+  assert.match(textOf(between(main, '<p class="gm-say">', '</p>')), /AGI-1: four games, four adventures 💜 .* no prizes yet, just bragging rights\./, 'her line, for all four games');
   // the shelf: each game in list.js, in its order, linked to its own page, its stars, players and plays waiting for our server
   const shelf = between(main, '<section class="section gm-shelf"', '</section>');
   assert.deepEqual([...shelf.matchAll(/<li class="gm-game" data-gm-game="(\w+)">/g)].map((m) => m[1]), IDS, 'a card for each game');
-  assert.match(textOf(shelf), /Three so far, and more on the way\./);
+  assert.match(textOf(shelf), /Four so far, and more on the way\./);
   assert.doesNotMatch(textOf(shelf), /one so far/i);
   const cardOf = (id) => between(shelf, `<li class="gm-game" data-gm-game="${id}">`, '\n            </li>');
   const rateOf = (id) => (id === 'rideemagi' ? '#rate' : `#rate-${id}`);         // (#rate: Ride 'Em, AGI!'s, from before there were two)
@@ -1058,7 +1118,7 @@ test('AGI games\' words (src/games/words.js): a row of stars, its numbers in wor
   }
   // every link to a game's ratings: the games page's cards, the games' own "Rate it"
   const gamesPage = readPage('games.html');
-  assert.deepEqual([...gamesPage.matchAll(/href="(#rate[^"]*)"/g)].map((m) => w.gameOfHash(m[1])), ['rideemagi', 'trenchingsimulator', 'vladrunner2049']);
+  assert.deepEqual([...gamesPage.matchAll(/href="(#rate[^"]*)"/g)].map((m) => w.gameOfHash(m[1])), ['rideemagi', 'trenchingsimulator', 'vladrunner2049', 'skybreak']);
   assert.equal((readPage('src/games/trenchingsimulator/shell.js').match(/href: '\/games#rate-trenchingsimulator'/g) || []).length, 2, 'TRENCHING SIMULATOR\'s two "Rate it"');
   assert.doesNotMatch(readPage('src/games/trenchingsimulator/shell.js'), /'\/games#rate'/, 'never Ride \'Em, AGI!\'s');
   assert.match(readPage('src/games/rideemagi/game.js'), /\/games#rate"/, 'Ride \'Em, AGI!\'s own, as it was');

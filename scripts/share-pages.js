@@ -66,7 +66,7 @@ export function allSharePages(site) {
 // tools/cards/trenchingsimulator-card.html)
 export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg', 'roadmap.jpg',
   'games.jpg', 'trenchingsimulator.jpg'];
-export const neededGameArt = () => ['images/vladrunner2049/keyart.webp'];
+export const neededGameArt = () => ['images/vladrunner2049/keyart.webp', 'images/skybreak/keyart.webp'];
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const site = siteUrl();
@@ -83,7 +83,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
   for (const [name, html] of Object.entries(allSharePages(site))) writeFileSync(`dist/share/${name}.html`, html);
   for (const page of ['dist/index.html', 'dist/diary.html', 'dist/live.html', 'dist/studio.html', 'dist/roadmap.html', 'dist/stake.html',
-    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html', 'dist/memes.html',
+    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html', 'dist/skybreak.html', 'dist/memes.html',
     'dist/pfp.html', 'dist/vote.html', 'dist/verify.html']) {
     if (existsSync(page)) writeFileSync(page, readFileSync(page, 'utf8').replaceAll('__SITE__', site));
   }
