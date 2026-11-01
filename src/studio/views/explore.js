@@ -1,4 +1,5 @@
-// AGI Studio: Explore (the app's front). Round 3 (2026-10-10, the owner's "Pro tool layout"): a compact top (what it is, in a
+// AGI Studio: Explore (the app's front). Its print-inspired colors and type follow the main page (2026-11-01).
+// Round 3 (2026-10-10, the owner's "Pro tool layout"): a compact top (what it is, in a
 // line, with a wall of what people made beside it), the live stats board as one strip, the spotlight of the week, then the
 // gallery (Trending · Influencers · My creations: views/gallery.js), and the two ways to start. Everything public here is the
 // same for everyone (/api/launch?inf-explore and ?inf-stats, kept a little by the CDN); a signed-in wallet's hearts after.
@@ -37,6 +38,14 @@ export async function render(ctx, route, root) {
 
   // ---------- the top: the app in a line, and a wall of what people made ----------
   const wall = h('div', { class: 'sa-hero-wall', 'aria-hidden': 'true' }, ...[0, 1, 2, 3].map(() => h('div', { class: 'sa-wall-col' }, h('div', { class: 'sa-wall-track' }))));
+  const art = h('div', { class: 'sa-hero-art', 'aria-hidden': 'true' },
+    h('span', { class: 'sa-hero-art-word', text: 'AGI' }),
+    h('span', { class: 'sa-hero-orbit' }),
+    h('img', { class: 'sa-hero-figure', src: '/images/landing/agi1-cutout.webp', alt: '', width: 796, height: 1510, decoding: 'async' }),
+    h('span', { class: 'sa-hero-sticker', text: 'Made of\nimagination.' }),
+    h('span', { class: 'sa-hero-spark', text: '✦' }));
+  const ribbon = h('div', { class: 'sa-hero-ribbon', 'aria-hidden': 'true' },
+    ...['Your imagination', 'AI influencers', 'Photos', 'Videos', '3D worlds'].map((text) => h('span', { text })));
   const seeTrends = btn('Browse trends', { kind: 'ghost', icon: 'zap' });
   const still = calm();
   const first = still ? HERO_STILL : 0;
@@ -57,7 +66,7 @@ export async function render(ctx, route, root) {
         linkBtn('Create an influencer', ctx.href('/create'), { kind: 'primary', icon: 'plus', dataset: { saLink: '', guide: 'start' } }),
         seeTrends),
       status),
-    wall);
+    art, wall, ribbon);
 
   // ---------- the live stats board, as one strip ----------
   const stats = h('section', { class: 'sa-stats', 'aria-label': 'AGI Studio, live', hidden: true },
@@ -198,6 +207,12 @@ function heroMotion(ctx, hero, rotor, { still, first }) {
   const update = () => hero.classList.toggle('is-still', !moving());
   measure();
   document.fonts?.ready.then(measure).catch(() => {});
+  // Pop mode changes the headline's font. Refit even in reduced-motion mode,
+  // and again when a newly requested display font is ready.
+  ctx.listen(window, 'agi:skin', () => {
+    measure();
+    document.fonts?.ready.then(measure).catch(() => {});
+  });
   if (still) { update(); return; }
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries) => {

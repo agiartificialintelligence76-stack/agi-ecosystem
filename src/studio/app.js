@@ -9,6 +9,11 @@
 //     send it, and our server reads the chain after).
 //   • Everything it shows is set with textContent; our server's answers are said in words (src/studio/app-words.js).
 import '../styles/studio-app.css';
+import '../styles/studio-pop.css';
+import '../styles/studio-home.css';
+import '../styles/studio-details.css';
+import '../styles/studio-theme.css';
+import { startTheme } from '../theme.js';
 import { postJson, withHuman } from '../lib/human.js';
 import { findWallets, signInWithWallet, explainWalletError } from '../lib/wallet.js';
 import { WALLET_STEPS, NO_WALLET } from '../live/words.js';
@@ -559,6 +564,7 @@ addEventListener('hashchange', giftFromAddress);
 
 // ---------- start ----------
 function start() {
+  startTheme();
   // (round 4, phase 3) an invite link's code, before any view reads the address
   catchInvite();
   // the static links in studio.html name /studio/…: on studio.agi1.app they become /…

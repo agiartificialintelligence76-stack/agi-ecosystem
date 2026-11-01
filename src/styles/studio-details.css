@@ -1,0 +1,197 @@
+/* Studio's secondary surfaces share the landing page's paper, ink and sticker colors.
+   Media previews retain their own dark overlays; user-selected 3D backdrops are untouched. */
+
+/* Dialogs, wallet choices and credit sheets. */
+:where(html[data-skin=pop]) .sa-sheet::backdrop {
+  background: rgb(23 10 54 / 0.48);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+:where(html[data-skin=pop]) .sa-sheet-in {
+  background: var(--sa-panel);
+  border: 2px solid var(--sa-text);
+  border-bottom: 0;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -7px 0 rgb(23 10 54 / 0.15);
+}
+:where(html[data-skin=pop]) .sa-sheet-head {
+  padding-top: 20px;
+  padding-bottom: 14px;
+  background: var(--sa-raised);
+  border-bottom: 1px solid var(--sa-line-2);
+}
+:where(html[data-skin=pop]) .sa-sheet-title {
+  font-family: var(--sa-display);
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+:where(html[data-skin=pop]) .sa-sheet-sub { line-height: 1.55; }
+:where(html[data-skin=pop]) .sa-sheet-body { padding-top: 16px; }
+:where(html[data-skin=pop]) .sa-sheet-foot { background: var(--sa-panel); border-color: var(--sa-line-2); }
+:where(html[data-skin=pop]) .sa-wallet, :where(html[data-skin=pop]) .sa-pick, :where(html[data-skin=pop]) .sa-amount { border-color: var(--sa-line-3); border-radius: 12px; }
+:where(html[data-skin=pop]) .sa-wallet:hover, :where(html[data-skin=pop]) .sa-pick:hover { background: var(--sa-raised); border-color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-wallet-letter { background: var(--sa-honey); color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-amount[aria-checked='true'] {
+  border-color: var(--sa-text);
+  background: var(--sa-honey);
+  box-shadow: 2px 2px 0 var(--sa-text);
+}
+:where(html[data-skin=pop]) .sa-amount strong { font-family: var(--sa-display); }
+:where(html[data-skin=pop]) .sa-step-n { background: var(--sa-raised-2); border: 1px solid var(--sa-text); border-radius: 50%; }
+:where(html[data-skin=pop]) .sa-pay { border-color: var(--sa-line-2); }
+:where(html[data-skin=pop]) .sa-addr { background: var(--sa-bg); }
+:where(html[data-skin=pop]) .sa-burn-head { border-color: var(--sa-line-3); background: #fff0cd; }
+:where(html[data-skin=pop]) .sa-burn-bar, :where(html[data-skin=pop]) .sa-prog-bar { background: rgb(23 10 54 / 0.12); }
+:where(html[data-skin=pop]) .sa-burn-icon, :where(html[data-skin=pop]) .sa-burn-row-icon { background: #ffd8b3; color: var(--sa-text); }
+
+/* Account, gifts and administrative information. */
+:where(html[data-skin=pop]) .sa-stat-card, :where(html[data-skin=pop]) .sa-prize, :where(html[data-skin=pop]) .sa-gift, :where(html[data-skin=pop]) .sa-gifts-card, :where(html[data-skin=pop]) .sa-help-card, :where(html[data-skin=pop]) .sa-help-grid > .sa-card, :where(html[data-skin=pop]) .sa-balance, :where(html[data-skin=pop]) .sa-member, :where(html[data-skin=pop]) .sa-owner-trend, :where(html[data-skin=pop]) .sa-owner-report, :where(html[data-skin=pop]) .sa-week, :where(html[data-skin=pop]) .sa-learn-card {
+  border: 1.5px solid var(--sa-text);
+  box-shadow: 3px 3px 0 rgb(23 10 54 / 0.13);
+}
+:where(html[data-skin=pop]) .sa-stat-card { padding: 20px; }
+:where(html[data-skin=pop]) .sa-stat-credits { background: #fff1bc; }
+:where(html[data-skin=pop]) .sa-stat-slots { background: #e7ddff; }
+:where(html[data-skin=pop]) .sa-stat-level { background: #d5faee; }
+:where(html[data-skin=pop]) .sa-stat-big, :where(html[data-skin=pop]) .sa-balance-value, :where(html[data-skin=pop]) .sa-gift-big {
+  font-family: var(--sa-display);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+:where(html[data-skin=pop]) .sa-stat-big { font-size: clamp(28px, 3vw, 38px); }
+:where(html[data-skin=pop]) .sa-stat-big .sa-i, :where(html[data-skin=pop]) .sa-credit-now .sa-i, :where(html[data-skin=pop]) .sa-prices dd .sa-i, :where(html[data-skin=pop]) .sa-gift-have .sa-i, :where(html[data-skin=pop]) .sa-gift-big .sa-i, :where(html[data-skin=pop]) .sa-card-price .sa-i { color: #8a5900; }
+:where(html[data-skin=pop]) .sa-prize { background: #fff8df; }
+:where(html[data-skin=pop]) .sa-prize-icon { border: 1.5px solid var(--sa-text); }
+:where(html[data-skin=pop]) .sa-prices-card { background: var(--sa-panel); }
+:where(html[data-skin=pop]) .sa-gift { background: #fff8df; }
+:where(html[data-skin=pop]) .sa-gift-review { border-color: var(--sa-text); background: #ffe5f2; }
+:where(html[data-skin=pop]) .sa-gift-hero { border-color: var(--sa-text); background: #ffe5f2; }
+:where(html[data-skin=pop]) .sa-gift-hero.is-done { border-color: var(--sa-text); background: #d5faee; }
+:where(html[data-skin=pop]) .sa-gift-hero-icon { border: 1.5px solid var(--sa-text); background: var(--sa-pink); color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-gift-hero.is-done .sa-gift-hero-icon { background: #3ff0c3; color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-gift-go.is-armed { background: var(--sa-honey); color: var(--sa-text); box-shadow: 3px 3px 0 var(--sa-text); }
+:where(html[data-skin=pop]) .sa-gift-row.is-in .sa-gift-row-icon { background: #ffe0f0; color: #a02264; }
+:where(html[data-skin=pop]) .sa-gifts-title .sa-i, :where(html[data-skin=pop]) .sa-gift-review-title .sa-i, :where(html[data-skin=pop]) .sa-invite-joined .sa-i { color: #a02264; }
+:where(html[data-skin=pop]) .sa-invite-joined { border-color: #bd76a1; background: #ffeaf4; }
+:where(html[data-skin=pop]) .sa-number, :where(html[data-skin=pop]) .sa-invite-stats li { border-color: var(--sa-line-2); background: var(--sa-bg); }
+:where(html[data-skin=pop]) .sa-made thead { background: var(--sa-raised); }
+:where(html[data-skin=pop]) .sa-made tbody tr:nth-child(even) { background: var(--sa-bg); }
+:where(html[data-skin=pop]) .sa-balance.is-low { border-color: var(--sa-bad); background: #fff0f3; }
+:where(html[data-skin=pop]) .sa-balance-note { color: #795100; }
+:where(html[data-skin=pop]) .sa-ex.is-making { border-color: var(--sa-accent); }
+:where(html[data-skin=pop]) .sa-week.is-picked { border-color: #927000; background: #fff8df; }
+
+/* Support conversations and teaching cards. */
+:where(html[data-skin=pop]) .sa-ticket-row { border-color: var(--sa-line-3); }
+:where(html[data-skin=pop]) .sa-ticket-row:hover { background: var(--sa-bg); border-color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-ticket-row.is-unread { border-color: var(--sa-accent); background: #f1ebff; }
+:where(html[data-skin=pop]) .sa-msg { border-color: var(--sa-line-2); background: var(--sa-surface); }
+:where(html[data-skin=pop]) .sa-msg.is-team { border-color: #9b80d6; background: #eee6ff; }
+:where(html[data-skin=pop]) .sa-msg.is-mine, :where(html[data-skin=pop]) .sa-help-q { background: #ffe0f0; }
+:where(html[data-skin=pop]) .sa-help-q { border: 1px solid #d39ab9; }
+:where(html[data-skin=pop]) .sa-help-a { background: var(--sa-panel); border-color: var(--sa-line-3); }
+:where(html[data-skin=pop]) .sa-help-who { color: var(--sa-text-2); }
+:where(html[data-skin=pop]) .sa-learn-card { background: var(--sa-surface); }
+:where(html[data-skin=pop]) .sa-learn-n { border: 1.5px solid var(--sa-text); background: var(--sa-honey); color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-learn-title { font-family: var(--sa-display); font-weight: 750; letter-spacing: -0.025em; }
+:where(html[data-skin=pop]) .sa-learn-play { border: 2px solid var(--sa-text); background: var(--sa-honey); color: var(--sa-text); box-shadow: 3px 3px 0 var(--sa-text); }
+:where(html[data-skin=pop]) .sa-learn-play.is-playing { background: rgb(23 10 54 / 0.82); color: #fff; }
+:where(html[data-skin=pop]) .sa-guide-card {
+  background: var(--sa-panel);
+  border: 2px solid var(--sa-text);
+  border-radius: 18px;
+  box-shadow: 5px 5px 0 var(--sa-text);
+}
+:where(html[data-skin=pop]) .sa-guide-arrow { background: var(--sa-panel); border-color: var(--sa-text); border-width: 2px; }
+:where(html[data-skin=pop]) .sa-guide-title { font-family: var(--sa-display); font-weight: 750; letter-spacing: -0.03em; }
+:where(html[data-skin=pop]) .sa-guide-count { color: var(--sa-accent-2); font-family: var(--sa-mono); }
+:where(html[data-skin=pop]) .sa-guide-x:hover { background: var(--sa-raised); }
+:where(html[data-skin=pop]) .sa-guide-watch { color: var(--sa-text); background: var(--sa-honey); border-color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-guide-watch:hover { background: #ffe28b; color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-guide-play.is-paused { color: var(--sa-text); background: var(--sa-honey); border: 2px solid var(--sa-text); box-shadow: 3px 3px 0 var(--sa-text); }
+:where(html[data-skin=pop]) .sa-guide-ring { outline-color: var(--sa-accent); box-shadow: 0 0 0 100vmax rgb(23 10 54 / 0.28); }
+:where(html[data-skin=pop]) .sa-guide-ring::after { border-color: var(--sa-accent); }
+
+/* Status colors must remain readable against paper. */
+:where(html[data-skin=pop]) .sa-err, :where(html[data-skin=pop]) .sa-field-why, :where(html[data-skin=pop]) .sa-media.is-failed .sa-media-state, :where(html[data-skin=pop]) .sa-tile.is-failed .sa-tile-state, :where(html[data-skin=pop]) .sa-edit-delete:hover:not(:disabled), :where(html[data-skin=pop]) .sa-media-acts .sa-btn-quiet:hover:not(:disabled) { color: var(--sa-bad); }
+:where(html[data-skin=pop]) .sa-cost-off, :where(html[data-skin=pop]) .sa-tag-new, :where(html[data-skin=pop]) .sa-role.is-mod, :where(html[data-skin=pop]) .sa-state.is-looks, :where(html[data-skin=pop]) .sa-state.is-body, :where(html[data-skin=pop]) .sa-state.is-making, :where(html[data-skin=pop]) .sa-state.is-claimed, :where(html[data-skin=pop]) .sa-state.is-sending {
+  background: #e8ddff;
+  color: #50309a;
+}
+:where(html[data-skin=pop]) .sa-state.is-ready, :where(html[data-skin=pop]) .sa-state.is-kept, :where(html[data-skin=pop]) .sa-state.is-approved, :where(html[data-skin=pop]) .sa-state.is-sent, :where(html[data-skin=pop]) .sa-role.is-support { background: #d3f7e9; color: #076445; }
+:where(html[data-skin=pop]) .sa-state.is-failed { background: #ffe0e9; color: #a32143; }
+:where(html[data-skin=pop]) .sa-state.is-pick, :where(html[data-skin=pop]) .sa-state.is-review, :where(html[data-skin=pop]) .sa-state.is-picked { background: #fff0b8; color: #735000; }
+:where(html[data-skin=pop]) .sa-badge.is-private { background: #ffe5f2; border-color: #c682a7; color: #92235d; }
+:where(html[data-skin=pop]) .sa-badge.is-on { color: #067753; border-color: #6cae98; }
+:where(html[data-skin=pop]) .sa-prog.is-slow .sa-prog-text { color: #795100; }
+:where(html[data-skin=pop]) .sa-card-input:checked + label .sa-card-note,
+:where(html[data-skin=pop]) .sa-card-input:checked + label .sa-card-from { color: #50309a; }
+:where(html[data-skin=pop]) .sa-igroup-h .sa-i, :where(html[data-skin=pop]) .sa-ichip .sa-spin { color: #067753; }
+:where(html[data-skin=pop]) .sa-edit-row .sa-edit-her { color: #92235d; border-color: #c682a7; }
+:where(html[data-skin=pop]) .sa-edit-row .sa-edit-her:hover:not(:disabled) { background: #ffe5f2; }
+:where(html[data-skin=pop]) .sa-heart-lg { color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-heart-lg[aria-pressed='true'] { color: #b32668; }
+:where(html[data-skin=pop]) .sa-person-new.is-full .sa-new-plus { color: var(--sa-text-2); }
+:where(html[data-skin=pop]) .sa-maker-name { color: var(--sa-accent-2); }
+:where(html[data-skin=pop]) .sa-tag-new { box-shadow: 0 0 0 1px #a58aca inset; }
+
+/* Empty media and loading states are part of the light interface. */
+:where(html[data-skin=pop]) .sa-skel, :where(html[data-skin=pop]) .sa-look.is-making {
+  background: linear-gradient(100deg, #ede6f8 30%, #fbf8ff 50%, #ede6f8 70%);
+  background-size: 300% 100%;
+}
+:where(html[data-skin=pop]) .sa-shimmer { background-image: linear-gradient(100deg, transparent 25%, rgb(107 59 255 / 0.07) 50%, transparent 75%); }
+:where(html[data-skin=pop]) .sa-media.is-failed, :where(html[data-skin=pop]) .sa-tile.is-failed { background: #fff0f3; box-shadow: 0 0 0 1px #d8a0af inset; }
+:where(html[data-skin=pop]) .sa-tile.is-making { color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-profile { border: 1.5px solid var(--sa-text); box-shadow: 3px 3px 0 rgb(23 10 54 / 0.13); }
+:where(html[data-skin=pop]) .sa-cover { background: linear-gradient(110deg, #cdb8ff, #ffd2e9 70%, #ffe499); }
+:where(html[data-skin=pop]) .sa-profile-pic { box-shadow: 0 0 0 3px var(--sa-surface), 3px 4px 0 var(--sa-text); }
+:where(html[data-skin=pop]) .sa-cta { border: 1.5px solid var(--sa-text); border-radius: var(--sa-r); background: #e8ddff; }
+:where(html[data-skin=pop]) .sa-toast { background: var(--sa-panel); border: 1.5px solid var(--sa-text); box-shadow: 3px 3px 0 var(--sa-text); }
+:where(html[data-skin=pop]) .sa-toast-good { background: #d5faee; }
+:where(html[data-skin=pop]) .sa-toast-bad { background: #ffe5ed; }
+
+/* Editors use a lavender mat around the real image or video. Color swatches retain their meaning. */
+:where(html[data-skin=pop]) .sa-pe-stage { background: #e4d9ff; border: 1.5px solid var(--sa-text); }
+:where(html[data-skin=pop]) .sa-pe-hint { background: rgb(23 10 54 / 0.85); color: #fff; }
+:where(html[data-skin=pop]) .sa-pe-panel { padding-right: 4px; }
+:where(html[data-skin=pop]) .sa-pe-selected, :where(html[data-skin=pop]) .sa-mx-word { border-color: var(--sa-line-3); }
+:where(html[data-skin=pop]) .sa-pe-filter[aria-pressed='true'], :where(html[data-skin=pop]) .sa-pe-layer[aria-pressed='true'], :where(html[data-skin=pop]) .sa-mx-word.is-picked {
+  border-color: var(--sa-text);
+  background: var(--sa-raised-2);
+  color: var(--sa-text);
+}
+:where(html[data-skin=pop]) .sa-pe-sticker:hover { border-color: var(--sa-text); background: #fff1bc; }
+:where(html[data-skin=pop]) .sa-ve-head { background: var(--sa-text); box-shadow: 0 0 0 1px rgb(255 255 255 / 0.7); }
+:where(html[data-skin=pop]) .sa-ref-x:hover { background: var(--sa-text); color: #fff; }
+
+/* The 3D canvas keeps the background chosen by its maker; its controls match the rest of Studio. */
+:where(html[data-skin=pop]) .sa-stage { border: 2px solid var(--sa-text); box-shadow: 4px 4px 0 rgb(23 10 54 / 0.15); }
+:where(html[data-skin=pop]) .sa-stage-note { color: #fff; text-shadow: 0 1px 5px #170a36; }
+:where(html[data-skin=pop]) .sa-model-moves, :where(html[data-skin=pop]) .sa-stage-tools, :where(html[data-skin=pop]) .sa-model-files {
+  border: 1.5px solid var(--sa-text);
+  box-shadow: 3px 3px 0 rgb(23 10 54 / 0.13);
+}
+:where(html[data-skin=pop]) .sa-stage-tools { background: var(--sa-panel); }
+:where(html[data-skin=pop]) .sa-move { border-radius: 999px; }
+:where(html[data-skin=pop]) .sa-move.is-on, :where(html[data-skin=pop]) .sa-toggle[aria-pressed='true'] {
+  background: #d5faee;
+  border-color: var(--sa-text);
+  color: var(--sa-text);
+}
+:where(html[data-skin=pop]) .sa-toggle[aria-pressed='true'] .sa-i { color: #067753; }
+:where(html[data-skin=pop]) .sa-step-item.is-done .sa-step-dot { color: #fff; }
+:where(html[data-skin=pop]) .sa-step-item.is-now .sa-step-dot { background: var(--sa-raised); }
+:where(html[data-skin=pop]) .sa-own, :where(html[data-skin=pop]) .sa-dl3d-row { border-color: var(--sa-line-2); }
+
+@media (min-width: 720px) {
+  :where(html[data-skin=pop]) .sa-sheet-in { border-bottom: 2px solid var(--sa-text); border-radius: 22px; box-shadow: 7px 7px 0 var(--sa-text); }
+}
+@media (max-width: 420px) {
+  :where(html[data-skin=pop]) .sa-stat-card { padding: 16px; }
+  :where(html[data-skin=pop]) .sa-sheet-title { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(html[data-skin=pop]) .sa-skel, :where(html[data-skin=pop]) .sa-look.is-making, :where(html[data-skin=pop]) .sa-shimmer { animation: none; }
+}

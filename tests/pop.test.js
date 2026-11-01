@@ -206,3 +206,46 @@ test('Pop mode: switching keeps your place (2026-09-27: it used to show another 
   assert.match(css, /font-family: 'Anybody';[\s\S]*?font-weight: 100 900;/);
   assert.match(css, /font-family: 'Instrument Serif';[\s\S]*?font-style: italic;/);
 });
+
+test('Studio shares the appearance switches: independent choices, saved on reload and followed across tabs', () => {
+  const studio = read('studio.html');
+  assert.match(studio, /data-theme-toggle/);
+  assert.match(studio, /data-skin-toggle aria-pressed="true"/);
+  assert.match(studio, /<script src="\/theme\.js\?v=\d+"><\/script>/);
+  assert.match(read('src/studio/app.js'), /import \{ startTheme \} from '\.\.\/theme\.js';/);
+  assert.match(read('src/studio/app.js'), /function start\(\) \{\s*startTheme\(\);/);
+  const saved = new Map();
+  const makeButton = () => ({ attrs: {}, handlers: {}, setAttribute(k, v) { this.attrs[k] = v; },
+    addEventListener(k, fn) { this.handlers[k] = fn; }, querySelector() { return null; } });
+  const themeButton = makeButton(), skinButton = makeButton(), listeners = {};
+  const root = { dataset: { page: 'studio' }, classList: { contains: () => false } };
+  const bar = { setAttribute(k, v) { this[k] = v; } };
+  vm.runInNewContext(read('src/theme.js').replace(/^export /gm, '') + '\nstartTheme();', {
+    document: { documentElement: root,
+      querySelector: (s) => s === 'meta[name="theme-color"]' ? bar : null,
+      querySelectorAll: (s) => s === '[data-theme-toggle]' ? [themeButton] : s === '[data-skin-toggle]' ? [skinButton] : [] },
+    localStorage: { getItem: (k) => saved.get(k) ?? null, setItem: (k, v) => saved.set(k, v) },
+    scrollY: 0, addEventListener: (k, fn) => { listeners[k] = fn; }, dispatchEvent() {},
+    CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init.detail; } },
+  });
+  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['dark', 'pop', '#120828']);
+  assert.equal(themeButton.attrs['aria-label'], 'Switch to light theme');
+  themeButton.handlers.click();
+  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['light', 'pop', '#f8f5ff']);
+  skinButton.handlers.click();
+  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['light', undefined, '#fafaf8']);
+  assert.equal(skinButton.attrs['aria-pressed'], 'false');
+  assert.deepEqual(prepaint({ page: 'studio', theme: saved.get('dr-theme'), skin: saved.get('dr-skin') }),
+    { theme: 'light', skin: null, bar: '#fafaf8' }, 'reload keeps both choices before paint');
+  themeButton.handlers.click();
+  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['dark', undefined, '#0b0b0c']);
+  skinButton.handlers.click();
+  assert.deepEqual([root.dataset.theme, root.dataset.skin], ['dark', 'pop']);
+  saved.set('dr-theme', 'light');
+  listeners.storage({ key: 'dr-theme' });
+  saved.set('dr-skin', 'lab');
+  listeners.storage({ key: 'dr-skin' });
+  assert.deepEqual([root.dataset.theme, root.dataset.skin], ['light', undefined], 'another same-origin tab updates Studio');
+  assert.equal(themeButton.attrs['aria-label'], 'Switch to dark theme');
+  assert.equal(skinButton.attrs['aria-pressed'], 'false');
+});

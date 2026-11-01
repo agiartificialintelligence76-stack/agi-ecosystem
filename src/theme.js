@@ -83,7 +83,7 @@ function applySkin(skin, remember) {
 // same spot; and once more when Pop mode's fonts have arrived (they make its headlines bigger), unless the visitor has
 // scrolled or pressed anything in between.
 const POP_FONTS = ['900 1em Anybody', 'italic 400 1em "Instrument Serif"'];
-const barBottom = () => document.querySelector('.topbar')?.getBoundingClientRect().bottom ?? 0;
+const barBottom = () => document.querySelector('.topbar, .sa-bar')?.getBoundingClientRect().bottom ?? 0;
 
 // what to hold on to under a point: the innermost block (not text, a drawing or an icon); never something that stays put
 // on the screen (the top bar and its menu, her live view strip on phones, a dialog); a box that scrolls by itself (her

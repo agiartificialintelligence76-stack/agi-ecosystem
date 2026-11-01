@@ -1,5 +1,18 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **AGI Studio design and appearance (2026-11-01):** the owner asked to make the whole Studio like the main page,
+> then to include its sun and sparkle switches and publish. Studio now follows the landing page's violet, lavender,
+> cream, ink, honey, pink and mint palette, Anybody display type, Instrument Serif accents and outlined pill controls.
+> `studio-pop.css`, `studio-home.css` and `studio-details.css` style navigation, Explore, forms, galleries, accounts,
+> support, guides and editors. `studio-theme.css` provides light/dark variants and responsive appearance controls.
+> The switches reuse `public/theme.js` and `src/theme.js`: dark Pop by default, with both saved preferences restored
+> before paint; Pop off uses the compact Studio layout. Both controls remain visible on phones. Explore retains its
+> rotating headline and live wall, with existing AGI artwork as its empty-wall fallback. Creation, wallet and credit
+> behavior is unchanged. Validated desktop/tablet/360px layouts, all four appearance combinations, persistence,
+> populated galleries and the photo editor with an isolated fixture. The clean release build passed: 1,416 tests,
+> 0 failures, 6 skips, Vite, share pages and secret check. Release prepared from production main e388601 in
+> `output/studio-publish-20261101`, excluding unrelated local work, for the authorized GitHub-to-Vercel publication.
+
 > **Meme addition (2026-10-29):** the owner put `memess/AGI_symphony_720p_new_voice-precise-upscale-model-starlight-precise-2-6-sharpness-5-resolution-1080p-frame-rate-30-fps-hdr-sdr-output-format-h-264.mp4` in the folder and asked for it in the meme library, then "and publish it". Added as **AGI Symphony** at the top of Videos (0:15), with the caption "he asked if a robot could write one. she asked him back" (the man in the clip asks whether a robot can write a symphony or paint a masterpiece, and AGI-1 asks him back), dated `addedAt` 2026-10-29 12:16 UTC so it's the first card of the Videos group (on All and on the Videos tab). The web copy (`public/memes/videos/agi-symphony.mp4`, 8.9 MB from 30 MB, SSIM 0.988 against the original) was made with `encode.ps1`'s settings for a short clip, and its poster is from 1 s (AGI-1 is on screen only at 0–1.7 s and 8.8–10.2 s); `encode.ps1` lists it, so running the script again skips it. `tests/owner-media.test.js`'s newest-first test names it now. The original is untouched.
 
 > **AGI-1 on Discord: 🔞┃agi1-nsfw is age-restricted (2026-10-29):** the last step of round 4's chat (it stalled after the owner's "im done with 1"; picked up from its last screen and "continue and finish"). The owner confirmed their age in Discord (User Settings → Account → Account Status → Age Group now says **Adult**), and at 15:34 (the owner's time) Claude in the owner's Chrome turned on **Age-Restricted Channel** for 🔞┃agi1-nsfw (Edit Channel → Overview → Content Visibility → Save Changes). A few minutes later `/post`'s channel list said **"age-restricted"** beside it (typing "nsfw" in /post's channel, in 🛡┃team-chat; nothing posted, the box cleared), so `/post` can now post an image there. Nothing else changed (still private: 🔞 18+, Team, Mod and AGI-1's role; its topic, rule 2 and AutoMod as they were), and no code changed. Discord lets only confirmed adults open an age-restricted channel, so Prince Loki and anyone given 🔞 18+ confirm their own age first. See "AGI-1 on Discord", "Round 4".

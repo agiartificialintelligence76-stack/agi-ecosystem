@@ -6401,11 +6401,11 @@ function cssSelectors(css) {
 
 test("the page: studio.html, the app's code (never HTML from strings, never a wallet transaction), its styles all scoped, its addresses", () => {
   const html = read('studio.html');
-  assert.equal((html.match(/<script\b/g) || []).length, 1, 'one script');
+  assert.equal((html.match(/<script\b/g) || []).length, 2, 'saved appearance before paint, then the app');
   assert.match(html, /<script type="module" src="\/src\/studio\/app\.js"><\/script>/);
   assert.doesNotMatch(html, /<style\b|\sstyle="|\son[a-z]+="/i, 'no inline styles or handlers (the CSP)');
-  assert.doesNotMatch(html, /\/theme\.js/, 'its own dark look');
-  assert.match(html, /<html lang="en" data-theme="dark" data-page="studio">/);
+  assert.match(html, /<script src="\/theme\.js\?v=\d+"><\/script>/, 'shared appearance choices before paint');
+  assert.match(html, /<html lang="en" data-page="studio">/);
   assert.match(html, /<body class="sa">/);
   assert.match(html, /<link rel="canonical" href="__SITE__\/studio" \/>/);
   assert.match(html, /<a class="sa-skip" href="#sa-main">/);

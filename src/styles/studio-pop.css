@@ -1,0 +1,237 @@
+/* Studio's shared visual system follows the AGI landing page: violet, paper,
+   wide display type and ink outlines. Layout/interaction rules stay in studio-app.css. */
+@font-face {
+  font-family: 'Anybody';
+  src: url('/fonts/Anybody-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('/fonts/InstrumentSerif-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+:where(html[data-skin=pop]) .sa {
+  --sa-bg: #f8f5ff;
+  --sa-panel: #fffdf7;
+  --sa-surface: #fff;
+  --sa-raised: #eee6ff;
+  --sa-raised-2: #e4d9ff;
+  --sa-line: rgb(23 10 54 / 0.14);
+  --sa-line-2: rgb(23 10 54 / 0.24);
+  --sa-line-3: rgb(23 10 54 / 0.5);
+  --sa-text: #170a36;
+  --sa-text-2: #4a3d6e;
+  --sa-text-3: #65587d;
+  --sa-accent: #6b3bff;
+  --sa-accent-2: #5930db;
+  --sa-accent-bg: #eee6ff;
+  --sa-pink: #ff4da6;
+  --sa-honey: #ffc933;
+  --sa-mint: #3ff0c3;
+  --sa-grad: linear-gradient(#6b3bff, #6b3bff);
+  --sa-gold: linear-gradient(#ffc933, #ffc933);
+  --sa-good: #067753;
+  --sa-bad: #b32648;
+  --sa-display: 'Anybody', 'Arial Black', system-ui, sans-serif;
+  --sa-serif: 'Instrument Serif', Georgia, serif;
+  --sa-r: 16px;
+  --sa-r-sm: 10px;
+  --sa-bar-h: 72px;
+  --sa-tabs-h: 66px;
+  color-scheme: light;
+  background-image: radial-gradient(rgb(107 59 255 / 0.08) 0.8px, transparent 0.8px);
+  background-size: 12px 12px;
+}
+:where(html[data-skin=pop]) .sa ::selection { background: var(--sa-honey); color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa :focus-visible { outline: 3px solid var(--sa-accent); outline-offset: 3px; }
+:where(html[data-skin=pop]) .sa-display, :where(html[data-skin=pop]) .sa-h1, :where(html[data-skin=pop]) .sa-page-title, :where(html[data-skin=pop]) .sa-logo-agi, :where(html[data-skin=pop]) .sa-empty-title {
+  font-family: var(--sa-display);
+  font-weight: 800;
+  font-variation-settings: 'wdth' 110;
+  letter-spacing: -0.045em;
+}
+:where(html[data-skin=pop]) .sa-page-title { font-size: clamp(28px, 4vw, 46px); line-height: 1.08; }
+:where(html[data-skin=pop]) .sa-h1 { font-size: clamp(24px, 3vw, 34px); }
+:where(html[data-skin=pop]) .sa-h2 { font-size: 18px; font-weight: 750; letter-spacing: -0.035em; }
+:where(html[data-skin=pop]) .sa-eyebrow {
+  font-family: var(--sa-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+:where(html[data-skin=pop]) .sa-grad { background-image: none; background-color: transparent; color: var(--sa-accent); }
+:where(html[data-skin=pop]) .sa-view { padding-top: 26px; }
+:where(html[data-skin=pop]) .sa-section-head { margin-bottom: 16px; }
+:where(html[data-skin=pop]) .sa-card { border: 1.5px solid var(--sa-line-2); box-shadow: 3px 3px 0 rgb(23 10 54 / 0.08); }
+:where(html[data-skin=pop]) .sa-banner { border: 1px solid #b9a1ff; background: var(--sa-raised); }
+:where(html[data-skin=pop]) .sa-note { background: #f2edff; }
+
+/* A compact version of the landing page's ink-outlined navigation. */
+:where(html[data-skin=pop]) .sa-bar {
+  background: var(--sa-panel);
+  border-bottom: 2px solid var(--sa-text);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:where(html[data-skin=pop]) .sa-bar-in { height: calc(var(--sa-bar-h) - 2px); gap: 14px; padding-inline: 24px; }
+:where(html[data-skin=pop]) .sa-logo { gap: 8px; font-size: 21px; }
+:where(html[data-skin=pop]) .sa-logo-mark {
+  width: 34px; height: 34px; padding: 6px;
+  border: 2px solid var(--sa-text); border-radius: 50%;
+  background: var(--sa-honey); color: var(--sa-text);
+  box-shadow: 2px 2px 0 var(--sa-text);
+}
+:where(html[data-skin=pop]) .sa-logo-agi { font-weight: 900; font-variation-settings: 'wdth' 125; }
+:where(html[data-skin=pop]) .sa-logo-studio { font-family: var(--sa-serif); font-style: italic; font-size: 25px; color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-nav { gap: 5px; margin-left: 26px; }
+:where(html[data-skin=pop]) .sa-nav a { border: 1.5px solid transparent; border-radius: 999px; padding: 8px 15px; font-weight: 650; color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-nav a:hover { background: var(--sa-raised); }
+:where(html[data-skin=pop]) .sa-nav a[aria-current='page'] { border-color: var(--sa-text); background: var(--sa-raised-2); box-shadow: 2px 2px 0 var(--sa-text); }
+:where(html[data-skin=pop]) .sa-guide-btn { border: 1.5px solid var(--sa-line-2); border-radius: 50%; color: var(--sa-text); background: var(--sa-surface); }
+:where(html[data-skin=pop]) .sa-guide-btn:hover { border-color: var(--sa-text); background: var(--sa-honey); }
+:where(html[data-skin=pop]) .sa-account { gap: 10px; }
+:where(html[data-skin=pop]) .sa-guide-btn[hidden] + .sa-account { margin-left: auto; }
+:where(html[data-skin=pop]) .sa-credits { height: 36px; border: 1.5px solid var(--sa-text); border-radius: 999px; background: #fff2bd; color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-credits .sa-i { color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-pill-plus { background: var(--sa-honey); color: var(--sa-text); border-left-color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-pill-plus:hover { background: #ffe28b; }
+:where(html[data-skin=pop]) .sa-me-btn { height: 36px; border-radius: 999px; background: var(--sa-surface); border-color: var(--sa-line-2); }
+:where(html[data-skin=pop]) .sa-universe { display: none; color: var(--sa-text-2); font-family: var(--sa-mono); font-size: 10px; text-decoration: none; white-space: nowrap; }
+:where(html[data-skin=pop]) .sa-universe:hover { color: var(--sa-accent); }
+
+/* Clear, tactile actions, retaining existing disabled/busy semantics. */
+:where(html[data-skin=pop]) .sa-btn { min-height: 40px; border-radius: 999px; border-width: 1.5px; font-weight: 650; transition: background-color .18s, color .18s, transform .18s, box-shadow .18s; }
+:where(html[data-skin=pop]) .sa-btn-primary { border-color: var(--sa-text); background: var(--sa-accent); color: #fff; box-shadow: 3px 3px 0 var(--sa-text); }
+:where(html[data-skin=pop]) .sa-btn-primary:hover:not(:disabled) { background: var(--sa-accent-2); filter: none; box-shadow: 4px 4px 0 var(--sa-text); transform: translate(-1px, -1px); }
+:where(html[data-skin=pop]) .sa-btn-primary:active:not(:disabled) { box-shadow: 1px 1px 0 var(--sa-text); transform: translate(1px, 1px); }
+:where(html[data-skin=pop]) .sa-btn-ghost { border-color: var(--sa-text); background: var(--sa-surface); color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-btn-ghost:hover:not(:disabled) { border-color: var(--sa-text); background: var(--sa-raised-2); }
+:where(html[data-skin=pop]) .sa-btn-quiet:hover:not(:disabled) { background: var(--sa-raised); }
+:where(html[data-skin=pop]) .sa-btn-danger { color: #9d1839; background: #ffe3e9; border-color: #c7637b; }
+:where(html[data-skin=pop]) .sa-btn-danger:hover:not(:disabled) { background: #ffd0dc; }
+:where(html[data-skin=pop]) .sa-btn-sm { min-height: 34px; }
+:where(html[data-skin=pop]) .sa-btn-lg { min-height: 48px; padding-inline: 22px; }
+:where(html[data-skin=pop]) .sa-btn:disabled { box-shadow: none; }
+:where(html[data-skin=pop]) .sa-btn-quiet.sa-sheet-x { min-height: 36px; width: 36px; }
+
+/* Paper controls with violet selections. */
+:where(html[data-skin=pop]) .sa-input { border-width: 1.5px; background: var(--sa-surface); }
+:where(html[data-skin=pop]) .sa-input:focus { outline: 3px solid rgb(107 59 255 / .16); border-color: var(--sa-accent); }
+:where(html[data-skin=pop]) .sa-label { color: var(--sa-text); font-weight: 650; }
+:where(html[data-skin=pop]) .sa-chip label { border-radius: 999px; min-height: 34px; }
+:where(html[data-skin=pop]) .sa-chip-input:checked + label { color: var(--sa-text); background: var(--sa-raised-2); border-color: var(--sa-accent); }
+:where(html[data-skin=pop]) .sa-chips-media .sa-chip label { border-radius: 0; background: none; }
+:where(html[data-skin=pop]) .sa-chips-media .sa-chip-input:checked + label { background: none; }
+:where(html[data-skin=pop]) .sa-chip-media { background: var(--sa-raised); border: 1px solid var(--sa-line-2); }
+:where(html[data-skin=pop]) .sa-chip-media.is-empty::before { color: #9b7ae3; }
+:where(html[data-skin=pop]) .sa-chips-media .sa-chip-input:checked + label .sa-chip-media { border-color: var(--sa-accent); box-shadow: 0 0 0 2px var(--sa-accent); }
+:where(html[data-skin=pop]) .sa-seg-row, :where(html[data-skin=pop]) .sa-tooltabs, :where(html[data-skin=pop]) .sa-filter { background: #eee7fb; border-color: var(--sa-line-2); }
+:where(html[data-skin=pop]) .sa-seg-input:checked + label { background: var(--sa-surface); color: var(--sa-accent-2); box-shadow: 0 0 0 1px var(--sa-line-2), 2px 2px 0 rgb(23 10 54 / .1); }
+:where(html[data-skin=pop]) .sa-idea { border-radius: 999px; background: var(--sa-surface); }
+:where(html[data-skin=pop]) .sa-idea:hover { background: #fff2bd; color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-drop { border: 1.5px dashed #9b7ae3; background: #f7f2ff; }
+:where(html[data-skin=pop]) .sa-drop:hover { background: var(--sa-raised); }
+:where(html[data-skin=pop]) .sa-consent.is-warn { background: #fff5d5; border-color: #c59c29; }
+:where(html[data-skin=pop]) .sa-tooltabs { border-radius: 12px; padding: 4px; }
+:where(html[data-skin=pop]) .sa-tooltab[aria-selected='true'] { color: var(--sa-text); background: var(--sa-honey); box-shadow: 0 0 0 1px var(--sa-text) inset; }
+:where(html[data-skin=pop]) .sa-tooltab[aria-selected='true'] .sa-i { color: var(--sa-text); }
+
+/* The creation workspace keeps its panel and gallery, with the same visual vocabulary. */
+:where(html[data-skin=pop]) .sa-ws-panel { background: var(--sa-panel); }
+:where(html[data-skin=pop]) .sa-ws-head { background: var(--sa-raised-2); border-bottom: 1.5px solid var(--sa-text); padding-block: 18px; }
+:where(html[data-skin=pop]) .sa-ws-title { font-family: var(--sa-display); font-weight: 800; font-size: 17px; letter-spacing: -.035em; }
+:where(html[data-skin=pop]) .sa-ws-sub { color: var(--sa-text-2); margin-top: 3px; }
+:where(html[data-skin=pop]) .sa-ws-body { scrollbar-color: #b7a3df transparent; }
+:where(html[data-skin=pop]) .sa-ws-sec-title { font-size: 13px; font-weight: 750; }
+:where(html[data-skin=pop]) .sa-ws-sec-head { margin-bottom: 4px; }
+:where(html[data-skin=pop]) .sa-ws-sec { padding-block: 18px; }
+:where(html[data-skin=pop]) .sa-ws-foot { background: var(--sa-panel); border-top: 1.5px solid var(--sa-text); padding-bottom: 18px; }
+:where(html[data-skin=pop]) .sa-ws-foot .sa-go { min-height: 46px; }
+:where(html[data-skin=pop]) .sa-cost-off { color: var(--sa-accent-2); border: 1px solid #c7b5f7; border-radius: 999px; }
+:where(html[data-skin=pop]) .sa-cost-right .sa-i { color: #8d6500; }
+:where(html[data-skin=pop]) .sa-go-cost { border-radius: 999px; }
+:where(html[data-skin=pop]) .sa-ws-main { padding-top: 20px; }
+:where(html[data-skin=pop]) .sa-ws-toggle { background: var(--sa-surface); border: 1px solid var(--sa-text); color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-ws-grip { background: var(--sa-text-3); }
+
+/* Galleries and the empty/loading states are part of the design too. */
+:where(html[data-skin=pop]) .sa-ghead { background: var(--sa-bg); border-bottom: 1.5px solid var(--sa-line-2); padding-block: 14px; -webkit-backdrop-filter: none; backdrop-filter: none; }
+:where(html[data-skin=pop]) .sa-gtabs { gap: 6px; padding: 2px 3px 4px; }
+:where(html[data-skin=pop]) .sa-gtab { border: 1.5px solid transparent; border-radius: 999px; height: 36px; padding-inline: 14px; }
+:where(html[data-skin=pop]) .sa-gtab:hover { background: var(--sa-raised); }
+:where(html[data-skin=pop]) .sa-gtab[aria-selected='true'] { color: var(--sa-text); border-color: var(--sa-text); background: var(--sa-honey); box-shadow: 2px 2px 0 var(--sa-text); }
+:where(html[data-skin=pop]) .sa-gtab-n { border-radius: 999px; background: rgb(255 255 255 / .65); color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-gsec-title { font-size: 16px; font-weight: 750; }
+:where(html[data-skin=pop]) .sa-gsec { margin-top: 22px; }
+:where(html[data-skin=pop]) .sa-gempty, :where(html[data-skin=pop]) .sa-empty { background: var(--sa-panel); border: 1.5px dashed #b29bcf; padding: 48px 20px; }
+:where(html[data-skin=pop]) .sa-gempty-title { font-family: var(--sa-display); font-weight: 750; font-size: 20px; letter-spacing: -.035em; }
+:where(html[data-skin=pop]) .sa-filter { border-radius: 999px; }
+:where(html[data-skin=pop]) .sa-filter-btn { border-radius: 999px; min-height: 28px; }
+:where(html[data-skin=pop]) .sa-filter-btn[aria-pressed='true'] { background: var(--sa-text); color: #fff; }
+:where(html[data-skin=pop]) .sa-trend-frame, :where(html[data-skin=pop]) .sa-person, :where(html[data-skin=pop]) .sa-tile { background: var(--sa-raised-2); border: 1.5px solid var(--sa-line-2); }
+:where(html[data-skin=pop]) .sa-media { border: 1px solid var(--sa-line-2); }
+:where(html[data-skin=pop]) .sa-trend-frame, :where(html[data-skin=pop]) .sa-media, :where(html[data-skin=pop]) .sa-person, :where(html[data-skin=pop]) .sa-tile { border-radius: 14px; }
+:where(html[data-skin=pop]) .sa-person { border: 1.5px solid var(--sa-line-2); }
+:where(html[data-skin=pop]) .sa-person-new { background: #f0e9ff; border: 1.5px dashed #9b7ae3; }
+:where(html[data-skin=pop]) .sa-person-new:hover { background: #e4d9ff; }
+:where(html[data-skin=pop]) .sa-skel, :where(html[data-skin=pop]) .sa-look.is-making { background-image: linear-gradient(100deg, #e8e0f7 30%, #f8f5ff 50%, #e8e0f7 70%); }
+:where(html[data-skin=pop]) .sa-profile { border: 1.5px solid var(--sa-line-2); box-shadow: 3px 3px 0 rgb(23 10 54 / .08); }
+:where(html[data-skin=pop]) .sa-cover { background: var(--sa-accent); background-image: radial-gradient(rgb(255 255 255 / .25) 1px, transparent 1px); background-size: 8px 8px; }
+:where(html[data-skin=pop]) .sa-profile-pic { border-color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-profile-name { font-family: var(--sa-display); font-weight: 800; letter-spacing: -.04em; }
+:where(html[data-skin=pop]) .sa-cta { background: var(--sa-raised-2); border-color: var(--sa-text); }
+
+/* Footer and phone navigation use the same print-like edges. */
+:where(html[data-skin=pop]) .sa-foot { border-top: 2px solid var(--sa-text); background: var(--sa-raised-2); color: var(--sa-text-2); }
+:where(html[data-skin=pop]) .sa-rules > summary { color: var(--sa-text); font-weight: 650; }
+:where(html[data-skin=pop]) .sa-foot-line { font-family: var(--sa-mono); font-size: 10px; letter-spacing: .04em; }
+:where(html[data-skin=pop]) .sa-foot-links a { color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-foot-links a:hover { color: var(--sa-accent); }
+:where(html[data-skin=pop]) .sa-tabs { background: var(--sa-panel); border-top: 2px solid var(--sa-text); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:where(html[data-skin=pop]) .sa-tabs a { color: var(--sa-text-2); font-weight: 650; }
+:where(html[data-skin=pop]) .sa-tabs a[aria-current='page'] { color: var(--sa-accent); }
+:where(html[data-skin=pop]) .sa-tab-plus { background: var(--sa-honey); border: 1.5px solid var(--sa-text); border-radius: 50%; box-shadow: 2px 2px 0 var(--sa-text); }
+:where(html[data-skin=pop]) .sa-tab-plus svg { color: var(--sa-text); }
+:where(html[data-skin=pop]) .sa-tabs a[aria-current='page'] .sa-tab-plus { background: var(--sa-accent); }
+:where(html[data-skin=pop]) .sa-tabs a[aria-current='page'] .sa-tab-plus svg { color: #fff; }
+
+@media (min-width: 1200px) { :where(html[data-skin=pop]) .sa-universe { display: inline; } }
+@media (min-width: 960px) {
+  :where(html[data-skin=pop]) .sa-ws.has-panel .sa-ws-panel { border-right: 2px solid var(--sa-text); }
+  :where(html[data-skin=pop]) .sa-ws.has-panel .sa-ghead { padding-block: 14px; }
+}
+@media (max-width: 959px) {
+  :where(html[data-skin=pop]) .sa-ws.is-drawer .sa-ws-panel { border: 2px solid var(--sa-text); border-bottom: 0; box-shadow: 0 -6px 0 rgb(23 10 54 / .08); }
+  :where(html[data-skin=pop]) .sa-ws.is-drawer .sa-ws-head { padding-block: 10px; }
+}
+@media (max-width: 719px) {
+  :where(html[data-skin=pop]) .sa { --sa-bar-h: 64px; }
+  :where(html[data-skin=pop]) .sa-bar-in { padding-inline: 14px; gap: 10px; }
+  :where(html[data-skin=pop]) .sa-logo { font-size: 18px; gap: 6px; }
+  :where(html[data-skin=pop]) .sa-logo-studio { font-size: 23px; }
+  :where(html[data-skin=pop]) .sa-logo-mark { width: 29px; height: 29px; padding: 5px; }
+  :where(html[data-skin=pop]) .sa-account { gap: 6px; }
+  :where(html[data-skin=pop]) .sa-account > .sa-btn { padding-inline: 11px; font-size: 12px; min-height: 36px; }
+  :where(html[data-skin=pop]) .sa-view { padding-top: 16px; }
+  :where(html[data-skin=pop]) .sa-ghead { gap: 8px; padding-block: 10px; }
+  :where(html[data-skin=pop]) .sa-gtabs { gap: 2px; }
+  :where(html[data-skin=pop]) .sa-gtab { padding-inline: 10px; font-size: 12.5px; }
+  :where(html[data-skin=pop]) .sa-gempty, :where(html[data-skin=pop]) .sa-empty { padding: 34px 16px; }
+}
+@media (max-width: 379px) {
+  :where(html[data-skin=pop]) .sa-bar-in { gap: 7px; padding-inline: 10px; }
+  :where(html[data-skin=pop]) .sa-logo { gap: 5px; }
+  :where(html[data-skin=pop]) .sa-logo-mark { width: 25px; height: 25px; }
+  :where(html[data-skin=pop]) .sa-guide-btn { margin-left: auto; }
+  :where(html[data-skin=pop]) .sa-account { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(html[data-skin=pop]) .sa-btn { transition: none; }
+  :where(html[data-skin=pop]) .sa-btn-primary:hover:not(:disabled) { transform: none; }
+}

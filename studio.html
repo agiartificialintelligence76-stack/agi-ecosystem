@@ -1,12 +1,13 @@
 <!doctype html>
-<html lang="en" data-theme="dark" data-page="studio">
+<html lang="en" data-page="studio">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>AGI Studio · make your own AI influencer</title>
     <meta name="description" content="Make your own AI influencer: design one in a few taps or start from a photo. Then photos in any scene, trend videos, short videos, a 3D model and a coin with its face. 18+ · PG-13 · AI-generated." />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#09090b" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#120828" />
+    <script src="/theme.js?v=7"></script>
     <!-- link previews (X and others). __SITE__ becomes the site's address at build time (scripts/share-pages.js) -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AGI" />
@@ -20,6 +21,7 @@
     <link rel="canonical" href="__SITE__/studio" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/Anybody-Variable.woff2" as="font" type="font/woff2" crossorigin />
     <script type="module" src="/src/studio/app.js"></script>
   </head>
   <body class="sa">
@@ -27,8 +29,8 @@
 
     <!-- AGI Studio (2026-10-10, studio.agi1.app; also agi1.app/studio): one page, its views drawn by src/studio/app.js at
          their own addresses (Explore, Create, an influencer, My studio, a 3D model, the owner's tools; since round 4, phase 2
-         Help & support and the team's Mod tools). Its own dark look
-         (src/styles/studio-app.css: every rule names an sa- class); since round 3 a pro tool's layout: controls on the left,
+         Help & support and the team's Mod tools). The main page's bright print-inspired look
+         (src/styles/studio-pop.css, studio-home.css and studio-details.css); a pro tool's layout: controls on the left,
          the gallery on the right (src/studio/views/workspace.js). -->
     <header class="sa-bar">
       <div class="sa-bar-in">
@@ -41,6 +43,16 @@
           <a href="/studio/create" data-sa-path="/create" data-sa-route="create">Create</a>
           <a href="/studio/me" data-sa-path="/me" data-sa-route="me">My studio</a>
         </nav>
+        <a class="sa-universe" href="https://agi1.app/">AGI universe ↗</a>
+        <div class="sa-appearance" role="group" aria-label="Appearance">
+          <button class="sa-appearance-btn" type="button" data-theme-toggle aria-label="Switch theme" title="Light or dark theme">
+            <svg class="sa-theme-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <svg class="sa-theme-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="sa-appearance-btn" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the bold AGI look">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
         <!-- (2026-10-11) the guide: this page's, again (src/studio/guide.js) -->
         <button type="button" class="sa-guide-btn" data-sa-guide data-guide="guide" aria-label="Show me around this page" title="Show me around">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" stroke="currentColor" stroke-width="1.8"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.7M12 17h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>

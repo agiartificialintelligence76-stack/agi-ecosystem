@@ -2580,7 +2580,7 @@ test("a character's page is the app's 3D view: its steps in words, its reactions
 
 test("its old page's addresses open the app: agi1.app/studio/<id> (the rewrite, its destination /studio), studio.agi1.app; the old page's files are gone", () => {
   const html = readFileSync(new URL('../studio.html', import.meta.url), 'utf8');
-  assert.match(html, /<html lang="en" data-theme="dark" data-page="studio">/);
+  assert.match(html, /<html lang="en" data-page="studio">/);
   assert.match(html, /<script type="module" src="\/src\/studio\/app\.js"><\/script>/);
   assert.match(html, /meta property="og:url" content="__SITE__\/studio"/);
   const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
