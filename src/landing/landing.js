@@ -323,7 +323,9 @@ export function startLanding(hero = $('[data-lp-hero]')) {
     O.angle += O.speed * dt;
     const n = planets.length;
     const names = [];                                                    // where each planet's name is, this frame
+    const orbs = [];
     planets.forEach((p, i) => {
+      if (p.closest('[data-owner-hidden="true"], [hidden]')) return;
       const th = O.angle + i * Math.PI * 2 / n;
       const ex = Math.cos(th) * O.rx * O.r, ey = Math.sin(th) * O.ry * O.r;
       const x = O.cx + ex * O.ct - ey * O.st, y = O.cy + ex * O.st + ey * O.ct;
@@ -332,6 +334,7 @@ export function startLanding(hero = $('[data-lp-hero]')) {
       p.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) scale(${s.toFixed(3)})`;
       p.style.zIndex = depth > 0 ? 8 : 2;
       const hidden = depth < 0.05 && Math.abs(x - O.cx) < O.fw * 0.34;         // behind her: not clickable through her
+      if (!hidden) orbs.push({ p, x, y, radius: s * O.ps / 2 });
       if (p.lpHidden !== hidden) { p.lpHidden = hidden; p.style.pointerEvents = hidden ? 'none' : 'auto'; if (hidden && p.matches(':hover')) O.hover = Math.max(0, O.hover - 1); }
       p.style.opacity = (Math.min(1, O.r * 1.6) * (0.78 + 0.22 * (depth + 1) / 2)).toFixed(3);
       const lw = O.labelW[i] || 120, lh = O.labelH[i] || 28;
@@ -342,12 +345,17 @@ export function startLanding(hero = $('[data-lp-hero]')) {
       const near = s * (O.ps / 2 + 10), far = s * (O.ps / 2 + 10 + lw);
       names.push({ p, depth, x0: labelLeft ? x - far : x + near, x1: labelLeft ? x - near : x + far, y0: y - s * lh / 2, y1: y + s * lh / 2 });
     });
-    // Names never pile up: front to back, a name that would cover one already shown stays hidden; and where the orbit is
+    // Names never pile up: a name that would cover another orb or a nearer name stays hidden; and where the orbit is
     // narrow (phones), only the front planets' names show at all
     names.sort((a, b) => b.depth - a.depth);
     const shown = [];
     for (const nm of names) {
       const quiet = (O.sw < 700 && nm.depth < -0.15)
+        || orbs.some((orb) => {
+          if (orb.p === nm.p) return false;
+          const dx = orb.x - clamp(orb.x, nm.x0, nm.x1), dy = orb.y - clamp(orb.y, nm.y0, nm.y1);
+          return dx * dx + dy * dy < (orb.radius + 4) ** 2;
+        })
         || shown.some((o) => nm.x0 < o.x1 + 6 && nm.x1 > o.x0 - 6 && nm.y0 < o.y1 + 4 && nm.y1 > o.y0 - 4);
       if (!quiet) shown.push(nm);
       if (nm.p.lpQuiet !== quiet) { nm.p.lpQuiet = quiet; nm.p.classList.toggle('is-quiet', quiet); }

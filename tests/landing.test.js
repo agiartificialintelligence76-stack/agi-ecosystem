@@ -42,17 +42,18 @@ test("the front has the page's one h1 (the lab hero's title is an h2 now); its d
   ]) assert.ok(html.includes(s), s);
   // the planets repeat the "Her world" list: for the mouse and touch only, never a keyboard stop inside hidden content
   const planets = front.match(/<a class="lp-planet [^"]*"[^>]*>/g) || [];
-  assert.equal(planets.length, 4, 'four planets');
+  assert.equal(planets.length, 10, 'one planet for each Her world destination');
   for (const a of planets) assert.match(a, /tabindex="-1"/);
   assert.match(front, /<img class="lp-figure-img" data-lp-img src="\/images\/landing\/agi1-cutout\.webp" width="796" height="1510" alt="AGI-1[^"]+"/, 'her picture has a description');
 });
 
-test('its links: the Playground, AGI Studio, AGI Games, "Risk check your coins on clank", her diary, $AGI, the roadmap and AGI on X; "Talk to AGI-1" opens the chat', () => {
+test('its links: every Her world destination, including PFP, has a matching planet; "Talk to AGI-1" opens the chat', () => {
   const nav = front.slice(front.indexOf('<nav class="lp-eco"'), front.indexOf('</nav>', front.indexOf('<nav class="lp-eco"')));
   assert.match(nav, /<nav class="lp-eco" aria-labelledby="lp-eco-label">/);
-  assert.match(nav, /<p class="lp-eco-label" id="lp-eco-label">Her world <span>\(09\)<\/span><\/p>/, 'the list is "Her world" (the owner, 2026-09-28: no "ecosystem")');
-  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['#playground', '/studio', '/games', '/memes', '#checker', '/diary', '#model-card', '/roadmap', 'https://x.com/agi1dotapp']);
-  assert.equal((nav.match(/<li>/g) || []).length, 9, 'its count says how many rows it has');
+  assert.match(nav, /<p class="lp-eco-label" id="lp-eco-label">Her world <span>\(10\)<\/span><\/p>/, 'the list is "Her world" (the owner, 2026-09-28: no "ecosystem")');
+  const destinations = [...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(destinations, ['#playground', '/studio', '/games', '/memes', '#checker', '/diary', '#model-card', '/roadmap', 'https://x.com/agi1dotapp', '/pfp']);
+  assert.equal((nav.match(/<li>/g) || []).length, 10, 'its count says how many rows it has');
   for (const [index, row] of [...nav.matchAll(/<li>([\s\S]*?)<\/li>/g)].entries()) {
     assert.equal((row[1].match(/<small(?:\s[^>]*)?>/g) || []).length, 1, `Her world row ${index + 1} has an editable description, including an empty one`);
   }
@@ -68,12 +69,14 @@ test('its links: the Playground, AGI Studio, AGI Games, "Risk check your coins o
   assert.match(nav, /<a class="lp-c-road" href="\/roadmap" [^>]*><span class="lp-dot"><\/span>Roadmap <small>what's next<\/small><i aria-hidden="true">→<\/i><\/a>/);
   assert.match(css, /\.lp-c-games \{ --c: [^}]+\}/, 'its own color');
   assert.match(css, /\.lp-c-road \{ --c: [^}]+\}/, 'its own color');
-  for (const [n, d] of [[6, '1.21'], [7, '1.27'], [8, '1.33'], [9, '1.39']]) {
+  for (const [n, d] of [[6, '1.21'], [7, '1.27'], [8, '1.33'], [9, '1.39'], [10, '1.45']]) {
     assert.match(css, new RegExp(`\\.lp-intro\\.lp-go \\.lp-eco li:nth-child\\(${n}\\) \\{ animation-delay: ${d.replace('.', '\\.')}s; \\}`), `row ${n} comes in in turn`);
   }
   assert.match(nav, /<span class="lp-dot"><\/span>Risk check your coins on clank<small id="lp-checker-description"><\/small><i aria-hidden="true">↓<\/i>/, 'the risk check keeps its original name and arrow with an editable empty description');
   const planets = [...front.matchAll(/<a class="lp-planet [^>]*href="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(planets, ['#playground', '#checker', '#model-card', 'https://x.com/agi1dotapp'], 'the planets: the same places');
+  assert.deepEqual([...planets].sort(), [...destinations].sort(), 'every list destination has exactly one planet');
+  assert.deepEqual(planets.slice(0,4), ['#playground', '#checker', '#model-card', 'https://x.com/agi1dotapp'], 'existing planet selectors retain their saved owner edits');
+  assert.match(nav, /href="\/pfp"[^>]*><span class="lp-dot"><\/span>PFP <small>make your profile picture<\/small>/);
   for (const id of new Set([...main.matchAll(/<a [^>]*href="#([^"]+)"/g)].map((m) => m[1]))) assert.match(html, new RegExp(`id="${id}"`), `#${id} is on the page`);
   for (const a of front.match(/<a [^>]*target="_blank"[^>]*>/g) || []) assert.match(a, /rel="noopener noreferrer"/, 'a new tab, without passing our page along');
   assert.match(front, /<button class="lp-btn lp-btn-ink" type="button" data-open-chat[^>]*>Talk to AGI-1 /);

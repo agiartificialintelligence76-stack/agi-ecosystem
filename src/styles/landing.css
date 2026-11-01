@@ -44,6 +44,12 @@
 .lp-c-games { --c: linear-gradient(100deg, #3ff0c3, #cdb8ff); }   /* AGI Games (2026-10-21): mint to lavender, its page's colors */
 .lp-c-road { --c: linear-gradient(100deg, #ffc933, #ff4da6); }   /* the Roadmap (2026-10-21): honey to pink */
 .lp-c-memes { --c: linear-gradient(100deg, #ff4da6, #6b3bff); }   /* Memes (2026-10-23): pink to violet */
+.lp-orbit-studio { --c: #f08acb; }
+.lp-orbit-games { --c: #3ff0c3; }
+.lp-orbit-memes { --c: #ff4da6; }
+.lp-orbit-diary { --c: #cdb8ff; }
+.lp-orbit-road { --c: #ffc933; }
+.lp-c-pfp { --c: #b69aff; }
 .lp-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 
 /* ---------- buttons ---------- */
@@ -156,6 +162,12 @@
 .lp-p2 { --sx: 76%; --sy: 46%; }
 .lp-p3 { --sx: 30%; --sy: 64%; }
 .lp-p4 { --sx: 70%; --sy: 62%; }
+.lp-p5 { --sx: 18%; --sy: 35%; }
+.lp-p6 { --sx: 82%; --sy: 32%; }
+.lp-p7 { --sx: 24%; --sy: 21%; }
+.lp-p8 { --sx: 76%; --sy: 18%; }
+.lp-p9 { --sx: 36%; --sy: 14%; }
+.lp-p10 { --sx: 64%; --sy: 12%; }
 .lp-planet-orb {
   position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--lp-ink);
   background: var(--c);
@@ -306,6 +318,7 @@
   .lp-intro.lp-go .lp-eco li:nth-child(7) { animation-delay: 1.27s; }
   .lp-intro.lp-go .lp-eco li:nth-child(8) { animation-delay: 1.33s; }
   .lp-intro.lp-go .lp-eco li:nth-child(9) { animation-delay: 1.39s; }
+  .lp-intro.lp-go .lp-eco li:nth-child(10) { animation-delay: 1.45s; }
   .lp-intro.lp-go .lp-sfx { animation: lp-pop 1s var(--lp-back) 1.55s both, lp-beat-text 1.5s var(--lp-ease) 2.6s infinite; }
   .lp-intro.lp-go .lp-bubble { animation: lp-bubble-in .9s var(--lp-back) 1.8s both; }
 }
