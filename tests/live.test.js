@@ -964,7 +964,7 @@ import { SEGMENT_IDS } from '../tools/live/lines.js';
 test('agi1.app/live: its promises (shown on stream and read out loud, never your account, PG-13, any length, other coins and famous people kindly, 2 days, an AI, not advice), 18+, the host\'s box hidden', () => {
   const html = read('live.html');
   assert.match(html, /<html lang="en" data-page="live">/);
-  assert.match(html, /<script src="\/theme\.js\?v=7"><\/script>/);
+  assert.match(html, /<script src="\/theme\.js\?v=8"><\/script>/);
   assert.match(html, /<link rel="canonical" href="__SITE__\/live" \/>/);
   for (const must of [/Your question is shown on her stream and she reads it out loud, with the name you give here \(if any, and if it can go on a public stream\) and, with a connected wallet at Crush or Soulmate, her 💜 badge\. Never your account, your wallet's address/,
     /18\+ and PG-13\. Ask her anything, however short\./, /She can talk about other coins and about famous people, kindly and fairly: never rumors, and never financial advice\./,

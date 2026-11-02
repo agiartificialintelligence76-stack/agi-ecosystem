@@ -1833,7 +1833,7 @@ test('the page: its own address, private, the rules and warnings on it, no inlin
   const html = readFileSync(new URL('../launch.html', import.meta.url), 'utf8');
   assert.match(html, /<html lang="en" data-page="launch">/);
   assert.match(html, /<meta name="robots" content="noindex" \/>/, 'a private link: never in search results');
-  assert.match(html, /<script src="\/theme\.js\?v=7"><\/script>/);
+  assert.match(html, /<script src="\/theme\.js\?v=8"><\/script>/);
   assert.match(html, /<script type="module" src="\/src\/launch\/page\.js"><\/script>/);
   assert.doesNotMatch(html.replace(/<script (type="module" )?src="[^"]+"><\/script>/g, ''), /<script/i, 'no inline scripts');
   assert.doesNotMatch(html, /\sstyle=|\son[a-z]+=/i, 'no inline styles or handlers');

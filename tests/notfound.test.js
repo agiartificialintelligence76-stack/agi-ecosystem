@@ -10,7 +10,7 @@ test('404: its own page, built by Vite, with no inline code and no indexing', ()
   assert.match(page, /<title>404 NOT_FOUND · AGI<\/title>/);
   assert.match(page, /<meta name="robots" content="noindex" \/>/);
   assert.match(page, /<script type="module" src="\/src\/notfound\/page\.js"><\/script>/);
-  assert.match(page, /<script src="\/theme\.js\?v=7"><\/script>/, 'the theme from the first paint, like every page');
+  assert.match(page, /<script src="\/theme\.js\?v=8"><\/script>/, 'the theme from the first paint, like every page');
   assert.ok(!/<script>|style="/.test(page), 'no inline scripts or styles (the security rules block them)');
   assert.match(page, /href="\/"/, 'a way back home');
   assert.match(page, /NOT_FOUND/);

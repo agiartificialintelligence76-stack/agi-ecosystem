@@ -1,11 +1,12 @@
 // Runs before the page paints (a plain script in <head>), so the page never flashes the wrong theme or look.
-// Uses the visitor's saved choices, or else the site's defaults: Pop mode, in the dark theme (since 2026-09-28, the owner:
-// "make the pop mode open on default, in dark mode"). Saved as dr-theme = light | dark and dr-skin = pop | lab (lab = the
-// visitor switched Pop mode off). src/theme.js adds the toggle buttons and saves the choices.
+// Uses the visitor's saved choices, or else the site's defaults: Pop mode, in the light theme (since 2026-11-02, the owner:
+// "make the default light mode and pop mode when they first visit the site"; at night from 2026-09-28 until then: "make the
+// pop mode open on default, in dark mode"). Saved as dr-theme = light | dark and dr-skin = pop | lab (lab = the visitor
+// switched Pop mode off), only when a button is pressed: src/theme.js adds the toggle buttons and saves the choices.
 (function () {
   var theme = null, skin = null;
   try { theme = localStorage.getItem('dr-theme'); skin = localStorage.getItem('dr-skin'); } catch (e) { /* private mode: the defaults */ }
-  if (theme !== 'light' && theme !== 'dark') theme = 'dark';
+  if (theme !== 'light' && theme !== 'dark') theme = 'light';
   var pop = skin !== 'lab';
   var root = document.documentElement;
   root.setAttribute('data-theme', theme);

@@ -2,12 +2,13 @@
 // This adds the toggle buttons and remembers the visitor's choices. Other code (the 3D stage) listens for the 'agi:theme'
 // and 'agi:skin' events.
 // Pop mode (2026-09-27, the owner's idea): the whole page in the bold $AGI look: same content, other design
-// (src/styles/pop.css, everything under [data-skin="pop"]). Since 2026-09-28 it's the default, in the dark theme (the owner:
-// "make the pop mode open on default, in dark mode"). The ✦ button next to the theme button (on very small phones, "Pop mode"
+// (src/styles/pop.css, everything under [data-skin="pop"]). Since 2026-09-28 it's the default: in the light theme since
+// 2026-11-02 (the owner: "make the default light mode and pop mode when they first visit the site"), at night until then
+// ("make the pop mode open on default, in dark mode"). The ✦ button next to the theme button (on very small phones, "Pop mode"
 // in the menu) switches it off and on; both choices are remembered in this browser (dr-skin = pop | lab, dr-theme).
 const KEY = 'dr-theme';
 const SKIN_KEY = 'dr-skin';
-export const DEFAULT_THEME = 'dark';
+export const DEFAULT_THEME = 'light';
 export const DEFAULT_SKIN = 'pop';
 const root = document.documentElement;
 

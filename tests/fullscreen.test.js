@@ -80,7 +80,7 @@ test('/theme.js: at /talk the page starts in full-screen talk before it paints (
   assert.ok(home.classes.has('lp-intro') && !home.classes.has('is-talk'), 'the home page: the front\'s entrance, not full-screen talk');
   assert.equal(home.title, 'Introducing AGI · Artificial Girlfriend Intelligence');
   assert.equal(prepaint({ path: '/talk', page: 'diary' }).classes.size, 0, 'only the home page has it');
-  for (const page of ['index.html', 'diary.html', 'launch.html', 'live.html']) assert.match(read(page), /<script src="\/theme\.js\?v=7"><\/script>/, `${page}: the new /theme.js (browsers keep the old one a day)`);
+  for (const page of ['index.html', 'diary.html', 'launch.html', 'live.html']) assert.match(read(page), /<script src="\/theme\.js\?v=8"><\/script>/, `${page}: the new /theme.js (browsers keep the old one a day)`);
 });
 
 test('the ways in: in the Playground only (never the crowded top bar), as links to /talk', () => {

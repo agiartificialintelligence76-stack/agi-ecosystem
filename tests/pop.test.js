@@ -1,5 +1,6 @@
 // Pop mode (2026-09-27, the owner's idea): the whole page in the bold $AGI look, same content. Since 2026-09-28 it's the
-// default, in the dark theme (the owner: "make the pop mode open on default, in dark mode"); its button switches it off.
+// default, in the light theme since 2026-11-02 (the owner: "make the default light mode and pop mode when they first visit
+// the site"; at night before: "make the pop mode open on default, in dark mode"); its button switches it off.
 // These checks keep it that way: the button on both pages, the lab look untouched (every Pop mode style is scoped to
 // [data-skin="pop"]), its fonts self-hosted and licensed, the decoration only repeating what the page already says, and the
 // defaults and the visitor's choice applied before the page paints.
@@ -139,25 +140,25 @@ function prepaint({ skin, theme, systemDark = false, page = null, storage = true
   return { skin: attrs['data-skin'] ?? null, theme: attrs['data-theme'], bar: meta.content };
 }
 
-test('Pop mode and the dark theme are the defaults, applied before the page paints; a saved choice wins; the browser bar matches', async () => {
+test('Pop mode and the light theme are the defaults (2026-11-02; at night from 2026-09-28), applied before the page paints; a saved choice wins; the browser bar matches', async () => {
   // src/theme.js expects a browser: give it the little it reads when it loads
   globalThis.document ??= { documentElement: { dataset: {} }, querySelector: () => null, querySelectorAll: () => [] };
   globalThis.matchMedia ??= () => ({ matches: false, addEventListener() {} });
   const { barColor, DEFAULT_THEME, DEFAULT_SKIN } = await import('../src/theme.js');
-  assert.deepEqual([DEFAULT_SKIN, DEFAULT_THEME], ['pop', 'dark'], "the owner's defaults (2026-09-28)");
-  const first = prepaint({ skin: null, theme: null, systemDark: false });
-  assert.deepEqual([first.skin, first.theme], ['pop', 'dark'], 'a first visit: Pop mode, dark (even when the system is light)');
+  assert.deepEqual([DEFAULT_SKIN, DEFAULT_THEME], ['pop', 'light'], "the owner's defaults (2026-11-02: Pop mode by day)");
+  const first = prepaint({ skin: null, theme: null, systemDark: true });
+  assert.deepEqual([first.skin, first.theme, first.bar], ['pop', 'light', '#6b3bff'], 'a first visit: Pop mode by day, its violet hero (even when the system is dark)');
   assert.equal(prepaint({ skin: 'lab', theme: null }).skin, null, 'switched off (saved as "lab"): it stays off');
   for (const odd of ['POP', 'pop ', '1', 'true', 'off']) assert.equal(prepaint({ skin: odd, theme: null }).skin, 'pop', `"${odd}" isn't a choice: the default`);
   const hidden = prepaint({ skin: 'lab', theme: 'light', storage: false });
-  assert.deepEqual([hidden.skin, hidden.theme], ['pop', 'dark'], 'private mode: the defaults, no error');
+  assert.deepEqual([hidden.skin, hidden.theme], ['pop', 'light'], 'private mode: the defaults, no error');
   for (const page of [null, 'diary', 'launch', 'live', 'studio']) {
     for (const [theme, systemDark] of [['light', false], ['dark', false], ['light', true], [null, true], [null, false]]) {
       for (const skin of ['pop', 'lab', null]) {
         const got = prepaint({ skin, theme, systemDark, page });
-        const expectTheme = theme || 'dark';
+        const expectTheme = theme || 'light';
         const expectSkin = skin === 'lab' ? 'lab' : 'pop';
-        assert.equal(got.theme, expectTheme, 'a saved theme wins, else dark');
+        assert.equal(got.theme, expectTheme, 'a saved theme wins (a visitor who picked dark stays dark), else light');
         assert.equal(got.skin, expectSkin === 'pop' ? 'pop' : null);
         assert.equal(got.bar, barColor(expectSkin, expectTheme, ['diary', 'launch', 'live', 'studio'].includes(page)), `${page || 'home'} · ${expectTheme} · ${expectSkin}: the same color as the page's own script`);
       }
@@ -178,7 +179,7 @@ test('Pop mode: switching it off is remembered, and the page script starts from 
   const theme = read('src/theme.js');
   assert.match(theme, /localStorage\.setItem\(SKIN_KEY, skin === 'pop' \? 'pop' : 'lab'\)/, 'off is saved too ("lab"): with nothing saved, the page opens in Pop mode');
   assert.match(theme, /apply\(saved\(\) \|\| DEFAULT_THEME, false\);\n  applySkin\(savedSkin\(\) \|\| DEFAULT_SKIN, false\);/, 'the saved choices, else the defaults');
-  assert.doesNotMatch(theme, /prefers-color-scheme/, "the system setting doesn't pick the theme any more (dark unless the visitor picks light)");
+  assert.doesNotMatch(theme, /prefers-color-scheme/, "the system setting doesn't pick the theme any more (light unless the visitor picks dark)");
   assert.doesNotMatch(read('public/theme.js'), /matchMedia/, '…in /theme.js either');
 });
 
@@ -228,24 +229,25 @@ test('Studio shares the appearance switches: independent choices, saved on reloa
     scrollY: 0, addEventListener: (k, fn) => { listeners[k] = fn; }, dispatchEvent() {},
     CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init.detail; } },
   });
-  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['dark', 'pop', '#120828']);
-  assert.equal(themeButton.attrs['aria-label'], 'Switch to light theme');
+  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['light', 'pop', '#f8f5ff'], 'nothing saved: Pop mode by day (2026-11-02)');
+  assert.equal(themeButton.attrs['aria-label'], 'Switch to dark theme');
+  assert.equal(saved.size, 0, 'nothing is saved until a button is pressed');
   themeButton.handlers.click();
-  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['light', 'pop', '#f8f5ff']);
+  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['dark', 'pop', '#120828']);
   skinButton.handlers.click();
-  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['light', undefined, '#fafaf8']);
+  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['dark', undefined, '#0b0b0c']);
   assert.equal(skinButton.attrs['aria-pressed'], 'false');
   assert.deepEqual(prepaint({ page: 'studio', theme: saved.get('dr-theme'), skin: saved.get('dr-skin') }),
-    { theme: 'light', skin: null, bar: '#fafaf8' }, 'reload keeps both choices before paint');
+    { theme: 'dark', skin: null, bar: '#0b0b0c' }, 'reload keeps both choices before paint');
   themeButton.handlers.click();
-  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['dark', undefined, '#0b0b0c']);
+  assert.deepEqual([root.dataset.theme, root.dataset.skin, bar.content], ['light', undefined, '#fafaf8']);
   skinButton.handlers.click();
-  assert.deepEqual([root.dataset.theme, root.dataset.skin], ['dark', 'pop']);
-  saved.set('dr-theme', 'light');
+  assert.deepEqual([root.dataset.theme, root.dataset.skin], ['light', 'pop']);
+  saved.set('dr-theme', 'dark');
   listeners.storage({ key: 'dr-theme' });
   saved.set('dr-skin', 'lab');
   listeners.storage({ key: 'dr-skin' });
-  assert.deepEqual([root.dataset.theme, root.dataset.skin], ['light', undefined], 'another same-origin tab updates Studio');
-  assert.equal(themeButton.attrs['aria-label'], 'Switch to dark theme');
+  assert.deepEqual([root.dataset.theme, root.dataset.skin], ['dark', undefined], 'another same-origin tab updates Studio');
+  assert.equal(themeButton.attrs['aria-label'], 'Switch to light theme');
   assert.equal(skinButton.attrs['aria-pressed'], 'false');
 });

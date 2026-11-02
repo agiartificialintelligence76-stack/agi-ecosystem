@@ -330,7 +330,7 @@ test('the roadmap: its pages at their own addresses (the roadmap, /stake, /givea
   for (const p of ROADMAP) {
     const page = readPage(`${p}.html`);
     assert.match(page, new RegExp(`<html lang="en" data-page="${p}">`), `${p}: its own page key (/theme.js: its browser bar)`);
-    assert.match(page, /<script src="\/theme\.js\?v=7"><\/script>/, `${p}: the page's look before it paints`);
+    assert.match(page, /<script src="\/theme\.js\?v=8"><\/script>/, `${p}: the page's look before it paints`);
     assert.match(page, new RegExp(`<link rel="canonical" href="__SITE__/${p}" />`), p);
     assert.match(page, new RegExp(`<meta property="og:url" content="__SITE__/${p}" />`), p);
     assert.ok(page.includes('<meta property="og:image" content="__SITE__/cards/roadmap.jpg" />'), `${p}: the roadmap's own link preview (tools/roadmap-promo, --cards)`);
@@ -576,7 +576,7 @@ test('the roadmap\'s pages: the phone\'s browser bar is Pop mode\'s violet hero 
   for (const p of ROADMAP) {
     assert.equal(barOf(p, 'pop', 'light'), '#6b3bff', `${p}: Pop mode, light`);
     assert.equal(barOf(p, 'pop', 'dark'), '#2a0f7a', `${p}: Pop mode, dark`);
-    assert.equal(barOf(p, null, null), '#2a0f7a', `${p}: the defaults (Pop mode, dark)`);
+    assert.equal(barOf(p, null, null), '#6b3bff', `${p}: the defaults (Pop mode, light, since 2026-11-02)`);
     assert.equal(barOf(p, 'lab', 'light'), '#fafaf8', `${p}: the lab look, light`);
     assert.equal(barOf(p, 'lab', 'dark'), '#0b0b0c', `${p}: the lab look, dark`);
   }
@@ -596,7 +596,7 @@ test('AGI games: its page at /games, its head and link preview (its own picture)
   const page = GAMES_PAGE();
   assert.match(page, /<html lang="en" data-page="games">/, 'its own page key (/theme.js: its browser bar)');
   assert.match(page, /<title>GAME beta · AGI games<\/title>/);
-  assert.match(page, /<script src="\/theme\.js\?v=7"><\/script>/, 'the page\'s look before it paints');
+  assert.match(page, /<script src="\/theme\.js\?v=8"><\/script>/, 'the page\'s look before it paints');
   assert.match(page, /<link rel="canonical" href="__SITE__\/games" \/>/);
   assert.match(page, /<meta property="og:url" content="__SITE__\/games" \/>/);
   assert.ok(page.includes('<meta property="og:image" content="__SITE__/cards/games.jpg" />'), 'its own link preview (tools/cards/games-card.html)');
@@ -989,7 +989,7 @@ test('AGI games\' look: every rule names a gm- class; "beta" stuck over GAME; Po
   // the phone's browser bar: Pop mode's violet hero, from the first paint (/theme.js), the page's color in the lab look
   assert.equal(barOf('games', 'pop', 'light'), '#6b3bff');
   assert.equal(barOf('games', 'pop', 'dark'), '#2a0f7a');
-  assert.equal(barOf('games', null, null), '#2a0f7a', 'the defaults (Pop mode, dark)');
+  assert.equal(barOf('games', null, null), '#6b3bff', 'the defaults (Pop mode, light, since 2026-11-02)');
   assert.equal(barOf('games', 'lab', 'light'), '#fafaf8');
   assert.equal(barOf('games', 'lab', 'dark'), '#0b0b0c');
 });

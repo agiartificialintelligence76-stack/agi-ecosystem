@@ -1,9 +1,20 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Pop mode by day for first visits (2026-11-02):** the owner: "can you make the default light mode and pop mode when
+> they first visit the site, publish to production". A visitor with nothing saved now gets Pop mode in the light theme
+> (Pop mode at night from 2026-09-28 until now): `public/theme.js` before the page paints, and `DEFAULT_THEME` in
+> `src/theme.js`, on every page that loads them (the home page, Studio, PFP, games, the diary, the roadmap…). A choice
+> made with the theme or ✦ button is still saved and still wins: someone who picked dark stays dark, and someone who never
+> pressed a button gets the new default (nothing is saved until a button is pressed). The pages load `/theme.js?v=8`, so
+> browsers holding the old copy (kept a day) get the new one at once; PFP's and Studio's own first browser-bar color in
+> their HTML follows (`#6b3bff`, `#f8f5ff`). Tests: `tests/pop.test.js` (the defaults; Studio's switches from the new
+> start), `tests/page.test.js` and `tests/popout.test.js` (the browser bar with nothing saved), the `v=8` checks.
+> Pushed to `main` (production) on 2026-11-02 from a clean copy of production's `43af80f` with only these files.
+
 > **The front's four looks (2026-11-02):** the owner: "can you make a pop mode/light/dark on these also just like the
 > others". The front (the hero with the huge AGI, her orbit, Her world and the contract address; its ribbons; the "General →
 > Girlfriend" manifesto; the loader) followed neither switch: it was one bright look on purpose. Now it follows both, like
-> every other section. **Pop mode by day** is unchanged (checked pixel for pixel). **Pop mode at night** (the default): a
+> every other section. **Pop mode by day** is unchanged (checked pixel for pixel). **Pop mode at night** (the default until the entry above): a
 > deep violet hero (`#2a0f7a`, the browser bar's color), the manifesto and the loader deep ink with honey as their accent
 > (like Evaluations at night), the pills deep violet with lavender outlines and pink hard shadows, honey buttons. **The lab
 > look** (Pop mode off), light and dark from `tokens.css`: paper or near-black, Geist only (Pop mode's two fonts are no
@@ -15,15 +26,21 @@
 > `--lp-hearts*`) from there, again on `agi:theme` / `agi:skin`, and never builds the ribbons while they're hidden.
 > Checked: 1440, 390 and 360 px in all four looks, switching both ways (keeps your place, no console errors, no sideways
 > scrolling), the production build, axe 0 issues in all four looks; `tests/landing.test.js` (17 now) and
-> `tests/pop.test.js` pass. Pushed to `main` (production) on 2026-11-02 from a clean copy of production's
-> `ae3dc75` with only these three files and this one; the folder's other local work stays local.
+> `tests/pop.test.js` pass. **Published 2026-11-02 as `43af80f` to `main`**, from a clean copy of production's `ae3dc75`
+> with only these three files and this one (the folder's other local work stays local). Before the push: the full build
+> the way Vercel runs it (Node 24, UTC, every setting in "Environment variables" set): 1,423 tests, 0 failed, 4 skipped;
+> Vite, share pages, secret check; the built front in all four looks at 1440, 390 and 360 px (colors, the browser bar, no
+> sideways scrolling, axe 0 issues, the site's real CSP with 0 violations, no console errors, the loader, switching both
+> ways in the manifesto keeps your place), Pop mode by day the same as production's build but for WebGL's own run-to-run
+> noise. Vercel: Ready. Live at https://www.agi1.app/ (it serves `main-DaZNxWH5.css`): the real ✦ and theme buttons went
+> through all four looks and back, the browser bar following, no console errors; the owner's saved look left as it was.
 
 > **AGI Studio design and appearance (2026-11-01):** the owner asked to make the whole Studio like the main page,
 > then to include its sun and sparkle switches and publish. Studio now follows the landing page's violet, lavender,
 > cream, ink, honey, pink and mint palette, Anybody display type, Instrument Serif accents and outlined pill controls.
 > `studio-pop.css`, `studio-home.css` and `studio-details.css` style navigation, Explore, forms, galleries, accounts,
 > support, guides and editors. `studio-theme.css` provides light/dark variants and responsive appearance controls.
-> The switches reuse `public/theme.js` and `src/theme.js`: dark Pop by default, with both saved preferences restored
+> The switches reuse `public/theme.js` and `src/theme.js`: dark Pop by default (Pop by day since 2026-11-02, like every page), with both saved preferences restored
 > before paint; Pop off uses the compact Studio layout. Both controls remain visible on phones. Explore retains its
 > rotating headline and live wall, with existing AGI artwork as its empty-wall fallback. Creation, wallet and credit
 > behavior is unchanged. Validated desktop/tablet/360px layouts, all four appearance combinations, persistence,
@@ -511,8 +528,9 @@ $AGI is a token on [clank.trade](https://clank.trade) on Robinhood Chain. The si
   (Lower / Some / High risk, the red flags and the facts behind them), and "Ask AGI-1": she appears right there in 3D,
   reacts and says what she thinks in her natural voice (a few fixed lines, made once). Never buy/sell advice
 - **Pop mode** (2026-09-27, the owner's idea): the whole page in the look of the $AGI ecosystem page that used to be at
-  agi1.app: bold color blocks, ink outlines, wide display type. Same content. **The default since 2026-09-28, in the dark
-  theme** (the owner: "make the pop mode open on default, in dark mode"); the ✦ button next to the theme button switches
+  agi1.app: bold color blocks, ink outlines, wide display type. Same content. **The default since 2026-09-28, in the light
+  theme since 2026-11-02** (the owner: "make the default light mode and pop mode when they first visit the site"; in
+  the dark theme before: "make the pop mode open on default, in dark mode"); the ✦ button next to the theme button switches
   back to the lab look, and both choices are remembered in the browser
 - **AGI-1 in 2D** (2026-09-27, the owner's idea; her Live2D model since 2026-10-01): a "3D · 2D" switch on the stage and in
   her live views. In 2D she's the Live2D model of the owner's VTuber project (breathing, blinking, looking, talking with the
@@ -10844,7 +10862,8 @@ itself; the ecosystem page it copied is gone, the look lives on here.)
 
 **What visitors see:**
 - A round **✦** button next to the theme button (both pages; the tooltip says "Pop mode: the bold AGI look"; "the AGI ecosystem look" until 2026-09-28). **On by
-  default since 2026-09-28, in the dark theme** (the owner: "make the pop mode open on default, in dark mode"; before that
+  default since 2026-09-28, in the light theme since 2026-11-02** (the owner: "make the default light mode and pop mode when
+  they first visit the site"; in the dark theme from 2026-09-28: "make the pop mode open on default, in dark mode"; before that
   it was off by default and the theme followed the system setting). Pressed, the page switches to the lab look; pressed
   again, back to Pop mode. Remembered in the browser (`dr-skin` = `pop` or `lab`), like the theme (`dr-theme`). The theme button still works inside it (Pop mode has a night version). On phones under
   380 px the top bar has no room for a fourth round button, so there it's a **"Pop mode On / Off"** row at the bottom of the
@@ -10893,7 +10912,7 @@ the browser saved `dr-skin` = `lab` (Pop mode switched off), and `data-theme="da
 `[data-skin-toggle]`, with `aria-pressed`), remembers the choice, repaints the browser bar (`barColor()`, the same colors as
 `/theme.js`; a test compares them) and sends `agi:skin`; the 3D stage listens (its `pop-light` / `pop-dark` colors, the
 hearts) and so does the menu (it closes when its links fit again). Browsers keep `/theme.js` a
-day, so the pages load it with a version (`/theme.js?v=6` since her pop-out window, 2026-10-02, `v=5` since full-screen talk, `v=4` since the launch page, `v=3` since the front: **raise the number whenever it changes**)
+day, so the pages load it with a version (`/theme.js?v=8` since Pop mode by day became the default, 2026-11-02, `v=7` before it, `v=6` since her pop-out window, 2026-10-02, `v=5` since full-screen talk, `v=4` since the launch page, `v=3` since the front: **raise the number whenever it changes**)
 and `src/theme.js` also applies the saved choices, else the same defaults (`DEFAULT_SKIN`, `DEFAULT_THEME`) itself.
 
 **Fonts:** Anybody (variable, 57 KB) and Instrument Serif Italic (22 KB), free (SIL Open Font License, the license files are
@@ -11348,8 +11367,8 @@ that stays with the button and its price; the gallery on the right; on phones a 
 **Principles**
 - Minimal: one idea per section, lots of whitespace, a strict grid, 1 px hairlines instead of shadows and glows.
 - Sharp typography carries the page: big confident headlines, short sentences, tabular numbers, few weights.
-- **Light and dark themes**, both first-class. Dark by default since 2026-09-28 (the owner); the toggle in the top bar
-  switches to light (saved in the browser). Test every change in both.
+- **Light and dark themes**, both first-class. Light by default since 2026-11-02 (the owner; dark from 2026-09-28 until then); the toggle in the top
+  bar switches to dark (saved in the browser). Test every change in both.
 - Serious lab voice, silly content: "We're releasing…", "Evaluations", "Model card", "Safety note", but the facts are memes.
 - One accent color, used sparingly (live dot, highlights, focus rings). Everything else is black, white and grays.
 - Motion is subtle (short fades and slides) and switches off with "reduce motion".
@@ -13673,6 +13692,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-31 | SKYBREAK's WebAssembly allowed only where it runs: its page's addresses and the splat engine's SPZ decoder worker get the site's CSP plus `'wasm-unsafe-eval'` (the worker also `data:`), as later rules in `vercel.json`; every other page keeps the policy as it was |
 | 2026-10-31 | On the site SKYBREAK's billboards chart a made-up `$SKY`, never `$AGI`'s price, and the Moon's flag is AGI-1's (hard rule 8); its own project keeps its originals |
 | 2026-10-31 | SKYBREAK's touch controls on any touchscreen (`pointer: coarse`), not only below 700 px wide, and a compact title on a short screen: a phone held sideways had no controls and couldn't reach Begin Ascent |
+| 2026-11-02 | First visits in Pop mode by day (the owner: "can you make the default light mode and pop mode when they first visit the site"): `/theme.js` and `DEFAULT_THEME` say light with nothing saved; a saved choice still wins, and nothing is saved until a button is pressed; the pages load `/theme.js?v=8` |
 
 ## Open questions
 
@@ -14203,6 +14223,9 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 - **This file is about 1.8 MB** (2026-10-29), far more than one session can hold at once: Claude reads it in parts
   (`grep -n` for what it needs, then `sed -n` on those lines), never whole; and when it clones the repo, it keeps the clone
   outside its working directory and doesn't register it as the session's repo root (that would load this file whole).
+  (2026-11-02: a session publishing the front's four looks did register it; this file loaded whole and the session kept
+  stopping with errors on each "continue", and its workspace was wiped before it pushed. The release was redone in a new
+  session that kept its clone in its scratch folder and never registered it.)
 - **Tests never depend on the build's own settings** (2026-10-02): Vercel runs `npm test` with the project's real
   environment variables present (the owner's keys). A test that needs a setting to be missing deletes it first (in its
   `beforeEach`). The first push of "Launch with AGI-1" failed that way (Vercel: Error after 41 s): three Telegram tests

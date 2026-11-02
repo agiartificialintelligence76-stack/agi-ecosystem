@@ -106,7 +106,7 @@ test('/theme.js: her window\'s page is full-screen talk marked .is-pip before it
     const got = prepaint({ path, search });
     assert.deepEqual([...got.classes].sort(), ['is-pip', 'is-talk'], `${path}${search}`);
     assert.equal(got.title, 'Talk to AGI-1 · AGI');
-    assert.equal(got.bar, '#1a0d3d', 'the color around her');
+    assert.equal(got.bar, '#e4d9ff', 'the color around her (Pop mode by day: the default since 2026-11-02)');
   }
   for (const search of ['?pip=10', '?xpip=1', '?pip', '']) assert.deepEqual([...prepaint({ search }).classes], ['is-talk'], `"${search}": full-screen talk, not the pop-out`);
   assert.deepEqual([...prepaint({ search: '?pip=1', framed: false }).classes], ['is-talk'], 'a page of its own: never believed (someone typed it)');
