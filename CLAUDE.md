@@ -17,7 +17,11 @@
 > 1,512 tests, 1,506 passed, 6 skipped, no failures; bundling, share pages and secret scan passed. The 271 focused
 > checks passed on Node 20 and 22, then the final 54 trading/chart checks passed again on both runtimes.
 > Release is isolated under `output/clank-production-20261102`, branch `codex/trench-terminal-refresh`, based on
-> production `d3be80b`; unrelated workspace changes are excluded. Publish only after full build and preview pass.
+> production `d3be80b`; unrelated workspace changes are excluded. Initial refresh `fb2a08c` passed preview and
+> production deployment, with all 16 generated game/font/logo assets verified byte-for-byte on agi1.app.
+> The final live visual check found CSS minification combined font stretch into an unsupported font shorthand.
+> The menu heading now keeps its intended Anybody display font after bundling; built desktop/phone checks and
+> the complete 1,512-test release build pass again. The small typography correction is ready for publication.
 
 
 > **Trenching Simulator terminal release (2026-11-02):** the owner requested production publication of Axium,
