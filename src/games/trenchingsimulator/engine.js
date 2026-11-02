@@ -115,7 +115,7 @@ export function normalizeConfig(config) {
 
 // ---------- a market ----------
 
-export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, config = {}, live = false } = {}) {
+export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, config = {}, live = false, allowLivePracticeLaunch = false } = {}) {
   const cfg = normalizeConfig(config);
   const seedStr = String(seed);
   const su = Number(solUsd);
@@ -153,6 +153,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     sol: start, held: 0, pos: new Map(), open: new Set(), pending: new Map(), orders: [], log: [], equity: [],
     fees: { terminal: 0, market: 0, priority: 0, failed: 0, mev: 0 },
   };
+  const canLaunchPractice = !M.live || allowLivePracticeLaunch === true;
+  const localPractice = (c) => M.live && canLaunchPractice && c.createdByPlayer === true;
 
   // ---------- the feed and the chat ----------
 
@@ -231,7 +233,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   // Practice launches use the same market mechanics as every simulated coin. The log records the complete
   // metadata before subsequent orders, so replay creates the same IDs, random streams and price paths.
   function launchCoin(input) {
-    if (M.live) return { ok: false, error: 'free_only' };
+    if (!canLaunchPractice) return { ok: false, error: 'free_only' };
     if (M.practiceLaunches >= MAX_PRACTICE_LAUNCHES) return { ok: false, error: 'launch_limit' };
     const data = cleanLaunch(input);
     if (!data) return { ok: false, error: 'bad_launch' };
@@ -454,7 +456,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
         c.cdTrim = true;
       }
     }
-    if (c.ext && c.ext.practice) {
+    if (c.ext && c.ext.practice || localPractice(c)) {
       const bar = cd[cd.length - 1], key = side > 0 ? 'buyVol' : 'sellVol';
       bar[key] = (bar[key] || 0) + sol;
     }
@@ -937,7 +939,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     for (let i = 0; i < aw.length; i++) {
       const c = aw[i];
       if (c.ext && c.ext.practice) { simExtPractice(c, t0, t1); continue; }
-      if (c.ext || M.simPaused) {
+      if (c.ext || M.simPaused && !localPractice(c)) {
         // a live coin (and a made-up one while they're paused): only the player's orders land
         landOnly(c, t1);
         if (c.ext && !c.q.length) {
@@ -1006,7 +1008,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   function compact(c) {
     const out = [];
     for (const x of c.cd) {
-      const b = c.ext?.practice ? Math.max(c.cd[0].t, Math.floor(x.t / 60) * 60) : Math.floor(x.t / 60) * 60;
+      const practice = c.ext?.practice || localPractice(c);
+      const b = practice ? Math.max(c.cd[0].t, Math.floor(x.t / 60) * 60) : Math.floor(x.t / 60) * 60;
       const last = out.length ? out[out.length - 1] : null;
       if (last && last.t === b) {
         if (x.h > last.h) last.h = x.h;
@@ -1015,15 +1018,15 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
         last.v += x.v;
         last.b += x.b;
         last.s += x.s;
-        if (c.ext?.practice) { last.buyVol += x.buyVol || 0; last.sellVol += x.sellVol || 0; }
+        if (practice) { last.buyVol += x.buyVol || 0; last.sellVol += x.sellVol || 0; }
       } else out.push({ t: b, o: x.o, h: x.h, l: x.l, c: x.c, v: x.v, b: x.b, s: x.s,
-        ...(c.ext?.practice ? { buyVol: x.buyVol || 0, sellVol: x.sellVol || 0 } : {}) });
+        ...(practice ? { buyVol: x.buyVol || 0, sellVol: x.sellVol || 0 } : {}) });
     }
     c.cd = out;
     if (c.trades.length > 20) c.trades.splice(0, c.trades.length - 20);
     c.compacted = true;
     c.hs = null;
-    if (c.ext?.practice) c.cdv++;
+    if (c.ext?.practice || localPractice(c)) c.cdv = (c.cdv || 0) + 1;
   }
 
   // ---------- reading (never changes the market, never draws a number) ----------
@@ -1121,7 +1124,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   }
 
   // in Live mode, whether the lists show this kind of coin now (real ones, made-up stand-ins); always, else
-  const shownKind = (c) => !M.live || (c.ext ? M.showExt : M.showSim);
+  const shownKind = (c) => !M.live || localPractice(c) || (c.ext ? M.showExt : M.showSim);
   // a coin's phase and how much of its curve is sold, as people see them (a live coin's from its source)
   const phaseOf = (c) => (c.ext ? c.ext.phase : c.mk.phase);
   const progressOf = (c) => {
@@ -1146,7 +1149,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       lastTrade: c.lastTrade, copyOf: c.copyOf, koth: M.koth === c.id, pair: c.pair,
     };
     if (c.createdByPlayer) Object.assign(r, { pair: c.pair, createdByPlayer: true });
-    if (M.live) r.standIn = true;
+    if (localPractice(c)) r.practice = true;
+    else if (M.live) r.standIn = true;
     return r;
   }
 
@@ -1199,7 +1203,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     const live = [];
     for (let i = M.coins.length - 1; i >= 0; i--) {
       const c = M.coins[i];
-      if (M.live && !(c.ext ? M.showExt : M.showSim)) continue;
+      if (!shownKind(c)) continue;
       const ph = phaseOf(c);
       if (ph === 'pool') migrated.push(c);
       else if (ph === 'migrating' || progressOf(c) >= 0.5) stretch.push(c);
@@ -1255,6 +1259,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       me: pos && (pos.tokens > 0 || pos.realized !== 0)
         ? { tokens: pos.tokens, cost: pos.cost, value: exitValue(c, pos.tokens), realized: pos.realized } : null,
       pending: c.q.map(orderView),
+      ...(c.createdByPlayer ? { pair: c.pair, createdByPlayer: true } : {}),
+      ...(localPractice(c) ? { practice: true, cdv: c.cdv || 0 } : {}),
     };
   }
 
@@ -1315,10 +1321,11 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
         src: c.ext.src, chain: c.ext.chain, pic: c.ext.pic, pair: c.ext.pair };
     }
     return {
-      id: c.id, name: c.name, ticker: c.ticker, emoji: c.emoji, theme: c.theme, line: c.line, mint: c.mint,
-      dev: c.devUser, devAddr: addrOf(c, 'dev', null), born: c.born, copyOf: c.copyOf, socials: { ...c.socials },
+      id: c.id, name: c.name, ticker: c.ticker, emoji: c.emoji, theme: c.theme, line: c.line, mint: localPractice(c) ? null : c.mint,
+      dev: c.devUser, devAddr: localPractice(c) ? null : addrOf(c, 'dev', null), born: c.born, copyOf: c.copyOf, socials: { ...c.socials },
       devCoins: c.plan.intel.devCoins, devMigrated: c.plan.intel.devMigrated, pair: c.pair,
       ...(c.createdByPlayer ? { pair: c.pair, createdByPlayer: true } : {}),
+      ...(localPractice(c) ? { practice: true } : {}),
     };
   }
 
@@ -1512,13 +1519,13 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   function kothField() {
     if (!M.live) return M.awake;
     const out = [];
-    if (M.showSim) for (const c of M.awake) if (!c.ext) out.push(c);
+    for (const c of M.awake) if (!c.ext && shownKind(c)) out.push(c);
     if (M.showExt) for (const c of M.ext) if (c.ext.live && c.ext.phase === 'curve') out.push(c);
     return out;
   }
   function kothOk(c) {
     if (c.ext) return M.showExt && c.ext.live && c.ext.phase === 'curve' && progressOf(c) >= 0.5;
-    return !c.asleep && c.mk.phase === 'curve' && curveProgress(c.mk.curve) >= 0.5 && (!M.live || M.showSim);
+    return !c.asleep && c.mk.phase === 'curve' && curveProgress(c.mk.curve) >= 0.5 && shownKind(c);
   }
 
   // who trades a live coin out there: nobody we know (never an address, never a made-up label)
@@ -1811,7 +1818,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     },
     practiceWindows(id) {
       const c = coinOf(id);
-      if (!c || !c.ext || !c.ext.practice) return null;
+      if (!c || !(c.ext?.practice || localPractice(c))) return null;
       const out = {}, now = tOf(M.n), mc = mcOf(c.mk);
       for (const [key, seconds] of Object.entries({ '5m': 300, '1h': 3600, '4h': 14400, '1d': 86400 })) {
         const since = Math.floor(now - seconds);
@@ -1874,6 +1881,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   P.equity.push({ t: 0, v: netWorth() });
 
   return {
+    get canLaunchPractice() { return canLaunchPractice; },
     get t() {
       return tOf(M.n);
     },

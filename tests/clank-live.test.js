@@ -292,3 +292,76 @@ test('Clank practice buys and sells move the same simulated pool and contribute 
   assert.equal(window.buys + window.sells, stats.txns); assert.ok(window.buyVolumeUsd > 0 && window.sellVolumeUsd > 0);
   for (const m of [bought, control, sold]) m.destroy();
 });
+
+test('Clank Live explicit local launches enter discovery and keep their practice market through source reconnects', () => {
+  const h = practiceHarness('clank-local-launch'), m = h.market, source = m.find(A)[0];
+  m.advanceTo(5);
+  const funds = m.player.sol;
+  const launched = m.launchCoin({ name: 'Local Practice Cat', ticker: 'LPCT', emoji: '🐱', pair: 'AAPL', line: 'Only in this practice run.' });
+  assert.equal(m.canLaunchPractice, true); assert.equal(launched.ok, true); assert.equal(m.player.sol, funds);
+  const id = launched.id;
+  assert.notEqual(id, source); assert.equal(m.isExt(id), false);
+  for (const read of [m.row, m.info, m.stats]) {
+    const local = read(id);
+    assert.equal(local.createdByPlayer, true); assert.equal(local.localPractice, true);
+    assert.equal(local.practice, true); assert.equal(local.live, false);
+    assert.equal(local.createdAt, NOW + 5000);
+  }
+  assert.equal(launched.coin.mint, null); assert.equal(launched.coin.devAddr, null);
+  assert.equal(m.clankPracticeStart(id), 5); assert.equal(m.clankPracticeSeed(id), m.row(id).mc);
+  assert.equal(clankFeed(m, { sort: 'new' })[0].id, id, 'local launch time compares correctly with source epoch timestamps');
+  assert.ok(clankFeed(m, { sort: 'trending' }).some((r) => r.id === id));
+  assert.deepEqual(clankFeed(m, { pair: 'AAPL' }).map((r) => r.id), [id]);
+  assert.deepEqual(clankFeed(m, { pair: 'NVDA' }).map((r) => r.id), [source]);
+  assert.deepEqual(m.find('$lpct'), [id]); assert.deepEqual(m.find('Local Practice Cat'), [id]);
+  assert.equal(m.order({ coin: id, side: 'buy', sol: .2, priority: 'ultra', slippage: 1 }).ok, true);
+  m.advanceTo(6); assert.equal(m.orders()[0].status, 'filled'); assert.ok(m.positions().find((p) => p.id === id)?.open);
+  assert.equal(m.order({ coin: id, side: 'sell', frac: 1, priority: 'ultra', slippage: 1 }).ok, true);
+  m.advanceTo(7); assert.equal(m.orders()[0].status, 'filled'); assert.equal(m.positions().find((p) => p.id === id).open, false);
+  assert.ok(m.trades(id).some((t) => t.me && t.side === 'buy')); assert.ok(m.trades(id).some((t) => t.me && t.side === 'sell'));
+  const window = m.clankPracticeWindows(id)['5m'];
+  assert.ok(window.buyVolumeUsd > 0 && window.sellVolumeUsd > 0);
+  assert.ok(Math.abs(window.volumeUsd - m.candles(id).reduce((sum, bar) => sum + bar.v, 0) * 100) < 1e-8);
+  const before = m.stats(id), bars = m.candles(id), seed = m.clankPracticeSeed(id);
+  h.feed.status = 'down'; h.snap([coin(A, { marketCapUsdg: 900000 })]);
+  assert.deepEqual(m.stats(id), before); assert.deepEqual(m.candles(id), bars);
+  h.feed.status = 'live'; h.snap([coin(A), coin(B)]);
+  assert.deepEqual(m.stats(id), before); assert.deepEqual(m.candles(id), bars); assert.equal(m.clankPracticeSeed(id), seed);
+  assert.equal(m.liveState().seen, 2, 'only actual source identities count as live listings');
+  assert.equal(m.size.coins, 3); assert.equal(m.row(source).live, true);
+  m.advanceTo(60); assert.equal(m.size.coins, 3, 'explicit creation does not enable fictional background discovery');
+  assert.ok(m.stats(id).vol > before.vol); m.destroy();
+});
+
+test('Clank local creations never send source lookup, history, search or write requests', async () => {
+  const clock = timerHarness(), requests = [], sourceReads = [];
+  const feed = createClankFeed({ ...clock, fetch: async (url, options) => {
+    requests.push({ url, options }); return Response.json({ ...wire(), nextCursor: 'source_next' });
+  } });
+  for (const key of ['detail', 'candles', 'interval', 'lookup']) {
+    const original = feed[key]; feed[key] = (...args) => { sourceReads.push([key, ...args]); return original(...args); };
+  }
+  const watch = feed.watch; feed.watch = (ids) => { sourceReads.push(['watch', ...ids]); return watch(ids); };
+  const m = createClankMarket({ feed, seed: 'clank-local-source-boundary', startSol: 10, solUsd: 100, wallNow: clock.now });
+  feed.start(); await flush(); assert.equal(requests.length, 1);
+  const launched = m.launchCoin({ name: 'Offline Local Cat', ticker: 'OFFCAT', pair: 'ETH', emoji: '🐱' });
+  assert.equal(launched.ok, true); const id = launched.id;
+  assert.equal(m.clankData(id), null); assert.deepEqual(m.clankTrades(id), []); assert.deepEqual(m.clankHolders(id), []);
+  assert.deepEqual(m.clankCandles(id, '1s'), []); m.clankWatchInterval(id, '1s'); m.focus(id);
+  assert.equal(await m.lookup(id), null); assert.equal(await m.lookup(m.info(id).mint), null);
+  assert.equal(await m.lookup(`local:${id}`), null);
+  assert.deepEqual(await m.clankSearch('Offline Local Cat'), [id]);
+  assert.equal(m.clankHasMore(), false); assert.equal(await m.clankLoadMore(), false);
+  assert.equal(m.order({ coin: id, side: 'buy', sol: .1, priority: 'ultra', slippage: 1 }).ok, true);
+  m.advanceTo(2); assert.equal(m.orders()[0].status, 'filled'); await flush();
+  assert.equal(requests.length, 1, 'launch, local chart, local search and practice trade cause no network request');
+  assert.ok(sourceReads.every((entry) => entry.length === 1 && entry[0] === 'watch'), 'local IDs never reach any source reader');
+  assert.deepEqual(feed.coins().map((c) => c.address), [A], 'local metadata never enters the authoritative source cache');
+  await m.clankSearch('Original Clank Coin'); assert.equal(requests.length, 2, 'real discovery search remains available');
+  assert.equal(m.clankHasMore(), true);
+  for (const { url, options } of requests) {
+    assert.equal(url.startsWith('/api/checker?terminal=clank'), true);
+    assert.equal(options.method || 'GET', 'GET'); assert.equal(options.body, undefined); assert.equal(options.credentials, 'omit');
+  }
+  m.destroy(); feed.stop();
+});

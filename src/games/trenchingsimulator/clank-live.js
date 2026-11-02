@@ -1,6 +1,6 @@
 // Dedicated Clank.trade identities and discovery. Each real coin's first public quote seeds a local practice
 // market; later source quotes only refresh metadata, never the simulated price/volume or the player's fills.
-// This market never enables fictional coin discovery, including while the upstream is unavailable.
+// Automatic fictional discovery stays off. Explicit player-created coins remain local to this practice run.
 import { createMarket } from './engine.js';
 import { toReal } from './live-chains.js';
 
@@ -130,11 +130,12 @@ export function createClankFeed({ url = '/api/checker?terminal=clank', fetch: fe
 
 export function createClankMarket({ feed, chain = 'robinhood', seed, solUsd = 150, startSol, config = {}, wallNow = Date.now } = {}) {
   const px = Number.isFinite(solUsd) && solUsd > 0 ? solUsd : 150;
-  const m = createMarket({ seed, solUsd: px, startSol, config: { ...config, warmup: 0 }, live: true });
+  const m = createMarket({ seed, solUsd: px, startSol, config: { ...config, warmup: 0 }, live: true, allowLivePracticeLaunch: true });
   const ext = m.ext, byAddress = new Map(), addresses = new Map(), metadata = new Map(), starts = new Map(), seeds = new Map();
+  const localIds = new Set();
   const base = wallNow() - m.t * 1000;
   m.baseTime = base; m.clankPractice = true;
-  let dead = false, focus = null, watchAt = -Infinity;
+  let dead = false, focus = null, watchAt = -Infinity, localQuery = false;
   ext.view({ ext: true, sim: false, simPaused: true });
   const real = (c) => toReal({ k: 'u', mu: c.marketCapUsd, lu: c.liquidityUsd || null, pg: c.progress, gr: c.phase === 'pool', cl: c.phase === 'migrating' }, { solUsd: px });
   function upsert(c) {
@@ -158,20 +159,41 @@ export function createClankMarket({ feed, chain = 'robinhood', seed, solUsd = 15
   });
   for (const c of feed.coins()) upsert(c);
   const rawRow = m.row, rawInfo = m.info, rawStats = m.stats;
+  const localCoin = (id, value) => localIds.has(id) && value?.createdByPlayer === true;
+  const localView = (value) => ({ ...value, live: false, practice: true, localPractice: true,
+    createdAt: base + value.born * 1000 });
   m.row = (id) => {
-    const row = rawRow(id), c = metadata.get(id); if (!row || !c) return null;
+    const row = rawRow(id), c = metadata.get(id);
+    if (localCoin(id, row)) return localView(row);
+    if (!row || !c) return null;
     return { ...row, name: c.name, ticker: c.ticker, quoteAsset: c.quoteAsset, holders: c.holderCount,
       progress: c.progress, phase: c.phase, trendingRank: c.trendingRank, priceChange: row.ch5m, createdAt: c.createdAt,
       practice: true, metadataLive: feed.status === 'live' };
   };
-  m.info = (id) => { const info = rawInfo(id), c = metadata.get(id); return info && c ? { ...info, quoteAsset: c.quoteAsset, name: c.name, ticker: c.ticker, line: c.description || '', dev: c.creatorUsername || c.creatorName || c.creator || '—' } : info; };
+  m.info = (id) => {
+    const info = rawInfo(id), c = metadata.get(id);
+    if (localCoin(id, info)) return localView(info);
+    return info && c ? { ...info, quoteAsset: c.quoteAsset, name: c.name, ticker: c.ticker, line: c.description || '', dev: c.creatorUsername || c.creatorName || c.creator || '—' } : null;
+  };
   m.stats = (id) => {
-    const s = rawStats(id), c = metadata.get(id); if (!s || !c) return null;
+    const s = rawStats(id), c = metadata.get(id);
+    if (localCoin(id, s)) return localView(s);
+    if (!s || !c) return null;
     return { ...s, name: c.name, ticker: c.ticker, progress: c.progress, phase: c.phase,
       holders: c.holderCount, practice: true, metadataLive: feed.status === 'live' };
   };
+  const launchCoin = m.launchCoin;
+  m.launchCoin = (input) => {
+    if (dead) return { ok: false, error: 'over' };
+    const result = launchCoin(input);
+    if (result?.ok && rawRow(result.id)?.createdByPlayer) {
+      localIds.add(result.id); starts.set(result.id, m.t); seeds.set(result.id, rawRow(result.id).mc);
+      return { ...result, coin: m.info(result.id) };
+    }
+    return result;
+  };
   m.lists = ({ limit = 100 } = {}) => {
-    const cap = Math.max(1, Math.min(500, limit)), rows = [...addresses.keys()].map(m.row).filter(Boolean);
+    const cap = Math.max(1, Math.min(500, limit)), rows = [...addresses.keys(), ...localIds].map(m.row).filter(Boolean);
     const fresh = [...rows].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0) || b.id - a.id);
     const ranks = new Map(feed.trending().map((a, i) => [a, i]));
     const trending = rows.filter((r) => ranks.has(addresses.get(r.id))).sort((a, b) => ranks.get(addresses.get(a.id)) - ranks.get(addresses.get(b.id)));
@@ -180,7 +202,14 @@ export function createClankMarket({ feed, chain = 'robinhood', seed, solUsd = 15
       stretch: fresh.filter((r) => r.phase === 'migrating' || r.phase === 'curve' && r.progress >= .5).slice(0, cap),
       migrated: fresh.filter((r) => r.phase === 'pool').slice(0, cap), trending: trending.slice(0, cap), bump: fresh.slice(0, cap), koth: null };
   };
-  m.find = (query) => { const q = String(query).trim().replace(/^\$/, '').toLowerCase(); return [...metadata].filter(([id, c]) => c.address === q || c.ticker.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)).map(([id]) => id); };
+  const localMatches = (q) => [...localIds].filter((id) => {
+    const row = rawRow(id); return row && (row.ticker.toLowerCase().includes(q) || row.name.toLowerCase().includes(q));
+  });
+  const queryOf = (query) => String(query).trim().replace(/^\$/, '').toLowerCase();
+  m.find = (query) => {
+    const q = queryOf(query);
+    return [...localMatches(q), ...[...metadata].filter(([, c]) => c.address === q || c.ticker.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)).map(([id]) => id)];
+  };
   function watch(force = false) {
     if (!force && wallNow() - watchAt < 2000) return; watchAt = wallNow();
     const ids = [...new Set([focus, ...m.positions().filter((p) => p.open).map((p) => p.id)])].filter((id) => addresses.has(id));
@@ -189,8 +218,12 @@ export function createClankMarket({ feed, chain = 'robinhood', seed, solUsd = 15
   const advanceTo = m.advanceTo;
   m.advanceTo = (t) => { const result = advanceTo(t); watch(); return result; };
   m.focus = (id) => { focus = addresses.has(id) ? id : null; watch(true); };
-  m.lookup = async (a) => { const c = await feed.lookup(a); return dead || !c ? null : upsert(c); };
-  m.clankData = (id) => { const c = metadata.get(id), d = feed.detail(addresses.get(id)); return c ? { ...c, ...d, status: feed.status } : null; };
+  m.lookup = async (a) => {
+    if (dead || typeof a !== 'string' || !ADDRESS.test(a.toLowerCase())) return null;
+    const c = await feed.lookup(a); return dead || !c ? null : upsert(c);
+  };
+  const detail = (id) => addresses.has(id) ? feed.detail(addresses.get(id)) : null;
+  m.clankData = (id) => { const c = metadata.get(id); return c ? { ...c, ...detail(id), status: feed.status } : null; };
   m.clankPracticeStart = (id) => starts.get(id) ?? null;
   m.clankPracticeSeed = (id) => seeds.get(id) ?? null;
   m.clankPracticeWindows = (id) => {
@@ -199,15 +232,20 @@ export function createClankMarket({ feed, chain = 'robinhood', seed, solUsd = 15
       buyers: w.buyers, sellers: w.sellers, buyVolumeUsd: w.buyVolume * px, sellVolumeUsd: w.sellVolume * px,
       volumeUsd: w.volume * px, change: w.change } : null]));
   };
-  m.clankTrades = (id) => feed.detail(addresses.get(id))?.trades || [];
-  m.clankHolders = (id) => feed.detail(addresses.get(id))?.holders || [];
+  m.clankTrades = (id) => detail(id)?.trades || [];
+  m.clankHolders = (id) => detail(id)?.holders || [];
   m.clankStocks = () => feed.stocks();
   m.clankRecentTrades = () => feed.recentTrades().map((r) => ({ ...r, coin: byAddress.get(r.address) ?? null, pic: r.image ? feed.picUrl(r.address) : null }));
-  m.clankCandles = (id, interval = '1m') => feed.candles(addresses.get(id), interval);
-  m.clankWatchInterval = (id, interval) => feed.interval(addresses.get(id), interval);
-  m.clankSearch = async (q) => { await feed.search(q); return dead ? [] : m.find(q); };
-  m.clankLoadMore = () => feed.loadMore();
-  m.clankHasMore = () => feed.hasMore;
+  m.clankCandles = (id, interval = '1m') => addresses.has(id) ? feed.candles(addresses.get(id), interval) : [];
+  m.clankWatchInterval = (id, interval) => { if (addresses.has(id)) feed.interval(addresses.get(id), interval); };
+  m.clankSearch = async (q) => {
+    if (dead) return [];
+    localQuery = Boolean(queryOf(q) && localMatches(queryOf(q)).length);
+    if (!localQuery) await feed.search(q);
+    return dead ? [] : m.find(q);
+  };
+  m.clankLoadMore = () => localQuery ? Promise.resolve(false) : feed.loadMore();
+  m.clankHasMore = () => !localQuery && feed.hasMore;
   m.liveState = () => ({ chain: 'robinhood', feed: feed.status, chainState: feed.chainState(), seen: addresses.size,
     shown: ext.shown, practice: true });
   m.liveTraded = () => m.positions().filter((p) => m.isExt(p.id) && p.buys > 0).length;

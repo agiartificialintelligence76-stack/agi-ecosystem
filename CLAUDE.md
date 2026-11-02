@@ -1,5 +1,19 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Clank Live practice launches (2026-11-03):** the owner reported that launching a coin in Clank Live was blocked.
+> Clank free play now explicitly enables local practice launches alongside public Robinhood Clank listings.
+> The launch form supports artwork, stock pair, description, safe social links and an optional initial practice buy.
+> Created coins appear under New, search and Profile / Created coins, with simulated candles, volume and holders.
+> They carry a local-practice label and no on-chain address; no launch, trade or local ID is sent to Clank servers.
+> Local launches survive source refreshes within the run. They end with the run and are not real on-chain coins.
+> Validation, fee checks and the 20-coin limit remain; ended runs and challenges cannot launch. Other Live adapters
+> remain opted out. Mixed Live replays stay recorded-only and describe simulated prices and volume accurately.
+> Isolated release: output/clank-production-20261102, branch codex/clank-live-launch, based on d33759e.
+> Validation: clean Node 24/UTC build with 79 fixture settings passes (1,536 tests; 1,530 passed, 6 skipped),
+> including bundling, share pages and secret scan. Focused engine/feed/launch/replay/UI checks pass 129/129
+> on Node 20 and 22. Built browser checks with production security headers verify Live creation, artwork,
+> initial buy fill, changing candles and volume, Created coins, and successful 360 px mobile creation.
+
 > **Live practice markets and new cover (2026-11-03):** the owner asked for every terminal's Live mode to work
 > like Clank: real coin identities and logos with locally simulated prices and volume, plus a new games-page cover,
 > and authorized production publication. Pomp, GNGM, Phomo, Axium and BasedBott now seed practice pools once from
@@ -13353,6 +13367,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 
 | Date | Decision |
 |---|---|
+| 2026-11-03 | Fix Clank Live free-play launching as a labeled, local practice coin alongside public listings. Creation, optional initial buy, artwork and social links are per-run only; no real on-chain launch or outbound order. Existing production publication authorization applies. |
 | 2026-11-03 | All Live spot terminals use real coin identities/artwork with local practice prices and volume; no fictional fallback during source outages. The owner authorized publication and replacement of the games-page cover with the new menu branding. |
 | 2026-09-23 | Rebuild from scratch in `AGI NEW WEBSITE`; AGI FINAL is a read-only reference |
 | 2026-09-23 | Vite + plain JavaScript; server code in Vercel Functions (replaces the Render chat server) |

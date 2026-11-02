@@ -1,7 +1,7 @@
 import { CHAINS, chainById, DEFAULT_CHAIN, feedWords } from './live-chains.js';
 
 const CLANK_CHAINS = Object.freeze(CHAINS.filter((chain) => chain.id === 'robinhood'));
-export const CLANK_LIVE_NOTE = 'Real Clank.trade coins and logos from Robinhood Chain. Prices start from the market, then prices and volume are simulated for your run. Your play-money trades move this practice market, not the real market.';
+export const CLANK_LIVE_NOTE = 'Real Clank.trade coins and logos from Robinhood Chain. Prices start from the market, then prices and volume are simulated for your run. Your play-money trades move this practice market, not the real market. In free play, you can also launch a labeled practice coin that exists only in your run.';
 
 export function terminalLiveChains(terminal) {
   return terminal === 'clank' ? CLANK_CHAINS : CHAINS;

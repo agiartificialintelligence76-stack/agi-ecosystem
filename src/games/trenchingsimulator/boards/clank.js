@@ -36,6 +36,8 @@ export function mountClank(host, ctx) {
   const { market } = ctx;
   const px = ctx.solUsd;
   const practice=market.clankPractice===true;
+  const canLaunch = () => Boolean(ctx.launchCoin) && market.canLaunchPractice === true && ctx.run?.mode === 'free' && ctx.run?.over !== true;
+  const launchUnavailable = 'Practice coin launches are available in Clank free play, including Live coins mode.';
   const practiceSeries=createClankPracticeSeries();
   const M = (n) => Number.isFinite(n)?usd(n * px):'—';
   const state = { view: 'explore', sort: 'trending', query: '', pair: 'all', coin: null, side: 'buy', tf: practice?1:60,
@@ -139,7 +141,7 @@ export function mountClank(host, ctx) {
     const ticker = el('span', { class: 'tsc-muted' }, `$${r.ticker}`);
     const mint = market.info(r.id)?.mint;
     const copy=button('⧉',async(e)=>{e.stopPropagation();if(!mint)return;try{await navigator.clipboard.writeText(mint);copy.title='Copied';}catch{copy.title=mint;}},'tsc-card-copy');copy.setAttribute('aria-label',`Copy ${r.ticker} address`);copy.hidden=!mint;
-    const source = el('div', { class: 'tsc-card-address' }, r.live ? `${mint?.slice(0,6)}...${mint?.slice(-4)}` : 'Simulated coin',copy);
+    const source = el('div', { class: 'tsc-card-address' }, r.createdByPlayer ? 'Your practice coin' : r.live ? `${mint?.slice(0,6)}...${mint?.slice(-4)}` : 'Simulated coin',copy);
     const cap = el('b'); const change = el('span'); const bar = el('span', { class: 'tsc-progress' }, el('i'));
     const progress = el('small', { class: 'tsc-muted' });
     const open=button('',()=>openCoin(r.id),'tsc-card-open');
@@ -191,6 +193,7 @@ export function mountClank(host, ctx) {
   const coinTicker = el('span'); const coinSource = el('span', { class: 'tsc-muted' });const coinLinks=el('span',{class:'tsc-coin-links'});
   const capWhole = el('span'), capFraction = el('span', { class: 'tsc-cap-fraction' });
   const cap = el('strong', { class: 'tsc-big-cap' }, capWhole, capFraction); const bond = el('b');
+  const bondLabel = el('span', {}, practice ? 'Clank bonding' : 'Bonding status');
   const bondBar = el('span', { class: 'tsc-progress' }, el('i'));
   const liquidity = el('b'); const creator = el('b');
   const canvas = el('div', { class: 'tsc-chart', 'aria-label': 'Coin market cap candle chart' });
@@ -240,7 +243,7 @@ export function mountClank(host, ctx) {
   const coinView = el('section', { class: 'tsc-coin' },
     el('header', { class: 'tsc-coin-header' }, el('div', { class: 'tsc-coin-name' }, coinAvatar,
       el('div', {}, coinTitle, el('div', { class: 'tsc-coin-sub' }, coinTicker, coinSource,coinLinks))),
-      el('div', { class: 'tsc-coin-meta' }, el('div', { class: 'tsc-bond' }, el('span', {}, practice?'Clank bonding':'Bonding status'), bond, bondBar),
+      el('div', { class: 'tsc-coin-meta' }, el('div', { class: 'tsc-bond' }, bondLabel, bond, bondBar),
         el('div', {}, el('span', {}, practice?'Practice liquidity':'Liquidity'), liquidity), el('div', {}, el('span', {}, 'Creator'), creator))),
     el('div', { class: 'tsc-coin-grid' }, el('div', { class: 'tsc-chart-column' },
       el('div', { class: 'tsc-cap-heading' }, cap, el('p', {}, practice?'Practice market cap':'Market cap')),
@@ -307,7 +310,7 @@ export function mountClank(host, ctx) {
       const rows = s.live ? market.clankHolders?.(state.coin)||[] : market.holders(state.coin,100)?.list||[];
       keyed(tableBody,rows,(r)=>r.address||r.addr||r.rank,row,(n,r)=>{const values=[r.me?'You':r.kol||short(r.address||r.addr),share(r.share??r.pct),tokens(r.tokens??r.tok),s.live?'—':M((r.tok||0)*s.price)];values.forEach((v,i)=>setText(n.$[i],v));});
       activityNote.hidden = rows.length > 0&&!practice;
-      setText(activityNote, practice?'Clank.trade holder snapshot. Practice trades do not change these on-chain holdings.':s.live ? 'Loading holders from Clank…' : 'No holders yet.');
+      setText(activityNote, s.createdByPlayer ? 'Simulated holders of your practice coin, only in this run.' : practice?'Clank.trade holder snapshot. Practice trades do not change these on-chain holdings.':s.live ? 'Loading holders from Clank…' : 'No holders yet.');
     } else {
       const rows = (s.live&&!practice ? market.clankTrades?.(state.coin)||[] : market.trades(state.coin,30)||[]).slice(0,30);
       keyed(tableBody,rows,(r)=>r.id||r.tx||`${r.t}:${r.addr}:${r.side}:${r.sol}:${r.tok}`,row,(n,r)=>{const quoteAmount=s.live&&!practice?r.quote:r.sol*px;const values=[r.side==='buy'?'BUY':'SELL',r.me?'You':r.kol||short(r.address||r.addr)||whoText(r.label),tokens(r.tokens??r.tok),Number.isFinite(quoteAmount)?new Intl.NumberFormat('en-US',{maximumSignificantDigits:6}).format(quoteAmount):'—'];values.forEach((v,i)=>setText(n.$[i],v));n.$[0].className=r.side==='buy'?'is-up':'is-down';});
@@ -318,7 +321,9 @@ export function mountClank(host, ctx) {
     if (state.coin === null) return;
     const s = market.stats(state.coin); const info = market.info(state.coin); if (!s || !info) return;
     setText(coinTitle, s.name); setText(coinTicker, `$${s.ticker}`);
-    setText(coinSource, practice?`${short(info.mint)} · simulated prices & volume`:`${s.live ? `${short(info.mint)} · ${s.src || 'Live coin'}` : 'Simulated coin'} · play money`);
+    setText(coinSource, s.createdByPlayer ? 'Your practice coin · this run only · simulated prices & volume' : practice?`${short(info.mint)} · simulated prices & volume`:`${s.live ? `${short(info.mint)} · ${s.src || 'Live coin'}` : 'Simulated coin'} · play money`);
+    setText(bondLabel, s.createdByPlayer ? 'Practice bonding' : practice ? 'Clank bonding' : 'Bonding status');
+    setText(holdersTab, s.createdByPlayer ? 'Practice holders (top 100)' : practice ? 'Clank holders (top 100)' : 'Holders (top 100)');
     const social=state.links.get(s.id)||market.clankData?.(s.id)||{},linkKey=`${s.id}:${social.twitter||''}:${social.website||''}`;
     if(coinLinks.dataset.key!==linkKey){coinLinks.dataset.key=linkKey;coinLinks.replaceChildren();for(const [key,label] of [['twitter','X'],['website','Website']]){try{const url=new URL(social[key]);if(['https:','http:'].includes(url.protocol))coinLinks.append(el('a',{href:url.href,target:'_blank',rel:'noopener noreferrer','aria-label':`${s.name} ${label}`},label));}catch{/* Optional link omitted. */}}}
     const capText = Number.isFinite(s.mc) ? usdFull(s.mc * px) : '—';
@@ -393,7 +398,7 @@ export function mountClank(host, ctx) {
       profileContent.className = 'tsc-profile-content tsc-grid';
       clearEmpty(profileContent);
       keyed(profileContent, rows, (r) => r.id, card, updateCard);
-      if (!rows.length) profileContent.replaceChildren(empty('No coins launched in this run. Launch a practice coin in simulated free play.'));
+      if (!rows.length) profileContent.replaceChildren(empty('No coins launched in this run. Launch a practice coin in free play, including Live coins mode.'));
     } else if (state.profileTab === 'history') {
       profileContent.className = 'tsc-profile-content';
       const orders = market.orders(100);
@@ -445,14 +450,14 @@ export function mountClank(host, ctx) {
     field('Coin name', launchName), field('Ticker', launchTicker), field('Paired asset', launchPair),
     el('p', { class: 'tsc-muted' }, `Starting market cap: ≈ ${M(START_MC)}`), field('Initial buy (USD)', launchBuy, 'Optional'),
     el('details', { class: 'tsc-advanced' }, el('summary', {}, 'Advanced options'),field('Twitter / X link',launchTwitter,'Optional'),field('Website link',launchWebsite,'Optional'), field('Description', launchDescription, 'Optional')),
-    launchError, launchSubmit, el('p', { class: 'tsc-muted' }, 'Creates a simulated coin in this free-play run. No wallet or real launch.'));
+    launchError, launchSubmit, el('p', { class: 'tsc-muted' }, 'Creates a practice coin only in this run, alongside the real listings in Live mode. No wallet or real launch.'));
   const launchView = el('section', { class: 'tsc-launch' }, launchForm, el('aside', {}, el('h2', {}, 'Preview'), preview));
   function renderPreview() {
     const r = { id: -1, name: launchName.value.trim() || 'Coin name', ticker: launchTicker.value.trim().toUpperCase() || 'COIN',
       emoji: '👻', theme: 'fantasy', pair: launchPair.value, holders: 0, mc: START_MC, ch5m: 0, progress: 0, vol5m: 0 };
     if (state.uploadUrl) state.pictures.set(-1, state.uploadUrl); else state.pictures.delete(-1);
     const c = card(r); c.$.open.disabled = true;c.$.open.removeAttribute('aria-label');if(!state.uploadUrl){c.$.image.replaceChildren(el('span',{class:'tsc-preview-image'},icon('chart')));c.style.setProperty('--token-accent','#424242');}preview.replaceChildren(c);
-    launchSubmit.disabled = !ctx.launchCoin || market.live || ctx.run?.mode !== 'free' || ctx.run?.over === true;
+    launchSubmit.disabled = !canLaunch();
   }
   for (const input of [launchName, launchTicker, launchPair]) input.addEventListener('input', renderPreview);
   imageInput.addEventListener('change', () => {
@@ -469,12 +474,12 @@ export function mountClank(host, ctx) {
     e.preventDefault();
     const checked = validateClankLaunch({ name: launchName.value, ticker: launchTicker.value, initialBuy: launchBuy.value, pair: launchPair.value });
     if (!checked.ok) return setText(launchError, checked.error);
-    if (!ctx.launchCoin || market.live || ctx.run?.mode !== 'free') return setText(launchError, 'Practice coin launches are available in simulated free play.');
+    if (!canLaunch()) return setText(launchError, ctx.run?.over ? 'This run has ended. Start a new free-play run to launch a coin.' : launchUnavailable);
     if (checked.amount > 0 && checked.amount < 0.001 * px) return setText(launchError, `The smallest initial buy is ${M(0.001)}.`);
     if (checked.amount > market.maxBuy(ctx.settings().priority) * px) return setText(launchError, 'Not enough play money for the initial buy, including fees.');
     const result = ctx.launchCoin({ name: checked.name, ticker: checked.ticker, pair: checked.pair, emoji: '👻', line: launchDescription.value.trim() });
     if (!result?.ok) return setText(launchError, result?.error === 'free_only' || result?.error === 'mode'
-      ? 'Practice coin launches are available in simulated free play.' : result?.message || errorText(result?.error));
+      ? launchUnavailable : result?.error === 'launch_limit' ? 'You can launch up to 20 practice coins per run.' : result?.message || errorText(result?.error));
     const id = result.id ?? result.coin?.id;
     if (!Number.isInteger(id)) return setText(launchError, 'The coin could not be created. Try again.');
     state.owned.push(id);
@@ -488,6 +493,10 @@ export function mountClank(host, ctx) {
       initialOrder = order?.ok ? order.order?.id ?? null : null;
       state.note = order?.ok ? 'Your practice coin launched. Its initial buy is pending.' : `Your coin launched. Initial buy: ${errorText(order?.error)}`;
     } else state.note = 'Your practice coin launched. It is now trading in this run.';
+    clearTimeout(state.searchTimer);
+    state.sort = 'new'; state.query = ''; state.pair = 'all'; state.limit = 42; state.searchError = ''; search.value = '';
+    Promise.resolve(market.clankSearch?.('')).catch(() => {});
+    state.statWindow = '5m';
     openCoin(id); state.lastOrder = initialOrder; setText(orderError, state.note);
   }
 
@@ -507,7 +516,7 @@ export function mountClank(host, ctx) {
     if (view === 'explore') renderFeed();
     if (view === 'launch') {
       renderPreview();
-      setText(launchError, !ctx.launchCoin || market.live || ctx.run?.mode !== 'free' ? 'Practice coin launches are available in simulated free play.' : '');
+      setText(launchError, canLaunch() ? '' : ctx.run?.over ? 'This run has ended. Start a new free-play run to launch a coin.' : launchUnavailable);
     }
     root.dataset.view=view;
     if (view === 'coin') { renderCoin(); }

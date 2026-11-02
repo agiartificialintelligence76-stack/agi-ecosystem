@@ -957,7 +957,7 @@ export function startShell(root) {
       order: (p) => run.order({ slippage: S.save.slippage, priority: S.save.priority, ...defined(p) }),
       launchCoin: (p) => {
         if (run.over) return { ok: false, error: 'over' };
-        if (run.live || setup.kind !== 'free') return { ok: false, error: 'free_only' };
+        if (setup.kind !== 'free' || !run.market.canLaunchPractice) return { ok: false, error: 'free_only' };
         return run.market.launchCoin(p);
       },
       openSettings: () => openSettings({ pause: false }),
