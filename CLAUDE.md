@@ -17,7 +17,7 @@
 > excluded. Requests are read-only, cached and bounded, with source/stale labels and no credentials.
 > Release is isolated at output/clank-production-20261102, branch codex/phomo-fidelity-20261103, based on e06dcda.
 > Reference measurements and limits: output/fomo-reference-audit-20261103.json.
-> Final isolated Node 24/UTC build with all 79 documented fixture settings passes: 1,585 tests, 1,579 passed,
+> Final isolated Node 24/UTC build with all 79 documented fixture settings passes: 1,586 tests, 1,580 passed,
 > 6 skipped, no failures; bundling, share pages and secret scan pass. Paper/engine/replay checks pass 173/173
 > on Node 20 and 22; final social/KOL fixes 40/40 and navigation 22/22 on both. Seven full date/time-zone
 > runs before the final navigation additions pass 1,577 tests each (6 skips), including midnight/year crossings.
@@ -27,6 +27,8 @@
 > mobile resize overlay and exiting perpetual discovery; no final app errors. Measured active token screen
 > uses 1.80 seconds main-thread work over 25.53 seconds (device-specific sample, not a zero-lag guarantee).
 > Evidence: output/phomo-release-browser-verification.json and output/terminal-kols-browser-verification-20261103.json.
+> Final startup follow-up: restored single-perpetual workspaces select the Perps tab even with older missing
+> or stale navigation preferences. Split workspaces retain their chosen rail; 23 UI regressions pass on Node 20/22.
 > Production publication authorized by the owner; preview verification follows this release commit.
 
 > **Results-screen refresh (2026-11-03):** the owner flagged the old cash-out screen during release verification.

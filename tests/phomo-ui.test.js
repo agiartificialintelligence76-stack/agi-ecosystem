@@ -469,6 +469,31 @@ test('Phomo side feed and watchlist preserve the central table and do not refres
   } finally {f.view.destroy();}
 });
 
+test('Phomo restored single perpetual workspace selects Perps even when older preferences omit or mismatch its navigation tab', () => {
+  for (const selected of [undefined,'leaderboard','feed','tokens']) {
+    const prefs=blankPhomoPrefs(); prefs.ui.panels=[{kind:'perps'}];
+    if(selected===undefined) delete prefs.ui.navigationKind; else prefs.ui.navigationKind=selected;
+    const f=fixture({store:new Map([[PHOMO_SAVE_KEY,JSON.stringify(prefs)]])});
+    try {
+      assert.equal(f.cls('ph-root').classList.contains('is-perps'),true);
+      assert.equal(f.label('Perps').getAttribute('aria-pressed'),'true');
+      assert.equal(f.label('Leaderboard').getAttribute('aria-pressed'),'false');
+      assert.equal(f.cls('ph-nav-external').hidden,false);
+      assert.equal(f.cls('ph-nav-social').hidden,true);
+      f.nav('Feed');
+      assert.equal(f.saved().ui.panels[0].kind,'tokens');
+      assert.equal(f.saved().ui.navigationKind,'feed');
+    } finally {f.view.destroy();}
+  }
+  const prefs=blankPhomoPrefs(); prefs.ui.panels=[{kind:'perps'},{kind:'tokens'}]; prefs.ui.navigationKind='feed';
+  const split=fixture({store:new Map([[PHOMO_SAVE_KEY,JSON.stringify(prefs)]])});
+  try {
+    assert.equal(split.label('Feed').getAttribute('aria-pressed'),'true','a split workspace retains its selected social rail');
+    assert.equal(split.cls('ph-nav-external').hidden,true);
+    assert.equal(split.cls('ph-nav-social').hidden,false);
+  } finally {split.view.destroy();}
+});
+
 test('Phomo discovery tabs leave a single perpetual workspace and show the selected spot or social rail', () => {
   const f=fixture();
   try {

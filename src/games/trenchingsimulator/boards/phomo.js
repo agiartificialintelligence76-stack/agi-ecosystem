@@ -536,7 +536,7 @@ export function mountPhomo(host, ctx) {
   const saved = state.prefs.ui?.panels;
   if (saved?.length) for (const p of saved) makePanel(TYPES.some(([k]) => k === p.kind) ? p.kind : 'tokens',p);
   else makePanel();
-  navigationKind = state.prefs.ui?.navigationKind || (panels[0]?.kind === 'perps' ? 'perps' : 'tokens');
+  navigationKind = singlePerps() ? 'perps' : state.prefs.ui?.navigationKind || 'tokens';
   const sizes = state.prefs.ui?.panelSizes || [];
   panels.forEach((p,i) => { if (sizes[i] > 0) { p.size = sizes[i]; p.el.style.setProperty('flex-basis',`${p.size}px`); p.el.style.setProperty('flex-grow','0'); } });
   refresh();
