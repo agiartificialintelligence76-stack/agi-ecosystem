@@ -9,6 +9,10 @@
 //   · the ribbons (faster while you scroll) and the manifesto (pinned while "General" gets crossed out)
 //   · with a mouse: a cursor with labels, magnetic buttons and hearts where you click, only over the front
 // "Reduce motion": no loader, no entrance, nothing moves on its own, and the manifesto shows its end.
+// Its four looks (2026-11-02, the owner: "make a pop mode/light/dark on these also just like the others"): Pop mode by day
+// and at night, and the lab look in both themes, all in landing.css. What this draws itself (the focus lines and halftone,
+// her print echoes, the hearts) takes its colors from there too, read again when the theme or Pop mode button is pressed;
+// the labelled cursor and the magnetic buttons are Pop mode's only (the lab look keeps the usual pointer).
 import { BUBBLE_LINES, REACTIONS } from './lines.js';          // what she says in her bubble
 import { copyButton } from '../lib/copy.js';                  // (the contract address's Copy button, 2026-09-29)
 import { TOKENS } from '../prices/parse.js';
@@ -28,6 +32,14 @@ const mulberry32 = (a) => () => {
 };
 const SEEN = 'agi-seen';                       // sessionStorage: the loader already played in this browser session
 const DEPTH = '/images/landing/agi1-depth.webp';
+// a CSS color as WebGL wants it (0–1 each), from "#rgb" or "#rrggbb"; anything else gets the fallback
+const glColor = (hex, fallback) => {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex).trim());
+  if (!m) return fallback;
+  const s = m[1].length === 3 ? m[1].replace(/./g, '$&$&') : m[1];
+  return [0, 2, 4].map((i) => parseInt(s.slice(i, i + 2), 16) / 255);
+};
+const cssColor = (v) => /^[#\w(),.%\s-]+$/.test(v) && !/^(none|transparent)$/i.test(v) ? v : null;   // a plain color, or none
 
 
 export function startLanding(hero = $('[data-lp-hero]')) {
@@ -88,6 +100,27 @@ export function startLanding(hero = $('[data-lp-hero]')) {
     lastScroll = y;
   });
 
+  // ---------- the look: Pop mode or the lab look, by day or at night (landing.css has the colors) ----------
+  const popLook = () => root.dataset.skin === 'pop';
+  let pal = null;
+  function readLook() {
+    const cs = w.getComputedStyle(hero);
+    const v = (name) => cs.getPropertyValue(name).trim();
+    const num = (name, fallback) => { const n = parseFloat(v(name)); return Number.isFinite(n) ? n : fallback; };
+    const line = v('--lp-fx-line');
+    pal = {
+      line: /^\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}$/.test(line) ? line : '255,255,255',   // the focus lines' r, g, b
+      lineK: clamp(num('--lp-fx-line-k', 1), 0, 4),                                      // … and how strong they are
+      dots: [cssColor(v('--lp-fx-dots')), cssColor(v('--lp-fx-dots-2'))],                 // the halftone corners (or none)
+      echoA: glColor(v('--lp-echo'), [1, 0.302, 0.651]),                                  // her print echoes
+      echoB: glColor(v('--lp-echo-2'), [1, 0.788, 0.2]),
+      print: clamp(num('--lp-print', 1), 0, 1),                                          // 0: no print look on her at all
+      hearts: v('--lp-hearts').split(/\s+/).map(cssColor).filter(Boolean),
+      heartsLine: cssColor(v('--lp-hearts-line')) || 'none',
+    };
+    return pal;
+  }
+
   // ---------- the hero: focus lines + halftone, drawn once per resize ----------
   const figure = $('[data-lp-figure]', hero), stage = $('[data-lp-stage]', hero);
   const fx = d.createElement('canvas');
@@ -99,6 +132,7 @@ export function startLanding(hero = $('[data-lp-hero]')) {
     fx.width = Math.round(r.width * dpr); fx.height = Math.round(r.height * dpr);
     const ctx = fx.getContext('2d');
     if (!ctx) return;
+    const P = pal || readLook();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, r.width, r.height);
     const fr = figure.getBoundingClientRect();
@@ -110,7 +144,7 @@ export function startLanding(hero = $('[data-lp-hero]')) {
     const n = r.width < 700 ? 150 : 260;
     for (let i = 0; i < n; i++) {
       const a = rnd() * Math.PI * 2, wd = 0.0025 + rnd() * 0.011, inner = R * (0.19 + rnd() * 0.24);
-      ctx.fillStyle = `rgba(255,255,255,${(0.045 + rnd() * 0.085).toFixed(3)})`;
+      ctx.fillStyle = `rgba(${P.line},${((0.045 + rnd() * 0.085) * P.lineK).toFixed(3)})`;
       ctx.beginPath();
       ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
       ctx.lineTo(cx + Math.cos(a - wd) * R, cy + Math.sin(a - wd) * R);
@@ -120,9 +154,10 @@ export function startLanding(hero = $('[data-lp-hero]')) {
     const step = r.width < 700 ? 11 : 14;
     const big = Math.max(r.width, r.height), narrow = r.width < 700;
     for (const c of [
-      { x: 0, y: r.height, rad: big * (narrow ? 0.4 : 0.52), col: 'rgba(255,77,166,.62)' },
-      { x: r.width, y: 0, rad: big * (narrow ? 0.22 : 0.34), col: 'rgba(63,240,195,.5)' },
+      { x: 0, y: r.height, rad: big * (narrow ? 0.4 : 0.52), col: P.dots[0] },
+      { x: r.width, y: 0, rad: big * (narrow ? 0.22 : 0.34), col: P.dots[1] },
     ]) {
+      if (!c.col) continue;                                   // (the lab look has none)
       ctx.fillStyle = c.col;
       for (let y = step / 2; y < r.height; y += step) {
         for (let x = step / 2; x < r.width; x += step) {
@@ -153,7 +188,7 @@ export function startLanding(hero = $('[data-lp-hero]')) {
       'uniform sampler2D uTex;uniform sampler2D uDepth;',
       'uniform vec4 uRect;uniform vec2 uCanvas;uniform vec2 uMouse;',
       'uniform vec2 uEchoA;uniform vec2 uEchoB;uniform vec3 uColA;uniform vec3 uColB;',
-      'uniform float uEchoAmt;uniform float uReveal;uniform float uTime;uniform float uHover;uniform float uCell;uniform float uHasDepth;',
+      'uniform float uEchoAmt;uniform float uReveal;uniform float uTime;uniform float uHover;uniform float uCell;uniform float uHasDepth;uniform float uPrint;',
       'float inb(vec2 u){return step(0.,u.x)*step(0.,u.y)*step(u.x,1.)*step(u.y,1.);}',
       'vec4 img(vec2 u){return texture2D(uTex,clamp(u,0.,1.))*inb(u);}',
       'float h21(vec2 p){return fract(sin(dot(p,vec2(41.3,289.1)))*43758.5453);}',
@@ -172,15 +207,15 @@ export function startLanding(hero = $('[data-lp-hero]')) {
       '    float loc=clamp((front-(1.-cuv.y))/.2+(h21(cid)-.5)*.5,0.,1.);',
       '    float rad=uCell*.74*loc;float dist=length(px-cc);',
       '    float m=(1.-smoothstep(rad-1.,rad,dist))*step(.35,s.a);',
-      '    vec3 sc=s.rgb/max(s.a,.001);vec3 dc=mix(sc,vec3(1.,.3,.65),.45*(1.-loc));',
+      '    vec3 sc=s.rgb/max(s.a,.001);vec3 dc=mix(sc,vec3(1.,.3,.65),.45*(1.-loc)*uPrint);',
       '    vec4 ht=vec4(dc*m,m);',
       '    float full=smoothstep(.7,1.,uReveal);',
       '    base=mix(ht,base,full);',
       '    float fy=1.-clamp(front,0.,1.);',
       '    float g=exp(-pow((uv.y-fy)*90.,2.))*(1.-full)*step(.02,uReveal)*img(vec2(uv.x,fy)).a;',
-      '    base.a=max(base.a,g*.9);base.rgb=min(base.rgb+vec3(1.,.86,.4)*g*.9,vec3(base.a));',
+      '    base.a=max(base.a,g*.9);base.rgb=min(base.rgb+mix(vec3(1.),vec3(1.,.86,.4),uPrint)*g*.9,vec3(base.a));',
       '  }',
-      '  float ea=img(uv-uEchoA).a*uEchoAmt;float eb=img(uv-uEchoB).a*uEchoAmt;',
+      '  float ea=img(uv-uEchoA).a*uEchoAmt*uPrint;float eb=img(uv-uEchoB).a*uEchoAmt*uPrint;',
       '  vec4 col=vec4(uColB*eb,eb);',
       '  col=vec4(uColA*ea,ea)+col*(1.-ea);',
       '  gl_FragColor=base+col*(1.-base.a);',
@@ -202,7 +237,7 @@ export function startLanding(hero = $('[data-lp-hero]')) {
     const loc = gl.getAttribLocation(prog, 'p');
     gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const U = {};
-    for (const n of ['uTex', 'uDepth', 'uRect', 'uCanvas', 'uMouse', 'uEchoA', 'uEchoB', 'uColA', 'uColB', 'uEchoAmt', 'uReveal', 'uTime', 'uHover', 'uCell', 'uHasDepth']) U[n] = gl.getUniformLocation(prog, n);
+    for (const n of ['uTex', 'uDepth', 'uRect', 'uCanvas', 'uMouse', 'uEchoA', 'uEchoB', 'uColA', 'uColB', 'uEchoAmt', 'uReveal', 'uTime', 'uHover', 'uCell', 'uHasDepth', 'uPrint']) U[n] = gl.getUniformLocation(prog, n);
     // a power-of-two copy, for mipmaps (clean hair lines when she's drawn smaller)
     const pot = (source, wPx, hPx) => {
       const c = d.createElement('canvas'); c.width = wPx; c.height = hPx;
@@ -225,8 +260,13 @@ export function startLanding(hero = $('[data-lp-hero]')) {
     makeTex(1, depthImg ? pot(depthImg, 256, 512) : pot(image, 4, 4), false);
     gl.uniform1i(U.uTex, 0); gl.uniform1i(U.uDepth, 1);
     gl.uniform1f(U.uHasDepth, depthImg ? 1 : 0);
-    gl.uniform3f(U.uColA, 1.0, 0.302, 0.651);          // pink echo
-    gl.uniform3f(U.uColB, 1.0, 0.788, 0.2);            // honey echo
+    // her two print echoes (pink and honey in Pop mode) and how much of the print look she gets: landing.css's, for each look
+    const setLook = (P) => {
+      gl.uniform3f(U.uColA, ...P.echoA);
+      gl.uniform3f(U.uColB, ...P.echoB);
+      gl.uniform1f(U.uPrint, P.print);
+    };
+    setLook(pal || readLook());
     gl.clearColor(0, 0, 0, 0);
     const st = { reveal: 0, revealFrom: 0, revealDur: 0, revealT0: -1, echoAmt: 0, hover: 0, hoverT: 0,
       mx: 0, my: 0, ea: { x: 0.009, y: -0.004 }, eb: { x: -0.011, y: -0.008 }, lost: false };
@@ -272,7 +312,7 @@ export function startLanding(hero = $('[data-lp-hero]')) {
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     resize();
-    return { resize, reveal, render, setHover: (v) => { st.hoverT = v; }, st };
+    return { resize, reveal, render, setLook, setHover: (v) => { st.hoverT = v; }, st };
   }
   const requestReveal = (dur) => { if (glfig) glfig.reveal(dur); else revealWanted = dur; };
 
@@ -477,6 +517,8 @@ export function startLanding(hero = $('[data-lp-hero]')) {
   function setupRibbons() {
     for (const tr of tracks) {
       tr.el.innerHTML = tr.unit;
+      // not shown (the lab look has no ribbons): nothing to measure, so nothing is built; the look's switch builds them again
+      if (!tr.el.scrollWidth) { tr.gw = 1; tr.x = 0; tr.el.style.transform = ''; continue; }
       const unitW = Math.max(1, tr.el.scrollWidth);
       const k = Math.max(1, Math.ceil((vw * 1.3) / unitW));
       const group = tr.unit.repeat(k);
@@ -580,11 +622,11 @@ export function startLanding(hero = $('[data-lp-hero]')) {
       } else cur.classList.remove('has-label');
     };
     d.addEventListener('pointerover', (e) => {
-      setOn(!!e.target.closest?.('.lp') && e.pointerType === 'mouse');
+      setOn(popLook() && !!e.target.closest?.('.lp') && e.pointerType === 'mouse');   // (Pop mode's only: the lab look keeps the usual pointer)
       const t = e.target.closest?.('.lp [data-cursor]') || null;
       if (t !== current) { current = t; paint(); }
     });
-    cursorAPI = { setAuto(text) { if (text !== auto) { auto = text; paint(); } } };
+    cursorAPI = { setAuto(text) { if (text !== auto) { auto = text; paint(); } }, off() { setOn(false); } };
     d.addEventListener('pointerdown', () => cur.classList.add('is-down'));
     d.addEventListener('pointerup', () => cur.classList.remove('is-down'));
     root.addEventListener('mouseleave', () => setOn(false));
@@ -593,6 +635,7 @@ export function startLanding(hero = $('[data-lp-hero]')) {
     if (!FINE || RM) return;
     for (const el of $$('.lp [data-magnetic]')) {
       el.addEventListener('pointermove', (e) => {
+        if (!popLook()) return;                                  // (Pop mode's only)
         const r = el.getBoundingClientRect();
         el.style.translate = `${((e.clientX - r.left - r.width / 2) * 0.28).toFixed(1)}px ${((e.clientY - r.top - r.height / 2) * 0.4).toFixed(1)}px`;
       });
@@ -601,14 +644,16 @@ export function startLanding(hero = $('[data-lp-hero]')) {
   }
   function setupHearts() {
     if (RM || !Element.prototype.animate) return;
-    const cols = ['#ff4da6', '#ffc933', '#3ff0c3', '#8b66ff', '#ffffff'];
+    const POP = ['#ff4da6', '#ffc933', '#3ff0c3', '#8b66ff', '#ffffff'];
     d.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 || !e.target.closest?.('.lp') || e.target.closest('a,button,input,textarea,select,label')) return;
       const x = e.clientX, y = e.clientY;
+      const P = pal || readLook();                                 // (the look's colors: the lab look's are its one accent)
+      const cols = P.hearts.length ? P.hearts : POP;
       for (let i = 0; i < 7; i++) {
         const s = d.createElement('span');
         s.className = 'lp-heart';
-        s.innerHTML = `<svg viewBox="0 0 24 22"><use href="#lp-heart" fill="${cols[i % cols.length]}" stroke="#170a36" stroke-width="1.8"/></svg>`;
+        s.innerHTML = `<svg viewBox="0 0 24 22"><use href="#lp-heart" fill="${cols[i % cols.length]}" stroke="${P.heartsLine}" stroke-width="1.8"/></svg>`;
         d.body.appendChild(s);
         const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, dist = 48 + Math.random() * 80, sc = 0.6 + Math.random() * 0.7, rot = (Math.random() - 0.5) * 100;
         const tx = x + Math.cos(a) * dist, ty = y + Math.sin(a) * dist;
@@ -657,6 +702,22 @@ export function startLanding(hero = $('[data-lp-hero]')) {
   runLoader(glReadySoon).then(() => (root.classList.contains('lp-intro') ? Promise.race([glReady, new Promise((ok) => w.setTimeout(ok, 700))]) : null))
     .then(() => safe('intro', heroIntro));
   w.setTimeout(() => { if (glfig && glfig.st.reveal === 0 && glfig.st.revealT0 < 0) glfig.reveal(1); }, 6500);
+
+  // the theme or Pop mode button (src/theme.js sends agi:theme and agi:skin): the look's colors again for her echoes and the
+  // focus lines, and everything measured again (the lab look's type and nodes are other sizes; Pop mode's fonts may still be
+  // on their way, so once more when they're in)
+  const onLook = () => {
+    readLook();
+    if (glfig) safe('gl look', () => glfig.setLook(pal));
+    if (!popLook()) {
+      cursorAPI?.off();
+      for (const el of $$('.lp [data-magnetic]')) el.style.translate = '';
+    }
+    w.requestAnimationFrame(() => { layoutAll(); d.fonts?.ready?.then(layoutAll); });
+    wake();
+  };
+  w.addEventListener('agi:theme', onLook);
+  w.addEventListener('agi:skin', onLook);
 
   let rT = 0;
   w.addEventListener('resize', () => { w.clearTimeout(rT); rT = w.setTimeout(layoutAll, 140); });

@@ -1,5 +1,23 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **The front's four looks (2026-11-02):** the owner: "can you make a pop mode/light/dark on these also just like the
+> others". The front (the hero with the huge AGI, her orbit, Her world and the contract address; its ribbons; the "General →
+> Girlfriend" manifesto; the loader) followed neither switch: it was one bright look on purpose. Now it follows both, like
+> every other section. **Pop mode by day** is unchanged (checked pixel for pixel). **Pop mode at night** (the default): a
+> deep violet hero (`#2a0f7a`, the browser bar's color), the manifesto and the loader deep ink with honey as their accent
+> (like Evaluations at night), the pills deep violet with lavender outlines and pink hard shadows, honey buttons. **The lab
+> look** (Pop mode off), light and dark from `tokens.css`: paper or near-black, Geist only (Pop mode's two fonts are no
+> longer downloaded there), the one accent, hairlines, no hard shadows; the huge AGI a quiet watermark, the orbit small
+> nodes on a dotted hairline, her bubble a plain chat bubble, her print echoes off, "Girlfriend" written in after the
+> crossed-out "General" like a tracked change; Pop mode's decoration (the "doki doki", the ribbons, the halftone), the
+> labelled cursor and the magnetic buttons stay in Pop mode. How: `landing.css` keeps its rules, now on `--lp-*` colors set
+> per look in "the four looks" at its end; `landing.js` reads its canvas colors (`--lp-fx-*`, `--lp-echo*`, `--lp-print`,
+> `--lp-hearts*`) from there, again on `agi:theme` / `agi:skin`, and never builds the ribbons while they're hidden.
+> Checked: 1440, 390 and 360 px in all four looks, switching both ways (keeps your place, no console errors, no sideways
+> scrolling), the production build, axe 0 issues in all four looks; `tests/landing.test.js` (17 now) and
+> `tests/pop.test.js` pass. Pushed to `main` (production) on 2026-11-02 from a clean copy of production's
+> `ae3dc75` with only these three files and this one; the folder's other local work stays local.
+
 > **AGI Studio design and appearance (2026-11-01):** the owner asked to make the whole Studio like the main page,
 > then to include its sun and sparkle switches and publish. Studio now follows the landing page's violet, lavender,
 > cream, ink, honey, pink and mint palette, Anybody display type, Instrument Serif accents and outlined pill controls.
@@ -11,7 +29,9 @@
 > behavior is unchanged. Validated desktop/tablet/360px layouts, all four appearance combinations, persistence,
 > populated galleries and the photo editor with an isolated fixture. The clean release build passed: 1,416 tests,
 > 0 failures, 6 skips, Vite, share pages and secret check. Release prepared from production main e388601 in
-> `output/studio-publish-20261101`, excluding unrelated local work, for the authorized GitHub-to-Vercel publication.
+> `output/studio-publish-20261101`, excluding unrelated local work. Published as 8594bb4 to main; Vercel Ready.
+> Live verified at https://www.agi1.app/studio, including both switches and saved reload preferences.
+> The separate studio.agi1.app subdomain returned NXDOMAIN during verification; use the working /studio route.
 
 > **Meme addition (2026-10-29):** the owner put `memess/AGI_symphony_720p_new_voice-precise-upscale-model-starlight-precise-2-6-sharpness-5-resolution-1080p-frame-rate-30-fps-hdr-sdr-output-format-h-264.mp4` in the folder and asked for it in the meme library, then "and publish it". Added as **AGI Symphony** at the top of Videos (0:15), with the caption "he asked if a robot could write one. she asked him back" (the man in the clip asks whether a robot can write a symphony or paint a masterpiece, and AGI-1 asks him back), dated `addedAt` 2026-10-29 12:16 UTC so it's the first card of the Videos group (on All and on the Videos tab). The web copy (`public/memes/videos/agi-symphony.mp4`, 8.9 MB from 30 MB, SSIM 0.988 against the original) was made with `encode.ps1`'s settings for a short clip, and its poster is from 1 s (AGI-1 is on screen only at 0–1.7 s and 8.8–10.2 s); `encode.ps1` lists it, so running the script again skips it. `tests/owner-media.test.js`'s newest-first test names it now. The original is untouched.
 
@@ -10961,8 +10981,8 @@ Evaluations, the Model card, the Playground, the risk check (ClankChecker) and t
   **the one who texts back.**", a "Zero red flags" sticker, then "Next: the model release ↓".
 - **With a mouse, over the front only:** a cursor with labels ("Say hi", "Risk check ↓", "The coin ↓", "Read →", "Follow ↗"), magnetic buttons,
   and hearts where you click.
-- **One bright look in every theme and both looks** on purpose (it's the brand's pop-manga print look): the theme and Pop
-  mode buttons change the rest of the site, not the front. The lab hero lost its `h1` to the front (it's an `h2` now: one
+- **Its four looks** (since 2026-11-02; until then one bright look in every theme and both looks, on purpose): Pop mode by
+  day as described here, Pop mode at night and the lab look in both themes (see "The front's four looks" at the top). The lab hero lost its `h1` to the front (it's an `h2` now: one
   `h1` per page, the front's "AGI, Artificial Girlfriend Intelligence").
 
 **How it works:**
@@ -11003,7 +11023,9 @@ Evaluations, the Model card, the Playground, the risk check (ClankChecker) and t
 | She's a flat picture (no halftone reveal, no echoes) | The browser has no WebGL (or lost it) | Normal fallback: her picture |
 | "Loading weights…" stays a while on the 3D stage after scrolling down quickly | The stage starts after the front's entrance (at the latest 6 s after the page opened) | Nothing to fix |
 
-**Tests:** `tests/landing.test.js` (16: first in the page and everything in order under the top bar; the one `h1`, the lab
+**Tests:** `tests/landing.test.js` (17 since 2026-11-02, its four looks: each sets the colors of every part, the browser bar
+matches the front in every look, the lab look's type and hidden decoration, the script reading its colors and following both
+buttons; 16 before: first in the page and everything in order under the top bar; the one `h1`, the lab
 hero's `h2`, decoration hidden from screen readers, the planets never a keyboard stop; its links (the Playground, the risk
 check, the Model card, the diary, X) and that every `#link` exists; one canvas in the markup, no inline code, nothing from other
 sites; its pictures and font (real WebP / WOFF2 files, small, the font's license); every CSS rule names an `lp-` class; what's
@@ -11356,8 +11378,8 @@ that stays with the button and its price; the gallery on the right; on phones a 
   toggle; Telegram's a paper plane line icon drawn for the site, since 2026-10-05), theme toggle, the Pop mode button (✦,
   the same round style), "Try AGI-1"; on phones the links
   move into a drop-down behind a menu button: full-width rows, 17 px, hairlines between them) → since 2026-09-28 **the
-  front** (the bright AGI landing, its ribbons and its manifesto: see "The front"; the one part of the page outside this lab
-  look) → **hero** →
+  front** (the bright AGI landing, its ribbons and its manifesto: see "The front"; until 2026-11-02 the one part of the page
+  outside this lab look, since then in it too with Pop mode off) → **hero** →
   **Evaluations** (fake benchmark chart, AGI vs "your ex": "Texts back", "Rizz-Bench"…) → **Model card** (tokenomics +
   contract address with copy) → **Playground** (AGI-1's chat styled like an AI playground) → **Risk check your coins on
   clank** (ClankChecker, 2026-09-26: every clank.trade coin with a risk scan, see "ClankChecker"; since 2026-09-28 in the

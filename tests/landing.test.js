@@ -338,3 +338,45 @@ test('the Copy button copies the whole address, or selects it where the clipboar
     delete globalThis.getSelection;
   }
 });
+
+test('the front follows the theme and Pop mode buttons like every other section (2026-11-02, the owner: "make a pop mode/light/dark on these also just like the others")', async () => {
+  const src = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = (sel) => {
+    const at = src.indexOf(`${sel} {`);
+    assert.ok(at >= 0, `${sel} is there`);
+    return src.slice(at, src.indexOf('}', at));
+  };
+  const night = rule(":root[data-skin='pop'][data-theme='dark'] :is(.lp, .lp-loader, .lp-cursor)");
+  const lab = rule(":root:not([data-skin='pop']) :is(.lp, .lp-loader, .lp-cursor)");
+  // each look sets the colors of the hero, its pills and buttons, the manifesto and the loader…
+  for (const name of ['--lp-bg', '--lp-card', '--lp-card-fg', '--lp-edge', '--lp-shade', '--lp-btn', '--lp-mani-bg', '--lp-mani-fg', '--lp-load-bg', '--lp-load-fg']) {
+    assert.match(night, new RegExp(`${name}:`), `Pop mode at night sets ${name}`);
+    assert.match(lab, new RegExp(`${name}:`), `the lab look sets ${name}`);
+  }
+  // …and those parts take them (no fixed colors left there)
+  assert.match(src, /\.lp-hero \{[^}]*background: var\(--lp-bg\); color: var\(--lp-fg\)/);
+  assert.match(src, /\.lp-mani \{[^}]*background: var\(--lp-mani-bg\); color: var\(--lp-mani-fg\)/);
+  assert.match(src, /\.lp-loading \.lp-loader \{[^}]*background: var\(--lp-load-bg\); color: var\(--lp-load-fg\)/);
+  assert.match(src, /\.lp-bubble \{[^}]*background: var\(--lp-card\); color: var\(--lp-card-fg\); border: 2\.5px solid var\(--lp-edge\)/);
+  // the phone's browser bar (/theme.js and src/theme.js) is the color at the top of the front, in every look
+  globalThis.document ??= { documentElement: { dataset: {} }, querySelector: () => null, querySelectorAll: () => [] };
+  const { barColor } = await import('../src/theme.js');
+  const tokens = read('src/styles/tokens.css');
+  assert.equal(barColor('pop', 'light', false), /--lp-violet: (#[0-9a-f]{6})/.exec(src)[1], 'Pop mode by day: violet');
+  assert.equal(barColor('pop', 'dark', false), /--lp-bg: (#[0-9a-f]{6})/.exec(night)[1], 'at night: deep violet');
+  assert.match(lab, /--lp-bg: var\(--bg\);/, "the lab look: the page's own background");
+  assert.equal(barColor('lab', 'light', false), /:root \{\s*--bg: (#[0-9a-f]{6})/.exec(tokens)[1]);
+  assert.equal(barColor('lab', 'dark', false), /:root\[data-theme='dark'\] \{\s*--bg: (#[0-9a-f]{6})/.exec(tokens)[1]);
+  // the lab look: the site's own type (Pop mode's two fonts stay Pop mode's), no print look on her, and Pop mode's
+  // decoration stays in Pop mode (like its own ribbons under the lab hero)
+  assert.match(lab, /--lp-display: var\(--sans\);/);
+  assert.match(lab, /--lp-serif: var\(--sans\);/);
+  assert.match(lab, /--lp-print: 0;/);
+  assert.match(src, /:root:not\(\[data-skin='pop'\]\) :is\(\.lp-sfx, \.lp-ribbons, \.lp-mani-tone\) \{ display: none; \}/);
+  // what the script draws itself takes the look's colors, read again whenever a button is pressed
+  for (const name of ['--lp-fx-line', '--lp-fx-dots', '--lp-echo', '--lp-print', '--lp-hearts']) assert.ok(js.includes(`'${name}'`), `the script reads ${name}`);
+  assert.match(js, /addEventListener\('agi:theme', onLook\);/);
+  assert.match(js, /addEventListener\('agi:skin', onLook\);/);
+  assert.match(js, /setOn\(popLook\(\) && /, "the labelled cursor is Pop mode's only");
+  assert.match(js, /if \(!tr\.el\.scrollWidth\) \{/, 'hidden ribbons are never built (there is nothing to measure)');
+});
